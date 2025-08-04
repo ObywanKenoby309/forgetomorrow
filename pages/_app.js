@@ -10,27 +10,26 @@ import '../styles/globals.css';
 export default function App({ Component, pageProps }) {
   const router = useRouter();
 
-  // Routes that use the landing page layout (LandingHeader/Footer)
+  // Pages that use Landing Header/Footer (typically public or marketing pages)
   const landingPages = ['/', '/login', '/signup', '/about'];
 
-  // Routes where footer should be hidden
+  // Pages where footer is hidden
   const noFooterPages = ['/feed', '/jobs'];
 
-  const useLandingLayout = landingPages.includes(router.pathname);
+  const useLandingHeaderFooter = landingPages.includes(router.pathname);
 
   return (
     <JobPipelineProvider>
-      {useLandingLayout ? <LandingHeader /> : <Header />}
+      {useLandingHeaderFooter ? <LandingHeader /> : <Header />}
       <main
         className={`pt-20 min-h-screen text-[#212121] ${
-          useLandingLayout ? '' : 'bg-[#ECEFF1]'
+          useLandingHeaderFooter ? '' : 'bg-[#ECEFF1]'
         }`}
       >
         <Component {...pageProps} />
       </main>
       {!noFooterPages.includes(router.pathname) &&
-        (useLandingLayout ? <LandingFooter /> : <Footer />)}
+        (useLandingHeaderFooter ? <LandingFooter /> : <Footer />)}
     </JobPipelineProvider>
   );
 }
-
