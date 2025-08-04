@@ -1,4 +1,3 @@
-// components/ProfileMetrics.js
 import React from 'react';
 import Link from 'next/link';
 import { Bar } from 'react-chartjs-2';
@@ -35,7 +34,10 @@ const mockData = {
   },
 };
 
-export default function ProfileMetrics({ showTopContent = false, showLastProfileViewer = false }) {
+export default function ProfileMetrics({
+  showTopContent = false,
+  showLastProfileViewer = false,
+}) {
   const data = {
     labels: mockData.daysLabels,
     datasets: [
@@ -91,10 +93,11 @@ export default function ProfileMetrics({ showTopContent = false, showLastProfile
           <div className="mt-2 font-bold text-[#FF7043] text-lg">
             {mockData.lastProfileViewer.name}
           </div>
-          <Link href={mockData.lastProfileViewer.profileUrl}>
-            <a className="text-[#FF7043] font-bold block mt-1 underline">
-              See all profile views
-            </a>
+          <Link
+            href={mockData.lastProfileViewer.profileUrl}
+            className="text-[#FF7043] font-bold block mt-1 underline"
+          >
+            See all profile views
           </Link>
         </div>
       )}
@@ -108,14 +111,20 @@ export default function ProfileMetrics({ showTopContent = false, showLastProfile
           <div className="mb-6">
             <strong>Highest Viewed Post:</strong>
             <p className="my-1">
-              <Link href={mockData.highestViewedPost.url}>
-                <a className="text-[#FF7043] underline font-bold">{mockData.highestViewedPost.title}</a>
+              <Link
+                href={mockData.highestViewedPost.url}
+                className="text-[#FF7043] underline font-bold"
+              >
+                {mockData.highestViewedPost.title}
               </Link>
             </p>
             <small>Views: {mockData.highestViewedPost.views.toLocaleString()}</small>
             <br />
-            <Link href="/user/posts">
-              <a className="text-[#FF7043] font-bold mt-1 inline-block underline">View all posts</a>
+            <Link
+              href="/user/posts"
+              className="text-[#FF7043] font-bold mt-1 inline-block underline"
+            >
+              View all posts
             </Link>
           </div>
 
@@ -125,8 +134,11 @@ export default function ProfileMetrics({ showTopContent = false, showLastProfile
             <p className="my-1 italic">"{mockData.highestViewedComment.snippet}"</p>
             <small>Likes: {mockData.highestViewedComment.likes.toLocaleString()}</small>
             <br />
-            <Link href="/user/comments">
-              <a className="text-[#FF7043] font-bold mt-1 inline-block underline">View all comments</a>
+            <Link
+              href="/user/comments"
+              className="text-[#FF7043] font-bold mt-1 inline-block underline"
+            >
+              View all comments
             </Link>
           </div>
         </section>
