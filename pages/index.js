@@ -41,10 +41,12 @@ export default function Home() {
       <Head>
         <title>ForgeTomorrow - Home</title>
         <link rel="icon" href="/favicon.ico" />
-        <meta name="description" content="Empowering job seekers with tools, community, and opportunity." />
+        <meta
+          name="description"
+          content="Empowering job seekers with tools, community, and opportunity."
+        />
       </Head>
 
-      {/* EmailJS SDK */}
       <Script
         src="https://cdn.emailjs.com/sdk/3.2/email.min.js"
         strategy="beforeInteractive"
@@ -61,7 +63,9 @@ export default function Home() {
           bg-black bg-opacity-70
           text-gray-100
           shadow-lg
+          flex flex-col items-center
           bg-[url('/images/forge-bg-bw.png')] bg-center bg-no-repeat bg-fixed bg-cover
+          min-h-[60vh]
         "
       >
         <h1
@@ -75,11 +79,11 @@ export default function Home() {
           Forge Tomorrow
         </h1>
 
-        <p className="mb-6 text-lg leading-relaxed max-w-3xl mx-auto">
+        <p className="mb-6 text-lg leading-relaxed max-w-3xl">
           We’re building the next evolution in professional networking — human-centered, AI-empowered,
           and built for the real world.
         </p>
-        <p className="mb-10 text-lg leading-relaxed max-w-3xl mx-auto">
+        <p className="mb-10 text-lg leading-relaxed max-w-3xl">
           Our mission is to equip job seekers, freelancers, recruiters, mentors, and ethical employers
           with the tools and transparency they need to succeed in today’s fast-changing job market.
           No gatekeeping. No noise. Just support that shows up, AI with integrity, and a network where
@@ -89,8 +93,8 @@ export default function Home() {
         <form
           id="waitlist-form"
           onSubmit={sendWaitlistEmail}
-          className="max-w-md mx-auto flex flex-col sm:flex-row gap-4"
           aria-label="Join the waitlist form"
+          className="max-w-md w-full flex flex-col sm:flex-row gap-4"
         >
           <input
             type="email"
@@ -100,6 +104,7 @@ export default function Home() {
             required
             autoComplete="email"
             aria-required="true"
+            aria-describedby="emailHelp"
             value={email}
             onChange={(e) => setEmail(e.target.value)}
             className="
@@ -125,10 +130,10 @@ export default function Home() {
 
         {statusMessage && (
           <p
-            role="alert"
-            className={`mt-6 max-w-md mx-auto text-sm ${
+            className={`mt-6 max-w-md text-sm ${
               statusMessage.type === 'success' ? 'text-green-400' : 'text-red-400'
             }`}
+            role="alert"
           >
             {statusMessage.text}
           </p>
