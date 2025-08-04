@@ -2,16 +2,24 @@ import Link from 'next/link';
 
 export default function LandingFooter() {
   return (
-    <footer className="bg-[#222] text-gray-300 py-6 mt-20">
-      <nav className="max-w-7xl mx-auto px-6 flex flex-col md:flex-row justify-between items-center space-y-4 md:space-y-0">
-        <div>&copy; {new Date().getFullYear()} ForgeTomorrow</div>
-        <ul className="flex space-x-6 font-semibold text-sm">
-          <li><Link href="/about"><a className="hover:underline">About</a></Link></li>
-          <li><Link href="/pricing"><a className="hover:underline">Pricing</a></Link></li>
-          <li><Link href="/support"><a className="hover:underline">Support</a></Link></li>
-          <li><Link href="/contact"><a className="hover:underline">Contact</a></Link></li>
-        </ul>
+    <footer className="bg-[#1a1a1a] text-gray-300 py-8">
+      <nav className="max-w-7xl mx-auto flex flex-wrap justify-center space-x-8">
+        <Link href="/" className="hover:text-[#FF7043] transition">
+          Home
+        </Link>
+        <Link href="/about" className="hover:text-[#FF7043] transition">
+          About
+        </Link>
+        <Link href="/signup" className="hover:text-[#FF7043] transition">
+          Sign Up
+        </Link>
+        <Link href="/login" className="hover:text-[#FF7043] transition">
+          Login
+        </Link>
       </nav>
+      <p className="mt-6 text-center text-gray-400 text-sm">
+        &copy; {new Date().getFullYear()} ForgeTomorrow. All rights reserved.
+      </p>
     </footer>
   );
 }
