@@ -85,4 +85,54 @@ export default function Home() {
         <p className="mb-10 text-lg leading-relaxed max-w-3xl mx-auto">
           Our mission is to equip job seekers, freelancers, recruiters, mentors, and ethical employers
           with the tools and transparency they need to succeed in today’s fast-changing job market.
-          No gatekeeping. No noise. Just supp
+          No gatekeeping. No noise. Just support that shows up, AI with integrity, and a network where
+          people come before algorithms.
+        </p>
+
+        <form
+          id="waitlist-form"
+          onSubmit={sendWaitlistEmail}
+          className="max-w-md w-full flex flex-col gap-4"
+          aria-label="Join the waitlist form"
+        >
+          <input
+            type="email"
+            name="user_email"
+            id="user_email"
+            placeholder="Enter your email"
+            required
+            autoComplete="email"
+            aria-required="true"
+            aria-describedby="emailHelp"
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
+            className="px-4 py-3 rounded-lg border border-gray-300 text-gray-900
+              focus:outline-none focus:ring-2 focus:ring-[#FF7043] focus:border-transparent
+              flex-grow min-w-0"
+          />
+          <button
+            type="submit"
+            disabled={isSending}
+            aria-live="polite"
+            className="bg-[#FF7043] hover:bg-[#F4511E] text-white font-bold
+              px-8 py-3 rounded-lg shadow-lg transition-colors duration-300
+              flex-shrink-0"
+          >
+            {isSending ? 'Sending...' : 'Join the Waitlist'}
+          </button>
+        </form>
+
+        {statusMessage && (
+          <p
+            className={`mt-6 max-w-md mx-auto text-sm ${
+              statusMessage.type === 'success' ? 'text-green-400' : 'text-red-400'
+            }`}
+            role="alert"
+          >
+            {statusMessage.text}
+          </p>
+        )}
+      </main>
+    </>
+  );
+}
