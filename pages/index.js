@@ -57,100 +57,81 @@ export default function Home() {
       <main
         role="main"
         aria-label="About ForgeTomorrow"
+        className="relative z-10 max-w-4xl mx-auto my-24 p-12 rounded-xl text-center
+          bg-black bg-opacity-70
+          text-gray-100
+          shadow-lg
+          flex flex-col items-center"
         style={{
-          minHeight: '80vh',
-          display: 'flex',
-          justifyContent: 'center',
-          alignItems: 'center',
-          padding: '2rem',
-          color: '#fff',
-          textAlign: 'center',
+          backgroundImage: "url('/images/forge-bg-bw.png')",
+          backgroundPosition: 'center',
+          backgroundRepeat: 'no-repeat',
+          backgroundSize: 'cover',
+          backgroundAttachment: 'fixed',
         }}
       >
-        <div
-          style={{
-            backgroundColor: 'rgba(0, 0, 0, 0.7)',
-            borderRadius: '12px',
-            padding: '3rem 2rem',
-            maxWidth: '700px',
-            width: '100%',
-          }}
+        <h1
+          className="text-5xl font-extrabold mb-6 tracking-wide
+            text-[#FF7043] drop-shadow-[0_0_10px_rgba(255,112,67,0.9)]
+            sm:text-6xl break-words"
         >
-          <h1
-            style={{
-              fontSize: '3rem',
-              marginBottom: '1.5rem',
-              color: '#FF7043',
-              textShadow: '0 0 10px rgba(255,112,67,0.9)',
-            }}
+          Forge Tomorrow
+        </h1>
+
+        <p className="mb-6 text-lg leading-relaxed max-w-3xl mx-auto">
+          We’re building the next evolution in professional networking — human-centered, AI-empowered,
+          and built for the real world.
+        </p>
+        <p className="mb-10 text-lg leading-relaxed max-w-3xl mx-auto">
+          Our mission is to equip job seekers, freelancers, recruiters, mentors, and ethical employers
+          with the tools and transparency they need to succeed in today’s fast-changing job market.
+          No gatekeeping. No noise. Just support that shows up, AI with integrity, and a network where
+          people come before algorithms.
+        </p>
+
+        <form
+          id="waitlist-form"
+          onSubmit={sendWaitlistEmail}
+          className="max-w-md w-full flex flex-col gap-4"
+          aria-label="Join the waitlist form"
+        >
+          <input
+            type="email"
+            name="user_email"
+            id="user_email"
+            placeholder="Enter your email"
+            required
+            autoComplete="email"
+            aria-required="true"
+            aria-describedby="emailHelp"
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
+            className="px-4 py-3 rounded-lg border border-gray-300 text-gray-900
+              focus:outline-none focus:ring-2 focus:ring-[#FF7043] focus:border-transparent
+              flex-grow min-w-0"
+          />
+          <button
+            type="submit"
+            disabled={isSending}
+            aria-live="polite"
+            className="bg-[#FF7043] hover:bg-[#F4511E] text-white font-bold
+              px-8 py-3 rounded-lg shadow-lg transition-colors duration-300
+              flex-shrink-0"
           >
-            Forge Tomorrow
-          </h1>
+            {isSending ? 'Sending...' : 'Join the Waitlist'}
+          </button>
+        </form>
 
-          <p style={{ marginBottom: '1.5rem', fontSize: '1.2rem' }}>
-            We’re building the next evolution in professional networking — human-centered, AI-empowered,
-            and built for the real world.
-          </p>
-
-          <p style={{ marginBottom: '2rem', fontSize: '1.2rem' }}>
-            Our mission is to equip job seekers, freelancers, recruiters, mentors, and ethical employers
-            with the tools and transparency they need to succeed in today’s fast-changing job market.
-            No gatekeeping. No noise. Just support that shows up, AI with integrity, and a network where
-            people come before algorithms.
-          </p>
-
-          <form
-            onSubmit={sendWaitlistEmail}
-            style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}
-            aria-label="Join the waitlist form"
+        {statusMessage && (
+          <p
+            className={`mt-6 max-w-md mx-auto text-sm ${
+              statusMessage.type === 'success' ? 'text-green-400' : 'text-red-400'
+            }`}
+            role="alert"
           >
-            <input
-              type="email"
-              placeholder="Enter your email"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              required
-              style={{
-                padding: '0.8rem 1rem',
-                fontSize: '1rem',
-                borderRadius: '8px',
-                border: '1px solid #ccc',
-                outline: 'none',
-              }}
-            />
-            <button
-              type="submit"
-              disabled={isSending}
-              style={{
-                backgroundColor: '#FF7043',
-                color: 'white',
-                fontWeight: 'bold',
-                padding: '0.8rem 1rem',
-                borderRadius: '8px',
-                cursor: 'pointer',
-                border: 'none',
-                transition: 'background-color 0.3s ease',
-              }}
-              onMouseOver={(e) => (e.currentTarget.style.backgroundColor = '#F4511E')}
-              onMouseOut={(e) => (e.currentTarget.style.backgroundColor = '#FF7043')}
-            >
-              {isSending ? 'Sending...' : 'Join the Waitlist'}
-            </button>
-          </form>
-
-          {statusMessage && (
-            <p
-              role="alert"
-              style={{
-                marginTop: '1rem',
-                color: statusMessage.type === 'success' ? '#4ade80' : '#f87171',
-                fontSize: '0.9rem',
-              }}
-            >
-              {statusMessage.text}
-            </p>
-          )}
-        </div>
+            {statusMessage.text}
+          </p>
+        )}
       </main>
     </>
   );
