@@ -54,46 +54,25 @@ export default function Home() {
         }}
       />
 
-      {/* Background wrapper */}
-      <div
-        style={{
-          position: 'fixed',
-          top: 0,
-          left: 0,
-          height: '100vh',
-          width: '100vw',
-          backgroundImage: "url('/forge-bg-bw.png')",
-          backgroundSize: 'cover',
-          backgroundPosition: 'center',
-          filter: 'brightness(0.4)',
-          zIndex: -1,
-        }}
-      />
-
-      {/* Content container */}
       <main
         role="main"
         aria-label="About ForgeTomorrow"
         style={{
-          minHeight: '100vh',
-          padding: '3rem 1.5rem',
+          minHeight: '80vh',
           display: 'flex',
-          flexDirection: 'column',
-          alignItems: 'center',
           justifyContent: 'center',
+          alignItems: 'center',
+          padding: '2rem',
           color: '#fff',
           textAlign: 'center',
-          position: 'relative',
-          zIndex: 1,
-          maxWidth: '900px',
-          margin: '0 auto',
         }}
       >
         <div
           style={{
-            backgroundColor: 'rgba(0, 0, 0, 0.65)',
+            backgroundColor: 'rgba(0, 0, 0, 0.7)',
             borderRadius: '12px',
             padding: '3rem 2rem',
+            maxWidth: '700px',
             width: '100%',
           }}
         >
