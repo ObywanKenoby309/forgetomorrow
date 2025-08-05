@@ -13,6 +13,7 @@ export default function Home() {
       alert('Please enter a valid email.');
       return;
     }
+
     setIsSending(true);
     setStatusMessage(null);
 
@@ -53,6 +54,7 @@ export default function Home() {
         }}
       />
 
+      {/* Background wrapper */}
       <div
         style={{
           position: 'fixed',
@@ -63,37 +65,42 @@ export default function Home() {
           backgroundImage: "url('/forge-bg-bw.png')",
           backgroundSize: 'cover',
           backgroundPosition: 'center',
-          filter: 'brightness(0.6)',
+          filter: 'brightness(0.4)',
           zIndex: -1,
         }}
       />
 
+      {/* Content container */}
       <main
         role="main"
         aria-label="About ForgeTomorrow"
         style={{
           minHeight: '100vh',
+          padding: '3rem 1.5rem',
           display: 'flex',
-          justifyContent: 'center',
+          flexDirection: 'column',
           alignItems: 'center',
-          padding: '2rem',
+          justifyContent: 'center',
           color: '#fff',
           textAlign: 'center',
+          position: 'relative',
+          zIndex: 1,
+          maxWidth: '900px',
+          margin: '0 auto',
         }}
       >
         <div
           style={{
-            backgroundColor: 'rgba(0,0,0,0.7)',
-            padding: '3rem',
+            backgroundColor: 'rgba(0, 0, 0, 0.65)',
             borderRadius: '12px',
-            maxWidth: '600px',
+            padding: '3rem 2rem',
             width: '100%',
           }}
         >
           <h1
             style={{
               fontSize: '3rem',
-              marginBottom: '1rem',
+              marginBottom: '1.5rem',
               color: '#FF7043',
               textShadow: '0 0 10px rgba(255,112,67,0.9)',
             }}
@@ -101,19 +108,23 @@ export default function Home() {
             Forge Tomorrow
           </h1>
 
-          <p style={{ marginBottom: '1.5rem', fontSize: '1.125rem' }}>
+          <p style={{ marginBottom: '1.5rem', fontSize: '1.2rem' }}>
             We’re building the next evolution in professional networking — human-centered, AI-empowered,
             and built for the real world.
           </p>
 
-          <p style={{ marginBottom: '2rem', fontSize: '1.125rem' }}>
+          <p style={{ marginBottom: '2rem', fontSize: '1.2rem' }}>
             Our mission is to equip job seekers, freelancers, recruiters, mentors, and ethical employers
             with the tools and transparency they need to succeed in today’s fast-changing job market.
             No gatekeeping. No noise. Just support that shows up, AI with integrity, and a network where
             people come before algorithms.
           </p>
 
-          <form onSubmit={sendWaitlistEmail} style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }} aria-label="Join the waitlist form">
+          <form
+            onSubmit={sendWaitlistEmail}
+            style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}
+            aria-label="Join the waitlist form"
+          >
             <input
               type="email"
               placeholder="Enter your email"
@@ -121,7 +132,7 @@ export default function Home() {
               onChange={(e) => setEmail(e.target.value)}
               required
               style={{
-                padding: '0.75rem 1rem',
+                padding: '0.8rem 1rem',
                 fontSize: '1rem',
                 borderRadius: '8px',
                 border: '1px solid #ccc',
@@ -135,7 +146,7 @@ export default function Home() {
                 backgroundColor: '#FF7043',
                 color: 'white',
                 fontWeight: 'bold',
-                padding: '0.75rem 1rem',
+                padding: '0.8rem 1rem',
                 borderRadius: '8px',
                 cursor: 'pointer',
                 border: 'none',
@@ -154,7 +165,7 @@ export default function Home() {
               style={{
                 marginTop: '1rem',
                 color: statusMessage.type === 'success' ? '#4ade80' : '#f87171',
-                fontSize: '0.875rem',
+                fontSize: '0.9rem',
               }}
             >
               {statusMessage.text}
