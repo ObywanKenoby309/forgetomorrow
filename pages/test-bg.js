@@ -12,6 +12,9 @@ export default function TestBG() {
         justifyContent: 'center',
         alignItems: 'center',
         fontSize: '2rem',
+        position: 'relative',
+        zIndex: 9999,
+        backgroundColor: 'transparent',
       }}
     >
       Background Test
