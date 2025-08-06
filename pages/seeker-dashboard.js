@@ -1,3 +1,4 @@
+// pages/seeker-dashboard.js
 import React from 'react';
 import Link from 'next/link';
 import ProfileMetrics from '../components/ProfileMetrics';
@@ -11,6 +12,7 @@ export default function SeekerDashboard() {
         gridTemplateColumns: '350px 1fr',
         gap: '20px',
         padding: '20px',
+        paddingTop: '100px', // ✅ Pushes below fixed header
         minHeight: '100vh',
         backgroundColor: '#ECEFF1',
       }}
