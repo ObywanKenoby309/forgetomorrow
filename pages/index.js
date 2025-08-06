@@ -23,7 +23,7 @@ export default function Home() {
 
       const result = await emailjs.send(
         'service_quxmizv',
-        'forgetomorrow',
+        'template_bnf88bh', // ✅ Updated Template ID here
         {
           user_email: email,
           email: email,
@@ -120,3 +120,4 @@ export default function Home() {
     </>
   );
 }
+
