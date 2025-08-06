@@ -26,9 +26,11 @@ export default function Home() {
         'forgetomorrow',
         {
           user_email: email,
+          email: email,
           message: 'Waitlist request from site form',
         }
       );
+
       console.log('EmailJS success:', result.text);
       setStatusMessage({
         type: 'success',
