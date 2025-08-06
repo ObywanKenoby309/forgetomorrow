@@ -11,25 +11,32 @@ export default function App({ Component, pageProps }) {
   const router = useRouter();
 
   const isLandingPage = ['/', '/signup', '/features', '/login', '/about'].includes(router.pathname);
+  const useForgeBackground = ['/', '/about'].includes(router.pathname); // ✅ New line
 
   return (
     <div className="relative min-h-screen">
-      {/* 🔳 Background Image Layer */}
-      <div
-        className="fixed inset-0 z-0"
-        style={{
-          backgroundImage: "url('/images/forge-bg-bw.png')",
-          backgroundSize: 'cover',
-          backgroundPosition: 'center',
-          backgroundAttachment: 'fixed',
-        }}
-      />
-
-      {/* 🖤 Dark Overlay */}
-      <div className="fixed inset-0 bg-black opacity-80 z-0" />
+      {/* 🔳 Background Image Layer - only for / and /about */}
+      {useForgeBackground && (
+        <>
+          <div
+            className="fixed inset-0 z-0"
+            style={{
+              backgroundImage: "url('/images/forge-bg-bw.png')",
+              backgroundSize: 'cover',
+              backgroundPosition: 'center',
+              backgroundAttachment: 'fixed',
+            }}
+          />
+          <div className="fixed inset-0 bg-black opacity-80 z-0" />
+        </>
+      )}
 
       {/* 🔝 Main Page Content */}
-      <div className="relative z-10 min-h-screen flex flex-col justify-between">
+      <div
+        className={`relative z-10 min-h-screen flex flex-col justify-between ${
+          !useForgeBackground ? 'bg-[#ECEFF1]' : ''
+        }`}
+      >
         {isLandingPage ? <LandingHeader /> : <Header />}
         <Component {...pageProps} />
         {isLandingPage ? <LandingFooter /> : <Footer />}
@@ -37,3 +44,4 @@ export default function App({ Component, pageProps }) {
     </div>
   );
 }
+
