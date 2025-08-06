@@ -1,11 +1,25 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import Head from 'next/head';
-import Script from 'next/script';
 
 export default function Home() {
   const [email, setEmail] = useState('');
   const [statusMessage, setStatusMessage] = useState(null);
   const [isSending, setIsSending] = useState(false);
+
+  useEffect(() => {
+    const loadEmailJS = async () => {
+      if (typeof window !== 'undefined') {
+        const script = document.createElement('script');
+        script.src = 'https://cdn.emailjs.com/sdk/3.2/email.min.js';
+        script.onload = () => {
+          window.emailjs.init('YyYidv88o9X7iKfYJ');
+        };
+        document.body.appendChild(script);
+      }
+    };
+
+    loadEmailJS();
+  }, []);
 
   const sendWaitlistEmail = async (e) => {
     e.preventDefault();
@@ -50,14 +64,6 @@ export default function Home() {
           content="Empowering job seekers with tools, community, and opportunity."
         />
       </Head>
-
-      <Script
-        src="https://cdn.emailjs.com/sdk/3.2/email.min.js"
-        strategy="beforeInteractive"
-        onLoad={() => {
-          window.emailjs.init('YyYidv88o9X7iKfYJ');
-        }}
-      />
 
       <main
         role="main"
