@@ -19,7 +19,9 @@ export default function About() {
           text-gray-200 font-sans
         "
       >
-        <h1 className="text-4xl text-center text-yellow-500 mb-8">About ForgeTomorrow</h1>
+        <h1 className="text-5xl sm:text-6xl font-extrabold mb-6 tracking-wide text-[#FF7043] drop-shadow-[0_0_10px_rgba(255,112,67,0.9)] text-center">
+          About Forge Tomorrow
+        </h1>
 
         <p className="max-w-2xl mb-6 text-lg leading-relaxed text-center">
           ForgeTomorrow started because we were tired of the gatekeeping and poor support from other famous sites.
