@@ -11,11 +11,11 @@ export default function App({ Component, pageProps }) {
   const router = useRouter();
 
   const isLandingPage = ['/', '/signup', '/features', '/login', '/about'].includes(router.pathname);
-  const useForgeBackground = ['/', '/about'].includes(router.pathname); // ✅ New line
+  const useForgeBackground = ['/', '/about', '/features'].includes(router.pathname); // ✅ Features now included
 
   return (
     <div className="relative min-h-screen">
-      {/* 🔳 Background Image Layer - only for / and /about */}
+      {/* 🔳 Background Image Layer - only for /, /about, and /features */}
       {useForgeBackground && (
         <>
           <div
@@ -44,4 +44,5 @@ export default function App({ Component, pageProps }) {
     </div>
   );
 }
+
 
