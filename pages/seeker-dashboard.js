@@ -11,8 +11,7 @@ export default function SeekerDashboard() {
         display: 'grid',
         gridTemplateColumns: '350px 1fr',
         gap: '20px',
-        padding: '20px',
-        paddingTop: '100px', // ✅ Pushes below fixed header
+        padding: '120px 20px 20px', // added top padding for spacing below header
         minHeight: '100vh',
         backgroundColor: '#ECEFF1',
       }}
@@ -47,16 +46,16 @@ export default function SeekerDashboard() {
           <Link href="/jobs" legacyBehavior>
             <button
               className="block bg-[#FF7043] hover:bg-[#F4511E] text-white px-4 py-2 rounded font-bold w-full transition-colors"
-              aria-label="Explore Job Listings"
+              aria-label="Open The Pipeline"
             >
-              Explore Job Listings
+              Open The Pipeline
             </button>
           </Link>
         </div>
 
         <div>
           <h3 className="text-[#FF7043] mb-2">Career Growth</h3>
-          <Link href="/hearth" legacyBehavior>
+          <Link href="/the-hearth" legacyBehavior>
             <button
               className="block bg-[#FF7043] hover:bg-[#F4511E] text-white px-4 py-2 rounded font-bold w-full transition-colors"
               aria-label="Visit Your Hearth for Mentors and Resources"
