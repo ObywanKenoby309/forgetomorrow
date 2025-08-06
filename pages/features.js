@@ -1,21 +1,7 @@
 // pages/features.js
 import Head from 'next/head';
-import FeaturesList from '../components/FeaturesList';
-import LandingHeader from '../components/LandingHeader';
-import LandingFooter from '../components/LandingFooter';
 
 export default function Features() {
-  const features = [
-    'Human-centered networking: Prioritizing real connections over algorithms.',
-    'AI-powered job search: Tailored recommendations and assistance with integrity.',
-    'Real job boards: Verified listings without spam or bots.',
-    'Flexible membership plans: Options for seekers, freelancers, recruiters, and small businesses.',
-    'Dedicated human support: Real tech support that shows up when you need it.',
-    'Secure messaging: Connect instantly with your network through private chats.',
-    'Transparency and fairness: No gatekeeping or hidden costs.',
-    'Mobile-friendly design: Access ForgeTomorrow anywhere, anytime.',
-  ];
-
   return (
     <>
       <Head>
@@ -23,21 +9,48 @@ export default function Features() {
         <link rel="icon" href="/favicon.ico" />
       </Head>
 
-      <LandingHeader />
-
       <main
         role="main"
-        aria-label="Features of ForgeTomorrow"
-        className="max-w-3xl mx-auto p-6 space-y-8 min-h-[80vh] bg-[#1a1a1a] text-[#f5f5f5] rounded-lg shadow my-20 sm:my-24"
+        className="
+          flex flex-col items-center justify-start
+          min-h-[calc(100vh-100px)]
+          px-6 py-16 max-w-4xl mx-auto
+          bg-gradient-to-b from-[#1a1a1a] to-black
+          text-gray-200 font-sans
+        "
       >
-        <section>
-          <h1 className="text-4xl font-bold text-[#ff9900] text-center mb-6">Features</h1>
-          <h2 className="text-2xl font-semibold text-[#ff9900] text-center mb-4">Empowering Everyone</h2>
-          <FeaturesList features={features} />
-        </section>
-      </main>
+        <h1 className="text-5xl sm:text-6xl mb-6 tracking-wide text-[#FF7043] drop-shadow-[0_0_10px_rgba(255,112,67,0.9)] text-center">
+          Platform Features
+        </h1>
 
-      <LandingFooter />
+        <ul className="max-w-2xl space-y-6 text-lg leading-relaxed text-center list-disc list-inside">
+          <li>
+            Human-centered networking — prioritizing real connections over algorithms.
+          </li>
+          <li>
+            AI-powered job search — tailored recommendations and assistance with integrity.
+          </li>
+          <li>
+            Real job boards — verified listings without spam or bots.
+          </li>
+          <li>
+            Flexible membership plans — options for seekers, freelancers, recruiters, and small businesses.
+          </li>
+          <li>
+            Dedicated human support — real tech support that shows up when you need it.
+          </li>
+          <li>
+            Secure messaging — connect instantly with your network through private chats.
+          </li>
+          <li>
+            Transparency and fairness — no gatekeeping or hidden costs.
+          </li>
+          <li>
+            Mobile-friendly design — access ForgeTomorrow anywhere, anytime.
+          </li>
+        </ul>
+      </main>
     </>
   );
 }
+
