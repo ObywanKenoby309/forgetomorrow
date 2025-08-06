@@ -1,5 +1,10 @@
 /* styles/globals.css */
 
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* Optional: retain your custom styles */
 html,
 body,
 #__next {
@@ -8,5 +13,3 @@ body,
   padding: 0;
   background: transparent;
 }
-
-/* You can keep any other global styles here */
