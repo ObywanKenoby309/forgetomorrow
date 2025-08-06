@@ -19,7 +19,7 @@ export default function About() {
           text-gray-200 font-sans
         "
       >
-        <h1 className="text-5xl sm:text-6xl font-extrabold mb-6 tracking-wide text-[#FF7043] drop-shadow-[0_0_10px_rgba(255,112,67,0.9)] text-center">
+        <h1 className="text-5xl sm:text-6xl mb-6 tracking-wide text-[#FF7043] drop-shadow-[0_0_10px_rgba(255,112,67,0.9)] text-center">
           About Forge Tomorrow
         </h1>
 
