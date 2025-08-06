@@ -3,9 +3,9 @@ import React from 'react';
 
 export default function FeaturesList({ features = [] }) {
   return (
-    <ul className="max-w-xl mx-auto list-disc list-inside space-y-4 text-lg leading-relaxed">
+    <ul className="max-w-2xl mx-auto space-y-6 text-lg leading-relaxed text-center text-gray-200">
       {features.map((feature, index) => (
-        <li key={index} className="text-[#ff4500] font-semibold">
+        <li key={index}>
           {feature}
         </li>
       ))}
