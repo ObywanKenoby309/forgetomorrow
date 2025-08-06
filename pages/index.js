@@ -24,7 +24,10 @@ export default function Home() {
       const result = await emailjs.send(
         'service_quxmizv',
         'forgetomorrow',
-        { user_email: email }
+        {
+          user_email: email,
+          message: 'Waitlist request from site form',
+        }
       );
       console.log('EmailJS success:', result.text);
       setStatusMessage({
@@ -115,4 +118,3 @@ export default function Home() {
     </>
   );
 }
-
