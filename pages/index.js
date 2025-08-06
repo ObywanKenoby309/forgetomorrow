@@ -18,7 +18,12 @@ export default function Home() {
     setStatusMessage(null);
 
     try {
-      await window.emailjs.send('service_quxmizv', 'forgetomorrow', { user_email: email });
+      const result = await window.emailjs.send(
+        'service_quxmizv',
+        'forgetomorrow',
+        { user_email: email }
+      );
+      console.log('EmailJS success:', result.text);
       setStatusMessage({
         type: 'success',
         text: `Success! You're added. We don't like ghosts. We will always respond and provide transparency.`,
