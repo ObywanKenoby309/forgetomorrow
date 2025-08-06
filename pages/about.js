@@ -15,7 +15,6 @@ export default function About() {
           flex flex-col items-center justify-start
           min-h-[calc(100vh-100px)]
           px-6 py-16 max-w-4xl mx-auto
-          bg-gradient-to-b from-[#1a1a1a] to-black
           text-gray-200 font-sans
         "
       >
