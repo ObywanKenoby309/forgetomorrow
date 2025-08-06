@@ -9,7 +9,8 @@ import LandingFooter from '../components/LandingFooter';
 
 export default function App({ Component, pageProps }) {
   const router = useRouter();
-  const isLandingPage = ['/', '/signup', '/features'].includes(router.pathname);
+
+  const isLandingPage = ['/', '/signup', '/features', '/login', '/about'].includes(router.pathname);
 
   return (
     <div className="relative min-h-screen">
@@ -23,7 +24,7 @@ export default function App({ Component, pageProps }) {
           backgroundAttachment: 'fixed',
         }}
       />
-      
+
       {/* 🖤 Dark Overlay */}
       <div className="fixed inset-0 bg-black opacity-80 z-0" />
 
