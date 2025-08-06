@@ -12,20 +12,27 @@ export default function App({ Component, pageProps }) {
   const isLandingPage = ['/', '/signup', '/features'].includes(router.pathname);
 
   return (
-    <div
-      className="relative min-h-screen"
-      style={{
-        backgroundImage: "url('/images/forge-bg-bw.png')",
-        backgroundSize: 'cover',
-        backgroundPosition: 'center',
-        backgroundAttachment: 'fixed',
-      }}
-    >
-      {isLandingPage ? <LandingHeader /> : <Header />}
+    <div className="relative min-h-screen">
+      {/* Background image */}
+      <div
+        className="fixed inset-0 z-0"
+        style={{
+          backgroundImage: "url('/images/forge-bg-bw.png')",
+          backgroundSize: 'cover',
+          backgroundPosition: 'center',
+          backgroundAttachment: 'fixed',
+        }}
+      />
+      
+      {/* Dark overlay */}
+      <div className="fixed inset-0 bg-black opacity-70 z-0" />
 
-      <Component {...pageProps} />
-
-      {isLandingPage ? <LandingFooter /> : <Footer />}
+      {/* Page content */}
+      <div className="relative z-10 min-h-screen flex flex-col justify-between">
+        {isLandingPage ? <LandingHeader /> : <Header />}
+        <Component {...pageProps} />
+        {isLandingPage ? <LandingFooter /> : <Footer />}
+      </div>
     </div>
   );
 }
