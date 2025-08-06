@@ -57,7 +57,7 @@ export default function Home() {
       <main
         role="main"
         aria-label="About ForgeTomorrow"
-        className="relative z-10 max-w-4xl mx-auto px-6 py-20 text-center text-gray-100 bg-black bg-opacity-40 rounded-xl shadow-lg backdrop-blur-md"
+        className="relative z-10 max-w-4xl mx-auto px-6 py-20 text-center text-gray-100 bg-black bg-opacity-20 rounded-xl shadow-lg backdrop-blur-md"
       >
         <h1 className="text-5xl sm:text-6xl font-extrabold mb-6 tracking-wide text-[#FF7043] drop-shadow-[0_0_10px_rgba(255,112,67,0.9)]">
           Forge Tomorrow
