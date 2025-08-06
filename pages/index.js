@@ -1,30 +1,11 @@
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import Head from 'next/head';
+import emailjs from '@emailjs/browser';
 
 export default function Home() {
   const [email, setEmail] = useState('');
   const [statusMessage, setStatusMessage] = useState(null);
   const [isSending, setIsSending] = useState(false);
-  const [emailjsReady, setEmailjsReady] = useState(false);
-
-  // Dynamically load EmailJS client-side
-  useEffect(() => {
-    const loadEmailJS = () => {
-      if (typeof window !== 'undefined' && !window.emailjs) {
-        const script = document.createElement('script');
-        script.src = 'https://cdn.emailjs.com/sdk/3.2/email.min.js';
-        script.onload = () => {
-          window.emailjs.init('YyYidv88o9X7iKfYJ');
-          setEmailjsReady(true);
-        };
-        document.body.appendChild(script);
-      } else if (window.emailjs) {
-        setEmailjsReady(true);
-      }
-    };
-
-    loadEmailJS();
-  }, []);
 
   const sendWaitlistEmail = async (e) => {
     e.preventDefault();
@@ -34,19 +15,13 @@ export default function Home() {
       return;
     }
 
-    if (!emailjsReady) {
-      setStatusMessage({
-        type: 'error',
-        text: 'Email service is still loading. Please wait a moment and try again.',
-      });
-      return;
-    }
-
     setIsSending(true);
     setStatusMessage(null);
 
     try {
-      const result = await window.emailjs.send(
+      emailjs.init('YyYidv88o9X7iKfYJ');
+
+      const result = await emailjs.send(
         'service_quxmizv',
         'forgetomorrow',
         { user_email: email }
@@ -140,3 +115,4 @@ export default function Home() {
     </>
   );
 }
+
