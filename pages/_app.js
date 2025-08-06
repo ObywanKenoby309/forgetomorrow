@@ -13,7 +13,7 @@ export default function App({ Component, pageProps }) {
 
   return (
     <div className="relative min-h-screen">
-      {/* Background image */}
+      {/* 🔳 Background Image Layer */}
       <div
         className="fixed inset-0 z-0"
         style={{
@@ -24,10 +24,10 @@ export default function App({ Component, pageProps }) {
         }}
       />
       
-      {/* Dark overlay */}
-      <div className="fixed inset-0 bg-black opacity-70 z-0" />
+      {/* 🖤 Dark Overlay */}
+      <div className="fixed inset-0 bg-black opacity-80 z-0" />
 
-      {/* Page content */}
+      {/* 🔝 Main Page Content */}
       <div className="relative z-10 min-h-screen flex flex-col justify-between">
         {isLandingPage ? <LandingHeader /> : <Header />}
         <Component {...pageProps} />
