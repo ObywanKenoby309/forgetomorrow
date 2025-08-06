@@ -13,7 +13,7 @@ export default function SeekerSidebar() {
         flexDirection: 'column',
         justifyContent: 'center',
         gap: '32px',
-        minHeight: '80vh',
+        height: 'fit-content', // ✅ changed from minHeight to fit content
         width: '300px',
       }}
     >
