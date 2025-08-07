@@ -1,5 +1,9 @@
 import Head from 'next/head';
 import { useState } from 'react';
+import jsPDF from 'jspdf';
+import { Document, Packer, Paragraph, TextRun } from 'docx';
+import { saveAs } from 'file-saver';
+
 import ContactInfoSection from '../../components/resume-form/ContactInfoSection';
 import ProfessionalSummarySection from '../../components/resume-form/ProfessionalSummarySection';
 import WorkExperienceSection from '../../components/resume-form/WorkExperienceSection';
@@ -34,6 +38,64 @@ export default function CreateResumePage() {
   const [achievements, setAchievements] = useState([]);
   const [customSections, setCustomSections] = useState([]);
   const [selectedTemplate, setSelectedTemplate] = useState('basic');
+
+  // Export PDF handler
+  const exportPDF = () => {
+    const doc = new jsPDF();
+
+    doc.text(formData.fullName || 'Your Name', 10, 10);
+    doc.text(formData.email || '', 10, 20);
+    doc.text(formData.phone || '', 10, 30);
+    doc.text(formData.location || '', 10, 40);
+
+    // For brevity, extend with more data as needed
+
+    doc.save('resume.pdf');
+  };
+
+  // Export Word handler
+  const exportWord = async () => {
+    const doc = new Document({
+      sections: [{
+        children: [
+          new Paragraph({
+            children: [
+              new TextRun({
+                text: formData.fullName || 'Your Name',
+                bold: true,
+                size: 32,
+              }),
+            ],
+          }),
+          new Paragraph(formData.email || ''),
+          new Paragraph(formData.phone || ''),
+          new Paragraph(formData.location || ''),
+          // Add more content here as desired
+        ],
+      }],
+    });
+
+    const blob = await Packer.toBlob(doc);
+    saveAs(blob, 'resume.docx');
+  };
+
+  // Export plain text handler
+  const exportPlainText = () => {
+    let text = `${formData.fullName || 'Your Name'}\n`;
+    text += `${formData.email || ''}\n`;
+    text += `${formData.phone || ''}\n`;
+    text += `${formData.location || ''}\n\n`;
+    text += `Professional Summary:\n${summary}\n`;
+    // Append other sections as plain text if needed
+
+    const element = document.createElement('a');
+    const file = new Blob([text], { type: 'text/plain' });
+    element.href = URL.createObjectURL(file);
+    element.download = 'resume.txt';
+    document.body.appendChild(element);
+    element.click();
+    document.body.removeChild(element);
+  };
 
   return (
     <>
@@ -70,7 +132,6 @@ export default function CreateResumePage() {
                 className="border border-gray-300 rounded p-2 w-full"
               >
                 <option value="basic">Basic (ATS Friendly)</option>
-                {/* Additional templates can be added here */}
               </select>
             </div>
 
@@ -91,8 +152,8 @@ export default function CreateResumePage() {
           </section>
 
           {/* Right Column – Live Resume Preview */}
-          <aside className="md:col-span-2 overflow-auto max-h-[80vh]">
-            <div className="bg-white rounded-lg shadow p-4">
+          <aside className="md:col-span-2 overflow-auto max-h-[80vh] flex flex-col">
+            <div className="bg-white rounded-lg shadow p-4 flex-grow">
               <h2 className="text-lg font-semibold text-[#FF7043] mb-2">Live Preview</h2>
               {selectedTemplate === 'basic' && (
                 <BasicResumeTemplate
@@ -109,7 +170,28 @@ export default function CreateResumePage() {
                   customSections={customSections}
                 />
               )}
-              {/* Add more templates preview conditional rendering here if needed */}
+            </div>
+
+            {/* Export Buttons */}
+            <div className="mt-4 flex gap-4 justify-center">
+              <button
+                onClick={exportPDF}
+                className="bg-[#FF7043] hover:bg-[#F4511E] text-white py-2 px-4 rounded"
+              >
+                Export PDF
+              </button>
+              <button
+                onClick={exportWord}
+                className="bg-[#FF7043] hover:bg-[#F4511E] text-white py-2 px-4 rounded"
+              >
+                Export Word
+              </button>
+              <button
+                onClick={exportPlainText}
+                className="bg-[#FF7043] hover:bg-[#F4511E] text-white py-2 px-4 rounded"
+              >
+                Export Text
+              </button>
             </div>
           </aside>
         </div>
