@@ -2,30 +2,35 @@
 import React from 'react';
 import { Document, Page, Text, View, StyleSheet } from '@react-pdf/renderer';
 
-// Neutral, ATS-safe styling (Helvetica built-in)
+// Neutral, ATS-safe styling
 const styles = StyleSheet.create({
   page: {
-    padding: 40,
+    paddingTop: 36,
+    paddingBottom: 36,
+    paddingHorizontal: 44,
     fontSize: 10,
     fontFamily: 'Helvetica',
-    lineHeight: 1.4,
-    color: '#222222',
+    lineHeight: 1.35,
+    color: '#222',
   },
-  block: { marginBottom: 12 },
-  name: { fontSize: 16, fontWeight: 'bold' },
+
+  // Header
+  headerBlock: { marginBottom: 10 },
+  name: { fontSize: 18, fontWeight: 'bold' },
   title: { fontSize: 11, fontWeight: 'bold', marginTop: 2 },
-  contact: { fontSize: 9, color: '#444', marginTop: 4 },
-  sectionTitle: {
-    fontSize: 11,
-    fontWeight: 'bold',
-    marginTop: 10,
-    marginBottom: 6,
-    color: '#333',
-  },
-  line: { marginBottom: 4 },
-  meta: { fontSize: 9, color: '#555' },
+  contact: { fontSize: 9, color: '#444', marginTop: 6 },
+
+  // Sectioning
+  rule: { height: 1, backgroundColor: '#DADADA', marginVertical: 12 },
+  section: { marginTop: 8, marginBottom: 8 },
+  sectionTitle: { fontSize: 11, fontWeight: 'bold', marginBottom: 6, color: '#333' },
+
+  // Content
+  headline: { fontWeight: 'bold' },
+  meta: { fontSize: 9, color: '#555', marginTop: 1, marginBottom: 2 },
   itemBlock: { marginBottom: 8 },
-  bulletLine: { marginLeft: 10, marginBottom: 2 },
+  line: { marginBottom: 3 },
+  bullet: { marginLeft: 10, marginBottom: 2 },
 });
 
 const safe = (v) => (v == null ? '' : String(v).trim());
@@ -50,80 +55,82 @@ export default function StyledResumePDF({
   achievements = [],
   customSections = [],
 }) {
-  const contactLine = joinBar(safe(formData.email), safe(formData.phone), safe(formData.portfolio));
+  const contactLine = joinBar(
+    safe(formData.location),
+    safe(formData.email),
+    safe(formData.phone),
+    safe(formData.portfolio)
+  );
 
   return (
     <Document>
       <Page size="A4" style={styles.page}>
-        {/* Header */}
-        <View style={styles.block}>
+        {/* ===== HEADER ===== */}
+        <View style={styles.headerBlock}>
           <Text style={styles.name}>{safe(formData.fullName) || 'Your Name'}</Text>
-          {safe(formData.location) ? <Text style={styles.meta}>{safe(formData.location)}</Text> : null}
-          {contactLine ? <Text style={styles.contact}>{contactLine}</Text> : null}
-          {/* Optional role line if you add it later */}
           {safe(formData.role) ? <Text style={styles.title}>{safe(formData.role)}</Text> : null}
+          {contactLine ? <Text style={styles.contact}>{contactLine}</Text> : null}
         </View>
+        <View style={styles.rule} />
 
-        {/* Summary */}
+        {/* ===== SUMMARY ===== */}
         {safe(summary) ? (
-          <View style={styles.block}>
+          <View style={styles.section}>
             <Text style={styles.sectionTitle}>Career Summary</Text>
             {splitLines(summary).map((l, i) => (
               <Text key={i} style={styles.line}>{l}</Text>
             ))}
           </View>
         ) : null}
+        <View style={styles.rule} />
 
-        {/* Experience */}
+        {/* ===== EXPERIENCE ===== */}
         {Array.isArray(experiences) && experiences.length > 0 ? (
-          <View style={styles.block}>
+          <View style={styles.section}>
             <Text style={styles.sectionTitle}>Professional Experience</Text>
             {experiences.map((exp, i) => {
-              const headline = [
-                safe(exp?.jobTitle),
-                safe(exp?.company) ? `, ${safe(exp?.company)}` : '',
-              ].join('');
-              const meta = joinBar(
-                safe(exp?.location),
-                joinDash(exp?.startDate, exp?.endDate)
-              );
+              const headline = [safe(exp?.jobTitle), safe(exp?.company) && `, ${safe(exp?.company)}`]
+                .filter(Boolean)
+                .join('');
+              const meta = joinBar(safe(exp?.location), joinDash(exp?.startDate, exp?.endDate));
               const bullets = splitLines(exp?.description);
 
               return (
                 <View key={i} style={styles.itemBlock}>
-                  <Text style={{ fontWeight: 'bold' }}>{headline || 'Job Title, Company'}</Text>
+                  <Text style={styles.headline}>{headline || 'Job Title, Company'}</Text>
                   {meta ? <Text style={styles.meta}>{meta}</Text> : null}
                   {bullets.map((b, idx) => (
-                    <Text key={idx} style={styles.bulletLine}>- {b}</Text> // hyphen bullets for ATS
+                    <Text key={idx} style={styles.bullet}>- {b}</Text>
                   ))}
                 </View>
               );
             })}
           </View>
         ) : null}
+        <View style={styles.rule} />
 
-        {/* Projects */}
+        {/* ===== PROJECTS ===== */}
         {Array.isArray(projects) && projects.length > 0 ? (
-          <View style={styles.block}>
+          <View style={styles.section}>
             <Text style={styles.sectionTitle}>Projects</Text>
             {projects.map((p, i) => (
               <View key={i} style={styles.itemBlock}>
-                <Text style={{ fontWeight: 'bold' }}>{safe(p?.title) || 'Project Title'}</Text>
+                <Text style={styles.headline}>{safe(p?.title) || 'Project Title'}</Text>
                 {safe(p?.description) ? <Text style={styles.line}>{safe(p?.description)}</Text> : null}
               </View>
             ))}
           </View>
         ) : null}
+        <View style={styles.rule} />
 
-        {/* Volunteer */}
+        {/* ===== VOLUNTEER ===== */}
         {Array.isArray(volunteerExperiences) && volunteerExperiences.length > 0 ? (
-          <View style={styles.block}>
+          <View style={styles.section}>
             <Text style={styles.sectionTitle}>Volunteer Experience</Text>
             {volunteerExperiences.map((v, i) => (
               <View key={i} style={styles.itemBlock}>
-                <Text style={{ fontWeight: 'bold' }}>
-                  {safe(v?.role) || 'Role'}
-                  {safe(v?.organization) ? `, ${safe(v?.organization)}` : ''}
+                <Text style={styles.headline}>
+                  {safe(v?.role) || 'Role'}{safe(v?.organization) ? `, ${safe(v?.organization)}` : ''}
                 </Text>
                 <Text style={styles.meta}>{joinDash(v?.startDate, v?.endDate)}</Text>
                 {safe(v?.description) ? <Text style={styles.line}>{safe(v?.description)}</Text> : null}
@@ -131,14 +138,15 @@ export default function StyledResumePDF({
             ))}
           </View>
         ) : null}
+        <View style={styles.rule} />
 
-        {/* Education */}
+        {/* ===== EDUCATION ===== */}
         {Array.isArray(educationList) && educationList.length > 0 ? (
-          <View style={styles.block}>
+          <View style={styles.section}>
             <Text style={styles.sectionTitle}>Education</Text>
             {educationList.map((e, i) => (
               <View key={i} style={styles.itemBlock}>
-                <Text style={{ fontWeight: 'bold' }}>
+                <Text style={styles.headline}>
                   {[safe(e?.degree), safe(e?.school)].filter(Boolean).join(', ') || 'Degree, School'}
                 </Text>
                 <Text style={styles.meta}>{joinDash(e?.startDate, e?.endDate)}</Text>
@@ -147,10 +155,11 @@ export default function StyledResumePDF({
             ))}
           </View>
         ) : null}
+        <View style={styles.rule} />
 
-        {/* Certifications */}
+        {/* ===== CERTS ===== */}
         {Array.isArray(certifications) && certifications.length > 0 ? (
-          <View style={styles.block}>
+          <View style={styles.section}>
             <Text style={styles.sectionTitle}>Certifications & Training</Text>
             {certifications.map((c, i) => (
               <Text key={i} style={styles.line}>
@@ -162,10 +171,11 @@ export default function StyledResumePDF({
             ))}
           </View>
         ) : null}
+        <View style={styles.rule} />
 
-        {/* Languages */}
+        {/* ===== LANGUAGES ===== */}
         {Array.isArray(languages) && languages.length > 0 ? (
-          <View style={styles.block}>
+          <View style={styles.section}>
             <Text style={styles.sectionTitle}>Languages</Text>
             {languages.map((l, i) => (
               <Text key={i} style={styles.line}>
@@ -176,38 +186,43 @@ export default function StyledResumePDF({
             ))}
           </View>
         ) : null}
+        <View style={styles.rule} />
 
-        {/* Skills */}
+        {/* ===== SKILLS ===== */}
         {Array.isArray(skills) && skills.length > 0 ? (
-          <View style={styles.block}>
+          <View style={styles.section}>
             <Text style={styles.sectionTitle}>Skills</Text>
             <Text style={styles.line}>{skills.map(safe).filter(Boolean).join(', ')}</Text>
           </View>
         ) : null}
+        <View style={styles.rule} />
 
-        {/* Achievements */}
+        {/* ===== ACHIEVEMENTS ===== */}
         {Array.isArray(achievements) && achievements.length > 0 ? (
-          <View style={styles.block}>
+          <View style={styles.section}>
             <Text style={styles.sectionTitle}>Achievements & Awards</Text>
             {achievements.map((a, i) => (
               <View key={i} style={styles.itemBlock}>
-                <Text style={{ fontWeight: 'bold' }}>{safe(a?.title) || 'Title'}</Text>
+                <Text style={styles.headline}>{safe(a?.title) || 'Title'}</Text>
                 {safe(a?.description) ? <Text style={styles.line}>{safe(a?.description)}</Text> : null}
               </View>
             ))}
           </View>
         ) : null}
 
-        {/* Custom Sections */}
+        {/* ===== CUSTOM ===== */}
         {Array.isArray(customSections) && customSections.length > 0 ? (
-          <View style={styles.block}>
-            {customSections.map((s, i) => (
-              <View key={i} style={styles.itemBlock}>
-                <Text style={styles.sectionTitle}>{safe(s?.title) || 'Custom Section'}</Text>
-                {safe(s?.content) ? <Text style={styles.line}>{safe(s?.content)}</Text> : null}
-              </View>
-            ))}
-          </View>
+          <>
+            <View style={styles.rule} />
+            <View style={styles.section}>
+              {customSections.map((s, i) => (
+                <View key={i} style={styles.itemBlock}>
+                  <Text style={styles.sectionTitle}>{safe(s?.title) || 'Custom Section'}</Text>
+                  {safe(s?.content) ? <Text style={styles.line}>{safe(s?.content)}</Text> : null}
+                </View>
+              ))}
+            </View>
+          </>
         ) : null}
       </Page>
     </Document>
