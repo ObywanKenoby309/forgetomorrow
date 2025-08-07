@@ -1,9 +1,9 @@
-// pages/resume/create.js
 import Head from 'next/head';
 import { useState } from 'react';
 import ContactInfoSection from '../../components/resume-form/ContactInfoSection';
 import ProfessionalSummarySection from '../../components/resume-form/ProfessionalSummarySection';
 import WorkExperienceSection from '../../components/resume-form/WorkExperienceSection';
+import ProjectsSection from '../../components/resume-form/ProjectsSection'; // NEW import
 
 export default function CreateResumePage() {
   const [formData, setFormData] = useState({
@@ -16,7 +16,8 @@ export default function CreateResumePage() {
   });
 
   const [summary, setSummary] = useState('');
-  const [experiences, setExperiences] = useState([]); // renamed from experienceList
+  const [experiences, setExperiences] = useState([]);
+  const [projects, setProjects] = useState([]); // NEW state
 
   return (
     <>
@@ -52,6 +53,7 @@ export default function CreateResumePage() {
             <ContactInfoSection formData={formData} setFormData={setFormData} />
             <ProfessionalSummarySection summary={summary} setSummary={setSummary} />
             <WorkExperienceSection experiences={experiences} setExperiences={setExperiences} />
+            <ProjectsSection projects={projects} setProjects={setProjects} /> {/* NEW */}
           </section>
 
           {/* Right Column – Live Resume Preview Placeholder */}
