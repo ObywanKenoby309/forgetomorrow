@@ -7,9 +7,10 @@ import ProjectsSection from '../../components/resume-form/ProjectsSection';
 import VolunteerExperienceSection from '../../components/resume-form/VolunteerExperienceSection';
 import EducationSection from '../../components/resume-form/EducationSection';
 import CertificationsSection from '../../components/resume-form/CertificationsSection';
+import LanguagesSection from '../../components/resume-form/LanguagesSection'; // NEW import
 import SkillsSection from '../../components/resume-form/SkillsSection';
 import AchievementsSection from '../../components/resume-form/AchievementsSection';
-import CustomSection from '../../components/resume-form/CustomSection'; // NEW import
+import CustomSection from '../../components/resume-form/CustomSection';
 
 export default function CreateResumePage() {
   const [formData, setFormData] = useState({
@@ -27,9 +28,10 @@ export default function CreateResumePage() {
   const [volunteerExperiences, setVolunteerExperiences] = useState([]);
   const [educationList, setEducationList] = useState([]);
   const [certifications, setCertifications] = useState([]);
+  const [languages, setLanguages] = useState([]); // NEW state
   const [skills, setSkills] = useState([]);
   const [achievements, setAchievements] = useState([]);
-  const [customSections, setCustomSections] = useState([]); // NEW state
+  const [customSections, setCustomSections] = useState([]);
 
   return (
     <>
@@ -72,9 +74,10 @@ export default function CreateResumePage() {
             />
             <EducationSection educationList={educationList} setEducationList={setEducationList} />
             <CertificationsSection certifications={certifications} setCertifications={setCertifications} />
+            <LanguagesSection languages={languages} setLanguages={setLanguages} /> {/* NEW */}
             <SkillsSection skills={skills} setSkills={setSkills} />
             <AchievementsSection achievements={achievements} setAchievements={setAchievements} />
-            <CustomSection customSections={customSections} setCustomSections={setCustomSections} /> {/* NEW */}
+            <CustomSection customSections={customSections} setCustomSections={setCustomSections} />
           </section>
 
           {/* Right Column – Live Resume Preview Placeholder */}
