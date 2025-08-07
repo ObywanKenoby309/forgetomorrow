@@ -2,6 +2,7 @@
 import Head from 'next/head';
 import { useState } from 'react';
 import ContactInfoSection from '../../components/resume-form/ContactInfoSection';
+import ProfessionalSummarySection from '../../components/resume-form/ProfessionalSummarySection';
 
 export default function CreateResumePage() {
   const [formData, setFormData] = useState({
@@ -12,6 +13,8 @@ export default function CreateResumePage() {
     portfolio: '',
     forgeUrl: 'https://forgetomorrow.com/your-profile' // this can be dynamic later
   });
+
+  const [summary, setSummary] = useState('');
 
   return (
     <>
@@ -45,6 +48,7 @@ export default function CreateResumePage() {
             </div>
 
             <ContactInfoSection formData={formData} setFormData={setFormData} />
+            <ProfessionalSummarySection summary={summary} setSummary={setSummary} />
           </section>
 
           {/* Right Column – Live Resume Preview Placeholder */}
@@ -62,3 +66,4 @@ export default function CreateResumePage() {
     </>
   );
 }
+
