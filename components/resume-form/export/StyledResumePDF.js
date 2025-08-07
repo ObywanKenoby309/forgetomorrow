@@ -15,18 +15,20 @@ const styles = StyleSheet.create({
   },
 
   // Header
-  headerBlock: { marginBottom: 10 },
+  headerBlock: { marginBottom: 16 }, // more breathing room
   name: { fontSize: 18, fontWeight: 'bold' },
   title: { fontSize: 11, fontWeight: 'bold', marginTop: 2 },
   contact: { fontSize: 9, color: '#444', marginTop: 6 },
 
-  // Sectioning
-  rule: { height: 1, backgroundColor: '#DADADA', marginVertical: 12 },
+  // Sectioning (consistent rhythm)
+  rule: { height: 1, backgroundColor: '#DADADA', marginVertical: 10 },
   section: { marginTop: 8, marginBottom: 8 },
   sectionTitle: { fontSize: 11, fontWeight: 'bold', marginBottom: 6, color: '#333' },
 
   // Content
-  headline: { fontWeight: 'bold' },
+  headline: {}, // we’ll style children pieces (title/company) individually
+  headlineTitle: { fontWeight: 'normal' },
+  headlineCompany: { fontWeight: 'bold' }, // company pops
   meta: { fontSize: 9, color: '#555', marginTop: 1, marginBottom: 2 },
   itemBlock: { marginBottom: 8 },
   line: { marginBottom: 3 },
@@ -38,13 +40,13 @@ const safe = (v) => (v == null ? '' : String(v).trim());
 const nonEmpty = (v) => safe(v).length > 0;
 const joinBar = (...vals) => vals.map(safe).filter(Boolean).join(' | ');
 
-// return "" if both are empty; otherwise "start - end" (with single dash only if both exist)
+// return "" if both are empty; otherwise "start - end" (or single when only one provided)
 const joinDash = (a, b) => {
   const start = safe(a);
   const end = safe(b);
   if (!start && !end) return '';
   if (start && end) return `${start} - ${end}`;
-  return start || end; // one-sided date
+  return start || end;
 };
 
 const splitLines = (txt) =>
@@ -116,7 +118,7 @@ export default function StyledResumePDF({
     safe(formData.portfolio)
   );
 
-  // --- build sections conditionally; we'll insert rules only between sections that render ---
+  // --- build sections conditionally; insert rules only between rendered sections ---
   const sections = [];
 
   // Summary
@@ -139,17 +141,23 @@ export default function StyledResumePDF({
       <View key="experience" style={styles.section}>
         <Text style={styles.sectionTitle}>Professional Experience</Text>
         {filledExperiences.map((exp, i) => {
-          const headline = [safe(exp?.jobTitle), nonEmpty(exp?.company) ? `, ${safe(exp?.company)}` : '']
-            .filter(Boolean)
-            .join('');
+          const title = safe(exp?.jobTitle);
+          const company = safe(exp?.company);
           const dateRange = joinDash(exp?.startDate, exp?.endDate);
           const metaPieces = [safe(exp?.location), dateRange].filter(Boolean);
           const bullets = splitLines(exp?.description);
 
           return (
             <View key={i} style={styles.itemBlock}>
-              {nonEmpty(headline) ? <Text style={styles.headline}>{headline}</Text> : null}
+              {(title || company) ? (
+                <Text style={styles.headline}>
+                  {title ? <Text style={styles.headlineTitle}>{title}</Text> : null}
+                  {company ? <Text style={styles.headlineCompany}>{title ? `, ${company}` : company}</Text> : null}
+                </Text>
+              ) : null}
+
               {metaPieces.length > 0 ? <Text style={styles.meta}>{metaPieces.join(' | ')}</Text> : null}
+
               {bullets.map((b, idx) => (
                 <Text key={idx} style={styles.bullet}>
                   - {b}
@@ -169,7 +177,7 @@ export default function StyledResumePDF({
         <Text style={styles.sectionTitle}>Projects</Text>
         {filledProjects.map((p, i) => (
           <View key={i} style={styles.itemBlock}>
-            {nonEmpty(p?.title) ? <Text style={styles.headline}>{safe(p?.title)}</Text> : null}
+            {nonEmpty(p?.title) ? <Text style={styles.headlineCompany}>{safe(p?.title)}</Text> : null}
             {nonEmpty(p?.description) ? <Text style={styles.line}>{safe(p?.description)}</Text> : null}
           </View>
         ))}
@@ -183,14 +191,18 @@ export default function StyledResumePDF({
       <View key="volunteer" style={styles.section}>
         <Text style={styles.sectionTitle}>Volunteer Experience</Text>
         {filledVol.map((v, i) => {
-          const headline = [safe(v?.role), nonEmpty(v?.organization) ? `, ${safe(v?.organization)}` : '']
-            .filter(Boolean)
-            .join('');
+          const role = safe(v?.role);
+          const org = safe(v?.organization);
           const dateRange = joinDash(v?.startDate, v?.endDate);
 
           return (
             <View key={i} style={styles.itemBlock}>
-              {nonEmpty(headline) ? <Text style={styles.headline}>{headline}</Text> : null}
+              {(role || org) ? (
+                <Text style={styles.headline}>
+                  {role ? <Text style={styles.headlineTitle}>{role}</Text> : null}
+                  {org ? <Text style={styles.headlineCompany}>{role ? `, ${org}` : org}</Text> : null}
+                </Text>
+              ) : null}
               {nonEmpty(dateRange) ? <Text style={styles.meta}>{dateRange}</Text> : null}
               {nonEmpty(v?.description) ? <Text style={styles.line}>{safe(v?.description)}</Text> : null}
             </View>
@@ -206,13 +218,18 @@ export default function StyledResumePDF({
       <View key="education" style={styles.section}>
         <Text style={styles.sectionTitle}>Education</Text>
         {filledEdu.map((e, i) => {
-          const headline =
-            [safe(e?.degree), safe(e?.school)].filter(Boolean).join(', ') || 'Degree, School';
+          const degree = safe(e?.degree);
+          const school = safe(e?.school);
           const dateRange = joinDash(e?.startDate, e?.endDate);
 
           return (
             <View key={i} style={styles.itemBlock}>
-              <Text style={styles.headline}>{headline}</Text>
+              {(degree || school) ? (
+                <Text style={styles.headline}>
+                  {degree ? <Text style={styles.headlineTitle}>{degree}</Text> : null}
+                  {school ? <Text style={styles.headlineCompany}>{degree ? `, ${school}` : school}</Text> : null}
+                </Text>
+              ) : null}
               {nonEmpty(dateRange) ? <Text style={styles.meta}>{dateRange}</Text> : null}
               {nonEmpty(e?.description) ? <Text style={styles.line}>{safe(e?.description)}</Text> : null}
             </View>
@@ -282,7 +299,7 @@ export default function StyledResumePDF({
         <Text style={styles.sectionTitle}>Achievements & Awards</Text>
         {filledAch.map((a, i) => (
           <View key={i} style={styles.itemBlock}>
-            {nonEmpty(a?.title) ? <Text style={styles.headline}>{safe(a?.title)}</Text> : null}
+            {nonEmpty(a?.title) ? <Text style={styles.headlineCompany}>{safe(a?.title)}</Text> : null}
             {nonEmpty(a?.description) ? <Text style={styles.line}>{safe(a?.description)}</Text> : null}
           </View>
         ))}

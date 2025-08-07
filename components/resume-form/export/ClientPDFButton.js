@@ -3,6 +3,11 @@ import React from 'react';
 import { PDFDownloadLink } from '@react-pdf/renderer';
 import StyledResumePDF from './StyledResumePDF';
 
+function fileSafeName(name) {
+  if (!name) return 'Resume';
+  return String(name).trim().replace(/\s+/g, '_').replace(/[^A-Za-z0-9_\-]/g, '');
+}
+
 export default function ClientPDFButton({
   formData,
   summary,
@@ -17,6 +22,9 @@ export default function ClientPDFButton({
   customSections,
   className,
 }) {
+  const base = fileSafeName(formData?.fullName);
+  const fileName = `${base}_Resume.pdf`;
+
   return (
     <PDFDownloadLink
       document={
@@ -34,7 +42,7 @@ export default function ClientPDFButton({
           customSections={customSections}
         />
       }
-      fileName="resume.pdf"
+      fileName={fileName}
       className={className}
     >
       {({ loading }) => (loading ? 'Preparing PDF…' : 'Export Styled PDF')}
