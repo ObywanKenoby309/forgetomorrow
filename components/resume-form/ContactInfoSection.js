@@ -9,7 +9,7 @@ export default function ContactInfoSection() {
     phone: '',
     location: '',
     portfolio: '',
-    forgeUrl: 'https://forgetomorrow.com/your-profile' // placeholder, will be auto-generated per user
+    forgeUrl: 'https://forgetomorrow.com/your-profile' // placeholder
   });
 
   const [isOpen, setIsOpen] = useState(false);
@@ -42,7 +42,8 @@ export default function ContactInfoSection() {
               name="fullName"
               value={formData.fullName}
               onChange={handleChange}
-              className="mt-1 w-full border-gray-300 rounded p-2"
+              placeholder="John Doe"
+              className="mt-1 w-full border border-gray-300 rounded p-2"
             />
           </div>
 
@@ -53,7 +54,8 @@ export default function ContactInfoSection() {
               name="email"
               value={formData.email}
               onChange={handleChange}
-              className="mt-1 w-full border-gray-300 rounded p-2"
+              placeholder="you@example.com"
+              className="mt-1 w-full border border-gray-300 rounded p-2"
             />
           </div>
 
@@ -64,7 +66,8 @@ export default function ContactInfoSection() {
               name="phone"
               value={formData.phone}
               onChange={handleChange}
-              className="mt-1 w-full border-gray-300 rounded p-2"
+              placeholder="(123) 456-7890"
+              className="mt-1 w-full border border-gray-300 rounded p-2"
             />
           </div>
 
@@ -75,7 +78,8 @@ export default function ContactInfoSection() {
               name="location"
               value={formData.location}
               onChange={handleChange}
-              className="mt-1 w-full border-gray-300 rounded p-2"
+              placeholder="Nashville, TN"
+              className="mt-1 w-full border border-gray-300 rounded p-2"
             />
           </div>
 
@@ -86,7 +90,8 @@ export default function ContactInfoSection() {
               name="portfolio"
               value={formData.portfolio}
               onChange={handleChange}
-              className="mt-1 w-full border-gray-300 rounded p-2"
+              placeholder="https://yourportfolio.com"
+              className="mt-1 w-full border border-gray-300 rounded p-2"
             />
           </div>
 
@@ -97,7 +102,7 @@ export default function ContactInfoSection() {
               name="forgeUrl"
               value={formData.forgeUrl}
               readOnly
-              className="mt-1 w-full border-gray-300 rounded p-2 bg-gray-100 text-gray-600"
+              className="mt-1 w-full border border-gray-300 rounded p-2 bg-gray-100 text-gray-600"
             />
           </div>
         </div>
