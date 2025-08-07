@@ -1,9 +1,8 @@
 import Head from 'next/head';
 import { useState } from 'react';
+import dynamic from 'next/dynamic';
 import { Document as DocxDocument, Packer, Paragraph, TextRun } from 'docx';
 import { saveAs } from 'file-saver';
-import { PDFDownloadLink } from '@react-pdf/renderer';
-import StyledResumePDF from '../../components/resume-form/export/StyledResumePDF';
 
 import ContactInfoSection from '../../components/resume-form/ContactInfoSection';
 import ProfessionalSummarySection from '../../components/resume-form/ProfessionalSummarySection';
@@ -17,6 +16,12 @@ import SkillsSection from '../../components/resume-form/SkillsSection';
 import AchievementsSection from '../../components/resume-form/AchievementsSection';
 import CustomSection from '../../components/resume-form/CustomSection';
 import BasicResumeTemplate from '../../components/resume-form/templates/BasicResumeTemplate';
+
+// 👇 Client-only PDF button (prevents SSR crash)
+const ClientPDFButton = dynamic(
+  () => import('../../components/resume-form/export/ClientPDFButton'),
+  { ssr: false }
+);
 
 export default function CreateResumePage() {
   const [formData, setFormData] = useState({
@@ -58,7 +63,6 @@ export default function CreateResumePage() {
             new Paragraph(formData.email || ''),
             new Paragraph(formData.phone || ''),
             new Paragraph(formData.location || ''),
-            // Extend with more content if desired
           ],
         },
       ],
@@ -75,7 +79,6 @@ export default function CreateResumePage() {
     text += `${formData.phone || ''}\n`;
     text += `${formData.location || ''}\n\n`;
     text += `Professional Summary:\n${summary}\n`;
-    // Append other sections as plain text if needed
 
     const element = document.createElement('a');
     const file = new Blob([text], { type: 'text/plain' });
@@ -109,7 +112,6 @@ export default function CreateResumePage() {
 
           {/* Center Column – Resume Form */}
           <section className="md:col-span-2 space-y-6">
-            {/* Template selector */}
             <div className="bg-white rounded-lg shadow p-4 mb-6">
               <label htmlFor="template-select" className="block font-semibold mb-2 text-[#FF7043]">
                 Choose Resume Template
@@ -163,28 +165,21 @@ export default function CreateResumePage() {
 
             {/* Export Buttons */}
             <div className="mt-4 flex gap-4 justify-center items-center flex-wrap">
-              {/* Styled PDF Export via @react-pdf/renderer */}
-              <PDFDownloadLink
-                document={
-                  <StyledResumePDF
-                    formData={formData}
-                    summary={summary}
-                    experiences={experiences}
-                    projects={projects}
-                    volunteerExperiences={volunteerExperiences}
-                    educationList={educationList}
-                    certifications={certifications}
-                    languages={languages}
-                    skills={skills}
-                    achievements={achievements}
-                    customSections={customSections}
-                  />
-                }
-                fileName="resume.pdf"
+              {/* Client-only Styled PDF Export */}
+              <ClientPDFButton
+                formData={formData}
+                summary={summary}
+                experiences={experiences}
+                projects={projects}
+                volunteerExperiences={volunteerExperiences}
+                educationList={educationList}
+                certifications={certifications}
+                languages={languages}
+                skills={skills}
+                achievements={achievements}
+                customSections={customSections}
                 className="bg-[#FF7043] hover:bg-[#F4511E] text-white py-2 px-4 rounded text-center"
-              >
-                {({ loading }) => (loading ? 'Preparing PDF…' : 'Export Styled PDF')}
-              </PDFDownloadLink>
+              />
 
               <button
                 onClick={exportWord}
