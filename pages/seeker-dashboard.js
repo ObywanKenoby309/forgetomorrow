@@ -1,8 +1,8 @@
 // pages/seeker-dashboard.js
 import React from 'react';
-import ProfileMetrics from '../components/ProfileMetrics';
+import JobSearchSnapshot from '../components/JobSearchSnapshot'; // ✅ new component
 import JobApplicationTracker from '../components/JobApplicationTracker';
-import SeekerSidebar from '../components/SeekerSidebar'; // ✅ import new sidebar
+import SeekerSidebar from '../components/SeekerSidebar';
 
 export default function SeekerDashboard() {
   return (
@@ -11,7 +11,7 @@ export default function SeekerDashboard() {
         display: 'grid',
         gridTemplateColumns: '300px 1fr',
         gap: '20px',
-        padding: '120px 20px 20px', // space below header
+        padding: '120px 20px 20px',
         minHeight: '100vh',
         backgroundColor: '#ECEFF1',
       }}
@@ -25,7 +25,10 @@ export default function SeekerDashboard() {
           gap: '20px',
         }}
       >
-        <ProfileMetrics showTopContent showLastProfileViewer />
+        <JobSearchSnapshot /> {/* ✅ New summary card at top */}
+
+        {/* 🔜 PinnedJobs section will go here */}
+
         <JobApplicationTracker />
       </main>
     </div>
