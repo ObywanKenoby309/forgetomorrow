@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { FaChevronDown, FaChevronRight, FaTrash, FaPlus } from 'react-icons/fa';
 
-export default function WorkExperienceSection({ experiences, setExperiences }) {
+export default function WorkExperienceSection({ experiences = [], setExperiences }) {
   const [isOpen, setIsOpen] = useState(false);
 
   const handleChange = (index, e) => {
