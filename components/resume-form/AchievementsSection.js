@@ -1,4 +1,3 @@
-// components/resume-form/AchievementsSection.js
 import { useState } from 'react';
 import { FaChevronDown, FaChevronRight, FaTrash, FaPlus } from 'react-icons/fa';
 
@@ -47,7 +46,7 @@ export default function AchievementsSection({ achievements, setAchievements }) {
         <div className="space-y-6">
           {achievements.map((ach, index) => (
             <div key={index} className="border rounded p-4 space-y-4 bg-gray-50">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                 <div>
                   <label className="block font-semibold text-gray-700">Title</label>
                   <input
