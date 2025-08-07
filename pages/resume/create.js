@@ -1,8 +1,9 @@
 import Head from 'next/head';
 import { useState } from 'react';
-import jsPDF from 'jspdf';
-import { Document, Packer, Paragraph, TextRun } from 'docx';
+import { Document as DocxDocument, Packer, Paragraph, TextRun } from 'docx';
 import { saveAs } from 'file-saver';
+import { PDFDownloadLink } from '@react-pdf/renderer';
+import StyledResumePDF from '../../components/resume-form/export/StyledResumePDF';
 
 import ContactInfoSection from '../../components/resume-form/ContactInfoSection';
 import ProfessionalSummarySection from '../../components/resume-form/ProfessionalSummarySection';
@@ -39,40 +40,28 @@ export default function CreateResumePage() {
   const [customSections, setCustomSections] = useState([]);
   const [selectedTemplate, setSelectedTemplate] = useState('basic');
 
-  // Export PDF handler
-  const exportPDF = () => {
-    const doc = new jsPDF();
-
-    doc.text(formData.fullName || 'Your Name', 10, 10);
-    doc.text(formData.email || '', 10, 20);
-    doc.text(formData.phone || '', 10, 30);
-    doc.text(formData.location || '', 10, 40);
-
-    // For brevity, extend with more data as needed
-
-    doc.save('resume.pdf');
-  };
-
   // Export Word handler
   const exportWord = async () => {
-    const doc = new Document({
-      sections: [{
-        children: [
-          new Paragraph({
-            children: [
-              new TextRun({
-                text: formData.fullName || 'Your Name',
-                bold: true,
-                size: 32,
-              }),
-            ],
-          }),
-          new Paragraph(formData.email || ''),
-          new Paragraph(formData.phone || ''),
-          new Paragraph(formData.location || ''),
-          // Add more content here as desired
-        ],
-      }],
+    const doc = new DocxDocument({
+      sections: [
+        {
+          children: [
+            new Paragraph({
+              children: [
+                new TextRun({
+                  text: formData.fullName || 'Your Name',
+                  bold: true,
+                  size: 32,
+                }),
+              ],
+            }),
+            new Paragraph(formData.email || ''),
+            new Paragraph(formData.phone || ''),
+            new Paragraph(formData.location || ''),
+            // Extend with more content if desired
+          ],
+        },
+      ],
     });
 
     const blob = await Packer.toBlob(doc);
@@ -173,19 +162,37 @@ export default function CreateResumePage() {
             </div>
 
             {/* Export Buttons */}
-            <div className="mt-4 flex gap-4 justify-center">
-              <button
-                onClick={exportPDF}
-                className="bg-[#FF7043] hover:bg-[#F4511E] text-white py-2 px-4 rounded"
+            <div className="mt-4 flex gap-4 justify-center items-center flex-wrap">
+              {/* Styled PDF Export via @react-pdf/renderer */}
+              <PDFDownloadLink
+                document={
+                  <StyledResumePDF
+                    formData={formData}
+                    summary={summary}
+                    experiences={experiences}
+                    projects={projects}
+                    volunteerExperiences={volunteerExperiences}
+                    educationList={educationList}
+                    certifications={certifications}
+                    languages={languages}
+                    skills={skills}
+                    achievements={achievements}
+                    customSections={customSections}
+                  />
+                }
+                fileName="resume.pdf"
+                className="bg-[#FF7043] hover:bg-[#F4511E] text-white py-2 px-4 rounded text-center"
               >
-                Export PDF
-              </button>
+                {({ loading }) => (loading ? 'Preparing PDF…' : 'Export Styled PDF')}
+              </PDFDownloadLink>
+
               <button
                 onClick={exportWord}
                 className="bg-[#FF7043] hover:bg-[#F4511E] text-white py-2 px-4 rounded"
               >
                 Export Word
               </button>
+
               <button
                 onClick={exportPlainText}
                 className="bg-[#FF7043] hover:bg-[#F4511E] text-white py-2 px-4 rounded"
