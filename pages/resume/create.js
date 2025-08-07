@@ -1,50 +1,26 @@
 // pages/resume/create.js
 import Head from 'next/head';
-import { useState } from 'react';
-import ContactInfoSection from '../../components/resume-form/ContactInfoSection';
+import ContactInfoSection from '../../components/ContactInfoSection';
 
-export default function CreateResume() {
-  const [contactInfo, setContactInfo] = useState({
-    fullName: '',
-    title: '',
-    email: '',
-    phone: '',
-    linkedin: '',
-    website: '',
-  });
-
+export default function CreateResumePage() {
   return (
     <>
       <Head>
         <title>Create Resume | ForgeTomorrow</title>
       </Head>
 
-      <main className="max-w-7xl mx-auto px-6 pt-[100px] pb-10 min-h-[80vh] bg-[#ECEFF1] text-[#212121]">
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-10">
-          {/* Resume Form Section */}
-          <section className="bg-white rounded-lg shadow p-8 space-y-10">
-            <h1 className="text-3xl font-bold text-[#FF7043]">Create Your Resume</h1>
-
-            {/* Contact Info Form */}
-            <ContactInfoSection contactInfo={contactInfo} onChange={setContactInfo} />
-          </section>
-
-          {/* Live Preview Section */}
-          <aside className="bg-white rounded-lg shadow p-8 space-y-4">
-            <h2 className="text-xl font-bold text-[#FF7043] mb-2">Live Preview</h2>
-            <div>
-              <p className="text-xl font-bold">{contactInfo.fullName || '[Your Name]'}</p>
-              <p className="text-md text-gray-700">{contactInfo.title || '[Professional Title]'}</p>
-              <div className="text-sm text-gray-600 mt-2 space-y-1">
-                {contactInfo.email && <p>📧 {contactInfo.email}</p>}
-                {contactInfo.phone && <p>📞 {contactInfo.phone}</p>}
-                {contactInfo.linkedin && <p>🔗 <a href={contactInfo.linkedin} className="text-[#FF7043] hover:underline" target="_blank">LinkedIn</a></p>}
-                {contactInfo.website && <p>🌐 <a href={contactInfo.website} className="text-[#FF7043] hover:underline" target="_blank">Portfolio</a></p>}
-              </div>
-            </div>
-          </aside>
+      <main className="max-w-5xl mx-auto px-6 min-h-[80vh] bg-[#ECEFF1] py-28 text-[#212121] space-y-10">
+        <div className="bg-white rounded-lg shadow p-8 space-y-6">
+          <h1 className="text-4xl font-bold text-[#FF7043] text-center">Create Your Resume</h1>
+          <p className="text-lg text-gray-700 text-center max-w-2xl mx-auto">
+            Fill in the sections below to generate a beautiful, ATS-optimized resume. You’ll be able to preview,
+            edit, and save your work as you go.
+          </p>
         </div>
+
+        <ContactInfoSection />
       </main>
     </>
   );
 }
+
