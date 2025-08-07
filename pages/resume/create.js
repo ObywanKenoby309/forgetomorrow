@@ -4,7 +4,8 @@ import ContactInfoSection from '../../components/resume-form/ContactInfoSection'
 import ProfessionalSummarySection from '../../components/resume-form/ProfessionalSummarySection';
 import WorkExperienceSection from '../../components/resume-form/WorkExperienceSection';
 import ProjectsSection from '../../components/resume-form/ProjectsSection';
-import VolunteerExperienceSection from '../../components/resume-form/VolunteerExperienceSection'; // NEW
+import VolunteerExperienceSection from '../../components/resume-form/VolunteerExperienceSection';
+import EducationSection from '../../components/resume-form/EducationSection'; // NEW import
 
 export default function CreateResumePage() {
   const [formData, setFormData] = useState({
@@ -19,7 +20,8 @@ export default function CreateResumePage() {
   const [summary, setSummary] = useState('');
   const [experiences, setExperiences] = useState([]);
   const [projects, setProjects] = useState([]);
-  const [volunteerExperiences, setVolunteerExperiences] = useState([]); // NEW
+  const [volunteerExperiences, setVolunteerExperiences] = useState([]);
+  const [educationList, setEducationList] = useState([]); // NEW state
 
   return (
     <>
@@ -60,6 +62,7 @@ export default function CreateResumePage() {
               volunteerExperiences={volunteerExperiences}
               setVolunteerExperiences={setVolunteerExperiences}
             />
+            <EducationSection educationList={educationList} setEducationList={setEducationList} /> {/* NEW */}
           </section>
 
           {/* Right Column – Live Resume Preview Placeholder */}
@@ -77,3 +80,4 @@ export default function CreateResumePage() {
     </>
   );
 }
+
