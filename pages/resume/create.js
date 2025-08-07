@@ -3,6 +3,7 @@ import Head from 'next/head';
 import { useState } from 'react';
 import ContactInfoSection from '../../components/resume-form/ContactInfoSection';
 import ProfessionalSummarySection from '../../components/resume-form/ProfessionalSummarySection';
+import WorkExperienceSection from '../../components/resume-form/WorkExperienceSection';
 
 export default function CreateResumePage() {
   const [formData, setFormData] = useState({
@@ -11,10 +12,11 @@ export default function CreateResumePage() {
     phone: '',
     location: '',
     portfolio: '',
-    forgeUrl: 'https://forgetomorrow.com/your-profile' // this can be dynamic later
+    forgeUrl: 'https://forgetomorrow.com/your-profile'
   });
 
   const [summary, setSummary] = useState('');
+  const [experienceList, setExperienceList] = useState([]);
 
   return (
     <>
@@ -49,6 +51,7 @@ export default function CreateResumePage() {
 
             <ContactInfoSection formData={formData} setFormData={setFormData} />
             <ProfessionalSummarySection summary={summary} setSummary={setSummary} />
+            <WorkExperienceSection experienceList={experienceList} setExperienceList={setExperienceList} />
           </section>
 
           {/* Right Column – Live Resume Preview Placeholder */}
@@ -66,4 +69,5 @@ export default function CreateResumePage() {
     </>
   );
 }
+
 
