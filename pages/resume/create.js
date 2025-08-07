@@ -1,7 +1,7 @@
 // pages/resume/create.js
 import Head from 'next/head';
 import { useState } from 'react';
-import ContactInfoSection from '../../components/ContactInfoSection';
+import ContactInfoSection from '../../components/resume-form/ContactInfoSection';
 
 export default function CreateResumePage() {
   const [formData, setFormData] = useState({
