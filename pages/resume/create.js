@@ -7,10 +7,11 @@ import ProjectsSection from '../../components/resume-form/ProjectsSection';
 import VolunteerExperienceSection from '../../components/resume-form/VolunteerExperienceSection';
 import EducationSection from '../../components/resume-form/EducationSection';
 import CertificationsSection from '../../components/resume-form/CertificationsSection';
-import LanguagesSection from '../../components/resume-form/LanguagesSection'; // NEW import
+import LanguagesSection from '../../components/resume-form/LanguagesSection';
 import SkillsSection from '../../components/resume-form/SkillsSection';
 import AchievementsSection from '../../components/resume-form/AchievementsSection';
 import CustomSection from '../../components/resume-form/CustomSection';
+import BasicResumeTemplate from '../../components/resume-form/templates/BasicResumeTemplate';
 
 export default function CreateResumePage() {
   const [formData, setFormData] = useState({
@@ -28,10 +29,11 @@ export default function CreateResumePage() {
   const [volunteerExperiences, setVolunteerExperiences] = useState([]);
   const [educationList, setEducationList] = useState([]);
   const [certifications, setCertifications] = useState([]);
-  const [languages, setLanguages] = useState([]); // NEW state
+  const [languages, setLanguages] = useState([]);
   const [skills, setSkills] = useState([]);
   const [achievements, setAchievements] = useState([]);
   const [customSections, setCustomSections] = useState([]);
+  const [selectedTemplate, setSelectedTemplate] = useState('basic');
 
   return (
     <>
@@ -56,12 +58,20 @@ export default function CreateResumePage() {
 
           {/* Center Column – Resume Form */}
           <section className="md:col-span-3 space-y-6">
-            <div className="bg-white rounded-lg shadow p-8 space-y-6">
-              <h1 className="text-4xl font-bold text-[#FF7043] text-center">Create Your Resume</h1>
-              <p className="text-lg text-gray-700 text-center max-w-2xl mx-auto">
-                Fill in the sections below to generate a beautiful, ATS-optimized resume. You’ll be able to preview,
-                edit, and save your work as you go.
-              </p>
+            {/* Template selector */}
+            <div className="bg-white rounded-lg shadow p-4 mb-6">
+              <label htmlFor="template-select" className="block font-semibold mb-2 text-[#FF7043]">
+                Choose Resume Template
+              </label>
+              <select
+                id="template-select"
+                value={selectedTemplate}
+                onChange={(e) => setSelectedTemplate(e.target.value)}
+                className="border border-gray-300 rounded p-2 w-full"
+              >
+                <option value="basic">Basic (ATS Friendly)</option>
+                {/* Additional templates can be added here */}
+              </select>
             </div>
 
             <ContactInfoSection formData={formData} setFormData={setFormData} />
@@ -74,20 +84,32 @@ export default function CreateResumePage() {
             />
             <EducationSection educationList={educationList} setEducationList={setEducationList} />
             <CertificationsSection certifications={certifications} setCertifications={setCertifications} />
-            <LanguagesSection languages={languages} setLanguages={setLanguages} /> {/* NEW */}
+            <LanguagesSection languages={languages} setLanguages={setLanguages} />
             <SkillsSection skills={skills} setSkills={setSkills} />
             <AchievementsSection achievements={achievements} setAchievements={setAchievements} />
             <CustomSection customSections={customSections} setCustomSections={setCustomSections} />
           </section>
 
-          {/* Right Column – Live Resume Preview Placeholder */}
-          <aside className="md:col-span-1">
+          {/* Right Column – Live Resume Preview */}
+          <aside className="md:col-span-1 overflow-auto max-h-[80vh]">
             <div className="bg-white rounded-lg shadow p-4">
               <h2 className="text-lg font-semibold text-[#FF7043] mb-2">Live Preview</h2>
-              <p className="text-sm text-gray-600">Coming soon: View your resume build live here.</p>
-              <div className="mt-4 h-[300px] bg-gray-100 border border-dashed border-gray-400 rounded p-4 text-center text-gray-500 text-sm flex items-center justify-center">
-                Resume preview panel
-              </div>
+              {selectedTemplate === 'basic' && (
+                <BasicResumeTemplate
+                  formData={formData}
+                  summary={summary}
+                  experiences={experiences}
+                  projects={projects}
+                  volunteerExperiences={volunteerExperiences}
+                  educationList={educationList}
+                  certifications={certifications}
+                  languages={languages}
+                  skills={skills}
+                  achievements={achievements}
+                  customSections={customSections}
+                />
+              )}
+              {/* Add more templates preview conditional rendering here if needed */}
             </div>
           </aside>
         </div>
