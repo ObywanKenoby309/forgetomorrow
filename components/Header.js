@@ -3,45 +3,40 @@ import Link from 'next/link';
 
 export default function Header() {
   return (
-    <header className="fixed top-0 left-0 right-0 bg-[#1a1a1a] text-gray-300 shadow-md z-50">
-      <nav className="max-w-7xl mx-auto px-6 py-4 flex items-center justify-between">
-        <Link href="/" className="text-2xl font-bold text-[#FF7043] hover:text-[#F4511E] transition">
+    <header className="bg-[#1a1a1a] text-gray-300 py-4 shadow-md fixed top-0 left-0 right-0 z-50">
+      <nav className="max-w-7xl mx-auto flex items-center justify-between px-6">
+        <Link
+          href="/"
+          className="text-[#FF7043] font-bold text-2xl tracking-wide hover:text-[#F4511E] transition"
+        >
           ForgeTomorrow
         </Link>
 
-        <ul className="hidden md:flex space-x-8 font-semibold">
-          <li>
-            <Link href="/about" className="hover:text-[#FF7043] transition">
-              About
-            </Link>
-          </li>
-          <li>
-            <Link href="/jobs" className="hover:text-[#FF7043] transition">
-              Jobs
-            </Link>
-          </li>
-          <li>
-            <Link href="/contacts" className="hover:text-[#FF7043] transition">
-              Contacts
-            </Link>
-          </li>
-          <li>
-            <Link href="/profile" className="hover:text-[#FF7043] transition">
-              Profile
-            </Link>
-          </li>
-          <li>
-            <Link
-              href="/login"
-              className="bg-[#FF7043] hover:bg-[#F4511E] text-white px-4 py-2 rounded-lg transition"
-            >
-              Login
-            </Link>
-          </li>
-        </ul>
+        <div className="space-x-6 hidden md:flex font-semibold">
+          <Link href="/about" className="hover:text-[#FF7043] transition">
+            About
+          </Link>
+          <Link href="/jobs" className="hover:text-[#FF7043] transition">
+            Jobs
+          </Link>
+          <Link href="/contacts" className="hover:text-[#FF7043] transition">
+            Contacts
+          </Link>
+          <Link href="/profile" className="hover:text-[#FF7043] transition">
+            Profile
+          </Link>
+          <Link
+            href="/login"
+            className="bg-[#FF7043] hover:bg-[#F4511E] text-white px-4 py-2 rounded-lg transition"
+          >
+            Login
+          </Link>
+        </div>
 
-        <div className="md:hidden">{/* Mobile menu placeholder */}</div>
+        {/* Mobile menu placeholder */}
+        <div className="md:hidden">{/* TODO: add mobile menu here if needed */}</div>
       </nav>
     </header>
   );
 }
+
