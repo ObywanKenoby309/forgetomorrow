@@ -3,7 +3,7 @@ import { useState } from 'react';
 import { FaChevronDown, FaChevronRight } from 'react-icons/fa';
 
 export default function ProfessionalSummarySection({ summary, setSummary }) {
-  const [isOpen, setIsOpen] = useState(true);
+  const [isOpen, setIsOpen] = useState(false);
 
   const toggleSection = () => {
     setIsOpen(!isOpen);
