@@ -19,16 +19,45 @@ export default function CreateResumePage() {
         <title>Create Resume | ForgeTomorrow</title>
       </Head>
 
-      <main className="max-w-5xl mx-auto px-6 min-h-[80vh] bg-[#ECEFF1] py-28 text-[#212121] space-y-10">
-        <div className="bg-white rounded-lg shadow p-8 space-y-6">
-          <h1 className="text-4xl font-bold text-[#FF7043] text-center">Create Your Resume</h1>
-          <p className="text-lg text-gray-700 text-center max-w-2xl mx-auto">
-            Fill in the sections below to generate a beautiful, ATS-optimized resume. You’ll be able to preview,
-            edit, and save your work as you go.
-          </p>
-        </div>
+      <main className="max-w-7xl mx-auto px-6 min-h-[80vh] bg-[#ECEFF1] py-28 text-[#212121]">
+        <div className="grid grid-cols-1 md:grid-cols-5 gap-6">
+          {/* Left Column – Back to Dashboard */}
+          <aside className="md:col-span-1">
+            <div className="bg-white rounded-lg shadow p-4 text-center">
+              <h2 className="text-lg font-semibold text-[#FF7043] mb-4">Navigation</h2>
+              <a
+                href="/seeker-dashboard"
+                className="block bg-[#FF7043] hover:bg-[#F4511E] text-white px-4 py-2 rounded transition"
+              >
+                ← Back to Dashboard
+              </a>
+            </div>
+          </aside>
 
-        <ContactInfoSection formData={formData} setFormData={setFormData} />
+          {/* Center Column – Resume Form */}
+          <section className="md:col-span-3 space-y-6">
+            <div className="bg-white rounded-lg shadow p-8 space-y-6">
+              <h1 className="text-4xl font-bold text-[#FF7043] text-center">Create Your Resume</h1>
+              <p className="text-lg text-gray-700 text-center max-w-2xl mx-auto">
+                Fill in the sections below to generate a beautiful, ATS-optimized resume. You’ll be able to preview,
+                edit, and save your work as you go.
+              </p>
+            </div>
+
+            <ContactInfoSection formData={formData} setFormData={setFormData} />
+          </section>
+
+          {/* Right Column – Live Resume Preview Placeholder */}
+          <aside className="md:col-span-1">
+            <div className="bg-white rounded-lg shadow p-4">
+              <h2 className="text-lg font-semibold text-[#FF7043] mb-2">Live Preview</h2>
+              <p className="text-sm text-gray-600">Coming soon: View your resume build live here.</p>
+              <div className="mt-4 h-[300px] bg-gray-100 border border-dashed border-gray-400 rounded p-4 text-center text-gray-500 text-sm flex items-center justify-center">
+                Resume preview panel
+              </div>
+            </div>
+          </aside>
+        </div>
       </main>
     </>
   );
