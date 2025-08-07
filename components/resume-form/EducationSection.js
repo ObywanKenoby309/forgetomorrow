@@ -77,7 +77,8 @@ export default function EducationSection({ educationList = [], setEducationList 
                   />
                 </div>
 
-                <div>
+                {/* Location full width */}
+                <div className="md:col-span-2">
                   <label className="block font-semibold text-gray-700">Location</label>
                   <input
                     type="text"
@@ -89,7 +90,8 @@ export default function EducationSection({ educationList = [], setEducationList 
                   />
                 </div>
 
-                <div className="flex gap-4">
+                {/* Start and End Dates side-by-side */}
+                <div className="md:col-span-2 flex gap-4">
                   <div className="flex-1">
                     <label className="block font-semibold text-gray-700 mb-1">Start Date</label>
                     <input
