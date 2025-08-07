@@ -41,9 +41,11 @@ export default function ResumeCoverCreator() {
                 <div className="bg-[#F5F5F5] border border-dashed border-gray-400 rounded p-6 text-center space-y-2">
                   <h3 className="text-xl font-semibold text-[#FF7043]">Start from Scratch</h3>
                   <p className="text-sm text-gray-600">Use our AI-enhanced form builder to create a new resume step-by-step.</p>
-                  <button className="mt-2 bg-[#FF7043] text-white px-4 py-2 rounded hover:bg-[#F4511E] transition-colors">
-                    Create Resume
-                  </button>
+                  <Link href="/resume/create" className="block mt-2">
+                    <button className="w-full bg-[#FF7043] text-white px-4 py-2 rounded hover:bg-[#F4511E] transition-colors">
+                      Create Resume
+                    </button>
+                  </Link>
                 </div>
 
                 <div className="bg-[#F5F5F5] border border-dashed border-gray-400 rounded p-6 text-center space-y-2">
