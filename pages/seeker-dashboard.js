@@ -1,6 +1,7 @@
 // pages/seeker-dashboard.js
 import React from 'react';
-import JobSearchSnapshot from '../components/JobSearchSnapshot'; // ✅ new component
+import JobSearchSnapshot from '../components/JobSearchSnapshot';
+import PinnedJobs from '../components/PinnedJobs'; // ✅ added
 import JobApplicationTracker from '../components/JobApplicationTracker';
 import SeekerSidebar from '../components/SeekerSidebar';
 
@@ -25,9 +26,9 @@ export default function SeekerDashboard() {
           gap: '20px',
         }}
       >
-        <JobSearchSnapshot /> {/* ✅ New summary card at top */}
+        <JobSearchSnapshot />
 
-        {/* 🔜 PinnedJobs section will go here */}
+        <PinnedJobs /> {/* ✅ newly added */}
 
         <JobApplicationTracker />
       </main>
