@@ -7,7 +7,7 @@ import ProjectsSection from '../../components/resume-form/ProjectsSection';
 import VolunteerExperienceSection from '../../components/resume-form/VolunteerExperienceSection';
 import EducationSection from '../../components/resume-form/EducationSection';
 import CertificationsSection from '../../components/resume-form/CertificationsSection';
-import LanguagesSection from '../../components/resume-form/LanguagesSection';
+import LanguagesSection from '../../components/resume-form/LanguagesSection'; // NEW import
 import SkillsSection from '../../components/resume-form/SkillsSection';
 import AchievementsSection from '../../components/resume-form/AchievementsSection';
 import CustomSection from '../../components/resume-form/CustomSection';
@@ -20,7 +20,7 @@ export default function CreateResumePage() {
     phone: '',
     location: '',
     portfolio: '',
-    forgeUrl: 'https://forgetomorrow.com/your-profile'
+    forgeUrl: 'https://forgetomorrow.com/your-profile',
   });
 
   const [summary, setSummary] = useState('');
