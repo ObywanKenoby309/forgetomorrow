@@ -1,8 +1,18 @@
 // pages/resume/create.js
 import Head from 'next/head';
+import { useState } from 'react';
 import ContactInfoSection from '../../components/ContactInfoSection';
 
 export default function CreateResumePage() {
+  const [formData, setFormData] = useState({
+    fullName: '',
+    email: '',
+    phone: '',
+    location: '',
+    portfolio: '',
+    forgeUrl: 'https://forgetomorrow.com/your-profile' // this can be dynamic later
+  });
+
   return (
     <>
       <Head>
@@ -18,9 +28,8 @@ export default function CreateResumePage() {
           </p>
         </div>
 
-        <ContactInfoSection />
+        <ContactInfoSection formData={formData} setFormData={setFormData} />
       </main>
     </>
   );
 }
-
