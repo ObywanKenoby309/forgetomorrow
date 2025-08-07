@@ -18,6 +18,18 @@ export default function SeekerSidebar() {
       }}
     >
       <div>
+        <h3 className="text-[#FF7043] mb-3 font-semibold text-lg">Career Roadmap</h3>
+        <Link href="/roadmap" legacyBehavior>
+          <button
+            className="block bg-[#FF7043] hover:bg-[#F4511E] text-white px-5 py-3 rounded font-bold w-full transition-colors"
+            aria-label="Launch Career Roadmap"
+          >
+            Launch Roadmap
+          </button>
+        </Link>
+      </div>
+
+      <div>
         <h2 className="text-[#FF7043] mb-3 font-semibold text-lg">Resume/Cover Creator</h2>
         <Link href="/resume-cover" legacyBehavior>
           <button
@@ -49,18 +61,6 @@ export default function SeekerSidebar() {
             aria-label="Visit Your Hearth"
           >
             Visit Your Hearth
-          </button>
-        </Link>
-      </div>
-
-      <div>
-        <h3 className="text-[#FF7043] mb-3 font-semibold text-lg">Career Roadmap</h3>
-        <Link href="/roadmap" legacyBehavior>
-          <button
-            className="block bg-[#FF7043] hover:bg-[#F4511E] text-white px-5 py-3 rounded font-bold w-full transition-colors"
-            aria-label="Launch Career Roadmap"
-          >
-            Launch Roadmap
           </button>
         </Link>
       </div>
