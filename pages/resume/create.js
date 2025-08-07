@@ -3,7 +3,8 @@ import { useState } from 'react';
 import ContactInfoSection from '../../components/resume-form/ContactInfoSection';
 import ProfessionalSummarySection from '../../components/resume-form/ProfessionalSummarySection';
 import WorkExperienceSection from '../../components/resume-form/WorkExperienceSection';
-import ProjectsSection from '../../components/resume-form/ProjectsSection'; // NEW import
+import ProjectsSection from '../../components/resume-form/ProjectsSection';
+import VolunteerExperienceSection from '../../components/resume-form/VolunteerExperienceSection'; // NEW
 
 export default function CreateResumePage() {
   const [formData, setFormData] = useState({
@@ -17,7 +18,8 @@ export default function CreateResumePage() {
 
   const [summary, setSummary] = useState('');
   const [experiences, setExperiences] = useState([]);
-  const [projects, setProjects] = useState([]); // NEW state
+  const [projects, setProjects] = useState([]);
+  const [volunteerExperiences, setVolunteerExperiences] = useState([]); // NEW
 
   return (
     <>
@@ -53,7 +55,11 @@ export default function CreateResumePage() {
             <ContactInfoSection formData={formData} setFormData={setFormData} />
             <ProfessionalSummarySection summary={summary} setSummary={setSummary} />
             <WorkExperienceSection experiences={experiences} setExperiences={setExperiences} />
-            <ProjectsSection projects={projects} setProjects={setProjects} /> {/* NEW */}
+            <ProjectsSection projects={projects} setProjects={setProjects} />
+            <VolunteerExperienceSection
+              volunteerExperiences={volunteerExperiences}
+              setVolunteerExperiences={setVolunteerExperiences}
+            />
           </section>
 
           {/* Right Column – Live Resume Preview Placeholder */}
