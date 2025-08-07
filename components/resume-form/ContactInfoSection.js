@@ -1,16 +1,4 @@
-// components/ContactInfoSection.js
-import { useState } from 'react';
-
-export default function ContactInfoSection() {
-  const [formData, setFormData] = useState({
-    fullName: '',
-    email: '',
-    phone: '',
-    location: '',
-    portfolio: '',
-    forgeUrl: 'https://forgetomorrow.com/your-profile' // placeholder, will be auto-generated per user
-  });
-
+export default function ContactInfoSection({ formData, setFormData }) {
   const handleChange = (e) => {
     const { name, value } = e.target;
     setFormData({ ...formData, [name]: value });
