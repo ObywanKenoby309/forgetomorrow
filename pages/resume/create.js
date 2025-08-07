@@ -7,7 +7,7 @@ import ProjectsSection from '../../components/resume-form/ProjectsSection';
 import VolunteerExperienceSection from '../../components/resume-form/VolunteerExperienceSection';
 import EducationSection from '../../components/resume-form/EducationSection';
 import CertificationsSection from '../../components/resume-form/CertificationsSection';
-import LanguagesSection from '../../components/resume-form/LanguagesSection'; // NEW import
+import LanguagesSection from '../../components/resume-form/LanguagesSection';
 import SkillsSection from '../../components/resume-form/SkillsSection';
 import AchievementsSection from '../../components/resume-form/AchievementsSection';
 import CustomSection from '../../components/resume-form/CustomSection';
@@ -57,7 +57,7 @@ export default function CreateResumePage() {
           </aside>
 
           {/* Center Column – Resume Form */}
-          <section className="md:col-span-3 space-y-6">
+          <section className="md:col-span-2 space-y-6">
             {/* Template selector */}
             <div className="bg-white rounded-lg shadow p-4 mb-6">
               <label htmlFor="template-select" className="block font-semibold mb-2 text-[#FF7043]">
@@ -91,7 +91,7 @@ export default function CreateResumePage() {
           </section>
 
           {/* Right Column – Live Resume Preview */}
-          <aside className="md:col-span-1 overflow-auto max-h-[80vh]">
+          <aside className="md:col-span-2 overflow-auto max-h-[80vh]">
             <div className="bg-white rounded-lg shadow p-4">
               <h2 className="text-lg font-semibold text-[#FF7043] mb-2">Live Preview</h2>
               {selectedTemplate === 'basic' && (
