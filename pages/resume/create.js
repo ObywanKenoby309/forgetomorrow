@@ -8,7 +8,8 @@ import VolunteerExperienceSection from '../../components/resume-form/VolunteerEx
 import EducationSection from '../../components/resume-form/EducationSection';
 import CertificationsSection from '../../components/resume-form/CertificationsSection';
 import SkillsSection from '../../components/resume-form/SkillsSection';
-import AchievementsSection from '../../components/resume-form/AchievementsSection'; // NEW import
+import AchievementsSection from '../../components/resume-form/AchievementsSection';
+import CustomSection from '../../components/resume-form/CustomSection'; // NEW import
 
 export default function CreateResumePage() {
   const [formData, setFormData] = useState({
@@ -27,7 +28,8 @@ export default function CreateResumePage() {
   const [educationList, setEducationList] = useState([]);
   const [certifications, setCertifications] = useState([]);
   const [skills, setSkills] = useState([]);
-  const [achievements, setAchievements] = useState([]); // NEW state
+  const [achievements, setAchievements] = useState([]);
+  const [customSections, setCustomSections] = useState([]); // NEW state
 
   return (
     <>
@@ -71,7 +73,8 @@ export default function CreateResumePage() {
             <EducationSection educationList={educationList} setEducationList={setEducationList} />
             <CertificationsSection certifications={certifications} setCertifications={setCertifications} />
             <SkillsSection skills={skills} setSkills={setSkills} />
-            <AchievementsSection achievements={achievements} setAchievements={setAchievements} /> {/* NEW */}
+            <AchievementsSection achievements={achievements} setAchievements={setAchievements} />
+            <CustomSection customSections={customSections} setCustomSections={setCustomSections} /> {/* NEW */}
           </section>
 
           {/* Right Column – Live Resume Preview Placeholder */}
