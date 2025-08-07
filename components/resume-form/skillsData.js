@@ -1,4 +1,5 @@
 const skillsList = [
+  // Your existing skills:
   "Communication",
   "Leadership",
   "Project Management",
@@ -41,7 +42,167 @@ const skillsList = [
   "Quality Assurance",
   "UX/UI Design",
   "Networking",
-  "Database Management"
+  "Database Management",
+
+  // Added ATS-friendly skills:
+
+  // Soft Skills
+  "Active Listening",
+  "Emotional Intelligence",
+  "Multitasking",
+  "Decision Making",
+  "Conflict Management",
+  "Coaching",
+  "Mentoring",
+  "Problem Resolution",
+  "Presentation Skills",
+  "Interpersonal Skills",
+
+  // Programming & IT
+  "TypeScript",
+  "Java",
+  "C++",
+  "C#",
+  "Ruby",
+  "PHP",
+  "Swift",
+  "Objective-C",
+  "MongoDB",
+  "NoSQL",
+  "Google Cloud Platform",
+  "Linux",
+  "API Development",
+  "REST",
+  "GraphQL",
+  "Machine Learning",
+  "Artificial Intelligence",
+  "Big Data",
+  "Hadoop",
+  "Spark",
+  "TensorFlow",
+  "Power BI",
+  "Tableau",
+  "ERP Systems",
+  "Salesforce",
+  "CRM",
+  "JIRA",
+  "DevOps",
+  "Continuous Integration",
+  "Continuous Deployment",
+  "Automation Testing",
+  "Unit Testing",
+  "Selenium",
+
+  // Business / Management
+  "Strategic Planning",
+  "Risk Management",
+  "Business Analysis",
+  "Product Management",
+  "Supply Chain Management",
+  "Vendor Management",
+  "Change Management",
+  "Operations Management",
+  "Performance Management",
+  "Lean Six Sigma",
+  "Process Improvement",
+
+  // Marketing / Sales
+  "Email Marketing",
+  "Lead Generation",
+  "Sales Strategy",
+  "Account Management",
+  "Brand Management",
+  "Market Research",
+  "Copywriting",
+
+  // Design
+  "Adobe Photoshop",
+  "Adobe Illustrator",
+  "Adobe XD",
+  "Figma",
+  "Sketch",
+  "Wireframing",
+  "Prototyping",
+  "Graphic Design",
+  "Video Editing",
+  "Animation",
+  "3D Modeling",
+
+  // Finance / Accounting
+  "Financial Analysis",
+  "Accounting",
+  "QuickBooks",
+  "Budget Forecasting",
+  "Tax Preparation",
+  "Accounts Payable",
+  "Accounts Receivable",
+  "Payroll",
+  "Auditing",
+  "Financial Reporting",
+  "SAP",
+
+  // Healthcare / Medical
+  "Patient Care",
+  "Medical Coding",
+  "HIPAA Compliance",
+  "Clinical Research",
+  "Pharmacy",
+  "Healthcare Administration",
+  "Electronic Medical Records (EMR)",
+  "Nursing",
+
+  // Other Industry-Specific
+  "Logistics",
+  "Contract Negotiation",
+  "Compliance",
+  "Safety Management",
+  "Environmental Health and Safety (EHS)",
+  "Teaching",
+  "Curriculum Development",
+  "Research",
+  "Translation",
+  "Legal Research",
+  "Litigation Support",
+
+  // Languages (commonly requested)
+  "Spanish",
+  "French",
+  "German",
+  "Mandarin",
+  "Japanese",
+  "Arabic",
+  "Portuguese",
+  "Russian",
+
+  // Software & Tools
+  "Google Workspace",
+  "Slack",
+  "Zoom",
+  "Trello",
+  "Asana",
+  "Notion",
+  "Confluence",
+
+  // Certifications (generic keywords)
+  "PMP",
+  "CPA",
+  "CFA",
+  "ITIL",
+  "Six Sigma",
+  "AWS Certified Solutions Architect",
+  "Cisco Certified Network Associate (CCNA)",
+  "Certified Scrum Master (CSM)",
+  "Google Analytics Certified",
+
+  // Other
+  "Research",
+  "Data Entry",
+  "Customer Support",
+  "Training & Development",
+  "Event Planning",
+  "Fundraising",
+  "Grant Writing",
+  "Public Relations"
 ];
 
 export default skillsList;
