@@ -16,7 +16,7 @@ export default function CreateResumePage() {
   });
 
   const [summary, setSummary] = useState('');
-  const [experienceList, setExperienceList] = useState([]);
+  const [experiences, setExperiences] = useState([]); // renamed from experienceList
 
   return (
     <>
@@ -51,7 +51,7 @@ export default function CreateResumePage() {
 
             <ContactInfoSection formData={formData} setFormData={setFormData} />
             <ProfessionalSummarySection summary={summary} setSummary={setSummary} />
-            <WorkExperienceSection experienceList={experienceList} setExperienceList={setExperienceList} />
+            <WorkExperienceSection experiences={experiences} setExperiences={setExperiences} />
           </section>
 
           {/* Right Column – Live Resume Preview Placeholder */}
@@ -69,5 +69,3 @@ export default function CreateResumePage() {
     </>
   );
 }
-
-
