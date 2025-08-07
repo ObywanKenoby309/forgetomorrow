@@ -91,7 +91,7 @@ export default function VolunteerExperienceSection({ volunteerExperiences = [], 
 
                 <div className="flex gap-4">
                   <div className="flex-1">
-                    <label className="block font-semibold text-gray-700">Start Date</label>
+                    <label className="block font-semibold text-gray-700 mb-1">Start Date</label>
                     <input
                       type="month"
                       name="startDate"
@@ -101,7 +101,7 @@ export default function VolunteerExperienceSection({ volunteerExperiences = [], 
                     />
                   </div>
                   <div className="flex-1">
-                    <label className="block font-semibold text-gray-700">End Date</label>
+                    <label className="block font-semibold text-gray-700 mb-1">End Date</label>
                     <input
                       type="month"
                       name="endDate"

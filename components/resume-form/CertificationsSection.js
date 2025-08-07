@@ -89,6 +89,7 @@ export default function CertificationsSection({ certifications = [], setCertific
                   />
                 </div>
 
+                {/* Equalize widths on paired date inputs */}
                 <div className="flex gap-4">
                   <div className="flex-1">
                     <label className="block font-semibold text-gray-700">Date Earned</label>
