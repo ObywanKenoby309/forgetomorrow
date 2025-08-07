@@ -1,28 +1,6 @@
 import { useState } from 'react';
 import { FaChevronDown, FaChevronRight, FaTimes } from 'react-icons/fa';
-
-// Example initial skills list; this can be replaced or expanded later
-const SKILLS_LIST = [
-  'Communication',
-  'Leadership',
-  'Project Management',
-  'JavaScript',
-  'React',
-  'Python',
-  'Customer Service',
-  'Problem Solving',
-  'Time Management',
-  'SQL',
-  'Teamwork',
-  'Agile',
-  'Data Analysis',
-  'Marketing',
-  'Sales',
-  'Microsoft Office',
-  'AWS',
-  'Docker',
-  'Cloud Computing',
-];
+import skillsList from './skillsData'; // <-- import external skills list
 
 export default function SkillsSection({ skills = [], setSkills }) {
   const [isOpen, setIsOpen] = useState(false);
@@ -42,7 +20,7 @@ export default function SkillsSection({ skills = [], setSkills }) {
       return;
     }
 
-    const filtered = SKILLS_LIST.filter(
+    const filtered = skillsList.filter(
       (skill) =>
         skill.toLowerCase().includes(val.toLowerCase()) && !skills.includes(skill)
     ).slice(0, 5); // limit suggestions to 5
