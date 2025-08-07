@@ -1,17 +1,7 @@
-// components/ContactInfoSection.js
 import { useState } from 'react';
 import { FaChevronDown, FaChevronRight } from 'react-icons/fa';
 
-export default function ContactInfoSection() {
-  const [formData, setFormData] = useState({
-    fullName: '',
-    email: '',
-    phone: '',
-    location: '',
-    portfolio: '',
-    forgeUrl: 'https://forgetomorrow.com/your-profile' // placeholder
-  });
-
+export default function ContactInfoSection({ formData, setFormData }) {
   const [isOpen, setIsOpen] = useState(false);
 
   const handleChange = (e) => {
