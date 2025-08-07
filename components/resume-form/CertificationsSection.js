@@ -92,7 +92,7 @@ export default function CertificationsSection({ certifications = [], setCertific
                 {/* Equalize widths on paired date inputs */}
                 <div className="flex gap-4">
                   <div className="flex-1">
-                    <label className="block font-semibold text-gray-700">Date Earned</label>
+                    <label className="block font-semibold text-gray-700 mb-1">Date Earned</label>
                     <input
                       type="month"
                       name="dateEarned"
@@ -102,7 +102,7 @@ export default function CertificationsSection({ certifications = [], setCertific
                     />
                   </div>
                   <div className="flex-1">
-                    <label className="block font-semibold text-gray-700">Expiration Date</label>
+                    <label className="block font-semibold text-gray-700 mb-1">Expiration Date</label>
                     <input
                       type="month"
                       name="expirationDate"

@@ -41,7 +41,11 @@ export default function WorkExperienceSection({ experiences = [], setExperiences
         onClick={toggleSection}
       >
         <h2 className="text-2xl font-bold text-[#FF7043]">Work Experience</h2>
-        {isOpen ? <FaChevronDown className="text-[#FF7043]" /> : <FaChevronRight className="text-[#FF7043]" />}
+        {isOpen ? (
+          <FaChevronDown className="text-[#FF7043]" />
+        ) : (
+          <FaChevronRight className="text-[#FF7043]" />
+        )}
       </div>
 
       {isOpen && (
