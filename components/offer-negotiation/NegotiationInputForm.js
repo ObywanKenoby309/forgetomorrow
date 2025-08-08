@@ -95,32 +95,36 @@ export default function NegotiationInputForm({ onSubmit }) {
         {errors.currentSalary && <p className="text-red-600 text-sm mt-1">{errors.currentSalary}</p>}
       </div>
 
-      <fieldset className="border rounded p-3">
-        <legend className="font-semibold mb-2">Is this a new job or current job? <span className="text-red-600">*</span></legend>
-        <label className="mr-4">
-          <input
-            type="radio"
-            name="isNewJob"
-            value="yes"
-            checked={form.isNewJob === 'yes'}
-            onChange={handleChange}
-            className="mr-1"
-          />
-          New Job
+      <div>
+        <label className="block font-semibold mb-1">
+          Is this a new job or current job? <span className="text-red-600">*</span>
         </label>
-        <label>
-          <input
-            type="radio"
-            name="isNewJob"
-            value="no"
-            checked={form.isNewJob === 'no'}
-            onChange={handleChange}
-            className="mr-1"
-          />
-          Current Job
-        </label>
+        <div className="border rounded p-3">
+          <label className="mr-4">
+            <input
+              type="radio"
+              name="isNewJob"
+              value="yes"
+              checked={form.isNewJob === 'yes'}
+              onChange={handleChange}
+              className="mr-1"
+            />
+            New Job
+          </label>
+          <label>
+            <input
+              type="radio"
+              name="isNewJob"
+              value="no"
+              checked={form.isNewJob === 'no'}
+              onChange={handleChange}
+              className="mr-1"
+            />
+            Current Job
+          </label>
+        </div>
         {errors.isNewJob && <p className="text-red-600 text-sm mt-1">{errors.isNewJob}</p>}
-      </fieldset>
+      </div>
 
       <div>
         <label htmlFor="location" className="block font-semibold mb-1">
