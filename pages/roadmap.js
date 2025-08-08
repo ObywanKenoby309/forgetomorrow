@@ -1,6 +1,7 @@
 import Head from 'next/head';
 import { useState } from 'react';
 
+import SeekerSidebar from '../components/SeekerSidebar';
 import ToolkitLanding from '../components/roadmap/ToolkitLanding';
 import ProfileDevelopment from '../components/roadmap/ProfileDevelopment';
 import OfferNegotiation from '../components/roadmap/OfferNegotiation';
@@ -15,96 +16,191 @@ export default function CareerRoadmap() {
         <title>Career Development Toolkit | ForgeTomorrow</title>
       </Head>
 
-      <main className="max-w-7xl mx-auto px-6 min-h-[80vh] bg-[#ECEFF1] text-[#212121]">
-        <div className="pt-[100px]">
-          <div className="grid grid-cols-1 md:grid-cols-5 gap-8">
-            {/* Left Column – Placeholder for Navigation/Sidebar */}
-            <aside className="md:col-span-1">
-              {/* Optional navigation or future sidebar can go here */}
-            </aside>
+      <div
+        style={{
+          display: 'grid',
+          gridTemplateColumns: '300px 1fr',
+          gap: '20px',
+          padding: '120px 20px 20px',
+          minHeight: '100vh',
+          backgroundColor: '#ECEFF1',
+        }}
+      >
+        <SeekerSidebar />
 
-            {/* Middle Column – Main Content */}
-            <section className="md:col-span-3 space-y-10">
-              <div className="bg-white rounded-lg shadow p-8 space-y-6">
-                <h1 className="text-4xl font-bold text-[#FF7043] text-center">
-                  Career Development Toolkit
-                </h1>
+        <main
+          style={{
+            display: 'flex',
+            flexDirection: 'column',
+            gap: '20px',
+          }}
+        >
+          <div
+            style={{
+              backgroundColor: 'white',
+              borderRadius: '8px',
+              boxShadow: '0 2px 8px rgba(0,0,0,0.1)',
+              padding: '32px',
+              flexGrow: 1,
+            }}
+          >
+            <h1
+              style={{
+                color: '#FF7043',
+                fontSize: '2.25rem',
+                fontWeight: '700',
+                textAlign: 'center',
+                marginBottom: '24px',
+              }}
+            >
+              Career Development Toolkit
+            </h1>
 
-                {!activeModule && (
-                  <>
-                    <p className="text-lg text-gray-700 text-center max-w-2xl mx-auto space-y-4">
-                      <span>
-                        Welcome to your Career Development Toolkit! This powerful AI-driven resource is designed to guide you through every stage of your job search and early career growth. From personalized insights on your resume and professional background, to expert advice on job offers and onboarding success, we’re here to help you build the career you deserve.
-                      </span>
-                      <br />
-                      <span>
-                        Here’s what you can expect:
-                      </span>
-                      <ul className="list-disc list-inside text-gray-700 text-left max-w-xl mx-auto my-4">
-                        <li>Tailored recommendations based on your unique skills and goals</li>
-                        <li>Step-by-step guidance through Profile Development, Offer Negotiation, and Onboarding & Growth</li>
-                        <li>Practical tools to help you land your ideal job and thrive in your new role</li>
-                        <li>Flexibility to take these results and work on your plan independently—or collaborate with a trainer, mentor, or coach to maximize your success</li>
-                      </ul>
-                      <br />
-                      <span>
-                        Please note: Free accounts receive one full roadmap experience to help you get started. Additional usage and advanced features are available through our subscription plans, designed to provide ongoing support as your career grows.
-                      </span>
-                      <br />
-                      <span>
-                        If you’re ready, choose a module below to begin shaping your future!
-                      </span>
-                    </p>
+            {!activeModule && (
+              <>
+                <p
+                  style={{
+                    color: '#4A5568',
+                    fontSize: '1.125rem',
+                    maxWidth: '600px',
+                    margin: '0 auto 32px auto',
+                    lineHeight: '1.6',
+                  }}
+                >
+                  Welcome to your Career Development Toolkit! This powerful AI-driven
+                  resource is designed to guide you through every stage of your job
+                  search and early career growth. From personalized insights on your
+                  resume and professional background, to expert advice on job offers and
+                  onboarding success, we’re here to help you build the career you deserve.
+                </p>
 
-                    <ToolkitLanding onSelectModule={setActiveModule} />
-                  </>
-                )}
+                <p
+                  style={{
+                    color: '#4A5568',
+                    fontSize: '1.125rem',
+                    maxWidth: '600px',
+                    margin: '0 auto 16px auto',
+                    lineHeight: '1.6',
+                  }}
+                >
+                  Here’s what you can expect:
+                </p>
 
-                {activeModule === 'profile' && (
-                  <>
-                    <button
-                      className="mb-4 text-sm text-[#FF7043] underline"
-                      onClick={() => setActiveModule(null)}
-                    >
-                      ← Back to toolkit
-                    </button>
-                    <ProfileDevelopment />
-                  </>
-                )}
+                <ul
+                  style={{
+                    color: '#4A5568',
+                    maxWidth: '600px',
+                    margin: '0 auto 32px auto',
+                    lineHeight: '1.6',
+                    listStyleType: 'disc',
+                    paddingLeft: '20px',
+                  }}
+                >
+                  <li>Tailored recommendations based on your unique skills and goals</li>
+                  <li>
+                    Step-by-step guidance through Profile Development, Offer Negotiation,
+                    and Onboarding & Growth
+                  </li>
+                  <li>Practical tools to help you land your ideal job and thrive in your new role</li>
+                  <li>
+                    Flexibility to take these results and work on your plan independently—
+                    or collaborate with a trainer, mentor, or coach to maximize your success
+                  </li>
+                </ul>
 
-                {activeModule === 'offer' && (
-                  <>
-                    <button
-                      className="mb-4 text-sm text-[#FF7043] underline"
-                      onClick={() => setActiveModule(null)}
-                    >
-                      ← Back to toolkit
-                    </button>
-                    <OfferNegotiation />
-                  </>
-                )}
+                <p
+                  style={{
+                    color: '#4A5568',
+                    fontSize: '1rem',
+                    maxWidth: '600px',
+                    margin: '0 auto 32px auto',
+                    lineHeight: '1.4',
+                    fontStyle: 'italic',
+                  }}
+                >
+                  Please note: Free accounts receive one full roadmap experience to help you get
+                  started. Additional usage and advanced features are available through our
+                  subscription plans, designed to provide ongoing support as your career grows.
+                </p>
 
-                {activeModule === 'onboarding' && (
-                  <>
-                    <button
-                      className="mb-4 text-sm text-[#FF7043] underline"
-                      onClick={() => setActiveModule(null)}
-                    >
-                      ← Back to toolkit
-                    </button>
-                    <OnboardingGrowth />
-                  </>
-                )}
-              </div>
-            </section>
+                <p
+                  style={{
+                    color: '#4A5568',
+                    fontSize: '1.125rem',
+                    maxWidth: '600px',
+                    margin: '0 auto',
+                    lineHeight: '1.6',
+                  }}
+                >
+                  If you’re ready, choose a module below to begin shaping your future!
+                </p>
 
-            {/* Right Column – Placeholder for Saved Docs or other tools */}
-            <aside className="md:col-span-1">
-              {/* Could add quick links, saved plans, or related tools here */}
-            </aside>
+                <ToolkitLanding onSelectModule={setActiveModule} />
+              </>
+            )}
+
+            {activeModule === 'profile' && (
+              <>
+                <button
+                  onClick={() => setActiveModule(null)}
+                  style={{
+                    marginBottom: '16px',
+                    fontSize: '0.875rem',
+                    color: '#FF7043',
+                    textDecoration: 'underline',
+                    background: 'none',
+                    border: 'none',
+                    cursor: 'pointer',
+                  }}
+                >
+                  ← Back to toolkit
+                </button>
+                <ProfileDevelopment />
+              </>
+            )}
+
+            {activeModule === 'offer' && (
+              <>
+                <button
+                  onClick={() => setActiveModule(null)}
+                  style={{
+                    marginBottom: '16px',
+                    fontSize: '0.875rem',
+                    color: '#FF7043',
+                    textDecoration: 'underline',
+                    background: 'none',
+                    border: 'none',
+                    cursor: 'pointer',
+                  }}
+                >
+                  ← Back to toolkit
+                </button>
+                <OfferNegotiation />
+              </>
+            )}
+
+            {activeModule === 'onboarding' && (
+              <>
+                <button
+                  onClick={() => setActiveModule(null)}
+                  style={{
+                    marginBottom: '16px',
+                    fontSize: '0.875rem',
+                    color: '#FF7043',
+                    textDecoration: 'underline',
+                    background: 'none',
+                    border: 'none',
+                    cursor: 'pointer',
+                  }}
+                >
+                  ← Back to toolkit
+                </button>
+                <OnboardingGrowth />
+              </>
+            )}
           </div>
-        </div>
-      </main>
+        </main>
+      </div>
     </>
   );
 }
