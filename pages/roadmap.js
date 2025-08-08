@@ -32,10 +32,28 @@ export default function CareerRoadmap() {
 
                 {!activeModule && (
                   <>
-                    <p className="text-lg text-gray-700 text-center max-w-2xl mx-auto">
-                      This AI-powered experience will analyze your resume and professional history
-                      to generate a personalized roadmap with your best-fit roles, a 30/60/90 day plan
-                      for growth, and recommended certifications to help you succeed.
+                    <p className="text-lg text-gray-700 text-center max-w-2xl mx-auto space-y-4">
+                      <span>
+                        Welcome to your Career Development Toolkit! This powerful AI-driven resource is designed to guide you through every stage of your job search and early career growth. From personalized insights on your resume and professional background, to expert advice on job offers and onboarding success, we’re here to help you build the career you deserve.
+                      </span>
+                      <br />
+                      <span>
+                        Here’s what you can expect:
+                      </span>
+                      <ul className="list-disc list-inside text-gray-700 text-left max-w-xl mx-auto my-4">
+                        <li>Tailored recommendations based on your unique skills and goals</li>
+                        <li>Step-by-step guidance through Profile Development, Offer Negotiation, and Onboarding & Growth</li>
+                        <li>Practical tools to help you land your ideal job and thrive in your new role</li>
+                        <li>Flexibility to take these results and work on your plan independently—or collaborate with a trainer, mentor, or coach to maximize your success</li>
+                      </ul>
+                      <br />
+                      <span>
+                        Please note: Free accounts receive one full roadmap experience to help you get started. Additional usage and advanced features are available through our subscription plans, designed to provide ongoing support as your career grows.
+                      </span>
+                      <br />
+                      <span>
+                        If you’re ready, choose a module below to begin shaping your future!
+                      </span>
                     </p>
 
                     <ToolkitLanding onSelectModule={setActiveModule} />
@@ -90,4 +108,3 @@ export default function CareerRoadmap() {
     </>
   );
 }
-
