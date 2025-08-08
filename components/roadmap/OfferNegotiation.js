@@ -1,6 +1,9 @@
 import React, { useState } from 'react';
+import { useRouter } from 'next/router';
 
 export default function OfferNegotiation() {
+  const router = useRouter();
+
   const [tips] = useState([
     'Understand your market value before negotiating.',
     'Consider total compensation, not just salary.',
@@ -24,8 +27,8 @@ export default function OfferNegotiation() {
 
       <div className="text-right">
         <button
+          onClick={() => router.push('/offer-negotiation/form')}
           className="bg-[#FF7043] text-white px-6 py-3 rounded hover:bg-[#F4511E] transition"
-          // onClick={() => {/* handle next step navigation */}}
         >
           Next
         </button>
