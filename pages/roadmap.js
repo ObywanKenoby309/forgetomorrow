@@ -104,4 +104,112 @@ export default function CareerRoadmap() {
                   <li>Practical tools to help you land your ideal job and thrive in your new role</li>
                   <li>
                     Flexibility to take these results and work on your plan independently—
-                    or collaborate with a trainer,
+                    or collaborate with a trainer, mentor, or coach to maximize your success
+                  </li>
+                </ul>
+
+                <p
+                  style={{
+                    color: '#4A5568',
+                    fontSize: '1rem',
+                    maxWidth: '600px',
+                    margin: '0 auto 32px auto',
+                    lineHeight: '1.4',
+                    fontStyle: 'italic',
+                  }}
+                >
+                  Please note: Free accounts receive one full roadmap experience to help you get
+                  started. Additional usage and advanced features are available through our
+                  subscription plans, designed to provide ongoing support as your career grows.
+                </p>
+
+                <p
+                  style={{
+                    color: '#4A5568',
+                    fontSize: '1.125rem',
+                    maxWidth: '600px',
+                    margin: '0 auto',
+                    lineHeight: '1.6',
+                  }}
+                >
+                  If you’re ready, choose a module below to begin shaping your future!
+                </p>
+
+                <ToolkitLanding onSelectModule={setActiveModule} />
+              </>
+            )}
+
+            {activeModule === 'profile' && (
+              <>
+                <button
+                  onClick={() => setActiveModule(null)}
+                  style={{
+                    marginBottom: '16px',
+                    fontSize: '0.875rem',
+                    color: '#FF7043',
+                    textDecoration: 'underline',
+                    background: 'none',
+                    border: 'none',
+                    cursor: 'pointer',
+                  }}
+                >
+                  ← Back to toolkit
+                </button>
+                <ProfileDevelopment />
+              </>
+            )}
+
+            {activeModule === 'offer' && (
+              <>
+                <button
+                  onClick={() => setActiveModule(null)}
+                  style={{
+                    marginBottom: '16px',
+                    fontSize: '0.875rem',
+                    color: '#FF7043',
+                    textDecoration: 'underline',
+                    background: 'none',
+                    border: 'none',
+                    cursor: 'pointer',
+                  }}
+                >
+                  ← Back to toolkit
+                </button>
+                <OfferNegotiation />
+              </>
+            )}
+
+            {activeModule === 'onboarding' && (
+              <>
+                <button
+                  onClick={() => setActiveModule(null)}
+                  style={{
+                    marginBottom: '16px',
+                    fontSize: '0.875rem',
+                    color: '#FF7043',
+                    textDecoration: 'underline',
+                    background: 'none',
+                    border: 'none',
+                    cursor: 'pointer',
+                  }}
+                >
+                  ← Back to toolkit
+                </button>
+                <OnboardingGrowth />
+              </>
+            )}
+          </div>
+        </main>
+
+        {/* Right Column – Empty placeholder for future content */}
+        <aside
+          style={{
+            backgroundColor: '#ECEFF1',
+            borderRadius: '8px',
+            width: '300px',
+          }}
+        />
+      </div>
+    </>
+  );
+}
