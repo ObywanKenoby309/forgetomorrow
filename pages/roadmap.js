@@ -53,7 +53,7 @@ export default function CareerRoadmap() {
                 marginBottom: '24px',
               }}
             >
-              Career Development Toolkit
+              Your Personalized Career Roadmap
             </h1>
 
             {!activeModule && (
