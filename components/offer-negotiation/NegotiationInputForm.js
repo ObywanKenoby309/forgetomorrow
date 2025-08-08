@@ -216,7 +216,7 @@ export default function NegotiationInputForm({ onSubmit }) {
           type="submit"
           className="bg-[#FF7043] text-white px-6 py-3 rounded hover:bg-[#F4511E] transition"
         >
-          Generate my Negotiation Strategy
+          Generate my Negotiation Results
         </button>
       </div>
     </form>
