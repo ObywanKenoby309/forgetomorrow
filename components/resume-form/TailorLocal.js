@@ -118,7 +118,7 @@ export default function TailorLocal({ className }) {
     (data.experiences || []).forEach((exp, idx) => {
       const role = exp?.title || 'Role';
       const company = exp?.company || '';
-      const bullets = tokenChunks.map((chunk, i) =>
+      const bullets = tokenChunks.map((chunk) =>
         `Drove measurable results in ${chunk.join(', ')} as ${role}${company ? ' at ' + company : ''}; instrumented process improvements and tracked KPIs to validate impact.`
       );
       out.push({ index: idx, role, company, bullets });
@@ -127,9 +127,7 @@ export default function TailorLocal({ className }) {
   }, [data.experiences, missing]);
 
   const applySummary = () => {
-    ctx.setSummary(suggestedSummary);
-    // Nudge the save toast
-    ctx.setSaveEventAt?.(new Date().toISOString());
+    ctx.setSummaryWithBackup?.(suggestedSummary);
   };
 
   const copyText = async (text) => {
@@ -141,6 +139,14 @@ export default function TailorLocal({ className }) {
     }
   };
 
+  const fmt = (iso='') => {
+    if (!iso) return '';
+    try {
+      const d = new Date(iso);
+      return d.toLocaleString();
+    } catch { return iso; }
+  };
+
   return (
     <section className={`bg-white rounded-lg shadow p-4 mb-6 ${className || ''}`}>
       <div className="flex items-center justify-between gap-4 mb-3">
@@ -148,6 +154,42 @@ export default function TailorLocal({ className }) {
         <span className="text-sm inline-block px-3 py-1 rounded-full bg-[#ECEFF1] text-[#212121] font-medium">
           JD Match: <span className="text-[#FF7043]">{score}%</span>
         </span>
+      </div>
+
+      {/* Backup controls (shared via context) */}
+      <div className="mb-3 p-3 border rounded bg-[#FAFAFA]">
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
+          <div className="text-sm">
+            <span className="font-medium">Temporary Backup:</span>{' '}
+            {ctx.summaryBackup?.text
+              ? <span className="text-gray-700">
+                  Saved {fmt(ctx.summaryBackup?.savedAt)} • {Math.min(ctx.summaryBackup.text.length, 60)} chars preview: “{ctx.summaryBackup.text.slice(0,60)}{ctx.summaryBackup.text.length>60 ? '…' : ''}”
+                </span>
+              : <span className="text-gray-500">No backup saved yet.</span>}
+          </div>
+          <div className="flex gap-2">
+            <button
+              onClick={() => ctx.saveSummaryBackup?.()}
+              className="px-3 py-2 rounded border border-gray-300 hover:bg-gray-50 text-sm"
+            >
+              Save Current as Backup
+            </button>
+            <button
+              onClick={() => ctx.revertSummaryBackup?.()}
+              disabled={!ctx.summaryBackup?.text}
+              className={`px-3 py-2 rounded text-sm ${ctx.summaryBackup?.text ? 'bg-[#37474F] text-white hover:opacity-90' : 'bg-gray-200 text-gray-500 cursor-not-allowed'}`}
+            >
+              Revert to Backup
+            </button>
+            <button
+              onClick={() => ctx.clearSummaryBackup?.()}
+              disabled={!ctx.summaryBackup?.text}
+              className={`px-3 py-2 rounded text-sm ${ctx.summaryBackup?.text ? 'border border-gray-300 hover:bg-gray-50' : 'bg-gray-200 text-gray-500 cursor-not-allowed'}`}
+            >
+              Clear Backup
+            </button>
+          </div>
+        </div>
       </div>
 
       <textarea

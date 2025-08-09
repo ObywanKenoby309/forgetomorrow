@@ -3,6 +3,8 @@ import React, { createContext, useState, useEffect, useRef } from 'react';
 
 export const ResumeContext = createContext();
 
+const SUMMARY_BACKUP_KEY = 'ft_summary_backup_v1';
+
 export function ResumeProvider({ children }) {
   const [formData, setFormData] = useState({
     fullName: '',
@@ -30,6 +32,71 @@ export function ResumeProvider({ children }) {
 
   const lastSaveRef = useRef(null);
 
+  // -------- Shared Summary Backup (for local tools + future API flows) --------
+  const [summaryBackup, setSummaryBackup] = useState({ text: '', savedAt: '' });
+
+  const nowIso = () => new Date().toISOString();
+
+  const loadSummaryBackup = () => {
+    if (typeof window === 'undefined') return;
+    try {
+      const raw = localStorage.getItem(SUMMARY_BACKUP_KEY);
+      if (!raw) return;
+      const parsed = JSON.parse(raw);
+      setSummaryBackup({
+        text: parsed?.text || '',
+        savedAt: parsed?.savedAt || '',
+      });
+    } catch {
+      // ignore parse errors
+    }
+  };
+
+  const persistSummaryBackup = (text) => {
+    if (typeof window === 'undefined') return;
+    const payload = { text: text || '', savedAt: nowIso() };
+    try {
+      localStorage.setItem(SUMMARY_BACKUP_KEY, JSON.stringify(payload));
+      setSummaryBackup(payload);
+      setSaveEventAt(payload.savedAt); // nudge any toast mechanism you already have
+    } catch {
+      // ignore storage errors
+    }
+  };
+
+  const saveSummaryBackup = (overrideText) => {
+    persistSummaryBackup(overrideText ?? summary);
+  };
+
+  const revertSummaryBackup = () => {
+    if (!summaryBackup.text) return;
+    setSummary(summaryBackup.text);
+    setSaveEventAt(nowIso());
+  };
+
+  const clearSummaryBackup = () => {
+    if (typeof window !== 'undefined') {
+      localStorage.removeItem(SUMMARY_BACKUP_KEY);
+    }
+    setSummaryBackup({ text: '', savedAt: '' });
+  };
+
+  /**
+   * setSummaryWithBackup(next)
+   * Auto-saves current summary into backup if:
+   *  - no backup exists, or
+   *  - backup differs from current
+   * Then sets the new summary.
+   */
+  const setSummaryWithBackup = (next) => {
+    const current = summary || '';
+    if (!summaryBackup.text || summaryBackup.text !== current) {
+      persistSummaryBackup(current);
+    }
+    setSummary(next);
+    setSaveEventAt(nowIso());
+  };
+
   // Restore saved snapshots + in-progress draft on mount
   useEffect(() => {
     try {
@@ -54,6 +121,10 @@ export function ResumeProvider({ children }) {
     } catch {
       // ignore parse/storage errors
     }
+
+    // Load shared backup after mount
+    loadSummaryBackup();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   // Persist snapshots list when "resumes" changes
@@ -88,9 +159,9 @@ export function ResumeProvider({ children }) {
           localStorage.setItem('ft_current_resume_draft', draftString);
           lastSaveRef.current = draftString;
 
-          const nowIso = new Date().toISOString();
-          setLastAutosaveAt(nowIso);
-          setSaveEventAt(nowIso); // triggers toast
+          const now = nowIso();
+          setLastAutosaveAt(now);
+          setSaveEventAt(now); // triggers toast
         } catch {
           /* ignore */
         }
@@ -128,6 +199,13 @@ export function ResumeProvider({ children }) {
         resumes, setResumes,
         lastAutosaveAt,
         saveEventAt, setSaveEventAt, // expose for manual save toast
+
+        // Shared backup API
+        summaryBackup,
+        saveSummaryBackup,
+        revertSummaryBackup,
+        clearSummaryBackup,
+        setSummaryWithBackup,
       }}
     >
       {children}
