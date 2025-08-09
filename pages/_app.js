@@ -39,6 +39,7 @@ export default function App({ Component, pageProps }) {
       >
         {isLandingPage ? <LandingHeader /> : <Header />}
 
+        {/* Context provider for resume state throughout the app */}
         <ResumeProvider>
           <Component {...pageProps} />
         </ResumeProvider>

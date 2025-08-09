@@ -2,7 +2,7 @@
 import { useRouter } from 'next/router';
 import Head from 'next/head';
 import { useContext, useEffect, useState } from 'react';
-import ResumeContext from '../../../context/ResumeContext';
+import { ResumeContext } from '../../../context/ResumeContext';
 
 export default function ViewResume() {
   const router = useRouter();
@@ -34,7 +34,6 @@ export default function ViewResume() {
             <p className="text-center text-gray-600">Loading...</p>
           ) : resume ? (
             <div>
-              {/* Render resume content here */}
               <h2 className="text-xl font-semibold mb-4">{resume.fullName || 'Unnamed'}</h2>
 
               <p><strong>Email:</strong> {resume.email || 'N/A'}</p>
@@ -48,8 +47,6 @@ export default function ViewResume() {
                 </>
               )}
 
-              {/* You can expand this section to display experiences, education, etc. */}
-              {/* For example: */}
               {resume.experiences && resume.experiences.length > 0 && (
                 <>
                   <h3 className="mt-6 font-semibold text-lg">Work Experience</h3>
@@ -65,7 +62,7 @@ export default function ViewResume() {
                 </>
               )}
 
-              {/* Add more sections as needed */}
+              {/* Add more sections such as education, certifications etc. here as needed */}
             </div>
           ) : (
             <div className="bg-[#F5F5F5] p-6 border border-dashed border-gray-400 rounded text-center text-gray-500">
