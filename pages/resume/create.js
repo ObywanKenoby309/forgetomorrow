@@ -18,6 +18,7 @@ import AchievementsSection from '../../components/resume-form/AchievementsSectio
 import CustomSection from '../../components/resume-form/CustomSection';
 import BasicResumeTemplate from '../../components/resume-form/templates/BasicResumeTemplate';
 import SnapshotControls from '../../components/resume-form/SnapshotControls';
+import JobMatchAnalyzer from '../../components/resume-form/JobMatchAnalyzer';
 
 const ClientPDFButton = dynamic(
   () => import('../../components/resume-form/export/ClientPDFButton'),
@@ -118,6 +119,14 @@ export default function CreateResumePage() {
           </section>
 
           <aside className="md:col-span-2 overflow-auto max-h-[80vh] flex flex-col">
+            {/* NEW: JD Match Analyzer */}
+            <JobMatchAnalyzer
+              data={{
+                formData, summary, experiences, projects, volunteerExperiences,
+                educationList, certifications, languages, skills, achievements, customSections
+              }}
+            />
+
             <div className="bg-white rounded-lg shadow p-4 flex-grow">
               <h2 className="text-lg font-semibold text-[#FF7043] mb-2">Live Preview</h2>
               {selectedTemplate === 'basic' && (
