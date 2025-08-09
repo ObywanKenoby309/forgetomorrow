@@ -63,27 +63,16 @@ export default function CareerRoadmap() {
                     color: '#4A5568',
                     fontSize: '1.125rem',
                     maxWidth: '600px',
-                    margin: '0 auto 32px auto',
-                    lineHeight: '1.6',
+                    margin: '0 auto 24px auto',
+                    lineHeight: '1.5',
+                    fontWeight: '600',
+                    textAlign: 'center',
                   }}
                 >
-                  Welcome to your Career Development Toolkit! This powerful AI-driven
-                  resource is designed to guide you through every stage of your job
-                  search and early career growth. From personalized insights on your
-                  resume and professional background, to expert advice on job offers and
-                  onboarding success, we’re here to help you build the career you deserve.
-                </p>
-
-                <p
-                  style={{
-                    color: '#4A5568',
-                    fontSize: '1.125rem',
-                    maxWidth: '600px',
-                    margin: '0 auto 16px auto',
-                    lineHeight: '1.6',
-                  }}
-                >
-                  Here’s what you can expect:
+                  Welcome to your Career Development Toolkit! This powerful AI-driven resource
+                  guides you through every stage of your job search and early career growth.
+                  Get personalized insights on your resume, job offers, and onboarding success
+                  to help build the career you deserve.
                 </p>
 
                 <ul
@@ -91,20 +80,21 @@ export default function CareerRoadmap() {
                     color: '#4A5568',
                     maxWidth: '600px',
                     margin: '0 auto 32px auto',
-                    lineHeight: '1.6',
+                    lineHeight: '1.5',
                     listStyleType: 'disc',
                     paddingLeft: '20px',
+                    fontSize: '1rem',
                   }}
                 >
                   <li>Tailored recommendations based on your unique skills and goals</li>
                   <li>
-                    Step-by-step guidance through Profile Development, Offer Negotiation,
-                    and Onboarding & Growth
+                    Step-by-step guidance through Profile Development, Offer Negotiation, and
+                    Onboarding & Growth
                   </li>
                   <li>Practical tools to help you land your ideal job and thrive in your new role</li>
                   <li>
-                    Flexibility to take these results and work on your plan independently—
-                    or collaborate with a trainer, mentor, or coach to maximize your success
+                    Flexibility to work independently or collaborate with a trainer, mentor,
+                    or coach to maximize your success
                   </li>
                 </ul>
 
@@ -113,14 +103,15 @@ export default function CareerRoadmap() {
                     color: '#4A5568',
                     fontSize: '1rem',
                     maxWidth: '600px',
-                    margin: '0 auto 32px auto',
+                    margin: '0 auto 16px auto',
                     lineHeight: '1.4',
                     fontStyle: 'italic',
+                    textAlign: 'center',
                   }}
                 >
-                  Please note: Free accounts receive one full roadmap experience to help you get
-                  started. Additional usage and advanced features are available through our
-                  subscription plans, designed to provide ongoing support as your career grows.
+                  <strong>Usage Note:</strong> Free users receive one full roadmap experience.  
+                  Please upload a complete resume via our AI-powered resume builder to get started.  
+                  Subscribers enjoy up to one personalized roadmap per month and access to advanced features.
                 </p>
 
                 <p
@@ -128,11 +119,12 @@ export default function CareerRoadmap() {
                     color: '#4A5568',
                     fontSize: '1.125rem',
                     maxWidth: '600px',
-                    margin: '0 auto',
+                    margin: '0 auto 32px auto',
                     lineHeight: '1.6',
+                    textAlign: 'center',
                   }}
                 >
-                  If you’re ready, choose a module below to begin shaping your future!
+                  When you’re ready, choose a module below to begin shaping your future!
                 </p>
 
                 <ToolkitLanding onSelectModule={setActiveModule} />
