@@ -1,5 +1,5 @@
 // context/ResumeContext.js
-import React, { createContext, useState, useEffect } from 'react';
+import React, { createContext, useState, useEffect, useRef } from 'react';
 
 export const ResumeContext = createContext();
 
@@ -22,21 +22,89 @@ export function ResumeProvider({ children }) {
   const [skills, setSkills] = useState([]);
   const [achievements, setAchievements] = useState([]);
   const [customSections, setCustomSections] = useState([]);
-  const [resumes, setResumes] = useState([]); // for saved resumes
+  const [resumes, setResumes] = useState([]);
+  const [lastAutosaveAt, setLastAutosaveAt] = useState(null); // ISO string
 
-  // TEMP: inject a fake resume for testing Onboarding & Growth flow
+  const lastSaveRef = useRef(null);
+
+  // Restore saved snapshots + in-progress draft on mount
   useEffect(() => {
-    setResumes([
-      {
-        id: 'fake-001',
-        fullName: 'John Doe',
-        summary:
-          'Experienced Operations Manager with a passion for process improvement and team leadership.',
-        updatedAt: new Date().toISOString(),
-      },
-    ]);
+    try {
+      const savedResumes = localStorage.getItem('ft_saved_resumes');
+      if (savedResumes) {
+        setResumes(JSON.parse(savedResumes));
+      }
+      const draft = localStorage.getItem('ft_current_resume_draft');
+      if (draft) {
+        const parsed = JSON.parse(draft);
+        setFormData(parsed.formData || {});
+        setSummary(parsed.summary || '');
+        setExperiences(parsed.experiences || []);
+        setProjects(parsed.projects || []);
+        setVolunteerExperiences(parsed.volunteerExperiences || []);
+        setEducationList(parsed.educationList || []);
+        setCertifications(parsed.certifications || []);
+        setLanguages(parsed.languages || []);
+        setSkills(parsed.skills || []);
+        setAchievements(parsed.achievements || []);
+        setCustomSections(parsed.customSections || []);
+      }
+    } catch {
+      // ignore parse/storage errors
+    }
   }, []);
-  // END TEMP
+
+  // Persist snapshots list when "resumes" changes
+  useEffect(() => {
+    try {
+      localStorage.setItem('ft_saved_resumes', JSON.stringify(resumes));
+    } catch {
+      // ignore storage errors
+    }
+  }, [resumes]);
+
+  // Autosave current draft every 10 seconds if changed
+  useEffect(() => {
+    const interval = setInterval(() => {
+      const draft = {
+        formData,
+        summary,
+        experiences,
+        projects,
+        volunteerExperiences,
+        educationList,
+        certifications,
+        languages,
+        skills,
+        achievements,
+        customSections,
+      };
+      const draftString = JSON.stringify(draft);
+
+      if (lastSaveRef.current !== draftString) {
+        try {
+          localStorage.setItem('ft_current_resume_draft', draftString);
+          lastSaveRef.current = draftString;
+          setLastAutosaveAt(new Date().toISOString());
+        } catch {
+          /* ignore */
+        }
+      }
+    }, 10000); // 10s
+    return () => clearInterval(interval);
+  }, [
+    formData,
+    summary,
+    experiences,
+    projects,
+    volunteerExperiences,
+    educationList,
+    certifications,
+    languages,
+    skills,
+    achievements,
+    customSections,
+  ]);
 
   return (
     <ResumeContext.Provider
@@ -53,6 +121,7 @@ export function ResumeProvider({ children }) {
         achievements, setAchievements,
         customSections, setCustomSections,
         resumes, setResumes,
+        lastAutosaveAt,
       }}
     >
       {children}

@@ -2,8 +2,6 @@
 import Head from 'next/head';
 import { useContext, useState } from 'react';
 import dynamic from 'next/dynamic';
-import { Document as DocxDocument, Packer, Paragraph, TextRun } from 'docx';
-import { saveAs } from 'file-saver';
 
 import { ResumeContext } from '../../context/ResumeContext';
 
@@ -38,98 +36,9 @@ export default function CreateResumePage() {
     skills, setSkills,
     achievements, setAchievements,
     customSections, setCustomSections,
-    // ⬇️ bring in saved resumes so we can persist snapshots
-    resumes, setResumes,
   } = useContext(ResumeContext);
 
   const [selectedTemplate, setSelectedTemplate] = useState('basic');
-  const [saving, setSaving] = useState(false);
-
-  // ---- Export: Word ----
-  const exportWord = async () => {
-    const doc = new DocxDocument({
-      sections: [
-        {
-          children: [
-            new Paragraph({
-              children: [
-                new TextRun({
-                  text: formData.fullName || 'Your Name',
-                  bold: true,
-                  size: 32,
-                }),
-              ],
-            }),
-            new Paragraph(formData.email || ''),
-            new Paragraph(formData.phone || ''),
-            new Paragraph(formData.location || ''),
-          ],
-        },
-      ],
-    });
-
-    const blob = await Packer.toBlob(doc);
-    saveAs(blob, 'resume.docx');
-  };
-
-  // ---- Export: Plain Text ----
-  const exportPlainText = () => {
-    let text = `${formData.fullName || 'Your Name'}\n`;
-    text += `${formData.email || ''}\n`;
-    text += `${formData.phone || ''}\n`;
-    text += `${formData.location || ''}\n\n`;
-    text += `Professional Summary:\n${summary}\n`;
-
-    const element = document.createElement('a');
-    const file = new Blob([text], { type: 'text/plain' });
-    element.href = URL.createObjectURL(file);
-    element.download = 'resume.txt';
-    document.body.appendChild(element);
-    element.click();
-    document.body.removeChild(element);
-  };
-
-  // ---- Save: Snapshot to Context + localStorage ----
-  const saveResume = () => {
-    try {
-      setSaving(true);
-
-      const id = `res-${Date.now()}`;
-      const snapshot = {
-        id,
-        // top-level fields used by the selector
-        fullName: formData.fullName || 'Untitled Resume',
-        summary: summary || '',
-        updatedAt: new Date().toISOString(),
-
-        // full builder payload (kept for future edits/exports)
-        formData: { ...formData },
-        experiences: [...experiences],
-        projects: [...projects],
-        volunteerExperiences: [...volunteerExperiences],
-        educationList: [...educationList],
-        certifications: [...certifications],
-        languages: [...languages],
-        skills: [...skills],
-        achievements: [...achievements],
-        customSections: [...customSections],
-      };
-
-      const next = [snapshot, ...(Array.isArray(resumes) ? resumes : [])];
-      setResumes(next);
-
-      // persist for selector/landing to read
-      try {
-        localStorage.setItem('ft_saved_resumes', JSON.stringify(next));
-      } catch {
-        /* ignore storage errors */
-      }
-
-      alert('Resume saved!');
-    } finally {
-      setSaving(false);
-    }
-  };
 
   return (
     <>
@@ -202,48 +111,21 @@ export default function CreateResumePage() {
               )}
             </div>
 
-            <div className="mt-4 flex gap-4 justify-center items-center flex-wrap">
-              <ClientPDFButton
-                formData={formData}
-                summary={summary}
-                experiences={experiences}
-                projects={projects}
-                volunteerExperiences={volunteerExperiences}
-                educationList={educationList}
-                certifications={certifications}
-                languages={languages}
-                skills={skills}
-                achievements={achievements}
-                customSections={customSections}
-                className="bg-[#FF7043] hover:bg-[#F4511E] text-white py-2 px-4 rounded text-center"
-              />
-
-              <button
-                onClick={exportWord}
-                className="bg-[#FF7043] hover:bg-[#F4511E] text-white py-2 px-4 rounded"
-              >
-                Export Word
-              </button>
-
-              <button
-                onClick={exportPlainText}
-                className="bg-[#FF7043] hover:bg-[#F4511E] text-white py-2 px-4 rounded"
-              >
-                Export Text
-              </button>
-
-              {/* NEW: Save Snapshot */}
-              <button
-                onClick={saveResume}
-                disabled={saving}
-                className={`${
-                  saving ? 'bg-gray-400 cursor-not-allowed' : 'bg-[#2E7D32] hover:bg-[#1B5E20]'
-                } text-white py-2 px-4 rounded`}
-                title="Save this version to your account so you can analyze or export later"
-              >
-                {saving ? 'Saving…' : 'Save Resume'}
-              </button>
-            </div>
+            {/* Unified action bar: PDF / Word / Text / Save */}
+            <ClientPDFButton
+              formData={formData}
+              summary={summary}
+              experiences={experiences}
+              projects={projects}
+              volunteerExperiences={volunteerExperiences}
+              educationList={educationList}
+              certifications={certifications}
+              languages={languages}
+              skills={skills}
+              achievements={achievements}
+              customSections={customSections}
+              className="bg-[#FF7043] hover:bg-[#F4511E] text-white py-2 px-4 rounded text-center"
+            />
           </aside>
         </div>
       </main>
