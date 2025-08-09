@@ -7,15 +7,16 @@ import Footer from '../components/Footer';
 import LandingHeader from '../components/LandingHeader';
 import LandingFooter from '../components/LandingFooter';
 
+import ResumeProvider from '../context/ResumeContext';
+
 export default function App({ Component, pageProps }) {
   const router = useRouter();
 
   const isLandingPage = ['/', '/signup', '/features', '/login', '/about'].includes(router.pathname);
-  const useForgeBackground = ['/', '/about', '/features'].includes(router.pathname); // ✅ Features now included
+  const useForgeBackground = ['/', '/about', '/features'].includes(router.pathname);
 
   return (
     <div className="relative min-h-screen">
-      {/* 🔳 Background Image Layer - only for /, /about, and /features */}
       {useForgeBackground && (
         <>
           <div
@@ -31,18 +32,19 @@ export default function App({ Component, pageProps }) {
         </>
       )}
 
-      {/* 🔝 Main Page Content */}
       <div
         className={`relative z-10 min-h-screen flex flex-col justify-between ${
           !useForgeBackground ? 'bg-[#ECEFF1]' : ''
         }`}
       >
         {isLandingPage ? <LandingHeader /> : <Header />}
-        <Component {...pageProps} />
+
+        <ResumeProvider>
+          <Component {...pageProps} />
+        </ResumeProvider>
+
         {isLandingPage ? <LandingFooter /> : <Footer />}
       </div>
     </div>
   );
 }
-
-

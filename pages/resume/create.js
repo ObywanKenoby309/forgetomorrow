@@ -1,8 +1,10 @@
 import Head from 'next/head';
-import { useState } from 'react';
+import { useContext } from 'react';
 import dynamic from 'next/dynamic';
 import { Document as DocxDocument, Packer, Paragraph, TextRun } from 'docx';
 import { saveAs } from 'file-saver';
+
+import ResumeContext from '../../context/ResumeContext';  // import your context
 
 import ContactInfoSection from '../../components/resume-form/ContactInfoSection';
 import ProfessionalSummarySection from '../../components/resume-form/ProfessionalSummarySection';
@@ -17,33 +19,26 @@ import AchievementsSection from '../../components/resume-form/AchievementsSectio
 import CustomSection from '../../components/resume-form/CustomSection';
 import BasicResumeTemplate from '../../components/resume-form/templates/BasicResumeTemplate';
 
-// 👇 Client-only PDF button (prevents SSR crash)
+// Client-only PDF button (prevents SSR crash)
 const ClientPDFButton = dynamic(
   () => import('../../components/resume-form/export/ClientPDFButton'),
   { ssr: false }
 );
 
 export default function CreateResumePage() {
-  const [formData, setFormData] = useState({
-    fullName: '',
-    email: '',
-    phone: '',
-    location: '',
-    portfolio: '',
-    forgeUrl: 'https://forgetomorrow.com/your-profile',
-  });
-
-  const [summary, setSummary] = useState('');
-  const [experiences, setExperiences] = useState([]);
-  const [projects, setProjects] = useState([]);
-  const [volunteerExperiences, setVolunteerExperiences] = useState([]);
-  const [educationList, setEducationList] = useState([]);
-  const [certifications, setCertifications] = useState([]);
-  const [languages, setLanguages] = useState([]);
-  const [skills, setSkills] = useState([]);
-  const [achievements, setAchievements] = useState([]);
-  const [customSections, setCustomSections] = useState([]);
-  const [selectedTemplate, setSelectedTemplate] = useState('basic');
+  const {
+    formData, setFormData,
+    summary, setSummary,
+    experiences, setExperiences,
+    projects, setProjects,
+    volunteerExperiences, setVolunteerExperiences,
+    educationList, setEducationList,
+    certifications, setCertifications,
+    languages, setLanguages,
+    skills, setSkills,
+    achievements, setAchievements,
+    customSections, setCustomSections,
+  } = useContext(ResumeContext);
 
   // Export Word handler
   const exportWord = async () => {
@@ -88,6 +83,8 @@ export default function CreateResumePage() {
     element.click();
     document.body.removeChild(element);
   };
+
+  const [selectedTemplate, setSelectedTemplate] = useState('basic');
 
   return (
     <>
@@ -165,7 +162,6 @@ export default function CreateResumePage() {
 
             {/* Export Buttons */}
             <div className="mt-4 flex gap-4 justify-center items-center flex-wrap">
-              {/* Client-only Styled PDF Export */}
               <ClientPDFButton
                 formData={formData}
                 summary={summary}
