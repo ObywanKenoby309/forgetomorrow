@@ -1,6 +1,9 @@
 import React, { useState } from 'react';
+import { useRouter } from 'next/router';
 
 export default function OnboardingGrowth() {
+  const router = useRouter();
+
   const [steps] = useState([
     'Set clear 30/60/90 day goals aligned with your role.',
     'Schedule regular check-ins with your manager or mentor.',
@@ -25,7 +28,9 @@ export default function OnboardingGrowth() {
       <div className="text-right">
         <button
           className="bg-[#FF7043] text-white px-6 py-3 rounded hover:bg-[#F4511E] transition"
-          // onClick={() => {/* handle next step navigation */}}
+          onClick={() => {
+            router.push('/roadmap/onboarding-growth/select');
+          }}
         >
           Next
         </button>
