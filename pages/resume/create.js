@@ -1,10 +1,11 @@
+// pages/resume/create.js
 import Head from 'next/head';
-import { useContext } from 'react';
+import { useContext, useState } from 'react';
 import dynamic from 'next/dynamic';
 import { Document as DocxDocument, Packer, Paragraph, TextRun } from 'docx';
 import { saveAs } from 'file-saver';
 
-import ResumeContext from '../../context/ResumeContext';  // import your context
+import { ResumeContext } from '../../context/ResumeContext';
 
 import ContactInfoSection from '../../components/resume-form/ContactInfoSection';
 import ProfessionalSummarySection from '../../components/resume-form/ProfessionalSummarySection';
@@ -19,7 +20,6 @@ import AchievementsSection from '../../components/resume-form/AchievementsSectio
 import CustomSection from '../../components/resume-form/CustomSection';
 import BasicResumeTemplate from '../../components/resume-form/templates/BasicResumeTemplate';
 
-// Client-only PDF button (prevents SSR crash)
 const ClientPDFButton = dynamic(
   () => import('../../components/resume-form/export/ClientPDFButton'),
   { ssr: false }
@@ -40,7 +40,8 @@ export default function CreateResumePage() {
     customSections, setCustomSections,
   } = useContext(ResumeContext);
 
-  // Export Word handler
+  const [selectedTemplate, setSelectedTemplate] = useState('basic');
+
   const exportWord = async () => {
     const doc = new DocxDocument({
       sections: [
@@ -67,7 +68,6 @@ export default function CreateResumePage() {
     saveAs(blob, 'resume.docx');
   };
 
-  // Export plain text handler
   const exportPlainText = () => {
     let text = `${formData.fullName || 'Your Name'}\n`;
     text += `${formData.email || ''}\n`;
@@ -84,8 +84,6 @@ export default function CreateResumePage() {
     document.body.removeChild(element);
   };
 
-  const [selectedTemplate, setSelectedTemplate] = useState('basic');
-
   return (
     <>
       <Head>
@@ -94,7 +92,6 @@ export default function CreateResumePage() {
 
       <main className="max-w-7xl mx-auto px-6 min-h-[80vh] bg-[#ECEFF1] py-28 text-[#212121]">
         <div className="grid grid-cols-1 md:grid-cols-5 gap-6">
-          {/* Left Column – Back to Dashboard */}
           <aside className="md:col-span-1">
             <div className="bg-white rounded-lg shadow p-4 text-center">
               <h2 className="text-lg font-semibold text-[#FF7043] mb-4">Navigation</h2>
@@ -107,7 +104,6 @@ export default function CreateResumePage() {
             </div>
           </aside>
 
-          {/* Center Column – Resume Form */}
           <section className="md:col-span-2 space-y-6">
             <div className="bg-white rounded-lg shadow p-4 mb-6">
               <label htmlFor="template-select" className="block font-semibold mb-2 text-[#FF7043]">
@@ -139,7 +135,6 @@ export default function CreateResumePage() {
             <CustomSection customSections={customSections} setCustomSections={setCustomSections} />
           </section>
 
-          {/* Right Column – Live Resume Preview */}
           <aside className="md:col-span-2 overflow-auto max-h-[80vh] flex flex-col">
             <div className="bg-white rounded-lg shadow p-4 flex-grow">
               <h2 className="text-lg font-semibold text-[#FF7043] mb-2">Live Preview</h2>
@@ -160,7 +155,6 @@ export default function CreateResumePage() {
               )}
             </div>
 
-            {/* Export Buttons */}
             <div className="mt-4 flex gap-4 justify-center items-center flex-wrap">
               <ClientPDFButton
                 formData={formData}
