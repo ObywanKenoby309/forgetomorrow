@@ -31,6 +31,16 @@ export default function ApplicationForm({ mode = 'add', initial, onClose, onSave
     onSave(form);
   };
 
+  const inputStyle = {
+    border: '1px solid #DADCE0',
+    borderRadius: '8px',
+    padding: '10px 12px',
+    width: '100%',
+    outline: 'none',
+  };
+
+  const labelStyle = { fontSize: 12, color: '#607D8B', marginBottom: 4, display: 'block' };
+
   return (
     <div
       onClick={onClose}
@@ -59,20 +69,36 @@ export default function ApplicationForm({ mode = 'add', initial, onClose, onSave
           {mode === 'edit' ? 'Edit Application' : 'Add Application'}
         </h2>
 
-        <form onSubmit={handleSubmit} style={{ display: 'grid', gap: 10 }}>
-          <input name="title" placeholder="Job Title *" value={form.title} onChange={handleChange} />
-          <input name="company" placeholder="Company *" value={form.company} onChange={handleChange} />
-          <input name="location" placeholder="Location" value={form.location} onChange={handleChange} />
-          <input name="link" placeholder="Job Link (optional)" value={form.link} onChange={handleChange} />
-          <textarea name="notes" placeholder="Notes" value={form.notes} onChange={handleChange} rows={3} />
+        <form onSubmit={handleSubmit} style={{ display: 'grid', gap: 12 }}>
+          <div>
+            <label style={labelStyle}>Job Title *</label>
+            <input name="title" value={form.title} onChange={handleChange} style={inputStyle} />
+          </div>
+          <div>
+            <label style={labelStyle}>Company *</label>
+            <input name="company" value={form.company} onChange={handleChange} style={inputStyle} />
+          </div>
+          <div>
+            <label style={labelStyle}>Location</label>
+            <input name="location" value={form.location} onChange={handleChange} style={inputStyle} />
+          </div>
+          <div>
+            <label style={labelStyle}>Job Link (optional)</label>
+            <input name="link" value={form.link} onChange={handleChange} style={inputStyle} />
+          </div>
+          <div>
+            <label style={labelStyle}>Notes</label>
+            <textarea name="notes" value={form.notes} onChange={handleChange} rows={3} style={{ ...inputStyle, resize: 'vertical' }} />
+          </div>
+
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
             <div>
-              <label style={{ fontSize: 12, color: '#607D8B' }}>Date Added</label>
-              <input type="date" name="dateAdded" value={form.dateAdded} onChange={handleChange} />
+              <label style={labelStyle}>Date Added</label>
+              <input type="date" name="dateAdded" value={form.dateAdded} onChange={handleChange} style={inputStyle} />
             </div>
             <div>
-              <label style={{ fontSize: 12, color: '#607D8B' }}>Status</label>
-              <select name="status" value={form.status} onChange={handleChange}>
+              <label style={labelStyle}>Status</label>
+              <select name="status" value={form.status} onChange={handleChange} style={inputStyle}>
                 {stages.map((s) => (
                   <option key={s} value={s}>{s}</option>
                 ))}
@@ -81,7 +107,7 @@ export default function ApplicationForm({ mode = 'add', initial, onClose, onSave
           </div>
 
           <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 10, marginTop: 8 }}>
-            <button type="button" onClick={onClose} style={{ padding: '6px 12px' }}>Cancel</button>
+            <button type="button" onClick={onClose} style={{ padding: '8px 12px', borderRadius: 6 }}>Cancel</button>
             <button type="submit" style={{ backgroundColor: '#FF7043', color: 'white', border: 'none', padding: '8px 14px', borderRadius: '6px' }}>
               {mode === 'edit' ? 'Save Changes' : 'Save'}
             </button>

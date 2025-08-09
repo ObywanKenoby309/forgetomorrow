@@ -51,14 +51,23 @@ export default function ApplicationsPage() {
     localStorage.setItem(STORAGE_KEY, JSON.stringify(tracker));
   }, [tracker]);
 
-  // Add new application (defaults to Pinned)
+  // Add new application (respects selected status)
   const addApplication = (app) => {
     const id = Date.now().toString();
     const dateAdded = app.dateAdded || new Date().toISOString().split('T')[0];
-    const newJob = { id, title: app.title, company: app.company, location: app.location || '', link: app.link || '', notes: app.notes || '', dateAdded };
+    const targetStage = STAGES.includes(app.status) ? app.status : 'Pinned';
+    const newJob = {
+      id,
+      title: app.title,
+      company: app.company,
+      location: app.location || '',
+      link: app.link || '',
+      notes: app.notes || '',
+      dateAdded,
+    };
     setTracker((prev) => ({
       ...prev,
-      Pinned: [newJob, ...prev.Pinned],
+      [targetStage]: [newJob, ...(prev[targetStage] || [])],
     }));
     setShowForm(false);
   };
@@ -75,7 +84,7 @@ export default function ApplicationsPage() {
       return {
         ...prev,
         [fromStage]: prev[fromStage].filter((job) => job.id !== id),
-        [STAGES[targetIndex]]: [ { ...item }, ...prev[STAGES[targetIndex]] ],
+        [STAGES[targetIndex]]: [{ ...item }, ...prev[STAGES[targetIndex]]],
       };
     });
   };
@@ -99,7 +108,7 @@ export default function ApplicationsPage() {
   // Save edits (may also change stage)
   const saveEdits = (updated) => {
     const { id, title, company, location, link, notes, dateAdded, status, originalStage } = updated;
-    const targetStage = status || originalStage;
+    const targetStage = STAGES.includes(status) ? status : originalStage;
 
     setTracker((prev) => {
       // remove from original stage
