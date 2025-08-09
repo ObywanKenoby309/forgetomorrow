@@ -23,7 +23,10 @@ export function ResumeProvider({ children }) {
   const [achievements, setAchievements] = useState([]);
   const [customSections, setCustomSections] = useState([]);
   const [resumes, setResumes] = useState([]);
+
+  // timestamps to show “Last saved” + toast
   const [lastAutosaveAt, setLastAutosaveAt] = useState(null); // ISO string
+  const [saveEventAt, setSaveEventAt] = useState(null);       // ISO string (autosave or manual)
 
   const lastSaveRef = useRef(null);
 
@@ -31,9 +34,8 @@ export function ResumeProvider({ children }) {
   useEffect(() => {
     try {
       const savedResumes = localStorage.getItem('ft_saved_resumes');
-      if (savedResumes) {
-        setResumes(JSON.parse(savedResumes));
-      }
+      if (savedResumes) setResumes(JSON.parse(savedResumes));
+
       const draft = localStorage.getItem('ft_current_resume_draft');
       if (draft) {
         const parsed = JSON.parse(draft);
@@ -85,7 +87,10 @@ export function ResumeProvider({ children }) {
         try {
           localStorage.setItem('ft_current_resume_draft', draftString);
           lastSaveRef.current = draftString;
-          setLastAutosaveAt(new Date().toISOString());
+
+          const nowIso = new Date().toISOString();
+          setLastAutosaveAt(nowIso);
+          setSaveEventAt(nowIso); // triggers toast
         } catch {
           /* ignore */
         }
@@ -122,6 +127,7 @@ export function ResumeProvider({ children }) {
         customSections, setCustomSections,
         resumes, setResumes,
         lastAutosaveAt,
+        saveEventAt, setSaveEventAt, // expose for manual save toast
       }}
     >
       {children}

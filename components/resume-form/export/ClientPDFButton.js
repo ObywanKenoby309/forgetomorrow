@@ -39,7 +39,7 @@ export default function ClientPDFButton({
   customSections,
   className,
 }) {
-  const { resumes, setResumes, lastAutosaveAt } = useContext(ResumeContext) || {};
+  const { resumes, setResumes, lastAutosaveAt, setSaveEventAt } = useContext(ResumeContext) || {};
   const [saving, setSaving] = useState(false);
   const [lastManualSaveAt, setLastManualSaveAt] = useState(null);
 
@@ -127,13 +127,15 @@ export default function ClientPDFButton({
         /* ignore */
       }
 
-      setLastManualSaveAt(new Date());
+      const now = new Date();
+      setLastManualSaveAt(now);
+      if (setSaveEventAt) setSaveEventAt(now.toISOString()); // trigger toast
     } finally {
       setSaving(false);
     }
   };
 
-  // Pick the most recent save time (autosave or manual save)
+  // Most recent save time (autosave or manual)
   const lastSavedDisplay = useMemo(() => {
     const a = lastAutosaveAt ? new Date(lastAutosaveAt).getTime() : 0;
     const m = lastManualSaveAt ? lastManualSaveAt.getTime() : 0;

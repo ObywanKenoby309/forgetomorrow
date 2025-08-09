@@ -1,6 +1,6 @@
 // pages/resume/create.js
 import Head from 'next/head';
-import { useContext, useState } from 'react';
+import { useContext, useEffect, useMemo, useState } from 'react';
 import dynamic from 'next/dynamic';
 
 import { ResumeContext } from '../../context/ResumeContext';
@@ -23,6 +23,16 @@ const ClientPDFButton = dynamic(
   { ssr: false }
 );
 
+function formatLocal(dt) {
+  if (!dt) return '';
+  try {
+    const d = typeof dt === 'string' ? new Date(dt) : dt;
+    return new Intl.DateTimeFormat(undefined, { timeStyle: 'short' }).format(d);
+  } catch {
+    return '';
+  }
+}
+
 export default function CreateResumePage() {
   const {
     formData, setFormData,
@@ -36,9 +46,21 @@ export default function CreateResumePage() {
     skills, setSkills,
     achievements, setAchievements,
     customSections, setCustomSections,
+    saveEventAt,
   } = useContext(ResumeContext);
 
   const [selectedTemplate, setSelectedTemplate] = useState('basic');
+
+  // Toast visibility controller
+  const [showToast, setShowToast] = useState(false);
+  const savedTime = useMemo(() => formatLocal(saveEventAt), [saveEventAt]);
+
+  useEffect(() => {
+    if (!saveEventAt) return;
+    setShowToast(true);
+    const t = setTimeout(() => setShowToast(false), 2000); // visible ~2s
+    return () => clearTimeout(t);
+  }, [saveEventAt]);
 
   return (
     <>
@@ -127,6 +149,23 @@ export default function CreateResumePage() {
               className="bg-[#FF7043] hover:bg-[#F4511E] text-white py-2 px-4 rounded text-center"
             />
           </aside>
+        </div>
+
+        {/* Forge toast: bottom-right, slide-up + fade */}
+        <div
+          className={[
+            'fixed right-6 bottom-6 z-50',
+            'transition-all duration-300',
+            showToast ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-3 pointer-events-none',
+          ].join(' ')}
+        >
+          <div className="bg-[#FF7043] text-white shadow-lg rounded-2xl px-4 py-3 flex items-center gap-2">
+            <span className="text-xl leading-none">⚒</span>
+            <span className="text-xl leading-none">💥</span>
+            <span className="font-medium">
+              Saved{savedTime ? ` at ${savedTime}` : ''}
+            </span>
+          </div>
         </div>
       </main>
     </>
