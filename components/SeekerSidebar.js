@@ -11,29 +11,58 @@ export default function SeekerSidebar() {
         borderRadius: '8px',
         display: 'flex',
         flexDirection: 'column',
-        gap: '16px',
-        minHeight: '80vh',
+        justifyContent: 'center',
+        gap: '32px',
+        height: 'fit-content',
         width: '300px',
       }}
     >
       <div>
-        <h2 className="text-[#FF7043] mb-3 font-semibold text-lg">Seeker Tools</h2>
-        <nav style={{ display: 'grid', gap: 10 }}>
-          {/* NEW: Quick link back to dashboard */}
-          <Link href="/seeker-dashboard" style={{ color: '#FF7043', fontWeight: 600 }}>
-            ← Seeker Dashboard
-          </Link>
+        <h3 className="text-[#FF7043] mb-3 font-semibold text-lg">Career Roadmap</h3>
+        <Link href="/roadmap" legacyBehavior>
+          <button
+            className="block bg-[#FF7043] hover:bg-[#F4511E] text-white px-5 py-3 rounded font-bold w-full transition-colors"
+            aria-label="Launch Career Roadmap"
+          >
+            Launch Roadmap
+          </button>
+        </Link>
+      </div>
 
-          <Link href="/applications" style={{ color: '#455A64' }}>
-            Applications Tracker
-          </Link>
-          <Link href="/pinned-jobs" style={{ color: '#455A64' }}>
-            Pinned Jobs
-          </Link>
-          <Link href="/resume/create" style={{ color: '#455A64' }}>
-            Create Resume
-          </Link>
-        </nav>
+      <div>
+        <h2 className="text-[#FF7043] mb-3 font-semibold text-lg">Resume/Cover Creator</h2>
+        <Link href="/resume-cover" legacyBehavior>
+          <button
+            className="block bg-[#FF7043] hover:bg-[#F4511E] text-white px-5 py-3 rounded font-bold w-full transition-colors"
+            aria-label="Go to Resume and Cover Letter Creator"
+          >
+            Open Creator
+          </button>
+        </Link>
+      </div>
+
+      <div>
+        <h3 className="text-[#FF7043] mb-3 font-semibold text-lg">Ready to Apply?</h3>
+        <Link href="/jobs" legacyBehavior>
+          <button
+            className="block bg-[#FF7043] hover:bg-[#F4511E] text-white px-5 py-3 rounded font-bold w-full transition-colors"
+            aria-label="Open The Pipeline"
+          >
+            Open The Pipeline
+          </button>
+        </Link>
+      </div>
+
+      <div>
+        <h3 className="text-[#FF7043] mb-3 font-semibold text-lg">Career Growth</h3>
+        <Link href="/the-hearth" legacyBehavior>
+          <button
+            className="block bg-[#FF7043] hover:bg-[#F4511E] text-white px-5 py-3 rounded font-bold w-full transition-colors"
+            aria-label="Visit Your Hearth"
+          >
+            Visit Your Hearth
+          </button>
+        </Link>
       </div>
     </aside>
   );
