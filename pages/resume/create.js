@@ -17,6 +17,7 @@ import SkillsSection from '../../components/resume-form/SkillsSection';
 import AchievementsSection from '../../components/resume-form/AchievementsSection';
 import CustomSection from '../../components/resume-form/CustomSection';
 import BasicResumeTemplate from '../../components/resume-form/templates/BasicResumeTemplate';
+import SnapshotControls from '../../components/resume-form/SnapshotControls';
 
 const ClientPDFButton = dynamic(
   () => import('../../components/resume-form/export/ClientPDFButton'),
@@ -96,6 +97,9 @@ export default function CreateResumePage() {
                 <option value="basic">Basic (ATS Friendly)</option>
               </select>
             </div>
+
+            {/* Snapshot save + link to Saved Versions */}
+            <SnapshotControls />
 
             <ContactInfoSection formData={formData} setFormData={setFormData} />
             <ProfessionalSummarySection summary={summary} setSummary={setSummary} />
