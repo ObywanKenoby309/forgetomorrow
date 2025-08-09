@@ -16,7 +16,17 @@ export default function ResumeTrackerSummary({ trackerData }) {
       }}
     >
       {STAGES.map((stage) => (
-        <div key={stage} style={{ textAlign: 'center', flex: 1 }}>
+        <div
+          key={stage}
+          style={{
+            textAlign: 'center',
+            flex: 1,
+            border: '1px solid #eee',
+            borderRadius: '8px',
+            padding: '10px',
+            background: '#fafafa',
+          }}
+        >
           <div style={{ fontWeight: 'bold', fontSize: '1.2em', color: '#FF7043' }}>
             {trackerData[stage] ? trackerData[stage].length : 0}
           </div>
