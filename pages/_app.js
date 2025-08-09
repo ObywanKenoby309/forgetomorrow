@@ -7,7 +7,7 @@ import Footer from '../components/Footer';
 import LandingHeader from '../components/LandingHeader';
 import LandingFooter from '../components/LandingFooter';
 
-import ResumeProvider from '../context/ResumeContext';
+import { ResumeProvider } from '../context/ResumeContext';
 
 export default function App({ Component, pageProps }) {
   const router = useRouter();
