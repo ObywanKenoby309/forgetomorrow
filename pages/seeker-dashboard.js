@@ -1,12 +1,30 @@
 // pages/seeker-dashboard.js
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import Link from 'next/link';
 import SeekerSidebar from '../components/SeekerSidebar';
 import JobSearchSnapshot from '../components/JobSearchSnapshot';
 import PinnedJobsPreview from '../components/PinnedJobsPreview';
 import ResumeTrackerPreview from '../components/ResumeTrackerPreview';
+import ResumeTrackerSummary from '../components/ResumeTrackerSummary';
+
+const STORAGE_KEY = 'applicationsTracker';
 
 export default function SeekerDashboard() {
+  const [trackerData, setTrackerData] = useState({
+    Pinned: [],
+    Applied: [],
+    Interviewing: [],
+    Offers: [],
+    Rejected: [],
+  });
+
+  useEffect(() => {
+    const saved = localStorage.getItem(STORAGE_KEY);
+    if (saved) {
+      setTrackerData(JSON.parse(saved));
+    }
+  }, []);
+
   return (
     <div
       style={{
@@ -21,6 +39,9 @@ export default function SeekerDashboard() {
       <SeekerSidebar />
 
       <main style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
+        {/* Summary Counts */}
+        <ResumeTrackerSummary trackerData={trackerData} />
+
         <JobSearchSnapshot />
 
         <section
