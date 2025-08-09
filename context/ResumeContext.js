@@ -1,5 +1,5 @@
 // context/ResumeContext.js
-import React, { createContext, useState } from 'react';
+import React, { createContext, useState, useEffect } from 'react';
 
 export const ResumeContext = createContext();
 
@@ -23,6 +23,20 @@ export function ResumeProvider({ children }) {
   const [achievements, setAchievements] = useState([]);
   const [customSections, setCustomSections] = useState([]);
   const [resumes, setResumes] = useState([]); // for saved resumes
+
+  // TEMP: inject a fake resume for testing Onboarding & Growth flow
+  useEffect(() => {
+    setResumes([
+      {
+        id: 'fake-001',
+        fullName: 'John Doe',
+        summary:
+          'Experienced Operations Manager with a passion for process improvement and team leadership.',
+        updatedAt: new Date().toISOString(),
+      },
+    ]);
+  }, []);
+  // END TEMP
 
   return (
     <ResumeContext.Provider
