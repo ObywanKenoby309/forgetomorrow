@@ -38,10 +38,14 @@ export default function CreateResumePage() {
     skills, setSkills,
     achievements, setAchievements,
     customSections, setCustomSections,
+    // ⬇️ bring in saved resumes so we can persist snapshots
+    resumes, setResumes,
   } = useContext(ResumeContext);
 
   const [selectedTemplate, setSelectedTemplate] = useState('basic');
+  const [saving, setSaving] = useState(false);
 
+  // ---- Export: Word ----
   const exportWord = async () => {
     const doc = new DocxDocument({
       sections: [
@@ -68,6 +72,7 @@ export default function CreateResumePage() {
     saveAs(blob, 'resume.docx');
   };
 
+  // ---- Export: Plain Text ----
   const exportPlainText = () => {
     let text = `${formData.fullName || 'Your Name'}\n`;
     text += `${formData.email || ''}\n`;
@@ -82,6 +87,48 @@ export default function CreateResumePage() {
     document.body.appendChild(element);
     element.click();
     document.body.removeChild(element);
+  };
+
+  // ---- Save: Snapshot to Context + localStorage ----
+  const saveResume = () => {
+    try {
+      setSaving(true);
+
+      const id = `res-${Date.now()}`;
+      const snapshot = {
+        id,
+        // top-level fields used by the selector
+        fullName: formData.fullName || 'Untitled Resume',
+        summary: summary || '',
+        updatedAt: new Date().toISOString(),
+
+        // full builder payload (kept for future edits/exports)
+        formData: { ...formData },
+        experiences: [...experiences],
+        projects: [...projects],
+        volunteerExperiences: [...volunteerExperiences],
+        educationList: [...educationList],
+        certifications: [...certifications],
+        languages: [...languages],
+        skills: [...skills],
+        achievements: [...achievements],
+        customSections: [...customSections],
+      };
+
+      const next = [snapshot, ...(Array.isArray(resumes) ? resumes : [])];
+      setResumes(next);
+
+      // persist for selector/landing to read
+      try {
+        localStorage.setItem('ft_saved_resumes', JSON.stringify(next));
+      } catch {
+        /* ignore storage errors */
+      }
+
+      alert('Resume saved!');
+    } finally {
+      setSaving(false);
+    }
   };
 
   return (
@@ -183,6 +230,18 @@ export default function CreateResumePage() {
                 className="bg-[#FF7043] hover:bg-[#F4511E] text-white py-2 px-4 rounded"
               >
                 Export Text
+              </button>
+
+              {/* NEW: Save Snapshot */}
+              <button
+                onClick={saveResume}
+                disabled={saving}
+                className={`${
+                  saving ? 'bg-gray-400 cursor-not-allowed' : 'bg-[#2E7D32] hover:bg-[#1B5E20]'
+                } text-white py-2 px-4 rounded`}
+                title="Save this version to your account so you can analyze or export later"
+              >
+                {saving ? 'Saving…' : 'Save Resume'}
               </button>
             </div>
           </aside>
