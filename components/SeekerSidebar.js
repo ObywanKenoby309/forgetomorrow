@@ -18,19 +18,31 @@ export default function SeekerSidebar() {
       }}
     >
       <div>
-        <h3 className="text-[#FF7043] mb-3 font-semibold text-lg">Career Roadmap</h3>
-        <Link href="/roadmap" legacyBehavior>
+        <h3 className="text-[#FF7043] mb-3 font-semibold text-lg">Seeker Dashboard</h3>
+        <Link href="/seeker-dashboard" legacyBehavior>
           <button
             className="block bg-[#FF7043] hover:bg-[#F4511E] text-white px-5 py-3 rounded font-bold w-full transition-colors"
-            aria-label="Launch Career Roadmap"
+            aria-label="Go to Seeker Dashboard"
           >
-            Launch Roadmap
+            Seeker Dashboard
           </button>
         </Link>
       </div>
 
       <div>
-        <h2 className="text-[#FF7043] mb-3 font-semibold text-lg">Resume/Cover Creator</h2>
+        <h3 className="text-[#FF7043] mb-3 font-semibold text-lg">Your Roadmap</h3>
+        <Link href="/roadmap" legacyBehavior>
+          <button
+            className="block bg-[#FF7043] hover:bg-[#F4511E] text-white px-5 py-3 rounded font-bold w-full transition-colors"
+            aria-label="Launch Career Roadmap"
+          >
+            Your Roadmap
+          </button>
+        </Link>
+      </div>
+
+      <div>
+        <h3 className="text-[#FF7043] mb-3 font-semibold text-lg">Open Creator</h3>
         <Link href="/resume-cover" legacyBehavior>
           <button
             className="block bg-[#FF7043] hover:bg-[#F4511E] text-white px-5 py-3 rounded font-bold w-full transition-colors"
@@ -42,19 +54,19 @@ export default function SeekerSidebar() {
       </div>
 
       <div>
-        <h3 className="text-[#FF7043] mb-3 font-semibold text-lg">Ready to Apply?</h3>
+        <h3 className="text-[#FF7043] mb-3 font-semibold text-lg">To The Pipeline</h3>
         <Link href="/jobs" legacyBehavior>
           <button
             className="block bg-[#FF7043] hover:bg-[#F4511E] text-white px-5 py-3 rounded font-bold w-full transition-colors"
             aria-label="Open The Pipeline"
           >
-            Open The Pipeline
+            To The Pipeline
           </button>
         </Link>
       </div>
 
       <div>
-        <h3 className="text-[#FF7043] mb-3 font-semibold text-lg">Career Growth</h3>
+        <h3 className="text-[#FF7043] mb-3 font-semibold text-lg">Visit Your Hearth</h3>
         <Link href="/the-hearth" legacyBehavior>
           <button
             className="block bg-[#FF7043] hover:bg-[#F4511E] text-white px-5 py-3 rounded font-bold w-full transition-colors"
