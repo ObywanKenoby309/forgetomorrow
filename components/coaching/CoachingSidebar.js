@@ -39,7 +39,7 @@ export default function CoachingSidebar({ active = 'overview' }) {
       <div style={{ fontWeight: 700, color: '#FF7043', fontSize: 18, marginBottom: 6 }}>
         Coaching
       </div>
-      <Item id="overview" href="/dashboard/coaching" label="Overview" />
+      <Item id="overview" href="/coaching-dashboard" label="Overview" />
       <Item id="clients" href="/dashboard/coaching/clients" label="Clients" />
       <Item id="sessions" href="/dashboard/coaching/sessions" label="Sessions" />
       <Item id="resources" href="/dashboard/coaching/resources" label="Resources" />

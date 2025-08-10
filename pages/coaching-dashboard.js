@@ -1,6 +1,6 @@
-// pages/dashboard/coaching.js
+// pages/coaching-dashboard.js
 import React from 'react';
-import Link from 'next/link';
+import CoachingSidebar from '../components/coaching/CoachingSidebar';
 
 export default function CoachingDashboardPage() {
   return (
@@ -14,29 +14,7 @@ export default function CoachingDashboardPage() {
         padding: '100px 20px 20px',
       }}
     >
-      <aside
-        style={{
-          background: 'white',
-          borderRadius: 12,
-          boxShadow: '0 2px 6px rgba(0,0,0,0.06)',
-          padding: 16,
-          display: 'flex',
-          flexDirection: 'column',
-          gap: 10,
-          border: '1px solid #eee',
-        }}
-      >
-        <div style={{ fontWeight: 700, color: '#FF7043', fontSize: 18, marginBottom: 6 }}>
-          Coaching
-        </div>
-        <NavItem href="/dashboard/coaching" label="Overview" active />
-        <NavItem href="/dashboard/coaching/clients" label="Clients" />
-        <NavItem href="/dashboard/coaching/sessions" label="Sessions" />
-        <NavItem href="/dashboard/coaching/resources" label="Resources" />
-        <div style={{ height: 1, background: '#eee', margin: '8px 0' }} />
-        <NavItem href="/applications" label="Applications Tracker" />
-        <NavItem href="/resume/create" label="Resume Builder" />
-      </aside>
+      <CoachingSidebar active="overview" />
 
       <main style={{ display: 'grid', gap: 20 }}>
         <Section title="Today">
@@ -64,26 +42,6 @@ export default function CoachingDashboardPage() {
         </Section>
       </main>
     </div>
-  );
-}
-
-function NavItem({ href, label, active = false }) {
-  return (
-    <Link
-      href={href}
-      style={{
-        display: 'block',
-        padding: '10px 12px',
-        borderRadius: 8,
-        textDecoration: 'none',
-        color: active ? '#FF7043' : '#455A64',
-        background: active ? 'rgba(255,112,67,0.08)' : 'transparent',
-        fontWeight: active ? 700 : 500,
-        border: active ? '1px solid rgba(255,112,67,0.25)' : '1px solid transparent',
-      }}
-    >
-      {label}
-    </Link>
   );
 }
 
