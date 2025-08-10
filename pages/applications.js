@@ -4,6 +4,7 @@ import SeekerSidebar from '../components/SeekerSidebar';
 import ResumeTrackerSummary from '../components/ResumeTrackerSummary';
 import ApplicationCard from '../components/applications/ApplicationCard';
 import ApplicationForm from '../components/applications/ApplicationForm';
+import ApplicationDetailsModal from '../components/applications/ApplicationDetailsModal';
 
 const STORAGE_KEY = 'applicationsTracker';
 const STAGES = ["Pinned", "Applied", "Interviewing", "Offers", "Rejected"];
@@ -31,10 +32,14 @@ const mockTracker = {
 export default function ApplicationsPage() {
   const [tracker, setTracker] = useState(mockTracker);
 
-  // modal state
+  // modal state for add/edit form
   const [showForm, setShowForm] = useState(false);
   const [formMode, setFormMode] = useState('add'); // 'add' | 'edit'
   const [jobToEdit, setJobToEdit] = useState(null); // { job, stage }
+
+  // modal state for read-only details
+  const [detailsOpen, setDetailsOpen] = useState(false);
+  const [details, setDetails] = useState({ job: null, stage: null });
 
   // Load from localStorage on mount
   useEffect(() => {
@@ -96,6 +101,11 @@ export default function ApplicationsPage() {
       ...prev,
       [stage]: prev[stage].filter((job) => job.id !== id),
     }));
+    // close details if we were viewing this exact job
+    if (detailsOpen && details.job?.id === id && details.stage === stage) {
+      setDetailsOpen(false);
+      setDetails({ job: null, stage: null });
+    }
   };
 
   // Start edit
@@ -126,6 +136,17 @@ export default function ApplicationsPage() {
 
     setShowForm(false);
     setJobToEdit(null);
+
+    // if details modal was open for this job, update its snapshot and stage
+    if (detailsOpen && details.job?.id === id) {
+      setDetails({ job: { id, title, company, location, link, notes, dateAdded }, stage: targetStage });
+    }
+  };
+
+  // Open details modal
+  const onView = (job, stage) => {
+    setDetails({ job, stage });
+    setDetailsOpen(true);
   };
 
   return (
@@ -174,6 +195,7 @@ export default function ApplicationsPage() {
                     onMove={moveApplication}
                     onDelete={deleteApplication}
                     onEdit={startEdit}
+                    onView={onView}
                     stages={STAGES}
                   />
                 ))
@@ -214,6 +236,16 @@ export default function ApplicationsPage() {
                 }
           }
           stages={STAGES}
+        />
+      )}
+
+      {detailsOpen && details.job && (
+        <ApplicationDetailsModal
+          job={details.job}
+          stage={details.stage}
+          onClose={() => setDetailsOpen(false)}
+          onEdit={startEdit}
+          onDelete={deleteApplication}
         />
       )}
     </div>

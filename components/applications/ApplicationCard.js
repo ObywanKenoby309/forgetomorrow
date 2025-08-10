@@ -1,6 +1,6 @@
 // components/applications/ApplicationCard.js
 import React from 'react';
-import { FaArrowLeft, FaArrowRight, FaTrash, FaEdit } from 'react-icons/fa';
+import { FaArrowLeft, FaArrowRight, FaTrash, FaEdit, FaEye } from 'react-icons/fa';
 
 const DEFAULT_STAGES = ["Pinned", "Applied", "Interviewing", "Offers", "Rejected"];
 
@@ -10,7 +10,8 @@ export default function ApplicationCard({
   onMove,
   onDelete,
   onEdit,
-  stages, // optional override from parent
+  onView,   // NEW: optional view details action
+  stages,   // optional override from parent
 }) {
   const STAGES = Array.isArray(stages) && stages.length ? stages : DEFAULT_STAGES;
   const currentIndex = STAGES.indexOf(stage);
@@ -76,6 +77,15 @@ export default function ApplicationCard({
         </div>
 
         <div style={{ display: 'flex', gap: 8 }}>
+          {onView && (
+            <button
+              onClick={() => onView(job, stage)}
+              title="View details"
+              style={{ background: 'none', border: '1px solid #eee', borderRadius: 6, padding: 6, cursor: 'pointer' }}
+            >
+              <FaEye color="#546E7A" />
+            </button>
+          )}
           <button
             onClick={() => onEdit(job, stage)}
             title="Edit"
