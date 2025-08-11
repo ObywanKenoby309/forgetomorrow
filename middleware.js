@@ -16,6 +16,17 @@ const STATIC_ALLOW = [
 export function middleware(req) {
   const { pathname } = new URL(req.url);
 
+  // ✅ Bypass everything when running locally or in dev
+  // (lets you record the Seeker Dashboard and other pages on localhost)
+  const hostname = req.nextUrl.hostname;
+  if (
+    process.env.NODE_ENV === 'development' ||
+    hostname === 'localhost' ||
+    hostname === '127.0.0.1'
+  ) {
+    return NextResponse.next();
+  }
+
   // Allow static assets
   if (STATIC_ALLOW.some((re) => re.test(pathname))) {
     return NextResponse.next();
