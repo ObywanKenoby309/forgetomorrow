@@ -19,11 +19,17 @@ export default function Profile() {
           {/* Profile Picture */}
           <div>
             <img
-              src="https://via.placeholder.com/140"
+              src="/demo-profile.jpg"
               alt="Profile picture"
               className="profile-pic mb-6 sm:mb-0 rounded-full border-4 border-[#FF7043] object-cover shadow-lg"
               aria-label="User profile picture"
               style={{ width: '140px', height: '140px', boxShadow: '0 0 10px rgba(255,112,67,0.5)' }}
+              onError={(e) => {
+                // Ensure we always have a local image for the recording
+                if (e.currentTarget.src.indexOf('/demo-profile.jpg') === -1) {
+                  e.currentTarget.src = '/demo-profile.jpg';
+                }
+              }}
             />
             <button
               className="mt-3 w-full sm:w-auto bg-[#FF7043] hover:bg-[#F4511E] text-white px-4 py-2 rounded font-semibold transition-colors"
