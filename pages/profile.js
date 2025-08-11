@@ -25,26 +25,20 @@ export default function Profile() {
         {/* Sidebar column (300px) */}
         <GenericSidebar />
 
-        {/* Main content column */}
+        {/* Main content column (fixed inner width to preserve right margin) */}
         <main style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
-          {/* Top Section: Image and Basic Info */}
-          <section
-            style={{
-              background: 'white',
-              borderRadius: '12px',
-              padding: '20px',
-              boxShadow: '0 2px 6px rgba(0,0,0,0.06)',
-            }}
-          >
-            <div
+          <div style={{ maxWidth: 860 }}>
+            {/* Top Section: Image and Basic Info */}
+            <section
               style={{
-                display: 'flex',
-                flexDirection: 'column',
-                gap: '20px',
+                background: 'white',
+                borderRadius: '12px',
+                padding: '20px',
+                boxShadow: '0 2px 6px rgba(0,0,0,0.06)',
               }}
             >
-              {/* Profile Picture + Button */}
-              <div style={{ display: 'flex', alignItems: 'center', gap: '24px' }}>
+              <div style={{ display: 'flex', gap: 24, alignItems: 'center', flexWrap: 'wrap' }}>
+                {/* Profile Picture + Button */}
                 <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
                   <img
                     src="/demo-profile.jpg"
@@ -99,100 +93,100 @@ export default function Profile() {
                   </div>
                 </div>
               </div>
-            </div>
-          </section>
+            </section>
 
-          {/* About Me Section */}
-          <section
-            style={{
-              position: 'relative',
-              background: 'white',
-              borderRadius: '12px',
-              padding: '20px',
-              boxShadow: '0 2px 6px rgba(0,0,0,0.06)',
-            }}
-          >
-            <button
-              onClick={alertFeatureComingSoon('Edit About Me')}
-              aria-label="Edit About Me"
+            {/* About Me Section */}
+            <section
               style={{
-                position: 'absolute',
-                top: 16,
-                right: 16,
-                background: '#FF7043',
-                color: 'white',
-                padding: '6px 12px',
-                borderRadius: 8,
-                fontWeight: 600,
-                border: 'none',
+                position: 'relative',
+                background: 'white',
+                borderRadius: '12px',
+                padding: '20px',
+                boxShadow: '0 2px 6px rgba(0,0,0,0.06)',
+              }}
+            >
+              <button
+                onClick={alertFeatureComingSoon('Edit About Me')}
+                aria-label="Edit About Me"
+                style={{
+                  position: 'absolute',
+                  top: 16,
+                  right: 16,
+                  background: '#FF7043',
+                  color: 'white',
+                  padding: '6px 12px',
+                  borderRadius: 8,
+                  fontWeight: 600,
+                  border: 'none',
+                  cursor: 'pointer',
+                }}
+                onMouseOver={(e) => (e.currentTarget.style.background = '#F4511E')}
+                onMouseOut={(e) => (e.currentTarget.style.background = '#FF7043')}
+              >
+                Edit
+              </button>
+              <h2 style={{ color: '#FF7043', fontSize: 24, fontWeight: 600, marginTop: 0 }}>
+                About Me
+              </h2>
+              <p style={{ color: '#374151', marginBottom: 0 }}>
+                Experienced leader with 20+ years in customer success, technical support, and team
+                management. Passionate about building authentic professional relationships and
+                leveraging AI to empower job seekers.
+              </p>
+            </section>
+
+            {/* Professional History Link */}
+            <section
+              role="button"
+              tabIndex={0}
+              aria-label="Go to Professional History"
+              onClick={alertFeatureComingSoon('Professional History section')}
+              onKeyPress={(e) => {
+                if (e.key === 'Enter') alertFeatureComingSoon('Professional History section')();
+              }}
+              style={{
+                background: 'white',
+                borderRadius: '12px',
+                padding: '20px',
+                boxShadow: '0 2px 6px rgba(0,0,0,0.06)',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'space-between',
                 cursor: 'pointer',
               }}
-              onMouseOver={(e) => (e.currentTarget.style.background = '#F4511E')}
-              onMouseOut={(e) => (e.currentTarget.style.background = '#FF7043')}
             >
-              Edit
-            </button>
-            <h2 style={{ color: '#FF7043', fontSize: 24, fontWeight: 600, marginTop: 0 }}>
-              About Me
-            </h2>
-            <p style={{ color: '#374151', marginBottom: 0 }}>
-              Experienced leader with 20+ years in customer success, technical support, and team
-              management. Passionate about building authentic professional relationships and
-              leveraging AI to empower job seekers.
-            </p>
-          </section>
+              <h2 style={{ color: '#FF7043', fontSize: 24, fontWeight: 600, margin: 0 }}>
+                Professional History
+              </h2>
+              <span style={{ color: '#FF7043', fontWeight: 700, fontSize: 20 }}>→</span>
+            </section>
 
-          {/* Professional History Link */}
-          <section
-            role="button"
-            tabIndex={0}
-            aria-label="Go to Professional History"
-            onClick={alertFeatureComingSoon('Professional History section')}
-            onKeyPress={(e) => {
-              if (e.key === 'Enter') alertFeatureComingSoon('Professional History section')();
-            }}
-            style={{
-              background: 'white',
-              borderRadius: '12px',
-              padding: '20px',
-              boxShadow: '0 2px 6px rgba(0,0,0,0.06)',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'space-between',
-              cursor: 'pointer',
-            }}
-          >
-            <h2 style={{ color: '#FF7043', fontSize: 24, fontWeight: 600, margin: 0 }}>
-              Professional History
-            </h2>
-            <span style={{ color: '#FF7043', fontWeight: 700, fontSize: 20 }}>→</span>
-          </section>
-
-          {/* Analytics Link */}
-          <section
-            role="button"
-            tabIndex={0}
-            aria-label="Go to Analytics Dashboard"
-            onClick={alertFeatureComingSoon('Analytics dashboard')}
-            onKeyPress={(e) => {
-              if (e.key === 'Enter') alertFeatureComingSoon('Analytics dashboard')();
-            }}
-            style={{
-              background: 'white',
-              borderRadius: '12px',
-              padding: '20px',
-              boxShadow: '0 2px 6px rgba(0,0,0,0.06)',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'space-between',
-              cursor: 'pointer',
-            }}
-          >
-            <h2 style={{ color: '#FF7043', fontSize: 24, fontWeight: 600, margin: 0 }}>
-              Analytics
-            </h2>
-            <span style={{ color: '#FF7043', fontWeight: 700, fontSize: 20 }}>→</span>
-          </section>
+            {/* Analytics Link */}
+            <section
+              role="button"
+              tabIndex={0}
+              aria-label="Go to Analytics Dashboard"
+              onClick={alertFeatureComingSoon('Analytics dashboard')}
+              onKeyPress={(e) => {
+                if (e.key === 'Enter') alertFeatureComingSoon('Analytics dashboard')();
+              }}
+              style={{
+                background: 'white',
+                borderRadius: '12px',
+                padding: '20px',
+                boxShadow: '0 2px 6px rgba(0,0,0,0.06)',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+                cursor: 'pointer',
+              }}
+            >
+              <h2 style={{ color: '#FF7043', fontSize: 24, fontWeight: 600, margin: 0 }}>
+                Analytics
+              </h2>
+              <span style={{ color: '#FF7043', fontWeight: 700, fontSize: 20 }}>→</span>
+            </section>
+          </div>
         </main>
       </div>
     </>
