@@ -1,50 +1,49 @@
-// pages/_app.js
-import '../styles/globals.css';
-import { useRouter } from 'next/router';
+// components/GenericSidebar.js
+import Link from 'next/link';
+import { useState } from 'react';
 
-import Header from '../components/Header';
-import Footer from '../components/Footer';
-import LandingHeader from '../components/LandingHeader';
-import LandingFooter from '../components/LandingFooter';
+export default function GenericSidebar({ top = 80 }) {
+  const [isOpen, setIsOpen] = useState(false);
 
-import { ResumeProvider } from '../context/ResumeContext';
-
-export default function App({ Component, pageProps }) {
-  const router = useRouter();
-
-  const isLandingPage = ['/', '/signup', '/features', '/login', '/about'].includes(router.pathname);
-  const useForgeBackground = ['/', '/about', '/features'].includes(router.pathname);
+  const menuItems = [
+    { name: 'Dashboard', href: '/dashboard' },
+    { name: 'Profile', href: '/profile' },
+    { name: 'Pipeline', href: '/pipeline' },
+    { name: 'Resume Tracker', href: '/resume-tracker' },
+    { name: 'Roadmap', href: '/roadmap' },
+    { name: 'Hearth', href: '/hearth' },
+  ];
 
   return (
-    <div className="relative min-h-screen">
-      {useForgeBackground && (
-        <>
-          <div
-            className="fixed inset-0 z-0"
-            style={{
-              backgroundImage: "url('/images/forge-bg-bw.png')",
-              backgroundSize: 'cover',
-              backgroundPosition: 'center',
-              backgroundAttachment: 'fixed',
-            }}
-          />
-          <div className="fixed inset-0 bg-black opacity-80 z-0" />
-        </>
-      )}
-
-      <div
-        className={`relative z-10 min-h-screen flex flex-col justify-between ${
-          !useForgeBackground ? 'bg-[#ECEFF1]' : ''
-        }`}
-      >
-        {isLandingPage ? <LandingHeader /> : <Header />}
-
-        <ResumeProvider>
-          <Component {...pageProps} />
-        </ResumeProvider>
-
-        {isLandingPage ? <LandingFooter /> : <Footer />}
+    <>
+      {/* Mobile toggle (not critical for now) */}
+      <div className="md:hidden bg-[#FF7043] text-white p-4 flex justify-between items-center sticky top-0 z-50">
+        <span className="font-bold">Menu</span>
+        <button
+          onClick={() => setIsOpen(!isOpen)}
+          className="bg-white text-[#FF7043] px-3 py-1 rounded font-semibold"
+        >
+          {isOpen ? 'Close' : 'Open'}
+        </button>
       </div>
-    </div>
+
+      <aside
+        className={`bg-white border-r border-gray-200 p-6 w-64 min-h-screen fixed left-0 z-40 transform ${
+          isOpen ? 'translate-x-0' : '-translate-x-full'
+        } md:translate-x-0 transition-transform duration-200 ease-in-out`}
+        style={{ top }}
+      >
+        <div className="text-2xl font-bold text-[#FF7043] mb-8">ForgeTomorrow</div>
+        <nav className="space-y-4">
+          {menuItems.map((item) => (
+            <Link key={item.name} href={item.href} className="block">
+              <span className="block text-gray-700 hover:text-[#FF7043] font-medium cursor-pointer">
+                {item.name}
+              </span>
+            </Link>
+          ))}
+        </nav>
+      </aside>
+    </>
   );
 }
