@@ -1,4 +1,4 @@
-// pages/_app.js 
+// pages/_app.js
 import '../styles/globals.css';
 import { useRouter } from 'next/router';
 
@@ -8,26 +8,12 @@ import LandingHeader from '../components/LandingHeader';
 import LandingFooter from '../components/LandingFooter';
 
 import { ResumeProvider } from '../context/ResumeContext';
-import GenericSidebar from '../components/GenericSidebar';
-
-// Routes that should display the sidebar
-const SIDEBAR_ROUTES = new Set([
-  '/dashboard',
-  '/profile',
-  '/pipeline',
-  '/resume-tracker',
-  '/roadmap',
-  '/hearth',
-]);
 
 export default function App({ Component, pageProps }) {
   const router = useRouter();
 
   const isLandingPage = ['/', '/signup', '/features', '/login', '/about'].includes(router.pathname);
   const useForgeBackground = ['/', '/about', '/features'].includes(router.pathname);
-
-  // Only show sidebar on selected routes (never on landing pages)
-  const showSidebar = !isLandingPage && SIDEBAR_ROUTES.has(router.pathname) && !Component?.hideSidebar;
 
   return (
     <div className="relative min-h-screen">
@@ -53,15 +39,9 @@ export default function App({ Component, pageProps }) {
       >
         {isLandingPage ? <LandingHeader /> : <Header />}
 
-        {/* Sidebar mounts under the standard Header only, with slight top offset */}
-        {showSidebar && <GenericSidebar top={80} />}
-
-        {/* Shift page content when sidebar is visible on desktop */}
-        <div className={showSidebar ? 'md:pl-64' : ''}>
-          <ResumeProvider>
-            <Component {...pageProps} />
-          </ResumeProvider>
-        </div>
+        <ResumeProvider>
+          <Component {...pageProps} />
+        </ResumeProvider>
 
         {isLandingPage ? <LandingFooter /> : <Footer />}
       </div>
