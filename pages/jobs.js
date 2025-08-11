@@ -1,3 +1,4 @@
+// pages/jobs.js
 import { useJobPipeline, JobPipelineProvider } from '../context/JobPipelineContext';
 import Head from 'next/head';
 import { useEffect } from 'react';
@@ -35,7 +36,7 @@ function Jobs() {
 
   useEffect(() => {
     jobs.forEach((job) => handleJobView(job));
-  }, []);
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   return (
     <div className="flex">
