@@ -36,6 +36,7 @@ function Jobs() {
 
   useEffect(() => {
     jobs.forEach((job) => handleJobView(job));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   return (
@@ -44,36 +45,72 @@ function Jobs() {
         <title>ForgeTomorrow - The Pipeline</title>
       </Head>
 
-      <div className="flex min-h-screen bg-[#ECEFF1]">
-        {/* Sidebar */}
+      {/* Mirror Seeker Dashboard layout */}
+      <div
+        style={{
+          display: 'grid',
+          gridTemplateColumns: '300px 1fr',
+          gap: '20px',
+          padding: '120px 20px 20px',
+          minHeight: '100vh',
+          backgroundColor: '#ECEFF1',
+        }}
+      >
+        {/* Sidebar column (300px) */}
         <GenericSidebar />
 
-        {/* Main content */}
-        <main className="flex-1 ml-64 p-8">
-          <h1 className="text-3xl font-bold text-[#FF7043] mb-6">Job Listings</h1>
+        {/* Main content column */}
+        <main style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
+          <section
+            style={{
+              background: 'white',
+              borderRadius: '12px',
+              padding: '20px',
+              boxShadow: '0 2px 6px rgba(0,0,0,0.06)',
+            }}
+          >
+            <h1 style={{ color: '#FF7043', margin: 0 }} className="text-3xl font-bold mb-2">
+              Job Listings
+            </h1>
+            <p className="text-gray-600">Explore and apply in one place.</p>
+          </section>
 
+          {/* Jobs list */}
           {jobs.map((job) => (
-            <div
+            <section
               key={job.id}
-              className="bg-white shadow-md rounded-lg p-6 mb-6 border border-gray-200"
+              style={{
+                background: 'white',
+                borderRadius: '12px',
+                padding: '20px',
+                boxShadow: '0 2px 6px rgba(0,0,0,0.06)',
+                border: '1px solid #e5e7eb',
+              }}
             >
               <h2 className="text-xl font-semibold text-gray-800">{job.title}</h2>
               <p className="text-gray-600">
-                {job.company} - {job.location}
+                {job.company} — {job.location}
               </p>
               <p className="mt-3 text-gray-700">{job.description}</p>
 
               <button
                 onClick={() => handleApply(job)}
-                className="mt-4 bg-[#FF7043] hover:bg-[#F4511E] text-white px-4 py-2 rounded transition"
+                className="mt-4 bg-[#FF7043] hover:bg-[#F4511E] text-white px-4 py-2 rounded font-bold transition-colors"
               >
                 Apply
               </button>
-            </div>
+            </section>
           ))}
 
           {/* Viewed / Applied Summary */}
-          <div className="mt-12">
+          <section
+            style={{
+              background: 'white',
+              borderRadius: '12px',
+              padding: '20px',
+              boxShadow: '0 2px 6px rgba(0,0,0,0.06)',
+            }}
+          >
             <h2 className="text-2xl font-bold mb-4 text-[#FF7043]">Viewed Jobs</h2>
             {viewedJobs.length === 0 ? (
               <p className="text-gray-500 italic">No jobs viewed yet.</p>
@@ -95,7 +132,7 @@ function Jobs() {
                 ))}
               </ul>
             )}
-          </div>
+          </section>
         </main>
       </div>
     </>

@@ -1,116 +1,200 @@
 // pages/profile.js
 import Head from 'next/head';
-import Header from '../components/Header';
-import Footer from '../components/Footer';
 import GenericSidebar from '../components/GenericSidebar';
 
 export default function Profile() {
   const alertFeatureComingSoon = (feature) => () => alert(`${feature} feature coming soon!`);
 
   return (
-    <div className="flex">
-      <GenericSidebar top={80} />
+    <>
+      <Head>
+        <title>ForgeTomorrow - Profile</title>
+      </Head>
 
-      <div className="flex-1 md:ml-64">
-        <Head>
-          <title>ForgeTomorrow - Profile</title>
-        </Head>
+      {/* Mirror Seeker Dashboard layout */}
+      <div
+        style={{
+          display: 'grid',
+          gridTemplateColumns: '300px 1fr',
+          gap: '20px',
+          padding: '120px 20px 20px',
+          minHeight: '100vh',
+          backgroundColor: '#ECEFF1',
+        }}
+      >
+        {/* Sidebar column (300px) */}
+        <GenericSidebar />
 
-        <Header />
-
-        <main className="max-w-4xl mx-auto p-6 space-y-10 min-h-[80vh] bg-[#ECEFF1] text-[#212121] pt-20">
+        {/* Main content column */}
+        <main style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
           {/* Top Section: Image and Basic Info */}
-          <section className="bg-white rounded-lg shadow p-8 flex flex-col items-center sm:flex-row sm:items-center sm:space-x-8 relative">
-            {/* Profile Picture */}
-            <div>
-              <img
-                src="/demo-profile.jpg"
-                alt="Profile picture"
-                className="profile-pic mb-6 sm:mb-0 rounded-full border-4 border-[#FF7043] object-cover shadow-lg"
-                aria-label="User profile picture"
-                style={{ width: '140px', height: '140px', boxShadow: '0 0 10px rgba(255,112,67,0.5)' }}
-                onError={(e) => {
-                  // Ensure we always have a local image for the recording
-                  if (e.currentTarget.src.indexOf('/demo-profile.jpg') === -1) {
-                    e.currentTarget.src = '/demo-profile.jpg';
-                  }
-                }}
-              />
-              <button
-                className="mt-3 w-full sm:w-auto bg-[#FF7043] hover:bg-[#F4511E] text-white px-4 py-2 rounded font-semibold transition-colors"
-                aria-label="Update profile picture"
-                onClick={alertFeatureComingSoon('Profile picture update')}
-              >
-                Update Picture
-              </button>
-            </div>
+          <section
+            style={{
+              background: 'white',
+              borderRadius: '12px',
+              padding: '20px',
+              boxShadow: '0 2px 6px rgba(0,0,0,0.06)',
+            }}
+          >
+            <div
+              style={{
+                display: 'flex',
+                flexDirection: 'column',
+                gap: '20px',
+              }}
+            >
+              {/* Profile Picture + Button */}
+              <div style={{ display: 'flex', alignItems: 'center', gap: '24px' }}>
+                <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
+                  <img
+                    src="/demo-profile.jpg"
+                    alt="Profile picture"
+                    aria-label="User profile picture"
+                    style={{
+                      width: 140,
+                      height: 140,
+                      objectFit: 'cover',
+                      borderRadius: '9999px',
+                      border: '4px solid #FF7043',
+                      boxShadow: '0 0 10px rgba(255,112,67,0.5)',
+                    }}
+                    onError={(e) => {
+                      if (!e.currentTarget.src.includes('/demo-profile.jpg')) {
+                        e.currentTarget.src = '/demo-profile.jpg';
+                      }
+                    }}
+                  />
+                  <button
+                    onClick={alertFeatureComingSoon('Profile picture update')}
+                    aria-label="Update profile picture"
+                    style={{
+                      marginTop: 12,
+                      background: '#FF7043',
+                      color: 'white',
+                      padding: '8px 16px',
+                      borderRadius: 8,
+                      fontWeight: 600,
+                      border: 'none',
+                      cursor: 'pointer',
+                    }}
+                    onMouseOver={(e) => (e.currentTarget.style.background = '#F4511E')}
+                    onMouseOut={(e) => (e.currentTarget.style.background = '#FF7043')}
+                  >
+                    Update Picture
+                  </button>
+                </div>
 
-            {/* Basic Info */}
-            <div className="flex-1 space-y-4">
-              <div>
-                <h1 className="text-4xl font-bold text-[#FF7043]">Eric James</h1>
-                <p className="text-gray-700 text-lg">He/Him</p>
-              </div>
-              <div>
-                <p className="text-gray-600 italic max-w-lg">
-                  Customer Success Leader & AI Advocate
-                </p>
-              </div>
-              <div className="flex flex-wrap gap-4 text-gray-600">
-                <span>Location: Nashville, TN</span>
-                <span>Status: Open to Opportunities</span>
+                {/* Basic Info */}
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                  <h1 style={{ fontSize: 32, fontWeight: 700, color: '#FF7043', margin: 0 }}>
+                    Eric James
+                  </h1>
+                  <p style={{ color: '#374151', fontSize: 18, margin: 0 }}>He/Him</p>
+                  <p style={{ color: '#4B5563', fontStyle: 'italic', marginTop: 8, maxWidth: 640 }}>
+                    Customer Success Leader & AI Advocate
+                  </p>
+                  <div style={{ display: 'flex', gap: 16, color: '#4B5563', marginTop: 8 }}>
+                    <span>Location: Nashville, TN</span>
+                    <span>Status: Open to Opportunities</span>
+                  </div>
+                </div>
               </div>
             </div>
           </section>
 
           {/* About Me Section */}
-          <section className="bg-white rounded-lg shadow p-6 relative">
+          <section
+            style={{
+              position: 'relative',
+              background: 'white',
+              borderRadius: '12px',
+              padding: '20px',
+              boxShadow: '0 2px 6px rgba(0,0,0,0.06)',
+            }}
+          >
             <button
-              className="absolute top-4 right-4 bg-[#FF7043] hover:bg-[#F4511E] text-white px-3 py-1 rounded text-sm font-semibold"
-              aria-label="Edit About Me"
               onClick={alertFeatureComingSoon('Edit About Me')}
+              aria-label="Edit About Me"
+              style={{
+                position: 'absolute',
+                top: 16,
+                right: 16,
+                background: '#FF7043',
+                color: 'white',
+                padding: '6px 12px',
+                borderRadius: 8,
+                fontWeight: 600,
+                border: 'none',
+                cursor: 'pointer',
+              }}
+              onMouseOver={(e) => (e.currentTarget.style.background = '#F4511E')}
+              onMouseOut={(e) => (e.currentTarget.style.background = '#FF7043')}
             >
               Edit
             </button>
-            <h2 className="text-2xl font-semibold text-[#FF7043] mb-4">About Me</h2>
-            <p className="text-gray-700">
-              Experienced leader with 20+ years in customer success, technical support, and team management. Passionate about building authentic professional relationships and leveraging AI to empower job seekers.
+            <h2 style={{ color: '#FF7043', fontSize: 24, fontWeight: 600, marginTop: 0 }}>
+              About Me
+            </h2>
+            <p style={{ color: '#374151', marginBottom: 0 }}>
+              Experienced leader with 20+ years in customer success, technical support, and team
+              management. Passionate about building authentic professional relationships and
+              leveraging AI to empower job seekers.
             </p>
           </section>
 
           {/* Professional History Link */}
           <section
-            className="bg-white rounded-lg shadow p-6 flex justify-between items-center cursor-pointer hover:shadow-md transition-shadow"
-            onClick={alertFeatureComingSoon('Professional History section')}
-            tabIndex={0}
             role="button"
+            tabIndex={0}
             aria-label="Go to Professional History"
+            onClick={alertFeatureComingSoon('Professional History section')}
             onKeyPress={(e) => {
               if (e.key === 'Enter') alertFeatureComingSoon('Professional History section')();
             }}
+            style={{
+              background: 'white',
+              borderRadius: '12px',
+              padding: '20px',
+              boxShadow: '0 2px 6px rgba(0,0,0,0.06)',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'space-between',
+              cursor: 'pointer',
+            }}
           >
-            <h2 className="text-2xl font-semibold text-[#FF7043]">Professional History</h2>
-            <span className="text-[#FF7043] font-bold text-xl">→</span>
+            <h2 style={{ color: '#FF7043', fontSize: 24, fontWeight: 600, margin: 0 }}>
+              Professional History
+            </h2>
+            <span style={{ color: '#FF7043', fontWeight: 700, fontSize: 20 }}>→</span>
           </section>
 
           {/* Analytics Link */}
           <section
-            className="bg-white rounded-lg shadow p-6 flex justify-between items-center cursor-pointer hover:shadow-md transition-shadow"
-            onClick={alertFeatureComingSoon('Analytics dashboard')}
-            tabIndex={0}
             role="button"
+            tabIndex={0}
             aria-label="Go to Analytics Dashboard"
+            onClick={alertFeatureComingSoon('Analytics dashboard')}
             onKeyPress={(e) => {
               if (e.key === 'Enter') alertFeatureComingSoon('Analytics dashboard')();
             }}
+            style={{
+              background: 'white',
+              borderRadius: '12px',
+              padding: '20px',
+              boxShadow: '0 2px 6px rgba(0,0,0,0.06)',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'space-between',
+              cursor: 'pointer',
+            }}
           >
-            <h2 className="text-2xl font-semibold text-[#FF7043]">Analytics</h2>
-            <span className="text-[#FF7043] font-bold text-xl">→</span>
+            <h2 style={{ color: '#FF7043', fontSize: 24, fontWeight: 600, margin: 0 }}>
+              Analytics
+            </h2>
+            <span style={{ color: '#FF7043', fontWeight: 700, fontSize: 20 }}>→</span>
           </section>
         </main>
-
-        <Footer />
       </div>
-    </div>
+    </>
   );
 }
