@@ -1,7 +1,7 @@
-// pages/jobs.js
 import { useJobPipeline, JobPipelineProvider } from '../context/JobPipelineContext';
 import Head from 'next/head';
 import { useEffect } from 'react';
+import GenericSidebar from '../components/GenericSidebar';
 
 function Jobs() {
   const { viewedJobs, appliedJobs, addViewedJob, addAppliedJob } = useJobPipeline();
@@ -38,12 +38,14 @@ function Jobs() {
   }, []);
 
   return (
-    <>
-      <Head>
-        <title>ForgeTomorrow - The Pipeline</title>
-      </Head>
+    <div className="flex">
+      <GenericSidebar top={80} />
 
-      <main className="max-w-4xl mx-auto p-6">
+      <main className="flex-1 md:ml-64 max-w-4xl mx-auto p-6">
+        <Head>
+          <title>ForgeTomorrow - The Pipeline</title>
+        </Head>
+
         <h1 className="text-3xl font-bold text-[#FF7043] mb-6">Job Listings</h1>
 
         {jobs.map((job) => (
@@ -52,7 +54,9 @@ function Jobs() {
             className="bg-white shadow-md rounded-lg p-6 mb-6 border border-gray-200"
           >
             <h2 className="text-xl font-semibold text-gray-800">{job.title}</h2>
-            <p className="text-gray-600">{job.company} - {job.location}</p>
+            <p className="text-gray-600">
+              {job.company} - {job.location}
+            </p>
             <p className="mt-3 text-gray-700">{job.description}</p>
 
             <button
@@ -89,7 +93,7 @@ function Jobs() {
           )}
         </div>
       </main>
-    </>
+    </div>
   );
 }
 
