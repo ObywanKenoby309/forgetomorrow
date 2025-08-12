@@ -22,7 +22,7 @@ export default function CoachingSessionsPage() {
   // ------------------
 
   const filtered = useMemo(() => {
-    return sessions.filter(s => {
+    return sessions.filter((s) => {
       const byType = type === 'All' ? true : s.type === type;
       const byStatus = status === 'All' ? true : s.status === status;
       return byType && byStatus;
@@ -49,6 +49,7 @@ export default function CoachingSessionsPage() {
     return d.toLocaleDateString(undefined, { month: 'short', day: 'numeric', weekday: 'short' });
   };
 
+  // Status badge (unchanged)
   const badge = (text) => {
     const map = {
       Scheduled: { bg: '#E3F2FD', fg: '#1565C0' },
@@ -58,6 +59,27 @@ export default function CoachingSessionsPage() {
     const { bg, fg } = map[text] || { bg: '#FFF3E0', fg: '#E65100' };
     return (
       <span style={{ fontSize: 12, background: bg, color: fg, padding: '4px 8px', borderRadius: 999 }}>
+        {text}
+      </span>
+    );
+  };
+
+  // NEW: slimmer type pill (Strategy / Resume / Interview)
+  const typePill = (text) => {
+    // keep your existing orange tone, just make it tighter
+    return (
+      <span
+        style={{
+          fontSize: 11,
+          background: '#FFF3E0',
+          color: '#E65100',
+          padding: '2px 6px', // tighter
+          borderRadius: 999,
+          lineHeight: 1.2,
+          display: 'inline-block',
+          whiteSpace: 'nowrap',
+        }}
+      >
         {text}
       </span>
     );
@@ -150,7 +172,7 @@ export default function CoachingSessionsPage() {
                       key={`${d}-${idx}`}
                       style={{
                         display: 'grid',
-                        gridTemplateColumns: '90px 1fr 140px 120px',
+                        gridTemplateColumns: '90px 1fr 120px 120px', // slightly tightened third column
                         alignItems: 'center',
                         gap: 10,
                         border: '1px solid #eee',
@@ -161,9 +183,7 @@ export default function CoachingSessionsPage() {
                     >
                       <strong>{s.time}</strong>
                       <span style={{ color: '#455A64' }}>{s.client}</span>
-                      <span style={{ fontSize: 12, background: '#FFF3E0', color: '#E65100', padding: '4px 8px', borderRadius: 999 }}>
-                        {s.type}
-                      </span>
+                      <span>{typePill(s.type)}</span>
                       <span>{badge(s.status)}</span>
                     </li>
                   ))}
