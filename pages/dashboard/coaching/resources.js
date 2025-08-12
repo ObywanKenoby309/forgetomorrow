@@ -44,7 +44,7 @@ export default function CoachingResourcesPage() {
 
       <main style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
         <div style={{ maxWidth: 860 }}>
-          {/* Top cards linking to anchors */}
+          {/* Top cards linking to anchors and newsletter */}
           <section
             style={{
               background: 'white',
@@ -55,10 +55,11 @@ export default function CoachingResourcesPage() {
             }}
           >
             <h2 style={{ color: '#FF7043', marginTop: 0, marginBottom: 12 }}>Docs & Tools</h2>
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, minmax(0, 1fr))', gap: 12 }}>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, minmax(0, 1fr))', gap: 12 }}>
               {card('#templates', 'Templates', 'Standard documents for repeatable coaching workflows.')}
               {card('#library', 'Resource Library', 'Guides, checklists, and curated materials.')}
               {card('#announcements', 'Announcements', 'What’s new and important this week.')}
+              {card('/dashboard/coaching/newsletter', 'Newsletter', 'Compose and send a broadcast message to clients.')}
             </div>
           </section>
 
