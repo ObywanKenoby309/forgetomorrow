@@ -1,8 +1,20 @@
 // pages/the-hearth.js
 import Head from 'next/head';
+import Link from 'next/link';
 
 export default function TheHearth() {
   const alertComingSoon = (feature) => () => alert(`${feature} feature coming soon!`);
+
+  const tiles = [
+    {
+      title: 'Mentorship Programs',
+      desc: 'Connect with experienced mentors to guide your career journey.',
+      href: '/hearth/spotlights', // wired
+    },
+    { title: 'Community Events', desc: 'Join workshops, webinars, and networking events tailored for growth.' },
+    { title: 'Discussion Forums', desc: 'Engage in meaningful conversations and share knowledge.' },
+    { title: 'Resource Library', desc: 'Access articles, guides, and tools to support your professional growth.' },
+  ];
 
   return (
     <>
@@ -18,25 +30,36 @@ export default function TheHearth() {
           </p>
 
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-6 max-w-4xl mx-auto">
-            {[
-              { title: 'Mentorship Programs', desc: 'Connect with experienced mentors to guide your career journey.' },
-              { title: 'Community Events', desc: 'Join workshops, webinars, and networking events tailored for growth.' },
-              { title: 'Discussion Forums', desc: 'Engage in meaningful conversations and share knowledge.' },
-              { title: 'Resource Library', desc: 'Access articles, guides, and tools to support your professional growth.' },
-            ].map(({ title, desc }) => (
-              <div
-                key={title}
-                className="bg-gray-100 rounded-lg p-6 shadow-sm hover:shadow-md transition-shadow cursor-pointer"
-                onClick={alertComingSoon(title)}
-                role="button"
-                tabIndex={0}
-                onKeyPress={(e) => { if (e.key === 'Enter') alertComingSoon(title)(); }}
-                aria-label={title}
-              >
-                <h2 className="text-2xl font-semibold mb-3 text-[#FF7043]">{title}</h2>
-                <p>{desc}</p>
-              </div>
-            ))}
+            {tiles.map(({ title, desc, href }) =>
+              href ? (
+                <Link
+                  key={title}
+                  href={href}
+                  className="bg-gray-100 rounded-lg p-6 shadow-sm hover:shadow-md transition-shadow cursor-pointer block focus:outline-none focus:ring-2 focus:ring-[#FF7043]"
+                >
+                  <h2 className="text-2xl font-semibold mb-3 text-[#FF7043]">{title}</h2>
+                  <p>{desc}</p>
+                </Link>
+              ) : (
+                <div
+                  key={title}
+                  className="bg-gray-100 rounded-lg p-6 shadow-sm hover:shadow-md transition-shadow cursor-pointer"
+                  onClick={alertComingSoon(title)}
+                  role="button"
+                  tabIndex={0}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter' || e.key === ' ') {
+                      e.preventDefault();
+                      alertComingSoon(title)();
+                    }
+                  }}
+                  aria-label={title}
+                >
+                  <h2 className="text-2xl font-semibold mb-3 text-[#FF7043]">{title}</h2>
+                  <p>{desc}</p>
+                </div>
+              )
+            )}
           </div>
         </section>
       </main>
