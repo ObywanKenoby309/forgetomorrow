@@ -1,9 +1,21 @@
-// pages/dashboard/coaching/sessions.js
 import React, { useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
 import CoachingSidebar from '../../../components/coaching/CoachingSidebar';
 
 const STORAGE_KEY = 'coachSessions_v1';
+
+// --- Helpers to avoid UTC drift ---
+function localISODate(d = new Date()) {
+  const y = d.getFullYear();
+  const m = String(d.getMonth() + 1).padStart(2, '0');
+  const day = String(d.getDate()).padStart(2, '0');
+  return `${y}-${m}-${day}`;
+}
+function toLocalDateTime(dateStr, timeStr = '00:00') {
+  const [y, m, d] = dateStr.split('-').map(Number);
+  const [hh, mm] = timeStr.split(':').map(Number);
+  return new Date(y, (m || 1) - 1, d || 1, hh || 0, mm || 0);
+}
 
 // Seed data (used only if nothing is saved yet)
 const seedSessions = [
@@ -20,13 +32,16 @@ export default function CoachingSessionsPage() {
   const [status, setStatus] = useState('All');
 
   // Sessions state + persistence
-  const [sessions, setSessions] = useState(seedSessions);
+  const [sessions, setSessions] = useState([]);
   useEffect(() => {
     if (typeof window === 'undefined') return;
     try {
       const saved = JSON.parse(localStorage.getItem(STORAGE_KEY) || '[]');
       if (Array.isArray(saved) && saved.length) setSessions(saved);
-      else localStorage.setItem(STORAGE_KEY, JSON.stringify(seedSessions));
+      else {
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(seedSessions));
+        setSessions(seedSessions);
+      }
     } catch {}
   }, []);
   useEffect(() => {
@@ -36,6 +51,7 @@ export default function CoachingSessionsPage() {
     } catch {}
   }, [sessions]);
 
+  // Filtering
   const filtered = useMemo(() => {
     return sessions.filter((s) => {
       const byType = type === 'All' ? true : s.type === type;
@@ -44,27 +60,30 @@ export default function CoachingSessionsPage() {
     });
   }, [sessions, type, status]);
 
+  // Group by date
   const groups = useMemo(() => {
     const g = filtered.reduce((acc, s) => {
-      acc[s.date] = acc[s.date] || [];
-      acc[s.date].push(s);
+      (acc[s.date] = acc[s.date] || []).push(s);
       return acc;
     }, {});
-    Object.keys(g).forEach((k) => g[k].sort((a, b) => a.time.localeCompare(b.time)));
+    Object.keys(g).forEach((k) =>
+      g[k].sort((a, b) => toLocalDateTime(a.date, a.time) - toLocalDateTime(b.date, b.time))
+    );
     return g;
   }, [filtered]);
 
   const orderedDates = Object.keys(groups).sort();
   const friendlyLabel = (iso) => {
-    const today = new Date().toISOString().slice(0, 10);
-    const tomorrow = new Date(Date.now() + 86400000).toISOString().slice(0, 10);
-    if (iso === today) return 'Today';
-    if (iso === tomorrow) return 'Tomorrow';
-    const d = new Date(iso);
+    const todayISO = localISODate();
+    const tomorrowISO = localISODate(new Date(Date.now() + 86400000));
+    if (iso === todayISO) return 'Today';
+    if (iso === tomorrowISO) return 'Tomorrow';
+    const [yy, mm, dd] = iso.split('-').map(Number);
+    const d = new Date(yy, mm - 1, dd);
     return d.toLocaleDateString(undefined, { month: 'short', day: 'numeric', weekday: 'short' });
   };
 
-  // Status badge (unchanged)
+  // Status badge
   const badge = (text) => {
     const map = {
       Scheduled: { bg: '#E3F2FD', fg: '#1565C0' },
@@ -79,7 +98,7 @@ export default function CoachingSessionsPage() {
     );
   };
 
-  // Slimmer type pill (Strategy / Resume / Interview)
+  // Slim orange type pill
   const typePill = (text) => (
     <span
       style={{
@@ -97,10 +116,10 @@ export default function CoachingSessionsPage() {
     </span>
   );
 
-  // Add Session modal
-  const [showAdd, setShowAdd] = useState(false);
+  // ---------- Add/Edit/Delete Modal ----------
+  const [modal, setModal] = useState({ open: false, mode: 'add', index: null });
   const [form, setForm] = useState({
-    date: new Date().toISOString().slice(0, 10),
+    date: localISODate(),
     time: '09:00',
     client: '',
     type: 'Strategy',
@@ -108,23 +127,58 @@ export default function CoachingSessionsPage() {
   });
   const update = (k, v) => setForm((f) => ({ ...f, [k]: v }));
 
-  const addSession = (e) => {
+  const openAdd = () => {
+    setForm({ date: localISODate(), time: '09:00', client: '', type: 'Strategy', status: 'Scheduled' });
+    setModal({ open: true, mode: 'add', index: null });
+  };
+
+  const openEdit = (idx) => {
+    const s = sessions[idx];
+    setForm({ date: s.date, time: s.time, client: s.client, type: s.type, status: s.status });
+    setModal({ open: true, mode: 'edit', index: idx });
+  };
+
+  const saveAdd = (e) => {
     e.preventDefault();
     if (!form.client.trim()) return alert('Please enter a client name.');
-    const rec = {
-      date: form.date,
-      time: form.time,
-      client: form.client.trim(),
-      type: form.type,
-      status: form.status,
-    };
+    const rec = { ...form, client: form.client.trim() };
     setSessions((prev) => {
       const next = [...prev, rec];
-      next.sort((a, b) => (a.date + a.time).localeCompare(b.date + b.time));
+      next.sort((a, b) => toLocalDateTime(a.date, a.time) - toLocalDateTime(b.date, b.time));
       return next;
     });
-    setShowAdd(false);
+    setModal({ open: false, mode: 'add', index: null });
   };
+
+  const saveEdit = (e) => {
+    e.preventDefault();
+    if (modal.index == null) return;
+    if (!form.client.trim()) return alert('Please enter a client name.');
+    setSessions((prev) => {
+      const next = [...prev];
+      next[modal.index] = { ...form, client: form.client.trim() };
+      next.sort((a, b) => toLocalDateTime(a.date, a.time) - toLocalDateTime(b.date, b.time));
+      return next;
+    });
+    setModal({ open: false, mode: 'add', index: null });
+  };
+
+  const deleteSession = (idx) => {
+    if (!confirm('Delete this session?')) return;
+    setSessions((prev) => prev.filter((_, i) => i !== idx));
+    setModal({ open: false, mode: 'add', index: null });
+  };
+
+  // Find the index in the master sessions array for a rendered item
+  const findIndexOf = (s) =>
+    sessions.findIndex(
+      (x) =>
+        x.date === s.date &&
+        x.time === s.time &&
+        x.client === s.client &&
+        x.type === s.type &&
+        x.status === s.status
+    );
 
   return (
     <div
@@ -155,13 +209,7 @@ export default function CoachingSessionsPage() {
               <select
                 value={type}
                 onChange={(e) => setType(e.target.value)}
-                style={{
-                  border: '1px solid #ddd',
-                  borderRadius: 10,
-                  padding: '10px 12px',
-                  outline: 'none',
-                  background: 'white',
-                }}
+                style={{ border: '1px solid #ddd', borderRadius: 10, padding: '10px 12px', outline: 'none', background: 'white' }}
               >
                 <option value="All">All Types</option>
                 <option value="Strategy">Strategy</option>
@@ -172,13 +220,7 @@ export default function CoachingSessionsPage() {
               <select
                 value={status}
                 onChange={(e) => setStatus(e.target.value)}
-                style={{
-                  border: '1px solid #ddd',
-                  borderRadius: 10,
-                  padding: '10px 12px',
-                  outline: 'none',
-                  background: 'white',
-                }}
+                style={{ border: '1px solid #ddd', borderRadius: 10, padding: '10px 12px', outline: 'none', background: 'white' }}
               >
                 <option value="All">All Statuses</option>
                 <option value="Scheduled">Scheduled</option>
@@ -192,7 +234,7 @@ export default function CoachingSessionsPage() {
 
               <button
                 type="button"
-                onClick={() => setShowAdd(true)}
+                onClick={openAdd}
                 style={{
                   background: '#FF7043',
                   color: 'white',
@@ -221,53 +263,88 @@ export default function CoachingSessionsPage() {
           >
             <h2 style={{ color: '#FF7043', marginTop: 0, marginBottom: 12 }}>Agenda</h2>
 
+            {/* Header row with Actions column */}
+            <div
+              style={{
+                display: 'grid',
+                gridTemplateColumns: '90px 1fr 120px 120px 110px',
+                gap: 10,
+                padding: '6px 10px',
+                background: '#FAFAFA',
+                color: '#607D8B',
+                fontSize: 12,
+                border: '1px solid #eee',
+                borderRadius: 8,
+                marginBottom: 6,
+				                fontWeight: 700,
+              }}
+            >
+              <span>Time</span>
+              <span>Name</span>
+              <span>Topic</span>
+              <span>Status</span>
+              <span>Actions</span>
+            </div>
+
             {orderedDates.map((d) => (
               <div key={d} style={{ marginBottom: 16 }}>
                 <div style={{ fontWeight: 700, marginBottom: 8, color: '#263238' }}>{friendlyLabel(d)}</div>
-
-                {/* Header row */}
-                <div
-                  style={{
-                    display: 'grid',
-                    gridTemplateColumns: '90px 1fr 120px 120px',
-                    gap: 10,
-                    padding: '6px 10px',
-                    background: '#FAFAFA',
-                    color: '#607D8B',
-                    fontSize: 12,
-                    border: '1px solid #eee',
-                    borderRadius: 8,
-                    marginBottom: 6,
-                    fontWeight: 700,
-                  }}
-                >
-                  <span>Time</span>
-                  <span>Name</span>
-                  <span>Topic</span>
-                  <span>Status</span>
-                </div>
-
                 <ul style={{ margin: 0, padding: 0, listStyle: 'none', display: 'grid', gap: 8 }}>
-                  {groups[d].map((s, idx) => (
-                    <li
-                      key={`${d}-${idx}`}
-                      style={{
-                        display: 'grid',
-                        gridTemplateColumns: '90px 1fr 120px 120px',
-                        alignItems: 'center',
-                        gap: 10,
-                        border: '1px solid #eee',
-                        borderRadius: 8,
-                        padding: '8px 10px',
-                        background: '#FFFFFF',
-                      }}
-                    >
-                      <strong>{s.time}</strong>
-                      <span style={{ color: '#455A64' }}>{s.client}</span>
-                      <span>{typePill(s.type)}</span>
-                      <span>{badge(s.status)}</span>
-                    </li>
-                  ))}
+                  {groups[d].map((s, idx) => {
+                    const masterIdx = findIndexOf(s);
+                    return (
+                      <li
+                        key={`${d}-${idx}`}
+                        style={{
+                          display: 'grid',
+                          gridTemplateColumns: '90px 1fr 120px 120px 110px',
+                          alignItems: 'center',
+                          gap: 10,
+                          border: '1px solid #eee',
+                          borderRadius: 8,
+                          padding: '8px 10px',
+                          background: '#FAFAFA',
+                        }}
+                      >
+                        <strong>{s.time}</strong>
+                        <span style={{ color: '#455A64' }}>{s.client}</span>
+                        <span>{typePill(s.type)}</span>
+                        <span>{badge(s.status)}</span>
+                        <div style={{ display: 'flex', gap: 6 }}>
+                          <button
+                            type="button"
+                            onClick={() => openEdit(masterIdx)}
+                            style={{
+                              background: '#FFF3E0',
+                              color: '#E65100',
+                              border: '1px solid #E65100',
+                              borderRadius: 6,
+                              padding: '4px 8px',
+                              fontSize: 11,
+                              cursor: 'pointer',
+                            }}
+                          >
+                            Edit
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => deleteSession(masterIdx)}
+                            style={{
+                              background: 'white',
+                              color: '#C62828',
+                              border: '1px solid #C62828',
+                              borderRadius: 6,
+                              padding: '4px 8px',
+                              fontSize: 11,
+                              cursor: 'pointer',
+                            }}
+                          >
+                            Delete
+                          </button>
+                        </div>
+                      </li>
+                    );
+                  })}
                 </ul>
               </div>
             ))}
@@ -277,103 +354,128 @@ export default function CoachingSessionsPage() {
         </div>
       </main>
 
-      {/* Add Session Modal */}
-      {showAdd && (
+      {/* Modal */}
+      {modal.open && (
         <div
-          role="dialog"
-          aria-modal="true"
           style={{
             position: 'fixed',
-            inset: 0,
-            background: 'rgba(0,0,0,0.35)',
-            display: 'grid',
-            placeItems: 'center',
-            zIndex: 50,
+            top: 0, left: 0, right: 0, bottom: 0,
+            background: 'rgba(0,0,0,0.4)',
+            display: 'flex',
+            justifyContent: 'center',
+            alignItems: 'center',
+            zIndex: 9999,
           }}
-          onClick={() => setShowAdd(false)}
         >
           <form
-            onClick={(e) => e.stopPropagation()}
-            onSubmit={addSession}
+            onSubmit={modal.mode === 'add' ? saveAdd : saveEdit}
             style={{
-              width: '100%',
-              maxWidth: 520,
               background: 'white',
               borderRadius: 12,
-              padding: 16,
-              border: '1px solid #eee',
-              boxShadow: '0 10px 24px rgba(0,0,0,0.12)',
-              display: 'grid',
-              gap: 10,
+              padding: 20,
+              width: 400,
+              display: 'flex',
+              flexDirection: 'column',
+              gap: 12,
             }}
           >
-            <div style={{ fontWeight: 800, color: '#263238', marginBottom: 4 }}>Add Session</div>
+            <h3 style={{ margin: 0, color: '#FF7043' }}>
+              {modal.mode === 'add' ? 'Add Session' : 'Edit Session'}
+            </h3>
 
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
-              <div>
-                <label style={label}>Date</label>
-                <input type="date" value={form.date} onChange={(e) => update('date', e.target.value)} style={input} required />
-              </div>
-              <div>
-                <label style={label}>Time</label>
-                <input type="time" value={form.time} onChange={(e) => update('time', e.target.value)} style={input} required />
-              </div>
-            </div>
+            <label>
+              Date:
+              <input
+                type="date"
+                value={form.date}
+                onChange={(e) => update('date', e.target.value)}
+                style={{ width: '100%', padding: 6 }}
+              />
+            </label>
+            <label>
+              Time:
+              <input
+                type="time"
+                value={form.time}
+                onChange={(e) => update('time', e.target.value)}
+                style={{ width: '100%', padding: 6 }}
+              />
+            </label>
+            <label>
+              Client Name:
+              <input
+                type="text"
+                value={form.client}
+                onChange={(e) => update('client', e.target.value)}
+                style={{ width: '100%', padding: 6 }}
+              />
+            </label>
+            <label>
+              Type:
+              <select value={form.type} onChange={(e) => update('type', e.target.value)} style={{ width: '100%', padding: 6 }}>
+                <option value="Strategy">Strategy</option>
+                <option value="Resume">Resume</option>
+                <option value="Interview">Interview</option>
+              </select>
+            </label>
+            <label>
+              Status:
+              <select value={form.status} onChange={(e) => update('status', e.target.value)} style={{ width: '100%', padding: 6 }}>
+                <option value="Scheduled">Scheduled</option>
+                <option value="Completed">Completed</option>
+                <option value="No-show">No-show</option>
+              </select>
+            </label>
 
-            <div>
-              <label style={label}>Client name</label>
-              <input value={form.client} onChange={(e) => update('client', e.target.value)} style={input} placeholder="e.g., Jamie R." required />
-            </div>
-
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
-              <div>
-                <label style={label}>Topic</label>
-                <select value={form.type} onChange={(e) => update('type', e.target.value)} style={input}>
-                  <option>Strategy</option>
-                  <option>Resume</option>
-                  <option>Interview</option>
-                </select>
+            <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: 10 }}>
+              {modal.mode === 'edit' && (
+                <button
+                  type="button"
+                  onClick={() => deleteSession(modal.index)}
+                  style={{
+                    background: 'white',
+                    color: '#C62828',
+                    border: '1px solid #C62828',
+                    borderRadius: 10,
+                    padding: '10px 12px',
+                    fontWeight: 700,
+                    cursor: 'pointer',
+                  }}
+                >
+                  Delete
+                </button>
+              )}
+              <div style={{ display: 'flex', gap: 8 }}>
+                <button
+                  type="submit"
+                  style={{
+                    background: '#FF7043',
+                    color: 'white',
+                    border: 'none',
+                    borderRadius: 10,
+                    padding: '10px 12px',
+                    fontWeight: 700,
+                    cursor: 'pointer',
+                  }}
+                >
+                  Save
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setModal({ open: false, mode: 'add', index: null })}
+                  style={{
+                    background: 'white',
+                    color: '#FF7043',
+                    border: '1px solid #FF7043',
+                    borderRadius: 10,
+                    padding: '10px 12px',
+                    fontWeight: 700,
+                    cursor: 'pointer',
+                  }}
+                >
+                  Cancel
+                </button>
               </div>
-              <div>
-                <label style={label}>Status</label>
-                <select value={form.status} onChange={(e) => update('status', e.target.value)} style={input}>
-                  <option>Scheduled</option>
-                  <option>Completed</option>
-                  <option>No-show</option>
-                </select>
-              </div>
-            </div>
-
-            <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end', marginTop: 6 }}>
-              <button
-                type="button"
-                onClick={() => setShowAdd(false)}
-                style={{
-                  background: 'white',
-                  color: '#FF7043',
-                  border: '1px solid #FF7043',
-                  borderRadius: 10,
-                  padding: '10px 12px',
-                  fontWeight: 700,
-                  cursor: 'pointer',
-                }}
-              >
-                Cancel
-              </button>
-              <button
-                type="submit"
-                style={{
-                  background: '#FF7043',
-                  color: 'white',
-                  border: 'none',
-                  borderRadius: 10,
-                  padding: '10px 12px',
-                  fontWeight: 700,
-                  cursor: 'pointer',
-                }}
-              >
-                Save
-              </button>
             </div>
           </form>
         </div>
@@ -381,6 +483,3 @@ export default function CoachingSessionsPage() {
     </div>
   );
 }
-
-const label = { display: 'block', fontSize: 12, color: '#607D8B', marginBottom: 4, fontWeight: 700 };
-const input = { border: '1px solid #ddd', borderRadius: 10, padding: '10px 12px', outline: 'none', width: '100%', background: 'white' };

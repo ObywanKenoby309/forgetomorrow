@@ -5,8 +5,31 @@ import CoachingSidebar from '../../../../components/coaching/CoachingSidebar';
 
 const STORAGE_KEY = 'coachSessions_v1';
 
+// --- Helpers to avoid UTC drift (use LOCAL dates/times) ---
+function localISODate(d = new Date()) {
+  const y = d.getFullYear();
+  const m = String(d.getMonth() + 1).padStart(2, '0');
+  const day = String(d.getDate()).padStart(2, '0');
+  return `${y}-${m}-${day}`;
+}
+function toLocalDateTime(dateStr, timeStr = '00:00') {
+  const [y, m, d] = dateStr.split('-').map(Number);
+  const [hh, mm] = timeStr.split(':').map(Number);
+  return new Date(y, (m || 1) - 1, d || 1, hh || 0, mm || 0);
+}
+
+// Seed data (only used if storage is empty)
+const seed = [
+  { date: '2025-08-12', time: '09:00', client: 'Alex Turner',  type: 'Strategy',  status: 'Scheduled' },
+  { date: '2025-08-12', time: '11:30', client: 'Priya N.',     type: 'Resume',    status: 'Scheduled' },
+  { date: '2025-08-12', time: '14:00', client: 'Michael R.',   type: 'Interview', status: 'Scheduled' },
+  { date: '2025-08-13', time: '10:00', client: 'Dana C.',      type: 'Strategy',  status: 'Scheduled' },
+  { date: '2025-08-15', time: '13:00', client: 'Robert L.',    type: 'Resume',    status: 'Completed' },
+  { date: '2025-08-16', time: '09:30', client: 'Jia L.',       type: 'Interview', status: 'No-show'  },
+];
+
 export default function CoachingSessionsCalendarPage() {
-  // Month navigation state
+  // Month navigation
   const today = new Date();
   const [year, setYear] = useState(today.getFullYear());
   const [month, setMonth] = useState(today.getMonth()); // 0-11
@@ -15,36 +38,25 @@ export default function CoachingSessionsCalendarPage() {
   const [type, setType] = useState('All');
   const [status, setStatus] = useState('All');
 
-  // Seed (only used if storage empty)
-  const seed = [
-    { date: '2025-08-12', time: '09:00', client: 'Alex Turner',  type: 'Strategy',  status: 'Scheduled' },
-    { date: '2025-08-12', time: '11:30', client: 'Priya N.',     type: 'Resume',    status: 'Scheduled' },
-    { date: '2025-08-12', time: '14:00', client: 'Michael R.',   type: 'Interview', status: 'Scheduled' },
-    { date: '2025-08-13', time: '10:00', client: 'Dana C.',      type: 'Strategy',  status: 'Scheduled' },
-    { date: '2025-08-15', time: '13:00', client: 'Robert L.',    type: 'Resume',    status: 'Completed' },
-    { date: '2025-08-16', time: '09:30', client: 'Jia L.',       type: 'Interview', status: 'No-show'  },
-  ];
-
-  const [sessions, setSessions] = useState(seed);
-
-  // Load/save storage so this stays in sync with Sessions page
+  // Sessions state + persistence (shared with Sessions + Dashboard)
+  const [sessions, setSessions] = useState([]);
   useEffect(() => {
     if (typeof window === 'undefined') return;
     try {
       const saved = JSON.parse(localStorage.getItem(STORAGE_KEY) || '[]');
       if (Array.isArray(saved) && saved.length) setSessions(saved);
-      else localStorage.setItem(STORAGE_KEY, JSON.stringify(seed));
-    } catch {}
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+      else {
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(seed));
+        setSessions(seed);
+      }
+    } catch { setSessions([]); }
   }, []);
   useEffect(() => {
     if (typeof window === 'undefined') return;
-    try {
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(sessions));
-    } catch {}
+    try { localStorage.setItem(STORAGE_KEY, JSON.stringify(sessions)); } catch {}
   }, [sessions]);
 
-  // Filtered sessions
+  // Derived: filter
   const filtered = useMemo(() => {
     return sessions.filter((s) => {
       const byType = type === 'All' ? true : s.type === type;
@@ -53,71 +65,101 @@ export default function CoachingSessionsCalendarPage() {
     });
   }, [sessions, type, status]);
 
-  // Build a static 6-week (42 day) grid starting from the first visible cell
+  // Static 6-week grid (42 cells), start on Sunday before/at the 1st
   const monthLabel = new Date(year, month, 1).toLocaleString(undefined, { month: 'long', year: 'numeric' });
   const gridDays = useMemo(() => {
     const firstOfMonth = new Date(year, month, 1);
     const startDay = firstOfMonth.getDay(); // 0=Sun
     const start = new Date(firstOfMonth);
-    start.setDate(firstOfMonth.getDate() - startDay); // back to previous Sunday (or same day if Sunday)
+    start.setDate(firstOfMonth.getDate() - startDay);
 
     const days = [];
     for (let i = 0; i < 42; i++) {
       const d = new Date(start);
       d.setDate(start.getDate() + i);
-      const iso = d.toISOString().slice(0, 10);
+      const iso = localISODate(d);
       days.push({
         iso,
         dayNum: d.getDate(),
         inMonth: d.getMonth() === month && d.getFullYear() === year,
-        isToday: iso === new Date().toISOString().slice(0, 10),
+        isToday: iso === localISODate(),
       });
     }
     return days;
   }, [year, month]);
 
-  // Sessions by date (after filters)
+  // Sessions by date
   const sessionsByDate = useMemo(() => {
     const map = {};
-    for (const s of filtered) {
-      map[s.date] = map[s.date] || [];
-      map[s.date].push(s);
-    }
-    Object.keys(map).forEach((k) => map[k].sort((a, b) => a.time.localeCompare(b.time)));
+    for (const s of filtered) (map[s.date] = map[s.date] || []).push(s);
+    Object.keys(map).forEach((k) =>
+      map[k].sort((a, b) => toLocalDateTime(a.date, a.time) - toLocalDateTime(b.date, b.time))
+    );
     return map;
   }, [filtered]);
 
-  // Add-session (via day click or top-right button)
-  const [selectedDay, setSelectedDay] = useState(null); // ISO
-  const [draft, setDraft] = useState(null);
+  // ---------- Shared Add/Edit/Delete modal (matches Sessions page) ----------
+  const [modal, setModal] = useState({ open: false, mode: 'add', index: null });
+  const [form, setForm] = useState({
+    date: localISODate(),
+    time: '09:00',
+    client: '',
+    type: 'Strategy',
+    status: 'Scheduled',
+  });
+  const update = (k, v) => setForm((f) => ({ ...f, [k]: v }));
 
-  const beginDraft = (iso) => {
-    setSelectedDay(iso);
-    setDraft({
-      date: iso,
-      time: '09:00',
-      client: '',
-      type: 'Strategy',
-      status: 'Scheduled',
-    });
+  const openAddFor = (isoDate) => {
+    setForm({ date: isoDate || localISODate(), time: '09:00', client: '', type: 'Strategy', status: 'Scheduled' });
+    setModal({ open: true, mode: 'add', index: null });
+  };
+  const openEdit = (idx) => {
+    const s = sessions[idx];
+    setForm({ date: s.date, time: s.time, client: s.client, type: s.type, status: s.status });
+    setModal({ open: true, mode: 'edit', index: idx });
   };
 
-  const submitDraft = (e) => {
-    if (e) e.preventDefault();
-    if (!draft || !draft.client.trim() || !draft.time) {
-      alert('Please enter a client name and time.');
-      return;
-    }
+  const saveAdd = (e) => {
+    e.preventDefault();
+    if (!form.client.trim()) return alert('Please enter a client name.');
+    const rec = { ...form, client: form.client.trim() };
     setSessions((prev) => {
-      const next = [...prev, { ...draft, client: draft.client.trim() }];
-      next.sort((a, b) => (a.date + a.time).localeCompare(b.date + b.time));
+      const next = [...prev, rec];
+      next.sort((a, b) => toLocalDateTime(a.date, a.time) - toLocalDateTime(b.date, b.time));
       return next;
     });
-    setDraft(null);
-    setSelectedDay(null);
+    setModal({ open: false, mode: 'add', index: null });
+  };
+  const saveEdit = (e) => {
+    e.preventDefault();
+    if (modal.index == null) return;
+    if (!form.client.trim()) return alert('Please enter a client name.');
+    setSessions((prev) => {
+      const next = [...prev];
+      next[modal.index] = { ...form, client: form.client.trim() };
+      next.sort((a, b) => toLocalDateTime(a.date, a.time) - toLocalDateTime(b.date, b.time));
+      return next;
+    });
+    setModal({ open: false, mode: 'add', index: null });
+  };
+  const deleteSession = (idx) => {
+    if (!confirm('Delete this session?')) return;
+    setSessions((prev) => prev.filter((_, i) => i !== idx));
+    setModal({ open: false, mode: 'add', index: null });
   };
 
-  // UI helpers
+  // Find in master array (for editing items inside day cells)
+  const findIndexOf = (s) =>
+    sessions.findIndex(
+      (x) =>
+        x.date === s.date &&
+        x.time === s.time &&
+        x.client === s.client &&
+        x.type === s.type &&
+        x.status === s.status
+    );
+
+  // UI helpers (match Sessions + Clients styles)
   const badge = (text) => {
     const map = {
       Scheduled: { bg: '#E3F2FD', fg: '#1565C0' },
@@ -131,7 +173,6 @@ export default function CoachingSessionsCalendarPage() {
       </span>
     );
   };
-
   const typePill = (text) => (
     <span
       style={{
@@ -154,17 +195,12 @@ export default function CoachingSessionsCalendarPage() {
     d.setMonth(d.getMonth() - 1);
     setYear(d.getFullYear());
     setMonth(d.getMonth());
-    setSelectedDay(null);
-    setDraft(null);
   };
-
   const nextMonth = () => {
     const d = new Date(year, month, 1);
     d.setMonth(d.getMonth() + 1);
     setYear(d.getFullYear());
     setMonth(d.getMonth());
-    setSelectedDay(null);
-    setDraft(null);
   };
 
   return (
@@ -181,7 +217,7 @@ export default function CoachingSessionsCalendarPage() {
       <CoachingSidebar active="sessions" />
 
       <main style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
-        <div style={{ maxWidth: 1120 /* wider calendar */ }}>
+        <div style={{ maxWidth: 1120 }}>
           {/* Top controls */}
           <section
             style={{
@@ -221,7 +257,7 @@ export default function CoachingSessionsCalendarPage() {
 
               <button
                 type="button"
-                onClick={() => beginDraft(new Date(year, month, today.getDate()).toISOString().slice(0, 10))}
+                onClick={() => openAddFor(localISODate())}
                 style={{
                   background: '#FF7043',
                   color: 'white',
@@ -292,24 +328,24 @@ export default function CoachingSessionsCalendarPage() {
               ))}
             </div>
 
-            {/* Static 6-week grid (42 cells) */}
+            {/* Static 6-week grid */}
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', gap: 12 }}>
               {gridDays.map(({ iso, dayNum, inMonth, isToday }) => {
                 const items = sessionsByDate[iso] || [];
                 return (
                   <div
                     key={iso}
-                    onClick={() => beginDraft(iso)}
+                    onClick={() => openAddFor(iso)}
                     title={`Add session on ${iso}`}
                     style={{
                       border: '1px solid #eee',
                       borderRadius: 10,
                       minHeight: 140,
                       background: inMonth ? '#FAFAFA' : '#F7F7F7',
-                      opacity: inMonth ? 1 : 0.6,
+                      opacity: inMonth ? 1 : 0.65,
                       padding: 10,
                       cursor: 'pointer',
-                      outline: isToday ? '2px solid #FFE0B2' : selectedDay === iso ? '2px solid #FFAB91' : 'none',
+                      outline: isToday ? '2px solid #FFE0B2' : 'none',
                       display: 'flex',
                       flexDirection: 'column',
                       gap: 8,
@@ -318,132 +354,172 @@ export default function CoachingSessionsCalendarPage() {
                     <div style={{ fontWeight: 700, color: '#263238' }}>{dayNum}</div>
 
                     <div style={{ display: 'grid', gap: 6 }}>
-                      {items.slice(0, 3).map((s, idx) => (
-                        <button
-                          key={`${iso}-${idx}`}
-                          type="button"
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            alert(`${s.time} • ${s.client}\n${s.type} • ${s.status}`);
-                          }}
-                          style={{
-                            textAlign: 'left',
-                            background: 'white',
-                            border: '1px solid #eee',
-                            borderRadius: 8,
-                            padding: '6px 8px',
-                            cursor: 'pointer',
-                            fontSize: 12,
-                          }}
-                        >
-                          <div style={{ fontWeight: 700 }}>{s.time}</div>
-                          <div style={{ color: '#455A64' }}>{s.client}</div>
-                          <div style={{ marginTop: 4, display: 'flex', gap: 6, alignItems: 'center' }}>
-                            {typePill(s.type)}
-                            {badge(s.status)}
-                          </div>
-                        </button>
-                      ))}
-
-                      {items.length > 3 && (
-                        <div style={{ fontSize: 12, color: '#607D8B' }}>+{items.length - 3} more</div>
-                      )}
+                      {items.slice(0, 3).map((s, idx) => {
+                        const masterIdx = findIndexOf(s);
+                        return (
+                          <button
+                            key={`${iso}-${idx}`}
+                            type="button"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              openEdit(masterIdx);
+                            }}
+                            style={{
+                              textAlign: 'left',
+                              background: 'white',
+                              border: '1px solid #eee',
+                              borderRadius: 8,
+                              padding: '6px 8px',
+                              cursor: 'pointer',
+                              fontSize: 12,
+                            }}
+                          >
+                            <div style={{ fontWeight: 700 }}>{s.time}</div>
+                            <div style={{ color: '#455A64' }}>{s.client}</div>
+                            <div style={{ marginTop: 4, display: 'flex', gap: 6, alignItems: 'center' }}>
+                              {typePill(s.type)}
+                              {badge(s.status)}
+                            </div>
+                          </button>
+                        );
+                      })}
+                      {items.length > 3 && <div style={{ fontSize: 12, color: '#607D8B' }}>+{items.length - 3} more</div>}
                     </div>
                   </div>
                 );
               })}
             </div>
-
-            {/* Add-session form (appears after clicking a day or +Add Session) */}
-            {draft && (
-              <form
-                onSubmit={submitDraft}
-                style={{
-                  marginTop: 16,
-                  borderTop: '1px solid #eee',
-                  paddingTop: 16,
-                  display: 'grid',
-                  gap: 12,
-                }}
-              >
-                <div style={{ fontWeight: 700, color: '#263238' }}>
-                  Add Session — <span style={{ color: '#FF7043' }}>{draft.date}</span>
-                </div>
-
-                <div style={{ display: 'grid', gridTemplateColumns: '120px 1fr 150px 150px', gap: 12 }}>
-                  <input
-                    value={draft.time}
-                    onChange={(e) => setDraft({ ...draft, time: e.target.value })}
-                    type="time"
-                    style={{ border: '1px solid #ddd', borderRadius: 10, padding: '10px 12px' }}
-                    required
-                  />
-                  <input
-                    value={draft.client}
-                    onChange={(e) => setDraft({ ...draft, client: e.target.value })}
-                    placeholder="Client name"
-                    style={{ border: '1px solid #ddd', borderRadius: 10, padding: '10px 12px' }}
-                    required
-                  />
-                  <select
-                    value={draft.type}
-                    onChange={(e) => setDraft({ ...draft, type: e.target.value })}
-                    style={{ border: '1px solid #ddd', borderRadius: 10, padding: '10px 12px', background: 'white' }}
-                  >
-                    <option value="Strategy">Strategy</option>
-                    <option value="Resume">Resume</option>
-                    <option value="Interview">Interview</option>
-                  </select>
-                  <select
-                    value={draft.status}
-                    onChange={(e) => setDraft({ ...draft, status: e.target.value })}
-                    style={{ border: '1px solid #ddd', borderRadius: 10, padding: '10px 12px', background: 'white' }}
-                  >
-                    <option value="Scheduled">Scheduled</option>
-                    <option value="Completed">Completed</option>
-                    <option value="No-show">No-show</option>
-                  </select>
-                </div>
-
-                <div style={{ display: 'flex', gap: 8 }}>
-                  <button
-                    type="submit"
-                    style={{
-                      background: '#FF7043',
-                      color: 'white',
-                      border: 'none',
-                      borderRadius: 10,
-                      padding: '10px 12px',
-                      fontWeight: 700,
-                      cursor: 'pointer',
-                    }}
-                  >
-                    Save Session
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setDraft(null);
-                      setSelectedDay(null);
-                    }}
-                    style={{
-                      background: 'white',
-                      color: '#FF7043',
-                      border: '1px solid #FF7043',
-                      borderRadius: 10,
-                      padding: '10px 12px',
-                      fontWeight: 700,
-                      cursor: 'pointer',
-                    }}
-                  >
-                    Cancel
-                  </button>
-                </div>
-              </form>
-            )}
           </section>
         </div>
       </main>
+
+      {/* Add/Edit Modal */}
+      {modal.open && (
+        <div
+          role="dialog"
+          aria-modal="true"
+          style={{
+            position: 'fixed',
+            inset: 0,
+            background: 'rgba(0,0,0,0.35)',
+            display: 'grid',
+            placeItems: 'center',
+            zIndex: 50,
+          }}
+          onClick={() => setModal({ open: false, mode: 'add', index: null })}
+        >
+          <form
+            onClick={(e) => e.stopPropagation()}
+            onSubmit={modal.mode === 'add' ? saveAdd : saveEdit}
+            style={{
+              width: '100%',
+              maxWidth: 520,
+              background: 'white',
+              borderRadius: 12,
+              padding: 16,
+              border: '1px solid #eee',
+              boxShadow: '0 10px 24px rgba(0,0,0,0.12)',
+              display: 'grid',
+              gap: 10,
+            }}
+          >
+            <div style={{ fontWeight: 800, color: '#263238', marginBottom: 4 }}>
+              {modal.mode === 'add' ? 'Add Session' : 'Edit Session'}
+            </div>
+
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
+              <div>
+                <label style={label}>Date</label>
+                <input type="date" value={form.date} onChange={(e) => update('date', e.target.value)} style={input} required />
+              </div>
+              <div>
+                <label style={label}>Time</label>
+                <input type="time" value={form.time} onChange={(e) => update('time', e.target.value)} style={input} required />
+              </div>
+            </div>
+
+            <div>
+              <label style={label}>Client name</label>
+              <input value={form.client} onChange={(e) => update('client', e.target.value)} style={input} placeholder="e.g., Jamie R." required />
+            </div>
+
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
+              <div>
+                <label style={label}>Topic</label>
+                <select value={form.type} onChange={(e) => update('type', e.target.value)} style={input}>
+                  <option>Strategy</option>
+                  <option>Resume</option>
+                  <option>Interview</option>
+                </select>
+              </div>
+              <div>
+                <label style={label}>Status</label>
+                <select value={form.status} onChange={(e) => update('status', e.target.value)} style={input}>
+                  <option>Scheduled</option>
+                  <option>Completed</option>
+                  <option>No-show</option>
+                </select>
+              </div>
+            </div>
+
+            <div style={{ display: 'flex', gap: 8, justifyContent: 'space-between', marginTop: 6 }}>
+              {modal.mode === 'edit' ? (
+                <button
+                  type="button"
+                  onClick={() => deleteSession(modal.index)}
+                  style={{
+                    background: 'white',
+                    color: '#C62828',
+                    border: '1px solid #C62828',
+                    borderRadius: 10,
+                    padding: '10px 12px',
+                    fontWeight: 700,
+                    cursor: 'pointer',
+                  }}
+                >
+                  Delete
+                </button>
+              ) : (
+                <span />
+              )}
+              <div style={{ display: 'flex', gap: 8 }}>
+                <button
+                  type="button"
+                  onClick={() => setModal({ open: false, mode: 'add', index: null })}
+                  style={{
+                    background: 'white',
+                    color: '#FF7043',
+                    border: '1px solid #FF7043',
+                    borderRadius: 10,
+                    padding: '10px 12px',
+                    fontWeight: 700,
+                    cursor: 'pointer',
+                  }}
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  style={{
+                    background: '#FF7043',
+                    color: 'white',
+                    border: 'none',
+                    borderRadius: 10,
+                    padding: '10px 12px',
+                    fontWeight: 700,
+                    cursor: 'pointer',
+                  }}
+                >
+                  Save
+                </button>
+              </div>
+            </div>
+          </form>
+        </div>
+      )}
     </div>
   );
 }
+
+const label = { display: 'block', fontSize: 12, color: '#607D8B', marginBottom: 4, fontWeight: 700 };
+const input = { border: '1px solid #ddd', borderRadius: 10, padding: '10px 12px', outline: 'none', width: '100%', background: 'white' };
