@@ -4,8 +4,9 @@ import CoachingSidebar from '../components/coaching/CoachingSidebar';
 import Link from 'next/link';
 
 const STORAGE_KEY = 'coachCSAT_v1';
+const SESSIONS_KEY = 'coachSessions_v1';
 
-// Uniform status colors shared across dashboard
+// Uniform status colors shared across dashboard (matches Clients list)
 function getStatusStyles(status) {
   if (status === 'At Risk') {
     return { background: '#FDECEA', color: '#C62828' };
@@ -18,28 +19,6 @@ function getStatusStyles(status) {
 }
 
 export default function CoachingDashboardPage() {
-  // --- Mock data (replace with real data later) ---
-  const kpis = [
-    { label: 'Sessions Today', value: 4 },
-    { label: 'Active Clients', value: 18 },
-    { label: 'Follow-ups Due', value: 6 },
-  ];
-
-  const upcomingSessions = [
-    { time: '9:00 AM', client: 'Alex Turner', type: 'Career Strategy', status: 'Active' },
-    { time: '11:30 AM', client: 'Priya N.', type: 'Resume Review', status: 'New Intake' },
-    { time: '2:00 PM', client: 'Michael R.', type: 'Interview Prep', status: 'At Risk' },
-  ];
-
-  const clients = [
-    { name: 'Alex Turner', status: 'Active', next: 'Aug 14, 10:00 AM' },
-    { name: 'Priya N.', status: 'Active', next: 'Aug 15, 1:30 PM' },
-    { name: 'Michael R.', status: 'At Risk', next: 'Aug 13, 3:00 PM' },
-    { name: 'Dana C.', status: 'New Intake', next: 'Aug 16, 9:00 AM' },
-    { name: 'Robert L.', status: 'Active', next: 'Aug 19, 2:30 PM' },
-  ];
-  // ------------------------------------------------
-
   // ---- CSAT: load from localStorage ----
   const [csat, setCsat] = useState([]);
   const [refreshing, setRefreshing] = useState(false);
@@ -75,9 +54,50 @@ export default function CoachingDashboardPage() {
           ) / csat.length
         ).toFixed(1)
       : '—';
-
   const totalResponses = csat.length;
   const recent = csat.slice(0, 3);
+
+  // ---- Sessions: load from localStorage so Dashboard stays in sync with Sessions/Calendar ----
+  const [sessions, setSessions] = useState([]);
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    try {
+      const saved = JSON.parse(localStorage.getItem(SESSIONS_KEY) || '[]');
+      setSessions(Array.isArray(saved) ? saved : []);
+    } catch {
+      setSessions([]);
+    }
+  }, []);
+
+  // ---- KPIs derived from sessions storage ----
+  const todayISO = new Date().toISOString().slice(0, 10);
+  const sessionsToday = sessions.filter((s) => s.date === todayISO);
+  const activeClients = new Set(sessions.map((s) => s.client)).size;
+
+  const kpis = [
+    { label: 'Sessions Today', value: sessionsToday.length },
+    { label: 'Active Clients', value: activeClients },
+    { label: 'Follow-ups Due', value: 6 }, // placeholder until you have real logic
+  ];
+
+  // ---- Upcoming Sessions (next 3 from "now") ----
+  const toDate = (d, t) => new Date(`${d}T${t}:00`);
+  const now = new Date();
+  const upcomingNext3 = sessions
+    .filter((s) => toDate(s.date, s.time) >= now)
+    .sort((a, b) => (a.date + a.time).localeCompare(b.date + b.time))
+    .slice(0, 3);
+
+  // --- Clients (kept your mock list for the table) ---
+  const clients = [
+    { name: 'Alex Turner', status: 'Active', next: 'Aug 14, 10:00 AM' },
+    { name: 'Priya N.', status: 'Active', next: 'Aug 15, 1:30 PM' },
+    { name: 'Michael R.', status: 'At Risk', next: 'Aug 13, 3:00 PM' },
+    { name: 'Dana C.', status: 'New Intake', next: 'Aug 16, 9:00 AM' },
+    { name: 'Robert L.', status: 'Active', next: 'Aug 19, 2:30 PM' },
+  ];
+  // ---------------------------------------------------
 
   return (
     <div
@@ -107,42 +127,49 @@ export default function CoachingDashboardPage() {
             <div style={grid3}>
               <Card title="Upcoming Sessions">
                 <ul style={{ margin: 0, padding: 0, listStyle: 'none', display: 'grid', gap: 8 }}>
-                  {upcomingSessions.map((s, idx) => {
-                    const { background, color } = getStatusStyles(s.status);
-                    return (
-                      <li
-                        key={idx}
-                        style={{
-                          display: 'flex',
-                          alignItems: 'center',
-                          justifyContent: 'space-between',
-                          border: '1px solid #eee',
-                          borderRadius: 8,
-                          padding: '8px 10px',
-                          background: 'white',
-                          gap: 10,
-                        }}
-                      >
-                        <span style={{ fontWeight: 600, minWidth: 72 }}>{s.time}</span>
-                        <div style={{ display: 'grid', gap: 2, flex: 1 }}>
-                          <span style={{ color: '#455A64' }}>{s.client}</span>
-                          <span style={{ color: '#90A4AE', fontSize: 12 }}>{s.type}</span>
-                        </div>
-                        <span
+                  {upcomingNext3.length === 0 ? (
+                    <li style={{ color: '#90A4AE' }}>No upcoming sessions.</li>
+                  ) : (
+                    upcomingNext3.map((s, idx) => {
+                      const { background, color } =
+                        typeof getStatusStyles === 'function'
+                          ? getStatusStyles(s.status || 'Active')
+                          : { background: '#E3F2FD', color: '#1565C0' };
+                      return (
+                        <li
+                          key={`${s.date}-${s.time}-${idx}`}
                           style={{
-                            fontSize: 12,
-                            background,
-                            color,
-                            padding: '4px 8px',
-                            borderRadius: 999,
-                            whiteSpace: 'nowrap',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'space-between',
+                            border: '1px solid #eee',
+                            borderRadius: 8,
+                            padding: '8px 10px',
+                            background: 'white',
+                            gap: 10,
                           }}
                         >
-                          {s.status}
-                        </span>
-                      </li>
-                    );
-                  })}
+                          <span style={{ fontWeight: 600, minWidth: 72 }}>{s.time}</span>
+                          <div style={{ display: 'grid', gap: 2, flex: 1 }}>
+                            <span style={{ color: '#455A64' }}>{s.client}</span>
+                            <span style={{ color: '#90A4AE', fontSize: 12 }}>{s.type}</span>
+                          </div>
+                          <span
+                            style={{
+                              fontSize: 12,
+                              background,
+                              color,
+                              padding: '4px 8px',
+                              borderRadius: 999,
+                              whiteSpace: 'nowrap',
+                            }}
+                          >
+                            {s.status || 'Scheduled'}
+                          </span>
+                        </li>
+                      );
+                    })
+                  )}
                 </ul>
                 <div style={{ textAlign: 'right', marginTop: 10 }}>
                   <Link href="/dashboard/coaching/sessions" style={{ color: '#FF7043', fontWeight: 600 }}>
@@ -311,7 +338,7 @@ export default function CoachingDashboardPage() {
             </div>
           </Section>
 
-          {/* Docs & Tools (keep as cards) */}
+          {/* Docs & Tools */}
           <Section title="Docs & Tools">
             <div style={grid3}>
               <Card title="Templates & Guides" />
