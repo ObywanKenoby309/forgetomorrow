@@ -1,7 +1,9 @@
 // pages/coaching-dashboard.js
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import CoachingSidebar from '../components/coaching/CoachingSidebar';
 import Link from 'next/link';
+
+const STORAGE_KEY = 'coachCSAT_v1';
 
 export default function CoachingDashboardPage() {
   // --- Mock data (replace with real data later) ---
@@ -25,6 +27,32 @@ export default function CoachingDashboardPage() {
     { name: 'Robert L.', status: 'Active', next: 'Aug 19, 2:30 PM' },
   ];
   // ------------------------------------------------
+
+  // ---- CSAT: load from localStorage ----
+  const [csat, setCsat] = useState([]);
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    try {
+      const arr = JSON.parse(localStorage.getItem(STORAGE_KEY) || '[]');
+      setCsat(Array.isArray(arr) ? arr : []);
+    } catch {
+      setCsat([]);
+    }
+  }, []);
+
+  const avgScore =
+    csat.length > 0
+      ? (
+          csat.reduce(
+            (sum, r) => sum + (Number(r.satisfaction) + Number(r.timeliness) + Number(r.quality)) / 3,
+            0
+          ) / csat.length
+        ).toFixed(1)
+      : '—';
+
+  const totalResponses = csat.length;
+  const recent = csat.slice(0, 3);
 
   return (
     <div
@@ -114,7 +142,7 @@ export default function CoachingDashboardPage() {
                   </tr>
                 </thead>
                 <tbody>
-                  {clients.map((c, i) => (
+                  {clients.map((c) => (
                     <tr key={c.name} style={{ borderTop: '1px solid #eee' }}>
                       <Td strong>{c.name}</Td>
                       <Td>
@@ -140,6 +168,80 @@ export default function CoachingDashboardPage() {
               <Link href="/dashboard/coaching/clients" style={{ color: '#FF7043', fontWeight: 600 }}>
                 View all clients
               </Link>
+            </div>
+          </Section>
+
+          {/* CSAT Overview (NEW) */}
+          <Section title="CSAT Overview">
+            <div style={grid3}>
+              <Card title="Average Score">
+                <div style={{ display: 'flex', alignItems: 'baseline', gap: 8 }}>
+                  <div style={{ fontSize: 28, fontWeight: 800, color: '#263238' }}>{avgScore}</div>
+                  <div style={{ color: '#90A4AE', fontSize: 12 }}>/ 5</div>
+                </div>
+                <div style={{ color: '#607D8B', fontSize: 13, marginTop: 4 }}>
+                  Based on {totalResponses} {totalResponses === 1 ? 'response' : 'responses'}
+                </div>
+                <div style={{ marginTop: 10 }}>
+                  <Link href="/dashboard/coaching/feedback" style={{ color: '#FF7043', fontWeight: 600 }}>
+                    Open feedback
+                  </Link>
+                </div>
+              </Card>
+
+              <Card title="Recent Feedback">
+                {recent.length === 0 ? (
+                  <div style={{ color: '#90A4AE' }}>No responses yet.</div>
+                ) : (
+                  <ul style={{ margin: 0, padding: 0, listStyle: 'none', display: 'grid', gap: 8 }}>
+                    {recent.map((r) => {
+                      const avg = ((r.satisfaction + r.timeliness + r.quality) / 3).toFixed(1);
+                      const comment = (r.comment || '').trim();
+                      return (
+                        <li
+                          key={r.id}
+                          style={{
+                            border: '1px solid #eee',
+                            borderRadius: 8,
+                            padding: '8px 10px',
+                            background: 'white',
+                          }}
+                        >
+                          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline' }}>
+                            <div style={{ fontWeight: 700, color: '#263238' }}>{avg}/5</div>
+                            <div style={{ color: '#90A4AE', fontSize: 12 }}>
+                              {new Date(r.createdAt).toLocaleString(undefined, {
+                                month: 'short',
+                                day: 'numeric',
+                                hour: 'numeric',
+                                minute: '2-digit',
+                              })}
+                            </div>
+                          </div>
+                          <div style={{ color: '#455A64', marginTop: 4 }}>
+                            {comment ? comment : <span style={{ color: '#90A4AE' }}>(No comment)</span>}
+                          </div>
+                          {r.anonymous ? (
+                            <div style={{ color: '#90A4AE', fontSize: 12, marginTop: 4 }}>Anonymous</div>
+                          ) : null}
+                        </li>
+                      );
+                    })}
+                  </ul>
+                )}
+              </Card>
+
+              <Card title="Breakdown (latest)">
+                {csat.length === 0 ? (
+                  <div style={{ color: '#90A4AE' }}>No data yet.</div>
+                ) : (
+                  <div style={{ display: 'grid', gap: 6 }}>
+                    <Row label="Satisfaction" value={csat[0].satisfaction} />
+                    <Row label="Timeliness" value={csat[0].timeliness} />
+                    <Row label="Quality" value={csat[0].quality} />
+                  </div>
+                )}
+              </Card>
             </div>
           </Section>
 
@@ -252,6 +354,15 @@ function Td({ children, strong = false }) {
     >
       {children}
     </td>
+  );
+}
+
+function Row({ label, value }) {
+  return (
+    <div style={{ display: 'flex', justifyContent: 'space-between', color: '#455A64' }}>
+      <span>{label}</span>
+      <span style={{ fontWeight: 700 }}>{value}/5</span>
+    </div>
   );
 }
 
