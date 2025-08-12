@@ -17,7 +17,7 @@ const MOCK_CLIENTS = [
     status: 'Active',
     next: 'Aug 14, 10:00 AM',
     last: 'Aug 10',
-    profileUrl: 'https://www.linkedin.com/in/example',
+    profileUrl: 'https://www.forgetomorrow.com/in/example',
     imageUrl: '',
     notes: 'Prefers morning sessions. Focused on product roles.',
     documents: [

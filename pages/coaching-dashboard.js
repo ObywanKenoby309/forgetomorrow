@@ -1,9 +1,21 @@
 // pages/coaching-dashboard.js
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useCallback } from 'react';
 import CoachingSidebar from '../components/coaching/CoachingSidebar';
 import Link from 'next/link';
 
 const STORAGE_KEY = 'coachCSAT_v1';
+
+// Uniform status colors shared across dashboard
+function getStatusStyles(status) {
+  if (status === 'At Risk') {
+    return { background: '#FDECEA', color: '#C62828' };
+  }
+  if (status === 'New Intake') {
+    return { background: '#E3F2FD', color: '#1565C0' };
+  }
+  // default: Active/OK
+  return { background: '#E8F5E9', color: '#2E7D32' };
+}
 
 export default function CoachingDashboardPage() {
   // --- Mock data (replace with real data later) ---
@@ -14,9 +26,9 @@ export default function CoachingDashboardPage() {
   ];
 
   const upcomingSessions = [
-    { time: '9:00 AM', client: 'Alex Turner', type: 'Career Strategy' },
-    { time: '11:30 AM', client: 'Priya N.', type: 'Resume Review' },
-    { time: '2:00 PM', client: 'Michael R.', type: 'Interview Prep' },
+    { time: '9:00 AM', client: 'Alex Turner', type: 'Career Strategy', status: 'Active' },
+    { time: '11:30 AM', client: 'Priya N.', type: 'Resume Review', status: 'New Intake' },
+    { time: '2:00 PM', client: 'Michael R.', type: 'Interview Prep', status: 'At Risk' },
   ];
 
   const clients = [
@@ -30,8 +42,9 @@ export default function CoachingDashboardPage() {
 
   // ---- CSAT: load from localStorage ----
   const [csat, setCsat] = useState([]);
+  const [refreshing, setRefreshing] = useState(false);
 
-  useEffect(() => {
+  const loadCsat = useCallback(() => {
     if (typeof window === 'undefined') return;
     try {
       const arr = JSON.parse(localStorage.getItem(STORAGE_KEY) || '[]');
@@ -40,6 +53,18 @@ export default function CoachingDashboardPage() {
       setCsat([]);
     }
   }, []);
+
+  useEffect(() => {
+    loadCsat();
+  }, [loadCsat]);
+
+  const refreshCsat = () => {
+    setRefreshing(true);
+    setTimeout(() => {
+      loadCsat();
+      setRefreshing(false);
+    }, 120);
+  };
 
   const avgScore =
     csat.length > 0
@@ -82,26 +107,42 @@ export default function CoachingDashboardPage() {
             <div style={grid3}>
               <Card title="Upcoming Sessions">
                 <ul style={{ margin: 0, padding: 0, listStyle: 'none', display: 'grid', gap: 8 }}>
-                  {upcomingSessions.map((s, idx) => (
-                    <li
-                      key={idx}
-                      style={{
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'space-between',
-                        border: '1px solid #eee',
-                        borderRadius: 8,
-                        padding: '8px 10px',
-                        background: 'white',
-                      }}
-                    >
-                      <span style={{ fontWeight: 600 }}>{s.time}</span>
-                      <span style={{ color: '#455A64' }}>{s.client}</span>
-                      <span style={{ fontSize: 12, background: '#FFF3E0', color: '#E65100', padding: '4px 8px', borderRadius: 999 }}>
-                        {s.type}
-                      </span>
-                    </li>
-                  ))}
+                  {upcomingSessions.map((s, idx) => {
+                    const { background, color } = getStatusStyles(s.status);
+                    return (
+                      <li
+                        key={idx}
+                        style={{
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'space-between',
+                          border: '1px solid #eee',
+                          borderRadius: 8,
+                          padding: '8px 10px',
+                          background: 'white',
+                          gap: 10,
+                        }}
+                      >
+                        <span style={{ fontWeight: 600, minWidth: 72 }}>{s.time}</span>
+                        <div style={{ display: 'grid', gap: 2, flex: 1 }}>
+                          <span style={{ color: '#455A64' }}>{s.client}</span>
+                          <span style={{ color: '#90A4AE', fontSize: 12 }}>{s.type}</span>
+                        </div>
+                        <span
+                          style={{
+                            fontSize: 12,
+                            background,
+                            color,
+                            padding: '4px 8px',
+                            borderRadius: 999,
+                            whiteSpace: 'nowrap',
+                          }}
+                        >
+                          {s.status}
+                        </span>
+                      </li>
+                    );
+                  })}
                 </ul>
                 <div style={{ textAlign: 'right', marginTop: 10 }}>
                   <Link href="/dashboard/coaching/sessions" style={{ color: '#FF7043', fontWeight: 600 }}>
@@ -142,25 +183,28 @@ export default function CoachingDashboardPage() {
                   </tr>
                 </thead>
                 <tbody>
-                  {clients.map((c) => (
-                    <tr key={c.name} style={{ borderTop: '1px solid #eee' }}>
-                      <Td strong>{c.name}</Td>
-                      <Td>
-                        <span
-                          style={{
-                            fontSize: 12,
-                            background: c.status === 'At Risk' ? '#FDECEA' : c.status === 'New Intake' ? '#E3F2FD' : '#E8F5E9',
-                            color: c.status === 'At Risk' ? '#C62828' : c.status === 'New Intake' ? '#1565C0' : '#2E7D32',
-                            padding: '4px 8px',
-                            borderRadius: 999,
-                          }}
-                        >
-                          {c.status}
-                        </span>
-                      </Td>
-                      <Td>{c.next}</Td>
-                    </tr>
-                  ))}
+                  {clients.map((c) => {
+                    const { background, color } = getStatusStyles(c.status);
+                    return (
+                      <tr key={c.name} style={{ borderTop: '1px solid #eee' }}>
+                        <Td strong>{c.name}</Td>
+                        <Td>
+                          <span
+                            style={{
+                              fontSize: 12,
+                              background,
+                              color,
+                              padding: '4px 8px',
+                              borderRadius: 999,
+                            }}
+                          >
+                            {c.status}
+                          </span>
+                        </Td>
+                        <Td>{c.next}</Td>
+                      </tr>
+                    );
+                  })}
                 </tbody>
               </table>
             </div>
@@ -171,8 +215,30 @@ export default function CoachingDashboardPage() {
             </div>
           </Section>
 
-          {/* CSAT Overview (NEW) */}
-          <Section title="CSAT Overview">
+          {/* CSAT Overview (with Refresh button) */}
+          <Section
+            title="CSAT Overview"
+            action={
+              <button
+                type="button"
+                onClick={refreshCsat}
+                aria-label="Refresh CSAT"
+                title="Refresh CSAT"
+                style={{
+                  background: 'white',
+                  color: '#FF7043',
+                  border: '1px solid #FF7043',
+                  borderRadius: 10,
+                  padding: '8px 10px',
+                  fontWeight: 700,
+                  cursor: 'pointer',
+                }}
+                disabled={refreshing}
+              >
+                {refreshing ? 'Refreshing…' : 'Refresh'}
+              </button>
+            }
+          >
             <div style={grid3}>
               <Card title="Average Score">
                 <div style={{ display: 'flex', alignItems: 'baseline', gap: 8 }}>
@@ -195,7 +261,7 @@ export default function CoachingDashboardPage() {
                 ) : (
                   <ul style={{ margin: 0, padding: 0, listStyle: 'none', display: 'grid', gap: 8 }}>
                     {recent.map((r) => {
-                      const avg = ((r.satisfaction + r.timeliness + r.quality) / 3).toFixed(1);
+                      const avg = ((Number(r.satisfaction) + Number(r.timeliness) + Number(r.quality)) / 3).toFixed(1);
                       const comment = (r.comment || '').trim();
                       return (
                         <li
@@ -261,7 +327,7 @@ export default function CoachingDashboardPage() {
 
 /* ---------- Local UI helpers (keep inline & minimal) ---------- */
 
-function Section({ title, children }) {
+function Section({ title, children, action = null }) {
   return (
     <section
       style={{
@@ -275,12 +341,13 @@ function Section({ title, children }) {
       <div
         style={{
           marginBottom: 12,
-          color: '#FF7043',
-          fontWeight: 700,
-          fontSize: 18,
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'space-between',
         }}
       >
-        {title}
+        <div style={{ color: '#FF7043', fontWeight: 700, fontSize: 18 }}>{title}</div>
+        {action}
       </div>
       <div>{children}</div>
     </section>
