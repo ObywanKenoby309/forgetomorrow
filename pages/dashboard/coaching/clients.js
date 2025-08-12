@@ -1,12 +1,13 @@
 // pages/dashboard/coaching/clients.js
 import React, { useMemo, useState } from 'react';
+import Link from 'next/link';
 import CoachingSidebar from '../../../components/coaching/CoachingSidebar';
 
 export default function CoachingClientsPage() {
   const [search, setSearch] = useState('');
   const [status, setStatus] = useState('All');
 
-  // --- Mock data (now in state so Delete can modify it) ---
+  // --- Mock data (state, so Delete can modify it) ---
   const [clients, setClients] = useState([
     { name: 'Alex Turner', email: 'alex.turner@example.com', status: 'Active', next: 'Aug 14, 10:00 AM', last: 'Aug 10' },
     { name: 'Priya N.', email: 'priya.n@example.com', status: 'Active', next: 'Aug 15, 1:30 PM', last: 'Aug 11' },
@@ -14,7 +15,7 @@ export default function CoachingClientsPage() {
     { name: 'Dana C.', email: 'dana.c@example.com', status: 'New Intake', next: 'Aug 16, 9:00 AM', last: 'Aug 12' },
     { name: 'Robert L.', email: 'robert.l@example.com', status: 'Active', next: 'Aug 19, 2:30 PM', last: 'Aug 09' },
   ]);
-  // --------------------------------------------------------
+  // ---------------------------------------------------
 
   const filtered = useMemo(() => {
     return clients.filter(c => {
@@ -48,37 +49,18 @@ export default function CoachingClientsPage() {
       <main style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
         <div style={{ maxWidth: 860 }}>
           {/* Filters */}
-          <section
-            style={{
-              background: 'white',
-              borderRadius: 12,
-              padding: 20,
-              boxShadow: '0 2px 6px rgba(0,0,0,0.06)',
-              border: '1px solid #eee',
-            }}
-          >
+          <section style={sectionStyle}>
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 180px 160px', gap: 12 }}>
               <input
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
                 placeholder="Search by name or email…"
-                style={{
-                  border: '1px solid #ddd',
-                  borderRadius: 10,
-                  padding: '10px 12px',
-                  outline: 'none',
-                }}
+                style={inputStyle}
               />
               <select
                 value={status}
                 onChange={(e) => setStatus(e.target.value)}
-                style={{
-                  border: '1px solid #ddd',
-                  borderRadius: 10,
-                  padding: '10px 12px',
-                  outline: 'none',
-                  background: 'white',
-                }}
+                style={inputStyle}
               >
                 <option value="All">All Statuses</option>
                 <option value="Active">Active</option>
@@ -89,15 +71,7 @@ export default function CoachingClientsPage() {
               <button
                 type="button"
                 onClick={() => alert('Add Client (coming soon)')}
-                style={{
-                  background: '#FF7043',
-                  color: 'white',
-                  border: 'none',
-                  borderRadius: 10,
-                  padding: '10px 12px',
-                  fontWeight: 700,
-                  cursor: 'pointer',
-                }}
+                style={primaryBtn}
               >
                 + Add Client
               </button>
@@ -105,15 +79,7 @@ export default function CoachingClientsPage() {
           </section>
 
           {/* Table */}
-          <section
-            style={{
-              background: 'white',
-              borderRadius: 12,
-              padding: 20,
-              boxShadow: '0 2px 6px rgba(0,0,0,0.06)',
-              border: '1px solid #eee',
-            }}
-          >
+          <section style={sectionStyle}>
             <h2 style={{ color: '#FF7043', marginTop: 0, marginBottom: 12 }}>Clients</h2>
 
             <div style={{ overflowX: 'auto' }}>
@@ -121,8 +87,8 @@ export default function CoachingClientsPage() {
                 style={{
                   width: '100%',
                   borderCollapse: 'separate',
-                  borderSpacing: '0 8px',        // space between row “cards”
-                  background: 'transparent',      // let row cards show
+                  borderSpacing: '0 8px',
+                  background: 'transparent',
                 }}
               >
                 <thead>
@@ -142,8 +108,8 @@ export default function CoachingClientsPage() {
                       key={c.email}
                       style={{
                         background: 'white',
-                        border: '1px solid #ddd',   // <-- gray border around the whole row
-                        borderRadius: 10,            // rounded corners (shows with borderSpacing)
+                        border: '1px solid #ddd',
+                        borderRadius: 10,
                         boxShadow: '0 1px 3px rgba(0,0,0,0.04)',
                       }}
                     >
@@ -154,17 +120,13 @@ export default function CoachingClientsPage() {
                           style={{
                             fontSize: 12,
                             background:
-                              c.status === 'At Risk'
-                                ? '#FDECEA'
-                                : c.status === 'New Intake'
-                                ? '#E3F2FD'
-                                : '#E8F5E9',
+                              c.status === 'At Risk' ? '#FDECEA'
+                              : c.status === 'New Intake' ? '#E3F2FD'
+                              : '#E8F5E9',
                             color:
-                              c.status === 'At Risk'
-                                ? '#C62828'
-                                : c.status === 'New Intake'
-                                ? '#1565C0'
-                                : '#2E7D32',
+                              c.status === 'At Risk' ? '#C62828'
+                              : c.status === 'New Intake' ? '#1565C0'
+                              : '#2E7D32',
                             padding: '4px 8px',
                             borderRadius: 999,
                           }}
@@ -175,9 +137,8 @@ export default function CoachingClientsPage() {
                       <Td>{c.next}</Td>
                       <Td>{c.last}</Td>
                       <Td>
-                        <button
-                          type="button"
-                          onClick={() => alert(`View ${c.name} (coming soon)`)}
+                        <Link
+                          href={`/dashboard/coaching/clients/${encodeURIComponent(c.email)}`}
                           style={{
                             background: 'white',
                             border: '1px solid #eee',
@@ -186,10 +147,13 @@ export default function CoachingClientsPage() {
                             cursor: 'pointer',
                             fontWeight: 600,
                             color: '#FF7043',
+                            textDecoration: 'none',
+                            display: 'inline-block',
                           }}
+                          aria-label={`View profile for ${c.name}`}
                         >
                           View Profile
-                        </button>
+                        </Link>
                       </Td>
                       <Td>
                         <button
@@ -229,6 +193,31 @@ export default function CoachingClientsPage() {
   );
 }
 
+/* ---------- Reused local styles ---------- */
+const sectionStyle = {
+  background: 'white',
+  borderRadius: 12,
+  padding: 20,
+  boxShadow: '0 2px 6px rgba(0,0,0,0.06)',
+  border: '1px solid #eee',
+};
+const inputStyle = {
+  border: '1px solid #ddd',
+  borderRadius: 10,
+  padding: '10px 12px',
+  outline: 'none',
+  background: 'white',
+};
+const primaryBtn = {
+  background: '#FF7043',
+  color: 'white',
+  border: 'none',
+  borderRadius: 10,
+  padding: '10px 12px',
+  fontWeight: 700,
+  cursor: 'pointer',
+};
+
 function Th({ children }) {
   return (
     <th
@@ -244,7 +233,6 @@ function Th({ children }) {
     </th>
   );
 }
-
 function Td({ children, strong = false }) {
   return (
     <td
