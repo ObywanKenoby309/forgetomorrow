@@ -2,50 +2,104 @@
 import Link from 'next/link';
 
 export default function CoachingSidebar({ active = 'overview' }) {
-  const Item = ({ id, href, label }) => {
-    const isActive = active === id;
-    return (
-      <Link
-        href={href}
-        style={{
-          display: 'block',
-          padding: '10px 12px',
-          borderRadius: 8,
-          textDecoration: 'none',
-          color: isActive ? '#FF7043' : '#455A64',
-          background: isActive ? 'rgba(255,112,67,0.08)' : 'transparent',
-          fontWeight: isActive ? 700 : 500,
-          border: isActive ? '1px solid rgba(255,112,67,0.25)' : '1px solid transparent',
-        }}
-      >
-        {label}
-      </Link>
-    );
+  const btn = "block bg-[#FF7043] hover:bg-[#F4511E] text-white px-5 py-3 rounded font-bold w-full transition-colors text-center";
+  const wrap = {
+    borderRight: '1px solid #ccc',
+    padding: '24px 20px',
+    backgroundColor: 'white',
+    borderRadius: '8px',
+    display: 'flex',
+    flexDirection: 'column',
+    justifyContent: 'center',
+    gap: '32px',
+    height: 'fit-content',
+    width: '300px',
+    // Removed shadow to align with SeekerSidebar
   };
 
+  const activeStyle = { outline: '2px solid #FFAB91' };
+
   return (
-    <aside
-      style={{
-        background: 'white',
-        borderRadius: 12,
-        boxShadow: '0 2px 6px rgba(0,0,0,0.06)',
-        padding: 16,
-        display: 'flex',
-        flexDirection: 'column',
-        gap: 10,
-        border: '1px solid #eee',
-      }}
-    >
-      <div style={{ fontWeight: 700, color: '#FF7043', fontSize: 18, marginBottom: 6 }}>
-        Coaching
+    <aside style={wrap}>
+      {/* Back to Seeker */}
+      <div>
+        <h3 className="text-[#FF7043] mb-3 font-semibold text-lg">Job Seeker</h3>
+        <Link href="/seeker-dashboard" legacyBehavior>
+          <a className={btn} aria-label="Back to Seeker Dashboard">
+            Your Seeker Dashboard
+          </a>
+        </Link>
       </div>
-      <Item id="overview" href="/coaching-dashboard" label="Overview" />
-      <Item id="clients" href="/dashboard/coaching/clients" label="Clients" />
-      <Item id="sessions" href="/dashboard/coaching/sessions" label="Sessions" />
-      <Item id="resources" href="/dashboard/coaching/resources" label="Resources" />
-      <div style={{ height: 1, background: '#eee', margin: '8px 0' }} />
-      <Item id="applications" href="/applications" label="Applications Tracker" />
-      <Item id="resume" href="/resume/create" label="Resume Builder" />
+
+      <div>
+        <h3 className="text-[#FF7043] mb-3 font-semibold text-lg">Coaching Overview</h3>
+        <Link href="/coaching-dashboard" legacyBehavior>
+          <a
+            className={btn}
+            style={active === 'overview' ? activeStyle : undefined}
+            aria-label="Go to Coaching Overview"
+          >
+            Overview
+          </a>
+        </Link>
+      </div>
+
+      <div>
+        <h3 className="text-[#FF7043] mb-3 font-semibold text-lg">Clients</h3>
+        <Link href="/dashboard/coaching/clients" legacyBehavior>
+          <a
+            className={btn}
+            style={active === 'clients' ? activeStyle : undefined}
+            aria-label="Go to Clients"
+          >
+            Clients
+          </a>
+        </Link>
+      </div>
+
+      <div>
+        <h3 className="text-[#FF7043] mb-3 font-semibold text-lg">Sessions</h3>
+        <Link href="/dashboard/coaching/sessions" legacyBehavior>
+          <a
+            className={btn}
+            style={active === 'sessions' ? activeStyle : undefined}
+            aria-label="Go to Sessions"
+          >
+            Sessions
+          </a>
+        </Link>
+      </div>
+
+      <div>
+        <h3 className="text-[#FF7043] mb-3 font-semibold text-lg">Resources</h3>
+        <Link href="/dashboard/coaching/resources" legacyBehavior>
+          <a
+            className={btn}
+            style={active === 'resources' ? activeStyle : undefined}
+            aria-label="Go to Resources"
+          >
+            Resources
+          </a>
+        </Link>
+      </div>
+
+      <div>
+        <h3 className="text-[#FF7043] mb-3 font-semibold text-lg">Applications</h3>
+        <Link href="/applications" legacyBehavior>
+          <a className={btn} aria-label="Open Applications Tracker">
+            Applications Tracker
+          </a>
+        </Link>
+      </div>
+
+      <div>
+        <h3 className="text-[#FF7043] mb-3 font-semibold text-lg">Resume Builder</h3>
+        <Link href="/resume/create" legacyBehavior>
+          <a className={btn} aria-label="Open Resume Builder">
+            Resume Builder
+          </a>
+        </Link>
+      </div>
     </aside>
   );
 }
