@@ -1,4 +1,4 @@
-// pages/recruiter/dashboard.js (only the imports + body changed)
+// pages/recruiter/dashboard.js
 import Head from "next/head";
 import { PlanProvider, usePlan } from "../../context/PlanContext";
 import RecruiterHeader from "../../components/recruiter/RecruiterHeader";
@@ -9,7 +9,7 @@ function DashboardBody() {
 
   return (
     <main className="max-w-7xl mx-auto px-4 md:px-6 py-6 space-y-6">
-      {/* Quick Stats */}
+      {/* Quick Stats (available to all plans) */}
       <section className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         {[
           { label: "Open Jobs", value: 3 },
@@ -26,7 +26,7 @@ function DashboardBody() {
 
       {/* Panels */}
       <section className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-        {/* Top Candidate Recommendations */}
+        {/* Top Candidate Recommendations — Enterprise-only */}
         <Panel title="Top Candidate Recommendations">
           {isEnterprise ? (
             <ul className="text-sm space-y-2">
@@ -45,7 +45,7 @@ function DashboardBody() {
           )}
         </Panel>
 
-        {/* Quick Analytics Snapshot */}
+        {/* Quick Analytics Snapshot — Enterprise-only */}
         <Panel title="Quick Analytics Snapshot">
           {isEnterprise ? (
             <div className="text-sm">
