@@ -2,9 +2,25 @@
 import Head from "next/head";
 import { PlanProvider, usePlan } from "../../context/PlanContext";
 import RecruiterHeader from "../../components/recruiter/RecruiterHeader";
+import { SourceBreakdown, Funnel, TrendLine } from "../../components/recruiter/AnalyticsCharts";
 
 function Body() {
   const { isEnterprise } = usePlan();
+
+  // Demo data (replace with real aggregates later)
+  const sources = [
+    { label: "Community Hubs", value: 182 },
+    { label: "Direct Search", value: 141 },
+    { label: "Referral", value: 79 },
+    { label: "Other", value: 45 },
+  ];
+  const funnel = [
+    { label: "Views", value: 5921 },
+    { label: "Clicks", value: 1604 },
+    { label: "Applies", value: 447 },
+    { label: "Hires", value: 12 },
+  ];
+  const trend = [120, 140, 110, 180, 220, 210, 260, 280, 240, 300, 310, 355];
 
   return (
     <main className="max-w-7xl mx-auto px-4 md:px-6 py-6 space-y-6">
@@ -35,15 +51,15 @@ function Body() {
         <section className="grid grid-cols-1 lg:grid-cols-2 gap-4">
           <div className="rounded-lg border bg-white p-4">
             <div className="font-medium mb-2">Source Tracking</div>
-            <div className="text-slate-500 text-sm">[Chart placeholder]</div>
+            <SourceBreakdown sources={sources} />
           </div>
           <div className="rounded-lg border bg-white p-4">
             <div className="font-medium mb-2">Funnel (Views → Applies → Hires)</div>
-            <div className="text-slate-500 text-sm">[Chart placeholder]</div>
+            <Funnel stages={funnel} />
           </div>
           <div className="rounded-lg border bg-white p-4 lg:col-span-2">
             <div className="font-medium mb-2">Trends Over Time</div>
-            <div className="text-slate-500 text-sm">[Line chart placeholder]</div>
+            <TrendLine points={trend} />
           </div>
         </section>
       )}
