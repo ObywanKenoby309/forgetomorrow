@@ -1,24 +1,36 @@
 // components/recruiter/MessageThread.js
 import { useEffect, useMemo, useRef, useState } from "react";
 
+function tsFmt(ts) {
+  try { return new Date(ts).toLocaleString(); } catch { return ""; }
+}
+
 /**
  * props:
- * - threads: [{id, candidate, snippet, messages:[{id, from:'recruiter'|'candidate', text, ts: ISO}], unread?: number}]
+ * - threads: [{id, candidate, snippet, messages:[{id, from:'recruiter'|'candidate', text, ts, status?:'sent'|'read'}], unread?: number}]
  * - initialThreadId?: number
  * - onSend?: (threadId, messageText) => void
+ * - onInsertSavedReply?: (setDraft) => void   // called by SavedReplies to insert text
  */
-export default function MessageThread({ threads = [], initialThreadId, onSend }) {
+export default function MessageThread({ threads = [], initialThreadId, onSend, onInsertSavedReply }) {
   const [activeId, setActiveId] = useState(initialThreadId ?? threads[0]?.id ?? null);
   const active = useMemo(() => threads.find(t => t.id === activeId) || null, [threads, activeId]);
   const [draft, setDraft] = useState("");
+  const [isTyping, setIsTyping] = useState(false);
   const scrollRef = useRef(null);
 
   useEffect(() => {
-    // auto-scroll to bottom on thread change or new message
-    if (scrollRef.current) {
-      scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
-    }
+    if (scrollRef.current) scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
   }, [activeId, active?.messages?.length]);
+
+  useEffect(() => {
+    // fake “candidate is typing” when you focus the input for a bit
+    let t;
+    if (activeId) {
+      t = setTimeout(() => setIsTyping(false), 0);
+    }
+    return () => clearTimeout(t);
+  }, [activeId]);
 
   const handleSend = () => {
     const text = draft.trim();
@@ -61,7 +73,18 @@ export default function MessageThread({ threads = [], initialThreadId, onSend })
           <div className="text-sm text-slate-500">Select a conversation.</div>
         ) : (
           <>
-            <div className="font-medium mb-2">Conversation with {active.candidate}</div>
+            <div className="flex items-center justify-between mb-2">
+              <div className="font-medium">Conversation with {active.candidate}</div>
+              <label className="text-xs text-slate-500 cursor-pointer">
+                <input
+                  type="checkbox"
+                  className="mr-1 align-middle"
+                  onChange={(e) => setIsTyping(e.target.checked)}
+                />
+                simulate typing
+              </label>
+            </div>
+
             <div
               ref={scrollRef}
               className="flex-1 border rounded p-3 text-sm text-slate-800 bg-slate-50 overflow-y-auto"
@@ -77,15 +100,27 @@ export default function MessageThread({ threads = [], initialThreadId, onSend })
                             ? "bg-[#FF7043] text-white"
                             : "bg-white border"
                         }`}
-                        title={new Date(m.ts).toLocaleString()}
+                        title={tsFmt(m.ts)}
                       >
-                        {m.text}
+                        <div>{m.text}</div>
+                        {m.from === "recruiter" && (
+                          <div className="mt-1 text-[10px] opacity-80">
+                            {m.status === "read" ? "Read" : "Sent"}
+                          </div>
+                        )}
                       </div>
                     </li>
                   ))}
                 </ul>
               ) : (
                 <div className="text-slate-500">No messages yet. Say hello!</div>
+              )}
+              {isTyping && (
+                <div className="mt-2 flex justify-start">
+                  <div className="px-3 py-2 rounded bg-white border text-slate-500 text-[13px]">
+                    {active.candidate} is typing…
+                  </div>
+                </div>
               )}
             </div>
 
@@ -106,6 +141,13 @@ export default function MessageThread({ threads = [], initialThreadId, onSend })
                 title="Ctrl/Cmd+Enter to send"
               >
                 Send
+              </button>
+              <button
+                className="rounded border text-sm px-3 py-2"
+                onClick={() => onInsertSavedReply?.(setDraft)}
+                title="Insert saved reply"
+              >
+                Saved Replies
               </button>
             </div>
           </>
