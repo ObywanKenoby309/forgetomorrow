@@ -2,7 +2,7 @@
 import React from 'react';
 
 const base = {
-  background: 'white',
+  background: '#f5f7fa', // Changed from white to light gray
   border: '1px solid #eee',
   borderRadius: 12,
   boxShadow: '0 2px 6px rgba(0,0,0,0.06)',

@@ -12,38 +12,43 @@ export default function CoachingResourcesPage() {
   // ------------------
 
   const card = (href, title, desc) => (
-    <a
-      href={href}
+    <div
+      onClick={() => (window.location.href = href)}
       style={{
         display: 'block',
-        background: '#FAFAFA',
+        background: '#F5F5F5',
         border: '1px solid #eee',
         borderRadius: 10,
         padding: 16,
         textDecoration: 'none',
         color: '#263238',
+        cursor: 'pointer',
+        flex: '1 1 18%',
+        minWidth: 150,
       }}
     >
       <div style={{ fontWeight: 700, marginBottom: 6 }}>{title}</div>
       <div style={{ color: '#607D8B' }}>{desc}</div>
-    </a>
+    </div>
   );
 
   return (
     <div
       style={{
         display: 'grid',
-        gridTemplateColumns: '300px 1fr',
+        gridTemplateColumns: '300px 1fr 300px', // Left sidebar, middle, right sidebar
         gap: '20px',
         padding: '120px 20px 20px',
         minHeight: '100vh',
         backgroundColor: '#ECEFF1',
       }}
     >
+      {/* Left Sidebar */}
       <CoachingSidebar active="resources" />
 
+      {/* Middle Section */}
       <main style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
-        <div style={{ maxWidth: 860 }}>
+        <div style={{ maxWidth: '100%' }}>
           {/* Top cards linking to anchors and newsletter */}
           <section
             style={{
@@ -54,12 +59,21 @@ export default function CoachingResourcesPage() {
               border: '1px solid #eee',
             }}
           >
-            <h2 style={{ color: '#FF7043', marginTop: 0, marginBottom: 12 }}>Docs & Tools</h2>
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, minmax(0, 1fr))', gap: 12 }}>
+            <h2 style={{ color: '#FF7043', marginTop: 0, marginBottom: 12, fontWeight: 'bold' }}>
+              Docs & Tools
+            </h2>
+            <div
+              style={{
+                display: 'flex',
+                flexWrap: 'wrap',
+                gap: 12,
+              }}
+            >
               {card('#templates', 'Templates', 'Standard documents for repeatable coaching workflows.')}
               {card('#library', 'Resource Library', 'Guides, checklists, and curated materials.')}
               {card('#announcements', 'Announcements', 'What’s new and important this week.')}
               {card('/dashboard/coaching/newsletter', 'Newsletter', 'Compose and send a broadcast message to clients.')}
+              {card('/resources/mentors/spotlight/new', 'Create a Spotlight Card', 'Highlight a mentor with a custom spotlight.')}
             </div>
           </section>
 
@@ -116,9 +130,7 @@ export default function CoachingResourcesPage() {
                       <Td>{r.owner}</Td>
                       <Td>{r.updated}</Td>
                       <Td>
-                        <a href={r.link} style={{ color: '#FF7043', fontWeight: 600 }}>
-                          View
-                        </a>
+                        <span style={{ color: '#FF7043', fontWeight: 600, cursor: 'pointer' }}>View</span>
                       </Td>
                     </tr>
                   ))}
@@ -128,6 +140,20 @@ export default function CoachingResourcesPage() {
           </section>
         </div>
       </main>
+
+      {/* Right Sidebar */}
+      <aside
+        style={{
+          background: 'white',
+          borderRadius: 12,
+          padding: 20,
+          boxShadow: '0 2px 6px rgba(0,0,0,0.06)',
+          border: '1px solid #eee',
+          height: 'fit-content',
+        }}
+      >
+        <h3 style={{ color: '#FF7043', marginTop: 0 }}>Coming Soon</h3>
+      </aside>
     </div>
   );
 }

@@ -3,14 +3,14 @@ import React, { useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/router';
 
-const STORAGE_KEY = 'hearthSpotlights_v1';
+// Internal shell
+import Header from '../../../../components/Header';
+import Footer from '../../../../components/Footer';
 
-function localISODate(d = new Date()) {
-  const y = d.getFullYear();
-  const m = String(d.getMonth() + 1).padStart(2, '0');
-  const day = String(d.getDate()).padStart(2, '0');
-  return `${y}-${m}-${day}`;
-}
+// Sidebars
+import CoachingSidebar from '../../../../components/coaching/CoachingSidebar';
+
+const STORAGE_KEY = 'hearthSpotlights_v1';
 
 const SPECIALTY_OPTIONS = [
   'Resume Review',
@@ -29,7 +29,7 @@ export default function NewSpotlightPage() {
     headline: '',
     summary: '',
     specialties: [],
-    rate: 'Free', // Free | Paid | Sliding
+    rate: 'Free',
     availability: 'Open to discuss',
     contactEmail: '',
     contactLink: '',
@@ -47,7 +47,7 @@ export default function NewSpotlightPage() {
 
   const submit = (e) => {
     e.preventDefault();
-    if (!form.name.trim() || !form.summary.trim() || !form.headline.trim()) {
+    if (!form.name.trim() || !form.headline.trim() || !form.summary.trim()) {
       alert('Name, headline, and summary are required.');
       return;
     }
@@ -80,39 +80,23 @@ export default function NewSpotlightPage() {
     }
   };
 
-  if (sent) {
-    return (
-      <div style={pageWrap}>
-        <main style={main}>
-          <section style={card}>
-            <h2 style={{ color: '#FF7043', margin: 0 }}>Spotlight posted!</h2>
-            <p style={{ color: '#607D8B', marginTop: 6 }}>Redirecting to Hearth Spotlights…</p>
-            <div style={{ display: 'flex', gap: 8 }}>
-              <Link href="/hearth/spotlights" style={btnPrimary}>Go now</Link>
-              <button
-                type="button"
-                onClick={() => setSent(false)}
-                style={btnGhost}
-              >
-                Post another
-              </button>
-            </div>
-          </section>
-        </main>
-      </div>
-    );
-  }
+  const Body = (
+    <div style={layoutWrap}>
+      {/* Left sidebar (same width as right) */}
+      <CoachingSidebar active="resources" />
 
-  return (
-    <div style={pageWrap}>
+      {/* Middle column */}
       <main style={main}>
-        {/* Header */}
-        <section style={card}>
-          <h2 style={{ color: '#FF7043', margin: 0 }}>Post a Hearth Spotlight</h2>
-          <p style={{ color: '#607D8B', marginTop: 6, marginBottom: 0 }}>
+        {/* Title card — compact, centered */}
+        <section style={headerStrip}>
+          <h1 style={headerTitle}>Post a Hearth Spotlight</h1>
+          <p style={headerSub}>
             Share what you offer and how seekers can reach you.
           </p>
         </section>
+
+        {/* Explicit spacer controlling the exact gap */}
+        <div style={{ height: 8 }} aria-hidden="true" />
 
         {/* Form */}
         <section style={card}>
@@ -120,11 +104,22 @@ export default function NewSpotlightPage() {
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
               <div>
                 <label style={label}>Your name</label>
-                <input value={form.name} onChange={(e) => update('name', e.target.value)} style={input} required />
+                <input
+                  value={form.name}
+                  onChange={(e) => update('name', e.target.value)}
+                  style={input}
+                  required
+                />
               </div>
               <div>
                 <label style={label}>Headline</label>
-                <input value={form.headline} onChange={(e) => update('headline', e.target.value)} style={input} placeholder="e.g., Senior PM mentor for career pivots" required />
+                <input
+                  value={form.headline}
+                  onChange={(e) => update('headline', e.target.value)}
+                  style={input}
+                  placeholder="e.g., Senior PM mentor for career pivots"
+                  required
+                />
               </div>
             </div>
 
@@ -144,7 +139,16 @@ export default function NewSpotlightPage() {
               <label style={label}>Specialties</label>
               <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
                 {SPECIALTY_OPTIONS.map((s) => (
-                  <label key={s} style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 14, color: '#37474F' }}>
+                  <label
+                    key={s}
+                    style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: 6,
+                      fontSize: 14,
+                      color: '#37474F',
+                    }}
+                  >
                     <input
                       type="checkbox"
                       checked={form.specialties.includes(s)}
@@ -179,11 +183,22 @@ export default function NewSpotlightPage() {
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
               <div>
                 <label style={label}>Contact email (or leave blank)</label>
-                <input type="email" value={form.contactEmail} onChange={(e) => update('contactEmail', e.target.value)} style={input} placeholder="you@domain.com" />
+                <input
+                  type="email"
+                  value={form.contactEmail}
+                  onChange={(e) => update('contactEmail', e.target.value)}
+                  style={input}
+                  placeholder="you@domain.com"
+                />
               </div>
               <div>
                 <label style={label}>Contact link (Calendly/LinkedIn/etc.)</label>
-                <input value={form.contactLink} onChange={(e) => update('contactLink', e.target.value)} style={input} placeholder="https://…" />
+                <input
+                  value={form.contactLink}
+                  onChange={(e) => update('contactLink', e.target.value)}
+                  style={input}
+                  placeholder="https://…"
+                />
               </div>
             </div>
 
@@ -194,14 +209,130 @@ export default function NewSpotlightPage() {
           </form>
         </section>
       </main>
+
+      {/* Right rail: blank canvas (same width as left) */}
+      <aside style={rightBlank}>
+        <div style={{ fontWeight: 700, color: '#263238', marginBottom: 6 }}>Coming soon</div>
+        <div style={{ color: '#90A4AE', fontSize: 14 }}>
+          This space is reserved for future Spotlights features.
+        </div>
+      </aside>
     </div>
+  );
+
+  if (sent) {
+    return (
+      <>
+        <Header />
+        {Body}
+        <Footer />
+      </>
+    );
+  }
+
+  return (
+    <>
+      <Header />
+      {Body}
+      <Footer />
+    </>
   );
 }
 
-const pageWrap = { display: 'grid', gridTemplateColumns: '1fr', padding: '120px 20px 20px', minHeight: '100vh', backgroundColor: '#ECEFF1', placeItems: 'start center' };
-const main = { width: '100%', maxWidth: 860, display: 'grid', gap: 20 };
-const card = { background: 'white', borderRadius: 12, padding: 20, boxShadow: '0 2px 6px rgba(0,0,0,0.06)', border: '1px solid #eee' };
-const label = { display: 'block', fontSize: 12, color: '#607D8B', marginBottom: 6, fontWeight: 700 };
-const input = { border: '1px solid #ddd', borderRadius: 10, padding: '10px 12px', outline: 'none', width: '100%', background: 'white' };
-const btnPrimary = { background: '#FF7043', color: 'white', border: 'none', borderRadius: 10, padding: '10px 12px', fontWeight: 700, textDecoration: 'none', cursor: 'pointer' };
-const btnGhost = { background: 'white', color: '#FF7043', border: '1px solid #FF7043', borderRadius: 10, padding: '10px 12px', fontWeight: 700, textDecoration: 'none', cursor: 'pointer' };
+/* Layout & styles */
+const layoutWrap = {
+  display: 'grid',
+  gridTemplateColumns: '300px 1fr 300px', // symmetrical rails
+  gap: 20,
+  padding: '120px 20px 20px',
+  minHeight: '100vh',
+  background: '#ECEFF1',
+};
+
+/* Grid gap off so spacer is the ONLY space between title and form */
+const main = { display: 'grid', gap: 0 };
+
+/* Title card */
+const headerStrip = {
+  background: 'white',
+  borderRadius: 12,
+  padding: '6px 12px',
+  border: '1px solid #eee',
+  boxShadow: '0 2px 6px rgba(0,0,0,0.06)',
+  textAlign: 'center',
+  height: 'fit-content',
+  minHeight: 0,
+  margin: 0, // no external margins
+};
+
+const headerTitle = {
+  fontSize: '2rem',
+  color: '#FF7043',
+  margin: 0,
+  fontWeight: 700,
+  lineHeight: 1.2,
+};
+
+const headerSub = {
+  fontSize: '1rem',
+  color: '#607D8B',
+  margin: '2px 0 0 0',
+  lineHeight: 1.3,
+};
+
+const rightBlank = {
+  background: 'white',
+  border: '1px solid #eee',
+  borderRadius: 12,
+  boxShadow: '0 2px 6px rgba(0,0,0,0.06)',
+  padding: 16,
+  minHeight: 120,
+};
+
+const card = {
+  background: 'white',
+  border: '1px solid #eee',
+  borderRadius: 12,
+  boxShadow: '0 2px 6px rgba(0,0,0,0.06)',
+  padding: 20,
+  margin: 0, // no external margins
+};
+
+const label = {
+  display: 'block',
+  fontSize: 12,
+  color: '#607D8B',
+  marginBottom: 6,
+  fontWeight: 700,
+};
+
+const input = {
+  border: '1px solid #ddd',
+  borderRadius: 10,
+  padding: '10px 12px',
+  outline: 'none',
+  width: '100%',
+  background: 'white',
+};
+
+const btnPrimary = {
+  background: '#FF7043',
+  color: 'white',
+  border: 'none',
+  borderRadius: 10,
+  padding: '10px 12px',
+  fontWeight: 700,
+  textDecoration: 'none',
+  cursor: 'pointer',
+};
+
+const btnGhost = {
+  background: 'white',
+  color: '#FF7043',
+  border: '1px solid #FF7043',
+  borderRadius: 10,
+  padding: '10px 12px',
+  fontWeight: 700,
+  textDecoration: 'none',
+  cursor: 'pointer',
+};
