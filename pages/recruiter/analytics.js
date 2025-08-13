@@ -3,6 +3,7 @@ import Head from "next/head";
 import { PlanProvider, usePlan } from "../../context/PlanContext";
 import RecruiterHeader from "../../components/recruiter/RecruiterHeader";
 import { SourceBreakdown, Funnel, TrendLine } from "../../components/recruiter/AnalyticsCharts";
+import FeatureLock from "../../components/recruiter/FeatureLock";
 
 function Body() {
   const { isEnterprise } = usePlan();
@@ -22,11 +23,28 @@ function Body() {
   ];
   const trend = [120, 140, 110, 180, 220, 210, 260, 280, 240, 300, 310, 355];
 
+  const ChartsBlock = (
+    <section className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+      <div className="rounded-lg border bg-white p-4">
+        <div className="font-medium mb-2">Source Tracking</div>
+        <SourceBreakdown sources={sources} />
+      </div>
+      <div className="rounded-lg border bg-white p-4">
+        <div className="font-medium mb-2">Funnel (Views → Applies → Hires)</div>
+        <Funnel stages={funnel} />
+      </div>
+      <div className="rounded-lg border bg-white p-4 lg:col-span-2">
+        <div className="font-medium mb-2">Trends Over Time</div>
+        <TrendLine points={trend} />
+      </div>
+    </section>
+  );
+
   return (
     <main className="max-w-7xl mx-auto px-4 md:px-6 py-6 space-y-6">
       <h1 className="text-xl font-semibold">Analytics</h1>
 
-      {/* Shared basic analytics */}
+      {/* Always-on KPIs for all plans */}
       <section className="grid grid-cols-1 sm:grid-cols-3 gap-4">
         <div className="rounded-lg border bg-white p-4">
           <div className="text-sm text-slate-500">Total Views (30d)</div>
@@ -42,26 +60,13 @@ function Body() {
         </div>
       </section>
 
-      {/* Enterprise-only */}
-      {!isEnterprise ? (
-        <div className="rounded-md border border-dashed p-4 text-sm text-slate-500 bg-slate-50">
-          🔒 Full analytics (source tracking, funnel, trends) are Enterprise features. Upgrade to unlock.
-        </div>
+      {/* Advanced analytics — Enterprise-only */}
+      {isEnterprise ? (
+        ChartsBlock
       ) : (
-        <section className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-          <div className="rounded-lg border bg-white p-4">
-            <div className="font-medium mb-2">Source Tracking</div>
-            <SourceBreakdown sources={sources} />
-          </div>
-          <div className="rounded-lg border bg-white p-4">
-            <div className="font-medium mb-2">Funnel (Views → Applies → Hires)</div>
-            <Funnel stages={funnel} />
-          </div>
-          <div className="rounded-lg border bg-white p-4 lg:col-span-2">
-            <div className="font-medium mb-2">Trends Over Time</div>
-            <TrendLine points={trend} />
-          </div>
-        </section>
+        <FeatureLock label="Full Analytics">
+          {ChartsBlock}
+        </FeatureLock>
       )}
     </main>
   );

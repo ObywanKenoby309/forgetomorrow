@@ -6,6 +6,7 @@ import RecruiterHeader from "../../components/recruiter/RecruiterHeader";
 import MessageThread from "../../components/recruiter/MessageThread";
 import SavedReplies from "../../components/recruiter/SavedReplies";
 import BulkMessageModal from "../../components/recruiter/BulkMessageModal";
+import FeatureLock from "../../components/recruiter/FeatureLock";
 
 function Body() {
   const { isEnterprise } = usePlan();
@@ -26,25 +27,20 @@ function Body() {
       candidate: "Omar Reed",
       snippet: "Available Thursday at 2pm…",
       unread: 1,
-      messages: [
-        { id: "m3", from: "candidate", text: "Thursday 2pm works for me.", ts: new Date().toISOString() },
-      ],
+      messages: [{ id: "m3", from: "candidate", text: "Thursday 2pm works for me.", ts: new Date().toISOString() }],
     },
     {
       id: 103,
       candidate: "Priya Kumar",
       snippet: "Attaching my portfolio…",
       unread: 0,
-      messages: [
-        { id: "m4", from: "candidate", text: "Here’s my portfolio link.", ts: new Date().toISOString() },
-      ],
+      messages: [{ id: "m4", from: "candidate", text: "Here’s my portfolio link.", ts: new Date().toISOString() }],
     },
   ]);
 
   const [bulkOpen, setBulkOpen] = useState(false);
 
   const onSend = (threadId, text) => {
-    // append recruiter message; then mark as read after short delay (demo)
     setThreads((prev) =>
       prev.map((t) =>
         t.id !== threadId
@@ -64,10 +60,7 @@ function Body() {
         prev.map((t) =>
           t.id !== threadId
             ? t
-            : {
-                ...t,
-                messages: t.messages.map((m) => (m.id.startsWith("m-") ? { ...m, status: "read" } : m)),
-              }
+            : { ...t, messages: t.messages.map((m) => (m.id.startsWith("m-") ? { ...m, status: "read" } : m)) }
         )
       );
     }, 800);
@@ -84,40 +77,28 @@ function Body() {
     setBulkOpen(false);
   };
 
-  const onInsertSavedReply = (setDraft) => {
-    // open a small side panel to choose a saved reply; here we just append via alert-free path
-    // handled via SavedReplies below by passing onInsert
-  };
-
   return (
     <main className="max-w-7xl mx-auto px-4 md:px-6 py-6 space-y-6">
       <div className="flex items-center justify-between">
         <h1 className="text-xl font-semibold">Messaging</h1>
-        <div className="flex items-center gap-2">
-          {isEnterprise ? (
-            <button className="rounded border px-3 py-2 text-sm" onClick={() => setBulkOpen(true)}>Bulk Message</button>
-          ) : (
-            <button className="rounded border px-3 py-2 text-sm" title="Enterprise only">🔒 Bulk Message</button>
-          )}
-        </div>
+
+        {/* Bulk Message — Enterprise-only */}
+        {isEnterprise ? (
+          <button className="rounded border px-3 py-2 text-sm" onClick={() => setBulkOpen(true)}>
+            Bulk Message
+          </button>
+        ) : (
+          <FeatureLock label="Bulk Message">
+            <button className="rounded border px-3 py-2 text-sm">Bulk Message</button>
+          </FeatureLock>
+        )}
       </div>
 
-      <MessageThread
-        threads={threads}
-        initialThreadId={101}
-        onSend={onSend}
-        onInsertSavedReply={(setDraft) => {
-          // this function is satisfied by the SavedReplies component via "Insert" click
-          // nothing to do here directly; we expose setDraft downward using closure below
-        }}
-      />
+      <MessageThread threads={threads} initialThreadId={101} onSend={onSend} />
 
-      {/* Saved replies manager */}
+      {/* Saved replies manager (available to all plans) */}
       <SavedReplies
         onInsert={(text) => {
-          // quick insert: put text into clipboard-ish spot by dispatching into an input prompt
-          // simpler: log and instruct user to copy; OR integrate by exposing a custom event.
-          // For now, we emulate by opening a small prompt and appending:
           const el = document.querySelector('input[placeholder="Type a message…"]');
           if (el) {
             const curr = el.value || "";
@@ -128,12 +109,15 @@ function Body() {
         }}
       />
 
-      <BulkMessageModal
-        open={bulkOpen}
-        onClose={() => setBulkOpen(false)}
-        candidates={candidatesFlat}
-        onSend={onBulkSend}
-      />
+      {/* Guard the modal: only render in Enterprise */}
+      {isEnterprise && (
+        <BulkMessageModal
+          open={bulkOpen}
+          onClose={() => setBulkOpen(false)}
+          candidates={candidatesFlat}
+          onSend={onBulkSend}
+        />
+      )}
     </main>
   );
 }
