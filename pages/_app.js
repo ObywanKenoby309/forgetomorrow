@@ -44,8 +44,19 @@ function RouteTracker() {
 export default function App({ Component, pageProps }) {
   const router = useRouter();
 
-  const isLandingPage = ['/', '/signup', '/features', '/login', '/about'].includes(router.pathname);
-  const useForgeBackground = ['/', '/about', '/features'].includes(router.pathname);
+  const isRecruiterRoute = router.pathname.startsWith('/recruiter');
+
+  // Landing header/footer only on these paths (and not for recruiter routes)
+  const isLandingPage =
+    !isRecruiterRoute &&
+    ['/', '/signup', '/features', '/login', '/about'].includes(router.pathname);
+
+  // Background image only on these paths (and not for recruiter routes)
+  const useForgeBackground =
+    !isRecruiterRoute && ['/', '/about', '/features'].includes(router.pathname);
+
+  // We only need top padding when the fixed main site Header is present
+  const needsTopPadding = !isRecruiterRoute && !isLandingPage;
 
   return (
     <div className="relative min-h-screen">
@@ -69,15 +80,19 @@ export default function App({ Component, pageProps }) {
           !useForgeBackground ? 'bg-[#ECEFF1]' : ''
         }`}
       >
-        {isLandingPage ? <LandingHeader /> : <Header />}
+        {/* Header logic:
+            - Recruiter routes render their own RecruiterHeader inside the page.
+            - Else, show LandingHeader on landing pages, Header everywhere else. */}
+        {!isRecruiterRoute && (isLandingPage ? <LandingHeader /> : <Header />)}
 
         <ResumeProvider>
-          {/* Track last visited non-feedback route for smart returns */}
           <RouteTracker />
-          <Component {...pageProps} />
+          <div className={needsTopPadding ? 'pt-20' : ''}>
+            <Component {...pageProps} />
+          </div>
         </ResumeProvider>
 
-        {isLandingPage ? <LandingFooter /> : <Footer />}
+        {!isRecruiterRoute && (isLandingPage ? <LandingFooter /> : <Footer />)}
       </div>
     </div>
   );
