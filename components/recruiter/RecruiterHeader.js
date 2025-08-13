@@ -20,19 +20,20 @@ export default function RecruiterHeader() {
   const isActive = (href) => router.pathname === href;
 
   return (
-    <header className="bg-[#2a2a2a] text-gray-300 py-3 shadow-md sticky top-0 left-0 right-0 z-50">
-      <nav className="max-w-7xl mx-auto flex items-center justify-between px-4 md:px-6">
+    <header className="bg-[#2a2a2a] text-gray-300 shadow-md sticky top-0 left-0 right-0 z-[9999]">
+      {/* Fixed-height bar */}
+      <nav className="max-w-7xl mx-auto px-4 md:px-6 h-14 flex items-center justify-between">
         {/* Brand + Plan Badge */}
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-3 min-w-0">
           <Link
             href="/recruiter/dashboard"
-            className="text-[#FF7043] font-bold text-xl tracking-wide hover:text-[#F4511E] transition"
+            className="text-[#FF7043] font-bold text-xl tracking-wide hover:text-[#F4511E] transition whitespace-nowrap leading-none"
           >
             ForgeTomorrow
           </Link>
-          <span className="text-sm text-gray-400">Recruiter Suite</span>
+          <span className="text-sm text-gray-400 whitespace-nowrap leading-none">Recruiter Suite</span>
           <span
-            className={`text-[10px] uppercase tracking-wide px-2 py-[3px] rounded-md border ${
+            className={`text-[10px] uppercase tracking-wide px-2 py-[3px] rounded-md border whitespace-nowrap leading-none ${
               isEnterprise
                 ? "bg-emerald-100 text-emerald-700 border-emerald-200"
                 : "bg-slate-100 text-slate-700 border-slate-300"
@@ -44,12 +45,12 @@ export default function RecruiterHeader() {
         </div>
 
         {/* Desktop Nav */}
-        <div className="hidden md:flex items-center gap-6 font-semibold">
+        <div className="hidden md:flex items-center gap-6 font-semibold flex-nowrap">
           {navItems.map((item) => (
             <Link
               key={item.href}
               href={item.href}
-              className={`transition ${
+              className={`transition whitespace-nowrap leading-none ${
                 isActive(item.href)
                   ? "text-[#FF7043]"
                   : "hover:text-[#FF7043] text-gray-300"
@@ -63,18 +64,18 @@ export default function RecruiterHeader() {
           {!isEnterprise && (
             <Link
               href="/recruiter/upgrade"
-              className="bg-[#FF7043] hover:bg-[#F4511E] text-white px-3 py-2 rounded-lg transition text-sm"
+              className="bg-[#FF7043] hover:bg-[#F4511E] text-white px-3 py-2 rounded-lg transition text-sm whitespace-nowrap leading-none"
               title="Unlock Enterprise features"
             >
               Upgrade to Enterprise
             </Link>
           )}
 
-          {/* Dev-only plan toggle (hidden in production) */}
+          {/* Dev-only toggle (keep it compact) */}
           {process.env.NODE_ENV !== "production" && (
             <button
               onClick={togglePlan}
-              className="ml-2 rounded-lg border border-gray-500/40 px-2 py-1 text-xs hover:bg-[#333]"
+              className="ml-2 rounded-lg border border-gray-500/40 px-2 py-1 text-xs hover:bg-[#333] whitespace-nowrap leading-none"
               title="Dev: toggle plan"
             >
               Toggle Plan
@@ -82,9 +83,9 @@ export default function RecruiterHeader() {
           )}
         </div>
 
-        {/* Mobile Menu Button */}
+        {/* Mobile Menu Button (same fixed height alignment) */}
         <button
-          className="md:hidden inline-flex items-center justify-center rounded-md p-2 hover:bg-[#333] focus:outline-none"
+          className="md:hidden inline-flex items-center justify-center h-10 w-10 rounded-md hover:bg-[#333] focus:outline-none"
           onClick={() => setOpen((v) => !v)}
           aria-label="Open menu"
         >
