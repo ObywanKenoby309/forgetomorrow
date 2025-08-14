@@ -1,0 +1,26 @@
+# Default to LF line endings for all text files
+* text=auto eol=lf
+
+# Explicitly enforce LF for code/config
+*.js text eol=lf
+*.jsx text eol=lf
+*.ts text eol=lf
+*.tsx text eol=lf
+*.json text eol=lf
+*.md text eol=lf
+*.prisma text eol=lf
+*.sql text eol=lf
+*.toml text eol=lf
+*.env text eol=lf
+
+# Allow CRLF only for Windows scripts
+*.bat text eol=crlf
+*.ps1 text eol=crlf
+
+# Keep images and binaries as-is
+*.png binary
+*.jpg binary
+*.jpeg binary
+*.gif binary
+*.ico binary
+*.pdf binary

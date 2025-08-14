@@ -1,14 +1,15 @@
 // pages/_app.js
-import '../styles/globals.css';
+import '@/styles/globals.css';
 import { useRouter } from 'next/router';
 import { useEffect } from 'react';
 
-import Header from '../components/Header';
-import Footer from '../components/Footer';
-import LandingHeader from '../components/LandingHeader';
-import LandingFooter from '../components/LandingFooter';
+import Header from '@/components/Header';
+import Footer from '@/components/Footer';
+import LandingHeader from '@/components/LandingHeader';
+import LandingFooter from '@/components/LandingFooter';
 
-import { ResumeProvider } from '../context/ResumeContext';
+import { ResumeProvider } from '@/context/ResumeContext';
+import { PlanProvider } from '@/context/PlanContext';
 
 function RouteTracker() {
   const router = useRouter();
@@ -85,12 +86,15 @@ export default function App({ Component, pageProps }) {
             - Else, show LandingHeader on landing pages, Header everywhere else. */}
         {!isRecruiterRoute && (isLandingPage ? <LandingHeader /> : <Header />)}
 
-        <ResumeProvider>
-          <RouteTracker />
-          <div className={needsTopPadding ? 'pt-20' : ''}>
-            <Component {...pageProps} />
-          </div>
-        </ResumeProvider>
+        {/* Global providers (Plan first so usePlan() is available everywhere) */}
+        <PlanProvider>
+          <ResumeProvider>
+            <RouteTracker />
+            <div className={needsTopPadding ? 'pt-20' : ''}>
+              <Component {...pageProps} />
+            </div>
+          </ResumeProvider>
+        </PlanProvider>
 
         {!isRecruiterRoute && (isLandingPage ? <LandingFooter /> : <Footer />)}
       </div>

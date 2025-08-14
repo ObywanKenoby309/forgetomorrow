@@ -9,16 +9,19 @@
   },
   "dependencies": {
     "@emailjs/browser": "^4.4.1",
+    "@prisma/client": "^6.14.0",
     "@react-pdf/renderer": "^4.3.0",
     "chart.js": "^4.3.0",
     "docx": "^9.5.1",
     "file-saver": "^2.0.5",
     "html2pdf.js": "^0.10.3",
     "next": "13.4.13",
+    "prisma": "^6.14.0",
     "react": "18.2.0",
     "react-chartjs-2": "^5.2.0",
     "react-dom": "18.2.0",
-    "react-icons": "^5.5.0"
+    "react-icons": "^5.5.0",
+    "recharts": "^3.1.2"
   },
   "devDependencies": {
     "autoprefixer": "^10.4.14",

@@ -23,3 +23,5 @@ yarn-error.log*
 
 # VSCode settings folder
 .vscode/
+
+/lib/generated/prisma

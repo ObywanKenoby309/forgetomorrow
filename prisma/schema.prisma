@@ -1,0 +1,65 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+model Job {
+  id           String        @id
+  title        String
+  metrics      DailyMetric[]
+}
+
+model Recruiter {
+  id           String        @id
+  name         String
+  metrics      DailyMetric[]
+}
+
+model DailyMetric {
+  id          Int       @id @default(autoincrement())
+  date        DateTime
+  jobId       String
+  recruiterId String
+
+  views       Int
+  clicks      Int
+  applies     Int
+  interviews  Int
+  offers      Int
+  hires       Int
+
+  srcForge    Int
+  srcRef      Int
+  srcBoards   Int
+
+  messages    Int
+  responses   Int
+
+  job         Job       @relation(fields: [jobId], references: [id])
+  recruiter   Recruiter @relation(fields: [recruiterId], references: [id])
+
+  @@index([date])
+  @@index([jobId])
+  @@index([recruiterId])
+  @@unique([date, jobId, recruiterId])
+}
+
+model AnalyticsEvent {
+  id            String   @id @default(cuid())
+  createdAt     DateTime @default(now())
+  eventType     String   // 'JOB_VIEW' | 'APPLY_SUBMIT' | 'MESSAGE_SENT'
+  userId        String?
+  companyId     String?
+  jobId         String?
+  recruiterId   String?
+  applicationId String?
+  metadata      Json?
+
+  @@index([jobId])
+  @@index([recruiterId])
+  @@index([eventType, createdAt])
+}
