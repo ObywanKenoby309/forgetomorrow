@@ -1,81 +1,63 @@
 // components/SeekerSidebar.js
-import Link from 'next/link';
+import Link from "next/link";
 
 export default function SeekerSidebar() {
+  const navItems = [
+    { label: "Seeker Dashboard", href: "/seeker-dashboard" },
+    { label: "Your Roadmap", href: "/roadmap" },
+    { label: "Open Creator", href: "/resume-cover" },
+    { label: "To The Pipeline", href: "/jobs" },
+    { label: "Visit Your Hearth", href: "/the-hearth" },
+  ];
+
   return (
     <aside
       style={{
-        borderRight: '1px solid #ccc',
-        padding: '24px 20px',
-        backgroundColor: 'white',
-        borderRadius: '8px',
-        display: 'flex',
-        flexDirection: 'column',
-        justifyContent: 'center',
-        gap: '32px',
-        height: 'fit-content',
-        width: '300px',
+        backgroundColor: "white",
+        padding: "20px 15px",
+        borderRadius: "12px",
+        display: "flex",
+        flexDirection: "column",
+        gap: "12px",
+        width: "100%",
+        boxShadow: "0 4px 12px rgba(0,0,0,0.08)",
       }}
     >
-      <div>
-        <h3 className="text-[#FF7043] mb-3 font-semibold text-lg">Seeker Dashboard</h3>
-        <Link href="/seeker-dashboard" legacyBehavior>
+      {navItems.map((item, index) => (
+        <Link key={index} href={item.href} legacyBehavior>
           <button
-            className="block bg-[#FF7043] hover:bg-[#F4511E] text-white px-5 py-3 rounded font-bold w-full transition-colors"
-            aria-label="Go to Seeker Dashboard"
+            style={{
+              display: "block",
+              padding: "12px 16px",
+              borderRadius: "8px",
+              fontWeight: "600",
+              fontSize: "0.95rem",
+              textAlign: "center",
+              background: "#FF7043",
+              color: "#fff",
+              border: "none",
+              cursor: "pointer",
+              transition: "all 0.2s ease-in-out",
+              boxShadow: "0 2px 6px rgba(0,0,0,0.06)",
+              width: "100%",
+            }}
+            onMouseEnter={(e) => {
+              e.currentTarget.style.background = "#F4511E";
+              e.currentTarget.style.transform = "translateY(-2px)";
+              e.currentTarget.style.boxShadow =
+                "0 6px 12px rgba(0,0,0,0.12)";
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.background = "#FF7043";
+              e.currentTarget.style.transform = "translateY(0)";
+              e.currentTarget.style.boxShadow =
+                "0 2px 6px rgba(0,0,0,0.06)";
+            }}
           >
-            Seeker Dashboard
+            {item.label}
           </button>
         </Link>
-      </div>
-
-      <div>
-        <h3 className="text-[#FF7043] mb-3 font-semibold text-lg">Your Roadmap</h3>
-        <Link href="/roadmap" legacyBehavior>
-          <button
-            className="block bg-[#FF7043] hover:bg-[#F4511E] text-white px-5 py-3 rounded font-bold w-full transition-colors"
-            aria-label="Launch Career Roadmap"
-          >
-            Your Roadmap
-          </button>
-        </Link>
-      </div>
-
-      <div>
-        <h3 className="text-[#FF7043] mb-3 font-semibold text-lg">Open Creator</h3>
-        <Link href="/resume-cover" legacyBehavior>
-          <button
-            className="block bg-[#FF7043] hover:bg-[#F4511E] text-white px-5 py-3 rounded font-bold w-full transition-colors"
-            aria-label="Go to Resume and Cover Letter Creator"
-          >
-            Open Creator
-          </button>
-        </Link>
-      </div>
-
-      <div>
-        <h3 className="text-[#FF7043] mb-3 font-semibold text-lg">To The Pipeline</h3>
-        <Link href="/jobs" legacyBehavior>
-          <button
-            className="block bg-[#FF7043] hover:bg-[#F4511E] text-white px-5 py-3 rounded font-bold w-full transition-colors"
-            aria-label="Open The Pipeline"
-          >
-            To The Pipeline
-          </button>
-        </Link>
-      </div>
-
-      <div>
-        <h3 className="text-[#FF7043] mb-3 font-semibold text-lg">Visit Your Hearth</h3>
-        <Link href="/the-hearth" legacyBehavior>
-          <button
-            className="block bg-[#FF7043] hover:bg-[#F4511E] text-white px-5 py-3 rounded font-bold w-full transition-colors"
-            aria-label="Visit Your Hearth"
-          >
-            Visit Your Hearth
-          </button>
-        </Link>
-      </div>
+      ))}
     </aside>
   );
 }

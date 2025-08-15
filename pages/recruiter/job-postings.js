@@ -1,10 +1,10 @@
 // pages/recruiter/job-postings.js
 import { useState } from "react";
-import { PlanProvider, usePlan } from "../../context/PlanContext";
-import RecruiterLayout from "../../components/layouts/RecruiterLayout";
-import JobTable from "../../components/recruiter/JobTable";
-import JobFormModal from "../../components/recruiter/JobFormModal";
-import { PrimaryButton, SecondaryButton } from "../../components/ui/Buttons";
+import { PlanProvider, usePlan } from "@/context/PlanContext";
+import RecruiterLayout from "@/components/layouts/RecruiterLayout";
+import JobTable from "@/components/recruiter/JobTable";
+import JobFormModal from "@/components/recruiter/JobFormModal";
+import { PrimaryButton, SecondaryButton } from "@/components/ui/Buttons";
 
 function HeaderBar({ onOpenModal }) {
   const { isEnterprise } = usePlan();
@@ -32,7 +32,6 @@ function HeaderBar({ onOpenModal }) {
               <SecondaryButton
                 onClick={(e) => {
                   e.preventDefault();
-                  // you can route to upgrade page here if desired
                 }}
               >
                 AI Job Description Optimizer
@@ -57,7 +56,6 @@ function HeaderBar({ onOpenModal }) {
   );
 }
 
-/** Optional right column tools */
 function RightToolsCard() {
   return (
     <div className="rounded-lg border bg-white p-4">

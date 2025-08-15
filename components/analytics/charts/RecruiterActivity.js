@@ -15,6 +15,36 @@ import {
 const ORANGE = '#FF9800';
 const BLUE   = '#2196F3';
 
+/** Tooltip that hides area-series rows and shows only line values */
+function OnlyLinesTooltip({ active, payload, label }) {
+  if (!active || !payload || !payload.length) return null;
+
+  // Filter out any payload entries tagged to hide (the shaded areas)
+  const rows = payload.filter((p) => p && p.name !== '__hide_in_tooltip__');
+  if (!rows.length) return null;
+
+  return (
+    <div className="rounded border bg-white px-2 py-1 text-xs shadow">
+      <div className="font-medium">{label}</div>
+      {rows.map((r) => (
+        <div key={r.dataKey} className="flex items-center gap-1">
+          {/* color swatch */}
+          <span
+            style={{
+              display: 'inline-block',
+              width: 8,
+              height: 8,
+              background: r.color,
+              borderRadius: 999,
+            }}
+          />
+          <span>{r.name || r.dataKey}: {r.value}</span>
+        </div>
+      ))}
+    </div>
+  );
+}
+
 export default function RecruiterActivity({ data = [] }) {
   return (
     <div className="bg-white rounded-2xl shadow p-5 border border-gray-100">
@@ -39,15 +69,19 @@ export default function RecruiterActivity({ data = [] }) {
             <CartesianGrid strokeDasharray="3 3" />
             <XAxis dataKey="week" />
             <YAxis />
-            <Tooltip />
 
-            {/* Shaded areas - no legend */}
+            {/* Custom tooltip: only line series are shown */}
+            <Tooltip content={OnlyLinesTooltip} />
+
+            {/* Shaded areas (hidden from legend + tooltip) */}
             <Area
               type="monotone"
               dataKey="messages"
               stroke="none"
               fill="url(#areaOrange)"
               legendType="none"
+              name="__hide_in_tooltip__"
+              isAnimationActive={false}
             />
             <Area
               type="monotone"
@@ -55,6 +89,8 @@ export default function RecruiterActivity({ data = [] }) {
               stroke="none"
               fill="url(#areaBlue)"
               legendType="none"
+              name="__hide_in_tooltip__"
+              isAnimationActive={false}
             />
 
             {/* Lines with legend names */}
@@ -65,6 +101,7 @@ export default function RecruiterActivity({ data = [] }) {
               stroke={ORANGE}
               strokeWidth={2}
               dot={false}
+              isAnimationActive={false}
             />
             <Line
               type="monotone"
@@ -73,6 +110,7 @@ export default function RecruiterActivity({ data = [] }) {
               stroke={BLUE}
               strokeWidth={2}
               dot={false}
+              isAnimationActive={false}
             />
 
             <Legend />

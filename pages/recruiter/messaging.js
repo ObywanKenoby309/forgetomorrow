@@ -1,16 +1,101 @@
 // pages/recruiter/messaging.js
-import Head from "next/head";
 import { useState } from "react";
-import { PlanProvider, usePlan } from "../../context/PlanContext";
-import RecruiterHeader from "../../components/recruiter/RecruiterHeader";
-import MessageThread from "../../components/recruiter/MessageThread";
-import SavedReplies from "../../components/recruiter/SavedReplies";
-import BulkMessageModal from "../../components/recruiter/BulkMessageModal";
-import FeatureLock from "../../components/recruiter/FeatureLock";
+import { PlanProvider, usePlan } from "@/context/PlanContext";
+import RecruiterLayout from "@/components/layouts/RecruiterLayout";
+import MessageThread from "@/components/recruiter/MessageThread";
+import SavedReplies from "@/components/recruiter/SavedReplies";
+import BulkMessageModal from "@/components/recruiter/BulkMessageModal";
+import { SecondaryButton } from "@/components/ui/Buttons";
 
-function Body() {
+/** Header (centered title + action on right) */
+function HeaderBar({ onOpenBulk }) {
   const { isEnterprise } = usePlan();
 
+  return (
+    <div className="grid grid-cols-1 md:grid-cols-3 items-center gap-3">
+      <div className="hidden md:block" />
+      <div className="text-center">
+        <h1 className="text-2xl font-bold text-[#FF7043]">Messaging</h1>
+        <p className="text-sm text-slate-600 mt-1 max-w-xl mx-auto">
+          View and reply to candidate conversations, or send bulk messages with Enterprise.
+        </p>
+      </div>
+      <div className="justify-self-center md:justify-self-end">
+        {isEnterprise ? (
+          <SecondaryButton onClick={onOpenBulk}>Bulk Message</SecondaryButton>
+        ) : (
+          // Overlay tooltip in locked mode so layout/height doesn't change
+          <span className="relative inline-block align-middle group">
+            <SecondaryButton onClick={(e) => e.preventDefault()}>Bulk Message</SecondaryButton>
+            <span
+              className="
+                absolute -top-10 right-0 hidden group-hover:block
+                whitespace-nowrap rounded-md border bg-white px-3 py-1 text-xs
+                shadow-md text-slate-700
+              "
+              style={{ zIndex: 30 }}
+            >
+              🔒 Upgrade to use Bulk Messaging
+            </span>
+          </span>
+        )}
+      </div>
+    </div>
+  );
+}
+
+/** Optional right column card for tips */
+function RightToolsCard() {
+  return (
+    <div className="rounded-lg border bg-white p-4">
+      <div className="font-medium mb-2">Tips</div>
+      <div className="text-sm text-slate-600 space-y-2">
+        <p>Keep bulk messages short and personalized.</p>
+        <p>Use saved replies to speed up responses.</p>
+      </div>
+    </div>
+  );
+}
+
+function Body({ threads, onSend, candidatesFlat, bulkOpen, setBulkOpen }) {
+  const { isEnterprise } = usePlan();
+
+  const onBulkSend = (ids, text) => {
+    console.log("BULK SEND", { ids, text });
+    setBulkOpen(false);
+  };
+
+  return (
+    <main className="space-y-6">
+      <MessageThread threads={threads} initialThreadId={101} onSend={onSend} />
+
+      {/* Saved replies manager (available to all plans) */}
+      <SavedReplies
+        onInsert={(text) => {
+          const el = document.querySelector('input[placeholder="Type a message…"]');
+          if (el) {
+            const curr = el.value || "";
+            el.value = curr ? `${curr} ${text}` : text;
+            el.dispatchEvent(new Event("input", { bubbles: true }));
+            el.focus();
+          }
+        }}
+      />
+
+      {/* Bulk message modal only for Enterprise */}
+      {isEnterprise && (
+        <BulkMessageModal
+          open={bulkOpen}
+          onClose={() => setBulkOpen(false)}
+          candidates={candidatesFlat}
+          onSend={onBulkSend}
+        />
+      )}
+    </main>
+  );
+}
+
+export default function MessagingPage() {
   const [threads, setThreads] = useState([
     {
       id: 101,
@@ -72,62 +157,21 @@ function Body() {
     { id: 3, name: "Priya Kumar", role: "Solutions Architect", location: "Austin, TX" },
   ];
 
-  const onBulkSend = (ids, text) => {
-    console.log("BULK SEND", { ids, text });
-    setBulkOpen(false);
-  };
-
-  return (
-    <main className="max-w-7xl mx-auto px-4 md:px-6 py-6 space-y-6">
-      <div className="flex items-center justify-between">
-        <h1 className="text-xl font-semibold">Messaging</h1>
-
-        {/* Bulk Message — Enterprise-only */}
-        {isEnterprise ? (
-          <button className="rounded border px-3 py-2 text-sm" onClick={() => setBulkOpen(true)}>
-            Bulk Message
-          </button>
-        ) : (
-          <FeatureLock label="Bulk Message">
-            <button className="rounded border px-3 py-2 text-sm">Bulk Message</button>
-          </FeatureLock>
-        )}
-      </div>
-
-      <MessageThread threads={threads} initialThreadId={101} onSend={onSend} />
-
-      {/* Saved replies manager (available to all plans) */}
-      <SavedReplies
-        onInsert={(text) => {
-          const el = document.querySelector('input[placeholder="Type a message…"]');
-          if (el) {
-            const curr = el.value || "";
-            el.value = curr ? `${curr} ${text}` : text;
-            el.dispatchEvent(new Event("input", { bubbles: true }));
-            el.focus();
-          }
-        }}
-      />
-
-      {/* Guard the modal: only render in Enterprise */}
-      {isEnterprise && (
-        <BulkMessageModal
-          open={bulkOpen}
-          onClose={() => setBulkOpen(false)}
-          candidates={candidatesFlat}
-          onSend={onBulkSend}
-        />
-      )}
-    </main>
-  );
-}
-
-export default function MessagingPage() {
   return (
     <PlanProvider>
-      <Head><title>Messaging — ForgeTomorrow</title></Head>
-      <RecruiterHeader />
-      <Body />
+      <RecruiterLayout
+        title="Messaging — ForgeTomorrow"
+        header={<HeaderBar onOpenBulk={() => setBulkOpen(true)} />}
+        right={<RightToolsCard />}
+      >
+        <Body
+          threads={threads}
+          onSend={onSend}
+          candidatesFlat={candidatesFlat}
+          bulkOpen={bulkOpen}
+          setBulkOpen={setBulkOpen}
+        />
+      </RecruiterLayout>
     </PlanProvider>
   );
 }

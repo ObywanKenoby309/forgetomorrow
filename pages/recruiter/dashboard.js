@@ -1,8 +1,8 @@
 // pages/recruiter/dashboard.js
-import { PlanProvider, usePlan } from "../../context/PlanContext";
-import FeatureLock from "../../components/recruiter/FeatureLock";
-import RecruiterLayout from "../../components/layouts/RecruiterLayout";
-import { PrimaryButton, SecondaryButton } from "../../components/ui/Buttons";
+import { PlanProvider, usePlan } from "@/context/PlanContext";
+import FeatureLock from "@/components/recruiter/FeatureLock";
+import RecruiterLayout from "@/components/layouts/RecruiterLayout";
+import { PrimaryButton, SecondaryButton } from "@/components/ui/Buttons";
 
 function HeaderBar() {
   // Center title/subtitle while keeping actions aligned right
@@ -110,7 +110,7 @@ function DashboardBody() {
               <div>Conversion (View→Apply): 4.7%</div>
             </div>
           ) : (
-            // Option 1: wrap locked mode in FeatureLock for identical padding/margins
+            // Locked mode wrapped for identical padding/margins
             <FeatureLock label="Analytics Snapshot">
               <div className="text-sm grid gap-2">
                 <div>Views</div>
