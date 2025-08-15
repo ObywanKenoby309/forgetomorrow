@@ -4,7 +4,7 @@ import Link from 'next/link';
 import { ResumeContext } from '../../context/ResumeContext';
 import { saveSnapshot } from '../../lib/snapshots';
 
-export default function SnapshotControls() {
+export default function SnapshotControls({ compact = false }) {
   const {
     formData, summary, experiences, projects, volunteerExperiences,
     educationList, certifications, languages, skills, achievements, customSections,
@@ -33,37 +33,100 @@ export default function SnapshotControls() {
     }
   };
 
+  // --- styles tuned for compact right-rail usage ---
+  const wrap = compact
+    ? {
+        background: '#fff',
+        border: '1px solid #eee',
+        borderRadius: 12,
+        padding: 10,
+        boxShadow: '0 2px 6px rgba(0,0,0,0.06)',
+        display: 'grid',
+        gap: 8,
+        width: '100%',
+      }
+    : { background: '#fff', borderRadius: 12, padding: 16, boxShadow: '0 2px 6px rgba(0,0,0,0.06)' };
+
+  const row = compact
+    ? { display: 'grid', gridTemplateColumns: '1fr auto', gap: 8, alignItems: 'center' }
+    : { display: 'flex', flexWrap: 'wrap', gap: 8, alignItems: 'center', justifyContent: 'space-between' };
+
+  const inputStyle = compact
+    ? {
+        border: '1px solid #ddd',
+        borderRadius: 10,
+        padding: '8px 10px',
+        height: 36,
+        width: '100%',
+        outline: 'none',
+      }
+    : { border: '1px solid #ddd', borderRadius: 10, padding: '10px 12px', width: 256, outline: 'none' };
+
+  const saveBtn = compact
+    ? {
+        padding: '8px 10px',
+        height: 36,
+        background: '#FF7043',
+        color: '#fff',
+        border: '1px solid rgba(0,0,0,0.06)',
+        borderRadius: 10,
+        fontWeight: 800,
+        cursor: 'pointer',
+        whiteSpace: 'nowrap',
+      }
+    : {
+        padding: '10px 12px',
+        background: '#FF7043',
+        color: '#fff',
+        border: '1px solid rgba(0,0,0,0.06)',
+        borderRadius: 10,
+        fontWeight: 800,
+        cursor: 'pointer',
+      };
+
+  const linkStyle = compact
+    ? { color: '#FF7043', fontWeight: 600, textDecoration: 'underline', textAlign: 'right' }
+    : { color: '#FF7043', textDecoration: 'underline', fontWeight: 600 };
+
   return (
-    <div className="bg-white rounded-lg shadow p-6 flex flex-col md:flex-row gap-3 md:items-center md:justify-between">
-      <div className="flex items-center gap-2">
+    <div style={wrap}>
+      <div style={row}>
         <input
           value={name}
           onChange={(e) => setName(e.target.value)}
-          placeholder="Name this snapshot (optional)"
-          className="border rounded px-3 py-2 w-64"
+          placeholder="Snapshot name (optional)"
+          style={inputStyle}
         />
-        <button
-          onClick={handleSave}
-          disabled={saving}
-          className="px-4 py-2 rounded bg-[#FF7043] text-white hover:opacity-90 disabled:opacity-50"
-        >
+        <button onClick={handleSave} disabled={saving} style={saveBtn}>
           {saving ? 'Saving…' : 'Save Snapshot'}
         </button>
       </div>
 
-      <Link href="/resume/saved" className="text-[#FF7043] underline">
-        View Saved Versions
-      </Link>
+      <div style={{ display: 'flex', justifyContent: compact ? 'flex-end' : 'space-between' }}>
+        <Link href="/resume/saved" style={linkStyle}>
+          View Saved Versions
+        </Link>
+      </div>
 
-      {/* simple toast */}
+      {/* toast */}
       {toast && (
         <div
           role="status"
-          className={`fixed bottom-6 right-6 px-4 py-3 rounded-lg shadow-lg text-white ${
-            toast.type === 'success' ? 'bg-green-600' : 'bg-red-600'
-          }`}
+          style={{
+            position: 'fixed',
+            bottom: 24,
+            right: 24,
+            padding: '10px 12px',
+            borderRadius: 12,
+            boxShadow: '0 10px 20px rgba(0,0,0,0.15)',
+            color: 'white',
+            background: toast.type === 'success' ? '#16a34a' : '#dc2626',
+            zIndex: 9999,
+            fontWeight: 600,
+          }}
         >
-          <span className="mr-2">💾</span>{toast.msg}
+          <span style={{ marginRight: 6 }}>💾</span>
+          {toast.msg}
         </div>
       )}
     </div>

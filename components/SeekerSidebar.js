@@ -1,63 +1,80 @@
-// components/SeekerSidebar.js
-import Link from "next/link";
+import React from 'react';
+import Link from 'next/link';
+import { useRouter } from 'next/router';
 
-export default function SeekerSidebar() {
+export default function SeekerSidebar({ active = '' }) {
+  const router = useRouter();
+
   const navItems = [
-    { label: "Seeker Dashboard", href: "/seeker-dashboard" },
-    { label: "Your Roadmap", href: "/roadmap" },
-    { label: "Open Creator", href: "/resume-cover" },
-    { label: "To The Pipeline", href: "/jobs" },
-    { label: "Visit Your Hearth", href: "/the-hearth" },
+    { header: 'Dashboard',       label: 'Seeker Dashboard', href: '/seeker-dashboard', key: 'dashboard' },
+    { header: 'Roadmap',         label: 'Your Roadmap',     href: '/roadmap',          key: 'roadmap' },
+    { header: 'Resume & Cover',  label: 'Open Creator',     href: '/resume-cover',     key: 'resume-cover' },
+    { header: 'Jobs',            label: 'To The Pipeline',  href: '/jobs',             key: 'jobs' },
+    { header: 'Community',       label: 'Visit Your Hearth', href: '/the-hearth',       key: 'the-hearth' },
   ];
 
+  const activeStyle = { outline: '2px solid #37474F', outlineOffset: '2px' };
+
+  const isActive = (item) =>
+    (active && active === item.key) || router.pathname === item.href;
+
   return (
-    <aside
+    <div
       style={{
-        backgroundColor: "white",
-        padding: "20px 15px",
-        borderRadius: "12px",
-        display: "flex",
-        flexDirection: "column",
-        gap: "12px",
-        width: "100%",
-        boxShadow: "0 4px 12px rgba(0,0,0,0.08)",
+        background: '#fff',
+        padding: '20px',
+        borderRadius: '12px',
+        boxShadow: '0 2px 6px rgba(0,0,0,0.06)',
+        minHeight: '100%',
+        display: 'flex',
+        flexDirection: 'column',
+        gap: '20px',
+        width: '240px', // fixed narrower width
       }}
     >
-      {navItems.map((item, index) => (
-        <Link key={index} href={item.href} legacyBehavior>
-          <button
+      {navItems.map((item, idx) => (
+        <div key={idx}>
+          {/* small, left-aligned orange header above each button */}
+          <div
             style={{
-              display: "block",
-              padding: "12px 16px",
-              borderRadius: "8px",
-              fontWeight: "600",
-              fontSize: "0.95rem",
-              textAlign: "center",
-              background: "#FF7043",
-              color: "#fff",
-              border: "none",
-              cursor: "pointer",
-              transition: "all 0.2s ease-in-out",
-              boxShadow: "0 2px 6px rgba(0,0,0,0.06)",
-              width: "100%",
+              fontSize: '14px',
+              fontWeight: '500',
+              marginBottom: '6px',
+              color: '#FF7043',
+            }}
+          >
+            {item.header}
+          </div>
+
+          {/* gradient pill button + metallic active outline */}
+          <Link
+            href={item.href}
+            style={{
+              display: 'block',
+              background: 'linear-gradient(135deg, #FF6F43, #FF8E53)',
+              padding: '10px 14px',
+              borderRadius: '30px',
+              fontWeight: 'bold',
+              color: '#fff',
+              textAlign: 'center',
+              textDecoration: 'none',
+              boxShadow: '0 3px 6px rgba(255,112,67,0.4)',
+              transition: 'all 0.25s ease',
+              ...(isActive(item) ? activeStyle : {}),
             }}
             onMouseEnter={(e) => {
-              e.currentTarget.style.background = "#F4511E";
-              e.currentTarget.style.transform = "translateY(-2px)";
-              e.currentTarget.style.boxShadow =
-                "0 6px 12px rgba(0,0,0,0.12)";
+              e.currentTarget.style.transform = 'scale(1.05)';
+              e.currentTarget.style.boxShadow = '0 4px 12px rgba(255,112,67,0.6)';
             }}
             onMouseLeave={(e) => {
-              e.currentTarget.style.background = "#FF7043";
-              e.currentTarget.style.transform = "translateY(0)";
-              e.currentTarget.style.boxShadow =
-                "0 2px 6px rgba(0,0,0,0.06)";
+              e.currentTarget.style.transform = 'scale(1)';
+              e.currentTarget.style.boxShadow = '0 3px 6px rgba(255,112,67,0.4)';
             }}
           >
             {item.label}
-          </button>
-        </Link>
+          </Link>
+        </div>
       ))}
-    </aside>
+    </div>
   );
 }
