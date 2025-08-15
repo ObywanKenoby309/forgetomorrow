@@ -47,17 +47,35 @@ export default function App({ Component, pageProps }) {
 
   const isRecruiterRoute = router.pathname.startsWith('/recruiter');
 
-  // Landing header/footer only on these paths (and not for recruiter routes)
+  // Seeker routes render their own SeekerHeader inside the page.
+  // This catches /seeker-dashboard, /seeker-profile, etc., plus specific Seeker pages.
+  const isSeekerRoute =
+    router.pathname.startsWith('/seeker') ||
+    ['/the-hearth', '/jobs', '/applications', '/pinned-jobs', '/resume-cover', '/roadmap'].includes(
+      router.pathname
+    );
+
+  // Coaching routes render their own CoachingHeader inside the page.
+  const isCoachingRoute =
+    router.pathname === '/coaching-dashboard' ||
+    router.pathname.startsWith('/dashboard/coaching');
+
+  // Landing header/footer only on these paths (and not for recruiter, seeker, or coaching routes)
   const isLandingPage =
     !isRecruiterRoute &&
+    !isSeekerRoute &&
+    !isCoachingRoute &&
     ['/', '/signup', '/features', '/login', '/about'].includes(router.pathname);
 
-  // Background image only on these paths (and not for recruiter routes)
+  // Background image only on these paths (and not for recruiter, seeker, or coaching routes)
   const useForgeBackground =
-    !isRecruiterRoute && ['/', '/about', '/features'].includes(router.pathname);
+    !isRecruiterRoute &&
+    !isSeekerRoute &&
+    !isCoachingRoute &&
+    ['/', '/about', '/features'].includes(router.pathname);
 
   // We only need top padding when the fixed main site Header is present
-  const needsTopPadding = !isRecruiterRoute && !isLandingPage;
+  const needsTopPadding = !isRecruiterRoute && !isSeekerRoute && !isCoachingRoute && !isLandingPage;
 
   return (
     <div className="relative min-h-screen">
@@ -82,9 +100,9 @@ export default function App({ Component, pageProps }) {
         }`}
       >
         {/* Header logic:
-            - Recruiter routes render their own RecruiterHeader inside the page.
+            - Recruiter, Seeker, and Coaching routes render their own headers inside the page.
             - Else, show LandingHeader on landing pages, Header everywhere else. */}
-        {!isRecruiterRoute && (isLandingPage ? <LandingHeader /> : <Header />)}
+        {!isRecruiterRoute && !isSeekerRoute && !isCoachingRoute && (isLandingPage ? <LandingHeader /> : <Header />)}
 
         {/* Global providers (Plan first so usePlan() is available everywhere) */}
         <PlanProvider>
@@ -96,7 +114,8 @@ export default function App({ Component, pageProps }) {
           </ResumeProvider>
         </PlanProvider>
 
-        {!isRecruiterRoute && (isLandingPage ? <LandingFooter /> : <Footer />)}
+        {/* Footer remains visible on Seeker/Coaching pages only if you want; currently hidden like header */}
+        {!isRecruiterRoute && !isSeekerRoute && !isCoachingRoute && (isLandingPage ? <LandingFooter /> : <Footer />)}
       </div>
     </div>
   );
