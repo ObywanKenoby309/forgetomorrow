@@ -1,4 +1,3 @@
-// components/layouts/RecruiterLayout.js
 import React from 'react';
 import Head from 'next/head';
 import RecruiterHeader from '@/components/recruiter/RecruiterHeader';
@@ -15,7 +14,6 @@ export default function RecruiterLayout({
       <Head><title>{title}</title></Head>
       <RecruiterHeader />
 
-      {/* Page grid without footer inside */}
       <div
         style={{
           display: 'grid',
@@ -27,7 +25,7 @@ export default function RecruiterLayout({
           `,
           gap: 20,
           padding: '30px 20px 20px',
-          minHeight: 'calc(100vh - 200px)', // leave space for footer
+          minHeight: 'calc(100vh - 200px)',
           backgroundColor: '#ECEFF1',
         }}
       >

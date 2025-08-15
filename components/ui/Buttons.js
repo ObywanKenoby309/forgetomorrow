@@ -1,9 +1,8 @@
-// components/ui/Buttons.js
 import React from "react";
 import Link from "next/link";
 
 const base =
-  "inline-flex items-center justify-center rounded font-medium transition-colors focus:outline-none focus:ring-2 focus:ring-offset-2";
+  "inline-flex items-center justify-center rounded-md font-semibold transition-colors focus:outline-none focus:ring-2 focus:ring-offset-2";
 const sizes = {
   sm: "text-sm px-3 py-2",
   md: "text-sm px-4 py-2", // default
@@ -35,7 +34,6 @@ export function PrimaryButton({
   );
 
   if (href) {
-    // Render as Next.js Link (no manual <a> usage in your pages)
     return (
       <Link href={href} className={styles} aria-disabled={disabled} {...rest}>
         {children}
@@ -97,3 +95,11 @@ export function SecondaryButton({
     </button>
   );
 }
+
+/** Back-compat wrapper so legacy imports `{ Button }` keep working */
+export function Button(props) {
+  return <PrimaryButton {...props} />;
+}
+
+/** Default export (also back-compat) */
+export default PrimaryButton;
