@@ -1,7 +1,11 @@
 import { NextResponse } from 'next/server';
 
 // Public pages allowed to be visible
-const PUBLIC_PATHS = new Set(['/', '/waiting-list', '/about']);
+const PUBLIC_PATHS = new Set([
+  '/', '/waiting-list', '/about',
+  '/pricing', '/features', '/login', '/signup', '/contact',
+  '/coming-soon'
+]);
 
 // Static files always allowed
 const STATIC_ALLOW = [
@@ -16,8 +20,7 @@ const STATIC_ALLOW = [
 export function middleware(req) {
   const { pathname } = new URL(req.url);
 
-  // ✅ Bypass everything when running locally or in dev
-  // (lets you record the Seeker Dashboard and other pages on localhost)
+  // ✅ Bypass in dev / localhost
   const hostname = req.nextUrl.hostname;
   if (
     process.env.NODE_ENV === 'development' ||
@@ -32,12 +35,12 @@ export function middleware(req) {
     return NextResponse.next();
   }
 
-  // Allow public pages
+  // Allow public pages (handles trailing slash)
   if (PUBLIC_PATHS.has(pathname) || PUBLIC_PATHS.has(pathname.replace(/\/$/, ''))) {
     return NextResponse.next();
   }
 
-  // Everything else → Coming Soon page
+  // Everything else → Coming Soon
   const url = new URL('/coming-soon', req.url);
   return NextResponse.rewrite(url);
 }
