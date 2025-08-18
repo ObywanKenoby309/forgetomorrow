@@ -1,68 +1,95 @@
 // pages/the-hearth.js
-import Head from 'next/head';
+import SeekerLayout from '@/components/layouts/SeekerLayout';
+import SeekerRightColumn from '@/components/seeker/SeekerRightColumn';
+import HearthCenter from '@/components/community/HearthCenter';
 import Link from 'next/link';
 
-export default function TheHearth() {
-  const alertComingSoon = (feature) => () => alert(`${feature} feature coming soon!`);
-
-  const tiles = [
-    {
-      title: 'Mentorship Programs',
-      desc: 'Connect with experienced mentors to guide your career journey.',
-      href: '/hearth/spotlights', // wired
-    },
-    { title: 'Community Events', desc: 'Join workshops, webinars, and networking events tailored for growth.' },
-    { title: 'Discussion Forums', desc: 'Engage in meaningful conversations and share knowledge.' },
-    { title: 'Resource Library', desc: 'Access articles, guides, and tools to support your professional growth.' },
-  ];
-
+function HeaderBox() {
   return (
-    <>
-      <Head>
-        <title>ForgeTomorrow - The Hearth</title>
-      </Head>
+    <section
+      style={{
+        background: 'white',
+        border: '1px solid #eee',
+        borderRadius: 12,
+        padding: 16,
+        boxShadow: '0 2px 6px rgba(0,0,0,0.06)',
+        textAlign: 'center',
+      }}
+    >
+      <h1
+        style={{
+          color: '#FF7043',
+          fontSize: 28,
+          fontWeight: 800,
+          margin: 0,
+        }}
+      >
+        The Hearth
+      </h1>
+      <p
+        style={{
+          marginTop: 8,
+          color: '#546E7A',
+          fontSize: 14,
+        }}
+      >
+        Your central place to build connections, find mentors, and grow your professional
+        network with purpose and authenticity.
+      </p>
+    </section>
+  );
+}
 
-      <main className="max-w-7xl mx-auto p-6 space-y-8 min-h-[80vh] bg-[#ECEFF1] text-[#212121] pt-20">
-        <section className="bg-white rounded-lg shadow p-8">
-          <h1 className="text-4xl font-bold text-[#FF7043] mb-6 text-center">The Hearth</h1>
-          <p className="text-lg text-gray-700 max-w-3xl mx-auto mb-6">
-            Your central place to build connections, find mentors, and grow your professional network with purpose and authenticity.
-          </p>
+function RightRail() {
+  return (
+    <div style={{ display: 'grid', gap: 12 }}>
+      <SeekerRightColumn variant="community" />
 
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-6 max-w-4xl mx-auto">
-            {tiles.map(({ title, desc, href }) =>
-              href ? (
-                <Link
-                  key={title}
-                  href={href}
-                  className="bg-gray-100 rounded-lg p-6 shadow-sm hover:shadow-md transition-shadow cursor-pointer block focus:outline-none focus:ring-2 focus:ring-[#FF7043]"
-                >
-                  <h2 className="text-2xl font-semibold mb-3 text-[#FF7043]">{title}</h2>
-                  <p>{desc}</p>
-                </Link>
-              ) : (
-                <div
-                  key={title}
-                  className="bg-gray-100 rounded-lg p-6 shadow-sm hover:shadow-md transition-shadow cursor-pointer"
-                  onClick={alertComingSoon(title)}
-                  role="button"
-                  tabIndex={0}
-                  onKeyDown={(e) => {
-                    if (e.key === 'Enter' || e.key === ' ') {
-                      e.preventDefault();
-                      alertComingSoon(title)();
-                    }
-                  }}
-                  aria-label={title}
-                >
-                  <h2 className="text-2xl font-semibold mb-3 text-[#FF7043]">{title}</h2>
-                  <p>{desc}</p>
-                </div>
-              )
-            )}
-          </div>
-        </section>
-      </main>
-    </>
+      {/* Extra quick links */}
+      <div
+        style={{
+          background: 'white',
+          borderRadius: 10,
+          padding: 12,
+          display: 'grid',
+          gap: 8,
+        }}
+      >
+        <div style={{ fontWeight: 800, color: '#37474F' }}>Shortcuts</div>
+        <Link href="/about" style={{ color: '#FF7043', fontWeight: 600 }}>Community Guidelines</Link>
+        <Link href="/support" style={{ color: '#FF7043', fontWeight: 600 }}>Get Support</Link>
+      </div>
+
+      {/* Rules */}
+      <div
+        style={{
+          background: 'white',
+          borderRadius: 10,
+          padding: 12,
+          display: 'grid',
+          gap: 6,
+        }}
+      >
+        <div style={{ fontWeight: 800, color: '#37474F' }}>Community Rules</div>
+        <ul style={{ margin: 0, paddingLeft: 18, color: '#607D8B', fontSize: 13 }}>
+          <li>Be respectful and constructive</li>
+          <li>No spam or solicitations</li>
+          <li>Keep personal info private</li>
+        </ul>
+      </div>
+    </div>
+  );
+}
+
+export default function TheHearth() {
+  return (
+    <SeekerLayout
+      title="ForgeTomorrow — The Hearth"
+      header={<HeaderBox />}
+      right={<RightRail />}
+      activeNav="the-hearth"
+    >
+      <HearthCenter />
+    </SeekerLayout>
   );
 }

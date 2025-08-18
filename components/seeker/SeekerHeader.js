@@ -7,7 +7,7 @@ const navItems = [
   { href: "/roadmap", label: "Your Roadmap" },
   { href: "/resume-cover", label: "Open Creator" },
   { href: "/jobs", label: "To The Pipeline" },
-  { href: "/the-hearth", label: "Visit Your Hearth" },
+  { href: "/seeker/the-hearth/", label: "Visit Your Hearth" },
 ];
 
 export default function SeekerHeader() {

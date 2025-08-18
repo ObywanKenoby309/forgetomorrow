@@ -9,12 +9,11 @@ export default function SeekerSidebar({ active = '' }) {
     { header: 'Dashboard',       label: 'Seeker Dashboard', href: '/seeker-dashboard', key: 'dashboard' },
     { header: 'Roadmap',         label: 'Your Roadmap',     href: '/roadmap',          key: 'roadmap' },
     { header: 'Resume & Cover',  label: 'Open Creator',     href: '/resume-cover',     key: 'resume-cover' },
-    { header: 'Jobs',            label: 'To The Pipeline',  href: '/jobs',             key: 'jobs' },
-    { header: 'Community',       label: 'Visit Your Hearth', href: '/the-hearth',       key: 'the-hearth' },
+    { header: 'Jobs',            label: 'To The Pipeline',  href: '/seeker/jobs',             key: 'jobs' },
+    { header: 'Community',       label: 'Visit Your Hearth', href: '/seeker/the-hearth',       key: 'the-hearth' },
   ];
 
   const activeStyle = { outline: '2px solid #37474F', outlineOffset: '2px' };
-
   const isActive = (item) =>
     (active && active === item.key) || router.pathname === item.href;
 
@@ -22,24 +21,25 @@ export default function SeekerSidebar({ active = '' }) {
     <div
       style={{
         background: '#fff',
-        padding: '20px',
+        padding: '16px',                // was 20px — match header/right cards
         borderRadius: '12px',
         boxShadow: '0 2px 6px rgba(0,0,0,0.06)',
         minHeight: '100%',
         display: 'flex',
         flexDirection: 'column',
-        gap: '20px',
-        width: '240px', // fixed narrower width
+        gap: '16px',                    // slightly tighter vertical rhythm
+        width: '240px',
       }}
     >
       {navItems.map((item, idx) => (
-        <div key={idx}>
+        <div key={idx} style={{ display: 'grid', gap: 6 }}>
           {/* small, left-aligned orange header above each button */}
           <div
             style={{
               fontSize: '14px',
               fontWeight: '500',
-              marginBottom: '6px',
+              marginBottom: '4px',      // was 6px — tighter
+              marginLeft: '6px',        // left indent you asked about
               color: '#FF7043',
             }}
           >

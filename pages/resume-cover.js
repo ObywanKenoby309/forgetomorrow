@@ -1,78 +1,183 @@
 // pages/resume-cover.js
-import Head from 'next/head';
 import Link from 'next/link';
+import SeekerLayout from '@/components/layouts/SeekerLayout';
+import SeekerRightColumn from '@/components/seeker/SeekerRightColumn';
 import SavedDocs from '../components/SavedDocs';
 
 export default function ResumeCoverCreator() {
+  const RightPane = (
+    <div style={{ display: 'grid', gap: 12 }}>
+      {/* Shortcuts (shared) */}
+      <SeekerRightColumn variant="creator" />
+
+      {/* Saved Docs */}
+      <div style={{ color: 'white', fontWeight: 700, marginTop: 4 }}>Saved Docs</div>
+      {/* SavedDocs renders its own internal styles/cards */}
+      <SavedDocs />
+    </div>
+  );
+
   return (
-    <>
-      <Head>
-        <title>Resume & Cover Creator | ForgeTomorrow</title>
-      </Head>
+    <SeekerLayout
+      title="Resume & Cover Creator | ForgeTomorrow"
+      headerTitle="Resume & Cover Letter Creator"
+      headerDescription="Build from scratch or upload an existing file. Soon: AI tailoring, ATS-ready exports, and versioning for each opportunity."
+      right={RightPane}
+    >
+      {/* Center column content */}
+      <div style={{ display: 'grid', gap: 20 }}>
+        {/* Intro card */}
+        <section
+          style={{
+            background: 'white',
+            borderRadius: 12,
+            border: '1px solid #eee',
+            boxShadow: '0 2px 6px rgba(0,0,0,0.06)',
+            padding: 24,
+            display: 'grid',
+            gap: 12,
+          }}
+        >
+          <h2
+            style={{
+              color: '#FF7043',
+              fontSize: 28,
+              fontWeight: 800,
+              textAlign: 'center',
+              margin: 0,
+            }}
+          >
+            Resume & Cover Letter Creator
+          </h2>
+          <p
+            style={{
+              color: '#455A64',
+              fontSize: 16,
+              textAlign: 'center',
+              maxWidth: 720,
+              margin: '0 auto',
+              lineHeight: 1.5,
+            }}
+          >
+            Easily build your professional resume and cover letter — from scratch or using your existing documents.
+            Soon, you’ll generate ATS‑optimized files with AI, tailor each version to job descriptions, and save versions
+            for each opportunity.
+          </p>
+        </section>
 
-      <main className="max-w-7xl mx-auto px-6 min-h-[80vh] bg-[#ECEFF1] text-[#212121]">
-        <div className="pt-[100px]">
-          <div className="grid grid-cols-1 md:grid-cols-5 gap-8">
-            {/* Left Column – Back to Dashboard */}
-            <aside className="md:col-span-1">
-              <div className="bg-white rounded-lg shadow p-6 text-center">
-                <h2 className="text-lg font-semibold text-[#FF7043] mb-4">Navigation</h2>
-                <Link
-                  href="/seeker-dashboard"
-                  className="block bg-[#FF7043] hover:bg-[#F4511E] text-white px-4 py-2 rounded transition"
-                >
-                  ← Back to Dashboard
-                </Link>
-              </div>
-            </aside>
+        {/* Options grid */}
+        <div
+          style={{
+            display: 'grid',
+            gridTemplateColumns: 'repeat(2, minmax(0, 1fr))',
+            gap: 16,
+          }}
+        >
+          {/* Start from Scratch */}
+          <section
+            style={{
+              background: '#F5F5F5',
+              border: '1px dashed #B0BEC5',
+              borderRadius: 12,
+              padding: 24,
+              textAlign: 'center',
+              display: 'grid',
+              gap: 8,
+            }}
+          >
+            <h3 style={{ color: '#FF7043', fontSize: 20, fontWeight: 700, margin: 0 }}>Start from Scratch</h3>
+            <p style={{ color: '#607D8B', fontSize: 14, margin: 0 }}>
+              Use our AI‑enhanced builder to create a new resume step‑by‑step.
+            </p>
+            <Link href="/resume/create" style={{ display: 'block', marginTop: 8 }}>
+              <button
+                type="button"
+                style={{
+                  width: '100%',
+                  background: '#FF7043',
+                  color: 'white',
+                  padding: '10px 12px',
+                  borderRadius: 10,
+                  border: '1px solid rgba(0,0,0,0.06)',
+                  fontWeight: 800,
+                  cursor: 'pointer',
+                }}
+              >
+                Create Resume
+              </button>
+            </Link>
+          </section>
 
-            {/* Middle Column – Creator */}
-            <section className="md:col-span-3 space-y-10">
-              <div className="bg-white rounded-lg shadow p-8 space-y-6">
-                <h1 className="text-4xl font-bold text-[#FF7043] text-center">Resume & Cover Letter Creator</h1>
-                <p className="text-lg text-gray-700 text-center max-w-2xl mx-auto">
-                  Easily build your professional resume and cover letter — from scratch or using your existing documents.
-                  Soon, you’ll be able to generate ATS-optimized files using AI, tailor each version to job descriptions,
-                  and save versions for each opportunity.
-                </p>
-              </div>
+          {/* Use Existing Resume */}
+          <section
+            style={{
+              background: '#F5F5F5',
+              border: '1px dashed #B0BEC5',
+              borderRadius: 12,
+              padding: 24,
+              textAlign: 'center',
+              display: 'grid',
+              gap: 8,
+            }}
+          >
+            <h3 style={{ color: '#FF7043', fontSize: 20, fontWeight: 700, margin: 0 }}>Use Existing Resume</h3>
+            <p style={{ color: '#607D8B', fontSize: 14, margin: 0 }}>
+              Upload your resume to improve and tailor it using AI tools.
+            </p>
+            <button
+              type="button"
+              style={{
+                marginTop: 8,
+                background: '#FF7043',
+                color: 'white',
+                padding: '10px 12px',
+                borderRadius: 10,
+                border: '1px solid rgba(0,0,0,0.06)',
+                fontWeight: 800,
+                cursor: 'pointer',
+                width: '100%',
+              }}
+            >
+              Upload Resume
+            </button>
+          </section>
 
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
-                <div className="bg-[#F5F5F5] border border-dashed border-gray-400 rounded p-6 text-center space-y-2">
-                  <h3 className="text-xl font-semibold text-[#FF7043]">Start from Scratch</h3>
-                  <p className="text-sm text-gray-600">Use our AI-enhanced form builder to create a new resume step-by-step.</p>
-                  <Link href="/resume/create" className="block mt-2">
-                    <button className="w-full bg-[#FF7043] text-white px-4 py-2 rounded hover:bg-[#F4511E] transition-colors">
-                      Create Resume
-                    </button>
-                  </Link>
-                </div>
-
-                <div className="bg-[#F5F5F5] border border-dashed border-gray-400 rounded p-6 text-center space-y-2">
-                  <h3 className="text-xl font-semibold text-[#FF7043]">Use Existing Resume</h3>
-                  <p className="text-sm text-gray-600">Upload your resume to improve and tailor it using AI tools.</p>
-                  <button className="mt-2 bg-[#FF7043] text-white px-4 py-2 rounded hover:bg-[#F4511E] transition-colors">
-                    Upload Resume
-                  </button>
-                </div>
-
-                <div className="col-span-1 sm:col-span-2 bg-[#F5F5F5] border border-dashed border-gray-400 rounded p-6 text-center space-y-2">
-                  <h3 className="text-xl font-semibold text-[#FF7043]">Cover Letter Builder</h3>
-                  <p className="text-sm text-gray-600">Build custom, targeted cover letters with one click.</p>
-                  <button className="mt-2 bg-[#FF7043] text-white px-4 py-2 rounded hover:bg-[#F4511E] transition-colors">
-                    Start Cover Letter
-                  </button>
-                </div>
-              </div>
-            </section>
-
-            {/* Right Column – Saved Docs */}
-            <aside className="md:col-span-1">
-              <SavedDocs />
-            </aside>
-          </div>
+          {/* Cover Letter (full width) */}
+          <section
+            style={{
+              gridColumn: '1 / -1',
+              background: '#F5F5F5',
+              border: '1px dashed #B0BEC5',
+              borderRadius: 12,
+              padding: 24,
+              textAlign: 'center',
+              display: 'grid',
+              gap: 8,
+            }}
+          >
+            <h3 style={{ color: '#FF7043', fontSize: 20, fontWeight: 700, margin: 0 }}>Cover Letter Builder</h3>
+            <p style={{ color: '#607D8B', fontSize: 14, margin: 0 }}>
+              Build custom, targeted cover letters with one click.
+            </p>
+            <button
+              type="button"
+              style={{
+                marginTop: 8,
+                background: '#FF7043',
+                color: 'white',
+                padding: '10px 12px',
+                borderRadius: 10,
+                border: '1px solid rgba(0,0,0,0.06)',
+                fontWeight: 800,
+                cursor: 'pointer',
+                width: '100%',
+              }}
+            >
+              Start Cover Letter
+            </button>
+          </section>
         </div>
-      </main>
-    </>
+      </div>
+    </SeekerLayout>
   );
 }
