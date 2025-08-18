@@ -1,81 +1,80 @@
-// components/SeekerSidebar.js
+import React from 'react';
 import Link from 'next/link';
+import { useRouter } from 'next/router';
 
-export default function SeekerSidebar() {
+export default function SeekerSidebar({ active = '' }) {
+  const router = useRouter();
+
+  const navItems = [
+    { header: 'Dashboard',       label: 'Seeker Dashboard', href: '/seeker-dashboard', key: 'dashboard' },
+    { header: 'Roadmap',         label: 'Your Roadmap',     href: '/roadmap',          key: 'roadmap' },
+    { header: 'Resume & Cover',  label: 'Open Creator',     href: '/resume-cover',     key: 'resume-cover' },
+    { header: 'Jobs',            label: 'To The Pipeline',  href: '/seeker/jobs',             key: 'jobs' },
+    { header: 'Community',       label: 'Visit Your Hearth', href: '/seeker/the-hearth',       key: 'the-hearth' },
+  ];
+
+  const activeStyle = { outline: '2px solid #37474F', outlineOffset: '2px' };
+  const isActive = (item) =>
+    (active && active === item.key) || router.pathname === item.href;
+
   return (
-    <aside
+    <div
       style={{
-        borderRight: '1px solid #ccc',
-        padding: '24px 20px',
-        backgroundColor: 'white',
-        borderRadius: '8px',
+        background: '#fff',
+        padding: '16px',                // was 20px — match header/right cards
+        borderRadius: '12px',
+        boxShadow: '0 2px 6px rgba(0,0,0,0.06)',
+        minHeight: '100%',
         display: 'flex',
         flexDirection: 'column',
-        justifyContent: 'center',
-        gap: '32px',
-        height: 'fit-content',
-        width: '300px',
+        gap: '16px',                    // slightly tighter vertical rhythm
+        width: '240px',
       }}
     >
-      <div>
-        <h3 className="text-[#FF7043] mb-3 font-semibold text-lg">Seeker Dashboard</h3>
-        <Link href="/seeker-dashboard" legacyBehavior>
-          <button
-            className="block bg-[#FF7043] hover:bg-[#F4511E] text-white px-5 py-3 rounded font-bold w-full transition-colors"
-            aria-label="Go to Seeker Dashboard"
+      {navItems.map((item, idx) => (
+        <div key={idx} style={{ display: 'grid', gap: 6 }}>
+          {/* small, left-aligned orange header above each button */}
+          <div
+            style={{
+              fontSize: '14px',
+              fontWeight: '500',
+              marginBottom: '4px',      // was 6px — tighter
+              marginLeft: '6px',        // left indent you asked about
+              color: '#FF7043',
+            }}
           >
-            Seeker Dashboard
-          </button>
-        </Link>
-      </div>
+            {item.header}
+          </div>
 
-      <div>
-        <h3 className="text-[#FF7043] mb-3 font-semibold text-lg">Your Roadmap</h3>
-        <Link href="/roadmap" legacyBehavior>
-          <button
-            className="block bg-[#FF7043] hover:bg-[#F4511E] text-white px-5 py-3 rounded font-bold w-full transition-colors"
-            aria-label="Launch Career Roadmap"
+          {/* gradient pill button + metallic active outline */}
+          <Link
+            href={item.href}
+            style={{
+              display: 'block',
+              background: 'linear-gradient(135deg, #FF6F43, #FF8E53)',
+              padding: '10px 14px',
+              borderRadius: '30px',
+              fontWeight: 'bold',
+              color: '#fff',
+              textAlign: 'center',
+              textDecoration: 'none',
+              boxShadow: '0 3px 6px rgba(255,112,67,0.4)',
+              transition: 'all 0.25s ease',
+              ...(isActive(item) ? activeStyle : {}),
+            }}
+            onMouseEnter={(e) => {
+              e.currentTarget.style.transform = 'scale(1.05)';
+              e.currentTarget.style.boxShadow = '0 4px 12px rgba(255,112,67,0.6)';
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.transform = 'scale(1)';
+              e.currentTarget.style.boxShadow = '0 3px 6px rgba(255,112,67,0.4)';
+            }}
           >
-            Your Roadmap
-          </button>
-        </Link>
-      </div>
-
-      <div>
-        <h3 className="text-[#FF7043] mb-3 font-semibold text-lg">Open Creator</h3>
-        <Link href="/resume-cover" legacyBehavior>
-          <button
-            className="block bg-[#FF7043] hover:bg-[#F4511E] text-white px-5 py-3 rounded font-bold w-full transition-colors"
-            aria-label="Go to Resume and Cover Letter Creator"
-          >
-            Open Creator
-          </button>
-        </Link>
-      </div>
-
-      <div>
-        <h3 className="text-[#FF7043] mb-3 font-semibold text-lg">To The Pipeline</h3>
-        <Link href="/jobs" legacyBehavior>
-          <button
-            className="block bg-[#FF7043] hover:bg-[#F4511E] text-white px-5 py-3 rounded font-bold w-full transition-colors"
-            aria-label="Open The Pipeline"
-          >
-            To The Pipeline
-          </button>
-        </Link>
-      </div>
-
-      <div>
-        <h3 className="text-[#FF7043] mb-3 font-semibold text-lg">Visit Your Hearth</h3>
-        <Link href="/the-hearth" legacyBehavior>
-          <button
-            className="block bg-[#FF7043] hover:bg-[#F4511E] text-white px-5 py-3 rounded font-bold w-full transition-colors"
-            aria-label="Visit Your Hearth"
-          >
-            Visit Your Hearth
-          </button>
-        </Link>
-      </div>
-    </aside>
+            {item.label}
+          </Link>
+        </div>
+      ))}
+    </div>
   );
 }

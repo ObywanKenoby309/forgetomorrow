@@ -3,10 +3,9 @@ import '@/styles/globals.css';
 import { useRouter } from 'next/router';
 import { useEffect } from 'react';
 
-import Header from '@/components/Header';
-import Footer from '@/components/Footer';
 import LandingHeader from '@/components/LandingHeader';
 import LandingFooter from '@/components/LandingFooter';
+// ⛔ Removed Header/Footer to avoid mixed public headers
 
 import { ResumeProvider } from '@/context/ResumeContext';
 import { PlanProvider } from '@/context/PlanContext';
@@ -17,21 +16,15 @@ function RouteTracker() {
   useEffect(() => {
     if (typeof window === 'undefined') return;
 
-    // On first mount, record current page unless it's a feedback page.
     const initial = router.asPath || '/';
     if (!initial.startsWith('/feedback/')) {
-      try {
-        sessionStorage.setItem('lastRoute', initial);
-      } catch {}
+      try { sessionStorage.setItem('lastRoute', initial); } catch {}
     }
 
-    // Before navigating away, store the *current* page as lastRoute.
     const handleStart = () => {
       const curr = router.asPath || '/';
       if (!curr.startsWith('/feedback/')) {
-        try {
-          sessionStorage.setItem('lastRoute', curr);
-        } catch {}
+        try { sessionStorage.setItem('lastRoute', curr); } catch {}
       }
     };
 
@@ -45,19 +38,36 @@ function RouteTracker() {
 export default function App({ Component, pageProps }) {
   const router = useRouter();
 
+  // Internal app sections
   const isRecruiterRoute = router.pathname.startsWith('/recruiter');
 
-  // Landing header/footer only on these paths (and not for recruiter routes)
-  const isLandingPage =
-    !isRecruiterRoute &&
-    ['/', '/signup', '/features', '/login', '/about'].includes(router.pathname);
+  // Seeker routes render their own header inside pages
+  const isSeekerRoute =
+    router.pathname.startsWith('/seeker') ||
+    router.pathname.startsWith('/resume') ||
+    [
+      '/the-hearth',
+      '/jobs',
+      '/applications',
+      '/pinned-jobs',
+      '/resume-cover',
+      '/roadmap',
+    ].includes(router.pathname);
 
-  // Background image only on these paths (and not for recruiter routes)
+  // Coaching routes render their own header inside pages
+  const isCoachingRoute =
+    router.pathname === '/coaching-dashboard' ||
+    router.pathname.startsWith('/dashboard/coaching');
+
+  // Public = not recruiter/seeker/coaching
+  const isPublic = !isRecruiterRoute && !isSeekerRoute && !isCoachingRoute;
+
+  // Background image only on these paths (keep your current set)
   const useForgeBackground =
-    !isRecruiterRoute && ['/', '/about', '/features'].includes(router.pathname);
+    isPublic && ['/', '/about', '/features'].includes(router.pathname);
 
-  // We only need top padding when the fixed main site Header is present
-  const needsTopPadding = !isRecruiterRoute && !isLandingPage;
+  // Public header is fixed (h-14). Add top padding when public header is present.
+  const needsTopPadding = isPublic;
 
   return (
     <div className="relative min-h-screen">
@@ -81,22 +91,23 @@ export default function App({ Component, pageProps }) {
           !useForgeBackground ? 'bg-[#ECEFF1]' : ''
         }`}
       >
-        {/* Header logic:
-            - Recruiter routes render their own RecruiterHeader inside the page.
-            - Else, show LandingHeader on landing pages, Header everywhere else. */}
-        {!isRecruiterRoute && (isLandingPage ? <LandingHeader /> : <Header />)}
+        {/* Headers:
+            - Internal (recruiter/seeker/coaching) use their own in-page headers
+            - ALL public pages use LandingHeader (unify look) */}
+        {isPublic && <LandingHeader />}
 
-        {/* Global providers (Plan first so usePlan() is available everywhere) */}
         <PlanProvider>
           <ResumeProvider>
             <RouteTracker />
-            <div className={needsTopPadding ? 'pt-20' : ''}>
+            {/* Match LandingHeader height (h-14 ~ 56px) */}
+            <div className={needsTopPadding ? 'pt-14' : ''}>
               <Component {...pageProps} />
             </div>
           </ResumeProvider>
         </PlanProvider>
 
-        {!isRecruiterRoute && (isLandingPage ? <LandingFooter /> : <Footer />)}
+        {/* Footers: unify public footer as well */}
+        {isPublic && <LandingFooter />}
       </div>
     </div>
   );

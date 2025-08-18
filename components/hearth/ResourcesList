@@ -1,0 +1,60 @@
+export default function ResourcesList({ items = [] }) {
+  const data = items.length
+    ? items
+    : [
+        { id: 1, title: 'ATS‑Friendly Resume Template', type: 'Template' },
+        { id: 2, title: 'Negotiation Basics: Counter Offers', type: 'Guide' },
+        { id: 3, title: 'Onboarding: First 30/60/90', type: 'Playbook' },
+        { id: 4, title: 'Cover Letters that Convert', type: 'Guide' },
+        { id: 5, title: 'Behavioral Interview Question Bank', type: 'Resource' },
+        { id: 6, title: 'Portfolio Checklist', type: 'Checklist' },
+      ];
+
+  return (
+    <div
+      style={{
+        background: 'white',
+        border: '1px solid #eee',
+        borderRadius: 12,
+        padding: 16,
+        boxShadow: '0 2px 6px rgba(0,0,0,0.06)',
+      }}
+    >
+      <div style={{ display: 'grid', gap: 12, gridTemplateColumns: 'repeat(3, minmax(0, 1fr))' }}>
+        {data.map((r) => (
+          <div
+            key={r.id}
+            style={{
+              border: '1px solid #eee',
+              borderRadius: 10,
+              padding: 12,
+              background: '#FAFAFA',
+              display: 'grid',
+              gap: 6,
+            }}
+          >
+            <div style={{ fontWeight: 800, color: '#263238' }}>{r.title}</div>
+            <div style={{ color: '#607D8B', fontSize: 12 }}>{r.type}</div>
+            <button
+              type="button"
+              onClick={() => alert('Opening (demo)')}
+              style={{
+                marginTop: 4,
+                background: '#FF7043',
+                color: 'white',
+                padding: '8px 12px',
+                borderRadius: 10,
+                border: '1px solid rgba(0,0,0,0.06)',
+                fontWeight: 800,
+                cursor: 'pointer',
+                justifySelf: 'start',
+              }}
+            >
+              Open
+            </button>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
