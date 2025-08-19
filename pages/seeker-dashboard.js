@@ -4,15 +4,13 @@ import Link from 'next/link';
 
 import SeekerLayout from '@/components/layouts/SeekerLayout';
 import SeekerRightColumn from '@/components/seeker/SeekerRightColumn';
-
-import ResumeTrackerSummary from '@/components/ResumeTrackerSummary';
+// import ResumeTrackerSummary from '@/components/ResumeTrackerSummary'; // removed
 import PinnedJobsPreview from '@/components/PinnedJobsPreview';
-// Read-only board preview (same data as /seeker/applications)
 import ApplicationsBoard from '@/components/applications/ApplicationsBoard';
 
 const STORAGE_KEY = 'applicationsTracker';
 
-/** Compact, single‑row snapshot */
+/** Compact, single-row snapshot */
 function CompactSnapshot({ trackerData }) {
   const applied = Array.isArray(trackerData?.Applied) ? trackerData.Applied.length : 0;
   const interviewing = Array.isArray(trackerData?.Interviewing) ? trackerData.Interviewing.length : 0;
@@ -111,20 +109,7 @@ export default function SeekerDashboard() {
     >
       {/* CENTER COLUMN CONTENT */}
       <div style={{ display: 'grid', gap: 16 }}>
-        {/* Summary Counts */}
-        <section
-          style={{
-            background: 'white',
-            borderRadius: 12,
-            padding: 16,
-            border: '1px solid #eee',
-            boxShadow: '0 2px 6px rgba(0,0,0,0.06)',
-          }}
-        >
-          <ResumeTrackerSummary trackerData={trackerData} />
-        </section>
-
-        {/* Snapshot — compact single-row */}
+        {/* 1) Job Search Snapshot */}
         <section
           style={{
             background: 'white',
@@ -142,7 +127,31 @@ export default function SeekerDashboard() {
           <CompactSnapshot trackerData={trackerData} />
         </section>
 
-        {/* Pinned Jobs */}
+        {/* 2) Resume / Application Tracker */}
+        <section
+          style={{
+            background: 'white',
+            borderRadius: 12,
+            padding: 16,
+            border: '1px solid #eee', // ✅ fixed quoting here
+            boxShadow: '0 2px 6px rgba(0,0,0,0.06)',
+          }}
+        >
+          <ApplicationsBoard
+            stagesData={trackerData}
+            compact
+            columns={5}
+            title="Resume / Application Tracker"
+            actions={
+              <Link href="/seeker/applications" style={{ color: '#FF7043', fontWeight: 600 }}>
+                View all
+              </Link>
+            }
+            // no handlers: renders read-only preview here
+          />
+        </section>
+
+        {/* 3) Pinned Jobs */}
         <section
           style={{
             background: 'white',
@@ -166,30 +175,6 @@ export default function SeekerDashboard() {
             </Link>
           </div>
           <PinnedJobsPreview />
-        </section>
-
-        {/* Resume / Application Tracker — read-only board preview */}
-        <section
-          style={{
-            background: 'white',
-            borderRadius: 12,
-            padding: 16,
-            border: '1px solid #eee',
-            boxShadow: '0 2px 6px rgba(0,0,0,0.06)',
-          }}
-        >
-          <ApplicationsBoard
-            stagesData={trackerData}
-            compact
-            columns={5}
-            title="Resume / Application Tracker"
-            actions={
-              <Link href="/seeker/applications" style={{ color: '#FF7043', fontWeight: 600 }}>
-                View all
-              </Link>
-            }
-            // no handlers: renders read-only preview here
-          />
         </section>
       </div>
     </SeekerLayout>

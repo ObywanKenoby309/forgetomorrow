@@ -1,6 +1,5 @@
-// components/applications/ApplicationCard.js
 import React from 'react';
-import { FaArrowLeft, FaArrowRight, FaTrash, FaEdit, FaEye } from 'react-icons/fa';
+import { FaArrowLeft, FaArrowRight, FaEdit, FaEye } from 'react-icons/fa';
 
 const DEFAULT_STAGES = ["Pinned", "Applied", "Interviewing", "Offers", "Rejected"];
 
@@ -8,10 +7,9 @@ export default function ApplicationCard({
   job,
   stage,
   onMove,
-  onDelete,
   onEdit,
-  onView,   // NEW: optional view details action
-  stages,   // optional override from parent
+  onView,
+  stages,
 }) {
   const STAGES = Array.isArray(stages) && stages.length ? stages : DEFAULT_STAGES;
   const currentIndex = STAGES.indexOf(stage);
@@ -35,84 +33,100 @@ export default function ApplicationCard({
       </div>
       <div style={{ fontSize: 12, color: '#607D8B' }}>Added: {job.dateAdded}</div>
 
-      <div style={{ display: 'flex', justifyContent: 'space-between', gap: 8 }}>
-        <div style={{ display: 'flex', gap: 8 }}>
-          <button
-            onClick={() => onMove(job.id, stage, -1)}
-            disabled={currentIndex <= 0}
-            title="Move left"
-            style={{
-              background: 'none',
-              border: '1px solid #eee',
-              borderRadius: 6,
-              padding: 6,
-              cursor: currentIndex <= 0 ? 'not-allowed' : 'pointer',
-            }}
-          >
-            <FaArrowLeft color={currentIndex <= 0 ? '#ccc' : '#FF7043'} />
-          </button>
-          <button
-            onClick={() => onMove(job.id, stage, 1)}
-            disabled={currentIndex === STAGES.length - 1 || currentIndex === -1}
-            title="Move right"
-            style={{
-              background: 'none',
-              border: '1px solid #eee',
-              borderRadius: 6,
-              padding: 6,
-              cursor:
-                currentIndex === STAGES.length - 1 || currentIndex === -1
-                  ? 'not-allowed'
-                  : 'pointer',
-            }}
-          >
-            <FaArrowRight
-              color={
-                currentIndex === STAGES.length - 1 || currentIndex === -1
-                  ? '#ccc'
-                  : '#FF7043'
-              }
-            />
-          </button>
-        </div>
+      {/* Buttons row */}
+      <div
+        style={{
+          display: 'flex',
+          justifyContent: 'center',
+          flexWrap: 'wrap',
+          gap: 6,
+          marginTop: 4,
+        }}
+      >
+        <button
+          onClick={() => onMove(job.id, stage, -1)}
+          disabled={currentIndex <= 0}
+          title="Move left"
+          style={{
+            width: 32,
+            height: 32,
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            border: '1px solid #eee',
+            borderRadius: 6,
+            background: 'white',
+            cursor: currentIndex <= 0 ? 'not-allowed' : 'pointer',
+          }}
+        >
+          <FaArrowLeft color={currentIndex <= 0 ? '#ccc' : '#FF7043'} />
+        </button>
 
-        <div style={{ display: 'flex', gap: 8 }}>
-          {onView && (
-            <button
-              onClick={() => onView(job, stage)}
-              title="View details"
-              style={{ background: 'none', border: '1px solid #eee', borderRadius: 6, padding: 6, cursor: 'pointer' }}
-            >
-              <FaEye color="#546E7A" />
-            </button>
-          )}
+        <button
+          onClick={() => onMove(job.id, stage, 1)}
+          disabled={currentIndex === STAGES.length - 1 || currentIndex === -1}
+          title="Move right"
+          style={{
+            width: 32,
+            height: 32,
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            border: '1px solid #eee',
+            borderRadius: 6,
+            background: 'white',
+            cursor:
+              currentIndex === STAGES.length - 1 || currentIndex === -1
+                ? 'not-allowed'
+                : 'pointer',
+          }}
+        >
+          <FaArrowRight
+            color={
+              currentIndex === STAGES.length - 1 || currentIndex === -1
+                ? '#ccc'
+                : '#FF7043'
+            }
+          />
+        </button>
+
+        {onView && (
           <button
-            onClick={() => onEdit(job, stage)}
-            title="Edit"
+            onClick={() => onView(job, stage)}
+            title="View details"
             style={{
-              background: 'none',
+              width: 32,
+              height: 32,
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
               border: '1px solid #eee',
               borderRadius: 6,
-              padding: 6,
+              background: 'white',
               cursor: 'pointer',
             }}
           >
-            <FaEdit color="#546E7A" />
+            <FaEye color="#546E7A" />
           </button>
-          <button
-            onClick={() => onDelete(job.id, stage)}
-            title="Delete"
-            style={{
-              background: 'none',
-              border: '1px solid #eee',
-              borderRadius: 6,
-              padding: 6,
-              cursor: 'pointer',
-            }}
-          >
-            <FaTrash color="#E53935" />
-          </button>
-        </div>
+        )}
+
+        <button
+          onClick={() => onEdit(job, stage)}
+          title="Edit"
+          style={{
+            width: 32,
+            height: 32,
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            border: '1px solid #eee',
+            borderRadius: 6,
+            background: 'white',
+            cursor: 'pointer',
+          }}
+        >
+          <FaEdit color="#546E7A" />
+        </button>
       </div>
     </div>
   );

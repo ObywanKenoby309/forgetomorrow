@@ -4,10 +4,10 @@ import { usePlan } from "@/context/PlanContext";
 
 const navItems = [
   { href: "/seeker-dashboard", label: "Seeker Dashboard" },
-  { href: "/roadmap", label: "Your Roadmap" },
-  { href: "/resume-cover", label: "Open Creator" },
-  { href: "/jobs", label: "To The Pipeline" },
-  { href: "/seeker/the-hearth/", label: "Visit Your Hearth" },
+  { href: "/feed", label: "Community Feed" },
+  { href: "/seeker/messages", label: "The Signal" },
+  { href: "/jobs", label: "The Pipeline" },
+  { href: "/seeker/the-hearth/", label: "Your Hearth" },
 ];
 
 export default function SeekerHeader() {

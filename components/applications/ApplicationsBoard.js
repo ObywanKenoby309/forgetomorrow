@@ -8,9 +8,10 @@ export default function ApplicationsBoard({
   stagesData = { Pinned: [], Applied: [], Interviewing: [], Offers: [], Rejected: [] },
   onAdd, onMove, onEdit, onDelete, onView,
   compact = false,
-  columns = 5,
+  columns = 5,              // number OR "auto"
   title = 'Job Application Tracker',
-  actions = null, // optional React node (e.g., "+ Add Application" button)
+  actions = null,           // right side
+  leftActions = null,       // ✅ NEW: left-side actions (next to title)
 }) {
   const wrapStyle = {
     background: 'white',
@@ -18,6 +19,8 @@ export default function ApplicationsBoard({
     borderRadius: 12,
     padding: compact ? 12 : 16,
     boxShadow: '0 2px 6px rgba(0,0,0,0.06)',
+    width: '100%',
+    boxSizing: 'border-box',
   };
 
   const columnStyle = {
@@ -27,6 +30,12 @@ export default function ApplicationsBoard({
     boxShadow: '0 2px 6px rgba(0,0,0,0.06)',
   };
 
+  // Responsive / fixed columns
+  const gridTemplateColumns =
+    columns === 'auto'
+      ? 'repeat(auto-fit, minmax(220px, 1fr))'
+      : `repeat(${columns}, minmax(0, 1fr))`;
+
   return (
     <section style={wrapStyle}>
       {/* Header */}
@@ -35,21 +44,32 @@ export default function ApplicationsBoard({
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'space-between',
+          gap: 12,
           marginBottom: compact ? 8 : 12,
+          flexWrap: 'wrap',
         }}
       >
-        <h2 style={{ color: '#FF7043', margin: 0, fontSize: compact ? '1.05rem' : '1.25rem' }}>
-          {title}
-        </h2>
-        {actions}
+        {/* Left: title + optional leftActions */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: 12, flex: '1 1 auto', minWidth: 240 }}>
+          <h2 style={{ color: '#FF7043', margin: 0, fontSize: compact ? '1.05rem' : '1.25rem' }}>
+            {title}
+          </h2>
+          {leftActions}
+        </div>
+
+        {/* Right: actions */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+          {actions}
+        </div>
       </div>
 
       {/* Board */}
       <div
         style={{
           display: 'grid',
-          gridTemplateColumns: `repeat(${columns}, 1fr)`,
+          gridTemplateColumns,
           gap: compact ? 12 : 20,
+          width: '100%',
         }}
       >
         {STAGES.map((stage) => (

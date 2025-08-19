@@ -5,7 +5,8 @@ import { useEffect, useState } from 'react';
 
 import LandingHeader from '@/components/LandingHeader';
 import LandingFooter from '@/components/LandingFooter';
-import Footer from '@/components/Footer'; // internal footer
+import Footer from '@/components/Footer';
+import UniversalHeader from '@/components/UniversalHeader';
 
 import { ResumeProvider } from '@/context/ResumeContext';
 import { PlanProvider } from '@/context/PlanContext';
@@ -40,7 +41,6 @@ export default function App({ Component, pageProps }) {
 
   // --- Internal app sections by path prefix
   const isRecruiterRoute = router.pathname.startsWith('/recruiter');
-
   const isSeekerRoute =
     router.pathname.startsWith('/seeker') ||
     router.pathname.startsWith('/resume') ||
@@ -56,37 +56,29 @@ export default function App({ Component, pageProps }) {
   const isCoachingRoute =
     router.pathname === '/coaching-dashboard' ||
     router.pathname.startsWith('/dashboard/coaching');
-	
-  // ✅ Treat Settings as internal-only
+
   const isSettingsRoute = router.pathname === '/settings';
 
-  // Public = not recruiter/seeker/coaching (default behavior)
-  const isPublicByPath = !isRecruiterRoute && !isSeekerRoute && !isCoachingRoute;
+  // Public = not recruiter/seeker/coaching/settings
+  const isPublicByPath = !isRecruiterRoute && !isSeekerRoute && !isCoachingRoute && !isSettingsRoute;
 
-  // --- Shared routes (can be viewed both publicly and internally)
-  const sharedRoutes = new Set([
-    '/help',
-    '/privacy',
-    '/terms',
-    '/security',
-    '/accessibility',
-    '/cookies',
-  ]);
+  // Pages that use UniversalHeader (and NOT role headers or LandingHeader)
+  const universalHeaderRoutes = new Set(['/feed']);
+  const isUniversalPage = universalHeaderRoutes.has(router.pathname);
 
-  // Determine if a shared route should render as "internal" using lastRoute heuristic
+  // Shared (can be public or internal depending on entry point)
+  const sharedRoutes = new Set(['/help', '/privacy', '/terms', '/security', '/accessibility', '/cookies']);
+
   const [sharedAsInternal, setSharedAsInternal] = useState(false);
-
   useEffect(() => {
     if (typeof window === 'undefined') return;
 
     const isShared = sharedRoutes.has(router.pathname);
     if (!isShared) {
-      // Reset when navigating off shared routes
       setSharedAsInternal(false);
       return;
     }
 
-    // Look at lastRoute to infer context (set by RouteTracker)
     let lastRoute = null;
     try { lastRoute = sessionStorage.getItem('lastRoute') || ''; } catch {}
 
@@ -95,25 +87,26 @@ export default function App({ Component, pageProps }) {
       (lastRoute.startsWith('/seeker') ||
         lastRoute.startsWith('/recruiter') ||
         lastRoute.startsWith('/dashboard/coaching') ||
-        lastRoute === '/coaching-dashboard');
+        lastRoute === '/coaching-dashboard' ||
+        lastRoute === '/feed' ||
+        lastRoute === '/settings');
 
     setSharedAsInternal(cameFromInternal);
   }, [router.pathname]);
 
-  // Effective "public" flag: if on shared route and came from internal, treat as internal
   const isPublicEffective = sharedRoutes.has(router.pathname)
     ? (isPublicByPath && !sharedAsInternal)
     : isPublicByPath;
 
-  // Background image only on these paths (keep your current set) and only for public rendering
+  // Marketing bg only on public marketing pages (and not on /feed)
   const useForgeBackground =
-    isPublicEffective && ['/', '/about', '/features'].includes(router.pathname);
+    !isUniversalPage && isPublicEffective && ['/', '/about', '/features'].includes(router.pathname);
 
-  // Nudge background on home to reveal the forge more (About stays centered)
   const forgeBgPosition = router.pathname === '/' ? '35% center' : 'center';
 
-  // Public header is fixed (h-14). Add top padding when public header is present.
-  const needsTopPadding = isPublicEffective;
+  // Fixed headers are 56px tall (h-14)
+  const renderLandingHeader = isPublicEffective && !isUniversalPage;
+  const needsTopPadding = renderLandingHeader || isUniversalPage;
 
   return (
     <div className="relative min-h-screen">
@@ -137,25 +130,24 @@ export default function App({ Component, pageProps }) {
           !useForgeBackground ? 'bg-[#ECEFF1]' : ''
         }`}
       >
-        {/* Headers:
-            - Internal (recruiter/seeker/coaching) use their own in-page headers
-            - Public or shared-rendered-as-public uses LandingHeader */}
-        {isPublicEffective && <LandingHeader />}
+        {/* Public header stays outside providers */}
+        {renderLandingHeader && <LandingHeader />}
 
         <PlanProvider>
           <ResumeProvider>
             <RouteTracker />
-            {/* Match LandingHeader height (h-14 ~ 56px) */}
+
+            {/* 🔸 UniversalHeader MUST be inside PlanProvider because it calls usePlan */}
+            {isUniversalPage && <UniversalHeader />}
+
             <div className={needsTopPadding ? 'pt-14' : ''}>
               <Component {...pageProps} />
             </div>
           </ResumeProvider>
         </PlanProvider>
 
-        {/* Footers:
-            - Public or shared-rendered-as-public => LandingFooter
-            - Internal or shared-rendered-as-internal => Footer */}
-        {isPublicEffective ? <LandingFooter /> : <Footer />}
+        {/* Footers: universal and internal pages use internal Footer */}
+        {renderLandingHeader ? <LandingFooter /> : <Footer />}
       </div>
     </div>
   );

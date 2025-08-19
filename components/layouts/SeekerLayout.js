@@ -1,7 +1,9 @@
+// components/layouts/SeekerLayout.js
 import React from 'react';
 import Head from 'next/head';
 import SeekerSidebar from '@/components/SeekerSidebar';
 import SeekerHeader from '@/components/seeker/SeekerHeader';
+import useSidebarCounts from '@/components/hooks/useSidebarCounts';
 
 export default function SeekerLayout({
   title = 'ForgeTomorrow — Seeker',
@@ -11,6 +13,8 @@ export default function SeekerLayout({
   children,
   activeNav,
 }) {
+  const counts = useSidebarCounts(); // ← NEW
+
   return (
     <>
       <Head><title>{title}</title></Head>
@@ -32,7 +36,7 @@ export default function SeekerLayout({
       >
         {/* LEFT — Sidebar */}
         <aside style={{ gridArea: 'left', alignSelf: 'start' }}>
-          {left || <SeekerSidebar active={activeNav} />}
+          {left || <SeekerSidebar active={activeNav} counts={counts} />}
         </aside>
 
         {/* HEADER */}

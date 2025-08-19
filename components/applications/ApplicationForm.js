@@ -24,10 +24,8 @@ export default function ApplicationForm({
   const firstFieldRef = useRef(null);
 
   useEffect(() => {
-    // Autofocus first input
     if (firstFieldRef.current) firstFieldRef.current.focus();
 
-    // Warn on unsaved changes
     const beforeUnload = (e) => {
       if (dirty) {
         e.preventDefault();
@@ -36,7 +34,6 @@ export default function ApplicationForm({
     };
     window.addEventListener('beforeunload', beforeUnload);
 
-    // Close on ESC
     const onEsc = (e) => e.key === 'Escape' && onClose();
     document.addEventListener('keydown', onEsc);
 
@@ -60,10 +57,11 @@ export default function ApplicationForm({
     onSave(form);
   };
 
+  // 🔻 slightly tighter inputs to reduce overall height
   const inputStyle = {
     border: '1px solid #DADCE0',
     borderRadius: '8px',
-    padding: '10px 12px',
+    padding: '8px 10px', // was 10px 12px
     width: '100%',
     outline: 'none',
   };
@@ -78,9 +76,11 @@ export default function ApplicationForm({
         inset: 0,
         background: 'rgba(0,0,0,0.5)',
         display: 'flex',
-        alignItems: 'center',
+        alignItems: 'flex-start',  // push modal to the top
         justifyContent: 'center',
-        zIndex: 999,
+        paddingTop: '80px',  // adjust this to control how far below navbar
+        zIndex: 1000,
+		overflowY: 'auto',  // so it scrolls if content is taller than screen
       }}
     >
       <div
@@ -88,12 +88,14 @@ export default function ApplicationForm({
         style={{
           background: 'white',
           borderRadius: '12px',
-          padding: '0 0 20px 0',
+          padding: '0 0 16px 0', // was 20px bottom
           width: '100%',
           maxWidth: 480,
+          maxHeight: '85vh',     // ✅ cap overall height
           boxShadow: '0 8px 24px rgba(0,0,0,0.15)',
           display: 'flex',
           flexDirection: 'column',
+          overflow: 'hidden',    // ✅ let inner body scroll instead
         }}
       >
         {/* Sticky header */}
@@ -102,7 +104,7 @@ export default function ApplicationForm({
             display: 'flex',
             justifyContent: 'space-between',
             alignItems: 'center',
-            padding: '16px 20px',
+            padding: '12px 16px', // was 16px 20px
             borderBottom: '1px solid #eee',
             position: 'sticky',
             top: 0,
@@ -111,7 +113,7 @@ export default function ApplicationForm({
             borderTopRightRadius: '12px',
           }}
         >
-          <h2 style={{ color: '#FF7043', margin: 0 }}>
+          <h2 style={{ color: '#FF7043', margin: 0, fontSize: 18 }}>
             {mode === 'edit' ? 'Edit Application' : 'Add Application'}
           </h2>
           <button
@@ -133,7 +135,12 @@ export default function ApplicationForm({
         {/* Form */}
         <form
           onSubmit={handleSubmit}
-          style={{ display: 'grid', gap: 12, padding: '20px' }}
+          style={{
+            display: 'grid',
+            gap: 8,               // was 12
+            padding: '16px',      // was 20px
+            overflowY: 'auto',    // ✅ body scrolls if needed
+          }}
         >
           <div>
             <label style={labelStyle}>Job Title *</label>
@@ -178,12 +185,12 @@ export default function ApplicationForm({
               name="notes"
               value={form.notes}
               onChange={handleChange}
-              rows={3}
+              rows={2}                          // was 3
               style={{ ...inputStyle, resize: 'vertical' }}
             />
           </div>
 
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 /* was 10 */ }}>
             <div>
               <label style={labelStyle}>Date Added</label>
               <input
@@ -215,15 +222,15 @@ export default function ApplicationForm({
             style={{
               display: 'flex',
               justifyContent: 'flex-end',
-              gap: 10,
-              marginTop: 8,
+              gap: 8,            // was 10
+              marginTop: 6,      // was 8
             }}
           >
             <button
               type="button"
               onClick={onClose}
               style={{
-                padding: '8px 12px',
+                padding: '6px 10px', // was 8px 12px
                 borderRadius: 6,
                 border: '1px solid #ccc',
                 background: 'white',
@@ -238,9 +245,10 @@ export default function ApplicationForm({
                 backgroundColor: '#FF7043',
                 color: 'white',
                 border: 'none',
-                padding: '8px 14px',
+                padding: '6px 12px', // was 8px 14px
                 borderRadius: '6px',
                 cursor: 'pointer',
+                fontWeight: 700,
               }}
             >
               {mode === 'edit' ? 'Save Changes' : 'Save'}
