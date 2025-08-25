@@ -19,6 +19,12 @@ const STATIC_ALLOW = [
 ];
 
 export function middleware(req) {
+  // 🔓 EMERGENCY BYPASS FOR DEADLINE
+  // If set to '1' in Vercel env, skip the Coming Soon gate entirely.
+  if (process.env.NEXT_PUBLIC_OPEN_SITE === '1') {
+    return NextResponse.next();
+  }
+
   const { pathname } = new URL(req.url);
 
   // ✅ Bypass in dev / localhost
