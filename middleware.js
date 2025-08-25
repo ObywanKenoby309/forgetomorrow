@@ -93,4 +93,4 @@ export function middleware(req) {
   // B) Block coaching routes for non-coaches (unless preview)
   const isCoachingRoute =
     pathname === '/coaching-dashboard' ||
-    pathname.startsWith('/dashboard/coaching'
+    pathname.startsWith('/dashboard/coaching')
