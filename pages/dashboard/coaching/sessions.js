@@ -1,7 +1,8 @@
+// pages/dashboard/coaching/sessions.js
 import React, { useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
-import CoachingSidebar from '../../../components/coaching/CoachingSidebar';
-import CoachingHeader from '../../../components/coaching/CoachingHeader';
+import CoachingLayout from '@/components/layouts/CoachingLayout';
+import CoachingRightColumn from '@/components/coaching/CoachingRightColumn';
 
 const STORAGE_KEY = 'coachSessions_v1';
 
@@ -183,308 +184,301 @@ export default function CoachingSessionsPage() {
 
   return (
     <>
-      <CoachingHeader />
-
-      <div
-        style={{
-          display: 'grid',
-          gridTemplateColumns: '300px 1fr',
-          gap: '20px',
-          padding: '120px 20px 20px',
-          minHeight: '100vh',
-          backgroundColor: '#ECEFF1',
-        }}
+      <CoachingLayout
+        title="Sessions | ForgeTomorrow"
+        headerTitle="Your Coaching Sessions"
+        headerDescription="Filter, add, and manage upcoming sessions. Switch to calendar for a weekly view."
+        activeNav="sessions"
+        right={<CoachingRightColumn />}
       >
-        <CoachingSidebar active="sessions" />
+        <div style={{ display: 'grid', gap: 16, maxWidth: 860 }}>
+          {/* Filters + actions */}
+          <section
+            style={{
+              background: 'white',
+              borderRadius: 12,
+              padding: 20,
+              boxShadow: '0 2px 6px rgba(0,0,0,0.06)',
+              border: '1px solid #eee',
+            }}
+          >
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr auto auto', gap: 12, alignItems: 'center' }}>
+              <select
+                value={type}
+                onChange={(e) => setType(e.target.value)}
+                style={{ border: '1px solid #ddd', borderRadius: 10, padding: '10px 12px', outline: 'none', background: 'white' }}
+                aria-label="Filter by session type"
+              >
+                <option value="All">All Types</option>
+                <option value="Strategy">Strategy</option>
+                <option value="Resume">Resume</option>
+                <option value="Interview">Interview</option>
+              </select>
 
-        <main style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
-          <div style={{ maxWidth: 860 }}>
-            {/* Filters + actions */}
-            <section
+              <select
+                value={status}
+                onChange={(e) => setStatus(e.target.value)}
+                style={{ border: '1px solid #ddd', borderRadius: 10, padding: '10px 12px', outline: 'none', background: 'white' }}
+                aria-label="Filter by session status"
+              >
+                <option value="All">All Statuses</option>
+                <option value="Scheduled">Scheduled</option>
+                <option value="Completed">Completed</option>
+                <option value="No-show">No-show</option>
+              </select>
+
+              <Link href="/dashboard/coaching/sessions/calendar" style={{ color: '#FF7043', fontWeight: 700 }}>
+                Calendar View →
+              </Link>
+
+              <button
+                type="button"
+                onClick={openAdd}
+                style={{
+                  background: '#FF7043',
+                  color: 'white',
+                  border: 'none',
+                  borderRadius: 10,
+                  padding: '10px 12px',
+                  fontWeight: 700,
+                  cursor: 'pointer',
+                  justifySelf: 'end',
+                }}
+              >
+                + Add Session
+              </button>
+            </div>
+          </section>
+
+          {/* Agenda */}
+          <section
+            style={{
+              background: 'white',
+              borderRadius: 12,
+              padding: 20,
+              boxShadow: '0 2px 6px rgba(0,0,0,0.06)',
+              border: '1px solid #eee',
+            }}
+          >
+            <h2 style={{ color: '#FF7043', marginTop: 0, marginBottom: 12 }}>Agenda</h2>
+
+            {/* Header row with Actions column */}
+            <div
               style={{
-                background: 'white',
-                borderRadius: 12,
-                padding: '20px',
-                boxShadow: '0 2px 6px rgba(0,0,0,0.06)',
+                display: 'grid',
+                gridTemplateColumns: '90px 1fr 120px 120px 110px',
+                gap: 10,
+                padding: '6px 10px',
+                background: '#FAFAFA',
+                color: '#607D8B',
+                fontSize: 12,
                 border: '1px solid #eee',
+                borderRadius: 8,
+                marginBottom: 6,
+                fontWeight: 700,
               }}
             >
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr auto auto', gap: '12px', alignItems: 'center' }}>
-                <select
-                  value={type}
-                  onChange={(e) => setType(e.target.value)}
-                  style={{ border: '1px solid #ddd', borderRadius: '10px', padding: '10px 12px', outline: 'none', background: 'white' }}
-                >
-                  <option value="All">All Types</option>
-                  <option value="Strategy">Strategy</option>
-                  <option value="Resume">Resume</option>
-                  <option value="Interview">Interview</option>
-                </select>
+              <span>Time</span>
+              <span>Name</span>
+              <span>Topic</span>
+              <span>Status</span>
+              <span>Actions</span>
+            </div>
 
-                <select
-                  value={status}
-                  onChange={(e) => setStatus(e.target.value)}
-                  style={{ border: '1px solid #ddd', borderRadius: '10px', padding: '10px 12px', outline: 'none', background: 'white' }}
-                >
-                  <option value="All">All Statuses</option>
-                  <option value="Scheduled">Scheduled</option>
-                  <option value="Completed">Completed</option>
-                  <option value="No-show">No-show</option>
-                </select>
+            {orderedDates.map((d) => (
+              <div key={d} style={{ marginBottom: 16 }}>
+                <div style={{ fontWeight: 700, marginBottom: 8, color: '#263238' }}>{friendlyLabel(d)}</div>
+                <ul style={{ margin: 0, padding: 0, listStyle: 'none', display: 'grid', gap: 8 }}>
+                  {groups[d].map((s, idx) => {
+                    const masterIdx = findIndexOf(s);
+                    return (
+                      <li
+                        key={`${d}-${idx}`}
+                        style={{
+                          display: 'grid',
+                          gridTemplateColumns: '90px 1fr 120px 120px 110px',
+                          alignItems: 'center',
+                          gap: 10,
+                          border: '1px solid #eee',
+                          borderRadius: 8,
+                          padding: '8px 10px',
+                          background: '#FAFAFA',
+                        }}
+                      >
+                        <strong>{s.time}</strong>
+                        <span style={{ color: '#455A64' }}>{s.client}</span>
+                        <span>{typePill(s.type)}</span>
+                        <span>{badge(s.status)}</span>
+                        <div style={{ display: 'flex', gap: 6 }}>
+                          <button
+                            type="button"
+                            onClick={() => openEdit(masterIdx)}
+                            style={{
+                              background: '#FFF3E0',
+                              color: '#E65100',
+                              border: '1px solid #E65100',
+                              borderRadius: 6,
+                              padding: '4px 8px',
+                              fontSize: 11,
+                              cursor: 'pointer',
+                            }}
+                          >
+                            Edit
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => deleteSession(masterIdx)}
+                            style={{
+                              background: 'white',
+                              color: '#C62828',
+                              border: '1px solid #C62828',
+                              borderRadius: 6,
+                              padding: '4px 8px',
+                              fontSize: 11,
+                              cursor: 'pointer',
+                            }}
+                          >
+                            Delete
+                          </button>
+                        </div>
+                      </li>
+                    );
+                  })}
+                </ul>
+              </div>
+            ))}
 
-                <Link href="/dashboard/coaching/sessions/calendar" style={{ color: '#FF7043', fontWeight: 700 }}>
-                  Calendar View →
-                </Link>
+            {orderedDates.length === 0 && <div style={{ color: '#90A4AE' }}>No sessions match your filters.</div>}
+          </section>
+        </div>
+      </CoachingLayout>
 
+      {/* Modal */}
+      {modal.open && (
+        <div
+          style={{
+            position: 'fixed',
+            top: 0, left: 0, right: 0, bottom: 0,
+            background: 'rgba(0,0,0,0.4)',
+            display: 'flex',
+            justifyContent: 'center',
+            alignItems: 'center',
+            zIndex: 9999,
+          }}
+        >
+          <form
+            onSubmit={modal.mode === 'add' ? saveAdd : saveEdit}
+            style={{
+              background: 'white',
+              borderRadius: 12,
+              padding: 20,
+              width: 400,
+              display: 'flex',
+              flexDirection: 'column',
+              gap: 12,
+            }}
+          >
+            <h3 style={{ margin: 0, color: '#FF7043' }}>
+              {modal.mode === 'add' ? 'Add Session' : 'Edit Session'}
+            </h3>
+
+            <label>
+              Date:
+              <input
+                type="date"
+                value={form.date}
+                onChange={(e) => update('date', e.target.value)}
+                style={{ width: '100%', padding: 6 }}
+              />
+            </label>
+            <label>
+              Time:
+              <input
+                type="time"
+                value={form.time}
+                onChange={(e) => update('time', e.target.value)}
+                style={{ width: '100%', padding: 6 }}
+              />
+            </label>
+            <label>
+              Client Name:
+              <input
+                type="text"
+                value={form.client}
+                onChange={(e) => update('client', e.target.value)}
+                style={{ width: '100%', padding: 6 }}
+              />
+            </label>
+            <label>
+              Type:
+              <select value={form.type} onChange={(e) => update('type', e.target.value)} style={{ width: '100%', padding: 6 }}>
+                <option value="Strategy">Strategy</option>
+                <option value="Resume">Resume</option>
+                <option value="Interview">Interview</option>
+              </select>
+            </label>
+            <label>
+              Status:
+              <select value={form.status} onChange={(e) => update('status', e.target.value)} style={{ width: '100%', padding: 6 }}>
+                <option value="Scheduled">Scheduled</option>
+                <option value="Completed">Completed</option>
+                <option value="No-show">No-show</option>
+              </select>
+            </label>
+
+            <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: 10 }}>
+              {modal.mode === 'edit' && (
                 <button
                   type="button"
-                  onClick={openAdd}
+                  onClick={() => deleteSession(modal.index)}
+                  style={{
+                    background: 'white',
+                    color: '#C62828',
+                    border: '1px solid #C62828',
+                    borderRadius: 10,
+                    padding: '10px 12px',
+                    fontWeight: 700,
+                    cursor: 'pointer',
+                  }}
+                >
+                  Delete
+                </button>
+              )}
+              <div style={{ display: 'flex', gap: 8 }}>
+                <button
+                  type="submit"
                   style={{
                     background: '#FF7043',
                     color: 'white',
                     border: 'none',
-                    borderRadius: '10px',
+                    borderRadius: 10,
                     padding: '10px 12px',
                     fontWeight: 700,
                     cursor: 'pointer',
-                    justifySelf: 'end',
                   }}
                 >
-                  + Add Session
+                  Save
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setModal({ open: false, mode: 'add', index: null })}
+                  style={{
+                    background: 'white',
+                    color: '#FF7043',
+                    border: '1px solid #FF7043',
+                    borderRadius: 10,
+                    padding: '10px 12px',
+                    fontWeight: 700,
+                    cursor: 'pointer',
+                  }}
+                >
+                  Cancel
                 </button>
               </div>
-            </section>
-
-            {/* Agenda */}
-            <section
-              style={{
-                background: 'white',
-                borderRadius: '12px',
-                padding: '20px',
-                boxShadow: '0 2px 6px rgba(0,0,0,0.06)',
-                border: '1px solid #eee',
-              }}
-            >
-              <h2 style={{ color: '#FF7043', marginTop: 0, marginBottom: '12px' }}>Agenda</h2>
-
-              {/* Header row with Actions column */}
-              <div
-                style={{
-                  display: 'grid',
-                  gridTemplateColumns: '90px 1fr 120px 120px 110px',
-                  gap: '10px',
-                  padding: '6px 10px',
-                  background: '#FAFAFA',
-                  color: '#607D8B',
-                  fontSize: '12px',
-                  border: '1px solid #eee',
-                  borderRadius: '8px',
-                  marginBottom: '6px',
-                  fontWeight: 700,
-                }}
-              >
-                <span>Time</span>
-                <span>Name</span>
-                <span>Topic</span>
-                <span>Status</span>
-                <span>Actions</span>
-              </div>
-
-              {orderedDates.map((d) => (
-                <div key={d} style={{ marginBottom: '16px' }}>
-                  <div style={{ fontWeight: 700, marginBottom: '8px', color: '#263238' }}>{friendlyLabel(d)}</div>
-                  <ul style={{ margin: 0, padding: 0, listStyle: 'none', display: 'grid', gap: '8px' }}>
-                    {groups[d].map((s, idx) => {
-                      const masterIdx = findIndexOf(s);
-                      return (
-                        <li
-                          key={`${d}-${idx}`}
-                          style={{
-                            display: 'grid',
-                            gridTemplateColumns: '90px 1fr 120px 120px 110px',
-                            alignItems: 'center',
-                            gap: '10px',
-                            border: '1px solid #eee',
-                            borderRadius: '8px',
-                            padding: '8px 10px',
-                            background: '#FAFAFA',
-                          }}
-                        >
-                          <strong>{s.time}</strong>
-                          <span style={{ color: '#455A64' }}>{s.client}</span>
-                          <span>{typePill(s.type)}</span>
-                          <span>{badge(s.status)}</span>
-                          <div style={{ display: 'flex', gap: '6px' }}>
-                            <button
-                              type="button"
-                              onClick={() => openEdit(masterIdx)}
-                              style={{
-                                background: '#FFF3E0',
-                                color: '#E65100',
-                                border: '1px solid #E65100',
-                                borderRadius: '6px',
-                                padding: '4px 8px',
-                                fontSize: '11px',
-                                cursor: 'pointer',
-                              }}
-                            >
-                              Edit
-                            </button>
-                            <button
-                              type="button"
-                              onClick={() => deleteSession(masterIdx)}
-                              style={{
-                                background: 'white',
-                                color: '#C62828',
-                                border: '1px solid #C62828',
-                                borderRadius: '6px',
-                                padding: '4px 8px',
-                                fontSize: '11px',
-                                cursor: 'pointer',
-                              }}
-                            >
-                              Delete
-                            </button>
-                          </div>
-                        </li>
-                      );
-                    })}
-                  </ul>
-                </div>
-              ))}
-
-              {orderedDates.length === 0 && <div style={{ color: '#90A4AE' }}>No sessions match your filters.</div>}
-            </section>
-          </div>
-        </main>
-
-        {/* Modal */}
-        {modal.open && (
-          <div
-            style={{
-              position: 'fixed',
-              top: 0, left: 0, right: 0, bottom: 0,
-              background: 'rgba(0,0,0,0.4)',
-              display: 'flex',
-              justifyContent: 'center',
-              alignItems: 'center',
-              zIndex: 9999,
-            }}
-          >
-            <form
-              onSubmit={modal.mode === 'add' ? saveAdd : saveEdit}
-              style={{
-                background: 'white',
-                borderRadius: '12px',
-                padding: '20px',
-                width: '400px',
-                display: 'flex',
-                flexDirection: 'column',
-                gap: '12px',
-              }}
-            >
-              <h3 style={{ margin: 0, color: '#FF7043' }}>
-                {modal.mode === 'add' ? 'Add Session' : 'Edit Session'}
-              </h3>
-
-              <label>
-                Date:
-                <input
-                  type="date"
-                  value={form.date}
-                  onChange={(e) => update('date', e.target.value)}
-                  style={{ width: '100%', padding: '6px' }}
-                />
-              </label>
-              <label>
-                Time:
-                <input
-                  type="time"
-                  value={form.time}
-                  onChange={(e) => update('time', e.target.value)}
-                  style={{ width: '100%', padding: '6px' }}
-                />
-              </label>
-              <label>
-                Client Name:
-                <input
-                  type="text"
-                  value={form.client}
-                  onChange={(e) => update('client', e.target.value)}
-                  style={{ width: '100%', padding: '6px' }}
-                />
-              </label>
-              <label>
-                Type:
-                <select value={form.type} onChange={(e) => update('type', e.target.value)} style={{ width: '100%', padding: '6px' }}>
-                  <option value="Strategy">Strategy</option>
-                  <option value="Resume">Resume</option>
-                  <option value="Interview">Interview</option>
-                </select>
-              </label>
-              <label>
-                Status:
-                <select value={form.status} onChange={(e) => update('status', e.target.value)} style={{ width: '100%', padding: '6px' }}>
-                  <option value="Scheduled">Scheduled</option>
-                  <option value="Completed">Completed</option>
-                  <option value="No-show">No-show</option>
-                </select>
-              </label>
-
-              <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: '10px' }}>
-                {modal.mode === 'edit' && (
-                  <button
-                    type="button"
-                    onClick={() => deleteSession(modal.index)}
-                    style={{
-                      background: 'white',
-                      color: '#C62828',
-                      border: '1px solid #C62828',
-                      borderRadius: '10px',
-                      padding: '10px 12px',
-                      fontWeight: 700,
-                      cursor: 'pointer',
-                    }}
-                  >
-                    Delete
-                  </button>
-                )}
-                <div style={{ display: 'flex', gap: '8px' }}>
-                  <button
-                    type="submit"
-                    style={{
-                      background: '#FF7043',
-                      color: 'white',
-                      border: 'none',
-                      borderRadius: '10px',
-                      padding: '10px 12px',
-                      fontWeight: 700,
-                      cursor: 'pointer',
-                    }}
-                  >
-                    Save
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setModal({ open: false, mode: 'add', index: null })}
-                    style={{
-                      background: 'white',
-                      color: '#FF7043',
-                      border: '1px solid #FF7043',
-                      borderRadius: '10px',
-                      padding: '10px 12px',
-                      fontWeight: 700,
-                      cursor: 'pointer',
-                    }}
-                  >
-                    Cancel
-                  </button>
-                </div>
-              </div>
-            </form>
-          </div>
-        )}
-      </div>
+            </div>
+          </form>
+        </div>
+      )}
     </>
   );
 }

@@ -42,6 +42,7 @@ export default function ClientRequestsCard({ linkHref = '/dashboard/coaching/cli
         borderRadius: 10,
         padding: 16,
         minHeight: 120,
+        height: '100%',
         display: 'flex',
         flexDirection: 'column',
       }}
@@ -80,11 +81,22 @@ export default function ClientRequestsCard({ linkHref = '/dashboard/coaching/cli
               }}
             >
               <div style={{ fontWeight: 600, minWidth: 140, color: '#263238' }}>{r.name}</div>
-              <div style={{ fontSize: 12, color: '#607D8B', flex: 1, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+              <div
+                style={{
+                  fontSize: 12,
+                  color: '#607D8B',
+                  flex: 1,
+                  whiteSpace: 'nowrap',
+                  overflow: 'hidden',
+                  textOverflow: 'ellipsis',
+                }}
+              >
                 {r.source ? `${r.source} • ` : ''}{formatWhen(r.requestedAt)}
               </div>
+
+              {/* Deep link to specific request; keep user on the Pending tab */}
               <Link
-                href={`${linkHref}?id=${encodeURIComponent(r.id)}`}
+                href={`${linkHref}?tab=pending&id=${encodeURIComponent(r.id)}#req-${encodeURIComponent(r.id)}`}
                 style={{ color: '#FF7043', fontWeight: 600, whiteSpace: 'nowrap' }}
               >
                 Review
@@ -95,7 +107,8 @@ export default function ClientRequestsCard({ linkHref = '/dashboard/coaching/cli
       </ul>
 
       <div style={{ textAlign: 'right', marginTop: 10 }}>
-        <Link href={linkHref} style={{ color: '#FF7043', fontWeight: 600 }}>
+        {/* Generic link to the list (no focused id), defaulting to Pending tab */}
+        <Link href={`${linkHref}?tab=pending`} style={{ color: '#FF7043', fontWeight: 600 }}>
           Review all requests
         </Link>
       </div>

@@ -9,14 +9,15 @@ const REQUESTS_KEY = 'coachClientRequests_v1';
 
 function readRequests() {
   try {
-    const arr = JSON.parse(localStorage.getItem(REQUESTS_KEY) || '[]');
+    const raw = localStorage.getItem(REQUESTS_KEY);
+    const arr = raw ? JSON.parse(raw) : [];
     return Array.isArray(arr) ? arr : [];
   } catch {
     return [];
   }
 }
 function writeRequests(list) {
-  localStorage.setItem(REQUESTS_KEY, JSON.stringify(list));
+  localStorage.setItem(REQUESTS_KEY, JSON.stringify(Array.isArray(list) ? list : []));
 }
 function fmt(ts) {
   try {
@@ -38,15 +39,30 @@ export default function ClientRequestsPage() {
   const [all, setAll] = useState([]);
   const [q, setQ] = useState('');
   const [tab, setTab] = useState('pending'); // 'pending' | 'approved' | 'declined'
+  const [highlightId, setHighlightId] = useState(null);
 
+  // Seed + load
   useEffect(() => {
     if (typeof window === 'undefined') return;
     const items = readRequests();
-    // lightweight seed if empty (dev only)
     if (items.length === 0) {
       const seed = [
-        { id: 'req_101', name: 'Jamie Park', source: 'Self-signup', requestedAt: new Date().toISOString(), status: 'pending', notes: '' },
-        { id: 'req_102', name: 'Luis Alvarez', source: 'Referral', requestedAt: new Date(Date.now() - 3600e3).toISOString(), status: 'pending', notes: 'Resume help' },
+        {
+          id: 'req_101',
+          name: 'Jamie Park',
+          source: 'Self-signup',
+          requestedAt: new Date().toISOString(),
+          status: 'pending',
+          notes: '',
+        },
+        {
+          id: 'req_102',
+          name: 'Luis Alvarez',
+          source: 'Referral',
+          requestedAt: new Date(Date.now() - 3600e3).toISOString(),
+          status: 'pending',
+          notes: 'Resume help',
+        },
       ];
       writeRequests(seed);
       setAll(seed);
@@ -55,34 +71,59 @@ export default function ClientRequestsPage() {
     }
   }, []);
 
-  // read URL hints (?tab=, ?id=)
+  // React to URL hints (?tab= , ?id= )
   useEffect(() => {
     if (!router.isReady) return;
+
     const t = (router.query.tab || 'pending').toString();
     setTab(['pending', 'approved', 'declined'].includes(t) ? t : 'pending');
-    // if an id is provided, jump the list to show it first (simple UX)
+
     const id = router.query.id ? router.query.id.toString() : null;
-    if (id) {
-      setAll(prev => {
-        const idx = prev.findIndex(x => x.id === id);
-        if (idx <= 0) return prev;
-        const copy = [...prev];
-        const [item] = copy.splice(idx, 1);
-        return [item, ...copy];
-      });
-    }
+    if (id) setHighlightId(id);
   }, [router.isReady, router.query.tab, router.query.id]);
+
+  // If an id is present, auto-switch to the item's status and scroll to it
+  useEffect(() => {
+    if (!highlightId || all.length === 0) return;
+
+    const item = all.find(r => r.id === highlightId);
+    if (item) {
+      const statusTab = item.status || 'pending';
+      if (tab !== statusTab) setTab(statusTab);
+    }
+
+    const handle = setTimeout(() => {
+      const el = document.getElementById(`req-${highlightId}`);
+      if (el && typeof el.scrollIntoView === 'function') {
+        el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        el.style.transition = 'box-shadow 0.3s ease, border-color 0.3s ease';
+        el.style.boxShadow = '0 0 0 3px rgba(255,112,67,0.35)';
+        el.style.borderColor = '#FF7043';
+        setTimeout(() => {
+          el.style.boxShadow = '';
+          el.style.borderColor = '#eee';
+        }, 2000);
+      }
+    }, 150);
+
+    return () => clearTimeout(handle);
+  }, [highlightId, all, tab]);
 
   const filtered = useMemo(() => {
     const term = q.trim().toLowerCase();
     return all
       .filter(r => (r.status || 'pending') === tab)
-      .filter(r => !term || r.name.toLowerCase().includes(term) || (r.source || '').toLowerCase().includes(term));
+      .filter(
+        r =>
+          !term ||
+          r.name.toLowerCase().includes(term) ||
+          (r.source || '').toLowerCase().includes(term)
+      );
   }, [all, q, tab]);
 
   const counts = useMemo(() => {
     const x = { pending: 0, approved: 0, declined: 0 };
-    for (const r of all) x[(r.status || 'pending')]++;
+    for (const r of all) x[r.status || 'pending']++;
     return x;
   }, [all]);
 
@@ -102,34 +143,15 @@ export default function ClientRequestsPage() {
     });
   }
 
-  const HeaderBox = (
-    <section
-      style={{
-        background: 'white',
-        border: '1px solid #eee',
-        borderRadius: 12,
-        padding: 16,
-        boxShadow: '0 2px 6px rgba(0,0,0,0.06)',
-        textAlign: 'center',
-      }}
-    >
-      <h1 style={{ margin: 0, color: '#FF7043', fontSize: 24, fontWeight: 800 }}>
-        Client Requests
-      </h1>
-      <p style={{ margin: '6px auto 0', color: '#607D8B', maxWidth: 720 }}>
-        View and triage new client intakes. Approve to add to your roster, or decline with notes.
-      </p>
-    </section>
-  );
-
   return (
     <CoachingLayout
       title="Client Requests | ForgeTomorrow"
-      header={HeaderBox}
+      headerTitle="Client Requests"
+      headerDescription="View and triage new client intakes. Approve to add to your roster, or decline with notes."
       activeNav="clients"
       right={<CoachingRightColumn />}
     >
-      <div style={{ display: 'grid', gap: 16, maxWidth: 980 }}>
+      <div style={{ display: 'grid', gap: 16, maxWidth: 860 }}>
         {/* Tabs + search row */}
         <div
           style={{
@@ -155,11 +177,11 @@ export default function ClientRequestsPage() {
                 fontWeight: 700,
                 cursor: 'pointer',
               }}
+              aria-pressed={tab === t}
+              aria-label={`Show ${t} requests`}
             >
               {t[0].toUpperCase() + t.slice(1)}{' '}
-              <span style={{ opacity: 0.8 }}>
-                ({counts[t] || 0})
-              </span>
+              <span style={{ opacity: 0.8 }}>({counts[t] || 0})</span>
             </button>
           ))}
           <div style={{ marginLeft: 'auto', display: 'flex', gap: 8 }}>
@@ -167,6 +189,7 @@ export default function ClientRequestsPage() {
               value={q}
               onChange={e => setQ(e.target.value)}
               placeholder="Search name or source…"
+              aria-label="Search requests"
               style={{
                 border: '1px solid #ccc',
                 borderRadius: 8,
@@ -174,7 +197,10 @@ export default function ClientRequestsPage() {
                 minWidth: 240,
               }}
             />
-            <Link href="/dashboard/coaching/clients" style={{ alignSelf: 'center', color: '#FF7043', fontWeight: 600 }}>
+            <Link
+              href="/dashboard/coaching/clients"
+              style={{ alignSelf: 'center', color: '#FF7043', fontWeight: 600 }}
+            >
               Go to Clients
             </Link>
           </div>
@@ -198,6 +224,7 @@ export default function ClientRequestsPage() {
             filtered.map(r => (
               <div
                 key={r.id}
+                id={`req-${r.id}`}
                 style={{
                   display: 'grid',
                   gridTemplateColumns: 'minmax(200px, 1fr) 1fr 220px',
@@ -233,6 +260,7 @@ export default function ClientRequestsPage() {
                         fontWeight: 700,
                         cursor: 'pointer',
                       }}
+                      aria-label={`Approve ${r.name}`}
                     >
                       Approve
                     </button>
@@ -249,6 +277,7 @@ export default function ClientRequestsPage() {
                         fontWeight: 700,
                         cursor: 'pointer',
                       }}
+                      aria-label={`Decline ${r.name}`}
                     >
                       Decline
                     </button>
@@ -265,7 +294,7 @@ export default function ClientRequestsPage() {
                       cursor: 'pointer',
                     }}
                     title="Remove request"
-                    aria-label="Remove request"
+                    aria-label={`Remove request for ${r.name}`}
                   >
                     Remove
                   </button>
