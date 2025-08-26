@@ -5,7 +5,9 @@ import { NextResponse } from 'next/server';
 const PUBLIC_PATHS = new Set([
   '/', '/waiting-list', '/about',
   '/pricing', '/features', '/login', '/signup', '/contact',
-  '/coming-soon'
+  '/coming-soon',
+  // keep public feedback form + any nested routes like /feedback/coach-id
+  '/feedback',
 ]);
 
 // Static files always allowed
@@ -19,15 +21,9 @@ const STATIC_ALLOW = [
 ];
 
 export function middleware(req) {
-  // 🔓 EMERGENCY BYPASS FOR DEADLINE (optional)
-  // If NEXT_PUBLIC_OPEN_SITE=1 is set in Vercel, skip the Coming Soon gate entirely.
-  if (process.env.NEXT_PUBLIC_OPEN_SITE === '1') {
-    return NextResponse.next();
-  }
-
   const { pathname } = new URL(req.url);
 
-  // ✅ Bypass in dev / localhost
+  // ✅ Bypass in dev / localhost (you can see everything locally)
   const hostname = req.nextUrl.hostname;
   if (
     process.env.NODE_ENV === 'development' ||
@@ -43,11 +39,16 @@ export function middleware(req) {
   }
 
   // Allow public pages (handles trailing slash)
-  if (PUBLIC_PATHS.has(pathname) || PUBLIC_PATHS.has(pathname.replace(/\/$/, ''))) {
+  const normalized = pathname.replace(/\/$/, '') || '/';
+  if (PUBLIC_PATHS.has(normalized)) {
+    return NextResponse.next();
+  }
+  // Also allow nested under listed public prefixes (e.g., /feedback/abc)
+  if ([...PUBLIC_PATHS].some((p) => p !== '/' && normalized.startsWith(p + '/'))) {
     return NextResponse.next();
   }
 
-  // Everything else → Coming Soon
+  // Everything else → Coming Soon (locked down)
   const url = new URL('/coming-soon', req.url);
   return NextResponse.rewrite(url);
 }
