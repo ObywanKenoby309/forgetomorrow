@@ -1,17 +1,16 @@
 // pages/profile.js
 import React, { useState } from 'react';
 import Head from 'next/head';
+import Link from 'next/link';
+import { useRouter } from 'next/router';
 import SeekerLayout from '@/components/layouts/SeekerLayout';
 
-// ⚙️ Quick spacing controls (tweak to taste)
-const UI = {
-  CARD_PAD: 16,       // section padding
-  SECTION_GAP: 16,    // vertical gap between sections
-  AVATAR_SIZE: 128,   // profile image size
-  INLINE_GAP: 16,     // row spacing in header card
-};
+const UI = { CARD_PAD: 16, SECTION_GAP: 16, AVATAR_SIZE: 128, INLINE_GAP: 16 };
 
 export default function ProfilePage() {
+  const router = useRouter();
+  const chromeSuffix = router.query.chrome === 'coach' ? '?chrome=coach' : '';
+
   const [historyOpen, setHistoryOpen] = useState(false);
 
   const HeaderBox = (
@@ -35,20 +34,12 @@ export default function ProfilePage() {
   );
 
   const alertSoon = (feature) => () => alert(`${feature} feature coming soon!`);
-
-  // optional: named handler so you can comment near the function if needed
   const openHistory = () => setHistoryOpen(true);
 
   return (
     <>
       <Head><title>Profile | ForgeTomorrow</title></Head>
-
-      <SeekerLayout
-        title="Profile | ForgeTomorrow"
-        header={HeaderBox}
-        right={null}
-        activeNav="profile"
-      >
+      <SeekerLayout title="Profile | ForgeTomorrow" header={HeaderBox} right={null} activeNav="profile">
         <div style={{ maxWidth: 860, display: 'grid', gap: UI.SECTION_GAP }}>
           {/* Top: Image + Basics */}
           <section
@@ -61,7 +52,6 @@ export default function ProfilePage() {
             }}
           >
             <div style={{ display: 'flex', gap: UI.INLINE_GAP, alignItems: 'center', flexWrap: 'wrap' }}>
-              {/* Avatar + button */}
               <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
                 <img
                   src="/demo-profile.jpg"
@@ -100,11 +90,8 @@ export default function ProfilePage() {
                 </button>
               </div>
 
-              {/* Basic info */}
               <div style={{ display: 'flex', flexDirection: 'column', gap: 6, minWidth: 240 }}>
-                <h1 style={{ fontSize: 28, fontWeight: 800, color: '#FF7043', margin: 0 }}>
-                  Eric James
-                </h1>
+                <h1 style={{ fontSize: 28, fontWeight: 800, color: '#FF7043', margin: 0 }}>Eric James</h1>
                 <p style={{ color: '#374151', fontSize: 16, margin: 0 }}>He/Him</p>
                 <p style={{ color: '#4B5563', fontStyle: 'italic', marginTop: 6, maxWidth: 640 }}>
                   Customer Success Leader & AI Advocate
@@ -148,25 +135,20 @@ export default function ProfilePage() {
             >
               Edit
             </button>
-            <h2 style={{ color: '#FF7043', fontSize: 22, fontWeight: 700, marginTop: 0 }}>
-              About Me
-            </h2>
+            <h2 style={{ color: '#FF7043', fontSize: 22, fontWeight: 700, marginTop: 0 }}>About Me</h2>
             <p style={{ color: '#374151', marginBottom: 0, lineHeight: 1.5 }}>
-              Experienced leader with 20+ years in customer success, technical support, and team
-              management. Passionate about building authentic professional relationships and
-              leveraging AI to empower job seekers.
+              Experienced leader with 20+ years in customer success, technical support, and team management.
+              Passionate about building authentic professional relationships and leveraging AI to empower job seekers.
             </p>
           </section>
 
-          {/* Professional History — opens modal */}
+          {/* Professional History — modal */}
           <section
             role="button"
             tabIndex={0}
             aria-label="Open Professional History"
             onClick={openHistory}
-            onKeyDown={(e) => {
-              if (e.key === 'Enter' || e.key === ' ') openHistory();
-            }}
+            onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') openHistory(); }}
             style={{
               background: 'white',
               borderRadius: 12,
@@ -180,21 +162,13 @@ export default function ProfilePage() {
               userSelect: 'none',
             }}
           >
-            <h2 style={{ color: '#FF7043', fontSize: 22, fontWeight: 700, margin: 0 }}>
-              Professional History
-            </h2>
+            <h2 style={{ color: '#FF7043', fontSize: 22, fontWeight: 700, margin: 0 }}>Professional History</h2>
             <span style={{ color: '#FF7043', fontWeight: 700, fontSize: 18 }}>→</span>
           </section>
 
-          {/* Analytics */}
-          <section
-            role="button"
-            tabIndex={0}
-            aria-label="Go to Analytics Dashboard"
-            onClick={alertSoon('Analytics dashboard')}
-            onKeyDown={(e) => {
-              if (e.key === 'Enter' || e.key === ' ') alertSoon('Analytics dashboard')();
-            }}
+          {/* Analytics — link to dedicated page, preserving ?chrome=coach */}
+          <Link
+            href={`/profile-analytics${chromeSuffix}`}
             style={{
               background: 'white',
               borderRadius: 12,
@@ -204,17 +178,16 @@ export default function ProfilePage() {
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'space-between',
-              cursor: 'pointer',
+              textDecoration: 'none',
             }}
+            aria-label="Go to Profile Analytics"
           >
-            <h2 style={{ color: '#FF7043', fontSize: 22, fontWeight: 700, margin: 0 }}>
-              Analytics
-            </h2>
+            <h2 style={{ color: '#FF7043', fontSize: 22, fontWeight: 700, margin: 0 }}>Analytics</h2>
             <span style={{ color: '#FF7043', fontWeight: 700, fontSize: 18 }}>→</span>
-          </section>
+          </Link>
         </div>
 
-        {/* ---------- Modal: Professional History ---------- */}
+        {/* Modal: Professional History */}
         {historyOpen && (
           <div
             role="dialog"
@@ -264,14 +237,11 @@ export default function ProfilePage() {
               </div>
 
               <div style={{ color: '#607D8B' }}>
-                This is a placeholder modal. We can list roles, timeframes, bullet points, and let you
-                add/edit them here. If you prefer a dedicated page, we can route this to
-                <code> /professional-history</code> and build a CRUD there.
+                This is a placeholder modal. We can list roles, timeframes, bullet points, and let you add/edit them here.
               </div>
             </div>
           </div>
         )}
-        {/* ---------- /Modal ---------- */}
       </SeekerLayout>
     </>
   );
