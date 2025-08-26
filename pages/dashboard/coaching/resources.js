@@ -1,12 +1,13 @@
 // pages/dashboard/coaching/resources.js
 import React from 'react';
-import CoachingSidebar from '../../../components/coaching/CoachingSidebar';
+import CoachingLayout from '@/components/layouts/CoachingLayout';
+import CoachingRightColumn from '@/components/coaching/CoachingRightColumn';
 
 export default function CoachingResourcesPage() {
   // --- Mock data ---
   const recent = [
-    { title: 'Client Intake Template', type: 'Template', owner: 'Ops', updated: 'Aug 10, 2025', link: '#templates' },
-    { title: 'Resume Review Checklist', type: 'Guide', owner: 'Coaching', updated: 'Aug 09, 2025', link: '#library' },
+    { title: 'Client Intake Template', type: 'Template', owner: 'Ops',      updated: 'Aug 10, 2025', link: '#templates' },
+    { title: 'Resume Review Checklist', type: 'Guide',   owner: 'Coaching', updated: 'Aug 09, 2025', link: '#library' },
     { title: 'Announcement: New Scheduler', type: 'Announcement', owner: 'Product', updated: 'Aug 08, 2025', link: '#announcements' },
   ];
   // ------------------
@@ -33,128 +34,127 @@ export default function CoachingResourcesPage() {
   );
 
   return (
-    <div
-      style={{
-        display: 'grid',
-        gridTemplateColumns: '300px 1fr 300px', // Left sidebar, middle, right sidebar
-        gap: '20px',
-        padding: '120px 20px 20px',
-        minHeight: '100vh',
-        backgroundColor: '#ECEFF1',
-      }}
+    <CoachingLayout
+      title="Docs & Tools | ForgeTomorrow"
+      activeNav="resources"
+      headerDescription="Templates, guides, announcements, and quick links for coaches."
+      right={<CoachingRightColumn />}
+      sidebarInitialOpen={{ coaching: true, seeker: false }}
     >
-      {/* Left Sidebar */}
-      <CoachingSidebar active="resources" />
-
-      {/* Middle Section */}
-      <main style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
-        <div style={{ maxWidth: '100%' }}>
-          {/* Top cards linking to anchors and newsletter */}
-          <section
+      {/* Center column content */}
+      <div style={{ display: 'grid', gap: 16, maxWidth: 860 }}>
+        {/* Top cards linking to anchors and newsletter */}
+        <section
+          style={{
+            background: 'white',
+            borderRadius: 12,
+            padding: 20,
+            boxShadow: '0 2px 6px rgba(0,0,0,0.06)',
+            border: '1px solid #eee',
+          }}
+        >
+          <h2 style={{ color: '#FF7043', marginTop: 0, marginBottom: 12, fontWeight: 'bold' }}>
+            Docs & Tools
+          </h2>
+          <div
             style={{
-              background: 'white',
-              borderRadius: 12,
-              padding: 20,
-              boxShadow: '0 2px 6px rgba(0,0,0,0.06)',
-              border: '1px solid #eee',
+              display: 'flex',
+              flexWrap: 'wrap',
+              gap: 12,
             }}
           >
-            <h2 style={{ color: '#FF7043', marginTop: 0, marginBottom: 12, fontWeight: 'bold' }}>
-              Docs & Tools
-            </h2>
-            <div
+            {card('#templates', 'Templates', 'Standard documents for repeatable coaching workflows.')}
+            {card('#library', 'Resource Library', 'Guides, checklists, and curated materials.')}
+            {card('#announcements', 'Announcements', 'What’s new and important this week.')}
+            {card('/dashboard/coaching/newsletter', 'Newsletter', 'Compose and send a broadcast message to clients.')}
+            {card('/resources/mentors/spotlight/new', 'Create a Spotlight Card', 'Highlight a mentor with a custom spotlight.')}
+          </div>
+        </section>
+
+        {/* Anchored sections */}
+        <Section id="templates" title="Templates">
+          <p style={{ color: '#607D8B', marginTop: 0 }}>Coming soon…</p>
+        </Section>
+
+        <Section id="library" title="Resource Library">
+          <p style={{ color: '#607D8B', marginTop: 0 }}>Coming soon…</p>
+        </Section>
+
+        <Section id="announcements" title="Announcements">
+          <p style={{ color: '#607D8B', marginTop: 0 }}>Coming soon…</p>
+        </Section>
+
+        {/* Recently added */}
+        <section
+          style={{
+            background: 'white',
+            borderRadius: 12,
+            padding: 20,
+            boxShadow: '0 2px 6px rgba(0,0,0,0.06)',
+            border: '1px solid #eee',
+          }}
+        >
+          <h2 style={{ color: '#FF7043', marginTop: 0, marginBottom: 12 }}>Recently Added</h2>
+          <div style={{ overflowX: 'auto' }}>
+            <table
               style={{
-                display: 'flex',
-                flexWrap: 'wrap',
-                gap: 12,
+                width: '100%',
+                borderCollapse: 'separate',
+                borderSpacing: 0,
+                background: 'white',
+                border: '1px solid #eee',
+                borderRadius: 10,
+                overflow: 'hidden',
               }}
             >
-              {card('#templates', 'Templates', 'Standard documents for repeatable coaching workflows.')}
-              {card('#library', 'Resource Library', 'Guides, checklists, and curated materials.')}
-              {card('#announcements', 'Announcements', 'What’s new and important this week.')}
-              {card('/dashboard/coaching/newsletter', 'Newsletter', 'Compose and send a broadcast message to clients.')}
-              {card('/resources/mentors/spotlight/new', 'Create a Spotlight Card', 'Highlight a mentor with a custom spotlight.')}
-            </div>
-          </section>
-
-          {/* Anchored sections */}
-          <Section id="templates" title="Templates">
-            <p style={{ color: '#607D8B', marginTop: 0 }}>Coming soon…</p>
-          </Section>
-
-          <Section id="library" title="Resource Library">
-            <p style={{ color: '#607D8B', marginTop: 0 }}>Coming soon…</p>
-          </Section>
-
-          <Section id="announcements" title="Announcements">
-            <p style={{ color: '#607D8B', marginTop: 0 }}>Coming soon…</p>
-          </Section>
-
-          {/* Recently added */}
-          <section
-            style={{
-              background: 'white',
-              borderRadius: 12,
-              padding: 20,
-              boxShadow: '0 2px 6px rgba(0,0,0,0.06)',
-              border: '1px solid #eee',
-            }}
-          >
-            <h2 style={{ color: '#FF7043', marginTop: 0, marginBottom: 12 }}>Recently Added</h2>
-            <div style={{ overflowX: 'auto' }}>
-              <table
-                style={{
-                  width: '100%',
-                  borderCollapse: 'separate',
-                  borderSpacing: 0,
-                  background: 'white',
-                  border: '1px solid #eee',
-                  borderRadius: 10,
-                  overflow: 'hidden',
-                }}
-              >
-                <thead>
-                  <tr style={{ background: '#FAFAFA' }}>
-                    <Th>Title</Th>
-                    <Th>Type</Th>
-                    <Th>Owner</Th>
-                    <Th>Updated</Th>
-                    <Th>Link</Th>
+              <thead>
+                <tr style={{ background: '#FAFAFA' }}>
+                  <Th>Title</Th>
+                  <Th>Type</Th>
+                  <Th>Owner</Th>
+                  <Th>Updated</Th>
+                  <Th>Link</Th>
+                </tr>
+              </thead>
+              <tbody>
+                {recent.map((r) => (
+                  <tr key={r.title} style={{ borderTop: '1px solid #eee' }}>
+                    <Td strong>{r.title}</Td>
+                    <Td>{r.type}</Td>
+                    <Td>{r.owner}</Td>
+                    <Td>{r.updated}</Td>
+                    <Td>
+                      <span
+                        onClick={() => (window.location.href = r.link)}
+                        style={{ color: '#FF7043', fontWeight: 600, cursor: 'pointer' }}
+                      >
+                        View
+                      </span>
+                    </Td>
                   </tr>
-                </thead>
-                <tbody>
-                  {recent.map((r) => (
-                    <tr key={r.title} style={{ borderTop: '1px solid #eee' }}>
-                      <Td strong>{r.title}</Td>
-                      <Td>{r.type}</Td>
-                      <Td>{r.owner}</Td>
-                      <Td>{r.updated}</Td>
-                      <Td>
-                        <span style={{ color: '#FF7043', fontWeight: 600, cursor: 'pointer' }}>View</span>
-                      </Td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          </section>
-        </div>
-      </main>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </section>
 
-      {/* Right Sidebar */}
-      <aside
-        style={{
-          background: 'white',
-          borderRadius: 12,
-          padding: 20,
-          boxShadow: '0 2px 6px rgba(0,0,0,0.06)',
-          border: '1px solid #eee',
-          height: 'fit-content',
-        }}
-      >
-        <h3 style={{ color: '#FF7043', marginTop: 0 }}>Coming Soon</h3>
-      </aside>
-    </div>
+        {/* Simple note to replace the old right-side "Coming Soon" box */}
+        <section
+          style={{
+            background: 'white',
+            borderRadius: 12,
+            padding: 20,
+            boxShadow: '0 2px 6px rgba(0,0,0,0.06)',
+            border: '1px solid #eee',
+          }}
+        >
+          <h3 style={{ color: '#FF7043', marginTop: 0 }}>Coming Soon</h3>
+          <p style={{ color: '#607D8B', marginTop: 0 }}>
+            Additional modules and shared assets will appear here as they’re published.
+          </p>
+        </section>
+      </div>
+    </CoachingLayout>
   );
 }
 

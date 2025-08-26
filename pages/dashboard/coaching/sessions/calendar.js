@@ -1,9 +1,7 @@
 // pages/dashboard/coaching/sessions/calendar.js
 import React from 'react';
-import Link from 'next/link';
-import CoachingSidebar from '../../../../components/coaching/CoachingSidebar';
-import CoachingHeader from '../../../../components/coaching/CoachingHeader';
-import CalendarInterface from '../../../../components/calendar/CalendarInterface';
+import CoachingLayout from '@/components/layouts/CoachingLayout';
+import CalendarInterface from '@/components/calendar/CalendarInterface';
 
 const STORAGE_KEY = 'coachSessions_v1';
 
@@ -18,34 +16,25 @@ const seed = [
 
 export default function CoachingSessionsCalendarPage() {
   return (
-    <>
-      <CoachingHeader />
-      <div
-        style={{
-          display: 'grid',
-          gridTemplateColumns: '300px 1fr',
-          gap: '20px',
-          padding: '40px 20px 20px',
-          minHeight: '100vh',
-          backgroundColor: '#ECEFF1',
-        }}
-      >
-        <CoachingSidebar active="sessions" />
-
-        <main style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
-          <div style={{ maxWidth: 1120 }}>
-            <CalendarInterface
-              title="Sessions Calendar"
-              storageKey={STORAGE_KEY}
-              seed={seed}
-              typeChoices={['Strategy', 'Resume', 'Interview']}
-              statusChoices={['Scheduled', 'Completed', 'No-show']}
-              backHref="/dashboard/coaching/sessions"
-              addLabel="+ Add Session"
-            />
-          </div>
-        </main>
+    <CoachingLayout
+      title="Sessions Calendar | ForgeTomorrow"
+      activeNav="sessions"
+      headerDescription="View, add, and manage upcoming coaching sessions in calendar view."
+      right={null} // <- Give the calendar full width (prevents misalignment)
+      sidebarInitialOpen={{ coaching: true, seeker: false }}
+    >
+      {/* Center column content */}
+      <div style={{ display: 'grid', gap: 16, maxWidth: '100%' }}>
+        <CalendarInterface
+          title="Sessions Calendar"
+          storageKey={STORAGE_KEY}
+          seed={seed}
+          typeChoices={['Strategy', 'Resume', 'Interview']}
+          statusChoices={['Scheduled', 'Completed', 'No-show']}
+          backHref="/dashboard/coaching/sessions"
+          addLabel="+ Add Session"
+        />
       </div>
-    </>
+    </CoachingLayout>
   );
 }

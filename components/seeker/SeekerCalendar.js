@@ -1,8 +1,17 @@
-// components/seeker/SeekerCalendar.js
-// Thin wrapper so we can reuse the exact same calendar component Seekers-side.
-// ⬇️ If your coaches calendar lives at a different path/name, update this import.
-import CalendarInterface from '@/components/CalendarInterface';
+// components/calendar/SeekerCalendar.js
+import React from 'react';
+import CalendarInterface from './CalendarInterface';
 
-export default function SeekerCalendarPage() {
-  return <CalendarInterface />;
+// Seeker-specific tuning
+const SEEKER_EVENT_NUDGE = 0;   // keep inside the cell (0 or small negative/positive)
+const SEEKER_WIDTH_DEDUCT = 10; // shrink entries a little to avoid kissing borders
+
+export default function SeekerCalendar(props) {
+  return (
+    <CalendarInterface
+      {...props}
+      eventNudge={SEEKER_EVENT_NUDGE}
+      eventWidthDeduct={SEEKER_WIDTH_DEDUCT}
+    />
+  );
 }

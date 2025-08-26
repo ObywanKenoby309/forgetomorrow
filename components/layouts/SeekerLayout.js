@@ -1,24 +1,58 @@
 // components/layouts/SeekerLayout.js
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import Head from 'next/head';
+import { useRouter } from 'next/router';
 import SeekerSidebar from '@/components/SeekerSidebar';
+import CoachingSidebar from '@/components/coaching/CoachingSidebar';
 import SeekerHeader from '@/components/seeker/SeekerHeader';
+import CoachingHeader from '@/components/coaching/CoachingHeader';
 import useSidebarCounts from '@/components/hooks/useSidebarCounts';
 
+/**
+ * Chrome control (coach | seeker) for Seeker routes:
+ * - query param: ?chrome=coach | seeker
+ * - optional prop: forceChrome='coach' | 'seeker' (future use)
+ * Precedence: prop > query > default 'seeker'
+ *
+ * Hydration-safe: SSR + first client render = 'seeker'. We only swap after mount.
+ */
 export default function SeekerLayout({
   title = 'ForgeTomorrow — Seeker',
   left,
-  header,
+  header,      // page-level header band (title/controls), not the top chrome header
   right,
   children,
   activeNav,
+  forceChrome, // optional: 'coach' | 'seeker' (not required today)
 }) {
-  const counts = useSidebarCounts(); // ← NEW
+  const counts = useSidebarCounts();
+  const router = useRouter();
+
+  // SSR/first render = seeker to avoid mismatches.
+  const [chromeMode, setChromeMode] = useState(
+    forceChrome === 'coach' || forceChrome === 'seeker' ? forceChrome : 'seeker'
+  );
+
+  useEffect(() => {
+    // Honor explicit prop if provided
+    if (forceChrome === 'coach' || forceChrome === 'seeker') {
+      setChromeMode(forceChrome);
+      return;
+    }
+    // Otherwise, look for ?chrome=coach|seeker
+    const q = router?.query?.chrome;
+    if (q === 'coach' || q === 'seeker') setChromeMode(q);
+    else setChromeMode('seeker');
+  }, [forceChrome, router?.query?.chrome]);
+
+  const useCoachChrome = chromeMode === 'coach';
 
   return (
     <>
       <Head><title>{title}</title></Head>
-      <SeekerHeader />
+
+      {/* Top chrome header (never replaced by the page `header` prop) */}
+      {useCoachChrome ? <CoachingHeader /> : <SeekerHeader />}
 
       <div
         style={{
@@ -34,12 +68,17 @@ export default function SeekerLayout({
           alignItems: 'start',
         }}
       >
-        {/* LEFT — Sidebar */}
+        {/* LEFT — Sidebar (coach vs seeker chrome) */}
         <aside style={{ gridArea: 'left', alignSelf: 'start' }}>
-          {left || <SeekerSidebar active={activeNav} counts={counts} />}
+          {left
+            ? left
+            : useCoachChrome
+              ? <CoachingSidebar active={activeNav} counts={counts} />
+              : <SeekerSidebar active={activeNav} counts={counts} />
+          }
         </aside>
 
-        {/* HEADER */}
+        {/* PAGE-LEVEL HEADER SLOT (title band / filters for the current page) */}
         <header
           style={{
             gridArea: 'header',
@@ -74,12 +113,7 @@ export default function SeekerLayout({
         </aside>
 
         {/* CONTENT */}
-        <main
-          style={{
-            gridArea: 'content',
-            minWidth: 0,
-          }}
-        >
+        <main style={{ gridArea: 'content', minWidth: 0 }}>
           <div style={{ display: 'grid', gap: 20, width: '100%', minWidth: 0 }}>
             {children}
           </div>
