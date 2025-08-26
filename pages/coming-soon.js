@@ -13,19 +13,24 @@ export default function ComingSoon() {
             🚀 ForgeTomorrow
           </h1>
           <p className="text-gray-700 mb-6 text-lg">
-            We’re building something powerful for job seekers, businesses, and coaches.  
+            We’re building something powerful for job seekers, businesses, and coaches.
             Our platform is currently in a private stage while we prepare for launch.
           </p>
           <p className="text-gray-600 mb-6">
-            Want to be first in line when we open?  
+            Want to be first in line when we open?
             Join our waiting list today and get early access.
           </p>
           <a
-            href="/waiting-list"
+            href="/"
             className="bg-[#FF7043] hover:bg-[#E64A19] text-white px-6 py-3 rounded-lg font-semibold transition"
           >
             Join the Waiting List
           </a>
+          {/*
+            If your home page has a specific section for the form,
+            you can use an anchor instead:
+            href="/#waitlist"
+          */}
         </div>
 
         <footer className="mt-10 text-gray-500 text-sm">
