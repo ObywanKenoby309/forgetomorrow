@@ -51,6 +51,7 @@ export default function App({ Component, pageProps }) {
       '/pinned-jobs',
       '/resume-cover',
       '/roadmap',
+      '/profile',            // ✅ Treat /profile as internal (prevents LandingHeader)
     ].includes(router.pathname);
 
   const isCoachingRoute =

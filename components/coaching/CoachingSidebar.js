@@ -114,9 +114,9 @@ function Section({ title, children, defaultOpen = false }) {
 
 export default function CoachingSidebar({
   active = 'overview',
-  counts = { clients: 0, sessions: 0, feedback: 0 },
-  // control which sections start open
-  initialOpen = { coaching: false, seeker: false },
+  counts = { clients: 0, sessions: 0, feedback: 0, connections: 0, signal: 0 },
+  // now also supports "connections" for default open/closed
+  initialOpen = { coaching: false, seeker: false, connections: false },
 }) {
   return (
     <nav
@@ -129,14 +129,42 @@ export default function CoachingSidebar({
         height: 'fit-content',
       }}
     >
-      {/* Coaching Overview */}
+      {/* 1) Profile */}
+      <NavItem
+        href="/profile?chrome=coach"
+        label="Profile"
+        active={active === 'profile'}
+      />
+
+      {/* 2) Overview */}
       <NavItem
         href="/coaching-dashboard"
         label="Overview"
         active={active === 'overview'}
       />
 
-      {/* Coaching Tools */}
+      {/* 3) Connections (section, like Seeker) */}
+      <Section title="Connections" defaultOpen={!!initialOpen.connections}>
+        <NavItem
+          href="/seeker/contact-center?chrome=coach"
+          label="Contact Center"
+          active={active === 'contacts'}
+          badge={counts.connections}
+        />
+        <NavItem
+          href="/seeker/messages?chrome=coach"
+          label="The Signal"
+          active={active === 'messages'}
+          badge={counts.signal}
+        />
+        <NavItem
+          href="/feed?chrome=coach"
+          label="Community Feed"
+          active={active === 'feed'}
+        />
+      </Section>
+
+      {/* 4) Coaching Tools */}
       <Section title="Coaching Tools" defaultOpen={!!initialOpen.coaching}>
         <NavItem
           href="/dashboard/coaching/clients"
@@ -166,28 +194,23 @@ export default function CoachingSidebar({
           active={active === 'feedback'}
           badge={counts.feedback}
         />
-        {/* (intentionally no jobs/pipeline entry here) */}
       </Section>
 
-      {/* Standalone Jobs link (always visible, no dropdown) */}
+      {/* 5) Jobs (standalone buffer) */}
       <NavItem
         href="/seeker/jobs?chrome=coach"
         label="Jobs"
         active={active === 'jobs'}
       />
 
-      {/* Seeker Tools (render Seeker pages with coach chrome via ?chrome=coach) */}
+      {/* 6) Seeker Tools */}
       <Section title="Seeker Tools" defaultOpen={!!initialOpen.seeker}>
         <NavItem
           href="/seeker-dashboard?chrome=coach"
           label="Seeker Dashboard"
           active={active === 'seeker-dashboard'}
         />
-        <NavItem
-          href="/seeker/applications?chrome=coach"
-          label="Applications"
-          active={active === 'applications'}
-        />
+        {/* intentionally omitting Applications from coach sidebar */}
         <NavItem
           href="/resume-cover?chrome=coach"
           label="Resume & Cover"
@@ -204,6 +227,13 @@ export default function CoachingSidebar({
           active={active === 'seeker-calendar'}
         />
       </Section>
+
+      {/* 7) The Hearth */}
+      <NavItem
+        href="/seeker/the-hearth?chrome=coach"
+        label="The Hearth"
+        active={active === 'hearth'}
+      />
     </nav>
   );
 }
