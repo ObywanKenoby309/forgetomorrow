@@ -5,7 +5,6 @@ import SeekerLayout from '@/components/layouts/SeekerLayout';
 import SeekerRightColumn from '@/components/seeker/SeekerRightColumn';
 import { applyCoverTemplate } from '@/lib/templates/applyCoverTemplate';
 
-// Small UI helpers (inline to avoid new components)
 function Field({ label, children }) {
   return (
     <div style={{ display: 'grid', gap: 6 }}>
@@ -14,7 +13,6 @@ function Field({ label, children }) {
     </div>
   );
 }
-
 function TextInput(props) {
   return (
     <input
@@ -29,7 +27,6 @@ function TextInput(props) {
     />
   );
 }
-
 function TextArea(props) {
   return (
     <textarea
@@ -45,7 +42,6 @@ function TextArea(props) {
     />
   );
 }
-
 function GhostButton({ children, onClick }) {
   return (
     <button
@@ -65,7 +61,6 @@ function GhostButton({ children, onClick }) {
     </button>
   );
 }
-
 function PrimaryButton({ children, onClick }) {
   return (
     <button
@@ -86,41 +81,26 @@ function PrimaryButton({ children, onClick }) {
   );
 }
 
-// Simple letter preview (center layout for printing later)
 function CoverPreview({ fields }) {
   return (
     <div style={{ background: 'white', border: '1px solid #eee', borderRadius: 12, padding: 24 }}>
       <div style={{ color: '#263238', fontSize: 14 }}>
-        {/* Header block (optional contact / date) */}
         {fields.signatureContact && (
           <div style={{ marginBottom: 12, color: '#607D8B' }}>{fields.signatureContact}</div>
         )}
-
-        {/* Recipient & greeting */}
         {(fields.recipient || fields.company) && (
           <div style={{ marginBottom: 6 }}>
             {fields.recipient && <div>{fields.recipient}</div>}
             {fields.company && <div>{fields.company}</div>}
           </div>
         )}
-
         <div style={{ margin: '12px 0' }}>{fields.greeting}</div>
-
-        {/* Opening */}
         {fields.opening && <p style={{ margin: '8px 0' }}>{fields.opening}</p>}
-
-        {/* Body bullets as short paragraphs */}
         {Array.isArray(fields.body) && fields.body.map((b, i) => (
           <p key={i} style={{ margin: '8px 0' }}>• {b}</p>
         ))}
-
-        {/* Value proposition */}
         {fields.valueProp && <p style={{ margin: '8px 0' }}>{fields.valueProp}</p>}
-
-        {/* Closing */}
         {fields.closing && <p style={{ margin: '12px 0' }}>{fields.closing}</p>}
-
-        {/* Signoff */}
         <div style={{ margin: '12px 0' }}>
           {fields.signoff}
           <br />
@@ -135,14 +115,13 @@ export default function CoverCreatePage() {
   const router = useRouter();
   const seededRef = useRef(false);
 
-  // Cover letter state
   const [fields, setFields] = useState({
     recipient: "",
     company: "",
     role: "",
     greeting: "Dear Hiring Manager,",
     opening: "",
-    body: [""],         // list of bullet/paragraph lines
+    body: [""],
     valueProp: "",
     closing: "",
     signoff: "Sincerely,",
@@ -150,11 +129,10 @@ export default function CoverCreatePage() {
     signatureContact: "",
   });
 
-  // Seed from ?template= only if currently blank
+  // Seed from ?template=
   useEffect(() => {
     const t = router.query?.template;
     if (!t || seededRef.current) return;
-
     const isBlank =
       !fields.opening &&
       (!fields.body || fields.body.every((l) => !l)) &&
@@ -162,45 +140,48 @@ export default function CoverCreatePage() {
       !fields.closing &&
       !fields.signatureName &&
       !fields.signatureContact;
-
     if (!isBlank) return;
 
-    const profile = {
-      name: "",       // wire from user later
-      targetRole: "", // e.g., from job context
-    };
+    const profile = { name: "", targetRole: "" };
     const doc = applyCoverTemplate(String(t), profile);
     if (doc?.fields) {
       setFields((prev) => ({ ...prev, ...doc.fields }));
       seededRef.current = true;
     }
-  }, [router.query?.template]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [router.query?.template]); // eslint-disable-line
 
-  // Right rail
+  // Auto-save to localStorage for combined export from resume page
+  useEffect(() => {
+    try {
+      localStorage.setItem('ft_cover_draft', JSON.stringify({ fields }));
+    } catch {}
+  }, [fields]);
+
+  const update = (key, val) => setFields((f) => ({ ...f, [key]: val }));
+  const updateBody = (idx, val) => setFields((f) => {
+    const body = [...(f.body || [])]; body[idx] = val; return { ...f, body };
+  });
+  const addBodyLine = () => setFields((f) => ({ ...f, body: [...(f.body || []), ""] }));
+  const removeBodyLine = (idx) => setFields((f) => ({ ...f, body: (f.body || []).filter((_, i) => i !== idx) }));
+
   const RightPane = (
     <div style={{ display: 'grid', gap: 12 }}>
       <SeekerRightColumn variant="creator" />
-
-      {/* Quick actions */}
       <div
         style={{
-          background: 'white',
-          border: '1px solid #eee',
-          borderRadius: 12,
-          padding: 12,
-          boxShadow: '0 2px 6px rgba(0,0,0,0.06)',
-          display: 'grid',
-          gap: 8,
+          background: 'white', border: '1px solid #eee', borderRadius: 12,
+          padding: 12, boxShadow: '0 2px 6px rgba(0,0,0,0.06)', display: 'grid', gap: 8
         }}
       >
         <div style={{ fontWeight: 800, color: '#37474F' }}>Quick Actions</div>
         <GhostButton onClick={() => window.print?.()}>Print / Save PDF</GhostButton>
-        <GhostButton onClick={() => alert('Tailor to JD coming soon')}>Tailor to Job (soon)</GhostButton>
+        <GhostButton onClick={() => router.push('/resume/create')}>
+          Export with Resume (open builder)
+        </GhostButton>
       </div>
     </div>
   );
 
-  // Header
   const HeaderBox = (
     <section
       style={{
@@ -228,19 +209,6 @@ export default function CoverCreatePage() {
     </section>
   );
 
-  // Mutators
-  const update = (key, val) => setFields((f) => ({ ...f, [key]: val }));
-  const updateBody = (idx, val) =>
-    setFields((f) => {
-      const body = [...(f.body || [])];
-      body[idx] = val;
-      return { ...f, body };
-    });
-  const addBodyLine = () =>
-    setFields((f) => ({ ...f, body: [...(f.body || []), ""] }));
-  const removeBodyLine = (idx) =>
-    setFields((f) => ({ ...f, body: (f.body || []).filter((_, i) => i !== idx) }));
-
   return (
     <SeekerLayout
       title="Create Cover Letter | ForgeTomorrow"
@@ -249,7 +217,6 @@ export default function CoverCreatePage() {
       activeNav="resume-cover"
     >
       <div style={{ display: 'grid', gap: 16 }}>
-        {/* Editor */}
         <section
           style={{
             background: 'white',
@@ -261,116 +228,113 @@ export default function CoverCreatePage() {
             gap: 12,
           }}
         >
-          <div style={{ display: 'grid', gap: 12 }}>
-            <div style={{ display: 'grid', gap: 10, gridTemplateColumns: 'repeat(3, minmax(0, 1fr))' }}>
-              <Field label="Recipient name">
-                <TextInput
-                  placeholder="Jane Doe"
-                  value={fields.recipient}
-                  onChange={(e) => update('recipient', e.target.value)}
-                />
-              </Field>
-              <Field label="Company">
-                <TextInput
-                  placeholder="Company XYZ"
-                  value={fields.company}
-                  onChange={(e) => update('company', e.target.value)}
-                />
-              </Field>
-              <Field label="Role (optional)">
-                <TextInput
-                  placeholder="Customer Success Lead"
-                  value={fields.role}
-                  onChange={(e) => update('role', e.target.value)}
-                />
-              </Field>
-            </div>
-
-            <div style={{ display: 'grid', gap: 10, gridTemplateColumns: '1fr 1fr' }}>
-              <Field label="Greeting">
-                <TextInput
-                  placeholder="Dear Hiring Manager,"
-                  value={fields.greeting}
-                  onChange={(e) => update('greeting', e.target.value)}
-                />
-              </Field>
-              <div />
-            </div>
-
-            <Field label="Opening">
-              <TextArea
-                placeholder="Open with intent and a clear, relevant statement."
-                value={fields.opening}
-                onChange={(e) => update('opening', e.target.value)}
+          <div style={{ display: 'grid', gap: 10, gridTemplateColumns: 'repeat(3, minmax(0, 1fr))' }}>
+            <Field label="Recipient name">
+              <TextInput
+                placeholder="Jane Doe"
+                value={fields.recipient}
+                onChange={(e) => update('recipient', e.target.value)}
               />
             </Field>
-
-            <div style={{ display: 'grid', gap: 8 }}>
-              <div style={{ fontWeight: 700, color: '#607D8B', fontSize: 12 }}>Body points</div>
-              {(fields.body || []).map((line, idx) => (
-                <div key={idx} style={{ display: 'grid', gridTemplateColumns: '1fr auto', gap: 8, alignItems: 'start' }}>
-                  <TextArea
-                    placeholder={`Point ${idx + 1}`}
-                    value={line}
-                    onChange={(e) => updateBody(idx, e.target.value)}
-                    style={{ minHeight: 60 }}
-                  />
-                  <GhostButton onClick={() => removeBodyLine(idx)}>Remove</GhostButton>
-                </div>
-              ))}
-              <div><GhostButton onClick={addBodyLine}>Add point</GhostButton></div>
-            </div>
-
-            <Field label="Value proposition">
-              <TextArea
-                placeholder="Bring it together—how you’ll help them hit goals fast."
-                value={fields.valueProp}
-                onChange={(e) => update('valueProp', e.target.value)}
+            <Field label="Company">
+              <TextInput
+                placeholder="Company XYZ"
+                value={fields.company}
+                onChange={(e) => update('company', e.target.value)}
               />
             </Field>
+            <Field label="Role (optional)">
+              <TextInput
+                placeholder="Customer Success Lead"
+                value={fields.role}
+                onChange={(e) => update('role', e.target.value)}
+              />
+            </Field>
+          </div>
 
-            <div style={{ display: 'grid', gap: 10, gridTemplateColumns: '1fr 1fr' }}>
-              <Field label="Closing">
+          <div style={{ display: 'grid', gap: 10, gridTemplateColumns: '1fr 1fr' }}>
+            <Field label="Greeting">
+              <TextInput
+                placeholder="Dear Hiring Manager,"
+                value={fields.greeting}
+                onChange={(e) => update('greeting', e.target.value)}
+              />
+            </Field>
+            <div />
+          </div>
+
+          <Field label="Opening">
+            <TextArea
+              placeholder="Open with intent and a clear, relevant statement."
+              value={fields.opening}
+              onChange={(e) => update('opening', e.target.value)}
+            />
+          </Field>
+
+          <div style={{ display: 'grid', gap: 8 }}>
+            <div style={{ fontWeight: 700, color: '#607D8B', fontSize: 12 }}>Body points</div>
+            {(fields.body || []).map((line, idx) => (
+              <div key={idx} style={{ display: 'grid', gridTemplateColumns: '1fr auto', gap: 8, alignItems: 'start' }}>
                 <TextArea
-                  placeholder="Thank them and invite next steps."
-                  value={fields.closing}
-                  onChange={(e) => update('closing', e.target.value)}
+                  placeholder={`Point ${idx + 1}`}
+                  value={line}
+                  onChange={(e) => updateBody(idx, e.target.value)}
+                  style={{ minHeight: 60 }}
                 />
-              </Field>
-              <Field label="Signoff">
-                <TextInput
-                  placeholder="Sincerely,"
-                  value={fields.signoff}
-                  onChange={(e) => update('signoff', e.target.value)}
-                />
-              </Field>
-            </div>
+                <GhostButton onClick={() => removeBodyLine(idx)}>Remove</GhostButton>
+              </div>
+            ))}
+            <div><GhostButton onClick={addBodyLine}>Add point</GhostButton></div>
+          </div>
 
-            <div style={{ display: 'grid', gap: 10, gridTemplateColumns: '1fr 1fr' }}>
-              <Field label="Your name">
-                <TextInput
-                  placeholder="Your Name"
-                  value={fields.signatureName}
-                  onChange={(e) => update('signatureName', e.target.value)}
-                />
-              </Field>
-              <Field label="Contact (email · phone · LinkedIn)">
-                <TextInput
-                  placeholder="you@email.com · (555) 123-4567 · linkedin.com/in/you"
-                  value={fields.signatureContact}
-                  onChange={(e) => update('signatureContact', e.target.value)}
-                />
-              </Field>
-            </div>
+          <Field label="Value proposition">
+            <TextArea
+              placeholder="Bring it together—how you’ll help them hit goals fast."
+              value={fields.valueProp}
+              onChange={(e) => update('valueProp', e.target.value)}
+            />
+          </Field>
 
-            <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end' }}>
-              <GhostButton onClick={() => window.print?.()}>Print / Save PDF</GhostButton>
-              <PrimaryButton onClick={() => alert('Export coming soon')}>Export</PrimaryButton>
-            </div>
+          <div style={{ display: 'grid', gap: 10, gridTemplateColumns: '1fr 1fr' }}>
+            <Field label="Closing">
+              <TextArea
+                placeholder="Thank them and invite next steps."
+                value={fields.closing}
+                onChange={(e) => update('closing', e.target.value)}
+              />
+            </Field>
+            <Field label="Signoff">
+              <TextInput
+                placeholder="Sincerely,"
+                value={fields.signoff}
+                onChange={(e) => update('signoff', e.target.value)}
+              />
+            </Field>
+          </div>
+
+          <div style={{ display: 'grid', gap: 10, gridTemplateColumns: '1fr 1fr' }}>
+            <Field label="Your name">
+              <TextInput
+                placeholder="Your Name"
+                value={fields.signatureName}
+                onChange={(e) => update('signatureName', e.target.value)}
+              />
+            </Field>
+            <Field label="Contact (email · phone · LinkedIn)">
+              <TextInput
+                placeholder="you@email.com · (555) 123-4567 · linkedin.com/in/you"
+                value={fields.signatureContact}
+                onChange={(e) => update('signatureContact', e.target.value)}
+              />
+            </Field>
+          </div>
+
+          <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end' }}>
+            <GhostButton onClick={() => window.print?.()}>Print / Save PDF</GhostButton>
+            <PrimaryButton onClick={() => alert('Export coming soon')}>Export</PrimaryButton>
           </div>
         </section>
 
-        {/* Live preview */}
         <section
           style={{
             background: 'white',

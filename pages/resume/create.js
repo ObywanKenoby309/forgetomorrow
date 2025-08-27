@@ -25,7 +25,10 @@ import JobMatchAnalyzer from '@/components/resume-form/JobMatchAnalyzer';
 import TailorLocal from '@/components/resume-form/TailorLocal';
 import ResumePreview from '@/components/resume-form/ResumePreview';
 
-import { applyResumeTemplate } from '@/lib/templates/applyTemplate'; // ← NEW
+import { applyResumeTemplate } from '@/lib/templates/applyTemplate';
+import AtsCheckBadge from '@/components/resume-form/AtsCheckBadge';           // ← NEW
+import AtsPreviewModal from '@/components/resume-form/AtsPreviewModal';       // ← NEW
+import SmartExportMenu from '@/components/resume-form/export/SmartExportMenu';// ← NEW
 
 const ClientPDFButton = dynamic(
   () => import('@/components/resume-form/export/ClientPDFButton'),
@@ -103,7 +106,6 @@ function DockModal({ open, title, onClose, children }) {
   );
 }
 
-/** Small right-rail “dock item” that stays collapsed with an Open button */
 function DockItem({ title, subtitle, onOpen }) {
   return (
     <div
@@ -111,7 +113,7 @@ function DockItem({ title, subtitle, onOpen }) {
         background: 'white',
         border: '1px solid #eee',
         borderRadius: 12,
-        padding: 12,                // tighter
+        padding: 12,
         boxShadow: '0 2px 6px rgba(0,0,0,0.06)',
         display: 'grid',
         alignItems: 'start',
@@ -131,12 +133,12 @@ function DockItem({ title, subtitle, onOpen }) {
           style={{
             background: '#FF7043',
             color: 'white',
-            padding: '6px 10px',     // smaller
+            padding: '6px 10px',
             borderRadius: 10,
             border: '1px solid rgba(0,0,0,0.06)',
             fontWeight: 800,
             cursor: 'pointer',
-            fontSize: 12,            // smaller
+            fontSize: 12,
           }}
         >
           Open
@@ -149,7 +151,7 @@ function DockItem({ title, subtitle, onOpen }) {
 // -------- page --------
 export default function CreateResumePage() {
   const router = useRouter();
-  const seededRef = useRef(false); // ← NEW: prevent re-seeding
+  const seededRef = useRef(false);
 
   const {
     formData, setFormData,
@@ -170,7 +172,7 @@ export default function CreateResumePage() {
   const [showToast, setShowToast] = useState(false);
   const savedTime = useMemo(() => formatLocal(saveEventAt), [saveEventAt]);
 
-  // ----- Seed from ?template= if doc is empty (non-destructive) -----
+  // Seed from ?template= if doc is empty
   useEffect(() => {
     const t = router.query?.template;
     if (!t || seededRef.current) return;
@@ -189,7 +191,6 @@ export default function CreateResumePage() {
 
     if (!isEmpty) return;
 
-    // Optional: derive a minimal profile from ContactInfo or other places
     const profile = {
       summary,
       skills,
@@ -201,21 +202,17 @@ export default function CreateResumePage() {
 
     const doc = applyResumeTemplate(String(t), profile);
 
-    // Map to your existing context state (non-destructive defaults)
     setSummary(doc?.sections?.summary?.data?.text || summary || '');
     setSkills(Array.isArray(doc?.sections?.skills?.items) ? doc.sections.skills.items : skills || []);
     setExperiences(Array.isArray(doc?.sections?.experience?.items) ? doc.sections.experience.items : experiences || []);
     setEducationList(Array.isArray(doc?.sections?.education?.items) ? doc.sections.education.items : educationList || []);
     setProjects(Array.isArray(doc?.sections?.projects?.items) ? doc.sections.projects.items : projects || []);
     setAchievements(Array.isArray(doc?.sections?.achievements?.items) ? doc.sections.achievements.items : achievements || []);
-    // keep volunteer, certs, languages, customSections as-is unless provided
     setCertifications(Array.isArray(doc?.sections?.certifications?.items) ? doc.sections.certifications.items : certifications || []);
     setLanguages(Array.isArray(doc?.sections?.languages?.items) ? doc.sections.languages.items : languages || []);
     setCustomSections(Array.isArray(doc?.sections?.custom?.items) ? doc.sections.custom.items : customSections || []);
 
     seededRef.current = true;
-    // (optional) toast
-    // setShowToast(true);
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [router.query?.template]);
 
@@ -224,6 +221,9 @@ export default function CreateResumePage() {
   const [openTailor, setOpenTailor] = useState(false);
   const [openPreview, setOpenPreview] = useState(false);
 
+  // ATS preview modal
+  const [openAtsPreview, setOpenAtsPreview] = useState(false);
+
   useEffect(() => {
     if (!saveEventAt) return;
     setShowToast(true);
@@ -231,7 +231,7 @@ export default function CreateResumePage() {
     return () => clearTimeout(t);
   }, [saveEventAt]);
 
-  // ----- Header box (center column) -----
+  // Header
   const HeaderBox = (
     <section
       style={{
@@ -265,36 +265,51 @@ export default function CreateResumePage() {
     </section>
   );
 
-  // ----- Right pane content (compact) -----
+  // Right rail
   const RightPane = (
     <div style={{ display: 'grid', gap: 12, width: '100%', boxSizing: 'border-box' }}>
       {/* Shortcuts */}
       <SeekerRightColumn variant="creator" />
 
-      {/* Export & Save (compact) */}
+      {/* ATS status + Export */}
       <div
         style={{
           background: 'white',
           border: '1px solid #eee',
           borderRadius: 12,
-          padding: 10, // tighter
+          padding: 10,
           boxShadow: '0 2px 6px rgba(0,0,0,0.06)',
           display: 'grid',
           gap: 8,
-          width: '100%',
-          boxSizing: 'border-box',
         }}
       >
-        {/* Save snapshots (compact) */}
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+          <AtsCheckBadge
+            formData={formData}
+            summary={summary}
+            experiences={experiences}
+            educationList={educationList}
+            skills={skills}
+          />
+          <button
+            type="button"
+            onClick={() => setOpenAtsPreview(true)}
+            style={{ background: 'white', border: '1px solid #E0E0E0', borderRadius: 10, padding: '6px 10px', fontWeight: 800, cursor: 'pointer' }}
+          >
+            ATS Preview
+          </button>
+        </div>
+
+        {/* Save snapshots */}
         <SnapshotControls compact />
 
-        {/* Export actions (slightly scaled down to fit rail) */}
+        {/* Smart Export */}
         <div
           style={{
             background: '#FAFAFA',
             border: '1px dashed #B0BEC5',
             borderRadius: 10,
-            padding: 10, // tighter
+            padding: 10,
             transform: 'scale(0.94)',
             transformOrigin: 'top right',
           }}
@@ -314,12 +329,31 @@ export default function CreateResumePage() {
             skills={skills}
             achievements={achievements}
             customSections={customSections}
-            className="bg-[#FF7043] hover:bg-[#F4511E] text-white py-1.5 px-3 rounded text-sm" // smaller primary button if used
+            coverStorageKey="ft_cover_draft"
+            defaultCombined={true}
+            defaultOrder="resume-first"
+            defaultAtsMode={true}
+            className="bg-[#FF7043] hover:bg-[#F4511E] text-white py-1.5 px-3 rounded text-sm"
           />
+		  
+		  <SmartExportMenu
+			formData={formData}
+			summary={summary}
+			experiences={experiences}
+			projects={projects}
+			volunteerExperiences={volunteerExperiences}
+			educationList={educationList}
+			certifications={certifications}
+			languages={languages}
+			skills={skills}
+			achievements={achievements}
+			customSections={customSections}
+			coverStorageKey="ft_cover_draft"
+		 />
         </div>
       </div>
 
-      {/* Dock items (collapsed by default) */}
+      {/* Dock items */}
       <DockItem
         title="Job Match Analyzer"
         subtitle="Paste a JD and see matched/missing keywords plus a match score."
@@ -480,6 +514,23 @@ export default function CreateResumePage() {
           customSections={customSections}
         />
       </DockModal>
+
+      {/* ATS PREVIEW */}
+      <AtsPreviewModal
+        open={openAtsPreview}
+        onClose={() => setOpenAtsPreview(false)}
+        formData={formData}
+        summary={summary}
+        experiences={experiences}
+        projects={projects}
+        volunteerExperiences={volunteerExperiences}
+        educationList={educationList}
+        certifications={certifications}
+        languages={languages}
+        skills={skills}
+        achievements={achievements}
+        customSections={customSections}
+      />
     </SeekerLayout>
   );
 }
