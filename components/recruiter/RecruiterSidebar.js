@@ -1,6 +1,7 @@
 // components/recruiter/RecruiterSidebar.js
 import React, { useState } from 'react';
 import Link from 'next/link';
+import { usePlan } from '@/context/PlanContext';
 
 const ORANGE = '#FF7043';
 const ORANGE_SOFT = '#FFEDE6';
@@ -115,8 +116,8 @@ function Section({ title, children, defaultOpen = false }) {
 
 export default function RecruiterSidebar({
   active = 'dashboard',
-  role = 'recruiter',        // 'owner' | 'admin' | 'billing' | 'recruiter' | 'hiringManager'
-  variant = 'smb',           // 'smb' | 'enterprise'
+  role: roleProp,            // optional legacy prop
+  variant,                   // optional: 'smb' | 'enterprise' (if omitted, we use plan)
   counts = {
     candidates: 0,
     jobs: 0,
@@ -126,9 +127,14 @@ export default function RecruiterSidebar({
   },
   initialOpen = { recruiter: true, seeker: false, connections: false },
 }) {
-  const chromeRecruiter = variant === 'enterprise' ? 'recruiter-ent' : 'recruiter-smb';
-  const isEnterprise = variant === 'enterprise';
-  const canSeeSettings = role === 'owner' || role === 'admin' || role === 'billing';
+  const { isEnterprise: planIsEnterprise, can, role: ctxRole } = usePlan();
+
+  // effective role/plan (prefer props if explicitly passed, else context)
+  const role = roleProp || ctxRole;
+  const isEnterprise = typeof variant === 'string' ? (variant === 'enterprise') : planIsEnterprise;
+
+  const chromeRecruiter = isEnterprise ? 'recruiter-ent' : 'recruiter-smb';
+  const canSeeSettings = can('recruiter.settings.view');
 
   return (
     <nav

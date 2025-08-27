@@ -1,9 +1,9 @@
 // pages/recruiter/settings.js
 import React from 'react';
-import { useRouter } from 'next/router';
 import RecruiterLayout from '@/components/layouts/RecruiterLayout';
 import { PlanProvider, usePlan } from '@/context/PlanContext';
 import { PrimaryButton, SecondaryButton } from '@/components/ui/Buttons';
+import Require from '@/components/guards/Require';
 
 function HeaderBar() {
   return (
@@ -157,32 +157,25 @@ function SettingsBody() {
   );
 }
 
-function SettingsPageInner({ role = 'recruiter' }) {
-  const canView = role === 'owner' || role === 'admin' || role === 'billing';
-
+function SettingsPageInner() {
+  // We gate via capability instead of ad-hoc role checks
   return (
     <RecruiterLayout
       title="ForgeTomorrow — Recruiter Settings"
       header={<HeaderBar />}
       right={<RightSummaryCard />}
-      role={role}
-      variant="enterprise"   // or 'smb' depending on the org; using enterprise so Audit Log shows in dev
     >
-      {canView ? <SettingsBody /> : <NoAccessCard />}
+      <Require capability="recruiter.settings.view" fallback={<NoAccessCard />}>
+        <SettingsBody />
+      </Require>
     </RecruiterLayout>
   );
 }
 
 export default function RecruiterSettingsPage() {
-  // Dev override: allow ?role=owner|admin|billing|recruiter|hiringManager
-  const router = useRouter();
-  const qRole = String(router?.query?.role || '').toLowerCase();
-  const allowed = new Set(['owner','admin','billing','recruiter','hiringmanager']);
-  const role = allowed.has(qRole) ? (qRole === 'hiringmanager' ? 'hiringManager' : qRole) : 'recruiter';
-
   return (
     <PlanProvider>
-      <SettingsPageInner role={role} />
+      <SettingsPageInner />
     </PlanProvider>
   );
 }
