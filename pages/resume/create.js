@@ -1,6 +1,7 @@
 // pages/resume/create.js
-import { useContext, useEffect, useMemo, useState } from 'react';
+import { useContext, useEffect, useMemo, useRef, useState } from 'react';
 import dynamic from 'next/dynamic';
+import { useRouter } from 'next/router';
 
 import SeekerLayout from '@/components/layouts/SeekerLayout';
 import SeekerRightColumn from '@/components/seeker/SeekerRightColumn';
@@ -23,6 +24,8 @@ import SnapshotControls from '@/components/resume-form/SnapshotControls';
 import JobMatchAnalyzer from '@/components/resume-form/JobMatchAnalyzer';
 import TailorLocal from '@/components/resume-form/TailorLocal';
 import ResumePreview from '@/components/resume-form/ResumePreview';
+
+import { applyResumeTemplate } from '@/lib/templates/applyTemplate'; // ← NEW
 
 const ClientPDFButton = dynamic(
   () => import('@/components/resume-form/export/ClientPDFButton'),
@@ -145,6 +148,9 @@ function DockItem({ title, subtitle, onOpen }) {
 
 // -------- page --------
 export default function CreateResumePage() {
+  const router = useRouter();
+  const seededRef = useRef(false); // ← NEW: prevent re-seeding
+
   const {
     formData, setFormData,
     summary, setSummary,
@@ -163,6 +169,55 @@ export default function CreateResumePage() {
   const [selectedTemplate, setSelectedTemplate] = useState('basic');
   const [showToast, setShowToast] = useState(false);
   const savedTime = useMemo(() => formatLocal(saveEventAt), [saveEventAt]);
+
+  // ----- Seed from ?template= if doc is empty (non-destructive) -----
+  useEffect(() => {
+    const t = router.query?.template;
+    if (!t || seededRef.current) return;
+
+    const isEmpty =
+      !summary &&
+      (experiences?.length ?? 0) === 0 &&
+      (projects?.length ?? 0) === 0 &&
+      (volunteerExperiences?.length ?? 0) === 0 &&
+      (educationList?.length ?? 0) === 0 &&
+      (certifications?.length ?? 0) === 0 &&
+      (languages?.length ?? 0) === 0 &&
+      (skills?.length ?? 0) === 0 &&
+      (achievements?.length ?? 0) === 0 &&
+      (customSections?.length ?? 0) === 0;
+
+    if (!isEmpty) return;
+
+    // Optional: derive a minimal profile from ContactInfo or other places
+    const profile = {
+      summary,
+      skills,
+      experience: experiences,
+      education: educationList,
+      projects,
+      links: [],
+    };
+
+    const doc = applyResumeTemplate(String(t), profile);
+
+    // Map to your existing context state (non-destructive defaults)
+    setSummary(doc?.sections?.summary?.data?.text || summary || '');
+    setSkills(Array.isArray(doc?.sections?.skills?.items) ? doc.sections.skills.items : skills || []);
+    setExperiences(Array.isArray(doc?.sections?.experience?.items) ? doc.sections.experience.items : experiences || []);
+    setEducationList(Array.isArray(doc?.sections?.education?.items) ? doc.sections.education.items : educationList || []);
+    setProjects(Array.isArray(doc?.sections?.projects?.items) ? doc.sections.projects.items : projects || []);
+    setAchievements(Array.isArray(doc?.sections?.achievements?.items) ? doc.sections.achievements.items : achievements || []);
+    // keep volunteer, certs, languages, customSections as-is unless provided
+    setCertifications(Array.isArray(doc?.sections?.certifications?.items) ? doc.sections.certifications.items : certifications || []);
+    setLanguages(Array.isArray(doc?.sections?.languages?.items) ? doc.sections.languages.items : languages || []);
+    setCustomSections(Array.isArray(doc?.sections?.custom?.items) ? doc.sections.custom.items : customSections || []);
+
+    seededRef.current = true;
+    // (optional) toast
+    // setShowToast(true);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [router.query?.template]);
 
   // Dock modals
   const [openAnalyzer, setOpenAnalyzer] = useState(false);
@@ -292,7 +347,7 @@ export default function CreateResumePage() {
     >
       {/* CENTER COLUMN CONTENT */}
       <div style={{ display: 'grid', gap: 16 }}>
-        {/* Template selector */}
+        {/* Template selector (kept; we seed via ?template=) */}
         <section
           style={{
             background: 'white',
@@ -319,6 +374,9 @@ export default function CreateResumePage() {
           >
             <option value="basic">Basic (ATS friendly)</option>
           </select>
+          <div style={{ marginTop: 8, fontSize: 12, color: '#607D8B' }}>
+            Tip: Pick a template on the previous screen — this page auto-seeds when opened with <code>?template=</code>.
+          </div>
         </section>
 
         {/* Form sections */}
