@@ -30,11 +30,11 @@ import AtsCheckBadge from '@/components/resume-form/AtsCheckBadge';
 import AtsPreviewModal from '@/components/resume-form/AtsPreviewModal';
 import SmartExportMenu from '@/components/resume-form/export/SmartExportMenu';
 
-// NEW: shared template registry + AI matcher
+// shared template registry + AI matcher
 import { resumeTemplates, getResumeTemplateComponent } from '@/lib/templates';
 import { matchTemplate } from '@/lib/ai/matchTemplate';
 
-// NEW: tiny stepper (appears only in apply flow)
+// stepper (always on now)
 import ApplySteps from '@/components/apply/ApplySteps';
 
 const ClientPDFButton = dynamic(
@@ -175,16 +175,16 @@ export default function CreateResumePage() {
     saveEventAt,
   } = useContext(ResumeContext);
 
-  // NEW: selected resume template + lazy-loaded component
+  // selected resume template + lazy-loaded component
   const [templateId, setTemplateId] = useState(() => String(router.query?.template || 'modern'));
   const [TemplateComp, setTemplateComp] = useState(null);
 
-  // keep your prior local "toast"
+  // toast
   const [showToast, setShowToast] = useState(false);
   const savedTime = useMemo(() => formatLocal(saveEventAt), [saveEventAt]);
 
-  // NEW: apply-flow flag + optional JD text
-  const isApplyFlow = String(router.query?.flow || '') === 'apply';
+  // unified apply flow is now default (no query needed)
+  const isApplyFlow = true;
   const [jd, setJd] = useState('');
   useEffect(() => {
     try {
@@ -193,7 +193,7 @@ export default function CreateResumePage() {
     } catch {}
   }, []);
 
-  // --- NEW: Ingest Apply Assistant seed BEFORE ?template= seeding ---
+  // Ingest Apply Assistant seed BEFORE ?template= seeding
   useEffect(() => {
     try {
       const raw = localStorage.getItem('ft_resume_seed');
@@ -239,7 +239,7 @@ export default function CreateResumePage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  // Seed from ?template= if doc is empty (kept as-is), and also mirror into templateId
+  // Seed from ?template= if doc is empty (kept), mirror into templateId
   useEffect(() => {
     const t = router.query?.template;
     if (!t || seededRef.current) {
@@ -319,7 +319,7 @@ export default function CreateResumePage() {
     return () => clearTimeout(t);
   }, [saveEventAt]);
 
-  // Header (adds stepper only in apply flow)
+  // Header (stepper always visible)
   const HeaderBox = (
     <section
       style={{
@@ -333,7 +333,7 @@ export default function CreateResumePage() {
         gap: 10,
       }}
     >
-      {isApplyFlow && <ApplySteps current={1} />}
+      <ApplySteps current={1} />
 
       <h1
         style={{
@@ -365,6 +365,7 @@ export default function CreateResumePage() {
 
       {/* ATS status + Export */}
       <div
+        id="export"
         style={{
           background: 'white',
           border: '1px solid #eee',
@@ -473,63 +474,61 @@ export default function CreateResumePage() {
     >
       {/* CENTER COLUMN CONTENT */}
       <div style={{ display: 'grid', gap: 16 }}>
-        {/* --- NEW: Optional JD card (only in apply flow) --- */}
-        {isApplyFlow && (
-          <section
-            style={{
-              background: 'white',
-              border: '1px solid #eee',
-              borderRadius: 12,
-              padding: 16,
-              boxShadow: '0 2px 6px rgba(0,0,0,0.06)',
-              display: 'grid',
-              gap: 8,
-            }}
-          >
-            <div style={{ fontWeight: 800, color: '#37474F' }}>Job description (optional)</div>
-            <textarea
-              placeholder="Paste the job description here to tailor your resume & enable ATS checks…"
-              value={jd}
-              onChange={(e) => setJd(e.target.value)}
-              style={{ width: '100%', minHeight: 160, border: '1px solid #E0E0E0', borderRadius: 10, padding: 12, outline: 'none' }}
-            />
-            <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end' }}>
-              <button
-                type="button"
-                onClick={() => { try { localStorage.setItem('ft_last_job_text', jd || ''); } catch {} setOpenAnalyzer(true); }}
-                style={{ background: 'white', border: '1px solid #E0E0E0', borderRadius: 10, padding: '8px 12px', fontWeight: 800, cursor: 'pointer' }}
-              >
-                Analyze JD
-              </button>
-              <button
-                type="button"
-                onClick={async () => {
-                  try { localStorage.setItem('ft_last_job_text', jd || ''); } catch {}
-                  // Optional AI template pick based on JD
-                  try {
-                    if (jd.trim()) {
-                      const result = await matchTemplate({ jobText: jd, profile: { summary, skills } });
-                      if (result?.resumeId) setTemplateId(result.resumeId);
-                    }
-                  } catch {}
-                  setOpenTailor(true); // free/local tailoring modal
-                }}
-                style={{ background: '#FF7043', color: 'white', border: '1px solid rgba(0,0,0,0.06)', borderRadius: 10, padding: '10px 14px', fontWeight: 800, cursor: 'pointer' }}
-              >
-                AI assist (free)
-              </button>
-              <a
-                href="/cover/create?flow=apply"
-                style={{ background: 'white', border: '1px solid #E0E0E0', borderRadius: 10, padding: '10px 14px', fontWeight: 800, textDecoration: 'none', display: 'inline-block' }}
-              >
-                Continue to Cover →
-              </a>
-            </div>
-            <div style={{ fontSize: 12, color: '#90A4AE' }}>We’ll reuse this JD on the cover step unless you change it.</div>
-          </section>
-        )}
+        {/* Optional JD card (always visible, still optional to use) */}
+        <section
+          style={{
+            background: 'white',
+            border: '1px solid #eee',
+            borderRadius: 12,
+            padding: 16,
+            boxShadow: '0 2px 6px rgba(0,0,0,0.06)',
+            display: 'grid',
+            gap: 8,
+          }}
+        >
+          <div style={{ fontWeight: 800, color: '#37474F' }}>Job description (optional)</div>
+          <textarea
+            placeholder="Paste the job description here to tailor your resume & enable ATS checks…"
+            value={jd}
+            onChange={(e) => setJd(e.target.value)}
+            style={{ width: '100%', minHeight: 160, border: '1px solid #E0E0E0', borderRadius: 10, padding: 12, outline: 'none' }}
+          />
+          <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end' }}>
+            <button
+              type="button"
+              onClick={() => { try { localStorage.setItem('ft_last_job_text', jd || ''); } catch {} setOpenAnalyzer(true); }}
+              style={{ background: 'white', border: '1px solid #E0E0E0', borderRadius: 10, padding: '8px 12px', fontWeight: 800, cursor: 'pointer' }}
+            >
+              Analyze JD
+            </button>
+            <button
+              type="button"
+              onClick={async () => {
+                try { localStorage.setItem('ft_last_job_text', jd || ''); } catch {}
+                // Optional AI template pick based on JD
+                try {
+                  if (jd.trim()) {
+                    const result = await matchTemplate({ jobText: jd, profile: { summary, skills } });
+                    if (result?.resumeId) setTemplateId(result.resumeId);
+                  }
+                } catch {}
+                setOpenTailor(true); // free/local tailoring modal
+              }}
+              style={{ background: '#FF7043', color: 'white', border: '1px solid rgba(0,0,0,0.06)', borderRadius: 10, padding: '10px 14px', fontWeight: 800, cursor: 'pointer' }}
+            >
+              AI assist (free)
+            </button>
+            <a
+              href="/cover/create"
+              style={{ background: 'white', border: '1px solid #E0E0E0', borderRadius: 10, padding: '10px 14px', fontWeight: 800, textDecoration: 'none', display: 'inline-block' }}
+            >
+              Continue to Cover →
+            </a>
+          </div>
+          <div style={{ fontSize: 12, color: '#90A4AE' }}>We’ll reuse this JD on the cover step unless you change it.</div>
+        </section>
 
-        {/* Template selector (upgraded: real templates + AI choose) */}
+        {/* Template selector (real templates + AI choose) */}
         <section
           style={{
             background: 'white',

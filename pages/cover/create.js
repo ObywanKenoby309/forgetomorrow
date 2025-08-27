@@ -16,7 +16,7 @@ import AtsPreviewModal from '@/components/resume-form/AtsPreviewModal';
 // AI writer used by the “Tailor with AI” button
 import { writeCover } from '@/lib/ai/writeCover';
 
-// Stepper for the unified flow
+// Stepper for the unified flow (always visible now)
 import ApplySteps from '@/components/apply/ApplySteps';
 
 function Field({ label, children }) {
@@ -129,8 +129,7 @@ export default function CoverCreatePage() {
   const router = useRouter();
   const seededRef = useRef(false);
 
-  // apply flow flag + JD reuse state
-  const isApplyFlow = String(router.query?.flow || '') === 'apply';
+  // unified flow: default on
   const [jd, setJd] = useState('');
   const [useSavedJd, setUseSavedJd] = useState(true);
   useEffect(() => {
@@ -315,7 +314,7 @@ export default function CoverCreatePage() {
         </GhostButton>
 
         <GhostButton onClick={() => window.print?.()}>Print / Save PDF</GhostButton>
-        <GhostButton onClick={() => router.push('/resume/create?flow=apply')}>
+        <GhostButton onClick={() => router.push('/resume/create')}>
           Back to Resume
         </GhostButton>
       </div>
@@ -335,7 +334,7 @@ export default function CoverCreatePage() {
         gap: 10,
       }}
     >
-      {isApplyFlow && <ApplySteps current={2} />}
+      <ApplySteps current={2} />
 
       <h1
         style={{
@@ -361,59 +360,57 @@ export default function CoverCreatePage() {
       activeNav="resume-cover"
     >
       <div style={{ display: 'grid', gap: 16 }}>
-        {/* --- JD reuse banner (apply flow only) --- */}
-        {isApplyFlow && (
-          <section
-            style={{
-              background: 'white',
-              border: '1px solid #eee',
-              borderRadius: 12,
-              padding: 12,
-              boxShadow: '0 2px 6px rgba(0,0,0,0.06)',
-              display: 'grid',
-              gap: 8,
-            }}
-          >
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8 }}>
-              <div style={{ fontWeight: 800, color: '#37474F' }}>
-                Using job description from Resume step
-              </div>
-              <label style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 12 }}>
-                <input
-                  type="checkbox"
-                  checked={useSavedJd}
-                  onChange={(e) => setUseSavedJd(e.target.checked)}
-                />
-                Reuse saved JD
-              </label>
+        {/* JD reuse banner (always visible) */}
+        <section
+          style={{
+            background: 'white',
+            border: '1px solid #eee',
+            borderRadius: 12,
+            padding: 12,
+            boxShadow: '0 2px 6px rgba(0,0,0,0.06)',
+            display: 'grid',
+            gap: 8,
+          }}
+        >
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8 }}>
+            <div style={{ fontWeight: 800, color: '#37474F' }}>
+              Using job description from Resume step
             </div>
-            {!useSavedJd && (
-              <textarea
-                placeholder="Paste a different job description for this cover letter…"
-                value={jd}
-                onChange={(e) => setJd(e.target.value)}
-                style={{ width: '100%', minHeight: 140, border: '1px solid #E0E0E0', borderRadius: 10, padding: 10, outline: 'none' }}
+            <label style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 12 }}>
+              <input
+                type="checkbox"
+                checked={useSavedJd}
+                onChange={(e) => setUseSavedJd(e.target.checked)}
               />
-            )}
-            <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end' }}>
-              <GhostButton
-                onClick={() => {
-                  try {
-                    localStorage.setItem('ft_last_job_text', useSavedJd ? (localStorage.getItem('ft_last_job_text') || '') : jd);
-                  } catch {}
-                }}
-              >
-                Save JD
-              </GhostButton>
-              <a href="/resume/create?flow=apply" style={{ textDecoration: 'none', padding: '10px 14px', borderRadius: 10, border: '1px solid #E0E0E0', fontWeight: 800 }}>
-                ← Back to Resume
-              </a>
-              <a href="/resume/create?flow=apply#export" style={{ textDecoration: 'none', padding: '10px 14px', borderRadius: 10, background: '#FF7043', color: 'white', border: '1px solid rgba(0,0,0,0.06)', fontWeight: 800 }}>
-                Next: Export / Apply
-              </a>
-            </div>
-          </section>
-        )}
+              Reuse saved JD
+            </label>
+          </div>
+          {!useSavedJd && (
+            <textarea
+              placeholder="Paste a different job description for this cover letter…"
+              value={jd}
+              onChange={(e) => setJd(e.target.value)}
+              style={{ width: '100%', minHeight: 140, border: '1px solid #E0E0E0', borderRadius: 10, padding: 10, outline: 'none' }}
+            />
+          )}
+          <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end' }}>
+            <GhostButton
+              onClick={() => {
+                try {
+                  localStorage.setItem('ft_last_job_text', useSavedJd ? (localStorage.getItem('ft_last_job_text') || '') : jd);
+                } catch {}
+              }}
+            >
+              Save JD
+            </GhostButton>
+            <a href="/resume/create" style={{ textDecoration: 'none', padding: '10px 14px', borderRadius: 10, border: '1px solid #E0E0E0', fontWeight: 800 }}>
+              ← Back to Resume
+            </a>
+            <a href="/resume/create#export" style={{ textDecoration: 'none', padding: '10px 14px', borderRadius: 10, background: '#FF7043', color: 'white', border: '1px solid rgba(0,0,0,0.06)', fontWeight: 800 }}>
+              Next: Export / Apply
+            </a>
+          </div>
+        </section>
 
         {/* Template selector + AI choose */}
         <section
