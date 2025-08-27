@@ -1,7 +1,7 @@
 // components/recruiter/CandidateList.js
 import { useMemo, useState } from "react";
 
-function CandidateCard({ c, isEnterprise, onView, onMessage }) {
+function CandidateCard({ c, isEnterprise, onView, onMessage, onWhy }) {
   return (
     <div className="rounded-lg border bg-white p-4">
       <div className="font-medium">{c.name}</div>
@@ -36,6 +36,18 @@ function CandidateCard({ c, isEnterprise, onView, onMessage }) {
         >
           Message
         </button>
+
+        {/* WHY (tertiary) — only renders if parent passed onWhy */}
+        {onWhy && (
+          <button
+            type="button"
+            aria-label={`Why ${c.name} matched`}
+            className="rounded border border-[#FF7043] text-[#FF7043] hover:bg-[#FFEDE6] text-xs px-2 py-1 font-semibold transition-colors"
+            onClick={() => onWhy(c)}
+          >
+            WHY
+          </button>
+        )}
       </div>
     </div>
   );
@@ -46,28 +58,25 @@ export default function CandidateList({
   isEnterprise = false,
   onView,
   onMessage,
-  // Control whether internal filters render (default on for backward-compat)
+  onWhy, // ← NEW
   showFilters = true,
-  // External filters (used when showFilters === false)
   query: externalQuery = "",
   locationFilter: externalLocation = "",
   booleanQuery: externalBoolean = "",
   ...rest
 }) {
-  // Internal state (only used when showFilters === true)
+  // Internal state (only when showFilters === true)
   const [query, setQuery] = useState("");
   const [location, setLocation] = useState("");
   const [boolQ, setBoolQ] = useState("");
 
-  // Choose effective values based on who owns the filters
   const effectiveQuery = showFilters ? query : externalQuery;
   const effectiveLocation = showFilters ? location : externalLocation;
-  const effectiveBoolean = showFilters ? boolQ : externalBoolean; // placeholder for future use
+  const effectiveBoolean = showFilters ? boolQ : externalBoolean;
 
   const filtered = useMemo(() => {
     const q = (effectiveQuery || "").trim().toLowerCase();
     const loc = (effectiveLocation || "").trim().toLowerCase();
-    // NOTE: effectiveBoolean accepted but not applied yet; wire to parser later
     return candidates.filter((c) => {
       const okQ = !q || `${c.name} ${c.role}`.toLowerCase().includes(q);
       const okL = !loc || (c.location || "").toLowerCase().includes(loc);
@@ -77,7 +86,7 @@ export default function CandidateList({
 
   return (
     <>
-      {/* OPTIONAL internal filters (hide by passing showFilters={false}) */}
+      {/* OPTIONAL internal filters */}
       {showFilters && (
         <div className="mb-4 grid grid-cols-1 sm:grid-cols-3 gap-3">
           <input
@@ -110,6 +119,7 @@ export default function CandidateList({
             isEnterprise={isEnterprise}
             onView={onView}
             onMessage={onMessage}
+            onWhy={onWhy}
           />
         ))}
 

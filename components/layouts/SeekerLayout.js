@@ -1,21 +1,32 @@
 // components/layouts/SeekerLayout.js
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import Head from 'next/head';
 import { useRouter } from 'next/router';
+
+// Seeker / Coach chrome
 import SeekerSidebar from '@/components/SeekerSidebar';
 import CoachingSidebar from '@/components/coaching/CoachingSidebar';
 import SeekerHeader from '@/components/seeker/SeekerHeader';
 import CoachingHeader from '@/components/coaching/CoachingHeader';
 import useSidebarCounts from '@/components/hooks/useSidebarCounts';
 
+// Recruiter chrome
+import RecruiterHeader from '@/components/recruiter/RecruiterHeader';
+import RecruiterSidebar from '@/components/recruiter/RecruiterSidebar';
+
 /**
- * Chrome control (coach | seeker) for Seeker routes:
- * - query param: ?chrome=coach | seeker
- * - optional prop: forceChrome='coach' | 'seeker' (future use)
- * Precedence: prop > query > default 'seeker'
+ * Unified chrome layout with gates:
+ * Modes: 'seeker' | 'coach' | 'recruiter-smb' | 'recruiter-ent'
  *
- * Hydration-safe: SSR + first client render = 'seeker'. We only swap after mount.
+ * Precedence: prop (forceChrome) > query (?chrome=) > default 'seeker'
+ * Example:
+ *   <SeekerLayout forceChrome="coach" ... />
+ *   /some-shared-page?chrome=recruiter-smb
+ *
+ * NOTE: This lets us reuse shared pages (jobs/profile/feed) without duplication.
  */
+const ALLOWED_MODES = new Set(['seeker', 'coach', 'recruiter-smb', 'recruiter-ent']);
+
 export default function SeekerLayout({
   title = 'ForgeTomorrow — Seeker',
   left,
@@ -23,36 +34,64 @@ export default function SeekerLayout({
   right,
   children,
   activeNav,
-  forceChrome, // optional: 'coach' | 'seeker' (not required today)
+  forceChrome, // optional: 'seeker' | 'coach' | 'recruiter-smb' | 'recruiter-ent'
 }) {
   const counts = useSidebarCounts();
   const router = useRouter();
 
-  // SSR/first render = seeker to avoid mismatches.
+  // Initial SSR-safe mode: fall back to 'seeker' to avoid mismatches.
   const [chromeMode, setChromeMode] = useState(
-    forceChrome === 'coach' || forceChrome === 'seeker' ? forceChrome : 'seeker'
+    forceChrome && ALLOWED_MODES.has(forceChrome) ? forceChrome : 'seeker'
   );
 
   useEffect(() => {
-    // Honor explicit prop if provided
-    if (forceChrome === 'coach' || forceChrome === 'seeker') {
+    // 1) Explicit prop wins
+    if (forceChrome && ALLOWED_MODES.has(forceChrome)) {
       setChromeMode(forceChrome);
       return;
     }
-    // Otherwise, look for ?chrome=coach|seeker
-    const q = router?.query?.chrome;
-    if (q === 'coach' || q === 'seeker') setChromeMode(q);
+    // 2) Else honor ?chrome=
+    const q = String(router?.query?.chrome || '').toLowerCase();
+    if (ALLOWED_MODES.has(q)) setChromeMode(q);
     else setChromeMode('seeker');
   }, [forceChrome, router?.query?.chrome]);
 
-  const useCoachChrome = chromeMode === 'coach';
+  const { HeaderComp, SidebarComp, sidebarProps } = useMemo(() => {
+    switch (chromeMode) {
+      case 'coach':
+        return {
+          HeaderComp: CoachingHeader,
+          SidebarComp: CoachingSidebar,
+          sidebarProps: { active: activeNav, counts },
+        };
+      case 'recruiter-smb':
+        return {
+          HeaderComp: RecruiterHeader,
+          SidebarComp: RecruiterSidebar,
+          sidebarProps: { variant: 'smb' },
+        };
+      case 'recruiter-ent':
+        return {
+          HeaderComp: RecruiterHeader,
+          SidebarComp: RecruiterSidebar,
+          sidebarProps: { variant: 'enterprise' },
+        };
+      case 'seeker':
+      default:
+        return {
+          HeaderComp: SeekerHeader,
+          SidebarComp: SeekerSidebar,
+          sidebarProps: { active: activeNav, counts },
+        };
+    }
+  }, [chromeMode, activeNav, counts]);
 
   return (
     <>
       <Head><title>{title}</title></Head>
 
-      {/* Top chrome header (never replaced by the page `header` prop) */}
-      {useCoachChrome ? <CoachingHeader /> : <SeekerHeader />}
+      {/* Top chrome header */}
+      <HeaderComp />
 
       <div
         style={{
@@ -64,21 +103,16 @@ export default function SeekerLayout({
             "left content right"
           `,
           gap: 20,
-          padding: '30px',
+          padding: '30px', // site-wide standardized top padding
           alignItems: 'start',
         }}
       >
-        {/* LEFT — Sidebar (coach vs seeker chrome) */}
+        {/* LEFT — Sidebar (overridable) */}
         <aside style={{ gridArea: 'left', alignSelf: 'start' }}>
-          {left
-            ? left
-            : useCoachChrome
-              ? <CoachingSidebar active={activeNav} counts={counts} />
-              : <SeekerSidebar active={activeNav} counts={counts} />
-          }
+          {left ? left : <SidebarComp {...sidebarProps} />}
         </aside>
 
-        {/* PAGE-LEVEL HEADER SLOT (title band / filters for the current page) */}
+        {/* PAGE-LEVEL HEADER SLOT (title band / filters / actions) */}
         <header
           style={{
             gridArea: 'header',
@@ -91,7 +125,7 @@ export default function SeekerLayout({
           {header}
         </header>
 
-        {/* RIGHT — Dark Rail */}
+        {/* RIGHT — Dark Rail (uniform across apps) */}
         <aside
           style={{
             gridArea: 'right',

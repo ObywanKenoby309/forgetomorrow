@@ -7,16 +7,16 @@ import { PrimaryButton, SecondaryButton } from "@/components/ui/Buttons";
 function HeaderBar() {
   // Center title/subtitle while keeping actions aligned right
   return (
-    <div className="grid grid-cols-1 md:grid-cols-3 items-center gap-3">
+    <div className="grid grid-cols-1 md:grid-cols-3 items-center gap-3 min-w-0">
       <div className="hidden md:block" />
-      <div className="text-center">
+      <div className="text-center min-w-0">
         <h1 className="text-2xl font-bold text-[#FF7043]">Recruiter Dashboard</h1>
         <p className="text-sm text-slate-600 mt-1 max-w-xl mx-auto">
           Monitor open roles, candidate recommendations, and quick analytics at a glance.
         </p>
       </div>
       <div className="justify-self-center md:justify-self-end">
-        <div className="flex items-center gap-2">
+        <div className="flex flex-wrap items-center gap-2">
           <PrimaryButton href="/recruiter/job-postings">Post a Job</PrimaryButton>
           <SecondaryButton href="/recruiter/analytics">View Analytics</SecondaryButton>
         </div>
@@ -50,13 +50,13 @@ function RightToolsCard() {
 // Panel auto-equal heights via h-full + flex layout; children fill space
 function Panel({ title, children }) {
   return (
-    <div className="rounded-lg border bg-white p-4 relative h-full flex flex-col">
+    <section className="rounded-lg border bg-white p-4 relative h-full flex flex-col" aria-label={title}>
       <div className="font-medium mb-2">{title}</div>
       {/* Ensure uniform internal spacing in all panels */}
-      <div className="flex-1 grid content-start gap-2">
+      <div className="flex-1 grid content-start gap-2 min-w-0">
         {children}
       </div>
-    </div>
+    </section>
   );
 }
 
@@ -64,7 +64,7 @@ function DashboardBody() {
   const { isEnterprise } = usePlan();
 
   return (
-    <main className="space-y-6">
+    <div className="space-y-6 min-w-0">
       {/* Quick Stats (available to all plans) */}
       <section className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         {[
@@ -74,7 +74,7 @@ function DashboardBody() {
           { label: "Applications (7d)", value: 42 },
         ].map((t) => (
           <div key={t.label} className="rounded-lg border bg-white p-4">
-            <div className="text-sm font-medium text-[#FF7043]">{t.label}</div>
+            <div className="text-sm font-medium text-[#FF7043] truncate">{t.label}</div>
             <div className="text-2xl font-semibold mt-1">{t.value}</div>
           </div>
         ))}
@@ -121,7 +121,7 @@ function DashboardBody() {
           )}
         </Panel>
       </section>
-    </main>
+    </div>
   );
 }
 

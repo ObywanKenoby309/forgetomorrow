@@ -6,8 +6,25 @@ import CandidateList from "../../components/recruiter/CandidateList";
 import CandidateProfileModal from "../../components/recruiter/CandidateProfileModal";
 import FeatureLock from "../../components/recruiter/FeatureLock";
 
+import WhyCandidateDrawer from "../../components/recruiter/WhyCandidateDrawer";
+import { getMockExplain } from "../../lib/recruiter/mockExplain";
+import * as Analytics from "../../lib/analytics/instrumentation";
+
+const mkWhySnapshot = (explain, mode) => ({
+  score: explain?.score,
+  mode,
+  reasons: (explain?.reasons || [])
+    .slice(0, mode === "full" ? 8 : 2)
+    .map((r) => ({
+      requirement: r.requirement,
+      evidence: (r.evidence || [])
+        .slice(0, mode === "full" ? 4 : 1)
+        .map((e) => ({ text: e.text, source: e.source || null })),
+    })),
+  filters: explain?.filters_triggered || [],
+});
+
 function HeaderOnly() {
-  // Header shows ONLY title + description (no inputs)
   return (
     <div className="w-full text-center">
       <h1 className="text-2xl font-bold text-[#FF7043]">Candidates</h1>
@@ -19,13 +36,23 @@ function HeaderOnly() {
   );
 }
 
-function RightToolsCard() {
+function RightToolsCard({ whyMode = "lite", creditsLeft = null }) {
+  const isFull = whyMode === "full";
   return (
     <div className="rounded-lg border bg-white p-4">
       <div className="font-medium mb-2">Tips</div>
       <div className="text-sm text-slate-600 space-y-2">
         <p>Use short queries, then refine with Boolean on Enterprise.</p>
         <p>Tag top candidates to build quick outreach lists.</p>
+        <p className="mt-2">
+          <span className="font-semibold">WHY</span>:{" "}
+          {isFull ? "Full rationale enabled" : "Lite rationale (top reasons only)"}
+          {creditsLeft != null && !isFull && (
+            <span className="ml-2 text-xs px-2 py-0.5 rounded-full border bg-[#FFEDE6] text-[#FF7043]">
+              {creditsLeft} left
+            </span>
+          )}
+        </p>
       </div>
     </div>
   );
@@ -34,12 +61,12 @@ function RightToolsCard() {
 function Body() {
   const { isEnterprise } = usePlan();
 
-  // inputs (one single row below header)
+  // Filters
   const [nameQuery, setNameQuery] = useState("");
   const [locQuery, setLocQuery] = useState("");
   const [boolQuery, setBoolQuery] = useState("");
 
-  // mock data (wire to API later)
+  // Mock candidates
   const [candidates, setCandidates] = useState([
     {
       id: 1,
@@ -100,7 +127,73 @@ function Body() {
     },
   ]);
 
-  // SINGLE filters row (equal widths), placed BELOW header
+  // WHY flags
+  const hasWhyFull = isEnterprise;
+  const hasWhyLite = true;
+  const whyMode = hasWhyFull ? "full" : hasWhyLite ? "lite" : "off";
+
+  // SMB credit counter (optional)
+  const [whyCreditsLeft, setWhyCreditsLeft] = useState(hasWhyFull ? null : 100);
+
+  // Profile modal
+  const [open, setOpen] = useState(false);
+  const [selected, setSelected] = useState(null);
+  const onView = (c) => {
+    setSelected(c);
+    setOpen(true);
+  };
+  const onMessage = (c) => console.log("Message", c);
+
+  const saveNotes = (id, text) => {
+    setCandidates((prev) => prev.map((c) => (c.id === id ? { ...c, notes: text } : c)));
+  };
+  const toggleTag = (id, tag) => {
+    setCandidates((prev) =>
+      prev.map((c) => {
+        if (c.id !== id) return c;
+        const has = (c.tags || []).includes(tag);
+        return { ...c, tags: has ? c.tags.filter((t) => t !== tag) : [...(c.tags || []), tag] };
+      })
+    );
+  };
+
+  // WHY drawer + instrumentation
+  const [whyOpen, setWhyOpen] = useState(false);
+  const [whyData, setWhyData] = useState(null);
+  const [whyCandidate, setWhyCandidate] = useState(null); // ← NEW
+
+  const onWhy = (c) => {
+    if (whyMode === "off") return;
+    if (!hasWhyFull && whyCreditsLeft === 0) return;
+
+    const ex = getMockExplain();
+    ex.summary = `${c.name.split(" ")[0]}: ${ex.summary}`;
+    ex.score = c.match;
+
+    setWhyCandidate(c);     // ← NEW: remember which candidate the drawer is for
+    setWhyData(ex);
+    setWhyOpen(true);
+
+    const evt = {
+      type: "why_opened",
+      ts: new Date().toISOString(),
+      orgId: null,
+      jobId: null,
+      candidateId: c.id,
+      role: "recruiter",
+      snapshot: mkWhySnapshot(ex, whyMode),
+    };
+    if (typeof Analytics.logWhyOpened === "function") {
+      Analytics.logWhyOpened({ ...evt, score: ex.score, mode: whyMode, explain: ex });
+    } else if (typeof Analytics.logEvent === "function") {
+      Analytics.logEvent(evt);
+    }
+
+    if (!hasWhyFull) {
+      setWhyCreditsLeft((n) => Math.max(0, (n || 0) - 1));
+    }
+  };
+
   const FiltersRow = (
     <div className="mb-4 grid grid-cols-1 sm:grid-cols-3 gap-3">
       <input
@@ -126,7 +219,6 @@ function Body() {
           onChange={(e) => setBoolQuery(e.target.value)}
         />
       ) : (
-        // Locked input stays disabled but wrapped to keep spacing consistent
         <FeatureLock label="Boolean Search">
           <input
             type="text"
@@ -139,29 +231,6 @@ function Body() {
     </div>
   );
 
-  const [open, setOpen] = useState(false);
-  const [selected, setSelected] = useState(null);
-
-  const onView = (c) => {
-    setSelected(c);
-    setOpen(true);
-  };
-  const onMessage = (c) => console.log("Message", c);
-
-  const saveNotes = (id, text) => {
-    setCandidates((prev) => prev.map((c) => (c.id === id ? { ...c, notes: text } : c)));
-  };
-
-  const toggleTag = (id, tag) => {
-    setCandidates((prev) =>
-      prev.map((c) => {
-        if (c.id !== id) return c;
-        const has = (c.tags || []).includes(tag);
-        return { ...c, tags: has ? c.tags.filter((t) => t !== tag) : [...(c.tags || []), tag] };
-      })
-    );
-  };
-
   return (
     <>
       {FiltersRow}
@@ -171,11 +240,10 @@ function Body() {
         isEnterprise={isEnterprise}
         onView={onView}
         onMessage={onMessage}
-        // If CandidateList renders its own filters, hide them:
+        onWhy={onWhy}
         showFilters={false}
         showFilterBar={false}
         filtersVisible={false}
-        // Optionally pass queries for future wiring:
         query={nameQuery}
         locationFilter={locQuery}
         booleanQuery={boolQuery}
@@ -188,17 +256,33 @@ function Body() {
         onSaveNotes={saveNotes}
         onToggleTag={toggleTag}
       />
+
+      <WhyCandidateDrawer
+        open={whyOpen}
+        onClose={() => setWhyOpen(false)}
+        explain={whyData}
+        mode={whyMode}
+        onViewCandidate={() => {
+          if (whyCandidate) {
+            setSelected(whyCandidate);
+            setOpen(true);
+          }
+          setWhyOpen(false);
+        }}
+      />
     </>
   );
 }
 
 export default function CandidatesPage() {
+  const RightCard = (props) => <RightToolsCard {...props} />;
+
   return (
     <PlanProvider>
       <RecruiterLayout
         title="Candidates — ForgeTomorrow"
         header={<HeaderOnly />}
-        right={<RightToolsCard />}
+        right={<RightCard />}
       >
         <Body />
       </RecruiterLayout>
