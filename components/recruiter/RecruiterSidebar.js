@@ -133,7 +133,9 @@ export default function RecruiterSidebar({
   const role = roleProp || ctxRole;
   const isEnterprise = typeof variant === 'string' ? (variant === 'enterprise') : planIsEnterprise;
 
+  // keep recruiter chrome even on Seeker pages
   const chromeRecruiter = isEnterprise ? 'recruiter-ent' : 'recruiter-smb';
+
   const canSeeSettings = can('recruiter.settings.view');
 
   return (
@@ -161,22 +163,22 @@ export default function RecruiterSidebar({
         active={active === 'dashboard'}
       />
 
-      {/* 3) Connections */}
+      {/* 3) Connections (Seeker pages, but KEEP recruiter chrome) */}
       <Section title="Connections" defaultOpen={!!initialOpen.connections}>
         <NavItem
-          href={`/seeker/contact-center?chrome=seeker`}
+          href={`/seeker/contact-center?chrome=${chromeRecruiter}`}
           label="Contact Center"
           active={active === 'contacts'}
           badge={counts.connections}
         />
         <NavItem
-          href={`/seeker/messages?chrome=seeker`}
+          href={`/seeker/messages?chrome=${chromeRecruiter}`}
           label="The Signal"
           active={active === 'messages'}
           badge={counts.signal}
         />
         <NavItem
-          href={`/feed?chrome=seeker`}
+          href={`/feed?chrome=${chromeRecruiter}`}
           label="Community Feed"
           active={active === 'feed'}
         />
@@ -225,38 +227,38 @@ export default function RecruiterSidebar({
         )}
       </Section>
 
-      {/* 5) Seeker Tools */}
+      {/* 5) Seeker Tools (Seeker pages, but KEEP recruiter chrome) */}
       <Section title="Seeker Tools" defaultOpen={!!initialOpen.seeker}>
         <NavItem
-          href={`/seeker-dashboard?chrome=seeker`}
+          href={`/seeker-dashboard?chrome=${chromeRecruiter}`}
           label="Seeker Dashboard"
           active={active === 'seeker-dashboard'}
         />
         <NavItem
-          href={`/seeker/jobs?chrome=seeker`}
+          href={`/seeker/jobs?chrome=${chromeRecruiter}`}
           label="Apply to Jobs"
           active={active === 'jobs'}
         />
         <NavItem
-          href={`/resume-cover?chrome=seeker`}
+          href={`/resume-cover?chrome=${chromeRecruiter}`}
           label="Resume & Cover"
           active={active === 'resume-cover'}
         />
         <NavItem
-          href={`/roadmap?chrome=seeker`}
+          href={`/roadmap?chrome=${chromeRecruiter}`}
           label="Career Roadmap"
           active={active === 'roadmap'}
         />
         <NavItem
-          href={`/seeker/calendar?chrome=seeker`}
+          href={`/seeker/calendar?chrome=${chromeRecruiter}`}
           label="Seeker Calendar"
           active={active === 'seeker-calendar'}
         />
       </Section>
 
-      {/* 6) The Hearth */}
+      {/* 6) The Hearth (Seeker page, keep recruiter chrome) */}
       <NavItem
-        href={`/seeker/the-hearth?chrome=seeker`}
+        href={`/seeker/the-hearth?chrome=${chromeRecruiter}`}
         label="The Hearth"
         active={active === 'hearth'}
       />
