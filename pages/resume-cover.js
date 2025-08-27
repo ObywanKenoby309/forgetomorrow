@@ -437,7 +437,7 @@ export default function ResumeCoverCreator() {
           <section
             style={{
               background: '#F5F5F5',
-              border: '1px dashed '#B0BEC5',
+              border: '1px dashed #B0BEC5',
               borderRadius: 12,
               padding: 24,
               textAlign: 'center',
