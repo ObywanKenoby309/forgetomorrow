@@ -26,9 +26,16 @@ import TailorLocal from '@/components/resume-form/TailorLocal';
 import ResumePreview from '@/components/resume-form/ResumePreview';
 
 import { applyResumeTemplate } from '@/lib/templates/applyTemplate';
-import AtsCheckBadge from '@/components/resume-form/AtsCheckBadge';           // ← NEW
-import AtsPreviewModal from '@/components/resume-form/AtsPreviewModal';       // ← NEW
-import SmartExportMenu from '@/components/resume-form/export/SmartExportMenu';// ← NEW
+import AtsCheckBadge from '@/components/resume-form/AtsCheckBadge';
+import AtsPreviewModal from '@/components/resume-form/AtsPreviewModal';
+import SmartExportMenu from '@/components/resume-form/export/SmartExportMenu';
+
+// NEW: shared template registry + AI matcher
+import { resumeTemplates, getResumeTemplateComponent } from '@/lib/templates';
+import { matchTemplate } from '@/lib/ai/matchTemplate';
+
+// NEW: tiny stepper (appears only in apply flow)
+import ApplySteps from '@/components/apply/ApplySteps';
 
 const ClientPDFButton = dynamic(
   () => import('@/components/resume-form/export/ClientPDFButton'),
@@ -168,14 +175,77 @@ export default function CreateResumePage() {
     saveEventAt,
   } = useContext(ResumeContext);
 
-  const [selectedTemplate, setSelectedTemplate] = useState('basic');
+  // NEW: selected resume template + lazy-loaded component
+  const [templateId, setTemplateId] = useState(() => String(router.query?.template || 'modern'));
+  const [TemplateComp, setTemplateComp] = useState(null);
+
+  // keep your prior local "toast"
   const [showToast, setShowToast] = useState(false);
   const savedTime = useMemo(() => formatLocal(saveEventAt), [saveEventAt]);
 
-  // Seed from ?template= if doc is empty
+  // NEW: apply-flow flag + optional JD text
+  const isApplyFlow = String(router.query?.flow || '') === 'apply';
+  const [jd, setJd] = useState('');
+  useEffect(() => {
+    try {
+      const saved = localStorage.getItem('ft_last_job_text') || '';
+      if (saved) setJd(saved);
+    } catch {}
+  }, []);
+
+  // --- NEW: Ingest Apply Assistant seed BEFORE ?template= seeding ---
+  useEffect(() => {
+    try {
+      const raw = localStorage.getItem('ft_resume_seed');
+      if (!raw) return;
+      const seed = JSON.parse(raw);
+
+      const isEmpty =
+        !summary &&
+        (experiences?.length ?? 0) === 0 &&
+        (projects?.length ?? 0) === 0 &&
+        (volunteerExperiences?.length ?? 0) === 0 &&
+        (educationList?.length ?? 0) === 0 &&
+        (certifications?.length ?? 0) === 0 &&
+        (languages?.length ?? 0) === 0 &&
+        (skills?.length ?? 0) === 0 &&
+        (achievements?.length ?? 0) === 0 &&
+        (customSections?.length ?? 0) === 0;
+
+      if (!isEmpty) {
+        localStorage.removeItem('ft_resume_seed');
+        return;
+      }
+
+      if (seed?.formData) setFormData(prev => ({ ...prev, ...seed.formData }));
+      if (seed?.summary != null) setSummary(seed.summary);
+      if (Array.isArray(seed?.experiences)) setExperiences(seed.experiences);
+      if (Array.isArray(seed?.projects)) setProjects(seed.projects);
+      if (Array.isArray(seed?.volunteerExperiences)) setVolunteerExperiences(seed.volunteerExperiences);
+      if (Array.isArray(seed?.educationList)) setEducationList(seed.educationList);
+      if (Array.isArray(seed?.certifications)) setCertifications(seed.certifications);
+      if (Array.isArray(seed?.languages)) setLanguages(seed.languages);
+      if (Array.isArray(seed?.skills)) setSkills(seed.skills);
+      if (Array.isArray(seed?.achievements)) setAchievements(seed.achievements);
+      if (Array.isArray(seed?.customSections)) setCustomSections(seed.customSections);
+
+      if (seed?.templateId) setTemplateId(String(seed.templateId));
+
+      seededRef.current = true;
+      localStorage.removeItem('ft_resume_seed');
+    } catch {
+      localStorage.removeItem('ft_resume_seed');
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  // Seed from ?template= if doc is empty (kept as-is), and also mirror into templateId
   useEffect(() => {
     const t = router.query?.template;
-    if (!t || seededRef.current) return;
+    if (!t || seededRef.current) {
+      if (t) setTemplateId(String(t));
+      return;
+    }
 
     const isEmpty =
       !summary &&
@@ -189,7 +259,10 @@ export default function CreateResumePage() {
       (achievements?.length ?? 0) === 0 &&
       (customSections?.length ?? 0) === 0;
 
-    if (!isEmpty) return;
+    if (!isEmpty) {
+      setTemplateId(String(t));
+      return;
+    }
 
     const profile = {
       summary,
@@ -213,8 +286,23 @@ export default function CreateResumePage() {
     setCustomSections(Array.isArray(doc?.sections?.custom?.items) ? doc.sections.custom.items : customSections || []);
 
     seededRef.current = true;
+    setTemplateId(String(t));
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [router.query?.template]);
+
+  // Load the template component whenever templateId changes
+  useEffect(() => {
+    let mounted = true;
+    (async () => {
+      try {
+        const Comp = await getResumeTemplateComponent(templateId || 'modern');
+        if (mounted) setTemplateComp(() => Comp);
+      } catch {
+        if (mounted) setTemplateComp(null);
+      }
+    })();
+    return () => { mounted = false; };
+  }, [templateId]);
 
   // Dock modals
   const [openAnalyzer, setOpenAnalyzer] = useState(false);
@@ -231,7 +319,7 @@ export default function CreateResumePage() {
     return () => clearTimeout(t);
   }, [saveEventAt]);
 
-  // Header
+  // Header (adds stepper only in apply flow)
   const HeaderBox = (
     <section
       style={{
@@ -241,8 +329,12 @@ export default function CreateResumePage() {
         padding: 16,
         boxShadow: '0 2px 6px rgba(0,0,0,0.06)',
         textAlign: 'center',
+        display: 'grid',
+        gap: 10,
       }}
     >
+      {isApplyFlow && <ApplySteps current={1} />}
+
       <h1
         style={{
           color: '#FF7043',
@@ -255,7 +347,7 @@ export default function CreateResumePage() {
       </h1>
       <p
         style={{
-          marginTop: 8,
+          marginTop: 0,
           color: '#546E7A',
           fontSize: 14,
         }}
@@ -335,21 +427,21 @@ export default function CreateResumePage() {
             defaultAtsMode={true}
             className="bg-[#FF7043] hover:bg-[#F4511E] text-white py-1.5 px-3 rounded text-sm"
           />
-		  
-		  <SmartExportMenu
-			formData={formData}
-			summary={summary}
-			experiences={experiences}
-			projects={projects}
-			volunteerExperiences={volunteerExperiences}
-			educationList={educationList}
-			certifications={certifications}
-			languages={languages}
-			skills={skills}
-			achievements={achievements}
-			customSections={customSections}
-			coverStorageKey="ft_cover_draft"
-		 />
+
+          <SmartExportMenu
+            formData={formData}
+            summary={summary}
+            experiences={experiences}
+            projects={projects}
+            volunteerExperiences={volunteerExperiences}
+            educationList={educationList}
+            certifications={certifications}
+            languages={languages}
+            skills={skills}
+            achievements={achievements}
+            customSections={customSections}
+            coverStorageKey="ft_cover_draft"
+          />
         </div>
       </div>
 
@@ -381,7 +473,63 @@ export default function CreateResumePage() {
     >
       {/* CENTER COLUMN CONTENT */}
       <div style={{ display: 'grid', gap: 16 }}>
-        {/* Template selector (kept; we seed via ?template=) */}
+        {/* --- NEW: Optional JD card (only in apply flow) --- */}
+        {isApplyFlow && (
+          <section
+            style={{
+              background: 'white',
+              border: '1px solid #eee',
+              borderRadius: 12,
+              padding: 16,
+              boxShadow: '0 2px 6px rgba(0,0,0,0.06)',
+              display: 'grid',
+              gap: 8,
+            }}
+          >
+            <div style={{ fontWeight: 800, color: '#37474F' }}>Job description (optional)</div>
+            <textarea
+              placeholder="Paste the job description here to tailor your resume & enable ATS checks…"
+              value={jd}
+              onChange={(e) => setJd(e.target.value)}
+              style={{ width: '100%', minHeight: 160, border: '1px solid #E0E0E0', borderRadius: 10, padding: 12, outline: 'none' }}
+            />
+            <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end' }}>
+              <button
+                type="button"
+                onClick={() => { try { localStorage.setItem('ft_last_job_text', jd || ''); } catch {} setOpenAnalyzer(true); }}
+                style={{ background: 'white', border: '1px solid #E0E0E0', borderRadius: 10, padding: '8px 12px', fontWeight: 800, cursor: 'pointer' }}
+              >
+                Analyze JD
+              </button>
+              <button
+                type="button"
+                onClick={async () => {
+                  try { localStorage.setItem('ft_last_job_text', jd || ''); } catch {}
+                  // Optional AI template pick based on JD
+                  try {
+                    if (jd.trim()) {
+                      const result = await matchTemplate({ jobText: jd, profile: { summary, skills } });
+                      if (result?.resumeId) setTemplateId(result.resumeId);
+                    }
+                  } catch {}
+                  setOpenTailor(true); // free/local tailoring modal
+                }}
+                style={{ background: '#FF7043', color: 'white', border: '1px solid rgba(0,0,0,0.06)', borderRadius: 10, padding: '10px 14px', fontWeight: 800, cursor: 'pointer' }}
+              >
+                AI assist (free)
+              </button>
+              <a
+                href="/cover/create?flow=apply"
+                style={{ background: 'white', border: '1px solid #E0E0E0', borderRadius: 10, padding: '10px 14px', fontWeight: 800, textDecoration: 'none', display: 'inline-block' }}
+              >
+                Continue to Cover →
+              </a>
+            </div>
+            <div style={{ fontSize: 12, color: '#90A4AE' }}>We’ll reuse this JD on the cover step unless you change it.</div>
+          </section>
+        )}
+
+        {/* Template selector (upgraded: real templates + AI choose) */}
         <section
           style={{
             background: 'white',
@@ -394,22 +542,55 @@ export default function CreateResumePage() {
           <label htmlFor="template-select" style={{ display: 'block', fontWeight: 700, marginBottom: 8, color: '#FF7043' }}>
             Choose Resume Template
           </label>
-          <select
-            id="template-select"
-            value={selectedTemplate}
-            onChange={(e) => setSelectedTemplate(e.target.value)}
-            style={{
-              border: '1px solid #ddd',
-              borderRadius: 8,
-              padding: '10px 12px',
-              width: '100%',
-              outline: 'none',
-            }}
-          >
-            <option value="basic">Basic (ATS friendly)</option>
-          </select>
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr auto', gap: 8, alignItems: 'center' }}>
+            <select
+              id="template-select"
+              value={templateId}
+              onChange={(e) => setTemplateId(e.target.value)}
+              style={{
+                border: '1px solid #ddd',
+                borderRadius: 8,
+                padding: '10px 12px',
+                width: '100%',
+                outline: 'none',
+              }}
+            >
+              {resumeTemplates.map(t => (
+                <option key={t.id} value={t.id}>{t.name}</option>
+              ))}
+            </select>
+
+            <button
+              type="button"
+              onClick={async () => {
+                try {
+                  const jobText = localStorage.getItem('ft_last_job_text') || '';
+                  const result = await matchTemplate({ jobText, profile: { summary, skills } });
+                  setTemplateId(result.resumeId);
+                  // eslint-disable-next-line no-alert
+                  alert(`AI picked: ${result.resumeId}\nReason: ${result.reasons.resume.why}`);
+                } catch (e) {
+                  // eslint-disable-next-line no-alert
+                  alert('Could not run template matcher. Using current selection.');
+                }
+              }}
+              style={{
+                background: '#FF7043',
+                color: 'white',
+                padding: '10px 12px',
+                borderRadius: 8,
+                border: '1px solid rgba(0,0,0,0.06)',
+                fontWeight: 800,
+                cursor: 'pointer',
+                whiteSpace: 'nowrap',
+              }}
+            >
+              Use AI to choose
+            </button>
+          </div>
+
           <div style={{ marginTop: 8, fontSize: 12, color: '#607D8B' }}>
-            Tip: Pick a template on the previous screen — this page auto-seeds when opened with <code>?template=</code>.
+            Tip: Opening this page with <code>?template=modern|classic|formal|impact</code> will also seed content and select the template.
           </div>
         </section>
 
@@ -500,19 +681,28 @@ export default function CreateResumePage() {
         title="Live Preview"
         onClose={() => setOpenPreview(false)}
       >
-        <ResumePreview
-          formData={formData}
-          summary={summary}
-          experiences={experiences}
-          projects={projects}
-          volunteerExperiences={volunteerExperiences}
-          educationList={educationList}
-          certifications={certifications}
-          languages={languages}
-          skills={skills}
-          achievements={achievements}
-          customSections={customSections}
-        />
+        {TemplateComp ? (
+          <TemplateComp
+            data={{
+              formData, summary, experiences, projects, volunteerExperiences,
+              educationList, certifications, languages, skills, achievements, customSections
+            }}
+          />
+        ) : (
+          <ResumePreview
+            formData={formData}
+            summary={summary}
+            experiences={experiences}
+            projects={projects}
+            volunteerExperiences={volunteerExperiences}
+            educationList={educationList}
+            certifications={certifications}
+            languages={languages}
+            skills={skills}
+            achievements={achievements}
+            customSections={customSections}
+          />
+        )}
       </DockModal>
 
       {/* ATS PREVIEW */}

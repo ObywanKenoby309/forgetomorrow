@@ -44,6 +44,8 @@ export default function App({ Component, pageProps }) {
   const isSeekerRoute =
     router.pathname.startsWith('/seeker') ||
     router.pathname.startsWith('/resume') ||
+    router.pathname.startsWith('/cover') ||   // ← NEW: treat /cover/* as internal
+    router.pathname.startsWith('/apply') ||   // ← OPTIONAL: unified Apply Assistant is internal
     [
       '/the-hearth',
       '/jobs',
@@ -52,7 +54,7 @@ export default function App({ Component, pageProps }) {
       '/resume-cover',
       '/roadmap',
       '/profile',            // ✅ Treat /profile as internal (prevents LandingHeader)
-	  '/profile-analytics',
+      '/profile-analytics',
     ].includes(router.pathname);
 
   const isCoachingRoute =

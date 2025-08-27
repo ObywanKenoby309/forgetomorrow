@@ -5,6 +5,20 @@ import SeekerLayout from '@/components/layouts/SeekerLayout';
 import SeekerRightColumn from '@/components/seeker/SeekerRightColumn';
 import { applyCoverTemplate } from '@/lib/templates/applyCoverTemplate';
 
+// Template registry + matcher
+import { coverTemplates, getCoverTemplateComponent } from '@/lib/templates';
+import { matchTemplate } from '@/lib/ai/matchTemplate';
+
+// ATS helpers (reused from resume)
+import AtsCheckBadge from '@/components/resume-form/AtsCheckBadge';
+import AtsPreviewModal from '@/components/resume-form/AtsPreviewModal';
+
+// AI writer used by the “Tailor with AI” button
+import { writeCover } from '@/lib/ai/writeCover';
+
+// Stepper for the unified flow
+import ApplySteps from '@/components/apply/ApplySteps';
+
 function Field({ label, children }) {
   return (
     <div style={{ display: 'grid', gap: 6 }}>
@@ -115,6 +129,21 @@ export default function CoverCreatePage() {
   const router = useRouter();
   const seededRef = useRef(false);
 
+  // apply flow flag + JD reuse state
+  const isApplyFlow = String(router.query?.flow || '') === 'apply';
+  const [jd, setJd] = useState('');
+  const [useSavedJd, setUseSavedJd] = useState(true);
+  useEffect(() => {
+    try {
+      const saved = localStorage.getItem('ft_last_job_text') || '';
+      setJd(saved);
+    } catch {}
+  }, []);
+
+  // selected cover template + lazy component
+  const [coverId, setCoverId] = useState(() => String(router.query?.template || 'concise'));
+  const [CoverComp, setCoverComp] = useState(null);
+
   const [fields, setFields] = useState({
     recipient: "",
     company: "",
@@ -129,10 +158,16 @@ export default function CoverCreatePage() {
     signatureContact: "",
   });
 
+  // ATS modal
+  const [openAtsPreview, setOpenAtsPreview] = useState(false);
+
   // Seed from ?template=
   useEffect(() => {
     const t = router.query?.template;
-    if (!t || seededRef.current) return;
+    if (!t || seededRef.current) {
+      if (t) setCoverId(String(t));
+      return;
+    }
     const isBlank =
       !fields.opening &&
       (!fields.body || fields.body.every((l) => !l)) &&
@@ -140,21 +175,37 @@ export default function CoverCreatePage() {
       !fields.closing &&
       !fields.signatureName &&
       !fields.signatureContact;
-    if (!isBlank) return;
-
+    if (!isBlank) {
+      setCoverId(String(t));
+      return;
+    }
     const profile = { name: "", targetRole: "" };
     const doc = applyCoverTemplate(String(t), profile);
     if (doc?.fields) {
       setFields((prev) => ({ ...prev, ...doc.fields }));
       seededRef.current = true;
+      setCoverId(String(t));
     }
-  }, [router.query?.template]); // eslint-disable-line
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [router.query?.template]);
 
-  // Auto-save to localStorage for combined export from resume page
+  // Load template component
   useEffect(() => {
-    try {
-      localStorage.setItem('ft_cover_draft', JSON.stringify({ fields }));
-    } catch {}
+    let mounted = true;
+    (async () => {
+      try {
+        const Comp = await getCoverTemplateComponent(coverId || 'concise');
+        if (mounted) setCoverComp(() => Comp);
+      } catch {
+        if (mounted) setCoverComp(null);
+      }
+    })();
+    return () => { mounted = false; };
+  }, [coverId]);
+
+  // Persist draft for combined export
+  useEffect(() => {
+    try { localStorage.setItem('ft_cover_draft', JSON.stringify({ fields })); } catch {}
   }, [fields]);
 
   const update = (key, val) => setFields((f) => ({ ...f, [key]: val }));
@@ -164,9 +215,64 @@ export default function CoverCreatePage() {
   const addBodyLine = () => setFields((f) => ({ ...f, body: [...(f.body || []), ""] }));
   const removeBodyLine = (idx) => setFields((f) => ({ ...f, body: (f.body || []).filter((_, i) => i !== idx) }));
 
+  // Data mapping for ATS + preview components
+  const atsData = useMemo(() => {
+    const bullets = (fields.body || []).filter(Boolean);
+    return {
+      formData: {
+        fullName: fields.signatureName || '',
+      },
+      summary: [fields.opening, fields.valueProp].filter(Boolean).join(' '),
+      experiences: bullets.length
+        ? [{ title: 'Relevant Highlights', company: fields.company || '', bullets }]
+        : [],
+      projects: [],
+      volunteerExperiences: [],
+      educationList: [],
+      certifications: [],
+      languages: [],
+      skills: [],
+      achievements: [],
+      customSections: [],
+    };
+  }, [fields]);
+
+  const mappedPreviewData = useMemo(() => ({
+    formData: { fullName: fields.signatureName || '' },
+    summary: fields.opening || fields.valueProp || '',
+    experiences: [{ bullets: (fields.body || []).filter(Boolean) }],
+  }), [fields]);
+
   const RightPane = (
     <div style={{ display: 'grid', gap: 12 }}>
       <SeekerRightColumn variant="creator" />
+
+      {/* ATS helper */}
+      <div
+        style={{
+          background: 'white', border: '1px solid #eee', borderRadius: 12,
+          padding: 10, boxShadow: '0 2px 6px rgba(0,0,0,0.06)', display: 'grid', gap: 8
+        }}
+      >
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+          <AtsCheckBadge
+            formData={atsData.formData}
+            summary={atsData.summary}
+            experiences={atsData.experiences}
+            educationList={atsData.educationList}
+            skills={atsData.skills}
+          />
+          <button
+            type="button"
+            onClick={() => setOpenAtsPreview(true)}
+            style={{ background: 'white', border: '1px solid #E0E0E0', borderRadius: 10, padding: '6px 10px', fontWeight: 800, cursor: 'pointer' }}
+          >
+            ATS Preview
+          </button>
+        </div>
+      </div>
+
+      {/* Quick Actions */}
       <div
         style={{
           background: 'white', border: '1px solid #eee', borderRadius: 12,
@@ -174,9 +280,43 @@ export default function CoverCreatePage() {
         }}
       >
         <div style={{ fontWeight: 800, color: '#37474F' }}>Quick Actions</div>
+
+        {/* Tailor with AI */}
+        <GhostButton
+          onClick={async () => {
+            const fromSaved = (localStorage.getItem('ft_last_job_text') || '').trim();
+            const jobText = (useSavedJd ? fromSaved : jd).trim()
+              || window.prompt('Paste the job description to tailor your letter:') || '';
+            if (!jobText) return;
+
+            // optional: pull quick resume context for better tailoring
+            let resume = {};
+            try {
+              const raw = localStorage.getItem('ft_resume_draft');
+              if (raw) {
+                const d = JSON.parse(raw);
+                resume = {
+                  fullName: d?.formData?.fullName || '',
+                  contact: [d?.formData?.email, d?.formData?.phone, d?.formData?.location].filter(Boolean).join(' · '),
+                  headline: d?.formData?.headline || '',
+                  skills: d?.skills || [],
+                  achievements: d?.achievements || [],
+                };
+              }
+            } catch {}
+
+            const out = await writeCover({ jobText, resume, style: coverId });
+            if (out?.fields) setFields(prev => ({ ...prev, ...out.fields }));
+            try { localStorage.setItem('ft_last_job_text', jobText); } catch {}
+            // setOpenAtsPreview(true); // optionally auto-open ATS after generating
+          }}
+        >
+          Tailor with AI
+        </GhostButton>
+
         <GhostButton onClick={() => window.print?.()}>Print / Save PDF</GhostButton>
-        <GhostButton onClick={() => router.push('/resume/create')}>
-          Export with Resume (open builder)
+        <GhostButton onClick={() => router.push('/resume/create?flow=apply')}>
+          Back to Resume
         </GhostButton>
       </div>
     </div>
@@ -191,8 +331,12 @@ export default function CoverCreatePage() {
         padding: 16,
         boxShadow: '0 2px 6px rgba(0,0,0,0.06)',
         textAlign: 'center',
+        display: 'grid',
+        gap: 10,
       }}
     >
+      {isApplyFlow && <ApplySteps current={2} />}
+
       <h1
         style={{
           color: '#FF7043',
@@ -203,8 +347,8 @@ export default function CoverCreatePage() {
       >
         Cover Letter Builder
       </h1>
-      <p style={{ marginTop: 8, color: '#546E7A', fontSize: 14 }}>
-        Pick a template from the gallery, then fine-tune here. Exports and AI tailoring coming soon.
+      <p style={{ marginTop: 0, color: '#546E7A', fontSize: 14 }}>
+        Pick a template, then tailor with AI or manually refine. Exports are available from the resume page or via print.
       </p>
     </section>
   );
@@ -217,6 +361,122 @@ export default function CoverCreatePage() {
       activeNav="resume-cover"
     >
       <div style={{ display: 'grid', gap: 16 }}>
+        {/* --- JD reuse banner (apply flow only) --- */}
+        {isApplyFlow && (
+          <section
+            style={{
+              background: 'white',
+              border: '1px solid #eee',
+              borderRadius: 12,
+              padding: 12,
+              boxShadow: '0 2px 6px rgba(0,0,0,0.06)',
+              display: 'grid',
+              gap: 8,
+            }}
+          >
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8 }}>
+              <div style={{ fontWeight: 800, color: '#37474F' }}>
+                Using job description from Resume step
+              </div>
+              <label style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 12 }}>
+                <input
+                  type="checkbox"
+                  checked={useSavedJd}
+                  onChange={(e) => setUseSavedJd(e.target.checked)}
+                />
+                Reuse saved JD
+              </label>
+            </div>
+            {!useSavedJd && (
+              <textarea
+                placeholder="Paste a different job description for this cover letter…"
+                value={jd}
+                onChange={(e) => setJd(e.target.value)}
+                style={{ width: '100%', minHeight: 140, border: '1px solid #E0E0E0', borderRadius: 10, padding: 10, outline: 'none' }}
+              />
+            )}
+            <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end' }}>
+              <GhostButton
+                onClick={() => {
+                  try {
+                    localStorage.setItem('ft_last_job_text', useSavedJd ? (localStorage.getItem('ft_last_job_text') || '') : jd);
+                  } catch {}
+                }}
+              >
+                Save JD
+              </GhostButton>
+              <a href="/resume/create?flow=apply" style={{ textDecoration: 'none', padding: '10px 14px', borderRadius: 10, border: '1px solid #E0E0E0', fontWeight: 800 }}>
+                ← Back to Resume
+              </a>
+              <a href="/resume/create?flow=apply#export" style={{ textDecoration: 'none', padding: '10px 14px', borderRadius: 10, background: '#FF7043', color: 'white', border: '1px solid rgba(0,0,0,0.06)', fontWeight: 800 }}>
+                Next: Export / Apply
+              </a>
+            </div>
+          </section>
+        )}
+
+        {/* Template selector + AI choose */}
+        <section
+          style={{
+            background: 'white',
+            border: '1px solid #eee',
+            borderRadius: 12,
+            padding: 16,
+            boxShadow: '0 2px 6px rgba(0,0,0,0.06)',
+            display: 'grid',
+            gap: 8,
+          }}
+        >
+          <label htmlFor="cover-template" style={{ display: 'block', fontWeight: 700, marginBottom: 4, color: '#FF7043' }}>
+            Choose Cover Template
+          </label>
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr auto', gap: 8, alignItems: 'center' }}>
+            <select
+              id="cover-template"
+              value={coverId}
+              onChange={(e) => setCoverId(e.target.value)}
+              style={{ border: '1px solid #ddd', borderRadius: 8, padding: '10px 12px', width: '100%', outline: 'none' }}
+            >
+              {coverTemplates.map(t => (
+                <option key={t.id} value={t.id}>{t.name}</option>
+              ))}
+            </select>
+            <button
+              type="button"
+              onClick={async () => {
+                try {
+                  const jobText = localStorage.getItem('ft_last_job_text') || '';
+                  const result = await matchTemplate({ jobText });
+                  if (result?.coverId) setCoverId(result.coverId);
+                  // eslint-disable-next-line no-alert
+                  if (result?.reasons?.cover?.why) {
+                    alert(`AI picked: ${result.coverId}\nReason: ${result.reasons.cover.why}`);
+                  }
+                } catch {
+                  // eslint-disable-next-line no-alert
+                  alert('Could not run template matcher. Using current selection.');
+                }
+              }}
+              style={{
+                background: '#FF7043',
+                color: 'white',
+                padding: '10px 12px',
+                borderRadius: 8,
+                border: '1px solid rgba(0,0,0,0.06)',
+                fontWeight: 800,
+                cursor: 'pointer',
+                whiteSpace: 'nowrap',
+              }}
+            >
+              Use AI to choose
+            </button>
+          </div>
+          <div style={{ marginTop: 4, fontSize: 12, color: '#607D8B' }}>
+            Tip: Open this page with <code>?template=concise|narrative|achievement</code> to auto-select and seed.
+          </div>
+        </section>
+
+        {/* Form fields */}
         <section
           style={{
             background: 'white',
@@ -335,6 +595,7 @@ export default function CoverCreatePage() {
           </div>
         </section>
 
+        {/* Preview */}
         <section
           style={{
             background: 'white',
@@ -345,9 +606,31 @@ export default function CoverCreatePage() {
           }}
         >
           <div style={{ fontWeight: 800, color: '#37474F', marginBottom: 8 }}>Preview</div>
-          <CoverPreview fields={fields} />
+
+          {CoverComp ? (
+            <CoverComp data={mappedPreviewData} />
+          ) : (
+            <CoverPreview fields={fields} />
+          )}
         </section>
       </div>
+
+      {/* ATS PREVIEW MODAL */}
+      <AtsPreviewModal
+        open={openAtsPreview}
+        onClose={() => setOpenAtsPreview(false)}
+        formData={atsData.formData}
+        summary={atsData.summary}
+        experiences={atsData.experiences}
+        projects={atsData.projects}
+        volunteerExperiences={atsData.volunteerExperiences}
+        educationList={atsData.educationList}
+        certifications={atsData.certifications}
+        languages={atsData.languages}
+        skills={atsData.skills}
+        achievements={atsData.achievements}
+        customSections={atsData.customSections}
+      />
     </SeekerLayout>
   );
 }
