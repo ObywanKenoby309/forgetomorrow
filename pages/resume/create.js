@@ -37,6 +37,14 @@ import { matchTemplate } from '@/lib/ai/matchTemplate';
 // stepper (always on now)
 import ApplySteps from '@/components/apply/ApplySteps';
 
+// ✅ JD ingest (client) + normalizer
+import { extractTextFromFile, normalizeJobText } from '@/lib/jd/ingest';
+// ✅ NEW: server fallback for heavy files
+import { uploadJD } from '@/lib/jd/uploadToApi';
+
+// Optional deep ATS panel
+import AtsDepthPanel from '@/components/resume-form/AtsDepthPanel';
+
 const ClientPDFButton = dynamic(
   () => import('@/components/resume-form/export/ClientPDFButton'),
   { ssr: false }
@@ -51,6 +59,15 @@ function formatLocal(dt) {
   } catch {
     return '';
   }
+}
+
+// ⏱ tiny timeout helper to avoid “Importing…” limbo
+function withTimeout(promise, ms = 15000, label = 'Operation') {
+  let timer;
+  const timeout = new Promise((_, reject) => {
+    timer = setTimeout(() => reject(new Error(`${label} timed out`)), ms);
+  });
+  return Promise.race([promise.finally(() => clearTimeout(timer)), timeout]);
 }
 
 /** Full-screen modal overlay for “focus” mode */
@@ -159,6 +176,8 @@ function DockItem({ title, subtitle, onOpen }) {
 export default function CreateResumePage() {
   const router = useRouter();
   const seededRef = useRef(false);
+  const fileInputRef = useRef(null);
+  const dropRef = useRef(null);
 
   const {
     formData, setFormData,
@@ -183,9 +202,11 @@ export default function CreateResumePage() {
   const [showToast, setShowToast] = useState(false);
   const savedTime = useMemo(() => formatLocal(saveEventAt), [saveEventAt]);
 
-  // unified apply flow is now default (no query needed)
-  const isApplyFlow = true;
+  // unified apply flow is default
   const [jd, setJd] = useState('');
+  const [jdBusy, setJdBusy] = useState(false);
+  const [jdError, setJdError] = useState('');
+
   useEffect(() => {
     try {
       const saved = localStorage.getItem('ft_last_job_text') || '';
@@ -465,6 +486,91 @@ export default function CreateResumePage() {
     </div>
   );
 
+  // ---- JD handlers (paste + upload) ----
+
+  // Offload PDFs and big files to the API for reliability
+  const BIG_BYTES = 1_500_000;
+
+  async function handleFile(file) {
+    setJdError('');
+    if (!file) return;
+    setJdBusy(true);
+    try {
+      let raw = '';
+      const lower = (file.name || '').toLowerCase();
+      const type = (file.type || '').toLowerCase();
+      const isPDF = type.includes('pdf') || lower.endsWith('.pdf');
+      const isBig = file.size > BIG_BYTES || isPDF;
+
+      if (isBig) {
+        // Reliable server path for heavy files/PDF
+        raw = await withTimeout(uploadJD(file, 20000), 22000, 'Upload JD');
+      } else {
+        // Fast client path for small TXT/DOCX
+        raw = await withTimeout(extractTextFromFile(file), 15000, 'Client extract');
+      }
+
+      const norm = normalizeJobText(raw);
+      setJd(norm);
+      try { localStorage.setItem('ft_last_job_text', norm); } catch {}
+    } catch (e) {
+      console.error('[JD Import] error:', e);
+      setJdError(e?.message || 'Could not import this file. Please paste the JD instead.');
+    } finally {
+      setJdBusy(false);
+      // allow re-selecting the same file
+      if (fileInputRef.current) fileInputRef.current.value = '';
+    }
+  }
+
+  useEffect(() => {
+    const el = dropRef.current;
+    if (!el) return;
+    const prevent = (e) => { e.preventDefault(); e.stopPropagation(); };
+    const onDrop = (e) => {
+      prevent(e);
+      const file = e.dataTransfer?.files?.[0];
+      if (file) handleFile(file);
+    };
+    el.addEventListener('dragenter', prevent);
+    el.addEventListener('dragover', prevent);
+    el.addEventListener('drop', onDrop);
+    return () => {
+      el.removeEventListener('dragenter', prevent);
+      el.removeEventListener('dragover', prevent);
+      el.removeEventListener('drop', onDrop);
+    };
+  }, []);
+
+  // ---- ATS Depth insertion actions ----
+  const addSkill = (term) => {
+    const s = Array.isArray(skills) ? [...skills] : [];
+    if (!s.some(v => String(v).toLowerCase() === term.toLowerCase())) {
+      s.push(term);
+      setSkills(s);
+    }
+  };
+
+  const addSummary = (phrase) => {
+    const sep = summary?.trim() ? ' ' : '';
+    const next = (summary || '') + sep + phrase;
+    setSummary(next);
+  };
+
+  const addBullet = (phrase) => {
+    const exps = Array.isArray(experiences) ? [...experiences] : [];
+    if (!exps.length) {
+      exps.push({ title: 'Target Role', company: '', bullets: [phrase] });
+    } else {
+      const first = { ...(exps[0] || {}) };
+      const bullets = Array.isArray(first.bullets) ? [...first.bullets] : [];
+      bullets.push(phrase);
+      first.bullets = bullets;
+      exps[0] = first;
+    }
+    setExperiences(exps);
+  };
+
   return (
     <SeekerLayout
       title="Create Resume | ForgeTomorrow"
@@ -474,8 +580,9 @@ export default function CreateResumePage() {
     >
       {/* CENTER COLUMN CONTENT */}
       <div style={{ display: 'grid', gap: 16 }}>
-        {/* Optional JD card (always visible, still optional to use) */}
+        {/* JD card — paste + import */}
         <section
+          ref={dropRef}
           style={{
             background: 'white',
             border: '1px solid #eee',
@@ -486,13 +593,40 @@ export default function CreateResumePage() {
             gap: 8,
           }}
         >
-          <div style={{ fontWeight: 800, color: '#37474F' }}>Job description (optional)</div>
+          <div style={{ fontWeight: 800, color: '#37474F', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+            <span>Job description (optional)</span>
+            <div style={{ display: 'flex', gap: 8 }}>
+              <button
+                type="button"
+                onClick={() => fileInputRef.current?.click()}
+                style={{ background: 'white', border: '1px solid #E0E0E0', borderRadius: 10, padding: '8px 12px', fontWeight: 800, cursor: 'pointer' }}
+              >
+                Import JD (PDF/DOCX/TXT)
+              </button>
+              <input
+                ref={fileInputRef}
+                type="file"
+                accept=".pdf,.doc,.docx,.txt,.md"
+                style={{ display: 'none' }}
+                onChange={(e) => handleFile(e.target.files?.[0])}
+              />
+            </div>
+          </div>
+
           <textarea
             placeholder="Paste the job description here to tailor your resume & enable ATS checks…"
             value={jd}
-            onChange={(e) => setJd(e.target.value)}
+            onChange={(e) => {
+              const v = e.target.value;
+              setJd(v);
+              try { localStorage.setItem('ft_last_job_text', v); } catch {}
+            }}
             style={{ width: '100%', minHeight: 160, border: '1px solid #E0E0E0', borderRadius: 10, padding: 12, outline: 'none' }}
           />
+
+          {jdBusy && <div style={{ color: '#607D8B', fontSize: 12 }}>Importing…</div>}
+          {jdError && <div style={{ color: '#C62828', fontSize: 12, fontWeight: 700 }}>{jdError}</div>}
+
           <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end' }}>
             <button
               type="button"
@@ -505,14 +639,13 @@ export default function CreateResumePage() {
               type="button"
               onClick={async () => {
                 try { localStorage.setItem('ft_last_job_text', jd || ''); } catch {}
-                // Optional AI template pick based on JD
                 try {
-                  if (jd.trim()) {
+                  if ((jd || '').trim()) {
                     const result = await matchTemplate({ jobText: jd, profile: { summary, skills } });
                     if (result?.resumeId) setTemplateId(result.resumeId);
                   }
                 } catch {}
-                setOpenTailor(true); // free/local tailoring modal
+                setOpenTailor(true);
               }}
               style={{ background: '#FF7043', color: 'white', border: '1px solid rgba(0,0,0,0.06)', borderRadius: 10, padding: '10px 14px', fontWeight: 800, cursor: 'pointer' }}
             >
@@ -525,7 +658,28 @@ export default function CreateResumePage() {
               Continue to Cover →
             </a>
           </div>
-          <div style={{ fontSize: 12, color: '#90A4AE' }}>We’ll reuse this JD on the cover step unless you change it.</div>
+          <div style={{ fontSize: 12, color: '#90A4AE' }}>Tip: Drag & drop a JD file anywhere on this card.</div>
+        </section>
+
+        {/* ✅ ATS Depth panel */}
+        <section
+          style={{
+            background: 'white',
+            border: '1px solid #eee',
+            borderRadius: 12,
+            padding: 16,
+            boxShadow: '0 2px 6px rgba(0,0,0,0.06)',
+          }}
+        >
+          <AtsDepthPanel
+            jdText={jd}
+            summary={summary}
+            skills={skills}
+            experiences={experiences}
+            onAddSkill={addSkill}
+            onAddSummary={addSummary}
+            onAddBullet={addBullet}
+          />
         </section>
 
         {/* Template selector (real templates + AI choose) */}
