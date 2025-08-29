@@ -1,116 +1,161 @@
+// components/resume-form/CustomSection.js
 import { useState } from 'react';
 import { FaChevronDown, FaChevronRight, FaTrash, FaPlus } from 'react-icons/fa';
 
-export default function CustomSection({ customSections, setCustomSections }) {
-  const [isOpen, setIsOpen] = useState(false);
+export default function CustomSection({
+  customSections = [],
+  setCustomSections,
+  embedded = false,     // render body only when used inside SectionGroup
+  defaultOpen = false,  // only used when not embedded
+}) {
+  const [isOpen, setIsOpen] = useState(defaultOpen);
 
-  const toggleSection = () => setIsOpen(!isOpen);
-
-  const handleTitleChange = (index, e) => {
-    const updated = [...customSections];
-    updated[index].title = e.target.value;
-    setCustomSections(updated);
+  // ----- helpers (immutable updates) -----
+  const updateSection = (idx, patch) => {
+    const next = [...customSections];
+    const curr = { ...(next[idx] || { title: '', items: [''] }) };
+    next[idx] = { ...curr, ...patch };
+    setCustomSections(next);
   };
 
-  const handleItemChange = (sectionIndex, itemIndex, e) => {
-    const updated = [...customSections];
-    updated[sectionIndex].items[itemIndex] = e.target.value;
-    setCustomSections(updated);
+  const updateItem = (sIdx, iIdx, value) => {
+    const next = [...customSections];
+    const section = { ...(next[sIdx] || { title: '', items: [] }) };
+    const items = Array.isArray(section.items) ? [...section.items] : [];
+    items[iIdx] = value;
+    section.items = items;
+    next[sIdx] = section;
+    setCustomSections(next);
   };
 
   const addSection = () => {
     setCustomSections([
       ...customSections,
-      { title: 'New Section', items: [''] }
+      { title: 'New Section', items: [''] },
     ]);
   };
 
-  const removeSection = (index) => {
-    const updated = [...customSections];
-    updated.splice(index, 1);
-    setCustomSections(updated);
+  const removeSection = (idx) => {
+    const next = [...customSections];
+    next.splice(idx, 1);
+    setCustomSections(next);
   };
 
-  const addItem = (index) => {
-    const updated = [...customSections];
-    updated[index].items.push('');
-    setCustomSections(updated);
+  const addItem = (sIdx) => {
+    const next = [...customSections];
+    const section = { ...(next[sIdx] || { title: '', items: [] }) };
+    const items = Array.isArray(section.items) ? [...section.items] : [];
+    items.push('');
+    section.items = items;
+    next[sIdx] = section;
+    setCustomSections(next);
   };
 
-  const removeItem = (sectionIndex, itemIndex) => {
-    const updated = [...customSections];
-    updated[sectionIndex].items.splice(itemIndex, 1);
-    setCustomSections(updated);
+  const removeItem = (sIdx, iIdx) => {
+    const next = [...customSections];
+    const section = { ...(next[sIdx] || { title: '', items: [] }) };
+    const items = Array.isArray(section.items) ? [...section.items] : [];
+    items.splice(iIdx, 1);
+    section.items = items;
+    next[sIdx] = section;
+    setCustomSections(next);
   };
 
-  return (
-    <section className="bg-white rounded-lg shadow p-6 space-y-4">
-      <div 
-        className="flex items-center justify-between cursor-pointer"
-        onClick={toggleSection}
-      >
-        <h2 className="text-2xl font-bold text-[#FF7043]">Custom Sections</h2>
-        {isOpen ? <FaChevronDown className="text-[#FF7043]" /> : <FaChevronRight className="text-[#FF7043]" />}
-      </div>
+  // ----- body -----
+  const Body = () => (
+    <div className="space-y-4">
+      {customSections.length === 0 && (
+        <p className="text-sm text-slate-500">No custom sections added yet.</p>
+      )}
 
-      {isOpen && (
-        <>
-          {customSections.map((section, sectionIndex) => (
-            <div key={sectionIndex} className="border rounded p-4 space-y-4 bg-gray-50">
-              <div className="flex justify-between items-center">
+      {customSections.map((section, sIdx) => (
+        <div
+          key={sIdx}
+          className="rounded-lg border border-slate-200 bg-slate-50 p-4 space-y-3"
+        >
+          <div className="flex items-center gap-3">
+            <input
+              type="text"
+              value={section.title || ''}
+              onChange={(e) => updateSection(sIdx, { title: e.target.value })}
+              placeholder="Section Title (e.g., Publications, Speaking, Interests)"
+              className="w-full rounded-lg border border-slate-200 p-2 text-sm font-semibold outline-none focus:border-[#FF7043] focus:ring-2 focus:ring-[#FF7043]/30"
+            />
+            <button
+              type="button"
+              onClick={() => removeSection(sIdx)}
+              className="inline-flex items-center gap-2 text-xs font-semibold text-red-600 hover:text-red-700"
+              aria-label="Remove section"
+              title="Remove section"
+            >
+              <FaTrash className="opacity-80" /> Remove
+            </button>
+          </div>
+
+          {/* items */}
+          <div className="space-y-2">
+            {(section.items || []).map((item, iIdx) => (
+              <div key={iIdx} className="flex items-center gap-2">
                 <input
                   type="text"
-                  value={section.title}
-                  onChange={(e) => handleTitleChange(sectionIndex, e)}
-                  className="text-xl font-semibold border-b border-gray-300 focus:outline-none focus:ring-2 focus:ring-[#FF7043] w-full"
-                  placeholder="Section Title"
+                  value={item}
+                  onChange={(e) => updateItem(sIdx, iIdx, e.target.value)}
+                  placeholder="Add item"
+                  className="flex-1 rounded-lg border border-slate-200 p-2 text-sm outline-none focus:border-[#FF7043] focus:ring-2 focus:ring-[#FF7043]/30"
                 />
                 <button
-                  onClick={() => removeSection(sectionIndex)}
-                  className="ml-4 text-red-600 hover:underline flex items-center gap-1"
+                  type="button"
+                  onClick={() => removeItem(sIdx, iIdx)}
+                  className="text-sm font-semibold text-red-600 hover:text-red-700"
+                  aria-label="Remove item"
+                  title="Remove item"
                 >
-                  <FaTrash /> Remove Section
+                  <FaTrash />
                 </button>
               </div>
-
-              {section.items.map((item, itemIndex) => (
-                <div key={itemIndex} className="flex items-center gap-2">
-                  <input
-                    type="text"
-                    value={item}
-                    onChange={(e) => handleItemChange(sectionIndex, itemIndex, e)}
-                    className="flex-grow border border-gray-300 rounded p-2 focus:outline-none focus:ring-2 focus:ring-[#FF7043]"
-                    placeholder="Add item"
-                  />
-                  <button
-                    onClick={() => removeItem(sectionIndex, itemIndex)}
-                    className="text-red-600 hover:underline"
-                    aria-label="Remove item"
-                  >
-                    <FaTrash />
-                  </button>
-                </div>
-              ))}
-
-              <button
-                type="button"
-                onClick={() => addItem(sectionIndex)}
-                className="mt-2 text-sm text-[#FF7043] hover:underline flex items-center gap-1"
-              >
-                <FaPlus /> Add Item
-              </button>
-            </div>
-          ))}
+            ))}
+          </div>
 
           <button
             type="button"
-            onClick={addSection}
-            className="mt-4 bg-[#FF7043] text-white px-4 py-2 rounded hover:bg-[#F4511E] transition flex items-center justify-center gap-2"
+            onClick={() => addItem(sIdx)}
+            className="inline-flex items-center gap-2 rounded-lg border border-[#FF7043]/30 px-3 py-2 text-sm font-semibold text-[#FF7043] hover:bg-[#FF7043] hover:text-white transition-colors"
           >
-            <FaPlus /> Add New Section
+            <FaPlus /> Add Item
           </button>
-        </>
-      )}
+        </div>
+      ))}
+
+      <button
+        type="button"
+        onClick={addSection}
+        className="inline-flex items-center gap-2 rounded-lg border border-[#FF7043]/30 px-3 py-2 text-sm font-semibold text-[#FF7043] hover:bg-[#FF7043] hover:text-white transition-colors"
+      >
+        <FaPlus /> Add Custom Section
+      </button>
+    </div>
+  );
+
+  // Embedded mode (inside SectionGroup) = no outer card/chrome
+  if (embedded) return <Body />;
+
+  // Standalone card mode
+  return (
+    <section className="bg-white rounded-xl border border-slate-200 shadow-sm p-4 md:p-5 space-y-4">
+      <button
+        type="button"
+        className="w-full flex items-center justify-between"
+        onClick={() => setIsOpen((o) => !o)}
+      >
+        <h2 className="text-lg font-semibold text-[#FF7043]">Custom Sections</h2>
+        {isOpen ? (
+          <FaChevronDown className="text-[#FF7043]" />
+        ) : (
+          <FaChevronRight className="text-[#FF7043]" />
+        )}
+      </button>
+
+      {isOpen && <Body />}
     </section>
   );
 }

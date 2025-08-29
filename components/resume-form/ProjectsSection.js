@@ -1,17 +1,26 @@
+// components/resume-form/ProjectsSection.js
 import { useState } from 'react';
 import { FaChevronDown, FaChevronRight, FaTrash, FaPlus } from 'react-icons/fa';
 
-export default function ProjectsSection({ projects = [], setProjects }) {
-  const [isOpen, setIsOpen] = useState(false);
+export default function ProjectsSection({
+  projects = [],
+  setProjects,
+  embedded = false,     // when true, render content only (used inside SectionGroup)
+  defaultOpen = true,   // used only when not embedded
+}) {
+  const [isOpen, setIsOpen] = useState(defaultOpen);
 
-  const toggleSection = () => {
-    setIsOpen(!isOpen);
-  };
+  const setField = (index, key, value) => {
+    const next = [...projects];
+    const curr = { ...(next[index] || {}) };
+    curr[key] = value;
 
-  const handleChange = (index, e) => {
-    const updated = [...projects];
-    updated[index][e.target.name] = e.target.value;
-    setProjects(updated);
+    // Keep "title" and "name" in sync so analyzers/templates that expect "name" still work
+    if (key === 'title') curr.name = value;
+    if (key === 'name' && !curr.title) curr.title = value;
+
+    next[index] = curr;
+    setProjects(next);
   };
 
   const addProject = () => {
@@ -19,117 +28,140 @@ export default function ProjectsSection({ projects = [], setProjects }) {
       ...projects,
       {
         title: '',
+        name: '',          // kept in sync with title
         role: '',
         description: '',
         startDate: '',
-        endDate: ''
-      }
+        endDate: '',
+        link: '',          // optional: portfolio/GitHub/case study
+      },
     ]);
   };
 
   const removeProject = (index) => {
-    const updated = [...projects];
-    updated.splice(index, 1);
-    setProjects(updated);
+    const next = [...projects];
+    next.splice(index, 1);
+    setProjects(next);
   };
 
-  return (
-    <section className="bg-white rounded-lg shadow p-6 space-y-4">
-      <div
-        className="flex items-center justify-between cursor-pointer"
-        onClick={toggleSection}
+  const Body = () => (
+    <div className="space-y-4">
+      {projects.length === 0 && (
+        <div className="text-sm text-slate-500">
+          No projects yet. Add work you shipped, capstones, freelance, or major initiatives.
+        </div>
+      )}
+
+      {projects.map((project, index) => (
+        <div key={index} className="rounded-lg border border-slate-200 bg-slate-50 p-4 space-y-3">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+            <div>
+              <label className="block text-sm font-semibold text-slate-700">Project Title</label>
+              <input
+                type="text"
+                value={project.title || ''}
+                onChange={(e) => setField(index, 'title', e.target.value)}
+                placeholder="e.g., Inventory Optimization Dashboard"
+                className="mt-1 w-full rounded-lg border border-slate-200 p-2 text-sm outline-none focus:border-[#FF7043] focus:ring-2 focus:ring-[#FF7043]/30"
+              />
+            </div>
+
+            <div>
+              <label className="block text-sm font-semibold text-slate-700">Your Role</label>
+              <input
+                type="text"
+                value={project.role || ''}
+                onChange={(e) => setField(index, 'role', e.target.value)}
+                placeholder="e.g., Lead Developer"
+                className="mt-1 w-full rounded-lg border border-slate-200 p-2 text-sm outline-none focus:border-[#FF7043] focus:ring-2 focus:ring-[#FF7043]/30"
+              />
+            </div>
+
+            <div className="md:col-span-2 flex gap-3">
+              <div className="flex-1">
+                <label className="block text-sm font-semibold text-slate-700 mb-1">Start Date</label>
+                <input
+                  type="month"
+                  value={project.startDate || ''}
+                  onChange={(e) => setField(index, 'startDate', e.target.value)}
+                  className="w-full rounded-lg border border-slate-200 p-2 text-sm outline-none focus:border-[#FF7043] focus:ring-2 focus:ring-[#FF7043]/30"
+                />
+              </div>
+              <div className="flex-1">
+                <label className="block text-sm font-semibold text-slate-700 mb-1">End Date</label>
+                <input
+                  type="month"
+                  value={project.endDate || ''}
+                  onChange={(e) => setField(index, 'endDate', e.target.value)}
+                  className="w-full rounded-lg border border-slate-200 p-2 text-sm outline-none focus:border-[#FF7043] focus:ring-2 focus:ring-[#FF7043]/30"
+                />
+              </div>
+            </div>
+
+            <div className="md:col-span-2">
+              <label className="block text-sm font-semibold text-slate-700">Link (optional)</label>
+              <input
+                type="url"
+                value={project.link || ''}
+                onChange={(e) => setField(index, 'link', e.target.value)}
+                placeholder="https://github.com/you/project or case study URL"
+                className="mt-1 w-full rounded-lg border border-slate-200 p-2 text-sm outline-none focus:border-[#FF7043] focus:ring-2 focus:ring-[#FF7043]/30"
+              />
+            </div>
+          </div>
+
+          <div>
+            <label className="block text-sm font-semibold text-slate-700">Description / Outcomes</label>
+            <textarea
+              value={project.description || ''}
+              onChange={(e) => setField(index, 'description', e.target.value)}
+              placeholder="What was the problem? What did you build? Quantify the impact if possible (e.g., “Cut picking time 22%”)."
+              className="mt-1 w-full min-h-[90px] rounded-lg border border-slate-200 p-3 text-sm outline-none focus:border-[#FF7043] focus:ring-2 focus:ring-[#FF7043]/30 resize-none"
+            />
+          </div>
+
+          <div className="flex justify-end">
+            <button
+              type="button"
+              onClick={() => removeProject(index)}
+              className="inline-flex items-center gap-2 text-xs font-semibold text-red-600 hover:text-red-700"
+            >
+              <FaTrash className="opacity-80" /> Remove Project
+            </button>
+          </div>
+        </div>
+      ))}
+
+      <button
+        type="button"
+        onClick={addProject}
+        className="inline-flex items-center gap-2 rounded-lg border border-[#FF7043]/30 px-3 py-2 text-sm font-semibold text-[#FF7043] hover:bg-[#FF7043] hover:text-white transition-colors"
       >
-        <h2 className="text-2xl font-bold text-[#FF7043]">Projects</h2>
+        <FaPlus /> Add Project
+      </button>
+    </div>
+  );
+
+  // Embedded mode (inside SectionGroup): no outer card/header.
+  if (embedded) return <Body />;
+
+  // Standalone: keep collapsible header for legacy routes.
+  return (
+    <section className="bg-white rounded-xl border border-slate-200 shadow-sm p-4 md:p-5 space-y-4">
+      <button
+        type="button"
+        className="w-full flex items-center justify-between"
+        onClick={() => setIsOpen((o) => !o)}
+      >
+        <h2 className="text-lg font-semibold text-[#FF7043]">Projects</h2>
         {isOpen ? (
           <FaChevronDown className="text-[#FF7043]" />
         ) : (
           <FaChevronRight className="text-[#FF7043]" />
         )}
-      </div>
+      </button>
 
-      {isOpen && (
-        <div className="space-y-6">
-          {projects.map((project, index) => (
-            <div key={index} className="border rounded p-4 space-y-4 bg-gray-50">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div>
-                  <label className="block font-semibold text-gray-700">Project Title</label>
-                  <input
-                    type="text"
-                    name="title"
-                    value={project.title}
-                    onChange={(e) => handleChange(index, e)}
-                    className="mt-1 w-full border-gray-300 rounded p-2"
-                    placeholder="Project Name"
-                  />
-                </div>
-
-                <div>
-                  <label className="block font-semibold text-gray-700">Role</label>
-                  <input
-                    type="text"
-                    name="role"
-                    value={project.role}
-                    onChange={(e) => handleChange(index, e)}
-                    className="mt-1 w-full border-gray-300 rounded p-2"
-                    placeholder="Your Role"
-                  />
-                </div>
-
-                <div className="flex gap-4">
-                  <div className="flex-1">
-                    <label className="block font-semibold text-gray-700">Start Date</label>
-                    <input
-                      type="month"
-                      name="startDate"
-                      value={project.startDate}
-                      onChange={(e) => handleChange(index, e)}
-                      className="mt-1 w-full border-gray-300 rounded p-2"
-                    />
-                  </div>
-                  <div className="flex-1">
-                    <label className="block font-semibold text-gray-700">End Date</label>
-                    <input
-                      type="month"
-                      name="endDate"
-                      value={project.endDate}
-                      onChange={(e) => handleChange(index, e)}
-                      className="mt-1 w-full border-gray-300 rounded p-2"
-                    />
-                  </div>
-                </div>
-              </div>
-
-              <div>
-                <label className="block font-semibold text-gray-700">Description</label>
-                <textarea
-                  name="description"
-                  value={project.description}
-                  onChange={(e) => handleChange(index, e)}
-                  className="mt-1 w-full border-gray-300 rounded p-3 resize-none"
-                  placeholder="Describe the project, your responsibilities, and accomplishments"
-                />
-              </div>
-
-              <button
-                type="button"
-                onClick={() => removeProject(index)}
-                className="text-sm text-red-600 hover:underline flex items-center gap-1"
-              >
-                <FaTrash /> Remove Project
-              </button>
-            </div>
-          ))}
-
-          <button
-            type="button"
-            onClick={addProject}
-            className="mt-2 text-sm text-[#FF7043] hover:underline flex items-center gap-1"
-          >
-            <FaPlus /> Add Another Project
-          </button>
-        </div>
-      )}
+      {isOpen && <Body />}
     </section>
   );
 }

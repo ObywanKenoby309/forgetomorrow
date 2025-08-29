@@ -21,7 +21,14 @@ export default function SnapshotControls({ compact = false }) {
         formData, summary, experiences, projects, volunteerExperiences,
         educationList, certifications, languages, skills, achievements, customSections,
       };
-      const snap = saveSnapshot(name, payload);
+
+      const label =
+        (typeof name === 'string' && name.trim()) ||
+        `Snapshot — ${new Intl.DateTimeFormat(undefined, {
+          month: 'short', day: '2-digit', hour: 'numeric', minute: '2-digit'
+        }).format(new Date())}`;
+
+      const snap = saveSnapshot(label, payload);
       setToast({ type: 'success', msg: `Saved “${snap.name}”` });
       setName('');
       setTimeout(() => setToast(null), 2500);
@@ -33,7 +40,7 @@ export default function SnapshotControls({ compact = false }) {
     }
   };
 
-  // --- styles tuned for compact right-rail usage ---
+  // styles
   const wrap = compact
     ? {
         background: '#fff',
@@ -51,16 +58,11 @@ export default function SnapshotControls({ compact = false }) {
     ? { display: 'grid', gridTemplateColumns: '1fr auto', gap: 8, alignItems: 'center' }
     : { display: 'flex', flexWrap: 'wrap', gap: 8, alignItems: 'center', justifyContent: 'space-between' };
 
-  const inputStyle = compact
-    ? {
-        border: '1px solid #ddd',
-        borderRadius: 10,
-        padding: '8px 10px',
-        height: 36,
-        width: '100%',
-        outline: 'none',
-      }
+  const inputStyleBase = compact
+    ? { border: '1px solid #ddd', borderRadius: 10, padding: '8px 10px', height: 36, width: '100%', outline: 'none' }
     : { border: '1px solid #ddd', borderRadius: 10, padding: '10px 12px', width: 256, outline: 'none' };
+
+  const inputStyle = { ...inputStyleBase, display: compact ? 'none' : undefined };
 
   const saveBtn = compact
     ? {
@@ -89,12 +91,35 @@ export default function SnapshotControls({ compact = false }) {
     : { color: '#FF7043', textDecoration: 'underline', fontWeight: 600 };
 
   return (
-    <div style={wrap}>
+    <div className="ft-snapshot-controls" style={wrap}>
+      {/* Scoped blockers for legacy toggles */}
+      <style jsx global>{`
+        .ft-snapshot-controls input[type="checkbox"],
+        .ft-snapshot-controls .switch,
+        .ft-snapshot-controls .form-switch,
+        .ft-snapshot-controls .toggle {
+          display: none !important;
+        }
+        .ft-snapshot-controls *::before,
+        .ft-snapshot-controls *::after {
+          content: none !important;
+          display: none !important;
+        }
+        .ft-snapshot-controls input::-webkit-contacts-auto-fill-button,
+        .ft-snapshot-controls input::-webkit-credentials-auto-fill-button,
+        .ft-snapshot-controls input::-ms-clear,
+        .ft-snapshot-controls input::-ms-reveal {
+          display: none !important;
+        }
+      `}</style>
+
       <div style={row}>
+        {/* Always render input; hide via CSS in compact to avoid SSR/CSR mismatch */}
         <input
           value={name}
           onChange={(e) => setName(e.target.value)}
           placeholder="Snapshot name (optional)"
+          aria-label="Snapshot name"
           style={inputStyle}
         />
         <button onClick={handleSave} disabled={saving} style={saveBtn}>
@@ -108,7 +133,6 @@ export default function SnapshotControls({ compact = false }) {
         </Link>
       </div>
 
-      {/* toast */}
       {toast && (
         <div
           role="status"

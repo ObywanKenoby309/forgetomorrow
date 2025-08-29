@@ -1,5 +1,4 @@
-// components/resume-form/JobMatchAnalyzer.js
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 
 // Very light stopword list to keep results meaningful
 const STOPWORDS = new Set([
@@ -11,20 +10,17 @@ const STOPWORDS = new Set([
 function tokenize(text='') {
   return (text || '')
     .toLowerCase()
-    // keep words & hyphenated terms
     .match(/[a-z0-9][a-z0-9\-]+/g) || [];
 }
 
 function extractKeywords(jdText='') {
   const words = tokenize(jdText);
-  // frequency map
   const freq = new Map();
   for (const w of words) {
     if (w.length < 3) continue;
     if (STOPWORDS.has(w)) continue;
     freq.set(w, (freq.get(w) || 0) + 1);
   }
-  // keep top ~80 unique tokens but biased to frequency
   const sorted = [...freq.entries()].sort((a,b) => b[1]-a[1]).map(([w]) => w);
   return sorted.slice(0, 80);
 }
@@ -39,7 +35,9 @@ function flatResumeText(data) {
   } = data || {};
 
   const joinItems = (arr, fields) =>
-    (arr||[]).map(it => fields.map(f => it?.[f] || '').join(' ')).join(' ');
+    (arr||[]).map(it =>
+      fields.map(f => (Array.isArray(it?.[f]) ? it[f].join(' ') : (it?.[f] || ''))).join(' ')
+    ).join(' ');
 
   return [
     formData.fullName, formData.location, formData.portfolio, formData.forgeUrl,
@@ -52,13 +50,15 @@ function flatResumeText(data) {
     (languages||[]).join(' '),
     (skills||[]).join(' '),
     (achievements||[]).join(' '),
-    (customSections||[]).map(s => s?.title + ' ' + (s?.content || '')).join(' ')
+    (customSections||[]).map(s => (s?.title || '') + ' ' + (s?.content || '')).join(' ')
   ].join(' ').toLowerCase();
 }
 
-export default function JobMatchAnalyzer(props) {
-  const [jd, setJd] = useState('');
-  const resumeText = useMemo(() => flatResumeText(props.data), [props.data]);
+export default function JobMatchAnalyzer({ jdText = '', data }) {
+  const [jd, setJd] = useState(jdText || '');
+  useEffect(() => { setJd(jdText || ''); }, [jdText]);
+
+  const resumeText = useMemo(() => flatResumeText(data), [data]);
   const jdKeywords = useMemo(() => extractKeywords(jd), [jd]);
 
   const matched = useMemo(() => {
@@ -76,6 +76,15 @@ export default function JobMatchAnalyzer(props) {
     const total = jdKeywords.length || 1;
     return Math.round((matched.hits.length / total) * 100);
   }, [jdKeywords.length, matched.hits.length]);
+
+  // ⤵️ Collapsible sections
+  const [showMatched, setShowMatched] = useState(true);
+  const [showMissing, setShowMissing] = useState(() => (matched.missing.length <= 20)); // collapse if long
+
+  useEffect(() => {
+    // Re-evaluate default collapse when JD changes
+    setShowMissing(matched.missing.length <= 20);
+  }, [jd, matched.missing.length]);
 
   return (
     <section className="bg-white rounded-lg shadow p-4 mb-6">
@@ -95,29 +104,64 @@ export default function JobMatchAnalyzer(props) {
         className="w-full border border-gray-300 rounded p-3 h-40 mb-4"
       />
 
+      {!jd.trim() && (
+        <div className="text-sm text-gray-500 mb-2">
+          Tip: This box auto-fills from the JD you pasted/imported on the main card.
+        </div>
+      )}
+
       {jdKeywords.length > 0 && (
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          {/* Matched */}
           <div>
-            <h3 className="font-semibold mb-2">Matched Keywords ({matched.hits.length})</h3>
-            <div className="flex flex-wrap gap-2">
-              {matched.hits.map((k) => (
-                <span key={k} className="text-sm px-2 py-1 rounded bg-green-100 text-green-800 border border-green-200">
-                  {k}
-                </span>
-              ))}
-              {matched.hits.length === 0 && <div className="text-sm text-gray-500">None yet.</div>}
+            <div className="flex items-center justify-between mb-2">
+              <h3 className="font-semibold">
+                Matched Keywords ({matched.hits.length})
+              </h3>
+              <button
+                type="button"
+                onClick={() => setShowMatched(s => !s)}
+                className="text-xs font-semibold border border-gray-300 rounded px-2 py-1"
+              >
+                {showMatched ? 'Hide' : 'Show'}
+              </button>
             </div>
+            {showMatched && (
+              <div className="flex flex-wrap gap-2">
+                {matched.hits.map((k) => (
+                  <span key={k} className="text-sm px-2 py-1 rounded bg-green-100 text-green-800 border border-green-200">
+                    {k}
+                  </span>
+                ))}
+                {matched.hits.length === 0 && <div className="text-sm text-gray-500">None yet.</div>}
+              </div>
+            )}
           </div>
+
+          {/* Missing */}
           <div>
-            <h3 className="font-semibold mb-2">Missing Keywords ({matched.missing.length})</h3>
-            <div className="flex flex-wrap gap-2">
-              {matched.missing.map((k) => (
-                <span key={k} className="text-sm px-2 py-1 rounded bg-red-100 text-red-800 border border-red-200">
-                  {k}
-                </span>
-              ))}
-              {matched.missing.length === 0 && <div className="text-sm text-gray-500">None — great coverage.</div>}
+            <div className="flex items-center justify-between mb-2">
+              <h3 className="font-semibold">
+                Missing Keywords ({matched.missing.length})
+              </h3>
+              <button
+                type="button"
+                onClick={() => setShowMissing(s => !s)}
+                className="text-xs font-semibold border border-gray-300 rounded px-2 py-1"
+              >
+                {showMissing ? 'Hide' : 'Show'}
+              </button>
             </div>
+            {showMissing && (
+              <div className="flex flex-wrap gap-2">
+                {matched.missing.map((k) => (
+                  <span key={k} className="text-sm px-2 py-1 rounded bg-red-100 text-red-800 border border-red-200">
+                    {k}
+                  </span>
+                ))}
+                {matched.missing.length === 0 && <div className="text-sm text-gray-500">None — great coverage.</div>}
+              </div>
+            )}
           </div>
         </div>
       )}

@@ -1,179 +1,180 @@
-// /components/resume-form/AtsDepthPanel.jsx
-import React, { useMemo } from 'react';
+// components/resume-form/AtsDepthPanel.js
+import { useMemo, useState } from 'react';
 
-// Tiny stopword list; we’ll extend later
-const STOP = new Set([
-  'the','a','an','and','or','for','with','to','of','in','on','by','at','as','is','are','be',
-  'this','that','these','those','it','its','your','you','we','our','from','over','under',
-  'will','can','must','should','have','has','had',
+// Keep the list *tight* so we don’t suggest junky fillers
+const STOPWORDS = new Set([
+  'the','and','or','to','of','in','for','on','with','a','an','by','as','at',
+  'is','are','be','you','we','our','your','their','from','that','this','will',
+  'can','ability','including','etc','etc.','using','use','used','over','under',
+  'within','across','per','into','out','about','it','its','role','type',
+  'full-time','intern','internship','benefits','compensation','responsibilities',
+  'requirements','preferred','mostly'
 ]);
 
-// Lightweight synonyms/aliases map to improve “presence” detection
-const SYNONYMS = {
-  'customer success': ['cs', 'client success', 'customer experience'],
-  'salesforce': ['sf', 'sfdc', 'sales force'],
-  'javascript': ['js'],
-  'typescript': ['ts'],
-  'excel': ['spreadsheets'],
-  'python': ['py'],
-  'kpis': ['metrics', 'key performance indicators'],
-  'stakeholder': ['partner'],
-  'cross-functional': ['xfn', 'cross functional'],
-};
-
-function tokenize(text) {
-  if (!text) return [];
-  return text
+function tokenize(text = '') {
+  return (text || '')
     .toLowerCase()
-    .replace(/[^a-z0-9+/#&.\s-]/g, ' ')
-    .split(/\s+/)
-    .filter(Boolean);
+    .match(/[a-z0-9][a-z0-9\-]+/g) || [];
 }
 
-function topTermsFromJD(jdText, max = 30) {
-  const toks = tokenize(jdText).filter(t => t.length > 2 && !STOP.has(t));
+function topKeywords(jdText = '', limit = 80) {
+  const words = tokenize(jdText);
   const freq = new Map();
-  for (const t of toks) freq.set(t, (freq.get(t) || 0) + 1);
-  const terms = Array.from(freq.entries())
-    .sort((a,b) => b[1]-a[1])
-    .map(([t]) => t)
-    .slice(0, max);
-
-  // Also extract a few bigrams that appear often
-  const words = toks;
-  const bigrams = new Map();
-  for (let i=0;i<words.length-1;i++) {
-    const bg = `${words[i]} ${words[i+1]}`;
-    if (bg.split(' ').some(w => STOP.has(w))) continue;
-    bigrams.set(bg, (bigrams.get(bg) || 0) + 1);
+  for (const w of words) {
+    if (w.length < 3) continue;
+    if (STOPWORDS.has(w)) continue;
+    freq.set(w, (freq.get(w) || 0) + 1);
   }
-  const topBigrams = Array.from(bigrams.entries())
-    .sort((a,b)=>b[1]-a[1])
-    .slice(0, 10)
-    .map(([bg]) => bg);
-
-  // Prefer bigrams (skills like "customer success", "project management")
-  const merged = [...topBigrams, ...terms].filter((t, i, arr) => arr.indexOf(t) === i);
-  return merged;
+  return [...freq.entries()].sort((a,b)=>b[1]-a[1]).map(([w])=>w).slice(0, limit);
 }
 
-function buildResumeCorpus({ summary, skills, experiences }) {
-  const bullets = (experiences || []).flatMap(exp => Array.isArray(exp?.bullets) ? exp.bullets : []);
-  const raw = [
-    summary || '',
-    ...(Array.isArray(skills) ? skills : []),
-    ...bullets,
-  ].join(' \n ');
-  const tokens = new Set(tokenize(raw));
-
-  // Expand tokens with synonyms so we count matches more generously
-  const expanded = new Set(tokens);
-  for (const [key, alts] of Object.entries(SYNONYMS)) {
-    if (tokens.has(key) || alts.some(a => tokens.has(a))) {
-      expanded.add(key);
-      for (const a of alts) expanded.add(a);
-    }
-  }
-  return expanded;
+function flatResumeText({ summary = '', skills = [], experiences = [] }) {
+  const ex = (experiences || [])
+    .map(e => [e?.title, e?.company, (e?.bullets || []).join(' ')].join(' '))
+    .join(' ');
+  return [summary, (skills || []).join(' '), ex].join(' ').toLowerCase();
 }
 
-function scoreTermPresence(term, tokenSet) {
-  // If term is a bigram, require both tokens present (loose)
-  if (term.includes(' ')) {
-    const parts = term.split(' ');
-    return parts.every(p => tokenSet.has(p));
-  }
-  return tokenSet.has(term);
-}
-
-/**
- * props:
- *  - jdText: string
- *  - summary: string
- *  - skills: string[]
- *  - experiences: [{ bullets: string[] }, ...]
- *  - onAddSkill(term: string)
- *  - onAddSummary(phrase: string)
- *  - onAddBullet(phrase: string)  // adds to current/first role
- */
 export default function AtsDepthPanel({
-  jdText,
-  summary,
-  skills,
-  experiences,
+  jdText = '',
+  summary = '',
+  skills = [],
+  experiences = [],
   onAddSkill,
   onAddSummary,
   onAddBullet,
-  limit = 15,
+  collapsedDefault = false,
+  maxChips = 12,
 }) {
-  const tokenSet = useMemo(
-    () => buildResumeCorpus({ summary, skills, experiences }),
+  const [collapsed, setCollapsed] = useState(collapsedDefault);
+  const [showAll, setShowAll] = useState(false);
+  const [added, setAdded] = useState({}); // { "keyword:kind": true }
+
+  const resumeText = useMemo(
+    () => flatResumeText({ summary, skills, experiences }),
     [summary, skills, experiences]
   );
+  const keywords = useMemo(() => topKeywords(jdText, 80), [jdText]);
 
-  const rankedMissing = useMemo(() => {
-    if (!jdText) return [];
-    const candidates = topTermsFromJD(jdText, 60);
-    const missing = candidates.filter(term => !scoreTermPresence(term, tokenSet));
-    return missing.slice(0, limit);
-  }, [jdText, tokenSet, limit]);
+  const { hits, missing } = useMemo(() => {
+    const h = [], m = [];
+    for (const k of keywords) (resumeText.includes(k) ? h : m).push(k);
+    return { hits: h, missing: m };
+  }, [keywords, resumeText]);
 
-  if (!jdText?.trim()) {
-    return (
-      <div style={{ color: '#607D8B', fontSize: 13 }}>
-        Paste or import a job description to see targeted, ATS-focused suggestions.
-      </div>
-    );
-  }
+  const visibleMissing = showAll ? missing : missing.slice(0, maxChips);
+  const moreCount = Math.max(missing.length - visibleMissing.length, 0);
+
+  const empty = !jdText?.trim();
+
+  const markAdded = (k, kind) => {
+    const key = `${k}:${kind}`;
+    setAdded(a => ({ ...a, [key]: true }));
+    setTimeout(() => setAdded(a => {
+      const copy = { ...a }; delete copy[key]; return copy;
+    }), 1200);
+  };
 
   return (
-    <div style={{ display: 'grid', gap: 8 }}>
-      <div style={{ fontWeight: 800, color: '#37474F' }}>
-        Missing keywords (suggested adds)
-      </div>
-      {!rankedMissing.length && (
-        <div style={{ color: '#2E7D32', fontWeight: 700 }}>Nice — no obvious gaps detected.</div>
-      )}
-      {rankedMissing.map((term) => (
-        <div key={term}
+    <div
+      style={{
+        background: 'white',
+        border: '1px solid #E0E0E0',
+        borderRadius: 12,
+        padding: 12,
+        boxShadow: '0 2px 6px rgba(0,0,0,0.06)',
+      }}
+    >
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8 }}>
+        <div style={{ fontWeight: 800, color: '#37474F' }}>
+          Missing keywords (suggested adds)
+          {missing.length ? ` · ${missing.length}` : ''}
+        </div>
+        <button
+          type="button"
+          onClick={() => setCollapsed(c => !c)}
           style={{
-            display: 'grid',
-            gridTemplateColumns: '1fr auto auto auto',
-            gap: 8,
-            alignItems: 'center',
-            border: '1px solid #eee',
-            borderRadius: 10,
-            padding: '8px 10px',
             background: 'white',
+            border: '1px solid #E0E0E0',
+            borderRadius: 10,
+            padding: '6px 10px',
+            fontWeight: 800,
+            cursor: 'pointer'
           }}
         >
-          <div style={{ fontWeight: 700 }}>{term}</div>
-          <button
-            type="button"
-            onClick={() => onAddSkill(term)}
-            style={{ background: 'white', border: '1px solid #E0E0E0', borderRadius: 8, padding: '6px 10px', fontWeight: 800, cursor: 'pointer' }}
-          >
-            + Skill
-          </button>
-          <button
-            type="button"
-            onClick={() => onAddSummary(term)}
-            style={{ background: 'white', border: '1px solid #E0E0E0', borderRadius: 8, padding: '6px 10px', fontWeight: 800, cursor: 'pointer' }}
-          >
-            + Summary
-          </button>
-          <button
-            type="button"
-            onClick={() => onAddBullet(`Applied ${term} to achieve measurable outcomes.`)}
-            style={{ background: 'white', border: '1px solid #E0E0E0', borderRadius: 8, padding: '6px 10px', fontWeight: 800, cursor: 'pointer' }}
-          >
-            + Bullet
-          </button>
-        </div>
-      ))}
-      <div style={{ fontSize: 12, color: '#90A4AE' }}>
-        Synonym-aware: e.g., “Salesforce” ≈ “SFDC”. We’ll tune per-role later.
+          {collapsed ? 'Show' : 'Hide'}
+        </button>
       </div>
+
+      {empty && (
+        <div style={{ marginTop: 8, fontSize: 12, color: '#90A4AE' }}>
+          Paste or import a job description to see suggested keywords you can add as Skills, Summary phrases, or Bullets.
+        </div>
+      )}
+
+      {!empty && !collapsed && (
+        <>
+          <div style={{ display: 'grid', gap: 8, marginTop: 12 }}>
+            {visibleMissing.map((k) => (
+              <div
+                key={k}
+                style={{
+                  background: '#FAFAFA',
+                  border: '1px solid #E0E0E0',
+                  borderRadius: 10,
+                  padding: 10,
+                  display: 'grid',
+                  gridTemplateColumns: '1fr auto auto auto',
+                  alignItems: 'center',
+                  gap: 8,
+                }}
+              >
+                <div style={{ fontWeight: 700, color: '#263238' }}>{k}</div>
+                <button
+                  type="button"
+                  onClick={() => { onAddSkill?.(k); markAdded(k, 'skill'); }}
+                  style={{ background: 'white', border: '1px solid #E0E0E0', borderRadius: 10, padding: '6px 10px', fontWeight: 800, cursor: 'pointer' }}
+                >
+                  {added[`${k}:skill`] ? 'Added ✓' : '+ Skill'}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => { onAddSummary?.(k); markAdded(k, 'summary'); }}
+                  style={{ background: 'white', border: '1px solid #E0E0E0', borderRadius: 10, padding: '6px 10px', fontWeight: 800, cursor: 'pointer' }}
+                >
+                  {added[`${k}:summary`] ? 'Added ✓' : '+ Summary'}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => { onAddBullet?.(`• ${k}`); markAdded(k, 'bullet'); }}
+                  style={{ background: 'white', border: '1px solid #E0E0E0', borderRadius: 10, padding: '6px 10px', fontWeight: 800, cursor: 'pointer' }}
+                >
+                  {added[`${k}:bullet`] ? 'Added ✓' : '+ Bullet'}
+                </button>
+              </div>
+            ))}
+          </div>
+
+          {moreCount > 0 && (
+            <div style={{ display: 'flex', justifyContent: 'center', marginTop: 10 }}>
+              <button
+                type="button"
+                onClick={() => setShowAll(s => !s)}
+                style={{
+                  background: 'white',
+                  border: '1px solid #E0E0E0',
+                  borderRadius: 10,
+                  padding: '6px 10px',
+                  fontWeight: 800,
+                  cursor: 'pointer'
+                }}
+              >
+                {showAll ? 'Show fewer' : `Show ${moreCount} more`}
+              </button>
+            </div>
+          )}
+        </>
+      )}
     </div>
   );
 }
