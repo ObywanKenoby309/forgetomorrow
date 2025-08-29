@@ -11,14 +11,14 @@ export default function CustomSection({
   const [isOpen, setIsOpen] = useState(defaultOpen);
 
   // ----- helpers (immutable updates) -----
-  const updateSection = (idx, patch) => {
+  const updateSectionTitle = (idx, value) => {
     const next = [...customSections];
     const curr = { ...(next[idx] || { title: '', items: [''] }) };
-    next[idx] = { ...curr, ...patch };
+    next[idx] = { ...curr, title: value };
     setCustomSections(next);
   };
 
-  const updateItem = (sIdx, iIdx, value) => {
+  const updateItemText = (sIdx, iIdx, value) => {
     const next = [...customSections];
     const section = { ...(next[sIdx] || { title: '', items: [] }) };
     const items = Array.isArray(section.items) ? [...section.items] : [];
@@ -61,7 +61,7 @@ export default function CustomSection({
     setCustomSections(next);
   };
 
-  // ----- body -----
+  // ----- body (unchanged layout; inputs are now uncontrolled + onBlur) -----
   const Body = () => (
     <div className="space-y-4">
       {customSections.length === 0 && (
@@ -76,8 +76,8 @@ export default function CustomSection({
           <div className="flex items-center gap-3">
             <input
               type="text"
-              value={section.title || ''}
-              onChange={(e) => updateSection(sIdx, { title: e.target.value })}
+              defaultValue={section.title || ''}
+              onBlur={(e) => updateSectionTitle(sIdx, e.target.value)}
               placeholder="Section Title (e.g., Publications, Speaking, Interests)"
               className="w-full rounded-lg border border-slate-200 p-2 text-sm font-semibold outline-none focus:border-[#FF7043] focus:ring-2 focus:ring-[#FF7043]/30"
             />
@@ -98,8 +98,8 @@ export default function CustomSection({
               <div key={iIdx} className="flex items-center gap-2">
                 <input
                   type="text"
-                  value={item}
-                  onChange={(e) => updateItem(sIdx, iIdx, e.target.value)}
+                  defaultValue={item}
+                  onBlur={(e) => updateItemText(sIdx, iIdx, e.target.value)}
                   placeholder="Add item"
                   className="flex-1 rounded-lg border border-slate-200 p-2 text-sm outline-none focus:border-[#FF7043] focus:ring-2 focus:ring-[#FF7043]/30"
                 />

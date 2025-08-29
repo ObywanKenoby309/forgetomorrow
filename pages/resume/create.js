@@ -1,5 +1,5 @@
 // pages/resume/create.js
-import { useContext, useEffect, useMemo, useRef, useState } from 'react';
+import { useContext, useEffect, useMemo, useRef, useState, useCallback } from 'react';
 import dynamic from 'next/dynamic';
 import { useRouter } from 'next/router';
 
@@ -422,6 +422,92 @@ export default function CreateResumePage() {
     setOpenTailor(true);
   };
 
+  // ---- Stable render callbacks for SectionGroup ----
+  const renderContact = useCallback(
+    () => <ContactInfoSection embedded formData={formData} setFormData={setFormData} />,
+    [formData, setFormData]
+  );
+
+  const renderExperience = useCallback(
+    () => <WorkExperienceSection embedded experiences={experiences} setExperiences={setExperiences} />,
+    [experiences, setExperiences]
+  );
+
+  const renderEducation = useCallback(
+    () => <EducationSection embedded educationList={educationList} setEducationList={setEducationList} />,
+    [educationList, setEducationList]
+  );
+
+  const renderSkills = useCallback(
+    () => <SkillsSection embedded skills={skills} setSkills={setSkills} />,
+    [skills, setSkills]
+  );
+
+  const renderSummary = useCallback(
+    () => <ProfessionalSummarySection embedded summary={summary} setSummary={setSummary} />,
+    [summary, setSummary]
+  );
+
+  const renderProjects = useCallback(
+    () => <ProjectsSection embedded projects={projects} setProjects={setProjects} />,
+    [projects, setProjects]
+  );
+
+  const renderVolunteer = useCallback(
+    () => (
+      <VolunteerExperienceSection
+        embedded
+        volunteerExperiences={volunteerExperiences}
+        setVolunteerExperiences={setVolunteerExperiences}
+      />
+    ),
+    [volunteerExperiences, setVolunteerExperiences]
+  );
+
+  const renderCerts = useCallback(
+    () => <CertificationsSection embedded certifications={certifications} setCertifications={setCertifications} />,
+    [certifications, setCertifications]
+  );
+
+  const renderLanguages = useCallback(
+    () => <LanguagesSection embedded languages={languages} setLanguages={setLanguages} />,
+    [languages, setLanguages]
+  );
+
+  const renderAwards = useCallback(
+    () => <AchievementsSection embedded achievements={achievements} setAchievements={setAchievements} />,
+    [achievements, setAchievements]
+  );
+
+  const renderCustom = useCallback(
+    () => <CustomSection embedded customSections={customSections} setCustomSections={setCustomSections} />,
+    [customSections, setCustomSections]
+  );
+
+  // ---- Memoized items arrays so SectionGroup receives stable references ----
+  const requiredItems = useMemo(
+    () => [
+      { key: 'contact',    title: 'Contact Information', render: renderContact },
+      { key: 'experience', title: 'Work Experience',     render: renderExperience },
+      { key: 'education',  title: 'Education',           render: renderEducation },
+      { key: 'skills',     title: 'Skills',              render: renderSkills },
+    ],
+    [renderContact, renderExperience, renderEducation, renderSkills]
+  );
+
+  const recommendedItems = useMemo(
+    () => [
+      { key: 'summary',   title: 'Professional Summary',      render: renderSummary },
+      { key: 'projects',  title: 'Projects',                  render: renderProjects },
+      { key: 'volunteer', title: 'Volunteer Experience',      render: renderVolunteer },
+      { key: 'certs',     title: 'Certifications / Training', render: renderCerts },
+      { key: 'languages', title: 'Languages',                 render: renderLanguages },
+      { key: 'awards',    title: 'Achievements / Awards',     render: renderAwards },
+      { key: 'custom',    title: 'Custom Sections',           render: renderCustom },
+    ],
+    [renderSummary, renderProjects, renderVolunteer, renderCerts, renderLanguages, renderAwards, renderCustom]
+  );
+
   return (
     <SeekerLayout
       title="Create Resume | ForgeTomorrow"
@@ -447,8 +533,7 @@ export default function CreateResumePage() {
     >
       {/* CENTER COLUMN CONTENT */}
       <div style={{ display: 'grid', gap: 16 }}>
-
-        {/* 1) Template selector — now first */}
+        {/* Template selector — moved to the top under the header */}
         <section
           style={{
             background: 'white',
@@ -507,7 +592,7 @@ export default function CreateResumePage() {
           </div>
         </section>
 
-        {/* 2) JD card — paste/import + actions */}
+        {/* JD card — paste/import + actions */}
         <div ref={dropRef}>
           <JdCard
             jd={jd}
@@ -520,7 +605,7 @@ export default function CreateResumePage() {
           />
         </div>
 
-        {/* 3) Missing keywords (ATS suggestions) — calmer, collapsible */}
+        {/* Missing keywords (ATS suggestions) — calmer, collapsible */}
         <ToggleCard title="Missing keywords (suggested adds)" defaultOpen={false}>
           <AtsDepthPanel
             jdText={jd}
@@ -554,42 +639,13 @@ export default function CreateResumePage() {
           />
         </ToggleCard>
 
-        {/* 4) Required & Recommended groups — compact & light */}
+        {/* Required & Recommended groups — compact & light */}
         <SectionGroup
           title="Required"
           defaultOpen
           density="compact"
           shell="ghost"
-          items={[
-            {
-              key: 'contact',
-              title: 'Contact Information',
-              render: () => (
-                <ContactInfoSection embedded formData={formData} setFormData={setFormData} />
-              ),
-            },
-            {
-              key: 'experience',
-              title: 'Work Experience',
-              render: () => (
-                <WorkExperienceSection embedded experiences={experiences} setExperiences={setExperiences} />
-              ),
-            },
-            {
-              key: 'education',
-              title: 'Education',
-              render: () => (
-                <EducationSection embedded educationList={educationList} setEducationList={setEducationList} />
-              ),
-            },
-            {
-              key: 'skills',
-              title: 'Skills',
-              render: () => (
-                <SkillsSection embedded skills={skills} setSkills={setSkills} />
-              ),
-            },
-          ]}
+          items={requiredItems}
         />
 
         <SectionGroup
@@ -597,57 +653,7 @@ export default function CreateResumePage() {
           defaultOpen={false}
           density="compact"
           shell="ghost"
-          items={[
-            {
-              key: 'summary',
-              title: 'Professional Summary',
-              render: () => (
-                <ProfessionalSummarySection embedded summary={summary} setSummary={setSummary} />
-              ),
-            },
-            {
-              key: 'projects',
-              title: 'Projects',
-              render: () => (
-                <ProjectsSection embedded projects={projects} setProjects={setProjects} />
-              ),
-            },
-            {
-              key: 'volunteer',
-              title: 'Volunteer Experience',
-              render: () => (
-                <VolunteerExperienceSection embedded volunteerExperiences={volunteerExperiences} setVolunteerExperiences={setVolunteerExperiences} />
-              ),
-            },
-            {
-              key: 'certs',
-              title: 'Certifications / Training',
-              render: () => (
-                <CertificationsSection embedded certifications={certifications} setCertifications={setCertifications} />
-              ),
-            },
-            {
-              key: 'languages',
-              title: 'Languages',
-              render: () => (
-                <LanguagesSection embedded languages={languages} setLanguages={setLanguages} />
-              ),
-            },
-            {
-              key: 'awards',
-              title: 'Achievements / Awards',
-              render: () => (
-                <AchievementsSection embedded achievements={achievements} setAchievements={setAchievements} />
-              ),
-            },
-            {
-              key: 'custom',
-              title: 'Custom Sections',
-              render: () => (
-                <CustomSection embedded customSections={customSections} setCustomSections={setCustomSections} />
-              ),
-            },
-          ]}
+          items={recommendedItems}
         />
       </div>
 

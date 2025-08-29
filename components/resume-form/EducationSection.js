@@ -1,74 +1,67 @@
 // components/resume-form/EducationSection.js
 import { useMemo, useState } from 'react';
-import {
-  FaChevronDown,
-  FaChevronRight,
-  FaTrash,
-  FaPlus,
-} from 'react-icons/fa';
+import { FaChevronDown, FaChevronRight, FaTrash, FaPlus } from 'react-icons/fa';
 
 export default function EducationSection({
   educationList = [],
   setEducationList,
-  embedded = false,     // render only fields (no outer card/header)
-  defaultOpen = true,   // used only in standalone mode
+  embedded = false,
+  defaultOpen = true,
 }) {
   const [isOpen, setIsOpen] = useState(defaultOpen);
 
-  // --- normalize so we can add "current" & keep keys consistent
-  const norm = useMemo(
-    () =>
-      (educationList || []).map((e) => ({
-        degree: e.degree ?? '',
-        institution: e.institution ?? '',
-        location: e.location ?? '',
-        startDate: e.startDate ?? '',
-        endDate: e.endDate ?? '',
-        current: !!e.current,
-        description: e.description ?? '',
-      })),
-    [educationList]
-  );
+  // Ensure stable ids (once) so rows don't remount
+  const rows = useMemo(() => {
+    return (educationList || []).map((e) => {
+      if (e?.id) return e;
+      return {
+        id:
+          (typeof crypto !== 'undefined' && crypto.randomUUID)
+            ? crypto.randomUUID()
+            : Math.random().toString(36).slice(2),
+        degree: e?.degree ?? '',
+        institution: e?.institution ?? '',
+        location: e?.location ?? '',
+        startDate: e?.startDate ?? '',
+        endDate: e?.endDate ?? '',
+        description: e?.description ?? '',
+      };
+    });
+  }, [educationList]);
 
   const commit = (next) => setEducationList(next);
 
-  const handleField = (idx, name, value) => {
-    const next = norm.map((row, i) => (i === idx ? { ...row, [name]: value } : row));
-    commit(next);
-  };
-
-  const toggleCurrent = (idx, checked) => {
-    const next = norm.map((row, i) =>
-      i === idx ? { ...row, current: checked, endDate: checked ? '' : row.endDate } : row
-    );
-    commit(next);
+  const updateFieldOnBlur = (id, field, value) => {
+    commit(rows.map((r) => (r.id === id ? { ...r, [field]: value } : r)));
   };
 
   const addEducation = () => {
     commit([
-      ...norm,
+      ...rows,
       {
+        id:
+          (typeof crypto !== 'undefined' && crypto.randomUUID)
+            ? crypto.randomUUID()
+            : Math.random().toString(36).slice(2),
         degree: '',
         institution: '',
         location: '',
         startDate: '',
         endDate: '',
-        current: false,
         description: '',
       },
     ]);
   };
 
-  const removeEducation = (idx) => {
-    commit(norm.filter((_, i) => i !== idx));
+  const removeEducation = (id) => {
+    commit(rows.filter((r) => r.id !== id));
   };
 
-  // ===== Embedded body (used inside SectionGroup) =====
   const Body = () => (
     <div className="space-y-4">
-      {norm.map((edu, idx) => (
+      {rows.map((edu) => (
         <div
-          key={idx}
+          key={edu.id}
           className="rounded-xl border border-slate-200 p-3 md:p-4 bg-white"
         >
           <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
@@ -78,8 +71,8 @@ export default function EducationSection({
               </label>
               <input
                 type="text"
-                value={edu.degree}
-                onChange={(e) => handleField(idx, 'degree', e.target.value)}
+                defaultValue={edu.degree}
+                onBlur={(e) => updateFieldOnBlur(edu.id, 'degree', e.target.value)}
                 placeholder="e.g. B.S. in Computer Science"
                 className="mt-1 w-full rounded-lg border border-slate-200 p-2.5 text-sm outline-none focus:border-[#FF7043] focus:ring-2 focus:ring-[#FF7043]/30"
               />
@@ -91,8 +84,8 @@ export default function EducationSection({
               </label>
               <input
                 type="text"
-                value={edu.institution}
-                onChange={(e) => handleField(idx, 'institution', e.target.value)}
+                defaultValue={edu.institution}
+                onBlur={(e) => updateFieldOnBlur(edu.id, 'institution', e.target.value)}
                 placeholder="e.g. University of Example"
                 className="mt-1 w-full rounded-lg border border-slate-200 p-2.5 text-sm outline-none focus:border-[#FF7043] focus:ring-2 focus:ring-[#FF7043]/30"
               />
@@ -104,22 +97,22 @@ export default function EducationSection({
               </label>
               <input
                 type="text"
-                value={edu.location}
-                onChange={(e) => handleField(idx, 'location', e.target.value)}
+                defaultValue={edu.location}
+                onBlur={(e) => updateFieldOnBlur(edu.id, 'location', e.target.value)}
                 placeholder="City, State"
                 className="mt-1 w-full rounded-lg border border-slate-200 p-2.5 text-sm outline-none focus:border-[#FF7043] focus:ring-2 focus:ring-[#FF7043]/30"
               />
             </div>
 
-            <div className="md:col-span-2 grid grid-cols-1 sm:grid-cols-3 gap-3">
+            <div className="md:col-span-2 grid grid-cols-1 sm:grid-cols-2 gap-3">
               <div>
                 <label className="block text-sm font-medium text-slate-700">
                   Start Date
                 </label>
                 <input
                   type="month"
-                  value={edu.startDate}
-                  onChange={(e) => handleField(idx, 'startDate', e.target.value)}
+                  defaultValue={edu.startDate}
+                  onBlur={(e) => updateFieldOnBlur(edu.id, 'startDate', e.target.value)}
                   className="mt-1 w-full rounded-lg border border-slate-200 p-2.5 text-sm outline-none focus:border-[#FF7043] focus:ring-2 focus:ring-[#FF7043]/30"
                 />
               </div>
@@ -129,21 +122,11 @@ export default function EducationSection({
                 </label>
                 <input
                   type="month"
-                  value={edu.current ? '' : edu.endDate}
-                  onChange={(e) => handleField(idx, 'endDate', e.target.value)}
-                  disabled={edu.current}
-                  className="mt-1 w-full rounded-lg border border-slate-200 p-2.5 text-sm outline-none disabled:bg-slate-100 focus:border-[#FF7043] focus:ring-2 focus:ring-[#FF7043]/30"
+                  defaultValue={edu.endDate}
+                  onBlur={(e) => updateFieldOnBlur(edu.id, 'endDate', e.target.value)}
+                  className="mt-1 w-full rounded-lg border border-slate-200 p-2.5 text-sm outline-none focus:border-[#FF7043] focus:ring-2 focus:ring-[#FF7043]/30"
                 />
               </div>
-              <label className="flex items-center gap-2 mt-6 text-sm font-medium text-slate-700">
-                <input
-                  type="checkbox"
-                  checked={edu.current}
-                  onChange={(e) => toggleCurrent(idx, e.target.checked)}
-                  className="rounded border-slate-300"
-                />
-                I am currently studying here
-              </label>
             </div>
           </div>
 
@@ -152,8 +135,8 @@ export default function EducationSection({
               Description / Notes
             </label>
             <textarea
-              value={edu.description}
-              onChange={(e) => handleField(idx, 'description', e.target.value)}
+              defaultValue={edu.description}
+              onBlur={(e) => updateFieldOnBlur(edu.id, 'description', e.target.value)}
               placeholder="Honors, relevant coursework, thesis, societies…"
               className="mt-1 w-full rounded-lg border border-slate-200 p-2.5 text-sm outline-none resize-y focus:border-[#FF7043] focus:ring-2 focus:ring-[#FF7043]/30"
               rows={3}
@@ -163,10 +146,10 @@ export default function EducationSection({
           <div className="mt-3">
             <button
               type="button"
-              onClick={() => removeEducation(idx)}
+              onClick={() => removeEducation(edu.id)}
               className="inline-flex items-center gap-1 text-xs text-red-600 hover:underline"
             >
-              <FaTrash /> Remove education
+              <FaTrash /> Remove Education
             </button>
           </div>
         </div>
@@ -177,12 +160,11 @@ export default function EducationSection({
         onClick={addEducation}
         className="inline-flex items-center gap-1 text-sm text-[#FF7043] hover:underline"
       >
-        <FaPlus /> Add another education
+        <FaPlus /> Add Another Education
       </button>
     </div>
   );
 
-  // ===== Render modes =====
   if (embedded) return <Body />;
 
   return (
@@ -190,7 +172,7 @@ export default function EducationSection({
       <button
         type="button"
         className="w-full flex items-center justify-between"
-        onClick={() => setIsOpen(!isOpen)}
+        onClick={() => setIsOpen((o) => !o)}
       >
         <h2 className="text-lg font-semibold text-[#FF7043]">Education</h2>
         {isOpen ? (
@@ -199,7 +181,6 @@ export default function EducationSection({
           <FaChevronRight className="text-[#FF7043]" />
         )}
       </button>
-
       {isOpen && <Body />}
     </section>
   );

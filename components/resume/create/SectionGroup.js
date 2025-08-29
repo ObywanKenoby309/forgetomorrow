@@ -1,58 +1,121 @@
-// components/resume/create/SectionGroup.js
-import { useState } from 'react';
-import { FaChevronDown, FaChevronUp, FaChevronRight } from 'react-icons/fa';
+// /components/resume/create/SectionGroup.js
+import { useEffect, useMemo, useState } from 'react';
+import { FaChevronDown, FaChevronRight } from 'react-icons/fa';
 
+/**
+ * SectionGroup
+ * - Keeps each item body mounted to preserve focus while typing
+ * - Uses stable keys only (item.key)
+ * - Syncs new items via useEffect (no state updates during render)
+ * - Keeps the same light visual shell you’re using now
+ */
 export default function SectionGroup({
   title,
-  subtitle,               // optional
-  defaultOpen = true,
-  items = [],             // [{key,title,render}]
-  density = 'compact',    // 'compact' | 'cozy'
-  shell = 'ghost',        // 'ghost' keeps the outer panel subtle
+  items = [],          // [{ key, title, render }]
+  defaultOpen = true,  // kept for parity
+  density = 'compact', // kept for parity; no visual change
+  shell = 'ghost',     // kept for parity; no visual change
 }) {
-  const [open, setOpen] = useState(!!defaultOpen);
-  const padY = density === 'compact' ? 'py-2' : 'py-3';
+  // Initialize open map once from the initial items list
+  const initialOpen = useMemo(() => {
+    const obj = {};
+    for (const it of items) {
+      if (it?.key != null) obj[it.key] = true;
+    }
+    return obj;
+  }, []); // only once
+
+  const [openMap, setOpenMap] = useState(initialOpen);
+
+  // If new items are introduced later, add them to the open map
+  useEffect(() => {
+    setOpenMap(prev => {
+      let changed = false;
+      const next = { ...prev };
+      for (const it of items) {
+        const k = it?.key;
+        if (k != null && !(k in next)) {
+          next[k] = true;
+          changed = true;
+        }
+      }
+      return changed ? next : prev;
+    });
+  }, [items]);
+
+  const toggle = (k) => setOpenMap(m => ({ ...m, [k]: !m[k] }));
 
   return (
-    <section className="bg-white rounded-xl border border-gray-200 shadow-sm">
-      {/* group header */}
-      <div className="flex items-center justify-between px-4 py-3">
-        <div>
-          <div className="text-[15px] font-semibold text-gray-800">{title}</div>
-          {!!subtitle && (
-            <div className="text-xs text-gray-500 mt-0.5">{subtitle}</div>
-          )}
-        </div>
-        <button
-          type="button"
-          onClick={() => setOpen(!open)}
-          className="text-[13px] font-medium border border-gray-300 rounded-lg px-3 py-1.5 hover:bg-gray-50"
+    <section
+      style={{
+        background: 'white',
+        border: '1px solid #eee',
+        borderRadius: 12,
+        padding: 12,
+        boxShadow: '0 2px 6px rgba(0,0,0,0.04)',
+        display: 'grid',
+        gap: 10,
+      }}
+    >
+      {title ? (
+        <div
+          style={{
+            padding: '2px 4px',
+            color: '#546E7A',
+            fontWeight: 700,
+            fontSize: 13,
+            letterSpacing: 0.2,
+          }}
         >
-          {open ? 'Collapse' : 'Expand'}
-        </button>
-      </div>
-
-      {/* rows */}
-      {open && (
-        <div className="px-3 pb-3">
-          {items.map(({ key, title, render }) => (
-            <details
-              key={key}
-              open={false}
-              className="group bg-white rounded-lg border border-gray-200 mb-2"
-            >
-              <summary className={`list-none cursor-pointer select-none flex items-center justify-between px-3 ${padY}`}>
-                <span className="text-[16px] font-semibold text-gray-800">{title}</span>
-                <FaChevronRight className="text-gray-400 group-open:hidden" />
-                <FaChevronDown className="text-gray-400 hidden group-open:block" />
-              </summary>
-              <div className="border-t border-gray-200 p-4">
-                {typeof render === 'function' ? render() : render}
-              </div>
-            </details>
-          ))}
+          {title}
         </div>
-      )}
+      ) : null}
+
+      <div style={{ display: 'grid', gap: 8 }}>
+        {items.map((it) => {
+          const key = it.key; // must be stable
+          const isOpen = !!openMap[key];
+
+          return (
+            <div
+              key={key}
+              style={{
+                background: 'white',
+                border: '1px solid #eee',
+                borderRadius: 12,
+                boxShadow: '0 1px 3px rgba(0,0,0,0.03)',
+              }}
+            >
+              <button
+                type="button"
+                onClick={() => toggle(key)}
+                style={{
+                  width: '100%',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'space-between',
+                  padding: '10px 12px',
+                  fontSize: 14,
+                  color: '#374151',
+                  fontWeight: 600,
+                }}
+              >
+                <span>{it.title}</span>
+                {isOpen ? (
+                  <FaChevronDown className="text-[#FF7043]" />
+                ) : (
+                  <FaChevronRight className="text-[#FF7043]" />
+                )}
+              </button>
+
+              {/* Keep mounted; just hide/show to preserve focus */}
+              <div style={{ display: isOpen ? 'block' : 'none', padding: '0 12px 12px 12px' }}>
+                {typeof it.render === 'function' ? it.render() : it.render}
+              </div>
+            </div>
+          );
+        })}
+      </div>
     </section>
   );
 }
