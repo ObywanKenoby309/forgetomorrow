@@ -1,5 +1,5 @@
 // components/resume-form/LanguagesSection.js
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import { FaChevronDown, FaChevronRight, FaTrash, FaPlus } from 'react-icons/fa';
 
 const LANGUAGE_OPTIONS = [
@@ -24,55 +24,62 @@ const PROFICIENCY_LEVELS = ["Basic", "Conversational", "Fluent", "Native"];
 export default function LanguagesSection({
   languages = [],
   setLanguages,
-  embedded = false,     // render content only (for SectionGroup)
-  defaultOpen = true,   // used only when not embedded
+  embedded = false,     // content-only (SectionGroup)
+  defaultOpen = true,   // only when not embedded
 }) {
   const [isOpen, setIsOpen] = useState(defaultOpen);
 
+  // Normalize for safe reads
+  const norm = useMemo(
+    () =>
+      (languages || []).map((l) => ({
+        language: l.language ?? '',
+        proficiency: l.proficiency ?? '',
+        years: l.years ?? '',
+      })),
+    [languages]
+  );
+
+  const commit = (next) => setLanguages(next);
+
   const setField = (index, key, value) => {
-    const next = [...languages];
-    const curr = { ...(next[index] || {}) };
-    if (key === 'years') {
-      // allow empty; else numeric 0–50 in 0.5 steps
-      if (value === '' || (/^\d*\.?\d*$/.test(value) && Number(value) >= 0 && Number(value) <= 50)) {
-        curr[key] = value;
-      } else {
-        return;
+    const next = norm.map((row, i) => {
+      if (i !== index) return row;
+      if (key === 'years') {
+        // allow empty string; otherwise accept numeric
+        if (value === '' || (/^\d*\.?\d*$/.test(value) && Number(value) >= 0 && Number(value) <= 50)) {
+          return { ...row, years: value };
+        }
+        return row;
       }
-    } else {
-      curr[key] = value;
-    }
-    next[index] = curr;
-    setLanguages(next);
+      return { ...row, [key]: value };
+    });
+    commit(next);
   };
 
   const addLanguage = () => {
-    setLanguages([
-      ...languages,
-      { language: '', proficiency: '', years: '' },
-    ]);
+    commit([...norm, { language: '', proficiency: '', years: '' }]);
   };
 
   const removeLanguage = (index) => {
-    const next = [...languages];
-    next.splice(index, 1);
-    setLanguages(next);
+    commit(norm.filter((_, i) => i !== index));
   };
 
-  const Body = () => (
+  // Stable content (no nested component = no remount on re-render)
+  const content = (
     <div className="space-y-4">
-      {languages.length === 0 && (
+      {norm.length === 0 && (
         <p className="text-sm text-slate-500">No languages added yet.</p>
       )}
 
-      {languages.map((entry, index) => (
+      {norm.map((entry, index) => (
         <div key={index} className="rounded-lg border border-slate-200 bg-slate-50 p-4 space-y-3">
           <div className="grid grid-cols-1 md:grid-cols-3 gap-3 items-end">
             <div>
               <label className="block text-sm font-semibold text-slate-700">Language</label>
               <input
                 list="language-options"
-                value={entry.language || ''}
+                value={entry.language}
                 onChange={(e) => setField(index, 'language', e.target.value)}
                 placeholder="Type or select a language"
                 className="mt-1 w-full rounded-lg border border-slate-200 p-2 text-sm outline-none focus:border-[#FF7043] focus:ring-2 focus:ring-[#FF7043]/30"
@@ -88,7 +95,7 @@ export default function LanguagesSection({
             <div>
               <label className="block text-sm font-semibold text-slate-700">Proficiency</label>
               <select
-                value={entry.proficiency || ''}
+                value={entry.proficiency}
                 onChange={(e) => setField(index, 'proficiency', e.target.value)}
                 className="mt-1 w-full rounded-lg border border-slate-200 p-2 text-sm outline-none focus:border-[#FF7043] focus:ring-2 focus:ring-[#FF7043]/30"
               >
@@ -106,7 +113,7 @@ export default function LanguagesSection({
                 min="0"
                 max="50"
                 step="0.5"
-                value={entry.years ?? ''}
+                value={entry.years}
                 onChange={(e) => setField(index, 'years', e.target.value)}
                 placeholder="e.g. 3.5"
                 className="mt-1 w-full rounded-lg border border-slate-200 p-2 text-sm outline-none focus:border-[#FF7043] focus:ring-2 focus:ring-[#FF7043]/30"
@@ -136,7 +143,7 @@ export default function LanguagesSection({
     </div>
   );
 
-  if (embedded) return <Body />;
+  if (embedded) return content;
 
   return (
     <section className="bg-white rounded-xl border border-slate-200 shadow-sm p-4 md:p-5 space-y-4">
@@ -149,7 +156,7 @@ export default function LanguagesSection({
         {isOpen ? <FaChevronDown className="text-[#FF7043]" /> : <FaChevronRight className="text-[#FF7043]" />}
       </button>
 
-      {isOpen && <Body />}
+      {isOpen && content}
     </section>
   );
 }

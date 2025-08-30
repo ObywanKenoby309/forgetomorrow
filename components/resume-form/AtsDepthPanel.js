@@ -43,7 +43,8 @@ export default function AtsDepthPanel({
   onAddSkill,
   onAddSummary,
   onAddBullet,
-  collapsedDefault = false,
+  // default CLOSED per spec
+  collapsedDefault = true,
   maxChips = 12,
 }) {
   const [collapsed, setCollapsed] = useState(collapsedDefault);
@@ -85,26 +86,29 @@ export default function AtsDepthPanel({
         boxShadow: '0 2px 6px rgba(0,0,0,0.06)',
       }}
     >
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8 }}>
-        <div style={{ fontWeight: 800, color: '#37474F' }}>
+      {/* Header row (click to toggle). No "Hide" button; lighter weight title */}
+      <button
+        type="button"
+        onClick={() => setCollapsed(c => !c)}
+        aria-expanded={!collapsed}
+        style={{
+          width: '100%',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+          gap: 8,
+          background: 'transparent',
+          border: 'none',
+          padding: '6px 4px',
+          cursor: 'pointer'
+        }}
+      >
+        <div style={{ fontWeight: 500, color: '#37474F' }}>
           Missing keywords (suggested adds)
-          {missing.length ? ` · ${missing.length}` : ''}
+          {missing.length ? <span style={{ color: '#78909C' }}>{` · ${missing.length}`}</span> : null}
         </div>
-        <button
-          type="button"
-          onClick={() => setCollapsed(c => !c)}
-          style={{
-            background: 'white',
-            border: '1px solid #E0E0E0',
-            borderRadius: 10,
-            padding: '6px 10px',
-            fontWeight: 800,
-            cursor: 'pointer'
-          }}
-        >
-          {collapsed ? 'Show' : 'Hide'}
-        </button>
-      </div>
+        <span style={{ color: '#607D8B', fontSize: 14 }}>{collapsed ? '▸' : '▾'}</span>
+      </button>
 
       {empty && (
         <div style={{ marginTop: 8, fontSize: 12, color: '#90A4AE' }}>
@@ -114,7 +118,7 @@ export default function AtsDepthPanel({
 
       {!empty && !collapsed && (
         <>
-          <div style={{ display: 'grid', gap: 8, marginTop: 12 }}>
+          <div style={{ display: 'grid', gap: 8, marginTop: 8 }}>
             {visibleMissing.map((k) => (
               <div
                 key={k}
@@ -129,25 +133,26 @@ export default function AtsDepthPanel({
                   gap: 8,
                 }}
               >
-                <div style={{ fontWeight: 700, color: '#263238' }}>{k}</div>
+                {/* Unbolded keyword label */}
+                <div style={{ color: '#263238' }}>{k}</div>
                 <button
                   type="button"
                   onClick={() => { onAddSkill?.(k); markAdded(k, 'skill'); }}
-                  style={{ background: 'white', border: '1px solid #E0E0E0', borderRadius: 10, padding: '6px 10px', fontWeight: 800, cursor: 'pointer' }}
+                  style={{ background: 'white', border: '1px solid #E0E0E0', borderRadius: 10, padding: '6px 10px', fontWeight: 700, cursor: 'pointer' }}
                 >
                   {added[`${k}:skill`] ? 'Added ✓' : '+ Skill'}
                 </button>
                 <button
                   type="button"
                   onClick={() => { onAddSummary?.(k); markAdded(k, 'summary'); }}
-                  style={{ background: 'white', border: '1px solid #E0E0E0', borderRadius: 10, padding: '6px 10px', fontWeight: 800, cursor: 'pointer' }}
+                  style={{ background: 'white', border: '1px solid #E0E0E0', borderRadius: 10, padding: '6px 10px', fontWeight: 700, cursor: 'pointer' }}
                 >
                   {added[`${k}:summary`] ? 'Added ✓' : '+ Summary'}
                 </button>
                 <button
                   type="button"
                   onClick={() => { onAddBullet?.(`• ${k}`); markAdded(k, 'bullet'); }}
-                  style={{ background: 'white', border: '1px solid #E0E0E0', borderRadius: 10, padding: '6px 10px', fontWeight: 800, cursor: 'pointer' }}
+                  style={{ background: 'white', border: '1px solid #E0E0E0', borderRadius: 10, padding: '6px 10px', fontWeight: 700, cursor: 'pointer' }}
                 >
                   {added[`${k}:bullet`] ? 'Added ✓' : '+ Bullet'}
                 </button>
@@ -165,7 +170,7 @@ export default function AtsDepthPanel({
                   border: '1px solid #E0E0E0',
                   borderRadius: 10,
                   padding: '6px 10px',
-                  fontWeight: 800,
+                  fontWeight: 700,
                   cursor: 'pointer'
                 }}
               >

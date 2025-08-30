@@ -1,5 +1,5 @@
 // pages/resume/create.js
-import { useContext, useEffect, useMemo, useRef, useState, useCallback } from 'react';
+import { useContext, useEffect, useMemo, useRef, useState } from 'react';
 import dynamic from 'next/dynamic';
 import { useRouter } from 'next/router';
 
@@ -30,32 +30,25 @@ import AtsCheckBadge from '@/components/resume-form/AtsCheckBadge';
 import AtsPreviewModal from '@/components/resume-form/AtsPreviewModal';
 import SmartExportMenu from '@/components/resume-form/export/SmartExportMenu';
 
-// Template registry + AI matcher
+// NOTE: SectionGroup removed on purpose to avoid the “global chevron”
+// import SectionGroup from '@/components/resume/create/SectionGroup';
+
 import { resumeTemplates, getResumeTemplateComponent } from '@/lib/templates';
 import { matchTemplate } from '@/lib/ai/matchTemplate';
 
-// Stepper
 import ApplySteps from '@/components/apply/ApplySteps';
 
-// JD ingest (client) + normalizer
 import { extractTextFromFile, normalizeJobText } from '@/lib/jd/ingest';
-// Server fallback for heavy files
 import { uploadJD } from '@/lib/jd/uploadToApi';
 
-// Optional deep ATS panel
 import AtsDepthPanel from '@/components/resume-form/AtsDepthPanel';
-
-// extracted building blocks
-import JdCard from '@/components/resume/create/JdCard';
-import RightRail from '@/components/resume/create/RightRail';
-import SectionGroup from '@/components/resume/create/SectionGroup';
 
 const ClientPDFButton = dynamic(
   () => import('@/components/resume-form/export/ClientPDFButton'),
   { ssr: false }
 );
 
-// -------- tiny helpers --------
+// -------- small helpers --------
 function formatLocal(dt) {
   if (!dt) return '';
   try {
@@ -131,25 +124,83 @@ function DockModal({ open, title, onClose, children }) {
   );
 }
 
-// Lightweight collapsible card used for “Missing keywords”
-function ToggleCard({ title, count, defaultOpen = false, children }) {
-  const [open, setOpen] = useState(!!defaultOpen);
+function DockItem({ title, subtitle, onOpen }) {
   return (
-    <section className="bg-white rounded-xl border border-gray-200 shadow-sm">
-      <div className="flex items-center justify-between px-4 py-3">
-        <div className="text-sm font-semibold text-gray-800">
-          {title}{typeof count === 'number' ? ` — ${count}` : ''}
-        </div>
+    <div
+      style={{
+        background: 'white',
+        border: '1px solid #eee',
+        borderRadius: 12,
+        padding: 12,
+        boxShadow: '0 2px 6px rgba(0,0,0,0.06)',
+        display: 'grid',
+        alignItems: 'start',
+        gap: 6,
+        boxSizing: 'border-box',
+        width: '100%',
+      }}
+    >
+      <div style={{ fontWeight: 800, color: '#FF7043' }}>{title}</div>
+      {subtitle ? (
+        <div style={{ color: '#607D8B', fontSize: 12 }}>{subtitle}</div>
+      ) : null}
+      <div style={{ marginTop: 4 }}>
         <button
           type="button"
-          onClick={() => setOpen(!open)}
-          className="text-[13px] font-medium border border-gray-300 rounded-lg px-3 py-1.5 hover:bg-gray-50"
+          onClick={onOpen}
+          style={{
+            background: '#FF7043',
+            color: 'white',
+            padding: '6px 10px',
+            borderRadius: 10,
+            border: '1px solid rgba(0,0,0,0.06)',
+            fontWeight: 800,
+            cursor: 'pointer',
+            fontSize: 12,
+          }}
         >
-          {open ? 'Hide' : 'Show'}
+          Open
         </button>
       </div>
-      {open && <div className="px-4 pb-4">{children}</div>}
-    </section>
+    </div>
+  );
+}
+
+/** Small neutral collapsible row (used for each sub-section inside Required/Recommended) */
+function RowCollapser({ title, open, onToggle, children, rightHint }) {
+  return (
+    <div
+      style={{
+        background: '#FFFFFF',
+        border: '1px solid #E5E7EB',
+        borderRadius: 10,
+      }}
+    >
+      <button
+        type="button"
+        onClick={onToggle}
+        aria-expanded={open}
+        style={{
+          width: '100%',
+          padding: '10px 12px',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+          gap: 8,
+          color: '#334155',
+          fontWeight: 600,
+          background: 'transparent',
+          cursor: 'pointer',
+        }}
+      >
+        <span>{title}</span>
+        <span style={{ color: '#64748B', display: 'flex', gap: 8, alignItems: 'center' }}>
+          {rightHint ? <span style={{ fontSize: 12 }}>{rightHint}</span> : null}
+          {open ? '▾' : '▸'}
+        </span>
+      </button>
+      {open && <div style={{ padding: 12, borderTop: '1px solid #E5E7EB' }}>{children}</div>}
+    </div>
   );
 }
 
@@ -157,6 +208,7 @@ function ToggleCard({ title, count, defaultOpen = false, children }) {
 export default function CreateResumePage() {
   const router = useRouter();
   const seededRef = useRef(false);
+  const fileInputRef = useRef(null);
   const dropRef = useRef(null);
 
   const {
@@ -174,27 +226,28 @@ export default function CreateResumePage() {
     saveEventAt,
   } = useContext(ResumeContext);
 
-  // selected resume template + lazy component
   const [templateId, setTemplateId] = useState(() => String(router.query?.template || 'modern'));
   const [TemplateComp, setTemplateComp] = useState(null);
 
-  // toast
   const [showToast, setShowToast] = useState(false);
   const savedTime = useMemo(() => formatLocal(saveEventAt), [saveEventAt]);
 
-  // unified apply flow – JD text lives here
   const [jd, setJd] = useState('');
   const [jdBusy, setJdBusy] = useState(false);
   const [jdError, setJdError] = useState('');
 
-  // convenience blob for passing to children
-  const resumeData = useMemo(() => ({
-    formData, summary, experiences, projects, volunteerExperiences,
-    educationList, certifications, languages, skills, achievements, customSections
-  }), [
-    formData, summary, experiences, projects, volunteerExperiences,
-    educationList, certifications, languages, skills, achievements, customSections
-  ]);
+  // Group headers closed by default
+  const [openReq, setOpenReq] = useState(false);
+  const [openRec, setOpenRec] = useState(false);
+
+  // Per-item collapse state (all closed initially)
+  const [reqOpen, setReqOpen] = useState({
+    contact: false, experience: false, education: false, skills: false,
+  });
+  const [recOpen, setRecOpen] = useState({
+    summary: false, projects: false, volunteer: false, certs: false,
+    languages: false, achievements: false, custom: false,
+  });
 
   useEffect(() => {
     try {
@@ -203,7 +256,7 @@ export default function CreateResumePage() {
     } catch {}
   }, []);
 
-  // Ingest Apply Assistant seed BEFORE ?template= seeding
+  // Ingest seed
   useEffect(() => {
     try {
       const raw = localStorage.getItem('ft_resume_seed');
@@ -249,7 +302,7 @@ export default function CreateResumePage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  // Seed from ?template= if doc is empty (kept), mirror into templateId
+  // Seed from ?template=
   useEffect(() => {
     const t = router.query?.template;
     if (!t || seededRef.current) {
@@ -274,15 +327,7 @@ export default function CreateResumePage() {
       return;
     }
 
-    const profile = {
-      summary,
-      skills,
-      experience: experiences,
-      education: educationList,
-      projects,
-      links: [],
-    };
-
+    const profile = { summary, skills, experience: experiences, education: educationList, projects, links: [] };
     const doc = applyResumeTemplate(String(t), profile);
 
     setSummary(doc?.sections?.summary?.data?.text || summary || '');
@@ -297,7 +342,7 @@ export default function CreateResumePage() {
 
     seededRef.current = true;
     setTemplateId(String(t));
-  // eslint-disable-next-line react-hooks/exhaustive-deps
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [router.query?.template]);
 
   // Load the template component whenever templateId changes
@@ -329,28 +374,105 @@ export default function CreateResumePage() {
     return () => clearTimeout(t);
   }, [saveEventAt]);
 
-  // Header
-  const HeaderBox = (
-    <section
-      style={{
-        background: 'white',
-        border: '1px solid #eee',
-        borderRadius: 12,
-        padding: 16,
-        boxShadow: '0 2px 6px rgba(0,0,0,0.06)',
-        textAlign: 'center',
-        display: 'grid',
-        gap: 10,
-      }}
-    >
-      <ApplySteps current={1} />
-      <h1 style={{ color: '#FF7043', fontSize: 28, fontWeight: 800, margin: 0 }}>
-        Resume & Cover Letter Builder
-      </h1>
-      <p style={{ marginTop: 0, color: '#546E7A', fontSize: 14 }}>
-        Build, tailor, analyze, and export professional documents. Open tools from the right dock when you need them.
-      </p>
-    </section>
+  // Right rail
+  const RightPane = (
+    <div style={{ display: 'grid', gap: 12, width: '100%', boxSizing: 'border-box' }}>
+      <SeekerRightColumn variant="creator" />
+      <div
+        id="export"
+        style={{
+          background: 'white',
+          border: '1px solid #eee',
+          borderRadius: 12,
+          padding: 10,
+          boxShadow: '0 2px 6px rgba(0,0,0,0.06)',
+          display: 'grid',
+          gap: 8,
+        }}
+      >
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+          <AtsCheckBadge
+            formData={formData}
+            summary={summary}
+            experiences={experiences}
+            educationList={educationList}
+            skills={skills}
+          />
+          <button
+            type="button"
+            onClick={() => setOpenAtsPreview(true)}
+            style={{ background: 'white', border: '1px solid #E0E0E0', borderRadius: 10, padding: '6px 10px', fontWeight: 800, cursor: 'pointer' }}
+          >
+            ATS Preview
+          </button>
+        </div>
+
+        <SnapshotControls compact />
+
+        <div
+          style={{
+            background: '#FAFAFA',
+            border: '1px dashed #B0BEC5',
+            borderRadius: 10,
+            padding: 10,
+            transform: 'scale(0.94)',
+            transformOrigin: 'top right',
+          }}
+        >
+          <div style={{ fontWeight: 700, color: '#37474F', marginBottom: 6, fontSize: 13 }}>
+            Export / Download
+          </div>
+          <ClientPDFButton
+            formData={formData}
+            summary={summary}
+            experiences={experiences}
+            projects={projects}
+            volunteerExperiences={volunteerExperiences}
+            educationList={educationList}
+            certifications={certifications}
+            languages={languages}
+            skills={skills}
+            achievements={achievements}
+            customSections={customSections}
+            coverStorageKey="ft_cover_draft"
+            defaultCombined={true}
+            defaultOrder="resume-first"
+            defaultAtsMode={true}
+            className="bg-[#FF7043] hover:bg-[#F4511E] text-white py-1.5 px-3 rounded text-sm"
+          />
+          <SmartExportMenu
+            formData={formData}
+            summary={summary}
+            experiences={experiences}
+            projects={projects}
+            volunteerExperiences={volunteerExperiences}
+            educationList={educationList}
+            certifications={certifications}
+            languages={languages}
+            skills={skills}
+            achievements={achievements}
+            customSections={customSections}
+            coverStorageKey="ft_cover_draft"
+          />
+        </div>
+      </div>
+
+      <DockItem
+        title="Job Match Analyzer"
+        subtitle="Paste a JD and see matched/missing keywords plus a match score."
+        onOpen={() => setOpenAnalyzer(true)}
+      />
+      <DockItem
+        title="Tailor (Local)"
+        subtitle="Generate a summary & bullets aligned to the JD—no API required."
+        onOpen={() => setOpenTailor(true)}
+      />
+      <DockItem
+        title="Live Preview"
+        subtitle="See your resume rendered as you edit content."
+        onOpen={() => setOpenPreview(true)}
+      />
+    </div>
   );
 
   // ---- JD handlers (paste + upload) ----
@@ -381,10 +503,10 @@ export default function CreateResumePage() {
       setJdError(e?.message || 'Could not import this file. Please paste the JD instead.');
     } finally {
       setJdBusy(false);
+      if (fileInputRef.current) fileInputRef.current.value = '';
     }
   }
 
-  // Drag & drop for the JD card
   useEffect(() => {
     const el = dropRef.current;
     if (!el) return;
@@ -404,136 +526,82 @@ export default function CreateResumePage() {
     };
   }, []);
 
-  // Actions for JdCard
-  const onAnalyze = () => {
-    const v = (jd || '').trim();
-    if (!v) { setJdError('Please provide a job description above.'); return; }
-    try { localStorage.setItem('ft_last_job_text', v); } catch {}
-    setOpenAnalyzer(true);
-  };
-  const onAssist = async () => {
-    const v = (jd || '').trim();
-    if (!v) { setJdError('Please provide a job description above.'); return; }
-    try { localStorage.setItem('ft_last_job_text', v); } catch {}
-    try {
-      const result = await matchTemplate({ jobText: v, profile: { summary, skills } });
-      if (result?.resumeId) setTemplateId(result.resumeId);
-    } catch {}
-    setOpenTailor(true);
+  // ---- ATS Depth insertion actions ----
+  const addSkill = (term) => {
+    const s = Array.isArray(skills) ? [...skills] : [];
+    if (!s.some(v => String(v).toLowerCase() === term.toLowerCase())) {
+      s.push(term);
+      setSkills(s);
+    }
   };
 
-  // ---- Stable render callbacks for SectionGroup ----
-  const renderContact = useCallback(
-    () => <ContactInfoSection embedded formData={formData} setFormData={setFormData} />,
-    [formData, setFormData]
-  );
+  const addSummary = (phrase) => {
+    const sep = summary?.trim() ? ' ' : '';
+    const next = (summary || '') + sep + phrase;
+    setSummary(next);
+  };
 
-  const renderExperience = useCallback(
-    () => <WorkExperienceSection embedded experiences={experiences} setExperiences={setExperiences} />,
-    [experiences, setExperiences]
-  );
+  const addBullet = (phrase) => {
+    const exps = Array.isArray(experiences) ? [...experiences] : [];
+    if (!exps.length) {
+      exps.push({ title: 'Target Role', company: '', bullets: [phrase] });
+    } else {
+      const first = { ...(exps[0] || {}) };
+      const bullets = Array.isArray(first.bullets) ? [...first.bullets] : [];
+      bullets.push(phrase);
+      first.bullets = bullets;
+      exps[0] = first;
+    }
+    setExperiences(exps);
+  };
 
-  const renderEducation = useCallback(
-    () => <EducationSection embedded educationList={educationList} setEducationList={setEducationList} />,
-    [educationList, setEducationList]
-  );
-
-  const renderSkills = useCallback(
-    () => <SkillsSection embedded skills={skills} setSkills={setSkills} />,
-    [skills, setSkills]
-  );
-
-  const renderSummary = useCallback(
-    () => <ProfessionalSummarySection embedded summary={summary} setSummary={setSummary} />,
-    [summary, setSummary]
-  );
-
-  const renderProjects = useCallback(
-    () => <ProjectsSection embedded projects={projects} setProjects={setProjects} />,
-    [projects, setProjects]
-  );
-
-  const renderVolunteer = useCallback(
-    () => (
-      <VolunteerExperienceSection
-        embedded
-        volunteerExperiences={volunteerExperiences}
-        setVolunteerExperiences={setVolunteerExperiences}
-      />
-    ),
-    [volunteerExperiences, setVolunteerExperiences]
-  );
-
-  const renderCerts = useCallback(
-    () => <CertificationsSection embedded certifications={certifications} setCertifications={setCertifications} />,
-    [certifications, setCertifications]
-  );
-
-  const renderLanguages = useCallback(
-    () => <LanguagesSection embedded languages={languages} setLanguages={setLanguages} />,
-    [languages, setLanguages]
-  );
-
-  const renderAwards = useCallback(
-    () => <AchievementsSection embedded achievements={achievements} setAchievements={setAchievements} />,
-    [achievements, setAchievements]
-  );
-
-  const renderCustom = useCallback(
-    () => <CustomSection embedded customSections={customSections} setCustomSections={setCustomSections} />,
-    [customSections, setCustomSections]
-  );
-
-  // ---- Memoized items arrays so SectionGroup receives stable references ----
-  const requiredItems = useMemo(
-    () => [
-      { key: 'contact',    title: 'Contact Information', render: renderContact },
-      { key: 'experience', title: 'Work Experience',     render: renderExperience },
-      { key: 'education',  title: 'Education',           render: renderEducation },
-      { key: 'skills',     title: 'Skills',              render: renderSkills },
-    ],
-    [renderContact, renderExperience, renderEducation, renderSkills]
-  );
-
-  const recommendedItems = useMemo(
-    () => [
-      { key: 'summary',   title: 'Professional Summary',      render: renderSummary },
-      { key: 'projects',  title: 'Projects',                  render: renderProjects },
-      { key: 'volunteer', title: 'Volunteer Experience',      render: renderVolunteer },
-      { key: 'certs',     title: 'Certifications / Training', render: renderCerts },
-      { key: 'languages', title: 'Languages',                 render: renderLanguages },
-      { key: 'awards',    title: 'Achievements / Awards',     render: renderAwards },
-      { key: 'custom',    title: 'Custom Sections',           render: renderCustom },
-    ],
-    [renderSummary, renderProjects, renderVolunteer, renderCerts, renderLanguages, renderAwards, renderCustom]
+  // Header (stepper always visible)
+  const HeaderBox = (
+    <section
+      style={{
+        background: 'white',
+        border: '1px solid #eee',
+        borderRadius: 12,
+        padding: 16,
+        boxShadow: '0 2px 6px rgba(0,0,0,0.06)',
+        textAlign: 'center',
+        display: 'grid',
+        gap: 10,
+      }}
+    >
+      <ApplySteps current={1} />
+      <h1
+        style={{
+          color: '#FF7043',
+          fontSize: 28,
+          fontWeight: 800,
+          margin: 0,
+        }}
+      >
+        Resume & Cover Letter Builder
+      </h1>
+      <p
+        style={{
+          marginTop: 0,
+          color: '#546E7A',
+          fontSize: 14,
+        }}
+      >
+        Build, tailor, analyze, and export professional documents. Open tools from the right dock when you need them.
+      </p>
+    </section>
   );
 
   return (
     <SeekerLayout
       title="Create Resume | ForgeTomorrow"
       header={HeaderBox}
-      right={
-        <div style={{ display:'grid', gap:12, width:'100%', boxSizing:'border-box' }}>
-          <SeekerRightColumn variant="creator" />
-          <RightRail
-            data={resumeData}
-            onOpenAts={() => setOpenAtsPreview(true)}
-            onOpenAnalyzer={() => setOpenAnalyzer(true)}
-            onOpenTailor={() => setOpenTailor(true)}
-            onOpenPreview={() => setOpenPreview(true)}
-            coverStorageKey="ft_cover_draft"
-            SnapshotControls={SnapshotControls}
-            AtsCheckBadge={AtsCheckBadge}
-            ClientPDFButton={ClientPDFButton}
-            SmartExportMenu={SmartExportMenu}
-          />
-        </div>
-      }
+      right={RightPane}
       activeNav="resume-cover"
     >
       {/* CENTER COLUMN CONTENT */}
       <div style={{ display: 'grid', gap: 16 }}>
-        {/* Template selector — moved to the top under the header */}
+        {/* 1) TEMPLATE SELECTOR — under the title card */}
         <section
           style={{
             background: 'white',
@@ -551,7 +619,13 @@ export default function CreateResumePage() {
               id="template-select"
               value={templateId}
               onChange={(e) => setTemplateId(e.target.value)}
-              style={{ border: '1px solid #ddd', borderRadius: 8, padding: '10px 12px', width: '100%', outline: 'none' }}
+              style={{
+                border: '1px solid #ddd',
+                borderRadius: 8,
+                padding: '10px 12px',
+                width: '100%',
+                outline: 'none',
+              }}
             >
               {resumeTemplates.map(t => (
                 <option key={t.id} value={t.id}>{t.name}</option>
@@ -564,13 +638,8 @@ export default function CreateResumePage() {
                 try {
                   const jobText = localStorage.getItem('ft_last_job_text') || '';
                   const result = await matchTemplate({ jobText, profile: { summary, skills } });
-                  setTemplateId(result.resumeId);
-                  // eslint-disable-next-line no-alert
-                  alert(`AI picked: ${result.resumeId}\nReason: ${result.reasons.resume.why}`);
-                } catch {
-                  // eslint-disable-next-line no-alert
-                  alert('Could not run template matcher. Using current selection.');
-                }
+                  if (result?.resumeId) setTemplateId(result.resumeId);
+                } catch {}
               }}
               style={{
                 background: '#FF7043',
@@ -588,76 +657,242 @@ export default function CreateResumePage() {
           </div>
 
           <div style={{ marginTop: 8, fontSize: 12, color: '#607D8B' }}>
-            Tip: Opening this page with <code>?template=modern|classic|formal|impact</code> will also seed content and select the template.
+            Tip: Open with <code>?template=modern|classic|formal|impact</code> to seed & select automatically.
           </div>
         </section>
 
-        {/* JD card — paste/import + actions */}
-        <div ref={dropRef}>
-          <JdCard
-            jd={jd}
-            setJd={setJd}
-            busy={jdBusy}
-            error={jdError}
-            onImportFile={handleFile}
-            onAnalyze={onAnalyze}
-            onAssist={onAssist}
-          />
-        </div>
+        {/* 2) JD card — paste + import */}
+        <section
+          ref={dropRef}
+          style={{
+            background: 'white',
+            border: '1px solid #eee',
+            borderRadius: 12,
+            padding: 16,
+            boxShadow: '0 2px 6px rgba(0,0,0,0.06)',
+            display: 'grid',
+            gap: 8,
+          }}
+        >
+          <div style={{ fontWeight: 800, color: '#37474F', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+            <span>Job description (optional)</span>
+            <div style={{ display: 'flex', gap: 8 }}>
+              <button
+                type="button"
+                onClick={() => fileInputRef.current?.click()}
+                style={{ background: 'white', border: '1px solid #E0E0E0', borderRadius: 10, padding: '8px 12px', fontWeight: 800, cursor: 'pointer' }}
+              >
+                Import JD (PDF/DOCX/TXT)
+              </button>
+              <input
+                ref={fileInputRef}
+                type="file"
+                accept=".pdf,.doc,.docx,.txt,.md"
+                style={{ display: 'none' }}
+                onChange={(e) => handleFile(e.target.files?.[0])}
+              />
+            </div>
+          </div>
 
-        {/* Missing keywords (ATS suggestions) — calmer, collapsible */}
-        <ToggleCard title="Missing keywords (suggested adds)" defaultOpen={false}>
+          <textarea
+            placeholder="Paste the job description here to tailor your resume & enable ATS checks…"
+            value={jd}
+            onChange={(e) => {
+              const v = e.target.value;
+              setJd(v);
+              try { localStorage.setItem('ft_last_job_text', v); } catch {}
+            }}
+            style={{ width: '100%', minHeight: 160, border: '1px solid #E0E0E0', borderRadius: 10, padding: 12, outline: 'none' }}
+          />
+
+          {jdBusy && <div style={{ color: '#607D8B', fontSize: 12 }}>Importing…</div>}
+          {jdError && <div style={{ color: '#C62828', fontSize: 12, fontWeight: 700 }}>{jdError}</div>}
+
+          <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end' }}>
+            <button
+              type="button"
+              onClick={() => {
+                const v = (jd || '').trim();
+                if (!v) { setJdError('Please provide a job description above.'); return; }
+                try { localStorage.setItem('ft_last_job_text', v); } catch {}
+                setOpenAnalyzer(true);
+              }}
+              style={{ background: 'white', border: '1px solid #E0E0E0', borderRadius: 10, padding: '8px 12px', fontWeight: 800, cursor: 'pointer' }}
+            >
+              Analyze JD
+            </button>
+            <button
+              type="button"
+              onClick={async () => {
+                const v = (jd || '').trim();
+                if (!v) { setJdError('Please provide a job description above.'); return; }
+                try { localStorage.setItem('ft_last_job_text', v); } catch {}
+                try {
+                  const result = await matchTemplate({ jobText: v, profile: { summary, skills } });
+                  if (result?.resumeId) setTemplateId(result.resumeId);
+                } catch {}
+                setOpenTailor(true);
+              }}
+              style={{ background: '#FF7043', color: 'white', border: '1px solid rgba(0,0,0,0.06)', borderRadius: 10, padding: '10px 14px', fontWeight: 800, cursor: 'pointer' }}
+            >
+              AI assist (free)
+            </button>
+            <a
+              href="/cover/create"
+              style={{ background: 'white', border: '1px solid #E0E0E0', borderRadius: 10, padding: '10px 14px', fontWeight: 800, textDecoration: 'none', display: 'inline-block' }}
+            >
+              Continue to Cover →
+            </a>
+          </div>
+          <div style={{ fontSize: 12, color: '#90A4AE' }}>Tip: Drag & drop a JD file anywhere on this card.</div>
+        </section>
+
+        {/* 3) ATS Depth — internal chevron only, collapsed by default via component prop */}
+        <section
+          style={{
+            background: 'white',
+            border: '1px solid #eee',
+            borderRadius: 12,
+            padding: 16,
+            boxShadow: '0 2px 6px rgba(0,0,0,0.06)',
+          }}
+        >
           <AtsDepthPanel
             jdText={jd}
             summary={summary}
             skills={skills}
             experiences={experiences}
-            onAddSkill={(term) => {
-              const s = Array.isArray(skills) ? [...skills] : [];
-              if (!s.some(v => String(v).toLowerCase() === term.toLowerCase())) {
-                s.push(term);
-                setSkills(s);
-              }
-            }}
-            onAddSummary={(phrase) => {
-              const sep = summary?.trim() ? ' ' : '';
-              setSummary((summary || '') + sep + phrase);
-            }}
-            onAddBullet={(phrase) => {
-              const exps = Array.isArray(experiences) ? [...experiences] : [];
-              if (!exps.length) {
-                exps.push({ title: 'Target Role', company: '', bullets: [phrase] });
-              } else {
-                const first = { ...(exps[0] || {}) };
-                const bullets = Array.isArray(first.bullets) ? [...first.bullets] : [];
-                bullets.push(phrase);
-                first.bullets = bullets;
-                exps[0] = first;
-              }
-              setExperiences(exps);
-            }}
+            onAddSkill={addSkill}
+            onAddSummary={addSummary}
+            onAddBullet={addBullet}
+            collapsedDefault={true}
           />
-        </ToggleCard>
+        </section>
 
-        {/* Required & Recommended groups — compact & light */}
-        <SectionGroup
-          title="Required"
-          defaultOpen
-          density="compact"
-          shell="ghost"
-          items={requiredItems}
-        />
+        {/* 4) REQUIRED — group header (closed by default) */}
+        <section className="bg-white rounded-xl border border-slate-200 shadow-sm">
+          <button
+            type="button"
+            className="w-full flex items-center justify-between px-4 py-3"
+            onClick={() => setOpenReq(o => !o)}
+            aria-expanded={openReq}
+          >
+            <span className="text-sm font-semibold text-slate-700 tracking-wide">Required</span>
+            <span className="text-slate-600">{openReq ? '▾' : '▸'}</span>
+          </button>
 
-        <SectionGroup
-          title="Recommended"
-          defaultOpen={false}
-          density="compact"
-          shell="ghost"
-          items={recommendedItems}
-        />
+          {openReq && (
+            <div className="px-3 pb-4 space-y-2">
+              <RowCollapser
+                title="Contact Information"
+                open={reqOpen.contact}
+                onToggle={() => setReqOpen(s => ({ ...s, contact: !s.contact }))}
+              >
+                <ContactInfoSection embedded formData={formData} setFormData={setFormData} />
+              </RowCollapser>
+
+              <RowCollapser
+                title="Work Experience"
+                open={reqOpen.experience}
+                onToggle={() => setReqOpen(s => ({ ...s, experience: !s.experience }))}
+              >
+                <WorkExperienceSection embedded experiences={experiences} setExperiences={setExperiences} />
+              </RowCollapser>
+
+              <RowCollapser
+                title="Education"
+                open={reqOpen.education}
+                onToggle={() => setReqOpen(s => ({ ...s, education: !s.education }))}
+              >
+                <EducationSection embedded educationList={educationList} setEducationList={setEducationList} />
+              </RowCollapser>
+
+              <RowCollapser
+                title="Skills / Keywords"
+                open={reqOpen.skills}
+                onToggle={() => setReqOpen(s => ({ ...s, skills: !s.skills }))}
+              >
+                <SkillsSection embedded skills={skills} setSkills={setSkills} />
+              </RowCollapser>
+            </div>
+          )}
+        </section>
+
+        {/* 5) RECOMMENDED — group header (closed by default) */}
+        <section className="bg-white rounded-xl border border-slate-200 shadow-sm">
+          <button
+            type="button"
+            className="w-full flex items-center justify-between px-4 py-3"
+            onClick={() => setOpenRec(o => !o)}
+            aria-expanded={openRec}
+          >
+            <span className="text-sm font-semibold text-slate-700 tracking-wide">Recommended</span>
+            <span className="text-slate-600">{openRec ? '▾' : '▸'}</span>
+          </button>
+
+          {openRec && (
+            <div className="px-3 pb-4 space-y-2">
+              <RowCollapser
+                title="Professional Summary"
+                open={recOpen.summary}
+                onToggle={() => setRecOpen(s => ({ ...s, summary: !s.summary }))}
+              >
+                <ProfessionalSummarySection embedded summary={summary} setSummary={setSummary} />
+              </RowCollapser>
+
+              <RowCollapser
+                title="Projects"
+                open={recOpen.projects}
+                onToggle={() => setRecOpen(s => ({ ...s, projects: !s.projects }))}
+              >
+                <ProjectsSection embedded projects={projects} setProjects={setProjects} />
+              </RowCollapser>
+
+              <RowCollapser
+                title="Volunteer Experience"
+                open={recOpen.volunteer}
+                onToggle={() => setRecOpen(s => ({ ...s, volunteer: !s.volunteer }))}
+              >
+                <VolunteerExperienceSection embedded volunteerExperiences={volunteerExperiences} setVolunteerExperiences={setVolunteerExperiences} />
+              </RowCollapser>
+
+              <RowCollapser
+                title="Certifications / Training"
+                open={recOpen.certs}
+                onToggle={() => setRecOpen(s => ({ ...s, certs: !s.certs }))}
+              >
+                <CertificationsSection embedded certifications={certifications} setCertifications={setCertifications} />
+              </RowCollapser>
+
+              <RowCollapser
+                title="Languages"
+                open={recOpen.languages}
+                onToggle={() => setRecOpen(s => ({ ...s, languages: !s.languages }))}
+              >
+                <LanguagesSection embedded languages={languages} setLanguages={setLanguages} />
+              </RowCollapser>
+
+              <RowCollapser
+                title="Achievements / Awards"
+                open={recOpen.achievements}
+                onToggle={() => setRecOpen(s => ({ ...s, achievements: !s.achievements }))}
+              >
+                <AchievementsSection embedded achievements={achievements} setAchievements={setAchievements} />
+              </RowCollapser>
+
+              <RowCollapser
+                title="Custom Sections"
+                open={recOpen.custom}
+                onToggle={() => setRecOpen(s => ({ ...s, custom: !s.custom }))}
+              >
+                <CustomSection embedded customSections={customSections} setCustomSections={setCustomSections} />
+              </RowCollapser>
+            </div>
+          )}
+        </section>
       </div>
 
-      {/* Toast (fixed, bottom-right) */}
+      {/* Toast */}
       <div
         style={{
           position: 'fixed',
@@ -691,17 +926,40 @@ export default function CreateResumePage() {
       </div>
 
       {/* FOCUS MODALS */}
-      <DockModal open={openAnalyzer} title="Job Match Analyzer" onClose={() => setOpenAnalyzer(false)}>
-        <JobMatchAnalyzer jdText={jd} data={resumeData} />
+      <DockModal
+        open={openAnalyzer}
+        title="Job Match Analyzer"
+        onClose={() => setOpenAnalyzer(false)}
+      >
+        <JobMatchAnalyzer
+          jdText={jd}
+          data={{
+            formData, summary, experiences, projects, volunteerExperiences,
+            educationList, certifications, languages, skills, achievements, customSections
+          }}
+        />
       </DockModal>
 
-      <DockModal open={openTailor} title="Tailor (Local)" onClose={() => setOpenTailor(false)}>
+      <DockModal
+        open={openTailor}
+        title="Tailor (Local)"
+        onClose={() => setOpenTailor(false)}
+      >
         <TailorLocal jdText={jd} />
       </DockModal>
 
-      <DockModal open={openPreview} title="Live Preview" onClose={() => setOpenPreview(false)}>
+      <DockModal
+        open={openPreview}
+        title="Live Preview"
+        onClose={() => setOpenPreview(false)}
+      >
         {TemplateComp ? (
-          <TemplateComp data={resumeData} />
+          <TemplateComp
+            data={{
+              formData, summary, experiences, projects, volunteerExperiences,
+              educationList, certifications, languages, skills, achievements, customSections
+            }}
+          />
         ) : (
           <ResumePreview
             formData={formData}

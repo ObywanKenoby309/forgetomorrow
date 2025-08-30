@@ -31,7 +31,8 @@ export default function AchievementsSection({
     setAchievements(next);
   };
 
-  const Body = () => (
+  // Stable content (avoid remounting sub-tree)
+  const content = (
     <div className="space-y-4">
       {achievements.length === 0 && (
         <p className="text-sm text-slate-500">No achievements added yet.</p>
@@ -116,7 +117,7 @@ export default function AchievementsSection({
     </div>
   );
 
-  if (embedded) return <Body />;
+  if (embedded) return content;
 
   return (
     <section className="bg-white rounded-xl border border-slate-200 shadow-sm p-4 md:p-5 space-y-4">
@@ -133,7 +134,7 @@ export default function AchievementsSection({
         )}
       </button>
 
-      {isOpen && <Body />}
+      {isOpen && content}
     </section>
   );
 }

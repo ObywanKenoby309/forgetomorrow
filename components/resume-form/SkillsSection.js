@@ -14,33 +14,34 @@ export default function SkillsSection({
   const [hoverIdx, setHoverIdx] = useState(-1);
 
   // case-insensitive “has skill”
-  const hasSkill = (s) =>
-    (skills || []).some((x) => String(x).toLowerCase() === String(s).toLowerCase());
+  const hasSkill = (arr, s) =>
+    (arr || []).some((x) => String(x).toLowerCase() === String(s).toLowerCase());
 
   const normalizedInput = input.trim();
 
   const suggestions = useMemo(() => {
     if (!normalizedInput) return [];
     const q = normalizedInput.toLowerCase();
-    const filtered = (skillsList || [])
-      .filter(
-        (s) => s.toLowerCase().includes(q) && !hasSkill(s)
-      )
+    return (skillsList || [])
+      .filter((s) => s.toLowerCase().includes(q))
+      .filter((s) => !hasSkill(skills, s))
       .slice(0, 8);
-    return filtered;
   }, [normalizedInput, skills]);
 
   const addSkill = (raw) => {
     const s = String(raw).trim();
     if (!s) return;
-    if (!hasSkill(s)) setSkills([...(skills || []), s]);
+    setSkills((prev) => {
+      if (hasSkill(prev, s)) return prev;
+      return [...(prev || []), s];
+    });
     setInput('');
     setHoverIdx(-1);
   };
 
   const removeSkill = (toRemove) => {
     const low = String(toRemove).toLowerCase();
-    setSkills((skills || []).filter((s) => String(s).toLowerCase() !== low));
+    setSkills((prev) => (prev || []).filter((s) => String(s).toLowerCase() !== low));
   };
 
   const onKeyDown = (e) => {
@@ -48,6 +49,7 @@ export default function SkillsSection({
     if ((e.key === 'Enter' || e.key === ',') && normalizedInput) {
       e.preventDefault();
       addSkill(normalizedInput);
+      return;
     }
     // Arrow navigation in suggestions
     if (suggestions.length) {
@@ -58,14 +60,14 @@ export default function SkillsSection({
         e.preventDefault();
         setHoverIdx((i) => (i - 1 + suggestions.length) % suggestions.length);
       } else if (e.key === 'Tab' && hoverIdx >= 0) {
-        // Tab to accept highlighted suggestion
         e.preventDefault();
         addSkill(suggestions[hoverIdx]);
       }
     }
   };
 
-  const Body = () => (
+  // Stable content (no nested component to avoid remounts)
+  const content = (
     <div className="space-y-3">
       <div className="relative">
         <input
@@ -88,11 +90,13 @@ export default function SkillsSection({
                 key={s}
                 onMouseEnter={() => setHoverIdx(i)}
                 onMouseLeave={() => setHoverIdx(-1)}
-                onClick={() => addSkill(s)}
+                onMouseDown={(e) => {
+                  // prevent input blur before click adds the skill
+                  e.preventDefault();
+                  addSkill(s);
+                }}
                 className={`cursor-pointer px-3 py-2 text-sm ${
-                  i === hoverIdx
-                    ? 'bg-[#FF7043] text-white'
-                    : 'hover:bg-[#FF7043]/10'
+                  i === hoverIdx ? 'bg-[#FF7043] text-white' : 'hover:bg-[#FF7043]/10'
                 }`}
               >
                 {s}
@@ -137,10 +141,8 @@ export default function SkillsSection({
     </div>
   );
 
-  // Embedded mode (inside SectionGroup)
-  if (embedded) return <Body />;
+  if (embedded) return content;
 
-  // Standalone (legacy / direct use)
   return (
     <section className="bg-white rounded-xl border border-slate-200 shadow-sm p-4 md:p-5 space-y-4">
       <button
@@ -149,14 +151,10 @@ export default function SkillsSection({
         onClick={() => setIsOpen((o) => !o)}
       >
         <h2 className="text-lg font-semibold text-[#FF7043]">Skills</h2>
-        {isOpen ? (
-          <FaChevronDown className="text-[#FF7043]" />
-        ) : (
-          <FaChevronRight className="text-[#FF7043]" />
-        )}
+        {isOpen ? <FaChevronDown className="text-[#FF7043]" /> : <FaChevronRight className="text-[#FF7043]" />}
       </button>
 
-      {isOpen && <Body />}
+      {isOpen && content}
     </section>
   );
 }
