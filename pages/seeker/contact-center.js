@@ -1,7 +1,8 @@
 // pages/seeker/contact-center.js
-import React, { useMemo } from 'react';
+import React, { useMemo, useState } from 'react';
 import Head from 'next/head';
 import Link from 'next/link';
+import { useRouter } from 'next/router';
 
 import SeekerLayout from '@/components/layouts/SeekerLayout';
 import SeekerRightColumn from '@/components/seeker/SeekerRightColumn';
@@ -10,6 +11,10 @@ import ContactsList from '@/components/ContactsList';
 import RequestList from '@/components/RequestList';
 
 export default function SeekerContactCenter() {
+  const router = useRouter();
+  const chrome = String(router.query.chrome || '').toLowerCase();
+  const withChrome = (path) => (chrome ? `${path}${path.includes('?') ? '&' : '?'}chrome=${chrome}` : path);
+
   // --- Mock data (replace with real data / API later) ---
   const contacts = [
     { id: 1, name: 'Jane Doe', status: 'Open to Opportunities', photo: 'https://via.placeholder.com/48' },
@@ -53,12 +58,16 @@ export default function SeekerContactCenter() {
         Contact Center
       </h1>
       <p style={{ margin: '6px auto 0', color: '#607D8B', maxWidth: 720 }}>
-        Manage your contacts, invitations, and messages. Jump into <Link href="/seeker/messages" style={{ color: '#FF7043', fontWeight: 700 }}>The Signal</Link> to chat.
+        Manage your contacts, invitations, and messages. Jump into{' '}
+        <Link href={withChrome('/seeker/messages')} style={{ color: '#FF7043', fontWeight: 700 }}>
+          The Signal
+        </Link>{' '}
+        to chat.
       </p>
     </section>
   );
 
-  // --- Right rail (you can customize this later) ---
+  // --- Right rail ---
   const RightRail = (
     <div style={{ display: 'grid', gap: 12 }}>
       <SeekerRightColumn variant="contacts" />
@@ -68,7 +77,7 @@ export default function SeekerContactCenter() {
   // --- Simple tabs row (Contacts | The Signal | Invites | Requests) ---
   const TabButton = ({ href, label, badge, active = false }) => (
     <Link
-      href={href}
+      href={withChrome(href)}
       style={{
         display: 'inline-flex',
         alignItems: 'center',
@@ -100,6 +109,11 @@ export default function SeekerContactCenter() {
     </Link>
   );
 
+  // --- Contacts collapsible state (default: collapsed) ---
+  const [showContacts, setShowContacts] = useState(false);
+  const topContacts = useMemo(() => contacts.slice(0, 5), [contacts]);
+  const contactsCount = counts.contacts;
+
   return (
     <SeekerLayout
       title="Contact Center | ForgeTomorrow"
@@ -127,7 +141,7 @@ export default function SeekerContactCenter() {
         </div>
       </section>
 
-      {/* Contacts */}
+      {/* Contacts (collapsible, shows only a short list on this page) */}
       <section
         style={{
           background: 'white',
@@ -137,8 +151,32 @@ export default function SeekerContactCenter() {
           boxShadow: '0 2px 6px rgba(0,0,0,0.06)',
         }}
       >
-        <h2 style={{ color: '#FF7043', marginTop: 0 }}>Contacts</h2>
-        <ContactsList contacts={contacts} onViewProfile={handleViewProfile} />
+        <div className="flex items-center justify-between mb-2">
+          <h2 style={{ color: '#FF7043', marginTop: 0 }} className="font-semibold">Contacts</h2>
+          <div className="flex items-center gap-2">
+            <span className="text-xs font-bold px-2 py-0.5 rounded-full bg-gray-100 text-gray-700">
+              {contactsCount}
+            </span>
+            <button
+              type="button"
+              className="text-sm px-2 py-1 border border-gray-300 rounded hover:bg-gray-50"
+              onClick={() => setShowContacts((v) => !v)}
+              aria-expanded={showContacts}
+              aria-controls="contacts-panel"
+            >
+              {showContacts ? 'Hide' : 'Show'}
+            </button>
+          </div>
+        </div>
+
+        <div id="contacts-panel" className={showContacts ? 'block' : 'hidden'}>
+          <ContactsList contacts={topContacts} onViewProfile={handleViewProfile} />
+          <div className="mt-3">
+            <Link href={withChrome('/seeker/contacts')} className="text-sm font-semibold" style={{ color: '#FF7043' }}>
+              View all contacts →
+            </Link>
+          </div>
+        </div>
       </section>
 
       {/* Requests / Invites */}
