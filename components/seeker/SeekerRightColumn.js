@@ -1,54 +1,92 @@
-// components/seeker/SeekerRightColumn.js
-import Link from 'next/link';
+// components/seeker/SeekerRightColumn.jsx
+import React from "react";
+import Link from "next/link";
 
-export default function SeekerRightColumn({ variant = 'default' }) {
-  const groups = {
-    default: [
-      { label: 'Pinned Jobs', href: '/pinned-jobs' },
-      { label: 'Applications', href: '/applications' },
-      { label: 'Open Creator', href: '/resume-cover' },
-    ],
-    jobs: [
-      { label: 'Applications', href: '/applications' },
-      { label: 'Pinned Jobs', href: '/pinned-jobs' },
-      { label: 'Your Roadmap', href: '/roadmap' },
-    ],
-    applications: [
-      { label: 'Pinned Jobs', href: '/pinned-jobs' },
-      { label: 'Open Creator', href: '/resume-cover' },
-      { label: 'Your Roadmap', href: '/roadmap' },
-    ],
-    pinned: [
-      { label: 'Applications', href: '/applications' },
-      { label: 'Jobs', href: '/jobs' },
-      { label: 'Open Creator', href: '/resume-cover' },
-    ],
-    creator: [
-      { label: 'Applications', href: '/applications' },
-      { label: 'Pinned Jobs', href: '/pinned-jobs' },
-      { label: 'Jobs', href: '/jobs' },
-    ],
-    hearth: [
-      { label: 'Jobs', href: '/jobs' },
-      { label: 'Applications', href: '/applications' },
-      { label: 'Your Roadmap', href: '/roadmap' },
-    ],
-  };
-
-  const items = groups[variant] || groups.default;
-
+function Card({ title, children }) {
   return (
-    <div style={{ display: 'grid', gap: 10 }}>
-      <div style={{ color: 'white', fontWeight: 700, marginBottom: 4 }}>Shortcuts</div>
-      <ul style={{ listStyle: 'none', margin: 0, padding: 0, display: 'grid', gap: 8 }}>
-        {items.map((it) => (
-          <li key={it.href}>
-            <Link href={it.href} style={{ color: '#FF7043', fontWeight: 600 }}>
-              {it.label}
-            </Link>
-          </li>
-        ))}
+    <section
+      style={{
+        background: "white",
+        borderRadius: 12,
+        padding: 12,
+        border: "1px solid #eee",
+        boxShadow: "0 2px 6px rgba(0,0,0,0.06)",
+      }}
+    >
+      {title && (
+        <h3 style={{ margin: 0, marginBottom: 8, fontWeight: 800, color: "#263238" }}>
+          {title}
+        </h3>
+      )}
+      <div>{children}</div>
+    </section>
+  );
+}
+
+export default function SeekerRightColumn({ variant = "default" }) {
+  // Common shortcuts block
+  const Shortcuts = (
+    <Card title="Shortcuts">
+      <ul className="space-y-2">
+        <li>
+          <Link href="/pinned-jobs" className="text-[#FF7043] font-semibold">
+            Pinned Jobs
+          </Link>
+        </li>
+        <li>
+          <Link href="/applications" className="text-[#FF7043] font-semibold">
+            Applications
+          </Link>
+        </li>
+        <li>
+          <Link href="/open-creator" className="text-[#FF7043] font-semibold">
+            Open Creator
+          </Link>
+        </li>
       </ul>
+    </Card>
+  );
+
+  // Feed-only extra cards (previously AdRail)
+  const Sponsored = (
+    <Card title="Sponsored">
+      <p className="text-sm text-gray-600">
+        Grow your reach. Promote your coaching or open roles on ForgeTomorrow.
+      </p>
+    </Card>
+  );
+
+  const LevelUp = (
+    <Card title="Level up">
+      <p className="text-sm text-gray-600">
+        Try Creator tools to polish your resume and portfolio.
+      </p>
+    </Card>
+  );
+
+  const ComingSoon = (
+    <Card title="Coming soon">
+      <p className="text-sm text-gray-600">
+        Contextual ads and partner offers will appear here.
+      </p>
+    </Card>
+  );
+
+  // Layout
+  return (
+    <div className="grid gap-3">
+      {Shortcuts}
+
+      {variant === "feed" && (
+        <>
+          {Sponsored}
+          {LevelUp}
+          {ComingSoon}
+        </>
+      )}
+
+      {/* Other variants can append their own blocks here, e.g.:
+          {variant === "messages" && <MessagesHelp />} */}
     </div>
   );
 }

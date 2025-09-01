@@ -55,6 +55,7 @@ export default function App({ Component, pageProps }) {
       '/roadmap',
       '/profile',            // ✅ Treat /profile as internal (prevents LandingHeader)
       '/profile-analytics',
+	  '/feed'
     ].includes(router.pathname);
 
   const isCoachingRoute =
@@ -67,8 +68,8 @@ export default function App({ Component, pageProps }) {
   const isPublicByPath = !isRecruiterRoute && !isSeekerRoute && !isCoachingRoute && !isSettingsRoute;
 
   // Pages that use UniversalHeader (and NOT role headers or LandingHeader)
-  const universalHeaderRoutes = new Set(['/feed']);
-  const isUniversalPage = universalHeaderRoutes.has(router.pathname);
+  const universalHeaderRoutes = new Set([]);
+  const isUniversalPage = universalHeaderRoutes.has(router.pathname) && !router.query?.chrome;
 
   // Shared (can be public or internal depending on entry point)
   const sharedRoutes = new Set(['/help', '/privacy', '/terms', '/security', '/accessibility', '/cookies']);

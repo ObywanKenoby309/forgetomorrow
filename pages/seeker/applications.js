@@ -1,14 +1,14 @@
 // pages/seeker/applications.js
 import React, { useEffect, useState } from 'react';
 import Link from 'next/link';
+import { useRouter } from 'next/router';
 
 import SeekerLayout from '@/components/layouts/SeekerLayout';
 import SeekerRightColumn from '@/components/seeker/SeekerRightColumn';
-
-import ResumeTrackerSummary from '@/components/ResumeTrackerSummary';
 import ApplicationForm from '@/components/applications/ApplicationForm';
 import ApplicationDetailsModal from '@/components/applications/ApplicationDetailsModal';
 import ApplicationsBoard from '@/components/applications/ApplicationsBoard';
+import { colorFor } from '@/components/seeker/dashboard/seekerColors';
 
 const STORAGE_KEY = 'applicationsTracker';
 const STAGES = ['Pinned', 'Applied', 'Interviewing', 'Offers', 'Rejected'];
@@ -33,7 +33,44 @@ const mockTracker = {
   ],
 };
 
+// map stage -> palette key
+const stageKey = (stage) =>
+  ({ Pinned: 'neutral', Applied: 'applied', Interviewing: 'interviewing', Offers: 'offers', Rejected: 'rejected' }[stage] || 'info');
+
+function StageStrip({ tracker }) {
+  return (
+    <div style={{ display: 'grid', gap: 12, gridTemplateColumns: 'repeat(5, minmax(0,1fr))' }}>
+      {STAGES.map((stage) => {
+        const count = tracker?.[stage]?.length || 0;
+        const c = colorFor(stageKey(stage));
+        return (
+          <div
+            key={stage}
+            style={{
+              background: c.bg,
+              color: c.text,
+              border: `1px solid ${c.solid}`,
+              borderRadius: 10,
+              padding: '10px 12px',
+              display: 'grid',
+              gap: 4,
+            }}
+          >
+            <div style={{ fontSize: 12, opacity: 0.9 }}>{stage}</div>
+            <div style={{ fontSize: 20, fontWeight: 800, lineHeight: 1 }}>{count}</div>
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+
 export default function SeekerApplicationsPage() {
+  const router = useRouter();
+  const chrome = String(router.query.chrome || '').toLowerCase();
+  const withChrome = (path) =>
+    chrome ? `${path}${path.includes('?') ? '&' : '?'}chrome=${chrome}` : path;
+
   const [tracker, setTracker] = useState(mockTracker);
 
   const [showForm, setShowForm] = useState(false);
@@ -118,9 +155,9 @@ export default function SeekerApplicationsPage() {
   return (
     <SeekerLayout title="Applications | ForgeTomorrow" header={HeaderBox} right={RightRail} activeNav="jobs">
       <div style={{ display: 'grid', gap: 16 }}>
-        {/* Summary */}
+        {/* Color-coded stage summary (palette-aligned) */}
         <section style={{ background:'white', borderRadius:12, padding:16, border:'1px solid #eee', boxShadow:'0 2px 6px rgba(0,0,0,0.06)' }}>
-          <ResumeTrackerSummary trackerData={tracker} />
+          <StageStrip tracker={tracker} />
         </section>
 
         {/* Board — leftActions (button) + right actions (helper text) */}
@@ -148,7 +185,7 @@ export default function SeekerApplicationsPage() {
           actions={
             <span style={{ color: '#607D8B', fontSize: 13 }}>
               or manage on the{' '}
-              <Link href="/seeker-dashboard" style={{ color: '#FF7043', fontWeight: 600 }}>
+              <Link href={withChrome('/seeker-dashboard')} style={{ color: '#FF7043', fontWeight: 600 }}>
                 Dashboard
               </Link>
             </span>

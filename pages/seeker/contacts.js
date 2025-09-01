@@ -32,7 +32,7 @@ export default function SeekerContactsGatePage() {
     }
   }, [chrome]);
 
-  const homeHref = withChrome('/seeker/dashboard');
+  const homeHref = withChrome('/seeker-dashboard');
 
   // Mock data (swap to API later)
   const contacts = useMemo(

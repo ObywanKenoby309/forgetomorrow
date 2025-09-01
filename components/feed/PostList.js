@@ -1,105 +1,211 @@
 // components/feed/PostList.js
-import { useEffect, useMemo, useState } from 'react';
-import PostCard from './PostCard';
-import PostCommentsModal from './PostCommentsModal';
+import { useMemo, useState } from "react";
 
-const STORAGE_KEY = 'feed_posts_v1';
+// Small helpers
+const timeAgo = (ts) => {
+  const diff = Math.max(0, Date.now() - ts);
+  const m = Math.floor(diff / 60000);
+  if (m < 1) return "just now";
+  if (m < 60) return `${m}m`;
+  const h = Math.floor(m / 60);
+  if (h < 24) return `${h}h`;
+  const d = Math.floor(h / 24);
+  return `${d}d`;
+};
 
-const seed = [
-  {
-    id: 'p1',
-    author: 'Alex T.',
-    createdAt: Date.now() - 1000 * 60 * 40,
-    body: 'First day using ForgeTomorrow — loving the vibe 🔥',
-    type: 'business',
-    likes: 4,
-    comments: [
-      { by: 'Jane', text: 'Welcome aboard!', ts: Date.now() - 1000 * 60 * 35 },
-      { by: 'Sam', text: 'Same here — UI is clean!', ts: Date.now() - 1000 * 60 * 30 },
-      { by: 'Mo', text: 'Let’s connect!', ts: Date.now() - 1000 * 60 * 25 },
-    ],
-  },
-  {
-    id: 'p2',
-    author: 'Priya N.',
-    createdAt: Date.now() - 1000 * 60 * 90,
-    body: 'Wrapped a mock interview. Sharing notes later.',
-    type: 'personal',
-    likes: 2,
-    comments: [{ by: 'Lee', text: 'Would love to see those!', ts: Date.now() - 1000 * 60 * 80 }],
-  },
-];
+function AttachmentGallery({ attachments = [] }) {
+  if (!attachments.length) return null;
 
-export default function PostList({ filter = 'all' }) {
-  const [posts, setPosts] = useState(seed);
-  const [openPost, setOpenPost] = useState(null);
+  const images = attachments.filter((a) => a.type === "image");
+  const videos = attachments.filter((a) => a.type === "video");
+  const links  = attachments.filter((a) => a.type === "link");
 
-  // (optional) hydrate from storage for demo persistence
-  useEffect(() => {
-    try {
-      const saved = JSON.parse(localStorage.getItem(STORAGE_KEY) || 'null');
-      if (Array.isArray(saved) && saved.length) setPosts(saved);
-      else localStorage.setItem(STORAGE_KEY, JSON.stringify(seed));
-    } catch {}
-  }, []);
-  useEffect(() => {
-    try { localStorage.setItem(STORAGE_KEY, JSON.stringify(posts)); } catch {}
-  }, [posts]);
+  return (
+    <div className="mt-3 space-y-3">
+      {/* Images grid */}
+      {images.length > 0 && (
+        <div
+          className={`grid gap-2 ${
+            images.length === 1 ? "grid-cols-1" :
+            images.length === 2 ? "grid-cols-2" : "grid-cols-3"
+          }`}
+        >
+          {images.map((img, i) => (
+            <img
+              key={`img-${i}`}
+              src={img.url}
+              alt={img.name || "image"}
+              className="w-full h-44 object-cover rounded-md border"
+            />
+          ))}
+        </div>
+      )}
 
-  // Filter visible posts
-  const visible = useMemo(() => {
-    if (filter === 'all') return posts;
-    return posts.filter((p) => p.type === filter);
-  }, [posts, filter]);
+      {/* Videos (stacked) */}
+      {videos.length > 0 && (
+        <div className="grid gap-2">
+          {videos.map((v, i) => (
+            <video
+              key={`vid-${i}`}
+              src={v.url}
+              controls
+              className="w-full rounded-md border"
+            />
+          ))}
+        </div>
+      )}
 
-  // Handlers
-  const handleReply = (postId, text) => {
-    setPosts((prev) =>
-      prev.map((p) =>
-        p.id !== postId
-          ? p
-          : {
-              ...p,
-              comments: [...p.comments, { by: 'You', text, ts: Date.now() }],
-            }
-      )
-    );
-  };
+      {/* Links (stacked simple preview) */}
+      {links.length > 0 && (
+        <div className="grid gap-2">
+          {links.map((l, i) => (
+            <a
+              key={`lnk-${i}`}
+              href={l.url}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="block border rounded-md p-3 bg-gray-50 hover:bg-gray-100 text-blue-700 break-all"
+              title={l.url}
+            >
+              🔗 {l.url}
+            </a>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
 
-  const openComments = (post) => setOpenPost(post);
-  const closeComments = () => setOpenPost(null);
+function PostCard({ post, isPinned, onReply }) {
+  const [showReactions, setShowReactions] = useState(false);
+  const [reply, setReply] = useState("");
 
-  const addCommentFromModal = (postId, text) => {
-    handleReply(postId, text);
-    // keep modal open and reflect new comment
-    setOpenPost((curr) =>
-      curr && curr.id === postId
-        ? { ...curr, comments: [...curr.comments, { by: 'You', text, ts: Date.now() }] }
-        : curr
-    );
+  const submitReply = () => {
+    const t = reply.trim();
+    if (!t) return;
+    onReply?.(post.id, t);
+    setReply("");
   };
 
   return (
-    <>
-      <div className="space-y-3">
-        {visible.map((p) => (
-          <PostCard
-            key={p.id}
-            post={p}
-            onReply={handleReply}
-            onOpenComments={openComments}
-            previewCount={2} // show 2 in preview
-          />
-        ))}
+    <article
+      className={`bg-white rounded-lg shadow p-4 border ${
+        isPinned ? "border-[#ff8a65]" : "border-transparent"
+      }`}
+    >
+      <header className="flex items-center justify-between gap-3">
+        <div className="min-w-0">
+          <div className="font-semibold text-gray-900 truncate">
+            {post.author}
+          </div>
+          <div className="text-xs text-gray-500">
+            {timeAgo(post.createdAt)} • {post.type === "business" ? "Professional" : "Personal"}
+          </div>
+        </div>
+
+        {/* Report post */}
+        <button
+          className="text-xs px-2 py-1 border rounded hover:bg-gray-50"
+          onClick={() => alert("Report submitted — thank you.")}
+        >
+          Report post
+        </button>
+      </header>
+
+      <div className="mt-3 whitespace-pre-wrap text-gray-900">{post.body}</div>
+
+      {/* Attachments */}
+      <AttachmentGallery attachments={post.attachments} />
+
+      {/* Footer actions */}
+      <div className="mt-3 flex items-center gap-2">
+        <button
+          type="button"
+          className="text-sm px-2 py-1 border rounded hover:bg-gray-50"
+          onClick={() => setShowReactions((s) => !s)}
+          aria-expanded={showReactions}
+        >
+          React
+        </button>
+
+        {showReactions && (
+          <div className="flex items-center gap-1 ml-1">
+            {["👍","🔥","👏","💯","🎉","❤️"].map((e) => (
+              <button
+                key={e}
+                className="px-2 py-1 text-lg hover:scale-110 transition"
+                onClick={() => alert(`You reacted ${e}`)}
+                aria-label={`React ${e}`}
+              >
+                {e}
+              </button>
+            ))}
+          </div>
+        )}
       </div>
 
-      {openPost && (
-        <PostCommentsModal
-          post={openPost}
-          onClose={closeComments}
-          onAddComment={addCommentFromModal}
-        />
+      {/* Comments */}
+      {post.comments?.length > 0 && (
+        <div className="mt-3 space-y-1">
+          {post.comments.map((c, i) => (
+            <div key={i} className="text-sm">
+              <span className="font-semibold text-gray-800">{c.by}</span>{" "}
+              <span className="text-gray-700">{c.text}</span>
+            </div>
+          ))}
+        </div>
       )}
-    </>
+
+      {/* Reply box */}
+      <div className="mt-3 flex items-center gap-2">
+        <input
+          value={reply}
+          onChange={(e) => setReply(e.target.value)}
+          placeholder="Write a reply…"
+          className="flex-1 border rounded-md px-3 py-2"
+          onKeyDown={(e) => {
+            if (e.key === "Enter" && !e.shiftKey) {
+              e.preventDefault();
+              submitReply();
+            }
+          }}
+        />
+        <button
+          className="px-3 py-2 rounded-md bg-[#ff7043] text-white font-semibold disabled:opacity-40"
+          onClick={submitReply}
+          disabled={!reply.trim()}
+        >
+          Reply
+        </button>
+      </div>
+    </article>
+  );
+}
+
+export default function PostList({ posts = [], filter = "both", pinnedId, onReply }) {
+  const filtered = useMemo(() => {
+    if (filter === "both") return posts;
+    return posts.filter((p) => p.type === (filter === "business" ? "business" : "personal"));
+  }, [posts, filter]);
+
+  if (!filtered.length) {
+    return (
+      <div className="text-center text-gray-500 py-10">
+        No posts yet. Be the first to share something!
+      </div>
+    );
+  }
+
+  return (
+    <div className="space-y-4">
+      {filtered.map((p) => (
+        <PostCard
+          key={p.id}
+          post={p}
+          isPinned={pinnedId === p.id}
+          onReply={onReply}
+        />
+      ))}
+    </div>
   );
 }

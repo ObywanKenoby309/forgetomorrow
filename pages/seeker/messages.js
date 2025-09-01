@@ -37,9 +37,7 @@ export default function Messages() {
       activeNav="messages"
     >
       <Head><title>ForgeTomorrow - The Signal</title></Head>
-      <div className="max-w-5xl mx-auto p-2">
         <SignalMessages />
-      </div>
     </SeekerLayout>
   );
 }

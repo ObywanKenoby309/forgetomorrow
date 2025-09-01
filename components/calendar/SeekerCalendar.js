@@ -2,17 +2,16 @@
 import React from 'react';
 import CalendarInterface from './CalendarInterface';
 
-/**
- * Thin wrapper so Seeker can have its own tuning without forking logic.
- * Adjust the two props below as needed.
- */
+// Seeker-specific tuning (keeps entries slightly inset inside cells)
+const SEEKER_EVENT_NUDGE = 0;
+const SEEKER_WIDTH_DEDUCT = 10;
+
 export default function SeekerCalendar(props) {
   return (
     <CalendarInterface
       {...props}
-      // Seeker-specific visual tuning:
-      eventNudge={-11}        // negative = move left; positive = move right
-      eventWidthDeduct={-1}    // shrink width by N px to avoid kissing borders
+      eventNudge={SEEKER_EVENT_NUDGE}
+      eventWidthDeduct={SEEKER_WIDTH_DEDUCT}
     />
   );
 }

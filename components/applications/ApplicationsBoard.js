@@ -1,8 +1,16 @@
-// components/applications/ApplicationsBoard.js
 import React from 'react';
 import ApplicationCard from './ApplicationCard';
+import { colorFor } from '@/components/seeker/dashboard/seekerColors';
 
-const STAGES = ["Pinned", "Applied", "Interviewing", "Offers", "Rejected"];
+const STAGES = ['Pinned', 'Applied', 'Interviewing', 'Offers', 'Rejected'];
+
+const stageKey = (stage) => ({
+  Pinned: 'pinned',          // or 'brand'
+  Applied: 'applied',
+  Interviewing: 'interviewing',
+  Offers: 'offers',
+  Rejected: 'rejected',
+}[stage] || 'info');
 
 export default function ApplicationsBoard({
   stagesData = { Pinned: [], Applied: [], Interviewing: [], Offers: [], Rejected: [] },
@@ -11,7 +19,7 @@ export default function ApplicationsBoard({
   columns = 5,              // number OR "auto"
   title = 'Job Application Tracker',
   actions = null,           // right side
-  leftActions = null,       // ✅ NEW: left-side actions (next to title)
+  leftActions = null,       // left side (next to title)
 }) {
   const wrapStyle = {
     background: 'white',
@@ -30,7 +38,6 @@ export default function ApplicationsBoard({
     boxShadow: '0 2px 6px rgba(0,0,0,0.06)',
   };
 
-  // Responsive / fixed columns
   const gridTemplateColumns =
     columns === 'auto'
       ? 'repeat(auto-fit, minmax(220px, 1fr))'
@@ -49,15 +56,12 @@ export default function ApplicationsBoard({
           flexWrap: 'wrap',
         }}
       >
-        {/* Left: title + optional leftActions */}
         <div style={{ display: 'flex', alignItems: 'center', gap: 12, flex: '1 1 auto', minWidth: 240 }}>
           <h2 style={{ color: '#FF7043', margin: 0, fontSize: compact ? '1.05rem' : '1.25rem' }}>
             {title}
           </h2>
           {leftActions}
         </div>
-
-        {/* Right: actions */}
         <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
           {actions}
         </div>
@@ -72,38 +76,50 @@ export default function ApplicationsBoard({
           width: '100%',
         }}
       >
-        {STAGES.map((stage) => (
-          <div key={stage} style={columnStyle}>
-            <div
-              style={{
-                color: '#FF7043',
-                marginTop: 0,
-                marginBottom: compact ? 6 : 8,
-                fontWeight: 700,
-              }}
-            >
-              {stage}
-            </div>
+        {STAGES.map((stage) => {
+          const c = colorFor(stageKey(stage));
+          const items = stagesData[stage] || [];
+          return (
+            <div key={stage} style={columnStyle}>
+              {/* Color-coded header pill with live count */}
+              <div
+                style={{
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: 8,
+                  padding: '6px 10px',
+                  borderRadius: 999,
+                  background: c.bg,
+                  color: c.text,
+                  border: `1px solid ${c.solid}`,
+                  marginBottom: compact ? 6 : 8,
+                  fontWeight: 700,
+                }}
+              >
+                <span>{stage}</span>
+                <span style={{ fontWeight: 900 }}>{items.length}</span>
+              </div>
 
-            {(stagesData[stage] || []).length > 0 ? (
-              stagesData[stage].map((job) => (
-                <ApplicationCard
-                  key={job.id}
-                  job={job}
-                  stage={stage}
-                  stages={STAGES}
-                  onMove={onMove}
-                  onDelete={onDelete}
-                  onEdit={onEdit}
-                  onView={onView}
-                  compact={compact}
-                />
-              ))
-            ) : (
-              <div style={{ color: '#90A4AE', fontSize: compact ? 12 : 14 }}>No items.</div>
-            )}
-          </div>
-        ))}
+              {items.length > 0 ? (
+                items.map((job) => (
+                  <ApplicationCard
+                    key={job.id}
+                    job={job}
+                    stage={stage}
+                    stages={STAGES}
+                    onMove={onMove}
+                    onDelete={onDelete}
+                    onEdit={onEdit}
+                    onView={onView}
+                    compact={compact}
+                  />
+                ))
+              ) : (
+                <div style={{ color: '#90A4AE', fontSize: compact ? 12 : 14 }}>No items.</div>
+              )}
+            </div>
+          );
+        })}
       </div>
     </section>
   );

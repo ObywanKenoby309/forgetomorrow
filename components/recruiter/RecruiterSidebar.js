@@ -204,6 +204,11 @@ export default function RecruiterSidebar({
           active={active === 'messaging'}
           badge={counts.messages}
         />
+		<NavItem
+          href="/recruiter/calendar"
+          label="Calendar"
+          active={active === 'calendar'}
+        />
         {isEnterprise && (
           <>
             <NavItem

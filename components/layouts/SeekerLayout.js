@@ -25,7 +25,9 @@ export default function SeekerLayout({
   activeNav,
   forceChrome,                 // 'seeker' | 'coach' | 'recruiter-smb' | 'recruiter-ent'
   rightVariant = 'dark',       // 'dark' | 'light'
-  rightWidth = 240,            // NEW: control the right rail width (px)
+  rightWidth = 260,            // ↓ defaults tuned for wider center
+  gap = 12,
+  pad = 16,
 }) {
   const counts = useSidebarCounts();
   const router = useRouter();
@@ -58,7 +60,7 @@ export default function SeekerLayout({
     }
   }, [chromeMode, activeNav, counts]);
 
-  // --- Right rail styles (base + variants) ---
+  // --- Right rail styles ---
   const rightBase = {
     gridArea: 'right',
     alignSelf: 'start',
@@ -75,7 +77,6 @@ export default function SeekerLayout({
     border: '1px solid #3a3a3a',
     padding: 16,
     boxShadow: '0 2px 6px rgba(0,0,0,0.06)',
-    minHeight: 120,
   };
 
   const rightLight = {
@@ -92,17 +93,18 @@ export default function SeekerLayout({
       {/* Top chrome header */}
       <HeaderComp />
 
+      {/* Main 3-column layout */}
       <div
         style={{
           display: 'grid',
-          gridTemplateColumns: `240px minmax(640px, 1fr) ${rightWidth}px`, // ← use prop here
+          gridTemplateColumns: `240px minmax(820px, 1fr) ${rightWidth}px`,
           gridTemplateRows: 'auto 1fr',
           gridTemplateAreas: `
             "left header right"
             "left content right"
           `,
-          gap: 20,
-          padding: '30px',
+          gap,
+          padding: pad,
           alignItems: 'start',
         }}
       >
@@ -111,8 +113,8 @@ export default function SeekerLayout({
           {left ? left : <SidebarComp {...sidebarProps} />}
         </aside>
 
-        {/* PAGE-LEVEL HEADER */}
-        <header style={{ gridArea: 'header', alignSelf: 'start', marginTop: 0, paddingTop: 0, minWidth: 0 }}>
+        {/* PAGE HEADER (center) */}
+        <header style={{ gridArea: 'header', alignSelf: 'start', minWidth: 0 }}>
           {header}
         </header>
 
@@ -121,9 +123,9 @@ export default function SeekerLayout({
           {right}
         </aside>
 
-        {/* CONTENT */}
+        {/* CONTENT (center) */}
         <main style={{ gridArea: 'content', minWidth: 0 }}>
-          <div style={{ display: 'grid', gap: 20, width: '100%', minWidth: 0 }}>
+          <div style={{ display: 'grid', gap, width: '100%', minWidth: 0 }}>
             {children}
           </div>
         </main>
