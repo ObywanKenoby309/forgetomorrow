@@ -2,10 +2,10 @@
 import { NextResponse } from 'next/server';
 
 // ──────────────────────────────────────────────────────────────
-// ENV-BASED LOCK
-// SITE_LOCK = "1"  → lock the site (except allowed hosts/static/coming-soon)
-// SITE_LOCK = "0"  → public rules (use PUBLIC_PATHS below)
-// ALLOWED_HOSTS = "example.com,preview.vercel.app" (optional)
+// ENV TOGGLES
+// SITE_LOCK = "1"  → lock the site (only public paths + /coming-soon)
+// SITE_LOCK = "0"  → fully public (no lock)
+// ALLOWED_HOSTS = "example.com,preview.vercel.app" (optional; bypass lock)
 // ──────────────────────────────────────────────────────────────
 const SITE_LOCK = process.env.SITE_LOCK === '1';
 const ALLOWED_HOSTS = (process.env.ALLOWED_HOSTS || '')
@@ -13,12 +13,12 @@ const ALLOWED_HOSTS = (process.env.ALLOWED_HOSTS || '')
   .map((h) => h.trim())
   .filter(Boolean);
 
-// Public pages allowed to be visible when NOT locked
+// Public pages allowed when locked
 const PUBLIC_PATHS = new Set([
   '/', '/waiting-list', '/about',
   '/pricing', '/features', '/login', '/signup', '/contact',
   '/coming-soon',
-  // keep public feedback form + any nested routes like /feedback/coach-id
+  // keep public feedback form + nested routes (e.g., /feedback/abc)
   '/feedback',
 ]);
 
@@ -35,50 +35,63 @@ const STATIC_ALLOW = [
 export function middleware(req) {
   const url = new URL(req.url);
   const { pathname } = url;
+  const hostname = req.nextUrl.hostname || '';
 
-  // ✅ Always allow static assets
+  // Always allow static assets
   if (STATIC_ALLOW.some((re) => re.test(pathname))) {
-    return NextResponse.next();
+    const res = NextResponse.next();
+    res.headers.set('x-site-lock', SITE_LOCK ? 'on' : 'off');
+    return res;
   }
 
-  // ✅ Bypass everything in local dev
-  const hostname = req.nextUrl.hostname || '';
+  // Local/dev bypass (you see everything on localhost)
   if (
     process.env.NODE_ENV === 'development' ||
     hostname === 'localhost' ||
     hostname === '127.0.0.1'
   ) {
-    return NextResponse.next();
+    const res = NextResponse.next();
+    res.headers.set('x-site-lock', 'dev-bypass');
+    return res;
   }
 
-  // ✅ If host is explicitly allowed, let it through (useful for previews)
+  // If host is explicitly allowed, bypass lock (useful for previews)
   if (ALLOWED_HOSTS.length > 0) {
-    const isAllowedHost = ALLOWED_HOSTS.some(
-      (allowed) => hostname === allowed || hostname.endsWith(allowed)
+    const allowed = ALLOWED_HOSTS.some(
+      (h) => hostname === h || hostname.endsWith(h)
     );
-    if (isAllowedHost) {
-      return NextResponse.next();
+    if (allowed) {
+      const res = NextResponse.next();
+      res.headers.set('x-site-lock', 'allowed-host');
+      return res;
     }
   }
 
-  // 🔒 LOCKED MODE: rewrite everything to /coming-soon
-  if (SITE_LOCK) {
-    const comingSoon = new URL('/coming-soon', req.url);
-    return NextResponse.rewrite(comingSoon);
+  // If NOT locked → fully public
+  if (!SITE_LOCK) {
+    const res = NextResponse.next();
+    res.headers.set('x-site-lock', 'off');
+    return res;
   }
 
-  // 🌐 PUBLIC MODE: allow listed public pages (handles trailing slash)
+  // LOCKED: allow only public paths; everything else → /coming-soon
   const normalized = pathname.replace(/\/$/, '') || '/';
-  if (PUBLIC_PATHS.has(normalized)) return NextResponse.next();
-
-  // Also allow nested under public prefixes (e.g., /feedback/abc)
+  if (PUBLIC_PATHS.has(normalized)) {
+    const res = NextResponse.next();
+    res.headers.set('x-site-lock', 'on-public');
+    return res;
+  }
+  // allow nested under public prefixes (e.g., /feedback/abc)
   if ([...PUBLIC_PATHS].some((p) => p !== '/' && normalized.startsWith(p + '/'))) {
-    return NextResponse.next();
+    const res = NextResponse.next();
+    res.headers.set('x-site-lock', 'on-public-nested');
+    return res;
   }
 
-  // Everything else → Coming Soon
   const comingSoon = new URL('/coming-soon', req.url);
-  return NextResponse.rewrite(comingSoon);
+  const res = NextResponse.rewrite(comingSoon);
+  res.headers.set('x-site-lock', 'on-locked');
+  return res;
 }
 
 export const config = {
