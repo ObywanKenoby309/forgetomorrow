@@ -100,11 +100,11 @@ export default function CoachingDashboardPage() {
       activeNav="overview" // <- ensures default title "Your Coaching Dashboard"
       headerDescription="Track client progress, manage sessions, and review feedback — all in one place."
       right={<CoachingRightColumn />}
-      // optional: control which sidebar sections start open
       sidebarInitialOpen={{ coaching: true, seeker: false }}
     >
       {/* Center column content */}
-      <div style={{ display: 'grid', gap: 16, maxWidth: 860 }}>
+      {/* CHANGED: remove maxWidth cap so center column can use full width */}
+      <div style={{ display: 'grid', gap: 16, width: '100%' }}>
         {/* Today (KPI strip + sessions list) */}
         <Section title="Today">
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, minmax(0, 1fr))', gap: 12, marginBottom: 12 }}>

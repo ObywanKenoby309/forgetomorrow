@@ -42,7 +42,8 @@ export default function CoachingResourcesPage() {
       sidebarInitialOpen={{ coaching: true, seeker: false }}
     >
       {/* Center column content */}
-      <div style={{ display: 'grid', gap: 16, maxWidth: 860 }}>
+      {/* CHANGED: remove maxWidth cap so center column can use full width */}
+      <div style={{ display: 'grid', gap: 16, width: '100%' }}>
         {/* Top cards linking to anchors and newsletter */}
         <section
           style={{

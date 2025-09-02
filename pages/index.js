@@ -80,6 +80,18 @@ export default function Home() {
           people come before algorithms.
         </p>
 
+        {/* Crowdfunding Link */}
+        <div className="mb-12">
+          <a
+            href="https://igg.me/at/forgetmrw/x/38735450#/"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="inline-block bg-[#FF7043] hover:bg-[#F4511E] text-white font-bold px-8 py-3 rounded-lg shadow-lg transition-colors duration-300"
+          >
+            Back Us on Indiegogo
+          </a>
+        </div>
+
         <form
           onSubmit={sendWaitlistEmail}
           className="max-w-md w-full mx-auto flex flex-col gap-4"
@@ -120,4 +132,3 @@ export default function Home() {
     </>
   );
 }
-
