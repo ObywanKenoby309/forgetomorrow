@@ -1,9 +1,8 @@
-// components/layouts/PublicLayout.js
+// components/layouts/Layout.js
 import Head from "next/head";
-import Header from "../Header";
-import Footer from "../Footer";
+import React from "react";
 
-export default function PublicLayout({
+export default function Layout({
   title = "ForgeTomorrow",
   header,
   left,
@@ -13,7 +12,6 @@ export default function PublicLayout({
   return (
     <>
       <Head><title>{title}</title></Head>
-      <Header />
 
       <div
         style={{
@@ -34,7 +32,7 @@ export default function PublicLayout({
           {left}
         </aside>
 
-        {/* HEADER */}
+        {/* PAGE HEADER SLOT */}
         <header
           style={{
             gridArea: "header",
@@ -75,8 +73,6 @@ export default function PublicLayout({
           </div>
         </main>
       </div>
-
-      <Footer />
     </>
   );
 }

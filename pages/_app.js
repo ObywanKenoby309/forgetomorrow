@@ -44,8 +44,8 @@ export default function App({ Component, pageProps }) {
   const isSeekerRoute =
     router.pathname.startsWith('/seeker') ||
     router.pathname.startsWith('/resume') ||
-    router.pathname.startsWith('/cover') ||   // ← NEW: treat /cover/* as internal
-    router.pathname.startsWith('/apply') ||   // ← OPTIONAL: unified Apply Assistant is internal
+    router.pathname.startsWith('/cover') ||
+    router.pathname.startsWith('/apply') ||
     [
       '/the-hearth',
       '/jobs',
@@ -53,9 +53,9 @@ export default function App({ Component, pageProps }) {
       '/pinned-jobs',
       '/resume-cover',
       '/roadmap',
-      '/profile',            // ✅ Treat /profile as internal (prevents LandingHeader)
+      '/profile',
       '/profile-analytics',
-	  '/feed'
+      '/feed'
     ].includes(router.pathname);
 
   const isCoachingRoute =
@@ -71,7 +71,7 @@ export default function App({ Component, pageProps }) {
   const universalHeaderRoutes = new Set([]);
   const isUniversalPage = universalHeaderRoutes.has(router.pathname) && !router.query?.chrome;
 
-  // Shared (can be public or internal depending on entry point)
+  // Shared routes can appear public or internal depending on entry
   const sharedRoutes = new Set(['/help', '/privacy', '/terms', '/security', '/accessibility', '/cookies']);
 
   const [sharedAsInternal, setSharedAsInternal] = useState(false);
@@ -109,9 +109,8 @@ export default function App({ Component, pageProps }) {
 
   const forgeBgPosition = router.pathname === '/' ? '35% center' : 'center';
 
-  // Fixed headers are 56px tall (h-14)
+  // Public pages render LandingHeader (now inside PlanProvider so usePlan works)
   const renderLandingHeader = isPublicEffective && !isUniversalPage;
-  const needsTopPadding = renderLandingHeader || isUniversalPage;
 
   return (
     <div className="relative min-h-screen">
@@ -135,23 +134,23 @@ export default function App({ Component, pageProps }) {
           !useForgeBackground ? 'bg-[#ECEFF1]' : ''
         }`}
       >
-        {/* Public header stays outside providers */}
-        {renderLandingHeader && <LandingHeader />}
-
         <PlanProvider>
           <ResumeProvider>
             <RouteTracker />
 
-            {/* 🔸 UniversalHeader MUST be inside PlanProvider because it calls usePlan */}
+            {/* Public header (plan-aware via context) */}
+            {renderLandingHeader && <LandingHeader />}
+
+            {/* UniversalHeader (also plan-aware) */}
             {isUniversalPage && <UniversalHeader />}
 
-            <div className={needsTopPadding ? 'pt-14' : ''}>
+            <div>
               <Component {...pageProps} />
             </div>
           </ResumeProvider>
         </PlanProvider>
 
-        {/* Footers: universal and internal pages use internal Footer */}
+        {/* Footers: universal and internal pages use internal Footer; public uses LandingFooter */}
         {renderLandingHeader ? <LandingFooter /> : <Footer />}
       </div>
     </div>

@@ -1,4 +1,3 @@
-// components/layouts/EnterpriseHeader.js
 import Link from "next/link";
 import { useRouter } from "next/router";
 import { useEffect, useRef, useState } from "react";
@@ -7,20 +6,19 @@ import { usePlan } from "@/context/PlanContext";
 /**
  * EnterpriseHeader
  * Props:
- * - brandHref: string (where logo/title links)
- * - brandLabel: string (e.g., "ForgeTomorrow")
- * - sectionLabel: string (e.g., "Recruiter Suite", "Job Seeker", "Coaching Suite")
- * - navItems: [{ href, label }]
- * - showUpgrade?: boolean (default true — hidden if Enterprise)
- * - supportHref?: string (defaults to "/support")
- * - optionsHref?: string (defaults to "/recruiter/options")
- * - alignWithGrid?: boolean (true = full-width bar aligned to page padding)
- * - planLabel?: string (optional override for the plan badge text, e.g., "Pro", "Basic")
+ * - brandHref, brandLabel, sectionLabel, navItems, showUpgrade, supportHref, optionsHref, alignWithGrid
+ * - planLabel?: string
+ * - showPlanBadge?: boolean (default true)
+ * - containerClass?: string        // NEW: override container width/padding
+ * - leftClass?: string             // NEW: override left (brand/badge) spacing
+ * - rightClass?: string            // NEW: override right (actions/profile) spacing
+ * - navGapClass?: string           // NEW: override center nav gap classes
+ * - heightClass?: string           // NEW: override header/nav height (default h-14)
  *
  * Behavior:
- * - If sectionLabel === "Coaching Suite": NO plan badge (per coaching requirement).
- * - Else if planLabel provided: use it (e.g., Seeker "Pro"/"Basic").
- * - Else fallback to business logic: Enterprise / Small Business.
+ * - Coaching always hides plan badge.
+ * - If showPlanBadge === false, hide plan badge (e.g., public pages).
+ * - planLabel override wins; else Enterprise/Small Business by context.
  */
 export default function EnterpriseHeader({
   brandHref = "/",
@@ -31,7 +29,15 @@ export default function EnterpriseHeader({
   supportHref = "/support",
   optionsHref = "/recruiter/options",
   alignWithGrid = true,
-  planLabel, // optional override
+  planLabel,
+  showPlanBadge = true,
+
+  // NEW overrides (all optional)
+  containerClass,
+  leftClass,
+  rightClass,
+  navGapClass,
+  heightClass,
 }) {
   const router = useRouter();
   const { isEnterprise, togglePlan } = usePlan();
@@ -51,10 +57,34 @@ export default function EnterpriseHeader({
     return () => document.removeEventListener("mousedown", onDocClick);
   }, []);
 
-  // Coaching: suppress plan badge entirely
-  const suppressBadge = sectionLabel === "Coaching Suite";
+  // --- Defaults that mirror your existing spacing exactly
+  const defaultHeight = "h-14";
+  const resolvedHeight = heightClass || defaultHeight;
 
-  // Badge text: prefer explicit override (Seeker), else business fallback (Recruiter)
+  const defaultContainer = alignWithGrid
+    ? "w-full px-5 md:px-6"
+    : "max-w-7xl mx-auto px-4 md:px-6";
+  const resolvedContainer = containerClass || defaultContainer;
+
+  const defaultLeft = "flex items-center gap-3 md:gap-4 min-w-0 pr-4 md:pr-6";
+  const resolvedLeft = leftClass
+    ? `flex items-center min-w-0 ${leftClass}`
+    : defaultLeft;
+
+  const defaultNavGap = "gap-7 md:gap-8";
+  const resolvedNavGap = navGapClass || defaultNavGap;
+
+  const defaultRight = "hidden md:flex items-center justify-end gap-3 pl-4 md:pl-6";
+  const resolvedRight = rightClass
+    ? `hidden md:flex items-center justify-end ${rightClass}`
+    : defaultRight;
+
+  // Coaching: suppress plan badge entirely
+  // Public pages: allow caller to suppress via showPlanBadge === false
+  const suppressBadge =
+    sectionLabel === "Coaching Suite" || showPlanBadge === false;
+
+  // Badge text: prefer explicit override; else business fallback
   const badgeText =
     typeof planLabel === "string" && planLabel.length > 0
       ? planLabel
@@ -63,13 +93,13 @@ export default function EnterpriseHeader({
       : "Small Business";
 
   return (
-    <header className="bg-[#2a2a2a] text-gray-300 shadow-md sticky top-0 left-0 right-0 z-[9999]">
+    <header className={`bg-[#2a2a2a] text-gray-300 shadow-md sticky top-0 left-0 right-0 z-[9999]`}>
       <nav
-        className={`${alignWithGrid ? "w-full px-5 md:px-6" : "max-w-7xl mx-auto px-4 md:px-6"} h-14 grid items-center gap-4`}
+        className={`${resolvedContainer} ${resolvedHeight} grid items-center gap-4`}
         style={{ gridTemplateColumns: "auto 1fr auto" }}
       >
         {/* LEFT — brand */}
-        <div className="flex items-center gap-3 md:gap-4 min-w-0 pr-4 md:pr-6">
+        <div className={resolvedLeft}>
           <Link href={brandHref} className="flex items-center gap-2">
             <img src="/favicon-32x32.png" alt={brandLabel} className="h-[22px] w-[22px] md:h-6 md:w-6 rounded" />
             <span className="text-[#FF7043] font-bold text-xl tracking-wide hover:text-[#F4511E] transition whitespace-nowrap leading-none">
@@ -94,7 +124,7 @@ export default function EnterpriseHeader({
         </div>
 
         {/* MIDDLE — nav */}
-        <div className="hidden md:flex items-center justify-center gap-7 md:gap-8 font-semibold">
+        <div className={`hidden md:flex items-center justify-center ${resolvedNavGap} font-semibold`}>
           {navItems.map((item) => (
             <Link
               key={item.href}
@@ -109,7 +139,7 @@ export default function EnterpriseHeader({
         </div>
 
         {/* RIGHT — actions/profile */}
-        <div className="hidden md:flex items-center justify-end gap-3 pl-4 md:pl-6">
+        <div className={resolvedRight}>
           {!isEnterprise && showUpgrade && (
             <Link
               href="/recruiter/upgrade"
@@ -188,7 +218,6 @@ export default function EnterpriseHeader({
         brandLabel={brandLabel}
         sectionLabel={sectionLabel}
         brandHref={brandHref}
-        // Only pass a plan label to mobile if not coaching
         planLabel={suppressBadge ? undefined : badgeText}
       />
     </header>
