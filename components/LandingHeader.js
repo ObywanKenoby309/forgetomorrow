@@ -12,15 +12,21 @@ export default function LandingHeader() {
     <EnterpriseHeader
       brandHref="/"
       brandLabel="ForgeTomorrow"
-      sectionLabel=""             // no subtitle
+      sectionLabel=""
       navItems={navItems}
       showUpgrade={false}
       alignWithGrid={false}
       optionsHref="/help"
       supportHref="/support"
-      showPlanBadge={false}       // hide plan badge on public
-      publicVariant={true}        // public spacing preset
-      showUserMenu={false}        // NEW: hide FT circle/avatar on public pages
+      showPlanBadge={false}
+      publicVariant={true}
+      showUserMenu={false}
+
+      // Custom container: remove ALL left padding, keep some right padding
+      containerClass="max-w-7xl pl-6 pr-6 md:pr-10"
+
+      // Left block: no left padding so brand hugs flush to edge
+      leftClass="flex items-center min-w-0 gap-4 md:gap-6 pr-6 md:pr-8"
     />
   );
 }
