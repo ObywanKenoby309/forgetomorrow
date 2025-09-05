@@ -1,3 +1,4 @@
+// components/layouts/EnterpriseHeader.js
 import Link from "next/link";
 import { useRouter } from "next/router";
 import { useEffect, useRef, useState } from "react";
@@ -8,12 +9,14 @@ import { usePlan } from "@/context/PlanContext";
  * Props:
  * - brandHref, brandLabel, sectionLabel, navItems, showUpgrade, supportHref, optionsHref, alignWithGrid
  * - planLabel?: string
- * - showPlanBadge?: boolean (default true)
- * - containerClass?: string        // NEW: override container width/padding
- * - leftClass?: string             // NEW: override left (brand/badge) spacing
- * - rightClass?: string            // NEW: override right (actions/profile) spacing
- * - navGapClass?: string           // NEW: override center nav gap classes
- * - heightClass?: string           // NEW: override header/nav height (default h-14)
+ * - showPlanBadge?: boolean (default true)  -> set false on public pages to hide plan badge
+ * - publicVariant?: boolean (default false) -> when true, widens left/right spacing for public pages
+ * - showUserMenu?: boolean (default true)   -> when false, hides FT circle/profile menu (use on public pages)
+ * - containerClass?: string        // optional override for container width/padding
+ * - leftClass?: string             // optional override for left (brand/badge) spacing
+ * - rightClass?: string            // optional override for right (actions/profile) spacing
+ * - navGapClass?: string           // optional override for center nav gap classes
+ * - heightClass?: string           // optional override for header/nav height (default h-14)
  *
  * Behavior:
  * - Coaching always hides plan badge.
@@ -32,7 +35,13 @@ export default function EnterpriseHeader({
   planLabel,
   showPlanBadge = true,
 
-  // NEW overrides (all optional)
+  // Public spacing preset
+  publicVariant = false,
+
+  // NEW: allow caller to hide the user/avatar menu (public pages)
+  showUserMenu = true,
+
+  // Optional fine-grain overrides
   containerClass,
   leftClass,
   rightClass,
@@ -57,30 +66,30 @@ export default function EnterpriseHeader({
     return () => document.removeEventListener("mousedown", onDocClick);
   }, []);
 
-  // --- Defaults that mirror your existing spacing exactly
+  // --- Defaults (mirror existing internal spacing)
   const defaultHeight = "h-14";
   const resolvedHeight = heightClass || defaultHeight;
 
   const defaultContainer = alignWithGrid
     ? "w-full px-5 md:px-6"
     : "max-w-7xl mx-auto px-4 md:px-6";
-  const resolvedContainer = containerClass || defaultContainer;
 
   const defaultLeft = "flex items-center gap-3 md:gap-4 min-w-0 pr-4 md:pr-6";
-  const resolvedLeft = leftClass
-    ? `flex items-center min-w-0 ${leftClass}`
-    : defaultLeft;
-
   const defaultNavGap = "gap-7 md:gap-8";
-  const resolvedNavGap = navGapClass || defaultNavGap;
-
   const defaultRight = "hidden md:flex items-center justify-end gap-3 pl-4 md:pl-6";
-  const resolvedRight = rightClass
-    ? `hidden md:flex items-center justify-end ${rightClass}`
-    : defaultRight;
+
+  // --- Public preset (only if publicVariant === true AND no explicit overrides were provided)
+  const publicContainer = "max-w-7xl mx-auto px-8 md:px-10";
+  const publicLeft = "flex items-center min-w-0 gap-4 md:gap-6 pr-6 md:pr-8";
+  const publicRight = "hidden md:flex items-center justify-end gap-4 md:gap-6 pl-6 md:pl-8";
+
+  const resolvedContainer = containerClass || (publicVariant ? publicContainer : defaultContainer);
+  const resolvedLeft      = leftClass      || (publicVariant ? publicLeft      : defaultLeft);
+  const resolvedRight     = rightClass     || (publicVariant ? publicRight     : defaultRight);
+  const resolvedNavGap    = navGapClass    || defaultNavGap;
 
   // Coaching: suppress plan badge entirely
-  // Public pages: allow caller to suppress via showPlanBadge === false
+  // Public pages: caller can suppress via showPlanBadge === false
   const suppressBadge =
     sectionLabel === "Coaching Suite" || showPlanBadge === false;
 
@@ -93,7 +102,7 @@ export default function EnterpriseHeader({
       : "Small Business";
 
   return (
-    <header className={`bg-[#2a2a2a] text-gray-300 shadow-md sticky top-0 left-0 right-0 z-[9999]`}>
+    <header className="bg-[#2a2a2a] text-gray-300 shadow-md sticky top-0 left-0 right-0 z-[9999]">
       <nav
         className={`${resolvedContainer} ${resolvedHeight} grid items-center gap-4`}
         style={{ gridTemplateColumns: "auto 1fr auto" }}
@@ -150,45 +159,48 @@ export default function EnterpriseHeader({
             </Link>
           )}
 
-          <div className="relative" ref={profileRef}>
-            <button
-              onClick={() => setOpenProfile((v) => !v)}
-              className="inline-flex items-center gap-2 px-2 py-1 rounded-md hover:bg-[#333] focus:outline-none"
-              aria-haspopup="menu"
-              aria-expanded={openProfile}
-            >
-              <span className="h-8 w-8 rounded-full bg-gradient-to-br from-[#FF7043] to-[#F4511E] flex items-center justify-center text-white text-xs font-bold">
-                FT
-              </span>
-              <svg className="h-4 w-4 text-gray-400" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
-                <path fillRule="evenodd" d="M5.23 7.21a.75.75 0 011.06.02L10 10.94l3.71-3.71a.75.75 0 111.06 1.06l-4.24 4.24a.75.75 0 01-1.06 0L5.21 8.29a.75.75 0 01.02-1.08z" clipRule="evenodd" />
-              </svg>
-            </button>
+          {/* NEW: hide user menu when showUserMenu === false (public pages) */}
+          {showUserMenu && (
+            <div className="relative" ref={profileRef}>
+              <button
+                onClick={() => setOpenProfile((v) => !v)}
+                className="inline-flex items-center gap-2 px-2 py-1 rounded-md hover:bg-[#333] focus:outline-none"
+                aria-haspopup="menu"
+                aria-expanded={openProfile}
+              >
+                <span className="h-8 w-8 rounded-full bg-gradient-to-br from-[#FF7043] to-[#F4511E] flex items-center justify-center text-white text-xs font-bold">
+                  FT
+                </span>
+                <svg className="h-4 w-4 text-gray-400" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
+                  <path fillRule="evenodd" d="M5.23 7.21a.75.75 0 011.06.02L10 10.94l3.71-3.71a.75.75 0 111.06 1.06l-4.24 4.24a.75.75 0 01-1.06 0L5.21 8.29a.75.75 0 01.02-1.08z" clipRule="evenodd" />
+                </svg>
+              </button>
 
-            {openProfile && (
-              <div role="menu" className="absolute right-0 mt-2 w-44 rounded-md border border-[#3a3a3a] bg-[#2f2f2f] shadow-lg overflow-hidden">
-                <Link href={optionsHref} className="block px-3 py-2 text-sm hover:bg-[#333] hover:text-white" role="menuitem">
-                  Options
-                </Link>
-                <Link href={supportHref} className="block px-3 py-2 text-sm hover:bg-[#333] hover:text-white" role="menuitem">
-                  Support
-                </Link>
-                <button
-                  className="w-full text-left px-3 py-2 text-sm hover:bg-[#333] hover:text-white"
-                  role="menuitem"
-                  onClick={() => console.log("Logging out…")}
-                >
-                  Log Out
-                </button>
-
-                {process.env.NODE_ENV !== "production" && (
-                  <button onClick={togglePlan} className="w-full text-left px-3 py-2 text-xs text-gray-300 hover:bg-[#333]" title="Dev: toggle plan">
-                    Toggle Plan (Dev)
+              {openProfile && (
+                <div role="menu" className="absolute right-0 mt-2 w-44 rounded-md border border-[#3a2a2a] bg-[#2f2f2f] shadow-lg overflow-hidden">
+                  <Link href={optionsHref} className="block px-3 py-2 text-sm hover:bg-[#333] hover:text-white" role="menuitem">
+                    Options
+                  </Link>
+                  <Link href={supportHref} className="block px-3 py-2 text-sm hover:bg-[#333] hover:text-white" role="menuitem">
+                    Support
+                  </Link>
+                  <button
+                    className="w-full text-left px-3 py-2 text-sm hover:bg-[#333] hover:text-white"
+                    role="menuitem"
+                    onClick={() => console.log("Logging out…")}
+                  >
+                    Log Out
                   </button>
-                )}
-              </div>
-            )}
-          </div>
+
+                  {process.env.NODE_ENV !== "production" && (
+                    <button onClick={togglePlan} className="w-full text-left px-3 py-2 text-xs text-gray-300 hover:bg-[#333]" title="Dev: toggle plan">
+                      Toggle Plan (Dev)
+                    </button>
+                  )}
+                </div>
+              )}
+            </div>
+          )}
         </div>
 
         {/* Mobile hamburger */}
@@ -218,6 +230,7 @@ export default function EnterpriseHeader({
         brandLabel={brandLabel}
         sectionLabel={sectionLabel}
         brandHref={brandHref}
+        // Only pass a plan label to mobile if not suppressed
         planLabel={suppressBadge ? undefined : badgeText}
       />
     </header>

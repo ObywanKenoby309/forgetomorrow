@@ -12,20 +12,15 @@ export default function LandingHeader() {
     <EnterpriseHeader
       brandHref="/"
       brandLabel="ForgeTomorrow"
-      sectionLabel=""               // no "Public" label
+      sectionLabel=""             // no subtitle
       navItems={navItems}
       showUpgrade={false}
       alignWithGrid={false}
       optionsHref="/help"
       supportHref="/support"
-      showPlanBadge={false}         // hide plan badge on public
-
-      // 🔧 Spacing overrides (left/right only)
-      containerClass="max-w-7xl mx-auto px-8"          // wider outer padding on public
-      leftClass="gap-4 md:gap-6 pr-6 md:pr-8"          // more space between logo/label/badge area
-      rightClass="gap-4 md:gap-6 pl-6 md:pl-8"         // more space around actions/profile
-      // navGapClass not touched (center looked correct)
-      // heightClass not touched (inherits h-14)
+      showPlanBadge={false}       // hide plan badge on public
+      publicVariant={true}        // public spacing preset
+      showUserMenu={false}        // NEW: hide FT circle/avatar on public pages
     />
   );
 }
