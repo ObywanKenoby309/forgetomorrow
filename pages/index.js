@@ -105,7 +105,7 @@ export default function Home() {
           {/* Crowdfunding Link */}
           <div className="mb-3">
             <a
-              href="https://igg.me/at/forgetmrw/x/38735450#/"
+              href="https://www.indiegogo.com/projects/a-people-first-platform-for-work-opportunity/x/38735450#/"
               target="_blank"
               rel="noopener noreferrer"
               className="inline-block bg-[#FF7043] hover:bg-[#F4511E] text-white font-bold px-8 py-3 rounded-lg shadow-lg transition-colors duration-300"

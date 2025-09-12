@@ -13,6 +13,9 @@ import ProfileResumeAttach from '@/components/profile/ProfileResumeAttach';
 import ProfileSkills from '@/components/profile/ProfileSkills';
 import ProfileHobbies from '@/components/profile/ProfileHobbies';
 
+// Helper shown beside sections
+import SectionHint from '@/components/SectionHint';
+
 const UI = { CARD_PAD: 16, SECTION_GAP: 16 };
 
 // LocalStorage keys
@@ -96,6 +99,13 @@ export default function ProfilePage() {
   useEffect(() => { try { localStorage.setItem(PREF_START_KEY, prefStart); } catch {} }, [prefStart]);
   useEffect(() => { try { localStorage.setItem(HOB_KEY, JSON.stringify(hobbies)); } catch {} }, [hobbies]);
 
+  // -------- Derived flags (for optional hints) --------
+  const hasSummary = Boolean(about?.trim());
+  const hasSkills = (skills?.length || 0) >= 6;
+  const hasLocations = (prefLocations?.length || 0) > 0;
+  const hasWorkType = Boolean(prefWorkType);
+  const hasLanguages = (languages?.length || 0) > 0;
+
   // ---------------- Header text ----------------
   const HeaderBox = (
     <section
@@ -121,28 +131,107 @@ export default function ProfilePage() {
     <>
       <Head><title>Profile | ForgeTomorrow</title></Head>
 
-      <SeekerLayout title="Profile | ForgeTomorrow" header={HeaderBox} right={null} activeNav="profile">
-        <div style={{ maxWidth: 1200, width: '100%', display: 'grid', gap: UI.SECTION_GAP }}>
-          <ProfileHeader
-            name={name} pronouns={pronouns} headline={headline}
-            location={location} status={status}
-            avatarUrl={avatarUrl} coverUrl={coverUrl}
-            setName={setName} setPronouns={setPronouns} setHeadline={setHeadline}
-            setLocation={setLocation} setStatus={setStatus}
-            setAvatarUrl={setAvatarUrl} setCoverUrl={setCoverUrl}
-          />
+      <SeekerLayout
+        title="Profile | ForgeTomorrow"
+        header={HeaderBox}
+        right={null}
+        activeNav="profile"
+      >
+        {/* container width unchanged */}
+        <div className="w-full max-w-7x1 mx-auto px-4 md:px-6 grid gap-4 md:gap-5">
+          {/* Header backer — banner flush on all edges */}
+          <section className="bg-white border border-gray-200 border-t-0 rounded-xl shadow-sm overflow-hidden pt-0 px-0 pb-0">
+            <ProfileHeader
+              name={name} pronouns={pronouns} headline={headline}
+              location={location} status={status}
+              avatarUrl={avatarUrl} coverUrl={coverUrl}
+              setName={setName} setPronouns={setPronouns} setHeadline={setHeadline}
+              setLocation={setLocation} setStatus={setStatus}
+              setAvatarUrl={setAvatarUrl} setCoverUrl={setCoverUrl}
+            />
+          </section>
 
-          <ProfileAbout about={about} setAbout={setAbout} />
+          {/* ABOUT + moved/renamed hint */}
+          <div className="grid md:grid-cols-3 items-start gap-4">
+            <div className="md:col-span-2">
+              <ProfileAbout about={about} setAbout={setAbout} />
+            </div>
+            <SectionHint
+              title="About Yourself"
+              bullets={[
+                'Open with a concrete outcome (e.g., “reduced churn 18% in 6 months”).',
+                'Mention your domain + tools (industries, platforms, or stacks).',
+                'Say what you want next so people know how to help.',
+              ]}
+            />
+          </div>
+
+          {/* PREFERENCES + single helper card */}
+          <div className="grid md:grid-cols-3 items-start gap-4">
+            <div className="md:col-span-2">
+              <ProfilePreferences
+                prefLocations={prefLocations} setPrefLocations={setPrefLocations}
+                prefWorkType={prefWorkType} setPrefWorkType={setPrefWorkType}
+                prefStart={prefStart} setPrefStart={setPrefStart}
+              />
+            </div>
+            <div className="space-y-4">
+              <SectionHint
+                title="Preferences help discovery"
+                bullets={[
+                  'Select work type (remote, onsite, hybrid).',
+                  'Add preferred locations to appear in local searches.',
+                  'Optional: earliest start date & relocation.',
+                ]}
+              />
+            </div>
+          </div>
+
+          {/* SKILLS (open by default) */}
+          <div className="grid md:grid-cols-3 items-start gap-4">
+            <div className="md:col-span-2">
+              <ProfileSkills
+                skills={skills}
+                setSkills={setSkills}
+                defaultOpen={true}
+                initialOpen={true}
+              />
+            </div>
+            {!hasSkills && (
+              <SectionHint
+                title="Strengthen your skills"
+                bullets={[
+                  'Aim for 8–12 core skills.',
+                  'Match target job descriptions.',
+                  'Include tools & frameworks.',
+                ]}
+              />
+            )}
+          </div>
+
+          {/* LANGUAGES (open by default) */}
+          <div className="grid md:grid-cols-3 items-start gap-4">
+            <div className="md:col-span-2">
+              <ProfileLanguages
+                languages={languages}
+                setLanguages={setLanguages}
+                defaultOpen={true}
+                initialOpen={true}
+              />
+            </div>
+            {!hasLanguages && (
+              <SectionHint
+                title="Languages add context"
+                bullets={[
+                  'Add spoken or programming languages.',
+                  'Helps with multilingual or global roles.',
+                ]}
+              />
+            )}
+          </div>
+
+          {/* Resume + Hobbies */}
           <ProfileResumeAttach withChrome={withChrome} />
-
-          <ProfilePreferences
-            prefLocations={prefLocations} setPrefLocations={setPrefLocations}
-            prefWorkType={prefWorkType} setPrefWorkType={setPrefWorkType}
-            prefStart={prefStart} setPrefStart={setPrefStart}
-          />
-
-          <ProfileSkills skills={skills} setSkills={setSkills} />
-          <ProfileLanguages languages={languages} setLanguages={setLanguages} />
           <ProfileHobbies hobbies={hobbies} setHobbies={setHobbies} />
         </div>
       </SeekerLayout>

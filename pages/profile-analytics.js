@@ -3,24 +3,16 @@ import React, { useMemo } from 'react';
 import Head from 'next/head';
 import { useRouter } from 'next/router';
 
-// Layouts
 import SeekerLayout from '@/components/layouts/SeekerLayout';
 import CoachingLayout from '@/components/layouts/CoachingLayout';
 
-// Charts
-import { Bar } from 'react-chartjs-2';
-import {
-  Chart as ChartJS,
-  BarElement,
-  CategoryScale,
-  LinearScale,
-  Tooltip,
-  Legend,
-} from 'chart.js';
-
-ChartJS.register(BarElement, CategoryScale, LinearScale, Tooltip, Legend);
-
-const UI = { CARD_PAD: 16, SECTION_GAP: 16 };
+// Componentized pieces
+import KPI from '@/components/analytics/KPI';
+import ViewsChart from '@/components/analytics/ViewsChart';
+import SearchAppearancesChart from '@/components/analytics/SearchAppearancesChart';
+import ProfileCompletionCard from '@/components/analytics/ProfileCompletionCard';
+import ConnectionsMiniChart from '@/components/analytics/ConnectionsMiniChart';
+import RecentViewers from '@/components/analytics/RecentViewers';
 
 export default function ProfileAnalyticsPage() {
   const router = useRouter();
@@ -31,12 +23,36 @@ export default function ProfileAnalyticsPage() {
   const analytics = useMemo(() => {
     const daysLabels = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
     return {
+      // KPIs
       totalViews: 1234,
       postsCount: 42,
       commentsCount: 58,
+      connectionsGained7d: 8,
+      profileCompletionPct: 78,
+
+      // Time series
       daysLabels,
       viewsLast7Days: [50, 75, 60, 80, 100, 90, 110],
+      searchAppearancesLast7Days: [120, 140, 135, 150, 180, 160, 200],
+      connectionsLast7Days: [1, 0, 2, 1, 1, 2, 1],
+
+      // Details
       lastProfileViewer: { name: 'Jane Doe', profileUrl: '/profile?tab=views' },
+      recentViewers: [
+        { name: 'Jane Doe', when: '2h ago' },
+        { name: 'Alex Turner', when: '5h ago' },
+        { name: 'Priya N.', when: 'Yesterday' },
+        { name: 'Michael R.', when: '2 days ago' },
+        { name: 'Dana C.', when: '3 days ago' },
+      ],
+      profileChecklist: [
+        { label: 'Headline', done: true },
+        { label: 'Summary', done: true },
+        { label: 'Experience', done: true },
+        { label: 'Skills', done: false },
+        { label: 'Links/Portfolio', done: false },
+        { label: 'Contact Preferences', done: true },
+      ],
       highestViewedPost: {
         title: 'How to Optimize Your Resume for ATS Systems',
         views: 1200,
@@ -50,223 +66,118 @@ export default function ProfileAnalyticsPage() {
     };
   }, []);
 
-  const chartData = useMemo(
-    () => ({
-      labels: analytics.daysLabels,
-      datasets: [
-        {
-          label: 'Profile Views',
-          data: analytics.viewsLast7Days,
-          backgroundColor: 'rgba(255,112,67,0.7)', // brand orange
-          borderRadius: 4,
-        },
-      ],
-    }),
-    [analytics]
-  );
-
-  const chartOptions = useMemo(
-    () => ({
-      responsive: true,
-      plugins: {
-        legend: { display: false },
-        tooltip: { enabled: true },
-      },
-      scales: {
-        y: { beginAtZero: true, ticks: { stepSize: 20 } },
-      },
-    }),
-    []
-  );
-
   const HeaderBox = (
-    <section
-      style={{
-        background: 'white',
-        border: '1px solid #eee',
-        borderRadius: 12,
-        padding: UI.CARD_PAD,
-        boxShadow: '0 2px 6px rgba(0,0,0,0.06)',
-        textAlign: 'center',
-      }}
-    >
-      <h1 style={{ margin: 0, color: '#FF7043', fontSize: 24, fontWeight: 800 }}>
-        Profile Analytics
-      </h1>
-      <p style={{ margin: '6px auto 0', color: '#607D8B', maxWidth: 720 }}>
+    <section className="bg-white border border-gray-200 rounded-xl shadow-sm p-4 text-center">
+      <h1 className="m-0 text-[#FF7043] text-2xl font-extrabold">Profile Analytics</h1>
+      <p className="mt-1 mb-0 text-[#607D8B] max-w-3xl mx-auto">
         Track engagement on your profile and content. (Charts are mock data for now.)
       </p>
     </section>
   );
 
+  const allViewsHref =
+    (analytics.lastProfileViewer.profileUrl || '/profile?tab=views') +
+    (isCoachChrome ? '&chrome=coach' : '');
+
   return (
     <>
       <Head><title>Profile Analytics | ForgeTomorrow</title></Head>
 
-      {/* Coach chrome when ?chrome=coach, Seeker chrome otherwise */}
       <Layout
         title="Profile Analytics | ForgeTomorrow"
         header={HeaderBox}
         right={null}
-        activeNav="profile"        // highlights Profile in both sidebars
+        activeNav="profile"
         sidebarInitialOpen={{ coaching: false, seeker: false }}
       >
-        <div style={{ maxWidth: 860, display: 'grid', gap: UI.SECTION_GAP }}>
-          {/* KPI Strip */}
-          <section
-            style={{
-              background: 'white',
-              borderRadius: 12,
-              padding: UI.CARD_PAD,
-              boxShadow: '0 2px 6px rgba(0,0,0,0.06)',
-              border: '1px solid #eee',
-            }}
-          >
-            <div
-              style={{
-                display: 'grid',
-                gridTemplateColumns: 'repeat(3, minmax(0, 1fr))',
-                gap: 12,
-              }}
-            >
-              <KPI label="Profile Views" value={analytics.totalViews.toLocaleString()} />
-              <KPI label="Posts" value={analytics.postsCount} />
-              <KPI label="Comments" value={analytics.commentsCount} />
+        <div className="grid gap-4 md:gap-6 lg:grid-cols-12">
+          {/* ===== Main Column ===== */}
+          <div className="lg:col-span-8 grid gap-4 md:gap-6">
+            {/* KPI Strip — full row */}
+            <section className="bg-white border border-gray-200 rounded-xl shadow-sm p-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3">
+                <KPI label="Profile Views" value={analytics.totalViews.toLocaleString()} />
+                <KPI label="Posts" value={analytics.postsCount} />
+                <KPI label="Comments" value={analytics.commentsCount} />
+                <KPI label="Connections (7d)" value={analytics.connectionsGained7d} />
+                <KPI label="Profile Completion" value={`${analytics.profileCompletionPct}%`} />
+              </div>
+            </section>
+
+            {/* NEW: Charts row — two columns on md+, stacked on mobile */}
+            <div className="grid gap-4 md:gap-6 md:grid-cols-2">
+              <ViewsChart
+                labels={analytics.daysLabels}
+                data={analytics.viewsLast7Days}
+              />
+              <SearchAppearancesChart
+                labels={analytics.daysLabels}
+                data={analytics.searchAppearancesLast7Days}
+              />
             </div>
-          </section>
 
-          {/* Chart */}
-          <section
-            style={{
-              background: 'white',
-              borderRadius: 12,
-              padding: UI.CARD_PAD,
-              boxShadow: '0 2px 6px rgba(0,0,0,0.06)',
-              border: '1px solid #eee',
-            }}
-          >
-            <h2 style={{ color: '#FF7043', marginTop: 0, marginBottom: 12 }}>Views (Last 7 Days)</h2>
-            <Bar data={chartData} options={chartOptions} />
-          </section>
+            {/* Top content — full row */}
+            <section className="bg-white border border-gray-200 rounded-xl shadow-sm p-4 grid gap-3">
+              <h2 className="text-[#FF7043] m-0 font-semibold">Top Content</h2>
 
-          {/* Last profile viewer */}
-          <section
-            style={{
-              background: 'white',
-              borderRadius: 12,
-              padding: UI.CARD_PAD,
-              boxShadow: '0 2px 6px rgba(0,0,0,0.06)',
-              border: '1px solid #eee',
-              display: 'grid',
-              gap: 6,
-            }}
-          >
-            <h2 style={{ color: '#FF7043', margin: 0 }}>Last Profile Viewer</h2>
-            <div style={{ color: '#263238', fontWeight: 700 }}>{analytics.lastProfileViewer.name}</div>
-            <a
-              href={analytics.lastProfileViewer.profileUrl + (isCoachChrome ? '?chrome=coach' : '')}
-              style={{ color: '#FF7043', fontWeight: 700, textDecoration: 'none' }}
-            >
-              See all profile views →
-            </a>
-          </section>
+              <div className="grid gap-1.5">
+                <strong className="text-[#263238]">Highest Viewed Post</strong>
+                <a
+                  href={analytics.highestViewedPost.url + (isCoachChrome ? '?chrome=coach' : '')}
+                  className="text-[#FF7043] font-bold no-underline"
+                >
+                  {analytics.highestViewedPost.title}
+                </a>
+                <small className="text-[#607D8B]">
+                  {analytics.highestViewedPost.views.toLocaleString()} views
+                </small>
+              </div>
 
-          {/* Top content */}
-          <section
-            style={{
-              background: 'white',
-              borderRadius: 12,
-              padding: UI.CARD_PAD,
-              boxShadow: '0 2px 6px rgba(0,0,0,0.06)',
-              border: '1px solid #eee',
-              display: 'grid',
-              gap: 12,
-            }}
-          >
-            <h2 style={{ color: '#FF7043', margin: 0 }}>Top Content</h2>
+              <div className="grid gap-1.5">
+                <strong className="text-[#263238]">Highest Liked Comment</strong>
+                <p className="text-[#455A64] m-0 italic">
+                  “{analytics.highestViewedComment.snippet}”
+                </p>
+                <a
+                  href={analytics.highestViewedComment.url + (isCoachChrome ? '?chrome=coach' : '')}
+                  className="text-[#FF7043] font-bold no-underline"
+                >
+                  View comment
+                </a>
+                <small className="text-[#607D8B]">
+                  {analytics.highestViewedComment.likes.toLocaleString()} likes
+                </small>
+              </div>
+            </section>
 
-            <div style={{ display: 'grid', gap: 6 }}>
-              <strong style={{ color: '#263238' }}>Highest Viewed Post</strong>
+            {/* Back to Profile */}
+            <section className="bg-white border border-gray-200 rounded-xl shadow-sm p-4 flex items-center justify-between">
+              <div className="text-[#607D8B]">
+                Review and refine your profile sections to improve engagement.
+              </div>
               <a
-                href={analytics.highestViewedPost.url + (isCoachChrome ? '?chrome=coach' : '')}
-                style={{ color: '#FF7043', fontWeight: 700, textDecoration: 'none' }}
+                href={'/profile' + (isCoachChrome ? '?chrome=coach' : '')}
+                className="bg-[#FF7043] text-white rounded-lg px-3 py-2 font-bold no-underline"
               >
-                {analytics.highestViewedPost.title}
+                Back to Profile
               </a>
-              <small style={{ color: '#607D8B' }}>
-                {analytics.highestViewedPost.views.toLocaleString()} views
-              </small>
-            </div>
+            </section>
+          </div>
 
-            <div style={{ display: 'grid', gap: 6 }}>
-              <strong style={{ color: '#263238' }}>Highest Liked Comment</strong>
-              <p style={{ color: '#455A64', margin: 0, fontStyle: 'italic' }}>
-                “{analytics.highestViewedComment.snippet}”
-              </p>
-              <a
-                href={analytics.highestViewedComment.url + (isCoachChrome ? '?chrome=coach' : '')}
-                style={{ color: '#FF7043', fontWeight: 700, textDecoration: 'none' }}
-              >
-                View comment
-              </a>
-              <small style={{ color: '#607D8B' }}>
-                {analytics.highestViewedComment.likes.toLocaleString()} likes
-              </small>
-            </div>
-          </section>
-
-          {/* Back to Profile */}
-          <section
-            style={{
-              background: 'white',
-              borderRadius: 12,
-              padding: UI.CARD_PAD,
-              boxShadow: '0 2px 6px rgba(0,0,0,0.06)',
-              border: '1px solid #eee',
-              display: 'flex',
-              justifyContent: 'space-between',
-              alignItems: 'center',
-            }}
-          >
-            <div style={{ color: '#607D8B' }}>
-              Review and refine your profile sections to improve engagement.
-            </div>
-            <a
-              href={'/profile' + (isCoachChrome ? '?chrome=coach' : '')}
-              style={{
-                background: '#FF7043',
-                color: 'white',
-                borderRadius: 10,
-                padding: '8px 12px',
-                fontWeight: 700,
-                textDecoration: 'none',
-              }}
-            >
-              Back to Profile
-            </a>
-          </section>
+          {/* ===== Sidebar ===== */}
+          <aside className="lg:col-span-4 grid gap-4 md:gap-6">
+            <ProfileCompletionCard
+              completionPct={analytics.profileCompletionPct}
+              checklist={analytics.profileChecklist}
+            />
+            <ConnectionsMiniChart
+              labels={analytics.daysLabels}
+              data={analytics.connectionsLast7Days}
+            />
+            <RecentViewers viewers={analytics.recentViewers} allViewsHref={allViewsHref} />
+          </aside>
         </div>
       </Layout>
     </>
-  );
-}
-
-/* ---- Tiny UI helpers ---- */
-function KPI({ label, value }) {
-  return (
-    <div
-      style={{
-        background: '#FFFFFF',
-        border: '1px solid #eee',
-        borderRadius: 10,
-        padding: 12,
-        minHeight: 70,
-        display: 'grid',
-        gap: 4,
-      }}
-    >
-      <div style={{ fontSize: 12, color: '#607D8B', fontWeight: 600 }}>{label}</div>
-      <div style={{ fontSize: 22, fontWeight: 800, color: '#263238' }}>{value}</div>
-    </div>
   );
 }
