@@ -43,18 +43,31 @@ const styles = StyleSheet.create({
 const safe = (v) => (v == null ? '' : String(v).trim());
 const nonEmpty = (v) => safe(v).length > 0;
 const joinBar = (...vals) => vals.map(safe).filter(Boolean).join(' · ');
-const joinDash = (a, b) => {
-  const start = safe(a);
-  const end = safe(b);
-  if (!start && !end) return '';
-  if (start && end) return `${start} – ${end}`;
-  return start || end;
+
+// NEW: format YYYY-MM and present fallback
+const fmtMonth = (iso) => {
+  const s = safe(iso);
+  if (!s) return '';
+  // accept "YYYY-MM" or "YYYY-MM-DD" → slice to YYYY-MM
+  return s.length >= 7 ? s.slice(0, 7) : s;
 };
+const fmtRange = (start, end) => {
+  const a = fmtMonth(start);
+  const b = nonEmpty(end) ? fmtMonth(end) : 'Present';
+  if (!a && !b) return '';
+  if (a && b) return `${a} – ${b}`;
+  return a || b;
+};
+
 const splitLines = (txt) =>
   safe(txt)
     .split('\n')
     .map((l) => l.trim())
     .filter(Boolean);
+
+const toStringArray = (arr) =>
+  Array.isArray(arr) ? arr.map(safe).filter(Boolean) : [];
+
 const hasAnyFields = (obj, fields) => fields.some((f) => nonEmpty(obj?.[f]));
 const stackWithRules = (nodes, keyPrefix = 's') =>
   nodes.reduce((acc, node, idx) => {
@@ -84,7 +97,17 @@ export default function StyledResumePDF({
   // Filter/normalize data
   const filledExperiences = Array.isArray(experiences)
     ? experiences.filter((exp) =>
-        hasAnyFields(exp, ['jobTitle', 'company', 'location', 'startDate', 'endDate', 'description'])
+        // include if it has core fields OR any bullets/highlights/description
+        hasAnyFields(exp, [
+          'jobTitle',
+          'company',
+          'location',
+          'startDate',
+          'endDate',
+          'description',
+        ]) ||
+        (Array.isArray(exp?.bullets) && exp.bullets.length > 0) ||
+        (Array.isArray(exp?.highlights) && exp.highlights.length > 0)
       )
     : [];
 
@@ -147,9 +170,18 @@ export default function StyledResumePDF({
         {filledExperiences.map((exp, i) => {
           const title = safe(exp?.jobTitle);
           const company = safe(exp?.company);
-          const dateRange = joinDash(exp?.startDate, exp?.endDate);
+          const dateRange = fmtRange(exp?.startDate, exp?.endDate); // <-- formatted with Present
           const metaPieces = [safe(exp?.location), dateRange].filter(Boolean);
-          const bullets = splitLines(exp?.description);
+
+          // NEW: merge bullets from description + bullets[] + highlights[]
+          const bulletsFromDescription = splitLines(exp?.description);
+          const bulletsFromArray = toStringArray(exp?.bullets);
+          const bulletsFromHighlights = toStringArray(exp?.highlights);
+          const bullets = [
+            ...bulletsFromDescription,
+            ...bulletsFromArray,
+            ...bulletsFromHighlights,
+          ].filter(Boolean);
 
           return (
             <View key={i} style={styles.itemBlock}>
@@ -160,11 +192,13 @@ export default function StyledResumePDF({
                 </Text>
               ) : null}
               {metaPieces.length > 0 ? <Text style={styles.meta}>{metaPieces.join(' • ')}</Text> : null}
-              {bullets.map((b, idx) => (
-                <Text key={idx} style={styles.bullet}>
-                  • {b}
-                </Text>
-              ))}
+              {bullets.length > 0
+                ? bullets.map((b, idx) => (
+                    <Text key={idx} style={styles.bullet}>
+                      • {b}
+                    </Text>
+                  ))
+                : null}
             </View>
           );
         })}
@@ -191,7 +225,7 @@ export default function StyledResumePDF({
         {filledVol.map((v, i) => {
           const role = safe(v?.role);
           const org = safe(v?.organization);
-          const dateRange = joinDash(v?.startDate, v?.endDate);
+          const dateRange = fmtRange(v?.startDate, v?.endDate); // <-- formatted
           return (
             <View key={i} style={styles.itemBlock}>
               {(role || org) ? (
@@ -215,7 +249,7 @@ export default function StyledResumePDF({
         {filledEdu.map((e, i) => {
           const degree = safe(e?.degree);
           const school = safe(e?.school);
-          const dateRange = joinDash(e?.startDate, e?.endDate);
+          const dateRange = fmtRange(e?.startDate, e?.endDate); // <-- formatted
           return (
             <View key={i} style={styles.itemBlock}>
               {(degree || school) ? (
@@ -359,7 +393,11 @@ export default function StyledResumePDF({
         <View style={styles.headerBlock}>
           <Text style={styles.name}>{nonEmpty(formData.fullName) ? safe(formData.fullName) : 'Your Name'}</Text>
           {nonEmpty(formData.role) ? <Text style={styles.title}>{safe(formData.role)}</Text> : null}
-          {nonEmpty(contactLine) ? <Text style={styles.contact}>{contactLine}</Text> : null}
+          {nonEmpty(joinBar(safe(formData.location), safe(formData.email), safe(formData.phone), safe(formData.portfolio))) ? (
+            <Text style={styles.contact}>
+              {joinBar(safe(formData.location), safe(formData.email), safe(formData.phone), safe(formData.portfolio))}
+            </Text>
+          ) : null}
         </View>
 
         {/* Body based on templateId */}
