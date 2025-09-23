@@ -4,8 +4,6 @@ import dynamic from 'next/dynamic';
 import { useRouter } from 'next/router';
 
 import SeekerLayout from '@/components/layouts/SeekerLayout';
-import SeekerRightColumn from '@/components/seeker/SeekerRightColumn';
-
 import { ResumeContext } from '@/context/ResumeContext';
 
 import ContactInfoSection from '@/components/resume-form/ContactInfoSection';
@@ -30,10 +28,7 @@ import AtsCheckBadge from '@/components/resume-form/AtsCheckBadge';
 import AtsPreviewModal from '@/components/resume-form/AtsPreviewModal';
 import SmartExportMenu from '@/components/resume-form/export/SmartExportMenu';
 
-// NOTE: SectionGroup removed on purpose to avoid the “global chevron”
-// import SectionGroup from '@/components/resume/create/SectionGroup';
-
-import { resumeTemplates, getResumeTemplateComponent } from '@/lib/templates';
+import { getResumeTemplateComponent } from '@/lib/templates';
 import { matchTemplate } from '@/lib/ai/matchTemplate';
 
 import ApplySteps from '@/components/apply/ApplySteps';
@@ -226,7 +221,21 @@ export default function CreateResumePage() {
     saveEventAt,
   } = useContext(ResumeContext);
 
-  const [templateId, setTemplateId] = useState(() => String(router.query?.template || 'modern'));
+  // ---- ONLY show ATS-safe options in UI
+  const ALLOWED_TEMPLATE_IDS = ['reverse', 'hybrid'];
+
+  // Always render these two choices in the UI (labels guaranteed)
+  const TEMPLATE_CHOICES = [
+    { id: 'reverse', name: 'Reverse (Default)' },
+    { id: 'hybrid',  name: 'Hybrid (Combination)' },
+  ];
+
+  // Default template is 'reverse' (coerce anything else to reverse)
+  const [templateId, setTemplateId] = useState(() => {
+    const t = String(router.query?.template || 'reverse');
+    return ALLOWED_TEMPLATE_IDS.includes(t) ? t : 'reverse';
+  });
+
   const [TemplateComp, setTemplateComp] = useState(null);
 
   const [showToast, setShowToast] = useState(false);
@@ -256,7 +265,7 @@ export default function CreateResumePage() {
     } catch {}
   }, []);
 
-  // Ingest seed
+  // Ingest seed from localStorage (if empty form)
   useEffect(() => {
     try {
       const raw = localStorage.getItem('ft_resume_seed');
@@ -292,7 +301,10 @@ export default function CreateResumePage() {
       if (Array.isArray(seed?.achievements)) setAchievements(seed.achievements);
       if (Array.isArray(seed?.customSections)) setCustomSections(seed.customSections);
 
-      if (seed?.templateId) setTemplateId(String(seed.templateId));
+      if (seed?.templateId) {
+        const picked = String(seed.templateId);
+        setTemplateId(ALLOWED_TEMPLATE_IDS.includes(picked) ? picked : 'reverse');
+      }
 
       seededRef.current = true;
       localStorage.removeItem('ft_resume_seed');
@@ -306,7 +318,10 @@ export default function CreateResumePage() {
   useEffect(() => {
     const t = router.query?.template;
     if (!t || seededRef.current) {
-      if (t) setTemplateId(String(t));
+      if (t) {
+        const picked = String(t);
+        setTemplateId(ALLOWED_TEMPLATE_IDS.includes(picked) ? picked : 'reverse');
+      }
       return;
     }
 
@@ -323,7 +338,7 @@ export default function CreateResumePage() {
       (customSections?.length ?? 0) === 0;
 
     if (!isEmpty) {
-      setTemplateId(String(t));
+      setTemplateId(ALLOWED_TEMPLATE_IDS.includes(String(t)) ? String(t) : 'reverse');
       return;
     }
 
@@ -341,7 +356,7 @@ export default function CreateResumePage() {
     setCustomSections(Array.isArray(doc?.sections?.custom?.items) ? doc.sections.custom.items : customSections || []);
 
     seededRef.current = true;
-    setTemplateId(String(t));
+    setTemplateId(ALLOWED_TEMPLATE_IDS.includes(String(t)) ? String(t) : 'reverse');
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [router.query?.template]);
 
@@ -350,13 +365,20 @@ export default function CreateResumePage() {
     let mounted = true;
     (async () => {
       try {
-        const Comp = await getResumeTemplateComponent(templateId || 'modern');
+        const Comp = await getResumeTemplateComponent(templateId || 'reverse');
         if (mounted) setTemplateComp(() => Comp);
       } catch {
         if (mounted) setTemplateComp(null);
       }
     })();
     return () => { mounted = false; };
+  }, [templateId]);
+
+  // If templateId drifts to something not allowed (defensive), coerce back
+  useEffect(() => {
+    if (!ALLOWED_TEMPLATE_IDS.includes(templateId)) {
+      setTemplateId('reverse');
+    }
   }, [templateId]);
 
   // Dock modals
@@ -374,12 +396,25 @@ export default function CreateResumePage() {
     return () => clearTimeout(t);
   }, [saveEventAt]);
 
-  // Right rail
+  // (2B) Listen for “open education” signal from AtsDepthPanel and scroll to the editor
+  useEffect(() => {
+    const handler = () => {
+      setOpenReq(true);
+      setReqOpen(s => ({ ...s, education: true }));
+      setTimeout(() => {
+        const el = document.getElementById('education-section');
+        if (el?.scrollIntoView) el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      }, 60);
+    };
+    window.addEventListener('ft-open-education', handler);
+    return () => window.removeEventListener('ft-open-education', handler);
+  }, []);
+
+  // Right rail (reordered & simplified)
   const RightPane = (
     <div style={{ display: 'grid', gap: 12, width: '100%', boxSizing: 'border-box' }}>
-      <SeekerRightColumn variant="creator" />
+      {/* ATS status + preview */}
       <div
-        id="export"
         style={{
           background: 'white',
           border: '1px solid #eee',
@@ -407,8 +442,7 @@ export default function CreateResumePage() {
           </button>
         </div>
 
-        <SnapshotControls compact />
-
+        {/* Export box */}
         <div
           style={{
             background: '#FAFAFA',
@@ -423,6 +457,7 @@ export default function CreateResumePage() {
             Export / Download
           </div>
           <ClientPDFButton
+            templateId={templateId}
             formData={formData}
             summary={summary}
             experiences={experiences}
@@ -434,13 +469,10 @@ export default function CreateResumePage() {
             skills={skills}
             achievements={achievements}
             customSections={customSections}
-            coverStorageKey="ft_cover_draft"
-            defaultCombined={true}
-            defaultOrder="resume-first"
-            defaultAtsMode={true}
             className="bg-[#FF7043] hover:bg-[#F4511E] text-white py-1.5 px-3 rounded text-sm"
           />
           <SmartExportMenu
+            templateId={templateId}
             formData={formData}
             summary={summary}
             experiences={experiences}
@@ -455,13 +487,12 @@ export default function CreateResumePage() {
             coverStorageKey="ft_cover_draft"
           />
         </div>
+
+        {/* Snapshot moved below exports */}
+        <SnapshotControls compact />
       </div>
 
-      <DockItem
-        title="Job Match Analyzer"
-        subtitle="Paste a JD and see matched/missing keywords plus a match score."
-        onOpen={() => setOpenAnalyzer(true)}
-      />
+      {/* Tools */}
       <DockItem
         title="Tailor (Local)"
         subtitle="Generate a summary & bullets aligned to the JD—no API required."
@@ -592,6 +623,8 @@ export default function CreateResumePage() {
     </section>
   );
 
+  const templateOptions = useMemo(() => TEMPLATE_CHOICES, []);
+
   return (
     <SeekerLayout
       title="Create Resume | ForgeTomorrow"
@@ -601,7 +634,7 @@ export default function CreateResumePage() {
     >
       {/* CENTER COLUMN CONTENT */}
       <div style={{ display: 'grid', gap: 16 }}>
-        {/* 1) TEMPLATE SELECTOR — under the title card */}
+        {/* 1) TEMPLATE SELECTOR */}
         <section
           style={{
             background: 'white',
@@ -627,7 +660,7 @@ export default function CreateResumePage() {
                 outline: 'none',
               }}
             >
-              {resumeTemplates.map(t => (
+              {templateOptions.map(t => (
                 <option key={t.id} value={t.id}>{t.name}</option>
               ))}
             </select>
@@ -638,7 +671,8 @@ export default function CreateResumePage() {
                 try {
                   const jobText = localStorage.getItem('ft_last_job_text') || '';
                   const result = await matchTemplate({ jobText, profile: { summary, skills } });
-                  if (result?.resumeId) setTemplateId(result.resumeId);
+                  const rid = String(result?.resumeId || '');
+                  if (ALLOWED_TEMPLATE_IDS.includes(rid)) setTemplateId(rid);
                 } catch {}
               }}
               style={{
@@ -657,11 +691,11 @@ export default function CreateResumePage() {
           </div>
 
           <div style={{ marginTop: 8, fontSize: 12, color: '#607D8B' }}>
-            Tip: Open with <code>?template=modern|classic|formal|impact</code> to seed & select automatically.
+            Tip: Open with <code>?template=reverse|hybrid</code> to seed &amp; select automatically.
           </div>
         </section>
 
-        {/* 2) JD card — paste + import */}
+        {/* 2) JD card */}
         <section
           ref={dropRef}
           style={{
@@ -729,7 +763,8 @@ export default function CreateResumePage() {
                 try { localStorage.setItem('ft_last_job_text', v); } catch {}
                 try {
                   const result = await matchTemplate({ jobText: v, profile: { summary, skills } });
-                  if (result?.resumeId) setTemplateId(result.resumeId);
+                  const rid = String(result?.resumeId || '');
+                  if (ALLOWED_TEMPLATE_IDS.includes(rid)) setTemplateId(rid);
                 } catch {}
                 setOpenTailor(true);
               }}
@@ -747,7 +782,7 @@ export default function CreateResumePage() {
           <div style={{ fontSize: 12, color: '#90A4AE' }}>Tip: Drag & drop a JD file anywhere on this card.</div>
         </section>
 
-        {/* 3) ATS Depth — internal chevron only, collapsed by default via component prop */}
+        {/* 3) ATS Depth */}
         <section
           style={{
             background: 'white',
@@ -762,14 +797,19 @@ export default function CreateResumePage() {
             summary={summary}
             skills={skills}
             experiences={experiences}
+            education={educationList}
             onAddSkill={addSkill}
-            onAddSummary={addSummary}
+            onAddSummary={(phrase) => {
+              const sep = summary?.trim() ? ' ' : '';
+              const next = (summary || '') + sep + phrase;
+              setSummary(next);
+            }}
             onAddBullet={addBullet}
             collapsedDefault={true}
           />
         </section>
 
-        {/* 4) REQUIRED — group header (closed by default) */}
+        {/* 4) REQUIRED */}
         <section className="bg-white rounded-xl border border-slate-200 shadow-sm">
           <button
             type="button"
@@ -799,13 +839,20 @@ export default function CreateResumePage() {
                 <WorkExperienceSection embedded experiences={experiences} setExperiences={setExperiences} />
               </RowCollapser>
 
-              <RowCollapser
-                title="Education"
-                open={reqOpen.education}
-                onToggle={() => setReqOpen(s => ({ ...s, education: !s.education }))}
-              >
-                <EducationSection embedded educationList={educationList} setEducationList={setEducationList} />
-              </RowCollapser>
+{/* Education */}
+<div id="education-section">
+  <RowCollapser
+    title="Education"
+    open={reqOpen.education}
+    onToggle={() => setReqOpen(s => ({ ...s, education: !s.education }))}
+  >
+    <EducationSection
+      embedded
+      educationList={educationList}
+      setEducationList={setEducationList}
+    />
+  </RowCollapser>
+</div>
 
               <RowCollapser
                 title="Skills / Keywords"
@@ -818,7 +865,7 @@ export default function CreateResumePage() {
           )}
         </section>
 
-        {/* 5) RECOMMENDED — group header (closed by default) */}
+        {/* 5) RECOMMENDED */}
         <section className="bg-white rounded-xl border border-slate-200 shadow-sm">
           <button
             type="button"
@@ -955,6 +1002,7 @@ export default function CreateResumePage() {
       >
         {TemplateComp ? (
           <TemplateComp
+            key={`preview-${templateId}`}
             data={{
               formData, summary, experiences, projects, volunteerExperiences,
               educationList, certifications, languages, skills, achievements, customSections
@@ -962,6 +1010,7 @@ export default function CreateResumePage() {
           />
         ) : (
           <ResumePreview
+            key="preview-fallback"
             formData={formData}
             summary={summary}
             experiences={experiences}

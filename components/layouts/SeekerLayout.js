@@ -25,9 +25,9 @@ export default function SeekerLayout({
   activeNav,
   forceChrome,                 // 'seeker' | 'coach' | 'recruiter-smb' | 'recruiter-ent'
   rightVariant = 'dark',       // 'dark' | 'light'
-  rightWidth = 260,            // ↓ defaults tuned for wider center
+  rightWidth = 260,            // width for right rail (px)
   gap = 12,
-  pad = 16,
+  pad = 16,                    // base padding
 }) {
   const counts = useSidebarCounts();
   const router = useRouter();
@@ -86,6 +86,16 @@ export default function SeekerLayout({
     boxShadow: 'none',
   };
 
+  // Compute asymmetric page padding:
+  // - Keep normal left/top/bottom padding
+  // - Slightly reduce the RIGHT padding when a right rail is present to “tighten the edge”
+  const containerPadding = {
+    paddingTop: pad,
+    paddingBottom: pad,
+    paddingLeft: pad,
+    paddingRight: right ? Math.max(8, pad - 4) : pad,
+  };
+
   return (
     <>
       <Head><title>{title}</title></Head>
@@ -93,23 +103,24 @@ export default function SeekerLayout({
       {/* Top chrome header */}
       <HeaderComp />
 
-      {/* Main 3-column layout */}
+      {/* Main layout shell */}
       <div
         style={{
           display: 'grid',
-          gridTemplateColumns: `240px minmax(820px, 1fr) ${rightWidth}px`,
+          gridTemplateColumns: `240px minmax(0, 1fr) ${right ? `${rightWidth}px` : '0px'}`,
           gridTemplateRows: 'auto 1fr',
-          gridTemplateAreas: `
-            "left header right"
-            "left content right"
-          `,
+          gridTemplateAreas: right
+            ? `"left header right"
+               "left content right"`
+            : `"left header header"
+               "left content content"`,
           gap,
-          padding: pad,
+          ...containerPadding,
           alignItems: 'start',
         }}
       >
         {/* LEFT — Sidebar */}
-        <aside style={{ gridArea: 'left', alignSelf: 'start' }}>
+        <aside style={{ gridArea: 'left', alignSelf: 'start', minWidth: 0 }}>
           {left ? left : <SidebarComp {...sidebarProps} />}
         </aside>
 
@@ -118,10 +129,12 @@ export default function SeekerLayout({
           {header}
         </header>
 
-        {/* RIGHT — Variant-controlled rail */}
-        <aside style={{ ...rightBase, ...(rightVariant === 'light' ? rightLight : rightDark) }}>
-          {right}
-        </aside>
+        {/* RIGHT — Variant-controlled rail (render only if provided) */}
+        {right ? (
+          <aside style={{ ...rightBase, ...(rightVariant === 'light' ? rightLight : rightDark) }}>
+            {right}
+          </aside>
+        ) : null}
 
         {/* CONTENT (center) */}
         <main style={{ gridArea: 'content', minWidth: 0 }}>

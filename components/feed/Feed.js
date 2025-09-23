@@ -2,10 +2,15 @@ import { useEffect, useState } from "react";
 import PostComposer from "./PostComposer";
 import PostList from "./PostList";
 
+// identify the signed-in user (stub for now)
+const currentUserId = "me";
+const currentUserName = "You";
+
 // seed
 const initialPosts = [
   {
     id: "p1",
+    authorId: "u1",
     author: "Alex T.",
     createdAt: Date.now() - 1000 * 60 * 6,
     body:
@@ -16,6 +21,7 @@ const initialPosts = [
   },
   {
     id: "p2",
+    authorId: "u2",
     author: "Priya N.",
     createdAt: Date.now() - 1000 * 60 * 45,
     body: "Weekend hike was perfect 🌲",
@@ -40,8 +46,19 @@ export default function Feed() {
   }, [pinnedId]);
 
   const handleNewPost = (post) => {
-    setPosts((prev) => [post, ...prev]);
-    setPinnedId(post.id);
+    // ensure new posts are attributed to the current user
+    const safePost = {
+      authorId: currentUserId,
+      author: currentUserName,
+      createdAt: Date.now(),
+      type: "business",
+      likes: 0,
+      comments: [],
+      ...post, // allow composer to override if it already sets these
+    };
+
+    setPosts((prev) => [safePost, ...prev]);
+    setPinnedId(safePost.id);
     setShowComposer(false);
   };
 
@@ -49,10 +66,17 @@ export default function Feed() {
     setPosts((prev) =>
       prev.map((p) =>
         p.id === postId
-          ? { ...p, comments: [...p.comments, { by: "You", text }] }
+          ? { ...p, comments: [...p.comments, { by: currentUserName, text }] }
           : p
       )
     );
+  };
+
+  // delete handler (optimistic)
+  const handleDelete = (postId) => {
+    if (!confirm("Delete this post? This cannot be undone.")) return;
+    setPosts((prev) => prev.filter((p) => p.id !== postId));
+    // If you add an API route, call it here and optionally rollback on failure.
   };
 
   // lock body scroll when composer is open
@@ -111,6 +135,8 @@ export default function Feed() {
         filter={filter}
         pinnedId={pinnedId}
         onReply={handleReply}
+        onDelete={handleDelete}
+        currentUserId={currentUserId}   // ← pass current user id down
       />
 
       {/* composer overlay */}

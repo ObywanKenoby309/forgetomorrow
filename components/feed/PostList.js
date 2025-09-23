@@ -1,7 +1,10 @@
-// components/feed/PostList.js
 import { useMemo, useState } from "react";
+import dynamic from "next/dynamic";
 
-// Small helpers
+// Hydration-safe "Xm ago" (renders client-only)
+const RelativeTime = dynamic(() => import("@/components/RelativeTime"), { ssr: false });
+
+// (kept for other uses)
 const timeAgo = (ts) => {
   const diff = Math.max(0, Date.now() - ts);
   const m = Math.floor(diff / 60000);
@@ -22,7 +25,6 @@ function AttachmentGallery({ attachments = [] }) {
 
   return (
     <div className="mt-3 space-y-3">
-      {/* Images grid */}
       {images.length > 0 && (
         <div
           className={`grid gap-2 ${
@@ -41,7 +43,6 @@ function AttachmentGallery({ attachments = [] }) {
         </div>
       )}
 
-      {/* Videos (stacked) */}
       {videos.length > 0 && (
         <div className="grid gap-2">
           {videos.map((v, i) => (
@@ -55,7 +56,6 @@ function AttachmentGallery({ attachments = [] }) {
         </div>
       )}
 
-      {/* Links (stacked simple preview) */}
       {links.length > 0 && (
         <div className="grid gap-2">
           {links.map((l, i) => (
@@ -76,7 +76,7 @@ function AttachmentGallery({ attachments = [] }) {
   );
 }
 
-function PostCard({ post, isPinned, onReply }) {
+function PostCard({ post, isPinned, onReply, onDelete, currentUserId }) {
   const [showReactions, setShowReactions] = useState(false);
   const [reply, setReply] = useState("");
 
@@ -86,6 +86,8 @@ function PostCard({ post, isPinned, onReply }) {
     onReply?.(post.id, t);
     setReply("");
   };
+
+  const canDelete = Boolean(onDelete) && post.authorId === currentUserId;
 
   return (
     <article
@@ -99,25 +101,39 @@ function PostCard({ post, isPinned, onReply }) {
             {post.author}
           </div>
           <div className="text-xs text-gray-500">
-            {timeAgo(post.createdAt)} • {post.type === "business" ? "Professional" : "Personal"}
+            <time dateTime={new Date(post.createdAt).toISOString()} aria-label={new Date(post.createdAt).toLocaleString()}>
+              <RelativeTime iso={new Date(post.createdAt).toISOString()} />
+            </time>
+            {" • "}
+            {post.type === "business" ? "Professional" : "Personal"}
           </div>
         </div>
 
-        {/* Report post */}
-        <button
-          className="text-xs px-2 py-1 border rounded hover:bg-gray-50"
-          onClick={() => alert("Report submitted — thank you.")}
-        >
-          Report post
-        </button>
+        <div className="flex items-center gap-2">
+          <button
+            className="text-xs px-2 py-1 border rounded hover:bg-gray-50"
+            onClick={() => alert("Report submitted — thank you.")}
+          >
+            Report post
+          </button>
+
+          {canDelete && (
+            <button
+              className="text-xs px-2 py-1 border rounded hover:bg-red-50 text-red-600 border-red-300"
+              onClick={() => onDelete(post.id)}
+              aria-label={`Delete post by ${post.author}`}
+              title="Delete post"
+            >
+              Delete
+            </button>
+          )}
+        </div>
       </header>
 
       <div className="mt-3 whitespace-pre-wrap text-gray-900">{post.body}</div>
 
-      {/* Attachments */}
       <AttachmentGallery attachments={post.attachments} />
 
-      {/* Footer actions */}
       <div className="mt-3 flex items-center gap-2">
         <button
           type="button"
@@ -144,7 +160,6 @@ function PostCard({ post, isPinned, onReply }) {
         )}
       </div>
 
-      {/* Comments */}
       {post.comments?.length > 0 && (
         <div className="mt-3 space-y-1">
           {post.comments.map((c, i) => (
@@ -156,7 +171,6 @@ function PostCard({ post, isPinned, onReply }) {
         </div>
       )}
 
-      {/* Reply box */}
       <div className="mt-3 flex items-center gap-2">
         <input
           value={reply}
@@ -182,7 +196,14 @@ function PostCard({ post, isPinned, onReply }) {
   );
 }
 
-export default function PostList({ posts = [], filter = "both", pinnedId, onReply }) {
+export default function PostList({
+  posts = [],
+  filter = "both",
+  pinnedId,
+  onReply,
+  onDelete,
+  currentUserId,
+}) {
   const filtered = useMemo(() => {
     if (filter === "both") return posts;
     return posts.filter((p) => p.type === (filter === "business" ? "business" : "personal"));
@@ -204,6 +225,8 @@ export default function PostList({ posts = [], filter = "both", pinnedId, onRepl
           post={p}
           isPinned={pinnedId === p.id}
           onReply={onReply}
+          onDelete={onDelete}
+          currentUserId={currentUserId}
         />
       ))}
     </div>

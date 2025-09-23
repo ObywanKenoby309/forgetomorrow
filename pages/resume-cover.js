@@ -1,8 +1,9 @@
 // pages/resume-cover.js
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useRef, useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/router';
 import SeekerLayout from '@/components/layouts/SeekerLayout';
+import ResumeRightRail from '@/components/resume/ResumeRightRail';
 
 const ORANGE = '#FF7043';
 const SLATE = '#455A64';
@@ -53,11 +54,18 @@ function SoftLink({ href, onClick, children }) {
   return <button type="button" onClick={onClick} style={style}>{children}</button>;
 }
 
+// Only the two ATS-recommended templates
 const TEMPLATES = [
-  { key: 'modern', name: 'Modern', tagline: 'Clean, ATS-safe. Great for most roles.' },
-  { key: 'classic', name: 'Classic', tagline: 'Traditional layout, clear sections.' },
-  { key: 'formal',  name: 'Formal',  tagline: 'Conservative look for regulated fields.' },
-  { key: 'impact',  name: 'Impact',  tagline: 'Bold headings; best when experience is strong.' },
+  {
+    key: 'reverse',
+    name: 'Reverse (Default)',
+    tagline: 'Safest for ATS: clear roles, companies, dates, and results.',
+  },
+  {
+    key: 'hybrid',
+    name: 'Hybrid (Combination)',
+    tagline: 'Skills & highlights up top, then full reverse-chronological history.',
+  },
 ];
 
 function TemplatePreviewModal({ open, onClose, tpl }) {
@@ -124,58 +132,6 @@ function TemplatePreviewModal({ open, onClose, tpl }) {
   );
 }
 
-function RightRail() {
-  const [recent, setRecent] = useState([]);
-  useEffect(() => {
-    try {
-      const raw = localStorage.getItem('ft_saved_resumes');
-      const list = raw ? JSON.parse(raw) : [];
-      const sorted = Array.isArray(list)
-        ? [...list].sort((a, b) => (b.updatedAt || '').localeCompare(a.updatedAt || ''))
-        : [];
-      setRecent(sorted.slice(0, 3));
-    } catch { setRecent([]); }
-  }, []);
-  return (
-    <div style={{ display: 'grid', gap: 12 }}>
-      <Card>
-        <div style={{ fontWeight: 800, marginBottom: 6 }}>Continue where you left off</div>
-        {recent.length ? (
-          <div style={{ display: 'grid', gap: 8 }}>
-            {recent.map((r) => (
-              <div key={r.id} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8, border: '1px solid #eee', borderRadius: 10, padding: '8px 10px' }}>
-                <div style={{ minWidth: 0 }}>
-                  <div style={{ fontWeight: 700, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-                    {r.fullName || 'Untitled Resume'}
-                  </div>
-                  <div style={{ color: '#78909C', fontSize: 12 }}>
-                    Last updated {new Date(r.updatedAt || Date.now()).toLocaleDateString()}
-                  </div>
-                </div>
-                <Link href="/resume/create" style={{ background: ORANGE, color: 'white', border: '1px solid rgba(0,0,0,0.06)', borderRadius: 10, padding: '8px 10px', fontWeight: 800, textDecoration: 'none', whiteSpace: 'nowrap' }}>
-                  Continue
-                </Link>
-              </div>
-            ))}
-            <Link href="/resume/create" style={{ color: ORANGE, fontWeight: 700, textDecoration: 'none' }}>
-              View all saved versions
-            </Link>
-          </div>
-        ) : (
-          <div style={{ color: '#78909C', fontSize: 14 }}>No saved resumes yet.</div>
-        )}
-      </Card>
-      <Card>
-        <div style={{ fontWeight: 800, marginBottom: 6 }}>Tips</div>
-        <ul style={{ margin: 0, paddingLeft: 18, color: '#607D8B', fontSize: 14, display: 'grid', gap: 6 }}>
-          <li>All templates are ATS-friendly; you can switch anytime.</li>
-          <li>Upload an existing resume if you’d rather improve it.</li>
-        </ul>
-      </Card>
-    </div>
-  );
-}
-
 export default function ResumeCoverLanding() {
   const router = useRouter();
   const fileRef = useRef(null);
@@ -198,7 +154,6 @@ export default function ResumeCoverLanding() {
         Start with a template or upload an existing file. You can add a cover letter later.
       </p>
 
-      {/* --- Aligned hero actions with vertical divider (no dot) --- */}
       <div
         style={{
           display: 'flex',
@@ -208,7 +163,7 @@ export default function ResumeCoverLanding() {
           flexWrap: 'wrap',
         }}
       >
-        <PrimaryButton href="/resume/create?template=modern">Build a Resume</PrimaryButton>
+        <PrimaryButton href="/resume/create?template=reverse">Build a Resume</PrimaryButton>
 
         <div style={{ display: 'inline-flex', alignItems: 'center', gap: 16, height: 38 }}>
           <SoftLink onClick={onUploadClick}>Upload a resume</SoftLink>
@@ -218,6 +173,17 @@ export default function ResumeCoverLanding() {
       </div>
 
       <input ref={fileRef} type="file" accept=".pdf,.doc,.docx,.txt" onChange={onFilePicked} style={{ display: 'none' }} />
+    </Card>
+  );
+
+  const ATSWhyBanner = (
+    <Card style={{ display: 'grid', gap: 6 }}>
+      <div style={{ fontWeight: 800 }}>Why only two resume formats?</div>
+      <div style={{ color: '#607D8B', fontSize: 14, lineHeight: 1.45 }}>
+        Because <strong>Reverse-Chronological</strong> and <strong>Hybrid</strong> are the only layouts consistently
+        passing ATS scans and recruiter reviews. Formats like “Functional” can be misread or flagged. Our goal is your
+        success—not fluff. As ATS improves, we’ll expand responsibly.
+      </div>
     </Card>
   );
 
@@ -251,7 +217,6 @@ export default function ResumeCoverLanding() {
             <div style={{ fontWeight: 800 }}>{tpl.name}</div>
             <div style={{ color: '#607D8B', fontSize: 12 }}>{tpl.tagline}</div>
 
-            {/* slimmer thumb */}
             <div
               style={{
                 height: 80,
@@ -313,12 +278,13 @@ export default function ResumeCoverLanding() {
     <SeekerLayout
       title="Resume & Cover | ForgeTomorrow"
       header={HeaderHero}
-      right={<RightRail />}
-      rightVariant="light"        // ← will take effect once we add the prop in SeekerLayout
-	  rightWidth={270}            // ← will adjust the right rail
+      right={<ResumeRightRail />}
+      rightVariant="light"   // will apply once SeekerLayout supports it
+      rightWidth={270}       // request: use this to fix the gutter in SeekerLayout
       activeNav="resume-cover"
     >
       <CenterWrap>
+        {ATSWhyBanner}
         {TemplatesRow}
       </CenterWrap>
 

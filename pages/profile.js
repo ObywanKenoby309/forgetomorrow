@@ -2,6 +2,7 @@
 import React, { useEffect, useState } from 'react';
 import Head from 'next/head';
 import { useRouter } from 'next/router';
+import Link from 'next/link'; // ← added
 import SeekerLayout from '@/components/layouts/SeekerLayout';
 
 // Self-contained components
@@ -124,6 +125,25 @@ export default function ProfilePage() {
       <p style={{ margin: '6px auto 0', color: '#607D8B', maxWidth: 720 }}>
         Give the community a clear, human overview — your resume provides the deep detail.
       </p>
+      {/* NEW: prominent analytics link */}
+      <div style={{ marginTop: 10 }}>
+        <Link
+          href={withChrome('/profile-analytics')}
+          style={{
+            display: 'inline-block',
+            background: 'white',
+            color: '#FF7043',
+            border: '1px solid #FF7043',
+            borderRadius: 10,
+            padding: '8px 12px',
+            fontWeight: 700,
+            textDecoration: 'none',
+          }}
+          aria-label="View Profile Analytics"
+        >
+          View Profile Analytics →
+        </Link>
+      </div>
     </section>
   );
 

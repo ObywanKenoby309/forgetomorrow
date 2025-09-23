@@ -23,7 +23,7 @@ function Card({ title, children }) {
   );
 }
 
-export default function SeekerRightColumn({ variant = "default" }) {
+export default function SeekerRightColumn({ variant = "default", showShortcuts = true }) {
   // Common shortcuts block
   const Shortcuts = (
     <Card title="Shortcuts">
@@ -47,7 +47,7 @@ export default function SeekerRightColumn({ variant = "default" }) {
     </Card>
   );
 
-  // Feed-only extra cards (previously AdRail)
+  // Feed-only extras
   const Sponsored = (
     <Card title="Sponsored">
       <p className="text-sm text-gray-600">
@@ -72,10 +72,9 @@ export default function SeekerRightColumn({ variant = "default" }) {
     </Card>
   );
 
-  // Layout
   return (
     <div className="grid gap-3">
-      {Shortcuts}
+      {showShortcuts && Shortcuts}
 
       {variant === "feed" && (
         <>
@@ -84,9 +83,6 @@ export default function SeekerRightColumn({ variant = "default" }) {
           {ComingSoon}
         </>
       )}
-
-      {/* Other variants can append their own blocks here, e.g.:
-          {variant === "messages" && <MessagesHelp />} */}
     </div>
   );
 }

@@ -3,150 +3,213 @@
 
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
-import { Document, Page, Text, View, StyleSheet, PDFDownloadLink } from '@react-pdf/renderer';
+import { Document, PDFDownloadLink } from '@react-pdf/renderer';
 
-// ---- layout knobs ----
-const MODAL_MAX_W = 520;           // tweak to 460/480 if you want slimmer
-const MODAL_SIDE_PADDING = 16;     // viewport padding so it never touches edges
-const MODAL_MAX_H = '85vh';        // scroll inside the card if content is taller
+/* Reuse the same two template PDFs we declared in ClientPDFButton */
+import ReactPDF from '@react-pdf/renderer';
 
-// Plain, ATS-safe styles (single column)
-const styles = StyleSheet.create({
+/* Inline copies of the two PDF page components so this menu is self-contained.
+   If you'd rather not duplicate, you can export them from ClientPDFButton and import here. */
+const { Page, Text, View, StyleSheet } = ReactPDF;
+
+const base = StyleSheet.create({
   page: { padding: 36, fontSize: 11, lineHeight: 1.4 },
-  h1: { fontSize: 16, marginBottom: 4, fontWeight: 700 },
-  h2: { fontSize: 12, marginTop: 10, marginBottom: 4, fontWeight: 700 },
-  meta: { color: '#455A64', marginBottom: 6 },
+  h1: { fontSize: 16, marginBottom: 2, fontWeight: 700 },
+  meta: { color: '#455A64', marginBottom: 8 },
+  hr: { borderBottomWidth: 1, borderBottomColor: '#E0E0E0', marginVertical: 8 },
+  h2: { fontSize: 12, marginBottom: 4, fontWeight: 700, color: '#37474F' },
   li: { marginLeft: 12, marginBottom: 2 },
-  row: { marginBottom: 4 },
+  row: { marginBottom: 6 },
 });
 
-function fileSafe(name, fallback = 'Document') {
-  return (name || fallback).trim().replace(/\s+/g, '_').replace(/[^A-Za-z0-9_\-]/g, '');
-}
-
-function ResumeAtsPage({
-  formData = {}, summary = '', experiences = [], projects = [],
-  volunteerExperiences = [], educationList = [], certifications = [],
-  languages = [], skills = [], achievements = [], customSections = [],
-}) {
+function ReversePage(props) {
+  const {
+    formData = {}, summary = '', experiences = [], projects = [],
+    volunteerExperiences = [], educationList = [], certifications = [],
+    languages = [], skills = [], achievements = [], customSections = [],
+  } = props;
   const name = formData?.fullName || formData?.name || 'Your Name';
-  const meta = [formData?.email, formData?.phone, formData?.location].filter(Boolean).join(' · ');
-
+  const meta = [formData?.location, formData?.email, formData?.phone, formData?.portfolio]
+    .filter(Boolean).join(' • ');
   return (
-    <Page size="LETTER" style={styles.page}>
-      <Text style={styles.h1}>{name}</Text>
-      {meta ? <Text style={styles.meta}>{meta}</Text> : null}
+    <Page size="LETTER" style={base.page}>
+      <Text style={base.h1}>{name}</Text>
+      {meta ? <Text style={base.meta}>{meta}</Text> : null}
 
-      {summary ? (<><Text style={styles.h2}>Professional Summary</Text><Text>{summary}</Text></>) : null}
+      {summary ? (<><Text style={base.h2}>Career Summary</Text><Text>{summary}</Text><View style={base.hr} /></>) : null}
 
       {!!experiences?.length && (
         <>
-          <Text style={styles.h2}>Work Experience</Text>
+          <Text style={base.h2}>Professional Experience</Text>
           {experiences.map((e, i) => (
-            <View key={i} style={styles.row}>
-              <Text>{(e?.title || '')}{e?.company ? ` — ${e.company}` : ''}</Text>
-              {e?.dateRange || e?.range ? <Text style={styles.meta}>{e?.dateRange || e?.range}</Text> : null}
-              {(e?.highlights || e?.bullets || []).map((b, j) => <Text key={j} style={styles.li}>• {b}</Text>)}
+            <View key={i} style={base.row}>
+              <Text>{(e?.title || e?.jobTitle || 'Role')}{e?.company ? `, ${e.company}` : ''}</Text>
+              <Text style={base.meta}>
+                {[e?.location, e?.dateRange || e?.range || `${e?.startDate || ''} – ${e?.endDate || 'Present'}`]
+                  .filter(Boolean).join(' • ')}
+              </Text>
+              {(e?.highlights || e?.bullets || (e?.description ? String(e.description).split('\n') : [])).map((b, j) => (
+                <Text key={j} style={base.li}>• {b}</Text>
+              ))}
             </View>
           ))}
+          <View style={base.hr} />
         </>
       )}
 
       {!!projects?.length && (
         <>
-          <Text style={styles.h2}>Projects</Text>
+          <Text style={base.h2}>Projects</Text>
           {projects.map((p, i) => (
-            <Text key={i} style={styles.li}>• {(p?.title || p?.name || 'Project')}{p?.summary ? ` — ${p.summary}` : ''}</Text>
+            <Text key={i} style={base.li}>• {(p?.title || p?.name || 'Project')}{p?.description ? ` — ${p.description}` : ''}</Text>
           ))}
-        </>
-      )}
-
-      {!!volunteerExperiences?.length && (
-        <>
-          <Text style={styles.h2}>Volunteer Experience</Text>
-          {volunteerExperiences.map((v, i) => (
-            <Text key={i} style={styles.li}>• {(v?.title || '')}{v?.organization ? ` — ${v.organization}` : ''}</Text>
-          ))}
+          <View style={base.hr} />
         </>
       )}
 
       {!!educationList?.length && (
         <>
-          <Text style={styles.h2}>Education</Text>
+          <Text style={base.h2}>Education</Text>
           {educationList.map((ed, i) => (
-            <Text key={i} style={styles.li}>• {(ed?.degree || ed?.program || '')}{ed?.institution ? ` — ${ed.institution}` : ''}</Text>
+            <View key={i} style={base.row}>
+              <Text>{(ed?.degree || ed?.program || '')}{ed?.school ? `, ${ed.school}` : (ed?.institution ? `, ${ed?.institution}` : '')}</Text>
+              <Text style={base.meta}>{
+                [ed?.startDate, ed?.endDate].filter(Boolean).join(' – ')
+              }</Text>
+            </View>
           ))}
+          <View style={base.hr} />
         </>
       )}
 
-      {!!skills?.length && (<><Text style={styles.h2}>Skills</Text><Text>{skills.join(', ')}</Text></>)}
-
-      {!!achievements?.length && (
+      {!!languages?.length && (
         <>
-          <Text style={styles.h2}>Achievements</Text>
-          {achievements.map((a, i) => <Text key={i} style={styles.li}>• {a}</Text>)}
+          <Text style={base.h2}>Languages</Text>
+          {languages.map((l, i) => {
+            const obj = typeof l === 'string' ? { language: l } : l || {};
+            const detail = [obj.proficiency || null, obj.years ? `${obj.years} years` : null]
+              .filter(Boolean).join(' | ');
+            return <Text key={i} style={base.li}>• {obj.language || 'Language'}{detail ? ` | ${detail}` : ''}</Text>;
+          })}
+          <View style={base.hr} />
         </>
       )}
 
-      {!!certifications?.length && (
-        <>
-          <Text style={styles.h2}>Certifications</Text>
-          {certifications.map((c, i) => <Text key={i} style={styles.li}>• {c?.name || c}</Text>)}
-        </>
-      )}
-
-      {!!customSections?.length && (
-        <>
-          <Text style={styles.h2}>Additional</Text>
-          {customSections.map((c, i) => <Text key={i} style={styles.li}>• {c?.title || c?.name || 'Item'}</Text>)}
-        </>
-      )}
+      {!!skills?.length && (<><Text style={base.h2}>Skills</Text><Text>{skills.join(', ')}</Text></>)}
     </Page>
   );
 }
 
-function CoverTextPage({ cover }) {
-  const f = cover?.fields || {};
-  const lines = [];
-  if (f.signatureContact) lines.push(f.signatureContact);
-  if (f.recipient || f.company) lines.push([f.recipient, f.company].filter(Boolean).join(', '));
-  if (f.greeting) lines.push(f.greeting);
-  if (f.opening) lines.push(f.opening);
-  if (Array.isArray(f.body)) f.body.filter(Boolean).forEach(b => lines.push(`• ${b}`));
-  if (f.valueProp) lines.push(f.valueProp);
-  if (f.closing) lines.push(f.closing);
-  if (f.signoff) lines.push(f.signoff);
-  if (f.signatureName) lines.push(f.signatureName);
+const hybridStyles = StyleSheet.create({
+  twoCol: { display: 'flex', flexDirection: 'row', gap: 12 },
+  left: { width: '36%' },
+  right: { width: '64%' },
+});
+function HybridPage(props) {
+  const {
+    formData = {}, summary = '', experiences = [], educationList = [],
+    languages = [], skills = [], projects = [],
+  } = props;
+
+  const name = formData?.fullName || formData?.name || 'Your Name';
+  const meta = [formData?.location, formData?.email, formData?.phone, formData?.portfolio]
+    .filter(Boolean).join(' • ');
 
   return (
-    <Page size="LETTER" style={styles.page}>
-      <Text style={styles.h1}>Cover Letter</Text>
-      {lines.length ? lines.map((ln, i) => <Text key={i} style={{ marginBottom: 6 }}>{ln}</Text>)
-                    : <Text>(No cover letter content saved yet.)</Text>}
+    <Page size="LETTER" style={base.page}>
+      <Text style={base.h1}>{name}</Text>
+      {meta ? <Text style={base.meta}>{meta}</Text> : null}
+
+      <View style={hybridStyles.twoCol}>
+        <View style={hybridStyles.left}>
+          {!!summary && (<><Text style={base.h2}>Summary</Text><Text>{summary}</Text><View style={base.hr} /></>)}
+          {!!skills?.length && (<><Text style={base.h2}>Skills</Text><Text>{skills.join(', ')}</Text><View style={base.hr} /></>)}
+          {!!languages?.length && (
+            <>
+              <Text style={base.h2}>Languages</Text>
+              {languages.map((l, i) => {
+                const obj = typeof l === 'string' ? { language: l } : l || {};
+                const detail = [obj.proficiency || null, obj.years ? `${obj.years} years` : null]
+                  .filter(Boolean).join(' | ');
+                return <Text key={i} style={base.li}>• {obj.language || 'Language'}{detail ? ` | ${detail}` : ''}</Text>;
+              })}
+              <View style={base.hr} />
+            </>
+          )}
+          {!!educationList?.length && (
+            <>
+              <Text style={base.h2}>Education</Text>
+              {educationList.map((ed, i) => (
+                <View key={i} style={base.row}>
+                  <Text>{(ed?.degree || ed?.program || '')}{ed?.school ? `, ${ed.school}` : (ed?.institution ? `, ${ed?.institution}` : '')}</Text>
+                  <Text style={base.meta}>{
+                    [ed?.startDate, ed?.endDate].filter(Boolean).join(' – ')
+                  }</Text>
+                </View>
+              ))}
+            </>
+          )}
+        </View>
+
+        <View style={hybridStyles.right}>
+          {!!experiences?.length && (
+            <>
+              <Text style={base.h2}>Experience</Text>
+              {experiences.map((e, i) => (
+                <View key={i} style={base.row}>
+                  <Text>{(e?.title || e?.jobTitle || 'Role')}{e?.company ? `, ${e.company}` : ''}</Text>
+                  <Text style={base.meta}>
+                    {[e?.location, e?.dateRange || e?.range || `${e?.startDate || ''} – ${e?.endDate || 'Present'}`]
+                      .filter(Boolean).join(' • ')}
+                  </Text>
+                  {(e?.highlights || e?.bullets || (e?.description ? String(e.description).split('\n') : [])).map((b, j) => (
+                    <Text key={j} style={base.li}>• {b}</Text>
+                  ))}
+                </View>
+              ))}
+            </>
+          )}
+
+          {!!projects?.length && (
+            <>
+              <Text style={base.h2}>Projects</Text>
+              {projects.map((p, i) => (
+                <Text key={i} style={base.li}>• {(p?.title || p?.name || 'Project')}{p?.description ? ` — ${p.description}` : ''}</Text>
+              ))}
+            </>
+          )}
+        </View>
+      </View>
     </Page>
   );
 }
 
-function CombinedAtsDoc({ order = 'resume-first', resumeProps, cover }) {
-  const children = order === 'cover-first'
-    ? [<CoverTextPage key="c" cover={cover} />, <ResumeAtsPage key="r" {...resumeProps} />]
-    : [<ResumeAtsPage key="r" {...resumeProps} />, <CoverTextPage key="c" cover={cover} />];
+function TemplateDoc({ templateId = 'reverse', resumeProps }) {
+  const children = templateId === 'hybrid'
+    ? [<HybridPage key="p" {...resumeProps} />]
+    : [<ReversePage key="p" {...resumeProps} />];
   return <Document>{children}</Document>;
 }
-function ResumeAtsDoc({ resumeProps }) {
-  return <Document><ResumeAtsPage {...resumeProps} /></Document>;
+
+function fileSafe(name, fallback = 'Document') {
+  return (name || fallback).trim().replace(/\s+/g, '_').replace(/[^A-Za-z0-9_\-]/g, '');
 }
+
+/* ----------------- SmartExportMenu ----------------- */
+const MODAL_MAX_W = 520;
+const MODAL_SIDE_PADDING = 16;
+const MODAL_MAX_H = '85vh';
 
 export default function SmartExportMenu({
   formData = {}, summary = '', experiences = [], projects = [],
   volunteerExperiences = [], educationList = [], certifications = [],
   languages = [], skills = [], achievements = [], customSections = [],
   coverStorageKey = 'ft_cover_draft',
+  templateId = 'reverse', // <<< NEW
 }) {
   const [open, setOpen] = useState(false);
-  const [cover, setCover] = useState(null);
-  const [combined, setCombined] = useState(false);
-  const [order, setOrder] = useState('resume-first');
+  const [cover] = useState(null);          // keeping for future combined export (cover builder)
+  const [order] = useState('resume-first'); // placeholder to keep UI stable if you re-add cover later
 
   // portal root
   const portalRef = useRef(null);
@@ -158,20 +221,6 @@ export default function SmartExportMenu({
     return () => { document.body.removeChild(el); };
   }, []);
 
-  // refresh cover on modal open
-  useEffect(() => {
-    if (!open) return;
-    try {
-      const raw = localStorage.getItem(coverStorageKey);
-      const parsed = raw ? JSON.parse(raw) : null;
-      setCover(parsed || null);
-      setCombined(!!parsed);
-    } catch {
-      setCover(null);
-      setCombined(false);
-    }
-  }, [open, coverStorageKey]);
-
   const resumeProps = useMemo(() => ({
     formData, summary, experiences, projects, volunteerExperiences,
     educationList, certifications, languages, skills, achievements, customSections,
@@ -179,13 +228,8 @@ export default function SmartExportMenu({
       educationList, certifications, languages, skills, achievements, customSections]);
 
   const safeName = fileSafe(formData?.fullName || formData?.name || 'Candidate', 'Candidate');
-  const CombinedDoc = <CombinedAtsDoc order={order} resumeProps={resumeProps} cover={cover} />;
-  const ResumeDoc   = <ResumeAtsDoc resumeProps={resumeProps} />;
-  const combinedName = `${safeName}_${order === 'cover-first' ? 'Cover_Resume' : 'Resume_Cover'}_ATS.pdf`;
-  const resumeName   = `${safeName}_Resume_ATS.pdf`;
-  const combinedDisabled = !cover;
+  const resumeName = `${safeName}_Resume_${templateId}.pdf`;
 
-  // modal (rendered via portal so it's centered on the viewport)
   const modal = !open ? null : (
     <div
       style={{
@@ -200,10 +244,7 @@ export default function SmartExportMenu({
       aria-modal="true"
       role="dialog"
     >
-      <div
-        onClick={() => setOpen(false)}
-        style={{ position: 'absolute', inset: 0, background: 'rgba(0,0,0,0.5)' }}
-      />
+      <div onClick={() => setOpen(false)} style={{ position: 'absolute', inset: 0, background: 'rgba(0,0,0,0.5)' }} />
       <div
         style={{
           position: 'relative',
@@ -222,7 +263,7 @@ export default function SmartExportMenu({
         }}
       >
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-          <div style={{ fontWeight: 800, color: '#37474F' }}>ATS-safe Export</div>
+          <div style={{ fontWeight: 800, color: '#37474F' }}>Export (Template: {templateId})</div>
           <button
             onClick={() => setOpen(false)}
             style={{ background: 'white', border: '1px solid #E0E0E0', borderRadius: 10, padding: '6px 10px', fontWeight: 800, cursor: 'pointer' }}
@@ -231,80 +272,20 @@ export default function SmartExportMenu({
           </button>
         </div>
 
-        <label
-          style={{
-            display: 'flex', alignItems: 'center', gap: 8,
-            border: '1px solid #eee', borderRadius: 10, padding: 10,
-            opacity: combinedDisabled ? 0.7 : 1,
-          }}
-          title={combinedDisabled ? 'No cover saved yet (create on /cover/create).' : undefined}
-        >
-          <input
-            type="checkbox"
-            checked={combined && !combinedDisabled}
-            onChange={(e) => setCombined(e.target.checked)}
-            disabled={combinedDisabled}
-          />
-          <div>
-            <div style={{ fontWeight: 700 }}>Combined PDF (Cover + Resume)</div>
-            <div style={{ fontSize: 12, color: '#607D8B' }}>
-              {combinedDisabled
-                ? 'No cover saved yet (create on /cover/create).'
-                : 'Includes your saved cover draft + ATS resume.'}
-            </div>
-          </div>
-        </label>
-
-        <div
-          style={{
-            display: 'grid', gap: 8,
-            opacity: combined && !combinedDisabled ? 1 : 0.5,
-            pointerEvents: combined && !combinedDisabled ? 'auto' : 'none',
-          }}
-        >
-          <div style={{ fontWeight: 700, color: '#37474F' }}>Order</div>
-          <div style={{ display: 'flex', gap: 10 }}>
-            <label style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-              <input
-                type="radio" name="order" value="resume-first"
-                checked={order === 'resume-first'} onChange={() => setOrder('resume-first')}
-              />
-              Resume first
-            </label>
-            <label style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-              <input
-                type="radio" name="order" value="cover-first"
-                checked={order === 'cover-first'} onChange={() => setOrder('cover-first')}
-              />
-              Cover first
-            </label>
-          </div>
-        </div>
-
         <div style={{ display: 'flex', gap: 10, justifyContent: 'flex-end', flexWrap: 'wrap' }}>
-          {combined && !combinedDisabled ? (
-            <PDFDownloadLink document={CombinedDoc} fileName={combinedName}>
-              {({ loading }) => (
-                <button
-                  type="button"
-                  style={{ background: '#FF7043', color: 'white', border: '1px solid rgba(0,0,0,0.06)', borderRadius: 10, padding: '10px 14px', fontWeight: 800, cursor: 'pointer' }}
-                >
-                  {loading ? 'Preparing…' : 'Download Combined (ATS)'}
-                </button>
-              )}
-            </PDFDownloadLink>
-          ) : (
-            <PDFDownloadLink document={ResumeDoc} fileName={resumeName}>
-              {({ loading }) => (
-                <button
-                  type="button"
-                  style={{ background: '#FF7043', color: 'white', border: '1px solid rgba(0,0,0,0.06)', borderRadius: 10, padding: '10px 14px', fontWeight: 800, cursor: 'pointer' }}
-                >
-                  {loading ? 'Preparing…' : 'Download Resume (ATS)'}
-                </button>
-              )}
-            </PDFDownloadLink>
-          )}
+          <PDFDownloadLink
+            document={<TemplateDoc templateId={templateId} resumeProps={resumeProps} />}
+            fileName={resumeName}
+          >
+            {({ loading }) => (
+              <button
+                type="button"
+                style={{ background: '#FF7043', color: 'white', border: '1px solid rgba(0,0,0,0.06)', borderRadius: 10, padding: '10px 14px', fontWeight: 800, cursor: 'pointer' }}
+              >
+                {loading ? 'Preparing…' : 'Download PDF'}
+              </button>
+            )}
+          </PDFDownloadLink>
         </div>
       </div>
     </div>
@@ -313,20 +294,19 @@ export default function SmartExportMenu({
   return (
     <div style={{ marginTop: 8, borderTop: '1px dashed #CFD8DC', paddingTop: 10 }}>
       <div style={{ fontWeight: 700, color: '#37474F', marginBottom: 6, fontSize: 13 }}>
-        Advanced Export (ATS-safe)
+        Advanced Export (Template-based)
       </div>
       <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
         <button
           type="button"
           onClick={() => setOpen(true)}
           style={{ background: 'white', border: '1px solid #E0E0E0', borderRadius: 10, padding: '8px 12px', fontWeight: 800, cursor: 'pointer' }}
-          title="Combine Cover + Resume in an ATS-friendly PDF"
+          title="Download a PDF that matches your selected template"
         >
           Configure & Download
         </button>
       </div>
 
-      {/* render modal into the body to avoid clipping/transform issues */}
       {open && portalRef.current ? createPortal(modal, portalRef.current) : null}
     </div>
   );
