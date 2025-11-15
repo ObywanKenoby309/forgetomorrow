@@ -2,14 +2,12 @@
 import { NextAuthOptions } from 'next-auth';
 import CredentialsProvider from 'next-auth/providers/credentials';
 import { PrismaAdapter } from '@next-auth/prisma-adapter';
-import { PrismaClient } from '@prisma/client';
+import { prisma } from './prisma';
 import bcrypt from 'bcrypt';
 import { sign, verify } from 'jsonwebtoken';
 
-const prisma = new PrismaClient();
 const JWT_SECRET = process.env.NEXTAUTH_SECRET!;
 
-// === NEXTAUTH CONFIG ===
 export const authOptions: NextAuthOptions = {
   adapter: PrismaAdapter(prisma),
   providers: [
@@ -46,10 +44,6 @@ export const authOptions: NextAuthOptions = {
   ],
   secret: JWT_SECRET,
   session: { strategy: 'jwt' },
-  pages: {
-    signIn: '/auth/signin',
-    error: '/auth/error',
-  },
   callbacks: {
     async jwt({ token, user }) {
       if (user) {
@@ -66,22 +60,11 @@ export const authOptions: NextAuthOptions = {
   },
 };
 
-// === JWT HELPERS ===
+// JWT helpers (optional, but safe to keep)
 export function verifyJwt(token: string): any {
   try {
     return verify(token, JWT_SECRET);
-  } catch (error) {
-    console.error('JWT Verification Failed:', error);
+  } catch {
     return null;
   }
-}
-
-export function readSessionCookie(cookieHeader: string): any {
-  if (!cookieHeader) return null;
-  const token = cookieHeader
-    .split(';')
-    .find((c: string) => c.trim().startsWith('next-auth.session-token='))
-    ?.split('=')[1];
-
-  return token ? verifyJwt(token) : null;
 }
