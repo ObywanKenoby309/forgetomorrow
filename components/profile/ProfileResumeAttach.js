@@ -1,50 +1,130 @@
-import React, { useEffect, useState } from 'react';
+// components/profile/ProfileResumeAttach.js
+import React, { useState } from 'react';
 
-const RESUME_KEY = 'profile_resume_attach_v2';
+export default function ProfileResumeAttach({ withChrome, resume, setResume }) {
+  const [isUploading, setIsUploading] = useState(false);
+  const [uploadError, setUploadError] = useState('');
 
-export default function ProfileResumeAttach({ withChrome }) {
-  const [resume, setResume] = useState('');
-  const [editOpen, setEditOpen] = useState(false);
+  const handleUpload = async (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
 
-  useEffect(() => { setResume(localStorage.getItem(RESUME_KEY) || ''); }, []);
-  useEffect(() => { try { localStorage.setItem(RESUME_KEY, resume); } catch {} }, [resume]);
+    if (!file.name.match(/\.(pdf|docx)$/i)) {
+      setUploadError('Only PDF or DOCX files are allowed.');
+      return;
+    }
+
+    if (file.size > 5 * 1024 * 1024) {
+      setUploadError('File too large. Max 5MB.');
+      return;
+    }
+
+    setIsUploading(true);
+    setUploadError('');
+
+    const formData = new FormData();
+    formData.append('resume', file);
+
+    try {
+      const res = await fetch('/api/resume/upload', {
+        method: 'POST',
+        body: formData
+      });
+
+      if (!res.ok) {
+        const err = await res.json();
+        throw new Error(err.error || 'Upload failed');
+      }
+
+      const data = await res.json();
+
+      // === ENSURE ALL FIELDS ===
+      const resumeData = {
+        filename: data.filename,
+        lastUpdated: data.lastUpdated || new Date().toISOString().split('T')[0],
+        score: data.score || 0,
+        keywords: data.keywords || []
+      };
+
+      setResume(resumeData); // Saves to profile.js → localStorage
+    } catch (err) {
+      setUploadError(err.message || 'Upload failed. Try again.');
+    } finally {
+      setIsUploading(false);
+    }
+  };
+
+  // === SAFE READ ===
+  const hasResume = resume && resume.filename && resume.lastUpdated;
+  const viewUrl = hasResume ? `/uploads/${resume.filename}` : null;
 
   return (
-    <section style={{ border: '1px solid #eee', borderRadius: 12, padding: 16, background: 'white' }}>
-      <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-        <h3 style={{ margin: 0, color: '#FF7043' }}>Attached Resume</h3>
-        <button onClick={() => setEditOpen(true)} style={{ border: '1px solid #FF7043', color: '#FF7043', padding: '4px 8px', borderRadius: 6 }}>Edit</button>
-      </div>
-      <p style={{ marginTop: 8 }}>
-        {resume ? (
-          <>Attached: <a href={withChrome(`/resume/${resume}`)} style={{ color: '#FF7043' }}>View Resume</a></>
-        ) : (
-          'No resume attached yet.'
-        )}
-      </p>
+    <section
+      style={{
+        border: '1px solid #eee',
+        borderRadius: 12,
+        padding: 16,
+        background: 'white',
+        boxShadow: '0 2px 6px rgba(0,0,0,0.06)'
+      }}
+    >
+      <h3 style={{ margin: 0, color: '#FF7043', fontWeight: 700, fontSize: '1.1rem' }}>
+        Attached Resume
+      </h3>
 
-      {editOpen && (
-        <Dialog title="Attach Resume" onClose={() => setEditOpen(false)}>
-          <input
-            value={resume}
-            onChange={(e) => setResume(e.target.value)}
-            placeholder="Enter resume ID or filename"
-            style={{ border: '1px solid #ddd', borderRadius: 6, padding: 8, width: '100%' }}
-          />
-        </Dialog>
+      {hasResume ? (
+        <div style={{ marginTop: 12, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+          <p style={{ margin: 0, fontSize: '0.9375rem', color: '#2d3748' }}>
+            Uploaded: <strong>{resume.lastUpdated}</strong>
+          </p>
+          <a
+            href={viewUrl}
+            target="_blank"
+            rel="noopener noreferrer"
+            style={{ color: '#FF7043', fontWeight: 600, fontSize: '0.875rem' }}
+          >
+            View Resume
+          </a>
+        </div>
+      ) : (
+        <p style={{ margin: '12px 0 0', color: '#718096', fontSize: '0.9375rem' }}>
+          No resume attached yet.
+        </p>
       )}
-    </section>
-  );
-}
 
-function Dialog({ children, title, onClose }) {
-  return (
-    <div onClick={onClose} style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.35)', display: 'grid', placeItems: 'center' }}>
-      <div onClick={(e) => e.stopPropagation()} style={{ background: 'white', borderRadius: 8, padding: 16, width: 400 }}>
-        <h3>{title}</h3>
-        {children}
-        <button onClick={onClose} style={{ marginTop: 8, background: '#FF7043', color: 'white', border: 'none', padding: '6px 10px', borderRadius: 6 }}>Save</button>
+      {uploadError && (
+        <p style={{ margin: '8px 0 0', color: '#e53e3e', fontSize: '0.875rem' }}>
+          {uploadError}
+        </p>
+      )}
+
+      <div style={{ marginTop: 16 }}>
+        <input
+          type="file"
+          accept=".pdf,.docx"
+          onChange={handleUpload}
+          disabled={isUploading}
+          id="resume-upload"
+          style={{ display: 'none' }}
+        />
+        <label
+          htmlFor="resume-upload"
+          style={{
+            display: 'inline-block',
+            background: '#FF7043',
+            color: 'white',
+            padding: '10px 20px',
+            borderRadius: 8,
+            fontWeight: 600,
+            fontSize: '0.9375rem',
+            cursor: isUploading ? 'not-allowed' : 'pointer',
+            opacity: isUploading ? 0.7 : 1,
+            transition: 'all 0.2s'
+          }}
+        >
+          {isUploading ? 'Uploading...' : 'Upload Resume'}
+        </label>
       </div>
-    </div>
+    </section>
   );
 }

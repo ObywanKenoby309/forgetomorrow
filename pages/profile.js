@@ -2,9 +2,8 @@
 import React, { useEffect, useState } from 'react';
 import Head from 'next/head';
 import { useRouter } from 'next/router';
-import Link from 'next/link'; // ← added
+import Link from 'next/link';
 import SeekerLayout from '@/components/layouts/SeekerLayout';
-
 // Self-contained components
 import ProfileHeader from '@/components/profile/ProfileHeader';
 import ProfileAbout from '@/components/profile/ProfileAbout';
@@ -13,7 +12,6 @@ import ProfilePreferences from '@/components/profile/ProfilePreferences';
 import ProfileResumeAttach from '@/components/profile/ProfileResumeAttach';
 import ProfileSkills from '@/components/profile/ProfileSkills';
 import ProfileHobbies from '@/components/profile/ProfileHobbies';
-
 // Helper shown beside sections
 import SectionHint from '@/components/SectionHint';
 
@@ -28,13 +26,13 @@ const STATUS_KEY = 'profile_status_v1';
 const AVATAR_KEY = 'profile_avatar_v1';
 const COVER_KEY = 'profile_cover_v1';
 const ABOUT_KEY = 'profile_about_v1';
-
 const SKL_KEY = 'profile_skills_v1';
 const LANG_KEY = 'profile_languages_v1';
 const PREF_LOC_KEY = 'profile_pref_locations_v1';
 const PREF_TYPE_KEY = 'profile_pref_worktype_v1';
 const PREF_START_KEY = 'profile_pref_start_v1';
 const HOB_KEY = 'profile_hobbies_v1';
+const RESUME_KEY = 'profile_resume_v1'; // ← NEW
 
 export default function ProfilePage() {
   const router = useRouter();
@@ -51,13 +49,13 @@ export default function ProfilePage() {
   const [avatarUrl, setAvatarUrl] = useState('/demo-profile.jpg');
   const [coverUrl, setCoverUrl] = useState('');
   const [about, setAbout] = useState('');
-
   const [skills, setSkills] = useState([]);
   const [languages, setLanguages] = useState([]);
   const [prefLocations, setPrefLocations] = useState([]);
   const [prefWorkType, setPrefWorkType] = useState('');
   const [prefStart, setPrefStart] = useState('');
   const [hobbies, setHobbies] = useState([]);
+  const [resume, setResume] = useState(null); // ← NEW: resume state
 
   // ---------------- Load from localStorage ----------------
   useEffect(() => {
@@ -73,14 +71,16 @@ export default function ProfilePage() {
       setAvatarUrl(readStr(AVATAR_KEY, '/demo-profile.jpg'));
       setCoverUrl(readStr(COVER_KEY, ''));
       setAbout(readStr(ABOUT_KEY, ''));
-
       setSkills(read(SKL_KEY, '[]'));
       setLanguages(read(LANG_KEY, '[]'));
       setPrefLocations(read(PREF_LOC_KEY, '[]'));
       setPrefWorkType(readStr(PREF_TYPE_KEY, ''));
       setPrefStart(readStr(PREF_START_KEY, ''));
       setHobbies(read(HOB_KEY, '[]'));
-    } catch {}
+      setResume(read(RESUME_KEY, null)); // ← LOAD RESUME
+    } catch (err) {
+      console.error('Failed to load from localStorage:', err);
+    }
   }, []);
 
   // ---------------- Persist to localStorage ----------------
@@ -92,13 +92,13 @@ export default function ProfilePage() {
   useEffect(() => { try { localStorage.setItem(AVATAR_KEY, avatarUrl); } catch {} }, [avatarUrl]);
   useEffect(() => { try { localStorage.setItem(COVER_KEY, coverUrl); } catch {} }, [coverUrl]);
   useEffect(() => { try { localStorage.setItem(ABOUT_KEY, about); } catch {} }, [about]);
-
   useEffect(() => { try { localStorage.setItem(SKL_KEY, JSON.stringify(skills)); } catch {} }, [skills]);
   useEffect(() => { try { localStorage.setItem(LANG_KEY, JSON.stringify(languages)); } catch {} }, [languages]);
   useEffect(() => { try { localStorage.setItem(PREF_LOC_KEY, JSON.stringify(prefLocations)); } catch {} }, [prefLocations]);
   useEffect(() => { try { localStorage.setItem(PREF_TYPE_KEY, prefWorkType); } catch {} }, [prefWorkType]);
   useEffect(() => { try { localStorage.setItem(PREF_START_KEY, prefStart); } catch {} }, [prefStart]);
   useEffect(() => { try { localStorage.setItem(HOB_KEY, JSON.stringify(hobbies)); } catch {} }, [hobbies]);
+  useEffect(() => { try { localStorage.setItem(RESUME_KEY, JSON.stringify(resume)); } catch {} }, [resume]); // ← SAVE RESUME
 
   // -------- Derived flags (for optional hints) --------
   const hasSummary = Boolean(about?.trim());
@@ -125,7 +125,6 @@ export default function ProfilePage() {
       <p style={{ margin: '6px auto 0', color: '#607D8B', maxWidth: 720 }}>
         Give the community a clear, human overview — your resume provides the deep detail.
       </p>
-      {/* NEW: prominent analytics link */}
       <div style={{ marginTop: 10 }}>
         <Link
           href={withChrome('/profile-analytics')}
@@ -141,7 +140,7 @@ export default function ProfilePage() {
           }}
           aria-label="View Profile Analytics"
         >
-          View Profile Analytics →
+          View Profile Analytics
         </Link>
       </div>
     </section>
@@ -150,16 +149,14 @@ export default function ProfilePage() {
   return (
     <>
       <Head><title>Profile | ForgeTomorrow</title></Head>
-
       <SeekerLayout
         title="Profile | ForgeTomorrow"
         header={HeaderBox}
         right={null}
         activeNav="profile"
       >
-        {/* container width unchanged */}
         <div className="w-full max-w-7x1 mx-auto px-4 md:px-6 grid gap-4 md:gap-5">
-          {/* Header backer — banner flush on all edges */}
+          {/* Header backer */}
           <section className="bg-white border border-gray-200 border-t-0 rounded-xl shadow-sm overflow-hidden pt-0 px-0 pb-0">
             <ProfileHeader
               name={name} pronouns={pronouns} headline={headline}
@@ -171,7 +168,7 @@ export default function ProfilePage() {
             />
           </section>
 
-          {/* ABOUT + moved/renamed hint */}
+          {/* ABOUT */}
           <div className="grid md:grid-cols-3 items-start gap-4">
             <div className="md:col-span-2">
               <ProfileAbout about={about} setAbout={setAbout} />
@@ -186,7 +183,7 @@ export default function ProfilePage() {
             />
           </div>
 
-          {/* PREFERENCES + single helper card */}
+          {/* PREFERENCES */}
           <div className="grid md:grid-cols-3 items-start gap-4">
             <div className="md:col-span-2">
               <ProfilePreferences
@@ -207,7 +204,7 @@ export default function ProfilePage() {
             </div>
           </div>
 
-          {/* SKILLS (open by default) */}
+          {/* SKILLS */}
           <div className="grid md:grid-cols-3 items-start gap-4">
             <div className="md:col-span-2">
               <ProfileSkills
@@ -229,7 +226,7 @@ export default function ProfilePage() {
             )}
           </div>
 
-          {/* LANGUAGES (open by default) */}
+          {/* LANGUAGES */}
           <div className="grid md:grid-cols-3 items-start gap-4">
             <div className="md:col-span-2">
               <ProfileLanguages
@@ -250,8 +247,12 @@ export default function ProfilePage() {
             )}
           </div>
 
-          {/* Resume + Hobbies */}
-          <ProfileResumeAttach withChrome={withChrome} />
+          {/* RESUME + HOBBIES */}
+          <ProfileResumeAttach 
+            withChrome={withChrome} 
+            resume={resume} 
+            setResume={setResume} 
+          />
           <ProfileHobbies hobbies={hobbies} setHobbies={setHobbies} />
         </div>
       </SeekerLayout>

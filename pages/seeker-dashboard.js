@@ -1,60 +1,28 @@
 // pages/seeker-dashboard.js
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/router';
-
 import SeekerLayout from '@/components/layouts/SeekerLayout';
 import SeekerRightColumn from '@/components/seeker/SeekerRightColumn';
 import PinnedJobsPreview from '@/components/PinnedJobsPreview';
-
-// DASHBOARD WIDGETS (graphs)
 import KpiRow from '@/components/seeker/dashboard/KpiRow';
 import FunnelChart from '@/components/seeker/dashboard/FunnelChart';
 import ApplicationsOverTime from '@/components/seeker/dashboard/ApplicationsOverTime';
+import { getClientSession } from '@/lib/auth-client';
 
-const STORAGE_KEY = 'applicationsTracker';
 
-/* ---------- helpers: last N ISO weeks + bucketing ---------- */
+// ISO WEEK HELPERS
 const startOfISOWeek = (d) => {
   const date = new Date(Date.UTC(d.getFullYear(), d.getMonth(), d.getDate()));
-  const day = date.getUTCDay() || 7; // 1..7 (Mon..Sun)
+  const day = date.getUTCDay() || 7;
   if (day !== 1) date.setUTCDate(date.getUTCDate() - (day - 1));
   date.setUTCHours(0, 0, 0, 0);
   return date;
 };
-const weekDiff = (a /* Date */, b /* Date */) => {
+const weekDiff = (a, b) => {
   const MSWEEK = 7 * 24 * 3600 * 1000;
-  return Math.floor((a - b) / MSWEEK);
+  return Math.floor((a.getTime() - b.getTime()) / MSWEEK);
 };
-/** Build W8..W1 buckets from trackerData (Applied + Interviewing by dateAdded) */
-function buildWeekSeries(trackerData, n = 8) {
-  const today = new Date();
-  const thisWeek = startOfISOWeek(today);
-
-  // init W8..W1 oldest->newest
-  const labels = Array.from({ length: n }, (_, i) => `W${n - i}`);
-  const buckets = labels.map(() => ({ applied: 0, interviews: 0 }));
-
-  const countItem = (isoDate, kind /* 'applied' | 'interviews' */) => {
-    if (!isoDate) return;
-    const d = new Date(isoDate);
-    if (isNaN(d)) return;
-    const wStart = startOfISOWeek(d);
-    const diff = weekDiff(thisWeek, wStart); // 0=cur week, 1=last week, etc.
-    if (diff >= 0 && diff < n) {
-      const idx = n - diff - 1; // map 0..n-1 to Wn..W1
-      buckets[idx][kind] += 1;
-    }
-  };
-
-  // Applied by dateAdded
-  (trackerData?.Applied || []).forEach((j) => countItem(j.dateAdded, 'applied'));
-  // Interviewing by dateAdded
-  (trackerData?.Interviewing || []).forEach((j) => countItem(j.dateAdded, 'interviews'));
-
-  // produce [{label:'W8', applied:x, interviews:y}, ... 'W1']
-  return labels.map((label, i) => ({ label, applied: buckets[i].applied, interviews: buckets[i].interviews }));
-}
 
 export default function SeekerDashboard() {
   const router = useRouter();
@@ -62,87 +30,107 @@ export default function SeekerDashboard() {
   const withChrome = (path) =>
     chrome ? `${path}${path.includes('?') ? '&' : '?'}chrome=${chrome}` : path;
 
-  const [trackerData, setTrackerData] = useState({
-    Pinned: [],
-    Applied: [],
-    Interviewing: [],
-    Offers: [],
-    Rejected: [],
-    // optionally: viewedByEmployers, lastApplicationAt, Hired
-  });
+  const [kpi, setKpi] = useState(null);
+  const [weeks, setWeeks] = useState([]);
+  const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
-    const saved = typeof window !== 'undefined' ? localStorage.getItem(STORAGE_KEY) : null;
-    if (saved) {
-      try { setTrackerData(JSON.parse(saved)); } catch {}
+    async function loadData() {
+      const session = await getClientSession();
+      if (!session?.user?.id) {
+        router.push('/login');
+        return;
+      }
+      const userId = session.user.id;
+
+      try {
+        const res = await fetch('/api/seeker/dashboard-data', {
+          headers: { 'X-User-ID': userId },
+        });
+        if (!res.ok) throw new Error('Failed to load data');
+        const data = await res.json();
+
+        const newKpi = {
+          applied: data.applications || 0,
+          viewed: data.views || 0,
+          interviewing: data.interviews || 0,
+          offers: data.offers || 0,
+          rejected: 0,
+          lastSent: data.lastApplication
+            ? new Date(data.lastApplication).toLocaleDateString()
+            : '—',
+        };
+        setKpi(newKpi);
+
+        // Applications over time
+        const today = new Date();
+        const thisWeek = startOfISOWeek(today);
+        const labels = Array.from({ length: 8 }, (_, i) => `W${8 - i}`);
+        const buckets = labels.map(() => ({ applied: 0, interviews: 0 }));
+
+        (data.allApplications || []).forEach((app) => {
+          const d = new Date(app.appliedAt);
+          const wStart = startOfISOWeek(d);
+          const diff = weekDiff(thisWeek, wStart);
+          if (diff >= 0 && diff < 8) {
+            const idx = 8 - diff - 1;
+            buckets[idx].applied += 1;
+          }
+        });
+
+        setWeeks(
+          labels.map((label, i) => ({
+            label,
+            applied: buckets[i].applied,
+            interviews: 0,
+          }))
+        );
+
+        setIsLoading(false);
+      } catch (err) {
+        console.error('Dashboard load error:', err);
+        setKpi({ applied: 0, viewed: 0, interviewing: 0, offers: 0, rejected: 0, lastSent: '—' });
+        setIsLoading(false);
+      }
     }
-  }, []);
+    loadData();
+  }, [router]);
 
-  // KPIs
-  const kpi = {
-    applied:      trackerData?.Applied?.length || 0,
-    viewed:       trackerData?.viewedByEmployers || 0,
-    interviewing: trackerData?.Interviewing?.length || 0,
-    offers:       trackerData?.Offers?.length || 0,
-    rejected:     trackerData?.Rejected?.length || 0,
-    hired:        trackerData?.Hired?.length || 0,
-    lastSent:     trackerData?.lastApplicationAt
-                    ? new Date(trackerData.lastApplicationAt).toLocaleDateString()
-                    : '—',
-  };
-
-  // build W8..W1 from data (memoized)
-  const weeks = useMemo(() => buildWeekSeries(trackerData, 8), [trackerData]);
-
-  // Header
   const HeaderBox = (
-    <section
-      style={{
-        background: 'white',
-        border: '1px solid #eee',
-        borderRadius: 12,
-        padding: 16,
-        boxShadow: '0 2px 6px rgba(0,0,0,0.06)',
-        textAlign: 'center',
-      }}
-    >
-      <h1 style={{ margin: 0, color: '#FF7043', fontSize: 24, fontWeight: 800 }}>
-        Your Job Seeker Dashboard
-      </h1>
-      <p style={{ margin: '6px auto 0', color: '#607D8B', maxWidth: 720 }}>
-        High-level insights at a glance. Drill into what needs attention and keep momentum.
+    <section className="bg-white border border-gray-200 rounded-xl p-6 text-center shadow-sm">
+      <h1 className="text-2xl md:text-3xl font-bold text-orange-600">Your Job Seeker Dashboard</h1>
+      <p className="text-sm md:text-base text-gray-600 mt-2 max-w-3xl mx-auto">
+        You're not alone. Track your momentum, see your wins, and keep moving forward.
       </p>
     </section>
   );
 
   const RightRail = (
-    <div style={{ display: 'grid', gap: 12 }}>
+    <div className="grid gap-4">
       <SeekerRightColumn variant="dashboard" />
     </div>
   );
 
+  if (isLoading) {
+    return (
+      <SeekerLayout title="Loading..." header={HeaderBox} right={RightRail}>
+        <div className="flex items-center justify-center h-64 text-gray-500">
+          Loading your progress...
+        </div>
+      </SeekerLayout>
+    );
+  }
+
+  const allZeros = !kpi || (kpi.applied === 0 && kpi.viewed === 0 && kpi.interviewing === 0 && kpi.offers === 0);
+
   return (
-    <SeekerLayout
-      title="Seeker Dashboard | ForgeTomorrow"
-      header={HeaderBox}
-      right={RightRail}
-      activeNav="dashboard"
-    >
-      <div style={{ display: 'grid', gap: 16 }}>
-        {/* KPI ROW */}
-        <section
-          style={{
-            background: 'white',
-            borderRadius: 12,
-            padding: 12,
-            border: '1px solid #eee',
-            boxShadow: '0 2px 6px rgba(0,0,0,0.06)',
-          }}
-        >
-          <h2 style={{ color: '#FF7043', margin: 0, fontSize: '1.05rem', lineHeight: 1.2 }}>
-            Job Search Snapshot
-          </h2>
-          <div style={{ marginTop: 8 }}>
+    <SeekerLayout title="Seeker Dashboard | ForgeTomorrow" header={HeaderBox} right={RightRail} activeNav="dashboard">
+      <div className="grid gap-6">
+
+        {/* KPI Row */}
+        <section className="bg-white border border-gray-200 rounded-xl p-4 shadow-sm">
+          <h2 className="text-lg font-semibold text-orange-600 mb-3">Job Search Snapshot</h2>
+          {kpi && (
             <KpiRow
               applied={kpi.applied}
               viewed={kpi.viewed}
@@ -151,59 +139,54 @@ export default function SeekerDashboard() {
               rejected={kpi.rejected}
               lastApplicationSent={kpi.lastSent}
             />
-          </div>
+          )}
         </section>
 
-        {/* CHARTS ROW */}
-        <section style={{ display: 'grid', gridTemplateColumns: '1.2fr 1fr', gap: 16 }}>
-          <div style={{ background: '#fff', border: '1px solid #eee', borderRadius: 12, padding: 16 }}>
-            <h3 style={{ marginTop: 0, color: '#455A64' }}>Application Funnel</h3>
-            <FunnelChart
-              data={{
-                applied: kpi.applied,
-                viewed: kpi.viewed,
-                interviewing: kpi.interviewing,
-                offers: kpi.offers,
-                hired: kpi.hired,
-              }}
-            />
-          </div>
-
-          <div style={{ background: '#fff', border: '1px solid #eee', borderRadius: 12, padding: 16 }}>
-            <h3 style={{ marginTop: 0, color: '#455A64' }}>Applications Over Time</h3>
-            <ApplicationsOverTime weeks={weeks} withChrome={withChrome} />
-          </div>
-        </section>
-
-        {/* INSIGHTS (placeholders for now) */}
-        <section style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>
-          <div style={{ background: '#fff', border: '1px solid #eee', borderRadius: 12, padding: 16 }}>
-            <h3 style={{ marginTop: 0, color: '#455A64' }}>Response Speed</h3>
-            <div style={{ color: '#607D8B' }}>Benchmarks coming soon.</div>
-          </div>
-          <div style={{ background: '#fff', border: '1px solid #eee', borderRadius: 12, padding: 16 }}>
-            <h3 style={{ marginTop: 0, color: '#455A64' }}>Top Categories</h3>
-            <div style={{ color: '#607D8B' }}>Distribution coming soon.</div>
-          </div>
-        </section>
-
-        {/* PINNED PREVIEW */}
-        <section
-          style={{
-            background: 'white',
-            borderRadius: 12,
-            padding: 16,
-            border: '1px solid #eee',
-            boxShadow: '0 2px 6px rgba(0,0,0,0.06)',
-          }}
-        >
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>
-            <h2 style={{ color: '#FF7043', margin: 0 }}>Pinned Jobs</h2>
-            <Link href={withChrome('/pinned-jobs')} style={{ color: '#FF7043', fontWeight: 600 }}>
+        {/* Pinned Jobs */}
+        <section className="bg-white border border-gray-200 rounded-xl p-5 shadow-sm">
+          <div className="flex items-center justify-between mb-4">
+            <h2 className="text-lg font-semibold text-orange-600">Your Next Yes</h2>
+            <Link href={withChrome('/pinned-jobs')} className="text-orange-600 font-medium hover:underline">
               View all
             </Link>
           </div>
           <PinnedJobsPreview />
+        </section>
+
+        {/* Charts */}
+        <section className="grid md:grid-cols-2 gap-6">
+          <div className="bg-white border border-gray-200 rounded-xl p-5 shadow-sm">
+            <h3 className="text-base font-semibold text-gray-800 mb-3">Application Funnel</h3>
+            {kpi && (
+              <FunnelChart
+                data={{
+                  applied: kpi.applied,
+                  viewed: kpi.viewed,
+                  interviewing: kpi.interviewing,
+                  offers: kpi.offers,
+                  hired: 0,
+                }}
+				showTrackerButton={true}
+              />
+            )}
+          </div>
+
+          <div className="bg-white border border-gray-200 rounded-xl p-5 shadow-sm">
+            <h3 className="text-base font-semibold text-gray-800 mb-3">Applications Over Time</h3>
+            <ApplicationsOverTime weeks={weeks} withChrome={withChrome} />
+          </div>
+        </section>
+
+        {/* Coming Soon */}
+        <section className="grid md:grid-cols-2 gap-6">
+          <div className="bg-white border border-gray-200 rounded-xl p-5 shadow-sm">
+            <h3 className="text-base font-semibold text-gray-800 mb-2">Response Speed</h3>
+            <p className="text-sm text-gray-500">Benchmarks coming soon.</p>
+          </div>
+          <div className="bg-white border border-gray-200 rounded-xl p-5 shadow-sm">
+            <h3 className="text-base font-semibold text-gray-800 mb-2">Top Categories</h3>
+            <p className="text-sm text-gray-500">Distribution coming soon.</p>
+          </div>
         </section>
       </div>
     </SeekerLayout>

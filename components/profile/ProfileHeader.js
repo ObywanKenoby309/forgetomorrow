@@ -1,3 +1,4 @@
+// components/profile/ProfileHeader.js
 import React, { useEffect, useState } from 'react';
 import ProfileBannerSelector from '@/components/profile/ProfileBannerSelector';
 
@@ -9,11 +10,11 @@ const STATUS_KEY = 'profile_status_v2';
 const AVATAR_KEY = 'profile_avatar_v2';
 const COVER_KEY = 'profile_cover_v2';
 const BANNER_H_KEY = 'profile_banner_h_v1';
-const BANNER_MODE_KEY = 'profile_banner_mode_v1';   // 'cover' | 'fit'
+const BANNER_MODE_KEY = 'profile_banner_mode_v1'; // 'cover' | 'fit'
 const BANNER_FOCALY_KEY = 'profile_banner_focalY_v1'; // 0..100
 
 export default function ProfileHeader() {
-  const [name, setName] = useState('');
+  const [name, setName] = useState(''); // ← LOCKED: no editing
   const [pronouns, setPronouns] = useState('');
   const [headline, setHeadline] = useState('');
   const [location, setLocation] = useState('');
@@ -21,12 +22,11 @@ export default function ProfileHeader() {
   const [avatarUrl, setAvatarUrl] = useState('/demo-profile.jpg');
   const [coverUrl, setCoverUrl] = useState('');
   const [editOpen, setEditOpen] = useState(false);
-
   const [bannerH, setBannerH] = useState(120);
-  const [bannerMode, setBannerMode] = useState('cover'); // 'cover' | 'fit'
-  const [focalY, setFocalY] = useState(50);              // 0..100
+  const [bannerMode, setBannerMode] = useState('cover');
+  const [focalY, setFocalY] = useState(50);
 
-  // Load
+  // === LOAD FROM localStorage ===
   useEffect(() => {
     try {
       setName(localStorage.getItem(NAME_KEY) || 'Unnamed');
@@ -36,19 +36,17 @@ export default function ProfileHeader() {
       setStatus(localStorage.getItem(STATUS_KEY) || '');
       setAvatarUrl(localStorage.getItem(AVATAR_KEY) || '/demo-profile.jpg');
       setCoverUrl(localStorage.getItem(COVER_KEY) || '');
-
       const h = parseInt(localStorage.getItem(BANNER_H_KEY) || '120', 10);
       if (!Number.isNaN(h)) setBannerH(clamp(h, 80, 220));
-
       setBannerMode(localStorage.getItem(BANNER_MODE_KEY) || 'cover');
-
       const fy = parseInt(localStorage.getItem(BANNER_FOCALY_KEY) || '50', 10);
       if (!Number.isNaN(fy)) setFocalY(clamp(fy, 0, 100));
-    } catch {}
+    } catch (err) {
+      console.error('Failed to load profile header:', err);
+    }
   }, []);
 
-  // Persist
-  useEffect(() => { try { localStorage.setItem(NAME_KEY, name); } catch {} }, [name]);
+  // === PERSIST TO localStorage (EXCEPT NAME) ===
   useEffect(() => { try { localStorage.setItem(PRONOUNS_KEY, pronouns); } catch {} }, [pronouns]);
   useEffect(() => { try { localStorage.setItem(HEADLINE_KEY, headline); } catch {} }, [headline]);
   useEffect(() => { try { localStorage.setItem(LOC_KEY, location); } catch {} }, [location]);
@@ -73,7 +71,7 @@ export default function ProfileHeader() {
       {coverUrl && (
         bannerMode === 'cover'
           ? <BannerCover url={coverUrl} height={bannerH} focalY={focalY} />
-          : <BannerFit   url={coverUrl} height={bannerH} />
+          : <BannerFit url={coverUrl} height={bannerH} />
       )}
 
       {/* Header row */}
@@ -91,10 +89,9 @@ export default function ProfileHeader() {
           {pronouns && <p style={{ margin: 0, fontSize: 14, color: '#607D8B' }}>{pronouns}</p>}
           {headline && <p style={{ margin: 0, fontSize: 15, color: '#455A64' }}>{headline}</p>}
           <p style={{ margin: '4px 0 0', fontSize: 14, color: '#455A64' }}>
-            {location && `📍 ${location}`} {status && `• ${status}`}
+            {location && `Location: ${location}`} {status && `• ${status}`}
           </p>
         </div>
-
         <button
           onClick={() => setEditOpen(true)}
           style={{
@@ -110,16 +107,30 @@ export default function ProfileHeader() {
         </button>
       </div>
 
+      {/* === EDIT DIALOG (NAME LOCKED) === */}
       {editOpen && (
         <Dialog title="Edit Profile Header" onClose={() => setEditOpen(false)}>
           <div style={{ display: 'grid', gap: 10 }}>
-            <LabeledInput label="Name" value={name} onChange={setName} />
+            {/* NAME: LOCKED */}
+            <div style={{ display: 'grid', gap: 4 }}>
+              <span style={{ fontSize: 13, fontWeight: 600 }}>Name (set at signup)</span>
+              <div style={{
+                padding: 8,
+                border: '1px solid #ddd',
+                borderRadius: 6,
+                background: '#f9f9f9',
+                color: '#666',
+                fontStyle: 'italic'
+              }}>
+                {name} <small>(locked — contact support to change)</small>
+              </div>
+            </div>
+
             <LabeledInput label="Pronouns" value={pronouns} onChange={setPronouns} />
             <LabeledInput label="Headline" value={headline} onChange={setHeadline} />
             <LabeledInput label="Location" value={location} onChange={setLocation} />
             <LabeledInput label="Status" value={status} onChange={setStatus} />
             <LabeledInput label="Avatar URL" value={avatarUrl} onChange={setAvatarUrl} />
-
             <LabeledInput label="Cover URL (optional)" value={coverUrl} onChange={setCoverUrl} />
             <ProfileBannerSelector value={coverUrl} onChange={setCoverUrl} />
 
@@ -173,7 +184,7 @@ export default function ProfileHeader() {
                 >
                   {bannerMode === 'cover'
                     ? <BannerCover url={coverUrl} height={120} focalY={focalY} />
-                    : <BannerFit   url={coverUrl} height={120} />}
+                    : <BannerFit url={coverUrl} height={120} />}
                 </div>
               </div>
             )}
@@ -213,7 +224,6 @@ export default function ProfileHeader() {
 }
 
 /* ---------- Banner renderers ---------- */
-
 function BannerCover({ url, height, focalY }) {
   return (
     <div
@@ -234,7 +244,6 @@ function BannerCover({ url, height, focalY }) {
 function BannerFit({ url, height }) {
   return (
     <div style={{ position: 'relative', height, width: '100%' }}>
-      {/* Soft backdrop to avoid bars */}
       <div
         aria-hidden="true"
         style={{
@@ -263,7 +272,6 @@ function BannerFit({ url, height }) {
 }
 
 /* ---------- UI bits ---------- */
-
 function ModeToggle({ value, onChange }) {
   const btn = (val, label) => (
     <button
@@ -302,7 +310,6 @@ function LabeledInput({ label, value, onChange }) {
   );
 }
 
-/* Wider + scrollable dialog */
 function Dialog({ children, title, onClose }) {
   return (
     <div
@@ -313,7 +320,7 @@ function Dialog({ children, title, onClose }) {
         display: 'grid',
         placeItems: 'center',
         zIndex: 50,
-        padding: 16, // keep space at very small viewports
+        padding: 16,
       }}
       onClick={onClose}
     >
@@ -323,9 +330,9 @@ function Dialog({ children, title, onClose }) {
           background: 'white',
           borderRadius: 8,
           padding: 16,
-          width: 720,           // wider editor on desktop
+          width: 720,
           maxWidth: '98vw',
-          maxHeight: '92vh',    // enable vertical scrolling when tall
+          maxHeight: '92vh',
           overflowY: 'auto',
           display: 'grid',
           gap: 10,

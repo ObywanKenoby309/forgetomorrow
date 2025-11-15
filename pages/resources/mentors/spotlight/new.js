@@ -3,9 +3,8 @@ import React, { useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/router';
 
-// Internal shell
-import Header from '../../../../components/Header';
-import Footer from '../../../../components/Footer';
+// Coaching shell (matches follow-ups pattern)
+import CoachingLayout from '@/components/layouts/CoachingLayout';
 
 // Sidebars
 import CoachingSidebar from '../../../../components/coaching/CoachingSidebar';
@@ -80,6 +79,27 @@ export default function NewSpotlightPage() {
     }
   };
 
+  // Coaching header (same pattern as follow-ups)
+  const HeaderBox = (
+    <section
+      style={{
+        background: 'white',
+        border: '1px solid #eee',
+        borderRadius: 12,
+        padding: 16,
+        boxShadow: '0 2px 6px rgba(0,0,0,0.06)',
+        textAlign: 'center',
+      }}
+    >
+      <h1 style={{ margin: 0, color: '#FF7043', fontSize: 24, fontWeight: 800 }}>
+        Post a Hearth Spotlight
+      </h1>
+      <p style={{ margin: '6px auto 0', color: '#607D8B', maxWidth: 720 }}>
+        Share what you offer and how seekers can reach you.
+      </p>
+    </section>
+  );
+
   const Body = (
     <div style={layoutWrap}>
       {/* Left sidebar (same width as right) */}
@@ -87,15 +107,7 @@ export default function NewSpotlightPage() {
 
       {/* Middle column */}
       <main style={main}>
-        {/* Title card — compact, centered */}
-        <section style={headerStrip}>
-          <h1 style={headerTitle}>Post a Hearth Spotlight</h1>
-          <p style={headerSub}>
-            Share what you offer and how seekers can reach you.
-          </p>
-        </section>
-
-        {/* Explicit spacer controlling the exact gap */}
+        {/* Title strip is now supplied via CoachingLayout header prop. Keep a tidy spacer to align grid. */}
         <div style={{ height: 8 }} aria-hidden="true" />
 
         {/* Form */}
@@ -210,7 +222,7 @@ export default function NewSpotlightPage() {
         </section>
       </main>
 
-      {/* Right rail: blank canvas (same width as left) */}
+      {/* Right rail: keep your placeholder panel for symmetry */}
       <aside style={rightBlank}>
         <div style={{ fontWeight: 700, color: '#263238', marginBottom: 6 }}>Coming soon</div>
         <div style={{ color: '#90A4AE', fontSize: 14 }}>
@@ -220,22 +232,16 @@ export default function NewSpotlightPage() {
     </div>
   );
 
-  if (sent) {
-    return (
-      <>
-        <Header />
-        {Body}
-        <Footer />
-      </>
-    );
-  }
-
+  // Keep “sent” flow simple, but still inside CoachingLayout so the shell is consistent
   return (
-    <>
-      <Header />
+    <CoachingLayout
+      title="Post a Hearth Spotlight | ForgeTomorrow"
+      header={HeaderBox}
+      activeNav="resources"
+      // You can add right={<CoachingRightColumn />} later if you want the global coaching right rail
+    >
       {Body}
-      <Footer />
-    </>
+    </CoachingLayout>
   );
 }
 
@@ -252,32 +258,14 @@ const layoutWrap = {
 /* Grid gap off so spacer is the ONLY space between title and form */
 const main = { display: 'grid', gap: 0 };
 
-/* Title card */
-const headerStrip = {
+/* Card used for the form */
+const card = {
   background: 'white',
-  borderRadius: 12,
-  padding: '6px 12px',
   border: '1px solid #eee',
+  borderRadius: 12,
   boxShadow: '0 2px 6px rgba(0,0,0,0.06)',
-  textAlign: 'center',
-  height: 'fit-content',
-  minHeight: 0,
-  margin: 0, // no external margins
-};
-
-const headerTitle = {
-  fontSize: '2rem',
-  color: '#FF7043',
+  padding: 20,
   margin: 0,
-  fontWeight: 700,
-  lineHeight: 1.2,
-};
-
-const headerSub = {
-  fontSize: '1rem',
-  color: '#607D8B',
-  margin: '2px 0 0 0',
-  lineHeight: 1.3,
 };
 
 const rightBlank = {
@@ -287,15 +275,6 @@ const rightBlank = {
   boxShadow: '0 2px 6px rgba(0,0,0,0.06)',
   padding: 16,
   minHeight: 120,
-};
-
-const card = {
-  background: 'white',
-  border: '1px solid #eee',
-  borderRadius: 12,
-  boxShadow: '0 2px 6px rgba(0,0,0,0.06)',
-  padding: 20,
-  margin: 0, // no external margins
 };
 
 const label = {

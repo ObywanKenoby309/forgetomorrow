@@ -1,65 +1,200 @@
+// prisma/schema.prisma
 generator client {
   provider = "prisma-client-js"
 }
 
 datasource db {
-  provider = "sqlite"
-  url      = env("DATABASE_URL")
+  provider = "sqlite" // Local dev
+  url      = env("DATABASE_URL") // Vercel will override with Postgres
 }
 
+// === USER ROLES & TIERS ===
+enum UserRole {
+  SEEKER
+  COACH
+  RECRUITER
+}
+
+enum Tier {
+  FREE
+  PRO
+  COACH
+  SMALL_BIZ
+  ENTERPRISE
+}
+
+// === USER MODEL ===
+model User {
+  id            String    @id @default(cuid())
+  email         String    @unique
+  name          String?
+  role          UserRole  @default(SEEKER)
+  tier          Tier      @default(FREE)
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+  stripeId      String?   // Stripe customer ID
+  profileNotes  Json?     // Resume data, notes, etc.
+
+  // === RELATIONS ===
+  applications  Application[]
+  views         JobView[]
+  interviews    Interview[]
+  offers        Offer[]
+  pinnedJobs    PinnedJob[]
+  resume        Resume?
+  covers        Cover[]
+  jobs          Job[]
+  scanLogs      ScanLog[] // ← REVERSE RELATION (FIXED P1012)
+
+  @@map("users")
+}
+
+// === JOB POSTING ===
 model Job {
-  id           String        @id
-  title        String
-  metrics      DailyMetric[]
+  id                  Int       @id @default(autoincrement())
+  company             String
+  title               String
+  worksite            String
+  location            String
+  type                String?
+  compensation        String?
+  description         String
+  status              String    @default("Draft")
+  urgent              Boolean   @default(false)
+
+  // Counters
+  viewsCount          Int       @default(0)
+  applicationsCount   Int       @default(0)
+
+  createdAt           DateTime  @default(now())
+  updatedAt           DateTime  @updatedAt
+
+  userId              String
+  user                User      @relation(fields: [userId], references: [id])
+
+  // Relations
+  applications        Application[]
+  views               JobView[]
+  interviews          Interview[]
+  offers              Offer[]
+  pinnedBy            PinnedJob[]
+  covers              Cover[]   // ← Opposite relation
+
+  @@map("jobs")
 }
 
-model Recruiter {
-  id           String        @id
-  name         String
-  metrics      DailyMetric[]
-}
-
-model DailyMetric {
+// === RESUME ===
+model Resume {
   id          Int       @id @default(autoincrement())
-  date        DateTime
-  jobId       String
-  recruiterId String
+  userId      String    @unique
+  content     String
+  isPublic    Boolean   @default(false)
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
 
-  views       Int
-  clicks      Int
-  applies     Int
-  interviews  Int
-  offers      Int
-  hires       Int
+  user        User      @relation(fields: [userId], references: [id])
 
-  srcForge    Int
-  srcRef      Int
-  srcBoards   Int
-
-  messages    Int
-  responses   Int
-
-  job         Job       @relation(fields: [jobId], references: [id])
-  recruiter   Recruiter @relation(fields: [recruiterId], references: [id])
-
-  @@index([date])
-  @@index([jobId])
-  @@index([recruiterId])
-  @@unique([date, jobId, recruiterId])
+  @@map("resumes")
 }
 
-model AnalyticsEvent {
-  id            String   @id @default(cuid())
-  createdAt     DateTime @default(now())
-  eventType     String   // 'JOB_VIEW' | 'APPLY_SUBMIT' | 'MESSAGE_SENT'
-  userId        String?
-  companyId     String?
-  jobId         String?
-  recruiterId   String?
-  applicationId String?
-  metadata      Json?
+// === COVER LETTER ===
+model Cover {
+  id          Int       @id @default(autoincrement())
+  userId      String
+  jobId       Int?
+  content     String
+  createdAt   DateTime  @default(now())
 
-  @@index([jobId])
-  @@index([recruiterId])
-  @@index([eventType, createdAt])
+  user        User      @relation(fields: [userId], references: [id])
+  job         Job?      @relation(fields: [jobId], references: [id])
+
+  @@map("covers")
+}
+
+// === APPLICATION ===
+model Application {
+  id          Int       @id @default(autoincrement())
+  userId      String
+  jobId       Int
+  resumeId    Int?
+  coverId     Int?
+  status      String    @default("Applied")
+  appliedAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  user        User      @relation(fields: [userId], references: [id])
+  job         Job       @relation(fields: [jobId], references: [id])
+
+  @@map("applications")
+}
+
+// === JOB VIEW ===
+model JobView {
+  id          Int       @id @default(autoincrement())
+  userId      String
+  jobId       Int
+  viewedBy    String?
+  viewedAt    DateTime  @default(now())
+
+  user        User      @relation(fields: [userId], references: [id])
+  job         Job       @relation(fields: [jobId], references: [id])
+
+  @@map("job_views")
+}
+
+// === INTERVIEW ===
+model Interview {
+  id          Int       @id @default(autoincrement())
+  userId      String
+  jobId       Int
+  scheduledAt DateTime
+  status      String    @default("Scheduled")
+
+  user        User      @relation(fields: [userId], references: [id])
+  job         Job       @relation(fields: [jobId], references: [id])
+
+  @@map("interviews")
+}
+
+// === OFFER ===
+model Offer {
+  id          Int       @id @default(autoincrement())
+  userId      String
+  jobId       Int
+  salary      String?
+  accepted    Boolean?
+  receivedAt  DateTime  @default(now())
+
+  user        User      @relation(fields: [userId], references: [id])
+  job         Job       @relation(fields: [jobId], references: [id])
+
+  @@map("offers")
+}
+
+// === PINNED JOB ===
+model PinnedJob {
+  id          Int       @id @default(autoincrement())
+  userId      String
+  jobId       Int
+  pinnedAt    DateTime  @default(now())
+
+  user        User      @relation(fields: [userId], references: [id])
+  job         Job       @relation(fields: [jobId], references: [id])
+
+  @@map("pinned_jobs")
+}
+
+// === AI SCAN LOG (FREE TIER TRACKING) ===
+model ScanLog {
+  id          String    @id @default(cuid())
+  userId      String
+  date        String    // YYYY-MM-DD
+  score       Int
+  createdAt   DateTime  @default(now())
+
+  // ← REVERSE RELATION TO USER (FIXES P1012)
+  user        User      @relation(fields: [userId], references: [id])
+
+  @@unique([userId, date])
+  @@map("scan_logs")
 }

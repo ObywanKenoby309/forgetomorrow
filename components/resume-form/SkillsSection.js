@@ -6,19 +6,17 @@ import skillsList from './skillsData';
 export default function SkillsSection({
   skills = [],
   setSkills,
-  embedded = false,     // render only content (for SectionGroup)
-  defaultOpen = true,   // used only when not embedded
+  embedded = false,
+  defaultOpen = true,
 }) {
   const [isOpen, setIsOpen] = useState(defaultOpen);
   const [input, setInput] = useState('');
   const [hoverIdx, setHoverIdx] = useState(-1);
 
-  // case-insensitive “has skill”
   const hasSkill = (arr, s) =>
     (arr || []).some((x) => String(x).toLowerCase() === String(s).toLowerCase());
 
   const normalizedInput = input.trim();
-
   const suggestions = useMemo(() => {
     if (!normalizedInput) return [];
     const q = normalizedInput.toLowerCase();
@@ -30,28 +28,23 @@ export default function SkillsSection({
 
   const addSkill = (raw) => {
     const s = String(raw).trim();
-    if (!s) return;
-    setSkills((prev) => {
-      if (hasSkill(prev, s)) return prev;
-      return [...(prev || []), s];
-    });
+    if (!s || skills.length >= 12) return;
+    if (hasSkill(skills, s)) return;
+    setSkills((prev) => [...prev, s]);
     setInput('');
     setHoverIdx(-1);
   };
 
   const removeSkill = (toRemove) => {
-    const low = String(toRemove).toLowerCase();
-    setSkills((prev) => (prev || []).filter((s) => String(s).toLowerCase() !== low));
+    setSkills((prev) => prev.filter((s) => String(s).toLowerCase() !== String(toRemove).toLowerCase()));
   };
 
   const onKeyDown = (e) => {
-    // Enter or comma adds the current input
     if ((e.key === 'Enter' || e.key === ',') && normalizedInput) {
       e.preventDefault();
       addSkill(normalizedInput);
       return;
     }
-    // Arrow navigation in suggestions
     if (suggestions.length) {
       if (e.key === 'ArrowDown') {
         e.preventDefault();
@@ -66,7 +59,6 @@ export default function SkillsSection({
     }
   };
 
-  // Stable content (no nested component to avoid remounts)
   const content = (
     <div className="space-y-3">
       <div className="relative">
@@ -78,11 +70,14 @@ export default function SkillsSection({
             setHoverIdx(-1);
           }}
           onKeyDown={onKeyDown}
-          placeholder="Type a skill and press Enter (e.g., React, Excel)…"
+          placeholder="Type a skill (8–12 total)…"
           className="w-full rounded-lg border border-slate-200 p-2.5 text-sm outline-none focus:border-[#FF7043] focus:ring-2 focus:ring-[#FF7043]/30"
           autoComplete="off"
+          disabled={skills.length >= 12}
         />
-
+        {skills.length >= 12 && (
+          <p className="text-xs text-orange-600 mt-1">Max 12 skills. Remove one to add more.</p>
+        )}
         {suggestions.length > 0 && (
           <ul className="absolute z-10 mt-1 max-h-52 w-full overflow-auto rounded-lg border border-slate-200 bg-white shadow">
             {suggestions.map((s, i) => (
@@ -91,7 +86,6 @@ export default function SkillsSection({
                 onMouseEnter={() => setHoverIdx(i)}
                 onMouseLeave={() => setHoverIdx(-1)}
                 onMouseDown={(e) => {
-                  // prevent input blur before click adds the skill
                   e.preventDefault();
                   addSkill(s);
                 }}
@@ -106,38 +100,45 @@ export default function SkillsSection({
         )}
       </div>
 
-      {(skills || []).length > 0 && (
-        <div className="flex flex-wrap gap-2">
-          {skills.map((s) => (
-            <span
-              key={s}
-              className="inline-flex items-center gap-1 rounded-full border border-[#FF7043]/30 bg-[#FF7043]/10 px-3 py-1 text-xs font-medium text-[#FF7043]"
+      <div className="flex flex-wrap gap-2">
+        {skills.map((s) => (
+          <span
+            key={s}
+            className="inline-flex items-center gap-1 rounded-full border border-[#FF7043]/30 bg-[#FF7043]/10 px-3 py-1 text-xs font-medium text-[#FF7043]"
+          >
+            {s}
+            <button
+              type="button"
+              onClick={() => removeSkill(s)}
+              className="ml-1 inline-flex items-center justify-center rounded-full p-0.5 hover:bg-[#FF7043]/20"
+              aria-label={`Remove ${s}`}
             >
-              {s}
-              <button
-                type="button"
-                onClick={() => removeSkill(s)}
-                className="ml-1 inline-flex items-center justify-center rounded-full p-0.5 hover:bg-[#FF7043]/20"
-                aria-label={`Remove ${s}`}
-              >
-                <FaTimes />
-              </button>
-            </span>
-          ))}
-        </div>
+              <FaTimes />
+            </button>
+          </span>
+        ))}
+      </div>
+
+      {skills.length > 0 && (
+        <button
+          type="button"
+          onClick={() => setSkills([])}
+          className="text-xs text-slate-500 hover:underline"
+        >
+          Clear all
+        </button>
       )}
 
-      {(skills || []).length > 0 && (
-        <div>
-          <button
-            type="button"
-            onClick={() => setSkills([])}
-            className="text-xs text-slate-500 hover:underline"
-          >
-            Clear all
-          </button>
-        </div>
-      )}
+      {/* ENFORCEMENT BADGE */}
+      <div className="text-xs">
+        {skills.length < 8 ? (
+          <span className="text-orange-600">Add {8 - skills.length} more skills (8 minimum)</span>
+        ) : skills.length > 12 ? (
+          <span className="text-red-600">Remove {skills.length - 12} skills (12 max)</span>
+        ) : (
+          <span className="text-green-600">8–12 skills — perfect!</span>
+        )}
+      </div>
     </div>
   );
 
@@ -150,10 +151,9 @@ export default function SkillsSection({
         className="w-full flex items-center justify-between"
         onClick={() => setIsOpen((o) => !o)}
       >
-        <h2 className="text-lg font-semibold text-[#FF7043]">Skills</h2>
+        <h2 className="text-lg font-semibold text-[#FF7043]">Skills (8–12)</h2>
         {isOpen ? <FaChevronDown className="text-[#FF7043]" /> : <FaChevronRight className="text-[#FF7043]" />}
       </button>
-
       {isOpen && content}
     </section>
   );

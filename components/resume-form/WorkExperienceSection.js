@@ -10,16 +10,14 @@ import {
 export default function WorkExperienceSection({
   experiences = [],
   setExperiences,
-  embedded = false,    // render only fields (no outer card/header)
-  defaultOpen = true,  // used only in standalone mode
+  embedded = false,
+  defaultOpen = true,
 }) {
   const [isOpen, setIsOpen] = useState(defaultOpen);
 
-  // --- helpers ---
   const norm = useMemo(
     () =>
       (experiences || []).map((e) => ({
-        // keep both keys so older code keeps working, but use "title" as canonical
         title: e.title ?? e.jobTitle ?? '',
         jobTitle: e.jobTitle ?? e.title ?? '',
         company: e.company ?? '',
@@ -27,14 +25,12 @@ export default function WorkExperienceSection({
         startDate: e.startDate ?? '',
         endDate: e.endDate ?? '',
         current: !!e.current,
-        // bullets preferred; fall back to description (split by newlines)
         bullets: Array.isArray(e.bullets)
           ? e.bullets
           : (e.description || '')
               .split('\n')
               .map((b) => b.trim())
               .filter(Boolean),
-        // keep raw description too (for backward compat / export if needed)
         description: e.description ?? '',
       })),
     [experiences]
@@ -48,7 +44,7 @@ export default function WorkExperienceSection({
         ? {
             ...e,
             [name]: value,
-            ...(name === 'title' ? { jobTitle: value } : null), // keep both in sync
+            ...(name === 'title' ? { jobTitle: value } : null),
           }
         : e
     );
@@ -101,7 +97,7 @@ export default function WorkExperienceSection({
         startDate: '',
         endDate: '',
         current: false,
-        bullets: [''],
+        bullets: ['', ''], // Start with 2 bullets
         description: '',
       },
     ]);
@@ -112,7 +108,6 @@ export default function WorkExperienceSection({
     commit(next);
   };
 
-  // ===== Embedded (used inside SectionGroup) =====
   if (embedded) {
     return (
       <div className="space-y-4">
@@ -134,7 +129,6 @@ export default function WorkExperienceSection({
                   className="mt-1 w-full rounded-lg border border-slate-200 p-2.5 text-sm outline-none focus:border-[#FF7043] focus:ring-2 focus:ring-[#FF7043]/30"
                 />
               </div>
-
               <div>
                 <label className="block text-sm font-medium text-slate-700">
                   Company
@@ -147,7 +141,6 @@ export default function WorkExperienceSection({
                   className="mt-1 w-full rounded-lg border border-slate-200 p-2.5 text-sm outline-none focus:border-[#FF7043] focus:ring-2 focus:ring-[#FF7043]/30"
                 />
               </div>
-
               <div className="md:col-span-2">
                 <label className="block text-sm font-medium text-slate-700">
                   Location
@@ -160,7 +153,6 @@ export default function WorkExperienceSection({
                   className="mt-1 w-full rounded-lg border border-slate-200 p-2.5 text-sm outline-none focus:border-[#FF7043] focus:ring-2 focus:ring-[#FF7043]/30"
                 />
               </div>
-
               <div className="md:col-span-2 grid grid-cols-1 sm:grid-cols-3 gap-3">
                 <div>
                   <label className="block text-sm font-medium text-slate-700">
@@ -201,7 +193,7 @@ export default function WorkExperienceSection({
               </div>
             </div>
 
-            {/* Bullets editor */}
+            {/* BULLETS EDITOR — ENFORCED */}
             <div className="mt-3">
               <label className="block text-sm font-medium text-slate-700">
                 Key Achievements / Responsibilities
@@ -230,7 +222,6 @@ export default function WorkExperienceSection({
                     </button>
                   </div>
                 ))}
-
                 <button
                   type="button"
                   onClick={() => addBullet(idx)}
@@ -239,6 +230,13 @@ export default function WorkExperienceSection({
                   <FaPlus /> Add bullet
                 </button>
               </div>
+
+              {/* ENFORCEMENT WARNING */}
+              {exp.bullets.length < 2 && (
+                <p className="text-xs text-orange-600 mt-2">
+                  Add {2 - exp.bullets.length} more bullet{exp.bullets.length === 1 ? '' : 's'} (2 minimum per role)
+                </p>
+              )}
             </div>
 
             <div className="mt-3">
@@ -264,7 +262,6 @@ export default function WorkExperienceSection({
     );
   }
 
-  // ===== Standalone (collapsible card) =====
   return (
     <section className="bg-white rounded-xl border border-slate-200 shadow-sm p-4 md:p-5 space-y-4">
       <button
@@ -279,17 +276,13 @@ export default function WorkExperienceSection({
           <FaChevronRight className="text-[#FF7043]" />
         )}
       </button>
-
       {isOpen && (
         <div className="space-y-4">
-          {/* reuse embedded rendering for the body */}
-          {(
-            <WorkExperienceSection
-              experiences={norm}
-              setExperiences={setExperiences}
-              embedded
-            />
-          )}
+          <WorkExperienceSection
+            experiences={norm}
+            setExperiences={setExperiences}
+            embedded
+          />
         </div>
       )}
     </section>

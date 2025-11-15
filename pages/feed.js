@@ -1,4 +1,3 @@
-// pages/feed.js (center content only; SeekerLayout wraps this page elsewhere)
 import React from "react";
 import Head from "next/head";
 import SeekerLayout from "@/components/layouts/SeekerLayout";

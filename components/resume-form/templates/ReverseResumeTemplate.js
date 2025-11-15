@@ -1,195 +1,116 @@
 // components/resume-form/templates/ReverseResumeTemplate.js
-// Reverse-chronological, single-column, ATS-safe
-
-import React from 'react';
-
-function Lines({ text }) {
-  if (!text) return null;
-  const lines = String(text).split(/\r?\n/).map(s => s.trim()).filter(Boolean);
-  return (
-    <ul className="list-disc list-inside space-y-1 text-gray-800 leading-snug">
-      {lines.map((l, i) => <li key={i}>{l}</li>)}
-    </ul>
-  );
-}
-
-function bulletsFor(exp) {
-  // Support either `bullets` array OR newline `description`
-  if (Array.isArray(exp?.bullets) && exp.bullets.length) return exp.bullets;
-  const desc = exp?.description || '';
-  return desc.split(/\r?\n/).map(s => s.trim()).filter(Boolean);
-}
-
 export default function ReverseResumeTemplate({ data }) {
-  const {
-    formData = {},
-    summary = '',
-    experiences = [],
-    projects = [],
-    volunteerExperiences = [],
-    educationList = [],
-    certifications = [],
-    languages = [],
-    skills = [],
-    achievements = [],
-    customSections = [],
-  } = data || {};
-
-  // Normalize some field names from different editors
-  const renderJobTitle = (exp) => exp.jobTitle || exp.title || 'Title';
-  const renderCompany  = (exp) => exp.company || exp.org || 'Company';
-  const renderDates    = (exp) =>
-    [exp.startDate || exp.start, exp.endDate || exp.end]
-      .filter(Boolean)
-      .join(' — ');
-
-  // Languages can be array of strings OR objects
-  const languageLabel = (it) =>
-    typeof it === 'string' ? it :
-    [it.language, it.proficiency, it.years ? `${it.years} yrs` : '']
-      .filter(Boolean)
-      .join(' — ');
+  const { personalInfo, summary, workExperiences = [], educationList = [], skills = [] } = data;
 
   return (
-    <article className="max-w-[780px] mx-auto bg-white text-gray-900 font-sans p-6">
-      {/* Header */}
-      <header className="border-b border-gray-300 pb-3 mb-4">
-        <h1 className="text-3xl font-extrabold tracking-tight">{formData.fullName || 'Your Name'}</h1>
-        <div className="text-sm text-gray-700 mt-1 flex flex-wrap gap-x-3 gap-y-1">
-          {formData.email && <span><a href={`mailto:${formData.email}`} className="underline">{formData.email}</a></span>}
-          {formData.phone && <span>{formData.phone}</span>}
-          {formData.location && <span>{formData.location}</span>}
-          {formData.portfolio && <span><a href={formData.portfolio} className="underline" target="_blank" rel="noreferrer">Portfolio</a></span>}
-        </div>
-      </header>
+    <div style={{
+      width: '100%',
+      padding: 0,
+      margin: 0,
+      fontFamily: 'Georgia, serif',
+      fontSize: '11pt',
+      lineHeight: '1.4',
+      color: '#1f2937'
+    }}>
+      {/* HEADER */}
+      <div style={{ textAlign: 'center', marginBottom: '20pt' }}>
+        <h1 style={{ fontSize: '28pt', fontWeight: 'bold', margin: 0 }}>
+          {personalInfo.name}
+        </h1>
 
-      {/* Summary */}
+        {/* CONTACT + LINKS */}
+        <p style={{ fontSize: '11pt', margin: '4pt 0 0 0', color: '#666' }}>
+          {[
+            personalInfo.email,
+            personalInfo.phone,
+            personalInfo.location,
+            personalInfo.linkedin && `LinkedIn: ${personalInfo.linkedin}`,
+            personalInfo.github && `GitHub: ${personalInfo.github}`,
+            personalInfo.portfolio && `Portfolio: ${personalInfo.portfolio}`,
+            personalInfo.ftProfile && `FT Profile: ${personalInfo.ftProfile}`
+          ].filter(Boolean).join(' | ')}
+        </p>
+
+        {/* TARGETED ROLE */}
+        {personalInfo.targetedRole && (
+          <p style={{ fontSize: '12pt', fontStyle: 'italic', margin: '8pt 0 0 0', color: '#444' }}>
+            {personalInfo.targetedRole}
+          </p>
+        )}
+      </div>
+
+      {/* SUMMARY */}
       {summary && (
-        <section className="mb-4">
-          <h2 className="text-lg font-semibold text-gray-800 border-b border-gray-200 pb-1">Professional Summary</h2>
-          <p className="mt-2 text-gray-800 whitespace-pre-wrap leading-relaxed">{summary}</p>
-        </section>
+        <div style={{ marginBottom: '16pt' }}>
+          <h2 style={{ fontSize: '13pt', fontWeight: 'bold', margin: '0 0 6pt 0', borderBottom: '1pt solid #000', textTransform: 'uppercase' }}>
+            Professional Summary
+          </h2>
+          <p style={{ margin: 0, fontSize: '11pt' }}>{summary}</p>
+        </div>
       )}
 
-      {/* Experience (reverse-chronological) */}
-      {experiences?.length > 0 && (
-        <section className="mb-4">
-          <h2 className="text-lg font-semibold text-gray-800 border-b border-gray-200 pb-1">Experience</h2>
-          <div className="mt-2 space-y-3">
-            {[...experiences].reverse().map((exp, idx) => (
-              <div key={idx}>
-                <div className="flex flex-wrap items-baseline justify-between gap-2">
-                  <h3 className="font-semibold text-gray-900">
-                    {renderJobTitle(exp)} — <span className="italic">{renderCompany(exp)}</span>
-                  </h3>
-                  <div className="text-sm text-gray-600">{renderDates(exp)}{exp.location ? ` | ${exp.location}` : ''}</div>
+      {/* EXPERIENCE */}
+      {workExperiences.length > 0 && (
+        <div style={{ marginBottom: '16pt' }}>
+          <h2 style={{ fontSize: '13pt', fontWeight: 'bold', margin: '0 0 6pt 0', borderBottom: '1pt solid #000', textTransform: 'uppercase' }}>
+            Experience
+          </h2>
+          {workExperiences.map((exp, i) => (
+            <div key={i} style={{ marginBottom: '12pt' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+                <div>
+                  <strong style={{ fontSize: '11pt' }}>{exp.title || exp.jobTitle}</strong>
+                  <span style={{ color: '#444', marginLeft: '8pt' }}>
+                    {exp.company} {exp.location && `• ${exp.location}`}
+                  </span>
                 </div>
-                <div className="mt-1">
-                  {Array.isArray(exp.bullets) && exp.bullets.length ? (
-                    <ul className="list-disc list-inside space-y-1 text-gray-800 leading-snug">
-                      {exp.bullets.map((b, i) => <li key={i}>{b}</li>)}
-                    </ul>
-                  ) : (
-                    <Lines text={exp.description} />
-                  )}
-                </div>
+                <span style={{ fontSize: '10pt', color: '#666', whiteSpace: 'nowrap' }}>
+                  {exp.startDate} – {exp.endDate || 'Present'}
+                </span>
               </div>
-            ))}
-          </div>
-        </section>
+              {(exp.bullets || []).map((b, bi) => (
+                <p key={bi} style={{ margin: '3pt 0 3pt 16pt', fontSize: '11pt' }}>
+                  {b}
+                </p>
+              ))}
+            </div>
+          ))}
+        </div>
       )}
 
-      {/* Education */}
-      {educationList?.length > 0 && (
-        <section className="mb-4">
-          <h2 className="text-lg font-semibold text-gray-800 border-b border-gray-200 pb-1">Education</h2>
-          <div className="mt-2 space-y-2">
-            {educationList.map((edu, i) => (
-              <div key={i}>
-                <div className="flex flex-wrap items-baseline justify-between gap-2">
-                  <h3 className="font-semibold">{edu.degree || 'Degree'} — <span className="italic">{edu.school || 'School'}</span></h3>
-                  <div className="text-sm text-gray-600">
-                    {[edu.startDate, edu.endDate].filter(Boolean).join(' — ')}
-                  </div>
-                </div>
-                {edu.description && <p className="text-gray-800 mt-1 whitespace-pre-wrap">{edu.description}</p>}
+      {/* EDUCATION */}
+      {educationList.length > 0 && (
+        <div style={{ marginBottom: '16pt' }}>
+          <h2 style={{ fontSize: '13pt', fontWeight: 'bold', margin: '0 0 6pt 0', borderBottom: '1pt solid #000', textTransform: 'uppercase' }}>
+            Education
+          </h2>
+          {educationList.map((edu, i) => (
+            <div key={i} style={{ marginBottom: '10pt' }}>
+              <div style={{ fontWeight: 'bold', fontSize: '11pt' }}>
+                {edu.degree} {edu.field && `${edu.field}`}
               </div>
-            ))}
-          </div>
-        </section>
-      )}
-
-      {/* Skills */}
-      {Array.isArray(skills) && skills.length > 0 && (
-        <section className="mb-4">
-          <h2 className="text-lg font-semibold text-gray-800 border-b border-gray-200 pb-1">Skills</h2>
-          <p className="mt-2 text-gray-800">{skills.join(', ')}</p>
-        </section>
-      )}
-
-      {/* Projects */}
-      {projects?.length > 0 && (
-        <section className="mb-4">
-          <h2 className="text-lg font-semibold text-gray-800 border-b border-gray-200 pb-1">Projects</h2>
-          <div className="mt-2 space-y-2">
-            {projects.map((p, i) => (
-              <div key={i}>
-                <h3 className="font-semibold">{p.title || 'Project'}</h3>
-                {p.description && <p className="text-gray-800 whitespace-pre-wrap">{p.description}</p>}
+              <div style={{ fontSize: '10pt' }}>
+                {edu.school} {edu.location && `• ${edu.location}`}
               </div>
-            ))}
-          </div>
-        </section>
-      )}
-
-      {/* Languages */}
-      {Array.isArray(languages) && languages.length > 0 && (
-        <section className="mb-4">
-          <h2 className="text-lg font-semibold text-gray-800 border-b border-gray-200 pb-1">Languages</h2>
-          <ul className="mt-2 list-disc list-inside text-gray-800">
-            {languages.map((it, i) => <li key={i}>{languageLabel(it)}</li>)}
-          </ul>
-        </section>
-      )}
-
-      {/* Certifications */}
-      {certifications?.length > 0 && (
-        <section className="mb-4">
-          <h2 className="text-lg font-semibold text-gray-800 border-b border-gray-200 pb-1">Certifications</h2>
-          <ul className="mt-2 list-disc list-inside text-gray-800">
-            {certifications.map((c, i) => (
-              <li key={i}>
-                {(c.name || c.title || 'Certification')}
-                {c.issuer ? ` — ${c.issuer}` : ''}
-                {c.date ? ` (${c.date})` : ''}
-              </li>
-            ))}
-          </ul>
-        </section>
-      )}
-
-      {/* Achievements */}
-      {achievements?.length > 0 && (
-        <section className="mb-4">
-          <h2 className="text-lg font-semibold text-gray-800 border-b border-gray-200 pb-1">Achievements</h2>
-          <div className="mt-2 space-y-1">
-            {achievements.map((a, i) => (
-              <div key={i}>
-                <span className="font-semibold">{a.title || a.name || 'Achievement'}</span>
-                {a.description ? ` — ${a.description}` : ''}
+              <div style={{ fontSize: '10pt', color: '#666' }}>
+                {edu.startDate} – {edu.endDate || 'Present'}
               </div>
-            ))}
-          </div>
-        </section>
+            </div>
+          ))}
+        </div>
       )}
 
-      {/* Custom Sections */}
-      {Array.isArray(customSections) && customSections.length > 0 && customSections.map((sec, i) => (
-        <section key={i} className="mb-4">
-          <h2 className="text-lg font-semibold text-gray-800 border-b border-gray-200 pb-1">{sec.title || 'Custom'}</h2>
-          {sec.content && <p className="mt-2 text-gray-800 whitespace-pre-wrap">{sec.content}</p>}
-        </section>
-      ))}
-    </article>
+      {/* SKILLS */}
+      {skills.length > 0 && (
+        <div>
+          <h2 style={{ fontSize: '13pt', fontWeight: 'bold', margin: '0 0 6pt 0', borderBottom: '1pt solid #000', textTransform: 'uppercase' }}>
+            Skills
+          </h2>
+          <p style={{ margin: 0, fontSize: '11pt' }}>
+            {skills.join(' • ')}
+          </p>
+        </div>
+      )}
+    </div>
   );
 }

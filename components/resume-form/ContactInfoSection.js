@@ -2,11 +2,13 @@
 import { useMemo, useState } from 'react';
 import { FaChevronDown, FaChevronRight } from 'react-icons/fa';
 
+const ORANGE = '#FF7043'; // Match create.js
+
 export default function ContactInfoSection({
   formData = {},
   setFormData,
-  embedded = false,      // <- when true, render just the fields (no card/header)
-  defaultOpen = true,    // <- used only in standalone mode
+  embedded = false,
+  defaultOpen = true,
 }) {
   const [isOpen, setIsOpen] = useState(defaultOpen);
 
@@ -31,66 +33,133 @@ export default function ContactInfoSection({
   if (embedded) {
     return (
       <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+        {/* Full Name */}
         <div>
           <label htmlFor="fullName" className="block text-sm font-medium text-slate-700">
             Full Name
           </label>
           <input
-            id="fullName"
             type="text"
-            name="fullName"
-            value={f.fullName}
-            onChange={handleChange}
-            placeholder="John Doe"
-            className="mt-1 w-full rounded-lg border border-slate-200 p-2.5 text-sm outline-none focus:border-[#FF7043] focus:ring-2 focus:ring-[#FF7043]/30"
+            placeholder="Your Name"
+            value={formData.name || ''}
+            onChange={(e) => {
+              const newValue = e.target.value;
+              setFormData(prev => ({ ...prev, name: newValue }));
+            }}
+            style={{
+              width: '100%',
+              padding: '10px 12px',
+              border: '1px solid #D1D5DB',
+              borderRadius: 8,
+              fontSize: 15,
+              marginTop: 6,
+            }}
           />
         </div>
 
+        {/* Email */}
         <div>
           <label htmlFor="email" className="block text-sm font-medium text-slate-700">
             Email
           </label>
           <input
-            id="email"
-            type="email"
-            name="email"
-            value={f.email}
-            onChange={handleChange}
+            type="text"
             placeholder="you@example.com"
-            className="mt-1 w-full rounded-lg border border-slate-200 p-2.5 text-sm outline-none focus:border-[#FF7043] focus:ring-2 focus:ring-[#FF7043]/30"
+            value={formData.email || ''}
+            onChange={(e) => {
+              const newValue = e.target.value;
+              setFormData(prev => ({ ...prev, email: newValue }));
+            }}
+            style={{
+              width: '100%',
+              padding: '10px 12px',
+              border: '1px solid #D1D5DB',
+              borderRadius: 8,
+              fontSize: 15,
+              marginTop: 6,
+            }}
           />
         </div>
 
+        {/* Phone */}
         <div>
           <label htmlFor="phone" className="block text-sm font-medium text-slate-700">
             Phone
           </label>
           <input
-            id="phone"
             type="tel"
-            name="phone"
-            value={f.phone}
-            onChange={handleChange}
-            placeholder="(123) 456-7890"
-            className="mt-1 w-full rounded-lg border border-slate-200 p-2.5 text-sm outline-none focus:border-[#FF7043] focus:ring-2 focus:ring-[#FF7043]/30"
+            placeholder="123-456-7890"
+            value={formData.phone || ''}
+            onChange={(e) => {
+              const newValue = e.target.value;
+              setFormData(prev => ({ ...prev, phone: newValue }));
+            }}
+            style={{
+              width: '100%',
+              padding: '10px 12px',
+              border: '1px solid #D1D5DB',
+              borderRadius: 8,
+              fontSize: 15,
+              marginTop: 6,
+            }}
           />
         </div>
 
+        {/* Location */}
         <div>
           <label htmlFor="location" className="block text-sm font-medium text-slate-700">
             Location
           </label>
           <input
-            id="location"
             type="text"
-            name="location"
-            value={f.location}
-            onChange={handleChange}
-            placeholder="Nashville, TN"
-            className="mt-1 w-full rounded-lg border border-slate-200 p-2.5 text-sm outline-none focus:border-[#FF7043] focus:ring-2 focus:ring-[#FF7043]/30"
+            placeholder="Anywhere"
+            value={formData.location || ''}
+            onChange={(e) => {
+              const newValue = e.target.value;
+              setFormData(prev => ({ ...prev, location: newValue }));
+            }}
+            style={{
+              width: '100%',
+              padding: '10px 12px',
+              border: '1px solid #D1D5DB',
+              borderRadius: 8,
+              fontSize: 15,
+              marginTop: 6,
+            }}
           />
         </div>
 
+        {/* TARGETED ROLE — FULL WIDTH + AI TIP */}
+        <div className="md:col-span-2">
+          <label style={{ fontWeight: 600, fontSize: 14, color: '#374151', display: 'block', marginBottom: 4 }}>
+            Targeted Role
+          </label>
+          <input
+            type="text"
+            placeholder="e.g., Senior Software Engineer at Google"
+            value={formData.targetedRole || ''}
+            onChange={(e) => setFormData({ ...formData, targetedRole: e.target.value })}
+            style={{
+              width: '100%',
+              padding: '12px 16px',
+              border: '1px solid #D1D5DB',
+              borderRadius: 8,
+              fontSize: 16,
+              marginTop: 4,
+            }}
+          />
+          <p style={{
+            fontSize: 12,
+            color: '#6B7280',
+            marginTop: 6,
+            marginBottom: 0,
+            fontStyle: 'italic'
+          }}>
+            AI uses this + job description to optimize your resume for ATS.
+          </p>
+        </div>
+
+        {/* Portfolio */}
         <div className="md:col-span-2">
           <label htmlFor="portfolio" className="block text-sm font-medium text-slate-700">
             Portfolio / Website
@@ -106,6 +175,7 @@ export default function ContactInfoSection({
           />
         </div>
 
+        {/* ForgeTomorrow Profile URL */}
         <div className="md:col-span-2">
           <label htmlFor="forgeUrl" className="block text-sm font-medium text-slate-700">
             ForgeTomorrow Profile URL
@@ -138,7 +208,6 @@ export default function ContactInfoSection({
           <FaChevronRight className="text-[#FF7043]" />
         )}
       </button>
-
       {isOpen && (
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div>
@@ -155,7 +224,6 @@ export default function ContactInfoSection({
               className="mt-1 w-full rounded-lg border border-slate-200 p-2.5 text-sm outline-none focus:border-[#FF7043] focus:ring-2 focus:ring-[#FF7043]/30"
             />
           </div>
-
           <div>
             <label htmlFor="email-std" className="block text-sm font-medium text-slate-700">
               Email
@@ -170,7 +238,6 @@ export default function ContactInfoSection({
               className="mt-1 w-full rounded-lg border border-slate-200 p-2.5 text-sm outline-none focus:border-[#FF7043] focus:ring-2 focus:ring-[#FF7043]/30"
             />
           </div>
-
           <div>
             <label htmlFor="phone-std" className="block text-sm font-medium text-slate-700">
               Phone
@@ -185,7 +252,6 @@ export default function ContactInfoSection({
               className="mt-1 w-full rounded-lg border border-slate-200 p-2.5 text-sm outline-none focus:border-[#FF7043] focus:ring-2 focus:ring-[#FF7043]/30"
             />
           </div>
-
           <div>
             <label htmlFor="location-std" className="block text-sm font-medium text-slate-700">
               Location
@@ -199,6 +265,36 @@ export default function ContactInfoSection({
               placeholder="Nashville, TN"
               className="mt-1 w-full rounded-lg border border-slate-200 p-2.5 text-sm outline-none focus:border-[#FF7043] focus:ring-2 focus:ring-[#FF7043]/30"
             />
+          </div>
+
+          {/* TARGETED ROLE — FULL WIDTH + AI TIP (STANDALONE) */}
+          <div className="md:col-span-2">
+            <label style={{ fontWeight: 600, fontSize: 14, color: '#374151', display: 'block', marginBottom: 4 }}>
+              Targeted Role
+            </label>
+            <input
+              type="text"
+              placeholder="e.g., Senior Software Engineer at Google"
+              value={formData.targetedRole || ''}
+              onChange={(e) => setFormData({ ...formData, targetedRole: e.target.value })}
+              style={{
+                width: '100%',
+                padding: '12px 16px',
+                border: '1px solid #D1D5DB',
+                borderRadius: 8,
+                fontSize: 16,
+                marginTop: 4,
+              }}
+            />
+            <p style={{
+              fontSize: 12,
+              color: '#6B7280',
+              marginTop: 6,
+              marginBottom: 0,
+              fontStyle: 'italic'
+            }}>
+              AI uses this + job description to optimize your resume for ATS.
+            </p>
           </div>
 
           <div className="md:col-span-2">
@@ -215,7 +311,6 @@ export default function ContactInfoSection({
               className="mt-1 w-full rounded-lg border border-slate-200 p-2.5 text-sm outline-none focus:border-[#FF7043] focus:ring-2 focus:ring-[#FF7043]/30"
             />
           </div>
-
           <div className="md:col-span-2">
             <label htmlFor="forgeUrl-std" className="block text-sm font-medium text-slate-700">
               ForgeTomorrow Profile URL

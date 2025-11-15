@@ -1,11 +1,41 @@
+// /pages/login.js
 import Head from 'next/head';
 import Link from 'next/link';
+import { useState } from 'react';
+import { useRouter } from 'next/router';
 
 export default function Login() {
-  const handleSubmit = (e) => {
+  const router = useRouter();
+  const [loading, setLoading] = useState(false);
+  const [err, setErr] = useState('');
+
+  async function handleSubmit(e) {
     e.preventDefault();
-    alert('Login functionality coming soon!');
-  };
+    setErr('');
+    setLoading(true);
+    const form = new FormData(e.currentTarget);
+    const email = form.get('email');
+    const password = form.get('password');
+
+    try {
+      const r = await fetch('/api/auth/login', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email, password }),
+      });
+      const data = await r.json();
+      if (!r.ok || !data?.ok) {
+        setErr(data?.error || 'Login failed');
+        setLoading(false);
+        return;
+      }
+      // success → go to home (or /dashboard, etc.)
+      router.replace('/');
+    } catch (e2) {
+      setErr('Network error');
+      setLoading(false);
+    }
+  }
 
   return (
     <>
@@ -45,11 +75,14 @@ export default function Login() {
               />
             </div>
 
+            {err && <div className="text-red-600 text-sm -mt-2">{err}</div>}
+
             <button
               type="submit"
-              className="w-full bg-[#FF7043] text-white py-3 rounded font-semibold hover:bg-[#F4511E] transition-colors"
+              disabled={loading}
+              className="w-full bg-[#FF7043] text-white py-3 rounded font-semibold hover:bg-[#F4511E] transition-colors disabled:opacity-60"
             >
-              Login
+              {loading ? 'Signing in…' : 'Login'}
             </button>
           </form>
 

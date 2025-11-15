@@ -1,7 +1,5 @@
-// components/signal/MessageComposer.js
 import React, { useRef, useState } from 'react';
-
-const COMMON_EMOJIS = ['👍','😊','🎉','🔥','🙏','🚀','🤝','💼','✅','💡','📎'];
+const COMMON_EMOJIS = ['👍', '😊', '🎉', '🔥', '🙏', '🚀', '🤝', '💼', '✅', '💡', '📎'];
 
 export default function MessageComposer({ onSend }) {
   const [text, setText] = useState('');
@@ -28,27 +26,21 @@ export default function MessageComposer({ onSend }) {
   const send = () => {
     const trimmed = text.trim();
     if (!trimmed && files.length === 0) return;
-
-    // Convert selected files to simple attachments (data URLs for demo)
-    const toDataURL = (file) =>
-      new Promise((res) => {
-        const reader = new FileReader();
-        reader.onload = () =>
-          res({
-            type: file.type.startsWith('image/') ? 'image' : 'file',
-            url: reader.result,
-            name: file.name,
-          });
-        reader.readAsDataURL(file);
-      });
-
-    Promise.all(files.map(toDataURL)).then((attachments) => {
-      onSend?.(trimmed, attachments);
-      setText('');
-      setFiles([]);
-      setShowEmoji(false);
-      inputRef.current?.focus();
-    });
+    const formData = new FormData();
+    formData.append('conversationId', 'c3'); // Dummy ID
+    formData.append('senderId', 'user123'); // Dummy ID
+    formData.append('content', trimmed);
+    files.forEach((file) => formData.append('attachments', file));
+    fetch('/api/messages', { method: 'POST', body: formData })
+      .then(res => res.json())
+      .then(data => {
+        onSend?.(trimmed, files.map(f => ({ url: URL.createObjectURL(f), type: f.type.startsWith('image/') ? 'image' : 'file', name: f.name })));
+        setText('');
+        setFiles([]);
+        setShowEmoji(false);
+        inputRef.current?.focus();
+      })
+      .catch(err => console.log('Error:', err));
   };
 
   const onKey = (e) => {
@@ -88,7 +80,6 @@ export default function MessageComposer({ onSend }) {
             minHeight: 44,
           }}
         />
-        {/* attachments preview */}
         {files.length > 0 && (
           <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', marginTop: 8 }}>
             {files.map((f, i) => (
@@ -123,8 +114,6 @@ export default function MessageComposer({ onSend }) {
             ))}
           </div>
         )}
-
-        {/* emoji popover */}
         {showEmoji && (
           <div
             style={{
@@ -164,7 +153,6 @@ export default function MessageComposer({ onSend }) {
           </div>
         )}
       </div>
-
       <div style={{ display: 'flex', gap: 8 }}>
         <button
           onClick={() => setShowEmoji((v) => !v)}
@@ -180,7 +168,6 @@ export default function MessageComposer({ onSend }) {
         >
           😊
         </button>
-
         <label
           style={{
             background: 'white',
@@ -200,7 +187,6 @@ export default function MessageComposer({ onSend }) {
             onChange={pickFiles}
           />
         </label>
-
         <button
           onClick={send}
           style={{

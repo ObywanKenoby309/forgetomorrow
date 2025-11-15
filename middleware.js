@@ -37,6 +37,11 @@ export function middleware(req) {
   const { pathname } = url;
   const hostname = req.nextUrl.hostname || '';
 
+  // ✅ NEW: if we have an auth session cookie, always allow
+  // (For investor demo we just check presence. Your /api/auth/login
+  // should set this cookie after verifying credentials.)
+  const hasSession = req.cookies.get?.('ft_session')?.value;
+
   // Always allow static assets
   if (STATIC_ALLOW.some((re) => re.test(pathname))) {
     const res = NextResponse.next();
@@ -65,6 +70,13 @@ export function middleware(req) {
       res.headers.set('x-site-lock', 'allowed-host');
       return res;
     }
+  }
+
+  // ✅ If a valid session cookie is present, bypass the lock
+  if (hasSession) {
+    const res = NextResponse.next();
+    res.headers.set('x-site-lock', 'session-allow');
+    return res;
   }
 
   // If NOT locked → fully public

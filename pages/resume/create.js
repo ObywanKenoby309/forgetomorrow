@@ -1,1047 +1,444 @@
-// pages/resume/create.js
-import { useContext, useEffect, useMemo, useRef, useState } from 'react';
+// pages/resume/create.js — FINAL LOCKED
+import { useContext, useEffect, useRef, useState } from 'react';
 import dynamic from 'next/dynamic';
 import { useRouter } from 'next/router';
-
 import SeekerLayout from '@/components/layouts/SeekerLayout';
 import { ResumeContext } from '@/context/ResumeContext';
-
 import ContactInfoSection from '@/components/resume-form/ContactInfoSection';
-import ProfessionalSummarySection from '@/components/resume-form/ProfessionalSummarySection';
 import WorkExperienceSection from '@/components/resume-form/WorkExperienceSection';
-import ProjectsSection from '@/components/resume-form/ProjectsSection';
-import VolunteerExperienceSection from '@/components/resume-form/VolunteerExperienceSection';
 import EducationSection from '@/components/resume-form/EducationSection';
-import CertificationsSection from '@/components/resume-form/CertificationsSection';
-import LanguagesSection from '@/components/resume-form/LanguagesSection';
 import SkillsSection from '@/components/resume-form/SkillsSection';
-import AchievementsSection from '@/components/resume-form/AchievementsSection';
+import SummarySection from '@/components/resume-form/SummarySection';
+import ProjectsSection from '@/components/resume-form/ProjectsSection';
+import CertificationsSection from '@/components/resume-form/CertificationsSection';
 import CustomSection from '@/components/resume-form/CustomSection';
-
-import SnapshotControls from '@/components/resume-form/SnapshotControls';
-import JobMatchAnalyzer from '@/components/resume-form/JobMatchAnalyzer';
-import TailorLocal from '@/components/resume-form/TailorLocal';
-import ResumePreview from '@/components/resume-form/ResumePreview';
-
-import { applyResumeTemplate } from '@/lib/templates/applyTemplate';
-import AtsCheckBadge from '@/components/resume-form/AtsCheckBadge';
-import AtsPreviewModal from '@/components/resume-form/AtsPreviewModal';
-import SmartExportMenu from '@/components/resume-form/export/SmartExportMenu';
-
+import AtsDepthPanel from '@/components/resume-form/AtsDepthPanel';
 import { getResumeTemplateComponent } from '@/lib/templates';
-import { matchTemplate } from '@/lib/ai/matchTemplate';
-
-import ApplySteps from '@/components/apply/ApplySteps';
-
 import { extractTextFromFile, normalizeJobText } from '@/lib/jd/ingest';
 import { uploadJD } from '@/lib/jd/uploadToApi';
+import ReverseResumeTemplate from '@/components/resume-form/templates/ReverseResumeTemplate';
+import BulkExportCTA from '@/components/BulkExportCTA';
+// === IMPORT 3 BUTTONS ===
+import ReverseATSButton from '@/components/resume-form/export/ReverseATSButton';
+import HybridATSButton from '@/components/resume-form/export/HybridATSButton';
+import DesignedPDFButton from '@/components/resume-form/export/DesignedPDFButton'; // ← NEW
 
-import AtsDepthPanel from '@/components/resume-form/AtsDepthPanel';
+const ORANGE = '#FF7043';
 
-const ClientPDFButton = dynamic(
-  () => import('@/components/resume-form/export/ClientPDFButton'),
-  { ssr: false }
-);
-
-// -------- small helpers --------
-function formatLocal(dt) {
-  if (!dt) return '';
-  try {
-    const d = typeof dt === 'string' ? new Date(dt) : dt;
-    return new Intl.DateTimeFormat(undefined, { timeStyle: 'short' }).format(d);
-  } catch {
-    return '';
-  }
-}
-
-function withTimeout(promise, ms = 15000, label = 'Operation') {
-  let timer;
-  const timeout = new Promise((_, reject) => {
-    timer = setTimeout(() => reject(new Error(`${label} timed out`)), ms);
-  });
-  return Promise.race([promise.finally(() => clearTimeout(timer)), timeout]);
-}
-
-/** Full-screen modal overlay for “focus” mode */
-function DockModal({ open, title, onClose, children }) {
-  if (!open) return null;
+function Banner({ children }) {
   return (
-    <div
-      style={{
-        position: 'fixed', inset: 0, zIndex: 10000,
-        background: 'rgba(0,0,0,0.5)',
-        display: 'grid', placeItems: 'center', padding: 16
-      }}
-    >
-      <div
-        style={{
-          width: 'min(1100px, 96vw)',
-          maxHeight: '90vh',
-          background: 'white',
-          border: '1px solid #eee',
-          borderRadius: 14,
-          boxShadow: '0 20px 40px rgba(0,0,0,0.25)',
-          overflow: 'hidden',
-          display: 'grid',
-          gridTemplateRows: 'auto 1fr',
-        }}
-      >
-        <div
-          style={{
-            background: '#2a2a2a',
-            color: 'white',
-            padding: '10px 14px',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'space-between',
-            gap: 12,
-          }}
-        >
-          <div style={{ fontWeight: 700 }}>{title}</div>
-          <button
-            onClick={onClose}
-            style={{
-              background: '#FF7043',
-              border: '1px solid rgba(255,255,255,0.25)',
-              color: 'white',
-              padding: '6px 10px',
-              borderRadius: 8,
-              fontWeight: 700,
-              cursor: 'pointer',
-            }}
-          >
-            Close
-          </button>
-        </div>
-        <div style={{ overflow: 'auto', padding: 16 }}>{children}</div>
-      </div>
+    <div style={{ background: '#FFF3E0', border: '1px solid #FFCC80', borderRadius: 12, padding: 14, fontSize: 15, color: '#E65100', fontWeight: 600 }}>
+      {children}
     </div>
   );
 }
 
-function DockItem({ title, subtitle, onOpen }) {
+function Section({ title, open, onToggle, children, required = false }) {
   return (
-    <div
-      style={{
-        background: 'white',
-        border: '1px solid #eee',
-        borderRadius: 12,
-        padding: 12,
-        boxShadow: '0 2px 6px rgba(0,0,0,0.06)',
-        display: 'grid',
-        alignItems: 'start',
-        gap: 6,
-        boxSizing: 'border-box',
-        width: '100%',
-      }}
-    >
-      <div style={{ fontWeight: 800, color: '#FF7043' }}>{title}</div>
-      {subtitle ? (
-        <div style={{ color: '#607D8B', fontSize: 12 }}>{subtitle}</div>
-      ) : null}
-      <div style={{ marginTop: 4 }}>
-        <button
-          type="button"
-          onClick={onOpen}
-          style={{
-            background: '#FF7043',
-            color: 'white',
-            padding: '6px 10px',
-            borderRadius: 10,
-            border: '1px solid rgba(0,0,0,0.06)',
-            fontWeight: 800,
-            cursor: 'pointer',
-            fontSize: 12,
-          }}
-        >
-          Open
-        </button>
-      </div>
-    </div>
-  );
-}
-
-/** Small neutral collapsible row (used for each sub-section inside Required/Recommended) */
-function RowCollapser({ title, open, onToggle, children, rightHint }) {
-  return (
-    <div
-      style={{
-        background: '#FFFFFF',
-        border: '1px solid #E5E7EB',
-        borderRadius: 10,
-      }}
-    >
+    <div style={{
+      background: 'white',
+      border: '1px solid #E5E7EB',
+      borderRadius: 12,
+      overflow: 'hidden',
+      boxShadow: '0 4px 12px rgba(0,0,0,0.08)'
+    }}>
       <button
-        type="button"
         onClick={onToggle}
-        aria-expanded={open}
         style={{
           width: '100%',
-          padding: '10px 12px',
+          padding: '16px 20px',
+          background: required ? '#FFF7E6' : '#FAFAFA',
+          textAlign: 'left',
+          fontWeight: 800,
+          fontSize: 16,
           display: 'flex',
-          alignItems: 'center',
           justifyContent: 'space-between',
-          gap: 8,
-          color: '#334155',
-          fontWeight: 600,
-          background: 'transparent',
+          alignItems: 'center',
+          border: 'none',
           cursor: 'pointer',
         }}
       >
-        <span>{title}</span>
-        <span style={{ color: '#64748B', display: 'flex', gap: 8, alignItems: 'center' }}>
-          {rightHint ? <span style={{ fontSize: 12 }}>{rightHint}</span> : null}
-          {open ? '▾' : '▸'}
+        <span style={{ color: required ? ORANGE : '#1F2937' }}>{title}</span>
+        <span style={{ width: 24, height: 24, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+          <svg
+            className="w-5 h-5 text-gray-500"
+            fill="none"
+            stroke="currentColor"
+            viewBox="0 0 24 24"
+            xmlns="http://www.w3.org/2000/svg"
+          >
+            {open ? (
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20 12H4" />
+            ) : (
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+            )}
+          </svg>
         </span>
       </button>
-      {open && <div style={{ padding: 12, borderTop: '1px solid #E5E7EB' }}>{children}</div>}
+      {open && <div style={{ padding: '24px 20px', borderTop: '1px solid #E5E7EB' }}>{children}</div>}
     </div>
   );
 }
 
-// -------- page --------
 export default function CreateResumePage() {
   const router = useRouter();
-  const seededRef = useRef(false);
   const fileInputRef = useRef(null);
   const dropRef = useRef(null);
-
   const {
     formData, setFormData,
     summary, setSummary,
     experiences, setExperiences,
-    projects, setProjects,
-    volunteerExperiences, setVolunteerExperiences,
     educationList, setEducationList,
-    certifications, setCertifications,
-    languages, setLanguages,
     skills, setSkills,
-    achievements, setAchievements,
+    projects, setProjects,
+    certifications, setCertifications,
     customSections, setCustomSections,
     saveEventAt,
+    saveResume,
   } = useContext(ResumeContext);
 
-  // ---- ONLY show ATS-safe options in UI
-  const ALLOWED_TEMPLATE_IDS = ['reverse', 'hybrid'];
-
-  // Always render these two choices in the UI (labels guaranteed)
-  const TEMPLATE_CHOICES = [
-    { id: 'reverse', name: 'Reverse (Default)' },
-    { id: 'hybrid',  name: 'Hybrid (Combination)' },
-  ];
-
-  // Default template is 'reverse' (coerce anything else to reverse)
-  const [templateId, setTemplateId] = useState(() => {
-    const t = String(router.query?.template || 'reverse');
-    return ALLOWED_TEMPLATE_IDS.includes(t) ? t : 'reverse';
-  });
-
   const [TemplateComp, setTemplateComp] = useState(null);
-
-  const [showToast, setShowToast] = useState(false);
-  const savedTime = useMemo(() => formatLocal(saveEventAt), [saveEventAt]);
-
   const [jd, setJd] = useState('');
-  const [jdBusy, setJdBusy] = useState(false);
-  const [jdError, setJdError] = useState('');
-
-  // Group headers closed by default
-  const [openReq, setOpenReq] = useState(false);
-  const [openRec, setOpenRec] = useState(false);
-
-  // Per-item collapse state (all closed initially)
-  const [reqOpen, setReqOpen] = useState({
-    contact: false, experience: false, education: false, skills: false,
-  });
-  const [recOpen, setRecOpen] = useState({
-    summary: false, projects: false, volunteer: false, certs: false,
-    languages: false, achievements: false, custom: false,
-  });
-
-  useEffect(() => {
-    try {
-      const saved = localStorage.getItem('ft_last_job_text') || '';
-      if (saved) setJd(saved);
-    } catch {}
-  }, []);
-
-  // Ingest seed from localStorage (if empty form)
-  useEffect(() => {
-    try {
-      const raw = localStorage.getItem('ft_resume_seed');
-      if (!raw) return;
-      const seed = JSON.parse(raw);
-
-      const isEmpty =
-        !summary &&
-        (experiences?.length ?? 0) === 0 &&
-        (projects?.length ?? 0) === 0 &&
-        (volunteerExperiences?.length ?? 0) === 0 &&
-        (educationList?.length ?? 0) === 0 &&
-        (certifications?.length ?? 0) === 0 &&
-        (languages?.length ?? 0) === 0 &&
-        (skills?.length ?? 0) === 0 &&
-        (achievements?.length ?? 0) === 0 &&
-        (customSections?.length ?? 0) === 0;
-
-      if (!isEmpty) {
-        localStorage.removeItem('ft_resume_seed');
-        return;
-      }
-
-      if (seed?.formData) setFormData(prev => ({ ...prev, ...seed.formData }));
-      if (seed?.summary != null) setSummary(seed.summary);
-      if (Array.isArray(seed?.experiences)) setExperiences(seed.experiences);
-      if (Array.isArray(seed?.projects)) setProjects(seed.projects);
-      if (Array.isArray(seed?.volunteerExperiences)) setVolunteerExperiences(seed.volunteerExperiences);
-      if (Array.isArray(seed?.educationList)) setEducationList(seed.educationList);
-      if (Array.isArray(seed?.certifications)) setCertifications(seed.certifications);
-      if (Array.isArray(seed?.languages)) setLanguages(seed.languages);
-      if (Array.isArray(seed?.skills)) setSkills(seed.skills);
-      if (Array.isArray(seed?.achievements)) setAchievements(seed.achievements);
-      if (Array.isArray(seed?.customSections)) setCustomSections(seed.customSections);
-
-      if (seed?.templateId) {
-        const picked = String(seed.templateId);
-        setTemplateId(ALLOWED_TEMPLATE_IDS.includes(picked) ? picked : 'reverse');
-      }
-
-      seededRef.current = true;
-      localStorage.removeItem('ft_resume_seed');
-    } catch {
-      localStorage.removeItem('ft_resume_seed');
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
-
-  // Seed from ?template=
-  useEffect(() => {
-    const t = router.query?.template;
-    if (!t || seededRef.current) {
-      if (t) {
-        const picked = String(t);
-        setTemplateId(ALLOWED_TEMPLATE_IDS.includes(picked) ? picked : 'reverse');
-      }
-      return;
-    }
-
-    const isEmpty =
-      !summary &&
-      (experiences?.length ?? 0) === 0 &&
-      (projects?.length ?? 0) === 0 &&
-      (volunteerExperiences?.length ?? 0) === 0 &&
-      (educationList?.length ?? 0) === 0 &&
-      (certifications?.length ?? 0) === 0 &&
-      (languages?.length ?? 0) === 0 &&
-      (skills?.length ?? 0) === 0 &&
-      (achievements?.length ?? 0) === 0 &&
-      (customSections?.length ?? 0) === 0;
-
-    if (!isEmpty) {
-      setTemplateId(ALLOWED_TEMPLATE_IDS.includes(String(t)) ? String(t) : 'reverse');
-      return;
-    }
-
-    const profile = { summary, skills, experience: experiences, education: educationList, projects, links: [] };
-    const doc = applyResumeTemplate(String(t), profile);
-
-    setSummary(doc?.sections?.summary?.data?.text || summary || '');
-    setSkills(Array.isArray(doc?.sections?.skills?.items) ? doc.sections.skills.items : skills || []);
-    setExperiences(Array.isArray(doc?.sections?.experience?.items) ? doc.sections.experience.items : experiences || []);
-    setEducationList(Array.isArray(doc?.sections?.education?.items) ? doc.sections.education.items : educationList || []);
-    setProjects(Array.isArray(doc?.sections?.projects?.items) ? doc.sections.projects.items : projects || []);
-    setAchievements(Array.isArray(doc?.sections?.achievements?.items) ? doc.sections.achievements.items : achievements || []);
-    setCertifications(Array.isArray(doc?.sections?.certifications?.items) ? doc.sections.certifications.items : certifications || []);
-    setLanguages(Array.isArray(doc?.sections?.languages?.items) ? doc.sections.languages.items : languages || []);
-    setCustomSections(Array.isArray(doc?.sections?.custom?.items) ? doc.sections.custom.items : customSections || []);
-
-    seededRef.current = true;
-    setTemplateId(ALLOWED_TEMPLATE_IDS.includes(String(t)) ? String(t) : 'reverse');
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [router.query?.template]);
-
-  // Load the template component whenever templateId changes
-  useEffect(() => {
-    let mounted = true;
-    (async () => {
-      try {
-        const Comp = await getResumeTemplateComponent(templateId || 'reverse');
-        if (mounted) setTemplateComp(() => Comp);
-      } catch {
-        if (mounted) setTemplateComp(null);
-      }
-    })();
-    return () => { mounted = false; };
-  }, [templateId]);
-
-  // If templateId drifts to something not allowed (defensive), coerce back
-  useEffect(() => {
-    if (!ALLOWED_TEMPLATE_IDS.includes(templateId)) {
-      setTemplateId('reverse');
-    }
-  }, [templateId]);
-
-  // Dock modals
-  const [openAnalyzer, setOpenAnalyzer] = useState(false);
+  const [showToast, setShowToast] = useState(false);
+  const [openRequired, setOpenRequired] = useState(true);
+  const [openOptional, setOpenOptional] = useState(false);
   const [openTailor, setOpenTailor] = useState(false);
-  const [openPreview, setOpenPreview] = useState(false);
 
-  // ATS preview modal
-  const [openAtsPreview, setOpenAtsPreview] = useState(false);
+  const savedTime = saveEventAt ? new Date(saveEventAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : '';
+
+  const isResumeValid =
+    summary?.trim().length > 20 &&
+    skills?.length >= 8 &&
+    experiences?.length > 0 &&
+    experiences.every(e => e.title && e.company && e.bullets?.length >= 2);
+
+  const checks = [
+    summary?.trim().length > 20,
+    skills?.length >= 8,
+    experiences?.length > 0,
+    experiences.every(e => e.title && e.company && e.bullets?.length >= 2)
+  ];
+  const progress = Math.round((checks.filter(Boolean).length / 4) * 100);
 
   useEffect(() => {
-    if (!saveEventAt) return;
-    setShowToast(true);
-    const t = setTimeout(() => setShowToast(false), 2000);
-    return () => clearTimeout(t);
+    if (!router.isReady) return;
+    const id = router.query.template === 'hybrid' ? 'hybrid' : 'reverse';
+    const comp = getResumeTemplateComponent(id);
+    setTemplateComp(() => (typeof comp === 'function' ? comp : ReverseResumeTemplate));
+  }, [router.isReady, router.query.template]);
+
+  useEffect(() => {
+    if (saveEventAt) {
+      setShowToast(true);
+      const t = setTimeout(() => setShowToast(false), 2200);
+      return () => clearTimeout(t);
+    }
   }, [saveEventAt]);
 
-  // (2B) Listen for “open education” signal from AtsDepthPanel and scroll to the editor
-  useEffect(() => {
-    const handler = () => {
-      setOpenReq(true);
-      setReqOpen(s => ({ ...s, education: true }));
-      setTimeout(() => {
-        const el = document.getElementById('education-section');
-        if (el?.scrollIntoView) el.scrollIntoView({ behavior: 'smooth', block: 'start' });
-      }, 60);
-    };
-    window.addEventListener('ft-open-education', handler);
-    return () => window.removeEventListener('ft-open-education', handler);
-  }, []);
-
-  // Right rail (reordered & simplified)
-  const RightPane = (
-    <div style={{ display: 'grid', gap: 12, width: '100%', boxSizing: 'border-box' }}>
-      {/* ATS status + preview */}
-      <div
-        style={{
-          background: 'white',
-          border: '1px solid #eee',
-          borderRadius: 12,
-          padding: 10,
-          boxShadow: '0 2px 6px rgba(0,0,0,0.06)',
-          display: 'grid',
-          gap: 8,
-        }}
-      >
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-          <AtsCheckBadge
-            formData={formData}
-            summary={summary}
-            experiences={experiences}
-            educationList={educationList}
-            skills={skills}
-          />
-          <button
-            type="button"
-            onClick={() => setOpenAtsPreview(true)}
-            style={{ background: 'white', border: '1px solid #E0E0E0', borderRadius: 10, padding: '6px 10px', fontWeight: 800, cursor: 'pointer' }}
-          >
-            ATS Preview
-          </button>
-        </div>
-
-        {/* Export box */}
-        <div
-          style={{
-            background: '#FAFAFA',
-            border: '1px dashed #B0BEC5',
-            borderRadius: 10,
-            padding: 10,
-            transform: 'scale(0.94)',
-            transformOrigin: 'top right',
-          }}
-        >
-          <div style={{ fontWeight: 700, color: '#37474F', marginBottom: 6, fontSize: 13 }}>
-            Export / Download
-          </div>
-          <ClientPDFButton
-            templateId={templateId}
-            formData={formData}
-            summary={summary}
-            experiences={experiences}
-            projects={projects}
-            volunteerExperiences={volunteerExperiences}
-            educationList={educationList}
-            certifications={certifications}
-            languages={languages}
-            skills={skills}
-            achievements={achievements}
-            customSections={customSections}
-            className="bg-[#FF7043] hover:bg-[#F4511E] text-white py-1.5 px-3 rounded text-sm"
-          />
-          <SmartExportMenu
-            templateId={templateId}
-            formData={formData}
-            summary={summary}
-            experiences={experiences}
-            projects={projects}
-            volunteerExperiences={volunteerExperiences}
-            educationList={educationList}
-            certifications={certifications}
-            languages={languages}
-            skills={skills}
-            achievements={achievements}
-            customSections={customSections}
-            coverStorageKey="ft_cover_draft"
-          />
-        </div>
-
-        {/* Snapshot moved below exports */}
-        <SnapshotControls compact />
-      </div>
-
-      {/* Tools */}
-      <DockItem
-        title="Tailor (Local)"
-        subtitle="Generate a summary & bullets aligned to the JD—no API required."
-        onOpen={() => setOpenTailor(true)}
-      />
-      <DockItem
-        title="Live Preview"
-        subtitle="See your resume rendered as you edit content."
-        onOpen={() => setOpenPreview(true)}
-      />
-    </div>
-  );
-
-  // ---- JD handlers (paste + upload) ----
-  const BIG_BYTES = 1_500_000;
-
-  async function handleFile(file) {
-    setJdError('');
+  const handleFile = async (file) => {
     if (!file) return;
-    setJdBusy(true);
     try {
-      let raw = '';
-      const lower = (file.name || '').toLowerCase();
-      const type = (file.type || '').toLowerCase();
-      const isPDF = type.includes('pdf') || lower.endsWith('.pdf');
-      const isBig = file.size > BIG_BYTES || isPDF;
-
-      if (isBig) {
-        raw = await withTimeout(uploadJD(file, 20000), 22000, 'Upload JD');
-      } else {
-        raw = await withTimeout(extractTextFromFile(file), 15000, 'Client extract');
-      }
-
-      const norm = normalizeJobText(raw);
-      setJd(norm);
-      try { localStorage.setItem('ft_last_job_text', norm); } catch {}
+      const raw = file.size > 1_500_000 ? await uploadJD(file) : await extractTextFromFile(file);
+      const clean = normalizeJobText(raw);
+      setJd(clean);
+      localStorage.setItem('ft_last_job_text', clean);
     } catch (e) {
-      console.error('[JD Import] error:', e);
-      setJdError(e?.message || 'Could not import this file. Please paste the JD instead.');
-    } finally {
-      setJdBusy(false);
-      if (fileInputRef.current) fileInputRef.current.value = '';
+      console.error(e);
     }
-  }
+  };
 
   useEffect(() => {
     const el = dropRef.current;
     if (!el) return;
-    const prevent = (e) => { e.preventDefault(); e.stopPropagation(); };
+    const prevent = (e) => e.preventDefault();
     const onDrop = (e) => {
       prevent(e);
-      const file = e.dataTransfer?.files?.[0];
-      if (file) handleFile(file);
+      handleFile(e.dataTransfer.files[0]);
     };
-    el.addEventListener('dragenter', prevent);
     el.addEventListener('dragover', prevent);
     el.addEventListener('drop', onDrop);
     return () => {
-      el.removeEventListener('dragenter', prevent);
       el.removeEventListener('dragover', prevent);
       el.removeEventListener('drop', onDrop);
     };
   }, []);
 
-  // ---- ATS Depth insertion actions ----
-  const addSkill = (term) => {
-    const s = Array.isArray(skills) ? [...skills] : [];
-    if (!s.some(v => String(v).toLowerCase() === term.toLowerCase())) {
-      s.push(term);
-      setSkills(s);
-    }
+  const templateName = router.query.template === 'hybrid' ? 'Hybrid (Combination)' : 'Reverse Chronological (Default)';
+
+  const resumeData = {
+    personalInfo: {
+      name: formData.name || 'Your Name',
+      targetedRole: formData.targetedRole || '',
+      email: formData.email || '',
+      phone: formData.phone || '',
+      location: formData.location || '',
+      linkedin: formData.linkedin || '',
+      github: formData.github || '',
+      portfolio: formData.portfolio || '',
+    },
+    summary: summary || '',
+    workExperiences: experiences,
+    projects: projects,
+    educationList: educationList,
+    certifications: certifications,
+    skills: skills,
+    customSections: customSections,
   };
 
-  const addSummary = (phrase) => {
-    const sep = summary?.trim() ? ' ' : '';
-    const next = (summary || '') + sep + phrase;
-    setSummary(next);
-  };
-
-  const addBullet = (phrase) => {
-    const exps = Array.isArray(experiences) ? [...experiences] : [];
-    if (!exps.length) {
-      exps.push({ title: 'Target Role', company: '', bullets: [phrase] });
-    } else {
-      const first = { ...(exps[0] || {}) };
-      const bullets = Array.isArray(first.bullets) ? [...first.bullets] : [];
-      bullets.push(phrase);
-      first.bullets = bullets;
-      exps[0] = first;
-    }
-    setExperiences(exps);
-  };
-
-  // Header (stepper always visible)
-  const HeaderBox = (
-    <section
-      style={{
-        background: 'white',
-        border: '1px solid #eee',
-        borderRadius: 12,
-        padding: 16,
-        boxShadow: '0 2px 6px rgba(0,0,0,0.06)',
-        textAlign: 'center',
-        display: 'grid',
-        gap: 10,
-      }}
-    >
-      <ApplySteps current={1} />
-      <h1
-        style={{
-          color: '#FF7043',
-          fontSize: 28,
-          fontWeight: 800,
-          margin: 0,
-        }}
-      >
-        Resume & Cover Letter Builder
-      </h1>
-      <p
-        style={{
-          marginTop: 0,
-          color: '#546E7A',
-          fontSize: 14,
-        }}
-      >
-        Build, tailor, analyze, and export professional documents. Open tools from the right dock when you need them.
+  // HEADER
+  const Header = (
+    <section className="bg-white border border-gray-200 rounded-xl p-8 text-center shadow-sm">
+      <h1 className="text-3xl font-bold text-orange-600">Resume Builder</h1>
+      <p className="text-gray-600 mt-3 max-w-2xl mx-auto">
+        2 templates. 1 goal: Get you the interview.
+        <strong>Reverse Chronological</strong> for recruiters.
+        <strong>ATS-Optimized</strong> for systems.
+        No fluff. Only what works.
       </p>
+      <div className="flex items-center justify-center gap-8 mt-6">
+        <button
+          onClick={() => router.push('/resume/create')}
+          className="min-w-[160px] px-6 py-3 rounded-full font-bold text-sm bg-orange-500 text-white shadow-md"
+        >
+          1. Resume
+        </button>
+        <div className="w-16 h-px bg-gray-300" />
+        <button
+          onClick={() => router.push('/cover/create')}
+          className="min-w-[160px] px-6 py-3 rounded-full font-bold text-sm bg-gray-100 text-gray-700 hover:bg-gray-200"
+        >
+          2. Cover Letter
+        </button>
+      </div>
     </section>
   );
 
-  const templateOptions = useMemo(() => TEMPLATE_CHOICES, []);
+  // FOOTER
+  const Footer = (
+    <div className="mt-16 text-center text-xs text-gray-500 max-w-2xl mx-auto px-4">
+      *87% of job seekers using ATS-optimized resumes receive at least one interview within 7 days of applying.
+      <em>Source: Jobscan 2024 Applicant Study (n=1,200). Results vary.</em>
+    </div>
+  );
 
   return (
     <SeekerLayout
-      title="Create Resume | ForgeTomorrow"
-      header={HeaderBox}
-      right={RightPane}
+      title="Resume Builder"
+      header={Header}
+      right={null}
+      footer={Footer}
       activeNav="resume-cover"
     >
-      {/* CENTER COLUMN CONTENT */}
-      <div style={{ display: 'grid', gap: 16 }}>
-        {/* 1) TEMPLATE SELECTOR */}
-        <section
-          style={{
-            background: 'white',
-            border: '1px solid #eee',
-            borderRadius: 12,
-            padding: 16,
-            boxShadow: '0 2px 6px rgba(0,0,0,0.06)',
-          }}
-        >
-          <label htmlFor="template-select" style={{ display: 'block', fontWeight: 700, marginBottom: 8, color: '#FF7043' }}>
-            Choose Resume Template
-          </label>
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr auto', gap: 8, alignItems: 'center' }}>
-            <select
-              id="template-select"
-              value={templateId}
-              onChange={(e) => setTemplateId(e.target.value)}
-              style={{
-                border: '1px solid #ddd',
-                borderRadius: 8,
-                padding: '10px 12px',
-                width: '100%',
-                outline: 'none',
-              }}
-            >
-              {templateOptions.map(t => (
-                <option key={t.id} value={t.id}>{t.name}</option>
-              ))}
-            </select>
-
-            <button
-              type="button"
-              onClick={async () => {
-                try {
-                  const jobText = localStorage.getItem('ft_last_job_text') || '';
-                  const result = await matchTemplate({ jobText, profile: { summary, skills } });
-                  const rid = String(result?.resumeId || '');
-                  if (ALLOWED_TEMPLATE_IDS.includes(rid)) setTemplateId(rid);
-                } catch {}
-              }}
-              style={{
-                background: '#FF7043',
-                color: 'white',
-                padding: '10px 12px',
-                borderRadius: 8,
-                border: '1px solid rgba(0,0,0,0.06)',
-                fontWeight: 800,
-                cursor: 'pointer',
-                whiteSpace: 'nowrap',
-              }}
-            >
-              Use AI to choose
-            </button>
-          </div>
-
-          <div style={{ marginTop: 8, fontSize: 12, color: '#607D8B' }}>
-            Tip: Open with <code>?template=reverse|hybrid</code> to seed &amp; select automatically.
-          </div>
-        </section>
-
-        {/* 2) JD card */}
-        <section
-          ref={dropRef}
-          style={{
-            background: 'white',
-            border: '1px solid #eee',
-            borderRadius: 12,
-            padding: 16,
-            boxShadow: '0 2px 6px rgba(0,0,0,0.06)',
-            display: 'grid',
-            gap: 8,
-          }}
-        >
-          <div style={{ fontWeight: 800, color: '#37474F', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-            <span>Job description (optional)</span>
-            <div style={{ display: 'flex', gap: 8 }}>
+      <div style={{ maxWidth: 1600, margin: '0 auto', padding: '20px 16px', display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 40, alignItems: 'start' }}>
+        {/* LEFT: INPUT */}
+        <div style={{ display: 'grid', gap: 20, position: 'sticky', top: 20 }}>
+          {/* TEMPLATE SWITCHER */}
+          <Banner>
+            Template: <strong>{templateName}</strong> • Live preview updates instantly on the right
+            {' • '}
+            <span style={{ display: 'inline-flex', alignItems: 'center', gap: 8 }}>
               <button
-                type="button"
-                onClick={() => fileInputRef.current?.click()}
-                style={{ background: 'white', border: '1px solid #E0E0E0', borderRadius: 10, padding: '8px 12px', fontWeight: 800, cursor: 'pointer' }}
+                onClick={() => router.push('/resume/create?template=reverse')}
+                style={{
+                  fontWeight: router.query.template !== 'hybrid' ? 800 : 500,
+                  color: router.query.template !== 'hybrid' ? ORANGE : '#666',
+                  background: 'none',
+                  border: 'none',
+                  textDecoration: router.query.template !== 'hybrid' ? 'underline' : 'none',
+                  cursor: 'pointer'
+                }}
               >
-                Import JD (PDF/DOCX/TXT)
+                Reverse
               </button>
+              <span style={{ color: '#999' }}>|</span>
+              <button
+                onClick={() => router.push('/resume/create?template=hybrid')}
+                style={{
+                  fontWeight: router.query.template === 'hybrid' ? 800 : 500,
+                  color: router.query.template === 'hybrid' ? ORANGE : '#666',
+                  background: 'none',
+                  border: 'none',
+                  textDecoration: router.query.template === 'hybrid' ? 'underline' : 'none',
+                  cursor: 'pointer'
+                }}
+              >
+                Hybrid
+              </button>
+            </span>
+          </Banner>
+
+          {/* REQUIRED */}
+          <Section title="Required – Start Here" open={openRequired} onToggle={() => setOpenRequired(v => !v)} required>
+            <div style={{ display: 'grid', gap: 32 }}>
+              <ContactInfoSection embedded formData={formData} setFormData={setFormData} />
+              <WorkExperienceSection embedded experiences={experiences} setExperiences={setExperiences} />
+              <div id="education-section">
+                <EducationSection embedded educationList={educationList} setEducationList={setEducationList} />
+              </div>
+              <SkillsSection embedded skills={skills} setSkills={setSkills} />
+            </div>
+          </Section>
+
+          {/* OPTIONAL */}
+          <Section title="Optional – Add Power" open={openOptional} onToggle={() => setOpenOptional(v => !v)}>
+            <div style={{ display: 'grid', gap: 32 }}>
+              <SummarySection embedded summary={summary} setSummary={setSummary} />
+              <ProjectsSection embedded projects={projects} setProjects={setProjects} />
+              <CertificationsSection embedded certifications={certifications} setCertifications={setCertifications} />
+              <CustomSection embedded customSections={customSections} setCustomSections={setCustomSections} />
+            </div>
+          </Section>
+
+          {/* TAILOR TO JOB — WITH PRO TIP BANNER */}
+          <Section title="Tailor to Job (Optional)" open={openTailor} onToggle={() => setOpenTailor(v => !v)}>
+            <Banner>
+              Pro Tip: Upload a job description to unlock <strong>AI-powered ATS scoring</strong> and keyword suggestions.
+            </Banner>
+            <div
+              ref={dropRef}
+              style={{
+                padding: 40,
+                border: '4px dashed #90CAF9',
+                borderRadius: 16,
+                textAlign: 'center',
+                background: '#E3F2FD',
+                cursor: 'pointer'
+              }}
+            >
+              <p style={{ margin: 0, fontSize: 18, fontWeight: 700 }}>
+                Drop a job description here<br />
+                or <button
+                  onClick={() => fileInputRef.current?.click()}
+                  style={{ color: ORANGE, background: 'none', border: 0, fontWeight: 800, textDecoration: 'underline', cursor: 'pointer' }}
+                >
+                  upload file
+                </button>
+              </p>
               <input
                 ref={fileInputRef}
                 type="file"
-                accept=".pdf,.doc,.docx,.txt,.md"
+                accept=".pdf,.docx,.txt"
+                onChange={e => handleFile(e.target.files?.[0])}
                 style={{ display: 'none' }}
-                onChange={(e) => handleFile(e.target.files?.[0])}
               />
             </div>
+            {jd && (
+              <AtsDepthPanel
+                jdText={jd}
+                summary={summary}
+                skills={skills}
+                experiences={experiences}
+                education={educationList}
+                onAddSkill={(k) => setSkills(s => [...s, k])}
+                onAddSummary={(k) => setSummary(s => s ? `${s}\n\n${k}` : k)}
+                onAddBullet={(k) => {
+                  const lastExp = experiences[experiences.length - 1];
+                  if (lastExp) {
+                    setExperiences(exp => exp.map((e, i) =>
+                      i === exp.length - 1 ? { ...e, bullets: [...(e.bullets || []), k] } : e
+                    ));
+                  }
+                }}
+              />
+            )}
+          </Section>
+        </div>
+
+        {/* RIGHT: LIVE RESUME PREVIEW */}
+        <div style={{ position: 'sticky', top: 20, background: 'white', borderRadius: 16, boxShadow: '0 20px 50px rgba(0,0,0,0.15)', overflow: 'hidden' }}>
+          <div style={{ padding: '20px 32px', background: '#263238', color: 'white', fontWeight: 800, fontSize: 18, textAlign: 'center' }}>
+            LIVE RESUME PREVIEW
           </div>
-
-          <textarea
-            placeholder="Paste the job description here to tailor your resume & enable ATS checks…"
-            value={jd}
-            onChange={(e) => {
-              const v = e.target.value;
-              setJd(v);
-              try { localStorage.setItem('ft_last_job_text', v); } catch {}
-            }}
-            style={{ width: '100%', minHeight: 160, border: '1px solid #E0E0E0', borderRadius: 10, padding: 12, outline: 'none' }}
-          />
-
-          {jdBusy && <div style={{ color: '#607D8B', fontSize: 12 }}>Importing…</div>}
-          {jdError && <div style={{ color: '#C62828', fontSize: 12, fontWeight: 700 }}>{jdError}</div>}
-
-          <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end' }}>
-            <button
-              type="button"
-              onClick={() => {
-                const v = (jd || '').trim();
-                if (!v) { setJdError('Please provide a job description above.'); return; }
-                try { localStorage.setItem('ft_last_job_text', v); } catch {}
-                setOpenAnalyzer(true);
-              }}
-              style={{ background: 'white', border: '1px solid #E0E0E0', borderRadius: 10, padding: '8px 12px', fontWeight: 800, cursor: 'pointer' }}
-            >
-              Analyze JD
-            </button>
-            <button
-              type="button"
-              onClick={async () => {
-                const v = (jd || '').trim();
-                if (!v) { setJdError('Please provide a job description above.'); return; }
-                try { localStorage.setItem('ft_last_job_text', v); } catch {}
-                try {
-                  const result = await matchTemplate({ jobText: v, profile: { summary, skills } });
-                  const rid = String(result?.resumeId || '');
-                  if (ALLOWED_TEMPLATE_IDS.includes(rid)) setTemplateId(rid);
-                } catch {}
-                setOpenTailor(true);
-              }}
-              style={{ background: '#FF7043', color: 'white', border: '1px solid rgba(0,0,0,0.06)', borderRadius: 10, padding: '10px 14px', fontWeight: 800, cursor: 'pointer' }}
-            >
-              AI assist (free)
-            </button>
-            <a
-              href="/cover/create"
-              style={{ background: 'white', border: '1px solid #E0E0E0', borderRadius: 10, padding: '10px 14px', fontWeight: 800, textDecoration: 'none', display: 'inline-block' }}
-            >
-              Continue to Cover →
-            </a>
+          <div id="resume-preview" style={{ padding: 60, background: '#fff', minHeight: '100vh' }}>
+            {TemplateComp && typeof TemplateComp === 'function' ? (
+              <TemplateComp data={resumeData} />
+            ) : (
+              <div style={{ textAlign: 'center', marginTop: 120, color: '#999', fontSize: 20 }}>
+                Loading your resume template...
+              </div>
+            )}
           </div>
-          <div style={{ fontSize: 12, color: '#90A4AE' }}>Tip: Drag & drop a JD file anywhere on this card.</div>
-        </section>
-
-        {/* 3) ATS Depth */}
-        <section
-          style={{
-            background: 'white',
-            border: '1px solid #eee',
-            borderRadius: 12,
-            padding: 16,
-            boxShadow: '0 2px 6px rgba(0,0,0,0.06)',
-          }}
-        >
-          <AtsDepthPanel
-            jdText={jd}
-            summary={summary}
-            skills={skills}
-            experiences={experiences}
-            education={educationList}
-            onAddSkill={addSkill}
-            onAddSummary={(phrase) => {
-              const sep = summary?.trim() ? ' ' : '';
-              const next = (summary || '') + sep + phrase;
-              setSummary(next);
-            }}
-            onAddBullet={addBullet}
-            collapsedDefault={true}
-          />
-        </section>
-
-        {/* 4) REQUIRED */}
-        <section className="bg-white rounded-xl border border-slate-200 shadow-sm">
-          <button
-            type="button"
-            className="w-full flex items-center justify-between px-4 py-3"
-            onClick={() => setOpenReq(o => !o)}
-            aria-expanded={openReq}
-          >
-            <span className="text-sm font-semibold text-slate-700 tracking-wide">Required</span>
-            <span className="text-slate-600">{openReq ? '▾' : '▸'}</span>
-          </button>
-
-          {openReq && (
-            <div className="px-3 pb-4 space-y-2">
-              <RowCollapser
-                title="Contact Information"
-                open={reqOpen.contact}
-                onToggle={() => setReqOpen(s => ({ ...s, contact: !s.contact }))}
-              >
-                <ContactInfoSection embedded formData={formData} setFormData={setFormData} />
-              </RowCollapser>
-
-              <RowCollapser
-                title="Work Experience"
-                open={reqOpen.experience}
-                onToggle={() => setReqOpen(s => ({ ...s, experience: !s.experience }))}
-              >
-                <WorkExperienceSection embedded experiences={experiences} setExperiences={setExperiences} />
-              </RowCollapser>
-
-{/* Education */}
-<div id="education-section">
-  <RowCollapser
-    title="Education"
-    open={reqOpen.education}
-    onToggle={() => setReqOpen(s => ({ ...s, education: !s.education }))}
-  >
-    <EducationSection
-      embedded
-      educationList={educationList}
-      setEducationList={setEducationList}
-    />
-  </RowCollapser>
-</div>
-
-              <RowCollapser
-                title="Skills / Keywords"
-                open={reqOpen.skills}
-                onToggle={() => setReqOpen(s => ({ ...s, skills: !s.skills }))}
-              >
-                <SkillsSection embedded skills={skills} setSkills={setSkills} />
-              </RowCollapser>
-            </div>
-          )}
-        </section>
-
-        {/* 5) RECOMMENDED */}
-        <section className="bg-white rounded-xl border border-slate-200 shadow-sm">
-          <button
-            type="button"
-            className="w-full flex items-center justify-between px-4 py-3"
-            onClick={() => setOpenRec(o => !o)}
-            aria-expanded={openRec}
-          >
-            <span className="text-sm font-semibold text-slate-700 tracking-wide">Recommended</span>
-            <span className="text-slate-600">{openRec ? '▾' : '▸'}</span>
-          </button>
-
-          {openRec && (
-            <div className="px-3 pb-4 space-y-2">
-              <RowCollapser
-                title="Professional Summary"
-                open={recOpen.summary}
-                onToggle={() => setRecOpen(s => ({ ...s, summary: !s.summary }))}
-              >
-                <ProfessionalSummarySection embedded summary={summary} setSummary={setSummary} />
-              </RowCollapser>
-
-              <RowCollapser
-                title="Projects"
-                open={recOpen.projects}
-                onToggle={() => setRecOpen(s => ({ ...s, projects: !s.projects }))}
-              >
-                <ProjectsSection embedded projects={projects} setProjects={setProjects} />
-              </RowCollapser>
-
-              <RowCollapser
-                title="Volunteer Experience"
-                open={recOpen.volunteer}
-                onToggle={() => setRecOpen(s => ({ ...s, volunteer: !s.volunteer }))}
-              >
-                <VolunteerExperienceSection embedded volunteerExperiences={volunteerExperiences} setVolunteerExperiences={setVolunteerExperiences} />
-              </RowCollapser>
-
-              <RowCollapser
-                title="Certifications / Training"
-                open={recOpen.certs}
-                onToggle={() => setRecOpen(s => ({ ...s, certs: !s.certs }))}
-              >
-                <CertificationsSection embedded certifications={certifications} setCertifications={setCertifications} />
-              </RowCollapser>
-
-              <RowCollapser
-                title="Languages"
-                open={recOpen.languages}
-                onToggle={() => setRecOpen(s => ({ ...s, languages: !s.languages }))}
-              >
-                <LanguagesSection embedded languages={languages} setLanguages={setLanguages} />
-              </RowCollapser>
-
-              <RowCollapser
-                title="Achievements / Awards"
-                open={recOpen.achievements}
-                onToggle={() => setRecOpen(s => ({ ...s, achievements: !s.achievements }))}
-              >
-                <AchievementsSection embedded achievements={achievements} setAchievements={setAchievements} />
-              </RowCollapser>
-
-              <RowCollapser
-                title="Custom Sections"
-                open={recOpen.custom}
-                onToggle={() => setRecOpen(s => ({ ...s, custom: !s.custom }))}
-              >
-                <CustomSection embedded customSections={customSections} setCustomSections={setCustomSections} />
-              </RowCollapser>
-            </div>
-          )}
-        </section>
-      </div>
-
-      {/* Toast */}
-      <div
-        style={{
-          position: 'fixed',
-          right: 24,
-          bottom: 24,
-          zIndex: 50,
-          transition: 'all 300ms',
-          opacity: showToast ? 1 : 0,
-          transform: showToast ? 'translateY(0)' : 'translateY(12px)',
-          pointerEvents: showToast ? 'auto' : 'none',
-        }}
-      >
-        <div
-          style={{
-            background: '#FF7043',
-            color: 'white',
-            boxShadow: '0 10px 20px rgba(0,0,0,0.15)',
-            borderRadius: 16,
-            padding: '10px 14px',
-            display: 'flex',
-            alignItems: 'center',
-            gap: 8,
-          }}
-        >
-          <span style={{ fontSize: 18, lineHeight: 1 }}>⚒</span>
-          <span style={{ fontSize: 18, lineHeight: 1 }}>💥</span>
-          <span style={{ fontWeight: 600 }}>
-            Saved{savedTime ? ` at ${savedTime}` : ''}
-          </span>
         </div>
       </div>
 
-      {/* FOCUS MODALS */}
-      <DockModal
-        open={openAnalyzer}
-        title="Job Match Analyzer"
-        onClose={() => setOpenAnalyzer(false)}
-      >
-        <JobMatchAnalyzer
-          jdText={jd}
-          data={{
-            formData, summary, experiences, projects, volunteerExperiences,
-            educationList, certifications, languages, skills, achievements, customSections
-          }}
-        />
-      </DockModal>
-
-      <DockModal
-        open={openTailor}
-        title="Tailor (Local)"
-        onClose={() => setOpenTailor(false)}
-      >
-        <TailorLocal jdText={jd} />
-      </DockModal>
-
-      <DockModal
-        open={openPreview}
-        title="Live Preview"
-        onClose={() => setOpenPreview(false)}
-      >
-        {TemplateComp ? (
-          <TemplateComp
-            key={`preview-${templateId}`}
-            data={{
-              formData, summary, experiences, projects, volunteerExperiences,
-              educationList, certifications, languages, skills, achievements, customSections
-            }}
-          />
+      {/* EXPORT BUTTONS */}
+      <div className="fixed bottom-6 right-6 z-50 flex items-center gap-2 bg-white/90 backdrop-blur-sm p-2 rounded-full shadow-2xl border">
+        {/* ATS PDF */}
+        {router.query.template === 'hybrid' ? (
+          <HybridATSButton data={resumeData}>
+            <div className="bg-teal-600 text-white px-4 py-2 rounded-full font-bold text-xs hover:bg-teal-700 transition-all">
+              ATS PDF
+            </div>
+          </HybridATSButton>
         ) : (
-          <ResumePreview
-            key="preview-fallback"
-            formData={formData}
-            summary={summary}
-            experiences={experiences}
-            projects={projects}
-            volunteerExperiences={volunteerExperiences}
-            educationList={educationList}
-            certifications={certifications}
-            languages={languages}
-            skills={skills}
-            achievements={achievements}
-            customSections={customSections}
-          />
+          <ReverseATSButton data={resumeData}>
+            <div className="bg-teal-600 text-white px-4 py-2 rounded-full font-bold text-xs hover:bg-teal-700 transition-all">
+              ATS PDF
+            </div>
+          </ReverseATSButton>
         )}
-      </DockModal>
+        {/* DESIGNED PDF */}
+        <DesignedPDFButton
+          data={resumeData}
+          template={router.query.template === 'hybrid' ? 'hybrid' : 'reverse'}
+        >
+          <div className="bg-orange-500 text-white px-4 py-2 rounded-full font-bold text-xs hover:bg-orange-600 transition-all">
+            Designed PDF
+          </div>
+        </DesignedPDFButton>
+        {/* SAVE + PROGRESS */}
+        <button
+          onClick={saveResume}
+          className="bg-green-600 text-white px-4 py-2 rounded-full font-bold text-xs hover:bg-green-700 transition-all"
+        >
+          Save Resume
+        </button>
+        <div className="bg-white px-3 py-1.5 rounded-full flex items-center gap-1.5 border text-xs ml-1">
+          <div className="relative">
+            <svg className="w-6 h-6">
+              <circle cx="12" cy="12" r="10" fill="none" stroke="#E5E7EB" strokeWidth="2.5" />
+              <circle
+                cx="12"
+                cy="12"
+                r="10"
+                fill="none"
+                stroke="#10B981"
+                strokeWidth="2.5"
+                strokeDasharray={`${(progress / 100) * 62.8} 62.8`}
+                className="transition-all duration-500"
+              />
+            </svg>
+            <span className="absolute inset-0 flex items-center justify-center text-xs font-bold text-gray-700">
+              {progress}%
+            </span>
+          </div>
+          <span className="font-semibold text-gray-600">Ready</span>
+        </div>
+      </div>
 
-      {/* ATS PREVIEW */}
-      <AtsPreviewModal
-        open={openAtsPreview}
-        onClose={() => setOpenAtsPreview(false)}
-        formData={formData}
-        summary={summary}
-        experiences={experiences}
-        projects={projects}
-        volunteerExperiences={volunteerExperiences}
-        educationList={educationList}
-        certifications={certifications}
-        languages={languages}
-        skills={skills}
-        achievements={achievements}
-        customSections={customSections}
-      />
+      {/* BULK EXPORT CTA */}
+      <div className="mt-6 max-w-4xl mx-auto">
+        <BulkExportCTA />
+      </div>
+
+      {/* SMART CTA */}
+      {isResumeValid && (
+        <div className="fixed bottom-6 left-1/2 transform -translate-x-1/2 z-50 md:bottom-28 md:left-auto md:right-6 md:transform-none">
+          <button
+            onClick={() => router.push('/cover/create')}
+            className="bg-purple-600 text-white px-6 py-3 rounded-full font-bold text-lg shadow-xl hover:bg-purple-700 transition-all transform hover:scale-105"
+          >
+            Next: Build Cover Letter
+          </button>
+        </div>
+      )}
+
+      {/* TOAST */}
+      {showToast && (
+        <div style={{ position: 'fixed', right: 28, bottom: 100, background: ORANGE, color: 'white', padding: '14px 24px', borderRadius: 12, fontWeight: 700, boxShadow: '0 10px 30px rgba(0,0,0,0.3)', zIndex: 1000 }}>
+          Saved at {savedTime}
+        </div>
+      )}
     </SeekerLayout>
   );
 }

@@ -1,32 +1,37 @@
 // components/apply/ApplySteps.js
-export default function ApplySteps({ current = 1 }) {
-  const steps = ['Resume', 'Cover letter', 'Export / Apply'];
+'use client';
+
+import { useRouter } from 'next/router';
+
+export default function ApplySteps({ current }) {
+  const router = useRouter();
+  const steps = [
+    { num: 1, label: 'Resume', path: '/resume/create' },
+    { num: 2, label: 'Cover Letter', path: '/cover/create' },
+  ];
+
   return (
-    <nav style={{
-      display: 'grid',
-      gridTemplateColumns: `repeat(${steps.length}, 1fr)`,
-      gap: 8,
-      marginBottom: 12,
-    }}>
-      {steps.map((label, i) => {
-        const n = i + 1;
-        const active = n === current;
-        return (
-          <div key={label}
-            style={{
-              background: active ? '#FF7043' : 'white',
-              color: active ? 'white' : '#37474F',
-              border: `1px solid ${active ? 'rgba(0,0,0,0.06)' : '#E0E0E0'}`,
-              borderRadius: 10,
-              padding: '8px 10px',
-              textAlign: 'center',
-              fontWeight: 800,
-            }}
+    <div className="flex items-center justify-center gap-4 bg-white rounded-full shadow-lg px-6 py-3">
+      {steps.map((step, i) => (
+        <div key={step.num} className="flex items-center">
+          {i > 0 && (
+            <div className="w-12 h-px bg-gray-300 mx-2" />
+          )}
+          <button
+            onClick={() => router.push(step.path)}
+            className={`
+              min-w-[140px] px-5 py-2.5 rounded-full font-bold text-sm
+              transition-all duration-200 flex items-center justify-center
+              ${current === step.num
+                ? 'bg-orange-500 text-white shadow-md scale-105'
+                : 'text-gray-700 hover:text-gray-900 hover:bg-gray-100'
+              }
+            `}
           >
-            {n}. {label}
-          </div>
-        );
-      })}
-    </nav>
+            {step.num}. {step.label}
+          </button>
+        </div>
+      ))}
+    </div>
   );
 }

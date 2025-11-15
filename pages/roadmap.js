@@ -1,7 +1,6 @@
 // pages/roadmap.js
 import { useState } from 'react';
 import Link from 'next/link';
-
 import SeekerLayout from '@/components/layouts/SeekerLayout';
 import ToolkitLanding from '../components/roadmap/ToolkitLanding';
 import ProfileDevelopment from '../components/roadmap/ProfileDevelopment';
@@ -58,7 +57,7 @@ export default function CareerRoadmap() {
       headerDescription="A guided, AI-driven path through profile building, offer negotiation, and your first 90 days."
       right={RightColumn}
     >
-      {/* Center column content spans the full center width */}
+      {/* Center column content */}
       <div
         style={{
           backgroundColor: 'white',
@@ -66,7 +65,7 @@ export default function CareerRoadmap() {
           border: '1px solid #eee',
           boxShadow: '0 2px 6px rgba(0,0,0,0.06)',
           padding: 24,
-          width: '100%',            // <-- full width of center column
+          width: '100%',
           display: 'grid',
           gap: 16,
         }}
@@ -88,7 +87,6 @@ export default function CareerRoadmap() {
               of your job search and early career growth. Get personalized insights on your resume, job offers, and
               onboarding success to help build the career you deserve.
             </p>
-
             <ul
               style={{
                 color: '#4A5568',
@@ -107,7 +105,6 @@ export default function CareerRoadmap() {
               <li>Practical tools to help you land your ideal job and thrive in your new role</li>
               <li>Flexibility to work independently or collaborate with a trainer, mentor, or coach</li>
             </ul>
-
             <p
               style={{
                 color: '#4A5568',
@@ -123,7 +120,6 @@ export default function CareerRoadmap() {
               via our AI-powered resume builder to get started. Subscribers enjoy up to one personalized roadmap per month
               and access to advanced features.
             </p>
-
             <p
               style={{
                 color: '#4A5568',
@@ -136,11 +132,11 @@ export default function CareerRoadmap() {
             >
               When you’re ready, choose a module below to begin shaping your future!
             </p>
-
             <ToolkitLanding onSelectModule={setActiveModule} />
           </>
         )}
 
+        {/* PROFILE DEVELOPMENT */}
         {activeModule === 'profile' && (
           <>
             <button
@@ -156,12 +152,16 @@ export default function CareerRoadmap() {
                 textAlign: 'left',
               }}
             >
-              ← Back to toolkit
+              Back to toolkit
             </button>
-            <ProfileDevelopment />
+            <ProfileDevelopment
+              onNext={() => setActiveModule('offer')}
+              setActiveModule={setActiveModule}
+            />
           </>
         )}
 
+        {/* OFFER NEGOTIATION */}
         {activeModule === 'offer' && (
           <>
             <button
@@ -177,12 +177,16 @@ export default function CareerRoadmap() {
                 textAlign: 'left',
               }}
             >
-              ← Back to toolkit
+              Back to toolkit
             </button>
-            <OfferNegotiation />
+            <OfferNegotiation
+              onNext={() => setActiveModule('onboarding')}
+              setActiveModule={setActiveModule}
+            />
           </>
         )}
 
+        {/* ONBOARDING & GROWTH */}
         {activeModule === 'onboarding' && (
           <>
             <button
@@ -198,9 +202,12 @@ export default function CareerRoadmap() {
                 textAlign: 'left',
               }}
             >
-              ← Back to toolkit
+              Back to toolkit
             </button>
-            <OnboardingGrowth />
+            <OnboardingGrowth
+              onNext={() => setActiveModule(null)}
+              setActiveModule={setActiveModule}
+            />
           </>
         )}
       </div>

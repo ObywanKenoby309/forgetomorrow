@@ -1,135 +1,111 @@
 // components/resume-form/templates/HybridResumeTemplate.js
-// Hybrid: skills & summary up top, then reverse-chron experience.
-// Simple responsive two-column “header”, single column body.
-
-import React from 'react';
-
 export default function HybridResumeTemplate({ data }) {
-  const {
-    formData = {},
-    summary = '',
-    experiences = [],
-    projects = [],
-    educationList = [],
-    skills = [],
-    languages = [],
-  } = data || {};
-
-  const renderJobTitle = (exp) => exp.jobTitle || exp.title || 'Title';
-  const renderCompany  = (exp) => exp.company || exp.org || 'Company';
-  const renderDates    = (exp) =>
-    [exp.startDate || exp.start, exp.endDate || exp.end]
-      .filter(Boolean)
-      .join(' — ');
-
-  const languageLabel = (it) =>
-    typeof it === 'string' ? it :
-    [it.language, it.proficiency, it.years ? `${it.years} yrs` : '']
-      .filter(Boolean)
-      .join(' — ');
+  const { personalInfo, summary, workExperiences = [], educationList = [], skills = [] } = data;
 
   return (
-    <article className="max-w-[780px] mx-auto bg-white text-gray-900 font-sans p-6">
-      {/* Top header */}
-      <header className="border-b border-gray-300 pb-3 mb-4">
-        <h1 className="text-3xl font-extrabold tracking-tight">{formData.fullName || 'Your Name'}</h1>
-        <div className="text-sm text-gray-700 mt-1 flex flex-wrap gap-x-3 gap-y-1">
-          {formData.email && <span><a href={`mailto:${formData.email}`} className="underline">{formData.email}</a></span>}
-          {formData.phone && <span>{formData.phone}</span>}
-          {formData.location && <span>{formData.location}</span>}
-          {formData.portfolio && <span><a href={formData.portfolio} className="underline" target="_blank" rel="noreferrer">Portfolio</a></span>}
-        </div>
-      </header>
+    <div style={{
+      width: '100%',
+      padding: 0,
+      margin: 0,
+      fontFamily: 'Helvetica, Arial, sans-serif',
+      fontSize: '11pt',
+      lineHeight: '1.4',
+      color: '#1f2937'
+    }}>
+      {/* HEADER */}
+      <div style={{ textAlign: 'center', marginBottom: '20pt' }}>
+        <h1 style={{ fontSize: '28pt', fontWeight: 'bold', margin: 0 }}>
+          {personalInfo.name}
+        </h1>
+        <p style={{ fontSize: '11pt', margin: '4pt 0 0 0', color: '#666' }}>
+          {[
+            personalInfo.email,
+            personalInfo.phone,
+            personalInfo.location,
+            personalInfo.linkedin,
+            personalInfo.github,
+            personalInfo.portfolio,
+            personalInfo.ftProfile
+          ].filter(Boolean).join(' | ')}
+        </p>
+        {personalInfo.targetedRole && (
+          <p style={{ fontSize: '12pt', fontStyle: 'italic', margin: '8pt 0 0 0', color: '#444' }}>
+            {personalInfo.targetedRole}
+          </p>
+        )}
+      </div>
 
-      {/* Hybrid top: Summary + Skills next to each other on wider screens */}
-      <section className="grid md:grid-cols-2 gap-4 mb-4">
-        <div>
-          <h2 className="text-lg font-semibold text-gray-800 border-b border-gray-200 pb-1">Summary</h2>
-          <p className="mt-2 text-gray-800 whitespace-pre-wrap leading-relaxed">{summary || 'Brief professional snapshot highlighting strengths and goals.'}</p>
+      {/* SUMMARY */}
+      {summary && (
+        <div style={{ marginBottom: '16pt' }}>
+          <h2 style={{ fontSize: '13pt', fontWeight: 'bold', margin: '0 0 6pt 0', borderBottom: '1pt solid #000', textTransform: 'uppercase' }}>
+            Professional Summary
+          </h2>
+          <p style={{ margin: 0, fontSize: '11pt' }}>{summary}</p>
         </div>
-        <div>
-          <h2 className="text-lg font-semibold text-gray-800 border-b border-gray-200 pb-1">Core Skills</h2>
-          <p className="mt-2 text-gray-800">{(skills || []).join(', ') || 'Skill 1, Skill 2, Skill 3'}</p>
-          {Array.isArray(languages) && languages.length > 0 && (
-            <>
-              <h3 className="text-sm font-semibold text-gray-700 mt-3">Languages</h3>
-              <ul className="list-disc list-inside text-gray-800">
-                {languages.map((it, i) => <li key={i}>{languageLabel(it)}</li>)}
-              </ul>
-            </>
-          )}
-        </div>
-      </section>
-
-      {/* Experience */}
-      {experiences?.length > 0 && (
-        <section className="mb-4">
-          <h2 className="text-lg font-semibold text-gray-800 border-b border-gray-200 pb-1">Experience</h2>
-          <div className="mt-2 space-y-3">
-            {[...experiences].reverse().map((exp, idx) => (
-              <div key={idx}>
-                <div className="flex flex-wrap items-baseline justify-between gap-2">
-                  <h3 className="font-semibold text-gray-900">
-                    {renderJobTitle(exp)} — <span className="italic">{renderCompany(exp)}</span>
-                  </h3>
-                  <div className="text-sm text-gray-600">{renderDates(exp)}{exp.location ? ` | ${exp.location}` : ''}</div>
-                </div>
-                {/* Bullets: prefer exp.bullets; fallback to newline description */}
-                <div className="mt-1">
-                  {Array.isArray(exp.bullets) && exp.bullets.length ? (
-                    <ul className="list-disc list-inside space-y-1 text-gray-800 leading-snug">
-                      {exp.bullets.map((b, i) => <li key={i}>{b}</li>)}
-                    </ul>
-                  ) : (
-                    <ul className="list-disc list-inside space-y-1 text-gray-800 leading-snug">
-                      {(exp.description || '')
-                        .split(/\r?\n/)
-                        .map(s => s.trim())
-                        .filter(Boolean)
-                        .map((l, i) => <li key={i}>{l}</li>)}
-                    </ul>
-                  )}
-                </div>
-              </div>
-            ))}
-          </div>
-        </section>
       )}
 
-      {/* Projects */}
-      {projects?.length > 0 && (
-        <section className="mb-4">
-          <h2 className="text-lg font-semibold text-gray-800 border-b border-gray-200 pb-1">Projects</h2>
-          <div className="mt-2 space-y-2">
-            {projects.map((p, i) => (
-              <div key={i}>
-                <h3 className="font-semibold">{p.title || 'Project'}</h3>
-                {p.description && <p className="text-gray-800 whitespace-pre-wrap">{p.description}</p>}
-              </div>
+      {/* TWO-COLUMN: SKILLS + EXPERIENCE */}
+      <div style={{ display: 'flex', gap: '24pt', marginBottom: '16pt' }}>
+        {/* LEFT: SKILLS */}
+        <div style={{ flex: 1 }}>
+          <h2 style={{ fontSize: '13pt', fontWeight: 'bold', margin: '0 0 6pt 0', borderBottom: '1pt solid #000', textTransform: 'uppercase' }}>
+            Skills
+          </h2>
+          <div style={{ columns: 2, columnGap: '12pt' }}>
+            {skills.map((skill, i) => (
+              <p key={i} style={{ margin: '2pt 0', fontSize: '11pt', breakInside: 'avoid' }}>
+                • {skill}
+              </p>
             ))}
           </div>
-        </section>
-      )}
+        </div>
 
-      {/* Education */}
-      {educationList?.length > 0 && (
-        <section className="mb-2">
-          <h2 className="text-lg font-semibold text-gray-800 border-b border-gray-200 pb-1">Education</h2>
-          <div className="mt-2 space-y-2">
-            {educationList.map((edu, i) => (
-              <div key={i}>
-                <div className="flex flex-wrap items-baseline justify-between gap-2">
-                  <h3 className="font-semibold">{edu.degree || 'Degree'} — <span className="italic">{edu.school || 'School'}</span></h3>
-                  <div className="text-sm text-gray-600">
-                    {[edu.startDate, edu.endDate].filter(Boolean).join(' — ')}
-                  </div>
+        {/* RIGHT: EXPERIENCE */}
+        <div style={{ flex: 2 }}>
+          <h2 style={{ fontSize: '13pt', fontWeight: 'bold', margin: '0 0 6pt 0', borderBottom: '1pt solid #000', textTransform: 'uppercase' }}>
+            Experience
+          </h2>
+          {workExperiences.map((exp, i) => (
+            <div key={i} style={{ marginBottom: '12pt' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                <div>
+                  <strong style={{ fontSize: '11pt' }}>{exp.title || exp.jobTitle}</strong>
+                  <span style={{ color: '#444', marginLeft: '8pt' }}>{exp.company}</span>
                 </div>
-                {edu.description && <p className="text-gray-800 mt-1 whitespace-pre-wrap">{edu.description}</p>}
+                <span style={{ fontSize: '10pt', color: '#666' }}>
+                  {exp.startDate} – {exp.endDate || 'Present'}
+                </span>
               </div>
-            ))}
-          </div>
-        </section>
+              {(exp.bullets || []).map((b, bi) => (
+                <p key={bi} style={{ margin: '2pt 0 2pt 16pt', fontSize: '11pt' }}>• {b}</p>
+              ))}
+            </div>
+          ))}
+        </div>
+      </div>
+
+      {/* EDUCATION */}
+      {educationList.length > 0 && (
+        <div style={{ marginBottom: '16pt' }}>
+          <h2 style={{ fontSize: '13pt', fontWeight: 'bold', margin: '0 0 6pt 0', borderBottom: '1pt solid #000', textTransform: 'uppercase' }}>
+            Education
+          </h2>
+          {educationList.map((edu, i) => (
+            <div key={i} style={{ marginBottom: '10pt' }}>
+              <div style={{ fontWeight: 'bold', fontSize: '11pt' }}>
+                {edu.degree} {edu.field && `${edu.field}`}
+              </div>
+              <div style={{ fontSize: '10pt' }}>
+                {edu.school} {edu.location && `• ${edu.location}`}
+              </div>
+              <div style={{ fontSize: '10pt', color: '#666' }}>
+                {edu.startDate} – {edu.endDate || 'Present'}
+              </div>
+            </div>
+          ))}
+        </div>
       )}
-    </article>
+    </div>
   );
 }

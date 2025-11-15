@@ -101,8 +101,8 @@ function PostCard({ post, isPinned, onReply, onDelete, currentUserId }) {
             {post.author}
           </div>
           <div className="text-xs text-gray-500">
-            <time dateTime={new Date(post.createdAt).toISOString()} aria-label={new Date(post.createdAt).toLocaleString()}>
-              <RelativeTime iso={new Date(post.createdAt).toISOString()} />
+            <time dateTime={post.createdAt ? new Date(post.createdAt).toISOString() : new Date().toISOString()} aria-label={post.createdAt ? new Date(post.createdAt).toLocaleString() : new Date().toLocaleString()}>
+              <RelativeTime iso={post.createdAt ? new Date(post.createdAt).toISOString() : new Date().toISOString()} />
             </time>
             {" • "}
             {post.type === "business" ? "Professional" : "Personal"}

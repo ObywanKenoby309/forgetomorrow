@@ -1,71 +1,60 @@
 // pages/resume-cover.js
-import React, { useRef, useState } from 'react';
+import React, { useRef, useState, useEffect } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/router';
 import SeekerLayout from '@/components/layouts/SeekerLayout';
 import ResumeRightRail from '@/components/resume/ResumeRightRail';
+import { getClientSession } from '@/lib/auth-client';
+
+// TEMP: Mock data until you connect real DB
+const MOCK_USER = {
+  id: 'user_123',
+  tier: 'basic', // or 'pro'
+  ai_generations_used: 1,
+};
+
+const MOCK_SAVED_RESUMES = [
+  { id: 1, title: 'Senior Product Designer', updated_at: '2025-08-10T10:00:00Z' },
+  { id: 2, title: 'Frontend Engineer (2024)', updated_at: '2025-08-05T14:22:00Z' },
+];
 
 const ORANGE = '#FF7043';
 const SLATE = '#455A64';
 
 function Card({ children, style }) {
   return (
-    <section
-      style={{
-        background: 'white',
-        border: '1px solid #eee',
-        borderRadius: 12,
-        boxShadow: '0 2px 6px rgba(0,0,0,0.06)',
-        padding: 16,
-        ...style,
-      }}
-    >
+    <section style={{ background: 'white', border: '1px solid #eee', borderRadius: 12, boxShadow: '0 2px 6px rgba(0,0,0,0.06)', padding: 16, ...style }}>
       {children}
     </section>
   );
 }
 
-function PrimaryButton({ href, onClick, children }) {
+function PrimaryButton({ href, onClick, children, disabled }) {
   const base = {
-    background: ORANGE,
+    background: disabled ? '#999' : ORANGE,
     border: '1px solid rgba(0,0,0,0.06)',
     color: 'white',
     fontWeight: 800,
-    padding: '10px 14px',
+    padding: '12px 20px',
     borderRadius: 10,
-    cursor: 'pointer',
+    cursor: disabled ? 'not-allowed' : 'pointer',
     display: 'inline-block',
     textDecoration: 'none',
+    opacity: disabled ? 0.7 : 1,
   };
   if (href) return <Link href={href} style={base}>{children}</Link>;
-  return <button type="button" onClick={onClick} style={base}>{children}</button>;
+  return <button type="button" onClick={onClick} disabled={disabled} style={base}>{children}</button>;
 }
 
 function SoftLink({ href, onClick, children }) {
-  const style = {
-    color: ORANGE,
-    fontWeight: 700,
-    textDecoration: 'none',
-    background: 'transparent',
-    border: 0,
-    cursor: 'pointer',
-  };
+  const style = { color: ORANGE, fontWeight: 700, textDecoration: 'none', background: 'transparent', border: 0, cursor: 'pointer' };
   if (href) return <Link href={href} style={style}>{children}</Link>;
   return <button type="button" onClick={onClick} style={style}>{children}</button>;
 }
 
-// Only the two ATS-recommended templates
 const TEMPLATES = [
-  {
-    key: 'reverse',
-    name: 'Reverse (Default)',
-    tagline: 'Safest for ATS: clear roles, companies, dates, and results.',
-  },
-  {
-    key: 'hybrid',
-    name: 'Hybrid (Combination)',
-    tagline: 'Skills & highlights up top, then full reverse-chronological history.',
-  },
+  { key: 'reverse', name: 'Reverse (Default)', tagline: 'Safest for ATS: clear roles, companies, dates, and results.' },
+  { key: 'hybrid', name: 'Hybrid (Combination)', tagline: 'Skills & highlights up top, then full reverse-chronological history.', pro: true },
 ];
 
 function TemplatePreviewModal({ open, onClose, tpl }) {
@@ -73,59 +62,16 @@ function TemplatePreviewModal({ open, onClose, tpl }) {
   return (
     <div style={{ position: 'fixed', inset: 0, zIndex: 10000, display: 'grid', placeItems: 'center' }}>
       <div onClick={onClose} style={{ position: 'absolute', inset: 0, background: 'rgba(0,0,0,0.5)' }} />
-      <div
-        role="dialog"
-        aria-modal="true"
-        style={{
-          position: 'relative',
-          width: 'min(460px, 96vw)',
-          background: 'white',
-          border: '1px solid #eee',
-          borderRadius: 12,
-          boxShadow: '0 20px 40px rgba(0,0,0,0.25)',
-          padding: 16,
-          display: 'grid',
-          gap: 10,
-        }}
-      >
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-          <div style={{ fontWeight: 800 }}>{tpl.name} — Preview</div>
-          <button
-            onClick={onClose}
-            style={{ background: 'white', border: '1px solid #E0E0E0', borderRadius: 10, padding: '6px 10px', fontWeight: 800, cursor: 'pointer' }}
-          >
-            Close
-          </button>
+      <div role="dialog" style={{ position: 'relative', width: 'min(460px, 96vw)', background: 'white', borderRadius: 12, boxShadow: '0 20px 40px rgba(0,0,0,0.25)', padding: 24 }}>
+        <div style={{ fontWeight: 800, fontSize: 20 }}>{tpl.name} — Preview</div>
+        <p style={{ color: SLATE, margin: '8px 0 16px' }}>{tpl.tagline}</p>
+        <div style={{ height: 240, background: '#f9f9f9', border: '2px dashed #CFD8DC', borderRadius: 12, display: 'grid', placeItems: 'center', color: '#90A4AE' }}>
+          Full preview coming soon
         </div>
-        <p style={{ color: SLATE, margin: 0 }}>{tpl.tagline}</p>
-        <div
-          style={{
-            height: 200,
-            border: '1px dashed #CFD8DC',
-            borderRadius: 10,
-            display: 'grid',
-            placeItems: 'center',
-            color: '#607D8B',
-            fontSize: 12,
-          }}
-        >
-          (Thumbnail placeholder)
-        </div>
-        <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
-          <Link
-            href={`/resume/create?template=${encodeURIComponent(tpl.key)}`}
-            style={{
-              background: ORANGE,
-              color: 'white',
-              border: '1px solid rgba(0,0,0,0.06)',
-              borderRadius: 10,
-              padding: '10px 14px',
-              fontWeight: 800,
-              textDecoration: 'none',
-            }}
-          >
+        <div style={{ marginTop: 20, textAlign: 'right' }}>
+          <PrimaryButton href={`/resume/create?template=${tpl.key}`}>
             Use {tpl.name}
-          </Link>
+          </PrimaryButton>
         </div>
       </div>
     </div>
@@ -135,129 +81,94 @@ function TemplatePreviewModal({ open, onClose, tpl }) {
 export default function ResumeCoverLanding() {
   const router = useRouter();
   const fileRef = useRef(null);
-
   const [previewOpen, setPreviewOpen] = useState(false);
   const [previewTpl, setPreviewTpl] = useState(null);
+  const [user, setUser] = useState(null);
+  const [tier, setTier] = useState('basic');
+  const [usage, setUsage] = useState({ used: 1, limit: 3 });
+  const [savedResumes, setSavedResumes] = useState([]);
+
+  useEffect(() => {
+    async function init() {
+      const session = await getClientSession();
+      if (!session?.user) {
+        router.push('/login');
+        return;
+      }
+      setUser(session.user);
+
+      // MOCKED — Replace with real DB call later
+      setTier(MOCK_USER.tier);
+      setUsage({ used: MOCK_USER.ai_generations_used, limit: MOCK_USER.tier === 'pro' ? Infinity : 3 });
+      setSavedResumes(MOCK_SAVED_RESUMES);
+    }
+    init();
+  }, [router]);
 
   const onUploadClick = () => fileRef.current?.click();
-  const onFilePicked = (e) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-    try { localStorage.setItem('ft_resume_last_upload_name', file.name); } catch {}
+  const onFilePicked = () => {
     router.push('/resume/create?uploaded=1');
   };
 
+  const canUseHybrid = tier === 'pro' || usage.used < usage.limit;
+
   const HeaderHero = (
     <Card style={{ textAlign: 'center' }}>
-      <h1 style={{ color: ORANGE, fontSize: 28, fontWeight: 800, margin: 0 }}>Build your resume</h1>
-      <p style={{ color: SLATE, margin: '8px 0 16px' }}>
+      <h1 style={{ color: ORANGE, fontSize: 32, fontWeight: 800 }}>Build your resume</h1>
+      <p style={{ color: SLATE, margin: '12px 0 24px', fontSize: 17 }}>
         Start with a template or upload an existing file. You can add a cover letter later.
       </p>
-
-      <div
-        style={{
-          display: 'flex',
-          gap: 16,
-          justifyContent: 'center',
-          alignItems: 'center',
-          flexWrap: 'wrap',
-        }}
-      >
+      <div style={{ display: 'flex', gap: 20, justifyContent: 'center', flexWrap: 'wrap' }}>
         <PrimaryButton href="/resume/create?template=reverse">Build a Resume</PrimaryButton>
-
-        <div style={{ display: 'inline-flex', alignItems: 'center', gap: 16, height: 38 }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 20 }}>
           <SoftLink onClick={onUploadClick}>Upload a resume</SoftLink>
-          <span aria-hidden="true" style={{ width: 1, height: 18, background: '#E0E0E0' }} />
+          <span style={{ width: 1, height: 24, background: '#E0E0E0' }} />
           <SoftLink href="/cover/create">Create a cover letter</SoftLink>
         </div>
       </div>
-
-      <input ref={fileRef} type="file" accept=".pdf,.doc,.docx,.txt" onChange={onFilePicked} style={{ display: 'none' }} />
+      {tier === 'basic' && (
+        <div style={{ marginTop: 16, color: '#666', fontSize: 14 }}>
+          Free tier: {usage.used}/{usage.limit} AI generations used
+        </div>
+      )}
+      <input ref={fileRef} type="file" accept=".pdf,.doc,.docx" onChange={onFilePicked} style={{ display: 'none' }} />
     </Card>
   );
 
   const ATSWhyBanner = (
-    <Card style={{ display: 'grid', gap: 6 }}>
-      <div style={{ fontWeight: 800 }}>Why only two resume formats?</div>
-      <div style={{ color: '#607D8B', fontSize: 14, lineHeight: 1.45 }}>
-        Because <strong>Reverse-Chronological</strong> and <strong>Hybrid</strong> are the only layouts consistently
-        passing ATS scans and recruiter reviews. Formats like “Functional” can be misread or flagged. Our goal is your
-        success—not fluff. As ATS improves, we’ll expand responsibly.
-      </div>
+    <Card>
+      <div style={{ fontWeight: 800, fontSize: 18 }}>Why only two resume formats?</div>
+      <p style={{ color: '#607D8B', lineHeight: 1.5 }}>
+        Because <strong>Reverse-Chronological</strong> and <strong>Hybrid</strong> are the only layouts that consistently pass ATS scans and recruiter eyes. 
+        Everything else is noise. We removed 9,998 templates so you don’t fail silently.
+      </p>
     </Card>
   );
 
   const TemplatesRow = (
     <Card>
-      <div style={{ fontWeight: 800 }}>Quick-start templates</div>
-      <div style={{ color: '#90A4AE', fontSize: 12, marginTop: 2 }}>
-        ATS-friendly by default. Switch any time.
-      </div>
-
-      <div
-        style={{
-          marginTop: 12,
-          display: 'grid',
-          gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))',
-          gap: 12,
-        }}
-      >
+      <div style={{ fontWeight: 800, fontSize: 18 }}>Quick-start templates</div>
+      <p style={{ color: '#90A4AE', fontSize: 14, marginTop: 4 }}>ATS-friendly by default. Switch any time.</p>
+      <div style={{ marginTop: 20, display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: 20 }}>
         {TEMPLATES.map((tpl) => (
-          <div
-            key={tpl.key}
-            style={{
-              border: '1px solid #eee',
-              borderRadius: 12,
-              padding: 12,
-              display: 'grid',
-              gap: 8,
-              alignContent: 'start',
-            }}
-          >
-            <div style={{ fontWeight: 800 }}>{tpl.name}</div>
-            <div style={{ color: '#607D8B', fontSize: 12 }}>{tpl.tagline}</div>
-
-            <div
-              style={{
-                height: 80,
-                border: '1px dashed #CFD8DC',
-                borderRadius: 10,
-                display: 'grid',
-                placeItems: 'center',
-                color: '#90A4AE',
-                fontSize: 12,
-              }}
+          <div key={tpl.key} style={{ border: '1px solid #eee', borderRadius: 16, padding: 20, position: 'relative' }}>
+            {tpl.pro && tier !== 'pro' && (
+              <div style={{ position: 'absolute', top: 12, right: 12, background: '#FFD700', color: '#000', fontSize: 10, fontWeight: 900, padding: '4px 8px', borderRadius: 6 }}>
+                PRO
+              </div>
+            )}
+            <div style={{ fontWeight: 800, fontSize: 18 }}>{tpl.name}</div>
+            <p style={{ color: '#607D8B', fontSize: 13, margin: '8px 0 16px' }}>{tpl.tagline}</p>
+            <div style={{ height: 140, background: '#F5F5F5', border: '2px dashed #CFD8DC', borderRadius: 12, marginBottom: 16 }} />
+            <PrimaryButton
+              href={tpl.pro && !canUseHybrid ? '/pricing' : `/resume/create?template=${tpl.key}`}
+              disabled={tpl.pro && !canUseHybrid}
             >
-              (Preview thumb)
-            </div>
-
-            <Link
-              href={`/resume/create?template=${encodeURIComponent(tpl.key)}`}
-              style={{
-                background: ORANGE,
-                color: 'white',
-                border: '1px solid rgba(0,0,0,0.06)',
-                borderRadius: 10,
-                padding: '8px 10px',
-                fontWeight: 800,
-                textDecoration: 'none',
-                textAlign: 'center',
-              }}
-            >
-              Use template
-            </Link>
-
+              {tpl.pro && tier !== 'pro' ? 'Upgrade for Hybrid' : 'Use template'}
+            </PrimaryButton>
             <button
-              type="button"
               onClick={() => { setPreviewTpl(tpl); setPreviewOpen(true); }}
-              style={{
-                background: 'transparent',
-                border: 0,
-                color: ORANGE,
-                fontWeight: 700,
-                justifySelf: 'start',
-                cursor: 'pointer',
-              }}
+              style={{ marginTop: 8, color: ORANGE, fontWeight: 700, background: 'none', border: 0, cursor: 'pointer' }}
             >
               Preview
             </button>
@@ -267,32 +178,19 @@ export default function ResumeCoverLanding() {
     </Card>
   );
 
-  // Constrain the center column width a bit for calm reading
-  const CenterWrap = ({ children }) => (
-    <div style={{ display: 'grid', gap: 16, maxWidth: 1080, margin: '0 auto', width: '100%' }}>
-      {children}
-    </div>
-  );
-
   return (
     <SeekerLayout
       title="Resume & Cover | ForgeTomorrow"
       header={HeaderHero}
-      right={<ResumeRightRail />}
-      rightVariant="light"   // will apply once SeekerLayout supports it
-      rightWidth={270}       // request: use this to fix the gutter in SeekerLayout
+      right={<ResumeRightRail savedResumes={savedResumes} usage={usage} tier={tier} />}
       activeNav="resume-cover"
     >
-      <CenterWrap>
+      <div style={{ maxWidth: 1080, margin: '0 auto', padding: '0 16px' }}>
         {ATSWhyBanner}
         {TemplatesRow}
-      </CenterWrap>
+      </div>
 
-      <TemplatePreviewModal
-        open={previewOpen}
-        onClose={() => setPreviewOpen(false)}
-        tpl={previewTpl}
-      />
+      <TemplatePreviewModal open={previewOpen} onClose={() => setPreviewOpen(false)} tpl={previewTpl} />
     </SeekerLayout>
   );
 }
