@@ -25,15 +25,19 @@ enum Tier {
 
 // === USER MODEL ===
 model User {
-  id            String    @id @default(cuid())
-  email         String    @unique
-  name          String?
-  role          UserRole  @default(SEEKER)
-  tier          Tier      @default(FREE)
-  createdAt     DateTime  @default(now())
-  updatedAt     DateTime  @updatedAt
-  stripeId      String?   // Stripe customer ID
-  profileNotes  Json?     // Resume data, notes, etc.
+  id                   String   @id @default(cuid())
+  email                String   @unique
+  name                 String?
+  image                String?
+  passwordHash         String?
+  emailVerified        Boolean  @default(false)
+  verificationToken    String?
+  verificationExpires  DateTime?
+  role                 String   @default("JOB_SEEKER")
+  plan                 String   @default("FREE")
+  stripeId             String?
+  createdAt            DateTime @default(now())
+}
 
   // === RELATIONS ===
   applications  Application[]
