@@ -25,21 +25,15 @@ enum Tier {
 
 // === USER MODEL ===
 model User {
-  id                   String   @id @default(cuid())
-  email                String   @unique
-  name                 String?
-  image                String?
-  passwordHash         String?
-  emailVerified        Boolean  @default(false)
-  verificationToken    String?
-  verificationExpires  DateTime?
-  role                 String   @default("JOB_SEEKER")
-  plan                 String   @default("FREE")
-  stripeId             String?
-  createdAt            DateTime @default(now())
-}
+  id            String   @id @default(cuid())
+  email         String   @unique
+  emailVerified Boolean  @default(false)
+  passwordHash  String?
+  name          String?
+  image         String?
+  role          String   @default("SEEKER")
+  plan          String   @default("FREE")
 
-  // === RELATIONS ===
   applications  Application[]
   views         JobView[]
   interviews    Interview[]
@@ -48,7 +42,7 @@ model User {
   resume        Resume?
   covers        Cover[]
   jobs          Job[]
-  scanLogs      ScanLog[] // ← REVERSE RELATION (FIXED P1012)
+  scanLogs      ScanLog[]
 
   @@map("users")
 }
