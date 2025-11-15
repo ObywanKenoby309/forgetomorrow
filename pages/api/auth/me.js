@@ -1,19 +1,36 @@
-// /pages/api/auth/me.js
-import { verifyJwt, readSessionCookie } from '@/lib/auth';
+// pages/api/auth/me.js
+import { getServerSession } from 'next-auth';
+import { authOptions } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
 
 export default async function handler(req, res) {
-  const token = readSessionCookie(req);
-  if (!token) return res.status(200).json({ ok: true, user: null });
+  try {
+    const session = await getServerSession(req, res, authOptions);
 
-  const payload = verifyJwt(token);
-  if (!payload?.sub) return res.status(200).json({ ok: true, user: null });
+    if (!session?.user?.id) {
+      return res.status(200).json({ ok: true, user: null });
+    }
 
-  // (optional) re-load a few fields from DB
-  const user = await prisma.user.findUnique({
-    where: { id: payload.sub },
-    select: { id: true, email: true, role: true, name: true },
-  });
+    // Optional: Refresh user from DB (e.g., role/plan changes)
+    const user = await prisma.user.findUnique({
+      where: { id: session.user.id },
+      select: {
+        id: true,
+        email: true,
+        name: true,
+        image: true,
+        role: true,
+        plan: true,
+      },
+    });
 
-  return res.status(200).json({ ok: true, user });
+    if (!user) {
+      return res.status(200).json({ ok: true, user: null });
+    }
+
+    return res.status(200).json({ ok: true, user });
+  } catch (error) {
+    console.error('[/api/auth/me] Error:', error);
+    return res.status(500).json({ ok: false, error: 'Internal server error' });
+  }
 }
