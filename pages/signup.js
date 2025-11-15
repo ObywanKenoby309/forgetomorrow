@@ -22,7 +22,6 @@ export default function Signup() {
             Create Your Account
           </h1>
 
-          {/* === GITHUB SIGNUP === */}
           <button
             onClick={handleGitHubSignup}
             disabled={isLoading}
