@@ -16,7 +16,7 @@ export default function Signup() {
     setLoading(true);
 
     const res = await fetch('/api/auth/signup', {
-753      method: 'POST',
+      method: 'POST',  // ← FIXED: NO 753
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ email, password }),
     });
