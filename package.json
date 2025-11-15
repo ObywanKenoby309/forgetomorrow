@@ -25,6 +25,7 @@
     "formidable": "^3.5.4",
     "groq-sdk": "^0.34.0",
     "html2pdf.js": "^0.10.3",
+    "jsonwebtoken": "^9.0.2",
     "jspdf": "3.0.2",
     "jszip": "^3.10.1",
     "lucide-react": "^0.539.0",
