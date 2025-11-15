@@ -60,7 +60,7 @@ export const authOptions: NextAuthOptions = {
   },
 };
 
-// JWT helpers (optional, but safe to keep)
+// Optional helpers
 export function verifyJwt(token: string): any {
   try {
     return verify(token, JWT_SECRET);
