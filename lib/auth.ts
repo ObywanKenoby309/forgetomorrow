@@ -6,7 +6,7 @@ import GithubProvider from 'next-auth/providers/github';
 import { PrismaAdapter } from '@next-auth/prisma-adapter';
 import bcrypt from 'bcrypt';
 import { sign, verify } from 'jsonwebtoken';
-import prisma from './prisma'; // Import PrismaClient from lib/prisma.ts
+import prisma from '@/lib/prisma'; // Import PrismaClient from lib/prisma.ts
 
 const JWT_SECRET = process.env.NEXTAUTH_SECRET || 'fallback-secret'; // Fallback if undefined
 
