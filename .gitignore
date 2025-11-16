@@ -4,3 +4,4 @@
 .env.production
 dev.db.env
 .env.local
+.vercel
