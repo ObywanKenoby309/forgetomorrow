@@ -1,49 +1,38 @@
 // pages/api/auth/signup.js
-import { PrismaClient } from '@prisma/client';
+import { prisma } from '@/lib/prisma';
 import bcrypt from 'bcrypt';
 import { v4 as uuidv4 } from 'uuid';
-import { sendVerificationEmail } from '../../../lib/email';
-
-const prisma = new PrismaClient();
+import { sendVerificationEmail } from '@/lib/email';
 
 export default async function handler(req, res) {
   if (req.method !== 'POST') return res.status(405).end();
 
-  const { email, password } = req.body;
+  const { email, password, firstName, lastName } = req.body;
 
-  // Validate
-  if (!email || !password || password.length < 6) {
-    return res.status(400).json({ error: 'Invalid email or password' });
+  if (!email || !password || !firstName || !lastName) {
+    return res.status(400).json({ error: 'All fields required' });
   }
 
-  // Check if user exists
   const existing = await prisma.user.findUnique({ where: { email } });
-  if (existing) {
-    return res.status(400).json({ error: 'Email already in use' });
-  }
+  if (existing) return res.status(400).json({ error: 'Email taken' });
 
-  // Hash password
   const passwordHash = await bcrypt.hash(password, 10);
+  const verificationToken = uuidv4();
 
-  // Generate verification token
-  const token = uuidv4();
-  const expires = new Date(Date.now() + 24 * 60 * 60 * 1000); // 24h
-
-  // Create user
   await prisma.user.create({
     data: {
-      email,
+      email: email.toLowerCase(),
       passwordHash,
+      name: `${firstName} ${lastName}`,
+      firstName,
+      lastName,
+      emailVerificationToken: verificationToken,
       emailVerified: false,
-      verificationToken: token,
-      verificationExpires: expires,
-      role: 'JOB_SEEKER',
       plan: 'FREE',
     },
   });
 
-  // Send email
-  await sendVerificationEmail(email, token);
+  await sendVerificationEmail(email, verificationToken);
 
   res.status(200).json({ success: true });
 }
