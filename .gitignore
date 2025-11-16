@@ -1,27 +1,3 @@
-# Node.js dependencies
-node_modules/
-
-# Next.js build output
-.next/
-
-# Production build output
-out/
-
-# Logs
-npm-debug.log*
-yarn-debug.log*
-yarn-error.log*
-
-# Env files
-.env.local
-.env.development.local
-.env.test.local
-.env.production.local
-
-# Mac system files
-.DS_Store
-
-# VSCode settings folder
-.vscode/
-
-/lib/generated/prisma
+.env 
+.env.local 
+dev.db 
