@@ -2,10 +2,14 @@
 import Head from 'next/head';
 import { useState } from 'react';
 import { useRouter } from 'next/router';
+import Link from 'next/link';
 
 export default function Signup() {
+  const [firstName, setFirstName] = useState('');
+  const [lastName, setLastName] = useState('');
   const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
+  const [agreeToS, setAgreeToS] = useState(false);
+  const [consentEmails, setConsentEmails] = useState(false);
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
   const router = useRouter();
@@ -15,19 +19,42 @@ export default function Signup() {
     setError('');
     setLoading(true);
 
-    const res = await fetch('/api/auth/signup', {
-      method: 'POST',  // ← FIXED: NO 753
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ email, password }),
-    });
-
-    const data = await res.json();
-
-    if (data.error) {
-      setError(data.error);
+    if (!firstName || !lastName || !email) {
+      setError('All fields are required');
       setLoading(false);
-    } else {
-      router.push('/check-email');
+      return;
+    }
+
+    if (!agreeToS) {
+      setError('You must agree to the Terms of Service');
+      setLoading(false);
+      return;
+    }
+
+    try {
+      const res = await fetch('/api/auth/signup', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          email,
+          firstName,
+          lastName,
+          agreeToS,
+          consentEmails,
+        }),
+      });
+
+      const data = await res.json();
+
+      if (data.error) {
+        setError(data.error);
+        setLoading(false);
+      } else {
+        router.push('/check-email');
+      }
+    } catch (err) {
+      setError('Something went wrong. Try again.');
+      setLoading(false);
     }
   };
 
@@ -44,9 +71,38 @@ export default function Signup() {
 
           {error && (
             <p className="text-red-500 text-sm mb-4 text-center">{error}</p>
-          )}
+            )}
 
-          <form onSubmit={handleSubmit} className="space-y-6">
+          <form onSubmit={handleSubmit} className="space-y-5">
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <label className="block text-gray-700 font-semibold mb-2">
+                  First Name
+                </label>
+                <input
+                  type="text"
+                  value={firstName}
+                  onChange={(e) => setFirstName(e.target.value)}
+                  required
+                  placeholder="John"
+                  className="w-full px-4 py-2 border rounded focus:outline-none focus:ring-2 focus:ring-[#FF7043]"
+                />
+              </div>
+              <div>
+                <label className="block text-gray-700 font-semibold mb-2">
+                  Last Name
+                </label>
+                <input
+                  type="text"
+                  value={lastName}
+                  onChange={(e) => setLastName(e.target.value)}
+                  required
+                  placeholder="Doe"
+                  className="w-full px-4 py-2 border rounded focus:outline-none focus:ring-2 focus:ring-[#FF7043]"
+                />
+              </div>
+            </div>
+
             <div>
               <label className="block text-gray-700 font-semibold mb-2">
                 Email
@@ -61,27 +117,45 @@ export default function Signup() {
               />
             </div>
 
-            <div>
-              <label className="block text-gray-700 font-semibold mb-2">
-                Password
-              </label>
+            <label className="flex items-start space-x-3 text-sm text-gray-600">
               <input
-                type="password"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
+                type="checkbox"
+                checked={agreeToS}
+                onChange={(e) => setAgreeToS(e.target.checked)}
                 required
-                minLength="6"
-                placeholder="6+ characters"
-                className="w-full px-4 py-2 border rounded focus:outline-none focus:ring-2 focus:ring-[#FF7043]"
+                className="mt-0.5"
               />
-            </div>
+              <span>
+                I agree to the{' '}
+                <Link href="/terms" className="text-[#FF7043] font-semibold hover:underline">
+                  Terms of Service
+                </Link>{' '}
+                and{' '}
+                <Link href="/privacy" className="text-[#FF7043] font-semibold hover:underline">
+                  Privacy Policy
+                </Link>
+                .
+              </span>
+            </label>
+
+            <label className="flex items-start space-x-3 text-sm text-gray-600">
+              <input
+                type="checkbox"
+                checked={consentEmails}
+                onChange={(e) => setConsentEmails(e.target.checked)}
+                className="mt-0.5"
+              />
+              <span>
+                Send me job tips, AI resume advice, and updates (optional)
+              </span>
+            </label>
 
             <button
               type="submit"
               disabled={loading}
               className="w-full bg-[#FF7043] text-white py-3 rounded font-semibold hover:bg-[#F4511E] transition-colors disabled:opacity-50"
             >
-              {loading ? 'Sending...' : 'Sign Up'}
+              {loading ? 'Sending...' : 'Create Account'}
             </button>
           </form>
 
