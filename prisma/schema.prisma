@@ -1,4 +1,3 @@
-// prisma/schema.prisma
 generator client {
   provider = "prisma-client-js"
 }
@@ -8,7 +7,7 @@ datasource db {
   url      = env("DATABASE_URL") // Vercel will override with Postgres
 }
 
-// === USER ROLES & TIERS ===
+// === ENUMS ===
 enum UserRole {
   SEEKER
   COACH
@@ -25,117 +24,129 @@ enum Tier {
 
 // === USER MODEL ===
 model User {
-  id            String   @id @default(cuid())
-  email         String   @unique
-  emailVerified Boolean  @default(false)
-  passwordHash  String?
-  name          String?
-  image         String?
-  role          String   @default("SEEKER")
-  plan          String   @default("FREE")
+  id                   String    @id @default(cuid())
+  email                String    @unique
+  emailVerified        Boolean   @default(false)
+  emailVerificationToken String?
+  
+  passwordHash         String?
+  
+  firstName            String?
+  lastName             String?
+  name                 String?   // Auto-filled: first + last
+  image                String?
+  
+  role                 UserRole  @default(SEEKER)
+  plan                 Tier      @default(FREE)
 
-  applications  Application[]
-  views         JobView[]
-  interviews    Interview[]
-  offers        Offer[]
-  pinnedJobs    PinnedJob[]
-  resume        Resume?
-  covers        Cover[]
-  jobs          Job[]
-  scanLogs      ScanLog[]
+  // MFA
+  mfaEnabled           Boolean   @default(false)
+  mfaSecret            String?
+
+  // Stripe
+  stripeCustomerId     String?   @unique
+  stripeSubscriptionId String?   @unique
+
+  // Relations
+  applications         Application[]
+  views                JobView[]
+  interviews           Interview[]
+  offers               Offer[]
+  pinnedJobs           PinnedJob[]
+  resume               Resume?
+  covers               Cover[]
+  jobs                 Job[]
+  scanLogs             ScanLog[]
+
+  createdAt            DateTime  @default(now())
+  updatedAt            DateTime  @updatedAt
 
   @@map("users")
 }
 
 // === JOB POSTING ===
 model Job {
-  id                  Int       @id @default(autoincrement())
-  company             String
-  title               String
-  worksite            String
-  location            String
-  type                String?
-  compensation        String?
-  description         String
-  status              String    @default("Draft")
-  urgent              Boolean   @default(false)
+  id                   Int       @id @default(autoincrement())
+  company              String
+  title                String
+  worksite             String
+  location             String
+  type                 String?
+  compensation         String?
+  description          String
+  status               String    @default("Draft")
+  urgent               Boolean   @default(false)
 
-  // Counters
-  viewsCount          Int       @default(0)
-  applicationsCount   Int       @default(0)
+  viewsCount           Int       @default(0)
+  applicationsCount    Int       @default(0)
 
-  createdAt           DateTime  @default(now())
-  updatedAt           DateTime  @updatedAt
+  createdAt            DateTime  @default(now())
+  updatedAt            DateTime  @updatedAt
 
-  userId              String
-  user                User      @relation(fields: [userId], references: [id])
+  userId               String
+  user                 User      @relation(fields: [userId], references: [id])
 
-  // Relations
-  applications        Application[]
-  views               JobView[]
-  interviews          Interview[]
-  offers              Offer[]
-  pinnedBy            PinnedJob[]
-  covers              Cover[]   // ← Opposite relation
+  applications         Application[]
+  views                JobView[]
+  interviews           Interview[]
+  offers               Offer[]
+  pinnedBy             PinnedJob[]
+  covers               Cover[]
 
   @@map("jobs")
 }
 
 // === RESUME ===
 model Resume {
-  id          Int       @id @default(autoincrement())
-  userId      String    @unique
+  id          Int      @id @default(autoincrement())
+  userId      String   @unique
   content     String
-  isPublic    Boolean   @default(false)
-  createdAt   DateTime  @default(now())
-  updatedAt   DateTime  @updatedAt
-
-  user        User      @relation(fields: [userId], references: [id])
+  isPublic    Boolean  @default(false)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  user        User     @relation(fields: [userId], references: [id])
 
   @@map("resumes")
 }
 
 // === COVER LETTER ===
 model Cover {
-  id          Int       @id @default(autoincrement())
-  userId      String
-  jobId       Int?
-  content     String
-  createdAt   DateTime  @default(now())
-
-  user        User      @relation(fields: [userId], references: [id])
-  job         Job?      @relation(fields: [jobId], references: [id])
+  id        Int       @id @default(autoincrement())
+  userId    String
+  jobId     Int?
+  content   String
+  createdAt DateTime  @default(now())
+  user      User      @relation(fields: [userId], references: [id])
+  job       Job?      @relation(fields: [jobId], references: [id])
 
   @@map("covers")
 }
 
 // === APPLICATION ===
 model Application {
-  id          Int       @id @default(autoincrement())
-  userId      String
-  jobId       Int
-  resumeId    Int?
-  coverId     Int?
-  status      String    @default("Applied")
-  appliedAt   DateTime  @default(now())
-  updatedAt   DateTime  @updatedAt
-
-  user        User      @relation(fields: [userId], references: [id])
-  job         Job       @relation(fields: [jobId], references: [id])
+  id         Int       @id @default(autoincrement())
+  userId     String
+  jobId      Int
+  resumeId   Int?
+  coverId    Int?
+  status     String    @default("Applied")
+  appliedAt  DateTime  @default(now())
+  updatedAt  DateTime  @updatedAt
+  user       User      @relation(fields: [userId], references: [id])
+  job        Job       @relation(fields: [jobId], references: [id])
 
   @@map("applications")
 }
 
 // === JOB VIEW ===
 model JobView {
-  id          Int       @id @default(autoincrement())
-  userId      String
-  jobId       Int
-  viewedBy    String?
-  viewedAt    DateTime  @default(now())
-
-  user        User      @relation(fields: [userId], references: [id])
-  job         Job       @relation(fields: [jobId], references: [id])
+  id        Int       @id @default(autoincrement())
+  userId    String
+  jobId     Int
+  viewedBy  String?
+  viewedAt  DateTime  @default(now())
+  user      User      @relation(fields: [userId], references: [id])
+  job       Job       @relation(fields: [jobId], references: [id])
 
   @@map("job_views")
 }
@@ -147,7 +158,6 @@ model Interview {
   jobId       Int
   scheduledAt DateTime
   status      String    @default("Scheduled")
-
   user        User      @relation(fields: [userId], references: [id])
   job         Job       @relation(fields: [jobId], references: [id])
 
@@ -156,42 +166,38 @@ model Interview {
 
 // === OFFER ===
 model Offer {
-  id          Int       @id @default(autoincrement())
-  userId      String
-  jobId       Int
-  salary      String?
-  accepted    Boolean?
-  receivedAt  DateTime  @default(now())
-
-  user        User      @relation(fields: [userId], references: [id])
-  job         Job       @relation(fields: [jobId], references: [id])
+  id         Int       @id @default(autoincrement())
+  userId     String
+  jobId      Int
+  salary     String?
+  accepted   Boolean?
+  receivedAt DateTime  @default(now())
+  user       User      @relation(fields: [userId], references: [id])
+  job        Job       @relation(fields: [jobId], references: [id])
 
   @@map("offers")
 }
 
 // === PINNED JOB ===
 model PinnedJob {
-  id          Int       @id @default(autoincrement())
-  userId      String
-  jobId       Int
-  pinnedAt    DateTime  @default(now())
-
-  user        User      @relation(fields: [userId], references: [id])
-  job         Job       @relation(fields: [jobId], references: [id])
+  id        Int       @id @default(autoincrement())
+  userId    String
+  jobId     Int
+  pinnedAt  DateTime  @default(now())
+  user      User      @relation(fields: [userId], references: [id])
+  job       Job       @relation(fields: [jobId], references: [id])
 
   @@map("pinned_jobs")
 }
 
-// === AI SCAN LOG (FREE TIER TRACKING) ===
+// === AI SCAN LOG ===
 model ScanLog {
-  id          String    @id @default(cuid())
-  userId      String
-  date        String    // YYYY-MM-DD
-  score       Int
-  createdAt   DateTime  @default(now())
-
-  // ← REVERSE RELATION TO USER (FIXES P1012)
-  user        User      @relation(fields: [userId], references: [id])
+  id        String    @id @default(cuid())
+  userId    String
+  date      String    // YYYY-MM-DD
+  score     Int
+  createdAt DateTime  @default(now())
+  user      User      @relation(fields: [userId], references: [id])
 
   @@unique([userId, date])
   @@map("scan_logs")
