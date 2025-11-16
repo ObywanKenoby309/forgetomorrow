@@ -2,5 +2,4 @@
 import NextAuth from 'next-auth';
 import { authOptions } from '@/lib/auth';
 
-// This file should be **minimal** — just import and export
 export default NextAuth(authOptions);
