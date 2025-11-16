@@ -1,3 +1,5 @@
 .env 
 .env.local 
-dev.db 
+.env.development
+.env.production
+dev.db
