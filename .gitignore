@@ -1,12 +1,16 @@
-.env 
-.env.local 
+# Environment variables
+.env
+.env.local
 .env.development
 .env.production
 dev.db.env
-.env.local
+
+# Vercel + Next.js + Node
 .vercel
-forgetomorrow-deploy.zip 
-"" 
-"# Node modules" 
-"node_modules/" 
-".next/" 
+node_modules/
+.next/
+dist/
+out/
+
+# Misc
+forgetomorrow-deploy.zip
