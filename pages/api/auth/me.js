@@ -1,7 +1,7 @@
 // pages/api/auth/me.js
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
-import prisma from '@/lib/prisma-client';
+import prisma from '@/lib/prisma';
 
 export default async function handler(req, res) {
   // Restrict to GET requests
