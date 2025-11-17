@@ -88,7 +88,7 @@ export default function LandingFooter() {
             <h2 className="font-semibold text-gray-100 mb-3">Join</h2>
             <ul className="space-y-2">
               <li>
-                <Link href="/signup" className="hover:text-[#FF7043] transition">
+                <Link href="/pricing" className="hover:text-[#FF7043] transition">
                   Sign Up
                 </Link>
               </li>

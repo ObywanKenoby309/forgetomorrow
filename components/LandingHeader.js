@@ -3,7 +3,7 @@ import EnterpriseHeader from "@/components/layouts/EnterpriseHeader";
 const navItems = [
   { href: "/", label: "Home" },
   { href: "/about", label: "About" },
-  { href: "/signup", label: "Sign Up" },
+  { href: "/pricing", label: "Sign Up" },   // ← FIXED: now goes to pricing first
   { href: "/login", label: "Login" },
 ];
 
@@ -21,11 +21,7 @@ export default function LandingHeader() {
       showPlanBadge={false}
       publicVariant={true}
       showUserMenu={false}
-
-      // Custom container: remove ALL left padding, keep some right padding
       containerClass="max-w-7xl pl-6 pr-6 md:pr-10"
-
-      // Left block: no left padding so brand hugs flush to edge
       leftClass="flex items-center min-w-0 gap-4 md:gap-6 pr-6 md:pr-8"
     />
   );
