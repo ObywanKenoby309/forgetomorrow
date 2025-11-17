@@ -1,5 +1,5 @@
 // pages/api/analytics/track.js
-import { prisma } from '@/lib/prisma';
+import prisma from '@/lib/prisma';
 
 const ALLOWED = new Set(['JOB_VIEW', 'APPLY_SUBMIT', 'MESSAGE_SENT']);
 const MAX_METADATA_BYTES = 8 * 1024; // 8KB soft cap
