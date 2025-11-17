@@ -16,7 +16,7 @@ const ALLOWED_HOSTS = (process.env.ALLOWED_HOSTS || '')
 // Public pages allowed when locked
 const PUBLIC_PATHS = new Set([
   '/', '/waiting-list', '/about',
-  '/pricing', '/features', '/login', '/signup', '/contact',
+  '/pricing', '/features', '/login', '/pricing', '/contact',
   '/coming-soon',
   // keep public feedback form + nested routes (e.g., /feedback/abc)
   '/feedback',

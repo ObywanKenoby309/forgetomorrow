@@ -88,7 +88,7 @@ export default function Login() {
 
           <p className="mt-6 text-center text-gray-600">
             Don&apos;t have an account?{' '}
-            <Link href="/signup" passHref>
+            <Link href="/pricing" passHref>
               <button
                 type="button"
                 className="text-[#FF7043] font-semibold hover:underline"

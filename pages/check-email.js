@@ -16,7 +16,7 @@ export default function CheckEmail() {
             We sent a confirmation link to your inbox.
           </p>
           <p className="text-sm text-gray-500 mt-4">
-            Didn’t get it? Check spam or <a href="/signup" className="text-[#FF7043]">try again</a>.
+            Didn’t get it? Check spam or <a href="/pricing" className="text-[#FF7043]">try again</a>.
           </p>
         </div>
       </main>
