@@ -1,29 +1,41 @@
-import { PrismaClient } from '@prisma/client';
-import bcrypt from 'bcrypt';
+// prisma/seed.js
+import bcrypt from "bcrypt";
+import { PrismaClient } from "@prisma/client";
 
 const prisma = new PrismaClient();
 
 async function main() {
-  const email = 'admin@forgetomorrow.com';
-  const password = 'ChangeMe123'; // 🔑 change this after login
-  const hashed = await bcrypt.hash(password, 10);
+  const adminEmail = "admin@forgetomorrow.com";
 
-  const admin = await prisma.user.upsert({
-    where: { email },
+  // If you want to set a plain password, generate it here instead:
+  // const passwordHash = await bcrypt.hash("ChangeMe123!", 10);
+  // Using existing pre-hashed password (from your earlier seed) for convenience:
+  const passwordHash = "$2b$10$rmTG94GuJNYjRfVmgD396exB1h0SntgZPXBZHQHgWNCsgWcpNVoxO";
+
+  console.log("Seeding admin user:", adminEmail);
+
+  await prisma.user.upsert({
+    where: { email: adminEmail },
     update: {},
     create: {
-      email,
-      passwordHash: hashed,   // <-- use the correct column name
-      role: 'ADMIN',
+      email: adminEmail,
+      passwordHash,
+      firstName: "Platform",
+      lastName: "Admin",
+      name: "Platform Admin",
+      // Now valid since ADMIN is added to the enum
+      role: "ADMIN",
+      plan: "ENTERPRISE",
+      emailVerified: true,
     },
   });
 
-  console.log('Admin user ready:', { id: admin.id, email: admin.email, role: admin.role });
+  console.log("Seeding complete.");
 }
 
 main()
   .catch((e) => {
-    console.error(e);
+    console.error("Seed failed:", e);
     process.exit(1);
   })
   .finally(async () => {

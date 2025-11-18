@@ -12,6 +12,7 @@ enum UserRole {
   SEEKER
   COACH
   RECRUITER
+  ADMIN     // <-- added ADMIN role
 }
 
 enum Tier {
@@ -24,42 +25,39 @@ enum Tier {
 
 // === USER MODEL ===
 model User {
-  id                   String    @id @default(cuid())
-  email                String    @unique
-  emailVerified        Boolean   @default(false)
+  id                     String    @id @default(cuid())
+  email                  String    @unique
+  emailVerified          Boolean   @default(false)
   emailVerificationToken String?
-  
-  passwordHash         String?
-  
-  firstName            String?
-  lastName             String?
-  name                 String?   // Auto-filled: first + last
-  image                String?
-  
-  role                 UserRole  @default(SEEKER)
-  plan                 Tier      @default(FREE)
+  passwordHash           String?
+  firstName              String?
+  lastName               String?
+  name                   String?   // Auto-filled: first + last
+  image                  String?
+  role                   UserRole  @default(SEEKER)
+  plan                   Tier      @default(FREE)
 
   // MFA
-  mfaEnabled           Boolean   @default(false)
-  mfaSecret            String?
+  mfaEnabled             Boolean   @default(false)
+  mfaSecret              String?
 
   // Stripe
-  stripeCustomerId     String?   @unique
-  stripeSubscriptionId String?   @unique
+  stripeCustomerId       String?   @unique
+  stripeSubscriptionId   String?   @unique
 
   // Relations
-  applications         Application[]
-  views                JobView[]
-  interviews           Interview[]
-  offers               Offer[]
-  pinnedJobs           PinnedJob[]
-  resume               Resume?
-  covers               Cover[]
-  jobs                 Job[]
-  scanLogs             ScanLog[]
+  applications           Application[]
+  views                  JobView[]
+  interviews             Interview[]
+  offers                 Offer[]
+  pinnedJobs             PinnedJob[]
+  resume                 Resume?
+  covers                 Cover[]
+  jobs                   Job[]
+  scanLogs               ScanLog[]
 
-  createdAt            DateTime  @default(now())
-  updatedAt            DateTime  @updatedAt
+  createdAt              DateTime  @default(now())
+  updatedAt              DateTime  @updatedAt
 
   @@map("users")
 }
@@ -201,4 +199,19 @@ model ScanLog {
 
   @@unique([userId, date])
   @@map("scan_logs")
+}
+
+// === VERIFICATION TOKENS ===
+model VerificationToken {
+  id           Int      @id @default(autoincrement())
+  token        String   @unique
+  email        String
+  firstName    String
+  lastName     String
+  passwordHash String
+  plan         String?
+  expiresAt    DateTime
+  createdAt    DateTime @default(now())
+
+  @@map("verification_tokens")
 }
