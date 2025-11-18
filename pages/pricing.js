@@ -3,9 +3,7 @@ import Head from "next/head";
 import { useState } from "react";
 import { loadStripe } from "@stripe/stripe-js";
 
-// THIS LINE KILLS THE PRERENDER ERROR FOREVER
 export const dynamic = "force-dynamic";
-
 const stripePromise = loadStripe(process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY);
 
 const plans = {
@@ -42,42 +40,18 @@ const plans = {
 export default function PricingPage() {
   const [loading, setLoading] = useState(null);
 
-  const handleClick = async (planKey) => {
+  // ONE CLEAN handler — routes every plan correctly
+  const handleClick = (planKey) => {
     setLoading(planKey);
 
-    if (planKey === "job-seeker-free") {
-      // Route to your existing free signup page
-      window.location.href = "/signup";
-      return setLoading(null);
-    }
-
     if (planKey === "enterprise-recruiter") {
-      // Open mail client to contact sales
       window.location.href = "mailto:sales@forgetomorrow.com";
-      return setLoading(null);
-    }
-
-    try {
-      const stripe = await stripePromise;
-      const res = await fetch("/api/create-checkout-session", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ plan: planKey }),
-      });
-
-      if (!res.ok) {
-        console.error("Checkout session failed", await res.text());
-        setLoading(null);
-        return;
-      }
-
-      const { url } = await res.json();
-      if (url) window.location.href = url;
-    } catch (err) {
-      console.error("Stripe checkout error", err);
-    } finally {
       setLoading(null);
+      return;
     }
+
+    // Every other plan (free + paid) goes to the new staged registration page
+    window.location.href = `/register/${planKey}`;
   };
 
   return (
@@ -115,11 +89,14 @@ export default function PricingPage() {
               }}
             >
               <div>
-                <h2 style={{ fontSize: "1.25rem", marginBottom: 6, color: "#111", fontWeight: 700 }}>{plan.name}</h2>
-                <p style={{ fontSize: "1.6rem", fontWeight: 700, margin: "8px 0 18px", color: "#111" }}>{plan.price}</p>
+                <h2 style={{ fontSize: "1.25rem", marginBottom: 6, color: "#111", fontWeight: 700 }}>
+                  {plan.name}
+                </h2>
+                <p style={{ fontSize: "1.6rem", fontWeight: 700, margin: "8px 0 18px", color: "#111" }}>
+                  {plan.price}
+                </p>
 
                 <div style={{ fontSize: "0.95rem", lineHeight: "1.5", color: "#222", marginBottom: 18 }}>
-                  {/* Short teaser bullets on the card — keep concise */}
                   {key === "job-seeker-free" && (
                     <>
                       <p style={{ margin: "6px 0" }}>• 1x1 Unlimited messaging (Direct Contacts)</p>
@@ -127,7 +104,6 @@ export default function PricingPage() {
                       <p style={{ margin: "6px 0" }}>• Resume & cover letter builder (limited)</p>
                     </>
                   )}
-
                   {key === "job-seeker-pro" && (
                     <>
                       <p style={{ margin: "6px 0" }}>• Profile analytics & insights</p>
@@ -135,7 +111,6 @@ export default function PricingPage() {
                       <p style={{ margin: "6px 0" }}>• Priority listings & search filters</p>
                     </>
                   )}
-
                   {key === "coach-mentor" && (
                     <>
                       <p style={{ margin: "6px 0" }}>• Mentee tracking & analytics</p>
@@ -143,7 +118,6 @@ export default function PricingPage() {
                       <p style={{ margin: "6px 0" }}>• Daily agenda & newsletter tools</p>
                     </>
                   )}
-
                   {key === "recruiter-smb" && (
                     <>
                       <p style={{ margin: "6px 0" }}>• Limited seats for recruiters</p>
@@ -151,7 +125,6 @@ export default function PricingPage() {
                       <p style={{ margin: "6px 0" }}>• Group messaging & team calendar</p>
                     </>
                   )}
-
                   {key === "enterprise-recruiter" && (
                     <>
                       <p style={{ margin: "6px 0" }}>• Tailored seats for your business</p>
@@ -180,7 +153,6 @@ export default function PricingPage() {
                   {loading === key ? "Loading…" : plan.button}
                 </button>
 
-                {/* Secondary link for Enterprise: explicit mailto (also shows below) */}
                 {key === "enterprise-recruiter" && (
                   <a
                     href="mailto:sales@forgetomorrow.com"
@@ -213,13 +185,12 @@ export default function PricingPage() {
           >
             Contact Support
           </button>
-
           <div style={{ marginTop: 18, fontSize: "0.85rem", color: "#bbb" }}>
             <p style={{ marginBottom: 6 }}>
-              After purchase you'll be guided through account setup and onboarding.
+              After registration you’ll receive a verification email.
             </p>
             <p>
-              Free plan users will be routed to a basic signup flow (no payment required).
+              Free accounts activate instantly. Paid plans proceed to secure checkout.
             </p>
           </div>
         </aside>
