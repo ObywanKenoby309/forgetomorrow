@@ -47,7 +47,7 @@ export default function PricingPage() {
 
     if (planKey === "job-seeker-free") {
       // Route to your existing free signup page
-      window.location.href = "/signup-free";
+      window.location.href = "/signup";
       return setLoading(null);
     }
 
