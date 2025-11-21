@@ -51,6 +51,7 @@ export default function AIATSScorerClient({ jdText, resumeData }: { jdText: stri
   ? 'Evaluate hiring fit with AI.'
   : 'Improve your resume with AI-powered scoring.'
 }
+</p>
 
       <button
         onClick={handleScan}
