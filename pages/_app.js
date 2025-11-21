@@ -89,7 +89,7 @@ export default function App({ Component, pageProps }) {
     : isPublicByPath;
 
   const useForgeBackground =
-    !isUniversalPage && isPublicEffective && ['/', '/about', '/features'].includes(router.pathname);
+    !isUniversalPage && isPublicEffective && ['/', '/about', '/features', '/press'].includes(router.pathname);
   const forgeBgPosition = router.pathname === '/' ? '35% center' : 'center';
   const renderLandingHeader = isPublicEffective && !isUniversalPage;
 

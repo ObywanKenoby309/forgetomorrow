@@ -1,9 +1,9 @@
-// pages/press.js — ForgeTomorrow Press Kit (unlisted, brutal, perfect)
+// pages/press.tsx
 import Head from 'next/head';
 import Image from 'next/image';
 import Link from 'next/link';
 
-export default function Press() {
+export default function PressKit() {
   return (
     <>
       <Head>
@@ -11,89 +11,47 @@ export default function Press() {
         <meta name="robots" content="noindex" />
       </Head>
 
-      <div className="min-h-screen bg-black text-white">
-        {/* Hero */}
-        <section className="px-8 py-20 text-center border-b border-gray-800">
-          <h1 className="text-5xl md:text-7xl font-black text-orange-500 mb-6">
-            ForgeTomorrow
+      {/* Full-screen forge background + overlay handled by _app.js */}
+      <div className="py-24 px-6">
+        <div className="max-w-5xl mx-auto text-center">
+          <h1 className="text-6xl md:text-7xl font-black text-orange-600 mb-8">
+            Press Kit
           </h1>
-          <p className="text-2xl md:text-4xl font-bold max-w-4xl mx-auto leading-tight">
-            Your path. Your power. Your tomorrow.
+          <p className="text-2xl text-gray-300 mb-16 max-w-3xl mx-auto">
+            Official assets, logos, brand colors, and contact for media & partners.
           </p>
-          <p className="text-gray-400 mt-6 text-lg">
-            The job search platform that treats candidates like humans and recruiters like partners.
-          </p>
-        </section>
 
-        {/* One-click download */}
-        <section className="bg-gray-950 py-12 text-center">
-          <a
-            href="/press/press-kit.zip"
-            className="inline-block px-12 py-6 bg-orange-600 hover:bg-orange-500 text-white text-xl font-bold rounded-lg transition"
-          >
-            Download Full Press Kit (.zip)
-          </a>
-        </section>
-
-        {/* Boilerplate */}
-        <section className="max-w-4xl mx-auto px-8 py-16 grid md:grid-cols-2 gap-12">
-          <div>
-            <h2 className="text-2xl font-bold text-orange-500 mb-4">50-Word Boilerplate</h2>
-            <p className="text-gray-300 leading-relaxed">
-              ForgeTomorrow is the modern job search platform built for real humans — job seekers get momentum-tracking dashboards, AI resume tools, and direct recruiter access. Coaches manage clients and sessions in one place. Recruiters post, message, and hire faster. No bots. No ghosting. Just progress.
-            </p>
-          </div>
-          <div>
-            <h2 className="text-2xl font-bold text-orange-500 mb-4">Founding Story</h2>
-            <p className="text-gray-300 leading-relaxed text-sm">
-              Founded in 2025 by Brian P., a 20-year recruiting veteran who got tired of seeing good people get crushed by broken job boards. ForgeTomorrow is the platform he wished existed — transparent, human-first, and built to actually help people win.
-            </p>
-          </div>
-        </section>
-
-        {/* Screenshots */}
-        <section className="bg-gray-950 py-16">
-          <div className="max-w-7xl mx-auto px-8">
-            <h2 className="text-3xl font-bold text-orange-500 mb-10 text-center">Product Screenshots</h2>
-            <div className="grid md:grid-cols-3 gap-8">
-              <div>
-                <Image src="/press/screenshot-seeker.jpg" width={1200} height={800} alt="Seeker Dashboard" className="rounded-lg border border-gray-800" />
-                <p className="text-center mt-4 text-gray-400">Seeker Dashboard</p>
-              </div>
-              <div>
-                <Image src="/press/screenshot-coach.jpg" width={1200} height={800} alt="Coach Suite" className="rounded-lg border border-gray-800" />
-                <p className="text-center mt-4 text-gray-400">Coach Suite</p>
-              </div>
-              <div>
-                <Image src="/press/screenshot-recruiter.jpg" width={1200} height={800} alt="Recruiter Dashboard" className="rounded-lg border border-gray-800" />
-                <p className="text-center mt-4 text-gray-400">Recruiter Dashboard</p>
-              </div>
+          {/* Logos */}
+          <section className="grid md:grid-cols-3 gap-12 mb-20">
+            <div className="bg-white/95 backdrop-blur rounded-2xl p-10 shadow-xl">
+              <Image src="/images/logo-color.png" width={380} height={380} alt="Color Logo" className="mx-auto" />
+              <Link href="/images/logo-color.png" download className="mt-6 inline-block text-orange-600 font-bold text-lg hover:underline">
+                Download PNG
+              </Link>
             </div>
-          </div>
-        </section>
-
-        {/* Team */}
-        <section className="max-w-4xl mx-auto px-8 py-16">
-          <h2 className="text-3xl font-bold text-orange-500 mb-10 text-center">Founder</h2>
-          <div className="flex flex-col md:flex-row items-center gap-10">
-            <Image src="/press/headshot-brian.jpg" width={400} height={500} alt="Brian P., Founder" className="rounded-lg" />
-            <div>
-              <h3 className="text-2xl font-bold">Brian P.</h3>
-              <p className="text-orange-500">Founder & CEO</p>
-              <p className="text-gray-400 mt-4 leading-relaxed">
-                20-year recruiting veteran turned builder. Spent decades watching good people get ignored by broken systems. Built ForgeTomorrow to fix it.
-              </p>
-              <p className="text-gray-400 mt-4">
-                Press contact: <a href="mailto:press@forgetomorrow.com" className="text-orange-500 underline">press@forgetomorrow.com</a>
-              </p>
+            <div className="bg-white/95 backdrop-blur rounded-2xl p-10 shadow-xl">
+              <Image src="/images/logo-white.png" width={380} height={380} alt="White Logo" className="mx-auto" />
+              <Link href="/images/logo-white.png" download className="mt-6 inline-block text-orange-600 font-bold text-lg hover:underline">
+                Download PNG
+              </Link>
             </div>
-          </div>
-        </section>
+            <div className="bg-white/95 backdrop-blur rounded-2xl p-10 shadow-xl">
+              <Image src="/images/logo-black.png" width={380} height={380} alt="Black Logo" className="mx-auto" />
+              <Link href="/images/logo-black.png" download className="mt-6 inline-block text-orange-600 font-bold text-lg hover:underline">
+                Download PNG
+              </Link>
+            </div>
+          </section>
 
-        <footer className="bg-gray-950 py-12 text-center text-gray-500 text-sm">
-          © 2025 ForgeTomorrow, Inc. All rights reserved.<br />
-          <a href="/" className="text-orange-600 hover:underline">forgetomorrow.com</a>
-        </footer>
+          {/* Contact */}
+          <section className="bg-white/95 backdrop-blur rounded-2xl p-12 inline-block">
+            <h2 className="text-4xl font-bold mb-4">Press Contact</h2>
+            <p className="text-2xl mb-2">Eric • Founder & CEO</p>
+            <a href="mailto:eric@forgetomorrow.com" className="text-xl text-orange-600 underline">
+              eric@forgetomorrow.com
+            </a>
+          </section>
+        </div>
       </div>
     </>
   );
