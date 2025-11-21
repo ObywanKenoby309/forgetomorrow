@@ -45,12 +45,12 @@ export default function AIATSScorerClient({ jdText, resumeData }: { jdText: stri
         AI ATS Score
       </h3>
       <p style={{ fontSize: 14, color: '#5D4037', marginBottom: 12 }}>
-        {session?.user?.role === 'COACH'
-          ? 'Coach your client with AI insights.'
-          : session?.user?.role === 'RECRUITER'
-          ? 'Evaluate hiring fit with AI.'
-          : 'Get AI-powered feedback to beat the ATS.'}
-      </p>
+        { (session?.user?.role as string || 'USER') === 'COACH'
+  ? 'Coach your client with AI insights.'
+  : (session?.user?.role as string || 'USER') === 'RECRUITER'
+  ? 'Evaluate hiring fit with AI.'
+  : 'Improve your resume with AI-powered scoring.'
+}
 
       <button
         onClick={handleScan}
