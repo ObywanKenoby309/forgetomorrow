@@ -1,0 +1,43 @@
+import Head from "next/head";
+
+export default function RecruiterInsights() {
+  return (
+    <>
+      <Head>
+        <title>Recruiter Insights | ForgeTomorrow</title>
+        <meta
+          name="description"
+          content="Transparent matching and actionable analytics for recruiters. See how ForgeTomorrow helps recruiters find the right talent efficiently."
+        />
+      </Head>
+
+      <section className="relative min-h-screen flex items-center justify-center px-6 text-center bg-[#112033]">
+        <div className="absolute inset-0 bg-black/40" aria-hidden="true" />
+        <div className="relative z-10 max-w-5xl mx-auto text-white">
+          <h1 className="text-5xl md:text-7xl font-black mb-8 leading-tight drop-shadow-2xl">
+            Recruiter Insights: <span className="text-[#FF7043]">Transparent Matching</span>
+          </h1>
+          <p className="text-2xl md:text-4xl max-w-4xl mx-auto drop-shadow-lg">
+            Actionable analytics to help recruiters find the right talent efficiently.
+          </p>
+          <img
+            src="/images/Recruiter Insights.jpg"
+            alt="Recruiter dashboard and analytics on ForgeTomorrow"
+            className="mt-12 rounded-xl shadow-2xl mx-auto max-w-full"
+          />
+        </div>
+      </section>
+
+      <section className="py-24 bg-gray-50">
+        <div className="max-w-4xl mx-auto px-6 space-y-12 text-gray-900">
+          <h2 className="text-4xl md:text-5xl font-black text-[#FF7043] text-center">
+            Actionable Insights
+          </h2>
+          <p className="text-lg md:text-xl leading-relaxed">
+            Recruiters gain transparency and data-driven tools to make informed decisions. Dashboards, filters, and analytics give a clear picture of candidate potential and ensure fair, efficient matching.
+          </p>
+        </div>
+      </section>
+    </>
+  );
+}

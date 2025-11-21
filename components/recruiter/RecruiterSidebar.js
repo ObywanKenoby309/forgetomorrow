@@ -240,7 +240,7 @@ export default function RecruiterSidebar({
           active={active === 'seeker-dashboard'}
         />
         <NavItem
-          href={`/seeker/jobs?chrome=${chromeRecruiter}`}
+          href={`/jobs?chrome=${chromeRecruiter}`}
           label="Apply to Jobs"
           active={active === 'jobs'}
         />

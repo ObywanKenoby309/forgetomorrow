@@ -1,0 +1,31 @@
+FORGETOMORROW MEDIA TEXT & COLOR GUIDELINES
+
+1. Brand Colors (Hex codes only)
+
+Steel Azure Dark → #112033 (primary background / headers)
+
+Orange Accent → #FF7043 (buttons, logos, CTAs)
+
+Hover Orange → #F4511E (hover states)
+
+Gray Main → #D1D5DB (body text)
+
+Gray Secondary → #9CA3AF (secondary text, captions)
+
+White → #FFFFFF (text on dark backgrounds, highlights)
+
+2. Text Guidelines
+
+Headers / Titles: White (#FFFFFF) or Orange (#FF7043) on dark backgrounds.
+
+Body Text: Gray Main (#D1D5DB) on dark backgrounds; Gray Secondary (#9CA3AF) for captions.
+
+Buttons / CTAs: Orange Accent (#FF7043) with White text; hover state #F4511E.
+
+Links: Orange Accent (#FF7043), hover #F4511E.
+
+3. Accessibility Notes
+
+Text over Steel Azure Dark must be #FFFFFF or #FF7043 for contrast.
+
+Small text should avoid orange to remain legible.

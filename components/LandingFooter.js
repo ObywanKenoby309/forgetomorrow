@@ -1,33 +1,33 @@
-// components/LandingFooter.js
-import Link from "next/link";
-import { Facebook, Youtube, Twitter } from "lucide-react";
+// components/LandingFooter.tsx ← FINAL CLEAN VERSION WITH TRACKING POLICY AND CONTACT FIXED
+import Link from 'next/link';
+import { Twitter, Facebook, Youtube } from 'lucide-react';
 
 export default function LandingFooter() {
   return (
-    <footer className="bg-[#1a1a1a] text-gray-300 py-10">
-      <div className="max-w-7xl mx-auto px-6">
-        <div className="grid gap-8 md:grid-cols-4 text-sm">
+    <footer className="bg-[#0a0a0a] text-gray-400 py-16 border-t border-gray-900">
+      <div className="max-w-7xl mx-auto px-6 lg:px-8">
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-10 mb-12">
           {/* Company */}
           <div>
-            <h2 className="font-semibold text-gray-100 mb-3">Company</h2>
-            <ul className="space-y-2">
+            <h3 className="text-white font-bold text-lg mb-5">Company</h3>
+            <ul className="space-y-3">
               <li>
-                <Link href="/about" className="hover:text-[#FF7043] transition">
-                  About
+                <Link href="/about" className="hover:text-[#FF7043] focus:text-[#FF7043] transition">
+                  About Us
                 </Link>
               </li>
               <li>
-                <Link href="/careers" className="hover:text-[#FF7043] transition">
+                <Link href="/careers" className="hover:text-[#FF7043] focus:text-[#FF7043] transition">
                   Careers
                 </Link>
               </li>
               <li>
-                <Link href="/press" className="hover:text-[#FF7043] transition">
-                  Press
+                <Link href="/press" className="hover:text-[#FF7043] focus:text-[#FF7043] transition">
+                  Press Kit
                 </Link>
               </li>
               <li>
-                <Link href="/blog" className="hover:text-[#FF7043] transition">
+                <Link href="/blog" className="hover:text-[#FF7043] focus:text-[#FF7043] transition">
                   Blog
                 </Link>
               </li>
@@ -36,20 +36,20 @@ export default function LandingFooter() {
 
           {/* Product */}
           <div>
-            <h2 className="font-semibold text-gray-100 mb-3">Product</h2>
-            <ul className="space-y-2">
+            <h3 className="text-white font-bold text-lg mb-5">Product</h3>
+            <ul className="space-y-3">
               <li>
-                <Link href="/features" className="hover:text-[#FF7043] transition">
+                <Link href="/features" className="hover:text-[#FF7043] focus:text-[#FF7043] transition">
                   Features
                 </Link>
               </li>
               <li>
-                <Link href="/pricing" className="hover:text-[#FF7043] transition">
+                <Link href="/pricing" className="hover:text-[#FF7043] focus:text-[#FF7043] transition">
                   Pricing
                 </Link>
               </li>
               <li>
-                <Link href="/help" className="hover:text-[#FF7043] transition">
+                <Link href="/help" className="hover:text-[#FF7043] focus:text-[#FF7043] transition">
                   Help Center
                 </Link>
               </li>
@@ -58,84 +58,89 @@ export default function LandingFooter() {
 
           {/* Legal */}
           <div>
-            <h2 className="font-semibold text-gray-100 mb-3">Legal</h2>
-            <ul className="space-y-2">
+            <h3 className="text-white font-bold text-lg mb-5">Legal</h3>
+            <ul className="space-y-3">
               <li>
-                <Link href="/privacy" className="hover:text-[#FF7043] transition">
-                  Privacy
+                <Link href="/privacy" className="hover:text-[#FF7043] focus:text-[#FF7043] transition">
+                  Privacy Policy
                 </Link>
               </li>
               <li>
-                <Link href="/terms" className="hover:text-[#FF7043] transition">
-                  Terms
+                <Link href="/terms" className="hover:text-[#FF7043] focus:text-[#FF7043] transition">
+                  Terms of Service
                 </Link>
               </li>
               <li>
-                <Link href="/security" className="hover:text-[#FF7043] transition">
+                <Link href="/security" className="hover:text-[#FF7043] focus:text-[#FF7043] transition">
                   Security
                 </Link>
               </li>
               <li>
-                <Link href="/accessibility" className="hover:text-[#FF7043] transition">
+                <Link href="/accessibility" className="hover:text-[#FF7043] focus:text-[#FF7043] transition">
                   Accessibility
                 </Link>
               </li>
+              <li>
+                <Link href="/tracking-policy" className="hover:text-[#FF7043] focus:text-[#FF7043] transition">
+                  Tracking & Cookies Policy
+                </Link>
+              </li>
             </ul>
           </div>
 
-          {/* Join / Auth */}
+          {/* Connect */}
           <div>
-            <h2 className="font-semibold text-gray-100 mb-3">Join</h2>
-            <ul className="space-y-2">
+            <h3 className="text-white font-bold text-lg mb-5">Connect</h3>
+            <ul className="space-y-3">
               <li>
-                <Link href="/pricing" className="hover:text-[#FF7043] transition">
-                  Sign Up
+                <Link href="/contact" className="hover:text-[#FF7043] focus:text-[#FF7043] transition">
+                  Contact
                 </Link>
               </li>
               <li>
-                <Link href="/login" className="hover:text-[#FF7043] transition">
-                  Login
+                <Link href="/pricing" className="hover:text-[#FF7043] focus:text-[#FF7043] transition font-medium">
+                  Get Early Access
                 </Link>
               </li>
             </ul>
+
+            {/* Social Icons */}
+            <div className="flex gap-5 mt-8">
+              <a
+                href="https://x.com/ForgeTomorrowHQ"
+                target="_blank"
+                rel="noopener noreferrer"
+                aria-label="Follow Forge Tomorrow on X"
+                className="hover:text-[#FF7043] focus:text-[#FF7043] transition"
+              >
+                <Twitter className="h-6 w-6" />
+              </a>
+              <a
+                href="https://facebook.com/profile.php?id=61579627354284"
+                target="_blank"
+                rel="noopener noreferrer"
+                aria-label="Follow Forge Tomorrow on Facebook"
+                className="hover:text-[#FF7043] focus:text-[#FF7043] transition"
+              >
+                <Facebook className="h-6 w-6" />
+              </a>
+              <a
+                href="https://youtube.com/@ForgeTomorrow-h2z"
+                target="_blank"
+                rel="noopener noreferrer"
+                aria-label="Subscribe on YouTube"
+                className="hover:text-[#FF7043] focus:text-[#FF7043] transition"
+              >
+                <Youtube className="h-6 w-6" />
+              </a>
+            </div>
           </div>
         </div>
 
-        {/* Social Icons */}
-        <div className="mt-10 flex justify-center gap-8">
-          <a
-            href="https://x.com/ForgeTomorrowHQ"
-            target="_blank"
-            rel="noopener noreferrer"
-            aria-label="ForgeTomorrow on X"
-            className="hover:text-[#FF7043] transition"
-          >
-            <Twitter className="h-6 w-6" />
-          </a>
-          <a
-            href="https://www.facebook.com/profile.php?id=61579627354284"
-            target="_blank"
-            rel="noopener noreferrer"
-            aria-label="ForgeTomorrow on Facebook"
-            className="hover:text-[#FF7043] transition"
-          >
-            <Facebook className="h-6 w-6" />
-          </a>
-          <a
-            href="https://www.youtube.com/@ForgeTomorrow-h2z"
-            target="_blank"
-            rel="noopener noreferrer"
-            aria-label="ForgeTomorrow on YouTube"
-            className="hover:text-[#FF7043] transition"
-          >
-            <Youtube className="h-6 w-6" />
-          </a>
+        {/* Bottom */}
+        <div className="border-t border-gray-800 pt-8 text-center text-sm text-gray-500">
+          <p>© {new Date().getFullYear()} Forge Tomorrow, Inc. All rights reserved.</p>
         </div>
-
-        {/* Copyright */}
-        <p className="mt-6 text-center text-gray-500 text-xs">
-          &copy; {new Date().getFullYear()} ForgeTomorrow. All rights reserved.
-        </p>
       </div>
     </footer>
   );

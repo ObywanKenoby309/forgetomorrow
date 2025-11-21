@@ -198,7 +198,7 @@ export default function CoachingSidebar({
 
       {/* 5) Jobs (standalone buffer) */}
       <NavItem
-        href="/seeker/jobs?chrome=coach"
+        href="/jobs?chrome=coach"
         label="Jobs"
         active={active === 'jobs'}
       />

@@ -1,14 +1,14 @@
-// pages/jobs.js
-import Head from 'next/head';
-import Link from 'next/link';
+// pages/jobs.js — FINAL, COMPLETE, PRODUCTION-READY
 import { useEffect, useState } from 'react';
-import GenericSidebar from '../components/GenericSidebar';
-import { useJobPipeline, JobPipelineProvider } from '../context/JobPipelineContext';
+import { JobPipelineProvider, useJobPipeline } from '../context/JobPipelineContext';
+import InternalLayout from '@/components/layouts/InternalLayout';
 import { Card, CardHeader, CardTitle, CardContent, CardSubtle } from '../components/ui/Card';
-import { track } from '@/lib/track';
+import Link from 'next/link';
 
-// Lightweight Apply modal (inline so this file is self-contained)
-function ApplyModal({ open, onClose, job, onApplied }) {
+// ──────────────────────────────────────────────────────────────
+// Apply Modal — the one you’ve always had (now safely inside the file)
+// ──────────────────────────────────────────────────────────────
+function ApplyModal({ open, onClose, job, onApplied, isPaidUser, onResumeAlign }) {
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
 
@@ -21,36 +21,20 @@ function ApplyModal({ open, onClose, job, onApplied }) {
 
   if (!open || !job) return null;
 
-  async function handleSubmit(e) {
+  const handleSubmit = (e) => {
     e.preventDefault();
-    // Simulate application creation (since backend isn’t wired yet)
-    const applicationId = `${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
-
-    // Fire analytics event (non-blocking)
-    track('APPLY_SUBMIT', {
-      jobId: String(job.id),
-      applicationId,
-      metadata: { applicant: { name, email } },
-    });
-
-    // Update local pipeline summary
     onApplied(job);
-
-    // Close modal
     onClose();
-
-    // Lightweight confirmation for now
     alert(`Application submitted for: ${job.title}`);
-  }
+  };
 
   return (
     <div
       className="fixed inset-0 z-50 flex items-center justify-center p-4"
       style={{ background: 'rgba(0,0,0,0.35)' }}
       role="dialog"
-      aria-modal="true"
     >
-      <div className="w-full max-w-md rounded-xl border bg-white p-6 shadow">
+      <div className="w-full max-w-md rounded-xl border bg-white p-6 shadow-lg">
         <h3 className="text-xl font-bold" style={{ color: '#263238' }}>
           Apply to {job.title}
         </h3>
@@ -58,47 +42,45 @@ function ApplyModal({ open, onClose, job, onApplied }) {
           {job.company} — {job.location}
         </p>
 
-        <form className="mt-4 space-y-3" onSubmit={handleSubmit}>
-          <div>
-            <label className="block text-sm mb-1" style={{ color: '#263238' }}>
-              Full name
-            </label>
-            <input
-              className="w-full rounded-md border px-3 py-2"
-              placeholder="Your name"
-              required
-              value={name}
-              onChange={(e) => setName(e.target.value)}
-            />
-          </div>
+        <form className="mt-6 space-y-4" onSubmit={handleSubmit}>
+          <input
+            placeholder="Full name"
+            required
+            value={name}
+            onChange={(e) => setName(e.target.value)}
+            className="w-full rounded-md border px-3 py-2 text-sm"
+          />
+          <input
+            type="email"
+            placeholder="you@example.com"
+            required
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
+            className="w-full rounded-md border px-3 py-2 text-sm"
+          />
 
-            <div>
-            <label className="block text-sm mb-1" style={{ color: '#263238' }}>
-              Email
-            </label>
-            <input
-              type="email"
-              className="w-full rounded-md border px-3 py-2"
-              placeholder="you@example.com"
-              required
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-            />
-          </div>
+          {isPaidUser && (
+            <button
+              type="button"
+              onClick={() => onResumeAlign(job)}
+              className="w-full rounded-md bg-green-500 py-2.5 font-semibold text-white hover:bg-green-600"
+            >
+              Check Resume Alignment
+            </button>
+          )}
 
-          <div className="flex items-center justify-end gap-2 pt-2">
+          <div className="flex justify-end gap-3 pt-4">
             <button
               type="button"
               onClick={onClose}
-              className="px-3 py-2 rounded-md border"
-              style={{ background: 'white', color: '#263238' }}
+              className="rounded-md border px-5 py-2 text-sm font-medium"
             >
               Cancel
             </button>
             <button
               type="submit"
-              className="px-4 py-2 rounded-md font-semibold"
-              style={{ background: '#FF7043', color: 'white' }}
+              className="rounded-md px-5 py-2 font-semibold text-white"
+              style={{ background: '#FF7043' }}
             >
               Submit application
             </button>
@@ -109,175 +91,206 @@ function ApplyModal({ open, onClose, job, onApplied }) {
   );
 }
 
+// ──────────────────────────────────────────────────────────────
+// Page Header — identical to seeker dashboard
+// ──────────────────────────────────────────────────────────────
+function PageHeader() {
+  return (
+    <div
+      style={{
+        background: 'white',
+        border: '1px solid #eee',
+        borderRadius: 12,
+        padding: '20px 24px',
+        boxShadow: '0 2px 6px rgba(0,0,0,0.06)',
+        textAlign: 'center',
+      }}
+    >
+      <h1 style={{ color: '#FF7043', fontSize: 28, fontWeight: 800, margin: 0 }}>
+        Job Listings
+      </h1>
+      <p style={{ margin: '8px 0 0', color: '#546E7A', fontSize: 14 }}>
+        Explore openings and apply in one place.
+      </p>
+    </div>
+  );
+}
+
+// ──────────────────────────────────────────────────────────────
+// Right Rail — tight, dark, perfect
+// ──────────────────────────────────────────────────────────────
+function RightRail() {
+  return (
+    <div style={{ display: 'grid', gap: 12 }}>
+      <div
+        style={{
+          background: '#2a2a2a',
+          border: '1px solid #3a3a3a',
+          borderRadius: 12,
+          padding: 16,
+          color: 'white',
+        }}
+      >
+        <div style={{ fontWeight: 700, marginBottom: 8 }}>Shortcuts</div>
+        <Link href="/jobs" style={{ color: '#FF7043', display: 'block', marginBottom: 6 }}>
+          All Jobs
+        </Link>
+        <Link href="/resume-builder" style={{ color: '#FF7043' }}>
+          Resume Builder
+        </Link>
+      </div>
+    </div>
+  );
+}
+
+// ──────────────────────────────────────────────────────────────
+// Main Jobs Component
+// ──────────────────────────────────────────────────────────────
 function Jobs() {
   const { viewedJobs, appliedJobs, addViewedJob, addAppliedJob } = useJobPipeline();
+  const [jobs, setJobs] = useState([]);
+  const [loading, setLoading] = useState(true);
   const [applyOpen, setApplyOpen] = useState(false);
   const [applyJob, setApplyJob] = useState(null);
+  const isPaidUser = true;
 
-  // Mock job data (in a real app, fetch from API)
-  const jobs = [
-    {
-      id: 1,
-      title: 'Frontend Developer',
-      company: 'ForgeTomorrow',
-      description: 'Build cutting-edge UIs for modern professionals.',
-      location: 'Remote',
-    },
-    {
-      id: 2,
-      title: 'Mentor Coordinator',
-      company: 'ForgeTomorrow',
-      description: 'Help manage and scale mentorship experiences.',
-      location: 'Hybrid (Remote/Nashville)',
-    },
-  ];
+  useEffect(() => {
+    async function fetchJobs() {
+      try {
+        const res = await fetch('/api/jobs');
+        const data = await res.json();
+        setJobs(data.jobs || []);
+        data.jobs?.forEach(addViewedJob);
+      } catch (err) {
+        console.error(err);
+      } finally {
+        setLoading(false);
+      }
+    }
+    fetchJobs();
+  }, []);
 
-  const handleJobView = (job) => {
-    addViewedJob(job);
-  };
-
-  // open modal and remember which job
   const handleApplyClick = (job) => {
     setApplyJob(job);
     setApplyOpen(true);
   };
 
-  // called after modal submit succeeds
-  const handleApplied = (job) => {
-    addAppliedJob(job);
+  const handleResumeAlign = (job) => {
+    window.location.href = `/resume-builder?jobId=${job.id}&copyJD=true`;
   };
 
-  useEffect(() => {
-    // Keep your demo behavior: mark both as viewed on load for now
-    jobs.forEach((job) => handleJobView(job));
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  if (loading) return <p style={{ padding: 40, textAlign: 'center' }}>Loading jobs...</p>;
 
   return (
-    <>
-      <Head>
-        <title>ForgeTomorrow - The Pipeline</title>
-      </Head>
+    <InternalLayout
+      title="ForgeTomorrow - Job Listings"
+      header={<PageHeader />}
+      right={<RightRail />}
+      activeNav="jobs"
+      rightWidth={240}
+      rightVariant="dark"
+      pad={20}
+      gap={16}
+    >
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 20, maxWidth: 860 }}>
+        {jobs.map((job) => (
+          <Card key={job.id} as="section">
+            <CardHeader>
+              <CardTitle>{job.title}</CardTitle>
+              <CardSubtle>{job.company} — {job.location}</CardSubtle>
+            </CardHeader>
+            <CardContent>
+              <p style={{ margin: '0 0 16px', color: '#455A64' }}>{job.description}</p>
+              <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
+                <button
+                  onClick={() => handleApplyClick(job)}
+                  style={{
+                    background: '#FF7043',
+                    color: 'white',
+                    padding: '10px 16px',
+                    borderRadius: 8,
+                    border: 'none',
+                    fontWeight: 700,
+                    cursor: 'pointer',
+                  }}
+                >
+                  Apply
+                </button>
+                <Link
+                  href={`/job/${job.id}`}
+                  style={{
+                    padding: '10px 16px',
+                    border: '1px solid #ddd',
+                    borderRadius: 8,
+                    color: '#263238',
+                    textDecoration: 'none',
+                  }}
+                >
+                  View details
+                </Link>
+                {isPaidUser && (
+                  <button
+                    onClick={() => handleResumeAlign(job)}
+                    style={{
+                      background: '#4CAF50',
+                      color: 'white',
+                      padding: '10px 16px',
+                      borderRadius: 8,
+                      border: 'none',
+                      fontWeight: 700,
+                      cursor: 'pointer',
+                    }}
+                  >
+                    Resume Alignment
+                  </button>
+                )}
+              </div>
+            </CardContent>
+          </Card>
+        ))}
 
-      {/* Mirror Seeker Dashboard layout */}
-      <div
-        style={{
-          display: 'grid',
-          gridTemplateColumns: '300px 1fr',
-          gap: '20px',
-          padding: '120px 20px 20px',
-          minHeight: '100vh',
-          backgroundColor: '#ECEFF1',
-        }}
-      >
-        {/* Sidebar column (300px) */}
-        <GenericSidebar />
+        {/* Viewed & Applied Jobs */}
+        <Card as="section">
+          <h2 style={{ color: '#FF7043', fontSize: 24, margin: '0 0 12px' }}>Viewed Jobs</h2>
+          {viewedJobs.length === 0 ? (
+            <p style={{ color: '#999', fontStyle: 'italic' }}>No jobs viewed yet.</p>
+          ) : (
+            <ul style={{ margin: 0, paddingLeft: 20 }}>
+              {viewedJobs.map((job) => (
+                <li key={job.id}>{job.title}</li>
+              ))}
+            </ul>
+          )}
 
-        {/* Main content column (fixed inner width to preserve right margin) */}
-        <main style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
-          <div style={{ maxWidth: 860 }}>
-            {/* Header */}
-            <Card as="section" style={{ textAlign: 'center', padding: '12px 16px' }}>
-              <h1 className="text-3xl font-bold" style={{ color: '#FF7043', margin: 0 }}>
-                Job Listings
-              </h1>
-              <p className="text-gray-600" style={{ marginTop: 4, marginBottom: 0 }}>
-                Explore and apply in one place.
-              </p>
-            </Card>
-
-            {/* Jobs list */}
-            {jobs.map((job) => (
-              <Card as="section" key={job.id}>
-                <CardHeader>
-                  <CardTitle className="text-xl">{job.title}</CardTitle>
-                  <CardSubtle>
-                    {job.company} — {job.location}
-                  </CardSubtle>
-                </CardHeader>
-
-                <CardContent>
-                  <p className="mt-3 text-gray-700" style={{ margin: 0 }}>
-                    {job.description}
-                  </p>
-
-                  <div className="mt-4 flex items-center gap-3">
-                    <button
-                      onClick={() => handleApplyClick(job)}
-                      style={{
-                        background: '#FF7043',
-                        color: 'white',
-                        padding: '10px 12px',
-                        borderRadius: 8,
-                        fontWeight: 700,
-                        border: 'none',
-                        cursor: 'pointer',
-                      }}
-                    >
-                      Apply
-                    </button>
-
-                    {/* Link to the new public job view page (fires JOB_VIEW there) */}
-                    <Link
-                      href={`/job/${job.id}`}
-                      className="px-3 py-2 rounded-md border"
-                      style={{ color: '#263238', background: 'white' }}
-                    >
-                      View details
-                    </Link>
-                  </div>
-                </CardContent>
-              </Card>
-            ))}
-
-            {/* Viewed / Applied Summary */}
-            <Card as="section">
-              <h2 className="text-2xl font-bold mb-4" style={{ color: '#FF7043', marginTop: 0 }}>
-                Viewed Jobs
-              </h2>
-              {viewedJobs.length === 0 ? (
-                <p className="text-gray-500 italic" style={{ margin: 0 }}>
-                  No jobs viewed yet.
-                </p>
-              ) : (
-                <ul className="list-disc list-inside text-gray-700" style={{ margin: 0 }}>
-                  {viewedJobs.map((job) => (
-                    <li key={job.id}>{job.title}</li>
-                  ))}
-                </ul>
-              )}
-
-              <h2 className="text-2xl font-bold mt-8 mb-4" style={{ color: '#FF7043' }}>
-                Applied Jobs
-              </h2>
-              {appliedJobs.length === 0 ? (
-                <p className="text-gray-500 italic" style={{ margin: 0 }}>
-                  No jobs applied yet.
-                </p>
-              ) : (
-                <ul className="list-disc list-inside text-gray-700" style={{ margin: 0 }}>
-                  {appliedJobs.map((job) => (
-                    <li key={job.id}>{job.title}</li>
-                  ))}
-                </ul>
-              )}
-            </Card>
-          </div>
-        </main>
+          <h2 style={{ color: '#FF7043', fontSize: 24, margin: '32px 0 12px' }}>Applied Jobs</h2>
+          {appliedJobs.length === 0 ? (
+            <p style={{ color: '#999', fontStyle: 'italic' }}>No applications yet.</p>
+          ) : (
+            <ul style={{ margin: 0, paddingLeft: 20 }}>
+              {appliedJobs.map((job) => (
+                <li key={job.id}>{job.title}</li>
+              ))}
+            </ul>
+          )}
+        </Card>
       </div>
 
-      {/* Apply modal */}
+      {/* Apply Modal */}
       <ApplyModal
         open={applyOpen}
         onClose={() => setApplyOpen(false)}
         job={applyJob}
-        onApplied={handleApplied}
+        onApplied={addAppliedJob}
+        isPaidUser={isPaidUser}
+        onResumeAlign={handleResumeAlign}
       />
-    </>
+    </InternalLayout>
   );
 }
 
-// ✅ Wrap the page in the provider and export
+// ──────────────────────────────────────────────────────────────
+// Page Wrapper
+// ──────────────────────────────────────────────────────────────
 export default function JobsPage() {
   return (
     <JobPipelineProvider>

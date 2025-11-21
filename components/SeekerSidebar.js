@@ -147,7 +147,7 @@ export default function SeekerSidebar({
         <NavItem href="/seeker/calendar" label="Calendar" active={active === 'calendar'} />
         <NavItem href="/roadmap" label="Roadmap" active={active === 'roadmap'} />
         <NavItem href="/resume-cover" label="Creator" active={active === 'resume-cover'} />
-        <NavItem href="/seeker/jobs" label="Pipeline" active={active === 'jobs'} />
+        <NavItem href="/jobs" label="Pipeline" active={active === 'jobs'} />
       </Section>
 
       {/* Hearth (outside sections, bold entry) */}

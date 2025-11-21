@@ -1,185 +1,131 @@
-import { useEffect, useState } from 'react';
+// pages/index.js ← FINAL, BUSINESS-SMART, ACCESSIBLE, WORKING
 import Head from 'next/head';
-import emailjs from '@emailjs/browser';
+import Link from 'next/link';
 
 export default function Home() {
-  const [email, setEmail] = useState('');
-  const [statusMessage, setStatusMessage] = useState(null);
-  const [isSending, setIsSending] = useState(false);
-
-  // UTM fields
-  const [utmSource, setUtmSource] = useState('');
-  const [utmMedium, setUtmMedium] = useState('');
-  const [utmCampaign, setUtmCampaign] = useState('');
-
-  // ✅ Init EmailJS once (PUBLIC key)
-  useEffect(() => {
-    emailjs.init('YyYidv88o9X7iKfYJ'); // <-- your public key
-  }, []);
-
-  // ✅ Pull UTM params from the URL once on mount
-  useEffect(() => {
-    if (typeof window === 'undefined') return;
-    const p = new URLSearchParams(window.location.search);
-    setUtmSource(p.get('utm_source') || '');
-    setUtmMedium(p.get('utm_medium') || '');
-    setUtmCampaign(p.get('utm_campaign') || '');
-  }, []);
-
-  const sendWaitlistEmail = async (e) => {
-    e.preventDefault();
-
-    if (!email || !/^\S+@\S+\.\S+$/.test(email)) {
-      alert('Please enter a valid email.');
-      return;
-    }
-
-    setIsSending(true);
-    setStatusMessage(null);
-
-    try {
-      const result = await emailjs.send(
-        'service_quxmizv',  // <-- your Service ID
-        'template_bnf88bh', // <-- your Template ID
-        {
-          // Match your EmailJS template variables exactly:
-          user_email: email, // <-- using {{user_email}} in the template
-          message: 'Waitlist request from site form',
-          utm_source: utmSource || 'direct',
-          utm_medium: utmMedium || 'none',
-          utm_campaign: utmCampaign || 'none',
-        }
-      );
-
-      console.log('EmailJS success:', result.text);
-      setStatusMessage({
-        type: 'success',
-        text: `Success! You're on the list. We'll send launch updates soon.`,
-      });
-      setEmail('');
-    } catch (error) {
-      console.error('EmailJS error:', error);
-      setStatusMessage({
-        type: 'error',
-        text: 'Oops! Something went wrong. Please try again later.',
-      });
-    } finally {
-      setIsSending(false);
-    }
-  };
-
   return (
     <>
       <Head>
-        <title>ForgeTomorrow — Home</title>
-        <link rel="icon" href="/favicon.ico" />
+        <title>ForgeTomorrow — Real Tools. Real Help. Right Now.</title>
         <meta
           name="description"
-          content="Empowering job seekers, recruiters, and coaches with tools, community, and opportunity. Beta access is reserved for Silver-tier (and above) Indiegogo backers."
+          content="Free resume builder (3/mo), job tracking, salary data, coaching directory, and community. Upgrade any time for unlimited use + pro features."
         />
       </Head>
 
-      <main className="min-h-screen">
-        {/* HERO + ABOUT */}
-        <section
-          role="main"
-          aria-label="About ForgeTomorrow"
-          className="relative z-10 max-w-4xl mx-auto px-6 py-20 text-center text-gray-100"
-        >
-          <h1 className="text-5xl sm:text-6xl font-extrabold mb-6 tracking-wide text-[#FF7043] drop-shadow-[0_0_10px_rgba(255,112,67,0.9)]">
-            Forge Tomorrow
-          </h1>
+      <main className="min-h-screen bg-gradient-to-b from-[#1a1a1a] to-[#0f0f0f] text-gray-100">
 
-          <p className="mb-6 text-lg leading-relaxed max-w-3xl mx-auto">
-            We’re building the next evolution in professional networking — human-centered, AI-empowered,
-            and built for the real world.
-          </p>
+        {/* HERO */}
+        <section className="relative min-h-screen flex items-center justify-center px-6 text-center">
+          <div
+            className="absolute inset-0 bg-[url('/images/forge-bg-bw.png')] opacity-20 bg-cover bg-center"
+            aria-hidden="true"
+          />
+          <div className="relative z-10 max-w-5xl">
+            <h1 className="text-5xl md:text-7xl lg:text-8xl font-black mb-8 leading-tight">
+              The forge is open.
+              <br />
+              <span className="text-[#FF7043]">Walk in.</span>
+            </h1>
 
-          <p className="mb-10 text-lg leading-relaxed max-w-3xl mx-auto">
-            Our mission is to equip job seekers, freelancers, recruiters, mentors, and ethical employers
-            with the tools and transparency they need to succeed in today’s fast-changing job market.
-            No gatekeeping. No noise. Just support that shows up, AI with integrity, and a network where
-            people come before algorithms.
-          </p>
+            <p className="text-xl md:text-2xl lg:text-3xl text-gray-200 max-w-4xl mx-auto leading-relaxed">
+              Whether you’re hunting your next job, hiring great people, or coaching others through the fire — 
+              this place was built for <strong>you</strong>.
+            </p>
 
-          {/* Crowdfunding Link */}
-          <div className="mb-3">
-            <a
-              href="https://www.indiegogo.com/projects/a-people-first-platform-for-work-opportunity/x/38735450#/"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="inline-block bg-[#FF7043] hover:bg-[#F4511E] text-white font-bold px-8 py-3 rounded-lg shadow-lg transition-colors duration-300"
-            >
-              Back Us on Indiegogo
-            </a>
+            <div className="mt-12 flex flex-col sm:flex-row gap-6 justify-center items-center">
+              <Link
+                href="/pricing"
+                className="inline-block bg-[#FF7043] hover:bg-[#f46036] text-white font-bold text-xl px-12 py-5 rounded-full shadow-2xl transition transform hover:scale-105 focus:outline-none focus:ring-4 focus:ring-[#FF7043] focus:ring-offset-2"
+              >
+                See Plans & Get Started
+              </Link>
+              <Link
+                href="/about"
+                className="inline-block border-2 border-[#FF7043] text-[#FF7043] hover:bg-[#FF7043] hover:text-white font-bold text-xl px-12 py-5 rounded-full transition focus:outline-none focus:ring-4 focus:ring-[#FF7043] focus:ring-offset-2"
+              >
+                Read the Promise
+              </Link>
+            </div>
           </div>
-          {/* 🔒 Policy note to prevent confusion */}
-          <p className="text-sm text-gray-300">
-            <span className="font-semibold">Note:</span> Beta access is reserved for
-            <span className="font-semibold"> Silver tier and above</span> Indiegogo backers.
-            The public waitlist receives launch announcements and product updates.
-          </p>
         </section>
 
-        {/* ✅ WAITLIST (CENTERED) */}
-        <section
-          id="waitlist"
-          className="scroll-mt-24 py-12 max-w-4xl mx-auto px-6 text-center"
-        >
-          <h2 className="text-2xl font-semibold text-gray-100">Join the waitlist</h2>
-          <p className="text-gray-300 mt-1">
-            Get launch updates and early news as we roll out features publicly.
-            <span className="block text-gray-400 text-sm mt-1">
-              Beta access is limited to Silver-tier (and above) Indiegogo backers.
-            </span>
-          </p>
+        {/* THREE PATHS — ALL POINT TO PRICING */}
+        <section className="py-24 bg-white text-gray-900">
+          <div className="max-w-6xl mx-auto px-6 grid md:grid-cols-3 gap-12 text-center">
 
-          <div className="mt-6 max-w-md mx-auto">
-            <form
-              onSubmit={sendWaitlistEmail}
-              className="w-full flex flex-col gap-4"
-              aria-label="Join the waitlist form"
-            >
-              <input
-                type="email"
-                id="user_email"
-                name="user_email"
-                placeholder="Enter your email"
-                required
-                autoComplete="email"
-                aria-required="true"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                className="px-4 py-3 rounded-lg border border-gray-300 text-gray-900 focus:outline-none focus:ring-2 focus:ring-[#FF7043] focus:border-transparent"
-              />
-
-              {/* Hidden UTM fields */}
-              <input type="hidden" name="utm_source" value={utmSource} readOnly />
-              <input type="hidden" name="utm_medium" value={utmMedium} readOnly />
-              <input type="hidden" name="utm_campaign" value={utmCampaign} readOnly />
-
-              <button
-                type="submit"
-                disabled={isSending}
-                className="bg-[#FF7043] hover:bg-[#F4511E] text-white font-bold px-8 py-3 rounded-lg shadow-lg transition-colors duration-300 disabled:opacity-60"
-              >
-                {isSending ? 'Sending…' : 'Join the Waitlist'}
-              </button>
-            </form>
-
-            {statusMessage && (
-              <p
-                className={`mt-6 text-sm ${
-                  statusMessage.type === 'success' ? 'text-green-400' : 'text-red-400'
-                }`}
-                role="status"
-                aria-live="polite"
-              >
-                {statusMessage.text}
+            {/* Job Seekers */}
+            <div className="space-y-6">
+              <div className="w-20 h-20 mx-auto bg-[#FF7043] rounded-full flex items-center justify-center text-4xl font-black text-white">
+                S
+              </div>
+              <h3 className="text-3xl font-bold text-[#FF7043]">Job Seekers</h3>
+              <p className="text-lg text-gray-700 leading-relaxed">
+                Free forever: job postings, coaching directory, community, see who viewed your profile.
+                <br /><br />
+                Start with <strong>3 résumés/mo</strong>, 1 incentive plan, 1 roadmap — upgrade any time for unlimited + analytics.
               </p>
-            )}
+              <Link href="/pricing" className="text-[#FF7043] font-bold hover:underline text-lg">
+                See free vs. Seeker Pro →
+              </Link>
+            </div>
+
+            {/* Recruiters & Employers */}
+            <div className="space-y-6">
+              <div className="w-20 h-20 mx-auto bg-emerald-600 rounded-full flex items-center justify-center text-4xl font-black text-white">
+                R
+              </div>
+              <h3 className="text-3xl font-bold text-emerald-600">Recruiters & Employers</h3>
+              <p className="text-lg text-gray-700 leading-relaxed">
+                Post jobs free. Reach motivated talent.
+                <br /><br />
+                Upgrade for unlimited searches, direct messaging, profile analytics, and priority visibility.
+              </p>
+              <Link href="/pricing" className="text-emerald-600 font-bold hover:underline text-lg">
+                View Recruiter Plans →
+              </Link>
+            </div>
+
+            {/* Coaches & Mentors */}
+            <div className="space-y-6">
+              <div className="w-20 h-20 mx-auto bg-purple-600 rounded-full flex items-center justify-center text-4xl font-black text-white">
+                C
+              </div>
+              <h3 className="text-3xl font-bold text-purple-600">Coaches & Mentors</h3>
+              <p className="text-lg text-gray-700 leading-relaxed">
+                List your services free. Be found by people who need you.
+                <br /><br />
+                Upgrade for booking tools, group sessions, premium placement, and future resource library access.
+              </p>
+              <Link href="/pricing" className="text-purple-600 font-bold hover:underline text-lg">
+                Explore Coach Plans →
+              </Link>
+            </div>
+
           </div>
         </section>
+
+        {/* FINAL INVITATION — PROFESSIONAL & ACCESSIBLE */}
+        <section className="py-24 bg-[#FF7043] text-white">
+          <div className="max-w-4xl mx-auto px-6 text-center">
+            <h2 className="text-4xl md:text-5xl font-black mb-8">
+              More than jobs. More than networking.
+            </h2>
+            <p className="text-xl md:text-2xl leading-relaxed max-w-3xl mx-auto">
+              ForgeTomorrow isn’t just a platform with some tools — we provide everything you need at every stage of your career journey. 
+              Join us today and start forging your tomorrow.
+            </p>
+            <div className="mt-10">
+              <Link
+                href="/pricing"
+                className="inline-block bg-white text-[#FF7043] font-bold text-xl px-12 py-5 rounded-full hover:bg-gray-100 transition shadow-2xl focus:outline-none focus:ring-4 focus:ring-white focus:ring-offset-2"
+              >
+                Choose Your Plan
+              </Link>
+            </div>
+          </div>
+        </section>
+
       </main>
     </>
   );
