@@ -16,6 +16,7 @@ const isDev = process.env.NEXT_PUBLIC_APP_ENV === 'development';
 // ——— NEXTAUTH CONFIG ———
 export const authOptions: NextAuthOptions = {
   adapter: PrismaAdapter(prisma),
+
   providers: [
     // Credentials (email/password)
     CredentialsProvider({
@@ -26,13 +27,19 @@ export const authOptions: NextAuthOptions = {
       },
       async authorize(credentials) {
         if (!credentials?.email || !credentials?.password) return null;
+
         const user = await prisma.user.findUnique({
           where: { email: credentials.email },
         });
+
         if (!user || !user.passwordHash) return null;
+
         const match = await bcrypt.compare(credentials.password, user.passwordHash);
         if (!match) return null;
+
+        // Require verified email before allowing login
         if (!user.emailVerified) return null;
+
         return {
           id: user.id,
           email: user.email,
@@ -68,25 +75,52 @@ export const authOptions: NextAuthOptions = {
               pass: process.env.EMAIL_PASSWORD,
             },
       },
-      from: process.env.EMAIL_FROM || 'ForgetTomorrow Dev <dev@forgetomorrow.local>',
+      from:
+        process.env.EMAIL_FROM ||
+        'ForgetTomorrow Dev <dev@forgetomorrow.local>',
     }),
   ],
 
   secret: process.env.NEXTAUTH_SECRET,
-  session: { strategy: 'jwt' },
-  pages: { signIn: '/auth/signin' },
+
+  // 🔐 Session controls – nobody stays logged in forever
+  session: {
+    strategy: 'jwt',
+    // How long a session is valid (in seconds) – here: 12 hours
+    maxAge: 60 * 60 * 12,
+    // How often to re-issue the token when the user is active – here: 30 minutes
+    updateAge: 60 * 30,
+  },
+
+  // Align JWT lifetime with the session window
+  jwt: {
+    maxAge: 60 * 60 * 12, // 12 hours
+  },
+
+  pages: {
+    signIn: '/auth/signin',
+  },
 
   callbacks: {
     async jwt({ token, user }) {
+      // On first sign-in, `user` is defined – copy custom props to the token
       if (user) {
-        token.role = user.role;
-        token.plan = user.plan;
+        token.role = (user as any).role;
+        token.plan = (user as any).plan;
       }
       return token;
     },
+
     async session({ session, token }) {
-      session.user.role = token.role;
-      session.user.plan = token.plan;
+      // Ensure session.user exists before mutating
+      if (session.user) {
+        // Attach id so you can use it easily on the client
+        if (token.sub) {
+          (session.user as any).id = token.sub;
+        }
+        (session.user as any).role = token.role;
+        (session.user as any).plan = token.plan;
+      }
       return session;
     },
   },
@@ -115,7 +149,11 @@ export function verifyJwt(token: string): JwtPayload | null {
 
 export function readSessionCookie(cookie: string | undefined): JwtPayload | null {
   if (!cookie) return null;
-  const tokenMatch = cookie.match(/(?:^|; )next-auth\.session-token=([^;]+)/);
+
+  const tokenMatch = cookie.match(
+    /(?:^|; )next-auth\.session-token=([^;]+)/
+  );
   if (!tokenMatch) return null;
+
   return verifyJwt(tokenMatch[1]);
 }
