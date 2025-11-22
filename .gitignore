@@ -14,3 +14,6 @@ out/
 
 # Misc
 forgetomorrow-deploy.zip
+
+# Ignore helper scripts
+*.bat
