@@ -1,4 +1,3 @@
-// pages/_app.js ← CLEAN UPDATED VERSION
 import '@/styles/globals.css';
 import { useRouter } from 'next/router';
 import { useEffect, useState } from 'react';
@@ -32,8 +31,7 @@ function RouteTracker() {
 
 export default function App({ Component, pageProps }) {
   const router = useRouter();
-
-  // Determine route types
+  // … (all your existing route logic stays 100 % untouched) …
   const isRecruiterRoute = router.pathname.startsWith('/recruiter');
   const isSeekerRoute =
     router.pathname.startsWith('/seeker') ||
@@ -42,7 +40,7 @@ export default function App({ Component, pageProps }) {
     router.pathname.startsWith('/apply') ||
     [
       '/the-hearth',
-	  '/jobs',
+      '/jobs',
       '/applications',
       '/pinned-jobs',
       '/resume-cover',
@@ -50,20 +48,16 @@ export default function App({ Component, pageProps }) {
       '/profile',
       '/profile-analytics',
       '/feed'
-    ].includes(router.pathname); // <-- /jobs removed
-
+    ].includes(router.pathname);
   const isCoachingRoute =
     router.pathname === '/coaching-dashboard' ||
     router.pathname.startsWith('/dashboard/coaching');
   const isSettingsRoute = router.pathname === '/settings';
   const isPublicByPath = !isRecruiterRoute && !isSeekerRoute && !isCoachingRoute && !isSettingsRoute;
-
   const universalHeaderRoutes = new Set([]);
   const isUniversalPage = universalHeaderRoutes.has(router.pathname) && !router.query?.chrome;
-
   const sharedRoutes = new Set(['/help', '/privacy', '/terms', '/security', '/accessibility', '/cookies']);
   const [sharedAsInternal, setSharedAsInternal] = useState(false);
-
   useEffect(() => {
     if (typeof window === 'undefined') return;
     const isShared = sharedRoutes.has(router.pathname);
@@ -83,45 +77,74 @@ export default function App({ Component, pageProps }) {
         lastRoute === '/settings');
     setSharedAsInternal(cameFromInternal);
   }, [router.pathname]);
-
   const isPublicEffective = sharedRoutes.has(router.pathname)
     ? (isPublicByPath && !sharedAsInternal)
     : isPublicByPath;
-
   const useForgeBackground =
     !isUniversalPage && isPublicEffective && ['/', '/about', '/features', '/press'].includes(router.pathname);
   const forgeBgPosition = router.pathname === '/' ? '35% center' : 'center';
   const renderLandingHeader = isPublicEffective && !isUniversalPage;
 
   return (
-    <div className="relative min-h-screen">
-      {useForgeBackground && (
-        <>
-          <div
-            className="fixed inset-0 z-0"
-            style={{
-              backgroundImage: "url('/images/forge-bg-bw.png')",
-              backgroundSize: 'cover',
-              backgroundPosition: forgeBgPosition,
-              backgroundAttachment: 'fixed',
-            }}
-          />
-          <div className="fixed inset-0 bg-black opacity-80 z-0" />
-        </>
-      )}
-      <div className={`relative z-10 min-h-screen flex flex-col justify-between ${!useForgeBackground ? 'bg-[#ECEFF1]' : ''}`}>
-        <PlanProvider>
-          <ResumeProvider>
-            <AiUsageProvider>
-              <RouteTracker />
-              {renderLandingHeader && <LandingHeader />}
-              {isUniversalPage && <UniversalHeader />}
-              <Component {...pageProps} />
-            </AiUsageProvider>
-          </ResumeProvider>
-        </PlanProvider>
-        {renderLandingHeader ? <LandingFooter /> : <Footer />}
+    <>
+      {/* ==== GDPR COOKIE BANNER INJECTED HERE ==== */}
+      <head>
+        <link rel="stylesheet" href="/cookieconsent/cookieconsent.min.css" />
+        <script src="/cookieconsent/cookieconsent.min.js" defer></script>
+        <script
+          defer
+          dangerouslySetInnerHTML={{
+            __html: `
+              window.addEventListener("load", function() {
+                window.cookieconsent.initialise({
+                  "palette": { "popup": { "background": "#000000" }, "button": { "background": "#f1d600", "text": "#000000" } },
+                  "theme": "edgeless",
+                  "position": "bottom-left",
+                  "type": "opt-out",
+                  "content": {
+                    "message": "We only use essential cookies for login & security. Nothing is tracked or sold — ever.",
+                    "dismiss": "Got it!",
+                    "deny": "Reject non-essential",
+                    "allow": "Allow all",
+                    "link": "Privacy Policy",
+                    "href": "https://forgetomorrow.com/privacy"
+                  }
+                });
+              });
+            `
+          }}
+        />
+      </head>
+
+      <div className="relative min-h-screen">
+        {useForgeBackground && (
+          <>
+            <div
+              className="fixed inset-0 z-0"
+              style={{
+                backgroundImage: "url('/images/forge-bg-bw.png')",
+                backgroundSize: 'cover',
+                backgroundPosition: forgeBgPosition,
+                backgroundAttachment: 'fixed',
+              }}
+            />
+            <div className="fixed inset-0 bg-black opacity-80 z-0" />
+          </>
+        )}
+        <div className={`relative z-10 min-h-screen flex flex-col justify-between ${!useForgeBackground ? 'bg-[#ECEFF1]' : ''}`}>
+          <PlanProvider>
+            <ResumeProvider>
+              <AiUsageProvider>
+                <RouteTracker />
+                {renderLandingHeader && <LandingHeader />}
+                {isUniversalPage && <UniversalHeader />}
+                <Component {...pageProps} />
+              </AiUsageProvider>
+            </ResumeProvider>
+          </PlanProvider>
+          {renderLandingHeader ? <LandingFooter /> : <Footer />}
+        </div>
       </div>
-    </div>
+    </>
   );
 }
