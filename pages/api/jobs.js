@@ -1,14 +1,30 @@
-// pages/api/jobs.js — FINAL VERSION (safe + future-proof)
-import { createClient } from '@supabase/supabase-js';
+// pages/api/jobs.js — UPDATED to use Railway Postgres (forge-jobs-cron) with safe fallback
 
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
-const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+import { Pool } from 'pg';
 
-const supabase = supabaseUrl && supabaseAnonKey 
-  ? createClient(supabaseUrl, supabaseAnonKey) 
-  : null;
+// Use a separate env var so we don't collide with auth DBs, etc.
+const connectionString =
+  process.env.FORGE_JOBS_DATABASE_URL ||
+  process.env.DATABASE_URL ||
+  null;
 
-// Your current hard-coded jobs (keeps the site 100% working even if Supabase isn't set up yet)
+// Lazily-initialized connection pool
+let pool = null;
+
+function getPool() {
+  if (!connectionString) return null;
+  if (!pool) {
+    pool = new Pool({
+      connectionString,
+      ssl: {
+        rejectUnauthorized: false, // Railway uses self-signed certs
+      },
+    });
+  }
+  return pool;
+}
+
+// Your existing fallback jobs — keeps the site up even if DB is not ready
 const fallbackJobs = [
   {
     id: 1,
@@ -31,29 +47,54 @@ export default async function handler(req, res) {
     return res.status(405).json({ error: 'Method not allowed' });
   }
 
+  const dbPool = getPool();
+
+  // If DB isn’t configured, quietly fall back
+  if (!dbPool) {
+    console.warn('FORGE_JOBS_DATABASE_URL not set; using fallback jobs');
+    return res.status(200).json({ jobs: fallbackJobs });
+  }
+
   try {
-    // If Supabase is configured → pull real jobs
-    if (supabase) {
-      const { data, error } = await supabase
-        .from('jobs')                    // ← change if your table name is different
-        .select('id, title, company, description, location, salary, type')
-        .order('created_at', { ascending: false });
+    const client = await dbPool.connect();
 
-      if (error) throw error;
+    try {
+      const result = await client.query(
+        `
+        SELECT
+          id,
+          title,
+          company,
+          location,
+          description,
+          url,
+          salary,
+          tags,
+          source,
+          publishedat
+        FROM jobs
+        ORDER BY
+          publishedat DESC NULLS LAST,
+          id DESC
+        LIMIT 200;
+        `
+      );
 
-      // If we got real jobs → use them
-      if (data && data.length > 0) {
-        return res.status(200).json({ jobs: data });
+      const rows = result.rows || [];
+
+      if (rows.length === 0) {
+        console.warn('Jobs table is empty; using fallback jobs');
+        return res.status(200).json({ jobs: fallbackJobs });
       }
+
+      // Return real jobs from Railway Postgres
+      return res.status(200).json({ jobs: rows });
+    } finally {
+      client.release();
     }
-
-    // If no Supabase or no jobs in DB → fall back to your hard-coded ones
-    console.log('Using fallback jobs (Supabase not ready or empty)');
-    res.status(200).json({ jobs: fallbackJobs });
-
   } catch (error) {
-    console.error('Jobs API error:', error);
-    // Even if everything fails → still return fallback so site never breaks
-    res.status(200).json({ jobs: fallbackJobs });
+    console.error('Jobs API error (Postgres):', error);
+    // If anything goes wrong, keep the site working with fallback
+    return res.status(200).json({ jobs: fallbackJobs });
   }
 }
