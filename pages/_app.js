@@ -1,6 +1,7 @@
 import '@/styles/globals.css';
 import { useRouter } from 'next/router';
 import { useEffect, useState } from 'react';
+import Head from 'next/head';  // ← ADD THIS LINE
 import LandingHeader from '@/components/LandingHeader';
 import LandingFooter from '@/components/LandingFooter';
 import Footer from '@/components/Footer';
@@ -31,7 +32,7 @@ function RouteTracker() {
 
 export default function App({ Component, pageProps }) {
   const router = useRouter();
-  // … (all your existing route logic stays 100 % untouched) …
+  // Determine route types
   const isRecruiterRoute = router.pathname.startsWith('/recruiter');
   const isSeekerRoute =
     router.pathname.startsWith('/seeker') ||
@@ -48,7 +49,7 @@ export default function App({ Component, pageProps }) {
       '/profile',
       '/profile-analytics',
       '/feed'
-    ].includes(router.pathname);
+    ].includes(router.pathname); // <-- /jobs removed
   const isCoachingRoute =
     router.pathname === '/coaching-dashboard' ||
     router.pathname.startsWith('/dashboard/coaching');
@@ -85,36 +86,40 @@ export default function App({ Component, pageProps }) {
   const forgeBgPosition = router.pathname === '/' ? '35% center' : 'center';
   const renderLandingHeader = isPublicEffective && !isUniversalPage;
 
+  // ← ADD THIS useEffect FOR CLIENT-ONLY COOKIE INIT (prevents hydration mismatch)
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    const script = document.createElement('script');
+    script.src = '/cookieconsent/cookieconsent.min.js';
+    script.defer = true;
+    script.onload = () => {
+      window.cookieconsent.initialise({
+        "palette": {
+          "popup": { "background": "#000000" },
+          "button": { "background": "#f1d600", "text": "#000000" }
+        },
+        "theme": "edgeless",
+        "position": "bottom-left",
+        "type": "opt-out",
+        "content": {
+          "message": "We only use essential cookies for login & security. Nothing is tracked or sold — ever.",
+          "dismiss": "Got it!",
+          "deny": "Reject non-essential",
+          "allow": "Allow all",
+          "link": "Privacy Policy",
+          "href": "https://forgetomorrow.com/privacy"
+        }
+      });
+    };
+    document.head.appendChild(script);
+  }, []);  // Empty deps: Runs once on client mount
+
   return (
     <>
-      {/* ==== GDPR COOKIE BANNER INJECTED HERE ==== */}
-      <head>
+      {/* ← ADD THIS PROPER <Head> FOR STYLES ONLY (no scripts here to avoid SSR issues) */}
+      <Head>
         <link rel="stylesheet" href="/cookieconsent/cookieconsent.min.css" />
-        <script src="/cookieconsent/cookieconsent.min.js" defer></script>
-        <script
-          defer
-          dangerouslySetInnerHTML={{
-            __html: `
-              window.addEventListener("load", function() {
-                window.cookieconsent.initialise({
-                  "palette": { "popup": { "background": "#000000" }, "button": { "background": "#f1d600", "text": "#000000" } },
-                  "theme": "edgeless",
-                  "position": "bottom-left",
-                  "type": "opt-out",
-                  "content": {
-                    "message": "We only use essential cookies for login & security. Nothing is tracked or sold — ever.",
-                    "dismiss": "Got it!",
-                    "deny": "Reject non-essential",
-                    "allow": "Allow all",
-                    "link": "Privacy Policy",
-                    "href": "https://forgetomorrow.com/privacy"
-                  }
-                });
-              });
-            `
-          }}
-        />
-      </head>
+      </Head>
 
       <div className="relative min-h-screen">
         {useForgeBackground && (
