@@ -75,15 +75,15 @@ export async function middleware(req) {
   // ──────────────────────────────────────────────────────────
   // 1) Local/dev bypass (you see everything on localhost)
   // ──────────────────────────────────────────────────────────
-  if (
-    process.env.NODE_ENV === 'development' ||
-    hostname === 'localhost' ||
-    hostname === '127.0.0.1'
-  ) {
-    const res = NextResponse.next()
-    res.headers.set('x-site-lock', 'dev-bypass')
-    return res
-  }
+ // if (
+ //   process.env.NODE_ENV === 'development' ||
+  //  hostname === 'localhost' ||
+  //  hostname === '127.0.0.1'
+  //) {
+   // const res = NextResponse.next()
+   // res.headers.set('x-site-lock', 'dev-bypass')
+   // return res
+  //}
 
   // ──────────────────────────────────────────────────────────
   // 2) Explicitly allowed hosts (preview domains, etc.)
@@ -116,13 +116,16 @@ export async function middleware(req) {
   // 4) API RATE LIMITING (Upstash) for sensitive API routes
   // ──────────────────────────────────────────────────────────
   if (pathname.startsWith('/api') && PROTECTED_API_PATTERN.test(pathname)) {
-    const ip =
-      req.ip ||
-      req.headers.get('x-forwarded-for')?.split(',')[0]?.trim() ||
-      'unknown'
+  console.log('🛡️ Rate limiter branch hit for', pathname)
 
-    try {
-      const { success, reset } = await ratelimit.limit(ip)
+  const ip =
+    req.ip ||
+    req.headers.get('x-forwarded-for')?.split(',')[0]?.trim() ||
+    'unknown'
+
+  try {
+    const { success, reset } = await ratelimit.limit(ip)
+    // ...
 
       if (!success) {
         const now = Math.floor(Date.now() / 1000)
