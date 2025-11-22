@@ -52,7 +52,7 @@ const ratelimit = new Ratelimit({
 })
 
 // Keywords that trigger extra protection on API routes
-const PROTECTED_API_PATTERN = /ai|resume|roadmap|cover|generate|ats|pay/i
+const PROTECTED_API_PATTERN = /ai|resume|roadmap|cover|generate|ats|pay|rate-limit-test/i
 
 export async function middleware(req) {
   const url = new URL(req.url)
