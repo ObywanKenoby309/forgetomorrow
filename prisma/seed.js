@@ -7,10 +7,9 @@ const prisma = new PrismaClient();
 async function main() {
   const adminEmail = "admin@forgetomorrow.com";
 
-  // If you want to set a plain password, generate it here instead:
-  // const passwordHash = await bcrypt.hash("ChangeMe123!", 10);
-  // Using existing pre-hashed password (from your earlier seed) for convenience:
-  const passwordHash = "$2b$10$rmTG94GuJNYjRfVmgD396exB1h0SntgZPXBZHQHgWNCsgWcpNVoxO";
+  // Using your pre-hashed password
+  const passwordHash =
+    "$2b$10$rmTG94GuJNYjRfVmgD396exB1h0SntgZPXBZHQHgWNCsgWcpNVoxO";
 
   console.log("Seeding admin user:", adminEmail);
 
@@ -23,10 +22,19 @@ async function main() {
       firstName: "Platform",
       lastName: "Admin",
       name: "Platform Admin",
-      // Now valid since ADMIN is added to the enum
       role: "ADMIN",
       plan: "ENTERPRISE",
       emailVerified: true,
+      newsletter: true,
+
+      // NEW FIELDS — explicit nulls so seed never fails
+      slug: null,
+      slugChangeCount: 0,
+      slugLastChangedAt: null,
+      mfaEnabled: false,
+      mfaSecret: null,
+      stripeCustomerId: null,
+      stripeSubscriptionId: null,
     },
   });
 

@@ -1,13 +1,33 @@
-// pages/register/[plan].jsx ← FINAL WORKING VERSION (SERVER-SIDE REDIRECT)
+// pages/register/[plan].jsx ← UPDATED FOR FIRST/LAST NAME + PREVERIFY
 import { useRouter } from 'next/router';
 import { useState, useEffect } from 'react';
 import Script from 'next/script';
 
 const planInfo = {
-  'job-seeker-free': { name: 'Job Seeker Free', price: 'Free forever', tier: 'FREE', priceId: null },
-  'job-seeker-pro': { name: 'Job Seeker Pro', price: '$9.99 / month', tier: 'PRO', priceId: 'price_1SVFSG0l9wtvF7U5zkEte7yY' },
-  'coach-mentor': { name: 'Coach & Mentor', price: '$39.99 / month', tier: 'COACH', priceId: 'price_1SVFRp0l9wtvF7U5mkqdFHRs' },
-  'recruiter-smb': { name: 'Recruiter SMB', price: '$99.99 / month', tier: 'SMALL_BIZ', priceId: 'price_1SVFR20l9wtvF7U5Nrduc7Bj' },
+  'job-seeker-free': {
+    name: 'Job Seeker Free',
+    price: 'Free forever',
+    tier: 'FREE',
+    priceId: null,
+  },
+  'job-seeker-pro': {
+    name: 'Job Seeker Pro',
+    price: '$9.99 / month',
+    tier: 'PRO',
+    priceId: 'price_1SVFSG0l9wtvF7U5zkEte7yY',
+  },
+  'coach-mentor': {
+    name: 'Coach & Mentor',
+    price: '$39.99 / month',
+    tier: 'COACH',
+    priceId: 'price_1SVFRp0l9wtvF7U5mkqdFHRs',
+  },
+  'recruiter-smb': {
+    name: 'Recruiter SMB',
+    price: '$99.99 / month',
+    tier: 'SMALL_BIZ',
+    priceId: 'price_1SVFR20l9wtvF7U5Nrduc7Bj',
+  },
 };
 
 export default function RegisterPlan() {
@@ -15,7 +35,9 @@ export default function RegisterPlan() {
   const { plan } = router.query;
   const info = planInfo[plan] || planInfo['job-seeker-free'];
 
-  const [name, setName] = useState('');
+  // 🔹 Split name into first + last
+  const [firstName, setFirstName] = useState('');
+  const [lastName, setLastName] = useState('');
   const [email, setEmail] = useState('');
   const [terms, setTerms] = useState(false);
   const [newsletter, setNewsletter] = useState(true);
@@ -24,62 +46,77 @@ export default function RegisterPlan() {
   const [captchaToken, setCaptchaToken] = useState('');
 
   useEffect(() => {
+    // reCAPTCHA callback defined in global scope
     window.onCaptchaSolved = (token) => setCaptchaToken(token);
   }, []);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     setError('');
-    if (!terms) return setError('You must agree to the Terms');
-    if (!captchaToken) return setError('Please complete the captcha');
+
+    if (!firstName.trim() || !lastName.trim()) {
+      setError('Please enter both first and last name.');
+      return;
+    }
+
+    if (!terms) {
+      setError('You must agree to the Terms');
+      return;
+    }
+
+    if (!captchaToken) {
+      setError('Please complete the captcha');
+      return;
+    }
 
     setLoading(true);
 
     try {
-      // 1. Stage user (creates FREE account)
-      const stageRes = await fetch('/api/register/stage-user', {
+      // 🔹 Stage account via preverify (email + token flow)
+      const stageRes = await fetch('/api/auth/preverify', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          name: name.trim(),
+          firstName: firstName.trim(),
+          lastName: lastName.trim(),
           email: email.trim().toLowerCase(),
-          plan,
+          password: 'temp-password-will-be-set-later', // real password is set on verify-email page
+          plan: info.tier,
+          recaptchaToken: captchaToken,
           newsletter,
-          captchaToken,
         }),
       });
 
       if (!stageRes.ok) {
-        const data = await stageRes.json();
+        const data = await stageRes.json().catch(() => ({}));
         throw new Error(data.error || 'Failed to create account');
       }
 
-      // 2. Free plan → go to check email
+      // Free plan → go to check-email page
       if (!info.priceId) {
         router.push('/check-email');
         return;
       }
 
-      // 3. Paid plan → server-side redirect to Stripe
+      // Paid plans → Stripe (kept as-is from your previous flow)
       const checkoutRes = await fetch('/api/stripe/create-checkout', {
-  method: 'POST',
-  headers: { 'Content-Type': 'application/json' },
-  body: JSON.stringify({
-    email: email.trim().toLowerCase(),
-    name: name.trim(),
-    priceId: info.priceId,
-    plan: info.tier,
-  }),
-});
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          email: email.trim().toLowerCase(),
+          name: `${firstName.trim()} ${lastName.trim()}`,
+          priceId: info.priceId,
+          plan: info.tier,
+        }),
+      });
 
-if (!checkoutRes.ok) {
-  const err = await checkoutRes.json();
-  throw new Error(err.error || 'Checkout failed');
-}
+      if (!checkoutRes.ok) {
+        const err = await checkoutRes.json().catch(() => ({}));
+        throw new Error(err.error || 'Checkout failed');
+      }
 
-const { url } = await checkoutRes.json();
-window.location.href = url;
-
+      const { url } = await checkoutRes.json();
+      window.location.href = url;
     } catch (err) {
       console.error('Registration error:', err);
       setError(err.message || 'Something went wrong');
@@ -94,24 +131,40 @@ window.location.href = url;
 
   return (
     <>
-      <Script src="https://www.google.com/recaptcha/api.js" strategy="lazyOnload" />
-
+      <Script
+        src="https://www.google.com/recaptcha/api.js"
+        strategy="lazyOnload"
+      />
       <div className="min-h-screen bg-gray-50 flex items-center justify-center p-4">
         <div className="bg-white rounded-xl shadow-lg p-8 max-w-md w-full">
-          <h1 className="text-3xl font-bold text-orange-600 mb-2">Complete Registration</h1>
+          <h1 className="text-3xl font-bold text-orange-600 mb-2">
+            Complete Registration
+          </h1>
           <p className="text-gray-600 mb-6">
             You're signing up for <strong>{info.name}</strong> – {info.price}
           </p>
 
           <form onSubmit={handleSubmit} className="space-y-5">
-            <input
-              type="text"
-              placeholder="Full Name"
-              value={name}
-              onChange={(e) => setName(e.target.value)}
-              required
-              className="w-full px-4 py-3 border rounded-lg"
-            />
+            {/* 🔹 First / Last name row */}
+            <div className="grid grid-cols-2 gap-3">
+              <input
+                type="text"
+                placeholder="First name"
+                value={firstName}
+                onChange={(e) => setFirstName(e.target.value)}
+                required
+                className="w-full px-4 py-3 border rounded-lg"
+              />
+              <input
+                type="text"
+                placeholder="Last name"
+                value={lastName}
+                onChange={(e) => setLastName(e.target.value)}
+                required
+                className="w-full px-4 py-3 border rounded-lg"
+              />
+            </div>
+
             <input
               type="email"
               placeholder="Email Address"
@@ -130,10 +183,21 @@ window.location.href = url;
             </div>
 
             <label className="flex items-center gap-3 text-sm">
-              <input type="checkbox" checked={terms} onChange={(e) => setTerms(e.target.checked)} required />
+              <input
+                type="checkbox"
+                checked={terms}
+                onChange={(e) => setTerms(e.target.checked)}
+                required
+              />
               <span>
-                I agree to the <a href="/terms" className="text-orange-600 underline">Terms</a> and{' '}
-                <a href="/privacy" className="text-orange-600 underline">Privacy Policy</a>
+                I agree to the{' '}
+                <a href="/terms" className="text-orange-600 underline">
+                  Terms
+                </a>{' '}
+                and{' '}
+                <a href="/privacy" className="text-orange-600 underline">
+                  Privacy Policy
+                </a>
               </span>
             </label>
 
@@ -143,10 +207,12 @@ window.location.href = url;
                 checked={newsletter}
                 onChange={(e) => setNewsletter(e.target.checked)}
               />
-              <span>Send me tips & updates (optional)</span>
+              <span>Send me tips &amp; updates (optional)</span>
             </label>
 
-            {error && <p className="text-red-600 text-center font-medium">{error}</p>}
+            {error && (
+              <p className="text-red-600 text-center font-medium">{error}</p>
+            )}
 
             <button
               type="submit"
@@ -163,7 +229,8 @@ window.location.href = url;
 
           {info.priceId && (
             <p className="text-center text-sm text-gray-500 mt-6">
-              You will be redirected to Stripe for secure payment. No charges until you confirm.
+              You will be redirected to Stripe for secure payment. No charges
+              until you confirm.
             </p>
           )}
         </div>

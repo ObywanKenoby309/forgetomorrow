@@ -1,6 +1,6 @@
 // pages/api/stripe/webhook.js ← FINAL VERSION (DO THIS NOW)
 import { buffer } from 'micro';
-import prisma from '@/lib/prisma';
+import { prisma } from '@/lib/prisma';
 import Stripe from 'stripe';
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY);

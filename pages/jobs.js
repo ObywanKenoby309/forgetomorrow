@@ -1,9 +1,31 @@
 // pages/jobs.js — robust filters + list/detail layout + formatting + numbered pagination
 import { useEffect, useState } from 'react';
 import { JobPipelineProvider, useJobPipeline } from '../context/JobPipelineContext';
-import InternalLayout from '@/components/layouts/InternalLayout';
+// NOTE: InternalLayout removed to avoid internal-only sign-in behavior
 import { Card, CardHeader, CardTitle, CardContent, CardSubtle } from '../components/ui/Card';
 import Link from 'next/link';
+
+// ──────────────────────────────────────────────────────────────
+// Lightweight layout shell (no internal-auth logic)
+// ──────────────────────────────────────────────────────────────
+function PageShell({ header, right, children }) {
+  return (
+    <div className="min-h-screen bg-[#ECEFF1] pt-20 px-4 md:px-8">
+      <div className="max-w-7xl mx-auto grid grid-cols-1 lg:grid-cols-[minmax(0,1.8fr)_minmax(260px,0.7fr)] gap-6">
+        {/* Main column */}
+        <div className="space-y-4">
+          {header}
+          {children}
+        </div>
+
+        {/* Right rail */}
+        <aside className="hidden lg:block">
+          {right}
+        </aside>
+      </div>
+    </div>
+  );
+}
 
 // ──────────────────────────────────────────────────────────────
 // Apply Modal
@@ -299,19 +321,16 @@ function Jobs() {
   // Recent viewed jobs (last 6, most recent first)
   const recentViewed = viewedJobs.slice(-6).reverse();
 
-  if (loading) return <p style={{ padding: 40, textAlign: 'center' }}>Loading jobs...</p>;
+  if (loading) {
+    return (
+      <PageShell header={<PageHeader />} right={<RightRail />}>
+        <p style={{ padding: 40, textAlign: 'center' }}>Loading jobs...</p>
+      </PageShell>
+    );
+  }
 
   return (
-    <InternalLayout
-      title="ForgeTomorrow - Job Listings"
-      header={<PageHeader />}
-      right={<RightRail />}
-      activeNav="jobs"
-      rightWidth={240}
-      rightVariant="dark"
-      pad={20}
-      gap={16}
-    >
+    <PageShell header={<PageHeader />} right={<RightRail />}>
       <div style={{ display: 'flex', flexDirection: 'column', gap: 20, maxWidth: 1200 }}>
         {/* Filter bar */}
         <Card as="section">
@@ -462,7 +481,7 @@ function Jobs() {
         <div
           style={{
             display: 'grid',
-            gridTemplateColumns: 'minmax(0, 1.8fr) minmax(0, 1.5fr)', // more space to list
+            gridTemplateColumns: 'minmax(0, 1.8fr) minmax(0, 1.5fr)',
             gap: 16,
             alignItems: 'flex-start',
           }}
@@ -470,7 +489,7 @@ function Jobs() {
           {/* LEFT: scrollable list + pagination at bottom */}
           <div
             style={{
-              maxHeight: '80vh', // match right side max height more closely
+              maxHeight: '80vh',
               display: 'flex',
               flexDirection: 'column',
               gap: 12,
@@ -945,7 +964,7 @@ function Jobs() {
         isPaidUser={isPaidUser}
         onResumeAlign={handleResumeAlign}
       />
-    </InternalLayout>
+    </PageShell>
   );
 }
 

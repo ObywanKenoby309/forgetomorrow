@@ -1,9 +1,10 @@
-// pages/profile.js
+// pages/profile.js ← FINAL VERSION WITH DISMISSIBLE EMAIL VERIFIED WELCOME BANNER
 import React, { useEffect, useState } from 'react';
 import Head from 'next/head';
 import { useRouter } from 'next/router';
 import Link from 'next/link';
 import SeekerLayout from '@/components/layouts/SeekerLayout';
+
 // Self-contained components
 import ProfileHeader from '@/components/profile/ProfileHeader';
 import ProfileAbout from '@/components/profile/ProfileAbout';
@@ -12,6 +13,7 @@ import ProfilePreferences from '@/components/profile/ProfilePreferences';
 import ProfileResumeAttach from '@/components/profile/ProfileResumeAttach';
 import ProfileSkills from '@/components/profile/ProfileSkills';
 import ProfileHobbies from '@/components/profile/ProfileHobbies';
+
 // Helper shown beside sections
 import SectionHint from '@/components/SectionHint';
 
@@ -32,7 +34,8 @@ const PREF_LOC_KEY = 'profile_pref_locations_v1';
 const PREF_TYPE_KEY = 'profile_pref_worktype_v1';
 const PREF_START_KEY = 'profile_pref_start_v1';
 const HOB_KEY = 'profile_hobbies_v1';
-const RESUME_KEY = 'profile_resume_v1'; // ← NEW
+const RESUME_KEY = 'profile_resume_v1';
+const WELCOME_DISMISS_KEY = 'profile_welcome_dismissed_v1';
 
 export default function ProfilePage() {
   const router = useRouter();
@@ -55,14 +58,16 @@ export default function ProfilePage() {
   const [prefWorkType, setPrefWorkType] = useState('');
   const [prefStart, setPrefStart] = useState('');
   const [hobbies, setHobbies] = useState([]);
-  const [resume, setResume] = useState(null); // ← NEW: resume state
+  const [resume, setResume] = useState(null);
+
+  // NEW: control for welcome banner visibility
+  const [showWelcomeBanner, setShowWelcomeBanner] = useState(false);
 
   // ---------------- Load from localStorage ----------------
   useEffect(() => {
     try {
       const read = (k, fb) => JSON.parse(localStorage.getItem(k) ?? fb);
       const readStr = (k, fb) => localStorage.getItem(k) ?? fb;
-
       setName(readStr(NAME_KEY, 'Eric James'));
       setPronouns(readStr(PRONOUNS_KEY, 'He/Him'));
       setHeadline(readStr(TITLE_KEY, 'Customer Success Leader & AI Advocate'));
@@ -77,11 +82,30 @@ export default function ProfilePage() {
       setPrefWorkType(readStr(PREF_TYPE_KEY, ''));
       setPrefStart(readStr(PREF_START_KEY, ''));
       setHobbies(read(HOB_KEY, '[]'));
-      setResume(read(RESUME_KEY, null)); // ← LOAD RESUME
+      setResume(read(RESUME_KEY, null));
     } catch (err) {
       console.error('Failed to load from localStorage:', err);
     }
   }, []);
+
+  // ---------------- Welcome banner logic ----------------
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+
+    if (router.query.verified === '1') {
+      const dismissed = localStorage.getItem(WELCOME_DISMISS_KEY) === '1';
+      if (!dismissed) {
+        setShowWelcomeBanner(true);
+      }
+    }
+  }, [router.query.verified]);
+
+  const dismissWelcome = () => {
+    try {
+      localStorage.setItem(WELCOME_DISMISS_KEY, '1');
+    } catch {}
+    setShowWelcomeBanner(false);
+  };
 
   // ---------------- Persist to localStorage ----------------
   useEffect(() => { try { localStorage.setItem(NAME_KEY, name); } catch {} }, [name]);
@@ -98,9 +122,9 @@ export default function ProfilePage() {
   useEffect(() => { try { localStorage.setItem(PREF_TYPE_KEY, prefWorkType); } catch {} }, [prefWorkType]);
   useEffect(() => { try { localStorage.setItem(PREF_START_KEY, prefStart); } catch {} }, [prefStart]);
   useEffect(() => { try { localStorage.setItem(HOB_KEY, JSON.stringify(hobbies)); } catch {} }, [hobbies]);
-  useEffect(() => { try { localStorage.setItem(RESUME_KEY, JSON.stringify(resume)); } catch {} }, [resume]); // ← SAVE RESUME
+  useEffect(() => { try { localStorage.setItem(RESUME_KEY, JSON.stringify(resume)); } catch {} }, [resume]);
 
-  // -------- Derived flags (for optional hints) --------
+  // -------- Derived flags --------
   const hasSummary = Boolean(about?.trim());
   const hasSkills = (skills?.length || 0) >= 6;
   const hasLocations = (prefLocations?.length || 0) > 0;
@@ -155,7 +179,25 @@ export default function ProfilePage() {
         right={null}
         activeNav="profile"
       >
-        <div className="w-full max-w-7x1 mx-auto px-4 md:px-6 grid gap-4 md:gap-5">
+        {/* EMAIL VERIFIED WELCOME BANNER — DISMISSIBLE, ONLY SHOWS ONCE */}
+        {showWelcomeBanner && (
+          <div className="relative mb-10 p-8 bg-gradient-to-r from-orange-500 to-pink-600 text-white rounded-3xl shadow-2xl text-center max-w-4xl mx-auto">
+            <button
+              type="button"
+              onClick={dismissWelcome}
+              aria-label="Close welcome message"
+              className="absolute top-3 right-3 text-white/80 hover:text-white text-xl leading-none"
+            >
+              ×
+            </button>
+            <h2 className="text-4xl md:text-5xl font-bold mb-4">Welcome to ForgeTomorrow!</h2>
+            <p className="text-xl md:text-2xl opacity-95">
+              Your email is verified. Complete your profile below and start getting discovered.
+            </p>
+          </div>
+        )}
+
+        <div className="w-full max-w-7xl mx-auto px-4 md:px-6 grid gap-4 md:gap-5">
           {/* Header backer */}
           <section className="bg-white border border-gray-200 border-t-0 rounded-xl shadow-sm overflow-hidden pt-0 px-0 pb-0">
             <ProfileHeader
@@ -207,12 +249,7 @@ export default function ProfilePage() {
           {/* SKILLS */}
           <div className="grid md:grid-cols-3 items-start gap-4">
             <div className="md:col-span-2">
-              <ProfileSkills
-                skills={skills}
-                setSkills={setSkills}
-                defaultOpen={true}
-                initialOpen={true}
-              />
+              <ProfileSkills skills={skills} setSkills={setSkills} defaultOpen={true} initialOpen={true} />
             </div>
             {!hasSkills && (
               <SectionHint
@@ -229,12 +266,7 @@ export default function ProfilePage() {
           {/* LANGUAGES */}
           <div className="grid md:grid-cols-3 items-start gap-4">
             <div className="md:col-span-2">
-              <ProfileLanguages
-                languages={languages}
-                setLanguages={setLanguages}
-                defaultOpen={true}
-                initialOpen={true}
-              />
+              <ProfileLanguages languages={languages} setLanguages={setLanguages} defaultOpen={true} initialOpen={true} />
             </div>
             {!hasLanguages && (
               <SectionHint
@@ -248,11 +280,7 @@ export default function ProfilePage() {
           </div>
 
           {/* RESUME + HOBBIES */}
-          <ProfileResumeAttach 
-            withChrome={withChrome} 
-            resume={resume} 
-            setResume={setResume} 
-          />
+          <ProfileResumeAttach withChrome={withChrome} resume={resume} setResume={setResume} />
           <ProfileHobbies hobbies={hobbies} setHobbies={setHobbies} />
         </div>
       </SeekerLayout>

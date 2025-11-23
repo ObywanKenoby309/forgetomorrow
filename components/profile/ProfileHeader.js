@@ -1,8 +1,9 @@
-// components/profile/ProfileHeader.js
+'use client';
+
 import React, { useEffect, useState } from 'react';
 import ProfileBannerSelector from '@/components/profile/ProfileBannerSelector';
+import ProfileAvatarSelector from '@/components/profile/ProfileAvatarSelector';
 
-const NAME_KEY = 'profile_name_v2';
 const PRONOUNS_KEY = 'profile_pronouns_v2';
 const HEADLINE_KEY = 'profile_headline_v2';
 const LOC_KEY = 'profile_location_v2';
@@ -10,43 +11,78 @@ const STATUS_KEY = 'profile_status_v2';
 const AVATAR_KEY = 'profile_avatar_v2';
 const COVER_KEY = 'profile_cover_v2';
 const BANNER_H_KEY = 'profile_banner_h_v1';
-const BANNER_MODE_KEY = 'profile_banner_mode_v1'; // 'cover' | 'fit'
-const BANNER_FOCALY_KEY = 'profile_banner_focalY_v1'; // 0..100
+const BANNER_MODE_KEY = 'profile_banner_mode_v1';
+const BANNER_FOCALY_KEY = 'profile_banner_focalY_v1';
 
 export default function ProfileHeader() {
-  const [name, setName] = useState(''); // ← LOCKED: no editing
+  const [name, setName] = useState('');
+  const [slug, setSlug] = useState(null);
+
   const [pronouns, setPronouns] = useState('');
   const [headline, setHeadline] = useState('');
   const [location, setLocation] = useState('');
   const [status, setStatus] = useState('');
-  const [avatarUrl, setAvatarUrl] = useState('/demo-profile.jpg');
+  const [avatarUrl, setAvatarUrl] = useState('/demo-avatar.png');
   const [coverUrl, setCoverUrl] = useState('');
+
   const [editOpen, setEditOpen] = useState(false);
   const [bannerH, setBannerH] = useState(120);
   const [bannerMode, setBannerMode] = useState('cover');
   const [focalY, setFocalY] = useState(50);
 
-  // === LOAD FROM localStorage ===
+  // Load from localStorage
   useEffect(() => {
     try {
-      setName(localStorage.getItem(NAME_KEY) || 'Unnamed');
       setPronouns(localStorage.getItem(PRONOUNS_KEY) || '');
       setHeadline(localStorage.getItem(HEADLINE_KEY) || '');
       setLocation(localStorage.getItem(LOC_KEY) || '');
       setStatus(localStorage.getItem(STATUS_KEY) || '');
-      setAvatarUrl(localStorage.getItem(AVATAR_KEY) || '/demo-profile.jpg');
+      setAvatarUrl(localStorage.getItem(AVATAR_KEY) || '/demo-avatar.png');
       setCoverUrl(localStorage.getItem(COVER_KEY) || '');
+
       const h = parseInt(localStorage.getItem(BANNER_H_KEY) || '120', 10);
       if (!Number.isNaN(h)) setBannerH(clamp(h, 80, 220));
+
       setBannerMode(localStorage.getItem(BANNER_MODE_KEY) || 'cover');
+
       const fy = parseInt(localStorage.getItem(BANNER_FOCALY_KEY) || '50', 10);
       if (!Number.isNaN(fy)) setFocalY(clamp(fy, 0, 100));
-    } catch (err) {
-      console.error('Failed to load profile header:', err);
+    } catch {
+      // ignore
     }
   }, []);
 
-  // === PERSIST TO localStorage (EXCEPT NAME) ===
+  // Load authenticated user
+  useEffect(() => {
+    let cancel = false;
+
+    (async () => {
+      try {
+        const res = await fetch('/api/auth/me');
+        const data = await res.json();
+        const user = data.user;
+        if (!user || cancel) return;
+
+        const fullName =
+          user.name ||
+          [user.firstName, user.lastName].filter(Boolean).join(' ');
+
+        setName(fullName || 'Unnamed');
+        setSlug(user.slug || null);
+
+        // If later you store these server-side, you can hydrate from user.*
+        // For now, localStorage remains the primary source.
+      } catch (err) {
+        if (!cancel) setName('Unnamed');
+      }
+    })();
+
+    return () => {
+      cancel = true;
+    };
+  }, []);
+
+  // Persist fields
   useEffect(() => { try { localStorage.setItem(PRONOUNS_KEY, pronouns); } catch {} }, [pronouns]);
   useEffect(() => { try { localStorage.setItem(HEADLINE_KEY, headline); } catch {} }, [headline]);
   useEffect(() => { try { localStorage.setItem(LOC_KEY, location); } catch {} }, [location]);
@@ -56,6 +92,13 @@ export default function ProfileHeader() {
   useEffect(() => { try { localStorage.setItem(BANNER_H_KEY, String(bannerH)); } catch {} }, [bannerH]);
   useEffect(() => { try { localStorage.setItem(BANNER_MODE_KEY, bannerMode); } catch {} }, [bannerMode]);
   useEffect(() => { try { localStorage.setItem(BANNER_FOCALY_KEY, String(focalY)); } catch {} }, [focalY]);
+
+  const fullUrl = slug ? `https://forgetomorrow.com/u/${slug}` : null;
+
+  const copySlug = () => {
+    if (!fullUrl) return;
+    navigator.clipboard.writeText(fullUrl);
+  };
 
   return (
     <section
@@ -67,31 +110,57 @@ export default function ProfileHeader() {
         background: 'white',
       }}
     >
-      {/* Banner */}
-      {coverUrl && (
-        bannerMode === 'cover'
+      {coverUrl &&
+        (bannerMode === 'cover'
           ? <BannerCover url={coverUrl} height={bannerH} focalY={focalY} />
-          : <BannerFit url={coverUrl} height={bannerH} />
-      )}
+          : <BannerFit url={coverUrl} height={bannerH} />)}
 
-      {/* Header row */}
+      {/* Header Row */}
       <div style={{ padding: 16, display: 'flex', gap: 16, alignItems: 'center' }}>
         <img
           src={avatarUrl}
           alt="Profile avatar"
           style={{
-            width: 96, height: 96, borderRadius: '50%',
-            border: '3px solid #FF7043', objectFit: 'cover'
+            width: 96,
+            height: 96,
+            borderRadius: '50%',
+            border: '3px solid #FF7043',
+            objectFit: 'cover',
           }}
         />
-        <div style={{ flex: 1 }}>
+
+        {/* Middle content */}
+        <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: 4 }}>
           <h2 style={{ margin: 0, fontSize: 22, color: '#263238' }}>{name}</h2>
-          {pronouns && <p style={{ margin: 0, fontSize: 14, color: '#607D8B' }}>{pronouns}</p>}
-          {headline && <p style={{ margin: 0, fontSize: 15, color: '#455A64' }}>{headline}</p>}
-          <p style={{ margin: '4px 0 0', fontSize: 14, color: '#455A64' }}>
+
+          {slug && (
+            <div
+              onClick={copySlug}
+              style={{
+                fontSize: 13,
+                color: '#FF7043',
+                cursor: 'pointer',
+                textDecoration: 'underline',
+                width: 'fit-content',
+              }}
+            >
+              {fullUrl}
+            </div>
+          )}
+
+          {pronouns && (
+            <p style={{ margin: 0, fontSize: 14, color: '#607D8B' }}>{pronouns}</p>
+          )}
+
+          {headline && (
+            <p style={{ margin: 0, fontSize: 15, color: '#455A64' }}>{headline}</p>
+          )}
+
+          <p style={{ margin: 0, fontSize: 14, color: '#455A64' }}>
             {location && `Location: ${location}`} {status && `• ${status}`}
           </p>
         </div>
+
         <button
           onClick={() => setEditOpen(true)}
           style={{
@@ -107,40 +176,78 @@ export default function ProfileHeader() {
         </button>
       </div>
 
-      {/* === EDIT DIALOG (NAME LOCKED) === */}
+      {/* Edit dialog */}
       {editOpen && (
         <Dialog title="Edit Profile Header" onClose={() => setEditOpen(false)}>
-          <div style={{ display: 'grid', gap: 10 }}>
-            {/* NAME: LOCKED */}
+          <div style={{ display: 'grid', gap: 12 }}>
             <div style={{ display: 'grid', gap: 4 }}>
-              <span style={{ fontSize: 13, fontWeight: 600 }}>Name (set at signup)</span>
-              <div style={{
-                padding: 8,
-                border: '1px solid #ddd',
-                borderRadius: 6,
-                background: '#f9f9f9',
-                color: '#666',
-                fontStyle: 'italic'
-              }}>
-                {name} <small>(locked — contact support to change)</small>
+              <span style={{ fontSize: 13, fontWeight: 600 }}>Name</span>
+              <div
+                style={{
+                  padding: 8,
+                  borderRadius: 6,
+                  border: '1px solid #ddd',
+                  background: '#f9f9f9',
+                  color: '#666',
+                  fontStyle: 'italic',
+                }}
+              >
+                {name || 'Unnamed'} <small>(set during signup)</small>
               </div>
             </div>
 
-            <LabeledInput label="Pronouns" value={pronouns} onChange={setPronouns} />
-            <LabeledInput label="Headline" value={headline} onChange={setHeadline} />
-            <LabeledInput label="Location" value={location} onChange={setLocation} />
-            <LabeledInput label="Status" value={status} onChange={setStatus} />
-            <LabeledInput label="Avatar URL" value={avatarUrl} onChange={setAvatarUrl} />
-            <LabeledInput label="Cover URL (optional)" value={coverUrl} onChange={setCoverUrl} />
+            <LabeledInput
+              label="Pronouns"
+              value={pronouns}
+              onChange={setPronouns}
+              placeholder="she/her, he/him, they/them"
+            />
+
+            <LabeledInput
+              label="Headline"
+              value={headline}
+              onChange={setHeadline}
+              placeholder="What you do / your focus"
+            />
+
+            <LabeledInput
+              label="Location"
+              value={location}
+              onChange={setLocation}
+              placeholder="City, Country"
+            />
+
+            <LabeledInput
+              label="Status"
+              value={status}
+              onChange={setStatus}
+              placeholder="Open to opportunities, building something new, etc."
+            />
+
+            {/* Avatar URL + selector */}
+            <LabeledInput
+              label="Avatar URL"
+              value={avatarUrl}
+              onChange={setAvatarUrl}
+              placeholder="https://… (optional)"
+            />
+            <ProfileAvatarSelector value={avatarUrl} onChange={setAvatarUrl} />
+
+            {/* Cover + banner selector */}
+            <LabeledInput
+              label="Cover URL (optional)"
+              value={coverUrl}
+              onChange={setCoverUrl}
+              placeholder="https://…"
+            />
             <ProfileBannerSelector value={coverUrl} onChange={setCoverUrl} />
 
-            {/* Mode */}
+            {/* Mode + height controls */}
             <div style={{ display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap' }}>
               <span style={{ fontSize: 13, fontWeight: 600 }}>Banner mode</span>
               <ModeToggle value={bannerMode} onChange={setBannerMode} />
             </div>
 
-            {/* Height */}
             <div style={{ display: 'grid', gap: 6 }}>
               <span style={{ fontSize: 13, fontWeight: 600 }}>Banner height</span>
               <input
@@ -153,7 +260,6 @@ export default function ProfileHeader() {
               <small style={{ color: '#607D8B' }}>{bannerH}px</small>
             </div>
 
-            {/* Focal Y only for cover */}
             {bannerMode === 'cover' && (
               <div style={{ display: 'grid', gap: 6 }}>
                 <span style={{ fontSize: 13, fontWeight: 600 }}>Vertical focus (cover)</span>
@@ -170,16 +276,16 @@ export default function ProfileHeader() {
               </div>
             )}
 
-            {/* Live preview */}
+            {/* Preview */}
             {coverUrl && (
               <div style={{ display: 'grid', gap: 8 }}>
-                <small style={{ color: '#607D8B' }}>Preview</small>
+                <small style={{ color: '#607D8B' }}>Banner preview</small>
                 <div
                   style={{
                     width: '100%',
                     border: '1px solid #eee',
                     borderRadius: 6,
-                    overflow: 'hidden'
+                    overflow: 'hidden',
                   }}
                 >
                   {bannerMode === 'cover'
@@ -193,28 +299,20 @@ export default function ProfileHeader() {
               <button
                 onClick={() => setEditOpen(false)}
                 style={{
-                  background: 'white', color: '#455A64',
-                  border: '1px solid #cfd8dc', padding: '6px 12px',
-                  borderRadius: 6, cursor: 'pointer',
+                  background: 'white',
+                  color: '#455A64',
+                  border: '1px solid #cfd8dc',
+                  padding: '6px 12px',
+                  borderRadius: 6,
+                  cursor: 'pointer',
                 }}
               >
-                Cancel
-              </button>
-              <button
-                onClick={() => setEditOpen(false)}
-                style={{
-                  background: '#FF7043', color: 'white',
-                  border: 'none', padding: '6px 12px',
-                  borderRadius: 6, cursor: 'pointer', fontWeight: 700,
-                }}
-              >
-                Save
+                Close
               </button>
             </div>
 
             <small style={{ color: '#90A4AE' }}>
-              Tip: For best results upload a wide banner (~1280×320 or 1600×400).
-              Use <b>Fit</b> to avoid cropping, or <b>Cover</b> with the vertical focus slider to crop gracefully.
+              Tip: Click your profile URL to copy it. Use presets or paste your own avatar/cover URLs.
             </small>
           </div>
         </Dialog>
@@ -223,7 +321,8 @@ export default function ProfileHeader() {
   );
 }
 
-/* ---------- Banner renderers ---------- */
+/* ===== Banner, Toggle, Inputs, Dialog ===== */
+
 function BannerCover({ url, height, focalY }) {
   return (
     <div
@@ -234,8 +333,6 @@ function BannerCover({ url, height, focalY }) {
         backgroundSize: 'cover',
         backgroundPosition: `center ${focalY}%`,
         backgroundRepeat: 'no-repeat',
-        borderTopLeftRadius: 12,
-        borderTopRightRadius: 12,
       }}
     />
   );
@@ -264,14 +361,12 @@ function BannerFit({ url, height }) {
           height: '100%',
           width: '100%',
           objectFit: 'contain',
-          objectPosition: 'center',
         }}
       />
     </div>
   );
 }
 
-/* ---------- UI bits ---------- */
 function ModeToggle({ value, onChange }) {
   const btn = (val, label) => (
     <button
@@ -297,13 +392,14 @@ function ModeToggle({ value, onChange }) {
   );
 }
 
-function LabeledInput({ label, value, onChange }) {
+function LabeledInput({ label, value, onChange, placeholder }) {
   return (
     <label style={{ display: 'grid', gap: 4 }}>
       <span style={{ fontSize: 13, fontWeight: 600 }}>{label}</span>
       <input
         value={value}
         onChange={(e) => onChange(e.target.value)}
+        placeholder={placeholder}
         style={{ border: '1px solid #ddd', borderRadius: 6, padding: 8 }}
       />
     </label>
@@ -336,7 +432,7 @@ function Dialog({ children, title, onClose }) {
           overflowY: 'auto',
           display: 'grid',
           gap: 10,
-          boxShadow: '0 10px 30px rgba(0,0,0,0.15)'
+          boxShadow: '0 10px 30px rgba(0,0,0,0.15)',
         }}
       >
         <h3 style={{ margin: 0 }}>{title}</h3>

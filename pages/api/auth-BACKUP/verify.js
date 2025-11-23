@@ -1,5 +1,5 @@
 // pages/api/auth/verify.js
-import prisma from "@/lib/prisma";
+import { prisma } from '@/lib/prisma';
 import { parse } from "url";
 
 export default async function handler(req, res) {

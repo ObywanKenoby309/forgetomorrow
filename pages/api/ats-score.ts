@@ -1,7 +1,7 @@
 // pages/api/ats-score.ts
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
-import prisma from '@/lib/prisma'; // ← CORRECT: default import
+import { prisma } from '@/lib/prisma'; // ← CORRECT: default import
 import type { NextApiRequest, NextApiResponse } from 'next';
 
 // === TYPES ===
