@@ -45,12 +45,20 @@ export async function POST(request: Request) {
   }
 
   // === FETCH RESUME ===
-  const resume = await prisma.resume.findUnique({
-    where: { id: parseInt(resumeId) },
-  });
-  if (!resume || resume.userId !== session.user.id.toString()) {
-    return NextResponse.json({ error: 'Resume not found' }, { status: 404 });
-  }
+  // Make sure we have a valid user on the session first
+if (!session || !session.user || !session.user.id) {
+  return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+}
+
+const userId = session.user.id.toString();
+
+const resume = await prisma.resume.findUnique({
+  where: { id: parseInt(resumeId, 10) },
+});
+
+if (!resume || resume.userId !== userId) {
+  return NextResponse.json({ error: 'Resume not found' }, { status: 404 });
+}
 
   // === CALL GEMINI ===
   const model = genAI.getGenerativeModel({ model: 'gemini-1.5-flash' });
