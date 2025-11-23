@@ -1,7 +1,7 @@
-// pages/api/auth/[...nextauth].ts   ← REPLACE YOUR WHOLE FILE WITH THIS
+// pages/api/auth/[...nextauth].ts
 import NextAuth from "next-auth";
 import CredentialsProvider from "next-auth/providers/credentials";
-import { prisma } from "@/lib/prisma"; // ← FIX 1: Use your shared Prisma instance
+import { prisma } from "@/lib/prisma";
 import bcrypt from "bcryptjs";
 
 export default NextAuth({
@@ -27,7 +27,10 @@ export default NextAuth({
         return {
           id: user.id,
           email: user.email,
-          name: user.name || `${user.firstName || ""} ${user.lastName || ""}`.trim() || user.email,
+          name:
+            user.name ||
+            `${user.firstName || ""} ${user.lastName || ""}`.trim() ||
+            user.email,
           role: user.role,
           plan: user.plan,
           stripeCustomerId: user.stripeCustomerId,
@@ -38,7 +41,7 @@ export default NextAuth({
 
   session: {
     strategy: "jwt" as const,
-    maxAge: 30 * 24 * 60 * 60, // 30 days
+    maxAge: 30 * 24 * 60 * 60,
   },
 
   callbacks: {
@@ -46,16 +49,17 @@ export default NextAuth({
       if (user) {
         token.role = user.role;
         token.plan = user.plan;
-        token.stripeCustomerId = user.stripeCustomerId ?? null;
+        (token as any).stripeCustomerId = (user as any).stripeCustomerId ?? null; // FIX
       }
       return token;
     },
+
     session: async ({ session, token }) => {
       if (session.user) {
         session.user.id = token.sub!;
-        session.user.role = token.role as string;
-        session.user.plan = token.plan as string;
-        session.user.stripeCustomerId = token.stripeCustomerId as string | null;
+        (session.user as any).role = token.role as string;
+        (session.user as any).plan = token.plan as string;
+        (session.user as any).stripeCustomerId = (token as any).stripeCustomerId as string | null; // FIX
       }
       return session;
     },
@@ -67,7 +71,7 @@ export default NextAuth({
   },
 
   secret: process.env.NEXTAUTH_SECRET,
-  // ← FIX 2: This makes localhost:3001 work perfectly
+
   jwt: {
     maxAge: 30 * 24 * 60 * 60,
   },
