@@ -46,6 +46,7 @@ export default function App({ Component, pageProps }) {
   const isUniversalPage = universalHeaderRoutes.has(router.pathname) && !router.query?.chrome;
   const sharedRoutes = new Set(['/help', '/privacy', '/terms', '/security', '/accessibility', '/cookies']);
   const [sharedAsInternal, setSharedAsInternal] = useState(false);
+
   useEffect(() => {
     if (typeof window === 'undefined') return;
     const isShared = sharedRoutes.has(router.pathname);
@@ -59,48 +60,23 @@ export default function App({ Component, pageProps }) {
     );
     setSharedAsInternal(cameFromInternal);
   }, [router.pathname]);
+
   const isPublicEffective = sharedRoutes.has(router.pathname) ? (isPublicByPath && !sharedAsInternal) : isPublicByPath;
   const useForgeBackground = !isUniversalPage && isPublicEffective && ['/', '/about', '/features', '/press'].includes(router.pathname);
   const forgeBgPosition = router.pathname === '/' ? '35% center' : 'center';
   const renderLandingHeader = isPublicEffective && !isUniversalPage;
-
-  // FINAL VANILLA COOKIE BANNER — disappears forever, no box, no errors
-  useEffect(() => {
-    if (typeof window === 'undefined') return;
-    if (localStorage.getItem('cookie-consent') === 'true') return;
-
-    const banner = document.createElement('div');
-    banner.style.cssText = `
-      position:fixed; bottom:20px; left:20px; right:20px; max-width:500px;
-      background:#000; color:#fff; padding:16px 24px; border-radius:8px;
-      font-family:inherit; font-size:14px; z-index:9999; box-shadow:0 8px 32px rgba(0,0,0,0.5);
-      display:flex; flex-wrap:wrap; align-items:center; justify-content:space-between; gap:12px;
-    `;
-    banner.innerHTML = `
-      <div>We use essential cookies for login & security. Nothing is tracked or sold — ever.</div>
-      <div style="display:flex; gap:8px; flex-shrink:0;">
-        <button id="cookie-reject" style="background:#333;color:#fff;border:none;padding:8px 16px;border-radius:4px;cursor:pointer;">Reject non-essential</button>
-        <button id="cookie-accept" style="background:#f1d600;color:#000;border:none;padding:8px 16px;border-radius:4px;cursor:pointer;font-weight:bold;">Got it</button>
-      </div>
-      <a href="/privacy" style="color:#f1d600;text-decoration:underline;font-size:12px;white-space:nowrap;">Privacy Policy</a>
-    `;
-
-    document.body.appendChild(banner);
-
-    const hide = () => {
-      localStorage.setItem('cookie-consent', 'true');
-      banner.remove();
-    };
-
-    document.getElementById('cookie-accept')?.addEventListener('click', hide);
-    document.getElementById('cookie-reject')?.addEventListener('click', hide);
-  }, []);
 
   return (
     <>
       <Head>
         <title>ForgeTomorrow</title>
         <meta name="viewport" content="width=device-width, initial-scale=1" />
+        {/* === COOKIE-SCRIPT — ONLY ONE BANNER NOW === */}
+        <script
+          async
+          src="https://cdn.cookie-script.com/s/ff274d476e18526f8fd0a8c8114bbaf3.js"
+          charSet="UTF-8"
+        />
       </Head>
 
       <div className="relative min-h-screen">
