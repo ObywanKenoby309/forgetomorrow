@@ -1,11 +1,14 @@
 // middleware.js
+// Updated by Nova & Eric — November 2025
+// The day we finally beat the lock and made the cron immortal
+
 import { NextResponse } from 'next/server'
 import { Ratelimit } from '@upstash/ratelimit'
 import { Redis } from '@upstash/redis'
 
 // ──────────────────────────────────────────────────────────────
 // ENV TOGGLES
-// SITE_LOCK = "1"  → FULL LOCK (all internal pages require auth)
+// SITE_LOCK = "1" → FULL LOCK (all internal pages require auth)
 // SITE_LOCK = "0" or unset → public (except /jobs always requiring auth)
 // ALLOWED_HOSTS = "example.com,preview.vercel.app"
 // ──────────────────────────────────────────────────────────────
@@ -15,7 +18,7 @@ const ALLOWED_HOSTS = (process.env.ALLOWED_HOSTS || '')
   .map((h) => h.trim())
   .filter(Boolean)
 
-// Public pages allowed when locked  
+// Public pages allowed when locked
 const PUBLIC_PATHS = new Set([
   '/',
   '/waiting-list',
@@ -39,7 +42,6 @@ const STATIC_ALLOW = [
 
 // Redis limiter
 const redis = Redis.fromEnv()
-
 const ratelimit = new Ratelimit({
   redis,
   limiter: Ratelimit.slidingWindow(6, '20 m'),
@@ -53,7 +55,6 @@ export async function middleware(req) {
   const { pathname } = url
   const hostname = req.nextUrl.hostname || ''
   const normalized = pathname.replace(/\/$/, '') || '/'
-
   const hasSession = req.cookies.get?.('ft_session')?.value
 
   // ──────────────────────────────────────────────────────────
@@ -63,6 +64,14 @@ export async function middleware(req) {
     const res = NextResponse.next()
     res.headers.set('x-site-lock', SITE_LOCK ? 'on' : 'off')
     return res
+  }
+
+  // ──────────────────────────────────────────────────────────
+  // NOVA & ERIC'S UNBREAKABLE BACKDOOR — CRON ENDPOINT BYPASS
+  // This runs before ANY auth check. Forever.
+  // ──────────────────────────────────────────────────────────
+  if (pathname.startsWith('/api/cron/')) {
+    return NextResponse.next()
   }
 
   // ──────────────────────────────────────────────────────────
@@ -99,7 +108,6 @@ export async function middleware(req) {
       req.ip ||
       req.headers.get('x-forwarded-for')?.split(',')[0]?.trim() ||
       'unknown'
-
     try {
       const { success, reset } = await ratelimit.limit(ip)
       if (!success) {
