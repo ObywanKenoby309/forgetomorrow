@@ -1,20 +1,41 @@
 import React, { useState } from 'react';
 import Collapsible from '@/components/ui/Collapsible';
 
-export default function ProfileSkills({ skills = [], setSkills }) {
+export default function ProfileSkills({
+  skills = [],
+  setSkills,
+  defaultOpen,
+  initialOpen,
+}) {
   const [newSkill, setNewSkill] = useState('');
 
   const addSkill = () => {
     const v = newSkill.trim();
     if (!v) return;
-    if (!skills.includes(v)) setSkills([...skills, v]);
+
+    // Case-insensitive dedupe
+    const exists = skills.some(
+      (s) => s.toLowerCase() === v.toLowerCase()
+    );
+    if (!exists) {
+      setSkills([...skills, v]);
+    }
     setNewSkill('');
   };
 
-  const removeSkill = (val) => setSkills(skills.filter((s) => s !== val));
+  const removeSkill = (val) => {
+    setSkills(skills.filter((s) => s !== val));
+  };
+
+  const isOpen =
+    typeof defaultOpen === 'boolean'
+      ? defaultOpen
+      : typeof initialOpen === 'boolean'
+      ? initialOpen
+      : false;
 
   return (
-    <Collapsible title="Skills" defaultOpen={false}>
+    <Collapsible title="Skills" defaultOpen={isOpen}>
       <section
         style={{
           background: 'white',
@@ -28,7 +49,12 @@ export default function ProfileSkills({ skills = [], setSkills }) {
           <input
             value={newSkill}
             onChange={(e) => setNewSkill(e.target.value)}
-            onKeyDown={(e) => e.key === 'Enter' && addSkill()}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter') {
+                e.preventDefault();
+                addSkill();
+              }
+            }}
             placeholder="Add a skill…"
             aria-label="New skill"
             style={{
@@ -62,7 +88,11 @@ export default function ProfileSkills({ skills = [], setSkills }) {
         ) : (
           <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
             {skills.map((skill) => (
-              <Chip key={skill} text={skill} onRemove={() => removeSkill(skill)} />
+              <Chip
+                key={skill}
+                text={skill}
+                onRemove={() => removeSkill(skill)}
+              />
             ))}
           </div>
         )}
@@ -88,6 +118,7 @@ function Chip({ text, onRemove }) {
     >
       {text}
       <button
+        type="button"
         onClick={onRemove}
         aria-label={`Remove ${text}`}
         style={{

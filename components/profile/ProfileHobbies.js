@@ -1,20 +1,40 @@
 import React, { useState } from 'react';
 import Collapsible from '@/components/ui/Collapsible';
 
-export default function ProfileHobbies({ hobbies = [], setHobbies }) {
+export default function ProfileHobbies({
+  hobbies = [],
+  setHobbies,
+  defaultOpen,
+  initialOpen,
+}) {
   const [newHobby, setNewHobby] = useState('');
 
   const addHobby = () => {
     const v = newHobby.trim();
     if (!v) return;
-    if (!hobbies.includes(v)) setHobbies([...hobbies, v]);
+
+    const exists = hobbies.some(
+      (h) => h.toLowerCase() === v.toLowerCase()
+    );
+    if (!exists) {
+      setHobbies([...hobbies, v]);
+    }
     setNewHobby('');
   };
 
-  const removeHobby = (val) => setHobbies(hobbies.filter((h) => h !== val));
+  const removeHobby = (val) => {
+    setHobbies(hobbies.filter((h) => h !== val));
+  };
+
+  const isOpen =
+    typeof defaultOpen === 'boolean'
+      ? defaultOpen
+      : typeof initialOpen === 'boolean'
+      ? initialOpen
+      : false;
 
   return (
-    <Collapsible title="Hobbies & Interests" defaultOpen={false}>
+    <Collapsible title="Hobbies & Interests" defaultOpen={isOpen}>
       <section
         style={{
           background: 'white',
@@ -28,7 +48,12 @@ export default function ProfileHobbies({ hobbies = [], setHobbies }) {
           <input
             value={newHobby}
             onChange={(e) => setNewHobby(e.target.value)}
-            onKeyDown={(e) => e.key === 'Enter' && addHobby()}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter') {
+                e.preventDefault();
+                addHobby();
+              }
+            }}
             placeholder="Add a hobby or interest…"
             aria-label="New hobby"
             style={{
@@ -62,7 +87,11 @@ export default function ProfileHobbies({ hobbies = [], setHobbies }) {
         ) : (
           <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
             {hobbies.map((hobby) => (
-              <Chip key={hobby} text={hobby} onRemove={() => removeHobby(hobby)} />
+              <Chip
+                key={hobby}
+                text={hobby}
+                onRemove={() => removeHobby(hobby)}
+              />
             ))}
           </div>
         )}
@@ -88,6 +117,7 @@ function Chip({ text, onRemove }) {
     >
       {text}
       <button
+        type="button"
         onClick={onRemove}
         aria-label={`Remove ${text}`}
         style={{

@@ -1,20 +1,40 @@
 import React, { useState } from 'react';
 import Collapsible from '@/components/ui/Collapsible';
 
-export default function ProfileLanguages({ languages = [], setLanguages }) {
+export default function ProfileLanguages({
+  languages = [],
+  setLanguages,
+  defaultOpen,
+  initialOpen,
+}) {
   const [newLang, setNewLang] = useState('');
 
   const addLang = () => {
     const v = newLang.trim();
     if (!v) return;
-    if (!languages.includes(v)) setLanguages([...languages, v]);
+
+    const exists = languages.some(
+      (l) => l.toLowerCase() === v.toLowerCase()
+    );
+    if (!exists) {
+      setLanguages([...languages, v]);
+    }
     setNewLang('');
   };
 
-  const removeLang = (val) => setLanguages(languages.filter((l) => l !== val));
+  const removeLang = (val) => {
+    setLanguages(languages.filter((l) => l !== val));
+  };
+
+  const isOpen =
+    typeof defaultOpen === 'boolean'
+      ? defaultOpen
+      : typeof initialOpen === 'boolean'
+      ? initialOpen
+      : false;
 
   return (
-    <Collapsible title="Languages" defaultOpen={false}>
+    <Collapsible title="Languages" defaultOpen={isOpen}>
       <section
         style={{
           background: 'white',
@@ -28,7 +48,12 @@ export default function ProfileLanguages({ languages = [], setLanguages }) {
           <input
             value={newLang}
             onChange={(e) => setNewLang(e.target.value)}
-            onKeyDown={(e) => e.key === 'Enter' && addLang()}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter') {
+                e.preventDefault();
+                addLang();
+              }
+            }}
             placeholder="Add a language…"
             aria-label="New language"
             style={{
@@ -62,7 +87,11 @@ export default function ProfileLanguages({ languages = [], setLanguages }) {
         ) : (
           <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
             {languages.map((lang) => (
-              <Chip key={lang} text={lang} onRemove={() => removeLang(lang)} />
+              <Chip
+                key={lang}
+                text={lang}
+                onRemove={() => removeLang(lang)}
+              />
             ))}
           </div>
         )}
@@ -88,6 +117,7 @@ function Chip({ text, onRemove }) {
     >
       {text}
       <button
+        type="button"
         onClick={onRemove}
         aria-label={`Remove ${text}`}
         style={{

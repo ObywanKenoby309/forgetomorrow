@@ -4,12 +4,16 @@ import Collapsible from '@/components/ui/Collapsible';
 
 export default function ProfilePreferences({
   // controlled values
-  prefWorkType,
+  prefStatus,        // "Actively Seeking" | "Open to Opportunities" | "Not Seeking" | null
+  prefWorkType,      // "Remote" | "Hybrid" | "On-site" | "Flexible" | null
+  prefRelocate,      // "Yes" | "No" | null
   prefLocations,
   prefStart,
 
   // setters expected by pages/profile.js
+  setPrefStatus,
   setPrefWorkType,
+  setPrefRelocate,
   setPrefLocations,
   setPrefStart,
 
@@ -23,9 +27,17 @@ export default function ProfilePreferences({
   const [locDraft, setLocDraft] = useState('');
 
   // Wire to either setters (preferred) or legacy handlers if provided
+  const handleStatus = (val) => {
+    if (typeof setPrefStatus === 'function') setPrefStatus(val);
+  };
+
   const handleWorkType = (val) => {
     if (typeof setPrefWorkType === 'function') setPrefWorkType(val);
     else onChangeWorkType?.(val);
+  };
+
+  const handleRelocate = (val) => {
+    if (typeof setPrefRelocate === 'function') setPrefRelocate(val);
   };
 
   const handleStart = (val) => {
@@ -60,37 +72,105 @@ export default function ProfilePreferences({
 
   return (
     <Collapsible title="Work Preferences" defaultOpen={false}>
-      <section style={{ display: 'grid', gap: 12 }}>
-        {/* Work type */}
-        <label
+      <section style={{ display: 'grid', gap: 16 }}>
+        {/* Top row: status + work type + relocate (3 columns) */}
+        <div
           style={{
             display: 'grid',
-            gap: 6,
-            color: '#455A64',
-            fontWeight: 600,
-            fontSize: 13,
+            gridTemplateColumns: 'repeat(3, minmax(0, 1fr))',
+            gap: 16,
           }}
         >
-          <span>Preferred work type</span>
-          <select
-            value={prefWorkType ?? ''} // keep controlled
-            onChange={(e) => handleWorkType(e.target.value)}
+          {/* Current work status */}
+          <label
             style={{
-              border: '1px solid #ddd',
-              borderRadius: 10,
-              padding: '10px 12px',
-              outline: 'none',
-              background: 'white',
-              width: '100%',
+              display: 'grid',
+              gap: 6,
+              color: '#455A64',
+              fontWeight: 600,
+              fontSize: 13,
             }}
           >
-            <option value="">— Select —</option>
-            <option value="Remote">Remote</option>
-            <option value="Hybrid">Hybrid</option>
-            <option value="On-site">On-site</option>
-            <option value="Flexible">Flexible</option>
-          </select>
-        </label>
+            <span>Current work status</span>
+            <select
+              value={prefStatus ?? ''}
+              onChange={(e) => handleStatus(e.target.value || null)}
+              style={{
+                border: '1px solid #ddd',
+                borderRadius: 10,
+                padding: '10px 12px',
+                outline: 'none',
+                background: 'white',
+                width: '100%',
+              }}
+            >
+              <option value="">— Select —</option>
+              <option value="Actively Seeking">Actively Seeking</option>
+              <option value="Open to Opportunities">Open to Opportunities</option>
+              <option value="Not Seeking">Not Seeking</option>
+            </select>
+          </label>
+
+          {/* Preferred work type */}
+          <label
+            style={{
+              display: 'grid',
+              gap: 6,
+              color: '#455A64',
+              fontWeight: 600,
+              fontSize: 13,
+            }}
+          >
+            <span>Preferred work type</span>
+            <select
+              value={prefWorkType ?? ''}
+              onChange={(e) => handleWorkType(e.target.value || null)}
+              style={{
+                border: '1px solid #ddd',
+                borderRadius: 10,
+                padding: '10px 12px',
+                outline: 'none',
+                background: 'white',
+                width: '100%',
+              }}
+            >
+              <option value="">— Select —</option>
+              <option value="Remote">Remote</option>
+              <option value="Hybrid">Hybrid</option>
+              <option value="On-site">On-site</option>
+              <option value="Flexible">Flexible</option>
+            </select>
+          </label>
+
+          {/* Willing to relocate */}
+          <label
+            style={{
+              display: 'grid',
+              gap: 6,
+              color: '#455A64',
+              fontWeight: 600,
+              fontSize: 13,
+            }}
+          >
+            <span>Willing to relocate</span>
+            <select
+              value={prefRelocate ?? ''}
+              onChange={(e) => handleRelocate(e.target.value || null)}
+              style={{
+                border: '1px solid #ddd',
+                borderRadius: 10,
+                padding: '10px 12px',
+                outline: 'none',
+                background: 'white',
+                width: '100%',
+              }}
+            >
+              <option value="">— Select —</option>
+              <option value="Yes">Yes</option>
+              <option value="No">No</option>
+            </select>
+          </label>
+        </div>
 
         {/* Locations (chips + inline add) */}
         <div>
@@ -149,7 +229,6 @@ export default function ProfilePreferences({
             </div>
           </div>
 
-          {/* Pills list */}
           {(locations.length ?? 0) === 0 ? (
             <div style={{ color: '#607D8B' }}>No locations yet.</div>
           ) : (
@@ -174,10 +253,10 @@ export default function ProfilePreferences({
           <span>Earliest start date (optional)</span>
           <input
             type="date"
-            value={prefStart ?? ''} // keep controlled
+            value={prefStart ?? ''}
             onChange={(e) => handleStart(e.target.value)}
             style={{
-              border: '1px solid #ddd',   // ✅ fixed quotes
+              border: '1px solid #ddd',
               borderRadius: 10,
               padding: '10px 12px',
               outline: 'none',

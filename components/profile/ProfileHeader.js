@@ -4,19 +4,10 @@ import React, { useEffect, useState } from 'react';
 import ProfileBannerSelector from '@/components/profile/ProfileBannerSelector';
 import ProfileAvatarSelector from '@/components/profile/ProfileAvatarSelector';
 
-const PRONOUNS_KEY = 'profile_pronouns_v2';
-const HEADLINE_KEY = 'profile_headline_v2';
-const LOC_KEY = 'profile_location_v2';
-const STATUS_KEY = 'profile_status_v2';
-const AVATAR_KEY = 'profile_avatar_v2';
-const COVER_KEY = 'profile_cover_v2';
-const BANNER_H_KEY = 'profile_banner_h_v1';
-const BANNER_MODE_KEY = 'profile_banner_mode_v1';
-const BANNER_FOCALY_KEY = 'profile_banner_focalY_v1';
-
 export default function ProfileHeader() {
   const [name, setName] = useState('');
   const [slug, setSlug] = useState(null);
+  const [slugValue, setSlugValue] = useState('');
 
   const [pronouns, setPronouns] = useState('');
   const [headline, setHeadline] = useState('');
@@ -25,40 +16,26 @@ export default function ProfileHeader() {
   const [avatarUrl, setAvatarUrl] = useState('/demo-avatar.png');
   const [coverUrl, setCoverUrl] = useState('');
 
-  const [editOpen, setEditOpen] = useState(false);
   const [bannerH, setBannerH] = useState(120);
-  const [bannerMode, setBannerMode] = useState('cover');
+  const [bannerMode, setBannerMode] = useState('cover'); // "cover" | "fit"
   const [focalY, setFocalY] = useState(50);
 
-  // Load from localStorage
-  useEffect(() => {
-    try {
-      setPronouns(localStorage.getItem(PRONOUNS_KEY) || '');
-      setHeadline(localStorage.getItem(HEADLINE_KEY) || '');
-      setLocation(localStorage.getItem(LOC_KEY) || '');
-      setStatus(localStorage.getItem(STATUS_KEY) || '');
-      setAvatarUrl(localStorage.getItem(AVATAR_KEY) || '/demo-avatar.png');
-      setCoverUrl(localStorage.getItem(COVER_KEY) || '');
+  // 'private' | 'public' | 'recruiters'
+  const [visibility, setVisibility] = useState('private');
 
-      const h = parseInt(localStorage.getItem(BANNER_H_KEY) || '120', 10);
-      if (!Number.isNaN(h)) setBannerH(clamp(h, 80, 220));
+  const [editOpen, setEditOpen] = useState(false);
+  const [saving, setSaving] = useState(false);
+  const [saveError, setSaveError] = useState(null);
 
-      setBannerMode(localStorage.getItem(BANNER_MODE_KEY) || 'cover');
-
-      const fy = parseInt(localStorage.getItem(BANNER_FOCALY_KEY) || '50', 10);
-      if (!Number.isNaN(fy)) setFocalY(clamp(fy, 0, 100));
-    } catch {
-      // ignore
-    }
-  }, []);
-
-  // Load authenticated user
+  // Load everything from the server (single source of truth)
   useEffect(() => {
     let cancel = false;
 
     (async () => {
       try {
-        const res = await fetch('/api/auth/me');
+        const res = await fetch('/api/profile/header');
+        if (!res.ok) throw new Error('Failed to load profile');
+
         const data = await res.json();
         const user = data.user;
         if (!user || cancel) return;
@@ -69,11 +46,36 @@ export default function ProfileHeader() {
 
         setName(fullName || 'Unnamed');
         setSlug(user.slug || null);
+        setSlugValue(user.slug || '');
 
-        // If later you store these server-side, you can hydrate from user.*
-        // For now, localStorage remains the primary source.
+        setPronouns(user.pronouns || '');
+        setHeadline(user.headline || '');
+        setLocation(user.location || '');
+        setStatus(user.status || '');
+
+        setAvatarUrl(user.avatarUrl || '/demo-avatar.png');
+        setCoverUrl(user.coverUrl || '');
+
+        const h = user.bannerHeight != null ? user.bannerHeight : 120;
+        setBannerH(clamp(h, 80, 220));
+
+        const mode = user.bannerMode === 'fit' ? 'fit' : 'cover';
+        setBannerMode(mode);
+
+        const fy = user.bannerFocalY != null ? user.bannerFocalY : 50;
+        setFocalY(clamp(fy, 0, 100));
+
+        // Map boolean to our 3-state UI (for now recruiters behaves like private)
+        if (user.isProfilePublic) {
+          setVisibility('public');
+        } else {
+          setVisibility('private');
+        }
       } catch (err) {
-        if (!cancel) setName('Unnamed');
+        if (!cancel) {
+          console.error('Failed to load profile header', err);
+          setName('Unnamed');
+        }
       }
     })();
 
@@ -82,22 +84,78 @@ export default function ProfileHeader() {
     };
   }, []);
 
-  // Persist fields
-  useEffect(() => { try { localStorage.setItem(PRONOUNS_KEY, pronouns); } catch {} }, [pronouns]);
-  useEffect(() => { try { localStorage.setItem(HEADLINE_KEY, headline); } catch {} }, [headline]);
-  useEffect(() => { try { localStorage.setItem(LOC_KEY, location); } catch {} }, [location]);
-  useEffect(() => { try { localStorage.setItem(STATUS_KEY, status); } catch {} }, [status]);
-  useEffect(() => { try { localStorage.setItem(AVATAR_KEY, avatarUrl); } catch {} }, [avatarUrl]);
-  useEffect(() => { try { localStorage.setItem(COVER_KEY, coverUrl); } catch {} }, [coverUrl]);
-  useEffect(() => { try { localStorage.setItem(BANNER_H_KEY, String(bannerH)); } catch {} }, [bannerH]);
-  useEffect(() => { try { localStorage.setItem(BANNER_MODE_KEY, bannerMode); } catch {} }, [bannerMode]);
-  useEffect(() => { try { localStorage.setItem(BANNER_FOCALY_KEY, String(focalY)); } catch {} }, [focalY]);
-
   const fullUrl = slug ? `https://forgetomorrow.com/u/${slug}` : null;
+  const fullUrlFromInput = slugValue
+    ? `https://forgetomorrow.com/u/${slugValue}`
+    : 'https://forgetomorrow.com/u/your-custom-url';
 
   const copySlug = () => {
     if (!fullUrl) return;
     navigator.clipboard.writeText(fullUrl);
+  };
+
+  const visibilityLabel =
+    visibility === 'public'
+      ? 'Public'
+      : visibility === 'recruiters'
+      ? 'Recruiters only'
+      : 'Private';
+
+  const handleSave = async () => {
+    setSaving(true);
+    setSaveError(null);
+
+    // Basic client-side cleaning: lower-case, trim spaces, spaces -> hyphens
+    const cleanedSlug = slugValue.trim().toLowerCase().replace(/\s+/g, '-');
+
+    try {
+      const res = await fetch('/api/profile/header', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          headline,
+          pronouns,
+          location,
+          status,
+          avatarUrl,
+          coverUrl,
+          bannerMode,
+          bannerHeight: bannerH,
+          bannerFocalY: focalY,
+          slug: cleanedSlug,
+          // For now: only PUBLIC = true, everything else = false
+          isProfilePublic: visibility === 'public',
+        }),
+      });
+
+      let data = {};
+      if (!res.ok) {
+        try {
+          data = await res.json();
+        } catch (_) {}
+        throw new Error(data.error || 'Failed to save profile');
+      } else {
+        try {
+          data = await res.json();
+        } catch (_) {}
+      }
+
+      // Update displayed slug to match what the server accepted
+      if (data.slug) {
+        setSlug(data.slug);
+        setSlugValue(data.slug);
+      } else {
+        setSlug(cleanedSlug);
+        setSlugValue(cleanedSlug);
+      }
+
+      setEditOpen(false);
+    } catch (err) {
+      console.error('Failed to save profile header', err);
+      setSaveError(err.message || 'Failed to save profile');
+    } finally {
+      setSaving(false);
+    }
   };
 
   return (
@@ -111,9 +169,11 @@ export default function ProfileHeader() {
       }}
     >
       {coverUrl &&
-        (bannerMode === 'cover'
-          ? <BannerCover url={coverUrl} height={bannerH} focalY={focalY} />
-          : <BannerFit url={coverUrl} height={bannerH} />)}
+        (bannerMode === 'cover' ? (
+          <BannerCover url={coverUrl} height={bannerH} focalY={focalY} />
+        ) : (
+          <BannerFit url={coverUrl} height={bannerH} />
+        ))}
 
       {/* Header Row */}
       <div style={{ padding: 16, display: 'flex', gap: 16, alignItems: 'center' }}>
@@ -159,6 +219,11 @@ export default function ProfileHeader() {
           <p style={{ margin: 0, fontSize: 14, color: '#455A64' }}>
             {location && `Location: ${location}`} {status && `• ${status}`}
           </p>
+
+          {/* Visibility hint */}
+          <p style={{ margin: 0, fontSize: 12, color: '#90A4AE' }}>
+            Profile visibility: {visibilityLabel}
+          </p>
         </div>
 
         <button
@@ -194,6 +259,68 @@ export default function ProfileHeader() {
               >
                 {name || 'Unnamed'} <small>(set during signup)</small>
               </div>
+            </div>
+
+            {/* Personal URL / slug editor */}
+            <div style={{ display: 'grid', gap: 4 }}>
+              <span style={{ fontSize: 13, fontWeight: 600 }}>Personal URL</span>
+              <div
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: 8,
+                  flexWrap: 'wrap',
+                }}
+              >
+                <span style={{ fontSize: 13, color: '#455A64' }}>
+                  https://forgetomorrow.com/u/
+                </span>
+                <input
+                  value={slugValue}
+                  onChange={(e) => setSlugValue(e.target.value)}
+                  placeholder="your-name-here"
+                  style={{
+                    border: '1px solid #ddd',
+                    borderRadius: 6,
+                    padding: 6,
+                    minWidth: 160,
+                  }}
+                />
+              </div>
+              <small style={{ color: '#90A4AE' }}>
+                Letters, numbers, and hyphens only. This is the link you can share publicly.
+              </small>
+              <small style={{ color: '#607D8B' }}>
+                Preview: {fullUrlFromInput}
+              </small>
+            </div>
+
+            {/* Profile visibility selector */}
+            <div style={{ display: 'grid', gap: 6 }}>
+              <span style={{ fontSize: 13, fontWeight: 600 }}>Profile visibility</span>
+              <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+                <VisibilityPill
+                  label="Private"
+                  value="private"
+                  active={visibility === 'private'}
+                  onClick={() => setVisibility('private')}
+                />
+                <VisibilityPill
+                  label="Public"
+                  value="public"
+                  active={visibility === 'public'}
+                  onClick={() => setVisibility('public')}
+                />
+                <VisibilityPill
+                  label="Recruiters only"
+                  value="recruiters"
+                  active={visibility === 'recruiters'}
+                  onClick={() => setVisibility('recruiters')}
+                />
+              </div>
+              <small style={{ color: '#90A4AE' }}>
+                Public: anyone with your link can view. Recruiters only: hidden from public; visible only to approved recruiters (future behavior).
+              </small>
             </div>
 
             <LabeledInput
@@ -288,11 +415,19 @@ export default function ProfileHeader() {
                     overflow: 'hidden',
                   }}
                 >
-                  {bannerMode === 'cover'
-                    ? <BannerCover url={coverUrl} height={120} focalY={focalY} />
-                    : <BannerFit url={coverUrl} height={120} />}
+                  {bannerMode === 'cover' ? (
+                    <BannerCover url={coverUrl} height={120} focalY={focalY} />
+                  ) : (
+                    <BannerFit url={coverUrl} height={120} />
+                  )}
                 </div>
               </div>
+            )}
+
+            {saveError && (
+              <small style={{ color: '#d32f2f' }}>
+                {saveError}
+              </small>
             )}
 
             <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8, marginTop: 8 }}>
@@ -309,10 +444,25 @@ export default function ProfileHeader() {
               >
                 Close
               </button>
+              <button
+                onClick={handleSave}
+                disabled={saving}
+                style={{
+                  background: '#FF7043',
+                  color: 'white',
+                  border: '1px solid #FF7043',
+                  padding: '6px 12px',
+                  borderRadius: 6,
+                  cursor: saving ? 'default' : 'pointer',
+                  opacity: saving ? 0.8 : 1,
+                }}
+              >
+                {saving ? 'Saving…' : 'Save changes'}
+              </button>
             </div>
 
             <small style={{ color: '#90A4AE' }}>
-              Tip: Click your profile URL to copy it. Use presets or paste your own avatar/cover URLs.
+              Tip: Click your profile URL to copy it. Your avatar, banner, and profile text are now saved to your account and will load on any device.
             </small>
           </div>
         </Dialog>
@@ -364,6 +514,27 @@ function BannerFit({ url, height }) {
         }}
       />
     </div>
+  );
+}
+
+function VisibilityPill({ label, active, onClick }) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      style={{
+        padding: '6px 12px',
+        borderRadius: 999,
+        border: '1px solid ' + (active ? '#FF7043' : '#cfd8dc'),
+        background: active ? '#FF7043' : 'white',
+        color: active ? 'white' : '#455A64',
+        fontSize: 12,
+        fontWeight: 700,
+        cursor: 'pointer',
+      }}
+    >
+      {label}
+    </button>
   );
 }
 

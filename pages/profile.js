@@ -1,4 +1,4 @@
-// pages/profile.js ← FINAL VERSION WITH DISMISSIBLE EMAIL VERIFIED WELCOME BANNER
+// pages/profile.js ← FINAL VERSION WITH SERVER SYNC + WORK STATUS / RELOCATE
 import React, { useEffect, useState } from 'react';
 import Head from 'next/head';
 import { useRouter } from 'next/router';
@@ -13,6 +13,7 @@ import ProfilePreferences from '@/components/profile/ProfilePreferences';
 import ProfileResumeAttach from '@/components/profile/ProfileResumeAttach';
 import ProfileSkills from '@/components/profile/ProfileSkills';
 import ProfileHobbies from '@/components/profile/ProfileHobbies';
+import ProfileCoverAttach from '@/components/profile/ProfileCoverAttach';
 
 // Helper shown beside sections
 import SectionHint from '@/components/SectionHint';
@@ -32,6 +33,8 @@ const SKL_KEY = 'profile_skills_v1';
 const LANG_KEY = 'profile_languages_v1';
 const PREF_LOC_KEY = 'profile_pref_locations_v1';
 const PREF_TYPE_KEY = 'profile_pref_worktype_v1';
+const PREF_STATUS_KEY = 'profile_pref_status_v1';
+const PREF_RELOC_KEY = 'profile_pref_relocate_v1';
 const PREF_START_KEY = 'profile_pref_start_v1';
 const HOB_KEY = 'profile_hobbies_v1';
 const RESUME_KEY = 'profile_resume_v1';
@@ -56,18 +59,24 @@ export default function ProfilePage() {
   const [languages, setLanguages] = useState([]);
   const [prefLocations, setPrefLocations] = useState([]);
   const [prefWorkType, setPrefWorkType] = useState('');
+  const [prefStatus, setPrefStatus] = useState('');      // NEW
+  const [prefRelocate, setPrefRelocate] = useState('');  // NEW ("Yes" | "No")
   const [prefStart, setPrefStart] = useState('');
   const [hobbies, setHobbies] = useState([]);
   const [resume, setResume] = useState(null);
 
-  // NEW: control for welcome banner visibility
+  // control for welcome banner visibility
   const [showWelcomeBanner, setShowWelcomeBanner] = useState(false);
+
+  // track server load so we don’t save before initial GET
+  const [serverLoaded, setServerLoaded] = useState(false);
 
   // ---------------- Load from localStorage ----------------
   useEffect(() => {
     try {
       const read = (k, fb) => JSON.parse(localStorage.getItem(k) ?? fb);
       const readStr = (k, fb) => localStorage.getItem(k) ?? fb;
+
       setName(readStr(NAME_KEY, 'Eric James'));
       setPronouns(readStr(PRONOUNS_KEY, 'He/Him'));
       setHeadline(readStr(TITLE_KEY, 'Customer Success Leader & AI Advocate'));
@@ -80,12 +89,63 @@ export default function ProfilePage() {
       setLanguages(read(LANG_KEY, '[]'));
       setPrefLocations(read(PREF_LOC_KEY, '[]'));
       setPrefWorkType(readStr(PREF_TYPE_KEY, ''));
+      setPrefStatus(readStr(PREF_STATUS_KEY, ''));
+      setPrefRelocate(readStr(PREF_RELOC_KEY, ''));
       setPrefStart(readStr(PREF_START_KEY, ''));
       setHobbies(read(HOB_KEY, '[]'));
       setResume(read(RESUME_KEY, null));
     } catch (err) {
       console.error('Failed to load from localStorage:', err);
     }
+  }, []);
+
+  // ---------------- Load from server (/api/profile/details) ----------------
+  useEffect(() => {
+    let cancelled = false;
+
+    (async () => {
+      try {
+        const res = await fetch('/api/profile/details');
+        if (!res.ok) {
+          setServerLoaded(true);
+          return;
+        }
+
+        const data = await res.json();
+        if (cancelled) return;
+
+        const u = data.user || {};
+
+        // About
+        if (typeof u.aboutMe === 'string' && u.aboutMe.length > 0) {
+          setAbout(u.aboutMe);
+        }
+
+        // Work preferences JSON blob
+        const wp = u.workPreferences || {};
+        if (wp.workStatus) setPrefStatus(wp.workStatus);
+        if (wp.workType) setPrefWorkType(wp.workType);
+        if (Array.isArray(wp.locations)) setPrefLocations(wp.locations);
+        if (wp.startDate) setPrefStart(wp.startDate);
+        if (typeof wp.willingToRelocate === 'boolean') {
+          setPrefRelocate(wp.willingToRelocate ? 'Yes' : 'No');
+        }
+
+        // Skills / languages / hobbies (JSON fields)
+        if (Array.isArray(u.skillsJson)) setSkills(u.skillsJson);
+        if (Array.isArray(u.languagesJson)) setLanguages(u.languagesJson);
+        if (Array.isArray(u.hobbiesJson)) setHobbies(u.hobbiesJson);
+
+        setServerLoaded(true);
+      } catch (err) {
+        console.error('Failed to load profile details from server:', err);
+        setServerLoaded(true);
+      }
+    })();
+
+    return () => {
+      cancelled = true;
+    };
   }, []);
 
   // ---------------- Welcome banner logic ----------------
@@ -120,9 +180,71 @@ export default function ProfilePage() {
   useEffect(() => { try { localStorage.setItem(LANG_KEY, JSON.stringify(languages)); } catch {} }, [languages]);
   useEffect(() => { try { localStorage.setItem(PREF_LOC_KEY, JSON.stringify(prefLocations)); } catch {} }, [prefLocations]);
   useEffect(() => { try { localStorage.setItem(PREF_TYPE_KEY, prefWorkType); } catch {} }, [prefWorkType]);
+  useEffect(() => { try { localStorage.setItem(PREF_STATUS_KEY, prefStatus); } catch {} }, [prefStatus]);
+  useEffect(() => { try { localStorage.setItem(PREF_RELOC_KEY, prefRelocate); } catch {} }, [prefRelocate]);
   useEffect(() => { try { localStorage.setItem(PREF_START_KEY, prefStart); } catch {} }, [prefStart]);
   useEffect(() => { try { localStorage.setItem(HOB_KEY, JSON.stringify(hobbies)); } catch {} }, [hobbies]);
   useEffect(() => { try { localStorage.setItem(RESUME_KEY, JSON.stringify(resume)); } catch {} }, [resume]);
+
+  // ---------------- Debounced save to server ----------------
+  useEffect(() => {
+    if (!serverLoaded) return;
+
+    const controller = new AbortController();
+
+    const timer = setTimeout(async () => {
+      try {
+        const body = {
+          aboutMe: about || '',
+          workPreferences: {
+            workStatus: prefStatus || '',
+            workType: prefWorkType || '',
+            locations: prefLocations || [],
+            startDate: prefStart || '',
+            willingToRelocate:
+              prefRelocate === 'Yes'
+                ? true
+                : prefRelocate === 'No'
+                ? false
+                : null,
+          },
+          skillsJson: skills || [],
+          languagesJson: languages || [],
+          hobbiesJson: hobbies || [],
+        };
+
+        const res = await fetch('/api/profile/details', {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(body),
+          signal: controller.signal,
+        });
+
+        if (!res.ok) {
+          console.error('Failed to save profile details');
+        }
+      } catch (err) {
+        if (err.name === 'AbortError') return;
+        console.error('Error saving profile details:', err);
+      }
+    }, 1000); // 1s debounce
+
+    return () => {
+      controller.abort();
+      clearTimeout(timer);
+    };
+  }, [
+    serverLoaded,
+    about,
+    prefStatus,
+    prefWorkType,
+    prefRelocate,
+    prefLocations,
+    prefStart,
+    skills,
+    languages,
+    hobbies,
+  ]);
 
   // -------- Derived flags --------
   const hasSummary = Boolean(about?.trim());
@@ -229,9 +351,16 @@ export default function ProfilePage() {
           <div className="grid md:grid-cols-3 items-start gap-4">
             <div className="md:col-span-2">
               <ProfilePreferences
-                prefLocations={prefLocations} setPrefLocations={setPrefLocations}
-                prefWorkType={prefWorkType} setPrefWorkType={setPrefWorkType}
-                prefStart={prefStart} setPrefStart={setPrefStart}
+                prefStatus={prefStatus}
+                setPrefStatus={setPrefStatus}
+                prefWorkType={prefWorkType}
+                setPrefWorkType={setPrefWorkType}
+                prefRelocate={prefRelocate}
+                setPrefRelocate={setPrefRelocate}
+                prefLocations={prefLocations}
+                setPrefLocations={setPrefLocations}
+                prefStart={prefStart}
+                setPrefStart={setPrefStart}
               />
             </div>
             <div className="space-y-4">
@@ -249,7 +378,12 @@ export default function ProfilePage() {
           {/* SKILLS */}
           <div className="grid md:grid-cols-3 items-start gap-4">
             <div className="md:col-span-2">
-              <ProfileSkills skills={skills} setSkills={setSkills} defaultOpen={true} initialOpen={true} />
+              <ProfileSkills
+                skills={skills}
+                setSkills={setSkills}
+                defaultOpen={true}
+                initialOpen={true}
+              />
             </div>
             {!hasSkills && (
               <SectionHint
@@ -266,7 +400,12 @@ export default function ProfilePage() {
           {/* LANGUAGES */}
           <div className="grid md:grid-cols-3 items-start gap-4">
             <div className="md:col-span-2">
-              <ProfileLanguages languages={languages} setLanguages={setLanguages} defaultOpen={true} initialOpen={true} />
+              <ProfileLanguages
+                languages={languages}
+                setLanguages={setLanguages}
+                defaultOpen={true}
+                initialOpen={true}
+              />
             </div>
             {!hasLanguages && (
               <SectionHint
@@ -279,8 +418,24 @@ export default function ProfilePage() {
             )}
           </div>
 
-          {/* RESUME + HOBBIES */}
-          <ProfileResumeAttach withChrome={withChrome} resume={resume} setResume={setResume} />
+          {/* RESUME + COVER */}
+          <div className="grid md:grid-cols-3 items-start gap-4">
+            <div className="md:col-span-2 space-y-4">
+              <ProfileResumeAttach withChrome={withChrome} />
+              <ProfileCoverAttach withChrome={withChrome} />
+            </div>
+            <SectionHint
+              title="Make it easy to say yes"
+              bullets={[
+                'Keep one primary resume linked to your profile.',
+                'Save up to 4 alternates for different roles.',
+                'Do the same with cover letters so recruiters instantly see your best fit.',
+                'Manage all your resumes and cover letters in the builder — you can change your primaries anytime from there.',
+              ]}
+            />
+          </div>
+
+          {/* HOBBIES */}
           <ProfileHobbies hobbies={hobbies} setHobbies={setHobbies} />
         </div>
       </SeekerLayout>

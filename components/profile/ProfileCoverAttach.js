@@ -1,38 +1,38 @@
-// components/profile/ProfileResumeAttach.js
+// components/profile/ProfileCoverAttach.js
 import React, { useEffect, useState } from 'react';
 import { useRouter } from 'next/router';
 
-export default function ProfileResumeAttach({ withChrome }) {
-  const [resumes, setResumes] = useState([]);
+export default function ProfileCoverAttach({ withChrome }) {
+  const [covers, setCovers] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const router = useRouter();
-  
-  const loadResumes = async () => {
+
+  const loadCovers = async () => {
     setLoading(true);
     setError('');
     try {
-      const res = await fetch('/api/profile/resume');
+      const res = await fetch('/api/profile/cover');
       if (!res.ok) {
         const err = await res.json().catch(() => ({}));
-        throw new Error(err.error || 'Failed to load resumes.');
+        throw new Error(err.error || 'Failed to load cover letters.');
       }
       const data = await res.json();
-      setResumes(data.resumes || []);
+      setCovers(data.covers || []);
     } catch (err) {
-      console.error('loadResumes', err);
-      setError(err.message || 'Failed to load resumes.');
+      console.error('loadCovers', err);
+      setError(err.message || 'Failed to load cover letters.');
     } finally {
       setLoading(false);
     }
   };
 
   useEffect(() => {
-    loadResumes();
+    loadCovers();
   }, []);
 
   const primary =
-    resumes.find((r) => r.isPrimary) || resumes[0] || null;
+    covers.find((c) => c.isPrimary) || covers[0] || null;
 
   const handleNew = () => {
   if (withChrome) {
@@ -80,7 +80,7 @@ export default function ProfileResumeAttach({ withChrome }) {
             fontSize: '1.1rem',
           }}
         >
-          Primary Resume
+          Primary Cover Letter
         </h3>
 
         <div style={{ display: 'flex', gap: 8 }}>
@@ -116,26 +116,26 @@ export default function ProfileResumeAttach({ withChrome }) {
               fontSize: '0.875rem',
             }}
           >
-            New resume
+            New cover letter
           </button>
         </div>
       </div>
 
       {loading ? (
         <p style={{ margin: 0, color: '#718096', fontSize: '0.9375rem' }}>
-          Loading resumes…
+          Loading cover letters…
         </p>
-      ) : resumes.length === 0 ? (
+      ) : covers.length === 0 ? (
         <p style={{ margin: 0, color: '#718096', fontSize: '0.9375rem' }}>
-          No resumes saved yet. Use the Resume Builder to create one and set it
-          as your primary.
+          No cover letters saved yet. Use the Cover Letter Builder to create one
+          and set it as your primary.
         </p>
       ) : (
         <div style={{ display: 'grid', gap: 6 }}>
           <div style={{ fontSize: 13, color: '#607D8B' }}>
             Primary:{' '}
             <strong style={{ color: '#263238' }}>
-              {primary.name || `Resume ${primary.id}`}
+              {primary.name || `Cover ${primary.id}`}
             </strong>
           </div>
           {primary.updatedAt && (

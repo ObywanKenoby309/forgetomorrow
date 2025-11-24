@@ -1,7 +1,7 @@
-// pages/press.tsx  ←  THIS IS THE ONLY VERSION THAT WILL BUILD GREEN RIGHT NOW
-import Head from 'next/head';
-import Image from 'next/image';
-import Link from 'next/link';
+// pages/press.tsx
+import Head from 'next/head'
+import Image from 'next/image'
+import Link from 'next/link'
 
 export default function PressKit() {
   return (
@@ -19,21 +19,53 @@ export default function PressKit() {
           </p>
 
           <div className="grid md:grid-cols-3 gap-12">
-            <div className="bg-white rounded-xl p-8 shadow">
-              <Image src="/images/logo-color.png" width={350} height={350} alt="Color logo" />
-              <Link href="/images/logo-color.png" download className="block mt-4 text-orange-600 font-bold">
+            {/* Color logo */}
+            <div className="bg-white rounded-xl p-8 shadow flex flex-col items-center">
+              <Image
+                src="/press/Brand/logo-color.png"
+                width={350}
+                height={350}
+                alt="ForgeTomorrow color logo"
+              />
+              <Link
+                href="/press/Brand/logo-color.png"
+                download
+                className="block mt-4 text-orange-600 font-bold"
+              >
                 Download PNG
               </Link>
             </div>
-            <div className="bg-white rounded-xl p-8 shadow">
-              <Image src="/images/logo-white.png" width={350} height={350} alt="White logo" />
-              <Link href="/images/logo-white.png" download className="block mt-4 text-orange-600 font-bold">
+
+            {/* White logo on dark background */}
+            <div className="bg-gray-900 rounded-xl p-8 shadow flex flex-col items-center">
+              <Image
+                src="/press/Brand/logo-white.png"
+                width={350}
+                height={350}
+                alt="ForgeTomorrow white logo"
+              />
+              <Link
+                href="/press/Brand/logo-white.png"
+                download
+                className="block mt-4 text-orange-400 font-bold"
+              >
                 Download PNG
               </Link>
             </div>
-            <div className="bg-white rounded-xl p-8 shadow">
-              <Image src="/images/logo-black.png" width={350} height={350} alt="Black logo" />
-              <Link href="/images/logo-black.png" download className="block mt-4 text-orange-600 font-bold">
+
+            {/* Black logo on light background */}
+            <div className="bg-gray-50 rounded-xl p-8 shadow flex flex-col items-center">
+              <Image
+                src="/press/Brand/logo-black.png"
+                width={350}
+                height={350}
+                alt="ForgeTomorrow black logo"
+              />
+              <Link
+                href="/press/Brand/logo-black.png"
+                download
+                className="block mt-4 text-orange-600 font-bold"
+              >
                 Download PNG
               </Link>
             </div>
@@ -42,12 +74,15 @@ export default function PressKit() {
           <div className="mt-20 bg-white rounded-xl p-12 inline-block">
             <h2 className="text-4xl font-bold mb-4">Press Contact</h2>
             <p className="text-2xl">Eric • Founder</p>
-            <a href="mailto:eric@forgetomorrow.com" className="text-xl text-orange-600">
-              eric@forgetomorrow.com
+            <a
+              href="mailto:eric@forgetomorrow.com"
+              className="text-xl text-orange-600"
+            >
+              eric.james@forgetomorrow.com
             </a>
           </div>
         </div>
       </main>
     </>
-  );
+  )
 }

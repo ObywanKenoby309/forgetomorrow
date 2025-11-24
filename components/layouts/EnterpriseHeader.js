@@ -100,7 +100,7 @@ export default function EnterpriseHeader({
             </Link>
             {sectionLabel && <span className="text-sm text-gray-400 ml-3">{sectionLabel}</span>}
             {!suppressBadge && (
-              <span className={`ml-3 text-[10px] uppercase tracking-widest px-2 py-1 rounded border ${isEnterprise ? "bg-emerald-100 text-em33erald-700 border-emerald-200" : "bg-slate-100 text-slate-700 border-slate-300"}`}>
+              <span className={`ml-3 text-[10px] uppercase tracking-widest px-2 py-1 rounded border ${isEnterprise ? "bg-emerald-100 text-emerald-700 border-emerald-200" : "bg-slate-100 text-slate-700 border-slate-300"}`}>
                 {badgeText}
               </span>
             )}

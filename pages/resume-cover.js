@@ -5,6 +5,9 @@ import { useRouter } from 'next/router';
 import SeekerLayout from '@/components/layouts/SeekerLayout';
 import ResumeRightRail from '@/components/resume/ResumeRightRail';
 import { getClientSession } from '@/lib/auth-client';
+import ProfileResumeAttach from '@/components/profile/ProfileResumeAttach';
+import ProfileCoverAttach from '@/components/profile/ProfileCoverAttach';
+import SectionHint from '@/components/SectionHint';
 
 // TEMP: Mock data until you connect real DB
 const MOCK_USER = {
@@ -79,7 +82,9 @@ function TemplatePreviewModal({ open, onClose, tpl }) {
 }
 
 export default function ResumeCoverLanding() {
-  const router = useRouter();
+  const router = useRouter();  const chrome = String(router.query.chrome || '').toLowerCase();
+  const withChrome = (path) =>
+    chrome ? `${path}${path.includes('?') ? '&' : '?'}chrome=${chrome}` : path;
   const fileRef = useRef(null);
   const [previewOpen, setPreviewOpen] = useState(false);
   const [previewTpl, setPreviewTpl] = useState(null);
@@ -189,7 +194,27 @@ export default function ResumeCoverLanding() {
         {ATSWhyBanner}
         {TemplatesRow}
       </div>
+	  
+      {/* Primary resume + cover attach section */}
+      <div style={{ maxWidth: 1080, margin: '32px auto', padding: '0 16px' }}>
+        <div className="grid md:grid-cols-3 items-start gap-4">
+          <div className="md:col-span-2 space-y-4">
+            <ProfileResumeAttach withChrome={withChrome} />
+            <ProfileCoverAttach withChrome={withChrome} />
+          </div>
 
+          <SectionHint
+            title="Make it easy to say yes"
+            bullets={[
+              'Keep one primary resume linked to your profile.',
+              'Save up to 4 alternates for different roles.',
+              'Do the same with cover letters so recruiters instantly see your best fit.',
+              'Manage all your resumes and cover letters in the builder — you can change your primaries anytime from there.',
+            ]}
+          />
+        </div>
+      </div>
+	  
       <TemplatePreviewModal open={previewOpen} onClose={() => setPreviewOpen(false)} tpl={previewTpl} />
     </SeekerLayout>
   );

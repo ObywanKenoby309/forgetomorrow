@@ -1,3 +1,7 @@
+// ============================================================================
+//  PRISMA CONFIGURATION
+// ============================================================================
+
 generator client {
   provider = "prisma-client-js"
 }
@@ -7,7 +11,10 @@ datasource db {
   url      = "file:./dev.db"
 }
 
-// === ENUMS ===
+// ============================================================================
+//  ENUMS
+// ============================================================================
+
 enum UserRole {
   SEEKER
   COACH
@@ -23,7 +30,9 @@ enum Tier {
   ENTERPRISE
 }
 
-// === ALL MODELS BEFORE USER ===
+// ============================================================================
+//  JOBS, APPLICATIONS, INTERVIEWS & OFFERS
+// ============================================================================
 
 model Job {
   id                Int      @id @default(autoincrement())
@@ -40,40 +49,19 @@ model Job {
   applicationsCount Int      @default(0)
   createdAt         DateTime @default(now())
   updatedAt         DateTime @updatedAt
-  userId            String
-  user              User     @relation(fields: [userId], references: [id])
-  applications      Application[]
-  views             JobView[]
-  interviews        Interview[]
-  offers            Offer[]
-  pinnedBy          PinnedJob[]
-  covers            Cover[]
+
+  // Owner
+  userId String
+  user   User   @relation(fields: [userId], references: [id])
+
+  applications Application[]
+  views        JobView[]
+  interviews   Interview[]
+  offers       Offer[]
+  pinnedBy     PinnedJob[]
+  covers       Cover[]
 
   @@map("jobs")
-}
-
-model Resume {
-  id        Int      @id @default(autoincrement())
-  userId    String   @unique
-  content   String
-  isPublic  Boolean  @default(false)
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-  user      User     @relation(fields: [userId], references: [id])
-
-  @@map("resumes")
-}
-
-model Cover {
-  id        Int      @id @default(autoincrement())
-  userId    String
-  jobId     Int?
-  content   String
-  createdAt DateTime @default(now())
-  user      User @relation(fields: [userId], references: [id])
-  job       Job? @relation(fields: [jobId], references: [id])
-
-  @@map("covers")
 }
 
 model Application {
@@ -86,20 +74,21 @@ model Application {
   appliedAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  user      User @relation(fields: [userId], references: [id])
-  job       Job  @relation(fields: [jobId], references: [id])
+  user User @relation(fields: [userId], references: [id])
+  job  Job  @relation(fields: [jobId], references: [id])
 
   @@map("applications")
 }
 
 model JobView {
-  id        Int      @id @default(autoincrement())
-  userId    String
-  jobId     Int
-  viewedBy  String?
-  viewedAt  DateTime @default(now())
-  user      User @relation(fields: [userId], references: [id])
-  job       Job  @relation(fields: [jobId], references: [id])
+  id       Int      @id @default(autoincrement())
+  userId   String
+  jobId    Int
+  viewedBy String?
+  viewedAt DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id])
+  job  Job  @relation(fields: [jobId], references: [id])
 
   @@map("job_views")
 }
@@ -110,8 +99,9 @@ model Interview {
   jobId       Int
   scheduledAt DateTime
   status      String   @default("Scheduled")
-  user        User @relation(fields: [userId], references: [id])
-  job         Job  @relation(fields: [jobId], references: [id])
+
+  user User @relation(fields: [userId], references: [id])
+  job  Job  @relation(fields: [jobId], references: [id])
 
   @@map("interviews")
 }
@@ -123,21 +113,62 @@ model Offer {
   salary     String?
   accepted   Boolean?
   receivedAt DateTime @default(now())
-  user       User @relation(fields: [userId], references: [id])
-  job        Job  @relation(fields: [jobId], references: [id])
+
+  user User @relation(fields: [userId], references: [id])
+  job  Job  @relation(fields: [jobId], references: [id])
 
   @@map("offers")
 }
 
 model PinnedJob {
-  id        Int      @id @default(autoincrement())
-  userId    String
-  jobId     Int
-  pinnedAt  DateTime @default(now())
-  user      User @relation(fields: [userId], references: [id])
-  job       Job  @relation(fields: [jobId], references: [id])
+  id       Int      @id @default(autoincrement())
+  userId   String
+  jobId    Int
+  pinnedAt DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id])
+  job  Job  @relation(fields: [jobId], references: [id])
 
   @@map("pinned_jobs")
+}
+
+// ============================================================================
+//  RESUMES, COVERS, AND SCAN LOGS
+// ============================================================================
+
+model Resume {
+  id        Int      @id @default(autoincrement())
+  userId    String
+  name      String // e.g. "Primary CS Resume"
+  content   String // JSON/string from builder
+  isPublic  Boolean  @default(false) // future: shareable public link
+  isPrimary Boolean  @default(false) // only one per user should be true
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  user User @relation(fields: [userId], references: [id])
+
+  @@index([userId])
+  @@map("resumes")
+}
+
+model Cover {
+  id        Int      @id @default(autoincrement())
+  userId    String
+  jobId     Int?
+  name      String // e.g. "General Cover", "CS Lead Cover"
+  content   String
+  isPublic  Boolean  @default(false) // for future public sharing if needed
+  isPrimary Boolean  @default(false) // only one per user should be true
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  user User @relation(fields: [userId], references: [id])
+  job  Job? @relation(fields: [jobId], references: [id])
+
+  @@index([userId])
+  @@index([jobId])
+  @@map("covers")
 }
 
 model ScanLog {
@@ -146,11 +177,16 @@ model ScanLog {
   date      String
   score     Int
   createdAt DateTime @default(now())
-  user      User @relation(fields: [userId], references: [id])
+
+  user User @relation(fields: [userId], references: [id])
 
   @@unique([userId, date])
   @@map("scan_logs")
 }
+
+// ============================================================================
+//  VERIFICATION / AUTH
+// ============================================================================
 
 model VerificationToken {
   id           Int      @id @default(autoincrement())
@@ -167,18 +203,20 @@ model VerificationToken {
   @@map("verification_tokens")
 }
 
-// ——— CAREER FORGE ———
+// ============================================================================
+//  CAREER TOOLS & HISTORY
+// ============================================================================
 
 model CareerRoadmap {
-  id          String    @id @default(cuid())
+  id          String   @id @default(cuid())
   userId      String
-  user        User      @relation("UserCareerRoadmaps", fields: [userId], references: [id], onDelete: Cascade)
-  generatedAt DateTime  @default(now())
+  user        User     @relation("UserCareerRoadmaps", fields: [userId], references: [id], onDelete: Cascade)
+  generatedAt DateTime @default(now())
   data        Json
   pdfUrl      String?
-  isPro       Boolean   @default(false)
-  createdAt   DateTime  @default(now())
-  updatedAt   DateTime  @updatedAt
+  isPro       Boolean  @default(false)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
 
   @@index([userId])
   @@index([createdAt])
@@ -209,35 +247,69 @@ model ProfileSnapshot {
   @@index([userId])
 }
 
-// ———————————————————————
-// USER MODEL — FINAL
-// ———————————————————————
+// ============================================================================
+//  CONSENT LOGGING
+// ============================================================================
+
+model UserConsent {
+  id          Int      @id @default(autoincrement())
+  userId      String
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  consentType String   // e.g. "cookies_analytics", "marketing_emails"
+  region      String?  // e.g. "EU", "US-CA", "BR"
+  given       Boolean  @default(true)
+  timestamp   DateTime @default(now())
+
+  @@index([userId])
+  @@index([userId, consentType])
+  @@map("user_consents")
+}
+
+// ============================================================================
+//  USER — FULL ACCOUNT + PROFILE
+// ============================================================================
 
 model User {
-  id                   String   @id @default(cuid())
-  email                String   @unique
-  emailVerified        Boolean  @default(false)
-  emailVerificationToken String? @unique
+  // ── Identity & Auth ────────────────────────────────────────────────────────
+  id                         String    @id @default(cuid())
+  email                      String    @unique
+  emailVerified              Boolean   @default(false)
+  emailVerificationToken     String?   @unique
   emailVerificationExpiresAt DateTime?
-  passwordHash         String?
-  firstName            String?
-  lastName             String?
-  name                 String?
-  image                String?
+  passwordHash               String?
+  firstName                  String?
+  lastName                   String?
+  name                       String?
+  image                      String?
 
-  // ——— PUBLIC PROFILE FIELDS ———
-  headline             String?
-  pronouns             String?
-  location             String?
-  status               String?
-  avatarUrl            String?
-  coverUrl             String?
+  // ── Public Profile Header ─────────────────────────────────────────────────
+  headline  String?
+  pronouns  String?
+  location  String?
+  status    String?
+  avatarUrl String?
+  coverUrl  String?
 
-  // ——— PROFILE SLUGS ———
-  slug                 String?  @unique
-  slugChangeCount      Int      @default(0)
-  slugLastChangedAt    DateTime?
+  // Banner / Display
+  bannerMode      String?  // "cover" | "fit"
+  bannerHeight    Int?     // 80–220
+  bannerFocalY    Int?     // 0–100
+  isProfilePublic Boolean  @default(false)
+  wallpaperUrl    String?
 
+  // ── Public URL / Slug ─────────────────────────────────────────────────────
+  slug              String?   @unique
+  slugChangeCount   Int       @default(0)
+  slugLastChangedAt DateTime?
+
+  // ── Main Profile Sections ─────────────────────────────────────────────────
+  aboutMe         String?
+  workPreferences Json? // { workType, locations[], startDate, relocate, workStatus }
+  skillsJson      Json? // ["Leadership", "Azure", "React"]
+  languagesJson   Json? // [{ name: "English", level: "Native" }]
+  hobbiesJson     Json? // ["Hiking", "Mentorship"]
+
+  // ── Account Role & Plan ───────────────────────────────────────────────────
   role                 UserRole @default(SEEKER)
   plan                 Tier     @default(FREE)
   newsletter           Boolean  @default(false)
@@ -246,22 +318,30 @@ model User {
   stripeCustomerId     String?  @unique
   stripeSubscriptionId String?  @unique
 
-  applications         Application[]
-  views                JobView[]
-  interviews           Interview[]
-  offers               Offer[]
-  pinnedJobs           PinnedJob[]
-  resume               Resume?
-  covers               Cover[]
-  jobs                 Job[]
-  scanLogs             ScanLog[]
+  // ── Relations ─────────────────────────────────────────────────────────────
+  applications Application[]
+  views        JobView[]
+  interviews   Interview[]
+  offers       Offer[]
+  pinnedJobs   PinnedJob[]
+  resumes      Resume[]
+  covers       Cover[]
+  jobs         Job[]
+  scanLogs     ScanLog[]
 
-  createdAt            DateTime @default(now())
-  updatedAt            DateTime @updatedAt
+  careerRoadmaps   CareerRoadmap[]   @relation("UserCareerRoadmaps")
+  negotiations     Negotiation[]     @relation("UserNegotiations")
+  profileSnapshots ProfileSnapshot[] @relation("UserProfileSnapshots")
+  consents         UserConsent[]
 
-  careerRoadmaps       CareerRoadmap[] @relation("UserCareerRoadmaps")
-  negotiations         Negotiation[]   @relation("UserNegotiations")
-  profileSnapshots     ProfileSnapshot[] @relation("UserProfileSnapshots")
+  // ── Corporate appearance overrides (ForgeTomorrow staff only) ─────────────
+  corporateBannerKey    String?  // e.g. "CEO", "CFO", "STAFF_GENERAL"
+  corporateBannerLocked Boolean  @default(false)
+
+  // ── Deletion & Timestamps ─────────────────────────────────────────────────
+  deletedAt DateTime?  // set when user requests deletion
+  createdAt DateTime   @default(now())
+  updatedAt DateTime   @updatedAt
 
   @@map("users")
 }
