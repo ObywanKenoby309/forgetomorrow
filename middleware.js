@@ -1,16 +1,13 @@
 // middleware.js
-// Updated by Nova & Eric — November 2025
-// The day we finally beat the lock and made the cron immortal
-
 import { NextResponse } from 'next/server'
 import { Ratelimit } from '@upstash/ratelimit'
 import { Redis } from '@upstash/redis'
 
 // ──────────────────────────────────────────────────────────────
 // ENV TOGGLES
-// SITE_LOCK = "1" → FULL LOCK (all internal pages require auth)
-// SITE_LOCK = "0" or unset → public (except /jobs always requiring auth)
-// ALLOWED_HOSTS = "example.com,preview.vercel.app"
+// SITE_LOCK = "1"  → lock the site (only PUBLIC_PATHS; others → /login)
+// SITE_LOCK = "0" or unset → fully public (no lock)
+// ALLOWED_HOSTS = "example.com,preview.vercel.app" (optional; bypass lock)
 // ──────────────────────────────────────────────────────────────
 const SITE_LOCK = process.env.SITE_LOCK === '1'
 const ALLOWED_HOSTS = (process.env.ALLOWED_HOSTS || '')
@@ -19,15 +16,27 @@ const ALLOWED_HOSTS = (process.env.ALLOWED_HOSTS || '')
   .filter(Boolean)
 
 // Public pages allowed when locked
+// Everything else is considered PRIVATE by default when SITE_LOCK=1
 const PUBLIC_PATHS = new Set([
-  '/',
+  '/',                 // landing
   '/waiting-list',
   '/about',
-  '/pricing',
+  '/careers',
+  '/press',
+  '/blog',
   '/features',
+  '/pricing',
+  '/help',
+  '/support',          // keeping this too in case /support exists
+  '/privacy',
+  '/terms',
+  '/security',
+  '/accessibility',
+  '/tracking-policy',
   '/login',
+  '/auth/signin',      // allow the sign-in page itself
   '/contact',
-  '/feedback', // nested allowed: /feedback/*
+  '/feedback',         // plus nested like /feedback/abc
 ])
 
 // Static files always allowed
@@ -40,25 +49,42 @@ const STATIC_ALLOW = [
   /\.(png|jpe?g|gif|svg|webp|ico|css|js|map|txt|xml|woff2?|ttf|otf)$/i,
 ]
 
-// Redis limiter
+// ──────────────────────────────────────────────────────────────
+// API RATE LIMITER (Upstash Redis)
+// Requires UPSTASH_REDIS_REST_URL + UPSTASH_REDIS_REST_TOKEN
+// ──────────────────────────────────────────────────────────────
 const redis = Redis.fromEnv()
+
 const ratelimit = new Ratelimit({
   redis,
-  limiter: Ratelimit.slidingWindow(6, '20 m'),
+  limiter: Ratelimit.slidingWindow(6, '20 m'), // 6 calls per 20 minutes per IP
   prefix: 'ft:rl:api',
 })
 
+// Keywords that trigger extra protection on API routes
 const PROTECTED_API_PATTERN = /ai|resume|roadmap|cover|generate|ats|pay/i
 
 export async function middleware(req) {
   const url = new URL(req.url)
   const { pathname } = url
   const hostname = req.nextUrl.hostname || ''
+
+  // normalize path: remove trailing slash, but keep root as '/'
   const normalized = pathname.replace(/\/$/, '') || '/'
-  const hasSession = req.cookies.get?.('ft_session')?.value
+
+  // Session cookies from your auth flows
+  const ftSession = req.cookies.get?.('ft_session')?.value
+
+  // NextAuth session cookies (JWT strategy)
+  const nextAuthSession =
+    req.cookies.get?.('next-auth.session-token')?.value ||
+    req.cookies.get?.('__Secure-next-auth.session-token')?.value
+
+  // Treat EITHER as a valid session
+  const hasSession = Boolean(ftSession || nextAuthSession)
 
   // ──────────────────────────────────────────────────────────
-  // 0) STATIC - always allowed
+  // 0) Always allow static assets
   // ──────────────────────────────────────────────────────────
   if (STATIC_ALLOW.some((re) => re.test(pathname))) {
     const res = NextResponse.next()
@@ -67,15 +93,20 @@ export async function middleware(req) {
   }
 
   // ──────────────────────────────────────────────────────────
-  // NOVA & ERIC'S UNBREAKABLE BACKDOOR — CRON ENDPOINT BYPASS
-  // This runs before ANY auth check. Forever.
-  // ──────────────────────────────────────────────────────────
-  if (pathname.startsWith('/api/cron/')) {
-    return NextResponse.next()
-  }
+  // 1) Local/dev bypass (you see everything on localhost)
+  // (currently disabled; you can re-enable if needed)
+//  if (
+//    process.env.NODE_ENV === 'development' ||
+//    hostname === 'localhost' ||
+//    hostname === '127.0.0.1'
+//  ) {
+//    const res = NextResponse.next()
+//    res.headers.set('x-site-lock', 'dev-bypass')
+//    return res
+//  }
 
   // ──────────────────────────────────────────────────────────
-  // 1) Allowed host bypass
+  // 2) Explicitly allowed hosts (preview domains, etc.)
   // ──────────────────────────────────────────────────────────
   if (ALLOWED_HOSTS.length > 0) {
     const allowed = ALLOWED_HOSTS.some(
@@ -89,11 +120,12 @@ export async function middleware(req) {
   }
 
   // ──────────────────────────────────────────────────────────
-  // 2) JOBS: always require login
+  // 3) JOBS: always require a session for /jobs* (even if SITE_LOCK=0)
   // ──────────────────────────────────────────────────────────
   if (normalized === '/jobs' || normalized.startsWith('/jobs/')) {
     if (!hasSession) {
-      return NextResponse.redirect(new URL('/login', req.url))
+      const loginUrl = new URL('/login', req.url)
+      return NextResponse.redirect(loginUrl)
     }
     const res = NextResponse.next()
     res.headers.set('x-site-lock', 'jobs-auth-required')
@@ -101,30 +133,38 @@ export async function middleware(req) {
   }
 
   // ──────────────────────────────────────────────────────────
-  // 3) API rate limiting on sensitive API routes
+  // 4) API RATE LIMITING (Upstash) for sensitive API routes
   // ──────────────────────────────────────────────────────────
   if (pathname.startsWith('/api') && PROTECTED_API_PATTERN.test(pathname)) {
+    console.log('🛡️ Rate limiter branch hit for', pathname)
+
     const ip =
       req.ip ||
       req.headers.get('x-forwarded-for')?.split(',')[0]?.trim() ||
       'unknown'
+
     try {
       const { success, reset } = await ratelimit.limit(ip)
+
       if (!success) {
         const now = Math.floor(Date.now() / 1000)
         const retryAfterSeconds = Math.max(0, reset - now) || 60
+
         return new Response('Rate limit exceeded. Try again later.', {
           status: 429,
-          headers: { 'Retry-After': retryAfterSeconds.toString() },
+          headers: {
+            'Retry-After': retryAfterSeconds.toString(),
+          },
         })
       }
     } catch (err) {
-      console.error('Rate limit error', err)
+      console.error('Rate limit error (Upstash)', err)
+      // Fail-open on limiter error so we don't self-DoS
     }
   }
 
   // ──────────────────────────────────────────────────────────
-  // 4) If the user is logged in → always allowed
+  // 5) If ANY valid session cookie is present, bypass SITE_LOCK
   // ──────────────────────────────────────────────────────────
   if (hasSession) {
     const res = NextResponse.next()
@@ -133,7 +173,7 @@ export async function middleware(req) {
   }
 
   // ──────────────────────────────────────────────────────────
-  // 5) SITE NOT LOCKED → fully public except jobs
+  // 6) If NOT locked → fully public (except /jobs above)
   // ──────────────────────────────────────────────────────────
   if (!SITE_LOCK) {
     const res = NextResponse.next()
@@ -142,7 +182,7 @@ export async function middleware(req) {
   }
 
   // ──────────────────────────────────────────────────────────
-  // 6) SITE LOCKED → only PUBLIC_PATHS allowed
+  // 7) LOCKED: allow only explicit PUBLIC_PATHS; rest → /login
   // ──────────────────────────────────────────────────────────
   if (PUBLIC_PATHS.has(normalized)) {
     const res = NextResponse.next()
@@ -150,7 +190,7 @@ export async function middleware(req) {
     return res
   }
 
-  // allow nested under public prefixes like /feedback/*
+  // allow nested under public prefixes (e.g., /feedback/abc, /blog/post-slug)
   if (
     [...PUBLIC_PATHS].some(
       (p) => p !== '/' && normalized.startsWith(p + '/')
@@ -161,14 +201,14 @@ export async function middleware(req) {
     return res
   }
 
-  // ──────────────────────────────────────────────────────────
-  // 7) ANY locked internal route with no session → LOGIN
-  // ──────────────────────────────────────────────────────────
-  const res = NextResponse.redirect(new URL('/login', req.url))
-  res.headers.set('x-site-lock', 'on-locked-login')
+  // No session + locked + not public → send to /login
+  const loginUrl = new URL('/login', req.url)
+  const res = NextResponse.redirect(loginUrl)
+  res.headers.set('x-site-lock', 'on-locked')
   return res
 }
 
 export const config = {
+  // Apply to everything; logic above decides what happens
   matcher: '/:path*',
 }
