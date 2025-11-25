@@ -21,7 +21,10 @@ export default NextAuth({
 
         if (!user?.passwordHash) return null;
 
-        const isValid = await bcrypt.compare(credentials.password, user.passwordHash);
+        const isValid = await bcrypt.compare(
+          credentials.password,
+          user.passwordHash
+        );
         if (!isValid) return null;
 
         return {
@@ -44,26 +47,28 @@ export default NextAuth({
     maxAge: 30 * 24 * 60 * 60,
   },
 
-  callbacks: {
-    jwt: async ({ token, user }) => {
-      if (user) {
-        token.role = user.role;
-        token.plan = user.plan;
-        (token as any).stripeCustomerId = (user as any).stripeCustomerId ?? null; // FIX
-      }
-      return token;
-    },
-
-    session: async ({ session, token }) => {
-      if (session.user) {
-        session.user.id = token.sub!;
-        (session.user as any).role = token.role as string;
-        (session.user as any).plan = token.plan as string;
-        (session.user as any).stripeCustomerId = (token as any).stripeCustomerId as string | null; // FIX
-      }
-      return session;
-    },
+callbacks: {
+  jwt: async ({ token, user }) => {
+    if (user) {
+      token.role = user.role;
+      token.plan = user.plan;
+      (token as any).stripeCustomerId =
+        (user as any).stripeCustomerId ?? null; // FIX
+    }
+    return token;
   },
+
+  session: async ({ session, token }) => {
+    if (session.user) {
+      session.user.id = token.sub!;
+      (session.user as any).role = token.role as string;
+      (session.user as any).plan = token.plan as string;
+      (session.user as any).stripeCustomerId = (token as any)
+        .stripeCustomerId as string | null; // FIX
+    }
+    return session;
+  },
+},
 
   pages: {
     signIn: "/auth/signin",
