@@ -61,8 +61,19 @@ const ratelimit = new Ratelimit({
   prefix: 'ft:rl:api',
 })
 
-// Keywords that trigger extra protection on API routes
-const PROTECTED_API_PATTERN = /ai|resume|roadmap|cover|generate|ats|pay/i
+// Specific API paths that should be rate-limited (heavy / AI / payment)
+const PROTECTED_API_PREFIXES = [
+  '/api/ai',           // e.g. /api/ai/helpdesk, /api/ai/resume-tailor
+  '/api/resume',       // e.g. /api/resume/ats-score
+  '/api/roadmap',      // e.g. /api/roadmap/generate
+  '/api/cover-letter',
+  '/api/ats',
+  '/api/pay',          // payment / billing related APIs
+]
+
+function isProtectedApiPath(pathname) {
+  return PROTECTED_API_PREFIXES.some((prefix) => pathname.startsWith(prefix))
+}
 
 export async function middleware(req) {
   const url = new URL(req.url)
@@ -95,15 +106,15 @@ export async function middleware(req) {
   // ──────────────────────────────────────────────────────────
   // 1) Local/dev bypass (you see everything on localhost)
   // (currently disabled; you can re-enable if needed)
-//  if (
-//    process.env.NODE_ENV === 'development' ||
-//    hostname === 'localhost' ||
-//    hostname === '127.0.0.1'
-//  ) {
-//    const res = NextResponse.next()
-//    res.headers.set('x-site-lock', 'dev-bypass')
-//    return res
-//  }
+  // if (
+  //   process.env.NODE_ENV === 'development' ||
+  //   hostname === 'localhost' ||
+  //   hostname === '127.0.0.1'
+  // ) {
+  //   const res = NextResponse.next()
+  //   res.headers.set('x-site-lock', 'dev-bypass')
+  //   return res
+  // }
 
   // ──────────────────────────────────────────────────────────
   // 2) Explicitly allowed hosts (preview domains, etc.)
@@ -135,7 +146,7 @@ export async function middleware(req) {
   // ──────────────────────────────────────────────────────────
   // 4) API RATE LIMITING (Upstash) for sensitive API routes
   // ──────────────────────────────────────────────────────────
-  if (pathname.startsWith('/api') && PROTECTED_API_PATTERN.test(pathname)) {
+  if (isProtectedApiPath(pathname)) {
     console.log('🛡️ Rate limiter branch hit for', pathname)
 
     const ip =
