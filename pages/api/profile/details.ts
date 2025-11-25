@@ -74,7 +74,11 @@ export default async function handler(
           }
         : null;
 
-      return res.status(200).json({ details });
+      // Backward-compatible: return both `details` and flattened fields
+      return res.status(200).json({
+        details,
+        ...(details || {}),
+      });
     } catch (err) {
       console.error("[profile/details] GET error", err);
       return res.status(500).json({ error: "Failed to load profile details" });
@@ -136,7 +140,11 @@ export default async function handler(
         hobbiesJson: updated.hobbiesJson,
       };
 
-      return res.status(200).json({ details });
+      // Same backward-compatible shape on update
+      return res.status(200).json({
+        details,
+        ...details,
+      });
     } catch (err) {
       console.error("[profile/details] PATCH error", err);
       return res
