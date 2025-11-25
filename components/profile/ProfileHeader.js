@@ -1,8 +1,10 @@
 'use client';
 
 import React, { useEffect, useState } from 'react';
-import ProfileBannerSelector from '@/components/profile/ProfileBannerSelector';
-import ProfileAvatarSelector from '@/components/profile/ProfileAvatarSelector';
+import ProfileBannerSelector from './ProfileBannerSelector';
+import ProfileAvatarSelector from './ProfileAvatarSelector';
+import { profileBanners } from '@/lib/profileBanners';
+import { profileWallpapers } from '@/lib/profileWallpapers';
 
 export default function ProfileHeader() {
   const [name, setName] = useState('');
@@ -15,6 +17,7 @@ export default function ProfileHeader() {
   const [status, setStatus] = useState('');
   const [avatarUrl, setAvatarUrl] = useState('/demo-avatar.png');
   const [coverUrl, setCoverUrl] = useState('');
+  const [wallpaperUrl, setWallpaperUrl] = useState('');
 
   const [bannerH, setBannerH] = useState(120);
   const [bannerMode, setBannerMode] = useState('cover'); // "cover" | "fit"
@@ -27,6 +30,10 @@ export default function ProfileHeader() {
   const [saving, setSaving] = useState(false);
   const [saveError, setSaveError] = useState(null);
 
+  // NEW: expand/collapse controls for “More options…”
+  const [bannerMoreOpen, setBannerMoreOpen] = useState(false);
+  const [wallpaperMoreOpen, setWallpaperMoreOpen] = useState(false);
+
   // Load everything from the server (single source of truth)
   useEffect(() => {
     let cancel = false;
@@ -37,7 +44,7 @@ export default function ProfileHeader() {
         if (!res.ok) throw new Error('Failed to load profile');
 
         const data = await res.json();
-        const user = data.user;
+        const user = data.user || data; // support both {user: {...}} and flat payloads
         if (!user || cancel) return;
 
         const fullName =
@@ -55,6 +62,7 @@ export default function ProfileHeader() {
 
         setAvatarUrl(user.avatarUrl || '/demo-avatar.png');
         setCoverUrl(user.coverUrl || '');
+        setWallpaperUrl(user.wallpaperUrl || '');
 
         const h = user.bannerHeight != null ? user.bannerHeight : 120;
         setBannerH(clamp(h, 80, 220));
@@ -119,6 +127,7 @@ export default function ProfileHeader() {
           status,
           avatarUrl,
           coverUrl,
+          wallpaperUrl,
           bannerMode,
           bannerHeight: bannerH,
           bannerFocalY: focalY,
@@ -140,10 +149,12 @@ export default function ProfileHeader() {
         } catch (_) {}
       }
 
+      const user = data.user || data;
+
       // Update displayed slug to match what the server accepted
-      if (data.slug) {
-        setSlug(data.slug);
-        setSlugValue(data.slug);
+      if (user.slug) {
+        setSlug(user.slug);
+        setSlugValue(user.slug);
       } else {
         setSlug(cleanedSlug);
         setSlugValue(cleanedSlug);
@@ -351,23 +362,332 @@ export default function ProfileHeader() {
               placeholder="Open to opportunities, building something new, etc."
             />
 
-            {/* Avatar URL + selector */}
-            <LabeledInput
-              label="Avatar URL"
-              value={avatarUrl}
-              onChange={setAvatarUrl}
-              placeholder="https://… (optional)"
-            />
+            {/* Avatar selector (no visible URL) */}
             <ProfileAvatarSelector value={avatarUrl} onChange={setAvatarUrl} />
 
-            {/* Cover + banner selector */}
-            <LabeledInput
-              label="Cover URL (optional)"
-              value={coverUrl}
-              onChange={setCoverUrl}
-              placeholder="https://…"
-            />
-            <ProfileBannerSelector value={coverUrl} onChange={setCoverUrl} />
+            {/* BANNER SELECTION (from /public/profile-banners) */}
+            <div style={{ display: 'grid', gap: 6 }}>
+              <span style={{ fontSize: 13, fontWeight: 600 }}>Profile banner</span>
+              <div
+                style={{
+                  display: 'flex',
+                  flexWrap: 'wrap',
+                  gap: 8,
+                  alignItems: 'center',
+                }}
+              >
+                {/* No banner */}
+                <button
+                  type="button"
+                  onClick={() => setCoverUrl('')}
+                  style={{
+                    padding: '6px 10px',
+                    borderRadius: 999,
+                    border: coverUrl ? '1px solid #CFD8DC' : '2px solid #FF7043',
+                    background: coverUrl ? 'white' : '#FFF3E0',
+                    color: '#455A64',
+                    fontSize: 12,
+                    fontWeight: 600,
+                    cursor: 'pointer',
+                  }}
+                >
+                  No banner
+                </button>
+
+                {/* Quick picks (first 3 banners) */}
+                {profileBanners.slice(0, 3).map((b) => {
+                  const active = coverUrl === b.src;
+                  return (
+                    <button
+                      key={b.key}
+                      type="button"
+                      onClick={() => setCoverUrl(b.src)}
+                      style={{
+                        borderRadius: 999,
+                        padding: 2,
+                        border: active ? '2px solid #FF7043' : '1px solid #CFD8DC',
+                        background: 'white',
+                        cursor: 'pointer',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                      }}
+                    >
+                      <img
+                        src={b.src}
+                        alt={b.name}
+                        style={{
+                          width: 72,
+                          height: 36,
+                          borderRadius: 999,
+                          objectFit: 'cover',
+                        }}
+                      />
+                    </button>
+                  );
+                })}
+
+                {/* Toggle all options */}
+                <button
+                  type="button"
+                  onClick={() => setBannerMoreOpen((v) => !v)}
+                  style={{
+                    padding: '6px 10px',
+                    borderRadius: 999,
+                    border: '1px solid #CFD8DC',
+                    background: 'white',
+                    color: '#455A64',
+                    fontSize: 12,
+                    fontWeight: 600,
+                    cursor: 'pointer',
+                  }}
+                >
+                  {bannerMoreOpen ? 'Hide options' : 'More options…'}
+                </button>
+              </div>
+
+              {bannerMoreOpen && (
+                <div
+                  style={{
+                    marginTop: 8,
+                    padding: 8,
+                    borderRadius: 8,
+                    border: '1px solid #ECEFF1',
+                    background: '#FAFAFA',
+                    display: 'grid',
+                    gap: 10,
+                  }}
+                >
+                  <div style={{ fontSize: 12, color: '#607D8B' }}>
+                    All banner options
+                  </div>
+                  <div
+                    style={{
+                      display: 'grid',
+                      gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr))',
+                      gap: 10,
+                    }}
+                  >
+                    {profileBanners.map((b) => {
+                      const active = coverUrl === b.src;
+                      return (
+                        <button
+                          key={b.key}
+                          type="button"
+                          onClick={() => setCoverUrl(b.src)}
+                          style={{
+                            borderRadius: 10,
+                            padding: 6,
+                            border: active ? '2px solid #FF7043' : '1px solid #e0e0e0',
+                            background: active ? '#FFF3E0' : 'white',
+                            cursor: 'pointer',
+                            textAlign: 'left',
+                            display: 'grid',
+                            gap: 6,
+                          }}
+                        >
+                          <div
+                            style={{
+                              borderRadius: 8,
+                              overflow: 'hidden',
+                              border: '1px solid #ddd',
+                              height: 64,
+                              background: '#eceff1',
+                            }}
+                          >
+                            <img
+                              src={b.src}
+                              alt={b.name}
+                              style={{
+                                width: '100%',
+                                height: '100%',
+                                objectFit: 'cover',
+                                display: 'block',
+                              }}
+                            />
+                          </div>
+                          <div
+                            style={{
+                              fontSize: 12,
+                              fontWeight: 700,
+                              color: '#263238',
+                            }}
+                          >
+                            {b.name}
+                          </div>
+                          <div style={{ fontSize: 11, color: '#78909C' }}>
+                            {b.desc}
+                          </div>
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+              )}
+            </div>
+
+            {/* WALLPAPER SELECTION (from /public/profile-wallpapers) */}
+            <div style={{ display: 'grid', gap: 6 }}>
+              <span style={{ fontSize: 13, fontWeight: 600 }}>
+                Page wallpaper (optional)
+              </span>
+              <div
+                style={{
+                  display: 'flex',
+                  flexWrap: 'wrap',
+                  gap: 8,
+                  alignItems: 'center',
+                }}
+              >
+                {/* No wallpaper */}
+                <button
+                  type="button"
+                  onClick={() => setWallpaperUrl('')}
+                  style={{
+                    padding: '6px 10px',
+                    borderRadius: 999,
+                    border: wallpaperUrl ? '1px solid #CFD8DC' : '2px solid #FF7043',
+                    background: wallpaperUrl ? 'white' : '#FFF3E0',
+                    color: '#455A64',
+                    fontSize: 12,
+                    fontWeight: 600,
+                    cursor: 'pointer',
+                  }}
+                >
+                  No wallpaper
+                </button>
+
+                {/* Quick picks (first 3 wallpapers) */}
+                {profileWallpapers.slice(0, 3).map((w) => {
+                  const active = wallpaperUrl === w.src;
+                  return (
+                    <button
+                      key={w.key}
+                      type="button"
+                      onClick={() => setWallpaperUrl(w.src)}
+                      style={{
+                        borderRadius: 999,
+                        padding: 2,
+                        border: active ? '2px solid #FF7043' : '1px solid #CFD8DC',
+                        background: 'white',
+                        cursor: 'pointer',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                      }}
+                    >
+                      <img
+                        src={w.src}
+                        alt={w.name}
+                        style={{
+                          width: 72,
+                          height: 36,
+                          borderRadius: 999,
+                          objectFit: 'cover',
+                        }}
+                      />
+                    </button>
+                  );
+                })}
+
+                {/* Toggle all wallpaper options */}
+                <button
+                  type="button"
+                  onClick={() => setWallpaperMoreOpen((v) => !v)}
+                  style={{
+                    padding: '6px 10px',
+                    borderRadius: 999,
+                    border: '1px solid #CFD8DC',
+                    background: 'white',
+                    color: '#455A64',
+                    fontSize: 12,
+                    fontWeight: 600,
+                    cursor: 'pointer',
+                  }}
+                >
+                  {wallpaperMoreOpen ? 'Hide options' : 'More options…'}
+                </button>
+              </div>
+
+              {wallpaperMoreOpen && (
+                <div
+                  style={{
+                    marginTop: 8,
+                    padding: 8,
+                    borderRadius: 8,
+                    border: '1px solid #ECEFF1',
+                    background: '#FAFAFA',
+                    display: 'grid',
+                    gap: 10,
+                  }}
+                >
+                  <div style={{ fontSize: 12, color: '#607D8B' }}>
+                    All wallpaper options
+                  </div>
+                  <div
+                    style={{
+                      display: 'grid',
+                      gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr))',
+                      gap: 10,
+                    }}
+                  >
+                    {profileWallpapers.map((w) => {
+                      const active = wallpaperUrl === w.src;
+                      return (
+                        <button
+                          key={w.key}
+                          type="button"
+                          onClick={() => setWallpaperUrl(w.src)}
+                          style={{
+                            borderRadius: 10,
+                            padding: 6,
+                            border: active ? '2px solid #FF7043' : '1px solid #e0e0e0',
+                            background: active ? '#FFF3E0' : 'white',
+                            cursor: 'pointer',
+                            textAlign: 'left',
+                            display: 'grid',
+                            gap: 6,
+                          }}
+                        >
+                          <div
+                            style={{
+                              borderRadius: 8,
+                              overflow: 'hidden',
+                              border: '1px solid #ddd',
+                              height: 64,
+                              background: '#eceff1',
+                            }}
+                          >
+                            <img
+                              src={w.src}
+                              alt={w.name}
+                              style={{
+                                width: '100%',
+                                height: '100%',
+                                objectFit: 'cover',
+                                display: 'block',
+                              }}
+                            />
+                          </div>
+                          <div
+                            style={{
+                              fontSize: 12,
+                              fontWeight: 700,
+                              color: '#263238',
+                            }}
+                          >
+                            {w.name}
+                          </div>
+                          <div style={{ fontSize: 11, color: '#78909C' }}>
+                            {w.desc}
+                          </div>
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+              )}
+            </div>
 
             {/* Mode + height controls */}
             <div style={{ display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap' }}>
@@ -462,7 +782,7 @@ export default function ProfileHeader() {
             </div>
 
             <small style={{ color: '#90A4AE' }}>
-              Tip: Click your profile URL to copy it. Your avatar, banner, and profile text are now saved to your account and will load on any device.
+              Tip: Click your profile URL to copy it. Your avatar, banner, wallpaper, and profile text are now saved to your account and will load on any device.
             </small>
           </div>
         </Dialog>

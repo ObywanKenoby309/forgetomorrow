@@ -2,6 +2,7 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import Head from 'next/head';
 import { useRouter } from 'next/router';
+import { useUserWallpaper } from '@/hooks/useUserWallpaper';
 
 // Seeker / Coach chrome
 import SeekerSidebar from '@/components/SeekerSidebar';
@@ -49,16 +50,49 @@ export default function SeekerLayout({
   const { HeaderComp, SidebarComp, sidebarProps } = useMemo(() => {
     switch (chromeMode) {
       case 'coach':
-        return { HeaderComp: CoachingHeader, SidebarComp: CoachingSidebar, sidebarProps: { active: activeNav, counts } };
+        return {
+          HeaderComp: CoachingHeader,
+          SidebarComp: CoachingSidebar,
+          sidebarProps: { active: activeNav, counts },
+        };
       case 'recruiter-smb':
-        return { HeaderComp: RecruiterHeader, SidebarComp: RecruiterSidebar, sidebarProps: { variant: 'smb' } };
+        return {
+          HeaderComp: RecruiterHeader,
+          SidebarComp: RecruiterSidebar,
+          sidebarProps: { variant: 'smb' },
+        };
       case 'recruiter-ent':
-        return { HeaderComp: RecruiterHeader, SidebarComp: RecruiterSidebar, sidebarProps: { variant: 'enterprise' } };
+        return {
+          HeaderComp: RecruiterHeader,
+          SidebarComp: RecruiterSidebar,
+          sidebarProps: { variant: 'enterprise' },
+        };
       case 'seeker':
       default:
-        return { HeaderComp: SeekerHeader, SidebarComp: SeekerSidebar, sidebarProps: { active: activeNav, counts } };
+        return {
+          HeaderComp: SeekerHeader,
+          SidebarComp: SeekerSidebar,
+          sidebarProps: { active: activeNav, counts },
+        };
     }
   }, [chromeMode, activeNav, counts]);
+
+  // --- Wallpaper background (applies to seeker / coach / recruiter) ---
+  const { wallpaperUrl } = useUserWallpaper();
+
+  const backgroundStyle = wallpaperUrl
+    ? {
+        minHeight: '100vh',
+        backgroundImage: `url(${wallpaperUrl})`,
+        backgroundSize: 'cover',
+        backgroundPosition: 'center top',
+        backgroundRepeat: 'no-repeat',
+        backgroundAttachment: 'fixed',
+      }
+    : {
+        minHeight: '100vh',
+        backgroundColor: '#ECEFF1',
+      };
 
   // --- Right rail styles ---
   const rightBase = {
@@ -98,50 +132,60 @@ export default function SeekerLayout({
 
   return (
     <>
-      <Head><title>{title}</title></Head>
+      <Head>
+        <title>{title}</title>
+      </Head>
 
-      {/* Top chrome header */}
-      <HeaderComp />
+      {/* Wallpaper wrapper */}
+      <div style={backgroundStyle}>
+        {/* Top chrome header */}
+        <HeaderComp />
 
-      {/* Main layout shell */}
-      <div
-        style={{
-          display: 'grid',
-          gridTemplateColumns: `240px minmax(0, 1fr) ${right ? `${rightWidth}px` : '0px'}`,
-          gridTemplateRows: 'auto 1fr',
-          gridTemplateAreas: right
-            ? `"left header right"
-               "left content right"`
-            : `"left header header"
-               "left content content"`,
-          gap,
-          ...containerPadding,
-          alignItems: 'start',
-        }}
-      >
-        {/* LEFT — Sidebar */}
-        <aside style={{ gridArea: 'left', alignSelf: 'start', minWidth: 0 }}>
-          {left ? left : <SidebarComp {...sidebarProps} />}
-        </aside>
-
-        {/* PAGE HEADER (center) */}
-        <header style={{ gridArea: 'header', alignSelf: 'start', minWidth: 0 }}>
-          {header}
-        </header>
-
-        {/* RIGHT — Variant-controlled rail (render only if provided) */}
-        {right ? (
-          <aside style={{ ...rightBase, ...(rightVariant === 'light' ? rightLight : rightDark) }}>
-            {right}
+        {/* Main layout shell */}
+        <div
+          style={{
+            display: 'grid',
+            gridTemplateColumns: `240px minmax(0, 1fr) ${right ? `${rightWidth}px` : '0px'}`,
+            gridTemplateRows: 'auto 1fr',
+            gridTemplateAreas: right
+              ? `"left header right"
+                 "left content right"`
+              : `"left header header"
+                 "left content content"`,
+            gap,
+            ...containerPadding,
+            alignItems: 'start',
+          }}
+        >
+          {/* LEFT — Sidebar */}
+          <aside style={{ gridArea: 'left', alignSelf: 'start', minWidth: 0 }}>
+            {left ? left : <SidebarComp {...sidebarProps} />}
           </aside>
-        ) : null}
 
-        {/* CONTENT (center) */}
-        <main style={{ gridArea: 'content', minWidth: 0 }}>
-          <div style={{ display: 'grid', gap, width: '100%', minWidth: 0 }}>
-            {children}
-          </div>
-        </main>
+          {/* PAGE HEADER (center) */}
+          <header style={{ gridArea: 'header', alignSelf: 'start', minWidth: 0 }}>
+            {header}
+          </header>
+
+          {/* RIGHT — Variant-controlled rail (render only if provided) */}
+          {right ? (
+            <aside
+              style={{
+                ...rightBase,
+                ...(rightVariant === 'light' ? rightLight : rightDark),
+              }}
+            >
+              {right}
+            </aside>
+          ) : null}
+
+          {/* CONTENT (center) */}
+          <main style={{ gridArea: 'content', minWidth: 0 }}>
+            <div style={{ display: 'grid', gap, width: '100%', minWidth: 0 }}>
+              {children}
+            </div>
+          </main>
+        </div>
       </div>
     </>
   );

@@ -1,371 +1,251 @@
 // pages/settings.js
-import Head from "next/head";
-import { useRouter } from "next/router";
-import { useEffect, useMemo, useState } from "react";
+import Head from 'next/head';
 
-const TABS = [
-  { key: "account", label: "Account" },
-  { key: "notifications", label: "Notifications" },
-  { key: "privacy", label: "Privacy & Data" },
-];
-
-export default function Settings() {
-  const router = useRouter();
-  const tab = typeof router.query.tab === "string" ? router.query.tab : "account";
-  const [active, setActive] = useState(TABS.some(t => t.key === tab) ? tab : "account");
-
-  useEffect(() => {
-    if (typeof tab === "string" && TABS.some(t => t.key === tab)) {
-      setActive(tab);
-    }
-  }, [tab]);
-
-  const onTab = (key) => {
-    const url = { pathname: "/settings", query: key === "account" ? {} : { tab: key } };
-    router.push(url, undefined, { shallow: true });
-  };
-
+export default function SettingsPage() {
   return (
     <>
       <Head>
-        <title>Settings — ForgeTomorrow</title>
+        <title>Settings • ForgeTomorrow</title>
       </Head>
 
-      <main className="max-w-5xl mx-auto px-6 py-8 text-slate-100">
-        <h1 className="text-3xl font-bold text-[#FF7043] mb-6">Settings</h1>
+      <main className="min-h-screen bg-[#ECEFF1] pt-24 pb-16 px-4">
+        <div className="max-w-4xl mx-auto space-y-10">
+          {/* Page header */}
+          <header className="space-y-2">
+            <h1 className="text-3xl md:text-4xl font-bold text-[#263238]">
+              Settings
+            </h1>
+            <p className="text-sm md:text-base text-[#546E7A]">
+              Manage your account, privacy, and profile appearance.
+            </p>
+          </header>
 
-        {/* Tabs */}
-        <div className="mb-6 border-b border-white/10">
-          <nav className="flex gap-6 text-sm">
-            {TABS.map((t) => {
-              const isActive = active === t.key;
-              return (
+          {/* Account section */}
+          <section className="bg-white rounded-2xl shadow-sm border border-[#CFD8DC] p-6 md:p-8 space-y-4">
+            <div className="flex items-center justify-between gap-4">
+              <h2 className="text-xl font-semibold text-[#263238]">
+                Account
+              </h2>
+              <span className="text-xs uppercase tracking-wide text-[#B0BEC5]">
+                Core
+              </span>
+            </div>
+
+            <div className="grid gap-4 md:grid-cols-2">
+              <div className="space-y-1">
+                <label className="text-xs font-medium text-[#607D8B] uppercase">
+                  Email
+                </label>
+                <p className="text-sm text-[#37474F] bg-[#ECEFF1] rounded-lg px-3 py-2">
+                  {/* TODO: Replace with real user email from API */}
+                  your.email@example.com
+                </p>
+              </div>
+
+              <div className="space-y-1">
+                <label className="text-xs font-medium text-[#607D8B] uppercase">
+                  Name
+                </label>
+                <p className="text-sm text-[#37474F] bg-[#ECEFF1] rounded-lg px-3 py-2">
+                  {/* TODO: Replace with name from DB (read-only) */}
+                  Unnamed (set during signup)
+                </p>
+              </div>
+            </div>
+
+            <div className="flex flex-wrap gap-3 pt-2">
+              {/* TODO: Wire to password-change flow later */}
+              <button
+                type="button"
+                className="inline-flex items-center justify-center px-4 py-2 rounded-full text-sm font-medium border border-[#CFD8DC] text-[#455A64] hover:bg-[#ECEFF1] transition"
+              >
+                Change password
+              </button>
+
+              {/* TODO: Wire to /api/auth/logout and redirect to /login */}
+              <button
+                type="button"
+                className="inline-flex items-center justify-center px-4 py-2 rounded-full text-sm font-semibold bg-[#FF7043] text-white hover:bg-[#F4511E] transition"
+              >
+                Log out
+              </button>
+            </div>
+          </section>
+
+          {/* Privacy & data */}
+          <section className="bg-white rounded-2xl shadow-sm border border-[#CFD8DC] p-6 md:p-8 space-y-5">
+            <div className="flex items-center justify-between gap-4">
+              <h2 className="text-xl font-semibold text-[#263238]">
+                Privacy & data
+              </h2>
+              <span className="text-xs uppercase tracking-wide text-[#B0BEC5]">
+                Compliance
+              </span>
+            </div>
+
+            <div className="space-y-4">
+              {/* Newsletter / marketing toggle placeholder */}
+              <div className="flex items-start justify-between gap-4">
+                <div>
+                  <p className="text-sm font-medium text-[#37474F]">
+                    Email updates & product news
+                  </p>
+                  <p className="text-xs text-[#78909C]">
+                    Get occasional updates about new features, product changes,
+                    and important account notices.
+                  </p>
+                </div>
+                {/* TODO: Replace with real toggle wired to newsletter flag */}
                 <button
-                  key={t.key}
-                  onClick={() => onTab(t.key)}
-                  className={`pb-3 -mb-px border-b-2 transition ${
-                    isActive
-                      ? "border-[#FF7043] text-white"
-                      : "border-transparent text-slate-300 hover:text-white"
-                  }`}
+                  type="button"
+                  className="text-xs font-medium px-3 py-1 rounded-full border border-[#CFD8DC] text-[#455A64] hover:bg-[#ECEFF1] transition"
                 >
-                  {t.label}
+                  Manage
                 </button>
-              );
-            })}
-          </nav>
-        </div>
+              </div>
 
-        {/* Panels */}
-        {active === "account" && <AccountPanel />}
-        {active === "notifications" && <NotificationsPanel />}
-        {active === "privacy" && <PrivacyPanel />}
+              <hr className="border-[#ECEFF1]" />
+
+              <div className="flex items-start justify-between gap-4">
+                <div>
+                  <p className="text-sm font-medium text-[#37474F]">
+                    Download my data
+                  </p>
+                  <p className="text-xs text-[#78909C]">
+                    Request a copy of the personal data associated with your
+                    ForgeTomorrow account.
+                  </p>
+                </div>
+                {/* TODO: Wire to export-data endpoint later */}
+                <button
+                  type="button"
+                  className="text-xs font-medium px-3 py-1 rounded-full border border-[#CFD8DC] text-[#455A64] hover:bg-[#ECEFF1] transition"
+                >
+                  Request export
+                </button>
+              </div>
+
+              <div className="flex items-start justify-between gap-4">
+                <div>
+                  <p className="text-sm font-medium text-[#37474F]">
+                    Delete my account
+                  </p>
+                  <p className="text-xs text-[#78909C]">
+                    Permanently delete your account and personal data, subject
+                    to legal retention requirements.
+                  </p>
+                </div>
+                {/* TODO: Wire to /api/privacy/delete with confirm modal */}
+                <button
+                  type="button"
+                  className="text-xs font-semibold px-3 py-1 rounded-full border border-[#FFAB91] text-[#D84315] hover:bg-[#FFEBEE] transition"
+                >
+                  Delete account
+                </button>
+              </div>
+            </div>
+          </section>
+
+          {/* Appearance / avatar */}
+          <section className="bg-white rounded-2xl shadow-sm border border-[#CFD8DC] p-6 md:p-8 space-y-5">
+            <div className="flex items-center justify-between gap-4">
+              <h2 className="text-xl font-semibold text-[#263238]">
+                Profile appearance
+              </h2>
+              <span className="text-xs uppercase tracking-wide text-[#B0BEC5]">
+                Profile
+              </span>
+            </div>
+
+            <div className="grid gap-6 md:grid-cols-[auto,1fr] items-start">
+              {/* Avatar preview */}
+              <div className="flex flex-col items-center gap-3">
+                <div className="w-20 h-20 rounded-full bg-[#ECEFF1] overflow-hidden flex items-center justify-center">
+                  {/* TODO: Replace src with real avatarUrl */}
+                  <span className="text-lg font-semibold text-[#607D8B]">
+                    EJ
+                  </span>
+                </div>
+                {/* TODO: Wire to avatar upload API */}
+                <label className="inline-flex items-center justify-center px-3 py-1.5 rounded-full text-xs font-medium border border-[#CFD8DC] text-[#455A64] hover:bg-[#ECEFF1] cursor-pointer transition">
+                  <span>Upload avatar</span>
+                  <input
+                    type="file"
+                    accept="image/*"
+                    className="hidden"
+                    // onChange={handleAvatarUpload}
+                  />
+                </label>
+              </div>
+
+              {/* Banner / visibility */}
+              <div className="space-y-4">
+                <div>
+                  <p className="text-sm font-medium text-[#37474F]">
+                    Profile visibility
+                  </p>
+                  <p className="text-xs text-[#78909C] mb-2">
+                    Control who can view your profile when sharing your public
+                    link.
+                  </p>
+                  {/* TODO: Wire these buttons to isProfilePublic / recruiter-only mode */}
+                  <div className="flex flex-wrap gap-2">
+                    <button
+                      type="button"
+                      className="px-3 py-1.5 rounded-full text-xs font-medium bg-[#FF7043] text-white hover:bg-[#F4511E] transition"
+                    >
+                      Private
+                    </button>
+                    <button
+                      type="button"
+                      className="px-3 py-1.5 rounded-full text-xs font-medium border border-[#CFD8DC] text-[#455A64] hover:bg-[#ECEFF1] transition"
+                    >
+                      Public
+                    </button>
+                    <button
+                      type="button"
+                      className="px-3 py-1.5 rounded-full text-xs font-medium border border-[#CFD8DC] text-[#455A64] hover:bg-[#ECEFF1] transition"
+                    >
+                      Recruiters only
+                    </button>
+                  </div>
+                </div>
+
+                <div>
+                  <p className="text-sm font-medium text-[#37474F]">
+                    Profile banner
+                  </p>
+                  <p className="text-xs text-[#78909C] mb-2">
+                    Choose between a personal banner or your ForgeTomorrow staff
+                    banner (if assigned).
+                  </p>
+                  {/* TODO: Wire to corporateBannerLocked / corporateBannerKey */}
+                  <div className="flex flex-wrap gap-2">
+                    <button
+                      type="button"
+                      className="px-3 py-1.5 rounded-full text-xs font-medium border border-[#CFD8DC] text-[#455A64] hover:bg-[#ECEFF1] transition"
+                    >
+                      Personal banner
+                    </button>
+                    <button
+                      type="button"
+                      className="px-3 py-1.5 rounded-full text-xs font-medium border border-dashed border-[#FFAB91] text-[#D84315] hover:bg-[#FFF3E0] transition"
+                    >
+                      Company banner (locked)
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </section>
+
+          {/* Small compliance note for future you */}
+          <p className="text-[10px] text-center text-[#B0BEC5] mt-4">
+            Data controls shown here are for illustration. Final behavior will
+            follow your GDPR / CCPA / LGPD policy wiring.
+          </p>
+        </div>
       </main>
-    </>
-  );
-}
-
-function Section({ title, children }) {
-  return (
-    <section className="bg-black/40 rounded-lg p-5 border border-white/10 mb-6">
-      <h2 className="font-semibold mb-3">{title}</h2>
-      {children}
-    </section>
-  );
-}
-
-function Label({ htmlFor, children }) {
-  return (
-    <label htmlFor={htmlFor} className="block text-sm text-slate-300 mb-1">
-      {children}
-    </label>
-  );
-}
-
-function Input(props) {
-  return (
-    <input
-      {...props}
-      className="w-full rounded-md bg-white/90 text-slate-900 px-3 py-2 border border-slate-300 focus:outline-none focus:ring-2 focus:ring-[#FF7043]"
-    />
-  );
-}
-
-function Toggle({ id, checked, onChange, label, helper }) {
-  return (
-    <div className="flex items-start justify-between gap-4">
-      <div>
-        <label htmlFor={id} className="font-medium text-sm">{label}</label>
-        {helper && <p className="text-xs text-slate-300 mt-1">{helper}</p>}
-      </div>
-      <input
-        id={id}
-        type="checkbox"
-        checked={checked}
-        onChange={(e) => onChange(e.target.checked)}
-        className="h-5 w-5 accent-[#FF7043]"
-      />
-    </div>
-  );
-}
-
-/* --- Panels --- */
-
-function AccountPanel() {
-  const [name, setName] = useState("");
-  const [headline, setHeadline] = useState("");
-  const [location, setLocation] = useState("");
-  const [website, setWebsite] = useState("");
-  const [saving, setSaving] = useState(false);
-
-  const save = async (e) => {
-    e.preventDefault();
-    setSaving(true);
-    try {
-      // TODO: POST to /api/settings/account
-      await new Promise((r) => setTimeout(r, 600));
-      alert("Account settings saved.");
-    } finally {
-      setSaving(false);
-    }
-  };
-
-  return (
-    <form onSubmit={save}>
-      <Section title="Profile">
-        <div className="grid sm:grid-cols-2 gap-4">
-          <div>
-            <Label htmlFor="name">Full Name</Label>
-            <Input id="name" value={name} onChange={(e) => setName(e.target.value)} />
-          </div>
-          <div>
-            <Label htmlFor="headline">Headline</Label>
-            <Input id="headline" value={headline} onChange={(e) => setHeadline(e.target.value)} />
-          </div>
-          <div>
-            <Label htmlFor="location">Location</Label>
-            <Input id="location" value={location} onChange={(e) => setLocation(e.target.value)} />
-          </div>
-          <div>
-            <Label htmlFor="website">Website</Label>
-            <Input id="website" value={website} onChange={(e) => setWebsite(e.target.value)} />
-          </div>
-        </div>
-      </Section>
-
-      <Section title="Security">
-        <div className="grid sm:grid-cols-2 gap-4">
-          <div>
-            <Label htmlFor="password">New Password</Label>
-            <Input id="password" type="password" placeholder="••••••••" />
-          </div>
-          <div>
-            <Label htmlFor="password2">Confirm Password</Label>
-            <Input id="password2" type="password" placeholder="••••••••" />
-          </div>
-        </div>
-      </Section>
-
-      <div className="flex justify-end">
-        <button
-          type="submit"
-          disabled={saving}
-          className="bg-[#FF7043] hover:bg-[#F4511E] text-white font-semibold px-5 py-2 rounded-md"
-        >
-          {saving ? "Saving…" : "Save Changes"}
-        </button>
-      </div>
-    </form>
-  );
-}
-
-function NotificationsPanel() {
-  const [emailApp, setEmailApp] = useState(true);
-  const [emailDigest, setEmailDigest] = useState(false);
-  const [productNews, setProductNews] = useState(false);
-  const [saving, setSaving] = useState(false);
-
-  const save = async (e) => {
-    e.preventDefault();
-    setSaving(true);
-    try {
-      // TODO: POST to /api/settings/notifications
-      await new Promise((r) => setTimeout(r, 500));
-      alert("Notification preferences saved.");
-    } finally {
-      setSaving(false);
-    }
-  };
-
-  return (
-    <form onSubmit={save}>
-      <Section title="Email Notifications">
-        <div className="space-y-4">
-          <Toggle
-            id="emailApp"
-            checked={emailApp}
-            onChange={setEmailApp}
-            label="Account & activity emails"
-            helper="Security alerts, account changes, application updates."
-          />
-          <Toggle
-            id="emailDigest"
-            checked={emailDigest}
-            onChange={setEmailDigest}
-            label="Weekly activity digest"
-            helper="A summary of views, messages, and job activity."
-          />
-          <Toggle
-            id="productNews"
-            checked={productNews}
-            onChange={setProductNews}
-            label="Product news & tips"
-            helper="Occasional updates about new features."
-          />
-        </div>
-      </Section>
-
-      <div className="flex justify-end">
-        <button
-          type="submit"
-          disabled={saving}
-          className="bg-[#FF7043] hover:bg-[#F4511E] text-white font-semibold px-5 py-2 rounded-md"
-        >
-          {saving ? "Saving…" : "Save Changes"}
-        </button>
-      </div>
-    </form>
-  );
-}
-
-function PrivacyPanel() {
-  const [profileVisibility, setProfileVisibility] = useState(true);
-  const [searchable, setSearchable] = useState(true);
-  const [saving, setSaving] = useState(false);
-  const [busyAction, setBusyAction] = useState("");
-
-  const save = async (e) => {
-    e.preventDefault();
-    setSaving(true);
-    try {
-      // TODO: POST to /api/settings/privacy
-      await new Promise((r) => setTimeout(r, 500));
-      alert("Privacy settings saved.");
-    } finally {
-      setSaving(false);
-    }
-  };
-
-  const confirm = async (message) => {
-    if (typeof window === "undefined") return false;
-    return window.confirm(message);
-  };
-
-  const exportData = async () => {
-    setBusyAction("export");
-    try {
-      // TODO: GET /api/me/export (stream file)
-      await new Promise((r) => setTimeout(r, 700));
-      alert("Data export started. You’ll receive a download when it’s ready.");
-    } finally {
-      setBusyAction("");
-    }
-  };
-
-  const deleteDataKeepAccount = async () => {
-    const ok = await confirm(
-      "Delete your personal data but keep your account?\n\nThis will remove your content and personal info (where allowed) but preserve your login so you can start fresh. This action cannot be undone."
-    );
-    if (!ok) return;
-    setBusyAction("deleteData");
-    try {
-      // TODO: POST /api/me/delete-data (soft data purge, keep account)
-      await new Promise((r) => setTimeout(r, 1000));
-      alert("Your data has been queued for deletion. This may take some time to complete.");
-    } finally {
-      setBusyAction("");
-    }
-  };
-
-  const deleteAccount = async () => {
-    const ok = await confirm(
-      "Permanently delete your account and all associated data?\n\nThis cannot be undone and will sign you out everywhere."
-    );
-    if (!ok) return;
-    setBusyAction("deleteAccount");
-    try {
-      // TODO: POST /api/me/delete-account (full erasure)
-      await new Promise((r) => setTimeout(r, 1200));
-      alert("Your account has been scheduled for deletion.");
-    } finally {
-      setBusyAction("");
-    }
-  };
-
-  return (
-    <>
-      <form onSubmit={save}>
-        <Section title="Visibility">
-          <div className="space-y-4">
-            <Toggle
-              id="profileVisible"
-              checked={profileVisibility}
-              onChange={setProfileVisibility}
-              label="Public profile"
-              helper="If off, only approved connections and recruiters you apply to can view your profile."
-            />
-            <Toggle
-              id="searchable"
-              checked={searchable}
-              onChange={setSearchable}
-              label="Search engine indexing"
-              helper="Allow search engines to index your public profile."
-            />
-          </div>
-        </Section>
-
-        <div className="flex justify-end">
-          <button
-            type="submit"
-            disabled={saving}
-            className="bg-[#FF7043] hover:bg-[#F4511E] text-white font-semibold px-5 py-2 rounded-md"
-          >
-            {saving ? "Saving…" : "Save Changes"}
-          </button>
-        </div>
-      </form>
-
-      <Section title="Your Data">
-        <div className="flex flex-wrap gap-3">
-          <button
-            onClick={exportData}
-            disabled={busyAction === "export"}
-            className="bg-slate-700 hover:bg-slate-600 text-white px-4 py-2 rounded-md text-sm"
-          >
-            {busyAction === "export" ? "Preparing export…" : "Export my data"}
-          </button>
-
-        <button
-            onClick={deleteDataKeepAccount}
-            disabled={busyAction === "deleteData"}
-            className="bg-[#B45309] hover:bg-[#92400E] text-white px-4 py-2 rounded-md text-sm"
-          >
-            {busyAction === "deleteData" ? "Deleting data…" : "Delete my data (keep account)"}
-          </button>
-
-          <button
-            onClick={deleteAccount}
-            disabled={busyAction === "deleteAccount"}
-            className="bg-red-600 hover:bg-red-500 text-white px-4 py-2 rounded-md text-sm"
-          >
-            {busyAction === "deleteAccount" ? "Deleting account…" : "Delete my account"}
-          </button>
-        </div>
-
-        <p className="text-xs text-slate-300 mt-3">
-          Note: “Delete my data (keep account)” attempts to remove or anonymize your personal data and content while preserving your login so you can continue using the service. Some records may be retained where legally required (e.g., billing, security logs).
-        </p>
-      </Section>
     </>
   );
 }
