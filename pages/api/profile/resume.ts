@@ -1,19 +1,26 @@
+// pages/api/profile/resume.ts
+import type { NextApiRequest, NextApiResponse } from "next";
 import { getServerSession } from "next-auth";
-import { authOptions } from "../auth/[...nextauth]";
+import authOptions from "../auth/[...nextauth]";
 import { PrismaClient } from "@prisma/client";
 
 const prisma = new PrismaClient();
 
 // /api/profile/resume
-export default async function handler(req, res) {
-  const session = await getServerSession(req, res, authOptions);
+export default async function handler(
+  req: NextApiRequest,
+  res: NextApiResponse
+) {
+  const session = (await getServerSession(req, res, authOptions)) as
+    | { user?: { email?: string | null } }
+    | null;
+
   if (!session?.user?.email) {
     return res.status(401).json({ error: "Not authenticated" });
   }
 
-  const email = session.user.email;
+  const email = session.user.email as string;
 
-  // Resolve userId once
   const user = await prisma.user.findUnique({
     where: { email },
     select: { id: true },
@@ -25,14 +32,12 @@ export default async function handler(req, res) {
 
   const userId = user.id;
 
+  // ──────────────── GET: list resumes + primary ────────────────
   if (req.method === "GET") {
     try {
       const resumes = await prisma.resume.findMany({
         where: { userId },
-        orderBy: [
-          { isPrimary: "desc" },
-          { updatedAt: "desc" },
-        ],
+        orderBy: [{ isPrimary: "desc" }, { updatedAt: "desc" }],
       });
 
       const primary =
@@ -45,35 +50,35 @@ export default async function handler(req, res) {
     }
   }
 
+  // ──────────────── POST: create resume ────────────────
   if (req.method === "POST") {
     try {
       const { name, content, isPrimary } = req.body || {};
 
-      if (!name || !String(name).trim()) {
+      if (!name?.trim()) {
         return res.status(400).json({ error: "Resume name is required." });
       }
-      if (!content || !String(content).trim()) {
+      if (!content?.trim()) {
         return res.status(400).json({ error: "Resume content is required." });
       }
 
       const count = await prisma.resume.count({ where: { userId } });
       if (count >= 5) {
         return res.status(400).json({
-          error: "You can save up to 5 resumes. Please delete one before adding another.",
+          error:
+            "You can save up to 5 resumes. Please delete one before adding another.",
         });
       }
 
       const createData: any = {
         userId,
-        name: String(name).trim(),
-        content: String(content),
+        name: name.trim(),
+        content: content.trim(),
       };
 
-      // First resume is always primary
       if (count === 0) {
         createData.isPrimary = true;
       } else if (isPrimary === true) {
-        // If user wants this one to be primary, clear others
         await prisma.resume.updateMany({
           where: { userId },
           data: { isPrimary: false },
@@ -85,10 +90,7 @@ export default async function handler(req, res) {
 
       const resumes = await prisma.resume.findMany({
         where: { userId },
-        orderBy: [
-          { isPrimary: "desc" },
-          { updatedAt: "desc" },
-        ],
+        orderBy: [{ isPrimary: "desc" }, { updatedAt: "desc" }],
       });
       const primary =
         resumes.find((r) => r.isPrimary) || resumes[0] || null;
@@ -100,6 +102,7 @@ export default async function handler(req, res) {
     }
   }
 
+  // ──────────────── PATCH: update resume ────────────────
   if (req.method === "PATCH") {
     try {
       const { id, name, content, isPrimary } = req.body || {};
@@ -113,7 +116,6 @@ export default async function handler(req, res) {
         return res.status(400).json({ error: "Invalid resume id." });
       }
 
-      // Ensure this resume belongs to the current user
       const existing = await prisma.resume.findFirst({
         where: { id: resumeId, userId },
       });
@@ -124,15 +126,10 @@ export default async function handler(req, res) {
 
       const data: any = {};
 
-      if (typeof name === "string" && name.trim()) {
-        data.name = name.trim();
-      }
-      if (typeof content === "string" && content.trim()) {
-        data.content = content;
-      }
+      if (name?.trim()) data.name = name.trim();
+      if (content?.trim()) data.content = content.trim();
 
       if (isPrimary === true) {
-        // Clear any other primary flags for this user
         await prisma.resume.updateMany({
           where: { userId },
           data: { isPrimary: false },
@@ -147,10 +144,7 @@ export default async function handler(req, res) {
 
       const resumes = await prisma.resume.findMany({
         where: { userId },
-        orderBy: [
-          { isPrimary: "desc" },
-          { updatedAt: "desc" },
-        ],
+        orderBy: [{ isPrimary: "desc" }, { updatedAt: "desc" }],
       });
       const primary =
         resumes.find((r) => r.isPrimary) || resumes[0] || null;
@@ -162,6 +156,7 @@ export default async function handler(req, res) {
     }
   }
 
+  // ──────────────── DELETE: delete resume ────────────────
   if (req.method === "DELETE") {
     try {
       const { id } = req.body || {};
@@ -188,7 +183,6 @@ export default async function handler(req, res) {
         where: { id: resumeId },
       });
 
-      // If we deleted the primary, promote another one if needed
       if (wasPrimary) {
         const remaining = await prisma.resume.findMany({
           where: { userId },
@@ -207,10 +201,7 @@ export default async function handler(req, res) {
 
       const resumes = await prisma.resume.findMany({
         where: { userId },
-        orderBy: [
-          { isPrimary: "desc" },
-          { updatedAt: "desc" },
-        ],
+        orderBy: [{ isPrimary: "desc" }, { updatedAt: "desc" }],
       });
       const primary =
         resumes.find((r) => r.isPrimary) || resumes[0] || null;
@@ -222,6 +213,7 @@ export default async function handler(req, res) {
     }
   }
 
+  // ──────────────── Unsupported methods ────────────────
   res.setHeader("Allow", ["GET", "POST", "PATCH", "DELETE"]);
-  return res.status(405).end(`Method ${req.method} Not Allowed`);
+  return res.status(405).json({ error: `Method ${req.method} Not Allowed` });
 }
