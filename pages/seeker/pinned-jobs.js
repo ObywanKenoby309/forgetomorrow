@@ -18,15 +18,26 @@ export default function PinnedJobs() {
         router.push('/login');
         return;
       }
-      // TODO: Replace with real API
-      const mock = [
-        { id: 1, title: "Customer Success Manager", company: "Acme Corp", location: "Remote", date: "2025-08-08" },
-        { id: 2, title: "Operations Manager", company: "Northwind", location: "Nashville, TN", date: "2025-08-06" },
-        { id: 3, title: "Director of Support", company: "OpenPhone", location: "Remote", date: "2025-08-04" },
-      ];
-      setPinned(mock);
-      setLoading(false);
+
+      try {
+        // When we add a real endpoint, it can return { jobs: [...] }
+        const res = await fetch('/api/seeker/pinned-jobs');
+        if (res.ok) {
+          const data = await res.json().catch(() => ({}));
+          const jobs = Array.isArray(data.jobs) ? data.jobs : [];
+          setPinned(jobs);
+        } else {
+          // No endpoint or non-200 → just treat as no pinned jobs yet
+          setPinned([]);
+        }
+      } catch (err) {
+        console.error('Pinned jobs load error:', err);
+        setPinned([]);
+      } finally {
+        setLoading(false);
+      }
     }
+
     load();
   }, [router]);
 
@@ -56,13 +67,18 @@ export default function PinnedJobs() {
   }
 
   return (
-    <SeekerLayout title="Pinned Jobs" header={Header} right={RightRail} footer={Footer} activeNav="pinned">
+    <SeekerLayout
+      title="Pinned Jobs"
+      header={Header}
+      right={RightRail}
+      footer={Footer}
+      activeNav="pinned"
+    >
       <div className="w-full max-w-none px-4 md:px-6 lg:px-8">
         <div className="grid gap-7">
-
           {pinned.length === 0 ? (
             <div className="text-center py-24 bg-gray-50 rounded-2xl">
-              <div className="text-6xl mb-6">Star</div>
+              <div className="text-6xl mb-6">📌</div>
               <h3 className="text-2xl font-bold text-gray-800">No pinned jobs yet</h3>
               <p className="text-gray-600 mt-4 max-w-md mx-auto">
                 When you see a role that feels right, hit the pin. It’ll appear here.
@@ -76,26 +92,35 @@ export default function PinnedJobs() {
               >
                 <div className="flex justify-between items-start mb-6">
                   <div>
-                    <h3 className="text-2xl font-bold text-gray-900">{job.title}</h3>
+                    <h3 className="text-2xl font-bold text-gray-900">
+                      {job.title || 'Untitled role'}
+                    </h3>
                     <p className="text-lg text-gray-600 mt-1">
-                      {job.company} • {job.location}
+                      {job.company || 'Unknown company'}
+                      {job.location ? ` • ${job.location}` : ''}
                     </p>
-                    <p className="text-sm text-gray-500 mt-3">
-                      Pinned on {new Date(job.date).toLocaleDateString()}
-                    </p>
+                    {job.date && (
+                      <p className="text-sm text-gray-500 mt-3">
+                        Pinned on {new Date(job.date).toLocaleDateString()}
+                      </p>
+                    )}
                   </div>
                   <button
+                    // TODO: wire up real unpin
                     onClick={() => alert('Unpin coming soon')}
                     className="text-gray-400 hover:text-red-600 transition"
                     title="Unpin"
                   >
                     <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                      <path
+                        strokeLinecap="round"
+                        strokeWidth={2}
+                        d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"
+                      />
                     </svg>
                   </button>
                 </div>
 
-                {/* Balanced, beautiful buttons */}
                 <div className="flex flex-col sm:flex-row gap-4">
                   <Link href={`/jobs/apply/${job.id}`} className="flex-1">
                     <button className="w-full bg-orange-600 hover:bg-orange-700 text-white font-bold py-3.5 px-8 rounded-lg transition text-base">
@@ -103,19 +128,27 @@ export default function PinnedJobs() {
                     </button>
                   </Link>
 
-                  <a
-                    href={`https://google.com/search?q=${encodeURIComponent(job.company + " careers")}`}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="flex-1"
-                  >
-                    <button className="w-full border border-gray-300 text-gray-700 hover:bg-gray-50 font-medium py-3.5 px-8 rounded-lg transition text-base flex items-center justify-center gap-2">
-                      <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
-                      </svg>
-                      Company Site
-                    </button>
-                  </a>
+                  {job.company && (
+                    <a
+                      href={`https://google.com/search?q=${encodeURIComponent(
+                        `${job.company} careers`
+                      )}`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="flex-1"
+                    >
+                      <button className="w-full border border-gray-300 text-gray-700 hover:bg-gray-50 font-medium py-3.5 px-8 rounded-lg transition text-base flex items-center justify-center gap-2">
+                        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path
+                            strokeLinecap="round"
+                            strokeWidth={2}
+                            d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"
+                          />
+                        </svg>
+                        Company Site
+                      </button>
+                    </a>
+                  )}
                 </div>
 
                 <div className="mt-5 text-center text-sm text-gray-500">

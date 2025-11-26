@@ -14,15 +14,15 @@ export function useUserWallpaper() {
       try {
         const res = await fetch('/api/profile/header');
         if (!res.ok) {
-          setLoading(false);
+          if (!cancelled) setLoading(false);
           return;
         }
 
         const data = await res.json();
-        // /api/profile/header returns the fields at the root
-        const url = data.wallpaperUrl || null;
+        const user = data.user || data;
 
         if (!cancelled) {
+          const url = user.wallpaperUrl || null;
           setWallpaperUrl(url);
           setLoading(false);
         }
@@ -35,8 +35,24 @@ export function useUserWallpaper() {
     }
 
     load();
+
+    // 🔔 Listen for live updates from ProfileHeader
+    function handleUpdated(e) {
+      if (cancelled) return;
+      const detail = e.detail || {};
+      const url = detail.wallpaperUrl || null;
+      setWallpaperUrl(url);
+    }
+
+    if (typeof window !== 'undefined') {
+      window.addEventListener('profile:wallpaper-updated', handleUpdated);
+    }
+
     return () => {
       cancelled = true;
+      if (typeof window !== 'undefined') {
+        window.removeEventListener('profile:wallpaper-updated', handleUpdated);
+      }
     };
   }, []);
 

@@ -30,7 +30,7 @@ export default function ProfileHeader() {
   const [saving, setSaving] = useState(false);
   const [saveError, setSaveError] = useState(null);
 
-  // NEW: expand/collapse controls for “More options…”
+  // expand/collapse controls for “More options…”
   const [bannerMoreOpen, setBannerMoreOpen] = useState(false);
   const [wallpaperMoreOpen, setWallpaperMoreOpen] = useState(false);
 
@@ -126,8 +126,9 @@ export default function ProfileHeader() {
           location,
           status,
           avatarUrl,
-          coverUrl,
-          wallpaperUrl,
+          // normalize empty strings to null so the DB truly "clears" them
+          coverUrl: coverUrl || null,
+          wallpaperUrl: wallpaperUrl || null,
           bannerMode,
           bannerHeight: bannerH,
           bannerFocalY: focalY,
@@ -158,6 +159,21 @@ export default function ProfileHeader() {
       } else {
         setSlug(cleanedSlug);
         setSlugValue(cleanedSlug);
+      }
+
+      // 🔄 sync wallpaper with server truth (null = no wallpaper)
+      const effectiveWallpaper = user.wallpaperUrl ?? null;
+      setWallpaperUrl(effectiveWallpaper || '');
+
+      // 🔔 broadcast to the rest of the app (layouts using useUserWallpaper)
+      if (typeof window !== 'undefined') {
+        window.dispatchEvent(
+          new CustomEvent('profile:wallpaper-updated', {
+            detail: {
+              wallpaperUrl: effectiveWallpaper,
+            },
+          })
+        );
       }
 
       setEditOpen(false);

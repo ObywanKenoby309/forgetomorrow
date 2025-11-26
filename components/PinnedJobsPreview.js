@@ -1,54 +1,73 @@
 // components/PinnedJobsPreview.js
-import React from 'react';
+'use client';
 
-const mockPinned = [
-  {
-    id: 'pj-1003',
-    title: 'Customer Success Manager',
-    company: 'Acme Corp',
-    location: 'Remote',
-    datePinned: '2025-08-08',
-  },
-  {
-    id: 'pj-1002',
-    title: 'Operations Manager',
-    company: 'NovaTech Solutions',
-    location: 'Nashville, TN',
-    datePinned: '2025-08-06',
-  },
-  {
-    id: 'pj-1001',
-    title: 'Director of Support',
-    company: 'Catalyst Growth',
-    location: 'Remote',
-    datePinned: '2025-08-04',
-  },
-  {
-    id: 'pj-0999',
-    title: 'Client Success Lead',
-    company: 'Beacon Systems',
-    location: 'Remote',
-    datePinned: '2025-08-01',
-  },
-];
+import React, { useEffect, useState } from 'react';
 
 function formatDate(iso) {
   try {
     return new Date(iso).toLocaleDateString();
   } catch {
-    return iso;
+    return iso || '—';
   }
 }
 
 export default function PinnedJobsPreview() {
-  // Show latest 3 by datePinned descending
-  const items = [...mockPinned].sort(
-    (a, b) => new Date(b.datePinned) - new Date(a.datePinned)
-  ).slice(0, 3);
+  const [jobs, setJobs] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');
+
+  useEffect(() => {
+    let cancelled = false;
+
+    async function load() {
+      setLoading(true);
+      setError('');
+      try {
+        const res = await fetch('/api/seeker/pinned-jobs?limit=3');
+        if (!res.ok) {
+          const err = await res.json().catch(() => ({}));
+          throw new Error(err.error || 'Failed to load pinned jobs');
+        }
+        const data = await res.json();
+        if (cancelled) return;
+        setJobs(data.jobs || []);
+      } catch (err) {
+        console.error('[PinnedJobsPreview] load error', err);
+        if (!cancelled) setError(err.message || 'Failed to load pinned jobs');
+      } finally {
+        if (!cancelled) setLoading(false);
+      }
+    }
+
+    load();
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  if (loading) {
+    return <div style={{ color: '#607D8B' }}>Loading pinned jobs…</div>;
+  }
+
+  if (error) {
+    return (
+      <div style={{ color: '#e53e3e', fontSize: 13 }}>
+        {error}
+      </div>
+    );
+  }
+
+  if (!jobs.length) {
+    return (
+      <div style={{ color: '#607D8B', fontSize: 14 }}>
+        No pinned jobs yet. When you pin roles from the job board, the latest ones will appear here as your “Next Yes.”
+      </div>
+    );
+  }
 
   return (
     <div style={{ display: 'grid', gap: 12 }}>
-      {items.map((job) => (
+      {jobs.map((job) => (
         <div
           key={job.id}
           style={{
@@ -63,17 +82,15 @@ export default function PinnedJobsPreview() {
           <div>
             <div style={{ fontWeight: 600 }}>{job.title}</div>
             <div style={{ color: '#546E7A' }}>
-              {job.company} • {job.location}
+              {job.company}
+              {job.location ? ` • ${job.location}` : ''}
             </div>
           </div>
           <div style={{ color: '#455A64', fontSize: 13 }}>
-            Pinned: {formatDate(job.datePinned)}
+            Pinned: {formatDate(job.pinnedAt)}
           </div>
         </div>
       ))}
-      {items.length === 0 && (
-        <div style={{ color: '#607D8B' }}>No pinned jobs yet.</div>
-      )}
     </div>
   );
 }

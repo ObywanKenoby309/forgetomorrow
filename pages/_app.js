@@ -1,3 +1,4 @@
+// pages/_app.js
 import '@/styles/globals.css';
 import { useRouter } from 'next/router';
 import { useEffect, useState } from 'react';
@@ -10,6 +11,7 @@ import UniversalHeader from '@/components/UniversalHeader';
 import { ResumeProvider } from '@/context/ResumeContext';
 import { PlanProvider } from '@/context/PlanContext';
 import { AiUsageProvider } from '@/context/AiUsageContext';
+import { useUserWallpaper } from '@/hooks/useUserWallpaper';
 
 function RouteTracker() {
   const router = useRouter();
@@ -40,6 +42,9 @@ function RouteTracker() {
 
 export default function App({ Component, pageProps }) {
   const router = useRouter();
+
+  // 🔹 NEW: pull user wallpaper (internal pages only)
+  const { wallpaperUrl } = useUserWallpaper();
 
   const isRecruiterRoute = router.pathname.startsWith('/recruiter');
   const isSeekerRoute =
@@ -113,6 +118,7 @@ export default function App({ Component, pageProps }) {
     ? isPublicByPath && !sharedAsInternal
     : isPublicByPath;
 
+  // Marketing pages (Forge hammer background)
   const useForgeBackground =
     !isUniversalPage &&
     isPublicEffective &&
@@ -125,6 +131,13 @@ export default function App({ Component, pageProps }) {
   const isBrowser = typeof window !== 'undefined';
   const shouldLoadCookieScript =
     isBrowser && window.location.hostname === 'forgetomorrow.com';
+
+  // 🔹 Decide if internal shell should be gray or transparent
+  const shouldUseGrayInternalBg =
+    // Only for non-marketing pages
+    !useForgeBackground &&
+    // If there is NO wallpaper set, use gray background
+    !wallpaperUrl;
 
   return (
     <>
@@ -143,6 +156,11 @@ export default function App({ Component, pageProps }) {
       )}
 
       <div className="relative min-h-screen">
+        {/* ─────────────────────────────────────────────
+            BACKGROUND LAYERS
+           ───────────────────────────────────────────── */}
+
+        {/* 1) Forge hammer background for public marketing pages */}
         {useForgeBackground && (
           <>
             <div
@@ -158,9 +176,29 @@ export default function App({ Component, pageProps }) {
           </>
         )}
 
+        {/* 2) User wallpaper for internal pages (seeker / recruiter / coaching / settings) */}
+        {!useForgeBackground && wallpaperUrl && (
+          <>
+            <div
+              className="fixed inset-0 z-0"
+              style={{
+                backgroundImage: `url(${wallpaperUrl})`,
+                backgroundSize: 'cover',
+                backgroundPosition: 'center',
+                backgroundAttachment: 'fixed',
+              }}
+            />
+            {/* Slight dark overlay for contrast */}
+            <div className="fixed inset-0 bg-black/40 z-0" />
+          </>
+        )}
+
+        {/* ─────────────────────────────────────────────
+            FOREGROUND CONTENT
+           ───────────────────────────────────────────── */}
         <div
           className={`relative z-10 min-h-screen flex flex-col justify-between ${
-            !useForgeBackground ? 'bg-[#ECEFF1]' : ''
+            shouldUseGrayInternalBg ? 'bg-[#ECEFF1]' : ''
           }`}
         >
           <PlanProvider>

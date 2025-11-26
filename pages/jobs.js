@@ -1,16 +1,16 @@
 // pages/jobs.js — robust filters + list/detail layout + formatting + numbered pagination
 import { useEffect, useState } from 'react';
 import { JobPipelineProvider, useJobPipeline } from '../context/JobPipelineContext';
-// NOTE: InternalLayout removed to avoid internal-only sign-in behavior
 import { Card, CardHeader, CardTitle, CardContent, CardSubtle } from '../components/ui/Card';
 import Link from 'next/link';
+import InternalLayout from '../components/layouts/InternalLayout';
 
 // ──────────────────────────────────────────────────────────────
 // Lightweight layout shell (no internal-auth logic)
 // ──────────────────────────────────────────────────────────────
 function PageShell({ header, right, children }) {
   return (
-    <div className="min-h-screen bg-[#ECEFF1] pt-20 px-4 md:px-8">
+    <div className="px-4 md:px-8 pb-10">
       <div className="max-w-7xl mx-auto grid grid-cols-1 lg:grid-cols-[minmax(0,1.8fr)_minmax(260px,0.7fr)] gap-6">
         {/* Main column */}
         <div className="space-y-4">
@@ -202,6 +202,9 @@ function Jobs() {
 
   const isPaidUser = true;
 
+  // 🔸 Track pinned jobs for the logged-in seeker
+  const [pinnedIds, setPinnedIds] = useState(new Set());
+
   useEffect(() => {
     async function fetchJobs() {
       try {
@@ -222,6 +225,76 @@ function Jobs() {
     }
     fetchJobs();
   }, [addViewedJob]);
+
+  // Load pinned job IDs once so the detail panel can show Pin / Unpin
+  useEffect(() => {
+    let cancelled = false;
+
+    async function loadPinned() {
+      try {
+        const res = await fetch('/api/seeker/pinned-jobs');
+        if (!res.ok) return;
+        const data = await res.json();
+        const ids = new Set((data.jobs || []).map((j) => j.id)); // API returns job.id
+        if (!cancelled) {
+          setPinnedIds(ids);
+        }
+      } catch (err) {
+        console.error('[Jobs] failed to load pinned jobs', err);
+      }
+    }
+
+    loadPinned();
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  const isJobPinned = (job) => !!job && pinnedIds.has(job.id);
+
+  const togglePin = async (job) => {
+  if (!job) return;
+  const currentlyPinned = isJobPinned(job);
+
+  try {
+    const res = await fetch('/api/seeker/pinned-jobs', {
+      method: currentlyPinned ? 'DELETE' : 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ jobId: job.id }),
+    });
+
+    const text = await res.text();
+    let data = {};
+    try {
+      data = text ? JSON.parse(text) : {};
+    } catch {
+      // non-JSON body, keep data as {}
+    }
+
+    console.log('[togglePin] status', res.status, 'body:', data || text);
+
+    if (!res.ok) {
+      throw new Error(data.error || `Pin API failed (status ${res.status})`);
+    }
+
+    setPinnedIds((prev) => {
+      const next = new Set(prev);
+      if (currentlyPinned) {
+        next.delete(job.id);
+      } else {
+        next.add(job.id);
+      }
+      return next;
+    });
+  } catch (err) {
+    console.error('[Jobs] togglePin error', err);
+    alert(err.message || (currentlyPinned
+      ? 'Could not unpin this job. Please try again.'
+      : 'Could not pin this job. Please try again.'
+    ));
+  }
+};
+
 
   const handleApplyClick = (job) => {
     setApplyJob(job);
@@ -611,29 +684,7 @@ function Jobs() {
                           Source: {job.source}
                         </div>
                       )}
-
-                      {/* Button underneath the short card */}
-                      <div style={{ textAlign: 'right' }}>
-                        <button
-                          type="button"
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            handleSelectJob(job);
-                          }}
-                          style={{
-                            padding: '8px 12px',
-                            borderRadius: 8,
-                            border: 'none',
-                            background: 'transparent',
-                            color: '#FF7043',
-                            fontWeight: 600,
-                            fontSize: 13,
-                            cursor: 'pointer',
-                          }}
-                        >
-                          View details →
-                        </button>
-                      </div>
+                      {/* ⬅️ "View details →" removed; clicking the card already selects it */}
                     </CardContent>
                   </Card>
                 );
@@ -829,8 +880,26 @@ function Jobs() {
                         flexWrap: 'wrap',
                         gap: 10,
                         marginTop: 8,
+                        justifyContent: 'flex-end',
                       }}
                     >
+                      {/* Pin / Unpin job */}
+                      <button
+                        type="button"
+                        onClick={() => togglePin(selectedJob)}
+                        style={{
+                          background: 'white',
+                          color: isJobPinned(selectedJob) ? '#D32F2F' : '#FF7043',
+                          padding: '10px 16px',
+                          borderRadius: 8,
+                          border: `1px solid ${isJobPinned(selectedJob) ? '#D32F2F' : '#FF7043'}`,
+                          fontWeight: 700,
+                          cursor: 'pointer',
+                        }}
+                      >
+                        {isJobPinned(selectedJob) ? 'Unpin job' : 'Pin job'}
+                      </button>
+
                       <button
                         type="button"
                         onClick={() => handleApplyClick(selectedJob)}
@@ -973,8 +1042,10 @@ function Jobs() {
 // ──────────────────────────────────────────────────────────────
 export default function JobsPage() {
   return (
-    <JobPipelineProvider>
-      <Jobs />
-    </JobPipelineProvider>
+    <InternalLayout activeNav="jobs">
+      <JobPipelineProvider>
+        <Jobs />
+      </JobPipelineProvider>
+    </InternalLayout>
   );
 }

@@ -146,7 +146,7 @@ export default function SeekerDashboard() {
         <section className="bg-white border border-gray-200 rounded-xl p-5 shadow-sm">
           <div className="flex items-center justify-between mb-4">
             <h2 className="text-lg font-semibold text-orange-600">Your Next Yes</h2>
-            <Link href={withChrome('/pinned-jobs')} className="text-orange-600 font-medium hover:underline">
+            <Link href={withChrome('/seeker/pinned-jobs')} className="text-orange-600 font-medium hover:underline">
               View all
             </Link>
           </div>
