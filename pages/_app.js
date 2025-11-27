@@ -12,8 +12,8 @@ import { ResumeProvider } from '@/context/ResumeContext';
 import { PlanProvider } from '@/context/PlanContext';
 import { AiUsageProvider } from '@/context/AiUsageContext';
 import { useUserWallpaper } from '@/hooks/useUserWallpaper';
-import SupportFloatingButton from '@/components/SupportFloatingButton'; // ⬅️ Global support button
-import { SessionProvider } from 'next-auth/react'; // ⬅️ Session provider
+import SupportFloatingButton from '@/components/SupportFloatingButton';
+import { SessionProvider } from 'next-auth/react';
 
 function RouteTracker() {
   const router = useRouter();
@@ -137,11 +137,16 @@ export default function App({ Component, pageProps: { session, ...pageProps } })
     (hostname === 'forgetomorrow.com' ||
       hostname.endsWith('.forgetomorrow.com'));
 
-  // 🔹 Decide if internal shell should be gray or transparent
+  // 🔹 Decide if we should show user wallpaper (INTERNAL ONLY)
+  const shouldUseWallpaper =
+    !isUniversalPage &&
+    !isPublicEffective && // never on public-facing pages
+    !!wallpaperUrl;
+
+  // 🔹 Decide if internal shell should be gray (when no wallpaper)
   const shouldUseGrayInternalBg =
-    // Only for non-marketing pages
     !useForgeBackground &&
-    // If there is NO wallpaper set, use gray background
+    !isPublicEffective && // only for internal shells
     !wallpaperUrl;
 
   return (
@@ -181,8 +186,8 @@ export default function App({ Component, pageProps: { session, ...pageProps } })
           </>
         )}
 
-        {/* 2) User wallpaper for internal pages (seeker / recruiter / coaching / settings) */}
-        {!useForgeBackground && wallpaperUrl && (
+        {/* 2) User wallpaper for INTERNAL pages only (seeker / recruiter / coaching / settings) */}
+        {shouldUseWallpaper && (
           <>
             <div
               className="fixed inset-0 z-0"
@@ -206,7 +211,7 @@ export default function App({ Component, pageProps: { session, ...pageProps } })
             shouldUseGrayInternalBg ? 'bg-[#ECEFF1]' : ''
           }`}
         >
-          {/* 🔐 Wrap everything in SessionProvider so useSession() works */}
+          {/* 🔐 Auth context */}
           <SessionProvider session={session}>
             <PlanProvider>
               <ResumeProvider>
