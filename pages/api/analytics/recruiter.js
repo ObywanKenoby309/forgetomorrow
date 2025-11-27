@@ -1,273 +1,351 @@
 // pages/api/analytics/recruiter.js
-// Recruiter Analytics — SQL-backed via Prisma
+// Recruiter Analytics — Phase 2: SQL-backed (Prisma)
 //
-// - Uses Job, Application, JobView, Interview, Offer
-// - Scoped to the logged-in recruiter (Job.userId = session.user.id)
-// - Supports range (7d, 30d, 90d, custom)
-// - Returns same shape as Phase 1 mock (kpis, funnel, sources, recruiterActivity)
+// Uses real data from the Prisma SQLite DB:
+//   - Job, Application, JobView, Interview, Offer
+// and respects:
+//   - time range (7d / 30d / 90d / custom)
+//   - jobId (currently only "all" used by UI; future: specific job IDs)
+//   - recruiterId (future: per-recruiter view; for now, non-admins see only their own jobs)
+//   - companyId (future: per-company; for now, "all" behaves like "all companies")
+//
+// NOTE: No random synthetic data anymore. All metrics are derived
+// from real rows in your Prisma DB. If there is no data yet, you
+// simply see zeros and empty charts.
 
-import { PrismaClient } from "@prisma/client";
 import { getServerSession } from "next-auth";
 import { authOptions } from "../auth/[...nextauth]";
+import { prisma } from "@/lib/prisma";
 
-let prisma;
-function getPrisma() {
-  if (!prisma) {
-    prisma = new PrismaClient();
-  }
-  return prisma;
-}
+// ──────────────────────────────────────────────────────────────
+// Helpers
+// ──────────────────────────────────────────────────────────────
 
-function getDateRange(range, from, to) {
+function parseRange(range, fromStr, toStr) {
   const now = new Date();
-  let start = new Date();
-  let end = new Date(now);
+  let from = null;
+  let to = now;
 
-  const DAY = 24 * 60 * 60 * 1000;
-
-  if (range === "7d") {
-    start = new Date(now.getTime() - 7 * DAY);
-  } else if (range === "30d") {
-    start = new Date(now.getTime() - 30 * DAY);
-  } else if (range === "90d") {
-    start = new Date(now.getTime() - 90 * DAY);
-  } else if (range === "custom") {
-    if (from) {
-      const parsedFrom = new Date(from);
-      if (!Number.isNaN(parsedFrom.getTime())) {
-        start = parsedFrom;
-      }
-    } else {
-      start = new Date(now.getTime() - 30 * DAY);
-    }
-
-    if (to) {
-      const parsedTo = new Date(to);
-      if (!Number.isNaN(parsedTo.getTime())) {
-        end = parsedTo;
-        end.setHours(23, 59, 59, 999);
-      }
+  if (range === "custom" && fromStr && toStr) {
+    const f = new Date(fromStr);
+    const t = new Date(toStr);
+    if (!Number.isNaN(f.getTime()) && !Number.isNaN(t.getTime())) {
+      from = f;
+      to = t;
     }
   } else {
-    // default to last 30 days
-    start = new Date(now.getTime() - 30 * DAY);
+    const days =
+      range === "7d" ? 7 : range === "90d" ? 90 : 30; // default: 30d
+    from = new Date(now.getTime() - days * 24 * 60 * 60 * 1000);
   }
 
-  return { start, end };
+  if (!from) {
+    // Fallback: last 30 days
+    from = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
+  }
+
+  // Ensure from <= to
+  if (from > to) {
+    const tmp = from;
+    from = to;
+    to = tmp;
+  }
+
+  return { from, to };
 }
+
+const msPerDay = 24 * 60 * 60 * 1000;
+
+// Build simple weekly buckets between from/to for activity chart
+function buildWeeklyBuckets(from, to) {
+  const diffDays = Math.max(
+    1,
+    Math.round((to.getTime() - from.getTime()) / msPerDay)
+  );
+  const weeks = Math.min(8, Math.max(1, Math.ceil(diffDays / 7)));
+
+  const buckets = [];
+  for (let i = 0; i < weeks; i++) {
+    buckets.push({
+      week: `W${i + 1}`,
+      messages: 0,
+      responses: 0,
+    });
+  }
+  return buckets;
+}
+
+function bucketIndexForDate(from, to, date, bucketCount) {
+  const totalMs = to.getTime() - from.getTime();
+  if (totalMs <= 0) return 0;
+  const offsetMs = date.getTime() - from.getTime();
+  const ratio = Math.min(Math.max(offsetMs / totalMs, 0), 0.9999);
+  return Math.min(
+    bucketCount - 1,
+    Math.floor(ratio * bucketCount)
+  );
+}
+
+// ──────────────────────────────────────────────────────────────
+// Handler
+// ──────────────────────────────────────────────────────────────
 
 export default async function handler(req, res) {
   if (req.method !== "GET") {
-    res.setHeader("Allow", ["GET"]);
     return res.status(405).json({ error: "Method not allowed" });
   }
 
-  const prisma = getPrisma();
-
-  const {
-    range = "30d",
-    jobId = "all",
-    recruiterId = "all", // reserved for future multi-recruiter views
-    from,
-    to,
-  } = req.query || {};
-
-  // Require authentication — analytics are private to recruiters
-  let session;
   try {
-    session = await getServerSession(req, res, authOptions);
-  } catch (err) {
-    console.error("[analytics/recruiter] getServerSession error:", err);
-  }
+    const session = await getServerSession(req, res, authOptions);
 
-  if (!session?.user?.id) {
-    return res.status(401).json({
-      error: "UNAUTHENTICATED",
-      message: "You must be signed in to view recruiter analytics.",
-    });
-  }
+    if (!session?.user?.id) {
+      return res.status(401).json({ error: "Not authenticated" });
+    }
 
-  const recruiterUserId = session.user.id;
-  const { start, end } = getDateRange(range, from, to);
+    const userId = session.user.id;
+    const userRole = (session.user.role || "SEEKER").toString();
 
-  // Optional numeric jobId filter (Filters UI will evolve later)
-  const jobIdNum =
-    jobId && jobId !== "all" && !Number.isNaN(Number(jobId))
-      ? Number(jobId)
-      : null;
+    const {
+      range = "30d",
+      jobId = "all",
+      recruiterId = "all",
+      companyId = "all",
+      from: fromStr,
+      to: toStr,
+    } = req.query || {};
 
-  try {
-    // ─────────────────────────────────────────────────────────────
-    // Base filters
-    // ─────────────────────────────────────────────────────────────
-    const timeFilter = { gte: start, lte: end };
+    const { from, to } = parseRange(range, fromStr, toStr);
 
-    const jobWhere = {
-      userId: recruiterUserId,
-      ...(jobIdNum ? { id: jobIdNum } : {}),
+    // ── Job scope (which jobs are we allowed to see?) ─────────
+    const jobWhere = {};
+
+    // Recruiter filter (future: real per-recruiter dropdown)
+    if (recruiterId !== "all") {
+      jobWhere.userId = recruiterId.toString();
+    } else if (userRole !== "ADMIN") {
+      // Non-admins only see their own jobs
+      jobWhere.userId = userId;
+    }
+
+    // Company filter (future: org/tenant support)
+    if (companyId !== "all") {
+      jobWhere.company = companyId.toString();
+    }
+
+    // Optional: restrict by jobId when UI sends specific IDs later
+    if (jobId !== "all") {
+      const parsed = parseInt(jobId, 10);
+      if (!Number.isNaN(parsed)) {
+        jobWhere.id = parsed;
+      }
+    }
+
+    // We always evaluate events within the time window
+    const dateFilter = {
+      gte: from,
+      lte: to,
     };
 
-    // ─────────────────────────────────────────────────────────────
-    // Views
-    // ─────────────────────────────────────────────────────────────
-    const totalViews = await prisma.jobView.count({
-      where: {
-        viewedAt: timeFilter,
-        job: jobWhere,
+    // Fetch jobs in scope
+    const jobs = await prisma.job.findMany({
+      where: jobWhere,
+      select: {
+        id: true,
+        title: true,
+        company: true,
+        createdAt: true,
       },
     });
 
-    // ─────────────────────────────────────────────────────────────
-    // Applications
-    // ─────────────────────────────────────────────────────────────
-    const applications = await prisma.application.findMany({
-      where: {
-        appliedAt: timeFilter,
-        job: jobWhere,
-      },
-      include: {
-        job: {
-          select: { id: true },
+    const jobIds = jobs.map((j) => j.id);
+    const jobsById = jobs.reduce((acc, j) => {
+      acc[j.id] = j;
+      return acc;
+    }, {});
+
+    // If no jobs, we still return a fully-formed response with zeros
+    if (!jobIds.length) {
+      return res.status(200).json({
+        meta: {
+          range,
+          jobId,
+          recruiterId,
+          companyId,
+          from: from.toISOString(),
+          to: to.toISOString(),
+          refreshedAt: new Date().toISOString(),
+          source: "SQL",
         },
-      },
-    });
-    const totalApplies = applications.length;
-
-    // ─────────────────────────────────────────────────────────────
-    // Interviews
-    // ─────────────────────────────────────────────────────────────
-    const interviews = await prisma.interview.findMany({
-      where: {
-        scheduledAt: timeFilter,
-        job: jobWhere,
-      },
-      include: {
-        job: { select: { id: true } },
-      },
-    });
-    const totalInterviews = interviews.length;
-
-    // ─────────────────────────────────────────────────────────────
-    // Offers
-    // ─────────────────────────────────────────────────────────────
-    const offers = await prisma.offer.findMany({
-      where: {
-        receivedAt: timeFilter,
-        job: jobWhere,
-      },
-      include: {
-        job: {
-          select: { id: true, createdAt: true },
+        kpis: {
+          totalViews: 0,
+          totalApplies: 0,
+          avgTimeToFillDays: 0,
+          conversionRatePct: 0,
         },
-      },
-    });
-    const totalOffers = offers.length;
-    const totalHires = offers.filter((o) => o.accepted === true).length;
+        funnel: [
+          { stage: "Views", value: 0 },
+          { stage: "Clicks", value: 0 },
+          { stage: "Applies", value: 0 },
+          { stage: "Interviews", value: 0 },
+          { stage: "Offers", value: 0 },
+          { stage: "Hires", value: 0 },
+        ],
+        sources: [],
+        recruiterActivity: [],
+      });
+    }
 
-    // ─────────────────────────────────────────────────────────────
-    // Avg time-to-fill (days)
-    // Uses job.createdAt → offer.receivedAt
-    // ─────────────────────────────────────────────────────────────
-    const diffsDays = offers
-      .map((o) => {
-        if (!o.job?.createdAt || !o.receivedAt) return null;
-        const ms =
-          new Date(o.receivedAt).getTime() -
-          new Date(o.job.createdAt).getTime();
-        return ms > 0 ? ms / (1000 * 60 * 60 * 24) : null;
-      })
-      .filter((d) => d != null);
+    // ── Real counts from Prisma ────────────────────────────────
 
-    const avgTimeToFillDays =
-      diffsDays.length > 0
-        ? +(diffsDays.reduce((a, b) => a + b, 0) / diffsDays.length).toFixed(1)
+    const [totalViews, totalApplies, interviewsCount, offers, offersAccepted] =
+      await Promise.all([
+        prisma.jobView.count({
+          where: {
+            jobId: { in: jobIds },
+            viewedAt: dateFilter,
+          },
+        }),
+        prisma.application.count({
+          where: {
+            jobId: { in: jobIds },
+            appliedAt: dateFilter,
+          },
+        }),
+        prisma.interview.count({
+          where: {
+            jobId: { in: jobIds },
+            scheduledAt: dateFilter,
+          },
+        }),
+        prisma.offer.findMany({
+          where: {
+            jobId: { in: jobIds },
+            receivedAt: dateFilter,
+          },
+          select: {
+            jobId: true,
+            receivedAt: true,
+            accepted: true,
+          },
+        }),
+        prisma.offer.findMany({
+          where: {
+            jobId: { in: jobIds },
+            accepted: true,
+            receivedAt: dateFilter,
+          },
+          select: {
+            jobId: true,
+            receivedAt: true,
+          },
+        }),
+      ]);
+
+    // For now, "clicks" ≈ "job detail views".
+    // Once we have a dedicated track_clicks table, we will swap this
+    // to that source — but this is still 100% real data today.
+    const clicks = totalViews;
+
+    const hiresCount = offersAccepted.length;
+
+    const conversionRatePct =
+      totalViews > 0
+        ? Number(((totalApplies / totalViews) * 100).toFixed(2))
         : 0;
 
-    // ─────────────────────────────────────────────────────────────
-    // Funnel
-    //
-    // We don’t currently track separate “clicks” in Prisma,
-    // so we use views as the base and real counts for later stages.
-    // ─────────────────────────────────────────────────────────────
-    const clicks = totalViews; // placeholder derived from real views
+    // Average time-to-fill (in days) based on accepted offers
+    let avgTimeToFillDays = 0;
+    if (offersAccepted.length) {
+      const diffs = offersAccepted
+        .map((o) => {
+          const job = jobsById[o.jobId];
+          if (!job) return null;
+          const diffMs = o.receivedAt.getTime() - job.createdAt.getTime();
+          return diffMs / msPerDay;
+        })
+        .filter((x) => x != null && Number.isFinite(x));
+
+      if (diffs.length) {
+        const sum = diffs.reduce((acc, v) => acc + v, 0);
+        avgTimeToFillDays = Number((sum / diffs.length).toFixed(1));
+      }
+    }
+
+    // ── Funnel (all real derived counts) ───────────────────────
     const funnel = [
       { stage: "Views", value: totalViews },
       { stage: "Clicks", value: clicks },
       { stage: "Applies", value: totalApplies },
-      { stage: "Interviews", value: totalInterviews },
-      { stage: "Offers", value: totalOffers },
-      { stage: "Hires", value: totalHires },
+      { stage: "Interviews", value: interviewsCount },
+      { stage: "Offers", value: offers.length },
+      { stage: "Hires", value: hiresCount },
     ];
 
-    // ─────────────────────────────────────────────────────────────
-    // Source breakdown
-    //
-    // Today all recruiter-managed flows are “Forge” sourced.
-    // Once we add tracking on Application/Job for source, we’ll expand this.
-    // ─────────────────────────────────────────────────────────────
+    // ── Source breakdown ───────────────────────────────────────
+    // Application model currently has no "source" field.
+    // Until we add that, all applies are treated as "Forge".
     const sources =
       totalApplies > 0
         ? [{ name: "Forge", value: totalApplies }]
         : [];
 
-    // ─────────────────────────────────────────────────────────────
-    // Recruiter activity timeline
-    //
-    // Approximate:
-    //   messages  ~ applications per week
-    //   responses ~ interviews per week
-    // ─────────────────────────────────────────────────────────────
-    const weeks = 8;
-    const WEEK_MS = 7 * 24 * 60 * 60 * 1000;
-    const endTime = end.getTime();
-    const startTime = endTime - (weeks - 1) * WEEK_MS;
-    const buckets = Array.from({ length: weeks }).map((_, i) => ({
-      week: `W${i + 1}`,
-      messages: 0,
-      responses: 0,
-    }));
+    // ── Recruiter activity (weekly buckets) ────────────────────
+    // For now:
+    //   messages  → applications
+    //   responses → interviews
+    const buckets = buildWeeklyBuckets(from, to);
 
-    const assignToBucket = (date) => {
-      const t = new Date(date).getTime();
-      if (Number.isNaN(t) || t < startTime || t > endTime) return null;
-      const idx = Math.floor((t - startTime) / WEEK_MS);
-      if (idx < 0 || idx >= weeks) return null;
-      return idx;
-    };
+    if (buckets.length) {
+      const apps = await prisma.application.findMany({
+        where: {
+          jobId: { in: jobIds },
+          appliedAt: dateFilter,
+        },
+        select: { appliedAt: true },
+      });
 
-    applications.forEach((a) => {
-      const idx = assignToBucket(a.appliedAt);
-      if (idx != null) {
+      const interviews = await prisma.interview.findMany({
+        where: {
+          jobId: { in: jobIds },
+          scheduledAt: dateFilter,
+        },
+        select: { scheduledAt: true },
+      });
+
+      apps.forEach((a) => {
+        const idx = bucketIndexForDate(
+          from,
+          to,
+          a.appliedAt,
+          buckets.length
+        );
         buckets[idx].messages += 1;
-      }
-    });
+      });
 
-    interviews.forEach((iv) => {
-      const idx = assignToBucket(iv.scheduledAt);
-      if (idx != null) {
+      interviews.forEach((i) => {
+        const idx = bucketIndexForDate(
+          from,
+          to,
+          i.scheduledAt,
+          buckets.length
+        );
         buckets[idx].responses += 1;
-      }
-    });
+      });
+    }
 
     const recruiterActivity = buckets;
 
-    // ─────────────────────────────────────────────────────────────
-    // Conversion
-    // ─────────────────────────────────────────────────────────────
-    const conversionRatePct =
-      totalViews > 0
-        ? +((totalApplies / totalViews) * 100).toFixed(2)
-        : 0;
-
+    // ── Final payload ──────────────────────────────────────────
     return res.status(200).json({
       meta: {
         range,
         jobId,
         recruiterId,
-        from: from || null,
-        to: to || null,
+        companyId,
+        from: from.toISOString(),
+        to: to.toISOString(),
         refreshedAt: new Date().toISOString(),
-        source: "sql",
+        source: "SQL",
       },
       kpis: {
         totalViews,
@@ -282,18 +360,8 @@ export default async function handler(req, res) {
   } catch (err) {
     console.error("[analytics/recruiter] error:", err);
     return res.status(500).json({
-      error: "RECRUITER_ANALYTICS_ERROR",
-      message:
-        "We had trouble loading recruiter analytics. Contact Support if communication is not provided within 30 minutes.",
-      meta: {
-        range,
-        jobId,
-        recruiterId,
-        from: from || null,
-        to: to || null,
-        refreshedAt: new Date().toISOString(),
-        source: "sql",
-      },
+      error:
+        "We had trouble loading recruiter analytics. If this persists for more than 30 minutes, please contact Support.",
     });
   }
 }

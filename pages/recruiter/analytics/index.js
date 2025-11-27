@@ -11,7 +11,7 @@ import ApplicationFunnel from "@/components/analytics/charts/ApplicationFunnel";
 import SourceBreakdown from "@/components/analytics/charts/SourceBreakdown";
 import RecruiterActivity from "@/components/analytics/charts/RecruiterActivity";
 
-// ---------- Data hook (SQL-backed)
+// ---------- Data hook
 function useAnalytics(state) {
   const [data, setData] = useState(null);
   const [loading, setLoading] = useState(false);
@@ -22,6 +22,7 @@ function useAnalytics(state) {
     params.set("range", state.range);
     params.set("jobId", state.jobId);
     params.set("recruiterId", state.recruiterId);
+    params.set("companyId", state.companyId);
     if (state.range === "custom") {
       if (state.from) params.set("from", state.from);
       if (state.to) params.set("to", state.to);
@@ -35,33 +36,11 @@ function useAnalytics(state) {
     const fetchData = async () => {
       try {
         setLoading(true);
-        setError(null);
-
         const res = await fetch(`/api/analytics/recruiter?${qs}`);
-
-        // Treat non-2xx as real errors so we can show honest messaging
-        if (!res.ok) {
-          let payload;
-          try {
-            payload = await res.json();
-          } catch {
-            payload = await res.text();
-          }
-          const msg =
-            typeof payload === "string"
-              ? payload
-              : payload?.message ||
-                `Failed to load recruiter analytics (HTTP ${res.status}).`;
-          throw new Error(msg);
-        }
-
         const json = await res.json();
         if (active) setData(json);
       } catch (e) {
-        if (active) {
-          console.error("[RecruiterAnalytics] fetch error:", e);
-          setError(e);
-        }
+        if (active) setError(e);
       } finally {
         if (active) setLoading(false);
       }
@@ -108,13 +87,18 @@ function Body() {
     range: "30d",
     jobId: "all",
     recruiterId: "all",
+    companyId: "all",
     from: "",
     to: "",
   });
 
   const { data, loading, error } = useAnalytics(filters);
   const { isEnterprise } = usePlan();
-  const onChange = (patch) => setFilters((s) => ({ ...s, ...patch }));
+  const onChange = (patch) =>
+    setFilters((s) => ({
+      ...s,
+      ...patch,
+    }));
 
   const ChartsBlock = (
     <section className="grid grid-cols-1 lg:grid-cols-2 gap-6">
@@ -133,21 +117,10 @@ function Body() {
         <Filters state={filters} onChange={onChange} />
       </div>
 
-      {/* Errors — Sev 1–style transparency */}
+      {/* Errors */}
       {error && (
-        <div className="bg-red-50 border border-red-200 text-red-800 p-4 rounded-xl text-sm">
-          <p className="font-medium">
-            We had trouble loading recruiter analytics.
-          </p>
-          <p className="mt-1">
-            If this continues for more than 30 minutes, contact the Support
-            Team so we can investigate.
-          </p>
-          {error?.message && (
-            <p className="mt-2 text-xs text-red-500/80">
-              Technical details: {error.message}
-            </p>
-          )}
+        <div className="bg-red-50 border border-red-200 text-red-700 p-4 rounded-xl">
+          {String(error)}
         </div>
       )}
 

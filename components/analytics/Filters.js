@@ -1,11 +1,13 @@
 // components/analytics/Filters.js
-// Filters: Time Range, Job Posting, Recruiter
-import React from 'react';
+// Filters: Time Range, Job Posting, Recruiter, Company
+import React from "react";
 
 export default function Filters({ state, onChange }) {
-  const { range, jobId, recruiterId, from, to } = state;
+  const { range, jobId, recruiterId, companyId, from, to } = state;
+
   return (
     <div className="bg-white rounded-2xl shadow p-5 border border-gray-100 grid grid-cols-1 md:grid-cols-4 gap-4">
+      {/* Time Range */}
       <div>
         <label className="block text-sm text-gray-600 mb-1">Time Range</label>
         <select
@@ -20,6 +22,7 @@ export default function Filters({ state, onChange }) {
         </select>
       </div>
 
+      {/* Job Posting */}
       <div>
         <label className="block text-sm text-gray-600 mb-1">Job Posting</label>
         <select
@@ -27,13 +30,12 @@ export default function Filters({ state, onChange }) {
           value={jobId}
           onChange={(e) => onChange({ jobId: e.target.value })}
         >
-          <option value="all">All</option>
-          <option value="jr-se">Jr. Software Engineer</option>
-          <option value="sr-se">Sr. Software Engineer</option>
-          <option value="cx-lead">Customer Success Lead</option>
+          {/* Phase 2: real job options from org */}
+          <option value="all">All job postings</option>
         </select>
       </div>
 
+      {/* Recruiter */}
       <div>
         <label className="block text-sm text-gray-600 mb-1">Recruiter</label>
         <select
@@ -41,22 +43,47 @@ export default function Filters({ state, onChange }) {
           value={recruiterId}
           onChange={(e) => onChange({ recruiterId: e.target.value })}
         >
-          <option value="all">All</option>
-          <option value="r1">Alexis</option>
-          <option value="r2">Jordan</option>
-          <option value="r3">Taylor</option>
+          {/* Phase 2: real recruiter list. For now, just "All". */}
+          <option value="all">All recruiters</option>
         </select>
       </div>
 
-      {range === 'custom' && (
-        <div className="grid grid-cols-2 gap-3 items-end">
+      {/* Company / Organization */}
+      <div>
+        <label className="block text-sm text-gray-600 mb-1">
+          Company / Organization
+        </label>
+        <select
+          className="w-full border rounded-xl p-2"
+          value={companyId}
+          onChange={(e) => onChange({ companyId: e.target.value })}
+        >
+          {/* Phase 2: per-company list (per org / tenant).
+              "All companies" = all the companies this user is allowed to see. */}
+          <option value="all">All companies</option>
+        </select>
+      </div>
+
+      {/* Custom date range fields */}
+      {range === "custom" && (
+        <div className="md:col-span-4 grid grid-cols-1 sm:grid-cols-2 gap-3 items-end mt-1">
           <div>
             <label className="block text-sm text-gray-600 mb-1">From</label>
-            <input type="date" className="w-full border rounded-xl p-2" value={from || ''} onChange={(e) => onChange({ from: e.target.value })} />
+            <input
+              type="date"
+              className="w-full border rounded-xl p-2"
+              value={from || ""}
+              onChange={(e) => onChange({ from: e.target.value })}
+            />
           </div>
           <div>
             <label className="block text-sm text-gray-600 mb-1">To</label>
-            <input type="date" className="w-full border rounded-xl p-2" value={to || ''} onChange={(e) => onChange({ to: e.target.value })} />
+            <input
+              type="date"
+              className="w-full border rounded-xl p-2"
+              value={to || ""}
+              onChange={(e) => onChange({ to: e.target.value })}
+            />
           </div>
         </div>
       )}
