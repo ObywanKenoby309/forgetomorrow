@@ -26,8 +26,8 @@ const PUBLIC_PATHS = new Set([
   '/blog',
   '/features',
   '/pricing',
-  '/help',
-  '/support',          // keeping this too in case /support exists
+  '/help',             // 🔹 Help Center: public, no AI agents
+  // '/support',       // 🔒 removed: Support is now internal-only
   '/privacy',
   '/subprocessors',
   '/terms',
@@ -145,6 +145,20 @@ export async function middleware(req) {
   }
 
   // ──────────────────────────────────────────────────────────
+  // 3b) SUPPORT: always require a session for /support* (internal-only)
+//     This covers /support, /support/chat, and any future nested routes.
+// ──────────────────────────────────────────────────────────
+  if (normalized === '/support' || normalized.startsWith('/support/')) {
+    if (!hasSession) {
+      const loginUrl = new URL('/login', req.url)
+      return NextResponse.redirect(loginUrl)
+    }
+    const res = NextResponse.next()
+    res.headers.set('x-site-lock', 'support-auth-required')
+    return res
+  }
+
+  // ──────────────────────────────────────────────────────────
   // 4) API RATE LIMITING (Upstash) for sensitive API routes
   // ──────────────────────────────────────────────────────────
   if (isProtectedApiPath(pathname)) {
@@ -185,8 +199,8 @@ export async function middleware(req) {
   }
 
   // ──────────────────────────────────────────────────────────
-  // 6) If NOT locked → fully public (except /jobs above)
-  // ──────────────────────────────────────────────────────────
+  // 6) If NOT locked → fully public (except /jobs above and /support*)
+// ──────────────────────────────────────────────────────────
   if (!SITE_LOCK) {
     const res = NextResponse.next()
     res.headers.set('x-site-lock', 'off')

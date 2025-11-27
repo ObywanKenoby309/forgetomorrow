@@ -1,9 +1,21 @@
 // components/SupportFloatingButton.js
 import Link from 'next/link';
 import { useRouter } from 'next/router';
+import { useSession } from 'next-auth/react';
 
 export default function SupportFloatingButton() {
   const router = useRouter();
+  const { data: session, status } = useSession();
+
+  // While auth status is loading, don't flash the button
+  if (status === 'loading') {
+    return null;
+  }
+
+  // Hide entirely for non-authenticated users (keeps HelpDesk off public pages)
+  if (!session?.user) {
+    return null;
+  }
 
   // Optional: hide on auth pages or support page itself
   const hideOnRoutes = new Set(['/auth/signin', '/auth/signup', '/support']);

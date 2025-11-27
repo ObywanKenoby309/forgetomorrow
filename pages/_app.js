@@ -12,7 +12,8 @@ import { ResumeProvider } from '@/context/ResumeContext';
 import { PlanProvider } from '@/context/PlanContext';
 import { AiUsageProvider } from '@/context/AiUsageContext';
 import { useUserWallpaper } from '@/hooks/useUserWallpaper';
-import SupportFloatingButton from '@/components/SupportFloatingButton'; // ⬅️ ADDED
+import SupportFloatingButton from '@/components/SupportFloatingButton'; // ⬅️ Global support button
+import { SessionProvider } from 'next-auth/react'; // ⬅️ NEW
 
 function RouteTracker() {
   const router = useRouter();
@@ -41,7 +42,7 @@ function RouteTracker() {
   return null;
 }
 
-export default function App({ Component, pageProps }) {
+export default function App({ Component, pageProps: { session, ...pageProps } }) {
   const router = useRouter();
 
   // 🔹 Pull user wallpaper (internal pages only)
@@ -202,21 +203,24 @@ export default function App({ Component, pageProps }) {
             shouldUseGrayInternalBg ? 'bg-[#ECEFF1]' : ''
           }`}
         >
-          <PlanProvider>
-            <ResumeProvider>
-              <AiUsageProvider>
-                <RouteTracker />
-                {renderLandingHeader && <LandingHeader />}
-                {isUniversalPage && <UniversalHeader />}
-                <Component {...pageProps} />
-              </AiUsageProvider>
-            </ResumeProvider>
-          </PlanProvider>
+          {/* 🔐 Wrap everything in SessionProvider so useSession() works */}
+          <SessionProvider session={session}>
+            <PlanProvider>
+              <ResumeProvider>
+                <AiUsageProvider>
+                  <RouteTracker />
+                  {renderLandingHeader && <LandingHeader />}
+                  {isUniversalPage && <UniversalHeader />}
+                  <Component {...pageProps} />
+                </AiUsageProvider>
+              </ResumeProvider>
+            </PlanProvider>
 
-          {renderLandingHeader ? <LandingFooter /> : <Footer />}
+            {renderLandingHeader ? <LandingFooter /> : <Footer />}
 
-          {/* Global Support Floating Button (HelpDesk personas) */}
-          <SupportFloatingButton />
+            {/* Global Support Floating Button (HelpDesk personas) */}
+            <SupportFloatingButton />
+          </SessionProvider>
         </div>
       </div>
     </>
