@@ -1,9 +1,10 @@
-// pages/api/jobs.js — UPDATED to use Railway Postgres (forge-jobs-cron)
-// and include per-user isPinned using a pinned_jobs table
+// pages/api/jobs.js — blend external (Railway) + internal (Prisma) jobs
+// and include per-user isPinned using a pinned_jobs table in Postgres
 
 import { Pool } from 'pg';
 import { getServerSession } from 'next-auth';
-import authOptions from './auth/[...nextauth]';
+import { authOptions } from './auth/[...nextauth]';
+import { PrismaClient } from '@prisma/client';
 
 // Use a separate env var so we don't collide with auth DBs, etc.
 const connectionString =
@@ -11,9 +12,8 @@ const connectionString =
   process.env.DATABASE_URL ||
   null;
 
-// Lazily-initialized connection pool
+// Lazily-initialized connection pool (Railway Postgres)
 let pool = null;
-
 function getPool() {
   if (!connectionString) return null;
   if (!pool) {
@@ -27,7 +27,16 @@ function getPool() {
   return pool;
 }
 
-// Your existing fallback jobs — keeps the site up even if DB is not ready
+// Lazily-initialized Prisma client (SQLite dev.db)
+let prisma = null;
+function getPrisma() {
+  if (!prisma) {
+    prisma = new PrismaClient();
+  }
+  return prisma;
+}
+
+// Fallback jobs — keeps the site up even if DBs are not ready
 const fallbackJobs = [
   {
     id: 1,
@@ -60,91 +69,143 @@ export default async function handler(req, res) {
   }
 
   const dbPool = getPool();
+  const prismaClient = getPrisma();
 
-  // If DB isn’t configured, quietly fall back
+  let externalJobs = [];
+  let internalJobs = [];
+  let pinnedSet = new Set();
+
+  // ───────────────────────────────────────────────────────────
+  // 1) External jobs from Railway Postgres
+  // ───────────────────────────────────────────────────────────
   if (!dbPool) {
-    console.warn('FORGE_JOBS_DATABASE_URL not set; using fallback jobs');
-    // No pinned info when using fallback
-    return res.status(200).json({
-      jobs: fallbackJobs.map((job) => ({ ...job, isPinned: false })),
-    });
-  }
-
-  try {
-    const client = await dbPool.connect();
-
+    console.warn('[jobs] FORGE_JOBS_DATABASE_URL not set; skipping external jobs');
+  } else {
     try {
-      // Ensure pinned table exists for this Postgres DB
-      await client.query(`
-        CREATE TABLE IF NOT EXISTS pinned_jobs (
-          id SERIAL PRIMARY KEY,
-          user_email TEXT NOT NULL,
-          job_id INTEGER NOT NULL,
-          pinned_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-          CONSTRAINT pinned_jobs_unique_user_job UNIQUE (user_email, job_id)
-        );
-      `);
+      const client = await dbPool.connect();
+      try {
+        // Ensure pinned table exists for this Postgres DB
+        await client.query(`
+          CREATE TABLE IF NOT EXISTS pinned_jobs (
+            id SERIAL PRIMARY KEY,
+            user_email TEXT NOT NULL,
+            job_id INTEGER NOT NULL,
+            pinned_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+            CONSTRAINT pinned_jobs_unique_user_job UNIQUE (user_email, job_id)
+          );
+        `);
 
-      // Load jobs from the cron-fed jobs table
-      const result = await client.query(
-        `
-        SELECT
-          id,
-          title,
-          company,
-          location,
-          description,
-          url,
-          salary,
-          tags,
-          source,
-          publishedat
-        FROM jobs
-        ORDER BY
-          publishedat DESC NULLS LAST,
-          id DESC
-        LIMIT 200;
-        `
-      );
-
-      const rows = result.rows || [];
-
-      if (rows.length === 0) {
-        console.warn('Jobs table is empty; using fallback jobs');
-        return res.status(200).json({
-          jobs: fallbackJobs.map((job) => ({ ...job, isPinned: false })),
-        });
-      }
-
-      // Look up which of these jobs are pinned by this user (if logged in)
-      let pinnedSet = new Set();
-      if (userEmail) {
-        const pinnedRes = await client.query(
+        // Load jobs from the cron-fed jobs table
+        const result = await client.query(
           `
-          SELECT job_id
-          FROM pinned_jobs
-          WHERE user_email = $1
-          `,
-          [userEmail]
+          SELECT
+            id,
+            title,
+            company,
+            location,
+            description,
+            url,
+            salary,
+            tags,
+            source,
+            publishedat
+          FROM jobs
+          ORDER BY
+            publishedat DESC NULLS LAST,
+            id DESC
+          LIMIT 200;
+          `
         );
-        pinnedSet = new Set(pinnedRes.rows.map((r) => r.job_id));
+
+        const rows = result.rows || [];
+
+        // Look up which of these jobs are pinned by this user (if logged in)
+        if (userEmail) {
+          const pinnedRes = await client.query(
+            `
+            SELECT job_id
+            FROM pinned_jobs
+            WHERE user_email = $1
+            `,
+            [userEmail]
+          );
+          pinnedSet = new Set(pinnedRes.rows.map((r) => r.job_id));
+        }
+
+        externalJobs = rows.map((row) => ({
+          id: row.id,
+          title: row.title,
+          company: row.company,
+          location: row.location,
+          description: row.description,
+          url: row.url,
+          salary: row.salary,
+          tags: row.tags,
+          // Human-readable source; keep DB source for transparency
+          source: row.source || 'External',
+          origin: 'external',
+          publishedat: row.publishedat,
+          isPinned: userEmail ? pinnedSet.has(row.id) : false,
+        }));
+      } finally {
+        client.release();
       }
-
-      // Shape final payload, tagging each job with isPinned
-      const jobs = rows.map((row) => ({
-        ...row,
-        isPinned: userEmail ? pinnedSet.has(row.id) : false,
-      }));
-
-      return res.status(200).json({ jobs });
-    } finally {
-      client.release();
+    } catch (error) {
+      console.error('[jobs] External jobs (Postgres) error:', error);
+      // We don't return yet — we still want to serve internal jobs if available
     }
+  }
+
+  // ───────────────────────────────────────────────────────────
+  // 2) Internal recruiter jobs from Prisma Job table
+  // ───────────────────────────────────────────────────────────
+  try {
+    const rawInternal = await prismaClient.job.findMany({
+      where: {
+        // Only show "Open" roles to seekers
+        status: 'Open',
+      },
+      orderBy: {
+        createdAt: 'desc',
+      },
+      take: 200,
+    });
+
+    internalJobs = rawInternal.map((job) => ({
+      id: job.id,
+      title: job.title,
+      company: job.company,
+      location: job.location,
+      description: job.description,
+      url: null, // internal jobs live on Forge
+      salary: job.compensation || null,
+      tags: null,
+      source: 'Forge Recruiter', // what seekers will see in the UI
+      origin: 'internal',
+      publishedat: job.createdAt, // serialized to ISO in JSON
+      isPinned: userEmail ? pinnedSet.has(job.id) : false,
+    }));
   } catch (error) {
-    console.error('Jobs API error (Postgres):', error);
-    // If anything goes wrong, keep the site working with fallback
+    console.error('[jobs] Internal jobs (Prisma) error:', error);
+  }
+
+  // ───────────────────────────────────────────────────────────
+  // 3) Combine sources or fall back
+  // ───────────────────────────────────────────────────────────
+  const combinedJobs = [...externalJobs, ...internalJobs];
+
+  if (!combinedJobs.length) {
+    console.warn('[jobs] No external or internal jobs found; using fallback');
     return res.status(200).json({
-      jobs: fallbackJobs.map((job) => ({ ...job, isPinned: false })),
+      jobs: fallbackJobs.map((job) => ({
+        ...job,
+        isPinned: false,
+        origin: 'fallback',
+        source: job.source || 'Fallback',
+        publishedat: new Date().toISOString(),
+      })),
     });
   }
+
+  return res.status(200).json({ jobs: combinedJobs });
 }

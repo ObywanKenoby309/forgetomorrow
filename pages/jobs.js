@@ -195,6 +195,7 @@ function Jobs() {
   const [locationFilter, setLocationFilter] = useState('');
   const [locationTypeFilter, setLocationTypeFilter] = useState(''); // '', 'Remote', 'Hybrid', 'On-site'
   const [daysFilter, setDaysFilter] = useState('');
+  const [sourceFilter, setSourceFilter] = useState(''); // '', 'external', 'internal'
 
   // Pagination for left list
   const [pageSize, setPageSize] = useState(20);
@@ -253,48 +254,49 @@ function Jobs() {
   const isJobPinned = (job) => !!job && pinnedIds.has(job.id);
 
   const togglePin = async (job) => {
-  if (!job) return;
-  const currentlyPinned = isJobPinned(job);
+    if (!job) return;
+    const currentlyPinned = isJobPinned(job);
 
-  try {
-    const res = await fetch('/api/seeker/pinned-jobs', {
-      method: currentlyPinned ? 'DELETE' : 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ jobId: job.id }),
-    });
-
-    const text = await res.text();
-    let data = {};
     try {
-      data = text ? JSON.parse(text) : {};
-    } catch {
-      // non-JSON body, keep data as {}
-    }
+      const res = await fetch('/api/seeker/pinned-jobs', {
+        method: currentlyPinned ? 'DELETE' : 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ jobId: job.id }),
+      });
 
-    console.log('[togglePin] status', res.status, 'body:', data || text);
-
-    if (!res.ok) {
-      throw new Error(data.error || `Pin API failed (status ${res.status})`);
-    }
-
-    setPinnedIds((prev) => {
-      const next = new Set(prev);
-      if (currentlyPinned) {
-        next.delete(job.id);
-      } else {
-        next.add(job.id);
+      const text = await res.text();
+      let data = {};
+      try {
+        data = text ? JSON.parse(text) : {};
+      } catch {
+        // non-JSON body, keep data as {}
       }
-      return next;
-    });
-  } catch (err) {
-    console.error('[Jobs] togglePin error', err);
-    alert(err.message || (currentlyPinned
-      ? 'Could not unpin this job. Please try again.'
-      : 'Could not pin this job. Please try again.'
-    ));
-  }
-};
 
+      console.log('[togglePin] status', res.status, 'body:', data || text);
+
+      if (!res.ok) {
+        throw new Error(data.error || `Pin API failed (status ${res.status})`);
+      }
+
+      setPinnedIds((prev) => {
+        const next = new Set(prev);
+        if (currentlyPinned) {
+          next.delete(job.id);
+        } else {
+          next.add(job.id);
+        }
+        return next;
+      });
+    } catch (err) {
+      console.error('[Jobs] togglePin error', err);
+      alert(
+        err.message ||
+          (currentlyPinned
+            ? 'Could not unpin this job. Please try again.'
+            : 'Could not pin this job. Please try again.')
+      );
+    }
+  };
 
   const handleApplyClick = (job) => {
     setApplyJob(job);
@@ -350,6 +352,12 @@ function Jobs() {
       if (inferred !== locationTypeFilter) {
         return false;
       }
+    }
+
+    if (sourceFilter) {
+      const origin = (job.origin || '').toLowerCase();
+      if (sourceFilter === 'external' && origin !== 'external') return false;
+      if (sourceFilter === 'internal' && origin !== 'internal') return false;
     }
 
     if (hasDaysFilter) {
@@ -411,8 +419,8 @@ function Jobs() {
             <div
               style={{
                 display: 'grid',
-                gridTemplateColumns:
-                  'minmax(0, 2fr) minmax(0, 1.4fr) minmax(0, 1.4fr) minmax(0, 1.2fr) minmax(0, 1.4fr)',
+                // Auto-fit so we can safely add filters without breaking layout
+                gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))',
                 gap: 12,
                 alignItems: 'center',
                 marginBottom: 8,
@@ -487,6 +495,26 @@ function Jobs() {
                   <option value="Remote">Remote</option>
                   <option value="Hybrid">Hybrid</option>
                   <option value="On-site">On-site</option>
+                </select>
+              </div>
+
+              {/* Source (internal vs external) */}
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+                <label style={{ fontSize: 12, color: '#78909C' }}>Source</label>
+                <select
+                  value={sourceFilter}
+                  onChange={(e) => setSourceFilter(e.target.value)}
+                  style={{
+                    padding: '8px 10px',
+                    borderRadius: 8,
+                    border: '1px solid #CFD8DC',
+                    fontSize: 14,
+                    backgroundColor: 'white',
+                  }}
+                >
+                  <option value="">All sources</option>
+                  <option value="external">External only</option>
+                  <option value="internal">Forge recruiters only</option>
                 </select>
               </div>
 
