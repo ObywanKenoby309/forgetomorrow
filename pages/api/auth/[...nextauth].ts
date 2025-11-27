@@ -4,7 +4,7 @@ import CredentialsProvider from "next-auth/providers/credentials";
 import { prisma } from "@/lib/prisma";
 import bcrypt from "bcryptjs";
 
-export default NextAuth({
+export const authOptions = {
   providers: [
     CredentialsProvider({
       name: "Credentials",
@@ -47,28 +47,41 @@ export default NextAuth({
     maxAge: 30 * 24 * 60 * 60,
   },
 
-callbacks: {
-  jwt: async ({ token, user }) => {
-    if (user) {
-      token.role = user.role;
-      token.plan = user.plan;
-      (token as any).stripeCustomerId =
-        (user as any).stripeCustomerId ?? null; // FIX
-    }
-    return token;
-  },
+  callbacks: {
+    // Explicitly type params so TS doesn't complain about implicit any
+    jwt: async ({
+      token,
+      user,
+    }: {
+      token: any;
+      user?: any;
+    }) => {
+      if (user) {
+        token.role = (user as any).role;
+        token.plan = (user as any).plan;
+        (token as any).stripeCustomerId =
+          (user as any).stripeCustomerId ?? null; // FIX
+      }
+      return token;
+    },
 
-  session: async ({ session, token }) => {
-    if (session.user) {
-      session.user.id = token.sub!;
-      (session.user as any).role = token.role as string;
-      (session.user as any).plan = token.plan as string;
-      (session.user as any).stripeCustomerId = (token as any)
-        .stripeCustomerId as string | null; // FIX
-    }
-    return session;
+    session: async ({
+      session,
+      token,
+    }: {
+      session: any;
+      token: any;
+    }) => {
+      if (session.user) {
+        (session.user as any).id = token.sub!;
+        (session.user as any).role = token.role as string;
+        (session.user as any).plan = token.plan as string;
+        (session.user as any).stripeCustomerId = (token as any)
+          .stripeCustomerId as string | null; // FIX
+      }
+      return session;
+    },
   },
-},
 
   pages: {
     signIn: "/auth/signin",
@@ -80,4 +93,7 @@ callbacks: {
   jwt: {
     maxAge: 30 * 24 * 60 * 60,
   },
-});
+};
+
+// Default export for NextAuth (used by Next.js)
+export default NextAuth(authOptions);

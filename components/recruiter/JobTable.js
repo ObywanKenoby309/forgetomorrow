@@ -6,6 +6,7 @@ const statusClass = (s) =>
     Open: "bg-emerald-50 text-emerald-700 border-emerald-200",
     Draft: "bg-amber-50 text-amber-700 border-amber-200",
     Closed: "bg-slate-100 text-slate-700 border-slate-300",
+    Unknown: "bg-slate-100 text-slate-700 border-slate-300",
   }[s] || "bg-slate-100 text-slate-700 border-slate-300");
 
 const urgencyBadge = (urgent) =>
@@ -113,42 +114,75 @@ export default function JobTable({ jobs = [], onEdit, onView, onClose }) {
             </tr>
           </thead>
           <tbody>
-            {filteredAndSorted.map((j) => (
-              <tr key={j.id} className="border-b last:border-0 hover:bg-slate-50">
-                <td className="px-4 py-3 font-medium">{j.company}</td>
-                <td className="px-4 py-3">{j.title}</td>
-                <td className="px-4 py-3 text-slate-600">{j.worksite}</td>
-                <td className="px-4 py-3 text-slate-600">{j.location}</td>
-                <td className="px-4 py-3">
-                  <span
-                    className={`inline-block px-2 py-[2px] rounded border text-xs ${statusClass(
-                      j.status
-                    )}`}
-                  >
-                    {j.status}
-                  </span>
-                </td>
-                <td className="px-4 py-3 text-center">
-                  {urgencyBadge(j.urgent)}
-                </td>
-                <td className="px-4 py-3 text-center">{j.views}</td>
-                <td className="px-4 py-3 text-center">{j.applications}</td>
-                <td className="px-4 py-3 text-xs">
-                  <button onClick={() => onEdit?.(j)} className="underline hover:text-blue-700">Edit</button>
-                  <span className="mx-1 text-slate-300">|</span>
-                  <button onClick={() => onView?.(j)} className="underline hover:text-blue-700">View</button>
-                  {j.status !== "Closed" && (
-                    <>
-                      <span className="mx-1 text-slate-300">|</span>
-                      <button onClick={() => onClose?.(j)} className="underline hover:text-red-700">Close</button>
-                    </>
-                  )}
-                </td>
-              </tr>
-            ))}
+            {filteredAndSorted.map((j) => {
+              const status = j.status || "Unknown";
+              const views = j.views ?? "—";
+              const applications = j.applications ?? "—";
+
+              return (
+                <tr
+                  key={j.id}
+                  className="border-b last:border-0 hover:bg-slate-50"
+                >
+                  <td className="px-4 py-3 font-medium">
+                    {j.company || "—"}
+                  </td>
+                  <td className="px-4 py-3">{j.title || "—"}</td>
+                  <td className="px-4 py-3 text-slate-600">
+                    {j.worksite || "—"}
+                  </td>
+                  <td className="px-4 py-3 text-slate-600">
+                    {j.location || "—"}
+                  </td>
+                  <td className="px-4 py-3">
+                    <span
+                      className={`inline-block px-2 py-[2px] rounded border text-xs ${statusClass(
+                        status
+                      )}`}
+                    >
+                      {status}
+                    </span>
+                  </td>
+                  <td className="px-4 py-3 text-center">
+                    {urgencyBadge(Boolean(j.urgent))}
+                  </td>
+                  <td className="px-4 py-3 text-center">{views}</td>
+                  <td className="px-4 py-3 text-center">{applications}</td>
+                  <td className="px-4 py-3 text-xs">
+                    <button
+                      onClick={() => onEdit?.(j)}
+                      className="underline hover:text-blue-700"
+                    >
+                      Edit
+                    </button>
+                    <span className="mx-1 text-slate-300">|</span>
+                    <button
+                      onClick={() => onView?.(j)}
+                      className="underline hover:text-blue-700"
+                    >
+                      View
+                    </button>
+                    {status !== "Closed" && (
+                      <>
+                        <span className="mx-1 text-slate-300">|</span>
+                        <button
+                          onClick={() => onClose?.(j)}
+                          className="underline hover:text-red-700"
+                        >
+                          Close
+                        </button>
+                      </>
+                    )}
+                  </td>
+                </tr>
+              );
+            })}
             {filteredAndSorted.length === 0 && (
               <tr>
-                <td colSpan={9} className="px-4 py-8 text-center text-slate-500">
+                <td
+                  colSpan={9}
+                  className="px-4 py-8 text-center text-slate-500"
+                >
                   {filter.status || filter.urgent
                     ? "No jobs match your filters."
                     : "No jobs yet. Click “Post a Job” to create your first listing."}

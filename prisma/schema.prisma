@@ -133,6 +133,39 @@ model PinnedJob {
 }
 
 // ============================================================================
+//  CANDIDATES (RECRUITER PIPELINE)
+// ============================================================================
+
+model Candidate {
+  id        Int      @id @default(autoincrement())
+  name      String
+  role      String?
+  location  String?
+  match     Int?
+  summary   String?
+
+  // Structured profile data for recruiter views
+  skills     Json?   // ["Customer Success", "SaaS", ...]
+  experience Json?   // [{ title, company, range, highlights[] }, ...]
+  activity   Json?   // [{ event, when, url? }, ...]
+  journey    Json?   // [{ action, timestamp }, ...]
+
+  // Recruiter pipeline metadata
+  tags  Json?        // ["Top Prospect", ...]
+  notes String?
+
+  // Ownership (optional; for now we do not filter by owner in API)
+  ownerId String?
+  owner   User?   @relation(fields: [ownerId], references: [id])
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([ownerId])
+  @@map("candidates")
+}
+
+// ============================================================================
 //  RESUMES, COVERS, AND SCAN LOGS
 // ============================================================================
 
@@ -333,6 +366,9 @@ model User {
   negotiations     Negotiation[]     @relation("UserNegotiations")
   profileSnapshots ProfileSnapshot[] @relation("UserProfileSnapshots")
   consents         UserConsent[]
+
+  // Recruiter candidate ownership
+  candidates Candidate[]
 
   // ── Corporate appearance overrides (ForgeTomorrow staff only) ─────────────
   corporateBannerKey    String?  // e.g. "CEO", "CFO", "STAFF_GENERAL"

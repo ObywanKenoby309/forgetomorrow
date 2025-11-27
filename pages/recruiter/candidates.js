@@ -1,5 +1,5 @@
 // pages/recruiter/candidates.js
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { PlanProvider, usePlan } from "../../context/PlanContext";
 import RecruiterLayout from "../../components/layouts/RecruiterLayout";
 import CandidateList from "../../components/recruiter/CandidateList";
@@ -66,66 +66,11 @@ function Body() {
   const [locQuery, setLocQuery] = useState("");
   const [boolQuery, setBoolQuery] = useState("");
 
-  // Mock candidates
-  const [candidates, setCandidates] = useState([
-    {
-      id: 1,
-      name: "Jane Doe",
-      role: "Client Success Lead",
-      location: "Remote",
-      match: 92,
-      summary:
-        "Customer-obsessed team lead with 7+ years in SaaS onboarding and retention.",
-      experience: [
-        {
-          title: "Senior CSM",
-          company: "NimbusCloud",
-          range: "Jan 2022 — Present",
-          highlights: ["Led 6 CSMs; 96% logo retention", "Built playbooks for enterprise onboarding"],
-        },
-        {
-          title: "CSM",
-          company: "AcmeSoft",
-          range: "2019 — 2021",
-          highlights: ["Improved NPS from 41 → 62", "Drove $1.2M expansion revenue"],
-        },
-      ],
-      skills: ["Customer Success", "Onboarding", "Playbooks", "SaaS", "Retention"],
-      activity: [{ event: "Applied to Client Success Team Lead", when: "2 days ago" }],
-      tags: ["Top Prospect"],
-      notes: "Strong in process building; confirm compensation expectations.",
-    },
-    {
-      id: 2,
-      name: "Omar Reed",
-      role: "Onboarding Specialist",
-      location: "Nashville, TN",
-      match: 88,
-      summary: "Process-driven onboarding specialist focused on time-to-value.",
-      experience: [
-        { title: "Onboarding Specialist", company: "FlowOps", range: "2021 — Present", highlights: ["Avg TTV 10 days"] },
-      ],
-      skills: ["Onboarding", "Process", "Documentation"],
-      activity: [{ event: "Viewed job post", when: "Yesterday" }],
-      tags: [],
-      notes: "",
-    },
-    {
-      id: 3,
-      name: "Priya Kumar",
-      role: "Solutions Architect",
-      location: "Austin, TX",
-      match: 86,
-      summary: "SA with strong pre-sales experience in integrations and security.",
-      experience: [
-        { title: "Solutions Architect", company: "SecureLayer", range: "2020 — Present", highlights: ["Led 15 POCs"] },
-      ],
-      skills: ["Solutions Architecture", "Security", "APIs", "Pre-sales"],
-      activity: [],
-      tags: ["Keep Warm"],
-      notes: "Potential for future SA role; not ideal for CSM role.",
-    },
-  ]);
+  // Data & errors
+  const [candidates, setCandidates] = useState([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [loadError, setLoadError] = useState(null);
+  const [actionError, setActionError] = useState(null);
 
   // WHY flags
   const hasWhyFull = isEnterprise;
@@ -138,29 +83,142 @@ function Body() {
   // Profile modal
   const [open, setOpen] = useState(false);
   const [selected, setSelected] = useState(null);
+
   const onView = (c) => {
     setSelected(c);
     setOpen(true);
   };
-  const onMessage = (c) => console.log("Message", c);
 
-  const saveNotes = (id, text) => {
-    setCandidates((prev) => prev.map((c) => (c.id === id ? { ...c, notes: text } : c)));
+  const onMessage = (c) => {
+    // Messaging system will be wired in a dedicated pass
+    console.log("Message", c);
   };
-  const toggleTag = (id, tag) => {
+
+  // Load candidates from Prisma-backed API
+  useEffect(() => {
+    let isMounted = true;
+
+    async function fetchCandidates() {
+      try {
+        setIsLoading(true);
+        const params = new URLSearchParams();
+        if (nameQuery) params.set("q", nameQuery);
+        if (locQuery) params.set("location", locQuery);
+        if (boolQuery) params.set("bool", boolQuery);
+
+        const res = await fetch(
+          `/api/recruiter/candidates${params.toString() ? `?${params.toString()}` : ""}`
+        );
+
+        if (!res.ok) {
+          throw new Error(`Failed to load candidates: ${res.status}`);
+        }
+
+        const json = await res.json();
+        if (!isMounted) return;
+
+        const list = Array.isArray(json.candidates) ? json.candidates : [];
+        setCandidates(list);
+        setLoadError(null);
+      } catch (err) {
+        console.error("[Candidates] load error:", err);
+        if (isMounted) {
+          setLoadError(
+            "We had trouble loading candidates. Contact the Support Team if communication isn't provided in 30 minutes."
+          );
+        }
+      } finally {
+        if (isMounted) {
+          setIsLoading(false);
+        }
+      }
+    }
+
+    fetchCandidates();
+    return () => {
+      isMounted = false;
+    };
+  }, [nameQuery, locQuery, boolQuery]);
+
+  // Notes persistence — optimistic update + Sev-1-transparent errors
+  const saveNotes = async (id, text) => {
+    setActionError(null);
+    // Optimistic update
+    setCandidates((prev) =>
+      prev.map((c) => (c.id === id ? { ...c, notes: text } : c))
+    );
+
+    try {
+      const res = await fetch("/api/recruiter/candidates/notes", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ candidateId: id, notes: text }),
+      });
+
+      if (!res.ok) {
+        const payload = await res.json().catch(() => ({}));
+        const msg =
+          payload?.error ||
+          `Failed to save candidate notes (status ${res.status}).`;
+        throw new Error(msg);
+      }
+    } catch (err) {
+      console.error("[Candidates] saveNotes error:", err);
+      setActionError(
+        "We couldn't save candidate notes. Your changes may not be stored yet."
+      );
+    }
+  };
+
+  // Tag toggle persistence — optimistic update + honest errors
+  const toggleTag = async (id, tag) => {
+    setActionError(null);
+
+    let updatedTags = null;
+
     setCandidates((prev) =>
       prev.map((c) => {
         if (c.id !== id) return c;
-        const has = (c.tags || []).includes(tag);
-        return { ...c, tags: has ? c.tags.filter((t) => t !== tag) : [...(c.tags || []), tag] };
+        const currentTags = Array.isArray(c.tags) ? c.tags : [];
+        const has = currentTags.includes(tag);
+        const next = has
+          ? currentTags.filter((t) => t !== tag)
+          : [...currentTags, tag];
+        updatedTags = next;
+        return { ...c, tags: next };
       })
     );
+
+    if (!updatedTags) {
+      return;
+    }
+
+    try {
+      const res = await fetch("/api/recruiter/candidates/tags", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ candidateId: id, tags: updatedTags }),
+      });
+
+      if (!res.ok) {
+        const payload = await res.json().catch(() => ({}));
+        const msg =
+          payload?.error ||
+          `Failed to update candidate tags (status ${res.status}).`;
+        throw new Error(msg);
+      }
+    } catch (err) {
+      console.error("[Candidates] toggleTag error:", err);
+      setActionError(
+        "We couldn't update candidate tags. Your changes may not be stored yet."
+      );
+    }
   };
 
-  // WHY drawer + instrumentation
+  // WHY drawer + instrumentation (still using mock explain for now)
   const [whyOpen, setWhyOpen] = useState(false);
   const [whyData, setWhyData] = useState(null);
-  const [whyCandidate, setWhyCandidate] = useState(null); // ← NEW
+  const [whyCandidate, setWhyCandidate] = useState(null);
 
   const onWhy = (c) => {
     if (whyMode === "off") return;
@@ -170,7 +228,7 @@ function Body() {
     ex.summary = `${c.name.split(" ")[0]}: ${ex.summary}`;
     ex.score = c.match;
 
-    setWhyCandidate(c);     // ← NEW: remember which candidate the drawer is for
+    setWhyCandidate(c);
     setWhyData(ex);
     setWhyOpen(true);
 
@@ -233,21 +291,39 @@ function Body() {
 
   return (
     <>
+      {/* Sev-1 style feed incident banner */}
+      {loadError && (
+        <div className="mb-4 rounded-md border border-red-200 bg-red-50 px-3 py-2 text-xs text-red-700">
+          {loadError}
+        </div>
+      )}
+
+      {/* Action-level error (notes/tags) */}
+      {actionError && (
+        <div className="mb-4 rounded-md border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-800">
+          {actionError}
+        </div>
+      )}
+
       {FiltersRow}
 
-      <CandidateList
-        candidates={candidates}
-        isEnterprise={isEnterprise}
-        onView={onView}
-        onMessage={onMessage}
-        onWhy={onWhy}
-        showFilters={false}
-        showFilterBar={false}
-        filtersVisible={false}
-        query={nameQuery}
-        locationFilter={locQuery}
-        booleanQuery={boolQuery}
-      />
+      {isLoading ? (
+        <div className="text-sm text-slate-600">Loading candidates...</div>
+      ) : (
+        <CandidateList
+          candidates={candidates}
+          isEnterprise={isEnterprise}
+          onView={onView}
+          onMessage={onMessage}
+          onWhy={onWhy}
+          showFilters={false}
+          showFilterBar={false}
+          filtersVisible={false}
+          query={nameQuery}
+          locationFilter={locQuery}
+          booleanQuery={boolQuery}
+        />
+      )}
 
       <CandidateProfileModal
         open={open}
