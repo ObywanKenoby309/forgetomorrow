@@ -12,6 +12,7 @@ import { ResumeProvider } from '@/context/ResumeContext';
 import { PlanProvider } from '@/context/PlanContext';
 import { AiUsageProvider } from '@/context/AiUsageContext';
 import { useUserWallpaper } from '@/hooks/useUserWallpaper';
+import SupportFloatingButton from '@/components/SupportFloatingButton'; // ⬅️ ADDED
 
 function RouteTracker() {
   const router = useRouter();
@@ -43,7 +44,7 @@ function RouteTracker() {
 export default function App({ Component, pageProps }) {
   const router = useRouter();
 
-  // 🔹 NEW: pull user wallpaper (internal pages only)
+  // 🔹 Pull user wallpaper (internal pages only)
   const { wallpaperUrl } = useUserWallpaper();
 
   const isRecruiterRoute = router.pathname.startsWith('/recruiter');
@@ -213,6 +214,9 @@ export default function App({ Component, pageProps }) {
           </PlanProvider>
 
           {renderLandingHeader ? <LandingFooter /> : <Footer />}
+
+          {/* Global Support Floating Button (HelpDesk personas) */}
+          <SupportFloatingButton />
         </div>
       </div>
     </>
