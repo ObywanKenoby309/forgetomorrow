@@ -13,7 +13,7 @@ import { PlanProvider } from '@/context/PlanContext';
 import { AiUsageProvider } from '@/context/AiUsageContext';
 import { useUserWallpaper } from '@/hooks/useUserWallpaper';
 import SupportFloatingButton from '@/components/SupportFloatingButton'; // ⬅️ Global support button
-import { SessionProvider } from 'next-auth/react'; // ⬅️ NEW
+import { SessionProvider } from 'next-auth/react'; // ⬅️ Session provider
 
 function RouteTracker() {
   const router = useRouter();
@@ -131,8 +131,11 @@ export default function App({ Component, pageProps: { session, ...pageProps } })
 
   // 🔒 Only load cookie banner on production hostname
   const isBrowser = typeof window !== 'undefined';
+  const hostname = isBrowser ? window.location.hostname : '';
   const shouldLoadCookieScript =
-    isBrowser && window.location.hostname === 'forgetomorrow.com';
+    isBrowser &&
+    (hostname === 'forgetomorrow.com' ||
+      hostname.endsWith('.forgetomorrow.com'));
 
   // 🔹 Decide if internal shell should be gray or transparent
   const shouldUseGrayInternalBg =
