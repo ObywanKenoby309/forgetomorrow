@@ -148,7 +148,7 @@ export const SERVICE_DESK_PERSONAS: SupportPersona[] = [
     },
     styleModel: {
       formalityLevel: 'low-medium',
-      sentenceLength: 'short-medium',
+      sentenceLength: 'medium-long',
       emojiUse: 'rare',
       bulletUsage: 'occasional',
       typicalPhrases: [
