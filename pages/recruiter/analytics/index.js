@@ -11,7 +11,7 @@ import ApplicationFunnel from "@/components/analytics/charts/ApplicationFunnel";
 import SourceBreakdown from "@/components/analytics/charts/SourceBreakdown";
 import RecruiterActivity from "@/components/analytics/charts/RecruiterActivity";
 
-// ---------- Data hook (unchanged)
+// ---------- Data hook (SQL-backed)
 function useAnalytics(state) {
   const [data, setData] = useState(null);
   const [loading, setLoading] = useState(false);
@@ -31,14 +31,37 @@ function useAnalytics(state) {
 
   useEffect(() => {
     let active = true;
+
     const fetchData = async () => {
       try {
         setLoading(true);
+        setError(null);
+
         const res = await fetch(`/api/analytics/recruiter?${qs}`);
+
+        // Treat non-2xx as real errors so we can show honest messaging
+        if (!res.ok) {
+          let payload;
+          try {
+            payload = await res.json();
+          } catch {
+            payload = await res.text();
+          }
+          const msg =
+            typeof payload === "string"
+              ? payload
+              : payload?.message ||
+                `Failed to load recruiter analytics (HTTP ${res.status}).`;
+          throw new Error(msg);
+        }
+
         const json = await res.json();
         if (active) setData(json);
       } catch (e) {
-        if (active) setError(e);
+        if (active) {
+          console.error("[RecruiterAnalytics] fetch error:", e);
+          setError(e);
+        }
       } finally {
         if (active) setLoading(false);
       }
@@ -60,7 +83,9 @@ function HeaderBar() {
   return (
     <div className="text-center">
       <h1 className="text-2xl font-bold text-[#FF7043]">Recruiter Analytics</h1>
-      <p className="text-sm text-slate-600 mt-1 max-w-xl mx-auto">Phase 2 — SQL‑backed</p>
+      <p className="text-sm text-slate-600 mt-1 max-w-xl mx-auto">
+        Phase 2 — SQL-backed
+      </p>
     </div>
   );
 }
@@ -70,7 +95,9 @@ function RightToolsCard() {
   return (
     <div className="rounded-lg border bg-white p-4">
       <div className="font-medium mb-2">Coming soon</div>
-      <div className="text-sm text-slate-600">Reserved space for tasteful business promotions.</div>
+      <div className="text-sm text-slate-600">
+        Reserved space for tasteful business promotions.
+      </div>
     </div>
   );
 }
@@ -106,34 +133,68 @@ function Body() {
         <Filters state={filters} onChange={onChange} />
       </div>
 
-      {/* Errors */}
+      {/* Errors — Sev 1–style transparency */}
       {error && (
-        <div className="bg-red-50 border border-red-200 text-red-700 p-4 rounded-xl">
-          {String(error)}
+        <div className="bg-red-50 border border-red-200 text-red-800 p-4 rounded-xl text-sm">
+          <p className="font-medium">
+            We had trouble loading recruiter analytics.
+          </p>
+          <p className="mt-1">
+            If this continues for more than 30 minutes, contact the Support
+            Team so we can investigate.
+          </p>
+          {error?.message && (
+            <p className="mt-2 text-xs text-red-500/80">
+              Technical details: {error.message}
+            </p>
+          )}
         </div>
       )}
 
       {/* KPIs */}
       <section className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-        <KPICard label="Total job views" value={data?.kpis?.totalViews ?? (loading ? "…" : 0)} />
-        <KPICard label="Total applies" value={data?.kpis?.totalApplies ?? (loading ? "…" : 0)} />
+        <KPICard
+          label="Total job views"
+          value={data?.kpis?.totalViews ?? (loading ? "…" : 0)}
+        />
+        <KPICard
+          label="Total applies"
+          value={data?.kpis?.totalApplies ?? (loading ? "…" : 0)}
+        />
         <KPICard
           label="Avg. time-to-fill"
-          value={data ? `${data.kpis.avgTimeToFillDays} days` : loading ? "…" : "0 days"}
+          value={
+            data
+              ? `${data.kpis.avgTimeToFillDays} days`
+              : loading
+              ? "…"
+              : "0 days"
+          }
         />
         <KPICard
           label="Conversion rate"
-          value={data ? `${data.kpis.conversionRatePct}%` : loading ? "…" : "0%"}
+          value={
+            data
+              ? `${data.kpis.conversionRatePct}%`
+              : loading
+              ? "…"
+              : "0%"
+          }
         />
       </section>
 
       {/* Charts */}
-      {isEnterprise ? ChartsBlock : <FeatureLock label="Full Analytics">{ChartsBlock}</FeatureLock>}
+      {isEnterprise ? (
+        ChartsBlock
+      ) : (
+        <FeatureLock label="Full Analytics">{ChartsBlock}</FeatureLock>
+      )}
 
       {/* Meta */}
       {data?.meta?.refreshedAt && (
         <div className="text-xs text-gray-400 text-right">
-          Last updated: {new Date(data.meta.refreshedAt).toLocaleString()} · Source:{" "}
+          Last updated:{" "}
+          {new Date(data.meta.refreshedAt).toLocaleString()} · Source:{" "}
           {data.meta.source?.toUpperCase?.() || "SQL"}
         </div>
       )}
