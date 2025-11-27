@@ -29,6 +29,7 @@ const PUBLIC_PATHS = new Set([
   '/help',
   '/support',          // keeping this too in case /support exists
   '/privacy',
+  '/subprocessors',
   '/terms',
   '/security',
   '/accessibility',
