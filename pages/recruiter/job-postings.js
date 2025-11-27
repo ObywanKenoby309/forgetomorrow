@@ -1,5 +1,5 @@
 // pages/recruiter/job-postings.js
-import { useState, useEffect } from "react";
+import { useEffect, useState, useCallback, useMemo } from "react";
 import { PlanProvider } from "@/context/PlanContext";
 import RecruiterLayout from "@/components/layouts/RecruiterLayout";
 import JobTable from "@/components/recruiter/JobTable";
@@ -35,20 +35,53 @@ function RightToolsCard() {
   );
 }
 
-function Body({ rows, isLoading, onEdit, onView, onClose }) {
+function Body({ rows, loading, error, onEdit, onView, onClose }) {
+  const tableRows = useMemo(
+    () =>
+      (rows || []).map((j) => ({
+        ...j,
+        // Map Prisma fields → table expectations
+        views: j.viewsCount ?? 0,
+        applications: j.applicationsCount ?? 0,
+      })),
+    [rows]
+  );
+
   return (
     <main className="space-y-6">
+      {/* Error banner */}
+      {error && (
+        <div className="rounded-lg border border-red-200 bg-red-50 p-4 text-sm text-red-800">
+          <div className="font-semibold mb-1">We had trouble loading job postings.</div>
+          <p>
+            The system couldn't load your latest postings. Our team is notified automatically.
+            If you don't see an update or status communication within 30 minutes, please contact
+            Support so we can investigate.
+          </p>
+        </div>
+      )}
+
+      {/* Table */}
       <div className="rounded-lg border bg-white p-2 sm:p-4">
-        {isLoading ? (
-          <div className="text-sm text-slate-600">Loading job postings...</div>
-        ) : (
-          <JobTable
-            jobs={rows}
-            onEdit={onEdit}
-            onView={onView}
-            onClose={onClose}
-          />
+        <JobTable
+          jobs={tableRows}
+          onEdit={onEdit}
+          onView={onView}
+          onClose={onClose}
+        />
+        {loading && (
+          <div className="px-4 py-3 text-xs text-slate-500 text-right">
+            Refreshing job postings…
+          </div>
         )}
+      </div>
+
+      {/* Performance preview – wired later to analytics */}
+      <div className="rounded-lg border bg-white p-4 text-sm">
+        <div className="font-medium mb-2">Job Performance (Preview)</div>
+        <div className="text-slate-500">
+          This area will pull per-job funnel metrics from Recruiter Analytics in a later pass.
+        </div>
       </div>
     </main>
   );
@@ -57,98 +90,112 @@ function Body({ rows, isLoading, onEdit, onView, onClose }) {
 export default function JobPostingsPage() {
   const [open, setOpen] = useState(false);
   const [rows, setRows] = useState([]);
-  const [isLoading, setIsLoading] = useState(true);
+  const [loading, setLoading] = useState(false);
   const [loadError, setLoadError] = useState(null);
-  const [saveError, setSaveError] = useState(null);
 
-  // Load real jobs from the shared /api/jobs feed (Railway Postgres + cron)
-  useEffect(() => {
-    let isMounted = true;
+  // ──────────────────────────────────────────────────────────────
+  // Load job postings for the current recruiter
+  // ──────────────────────────────────────────────────────────────
+  const loadJobs = useCallback(async () => {
+    try {
+      setLoading(true);
+      setLoadError(null);
 
-    async function fetchJobs() {
-      try {
-        setIsLoading(true);
-        const res = await fetch("/api/jobs");
-        if (!res.ok) {
-          throw new Error(`Failed to load jobs: ${res.status}`);
-        }
-        const json = await res.json();
-        if (!isMounted) return;
-
-        const jobs = Array.isArray(json.jobs) ? json.jobs : [];
-        setRows(jobs);
-        setLoadError(null);
-      } catch (err) {
-        console.error("[Recruiter Job Postings] Error loading jobs:", err);
-        if (isMounted) {
-          // Sev-1 style transparency: the feed is critical to the service
-          setLoadError(
-            "We had trouble loading job postings. Contact the Support Team if communication isn't provided in 30 minutes."
-          );
-        }
-      } finally {
-        if (isMounted) {
-          setIsLoading(false);
-        }
+      const res = await fetch("/api/recruiter/job-postings");
+      if (!res.ok) {
+        throw new Error(`HTTP ${res.status}`);
       }
+      const json = await res.json();
+      setRows(Array.isArray(json.jobs) ? json.jobs : []);
+    } catch (err) {
+      console.error("[JobPostings] load error", err);
+      setLoadError(err);
+    } finally {
+      setLoading(false);
     }
-
-    fetchJobs();
-    return () => {
-      isMounted = false;
-    };
   }, []);
 
-  // Post a new job into the shared pipeline (Railway jobs table)
-  const handleSaveJob = async (data) => {
-    setSaveError(null);
+  useEffect(() => {
+    loadJobs();
+  }, [loadJobs]);
 
+  // ──────────────────────────────────────────────────────────────
+  // Handlers
+  // ──────────────────────────────────────────────────────────────
+
+  // Create new job
+  const handleSaveJob = async (data) => {
     try {
       const res = await fetch("/api/recruiter/job-postings", {
         method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify(data),
       });
 
       if (!res.ok) {
-        const payload = await res.json().catch(() => ({}));
-        const msg =
-          payload?.error ||
-          `Failed to save job posting (status ${res.status}).`;
-        throw new Error(msg);
+        const errJson = await res.json().catch(() => ({}));
+        throw new Error(errJson.error || `HTTP ${res.status}`);
       }
 
-      const created = await res.json();
+      const json = await res.json();
+      const newJob = json.job;
 
-      // Normalize for the recruiter table:
-      // jobs from /api/jobs won't have status/urgent/views/apps columns yet,
-      // but for brand-new recruiter-created postings, we can truthfully start at zero.
-      const normalized = {
-        ...created,
-        worksite: data.worksite || created.worksite || "",
-        location: data.location || created.location || "",
-        status: data.status || "Open",
-        urgent: !!data.urgent,
-        views: created.views ?? 0,
-        applications: created.applications ?? 0,
-      };
+      if (newJob) {
+        setRows((prev) => [newJob, ...prev]);
+      }
 
-      setRows((prev) => [normalized, ...(prev || [])]);
       setOpen(false);
-      console.log("JOB SAVED (pipeline)", normalized);
     } catch (err) {
-      console.error("[Recruiter Job Postings] save error:", err);
-      setSaveError(
-        "We couldn't save this job to the shared job feed. Your changes haven't been published yet."
+      console.error("[JobPostings] save error", err);
+      alert(
+        "We couldn't save this job posting. Please try again in a moment, and contact Support if the issue continues."
       );
     }
   };
 
-  const handleEdit = (job) => console.log("Edit", job);
-  const handleView = (job) => console.log("View", job);
-  const handleClose = (job) => console.log("Close", job);
+  // Placeholder edit / view for now (front-end only)
+  const handleEdit = (job) => {
+    console.log("Edit (future wiring)", job);
+    // Future: open modal pre-filled and PATCH /api/recruiter/job-postings
+  };
+
+  const handleView = (job) => {
+    console.log("View (future wiring)", job);
+    // Future: navigate to /job/[id] or recruiter detail view
+  };
+
+  // Close (update status → "Closed")
+  const handleClose = async (job) => {
+    if (!job?.id) return;
+    const confirmClose = window.confirm(
+      `Mark "${job.title}" as Closed? Candidates will no longer see it as open.`
+    );
+    if (!confirmClose) return;
+
+    try {
+      const res = await fetch("/api/recruiter/job-postings", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ id: job.id, status: "Closed" }),
+      });
+
+      if (!res.ok) {
+        const errJson = await res.json().catch(() => ({}));
+        throw new Error(errJson.error || `HTTP ${res.status}`);
+      }
+
+      const json = await res.json();
+      const updated = json.job;
+      if (updated) {
+        setRows((prev) => prev.map((j) => (j.id === updated.id ? updated : j)));
+      }
+    } catch (err) {
+      console.error("[JobPostings] close error", err);
+      alert(
+        "We couldn't update this job's status. Please refresh and try again, and contact Support if it keeps happening."
+      );
+    }
+  };
 
   return (
     <PlanProvider>
@@ -157,23 +204,10 @@ export default function JobPostingsPage() {
         header={<HeaderBar onOpenModal={() => setOpen(true)} />}
         right={<RightToolsCard />}
       >
-        {/* Load error banner for Sev-1 style feed incidents */}
-        {loadError && (
-          <div className="mb-4 rounded-md border border-red-200 bg-red-50 px-3 py-2 text-xs text-red-700">
-            {loadError}
-          </div>
-        )}
-
-        {/* Save error banner for recruiter posting issues */}
-        {saveError && (
-          <div className="mb-4 rounded-md border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-800">
-            {saveError}
-          </div>
-        )}
-
         <Body
           rows={rows}
-          isLoading={isLoading}
+          loading={loading}
+          error={loadError}
           onEdit={handleEdit}
           onView={handleView}
           onClose={handleClose}

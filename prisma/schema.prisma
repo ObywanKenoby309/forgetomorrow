@@ -54,6 +54,9 @@ model Job {
   userId String
   user   User   @relation(fields: [userId], references: [id])
 
+  // 🔸 NEW: which account / org owns this job (for tracing & reporting)
+  accountKey String?   // e.g. "ACCT-12345" or internal org code
+
   applications Application[]
   views        JobView[]
   interviews   Interview[]
@@ -61,6 +64,7 @@ model Job {
   pinnedBy     PinnedJob[]
   covers       Cover[]
 
+  @@index([accountKey])
   @@map("jobs")
 }
 
@@ -130,39 +134,6 @@ model PinnedJob {
   job  Job  @relation(fields: [jobId], references: [id])
 
   @@map("pinned_jobs")
-}
-
-// ============================================================================
-//  CANDIDATES (RECRUITER PIPELINE)
-// ============================================================================
-
-model Candidate {
-  id        Int      @id @default(autoincrement())
-  name      String
-  role      String?
-  location  String?
-  match     Int?
-  summary   String?
-
-  // Structured profile data for recruiter views
-  skills     Json?   // ["Customer Success", "SaaS", ...]
-  experience Json?   // [{ title, company, range, highlights[] }, ...]
-  activity   Json?   // [{ event, when, url? }, ...]
-  journey    Json?   // [{ action, timestamp }, ...]
-
-  // Recruiter pipeline metadata
-  tags  Json?        // ["Top Prospect", ...]
-  notes String?
-
-  // Ownership (optional; for now we do not filter by owner in API)
-  ownerId String?
-  owner   User?   @relation(fields: [ownerId], references: [id])
-
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-
-  @@index([ownerId])
-  @@map("candidates")
 }
 
 // ============================================================================
@@ -351,6 +322,9 @@ model User {
   stripeCustomerId     String?  @unique
   stripeSubscriptionId String?  @unique
 
+  // 🔸 NEW: which account / org this user belongs to (for recruiter tenants)
+  accountKey String?   // e.g. "ACCT-12345"
+
   // ── Relations ─────────────────────────────────────────────────────────────
   applications Application[]
   views        JobView[]
@@ -366,9 +340,6 @@ model User {
   negotiations     Negotiation[]     @relation("UserNegotiations")
   profileSnapshots ProfileSnapshot[] @relation("UserProfileSnapshots")
   consents         UserConsent[]
-
-  // Recruiter candidate ownership
-  candidates Candidate[]
 
   // ── Corporate appearance overrides (ForgeTomorrow staff only) ─────────────
   corporateBannerKey    String?  // e.g. "CEO", "CFO", "STAFF_GENERAL"

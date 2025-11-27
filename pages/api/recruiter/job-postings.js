@@ -1,115 +1,160 @@
 // pages/api/recruiter/job-postings.js
-// Create new recruiter-owned job postings in the shared jobs feed (Railway Postgres)
 
-import { Pool } from "pg";
-import { getServerSession } from "next-auth";
-import authOptions from "../auth/[...nextauth]";
+import { getServerSession } from "next-auth/next";
+import { authOptions } from "../auth/[...nextauth]";
+import { prisma } from "@/lib/prisma";
 
-// Reuse the same DB as /api/jobs (forge-jobs-cron on Railway)
-const connectionString =
-  process.env.FORGE_JOBS_DATABASE_URL ||
-  process.env.DATABASE_URL ||
-  null;
+async function requireRecruiterSession(req, res) {
+  const session = await getServerSession(req, res, authOptions);
 
-let pool = null;
-
-function getPool() {
-  if (!connectionString) return null;
-  if (!pool) {
-    pool = new Pool({
-      connectionString,
-      ssl: {
-        rejectUnauthorized: false, // Railway uses managed certs
-      },
-    });
+  if (!session?.user?.email || !session.user.id) {
+    res.status(401).json({ error: "Not authenticated" });
+    return null;
   }
-  return pool;
+
+  // Optional: basic role gate — only recruiters & admins can use this endpoint
+  const role = (session.user /** as any */)?.role || "SEEKER";
+  if (!["RECRUITER", "ADMIN"].includes(String(role))) {
+    res.status(403).json({ error: "Insufficient permissions" });
+    return null;
+  }
+
+  return session;
 }
 
 export default async function handler(req, res) {
-  if (req.method !== "POST") {
-    res.setHeader("Allow", ["POST"]);
+  const session = await requireRecruiterSession(req, res);
+  if (!session) return;
+
+  const userId = session.user.id;
+  const accountKey = (session.user /** as any */).accountKey || null;
+
+  try {
+    if (req.method === "GET") {
+      // Fetch all jobs owned by this user (later we can expand to account-level)
+      const jobs = await prisma.job.findMany({
+        where: { userId },
+        orderBy: { createdAt: "desc" },
+      });
+
+      // Shape to match your JobTable expectations
+      const rows = jobs.map((job) => ({
+        id: job.id,
+        title: job.title,
+        company: job.company,
+        worksite: job.worksite,
+        location: job.location,
+        status: job.status,
+        urgent: job.urgent,
+        views: job.viewsCount,
+        applications: job.applicationsCount,
+        // For future debugging / admin UI:
+        accountKey: job.accountKey,
+        createdAt: job.createdAt,
+      }));
+
+      return res.status(200).json({ jobs: rows });
+    }
+
+    if (req.method === "POST") {
+      const {
+        title,
+        company,
+        worksite,
+        location,
+        type,
+        compensation,
+        description,
+        status = "Draft",
+        urgent = false,
+      } = req.body || {};
+
+      if (!title || !company || !worksite || !location || !description) {
+        return res.status(400).json({
+          error: "Missing required fields (title, company, worksite, location, description).",
+        });
+      }
+
+      const job = await prisma.job.create({
+        data: {
+          title,
+          company,
+          worksite,
+          location,
+          type: type || null,
+          compensation: compensation || null,
+          description,
+          status,
+          urgent: Boolean(urgent),
+          userId,
+          accountKey, // 🔸 KEY LINE: tie posting to the account/org
+        },
+      });
+
+      return res.status(201).json({
+        job: {
+          id: job.id,
+          title: job.title,
+          company: job.company,
+          worksite: job.worksite,
+          location: job.location,
+          status: job.status,
+          urgent: job.urgent,
+          views: job.viewsCount,
+          applications: job.applicationsCount,
+          accountKey: job.accountKey,
+          createdAt: job.createdAt,
+        },
+      });
+    }
+
+    if (req.method === "PATCH") {
+      const { id, status, urgent } = req.body || {};
+      if (!id) {
+        return res.status(400).json({ error: "Job id is required." });
+      }
+
+      // Ensure the job belongs to the current user (basic multitenant guard)
+      const existing = await prisma.job.findFirst({
+        where: { id: Number(id), userId },
+      });
+
+      if (!existing) {
+        return res.status(404).json({ error: "Job not found or not owned by this recruiter." });
+      }
+
+      const updated = await prisma.job.update({
+        where: { id: existing.id },
+        data: {
+          status: status ?? existing.status,
+          urgent:
+            typeof urgent === "boolean" ? urgent : existing.urgent,
+        },
+      });
+
+      return res.status(200).json({
+        job: {
+          id: updated.id,
+          title: updated.title,
+          company: updated.company,
+          worksite: updated.worksite,
+          location: updated.location,
+          status: updated.status,
+          urgent: updated.urgent,
+          views: updated.viewsCount,
+          applications: updated.applicationsCount,
+          accountKey: updated.accountKey,
+          createdAt: updated.createdAt,
+        },
+      });
+    }
+
+    res.setHeader("Allow", "GET,POST,PATCH");
     return res.status(405).json({ error: "Method not allowed" });
-  }
-
-  const dbPool = getPool();
-  if (!dbPool) {
-    return res
-      .status(500)
-      .json({ error: "Jobs database is not configured for this environment." });
-  }
-
-  // Require an authenticated user (recruiter)
-  let session;
-  try {
-    session = await getServerSession(req, res, authOptions);
   } catch (err) {
-    console.error("[recruiter/job-postings] session error:", err);
-  }
-
-  if (!session?.user?.email) {
-    return res.status(401).json({ error: "Not authenticated" });
-  }
-
-  const { title, company, location, description } = req.body || {};
-
-  if (!title || !company) {
-    return res.status(400).json({
-      error: "Missing required fields: title and company are required.",
+    console.error("[api/recruiter/job-postings] error:", err);
+    return res.status(500).json({
+      error: "Unexpected error while handling recruiter job postings.",
     });
-  }
-
-  const client = await dbPool.connect();
-
-  try {
-    // Insert into the same jobs table used by the cron pipeline.
-    // We keep fields honest: many can be null/blank until we expand schema.
-    const result = await client.query(
-      `
-      INSERT INTO jobs (
-        title,
-        company,
-        location,
-        description,
-        url,
-        salary,
-        tags,
-        source,
-        publishedat
-      )
-      VALUES ($1, $2, $3, $4, $5, $6, $7, $8, NOW())
-      RETURNING
-        id,
-        title,
-        company,
-        location,
-        description,
-        url,
-        salary,
-        tags,
-        source,
-        publishedat
-      `,
-      [
-        title,
-        company,
-        location || "",
-        description || "",
-        null, // url for now; can add a Forge job details URL later
-        null, // salary (optional / future)
-        null, // tags (future: skills or metadata)
-        "ForgeTomorrow Recruiter", // allows us to distinguish internal postings
-      ]
-    );
-
-    const createdJob = result.rows[0];
-    return res.status(201).json(createdJob);
-  } catch (err) {
-    console.error("[recruiter/job-postings] insert error:", err);
-    return res
-      .status(500)
-      .json({ error: "Failed to create job posting in the shared feed." });
-  } finally {
-    client.release();
   }
 }

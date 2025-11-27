@@ -1,10 +1,10 @@
 // pages/api/auth/[...nextauth].ts
-import NextAuth from "next-auth";
+import NextAuth, { NextAuthOptions } from "next-auth";
 import CredentialsProvider from "next-auth/providers/credentials";
 import { prisma } from "@/lib/prisma";
 import bcrypt from "bcryptjs";
 
-export const authOptions = {
+export const authOptions: NextAuthOptions = {
   providers: [
     CredentialsProvider({
       name: "Credentials",
@@ -37,47 +37,40 @@ export const authOptions = {
           role: user.role,
           plan: user.plan,
           stripeCustomerId: user.stripeCustomerId,
+          // 🔸 NEW: surface accountKey on the user object so callbacks can use it
+          accountKey: user.accountKey ?? null,
         };
       },
     }),
   ],
 
   session: {
-    strategy: "jwt" as const,
+    strategy: "jwt",
     maxAge: 30 * 24 * 60 * 60,
   },
 
   callbacks: {
-    // Explicitly type params so TS doesn't complain about implicit any
-    jwt: async ({
-      token,
-      user,
-    }: {
-      token: any;
-      user?: any;
-    }) => {
+    async jwt({ token, user }) {
       if (user) {
         token.role = (user as any).role;
         token.plan = (user as any).plan;
         (token as any).stripeCustomerId =
-          (user as any).stripeCustomerId ?? null; // FIX
+          (user as any).stripeCustomerId ?? null;
+        // 🔸 NEW: carry accountKey into the token
+        (token as any).accountKey = (user as any).accountKey ?? null;
       }
       return token;
     },
 
-    session: async ({
-      session,
-      token,
-    }: {
-      session: any;
-      token: any;
-    }) => {
+    async session({ session, token }) {
       if (session.user) {
-        (session.user as any).id = token.sub!;
+        session.user.id = token.sub!;
         (session.user as any).role = token.role as string;
         (session.user as any).plan = token.plan as string;
         (session.user as any).stripeCustomerId = (token as any)
-          .stripeCustomerId as string | null; // FIX
+          .stripeCustomerId as string | null;
+        // 🔸 NEW: expose accountKey on session.user
+        (session.user as any).accountKey = (token as any).accountKey ?? null;
       }
       return session;
     },
@@ -95,5 +88,4 @@ export const authOptions = {
   },
 };
 
-// Default export for NextAuth (used by Next.js)
 export default NextAuth(authOptions);
