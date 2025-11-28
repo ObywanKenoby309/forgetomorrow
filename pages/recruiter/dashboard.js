@@ -65,31 +65,36 @@ function Panel({ title, children }) {
 function DashboardBody() {
   const { isEnterprise } = usePlan();
 
-  const [data, setData] = useState(null);
+  const [analyticsData, setAnalyticsData] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState(null);
 
-  // Fetch aggregated recruiter dashboard data
+  // Fetch aggregated recruiter analytics data (same engine as /recruiter/analytics)
   useEffect(() => {
     let isMounted = true;
 
     async function fetchDashboard() {
       try {
         setIsLoading(true);
-        const res = await fetch("/api/recruiter/dashboard");
+        // Default view: 30 days, all jobs, all recruiters
+        const res = await fetch(
+          "/api/analytics/recruiter?range=30d&jobId=all&recruiterId=all"
+        );
         if (!res.ok) {
           throw new Error(`Failed to load dashboard: ${res.status}`);
         }
         const json = await res.json();
         if (isMounted) {
-          setData(json);
+          setAnalyticsData(json);
           setError(null);
         }
       } catch (err) {
-        console.error("[RecruiterDashboard] Error loading data:", err);
+        console.error("[RecruiterDashboard] Error loading analytics:", err);
         if (isMounted) {
           // We’ll still render safe fallback values below
-          setError("We had trouble loading live dashboard data. Showing fallback values for now.");
+          setError(
+            "We had trouble loading live analytics. Showing fallback values for now."
+          );
         }
       } finally {
         if (isMounted) {
@@ -104,26 +109,67 @@ function DashboardBody() {
     };
   }, []);
 
-  // Fallback stats ensure the dashboard always renders
-  const stats = data?.stats ?? [
-    { label: "Open Jobs", value: 3 },
-    { label: "Active Candidates", value: 18 },
-    { label: "Messages Waiting", value: 5 },
-    { label: "Applications (7d)", value: 42 },
-  ];
+  // ──────────────────────────────────────────────────────────────
+  // Derive stats + snapshot from analyticsData (or fall back)
+  // ──────────────────────────────────────────────────────────────
+  const kpis = analyticsData?.kpis || null;
+  const sourcesArray = Array.isArray(analyticsData?.sources)
+    ? analyticsData.sources
+    : [];
+  const primarySource = sourcesArray[0] || null;
 
-  const topCandidates = data?.topCandidates ?? [
+  const stats = kpis
+    ? [
+        { label: "Total Views", value: kpis.totalViews ?? 0 },
+        { label: "Total Applies", value: kpis.totalApplies ?? 0 },
+        {
+          label: "Avg Time-to-Fill",
+          value:
+            typeof kpis.avgTimeToFillDays === "number"
+              ? `${kpis.avgTimeToFillDays} days`
+              : "—",
+        },
+        {
+          label: "Conversion (View→Apply)",
+          value:
+            typeof kpis.conversionRatePct === "number"
+              ? `${kpis.conversionRatePct}%`
+              : "—",
+        },
+      ]
+    : [
+        // Fallbacks when analytics API is unavailable
+        { label: "Open Jobs", value: 3 },
+        { label: "Active Candidates", value: 18 },
+        { label: "Messages Waiting", value: 5 },
+        { label: "Applications (7d)", value: 42 },
+      ];
+
+  const analyticsSnapshot = kpis
+    ? {
+        timeToHireDays: kpis.avgTimeToFillDays ?? 0,
+        topSourceLabel: primarySource?.name || "Forge",
+        topSourcePercent:
+          primarySource && kpis.totalApplies
+            ? Math.round(
+                (primarySource.value / Math.max(kpis.totalApplies, 1)) * 100
+              )
+            : null,
+        conversionViewToApply: kpis.conversionRatePct ?? 0,
+      }
+    : {
+        timeToHireDays: 18,
+        topSourceLabel: "Community Hubs",
+        topSourcePercent: 38,
+        conversionViewToApply: 4.7,
+      };
+
+  // Top candidates still stubbed for now (future: wire to actual matching)
+  const topCandidates = [
     { name: "Jane D.", title: "Sr. CSM", matchPercent: 92 },
     { name: "Omar R.", title: "Onboarding Lead", matchPercent: 88 },
     { name: "Priya K.", title: "Solutions Architect", matchPercent: 86 },
   ];
-
-  const analytics = data?.analytics ?? {
-    timeToHireDays: 18,
-    topSourceLabel: "Community Hubs",
-    topSourcePercent: 38,
-    conversionViewToApply: 4.7,
-  };
 
   return (
     <div className="space-y-6 min-w-0">
@@ -136,7 +182,7 @@ function DashboardBody() {
 
       {/* Quick Stats (available to all plans) */}
       <section className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-        {isLoading && !data
+        {isLoading && !analyticsData
           ? // Loading skeletons
             Array.from({ length: 4 }).map((_, idx) => (
               <div
@@ -162,7 +208,7 @@ function DashboardBody() {
       <section className="grid grid-cols-1 lg:grid-cols-2 gap-4 items-stretch">
         {/* Top Candidate Recommendations */}
         <Panel title="Top Candidate Recommendations">
-          {isLoading && !data ? (
+          {isLoading && !analyticsData ? (
             <ul className="text-sm grid gap-2 animate-pulse">
               <li className="h-3 bg-slate-200 rounded w-3/4" />
               <li className="h-3 bg-slate-200 rounded w-4/5" />
@@ -189,7 +235,7 @@ function DashboardBody() {
 
         {/* Quick Analytics Snapshot */}
         <Panel title="Quick Analytics Snapshot">
-          {isLoading && !data ? (
+          {isLoading && !analyticsData ? (
             <div className="text-sm grid gap-2 animate-pulse">
               <div className="h-3 bg-slate-200 rounded w-2/3" />
               <div className="h-3 bg-slate-200 rounded w-3/4" />
@@ -197,13 +243,19 @@ function DashboardBody() {
             </div>
           ) : isEnterprise ? (
             <div className="text-sm grid gap-2">
-              <div>Time-to-Hire: {analytics.timeToHireDays} days</div>
+              <div>Time-to-Hire: {analyticsSnapshot.timeToHireDays} days</div>
               <div>
-                Top Source: {analytics.topSourceLabel} ({analytics.topSourcePercent}
-                %)
+                Top Source: {analyticsSnapshot.topSourceLabel}
+                {typeof analyticsSnapshot.topSourcePercent === "number"
+                  ? ` (${analyticsSnapshot.topSourcePercent}%)`
+                  : ""}
               </div>
               <div>
-                Conversion (View→Apply): {analytics.conversionViewToApply}%
+                Conversion (View→Apply): {analyticsSnapshot.conversionViewToApply}%
+              </div>
+              <div className="pt-1 text-[11px] text-slate-500">
+                For deeper breakdowns, open full Analytics and adjust time range,
+                job, recruiter, or company filters.
               </div>
             </div>
           ) : (
