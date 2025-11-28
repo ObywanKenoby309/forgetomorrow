@@ -8,7 +8,7 @@ export default function Help() {
       </Head>
 
       <div className="relative min-h-[80vh] py-10">
-        {/* Decorative background layer — low opacity, no text on top */}
+        {/* Decorative background layer — not announced */}
         <div
           className="pointer-events-none absolute inset-0 opacity-40"
           aria-hidden="true"
@@ -19,50 +19,77 @@ export default function Help() {
           }}
         />
 
-        {/* Foreground content */}
-        <main className="relative max-w-4xl mx-auto px-6 text-slate-900">
-          <h1 className="text-3xl font-bold text-[#FF7043] mb-4">
-            Help &amp; Support
-          </h1>
-          <p className="text-slate-700 mb-8 leading-relaxed max-w-3xl">
-            This Help Center is for anyone who needs assistance with ForgeTomorrow —
-            even if you don&apos;t have an account yet or can&apos;t sign in. You&apos;ll
-            find guidance on how to reach us, resolve common issues, and understand
-            where to get live support once you&apos;re inside the platform.
-          </p>
+        {/* Foreground */}
+        <main
+          className="relative max-w-4xl mx-auto px-6 text-slate-900"
+          aria-labelledby="help-center-heading"
+        >
+          <header className="mb-6">
+            <h1
+              id="help-center-heading"
+              className="text-3xl font-bold text-[#FF7043] mb-4"
+            >
+              Help &amp; Support
+            </h1>
+            <p className="text-slate-700 mb-8 leading-relaxed max-w-3xl">
+              This Help Center is for anyone who needs assistance with
+              ForgeTomorrow — even if you don&apos;t have an account yet or
+              can&apos;t sign in. You&apos;ll find guidance on how to reach us,
+              resolve common issues, and understand where to get live support
+              once you&apos;re inside the platform.
+            </p>
+          </header>
 
-          {/* How to contact us */}
-          <section className="space-y-4 mb-10">
+          {/* Contacting support */}
+          <section
+            className="space-y-4 mb-10"
+            role="region"
+            aria-labelledby="contacting-support"
+          >
+            <h2
+              id="contacting-support"
+              className="text-xl font-semibold text-slate-900 mb-2"
+            >
+              Contacting Support
+            </h2>
+
             <article className="bg-white rounded-lg p-6 border border-slate-200 shadow-sm">
-              <h2 className="text-lg font-semibold text-slate-900 mb-2">
-                Contacting Support
-              </h2>
+              <h3 className="text-lg font-semibold text-slate-900 mb-2">
+                Email Support
+              </h3>
               <p className="text-sm text-slate-700 mb-2">
-                If you need help and can&apos;t access your account, you can reach our
-                team directly by email:
+                If you need help and can&apos;t access your account, you can
+                reach our team directly by email:
               </p>
               <p className="text-sm mb-3">
                 <a
                   href="mailto:support@forgetomorrow.com"
-                  className="text-[#FF7043] underline font-medium"
+                  className="text-[#FF7043] underline font-medium focus:outline-none focus:ring-2 focus:ring-[#FF7043] focus:ring-offset-2 focus:ring-offset-white rounded-sm"
                 >
                   support@forgetomorrow.com
                 </a>
               </p>
               <p className="text-xs text-slate-500">
-                Please include the email you registered with (if applicable) and a
-                brief description of what you&apos;re experiencing so we can help you
-                faster.
+                Please include your registered email (if applicable) and a brief
+                description of the issue so we can assist you faster.
               </p>
             </article>
           </section>
 
           {/* Common situations */}
-          <section className="space-y-4 mb-10">
-            <h2 className="text-xl font-semibold text-slate-900 mb-2">
+          <section
+            className="space-y-4 mb-10"
+            role="region"
+            aria-labelledby="common-situations"
+          >
+            <h2
+              id="common-situations"
+              className="text-xl font-semibold text-slate-900 mb-2"
+            >
               Common Situations
             </h2>
 
+            {/* Can't sign in */}
             <article className="bg-white rounded-lg p-6 border border-slate-200 shadow-sm">
               <h3 className="text-base font-semibold text-slate-900 mb-2">
                 I can&apos;t sign in
@@ -71,62 +98,74 @@ export default function Help() {
                 If you&apos;re having trouble signing in:
               </p>
               <ul className="list-disc list-inside text-sm text-slate-700 space-y-1">
-                <li>Double-check that you&apos;re using the correct email address.</li>
+                <li>Double-check your email address.</li>
                 <li>
-                  If you signed up with a social login (e.g. &quot;Continue with
-                  Google&quot;), use the same option again.
+                  If you signed up with a social login (e.g. Continue with
+                  Google), use the same method again.
                 </li>
-                <li>
-                  Try resetting your password from the sign-in page if that option is
-                  available.
-                </li>
+                <li>Try resetting your password if available.</li>
               </ul>
               <p className="text-xs text-slate-500 mt-3">
-                If you still can&apos;t access your account, email us and we&apos;ll
-                help you verify your identity and restore access where possible.
+                If issues persist, email us and we&apos;ll help verify your
+                identity and restore access if possible.
               </p>
             </article>
 
+            {/* No account yet */}
             <article className="bg-white rounded-lg p-6 border border-slate-200 shadow-sm">
               <h3 className="text-base font-semibold text-slate-900 mb-2">
                 I haven&apos;t created an account yet
               </h3>
               <p className="text-sm text-slate-700 mb-2">
-                You can create a ForgeTomorrow account from our main site when sign-up
-                is available. If you have questions about eligibility, pricing, or how
-                it works before you join, feel free to contact us.
+                You can create a ForgeTomorrow account from our main site when
+                sign-up is available. If you have questions about eligibility,
+                pricing, or how it works, feel free to contact us.
               </p>
               <p className="text-sm text-slate-700">
-                We can help you understand which role (Seeker, Coach, Recruiter, or
-                Admin) is the best fit before you get started.
+                We can also help you choose the best role — Seeker, Coach,
+                Recruiter, or Admin.
               </p>
             </article>
 
+            {/* Privacy */}
             <article className="bg-white rounded-lg p-6 border border-slate-200 shadow-sm">
               <h3 className="text-base font-semibold text-slate-900 mb-2">
                 I have a question about privacy or data
               </h3>
               <p className="text-sm text-slate-700 mb-2">
                 For questions about how we handle your data, please review our{" "}
-                <a href="/privacy" className="text-[#FF7043] underline">
+                <a
+                  href="/privacy"
+                  className="text-[#FF7043] underline font-medium focus:outline-none focus:ring-2 focus:ring-[#FF7043] focus:ring-offset-2 focus:ring-offset-white rounded-sm"
+                >
                   Privacy Policy
                 </a>{" "}
                 and{" "}
-                <a href="/subprocessors" className="text-[#FF7043] underline">
+                <a
+                  href="/subprocessors"
+                  className="text-[#FF7043] underline font-medium focus:outline-none focus:ring-2 focus:ring-[#FF7043] focus:ring-offset-2 focus:ring-offset-white rounded-sm"
+                >
                   Sub-processors
                 </a>{" "}
-                page.
+                pages.
               </p>
               <p className="text-sm text-slate-700">
-                If you still have concerns or need clarification, reach out to us by
-                email and we&apos;ll be happy to provide more detail.
+                If you still have concerns, reach out and we&apos;ll provide
+                clarity.
               </p>
             </article>
           </section>
 
-          {/* For signed-in users */}
-          <section className="space-y-4 mb-4">
-            <h2 className="text-xl font-semibold text-slate-900">
+          {/* Signed-in users */}
+          <section
+            className="space-y-4 mb-4"
+            role="region"
+            aria-labelledby="signed-in-users"
+          >
+            <h2
+              id="signed-in-users"
+              className="text-xl font-semibold text-slate-900"
+            >
               If You Already Have a ForgeTomorrow Account
             </h2>
 
@@ -135,13 +174,12 @@ export default function Help() {
                 In-app Support
               </h3>
               <p className="text-sm text-slate-700 mb-2">
-                When you&apos;re signed in, you&apos;ll see a Support area inside the
-                platform where you can get more personalized help and guidance.
+                When you&apos;re signed in, you&apos;ll see a Support area inside
+                the platform where you can get personalized help.
               </p>
               <p className="text-sm text-slate-700">
-                If you&apos;re unable to access that Support area because you can&apos;t
-                log in, this Help Center page and our email address are your best
-                options to reach us.
+                If you can&apos;t access it due to login issues, use this Help
+                Center or email us.
               </p>
             </article>
           </section>
