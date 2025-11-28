@@ -145,10 +145,14 @@ function PersonaCard({
   active: boolean;
   onClick: () => void;
 }) {
+  const ariaLabel = `${persona.name}, ${persona.role}, ${persona.pronouns}, ${persona.timezone}`;
+
   return (
     <button
       type="button"
       onClick={onClick}
+      aria-pressed={active}
+      aria-label={ariaLabel}
       className={[
         'flex flex-col rounded-2xl border p-4 text-left shadow-sm transition-all',
         active
@@ -306,7 +310,10 @@ export default function PersonaTestPage() {
 
         <main className="grid gap-5 lg:grid-cols-[minmax(0,1.4fr)_minmax(0,1.1fr)]">
           {/* Persona grid */}
-          <section className="flex flex-col gap-3">
+          <section
+            className="flex flex-col gap-3"
+            aria-label="HelpDesk personas"
+          >
             <h2 className="text-xs font-semibold uppercase tracking-[0.2em] text-slate-400">
               Personas
             </h2>
@@ -325,13 +332,19 @@ export default function PersonaTestPage() {
           </section>
 
           {/* Live test console */}
-          <section className="flex flex-col rounded-2xl border border-slate-800 bg-slate-900/80 p-4">
+          <section
+            className="flex flex-col rounded-2xl border border-slate-800 bg-slate-900/80 p-4"
+            aria-labelledby="live-console-heading"
+          >
             <div className="flex items-start justify-between gap-3 border-b border-slate-800 pb-3">
               <div>
                 <p className="text-[11px] uppercase tracking-[0.2em] text-slate-400">
                   Live test console
                 </p>
-                <h2 className="text-sm font-semibold text-slate-50">
+                <h2
+                  id="live-console-heading"
+                  className="text-sm font-semibold text-slate-50"
+                >
                   Talking with {activePersona.name}
                 </h2>
                 <p className="text-xs text-slate-400">
@@ -364,7 +377,13 @@ export default function PersonaTestPage() {
                 </button>
               </div>
 
-              <div className="flex-1 space-y-2 overflow-y-auto rounded-lg border border-slate-800 bg-slate-950/70 p-2 text-[13px]">
+              <div
+                className="flex-1 space-y-2 overflow-y-auto rounded-lg border border-slate-800 bg-slate-950/70 p-2 text-[13px]"
+                role="log"
+                aria-live="polite"
+                aria-relevant="additions"
+                aria-label={`Conversation with ${activePersona.name}`}
+              >
                 {messages.length === 0 && (
                   <div className="text-[11px] text-slate-500">
                     No messages yet. Type a question below to start a
@@ -396,7 +415,11 @@ export default function PersonaTestPage() {
               </div>
 
               {error && (
-                <div className="mt-2 rounded-md border border-red-700 bg-red-950/60 px-2 py-1 text-[11px] text-red-200">
+                <div
+                  className="mt-2 rounded-md border border-red-700 bg-red-950/60 px-2 py-1 text-[11px] text-red-200"
+                  role="alert"
+                  aria-live="assertive"
+                >
                   {error}
                 </div>
               )}
@@ -406,7 +429,14 @@ export default function PersonaTestPage() {
                 onSubmit={handleSend}
                 className="mt-3 flex flex-col gap-2"
               >
+                <label
+                  htmlFor="helpdesk-message"
+                  className="text-[11px] text-slate-300"
+                >
+                  Message to {activePersona.name}
+                </label>
                 <textarea
+                  id="helpdesk-message"
                   value={input}
                   onChange={(e) => setInput(e.target.value)}
                   placeholder={`Ask ${activePersona.name} a question...`}
