@@ -28,8 +28,11 @@ export default function SignIn({ csrfToken, error }: SignInProps) {
     ? errorMessages[error] || errorMessages.default
     : null;
 
+  const hasError = Boolean(friendlyError);
+  const errorId = hasError ? 'signin-error-message' : undefined;
+
   return (
-    <div
+    <main
       style={{
         maxWidth: 400,
         margin: '100px auto',
@@ -38,8 +41,10 @@ export default function SignIn({ csrfToken, error }: SignInProps) {
         borderRadius: 12,
         boxShadow: '0 4px 20px rgba(0,0,0,0.1)',
       }}
+      aria-labelledby="signin-heading"
     >
-      <h2
+      <h1
+        id="signin-heading"
         style={{
           textAlign: 'center',
           color: '#FF7043',
@@ -49,10 +54,13 @@ export default function SignIn({ csrfToken, error }: SignInProps) {
         }}
       >
         Welcome Back
-      </h2>
+      </h1>
 
       {friendlyError && (
         <div
+          id={errorId}
+          role="alert"
+          aria-live="assertive"
           style={{
             marginBottom: 16,
             padding: '8px 10px',
@@ -67,7 +75,13 @@ export default function SignIn({ csrfToken, error }: SignInProps) {
       )}
 
       {/* Credentials Form → NextAuth Credentials provider */}
-      <form method="post" action="/api/auth/callback/credentials">
+      <form
+        method="post"
+        action="/api/auth/callback/credentials"
+        aria-describedby={
+          hasError ? errorId : undefined
+        }
+      >
         {/* Required CSRF token for NextAuth */}
         <input
           name="csrfToken"
@@ -79,18 +93,25 @@ export default function SignIn({ csrfToken, error }: SignInProps) {
         <input
           name="callbackUrl"
           type="hidden"
-          value="/seeker-dashboard"   // ← CHANGED from "/auth/signin"
+          value="/seeker-dashboard" // ← CHANGED from "/auth/signin"
         />
 
         <div style={{ marginBottom: 16 }}>
-          <label style={{ display: 'block', marginBottom: 6, fontWeight: 600 }}>
+          <label
+            htmlFor="signin-email"
+            style={{ display: 'block', marginBottom: 6, fontWeight: 600 }}
+          >
             Email
           </label>
           <input
+            id="signin-email"
             name="email"
             type="email"
             placeholder="you@example.com"
             required
+            autoComplete="email"
+            aria-invalid={hasError ? 'true' : undefined}
+            aria-describedby={hasError ? errorId : undefined}
             style={{
               width: '100%',
               padding: 12,
@@ -103,14 +124,21 @@ export default function SignIn({ csrfToken, error }: SignInProps) {
         </div>
 
         <div style={{ marginBottom: 24 }}>
-          <label style={{ display: 'block', marginBottom: 6, fontWeight: 600 }}>
+          <label
+            htmlFor="signin-password"
+            style={{ display: 'block', marginBottom: 6, fontWeight: 600 }}
+          >
             Password
           </label>
           <input
+            id="signin-password"
             name="password"
             type="password"
             placeholder="Your password"
             required
+            autoComplete="current-password"
+            aria-invalid={hasError ? 'true' : undefined}
+            aria-describedby={hasError ? errorId : undefined}
             style={{
               width: '100%',
               padding: 12,
@@ -151,7 +179,7 @@ export default function SignIn({ csrfToken, error }: SignInProps) {
         After signing in, you&apos;ll be redirected to your ForgeTomorrow
         dashboard.
       </p>
-    </div>
+    </main>
   );
 }
 
