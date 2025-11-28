@@ -1,6 +1,6 @@
 // components/recruiter/JobFormModal.js
 import { useEffect, useState } from "react";
-import JDOptimizer from "../ai/JDOptimizer";
+import JDOptimizer from "@/components/ai/JDOptimizer";
 import { usePlan } from "@/context/PlanContext";
 
 export default function JobFormModal({ open, onClose, onSave }) {
@@ -32,7 +32,12 @@ export default function JobFormModal({ open, onClose, onSave }) {
     }
   }, [open]);
 
-  const valid = data.company && data.title && data.worksite && data.location && data.description;
+  const valid =
+    data.company &&
+    data.title &&
+    data.worksite &&
+    data.location &&
+    (data.description || "").trim();
 
   const handleSave = () => {
     if (!valid) return;
@@ -134,13 +139,13 @@ export default function JobFormModal({ open, onClose, onSave }) {
               onChange={(e) => setData({ ...data, description: e.target.value })}
               placeholder="Describe responsibilities, must-haves, culture..."
             />
-            {data.description.trim() && isEnterprise ? (
+            {(data.description || "").trim() && isEnterprise ? (
               <JDOptimizer
                 draft={data.description}
                 title={data.title}
                 onOptimize={(text) => setData({ ...data, description: text })}
               />
-            ) : data.description.trim() && !isEnterprise ? (
+            ) : (data.description || "").trim() && !isEnterprise ? (
               <div className="mt-3 p-3 bg-gray-50 border border-gray-300 rounded-lg text-xs">
                 <p className="font-bold text-gray-700">AI JD Optimizer</p>
                 <p className="text-gray-600">Enterprise only — upgrade to unlock</p>
@@ -164,7 +169,10 @@ export default function JobFormModal({ open, onClose, onSave }) {
         <div className="p-5 border-t flex items-center justify-between gap-3 sticky bottom-0 bg-white">
           <div className="text-xs text-slate-500">Fields marked * are required.</div>
           <div className="flex items-center gap-2">
-            <button onClick={onClose} className="px-4 py-2 rounded border text-sm hover:bg-slate-50">
+            <button
+              onClick={onClose}
+              className="px-4 py-2 rounded border text-sm hover:bg-slate-50"
+            >
               Cancel
             </button>
             <button

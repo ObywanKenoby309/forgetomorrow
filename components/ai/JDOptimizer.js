@@ -6,27 +6,39 @@ export default function JDOptimizer({ draft, title, onOptimize }) {
   const [loading, setLoading] = useState(false);
 
   const optimize = async () => {
-    if (!draft.trim()) return;
-    setLoading(true);
+  if (!draft.trim()) return;
+  setLoading(true);
 
-    try {
-      const res = await fetch('/api/ai/generate', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          tool: 'optimizeJD',
-          input: draft,
-          title,
-        }),
-      });
-      const { response } = await res.json();
-      onOptimize(response);
-    } catch {
+  try {
+    const res = await fetch('/api/recruiter/jd-optimize', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        draft,
+        title,
+        company, 
+        location,
+        worksite,
+        employmentType,
+        compensation,
+      }),
+    });
+
+    const data = await res.json();
+
+    if (!res.ok) {
       onOptimize('Failed to optimize.');
-    } finally {
-      setLoading(false);
+      return;
     }
-  };
+
+    onOptimize(data.optimizedDescription);
+  } catch (err) {
+    onOptimize('Failed to optimize.');
+  } finally {
+    setLoading(false);
+  }
+};
+
 
   return (
     <div className="mt-4 p-4 bg-gradient-to-r from-purple-50 to-blue-50 border border-purple-200 rounded-lg">

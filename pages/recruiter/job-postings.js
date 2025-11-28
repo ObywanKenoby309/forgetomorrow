@@ -49,7 +49,7 @@ function Body({ rows, loading, error, onEdit, onView, onClose }) {
 
   return (
     <main className="space-y-6">
-      {/* Error banner */}
+      {/* Error banner (only for real failures) */}
       {error && (
         <div className="rounded-lg border border-red-200 bg-red-50 p-4 text-sm text-red-800">
           <div className="font-semibold mb-1">We had trouble loading job postings.</div>
@@ -102,11 +102,28 @@ export default function JobPostingsPage() {
       setLoadError(null);
 
       const res = await fetch("/api/recruiter/job-postings");
-      if (!res.ok) {
-        throw new Error(`HTTP ${res.status}`);
+      let json = null;
+
+      // Try to parse JSON either way so we can read error messages
+      try {
+        json = await res.json();
+      } catch {
+        json = null;
       }
-      const json = await res.json();
-      setRows(Array.isArray(json.jobs) ? json.jobs : []);
+
+      if (!res.ok) {
+        // 401/403/404 are "non-fatal": just show an empty table, no scary banner
+        if (res.status === 401 || res.status === 403 || res.status === 404) {
+          console.warn("[JobPostings] non-fatal status", res.status, json);
+          setRows([]);
+          return;
+        }
+
+        const message = json?.error || `HTTP ${res.status}`;
+        throw new Error(message);
+      }
+
+      setRows(Array.isArray(json?.jobs) ? json.jobs : []);
     } catch (err) {
       console.error("[JobPostings] load error", err);
       setLoadError(err);
