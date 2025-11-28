@@ -1,116 +1,182 @@
 // pages/api/recruiter/ats-builder.js
-import OpenAI from "openai";
-import { getServerSession } from "next-auth";
-import { authOptions } from "../auth/[...nextauth]";
+// Heuristic ATS-style evaluation for job descriptions.
+// No external API calls – safe mock that produces rich, structured feedback.
 
-/**
- * Body shape:
- * {
- *   title: string,
- *   company: string,
- *   seniority: string,
- *   location: string,
- *   employmentType: string,
- *   notes: string,          // freeform wishes, “must have X, nice to have Y”
- *   tone: "formal" | "friendly" | "concise"
- * }
- *
- * Response:
- * {
- *   jobDescription: string, // full JD, markdown-ish
- *   keySkills: string[],    // ATS skills list
- *   screeningQuestions: string[], // suggested screens
- *   atsHints: string        // short paragraph of ATS notes
- * }
- */
-
-const client = new OpenAI({
-  apiKey: process.env.OPENAI_API_KEY,
-});
-
-export default async function handler(req, res) {
-  if (req.method !== "POST") {
-    return res.status(405).json({ error: "Method not allowed" });
+export default function handler(req, res) {
+  if (req.method !== 'POST') {
+    return res.status(405).json({ error: 'Method not allowed' });
   }
 
-  // Optional: require auth so randoms can’t spam this
-  try {
-    const session = await getServerSession(req, res, authOptions);
-    if (!session?.user?.email) {
-      return res.status(401).json({ error: "Not authenticated" });
-    }
-  } catch (err) {
-    console.error("[ats-builder] session error", err);
-    // still bail to be safe
-    return res.status(401).json({ error: "Not authenticated" });
+  const { description, title = '', company = '' } = req.body || {};
+
+  if (!description || !description.trim()) {
+    return res.status(400).json({ error: 'Description is required.' });
   }
 
-  const {
-    title = "",
-    company = "",
-    seniority = "",
-    location = "",
-    employmentType = "",
-    notes = "",
-    tone = "formal",
-  } = req.body || {};
+  const raw = String(description);
+  const text = raw.replace(/\s+/g, ' ').trim();
 
-  if (!title) {
-    return res.status(400).json({ error: "Missing required field: title" });
+  // ─────────────────────────────────────────────────────
+  // Simple signals / heuristics
+  // ─────────────────────────────────────────────────────
+  const length = text.length;
+  const hasBullets = /(\n|^)[\-\•\*]/.test(raw);
+  const hasResponsibilities = /responsibilit(y|ies)/i.test(raw);
+  const hasRequirements = /(requirements|qualifications|must\-have)/i.test(raw);
+  const hasNiceToHave = /(nice to have|bonus|preferred)/i.test(raw);
+  const mentionsRemote = /remote/i.test(raw);
+  const mentionsHybrid = /hybrid/i.test(raw);
+  const mentionsOnsite = /(on[- ]?site|on site)/i.test(raw);
+  const hasComp = /(salary|\$|compensation|pay|rate)/i.test(raw);
+  const hasSeniority = /(senior|lead|principal|junior|mid[- ]level)/i.test(raw);
+  const hasTechKeywords = /(javascript|react|python|node|java|sql|cloud|aws|azure|gcp|docker|kubernetes)/i.test(raw);
+  const hasMethodology = /(agile|scrum|kanban|ci\/cd|devops)/i.test(raw);
+
+  // Rough score out of 100
+  let score = 60;
+
+  if (hasBullets) score += 8;
+  if (hasResponsibilities) score += 5;
+  if (hasRequirements) score += 5;
+  if (hasNiceToHave) score += 3;
+  if (hasComp) score += 4;
+  if (hasSeniority) score += 4;
+  if (hasTechKeywords) score += 6;
+  if (hasMethodology) score += 3;
+
+  // Penalize super short or mega wall-of-text
+  if (length < 400) score -= 10;
+  if (length < 250) score -= 10;
+  if (length > 2200 && !hasBullets) score -= 10;
+
+  // Clamp
+  score = Math.max(10, Math.min(98, score));
+
+  // ─────────────────────────────────────────────────────
+  // Strengths / issues / suggestions
+  // ─────────────────────────────────────────────────────
+  const strengths = [];
+  const issues = [];
+  const suggestions = [];
+
+  if (hasBullets) {
+    strengths.push('Uses bullet points so resumes and hiring managers can scan quickly.');
+  } else {
+    issues.push('Description is mostly a wall of text, which is hard for humans and ATS to scan.');
+    suggestions.push('Break responsibilities and requirements into short bullet points.');
   }
 
-  try {
-    const prompt = `
-You are an expert recruiter and ATS specialist. You help hiring teams write clear, inclusive, ATS-friendly job descriptions.
-
-Write an ATS-optimized job description and supporting details for this role:
-
-- Title: ${title}
-- Company: ${company || "Confidential"}
-- Seniority: ${seniority || "Not specified"}
-- Location: ${location || "Remote / flexible"}
-- Employment type: ${employmentType || "Full-time"}
-- Recruiter notes / must-haves / nice-to-haves:
-${notes || "(none provided)"}
-
-Tone: ${tone === "friendly" ? "friendly but professional" : tone === "concise" ? "concise and to the point" : "formal and professional"}.
-
-OUTPUT STRICTLY AS JSON with this shape:
-{
-  "jobDescription": "string - multi-paragraph JD with sections (About the role, Responsibilities, Requirements, Nice to have, Benefits)",
-  "keySkills": ["skill1", "skill2", "..."],
-  "screeningQuestions": ["question1", "question2", "..."],
-  "atsHints": "short paragraph explaining why this is ATS-friendly and how to tweak it if needed"
-}
-    `.trim();
-
-    const completion = await client.responses.create({
-      model: "gpt-4.1-mini",
-      input: prompt,
-      response_format: { type: "json_object" },
-    });
-
-    const raw = completion.output[0]?.content[0]?.text || "{}";
-    let parsed;
-    try {
-      parsed = JSON.parse(raw);
-    } catch (err) {
-      console.error("[ats-builder] JSON parse error", err, raw);
-      return res.status(500).json({ error: "AI response parse error" });
-    }
-
-    const payload = {
-      jobDescription: parsed.jobDescription || "",
-      keySkills: Array.isArray(parsed.keySkills) ? parsed.keySkills : [],
-      screeningQuestions: Array.isArray(parsed.screeningQuestions)
-        ? parsed.screeningQuestions
-        : [],
-      atsHints: parsed.atsHints || "",
-    };
-
-    return res.status(200).json(payload);
-  } catch (err) {
-    console.error("[ats-builder] error", err);
-    return res.status(500).json({ error: "Failed to generate job description" });
+  if (hasResponsibilities) {
+    strengths.push('Responsibilities section makes the day-to-day work more concrete.');
+  } else {
+    issues.push('Responsibilities are not clearly separated or labeled.');
+    suggestions.push('Add a **Responsibilities** section with 5–8 action-led bullet points.');
   }
+
+  if (hasRequirements) {
+    strengths.push('Requirements or qualifications are called out explicitly.');
+  } else {
+    issues.push('Requirements are not clearly grouped, which can confuse candidates and ATS parsers.');
+    suggestions.push('Add a **Requirements / Must-have** section listing skills, experience, and tools.');
+  }
+
+  if (!hasNiceToHave) {
+    suggestions.push('Add a short **Nice-to-have** section so stronger candidates know how to stand out.');
+  }
+
+  if (mentionsRemote || mentionsHybrid || mentionsOnsite) {
+    strengths.push('Worksite (Remote / Hybrid / Onsite) is mentioned somewhere in the text.');
+  } else {
+    issues.push('Worksite (Remote / Hybrid / Onsite) is not clearly stated.');
+    suggestions.push('Add a line at the top like **Location: Remote (US)** or **Location: Hybrid — City, Country**.');
+  }
+
+  if (!hasComp) {
+    suggestions.push(
+      'Consider including at least a rough salary band or rate to improve applies and pay transparency.'
+    );
+  }
+
+  if (!hasTechKeywords) {
+    suggestions.push(
+      'Include 5–10 specific tools, frameworks, or platforms candidates should know (e.g., React, Node, SQL, AWS).'
+    );
+  }
+
+  if (!hasMethodology) {
+    suggestions.push(
+      'Mention methodologies or practices your team uses (Agile, Scrum, CI/CD, DevOps) if applicable.'
+    );
+  }
+
+  if (!hasSeniority && title) {
+    suggestions.push(
+      'If this role has a clear seniority level, reflect it consistently in the title and description (e.g., Senior, Lead, Principal).'
+    );
+  }
+
+  // ─────────────────────────────────────────────────────
+  // Naive keyword extraction (top-ish tokens)
+  // ─────────────────────────────────────────────────────
+  const words = raw
+    .toLowerCase()
+    .replace(/[^a-z0-9\+\.# ]/g, ' ')
+    .split(/\s+/)
+    .filter((w) => w.length > 3);
+
+  const stopwords = new Set([
+    'this', 'that', 'with', 'will', 'have', 'from', 'your', 'they', 'their',
+    'such', 'into', 'over', 'under', 'about', 'after', 'before', 'other',
+    'team', 'role', 'work', 'you', 'would', 'which', 'also', 'been', 'than',
+    'within', 'across', 'able', 'including', 'using', 'required', 'preferred'
+  ]);
+
+  const counts = {};
+  for (const w of words) {
+    if (stopwords.has(w)) continue;
+    counts[w] = (counts[w] || 0) + 1;
+  }
+
+  const keywords = Object.entries(counts)
+    .sort((a, b) => b[1] - a[1])
+    .slice(0, 10)
+    .map(([w]) => w);
+
+  // ─────────────────────────────────────────────────────
+  // Summary
+  // ─────────────────────────────────────────────────────
+  const roleLabel = title || 'this role';
+  let summary;
+  if (score >= 80) {
+    summary = `Strong ATS foundation. ${roleLabel} is described with enough structure and keywords that most parsers and candidates should understand it quickly. Focus on fine-tuning clarity and compensation transparency.`;
+  } else if (score >= 60) {
+    summary = `Solid starting point. ${roleLabel} includes useful detail but would benefit from clearer sections, more specific keywords, and a sharper top summary.`;
+  } else {
+    summary = `Needs structure. ${roleLabel} will be hard for ATS and candidates to scan in its current form. Breaking it into clear sections and adding concrete skills will help a lot.`;
+  }
+
+  return res.status(200).json({
+    score,
+    summary,
+    strengths,
+    issues,
+    suggestions,
+    keywords,
+    meta: {
+      length,
+      hasBullets,
+      hasResponsibilities,
+      hasRequirements,
+      hasNiceToHave,
+      mentionsRemote,
+      mentionsHybrid,
+      mentionsOnsite,
+      hasComp,
+      hasSeniority,
+      hasTechKeywords,
+      hasMethodology,
+      title,
+      company,
+    },
+  });
 }

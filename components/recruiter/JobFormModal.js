@@ -1,6 +1,7 @@
 // components/recruiter/JobFormModal.js
 import { useEffect, useState } from "react";
 import JDOptimizer from "@/components/ai/JDOptimizer";
+import ATSAdvisor from "@/components/ai/ATSAdvisor";
 import { usePlan } from "@/context/PlanContext";
 
 export default function JobFormModal({ open, onClose, onSave }) {
@@ -54,7 +55,7 @@ export default function JobFormModal({ open, onClose, onSave }) {
           <h2 className="text-lg font-semibold">Post a Job</h2>
           {isEnterprise ? (
             <span className="text-xs bg-gradient-to-r from-purple-600 to-blue-600 text-white px-2 py-1 rounded-full font-medium">
-              AI Optimizer Active
+              Dual-AI Optimizer Active
             </span>
           ) : (
             <span className="text-xs bg-gray-400 text-white px-2 py-1 rounded-full">
@@ -131,27 +132,52 @@ export default function JobFormModal({ open, onClose, onSave }) {
             </Field>
           </div>
 
-          {/* DESCRIPTION + AI */}
-          <Field label="Description" required>
-            <textarea
-              className="border rounded px-3 py-2 w-full min-h-[180px] font-mono text-sm"
-              value={data.description}
-              onChange={(e) => setData({ ...data, description: e.target.value })}
-              placeholder="Describe responsibilities, must-haves, culture..."
-            />
-            {(data.description || "").trim() && isEnterprise ? (
-              <JDOptimizer
-                draft={data.description}
-                title={data.title}
-                onOptimize={(text) => setData({ ...data, description: text })}
-              />
-            ) : (data.description || "").trim() && !isEnterprise ? (
-              <div className="mt-3 p-3 bg-gray-50 border border-gray-300 rounded-lg text-xs">
-                <p className="font-bold text-gray-700">AI JD Optimizer</p>
-                <p className="text-gray-600">Enterprise only — upgrade to unlock</p>
-              </div>
-            ) : null}
-          </Field>
+          {/* DESCRIPTION + Dual AI */}
+<Field label="Description" required>
+  <p className="text-[11px] text-slate-500 mb-1">
+    Tip: Paste your draft, use{" "}
+    <span className="font-semibold">Grok JD Builder</span> to rewrite it,
+    then run <span className="font-semibold">Sora ATS Insights</span> on the
+    final version for scoring and suggestions.
+  </p>
+  <textarea
+    className="border rounded px-3 py-2 w-full min-h-[180px] font-mono text-sm"
+    value={data.description}
+    onChange={(e) => setData({ ...data, description: e.target.value })}
+    placeholder="Describe responsibilities, must-haves, culture..."
+  />
+
+  {data.description.trim() && isEnterprise ? (
+    <>
+      {/* Step 1 — Grok JD Builder (rewrite) */}
+      <JDOptimizer
+        draft={data.description}
+        title={data.title}
+        company={data.company}
+        onOptimize={(text) => setData({ ...data, description: text })}
+      />
+
+      {/* Step 2 — Sora ATS Insights (score + suggestions) */}
+      <div className="mt-4">
+        <ATSAdvisor
+          draft={data.description}
+          title={data.title}
+          company={data.company}
+        />
+      </div>
+    </>
+  ) : data.description.trim() && !isEnterprise ? (
+    <div className="mt-3 p-3 bg-gray-50 border border-gray-300 rounded-lg text-xs">
+      <p className="font-bold text-gray-700">Dual-AI JD Builder</p>
+      <p className="text-gray-600">
+        Enterprise only — unlock Grok JD Builder + Sora ATS Insights to rewrite
+        and score job descriptions in one flow.
+      </p>
+    </div>
+  ) : null}
+</Field>
+
+
 
           <Field label="Status">
             <select
