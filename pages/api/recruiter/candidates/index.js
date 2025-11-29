@@ -33,22 +33,52 @@ export default async function handler(req, res) {
     return res.status(401).json({ error: "Not authenticated" });
   }
 
-  const { q = "", location = "", bool = "" } = req.query || {};
+  const {
+    q = "",
+    location = "",
+    bool = "",
+    summaryKeywords = "",
+    jobTitle = "",
+    workStatus = "",
+    preferredWorkType = "",
+    willingToRelocate = "",
+    skills = "",
+    languages = "",
+  } = req.query || {};
 
   const nameRoleQuery = (q || "").toString().trim();
   const locationQuery = (location || "").toString().trim();
   const booleanQuery = (bool || "").toString().trim();
 
+  const summaryKeywordsQuery = (summaryKeywords || "").toString().trim();
+  const jobTitleQuery = (jobTitle || "").toString().trim();
+  const workStatusQuery = (workStatus || "").toString().trim();
+  const preferredWorkTypeQuery = (preferredWorkType || "").toString().trim();
+  const willingToRelocateQuery = (willingToRelocate || "").toString().trim();
+  const skillsRaw = (skills || "").toString().trim();
+  const languagesRaw = (languages || "").toString().trim();
+
+  const skillTokens = skillsRaw
+    ? skillsRaw.split(",").map((s) => s.trim()).filter(Boolean)
+    : [];
+  const languageTokens = languagesRaw
+    ? languagesRaw.split(",").map((l) => l.trim()).filter(Boolean)
+    : [];
+
   const where = {};
 
+  // Basic name / role / summary search (card-level)
   if (nameRoleQuery) {
     where.OR = [
       { name: { contains: nameRoleQuery, mode: "insensitive" } },
       { role: { contains: nameRoleQuery, mode: "insensitive" } },
+      { title: { contains: nameRoleQuery, mode: "insensitive" } },
+      { currentTitle: { contains: nameRoleQuery, mode: "insensitive" } },
       { summary: { contains: nameRoleQuery, mode: "insensitive" } },
     ];
   }
 
+  // Location filter
   if (locationQuery) {
     where.location = {
       contains: locationQuery,
@@ -56,17 +86,144 @@ export default async function handler(req, res) {
     };
   }
 
-  // Boolean query placeholder — future: parse Boolean search.
-  // For now, if present, we simply search it in summary.
+  // Boolean query placeholder — future: parse Boolean search syntax.
+  // For now, we simply search it in summary + skills.
   if (booleanQuery) {
     where.AND = (where.AND || []).concat([
       {
-        summary: {
-          contains: booleanQuery,
-          mode: "insensitive",
+        OR: [
+          {
+            summary: {
+              contains: booleanQuery,
+              mode: "insensitive",
+            },
+          },
+          {
+            skills: {
+              contains: booleanQuery,
+              mode: "insensitive",
+            },
+          },
+        ],
+      },
+    ]);
+  }
+
+  // ─────────────────────────────────────────────
+  // SAFE PROFILE-BASED FILTERS ONLY
+  // We intentionally DO NOT filter on:
+  // - hobbies / interests
+  // - previous employers
+  // - birthdays / age proxies
+  // - pronouns or gender-related fields
+  // Names are only used via the generic q search above.
+  // ─────────────────────────────────────────────
+
+  // Summary keywords → search summary + skills
+  if (summaryKeywordsQuery) {
+    where.AND = (where.AND || []).concat([
+      {
+        OR: [
+          {
+            summary: {
+              contains: summaryKeywordsQuery,
+              mode: "insensitive",
+            },
+          },
+          {
+            skills: {
+              contains: summaryKeywordsQuery,
+              mode: "insensitive",
+            },
+          },
+        ],
+      },
+    ]);
+  }
+
+  // Job title → role / title / currentTitle
+  if (jobTitleQuery) {
+    where.AND = (where.AND || []).concat([
+      {
+        OR: [
+          {
+            role: {
+              contains: jobTitleQuery,
+              mode: "insensitive",
+            },
+          },
+          {
+            title: {
+              contains: jobTitleQuery,
+              mode: "insensitive",
+            },
+          },
+          {
+            currentTitle: {
+              contains: jobTitleQuery,
+              mode: "insensitive",
+            },
+          },
+        ],
+      },
+    ]);
+  }
+
+  // Current work status (exact match)
+  if (workStatusQuery) {
+    where.AND = (where.AND || []).concat([
+      {
+        workStatus: {
+          equals: workStatusQuery,
         },
       },
     ]);
+  }
+
+  // Preferred work type (exact match)
+  if (preferredWorkTypeQuery) {
+    where.AND = (where.AND || []).concat([
+      {
+        preferredWorkType: {
+          equals: preferredWorkTypeQuery,
+        },
+      },
+    ]);
+  }
+
+  // Willing to relocate (exact match)
+  if (willingToRelocateQuery) {
+    where.AND = (where.AND || []).concat([
+      {
+        willingToRelocate: {
+          equals: willingToRelocateQuery,
+        },
+      },
+    ]);
+  }
+
+  // Skills: every token must appear somewhere in skills text
+  if (skillTokens.length > 0) {
+    const skillClauses = skillTokens.map((token) => ({
+      skills: {
+        contains: token,
+        mode: "insensitive",
+      },
+    }));
+
+    where.AND = (where.AND || []).concat(skillClauses);
+  }
+
+  // Languages: every token must appear somewhere in languages text
+  if (languageTokens.length > 0) {
+    const languageClauses = languageTokens.map((token) => ({
+      languages: {
+        contains: token,
+        mode: "insensitive",
+      },
+    }));
+
+    where.AND = (where.AND || []).concat(languageClauses);
   }
 
   try {
