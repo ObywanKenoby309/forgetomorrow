@@ -9,7 +9,9 @@ import FeatureLock from "../../components/recruiter/FeatureLock";
 import WhyCandidateDrawer from "../../components/recruiter/WhyCandidateDrawer";
 import { getMockExplain } from "../../lib/recruiter/mockExplain";
 import * as Analytics from "../../lib/analytics/instrumentation";
+import WhyInfo from "../../components/recruiter/WhyInfo";
 
+// Shape the snapshot we log / maybe show later
 const mkWhySnapshot = (explain, mode) => ({
   score: explain?.score,
   mode,
@@ -29,13 +31,15 @@ function HeaderOnly() {
     <div className="w-full text-center">
       <h1 className="text-2xl font-bold text-[#FF7043]">Candidates</h1>
       <p className="mt-1 text-sm text-slate-600 max-w-xl mx-auto leading-relaxed">
-        Review and manage your active pipeline. Search by name/role, filter by location,
-        and—on Enterprise—use Boolean search to dial in exactly who you need.
+        Review and manage your active pipeline. Search by name/role, filter by
+        location, and—on Enterprise—use Boolean search to dial in exactly who you
+        need.
       </p>
     </div>
   );
 }
 
+// Sidebar card now reads the real plan via usePlan()
 function RightToolsCard({ whyMode = "lite", creditsLeft = null }) {
   const isFull = whyMode === "full";
   return (
@@ -44,9 +48,13 @@ function RightToolsCard({ whyMode = "lite", creditsLeft = null }) {
       <div className="text-sm text-slate-600 space-y-2">
         <p>Use short queries, then refine with Boolean on Enterprise.</p>
         <p>Tag top candidates to build quick outreach lists.</p>
-        <p className="mt-2">
-          <span className="font-semibold">WHY</span>:{" "}
-          {isFull ? "Full rationale enabled" : "Lite rationale (top reasons only)"}
+        <p className="mt-2 flex items-center flex-wrap gap-1">
+          <span>
+            <span className="font-semibold">WHY</span>:{" "}
+            {isFull ? "Full rationale enabled" : "Lite rationale (top reasons only)"}
+          </span>
+          {/* Single POR for explainability */}
+          <WhyInfo />
           {creditsLeft != null && !isFull && (
             <span className="ml-2 text-xs px-2 py-0.5 rounded-full border bg-[#FFEDE6] text-[#FF7043]">
               {creditsLeft} left
@@ -94,6 +102,21 @@ function Body() {
     console.log("Message", c);
   };
 
+  // Helper: demo candidate used for dev-only fallback
+  const buildDemoCandidates = () => [
+    {
+      id: "demo-1",
+      name: "Demo Candidate",
+      title: "Senior Customer Success Manager",
+      currentTitle: "Senior Customer Success Manager",
+      location: "Remote (US)",
+      match: 91,
+      email: "demo@example.com",
+      tags: [],
+      notes: "",
+    },
+  ];
+
   // Load candidates from Prisma-backed API
   useEffect(() => {
     let isMounted = true;
@@ -101,28 +124,51 @@ function Body() {
     async function fetchCandidates() {
       try {
         setIsLoading(true);
+        setLoadError(null);
+
         const params = new URLSearchParams();
         if (nameQuery) params.set("q", nameQuery);
         if (locQuery) params.set("location", locQuery);
         if (boolQuery) params.set("bool", boolQuery);
 
         const res = await fetch(
-          `/api/recruiter/candidates${params.toString() ? `?${params.toString()}` : ""}`
+          `/api/recruiter/candidates${
+            params.toString() ? `?${params.toString()}` : ""
+          }`
         );
 
+        // If API fails but dev flag is on, fall back to demo candidate
         if (!res.ok) {
+          if (process.env.NEXT_PUBLIC_FAKE_CANDIDATES === "1") {
+            if (!isMounted) return;
+            setCandidates(buildDemoCandidates());
+            setLoadError(null);
+            return;
+          }
           throw new Error(`Failed to load candidates: ${res.status}`);
         }
 
         const json = await res.json();
         if (!isMounted) return;
 
-        const list = Array.isArray(json.candidates) ? json.candidates : [];
+        let list = Array.isArray(json.candidates) ? json.candidates : [];
+
+        // If API succeeds but returns no rows, optionally seed demo
+        if (!list.length && process.env.NEXT_PUBLIC_FAKE_CANDIDATES === "1") {
+          list = buildDemoCandidates();
+        }
+
         setCandidates(list);
         setLoadError(null);
       } catch (err) {
         console.error("[Candidates] load error:", err);
-        if (isMounted) {
+        if (!isMounted) return;
+
+        // Final catch: if anything blows up, still show demo in dev
+        if (process.env.NEXT_PUBLIC_FAKE_CANDIDATES === "1") {
+          setCandidates(buildDemoCandidates());
+          setLoadError(null);
+        } else {
           setLoadError(
             "We had trouble loading candidates. Contact the Support Team if communication isn't provided in 30 minutes."
           );
@@ -215,22 +261,52 @@ function Body() {
     }
   };
 
-  // WHY drawer + instrumentation (still using mock explain for now)
+  // WHY drawer + instrumentation (API + mock fallback)
   const [whyOpen, setWhyOpen] = useState(false);
   const [whyData, setWhyData] = useState(null);
   const [whyCandidate, setWhyCandidate] = useState(null);
 
-  const onWhy = (c) => {
+  const onWhy = async (c) => {
     if (whyMode === "off") return;
     if (!hasWhyFull && whyCreditsLeft === 0) return;
 
-    const ex = getMockExplain();
-    ex.summary = `${c.name.split(" ")[0]}: ${ex.summary}`;
-    ex.score = c.match;
+    let ex;
+
+    try {
+      const res = await fetch("/api/recruiter/candidates/why", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        // Phase 1: no specific job context yet → jobId: null
+        body: JSON.stringify({
+          candidateId: c.id,
+          jobId: null,
+        }),
+      });
+
+      if (!res.ok) {
+        throw new Error(`WHY API failed (status ${res.status})`);
+      }
+
+      ex = await res.json();
+    } catch (err) {
+      console.error("[Candidates] WHY API error:", err);
+      // Fallback to mock explanation so feature never feels broken
+      ex = getMockExplain();
+    }
+
+    // Personalize explanation with candidate’s data
+    if (c?.name && ex.summary) {
+      ex.summary = `${c.name.split(" ")[0]}: ${ex.summary}`;
+    }
+    if (typeof c?.match === "number") {
+      ex.score = c.match;
+    }
 
     setWhyCandidate(c);
     setWhyData(ex);
     setWhyOpen(true);
+
+    const snapshot = mkWhySnapshot(ex, whyMode);
 
     const evt = {
       type: "why_opened",
@@ -239,8 +315,9 @@ function Body() {
       jobId: null,
       candidateId: c.id,
       role: "recruiter",
-      snapshot: mkWhySnapshot(ex, whyMode),
+      snapshot,
     };
+
     if (typeof Analytics.logWhyOpened === "function") {
       Analytics.logWhyOpened({ ...evt, score: ex.score, mode: whyMode, explain: ex });
     } else if (typeof Analytics.logEvent === "function") {

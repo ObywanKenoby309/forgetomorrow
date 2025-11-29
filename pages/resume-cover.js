@@ -1,6 +1,5 @@
-// pages/resume-cover.js
+// pages/resume-cover.js — Resume + cover landing with ATS context
 import React, { useRef, useState, useEffect } from 'react';
-import Head from 'next/head';
 import Link from 'next/link';
 import { useRouter } from 'next/router';
 import SeekerLayout from '@/components/layouts/SeekerLayout';
@@ -106,8 +105,13 @@ const TEMPLATES = [
   },
 ];
 
-function TemplatePreviewModal({ open, onClose, tpl }) {
+function TemplatePreviewModal({ open, onClose, tpl, buildCreateHref }) {
   if (!open || !tpl) return null;
+
+  const href = buildCreateHref
+    ? buildCreateHref({ template: tpl.key })
+    : `/resume/create?template=${tpl.key}`;
+
   return (
     <div
       style={{
@@ -150,7 +154,7 @@ function TemplatePreviewModal({ open, onClose, tpl }) {
           Full preview coming soon
         </div>
         <div style={{ marginTop: 20, textAlign: 'right' }}>
-          <PrimaryButton href={`/resume/create?template=${tpl.key}`}>
+          <PrimaryButton href={href}>
             Use {tpl.name}
           </PrimaryButton>
         </div>
@@ -173,6 +177,12 @@ export default function ResumeCoverLanding() {
   const [usage, setUsage] = useState({ used: 1, limit: 3 });
   const [savedResumes, setSavedResumes] = useState([]);
 
+  // Context: ATS pack + job params from jobs page
+  const [atsPack, setAtsPack] = useState(null);
+  const [atsSource, setAtsSource] = useState(null); // e.g., 'ats'
+  const [jobContext, setJobContext] = useState(null); // { jobId, copyJD }
+
+  // Init session + mock usage
   useEffect(() => {
     async function init() {
       const session = await getClientSession();
@@ -193,13 +203,78 @@ export default function ResumeCoverLanding() {
     init();
   }, [router]);
 
+  // Read ATS pack + jobId/copyJD from query/localStorage
+  useEffect(() => {
+    if (!router.isReady) return;
+
+    const { from, jobId, copyJD } = router.query || {};
+
+    // Job context from jobs page "Check Resume Alignment" / "Apply" flows
+    if (jobId) {
+      setJobContext({
+        jobId: String(jobId),
+        copyJD: String(copyJD || '').toLowerCase() === 'true',
+      });
+    }
+
+    // ATS pack from floating panel "Improve my resume with Grok + OpenAI →"
+    if (String(from || '').toLowerCase() === 'ats') {
+      if (typeof window !== 'undefined') {
+        try {
+          const raw = window.localStorage.getItem('forge-ats-pack');
+          if (raw) {
+            const parsed = JSON.parse(raw);
+            setAtsPack(parsed);
+            setAtsSource('ats');
+          }
+        } catch (err) {
+          console.error('[resume-cover] Failed to load ATS pack from localStorage', err);
+        }
+      }
+    }
+  }, [router.isReady, router.query]);
+
+  // Helper: builder route that carries ATS + job context
+  const buildCreateHref = (options = {}) => {
+    const params = new URLSearchParams();
+
+    // Template or upload flags
+    if (options.template) {
+      params.set('template', options.template);
+    }
+    if (options.uploaded) {
+      params.set('uploaded', '1');
+    }
+
+    // Job context from jobs page
+    if (jobContext?.jobId) {
+      params.set('jobId', jobContext.jobId);
+      if (jobContext.copyJD) {
+        params.set('copyJD', 'true');
+      }
+    }
+
+    // ATS source flag so /resume/create knows to look at localStorage
+    if (atsSource === 'ats') {
+      params.set('from', 'ats');
+    }
+
+    const qs = params.toString();
+    return `/resume/create${qs ? `?${qs}` : ''}`;
+  };
+
   const onUploadClick = () => fileRef.current?.click();
+
   const onFilePicked = () => {
-    router.push('/resume/create?uploaded=1');
+    // Imported resume → still honor ATS + job context
+    router.push(buildCreateHref({ uploaded: true }));
   };
 
   const canUseHybrid = tier === 'pro' || usage.used < usage.limit;
 
+  // ─────────────────────────────────────────────────────────────
+  // Header hero
+  // ─────────────────────────────────────────────────────────────
   const HeaderHero = (
     <Card
       style={{
@@ -228,13 +303,15 @@ export default function ResumeCoverLanding() {
           flexWrap: 'wrap',
         }}
       >
-        <PrimaryButton href="/resume/create?template=reverse">
+        <PrimaryButton href={buildCreateHref({ template: 'reverse' })}>
           Build a Resume
         </PrimaryButton>
         <div style={{ display: 'flex', alignItems: 'center', gap: 20 }}>
           <SoftLink onClick={onUploadClick}>Upload a resume</SoftLink>
           <span style={{ width: 1, height: 24, background: '#E0E0E0' }} />
-          <SoftLink href="/cover/create">Create a cover letter</SoftLink>
+          <SoftLink href={withChrome('/cover/create')}>
+            Create a cover letter
+          </SoftLink>
         </div>
       </div>
       {tier === 'basic' && (
@@ -253,13 +330,47 @@ export default function ResumeCoverLanding() {
     </Card>
   );
 
+  // ─────────────────────────────────────────────────────────────
+  // ATS context banner (when coming from ATSResultPanel)
+  // ─────────────────────────────────────────────────────────────
+  const ATSContextBanner =
+    atsPack && atsPack.job ? (
+      <Card
+        style={{
+          marginTop: 16,
+          borderColor: '#1A4B8F',
+          borderWidth: 1,
+        }}
+      >
+        <div
+          style={{
+            fontWeight: 800,
+            fontSize: 16,
+            color: '#1A4B8F',
+            marginBottom: 4,
+          }}
+        >
+          We’ve loaded ATS insights for this job
+        </div>
+        <p style={{ margin: '4px 0', fontSize: 14, color: '#37474F' }}>
+          <strong>{atsPack.job.title}</strong> at{' '}
+          <strong>{atsPack.job.company}</strong>
+          {atsPack.job.location ? ` — ${atsPack.job.location}` : ''}
+        </p>
+        <p style={{ margin: '4px 0 0', fontSize: 13, color: '#607D8B' }}>
+          When you open the builder, we’ll surface these recommendations so you can tune
+          your resume before you export or apply.
+        </p>
+      </Card>
+    ) : null;
+
   const ATSWhyBanner = (
     <Card>
       <div style={{ fontWeight: 800, fontSize: 18 }}>Why only two resume formats?</div>
       <p style={{ color: '#607D8B', lineHeight: 1.5 }}>
-        Because <strong>Reverse-Chronological</strong> and <strong>Hybrid</strong> are
-        the only layouts that consistently pass ATS scans and recruiter eyes.
-        Everything else is noise. We removed 9,998 templates so you don’t fail silently.
+        Because <strong>Reverse-Chronological</strong> and <strong>Hybrid</strong> are the only
+        layouts that consistently pass ATS scans and recruiter eyes. Everything else is
+        noise. We removed 9,998 templates so you don’t fail silently.
       </p>
     </Card>
   );
@@ -278,130 +389,134 @@ export default function ResumeCoverLanding() {
           gap: 20,
         }}
       >
-        {TEMPLATES.map((tpl) => (
-          <div
-            key={tpl.key}
-            style={{
-              border: '1px solid #eee',
-              borderRadius: 16,
-              padding: 20,
-              position: 'relative',
-            }}
-          >
-            {tpl.pro && tier !== 'pro' && (
-              <div
+        {TEMPLATES.map((tpl) => {
+          const disabled = tpl.pro && !canUseHybrid;
+          const href = disabled ? '/pricing' : buildCreateHref({ template: tpl.key });
+
+          return (
+            <div
+              key={tpl.key}
+              style={{
+                border: '1px solid #eee',
+                borderRadius: 16,
+                padding: 20,
+                position: 'relative',
+              }}
+            >
+              {tpl.pro && tier !== 'pro' && (
+                <div
+                  style={{
+                    position: 'absolute',
+                    top: 12,
+                    right: 12,
+                    background: '#FFD700',
+                    color: '#000',
+                    fontSize: 10,
+                    fontWeight: 900,
+                    padding: '4px 8px',
+                    borderRadius: 6,
+                  }}
+                >
+                  PRO
+                </div>
+              )}
+              <div style={{ fontWeight: 800, fontSize: 18 }}>{tpl.name}</div>
+              <p
                 style={{
-                  position: 'absolute',
-                  top: 12,
-                  right: 12,
-                  background: '#FFD700',
-                  color: '#000',
-                  fontSize: 10,
-                  fontWeight: 900,
-                  padding: '4px 8px',
-                  borderRadius: 6,
+                  color: '#607D8B',
+                  fontSize: 13,
+                  margin: '8px 0 16px',
                 }}
               >
-                PRO
-              </div>
-            )}
-            <div style={{ fontWeight: 800, fontSize: 18 }}>{tpl.name}</div>
-            <p
-              style={{
-                color: '#607D8B',
-                fontSize: 13,
-                margin: '8px 0 16px',
-              }}
-            >
-              {tpl.tagline}
-            </p>
-            <div
-              style={{
-                height: 140,
-                background: '#F5F5F5',
-                border: '2px dashed #CFD8DC',
-                borderRadius: 12,
-                marginBottom: 16,
-              }}
-            />
-            <PrimaryButton
-              href={
-                tpl.pro && !canUseHybrid
-                  ? '/pricing'
-                  : `/resume/create?template=${tpl.key}`
-              }
-              disabled={tpl.pro && !canUseHybrid}
-            >
-              {tpl.pro && tier !== 'pro' ? 'Upgrade for Hybrid' : 'Use template'}
-            </PrimaryButton>
-            <button
-              type="button"
-              onClick={() => {
-                setPreviewTpl(tpl);
-                setPreviewOpen(true);
-              }}
-              style={{
-                marginTop: 8,
-                color: ORANGE,
-                fontWeight: 700,
-                background: 'none',
-                border: 0,
-                cursor: 'pointer',
-              }}
-            >
-              Preview
-            </button>
-          </div>
-        ))}
+                {tpl.tagline}
+              </p>
+              <div
+                style={{
+                  height: 140,
+                  background: '#F5F5F5',
+                  border: '2px dashed #CFD8DC',
+                  borderRadius: 12,
+                  marginBottom: 16,
+                }}
+              />
+              <PrimaryButton href={href} disabled={disabled}>
+                {tpl.pro && tier !== 'pro' ? 'Upgrade for Hybrid' : 'Use template'}
+              </PrimaryButton>
+              <button
+                type="button"
+                onClick={() => {
+                  setPreviewTpl(tpl);
+                  setPreviewOpen(true);
+                }}
+                style={{
+                  marginTop: 8,
+                  color: ORANGE,
+                  fontWeight: 700,
+                  background: 'none',
+                  border: 0,
+                  cursor: 'pointer',
+                }}
+              >
+                Preview
+              </button>
+            </div>
+          );
+        })}
       </div>
     </Card>
   );
 
   return (
-    <>
-      <Head>
-        <title>Resume &amp; Cover | ForgeTomorrow</title>
-      </Head>
-
-      <SeekerLayout
-        title="Resume & Cover | ForgeTomorrow"
-        header={HeaderHero}
-        right={
-          <ResumeRightRail savedResumes={savedResumes} usage={usage} tier={tier} />
-        }
-        activeNav="resume-cover"
-      >
-        <div style={{ maxWidth: 1080, margin: '0 auto', padding: '0 16px' }}>
-          {ATSWhyBanner}
-          {TemplatesRow}
-        </div>
-
-        {/* Primary resume + cover attach section */}
-        <div style={{ maxWidth: 1080, margin: '32px auto', padding: '0 16px' }}>
-          <div className="grid md:grid-cols-3 items-start gap-4">
-            <div className="md:col-span-2 space-y-4">
-              <ProfileResumeAttach withChrome={withChrome} />
-              <ProfileCoverAttach withChrome={withChrome} />
-            </div>
-
-            <SectionHint
-              title="Make it easy to say yes"
-              bullets={[
-                'Keep one primary resume linked to your profile.',
-                'Save up to 4 alternates for different roles.',
-                'Do the same with cover letters so recruiters instantly see your best fit.',
-                'Manage all your resumes and cover letters in the builder — you can change your primaries anytime from there.',
-              ]}
-            />
-          </div>
-        </div>
-
-        <TemplatePreviewModal
-          open={previewOpen}
-          onClose={() => setPreviewOpen(false)}
-          tpl={previewTpl}
+    <SeekerLayout
+      title="Resume & Cover | ForgeTomorrow"
+      header={HeaderHero}
+      right={
+        <ResumeRightRail
+          savedResumes={savedResumes}
+          usage={usage}
+          tier={tier}
         />
-      </SeekerLayout>
-    </>
+      }
+      activeNav="resume-cover"
+    >
+      <div style={{ maxWidth: 1080, margin: '0 auto', padding: '0 16px' }}>
+        {ATSContextBanner}
+        {ATSWhyBanner}
+        {TemplatesRow}
+      </div>
+
+      {/* Primary resume + cover attach section */}
+      <div
+        style={{
+          maxWidth: 1080,
+          margin: '32px auto',
+          padding: '0 16px',
+        }}
+      >
+        <div className="grid md:grid-cols-3 items-start gap-4">
+          <div className="md:col-span-2 space-y-4">
+            <ProfileResumeAttach withChrome={withChrome} />
+            <ProfileCoverAttach withChrome={withChrome} />
+          </div>
+
+          <SectionHint
+            title="Make it easy to say yes"
+            bullets={[
+              'Keep one primary resume linked to your profile.',
+              'Save up to 4 alternates for different roles.',
+              'Do the same with cover letters so recruiters instantly see your best fit.',
+              'Manage all your resumes and cover letters in the builder — you can change your primaries anytime from there.',
+            ]}
+          />
+        </div>
+      </div>
+
+      <TemplatePreviewModal
+        open={previewOpen}
+        onClose={() => setPreviewOpen(false)}
+        tpl={previewTpl}
+        buildCreateHref={buildCreateHref}
+      />
+    </SeekerLayout>
   );
 }

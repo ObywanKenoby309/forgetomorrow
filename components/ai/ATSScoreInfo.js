@@ -8,7 +8,7 @@ export default function ATSScoreInfo() {
   const triggerRef = useRef(null);
   const closeRef = useRef(null);
 
-  // Close on Escape, manage simple focus behavior
+  // Close on Escape
   useEffect(() => {
     if (!open) return;
 
@@ -103,14 +103,16 @@ export default function ATSScoreInfo() {
               <p>
                 The ATS Score estimates how easily a job description can be
                 parsed and ranked by modern Applicant Tracking Systems (ATS) and
-                understood by recruiters and candidates.
+                understood quickly by recruiters and candidates.
               </p>
 
-              <p className="font-semibold text-slate-900">What the score measures</p>
+              <p className="font-semibold text-slate-900">
+                What the score measures
+              </p>
               <ul className="list-disc pl-4 space-y-1">
                 <li>
                   <span className="font-semibold">Core structure</span> – checks
-                  for sections like title, worksite, employment type,
+                  for pieces like title, worksite, employment type,
                   responsibilities, requirements, and compensation.
                 </li>
                 <li>
@@ -139,20 +141,53 @@ export default function ATSScoreInfo() {
                 </li>
               </ul>
 
-              <p className="font-semibold text-slate-900">How the score is used</p>
-              <p>
-                The ATS Score ranges from <span className="font-semibold">0</span>{' '}
-                to <span className="font-semibold">100</span> and reflects
-                alignment with widely accepted best practices. Higher scores
-                usually mean better machine readability and candidate clarity.
+              <p className="font-semibold text-slate-900">
+                How to read the score
               </p>
+              <ul className="list-disc pl-4 space-y-1">
+                <li>
+                  <span className="font-semibold">95–100:</span> Recruiter-ready.
+                  Strong clarity, structure, and keyword alignment.
+                </li>
+                <li>
+                  <span className="font-semibold">80–94:</span> Strong ATS
+                  foundation. A few clarity or detail improvements may still
+                  help.
+                </li>
+                <li>
+                  <span className="font-semibold">60–79:</span> Functional but
+                  could benefit from tighter wording, better structure, or more
+                  specific skills.
+                </li>
+                <li>
+                  <span className="font-semibold">0–59:</span> High-risk range.
+                  Missing details or unclear structure may hurt visibility in
+                  real ATS systems.
+                </li>
+              </ul>
+
+              <p className="font-semibold text-slate-900">
+                Why the score can change
+              </p>
+              <ul className="list-disc pl-4 space-y-1">
+                <li>Rewrites add or clarify responsibilities and requirements.</li>
+                <li>
+                  New keywords, tools, or frameworks make the role more
+                  discoverable.
+                </li>
+                <li>
+                  Adjusting worksite, seniority, or compensation improves
+                  transparency signals.
+                </li>
+              </ul>
 
               <p className="font-semibold text-slate-900">Important note</p>
               <p>
                 Every ATS uses its own algorithms, so no score can guarantee a
                 specific ranking in any one system. ForgeTomorrow&apos;s ATS
                 Insights provide a best-practice estimate and concrete editing
-                suggestions, not a promise of performance in a particular tool.
+                suggestions, not a promise of performance in a particular tool
+                or legal/DEI review.
               </p>
             </div>
 

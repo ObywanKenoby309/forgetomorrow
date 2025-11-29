@@ -1,7 +1,7 @@
 // pages/api/ats-score.ts
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
-import { prisma } from '@/lib/prisma'; // ← CORRECT: default import
+import { prisma } from '@/lib/prisma';
 import type { NextApiRequest, NextApiResponse } from 'next';
 
 // === TYPES ===
@@ -10,6 +10,8 @@ type ATSResponse = {
   tips: string[];
   role?: string;
   upgrade?: boolean;
+  aiSummary?: string;              // ← NEW: AI read of this role
+  aiRecommendations?: string[];    // ← NEW: concrete next steps
 };
 
 type ApiResponse = {
@@ -61,9 +63,15 @@ export default async function handler(
             score: 0,
             tips: [
               'Free tier: 3 AI scans/day used.',
-              'Upgrade to Pro for unlimited AI + bullet rewrites.',
+              'Upgrade to Pro for unlimited AI scans and bullet rewrites.',
             ],
             upgrade: true,
+            aiSummary:
+              'Free tier limit reached for today. Upgrade to unlock unlimited scans and deeper guidance.',
+            aiRecommendations: [
+              'Review your last scan’s suggestions and update your resume.',
+              'Come back tomorrow for another free scan, or upgrade to Pro.',
+            ],
           },
         });
       }
@@ -81,12 +89,28 @@ export default async function handler(
         ? 'You are a career coach. Give session-ready advice.'
         : role === 'RECRUITER'
         ? 'You are a recruiter. Score for hiring fit and red flags.'
-        : 'You are a job seeker. Focus on ATS pass rate and interview readiness.';
+        : 'You are an ATS expert helping a job seeker. Focus on ATS pass rate and interview readiness.';
 
     const prompt = `
 ${roleContext}
 
-Score this resume vs. the job description on **content alignment** (0–100 scale).
+Given the job description and candidate resume, do three things:
+
+1) Score the resume vs. the job description on **content alignment** (0–100).
+2) Write a short, encouraging "AI read of this role" summary (3–5 sentences) explaining fit.
+3) List 2–4 **specific, actionable** recommendations to improve the resume for THIS role.
+
+Return **valid JSON only** (no markdown, no extra commentary):
+
+{
+  "score": 92,
+  "summary": "Short explanation of how well the resume fits the role and why.",
+  "recommendations": [
+    "Specific improvement 1",
+    "Specific improvement 2",
+    "Specific improvement 3"
+  ]
+}
 
 JOB DESCRIPTION:
 ${jd}
@@ -99,23 +123,17 @@ RESUME:
       resume.workExperiences
         ?.map(
           (e: any) =>
-            `${e.jobTitle} at ${e.company}: ${(e.bullets || []).join('; ')}`
+            `${e.jobTitle || e.title || 'Role'} at ${e.company || 'Unknown'}: ${(e.bullets || []).join(
+              '; '
+            )}`
         )
         .join(' | ') || 'None'
     }
 - Education: ${
       resume.educationList
-        ?.map((e: any) => `${e.degree} in ${e.field}`)
+        ?.map((e: any) => `${e.degree || 'Degree'} in ${e.field || e.program || 'Field'}`)
         .join(', ') || 'None'
     }
-
-Return **valid JSON only** (no markdown, no explanation):
-{
-  "score": 92,
-  "strengths": ["Perfect role fit", "Quantified 42% revenue growth"],
-  "gaps": ["No SQL usage shown", "Missing A/B testing example"],
-  "action": "Add 1 bullet with SQL + 1 with metrics"
-}
 `.trim();
 
     const response = await fetch('https://api.x.ai/v1/chat/completions', {
@@ -127,11 +145,14 @@ Return **valid JSON only** (no markdown, no explanation):
       body: JSON.stringify({
         model: 'grok-3-mini',
         messages: [
-          { role: 'system', content: 'You are an expert ATS analyst. Respond with JSON only.' },
+          {
+            role: 'system',
+            content: 'You are an expert ATS analyst. Respond with JSON only.',
+          },
           { role: 'user', content: prompt },
         ],
         temperature: 0.1,
-        max_tokens: 300,
+        max_tokens: 400,
       }),
     });
 
@@ -142,10 +163,9 @@ Return **valid JSON only** (no markdown, no explanation):
 
     const data = await response.json();
     const raw = data.choices?.[0]?.message?.content?.trim();
-
     if (!raw) throw new Error('Empty response from Grok');
 
-    let result: { score: number; strengths: string[]; gaps: string[]; action: string };
+    let result: { score: number; summary?: string; recommendations?: string[] };
     try {
       result = JSON.parse(raw);
     } catch (parseError) {
@@ -153,28 +173,38 @@ Return **valid JSON only** (no markdown, no explanation):
       throw new Error('Invalid JSON from AI');
     }
 
+    const score = typeof result.score === 'number' ? result.score : 0;
+    const aiSummary =
+      result.summary ||
+      'AI read unavailable for this scan, but you can still use the ATS score and missing keywords.';
+    const aiRecommendations =
+      Array.isArray(result.recommendations) && result.recommendations.length > 0
+        ? result.recommendations
+        : [
+            'Mirror 2–3 of the job’s exact keywords in your summary and skills.',
+            'Add at least one bullet with clear metrics (%, $, time saved) to your most recent role.',
+          ];
+
     // === 4. LOG SCAN ===
     await prisma.scanLog.create({
       data: {
         userId,
         date: new Date().toISOString().split('T')[0],
-        score: result.score,
+        score,
       },
     });
 
-    // === 5. FORMAT TIPS ===
-    const tips = [
-      ...result.strengths.map((s: string) => `Success: ${s}`),
-      ...result.gaps.map((g: string) => `Improvement: ${g}`),
-      `**Next Step:** ${result.action}`,
-    ];
+    // === 5. FORMAT TIPS (short, for the small tips list) ===
+    const tips = aiRecommendations.slice(0, 4);
 
     return res.status(200).json({
       ok: true,
       data: {
-        score: result.score,
-        tips: tips.slice(0, 4), // Limit to 4 tips
+        score,
+        tips,
         role,
+        aiSummary,
+        aiRecommendations,
       },
     });
   } catch (error: any) {
@@ -228,16 +258,22 @@ function fallbackResponse(
 
     score = Math.min(100, Math.max(0, score));
 
+    const aiSummary =
+      'Heuristic fallback: this score is based on simple keyword and impact checks. Use it as a rough guide and run a full AI scan when available.';
+    const aiRecommendations = [
+      'Mirror the exact job title somewhere near the top of your resume.',
+      'Pull 3–5 key skills from the job description and make sure they appear in your skills or bullets.',
+      'Add at least one bullet with measurable results (%, $, time saved) in your most recent role.',
+    ];
+
     res.status(200).json({
       ok: true,
       data: {
         score,
-        tips: [
-          'Add keywords from the job description.',
-          'Use numbers: "Grew X by 30%"',
-          'Prove skills with examples in bullets.',
-        ],
+        tips: aiRecommendations.slice(0, 3),
         role,
+        aiSummary,
+        aiRecommendations,
       },
     });
   } catch (error) {

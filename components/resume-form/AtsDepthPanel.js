@@ -1,8 +1,7 @@
-// components/resume-form/AtsDepthPanel.js
-'use client'; // ← CRITICAL: Makes this a Client Component
+'use client'; // ← Client component
 
-import { useMemo, useState } from 'react';
-import AIATSScorerClient from './AIATSScorerClient'; // ← .tsx auto-resolved
+import { useEffect, useMemo, useState } from 'react';
+import CoachSuggestionsPanel from './CoachSuggestionsPanel';
 
 /* =========================
    Tokenizing / Normalizing
@@ -32,7 +31,8 @@ const VERBS = new Set([
   'streamline','streamlined','design','designed','analyze','analyzed','analyzing',
   'track','tracked','tracking','report','reported','reporting','collaborate','collaborated',
   'coordinate','coordinated','own','owned','owning','manage','managed','managing','execute','executed',
-  'drive','driven','driving','develop','developed','launch','launched','maintain','maintained','assist','plan','planned','planning'
+  'drive','driven','driving','develop','developed','launch','launched','maintain','maintained','assist',
+  'plan','planned','planning'
 ]);
 
 const CURATED_PHRASES = new Set([
@@ -79,7 +79,9 @@ function segment(text = '') {
 
 function bigrams(tokens = []) {
   const out = [];
-  for (let i = 0; i < tokens.length - 1; i++) out.push(`${tokens[i]} ${tokens[i+1]}`);
+  for (let i = 0; i < tokens.length - 1; i++) {
+    out.push(`${tokens[i]} ${tokens[i + 1]}`);
+  }
   return out;
 }
 
@@ -104,6 +106,7 @@ function extractCandidates(jdText = '', limitUni = 120, limitBi = 80) {
   const n = normalize(jdText);
   const uniFreq = new Map();
   const biFreq = new Map();
+
   for (const sent of segment(n)) {
     const toks = tokenizeSentence(sent);
     for (const w of toks) {
@@ -112,7 +115,7 @@ function extractCandidates(jdText = '', limitUni = 120, limitBi = 80) {
       uniFreq.set(w, (uniFreq.get(w) || 0) + 1);
     }
     for (const p of bigrams(toks)) {
-      const [a,b] = p.split(' ');
+      const [a, b] = p.split(' ');
       if (!a || !b) continue;
       if (STOPWORDS.has(a) || STOPWORDS.has(b)) continue;
       if (GENERIC_LOW.has(a) || GENERIC_LOW.has(b)) {
@@ -121,8 +124,9 @@ function extractCandidates(jdText = '', limitUni = 120, limitBi = 80) {
       biFreq.set(p, (biFreq.get(p) || 0) + 1);
     }
   }
-  const unis = [...uniFreq.entries()].sort((a,b)=>b[1]-a[1]).map(([w])=>w).slice(0, limitUni);
-  const bisTop = [...biFreq.entries()].sort((a,b)=>b[1]-a[1]).map(([w])=>w).slice(0, limitBi);
+
+  const unis = [...uniFreq.entries()].sort((a, b) => b[1] - a[1]).map(([w]) => w).slice(0, limitUni);
+  const bisTop = [...biFreq.entries()].sort((a, b) => b[1] - a[1]).map(([w]) => w).slice(0, limitBi);
   return { unis, bis: bisTop };
 }
 
@@ -137,7 +141,12 @@ const TOOL_RX = [
 ];
 
 function bucketize({ unis, bis }) {
-  const high = new Set(), tools = new Set(), soft = new Set(), otherPhrases = new Set(), otherUnis = new Set();
+  const high = new Set();
+  const tools = new Set();
+  const soft = new Set();
+  const otherPhrases = new Set();
+  const otherUnis = new Set();
+
   unis.forEach(t => {
     const s = t.toLowerCase();
     if (SOFT_SKILLS.has(s)) { soft.add(s); return; }
@@ -145,6 +154,7 @@ function bucketize({ unis, bis }) {
     if (TOOL_RX.some(rx => rx.test(s))) { tools.add(s); return; }
     if (!GENERIC_LOW.has(s) && !STOPWORDS.has(s) && s.length >= 5) otherUnis.add(s);
   });
+
   bis.forEach(p => {
     const s = p.toLowerCase();
     if (DROP_PHRASES.has(s)) return;
@@ -157,6 +167,7 @@ function bucketize({ unis, bis }) {
       otherPhrases.add(s);
     }
   });
+
   const other = (otherPhrases.size ? [...otherPhrases] : [...otherUnis]).filter(Boolean);
   return { high: [...high], tools: [...tools], soft: [...soft], other };
 }
@@ -167,8 +178,8 @@ function bucketize({ unis, bis }) {
 const DEGREE_LEVELS = [
   { key: 'doctorate', rx: /\b(ph\.?d\.?|doctorate|doctoral|md|jd)\b/ },
   { key: 'masters', rx: /\b(masters?|m\.?s\.?|m\.?sc|mba)\b/ },
-  { key: 'bachelors', rx: /\b(bachelors?|b\.?s\.?|b\.?sc|b\.?a)\b/ },
-  { key: 'associates', rx: /\b(associates?|a\.?a\.?|a\.?s\.?)\b/ },
+  { key: 'bachelors', rx: /\b(bachelors?|b\.?s\.?|b\.sc|b\.a)\b/ },
+  { key: 'associates', rx: /\b(associates?|a\.?a\.?|a\.s\.?)\b/ },
 ];
 const DEGREE_WORD = /\b(degree|diploma)\b/;
 const KNOWN_FIELDS = new Set([
@@ -177,7 +188,7 @@ const KNOWN_FIELDS = new Set([
   'english','mathematics','math','software engineering','it','information technology'
 ]);
 
-function canonicalLevel(text='') {
+function canonicalLevel(text = '') {
   const n = normalize(text);
   for (const { key, rx } of DEGREE_LEVELS) if (rx.test(n)) return key;
   return null;
@@ -199,14 +210,15 @@ function extractFieldAfter(text, anchor = 'in', knownOnly = false) {
   chunk = chunk.split(/[,.;]| and | or /)[0].trim();
   if (KNOWN_FIELDS.has(chunk)) return chunk;
   if (knownOnly) return null;
-  const tokens = chunk.split(/\s+/).slice(0,3).join(' ').trim();
+  const tokens = chunk.split(/\s+/).slice(0, 3).join(' ').trim();
   return tokens || null;
 }
 
-function parseEduFromJD(jdText='') {
+function parseEduFromJD(jdText = '') {
   const n = normalize(jdText);
   let level = null;
   let field = null;
+
   for (const { key, rx } of DEGREE_LEVELS) {
     const r1 = new RegExp(`\\b${rx.source}\\b[^.]{0,80}?${DEGREE_WORD.source}`, 'i');
     const r2 = new RegExp(`${DEGREE_WORD.source}[^.]{0,80}?\\b${rx.source}\\b`, 'i');
@@ -220,6 +232,7 @@ function parseEduFromJD(jdText='') {
       break;
     }
   }
+
   if (!level && DEGREE_WORD.test(n)) {
     const m = n.match(new RegExp(DEGREE_WORD.source, 'i'));
     if (m) {
@@ -229,6 +242,7 @@ function parseEduFromJD(jdText='') {
       field = extractFieldAfter(windowTxt, 'in', true);
     }
   }
+
   if (!level && !field && !DEGREE_WORD.test(n)) return null;
   return { level, field };
 }
@@ -265,7 +279,9 @@ function hitEducation(jdReq, resumeEduList = []) {
   if (!jdReq) return { levelHit: false, fieldHit: false };
   const wantLevel = jdReq.level || null;
   const wantField = jdReq.field ? normalize(jdReq.field) : null;
-  let levelHit = false, fieldHit = false;
+  let levelHit = false;
+  let fieldHit = false;
+
   for (const e of resumeEduList) {
     const lvl = e.level || null;
     const fld = e.field ? normalize(e.field) : null;
@@ -277,7 +293,7 @@ function hitEducation(jdReq, resumeEduList = []) {
 }
 
 /* =========================
-   Scoring
+   Scoring (heuristic only)
    ========================= */
 function coverage(matchedCount, total) {
   if (!total) return 0;
@@ -294,9 +310,8 @@ function containsWordBoundary(haystack, needle) {
 function guessRole(jd = '') {
   const n = normalize(jd);
   const m = n.match(/\b(title|role|position)\s*[:\-]\s*([^\n,]+)/i);
-  if (m?.[2]) return m[2].trim();
-  const first = (jd.split('\n')[0] || '').trim();
-  return first.slice(0, 72);
+  if (m && m[2]) return m[2].trim();
+  return '';
 }
 
 function computeMatchScore(jdText, resumeData) {
@@ -308,6 +323,7 @@ function computeMatchScore(jdText, resumeData) {
   const resumeEduList = parseEduFromResume(resumeData.education || []);
   const { levelHit, fieldHit } = hitEducation(jdEduReq, resumeEduList);
   const resumeNorm = flatResumeText(resumeData);
+
   let titleHit = 0;
   if (roleTokens.length) {
     const phrase = roleTokens.join(' ');
@@ -315,12 +331,15 @@ function computeMatchScore(jdText, resumeData) {
     const tokenHits = roleTokens.filter(t => containsWordBoundary(resumeNorm, t)).length;
     titleHit = exactish ? 1 : coverage(tokenHits, roleTokens.length);
   }
-  const inResume = (k) => containsWordBoundary(resumeNorm, k);
+
+  const inResume = k => containsWordBoundary(resumeNorm, k);
   const highHits = buckets.high.filter(inResume);
   const toolHits = buckets.tools.filter(inResume);
   const softHits = buckets.soft.filter(inResume);
-  const needLevel = Boolean(jdEduReq?.level);
-  const needField = Boolean(jdEduReq?.field);
+
+  const needLevel = Boolean(jdEduReq && jdEduReq.level);
+  const needField = Boolean(jdEduReq && jdEduReq.field);
+
   const eduCov = (!needLevel && !needField)
     ? 0
     : (() => {
@@ -332,56 +351,67 @@ function computeMatchScore(jdText, resumeData) {
           (needField ? (fieldHit ? fieldWeight : 0) : 0)
         ) / denom;
       })();
-  const wordHit = (word) => {
+
+  const wordHit = word => {
     const esc = word.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
     const rx = new RegExp(`\\b${esc}\\b`, 'i');
     return rx.test(resumeNorm);
   };
-  const phraseHit = (phrase) => resumeNorm.includes(phrase);
-  const strictOtherHit = (k) => (k.includes(' ') ? phraseHit(k) : wordHit(k));
+  const phraseHit = phrase => resumeNorm.includes(phrase);
+  const strictOtherHit = k => (k.includes(' ') ? phraseHit(k) : wordHit(k));
   const otherHits = buckets.other.filter(strictOtherHit);
+
   const w = { title: 15, high: 45, tools: 20, edu: 15, soft: 5, other: 0 };
+
   const bucketCoverage = (have, total) => {
     if (total === 0) return 0;
     if (have >= total) return 1;
     const denom = Math.max(total, 4);
     return Math.max(0, Math.min(1, have / denom));
   };
+
   const cov = {
     title: roleTokens.length ? titleHit : 0,
     high: bucketCoverage(highHits.length, buckets.high.length),
     tools: bucketCoverage(toolHits.length, buckets.tools.length),
     edu: eduCov,
     soft: bucketCoverage(softHits.length, buckets.soft.length),
-    other: bucketCoverage(otherHits.length, buckets.other.length)
+    other: bucketCoverage(otherHits.length, buckets.other.length),
   };
+
   const active = {
     title: roleTokens.length > 0,
     high: buckets.high.length > 0,
     tools: buckets.tools.length > 0,
     edu: needLevel || needField,
     soft: buckets.soft.length > 0,
-    other: false
+    other: false,
   };
+
   const activeWeight =
     (active.title ? w.title : 0) +
     (active.high ? w.high : 0) +
     (active.tools ? w.tools : 0) +
     (active.edu ? w.edu : 0) +
     (active.soft ? w.soft : 0);
+
   const normFactor = activeWeight ? (100 / activeWeight) : 0;
+
   const titleScore = cov.title * w.title * normFactor;
   const highScore = cov.high * w.high * normFactor;
   const toolScore = cov.tools * w.tools * normFactor;
   const eduScore = cov.edu * w.edu * normFactor;
   const softScore = cov.soft * w.soft * normFactor;
   const otherScore = 0;
+
   const total = Math.round(titleScore + highScore + toolScore + eduScore + softScore + otherScore);
+
   const eduMissing = [];
   if (needLevel || needField) {
-    if (needLevel && !levelHit) eduMissing.push(levelLabel(jdEduReq.level));
-    if (needField && !fieldHit) eduMissing.push(jdEduReq.field);
+    if (needLevel && !levelHit) eduMissing.push(levelLabel(jdEduReq ? jdEduReq.level : null));
+    if (needField && !fieldHit && jdEduReq && jdEduReq.field) eduMissing.push(jdEduReq.field);
   }
+
   return {
     score: total,
     breakdown: {
@@ -391,7 +421,7 @@ function computeMatchScore(jdText, resumeData) {
       edu: {
         score: Math.round(eduScore),
         have: (needLevel && levelHit ? 1 : 0) + (needField && fieldHit ? 1 : 0),
-        total: (needLevel ? 1 : 0) + (needField ? 1 : 0)
+        total: (needLevel ? 1 : 0) + (needField ? 1 : 0),
       },
       soft: { score: Math.round(softScore), have: softHits.length, total: buckets.soft.length },
       other: { score: 0, have: otherHits.length, total: buckets.other.length },
@@ -402,16 +432,9 @@ function computeMatchScore(jdText, resumeData) {
       tools: buckets.tools.filter(k => !inResume(k)),
       edu: eduMissing,
       soft: buckets.soft.filter(k => !inResume(k)),
-      other: []
-    }
+      other: [],
+    },
   };
-}
-
-/* =========================
-   AI SCORER — NOW CLIENT-ONLY
-   ========================= */
-function AIATSScorer({ jdText, resumeData }) {
-  return <AIATSScorerClient jdText={jdText} resumeData={resumeData} />;
 }
 
 /* =========================
@@ -430,17 +453,35 @@ export default function AtsDepthPanel({
   maxChips = 12,
 }) {
   const [collapsed, setCollapsed] = useState(collapsedDefault);
-  const [showAll, setShowAll] = useState({ high:false, tools:false, edu:false, soft:false });
+  const [showAll, setShowAll] = useState({ high: false, tools: false, edu: false, soft: false });
   const [added, setAdded] = useState({});
+  const [hasScanned, setHasScanned] = useState(false);
+
+  const [coachOpen, setCoachOpen] = useState(false);
+  const [coachContext, setCoachContext] = useState({
+    section: 'overview',
+    keyword: null,
+  });
+
+  // Resume shape just for this scorer
   const resumeData = useMemo(
     () => ({ summary, skills, experiences, education }),
     [summary, skills, experiences, education]
   );
-  const { score, breakdown, missing } = useMemo(
-    () => computeMatchScore(jdText, resumeData),
+
+  const { score: heuristicScore, breakdown, missing } = useMemo(
+    () => computeMatchScore(jdText || '', resumeData),
     [jdText, resumeData]
   );
-  const empty = !jdText?.trim();
+
+  const displayScore = hasScanned ? heuristicScore : null;
+  const emptyJD = !jdText?.trim();
+
+  useEffect(() => {
+    // Whenever the JD changes, require a fresh scan
+    setHasScanned(false);
+  }, [jdText]);
+
   const markAdded = (k, kind) => {
     const key = `${k}:${kind}`;
     setAdded(a => ({ ...a, [key]: true }));
@@ -448,17 +489,38 @@ export default function AtsDepthPanel({
       const copy = { ...a }; delete copy[key]; return copy;
     }), 900);
   };
-  const barColor = score >= 85 ? '#2E7D32' : score >= 70 ? '#F59E0B' : '#C62828';
-  const hint = score >= 85 ? 'Great fit' : score >= 70 ? 'Close — add a few high-impact terms' : 'Low — add more high-impact terms';
+
+  const barColor =
+    displayScore === null ? '#B0BEC5' :
+    displayScore >= 85 ? '#2E7D32' :
+    displayScore >= 70 ? '#F59E0B' :
+    '#C62828';
+
+  const hint =
+    displayScore === null
+      ? 'Run the AI scan to see your ATS match score.'
+      : displayScore >= 85
+      ? 'Great fit — strong alignment to this job.'
+      : displayScore >= 70
+      ? 'Close — add a few high-impact terms (aim ≥85%).'
+      : 'Low — add more high-impact terms (aim ≥85%).';
 
   function openEducationSection() {
     if (typeof window !== 'undefined') {
       window.dispatchEvent(new Event('ft-open-education'));
       const el = document.getElementById('education-section');
-      if (el?.scrollIntoView) {
-        setTimeout(() => el.scrollIntoView({ behavior: 'smooth', block: 'start' }), 60);
+      if (el && el.scrollIntoView) {
+        setTimeout(
+          () => el.scrollIntoView({ behavior: 'smooth', block: 'start' }),
+          60
+        );
       }
     }
+  }
+
+  function openCoachOverview() {
+    setCoachContext({ section: 'overview', keyword: null });
+    setCoachOpen(true);
   }
 
   function Group({ id, title, items }) {
@@ -466,25 +528,51 @@ export default function AtsDepthPanel({
     const moreCount = Math.max(items.length - list.length, 0);
     return (
       <div style={{ border: '1px solid #E0E0E0', borderRadius: 10, padding: 10 }}>
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 }}>
+        <div
+          style={{
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            marginBottom: 8,
+          }}
+        >
           <div style={{ fontWeight: 700, color: '#37474F' }}>
-            {title} {items.length ? <span style={{ color: '#78909C', fontWeight: 600 }}>{`· ${items.length}`}</span> : null}
+            {title}{' '}
+            {items.length ? (
+              <span style={{ color: '#78909C', fontWeight: 600 }}>
+                {`· ${items.length}`}
+              </span>
+            ) : null}
           </div>
           {moreCount > 0 && (
             <button
               type="button"
-              onClick={() => setShowAll(s => ({ ...s, [id]: !s[id] }))}
-              style={{ background: 'white', border: '1px solid #E0E0E0', borderRadius: 10, padding: '6px 10px', fontWeight: 700, cursor: 'pointer' }}
+              onClick={() =>
+                setShowAll(s => ({
+                  ...s,
+                  [id]: !s[id],
+                }))
+              }
+              style={{
+                background: 'white',
+                border: '1px solid #E0E0E0',
+                borderRadius: 10,
+                padding: '6px 10px',
+                fontWeight: 700,
+                cursor: 'pointer',
+              }}
             >
               {showAll[id] ? 'Show fewer' : `Show ${moreCount} more`}
             </button>
           )}
         </div>
         {items.length === 0 ? (
-          <div style={{ fontSize: 12, color: '#2E7D32' }}>No missing keywords here — nice!</div>
+          <div style={{ fontSize: 12, color: '#2E7D32' }}>
+            No missing keywords here — nice!
+          </div>
         ) : (
           <div style={{ display: 'grid', gap: 8 }}>
-            {list.map((k) => (
+            {list.map(k => (
               <div
                 key={k}
                 style={{
@@ -493,7 +581,8 @@ export default function AtsDepthPanel({
                   borderRadius: 10,
                   padding: 10,
                   display: 'grid',
-                  gridTemplateColumns: id === 'edu' ? '1fr auto' : '1fr auto auto auto',
+                  gridTemplateColumns:
+                    id === 'edu' ? '1fr auto' : '1fr auto auto auto',
                   alignItems: 'center',
                   gap: 8,
                 }}
@@ -503,7 +592,14 @@ export default function AtsDepthPanel({
                   <button
                     type="button"
                     onClick={openEducationSection}
-                    style={{ background: 'white', border: '1px solid #E0E0E0', borderRadius: 10, padding: '6px 10px', fontWeight: 700, cursor: 'pointer' }}
+                    style={{
+                      background: 'white',
+                      border: '1px solid #E0E0E0',
+                      borderRadius: 10,
+                      padding: '6px 10px',
+                      fontWeight: 700,
+                      cursor: 'pointer',
+                    }}
                   >
                     Open Education
                   </button>
@@ -511,22 +607,52 @@ export default function AtsDepthPanel({
                   <>
                     <button
                       type="button"
-                      onClick={() => { onAddSkill?.(k); markAdded(k, 'skill'); }}
-                      style={{ background: 'white', border: '1px solid #E0E0E0', borderRadius: 10, padding: '6px 10px', fontWeight: 700, cursor: 'pointer' }}
+                      onClick={() => {
+                        onAddSkill && onAddSkill(k);
+                        markAdded(k, 'skill');
+                      }}
+                      style={{
+                        background: 'white',
+                        border: '1px solid #E0E0E0',
+                        borderRadius: 10,
+                        padding: '6px 10px',
+                        fontWeight: 700,
+                        cursor: 'pointer',
+                      }}
                     >
                       {added[`${k}:skill`] ? 'Added' : '+ Skill'}
                     </button>
                     <button
                       type="button"
-                      onClick={() => { onAddSummary?.(k); markAdded(k, 'summary'); }}
-                      style={{ background: 'white', border: '1px solid #E0E0E0', borderRadius: 10, padding: '6px 10px', fontWeight: 700, cursor: 'pointer' }}
+                      onClick={() => {
+                        onAddSummary && onAddSummary(k);
+                        markAdded(k, 'summary');
+                      }}
+                      style={{
+                        background: 'white',
+                        border: '1px solid #E0E0E0',
+                        borderRadius: 10,
+                        padding: '6px 10px',
+                        fontWeight: 700,
+                        cursor: 'pointer',
+                      }}
                     >
                       {added[`${k}:summary`] ? 'Added' : '+ Summary'}
                     </button>
                     <button
                       type="button"
-                      onClick={() => { onAddBullet?.(`• ${k}`); markAdded(k, 'bullet'); }}
-                      style={{ background: 'white', border: '1px solid #E0E0E0', borderRadius: 10, padding: '6px 10px', fontWeight: 700, cursor: 'pointer' }}
+                      onClick={() => {
+                        onAddBullet && onAddBullet(`• ${k}`);
+                        markAdded(k, 'bullet');
+                      }}
+                      style={{
+                        background: 'white',
+                        border: '1px solid #E0E0E0',
+                        borderRadius: 10,
+                        padding: '6px 10px',
+                        fontWeight: 700,
+                        cursor: 'pointer',
+                      }}
                     >
                       {added[`${k}:bullet`] ? 'Added' : '+ Bullet'}
                     </button>
@@ -541,56 +667,248 @@ export default function AtsDepthPanel({
   }
 
   return (
-    <div style={{
-      background: 'white',
-      border: '1px solid #E0E0E0',
-      borderRadius: 12,
-      padding: 12,
-      boxShadow: '0 2px 6px rgba(0,0,0,0.06)',
-    }}>
-      {/* HEADER */}
-      <button
-        type="button"
-        onClick={() => setCollapsed(c => !c)}
-        aria-expanded={!collapsed}
+    <>
+      <div
         style={{
-          width: '100%',
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'space-between',
-          gap: 8,
-          background: 'transparent',
-          border: 'none',
-          padding: '6px 4px',
-          cursor: 'pointer'
+          background: 'white',
+          border: '1px solid #E0E0E0',
+          borderRadius: 12,
+          padding: 12,
+          boxShadow: '0 2px 6px rgba(0,0,0,0.06)',
         }}
       >
-        <div style={{ fontWeight: 700, color: '#37474F' }}>ATS Match</div>
-        <span style={{ color: '#607D8B', fontSize: 14 }}>{collapsed ? 'Expand' : 'Collapse'}</span>
-      </button>
+        {/* HEADER ROW (title + expand toggle) */}
+        <button
+          type="button"
+          onClick={() => setCollapsed(c => !c)}
+          aria-expanded={!collapsed}
+          style={{
+            width: '100%',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            gap: 8,
+            background: 'transparent',
+            border: 'none',
+            padding: '6px 4px',
+            cursor: 'pointer',
+          }}
+        >
+          <div style={{ fontWeight: 700, color: '#37474F' }}>ATS Match</div>
+          <span style={{ color: '#607D8B', fontSize: 14 }}>
+            {collapsed ? 'Expand' : 'Collapse'}
+          </span>
+        </button>
 
-      {empty && (
-        <div style={{ marginTop: 8, fontSize: 14, color: '#90A4AE', fontStyle: 'italic' }}>
-          <strong>Pro Tip:</strong> Upload a job description above to unlock AI-powered ATS scoring and keyword suggestions.
-        </div>
-      )}
+        {/* TOP: SCORE + BAR + GUIDANCE */}
+        {!emptyJD && (
+          <div style={{ marginTop: 8 }}>
+            <div style={{ display: 'flex', alignItems: 'baseline', gap: 8 }}>
+              <div style={{ fontWeight: 800, fontSize: 24, color: barColor }}>
+                {displayScore !== null ? `${displayScore}%` : '—'}
+              </div>
+              <div style={{ fontSize: 13, color: '#607D8B' }}>
+                {hint}
+              </div>
+            </div>
+            <div
+              style={{
+                height: 10,
+                background: '#ECEFF1',
+                borderRadius: 999,
+                overflow: 'hidden',
+                marginTop: 6,
+              }}
+            >
+              <div
+                style={{
+                  width: `${displayScore !== null ? Math.min(displayScore, 100) : 0}%`,
+                  height: '100%',
+                  background: barColor,
+                }}
+              />
+            </div>
 
-      {!empty && (
-        <div style={{ marginTop: 8 }}>
-          <div style={{ display: 'flex', alignItems: 'baseline', gap: 8 }}>
-            <div style={{ fontWeight: 800, fontSize: 24, color: barColor }}>{score}%</div>
-            <div style={{ fontSize: 13, color: '#607D8B' }}>{hint} (aim ≥85%)</div>
+            {/* Guidance line under bar */}
+            <div
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: 10,
+                marginTop: 10,
+                color: '#607D8B',
+                fontSize: 13,
+              }}
+            >
+              <span
+                style={{
+                  width: 44,
+                  height: 4,
+                  borderRadius: 999,
+                  background: '#CFD8DC',
+                  display: 'inline-block',
+                }}
+              />
+              <span>
+                Add your experience, skills, and summary, then run the AI scan to see your ATS match
+                score.
+              </span>
+            </div>
           </div>
-          <div style={{ height: 10, background: '#ECEFF1', borderRadius: 999, overflow: 'hidden', marginTop: 6 }}>
-            <div style={{ width: `${Math.min(score,100)}%`, height: '100%', background: barColor }} />
+        )}
+
+        {/* WHEN NO JD: just info text */}
+        {emptyJD && (
+          <div style={{ marginTop: 12, fontSize: 13, color: '#607D8B' }}>
+            Upload or paste a job description above to unlock ATS scoring and the AI resume coach.
           </div>
+        )}
 
-          {/* AI SCORER */}
-          <AIATSScorer jdText={jdText} resumeData={resumeData} />
+        {/* MAIN: TWO BIG CARDS SIDE-BY-SIDE */}
+        {!emptyJD && (
+          <div
+            style={{
+              display: 'grid',
+              gridTemplateColumns: '1fr 1fr',
+              gap: 16,
+              marginTop: 18,
+            }}
+          >
+            {/* LEFT CARD: AI ATS Score */}
+            <div
+              style={{
+                background: '#FFF8E1',
+                borderRadius: 16,
+                border: '1px solid #FFE0B2',
+                padding: 24,
+                display: 'flex',
+                flexDirection: 'column',
+                justifyContent: 'space-between',
+                minHeight: 220,
+              }}
+            >
+              <div>
+                <div
+                  style={{
+                    fontSize: 22,
+                    fontWeight: 800,
+                    color: '#F97316',
+                    marginBottom: 8,
+                  }}
+                >
+                  AI ATS Score
+                </div>
+                <div style={{ fontSize: 15, color: '#4B5563', lineHeight: 1.5 }}>
+                  Improve your resume with AI-powered scoring.
+                </div>
+                <div
+                  style={{
+                    marginTop: 18,
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: 10,
+                    fontSize: 12,
+                    color: '#607D8B',
+                  }}
+                >
+                  <span
+                    style={{
+                      width: 44,
+                      height: 4,
+                      borderRadius: 999,
+                      background: '#CFD8DC',
+                      display: 'inline-block',
+                    }}
+                  />
+                  <span>Run the AI scan to see your ATS match score.</span>
+                </div>
+              </div>
+              <div style={{ marginTop: 20 }}>
+                <button
+                  type="button"
+                  onClick={() => setHasScanned(true)}
+                  style={{
+                    width: '100%',
+                    padding: '14px 16px',
+                    borderRadius: 999,
+                    border: 'none',
+                    background: '#FF7043',
+                    color: 'white',
+                    fontWeight: 800,
+                    fontSize: 16,
+                    cursor: 'pointer',
+                    boxShadow: '0 6px 16px rgba(0,0,0,0.18)',
+                  }}
+                >
+                  Run AI Scan
+                </button>
+              </div>
+            </div>
 
-          {/* BREAKDOWN */}
-          {!collapsed && (
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(5,1fr)', gap: 6, marginTop: 14 }}>
+            {/* RIGHT CARD: AI Resume Coach */}
+            <div
+              style={{
+                background: '#FFF8E1',
+                borderRadius: 16,
+                border: '1px solid #FFE0B2',
+                padding: 24,
+                display: 'flex',
+                flexDirection: 'column',
+                justifyContent: 'space-between',
+                minHeight: 220,
+              }}
+            >
+              <div>
+                <div
+                  style={{
+                    fontSize: 22,
+                    fontWeight: 800,
+                    color: '#F97316',
+                    marginBottom: 8,
+                  }}
+                >
+                  AI Resume Coach
+                </div>
+                <div style={{ fontSize: 15, color: '#4B5563', lineHeight: 1.5 }}>
+                  Ask the coach to help guide you through aligning your resume to industry-standard ATS
+                  expectations.
+                </div>
+              </div>
+              <div style={{ marginTop: 20 }}>
+                <button
+                  type="button"
+                  onClick={openCoachOverview}
+                  style={{
+                    width: '100%',
+                    padding: '14px 16px',
+                    borderRadius: 999,
+                    border: 'none',
+                    background: '#FF7043',
+                    color: 'white',
+                    fontWeight: 800,
+                    fontSize: 16,
+                    cursor: 'pointer',
+                    boxShadow: '0 6px 16px rgba(0,0,0,0.18)',
+                  }}
+                >
+                  Ask the Coach
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* BREAKDOWN + MISSING KEYWORDS */}
+        {!collapsed && !emptyJD && (
+          <>
+            <div
+              style={{
+                display: 'grid',
+                gridTemplateColumns: 'repeat(5,1fr)',
+                gap: 6,
+                marginTop: 18,
+              }}
+            >
               {[
                 ['Title/Role', breakdown.title?.score, breakdown.title?.have, breakdown.title?.total],
                 ['Hard skills', breakdown.high?.score, breakdown.high?.have, breakdown.high?.total],
@@ -598,27 +916,75 @@ export default function AtsDepthPanel({
                 ['Education', breakdown.edu?.score, breakdown.edu?.have, breakdown.edu?.total],
                 ['Soft skills', breakdown.soft?.score, breakdown.soft?.have, breakdown.soft?.total],
               ].map(([label, s, have, total]) => (
-                <div key={label} style={{ border: '1px solid #EEE', borderRadius: 8, padding: 8 }}>
-                  <div style={{ fontWeight: 700, fontSize: 12, color: '#37474F' }}>{label}</div>
-                  <div style={{ fontSize: 12, color: '#607D8B' }}>
-                    {typeof have === 'number' && typeof total === 'number' ? `${have}/${total} matched` : '—'}
+                <div
+                  key={label}
+                  style={{
+                    border: '1px solid #EEE',
+                    borderRadius: 8,
+                    padding: 8,
+                  }}
+                >
+                  <div
+                    style={{
+                      fontWeight: 700,
+                      fontSize: 12,
+                      color: '#37474F',
+                    }}
+                  >
+                    {label}
                   </div>
-                  <div style={{ fontWeight: 700, fontSize: 12, color: '#455A64', marginTop: 4 }}>{s ?? 0} pts</div>
+                  <div
+                    style={{
+                      fontSize: 12,
+                      color: '#607D8B',
+                    }}
+                  >
+                    {typeof have === 'number' && typeof total === 'number'
+                      ? `${have}/${total} matched`
+                      : '—'}
+                  </div>
+                  <div
+                    style={{
+                      fontWeight: 700,
+                      fontSize: 12,
+                      color: '#455A64',
+                      marginTop: 4,
+                    }}
+                  >
+                    {(s ?? 0) + ' pts'}
+                  </div>
                 </div>
               ))}
             </div>
-          )}
-        </div>
-      )}
 
-      {!empty && !collapsed && (
-        <div style={{ display: 'grid', gap: 10, marginTop: 16 }}>
-          <Group id="high" title="High-impact hard skills" items={missing.high} />
-          <Group id="tools" title="Tools / Platforms" items={missing.tools} />
-          <Group id="edu" title="Education" items={missing.edu} />
-          <Group id="soft" title="Soft skills" items={missing.soft} />
-        </div>
-      )}
-    </div>
+            <div
+              style={{
+                display: 'grid',
+                gap: 10,
+                marginTop: 16,
+              }}
+            >
+              <Group id="high" title="High-impact hard skills" items={missing.high} />
+              <Group id="tools" title="Tools / Platforms" items={missing.tools} />
+              <Group id="edu" title="Education" items={missing.edu} />
+              <Group id="soft" title="Soft skills" items={missing.soft} />
+            </div>
+          </>
+        )}
+      </div>
+
+      {/* Floating writing coach (bottom-right overlay) */}
+      <CoachSuggestionsPanel
+        open={coachOpen}
+        onClose={() => setCoachOpen(false)}
+        context={coachContext}
+        jdText={jdText}
+        resumeData={resumeData}
+        missing={missing}
+        onAddSkill={onAddSkill}
+        onAddSummary={onAddSummary}
+        onAddBullet={onAddBullet}
+      />
+    </>
   );
 }

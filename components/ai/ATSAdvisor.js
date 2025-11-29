@@ -1,8 +1,8 @@
 // components/ai/ATSAdvisor.js
-'use client';
+"use client";
 
-import { useState } from 'react';
-import ATSScoreInfo from '@/components/ai/ATSScoreInfo';
+import { useState } from "react";
+import ATSScoreInfo from "@/components/ai/ATSScoreInfo";
 
 export default function ATSAdvisor({ draft, title, company }) {
   const [loading, setLoading] = useState(false);
@@ -16,13 +16,13 @@ export default function ATSAdvisor({ draft, title, company }) {
     setResult(null);
 
     try {
-      const res = await fetch('/api/recruiter/ats-builder', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+      const res = await fetch("/api/recruiter/ats-builder", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           description: draft,
-          title: (title || '').trim() || '(Untitled role)',
-          company: company || '',
+          title: (title || "").trim() || "(Untitled role)",
+          company: company || "",
         }),
       });
 
@@ -33,10 +33,11 @@ export default function ATSAdvisor({ draft, title, company }) {
 
       setResult(json);
     } catch (err) {
+      console.error("[ATSAdvisor] API error", err);
       setResult({
         error:
           err.message ||
-          'We could not analyze this job description. Please try again in a moment.',
+          "We could not analyze this job description. Please try again in a moment.",
       });
     } finally {
       setLoading(false);
@@ -45,7 +46,6 @@ export default function ATSAdvisor({ draft, title, company }) {
 
   return (
     <div className="mt-3 p-4 border border-slate-200 rounded-lg bg-slate-50">
-      {/* Header row with title, helper text, action button, and ATS info modal trigger */}
       <div className="flex items-center justify-between gap-2 mb-2">
         <div>
           <p className="text-xs font-semibold text-slate-900 uppercase tracking-wide">
@@ -56,28 +56,18 @@ export default function ATSAdvisor({ draft, title, company }) {
           </p>
         </div>
 
-        <div className="flex items-center gap-2">
-          <button
-            type="button"
-            onClick={handleAnalyze}
-            disabled={!hasDescription || loading}
-            className={`px-3 py-1.5 text-xs font-semibold rounded ${
-              !hasDescription || loading
-                ? 'bg-slate-300 text-slate-600 cursor-not-allowed'
-                : 'bg-slate-900 text-white hover:bg-slate-800'
-            }`}
-          >
-            {loading ? 'Analyzing…' : 'Analyze ATS fit'}
-          </button>
-
-          {/* "How this score works" info trigger */}
-          <div className="flex items-center">
-            <span className="text-[11px] text-slate-500 mr-1">
-              How this score works
-            </span>
-            <ATSScoreInfo />
-          </div>
-        </div>
+        <button
+          type="button"
+          onClick={handleAnalyze}
+          disabled={!hasDescription || loading}
+          className={`px-3 py-1.5 text-xs font-semibold rounded ${
+            !hasDescription || loading
+              ? "bg-slate-300 text-slate-600 cursor-not-allowed"
+              : "bg-slate-900 text-white hover:bg-slate-800"
+          }`}
+        >
+          {loading ? "Analyzing…" : "Analyze ATS fit"}
+        </button>
       </div>
 
       {!hasDescription && (
@@ -88,15 +78,21 @@ export default function ATSAdvisor({ draft, title, company }) {
 
       {result && !result.error && (
         <div className="mt-3 space-y-3 text-xs text-slate-800">
-          {/* Score + summary */}
+          {/* Score + summary + info "i" */}
           <div className="flex items-center gap-3 flex-wrap">
-            {typeof result.score === 'number' && (
-              <span className="inline-flex items-center justify-center rounded-full bg-slate-900 text-white text-[11px] px-3 py-1 font-semibold">
-                ATS strength: {result.score}/100
-              </span>
+            {typeof result.score === "number" && (
+              <div className="inline-flex items-center gap-1.5">
+                <span className="inline-flex items-center justify-center rounded-full bg-slate-900 text-white text-[11px] px-3 py-1 font-semibold">
+                  ATS strength: {result.score}/100
+                </span>
+                {/* Explainability: how we estimate this score */}
+                <ATSScoreInfo />
+              </div>
             )}
             {result.summary && (
-              <p className="text-[11px] text-slate-700 max-w-xl">{result.summary}</p>
+              <p className="text-[11px] text-slate-700 max-w-xl">
+                {result.summary}
+              </p>
             )}
           </div>
 

@@ -1,4 +1,4 @@
-// pages/resume/create.js — FINAL LOCKED
+// pages/resume/create.js — FINAL LOCKED + ATS CONTEXT
 import { useContext, useEffect, useRef, useState } from 'react';
 import dynamic from 'next/dynamic';
 import { useRouter } from 'next/router';
@@ -25,9 +25,30 @@ import DesignedPDFButton from '@/components/resume-form/export/DesignedPDFButton
 
 const ORANGE = '#FF7043';
 
-function Banner({ children }) {
+function Banner({ children, tone = 'orange' }) {
+  const toneStyles =
+    tone === 'blue'
+      ? {
+          background: '#E3F2FD',
+          border: '1px solid #90CAF9',
+          color: '#0D47A1',
+        }
+      : {
+          background: '#FFF3E0',
+          border: '1px solid #FFCC80',
+          color: '#E65100',
+        };
+
   return (
-    <div style={{ background: '#FFF3E0', border: '1px solid #FFCC80', borderRadius: 12, padding: 14, fontSize: 15, color: '#E65100', fontWeight: 600 }}>
+    <div
+      style={{
+        ...toneStyles,
+        borderRadius: 12,
+        padding: 14,
+        fontSize: 15,
+        fontWeight: 600,
+      }}
+    >
       {children}
     </div>
   );
@@ -35,13 +56,15 @@ function Banner({ children }) {
 
 function Section({ title, open, onToggle, children, required = false }) {
   return (
-    <div style={{
-      background: 'white',
-      border: '1px solid #E5E7EB',
-      borderRadius: 12,
-      overflow: 'hidden',
-      boxShadow: '0 4px 12px rgba(0,0,0,0.08)'
-    }}>
+    <div
+      style={{
+        background: 'white',
+        border: '1px solid #E5E7EB',
+        borderRadius: 12,
+        overflow: 'hidden',
+        boxShadow: '0 4px 12px rgba(0,0,0,0.08)',
+      }}
+    >
       <button
         onClick={onToggle}
         style={{
@@ -59,7 +82,15 @@ function Section({ title, open, onToggle, children, required = false }) {
         }}
       >
         <span style={{ color: required ? ORANGE : '#1F2937' }}>{title}</span>
-        <span style={{ width: 24, height: 24, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+        <span
+          style={{
+            width: 24,
+            height: 24,
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+          }}
+        >
           <svg
             className="w-5 h-5 text-gray-500"
             fill="none"
@@ -70,12 +101,19 @@ function Section({ title, open, onToggle, children, required = false }) {
             {open ? (
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20 12H4" />
             ) : (
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={2}
+                d="M12 4v16m8-8H4"
+              />
             )}
           </svg>
         </span>
       </button>
-      {open && <div style={{ padding: '24px 20px', borderTop: '1px solid #E5E7EB' }}>{children}</div>}
+      {open && (
+        <div style={{ padding: '24px 20px', borderTop: '1px solid #E5E7EB' }}>{children}</div>
+      )}
     </div>
   );
 }
@@ -84,15 +122,24 @@ export default function CreateResumePage() {
   const router = useRouter();
   const fileInputRef = useRef(null);
   const dropRef = useRef(null);
+
   const {
-    formData, setFormData,
-    summary, setSummary,
-    experiences, setExperiences,
-    educationList, setEducationList,
-    skills, setSkills,
-    projects, setProjects,
-    certifications, setCertifications,
-    customSections, setCustomSections,
+    formData,
+    setFormData,
+    summary,
+    setSummary,
+    experiences,
+    setExperiences,
+    educationList,
+    setEducationList,
+    skills,
+    setSkills,
+    projects,
+    setProjects,
+    certifications,
+    setCertifications,
+    customSections,
+    setCustomSections,
     saveEventAt,
     saveResume,
   } = useContext(ResumeContext);
@@ -104,22 +151,39 @@ export default function CreateResumePage() {
   const [openOptional, setOpenOptional] = useState(false);
   const [openTailor, setOpenTailor] = useState(false);
 
-  const savedTime = saveEventAt ? new Date(saveEventAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : '';
+  // ATS context passed from jobs page (via resume-cover)
+  const [atsPack, setAtsPack] = useState(null);
+  const [atsJobMeta, setAtsJobMeta] = useState(null);
+  const [atsAppliedFromContext, setAtsAppliedFromContext] = useState(false);
+
+  // Helper: detect if atsPack is a real ATS result vs demo
+  const hasRealAts =
+    !!(
+      atsPack &&
+      atsPack.ats &&
+      typeof atsPack.ats.score === 'number' &&
+      !/demo|sample/i.test(atsPack.ats.summary || '')
+    );
+
+  const savedTime = saveEventAt
+    ? new Date(saveEventAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+    : '';
 
   const isResumeValid =
     summary?.trim().length > 20 &&
     skills?.length >= 8 &&
     experiences?.length > 0 &&
-    experiences.every(e => e.title && e.company && e.bullets?.length >= 2);
+    experiences.every((e) => e.title && e.company && e.bullets?.length >= 2);
 
   const checks = [
     summary?.trim().length > 20,
     skills?.length >= 8,
     experiences?.length > 0,
-    experiences.every(e => e.title && e.company && e.bullets?.length >= 2)
+    experiences.every((e) => e.title && e.company && e.bullets?.length >= 2),
   ];
   const progress = Math.round((checks.filter(Boolean).length / 4) * 100);
 
+  // Load resume template
   useEffect(() => {
     if (!router.isReady) return;
     const id = router.query.template === 'hybrid' ? 'hybrid' : 'reverse';
@@ -127,6 +191,7 @@ export default function CreateResumePage() {
     setTemplateComp(() => (typeof comp === 'function' ? comp : ReverseResumeTemplate));
   }, [router.isReady, router.query.template]);
 
+  // Toast on save
   useEffect(() => {
     if (saveEventAt) {
       setShowToast(true);
@@ -135,26 +200,35 @@ export default function CreateResumePage() {
     }
   }, [saveEventAt]);
 
+  // Handle manual JD file upload / drop
   const handleFile = async (file) => {
     if (!file) return;
     try {
-      const raw = file.size > 1_500_000 ? await uploadJD(file) : await extractTextFromFile(file);
+      const raw =
+        file.size > 1_500_000 ? await uploadJD(file) : await extractTextFromFile(file);
       const clean = normalizeJobText(raw);
       setJd(clean);
-      localStorage.setItem('ft_last_job_text', clean);
+      if (typeof window !== 'undefined') {
+        window.localStorage.setItem('ft_last_job_text', clean);
+      }
     } catch (e) {
       console.error(e);
     }
   };
 
+  // Drag-and-drop listeners
   useEffect(() => {
     const el = dropRef.current;
     if (!el) return;
+
     const prevent = (e) => e.preventDefault();
     const onDrop = (e) => {
       prevent(e);
-      handleFile(e.dataTransfer.files[0]);
+      if (e.dataTransfer?.files?.[0]) {
+        handleFile(e.dataTransfer.files[0]);
+      }
     };
+
     el.addEventListener('dragover', prevent);
     el.addEventListener('drop', onDrop);
     return () => {
@@ -163,7 +237,10 @@ export default function CreateResumePage() {
     };
   }, []);
 
-  const templateName = router.query.template === 'hybrid' ? 'Hybrid (Combination)' : 'Reverse Chronological (Default)';
+  const templateName =
+    router.query.template === 'hybrid'
+      ? 'Hybrid (Combination)'
+      : 'Reverse Chronological (Default)';
 
   const resumeData = {
     personalInfo: {
@@ -185,15 +262,68 @@ export default function CreateResumePage() {
     customSections: customSections,
   };
 
+  // ─────────────────────────────────────────────────────────────
+  // NEW: Apply ATS pack + JD context from resume-cover
+  // ─────────────────────────────────────────────────────────────
+  useEffect(() => {
+    if (!router.isReady) return;
+    if (atsAppliedFromContext) return;
+
+    const { from } = router.query || {};
+    const fromFlag = String(from || '').toLowerCase();
+
+    let applied = false;
+
+    if (fromFlag === 'ats' && typeof window !== 'undefined') {
+      try {
+        const raw = window.localStorage.getItem('forge-ats-pack');
+        if (raw) {
+          const pack = JSON.parse(raw);
+          setAtsPack(pack || null);
+          if (pack?.job) {
+            setAtsJobMeta({
+              title: pack.job.title || '',
+              company: pack.job.company || '',
+              location: pack.job.location || '',
+            });
+          }
+
+          // If ATS pack carries a job description, auto-use it as JD text
+          if (pack?.job?.description && !jd) {
+            const clean = normalizeJobText(pack.job.description);
+            setJd(clean);
+            window.localStorage.setItem('ft_last_job_text', clean);
+            applied = true;
+          }
+        }
+      } catch (err) {
+        console.error('[resume/create] Failed to load ATS pack from localStorage', err);
+      }
+    }
+
+    // Fallback: if we don't have a JD yet, reuse last uploaded JD if available
+    if (!applied && !jd && typeof window !== 'undefined') {
+      try {
+        const last = window.localStorage.getItem('ft_last_job_text');
+        if (last) {
+          setJd(last);
+        }
+      } catch (err) {
+        console.error('[resume/create] Failed to load ft_last_job_text', err);
+      }
+    }
+
+    setAtsAppliedFromContext(true);
+  }, [router.isReady, router.query, jd, atsAppliedFromContext]);
+
   // HEADER
   const Header = (
     <section className="bg-white border border-gray-200 rounded-xl p-8 text-center shadow-sm">
       <h1 className="text-3xl font-bold text-orange-600">Resume Builder</h1>
       <p className="text-gray-600 mt-3 max-w-2xl mx-auto">
-        2 templates. 1 goal: Get you the interview.
-        <strong>Reverse Chronological</strong> for recruiters.
-        <strong>ATS-Optimized</strong> for systems.
-        No fluff. Only what works.
+        2 templates. 1 goal: Get you the interview.{' '}
+        <strong>Reverse Chronological</strong> for recruiters.{' '}
+        <strong>ATS-Optimized</strong> for systems. No fluff. Only what works.
       </p>
       <div className="flex items-center justify-center gap-8 mt-6">
         <button
@@ -216,8 +346,8 @@ export default function CreateResumePage() {
   // FOOTER
   const Footer = (
     <div className="mt-16 text-center text-xs text-gray-500 max-w-2xl mx-auto px-4">
-      *87% of job seekers using ATS-optimized resumes receive at least one interview within 7 days of applying.
-      <em>Source: Jobscan 2024 Applicant Study (n=1,200). Results vary.</em>
+      *87% of job seekers using ATS-optimized resumes receive at least one interview within 7 days of
+      applying. <em>Source: Jobscan 2024 Applicant Study (n=1,200). Results vary.</em>
     </div>
   );
 
@@ -229,7 +359,17 @@ export default function CreateResumePage() {
       footer={Footer}
       activeNav="resume-cover"
     >
-      <div style={{ maxWidth: 1600, margin: '0 auto', padding: '20px 16px', display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 40, alignItems: 'start' }}>
+      <div
+        style={{
+          maxWidth: 1600,
+          margin: '0 auto',
+          padding: '20px 16px',
+          display: 'grid',
+          gridTemplateColumns: '1fr 1fr',
+          gap: 40,
+          alignItems: 'start',
+        }}
+      >
         {/* LEFT: INPUT */}
         <div style={{ display: 'grid', gap: 20, position: 'sticky', top: 20 }}>
           {/* TEMPLATE SWITCHER */}
@@ -244,8 +384,9 @@ export default function CreateResumePage() {
                   color: router.query.template !== 'hybrid' ? ORANGE : '#666',
                   background: 'none',
                   border: 'none',
-                  textDecoration: router.query.template !== 'hybrid' ? 'underline' : 'none',
-                  cursor: 'pointer'
+                  textDecoration:
+                    router.query.template !== 'hybrid' ? 'underline' : 'none',
+                  cursor: 'pointer',
                 }}
               >
                 Reverse
@@ -258,8 +399,9 @@ export default function CreateResumePage() {
                   color: router.query.template === 'hybrid' ? ORANGE : '#666',
                   background: 'none',
                   border: 'none',
-                  textDecoration: router.query.template === 'hybrid' ? 'underline' : 'none',
-                  cursor: 'pointer'
+                  textDecoration:
+                    router.query.template === 'hybrid' ? 'underline' : 'none',
+                  cursor: 'pointer',
                 }}
               >
                 Hybrid
@@ -268,32 +410,155 @@ export default function CreateResumePage() {
           </Banner>
 
           {/* REQUIRED */}
-          <Section title="Required – Start Here" open={openRequired} onToggle={() => setOpenRequired(v => !v)} required>
+          <Section
+            title="Required – Start Here"
+            open={openRequired}
+            onToggle={() => setOpenRequired((v) => !v)}
+            required
+          >
             <div style={{ display: 'grid', gap: 32 }}>
-              <ContactInfoSection embedded formData={formData} setFormData={setFormData} />
-              <WorkExperienceSection embedded experiences={experiences} setExperiences={setExperiences} />
+              <ContactInfoSection
+                embedded
+                formData={formData}
+                setFormData={setFormData}
+              />
+              <WorkExperienceSection
+                embedded
+                experiences={experiences}
+                setExperiences={setExperiences}
+              />
               <div id="education-section">
-                <EducationSection embedded educationList={educationList} setEducationList={setEducationList} />
+                <EducationSection
+                  embedded
+                  educationList={educationList}
+                  setEducationList={setEducationList}
+                />
               </div>
               <SkillsSection embedded skills={skills} setSkills={setSkills} />
             </div>
           </Section>
 
           {/* OPTIONAL */}
-          <Section title="Optional – Add Power" open={openOptional} onToggle={() => setOpenOptional(v => !v)}>
+          <Section
+            title="Optional – Summary, Projects, Certifications, and Custom Sections"
+            open={openOptional}
+            onToggle={() => setOpenOptional((v) => !v)}
+          >
             <div style={{ display: 'grid', gap: 32 }}>
-              <SummarySection embedded summary={summary} setSummary={setSummary} />
-              <ProjectsSection embedded projects={projects} setProjects={setProjects} />
-              <CertificationsSection embedded certifications={certifications} setCertifications={setCertifications} />
-              <CustomSection embedded customSections={customSections} setCustomSections={setCustomSections} />
+              <SummarySection
+                embedded
+                summary={summary}
+                setSummary={setSummary}
+              />
+              <ProjectsSection
+                embedded
+                projects={projects}
+                setProjects={setProjects}
+              />
+              <CertificationsSection
+                embedded
+                certifications={certifications}
+                setCertifications={setCertifications}
+              />
+              <CustomSection
+                embedded
+                customSections={customSections}
+                setCustomSections={setCustomSections}
+              />
             </div>
           </Section>
 
-          {/* TAILOR TO JOB — WITH PRO TIP BANNER */}
-          <Section title="Tailor to Job (Optional)" open={openTailor} onToggle={() => setOpenTailor(v => !v)}>
-            <Banner>
-              Pro Tip: Upload a job description to unlock <strong>AI-powered ATS scoring</strong> and keyword suggestions.
-            </Banner>
+          {/* The Forge Hammer — WITH ATS CONTEXT + FIRE METAPHOR */}
+          <Section
+            title={
+              <>
+                <span style={{ fontWeight: 800 }}>The Forge Hammer</span>
+                <span style={{ fontWeight: 400 }}>
+                  {' – where our AI hammer, your resume steel, and employers\' job fire work together.'}
+                </span>
+              </>
+            }
+            open={openTailor}
+            onToggle={() => setOpenTailor((v) => !v)}
+          >
+            {/* If we have ATS context, show FIRE card instead of Pro Tip */}
+            {atsPack ? (
+              <div style={{ display: 'grid', gap: 10, marginBottom: 16 }}>
+                <Banner tone="blue">
+                  <div style={{ fontWeight: 800, marginBottom: 4 }}>
+                    🔥 Job Fire Loaded
+                  </div>
+
+                  <div style={{ fontSize: 14, marginBottom: 6 }}>
+                    This job is now the <strong>fire</strong> heating your resume steel.
+                    Your AI hammer and ATS tools are shaping everything against this posting:
+                  </div>
+
+                  {atsJobMeta && (
+                    <div style={{ fontSize: 14, marginBottom: 4 }}>
+                      <strong>{atsJobMeta.title}</strong>
+                      {atsJobMeta.company ? ` at ${atsJobMeta.company}` : ''}
+                      {atsJobMeta.location ? ` — ${atsJobMeta.location}` : ''}
+                    </div>
+                  )}
+
+                  {/* Only show match/tips if this ATS data is real, not demo */}
+                  {hasRealAts ? (
+                    <>
+                      <div style={{ fontSize: 13, marginBottom: 6 }}>
+                        Current estimated match: <strong>{atsPack.ats.score}%</strong>
+                      </div>
+
+                      {atsPack.ats.summary && (
+                        <div style={{ fontSize: 13, marginBottom: 6 }}>
+                          <strong>AI read of this role:</strong> {atsPack.ats.summary}
+                        </div>
+                      )}
+
+                      {Array.isArray(atsPack.ats.recommendations) &&
+                        atsPack.ats.recommendations.length > 0 && (
+                          <div style={{ fontSize: 13 }}>
+                            <strong>Key improvements to consider:</strong>
+                            <ul
+                              style={{
+                                margin: '4px 0 0',
+                                paddingLeft: 18,
+                                fontSize: 13,
+                              }}
+                            >
+                              {atsPack.ats.recommendations.map((rec, idx) => (
+                                <li key={idx}>{rec}</li>
+                              ))}
+                            </ul>
+                          </div>
+                        )}
+                    </>
+                  ) : (
+                    <div style={{ fontSize: 13, marginTop: 4 }}>
+                      This job is loaded as your fire, but it hasn’t been fully scored yet.
+                      Run an AI ATS scan below to see your live match % and tailored tips.
+                    </div>
+                  )}
+                </Banner>
+              </div>
+            ) : (
+              // No ATS pack yet → show FIRE PRO TIP
+              <Banner>
+                <div style={{ fontWeight: 800, marginBottom: 4 }}>
+                  🔥 Add the fire.
+                </div>
+
+                <div style={{ fontSize: 14 }}>
+                  Your resume is the <strong>steel</strong>. This page is the{' '}
+                  <strong>anvil</strong>. The AI tools are your <strong>hammer</strong>.
+                  Add a job description to supply the <strong>fire</strong> — and unlock
+                  AI-powered ATS scoring, keyword suggestions, and tailored guidance for
+                  this specific role.
+                </div>
+              </Banner>
+            )}
+
+            {/* JD upload / drag-and-drop */}
             <div
               ref={dropRef}
               style={{
@@ -302,14 +567,24 @@ export default function CreateResumePage() {
                 borderRadius: 16,
                 textAlign: 'center',
                 background: '#E3F2FD',
-                cursor: 'pointer'
+                cursor: 'pointer',
+                marginTop: 16,
               }}
             >
               <p style={{ margin: 0, fontSize: 18, fontWeight: 700 }}>
-                Drop a job description here<br />
-                or <button
+                Drop a job description here
+                <br />
+                or{' '}
+                <button
                   onClick={() => fileInputRef.current?.click()}
-                  style={{ color: ORANGE, background: 'none', border: 0, fontWeight: 800, textDecoration: 'underline', cursor: 'pointer' }}
+                  style={{
+                    color: ORANGE,
+                    background: 'none',
+                    border: 0,
+                    fontWeight: 800,
+                    textDecoration: 'underline',
+                    cursor: 'pointer',
+                  }}
                 >
                   upload file
                 </button>
@@ -318,25 +593,31 @@ export default function CreateResumePage() {
                 ref={fileInputRef}
                 type="file"
                 accept=".pdf,.docx,.txt"
-                onChange={e => handleFile(e.target.files?.[0])}
+                onChange={(e) => handleFile(e.target.files?.[0])}
                 style={{ display: 'none' }}
               />
             </div>
+
             {jd && (
               <AtsDepthPanel
                 jdText={jd}
+                resumeData={resumeData}
                 summary={summary}
                 skills={skills}
                 experiences={experiences}
                 education={educationList}
-                onAddSkill={(k) => setSkills(s => [...s, k])}
-                onAddSummary={(k) => setSummary(s => s ? `${s}\n\n${k}` : k)}
+                onAddSkill={(k) => setSkills((s) => [...s, k])}
+                onAddSummary={(k) => setSummary((s) => (s ? `${s}\n\n${k}` : k))}
                 onAddBullet={(k) => {
                   const lastExp = experiences[experiences.length - 1];
                   if (lastExp) {
-                    setExperiences(exp => exp.map((e, i) =>
-                      i === exp.length - 1 ? { ...e, bullets: [...(e.bullets || []), k] } : e
-                    ));
+                    setExperiences((exp) =>
+                      exp.map((e, i) =>
+                        i === exp.length - 1
+                          ? { ...e, bullets: [...(e.bullets || []), k] }
+                          : e
+                      )
+                    );
                   }
                 }}
               />
@@ -345,15 +626,43 @@ export default function CreateResumePage() {
         </div>
 
         {/* RIGHT: LIVE RESUME PREVIEW */}
-        <div style={{ position: 'sticky', top: 20, background: 'white', borderRadius: 16, boxShadow: '0 20px 50px rgba(0,0,0,0.15)', overflow: 'hidden' }}>
-          <div style={{ padding: '20px 32px', background: '#263238', color: 'white', fontWeight: 800, fontSize: 18, textAlign: 'center' }}>
+        <div
+          style={{
+            position: 'sticky',
+            top: 20,
+            background: 'white',
+            borderRadius: 16,
+            boxShadow: '0 20px 50px rgba(0,0,0,0.15)',
+            overflow: 'hidden',
+          }}
+        >
+          <div
+            style={{
+              padding: '20px 32px',
+              background: '#263238',
+              color: 'white',
+              fontWeight: 800,
+              fontSize: 18,
+              textAlign: 'center',
+            }}
+          >
             LIVE RESUME PREVIEW
           </div>
-          <div id="resume-preview" style={{ padding: 60, background: '#fff', minHeight: '100vh' }}>
+          <div
+            id="resume-preview"
+            style={{ padding: 60, background: '#fff', minHeight: '100vh' }}
+          >
             {TemplateComp && typeof TemplateComp === 'function' ? (
               <TemplateComp data={resumeData} />
             ) : (
-              <div style={{ textAlign: 'center', marginTop: 120, color: '#999', fontSize: 20 }}>
+              <div
+                style={{
+                  textAlign: 'center',
+                  marginTop: 120,
+                  color: '#999',
+                  fontSize: 20,
+                }}
+              >
                 Loading your resume template...
               </div>
             )}
@@ -362,7 +671,7 @@ export default function CreateResumePage() {
       </div>
 
       {/* EXPORT BUTTONS */}
-      <div className="fixed bottom-6 right-6 z-50 flex items-center gap-2 bg-white/90 backdrop-blur-sm p-2 rounded-full shadow-2xl border">
+      <div className="fixed bottom-6 right-6 z-10 flex items-center gap-2 bg-white/90 backdrop-blur-sm p-2 rounded-full shadow-2xl border">
         {/* ATS PDF */}
         {router.query.template === 'hybrid' ? (
           <HybridATSButton data={resumeData}>
@@ -396,7 +705,14 @@ export default function CreateResumePage() {
         <div className="bg-white px-3 py-1.5 rounded-full flex items-center gap-1.5 border text-xs ml-1">
           <div className="relative">
             <svg className="w-6 h-6">
-              <circle cx="12" cy="12" r="10" fill="none" stroke="#E5E7EB" strokeWidth="2.5" />
+              <circle
+                cx="12"
+                cy="12"
+                r="10"
+                fill="none"
+                stroke="#E5E7EB"
+                strokeWidth="2.5"
+              />
               <circle
                 cx="12"
                 cy="12"
@@ -435,7 +751,20 @@ export default function CreateResumePage() {
 
       {/* TOAST */}
       {showToast && (
-        <div style={{ position: 'fixed', right: 28, bottom: 100, background: ORANGE, color: 'white', padding: '14px 24px', borderRadius: 12, fontWeight: 700, boxShadow: '0 10px 30px rgba(0,0,0,0.3)', zIndex: 1000 }}>
+        <div
+          style={{
+            position: 'fixed',
+            right: 28,
+            bottom: 100,
+            background: ORANGE,
+            color: 'white',
+            padding: '14px 24px',
+            borderRadius: 12,
+            fontWeight: 700,
+            boxShadow: '0 10px 30px rgba(0,0,0,0.3)',
+            zIndex: 1000,
+          }}
+        >
           Saved at {savedTime}
         </div>
       )}

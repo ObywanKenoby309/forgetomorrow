@@ -235,7 +235,7 @@ export default function SmartExportMenu({
       style={{
         position: 'fixed',
         inset: 0,
-        zIndex: 100000,
+        zIndex: 50,
         display: 'grid',
         placeItems: 'center',
         padding: MODAL_SIDE_PADDING,
