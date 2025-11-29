@@ -8,14 +8,14 @@ const ReCAPTCHA = dynamic(() => import("react-google-recaptcha"), { ssr: false }
 
 export default function SignupFree() {
   const [loading, setLoading] = useState(false);
-  const [phase, setPhase] = useState<"form" | "sent">("form");
+  const [phase, setPhase] = useState("form"); // 'form' | 'sent'
   const [firstName, setFirstName] = useState("");
   const [lastName, setLastName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [agreed, setAgreed] = useState(false);
   const [error, setError] = useState("");
-  const [captchaValue, setCaptchaValue] = useState<string | null>(null);
+  const [captchaValue, setCaptchaValue] = useState(null);
   const [siteKey, setSiteKey] = useState("");
 
   useEffect(() => {
@@ -25,7 +25,7 @@ export default function SignupFree() {
     }
   }, []);
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
     setError("");
 
@@ -58,24 +58,20 @@ export default function SignupFree() {
       if (res.ok) {
         setPhase("sent");
       } else {
-        const data = await res.json();
+        const data = await res.json().catch(() => ({}));
         setError(data?.error || "Something went wrong — try again");
       }
     } catch (err) {
       console.error(err);
       setError("Network error — try again");
+    } finally {
+      setLoading(false);
     }
-
-    setLoading(false);
   };
 
   if (phase === "sent") {
     return (
-      <div
-        style={container}
-        role="status"
-        aria-live="polite"
-      >
+      <div style={container}>
         <h1 style={title}>Check your email</h1>
         <p style={{ color: "#ddd" }}>
           We sent a verification link to <strong>{email}</strong>. Click the link within 1 hour to
@@ -88,82 +84,43 @@ export default function SignupFree() {
   return (
     <div style={container}>
       <h1 style={title}>Create your account</h1>
-      <form onSubmit={handleSubmit} aria-describedby={error ? "signup-error" : undefined}>
+      <form onSubmit={handleSubmit}>
         <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
-          <div>
-            <label
-              htmlFor="first-name"
-              style={label}
-            >
-              First name
-            </label>
-            <input
-              id="first-name"
-              placeholder="First name"
-              value={firstName}
-              onChange={(e) => setFirstName(e.target.value)}
-              required
-              style={input}
-            />
-          </div>
-
-          <div>
-            <label
-              htmlFor="last-name"
-              style={label}
-            >
-              Last name
-            </label>
-            <input
-              id="last-name"
-              placeholder="Last name"
-              value={lastName}
-              onChange={(e) => setLastName(e.target.value)}
-              required
-              style={input}
-            />
-          </div>
-        </div>
-
-        <div style={{ marginTop: 12 }}>
-          <label
-            htmlFor="email"
-            style={label}
-          >
-            Email
-          </label>
           <input
-            id="email"
-            type="email"
-            placeholder="you@example.com"
-            value={email}
-            onChange={(e) => setEmail(e.target.value)}
+            placeholder="First name"
+            value={firstName}
+            onChange={(e) => setFirstName(e.target.value)}
+            required
+            style={input}
+          />
+          <input
+            placeholder="Last name"
+            value={lastName}
+            onChange={(e) => setLastName(e.target.value)}
             required
             style={input}
           />
         </div>
 
-        <div style={{ marginTop: 12 }}>
-          <label
-            htmlFor="temp-password"
-            style={label}
-          >
-            Temporary password
-          </label>
-          <input
-            id="temp-password"
-            type="password"
-            placeholder="Temporary password"
-            value={password}
-            onChange={(e) => setPassword(e.target.value)}
-            required
-            style={input}
-          />
-        </div>
+        <input
+          type="email"
+          placeholder="Email"
+          value={email}
+          onChange={(e) => setEmail(e.target.value)}
+          required
+          style={{ ...input, marginTop: 12 }}
+        />
 
-        <label
-          style={{ display: "flex", alignItems: "center", gap: 8, marginTop: 16 }}
-        >
+        <input
+          type="password"
+          placeholder="Temporary password"
+          value={password}
+          onChange={(e) => setPassword(e.target.value)}
+          required
+          style={{ ...input, marginTop: 12 }}
+        />
+
+        <label style={{ display: "flex", alignItems: "center", gap: 8, marginTop: 16 }}>
           <input
             type="checkbox"
             checked={agreed}
@@ -180,23 +137,11 @@ export default function SignupFree() {
 
         {siteKey && (
           <div style={{ marginTop: 16 }}>
-            <ReCAPTCHA
-              sitekey={siteKey}
-              onChange={(value) => setCaptchaValue(value)}
-            />
+            <ReCAPTCHA sitekey={siteKey} onChange={(value) => setCaptchaValue(value)} />
           </div>
         )}
 
-        {error && (
-          <p
-            id="signup-error"
-            style={{ color: "#ff8080", marginTop: 10 }}
-            role="alert"
-            aria-live="polite"
-          >
-            {error}
-          </p>
-        )}
+        {error && <p style={{ color: "#ff8080", marginTop: 10 }}>{error}</p>}
 
         <button type="submit" disabled={loading} style={button}>
           {loading ? "Sending…" : "Send verification email"}
@@ -207,7 +152,7 @@ export default function SignupFree() {
 }
 
 /* Styles */
-const container: React.CSSProperties = {
+const container = {
   maxWidth: 520,
   margin: "80px auto",
   padding: 28,
@@ -217,7 +162,7 @@ const container: React.CSSProperties = {
   fontFamily: "Inter, system-ui, -apple-system, sans-serif",
 };
 
-const input: React.CSSProperties = {
+const input = {
   width: "100%",
   padding: 12,
   borderRadius: 8,
@@ -228,7 +173,7 @@ const input: React.CSSProperties = {
   boxSizing: "border-box",
 };
 
-const button: React.CSSProperties = {
+const button = {
   width: "100%",
   padding: 14,
   background: "#FF7043",
@@ -240,15 +185,4 @@ const button: React.CSSProperties = {
   cursor: "pointer",
 };
 
-const title: React.CSSProperties = {
-  textAlign: "center",
-  marginBottom: 18,
-};
-
-const label: React.CSSProperties = {
-  display: "block",
-  marginBottom: 4,
-  fontSize: 13,
-  color: "#e5e7eb",
-  fontWeight: 500,
-};
+const title = { textAlign: "center", marginBottom: 18 };
