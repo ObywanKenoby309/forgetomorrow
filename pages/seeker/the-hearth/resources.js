@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import Link from 'next/link';
 import SeekerLayout from '@/components/layouts/SeekerLayout';
 import { SECTION_DETAILS } from '@/lib/resourceSections';
@@ -108,10 +108,11 @@ const SECTION_CARDS = [
 ];
 
 // ─────────────────────────────────────────────
-// Viewer component with expandable articles
+// Viewer component with expandable + scroll-to articles
 // ─────────────────────────────────────────────
 function SectionViewer({ selectedSection }) {
   const [expandedIndex, setExpandedIndex] = useState(0);
+  const articleRefs = useRef([]);
 
   useEffect(() => {
     // Reset expanded article when switching sections
@@ -179,7 +180,7 @@ function SectionViewer({ selectedSection }) {
         </ul>
       )}
 
-      {/* Expandable article list */}
+      {/* Expandable article list with scroll-to behavior */}
       {hasArticles && (
         <div style={{ marginTop: 14 }}>
           {details.articles.map((article, idx) => {
@@ -187,6 +188,9 @@ function SectionViewer({ selectedSection }) {
             return (
               <div
                 key={idx}
+                ref={(el) => {
+                  articleRefs.current[idx] = el;
+                }}
                 style={{
                   marginTop: idx === 0 ? 0 : 12,
                   borderTop: '1px solid #ECEFF1',
@@ -195,9 +199,21 @@ function SectionViewer({ selectedSection }) {
               >
                 <button
                   type="button"
-                  onClick={() =>
-                    setExpandedIndex(isOpen ? -1 : idx)
-                  }
+                  onClick={() => {
+                    const nextIndex = isOpen ? -1 : idx;
+                    setExpandedIndex(nextIndex);
+
+                    if (!isOpen && articleRefs.current[idx]) {
+                      try {
+                        articleRefs.current[idx].scrollIntoView({
+                          behavior: 'smooth',
+                          block: 'start',
+                        });
+                      } catch {
+                        // fail-safe: ignore if scrollIntoView is not supported
+                      }
+                    }
+                  }}
                   style={{
                     width: '100%',
                     textAlign: 'left',
