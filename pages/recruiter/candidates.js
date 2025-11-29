@@ -74,6 +74,22 @@ function Body() {
   const [locQuery, setLocQuery] = useState("");
   const [boolQuery, setBoolQuery] = useState("");
 
+  // NEW: Profile-based targeting filters (safe fields only)
+  const [summaryKeywords, setSummaryKeywords] = useState("");
+  const [jobTitle, setJobTitle] = useState("");
+  const [workStatus, setWorkStatus] = useState("");
+  const [preferredWorkType, setPreferredWorkType] = useState("");
+  const [willingToRelocate, setWillingToRelocate] = useState("");
+  const [skills, setSkills] = useState("");
+  const [languages, setLanguages] = useState("");
+
+  // NEW: Targeting/automation panel state
+  const [targetingOpen, setTargetingOpen] = useState(false);
+  const [automationEnabled, setAutomationEnabled] = useState(false);
+  const [automationName, setAutomationName] = useState("");
+  const [automationSaving, setAutomationSaving] = useState(false);
+  const [automationMessage, setAutomationMessage] = useState(null);
+
   // Data & errors
   const [candidates, setCandidates] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -131,6 +147,15 @@ function Body() {
         if (locQuery) params.set("location", locQuery);
         if (boolQuery) params.set("bool", boolQuery);
 
+        // NEW: safe profile filters
+        if (summaryKeywords) params.set("summaryKeywords", summaryKeywords);
+        if (jobTitle) params.set("jobTitle", jobTitle);
+        if (workStatus) params.set("workStatus", workStatus);
+        if (preferredWorkType) params.set("preferredWorkType", preferredWorkType);
+        if (willingToRelocate) params.set("willingToRelocate", willingToRelocate);
+        if (skills) params.set("skills", skills);
+        if (languages) params.set("languages", languages);
+
         const res = await fetch(
           `/api/recruiter/candidates${
             params.toString() ? `?${params.toString()}` : ""
@@ -184,7 +209,18 @@ function Body() {
     return () => {
       isMounted = false;
     };
-  }, [nameQuery, locQuery, boolQuery]);
+  }, [
+    nameQuery,
+    locQuery,
+    boolQuery,
+    summaryKeywords,
+    jobTitle,
+    workStatus,
+    preferredWorkType,
+    willingToRelocate,
+    skills,
+    languages,
+  ]);
 
   // Notes persistence — optimistic update + Sev-1-transparent errors
   const saveNotes = async (id, text) => {
@@ -366,6 +402,53 @@ function Body() {
     </div>
   );
 
+  // NEW: save automation config (soft-fails if API not present)
+  const saveAutomationConfig = async () => {
+    setAutomationMessage(null);
+    setActionError(null);
+
+    try {
+      setAutomationSaving(true);
+
+      const payload = {
+        name: automationName || null,
+        enabled: automationEnabled,
+        // Filters used for the daily feed (safe fields only)
+        filters: {
+          q: nameQuery || null,
+          location: locQuery || null,
+          bool: boolQuery || null,
+          summaryKeywords: summaryKeywords || null,
+          jobTitle: jobTitle || null,
+          workStatus: workStatus || null,
+          preferredWorkType: preferredWorkType || null,
+          willingToRelocate: willingToRelocate || null,
+          skills: skills || null,
+          languages: languages || null,
+        },
+      };
+
+      const res = await fetch("/api/recruiter/candidates/automation", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
+      });
+
+      if (!res.ok) {
+        throw new Error(`Automation API failed (status ${res.status})`);
+      }
+
+      setAutomationMessage("Automation settings saved for your daily candidate feed.");
+    } catch (err) {
+      console.error("[Candidates] automation save error:", err);
+      setAutomationMessage(
+        "We couldn't save automation settings yet. This feature may not be fully wired on your account."
+      );
+    } finally {
+      setAutomationSaving(false);
+    }
+  };
+
   return (
     <>
       {/* Sev-1 style feed incident banner */}
@@ -383,6 +466,201 @@ function Body() {
       )}
 
       {FiltersRow}
+
+      {/* NEW: Candidate targeting + automation panel (lives in the red area from screenshot) */}
+      <div className="mb-4">
+        <button
+          type="button"
+          onClick={() => setTargetingOpen((open) => !open)}
+          className="flex w-full items-center justify-between rounded-md border border-slate-300 bg-white/90 px-3 py-2 text-xs sm:text-sm font-medium text-slate-700 shadow-sm hover:bg-white focus:outline-none focus:ring-2 focus:ring-[#FF7043]"
+        >
+          <span>Candidate targeting &amp; automation (profile-based filters)</span>
+          <span className="ml-2 text-[11px] text-slate-500">
+            {targetingOpen ? "Hide" : "Show options"}
+          </span>
+        </button>
+
+        {targetingOpen && (
+          <div className="mt-3 rounded-lg border border-slate-200 bg-white/95 p-4 shadow-lg">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+              <div>
+                <label className="block text-xs font-medium text-slate-600 mb-1">
+                  Summary keywords
+                </label>
+                <input
+                  type="text"
+                  value={summaryKeywords}
+                  onChange={(e) => setSummaryKeywords(e.target.value)}
+                  placeholder="e.g., customer success, onboarding, renewals"
+                  className="w-full rounded border px-2 py-1.5 text-xs sm:text-sm focus:outline-none focus:ring-2 focus:ring-[#FF7043]"
+                />
+              </div>
+
+              <div>
+                <label className="block text-xs font-medium text-slate-600 mb-1">
+                  Job title
+                </label>
+                <input
+                  type="text"
+                  value={jobTitle}
+                  onChange={(e) => setJobTitle(e.target.value)}
+                  placeholder="e.g., Customer Success Manager"
+                  className="w-full rounded border px-2 py-1.5 text-xs sm:text-sm focus:outline-none focus:ring-2 focus:ring-[#FF7043]"
+                />
+              </div>
+
+              <div>
+                <label className="block text-xs font-medium text-slate-600 mb-1">
+                  Current work status
+                </label>
+                <select
+                  value={workStatus}
+                  onChange={(e) => setWorkStatus(e.target.value)}
+                  className="w-full rounded border px-2 py-1.5 text-xs sm:text-sm focus:outline-none focus:ring-2 focus:ring-[#FF7043]"
+                >
+                  <option value="">Any status</option>
+                  <option value="employed">Employed</option>
+                  <option value="unemployed">Actively looking</option>
+                  <option value="student">Student</option>
+                  <option value="contractor">Contractor / Freelance</option>
+                </select>
+              </div>
+
+              <div>
+                <label className="block text-xs font-medium text-slate-600 mb-1">
+                  Preferred work type
+                </label>
+                <select
+                  value={preferredWorkType}
+                  onChange={(e) => setPreferredWorkType(e.target.value)}
+                  className="w-full rounded border px-2 py-1.5 text-xs sm:text-sm focus:outline-none focus:ring-2 focus:ring-[#FF7043]"
+                >
+                  <option value="">Any type</option>
+                  <option value="full-time">Full-time</option>
+                  <option value="part-time">Part-time</option>
+                  <option value="contract">Contract</option>
+                  <option value="internship">Internship</option>
+                  <option value="temporary">Temporary</option>
+                  <option value="remote-only">Remote only</option>
+                </select>
+              </div>
+
+              <div>
+                <label className="block text-xs font-medium text-slate-600 mb-1">
+                  Willing to relocate
+                </label>
+                <select
+                  value={willingToRelocate}
+                  onChange={(e) => setWillingToRelocate(e.target.value)}
+                  className="w-full rounded border px-2 py-1.5 text-xs sm:text-sm focus:outline-none focus:ring-2 focus:ring-[#FF7043]"
+                >
+                  <option value="">Any</option>
+                  <option value="yes">Yes</option>
+                  <option value="no">No</option>
+                  <option value="maybe">Maybe</option>
+                </select>
+              </div>
+
+              <div>
+                <label className="block text-xs font-medium text-slate-600 mb-1">
+                  Skills (comma-separated)
+                </label>
+                <input
+                  type="text"
+                  value={skills}
+                  onChange={(e) => setSkills(e.target.value)}
+                  placeholder="e.g., Salesforce, SQL, Zendesk"
+                  className="w-full rounded border px-2 py-1.5 text-xs sm:text-sm focus:outline-none focus:ring-2 focus:ring-[#FF7043]"
+                />
+              </div>
+
+              <div>
+                <label className="block text-xs font-medium text-slate-600 mb-1">
+                  Languages (comma-separated)
+                </label>
+                <input
+                  type="text"
+                  value={languages}
+                  onChange={(e) => setLanguages(e.target.value)}
+                  placeholder="e.g., English, Spanish, French"
+                  className="w-full rounded border px-2 py-1.5 text-xs sm:text-sm focus:outline-none focus:ring-2 focus:ring-[#FF7043]"
+                />
+              </div>
+            </div>
+
+            <div className="mt-4 border-t border-slate-200 pt-3 flex flex-col md:flex-row md:items-center md:justify-between gap-3">
+              <div className="flex flex-col gap-2">
+                <div className="flex items-center gap-2">
+                  <input
+                    id="automationEnabled"
+                    type="checkbox"
+                    checked={automationEnabled}
+                    onChange={(e) => setAutomationEnabled(e.target.checked)}
+                    className="h-3 w-3 rounded border-slate-400 text-[#FF7043] focus:ring-[#FF7043]"
+                  />
+                  <label
+                    htmlFor="automationEnabled"
+                    className="text-xs text-slate-700"
+                  >
+                    Enable daily candidate feed using these filters
+                  </label>
+                </div>
+                <div>
+                  <label className="block text-[11px] font-medium text-slate-600 mb-1">
+                    Automation name (optional)
+                  </label>
+                  <input
+                    type="text"
+                    value={automationName}
+                    onChange={(e) => setAutomationName(e.target.value)}
+                    placeholder="e.g., Senior CSM – US remote"
+                    className="w-full rounded border px-2 py-1.5 text-xs sm:text-sm focus:outline-none focus:ring-2 focus:ring-[#FF7043]"
+                  />
+                </div>
+              </div>
+
+              <div className="flex items-center gap-2 md:justify-end">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setSummaryKeywords("");
+                    setJobTitle("");
+                    setWorkStatus("");
+                    setPreferredWorkType("");
+                    setWillingToRelocate("");
+                    setSkills("");
+                    setLanguages("");
+                  }}
+                  className="rounded-md border border-slate-300 px-3 py-1.5 text-xs sm:text-sm text-slate-700 hover:bg-slate-50"
+                >
+                  Clear targeting
+                </button>
+                <button
+                  type="button"
+                  onClick={saveAutomationConfig}
+                  disabled={automationSaving}
+                  className="rounded-md bg-[#FF7043] px-3 py-1.5 text-xs sm:text-sm font-medium text-white shadow-sm hover:bg-[#f45c28] disabled:opacity-60"
+                >
+                  {automationSaving ? "Saving…" : "Save automation"}
+                </button>
+              </div>
+            </div>
+
+            {automationMessage && (
+              <p className="mt-2 text-[11px] text-slate-600">
+                {automationMessage}
+              </p>
+            )}
+
+            <p className="mt-2 text-[11px] text-slate-500">
+              ForgeTomorrow never filters candidates by name, hobbies or
+              interests, previous employers, birthdays or age, or pronouns. Those
+              details may appear in a profile but are not used for search or
+              automation.
+            </p>
+          </div>
+        )}
+      </div>
 
       {isLoading ? (
         <div className="text-sm text-slate-600">Loading candidates...</div>
