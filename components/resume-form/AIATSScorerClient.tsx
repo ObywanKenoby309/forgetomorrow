@@ -93,12 +93,9 @@ export default function AIATSScorerClient({
       ? 'Evaluate hiring fit with AI.'
       : 'Improve your resume with AI-powered scoring.';
 
-  const normalizedTips =
-    Array.isArray(tips)
-      ? tips
-      : typeof tips === 'string' && tips.trim()
-      ? [tips.trim()]
-      : [];
+    const safeTips: string[] = Array.isArray(tips)
+    ? tips.filter((t): t is string => typeof t === 'string' && t.trim().length > 0)
+    : [];
 
   const canAskCoach = typeof onAskCoach === 'function';
 
