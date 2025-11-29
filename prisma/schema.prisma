@@ -341,7 +341,8 @@ model User {
   profileSnapshots ProfileSnapshot[] @relation("UserProfileSnapshots")
   consents         UserConsent[]
 
-  candidates       Candidate[]       // <── back-reference for Candidate.user
+  candidates           Candidate[]                   // back-reference for Candidate.user
+  candidateAutomations RecruiterCandidateAutomation[] // recruiter candidate feed rules
 
   // ── Corporate appearance overrides (ForgeTomorrow staff only) ─────────────
   corporateBannerKey    String?  // e.g. "CEO", "CFO", "STAFF_GENERAL"
@@ -400,4 +401,38 @@ model Candidate {
 
   @@index([userId])
   @@map("candidates")
+}
+
+// ============================================================================
+//  RECRUITER CANDIDATE AUTOMATION
+// ============================================================================
+
+model RecruiterCandidateAutomation {
+  id      String @id @default(cuid())
+  userId  String
+  user    User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  // Optional label, e.g. "Senior CSM – US remote"
+  name    String?
+
+  // JSON object containing only allowed filters:
+  // {
+  //   summaryKeywords: string | null,
+  //   jobTitle:        string | null,
+  //   workStatus:      string | null,
+  //   preferredWorkType: string | null,
+  //   relocate:        string | null,
+  //   skills:          string | null,
+  //   languages:       string | null
+  // }
+  filters Json
+
+  enabled   Boolean  @default(true)
+  lastRunAt DateTime?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([userId])
+  @@map("recruiter_candidate_automation")
 }

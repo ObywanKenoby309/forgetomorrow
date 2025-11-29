@@ -74,7 +74,7 @@ function Body() {
   const [locQuery, setLocQuery] = useState("");
   const [boolQuery, setBoolQuery] = useState("");
 
-  // NEW: Profile-based targeting filters (safe fields only)
+  // Profile-based targeting filters (safe fields only)
   const [summaryKeywords, setSummaryKeywords] = useState("");
   const [jobTitle, setJobTitle] = useState("");
   const [workStatus, setWorkStatus] = useState("");
@@ -83,7 +83,7 @@ function Body() {
   const [skills, setSkills] = useState("");
   const [languages, setLanguages] = useState("");
 
-  // NEW: Targeting/automation panel state
+  // Targeting/automation panel state
   const [targetingOpen, setTargetingOpen] = useState(false);
   const [automationEnabled, setAutomationEnabled] = useState(false);
   const [automationName, setAutomationName] = useState("");
@@ -133,7 +133,7 @@ function Body() {
     },
   ];
 
-  // Load candidates from Prisma-backed API
+  // Load candidates from Prisma-backed API (with filters)
   useEffect(() => {
     let isMounted = true;
 
@@ -147,7 +147,7 @@ function Body() {
         if (locQuery) params.set("location", locQuery);
         if (boolQuery) params.set("bool", boolQuery);
 
-        // NEW: safe profile filters
+        // Safe profile filters
         if (summaryKeywords) params.set("summaryKeywords", summaryKeywords);
         if (jobTitle) params.set("jobTitle", jobTitle);
         if (workStatus) params.set("workStatus", workStatus);
@@ -221,6 +221,58 @@ function Body() {
     skills,
     languages,
   ]);
+
+  // NEW: load saved automation config on mount
+  useEffect(() => {
+    let isMounted = true;
+
+    async function loadAutomation() {
+      try {
+        const res = await fetch("/api/recruiter/candidates/automation");
+        if (!res.ok) return; // soft-fail if not wired yet
+
+        const json = await res.json();
+        if (!isMounted) return;
+
+        const automation = json?.automation;
+        if (!automation) return;
+
+        setAutomationEnabled(Boolean(automation.enabled));
+        setAutomationName(automation.name || "");
+
+        const filters = automation.filters || {};
+        if (typeof filters.summaryKeywords === "string") {
+          setSummaryKeywords(filters.summaryKeywords);
+        }
+        if (typeof filters.jobTitle === "string") {
+          setJobTitle(filters.jobTitle);
+        }
+        if (typeof filters.workStatus === "string") {
+          setWorkStatus(filters.workStatus);
+        }
+        if (typeof filters.preferredWorkType === "string") {
+          setPreferredWorkType(filters.preferredWorkType);
+        }
+        if (typeof filters.relocate === "string") {
+          // backend uses `relocate`; UI state is `willingToRelocate`
+          setWillingToRelocate(filters.relocate);
+        }
+        if (typeof filters.skills === "string") {
+          setSkills(filters.skills);
+        }
+        if (typeof filters.languages === "string") {
+          setLanguages(filters.languages);
+        }
+      } catch (err) {
+        console.error("[Candidates] automation load error:", err);
+      }
+    }
+
+    loadAutomation();
+    return () => {
+      isMounted = false;
+    };
+  }, []);
 
   // Notes persistence — optimistic update + Sev-1-transparent errors
   const saveNotes = async (id, text) => {
@@ -402,7 +454,7 @@ function Body() {
     </div>
   );
 
-  // NEW: save automation config (soft-fails if API not present)
+  // Save automation config (soft-fails if API not present)
   const saveAutomationConfig = async () => {
     setAutomationMessage(null);
     setActionError(null);
@@ -422,7 +474,7 @@ function Body() {
           jobTitle: jobTitle || null,
           workStatus: workStatus || null,
           preferredWorkType: preferredWorkType || null,
-          willingToRelocate: willingToRelocate || null,
+          relocate: willingToRelocate || null, // <-- backend key is `relocate`
           skills: skills || null,
           languages: languages || null,
         },
@@ -467,7 +519,7 @@ function Body() {
 
       {FiltersRow}
 
-      {/* NEW: Candidate targeting + automation panel (lives in the red area from screenshot) */}
+      {/* Candidate targeting + automation panel */}
       <div className="mb-4">
         <button
           type="button"
