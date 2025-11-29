@@ -60,6 +60,22 @@ export default function CandidateProfileModal({
   const toggleExp = (idx) =>
     setExpandedExp((p) => ({ ...p, [idx]: !p[idx] }));
 
+  // ─────────────────────────────────────────
+  // Subtle UX helpers
+  // ─────────────────────────────────────────
+  const sectionClasses = (isEmpty = false) =>
+    `rounded border p-4 ${
+      isEmpty ? "bg-slate-50 border-slate-200" : "bg-white"
+    }`;
+
+  const isSummaryEmpty =
+    !candidate.summary || !candidate.summary.toString().trim();
+  const hasExperience = (candidate.experience || []).length > 0;
+  const hasActivity = (candidate.activity || []).length > 0;
+  const hasJourney = getFilteredJourney().length > 0;
+  const hasSkills = skillsLocal.length > 0;
+  const hasNotes = notes.trim().length > 0;
+
   return (
     <div className="fixed inset-0 z-[100] flex items-center justify-center">
       {/* Backdrop */}
@@ -72,7 +88,7 @@ export default function CandidateProfileModal({
           <div>
             <div className="text-lg font-semibold">{candidate.name}</div>
             <div className="text-sm text-slate-500">
-              {candidate.role} • {candidate.location || "—"}
+              {candidate.role || "Candidate"} • {candidate.location || "—"}
             </div>
           </div>
           <button
@@ -84,109 +100,132 @@ export default function CandidateProfileModal({
         </div>
 
         {/* Body */}
-        <div className="p-5 grid grid-cols-1 lg:grid-cols-3 gap-5 overflow-y-auto">
+        <div className="p-5 grid grid-cols-1 lg:grid-cols-3 gap-5 overflow-y-auto bg-slate-50/40">
           {/* LEFT: Summary, Experience, Activity, Journey */}
           <div className="lg:col-span-2 space-y-5">
             {/* Summary */}
-            <section className="rounded border bg-white p-4">
-              <div className="font-medium mb-2">Summary</div>
-              <div className="text-sm text-slate-700">
-                {candidate.summary || "No summary available."}
-              </div>
+            <section className={sectionClasses(isSummaryEmpty)}>
+              <div className="font-medium mb-1">Summary</div>
+              {isSummaryEmpty ? (
+                <div className="text-sm text-slate-500">
+                  This candidate hasn&apos;t added a full summary yet.
+                  <span className="block text-xs text-slate-400 mt-1">
+                    Review their profile or resume for additional context.
+                  </span>
+                </div>
+              ) : (
+                <div className="text-sm text-slate-700 whitespace-pre-line">
+                  {candidate.summary}
+                </div>
+              )}
             </section>
 
             {/* Experience (expandable) */}
-            <section className="rounded border bg-white p-4">
+            <section className={sectionClasses(!hasExperience)}>
               <div className="font-medium mb-2">Experience</div>
-              <ul className="space-y-3 text-sm">
-                {(candidate.experience || []).map((exp, idx) => {
-                  const openItem = !!expandedExp[idx];
-                  return (
-                    <li key={idx} className="border-b last:border-0 pb-3">
-                      <div className="flex items-start justify-between gap-3">
-                        <div>
-                          <div className="font-medium">
-                            {exp.title} — {exp.company}
+              {hasExperience ? (
+                <ul className="space-y-3 text-sm">
+                  {(candidate.experience || []).map((exp, idx) => {
+                    const openItem = !!expandedExp[idx];
+                    return (
+                      <li key={idx} className="border-b last:border-0 pb-3">
+                        <div className="flex items-start justify-between gap-3">
+                          <div>
+                            <div className="font-medium">
+                              {exp.title} — {exp.company}
+                            </div>
+                            <div className="text-slate-500">{exp.range}</div>
                           </div>
-                          <div className="text-slate-500">{exp.range}</div>
+                          {exp.highlights?.length ? (
+                            <button
+                              onClick={() => toggleExp(idx)}
+                              className="text-xs px-2 py-1 border rounded hover:bg-slate-50"
+                            >
+                              {openItem ? "Hide" : "Show"} details
+                            </button>
+                          ) : null}
                         </div>
-                        {exp.highlights?.length ? (
-                          <button
-                            onClick={() => toggleExp(idx)}
-                            className="text-xs px-2 py-1 border rounded hover:bg-slate-50"
-                          >
-                            {openItem ? "Hide" : "Show"} details
-                          </button>
-                        ) : null}
-                      </div>
 
-                      {openItem && exp.highlights?.length ? (
-                        <ul className="list-disc pl-5 mt-2 space-y-1">
-                          {exp.highlights.map((h, i) => (
-                            <li key={i}>{h}</li>
-                          ))}
-                        </ul>
-                      ) : null}
-                    </li>
-                  );
-                })}
-                {(candidate.experience || []).length === 0 && (
-                  <li className="text-slate-500">No experience listed.</li>
-                )}
-              </ul>
+                        {openItem && exp.highlights?.length ? (
+                          <ul className="list-disc pl-5 mt-2 space-y-1">
+                            {exp.highlights.map((h, i) => (
+                              <li key={i}>{h}</li>
+                            ))}
+                          </ul>
+                        ) : null}
+                      </li>
+                    );
+                  })}
+                </ul>
+              ) : (
+                <div className="text-sm text-slate-500">
+                  No experience listed.
+                  <span className="block text-xs text-slate-400 mt-1">
+                    As candidates update their profiles and resumes, their work
+                    history will appear here.
+                  </span>
+                </div>
+              )}
             </section>
 
             {/* Activity (Next.js-safe links) */}
-            <section className="rounded border bg-white p-4">
+            <section className={sectionClasses(!hasActivity)}>
               <div className="font-medium mb-2">Recent Activity</div>
-              <ul className="space-y-2 text-sm">
-                {(candidate.activity || []).map((a, idx) => {
-                  const content = (
-                    <div className="flex items-center justify-between w-full">
-                      <span className="text-slate-700">{a.event}</span>
-                      <span className="text-slate-500">{a.when}</span>
-                    </div>
-                  );
+              {hasActivity ? (
+                <ul className="space-y-2 text-sm">
+                  {(candidate.activity || []).map((a, idx) => {
+                    const content = (
+                      <div className="flex items-center justify-between w-full">
+                        <span className="text-slate-700">{a.event}</span>
+                        <span className="text-slate-500">{a.when}</span>
+                      </div>
+                    );
 
-                  if (a.url) {
-                    const isInternal = a.url.startsWith("/");
+                    if (a.url) {
+                      const isInternal = a.url.startsWith("/");
+                      return (
+                        <li key={idx}>
+                          {isInternal ? (
+                            <Link
+                              href={a.url}
+                              className="block hover:bg-slate-50 rounded px-2 py-1"
+                            >
+                              {content}
+                            </Link>
+                          ) : (
+                            <a
+                              href={a.url}
+                              target="_blank"
+                              rel="noreferrer noopener"
+                              className="block hover:bg-slate-50 rounded px-2 py-1"
+                            >
+                              {content}
+                            </a>
+                          )}
+                        </li>
+                      );
+                    }
+
                     return (
                       <li key={idx}>
-                        {isInternal ? (
-                          <Link
-                            href={a.url}
-                            className="block hover:bg-slate-50 rounded px-2 py-1"
-                          >
-                            {content}
-                          </Link>
-                        ) : (
-                          <a
-                            href={a.url}
-                            target="_blank"
-                            rel="noreferrer noopener"
-                            className="block hover:bg-slate-50 rounded px-2 py-1"
-                          >
-                            {content}
-                          </a>
-                        )}
+                        <div className="px-2 py-1">{content}</div>
                       </li>
                     );
-                  }
-
-                  return (
-                    <li key={idx}>
-                      <div className="px-2 py-1">{content}</div>
-                    </li>
-                  );
-                })}
-                {(candidate.activity || []).length === 0 && (
-                  <li className="text-slate-500">No recent activity.</li>
-                )}
-              </ul>
+                  })}
+                </ul>
+              ) : (
+                <div className="text-sm text-slate-500">
+                  No recent activity.
+                  <span className="block text-xs text-slate-400 mt-1">
+                    As candidates view, apply, and message, their timeline will
+                    appear here.
+                  </span>
+                </div>
+              )}
             </section>
 
             {/* Candidate Journey Replay (with filter) */}
-            <section className="rounded border bg-white p-4">
+            <section className={sectionClasses(!hasJourney)}>
               <div className="flex items-center justify-between mb-2">
                 <div className="font-medium">Candidate Journey Replay</div>
                 <div className="flex gap-2">
@@ -207,7 +246,7 @@ export default function CandidateProfileModal({
               </div>
 
               <div className="space-y-3 overflow-y-auto max-h-[300px] pr-2">
-                {getFilteredJourney().length ? (
+                {hasJourney ? (
                   getFilteredJourney().map((step, idx) => (
                     <div key={idx} className="text-sm">
                       <div className="font-medium">{step.action}</div>
@@ -217,6 +256,9 @@ export default function CandidateProfileModal({
                 ) : (
                   <div className="text-slate-500 text-sm">
                     No journey replay data available.
+                    <span className="block text-xs text-slate-400 mt-1">
+                      This will populate as candidates interact with your roles.
+                    </span>
                   </div>
                 )}
               </div>
@@ -226,10 +268,10 @@ export default function CandidateProfileModal({
           {/* RIGHT: Skills, Tags, Notes */}
           <div className="space-y-5">
             {/* Skills (add/remove; local only) */}
-            <section className="rounded border bg-white p-4">
+            <section className={sectionClasses(!hasSkills)}>
               <div className="font-medium mb-2">Skills</div>
               <div className="flex flex-wrap gap-2 mb-3">
-                {skillsLocal.length ? (
+                {hasSkills ? (
                   skillsLocal.map((s, i) => (
                     <span
                       key={i}
@@ -248,7 +290,13 @@ export default function CandidateProfileModal({
                     </span>
                   ))
                 ) : (
-                  <div className="text-sm text-slate-500">No skills listed.</div>
+                  <div className="text-sm text-slate-500">
+                    No skills listed.
+                    <span className="block text-xs text-slate-400 mt-1">
+                      Add skills to enrich this candidate snapshot for your
+                      team. (Local only for now.)
+                    </span>
+                  </div>
                 )}
               </div>
               <div className="flex items-center gap-2">
@@ -281,12 +329,12 @@ export default function CandidateProfileModal({
                 </button>
               </div>
               <p className="mt-2 text-xs text-slate-500">
-                (Mock only — changes aren’t saved yet.)
+                Mock only — skill edits aren&apos;t saved yet.
               </p>
             </section>
 
             {/* Tags */}
-            <section className="rounded border bg-white p-4">
+            <section className={sectionClasses(false)}>
               <div className="font-medium mb-2">Tags</div>
               <div className="flex flex-wrap gap-2">
                 {["Top Prospect", "Phone Screen", "Keep Warm", "Do Not Contact"].map(
@@ -298,7 +346,7 @@ export default function CandidateProfileModal({
             </section>
 
             {/* Notes */}
-            <section className="rounded border bg-white p-4">
+            <section className={sectionClasses(!hasNotes)}>
               <div className="font-medium mb-2">Notes</div>
               <textarea
                 className="border rounded px-3 py-2 w-full min-h-[120px] text-sm"
@@ -306,7 +354,11 @@ export default function CandidateProfileModal({
                 value={notes}
                 onChange={(e) => setNotes(e.target.value)}
               />
-              <div className="mt-2 flex items-center justify-end">
+              <div className="mt-1 text-[11px] text-slate-400">
+                Notes are private to your organization and are not shared with
+                candidates.
+              </div>
+              <div className="mt-3 flex items-center justify-end">
                 <button
                   onClick={saveNotes}
                   className="px-3 py-2 rounded text-sm text-white bg-[#FF7043] hover:bg-[#F4511E]"

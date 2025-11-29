@@ -7,7 +7,8 @@
     "dev": "next dev -p 3001",
     "build": "prisma generate && next build",
     "start": "next start -p 3001",
-    "seed": "node prisma/seed.js"
+    "seed": "node prisma/seed.js",
+	"seed:candidates": "node ./scripts/seedCandidates.js"
   },
   "prisma": {
     "seed": "node prisma/seed.js"
