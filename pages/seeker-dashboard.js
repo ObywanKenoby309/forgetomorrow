@@ -1,5 +1,6 @@
 // pages/seeker-dashboard.js
 import React, { useEffect, useState } from 'react';
+import Head from 'next/head';
 import Link from 'next/link';
 import { useRouter } from 'next/router';
 import SeekerLayout from '@/components/layouts/SeekerLayout';
@@ -10,7 +11,6 @@ import FunnelChart from '@/components/seeker/dashboard/FunnelChart';
 import ApplicationsOverTime from '@/components/seeker/dashboard/ApplicationsOverTime';
 import { getClientSession } from '@/lib/auth-client';
 
-
 // ISO WEEK HELPERS
 const startOfISOWeek = (d) => {
   const date = new Date(Date.UTC(d.getFullYear(), d.getMonth(), d.getDate()));
@@ -19,6 +19,7 @@ const startOfISOWeek = (d) => {
   date.setUTCHours(0, 0, 0, 0);
   return date;
 };
+
 const weekDiff = (a, b) => {
   const MSWEEK = 7 * 24 * 3600 * 1000;
   return Math.floor((a.getTime() - b.getTime()) / MSWEEK);
@@ -89,7 +90,14 @@ export default function SeekerDashboard() {
         setIsLoading(false);
       } catch (err) {
         console.error('Dashboard load error:', err);
-        setKpi({ applied: 0, viewed: 0, interviewing: 0, offers: 0, rejected: 0, lastSent: '—' });
+        setKpi({
+          applied: 0,
+          viewed: 0,
+          interviewing: 0,
+          offers: 0,
+          rejected: 0,
+          lastSent: '—',
+        });
         setIsLoading(false);
       }
     }
@@ -97,8 +105,13 @@ export default function SeekerDashboard() {
   }, [router]);
 
   const HeaderBox = (
-    <section className="bg-white border border-gray-200 rounded-xl p-6 text-center shadow-sm">
-      <h1 className="text-2xl md:text-3xl font-bold text-orange-600">Your Job Seeker Dashboard</h1>
+    <section
+      aria-label="Job seeker dashboard overview"
+      className="bg-white border border-gray-200 rounded-xl p-6 text-center shadow-sm"
+    >
+      <h1 className="text-2xl md:text-3xl font-bold text-orange-600">
+        Your Job Seeker Dashboard
+      </h1>
       <p className="text-sm md:text-base text-gray-600 mt-2 max-w-3xl mx-auto">
         You're not alone. Track your momentum, see your wins, and keep moving forward.
       </p>
@@ -113,82 +126,109 @@ export default function SeekerDashboard() {
 
   if (isLoading) {
     return (
-      <SeekerLayout title="Loading..." header={HeaderBox} right={RightRail}>
-        <div className="flex items-center justify-center h-64 text-gray-500">
-          Loading your progress...
-        </div>
-      </SeekerLayout>
+      <>
+        <Head>
+          <title>Loading… | ForgeTomorrow</title>
+        </Head>
+        <SeekerLayout title="Loading..." header={HeaderBox} right={RightRail}>
+          <div className="flex items-center justify-center h-64 text-gray-500">
+            Loading your progress...
+          </div>
+        </SeekerLayout>
+      </>
     );
   }
 
-  const allZeros = !kpi || (kpi.applied === 0 && kpi.viewed === 0 && kpi.interviewing === 0 && kpi.offers === 0);
-
   return (
-    <SeekerLayout title="Seeker Dashboard | ForgeTomorrow" header={HeaderBox} right={RightRail} activeNav="dashboard">
-      <div className="grid gap-6">
-
-        {/* KPI Row */}
-        <section className="bg-white border border-gray-200 rounded-xl p-4 shadow-sm">
-          <h2 className="text-lg font-semibold text-orange-600 mb-3">Job Search Snapshot</h2>
-          {kpi && (
-            <KpiRow
-              applied={kpi.applied}
-              viewed={kpi.viewed}
-              interviewing={kpi.interviewing}
-              offers={kpi.offers}
-              rejected={kpi.rejected}
-              lastApplicationSent={kpi.lastSent}
-            />
-          )}
-        </section>
-
-        {/* Pinned Jobs */}
-        <section className="bg-white border border-gray-200 rounded-xl p-5 shadow-sm">
-          <div className="flex items-center justify-between mb-4">
-            <h2 className="text-lg font-semibold text-orange-600">Your Next Yes</h2>
-            <Link href={withChrome('/seeker/pinned-jobs')} className="text-orange-600 font-medium hover:underline">
-              View all
-            </Link>
-          </div>
-          <PinnedJobsPreview />
-        </section>
-
-        {/* Charts */}
-        <section className="grid md:grid-cols-2 gap-6">
-          <div className="bg-white border border-gray-200 rounded-xl p-5 shadow-sm">
-            <h3 className="text-base font-semibold text-gray-800 mb-3">Application Funnel</h3>
+    <>
+      <Head>
+        <title>Seeker Dashboard | ForgeTomorrow</title>
+      </Head>
+      <SeekerLayout
+        title="Seeker Dashboard | ForgeTomorrow"
+        header={HeaderBox}
+        right={RightRail}
+        activeNav="dashboard"
+      >
+        <div className="grid gap-6">
+          {/* KPI Row */}
+          <section className="bg-white border border-gray-200 rounded-xl p-4 shadow-sm">
+            <h2 className="text-lg font-semibold text-orange-600 mb-3">
+              Job Search Snapshot
+            </h2>
             {kpi && (
-              <FunnelChart
-                data={{
-                  applied: kpi.applied,
-                  viewed: kpi.viewed,
-                  interviewing: kpi.interviewing,
-                  offers: kpi.offers,
-                  hired: 0,
-                }}
-				showTrackerButton={true}
+              <KpiRow
+                applied={kpi.applied}
+                viewed={kpi.viewed}
+                interviewing={kpi.interviewing}
+                offers={kpi.offers}
+                rejected={kpi.rejected}
+                lastApplicationSent={kpi.lastSent}
               />
             )}
-          </div>
+          </section>
 
-          <div className="bg-white border border-gray-200 rounded-xl p-5 shadow-sm">
-            <h3 className="text-base font-semibold text-gray-800 mb-3">Applications Over Time</h3>
-            <ApplicationsOverTime weeks={weeks} withChrome={withChrome} />
-          </div>
-        </section>
+          {/* Pinned Jobs */}
+          <section className="bg-white border border-gray-200 rounded-xl p-5 shadow-sm">
+            <div className="flex items-center justify-between mb-4">
+              <h2 className="text-lg font-semibold text-orange-600">
+                Your Next Yes
+              </h2>
+              <Link
+                href={withChrome('/seeker/pinned-jobs')}
+                className="text-orange-600 font-medium hover:underline"
+              >
+                View all
+              </Link>
+            </div>
+            <PinnedJobsPreview />
+          </section>
 
-        {/* Coming Soon */}
-        <section className="grid md:grid-cols-2 gap-6">
-          <div className="bg-white border border-gray-200 rounded-xl p-5 shadow-sm">
-            <h3 className="text-base font-semibold text-gray-800 mb-2">Response Speed</h3>
-            <p className="text-sm text-gray-500">Benchmarks coming soon.</p>
-          </div>
-          <div className="bg-white border border-gray-200 rounded-xl p-5 shadow-sm">
-            <h3 className="text-base font-semibold text-gray-800 mb-2">Top Categories</h3>
-            <p className="text-sm text-gray-500">Distribution coming soon.</p>
-          </div>
-        </section>
-      </div>
-    </SeekerLayout>
+          {/* Charts */}
+          <section className="grid md:grid-cols-2 gap-6">
+            <div className="bg-white border border-gray-200 rounded-xl p-5 shadow-sm">
+              <h3 className="text-base font-semibold text-gray-800 mb-3">
+                Application Funnel
+              </h3>
+              {kpi && (
+                <FunnelChart
+                  data={{
+                    applied: kpi.applied,
+                    viewed: kpi.viewed,
+                    interviewing: kpi.interviewing,
+                    offers: kpi.offers,
+                    hired: 0,
+                  }}
+                  showTrackerButton={true}
+                />
+              )}
+            </div>
+
+            <div className="bg-white border border-gray-200 rounded-xl p-5 shadow-sm">
+              <h3 className="text-base font-semibold text-gray-800 mb-3">
+                Applications Over Time
+              </h3>
+              <ApplicationsOverTime weeks={weeks} withChrome={withChrome} />
+            </div>
+          </section>
+
+          {/* Coming Soon */}
+          <section className="grid md:grid-cols-2 gap-6">
+            <div className="bg-white border border-gray-200 rounded-xl p-5 shadow-sm">
+              <h3 className="text-base font-semibold text-gray-800 mb-2">
+                Response Speed
+              </h3>
+              <p className="text-sm text-gray-500">Benchmarks coming soon.</p>
+            </div>
+            <div className="bg-white border border-gray-200 rounded-xl p-5 shadow-sm">
+              <h3 className="text-base font-semibold text-gray-800 mb-2">
+                Top Categories
+              </h3>
+              <p className="text-sm text-gray-500">Distribution coming soon.</p>
+            </div>
+          </section>
+        </div>
+      </SeekerLayout>
+    </>
   );
 }

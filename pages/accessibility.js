@@ -1,4 +1,4 @@
-// pages/accessibility.tsx  ← FINAL, WORKING, NO DOUBLE HEADER
+// pages/accessibility.tsx  ← FINAL, A11Y-ENHANCED
 import Head from "next/head";
 
 export default function Accessibility() {
@@ -12,12 +12,15 @@ export default function Accessibility() {
         />
       </Head>
 
-      {/* ← _app.js will automatically render LandingHeader + LandingFooter */}
-      {/* ← You do NOT put them here anymore */}
-
-      <main className="min-h-screen bg-gray-50 py-20 px-6">
+      <main
+        className="min-h-screen bg-gray-50 py-20 px-6"
+        aria-labelledby="accessibility-heading"
+      >
         <div className="max-w-4xl mx-auto">
-          <h1 className="text-5xl md:text-6xl font-bold text-[#FF7043] mb-8">
+          <h1
+            id="accessibility-heading"
+            className="text-5xl md:text-6xl font-bold text-[#FF7043] mb-8"
+          >
             Accessibility at Forge Tomorrow
           </h1>
 
@@ -61,7 +64,13 @@ export default function Accessibility() {
                 Have feedback or need help using Forge Tomorrow?
               </p>
               <p className="text-gray-700 mt-2">
-                Email us anytime at <a href="mailto:accessibility@forgetomorrow.com" className="text-[#FF7043] underline font-medium">accessibility@forgetomorrow.com</a>
+                Email us anytime at{" "}
+                <a
+                  href="mailto:accessibility@forgetomorrow.com"
+                  className="text-[#FF7043] underline font-medium"
+                >
+                  accessibility@forgetomorrow.com
+                </a>
               </p>
             </div>
           </section>

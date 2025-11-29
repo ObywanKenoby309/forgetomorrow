@@ -67,7 +67,10 @@ export default function ProfileAnalyticsPage() {
   }, []);
 
   const HeaderBox = (
-    <section className="bg-white border border-gray-200 rounded-xl shadow-sm p-4 text-center">
+    <section
+      className="bg-white border border-gray-200 rounded-xl shadow-sm p-4 text-center"
+      aria-label="Profile analytics overview"
+    >
       <h1 className="m-0 text-[#FF7043] text-2xl font-extrabold">Profile Analytics</h1>
       <p className="mt-1 mb-0 text-[#607D8B] max-w-3xl mx-auto">
         Track engagement on your profile and content. (Charts are mock data for now.)
@@ -81,7 +84,9 @@ export default function ProfileAnalyticsPage() {
 
   return (
     <>
-      <Head><title>Profile Analytics | ForgeTomorrow</title></Head>
+      <Head>
+        <title>Profile Analytics | ForgeTomorrow</title>
+      </Head>
 
       <Layout
         title="Profile Analytics | ForgeTomorrow"
@@ -104,7 +109,7 @@ export default function ProfileAnalyticsPage() {
               </div>
             </section>
 
-            {/* NEW: Charts row — two columns on md+, stacked on mobile */}
+            {/* Charts row — two columns on md+, stacked on mobile */}
             <div className="grid gap-4 md:gap-6 md:grid-cols-2">
               <ViewsChart
                 labels={analytics.daysLabels}

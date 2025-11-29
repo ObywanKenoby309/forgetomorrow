@@ -8,14 +8,14 @@ const ReCAPTCHA = dynamic(() => import("react-google-recaptcha"), { ssr: false }
 
 export default function SignupFree() {
   const [loading, setLoading] = useState(false);
-  const [phase, setPhase] = useState("form"); // 'form' | 'sent'
+  const [phase, setPhase] = useState<"form" | "sent">("form");
   const [firstName, setFirstName] = useState("");
   const [lastName, setLastName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [agreed, setAgreed] = useState(false);
   const [error, setError] = useState("");
-  const [captchaValue, setCaptchaValue] = useState(null);
+  const [captchaValue, setCaptchaValue] = useState<string | null>(null);
   const [siteKey, setSiteKey] = useState("");
 
   useEffect(() => {
@@ -25,7 +25,7 @@ export default function SignupFree() {
     }
   }, []);
 
-  const handleSubmit = async (e) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError("");
 
@@ -71,7 +71,11 @@ export default function SignupFree() {
 
   if (phase === "sent") {
     return (
-      <div style={container}>
+      <div
+        style={container}
+        role="status"
+        aria-live="polite"
+      >
         <h1 style={title}>Check your email</h1>
         <p style={{ color: "#ddd" }}>
           We sent a verification link to <strong>{email}</strong>. Click the link within 1 hour to
@@ -84,43 +88,82 @@ export default function SignupFree() {
   return (
     <div style={container}>
       <h1 style={title}>Create your account</h1>
-      <form onSubmit={handleSubmit}>
+      <form onSubmit={handleSubmit} aria-describedby={error ? "signup-error" : undefined}>
         <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
+          <div>
+            <label
+              htmlFor="first-name"
+              style={label}
+            >
+              First name
+            </label>
+            <input
+              id="first-name"
+              placeholder="First name"
+              value={firstName}
+              onChange={(e) => setFirstName(e.target.value)}
+              required
+              style={input}
+            />
+          </div>
+
+          <div>
+            <label
+              htmlFor="last-name"
+              style={label}
+            >
+              Last name
+            </label>
+            <input
+              id="last-name"
+              placeholder="Last name"
+              value={lastName}
+              onChange={(e) => setLastName(e.target.value)}
+              required
+              style={input}
+            />
+          </div>
+        </div>
+
+        <div style={{ marginTop: 12 }}>
+          <label
+            htmlFor="email"
+            style={label}
+          >
+            Email
+          </label>
           <input
-            placeholder="First name"
-            value={firstName}
-            onChange={(e) => setFirstName(e.target.value)}
-            required
-            style={input}
-          />
-          <input
-            placeholder="Last name"
-            value={lastName}
-            onChange={(e) => setLastName(e.target.value)}
+            id="email"
+            type="email"
+            placeholder="you@example.com"
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
             required
             style={input}
           />
         </div>
 
-        <input
-          type="email"
-          placeholder="Email"
-          value={email}
-          onChange={(e) => setEmail(e.target.value)}
-          required
-          style={{ ...input, marginTop: 12 }}
-        />
+        <div style={{ marginTop: 12 }}>
+          <label
+            htmlFor="temp-password"
+            style={label}
+          >
+            Temporary password
+          </label>
+          <input
+            id="temp-password"
+            type="password"
+            placeholder="Temporary password"
+            value={password}
+            onChange={(e) => setPassword(e.target.value)}
+            required
+            style={input}
+          />
+        </div>
 
-        <input
-          type="password"
-          placeholder="Temporary password"
-          value={password}
-          onChange={(e) => setPassword(e.target.value)}
-          required
-          style={{ ...input, marginTop: 12 }}
-        />
-
-        <label style={{ display: "flex", alignItems: "center", gap: 8, marginTop: 16 }}>
+        <label
+          style={{ display: "flex", alignItems: "center", gap: 8, marginTop: 16 }}
+        >
           <input
             type="checkbox"
             checked={agreed}
@@ -130,18 +173,30 @@ export default function SignupFree() {
           <span style={{ color: "#ddd", fontSize: 14 }}>
             I agree to the{" "}
             <a href="/terms" style={{ color: "#FF7043", textDecoration: "underline" }}>
-              Terms & Conditions
+              Terms &amp; Conditions
             </a>
           </span>
         </label>
 
         {siteKey && (
           <div style={{ marginTop: 16 }}>
-            <ReCAPTCHA sitekey={siteKey} onChange={(value) => setCaptchaValue(value)} />
+            <ReCAPTCHA
+              sitekey={siteKey}
+              onChange={(value) => setCaptchaValue(value)}
+            />
           </div>
         )}
 
-        {error && <p style={{ color: "#ff8080", marginTop: 10 }}>{error}</p>}
+        {error && (
+          <p
+            id="signup-error"
+            style={{ color: "#ff8080", marginTop: 10 }}
+            role="alert"
+            aria-live="polite"
+          >
+            {error}
+          </p>
+        )}
 
         <button type="submit" disabled={loading} style={button}>
           {loading ? "Sending…" : "Send verification email"}
@@ -152,7 +207,7 @@ export default function SignupFree() {
 }
 
 /* Styles */
-const container = {
+const container: React.CSSProperties = {
   maxWidth: 520,
   margin: "80px auto",
   padding: 28,
@@ -162,7 +217,7 @@ const container = {
   fontFamily: "Inter, system-ui, -apple-system, sans-serif",
 };
 
-const input = {
+const input: React.CSSProperties = {
   width: "100%",
   padding: 12,
   borderRadius: 8,
@@ -173,7 +228,7 @@ const input = {
   boxSizing: "border-box",
 };
 
-const button = {
+const button: React.CSSProperties = {
   width: "100%",
   padding: 14,
   background: "#FF7043",
@@ -185,4 +240,15 @@ const button = {
   cursor: "pointer",
 };
 
-const title = { textAlign: "center", marginBottom: 18 };
+const title: React.CSSProperties = {
+  textAlign: "center",
+  marginBottom: 18,
+};
+
+const label: React.CSSProperties = {
+  display: "block",
+  marginBottom: 4,
+  fontSize: 13,
+  color: "#e5e7eb",
+  fontWeight: 500,
+};

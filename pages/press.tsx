@@ -11,11 +11,19 @@ export default function PressKit() {
         <meta name="robots" content="noindex" />
       </Head>
 
-      <main className="min-h-screen bg-gray-100 py-24 px-8">
+      <main
+        className="min-h-screen bg-gray-100 py-24 px-8"
+        aria-labelledby="press-kit-heading"
+      >
         <div className="max-w-4xl mx-auto text-center">
-          <h1 className="text-6xl font-black text-orange-600 mb-8">Press Kit</h1>
+          <h1
+            id="press-kit-heading"
+            className="text-6xl font-black text-orange-600 mb-8"
+          >
+            Press Kit
+          </h1>
           <p className="text-2xl text-gray-700 mb-16">
-            Logos, brand colors, and contact info for media & partners.
+            Logos, brand colors, and contact info for media &amp; partners.
           </p>
 
           <div className="grid md:grid-cols-3 gap-12">

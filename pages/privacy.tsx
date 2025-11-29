@@ -13,9 +13,15 @@ export default function Privacy() {
         />
       </Head>
 
-      <div className="min-h-screen bg-gray-50 py-12 px-4">
+      <main
+        className="min-h-screen bg-gray-50 py-12 px-4"
+        aria-labelledby="privacy-policy-heading"
+      >
         <div className="max-w-4xl mx-auto bg-white rounded-2xl shadow-lg p-8 md:p-12">
-          <h1 className="text-4xl md:text-5xl font-bold text-orange-600 mb-4">
+          <h1
+            id="privacy-policy-heading"
+            className="text-4xl md:text-5xl font-bold text-orange-600 mb-4"
+          >
             FORGE TOMORROW – PRIVACY POLICY
           </h1>
           <p className="text-gray-600 mb-10">Last Updated: November 27, 2025</p>
@@ -512,7 +518,7 @@ export default function Privacy() {
             </Link>
           </div>
         </div>
-      </div>
+      </main>
     </>
   );
 }

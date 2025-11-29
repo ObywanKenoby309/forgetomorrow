@@ -19,7 +19,7 @@ function PageShell({ header, right, children }) {
         </div>
 
         {/* Right rail */}
-        <aside className="hidden lg:block">
+        <aside className="hidden lg:block" aria-label="Job tools">
           {right}
         </aside>
       </div>
@@ -50,36 +50,59 @@ function ApplyModal({ open, onClose, job, onApplied, isPaidUser, onResumeAlign }
     alert(`Application submitted for: ${job.title}`);
   };
 
+  const titleId = 'apply-dialog-title';
+  const descriptionId = 'apply-dialog-description';
+
   return (
     <div
       className="fixed inset-0 z-50 flex items-center justify-center p-4"
       style={{ background: 'rgba(0,0,0,0.35)' }}
       role="dialog"
+      aria-modal="true"
+      aria-labelledby={titleId}
+      aria-describedby={descriptionId}
     >
       <div className="w-full max-w-md rounded-xl border bg-white p-6 shadow-lg">
-        <h3 className="text-xl font-bold" style={{ color: '#263238' }}>
+        <h3 id={titleId} className="text-xl font-bold" style={{ color: '#263238' }}>
           Apply to {job.title}
         </h3>
-        <p className="text-sm mt-1" style={{ color: '#607D8B' }}>
+        <p
+          id={descriptionId}
+          className="text-sm mt-1"
+          style={{ color: '#607D8B' }}
+        >
           {job.company} — {job.location}
         </p>
 
         <form className="mt-6 space-y-4" onSubmit={handleSubmit}>
-          <input
-            placeholder="Full name"
-            required
-            value={name}
-            onChange={(e) => setName(e.target.value)}
-            className="w-full rounded-md border px-3 py-2 text-sm"
-          />
-          <input
-            type="email"
-            placeholder="you@example.com"
-            required
-            value={email}
-            onChange={(e) => setEmail(e.target.value)}
-            className="w-full rounded-md border px-3 py-2 text-sm"
-          />
+          <div className="flex flex-col gap-1 text-sm">
+            <label htmlFor="apply-full-name" className="font-medium text-slate-800">
+              Full name
+            </label>
+            <input
+              id="apply-full-name"
+              placeholder="Full name"
+              required
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+              className="w-full rounded-md border px-3 py-2 text-sm"
+            />
+          </div>
+
+          <div className="flex flex-col gap-1 text-sm">
+            <label htmlFor="apply-email" className="font-medium text-slate-800">
+              Email address
+            </label>
+            <input
+              id="apply-email"
+              type="email"
+              placeholder="you@example.com"
+              required
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              className="w-full rounded-md border px-3 py-2 text-sm"
+            />
+          </div>
 
           {isPaidUser && (
             <button
@@ -118,7 +141,7 @@ function ApplyModal({ open, onClose, job, onApplied, isPaidUser, onResumeAlign }
 // ──────────────────────────────────────────────────────────────
 function PageHeader() {
   return (
-    <div
+    <header
       style={{
         background: 'white',
         border: '1px solid #eee',
@@ -128,13 +151,17 @@ function PageHeader() {
         textAlign: 'center',
       }}
     >
-      <h1 style={{ color: '#FF7043', fontSize: 28, fontWeight: 800, margin: 0 }}>
+      <h1
+        style={{ color: '#FF7043', fontSize: 28, fontWeight: 800, margin: 0 }}
+      >
         Job Listings
       </h1>
-      <p style={{ margin: '8px 0 0', color: '#546E7A', fontSize: 14 }}>
+      <p
+        style={{ margin: '8px 0 0', color: '#546E7A', fontSize: 14 }}
+      >
         Explore openings, review full details, and apply with confidence.
       </p>
-    </div>
+    </header>
   );
 }
 
@@ -143,7 +170,10 @@ function PageHeader() {
 // ──────────────────────────────────────────────────────────────
 function RightRail() {
   return (
-    <div style={{ display: 'grid', gap: 12 }}>
+    <nav
+      aria-label="Job listing shortcuts"
+      style={{ display: 'grid', gap: 12 }}
+    >
       <div
         style={{
           background: '#2a2a2a',
@@ -154,14 +184,17 @@ function RightRail() {
         }}
       >
         <div style={{ fontWeight: 700, marginBottom: 8 }}>Shortcuts</div>
-        <Link href="/jobs" style={{ color: '#FF7043', display: 'block', marginBottom: 6 }}>
+        <Link
+          href="/jobs"
+          style={{ color: '#FF7043', display: 'block', marginBottom: 6 }}
+        >
           All Jobs
         </Link>
         <Link href="/resume-builder" style={{ color: '#FF7043' }}>
           Resume Builder
         </Link>
       </div>
-    </div>
+    </nav>
   );
 }
 
@@ -405,16 +438,38 @@ function Jobs() {
   if (loading) {
     return (
       <PageShell header={<PageHeader />} right={<RightRail />}>
-        <p style={{ padding: 40, textAlign: 'center' }}>Loading jobs...</p>
+        <p style={{ padding: 40, textAlign: 'center' }} aria-busy="true">
+          Loading jobs...
+        </p>
       </PageShell>
     );
   }
 
   return (
     <PageShell header={<PageHeader />} right={<RightRail />}>
-      <div style={{ display: 'flex', flexDirection: 'column', gap: 20, maxWidth: 1200 }}>
+      <div
+        style={{
+          display: 'flex',
+          flexDirection: 'column',
+          gap: 20,
+          maxWidth: 1200,
+        }}
+      >
         {/* Filter bar */}
-        <Card as="section">
+        <Card as="section" aria-labelledby="jobs-filter-heading">
+          <CardHeader>
+            <h2
+              id="jobs-filter-heading"
+              style={{
+                margin: 0,
+                fontSize: 16,
+                fontWeight: 600,
+                color: '#263238',
+              }}
+            >
+              Filter jobs
+            </h2>
+          </CardHeader>
           <CardContent>
             <div
               style={{
@@ -428,8 +483,14 @@ function Jobs() {
             >
               {/* Keywords */}
               <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
-                <label style={{ fontSize: 12, color: '#78909C' }}>Keywords</label>
+                <label
+                  htmlFor="jobs-filter-keywords"
+                  style={{ fontSize: 12, color: '#78909C' }}
+                >
+                  Keywords
+                </label>
                 <input
+                  id="jobs-filter-keywords"
                   type="text"
                   value={keyword}
                   onChange={(e) => setKeyword(e.target.value)}
@@ -445,8 +506,14 @@ function Jobs() {
 
               {/* Company Name */}
               <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
-                <label style={{ fontSize: 12, color: '#78909C' }}>Company Name</label>
+                <label
+                  htmlFor="jobs-filter-company"
+                  style={{ fontSize: 12, color: '#78909C' }}
+                >
+                  Company Name
+                </label>
                 <input
+                  id="jobs-filter-company"
                   type="text"
                   value={companyFilter}
                   onChange={(e) => setCompanyFilter(e.target.value)}
@@ -462,8 +529,14 @@ function Jobs() {
 
               {/* Location */}
               <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
-                <label style={{ fontSize: 12, color: '#78909C' }}>Location</label>
+                <label
+                  htmlFor="jobs-filter-location"
+                  style={{ fontSize: 12, color: '#78909C' }}
+                >
+                  Location
+                </label>
                 <input
+                  id="jobs-filter-location"
                   type="text"
                   value={locationFilter}
                   onChange={(e) => setLocationFilter(e.target.value)}
@@ -479,8 +552,14 @@ function Jobs() {
 
               {/* Location Type */}
               <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
-                <label style={{ fontSize: 12, color: '#78909C' }}>Location Type</label>
+                <label
+                  htmlFor="jobs-filter-location-type"
+                  style={{ fontSize: 12, color: '#78909C' }}
+                >
+                  Location Type
+                </label>
                 <select
+                  id="jobs-filter-location-type"
                   value={locationTypeFilter}
                   onChange={(e) => setLocationTypeFilter(e.target.value)}
                   style={{
@@ -500,8 +579,14 @@ function Jobs() {
 
               {/* Source (internal vs external) */}
               <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
-                <label style={{ fontSize: 12, color: '#78909C' }}>Source</label>
+                <label
+                  htmlFor="jobs-filter-source"
+                  style={{ fontSize: 12, color: '#78909C' }}
+                >
+                  Source
+                </label>
                 <select
+                  id="jobs-filter-source"
                   value={sourceFilter}
                   onChange={(e) => setSourceFilter(e.target.value)}
                   style={{
@@ -520,8 +605,14 @@ function Jobs() {
 
               {/* Posted in last N days */}
               <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
-                <label style={{ fontSize: 12, color: '#78909C' }}>Posted in last (days)</label>
+                <label
+                  htmlFor="jobs-filter-days"
+                  style={{ fontSize: 12, color: '#78909C' }}
+                >
+                  Posted in last (days)
+                </label>
                 <input
+                  id="jobs-filter-days"
                   type="number"
                   min="1"
                   value={daysFilter}
@@ -551,11 +642,13 @@ function Jobs() {
             >
               <span>
                 Showing {filteredJobs.length === 0 ? 0 : startIndex + 1}–
-                {Math.min(startIndex + pageSize, filteredJobs.length)} of {filteredJobs.length} jobs
+                {Math.min(startIndex + pageSize, filteredJobs.length)} of{' '}
+                {filteredJobs.length} jobs
               </span>
               <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
                 <span>Jobs per page:</span>
                 <select
+                  aria-label="Jobs per page"
                   value={pageSize}
                   onChange={(e) => {
                     setPageSize(Number(e.target.value));
@@ -588,7 +681,8 @@ function Jobs() {
           }}
         >
           {/* LEFT: scrollable list + pagination at bottom */}
-          <div
+          <section
+            aria-label="Job results"
             style={{
               maxHeight: '80vh',
               display: 'flex',
@@ -611,7 +705,9 @@ function Jobs() {
                 const rawDesc = job.description || '';
                 const cleanDesc = rawDesc.replace(/<[^>]*>/g, '');
                 const snippet =
-                  cleanDesc.length > 160 ? `${cleanDesc.slice(0, 160)}…` : cleanDesc;
+                  cleanDesc.length > 160
+                    ? `${cleanDesc.slice(0, 160)}…`
+                    : cleanDesc;
 
                 const location = job.location || '';
                 const locationType = inferLocationType(location);
@@ -633,10 +729,13 @@ function Jobs() {
                 return (
                   <Card
                     key={job.id}
-                    as="section"
+                    as="article"
+                    aria-label={`${job.title} at ${job.company || 'Unknown company'}`}
                     style={{
                       cursor: 'pointer',
-                      border: isSelected ? '2px solid #FF7043' : '1px solid #e0e0e0',
+                      border: isSelected
+                        ? '2px solid #FF7043'
+                        : '1px solid #e0e0e0',
                     }}
                     onClick={() => handleSelectJob(job)}
                   >
@@ -654,9 +753,20 @@ function Jobs() {
                           <CardTitle>{job.title}</CardTitle>
                           <CardSubtle>{job.company}</CardSubtle>
                         </div>
-                        <div style={{ textAlign: 'right', minWidth: 120 }}>
-                          <div style={{ fontSize: 12, color: '#78909C' }}>Posted</div>
-                          <div style={{ fontSize: 13, color: '#455A64', fontWeight: 500 }}>
+                        <div
+                          style={{ textAlign: 'right', minWidth: 120 }}
+                          aria-label={`Posted ${postedLabel}`}
+                        >
+                          <div style={{ fontSize: 12, color: '#78909C' }}>
+                            Posted
+                          </div>
+                          <div
+                            style={{
+                              fontSize: 13,
+                              color: '#455A64',
+                              fontWeight: 500,
+                            }}
+                          >
                             {postedLabel}
                           </div>
                         </div>
@@ -721,7 +831,8 @@ function Jobs() {
 
             {/* Pagination controls UNDER the cards */}
             {filteredJobs.length > pageSize && (
-              <div
+              <nav
+                aria-label="Job results pagination"
                 style={{
                   display: 'flex',
                   justifyContent: 'center',
@@ -742,16 +853,19 @@ function Jobs() {
                     padding: '4px 8px',
                     borderRadius: 6,
                     border: '1px solid #CFD8DC',
-                    background: currentPage === 1 ? '#ECEFF1' : 'white',
-                    cursor: currentPage === 1 ? 'default' : 'pointer',
+                    background:
+                      currentPage === 1 ? '#ECEFF1' : 'white',
+                    cursor:
+                      currentPage === 1 ? 'default' : 'pointer',
                     fontWeight: 500,
                   }}
+                  aria-label="Go to first page"
                 >
                   First
                 </button>
 
                 {/* Ellipsis before if needed */}
-                {startPage > 1 && <span>…</span>}
+                {startPage > 1 && <span aria-hidden="true">…</span>}
 
                 {/* Page numbers */}
                 {pageNumbers.map((p) => (
@@ -763,18 +877,25 @@ function Jobs() {
                       padding: '4px 8px',
                       borderRadius: 6,
                       border: '1px solid #CFD8DC',
-                      background: p === currentPage ? '#FF7043' : 'white',
-                      color: p === currentPage ? 'white' : '#263238',
-                      cursor: p === currentPage ? 'default' : 'pointer',
+                      background:
+                        p === currentPage ? '#FF7043' : 'white',
+                      color:
+                        p === currentPage ? 'white' : '#263238',
+                      cursor:
+                        p === currentPage ? 'default' : 'pointer',
                       fontWeight: p === currentPage ? 700 : 500,
                     }}
+                    aria-current={p === currentPage ? 'page' : undefined}
+                    aria-label={`Go to page ${p}`}
                   >
                     {p}
                   </button>
                 ))}
 
                 {/* Ellipsis after if needed */}
-                {endPage < totalPages && <span>…</span>}
+                {endPage < totalPages && (
+                  <span aria-hidden="true">…</span>
+                )}
 
                 {/* Last */}
                 <button
@@ -785,21 +906,28 @@ function Jobs() {
                     padding: '4px 8px',
                     borderRadius: 6,
                     border: '1px solid #CFD8DC',
-                    background: currentPage === totalPages ? '#ECEFF1' : 'white',
-                    cursor: currentPage === totalPages ? 'default' : 'pointer',
+                    background:
+                      currentPage === totalPages
+                        ? '#ECEFF1'
+                        : 'white',
+                    cursor:
+                      currentPage === totalPages
+                        ? 'default'
+                        : 'pointer',
                     fontWeight: 500,
                   }}
+                  aria-label="Go to last page"
                 >
                   Last
                 </button>
-              </div>
+              </nav>
             )}
-          </div>
+          </section>
 
           {/* RIGHT: Sticky full job view, formatted */}
-          <div>
+          <section aria-label="Selected job details">
             <Card
-              as="section"
+              as="article"
               style={{
                 position: 'sticky',
                 top: 0,
@@ -813,7 +941,8 @@ function Jobs() {
                   <CardHeader>
                     <CardTitle>{selectedJob.title}</CardTitle>
                     <CardSubtle>
-                      {selectedJob.company} — {selectedJob.location || 'Location not provided'}
+                      {selectedJob.company} —{' '}
+                      {selectedJob.location || 'Location not provided'}
                     </CardSubtle>
 
                     <div
@@ -853,7 +982,13 @@ function Jobs() {
                     </div>
                   </CardHeader>
 
-                  <CardContent style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+                  <CardContent
+                    style={{
+                      display: 'flex',
+                      flexDirection: 'column',
+                      gap: 12,
+                    }}
+                  >
                     {/* Full description (scrollable + formatted paragraphs) */}
                     <div
                       style={{
@@ -864,7 +999,10 @@ function Jobs() {
                       }}
                     >
                       {(() => {
-                        const raw = (selectedJob.description || '').replace(/<[^>]*>/g, '');
+                        const raw = (selectedJob.description || '').replace(
+                          /<[^>]*>/g,
+                          ''
+                        );
                         const paragraphs = raw
                           .split(/\n\s*\n/)
                           .map((p) => p.trim())
@@ -889,7 +1027,10 @@ function Jobs() {
                           <p
                             key={idx}
                             style={{
-                              margin: idx === 0 ? '0 0 10px' : '10px 0 0',
+                              margin:
+                                idx === 0
+                                  ? '0 0 10px'
+                                  : '10px 0 0',
                               color: '#37474F',
                               fontSize: 14,
                               lineHeight: 1.6,
@@ -917,15 +1058,24 @@ function Jobs() {
                         onClick={() => togglePin(selectedJob)}
                         style={{
                           background: 'white',
-                          color: isJobPinned(selectedJob) ? '#D32F2F' : '#FF7043',
+                          color: isJobPinned(selectedJob)
+                            ? '#D32F2F'
+                            : '#FF7043',
                           padding: '10px 16px',
                           borderRadius: 8,
-                          border: `1px solid ${isJobPinned(selectedJob) ? '#D32F2F' : '#FF7043'}`,
+                          border: `1px solid ${
+                            isJobPinned(selectedJob)
+                              ? '#D32F2F'
+                              : '#FF7043'
+                          }`,
                           fontWeight: 700,
                           cursor: 'pointer',
                         }}
+                        aria-pressed={isJobPinned(selectedJob)}
                       >
-                        {isJobPinned(selectedJob) ? 'Unpin job' : 'Pin job'}
+                        {isJobPinned(selectedJob)
+                          ? 'Unpin job'
+                          : 'Pin job'}
                       </button>
 
                       <button
@@ -994,12 +1144,13 @@ function Jobs() {
                     Select a job
                   </h3>
                   <p style={{ color: '#78909C', fontSize: 14 }}>
-                    Choose a job from the list on the left to view full details here.
+                    Choose a job from the list on the left to view full details
+                    here.
                   </p>
                 </CardContent>
               )}
             </Card>
-          </div>
+          </section>
         </div>
 
         {/* Bottom: two compact cards side-by-side */}
@@ -1011,17 +1162,34 @@ function Jobs() {
           }}
         >
           {/* Recently Viewed */}
-          <Card as="section">
+          <Card as="section" aria-labelledby="jobs-recent-heading">
             <CardHeader>
-              <CardTitle style={{ color: '#FF7043', fontSize: 20 }}>Recently Viewed</CardTitle>
+              <CardTitle
+                id="jobs-recent-heading"
+                style={{ color: '#FF7043', fontSize: 20 }}
+              >
+                Recently Viewed
+              </CardTitle>
             </CardHeader>
             <CardContent>
               {recentViewed.length === 0 ? (
-                <p style={{ color: '#999', fontStyle: 'italic', margin: 0 }}>
+                <p
+                  style={{
+                    color: '#999',
+                    fontStyle: 'italic',
+                    margin: 0,
+                  }}
+                >
                   No jobs viewed yet.
                 </p>
               ) : (
-                <ul style={{ margin: 0, paddingLeft: 18, fontSize: 14 }}>
+                <ul
+                  style={{
+                    margin: 0,
+                    paddingLeft: 18,
+                    fontSize: 14,
+                  }}
+                >
                   {recentViewed.map((job) => (
                     <li key={`${job.id}-${job.title}`}>{job.title}</li>
                   ))}
@@ -1031,17 +1199,34 @@ function Jobs() {
           </Card>
 
           {/* Applied Jobs */}
-          <Card as="section">
+          <Card as="section" aria-labelledby="jobs-applied-heading">
             <CardHeader>
-              <CardTitle style={{ color: '#FF7043', fontSize: 20 }}>Applied Jobs</CardTitle>
+              <CardTitle
+                id="jobs-applied-heading"
+                style={{ color: '#FF7043', fontSize: 20 }}
+              >
+                Applied Jobs
+              </CardTitle>
             </CardHeader>
             <CardContent>
               {appliedJobs.length === 0 ? (
-                <p style={{ color: '#999', fontStyle: 'italic', margin: 0 }}>
+                <p
+                  style={{
+                    color: '#999',
+                    fontStyle: 'italic',
+                    margin: 0,
+                  }}
+                >
                   No applications yet.
                 </p>
               ) : (
-                <ul style={{ margin: 0, paddingLeft: 18, fontSize: 14 }}>
+                <ul
+                  style={{
+                    margin: 0,
+                    paddingLeft: 18,
+                    fontSize: 14,
+                  }}
+                >
                   {appliedJobs.map((job) => (
                     <li key={`${job.id}-${job.title}`}>{job.title}</li>
                   ))}

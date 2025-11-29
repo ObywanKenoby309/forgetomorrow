@@ -12,10 +12,16 @@ export default function TrackingPolicy() {
         />
       </Head>
 
-      <div className="min-h-screen bg-gray-50 py-12 px-4">
+      <main
+        className="min-h-screen bg-gray-50 py-12 px-4"
+        aria-labelledby="tracking-cookies-heading"
+      >
         <div className="max-w-4xl mx-auto bg-white rounded-2xl shadow-lg p-8 md:p-12">
-          <h1 className="text-4xl md:text-5xl font-bold text-orange-600 mb-4">
-            FORGE TOMORROW – TRACKING & COOKIES POLICY
+          <h1
+            id="tracking-cookies-heading"
+            className="text-4xl md:text-5xl font-bold text-orange-600 mb-4"
+          >
+            FORGE TOMORROW – TRACKING &amp; COOKIES POLICY
           </h1>
           <p className="text-gray-600 mb-10">Last Updated: November 2025</p>
 
@@ -26,7 +32,7 @@ export default function TrackingPolicy() {
                 1. Overview
               </h2>
               <p className="mt-4">
-                This Tracking & Cookies Policy explains how Forge Tomorrow (“we,”
+                This Tracking &amp; Cookies Policy explains how Forge Tomorrow (“we,”
                 “us,” “our”) uses cookies and similar tracking technologies to
                 provide, secure, and improve our Services.
               </p>
@@ -80,7 +86,7 @@ export default function TrackingPolicy() {
               </p>
             </section>
 
-            {/* 4. Do We Use Third-Party Cookies? */}
+            {/* 4. Third-Party Cookies */}
             <section>
               <h2 className="text-2xl font-semibold text-gray-900">
                 4. Third-Party Cookies
@@ -92,7 +98,7 @@ export default function TrackingPolicy() {
               </p>
             </section>
 
-            {/* 5. Do We Use Tracking Pixels */}
+            {/* 5. Pixels, Tags, and Other Tracking */}
             <section>
               <h2 className="text-2xl font-semibold text-gray-900">
                 5. Pixels, Tags, and Other Tracking
@@ -107,7 +113,7 @@ export default function TrackingPolicy() {
             {/* 6. Your Choices */}
             <section>
               <h2 className="text-2xl font-semibold text-gray-900">
-                6. Your Choices & Controls
+                6. Your Choices &amp; Controls
               </h2>
               <p className="mt-4">
                 You may disable non-essential cookies in your browser settings.
@@ -133,7 +139,8 @@ export default function TrackingPolicy() {
                 8. Contact
               </h2>
               <p className="mt-4">
-                For questions about this Policy:<br />
+                For questions about this Policy:
+                <br />
                 Email:{" "}
                 <a
                   href="mailto:legal@forgetomorrow.com"
@@ -151,7 +158,7 @@ export default function TrackingPolicy() {
             </Link>
           </div>
         </div>
-      </div>
+      </main>
     </>
   );
 }

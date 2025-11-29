@@ -10,15 +10,20 @@ export default function Security() {
         <meta name="description" content="Forge Tomorrow Security Statement" />
       </Head>
 
-      <div className="min-h-screen bg-gray-50 py-12 px-4">
+      <main
+        className="min-h-screen bg-gray-50 py-12 px-4"
+        aria-labelledby="security-statement-heading"
+      >
         <div className="max-w-4xl mx-auto bg-white rounded-2xl shadow-lg p-8 md:p-12">
-          <h1 className="text-4xl md:text-5xl font-bold text-orange-600 mb-4">
+          <h1
+            id="security-statement-heading"
+            className="text-4xl md:text-5xl font-bold text-orange-600 mb-4"
+          >
             FORGE TOMORROW – SECURITY STATEMENT
           </h1>
           <p className="text-gray-600 mb-10">Last Updated: November 2025</p>
 
           <div className="prose prose-lg max-w-none text-gray-700 space-y-8">
-
             {/* 1. Infrastructure Security */}
             <section>
               <h2 className="text-2xl font-semibold text-gray-900">
@@ -160,7 +165,7 @@ export default function Security() {
             </Link>
           </div>
         </div>
-      </div>
+      </main>
     </>
   );
 }

@@ -1,4 +1,4 @@
-// pages/profile.js ← FINAL VERSION WITH SERVER SYNC + WORK STATUS / RELOCATE
+// pages/profile.js ← FINAL VERSION WITH SERVER SYNC + WORK STATUS / RELOCATE + A11Y TWEAKS
 import React, { useEffect, useState } from 'react';
 import Head from 'next/head';
 import { useRouter } from 'next/router';
@@ -264,11 +264,25 @@ export default function ProfilePage() {
         boxShadow: '0 2px 6px rgba(0,0,0,0.06)',
         textAlign: 'center',
       }}
+      aria-label="Profile overview"
     >
-      <h1 style={{ margin: 0, color: '#FF7043', fontSize: 24, fontWeight: 800 }}>
+      <h1
+        style={{
+          margin: 0,
+          color: '#FF7043',
+          fontSize: 24,
+          fontWeight: 800,
+        }}
+      >
         Your Profile
       </h1>
-      <p style={{ margin: '6px auto 0', color: '#607D8B', maxWidth: 720 }}>
+      <p
+        style={{
+          margin: '6px auto 0',
+          color: '#607D8B',
+          maxWidth: 720,
+        }}
+      >
         Give the community a clear, human overview — your resume provides the deep detail.
       </p>
       <div style={{ marginTop: 10 }}>
@@ -294,7 +308,9 @@ export default function ProfilePage() {
 
   return (
     <>
-      <Head><title>Profile | ForgeTomorrow</title></Head>
+      <Head>
+        <title>Profile | ForgeTomorrow</title>
+      </Head>
       <SeekerLayout
         title="Profile | ForgeTomorrow"
         header={HeaderBox}
@@ -303,7 +319,12 @@ export default function ProfilePage() {
       >
         {/* EMAIL VERIFIED WELCOME BANNER — DISMISSIBLE, ONLY SHOWS ONCE */}
         {showWelcomeBanner && (
-          <div className="relative mb-10 p-8 bg-gradient-to-r from-orange-500 to-pink-600 text-white rounded-3xl shadow-2xl text-center max-w-4xl mx-auto">
+          <section
+            className="relative mb-10 p-8 bg-gradient-to-r from-orange-500 to-pink-600 text-white rounded-3xl shadow-2xl text-center max-w-4xl mx-auto"
+            role="status"
+            aria-live="polite"
+            aria-label="Welcome to ForgeTomorrow"
+          >
             <button
               type="button"
               onClick={dismissWelcome}
@@ -312,23 +333,36 @@ export default function ProfilePage() {
             >
               ×
             </button>
-            <h2 className="text-4xl md:text-5xl font-bold mb-4">Welcome to ForgeTomorrow!</h2>
+            <h2 className="text-4xl md:text-5xl font-bold mb-4">
+              Welcome to ForgeTomorrow!
+            </h2>
             <p className="text-xl md:text-2xl opacity-95">
               Your email is verified. Complete your profile below and start getting discovered.
             </p>
-          </div>
+          </section>
         )}
 
         <div className="w-full max-w-7xl mx-auto px-4 md:px-6 grid gap-4 md:gap-5">
           {/* Header backer */}
-          <section className="bg-white border border-gray-200 border-t-0 rounded-xl shadow-sm overflow-hidden pt-0 px-0 pb-0">
+          <section
+            className="bg-white border border-gray-200 border-t-0 rounded-xl shadow-sm overflow-hidden pt-0 px-0 pb-0"
+            aria-label="Profile header section"
+          >
             <ProfileHeader
-              name={name} pronouns={pronouns} headline={headline}
-              location={location} status={status}
-              avatarUrl={avatarUrl} coverUrl={coverUrl}
-              setName={setName} setPronouns={setPronouns} setHeadline={setHeadline}
-              setLocation={setLocation} setStatus={setStatus}
-              setAvatarUrl={setAvatarUrl} setCoverUrl={setCoverUrl}
+              name={name}
+              pronouns={pronouns}
+              headline={headline}
+              location={location}
+              status={status}
+              avatarUrl={avatarUrl}
+              coverUrl={coverUrl}
+              setName={setName}
+              setPronouns={setPronouns}
+              setHeadline={setHeadline}
+              setLocation={setLocation}
+              setStatus={setStatus}
+              setAvatarUrl={setAvatarUrl}
+              setCoverUrl={setCoverUrl}
             />
           </section>
 

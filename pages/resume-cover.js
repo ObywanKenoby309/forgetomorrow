@@ -1,5 +1,6 @@
 // pages/resume-cover.js
 import React, { useRef, useState, useEffect } from 'react';
+import Head from 'next/head';
 import Link from 'next/link';
 import { useRouter } from 'next/router';
 import SeekerLayout from '@/components/layouts/SeekerLayout';
@@ -26,7 +27,16 @@ const SLATE = '#455A64';
 
 function Card({ children, style }) {
   return (
-    <section style={{ background: 'white', border: '1px solid #eee', borderRadius: 12, boxShadow: '0 2px 6px rgba(0,0,0,0.06)', padding: 16, ...style }}>
+    <section
+      style={{
+        background: 'white',
+        border: '1px solid #eee',
+        borderRadius: 12,
+        boxShadow: '0 2px 6px rgba(0,0,0,0.06)',
+        padding: 16,
+        ...style,
+      }}
+    >
       {children}
     </section>
   );
@@ -45,30 +55,98 @@ function PrimaryButton({ href, onClick, children, disabled }) {
     textDecoration: 'none',
     opacity: disabled ? 0.7 : 1,
   };
-  if (href) return <Link href={href} style={base}>{children}</Link>;
-  return <button type="button" onClick={onClick} disabled={disabled} style={base}>{children}</button>;
+  if (href) {
+    return (
+      <Link href={href} style={base}>
+        {children}
+      </Link>
+    );
+  }
+  return (
+    <button type="button" onClick={onClick} disabled={disabled} style={base}>
+      {children}
+    </button>
+  );
 }
 
 function SoftLink({ href, onClick, children }) {
-  const style = { color: ORANGE, fontWeight: 700, textDecoration: 'none', background: 'transparent', border: 0, cursor: 'pointer' };
-  if (href) return <Link href={href} style={style}>{children}</Link>;
-  return <button type="button" onClick={onClick} style={style}>{children}</button>;
+  const style = {
+    color: ORANGE,
+    fontWeight: 700,
+    textDecoration: 'none',
+    background: 'transparent',
+    border: 0,
+    cursor: 'pointer',
+  };
+  if (href) {
+    return (
+      <Link href={href} style={style}>
+        {children}
+      </Link>
+    );
+  }
+  return (
+    <button type="button" onClick={onClick} style={style}>
+      {children}
+    </button>
+  );
 }
 
 const TEMPLATES = [
-  { key: 'reverse', name: 'Reverse (Default)', tagline: 'Safest for ATS: clear roles, companies, dates, and results.' },
-  { key: 'hybrid', name: 'Hybrid (Combination)', tagline: 'Skills & highlights up top, then full reverse-chronological history.', pro: true },
+  {
+    key: 'reverse',
+    name: 'Reverse (Default)',
+    tagline: 'Safest for ATS: clear roles, companies, dates, and results.',
+  },
+  {
+    key: 'hybrid',
+    name: 'Hybrid (Combination)',
+    tagline: 'Skills & highlights up top, then full reverse-chronological history.',
+    pro: true,
+  },
 ];
 
 function TemplatePreviewModal({ open, onClose, tpl }) {
   if (!open || !tpl) return null;
   return (
-    <div style={{ position: 'fixed', inset: 0, zIndex: 10000, display: 'grid', placeItems: 'center' }}>
-      <div onClick={onClose} style={{ position: 'absolute', inset: 0, background: 'rgba(0,0,0,0.5)' }} />
-      <div role="dialog" style={{ position: 'relative', width: 'min(460px, 96vw)', background: 'white', borderRadius: 12, boxShadow: '0 20px 40px rgba(0,0,0,0.25)', padding: 24 }}>
+    <div
+      style={{
+        position: 'fixed',
+        inset: 0,
+        zIndex: 10000,
+        display: 'grid',
+        placeItems: 'center',
+      }}
+    >
+      <div
+        onClick={onClose}
+        style={{ position: 'absolute', inset: 0, background: 'rgba(0,0,0,0.5)' }}
+      />
+      <div
+        role="dialog"
+        aria-modal="true"
+        style={{
+          position: 'relative',
+          width: 'min(460px, 96vw)',
+          background: 'white',
+          borderRadius: 12,
+          boxShadow: '0 20px 40px rgba(0,0,0,0.25)',
+          padding: 24,
+        }}
+      >
         <div style={{ fontWeight: 800, fontSize: 20 }}>{tpl.name} — Preview</div>
         <p style={{ color: SLATE, margin: '8px 0 16px' }}>{tpl.tagline}</p>
-        <div style={{ height: 240, background: '#f9f9f9', border: '2px dashed #CFD8DC', borderRadius: 12, display: 'grid', placeItems: 'center', color: '#90A4AE' }}>
+        <div
+          style={{
+            height: 240,
+            background: '#f9f9f9',
+            border: '2px dashed #CFD8DC',
+            borderRadius: 12,
+            display: 'grid',
+            placeItems: 'center',
+            color: '#90A4AE',
+          }}
+        >
           Full preview coming soon
         </div>
         <div style={{ marginTop: 20, textAlign: 'right' }}>
@@ -82,9 +160,11 @@ function TemplatePreviewModal({ open, onClose, tpl }) {
 }
 
 export default function ResumeCoverLanding() {
-  const router = useRouter();  const chrome = String(router.query.chrome || '').toLowerCase();
+  const router = useRouter();
+  const chrome = String(router.query.chrome || '').toLowerCase();
   const withChrome = (path) =>
     chrome ? `${path}${path.includes('?') ? '&' : '?'}chrome=${chrome}` : path;
+
   const fileRef = useRef(null);
   const [previewOpen, setPreviewOpen] = useState(false);
   const [previewTpl, setPreviewTpl] = useState(null);
@@ -104,7 +184,10 @@ export default function ResumeCoverLanding() {
 
       // MOCKED — Replace with real DB call later
       setTier(MOCK_USER.tier);
-      setUsage({ used: MOCK_USER.ai_generations_used, limit: MOCK_USER.tier === 'pro' ? Infinity : 3 });
+      setUsage({
+        used: MOCK_USER.ai_generations_used,
+        limit: MOCK_USER.tier === 'pro' ? Infinity : 3,
+      });
       setSavedResumes(MOCK_SAVED_RESUMES);
     }
     init();
@@ -118,13 +201,36 @@ export default function ResumeCoverLanding() {
   const canUseHybrid = tier === 'pro' || usage.used < usage.limit;
 
   const HeaderHero = (
-    <Card style={{ textAlign: 'center' }}>
-      <h1 style={{ color: ORANGE, fontSize: 32, fontWeight: 800 }}>Build your resume</h1>
-      <p style={{ color: SLATE, margin: '12px 0 24px', fontSize: 17 }}>
-        Start with a template or upload an existing file. You can add a cover letter later.
+    <Card
+      style={{
+        textAlign: 'center',
+      }}
+      aria-label="Resume and cover letter builder overview"
+    >
+      <h1 style={{ color: ORANGE, fontSize: 32, fontWeight: 800, margin: 0 }}>
+        Build your resume
+      </h1>
+      <p
+        style={{
+          color: SLATE,
+          margin: '12px 0 24px',
+          fontSize: 17,
+        }}
+      >
+        Start with a template or upload an existing file. You can add a cover letter
+        later.
       </p>
-      <div style={{ display: 'flex', gap: 20, justifyContent: 'center', flexWrap: 'wrap' }}>
-        <PrimaryButton href="/resume/create?template=reverse">Build a Resume</PrimaryButton>
+      <div
+        style={{
+          display: 'flex',
+          gap: 20,
+          justifyContent: 'center',
+          flexWrap: 'wrap',
+        }}
+      >
+        <PrimaryButton href="/resume/create?template=reverse">
+          Build a Resume
+        </PrimaryButton>
         <div style={{ display: 'flex', alignItems: 'center', gap: 20 }}>
           <SoftLink onClick={onUploadClick}>Upload a resume</SoftLink>
           <span style={{ width: 1, height: 24, background: '#E0E0E0' }} />
@@ -133,10 +239,17 @@ export default function ResumeCoverLanding() {
       </div>
       {tier === 'basic' && (
         <div style={{ marginTop: 16, color: '#666', fontSize: 14 }}>
-          Free tier: {usage.used}/{usage.limit} AI generations used
+          Free tier: {usage.used}/{usage.limit === Infinity ? '∞' : usage.limit} AI
+          generations used
         </div>
       )}
-      <input ref={fileRef} type="file" accept=".pdf,.doc,.docx" onChange={onFilePicked} style={{ display: 'none' }} />
+      <input
+        ref={fileRef}
+        type="file"
+        accept=".pdf,.doc,.docx"
+        onChange={onFilePicked}
+        style={{ display: 'none' }}
+      />
     </Card>
   );
 
@@ -144,7 +257,8 @@ export default function ResumeCoverLanding() {
     <Card>
       <div style={{ fontWeight: 800, fontSize: 18 }}>Why only two resume formats?</div>
       <p style={{ color: '#607D8B', lineHeight: 1.5 }}>
-        Because <strong>Reverse-Chronological</strong> and <strong>Hybrid</strong> are the only layouts that consistently pass ATS scans and recruiter eyes. 
+        Because <strong>Reverse-Chronological</strong> and <strong>Hybrid</strong> are
+        the only layouts that consistently pass ATS scans and recruiter eyes.
         Everything else is noise. We removed 9,998 templates so you don’t fail silently.
       </p>
     </Card>
@@ -153,27 +267,87 @@ export default function ResumeCoverLanding() {
   const TemplatesRow = (
     <Card>
       <div style={{ fontWeight: 800, fontSize: 18 }}>Quick-start templates</div>
-      <p style={{ color: '#90A4AE', fontSize: 14, marginTop: 4 }}>ATS-friendly by default. Switch any time.</p>
-      <div style={{ marginTop: 20, display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: 20 }}>
+      <p style={{ color: '#90A4AE', fontSize: 14, marginTop: 4 }}>
+        ATS-friendly by default. Switch any time.
+      </p>
+      <div
+        style={{
+          marginTop: 20,
+          display: 'grid',
+          gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))',
+          gap: 20,
+        }}
+      >
         {TEMPLATES.map((tpl) => (
-          <div key={tpl.key} style={{ border: '1px solid #eee', borderRadius: 16, padding: 20, position: 'relative' }}>
+          <div
+            key={tpl.key}
+            style={{
+              border: '1px solid #eee',
+              borderRadius: 16,
+              padding: 20,
+              position: 'relative',
+            }}
+          >
             {tpl.pro && tier !== 'pro' && (
-              <div style={{ position: 'absolute', top: 12, right: 12, background: '#FFD700', color: '#000', fontSize: 10, fontWeight: 900, padding: '4px 8px', borderRadius: 6 }}>
+              <div
+                style={{
+                  position: 'absolute',
+                  top: 12,
+                  right: 12,
+                  background: '#FFD700',
+                  color: '#000',
+                  fontSize: 10,
+                  fontWeight: 900,
+                  padding: '4px 8px',
+                  borderRadius: 6,
+                }}
+              >
                 PRO
               </div>
             )}
             <div style={{ fontWeight: 800, fontSize: 18 }}>{tpl.name}</div>
-            <p style={{ color: '#607D8B', fontSize: 13, margin: '8px 0 16px' }}>{tpl.tagline}</p>
-            <div style={{ height: 140, background: '#F5F5F5', border: '2px dashed #CFD8DC', borderRadius: 12, marginBottom: 16 }} />
+            <p
+              style={{
+                color: '#607D8B',
+                fontSize: 13,
+                margin: '8px 0 16px',
+              }}
+            >
+              {tpl.tagline}
+            </p>
+            <div
+              style={{
+                height: 140,
+                background: '#F5F5F5',
+                border: '2px dashed #CFD8DC',
+                borderRadius: 12,
+                marginBottom: 16,
+              }}
+            />
             <PrimaryButton
-              href={tpl.pro && !canUseHybrid ? '/pricing' : `/resume/create?template=${tpl.key}`}
+              href={
+                tpl.pro && !canUseHybrid
+                  ? '/pricing'
+                  : `/resume/create?template=${tpl.key}`
+              }
               disabled={tpl.pro && !canUseHybrid}
             >
               {tpl.pro && tier !== 'pro' ? 'Upgrade for Hybrid' : 'Use template'}
             </PrimaryButton>
             <button
-              onClick={() => { setPreviewTpl(tpl); setPreviewOpen(true); }}
-              style={{ marginTop: 8, color: ORANGE, fontWeight: 700, background: 'none', border: 0, cursor: 'pointer' }}
+              type="button"
+              onClick={() => {
+                setPreviewTpl(tpl);
+                setPreviewOpen(true);
+              }}
+              style={{
+                marginTop: 8,
+                color: ORANGE,
+                fontWeight: 700,
+                background: 'none',
+                border: 0,
+                cursor: 'pointer',
+              }}
             >
               Preview
             </button>
@@ -184,38 +358,50 @@ export default function ResumeCoverLanding() {
   );
 
   return (
-    <SeekerLayout
-      title="Resume & Cover | ForgeTomorrow"
-      header={HeaderHero}
-      right={<ResumeRightRail savedResumes={savedResumes} usage={usage} tier={tier} />}
-      activeNav="resume-cover"
-    >
-      <div style={{ maxWidth: 1080, margin: '0 auto', padding: '0 16px' }}>
-        {ATSWhyBanner}
-        {TemplatesRow}
-      </div>
-	  
-      {/* Primary resume + cover attach section */}
-      <div style={{ maxWidth: 1080, margin: '32px auto', padding: '0 16px' }}>
-        <div className="grid md:grid-cols-3 items-start gap-4">
-          <div className="md:col-span-2 space-y-4">
-            <ProfileResumeAttach withChrome={withChrome} />
-            <ProfileCoverAttach withChrome={withChrome} />
-          </div>
+    <>
+      <Head>
+        <title>Resume &amp; Cover | ForgeTomorrow</title>
+      </Head>
 
-          <SectionHint
-            title="Make it easy to say yes"
-            bullets={[
-              'Keep one primary resume linked to your profile.',
-              'Save up to 4 alternates for different roles.',
-              'Do the same with cover letters so recruiters instantly see your best fit.',
-              'Manage all your resumes and cover letters in the builder — you can change your primaries anytime from there.',
-            ]}
-          />
+      <SeekerLayout
+        title="Resume & Cover | ForgeTomorrow"
+        header={HeaderHero}
+        right={
+          <ResumeRightRail savedResumes={savedResumes} usage={usage} tier={tier} />
+        }
+        activeNav="resume-cover"
+      >
+        <div style={{ maxWidth: 1080, margin: '0 auto', padding: '0 16px' }}>
+          {ATSWhyBanner}
+          {TemplatesRow}
         </div>
-      </div>
-	  
-      <TemplatePreviewModal open={previewOpen} onClose={() => setPreviewOpen(false)} tpl={previewTpl} />
-    </SeekerLayout>
+
+        {/* Primary resume + cover attach section */}
+        <div style={{ maxWidth: 1080, margin: '32px auto', padding: '0 16px' }}>
+          <div className="grid md:grid-cols-3 items-start gap-4">
+            <div className="md:col-span-2 space-y-4">
+              <ProfileResumeAttach withChrome={withChrome} />
+              <ProfileCoverAttach withChrome={withChrome} />
+            </div>
+
+            <SectionHint
+              title="Make it easy to say yes"
+              bullets={[
+                'Keep one primary resume linked to your profile.',
+                'Save up to 4 alternates for different roles.',
+                'Do the same with cover letters so recruiters instantly see your best fit.',
+                'Manage all your resumes and cover letters in the builder — you can change your primaries anytime from there.',
+              ]}
+            />
+          </div>
+        </div>
+
+        <TemplatePreviewModal
+          open={previewOpen}
+          onClose={() => setPreviewOpen(false)}
+          tpl={previewTpl}
+        />
+      </SeekerLayout>
+    </>
   );
 }

@@ -13,9 +13,15 @@ export default function Subprocessors() {
         />
       </Head>
 
-      <div className="min-h-screen bg-gray-50 py-12 px-4">
+      <main
+        className="min-h-screen bg-gray-50 py-12 px-4"
+        aria-labelledby="subprocessors-heading"
+      >
         <div className="max-w-4xl mx-auto bg-white rounded-2xl shadow-lg p-8 md:p-12">
-          <h1 className="text-3xl md:text-4xl font-bold text-orange-600 mb-4">
+          <h1
+            id="subprocessors-heading"
+            className="text-3xl md:text-4xl font-bold text-orange-600 mb-4"
+          >
             Forge Tomorrow – Sub-processors
           </h1>
           <p className="text-gray-600 mb-6">
@@ -65,6 +71,7 @@ export default function Subprocessors() {
                       </th>
                     </tr>
                   </thead>
+
                   <tbody>
                     <tr className="border-t border-gray-200">
                       <td className="px-4 py-3 align-top">Vercel</td>
@@ -76,6 +83,7 @@ export default function Subprocessors() {
                       </td>
                       <td className="px-4 py-3 align-top">USA</td>
                     </tr>
+
                     <tr className="border-t border-gray-200">
                       <td className="px-4 py-3 align-top">Railway</td>
                       <td className="px-4 py-3 align-top">
@@ -86,6 +94,7 @@ export default function Subprocessors() {
                       </td>
                       <td className="px-4 py-3 align-top">USA</td>
                     </tr>
+
                     <tr className="border-t border-gray-200">
                       <td className="px-4 py-3 align-top">Supabase</td>
                       <td className="px-4 py-3 align-top">
@@ -97,6 +106,7 @@ export default function Subprocessors() {
                       </td>
                       <td className="px-4 py-3 align-top">USA</td>
                     </tr>
+
                     <tr className="border-t border-gray-200">
                       <td className="px-4 py-3 align-top">Stripe</td>
                       <td className="px-4 py-3 align-top">Payment processing</td>
@@ -105,6 +115,7 @@ export default function Subprocessors() {
                       </td>
                       <td className="px-4 py-3 align-top">USA</td>
                     </tr>
+
                     <tr className="border-t border-gray-200">
                       <td className="px-4 py-3 align-top">OpenAI</td>
                       <td className="px-4 py-3 align-top">
@@ -115,6 +126,7 @@ export default function Subprocessors() {
                       </td>
                       <td className="px-4 py-3 align-top">USA</td>
                     </tr>
+
                     <tr className="border-t border-gray-200">
                       <td className="px-4 py-3 align-top">Grok / xAI</td>
                       <td className="px-4 py-3 align-top">
@@ -125,6 +137,7 @@ export default function Subprocessors() {
                       </td>
                       <td className="px-4 py-3 align-top">USA</td>
                     </tr>
+
                     <tr className="border-t border-gray-200">
                       <td className="px-4 py-3 align-top">Groq</td>
                       <td className="px-4 py-3 align-top">
@@ -135,6 +148,7 @@ export default function Subprocessors() {
                       </td>
                       <td className="px-4 py-3 align-top">USA</td>
                     </tr>
+
                     <tr className="border-t border-gray-200">
                       <td className="px-4 py-3 align-top">
                         Zoho Mail / Zoho Workplace
@@ -147,6 +161,7 @@ export default function Subprocessors() {
                       </td>
                       <td className="px-4 py-3 align-top">USA / India</td>
                     </tr>
+
                     <tr className="border-t border-gray-200">
                       <td className="px-4 py-3 align-top">
                         Brevo (formerly Sendinblue)
@@ -159,6 +174,7 @@ export default function Subprocessors() {
                       </td>
                       <td className="px-4 py-3 align-top">EU</td>
                     </tr>
+
                     <tr className="border-t border-gray-200">
                       <td className="px-4 py-3 align-top">EmailJS</td>
                       <td className="px-4 py-3 align-top">
@@ -169,6 +185,7 @@ export default function Subprocessors() {
                       </td>
                       <td className="px-4 py-3 align-top">USA</td>
                     </tr>
+
                     <tr className="border-t border-gray-200">
                       <td className="px-4 py-3 align-top">Cookie-Script.com</td>
                       <td className="px-4 py-3 align-top">
@@ -224,7 +241,7 @@ export default function Subprocessors() {
             </Link>
           </div>
         </div>
-      </div>
+      </main>
     </>
   );
 }

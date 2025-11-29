@@ -1,0 +1,262 @@
+Folder PATH listing
+Volume serial number is 0000000B 60DA:898D
+C:\FORGETOMORROW\PAGES
+³   about.js
+³   accessibility.js
+³   blog.js
+³   bulk-export.js
+³   business-dashboard.js
+³   careers.tsx
+³   changelog.js
+³   check-email.js
+³   check-email.js.bak
+³   coaching-dashboard.js
+³   coming-soon.js
+³   contact.tsx
+³   cookies.js
+³   features.js
+³   feed.js
+³   help.js
+³   index.js
+³   jobs.js
+³   login.js
+³   mentor-dashboard.js
+³   press.tsx
+³   pricing.js
+³   privacy.tsx
+³   profile-analytics.js
+³   profile-analytics.zip
+³   profile.js
+³   resume-cover.js
+³   roadmap.js
+³   security.tsx
+³   seeker-dashboard.js
+³   settings.js
+³   shortcuts.js
+³   signup.jsx
+³   status.js
+³   subprocessors.tsx
+³   support.js
+³   terms.tsx
+³   the-hearth.js
+³   tools.js
+³   tracking-policy.tsx
+³   verify-email.jsx
+³   video.js
+³   _app.js
+³   
+ÃÄÄÄadmin
+³       persona-test.tsx
+³       
+ÃÄÄÄapi
+³   ³   ai-tailor.js
+³   ³   apply.js
+³   ³   ats-score.ts
+³   ³   create-checkout-session.js
+³   ³   feed.js
+³   ³   jd-extract.js
+³   ³   jobs.js
+³   ³   messages.js
+³   ³   rate-limit-test.js
+³   ³   register.js
+³   ³   resume-align.js
+³   ³   
+³   ÃÄÄÄai
+³   ³       generate.js
+³   ³       
+³   ÃÄÄÄanalytics
+³   ³       recruiter.js
+³   ³       track.js
+³   ³       
+³   ÃÄÄÄauth
+³   ³   ³   login.js
+³   ³   ³   logout.js
+³   ³   ³   me.js
+³   ³   ³   preverify.js
+³   ³   ³   session.js
+³   ³   ³   signup.js
+³   ³   ³   verify-email.js
+³   ³   ³   verify.js
+³   ³   ³   [...nextauth].ts
+³   ³   ³   
+³   ³   ÀÄÄÄverify
+³   ³           [token].js
+³   ³           
+³   ÃÄÄÄauth-BACKUP
+³   ³   ³   logout.js
+³   ³   ³   me.js
+³   ³   ³   preverify.js
+³   ³   ³   session.js
+³   ³   ³   signup.js
+³   ³   ³   stage-user-NEW.js
+³   ³   ³   verify-email.js
+³   ³   ³   verify.js
+³   ³   ³   
+³   ³   ÀÄÄÄverify
+³   ³           [token].js
+³   ³           
+³   ÃÄÄÄcron
+³   ³       expire-jobs.js
+³   ³       
+³   ÃÄÄÄmaintenance
+³   ³       cron-debug.ts
+³   ³       purge-deleted-users.ts
+³   ³       
+³   ÃÄÄÄprivacy
+³   ³       delete.js
+³   ³       
+³   ÃÄÄÄprofile
+³   ³       avatar.ts
+³   ³       cover.ts
+³   ³       details.ts
+³   ³       header.ts
+³   ³       resume.ts
+³   ³       slug.js
+³   ³       
+³   ÃÄÄÄrecruiter
+³   ³   ³   ats-builder.js
+³   ³   ³   dashboard.js
+³   ³   ³   jd-optimize.js
+³   ³   ³   job-postings.js
+³   ³   ³   
+³   ³   ÀÄÄÄcandidates
+³   ³           index.js
+³   ³           notes.js
+³   ³           tags.js
+³   ³           
+³   ÃÄÄÄresume
+³   ³       upload.js
+³   ³       
+³   ÃÄÄÄseeker
+³   ³       pinned-jobs.js
+³   ³       
+³   ÃÄÄÄstripe
+³   ³       create-checkout.js
+³   ³       webhook.js
+³   ³       
+³   ÃÄÄÄsupport
+³   ³       ask.ts
+³   ³       
+³   ÀÄÄÄverify
+³           email.js
+³           
+ÃÄÄÄapply
+³       index.js
+³       
+ÃÄÄÄauth
+³       signin.tsx
+³       
+ÃÄÄÄblog
+³       coach-spotlight.js
+³       founder-welcome.js
+³       recruiter-insights.js
+³       resume-builder.js
+³       
+ÃÄÄÄcoaching
+³       contacts.js
+³       
+ÃÄÄÄcover
+³   ³   create.js
+³   ³   pdf.js
+³   ³   
+³   ÀÄÄÄview
+³           [id].js
+³           
+ÃÄÄÄdashboard
+³   ÀÄÄÄcoaching
+³       ³   clients.js
+³       ³   feedback.js
+³       ³   hearth.js
+³       ³   jobs.js
+³       ³   resources.js
+³       ³   sessions.js
+³       ³   
+³       ÃÄÄÄclients
+³       ³       add.js
+³       ³       followups.js
+³       ³       requests.js
+³       ³       [email].js
+³       ³       
+³       ÃÄÄÄnewsletter
+³       ³       index.js
+³       ³       sent.js
+³       ³       
+³       ÀÄÄÄsessions
+³               calendar.js
+³               
+ÃÄÄÄfeedback
+³       [coachID].js
+³       
+ÃÄÄÄhearth
+³   ÀÄÄÄspotlights
+³           index.js
+³           
+ÃÄÄÄjob
+³       [id].js
+³       
+ÃÄÄÄoffer-negotiation
+³       form.js
+³       index.js
+³       results.js
+³       
+ÃÄÄÄrecruiter
+³   ³   calendar.js
+³   ³   candidates.js
+³   ³   contacts.js
+³   ³   dashboard.js
+³   ³   job-postings.js
+³   ³   messaging.js
+³   ³   settings.js
+³   ³   upgrade.js
+³   ³   
+³   ÀÄÄÄanalytics
+³           index.js
+³           
+ÃÄÄÄregister
+³       [plan].jsx
+³       
+ÃÄÄÄresources
+³   ÀÄÄÄmentors
+³       ÀÄÄÄspotlight
+³               new.js
+³               
+ÃÄÄÄresume
+³   ³   create.js
+³   ³   saved.js
+³   ³   
+³   ÀÄÄÄview
+³           [id].js
+³           
+ÃÄÄÄroadmap
+³   ÀÄÄÄonboarding-growth
+³           results.js
+³           select.js
+³           
+ÃÄÄÄseeker
+³   ³   applications.js
+³   ³   calendar.js
+³   ³   contact-center.js
+³   ³   contacts.js
+³   ³   jobs.js
+³   ³   messages.js
+³   ³   pinned-jobs.js
+³   ³   
+³   ÀÄÄÄthe-hearth
+³           events.js
+³           forums.js
+³           index.js
+³           mentorship.js
+³           resources.js
+³           
+ÃÄÄÄsettings
+³       profile-url.js
+³       
+ÃÄÄÄsupport
+³       chat.js
+³       
+ÃÄÄÄu
+³       [slug].js
+³       
+ÀÄÄÄverify-email
+        success.js
+        

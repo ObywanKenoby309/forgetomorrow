@@ -1,7 +1,8 @@
-// pages/register/[plan].jsx ← UPDATED FOR FIRST/LAST NAME + PREVERIFY
+// pages/register/[plan].jsx ← UPDATED FOR FIRST/LAST NAME + PREVERIFY + A11Y
 import { useRouter } from 'next/router';
 import { useState, useEffect } from 'react';
 import Script from 'next/script';
+import Head from 'next/head';
 
 const planInfo = {
   'job-seeker-free': {
@@ -47,7 +48,8 @@ export default function RegisterPlan() {
 
   useEffect(() => {
     // reCAPTCHA callback defined in global scope
-    window.onCaptchaSolved = (token) => setCaptchaToken(token);
+    // @ts-ignore
+    window.onCaptchaSolved = (token: string) => setCaptchaToken(token);
   }, []);
 
   const handleSubmit = async (e) => {
@@ -117,69 +119,125 @@ export default function RegisterPlan() {
 
       const { url } = await checkoutRes.json();
       window.location.href = url;
-    } catch (err) {
+    } catch (err: any) {
       console.error('Registration error:', err);
       setError(err.message || 'Something went wrong');
       setCaptchaToken('');
+      // @ts-ignore
       if (window.grecaptcha) window.grecaptcha.reset();
     } finally {
       setLoading(false);
     }
   };
 
-  if (!plan || !info) return <p>Invalid plan</p>;
+  if (!plan || !info) {
+    // Accessible fallback for invalid/unknown plan
+    return (
+      <>
+        <Head>
+          <title>Plan not found | ForgeTomorrow</title>
+        </Head>
+        <main className="min-h-screen flex items-center justify-center bg-gray-50 px-4">
+          <p className="text-center text-gray-800">
+            The plan you tried to access is not available.{' '}
+            <a href="/pricing" className="text-orange-600 underline">
+              View all available plans
+            </a>
+            .
+          </p>
+        </main>
+      </>
+    );
+  }
 
   return (
     <>
+      <Head>
+        <title>Complete registration — {info.name} | ForgeTomorrow</title>
+        <meta
+          name="description"
+          content={`Complete your ForgeTomorrow registration for the ${info.name} plan (${info.price}).`}
+        />
+      </Head>
+
       <Script
         src="https://www.google.com/recaptcha/api.js"
         strategy="lazyOnload"
       />
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center p-4">
+
+      <main className="min-h-screen bg-gray-50 flex items-center justify-center p-4">
         <div className="bg-white rounded-xl shadow-lg p-8 max-w-md w-full">
           <h1 className="text-3xl font-bold text-orange-600 mb-2">
             Complete Registration
           </h1>
           <p className="text-gray-600 mb-6">
-            You're signing up for <strong>{info.name}</strong> – {info.price}
+            You&apos;re signing up for <strong>{info.name}</strong> – {info.price}
           </p>
 
-          <form onSubmit={handleSubmit} className="space-y-5">
+          <form onSubmit={handleSubmit} className="space-y-5" aria-describedby={error ? 'register-error' : undefined}>
             {/* 🔹 First / Last name row */}
-            <div className="grid grid-cols-2 gap-3">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <div>
+                <label
+                  htmlFor="first-name"
+                  className="block text-sm font-medium text-gray-700 mb-1"
+                >
+                  First name
+                </label>
+                <input
+                  id="first-name"
+                  type="text"
+                  placeholder="First name"
+                  value={firstName}
+                  onChange={(e) => setFirstName(e.target.value)}
+                  required
+                  className="w-full px-4 py-3 border rounded-lg"
+                />
+              </div>
+              <div>
+                <label
+                  htmlFor="last-name"
+                  className="block text-sm font-medium text-gray-700 mb-1"
+                >
+                  Last name
+                </label>
+                <input
+                  id="last-name"
+                  type="text"
+                  placeholder="Last name"
+                  value={lastName}
+                  onChange={(e) => setLastName(e.target.value)}
+                  required
+                  className="w-full px-4 py-3 border rounded-lg"
+                />
+              </div>
+            </div>
+
+            <div>
+              <label
+                htmlFor="email"
+                className="block text-sm font-medium text-gray-700 mb-1"
+              >
+                Email address
+              </label>
               <input
-                type="text"
-                placeholder="First name"
-                value={firstName}
-                onChange={(e) => setFirstName(e.target.value)}
-                required
-                className="w-full px-4 py-3 border rounded-lg"
-              />
-              <input
-                type="text"
-                placeholder="Last name"
-                value={lastName}
-                onChange={(e) => setLastName(e.target.value)}
+                id="email"
+                type="email"
+                placeholder="Email address"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
                 required
                 className="w-full px-4 py-3 border rounded-lg"
               />
             </div>
-
-            <input
-              type="email"
-              placeholder="Email Address"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              required
-              className="w-full px-4 py-3 border rounded-lg"
-            />
 
             <div className="flex justify-center my-6">
               <div
                 className="g-recaptcha"
                 data-sitekey={process.env.NEXT_PUBLIC_RECAPTCHA_SITE_KEY}
                 data-callback="onCaptchaSolved"
-              ></div>
+                aria-label="reCAPTCHA security check"
+              />
             </div>
 
             <label className="flex items-center gap-3 text-sm">
@@ -211,7 +269,14 @@ export default function RegisterPlan() {
             </label>
 
             {error && (
-              <p className="text-red-600 text-center font-medium">{error}</p>
+              <p
+                id="register-error"
+                className="text-red-600 text-center font-medium"
+                role="alert"
+                aria-live="assertive"
+              >
+                {error}
+              </p>
             )}
 
             <button
@@ -234,7 +299,7 @@ export default function RegisterPlan() {
             </p>
           )}
         </div>
-      </div>
+      </main>
     </>
   );
 }
