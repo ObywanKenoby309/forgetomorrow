@@ -3,10 +3,13 @@
 import { useSession } from 'next-auth/react';
 import { useState, useEffect } from 'react';
 
-type AIATSScorerClientProps = {
+export type AIATSScorerClientProps = {
   jdText: string;
   resumeData: any;
+  /** Called when a new score is available (or null on failure/reset) */
   onScore?: (score: number | null) => void;
+  /** Alternate name used by AtsDepthPanel */
+  onScoreChange?: (score: number | null) => void;
   /** Optional: hook this up to open the Writing Coach modal */
   onAskCoach?: () => void;
 };
@@ -15,6 +18,7 @@ export default function AIATSScorerClient({
   jdText,
   resumeData,
   onScore,
+  onScoreChange,
   onAskCoach,
 }: AIATSScorerClientProps) {
   const { data: session } = useSession();
@@ -52,33 +56,44 @@ export default function AIATSScorerClient({
       if (data.upgrade) {
         setUpgrade(true);
         setScore(null);
-        setTips(Array.isArray(data.tips) ? data.tips : []);
+
+        const nextTips: string[] = Array.isArray(data.tips)
+          ? data.tips
+          : typeof data.tips === 'string' && data.tips.trim()
+          ? [data.tips.trim()]
+          : [];
+
+        setTips(nextTips);
         onScore?.(null);
+        onScoreChange?.(null);
       } else {
         const s =
           typeof data.score === 'number'
             ? Math.max(0, Math.min(100, Math.round(data.score)))
             : null;
 
+        const nextTips: string[] = Array.isArray(data.tips)
+          ? data.tips
+          : typeof data.tips === 'string' && data.tips.trim()
+          ? [data.tips.trim()]
+          : [];
+
         setScore(s);
-        setTips(
-          Array.isArray(data.tips)
-            ? data.tips
-            : typeof data.tips === 'string' && data.tips.trim()
-            ? [data.tips.trim()]
-            : []
-        );
+        setTips(nextTips);
 
         if (s !== null) {
           onScore?.(s);
+          onScoreChange?.(s);
         } else {
           onScore?.(null);
+          onScoreChange?.(null);
         }
       }
     } catch (e) {
       console.error('AI ATS scan failed', e);
       setError('AI scan failed — try again.');
       onScore?.(null);
+      onScoreChange?.(null);
       alert('AI scan failed — try again');
     } finally {
       setLoading(false);
