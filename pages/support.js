@@ -9,15 +9,16 @@ export default function Support() {
         <title>ForgeTomorrow – Support</title>
       </Head>
 
-      <main className="max-w-4xl mx-auto p-6 space-y-8 min-h-[80vh] bg-[#ECEFF1] text-[#212121] pt-20">
-        {/* Header card */}
+      <main className="max-w-4xl mx-auto p-6 space-y-10 min-h-[80vh] bg-[#ECEFF1] text-[#212121] pt-20">
+
+        {/* NEW HEADER CARD (consistent across site) */}
         <section
           style={{
             background: 'white',
             borderRadius: 12,
             padding: 16,
-            boxShadow: '0 2px 6px rgba(0,0,0,0.06)',
             border: '1px solid #eee',
+            boxShadow: '0 2px 6px rgba(0,0,0,0.06)',
             textAlign: 'center',
           }}
         >
@@ -44,8 +45,9 @@ export default function Support() {
           </p>
         </section>
 
-        {/* Main content card */}
+        {/* MAIN CONTENT CARD */}
         <section className="bg-white rounded-lg shadow p-8 space-y-6">
+
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
             {[
               {
@@ -89,7 +91,6 @@ export default function Support() {
                 'bg-gray-100 p-6 rounded-lg shadow-sm hover:shadow-md transition-shadow cursor-pointer focus:outline-none focus:ring-2 focus:ring-[#FF7043] focus:ring-offset-2 focus:ring-offset-white';
 
               if (href) {
-                // Link-based card (Chat with Support)
                 return (
                   <Link
                     key={title}
@@ -97,15 +98,12 @@ export default function Support() {
                     className={commonClasses}
                     aria-label={title}
                   >
-                    <h2 className="text-2xl font-semibold text-[#FF7043] mb-3">
-                      {title}
-                    </h2>
+                    <h2 className="text-2xl font-semibold text-[#FF7043] mb-3">{title}</h2>
                     <p>{desc}</p>
                   </Link>
                 );
               }
 
-              // Click-to-alert cards (coming soon sections)
               return (
                 <div
                   key={title}
@@ -113,9 +111,7 @@ export default function Support() {
                   role="button"
                   tabIndex={0}
                   onClick={() => alert(alertMsg)}
-                  onKeyPress={(e) => {
-                    if (e.key === 'Enter') alert(alertMsg);
-                  }}
+                  onKeyPress={(e) => e.key === 'Enter' && alert(alertMsg)}
                   aria-label={title}
                 >
                   <h2 className="text-2xl font-semibold text-[#FF7043] mb-3">{title}</h2>
