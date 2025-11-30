@@ -343,6 +343,12 @@ model User {
 
   candidates           Candidate[]                    // back-reference for Candidate.user
   candidateAutomations RecruiterCandidateAutomation[] // recruiter candidate feed rules
+  
+  // Messaging relations
+  messages                Message[]                 @relation("UserMessages")
+  conversationParticipants ConversationParticipant[] @relation("UserConversationParticipants")
+  blocksInitiated         UserBlock[]               @relation("UserBlocksAsBlocker")
+  blocksReceived          UserBlock[]               @relation("UserBlocksAsBlocked")
 
   // ── Corporate appearance overrides (ForgeTomorrow staff only) ─────────────
   corporateBannerKey    String?  // e.g. "CEO", "CFO", "STAFF_GENERAL"
@@ -435,4 +441,66 @@ model RecruiterCandidateAutomation {
 
   @@index([userId])
   @@map("recruiter_candidate_automation")
+}
+
+// ============================================================================
+//  MESSAGING — CONVERSATIONS, MESSAGES, BLOCKS
+// ============================================================================
+
+model Conversation {
+  id        Int      @id @default(autoincrement())
+  isGroup   Boolean  @default(false)     // false = 1:1, true = group chat
+  title     String?                       // for groups; null for 1:1
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  messages     Message[]
+  participants ConversationParticipant[]
+
+  @@map("conversations")
+}
+
+model ConversationParticipant {
+  id             Int      @id @default(autoincrement())
+  conversationId Int
+  userId         String
+  joinedAt       DateTime @default(now())
+  role           String?  // e.g. "owner", "member"
+
+  conversation Conversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+  user         User        @relation("UserConversationParticipants", fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([conversationId, userId])
+  @@index([userId])
+  @@map("conversation_participants")
+}
+
+model Message {
+  id             Int      @id @default(autoincrement())
+  conversationId Int
+  senderId       String
+  content        String
+  createdAt      DateTime @default(now())
+
+  conversation Conversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+  sender       User        @relation("UserMessages", fields: [senderId], references: [id])
+
+  @@index([conversationId])
+  @@index([senderId])
+  @@map("messages")
+}
+
+model UserBlock {
+  id        Int      @id @default(autoincrement())
+  blockerId String
+  blockedId String
+  createdAt DateTime @default(now())
+
+  blocker User @relation("UserBlocksAsBlocker", fields: [blockerId], references: [id], onDelete: Cascade)
+  blocked User @relation("UserBlocksAsBlocked", fields: [blockedId], references: [id], onDelete: Cascade)
+
+  @@unique([blockerId, blockedId])
+  @@index([blockerId])
+  @@index([blockedId])
+  @@map("user_blocks")
 }

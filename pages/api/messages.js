@@ -1,75 +1,275 @@
 // pages/api/messages.js
-import { createClient } from '@supabase/supabase-js';
+import { PrismaClient } from '@prisma/client';
 
-const supabase = createClient(
-  process.env.SUPABASE_URL,
-  process.env.SUPABASE_SERVICE_ROLE_KEY
-);
+const prisma = new PrismaClient();
+
+/**
+ * TEMP AUTH HELPER (DEV-ONLY)
+ * ---------------------------
+ * For now, we read the current user ID from the `x-user-id` header.
+ * In production, replace this with your real auth/session logic
+ * (e.g., reading from a JWT, next-auth session, or cookie).
+ */
+function getCurrentUserId(req) {
+  const raw = req.headers['x-user-id'] || req.headers['X-User-Id'];
+  if (!raw || typeof raw !== 'string') return null;
+  return raw;
+}
 
 export default async function handler(req, res) {
-  const token = req.headers.authorization?.split(' ')[1];
+  const userId = getCurrentUserId(req);
 
-  if (!token || token !== process.env.GROQ_API_KEY) {
-    return res.status(401).json({ error: 'Unauthorized' });
+  if (!userId) {
+    return res.status(401).json({ error: 'Unauthorized: x-user-id header is required (dev stub)' });
   }
 
-  // Verify user by GROQ_API_KEY (mapped to api_key in DB)
-  const { data: user, error: userError } = await supabase
-    .from('users')
-    .select('id')
-    .eq('api_key', token)
-    .single();
+  try {
+    if (req.method === 'GET') {
+      const { conversationId } = req.query;
 
-  if (userError || !user) {
-    return res.status(401).json({ error: 'Unauthorized' });
-  }
+      // Return messages for a specific conversation
+      if (conversationId) {
+        const convId = Number(conversationId);
+        if (Number.isNaN(convId)) {
+          return res.status(400).json({ error: 'Invalid conversationId' });
+        }
 
-  const userId = user.id;
+        // Ensure the current user is a participant in this conversation
+        const participant = await prisma.conversationParticipant.findFirst({
+          where: {
+            conversationId: convId,
+            userId,
+          },
+        });
 
-  if (req.method === 'GET') {
-    const { data, error } = await supabase
-      .from('messages')
-      .select('id, sender_id, content, created_at')
-      .eq('conversation_id', 'c3')
-      .order('created_at', { ascending: true });
+        if (!participant) {
+          return res.status(403).json({ error: 'Forbidden: not a participant of this conversation' });
+        }
 
-    if (error) return res.status(500).json({ error: 'Database error' });
+        const messages = await prisma.message.findMany({
+          where: { conversationId: convId },
+          orderBy: { createdAt: 'asc' },
+          include: {
+            sender: true,
+          },
+        });
 
-    const messages = data.map(m => ({
-      id: m.id,
-      from: m.sender_id,
-      text: m.content,
-      time: new Date(m.created_at).toLocaleTimeString()
-    }));
+        const mapped = messages.map((m) => ({
+          id: m.id,
+          senderId: m.senderId,
+          senderName: m.sender.name || m.sender.email,
+          text: m.content,
+          timeIso: m.createdAt.toISOString(),
+          timeFormatted: m.createdAt.toLocaleTimeString(undefined, {
+            hour: '2-digit',
+            minute: '2-digit',
+          }),
+        }));
 
-    return res.status(200).json({ messages });
-
-  } else if (req.method === 'POST') {
-    const { conversationId, content } = req.body;
-    const convId = conversationId || 'c3';
-
-    const { data, error } = await supabase
-      .from('messages')
-      .insert({
-        conversation_id: convId,
-        sender_id: userId,
-        content,
-      })
-      .select()
-      .single();
-
-    if (error) return res.status(500).json({ error: 'Database error' });
-
-    return res.status(201).json({
-      message: {
-        id: data.id,
-        from: userId,
-        text: content,
-        time: new Date(data.created_at).toLocaleTimeString()
+        return res.status(200).json({ messages: mapped });
       }
-    });
 
-  } else {
+      // Otherwise, list all conversations for this user
+      const participations = await prisma.conversationParticipant.findMany({
+        where: { userId },
+        include: {
+          conversation: {
+            include: {
+              messages: {
+                orderBy: { createdAt: 'desc' },
+                take: 1,
+              },
+              participants: {
+                include: {
+                  user: true,
+                },
+              },
+            },
+          },
+        },
+        orderBy: { joinedAt: 'desc' },
+      });
+
+      const conversations = participations.map((p) => {
+        const c = p.conversation;
+
+        const others = c.participants.filter((cp) => cp.userId !== userId);
+        const primaryOther = others[0]?.user || null;
+        const lastMessage = c.messages[0] || null;
+
+        const name =
+          c.isGroup && c.title
+            ? c.title
+            : primaryOther?.name ||
+              primaryOther?.email ||
+              (c.isGroup ? 'Group chat' : 'Conversation');
+
+        const subtitle = c.isGroup
+          ? `${c.participants.length} participants`
+          : primaryOther?.headline || primaryOther?.location || '—';
+
+        return {
+          id: c.id,
+          isGroup: c.isGroup,
+          title: c.title,
+          name,
+          avatar: primaryOther?.avatarUrl || null,
+          lastMessage: lastMessage ? lastMessage.content.slice(0, 60) : '',
+          time: lastMessage
+            ? lastMessage.createdAt.toLocaleTimeString(undefined, {
+                hour: '2-digit',
+                minute: '2-digit',
+              })
+            : '',
+          unread: 0, // TODO: wire unread counts later
+          muted: false, // TODO: add mute model/field if needed
+          subtitle,
+        };
+      });
+
+      return res.status(200).json({ conversations });
+    }
+
+    if (req.method === 'POST') {
+      const { conversationId, recipientId, content } = req.body || {};
+
+      if (!content || !content.trim()) {
+        return res.status(400).json({ error: 'Message content is required' });
+      }
+
+      let conversation;
+
+      // If a specific conversation is provided, use it
+      if (conversationId) {
+        const convId = Number(conversationId);
+        if (Number.isNaN(convId)) {
+          return res.status(400).json({ error: 'Invalid conversationId' });
+        }
+
+        conversation = await prisma.conversation.findUnique({
+          where: { id: convId },
+          include: {
+            participants: true,
+          },
+        });
+
+        if (!conversation) {
+          return res.status(404).json({ error: 'Conversation not found' });
+        }
+
+        // Ensure sender is a participant
+        if (!conversation.participants.some((p) => p.userId === userId)) {
+          return res.status(403).json({ error: 'Forbidden: not a participant of this conversation' });
+        }
+      } else if (recipientId) {
+        // 1:1 conversation: find or create
+        const recipient = await prisma.user.findUnique({
+          where: { id: recipientId },
+        });
+
+        if (!recipient) {
+          return res.status(404).json({ error: 'Recipient not found' });
+        }
+
+        // Find existing non-group conversation between these two users
+        const existingParticipations = await prisma.conversationParticipant.findMany({
+          where: {
+            userId: { in: [userId, recipientId] },
+          },
+          include: {
+            conversation: {
+              include: {
+                participants: true,
+              },
+            },
+          },
+        });
+
+        conversation = existingParticipations
+          .map((p) => p.conversation)
+          .find(
+            (conv) =>
+              !conv.isGroup &&
+              conv.participants.some((p) => p.userId === userId) &&
+              conv.participants.some((p) => p.userId === recipientId),
+          );
+
+        // If no existing 1:1 conversation, create a new one
+        if (!conversation) {
+          conversation = await prisma.conversation.create({
+            data: {
+              isGroup: false,
+              participants: {
+                create: [{ userId }, { userId: recipientId }],
+              },
+            },
+            include: {
+              participants: true,
+            },
+          });
+        }
+      } else {
+        return res
+          .status(400)
+          .json({ error: 'conversationId or recipientId is required to send a message' });
+      }
+
+      // BLOCKING CHECK — if either side has blocked the other, do not send
+      const otherParticipants = conversation.participants.filter((p) => p.userId !== userId);
+      const otherUserIds = otherParticipants.map((p) => p.userId);
+
+      if (otherUserIds.length > 0) {
+        const blocks = await prisma.userBlock.findMany({
+          where: {
+            OR: [
+              {
+                blockerId: userId,
+                blockedId: { in: otherUserIds },
+              },
+              {
+                blockerId: { in: otherUserIds },
+                blockedId: userId,
+              },
+            ],
+          },
+        });
+
+        if (blocks.length > 0) {
+          return res.status(403).json({ error: 'Messaging is blocked between these users' });
+        }
+      }
+
+      // Create the message
+      const message = await prisma.message.create({
+        data: {
+          conversationId: conversation.id,
+          senderId: userId,
+          content: content.trim(),
+        },
+        include: {
+          sender: true,
+        },
+      });
+
+      const response = {
+        id: message.id,
+        conversationId: conversation.id,
+        senderId: message.senderId,
+        senderName: message.sender.name || message.sender.email,
+        text: message.content,
+        timeIso: message.createdAt.toISOString(),
+        timeFormatted: message.createdAt.toLocaleTimeString(undefined, {
+          hour: '2-digit',
+          minute: '2-digit',
+        }),
+      };
+
+      return res.status(201).json({ message: response });
+    }
+
     return res.status(405).json({ error: 'Method not allowed' });
+  } catch (err) {
+    console.error('Error in /api/messages:', err);
+    return res.status(500).json({ error: 'Internal server error' });
   }
 }
