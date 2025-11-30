@@ -185,6 +185,8 @@ function SectionViewer({ selectedSection }) {
         <div style={{ marginTop: 14 }}>
           {details.articles.map((article, idx) => {
             const isOpen = expandedIndex === idx;
+            const ArticleComponent = article.Component || null;
+
             return (
               <div
                 key={idx}
@@ -210,7 +212,7 @@ function SectionViewer({ selectedSection }) {
                           block: 'start',
                         });
                       } catch {
-                        // fail-safe: ignore if scrollIntoView is not supported
+                        // ignore if scrollIntoView is not supported
                       }
                     }
                   }}
@@ -246,16 +248,23 @@ function SectionViewer({ selectedSection }) {
                   </span>
                 </button>
 
-                {isOpen &&
-                  article.paragraphs &&
-                  article.paragraphs.map((para, pIdx) => (
-                    <p
-                      key={pIdx}
-                      style={{ color: '#455A64', marginTop: 6 }}
-                    >
-                      {para}
-                    </p>
-                  ))}
+                {isOpen && (
+                  <>
+                    {ArticleComponent ? (
+                      <ArticleComponent />
+                    ) : (
+                      article.paragraphs &&
+                      article.paragraphs.map((para, pIdx) => (
+                        <p
+                          key={pIdx}
+                          style={{ color: '#455A64', marginTop: 6 }}
+                        >
+                          {para}
+                        </p>
+                      ))
+                    )}
+                  </>
+                )}
               </div>
             );
           })}
