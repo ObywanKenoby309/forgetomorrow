@@ -341,7 +341,7 @@ model User {
   profileSnapshots ProfileSnapshot[] @relation("UserProfileSnapshots")
   consents         UserConsent[]
 
-  candidates           Candidate[]                   // back-reference for Candidate.user
+  candidates           Candidate[]                    // back-reference for Candidate.user
   candidateAutomations RecruiterCandidateAutomation[] // recruiter candidate feed rules
 
   // ── Corporate appearance overrides (ForgeTomorrow staff only) ─────────────
@@ -408,22 +408,22 @@ model Candidate {
 // ============================================================================
 
 model RecruiterCandidateAutomation {
-  id      String @id @default(cuid())
-  userId  String
-  user    User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  id     String @id @default(cuid())
+  userId String
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   // Optional label, e.g. "Senior CSM – US remote"
-  name    String?
+  name String?
 
   // JSON object containing only allowed filters:
   // {
-  //   summaryKeywords: string | null,
-  //   jobTitle:        string | null,
-  //   workStatus:      string | null,
+  //   summaryKeywords:   string | null,
+  //   jobTitle:          string | null,
+  //   workStatus:        string | null,
   //   preferredWorkType: string | null,
-  //   relocate:        string | null,
-  //   skills:          string | null,
-  //   languages:       string | null
+  //   relocate:          string | null,
+  //   skills:            string | null,
+  //   languages:         string | null
   // }
   filters Json
 
