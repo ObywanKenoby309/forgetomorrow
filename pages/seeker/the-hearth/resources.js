@@ -66,6 +66,11 @@ const Header = (
 // Left-side card metadata (titles + blurbs only)
 const SECTION_CARDS = [
   {
+    title: 'ForgeTomorrow Platform Tutorials',
+    blurb:
+      'Learn how to use the ForgeTomorrow tools themselves: the resume builder, SmartNetworking, and negotiation support-so the platform works like a co-pilot in your job search.',
+  },
+  {
     title: 'Job Search Foundations',
     blurb:
       'Start here if you’re restarting your search or feel stuck. Learn how to structure your week, tap into the hidden job market, and avoid burnout while moving forward.',
@@ -99,11 +104,6 @@ const SECTION_CARDS = [
     title: 'Special Situations & Tough Scenarios',
     blurb:
       'Handle job gaps, layoffs, and career pivots with confidence. Learn how to talk about your story honestly while staying future-focused and resilient through rejection.',
-  },
-  {
-    title: 'ForgeTomorrow Platform Tutorials',
-    blurb:
-      'Learn how to use the ForgeTomorrow tools themselves: the resume builder, SmartNetworking, and negotiation support—so the platform works like a co-pilot in your job search.',
   },
 ];
 
