@@ -1,5 +1,6 @@
 // pages/recruiter/candidates.js
 import { useState, useEffect } from "react";
+import { useRouter } from "next/router";
 import { PlanProvider, usePlan } from "../../context/PlanContext";
 import RecruiterLayout from "../../components/layouts/RecruiterLayout";
 import CandidateList from "../../components/recruiter/CandidateList";
@@ -68,6 +69,7 @@ function RightToolsCard({ whyMode = "lite", creditsLeft = null }) {
 
 function Body() {
   const { isEnterprise } = usePlan();
+  const router = useRouter();
 
   // Filters
   const [nameQuery, setNameQuery] = useState("");
@@ -113,9 +115,24 @@ function Body() {
     setOpen(true);
   };
 
+  // Message → jump to recruiter messaging page with staged draft
   const onMessage = (c) => {
-    // Messaging system will be wired in a dedicated pass
-    console.log("Message", c);
+    if (!c) return;
+
+    const firstName = (c.name || "").split(" ")[0] || "";
+
+    router.push({
+      pathname: "/recruiter/messaging",
+      query: {
+        candidateId: c.id,
+        toUserId: c.userId || "",
+        name: c.name || "",
+        role: c.role || c.title || "",
+        prefill: firstName
+          ? `Hi ${firstName}, thanks for connecting — I’d love to chat about a role that looks like a strong match for your background.`
+          : `Hi there, thanks for connecting — I’d love to chat about a role that looks like a strong match for your background.`,
+      },
+    });
   };
 
   // Helper: demo candidate used for dev-only fallback
@@ -222,7 +239,7 @@ function Body() {
     languages,
   ]);
 
-  // NEW: load saved automation config on mount
+  // Load saved automation config on mount
   useEffect(() => {
     let isMounted = true;
 
@@ -474,7 +491,7 @@ function Body() {
           jobTitle: jobTitle || null,
           workStatus: workStatus || null,
           preferredWorkType: preferredWorkType || null,
-          relocate: willingToRelocate || null, // <-- backend key is `relocate`
+          relocate: willingToRelocate || null, // backend key is `relocate`
           skills: skills || null,
           languages: languages || null,
         },
@@ -524,7 +541,7 @@ function Body() {
         <button
           type="button"
           onClick={() => setTargetingOpen((open) => !open)}
-          className="flex w-full items-center justify-between rounded-md border border-slate-300 bg-white/90 px-3 py-2 text-xs sm:text-sm font-medium text-slate-700 shadow-sm hover:bg-white focus:outline-none focus:ring-2 focus:ring-[#FF7043]"
+          className="flex w-full items-center justify-between rounded-md border border-slate-300 bg-white/90 px-3 py-2 text-xs sm:text-sm font-medium text-slate-700 shadow-sm hover:bg.white focus:outline-none focus:ring-2 focus:ring-[#FF7043]"
         >
           <span>Candidate targeting &amp; automation (profile-based filters)</span>
           <span className="ml-2 text-[11px] text-slate-500">
@@ -571,10 +588,11 @@ function Body() {
                   className="w-full rounded border px-2 py-1.5 text-xs sm:text-sm focus:outline-none focus:ring-2 focus:ring-[#FF7043]"
                 >
                   <option value="">Any status</option>
-                  <option value="employed">Employed</option>
-                  <option value="unemployed">Actively looking</option>
-                  <option value="student">Student</option>
-                  <option value="contractor">Contractor / Freelance</option>
+                  <option value="Actively Seeking">Actively Seeking</option>
+                  <option value="Open to Opportunities">Open to Opportunities</option>
+                  <option value="Not Seeking">Not Seeking</option>
+                  <option value="Student">Student</option>
+                  <option value="Contractor / Freelance">Contractor / Freelance</option>
                 </select>
               </div>
 
@@ -588,12 +606,10 @@ function Body() {
                   className="w-full rounded border px-2 py-1.5 text-xs sm:text-sm focus:outline-none focus:ring-2 focus:ring-[#FF7043]"
                 >
                   <option value="">Any type</option>
-                  <option value="full-time">Full-time</option>
-                  <option value="part-time">Part-time</option>
-                  <option value="contract">Contract</option>
-                  <option value="internship">Internship</option>
-                  <option value="temporary">Temporary</option>
-                  <option value="remote-only">Remote only</option>
+                  <option value="Remote">Remote</option>
+                  <option value="Hybrid">Hybrid</option>
+                  <option value="Onsite">Onsite</option>
+                  <option value="Flexible">Flexible</option>
                 </select>
               </div>
 
