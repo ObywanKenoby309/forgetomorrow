@@ -1,8 +1,14 @@
 // pages/seeker/messages.js
 import Head from 'next/head';
+import dynamic from 'next/dynamic';
 import SeekerLayout from '@/components/layouts/SeekerLayout';
 import SeekerRightColumn from '@/components/seeker/SeekerRightColumn';
-import SignalMessages from '@/components/signal/SignalMessages';
+
+// Load SignalMessages only on the client to avoid SSR/prerender issues
+const SignalMessages = dynamic(
+  () => import('@/components/signal/SignalMessages'),
+  { ssr: false }
+);
 
 export default function Messages() {
   const HeaderBox = (
@@ -16,9 +22,32 @@ export default function Messages() {
         textAlign: 'center',
       }}
     >
-      <h1 style={{ margin: 0, color: '#ff8a65', fontSize: 24, fontWeight: 800 }}>The Signal</h1>
-      <p style={{ margin: '6px auto 0', color: '#607D8B', maxWidth: 720 }}>
+      <h1
+        style={{
+          margin: 0,
+          color: '#ff8a65',
+          fontSize: 24,
+          fontWeight: 800,
+        }}
+      >
+        The Signal
+      </h1>
+      <p
+        style={{
+          margin: '6px auto 0',
+          color: '#607D8B',
+          maxWidth: 720,
+          fontSize: 14,
+          lineHeight: 1.5,
+        }}
+      >
         Chat with coaches, recruiters, and peers all in one place.
+        <br />
+        <span style={{ fontSize: 13 }}>
+          New conversations are started from user profile and candidate cards.
+          Once you send a message from someone&apos;s profile, the thread will
+          appear here in The Signal so you can pick it up any time.
+        </span>
       </p>
     </section>
   );
@@ -36,8 +65,11 @@ export default function Messages() {
       right={RightRail}
       activeNav="messages"
     >
-      <Head><title>ForgeTomorrow - The Signal</title></Head>
-        <SignalMessages />
+      <Head>
+        <title>ForgeTomorrow - The Signal</title>
+      </Head>
+      {/* Client-only chat inbox */}
+      <SignalMessages />
     </SeekerLayout>
   );
 }
