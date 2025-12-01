@@ -4,11 +4,10 @@ import { PrismaClient } from '@prisma/client';
 const prisma = new PrismaClient();
 
 /**
- * TEMP AUTH HELPER (DEV-ONLY)
- * ---------------------------
- * For now, we read the current user ID from the `x-user-id` header.
- * In production, replace this with your real auth/session logic
- * (e.g., reading from a JWT, next-auth session, or cookie).
+ * DEV-ONLY AUTH STUB
+ * ------------------
+ * For now we read the current user ID from the `x-user-id` header.
+ * In production, replace this with your real NextAuth / session logic.
  */
 function getCurrentUserId(req) {
   const raw = req.headers['x-user-id'] || req.headers['X-User-Id'];
@@ -27,281 +26,11 @@ export default async function handler(req, res) {
 
   try {
     if (req.method === 'GET') {
-      const { conversationId, channel } = req.query;
-
-      // Return messages for a specific conversation
-      if (conversationId) {
-        const convId = Number(conversationId);
-        if (Number.isNaN(convId)) {
-          return res.status(400).json({ error: 'Invalid conversationId' });
-        }
-
-        // Ensure the current user is a participant in this conversation
-        const participant = await prisma.conversationParticipant.findFirst({
-          where: {
-            conversationId: convId,
-            userId,
-          },
-        });
-
-        if (!participant) {
-          return res
-            .status(403)
-            .json({ error: 'Forbidden: not a participant of this conversation' });
-        }
-
-        const messages = await prisma.message.findMany({
-          where: { conversationId: convId },
-          orderBy: { createdAt: 'asc' },
-          include: {
-            sender: true,
-          },
-        });
-
-        const mapped = messages.map((m) => ({
-          id: m.id,
-          senderId: m.senderId,
-          senderName: m.sender.name || m.sender.email,
-          text: m.content,
-          timeIso: m.createdAt.toISOString(),
-          timeFormatted: m.createdAt.toLocaleTimeString(undefined, {
-            hour: '2-digit',
-            minute: '2-digit',
-          }),
-        }));
-
-        return res.status(200).json({ messages: mapped });
-      }
-
-      // Otherwise, list all conversations for this user.
-      // Optional filter: ?channel=seeker|recruiter|coach|shared
-      const channelFilter =
-        typeof channel === 'string' && channel.trim().length > 0
-          ? channel.trim()
-          : null;
-
-      const participations = await prisma.conversationParticipant.findMany({
-        where: {
-          userId,
-          ...(channelFilter
-            ? { conversation: { channel: channelFilter } }
-            : {}),
-        },
-        include: {
-          conversation: {
-            include: {
-              messages: {
-                orderBy: { createdAt: 'desc' },
-                take: 1,
-              },
-              participants: {
-                include: {
-                  user: true,
-                },
-              },
-            },
-          },
-        },
-        orderBy: { joinedAt: 'desc' },
-      });
-
-      const conversations = participations.map((p) => {
-        const c = p.conversation;
-
-        const others = c.participants.filter((cp) => cp.userId !== userId);
-        const primaryOther = others[0]?.user || null;
-        const lastMessage = c.messages[0] || null;
-
-        const name =
-          c.isGroup && c.title
-            ? c.title
-            : primaryOther?.name ||
-              primaryOther?.email ||
-              (c.isGroup ? 'Group chat' : 'Conversation');
-
-        const subtitle = c.isGroup
-          ? `${c.participants.length} participants`
-          : primaryOther?.headline || primaryOther?.location || '—';
-
-        return {
-          id: c.id,
-          isGroup: c.isGroup,
-          title: c.title,
-          channel: c.channel,
-          name,
-          avatar: primaryOther?.avatarUrl || null,
-          lastMessage: lastMessage ? lastMessage.content.slice(0, 60) : '',
-          time: lastMessage
-            ? lastMessage.createdAt.toLocaleTimeString(undefined, {
-                hour: '2-digit',
-                minute: '2-digit',
-              })
-            : '',
-          unread: 0, // TODO: wire unread counts later
-          muted: false, // TODO: add mute model/field if needed
-          subtitle,
-        };
-      });
-
-      return res.status(200).json({ conversations });
+      return handleGet(req, res, userId);
     }
 
     if (req.method === 'POST') {
-      const { conversationId, recipientId, content, channel } = req.body || {};
-
-      if (!content || !content.trim()) {
-        return res.status(400).json({ error: 'Message content is required' });
-      }
-
-      const trimmedContent = content.trim();
-      const convChannel =
-        typeof channel === 'string' && channel.trim().length > 0
-          ? channel.trim()
-          : null;
-
-      let conversation;
-
-      // If a specific conversation is provided, use it
-      if (conversationId) {
-        const convId = Number(conversationId);
-        if (Number.isNaN(convId)) {
-          return res.status(400).json({ error: 'Invalid conversationId' });
-        }
-
-        conversation = await prisma.conversation.findUnique({
-          where: { id: convId },
-          include: {
-            participants: true,
-          },
-        });
-
-        if (!conversation) {
-          return res.status(404).json({ error: 'Conversation not found' });
-        }
-
-        // Ensure sender is a participant
-        if (!conversation.participants.some((p) => p.userId === userId)) {
-          return res
-            .status(403)
-            .json({ error: 'Forbidden: not a participant of this conversation' });
-        }
-      } else if (recipientId) {
-        // 1:1 conversation: find or create, scoped by channel if provided
-        const recipient = await prisma.user.findUnique({
-          where: { id: recipientId },
-        });
-
-        if (!recipient) {
-          return res.status(404).json({ error: 'Recipient not found' });
-        }
-
-        // Find existing non-group conversation between these two users
-        // If a specific channel is provided, we only consider conversations
-        // in that channel. Otherwise, channel is not used as a filter.
-        const existingParticipations =
-          await prisma.conversationParticipant.findMany({
-            where: {
-              userId: { in: [userId, recipientId] },
-              ...(convChannel
-                ? { conversation: { isGroup: false, channel: convChannel } }
-                : { conversation: { isGroup: false } }),
-            },
-            include: {
-              conversation: {
-                include: {
-                  participants: true,
-                },
-              },
-            },
-          });
-
-        conversation = existingParticipations
-          .map((p) => p.conversation)
-          .find(
-            (conv) =>
-              !conv.isGroup &&
-              conv.participants.some((p) => p.userId === userId) &&
-              conv.participants.some((p) => p.userId === recipientId),
-          );
-
-        // If no existing 1:1 conversation, create a new one
-        if (!conversation) {
-          conversation = await prisma.conversation.create({
-            data: {
-              isGroup: false,
-              channel: convChannel,
-              participants: {
-                create: [{ userId }, { userId: recipientId }],
-              },
-            },
-            include: {
-              participants: true,
-            },
-          });
-        }
-      } else {
-        return res.status(400).json({
-          error:
-            'conversationId or recipientId is required to send a message',
-        });
-      }
-
-      // BLOCKING CHECK — if either side has blocked the other, do not send
-      const otherParticipants = conversation.participants.filter(
-        (p) => p.userId !== userId,
-      );
-      const otherUserIds = otherParticipants.map((p) => p.userId);
-
-      if (otherUserIds.length > 0) {
-        const blocks = await prisma.userBlock.findMany({
-          where: {
-            OR: [
-              {
-                blockerId: userId,
-                blockedId: { in: otherUserIds },
-              },
-              {
-                blockerId: { in: otherUserIds },
-                blockedId: userId,
-              },
-            ],
-          },
-        });
-
-        if (blocks.length > 0) {
-          return res
-            .status(403)
-            .json({ error: 'Messaging is blocked between these users' });
-        }
-      }
-
-      // Create the message
-      const message = await prisma.message.create({
-        data: {
-          conversationId: conversation.id,
-          senderId: userId,
-          content: trimmedContent,
-        },
-        include: {
-          sender: true,
-        },
-      });
-
-      const response = {
-        id: message.id,
-        conversationId: conversation.id,
-        senderId: message.senderId,
-        senderName: message.sender.name || message.sender.email,
-        text: message.content,
-        timeIso: message.createdAt.toISOString(),
-        timeFormatted: message.createdAt.toLocaleTimeString(undefined, {
-          hour: '2-digit',
-          minute: '2-digit',
-        }),
-        channel: conversation.channel,
-      };
-
-      return res.status(201).json({ message: response });
+      return handlePost(req, res, userId);
     }
 
     return res.status(405).json({ error: 'Method not allowed' });
@@ -309,4 +38,203 @@ export default async function handler(req, res) {
     console.error('Error in /api/messages:', err);
     return res.status(500).json({ error: 'Internal server error' });
   }
+}
+
+/**
+ * GET /api/messages
+ *
+ * Two modes:
+ * 1) /api/messages?channel=recruiter
+ *    → list conversations for that channel for the current user
+ *
+ * 2) /api/messages?conversationId=123
+ *    → list messages in that conversation (if user is a participant)
+ */
+async function handleGet(req, res, userId) {
+  const { channel, conversationId } = req.query || {};
+
+  // Mode 1: list conversations by channel (used by recruiter messaging inbox)
+  if (typeof channel === 'string' && channel.trim().length > 0) {
+    const channelKey = channel.trim();
+
+    // Find all conversations in this channel where the user participates
+    const participations = await prisma.conversationParticipant.findMany({
+      where: {
+        userId,
+        conversation: {
+          channel: channelKey,
+        },
+      },
+      include: {
+        conversation: {
+          include: {
+            messages: {
+              orderBy: { createdAt: 'asc' },
+              take: 1, // we'll fetch last message separately / keep light
+            },
+            participants: {
+              include: {
+                user: true,
+              },
+            },
+          },
+        },
+      },
+    });
+
+    const conversations = [];
+
+    for (const part of participations) {
+      const conv = part.conversation;
+
+      // Get last message for snippet (separate query to allow older DBs)
+      const lastMessageRecord = await prisma.message.findFirst({
+        where: { conversationId: conv.id },
+        orderBy: { createdAt: 'desc' },
+      });
+
+      const otherParticipant = conv.participants.find((p) => p.userId !== userId);
+      const otherUser = otherParticipant?.user || null;
+
+      conversations.push({
+        id: conv.id,
+        channel: conv.channel,
+        title: conv.title,
+        // Best-effort "name" for the other side (used as candidate label)
+        name:
+          otherUser?.name ||
+          (otherUser?.firstName || otherUser?.lastName
+            ? `${otherUser.firstName || ''} ${otherUser.lastName || ''}`.trim()
+            : otherUser?.email || 'Conversation'),
+        lastMessage: lastMessageRecord?.content || '',
+        lastMessageAt: lastMessageRecord?.createdAt?.toISOString() || null,
+        unread: 0, // TODO: add read receipts later
+      });
+    }
+
+    return res.status(200).json({ conversations });
+  }
+
+  // Mode 2: list messages in a specific conversation
+  if (typeof conversationId === 'string' && conversationId.trim().length > 0) {
+    const convId = Number(conversationId);
+    if (!Number.isInteger(convId)) {
+      return res.status(400).json({ error: 'conversationId must be an integer' });
+    }
+
+    // Ensure the user is a participant
+    const participant = await prisma.conversationParticipant.findFirst({
+      where: {
+        conversationId: convId,
+        userId,
+      },
+    });
+
+    if (!participant) {
+      return res
+        .status(403)
+        .json({ error: 'You are not a participant in this conversation' });
+    }
+
+    const messages = await prisma.message.findMany({
+      where: { conversationId: convId },
+      orderBy: { createdAt: 'asc' },
+    });
+
+    const shaped = messages.map((m) => ({
+      id: m.id,
+      conversationId: m.conversationId,
+      senderId: m.senderId,
+      text: m.content, // map Prisma `content` → API `text`
+      timeIso: m.createdAt.toISOString(),
+    }));
+
+    return res.status(200).json({ messages: shaped });
+  }
+
+  return res.status(400).json({
+    error:
+      'Missing query. Provide either ?channel=recruiter or ?conversationId=123',
+  });
+}
+
+/**
+ * POST /api/messages
+ *
+ * Body:
+ * {
+ *   conversationId: number,
+ *   content: string,        // OR `text`, we normalize both
+ *   channel?: "recruiter"   // optional (for future use)
+ * }
+ */
+async function handlePost(req, res, userId) {
+  const { conversationId, content, text, channel } = req.body || {};
+
+  const convId = Number(conversationId);
+  if (!Number.isInteger(convId)) {
+    return res
+      .status(400)
+      .json({ error: 'conversationId (integer) is required' });
+  }
+
+  const messageText = (typeof content === 'string' && content.trim().length > 0
+    ? content
+    : typeof text === 'string'
+    ? text
+    : ''
+  ).trim();
+
+  if (!messageText) {
+    return res.status(400).json({ error: 'Message content is required' });
+  }
+
+  // Ensure the user is a participant
+  const participant = await prisma.conversationParticipant.findFirst({
+    where: {
+      conversationId: convId,
+      userId,
+    },
+    include: {
+      conversation: true,
+    },
+  });
+
+  if (!participant) {
+    return res
+      .status(403)
+      .json({ error: 'You are not a participant in this conversation' });
+  }
+
+  // OPTIONAL: sanity-check that channel matches conversation.channel
+  if (typeof channel === 'string' && participant.conversation.channel) {
+    const normalizedRequested = channel.trim();
+    if (normalizedRequested !== participant.conversation.channel) {
+      // We don't hard-fail this yet, but we could.
+      console.warn(
+        '[messages POST] Channel mismatch:',
+        normalizedRequested,
+        'vs',
+        participant.conversation.channel
+      );
+    }
+  }
+
+  const msg = await prisma.message.create({
+    data: {
+      conversationId: convId,
+      senderId: userId,
+      content: messageText,
+    },
+  });
+
+  return res.status(200).json({
+    message: {
+      id: msg.id,
+      conversationId: msg.conversationId,
+      senderId: msg.senderId,
+      text: msg.content,
+      timeIso: msg.createdAt.toISOString(),
+    },
+  });
 }
