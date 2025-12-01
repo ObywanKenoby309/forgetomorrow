@@ -6,6 +6,7 @@ import nodemailer from 'nodemailer';
 
 const VERIFICATION_EXPIRY_MINUTES = 60;
 const isProd = process.env.NODE_ENV === 'production';
+const REGISTRATION_LOCK = process.env.REGISTRATION_LOCK === '1';
 
 // BREVO NEWSLETTER AUTO-ADD
 async function addToBrevo(email, firstName, lastName) {
@@ -13,6 +14,7 @@ async function addToBrevo(email, firstName, lastName) {
     console.log('Brevo not configured — skipping');
     return;
   }
+
   try {
     const res = await fetch('https://api.brevo.com/v3/contacts', {
       method: 'POST',
@@ -26,9 +28,12 @@ async function addToBrevo(email, firstName, lastName) {
         listIds: [Number(process.env.BREVO_LIST_ID)],
       }),
     });
-    res.ok
-      ? console.log('BREVO → added:', email)
-      : console.error('Brevo error:', await res.text());
+
+    if (res.ok) {
+      console.log('BREVO → added:', email);
+    } else {
+      console.error('Brevo error:', await res.text());
+    }
   } catch (err) {
     console.error('Brevo exception:', err.message);
   }
@@ -36,7 +41,8 @@ async function addToBrevo(email, firstName, lastName) {
 
 async function verifyRecaptcha(token) {
   const secret = process.env.RECAPTCHA_SECRET_KEY;
-  if (!secret) return true;
+  if (!secret) return true; // fail-open if not configured
+
   const res = await fetch('https://www.google.com/recaptcha/api/siteverify', {
     method: 'POST',
     headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
@@ -51,11 +57,10 @@ export default async function handler(req, res) {
     return res.status(405).json({ error: 'Method not allowed' });
   }
 
-  // 🔒 Global registration gate: controlled via REGISTRATION_LOCK
-  // REGISTRATION_LOCK = "1" → disable preverify + new signups
-  if (process.env.REGISTRATION_LOCK === '1') {
-    return res.status(403).json({
-      error: 'Signup is currently disabled while we prepare for launch.',
+  // Global kill-switch for new registrations
+  if (REGISTRATION_LOCK) {
+    return res.status(503).json({
+      error: 'Registrations are currently closed. Please try again later.',
     });
   }
 
@@ -74,22 +79,26 @@ export default async function handler(req, res) {
   if (!firstName || !lastName || !email || !password) {
     return res.status(400).json({ error: 'Missing required fields' });
   }
+
   if (!recaptchaToken) {
     return res.status(400).json({ error: 'Missing reCAPTCHA token' });
   }
 
-  if (process.env.NODE_ENV === 'production') {
+  if (isProd) {
     const valid = await verifyRecaptcha(recaptchaToken);
-    if (!valid) return res.status(400).json({ error: 'reCAPTCHA failed' });
+    if (!valid) {
+      return res.status(400).json({ error: 'reCAPTCHA failed' });
+    }
   }
 
   const normalizedEmail = email.toLowerCase().trim();
 
-  // Check if user exists
+  // 1) Check if user exists
   try {
     const existing = await prisma.user.findUnique({
       where: { email: normalizedEmail },
     });
+
     if (existing) {
       return res.status(400).json({ error: 'Email already registered' });
     }
@@ -98,7 +107,7 @@ export default async function handler(req, res) {
     return res.status(500).json({ error: 'Database error' });
   }
 
-  // Create verification token
+  // 2) Create verification token row
   const passwordHash = await bcrypt.hash(password, 10);
   const token = uuidv4();
   const expiresAt = new Date(
@@ -118,61 +127,70 @@ export default async function handler(req, res) {
         expiresAt,
       },
     });
-    console.log('DB save successful');
+    console.log('DB save successful for preverify:', normalizedEmail);
   } catch (error) {
     console.error('PRISMA CREATE FAILED:', error);
-    return res.status(500).json({ error: 'Failed to save', details: error.message });
+    return res.status(500).json({
+      error: 'Failed to save verification token',
+      details: error.message,
+    });
   }
 
-  // Newsletter → Brevo
+  // 3) Newsletter → Brevo
   const wantsNewsletter =
     newsletter === 'on' || newsletter === true || newsletter === 'true';
+
   console.log('WANTS NEWSLETTER?', wantsNewsletter);
+
   if (wantsNewsletter) {
     console.log('CALLING BREVO...');
     await addToBrevo(normalizedEmail, firstName, lastName);
   }
 
-  // Build verification URL
+  // 4) Build verification URL
   const baseUrl =
     process.env.NEXT_PUBLIC_OPEN_SITE ||
     process.env.NEXT_PUBLIC_SITE_URL ||
     'http://localhost:3001';
+
   const verifyUrl = `${baseUrl}/api/auth/verify?token=${token}`;
 
-  // Choose transporter based on environment
-  let transporter;
-  if (isProd) {
-    // Production: real SMTP (Zoho, etc.)
-    transporter = nodemailer.createTransport({
-      host: process.env.SMTP_HOST,
-      port: Number(process.env.SMTP_PORT) || 465,
-      secure: true, // 465 is normally secure
-      auth:
-        process.env.SMTP_USER && process.env.SMTP_PASS
-          ? {
-              user: process.env.SMTP_USER,
-              pass: process.env.SMTP_PASS,
-            }
-          : undefined,
-      logger: true,
-      debug: true,
-    });
-  } else {
-    // Development: Maildev / local SMTP
-    transporter = nodemailer.createTransport({
-      host: 'localhost',
-      port: 1025,
-      secure: false,
-      ignoreTLS: true,
-      auth: null,
-      tls: { rejectUnauthorized: false },
-      logger: true,
-      debug: true,
-    });
-  }
+  // 5) Email transport
+  let emailSent = false;
 
   try {
+    let transporter;
+
+    if (isProd) {
+      // Production: real SMTP
+      transporter = nodemailer.createTransport({
+        host: process.env.SMTP_HOST,
+        port: Number(process.env.SMTP_PORT) || 465,
+        secure: true,
+        auth:
+          process.env.SMTP_USER && process.env.SMTP_PASS
+            ? {
+                user: process.env.SMTP_USER,
+                pass: process.env.SMTP_PASS,
+              }
+            : undefined,
+        logger: true,
+        debug: true,
+      });
+    } else {
+      // Development: Maildev / local SMTP
+      transporter = nodemailer.createTransport({
+        host: 'localhost',
+        port: 1025,
+        secure: false,
+        ignoreTLS: true,
+        auth: null,
+        tls: { rejectUnauthorized: false },
+        logger: true,
+        debug: true,
+      });
+    }
+
     await transporter.sendMail({
       from: 'ForgeTomorrow <no-reply@forgetomorrow.com>',
       to: normalizedEmail,
@@ -183,18 +201,21 @@ export default async function handler(req, res) {
              <p>Or copy: ${verifyUrl}</p>`,
       text: `Verify: ${verifyUrl}`,
     });
+
+    emailSent = true;
     console.log('EMAIL SENT TO:', normalizedEmail);
   } catch (err) {
-    console.error('EMAIL SEND FAILED:', err);
-
-    if (isProd) {
-      // In production, we still want this to be a hard failure
-      return res.status(500).json({ error: 'Email failed' });
-    } else {
-      // In development, don't block account creation on SMTP issues
-      console.warn('Dev mode: email failed, but continuing. Verify URL:', verifyUrl);
-    }
+    // 🔸 IMPORTANT CHANGE: log error, but don't block the response
+    emailSent = false;
+    console.error('EMAIL SEND FAILED (non-blocking):', err);
   }
 
-  return res.status(200).json({ success: true });
+  // 6) Respond OK regardless of email status
+  // Frontend currently just checks res.ok → "sent" state
+  return res.status(200).json({
+    success: true,
+    emailSent,
+    // In dev you *could* expose verifyUrl for debugging if you wanted:
+    // verifyUrl: isProd ? undefined : verifyUrl,
+  });
 }
