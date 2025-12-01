@@ -1,60 +1,42 @@
-// hooks/useUserWallpaper.js
-'use client';
+// hooks/useUserWallpaper.js (or wherever it lives)
+import { useEffect, useState } from "react";
 
-import { useEffect, useState } from 'react';
-
-export function useUserWallpaper() {
-  const [wallpaperUrl, setWallpaperUrl] = useState(null);
-  const [loading, setLoading] = useState(true);
+export default function useUserWallpaper() {
+  const [wallpaper, setWallpaper] = useState(null);
 
   useEffect(() => {
     let cancelled = false;
 
     async function load() {
       try {
-        const res = await fetch('/api/profile/header');
+        const res = await fetch("/api/auth/me", { credentials: "include" });
+
         if (!res.ok) {
-          if (!cancelled) setLoading(false);
+          // 401 when logged out = expected, just bail quietly
+          if (res.status === 401) return;
+          console.warn("[useUserWallpaper] non-ok status", res.status);
           return;
         }
 
         const data = await res.json();
-        const user = data.user || data;
-
-        if (!cancelled) {
-          const url = user.wallpaperUrl || null;
-          setWallpaperUrl(url);
-          setLoading(false);
+        if (!cancelled && data?.user) {
+          setWallpaper({
+            wallpaperUrl: data.user.wallpaperUrl,
+            bannerMode: data.user.bannerMode,
+            bannerHeight: data.user.bannerHeight,
+            bannerFocalY: data.user.bannerFocalY,
+          });
         }
       } catch (err) {
-        if (!cancelled) {
-          console.error('[useUserWallpaper] load error', err);
-          setLoading(false);
-        }
+        console.warn("[useUserWallpaper] load error (ignored)", err);
       }
     }
 
     load();
-
-    // 🔔 Listen for live updates from ProfileHeader
-    function handleUpdated(e) {
-      if (cancelled) return;
-      const detail = e.detail || {};
-      const url = detail.wallpaperUrl || null;
-      setWallpaperUrl(url);
-    }
-
-    if (typeof window !== 'undefined') {
-      window.addEventListener('profile:wallpaper-updated', handleUpdated);
-    }
-
     return () => {
       cancelled = true;
-      if (typeof window !== 'undefined') {
-        window.removeEventListener('profile:wallpaper-updated', handleUpdated);
-      }
     };
   }, []);
 
-  return { wallpaperUrl, loading };
+  return wallpaper;
 }
