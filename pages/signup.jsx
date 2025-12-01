@@ -43,19 +43,20 @@ export default function SignupFree() {
     setLoading(true);
 
     try {
-      const res = await fetch("/api/auth/preverify", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          firstName,
-          lastName,
-          email,
-          password,
-          plan: "FREE",
-          recaptchaToken: captchaValue,
-          newsletter, // ← send flag to API again
-        }),
-      });
+      const res = await fetch("/api/preverify", {   // 👈 changed from /api/auth/preverify
+  method: "POST",
+  headers: { "Content-Type": "application/json" },
+  body: JSON.stringify({
+    firstName,
+    lastName,
+    email,
+    password,
+    plan: "FREE",
+    recaptchaToken: captchaValue,
+    // if you want everyone added to newsletter automatically:
+    newsletter: true,
+  }),
+});
 
       if (res.ok) {
         setPhase("sent");
