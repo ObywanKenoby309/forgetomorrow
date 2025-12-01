@@ -1,93 +1,60 @@
 // pages/api/auth/me.js
-//
-// Returns the *currently authenticated* user,
-// based on the same logic we use in /api/profile/slug:
-// 1) NextAuth session (JWT)
-// 2) Fallback to custom JWT cookie ("auth")
-
-import { prisma } from '@/lib/prisma';
-import { getServerSession } from 'next-auth';
-import { authOptions } from '@/lib/auth';
-import { verify } from 'jsonwebtoken';
-
-const JWT_SECRET =
-  process.env.NEXTAUTH_SECRET || 'dev-secret-change-in-production';
-
-async function getUserIdFromRequest(req, res) {
-  // 1) Try NextAuth session (same as /api/profile/slug)
-  try {
-    const session = await getServerSession(req, res, authOptions);
-    if (session && session.user && session.user.id) {
-      return session.user.id;
-    }
-  } catch (err) {
-    console.error('[/api/auth/me] getServerSession failed:', err);
-  }
-
-  // 2) Fallback: custom JWT cookie from older auth flow
-  const authCookie = req.cookies?.auth;
-  if (authCookie) {
-    try {
-      const payload = verify(authCookie, JWT_SECRET);
-      if (payload && payload.userId) {
-        return payload.userId;
-      }
-    } catch (err) {
-      console.error('[/api/auth/me] JWT verify failed:', err);
-    }
-  }
-
-  return null;
-}
+import { getServerSession } from "next-auth/next";
+import { authOptions } from "./[...nextauth]";
+import prisma from "@/lib/prisma";
 
 export default async function handler(req, res) {
-  try {
-    const userId = await getUserIdFromRequest(req, res);
+  // Only allow GET for now
+  if (req.method !== "GET") {
+    return res.status(405).json({ ok: false, error: "Method not allowed" });
+  }
 
-    if (!userId) {
-      return res.status(401).json({ ok: false, error: 'Not authenticated' });
+  try {
+    const session = await getServerSession(req, res, authOptions);
+
+    // Not logged in → clean 401 JSON (no HTML error page)
+    if (!session || !session.user || !session.user.email) {
+      return res.status(401).json({
+        ok: false,
+        user: null,
+      });
     }
 
     const user = await prisma.user.findUnique({
-      where: { id: userId },
+      where: { email: session.user.email },
       select: {
         id: true,
         email: true,
-        name: true,
         firstName: true,
         lastName: true,
+        name: true,
+        image: true,
+        avatarUrl: true,
+        wallpaperUrl: true,
+        bannerMode: true,
+        bannerHeight: true,
+        bannerFocalY: true,
         role: true,
         plan: true,
-        slug: true,
-
-        // public profile fields
-        pronouns: true,
-        headline: true,
-        location: true,
-        status: true,
-        avatarUrl: true,
-        coverUrl: true,
       },
     });
 
     if (!user) {
-      return res.status(404).json({ ok: false, error: 'User not found' });
+      return res.status(404).json({
+        ok: false,
+        user: null,
+      });
     }
 
-    const fullName =
-      user.name ||
-      [user.firstName, user.lastName].filter(Boolean).join(' ') ||
-      'Unnamed';
-
-    return res.json({
+    return res.status(200).json({
       ok: true,
-      user: {
-        ...user,
-        name: fullName,
-      },
+      user,
     });
   } catch (err) {
-    console.error('[/api/auth/me] Error:', err);
-    return res.status(500).json({ ok: false, error: 'Internal server error' });
+    console.error("[api/auth/me] error", err);
+    return res.status(500).json({
+      ok: false,
+      error: "Internal server error",
+    });
   }
 }
