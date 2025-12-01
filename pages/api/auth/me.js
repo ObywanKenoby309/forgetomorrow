@@ -1,6 +1,6 @@
 // pages/api/auth/me.js
 
-import prisma from "@/lib/prisma";
+import { prisma } from "@/lib/prisma"; // ⬅️ changed from default import
 
 export default async function handler(req, res) {
   if (req.method !== "GET") {
@@ -8,7 +8,6 @@ export default async function handler(req, res) {
   }
 
   try {
-    // Build a base URL that works on Vercel + local
     const proto =
       req.headers["x-forwarded-proto"] ||
       (process.env.NODE_ENV === "development" ? "http" : "https");
@@ -16,14 +15,12 @@ export default async function handler(req, res) {
     const baseUrl =
       process.env.NEXTAUTH_URL || `${proto}://${host}`;
 
-    // Ask NextAuth for the current session, forwarding cookies
     const sessionRes = await fetch(`${baseUrl}/api/auth/session`, {
       headers: {
         cookie: req.headers.cookie || "",
       },
     });
 
-    // Not logged in → clean 401 JSON
     if (sessionRes.status === 401) {
       return res.status(401).json({
         ok: false,
@@ -51,7 +48,6 @@ export default async function handler(req, res) {
       });
     }
 
-    // Look up the full user record
     const user = await prisma.user.findUnique({
       where: { email: session.user.email },
       select: {
