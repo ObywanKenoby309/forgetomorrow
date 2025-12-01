@@ -1,7 +1,8 @@
-// hooks/useUserWallpaper.js (or wherever it lives)
+// hooks/useUserWallpaper.js
 import { useEffect, useState } from "react";
 
-export default function useUserWallpaper() {
+// Define the hook once
+function useUserWallpaper() {
   const [wallpaper, setWallpaper] = useState(null);
 
   useEffect(() => {
@@ -12,8 +13,11 @@ export default function useUserWallpaper() {
         const res = await fetch("/api/auth/me", { credentials: "include" });
 
         if (!res.ok) {
-          // 401 when logged out = expected, just bail quietly
-          if (res.status === 401) return;
+          // 401 when logged out = expected → clear wallpaper + bail quietly
+          if (res.status === 401) {
+            if (!cancelled) setWallpaper(null);
+            return;
+          }
           console.warn("[useUserWallpaper] non-ok status", res.status);
           return;
         }
@@ -40,3 +44,7 @@ export default function useUserWallpaper() {
 
   return wallpaper;
 }
+
+// Export BOTH named + default so all imports work
+export { useUserWallpaper };
+export default useUserWallpaper;
