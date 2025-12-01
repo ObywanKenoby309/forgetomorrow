@@ -27,9 +27,9 @@ const PUBLIC_PATHS = new Set([
   '/tracking-policy',
   '/login',
   '/auth/signin',
+  '/signup',           // ← allow signup page itself
   '/contact',
   '/feedback',
-  '/signup',           // allow signup page itself under lock
 ]);
 
 const STATIC_ALLOW = [
@@ -77,24 +77,32 @@ export async function middleware(req) {
 
   const hasSession = Boolean(ftSession || nextAuthSession);
 
+  // ─────────────────────────────────────
   // 0) Always allow static assets
+  // ─────────────────────────────────────
   if (STATIC_ALLOW.some((re) => re.test(pathname))) {
     const res = NextResponse.next();
     res.headers.set('x-site-lock', SITE_LOCK ? 'on' : 'off');
     return res;
   }
 
-  // 1) Always allow auth APIs + preverify (so they return JSON, not HTML)
+  // ─────────────────────────────────────
+  // 1) Always allow auth & signup-related APIs
+  //    - /api/auth/*  (NextAuth)
+  //    - /api/preverify (signup pre-verification)
+  // ─────────────────────────────────────
   if (
     normalized.startsWith('/api/auth/') ||
     normalized === '/api/preverify'
   ) {
     const res = NextResponse.next();
-    res.headers.set('x-site-lock', 'auth-or-preverify-api');
+    res.headers.set('x-site-lock', 'auth-api');
     return res;
   }
 
+  // ─────────────────────────────────────
   // 2) Explicitly allowed hosts (preview domains, etc.)
+  // ─────────────────────────────────────
   if (ALLOWED_HOSTS.length > 0) {
     const allowed = ALLOWED_HOSTS.some(
       (h) => hostname === h || hostname.endsWith(h)
@@ -106,7 +114,9 @@ export async function middleware(req) {
     }
   }
 
+  // ─────────────────────────────────────
   // 3) JOBS: require session
+  // ─────────────────────────────────────
   if (normalized === '/jobs' || normalized.startsWith('/jobs/')) {
     if (!hasSession) {
       const loginUrl = new URL('/login', req.url);
@@ -117,7 +127,9 @@ export async function middleware(req) {
     return res;
   }
 
+  // ─────────────────────────────────────
   // 3b) SUPPORT: require session
+  // ─────────────────────────────────────
   if (normalized === '/support' || normalized.startsWith('/support/')) {
     if (!hasSession) {
       const loginUrl = new URL('/login', req.url);
@@ -128,7 +140,9 @@ export async function middleware(req) {
     return res;
   }
 
+  // ─────────────────────────────────────
   // 4) API RATE LIMITING for sensitive APIs
+  // ─────────────────────────────────────
   if (isProtectedApiPath(pathname)) {
     console.log('🛡️ Rate limiter branch hit for', pathname);
 
@@ -156,21 +170,27 @@ export async function middleware(req) {
     }
   }
 
+  // ─────────────────────────────────────
   // 5) Any valid session bypasses SITE_LOCK
+  // ─────────────────────────────────────
   if (hasSession) {
     const res = NextResponse.next();
     res.headers.set('x-site-lock', SITE_LOCK ? 'session-allow' : 'off');
     return res;
   }
 
+  // ─────────────────────────────────────
   // 6) If not locked → fully public (except jobs/support above)
+  // ─────────────────────────────────────
   if (!SITE_LOCK) {
     const res = NextResponse.next();
     res.headers.set('x-site-lock', 'off');
     return res;
   }
 
+  // ─────────────────────────────────────
   // 7) LOCKED: only PUBLIC_PATHS; rest → /login
+  // ─────────────────────────────────────
   if (PUBLIC_PATHS.has(normalized)) {
     const res = NextResponse.next();
     res.headers.set('x-site-lock', 'on-public');
