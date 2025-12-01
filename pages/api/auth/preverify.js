@@ -26,7 +26,9 @@ async function addToBrevo(email, firstName, lastName) {
         listIds: [Number(process.env.BREVO_LIST_ID)],
       }),
     });
-    res.ok ? console.log('BREVO → added:', email) : console.error('Brevo error:', await res.text());
+    res.ok
+      ? console.log('BREVO → added:', email)
+      : console.error('Brevo error:', await res.text());
   } catch (err) {
     console.error('Brevo exception:', err.message);
   }
@@ -45,7 +47,17 @@ async function verifyRecaptcha(token) {
 }
 
 export default async function handler(req, res) {
-  if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed' });
+  if (req.method !== 'POST') {
+    return res.status(405).json({ error: 'Method not allowed' });
+  }
+
+  // 🔒 Global registration gate: controlled via REGISTRATION_LOCK
+  // REGISTRATION_LOCK = "1" → disable preverify + new signups
+  if (process.env.REGISTRATION_LOCK === '1') {
+    return res.status(403).json({
+      error: 'Signup is currently disabled while we prepare for launch.',
+    });
+  }
 
   const {
     firstName,
@@ -75,8 +87,12 @@ export default async function handler(req, res) {
 
   // Check if user exists
   try {
-    const existing = await prisma.user.findUnique({ where: { email: normalizedEmail } });
-    if (existing) return res.status(400).json({ error: 'Email already registered' });
+    const existing = await prisma.user.findUnique({
+      where: { email: normalizedEmail },
+    });
+    if (existing) {
+      return res.status(400).json({ error: 'Email already registered' });
+    }
   } catch (err) {
     console.error('DB check failed:', err);
     return res.status(500).json({ error: 'Database error' });
@@ -85,7 +101,9 @@ export default async function handler(req, res) {
   // Create verification token
   const passwordHash = await bcrypt.hash(password, 10);
   const token = uuidv4();
-  const expiresAt = new Date(Date.now() + VERIFICATION_EXPIRY_MINUTES * 60 * 1000);
+  const expiresAt = new Date(
+    Date.now() + VERIFICATION_EXPIRY_MINUTES * 60 * 1000
+  );
 
   try {
     await prisma.verificationToken.create({
@@ -130,12 +148,13 @@ export default async function handler(req, res) {
       host: process.env.SMTP_HOST,
       port: Number(process.env.SMTP_PORT) || 465,
       secure: true, // 465 is normally secure
-      auth: process.env.SMTP_USER && process.env.SMTP_PASS
-        ? {
-            user: process.env.SMTP_USER,
-            pass: process.env.SMTP_PASS,
-          }
-        : undefined,
+      auth:
+        process.env.SMTP_USER && process.env.SMTP_PASS
+          ? {
+              user: process.env.SMTP_USER,
+              pass: process.env.SMTP_PASS,
+            }
+          : undefined,
       logger: true,
       debug: true,
     });

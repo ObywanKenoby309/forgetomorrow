@@ -5,6 +5,14 @@ import bcrypt from 'bcryptjs';
 const prisma = new PrismaClient();
 
 export default async function handler(req, res) {
+  // 🔒 Global registration gate: controlled via REGISTRATION_LOCK env var
+  // REGISTRATION_LOCK = "1" → disable new account creation
+  if (process.env.REGISTRATION_LOCK === '1') {
+    return res.status(403).json({
+      error: 'Registration is currently disabled while we prepare for launch.',
+    });
+  }
+
   // Only allow POST
   if (req.method !== 'POST') {
     return res.status(405).json({ error: 'Method not allowed' });
@@ -40,8 +48,8 @@ export default async function handler(req, res) {
 
     const normalized = (inputRole?.toLowerCase().trim() || 'seeker');
     const prismaRole = roleMap[normalized] || 'SEEKER';
-    const tier = tierMap[normalized] ||
-      (prismaRole === 'SEEKER' ? 'free' : null);
+    const tier =
+      tierMap[normalized] || (prismaRole === 'SEEKER' ? 'free' : null);
 
     // ---- Check existing user -------------------------------------------------
     const existing = await prisma.user.findUnique({ where: { email } });
