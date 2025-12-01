@@ -27,7 +27,7 @@ const PUBLIC_PATHS = new Set([
   '/features',
   '/pricing',
   '/help',             // 🔹 Help Center: public, no AI agents
-  // '/support',       // 🔒 removed: Support is now internal-only
+  // '/support',       // 🔒 Support is internal-only
   '/privacy',
   '/subprocessors',
   '/terms',
@@ -76,6 +76,11 @@ function isProtectedApiPath(pathname) {
   return PROTECTED_API_PREFIXES.some((prefix) => pathname.startsWith(prefix))
 }
 
+// NEW: auth API paths should always be allowed (NextAuth needs them before login)
+function isAuthApiPath(pathname) {
+  return pathname.startsWith('/api/auth')
+}
+
 export async function middleware(req) {
   const url = new URL(req.url)
   const { pathname } = url
@@ -101,6 +106,17 @@ export async function middleware(req) {
   if (STATIC_ALLOW.some((re) => re.test(pathname))) {
     const res = NextResponse.next()
     res.headers.set('x-site-lock', SITE_LOCK ? 'on' : 'off')
+    return res
+  }
+
+  // ──────────────────────────────────────────────────────────
+  // 0.5) Always allow auth API endpoints (NextAuth JSON routes)
+  //     e.g. /api/auth/session, /api/auth/me, /api/auth/callback/*
+  //     These MUST work while logged out, otherwise auth breaks.
+// ──────────────────────────────────────────────────────────
+  if (isAuthApiPath(pathname)) {
+    const res = NextResponse.next()
+    res.headers.set('x-site-lock', 'auth-api-bypass')
     return res
   }
 
@@ -146,7 +162,7 @@ export async function middleware(req) {
 
   // ──────────────────────────────────────────────────────────
   // 3b) SUPPORT: always require a session for /support* (internal-only)
-//     This covers /support, /support/chat, and any future nested routes.
+  //     This covers /support, /support/chat, etc.
 // ──────────────────────────────────────────────────────────
   if (normalized === '/support' || normalized.startsWith('/support/')) {
     if (!hasSession) {
@@ -199,7 +215,7 @@ export async function middleware(req) {
   }
 
   // ──────────────────────────────────────────────────────────
-  // 6) If NOT locked → fully public (except /jobs above and /support*)
+  // 6) If NOT locked → fully public (except /jobs and /support above)
 // ──────────────────────────────────────────────────────────
   if (!SITE_LOCK) {
     const res = NextResponse.next()
