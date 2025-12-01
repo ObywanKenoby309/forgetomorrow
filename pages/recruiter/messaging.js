@@ -1,5 +1,6 @@
 // pages/recruiter/messaging.js
 import { useState, useEffect } from "react";
+import { useRouter } from "next/router";
 import { PlanProvider, usePlan } from "@/context/PlanContext";
 import RecruiterLayout from "@/components/layouts/RecruiterLayout";
 import MessageThread from "@/components/recruiter/MessageThread";
@@ -54,7 +55,9 @@ function HeaderBar({ onOpenBulk }) {
         ) : (
           // Overlay tooltip in locked mode so layout/height doesn't change
           <span className="relative inline-block align-middle group">
-            <SecondaryButton onClick={(e) => e.preventDefault()}>Bulk Message</SecondaryButton>
+            <SecondaryButton onClick={(e) => e.preventDefault()}>
+              Bulk Message
+            </SecondaryButton>
             <span
               className="
                 absolute -top-10 right-0 hidden group-hover:block
@@ -85,7 +88,15 @@ function RightToolsCard() {
   );
 }
 
-function Body({ threads, onSend, candidatesFlat, bulkOpen, setBulkOpen }) {
+function Body({
+  threads,
+  onSend,
+  candidatesFlat,
+  bulkOpen,
+  setBulkOpen,
+  initialThreadId,
+  prefillText,
+}) {
   const { isEnterprise } = usePlan();
 
   const onBulkSend = (ids, text) => {
@@ -93,9 +104,27 @@ function Body({ threads, onSend, candidatesFlat, bulkOpen, setBulkOpen }) {
     setBulkOpen(false);
   };
 
+  // When we arrive with a prefill (from candidates page), drop it
+  // into the message input once the thread is ready and input exists.
+  useEffect(() => {
+    if (!initialThreadId) return;
+    if (!prefillText || !prefillText.trim()) return;
+
+    const el = document.querySelector('input[placeholder="Type a message…"]');
+    if (el && !el.value) {
+      el.value = prefillText;
+      el.dispatchEvent(new Event("input", { bubbles: true }));
+      el.focus();
+    }
+  }, [initialThreadId, prefillText]);
+
   return (
     <main className="space-y-6">
-      <MessageThread threads={threads} initialThreadId={threads[0]?.id} onSend={onSend} />
+      <MessageThread
+        threads={threads}
+        initialThreadId={initialThreadId || threads[0]?.id}
+        onSend={onSend}
+      />
 
       {/* Saved replies manager (available to all plans) */}
       <SavedReplies
@@ -124,8 +153,19 @@ function Body({ threads, onSend, candidatesFlat, bulkOpen, setBulkOpen }) {
 }
 
 export default function MessagingPage() {
+  const router = useRouter();
   const [threads, setThreads] = useState([]);
   const [bulkOpen, setBulkOpen] = useState(false);
+  const [initialThreadId, setInitialThreadId] = useState(null);
+
+  // From recruiter/candidates → onMessage()
+  const queryConversationId =
+    (router.query.c && String(router.query.c)) ||
+    (router.query.conversationId && String(router.query.conversationId)) ||
+    null;
+
+  const prefillText =
+    typeof router.query.prefill === "string" ? router.query.prefill : "";
 
   // For now, keep this static mock list for the bulk modal UI.
   const candidatesFlat = [
@@ -142,7 +182,9 @@ export default function MessagingPage() {
       try {
         // 1) Fetch conversations for the recruiter channel
         const data = await fetchJson("/api/messages?channel=recruiter");
-        const conversations = Array.isArray(data.conversations) ? data.conversations : [];
+        const conversations = Array.isArray(data.conversations)
+          ? data.conversations
+          : [];
 
         // 2) For each conversation, fetch its messages
         const threadsWithMessages = await Promise.all(
@@ -151,7 +193,9 @@ export default function MessagingPage() {
               const msgData = await fetchJson(
                 `/api/messages?conversationId=${encodeURIComponent(conv.id)}`
               );
-              const msgs = Array.isArray(msgData.messages) ? msgData.messages : [];
+              const msgs = Array.isArray(msgData.messages)
+                ? msgData.messages
+                : [];
 
               const mappedMessages = msgs.map((m) => ({
                 id: m.id,
@@ -161,31 +205,49 @@ export default function MessagingPage() {
                 status: "read",
               }));
 
-              const lastMsg =
-                mappedMessages[mappedMessages.length - 1] || null;
+              const lastMsg = mappedMessages[mappedMessages.length - 1] || null;
 
               return {
                 id: conv.id,
                 candidate: conv.name || "Conversation",
                 snippet: conv.lastMessage || lastMsg?.text || "",
-                unread: typeof conv.unread === "number" ? conv.unread : 0,
+                unread:
+                  typeof conv.unread === "number" ? conv.unread : 0,
                 messages: mappedMessages,
               };
             } catch (err) {
-              console.error("Failed to load messages for conversation", conv.id, err);
+              console.error(
+                "Failed to load messages for conversation",
+                conv.id,
+                err
+              );
               return {
                 id: conv.id,
                 candidate: conv.name || "Conversation",
                 snippet: conv.lastMessage || "",
-                unread: typeof conv.unread === "number" ? conv.unread : 0,
+                unread:
+                  typeof conv.unread === "number" ? conv.unread : 0,
                 messages: [],
               };
             }
           })
         );
 
-        if (!cancelled) {
-          setThreads(threadsWithMessages);
+        if (cancelled) return;
+
+        setThreads(threadsWithMessages);
+
+        // Decide which thread to focus:
+        // - If we came from a candidate card with ?c=..., use that
+        // - Otherwise, fall back to the first thread
+        const fallbackId = threadsWithMessages[0]?.id || null;
+        if (queryConversationId) {
+          const match = threadsWithMessages.find(
+            (t) => String(t.id) === String(queryConversationId)
+          );
+          setInitialThreadId(match ? match.id : fallbackId);
+        } else {
+          setInitialThreadId(fallbackId);
         }
       } catch (err) {
         console.error("Failed to load recruiter threads:", err);
@@ -197,7 +259,8 @@ export default function MessagingPage() {
     return () => {
       cancelled = true;
     };
-  }, []);
+    // Re-run if the conversation id in the URL changes
+  }, [queryConversationId]);
 
   const onSend = async (threadId, text) => {
     if (!text || !String(text).trim()) return;
@@ -253,6 +316,8 @@ export default function MessagingPage() {
           candidatesFlat={candidatesFlat}
           bulkOpen={bulkOpen}
           setBulkOpen={setBulkOpen}
+          initialThreadId={initialThreadId}
+          prefillText={prefillText}
         />
       </RecruiterLayout>
     </PlanProvider>
