@@ -1,11 +1,39 @@
 // pages/recruiter/messaging.js
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { PlanProvider, usePlan } from "@/context/PlanContext";
 import RecruiterLayout from "@/components/layouts/RecruiterLayout";
 import MessageThread from "@/components/recruiter/MessageThread";
 import SavedReplies from "@/components/recruiter/SavedReplies";
 import BulkMessageModal from "@/components/recruiter/BulkMessageModal";
 import { SecondaryButton } from "@/components/ui/Buttons";
+
+/**
+ * DEV: Current recruiter user ID (your own account).
+ * This must match the `id` field of your User row in Prisma.
+ */
+const CURRENT_USER_ID = "cmic534oy0000bv2gsjrl83al";
+
+/**
+ * Small fetch helper that always sends x-user-id so the API
+ * can resolve the current user (dev stub).
+ */
+async function fetchJson(url, options = {}) {
+  const res = await fetch(url, {
+    ...options,
+    headers: {
+      "Content-Type": "application/json",
+      "x-user-id": CURRENT_USER_ID,
+      ...(options.headers || {}),
+    },
+  });
+
+  if (!res.ok) {
+    const text = await res.text();
+    throw new Error(`Request failed (${res.status}): ${text}`);
+  }
+
+  return res.json();
+}
 
 /** Header (centered title + action on right) */
 function HeaderBar({ onOpenBulk }) {
@@ -67,7 +95,7 @@ function Body({ threads, onSend, candidatesFlat, bulkOpen, setBulkOpen }) {
 
   return (
     <main className="space-y-6">
-      <MessageThread threads={threads} initialThreadId={101} onSend={onSend} />
+      <MessageThread threads={threads} initialThreadId={threads[0]?.id} onSend={onSend} />
 
       {/* Saved replies manager (available to all plans) */}
       <SavedReplies
@@ -96,66 +124,121 @@ function Body({ threads, onSend, candidatesFlat, bulkOpen, setBulkOpen }) {
 }
 
 export default function MessagingPage() {
-  const [threads, setThreads] = useState([
-    {
-      id: 101,
-      candidate: "Jane Doe",
-      snippet: "Thanks for the update…",
-      unread: 0,
-      messages: [
-        { id: "m1", from: "candidate", text: "Hi! Thanks for reaching out.", ts: new Date().toISOString() },
-        { id: "m2", from: "recruiter", text: "Great, let’s schedule a call.", ts: new Date().toISOString(), status: "read" },
-      ],
-    },
-    {
-      id: 102,
-      candidate: "Omar Reed",
-      snippet: "Available Thursday at 2pm…",
-      unread: 1,
-      messages: [{ id: "m3", from: "candidate", text: "Thursday 2pm works for me.", ts: new Date().toISOString() }],
-    },
-    {
-      id: 103,
-      candidate: "Priya Kumar",
-      snippet: "Attaching my portfolio…",
-      unread: 0,
-      messages: [{ id: "m4", from: "candidate", text: "Here’s my portfolio link.", ts: new Date().toISOString() }],
-    },
-  ]);
-
+  const [threads, setThreads] = useState([]);
   const [bulkOpen, setBulkOpen] = useState(false);
 
-  const onSend = (threadId, text) => {
-    setThreads((prev) =>
-      prev.map((t) =>
-        t.id !== threadId
-          ? t
-          : {
-              ...t,
-              snippet: text,
-              messages: [
-                ...t.messages,
-                { id: `m-${Date.now()}`, from: "recruiter", text, ts: new Date().toISOString(), status: "sent" },
-              ],
-            }
-      )
-    );
-    setTimeout(() => {
-      setThreads((prev) =>
-        prev.map((t) =>
-          t.id !== threadId
-            ? t
-            : { ...t, messages: t.messages.map((m) => (m.id.startsWith("m-") ? { ...m, status: "read" } : m)) }
-        )
-      );
-    }, 800);
-  };
-
+  // For now, keep this static mock list for the bulk modal UI.
   const candidatesFlat = [
     { id: 1, name: "Jane Doe", role: "Client Success Lead", location: "Remote" },
     { id: 2, name: "Omar Reed", role: "Onboarding Specialist", location: "Nashville, TN" },
     { id: 3, name: "Priya Kumar", role: "Solutions Architect", location: "Austin, TX" },
   ];
+
+  // Load recruiter-channel conversations from the API
+  useEffect(() => {
+    let cancelled = false;
+
+    async function loadThreads() {
+      try {
+        // 1) Fetch conversations for the recruiter channel
+        const data = await fetchJson("/api/messages?channel=recruiter");
+        const conversations = Array.isArray(data.conversations) ? data.conversations : [];
+
+        // 2) For each conversation, fetch its messages
+        const threadsWithMessages = await Promise.all(
+          conversations.map(async (conv) => {
+            try {
+              const msgData = await fetchJson(
+                `/api/messages?conversationId=${encodeURIComponent(conv.id)}`
+              );
+              const msgs = Array.isArray(msgData.messages) ? msgData.messages : [];
+
+              const mappedMessages = msgs.map((m) => ({
+                id: m.id,
+                from: m.senderId === CURRENT_USER_ID ? "recruiter" : "candidate",
+                text: m.text,
+                ts: m.timeIso || new Date().toISOString(),
+                status: "read",
+              }));
+
+              const lastMsg =
+                mappedMessages[mappedMessages.length - 1] || null;
+
+              return {
+                id: conv.id,
+                candidate: conv.name || "Conversation",
+                snippet: conv.lastMessage || lastMsg?.text || "",
+                unread: typeof conv.unread === "number" ? conv.unread : 0,
+                messages: mappedMessages,
+              };
+            } catch (err) {
+              console.error("Failed to load messages for conversation", conv.id, err);
+              return {
+                id: conv.id,
+                candidate: conv.name || "Conversation",
+                snippet: conv.lastMessage || "",
+                unread: typeof conv.unread === "number" ? conv.unread : 0,
+                messages: [],
+              };
+            }
+          })
+        );
+
+        if (!cancelled) {
+          setThreads(threadsWithMessages);
+        }
+      } catch (err) {
+        console.error("Failed to load recruiter threads:", err);
+      }
+    }
+
+    loadThreads();
+
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  const onSend = async (threadId, text) => {
+    if (!text || !String(text).trim()) return;
+    const trimmed = String(text).trim();
+
+    try {
+      // Send message to the recruiter-channel conversation
+      const data = await fetchJson("/api/messages", {
+        method: "POST",
+        body: JSON.stringify({
+          conversationId: threadId,
+          content: trimmed,
+          channel: "recruiter",
+        }),
+      });
+
+      const msg = data?.message;
+      const newMsg = {
+        id: msg?.id ?? `m-${Date.now()}`,
+        from: "recruiter",
+        text: msg?.text ?? trimmed,
+        ts: msg?.timeIso || new Date().toISOString(),
+        status: "sent",
+      };
+
+      setThreads((prev) =>
+        prev.map((t) =>
+          t.id !== threadId
+            ? t
+            : {
+                ...t,
+                snippet: trimmed,
+                messages: [...t.messages, newMsg],
+              }
+        )
+      );
+    } catch (err) {
+      console.error("Failed to send recruiter message:", err);
+      // TODO: surface this in UI later
+    }
+  };
 
   return (
     <PlanProvider>

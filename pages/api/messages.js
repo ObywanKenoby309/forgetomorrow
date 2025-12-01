@@ -20,12 +20,14 @@ export default async function handler(req, res) {
   const userId = getCurrentUserId(req);
 
   if (!userId) {
-    return res.status(401).json({ error: 'Unauthorized: x-user-id header is required (dev stub)' });
+    return res
+      .status(401)
+      .json({ error: 'Unauthorized: x-user-id header is required (dev stub)' });
   }
 
   try {
     if (req.method === 'GET') {
-      const { conversationId } = req.query;
+      const { conversationId, channel } = req.query;
 
       // Return messages for a specific conversation
       if (conversationId) {
@@ -43,7 +45,9 @@ export default async function handler(req, res) {
         });
 
         if (!participant) {
-          return res.status(403).json({ error: 'Forbidden: not a participant of this conversation' });
+          return res
+            .status(403)
+            .json({ error: 'Forbidden: not a participant of this conversation' });
         }
 
         const messages = await prisma.message.findMany({
@@ -69,9 +73,20 @@ export default async function handler(req, res) {
         return res.status(200).json({ messages: mapped });
       }
 
-      // Otherwise, list all conversations for this user
+      // Otherwise, list all conversations for this user.
+      // Optional filter: ?channel=seeker|recruiter|coach|shared
+      const channelFilter =
+        typeof channel === 'string' && channel.trim().length > 0
+          ? channel.trim()
+          : null;
+
       const participations = await prisma.conversationParticipant.findMany({
-        where: { userId },
+        where: {
+          userId,
+          ...(channelFilter
+            ? { conversation: { channel: channelFilter } }
+            : {}),
+        },
         include: {
           conversation: {
             include: {
@@ -112,6 +127,7 @@ export default async function handler(req, res) {
           id: c.id,
           isGroup: c.isGroup,
           title: c.title,
+          channel: c.channel,
           name,
           avatar: primaryOther?.avatarUrl || null,
           lastMessage: lastMessage ? lastMessage.content.slice(0, 60) : '',
@@ -131,11 +147,17 @@ export default async function handler(req, res) {
     }
 
     if (req.method === 'POST') {
-      const { conversationId, recipientId, content } = req.body || {};
+      const { conversationId, recipientId, content, channel } = req.body || {};
 
       if (!content || !content.trim()) {
         return res.status(400).json({ error: 'Message content is required' });
       }
+
+      const trimmedContent = content.trim();
+      const convChannel =
+        typeof channel === 'string' && channel.trim().length > 0
+          ? channel.trim()
+          : null;
 
       let conversation;
 
@@ -159,10 +181,12 @@ export default async function handler(req, res) {
 
         // Ensure sender is a participant
         if (!conversation.participants.some((p) => p.userId === userId)) {
-          return res.status(403).json({ error: 'Forbidden: not a participant of this conversation' });
+          return res
+            .status(403)
+            .json({ error: 'Forbidden: not a participant of this conversation' });
         }
       } else if (recipientId) {
-        // 1:1 conversation: find or create
+        // 1:1 conversation: find or create, scoped by channel if provided
         const recipient = await prisma.user.findUnique({
           where: { id: recipientId },
         });
@@ -172,18 +196,24 @@ export default async function handler(req, res) {
         }
 
         // Find existing non-group conversation between these two users
-        const existingParticipations = await prisma.conversationParticipant.findMany({
-          where: {
-            userId: { in: [userId, recipientId] },
-          },
-          include: {
-            conversation: {
-              include: {
-                participants: true,
+        // If a specific channel is provided, we only consider conversations
+        // in that channel. Otherwise, channel is not used as a filter.
+        const existingParticipations =
+          await prisma.conversationParticipant.findMany({
+            where: {
+              userId: { in: [userId, recipientId] },
+              ...(convChannel
+                ? { conversation: { isGroup: false, channel: convChannel } }
+                : { conversation: { isGroup: false } }),
+            },
+            include: {
+              conversation: {
+                include: {
+                  participants: true,
+                },
               },
             },
-          },
-        });
+          });
 
         conversation = existingParticipations
           .map((p) => p.conversation)
@@ -199,6 +229,7 @@ export default async function handler(req, res) {
           conversation = await prisma.conversation.create({
             data: {
               isGroup: false,
+              channel: convChannel,
               participants: {
                 create: [{ userId }, { userId: recipientId }],
               },
@@ -209,13 +240,16 @@ export default async function handler(req, res) {
           });
         }
       } else {
-        return res
-          .status(400)
-          .json({ error: 'conversationId or recipientId is required to send a message' });
+        return res.status(400).json({
+          error:
+            'conversationId or recipientId is required to send a message',
+        });
       }
 
       // BLOCKING CHECK — if either side has blocked the other, do not send
-      const otherParticipants = conversation.participants.filter((p) => p.userId !== userId);
+      const otherParticipants = conversation.participants.filter(
+        (p) => p.userId !== userId,
+      );
       const otherUserIds = otherParticipants.map((p) => p.userId);
 
       if (otherUserIds.length > 0) {
@@ -235,7 +269,9 @@ export default async function handler(req, res) {
         });
 
         if (blocks.length > 0) {
-          return res.status(403).json({ error: 'Messaging is blocked between these users' });
+          return res
+            .status(403)
+            .json({ error: 'Messaging is blocked between these users' });
         }
       }
 
@@ -244,7 +280,7 @@ export default async function handler(req, res) {
         data: {
           conversationId: conversation.id,
           senderId: userId,
-          content: content.trim(),
+          content: trimmedContent,
         },
         include: {
           sender: true,
@@ -262,6 +298,7 @@ export default async function handler(req, res) {
           hour: '2-digit',
           minute: '2-digit',
         }),
+        channel: conversation.channel,
       };
 
       return res.status(201).json({ message: response });

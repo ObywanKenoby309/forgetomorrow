@@ -6,11 +6,14 @@ import RecruiterLayout from "../../components/layouts/RecruiterLayout";
 import CandidateList from "../../components/recruiter/CandidateList";
 import CandidateProfileModal from "../../components/recruiter/CandidateProfileModal";
 import FeatureLock from "../../components/recruiter/FeatureLock";
-
 import WhyCandidateDrawer from "../../components/recruiter/WhyCandidateDrawer";
 import { getMockExplain } from "../../lib/recruiter/mockExplain";
 import * as Analytics from "../../lib/analytics/instrumentation";
 import WhyInfo from "../../components/recruiter/WhyInfo";
+import PersonaChoiceModal from "../../components/common/PersonaChoiceModal";
+
+// DEV-ONLY: your recruiter user id to hit /api/conversations
+const RECRUITER_DEV_USER_ID = "cmic534oy0000bv2gsjrl83al";
 
 // Shape the snapshot we log / maybe show later
 const mkWhySnapshot = (explain, mode) => ({
@@ -115,25 +118,9 @@ function Body() {
     setOpen(true);
   };
 
-  // Message → jump to recruiter messaging page with staged draft
-  const onMessage = (c) => {
-    if (!c) return;
-
-    const firstName = (c.name || "").split(" ")[0] || "";
-
-    router.push({
-      pathname: "/recruiter/messaging",
-      query: {
-        candidateId: c.id,
-        toUserId: c.userId || "",
-        name: c.name || "",
-        role: c.role || c.title || "",
-        prefill: firstName
-          ? `Hi ${firstName}, thanks for connecting — I’d love to chat about a role that looks like a strong match for your background.`
-          : `Hi there, thanks for connecting — I’d love to chat about a role that looks like a strong match for your background.`,
-      },
-    });
-  };
+  // Persona modal state
+  const [personaOpen, setPersonaOpen] = useState(false);
+  const [personaCandidate, setPersonaCandidate] = useState(null);
 
   // Helper: demo candidate used for dev-only fallback
   const buildDemoCandidates = () => [
@@ -149,6 +136,92 @@ function Body() {
       notes: "",
     },
   ];
+
+  // Central function to create/open conversation, then route
+  const startConversation = async (candidate, channel) => {
+    if (!candidate) return;
+
+    try {
+      const res = await fetch("/api/conversations", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          // DEV-ONLY auth stub; replaced by real auth later
+          "x-user-id": RECRUITER_DEV_USER_ID,
+        },
+        body: JSON.stringify({
+          recipientId: candidate.userId || candidate.id,
+          channel,
+        }),
+      });
+
+      if (!res.ok) {
+        const payload = await res.json().catch(() => ({}));
+        console.error(
+          "[Candidates] startConversation error:",
+          res.status,
+          payload
+        );
+        alert(
+          "We couldn't open a conversation yet. Please try again in a moment."
+        );
+        return;
+      }
+
+      const json = await res.json();
+      const conv = json?.conversation;
+      if (!conv || !conv.id) {
+        alert(
+          "We couldn't open a conversation yet. Please try again in a moment."
+        );
+        return;
+      }
+
+      const destName = candidate.name || "";
+      const firstName = destName.split(" ")[0] || "";
+      const prefill = firstName
+        ? `Hi ${firstName}, thanks for connecting — I’d love to chat about a role that looks like a strong match for your background.`
+        : `Hi there, thanks for connecting — I’d love to chat about a role that looks like a strong match for your background.`;
+
+      if (channel === "recruiter") {
+        router.push({
+          pathname: "/recruiter/messaging",
+          query: {
+            c: conv.id,
+            candidateId: candidate.id,
+            toUserId: conv.otherUser?.id || "",
+            name: destName,
+            role: candidate.role || candidate.title || "",
+            prefill,
+          },
+        });
+      } else {
+        // Personal / Signal inbox
+        router.push({
+          pathname: "/seeker/messages",
+          query: {
+            c: conv.id,
+            toUserId: conv.otherUser?.id || "",
+            name: destName,
+            role: candidate.role || candidate.title || "",
+            prefill,
+          },
+        });
+      }
+    } catch (err) {
+      console.error("[Candidates] startConversation error:", err);
+      alert(
+        "We couldn't open a conversation yet. Please try again in a moment."
+      );
+    }
+  };
+
+  // Message → open Persona choice modal
+  const onMessage = (c) => {
+    if (!c) return;
+    setPersonaCandidate(c);
+    setPersonaOpen(true);
+  };
 
   // Load candidates from Prisma-backed API (with filters)
   useEffect(() => {
@@ -767,6 +840,30 @@ function Body() {
             setOpen(true);
           }
           setWhyOpen(false);
+        }}
+      />
+
+      <PersonaChoiceModal
+        open={personaOpen}
+        targetName={personaCandidate?.name}
+        description="Recruiter messages stay in your Recruiter Suite inbox. Personal messages go to your Signal inbox so you can network as yourself."
+        primaryLabel="Use Recruiter inbox"
+        secondaryLabel="Use Personal inbox (Signal)"
+        onClose={() => {
+          setPersonaOpen(false);
+          setPersonaCandidate(null);
+        }}
+        onPrimary={async () => {
+          const c = personaCandidate;
+          setPersonaOpen(false);
+          setPersonaCandidate(null);
+          if (c) await startConversation(c, "recruiter");
+        }}
+        onSecondary={async () => {
+          const c = personaCandidate;
+          setPersonaOpen(false);
+          setPersonaCandidate(null);
+          if (c) await startConversation(c, "personal");
         }}
       />
     </>
