@@ -3,20 +3,12 @@ import { NextResponse } from 'next/server'
 import { Ratelimit } from '@upstash/ratelimit'
 import { Redis } from '@upstash/redis'
 
-// ──────────────────────────────────────────────
-// ENV TOGGLES
-// SITE_LOCK = "1" → lock internal pages (only PUBLIC_PATHS allowed w/o session)
-// SITE_LOCK = "0" or unset → public site, normal auth
-// ALLOWED_HOSTS = "example.com,preview.vercel.app" → always allowed
-// ──────────────────────────────────────────────
 const SITE_LOCK = process.env.SITE_LOCK === '1'
 const ALLOWED_HOSTS = (process.env.ALLOWED_HOSTS || '')
   .split(',')
   .map((h) => h.trim())
   .filter(Boolean)
 
-// Public pages allowed when SITE_LOCK=1
-// Everything else is considered private by default
 const PUBLIC_PATHS = new Set([
   '/',                 // landing
   '/waiting-list',
@@ -37,9 +29,9 @@ const PUBLIC_PATHS = new Set([
   '/auth/signin',
   '/contact',
   '/feedback',
+  '/signup',           // 👈 NEW: allow signup page even when locked
 ])
 
-// Static assets always allowed
 const STATIC_ALLOW = [
   /^\/_next\//,
   /^\/favicon\.ico$/,
@@ -49,16 +41,14 @@ const STATIC_ALLOW = [
   /\.(png|jpe?g|gif|svg|webp|ico|css|js|map|txt|xml|woff2?|ttf|otf)$/i,
 ]
 
-// Upstash Redis for API rate limiting
 const redis = Redis.fromEnv()
 
 const ratelimit = new Ratelimit({
   redis,
-  limiter: Ratelimit.slidingWindow(6, '20 m'), // 6 calls per 20 minutes / IP
+  limiter: Ratelimit.slidingWindow(6, '20 m'),
   prefix: 'ft:rl:api',
 })
 
-// API prefixes that should be rate-limited (AI, billing, etc.)
 const PROTECTED_API_PREFIXES = [
   '/api/ai',
   '/api/resume',
@@ -77,11 +67,10 @@ export async function middleware(req) {
   const { pathname } = url
   const hostname = req.nextUrl.hostname || ''
 
-  // normalize path: remove trailing slash but keep '/' as root
   const normalized = pathname.replace(/\/$/, '') || '/'
 
-  // Sessions: either your custom ft_session or NextAuth's session tokens
   const ftSession = req.cookies.get?.('ft_session')?.value
+
   const nextAuthSession =
     req.cookies.get?.('next-auth.session-token')?.value ||
     req.cookies.get?.('__Secure-next-auth.session-token')?.value
@@ -108,7 +97,7 @@ export async function middleware(req) {
   }
 
   // ─────────────────────────────────────
-  // 2) Explicitly allowed hosts (preview / special domains)
+  // 2) Explicitly allowed hosts (preview domains, etc.)
   // ─────────────────────────────────────
   if (ALLOWED_HOSTS.length > 0) {
     const allowed = ALLOWED_HOSTS.some(
@@ -135,7 +124,7 @@ export async function middleware(req) {
   }
 
   // ─────────────────────────────────────
-  // 3b) SUPPORT: require session (internal-only)
+  // 3b) SUPPORT: require session
   // ─────────────────────────────────────
   if (normalized === '/support' || normalized.startsWith('/support/')) {
     if (!hasSession) {
@@ -174,7 +163,6 @@ export async function middleware(req) {
       }
     } catch (err) {
       console.error('Rate limit error (Upstash)', err)
-      // fail-open: do not block if rate limiter is broken
     }
   }
 
@@ -205,7 +193,6 @@ export async function middleware(req) {
     return res
   }
 
-  // allow nested under public prefixes (e.g., /feedback/abc, /blog/post-slug)
   if (
     [...PUBLIC_PATHS].some(
       (p) => p !== '/' && normalized.startsWith(p + '/')
@@ -216,7 +203,6 @@ export async function middleware(req) {
     return res
   }
 
-  // No session + locked + not public → send to /login
   const loginUrl = new URL('/login', req.url)
   const res = NextResponse.redirect(loginUrl)
   res.headers.set('x-site-lock', 'on-locked')
