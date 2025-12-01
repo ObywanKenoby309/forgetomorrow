@@ -139,7 +139,12 @@ export default async function handler(req, res) {
     console.log('[preverify] verification token saved');
   } catch (err) {
     console.error('[preverify] DB error:', err);
-    return res.status(500).json({ error: 'Database error' });
+
+    return res.status(500).json({
+      error: 'Database error',
+      details: err?.message || 'Unknown DB error',
+      code: err?.code || null,
+    });
   }
 
   // Newsletter opt-in → Brevo
