@@ -1,18 +1,14 @@
 // pages/api/auth/preverify.js
-import { PrismaClient } from '@prisma/client';
-import bcrypt from 'bcryptjs';
-import { v4 as uuidv4 } from 'uuid';
-import nodemailer from 'nodemailer';
+import { prisma } from '@/lib/prisma';
+import bcrypt from 'bcrypt';
 
-const prisma = new PrismaClient();
-
-const VERIFICATION_EXPIRY_MINUTES = 60;
+const VERIFICATION_EXPIRY_MINUTES = 60; // kept for future use if we restore tokens
 const isProd = process.env.NODE_ENV === 'production';
 const REGISTRATION_LOCK = process.env.REGISTRATION_LOCK === '1';
 
-// ─────────────────────────────────────────────
-//  BREVO NEWSLETTER AUTO-ADD
-// ─────────────────────────────────────────────
+// ─────────────────────────────
+// Brevo newsletter auto-add
+// ─────────────────────────────
 async function addToBrevo(email, firstName, lastName) {
   if (!process.env.BREVO_API_KEY || !process.env.BREVO_LIST_ID) {
     console.log('[preverify] Brevo not configured — skipping');
@@ -34,45 +30,54 @@ async function addToBrevo(email, firstName, lastName) {
     });
 
     if (res.ok) {
-      console.log('[preverify] BREVO → added:', email);
+      console.log('[preverify] Brevo contact added:', email);
     } else {
-      console.error('[preverify] Brevo error:', await res.text());
+      console.error(
+        '[preverify] Brevo error:',
+        res.status,
+        await res.text().catch(() => '<no text>')
+      );
     }
   } catch (err) {
-    console.error('[preverify] Brevo exception:', err.message);
+    console.error('[preverify] Brevo exception:', err);
   }
 }
 
-// ─────────────────────────────────────────────
-//  reCAPTCHA verify
-// ─────────────────────────────────────────────
+// ─────────────────────────────
+// reCAPTCHA verify
+// ─────────────────────────────
 async function verifyRecaptcha(token) {
   const secret = process.env.RECAPTCHA_SECRET_KEY;
-  if (!secret) return true; // if not configured, don't block
+  if (!secret) {
+    console.warn('[preverify] Missing RECAPTCHA_SECRET_KEY — skipping check');
+    return true;
+  }
 
-  const res = await fetch('https://www.google.com/recaptcha/api/siteverify', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-    body: new URLSearchParams({ secret, response: token }),
-  });
+  try {
+    const res = await fetch('https://www.google.com/recaptcha/api/siteverify', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+      body: new URLSearchParams({ secret, response: token }),
+    });
 
-  const data = await res.json();
-  return data.success;
+    const data = await res.json();
+    return !!data.success;
+  } catch (err) {
+    console.error('[preverify] reCAPTCHA verify error:', err);
+    // Fail open rather than block signups if Google is flaky
+    return true;
+  }
 }
 
-// ─────────────────────────────────────────────
-//  HANDLER
-// ─────────────────────────────────────────────
 export default async function handler(req, res) {
   if (req.method !== 'POST') {
-    res.setHeader('Allow', ['POST']);
     return res.status(405).json({ error: 'Method not allowed' });
   }
 
   if (REGISTRATION_LOCK) {
-    return res
-      .status(403)
-      .json({ error: 'New registrations are temporarily disabled.' });
+    return res.status(403).json({
+      error: 'Registration is currently locked. Please try again later.',
+    });
   }
 
   const {
@@ -85,19 +90,24 @@ export default async function handler(req, res) {
     newsletter,
   } = req.body || {};
 
-  console.log('[preverify] incoming body:', {
-    email,
-    plan,
-    newsletter,
-  });
-
+  // ─────────────────────────────
+  // Basic validation
+  // ─────────────────────────────
   if (!firstName || !lastName || !email || !password) {
     return res.status(400).json({ error: 'Missing required fields' });
   }
+
+  if (!/^\S+@\S+\.\S+$/.test(email)) {
+    return res.status(400).json({ error: 'Invalid email format' });
+  }
+
   if (!recaptchaToken) {
     return res.status(400).json({ error: 'Missing reCAPTCHA token' });
   }
 
+  // ─────────────────────────────
+  // reCAPTCHA (only enforced in prod)
+  // ─────────────────────────────
   if (isProd) {
     const valid = await verifyRecaptcha(recaptchaToken);
     if (!valid) {
@@ -108,7 +118,9 @@ export default async function handler(req, res) {
   const normalizedEmail = email.toLowerCase().trim();
 
   try {
-    // ── Check if user already exists ──
+    // ─────────────────────────────
+    // Check if user already exists
+    // ─────────────────────────────
     const existing = await prisma.user.findUnique({
       where: { email: normalizedEmail },
     });
@@ -117,26 +129,48 @@ export default async function handler(req, res) {
       return res.status(400).json({ error: 'Email already registered' });
     }
 
-    // ── Create verification token row ──
-    const passwordHash = await bcrypt.hash(password, 10);
-    const token = uuidv4();
-    const expiresAt = new Date(
-      Date.now() + VERIFICATION_EXPIRY_MINUTES * 60 * 1000
-    );
+    // ─────────────────────────────
+    // DIRECT USER CREATION (no token)
+    // This mirrors pages/api/register.js behaviour
+    // ─────────────────────────────
+    const passwordHash = await bcrypt.hash(password, 12);
 
-    await prisma.verificationToken.create({
+    // Simple role / tier mapping for now — SEEKER/free
+    const user = await prisma.user.create({
       data: {
-        token,
         email: normalizedEmail,
-        firstName,
-        lastName,
         passwordHash,
-        plan,
-        newsletter: Boolean(newsletter),
-        expiresAt,
+        role: 'SEEKER',
+        tier: 'free',
+        // If your User model has name/firstName/lastName fields, you can
+        // add them here later once we confirm the schema in production.
+      },
+      select: {
+        id: true,
+        email: true,
+        role: true,
+        tier: true,
+        createdAt: true,
       },
     });
-    console.log('[preverify] verification token saved');
+
+    console.log('[preverify] User created via signup:', user.email);
+
+    // ─────────────────────────────
+    // Newsletter → Brevo (optional)
+    // ─────────────────────────────
+    const wantsNewsletter =
+      newsletter === 'on' || newsletter === true || newsletter === 'true';
+
+    if (wantsNewsletter) {
+      await addToBrevo(normalizedEmail, firstName, lastName);
+    }
+
+    // For now, we don’t send a verification email — account is ready to log in.
+    return res.status(200).json({
+      success: true,
+      user,
+    });
   } catch (err) {
     console.error('[preverify] DB error:', err);
 
@@ -146,77 +180,4 @@ export default async function handler(req, res) {
       code: err?.code || null,
     });
   }
-
-  // Newsletter opt-in → Brevo
-  const wantsNewsletter =
-    newsletter === 'on' || newsletter === true || newsletter === 'true';
-  if (wantsNewsletter) {
-    addToBrevo(normalizedEmail, firstName, lastName).catch((err) =>
-      console.error('[preverify] Brevo async error:', err)
-    );
-  }
-
-  // ── Build verify URL ──
-  const baseUrl =
-    process.env.NEXT_PUBLIC_OPEN_SITE ||
-    process.env.NEXT_PUBLIC_SITE_URL ||
-    'http://localhost:3001';
-
-  const verifyUrl = `${baseUrl}/api/auth/verify?token=${token}`;
-
-  // ── Nodemailer transport (Zoho / Maildev) ──
-  let transporter;
-  if (isProd) {
-    transporter = nodemailer.createTransport({
-      host: process.env.SMTP_HOST,
-      port: Number(process.env.SMTP_PORT) || 465,
-      secure: true,
-      auth:
-        process.env.SMTP_USER && process.env.SMTP_PASS
-          ? {
-              user: process.env.SMTP_USER,
-              pass: process.env.SMTP_PASS,
-            }
-          : undefined,
-    });
-  } else {
-    transporter = nodemailer.createTransport({
-      host: 'localhost',
-      port: 1025,
-      secure: false,
-      ignoreTLS: true,
-      auth: null,
-      tls: { rejectUnauthorized: false },
-    });
-  }
-
-  try {
-    await transporter.sendMail({
-      from: process.env.SMTP_FROM_ADMIN || 'ForgeTomorrow <no-reply@forgetomorrow.com>',
-      to: normalizedEmail,
-      subject: 'Verify your ForgeTomorrow account',
-      html: `<h2>Welcome, ${firstName}!</h2>
-             <p>Click below to verify (expires in 1 hour):</p>
-             <p><a href="${verifyUrl}" style="background:#FF7043;color:white;padding:15px 30px;text-decoration:none;border-radius:8px;font-weight:bold;">Verify Account</a></p>
-             <p>Or copy: ${verifyUrl}</p>`,
-      text: `Verify: ${verifyUrl}`,
-    });
-
-    console.log('[preverify] verification email sent to', normalizedEmail);
-  } catch (err) {
-    console.error('[preverify] EMAIL SEND FAILED:', err);
-
-    if (isProd) {
-      return res.status(500).json({ error: 'Email failed' });
-    } else {
-      console.warn(
-        '[preverify] Dev mode: email failed, but returning success. Verify URL:',
-        verifyUrl
-      );
-    }
-  } finally {
-    await prisma.$disconnect().catch(() => {});
-  }
-
-  return res.status(200).json({ success: true });
 }
