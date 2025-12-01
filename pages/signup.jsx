@@ -43,7 +43,7 @@ export default function SignupFree() {
     setLoading(true);
 
     try {
-      const res = await fetch("/api/preverify", {   // 👈 changed from /api/auth/preverify
+      const res = await fetch("/api/auth/preverify", {
   method: "POST",
   headers: { "Content-Type": "application/json" },
   body: JSON.stringify({
@@ -53,8 +53,6 @@ export default function SignupFree() {
     password,
     plan: "FREE",
     recaptchaToken: captchaValue,
-    // if you want everyone added to newsletter automatically:
-    newsletter: true,
   }),
 });
 
