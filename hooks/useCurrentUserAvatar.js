@@ -1,7 +1,7 @@
 // hooks/useCurrentUserAvatar.js
 import { useEffect, useState } from 'react';
 
-export default function useCurrentUserAvatar() {
+export function useCurrentUserAvatar() {
   const [avatarUrl, setAvatarUrl] = useState(null);
   const [loading, setLoading] = useState(true);
 
@@ -57,3 +57,6 @@ export default function useCurrentUserAvatar() {
 
   return { avatarUrl, loading };
 }
+
+// Keep a default export too, in case anything imports it that way
+export default useCurrentUserAvatar;
