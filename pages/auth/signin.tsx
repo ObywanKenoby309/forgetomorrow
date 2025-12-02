@@ -1,4 +1,4 @@
-// pages/auth/signin.tsx 
+// pages/auth/signin.tsx — FINAL FIXED VERSION (NO MORE LOOP)
 import { getSession, getCsrfToken } from 'next-auth/react';
 
 type SignInProps = {
@@ -7,7 +7,6 @@ type SignInProps = {
 };
 
 export default function SignIn({ csrfToken, error }: SignInProps) {
-  // Map NextAuth error codes → friendly message
   const errorMessages: Record<string, string> = {
     Signin: 'Try signing in with a different account.',
     OAuthSignin: 'Try signing in with a different account.',
@@ -27,9 +26,6 @@ export default function SignIn({ csrfToken, error }: SignInProps) {
   const friendlyError = error
     ? errorMessages[error] || errorMessages.default
     : null;
-
-  const hasError = Boolean(friendlyError);
-  const errorId = hasError ? 'signin-error-message' : undefined;
 
   return (
     <main
@@ -58,64 +54,40 @@ export default function SignIn({ csrfToken, error }: SignInProps) {
 
       {friendlyError && (
         <div
-          id={errorId}
           role="alert"
           aria-live="assertive"
           style={{
             marginBottom: 16,
-            padding: '8px 10px',
+            padding: '10px 14px',
             borderRadius: 8,
             background: '#FFEBEE',
             color: '#C62828',
-            fontSize: 13,
+            fontSize: 14,
           }}
         >
           {friendlyError}
         </div>
       )}
 
-      {/* Credentials Form → NextAuth Credentials provider */}
-      <form
-        method="post"
-        action="/api/auth/callback/credentials"
-        aria-describedby={
-          hasError ? errorId : undefined
-        }
-      >
-        {/* Required CSRF token for NextAuth */}
-        <input
-          name="csrfToken"
-          type="hidden"
-          defaultValue={csrfToken ?? undefined}
-        />
+      <form method="post" action="/api/auth/callback/credentials">
+        <input name="csrfToken" type="hidden" defaultValue={csrfToken ?? ''} />
 
-        {/* IMPORTANT: tell NextAuth where to send us AFTER sign-in */}
-        <input
-          name="callbackUrl"
-          type="hidden"
-          value="/seeker-dashboard" // ← CHANGED from "/auth/signin"
-        />
+        {/* ← NO HARDCODED callbackUrl — LET NEXTAUTH DO ITS JOB */}
 
         <div style={{ marginBottom: 16 }}>
-          <label
-            htmlFor="signin-email"
-            style={{ display: 'block', marginBottom: 6, fontWeight: 600 }}
-          >
+          <label htmlFor="email" style={{ display: 'block', marginBottom: 6, fontWeight: 600 }}>
             Email
           </label>
           <input
-            id="signin-email"
+            id="email"
             name="email"
             type="email"
             placeholder="you@example.com"
             required
             autoComplete="email"
-            aria-invalid={hasError ? 'true' : undefined}
-            aria-describedby={hasError ? errorId : undefined}
             style={{
               width: '100%',
               padding: 12,
-              marginTop: 4,
               borderRadius: 8,
               border: '1px solid #ddd',
               fontSize: 14,
@@ -124,25 +96,19 @@ export default function SignIn({ csrfToken, error }: SignInProps) {
         </div>
 
         <div style={{ marginBottom: 24 }}>
-          <label
-            htmlFor="signin-password"
-            style={{ display: 'block', marginBottom: 6, fontWeight: 600 }}
-          >
+          <label htmlFor="password" style={{ display: 'block', marginBottom: 6, fontWeight: 600 }}>
             Password
           </label>
           <input
-            id="signin-password"
+            id="password"
             name="password"
             type="password"
-            placeholder="Your password"
+            placeholder="••••••••"
             required
             autoComplete="current-password"
-            aria-invalid={hasError ? 'true' : undefined}
-            aria-describedby={hasError ? errorId : undefined}
             style={{
               width: '100%',
               padding: 12,
-              marginTop: 4,
               borderRadius: 8,
               border: '1px solid #ddd',
               fontSize: 14,
@@ -168,53 +134,42 @@ export default function SignIn({ csrfToken, error }: SignInProps) {
         </button>
       </form>
 
-      <p
-        style={{
-          textAlign: 'center',
-          marginTop: 24,
-          color: '#666',
-          fontSize: 13,
-        }}
-      >
-        After signing in, you&apos;ll be redirected to your ForgeTomorrow
-        dashboard.
+      <p style={{ textAlign: 'center', marginTop: 24, color: '#666', fontSize: 13 }}>
+        After signing in, you’ll land on your personal dashboard.
       </p>
     </main>
   );
 }
 
+// ————————————————————————————————————————
+// CORRECT REDIRECT LOGIC FOR ALL USER TYPES
+// ————————————————————————————————————————
 export async function getServerSideProps(context: any) {
-  // 1) If already logged in → send them to the right dashboard
   const session = await getSession(context);
 
+  // Already logged in → send to the RIGHT dashboard
   if (session?.user) {
-    const rawPlan = (session.user as any).plan || '';
-    const plan = String(rawPlan).toUpperCase();
-
-    let destination = '/seeker-dashboard';
+    const plan = String((session.user as any).plan || '').toUpperCase();
 
     if (plan.includes('COACH')) {
-      destination = '/coaching-dashboard';
-    } else if (plan.includes('RECRUIT')) {
-      destination = '/recruiter/dashboard';
+      return { redirect: { destination: '/coaching-dashboard', permanent: false } };
+    }
+    if (plan.includes('RECRUIT')) {
+      return { redirect: { destination: '/recruiter/dashboard', permanent: false } };
     }
 
-    return {
-      redirect: {
-        destination,
-        permanent: false,
-      },
-    };
+    // Default: seeker
+    return { redirect: { destination: '/seeker-dashboard', permanent: false } };
   }
 
-  // 2) Not logged in → show the sign-in form
+  // Not logged in → show sign-in form
   const csrfToken = await getCsrfToken(context);
   const { error = null } = context.query;
 
   return {
     props: {
       csrfToken: csrfToken ?? null,
-      error,
+      error: error ?? null,
     },
   };
 }
