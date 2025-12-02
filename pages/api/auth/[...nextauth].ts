@@ -22,9 +22,17 @@ export const authOptions: NextAuthOptions = {
           where: { email: normalizedEmail },
         });
 
-        // Must exist, must have a password, and must be verified
         if (!user?.passwordHash) return null;
-        if (!user.emailVerified) return null;
+
+        // TEMP: log so we can see what's going on in server logs
+        console.log("[nextauth] authorize user", {
+          email: user.email,
+          emailVerified: user.emailVerified,
+          plan: user.plan,
+        });
+
+        // NOTE: For now we do NOT hard-block on emailVerified
+        // if (!user.emailVerified) return null;
 
         const isValid = await bcrypt.compare(
           credentials.password,
