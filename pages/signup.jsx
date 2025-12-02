@@ -1,435 +1,345 @@
-"use client";
-
-import { useState, useEffect } from "react";
+// pages/signup.jsx
+import { useState } from "react";
+import Head from "next/head";
+import Link from "next/link";
 import dynamic from "next/dynamic";
 
 // Dynamically import ReCAPTCHA to avoid SSR issues
-<<<<<<< HEAD
 const ReCAPTCHA = dynamic(() => import("react-google-recaptcha"), {
   ssr: false,
 });
 
 export default function Signup() {
-=======
-const ReCAPTCHA = dynamic(() => import("react-google-recaptcha"), { ssr: false });
-
-export default function SignupFree() {
->>>>>>> 6ee98c0 (Add privacy delete user data system)
   const [loading, setLoading] = useState(false);
   const [phase, setPhase] = useState("form"); // 'form' | 'sent'
-  const [firstName, setFirstName] = useState("");
-  const [lastName, setLastName] = useState("");
-  const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
-  const [agreed, setAgreed] = useState(false);
-<<<<<<< HEAD
-  const [newsletter, setNewsletter] = useState(true);
-=======
->>>>>>> 6ee98c0 (Add privacy delete user data system)
   const [error, setError] = useState("");
-  const [captchaValue, setCaptchaValue] = useState(null);
-  const [siteKey, setSiteKey] = useState("");
+  const [captchaToken, setCaptchaToken] = useState(null);
 
-<<<<<<< HEAD
-  // Load reCAPTCHA site key from env
-  useEffect(() => {
-    const key = process.env.NEXT_PUBLIC_RECAPTCHA_SITE_KEY || "";
-    setSiteKey(key);
-    if (!key) {
-=======
-  useEffect(() => {
-    setSiteKey(process.env.NEXT_PUBLIC_RECAPTCHA_SITE_KEY || "");
-    if (!process.env.NEXT_PUBLIC_RECAPTCHA_SITE_KEY) {
->>>>>>> 6ee98c0 (Add privacy delete user data system)
-      console.error("Missing NEXT_PUBLIC_RECAPTCHA_SITE_KEY in environment!");
-    }
-  }, []);
+  const [form, setForm] = useState({
+    firstName: "",
+    lastName: "",
+    email: "",
+    password: "",
+    confirmPassword: "",
+    newsletter: true,
+    agree: false,
+  });
 
-  const handleSubmit = async (e) => {
+  const onChange = (field) => (e) => {
+    const value =
+      e.target.type === "checkbox" ? e.target.checked : e.target.value;
+    setForm((prev) => ({ ...prev, [field]: value }));
+  };
+
+  async function handleSubmit(e) {
     e.preventDefault();
     setError("");
 
-    if (!agreed) {
-      setError("You must agree to the Terms and Conditions.");
+    if (loading) return;
+
+    if (!form.agree) {
+      setError("Please agree to the Terms of Use and Privacy Policy.");
       return;
     }
 
-    if (!captchaValue) {
-      setError("Please complete the reCAPTCHA.");
+    if (!captchaToken) {
+      setError("Please complete the verification step before continuing.");
       return;
     }
 
-    setLoading(true);
+    if (!form.email || !form.password || !form.firstName || !form.lastName) {
+      setError("Please fill in all required fields.");
+      return;
+    }
+
+    if (form.password !== form.confirmPassword) {
+      setError("Passwords do not match.");
+      return;
+    }
 
     try {
+      setLoading(true);
+
       const res = await fetch("/api/auth/preverify", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          firstName,
-          lastName,
-          email,
-          password,
-<<<<<<< HEAD
-          plan: "free",
-          recaptchaToken: captchaValue,
-          newsletter,
-=======
+          firstName: form.firstName.trim(),
+          lastName: form.lastName.trim(),
+          email: form.email.trim(),
+          password: form.password,
           plan: "FREE",
-          recaptchaToken: captchaValue,
->>>>>>> 6ee98c0 (Add privacy delete user data system)
+          newsletter: !!form.newsletter,
+          captchaToken,
         }),
       });
 
-      if (res.ok) {
-        setPhase("sent");
-      } else {
-        const data = await res.json().catch(() => ({}));
-        setError(data?.error || "Something went wrong — try again");
+      const json = await res.json().catch(() => ({}));
+
+      if (!res.ok) {
+        const message =
+          json?.error ||
+          json?.message ||
+          (res.status === 500
+            ? "Database error (user lookup). Please try again in a few minutes."
+            : "Something went wrong. Please try again.");
+        setError(message);
+        return;
       }
+
+      // Success -> move to "check your email" screen
+      setPhase("sent");
     } catch (err) {
-      console.error(err);
-      setError("Network error — try again");
+      console.error("[signup] submit error:", err);
+      setError(
+        "We couldn't send your verification email yet. Please try again shortly."
+      );
     } finally {
       setLoading(false);
     }
-  };
-
-  if (phase === "sent") {
-    return (
-<<<<<<< HEAD
-      <main style={pageShell}>
-        <div style={card}>
-          <h1 style={title}>Check your email</h1>
-          <p style={{ color: "#ddd", marginTop: 8, fontSize: 14, lineHeight: 1.5 }}>
-            We sent a verification link to{" "}
-            <strong>{email}</strong>. Click the link within 1 hour to
-            complete your signup and activate your account.
-          </p>
-          <p style={{ color: "#888", marginTop: 16, fontSize: 13 }}>
-            Already verified?{" "}
-            <a href="/auth/signin" style={link}>
-              Log in here
-            </a>
-            .
-          </p>
-        </div>
-      </main>
-=======
-      <div style={container}>
-        <h1 style={title}>Check your email</h1>
-        <p style={{ color: "#ddd" }}>
-          We sent a verification link to <strong>{email}</strong>. Click the link within 1 hour to
-          complete signup.
-        </p>
-      </div>
->>>>>>> 6ee98c0 (Add privacy delete user data system)
-    );
   }
 
-  return (
-<<<<<<< HEAD
-    <main style={pageShell}>
-      <div style={card}>
-        <h1 style={title}>Create your ForgeTomorrow account</h1>
-        <p style={subtitle}>
-          Start with a free account. You can upgrade later once you’re ready to go deeper.
-        </p>
-
-        <form onSubmit={handleSubmit} style={{ marginTop: 20 }}>
-          {/* Name row */}
-          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
-            <input
-              placeholder="First name"
-              value={firstName}
-              onChange={(e) => setFirstName(e.target.value)}
-              required
-              style={input}
-              autoComplete="given-name"
-            />
-            <input
-              placeholder="Last name"
-              value={lastName}
-              onChange={(e) => setLastName(e.target.value)}
-              required
-              style={input}
-              autoComplete="family-name"
-            />
-          </div>
-
-          {/* Email */}
-          <input
-            type="email"
-            placeholder="Work or personal email"
-            value={email}
-            onChange={(e) => setEmail(e.target.value)}
-            required
-            style={{ ...input, marginTop: 12 }}
-            autoComplete="email"
-          />
-
-          {/* Password */}
-          <input
-            type="password"
-            placeholder="Temporary password"
-            value={password}
-            onChange={(e) => setPassword(e.target.value)}
-            required
-            style={{ ...input, marginTop: 12 }}
-            autoComplete="new-password"
-          />
-
-          {/* Terms checkbox */}
-          <label
-            style={{
-              display: "flex",
-              alignItems: "center",
-              gap: 8,
-              marginTop: 16,
-              fontSize: 13,
-              color: "#ddd",
-            }}
-          >
-            <input
-              type="checkbox"
-              checked={agreed}
-              onChange={(e) => setAgreed(e.target.checked)}
-              style={{ width: 16, height: 16 }}
-            />
-            <span>
-              I agree to the{" "}
-              <a href="/terms" style={link}>
-                Terms &amp; Conditions
-              </a>{" "}
-              and{" "}
-              <a href="/privacy" style={link}>
-                Privacy Policy
-              </a>
-              .
-            </span>
-          </label>
-
-          {/* Newsletter checkbox */}
-          <label
-            style={{
-              display: "flex",
-              alignItems: "center",
-              gap: 8,
-              marginTop: 10,
-              fontSize: 13,
-              color: "#aaa",
-            }}
-          >
-            <input
-              type="checkbox"
-              checked={newsletter}
-              onChange={(e) => setNewsletter(e.target.checked)}
-              style={{ width: 16, height: 16 }}
-            />
-            <span>
-              Send me early-access updates and practical career tips (optional).
-            </span>
-          </label>
-
-          {/* reCAPTCHA */}
-          {siteKey && (
-            <div style={{ marginTop: 16 }}>
-              <ReCAPTCHA
-                sitekey={siteKey}
-                onChange={(value) => setCaptchaValue(value)}
-              />
-            </div>
-          )}
-
-          {/* Error */}
-          {error && (
-            <p style={{ color: "#ff8080", marginTop: 10, fontSize: 13 }}>
-              {error}
-            </p>
-          )}
-
-          {/* Submit */}
-          <button type="submit" disabled={loading} style={button}>
-            {loading ? "Sending verification link…" : "Send verification email"}
-          </button>
-        </form>
-
-        <p style={{ marginTop: 16, fontSize: 13, color: "#999", textAlign: "center" }}>
-          Already verified an account?{" "}
-          <a href="/auth/signin" style={link}>
-            Log in here
-          </a>
-          .
-        </p>
-      </div>
-    </main>
-  );
-}
-
-/* Layout styles */
-
-const pageShell = {
-  minHeight: "100vh",
-  margin: 0,
-  padding: "64px 16px",
-  display: "flex",
-  alignItems: "flex-start",
-  justifyContent: "center",
-  background:
-    "radial-gradient(circle at top, #1e293b 0, #020617 45%, #020617 100%)",
-  color: "white",
-  fontFamily: "Inter, system-ui, -apple-system, sans-serif",
-};
-
-const card = {
-  width: "100%",
-  maxWidth: 520,
-  padding: 28,
-  borderRadius: 14,
-  background: "rgba(15, 17, 18, 0.96)",
-  border: "1px solid rgba(148, 163, 184, 0.25)",
-  boxShadow: "0 24px 60px rgba(0, 0, 0, 0.6)",
-};
-
-const title = {
-  fontSize: 24,
-  fontWeight: 800,
-  margin: 0,
-  textAlign: "center",
-};
-
-const subtitle = {
-  marginTop: 8,
-  marginBottom: 0,
-  fontSize: 14,
-  color: "#cbd5f5",
-  textAlign: "center",
-=======
-    <div style={container}>
-      <h1 style={title}>Create your account</h1>
-      <form onSubmit={handleSubmit}>
-        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
-          <input
-            placeholder="First name"
-            value={firstName}
-            onChange={(e) => setFirstName(e.target.value)}
-            required
-            style={input}
-          />
-          <input
-            placeholder="Last name"
-            value={lastName}
-            onChange={(e) => setLastName(e.target.value)}
-            required
-            style={input}
-          />
-        </div>
-
-        <input
-          type="email"
-          placeholder="Email"
-          value={email}
-          onChange={(e) => setEmail(e.target.value)}
-          required
-          style={{ ...input, marginTop: 12 }}
-        />
-
-        <input
-          type="password"
-          placeholder="Temporary password"
-          value={password}
-          onChange={(e) => setPassword(e.target.value)}
-          required
-          style={{ ...input, marginTop: 12 }}
-        />
-
-        <label style={{ display: "flex", alignItems: "center", gap: 8, marginTop: 16 }}>
-          <input
-            type="checkbox"
-            checked={agreed}
-            onChange={(e) => setAgreed(e.target.checked)}
-            style={{ width: 16, height: 16 }}
-          />
-          <span style={{ color: "#ddd", fontSize: 14 }}>
-            I agree to the{" "}
-            <a href="/terms" style={{ color: "#FF7043", textDecoration: "underline" }}>
-              Terms &amp; Conditions
-            </a>
-          </span>
-        </label>
-
-        {siteKey && (
-          <div style={{ marginTop: 16 }}>
-            <ReCAPTCHA sitekey={siteKey} onChange={(value) => setCaptchaValue(value)} />
-          </div>
-        )}
-
-        {error && <p style={{ color: "#ff8080", marginTop: 10 }}>{error}</p>}
-
-        <button type="submit" disabled={loading} style={button}>
-          {loading ? "Sending…" : "Send verification email"}
-        </button>
-      </form>
+  const HeaderCopy = (
+    <div
+      style={{
+        background: "rgba(255, 255, 255, 0.92)",
+        borderRadius: 16,
+        padding: 16,
+        border: "1px solid #eee",
+        boxShadow: "0 2px 6px rgba(0,0,0,0.06)",
+        textAlign: "center",
+      }}
+    >
+      <h1
+        style={{
+          margin: 0,
+          color: "#FF7043",
+          fontSize: 28,
+          fontWeight: 800,
+        }}
+      >
+        Create your ForgeTomorrow account
+      </h1>
+      <p
+        style={{
+          margin: "8px auto 0",
+          maxWidth: 520,
+          fontSize: 14,
+          lineHeight: 1.5,
+          color: "#374151",
+        }}
+      >
+        Professional networking without the noise — with all the tools.
+        Start with a free Seeker account, then upgrade when you're ready.
+      </p>
     </div>
   );
+
+  return (
+    <>
+      <Head>
+        <title>Sign up — ForgeTomorrow</title>
+      </Head>
+
+      <main className="min-h-screen bg-[#0B1724] text-slate-900 flex items-center justify-center px-4 py-10">
+        <div className="max-w-5xl w-full grid md:grid-cols-2 gap-8 items-stretch">
+          {/* Left side – hero / message */}
+          <div className="flex flex-col justify-center space-y-4 text-white">
+            <div className="text-sm uppercase tracking-wide text-[#FFB199]">
+              Early Access • Seeker Suite
+            </div>
+            <h2 className="text-3xl md:text-4xl font-extrabold">
+              Your next chapter
+              <span className="block text-[#FF7043]">starts here.</span>
+            </h2>
+            <p className="text-sm md:text-base text-slate-200 leading-relaxed">
+              ForgeTomorrow is built for real job seekers and real recruiters —
+              no algorithmic suppression, no spam, just tools that help you move
+              faster toward the work you’re called to do.
+            </p>
+            <ul className="mt-2 space-y-2 text-sm text-slate-200">
+              <li>• Create a free profile in minutes.</li>
+              <li>• Build and export ATS-ready resumes.</li>
+              <li>• Get AI-assisted insight without losing control.</li>
+            </ul>
+            <p className="text-xs text-slate-400 mt-4">
+              Already verified an account?{" "}
+              <Link
+                href="/login"
+                className="text-[#FFB199] hover:text-[#FF7043] underline"
+              >
+                Log in here
+              </Link>
+              .
+            </p>
+          </div>
+
+          {/* Right side – card */}
+          <div className="bg-[#F5F7FA] rounded-2xl shadow-xl border border-slate-200 p-6 md:p-7">
+            {HeaderCopy}
+
+            {phase === "form" ? (
+              <form onSubmit={handleSubmit} className="mt-6 space-y-4">
+                {error && (
+                  <div className="rounded-md border border-red-200 bg-red-50 px-3 py-2 text-xs text-red-700">
+                    {error}
+                  </div>
+                )}
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  <div>
+                    <label className="block text-xs font-medium text-slate-700 mb-1">
+                      First name
+                    </label>
+                    <input
+                      type="text"
+                      className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#FF7043]"
+                      value={form.firstName}
+                      onChange={onChange("firstName")}
+                      required
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-medium text-slate-700 mb-1">
+                      Last name
+                    </label>
+                    <input
+                      type="text"
+                      className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#FF7043]"
+                      value={form.lastName}
+                      onChange={onChange("lastName")}
+                      required
+                    />
+                  </div>
+                </div>
+
+                <div>
+                  <label className="block text-xs font-medium text-slate-700 mb-1">
+                    Email
+                  </label>
+                  <input
+                    type="email"
+                    className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#FF7043]"
+                    value={form.email}
+                    onChange={onChange("email")}
+                    required
+                  />
+                </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  <div>
+                    <label className="block text-xs font-medium text-slate-700 mb-1">
+                      Password
+                    </label>
+                    <input
+                      type="password"
+                      className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#FF7043]"
+                      value={form.password}
+                      onChange={onChange("password")}
+                      required
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-medium text-slate-700 mb-1">
+                      Confirm password
+                    </label>
+                    <input
+                      type="password"
+                      className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#FF7043]"
+                      value={form.confirmPassword}
+                      onChange={onChange("confirmPassword")}
+                      required
+                    />
+                  </div>
+                </div>
+
+                <div className="flex items-center justify-between gap-2">
+                  <label className="flex items-center gap-2 text-xs text-slate-700">
+                    <input
+                      type="checkbox"
+                      checked={form.newsletter}
+                      onChange={onChange("newsletter")}
+                      className="h-3 w-3 rounded border-slate-400 text-[#FF7043] focus:ring-[#FF7043]"
+                    />
+                    <span>Send me early access updates and tips.</span>
+                  </label>
+                </div>
+
+                <div className="mt-2">
+                  <ReCAPTCHA
+                    sitekey={
+                      process.env.NEXT_PUBLIC_RECAPTCHA_SITE_KEY ||
+                      "no-site-key-configured"
+                    }
+                    onChange={(token) => setCaptchaToken(token)}
+                  />
+                </div>
+
+                <div className="flex items-start gap-2 mt-2">
+                  <input
+                    id="agree"
+                    type="checkbox"
+                    checked={form.agree}
+                    onChange={onChange("agree")}
+                    className="mt-0.5 h-3 w-3 rounded border-slate-400 text-[#FF7043] focus:ring-[#FF7043]"
+                  />
+                  <label
+                    htmlFor="agree"
+                    className="text-[11px] leading-snug text-slate-600"
+                  >
+                    I agree to the{" "}
+                    <Link
+                      href="/legal/terms"
+                      className="text-[#FF7043] hover:underline"
+                    >
+                      Terms of Use
+                    </Link>{" "}
+                    and{" "}
+                    <Link
+                      href="/legal/privacy"
+                      className="text-[#FF7043] hover:underline"
+                    >
+                      Privacy Policy
+                    </Link>
+                    .
+                  </label>
+                </div>
+
+                <button
+                  type="submit"
+                  disabled={loading}
+                  className="mt-4 w-full rounded-md bg-[#FF7043] px-4 py-2.5 text-sm font-semibold text-white shadow-md hover:bg-[#f45c28] disabled:opacity-60"
+                >
+                  {loading ? "Sending verification link…" : "Create your account"}
+                </button>
+              </form>
+            ) : (
+              <div className="mt-6 space-y-4 text-sm text-slate-700">
+                <div className="rounded-md border border-emerald-200 bg-emerald-50 px-3 py-2 text-xs text-emerald-800">
+                  We’ve sent a verification link to{" "}
+                  <span className="font-semibold">{form.email}</span>. Click the
+                  link in your inbox to complete setup. The link is time-limited
+                  for security.
+                </div>
+                <p>
+                  Once verified, you’ll be able to log in and finish your profile.
+                </p>
+                <p className="text-xs text-slate-500">
+                  Didn’t get the email? Check your spam folder or try again with a
+                  different address.
+                </p>
+                <button
+                  type="button"
+                  onClick={() => setPhase("form")}
+                  className="text-xs text-[#FF7043] hover:underline"
+                >
+                  Go back and try a different email
+                </button>
+              </div>
+            )}
+          </div>
+        </div>
+      </main>
+    </>
+  );
 }
-
-/* Styles */
-const container = {
-  maxWidth: 520,
-  margin: "80px auto",
-  padding: 28,
-  background: "#0f1112",
-  color: "white",
-  borderRadius: 12,
-  fontFamily: "Inter, system-ui, -apple-system, sans-serif",
->>>>>>> 6ee98c0 (Add privacy delete user data system)
-};
-
-const input = {
-  width: "100%",
-  padding: 12,
-  borderRadius: 8,
-<<<<<<< HEAD
-  background: "#020617",
-  color: "white",
-  border: "1px solid #1f2933",
-  outline: "none",
-  fontSize: 14,
-=======
-  background: "#16181a",
-  color: "white",
-  border: "1px solid #2a2c2e",
-  outline: "none",
->>>>>>> 6ee98c0 (Add privacy delete user data system)
-  boxSizing: "border-box",
-};
-
-const button = {
-  width: "100%",
-<<<<<<< HEAD
-  padding: 13,
-=======
-  padding: 14,
->>>>>>> 6ee98c0 (Add privacy delete user data system)
-  background: "#FF7043",
-  color: "white",
-  border: "none",
-  borderRadius: 8,
-  fontWeight: 700,
-  marginTop: 18,
-  cursor: "pointer",
-<<<<<<< HEAD
-  fontSize: 15,
-};
-
-const link = {
-  color: "#FF7043",
-  textDecoration: "underline",
-  textUnderlineOffset: 2,
-};
-=======
-};
-
-const title = { textAlign: "center", marginBottom: 18 };
->>>>>>> 6ee98c0 (Add privacy delete user data system)

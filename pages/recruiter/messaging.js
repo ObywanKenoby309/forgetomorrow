@@ -1,10 +1,6 @@
 // pages/recruiter/messaging.js
-<<<<<<< HEAD
 import { useState, useEffect } from "react";
 import { useRouter } from "next/router";
-=======
-import { useState } from "react";
->>>>>>> 6ee98c0 (Add privacy delete user data system)
 import { PlanProvider, usePlan } from "@/context/PlanContext";
 import RecruiterLayout from "@/components/layouts/RecruiterLayout";
 import MessageThread from "@/components/recruiter/MessageThread";
@@ -12,7 +8,6 @@ import SavedReplies from "@/components/recruiter/SavedReplies";
 import BulkMessageModal from "@/components/recruiter/BulkMessageModal";
 import { SecondaryButton } from "@/components/ui/Buttons";
 
-<<<<<<< HEAD
 /**
  * DEV: Current recruiter user ID (your own account).
  * This must match the `id` field of your User row in Prisma.
@@ -41,8 +36,6 @@ async function fetchJson(url, options = {}) {
   return res.json();
 }
 
-=======
->>>>>>> 6ee98c0 (Add privacy delete user data system)
 /** Header (centered title + action on right) */
 function HeaderBar({ onOpenBulk }) {
   const { isEnterprise } = usePlan();
@@ -62,13 +55,9 @@ function HeaderBar({ onOpenBulk }) {
         ) : (
           // Overlay tooltip in locked mode so layout/height doesn't change
           <span className="relative inline-block align-middle group">
-<<<<<<< HEAD
             <SecondaryButton onClick={(e) => e.preventDefault()}>
               Bulk Message
             </SecondaryButton>
-=======
-            <SecondaryButton onClick={(e) => e.preventDefault()}>Bulk Message</SecondaryButton>
->>>>>>> 6ee98c0 (Add privacy delete user data system)
             <span
               className="
                 absolute -top-10 right-0 hidden group-hover:block
@@ -99,7 +88,6 @@ function RightToolsCard() {
   );
 }
 
-<<<<<<< HEAD
 function Body({
   threads,
   onSend,
@@ -109,9 +97,6 @@ function Body({
   initialThreadId,
   prefillText,
 }) {
-=======
-function Body({ threads, onSend, candidatesFlat, bulkOpen, setBulkOpen }) {
->>>>>>> 6ee98c0 (Add privacy delete user data system)
   const { isEnterprise } = usePlan();
 
   const onBulkSend = (ids, text) => {
@@ -119,7 +104,6 @@ function Body({ threads, onSend, candidatesFlat, bulkOpen, setBulkOpen }) {
     setBulkOpen(false);
   };
 
-<<<<<<< HEAD
   // When we arrive with a prefill (from candidates page), drop it
   // into the message input once the thread is ready and input exists.
   useEffect(() => {
@@ -141,16 +125,13 @@ function Body({ threads, onSend, candidatesFlat, bulkOpen, setBulkOpen }) {
         initialThreadId={initialThreadId || threads[0]?.id}
         onSend={onSend}
       />
-=======
-  return (
-    <main className="space-y-6">
-      <MessageThread threads={threads} initialThreadId={101} onSend={onSend} />
->>>>>>> 6ee98c0 (Add privacy delete user data system)
 
       {/* Saved replies manager (available to all plans) */}
       <SavedReplies
         onInsert={(text) => {
-          const el = document.querySelector('input[placeholder="Type a message…"]');
+          const el = document.querySelector(
+            'input[placeholder="Type a message…"]'
+          );
           if (el) {
             const curr = el.value || "";
             el.value = curr ? `${curr} ${text}` : text;
@@ -174,7 +155,6 @@ function Body({ threads, onSend, candidatesFlat, bulkOpen, setBulkOpen }) {
 }
 
 export default function MessagingPage() {
-<<<<<<< HEAD
   const router = useRouter();
   const [threads, setThreads] = useState([]);
   const [bulkOpen, setBulkOpen] = useState(false);
@@ -190,70 +170,27 @@ export default function MessagingPage() {
     typeof router.query.prefill === "string" ? router.query.prefill : "";
 
   // For now, keep this static mock list for the bulk modal UI.
-=======
-  const [threads, setThreads] = useState([
-    {
-      id: 101,
-      candidate: "Jane Doe",
-      snippet: "Thanks for the update…",
-      unread: 0,
-      messages: [
-        { id: "m1", from: "candidate", text: "Hi! Thanks for reaching out.", ts: new Date().toISOString() },
-        { id: "m2", from: "recruiter", text: "Great, let’s schedule a call.", ts: new Date().toISOString(), status: "read" },
-      ],
-    },
-    {
-      id: 102,
-      candidate: "Omar Reed",
-      snippet: "Available Thursday at 2pm…",
-      unread: 1,
-      messages: [{ id: "m3", from: "candidate", text: "Thursday 2pm works for me.", ts: new Date().toISOString() }],
-    },
-    {
-      id: 103,
-      candidate: "Priya Kumar",
-      snippet: "Attaching my portfolio…",
-      unread: 0,
-      messages: [{ id: "m4", from: "candidate", text: "Here’s my portfolio link.", ts: new Date().toISOString() }],
-    },
-  ]);
-
-  const [bulkOpen, setBulkOpen] = useState(false);
-
-  const onSend = (threadId, text) => {
-    setThreads((prev) =>
-      prev.map((t) =>
-        t.id !== threadId
-          ? t
-          : {
-              ...t,
-              snippet: text,
-              messages: [
-                ...t.messages,
-                { id: `m-${Date.now()}`, from: "recruiter", text, ts: new Date().toISOString(), status: "sent" },
-              ],
-            }
-      )
-    );
-    setTimeout(() => {
-      setThreads((prev) =>
-        prev.map((t) =>
-          t.id !== threadId
-            ? t
-            : { ...t, messages: t.messages.map((m) => (m.id.startsWith("m-") ? { ...m, status: "read" } : m)) }
-        )
-      );
-    }, 800);
-  };
-
->>>>>>> 6ee98c0 (Add privacy delete user data system)
   const candidatesFlat = [
-    { id: 1, name: "Jane Doe", role: "Client Success Lead", location: "Remote" },
-    { id: 2, name: "Omar Reed", role: "Onboarding Specialist", location: "Nashville, TN" },
-    { id: 3, name: "Priya Kumar", role: "Solutions Architect", location: "Austin, TX" },
+    {
+      id: 1,
+      name: "Jane Doe",
+      role: "Client Success Lead",
+      location: "Remote",
+    },
+    {
+      id: 2,
+      name: "Omar Reed",
+      role: "Onboarding Specialist",
+      location: "Nashville, TN",
+    },
+    {
+      id: 3,
+      name: "Priya Kumar",
+      role: "Solutions Architect",
+      location: "Austin, TX",
+    },
   ];
 
-<<<<<<< HEAD
   // Load recruiter-channel conversations from the API
   useEffect(() => {
     let cancelled = false;
@@ -383,8 +320,6 @@ export default function MessagingPage() {
     }
   };
 
-=======
->>>>>>> 6ee98c0 (Add privacy delete user data system)
   return (
     <PlanProvider>
       <RecruiterLayout
@@ -398,11 +333,8 @@ export default function MessagingPage() {
           candidatesFlat={candidatesFlat}
           bulkOpen={bulkOpen}
           setBulkOpen={setBulkOpen}
-<<<<<<< HEAD
           initialThreadId={initialThreadId}
           prefillText={prefillText}
-=======
->>>>>>> 6ee98c0 (Add privacy delete user data system)
         />
       </RecruiterLayout>
     </PlanProvider>

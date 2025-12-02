@@ -1,6 +1,5 @@
 // pages/seeker/messages.js
 import Head from 'next/head';
-<<<<<<< HEAD
 import dynamic from 'next/dynamic';
 import SeekerLayout from '@/components/layouts/SeekerLayout';
 import SeekerRightColumn from '@/components/seeker/SeekerRightColumn';
@@ -10,11 +9,6 @@ const SignalMessages = dynamic(
   () => import('@/components/signal/SignalMessages'),
   { ssr: false }
 );
-=======
-import SeekerLayout from '@/components/layouts/SeekerLayout';
-import SeekerRightColumn from '@/components/seeker/SeekerRightColumn';
-import SignalMessages from '@/components/signal/SignalMessages';
->>>>>>> 6ee98c0 (Add privacy delete user data system)
 
 export default function Messages() {
   const HeaderBox = (
@@ -28,7 +22,6 @@ export default function Messages() {
         textAlign: 'center',
       }}
     >
-<<<<<<< HEAD
       <h1
         style={{
           margin: 0,
@@ -55,11 +48,6 @@ export default function Messages() {
           Once you send a message from someone&apos;s profile, the thread will
           appear here in The Signal so you can pick it up any time.
         </span>
-=======
-      <h1 style={{ margin: 0, color: '#ff8a65', fontSize: 24, fontWeight: 800 }}>The Signal</h1>
-      <p style={{ margin: '6px auto 0', color: '#607D8B', maxWidth: 720 }}>
-        Chat with coaches, recruiters, and peers all in one place.
->>>>>>> 6ee98c0 (Add privacy delete user data system)
       </p>
     </section>
   );
@@ -77,16 +65,11 @@ export default function Messages() {
       right={RightRail}
       activeNav="messages"
     >
-<<<<<<< HEAD
       <Head>
         <title>ForgeTomorrow - The Signal</title>
       </Head>
       {/* Client-only chat inbox */}
       <SignalMessages />
-=======
-      <Head><title>ForgeTomorrow - The Signal</title></Head>
-        <SignalMessages />
->>>>>>> 6ee98c0 (Add privacy delete user data system)
     </SeekerLayout>
   );
 }

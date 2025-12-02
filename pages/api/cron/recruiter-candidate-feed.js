@@ -13,7 +13,6 @@ function getPrisma() {
   return prisma;
 }
 
-<<<<<<< HEAD
 function buildWhereFromFilters(filters = {}) {
   const where = {};
 
@@ -32,34 +31,10 @@ function buildWhereFromFilters(filters = {}) {
     andClauses.push({
       summary: {
         contains: summaryKeywords, // 👈 no mode
-=======
-// Reuse the same semantics as the recruiter candidates list endpoint,
-// but based solely on the stored automation.filters.
-function buildWhereFromFilters(filters = {}) {
-  const f = filters || {};
-
-  const summaryKeywords = (f.summaryKeywords || "").trim();
-  const jobTitle = (f.jobTitle || "").trim();
-  const workStatus = (f.workStatus || "").trim();
-  const preferredWorkType = (f.preferredWorkType || "").trim();
-  const relocate = (f.relocate || "").trim();
-  const skills = (f.skills || "").trim();
-  const languages = (f.languages || "").trim();
-
-  const where = {};
-  const andClauses = [];
-
-  if (summaryKeywords) {
-    andClauses.push({
-      summary: {
-        contains: summaryKeywords,
-        mode: "insensitive",
->>>>>>> 6ee98c0 (Add privacy delete user data system)
       },
     });
   }
 
-<<<<<<< HEAD
   // Job title across role/title/currentTitle
   if (jobTitle) {
     andClauses.push({
@@ -79,53 +54,28 @@ function buildWhereFromFilters(filters = {}) {
             contains: jobTitle, // 👈 no mode
           },
         },
-=======
-  if (jobTitle) {
-    andClauses.push({
-      OR: [
-        { role: { contains: jobTitle, mode: "insensitive" } },
-        { title: { contains: jobTitle, mode: "insensitive" } },
-        { currentTitle: { contains: jobTitle, mode: "insensitive" } },
->>>>>>> 6ee98c0 (Add privacy delete user data system)
       ],
     });
   }
 
-<<<<<<< HEAD
   // Work status — exact match
   if (workStatus) {
     andClauses.push({
       workStatus: {
         equals: workStatus,
-=======
-  if (workStatus) {
-    andClauses.push({
-      workStatus: {
-        contains: workStatus,
-        mode: "insensitive",
->>>>>>> 6ee98c0 (Add privacy delete user data system)
       },
     });
   }
 
-<<<<<<< HEAD
   // Preferred work type
   if (preferredWorkType) {
     andClauses.push({
       preferredWorkType: {
         contains: preferredWorkType, // 👈 no mode
-=======
-  if (preferredWorkType) {
-    andClauses.push({
-      preferredWorkType: {
-        contains: preferredWorkType,
-        mode: "insensitive",
->>>>>>> 6ee98c0 (Add privacy delete user data system)
       },
     });
   }
 
-<<<<<<< HEAD
   // Relocation preference
   if (relocate) {
     andClauses.push({
@@ -151,46 +101,6 @@ function buildWhereFromFilters(filters = {}) {
         contains: languages, // 👈 no mode
       },
     });
-=======
-  if (relocate) {
-    // We normalize relocate as a simple lowercase string in filters,
-    // so we match on exact lowercase value here.
-    andClauses.push({
-      willingToRelocate: relocate.toLowerCase(),
-    });
-  }
-
-  if (skills) {
-    const skillTerms = skills
-      .split(",")
-      .map((s) => s.trim())
-      .filter(Boolean);
-
-    for (const term of skillTerms) {
-      andClauses.push({
-        skills: {
-          contains: term,
-          mode: "insensitive",
-        },
-      });
-    }
-  }
-
-  if (languages) {
-    const languageTerms = languages
-      .split(",")
-      .map((s) => s.trim())
-      .filter(Boolean);
-
-    for (const term of languageTerms) {
-      andClauses.push({
-        languages: {
-          contains: term,
-          mode: "insensitive",
-        },
-      });
-    }
->>>>>>> 6ee98c0 (Add privacy delete user data system)
   }
 
   if (andClauses.length) {
@@ -210,10 +120,7 @@ export default async function handler(req, res) {
       req.query.token ||
       req.headers["x-cron-secret"] ||
       req.headers["x-cron-token"];
-<<<<<<< HEAD
 
-=======
->>>>>>> 6ee98c0 (Add privacy delete user data system)
     if (token !== secret) {
       return res.status(401).json({ error: "Unauthorized cron caller." });
     }
@@ -225,36 +132,20 @@ export default async function handler(req, res) {
   }
 
   try {
-<<<<<<< HEAD
     const automations = await prisma.recruiterCandidateAutomation.findMany({
       where: { enabled: true },
       include: { user: true },
     });
-=======
-    const automations =
-      await prisma.recruiterCandidateAutomation.findMany({
-        where: { enabled: true },
-        include: { user: true },
-      });
->>>>>>> 6ee98c0 (Add privacy delete user data system)
 
     const now = new Date();
     const results = [];
 
     for (const auto of automations) {
-<<<<<<< HEAD
       const filters = auto.filters || {};
       const where = buildWhereFromFilters(filters);
 
       // Tenant isolation if accountKey is used
       if (auto.user.accountKey) {
-=======
-      const filters = (auto.filters || {});
-      const where = buildWhereFromFilters(filters);
-
-      // Only match candidates from the same account/tenant if you're using accountKey
-      if (auto.user?.accountKey) {
->>>>>>> 6ee98c0 (Add privacy delete user data system)
         where.user = {
           accountKey: auto.user.accountKey,
         };
@@ -266,11 +157,7 @@ export default async function handler(req, res) {
         take: 50, // cap per run to avoid overload
       });
 
-<<<<<<< HEAD
       // Update lastRunAt
-=======
-      // Update lastRunAt for observability
->>>>>>> 6ee98c0 (Add privacy delete user data system)
       await prisma.recruiterCandidateAutomation.update({
         where: { id: auto.id },
         data: { lastRunAt: now },
@@ -292,10 +179,6 @@ export default async function handler(req, res) {
       });
     }
 
-<<<<<<< HEAD
-=======
-    // For now we just return JSON; later we can persist to a "feed" table or send notifications.
->>>>>>> 6ee98c0 (Add privacy delete user data system)
     return res.status(200).json({
       ranAt: now.toISOString(),
       automationCount: automations.length,
@@ -303,7 +186,6 @@ export default async function handler(req, res) {
     });
   } catch (err) {
     console.error("[cron/recruiter-candidate-feed] error:", err);
-<<<<<<< HEAD
 
     // 🔍 TEMP: surface the real error so we can debug
     return res.status(500).json({
@@ -311,10 +193,5 @@ export default async function handler(req, res) {
       details: String(err?.message || err),
       stack: err?.stack || null,
     });
-=======
-    return res
-      .status(500)
-      .json({ error: "Candidate feed cron run failed unexpectedly." });
->>>>>>> 6ee98c0 (Add privacy delete user data system)
   }
 }
