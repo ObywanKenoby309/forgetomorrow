@@ -1,29 +1,19 @@
 // pages/recruiter/candidates.js
 import { useState, useEffect } from "react";
-<<<<<<< HEAD
 import { useRouter } from "next/router";
-=======
->>>>>>> 6ee98c0 (Add privacy delete user data system)
 import { PlanProvider, usePlan } from "../../context/PlanContext";
 import RecruiterLayout from "../../components/layouts/RecruiterLayout";
 import CandidateList from "../../components/recruiter/CandidateList";
 import CandidateProfileModal from "../../components/recruiter/CandidateProfileModal";
 import FeatureLock from "../../components/recruiter/FeatureLock";
-<<<<<<< HEAD
-=======
-
->>>>>>> 6ee98c0 (Add privacy delete user data system)
 import WhyCandidateDrawer from "../../components/recruiter/WhyCandidateDrawer";
 import { getMockExplain } from "../../lib/recruiter/mockExplain";
 import * as Analytics from "../../lib/analytics/instrumentation";
 import WhyInfo from "../../components/recruiter/WhyInfo";
-<<<<<<< HEAD
 import PersonaChoiceModal from "../../components/common/PersonaChoiceModal";
 
 // DEV-ONLY: your recruiter user id to hit /api/conversations
 const RECRUITER_DEV_USER_ID = "cmic534oy0000bv2gsjrl83al";
-=======
->>>>>>> 6ee98c0 (Add privacy delete user data system)
 
 // Shape the snapshot we log / maybe show later
 const mkWhySnapshot = (explain, mode) => ({
@@ -82,10 +72,7 @@ function RightToolsCard({ whyMode = "lite", creditsLeft = null }) {
 
 function Body() {
   const { isEnterprise } = usePlan();
-<<<<<<< HEAD
   const router = useRouter();
-=======
->>>>>>> 6ee98c0 (Add privacy delete user data system)
 
   // Filters
   const [nameQuery, setNameQuery] = useState("");
@@ -131,16 +118,9 @@ function Body() {
     setOpen(true);
   };
 
-<<<<<<< HEAD
   // Persona modal state
   const [personaOpen, setPersonaOpen] = useState(false);
   const [personaCandidate, setPersonaCandidate] = useState(null);
-=======
-  const onMessage = (c) => {
-    // Messaging system will be wired in a dedicated pass
-    console.log("Message", c);
-  };
->>>>>>> 6ee98c0 (Add privacy delete user data system)
 
   // Helper: demo candidate used for dev-only fallback
   const buildDemoCandidates = () => [
@@ -157,7 +137,6 @@ function Body() {
     },
   ];
 
-<<<<<<< HEAD
   // Central function to create/open conversation, then route
   const startConversation = async (candidate, channel) => {
     if (!candidate) return;
@@ -244,8 +223,6 @@ function Body() {
     setPersonaOpen(true);
   };
 
-=======
->>>>>>> 6ee98c0 (Add privacy delete user data system)
   // Load candidates from Prisma-backed API (with filters)
   useEffect(() => {
     let isMounted = true;
@@ -335,11 +312,7 @@ function Body() {
     languages,
   ]);
 
-<<<<<<< HEAD
-  // Load saved automation config on mount
-=======
   // NEW: load saved automation config on mount
->>>>>>> 6ee98c0 (Add privacy delete user data system)
   useEffect(() => {
     let isMounted = true;
 
@@ -591,11 +564,7 @@ function Body() {
           jobTitle: jobTitle || null,
           workStatus: workStatus || null,
           preferredWorkType: preferredWorkType || null,
-<<<<<<< HEAD
           relocate: willingToRelocate || null, // backend key is `relocate`
-=======
-          relocate: willingToRelocate || null, // <-- backend key is `relocate`
->>>>>>> 6ee98c0 (Add privacy delete user data system)
           skills: skills || null,
           languages: languages || null,
         },
@@ -645,11 +614,7 @@ function Body() {
         <button
           type="button"
           onClick={() => setTargetingOpen((open) => !open)}
-<<<<<<< HEAD
-          className="flex w-full items-center justify-between rounded-md border border-slate-300 bg-white/90 px-3 py-2 text-xs sm:text-sm font-medium text-slate-700 shadow-sm hover:bg.white focus:outline-none focus:ring-2 focus:ring-[#FF7043]"
-=======
           className="flex w-full items-center justify-between rounded-md border border-slate-300 bg-white/90 px-3 py-2 text-xs sm:text-sm font-medium text-slate-700 shadow-sm hover:bg-white focus:outline-none focus:ring-2 focus:ring-[#FF7043]"
->>>>>>> 6ee98c0 (Add privacy delete user data system)
         >
           <span>Candidate targeting &amp; automation (profile-based filters)</span>
           <span className="ml-2 text-[11px] text-slate-500">
@@ -696,18 +661,10 @@ function Body() {
                   className="w-full rounded border px-2 py-1.5 text-xs sm:text-sm focus:outline-none focus:ring-2 focus:ring-[#FF7043]"
                 >
                   <option value="">Any status</option>
-<<<<<<< HEAD
-                  <option value="Actively Seeking">Actively Seeking</option>
-                  <option value="Open to Opportunities">Open to Opportunities</option>
-                  <option value="Not Seeking">Not Seeking</option>
-                  <option value="Student">Student</option>
-                  <option value="Contractor / Freelance">Contractor / Freelance</option>
-=======
                   <option value="employed">Employed</option>
                   <option value="unemployed">Actively looking</option>
                   <option value="student">Student</option>
                   <option value="contractor">Contractor / Freelance</option>
->>>>>>> 6ee98c0 (Add privacy delete user data system)
                 </select>
               </div>
 
@@ -721,19 +678,12 @@ function Body() {
                   className="w-full rounded border px-2 py-1.5 text-xs sm:text-sm focus:outline-none focus:ring-2 focus:ring-[#FF7043]"
                 >
                   <option value="">Any type</option>
-<<<<<<< HEAD
-                  <option value="Remote">Remote</option>
-                  <option value="Hybrid">Hybrid</option>
-                  <option value="Onsite">Onsite</option>
-                  <option value="Flexible">Flexible</option>
-=======
                   <option value="full-time">Full-time</option>
                   <option value="part-time">Part-time</option>
                   <option value="contract">Contract</option>
                   <option value="internship">Internship</option>
                   <option value="temporary">Temporary</option>
                   <option value="remote-only">Remote only</option>
->>>>>>> 6ee98c0 (Add privacy delete user data system)
                 </select>
               </div>
 
@@ -893,7 +843,6 @@ function Body() {
           setWhyOpen(false);
         }}
       />
-<<<<<<< HEAD
 
       <PersonaChoiceModal
         open={personaOpen}
@@ -918,8 +867,6 @@ function Body() {
           if (c) await startConversation(c, "personal");
         }}
       />
-=======
->>>>>>> 6ee98c0 (Add privacy delete user data system)
     </>
   );
 }
