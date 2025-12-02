@@ -1,5 +1,4 @@
 // pages/api/messages.js
-<<<<<<< HEAD
 import { PrismaClient } from '@prisma/client';
 
 const prisma = new PrismaClient();
@@ -94,7 +93,9 @@ async function handleGet(req, res, userId) {
         orderBy: { createdAt: 'desc' },
       });
 
-      const otherParticipant = conv.participants.find((p) => p.userId !== userId);
+      const otherParticipant = conv.participants.find(
+        (p) => p.userId !== userId
+      );
       const otherUser = otherParticipant?.user || null;
 
       conversations.push({
@@ -105,7 +106,9 @@ async function handleGet(req, res, userId) {
         name:
           otherUser?.name ||
           (otherUser?.firstName || otherUser?.lastName
-            ? `${otherUser.firstName || ''} ${otherUser.lastName || ''}`.trim()
+            ? `${otherUser.firstName || ''} ${
+                otherUser.lastName || ''
+              }`.trim()
             : otherUser?.email || 'Conversation'),
         lastMessage: lastMessageRecord?.content || '',
         lastMessageAt: lastMessageRecord?.createdAt?.toISOString() || null,
@@ -120,7 +123,9 @@ async function handleGet(req, res, userId) {
   if (typeof conversationId === 'string' && conversationId.trim().length > 0) {
     const convId = Number(conversationId);
     if (!Number.isInteger(convId)) {
-      return res.status(400).json({ error: 'conversationId must be an integer' });
+      return res
+        .status(400)
+        .json({ error: 'conversationId must be an integer' });
     }
 
     // Ensure the user is a participant
@@ -132,9 +137,9 @@ async function handleGet(req, res, userId) {
     });
 
     if (!participant) {
-      return res
-        .status(403)
-        .json({ error: 'You are not a participant in this conversation' });
+      return res.status(403).json({
+        error: 'You are not a participant in this conversation',
+      });
     }
 
     const messages = await prisma.message.findMany({
@@ -179,11 +184,12 @@ async function handlePost(req, res, userId) {
       .json({ error: 'conversationId (integer) is required' });
   }
 
-  const messageText = (typeof content === 'string' && content.trim().length > 0
-    ? content
-    : typeof text === 'string'
-    ? text
-    : ''
+  const messageText = (
+    typeof content === 'string' && content.trim().length > 0
+      ? content
+      : typeof text === 'string'
+      ? text
+      : ''
   ).trim();
 
   if (!messageText) {
@@ -239,79 +245,3 @@ async function handlePost(req, res, userId) {
     },
   });
 }
-=======
-import { createClient } from '@supabase/supabase-js';
-
-const supabase = createClient(
-  process.env.SUPABASE_URL,
-  process.env.SUPABASE_SERVICE_ROLE_KEY
-);
-
-export default async function handler(req, res) {
-  const token = req.headers.authorization?.split(' ')[1];
-
-  if (!token || token !== process.env.GROQ_API_KEY) {
-    return res.status(401).json({ error: 'Unauthorized' });
-  }
-
-  // Verify user by GROQ_API_KEY (mapped to api_key in DB)
-  const { data: user, error: userError } = await supabase
-    .from('users')
-    .select('id')
-    .eq('api_key', token)
-    .single();
-
-  if (userError || !user) {
-    return res.status(401).json({ error: 'Unauthorized' });
-  }
-
-  const userId = user.id;
-
-  if (req.method === 'GET') {
-    const { data, error } = await supabase
-      .from('messages')
-      .select('id, sender_id, content, created_at')
-      .eq('conversation_id', 'c3')
-      .order('created_at', { ascending: true });
-
-    if (error) return res.status(500).json({ error: 'Database error' });
-
-    const messages = data.map(m => ({
-      id: m.id,
-      from: m.sender_id,
-      text: m.content,
-      time: new Date(m.created_at).toLocaleTimeString()
-    }));
-
-    return res.status(200).json({ messages });
-
-  } else if (req.method === 'POST') {
-    const { conversationId, content } = req.body;
-    const convId = conversationId || 'c3';
-
-    const { data, error } = await supabase
-      .from('messages')
-      .insert({
-        conversation_id: convId,
-        sender_id: userId,
-        content,
-      })
-      .select()
-      .single();
-
-    if (error) return res.status(500).json({ error: 'Database error' });
-
-    return res.status(201).json({
-      message: {
-        id: data.id,
-        from: userId,
-        text: content,
-        time: new Date(data.created_at).toLocaleTimeString()
-      }
-    });
-
-  } else {
-    return res.status(405).json({ error: 'Method not allowed' });
-  }
-}
->>>>>>> 6ee98c0 (Add privacy delete user data system)
