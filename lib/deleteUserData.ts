@@ -51,8 +51,7 @@ export async function clearUserData(userId: string) {
       })
       .catch(() => {});
 
-    // ?งน 4) Saved jobs / bookmarks / favorites
-    // In your schema this is PinnedJob, not SavedJob
+    // ?งน 4) Saved jobs / bookmarks / favorites (PinnedJob in your schema)
     await tx.pinnedJob
       ?.deleteMany?.({
         where: { userId },
@@ -63,18 +62,6 @@ export async function clearUserData(userId: string) {
     // await tx.coverLetter?.deleteMany?.({ where: { userId } }).catch(() => {});
     // await tx.note?.deleteMany?.({ where: { userId } }).catch(() => {});
     // await tx.aiArtifact?.deleteMany?.({ where: { userId } }).catch(() => {});
-
-    // ?งน 6) Anonymize records we must keep (e.g. invoices, billing)
-    await tx.invoice
-      ?.updateMany?.({
-        where: { userId },
-        data: {
-          userId: null,
-          customerEmail: null,
-          customerName: "Deleted User",
-        },
-      })
-      .catch(() => {});
 
     // NOTE: We DO NOT delete the User row here.
   });
