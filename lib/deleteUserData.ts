@@ -37,7 +37,8 @@ export async function clearUserData(userId: string) {
     }
 
     // ?งน 2) Job applications
-    await tx.jobApplication
+    // Prisma model is `application`, not `jobApplication`
+    await tx.application
       ?.deleteMany?.({
         where: { userId },
       })
