@@ -5,6 +5,8 @@ import { Redis } from "@upstash/redis";
 
 // Optional site lock: when SITE_LOCK=1, non-public pages require auth
 const SITE_LOCK = process.env.SITE_LOCK === "1";
+// Signup window toggle: when SIGNUPS_OPEN=1, allow new account creation
+const SIGNUPS_OPEN = process.env.SIGNUPS_OPEN === "1";
 
 // Upstash Redis (optional – safe if not configured)
 const redis =
@@ -40,13 +42,24 @@ const PUBLIC_PATHS = new Set([
   "/tracking-policy",
   "/login",
   "/auth/signin",      // allow the sign-in page itself
-  "/signup",           // allow signup page itself
+  // 👇 /signup is handled separately in isPublicPath with SIGNUPS_OPEN
   "/contact",
   "/feedback",         // plus nested like /feedback/abc
 ]);
 
 function isPublicPath(pathname) {
   if (PUBLIC_PATHS.has(pathname)) return true;
+
+  // 🔓 Signup flow – only allowed when SIGNUPS_OPEN=1
+  if (SIGNUPS_OPEN) {
+    if (pathname === "/signup") return true;
+    if (pathname.startsWith("/api/auth/preverify")) return true;
+  }
+
+  // 🔓 Verification link endpoint should always be accessible
+  if (pathname.startsWith("/api/auth/verify")) {
+    return true;
+  }
 
   // Allow nested feedback paths
   if (pathname.startsWith("/feedback/")) return true;
