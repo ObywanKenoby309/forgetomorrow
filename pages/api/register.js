@@ -5,17 +5,6 @@ import bcrypt from 'bcryptjs';
 const prisma = new PrismaClient();
 
 export default async function handler(req, res) {
-<<<<<<< HEAD
-  // 🔒 Global registration gate: controlled via REGISTRATION_LOCK env var
-  // REGISTRATION_LOCK = "1" → disable new account creation
-  if (process.env.REGISTRATION_LOCK === '1') {
-    return res.status(403).json({
-      error: 'Registration is currently disabled while we prepare for launch.',
-    });
-  }
-
-=======
->>>>>>> 6ee98c0 (Add privacy delete user data system)
   // Only allow POST
   if (req.method !== 'POST') {
     return res.status(405).json({ error: 'Method not allowed' });
@@ -44,23 +33,23 @@ export default async function handler(req, res) {
     };
 
     const tierMap = {
-      'seeker pro': 'pro',
-      'recruiter smb': 'smb',
-      'recruiter enterprise': 'enterprise',
+      'seeker pro': 'PRO',
+      'recruiter smb': 'SMALL_BIZ',
+      'recruiter enterprise': 'ENTERPRISE',
     };
 
     const normalized = (inputRole?.toLowerCase().trim() || 'seeker');
     const prismaRole = roleMap[normalized] || 'SEEKER';
-<<<<<<< HEAD
-    const tier =
-      tierMap[normalized] || (prismaRole === 'SEEKER' ? 'free' : null);
-=======
-    const tier = tierMap[normalized] ||
-      (prismaRole === 'SEEKER' ? 'free' : null);
->>>>>>> 6ee98c0 (Add privacy delete user data system)
+    const plan = tierMap[normalized] ||
+      (prismaRole === 'SEEKER' ? 'FREE' : null);
 
     // ---- Check existing user -------------------------------------------------
-    const existing = await prisma.user.findUnique({ where: { email } });
+    const normalizedEmail = email.toLowerCase().trim();
+
+    const existing = await prisma.user.findUnique({
+      where: { email: normalizedEmail },
+    });
+
     if (existing) {
       return res.status(409).json({ error: 'User already exists' });
     }
@@ -71,16 +60,16 @@ export default async function handler(req, res) {
     // ---- Create user ---------------------------------------------------------
     const user = await prisma.user.create({
       data: {
-        email,
+        email: normalizedEmail,
         passwordHash,
         role: prismaRole,
-        tier,
+        plan,
       },
       select: {
         id: true,
         email: true,
         role: true,
-        tier: true,
+        plan: true,
         createdAt: true,
       },
     });
@@ -98,8 +87,4 @@ export default async function handler(req, res) {
   } finally {
     await prisma.$disconnect();
   }
-<<<<<<< HEAD
 }
-=======
-}
->>>>>>> 6ee98c0 (Add privacy delete user data system)
