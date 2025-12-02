@@ -1,4 +1,4 @@
-// lib/privacy/deleteUserData.ts
+// lib/deleteUserData.ts
 import { prisma } from "@/lib/prisma";
 
 /**
@@ -7,43 +7,72 @@ import { prisma } from "@/lib/prisma";
  */
 export async function clearUserData(userId: string) {
   return prisma.$transaction(async (tx) => {
-    // ðŸ§¹ 1) Messages / DMs
-    // TODO: rename `message` + fields to your real models/columns
-    await tx.message?.deleteMany?.({
-      where: {
-        OR: [{ senderId: userId }, { recipientId: userId }],
-      },
-    }).catch(() => {});
+    // ?§¹ 1) Messages / DMs
+    // GDPR: remove ALL messages in conversations where the user was a participant.
+    try {
+      // 1a) Find all conversations the user participated in
+      const convRows =
+        (await tx.conversationParticipant?.findMany?.({
+          where: { userId },
+          select: { conversationId: true },
+        })) || [];
 
-    // ðŸ§¹ 2) Job applications
-    await tx.jobApplication?.deleteMany?.({
-      where: { userId },
-    }).catch(() => {});
+      const convIds = convRows.map((c) => c.conversationId);
 
-    // ðŸ§¹ 3) Resumes / documents / uploads
-    await tx.resume?.deleteMany?.({
-      where: { userId },
-    }).catch(() => {});
+      if (convIds.length > 0) {
+        // 1b) Delete all messages in those conversations
+        await tx.message?.deleteMany?.({
+          where: {
+            conversationId: { in: convIds },
+          },
+        });
 
-    // ðŸ§¹ 4) Saved jobs / bookmarks / favorites
-    await tx.savedJob?.deleteMany?.({
-      where: { userId },
-    }).catch(() => {});
+        // 1c) Remove the user's participation rows as well
+        await tx.conversationParticipant?.deleteMany?.({
+          where: { userId },
+        });
+      }
+    } catch {
+      // Swallow errors here so one table doesn't break the whole privacy flow
+    }
 
-    // ðŸ§¹ 5) Other personal tables (examples / placeholders)
+    // ?§¹ 2) Job applications
+    await tx.jobApplication
+      ?.deleteMany?.({
+        where: { userId },
+      })
+      .catch(() => {});
+
+    // ?§¹ 3) Resumes / documents / uploads
+    await tx.resume
+      ?.deleteMany?.({
+        where: { userId },
+      })
+      .catch(() => {});
+
+    // ?§¹ 4) Saved jobs / bookmarks / favorites
+    await tx.savedJob
+      ?.deleteMany?.({
+        where: { userId },
+      })
+      .catch(() => {});
+
+    // ?§¹ 5) Other personal tables (examples / placeholders)
     // await tx.coverLetter?.deleteMany?.({ where: { userId } }).catch(() => {});
     // await tx.note?.deleteMany?.({ where: { userId } }).catch(() => {});
     // await tx.aiArtifact?.deleteMany?.({ where: { userId } }).catch(() => {});
 
-    // ðŸ§¹ 6) Anonymize records we must keep (e.g. invoices, billing)
-    await tx.invoice?.updateMany?.({
-      where: { userId },
-      data: {
-        userId: null,
-        customerEmail: null,
-        customerName: "Deleted User",
-      },
-    }).catch(() => {});
+    // ?§¹ 6) Anonymize records we must keep (e.g. invoices, billing)
+    await tx.invoice
+      ?.updateMany?.({
+        where: { userId },
+        data: {
+          userId: null,
+          customerEmail: null,
+          customerName: "Deleted User",
+        },
+      })
+      .catch(() => {});
 
     // NOTE: We DO NOT delete the User row here.
   });
@@ -58,14 +87,18 @@ export async function deleteUserCompletely(userId: string) {
     // First clear all personal data
     await clearUserData(userId);
 
-    // ðŸ§¹ Auth-related rows (if you use NextAuth or similar)
-    await tx.session?.deleteMany?.({
-      where: { userId },
-    }).catch(() => {});
+    // ?§¹ Auth-related rows (if you use NextAuth or similar)
+    await tx.session
+      ?.deleteMany?.({
+        where: { userId },
+      })
+      .catch(() => {});
 
-    await tx.account?.deleteMany?.({
-      where: { userId },
-    }).catch(() => {});
+    await tx.account
+      ?.deleteMany?.({
+        where: { userId },
+      })
+      .catch(() => {});
 
     // Finally, delete the user account itself
     await tx.user.delete({
