@@ -343,12 +343,15 @@ model User {
 
   candidates           Candidate[]                    // back-reference for Candidate.user
   candidateAutomations RecruiterCandidateAutomation[] // recruiter candidate feed rules
+<<<<<<< HEAD
   
   // Messaging relations
   messages                Message[]                 @relation("UserMessages")
   conversationParticipants ConversationParticipant[] @relation("UserConversationParticipants")
   blocksInitiated         UserBlock[]               @relation("UserBlocksAsBlocker")
   blocksReceived          UserBlock[]               @relation("UserBlocksAsBlocked")
+=======
+>>>>>>> 6ee98c0 (Add privacy delete user data system)
 
   // ── Corporate appearance overrides (ForgeTomorrow staff only) ─────────────
   corporateBannerKey    String?  // e.g. "CEO", "CFO", "STAFF_GENERAL"
@@ -442,6 +445,7 @@ model RecruiterCandidateAutomation {
   @@index([userId])
   @@map("recruiter_candidate_automation")
 }
+<<<<<<< HEAD
 
 // ============================================================================
 //  MESSAGING — CONVERSATIONS, MESSAGES, BLOCKS
@@ -509,3 +513,5 @@ model UserBlock {
   @@index([blockedId])
   @@map("user_blocks")
 }
+=======
+>>>>>>> 6ee98c0 (Add privacy delete user data system)

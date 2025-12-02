@@ -5,6 +5,7 @@ import bcrypt from 'bcryptjs';
 const prisma = new PrismaClient();
 
 export default async function handler(req, res) {
+<<<<<<< HEAD
   // 🔒 Global registration gate: controlled via REGISTRATION_LOCK env var
   // REGISTRATION_LOCK = "1" → disable new account creation
   if (process.env.REGISTRATION_LOCK === '1') {
@@ -13,6 +14,8 @@ export default async function handler(req, res) {
     });
   }
 
+=======
+>>>>>>> 6ee98c0 (Add privacy delete user data system)
   // Only allow POST
   if (req.method !== 'POST') {
     return res.status(405).json({ error: 'Method not allowed' });
@@ -48,8 +51,13 @@ export default async function handler(req, res) {
 
     const normalized = (inputRole?.toLowerCase().trim() || 'seeker');
     const prismaRole = roleMap[normalized] || 'SEEKER';
+<<<<<<< HEAD
     const tier =
       tierMap[normalized] || (prismaRole === 'SEEKER' ? 'free' : null);
+=======
+    const tier = tierMap[normalized] ||
+      (prismaRole === 'SEEKER' ? 'free' : null);
+>>>>>>> 6ee98c0 (Add privacy delete user data system)
 
     // ---- Check existing user -------------------------------------------------
     const existing = await prisma.user.findUnique({ where: { email } });
@@ -90,4 +98,8 @@ export default async function handler(req, res) {
   } finally {
     await prisma.$disconnect();
   }
+<<<<<<< HEAD
 }
+=======
+}
+>>>>>>> 6ee98c0 (Add privacy delete user data system)
