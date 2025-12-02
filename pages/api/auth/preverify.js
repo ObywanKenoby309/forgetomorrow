@@ -10,6 +10,10 @@ const isProd = process.env.NODE_ENV === 'production';
 // Optional registration lock (0 = allow, 1 = block)
 const REGISTRATION_LOCK = process.env.REGISTRATION_LOCK === '1';
 
+// Optional reCAPTCHA bypass (0 = enforce, 1 = skip)
+// Use this ONLY for controlled internal testing.
+const RECAPTCHA_DISABLED = process.env.RECAPTCHA_DISABLED === '1';
+
 // BREVO NEWSLETTER AUTO-ADD
 async function addToBrevo(email, firstName, lastName) {
   if (!process.env.BREVO_API_KEY || !process.env.BREVO_LIST_ID) {
@@ -82,8 +86,9 @@ export default async function handler(req, res) {
     email,
     password,
     plan = 'free',
-    captchaToken,     // 👈 from client
-    recaptchaToken,   // 👈 legacy / alternate name
+    // Frontend currently sends `captchaToken`; we also accept `recaptchaToken` for flexibility.
+    recaptchaToken,
+    captchaToken,
     newsletter,
   } = req.body || {};
 
@@ -97,17 +102,20 @@ export default async function handler(req, res) {
     return res.status(400).json({ error: 'Missing required fields' });
   }
 
-  // Support both captchaToken and recaptchaToken
-  const captchaTokenToUse = captchaToken || recaptchaToken;
+  // Choose whichever token field was provided
+  const tokenToVerify = recaptchaToken || captchaToken || null;
 
-  if (!captchaTokenToUse) {
-    return res.status(400).json({ error: 'Missing reCAPTCHA token' });
-  }
+  if (!RECAPTCHA_DISABLED) {
+    if (!tokenToVerify) {
+      return res.status(400).json({ error: 'Missing reCAPTCHA token' });
+    }
 
-  // reCAPTCHA
-  const captchaOk = await verifyRecaptcha(captchaTokenToUse);
-  if (!captchaOk) {
-    return res.status(400).json({ error: 'reCAPTCHA failed' });
+    const captchaOk = await verifyRecaptcha(tokenToVerify);
+    if (!captchaOk) {
+      return res.status(400).json({ error: 'reCAPTCHA failed' });
+    }
+  } else {
+    console.warn('[preverify] RECAPTCHA_DISABLED=1 — skipping reCAPTCHA verification');
   }
 
   const normalizedEmail = String(email).toLowerCase().trim();
