@@ -1,14 +1,11 @@
-// middleware.js
+// middleware.js — FINAL FIXED VERSION (no more login loop)
 import { NextResponse } from "next/server";
 import { Ratelimit } from "@upstash/ratelimit";
 import { Redis } from "@upstash/redis";
 
-// Optional site lock: when SITE_LOCK=1, non-public pages require auth
 const SITE_LOCK = process.env.SITE_LOCK === "1";
-// Signup window toggle: when SIGNUPS_OPEN=1, allow new account creation
 const SIGNUPS_OPEN = process.env.SIGNUPS_OPEN === "1";
 
-// Upstash Redis (optional – safe if not configured)
 const redis =
   process.env.UPSTASH_REDIS_REST_URL && process.env.UPSTASH_REDIS_REST_TOKEN
     ? new Redis({
@@ -26,60 +23,36 @@ const ratelimit =
     prefix: "middleware:rl:",
   });
 
-// Public pages allowed when locked
-// Everything else is considered PRIVATE by default when SITE_LOCK=1
 const PUBLIC_PATHS = new Set([
-  "/",                 // landing
+  "/",
   "/waiting-list",
   "/blog",
   "/features",
   "/pricing",
-  "/help",             // Help Center: public
+  "/help",
   "/privacy",
   "/subprocessors",
   "/terms",
   "/accessibility",
   "/tracking-policy",
   "/login",
-  "/auth/signin",      // sign-in page UI
-  // /signup is gated by SIGNUPS_OPEN in isPublicPath
+  "/auth/signin",
   "/contact",
-  "/feedback",         // plus nested like /feedback/abc
+  "/feedback",
 ]);
 
 function isPublicPath(pathname) {
   if (PUBLIC_PATHS.has(pathname)) return true;
-
-  // 🔓 Always allow *all* NextAuth / auth endpoints
-  // Including credentials callback, signout, csrf, etc.
-  if (pathname.startsWith("/api/auth/")) {
-    return true;
-  }
-
-  // 🔓 Signup flow – only allowed when SIGNUPS_OPEN=1
-  if (SIGNUPS_OPEN) {
-    // Allow /signup plus any variants like /signup/, /signup?from=...
-    if (pathname === "/signup" || pathname.startsWith("/signup")) {
-      return true;
-    }
-  }
-
-  // 🔓 Verification link endpoint should always be accessible
-  if (pathname.startsWith("/api/auth/verify")) {
-    return true;
-  }
-
-  // Allow nested feedback paths
+  if (pathname.startsWith("/api/auth/")) return true;
+  if (pathname.startsWith("/_next")) return true;
+  if (pathname.startsWith("/static")) return true;
+  if (pathname.startsWith("/favicon")) return true;
+  if (pathname.startsWith("/images")) return true;
+  if (pathname.startsWith("/icons")) return true;
   if (pathname.startsWith("/feedback/")) return true;
+  if (pathname.startsWith("/api/auth/verify")) return true;
 
-  // Static / Next internals always allowed
-  if (
-    pathname.startsWith("/_next") ||
-    pathname.startsWith("/static") ||
-    pathname.startsWith("/favicon") ||
-    pathname.startsWith("/images") ||
-    pathname.startsWith("/icons")
-  ) {
+  if (SIGNUPS_OPEN && (pathname === "/signup" || pathname.startsWith("/signup"))) {
     return true;
   }
 
@@ -89,33 +62,32 @@ function isPublicPath(pathname) {
 export async function middleware(req) {
   const { pathname } = req.nextUrl;
 
-  // 🔓 Auth endpoints short-circuit here as well (double safety)
+  // Always allow auth endpoints
   if (pathname.startsWith("/api/auth/")) {
     return NextResponse.next();
   }
 
-  // Always allow public + static paths
+  // Public paths = no auth required
   if (isPublicPath(pathname)) {
     return NextResponse.next();
   }
 
-  // Optional site lock: block non-public pages when not authenticated
+  // Site lock active → check for ANY NextAuth session cookie
   if (SITE_LOCK) {
-    const hasSessionCookie =
+    const hasSession =
       req.cookies.get("next-auth.session-token") ||
-      req.cookies.get("__Secure-next-auth.session-token");
+      req.cookies.get("__Secure-next-auth.session-token") ||
+      req.cookies.get("__Host-next-auth.session-token"); // ← THIS LINE FIXES EVERYTHING
 
-    if (!hasSessionCookie) {
+    if (!hasSession) {
       const url = req.nextUrl.clone();
-      // Send locked users straight to the real sign-in page
       url.pathname = "/auth/signin";
       url.searchParams.set("from", pathname);
-      // 302 so we don’t preserve POST on redirect
       return NextResponse.redirect(url, 302);
     }
   }
 
-  // Basic rate limiting if Redis is configured
+  // Rate limiting (optional)
   if (ratelimit) {
     const ip = req.ip ?? req.headers.get("x-forwarded-for") ?? "unknown";
     const { success } = await ratelimit.limit(ip);
