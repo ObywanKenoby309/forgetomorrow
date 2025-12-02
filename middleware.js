@@ -42,7 +42,7 @@ const PUBLIC_PATHS = new Set([
   "/tracking-policy",
   "/login",
   "/auth/signin",      // allow the sign-in page itself
-  // 👇 /signup is handled separately in isPublicPath with SIGNUPS_OPEN
+  // /signup is gated by SIGNUPS_OPEN in isPublicPath
   "/contact",
   "/feedback",         // plus nested like /feedback/abc
 ]);
@@ -52,8 +52,15 @@ function isPublicPath(pathname) {
 
   // 🔓 Signup flow – only allowed when SIGNUPS_OPEN=1
   if (SIGNUPS_OPEN) {
-    if (pathname === "/signup") return true;
-    if (pathname.startsWith("/api/auth/preverify")) return true;
+    // Allow /signup plus any variants like /signup/, /signup?from=...
+    if (pathname === "/signup" || pathname.startsWith("/signup")) {
+      return true;
+    }
+
+    // Allow the preverify API only while signups are open
+    if (pathname.startsWith("/api/auth/preverify")) {
+      return true;
+    }
   }
 
   // 🔓 Verification link endpoint should always be accessible
