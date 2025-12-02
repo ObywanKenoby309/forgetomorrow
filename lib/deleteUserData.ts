@@ -69,25 +69,12 @@ export async function clearUserData(userId: string) {
 
 /**
  * Delete a user's account and their data.
- * This calls clearUserData first, then removes auth + user record.
+ * This calls clearUserData first, then removes the user record.
  */
 export async function deleteUserCompletely(userId: string) {
   return prisma.$transaction(async (tx) => {
     // First clear all personal data
     await clearUserData(userId);
-
-    // ?งน Auth-related rows (if you use NextAuth or similar)
-    await tx.session
-      ?.deleteMany?.({
-        where: { userId },
-      })
-      .catch(() => {});
-
-    await tx.account
-      ?.deleteMany?.({
-        where: { userId },
-      })
-      .catch(() => {});
 
     // Finally, delete the user account itself
     await tx.user.delete({
