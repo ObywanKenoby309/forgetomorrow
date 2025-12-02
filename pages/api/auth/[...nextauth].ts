@@ -15,11 +15,16 @@ export const authOptions: NextAuthOptions = {
       async authorize(credentials) {
         if (!credentials?.email || !credentials?.password) return null;
 
+        // Normalize email exactly like preverify
+        const normalizedEmail = credentials.email.toLowerCase().trim();
+
         const user = await prisma.user.findUnique({
-          where: { email: credentials.email.toLowerCase() },
+          where: { email: normalizedEmail },
         });
 
+        // Must exist, must have a password, and must be verified
         if (!user?.passwordHash) return null;
+        if (!user.emailVerified) return null;
 
         const isValid = await bcrypt.compare(
           credentials.password,
@@ -37,7 +42,7 @@ export const authOptions: NextAuthOptions = {
           role: user.role,
           plan: user.plan,
           stripeCustomerId: user.stripeCustomerId,
-          // 🔸 NEW: surface accountKey on the user object so callbacks can use it
+          // 🔸 surface accountKey on the user object so callbacks can use it
           accountKey: user.accountKey ?? null,
         };
       },
@@ -56,7 +61,7 @@ export const authOptions: NextAuthOptions = {
         token.plan = (user as any).plan;
         (token as any).stripeCustomerId =
           (user as any).stripeCustomerId ?? null;
-        // 🔸 NEW: carry accountKey into the token
+        // 🔸 carry accountKey into the token
         (token as any).accountKey = (user as any).accountKey ?? null;
       }
       return token;
@@ -69,7 +74,7 @@ export const authOptions: NextAuthOptions = {
         (session.user as any).plan = token.plan as string;
         (session.user as any).stripeCustomerId = (token as any)
           .stripeCustomerId as string | null;
-        // 🔸 NEW: expose accountKey on session.user
+        // 🔸 expose accountKey on session.user
         (session.user as any).accountKey = (token as any).accountKey ?? null;
       }
       return session;
