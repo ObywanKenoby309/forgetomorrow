@@ -37,7 +37,7 @@ export async function clearUserData(userId: string) {
     }
 
     // ?งน 2) Job applications
-    // Prisma model is `application`, not `jobApplication`
+    // Prisma model is `Application`
     await tx.application
       ?.deleteMany?.({
         where: { userId },
@@ -52,7 +52,8 @@ export async function clearUserData(userId: string) {
       .catch(() => {});
 
     // ?งน 4) Saved jobs / bookmarks / favorites
-    await tx.savedJob
+    // In your schema this is PinnedJob, not SavedJob
+    await tx.pinnedJob
       ?.deleteMany?.({
         where: { userId },
       })
