@@ -54,8 +54,8 @@ model Job {
   userId String
   user   User   @relation(fields: [userId], references: [id])
 
-  // 🔸 NEW: which account / org owns this job (for tracing & reporting)
-  accountKey String?   // e.g. "ACCT-12345" or internal org code
+  // 🔸 which account / org owns this job (for tracing & reporting)
+  accountKey String? // e.g. "ACCT-12345" or internal org code
 
   applications Application[]
   views        JobView[]
@@ -259,8 +259,8 @@ model UserConsent {
   id          Int      @id @default(autoincrement())
   userId      String
   user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  consentType String   // e.g. "cookies_analytics", "marketing_emails"
-  region      String?  // e.g. "EU", "US-CA", "BR"
+  consentType String // e.g. "cookies_analytics", "marketing_emails"
+  region      String? // e.g. "EU", "US-CA", "BR"
   given       Boolean  @default(true)
   timestamp   DateTime @default(now())
 
@@ -295,10 +295,10 @@ model User {
   coverUrl  String?
 
   // Banner / Display
-  bannerMode      String?  // "cover" | "fit"
-  bannerHeight    Int?     // 80–220
-  bannerFocalY    Int?     // 0–100
-  isProfilePublic Boolean  @default(false)
+  bannerMode      String? // "cover" | "fit"
+  bannerHeight    Int? // 80–220
+  bannerFocalY    Int? // 0–100
+  isProfilePublic Boolean @default(false)
   wallpaperUrl    String?
 
   // ── Public URL / Slug ─────────────────────────────────────────────────────
@@ -322,8 +322,8 @@ model User {
   stripeCustomerId     String?  @unique
   stripeSubscriptionId String?  @unique
 
-  // 🔸 NEW: which account / org this user belongs to (for recruiter tenants)
-  accountKey String?   // e.g. "ACCT-12345"
+  // which account / org this user belongs to (for recruiter tenants)
+  accountKey String? // e.g. "ACCT-12345"
 
   // ── Relations ─────────────────────────────────────────────────────────────
   applications Application[]
@@ -341,26 +341,23 @@ model User {
   profileSnapshots ProfileSnapshot[] @relation("UserProfileSnapshots")
   consents         UserConsent[]
 
-  candidates           Candidate[]                    // back-reference for Candidate.user
+  candidates           Candidate[] // back-reference for Candidate.user
   candidateAutomations RecruiterCandidateAutomation[] // recruiter candidate feed rules
-<<<<<<< HEAD
-  
+
   // Messaging relations
-  messages                Message[]                 @relation("UserMessages")
+  messages                 Message[]                 @relation("UserMessages")
   conversationParticipants ConversationParticipant[] @relation("UserConversationParticipants")
-  blocksInitiated         UserBlock[]               @relation("UserBlocksAsBlocker")
-  blocksReceived          UserBlock[]               @relation("UserBlocksAsBlocked")
-=======
->>>>>>> 6ee98c0 (Add privacy delete user data system)
+  blocksInitiated          UserBlock[]               @relation("UserBlocksAsBlocker")
+  blocksReceived           UserBlock[]               @relation("UserBlocksAsBlocked")
 
   // ── Corporate appearance overrides (ForgeTomorrow staff only) ─────────────
-  corporateBannerKey    String?  // e.g. "CEO", "CFO", "STAFF_GENERAL"
-  corporateBannerLocked Boolean  @default(false)
+  corporateBannerKey    String? // e.g. "CEO", "CFO", "STAFF_GENERAL"
+  corporateBannerLocked Boolean @default(false)
 
   // ── Deletion & Timestamps ─────────────────────────────────────────────────
-  deletedAt DateTime?  // set when user requests deletion
-  createdAt DateTime   @default(now())
-  updatedAt DateTime   @updatedAt
+  deletedAt DateTime?
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
 
   @@map("users")
 }
@@ -380,9 +377,9 @@ model Candidate {
   headline     String?
   summary      String?
   location     String?
-  role         String?  // primary role / label used in search
-  title        String?  // card display title (may mirror role)
-  currentTitle String?  // explicit current job title, if needed
+  role         String? // primary role / label used in search
+  title        String? // card display title (may mirror role)
+  currentTitle String? // explicit current job title, if needed
 
   // Work preferences / status (powers filters)
   workStatus        String? // employed, actively looking, student, etc.
@@ -394,13 +391,13 @@ model Candidate {
   languages String? // comma- or pipe-delimited languages
 
   // Recruiter-only fields (private)
-  tags          String?   // comma-separated recruiter tags
-  notes         String?   // private recruiter notes
-  source        String?   // e.g. "Forge", "Import", "Referral"
-  pipelineStage String?   // e.g. "new", "reviewing", "contacted"
+  tags          String? // comma-separated recruiter tags
+  notes         String? // private recruiter notes
+  source        String? // e.g. "Forge", "Import", "Referral"
+  pipelineStage String? // e.g. "new", "reviewing", "contacted"
 
   // Match data (used by card + WHY)
-  match Int?    // last known match score (0–100)
+  match Int? // last known match score (0–100)
 
   lastContacted DateTime?
   lastSeen      DateTime?
@@ -436,7 +433,7 @@ model RecruiterCandidateAutomation {
   // }
   filters Json
 
-  enabled   Boolean  @default(true)
+  enabled   Boolean   @default(true)
   lastRunAt DateTime?
 
   createdAt DateTime @default(now())
@@ -445,21 +442,20 @@ model RecruiterCandidateAutomation {
   @@index([userId])
   @@map("recruiter_candidate_automation")
 }
-<<<<<<< HEAD
 
 // ============================================================================
 //  MESSAGING — CONVERSATIONS, MESSAGES, BLOCKS
 // ============================================================================
 
 model Conversation {
-  id        Int      @id @default(autoincrement())
-  isGroup   Boolean  @default(false)     // false = 1:1, true = group chat
-  title     String?                       // for groups; null for 1:1
-  
+  id      Int     @id @default(autoincrement())
+  isGroup Boolean @default(false) // false = 1:1, true = group chat
+  title   String? // for groups; null for 1:1
+
   // Which "inbox"/workspace this conversation belongs to:
   // "seeker" | "recruiter" | "coach" | "shared" | null
-  channel   String?
-  
+  channel String?
+
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
@@ -474,10 +470,10 @@ model ConversationParticipant {
   conversationId Int
   userId         String
   joinedAt       DateTime @default(now())
-  role           String?  // e.g. "owner", "member"
+  role           String? // e.g. "owner", "member"
 
   conversation Conversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
-  user         User        @relation("UserConversationParticipants", fields: [userId], references: [id], onDelete: Cascade)
+  user         User         @relation("UserConversationParticipants", fields: [userId], references: [id], onDelete: Cascade)
 
   @@unique([conversationId, userId])
   @@index([userId])
@@ -492,7 +488,7 @@ model Message {
   createdAt      DateTime @default(now())
 
   conversation Conversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
-  sender       User        @relation("UserMessages", fields: [senderId], references: [id])
+  sender       User         @relation("UserMessages", fields: [senderId], references: [id])
 
   @@index([conversationId])
   @@index([senderId])
@@ -513,5 +509,3 @@ model UserBlock {
   @@index([blockedId])
   @@map("user_blocks")
 }
-=======
->>>>>>> 6ee98c0 (Add privacy delete user data system)
