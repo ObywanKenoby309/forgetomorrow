@@ -13,44 +13,50 @@ export const authOptions: NextAuthOptions = {
         password: { label: "Password", type: "password" },
       },
       async authorize(credentials) {
-        if (!credentials?.email || !credentials?.password) return null;
+        if (!credentials?.email || !credentials?.password) {
+          console.log("[nextauth] Missing email or password");
+          return null;
+        }
 
-        // Normalize email exactly like preverify
         const normalizedEmail = credentials.email.toLowerCase().trim();
-
         const user = await prisma.user.findUnique({
           where: { email: normalizedEmail },
         });
 
-        if (!user?.passwordHash) return null;
+        if (!user) {
+          console.log("[nextauth] User not found:", normalizedEmail);
+          return null;
+        }
 
-        // TEMP: log so we can see what's going on in server logs
-        console.log("[nextauth] authorize user", {
-          email: user.email,
-          emailVerified: user.emailVerified,
-          plan: user.plan,
-        });
-
-        // NOTE: For now we do NOT hard-block on emailVerified
-        // if (!user.emailVerified) return null;
+        if (!user.passwordHash) {
+          console.log("[nextauth] No password hash for user:", normalizedEmail);
+          return null;
+        }
 
         const isValid = await bcrypt.compare(
           credentials.password,
           user.passwordHash
         );
-        if (!isValid) return null;
+
+        if (!isValid) {
+          console.log("[nextauth] Invalid password for:", normalizedEmail);
+          return null;
+        }
+
+        console.log("[nextauth] SUCCESSFUL LOGIN:", {
+          email: user.email,
+          role: user.role,
+          plan: user.plan,
+          emailVerified: user.emailVerified,
+        });
 
         return {
           id: user.id,
           email: user.email,
-          name:
-            user.name ||
-            `${user.firstName || ""} ${user.lastName || ""}`.trim() ||
-            user.email,
+          name: user.name || user.email,
           role: user.role,
           plan: user.plan,
           stripeCustomerId: user.stripeCustomerId,
-          // 🔸 surface accountKey on the user object so callbacks can use it
           accountKey: user.accountKey ?? null,
         };
       },
@@ -59,7 +65,7 @@ export const authOptions: NextAuthOptions = {
 
   session: {
     strategy: "jwt",
-    maxAge: 30 * 24 * 60 * 60,
+    maxAge: 30 * 24 * 60 * 60, // 30 days
   },
 
   callbacks: {
@@ -67,24 +73,23 @@ export const authOptions: NextAuthOptions = {
       if (user) {
         token.role = (user as any).role;
         token.plan = (user as any).plan;
-        (token as any).stripeCustomerId =
-          (user as any).stripeCustomerId ?? null;
-        // 🔸 carry accountKey into the token
-        (token as any).accountKey = (user as any).accountKey ?? null;
+        token.stripeCustomerId = (user as any).stripeCustomerId ?? null;
+        token.accountKey = (user as any).accountKey ?? null;
       }
       return token;
     },
 
     async session({ session, token }) {
+      console.log("[DEBUG] Session callback fired:", { session, token });
+
       if (session.user) {
         session.user.id = token.sub!;
         (session.user as any).role = token.role as string;
         (session.user as any).plan = token.plan as string;
-        (session.user as any).stripeCustomerId = (token as any)
-          .stripeCustomerId as string | null;
-        // 🔸 expose accountKey on session.user
-        (session.user as any).accountKey = (token as any).accountKey ?? null;
+        (session.user as any).stripeCustomerId = token.stripeCustomerId as string | null;
+        (session.user as any).accountKey = token.accountKey ?? null;
       }
+
       return session;
     },
   },
@@ -95,7 +100,6 @@ export const authOptions: NextAuthOptions = {
   },
 
   secret: process.env.NEXTAUTH_SECRET,
-
   jwt: {
     maxAge: 30 * 24 * 60 * 60,
   },
