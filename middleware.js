@@ -41,7 +41,7 @@ const PUBLIC_PATHS = new Set([
   "/accessibility",
   "/tracking-policy",
   "/login",
-  "/auth/signin",      // allow the sign-in page itself
+  "/auth/signin",      // sign-in page UI
   // /signup is gated by SIGNUPS_OPEN in isPublicPath
   "/contact",
   "/feedback",         // plus nested like /feedback/abc
@@ -50,15 +50,16 @@ const PUBLIC_PATHS = new Set([
 function isPublicPath(pathname) {
   if (PUBLIC_PATHS.has(pathname)) return true;
 
+  // 🔓 Always allow *all* NextAuth / auth endpoints
+  // Including credentials callback, signout, csrf, etc.
+  if (pathname.startsWith("/api/auth/")) {
+    return true;
+  }
+
   // 🔓 Signup flow – only allowed when SIGNUPS_OPEN=1
   if (SIGNUPS_OPEN) {
     // Allow /signup plus any variants like /signup/, /signup?from=...
     if (pathname === "/signup" || pathname.startsWith("/signup")) {
-      return true;
-    }
-
-    // Allow the preverify API only while signups are open
-    if (pathname.startsWith("/api/auth/preverify")) {
       return true;
     }
   }
@@ -88,6 +89,11 @@ function isPublicPath(pathname) {
 export async function middleware(req) {
   const { pathname } = req.nextUrl;
 
+  // 🔓 Auth endpoints short-circuit here as well (double safety)
+  if (pathname.startsWith("/api/auth/")) {
+    return NextResponse.next();
+  }
+
   // Always allow public + static paths
   if (isPublicPath(pathname)) {
     return NextResponse.next();
@@ -101,9 +107,11 @@ export async function middleware(req) {
 
     if (!hasSessionCookie) {
       const url = req.nextUrl.clone();
-      url.pathname = "/login";
+      // Send locked users straight to the real sign-in page
+      url.pathname = "/auth/signin";
       url.searchParams.set("from", pathname);
-      return NextResponse.redirect(url);
+      // 302 so we don’t preserve POST on redirect
+      return NextResponse.redirect(url, 302);
     }
   }
 
