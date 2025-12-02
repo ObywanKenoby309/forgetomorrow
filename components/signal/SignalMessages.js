@@ -161,3 +161,56 @@ export default function SignalMessages() {
           overflow: 'hidden',
           background: '#fff',
           boxShadow: '0 1px 3px rgba(0,0,0,0.1)',
+        }}
+      >
+        {active ? (
+          <>
+            <ConversationHeader
+              name={active.name || 'Conversation'}
+              status={active.subtitle || '—'}
+              isMuted={!!active.muted}
+              onViewProfile={handleViewProfile}
+              onToggleMute={handleToggleMute}
+              onDelete={handleDeleteConversation}
+            />
+            <div
+              style={{
+                minHeight: 0,
+                overflowY: 'auto',
+                padding: '0 16px',
+              }}
+            >
+              <MessageThread messages={activeMessages} />
+            </div>
+            <MessageComposer onSend={onSend} />
+          </>
+        ) : (
+          <div
+            style={{
+              display: 'grid',
+              placeItems: 'center',
+              padding: 24,
+              textAlign: 'center',
+              color: '#607D8B',
+              fontSize: 14,
+            }}
+          >
+            {hasConversations ? (
+              <span>Select a conversation to begin.</span>
+            ) : (
+              <div>
+                <p style={{ marginBottom: 4 }}>
+                  Your Signal inbox is ready.
+                </p>
+                <p style={{ fontSize: 13 }}>
+                  Start a conversation from a profile or candidate card and
+                  it will appear here automatically.
+                </p>
+              </div>
+            )}
+          </div>
+        )}
+      </section>
+    </div>
+  );
+}
