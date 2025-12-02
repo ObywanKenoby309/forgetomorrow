@@ -82,7 +82,8 @@ export default async function handler(req, res) {
     email,
     password,
     plan = 'free',
-    recaptchaToken,
+    captchaToken,     // 👈 from client
+    recaptchaToken,   // 👈 legacy / alternate name
     newsletter,
   } = req.body || {};
 
@@ -95,12 +96,16 @@ export default async function handler(req, res) {
   if (!firstName || !lastName || !email || !password) {
     return res.status(400).json({ error: 'Missing required fields' });
   }
-  if (!recaptchaToken) {
+
+  // Support both captchaToken and recaptchaToken
+  const captchaTokenToUse = captchaToken || recaptchaToken;
+
+  if (!captchaTokenToUse) {
     return res.status(400).json({ error: 'Missing reCAPTCHA token' });
   }
 
   // reCAPTCHA
-  const captchaOk = await verifyRecaptcha(recaptchaToken);
+  const captchaOk = await verifyRecaptcha(captchaTokenToUse);
   if (!captchaOk) {
     return res.status(400).json({ error: 'reCAPTCHA failed' });
   }
