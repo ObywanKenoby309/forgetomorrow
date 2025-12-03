@@ -7,7 +7,9 @@ import MessageThread from "@/components/recruiter/MessageThread";
 import SavedReplies from "@/components/recruiter/SavedReplies";
 import BulkMessageModal from "@/components/recruiter/BulkMessageModal";
 import { SecondaryButton } from "@/components/ui/Buttons";
-import { getClientSession } from "@/lib/auth-client";
+
+// DEV-ONLY: same recruiter user id as candidates page
+const RECRUITER_DEV_USER_ID = "cmic534oy0000bv2gsjrl83al";
 
 /** Header (centered title + action on right) */
 function HeaderBar({ onOpenBulk }) {
@@ -19,8 +21,7 @@ function HeaderBar({ onOpenBulk }) {
       <div className="text-center">
         <h1 className="text-2xl font-bold text-[#FF7043]">Messaging</h1>
         <p className="text-sm text-slate-600 mt-1 max-w-xl mx-auto">
-          View and reply to candidate conversations, or send bulk messages with
-          Enterprise.
+          View and reply to candidate conversations, or send bulk messages with Enterprise.
         </p>
       </div>
       <div className="justify-self-center md:justify-self-end">
@@ -134,9 +135,6 @@ export default function MessagingPage() {
   const [bulkOpen, setBulkOpen] = useState(false);
   const [initialThreadId, setInitialThreadId] = useState(null);
 
-  const [currentUserId, setCurrentUserId] = useState(null);
-  const [loadingUser, setLoadingUser] = useState(true);
-
   // From recruiter/candidates → onMessage()
   const queryConversationId =
     (router.query.c && String(router.query.c)) ||
@@ -168,51 +166,14 @@ export default function MessagingPage() {
     },
   ];
 
-  // 1) Resolve the REAL current user from session
-  useEffect(() => {
-    let cancelled = false;
-
-    async function loadUser() {
-      try {
-        const session = await getClientSession();
-        if (!session?.user?.id) {
-          await router.replace("/auth/signin");
-          return;
-        }
-        if (!cancelled) {
-          setCurrentUserId(session.user.id);
-        }
-      } catch (err) {
-        console.error("Failed to load session for recruiter messaging:", err);
-        if (!cancelled) {
-          // If session explodes, kick back to sign-in
-          await router.replace("/auth/signin");
-        }
-      } finally {
-        if (!cancelled) {
-          setLoadingUser(false);
-        }
-      }
-    }
-
-    loadUser();
-    return () => {
-      cancelled = true;
-    };
-  }, [router]);
-
-  // Small fetch helper that always sends x-user-id from the *real* user
+  // Small fetch helper that always sends x-user-id from the dev recruiter user
   async function fetchJson(url, options = {}) {
-    if (!currentUserId) {
-      throw new Error("No current user id resolved yet");
-    }
-
     const res = await fetch(url, {
       ...options,
       headers: {
         "Content-Type": "application/json",
         ...(options.headers || {}),
-        "x-user-id": currentUserId,
+        "x-user-id": RECRUITER_DEV_USER_ID,
       },
     });
 
@@ -224,9 +185,8 @@ export default function MessagingPage() {
     return res.json();
   }
 
-  // 2) Load recruiter-channel conversations from the API
+  // Load recruiter-channel conversations from the API
   useEffect(() => {
-    if (!currentUserId) return; // wait until we know who we are
     let cancelled = false;
 
     async function loadThreads() {
@@ -251,7 +211,7 @@ export default function MessagingPage() {
               const mappedMessages = msgs.map((m) => ({
                 id: m.id,
                 from:
-                  m.senderId === currentUserId ? "recruiter" : "candidate",
+                  m.senderId === RECRUITER_DEV_USER_ID ? "recruiter" : "candidate",
                 text: m.text,
                 ts: m.timeIso || new Date().toISOString(),
                 status: "read",
@@ -312,67 +272,8 @@ export default function MessagingPage() {
     return () => {
       cancelled = true;
     };
-    // Re-run if the conversation id in the URL changes or user changes
-  }, [queryConversationId, currentUserId]);
-
-  const onSend = async (threadId, text) => {
-    if (!text || !String(text).trim()) return;
-    const trimmed = String(text).trim();
-
-    try {
-      // Send message to the recruiter-channel conversation
-      const data = await fetchJson("/api/messages", {
-        method: "POST",
-        body: JSON.stringify({
-          conversationId: threadId,
-          content: trimmed,
-          channel: "recruiter",
-        }),
-      });
-
-      const msg = data?.message;
-      const newMsg = {
-        id: msg?.id ?? `m-${Date.now()}`,
-        from: "recruiter",
-        text: msg?.text ?? trimmed,
-        ts: msg?.timeIso || new Date().toISOString(),
-        status: "sent",
-      };
-
-      setThreads((prev) =>
-        prev.map((t) =>
-          t.id !== threadId
-            ? t
-            : {
-                ...t,
-                snippet: trimmed,
-                messages: [...t.messages, newMsg],
-              }
-        )
-      );
-    } catch (err) {
-      console.error("Failed to send recruiter message:", err);
-      // TODO: surface this in UI later
-    }
-  };
-
-  // Simple loading shell while we resolve the user
-  if (loadingUser || !currentUserId) {
-    return (
-      <PlanProvider>
-        <RecruiterLayout
-          title="Messaging — ForgeTomorrow"
-          header={<HeaderBar onOpenBulk={() => {}} />}
-          right={<RightToolsCard />}
-          activeNav="messaging"
-        >
-          <div className="h-64 flex items-center justify-center text-slate-500">
-            Loading your messaging inbox…
-          </div>
-        </RecruiterLayout>
-      </PlanProvider>
-    );
-  }
+    // Re-run if the conversation id in the URL changes
+  }, [queryConversationId]);
 
   return (
     <PlanProvider>
@@ -384,7 +285,44 @@ export default function MessagingPage() {
       >
         <Body
           threads={threads}
-          onSend={onSend}
+          onSend={async (threadId, text) => {
+            if (!text || !String(text).trim()) return;
+            const trimmed = String(text).trim();
+
+            try {
+              const data = await fetchJson("/api/messages", {
+                method: "POST",
+                body: JSON.stringify({
+                  conversationId: threadId,
+                  content: trimmed,
+                  channel: "recruiter",
+                }),
+              });
+
+              const msg = data?.message;
+              const newMsg = {
+                id: msg?.id ?? `m-${Date.now()}`,
+                from: "recruiter",
+                text: msg?.text ?? trimmed,
+                ts: msg?.timeIso || new Date().toISOString(),
+                status: "sent",
+              };
+
+              setThreads((prev) =>
+                prev.map((t) =>
+                  t.id !== threadId
+                    ? t
+                    : {
+                        ...t,
+                        snippet: trimmed,
+                        messages: [...t.messages, newMsg],
+                      }
+                )
+              );
+            } catch (err) {
+              console.error("Failed to send recruiter message:", err);
+            }
+          }}
           candidatesFlat={candidatesFlat}
           bulkOpen={bulkOpen}
           setBulkOpen={setBulkOpen}
