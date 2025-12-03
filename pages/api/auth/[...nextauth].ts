@@ -60,17 +60,16 @@ export const authOptions: NextAuthOptions = {
 
   secret: process.env.NEXTAUTH_SECRET,
 
-  // ─────────────────────── CALLBACKS (WITH REDIRECT FIX) ───────────────────────
   callbacks: {
-    // ✅ Make sure we always land in a safe place after auth
+    // 🔑 Main fix: make redirects deterministic & safe
     async redirect({ url, baseUrl }) {
-      // Allow relative URLs (e.g. "/seeker-dashboard")
+      // Allow relative URLs (/seeker-dashboard, /coaching-dashboard, etc.)
       if (url.startsWith("/")) return `${baseUrl}${url}`;
 
       // Allow same-origin absolute URLs
       if (url.startsWith(baseUrl)) return url;
 
-      // Fallback: always send to seeker dashboard
+      // Fallback: always go to seeker dashboard
       return `${baseUrl}/seeker-dashboard`;
     },
 
@@ -98,20 +97,6 @@ export const authOptions: NextAuthOptions = {
       return session;
     },
   },
-
-  // ───────────────────── COOKIE CONFIG (FOR VERCEL / HTTPS) ────────────────────
-  cookies: {
-    sessionToken: {
-      name: "__Secure-next-auth.session-token",
-      options: {
-        httpOnly: true,
-        sameSite: "lax",
-        path: "/",
-        secure: true, // required for secure cookies on Vercel prod
-      },
-    },
-  },
-  // ─────────────────────────────────────────────────────────────────────────────
 };
 
 export default NextAuth(authOptions);
