@@ -38,10 +38,14 @@ export default function SeekerDashboard() {
   useEffect(() => {
     async function loadData() {
       const session = await getClientSession();
+
+      // ⬇⬇⬇ KEY CHANGE: send to /auth/signin instead of /login
       if (!session?.user?.id) {
-        router.push('/login');
+        router.push('/auth/signin');
         return;
       }
+      // ⬆⬆⬆
+
       const userId = session.user.id;
 
       try {
