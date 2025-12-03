@@ -55,10 +55,26 @@ Type your question or concern in your own words. We'll automatically route it to
 
   const bottomRef = useRef(null);
 
+  // 🔄 Track whether we should stick to bottom (only auto-scroll when user hasn't scrolled up)
+  const scrollerRef = useRef(null);
+  const [stickToBottom, setStickToBottom] = useState(true);
+
   useEffect(() => {
     if (!bottomRef.current) return;
+    if (!stickToBottom) return;
     bottomRef.current.scrollIntoView({ behavior: 'smooth' });
-  }, [messages, loading]);
+  }, [messages, loading, stickToBottom]);
+
+  const handleScroll = () => {
+    const el = scrollerRef.current;
+    if (!el) return;
+
+    const threshold = 40; // px from bottom counts as "at bottom"
+    const distanceFromBottom =
+      el.scrollHeight - el.scrollTop - el.clientHeight;
+
+    setStickToBottom(distanceFromBottom <= threshold);
+  };
 
   const handleSend = async () => {
     const trimmed = input.trim();
@@ -183,7 +199,11 @@ Type your question or concern in your own words. We'll automatically route it to
         {/* Chat container */}
         <div className="flex-1 bg-white rounded-xl shadow-md border border-slate-200 flex flex-col overflow-hidden">
           {/* Messages area */}
-          <div className="flex-1 overflow-y-auto px-4 py-4 md:px-6 md:py-5 space-y-3">
+          <div
+            ref={scrollerRef}
+            onScroll={handleScroll}
+            className="flex-1 overflow-y-auto px-4 py-4 md:px-6 md:py-5 space-y-3"
+          >
             {messages.map((msg) => {
               if (msg.from === 'system') {
                 return (
