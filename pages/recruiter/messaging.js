@@ -19,7 +19,8 @@ function HeaderBar({ onOpenBulk }) {
       <div className="text-center">
         <h1 className="text-2xl font-bold text-[#FF7043]">Messaging</h1>
         <p className="text-sm text-slate-600 mt-1 max-w-xl mx-auto">
-          View and reply to candidate conversations, or send bulk messages with Enterprise.
+          View and reply to candidate conversations, or send bulk messages with
+          Enterprise.
         </p>
       </div>
       <div className="justify-self-center md:justify-self-end">
@@ -363,6 +364,7 @@ export default function MessagingPage() {
           title="Messaging — ForgeTomorrow"
           header={<HeaderBar onOpenBulk={() => {}} />}
           right={<RightToolsCard />}
+          activeNav="messaging"
         >
           <div className="h-64 flex items-center justify-center text-slate-500">
             Loading your messaging inbox…
@@ -378,6 +380,7 @@ export default function MessagingPage() {
         title="Messaging — ForgeTomorrow"
         header={<HeaderBar onOpenBulk={() => setBulkOpen(true)} />}
         right={<RightToolsCard />}
+        activeNav="messaging"
       >
         <Body
           threads={threads}
