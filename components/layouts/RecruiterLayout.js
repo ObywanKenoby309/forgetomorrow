@@ -21,7 +21,7 @@ export default function RecruiterLayout({
   variant = 'smb',           // 'smb' | 'enterprise'
   counts,                    // optional badges
   initialOpen,               // optional section defaults
-  activeNav = 'dashboard',   // NEW: which nav item is active in the sidebar
+  activeNav,                 // which nav item is active in the sidebar
 }) {
   return (
     <>
