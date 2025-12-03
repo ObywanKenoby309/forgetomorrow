@@ -22,13 +22,19 @@ export const authOptions: NextAuthOptions = {
 
         if (!user || !user.passwordHash) return null;
 
-        const isValid = await bcrypt.compare(credentials.password, user.passwordHash);
+        const isValid = await bcrypt.compare(
+          credentials.password,
+          user.passwordHash
+        );
         if (!isValid) return null;
 
         return {
           id: user.id,
           email: user.email,
-          name: user.name || user.email,
+          name:
+            user.name ||
+            `${user.firstName || ""} ${user.lastName || ""}`.trim() ||
+            user.email,
           role: user.role,
           plan: user.plan,
           stripeCustomerId: user.stripeCustomerId,
@@ -54,14 +60,27 @@ export const authOptions: NextAuthOptions = {
 
   secret: process.env.NEXTAUTH_SECRET,
 
-  // ─────────────────────── THIS IS THE FIX ───────────────────────
+  // ─────────────────────── CALLBACKS (WITH REDIRECT FIX) ───────────────────────
   callbacks: {
+    // ✅ Make sure we always land in a safe place after auth
+    async redirect({ url, baseUrl }) {
+      // Allow relative URLs (e.g. "/seeker-dashboard")
+      if (url.startsWith("/")) return `${baseUrl}${url}`;
+
+      // Allow same-origin absolute URLs
+      if (url.startsWith(baseUrl)) return url;
+
+      // Fallback: always send to seeker dashboard
+      return `${baseUrl}/seeker-dashboard`;
+    },
+
     async jwt({ token, user }) {
       if (user) {
         token.role = (user as any).role;
         token.plan = (user as any).plan;
-        token.stripeCustomerId = (user as any).stripeCustomerId ?? null;
-        token.accountKey = (user as any).accountKey ?? null;
+        (token as any).stripeCustomerId =
+          (user as any).stripeCustomerId ?? null;
+        (token as any).accountKey = (user as any).accountKey ?? null;
       }
       return token;
     },
@@ -71,35 +90,28 @@ export const authOptions: NextAuthOptions = {
         session.user.id = token.sub!;
         (session.user as any).role = token.role;
         (session.user as any).plan = token.plan;
-        (session.user as any).stripeCustomerId = token.stripeCustomerId;
-        (session.user as any).accountKey = token.accountKey ?? null;
+        (session.user as any).stripeCustomerId = (token as any)
+          .stripeCustomerId;
+        (session.user as any).accountKey =
+          ((token as any).accountKey as string | null) ?? null;
       }
       return session;
     },
-
-    // ←←← THIS ONE KILLS THE LOOP ←←←
-    async redirect({ url, baseUrl }) {
-      // If the URL is relative or same domain → allow it
-      if (url.startsWith("/")) return `${baseUrl}${url}`;
-      if (url.startsWith(baseUrl)) return url;
-      // Otherwise redirect to dashboard after login
-      return `${baseUrl}/seeker-dashboard`;
-    },
   },
 
-  // ←←← THIS ONE FIXES COOKIE DOMAIN ISSUES ←←←
+  // ───────────────────── COOKIE CONFIG (FOR VERCEL / HTTPS) ────────────────────
   cookies: {
     sessionToken: {
-      name: `__Secure-next-auth.session-token`,
+      name: "__Secure-next-auth.session-token",
       options: {
         httpOnly: true,
         sameSite: "lax",
         path: "/",
-        secure: true, // forces HTTPS cookies in prod
+        secure: true, // required for secure cookies on Vercel prod
       },
     },
   },
-  // ─────────────────────────────────────────────────────────────
+  // ─────────────────────────────────────────────────────────────────────────────
 };
 
 export default NextAuth(authOptions);
