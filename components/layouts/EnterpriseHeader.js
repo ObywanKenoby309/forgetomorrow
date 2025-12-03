@@ -235,6 +235,10 @@ export default function EnterpriseHeader({
                         <button
                           className="w-full text-left px-4 py-3 text-sm hover:bg-[#333]"
                           role="menuitem"
+                          onClick={() => {
+                            setOpenProfile(false);
+                            router.push("/logout"); // 🔒 go through centralized logout
+                          }}
                         >
                           Log Out
                         </button>
