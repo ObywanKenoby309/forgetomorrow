@@ -39,11 +39,19 @@ export default async function handler(
         select: {
           firstName: true,
           lastName: true,
+          name: true,
+          pronouns: true,
           headline: true,
           status: true,
+          location: true,
+          slug: true,
+          isProfilePublic: true,
           avatarUrl: true,
           coverUrl: true,
           wallpaperUrl: true,
+          bannerHeight: true,
+          bannerMode: true,
+          bannerFocalY: true,
           corporateBannerKey: true,
           corporateBannerLocked: true,
         },
@@ -58,8 +66,13 @@ export default async function handler(
         corporateBanner = getCorporateBannerByKey(record.corporateBannerKey);
       }
 
+      // If there is a corporate banner, treat it as the effective coverUrl
+      const effectiveCoverUrl =
+        (corporateBanner && corporateBanner.bannerSrc) || record.coverUrl || null;
+
       return res.status(200).json({
         ...record,
+        coverUrl: effectiveCoverUrl,
         corporateBanner,
       });
     } catch (err) {
@@ -81,6 +94,13 @@ export default async function handler(
         wallpaperUrl,
         corporateBannerKey,
         corporateBannerLocked,
+        pronouns,
+        location,
+        slug,
+        isProfilePublic,
+        bannerHeight,
+        bannerMode,
+        bannerFocalY,
       } = req.body || {};
 
       const data: any = {};
@@ -95,17 +115,33 @@ export default async function handler(
       if (corporateBannerLocked !== undefined)
         data.corporateBannerLocked = corporateBannerLocked;
 
+      if (pronouns !== undefined) data.pronouns = pronouns;
+      if (location !== undefined) data.location = location;
+      if (slug !== undefined) data.slug = slug;
+      if (isProfilePublic !== undefined) data.isProfilePublic = isProfilePublic;
+      if (bannerHeight !== undefined) data.bannerHeight = bannerHeight;
+      if (bannerMode !== undefined) data.bannerMode = bannerMode;
+      if (bannerFocalY !== undefined) data.bannerFocalY = bannerFocalY;
+
       const updated = await prisma.user.update({
         where: { id: userId },
         data,
         select: {
           firstName: true,
           lastName: true,
+          name: true,
+          pronouns: true,
           headline: true,
           status: true,
+          location: true,
+          slug: true,
+          isProfilePublic: true,
           avatarUrl: true,
           coverUrl: true,
           wallpaperUrl: true,
+          bannerHeight: true,
+          bannerMode: true,
+          bannerFocalY: true,
           corporateBannerKey: true,
           corporateBannerLocked: true,
         },
@@ -116,8 +152,12 @@ export default async function handler(
         corporateBanner = getCorporateBannerByKey(updated.corporateBannerKey);
       }
 
+      const effectiveCoverUrl =
+        (corporateBanner && corporateBanner.bannerSrc) || updated.coverUrl || null;
+
       return res.status(200).json({
         ...updated,
+        coverUrl: effectiveCoverUrl,
         corporateBanner,
       });
     } catch (err) {

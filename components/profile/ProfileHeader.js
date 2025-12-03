@@ -61,7 +61,16 @@ export default function ProfileHeader() {
         setStatus(user.status || '');
 
         setAvatarUrl(user.avatarUrl || '/demo-avatar.png');
-        setCoverUrl(user.coverUrl || '');
+
+        // Prefer corporate banner from the API if present, otherwise use coverUrl
+        const corporateBanner =
+          data.corporateBanner || user.corporateBanner || null;
+        const effectiveCoverUrl =
+          (corporateBanner && corporateBanner.bannerSrc) ||
+          user.coverUrl ||
+          '';
+        setCoverUrl(effectiveCoverUrl);
+
         setWallpaperUrl(user.wallpaperUrl || '');
 
         const h = user.bannerHeight != null ? user.bannerHeight : 120;
