@@ -8,7 +8,8 @@ import RecruiterSidebar from '@/components/recruiter/RecruiterSidebar';
  * Recruiter-only layout.
  * - Grid/padding/right-rail match SeekerLayout for uniformity.
  * - `headerCard` (default true) wraps the header slot in a white card.
- * - NEW: `role` (org-level permission) and `variant` (smb|enterprise) pass to sidebar.
+ * - `role` (org-level permission) and `variant` (smb|enterprise) pass to sidebar.
+ * - `activeNav` tells the sidebar which item should be highlighted.
  */
 export default function RecruiterLayout({
   title = 'ForgeTomorrow — Recruiter',
@@ -20,10 +21,14 @@ export default function RecruiterLayout({
   variant = 'smb',           // 'smb' | 'enterprise'
   counts,                    // optional badges
   initialOpen,               // optional section defaults
+  activeNav = 'dashboard',   // NEW: which nav item is active in the sidebar
 }) {
   return (
     <>
-      <Head><title>{title}</title></Head>
+      <Head>
+        <title>{title}</title>
+      </Head>
+
       <RecruiterHeader />
 
       <div
@@ -43,6 +48,7 @@ export default function RecruiterLayout({
         {/* LEFT — Sidebar */}
         <aside style={{ gridArea: 'left', alignSelf: 'start' }}>
           <RecruiterSidebar
+            active={activeNav}
             role={role}
             variant={variant}
             counts={counts}
@@ -58,7 +64,7 @@ export default function RecruiterLayout({
               background: 'white',
               borderRadius: 12,
               padding: '8px 16px',
-              border: '1px solid #eee',
+              border: '1px solid '#eee',
               boxShadow: '0 2px 6px rgba(0,0,0,0.06)',
               minWidth: 0,
             }}
