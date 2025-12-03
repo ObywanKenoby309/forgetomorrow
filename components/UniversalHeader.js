@@ -117,7 +117,7 @@ export default function UniversalHeader() {
                 <button
                   onClick={() => {
                     setMenuOpen(false);
-                    alert("Log out (wire your auth here)");
+                    router.push("/logout"); // ← go to logout page to actually end session
                   }}
                   className="w-full text-left px-3 py-2 text-sm text-gray-200 hover:bg-[#FF7043] hover:text-white"
                 >
