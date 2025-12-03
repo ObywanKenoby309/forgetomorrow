@@ -2,6 +2,7 @@
 import { useState } from 'react';
 import Head from 'next/head';
 import Link from 'next/link';
+import UniversalHeader from '@/components/UniversalHeader';
 
 // Persona definitions for display only
 const PERSONA_DISPLAY = {
@@ -155,29 +156,22 @@ Type your question or concern in your own words. We'll automatically route it to
         <title>ForgeTomorrow - Support Chat</title>
       </Head>
 
-      <main className="max-w-5xl mx-auto px-4 py-6 md:py-10 min-h-[80vh] flex flex-col">
-        {/* Top bar */}
-        <div className="flex items-center justify-between mb-4 md:mb-6">
-          <div>
-            <h1 className="text-2xl md:text-3xl font-bold text-[#FF7043]">
-              Support Chat
-            </h1>
-            <p className="text-sm md:text-base text-slate-600">
-              Ask your question in natural language. The right support persona will answer
-              automatically and stay with you for this conversation.
-            </p>
-          </div>
+      {/* Internal app header — dynamic based on PlanContext / current user */}
+      <UniversalHeader />
 
-          <Link
-            href="/support"
-            className="text-xs md:text-sm text-slate-500 hover:text-slate-700 underline"
-          >
-            ← Back to Support Center
-          </Link>
-        </div>
+      <main className="relative z-10 max-w-5xl mx-auto px-4 pt-24 pb-10 min-h-[80vh] flex flex-col">
+        {/* Page Title Card (matches internal style like Seeker Dashboard) */}
+        <section className="bg-white border border-gray-200 rounded-xl p-6 shadow-sm mb-6 text-center">
+          <h1 className="text-3xl font-bold text-[#FF7043]">
+            Support Chat
+          </h1>
+          <p className="text-sm md:text-base text-slate-600 mt-2">
+            Ask your question in natural language. The right support persona will answer and stay with you for this conversation.
+          </p>
+        </section>
 
         {/* Chat container */}
-        <div className="flex-1 bg-white rounded-xl shadow-md border border-slate-200 flex flex-col overflow-hidden">
+        <section className="flex-1 bg-white rounded-xl shadow-md border border-slate-200 flex flex-col overflow-hidden">
           {/* Messages area */}
           <div className="flex-1 overflow-y-auto px-4 py-4 md:px-6 md:py-5 space-y-3">
             {messages.map((msg) => {
@@ -272,11 +266,10 @@ Type your question or concern in your own words. We'll automatically route it to
               </button>
             </div>
             <p className="mt-1 text-[11px] text-slate-500">
-              Please don’t share passwords or sensitive financial details. Our support
-              personas are here to help, but they can’t see private account numbers.
+              Please don’t share passwords or sensitive financial details. Our support personas are here to help, but they can’t see private account numbers.
             </p>
           </div>
-        </div>
+        </section>
       </main>
     </>
   );
