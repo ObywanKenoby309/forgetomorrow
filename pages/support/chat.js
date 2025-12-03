@@ -58,7 +58,7 @@ Type your question or concern in your own words. We'll automatically route it to
   // 🔄 Track scroll behavior and who triggered the latest message update
   const scrollerRef = useRef(null);
   const [stickToBottom, setStickToBottom] = useState(true);
-  const [lastChangeSource, setLastChangeSource] = useState<'user' | 'bot' | 'system' | null>('system');
+  const [lastChangeSource, setLastChangeSource] = useState('system'); // 'user' | 'bot' | 'system'
 
   useEffect(() => {
     if (!bottomRef.current) return;
