@@ -2,25 +2,57 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 
 function tsFmt(ts) {
-  try { return new Date(ts).toLocaleString(); } catch { return ""; }
+  try {
+    return new Date(ts).toLocaleString();
+  } catch {
+    return "";
+  }
 }
 
 /**
  * props:
  * - threads: [{id, candidate, snippet, messages:[{id, from:'recruiter'|'candidate', text, ts, status?:'sent'|'read'}], unread?: number}]
- * - initialThreadId?: number
+ * - initialThreadId?: number|string
  * - onSend?: (threadId, messageText) => void
  * - onInsertSavedReply?: (setDraft) => void   // called by SavedReplies to insert text
  */
-export default function MessageThread({ threads = [], initialThreadId, onSend, onInsertSavedReply }) {
-  const [activeId, setActiveId] = useState(initialThreadId ?? threads[0]?.id ?? null);
-  const active = useMemo(() => threads.find(t => t.id === activeId) || null, [threads, activeId]);
+export default function MessageThread({
+  threads = [],
+  initialThreadId,
+  onSend,
+  onInsertSavedReply,
+}) {
+  const [activeId, setActiveId] = useState(
+    initialThreadId ?? threads[0]?.id ?? null
+  );
+  const active = useMemo(
+    () => threads.find((t) => t.id === activeId) || null,
+    [threads, activeId]
+  );
   const [draft, setDraft] = useState("");
   const [isTyping, setIsTyping] = useState(false);
   const scrollRef = useRef(null);
 
+  // 🔁 Keep activeId in sync with initialThreadId / threads when they change
   useEffect(() => {
-    if (scrollRef.current) scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
+    const next = initialThreadId ?? threads[0]?.id ?? null;
+    setActiveId((prev) => {
+      // If we already have a valid activeId that still exists, keep it
+      if (prev && threads.some((t) => t.id === prev)) {
+        // But if initialThreadId is explicitly set and different, respect that
+        if (initialThreadId && prev !== initialThreadId) {
+          return initialThreadId;
+        }
+        return prev;
+      }
+      return next;
+    });
+  }, [initialThreadId, threads]);
+
+  useEffect(() => {
+    if (scrollRef.current) {
+      scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
+    }
   }, [activeId, active?.messages?.length]);
 
   useEffect(() => {
@@ -44,7 +76,9 @@ export default function MessageThread({ threads = [], initialThreadId, onSend, o
       {/* Threads list */}
       <aside className="md:col-span-1 rounded-lg border bg-white divide-y">
         {threads.length === 0 && (
-          <div className="px-4 py-6 text-sm text-slate-500">No conversations yet.</div>
+          <div className="px-4 py-6 text-sm text-slate-500">
+            No conversations yet.
+          </div>
         )}
         {threads.map((t) => (
           <button
@@ -62,7 +96,9 @@ export default function MessageThread({ threads = [], initialThreadId, onSend, o
                 </span>
               ) : null}
             </div>
-            <div className="text-xs text-slate-500 truncate">{t.snippet || "—"}</div>
+            <div className="text-xs text-slate-500 truncate">
+              {t.snippet || "—"}
+            </div>
           </button>
         ))}
       </aside>
@@ -74,7 +110,9 @@ export default function MessageThread({ threads = [], initialThreadId, onSend, o
         ) : (
           <>
             <div className="flex items-center justify-between mb-2">
-              <div className="font-medium">Conversation with {active.candidate}</div>
+              <div className="font-medium">
+                Conversation with {active.candidate}
+              </div>
               <label className="text-xs text-slate-500 cursor-pointer">
                 <input
                   type="checkbox"
@@ -93,7 +131,14 @@ export default function MessageThread({ threads = [], initialThreadId, onSend, o
               {active.messages?.length ? (
                 <ul className="space-y-2">
                   {active.messages.map((m) => (
-                    <li key={m.id} className={`flex ${m.from === "recruiter" ? "justify-end" : "justify-start"}`}>
+                    <li
+                      key={m.id}
+                      className={`flex ${
+                        m.from === "recruiter"
+                          ? "justify-end"
+                          : "justify-start"
+                      }`}
+                    >
                       <div
                         className={`px-3 py-2 rounded max-w-[80%] ${
                           m.from === "recruiter"
@@ -113,7 +158,9 @@ export default function MessageThread({ threads = [], initialThreadId, onSend, o
                   ))}
                 </ul>
               ) : (
-                <div className="text-slate-500">No messages yet. Say hello!</div>
+                <div className="text-slate-500">
+                  No messages yet. Say hello!
+                </div>
               )}
               {isTyping && (
                 <div className="mt-2 flex justify-start">
@@ -131,7 +178,8 @@ export default function MessageThread({ threads = [], initialThreadId, onSend, o
                 value={draft}
                 onChange={(e) => setDraft(e.target.value)}
                 onKeyDown={(e) => {
-                  if (e.key === "Enter" && (e.ctrlKey || e.metaKey)) handleSend();
+                  if ((e.metaKey || e.ctrlKey) && e.key === "Enter")
+                    handleSend();
                 }}
               />
               <button

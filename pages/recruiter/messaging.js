@@ -7,34 +7,7 @@ import MessageThread from "@/components/recruiter/MessageThread";
 import SavedReplies from "@/components/recruiter/SavedReplies";
 import BulkMessageModal from "@/components/recruiter/BulkMessageModal";
 import { SecondaryButton } from "@/components/ui/Buttons";
-
-/**
- * DEV: Current recruiter user ID (your own account).
- * This must match the `id` field of your User row in Prisma.
- */
-const CURRENT_USER_ID = "cmic534oy0000bv2gsjrl83al";
-
-/**
- * Small fetch helper that always sends x-user-id so the API
- * can resolve the current user (dev stub).
- */
-async function fetchJson(url, options = {}) {
-  const res = await fetch(url, {
-    ...options,
-    headers: {
-      "Content-Type": "application/json",
-      "x-user-id": CURRENT_USER_ID,
-      ...(options.headers || {}),
-    },
-  });
-
-  if (!res.ok) {
-    const text = await res.text();
-    throw new Error(`Request failed (${res.status}): ${text}`);
-  }
-
-  return res.json();
-}
+import { getClientSession } from "@/lib/auth-client";
 
 /** Header (centered title + action on right) */
 function HeaderBar({ onOpenBulk }) {
@@ -160,6 +133,9 @@ export default function MessagingPage() {
   const [bulkOpen, setBulkOpen] = useState(false);
   const [initialThreadId, setInitialThreadId] = useState(null);
 
+  const [currentUserId, setCurrentUserId] = useState(null);
+  const [loadingUser, setLoadingUser] = useState(true);
+
   // From recruiter/candidates → onMessage()
   const queryConversationId =
     (router.query.c && String(router.query.c)) ||
@@ -191,8 +167,65 @@ export default function MessagingPage() {
     },
   ];
 
-  // Load recruiter-channel conversations from the API
+  // 1) Resolve the REAL current user from session
   useEffect(() => {
+    let cancelled = false;
+
+    async function loadUser() {
+      try {
+        const session = await getClientSession();
+        if (!session?.user?.id) {
+          await router.replace("/auth/signin");
+          return;
+        }
+        if (!cancelled) {
+          setCurrentUserId(session.user.id);
+        }
+      } catch (err) {
+        console.error("Failed to load session for recruiter messaging:", err);
+        if (!cancelled) {
+          // If session explodes, kick back to sign-in
+          await router.replace("/auth/signin");
+        }
+      } finally {
+        if (!cancelled) {
+          setLoadingUser(false);
+        }
+      }
+    }
+
+    loadUser();
+    return () => {
+      cancelled = true;
+    };
+  }, [router]);
+
+  // Small fetch helper that always sends x-user-id from the *real* user
+  async function fetchJson(url, options = {}) {
+    if (!currentUserId) {
+      throw new Error("No current user id resolved yet");
+    }
+
+    const res = await fetch(url, {
+      ...options,
+      headers: {
+        "Content-Type": "application/json",
+        ...(options.headers || {}),
+        "x-user-id": currentUserId,
+      },
+    });
+
+    if (!res.ok) {
+      const text = await res.text();
+      throw new Error(`Request failed (${res.status}): ${text}`);
+    }
+
+    return res.json();
+  }
+
+  // 2) Load recruiter-channel conversations from the API
+  useEffect(() => {
+    if (!currentUserId) return; // wait until we know who we are
     let cancelled = false;
 
     async function loadThreads() {
@@ -216,13 +249,15 @@ export default function MessagingPage() {
 
               const mappedMessages = msgs.map((m) => ({
                 id: m.id,
-                from: m.senderId === CURRENT_USER_ID ? "recruiter" : "candidate",
+                from:
+                  m.senderId === currentUserId ? "recruiter" : "candidate",
                 text: m.text,
                 ts: m.timeIso || new Date().toISOString(),
                 status: "read",
               }));
 
-              const lastMsg = mappedMessages[mappedMessages.length - 1] || null;
+              const lastMsg =
+                mappedMessages[mappedMessages.length - 1] || null;
 
               return {
                 id: conv.id,
@@ -276,8 +311,8 @@ export default function MessagingPage() {
     return () => {
       cancelled = true;
     };
-    // Re-run if the conversation id in the URL changes
-  }, [queryConversationId]);
+    // Re-run if the conversation id in the URL changes or user changes
+  }, [queryConversationId, currentUserId]);
 
   const onSend = async (threadId, text) => {
     if (!text || !String(text).trim()) return;
@@ -319,6 +354,23 @@ export default function MessagingPage() {
       // TODO: surface this in UI later
     }
   };
+
+  // Simple loading shell while we resolve the user
+  if (loadingUser || !currentUserId) {
+    return (
+      <PlanProvider>
+        <RecruiterLayout
+          title="Messaging — ForgeTomorrow"
+          header={<HeaderBar onOpenBulk={() => {}} />}
+          right={<RightToolsCard />}
+        >
+          <div className="h-64 flex items-center justify-center text-slate-500">
+            Loading your messaging inbox…
+          </div>
+        </RecruiterLayout>
+      </PlanProvider>
+    );
+  }
 
   return (
     <PlanProvider>
