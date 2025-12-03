@@ -72,10 +72,18 @@ export default function SignIn({ csrfToken, error }: SignInProps) {
       <form method="post" action="/api/auth/callback/credentials">
         <input name="csrfToken" type="hidden" defaultValue={csrfToken ?? ''} />
 
-        {/* ← NO HARDCODED callbackUrl — LET NEXTAUTH DO ITS JOB */}
+        {/* 🔁 After successful login, come back here so getServerSideProps can route by plan */}
+        <input
+          name="callbackUrl"
+          type="hidden"
+          value="/auth/signin"
+        />
 
         <div style={{ marginBottom: 16 }}>
-          <label htmlFor="email" style={{ display: 'block', marginBottom: 6, fontWeight: 600 }}>
+          <label
+            htmlFor="email"
+            style={{ display: 'block', marginBottom: 6, fontWeight: 600 }}
+          >
             Email
           </label>
           <input
@@ -96,7 +104,10 @@ export default function SignIn({ csrfToken, error }: SignInProps) {
         </div>
 
         <div style={{ marginBottom: 24 }}>
-          <label htmlFor="password" style={{ display: 'block', marginBottom: 6, fontWeight: 600 }}>
+          <label
+            htmlFor="password"
+            style={{ display: 'block', marginBottom: 6, fontWeight: 600 }}
+          >
             Password
           </label>
           <input
@@ -134,7 +145,14 @@ export default function SignIn({ csrfToken, error }: SignInProps) {
         </button>
       </form>
 
-      <p style={{ textAlign: 'center', marginTop: 24, color: '#666', fontSize: 13 }}>
+      <p
+        style={{
+          textAlign: 'center',
+          marginTop: 24,
+          color: '#666',
+          fontSize: 13,
+        }}
+      >
         After signing in, you’ll land on your personal dashboard.
       </p>
     </main>
@@ -152,14 +170,29 @@ export async function getServerSideProps(context: any) {
     const plan = String((session.user as any).plan || '').toUpperCase();
 
     if (plan.includes('COACH')) {
-      return { redirect: { destination: '/coaching-dashboard', permanent: false } };
+      return {
+        redirect: {
+          destination: '/coaching-dashboard',
+          permanent: false,
+        },
+      };
     }
     if (plan.includes('RECRUIT')) {
-      return { redirect: { destination: '/recruiter/dashboard', permanent: false } };
+      return {
+        redirect: {
+          destination: '/recruiter/dashboard',
+          permanent: false,
+        },
+      };
     }
 
     // Default: seeker
-    return { redirect: { destination: '/seeker-dashboard', permanent: false } };
+    return {
+      redirect: {
+        destination: '/seeker-dashboard',
+        permanent: false,
+      },
+    };
   }
 
   // Not logged in → show sign-in form
