@@ -22,7 +22,7 @@ export const CORPORATE_BANNERS: Record<
 > = {
   CEO: {
     label: 'Chief Executive Officer',
-    bannerSrc: '/profile-banners/Lead_Purpose.png', // sunrise in mountains
+    bannerSrc: '/corporate-banners/CEO.png', // <─ your locked CEO banner
     wallpaperSrc: '/profile-wallpaper/Leadership.jpg',
   },
   CFO: {
