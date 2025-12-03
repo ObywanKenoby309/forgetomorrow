@@ -61,16 +61,26 @@ export const authOptions: NextAuthOptions = {
   secret: process.env.NEXTAUTH_SECRET,
 
   callbacks: {
-    // 🔑 Main fix: make redirects deterministic & safe
+    // 🔑 Redirect behavior: respect callbackUrl, but never dump a logged-in user back on bare "/"
     async redirect({ url, baseUrl }) {
-      // Allow relative URLs (/seeker-dashboard, /coaching-dashboard, etc.)
-      if (url.startsWith("/")) return `${baseUrl}${url}`;
+      // If NextAuth wants to send us to the bare base URL, route through /auth/signin
+      // so getServerSideProps there can push the user to the correct dashboard.
+      if (url === baseUrl || url === `${baseUrl}/`) {
+        return `${baseUrl}/auth/signin`;
+      }
 
-      // Allow same-origin absolute URLs
-      if (url.startsWith(baseUrl)) return url;
+      // Allow relative URLs (/seeker-dashboard, /coaching-dashboard, /auth/signin, etc.)
+      if (url.startsWith("/")) {
+        return `${baseUrl}${url}`;
+      }
 
-      // Fallback: always go to seeker dashboard
-      return `${baseUrl}/seeker-dashboard`;
+      // Allow same-origin absolute URLs (e.g. https://forgetomorrow.com/auth/signin)
+      if (url.startsWith(baseUrl)) {
+        return url;
+      }
+
+      // Fallback: if something weird happens, go to sign-in router instead of marketing home
+      return `${baseUrl}/auth/signin`;
     },
 
     async jwt({ token, user }) {
