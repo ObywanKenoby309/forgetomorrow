@@ -36,24 +36,49 @@ export default function SeekerDashboard() {
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
+    let cancelled = false;
+
     async function loadData() {
-      const session = await getClientSession();
-
-      // ⬇⬇⬇ KEY CHANGE: send to /auth/signin instead of /login
-      if (!session?.user?.id) {
-        router.push('/auth/signin');
-        return;
-      }
-      // ⬆⬆⬆
-
-      const userId = session.user.id;
-
       try {
-        const res = await fetch('/api/seeker/dashboard-data', {
-          headers: { 'X-User-ID': userId },
-        });
-        if (!res.ok) throw new Error('Failed to load data');
-        const data = await res.json();
+        const session = await getClientSession();
+
+        if (!session?.user?.id) {
+          console.warn('[SeekerDashboard] No session, sending to /auth/signin');
+          router.push('/auth/signin');
+          return;
+        }
+
+        const userId = session.user.id;
+        console.log('[SeekerDashboard] Loaded session for user', userId);
+
+        // Default empty state
+        let data = {
+          applications: 0,
+          views: 0,
+          interviews: 0,
+          offers: 0,
+          lastApplication: null,
+          allApplications: [],
+        };
+
+        try {
+          const res = await fetch('/api/seeker/dashboard-data', {
+            headers: { 'X-User-ID': userId },
+          });
+
+          if (!res.ok) {
+            console.warn(
+              '[SeekerDashboard] /api/seeker/dashboard-data returned',
+              res.status
+            );
+          } else {
+            data = await res.json();
+          }
+        } catch (err) {
+          console.error('[SeekerDashboard] dashboard-data fetch error:', err);
+        }
+
+        if (cancelled) return;
 
         const newKpi = {
           applied: data.applications || 0,
@@ -90,22 +115,31 @@ export default function SeekerDashboard() {
             interviews: 0,
           }))
         );
-
-        setIsLoading(false);
       } catch (err) {
-        console.error('Dashboard load error:', err);
-        setKpi({
-          applied: 0,
-          viewed: 0,
-          interviewing: 0,
-          offers: 0,
-          rejected: 0,
-          lastSent: '—',
-        });
-        setIsLoading(false);
+        console.error('[SeekerDashboard] Unexpected load error:', err);
+        if (!cancelled) {
+          setKpi({
+            applied: 0,
+            viewed: 0,
+            interviewing: 0,
+            offers: 0,
+            rejected: 0,
+            lastSent: '—',
+          });
+          setWeeks([]);
+        }
+      } finally {
+        if (!cancelled) {
+          setIsLoading(false);
+        }
       }
     }
+
     loadData();
+
+    return () => {
+      cancelled = true;
+    };
   }, [router]);
 
   const HeaderBox = (
