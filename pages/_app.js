@@ -72,8 +72,17 @@ export default function App({ Component, pageProps: { session, ...pageProps } })
 
   const isSettingsRoute = router.pathname === '/settings';
 
+  // 🔹 Treat Support Center as INTERNAL (shared tool for logged-in users)
+  const isSupportRoute =
+    router.pathname === '/support' ||
+    router.pathname === '/support/chat';
+
   const isPublicByPath =
-    !isRecruiterRoute && !isSeekerRoute && !isCoachingRoute && !isSettingsRoute;
+    !isRecruiterRoute &&
+    !isSeekerRoute &&
+    !isCoachingRoute &&
+    !isSettingsRoute &&
+    !isSupportRoute;
 
   const universalHeaderRoutes = new Set([]);
   const isUniversalPage =
@@ -186,7 +195,7 @@ export default function App({ Component, pageProps: { session, ...pageProps } })
           </>
         )}
 
-        {/* 2) User wallpaper for INTERNAL pages only (seeker / recruiter / coaching / settings) */}
+        {/* 2) User wallpaper for INTERNAL pages only (seeker / recruiter / coaching / settings / support) */}
         {shouldUseWallpaper && (
           <>
             <div

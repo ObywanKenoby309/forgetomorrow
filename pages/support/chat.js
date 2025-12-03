@@ -1,5 +1,5 @@
 // pages/support/chat.js
-import { useState, useRef, useEffect } from 'react';
+import { useState } from 'react';
 import Head from 'next/head';
 import Link from 'next/link';
 
@@ -53,35 +53,6 @@ Type your question or concern in your own words. We'll automatically route it to
   // 🔴 Once set after the first reply, this persona stays for the entire chat
   const [activePersonaId, setActivePersonaId] = useState(null);
 
-  const bottomRef = useRef(null);
-
-  // 🔄 Track scroll behavior and who triggered the latest message update
-  const scrollerRef = useRef(null);
-  const [stickToBottom, setStickToBottom] = useState(true);
-  const [lastChangeSource, setLastChangeSource] = useState('system'); // 'user' | 'bot' | 'system'
-
-  useEffect(() => {
-    if (!bottomRef.current) return;
-    if (!stickToBottom) return;
-
-    // ❗ Do not auto-scroll when the user sends a message.
-    // Only scroll for system/bot messages when the user is near the bottom.
-    if (lastChangeSource === 'user') return;
-
-    bottomRef.current.scrollIntoView({ behavior: 'smooth' });
-  }, [messages, loading, stickToBottom, lastChangeSource]);
-
-  const handleScroll = () => {
-    const el = scrollerRef.current;
-    if (!el) return;
-
-    // 0 threshold: as soon as the user scrolls up *at all*, disable auto-stick.
-    const distanceFromBottom =
-      el.scrollHeight - el.scrollTop - el.clientHeight;
-
-    setStickToBottom(distanceFromBottom <= 0);
-  };
-
   const handleSend = async () => {
     const trimmed = input.trim();
     if (!trimmed || loading) return;
@@ -94,8 +65,7 @@ Type your question or concern in your own words. We'll automatically route it to
       text: trimmed,
     };
 
-    // Mark that the last change came from the user (we'll skip auto-scroll)
-    setLastChangeSource('user');
+    // Add user message
     setMessages((prev) => [...prev, userMessage]);
     setInput('');
     setLoading(true);
@@ -144,8 +114,7 @@ Type your question or concern in your own words. We'll automatically route it to
         intent: data.intent || 'general',
       };
 
-      // Last change is from bot now → allowed to auto-scroll if user is at bottom
-      setLastChangeSource('bot');
+      // Add bot message
       setMessages((prev) => [...prev, botMessage]);
     } catch (err) {
       console.error(err);
@@ -194,7 +163,8 @@ Type your question or concern in your own words. We'll automatically route it to
               Support Chat
             </h1>
             <p className="text-sm md:text-base text-slate-600">
-              Ask your question in natural language. The right support persona will answer automatically and stay with you for this conversation.
+              Ask your question in natural language. The right support persona will answer
+              automatically and stay with you for this conversation.
             </p>
           </div>
 
@@ -209,18 +179,11 @@ Type your question or concern in your own words. We'll automatically route it to
         {/* Chat container */}
         <div className="flex-1 bg-white rounded-xl shadow-md border border-slate-200 flex flex-col overflow-hidden">
           {/* Messages area */}
-          <div
-            ref={scrollerRef}
-            onScroll={handleScroll}
-            className="flex-1 overflow-y-auto px-4 py-4 md:px-6 md:py-5 space-y-3"
-          >
+          <div className="flex-1 overflow-y-auto px-4 py-4 md:px-6 md:py-5 space-y-3">
             {messages.map((msg) => {
               if (msg.from === 'system') {
                 return (
-                  <div
-                    key={msg.id}
-                    className="flex justify-center"
-                  >
+                  <div key={msg.id} className="flex justify-center">
                     <div className="max-w-xl text-xs md:text-sm text-slate-600 bg-slate-100 border border-slate-200 rounded-lg px-3 py-2 text-center whitespace-pre-wrap">
                       {msg.text}
                     </div>
@@ -236,19 +199,12 @@ Type your question or concern in your own words. We'll automatically route it to
               const bubbleAlign = isUser ? 'items-end' : 'items-start';
 
               return (
-                <div
-                  key={msg.id}
-                  className={`flex ${alignment}`}
-                >
-                  <div
-                    className={`flex flex-col max-w-[80%] ${bubbleAlign}`}
-                  >
+                <div key={msg.id} className={`flex ${alignment}`}>
+                  <div className={`flex flex-col max-w-[80%] ${bubbleAlign}`}>
                     {!isUser && (
                       <div className="flex items-center gap-2 mb-1">
                         <div className="h-7 w-7 rounded-full bg-[#FF7043] text-white flex items-center justify-center text-xs font-semibold">
-                          {msg.personaName
-                            ? msg.personaName.charAt(0)
-                            : 'S'}
+                          {msg.personaName ? msg.personaName.charAt(0) : 'S'}
                         </div>
                         <div className="flex flex-col">
                           <span className="text-xs font-semibold text-slate-800">
@@ -286,8 +242,6 @@ Type your question or concern in your own words. We'll automatically route it to
                 </div>
               </div>
             )}
-
-            <div ref={bottomRef} />
           </div>
 
           {/* Error bar */}
@@ -318,7 +272,8 @@ Type your question or concern in your own words. We'll automatically route it to
               </button>
             </div>
             <p className="mt-1 text-[11px] text-slate-500">
-              Please don’t share passwords or sensitive financial details. Our support personas are here to help, but they can’t see private account numbers.
+              Please don’t share passwords or sensitive financial details. Our support
+              personas are here to help, but they can’t see private account numbers.
             </p>
           </div>
         </div>
