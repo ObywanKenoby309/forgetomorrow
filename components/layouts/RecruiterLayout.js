@@ -21,7 +21,7 @@ export default function RecruiterLayout({
   variant = 'smb',           // 'smb' | 'enterprise'
   counts,                    // optional badges
   initialOpen,               // optional section defaults
-  activeNav,                 // which nav item is active in the sidebar
+  activeNav = 'dashboard',   // default active nav item
 }) {
   return (
     <>
@@ -64,7 +64,7 @@ export default function RecruiterLayout({
               background: 'white',
               borderRadius: 12,
               padding: '8px 16px',
-              border: '1px solid '#eee',
+              border: '1px solid #eee',
               boxShadow: '0 2px 6px rgba(0,0,0,0.06)',
               minWidth: 0,
             }}
@@ -108,7 +108,14 @@ export default function RecruiterLayout({
 
         {/* CONTENT */}
         <main style={{ gridArea: 'content', minWidth: 0 }}>
-          <div style={{ display: 'grid', gap: 20, width: '100%', minWidth: 0 }}>
+          <div
+            style={{
+              display: 'grid',
+              gap: 20,
+              width: '100%',
+              minWidth: 0,
+            }}
+          >
             {children}
           </div>
         </main>
