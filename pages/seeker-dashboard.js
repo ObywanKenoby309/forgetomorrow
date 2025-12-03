@@ -42,42 +42,20 @@ export default function SeekerDashboard() {
       try {
         const session = await getClientSession();
 
+        // If still no session → kick to sign-in and stop
         if (!session?.user?.id) {
-          console.warn('[SeekerDashboard] No session, sending to /auth/signin');
-          router.push('/auth/signin');
+          await router.replace('/auth/signin');
           return;
         }
 
         const userId = session.user.id;
-        console.log('[SeekerDashboard] Loaded session for user', userId);
 
-        // Default empty state
-        let data = {
-          applications: 0,
-          views: 0,
-          interviews: 0,
-          offers: 0,
-          lastApplication: null,
-          allApplications: [],
-        };
+        const res = await fetch('/api/seeker/dashboard-data', {
+          headers: { 'X-User-ID': userId },
+        });
+        if (!res.ok) throw new Error('Failed to load data');
 
-        try {
-          const res = await fetch('/api/seeker/dashboard-data', {
-            headers: { 'X-User-ID': userId },
-          });
-
-          if (!res.ok) {
-            console.warn(
-              '[SeekerDashboard] /api/seeker/dashboard-data returned',
-              res.status
-            );
-          } else {
-            data = await res.json();
-          }
-        } catch (err) {
-          console.error('[SeekerDashboard] dashboard-data fetch error:', err);
-        }
-
+        const data = await res.json();
         if (cancelled) return;
 
         const newKpi = {
@@ -116,7 +94,7 @@ export default function SeekerDashboard() {
           }))
         );
       } catch (err) {
-        console.error('[SeekerDashboard] Unexpected load error:', err);
+        console.error('Dashboard load error:', err);
         if (!cancelled) {
           setKpi({
             applied: 0,
@@ -126,7 +104,6 @@ export default function SeekerDashboard() {
             rejected: 0,
             lastSent: '—',
           });
-          setWeeks([]);
         }
       } finally {
         if (!cancelled) {
@@ -140,7 +117,8 @@ export default function SeekerDashboard() {
     return () => {
       cancelled = true;
     };
-  }, [router]);
+    // 👇 run ONCE on mount; router is stable here
+  }, []); 
 
   const HeaderBox = (
     <section
