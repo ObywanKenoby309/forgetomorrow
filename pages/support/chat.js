@@ -55,25 +55,31 @@ Type your question or concern in your own words. We'll automatically route it to
 
   const bottomRef = useRef(null);
 
-  // 🔄 Track whether we should stick to bottom (only auto-scroll when user hasn't scrolled up)
+  // 🔄 Track scroll behavior and who triggered the latest message update
   const scrollerRef = useRef(null);
   const [stickToBottom, setStickToBottom] = useState(true);
+  const [lastChangeSource, setLastChangeSource] = useState<'user' | 'bot' | 'system' | null>('system');
 
   useEffect(() => {
     if (!bottomRef.current) return;
     if (!stickToBottom) return;
+
+    // ❗ Do not auto-scroll when the user sends a message.
+    // Only scroll for system/bot messages when the user is near the bottom.
+    if (lastChangeSource === 'user') return;
+
     bottomRef.current.scrollIntoView({ behavior: 'smooth' });
-  }, [messages, loading, stickToBottom]);
+  }, [messages, loading, stickToBottom, lastChangeSource]);
 
   const handleScroll = () => {
     const el = scrollerRef.current;
     if (!el) return;
 
-    const threshold = 40; // px from bottom counts as "at bottom"
+    // 0 threshold: as soon as the user scrolls up *at all*, disable auto-stick.
     const distanceFromBottom =
       el.scrollHeight - el.scrollTop - el.clientHeight;
 
-    setStickToBottom(distanceFromBottom <= threshold);
+    setStickToBottom(distanceFromBottom <= 0);
   };
 
   const handleSend = async () => {
@@ -88,6 +94,8 @@ Type your question or concern in your own words. We'll automatically route it to
       text: trimmed,
     };
 
+    // Mark that the last change came from the user (we'll skip auto-scroll)
+    setLastChangeSource('user');
     setMessages((prev) => [...prev, userMessage]);
     setInput('');
     setLoading(true);
@@ -136,6 +144,8 @@ Type your question or concern in your own words. We'll automatically route it to
         intent: data.intent || 'general',
       };
 
+      // Last change is from bot now → allowed to auto-scroll if user is at bottom
+      setLastChangeSource('bot');
       setMessages((prev) => [...prev, botMessage]);
     } catch (err) {
       console.error(err);
