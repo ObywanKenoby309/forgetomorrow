@@ -167,29 +167,45 @@ export async function getServerSideProps(context: any) {
 
   // Already logged in → send to the RIGHT dashboard
   if (session?.user) {
-    const plan = String((session.user as any).plan || '').toUpperCase();
+    const role = String((session.user as any).role || "").toUpperCase();
+    const plan = String((session.user as any).plan || "").toUpperCase();
 
-    if (plan.includes('COACH')) {
+    // 1) Recruiter (SMALL_BIZ / ENTERPRISE)
+    if (role === "RECRUITER") {
+      // If you ever want a different page for SMB vs ENT, you can branch on `plan` here.
+      // For now, they both land on the same recruiter dashboard.
       return {
         redirect: {
-          destination: '/coaching-dashboard',
-          permanent: false,
-        },
-      };
-    }
-    if (plan.includes('RECRUIT')) {
-      return {
-        redirect: {
-          destination: '/recruiter/dashboard',
+          destination: "/recruiter/dashboard",
           permanent: false,
         },
       };
     }
 
-    // Default: seeker
+    // 2) Coach
+    if (role === "COACH") {
+      return {
+        redirect: {
+          destination: "/coaching-dashboard", // or /coach/clients if that’s your real hub
+          permanent: false,
+        },
+      };
+    }
+
+    // 3) Admin (optional)
+    if (role === "ADMIN") {
+      return {
+        redirect: {
+          destination: "/admin",
+          permanent: false,
+        },
+      };
+    }
+
+    // 4) Default: Seeker (FREE / PRO)
     return {
       redirect: {
-        destination: '/seeker-dashboard',
+        destination: "/seeker-dashboard",
         permanent: false,
       },
     };
