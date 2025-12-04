@@ -1,12 +1,18 @@
 // context/PlanContext.js
-import React, { createContext, useContext, useEffect, useMemo, useState } from "react";
+import React, {
+  createContext,
+  useContext,
+  useEffect,
+  useMemo,
+  useState,
+} from "react";
 import { useRouter } from "next/router";
 
 /**
- * Access/Plan context (pre-SQL):
- * - plan: "small" | "enterprise"               (existing)
+ * Access/Plan context:
+ * - plan: "small" | "enterprise"
  * - role: "recruiter" | "admin" | "owner" | "billing" | "hiringManager" | "site_admin"
- * - features: string[]                          e.g., ["why_plus", "ats_greenhouse"]
+ * - features: string[]
  *
  * Dev overrides (persist):
  *   ?plan=enterprise|small
@@ -27,13 +33,21 @@ export function PlanProvider({ children }) {
   const [role, setRole] = useState("recruiter");
   const [features, setFeatures] = useState([]);
 
-  // Initial hydrate from localStorage
+  // Track if query params have explicitly overridden plan/role
+  const [hasQueryPlanOverride, setHasQueryPlanOverride] = useState(false);
+  const [hasQueryRoleOverride, setHasQueryRoleOverride] = useState(false);
+
+  // ─────────────────────────────────────────────
+  // 1) Initial hydrate from localStorage
+  // ─────────────────────────────────────────────
   useEffect(() => {
     try {
       if (typeof window === "undefined") return;
       const savedPlan = localStorage.getItem("ft_recruiter_plan");
       const savedRole = localStorage.getItem("ft_role");
-      const savedFeatures = JSON.parse(localStorage.getItem("ft_features") || "[]");
+      const savedFeatures = JSON.parse(
+        localStorage.getItem("ft_features") || "[]"
+      );
 
       if (savedPlan === "enterprise" || savedPlan === "small") setPlan(savedPlan);
       if (savedRole) setRole(savedRole);
@@ -43,7 +57,9 @@ export function PlanProvider({ children }) {
     }
   }, []);
 
-  // Query param overrides (persist)
+  // ─────────────────────────────────────────────
+  // 2) Query param overrides (persist)
+  // ─────────────────────────────────────────────
   useEffect(() => {
     if (!router?.isReady) return;
 
@@ -51,17 +67,31 @@ export function PlanProvider({ children }) {
     const qpPlan = router.query?.plan;
     if (qpPlan === "enterprise" || qpPlan === "small") {
       setPlan(qpPlan);
-      try { localStorage.setItem("ft_recruiter_plan", qpPlan); } catch {}
+      setHasQueryPlanOverride(true);
+      try {
+        localStorage.setItem("ft_recruiter_plan", qpPlan);
+      } catch {}
     }
 
     // role
     const qpRoleRaw = router.query?.role;
-    const qpRole = typeof qpRoleRaw === "string" ? qpRoleRaw.toLowerCase() : "";
-    const allowedRoles = new Set(["recruiter", "admin", "owner", "billing", "hiringmanager", "site_admin"]);
+    const qpRole =
+      typeof qpRoleRaw === "string" ? qpRoleRaw.toLowerCase() : "";
+    const allowedRoles = new Set([
+      "recruiter",
+      "admin",
+      "owner",
+      "billing",
+      "hiringmanager",
+      "site_admin",
+    ]);
     if (allowedRoles.has(qpRole)) {
       const normalized = qpRole === "hiringmanager" ? "hiringManager" : qpRole;
       setRole(normalized);
-      try { localStorage.setItem("ft_role", normalized); } catch {}
+      setHasQueryRoleOverride(true);
+      try {
+        localStorage.setItem("ft_role", normalized);
+      } catch {}
     }
 
     // features
@@ -69,25 +99,130 @@ export function PlanProvider({ children }) {
     if (typeof qpFeaturesRaw === "string") {
       const list = qpFeaturesRaw
         .split(",")
-        .map(s => s.trim().toLowerCase())
+        .map((s) => s.trim().toLowerCase())
         .filter(Boolean);
       setFeatures(list);
-      try { localStorage.setItem("ft_features", JSON.stringify(list)); } catch {}
+      try {
+        localStorage.setItem("ft_features", JSON.stringify(list));
+      } catch {}
     }
-  }, [router?.isReady, router?.query?.plan, router?.query?.role, router?.query?.features]);
+  }, [
+    router?.isReady,
+    router?.query?.plan,
+    router?.query?.role,
+    router?.query?.features,
+  ]);
 
-  // Persist on change (plan only; role/features are set above when changed via UI)
+  // ─────────────────────────────────────────────
+  // 3) Sync from server user (/api/auth/me)
+  //
+  //    - Only runs if there is NO ?plan override.
+  //    - Maps Prisma enums → local "small"/"enterprise" + role.
+  // ─────────────────────────────────────────────
   useEffect(() => {
-    try { localStorage.setItem("ft_recruiter_plan", plan); } catch {}
+    // Don’t fight an explicit ?plan=... override
+    if (hasQueryPlanOverride && hasQueryRoleOverride) return;
+
+    let cancelled = false;
+
+    async function syncFromServer() {
+      try {
+        const res = await fetch("/api/auth/me");
+        if (!res.ok) return;
+
+        const json = await res.json();
+        const user = json?.user;
+        if (!user || cancelled) return;
+
+        // Map Tier enum → "small" | "enterprise"
+        // Tier: FREE | PRO | COACH | SMALL_BIZ | ENTERPRISE
+        let serverPlan = "small";
+        switch (user.plan) {
+          case "ENTERPRISE":
+            serverPlan = "enterprise";
+            break;
+          case "SMALL_BIZ":
+          case "PRO":
+          case "COACH":
+          case "FREE":
+          default:
+            serverPlan = "small";
+            break;
+        }
+
+        // Map UserRole enum → recruiter-role-ish string
+        // UserRole: SEEKER | COACH | RECRUITER | ADMIN
+        let serverRole = "recruiter";
+        switch (user.role) {
+          case "ADMIN":
+            serverRole = "site_admin";
+            break;
+          case "RECRUITER":
+            serverRole = "recruiter";
+            break;
+          case "COACH":
+            // For now treat as recruiter seat in this context;
+            // coaching-specific context can specialize later.
+            serverRole = "recruiter";
+            break;
+          case "SEEKER":
+          default:
+            serverRole = "recruiter";
+            break;
+        }
+
+        if (!cancelled) {
+          // Only override plan if no ?plan= override is present
+          if (!hasQueryPlanOverride) {
+            setPlan(serverPlan);
+            try {
+              localStorage.setItem("ft_recruiter_plan", serverPlan);
+            } catch {}
+          }
+
+          // Only override role if no ?role= override is present
+          if (!hasQueryRoleOverride) {
+            setRole(serverRole);
+            try {
+              localStorage.setItem("ft_role", serverRole);
+            } catch {}
+          }
+        }
+      } catch (err) {
+        console.error("[PlanContext] failed to sync from /api/auth/me", err);
+      }
+    }
+
+    syncFromServer();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [hasQueryPlanOverride, hasQueryRoleOverride]);
+
+  // ─────────────────────────────────────────────
+  // 4) Persist on change (plan only; role/features
+  //    are set above when changed via UI or query)
+  // ─────────────────────────────────────────────
+  useEffect(() => {
+    try {
+      localStorage.setItem("ft_recruiter_plan", plan);
+    } catch {
+      /* noop */
+    }
   }, [plan]);
 
+  // ─────────────────────────────────────────────
+  // 5) Derived helpers / capabilities
+  // ─────────────────────────────────────────────
   const value = useMemo(() => {
     const isEnterprise = plan === "enterprise";
     const isSmall = plan === "small";
 
     // convenience role flags
     const isSiteAdmin = role === "site_admin";
-    const isRecruiterAdmin = role === "owner" || role === "admin" || role === "billing" || isSiteAdmin;
+    const isRecruiterAdmin =
+      role === "owner" || role === "admin" || role === "billing" || isSiteAdmin;
     const isRecruiterSeat = role === "recruiter";
     const isHiringManager = role === "hiringManager";
 
@@ -124,8 +259,9 @@ export function PlanProvider({ children }) {
       }
     };
 
-    // Dev toggler kept from your original
-    const togglePlan = () => setPlan((p) => (p === "enterprise" ? "small" : "enterprise"));
+    // Dev toggler kept for non-prod use
+    const togglePlan = () =>
+      setPlan((p) => (p === "enterprise" ? "small" : "enterprise"));
 
     return {
       // identity-ish
@@ -154,7 +290,9 @@ export function PlanProvider({ children }) {
     };
   }, [plan, role, features]);
 
-  return <PlanContext.Provider value={value}>{children}</PlanContext.Provider>;
+  return (
+    <PlanContext.Provider value={value}>{children}</PlanContext.Provider>
+  );
 }
 
 export function usePlan() {
