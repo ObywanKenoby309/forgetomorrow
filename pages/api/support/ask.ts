@@ -155,6 +155,40 @@ function isEscalationTrigger(message: string): boolean {
 }
 
 // ---------------------------------------------------------------------------
+// Escalation confirmation detection
+// ---------------------------------------------------------------------------
+function isEscalationConfirmation(message: string): boolean {
+  const text = message.toLowerCase().trim();
+
+  const phrases = [
+    'yes please escalate',
+    'yes, please escalate',
+    'yes escalate',
+    'yes, escalate',
+    'please escalate',
+    'go ahead and escalate',
+    'escalate this',
+    'escalate it',
+    'talk to a supervisor',
+    'next level support',
+    'next-level support',
+    'escalate to next level',
+    'escalate to next-level',
+  ];
+
+  if (phrases.some((p) => text.includes(p))) {
+    return true;
+  }
+
+  // Simple "yes" handling to cover short replies after the escalation question
+  if (text === 'yes' || text === 'yes please' || text === 'yeah' || text === 'yep') {
+    return true;
+  }
+
+  return false;
+}
+
+// ---------------------------------------------------------------------------
 // Handler
 // ---------------------------------------------------------------------------
 export default async function handler(
@@ -213,7 +247,18 @@ export default async function handler(
       selectedPersona = INTENT_TO_PERSONA[intent];
     }
 
-    // 🆕 Escalation check for follow-up messages like "this didn't work"
+    // 🆕 Escalation flow
+    if (incomingPersonaId && isEscalationConfirmation(message)) {
+      const confirmationReply =
+        "Thank you for confirming. I'm escalating this to our next level support team now. They'll review your case in more detail and follow up with you as soon as possible.";
+
+      return res.status(200).json({
+        reply: confirmationReply,
+        personaId: selectedPersona,
+        intent,
+      });
+    }
+
     if (incomingPersonaId && isEscalationTrigger(message)) {
       const escalationReply =
         "I'm sorry that didn't fully resolve the issue yet. Would you like me to escalate this to our next level support so we can take a deeper look?";
