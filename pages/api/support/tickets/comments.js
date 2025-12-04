@@ -15,7 +15,7 @@ export default async function handler(req, res) {
     return res.status(405).json({ error: 'Method not allowed' });
   }
 
-  try:
+  try {
     const { ticketId, body } = req.body || {};
 
     const trimmedBody = typeof body === 'string' ? body.trim() : '';
