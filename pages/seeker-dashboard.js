@@ -1,6 +1,5 @@
 // pages/seeker-dashboard.js
 import React, { useEffect, useState } from 'react';
-import Head from 'next/head';
 import Link from 'next/link';
 import { useRouter } from 'next/router';
 import SeekerLayout from '@/components/layouts/SeekerLayout';
@@ -28,6 +27,7 @@ const weekDiff = (a, b) => {
 export default function SeekerDashboard() {
   const router = useRouter();
   const chrome = String(router.query.chrome || '').toLowerCase();
+
   const withChrome = (path) =>
     chrome ? `${path}${path.includes('?') ? '&' : '?'}chrome=${chrome}` : path;
 
@@ -42,7 +42,7 @@ export default function SeekerDashboard() {
       try {
         const session = await getClientSession();
 
-        // If still no session → kick to sign-in and stop
+        // ✅ Only auth gate: if no session → sign-in. No role-based redirect.
         if (!session?.user?.id) {
           await router.replace('/auth/signin');
           return;
@@ -117,8 +117,7 @@ export default function SeekerDashboard() {
     return () => {
       cancelled = true;
     };
-    // 👇 run ONCE on mount; router is stable here
-  }, []); 
+  }, [router]);
 
   const HeaderBox = (
     <section
@@ -129,7 +128,8 @@ export default function SeekerDashboard() {
         Your Job Seeker Dashboard
       </h1>
       <p className="text-sm md:text-base text-gray-600 mt-2 max-w-3xl mx-auto">
-        You're not alone. Track your momentum, see your wins, and keep moving forward.
+        You&apos;re not alone. Track your momentum, see your wins, and keep moving
+        forward.
       </p>
     </section>
   );
@@ -142,109 +142,103 @@ export default function SeekerDashboard() {
 
   if (isLoading) {
     return (
-      <>
-        <Head>
-          <title>Loading… | ForgeTomorrow</title>
-        </Head>
-        <SeekerLayout title="Loading..." header={HeaderBox} right={RightRail}>
-          <div className="flex items-center justify-center h-64 text-gray-500">
-            Loading your progress...
-          </div>
-        </SeekerLayout>
-      </>
+      <SeekerLayout
+        title="Loading… | ForgeTomorrow"
+        header={HeaderBox}
+        right={RightRail}
+      >
+        <div className="flex items-center justify-center h-64 text-gray-500">
+          Loading your progress...
+        </div>
+      </SeekerLayout>
     );
   }
 
   return (
-    <>
-      <Head>
-        <title>Seeker Dashboard | ForgeTomorrow</title>
-      </Head>
-      <SeekerLayout
-        title="Seeker Dashboard | ForgeTomorrow"
-        header={HeaderBox}
-        right={RightRail}
-        activeNav="dashboard"
-      >
-        <div className="grid gap-6">
-          {/* KPI Row */}
-          <section className="bg-white border border-gray-200 rounded-xl p-4 shadow-sm">
-            <h2 className="text-lg font-semibold text-orange-600 mb-3">
-              Job Search Snapshot
+    <SeekerLayout
+      title="Seeker Dashboard | ForgeTomorrow"
+      header={HeaderBox}
+      right={RightRail}
+      activeNav="dashboard"
+    >
+      <div className="grid gap-6">
+        {/* KPI Row */}
+        <section className="bg-white border border-gray-200 rounded-xl p-4 shadow-sm">
+          <h2 className="text-lg font-semibold text-orange-600 mb-3">
+            Job Search Snapshot
+          </h2>
+          {kpi && (
+            <KpiRow
+              applied={kpi.applied}
+              viewed={kpi.viewed}
+              interviewing={kpi.interviewing}
+              offers={kpi.offers}
+              rejected={kpi.rejected}
+              lastApplicationSent={kpi.lastSent}
+            />
+          )}
+        </section>
+
+        {/* Pinned Jobs */}
+        <section className="bg-white border border-gray-200 rounded-xl p-5 shadow-sm">
+          <div className="flex items-center justify-between mb-4">
+            <h2 className="text-lg font-semibold text-orange-600">
+              Your Next Yes
             </h2>
+            <Link
+              href={withChrome('/seeker/pinned-jobs')}
+              className="text-orange-600 font-medium hover:underline"
+            >
+              View all
+            </Link>
+          </div>
+          <PinnedJobsPreview />
+        </section>
+
+        {/* Charts */}
+        <section className="grid md:grid-cols-2 gap-6">
+          <div className="bg-white border border-gray-200 rounded-xl p-5 shadow-sm">
+            <h3 className="text-base font-semibold text-gray-800 mb-3">
+              Application Funnel
+            </h3>
             {kpi && (
-              <KpiRow
-                applied={kpi.applied}
-                viewed={kpi.viewed}
-                interviewing={kpi.interviewing}
-                offers={kpi.offers}
-                rejected={kpi.rejected}
-                lastApplicationSent={kpi.lastSent}
+              <FunnelChart
+                data={{
+                  applied: kpi.applied,
+                  viewed: kpi.viewed,
+                  interviewing: kpi.interviewing,
+                  offers: kpi.offers,
+                  hired: 0,
+                }}
+                showTrackerButton={true}
               />
             )}
-          </section>
+          </div>
 
-          {/* Pinned Jobs */}
-          <section className="bg-white border border-gray-200 rounded-xl p-5 shadow-sm">
-            <div className="flex items-center justify-between mb-4">
-              <h2 className="text-lg font-semibold text-orange-600">
-                Your Next Yes
-              </h2>
-              <Link
-                href={withChrome('/seeker/pinned-jobs')}
-                className="text-orange-600 font-medium hover:underline"
-              >
-                View all
-              </Link>
-            </div>
-            <PinnedJobsPreview />
-          </section>
+          <div className="bg-white border border-gray-200 rounded-xl p-5 shadow-sm">
+            <h3 className="text-base font-semibold text-gray-800 mb-3">
+              Applications Over Time
+            </h3>
+            <ApplicationsOverTime weeks={weeks} withChrome={withChrome} />
+          </div>
+        </section>
 
-          {/* Charts */}
-          <section className="grid md:grid-cols-2 gap-6">
-            <div className="bg-white border border-gray-200 rounded-xl p-5 shadow-sm">
-              <h3 className="text-base font-semibold text-gray-800 mb-3">
-                Application Funnel
-              </h3>
-              {kpi && (
-                <FunnelChart
-                  data={{
-                    applied: kpi.applied,
-                    viewed: kpi.viewed,
-                    interviewing: kpi.interviewing,
-                    offers: kpi.offers,
-                    hired: 0,
-                  }}
-                  showTrackerButton={true}
-                />
-              )}
-            </div>
-
-            <div className="bg-white border border-gray-200 rounded-xl p-5 shadow-sm">
-              <h3 className="text-base font-semibold text-gray-800 mb-3">
-                Applications Over Time
-              </h3>
-              <ApplicationsOverTime weeks={weeks} withChrome={withChrome} />
-            </div>
-          </section>
-
-          {/* Coming Soon */}
-          <section className="grid md:grid-cols-2 gap-6">
-            <div className="bg-white border border-gray-200 rounded-xl p-5 shadow-sm">
-              <h3 className="text-base font-semibold text-gray-800 mb-2">
-                Response Speed
-              </h3>
-              <p className="text-sm text-gray-500">Benchmarks coming soon.</p>
-            </div>
-            <div className="bg-white border border-gray-200 rounded-xl p-5 shadow-sm">
-              <h3 className="text-base font-semibold text-gray-800 mb-2">
-                Top Categories
-              </h3>
-              <p className="text-sm text-gray-500">Distribution coming soon.</p>
-            </div>
-          </section>
-        </div>
-      </SeekerLayout>
-    </>
+        {/* Coming Soon */}
+        <section className="grid md:grid-cols-2 gap-6">
+          <div className="bg-white border border-gray-200 rounded-xl p-5 shadow-sm">
+            <h3 className="text-base font-semibold text-gray-800 mb-2">
+              Response Speed
+            </h3>
+            <p className="text-sm text-gray-500">Benchmarks coming soon.</p>
+          </div>
+          <div className="bg-white border border-gray-200 rounded-xl p-5 shadow-sm">
+            <h3 className="text-base font-semibold text-gray-800 mb-2">
+              Top Categories
+            </h3>
+            <p className="text-sm text-gray-500">Distribution coming soon.</p>
+          </div>
+        </section>
+      </div>
+    </SeekerLayout>
   );
 }

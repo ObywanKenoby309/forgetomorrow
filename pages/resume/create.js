@@ -22,6 +22,7 @@ import BulkExportCTA from '@/components/BulkExportCTA';
 import ReverseATSButton from '@/components/resume-form/export/ReverseATSButton';
 import HybridATSButton from '@/components/resume-form/export/HybridATSButton';
 import DesignedPDFButton from '@/components/resume-form/export/DesignedPDFButton'; // ← NEW
+import { getClientSession } from '@/lib/auth-client';
 
 const ORANGE = '#FF7043';
 
@@ -120,6 +121,10 @@ function Section({ title, open, onToggle, children, required = false }) {
 
 export default function CreateResumePage() {
   const router = useRouter();
+  const chrome = String(router.query.chrome || '').toLowerCase();
+  const withChrome = (path) =>
+    chrome ? `${path}${path.includes('?') ? '&' : '?'}chrome=${chrome}` : path;
+
   const fileInputRef = useRef(null);
   const dropRef = useRef(null);
 
@@ -150,6 +155,36 @@ export default function CreateResumePage() {
   const [openRequired, setOpenRequired] = useState(true);
   const [openOptional, setOpenOptional] = useState(false);
   const [openTailor, setOpenTailor] = useState(false);
+
+  // Auth gate: allow any logged-in user (seeker, coach, recruiter), no role redirects
+  const [checkingAuth, setCheckingAuth] = useState(true);
+
+  useEffect(() => {
+    let cancelled = false;
+
+    async function checkAuth() {
+      try {
+        const session = await getClientSession();
+        if (!session?.user?.id) {
+          await router.replace('/auth/signin');
+          return;
+        }
+      } catch (err) {
+        console.error('[resume/create] auth check failed:', err);
+        await router.replace('/auth/signin');
+        return;
+      } finally {
+        if (!cancelled) {
+          setCheckingAuth(false);
+        }
+      }
+    }
+
+    checkAuth();
+    return () => {
+      cancelled = true;
+    };
+  }, [router]);
 
   // ATS context passed from jobs page (via resume-cover)
   const [atsPack, setAtsPack] = useState(null);
@@ -263,7 +298,7 @@ export default function CreateResumePage() {
   };
 
   // ─────────────────────────────────────────────────────────────
-  // NEW: Apply ATS pack + JD context from resume-cover
+  // Apply ATS pack + JD context from resume-cover
   // ─────────────────────────────────────────────────────────────
   useEffect(() => {
     if (!router.isReady) return;
@@ -327,14 +362,14 @@ export default function CreateResumePage() {
       </p>
       <div className="flex items-center justify-center gap-8 mt-6">
         <button
-          onClick={() => router.push('/resume/create')}
+          onClick={() => router.push(withChrome('/resume/create'))}
           className="min-w-[160px] px-6 py-3 rounded-full font-bold text-sm bg-orange-500 text-white shadow-md"
         >
           1. Resume
         </button>
-        <div className="w-16 h-px bg-gray-300" />
+      <div className="w-16 h-px bg-gray-300" />
         <button
-          onClick={() => router.push('/cover/create')}
+          onClick={() => router.push(withChrome('/cover/create'))}
           className="min-w-[160px] px-6 py-3 rounded-full font-bold text-sm bg-gray-100 text-gray-700 hover:bg-gray-200"
         >
           2. Cover Letter
@@ -350,6 +385,31 @@ export default function CreateResumePage() {
       applying. <em>Source: Jobscan 2024 Applicant Study (n=1,200). Results vary.</em>
     </div>
   );
+
+  // While we're checking auth, show a neutral loading shell with whatever chrome they came in with
+  if (checkingAuth) {
+    return (
+      <SeekerLayout
+        title="Resume Builder"
+        header={Header}
+        right={null}
+        footer={Footer}
+        activeNav="resume-cover"
+      >
+        <div
+          style={{
+            minHeight: '50vh',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            color: '#64748b',
+          }}
+        >
+          Checking your account…
+        </div>
+      </SeekerLayout>
+    );
+  }
 
   return (
     <SeekerLayout
@@ -378,7 +438,7 @@ export default function CreateResumePage() {
             {' • '}
             <span style={{ display: 'inline-flex', alignItems: 'center', gap: 8 }}>
               <button
-                onClick={() => router.push('/resume/create?template=reverse')}
+                onClick={() => router.push(withChrome('/resume/create?template=reverse'))}
                 style={{
                   fontWeight: router.query.template !== 'hybrid' ? 800 : 500,
                   color: router.query.template !== 'hybrid' ? ORANGE : '#666',
@@ -393,7 +453,7 @@ export default function CreateResumePage() {
               </button>
               <span style={{ color: '#999' }}>|</span>
               <button
-                onClick={() => router.push('/resume/create?template=hybrid')}
+                onClick={() => router.push(withChrome('/resume/create?template=hybrid'))}
                 style={{
                   fontWeight: router.query.template === 'hybrid' ? 800 : 500,
                   color: router.query.template === 'hybrid' ? ORANGE : '#666',
@@ -741,7 +801,7 @@ export default function CreateResumePage() {
       {isResumeValid && (
         <div className="fixed bottom-6 left-1/2 transform -translate-x-1/2 z-50 md:bottom-28 md:left-auto md:right-6 md:transform-none">
           <button
-            onClick={() => router.push('/cover/create')}
+            onClick={() => router.push(withChrome('/cover/create'))}
             className="bg-purple-600 text-white px-6 py-3 rounded-full font-bold text-lg shadow-xl hover:bg-purple-700 transition-all transform hover:scale-105"
           >
             Next: Build Cover Letter

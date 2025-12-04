@@ -8,20 +8,26 @@ import { extractTextFromFile } from '@/lib/jd/ingest';
 import BulkExportCTA from '@/components/BulkExportCTA';
 import CoverPDFButton from '@/components/cover-letter/export/CoverPDFButton';
 
-const CoverLetterTemplate = dynamic(() => import('@/components/cover-letter/CoverLetterTemplate'), { ssr: false });
+const CoverLetterTemplate = dynamic(
+  () => import('@/components/cover-letter/CoverLetterTemplate'),
+  { ssr: false }
+);
+
 const ORANGE = '#FF7043';
 
 function Banner({ children }) {
   return (
-    <div style={{
-      background: '#FFF3E0',
-      border: '1px solid #FFCC80',
-      borderRadius: 12,
-      padding: 14,
-      fontSize: 15,
-      color: '#E65100',
-      fontWeight: 600
-    }}>
+    <div
+      style={{
+        background: '#FFF3E0',
+        border: '1px solid #FFCC80',
+        borderRadius: 12,
+        padding: 14,
+        fontSize: 15,
+        color: '#E65100',
+        fontWeight: 600,
+      }}
+    >
       {children}
     </div>
   );
@@ -29,13 +35,15 @@ function Banner({ children }) {
 
 function Section({ title, open, onToggle, children, required = false }) {
   return (
-    <div style={{
-      background: 'white',
-      border: '1px solid #E5E7EB',
-      borderRadius: 12,
-      overflow: 'hidden',
-      boxShadow: '0 4px 12px rgba(0,0,0,0.08)'
-    }}>
+    <div
+      style={{
+        background: 'white',
+        border: '1px solid #E5E7EB',
+        borderRadius: 12,
+        overflow: 'hidden',
+        boxShadow: '0 4px 12px rgba(0,0,0,0.08)',
+      }}
+    >
       <button
         onClick={onToggle}
         style={{
@@ -53,7 +61,15 @@ function Section({ title, open, onToggle, children, required = false }) {
         }}
       >
         <span style={{ color: required ? ORANGE : '#1F2937' }}>{title}</span>
-        <span style={{ width: 24, height: 24, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+        <span
+          style={{
+            width: 24,
+            height: 24,
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+          }}
+        >
           <svg
             className="w-5 h-5 text-gray-500"
             fill="none"
@@ -62,25 +78,47 @@ function Section({ title, open, onToggle, children, required = false }) {
             xmlns="http://www.w3.org/2000/svg"
           >
             {open ? (
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20 12H4" />
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={2}
+                d="M20 12H4"
+              />
             ) : (
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={2}
+                d="M12 4v16m8-8H4"
+              />
             )}
           </svg>
         </span>
       </button>
-      {open && <div style={{ padding: '24px 20px', borderTop: '1px solid #E5E7EB' }}>{children}</div>}
+      {open && (
+        <div style={{ padding: '24px 20px', borderTop: '1px solid #E5E7EB' }}>
+          {children}
+        </div>
+      )}
     </div>
   );
 }
 
 export default function CoverLetterPage() {
   const router = useRouter();
+
+  // 🔸 Preserve chrome mode (seeker / coach / recruiter-smb / recruiter-ent)
+  const chrome = String(router.query.chrome || '').toLowerCase();
+  const withChrome = (path) =>
+    chrome ? `${path}${path.includes('?') ? '&' : '?'}chrome=${chrome}` : path;
+
   const fileInputRef = useRef(null);
   const dropRef = useRef(null);
   const { formData = {}, saveEventAt } = useContext(ResumeContext);
+
   const [jd, setJd] = useState('');
   const [isLoading, setIsLoading] = useState(false);
+
   const [recipient, setRecipient] = useState('Hiring Manager');
   const [company, setCompany] = useState('');
   const [role, setRole] = useState('');
@@ -90,10 +128,17 @@ export default function CoverLetterPage() {
   const [closing, setClosing] = useState('');
   const [signoff, setSignoff] = useState('Sincerely,');
   const [portfolio, setPortfolio] = useState(formData?.portfolio || '');
+
   const [openRequired, setOpenRequired] = useState(true);
   const [openContent, setOpenContent] = useState(true);
   const [openTailor, setOpenTailor] = useState(false);
-  const savedTime = saveEventAt ? new Date(saveEventAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : '';
+
+  const savedTime = saveEventAt
+    ? new Date(saveEventAt).toLocaleTimeString([], {
+        hour: '2-digit',
+        minute: '2-digit',
+      })
+    : '';
 
   const letterData = {
     fullName: formData.fullName || 'Your Name',
@@ -112,9 +157,14 @@ export default function CoverLetterPage() {
     jd: jd || '',
   };
 
+  // Load last JD if present
   useEffect(() => {
-    const saved = localStorage.getItem('ft_last_job_text');
-    if (saved) setJd(saved);
+    try {
+      const saved = localStorage.getItem('ft_last_job_text');
+      if (saved) setJd(saved);
+    } catch {
+      // ignore
+    }
   }, []);
 
   const handleFile = async (file) => {
@@ -122,45 +172,80 @@ export default function CoverLetterPage() {
     try {
       const text = await extractTextFromFile(file);
       setJd(text);
-      localStorage.setItem('ft_last_job_text', text);
+      try {
+        localStorage.setItem('ft_last_job_text', text);
+      } catch {
+        // ignore
+      }
     } catch (e) {
       console.error(e);
     }
   };
 
+  // Drag/drop for JD
   useEffect(() => {
     const el = dropRef.current;
     if (!el) return;
+
     const prevent = (e) => e.preventDefault();
-    const onDrop = (e) => { prevent(e); handleFile(e.dataTransfer.files[0]); };
+    const onDrop = (e) => {
+      prevent(e);
+      if (e.dataTransfer?.files?.[0]) {
+        handleFile(e.dataTransfer.files[0]);
+      }
+    };
+
     el.addEventListener('dragover', prevent);
     el.addEventListener('drop', onDrop);
+
     return () => {
       el.removeEventListener('dragover', prevent);
       el.removeEventListener('drop', onDrop);
     };
   }, []);
 
+  // Auto-save draft
   useEffect(() => {
     const timer = setInterval(() => {
       try {
-        localStorage.setItem('ft_cover_draft', JSON.stringify({
-          recipient, company, role, greeting, opening, body, closing, signoff, portfolio
-        }));
-      } catch {}
+        localStorage.setItem(
+          'ft_cover_draft',
+          JSON.stringify({
+            recipient,
+            company,
+            role,
+            greeting,
+            opening,
+            body,
+            closing,
+            signoff,
+            portfolio,
+          })
+        );
+      } catch {
+        // ignore
+      }
     }, 30000);
+
     return () => clearInterval(timer);
   }, [recipient, company, role, greeting, opening, body, closing, signoff, portfolio]);
 
   const runAITailor = async () => {
     if (!jd.trim()) return;
     setIsLoading(true);
+
     try {
       const experiences = formData.workExperiences || [];
       const expText = experiences
-        .map(exp => `${exp.jobTitle} at ${exp.company}: ${exp.bullets?.join('. ') || ''}`)
+        .map(
+          (exp) =>
+            `${exp.jobTitle} at ${exp.company}: ${
+              exp.bullets?.join('. ') || ''
+            }`
+        )
         .filter(Boolean)
         .join('\n');
+
       const prompt = `
 You are a brutal, direct cover letter AI. Write:
 - 1 opening sentence (12 words max)
@@ -179,22 +264,36 @@ BULLET2: ...
 BULLET3: ...
 CLOSING: ...
       `.trim();
+
       const res = await fetch('/api/ai-tailor', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ prompt })
+        body: JSON.stringify({ prompt }),
       });
+
       const text = await res.text();
-      const lines = text.split('\n').map(l => l.trim());
-      const opening = lines.find(l => l.startsWith('OPENING:'))?.replace('OPENING:', '').trim() || '';
+      const lines = text.split('\n').map((l) => l.trim());
+
+      const openingLine =
+        lines
+          .find((l) => l.startsWith('OPENING:'))
+          ?.replace('OPENING:', '')
+          .trim() || '';
+
       const bullets = lines
-        .filter(l => l.match(/^BULLET[1-3]:/))
-        .map(l => l.replace(/^BULLET\d+:/, '').trim())
+        .filter((l) => l.match(/^BULLET[1-3]:/))
+        .map((l) => l.replace(/^BULLET\d+:/, '').trim())
         .filter(Boolean);
-      const closing = lines.find(l => l.startsWith('CLOSING:'))?.replace('CLOSING:', '').trim() || '';
-      setOpening(opening);
+
+      const closingLine =
+        lines
+          .find((l) => l.startsWith('CLOSING:'))
+          ?.replace('CLOSING:', '')
+          .trim() || '';
+
+      setOpening(openingLine);
       setBody(bullets.join('\n'));
-      setClosing(closing);
+      setClosing(closingLine);
     } catch (err) {
       console.error('AI Tailor failed:', err);
       alert('AI failed. Try again.');
@@ -203,24 +302,27 @@ CLOSING: ...
     }
   };
 
+  // HEADER
   const Header = (
     <section className="bg-white border border-gray-200 rounded-xl p-8 text-center shadow-sm">
       <h1 className="text-3xl font-bold text-orange-600">Cover Builder</h1>
       <p className="text-gray-600 mt-3 max-w-2xl mx-auto">
         1 letter. 3 bullets. 100% tailored.
+        {' '}
         No generic paragraphs. Only your real wins.
+        {' '}
         Beats 3-paragraph letters every time.
       </p>
       <div className="flex items-center justify-center gap-8 mt-6">
         <button
-          onClick={() => router.push('/resume/create')}
+          onClick={() => router.push(withChrome('/resume/create'))}
           className="min-w-[160px] px-6 py-3 rounded-full font-bold text-sm bg-gray-100 text-gray-700 hover:bg-gray-200"
         >
           1. Resume
         </button>
         <div className="w-16 h-px bg-gray-300" />
         <button
-          onClick={() => router.push('/cover/create')}
+          onClick={() => router.push(withChrome('/cover/create'))}
           className="min-w-[160px] px-6 py-3 rounded-full font-bold text-sm bg-orange-500 text-white shadow-md"
         >
           2. Cover Letter
@@ -231,8 +333,9 @@ CLOSING: ...
 
   const Footer = (
     <div className="mt-16 text-center text-xs text-gray-500 max-w-2xl mx-auto px-4">
-      *87% of job seekers using ATS-optimized resumes receive at least one interview within 7 days of applying.
-      <em>Source: Jobscan 2024 Applicant Study (n=1,200). Results vary.</em>
+      *87% of job seekers using ATS-optimized resumes receive at least one interview within 7
+      days of applying.
+      <em> Source: Jobscan 2024 Applicant Study (n=1,200). Results vary.</em>
     </div>
   );
 
@@ -244,129 +347,267 @@ CLOSING: ...
       footer={Footer}
       activeNav="resume-cover"
     >
-      <div style={{ maxWidth: 1600, margin: '0 auto', padding: '20px 16px', display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 40, alignItems: 'start' }}>
-        <div style={{ display: 'grid', gap: 20, position: 'sticky', top: 20 }}>
+      <div
+        style={{
+          maxWidth: 1600,
+          margin: '0 auto',
+          padding: '20px 16px',
+          display: 'grid',
+          gridTemplateColumns: '1fr 1fr',
+          gap: 40,
+          alignItems: 'start',
+        }}
+      >
+        {/* LEFT: FORM */}
+        <div
+          style={{
+            display: 'grid',
+            gap: 20,
+            position: 'sticky',
+            top: 20,
+          }}
+        >
           <Banner>
-            Live preview updates instantly on the right • <a href="/resume/create" style={{ textDecoration: 'underline' }}>Back to Resume</a>
+            Live preview updates instantly on the right •{' '}
+            <a
+              href={withChrome('/resume/create')}
+              style={{ textDecoration: 'underline' }}
+            >
+              Back to Resume
+            </a>
           </Banner>
-          <div style={{
-            background: '#FFF7E6',
-            border: '1px solid #FED7AA',
-            borderRadius: 12,
-            padding: 18,
-            marginBottom: 20,
-            fontSize: 14,
-            lineHeight: 1.6,
-            color: '#92400E'
-          }}>
-            <strong style={{ fontSize: 15, display: 'block', marginBottom: 8 }}>
+
+          {/* Philosophy box */}
+          <div
+            style={{
+              background: '#FFF7E6',
+              border: '1px solid #FED7AA',
+              borderRadius: 12,
+              padding: 18,
+              marginBottom: 20,
+              fontSize: 14,
+              lineHeight: 1.6,
+              color: '#92400E',
+            }}
+          >
+            <strong
+              style={{
+                fontSize: 15,
+                display: 'block',
+                marginBottom: 8,
+              }}
+            >
               The Forge Cover Letter Philosophy
             </strong>
-            <strong>Short = Strong.</strong> Recruiters spend <strong>6 seconds</strong> on your letter. We remove fluff, keep metrics, and make every word count.<br /><br />
-            <strong>Bullets = Scan-proof.</strong> Humans don’t read — they <strong>scan</strong>. 3 bullets with numbers beat 3 paragraphs every time.<br /><br />
-            <strong>No “excited.” Just impact.</strong> Your resume tells the story. This letter <strong>lands the punch</strong>.
+            <strong>Short = Strong.</strong> Recruiters spend <strong>6 seconds</strong> on your
+            letter. We remove fluff, keep metrics, and make every word count.
+            <br />
+            <br />
+            <strong>Bullets = Scan-proof.</strong> Humans don’t read — they{' '}
+            <strong>scan</strong>. 3 bullets with numbers beat 3 paragraphs every time.
+            <br />
+            <br />
+            <strong>No “excited.” Just impact.</strong> Your resume tells the story. This letter{' '}
+            <strong>lands the punch</strong>.
           </div>
-          <Section title="Required – Start Here" open={openRequired} onToggle={() => setOpenRequired(v => !v)} required>
+
+          {/* Required section */}
+          <Section
+            title="Required – Start Here"
+            open={openRequired}
+            onToggle={() => setOpenRequired((v) => !v)}
+            required
+          >
             <div style={{ display: 'grid', gap: 20 }}>
               <div>
                 <label style={{ fontWeight: 700 }}>Recipient</label>
                 <input
                   value={recipient}
-                  onChange={e => setRecipient(e.target.value)}
+                  onChange={(e) => setRecipient(e.target.value)}
                   placeholder="Hiring Manager"
-                  style={{ width: '100%', padding: 12, border: '1px solid #E5E7EB', borderRadius: 8 }}
+                  style={{
+                    width: '100%',
+                    padding: 12,
+                    border: '1px solid #E5E7EB',
+                    borderRadius: 8,
+                  }}
                 />
               </div>
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
+
+              <div
+                style={{
+                  display: 'grid',
+                  gridTemplateColumns: '1fr 1fr',
+                  gap: 12,
+                }}
+              >
                 <div>
                   <label style={{ fontWeight: 700 }}>Company</label>
                   <input
                     value={company}
-                    onChange={e => setCompany(e.target.value)}
+                    onChange={(e) => setCompany(e.target.value)}
                     placeholder="Company XYZ"
-                    style={{ width: '100%', padding: 12, border: '1px solid #E5E7EB', borderRadius: 8 }}
+                    style={{
+                      width: '100%',
+                      padding: 12,
+                      border: '1px solid #E5E7EB',
+                      borderRadius: 8,
+                    }}
                   />
                 </div>
                 <div>
                   <label style={{ fontWeight: 700 }}>Role (Optional)</label>
                   <input
                     value={role}
-                    onChange={e => setRole(e.target.value)}
+                    onChange={(e) => setRole(e.target.value)}
                     placeholder="Senior Designer"
-                    style={{ width: '100%', padding: 12, border: '1px solid #E5E7EB', borderRadius: 8 }}
+                    style={{
+                      width: '100%',
+                      padding: 12,
+                      border: '1px solid #E5E7EB',
+                      borderRadius: 8,
+                    }}
                   />
                 </div>
               </div>
+
               <div>
                 <label style={{ fontWeight: 700 }}>Greeting</label>
                 <input
                   value={greeting}
-                  onChange={e => setGreeting(e.target.value)}
+                  onChange={(e) => setGreeting(e.target.value)}
                   placeholder="Dear Hiring Manager,"
-                  style={{ width: '100%', padding: 12, border: '1px solid #E5E7EB', borderRadius: 8 }}
+                  style={{
+                    width: '100%',
+                    padding: 12,
+                    border: '1px solid #E5E7EB',
+                    borderRadius: 8,
+                  }}
                 />
               </div>
+
               <div>
-                <label style={{ fontWeight: 700 }}>Portfolio / Website (Optional)</label>
+                <label style={{ fontWeight: 700 }}>
+                  Portfolio / Website (Optional)
+                </label>
                 <input
                   type="url"
                   value={portfolio}
-                  onChange={e => setPortfolio(e.target.value)}
+                  onChange={(e) => setPortfolio(e.target.value)}
                   placeholder="https://yourwebsite.com"
-                  style={{ width: '100%', padding: 12, border: '1px solid #E5E7EB', borderRadius: 8 }}
+                  style={{
+                    width: '100%',
+                    padding: 12,
+                    border: '1px solid #E5E7EB',
+                    borderRadius: 8,
+                  }}
                 />
               </div>
             </div>
           </Section>
-          <Section title="Letter Content" open={openContent} onToggle={() => setOpenContent(v => !v)}>
+
+          {/* Content section */}
+          <Section
+            title="Letter Content"
+            open={openContent}
+            onToggle={() => setOpenContent((v) => !v)}
+          >
             <div style={{ display: 'grid', gap: 20 }}>
               <div>
                 <label style={{ fontWeight: 700 }}>Opening Paragraph</label>
                 <textarea
                   value={opening}
-                  onChange={e => setOpening(e.target.value)}
+                  onChange={(e) => setOpening(e.target.value)}
                   placeholder="I’m applying because I built the future of job apps."
-                  style={{ width: '100%', height: 100, padding: 12, border: '1px solid #E5E7EB', borderRadius: 8, fontFamily: 'inherit' }}
+                  style={{
+                    width: '100%',
+                    height: 100,
+                    padding: 12,
+                    border: '1px solid #E5E7EB',
+                    borderRadius: 8,
+                    fontFamily: 'inherit',
+                  }}
                 />
               </div>
+
               <div>
                 <label style={{ fontWeight: 700 }}>Body (Key Points)</label>
                 <textarea
                   value={body}
-                  onChange={e => setBody(e.target.value)}
-                  placeholder="Key point 1 with an increase of success of 45%\nKey point 2 with a decrease of loss by 23%\nRetained customer base of 73%"
-                  style={{ width: '100%', height: 150, padding: 12, border: '1px solid #E5E7EB', borderRadius: 8, fontFamily: 'inherit' }}
+                  onChange={(e) => setBody(e.target.value)}
+                  placeholder={
+                    'Key point 1 with an increase of success of 45%\n' +
+                    'Key point 2 with a decrease of loss by 23%\n' +
+                    'Retained customer base of 73%'
+                  }
+                  style={{
+                    width: '100%',
+                    height: 150,
+                    padding: 12,
+                    border: '1px solid #E5E7EB',
+                    borderRadius: 8,
+                    fontFamily: 'inherit',
+                  }}
                 />
               </div>
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
+
+              <div
+                style={{
+                  display: 'grid',
+                  gridTemplateColumns: '1fr 1fr',
+                  gap: 12,
+                }}
+              >
                 <div>
                   <label style={{ fontWeight: 700 }}>Closing</label>
                   <textarea
                     value={closing}
-                    onChange={e => setClosing(e.target.value)}
+                    onChange={(e) => setClosing(e.target.value)}
                     placeholder="Let’s talk."
-                    style={{ width: '100%', height: 80, padding: 12, border: '1px solid #E5E7EB', borderRadius: 8, fontFamily: 'inherit' }}
+                    style={{
+                      width: '100%',
+                      height: 80,
+                      padding: 12,
+                      border: '1px solid #E5E7EB',
+                      borderRadius: 8,
+                      fontFamily: 'inherit',
+                    }}
                   />
                 </div>
                 <div>
                   <label style={{ fontWeight: 700 }}>Sign-off</label>
                   <input
                     value={signoff}
-                    onChange={e => setSignoff(e.target.value)}
+                    onChange={(e) => setSignoff(e.target.value)}
                     placeholder="Sincerely,"
-                    style={{ width: '100%', padding: 12, border: '1px solid #E5E7EB', borderRadius: 8 }}
+                    style={{
+                      width: '100%',
+                      padding: 12,
+                      border: '1px solid #E5E7EB',
+                      borderRadius: 8,
+                    }}
                   />
                 </div>
               </div>
             </div>
           </Section>
-          <Section title="Tailor to Job" open={openTailor} onToggle={() => setOpenTailor(v => !v)}>
+
+          {/* Tailor to Job */}
+          <Section
+            title="Tailor to Job"
+            open={openTailor}
+            onToggle={() => setOpenTailor((v) => !v)}
+          >
             <div style={{ display: 'grid', gap: 16 }}>
               <div>
-                <label style={{ fontWeight: 700, fontSize: 14 }}>Paste Job Description (Primary)</label>
+                <label
+                  style={{ fontWeight: 700, fontSize: 14 }}
+                >
+                  Paste Job Description (Primary)
+                </label>
                 <textarea
                   value={jd}
-                  onChange={e => setJd(e.target.value)}
+                  onChange={(e) => setJd(e.target.value)}
                   placeholder="Paste the full job description here..."
                   style={{
                     width: '100%',
@@ -376,11 +617,18 @@ CLOSING: ...
                     borderRadius: 8,
                     fontFamily: 'inherit',
                     fontSize: 14,
-                    resize: 'vertical'
+                    resize: 'vertical',
                   }}
                 />
               </div>
-              <div style={{ textAlign: 'center', fontSize: 13, color: '#666' }}>
+
+              <div
+                style={{
+                  textAlign: 'center',
+                  fontSize: 13,
+                  color: '#666',
+                }}
+              >
                 or{' '}
                 <button
                   onClick={() => fileInputRef.current?.click()}
@@ -390,7 +638,7 @@ CLOSING: ...
                     border: 0,
                     fontWeight: 800,
                     textDecoration: 'underline',
-                    cursor: 'pointer'
+                    cursor: 'pointer',
                   }}
                 >
                   upload file
@@ -399,23 +647,28 @@ CLOSING: ...
                   ref={fileInputRef}
                   type="file"
                   accept=".pdf,.docx,.txt"
-                  onChange={e => handleFile(e.target.files?.[0])}
+                  onChange={(e) => handleFile(e.target.files?.[0])}
                   style={{ display: 'none' }}
                 />
               </div>
+
               {jd && (
-                <div style={{
-                  padding: '8px 12px',
-                  background: '#F0FDF4',
-                  border: '1px solid #BBF7D0',
-                  borderRadius: 8,
-                  fontSize: 12,
-                  color: '#166534',
-                  fontWeight: 600
-                }}>
-                  JD loaded • {jd.split(/\s+/).filter(Boolean).length} words
+                <div
+                  style={{
+                    padding: '8px 12px',
+                    background: '#F0FDF4',
+                    border: '1px solid #BBF7D0',
+                    borderRadius: 8,
+                    fontSize: 12,
+                    color: '#166534',
+                    fontWeight: 600,
+                  }}
+                >
+                  JD loaded •{' '}
+                  {jd.split(/\s+/).filter(Boolean).length} words
                 </div>
               )}
+
               {jd && (
                 <button
                   onClick={runAITailor}
@@ -430,85 +683,134 @@ CLOSING: ...
                     fontSize: 16,
                     border: 'none',
                     cursor: isLoading ? 'not-allowed' : 'pointer',
-                    opacity: isLoading ? 0.7 : 1
+                    opacity: isLoading ? 0.7 : 1,
                   }}
                 >
                   {isLoading ? 'AI Tailoring...' : 'AI TAILOR to 3s'}
                 </button>
               )}
-              <div ref={dropRef} style={{ height: 1, opacity: 0, pointerEvents: 'none' }} />
+
+              {/* Invisible drop target to share the same box as page */}
+              <div
+                ref={dropRef}
+                style={{
+                  height: 1,
+                  opacity: 0,
+                  pointerEvents: 'none',
+                }}
+              />
             </div>
           </Section>
         </div>
-        <div style={{ position: 'sticky', top: 20, background: 'white', borderRadius: 16, boxShadow: '0 20px 50px rgba(0,0,0,0.15)', overflow: 'hidden' }}>
-          <div style={{ padding: '20px 32px', background: '#263238', color: 'white', fontWeight: 800, fontSize: 18, textAlign: 'center' }}>
+
+        {/* RIGHT: LIVE PREVIEW */}
+        <div
+          style={{
+            position: 'sticky',
+            top: 20,
+            background: 'white',
+            borderRadius: 16,
+            boxShadow: '0 20px 50px rgba(0,0,0,0.15)',
+            overflow: 'hidden',
+          }}
+        >
+          <div
+            style={{
+              padding: '20px 32px',
+              background: '#263238',
+              color: 'white',
+              fontWeight: 800,
+              fontSize: 18,
+              textAlign: 'center',
+            }}
+          >
             LIVE COVER LETTER
           </div>
-          <div style={{ padding: 60, background: '#fff', minHeight: '100vh' }}>
+          <div
+            style={{
+              padding: 60,
+              background: '#fff',
+              minHeight: '100vh',
+            }}
+          >
             <CoverLetterTemplate data={letterData} />
           </div>
         </div>
       </div>
-      <div style={{ position: 'fixed', bottom: 28, right: 28, zIndex: 1000, display: 'flex', gap: 12 }}>
-        <CoverPDFButton
-          templateId="ats-cover"
-          data={letterData}
-        >
-          <button style={{
-            background: '#10b981',
-            color: 'white',
-            padding: '18px 32px',
-            borderRadius: 50,
-            border: 'none',
-            fontWeight: 800,
-            fontSize: 18,
-            boxShadow: '0 15px 35px rgba(16,185,129,0.5)',
-            cursor: 'pointer',
-            transition: 'all 0.2s'
-          }}>
+
+      {/* EXPORT BUTTONS */}
+      <div
+        style={{
+          position: 'fixed',
+          bottom: 28,
+          right: 28,
+          zIndex: 1000,
+          display: 'flex',
+          gap: 12,
+        }}
+      >
+        <CoverPDFButton templateId="ats-cover" data={letterData}>
+          <button
+            style={{
+              background: '#10b981',
+              color: 'white',
+              padding: '18px 32px',
+              borderRadius: 50,
+              border: 'none',
+              fontWeight: 800,
+              fontSize: 18,
+              boxShadow: '0 15px 35px rgba(16,185,129,0.5)',
+              cursor: 'pointer',
+              transition: 'all 0.2s',
+            }}
+          >
             ATS PDF
           </button>
         </CoverPDFButton>
-        <CoverPDFButton
-          templateId="cover-pdf"
-          data={letterData}
-        >
-          <button style={{
-            background: ORANGE,
-            color: 'white',
-            padding: '18px 32px',
-            borderRadius: 12,
-            border: 'none',
-            fontWeight: 800,
-            fontSize: 18,
-            boxShadow: '0 15px 35px rgba(255,112,67,0.5)',
-            cursor: 'pointer',
-            transition: 'all 0.2s'
-          }}>
+
+        <CoverPDFButton templateId="cover-pdf" data={letterData}>
+          <button
+            style={{
+              background: ORANGE,
+              color: 'white',
+              padding: '18px 32px',
+              borderRadius: 12,
+              border: 'none',
+              fontWeight: 800,
+              fontSize: 18,
+              boxShadow: '0 15px 35px rgba(255,112,67,0.5)',
+              cursor: 'pointer',
+              transition: 'all 0.2s',
+            }}
+          >
             Designed PDF
           </button>
         </CoverPDFButton>
       </div>
+
       <div className="mt-6 max-w-4xl mx-auto">
         <BulkExportCTA />
       </div>
+
       {saveEventAt && (
-        <div style={{
-          position: 'fixed',
-          right: 28,
-          bottom: 100,
-          background: '#16A34A',
-          color: 'white',
-          padding: '12px 20px',
-          borderRadius: 8,
-          fontWeight: 700,
-          fontSize: 14,
-          boxShadow: '0 8px 25px rgba(0,0,0,0.2)',
-          zIndex: 1000,
-          display: 'flex',
-          alignItems: 'center',
-          gap: 8
-        }}>
+        <div
+          style={{
+            position: 'fixed',
+            right: 28,
+            bottom: 100,
+            background: '#16A34A',
+            color: 'white',
+            padding: '12px 20px',
+            borderRadius: 8,
+            fontWeight: 700,
+            fontSize: 14,
+            boxShadow: '0 8px 25px rgba(0,0,0,0.2)',
+            zIndex: 1000,
+            display: 'flex',
+            alignItems: 'center',
+            gap: 8,
+          }}
+        >
           <span>Saved</span>
           <span style={{ fontSize: 12, opacity: 0.8 }}>{savedTime}</span>
         </div>

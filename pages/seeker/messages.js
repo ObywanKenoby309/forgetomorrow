@@ -1,5 +1,4 @@
 // pages/seeker/messages.js
-import Head from 'next/head';
 import dynamic from 'next/dynamic';
 import SeekerLayout from '@/components/layouts/SeekerLayout';
 import SeekerRightColumn from '@/components/seeker/SeekerRightColumn';
@@ -60,14 +59,11 @@ export default function Messages() {
 
   return (
     <SeekerLayout
-      title="Messages | ForgeTomorrow"
+      title="ForgeTomorrow — The Signal"
       header={HeaderBox}
       right={RightRail}
       activeNav="messages"
     >
-      <Head>
-        <title>ForgeTomorrow - The Signal</title>
-      </Head>
       {/* Client-only chat inbox */}
       <SignalMessages />
     </SeekerLayout>

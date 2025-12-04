@@ -7,7 +7,7 @@ const navItems = [
   { href: "/feed", label: "Community Feed" },
   { href: "/seeker/messages", label: "The Signal" },
   { href: "/jobs", label: "The Pipeline" },
-  { href: "/seeker/the-hearth/", label: "Your Hearth" },
+  { href: "/the-hearth", label: "Your Hearth" }, // 🔧 point to shared Hearth
 ];
 
 export default function SeekerHeader() {
