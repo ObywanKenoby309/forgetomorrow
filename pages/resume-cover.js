@@ -9,18 +9,6 @@ import ProfileResumeAttach from '@/components/profile/ProfileResumeAttach';
 import ProfileCoverAttach from '@/components/profile/ProfileCoverAttach';
 import SectionHint from '@/components/SectionHint';
 
-// TEMP: Mock data until you connect real DB
-const MOCK_USER = {
-  id: 'user_123',
-  tier: 'basic', // or 'pro'
-  ai_generations_used: 1,
-};
-
-const MOCK_SAVED_RESUMES = [
-  { id: 1, title: 'Senior Product Designer', updated_at: '2025-08-10T10:00:00Z' },
-  { id: 2, title: 'Frontend Engineer (2024)', updated_at: '2025-08-05T14:22:00Z' },
-];
-
 const ORANGE = '#FF7043';
 const SLATE = '#455A64';
 
@@ -173,32 +161,37 @@ export default function ResumeCoverLanding() {
   const [previewOpen, setPreviewOpen] = useState(false);
   const [previewTpl, setPreviewTpl] = useState(null);
   const [user, setUser] = useState(null);
-  const [tier, setTier] = useState('basic');
-  const [usage, setUsage] = useState({ used: 1, limit: 3 });
-  const [savedResumes, setSavedResumes] = useState([]);
+
+  // Live data placeholders until wired:
+  const [tier, setTier] = useState('basic');              // 'basic' | 'pro'
+  const [usage, setUsage] = useState({ used: 0, limit: 3 }); // AI generations
+  const [savedResumes, setSavedResumes] = useState([]);   // [] until DB wiring
 
   // Context: ATS pack + job params from jobs page
   const [atsPack, setAtsPack] = useState(null);
   const [atsSource, setAtsSource] = useState(null); // e.g., 'ats'
   const [jobContext, setJobContext] = useState(null); // { jobId, copyJD }
 
-  // Init session + mock usage
+  // Init session; no redirect here so recruiters don't get bounced
   useEffect(() => {
     async function init() {
-      const session = await getClientSession();
-      if (!session?.user) {
-        router.push('/login');
-        return;
-      }
-      setUser(session.user);
+      try {
+        const session = await getClientSession();
 
-      // MOCKED — Replace with real DB call later
-      setTier(MOCK_USER.tier);
-      setUsage({
-        used: MOCK_USER.ai_generations_used,
-        limit: MOCK_USER.tier === 'pro' ? Infinity : 3,
-      });
-      setSavedResumes(MOCK_SAVED_RESUMES);
+        if (session?.user) {
+          setUser(session.user);
+        } else {
+          // Rely on global auth / middleware instead of forcing /login here
+          console.warn('[resume-cover] No session user found on client init');
+        }
+
+        // TODO: Replace these placeholders with real DB-driven values
+        setTier((prev) => prev);          // keep 'basic' for now
+        setUsage((prev) => prev);        // { used: 0, limit: 3 } for now
+        setSavedResumes((prev) => prev); // empty until wired
+      } catch (err) {
+        console.error('[resume-cover] Failed to init session/usage', err);
+      }
     }
     init();
   }, [router]);
@@ -314,10 +307,10 @@ export default function ResumeCoverLanding() {
           </SoftLink>
         </div>
       </div>
-      {tier === 'basic' && (
+      {tier === 'basic' && usage && typeof usage.used === 'number' && (
         <div style={{ marginTop: 16, color: '#666', fontSize: 14 }}>
-          Free tier: {usage.used}/{usage.limit === Infinity ? '∞' : usage.limit} AI
-          generations used
+          Free tier:{' '}
+          {usage.used}/{usage.limit === Infinity ? '∞' : usage.limit} AI generations used
         </div>
       )}
       <input
