@@ -1,10 +1,11 @@
 // pages/support/ticket/[id].js
+import { useState } from 'react';
 import Head from 'next/head';
 import Link from 'next/link';
 import { prisma } from '@/lib/prisma';
 import Footer from '../../../components/Footer';
 
-export default function SupportTicketDetail({ ticket }) {
+export default function SupportTicketDetail({ ticket, comments: initialComments }) {
   if (!ticket) {
     return (
       <>
@@ -29,6 +30,11 @@ export default function SupportTicketDetail({ ticket }) {
       </>
     );
   }
+
+  const [comments, setComments] = useState(initialComments || []);
+  const [newComment, setNewComment] = useState('');
+  const [submitting, setSubmitting] = useState(false);
+  const [error, setError] = useState(null);
 
   const statusBadgeClasses = (status) => {
     if (!status) return 'bg-slate-100 text-slate-700';
@@ -65,6 +71,44 @@ export default function SupportTicketDetail({ ticket }) {
       return d.toLocaleString();
     } catch {
       return iso;
+    }
+  };
+
+  const handleAddComment = async (e) => {
+    e.preventDefault();
+    const trimmed = newComment.trim();
+    if (!trimmed) return;
+
+    setSubmitting(true);
+    setError(null);
+
+    try {
+      const res = await fetch('/api/support/tickets/comments', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          ticketId: ticket.id,
+          body: trimmed,
+        }),
+      });
+
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}));
+        throw new Error(data.error || 'Failed to add note');
+      }
+
+      const data = await res.json().catch(() => null);
+      const created = data?.comment;
+
+      if (created) {
+        setComments((prev) => [...prev, created]);
+        setNewComment('');
+      }
+    } catch (err) {
+      console.error('Error adding internal note:', err);
+      setError(err.message || 'Unable to add note.');
+    } finally {
+      setSubmitting(false);
     }
   };
 
@@ -177,11 +221,64 @@ export default function SupportTicketDetail({ ticket }) {
             </div>
           </div>
 
-          {/* Placeholder for future comments / timeline */}
-          <div className="pt-4 border-t border-dashed border-slate-200">
-            <p className="text-xs text-slate-500">
-              Timeline, internal notes, and escalation history can be added here later.
-            </p>
+          {/* Internal notes */}
+          <div className="pt-4 border-t border-slate-200 space-y-3">
+            <div className="flex items-center justify-between">
+              <h2 className="text-sm font-semibold text-slate-700 uppercase tracking-wide">
+                Internal Notes (agents only)
+              </h2>
+            </div>
+
+            {comments.length === 0 ? (
+              <p className="text-xs text-slate-500">
+                No internal notes yet. Use the form below to leave a quick note about actions taken, findings, or escalation context.
+              </p>
+            ) : (
+              <div className="space-y-2 max-h-60 overflow-y-auto border border-slate-100 rounded-md p-2 bg-slate-50">
+                {comments.map((c) => (
+                  <div
+                    key={c.id}
+                    className="text-xs bg-white border border-slate-200 rounded px-2 py-1.5 mb-1"
+                  >
+                    <div className="flex items-center justify-between mb-1">
+                      <span className="font-semibold text-slate-700">
+                        {c.authorEmail || 'Agent'}
+                      </span>
+                      <span className="text-[10px] text-slate-500">
+                        {formatDate(c.createdAt)}
+                      </span>
+                    </div>
+                    <p className="text-[11px] text-slate-800 whitespace-pre-wrap">
+                      {c.body}
+                    </p>
+                  </div>
+                ))}
+              </div>
+            )}
+
+            <form onSubmit={handleAddComment} className="space-y-2 mt-2">
+              <label className="block text-xs font-semibold text-slate-600 uppercase tracking-wide mb-1">
+                Add internal note
+              </label>
+              <textarea
+                className="w-full rounded-md border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900 focus:outline-none focus:ring-2 focus:ring-[#FF7043] focus:border-transparent resize-vertical min-h-[60px]"
+                value={newComment}
+                onChange={(e) => setNewComment(e.target.value)}
+                placeholder="Summarize what you found, what you changed, or what needs follow-up. This is only visible to the support team."
+              />
+              {error && (
+                <p className="text-xs text-red-600">
+                  {error}
+                </p>
+              )}
+              <button
+                type="submit"
+                disabled={submitting || !newComment.trim()}
+                className="inline-flex items-center justify-center rounded-md bg-[#FF7043] text-white text-xs font-semibold px-3 py-1.5 shadow hover:bg-[#ff8a65] disabled:opacity-60 disabled:cursor-not-allowed"
+              >
+                {submitting ? 'Saving…' : 'Add Note'}
+              </button>
+            </form>
           </div>
         </section>
       </main>
@@ -207,6 +304,12 @@ export async function getServerSideProps(context) {
       return { notFound: true };
     }
 
+    // Load internal notes (comments) for this ticket
+    const comments = await prisma.supportTicketComment.findMany({
+      where: { ticketId: id },
+      orderBy: { createdAt: 'asc' },
+    });
+
     return {
       props: {
         ticket: {
@@ -222,6 +325,14 @@ export async function getServerSideProps(context) {
           createdAt: ticket.createdAt.toISOString(),
           updatedAt: ticket.updatedAt.toISOString(),
         },
+        comments: comments.map((c) => ({
+          id: c.id,
+          body: c.body,
+          isInternal: c.isInternal,
+          authorId: c.authorId,
+          authorEmail: c.authorEmail,
+          createdAt: c.createdAt.toISOString(),
+        })),
       },
     };
   } catch (err) {
