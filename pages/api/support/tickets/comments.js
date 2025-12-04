@@ -1,6 +1,6 @@
 // pages/api/support/tickets/comments.js
 import { getServerSession } from 'next-auth/next';
-import { authOptions } from '../auth/[...nextauth]';
+import { authOptions } from "../../auth/[...nextauth]";
 import { prisma } from '@/lib/prisma';
 
 export default async function handler(req, res) {
