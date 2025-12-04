@@ -112,6 +112,32 @@ export default function SupportTicketDetail({ ticket, comments: initialComments 
     }
   };
 
+  // Build a simple timeline using ticket + comments
+  const timelineEvents = [
+    {
+      id: 'created',
+      type: 'created',
+      label: 'Ticket created',
+      description: ticket.subject,
+      timestamp: ticket.createdAt,
+    },
+    ...comments.map((c) => ({
+      id: c.id,
+      type: 'note',
+      label: 'Internal note added',
+      description: c.body,
+      meta: c.authorEmail || 'Agent',
+      timestamp: c.createdAt,
+    })),
+    {
+      id: 'updated',
+      type: 'updated',
+      label: 'Last updated',
+      description: `Status: ${ticket.status || 'OPEN'}`,
+      timestamp: ticket.updatedAt,
+    },
+  ];
+
   return (
     <>
       <Head>
@@ -218,6 +244,39 @@ export default function SupportTicketDetail({ ticket, comments: initialComments 
               <p className="text-sm text-slate-800 whitespace-pre-wrap">
                 {ticket.initialMessage}
               </p>
+            </div>
+          </div>
+
+          {/* Activity Timeline */}
+          <div className="pt-4 border-t border-slate-200 space-y-3">
+            <h2 className="text-sm font-semibold text-slate-700 uppercase tracking-wide mb-2">
+              Activity Timeline
+            </h2>
+            <div className="relative pl-4 border-l border-slate-200 space-y-4">
+              {timelineEvents.map((event, index) => (
+                <div key={event.id} className="relative">
+                  {/* Dot */}
+                  <span className="absolute -left-2 top-1 h-3 w-3 rounded-full bg-[#FF7043]" />
+                  <div className="ml-1">
+                    <div className="flex items-center justify-between gap-2">
+                      <p className="text-xs font-semibold text-slate-800">
+                        {event.label}
+                        {event.type === 'note' && event.meta
+                          ? ` · ${event.meta}`
+                          : ''}
+                      </p>
+                      <span className="text-[10px] text-slate-500">
+                        {formatDate(event.timestamp)}
+                      </span>
+                    </div>
+                    {event.description && (
+                      <p className="mt-1 text-[11px] text-slate-700 whitespace-pre-wrap">
+                        {event.description}
+                      </p>
+                    )}
+                  </div>
+                </div>
+              ))}
             </div>
           </div>
 
