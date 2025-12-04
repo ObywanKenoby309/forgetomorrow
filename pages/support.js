@@ -1,8 +1,87 @@
+import { useEffect, useState } from 'react';
 import Head from 'next/head';
 import Link from 'next/link';
 import Footer from '../components/Footer';
 
 export default function Support() {
+  const [tickets, setTickets] = useState([]);
+  const [loadingTickets, setLoadingTickets] = useState(true);
+  const [ticketError, setTicketError] = useState(null);
+
+  useEffect(() => {
+    let isCancelled = false;
+
+    async function fetchTickets() {
+      try {
+        setLoadingTickets(true);
+        setTicketError(null);
+
+        const res = await fetch('/api/support/tickets');
+        if (!res.ok) {
+          throw new Error('Failed to load tickets');
+        }
+
+        const data = await res.json().catch(() => ({}));
+        if (!isCancelled) {
+          setTickets(data.tickets || []);
+        }
+      } catch (err) {
+        console.error('Error loading tickets:', err);
+        if (!isCancelled) {
+          setTicketError(err.message || 'Unable to load tickets.');
+        }
+      } finally {
+        if (!isCancelled) {
+          setLoadingTickets(false);
+        }
+      }
+    }
+
+    fetchTickets();
+
+    return () => {
+      isCancelled = true;
+    };
+  }, []);
+
+  const formatDate = (iso) => {
+    if (!iso) return '-';
+    try {
+      const d = new Date(iso);
+      return d.toLocaleString();
+    } catch {
+      return iso;
+    }
+  };
+
+  const statusBadgeClasses = (status) => {
+    if (!status) return 'bg-slate-100 text-slate-700';
+    const s = status.toUpperCase();
+    if (s === 'OPEN') return 'bg-red-50 text-red-700';
+    if (s === 'IN_PROGRESS') return 'bg-amber-50 text-amber-700';
+    if (s === 'AWAITING_USER') return 'bg-blue-50 text-blue-700';
+    if (s === 'RESOLVED') return 'bg-emerald-50 text-emerald-700';
+    if (s === 'CLOSED') return 'bg-slate-100 text-slate-700';
+    return 'bg-slate-100 text-slate-700';
+  };
+
+  const intentLabel = (intent) => {
+    if (!intent) return 'General';
+    switch (intent) {
+      case 'technical':
+        return 'Technical';
+      case 'billing':
+        return 'Billing';
+      case 'recruiter':
+        return 'Recruiter';
+      case 'emotional':
+        return 'Mindset';
+      case 'general':
+      default:
+        return 'General';
+    }
+  };
+
   return (
     <>
       <Head>
@@ -120,6 +199,92 @@ export default function Support() {
               );
             })}
           </div>
+        </section>
+
+        {/* RECENT TICKETS */}
+        <section className="bg-white rounded-lg shadow p-6 space-y-4">
+          <div className="flex items-center justify-between">
+            <div>
+              <h2 className="text-xl font-semibold text-[#FF7043]">
+                Recent Support Tickets
+              </h2>
+              <p className="text-sm text-slate-600">
+                Tickets created from your Support Chat and other channels.
+              </p>
+            </div>
+          </div>
+
+          {loadingTickets && (
+            <p className="text-sm text-slate-500">Loading tickets…</p>
+          )}
+
+          {ticketError && !loadingTickets && (
+            <p className="text-sm text-red-600">
+              {ticketError}
+            </p>
+          )}
+
+          {!loadingTickets && !ticketError && tickets.length === 0 && (
+            <p className="text-sm text-slate-500">
+              No tickets yet. Start a conversation in{' '}
+              <Link
+                href="/support/chat"
+                className="text-[#FF7043] underline"
+              >
+                Support Chat
+              </Link>{' '}
+              and we’ll track it here.
+            </p>
+          )}
+
+          {!loadingTickets && !ticketError && tickets.length > 0 && (
+            <div className="overflow-x-auto">
+              <table className="min-w-full text-sm border-t border-slate-200">
+                <thead>
+                  <tr className="text-left text-xs uppercase tracking-wide text-slate-500">
+                    <th className="py-2 pr-3">Subject</th>
+                    <th className="py-2 px-3">Status</th>
+                    <th className="py-2 px-3">Intent</th>
+                    <th className="py-2 px-3">Persona</th>
+                    <th className="py-2 px-3">Source</th>
+                    <th className="py-2 pl-3">Created</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {tickets.map((t) => (
+                    <tr key={t.id} className="border-t border-slate-100">
+                      <td className="py-2 pr-3 max-w-xs">
+                        <span className="font-medium text-slate-800">
+                          {t.subject}
+                        </span>
+                      </td>
+                      <td className="py-2 px-3">
+                        <span
+                          className={`inline-flex items-center rounded-full px-2 py-0.5 text-[11px] font-medium ${statusBadgeClasses(
+                            t.status
+                          )}`}
+                        >
+                          {t.status || 'OPEN'}
+                        </span>
+                      </td>
+                      <td className="py-2 px-3 text-xs text-slate-700">
+                        {intentLabel(t.intent)}
+                      </td>
+                      <td className="py-2 px-3 text-xs text-slate-700">
+                        {t.personaId || '—'}
+                      </td>
+                      <td className="py-2 px-3 text-xs text-slate-700">
+                        {t.source || 'support-chat'}
+                      </td>
+                      <td className="py-2 pl-3 text-xs text-slate-500 whitespace-nowrap">
+                        {formatDate(t.createdAt)}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
         </section>
       </main>
 
