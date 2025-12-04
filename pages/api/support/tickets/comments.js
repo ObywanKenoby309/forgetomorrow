@@ -1,6 +1,6 @@
 // pages/api/support/tickets/comments.js
 import { getServerSession } from 'next-auth/next';
-import { authOptions } from "../../auth/[...nextauth]";
+import { authOptions } from '../../auth/[...nextauth]';
 import { prisma } from '@/lib/prisma';
 
 export default async function handler(req, res) {
@@ -15,48 +15,55 @@ export default async function handler(req, res) {
     return res.status(405).json({ error: 'Method not allowed' });
   }
 
-  try {
+  try:
     const { ticketId, body } = req.body || {};
 
-    if (!ticketId || !body || !body.trim()) {
+    const trimmedBody = typeof body === 'string' ? body.trim() : '';
+
+    if (!ticketId || !trimmedBody) {
       return res.status(400).json({
-        error: 'Both "ticketId" and non-empty "body" are required',
+        error: 'Both "ticketId" and a non-empty "body" are required.',
       });
     }
 
-    // Ensure ticket exists
+    // Optional: ensure ticket exists and belongs to this user/org
     const ticket = await prisma.supportTicket.findUnique({
       where: { id: ticketId },
+      select: { id: true },
     });
 
     if (!ticket) {
-      return res.status(404).json({ error: 'Ticket not found' });
+      return res.status(404).json({ error: 'Ticket not found.' });
     }
 
-    const comment = await prisma.supportTicketComment.create({
+    // Assumes a Prisma model like:
+    // model SupportComment {
+    //   id        String   @id @default(cuid())
+    //   ticketId  String
+    //   userId    String
+    //   body      String
+    //   createdAt DateTime @default(now())
+    //   // ...
+    // }
+    const comment = await prisma.supportComment.create({
       data: {
         ticketId,
-        body: body.trim(),
-        isInternal: true,
-        authorId: session.user?.id || null,
-        authorEmail: session.user?.email || null,
+        userId: session.user.id,
+        body: trimmedBody,
       },
     });
 
-    return res.status(200).json({
-      comment: {
-        id: comment.id,
-        body: comment.body,
-        isInternal: comment.isInternal,
-        authorId: comment.authorId,
-        authorEmail: comment.authorEmail,
-        createdAt: comment.createdAt.toISOString(),
-      },
+    // (Optional) bump the ticket's updatedAt for freshness
+    await prisma.supportTicket.update({
+      where: { id: ticketId },
+      data: { updatedAt: new Date() },
     });
+
+    return res.status(200).json({ comment });
   } catch (err) {
-    console.error('Error creating support ticket comment:', err);
-    return res
-      .status(500)
-      .json({ error: 'Failed to create internal note' });
+    console.error('Error creating ticket comment:', err);
+    return res.status(500).json({
+      error: 'Unable to add comment. Please try again.',
+    });
   }
 }

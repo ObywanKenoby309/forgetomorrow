@@ -1,7 +1,53 @@
+// pages/support.js (or pages/support/index.js)
 import { useEffect, useState } from 'react';
-import Head from 'next/head';
 import Link from 'next/link';
-import Footer from '../components/Footer';
+import SeekerLayout from '@/components/layouts/SeekerLayout';
+import SeekerRightColumn from '@/components/seeker/SeekerRightColumn';
+
+function SupportHeaderBox() {
+  return (
+    <section
+      style={{
+        background: 'white',
+        borderRadius: 12,
+        padding: 16,
+        border: '1px solid #eee',
+        boxShadow: '0 2px 6px rgba(0,0,0,0.06)',
+        textAlign: 'center',
+      }}
+    >
+      <h1
+        style={{
+          margin: 0,
+          color: '#FF7043',
+          fontSize: 28,
+          fontWeight: 800,
+        }}
+      >
+        Support Center
+      </h1>
+      <p
+        style={{
+          margin: '6px auto 0',
+          color: '#607D8B',
+          maxWidth: 640,
+        }}
+      >
+        We take your experience seriously. If you have questions, feedback, or need
+        assistance, you’re in the right place. Our dedicated team is here to help you
+        succeed every step of the way.
+      </p>
+    </section>
+  );
+}
+
+const STATUS_OPTIONS = [
+  'OPEN',
+  'IN_PROGRESS',
+  'AWAITING_USER',
+  'RESOLVED',
+  'CLOSED',
+];
 
 export default function Support() {
   const [tickets, setTickets] = useState([]);
@@ -144,59 +190,17 @@ export default function Support() {
     }
   };
 
-  const STATUS_OPTIONS = [
-    'OPEN',
-    'IN_PROGRESS',
-    'AWAITING_USER',
-    'RESOLVED',
-    'CLOSED',
-  ];
-
   return (
-    <>
-      <Head>
-        <title>ForgeTomorrow – Support</title>
-      </Head>
-
-      <main className="max-w-4xl mx-auto p-6 space-y-10 min-h-[80vh] bg-[#ECEFF1] text-[#212121] pt-20">
-
-        {/* NEW HEADER CARD (consistent across site) */}
-        <section
-          style={{
-            background: 'white',
-            borderRadius: 12,
-            padding: 16,
-            border: '1px solid #eee',
-            boxShadow: '0 2px 6px rgba(0,0,0,0.06)',
-            textAlign: 'center',
-          }}
-        >
-          <h1
-            style={{
-              margin: 0,
-              color: '#FF7043',
-              fontSize: 28,
-              fontWeight: 800,
-            }}
-          >
-            Support Center
-          </h1>
-          <p
-            style={{
-              margin: '6px auto 0',
-              color: '#607D8B',
-              maxWidth: 640,
-            }}
-          >
-            We take your experience seriously. If you have questions, feedback, or need
-            assistance, you’re in the right place. Our dedicated team is here to help you
-            succeed every step of the way.
-          </p>
-        </section>
+    <SeekerLayout
+      title="ForgeTomorrow – Support"
+      header={<SupportHeaderBox />}
+      right={<SeekerRightColumn variant="support" />}
+      activeNav="support"
+    >
+      <div className="max-w-4xl mx-auto p-6 space-y-10">
 
         {/* MAIN CONTENT CARD */}
         <section className="bg-white rounded-lg shadow p-8 space-y-6">
-
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
             {[
               {
@@ -247,7 +251,9 @@ export default function Support() {
                     className={commonClasses}
                     aria-label={title}
                   >
-                    <h2 className="text-2xl font-semibold text-[#FF7043] mb-3">{title}</h2>
+                    <h2 className="text-2xl font-semibold text-[#FF7043] mb-3">
+                      {title}
+                    </h2>
                     <p>{desc}</p>
                   </Link>
                 );
@@ -263,7 +269,9 @@ export default function Support() {
                   onKeyPress={(e) => e.key === 'Enter' && alert(alertMsg)}
                   aria-label={title}
                 >
-                  <h2 className="text-2xl font-semibold text-[#FF7043] mb-3">{title}</h2>
+                  <h2 className="text-2xl font-semibold text-[#FF7043] mb-3">
+                    {title}
+                  </h2>
                   <p>{desc}</p>
                 </div>
               );
@@ -290,18 +298,13 @@ export default function Support() {
           )}
 
           {ticketError && !loadingTickets && (
-            <p className="text-sm text-red-600">
-              {ticketError}
-            </p>
+            <p className="text-sm text-red-600">{ticketError}</p>
           )}
 
           {!loadingTickets && !ticketError && tickets.length === 0 && (
             <p className="text-sm text-slate-500">
               No tickets yet. Start a conversation in{' '}
-              <Link
-                href="/support/chat"
-                className="text-[#FF7043] underline"
-              >
+              <Link href="/support/chat" className="text-[#FF7043] underline">
                 Support Chat
               </Link>{' '}
               and we’ll track it here.
@@ -380,9 +383,7 @@ export default function Support() {
             </div>
           )}
         </section>
-      </main>
-
-      <Footer />
-    </>
+      </div>
+    </SeekerLayout>
   );
 }
