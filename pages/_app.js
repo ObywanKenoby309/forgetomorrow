@@ -75,7 +75,8 @@ export default function App({ Component, pageProps: { session, ...pageProps } })
   // 🔹 Treat Support Center as INTERNAL (shared tool for logged-in users)
   const isSupportRoute =
     router.pathname === '/support' ||
-    router.pathname === '/support/chat';
+    router.pathname === '/support/chat' ||
+    router.pathname.startsWith('/support/'); // 🔒 NEW: covers /support/ticket/[id] and any future nested routes
 
   const isPublicByPath =
     !isRecruiterRoute &&
