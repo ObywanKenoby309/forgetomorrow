@@ -129,7 +129,6 @@ function Body({
 
 export default function MessagingPage() {
   const router = useRouter();
-
   const [threads, setThreads] = useState([]);
   const [bulkOpen, setBulkOpen] = useState(false);
   const [initialThreadId, setInitialThreadId] = useState(null);
@@ -168,54 +167,23 @@ export default function MessagingPage() {
     },
   ];
 
-  // 1) Resolve the REAL current user from session + lock to recruiter role
+  // 1) Resolve the REAL current user from session
   useEffect(() => {
     let cancelled = false;
 
     async function loadUser() {
       try {
         const session = await getClientSession();
-
-        const user = session?.user;
-        if (!user || !user.id) {
-          if (!cancelled) {
-            await router.replace("/auth/signin");
-          }
+        if (!session?.user?.id) {
+          // Not logged in → go to sign-in, but do NOT bounce to other dashboards
+          await router.replace("/auth/signin");
           return;
         }
-
-        // Role + tier from your schema:
-        // role: SEEKER | COACH | RECRUITER | ADMIN
-        // tier: FREE | PRO | COACH | SMALL_BIZ | ENTERPRISE
-        const role = user.role;
-        const tier = user.tier;
-
-        // 🔒 Hard lock: only RECRUITER (or ADMIN) allowed here
-        if (role !== "RECRUITER" && role !== "ADMIN") {
-          if (!cancelled) {
-            // send people “home” based on role
-            if (role === "SEEKER") {
-              await router.replace("/seeker-dashboard");
-            } else if (role === "COACH") {
-              await router.replace("/coach/clients");
-            } else {
-              await router.replace("/");
-            }
-          }
-          return;
-        }
-
         if (!cancelled) {
-          setCurrentUserId(user.id);
+          setCurrentUserId(session.user.id);
         }
-
-        // (Optional) you can log to verify what the server thinks you are:
-        console.log("[Recruiter Messaging] user:", { id: user.id, role, tier });
       } catch (err) {
-        console.error(
-          "Failed to load session for recruiter messaging:",
-          err
-        );
+        console.error("Failed to load session for recruiter messaging:", err);
         if (!cancelled) {
           await router.replace("/auth/signin");
         }
@@ -346,11 +314,12 @@ export default function MessagingPage() {
     // Re-run if the conversation id in the URL changes or user changes
   }, [queryConversationId, currentUserId]);
 
-  const handleSend = async (threadId, text) => {
+  const onSend = async (threadId, text) => {
     if (!text || !String(text).trim()) return;
     const trimmed = String(text).trim();
 
     try {
+      // Send message to the recruiter-channel conversation
       const data = await fetchJson("/api/messages", {
         method: "POST",
         body: JSON.stringify({
@@ -414,7 +383,7 @@ export default function MessagingPage() {
       >
         <Body
           threads={threads}
-          onSend={handleSend}
+          onSend={onSend}
           candidatesFlat={candidatesFlat}
           bulkOpen={bulkOpen}
           setBulkOpen={setBulkOpen}

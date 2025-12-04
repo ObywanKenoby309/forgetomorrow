@@ -1,10 +1,11 @@
-// components/layouts/EnterpriseHeader.js ← with avatar hook wired
+// components/layouts/EnterpriseHeader.js ← with real plan from session
 import Link from "next/link";
 import { useRouter } from "next/router";
 import { useEffect, useRef, useState } from "react";
 import { usePlan } from "@/context/PlanContext";
 import Avatar from "@/components/common/Avatar";
 import { useCurrentUserAvatar } from "@/hooks/useCurrentUserAvatar";
+import { useSession } from "next-auth/react";
 
 export default function EnterpriseHeader({
   brandHref = "/",
@@ -28,7 +29,25 @@ export default function EnterpriseHeader({
   heightClass,
 }) {
   const router = useRouter();
-  const { isEnterprise, togglePlan } = usePlan();
+
+  // 🔸 Plan context (dev toggle etc.)
+  const { isEnterprise: planIsEnterprise, togglePlan } = usePlan();
+
+  // 🔸 Real plan from NextAuth session
+  const { data: session } = useSession();
+  const rawPlan =
+    (session?.user && session.user.plan) || null;
+  const normalizedPlan =
+    typeof rawPlan === "string" ? rawPlan.toUpperCase() : null;
+
+  // Recruiter Enterprise = true when DB says ENTERPRISE
+  const isRecruiterEnterprise =
+    normalizedPlan === "ENTERPRISE" ||
+    normalizedPlan === "RECRUITER_ENTERPRISE";
+
+  // Final flag used everywhere in this header
+  const isEnterprise = planIsEnterprise || isRecruiterEnterprise;
+
   const [openMobile, setOpenMobile] = useState(false);
   const [openProfile, setOpenProfile] = useState(false);
   const profileRef = useRef(null);
@@ -85,6 +104,7 @@ export default function EnterpriseHeader({
 
   const suppressBadge =
     sectionLabel === "Coaching Suite" || showPlanBadge === false;
+
   const badgeText =
     typeof planLabel === "string" && planLabel.length > 0
       ? planLabel
@@ -195,11 +215,7 @@ export default function EnterpriseHeader({
                       aria-haspopup="true"
                       aria-expanded={openProfile}
                     >
-                      <Avatar
-                        avatarUrl={avatarUrl}
-                        initials={initials}
-                        size="md"
-                      />
+                      <Avatar avatarUrl={avatarUrl} initials={initials} size="md" />
                       <svg
                         className="h-5 w-5 text-gray-400"
                         fill="currentColor"
@@ -237,7 +253,7 @@ export default function EnterpriseHeader({
                           role="menuitem"
                           onClick={() => {
                             setOpenProfile(false);
-                            router.push("/logout"); // 🔒 go through centralized logout
+                            router.push("/logout");
                           }}
                         >
                           Log Out
