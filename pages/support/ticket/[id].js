@@ -1,17 +1,19 @@
 // pages/support/ticket/[id].js
 import { useState } from 'react';
-import Head from 'next/head';
 import Link from 'next/link';
 import { prisma } from '@/lib/prisma';
-import Footer from '../../../components/Footer';
+import SeekerLayout from '@/components/layouts/SeekerLayout';
+import SeekerRightColumn from '@/components/seeker/SeekerRightColumn';
 
 export default function SupportTicketDetail({ ticket, comments: initialComments }) {
+  // Fallback: ticket not found
   if (!ticket) {
     return (
-      <>
-        <Head>
-          <title>Ticket not found – ForgeTomorrow Support</title>
-        </Head>
+      <SeekerLayout
+        title="Ticket not found – ForgeTomorrow Support"
+        activeNav="support"
+        right={<SeekerRightColumn variant="support" />}
+      >
         <main className="max-w-3xl mx-auto p-6 min-h-[80vh] flex flex-col justify-center items-center bg-[#ECEFF1] text-[#212121] pt-20">
           <h1 className="text-2xl font-bold text-[#FF7043] mb-2">
             Ticket not found
@@ -26,8 +28,7 @@ export default function SupportTicketDetail({ ticket, comments: initialComments 
             ← Back to Support Center
           </Link>
         </main>
-        <Footer />
-      </>
+      </SeekerLayout>
     );
   }
 
@@ -191,12 +192,14 @@ export default function SupportTicketDetail({ ticket, comments: initialComments 
       ticketState.chatTranscript.length > 0) ||
     !!ticketState.chatSummary;
 
-  return (
-    <>
-      <Head>
-        <title>{ticketState.subject} – ForgeTomorrow Support Ticket</title>
-      </Head>
+  const pageTitle = `${ticketState.subject} – ForgeTomorrow Support Ticket`;
 
+  return (
+    <SeekerLayout
+      title={pageTitle}
+      activeNav="support"
+      right={<SeekerRightColumn variant="support" />}
+    >
       <main className="max-w-3xl mx-auto p-6 space-y-8 min-h-[80vh] bg-[#ECEFF1] text-[#212121] pt-20">
         {/* Header */}
         <section
@@ -221,7 +224,8 @@ export default function SupportTicketDetail({ ticket, comments: initialComments 
                 Support Ticket
               </h1>
               <p className="mt-1 text-sm text-slate-600">
-                Ticket ID: <span className="font-mono text-xs">{ticketState.id}</span>
+                Ticket ID:{' '}
+                <span className="font-mono text-xs">{ticketState.id}</span>
               </p>
               <p className="mt-1 text-xs text-slate-500">
                 Created: {formatDate(ticketState.createdAt)} · Last updated:{' '}
@@ -495,9 +499,7 @@ export default function SupportTicketDetail({ ticket, comments: initialComments 
           </div>
         </section>
       </main>
-
-      <Footer />
-    </>
+    </SeekerLayout>
   );
 }
 
