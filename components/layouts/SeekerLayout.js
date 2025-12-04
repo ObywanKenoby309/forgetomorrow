@@ -24,28 +24,37 @@ export default function SeekerLayout({
   right,
   children,
   activeNav,
-  forceChrome,                 // 'seeker' | 'coach' | 'recruiter-smb' | 'recruiter-ent'
-  rightVariant = 'dark',       // 'dark' | 'light'
-  rightWidth = 260,            // width for right rail (px)
+  forceChrome,
+  rightVariant = 'dark',
+  rightWidth = 260,
   gap = 12,
-  pad = 16,                    // base padding
+  pad = 16,
 }) {
-  const counts = useSidebarCounts();
   const router = useRouter();
 
-  const [chromeMode, setChromeMode] = useState(
-    forceChrome && ALLOWED_MODES.has(forceChrome) ? forceChrome : 'seeker'
-  );
+  // 🔥 FIX 1 — Determine chrome BEFORE any render
+  const initialChrome = (() => {
+    if (forceChrome && ALLOWED_MODES.has(forceChrome)) return forceChrome;
 
+    const q = String(router?.query?.chrome || '').toLowerCase();
+    if (ALLOWED_MODES.has(q)) return q;
+
+    return 'seeker';
+  })();
+
+  const [chromeMode, setChromeMode] = useState(initialChrome);
+
+  // 🔥 FIX 2 — Update if chrome query changes AFTER mount
   useEffect(() => {
-    if (forceChrome && ALLOWED_MODES.has(forceChrome)) {
-      setChromeMode(forceChrome);
-      return;
-    }
     const q = String(router?.query?.chrome || '').toLowerCase();
     if (ALLOWED_MODES.has(q)) setChromeMode(q);
+    else if (forceChrome && ALLOWED_MODES.has(forceChrome)) setChromeMode(forceChrome);
     else setChromeMode('seeker');
-  }, [forceChrome, router?.query?.chrome]);
+  }, [router?.query?.chrome, forceChrome]);
+
+  // 🔥 FIX 3 — Only seekers use Seeker counts (this prevented recruiter redirects)
+  const isSeekerChrome = chromeMode === 'seeker';
+  const counts = isSeekerChrome ? useSidebarCounts() : {};
 
   const { HeaderComp, SidebarComp, sidebarProps } = useMemo(() => {
     switch (chromeMode) {
@@ -53,20 +62,23 @@ export default function SeekerLayout({
         return {
           HeaderComp: CoachingHeader,
           SidebarComp: CoachingSidebar,
-          sidebarProps: { active: activeNav, counts },
+          sidebarProps: { active: activeNav },
         };
+
       case 'recruiter-smb':
         return {
           HeaderComp: RecruiterHeader,
           SidebarComp: RecruiterSidebar,
           sidebarProps: { variant: 'smb' },
         };
+
       case 'recruiter-ent':
         return {
           HeaderComp: RecruiterHeader,
           SidebarComp: RecruiterSidebar,
           sidebarProps: { variant: 'enterprise' },
         };
+
       case 'seeker':
       default:
         return {
@@ -77,9 +89,8 @@ export default function SeekerLayout({
     }
   }, [chromeMode, activeNav, counts]);
 
-  // --- Wallpaper background (applies to seeker / coach / recruiter) ---
+  // Wallpaper logic
   const { wallpaperUrl } = useUserWallpaper();
-
   const backgroundStyle = wallpaperUrl
     ? {
         minHeight: '100vh',
@@ -94,7 +105,7 @@ export default function SeekerLayout({
         backgroundColor: '#ECEFF1',
       };
 
-  // --- Right rail styles ---
+  // Right-rail style presets
   const rightBase = {
     gridArea: 'right',
     alignSelf: 'start',
@@ -120,9 +131,6 @@ export default function SeekerLayout({
     boxShadow: 'none',
   };
 
-  // Compute asymmetric page padding:
-  // - Keep normal left/top/bottom padding
-  // - Slightly reduce the RIGHT padding when a right rail is present to “tighten the edge”
   const containerPadding = {
     paddingTop: pad,
     paddingBottom: pad,
@@ -136,16 +144,16 @@ export default function SeekerLayout({
         <title>{title}</title>
       </Head>
 
-      {/* Wallpaper wrapper */}
       <div style={backgroundStyle}>
-        {/* Top chrome header */}
+        {/* 🔥 FIX 4 — Header ALWAYS matches chromeMode */}
         <HeaderComp />
 
-        {/* Main layout shell */}
         <div
           style={{
             display: 'grid',
-            gridTemplateColumns: `240px minmax(0, 1fr) ${right ? `${rightWidth}px` : '0px'}`,
+            gridTemplateColumns: `240px minmax(0, 1fr) ${
+              right ? `${rightWidth}px` : '0px'
+            }`,
             gridTemplateRows: 'auto 1fr',
             gridTemplateAreas: right
               ? `"left header right"
@@ -157,18 +165,16 @@ export default function SeekerLayout({
             alignItems: 'start',
           }}
         >
-          {/* LEFT — Sidebar */}
+          {/* LEFT SIDEBAR */}
           <aside style={{ gridArea: 'left', alignSelf: 'start', minWidth: 0 }}>
             {left ? left : <SidebarComp {...sidebarProps} />}
           </aside>
 
-          {/* PAGE HEADER (center) */}
-          <header style={{ gridArea: 'header', alignSelf: 'start', minWidth: 0 }}>
-            {header}
-          </header>
+          {/* PAGE HEADER */}
+          <header style={{ gridArea: 'header', minWidth: 0 }}>{header}</header>
 
-          {/* RIGHT — Variant-controlled rail (render only if provided) */}
-          {right ? (
+          {/* RIGHT RAIL */}
+          {right && (
             <aside
               style={{
                 ...rightBase,
@@ -177,13 +183,11 @@ export default function SeekerLayout({
             >
               {right}
             </aside>
-          ) : null}
+          )}
 
-          {/* CONTENT (center) */}
+          {/* PAGE CONTENT */}
           <main style={{ gridArea: 'content', minWidth: 0 }}>
-            <div style={{ display: 'grid', gap, width: '100%', minWidth: 0 }}>
-              {children}
-            </div>
+            <div style={{ display: 'grid', gap }}>{children}</div>
           </main>
         </div>
       </div>
