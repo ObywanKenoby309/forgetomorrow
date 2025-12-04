@@ -509,3 +509,25 @@ model UserBlock {
   @@index([blockedId])
   @@map("user_blocks")
 }
+
+// ============================================================================
+//  SUPPORT TICKETS
+// ============================================================================
+
+model SupportTicket {
+  id             String   @id @default(cuid())
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  userId         String?  // the logged-in user's ID (if available)
+  userEmail      String?  // fallback for anonymous / external support
+
+  subject        String
+  initialMessage String
+
+  source         String   // e.g. "support-chat", "email"
+  personaId      String?  // daniel, barbara, etc.
+  intent         String?  // technical, billing, recruiter, emotional, general
+
+  status         String   // OPEN, IN_PROGRESS, AWAITING_USER, RESOLVED, CLOSED
+}
