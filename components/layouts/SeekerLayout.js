@@ -66,18 +66,17 @@ export default function SeekerLayout({
         };
 
       case 'recruiter-smb':
-        return {
-          HeaderComp: RecruiterHeader,
-          SidebarComp: RecruiterSidebar,
-          sidebarProps: { variant: 'smb' },
-        };
-
-      case 'recruiter-ent':
-        return {
-          HeaderComp: RecruiterHeader,
-          SidebarComp: RecruiterSidebar,
-          sidebarProps: { variant: 'enterprise' },
-        };
+  return {
+    HeaderComp: RecruiterHeader,
+    SidebarComp: RecruiterSidebar,
+    sidebarProps: { variant: 'smb', counts, active: activeNav },
+  };
+case 'recruiter-ent':
+  return {
+    HeaderComp: RecruiterHeader,
+    SidebarComp: RecruiterSidebar,
+    sidebarProps: { variant: 'enterprise', counts, active: activeNav },
+  };
 
       case 'seeker':
       default:
