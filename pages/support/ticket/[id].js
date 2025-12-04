@@ -77,6 +77,14 @@ export default function SupportTicketDetail({ ticket, comments: initialComments 
     }
   };
 
+  const chatRoleLabel = (role) => {
+    if (!role) return 'Support';
+    const r = String(role).toLowerCase();
+    if (r === 'user') return 'User';
+    if (r === 'agent' || r === 'support' || r === 'assistant') return 'Support';
+    return 'Support';
+  };
+
   const handleAddComment = async (e) => {
     e.preventDefault();
     const trimmed = newComment.trim();
@@ -178,6 +186,11 @@ export default function SupportTicketDetail({ ticket, comments: initialComments 
     },
   ];
 
+  const hasChatData =
+    (Array.isArray(ticketState.chatTranscript) &&
+      ticketState.chatTranscript.length > 0) ||
+    !!ticketState.chatSummary;
+
   return (
     <>
       <Head>
@@ -211,7 +224,8 @@ export default function SupportTicketDetail({ ticket, comments: initialComments 
                 Ticket ID: <span className="font-mono text-xs">{ticketState.id}</span>
               </p>
               <p className="mt-1 text-xs text-slate-500">
-                Created: {formatDate(ticketState.createdAt)} · Last updated: {formatDate(ticketState.updatedAt)}
+                Created: {formatDate(ticketState.createdAt)} · Last updated:{' '}
+                {formatDate(ticketState.updatedAt)}
               </p>
             </div>
             <div className="flex flex-col items-end gap-2">
@@ -335,6 +349,57 @@ export default function SupportTicketDetail({ ticket, comments: initialComments 
             </div>
           </div>
 
+          {/* Support Chat Transcript (if attached) */}
+          {hasChatData && (
+            <div className="pt-4 border-t border-slate-200 space-y-3">
+              <h2 className="text-sm font-semibold text-slate-700 uppercase tracking-wide mb-2">
+                Support Chat Transcript
+              </h2>
+
+              {ticketState.chatSummary && (
+                <div className="bg-amber-50 border border-amber-200 rounded-lg p-3">
+                  <p className="text-xs font-semibold text-amber-900 mb-1">
+                    Summary of user issue
+                  </p>
+                  <p className="text-xs text-amber-900 whitespace-pre-wrap">
+                    {ticketState.chatSummary}
+                  </p>
+                </div>
+              )}
+
+              {Array.isArray(ticketState.chatTranscript) &&
+              ticketState.chatTranscript.length > 0 ? (
+                <div className="max-h-60 overflow-y-auto border border-slate-100 rounded-md bg-slate-50 p-2 space-y-2">
+                  {ticketState.chatTranscript.map((msg, idx) => (
+                    <div
+                      key={msg.id || idx}
+                      className="bg-white border border-slate-200 rounded px-2 py-1.5 text-xs"
+                    >
+                      <div className="flex items-center justify-between mb-1">
+                        <span className="font-semibold text-slate-700">
+                          {chatRoleLabel(msg.role)}
+                          {msg.personaName ? ` · ${msg.personaName}` : ''}
+                        </span>
+                        {msg.timestamp && (
+                          <span className="text-[10px] text-slate-500">
+                            {formatDate(msg.timestamp)}
+                          </span>
+                        )}
+                      </div>
+                      <p className="text-[11px] text-slate-800 whitespace-pre-wrap">
+                        {msg.text || msg.content}
+                      </p>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <p className="text-xs text-slate-500">
+                  This ticket came from Support Chat, but no detailed transcript is attached yet.
+                </p>
+              )}
+            </div>
+          )}
+
           {/* Activity Timeline */}
           <div className="pt-4 border-t border-slate-200 space-y-3">
             <h2 className="text-sm font-semibold text-slate-700 uppercase tracking-wide mb-2">
@@ -378,7 +443,8 @@ export default function SupportTicketDetail({ ticket, comments: initialComments 
 
             {comments.length === 0 ? (
               <p className="text-xs text-slate-500">
-                No internal notes yet. Use the form below to leave a quick note about actions taken, findings, or escalation context.
+                No internal notes yet. Use the form below to leave a quick note about actions
+                taken, findings, or escalation context.
               </p>
             ) : (
               <div className="space-y-2 max-h-60 overflow-y-auto border border-slate-100 rounded-md p-2 bg-slate-50">
@@ -471,6 +537,9 @@ export async function getServerSideProps(context) {
           userEmail: ticket.userEmail,
           createdAt: ticket.createdAt.toISOString(),
           updatedAt: ticket.updatedAt.toISOString(),
+          // Optional chat fields – safe even if they don't exist yet
+          chatTranscript: ticket.chatTranscript || null,
+          chatSummary: ticket.chatSummary || null,
         },
         comments: comments.map((c) => ({
           id: c.id,
