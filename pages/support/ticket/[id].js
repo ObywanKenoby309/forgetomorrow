@@ -31,10 +31,13 @@ export default function SupportTicketDetail({ ticket, comments: initialComments 
     );
   }
 
+  const [ticketState, setTicketState] = useState(ticket);
   const [comments, setComments] = useState(initialComments || []);
   const [newComment, setNewComment] = useState('');
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState(null);
+  const [statusUpdating, setStatusUpdating] = useState(false);
+  const [statusError, setStatusError] = useState(null);
 
   const statusBadgeClasses = (status) => {
     if (!status) return 'bg-slate-100 text-slate-700';
@@ -87,7 +90,7 @@ export default function SupportTicketDetail({ ticket, comments: initialComments 
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          ticketId: ticket.id,
+          ticketId: ticketState.id,
           body: trimmed,
         }),
       });
@@ -112,14 +115,51 @@ export default function SupportTicketDetail({ ticket, comments: initialComments 
     }
   };
 
+  const handleStatusChange = async (newStatus) => {
+    if (!newStatus || statusUpdating) return;
+
+    setStatusUpdating(true);
+    setStatusError(null);
+
+    try {
+      const res = await fetch('/api/support/tickets/status', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          id: ticketState.id,
+          status: newStatus,
+        }),
+      });
+
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}));
+        throw new Error(data.error || 'Failed to update ticket status');
+      }
+
+      const data = await res.json().catch(() => null);
+      const updated = data?.ticket;
+
+      setTicketState((prev) => ({
+        ...prev,
+        status: updated?.status || newStatus,
+        updatedAt: updated?.updatedAt || prev.updatedAt,
+      }));
+    } catch (err) {
+      console.error('Error updating ticket status:', err);
+      setStatusError(err.message || 'Unable to update ticket status.');
+    } finally {
+      setStatusUpdating(false);
+    }
+  };
+
   // Build a simple timeline using ticket + comments
   const timelineEvents = [
     {
       id: 'created',
       type: 'created',
       label: 'Ticket created',
-      description: ticket.subject,
-      timestamp: ticket.createdAt,
+      description: ticketState.subject,
+      timestamp: ticketState.createdAt,
     },
     ...comments.map((c) => ({
       id: c.id,
@@ -133,15 +173,15 @@ export default function SupportTicketDetail({ ticket, comments: initialComments 
       id: 'updated',
       type: 'updated',
       label: 'Last updated',
-      description: `Status: ${ticket.status || 'OPEN'}`,
-      timestamp: ticket.updatedAt,
+      description: `Status: ${ticketState.status || 'OPEN'}`,
+      timestamp: ticketState.updatedAt,
     },
   ];
 
   return (
     <>
       <Head>
-        <title>{ticket.subject} – ForgeTomorrow Support Ticket</title>
+        <title>{ticketState.subject} – ForgeTomorrow Support Ticket</title>
       </Head>
 
       <main className="max-w-3xl mx-auto p-6 space-y-8 min-h-[80vh] bg-[#ECEFF1] text-[#212121] pt-20">
@@ -168,19 +208,19 @@ export default function SupportTicketDetail({ ticket, comments: initialComments 
                 Support Ticket
               </h1>
               <p className="mt-1 text-sm text-slate-600">
-                Ticket ID: <span className="font-mono text-xs">{ticket.id}</span>
+                Ticket ID: <span className="font-mono text-xs">{ticketState.id}</span>
               </p>
               <p className="mt-1 text-xs text-slate-500">
-                Created: {formatDate(ticket.createdAt)} · Last updated: {formatDate(ticket.updatedAt)}
+                Created: {formatDate(ticketState.createdAt)} · Last updated: {formatDate(ticketState.updatedAt)}
               </p>
             </div>
             <div className="flex flex-col items-end gap-2">
               <span
                 className={`inline-flex items-center rounded-full px-3 py-1 text-xs font-semibold ${statusBadgeClasses(
-                  ticket.status
+                  ticketState.status
                 )}`}
               >
-                {ticket.status || 'OPEN'}
+                {ticketState.status || 'OPEN'}
               </span>
               <Link
                 href="/support"
@@ -194,12 +234,60 @@ export default function SupportTicketDetail({ ticket, comments: initialComments 
 
         {/* Details card */}
         <section className="bg-white rounded-lg shadow p-6 space-y-4">
+          {/* Agent Action Bar */}
+          <div className="border border-slate-100 rounded-md p-3 bg-slate-50 mb-4">
+            <div className="flex flex-wrap items-center justify-between gap-2">
+              <span className="text-xs font-semibold text-slate-700 uppercase tracking-wide">
+                Agent actions
+              </span>
+              <div className="flex flex-wrap gap-2">
+                <button
+                  type="button"
+                  onClick={() => handleStatusChange('IN_PROGRESS')}
+                  disabled={statusUpdating}
+                  className="px-3 py-1 text-[11px] rounded-md border border-slate-300 bg-white text-slate-800 hover:bg-slate-100 disabled:opacity-60 disabled:cursor-not-allowed"
+                >
+                  Mark In Progress
+                </button>
+                <button
+                  type="button"
+                  onClick={() => handleStatusChange('AWAITING_USER')}
+                  disabled={statusUpdating}
+                  className="px-3 py-1 text-[11px] rounded-md border border-slate-300 bg-white text-slate-800 hover:bg-slate-100 disabled:opacity-60 disabled:cursor-not-allowed"
+                >
+                  Request User Info
+                </button>
+                <button
+                  type="button"
+                  onClick={() => handleStatusChange('RESOLVED')}
+                  disabled={statusUpdating}
+                  className="px-3 py-1 text-[11px] rounded-md border border-emerald-300 bg-emerald-50 text-emerald-800 hover:bg-emerald-100 disabled:opacity-60 disabled:cursor-not-allowed"
+                >
+                  Resolve
+                </button>
+                <button
+                  type="button"
+                  onClick={() => handleStatusChange('CLOSED')}
+                  disabled={statusUpdating}
+                  className="px-3 py-1 text-[11px] rounded-md border border-slate-400 bg-slate-100 text-slate-800 hover:bg-slate-200 disabled:opacity-60 disabled:cursor-not-allowed"
+                >
+                  Close Ticket
+                </button>
+              </div>
+            </div>
+            {statusError && (
+              <p className="mt-2 text-[11px] text-red-600">
+                {statusError}
+              </p>
+            )}
+          </div>
+
           <div>
             <h2 className="text-sm font-semibold text-slate-700 uppercase tracking-wide mb-1">
               Subject
             </h2>
             <p className="text-base font-medium text-slate-900">
-              {ticket.subject}
+              {ticketState.subject}
             </p>
           </div>
 
@@ -208,14 +296,14 @@ export default function SupportTicketDetail({ ticket, comments: initialComments 
               <h3 className="text-xs font-semibold text-slate-600 uppercase tracking-wide mb-1">
                 Intent
               </h3>
-              <p className="text-slate-800">{intentLabel(ticket.intent)}</p>
+              <p className="text-slate-800">{intentLabel(ticketState.intent)}</p>
             </div>
             <div>
               <h3 className="text-xs font-semibold text-slate-600 uppercase tracking-wide mb-1">
                 Persona
               </h3>
               <p className="text-slate-800">
-                {ticket.personaId ? ticket.personaId : '—'}
+                {ticketState.personaId ? ticketState.personaId : '—'}
               </p>
             </div>
             <div>
@@ -223,7 +311,7 @@ export default function SupportTicketDetail({ ticket, comments: initialComments 
                 Source
               </h3>
               <p className="text-slate-800">
-                {ticket.source || 'support-chat'}
+                {ticketState.source || 'support-chat'}
               </p>
             </div>
             <div>
@@ -231,7 +319,7 @@ export default function SupportTicketDetail({ ticket, comments: initialComments 
                 User
               </h3>
               <p className="text-slate-800">
-                {ticket.userEmail || ticket.userId || '—'}
+                {ticketState.userEmail || ticketState.userId || '—'}
               </p>
             </div>
           </div>
@@ -242,7 +330,7 @@ export default function SupportTicketDetail({ ticket, comments: initialComments 
             </h2>
             <div className="bg-slate-50 border border-slate-200 rounded-lg p-3">
               <p className="text-sm text-slate-800 whitespace-pre-wrap">
-                {ticket.initialMessage}
+                {ticketState.initialMessage}
               </p>
             </div>
           </div>
@@ -253,7 +341,7 @@ export default function SupportTicketDetail({ ticket, comments: initialComments 
               Activity Timeline
             </h2>
             <div className="relative pl-4 border-l border-slate-200 space-y-4">
-              {timelineEvents.map((event, index) => (
+              {timelineEvents.map((event) => (
                 <div key={event.id} className="relative">
                   {/* Dot */}
                   <span className="absolute -left-2 top-1 h-3 w-3 rounded-full bg-[#FF7043]" />
