@@ -129,8 +129,31 @@ IMPORTANT RULES:
 - Be clear, concise, helpful, and professional.
 `.trim();
 
-// ----------------------- END OF PART 1 -----------------------
 // ---------------------------------------------------------------------------
+// Escalation trigger detection
+// ---------------------------------------------------------------------------
+function isEscalationTrigger(message: string): boolean {
+  const text = message.toLowerCase();
+
+  const phrases = [
+    "this didn't work",
+    'this did not work',
+    "that didn't work",
+    'that did not work',
+    'still not working',
+    'still not work',
+    "didn't fix",
+    'did not fix',
+    "didn't help",
+    'did not help',
+    'no change',
+    'same issue',
+    'same problem',
+  ];
+
+  return phrases.some((p) => text.includes(p));
+}
+
 // ---------------------------------------------------------------------------
 // Handler
 // ---------------------------------------------------------------------------
@@ -188,6 +211,18 @@ export default async function handler(
       // FIRST message — auto-route based on intent
       intent = detectIntent(message);
       selectedPersona = INTENT_TO_PERSONA[intent];
+    }
+
+    // 🆕 Escalation check for follow-up messages like "this didn't work"
+    if (incomingPersonaId && isEscalationTrigger(message)) {
+      const escalationReply =
+        "I'm sorry that didn't fully resolve the issue yet. Would you like me to escalate this to our next level support so we can take a deeper look?";
+
+      return res.status(200).json({
+        reply: escalationReply,
+        personaId: selectedPersona,
+        intent,
+      });
     }
 
     const personaPrompt = PERSONA_PROMPTS[selectedPersona];
