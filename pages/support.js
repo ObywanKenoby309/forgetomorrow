@@ -326,9 +326,12 @@ export default function Support() {
                   {tickets.map((t) => (
                     <tr key={t.id} className="border-t border-slate-100">
                       <td className="py-2 pr-3 max-w-xs">
-                        <span className="font-medium text-slate-800">
+                        <Link
+                          href={`/support/ticket/${t.id}`}
+                          className="font-medium text-slate-800 hover:underline"
+                        >
                           {t.subject}
-                        </span>
+                        </Link>
                       </td>
                       <td className="py-2 px-3 align-top">
                         <div className="flex flex-col gap-1">
