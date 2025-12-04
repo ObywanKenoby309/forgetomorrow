@@ -24,38 +24,46 @@ export default function SeekerLayout({
   right,
   children,
   activeNav,
-  forceChrome,
-  rightVariant = 'dark',
+  forceChrome,           // 'seeker' | 'coach' | 'recruiter-smb' | 'recruiter-ent'
+  rightVariant = 'dark', // 'dark' | 'light'
   rightWidth = 260,
   gap = 12,
   pad = 16,
 }) {
   const router = useRouter();
 
-  // 🔥 FIX 1 — Determine chrome BEFORE any render
+  // ---- CHROME MODE (determine once, then keep in state) ----
   const initialChrome = (() => {
     if (forceChrome && ALLOWED_MODES.has(forceChrome)) return forceChrome;
 
-    const q = String(router?.query?.chrome || '').toLowerCase();
-    if (ALLOWED_MODES.has(q)) return q;
+    const raw = String(router?.query?.chrome || '').toLowerCase();
+    if (ALLOWED_MODES.has(raw)) return raw;
 
     return 'seeker';
   })();
 
   const [chromeMode, setChromeMode] = useState(initialChrome);
 
-  // 🔥 FIX 2 — Update if chrome query changes AFTER mount
   useEffect(() => {
-    const q = String(router?.query?.chrome || '').toLowerCase();
-    if (ALLOWED_MODES.has(q)) setChromeMode(q);
-    else if (forceChrome && ALLOWED_MODES.has(forceChrome)) setChromeMode(forceChrome);
-    else setChromeMode('seeker');
+    const raw = String(router?.query?.chrome || '').toLowerCase();
+
+    if (forceChrome && ALLOWED_MODES.has(forceChrome)) {
+      setChromeMode(forceChrome);
+      return;
+    }
+
+    if (ALLOWED_MODES.has(raw)) {
+      setChromeMode(raw);
+    } else {
+      setChromeMode('seeker');
+    }
   }, [router?.query?.chrome, forceChrome]);
 
-  // 🔥 FIX 3 — Only seekers use Seeker counts (this prevented recruiter redirects)
+  // Always call hook; only Seeker uses the counts
+  const seekerCounts = useSidebarCounts();
   const isSeekerChrome = chromeMode === 'seeker';
-  const counts = isSeekerChrome ? useSidebarCounts() : {};
 
+  // ---- HEADER + SIDEBAR SELECTION ----
   const { HeaderComp, SidebarComp, sidebarProps } = useMemo(() => {
     switch (chromeMode) {
       case 'coach':
@@ -66,30 +74,43 @@ export default function SeekerLayout({
         };
 
       case 'recruiter-smb':
-  return {
-    HeaderComp: RecruiterHeader,
-    SidebarComp: RecruiterSidebar,
-    sidebarProps: { variant: 'smb', counts, active: activeNav },
-  };
-case 'recruiter-ent':
-  return {
-    HeaderComp: RecruiterHeader,
-    SidebarComp: RecruiterSidebar,
-    sidebarProps: { variant: 'enterprise', counts, active: activeNav },
-  };
+        return {
+          HeaderComp: RecruiterHeader,
+          SidebarComp: RecruiterSidebar,
+          sidebarProps: {
+            variant: 'smb',
+            active: activeNav,
+            counts: {}, // recruiter sidebar doesn’t need seeker counts
+          },
+        };
+
+      case 'recruiter-ent':
+        return {
+          HeaderComp: RecruiterHeader,
+          SidebarComp: RecruiterSidebar,
+          sidebarProps: {
+            variant: 'enterprise',
+            active: activeNav,
+            counts: {},
+          },
+        };
 
       case 'seeker':
       default:
         return {
           HeaderComp: SeekerHeader,
           SidebarComp: SeekerSidebar,
-          sidebarProps: { active: activeNav, counts },
+          sidebarProps: {
+            active: activeNav,
+            counts: seekerCounts,
+          },
         };
     }
-  }, [chromeMode, activeNav, counts]);
+  }, [chromeMode, activeNav, seekerCounts]);
 
-  // Wallpaper logic
+  // ---- WALLPAPER / BACKGROUND ----
   const { wallpaperUrl } = useUserWallpaper();
+
   const backgroundStyle = wallpaperUrl
     ? {
         minHeight: '100vh',
@@ -104,7 +125,7 @@ case 'recruiter-ent':
         backgroundColor: '#ECEFF1',
       };
 
-  // Right-rail style presets
+  // ---- RIGHT RAIL STYLES ----
   const rightBase = {
     gridArea: 'right',
     alignSelf: 'start',
@@ -130,6 +151,7 @@ case 'recruiter-ent':
     boxShadow: 'none',
   };
 
+  // Asymmetric padding to keep right edge tight when a rail exists
   const containerPadding = {
     paddingTop: pad,
     paddingBottom: pad,
@@ -143,10 +165,12 @@ case 'recruiter-ent':
         <title>{title}</title>
       </Head>
 
+      {/* Wallpaper wrapper */}
       <div style={backgroundStyle}>
-        {/* 🔥 FIX 4 — Header ALWAYS matches chromeMode */}
+        {/* Top chrome header ALWAYS matches chromeMode */}
         <HeaderComp />
 
+        {/* Main layout shell */}
         <div
           style={{
             display: 'grid',
@@ -164,16 +188,18 @@ case 'recruiter-ent':
             alignItems: 'start',
           }}
         >
-          {/* LEFT SIDEBAR */}
+          {/* LEFT — Sidebar */}
           <aside style={{ gridArea: 'left', alignSelf: 'start', minWidth: 0 }}>
             {left ? left : <SidebarComp {...sidebarProps} />}
           </aside>
 
-          {/* PAGE HEADER */}
-          <header style={{ gridArea: 'header', minWidth: 0 }}>{header}</header>
+          {/* PAGE HEADER (center) */}
+          <header style={{ gridArea: 'header', alignSelf: 'start', minWidth: 0 }}>
+            {header}
+          </header>
 
-          {/* RIGHT RAIL */}
-          {right && (
+          {/* RIGHT — Variant-controlled rail */}
+          {right ? (
             <aside
               style={{
                 ...rightBase,
@@ -182,11 +208,13 @@ case 'recruiter-ent':
             >
               {right}
             </aside>
-          )}
+          ) : null}
 
-          {/* PAGE CONTENT */}
+          {/* CONTENT (center) */}
           <main style={{ gridArea: 'content', minWidth: 0 }}>
-            <div style={{ display: 'grid', gap }}>{children}</div>
+            <div style={{ display: 'grid', gap, width: '100%', minWidth: 0 }}>
+              {children}
+            </div>
           </main>
         </div>
       </div>
