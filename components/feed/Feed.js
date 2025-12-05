@@ -31,7 +31,7 @@ export default function Feed() {
         ? new Date(row.createdAt).toISOString()
         : new Date().toISOString();
 
-    const normalized = {
+    return {
       id: row.id,
       authorId: row.authorId ?? currentUserId,
       author: row.author ?? row.authorName ?? currentUserName,
@@ -42,9 +42,6 @@ export default function Feed() {
       comments: Array.isArray(row.comments) ? row.comments : [],
       attachments: Array.isArray(row.attachments) ? row.attachments : [],
     };
-
-    console.log('[FEED] normalizePost →', normalized);
-    return normalized;
   };
 
   // Load posts on mount
@@ -52,8 +49,8 @@ export default function Feed() {
     let cancelled = false;
 
     async function loadFeed() {
-      console.log('[FEED] loadFeed: fetching /api/feed');
       try {
+        console.log('[FEED] loadFeed: fetching /api/feed');
         const res = await fetch('/api/feed');
         if (!res.ok) {
           console.error('Feed GET failed:', await res.text());
@@ -65,7 +62,11 @@ export default function Feed() {
         console.log('[FEED] raw /api/feed response', data);
 
         const list = Array.isArray(data.posts) ? data.posts : [];
-        const normalized = list.map(normalizePost).filter(Boolean);
+        const normalized = list.map((row) => {
+          const n = normalizePost(row);
+          console.log('[FEED] normalizePost →', n);
+          return n;
+        }).filter(Boolean);
 
         console.log('[FEED] setting posts →', normalized);
         setPosts(normalized);
@@ -92,8 +93,7 @@ export default function Feed() {
 
   // New post coming from PostComposer → send to API as { text, type, attachments }
   const handleNewPost = async (postFromComposer) => {
-    console.log('[FEED] handleNewPost called with', postFromComposer);
-
+    // postFromComposer: { id, author, createdAt, body, type, attachments[] }
     const payload = {
       text: (postFromComposer.body ?? '').toString(),
       type: postFromComposer.type,
@@ -117,7 +117,6 @@ export default function Feed() {
 
       const data = await res.json();
       const saved = data.post;
-      console.log('[FEED] /api/feed POST response', data);
 
       const safePost = normalizePost({
         ...saved,
@@ -125,11 +124,7 @@ export default function Feed() {
         attachments: saved?.attachments ?? payload.attachments,
       });
 
-      setPosts((prev) => {
-        const next = safePost ? [safePost, ...prev] : prev;
-        console.log('[FEED] posts after new post', next);
-        return next;
-      });
+      setPosts((prev) => (safePost ? [safePost, ...prev] : prev));
       setShowComposer(false);
     } catch (err) {
       console.error('Feed POST error:', err);
@@ -137,72 +132,63 @@ export default function Feed() {
     }
   };
 
-  // 🔍 Instrumented + stable reply handler
-const handleReply = async (postId, text) => {
-  const trimmed = (text ?? '').toString().trim();
-  if (!trimmed) return;
+  // 🔥 Persist replies (typed + emoji) to DB via /api/feed/comments
+  const handleReply = async (postId, text) => {
+    const trimmed = (text ?? '').toString().trim();
+    if (!trimmed) return;
 
-  console.log('[FEED] handleReply → /api/feed/comments', {
-    postId,
-    text: trimmed,
-  });
-
-  try {
-    const res = await fetch('/api/feed/comments', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ postId, text: trimmed }),
+    console.log('[FEED] handleReply → /api/feed/comments', {
+      postId,
+      text: trimmed,
     });
 
-    if (!res.ok) {
-      console.error('Feed COMMENT POST failed:', await res.text());
-      return;
+    try {
+      const res = await fetch('/api/feed/comments', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ postId, text: trimmed }),
+      });
+
+      if (!res.ok) {
+        console.error('Feed COMMENT POST failed:', await res.text());
+        return;
+      }
+
+      const data = await res.json();
+      const updatedPost = data.post;
+
+      if (!updatedPost || !updatedPost.id) {
+        console.error('Feed COMMENT POST: invalid response', data);
+        return;
+      }
+
+      console.log('[FEED] comments updated from API', {
+        postId: updatedPost.id,
+        comments: updatedPost.comments,
+      });
+
+      // Merge updated comments into local posts
+      setPosts((prev) =>
+        prev.map((p) =>
+          // == so "7" and 7 both match
+          p.id == updatedPost.id
+            ? {
+                ...p,
+                comments: Array.isArray(updatedPost.comments)
+                  ? updatedPost.comments
+                  : [],
+              }
+            : p
+        )
+      );
+    } catch (err) {
+      console.error('Feed COMMENT POST error:', err);
     }
-
-    const data = await res.json();
-    const updatedPost = data.post;
-
-    if (!updatedPost || !updatedPost.id) {
-      console.error('Feed COMMENT POST: invalid response', data);
-      return;
-    }
-
-    // Merge the updated comments into local posts
-    setPosts((prev) =>
-      prev.map((p) =>
-        p.id == updatedPost.id
-          ? {
-              ...p,
-              comments: Array.isArray(updatedPost.comments)
-                ? updatedPost.comments
-                : [],
-            }
-          : p
-      )
-    );
-  } catch (err) {
-    console.error('Feed COMMENT POST error:', err);
-  }
-};
-
-
-    console.log(
-      '[FEED] next posts after reply (comments snapshot)',
-      next.map((p) => ({
-        id: p.id,
-        comments: p.comments,
-      }))
-    );
-
-    return next;
-  });
-};
+  };
 
   const handleDelete = async (postId) => {
     if (!postId) return;
     if (!confirm('Delete this post? This cannot be undone.')) return;
-
-    console.log('[FEED] handleDelete called', { postId });
 
     try {
       const res = await fetch(`/api/feed/${postId}`, {
@@ -216,11 +202,7 @@ const handleReply = async (postId, text) => {
       }
 
       // Remove locally after successful delete
-      setPosts((prev) => {
-        const next = prev.filter((p) => p.id !== postId);
-        console.log('[FEED] posts after delete', next);
-        return next;
-      });
+      setPosts((prev) => prev.filter((p) => p.id !== postId));
     } catch (err) {
       console.error('Feed DELETE error:', err);
       alert("Sorry — we couldn't delete that post. Please try again.");
