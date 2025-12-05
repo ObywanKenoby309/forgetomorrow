@@ -17,7 +17,7 @@ export default function Feed() {
     [session?.user?.firstName, session?.user?.lastName].filter(Boolean).join(' ') ||
     (session?.user?.email ? session.user.email.split('@')[0] : 'You');
 
-  // Load posts from API
+  // Load posts on mount
   useEffect(() => {
     let cancelled = false;
 
@@ -29,30 +29,8 @@ export default function Feed() {
           return;
         }
         const data = await res.json();
-        const raw = Array.isArray(data.posts) ? data.posts : [];
-
         if (!cancelled) {
-          const normalized = raw.map((p) => {
-            const text = p.text || p.body || p.content || '';
-            const authorName = p.authorName || p.author || 'ForgeTomorrow';
-
-            return {
-              // DB fields
-              id: p.id,
-              authorId: p.authorId,
-              createdAt: p.createdAt,
-              type: p.type || 'business',
-              // text in BOTH places so PostCard/PostCommentsModal keep working
-              text,
-              body: text,
-              // display
-              author: authorName,
-              likes: p.likes ?? 0,
-              comments: Array.isArray(p.comments) ? p.comments : [],
-            };
-          });
-
-          setPosts(normalized);
+          setPosts(Array.isArray(data.posts) ? data.posts : []);
         }
       } catch (err) {
         console.error('Feed GET error:', err);
@@ -75,43 +53,19 @@ export default function Feed() {
     };
   }, [showComposer]);
 
-  // Composer -> API
-  const handleNewPost = async (composerPayload) => {
-    // composerPayload shape from PostComposer:
-    // {
-    //   id, author, createdAt, body, type, likes, comments, attachments[]
-    // }
-
-    let rawText = '';
-
-    if (typeof composerPayload === 'string') {
-      rawText = composerPayload;
-    } else if (composerPayload && typeof composerPayload === 'object') {
-      rawText =
-        composerPayload.text ||
-        composerPayload.body ||
-        composerPayload.content ||
-        '';
-    }
-
-    const text = (rawText || '').trim();
-    const type =
-      composerPayload &&
-      typeof composerPayload === 'object' &&
-      composerPayload.type
-        ? composerPayload.type
-        : 'business';
-
-    if (!text) {
-      alert('Please write something before posting.');
-      return;
-    }
+  // New post coming from PostComposer → send to API as { text, type }
+  const handleNewPost = async (postFromComposer) => {
+    // postFromComposer: { id, author, createdAt, body, type, attachments[] }
+    const payload = {
+      text: (postFromComposer.body ?? '').toString(),
+      type: postFromComposer.type,
+    };
 
     try {
       const res = await fetch('/api/feed', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ text, type }),
+        body: JSON.stringify(payload),
       });
 
       if (!res.ok) {
@@ -121,23 +75,18 @@ export default function Feed() {
       }
 
       const data = await res.json();
-      const saved = data.post || {};
+      const saved = data.post;
 
-      const savedText = saved.text || text;
-      const authorName =
-        saved.authorName || composerPayload.author || currentUserName;
-
+      // Ensure the shape matches what PostList/PostCard expect
       const safePost = {
-        id: saved.id || composerPayload.id || String(Date.now()),
-        authorId: saved.authorId || currentUserId,
-        createdAt: saved.createdAt || new Date().toISOString(),
-        type: saved.type || type,
-        // again: keep both fields for current UI components
-        text: savedText,
-        body: savedText,
-        author: authorName,
-        likes: 0,
-        comments: [],
+        id: saved.id,
+        authorId: saved.authorId ?? currentUserId,
+        author: saved.author ?? saved.authorName ?? currentUserName,
+        body: saved.body ?? saved.content ?? payload.text,
+        type: saved.type ?? postFromComposer.type,
+        createdAt: saved.createdAt ?? new Date().toISOString(),
+        likes: saved.likes ?? 0,
+        comments: saved.comments ?? [],
       };
 
       setPosts((prev) => [safePost, ...prev]);
@@ -159,13 +108,13 @@ export default function Feed() {
           : p
       )
     );
-    // later: POST /api/feed/:id/comments
+    // (optional) later: POST /api/feed/:id/comments
   };
 
   const handleDelete = (postId) => {
     if (!confirm('Delete this post? This cannot be undone.')) return;
     setPosts((prev) => prev.filter((p) => p.id !== postId));
-    // later: DELETE /api/feed/:id
+    // (optional) later: DELETE /api/feed/:id
   };
 
   return (
