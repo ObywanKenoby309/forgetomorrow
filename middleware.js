@@ -1,4 +1,4 @@
-// middleware.js  —  Nova’s FINAL JavaScript version (zero TypeScript = zero errors)
+// middleware.js — Updated PUBLIC PAGES version
 import { NextResponse } from "next/server";
 import { Ratelimit } from "@upstash/ratelimit";
 import { Redis } from "@upstash/redis";
@@ -23,36 +23,51 @@ const ratelimit =
     prefix: "middleware:rl:",
   });
 
+/* -----------------------------------------------
+   PUBLIC PAGES (FULL EXTERNAL SITE)
+------------------------------------------------ */
 const PUBLIC_PATHS = new Set([
-  "/",
-  "/waiting-list",
-  "/blog",
-  "/features",
-  "/pricing",
-  "/help",
-  "/privacy",
-  "/subprocessors",
-  "/terms",
-  "/accessibility",
-  "/tracking-policy",
-  "/login",
-  "/auth/signin",
-  "/contact",
-  "/feedback",
+  "/",                     // Home
+  "/about",                // About Us
+  "/pricing",              // Pricing / Signup
+  "/help",                 // Help Center (NOT Support Center)
+  "/contact",              // Contact
+  "/features",             // Features overview
+  "/careers",              // Careers
+  "/press",                // Press Kit
+  "/blog",                 // Blog landing
+  "/privacy",              // Privacy Policy
+  "/terms",                // Terms of Service
+  "/security",             // Security
+  "/accessibility",        // Accessibility
+  "/tracking-policy",      // Cookies / Tracking
+  "/login",                // Login page
+  "/auth/signin",          // NextAuth Signin
+  "/feedback",             // Feedback landing
+  "/subprocessors",        // Subprocessor list
 ]);
 
 function isPublicPath(pathname) {
+  // Direct matches
   if (PUBLIC_PATHS.has(pathname)) return true;
+
+  // Wildcard sections: allow all children
+  if (pathname.startsWith("/blog/")) return true;
+  if (pathname.startsWith("/help/")) return true;
+  if (pathname.startsWith("/features/")) return true;
+  if (pathname.startsWith("/feedback/")) return true;
+
+  // Public assets
   if (pathname.startsWith("/api/auth/")) return true;
   if (pathname.startsWith("/_next")) return true;
   if (pathname.startsWith("/static")) return true;
   if (pathname.startsWith("/favicon")) return true;
   if (pathname.startsWith("/images")) return true;
   if (pathname.startsWith("/icons")) return true;
-  if (pathname.startsWith("/feedback/")) return true;
-  if (SIGNUPS_OPEN && (pathname === "/signup" || pathname.startsWith("/signup"))) {
-    return true;
-  }
+
+  // Signup / Register flow
+  if (SIGNUPS_OPEN && pathname.startsWith("/signup")) return true;
+
   return false;
 }
 
@@ -69,7 +84,7 @@ export async function middleware(req) {
     return NextResponse.next();
   }
 
-  // 3. SITE_LOCK — catch every possible session cookie name Vercel uses
+  // 3. SITE_LOCK protected mode
   if (SITE_LOCK) {
     const hasSession = req.cookies
       .getAll()
@@ -92,7 +107,6 @@ export async function middleware(req) {
     }
   }
 
-  // 5. Everything else → go
   return NextResponse.next();
 }
 

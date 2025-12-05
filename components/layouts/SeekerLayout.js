@@ -1,4 +1,3 @@
-// components/layouts/SeekerLayout.js
 import React, { useEffect, useMemo, useState } from 'react';
 import Head from 'next/head';
 import { useRouter } from 'next/router';
@@ -58,6 +57,17 @@ export default function SeekerLayout({
       setChromeMode('seeker');
     }
   }, [router?.query?.chrome, forceChrome]);
+
+  // Mobile layout flag
+  const [isMobile, setIsMobile] = useState(false);
+  useEffect(() => {
+    const handleResize = () => {
+      setIsMobile(window.innerWidth < 768); // mobile breakpoint
+    };
+    handleResize();
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
 
   // Always call hook; only Seeker uses the counts
   const seekerCounts = useSidebarCounts();
@@ -159,6 +169,33 @@ export default function SeekerLayout({
     paddingRight: right ? Math.max(8, pad - 4) : pad,
   };
 
+  const hasRight = Boolean(right);
+
+  const desktopGrid = {
+    display: 'grid',
+    gridTemplateColumns: `240px minmax(0, 1fr) ${hasRight ? `${rightWidth}px` : '0px'}`,
+    gridTemplateRows: 'auto 1fr',
+    gridTemplateAreas: hasRight
+      ? `"left header right"
+         "left content right"`
+      : `"left header header"
+         "left content content"`,
+  };
+
+  const mobileGrid = {
+    display: 'grid',
+    gridTemplateColumns: '1fr',
+    gridTemplateRows: 'auto auto auto auto',
+    gridTemplateAreas: hasRight
+      ? `"header"
+         "content"
+         "right"
+         "left"`
+      : `"header"
+         "content"
+         "left"`,
+  };
+
   return (
     <>
       <Head>
@@ -173,16 +210,7 @@ export default function SeekerLayout({
         {/* Main layout shell */}
         <div
           style={{
-            display: 'grid',
-            gridTemplateColumns: `240px minmax(0, 1fr) ${
-              right ? `${rightWidth}px` : '0px'
-            }`,
-            gridTemplateRows: 'auto 1fr',
-            gridTemplateAreas: right
-              ? `"left header right"
-                 "left content right"`
-              : `"left header header"
-                 "left content content"`,
+            ...(isMobile ? mobileGrid : desktopGrid),
             gap,
             ...containerPadding,
             alignItems: 'start',
@@ -199,7 +227,7 @@ export default function SeekerLayout({
           </header>
 
           {/* RIGHT — Variant-controlled rail */}
-          {right ? (
+          {hasRight ? (
             <aside
               style={{
                 ...rightBase,

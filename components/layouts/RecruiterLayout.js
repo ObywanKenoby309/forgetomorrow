@@ -1,5 +1,4 @@
-// components/layouts/RecruiterLayout.js
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import Head from 'next/head';
 import RecruiterHeader from '@/components/recruiter/RecruiterHeader';
 import RecruiterSidebar from '@/components/recruiter/RecruiterSidebar';
@@ -23,6 +22,47 @@ export default function RecruiterLayout({
   initialOpen,               // optional section defaults
   activeNav = 'dashboard',   // default active nav item
 }) {
+  const [isMobile, setIsMobile] = useState(false);
+
+  useEffect(() => {
+    const handleResize = () => {
+      setIsMobile(window.innerWidth < 768);
+    };
+    handleResize();
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
+
+  const hasRight = Boolean(right);
+
+  const desktopGrid = {
+    display: 'grid',
+    gridTemplateColumns: '240px minmax(640px, 1fr) 240px',
+    gridTemplateRows: 'auto 1fr',
+    gridTemplateAreas: `
+      "left header right"
+      "left content right"
+    `,
+  };
+
+  const mobileGrid = {
+    display: 'grid',
+    gridTemplateColumns: '1fr',
+    gridTemplateRows: 'auto auto auto auto',
+    gridTemplateAreas: hasRight
+      ? `
+        "header"
+        "content"
+        "right"
+        "left"
+      `
+      : `
+        "header"
+        "content"
+        "left"
+      `,
+  };
+
   return (
     <>
       <Head>
@@ -33,20 +73,15 @@ export default function RecruiterLayout({
 
       <div
         style={{
-          display: 'grid',
-          gridTemplateColumns: '240px minmax(640px, 1fr) 240px',
-          gridTemplateRows: 'auto 1fr',
-          gridTemplateAreas: `
-            "left header right"
-            "left content right"
-          `,
+          ...(isMobile ? mobileGrid : desktopGrid),
           gap: 20,
-          padding: '30px',
+          padding: '30px 16px',
           alignItems: 'start',
+          boxSizing: 'border-box',
         }}
       >
         {/* LEFT — Sidebar */}
-        <aside style={{ gridArea: 'left', alignSelf: 'start' }}>
+        <aside style={{ gridArea: 'left', alignSelf: 'start', minWidth: 0 }}>
           <RecruiterSidebar
             active={activeNav}
             role={role}
@@ -64,7 +99,7 @@ export default function RecruiterLayout({
               background: 'white',
               borderRadius: 12,
               padding: '8px 16px',
-              border: '1px solid #eee',
+              border: '1px solid '#eee',
               boxShadow: '0 2px 6px rgba(0,0,0,0.06)',
               minWidth: 0,
             }}
@@ -86,25 +121,27 @@ export default function RecruiterLayout({
         )}
 
         {/* RIGHT — Dark Rail */}
-        <aside
-          style={{
-            gridArea: 'right',
-            alignSelf: 'start',
-            background: '#2a2a2a',
-            border: '1px solid #3a3a3a',
-            borderRadius: 12,
-            padding: 16,
-            boxShadow: '0 2px 6px rgba(0,0,0,0.06)',
-            minHeight: 120,
-            boxSizing: 'border-box',
-            width: 240,
-            minWidth: 240,
-            maxWidth: 240,
-            minInlineSize: 0,
-          }}
-        >
-          {right}
-        </aside>
+        {hasRight && (
+          <aside
+            style={{
+              gridArea: 'right',
+              alignSelf: 'start',
+              background: '#2a2a2a',
+              border: '1px solid #3a3a3a',
+              borderRadius: 12,
+              padding: 16,
+              boxShadow: '0 2px 6px rgba(0,0,0,0.06)',
+              minHeight: 120,
+              boxSizing: 'border-box',
+              width: 240,
+              minWidth: 240,
+              maxWidth: 240,
+              minInlineSize: 0,
+            }}
+          >
+            {right}
+          </aside>
+        )}
 
         {/* CONTENT */}
         <main style={{ gridArea: 'content', minWidth: 0 }}>

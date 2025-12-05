@@ -1,4 +1,4 @@
-// components/LandingFooter.tsx ← FINAL CLEAN VERSION WITH PATENT NOTICE
+// components/LandingFooter.tsx ← FINAL CLEAN VERSION WITHOUT "Get Early Access"
 import Link from 'next/link';
 import { Twitter, Facebook, Youtube } from 'lucide-react';
 
@@ -97,11 +97,6 @@ export default function LandingFooter() {
                   Contact
                 </Link>
               </li>
-              <li>
-                <Link href="/pricing" className="hover:text-[#FF7043] focus:text-[#FF7043] transition font-medium">
-                  Get Early Access
-                </Link>
-              </li>
             </ul>
 
             {/* Social Icons */}
@@ -139,7 +134,6 @@ export default function LandingFooter() {
 
         {/* Bottom */}
         <div className="border-t border-gray-800 pt-8 text-center text-sm text-gray-500">
-
           {/* Patent Notice (Option B placement) */}
           <p className="text-xs text-gray-500 max-w-3xl mx-auto mb-3 leading-relaxed">
             ForgeTomorrow’s technologies — including its AI explainability engine, recruiter analytics systems,
