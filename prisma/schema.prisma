@@ -515,13 +515,13 @@ model UserBlock {
 // ============================================================================
 
 model FeedPost {
-  id         String   @id @default(cuid())
+  id         Int      @id @default(autoincrement())
   authorId   String
   authorName String
-  text       String
-  type       String   @default("business") // 'business' | 'personal'
-  audience   String   @default("both")     // 'both' | 'business' | 'personal'
+  content    String
+  type       String   @default("business") // "business" | "personal"
   createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
 
   @@index([authorId])
   @@map("feed_posts")

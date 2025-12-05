@@ -1,78 +1,89 @@
-import { useEffect, useState } from "react";
-import PostComposer from "./PostComposer";
-import PostList from "./PostList";
+// components/feed/Feed.js
+import { useEffect, useState } from 'react';
+import { useSession } from 'next-auth/react';
+import PostComposer from './PostComposer';
+import PostList from './PostList';
 
 export default function Feed() {
-  const [filter, setFilter] = useState("both");
+  const { data: session } = useSession();
+
+  const [filter, setFilter] = useState('both');
   const [showComposer, setShowComposer] = useState(false);
   const [posts, setPosts] = useState([]);
-  const [loading, setLoading] = useState(true);
 
-  // Load posts from API (works in dev + prod)
+  const currentUserId = session?.user?.id || 'me';
+  const currentUserName =
+    session?.user?.name ||
+    [session?.user?.firstName, session?.user?.lastName].filter(Boolean).join(' ') ||
+    (session?.user?.email ? session.user.email.split('@')[0] : 'You');
+
+  // Load posts
   useEffect(() => {
     let cancelled = false;
 
-    async function load() {
+    async function loadFeed() {
       try {
-        setLoading(true);
-        const res = await fetch("/api/feed");
+        const res = await fetch('/api/feed');
         if (!res.ok) {
-          throw new Error("Failed to load feed");
+          console.error('Feed GET failed:', await res.text());
+          return;
         }
-        const data = await res.json().catch(() => ({}));
-        if (!cancelled && Array.isArray(data.posts)) {
-          setPosts(data.posts);
+        const data = await res.json();
+        if (!cancelled) {
+          setPosts(Array.isArray(data.posts) ? data.posts : []);
         }
       } catch (err) {
-        console.error("Feed error:", err);
-      } finally {
-        if (!cancelled) setLoading(false);
+        console.error('Feed GET error:', err);
       }
     }
 
-    load();
+    loadFeed();
     return () => {
       cancelled = true;
     };
   }, []);
 
-  // Prevent body scroll when composer is open
+  // Lock scroll when composer open
   useEffect(() => {
     if (!showComposer) return;
     const prev = document.body.style.overflow;
-    document.body.style.overflow = "hidden";
+    document.body.style.overflow = 'hidden';
     return () => {
       document.body.style.overflow = prev;
     };
   }, [showComposer]);
 
-  const handleNewPost = async (draft) => {
+  const handleNewPost = async (post) => {
+    // post = { text, type }
     try {
-      const payload = {
-        content: draft.content || draft.text || "",
-        type: draft.type || "business",
-      };
-
-      const res = await fetch("/api/feed", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(payload),
+      const res = await fetch('/api/feed', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(post),
       });
 
       if (!res.ok) {
-        console.error("Failed to save post:", await res.text());
-        alert("Sorry — we couldn’t save that post. Please try again.");
+        console.error('Feed POST failed:', await res.text());
+        alert("Sorry — we couldn't save that post. Please try again.");
         return;
       }
 
-      const data = await res.json().catch(() => ({}));
-      if (data.post) {
-        setPosts((prev) => [data.post, ...prev]);
-      }
+      const data = await res.json();
+      const saved = data.post;
+
+      const safePost = {
+        authorId: currentUserId,
+        author: currentUserName,
+        likes: 0,
+        comments: [],
+        ...saved,
+      };
+
+      setPosts((prev) => [safePost, ...prev]);
       setShowComposer(false);
     } catch (err) {
-      console.error("Error creating post:", err);
-      alert("Sorry — we couldn’t save that post. Please try again.");
+      console.error('Feed POST error:', err);
+      alert("Sorry — we couldn't save that post. Please try again.");
     }
   };
 
@@ -82,20 +93,18 @@ export default function Feed() {
         p.id === postId
           ? {
               ...p,
-              comments: [
-                ...(p.comments || []),
-                { by: "You", text, createdAt: new Date().toISOString() },
-              ],
+              comments: [...(p.comments || []), { by: currentUserName, text }],
             }
           : p
       )
     );
+    // (optional) later: POST /api/feed/:id/comments
   };
 
   const handleDelete = (postId) => {
-    if (!confirm("Delete this post? This cannot be undone.")) return;
+    if (!confirm('Delete this post? This cannot be undone.')) return;
     setPosts((prev) => prev.filter((p) => p.id !== postId));
-    // (Later we can wire a DELETE /api/feed/[id])
+    // (optional) later: DELETE /api/feed/:id
   };
 
   return (
@@ -113,9 +122,9 @@ export default function Feed() {
               style={{
                 backgroundImage:
                   "url(\"data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 20 20'><path fill='%236b7280' d='M5 7l5 6 5-6H5z'/></svg>\")",
-                backgroundRepeat: "no-repeat",
-                backgroundPosition: "right 0.5rem center",
-                backgroundSize: "12px 12px",
+                backgroundRepeat: 'no-repeat',
+                backgroundPosition: 'right 0.5rem center',
+                backgroundSize: '12px 12px',
               }}
             >
               <option value="both">Both</option>
@@ -124,9 +133,7 @@ export default function Feed() {
             </select>
           </div>
         </div>
-        <span className="text-xs text-gray-500">
-          {loading ? "Loading…" : "Showing most recent"}
-        </span>
+        <span className="text-xs text-gray-500">Showing most recent</span>
       </div>
 
       {/* start a post */}
@@ -145,14 +152,14 @@ export default function Feed() {
         filter={filter}
         onReply={handleReply}
         onDelete={handleDelete}
-        currentUserId={null}
+        currentUserId={currentUserId}
       />
 
       {/* composer overlay */}
       {showComposer && (
         <div
           className="fixed inset-0 z-[60]"
-          onKeyDown={(e) => e.key === "Escape" && setShowComposer(false)}
+          onKeyDown={(e) => e.key === 'Escape' && setShowComposer(false)}
           tabIndex={-1}
         >
           <div
