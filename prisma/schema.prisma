@@ -296,8 +296,8 @@ model User {
 
   // Banner / Display
   bannerMode      String? // "cover" | "fit"
-  bannerHeight    Int? // 80–220
-  bannerFocalY    Int? // 0–100
+  bannerHeight    Int?    // 80–220
+  bannerFocalY    Int?    // 0–100
   isProfilePublic Boolean @default(false)
   wallpaperUrl    String?
 
@@ -508,6 +508,23 @@ model UserBlock {
   @@index([blockerId])
   @@index([blockedId])
   @@map("user_blocks")
+}
+
+// ============================================================================
+//  COMMUNITY FEED
+// ============================================================================
+
+model FeedPost {
+  id         String   @id @default(cuid())
+  authorId   String
+  authorName String
+  text       String
+  type       String   @default("business") // 'business' | 'personal'
+  audience   String   @default("both")     // 'both' | 'business' | 'personal'
+  createdAt  DateTime @default(now())
+
+  @@index([authorId])
+  @@map("feed_posts")
 }
 
 // ============================================================================

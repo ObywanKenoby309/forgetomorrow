@@ -1,38 +1,42 @@
-// components/feed/Feed.js
 import { useEffect, useState } from "react";
 import PostComposer from "./PostComposer";
 import PostList from "./PostList";
-
-// For now, simple stub. Later we can pull from session.
-const currentUserId = "me";
-const currentUserName = "You";
 
 export default function Feed() {
   const [filter, setFilter] = useState("both");
   const [showComposer, setShowComposer] = useState(false);
   const [posts, setPosts] = useState([]);
+  const [loading, setLoading] = useState(true);
 
-  // Load posts from API (shared across roles)
+  // Load posts from API (works in dev + prod)
   useEffect(() => {
-    fetch("/api/feed")
-      .then((res) => res.json())
-      .then((data) => {
-        const normalized = (data.posts || []).map((p) => ({
-          id: p.id,
-          authorId: p.authorId ?? "anon",
-          author: p.author ?? "ForgeTomorrow",
-          text: p.text ?? "",
-          type: p.type ?? "business",
-          audience: p.audience ?? "both",
-          createdAt: p.createdAt ?? Date.now(),
-          likes: p.likes ?? 0,
-          comments: Array.isArray(p.comments) ? p.comments : [],
-        }));
-        setPosts(normalized);
-      })
-      .catch((err) => console.log("Feed error:", err));
+    let cancelled = false;
+
+    async function load() {
+      try {
+        setLoading(true);
+        const res = await fetch("/api/feed");
+        if (!res.ok) {
+          throw new Error("Failed to load feed");
+        }
+        const data = await res.json().catch(() => ({}));
+        if (!cancelled && Array.isArray(data.posts)) {
+          setPosts(data.posts);
+        }
+      } catch (err) {
+        console.error("Feed error:", err);
+      } finally {
+        if (!cancelled) setLoading(false);
+      }
+    }
+
+    load();
+    return () => {
+      cancelled = true;
+    };
   }, []);
 
+  // Prevent body scroll when composer is open
   useEffect(() => {
     if (!showComposer) return;
     const prev = document.body.style.overflow;
@@ -42,17 +46,13 @@ export default function Feed() {
     };
   }, [showComposer]);
 
-  const handleNewPost = async (post) => {
-    // post likely contains { text, type, audience }
-    const payload = {
-      text: post.text,
-      type: post.type,
-      audience: post.audience,
-      authorId: currentUserId,
-      authorName: currentUserName,
-    };
-
+  const handleNewPost = async (draft) => {
     try {
+      const payload = {
+        content: draft.content || draft.text || "",
+        type: draft.type || "business",
+      };
+
       const res = await fetch("/api/feed", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -60,29 +60,19 @@ export default function Feed() {
       });
 
       if (!res.ok) {
-        console.error("Failed to create post", await res.text());
-        // Fallback: local optimistic insert
-        const safePost = {
-          id: `temp_${Date.now()}`,
-          authorId: currentUserId,
-          author: currentUserName,
-          createdAt: Date.now(),
-          type: post.type || "business",
-          audience: post.audience || "both",
-          likes: 0,
-          comments: [],
-          text: post.text || "",
-        };
-        setPosts((prev) => [safePost, ...prev]);
-      } else {
-        const data = await res.json();
-        const saved = data.post;
-        setPosts((prev) => [saved, ...prev]);
+        console.error("Failed to save post:", await res.text());
+        alert("Sorry — we couldn’t save that post. Please try again.");
+        return;
       }
-    } catch (err) {
-      console.error("Feed POST error:", err);
-    } finally {
+
+      const data = await res.json().catch(() => ({}));
+      if (data.post) {
+        setPosts((prev) => [data.post, ...prev]);
+      }
       setShowComposer(false);
+    } catch (err) {
+      console.error("Error creating post:", err);
+      alert("Sorry — we couldn’t save that post. Please try again.");
     }
   };
 
@@ -92,7 +82,10 @@ export default function Feed() {
         p.id === postId
           ? {
               ...p,
-              comments: [...(p.comments || []), { by: currentUserName, text }],
+              comments: [
+                ...(p.comments || []),
+                { by: "You", text, createdAt: new Date().toISOString() },
+              ],
             }
           : p
       )
@@ -102,6 +95,7 @@ export default function Feed() {
   const handleDelete = (postId) => {
     if (!confirm("Delete this post? This cannot be undone.")) return;
     setPosts((prev) => prev.filter((p) => p.id !== postId));
+    // (Later we can wire a DELETE /api/feed/[id])
   };
 
   return (
@@ -130,7 +124,9 @@ export default function Feed() {
             </select>
           </div>
         </div>
-        <span className="text-xs text-gray-500">Showing most recent</span>
+        <span className="text-xs text-gray-500">
+          {loading ? "Loading…" : "Showing most recent"}
+        </span>
       </div>
 
       {/* start a post */}
@@ -149,7 +145,7 @@ export default function Feed() {
         filter={filter}
         onReply={handleReply}
         onDelete={handleDelete}
-        currentUserId={currentUserId}
+        currentUserId={null}
       />
 
       {/* composer overlay */}

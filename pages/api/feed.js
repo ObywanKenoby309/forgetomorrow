@@ -1,54 +1,90 @@
 // pages/api/feed.js
+import { prisma } from '@/lib/prisma';
+import { getServerSession } from 'next-auth/next';
+import { authOptions } from './auth/[...nextauth]';
 
-let POSTS = [
-  {
-    id: 'seed-1',
-    authorId: 'system',
-    author: 'ForgeTomorrow',
-    text: 'Welcome to your shared ForgeTomorrow feed. Posts from any role appear here.',
-    type: 'business', // 'business' | 'personal'
-    audience: 'both',
-    createdAt: Date.now() - 5 * 60 * 1000, // 5m ago
-    likes: 0,
-    comments: [],
-  },
-];
+function mapPost(p) {
+  const authorFromUser =
+    p.author?.name ||
+    [p.author?.firstName, p.author?.lastName].filter(Boolean).join(' ') ||
+    'ForgeTomorrow user';
 
-export default function handler(req, res) {
+  return {
+    id: p.id,
+    authorId: p.authorId,
+    author: p.authorName || authorFromUser,
+    content: p.content,
+    type: p.type || 'business',
+    createdAt: p.createdAt,
+  };
+}
+
+export default async function handler(req, res) {
   if (req.method === 'GET') {
-    // newest first
-    const posts = [...POSTS].sort((a, b) => b.createdAt - a.createdAt);
-    return res.status(200).json({ posts });
+    try {
+      const posts = await prisma.feedPost.findMany({
+        orderBy: { createdAt: 'desc' },
+        take: 100,
+        include: {
+          author: {
+            select: {
+              name: true,
+              firstName: true,
+              lastName: true,
+            },
+          },
+        },
+      });
+
+      return res.status(200).json({
+        posts: posts.map(mapPost),
+      });
+    } catch (err) {
+      console.error('[GET /api/feed] error', err);
+      return res.status(500).json({ error: 'Failed to load feed.' });
+    }
   }
 
   if (req.method === 'POST') {
     try {
-      const body = req.body || {};
-      const text = (body.text || '').trim();
+      const session = await getServerSession(req, res, authOptions);
 
-      if (!text) {
-        return res.status(400).json({ error: 'Post text is required.' });
+      if (!session?.user?.id) {
+        return res.status(401).json({ error: 'Not authenticated' });
       }
 
-      const now = Date.now();
+      const { content, type } = req.body || {};
+      const text = (content || '').toString().trim();
 
-      const newPost = {
-        id: `p_${now}_${Math.random().toString(36).slice(2, 8)}`,
-        text,
-        type: body.type === 'personal' ? 'personal' : 'business',
-        audience: body.audience || 'both',
-        authorId: body.authorId || 'anon',
-        author: body.authorName || 'ForgeTomorrow',
-        createdAt: now,
-        likes: 0,
-        comments: [],
-      };
+      if (!text) {
+        return res.status(400).json({ error: 'Post content is required.' });
+      }
 
-      POSTS.unshift(newPost);
+      const normalizedType =
+        type && ['business', 'personal'].includes(type) ? type : 'business';
 
-      return res.status(201).json({ post: newPost });
+      const created = await prisma.feedPost.create({
+        data: {
+          authorId: session.user.id,
+          content: text,
+          type: normalizedType,
+        },
+        include: {
+          author: {
+            select: {
+              name: true,
+              firstName: true,
+              lastName: true,
+            },
+          },
+        },
+      });
+
+      return res.status(201).json({
+        post: mapPost(created),
+      });
     } catch (err) {
-      console.error('[api/feed] POST error', err);
+      console.error('[POST /api/feed] error', err);
       return res.status(500).json({ error: 'Failed to create post.' });
     }
   }
