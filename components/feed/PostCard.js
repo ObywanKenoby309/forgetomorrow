@@ -24,8 +24,10 @@ export default function PostCard({
     setReply('');
   };
 
+  // ⬇️ Emojis now send immediately as a reply instead of editing the input
   const addEmoji = (emoji) => {
-    setReply((prev) => (prev ? `${prev} ${emoji}` : emoji));
+    if (!onReply) return;
+    onReply(post.id, emoji);
   };
 
   const handleDeleteClick = () => {
@@ -77,14 +79,29 @@ export default function PostCard({
       id={`post-${post.id}`}
       className="bg-white rounded-lg shadow p-4"
     >
-      {/* header */}
-      <header className="mb-2">
-        <div className="font-semibold">{post.author}</div>
-        <div className="text-xs text-gray-500">
-          {createdAtLabel}
-          {' • '}
-          {post.type === 'personal' ? 'Personal' : 'Business'}
+      {/* header with Report in top-right */}
+      <header className="mb-2 flex items-start justify-between gap-4">
+        <div>
+          <div className="font-semibold">{post.author}</div>
+          <div className="text-xs text-gray-500">
+            {createdAtLabel}
+            {' • '}
+            {post.type === 'personal' ? 'Personal' : 'Business'}
+          </div>
         </div>
+
+        <button
+          type="button"
+          onClick={handleReportClick}
+          className={`px-3 py-1.5 rounded-md text-sm font-semibold ${
+            reported
+              ? 'bg-red-200 text-red-800 cursor-default'
+              : 'bg-red-600 text-white hover:bg-red-700'
+          }`}
+          disabled={reported}
+        >
+          {reported ? 'Reported' : 'Report'}
+        </button>
       </header>
 
       {/* body text */}
@@ -102,14 +119,14 @@ export default function PostCard({
                 <img
                   src={a.url}
                   alt={a.name || 'image'}
-                  className="w-full max-h-96 object-contain rounded"
+                  className="w-full h-auto max-h-[600px] object-contain rounded"
                 />
               )}
               {a.type === 'video' && (
                 <video
                   src={a.url}
                   controls
-                  className="w-full max-h-96 object-contain rounded"
+                  className="w-full h-auto max-h-[600px] object-contain rounded"
                 />
               )}
               {a.type === 'link' && (
@@ -165,7 +182,7 @@ export default function PostCard({
         </button>
       )}
 
-      {/* reply row + emoji bar + delete/report */}
+      {/* reply row + emoji bar + delete */}
       <div className="space-y-2">
         <div className="flex flex-wrap gap-2 items-center">
           <input
@@ -183,30 +200,14 @@ export default function PostCard({
             Reply
           </button>
 
-          {/* OWNER: Delete button */}
+          {/* OWNER: gray Delete button */}
           {isOwner && (
             <button
               type="button"
               onClick={handleDeleteClick}
-              className="px-3 py-2 rounded-md bg-red-600 text-white text-sm font-semibold hover:bg-red-700"
+              className="px-3 py-2 rounded-md bg-gray-500 text-white text-sm font-semibold hover:bg-gray-600"
             >
               Delete
-            </button>
-          )}
-
-          {/* NON-OWNER: red Report button */}
-          {!isOwner && (
-            <button
-              type="button"
-              onClick={handleReportClick}
-              className={`px-3 py-2 rounded-md text-sm font-semibold ${
-                reported
-                  ? 'bg-red-200 text-red-800 cursor-default'
-                  : 'bg-red-600 text-white hover:bg-red-700'
-              }`}
-              disabled={reported}
-            >
-              {reported ? 'Reported' : 'Report'}
             </button>
           )}
         </div>
@@ -216,7 +217,7 @@ export default function PostCard({
           <div className="text-xs text-gray-600 mt-1">{reportMessage}</div>
         )}
 
-        {/* emoji bar just injects emoji into reply input */}
+        {/* emoji bar now sends immediate replies */}
         <QuickEmojiBar onPick={addEmoji} />
       </div>
     </article>
