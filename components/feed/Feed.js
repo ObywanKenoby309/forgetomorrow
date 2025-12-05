@@ -1,31 +1,36 @@
+// components/feed/Feed.js
 import { useEffect, useState } from "react";
 import PostComposer from "./PostComposer";
 import PostList from "./PostList";
 
-// Identify the signed-in user (stub for now)
-const currentUserId = "me";
-const currentUserName = "You";
-
-export default function Feed() {
+export default function Feed({
+  currentUserId = "me",
+  currentUserName = "You",
+}) {
   const [filter, setFilter] = useState("both");
   const [showComposer, setShowComposer] = useState(false);
   const [posts, setPosts] = useState([]);
 
+  // Load feed posts from shared API
   useEffect(() => {
-    fetch('http://localhost:3001/api/feed')
-      .then(res => res.json())
-      .then(data => setPosts(data.posts))
-      .catch(err => console.log('Feed error:', err));
+    fetch("/api/feed")
+      .then((res) => res.json())
+      .then((data) => setPosts(data.posts || []))
+      .catch((err) => console.log("Feed error:", err));
   }, []);
 
+  // Lock body scroll when composer is open
   useEffect(() => {
     if (!showComposer) return;
     const prev = document.body.style.overflow;
     document.body.style.overflow = "hidden";
-    return () => { document.body.style.overflow = prev; };
+    return () => {
+      document.body.style.overflow = prev;
+    };
   }, [showComposer]);
 
-  const handleNewPost = (post) => {
+  // Create a new post: optimistic insert + persist to /api/feed
+  const handleNewPost = async (post) => {
     const safePost = {
       authorId: currentUserId,
       author: currentUserName,
@@ -35,14 +40,49 @@ export default function Feed() {
       comments: [],
       ...post,
     };
+
+    // Optimistic update so UI feels instant
     setPosts((prev) => [safePost, ...prev]);
     setShowComposer(false);
+
+    try {
+      const res = await fetch("/api/feed", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(safePost),
+      });
+
+      if (!res.ok) {
+        console.error("Feed POST failed:", await res.text());
+        return;
+      }
+
+      const data = await res.json().catch(() => ({}));
+      const created = data.post;
+
+      if (created && created.id) {
+        // Replace optimistic post with server version (has real id, createdAt)
+        setPosts((prev) => {
+          // Drop the optimistic one (same content & createdAt we just used)
+          const withoutOptimistic = prev.filter((p) => p !== safePost);
+          return [created, ...withoutOptimistic];
+        });
+      }
+    } catch (err) {
+      console.error("Error creating feed post:", err);
+      // If POST fails, we keep the optimistic one so user still sees their post.
+    }
   };
 
   const handleReply = (postId, text) => {
     setPosts((prev) =>
       prev.map((p) =>
-        p.id === postId ? { ...p, comments: [...p.comments, { by: currentUserName, text }] } : p
+        p.id === postId
+          ? {
+              ...p,
+              comments: [...(p.comments || []), { by: currentUserName, text }],
+            }
+          : p
       )
     );
   };
@@ -50,6 +90,7 @@ export default function Feed() {
   const handleDelete = (postId) => {
     if (!confirm("Delete this post? This cannot be undone.")) return;
     setPosts((prev) => prev.filter((p) => p.id !== postId));
+    // NOTE: No API delete yet; this is fine for MVP/testing.
   };
 
   return (
@@ -65,7 +106,8 @@ export default function Feed() {
               onChange={(e) => setFilter(e.target.value)}
               className="text-sm bg-white outline-none pr-8 appearance-none"
               style={{
-                backgroundImage: "url(\"data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 20 20'><path fill='%236b7280' d='M5 7l5 6 5-6H5z'/></svg>\")",
+                backgroundImage:
+                  "url(\"data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 20 20'><path fill='%236b7280' d='M5 7l5 6 5-6H5z'/></svg>\")",
                 backgroundRepeat: "no-repeat",
                 backgroundPosition: "right 0.5rem center",
                 backgroundSize: "12px 12px",
@@ -79,6 +121,7 @@ export default function Feed() {
         </div>
         <span className="text-xs text-gray-500">Showing most recent</span>
       </div>
+
       {/* start a post */}
       <div className="bg-white rounded-lg shadow p-4 mb-4">
         <button
@@ -88,6 +131,7 @@ export default function Feed() {
           Start a post…
         </button>
       </div>
+
       {/* feed list */}
       <PostList
         posts={posts}
@@ -96,6 +140,7 @@ export default function Feed() {
         onDelete={handleDelete}
         currentUserId={currentUserId}
       />
+
       {/* composer overlay */}
       {showComposer && (
         <div
