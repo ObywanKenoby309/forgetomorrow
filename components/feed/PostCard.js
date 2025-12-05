@@ -24,7 +24,7 @@ export default function PostCard({
     setReply('');
   };
 
-  // ⬇️ Emojis now send immediately as a reply instead of editing the input
+  // Emojis send immediately as replies
   const addEmoji = (emoji) => {
     if (!onReply) return;
     onReply(post.id, emoji);
@@ -38,6 +38,10 @@ export default function PostCard({
   const handleReportClick = async () => {
     if (reported) return;
 
+    // Optimistic UI: flip state immediately
+    setReported(true);
+    setReportMessage('Submitting your report...');
+
     try {
       const res = await fetch('/api/feed/report', {
         method: 'POST',
@@ -47,18 +51,19 @@ export default function PostCard({
 
       if (!res.ok) {
         console.error('Feed REPORT failed:', await res.text());
+        setReported(false);
         setReportMessage(
           "We couldn't submit your report. Please try again or contact support."
         );
         return;
       }
 
-      setReported(true);
       setReportMessage(
         'Your report has been submitted. Our team will review this post.'
       );
     } catch (err) {
       console.error('Feed REPORT error:', err);
+      setReported(false);
       setReportMessage(
         "We couldn't submit your report. Please try again or contact support."
       );
@@ -79,7 +84,7 @@ export default function PostCard({
       id={`post-${post.id}`}
       className="bg-white rounded-lg shadow p-4"
     >
-      {/* header with Report in top-right */}
+      {/* header with conditional Report in top-right */}
       <header className="mb-2 flex items-start justify-between gap-4">
         <div>
           <div className="font-semibold">{post.author}</div>
@@ -90,18 +95,21 @@ export default function PostCard({
           </div>
         </div>
 
-        <button
-          type="button"
-          onClick={handleReportClick}
-          className={`px-3 py-1.5 rounded-md text-sm font-semibold ${
-            reported
-              ? 'bg-red-200 text-red-800 cursor-default'
-              : 'bg-red-600 text-white hover:bg-red-700'
-          }`}
-          disabled={reported}
-        >
-          {reported ? 'Reported' : 'Report'}
-        </button>
+        {/* Only show Report for non-owners */}
+        {!isOwner && (
+          <button
+            type="button"
+            onClick={handleReportClick}
+            className={`px-3 py-1.5 rounded-md text-sm font-semibold ${
+              reported
+                ? 'bg-red-200 text-red-800 cursor-default'
+                : 'bg-red-600 text-white hover:bg-red-700'
+            }`}
+            disabled={reported}
+          >
+            {reported ? 'Reported' : 'Report'}
+          </button>
+        )}
       </header>
 
       {/* body text */}
@@ -182,7 +190,7 @@ export default function PostCard({
         </button>
       )}
 
-      {/* reply row + emoji bar + delete */}
+      {/* reply row + delete (owner only) + emoji bar */}
       <div className="space-y-2">
         <div className="flex flex-wrap gap-2 items-center">
           <input

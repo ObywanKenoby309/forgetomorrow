@@ -84,7 +84,7 @@ export default async function handler(req, res) {
     const postUrl = `${APP_BASE_URL}/feed#post-${post.id}`;
 
     const lines = [
-      'A member of the community has reported a post needing reviewed.',
+      'A member of the ForgeTomorrow community has reported a post that may need moderation review.',
       '',
       `Report timestamp: ${reportTimestamp.toISOString()}`,
       `Original post timestamp: ${post.createdAt.toISOString()}`,
@@ -99,34 +99,42 @@ export default async function handler(req, res) {
     ];
 
     if (attachments.length) {
-      lines.push('', 'Attachments (JSON):', JSON.stringify(attachments, null, 2));
+      lines.push(
+        '',
+        'Attachments (JSON):',
+        JSON.stringify(attachments, null, 2)
+      );
     }
 
     lines.push(
       '',
-      'Please perform the following actions:',
-      '1. Review message content',
-      '2. Compare possible violations to community guidelines and policies',
-      '3. Notify appropriate next-level parties as needed',
-      '4. If message is determined to NOT violate community guidelines:',
-      '   - Record findings in violation tracker for future review',
-      '5. If message DOES violate community guidelines:',
-      '   - Record time of review',
-      '   - Record which policy the message is in violation of',
-      '   - Delete post',
-      '   - Notify member reporting that review and actions have been concluded',
-      '   - Email user account of violation',
-      '   - Save violation in tracker for further review'
+      'Recommended moderation process:',
+      '1. Review message content in context (including attachments, if any).',
+      '2. Compare potential issues against community guidelines and policies.',
+      '3. If no violation is found:',
+      '   - Record findings in the violation tracker for future reference.',
+      '4. If a violation IS found:',
+      '   - Record the time of review.',
+      '   - Record which policy (or policies) the message violates.',
+      '   - Delete or hide the post as appropriate.',
+      '   - Notify the reporting member that review and any actions have been completed.',
+      '   - Email the user whose account posted the content with details of the violation.',
+      '   - Save the violation in the tracker for further review or escalation.'
     );
 
     try {
       const transporter = createTransporter();
-      await transporter.sendMail({
+      const fromAddress =
+        process.env.SMTP_USER || SUPPORT_EMAIL || 'no-reply@forgetomorrow.com';
+
+      const info = await transporter.sendMail({
         to: SUPPORT_EMAIL,
-        from: SUPPORT_EMAIL,
+        from: `"ForgeTomorrow Moderation" <${fromAddress}>`,
         subject: 'COMMUNITY POST REPORT',
         text: lines.join('\n'),
       });
+
+      console.log('[FEED REPORT EMAIL SENT]', info.messageId || info);
     } catch (mailErr) {
       console.error('[FEED REPORT EMAIL ERROR]', mailErr);
       // We still return 200 so user sees confirmation; logs will show issues.
