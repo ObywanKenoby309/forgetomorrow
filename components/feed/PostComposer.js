@@ -15,43 +15,55 @@ export default function PostComposer({ onPost }) {
     text.trim().length > 0 &&
     (postType === "business" || postType === "personal");
 
-  // Clean up object URLs on unmount
+  // No more blob URL cleanup needed; we store data URLs in attachments.
   useEffect(() => {
-    return () => {
-      attachments.forEach((a) => {
-        if ((a.type === "image" || a.type === "video") && a.__blobUrl) {
-          URL.revokeObjectURL(a.url);
-        }
-      });
-    };
-  }, [attachments]);
+    // Reserved for any future cleanup if needed
+  }, []);
 
-  // ---- Attachments handlers ----
+  // ---- Helpers to read files as data URLs for persistence ----
+  const fileToDataUrl = (file, cb) => {
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = () => {
+      cb(reader.result);
+    };
+    reader.onerror = () => {
+      // Silent fail; could add tiny toast later
+      cb(null);
+    };
+    reader.readAsDataURL(file);
+  };
+
   const addImages = (files) => {
     if (!files?.length) return;
-    const next = [];
     [...files].forEach((f) => {
-      const url = URL.createObjectURL(f);
-      next.push({ type: "image", url, name: f.name || "image", __blobUrl: true });
+      fileToDataUrl(f, (dataUrl) => {
+        if (!dataUrl) return;
+        setAttachments((prev) => [
+          ...prev,
+          { type: "image", url: dataUrl, name: f.name || "image" },
+        ]);
+      });
     });
-    setAttachments((prev) => [...prev, ...next]);
   };
 
   const addVideos = (files) => {
     if (!files?.length) return;
-    const next = [];
     [...files].forEach((f) => {
-      const url = URL.createObjectURL(f);
-      next.push({ type: "video", url, name: f.name || "video", __blobUrl: true });
+      fileToDataUrl(f, (dataUrl) => {
+        if (!dataUrl) return;
+        setAttachments((prev) => [
+          ...prev,
+          { type: "video", url: dataUrl, name: f.name || "video" },
+        ]);
+      });
     });
-    setAttachments((prev) => [...prev, ...next]);
   };
 
   const addLink = () => {
     const url = linkValue.trim();
     if (!url) return;
     try {
-      // basic validation; will throw if invalid
       const u = new URL(url);
       setAttachments((prev) => [
         ...prev,
@@ -60,17 +72,13 @@ export default function PostComposer({ onPost }) {
       setLinkValue("");
       setShowLinkInput(false);
     } catch {
-      // no-op; you could surface a tiny error if you want
+      // invalid URL – ignore for now; later we can show a small error
     }
   };
 
   const removeAttachment = (idx) => {
     setAttachments((prev) => {
       const copy = [...prev];
-      const item = copy[idx];
-      if ((item?.type === "image" || item?.type === "video") && item.__blobUrl) {
-        URL.revokeObjectURL(item.url);
-      }
       copy.splice(idx, 1);
       return copy;
     });
@@ -80,6 +88,7 @@ export default function PostComposer({ onPost }) {
   const submit = () => {
     const body = text.trim();
     if (!canPost) return;
+
     onPost?.({
       id: crypto.randomUUID?.() || String(Date.now()),
       author: "You",
@@ -88,16 +97,15 @@ export default function PostComposer({ onPost }) {
       type: postType, // required
       likes: 0,
       comments: [],
-      attachments: attachments.map(({ type, url, name }) => ({ type, url, name })),
+      attachments: attachments.map(({ type, url, name }) => ({
+        type,
+        url,
+        name,
+      })),
     });
+
     setText("");
     setPostType("");
-    // revoke and clear
-    attachments.forEach((a) => {
-      if ((a.type === "image" || a.type === "video") && a.__blobUrl) {
-        URL.revokeObjectURL(a.url);
-      }
-    });
     setAttachments([]);
     setShowLinkInput(false);
     setLinkValue("");
