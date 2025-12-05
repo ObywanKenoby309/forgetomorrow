@@ -163,9 +163,9 @@ export default function ResumeCoverLanding() {
   const [user, setUser] = useState(null);
 
   // Live data placeholders until wired:
-  const [tier, setTier] = useState('basic');              // 'basic' | 'pro'
+  const [tier, setTier] = useState('basic'); // 'basic' | 'pro'
   const [usage, setUsage] = useState({ used: 0, limit: 3 }); // AI generations
-  const [savedResumes, setSavedResumes] = useState([]);   // [] until DB wiring
+  const [savedResumes, setSavedResumes] = useState([]); // [] until DB wiring
 
   // Context: ATS pack + job params from jobs page
   const [atsPack, setAtsPack] = useState(null);
@@ -186,8 +186,8 @@ export default function ResumeCoverLanding() {
         }
 
         // TODO: Replace these placeholders with real DB-driven values
-        setTier((prev) => prev);          // keep 'basic' for now
-        setUsage((prev) => prev);        // { used: 0, limit: 3 } for now
+        setTier((prev) => prev); // keep 'basic' for now
+        setUsage((prev) => prev); // { used: 0, limit: 3 } for now
         setSavedResumes((prev) => prev); // empty until wired
       } catch (err) {
         console.error('[resume-cover] Failed to init session/usage', err);
@@ -227,7 +227,7 @@ export default function ResumeCoverLanding() {
     }
   }, [router.isReady, router.query]);
 
-  // Helper: builder route that carries ATS + job context
+  // Helper: builder route that carries ATS + job context (AND chrome)
   const buildCreateHref = (options = {}) => {
     const params = new URLSearchParams();
 
@@ -253,13 +253,16 @@ export default function ResumeCoverLanding() {
     }
 
     const qs = params.toString();
-    return `/resume/create${qs ? `?${qs}` : ''}`;
+    const basePath = `/resume/create${qs ? `?${qs}` : ''}`;
+
+    // 🔹 Preserve chrome (recruiter-smb / recruiter-ent / coach / seeker)
+    return withChrome(basePath);
   };
 
   const onUploadClick = () => fileRef.current?.click();
 
   const onFilePicked = () => {
-    // Imported resume → still honor ATS + job context
+    // Imported resume → still honor ATS + job context + chrome
     router.push(buildCreateHref({ uploaded: true }));
   };
 
