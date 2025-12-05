@@ -125,18 +125,18 @@ export default function EnterpriseHeader({
         >
           {/* LEFT — Brand */}
           <div className={resolvedLeft}>
-            <Link href={brandHref} className="flex items-center gap-2 min-w-0">
+            <Link href={brandHref} className="flex items-center gap-2">
               <img
                 src="/favicon-32x32.png"
                 alt={brandLabel}
-                className="h-[22px] w-[22px] md:h-6 md:w-6 rounded flex-shrink-0"
+                className="h-[22px] w-[22px] md:h-6 md:w-6 rounded"
               />
-              <span className="text-[#FF7043] font-bold text-lg sm:text-xl tracking-wide hover:text-[#F4511E] transition truncate max-w-[140px] sm:max-w-[200px]">
+              <span className="text-[#FF7043] font-bold text-xl tracking-wide hover:text-[#F4511E] transition">
                 {brandLabel}
               </span>
             </Link>
             {sectionLabel && (
-              <span className="text-sm text-gray-400 ml-3 truncate">
+              <span className="text-sm text-gray-400 ml-3">
                 {sectionLabel}
               </span>
             )}
@@ -308,6 +308,7 @@ export default function EnterpriseHeader({
         </nav>
       </header>
 
+      {/* MOBILE OVERLAY MENU */}
       {openMobile && (
         <div className="fixed inset-0 z-[99999] bg-[#2a2a2a] overflow-y-auto">
           <div className="px-8 py-12 min-h-screen flex flex-col">
@@ -331,40 +332,75 @@ export default function EnterpriseHeader({
               </svg>
             </button>
 
+            {/* Brand */}
             <Link
               href={brandHref}
               onClick={() => setOpenMobile(false)}
-              className="flex items-center gap-4 mb-12"
+              className="flex items-center gap-6 mb-20"
             >
               <img
                 src="/favicon-32x32.png"
                 alt={brandLabel}
-                className="h-12 w-12 rounded"
+                className="h-16 w-16 rounded"
               />
-              <div className="text-[#FF7043] font-black text-3xl sm:text-4xl md:text-5xl leading-tight break-words">
+              <div className="text-[#FF7043] font-black text-5xl">
                 {brandLabel}
               </div>
             </Link>
 
-            <nav className="flex flex-col gap-8 flex-1">
+            {/* Nav + account actions */}
+            <nav className="flex flex-col gap-12 flex-1">
               {navItems.map((item) => (
                 <Link
                   key={item.href}
                   href={item.href}
                   onClick={() => setOpenMobile(false)}
-                  className="text-2xl sm:text-3xl font-medium text-gray-300 hover:text-[#FF7043] focus:text-[#FF7043] focus:outline-none focus:ring-4 focus:ring-orange-500 rounded-2xl py-4 transition"
+                  className="text-4xl font-medium text-gray-300 hover:text-[#FF7043] focus:text-[#FF7043] focus:outline-none focus:ring-4 focus:ring-orange-500 rounded-2xl py-6 transition"
                 >
                   {item.label}
                 </Link>
               ))}
 
-              <Link
-                href="/pricing"
-                onClick={() => setOpenMobile(false)}
-                className="bg-[#FF7043] text-white text-2xl sm:text-3xl font-bold text-center py-6 sm:py-8 rounded-2xl hover:bg-orange-600 focus:outline-none focus:ring-4 focus:ring-orange-300 transition shadow-2xl"
-              >
-                Get Started
-              </Link>
+              {/* Public vs internal behavior */}
+              {(publicVariant || !showUserMenu) ? (
+                <Link
+                  href="/pricing"
+                  onClick={() => setOpenMobile(false)}
+                  className="bg-[#FF7043] text-white text-4xl font-bold text-center py-12 rounded-3xl hover:bg-orange-600 focus:outline-none focus:ring-4 focus:ring-orange-300 transition shadow-2xl"
+                >
+                  Get Started
+                </Link>
+              ) : (
+                <div className="mt-10 space-y-6 text-3xl">
+                  <button
+                    onClick={() => {
+                      setOpenMobile(false);
+                      router.push(optionsHref);
+                    }}
+                    className="w-full text-left text-gray-200 hover:text-[#FF7043] focus:outline-none focus:ring-4 focus:ring-orange-500 rounded-2xl py-4"
+                  >
+                    Options
+                  </button>
+                  <button
+                    onClick={() => {
+                      setOpenMobile(false);
+                      router.push(supportHref);
+                    }}
+                    className="w-full text-left text-gray-200 hover:text-[#FF7043] focus:outline-none focus:ring-4 focus:ring-orange-500 rounded-2xl py-4"
+                  >
+                    Support
+                  </button>
+                  <button
+                    onClick={() => {
+                      setOpenMobile(false);
+                      router.push("/logout");
+                    }}
+                    className="w-full text-left text-gray-200 hover:text-[#FF7043] focus:outline-none focus:ring-4 focus:ring-orange-500 rounded-2xl py-4"
+                  >
+                    Log Out
+                  </button>
+                </div>
+              )}
             </nav>
           </div>
         </div>

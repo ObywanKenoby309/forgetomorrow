@@ -4,14 +4,16 @@ import Head from 'next/head';
 import { useRouter } from 'next/router';
 import { useUserWallpaper } from '@/hooks/useUserWallpaper';
 
+// Seeker / Coach chrome
 import SeekerSidebar from '@/components/SeekerSidebar';
 import CoachingSidebar from '@/components/coaching/CoachingSidebar';
 import SeekerHeader from '@/components/seeker/SeekerHeader';
 import CoachingHeader from '@/components/coaching/CoachingHeader';
+import useSidebarCounts from '@/components/hooks/useSidebarCounts';
+
+// Recruiter chrome
 import RecruiterHeader from '@/components/recruiter/RecruiterHeader';
 import RecruiterSidebar from '@/components/recruiter/RecruiterSidebar';
-
-import useSidebarCounts from '@/components/hooks/useSidebarCounts';
 
 const ALLOWED_MODES = new Set(['seeker', 'coach', 'recruiter-smb', 'recruiter-ent']);
 
@@ -22,33 +24,59 @@ export default function SeekerLayout({
   right,
   children,
   activeNav,
-  forceChrome,
-  rightVariant = 'dark',
+  forceChrome,           // 'seeker' | 'coach' | 'recruiter-smb' | 'recruiter-ent'
+  rightVariant = 'dark', // 'dark' | 'light'
   rightWidth = 260,
   gap = 12,
   pad = 16,
 }) {
   const router = useRouter();
-  const seekerCounts = useSidebarCounts();
 
-  // --- Determine chrome type ---
+  // ---- MOBILE FLAG (desktop stays original) ----
+  const [isMobile, setIsMobile] = useState(false);
+  useEffect(() => {
+    const handleResize = () => {
+      if (typeof window !== 'undefined') {
+        setIsMobile(window.innerWidth < 768);
+      }
+    };
+    handleResize();
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
+
+  // ---- CHROME MODE (determine once, then keep in state) ----
   const initialChrome = (() => {
     if (forceChrome && ALLOWED_MODES.has(forceChrome)) return forceChrome;
+
     const raw = String(router?.query?.chrome || '').toLowerCase();
-    return ALLOWED_MODES.has(raw) ? raw : 'seeker';
+    if (ALLOWED_MODES.has(raw)) return raw;
+
+    return 'seeker';
   })();
 
   const [chromeMode, setChromeMode] = useState(initialChrome);
+
   useEffect(() => {
+    const raw = String(router?.query?.chrome || '').toLowerCase();
+
     if (forceChrome && ALLOWED_MODES.has(forceChrome)) {
       setChromeMode(forceChrome);
       return;
     }
-    const raw = String(router?.query?.chrome || '').toLowerCase();
-    setChromeMode(ALLOWED_MODES.has(raw) ? raw : 'seeker');
+
+    if (ALLOWED_MODES.has(raw)) {
+      setChromeMode(raw);
+    } else {
+      setChromeMode('seeker');
+    }
   }, [router?.query?.chrome, forceChrome]);
 
-  // Map chrome → UI components
+  // Always call hook; only Seeker uses the counts
+  const seekerCounts = useSidebarCounts();
+  const isSeekerChrome = chromeMode === 'seeker';
+
+  // ---- HEADER + SIDEBAR SELECTION ----
   const { HeaderComp, SidebarComp, sidebarProps } = useMemo(() => {
     switch (chromeMode) {
       case 'coach':
@@ -57,30 +85,45 @@ export default function SeekerLayout({
           SidebarComp: CoachingSidebar,
           sidebarProps: { active: activeNav },
         };
+
       case 'recruiter-smb':
         return {
           HeaderComp: RecruiterHeader,
           SidebarComp: RecruiterSidebar,
-          sidebarProps: { variant: 'smb', active: activeNav, counts: {} },
+          sidebarProps: {
+            variant: 'smb',
+            active: activeNav,
+            counts: {}, // recruiter sidebar doesn’t need seeker counts
+          },
         };
+
       case 'recruiter-ent':
         return {
           HeaderComp: RecruiterHeader,
           SidebarComp: RecruiterSidebar,
-          sidebarProps: { variant: 'enterprise', active: activeNav, counts: {} },
+          sidebarProps: {
+            variant: 'enterprise',
+            active: activeNav,
+            counts: {},
+          },
         };
+
       case 'seeker':
       default:
         return {
           HeaderComp: SeekerHeader,
           SidebarComp: SeekerSidebar,
-          sidebarProps: { active: activeNav, counts: seekerCounts },
+          sidebarProps: {
+            active: activeNav,
+            counts: seekerCounts,
+          },
         };
     }
   }, [chromeMode, activeNav, seekerCounts]);
 
-  // Wallpaper
+  // ---- WALLPAPER / BACKGROUND ----
   const { wallpaperUrl } = useUserWallpaper();
+
   const backgroundStyle = wallpaperUrl
     ? {
         minHeight: '100vh',
@@ -95,8 +138,8 @@ export default function SeekerLayout({
         backgroundColor: '#ECEFF1',
       };
 
-  // Right rail styling
-  const rightShared = {
+  // ---- RIGHT RAIL STYLES ----
+  const rightBase = {
     gridArea: 'right',
     alignSelf: 'start',
     borderRadius: 12,
@@ -104,78 +147,111 @@ export default function SeekerLayout({
     width: rightWidth,
     minWidth: rightWidth,
     maxWidth: rightWidth,
+    minInlineSize: 0,
   };
 
   const rightDark = {
     background: '#2a2a2a',
     border: '1px solid #3a3a3a',
     padding: 16,
+    boxShadow: '0 2px 6px rgba(0,0,0,0.06)',
   };
 
-  const rightLight = { background: 'transparent', padding: 0 };
+  const rightLight = {
+    background: 'transparent',
+    border: 'none',
+    padding: 0,
+    boxShadow: 'none',
+  };
 
-  // MOBILE WRAPPER (this is the magic)
-  const containerStyle = {
+  // Asymmetric padding to keep right edge tight when a rail exists
+  const containerPadding = {
+    paddingTop: pad,
+    paddingBottom: pad,
+    paddingLeft: pad,
+    paddingRight: right ? Math.max(8, pad - 4) : pad,
+  };
+
+  // ---- GRID LAYOUT (desktop original vs mobile stacked) ----
+
+  const desktopGrid = {
     display: 'grid',
-    gap,
-    padding: pad,
-    alignItems: 'start',
-
-    /* ⬇️ MOBILE: collapse to a single column */
-    gridTemplateColumns: '1fr',
-    gridTemplateAreas: `
-      "left"
-      "header"
-      "content"
-      ${right ? `"right"` : ""}
-    `,
-
-    /* ⬆️ DESKTOP OVERRIDE */
-    ...(typeof window !== 'undefined' && window.innerWidth >= 900
-      ? {
-          gridTemplateColumns: `240px minmax(0,1fr) ${right ? rightWidth + 'px' : '0px'}`,
-          gridTemplateAreas: right
-            ? `"left header right" "left content right"`
-            : `"left header header" "left content content"`,
-        }
-      : {}),
+    gridTemplateColumns: `240px minmax(0, 1fr) ${
+      right ? `${rightWidth}px` : '0px'
+    }`,
+    gridTemplateRows: 'auto 1fr',
+    gridTemplateAreas: right
+      ? `"left header right"
+         "left content right"`
+      : `"left header header"
+         "left content content"`,
   };
+
+  const mobileGrid = {
+    display: 'grid',
+    gridTemplateColumns: '1fr',
+    gridTemplateRows: 'auto auto auto auto',
+    gridTemplateAreas: right
+      ? `"header"
+         "content"
+         "right"
+         "left"`
+      : `"header"
+         "content"
+         "left"`,
+  };
+
+  const gridStyles = isMobile ? mobileGrid : desktopGrid;
 
   return (
     <>
-      <Head><title>{title}</title></Head>
+      <Head>
+        <title>{title}</title>
+      </Head>
 
+      {/* Wallpaper wrapper */}
       <div style={backgroundStyle}>
+        {/* Top chrome header ALWAYS matches chromeMode */}
         <HeaderComp />
 
-        {/* MAIN GRID */}
-        <div style={containerStyle}>
-          {/* LEFT SIDEBAR */}
-          <aside style={{ gridArea: 'left', minWidth: 0 }}>
-            {left ?? <SidebarComp {...sidebarProps} />}
+        {/* Main layout shell */}
+        <div
+          style={{
+            ...gridStyles,
+            gap,
+            ...containerPadding,
+            alignItems: 'start',
+          }}
+        >
+          {/* LEFT — Sidebar */}
+          <aside style={{ gridArea: 'left', alignSelf: 'start', minWidth: 0 }}>
+            {left ? left : <SidebarComp {...sidebarProps} />}
           </aside>
 
-          {/* PAGE HEADER */}
-          <header style={{ gridArea: 'header', minWidth: 0 }}>
+          {/* PAGE HEADER (center) */}
+          <header
+            style={{ gridArea: 'header', alignSelf: 'start', minWidth: 0 }}
+          >
             {header}
           </header>
 
-          {/* RIGHT RAIL (moved under content on mobile) */}
-          {right && (
+          {/* RIGHT — Variant-controlled rail */}
+          {right ? (
             <aside
               style={{
-                ...rightShared,
+                ...rightBase,
                 ...(rightVariant === 'light' ? rightLight : rightDark),
-                gridArea: 'right',
               }}
             >
               {right}
             </aside>
-          )}
+          ) : null}
 
-          {/* MAIN CONTENT */}
+          {/* CONTENT (center) */}
           <main style={{ gridArea: 'content', minWidth: 0 }}>
-            <div style={{ display: 'grid', gap }}>{children}</div>
+            <div style={{ display: 'grid', gap, width: '100%', minWidth: 0 }}>
+              {children}
+            </div>
           </main>
         </div>
       </div>
