@@ -4,7 +4,8 @@ import { authOptions } from '../auth/[...nextauth]';
 import { prisma } from '@/lib/prisma';
 import nodemailer from 'nodemailer';
 
-const SUPPORT_EMAIL = process.env.SUPPORT_EMAIL || 'support@forgetomorrow.com';
+const SUPPORT_EMAIL =
+  process.env.SUPPORT_EMAIL || 'forgetomorrowteam@gmail.com';
 const APP_BASE_URL =
   process.env.NEXT_PUBLIC_APP_URL || 'https://www.forgetomorrow.com';
 
@@ -33,9 +34,10 @@ function parseContent(content) {
   return { body, attachments };
 }
 
-function createTransporter() {
+// Primary transport: SMTP_* env (for moderation pipeline)
+function createSmtpTransport() {
   if (!process.env.SMTP_HOST) {
-    throw new Error('SMTP not configured (SMTP_HOST missing)');
+    return null;
   }
 
   return nodemailer.createTransport({
@@ -49,6 +51,23 @@ function createTransporter() {
             pass: process.env.SMTP_PASS,
           }
         : undefined,
+  });
+}
+
+// Fallback transport: EMAIL_* env (already used elsewhere in app)
+function createEmailServerTransport() {
+  if (!process.env.EMAIL_SERVER || !process.env.EMAIL_USER) {
+    return null;
+  }
+
+  return nodemailer.createTransport({
+    host: process.env.EMAIL_SERVER,
+    port: Number(process.env.EMAIL_PORT || 587),
+    secure: false,
+    auth: {
+      user: process.env.EMAIL_USER,
+      pass: process.env.EMAIL_PASSWORD,
+    },
   });
 }
 
@@ -122,22 +141,59 @@ export default async function handler(req, res) {
       '   - Save the violation in the tracker for further review or escalation.'
     );
 
-    try {
-      const transporter = createTransporter();
-      const fromAddress =
-        process.env.SMTP_USER || SUPPORT_EMAIL || 'no-reply@forgetomorrow.com';
+    const textBody = lines.join('\n');
 
-      const info = await transporter.sendMail({
-        to: SUPPORT_EMAIL,
-        from: `"ForgeTomorrow Moderation" <${fromAddress}>`,
-        subject: 'COMMUNITY POST REPORT',
-        text: lines.join('\n'),
-      });
+    const smtpTransport = createSmtpTransport();
+    const emailTransport = createEmailServerTransport();
 
-      console.log('[FEED REPORT EMAIL SENT]', info.messageId || info);
-    } catch (mailErr) {
-      console.error('[FEED REPORT EMAIL ERROR]', mailErr);
-      // We still return 200 so user sees confirmation; logs will show issues.
+    // Decide "from" address
+    const fromAddress =
+      process.env.SMTP_USER ||
+      process.env.EMAIL_FROM ||
+      process.env.EMAIL_USER ||
+      'no-reply@forgetomorrow.com';
+
+    let sent = false;
+
+    // Try primary moderation transport first
+    if (smtpTransport) {
+      try {
+        const info = await smtpTransport.sendMail({
+          to: SUPPORT_EMAIL,
+          from: `"ForgeTomorrow Moderation" <${fromAddress}>`,
+          subject: 'COMMUNITY POST REPORT',
+          text: textBody,
+        });
+        console.log('[FEED REPORT EMAIL SENT - SMTP_*]', info?.messageId || info);
+        sent = true;
+      } catch (mailErr) {
+        console.error('[FEED REPORT EMAIL ERROR - SMTP_*]', mailErr);
+      }
+    }
+
+    // Fallback to EMAIL_* transport if primary failed
+    if (!sent && emailTransport) {
+      try {
+        const info = await emailTransport.sendMail({
+          to: SUPPORT_EMAIL,
+          from: `"ForgeTomorrow Moderation" <${fromAddress}>`,
+          subject: 'COMMUNITY POST REPORT',
+          text: textBody,
+        });
+        console.log(
+          '[FEED REPORT EMAIL SENT - EMAIL_SERVER]',
+          info?.messageId || info
+        );
+        sent = true;
+      } catch (mailErr) {
+        console.error('[FEED REPORT EMAIL ERROR - EMAIL_SERVER]', mailErr);
+      }
+    }
+
+    if (!sent) {
+      console.error('[FEED REPORT EMAIL NOT SENT - no transport succeeded]');
+      // We still return 200 so the user sees confirmation;
+      // internal logs will show what went wrong.
     }
 
     return res.status(200).json({ ok: true });
