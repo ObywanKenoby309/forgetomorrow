@@ -131,18 +131,22 @@ export default function EnterpriseHeader({
                 alt={brandLabel}
                 className="h-[22px] w-[22px] md:h-6 md:w-6 rounded"
               />
-              <span className="text-[#FF7043] font-bold text-xl tracking-wide hover:text-[#F4511E] transition">
+              <span className="text-[#FF7043] font-bold text-lg sm:text-xl tracking-wide hover:text-[#F4511E] transition">
                 {brandLabel}
               </span>
             </Link>
+
+            {/* Section label — hide on small screens */}
             {sectionLabel && (
-              <span className="text-sm text-gray-400 ml-3">
+              <span className="hidden sm:inline text-sm text-gray-400 ml-3">
                 {sectionLabel}
               </span>
             )}
+
+            {/* Plan badge — hide on small screens */}
             {!suppressBadge && (
               <span
-                className={`ml-3 text-[10px] uppercase tracking-widest px-2 py-1 rounded border ${
+                className={`hidden sm:inline-flex ml-3 text-[10px] uppercase tracking-widest px-2 py-1 rounded border ${
                   isEnterprise
                     ? "bg-emerald-100 text-emerald-700 border-emerald-200"
                     : "bg-slate-100 text-slate-700 border-slate-300"
@@ -308,7 +312,7 @@ export default function EnterpriseHeader({
         </nav>
       </header>
 
-      {/* MOBILE OVERLAY MENU */}
+      {/* MOBILE OVERLAY MENU (unchanged behavior) */}
       {openMobile && (
         <div className="fixed inset-0 z-[99999] bg-[#2a2a2a] overflow-y-auto">
           <div className="px-8 py-12 min-h-screen flex flex-col">
@@ -348,7 +352,7 @@ export default function EnterpriseHeader({
               </div>
             </Link>
 
-            {/* Nav + account actions */}
+            {/* Nav + account actions / CTA */}
             <nav className="flex flex-col gap-12 flex-1">
               {navItems.map((item) => (
                 <Link
@@ -361,7 +365,6 @@ export default function EnterpriseHeader({
                 </Link>
               ))}
 
-              {/* Public vs internal behavior */}
               {(publicVariant || !showUserMenu) ? (
                 <Link
                   href="/pricing"
