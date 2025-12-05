@@ -18,7 +18,8 @@ export default function PostCard({ post, onReply, onOpenComments }) {
 
   const hasComments = (post.comments?.length || 0) > 0;
   const previewCount = 2;
-  const hasAttachments = Array.isArray(post.attachments) && post.attachments.length > 0;
+
+  const attachments = Array.isArray(post.attachments) ? post.attachments : [];
 
   return (
     <article className="bg-white rounded-lg shadow p-4">
@@ -39,42 +40,50 @@ export default function PostCard({ post, onReply, onOpenComments }) {
       <p className="mb-3 whitespace-pre-wrap">{post.body}</p>
 
       {/* attachments */}
-      {hasAttachments && (
-        <div className="mb-3 grid grid-cols-2 sm:grid-cols-3 gap-3">
-          {post.attachments.map((a, idx) => (
-            <div
-              key={idx}
-              className="relative border rounded-md p-2 bg-gray-50 flex flex-col gap-2"
-            >
-              {a.type === 'image' && (
-                <img
-                  src={a.url}
-                  alt={a.name || 'image'}
-                  className="w-full h-28 object-cover rounded"
-                />
-              )}
-              {a.type === 'video' && (
-                <video
-                  src={a.url}
-                  controls
-                  className="w-full h-28 object-cover rounded"
-                />
-              )}
-              {a.type === 'link' && (
-                <a
-                  href={a.url}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="text-sm text-blue-600 underline break-all"
+      {attachments.length > 0 && (
+        <div className="mb-3 grid grid-cols-1 sm:grid-cols-2 gap-3">
+          {attachments.map((a, idx) => {
+            if (a.type === 'image') {
+              return (
+                <div key={idx} className="border rounded-md overflow-hidden">
+                  <img
+                    src={a.url}
+                    alt={a.name || 'image'}
+                    className="w-full h-48 object-cover"
+                  />
+                </div>
+              );
+            }
+            if (a.type === 'video') {
+              return (
+                <div key={idx} className="border rounded-md overflow-hidden">
+                  <video
+                    src={a.url}
+                    controls
+                    className="w-full h-48 object-cover"
+                  />
+                </div>
+              );
+            }
+            if (a.type === 'link') {
+              return (
+                <div
+                  key={idx}
+                  className="border rounded-md px-3 py-2 bg-gray-50 text-sm break-all"
                 >
-                  {a.url}
-                </a>
-              )}
-              {a.name && (
-                <div className="text-xs text-gray-500 truncate">{a.name}</div>
-              )}
-            </div>
-          ))}
+                  <a
+                    href={a.url}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="text-blue-600 underline"
+                  >
+                    {a.url}
+                  </a>
+                </div>
+              );
+            }
+            return null;
+          })}
         </div>
       )}
 

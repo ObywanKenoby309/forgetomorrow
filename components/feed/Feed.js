@@ -17,6 +17,28 @@ export default function Feed() {
     [session?.user?.firstName, session?.user?.lastName].filter(Boolean).join(' ') ||
     (session?.user?.email ? session.user.email.split('@')[0] : 'You');
 
+  // Normalize post shape coming from API
+  const normalizePost = (row) => {
+    if (!row) return null;
+
+    const createdAt =
+      typeof row.createdAt === 'string' || row.createdAt instanceof Date
+        ? new Date(row.createdAt).toISOString()
+        : new Date().toISOString();
+
+    return {
+      id: row.id,
+      authorId: row.authorId ?? currentUserId,
+      author: row.author ?? row.authorName ?? currentUserName,
+      body: row.body ?? row.content ?? '',
+      type: row.type ?? 'business',
+      createdAt,
+      likes: row.likes ?? 0,
+      comments: Array.isArray(row.comments) ? row.comments : [],
+      attachments: Array.isArray(row.attachments) ? row.attachments : [],
+    };
+  };
+
   // Load posts on mount
   useEffect(() => {
     let cancelled = false;
@@ -29,9 +51,14 @@ export default function Feed() {
           return;
         }
         const data = await res.json();
-        if (!cancelled) {
-          setPosts(Array.isArray(data.posts) ? data.posts : []);
-        }
+        if (cancelled) return;
+
+        const list = Array.isArray(data.posts) ? data.posts : [];
+        const normalized = list
+          .map(normalizePost)
+          .filter(Boolean);
+
+        setPosts(normalized);
       } catch (err) {
         console.error('Feed GET error:', err);
       }
@@ -41,7 +68,7 @@ export default function Feed() {
     return () => {
       cancelled = true;
     };
-  }, []);
+  }, []); // run once
 
   // Lock scroll when composer open
   useEffect(() => {
@@ -53,12 +80,15 @@ export default function Feed() {
     };
   }, [showComposer]);
 
-  // New post coming from PostComposer → send to API as { text, type }
+  // New post coming from PostComposer → send to API as { text, type, attachments }
   const handleNewPost = async (postFromComposer) => {
     // postFromComposer: { id, author, createdAt, body, type, attachments[] }
     const payload = {
       text: (postFromComposer.body ?? '').toString(),
       type: postFromComposer.type,
+      attachments: Array.isArray(postFromComposer.attachments)
+        ? postFromComposer.attachments
+        : [],
     };
 
     try {
@@ -77,19 +107,13 @@ export default function Feed() {
       const data = await res.json();
       const saved = data.post;
 
-      // Ensure the shape matches what PostList/PostCard expect
-      const safePost = {
-        id: saved.id,
-        authorId: saved.authorId ?? currentUserId,
-        author: saved.author ?? saved.authorName ?? currentUserName,
-        body: saved.body ?? saved.content ?? payload.text,
-        type: saved.type ?? postFromComposer.type,
-        createdAt: saved.createdAt ?? new Date().toISOString(),
-        likes: saved.likes ?? 0,
-        comments: saved.comments ?? [],
-      };
+      const safePost = normalizePost({
+        ...saved,
+        // Fallback in case API doesn't echo attachments for some reason
+        attachments: saved?.attachments ?? payload.attachments,
+      });
 
-      setPosts((prev) => [safePost, ...prev]);
+      setPosts((prev) => (safePost ? [safePost, ...prev] : prev));
       setShowComposer(false);
     } catch (err) {
       console.error('Feed POST error:', err);
@@ -97,73 +121,31 @@ export default function Feed() {
     }
   };
 
-  const handleReply = async (postId, text) => {
-    const trimmed = (text || '').trim();
-    if (!trimmed) return;
-
-    try {
-      const res = await fetch('/api/feed/comments', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ postId, text: trimmed }),
-      });
-
-      if (!res.ok) {
-        console.error('Feed COMMENT failed:', await res.text());
-        // Fallback: local update so user still sees it
-        setPosts((prev) =>
-          prev.map((p) =>
-            p.id === postId
-              ? {
-                  ...p,
-                  comments: [
-                    ...(p.comments || []),
-                    {
-                      by: currentUserName,
-                      text: trimmed,
-                      at: new Date().toISOString(),
-                    },
-                  ],
-                }
-              : p
-          )
-        );
-        return;
-      }
-
-      const data = await res.json();
-      const updated = data.post;
-
-      setPosts((prev) =>
-        prev.map((p) => (p.id === updated.id ? updated : p))
-      );
-    } catch (err) {
-      console.error('Feed COMMENT error:', err);
-      // Fallback: same optimistic local update
-      setPosts((prev) =>
-        prev.map((p) =>
-          p.id === postId
-            ? {
-                ...p,
-                comments: [
-                  ...(p.comments || []),
-                  {
-                    by: currentUserName,
-                    text: trimmed,
-                    at: new Date().toISOString(),
-                  },
-                ],
-              }
-            : p
-        )
-      );
-    }
+  const handleReply = (postId, text) => {
+    setPosts((prev) =>
+      prev.map((p) =>
+        p.id === postId
+          ? {
+              ...p,
+              comments: [
+                ...(Array.isArray(p.comments) ? p.comments : []),
+                {
+                  by: currentUserName,
+                  text,
+                  at: new Date().toISOString(),
+                },
+              ],
+            }
+          : p
+      )
+    );
+    // optional: later POST /api/feed/:id/comments
   };
 
   const handleDelete = (postId) => {
     if (!confirm('Delete this post? This cannot be undone.')) return;
     setPosts((prev) => prev.filter((p) => p.id !== postId));
-    // (optional) later: DELETE /api/feed/:id
+    // optional: later DELETE /api/feed/:id
   };
 
   return (
