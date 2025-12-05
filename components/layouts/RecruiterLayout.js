@@ -1,3 +1,4 @@
+// components/layouts/RecruiterLayout.js
 import React, { useEffect, useState } from 'react';
 import Head from 'next/head';
 import RecruiterHeader from '@/components/recruiter/RecruiterHeader';
@@ -99,7 +100,7 @@ export default function RecruiterLayout({
               background: 'white',
               borderRadius: 12,
               padding: '8px 16px',
-              border: '1px solid '#eee',
+              border: '1px solid #eee',
               boxShadow: '0 2px 6px rgba(0,0,0,0.06)',
               minWidth: 0,
             }}
