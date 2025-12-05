@@ -21,8 +21,7 @@ import BulkExportCTA from '@/components/BulkExportCTA';
 // === IMPORT 3 BUTTONS ===
 import ReverseATSButton from '@/components/resume-form/export/ReverseATSButton';
 import HybridATSButton from '@/components/resume-form/export/HybridATSButton';
-import DesignedPDFButton from '@/components/resume-form/export/DesignedPDFButton';
-import { getClientSession } from '@/lib/auth-client';
+import DesignedPDFButton from '@/components/resume-form/export/DesignedPDFButton'; // ← NEW
 
 const ORANGE = '#FF7043';
 
@@ -155,36 +154,6 @@ export default function CreateResumePage() {
   const [openRequired, setOpenRequired] = useState(true);
   const [openOptional, setOpenOptional] = useState(false);
   const [openTailor, setOpenTailor] = useState(false);
-
-  // Auth gate: allow any logged-in user (seeker, coach, recruiter), no role redirects
-  const [checkingAuth, setCheckingAuth] = useState(true);
-
-  useEffect(() => {
-    let cancelled = false;
-
-    async function checkAuth() {
-      try {
-        const session = await getClientSession();
-        if (!session?.user?.id) {
-          await router.replace('/auth/signin');
-          return;
-        }
-      } catch (err) {
-        console.error('[resume/create] auth check failed:', err);
-        await router.replace('/auth/signin');
-        return;
-      } finally {
-        if (!cancelled) {
-          setCheckingAuth(false);
-        }
-      }
-    }
-
-    checkAuth();
-    return () => {
-      cancelled = true;
-    };
-  }, [router]);
 
   // ATS context passed from jobs page (via resume-cover)
   const [atsPack, setAtsPack] = useState(null);
@@ -385,31 +354,6 @@ export default function CreateResumePage() {
       applying. <em>Source: Jobscan 2024 Applicant Study (n=1,200). Results vary.</em>
     </div>
   );
-
-  // While checking auth, show neutral shell (keeps chrome consistent)
-  if (checkingAuth) {
-    return (
-      <SeekerLayout
-        title="Resume Builder"
-        header={Header}
-        right={null}
-        footer={Footer}
-        activeNav="resume-cover"
-      >
-        <div
-          style={{
-            minHeight: '50vh',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            color: '#64748b',
-          }}
-        >
-          Checking your account…
-        </div>
-      </SeekerLayout>
-    );
-  }
 
   return (
     <SeekerLayout
@@ -730,67 +674,68 @@ export default function CreateResumePage() {
         </div>
       </div>
 
-      {/* EXPORT BUTTONS */}
-      <div className="fixed bottom-24 right-6 z-40 flex items-center gap-2 bg-white/90 backdrop-blur-sm p-2 rounded-full shadow-2xl border">
-        {/* ATS PDF */}
-        {router.query.template === 'hybrid' ? (
-          <HybridATSButton data={resumeData}>
-            <div className="bg-teal-600 text-white px-4 py-2 rounded-full font-bold text-xs hover:bg-teal-700 transition-all">
-              ATS PDF
-            </div>
-          </HybridATSButton>
-        ) : (
-          <ReverseATSButton data={resumeData}>
-            <div className="bg-teal-600 text-white px-4 py-2 rounded-full font-bold text-xs hover:bg-teal-700 transition-all">
-              ATS PDF
-            </div>
-          </ReverseATSButton>
-        )}
-        {/* DESIGNED PDF */}
-        <DesignedPDFButton
-          data={resumeData}
-          template={router.query.template === 'hybrid' ? 'hybrid' : 'reverse'}
-        >
-          <div className="bg-orange-500 text-white px-4 py-2 rounded-full font-bold text-xs hover:bg-orange-600 transition-all">
-            Designed PDF
-          </div>
-        </DesignedPDFButton>
-        {/* SAVE + PROGRESS */}
-        <button
-          onClick={saveResume}
-          className="bg-green-600 text-white px-4 py-2 rounded-full font-bold text-xs hover:bg-green-700 transition-all"
-        >
-          Save Resume
-        </button>
-        <div className="bg-white px-3 py-1.5 rounded-full flex items-center gap-1.5 border text-xs ml-1">
-          <div className="relative">
-            <svg className="w-6 h-6">
-              <circle
-                cx="12"
-                cy="12"
-                r="10"
-                fill="none"
-                stroke="#E5E7EB"
-                strokeWidth="2.5"
-              />
-              <circle
-                cx="12"
-                cy="12"
-                r="10"
-                fill="none"
-                stroke="#10B981"
-                strokeWidth="2.5"
-                strokeDasharray={`${(progress / 100) * 62.8} 62.8`}
-                className="transition-all duration-500"
-              />
-            </svg>
-            <span className="absolute inset-0 flex items-center justify-center text-xs font-bold text-gray-700">
-              {progress}%
-            </span>
-          </div>
-          <span className="font-semibold text-gray-600">Ready</span>
-        </div>
+      {/* EXPORT BUTTONS (MOVED UP ~140px) */}
+<div
+  className="fixed z-10 flex items-center gap-2 bg-white/90 backdrop-blur-sm p-2 rounded-full shadow-2xl border"
+  style={{
+    bottom: "160px",   // ← was bottom-6 (~24px). Now lifted ~140px.
+    right: "24px",
+  }}
+>
+  {/* ATS PDF */}
+  {router.query.template === 'hybrid' ? (
+    <HybridATSButton data={resumeData}>
+      <div className="bg-teal-600 text-white px-4 py-2 rounded-full font-bold text-xs hover:bg-teal-700 transition-all">
+        ATS PDF
       </div>
+    </HybridATSButton>
+  ) : (
+    <ReverseATSButton data={resumeData}>
+      <div className="bg-teal-600 text-white px-4 py-2 rounded-full font-bold text-xs hover:bg-teal-700 transition-all">
+        ATS PDF
+      </div>
+    </ReverseATSButton>
+  )}
+
+  {/* DESIGNED PDF */}
+  <DesignedPDFButton
+    data={resumeData}
+    template={router.query.template === 'hybrid' ? 'hybrid' : 'reverse'}
+  >
+    <div className="bg-orange-500 text-white px-4 py-2 rounded-full font-bold text-xs hover:bg-orange-600 transition-all">
+      Designed PDF
+    </div>
+  </DesignedPDFButton>
+
+  {/* SAVE + PROGRESS */}
+  <button
+    onClick={saveResume}
+    className="bg-green-600 text-white px-4 py-2 rounded-full font-bold text-xs hover:bg-green-700 transition-all"
+  >
+    Save Resume
+  </button>
+  <div className="bg-white px-3 py-1.5 rounded-full flex items-center gap-1.5 border text-xs ml-1">
+    <div className="relative">
+      <svg className="w-6 h-6">
+        <circle cx="12" cy="12" r="10" fill="none" stroke="#E5E7EB" strokeWidth="2.5" />
+        <circle
+          cx="12"
+          cy="12"
+          r="10"
+          fill="none"
+          stroke="#10B981"
+          strokeWidth="2.5"
+          strokeDasharray={`${(progress / 100) * 62.8} 62.8`}
+          className="transition-all duration-500"
+        />
+      </svg>
+      <span className="absolute inset-0 flex items-center justify-center text-xs font-bold text-gray-700">
+        {progress}%
+      </span>
+    </div>
+    <span className="font-semibold text-gray-600">Ready</span>
+  </div>
+</div>
 
       {/* BULK EXPORT CTA */}
       <div className="mt-6 max-w-4xl mx-auto">
@@ -809,25 +754,21 @@ export default function CreateResumePage() {
         </div>
       )}
 
-      {/* TOAST */}
       {showToast && (
-        <div
-          style={{
-            position: 'fixed',
-            right: 28,
-            bottom: 100,
-            background: ORANGE,
-            color: 'white',
-            padding: '14px 24px',
-            borderRadius: 12,
-            fontWeight: 700,
-            boxShadow: '0 10px 30px rgba(0,0,0,0.3)',
-            zIndex: 1000,
-          }}
-        >
-          Saved at {savedTime}
-        </div>
-      )}
-    </SeekerLayout>
-  );
-}
+  <div
+    style={{
+      position: 'fixed',
+      right: 28,
+      bottom: 230, // ← was 100. Lifted to stay above moved toolbars.
+      background: ORANGE,
+      color: 'white',
+      padding: '14px 24px',
+      borderRadius: 12,
+      fontWeight: 700,
+      boxShadow: '0 10px 30px rgba(0,0,0,0.3)',
+      zIndex: 1000,
+    }}
+  >
+    Saved at {savedTime}
+  </div>
+)}
