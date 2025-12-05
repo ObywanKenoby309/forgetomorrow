@@ -520,6 +520,8 @@ model FeedPost {
   authorName String
   content    String
   type       String   @default("business") // "business" | "personal"
+  likes      Int      @default(0)
+  comments   Json     @default("[]")       // [{ by, text, at }]
   createdAt  DateTime @default(now())
   updatedAt  DateTime @updatedAt
 

@@ -3,39 +3,36 @@ import { getServerSession } from 'next-auth/next';
 import { authOptions } from '@/pages/api/auth/[...nextauth]';
 import { prisma } from '@/lib/prisma';
 
+function normalizeFeedPost(row) {
+  return {
+    id: row.id,
+    authorId: row.authorId,
+    author: row.authorName,
+    body: row.content,
+    type: row.type || 'business',
+    likes: row.likes ?? 0,
+    comments: Array.isArray(row.comments) ? row.comments : [],
+    createdAt: row.createdAt,
+  };
+}
+
 export default async function handler(req, res) {
-  // ─────────────────────────────────────────────────────────────
-  // GET – load recent posts
-  // ─────────────────────────────────────────────────────────────
   if (req.method === 'GET') {
     try {
-      const posts = await prisma.feedPost.findMany({
+      const rows = await prisma.feedPost.findMany({
         orderBy: { createdAt: 'desc' },
-        take: 50,
       });
 
-      // Map DB → UI shape expected by PostCard/PostCommentsModal
-      const mapped = posts.map((p) => ({
-        id: p.id,
-        authorId: p.authorId,
-        author: p.authorName || 'Member',
-        body: p.content, // 👈 main text
-        type: p.type || 'business',
-        createdAt: p.createdAt,
-        likes: 0,
-        comments: [],
-      }));
-
-      return res.status(200).json({ posts: mapped });
+      const posts = rows.map(normalizeFeedPost);
+      return res.status(200).json({ posts });
     } catch (err) {
       console.error('[FEED GET ERROR]', err);
-      return res.status(500).json({ error: 'Internal server error' });
+      return res
+        .status(500)
+        .json({ error: 'Internal server error while loading feed.' });
     }
   }
 
-  // ─────────────────────────────────────────────────────────────
-  // POST – create a new post
-  // ─────────────────────────────────────────────────────────────
   if (req.method === 'POST') {
     try {
       const session = await getServerSession(req, res, authOptions);
@@ -45,59 +42,42 @@ export default async function handler(req, res) {
       }
 
       const { text, type } = req.body || {};
-      const cleanText = (text ?? '').toString().trim();
-      const cleanType = (type ?? '').toString().toLowerCase();
+      const bodyText = (text || '').trim();
 
-      if (!cleanText) {
+      if (!bodyText) {
         return res.status(400).json({ error: 'Post text is required' });
       }
 
-      if (cleanType !== 'business' && cleanType !== 'personal') {
-        return res.status(400).json({ error: 'Invalid post type' });
-      }
+      const postType =
+        type === 'personal' || type === 'business' ? type : 'business';
 
       const user = session.user;
-
-      const authorName =
+      const displayName =
         user.name ||
         [user.firstName, user.lastName].filter(Boolean).join(' ') ||
-        (user.email ? user.email.split('@')[0] : 'Member');
+        (user.email ? user.email.split('@')[0] : 'Someone');
 
-      // 👇 match your Prisma schema: content + type, NO `text` field
-      const dbPost = await prisma.feedPost.create({
+      const created = await prisma.feedPost.create({
         data: {
           authorId: user.id,
-          authorName,
-          content: cleanText,
-          type: cleanType,
+          authorName: displayName,
+          content: bodyText,
+          type: postType,
+          likes: 0,
+          comments: [],
         },
       });
 
-      // Return in the same shape as GET so the UI can use it directly
-      const post = {
-        id: dbPost.id,
-        authorId: dbPost.authorId,
-        author: dbPost.authorName || 'Member',
-        body: dbPost.content,
-        type: dbPost.type || 'business',
-        createdAt: dbPost.createdAt,
-        likes: 0,
-        comments: [],
-      };
-
-      return res.status(201).json({ post });
+      return res.status(200).json({ post: normalizeFeedPost(created) });
     } catch (err) {
       console.error('[FEED POST ERROR]', err);
       return res.status(500).json({
-        error: 'Internal server error',
-        detail: err?.message ?? String(err),
+        error: 'Internal server error while creating post.',
+        detail: err?.message,
       });
     }
   }
 
-  // ─────────────────────────────────────────────────────────────
-  // Fallback
-  // ─────────────────────────────────────────────────────────────
-  res.setHeader('Allow', 'GET,POST');
+  res.setHeader('Allow', ['GET', 'POST']);
   return res.status(405).json({ error: 'Method not allowed' });
 }

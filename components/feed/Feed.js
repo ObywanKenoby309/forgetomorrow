@@ -97,18 +97,67 @@ export default function Feed() {
     }
   };
 
-  const handleReply = (postId, text) => {
-    setPosts((prev) =>
-      prev.map((p) =>
-        p.id === postId
-          ? {
-              ...p,
-              comments: [...(p.comments || []), { by: currentUserName, text }],
-            }
-          : p
-      )
-    );
-    // (optional) later: POST /api/feed/:id/comments
+  const handleReply = async (postId, text) => {
+    const trimmed = (text || '').trim();
+    if (!trimmed) return;
+
+    try {
+      const res = await fetch('/api/feed/comments', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ postId, text: trimmed }),
+      });
+
+      if (!res.ok) {
+        console.error('Feed COMMENT failed:', await res.text());
+        // Fallback: local update so user still sees it
+        setPosts((prev) =>
+          prev.map((p) =>
+            p.id === postId
+              ? {
+                  ...p,
+                  comments: [
+                    ...(p.comments || []),
+                    {
+                      by: currentUserName,
+                      text: trimmed,
+                      at: new Date().toISOString(),
+                    },
+                  ],
+                }
+              : p
+          )
+        );
+        return;
+      }
+
+      const data = await res.json();
+      const updated = data.post;
+
+      setPosts((prev) =>
+        prev.map((p) => (p.id === updated.id ? updated : p))
+      );
+    } catch (err) {
+      console.error('Feed COMMENT error:', err);
+      // Fallback: same optimistic local update
+      setPosts((prev) =>
+        prev.map((p) =>
+          p.id === postId
+            ? {
+                ...p,
+                comments: [
+                  ...(p.comments || []),
+                  {
+                    by: currentUserName,
+                    text: trimmed,
+                    at: new Date().toISOString(),
+                  },
+                ],
+              }
+            : p
+        )
+      );
+    }
   };
 
   const handleDelete = (postId) => {
