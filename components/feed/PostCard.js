@@ -14,20 +14,25 @@ export default function PostCard({
   const [reportMessage, setReportMessage] = useState('');
 
   const isOwner = currentUserId && post.authorId === currentUserId;
-  const hasComments = (post.comments?.length || 0) > 0;
+  const comments = Array.isArray(post.comments) ? post.comments : [];
+  const hasComments = comments.length > 0;
   const previewCount = 2;
 
   const sendReply = () => {
     const t = reply.trim();
     if (!t) return;
-    onReply?.(post.id, t);
+    // Safety check so it fails loudly in dev if handler is missing
+    if (typeof onReply === 'function') {
+      onReply(post.id, t);
+    } else {
+      console.warn('PostCard: onReply is not defined');
+    }
     setReply('');
   };
 
-  // Emojis send immediately as replies
+  // ⬇️ Emojis should insert into the reply box, not send immediately
   const addEmoji = (emoji) => {
-    if (!onReply) return;
-    onReply(post.id, emoji);
+    setReply((prev) => (prev ? `${prev} ${emoji}` : emoji));
   };
 
   const handleDeleteClick = () => {
@@ -38,7 +43,7 @@ export default function PostCard({
   const handleReportClick = async () => {
     if (reported) return;
 
-    // Optimistic UI: flip state immediately
+    // Optimistic UI
     setReported(true);
     setReportMessage('Submitting your report...');
 
@@ -164,14 +169,14 @@ export default function PostCard({
           className="hover:underline"
           title="View comments"
         >
-          💬 {post.comments.length} Comments
+          💬 {comments.length} Comments
         </button>
       </div>
 
       {/* comments preview */}
       {hasComments && (
         <div className="space-y-2 mb-2">
-          {post.comments.slice(0, previewCount).map((c, i) => (
+          {comments.slice(0, previewCount).map((c, i) => (
             <div key={i} className="text-sm">
               <span className="font-medium">{c.by}:</span> {c.text}
             </div>
@@ -180,13 +185,13 @@ export default function PostCard({
       )}
 
       {/* "view all" link */}
-      {post.comments.length > previewCount && (
+      {comments.length > previewCount && (
         <button
           type="button"
           onClick={() => onOpenComments?.(post)}
           className="text-xs text-gray-600 hover:underline mb-3"
         >
-          View all {post.comments.length} comments
+          View all {comments.length} comments
         </button>
       )}
 
@@ -225,7 +230,7 @@ export default function PostCard({
           <div className="text-xs text-gray-600 mt-1">{reportMessage}</div>
         )}
 
-        {/* emoji bar now sends immediate replies */}
+        {/* emoji bar now injects emoji into the reply input */}
         <QuickEmojiBar onPick={addEmoji} />
       </div>
     </article>
