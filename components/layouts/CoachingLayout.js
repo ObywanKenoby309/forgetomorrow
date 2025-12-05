@@ -27,7 +27,9 @@ export default function CoachingLayout({
 
   const pageTitle = headerTitle || defaultFromNav;
 
-  // --- Mobile flag ---
+  const hasRight = Boolean(right);
+
+  // --- Mobile flag (desktop layout stays original) ---
   const [isMobile, setIsMobile] = useState(false);
 
   useEffect(() => {
@@ -37,14 +39,12 @@ export default function CoachingLayout({
       }
     };
 
-    handleResize(); // run once on mount
+    handleResize(); // run once at mount
     window.addEventListener('resize', handleResize);
     return () => window.removeEventListener('resize', handleResize);
   }, []);
 
-  const hasRight = Boolean(right);
-
-  // Desktop: 3-column layout (sidebar | content | right rail)
+  // --- Desktop vs mobile grid configs ---
   const desktopGrid = {
     display: 'grid',
     gridTemplateColumns: '240px minmax(640px, 1fr) 240px',
@@ -55,7 +55,7 @@ export default function CoachingLayout({
     `,
   };
 
-  // Mobile: single column, stacked
+  // On mobile, show header first, then content, then right rail, then sidebar
   const mobileGrid = {
     display: 'grid',
     gridTemplateColumns: '1fr',
@@ -74,6 +74,8 @@ export default function CoachingLayout({
       `,
   };
 
+  const gridStyles = isMobile ? mobileGrid : desktopGrid;
+
   return (
     <>
       <Head><title>{title}</title></Head>
@@ -81,7 +83,7 @@ export default function CoachingLayout({
 
       <div
         style={{
-          ...(isMobile ? mobileGrid : desktopGrid),
+          ...gridStyles,
           gap: 20,
           padding: isMobile ? '16px' : '30px',
           alignItems: 'start',
