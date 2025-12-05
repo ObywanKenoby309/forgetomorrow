@@ -674,68 +674,67 @@ export default function CreateResumePage() {
         </div>
       </div>
 
-      {/* EXPORT BUTTONS (MOVED UP ~140px) */}
-<div
-  className="fixed z-10 flex items-center gap-2 bg-white/90 backdrop-blur-sm p-2 rounded-full shadow-2xl border"
-  style={{
-    bottom: "160px",   // ← was bottom-6 (~24px). Now lifted ~140px.
-    right: "24px",
-  }}
->
-  {/* ATS PDF */}
-  {router.query.template === 'hybrid' ? (
-    <HybridATSButton data={resumeData}>
-      <div className="bg-teal-600 text-white px-4 py-2 rounded-full font-bold text-xs hover:bg-teal-700 transition-all">
-        ATS PDF
+      {/* EXPORT BUTTONS */}
+      <div className="fixed bottom-24 right-6 z-10 flex items-center gap-2 bg-white/90 backdrop-blur-sm p-2 rounded-full shadow-2xl border">
+        {/* ATS PDF */}
+        {router.query.template === 'hybrid' ? (
+          <HybridATSButton data={resumeData}>
+            <div className="bg-teal-600 text-white px-4 py-2 rounded-full font-bold text-xs hover:bg-teal-700 transition-all">
+              ATS PDF
+            </div>
+          </HybridATSButton>
+        ) : (
+          <ReverseATSButton data={resumeData}>
+            <div className="bg-teal-600 text-white px-4 py-2 rounded-full font-bold text-xs hover:bg-teal-700 transition-all">
+              ATS PDF
+            </div>
+          </ReverseATSButton>
+        )}
+        {/* DESIGNED PDF */}
+        <DesignedPDFButton
+          data={resumeData}
+          template={router.query.template === 'hybrid' ? 'hybrid' : 'reverse'}
+        >
+          <div className="bg-orange-500 text-white px-4 py-2 rounded-full font-bold text-xs hover:bg-orange-600 transition-all">
+            Designed PDF
+          </div>
+        </DesignedPDFButton>
+        {/* SAVE + PROGRESS */}
+        <button
+          onClick={saveResume}
+          className="bg-green-600 text-white px-4 py-2 rounded-full font-bold text-xs hover:bg-green-700 transition-all"
+        >
+          Save Resume
+        </button>
+        <div className="bg-white px-3 py-1.5 rounded-full flex items-center gap-1.5 border text-xs ml-1">
+          <div className="relative">
+            <svg className="w-6 h-6">
+              <circle
+                cx="12"
+                cy="12"
+                r="10"
+                fill="none"
+                stroke="#E5E7EB"
+                strokeWidth="2.5"
+              />
+              <circle
+                cx="12"
+                cy="12"
+                r="10"
+                fill="none"
+                stroke="#10B981"
+                strokeWidth="2.5"
+                strokeDasharray={`${(progress / 100) * 62.8} 62.8`}
+                className="transition-all duration-500"
+              />
+            </svg>
+            <span className="absolute inset-0 flex items-center justifyCenter text-xs font-bold text-gray-700">
+              {progress}%
+            </span>
+          </div>
+          <span className="font-semibold text-gray-600">Ready</span>
+        </div>
       </div>
-    </HybridATSButton>
-  ) : (
-    <ReverseATSButton data={resumeData}>
-      <div className="bg-teal-600 text-white px-4 py-2 rounded-full font-bold text-xs hover:bg-teal-700 transition-all">
-        ATS PDF
-      </div>
-    </ReverseATSButton>
-  )}
-
-  {/* DESIGNED PDF */}
-  <DesignedPDFButton
-    data={resumeData}
-    template={router.query.template === 'hybrid' ? 'hybrid' : 'reverse'}
-  >
-    <div className="bg-orange-500 text-white px-4 py-2 rounded-full font-bold text-xs hover:bg-orange-600 transition-all">
-      Designed PDF
-    </div>
-  </DesignedPDFButton>
-
-  {/* SAVE + PROGRESS */}
-  <button
-    onClick={saveResume}
-    className="bg-green-600 text-white px-4 py-2 rounded-full font-bold text-xs hover:bg-green-700 transition-all"
-  >
-    Save Resume
-  </button>
-  <div className="bg-white px-3 py-1.5 rounded-full flex items-center gap-1.5 border text-xs ml-1">
-    <div className="relative">
-      <svg className="w-6 h-6">
-        <circle cx="12" cy="12" r="10" fill="none" stroke="#E5E7EB" strokeWidth="2.5" />
-        <circle
-          cx="12"
-          cy="12"
-          r="10"
-          fill="none"
-          stroke="#10B981"
-          strokeWidth="2.5"
-          strokeDasharray={`${(progress / 100) * 62.8} 62.8`}
-          className="transition-all duration-500"
-        />
-      </svg>
-      <span className="absolute inset-0 flex items-center justify-center text-xs font-bold text-gray-700">
-        {progress}%
-      </span>
-    </div>
-    <span className="font-semibold text-gray-600">Ready</span>
-  </div>
-</div>
 
       {/* BULK EXPORT CTA */}
       <div className="mt-6 max-w-4xl mx-auto">
@@ -754,21 +753,25 @@ export default function CreateResumePage() {
         </div>
       )}
 
+      {/* TOAST */}
       {showToast && (
-  <div
-    style={{
-      position: 'fixed',
-      right: 28,
-      bottom: 230, // ← was 100. Lifted to stay above moved toolbars.
-      background: ORANGE,
-      color: 'white',
-      padding: '14px 24px',
-      borderRadius: 12,
-      fontWeight: 700,
-      boxShadow: '0 10px 30px rgba(0,0,0,0.3)',
-      zIndex: 1000,
-    }}
-  >
-    Saved at {savedTime}
-  </div>
-)}
+        <div
+          style={{
+            position: 'fixed',
+            right: 28,
+            bottom: 170,
+            background: ORANGE,
+            color: 'white',
+            padding: '14px 24px',
+            borderRadius: 12,
+            fontWeight: 700,
+            boxShadow: '0 10px 30px rgba(0,0,0,0.3)',
+            zIndex: 1000,
+          }}
+        >
+          Saved at {savedTime}
+        </div>
+      )}
+    </SeekerLayout>
+  );
+}
