@@ -127,7 +127,7 @@ export default function Feed() {
   const handleReply = (postId, text) => {
     setPosts((prev) =>
       prev.map((p) =>
-        p.id === postId
+        p.id == postId
           ? {
               ...p,
               comments: [

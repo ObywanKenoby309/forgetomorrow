@@ -21,7 +21,6 @@ export default function PostCard({
   const sendReply = () => {
     const t = reply.trim();
     if (!t) return;
-    // Safety check so it fails loudly in dev if handler is missing
     if (typeof onReply === 'function') {
       onReply(post.id, t);
     } else {
@@ -30,7 +29,7 @@ export default function PostCard({
     setReply('');
   };
 
-  // ⬇️ Emojis should insert into the reply box, not send immediately
+  // Emojis insert into the reply box, not send
   const addEmoji = (emoji) => {
     setReply((prev) => (prev ? `${prev} ${emoji}` : emoji));
   };
@@ -230,7 +229,7 @@ export default function PostCard({
           <div className="text-xs text-gray-600 mt-1">{reportMessage}</div>
         )}
 
-        {/* emoji bar now injects emoji into the reply input */}
+        {/* emoji bar inserts into reply input */}
         <QuickEmojiBar onPick={addEmoji} />
       </div>
     </article>
