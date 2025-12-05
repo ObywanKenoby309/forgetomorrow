@@ -1,4 +1,4 @@
-// components/LandingFooter.tsx ← FINAL CLEAN VERSION WITH TRACKING POLICY AND CONTACT FIXED
+// components/LandingFooter.tsx ← FINAL CLEAN VERSION WITH PATENT NOTICE
 import Link from 'next/link';
 import { Twitter, Facebook, Youtube } from 'lucide-react';
 
@@ -139,6 +139,15 @@ export default function LandingFooter() {
 
         {/* Bottom */}
         <div className="border-t border-gray-800 pt-8 text-center text-sm text-gray-500">
+
+          {/* Patent Notice (Option B placement) */}
+          <p className="text-xs text-gray-500 max-w-3xl mx-auto mb-3 leading-relaxed">
+            ForgeTomorrow’s technologies — including its AI explainability engine, recruiter analytics systems,
+            human–AI workflow orchestration models, and adaptive career-matching platform — are protected under
+            multiple U.S. and international patent filings (pending). Unauthorized reproduction, reverse engineering,
+            or replication of these systems is prohibited.
+          </p>
+
           <p>© {new Date().getFullYear()} Forge Tomorrow, Inc. All rights reserved.</p>
         </div>
       </div>
