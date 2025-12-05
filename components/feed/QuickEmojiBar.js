@@ -3,6 +3,10 @@ export default function QuickEmojiBar({ onPick }) {
   const emojis = ['👍', '🔥', '🎉', '👏', '❤️'];
 
   const handleClick = (emoji) => {
+    console.log('[EMOJI BAR] emoji clicked', {
+      emoji,
+      hasOnPick: typeof onPick === 'function',
+    });
     if (typeof onPick === 'function') {
       onPick(emoji);
     }

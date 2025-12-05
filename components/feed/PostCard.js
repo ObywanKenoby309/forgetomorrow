@@ -21,17 +21,13 @@ export default function PostCard({
   const sendReply = () => {
     const t = reply.trim();
     if (!t) return;
+
     if (typeof onReply === 'function') {
       onReply(post.id, t);
     } else {
       console.warn('PostCard: onReply is not defined');
     }
     setReply('');
-  };
-
-  // Emojis insert into the reply box, not send
-  const addEmoji = (emoji) => {
-    setReply((prev) => (prev ? `${prev} ${emoji}` : emoji));
   };
 
   const handleDeleteClick = () => {
@@ -229,8 +225,20 @@ export default function PostCard({
           <div className="text-xs text-gray-600 mt-1">{reportMessage}</div>
         )}
 
-        {/* emoji bar inserts into reply input */}
-        <QuickEmojiBar onPick={addEmoji} />
+        {/* 🔥 Emoji bar: ONE-CLICK REACTIONS */}
+        <QuickEmojiBar
+          onPick={(emoji) => {
+            // Track what happens
+            console.log('[EMOJI] one-click reaction', {
+              postId: post.id,
+              emoji,
+              hasOnReply: typeof onReply === 'function',
+            });
+            if (typeof onReply === 'function') {
+              onReply(post.id, emoji);
+            }
+          }}
+        />
       </div>
     </article>
   );

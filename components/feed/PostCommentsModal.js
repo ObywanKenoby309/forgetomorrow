@@ -10,11 +10,21 @@ export default function PostCommentsModal({ post, onClose, onReply }) {
   const send = () => {
     const t = text.trim();
     if (!t) return;
+    console.log('[COMMENTS MODAL] send called', {
+      postId: post.id,
+      text: t,
+      hasOnReply: typeof onReply === 'function',
+    });
     onReply?.(post.id, t);
     setText('');
   };
 
   const addEmoji = (emoji) => {
+    console.log('[COMMENTS MODAL] addEmoji', {
+      postId: post.id,
+      emoji,
+      before: text,
+    });
     setText((prev) => (prev ? `${prev} ${emoji}` : emoji));
   };
 
