@@ -11,6 +11,7 @@ export default function PostCard({
 }) {
   const [reply, setReply] = useState('');
   const [reported, setReported] = useState(false);
+  const [reportMessage, setReportMessage] = useState('');
 
   const isOwner = currentUserId && post.authorId === currentUserId;
   const hasComments = (post.comments?.length || 0) > 0;
@@ -32,8 +33,34 @@ export default function PostCard({
     onDelete(post.id);
   };
 
-  const handleReportClick = () => {
-    setReported(true);
+  const handleReportClick = async () => {
+    if (reported) return;
+
+    try {
+      const res = await fetch('/api/feed/report', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ postId: post.id }),
+      });
+
+      if (!res.ok) {
+        console.error('Feed REPORT failed:', await res.text());
+        setReportMessage(
+          "We couldn't submit your report. Please try again or contact support."
+        );
+        return;
+      }
+
+      setReported(true);
+      setReportMessage(
+        'Your report has been submitted. Our team will review this post.'
+      );
+    } catch (err) {
+      console.error('Feed REPORT error:', err);
+      setReportMessage(
+        "We couldn't submit your report. Please try again or contact support."
+      );
+    }
   };
 
   const createdAtLabel = (() => {
@@ -46,7 +73,10 @@ export default function PostCard({
   })();
 
   return (
-    <article className="bg-white rounded-lg shadow p-4">
+    <article
+      id={`post-${post.id}`}
+      className="bg-white rounded-lg shadow p-4"
+    >
       {/* header */}
       <header className="mb-2">
         <div className="font-semibold">{post.author}</div>
@@ -60,7 +90,7 @@ export default function PostCard({
       {/* body text */}
       <p className="mb-3 whitespace-pre-wrap">{post.body}</p>
 
-      {/* attachments: show full image/video within reasonable bounds */}
+      {/* attachments */}
       {Array.isArray(post.attachments) && post.attachments.length > 0 && (
         <div className="mb-3 grid grid-cols-1 sm:grid-cols-2 gap-3">
           {post.attachments.map((a, idx) => (
@@ -153,7 +183,7 @@ export default function PostCard({
             Reply
           </button>
 
-          {/* OWNER: Delete button (you can clean up your own posts) */}
+          {/* OWNER: Delete button */}
           {isOwner && (
             <button
               type="button"
@@ -180,6 +210,11 @@ export default function PostCard({
             </button>
           )}
         </div>
+
+        {/* inline confirmation/error for report */}
+        {reportMessage && (
+          <div className="text-xs text-gray-600 mt-1">{reportMessage}</div>
+        )}
 
         {/* emoji bar just injects emoji into reply input */}
         <QuickEmojiBar onPick={addEmoji} />
