@@ -21,7 +21,8 @@ import BulkExportCTA from '@/components/BulkExportCTA';
 // === IMPORT 3 BUTTONS ===
 import ReverseATSButton from '@/components/resume-form/export/ReverseATSButton';
 import HybridATSButton from '@/components/resume-form/export/HybridATSButton';
-import DesignedPDFButton from '@/components/resume-form/export/DesignedPDFButton'; // ← NEW
+import DesignedPDFButton from '@/components/resume-form/export/DesignedPDFButton';
+import { getClientSession } from '@/lib/auth-client';
 
 const ORANGE = '#FF7043';
 
@@ -154,6 +155,36 @@ export default function CreateResumePage() {
   const [openRequired, setOpenRequired] = useState(true);
   const [openOptional, setOpenOptional] = useState(false);
   const [openTailor, setOpenTailor] = useState(false);
+
+  // Auth gate: allow any logged-in user (seeker, coach, recruiter), no role redirects
+  const [checkingAuth, setCheckingAuth] = useState(true);
+
+  useEffect(() => {
+    let cancelled = false;
+
+    async function checkAuth() {
+      try {
+        const session = await getClientSession();
+        if (!session?.user?.id) {
+          await router.replace('/auth/signin');
+          return;
+        }
+      } catch (err) {
+        console.error('[resume/create] auth check failed:', err);
+        await router.replace('/auth/signin');
+        return;
+      } finally {
+        if (!cancelled) {
+          setCheckingAuth(false);
+        }
+      }
+    }
+
+    checkAuth();
+    return () => {
+      cancelled = true;
+    };
+  }, [router]);
 
   // ATS context passed from jobs page (via resume-cover)
   const [atsPack, setAtsPack] = useState(null);
@@ -354,6 +385,31 @@ export default function CreateResumePage() {
       applying. <em>Source: Jobscan 2024 Applicant Study (n=1,200). Results vary.</em>
     </div>
   );
+
+  // While checking auth, show neutral shell (keeps chrome consistent)
+  if (checkingAuth) {
+    return (
+      <SeekerLayout
+        title="Resume Builder"
+        header={Header}
+        right={null}
+        footer={Footer}
+        activeNav="resume-cover"
+      >
+        <div
+          style={{
+            minHeight: '50vh',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            color: '#64748b',
+          }}
+        >
+          Checking your account…
+        </div>
+      </SeekerLayout>
+    );
+  }
 
   return (
     <SeekerLayout
@@ -675,7 +731,7 @@ export default function CreateResumePage() {
       </div>
 
       {/* EXPORT BUTTONS */}
-      <div className="fixed bottom-6 right-6 z-10 flex items-center gap-2 bg-white/90 backdrop-blur-sm p-2 rounded-full shadow-2xl border">
+      <div className="fixed bottom-24 right-6 z-40 flex items-center gap-2 bg-white/90 backdrop-blur-sm p-2 rounded-full shadow-2xl border">
         {/* ATS PDF */}
         {router.query.template === 'hybrid' ? (
           <HybridATSButton data={resumeData}>

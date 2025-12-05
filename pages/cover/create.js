@@ -133,6 +133,8 @@ export default function CoverLetterPage() {
   const [openContent, setOpenContent] = useState(true);
   const [openTailor, setOpenTailor] = useState(false);
 
+  const [showToast, setShowToast] = useState(false);
+
   const savedTime = saveEventAt
     ? new Date(saveEventAt).toLocaleTimeString([], {
         hour: '2-digit',
@@ -230,6 +232,14 @@ export default function CoverLetterPage() {
     return () => clearInterval(timer);
   }, [recipient, company, role, greeting, opening, body, closing, signoff, portfolio]);
 
+  // Toast behavior (match resume/create)
+  useEffect(() => {
+    if (!saveEventAt) return;
+    setShowToast(true);
+    const t = setTimeout(() => setShowToast(false), 2200);
+    return () => clearTimeout(t);
+  }, [saveEventAt]);
+
   const runAITailor = async () => {
     if (!jd.trim()) return;
     setIsLoading(true);
@@ -307,10 +317,8 @@ CLOSING: ...
     <section className="bg-white border border-gray-200 rounded-xl p-8 text-center shadow-sm">
       <h1 className="text-3xl font-bold text-orange-600">Cover Builder</h1>
       <p className="text-gray-600 mt-3 max-w-2xl mx-auto">
-        1 letter. 3 bullets. 100% tailored.
-        {' '}
-        No generic paragraphs. Only your real wins.
-        {' '}
+        1 letter. 3 bullets. 100% tailored.{' '}
+        No generic paragraphs. Only your real wins.{' '}
         Beats 3-paragraph letters every time.
       </p>
       <div className="flex items-center justify-center gap-8 mt-6">
@@ -738,53 +746,18 @@ CLOSING: ...
         </div>
       </div>
 
-      {/* EXPORT BUTTONS */}
-      <div
-        style={{
-          position: 'fixed',
-          bottom: 28,
-          right: 28,
-          zIndex: 1000,
-          display: 'flex',
-          gap: 12,
-        }}
-      >
+      {/* EXPORT BUTTONS (match resume/create style & position) */}
+      <div className="fixed bottom-24 right-6 z-40 flex items-center gap-2 bg-white/90 backdrop-blur-sm p-2 rounded-full shadow-2xl border">
         <CoverPDFButton templateId="ats-cover" data={letterData}>
-          <button
-            style={{
-              background: '#10b981',
-              color: 'white',
-              padding: '18px 32px',
-              borderRadius: 50,
-              border: 'none',
-              fontWeight: 800,
-              fontSize: 18,
-              boxShadow: '0 15px 35px rgba(16,185,129,0.5)',
-              cursor: 'pointer',
-              transition: 'all 0.2s',
-            }}
-          >
+          <div className="bg-teal-600 text-white px-4 py-2 rounded-full font-bold text-xs hover:bg-teal-700 transition-all cursor-pointer">
             ATS PDF
-          </button>
+          </div>
         </CoverPDFButton>
 
         <CoverPDFButton templateId="cover-pdf" data={letterData}>
-          <button
-            style={{
-              background: ORANGE,
-              color: 'white',
-              padding: '18px 32px',
-              borderRadius: 12,
-              border: 'none',
-              fontWeight: 800,
-              fontSize: 18,
-              boxShadow: '0 15px 35px rgba(255,112,67,0.5)',
-              cursor: 'pointer',
-              transition: 'all 0.2s',
-            }}
-          >
+          <div className="bg-orange-500 text-white px-4 py-2 rounded-full font-bold text-xs hover:bg-orange-600 transition-all cursor-pointer">
             Designed PDF
-          </button>
+          </div>
         </CoverPDFButton>
       </div>
 
@@ -792,7 +765,7 @@ CLOSING: ...
         <BulkExportCTA />
       </div>
 
-      {saveEventAt && (
+      {saveEventAt && showToast && (
         <div
           style={{
             position: 'fixed',
