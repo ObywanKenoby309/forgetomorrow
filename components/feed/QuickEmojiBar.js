@@ -1,15 +1,19 @@
 // components/feed/QuickEmojiBar.js
 export default function QuickEmojiBar({ onPick }) {
-  const emojis = ['👍', '👏', '🔥', '🎉', '💡', '❤️'];
+  const emojis = ['👍', '🎉', '💪', '🔥', '🙏', '😊'];
+
+  const handleClick = (emoji) => {
+    onPick?.(emoji);
+  };
 
   return (
-    <div className="flex flex-wrap gap-2 text-xl">
+    <div className="flex flex-wrap gap-2 text-xl mt-1">
       {emojis.map((emoji) => (
         <button
           key={emoji}
           type="button"
-          onClick={() => onPick?.(emoji)}
-          className="rounded-full px-2 py-1 hover:bg-gray-100"
+          onClick={() => handleClick(emoji)}
+          className="hover:scale-110 transition-transform"
           aria-label={`React with ${emoji}`}
         >
           {emoji}
