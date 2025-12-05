@@ -23,8 +23,53 @@ export default function SupportFloatingButton() {
     return null;
   }
 
+  // Only show on *app* surfaces, never on public marketing pages.
+  // Add new app sections here as needed.
+  const pathname = router.pathname || '';
+  const allowedPrefixes = [
+    '/seeker',
+    '/recruiter',
+    '/coaching',
+    '/jobs',
+    '/resume',
+    '/cover',
+    '/roadmap',
+    '/feed',
+    '/profile',
+    '/seeker-dashboard',
+    '/recruiter-dashboard',
+    '/coaching-dashboard',
+    '/support', // still treated as app, but hidden above by hideOnRoutes
+  ];
+
+  const isAllowed = allowedPrefixes.some((prefix) =>
+    pathname.startsWith(prefix)
+  );
+
+  if (!isAllowed) {
+    // e.g. '/', '/pricing', '/about', etc. → no floating button
+    return null;
+  }
+
   // Preserve chrome mode (seeker / coach / recruiter-smb / recruiter-ent)
-  const chrome = String(router.query.chrome || '').toLowerCase();
+  const queryChrome = String(router.query.chrome || '').toLowerCase();
+  let chrome = queryChrome;
+
+  // If chrome not explicitly set in URL, derive from user role
+  if (!chrome) {
+    const role = String(session.user.role || '').toLowerCase();
+
+    if (role.startsWith('recruiter')) {
+      // recruiter_smb, recruiter_ent, recruiter_admin, etc.
+      chrome = role.includes('ent') ? 'recruiter-ent' : 'recruiter-smb';
+    } else if (role.includes('coach')) {
+      chrome = 'coach';
+    } else {
+      // default to seeker experience
+      chrome = 'seeker';
+    }
+  }
+
   const supportHref = chrome ? `/support?chrome=${chrome}` : '/support';
 
   const handleClick = (e) => {
