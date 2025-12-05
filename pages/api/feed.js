@@ -1,60 +1,58 @@
 // pages/api/feed.js
-let posts = [
+
+let POSTS = [
   {
-    id: 'p1',
+    id: 'seed-1',
     authorId: 'system',
     author: 'ForgeTomorrow',
-    content: 'Welcome to your new feed. Share wins, lessons, and questions here.',
-    type: 'business',
+    text: 'Welcome to your shared ForgeTomorrow feed. Posts from any role appear here.',
+    type: 'business', // 'business' | 'personal'
+    audience: 'both',
+    createdAt: Date.now() - 5 * 60 * 1000, // 5m ago
     likes: 0,
     comments: [],
-    createdAt: new Date().toISOString(),
   },
 ];
 
 export default function handler(req, res) {
   if (req.method === 'GET') {
-    // Return newest first
-    return res.status(200).json({ posts: posts || [] });
+    // newest first
+    const posts = [...POSTS].sort((a, b) => b.createdAt - a.createdAt);
+    return res.status(200).json({ posts });
   }
 
   if (req.method === 'POST') {
     try {
       const body = req.body || {};
+      const text = (body.text || '').trim();
 
-      // We accept either `content` or `text` from the composer
-      const content = body.content || body.text || '';
-      const type = body.type === 'personal' ? 'personal' : 'business';
-
-      if (!content || typeof content !== 'string') {
-        return res
-          .status(400)
-          .json({ error: 'Post content is required as `content` or `text`.' });
+      if (!text) {
+        return res.status(400).json({ error: 'Post text is required.' });
       }
 
-      const now = new Date();
-      const id = 'p_' + now.getTime().toString(36);
+      const now = Date.now();
 
-      const post = {
-        id,
+      const newPost = {
+        id: `p_${now}_${Math.random().toString(36).slice(2, 8)}`,
+        text,
+        type: body.type === 'personal' ? 'personal' : 'business',
+        audience: body.audience || 'both',
         authorId: body.authorId || 'anon',
-        author: body.author || 'Anonymous',
-        content,
-        type,
-        likes: typeof body.likes === 'number' ? body.likes : 0,
-        comments: Array.isArray(body.comments) ? body.comments : [],
-        createdAt: now.toISOString(),
+        author: body.authorName || 'ForgeTomorrow',
+        createdAt: now,
+        likes: 0,
+        comments: [],
       };
 
-      // Prepend newest
-      posts = [post, ...posts];
+      POSTS.unshift(newPost);
 
-      return res.status(201).json({ post });
+      return res.status(201).json({ post: newPost });
     } catch (err) {
-      console.error('[api/feed] POST error:', err);
+      console.error('[api/feed] POST error', err);
       return res.status(500).json({ error: 'Failed to create post.' });
     }
   }
 
+  res.setHeader('Allow', ['GET', 'POST']);
   return res.status(405).json({ error: 'Method not allowed' });
 }

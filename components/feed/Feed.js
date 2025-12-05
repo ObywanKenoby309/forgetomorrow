@@ -3,23 +3,36 @@ import { useEffect, useState } from "react";
 import PostComposer from "./PostComposer";
 import PostList from "./PostList";
 
-export default function Feed({
-  currentUserId = "me",
-  currentUserName = "You",
-}) {
+// For now, simple stub. Later we can pull from session.
+const currentUserId = "me";
+const currentUserName = "You";
+
+export default function Feed() {
   const [filter, setFilter] = useState("both");
   const [showComposer, setShowComposer] = useState(false);
   const [posts, setPosts] = useState([]);
 
-  // Load feed posts from shared API
+  // Load posts from API (shared across roles)
   useEffect(() => {
     fetch("/api/feed")
       .then((res) => res.json())
-      .then((data) => setPosts(data.posts || []))
+      .then((data) => {
+        const normalized = (data.posts || []).map((p) => ({
+          id: p.id,
+          authorId: p.authorId ?? "anon",
+          author: p.author ?? "ForgeTomorrow",
+          text: p.text ?? "",
+          type: p.type ?? "business",
+          audience: p.audience ?? "both",
+          createdAt: p.createdAt ?? Date.now(),
+          likes: p.likes ?? 0,
+          comments: Array.isArray(p.comments) ? p.comments : [],
+        }));
+        setPosts(normalized);
+      })
       .catch((err) => console.log("Feed error:", err));
   }, []);
 
-  // Lock body scroll when composer is open
   useEffect(() => {
     if (!showComposer) return;
     const prev = document.body.style.overflow;
@@ -29,48 +42,47 @@ export default function Feed({
     };
   }, [showComposer]);
 
-  // Create a new post: optimistic insert + persist to /api/feed
   const handleNewPost = async (post) => {
-    const safePost = {
+    // post likely contains { text, type, audience }
+    const payload = {
+      text: post.text,
+      type: post.type,
+      audience: post.audience,
       authorId: currentUserId,
-      author: currentUserName,
-      createdAt: Date.now(),
-      type: "business",
-      likes: 0,
-      comments: [],
-      ...post,
+      authorName: currentUserName,
     };
-
-    // Optimistic update so UI feels instant
-    setPosts((prev) => [safePost, ...prev]);
-    setShowComposer(false);
 
     try {
       const res = await fetch("/api/feed", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(safePost),
+        body: JSON.stringify(payload),
       });
 
       if (!res.ok) {
-        console.error("Feed POST failed:", await res.text());
-        return;
-      }
-
-      const data = await res.json().catch(() => ({}));
-      const created = data.post;
-
-      if (created && created.id) {
-        // Replace optimistic post with server version (has real id, createdAt)
-        setPosts((prev) => {
-          // Drop the optimistic one (same content & createdAt we just used)
-          const withoutOptimistic = prev.filter((p) => p !== safePost);
-          return [created, ...withoutOptimistic];
-        });
+        console.error("Failed to create post", await res.text());
+        // Fallback: local optimistic insert
+        const safePost = {
+          id: `temp_${Date.now()}`,
+          authorId: currentUserId,
+          author: currentUserName,
+          createdAt: Date.now(),
+          type: post.type || "business",
+          audience: post.audience || "both",
+          likes: 0,
+          comments: [],
+          text: post.text || "",
+        };
+        setPosts((prev) => [safePost, ...prev]);
+      } else {
+        const data = await res.json();
+        const saved = data.post;
+        setPosts((prev) => [saved, ...prev]);
       }
     } catch (err) {
-      console.error("Error creating feed post:", err);
-      // If POST fails, we keep the optimistic one so user still sees their post.
+      console.error("Feed POST error:", err);
+    } finally {
+      setShowComposer(false);
     }
   };
 
@@ -90,7 +102,6 @@ export default function Feed({
   const handleDelete = (postId) => {
     if (!confirm("Delete this post? This cannot be undone.")) return;
     setPosts((prev) => prev.filter((p) => p.id !== postId));
-    // NOTE: No API delete yet; this is fine for MVP/testing.
   };
 
   return (
