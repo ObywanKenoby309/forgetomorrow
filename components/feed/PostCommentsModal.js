@@ -55,8 +55,8 @@ export default function PostCommentsModal({ post, onClose, onReply }) {
 
         <p className="mb-4 whitespace-pre-wrap">{post.body}</p>
 
-        {/* full comments list */}
-        <div className="border-t pt-4 space-y-3 max-height-[50vh] max-h-[50vh] overflow-y-auto">
+        {/* existing comments */}
+        <div className="border-t pt-4 space-y-3 max-h-[50vh] overflow-y-auto">
           {post.comments.length === 0 ? (
             <div className="text-sm text-gray-500">
               No comments yet—be the first!

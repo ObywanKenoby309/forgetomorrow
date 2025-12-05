@@ -33,7 +33,6 @@ export default function PostCard({
   };
 
   const handleReportClick = () => {
-    // simple local acknowledgement (no alerts)
     setReported(true);
   };
 
@@ -61,9 +60,9 @@ export default function PostCard({
       {/* body text */}
       <p className="mb-3 whitespace-pre-wrap">{post.body}</p>
 
-      {/* attachments (images / videos / links) */}
+      {/* attachments: show full image/video within reasonable bounds */}
       {Array.isArray(post.attachments) && post.attachments.length > 0 && (
-        <div className="mb-3 grid grid-cols-2 sm:grid-cols-3 gap-3">
+        <div className="mb-3 grid grid-cols-1 sm:grid-cols-2 gap-3">
           {post.attachments.map((a, idx) => (
             <div
               key={idx}
@@ -73,14 +72,14 @@ export default function PostCard({
                 <img
                   src={a.url}
                   alt={a.name || 'image'}
-                  className="w-full h-28 object-cover rounded"
+                  className="w-full max-h-96 object-contain rounded"
                 />
               )}
               {a.type === 'video' && (
                 <video
                   src={a.url}
                   controls
-                  className="w-full h-28 object-cover rounded"
+                  className="w-full max-h-96 object-contain rounded"
                 />
               )}
               {a.type === 'link' && (
@@ -101,7 +100,7 @@ export default function PostCard({
         </div>
       )}
 
-      {/* meta row: likes + open comments */}
+      {/* meta row */}
       <div className="text-sm text-gray-600 mb-3 flex items-center gap-4">
         <span>👍 {post.likes ?? 0}</span>
         <button
@@ -114,7 +113,7 @@ export default function PostCard({
         </button>
       </div>
 
-      {/* comments preview (top 2) */}
+      {/* comments preview */}
       {hasComments && (
         <div className="space-y-2 mb-2">
           {post.comments.slice(0, previewCount).map((c, i) => (
@@ -125,7 +124,7 @@ export default function PostCard({
         </div>
       )}
 
-      {/* "view all comments" */}
+      {/* "view all" link */}
       {post.comments.length > previewCount && (
         <button
           type="button"
@@ -136,7 +135,7 @@ export default function PostCard({
         </button>
       )}
 
-      {/* reply input + actions + emoji bar */}
+      {/* reply row + emoji bar + delete/report */}
       <div className="space-y-2">
         <div className="flex flex-wrap gap-2 items-center">
           <input
@@ -154,26 +153,26 @@ export default function PostCard({
             Reply
           </button>
 
-          {/* Owner-only delete button, same shape as Reply but gray */}
+          {/* OWNER: Delete button (you can clean up your own posts) */}
           {isOwner && (
             <button
               type="button"
               onClick={handleDeleteClick}
-              className="px-3 py-2 rounded-md bg-gray-600 text-white text-sm font-semibold hover:bg-gray-700"
+              className="px-3 py-2 rounded-md bg-red-600 text-white text-sm font-semibold hover:bg-red-700"
             >
               Delete
             </button>
           )}
 
-          {/* Non-owner: Report button */}
+          {/* NON-OWNER: red Report button */}
           {!isOwner && (
             <button
               type="button"
               onClick={handleReportClick}
               className={`px-3 py-2 rounded-md text-sm font-semibold ${
                 reported
-                  ? 'bg-gray-300 text-gray-700 cursor-default'
-                  : 'bg-gray-500 text-white hover:bg-gray-600'
+                  ? 'bg-red-200 text-red-800 cursor-default'
+                  : 'bg-red-600 text-white hover:bg-red-700'
               }`}
               disabled={reported}
             >
@@ -182,7 +181,7 @@ export default function PostCard({
           )}
         </div>
 
-        {/* emoji bar that adds to reply text (no popups) */}
+        {/* emoji bar just injects emoji into reply input */}
         <QuickEmojiBar onPick={addEmoji} />
       </div>
     </article>
