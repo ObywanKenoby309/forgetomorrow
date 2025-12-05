@@ -23,19 +23,24 @@ export default function RecruiterLayout({
   initialOpen,               // optional section defaults
   activeNav = 'dashboard',   // default active nav item
 }) {
+  // Simple mobile flag based on viewport width
   const [isMobile, setIsMobile] = useState(false);
 
   useEffect(() => {
     const handleResize = () => {
-      setIsMobile(window.innerWidth < 768);
+      if (typeof window !== 'undefined') {
+        setIsMobile(window.innerWidth < 768);
+      }
     };
-    handleResize();
+
+    handleResize(); // run once on mount
     window.addEventListener('resize', handleResize);
     return () => window.removeEventListener('resize', handleResize);
   }, []);
 
   const hasRight = Boolean(right);
 
+  // Desktop: 3-column grid (sidebar | content | right rail)
   const desktopGrid = {
     display: 'grid',
     gridTemplateColumns: '240px minmax(640px, 1fr) 240px',
@@ -46,6 +51,7 @@ export default function RecruiterLayout({
     `,
   };
 
+  // Mobile: single column, stacked
   const mobileGrid = {
     display: 'grid',
     gridTemplateColumns: '1fr',
@@ -76,7 +82,8 @@ export default function RecruiterLayout({
         style={{
           ...(isMobile ? mobileGrid : desktopGrid),
           gap: 20,
-          padding: '30px 16px',
+          // slightly reduced horizontal padding for smaller screens
+          padding: isMobile ? '16px' : '30px 16px',
           alignItems: 'start',
           boxSizing: 'border-box',
         }}

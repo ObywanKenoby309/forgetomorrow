@@ -1,3 +1,4 @@
+// components/layouts/CoachingLayout.js
 import React, { useEffect, useState } from 'react';
 import Head from 'next/head';
 import CoachingHeader from '@/components/coaching/CoachingHeader';
@@ -14,17 +15,6 @@ export default function CoachingLayout({
   activeNav = 'overview',     // ← keep receiving this
   sidebarInitialOpen,         // ← and this
 }) {
-  const [isMobile, setIsMobile] = useState(false);
-
-  useEffect(() => {
-    const handleResize = () => {
-      setIsMobile(window.innerWidth < 768);
-    };
-    handleResize();
-    window.addEventListener('resize', handleResize);
-    return () => window.removeEventListener('resize', handleResize);
-  }, []);
-
   const defaultFromNav = {
     overview: 'Your Coaching Dashboard',
     clients: 'Clients',
@@ -36,8 +26,25 @@ export default function CoachingLayout({
   }[activeNav] || 'Coaching';
 
   const pageTitle = headerTitle || defaultFromNav;
+
+  // --- Mobile flag ---
+  const [isMobile, setIsMobile] = useState(false);
+
+  useEffect(() => {
+    const handleResize = () => {
+      if (typeof window !== 'undefined') {
+        setIsMobile(window.innerWidth < 768);
+      }
+    };
+
+    handleResize(); // run once on mount
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
+
   const hasRight = Boolean(right);
 
+  // Desktop: 3-column layout (sidebar | content | right rail)
   const desktopGrid = {
     display: 'grid',
     gridTemplateColumns: '240px minmax(640px, 1fr) 240px',
@@ -48,6 +55,7 @@ export default function CoachingLayout({
     `,
   };
 
+  // Mobile: single column, stacked
   const mobileGrid = {
     display: 'grid',
     gridTemplateColumns: '1fr',
@@ -75,7 +83,7 @@ export default function CoachingLayout({
         style={{
           ...(isMobile ? mobileGrid : desktopGrid),
           gap: 20,
-          padding: '30px 16px',
+          padding: isMobile ? '16px' : '30px',
           alignItems: 'start',
           boxSizing: 'border-box',
         }}
