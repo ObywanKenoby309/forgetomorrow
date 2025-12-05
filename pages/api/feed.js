@@ -8,6 +8,7 @@ function mapFeedPostRow(row) {
   let body = row.content || '';
   let attachments = [];
 
+  // Parse the JSON-encoded content field: { body, attachments[] }
   try {
     const parsed = JSON.parse(row.content);
     if (parsed && typeof parsed === 'object') {
@@ -18,6 +19,21 @@ function mapFeedPostRow(row) {
     // content was plain text, ignore
   }
 
+  // 🔹 Safely parse comments coming back from Prisma
+  let comments = [];
+  const rawComments = row.comments;
+
+  if (Array.isArray(rawComments)) {
+    comments = rawComments;
+  } else if (typeof rawComments === 'string') {
+    try {
+      const parsed = JSON.parse(rawComments);
+      if (Array.isArray(parsed)) comments = parsed;
+    } catch {
+      // ignore bad JSON, keep empty
+    }
+  }
+
   return {
     id: row.id,
     authorId: row.authorId,
@@ -25,8 +41,8 @@ function mapFeedPostRow(row) {
     body,
     type: row.type || 'business',
     createdAt: row.createdAt,
-    likes: 0,
-    comments: [],
+    likes: row.likes ?? 0,
+    comments,        // ✅ use DB-stored comments
     attachments,
   };
 }
@@ -79,6 +95,7 @@ export default async function handler(req, res) {
           authorName,
           content: JSON.stringify(contentObj),
           type: type === 'personal' ? 'personal' : 'business',
+          // likes + comments will use defaults from schema
         },
       });
 

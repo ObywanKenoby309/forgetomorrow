@@ -138,28 +138,53 @@ export default function Feed() {
   };
 
   // 🔍 Instrumented + stable reply handler
-const handleReply = (postId, text) => {
-  console.log('[FEED] handleReply', { postId, text });
+const handleReply = async (postId, text) => {
+  const trimmed = (text ?? '').toString().trim();
+  if (!trimmed) return;
 
-  setPosts((prev) => {
-    console.log('[FEED] previous posts before reply', prev);
+  console.log('[FEED] handleReply → /api/feed/comments', {
+    postId,
+    text: trimmed,
+  });
 
-    const next = prev.map((p) =>
-      // use == so "7" matches 7
-      p.id == postId
-        ? {
-            ...p,
-            comments: [
-              ...(Array.isArray(p.comments) ? p.comments : []),
-              {
-                by: currentUserName,
-                text,
-                at: new Date().toISOString(),
-              },
-            ],
-          }
-        : p
+  try {
+    const res = await fetch('/api/feed/comments', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ postId, text: trimmed }),
+    });
+
+    if (!res.ok) {
+      console.error('Feed COMMENT POST failed:', await res.text());
+      return;
+    }
+
+    const data = await res.json();
+    const updatedPost = data.post;
+
+    if (!updatedPost || !updatedPost.id) {
+      console.error('Feed COMMENT POST: invalid response', data);
+      return;
+    }
+
+    // Merge the updated comments into local posts
+    setPosts((prev) =>
+      prev.map((p) =>
+        p.id == updatedPost.id
+          ? {
+              ...p,
+              comments: Array.isArray(updatedPost.comments)
+                ? updatedPost.comments
+                : [],
+            }
+          : p
+      )
     );
+  } catch (err) {
+    console.error('Feed COMMENT POST error:', err);
+  }
+};
+
 
     console.log(
       '[FEED] next posts after reply (comments snapshot)',
