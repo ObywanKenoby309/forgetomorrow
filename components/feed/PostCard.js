@@ -5,6 +5,10 @@ import QuickEmojiBar from './QuickEmojiBar';
 export default function PostCard({ post, onReply, onOpenComments }) {
   const [reply, setReply] = useState('');
 
+  const comments = post.comments || [];
+  const hasComments = (comments.length || 0) > 0;
+  const previewCount = 2;
+
   const send = () => {
     const t = reply.trim();
     if (!t) return;
@@ -16,16 +20,16 @@ export default function PostCard({ post, onReply, onOpenComments }) {
     setReply((prev) => (prev ? `${prev} ${emoji}` : emoji));
   };
 
-  const hasComments = (post.comments?.length || 0) > 0;
-  const previewCount = 2;
-
   return (
     <article className="bg-white rounded-lg shadow p-4">
       {/* header */}
       <header className="mb-2">
         <div className="font-semibold">{post.author}</div>
         <div className="text-xs text-gray-500">
-          {new Date(post.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+          {new Date(post.createdAt).toLocaleTimeString([], {
+            hour: '2-digit',
+            minute: '2-digit',
+          })}
           {' • '}
           {post.type === 'business' ? 'Business' : 'Personal'}
         </div>
@@ -36,21 +40,21 @@ export default function PostCard({ post, onReply, onOpenComments }) {
 
       {/* meta row with counts + open comments */}
       <div className="text-sm text-gray-600 mb-3 flex items-center gap-4">
-        <span>👍 {post.likes}</span>
+        <span>👍 {post.likes ?? 0}</span>
         <button
           type="button"
           onClick={() => onOpenComments?.(post)}
           className="hover:underline"
           title="View comments"
         >
-          💬 {post.comments.length} Comments
+          💬 {comments.length} Comments
         </button>
       </div>
 
       {/* comments preview */}
       {hasComments && (
         <div className="space-y-2 mb-2">
-          {post.comments.slice(0, previewCount).map((c, i) => (
+          {comments.slice(0, previewCount).map((c, i) => (
             <div key={i} className="text-sm">
               <span className="font-medium">{c.by}:</span> {c.text}
             </div>
@@ -59,13 +63,13 @@ export default function PostCard({ post, onReply, onOpenComments }) {
       )}
 
       {/* view all comments link (only if more than previewCount) */}
-      {post.comments.length > previewCount && (
+      {comments.length > previewCount && (
         <button
           type="button"
           onClick={() => onOpenComments?.(post)}
           className="text-xs text-gray-600 hover:underline mb-3"
         >
-          View all {post.comments.length} comments
+          View all {comments.length} comments
         </button>
       )}
 

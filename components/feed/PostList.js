@@ -1,5 +1,5 @@
 // components/feed/PostList.js
-import { useState, useMemo } from 'react';
+import { useMemo, useState } from 'react';
 import PostCard from './PostCard';
 import PostCommentsModal from './PostCommentsModal';
 
@@ -10,31 +10,38 @@ export default function PostList({
   onDelete,
   currentUserId,
 }) {
-  const [activePost, setActivePost] = useState(null);
+  const [activePostId, setActivePostId] = useState(null);
 
-  // Apply filter (business / personal / both)
+  const safePosts = Array.isArray(posts) ? posts : [];
+
+  // Filter posts by type ("business" | "personal" | both)
   const filteredPosts = useMemo(() => {
-    if (!Array.isArray(posts)) return [];
-    if (filter === 'both') return posts;
-    return posts.filter((p) => (p.type || 'business') === filter);
-  }, [posts, filter]);
+    if (filter === 'both') return safePosts;
+    return safePosts.filter((p) => (p.type || 'business') === filter);
+  }, [safePosts, filter]);
+
+  // Always derive the active post from latest posts prop
+  const activePost =
+    activePostId != null
+      ? safePosts.find((p) => p.id === activePostId) || null
+      : null;
 
   const handleOpenComments = (post) => {
-    setActivePost(post);
+    setActivePostId(post?.id ?? null);
   };
 
   const handleCloseComments = () => {
-    setActivePost(null);
+    setActivePostId(null);
   };
 
-  // Wrap onReply so modal + cards both get updated
   const handleReplyInternal = (postId, text) => {
     onReply?.(postId, text);
+  };
 
-    // If the modal is open, refresh its copy from latest posts
-    const updated = posts.find((p) => p.id === postId);
-    if (updated) {
-      setActivePost(updated);
+  const handleDeleteInternal = (postId) => {
+    onDelete?.(postId);
+    if (postId === activePostId) {
+      setActivePostId(null);
     }
   };
 
@@ -53,7 +60,7 @@ export default function PostList({
               onReply={handleReplyInternal}
               onOpenComments={handleOpenComments}
               currentUserId={currentUserId}
-              onDelete={onDelete}
+              onDelete={handleDeleteInternal}
             />
           ))
         )}

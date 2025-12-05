@@ -5,6 +5,10 @@ import QuickEmojiBar from './QuickEmojiBar';
 export default function PostCommentsModal({ post, onClose, onReply }) {
   const [text, setText] = useState('');
 
+  if (!post) return null;
+
+  const comments = post.comments || [];
+
   const send = () => {
     const t = text.trim();
     if (!t) return;
@@ -15,8 +19,6 @@ export default function PostCommentsModal({ post, onClose, onReply }) {
   const addEmoji = (emoji) => {
     setText((prev) => (prev ? `${prev} ${emoji}` : emoji));
   };
-
-  if (!post) return null;
 
   return (
     <div
@@ -40,23 +42,28 @@ export default function PostCommentsModal({ post, onClose, onReply }) {
         <header className="mb-4">
           <div className="font-semibold">{post.author}</div>
           <div className="text-xs text-gray-500">
-            {new Date(post.createdAt).toLocaleString()} • {post.type === 'business' ? 'Business' : 'Personal'}
+            {new Date(post.createdAt).toLocaleString()} •{' '}
+            {post.type === 'business' ? 'Business' : 'Personal'}
           </div>
         </header>
 
         <p className="mb-4 whitespace-pre-wrap">{post.body}</p>
 
         <div className="border-t pt-4 space-y-3 max-h-[50vh] overflow-y-auto">
-          {post.comments.length === 0 ? (
-            <div className="text-sm text-gray-500">No comments yet—be the first!</div>
+          {comments.length === 0 ? (
+            <div className="text-sm text-gray-500">
+              No comments yet—be the first!
+            </div>
           ) : (
-            post.comments.map((c, i) => (
+            comments.map((c, i) => (
               <div key={i}>
                 <div className="text-sm">
                   <span className="font-medium">{c.by}:</span> {c.text}
                 </div>
                 {c.at && (
-                  <div className="text-xs text-gray-400">{new Date(c.at).toLocaleString()}</div>
+                  <div className="text-xs text-gray-400">
+                    {new Date(c.at).toLocaleString()}
+                  </div>
                 )}
               </div>
             ))
