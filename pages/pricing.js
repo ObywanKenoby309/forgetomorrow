@@ -1,6 +1,6 @@
 // pages/pricing.js
 import Head from "next/head";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { loadStripe } from "@stripe/stripe-js";
 
 export const dynamic = "force-dynamic";
@@ -39,6 +39,19 @@ const plans = {
 
 export default function PricingPage() {
   const [loading, setLoading] = useState(null);
+  const [isMobile, setIsMobile] = useState(false);
+
+  useEffect(() => {
+    // Only run on client
+    const handleResize = () => {
+      setIsMobile(window.innerWidth < 768); // mobile breakpoint
+    };
+
+    handleResize();
+    window.addEventListener("resize", handleResize);
+
+    return () => window.removeEventListener("resize", handleResize);
+  }, []);
 
   // ONE CLEAN handler — routes every plan correctly
   const handleClick = (planKey) => {
@@ -54,13 +67,33 @@ export default function PricingPage() {
     window.location.href = `/register/${planKey}`;
   };
 
+  const containerStyle = {
+    display: isMobile ? "block" : "grid",
+    gridTemplateColumns: isMobile ? "1fr" : "1fr 320px",
+    gap: isMobile ? 24 : 40,
+    padding: isMobile ? "24px 16px" : "40px 20px",
+    alignItems: "start",
+    maxWidth: 1200,
+    margin: "0 auto",
+    boxSizing: "border-box",
+  };
+
+  const asideStyle = {
+    backgroundColor: "#0b0b0b",
+    borderRadius: 12,
+    padding: 24,
+    color: "white",
+    height: "fit-content",
+    marginTop: isMobile ? 24 : 0,
+  };
+
   return (
     <>
       <Head>
         <title>ForgeTomorrow — Choose Your Plan</title>
       </Head>
 
-      <div style={{ display: "grid", gridTemplateColumns: "1fr 320px", gap: 40, padding: "40px 20px", alignItems: "start" }}>
+      <div style={containerStyle}>
         <main
           style={{
             display: "grid",
@@ -166,22 +199,22 @@ export default function PricingPage() {
           ))}
         </main>
 
-        <aside
-          style={{
-            backgroundColor: "#0b0b0b",
-            borderRadius: 12,
-            padding: 24,
-            color: "white",
-            height: "fit-content",
-          }}
-        >
+        <aside style={asideStyle}>
           <h3 style={{ fontSize: "1.25rem", marginBottom: 12 }}>Need Help?</h3>
           <p style={{ marginBottom: 16, fontSize: "0.95rem", color: "#ddd" }}>
             Our team is here to guide you in choosing the right plan.
           </p>
           <button
             onClick={() => (window.location.href = "/support")}
-            style={{ width: "100%", padding: "12px", background: "#FF7043", color: "white", border: "none", borderRadius: 8, fontWeight: 700 }}
+            style={{
+              width: "100%",
+              padding: "12px",
+              background: "#FF7043",
+              color: "white",
+              border: "none",
+              borderRadius: 8,
+              fontWeight: 700,
+            }}
           >
             Contact Support
           </button>

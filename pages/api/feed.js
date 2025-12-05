@@ -4,7 +4,7 @@ import { authOptions } from './auth/[...nextauth]';
 import { prisma } from '@/lib/prisma';
 
 // Helper: parse FeedPost.content into { body, attachments[] }
-function mapFeedPostRow(row) {
+function mapFeedPostRow(row, userMap) {
   let body = row.content || '';
   let attachments = [];
 
@@ -34,15 +34,25 @@ function mapFeedPostRow(row) {
     }
   }
 
+  // 🔹 Lookup author avatar from userMap (if provided)
+  let authorAvatar = null;
+  if (userMap && row.authorId) {
+    const u = userMap.get(row.authorId);
+    if (u) {
+      authorAvatar = u.avatarUrl || u.image || null;
+    }
+  }
+
   return {
     id: row.id,
     authorId: row.authorId,
     author: row.authorName,
+    authorAvatar, // ✅ used by PostCard header
     body,
     type: row.type || 'business',
     createdAt: row.createdAt,
     likes: row.likes ?? 0,
-    comments,        // ✅ use DB-stored comments
+    comments,
     attachments,
   };
 }
@@ -60,7 +70,22 @@ export default async function handler(req, res) {
         orderBy: { createdAt: 'desc' },
         take: 50,
       });
-      const posts = rows.map(mapFeedPostRow);
+
+      // 🔹 Fetch user avatars for all unique authors
+      const authorIds = Array.from(
+        new Set(rows.map((r) => r.authorId).filter(Boolean))
+      );
+
+      let userMap = null;
+      if (authorIds.length > 0) {
+        const users = await prisma.user.findMany({
+          where: { id: { in: authorIds } },
+          select: { id: true, avatarUrl: true, image: true },
+        });
+        userMap = new Map(users.map((u) => [u.id, u]));
+      }
+
+      const posts = rows.map((row) => mapFeedPostRow(row, userMap));
       return res.status(200).json({ posts });
     } catch (err) {
       console.error('[FEED GET ERROR]', err);
@@ -95,11 +120,18 @@ export default async function handler(req, res) {
           authorName,
           content: JSON.stringify(contentObj),
           type: type === 'personal' ? 'personal' : 'business',
-          // likes + comments will use defaults from schema
+          // likes + comments use defaults from schema
         },
       });
 
-      const post = mapFeedPostRow(created);
+      // 🔹 Build a tiny userMap for this single author so avatar works on echo
+      const authorAvatar = u.avatarUrl || u.image || null;
+      const basePost = mapFeedPostRow(created, null);
+      const post = {
+        ...basePost,
+        authorAvatar,
+      };
+
       return res.status(201).json({ post });
     } catch (err) {
       console.error('[FEED POST ERROR]', err);

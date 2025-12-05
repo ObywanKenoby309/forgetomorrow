@@ -35,8 +35,7 @@ export default function EnterpriseHeader({
 
   // 🔸 Real plan from NextAuth session
   const { data: session } = useSession();
-  const rawPlan =
-    (session?.user && session.user.plan) || null;
+  const rawPlan = (session?.user && session.user.plan) || null;
   const normalizedPlan =
     typeof rawPlan === "string" ? rawPlan.toUpperCase() : null;
 
@@ -126,18 +125,18 @@ export default function EnterpriseHeader({
         >
           {/* LEFT — Brand */}
           <div className={resolvedLeft}>
-            <Link href={brandHref} className="flex items-center gap-2">
+            <Link href={brandHref} className="flex items-center gap-2 min-w-0">
               <img
                 src="/favicon-32x32.png"
                 alt={brandLabel}
-                className="h-[22px] w-[22px] md:h-6 md:w-6 rounded"
+                className="h-[22px] w-[22px] md:h-6 md:w-6 rounded flex-shrink-0"
               />
-              <span className="text-[#FF7043] font-bold text-xl tracking-wide hover:text-[#F4511E] transition">
+              <span className="text-[#FF7043] font-bold text-lg sm:text-xl tracking-wide hover:text-[#F4511E] transition truncate max-w-[140px] sm:max-w-[200px]">
                 {brandLabel}
               </span>
             </Link>
             {sectionLabel && (
-              <span className="text-sm text-gray-400 ml-3">
+              <span className="text-sm text-gray-400 ml-3 truncate">
                 {sectionLabel}
               </span>
             )}
@@ -335,25 +334,25 @@ export default function EnterpriseHeader({
             <Link
               href={brandHref}
               onClick={() => setOpenMobile(false)}
-              className="flex items_center gap-6 mb-20"
+              className="flex items-center gap-4 mb-12"
             >
               <img
                 src="/favicon-32x32.png"
                 alt={brandLabel}
-                className="h-16 w-16 rounded"
+                className="h-12 w-12 rounded"
               />
-              <div className="text-[#FF7043] font-black text-5xl">
+              <div className="text-[#FF7043] font-black text-3xl sm:text-4xl md:text-5xl leading-tight break-words">
                 {brandLabel}
               </div>
             </Link>
 
-            <nav className="flex flex-col gap-12 flex-1">
+            <nav className="flex flex-col gap-8 flex-1">
               {navItems.map((item) => (
                 <Link
                   key={item.href}
                   href={item.href}
                   onClick={() => setOpenMobile(false)}
-                  className="text-4xl font-medium text-gray-300 hover:text-[#FF7043] focus:text-[#FF7043] focus:outline-none focus:ring-4 focus:ring-orange-500 rounded-2xl py-6 transition"
+                  className="text-2xl sm:text-3xl font-medium text-gray-300 hover:text-[#FF7043] focus:text-[#FF7043] focus:outline-none focus:ring-4 focus:ring-orange-500 rounded-2xl py-4 transition"
                 >
                   {item.label}
                 </Link>
@@ -362,7 +361,7 @@ export default function EnterpriseHeader({
               <Link
                 href="/pricing"
                 onClick={() => setOpenMobile(false)}
-                className="bg-[#FF7043] text-white text-4xl font-bold text-center py-12 rounded-3xl hover:bg-orange-600 focus:outline-none focus:ring-4 focus:ring-orange-300 transition shadow-2xl"
+                className="bg-[#FF7043] text-white text-2xl sm:text-3xl font-bold text-center py-6 sm:py-8 rounded-2xl hover:bg-orange-600 focus:outline-none focus:ring-4 focus:ring-orange-300 transition shadow-2xl"
               >
                 Get Started
               </Link>

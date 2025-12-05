@@ -10,21 +10,11 @@ export default function PostCommentsModal({ post, onClose, onReply }) {
   const send = () => {
     const t = text.trim();
     if (!t) return;
-    console.log('[COMMENTS MODAL] send called', {
-      postId: post.id,
-      text: t,
-      hasOnReply: typeof onReply === 'function',
-    });
     onReply?.(post.id, t);
     setText('');
   };
 
   const addEmoji = (emoji) => {
-    console.log('[COMMENTS MODAL] addEmoji', {
-      postId: post.id,
-      emoji,
-      before: text,
-    });
     setText((prev) => (prev ? `${prev} ${emoji}` : emoji));
   };
 
@@ -56,10 +46,24 @@ export default function PostCommentsModal({ post, onClose, onReply }) {
           ✕
         </button>
 
-        <header className="mb-4">
-          <div className="font-semibold">{post.author}</div>
-          <div className="text-xs text-gray-500">
-            {createdAtLabel} • {post.type === 'personal' ? 'Personal' : 'Business'}
+        {/* header with avatar */}
+        <header className="mb-4 flex items-center gap-3">
+          {post.authorAvatar ? (
+            <img
+              src={post.authorAvatar}
+              alt={post.author || 'Author'}
+              className="w-9 h-9 rounded-full object-cover bg-gray-200 flex-shrink-0"
+            />
+          ) : (
+            <div className="w-9 h-9 rounded-full bg-gray-200 flex items-center justify-center text-xs text-gray-500 flex-shrink-0">
+              {post.author?.charAt(0)?.toUpperCase() || '?'}
+            </div>
+          )}
+          <div>
+            <div className="font-semibold">{post.author}</div>
+            <div className="text-xs text-gray-500">
+              {createdAtLabel} • {post.type === 'personal' ? 'Personal' : 'Business'}
+            </div>
           </div>
         </header>
 
@@ -73,15 +77,28 @@ export default function PostCommentsModal({ post, onClose, onReply }) {
             </div>
           ) : (
             post.comments.map((c, i) => (
-              <div key={i}>
-                <div className="text-sm">
-                  <span className="font-medium">{c.by}:</span> {c.text}
-                </div>
-                {c.at && (
-                  <div className="text-xs text-gray-400">
-                    {new Date(c.at).toLocaleString()}
+              <div key={i} className="flex items-start gap-2">
+                {c.avatarUrl ? (
+                  <img
+                    src={c.avatarUrl}
+                    alt={c.by || 'User'}
+                    className="w-7 h-7 rounded-full object-cover bg-gray-200 mt-0.5 flex-shrink-0"
+                  />
+                ) : (
+                  <div className="w-7 h-7 rounded-full bg-gray-200 flex items-center justify-center text-[10px] text-gray-500 mt-0.5 flex-shrink-0">
+                    {c.by?.charAt(0)?.toUpperCase() || '?'}
                   </div>
                 )}
+                <div>
+                  <div className="text-sm">
+                    <span className="font-medium">{c.by}:</span> {c.text}
+                  </div>
+                  {c.at && (
+                    <div className="text-xs text-gray-400">
+                      {new Date(c.at).toLocaleString()}
+                    </div>
+                  )}
+                </div>
               </div>
             ))
           )}

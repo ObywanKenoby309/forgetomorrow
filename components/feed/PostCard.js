@@ -14,26 +14,18 @@ export default function PostCard({
   const [reportMessage, setReportMessage] = useState('');
 
   const isOwner = currentUserId && post.authorId === currentUserId;
-  const comments = Array.isArray(post.comments) ? post.comments : [];
-  const hasComments = comments.length > 0;
+  const hasComments = (post.comments?.length || 0) > 0;
   const previewCount = 2;
-
-  console.log('[POSTCARD] render', {
-    id: post.id,
-    commentsCount: comments.length,
-    comments,
-  });
 
   const sendReply = () => {
     const t = reply.trim();
     if (!t) return;
-
-    if (typeof onReply === 'function') {
-      onReply(post.id, t);
-    } else {
-      console.warn('PostCard: onReply is not defined');
-    }
+    onReply?.(post.id, t);
     setReply('');
+  };
+
+  const addEmoji = (emoji) => {
+    setReply((prev) => (prev ? `${prev} ${emoji}` : emoji));
   };
 
   const handleDeleteClick = () => {
@@ -44,10 +36,6 @@ export default function PostCard({
   const handleReportClick = async () => {
     if (reported) return;
 
-    // Optimistic UI
-    setReported(true);
-    setReportMessage('Submitting your report...');
-
     try {
       const res = await fetch('/api/feed/report', {
         method: 'POST',
@@ -57,19 +45,18 @@ export default function PostCard({
 
       if (!res.ok) {
         console.error('Feed REPORT failed:', await res.text());
-        setReported(false);
         setReportMessage(
           "We couldn't submit your report. Please try again or contact support."
         );
         return;
       }
 
+      setReported(true);
       setReportMessage(
         'Your report has been submitted. Our team will review this post.'
       );
     } catch (err) {
       console.error('Feed REPORT error:', err);
-      setReported(false);
       setReportMessage(
         "We couldn't submit your report. Please try again or contact support."
       );
@@ -90,8 +77,19 @@ export default function PostCard({
       id={`post-${post.id}`}
       className="bg-white rounded-lg shadow p-4"
     >
-      {/* header with conditional Report in top-right */}
-      <header className="mb-2 flex items-start justify-between gap-4">
+      {/* header with avatar */}
+      <header className="mb-2 flex items-center gap-3">
+        {post.authorAvatar ? (
+          <img
+            src={post.authorAvatar}
+            alt={post.author || 'Author'}
+            className="w-9 h-9 rounded-full object-cover bg-gray-200 flex-shrink-0"
+          />
+        ) : (
+          <div className="w-9 h-9 rounded-full bg-gray-200 flex items-center justify-center text-xs text-gray-500 flex-shrink-0">
+            {post.author?.charAt(0)?.toUpperCase() || '?'}
+          </div>
+        )}
         <div>
           <div className="font-semibold">{post.author}</div>
           <div className="text-xs text-gray-500">
@@ -100,22 +98,6 @@ export default function PostCard({
             {post.type === 'personal' ? 'Personal' : 'Business'}
           </div>
         </div>
-
-        {/* Only show Report for non-owners */}
-        {!isOwner && (
-          <button
-            type="button"
-            onClick={handleReportClick}
-            className={`px-3 py-1.5 rounded-md text-sm font-semibold ${
-              reported
-                ? 'bg-red-200 text-red-800 cursor-default'
-                : 'bg-red-600 text-white hover:bg-red-700'
-            }`}
-            disabled={reported}
-          >
-            {reported ? 'Reported' : 'Report'}
-          </button>
-        )}
       </header>
 
       {/* body text */}
@@ -133,14 +115,14 @@ export default function PostCard({
                 <img
                   src={a.url}
                   alt={a.name || 'image'}
-                  className="w-full h-auto max-h-[600px] object-contain rounded"
+                  className="w-full max-h-96 object-contain rounded"
                 />
               )}
               {a.type === 'video' && (
                 <video
                   src={a.url}
                   controls
-                  className="w-full h-auto max-h-[600px] object-contain rounded"
+                  className="w-full max-h-96 object-contain rounded"
                 />
               )}
               {a.type === 'link' && (
@@ -170,33 +152,46 @@ export default function PostCard({
           className="hover:underline"
           title="View comments"
         >
-          💬 {comments.length} Comments
+          💬 {post.comments.length} Comments
         </button>
       </div>
 
       {/* comments preview */}
       {hasComments && (
         <div className="space-y-2 mb-2">
-          {comments.slice(0, previewCount).map((c, i) => (
-            <div key={i} className="text-sm">
-              <span className="font-medium">{c.by}:</span> {c.text}
+          {post.comments.slice(0, previewCount).map((c, i) => (
+            <div key={i} className="text-sm flex items-start gap-2">
+              {c.avatarUrl ? (
+                <img
+                  src={c.avatarUrl}
+                  alt={c.by || 'User'}
+                  className="w-6 h-6 rounded-full object-cover bg-gray-200 mt-0.5 flex-shrink-0"
+                />
+              ) : (
+                <div className="w-6 h-6 rounded-full bg-gray-200 flex items-center justify-center text-[10px] text-gray-500 mt-0.5 flex-shrink-0">
+                  {c.by?.charAt(0)?.toUpperCase() || '?'}
+                </div>
+              )}
+              <div>
+                <span className="font-medium">{c.by}:</span> {c.text}
+              </div>
             </div>
           ))}
         </div>
       )}
 
       {/* "view all" link */}
-      {comments.length > previewCount && (
+      {post.comments.length > previewCount && (
         <button
           type="button"
           onClick={() => onOpenComments?.(post)}
           className="text-xs text-gray-600 hover:underline mb-3"
         >
-          View all {comments.length} comments
+          View all {post.comments.length} comments
         </button>
       )}
 
-      {/* reply row + delete (owner only) + emoji bar */}
+      {/* reply row + emoji bar + delete/report */}
       <div className="space-y-2">
         <div className="flex flex-wrap gap-2 items-center">
           <input
@@ -214,14 +209,30 @@ export default function PostCard({
             Reply
           </button>
 
-          {/* OWNER: gray Delete button */}
+          {/* OWNER: Delete button */}
           {isOwner && (
             <button
               type="button"
               onClick={handleDeleteClick}
-              className="px-3 py-2 rounded-md bg-gray-500 text-white text-sm font-semibold hover:bg-gray-600"
+              className="px-3 py-2 rounded-md bg-red-600 text-white text-sm font-semibold hover:bg-red-700"
             >
               Delete
+            </button>
+          )}
+
+          {/* NON-OWNER: red Report button */}
+          {!isOwner && (
+            <button
+              type="button"
+              onClick={handleReportClick}
+              className={`px-3 py-2 rounded-md text-sm font-semibold ${
+                reported
+                  ? 'bg-red-200 text-red-800 cursor-default'
+                  : 'bg-red-600 text-white hover:bg-red-700'
+              }`}
+              disabled={reported}
+            >
+              {reported ? 'Reported' : 'Report'}
             </button>
           )}
         </div>
@@ -231,20 +242,8 @@ export default function PostCard({
           <div className="text-xs text-gray-600 mt-1">{reportMessage}</div>
         )}
 
-        {/* 🔥 Emoji bar: ONE-CLICK REACTIONS */}
-        <QuickEmojiBar
-          onPick={(emoji) => {
-            // Track what happens
-            console.log('[EMOJI] one-click reaction', {
-              postId: post.id,
-              emoji,
-              hasOnReply: typeof onReply === 'function',
-            });
-            if (typeof onReply === 'function') {
-              onReply(post.id, emoji);
-            }
-          }}
-        />
+        {/* emoji bar just injects emoji into reply input */}
+        <QuickEmojiBar onPick={addEmoji} />
       </div>
     </article>
   );

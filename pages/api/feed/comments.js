@@ -8,7 +8,7 @@ function normalizeFeedPost(row) {
     id: row.id,
     authorId: row.authorId,
     author: row.authorName,
-    body: row.content,
+    body: row.content, // body is not used heavily here; comments are the key
     type: row.type || 'business',
     likes: row.likes ?? 0,
     comments: Array.isArray(row.comments) ? row.comments : [],
@@ -58,6 +58,8 @@ export default async function handler(req, res) {
       [user.firstName, user.lastName].filter(Boolean).join(' ') ||
       (user.email ? user.email.split('@')[0] : 'Someone');
 
+    const avatarUrl = user.avatarUrl || user.image || null;
+
     const currentComments = Array.isArray(existing.comments)
       ? existing.comments
       : [];
@@ -66,6 +68,7 @@ export default async function handler(req, res) {
       by: displayName,
       text: trimmed,
       at: new Date().toISOString(),
+      avatarUrl, // ✅ used in UI for commenter avatar
     };
 
     const updated = await prisma.feedPost.update({
