@@ -1,10 +1,30 @@
 // pages/support.js (or pages/support/index.js)
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
+import { useRouter } from 'next/router';
 import SeekerLayout from '@/components/layouts/SeekerLayout';
 import SeekerRightColumn from '@/components/seeker/SeekerRightColumn';
 
-function SupportHeaderBox() {
+function SupportHeaderBox({ chrome }) {
+  const mode = String(chrome || '').toLowerCase();
+
+  const isRecruiter = mode.startsWith('recruiter');
+  const isCoach = mode === 'coach';
+
+  let title = 'Support Center';
+  let subtitle =
+    'We take your experience seriously. If you have questions, feedback, or need assistance, you’re in the right place. Our dedicated team is here to help you succeed every step of the way.';
+
+  if (isRecruiter) {
+    title = 'Recruiter Support Center';
+    subtitle =
+      'Running searches, posting jobs, managing pipelines, or reviewing candidates — if something isn’t working the way you expect, we’re here to help your hiring run smoother and faster.';
+  } else if (isCoach) {
+    title = 'Coach Support Center';
+    subtitle =
+      'Whether you’re supporting clients, building programs, or using coaching tools, this is your home base for questions, feedback, and help staying focused on your clients.';
+  }
+
   return (
     <section
       style={{
@@ -24,7 +44,7 @@ function SupportHeaderBox() {
           fontWeight: 800,
         }}
       >
-        Support Center
+        {title}
       </h1>
       <p
         style={{
@@ -33,9 +53,7 @@ function SupportHeaderBox() {
           maxWidth: 640,
         }}
       >
-        We take your experience seriously. If you have questions, feedback, or need
-        assistance, you’re in the right place. Our dedicated team is here to help you
-        succeed every step of the way.
+        {subtitle}
       </p>
     </section>
   );
@@ -50,6 +68,11 @@ const STATUS_OPTIONS = [
 ];
 
 export default function Support() {
+  const router = useRouter();
+  const chrome = String(router.query.chrome || '').toLowerCase();
+  const withChrome = (path) =>
+    chrome ? `${path}${path.includes('?') ? '&' : '?'}chrome=${chrome}` : path;
+
   const [tickets, setTickets] = useState([]);
   const [loadingTickets, setLoadingTickets] = useState(true);
   const [ticketError, setTicketError] = useState(null);
@@ -193,12 +216,11 @@ export default function Support() {
   return (
     <SeekerLayout
       title="ForgeTomorrow – Support"
-      header={<SupportHeaderBox />}
+      header={<SupportHeaderBox chrome={chrome} />}
       right={<SeekerRightColumn variant="support" />}
       activeNav="support"
     >
       <div className="max-w-4xl mx-auto p-6 space-y-10">
-
         {/* MAIN CONTENT CARD */}
         <section className="bg-white rounded-lg shadow p-8 space-y-6">
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
@@ -247,7 +269,7 @@ export default function Support() {
                 return (
                   <Link
                     key={title}
-                    href={href}
+                    href={withChrome(href)}
                     className={commonClasses}
                     aria-label={title}
                   >
@@ -304,7 +326,10 @@ export default function Support() {
           {!loadingTickets && !ticketError && tickets.length === 0 && (
             <p className="text-sm text-slate-500">
               No tickets yet. Start a conversation in{' '}
-              <Link href="/support/chat" className="text-[#FF7043] underline">
+              <Link
+                href={withChrome('/support/chat')}
+                className="text-[#FF7043] underline"
+              >
                 Support Chat
               </Link>{' '}
               and we’ll track it here.
@@ -330,7 +355,7 @@ export default function Support() {
                     <tr key={t.id} className="border-t border-slate-100">
                       <td className="py-2 pr-3 max-w-xs">
                         <Link
-                          href={`/support/ticket/${t.id}`}
+                          href={withChrome(`/support/ticket/${t.id}`)}
                           className="font-medium text-slate-800 hover:underline"
                         >
                           {t.subject}
