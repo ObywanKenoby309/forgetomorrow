@@ -12,10 +12,15 @@ export default function Feed() {
   const [posts, setPosts] = useState([]);
 
   const currentUserId = session?.user?.id || 'me';
+
+  const emailUsername =
+    session?.user?.email ? session.user.email.split('@')[0] : null;
+
   const currentUserName =
     session?.user?.name ||
     [session?.user?.firstName, session?.user?.lastName].filter(Boolean).join(' ') ||
-    (session?.user?.email ? session.user.email.split('@')[0] : 'You');
+    emailUsername ||
+    'You';
 
   // Normalize post shape coming from API
   const normalizePost = (row) => {
@@ -54,9 +59,7 @@ export default function Feed() {
         if (cancelled) return;
 
         const list = Array.isArray(data.posts) ? data.posts : [];
-        const normalized = list
-          .map(normalizePost)
-          .filter(Boolean);
+        const normalized = list.map(normalizePost).filter(Boolean);
 
         setPosts(normalized);
       } catch (err) {
@@ -142,10 +145,27 @@ export default function Feed() {
     // optional: later POST /api/feed/:id/comments
   };
 
-  const handleDelete = (postId) => {
+  const handleDelete = async (postId) => {
+    if (!postId) return;
     if (!confirm('Delete this post? This cannot be undone.')) return;
-    setPosts((prev) => prev.filter((p) => p.id !== postId));
-    // optional: later DELETE /api/feed/:id
+
+    try {
+      const res = await fetch(`/api/feed/${postId}`, {
+        method: 'DELETE',
+      });
+
+      if (!res.ok) {
+        console.error('Feed DELETE failed:', await res.text());
+        alert("Sorry — we couldn't delete that post. Please try again.");
+        return;
+      }
+
+      // Remove locally after successful delete
+      setPosts((prev) => prev.filter((p) => p.id !== postId));
+    } catch (err) {
+      console.error('Feed DELETE error:', err);
+      alert("Sorry — we couldn't delete that post. Please try again.");
+    }
   };
 
   return (
