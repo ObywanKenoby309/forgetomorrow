@@ -1,78 +1,75 @@
 // components/feed/PostComposer.js
-import { useEffect, useRef, useState } from "react";
+import { useState } from 'react';
 
 export default function PostComposer({ onPost }) {
-  const [text, setText] = useState("");
-  const [postType, setPostType] = useState(""); // "", "business", "personal"
+  const [text, setText] = useState('');
+  const [postType, setPostType] = useState(''); // "", "business", "personal"
   const [attachments, setAttachments] = useState([]); // [{type, url, name}]
   const [showLinkInput, setShowLinkInput] = useState(false);
-  const [linkValue, setLinkValue] = useState("");
-
-  const imageInputRef = useRef(null);
-  const videoInputRef = useRef(null);
+  const [linkValue, setLinkValue] = useState('');
 
   const canPost =
     text.trim().length > 0 &&
-    (postType === "business" || postType === "personal");
+    (postType === 'business' || postType === 'personal');
 
-  // No more blob URL cleanup needed; we store data URLs in attachments.
-  useEffect(() => {
-    // Reserved for any future cleanup if needed
-  }, []);
+  const fileToDataUrl = (file) =>
+    new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = () => resolve(reader.result);
+      reader.onerror = reject;
+      reader.readAsDataURL(file);
+    });
 
-  // ---- Helpers to read files as data URLs for persistence ----
-  const fileToDataUrl = (file, cb) => {
-    if (!file) return;
-    const reader = new FileReader();
-    reader.onload = () => {
-      cb(reader.result);
-    };
-    reader.onerror = () => {
-      // Silent fail; could add tiny toast later
-      cb(null);
-    };
-    reader.readAsDataURL(file);
+  // ---- Attachments handlers ----
+  const addImages = async (files) => {
+    if (!files?.length) return;
+    try {
+      const promises = [...files].map(async (f) => {
+        const dataUrl = await fileToDataUrl(f);
+        return {
+          type: 'image',
+          url: dataUrl,
+          name: f.name || 'image',
+        };
+      });
+      const next = await Promise.all(promises);
+      setAttachments((prev) => [...prev, ...next]);
+    } catch (err) {
+      console.error('Failed to read image files', err);
+    }
   };
 
-  const addImages = (files) => {
+  const addVideos = async (files) => {
     if (!files?.length) return;
-    [...files].forEach((f) => {
-      fileToDataUrl(f, (dataUrl) => {
-        if (!dataUrl) return;
-        setAttachments((prev) => [
-          ...prev,
-          { type: "image", url: dataUrl, name: f.name || "image" },
-        ]);
+    try {
+      const promises = [...files].map(async (f) => {
+        const dataUrl = await fileToDataUrl(f);
+        return {
+          type: 'video',
+          url: dataUrl,
+          name: f.name || 'video',
+        };
       });
-    });
-  };
-
-  const addVideos = (files) => {
-    if (!files?.length) return;
-    [...files].forEach((f) => {
-      fileToDataUrl(f, (dataUrl) => {
-        if (!dataUrl) return;
-        setAttachments((prev) => [
-          ...prev,
-          { type: "video", url: dataUrl, name: f.name || "video" },
-        ]);
-      });
-    });
+      const next = await Promise.all(promises);
+      setAttachments((prev) => [...prev, ...next]);
+    } catch (err) {
+      console.error('Failed to read video files', err);
+    }
   };
 
   const addLink = () => {
     const url = linkValue.trim();
     if (!url) return;
     try {
-      const u = new URL(url);
+      const u = new URL(url); // basic validation
       setAttachments((prev) => [
         ...prev,
-        { type: "link", url: u.toString(), name: u.hostname },
+        { type: 'link', url: u.toString(), name: u.hostname },
       ]);
-      setLinkValue("");
+      setLinkValue('');
       setShowLinkInput(false);
     } catch {
-      // invalid URL – ignore for now; later we can show a small error
+      // invalid URL, ignore for now
     }
   };
 
@@ -91,7 +88,7 @@ export default function PostComposer({ onPost }) {
 
     onPost?.({
       id: crypto.randomUUID?.() || String(Date.now()),
-      author: "You",
+      author: 'You',
       createdAt: Date.now(),
       body,
       type: postType, // required
@@ -104,11 +101,11 @@ export default function PostComposer({ onPost }) {
       })),
     });
 
-    setText("");
-    setPostType("");
+    setText('');
+    setPostType('');
     setAttachments([]);
     setShowLinkInput(false);
-    setLinkValue("");
+    setLinkValue('');
   };
 
   return (
@@ -129,21 +126,21 @@ export default function PostComposer({ onPost }) {
               key={idx}
               className="relative border rounded-md p-2 bg-gray-50 flex flex-col gap-2"
             >
-              {a.type === "image" && (
+              {a.type === 'image' && (
                 <img
                   src={a.url}
-                  alt={a.name || "image"}
+                  alt={a.name || 'image'}
                   className="w-full h-28 object-cover rounded"
                 />
               )}
-              {a.type === "video" && (
+              {a.type === 'video' && (
                 <video
                   src={a.url}
                   controls
                   className="w-full h-28 object-cover rounded"
                 />
               )}
-              {a.type === "link" && (
+              {a.type === 'link' && (
                 <a
                   href={a.url}
                   target="_blank"
@@ -191,7 +188,7 @@ export default function PostComposer({ onPost }) {
             type="button"
             onClick={() => {
               setShowLinkInput(false);
-              setLinkValue("");
+              setLinkValue('');
             }}
             className="px-3 py-2 rounded-md border"
           >
@@ -201,51 +198,49 @@ export default function PostComposer({ onPost }) {
       )}
 
       <div className="mt-3 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-        {/* Left: attachment controls (with hidden inputs) */}
+        {/* Left: attachment controls */}
         <div className="flex items-center gap-3 text-sm text-gray-700">
           <input
-            ref={imageInputRef}
+            id="feed-image-input"
             type="file"
             accept="image/*"
             multiple
             className="hidden"
             onChange={(e) => {
               addImages(e.target.files);
-              e.target.value = "";
+              e.target.value = '';
             }}
           />
-          <button
-            type="button"
-            className="inline-flex items-center gap-1 hover:text-gray-900"
-            onClick={() => imageInputRef.current?.click()}
+          <label
+            htmlFor="feed-image-input"
+            className="inline-flex items-center gap-1 hover:text-gray-900 cursor-pointer"
           >
             <span role="img" aria-label="photo">
               📷
             </span>
             Photo
-          </button>
+          </label>
 
           <input
-            ref={videoInputRef}
+            id="feed-video-input"
             type="file"
             accept="video/mp4,video/webm"
             multiple
             className="hidden"
             onChange={(e) => {
               addVideos(e.target.files);
-              e.target.value = "";
+              e.target.value = '';
             }}
           />
-          <button
-            type="button"
-            className="inline-flex items-center gap-1 hover:text-gray-900"
-            onClick={() => videoInputRef.current?.click()}
+          <label
+            htmlFor="feed-video-input"
+            className="inline-flex items-center gap-1 hover:text-gray-900 cursor-pointer"
           >
             <span role="img" aria-label="video">
               🎥
             </span>
             Video
-          </button>
+          </label>
 
           <button
             type="button"
@@ -268,25 +263,25 @@ export default function PostComposer({ onPost }) {
           <div className="inline-flex rounded-md border overflow-hidden">
             <button
               type="button"
-              onClick={() => setPostType("business")}
+              onClick={() => setPostType('business')}
               className={`px-3 py-1 text-sm ${
-                postType === "business"
-                  ? "bg-[#ff8a65] text-white"
-                  : "bg-white"
+                postType === 'business'
+                  ? 'bg-[#ff8a65] text-white'
+                  : 'bg-white'
               }`}
-              aria-pressed={postType === "business"}
+              aria-pressed={postType === 'business'}
             >
               Business
             </button>
             <button
               type="button"
-              onClick={() => setPostType("personal")}
+              onClick={() => setPostType('personal')}
               className={`px-3 py-1 text-sm ${
-                postType === "personal"
-                  ? "bg-[#ff8a65] text-white"
-                  : "bg-white"
+                postType === 'personal'
+                  ? 'bg-[#ff8a65] text-white'
+                  : 'bg-white'
               }`}
-              aria-pressed={postType === "personal"}
+              aria-pressed={postType === 'personal'}
             >
               Personal
             </button>
@@ -298,8 +293,8 @@ export default function PostComposer({ onPost }) {
             className="bg-[#ff7043] text-white font-semibold px-4 py-2 rounded-md disabled:opacity-40 disabled:cursor-not-allowed"
             title={
               !canPost
-                ? "Write something and choose Business or Personal"
-                : "Post"
+                ? 'Write something and choose Business or Personal'
+                : 'Post'
             }
           >
             Post

@@ -5,10 +5,6 @@ import QuickEmojiBar from './QuickEmojiBar';
 export default function PostCard({ post, onReply, onOpenComments }) {
   const [reply, setReply] = useState('');
 
-  const comments = post.comments || [];
-  const hasComments = (comments.length || 0) > 0;
-  const previewCount = 2;
-
   const send = () => {
     const t = reply.trim();
     if (!t) return;
@@ -19,6 +15,10 @@ export default function PostCard({ post, onReply, onOpenComments }) {
   const addEmoji = (emoji) => {
     setReply((prev) => (prev ? `${prev} ${emoji}` : emoji));
   };
+
+  const hasComments = (post.comments?.length || 0) > 0;
+  const previewCount = 2;
+  const hasAttachments = Array.isArray(post.attachments) && post.attachments.length > 0;
 
   return (
     <article className="bg-white rounded-lg shadow p-4">
@@ -38,23 +38,63 @@ export default function PostCard({ post, onReply, onOpenComments }) {
       {/* body */}
       <p className="mb-3 whitespace-pre-wrap">{post.body}</p>
 
+      {/* attachments */}
+      {hasAttachments && (
+        <div className="mb-3 grid grid-cols-2 sm:grid-cols-3 gap-3">
+          {post.attachments.map((a, idx) => (
+            <div
+              key={idx}
+              className="relative border rounded-md p-2 bg-gray-50 flex flex-col gap-2"
+            >
+              {a.type === 'image' && (
+                <img
+                  src={a.url}
+                  alt={a.name || 'image'}
+                  className="w-full h-28 object-cover rounded"
+                />
+              )}
+              {a.type === 'video' && (
+                <video
+                  src={a.url}
+                  controls
+                  className="w-full h-28 object-cover rounded"
+                />
+              )}
+              {a.type === 'link' && (
+                <a
+                  href={a.url}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-sm text-blue-600 underline break-all"
+                >
+                  {a.url}
+                </a>
+              )}
+              {a.name && (
+                <div className="text-xs text-gray-500 truncate">{a.name}</div>
+              )}
+            </div>
+          ))}
+        </div>
+      )}
+
       {/* meta row with counts + open comments */}
       <div className="text-sm text-gray-600 mb-3 flex items-center gap-4">
-        <span>👍 {post.likes ?? 0}</span>
+        <span>👍 {post.likes}</span>
         <button
           type="button"
           onClick={() => onOpenComments?.(post)}
           className="hover:underline"
           title="View comments"
         >
-          💬 {comments.length} Comments
+          💬 {post.comments.length} Comments
         </button>
       </div>
 
       {/* comments preview */}
       {hasComments && (
         <div className="space-y-2 mb-2">
-          {comments.slice(0, previewCount).map((c, i) => (
+          {post.comments.slice(0, previewCount).map((c, i) => (
             <div key={i} className="text-sm">
               <span className="font-medium">{c.by}:</span> {c.text}
             </div>
@@ -63,13 +103,13 @@ export default function PostCard({ post, onReply, onOpenComments }) {
       )}
 
       {/* view all comments link (only if more than previewCount) */}
-      {comments.length > previewCount && (
+      {post.comments.length > previewCount && (
         <button
           type="button"
           onClick={() => onOpenComments?.(post)}
           className="text-xs text-gray-600 hover:underline mb-3"
         >
-          View all {comments.length} comments
+          View all {post.comments.length} comments
         </button>
       )}
 
