@@ -14,13 +14,11 @@ export default function PostList({
 
   const safePosts = Array.isArray(posts) ? posts : [];
 
-  // Filter posts by type ("business" | "personal" | both)
   const filteredPosts = useMemo(() => {
     if (filter === 'both') return safePosts;
     return safePosts.filter((p) => (p.type || 'business') === filter);
   }, [safePosts, filter]);
 
-  // Always derive the active post from latest posts prop
   const activePost =
     activePostId != null
       ? safePosts.find((p) => p.id === activePostId) || null
@@ -53,16 +51,23 @@ export default function PostList({
             No posts yet. Be the first to share something.
           </div>
         ) : (
-          filteredPosts.map((post) => (
-            <PostCard
-              key={post.id}
-              post={post}
-              onReply={handleReplyInternal}
-              onOpenComments={handleOpenComments}
-              currentUserId={currentUserId}
-              onDelete={handleDeleteInternal}
-            />
-          ))
+          filteredPosts.map((post) => {
+            console.log('[POSTLIST] rendering post', {
+              id: post.id,
+              comments: post.comments,
+            });
+
+            return (
+              <PostCard
+                key={post.id}
+                post={post}
+                onReply={handleReplyInternal}
+                onOpenComments={handleOpenComments}
+                currentUserId={currentUserId}
+                onDelete={handleDeleteInternal}
+              />
+            );
+          })
         )}
       </div>
 

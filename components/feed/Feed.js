@@ -145,7 +145,7 @@ const handleReply = (postId, text) => {
     console.log('[FEED] previous posts before reply', prev);
 
     const next = prev.map((p) =>
-      // use == so "1" matches 1 — prevents silent mismatch
+      // use == so "7" matches 7
       p.id == postId
         ? {
             ...p,
@@ -161,11 +161,17 @@ const handleReply = (postId, text) => {
         : p
     );
 
-    console.log('[FEED] next posts after reply', next);
+    console.log(
+      '[FEED] next posts after reply (comments snapshot)',
+      next.map((p) => ({
+        id: p.id,
+        comments: p.comments,
+      }))
+    );
+
     return next;
   });
 };
-
 
   const handleDelete = async (postId) => {
     if (!postId) return;

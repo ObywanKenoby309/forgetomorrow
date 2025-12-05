@@ -18,6 +18,12 @@ export default function PostCard({
   const hasComments = comments.length > 0;
   const previewCount = 2;
 
+  console.log('[POSTCARD] render', {
+    id: post.id,
+    commentsCount: comments.length,
+    comments,
+  });
+
   const sendReply = () => {
     const t = reply.trim();
     if (!t) return;
