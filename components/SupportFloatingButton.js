@@ -23,14 +23,17 @@ export default function SupportFloatingButton() {
     return null;
   }
 
+  // Preserve chrome mode (seeker / coach / recruiter-smb / recruiter-ent)
+  const chrome = String(router.query.chrome || '').toLowerCase();
+  const supportHref = chrome ? `/support?chrome=${chrome}` : '/support';
+
   const handleClick = (e) => {
-    // If the current page has any special logic later, we can hook it here
-    // For now we just let Next.js handle navigation
+    // Hook for any future page-specific logic on click
   };
 
   return (
     <div className="fixed bottom-6 right-6 z-50">
-      <Link href="/support" legacyBehavior>
+      <Link href={supportHref} legacyBehavior>
         <a
           onClick={handleClick}
           className="
