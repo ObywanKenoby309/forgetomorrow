@@ -145,75 +145,52 @@ export default function MessagingPage() {
   const prefillText =
     typeof router.query.prefill === "string" ? router.query.prefill : "";
 
-  // For now, keep this static mock list for the bulk modal UI.
-  const candidatesFlat = [
-    {
-      id: 1,
-      name: "Jane Doe",
-      role: "Client Success Lead",
-      location: "Remote",
-    },
-    {
-      id: 2,
-      name: "Omar Reed",
-      role: "Onboarding Specialist",
-      location: "Nashville, TN",
-    },
-    {
-      id: 3,
-      name: "Priya Kumar",
-      role: "Solutions Architect",
-      location: "Austin, TX",
-    },
-  ];
-
   // 1) Resolve the REAL current user from session
-  useEffect(() => {
-    let cancelled = false;
+useEffect(() => {
+  let cancelled = false;
 
-    async function loadUser() {
-      try {
-        const session = await getClientSession();
-        if (!session?.user?.id) {
-          // Not logged in → go to sign-in, but do NOT bounce to other dashboards
+  async function loadUser() {
+    try {
+      const session = await getClientSession();
+
+      // ⚠️ Important: NextAuth will return null *briefly* during hydration.
+      // DO NOT redirect yet — wait until NextAuth fully resolves.
+      if (!session) {
+        return; // allow hydration to finish
+      }
+
+      // If session exists but user is missing (rare edge case)
+      if (!session.user?.id) {
+        if (!cancelled) {
           await router.replace("/auth/signin");
-          return;
         }
-        if (!cancelled) {
-          setCurrentUserId(session.user.id);
-        }
-      } catch (err) {
-        console.error("Failed to load session for recruiter messaging:", err);
-        if (!cancelled) {
-          await router.replace("/auth/signin");
-        }
-      } finally {
-        if (!cancelled) {
-          setLoadingUser(false);
-        }
+        return;
+      }
+
+      // Valid session → set user ID
+      if (!cancelled) {
+        setCurrentUserId(session.user.id);
+      }
+    } catch (err) {
+      console.error("Failed to load session for recruiter messaging:", err);
+
+      // Only redirect if we actually KNOW there’s no session
+      if (!cancelled) {
+        await router.replace("/auth/signin");
+      }
+    } finally {
+      if (!cancelled) {
+        setLoadingUser(false);
       }
     }
+  }
 
-    loadUser();
-    return () => {
-      cancelled = true;
-    };
-  }, [router]);
+  loadUser();
+  return () => {
+    cancelled = true;
+  };
+}, [router]);
 
-  // Small fetch helper that always sends x-user-id from the *real* user
-  async function fetchJson(url, options = {}) {
-    if (!currentUserId) {
-      throw new Error("No current user id resolved yet");
-    }
-
-    const res = await fetch(url, {
-      ...options,
-      headers: {
-        "Content-Type": "application/json",
-        ...(options.headers || {}),
-        "x-user-id": currentUserId,
-      },
-    });
 
     if (!res.ok) {
       const text = await res.text();
