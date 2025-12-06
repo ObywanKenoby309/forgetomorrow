@@ -32,19 +32,6 @@ export default function SeekerLayout({
 }) {
   const router = useRouter();
 
-  // ---- MOBILE FLAG (desktop stays original) ----
-  const [isMobile, setIsMobile] = useState(false);
-  useEffect(() => {
-    const handleResize = () => {
-      if (typeof window !== 'undefined') {
-        setIsMobile(window.innerWidth < 768);
-      }
-    };
-    handleResize();
-    window.addEventListener('resize', handleResize);
-    return () => window.removeEventListener('resize', handleResize);
-  }, []);
-
   // ---- CHROME MODE (determine once, then keep in state) ----
   const initialChrome = (() => {
     if (forceChrome && ALLOWED_MODES.has(forceChrome)) return forceChrome;
@@ -138,15 +125,33 @@ export default function SeekerLayout({
         backgroundColor: '#ECEFF1',
       };
 
+  // ---- MOBILE DETECTION + SIDEBAR OVERLAY ----
+  const hasRight = Boolean(right);
+  const [isMobile, setIsMobile] = useState(true);
+  const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false);
+
+  useEffect(() => {
+    const handleResize = () => {
+      if (typeof window !== 'undefined') {
+        const width = window.innerWidth;
+        setIsMobile(width < 1024);
+      }
+    };
+
+    handleResize();
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
+
   // ---- RIGHT RAIL STYLES ----
   const rightBase = {
     gridArea: 'right',
     alignSelf: 'start',
     borderRadius: 12,
     boxSizing: 'border-box',
-    width: rightWidth,
-    minWidth: rightWidth,
-    maxWidth: rightWidth,
+    width: hasRight && !isMobile ? rightWidth : '100%',
+    minWidth: hasRight && !isMobile ? rightWidth : 0,
+    maxWidth: hasRight && !isMobile ? rightWidth : '100%',
     minInlineSize: 0,
   };
 
@@ -169,18 +174,15 @@ export default function SeekerLayout({
     paddingTop: pad,
     paddingBottom: pad,
     paddingLeft: pad,
-    paddingRight: right ? Math.max(8, pad - 4) : pad,
+    paddingRight: hasRight ? Math.max(8, pad - 4) : pad,
   };
 
-  // ---- GRID LAYOUT (desktop original vs mobile stacked) ----
-
+  // ---- DESKTOP VS MOBILE GRID ----
   const desktopGrid = {
     display: 'grid',
-    gridTemplateColumns: `240px minmax(0, 1fr) ${
-      right ? `${rightWidth}px` : '0px'
-    }`,
+    gridTemplateColumns: `240px minmax(0, 1fr) ${hasRight ? `${rightWidth}px` : '0px'}`,
     gridTemplateRows: 'auto 1fr',
-    gridTemplateAreas: right
+    gridTemplateAreas: hasRight
       ? `"left header right"
          "left content right"`
       : `"left header header"
@@ -190,15 +192,13 @@ export default function SeekerLayout({
   const mobileGrid = {
     display: 'grid',
     gridTemplateColumns: '1fr',
-    gridTemplateRows: 'auto auto auto auto',
-    gridTemplateAreas: right
+    gridTemplateRows: hasRight ? 'auto auto auto' : 'auto auto',
+    gridTemplateAreas: hasRight
       ? `"header"
          "content"
-         "right"
-         "left"`
+         "right"`
       : `"header"
-         "content"
-         "left"`,
+         "content"`,
   };
 
   const gridStyles = isMobile ? mobileGrid : desktopGrid;
@@ -223,20 +223,57 @@ export default function SeekerLayout({
             alignItems: 'start',
           }}
         >
-          {/* LEFT — Sidebar */}
-          <aside style={{ gridArea: 'left', alignSelf: 'start', minWidth: 0 }}>
+          {/* LEFT — Sidebar (hidden on mobile, moved into overlay) */}
+          <aside
+            style={{
+              gridArea: 'left',
+              alignSelf: 'start',
+              minWidth: 0,
+              display: isMobile ? 'none' : 'block',
+            }}
+          >
             {left ? left : <SidebarComp {...sidebarProps} />}
           </aside>
 
           {/* PAGE HEADER (center) */}
           <header
-            style={{ gridArea: 'header', alignSelf: 'start', minWidth: 0 }}
+            style={{
+              gridArea: 'header',
+              alignSelf: 'start',
+              minWidth: 0,
+            }}
           >
             {header}
+
+            {/* Mobile-only "Open Sidebar" button */}
+            {isMobile && (
+              <div style={{ marginTop: 12 }}>
+                <button
+                  type="button"
+                  onClick={() => setMobileSidebarOpen(true)}
+                  style={{
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: 8,
+                    borderRadius: 999,
+                    padding: '8px 14px',
+                    fontSize: 13,
+                    fontWeight: 600,
+                    border: '1px solid #CFD8DC',
+                    background: '#ECEFF1',
+                    color: '#263238',
+                    cursor: 'pointer',
+                  }}
+                >
+                  <span style={{ fontSize: 16 }}>☰</span>
+                  <span>Open Sidebar</span>
+                </button>
+              </div>
+            )}
           </header>
 
           {/* RIGHT — Variant-controlled rail */}
-          {right ? (
+          {hasRight ? (
             <aside
               style={{
                 ...rightBase,
@@ -255,6 +292,84 @@ export default function SeekerLayout({
           </main>
         </div>
       </div>
+
+      {/* MOBILE SIDEBAR OVERLAY */}
+      {isMobile && mobileSidebarOpen && (
+        <div
+          style={{
+            position: 'fixed',
+            inset: 0,
+            zIndex: 99999,
+            backgroundColor: 'rgba(0,0,0,0.6)',
+            display: 'flex',
+            justifyContent: 'flex-start',
+            alignItems: 'stretch',
+          }}
+        >
+          <div
+            style={{
+              width: '80%',
+              maxWidth: 320,
+              background: '#FFFFFF',
+              padding: 16,
+              boxSizing: 'border-box',
+              overflowY: 'auto',
+              boxShadow: '4px 0 20px rgba(0,0,0,0.3)',
+            }}
+          >
+            {/* Header row inside sidebar overlay */}
+            <div
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+                marginBottom: 12,
+              }}
+            >
+              <div
+                style={{
+                  fontSize: 14,
+                  fontWeight: 700,
+                  color: '#263238',
+                }}
+              >
+                Navigation
+              </div>
+              <button
+                type="button"
+                onClick={() => setMobileSidebarOpen(false)}
+                aria-label="Close sidebar"
+                style={{
+                  border: 'none',
+                  background: 'transparent',
+                  cursor: 'pointer',
+                  fontSize: 20,
+                  lineHeight: 1,
+                  color: '#546E7A',
+                }}
+              >
+                ×
+              </button>
+            </div>
+
+            {/* Reuse whichever sidebar chromeMode selected */}
+            {left ? left : <SidebarComp {...sidebarProps} />}
+          </div>
+
+          {/* Clickable area to close overlay when tapping outside panel */}
+          <button
+            type="button"
+            onClick={() => setMobileSidebarOpen(false)}
+            aria-label="Dismiss sidebar"
+            style={{
+              flex: 1,
+              border: 'none',
+              background: 'transparent',
+              cursor: 'pointer',
+            }}
+          />
+        </div>
+      )}
     </>
   );
 }

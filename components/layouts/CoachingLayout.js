@@ -26,25 +26,25 @@ export default function CoachingLayout({
   }[activeNav] || 'Coaching';
 
   const pageTitle = headerTitle || defaultFromNav;
-
   const hasRight = Boolean(right);
 
-  // --- Mobile flag (desktop layout stays original) ---
-  const [isMobile, setIsMobile] = useState(false);
+  // --- Mobile detection (match Seeker/Recruiter behavior) ---
+  const [isMobile, setIsMobile] = useState(true);
+  const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false);
 
   useEffect(() => {
     const handleResize = () => {
       if (typeof window !== 'undefined') {
-        setIsMobile(window.innerWidth < 768);
+        const width = window.innerWidth;
+        setIsMobile(width < 1024);
       }
     };
 
-    handleResize(); // run once at mount
+    handleResize();
     window.addEventListener('resize', handleResize);
     return () => window.removeEventListener('resize', handleResize);
   }, []);
 
-  // --- Desktop vs mobile grid configs ---
   const desktopGrid = {
     display: 'grid',
     gridTemplateColumns: '240px minmax(640px, 1fr) 240px',
@@ -55,22 +55,19 @@ export default function CoachingLayout({
     `,
   };
 
-  // On mobile, show header first, then content, then right rail, then sidebar
   const mobileGrid = {
     display: 'grid',
     gridTemplateColumns: '1fr',
-    gridTemplateRows: 'auto auto auto auto',
+    gridTemplateRows: hasRight ? 'auto auto auto' : 'auto auto',
     gridTemplateAreas: hasRight
       ? `
         "header"
         "content"
         "right"
-        "left"
       `
       : `
         "header"
         "content"
-        "left"
       `,
   };
 
@@ -90,8 +87,14 @@ export default function CoachingLayout({
           boxSizing: 'border-box',
         }}
       >
-        {/* LEFT — Sidebar */}
-        <aside style={{ gridArea: 'left', alignSelf: 'start', minWidth: 0 }}>
+        {/* LEFT — Sidebar (hidden on mobile, moved into overlay) */}
+        <aside
+          style={{
+            gridArea: 'left',
+            alignSelf: 'start',
+            display: isMobile ? 'none' : 'block',
+          }}
+        >
           {left || (
             <CoachingSidebar
               initialOpen={sidebarInitialOpen}  // ← force sections open/closed
@@ -102,7 +105,13 @@ export default function CoachingLayout({
 
         {/* HEADER */}
         <header
-          style={{ gridArea: 'header', alignSelf: 'start', marginTop: 0, paddingTop: 0, minWidth: 0 }}
+          style={{
+            gridArea: 'header',
+            alignSelf: 'start',
+            marginTop: 0,
+            paddingTop: 0,
+            minWidth: 0,
+          }}
         >
           {header ?? (
             <section
@@ -125,6 +134,32 @@ export default function CoachingLayout({
               )}
             </section>
           )}
+
+          {/* Mobile-only "Open Sidebar" button */}
+          {isMobile && (
+            <div style={{ marginTop: 12 }}>
+              <button
+                type="button"
+                onClick={() => setMobileSidebarOpen(true)}
+                style={{
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: 8,
+                  borderRadius: 999,
+                  padding: '8px 14px',
+                  fontSize: 13,
+                  fontWeight: 600,
+                  border: '1px solid #CFD8DC',
+                  background: '#ECEFF1',
+                  color: '#263238',
+                  cursor: 'pointer',
+                }}
+              >
+                <span style={{ fontSize: 16 }}>☰</span>
+                <span>Open Sidebar</span>
+              </button>
+            </div>
+          )}
         </header>
 
         {/* RIGHT — dark rail */}
@@ -140,9 +175,9 @@ export default function CoachingLayout({
               boxShadow: '0 2px 6px rgba(0,0,0,0.06)',
               minHeight: 120,
               boxSizing: 'border-box',
-              width: 240,
-              minWidth: 240,
-              maxWidth: 240,
+              width: isMobile ? '100%' : 240,
+              minWidth: isMobile ? 0 : 240,
+              maxWidth: isMobile ? '100%' : 240,
               minInlineSize: 0,
               color: 'white',
             }}
@@ -158,6 +193,89 @@ export default function CoachingLayout({
           </div>
         </main>
       </div>
+
+      {/* MOBILE SIDEBAR OVERLAY */}
+      {isMobile && mobileSidebarOpen && (
+        <div
+          style={{
+            position: 'fixed',
+            inset: 0,
+            zIndex: 99999,
+            backgroundColor: 'rgba(0,0,0,0.6)',
+            display: 'flex',
+            justifyContent: 'flex-start',
+            alignItems: 'stretch',
+          }}
+        >
+          <div
+            style={{
+              width: '80%',
+              maxWidth: 320,
+              background: '#FFFFFF',
+              padding: 16,
+              boxSizing: 'border-box',
+              overflowY: 'auto',
+              boxShadow: '4px 0 20px rgba(0,0,0,0.3)',
+            }}
+          >
+            {/* Header row inside sidebar overlay */}
+            <div
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+                marginBottom: 12,
+              }}
+            >
+              <div
+                style={{
+                  fontSize: 14,
+                  fontWeight: 700,
+                  color: '#263238',
+                }}
+              >
+                Navigation
+              </div>
+              <button
+                type="button"
+                onClick={() => setMobileSidebarOpen(false)}
+                aria-label="Close sidebar"
+                style={{
+                  border: 'none',
+                  background: 'transparent',
+                  cursor: 'pointer',
+                  fontSize: 20,
+                  lineHeight: 1,
+                  color: '#546E7A',
+                }}
+              >
+                ×
+              </button>
+            </div>
+
+            {/* Coaching sidebar in overlay */}
+            {left || (
+              <CoachingSidebar
+                initialOpen={sidebarInitialOpen}
+                active={activeNav}
+              />
+            )}
+          </div>
+
+          {/* Clickable area to close overlay when tapping outside panel */}
+          <button
+            type="button"
+            onClick={() => setMobileSidebarOpen(false)}
+            aria-label="Dismiss sidebar"
+            style={{
+              flex: 1,
+              border: 'none',
+              background: 'transparent',
+              cursor: 'pointer',
+            }}
+          />
+        </div>
+      )}
     </>
   );
 }
