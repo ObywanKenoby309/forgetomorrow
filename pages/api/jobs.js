@@ -63,8 +63,6 @@ export default async function handler(req, res) {
     return res.status(200).json({ jobs: fallbackJobs });
   }
 
-  let jobs = [];
-
   try {
     const client = await dbPool.connect();
     try {
@@ -81,10 +79,10 @@ export default async function handler(req, res) {
           salary,
           tags,
           source,
-          publishedAt
+          publishedAt AS "publishedat"
         FROM jobs
         ORDER BY
-          publishedAt DESC NULLS LAST,
+          "publishedat" DESC NULLS LAST,
           id DESC
         LIMIT 200;
         `
@@ -92,7 +90,12 @@ export default async function handler(req, res) {
 
       const rows = result.rows || [];
 
-      jobs = rows.map((row) => ({
+      if (!rows.length) {
+        console.warn('[jobs] No jobs found; using fallback');
+        return res.status(200).json({ jobs: fallbackJobs });
+      }
+
+      const jobs = rows.map((row) => ({
         id: row.id,
         title: row.title,
         company: row.company,
@@ -103,20 +106,19 @@ export default async function handler(req, res) {
         tags: row.tags,
         source: row.source || 'External',
         origin: 'external',
-        // Normalize to something Date(...) can handle on the frontend
-        publishedat: row.publishedat || row.publishedat || row.publishedat,
+        // normalized to ISO string for the frontend filter logic
+        publishedat: row.publishedat
+          ? new Date(row.publishedat).toISOString()
+          : new Date().toISOString(),
       }));
+
+      return res.status(200).json({ jobs });
     } finally {
       client.release();
     }
   } catch (error) {
     console.error('[jobs] Postgres jobs error:', error);
-  }
-
-  if (!jobs.length) {
-    console.warn('[jobs] No jobs found; using fallback');
+    console.warn('[jobs] Using fallback jobs due to error');
     return res.status(200).json({ jobs: fallbackJobs });
   }
-
-  return res.status(200).json({ jobs });
 }
