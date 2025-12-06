@@ -14,7 +14,8 @@ export default function EnterpriseHeader({
   navItems = [],
   showUpgrade = true,
   supportHref = "/support",
-  optionsHref = "/recruiter/options",
+  // 🔁 changed from "/recruiter/options" → "/settings"
+  optionsHref = "/settings",
   alignWithGrid = true,
   planLabel,
   showPlanBadge = true,
@@ -242,7 +243,8 @@ export default function EnterpriseHeader({
                           className="block px-4 py-3 text-sm hover:bg-[#333]"
                           role="menuitem"
                         >
-                          Options
+                          {/* 🔁 changed label Options → Settings */}
+                          Settings
                         </Link>
                         <Link
                           href={supportHref}
@@ -389,7 +391,8 @@ export default function EnterpriseHeader({
                     }}
                     className="w-full text-left text-gray-200 hover:text-[#FF7043] focus:outline-none focus:ring-4 focus:ring-orange-500 rounded-xl py-3"
                   >
-                    Options
+                    {/* 🔁 changed label Options → Settings */}
+                    Settings
                   </button>
                   <button
                     onClick={() => {
