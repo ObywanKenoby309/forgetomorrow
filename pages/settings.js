@@ -7,7 +7,6 @@ export default function SettingsPage() {
     try {
       const res = await fetch('/api/billing/portal', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
       });
 
       if (!res.ok) {
@@ -49,7 +48,7 @@ export default function SettingsPage() {
               Settings
             </h1>
             <p className="text-sm md:text-base text-[#546E7A]">
-              Manage your account, privacy, billing, and how your profile appears across ForgeTomorrow.
+              Manage your account, privacy, and billing in one place.
             </p>
           </header>
 
@@ -213,6 +212,7 @@ export default function SettingsPage() {
                   <button
                     type="button"
                     className="px-4 py-2 rounded-full text-xs font-medium border border-[#CFD8DC] text-[#455A64] hover:bg-[#ECEFF1] transition"
+                    onClick={() => (window.location.href = '/pricing')}
                   >
                     View plans
                   </button>
@@ -240,105 +240,6 @@ export default function SettingsPage() {
               </div>
             </div>
           </section>
-
-          {/* Profile appearance */}
-          <section className="bg-white rounded-2xl shadow-sm border border-[#CFD8DC] p-6 md:p-8 space-y-5">
-            <div className="flex items-center justify-between gap-4">
-              <h2 className="text-xl font-semibold text-[#263238]">
-                Profile appearance
-              </h2>
-              <span className="text-xs uppercase tracking-wide text-[#B0BEC5]">
-                Profile
-              </span>
-            </div>
-
-            <div className="grid gap-6 md:grid-cols-[auto,1fr] items-start">
-              {/* Avatar preview */}
-              <div className="flex flex-col items-center gap-3">
-                <div className="w-20 h-20 rounded-full bg-[#ECEFF1] overflow-hidden flex items-center justify-center">
-                  {/* TODO: Replace src with real avatarUrl */}
-                  <span className="text-lg font-semibold text-[#607D8B]">
-                    EJ
-                  </span>
-                </div>
-                {/* TODO: Wire to avatar upload API */}
-                <label className="inline-flex items-center justify-center px-3 py-1.5 rounded-full text-xs font-medium border border-[#CFD8DC] text-[#455A64] hover:bg-[#ECEFF1] cursor-pointer transition">
-                  <span>Upload avatar</span>
-                  <input
-                    type="file"
-                    accept="image/*"
-                    className="hidden"
-                    // onChange={handleAvatarUpload}
-                  />
-                </label>
-              </div>
-
-              {/* Banner / visibility */}
-              <div className="space-y-4">
-                <div>
-                  <p className="text-sm font-medium text-[#37474F]">
-                    Profile visibility
-                  </p>
-                  <p className="text-xs text-[#78909C] mb-2">
-                    Control who can view your profile when sharing your public
-                    link.
-                  </p>
-                  {/* TODO: Wire these buttons to isProfilePublic / recruiter-only mode */}
-                  <div className="flex flex-wrap gap-2">
-                    <button
-                      type="button"
-                      className="px-3 py-1.5 rounded-full text-xs font-medium bg-[#FF7043] text-white hover:bg-[#F4511E] transition"
-                    >
-                      Private
-                    </button>
-                    <button
-                      type="button"
-                      className="px-3 py-1.5 rounded-full text-xs font-medium border border-[#CFD8DC] text-[#455A64] hover:bg-[#ECEFF1] transition"
-                    >
-                      Public
-                    </button>
-                    <button
-                      type="button"
-                      className="px-3 py-1.5 rounded-full text-xs font-medium border border-[#CFD8DC] text-[#455A64] hover:bg-[#ECEFF1] transition"
-                    >
-                      Recruiters only
-                    </button>
-                  </div>
-                </div>
-
-                <div>
-                  <p className="text-sm font-medium text-[#37474F]">
-                    Profile banner
-                  </p>
-                  <p className="text-xs text-[#78909C] mb-2">
-                    Choose between a personal banner or your ForgeTomorrow staff
-                    banner (if assigned).
-                  </p>
-                  {/* TODO: Wire to corporateBannerLocked / corporateBannerKey */}
-                  <div className="flex flex-wrap gap-2">
-                    <button
-                      type="button"
-                      className="px-3 py-1.5 rounded-full text-xs font-medium border border-[#CFD8DC] text-[#455A64] hover:bg-[#ECEFF1] transition"
-                    >
-                      Personal banner
-                    </button>
-                    <button
-                      type="button"
-                      className="px-3 py-1.5 rounded-full text-xs font-medium border border-dashed border-[#FFAB91] text-[#D84315] hover:bg-[#FFF3E0] transition"
-                    >
-                      Company banner (locked)
-                    </button>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </section>
-
-          {/* Small compliance note for future you */}
-          <p className="text-[10px] text-center text-[#B0BEC5] mt-4">
-            Data controls shown here are for illustration. Final behavior will
-            follow your GDPR / CCPA / LGPD policy wiring.
-          </p>
         </div>
       </main>
     </>

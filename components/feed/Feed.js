@@ -38,7 +38,7 @@ export default function Feed() {
       id: row.id,
       authorId: row.authorId ?? currentUserId,
       author: row.author ?? row.authorName ?? currentUserName,
-      // 🔹 Prefer API-provided avatar, otherwise if it's the current user, fall back to their avatar
+      // Prefer API-provided avatar, otherwise (as a fallback) use current user avatar
       authorAvatar:
         row.authorAvatar ??
         (row.authorId && row.authorId === currentUserId
@@ -53,43 +53,39 @@ export default function Feed() {
     };
   };
 
+  // 🔁 Shared function to load/reload feed from API
+  const reloadFeed = async () => {
+    try {
+      console.log('[FEED] reloadFeed: fetching /api/feed');
+      const res = await fetch('/api/feed');
+      if (!res.ok) {
+        console.error('Feed GET failed:', await res.text());
+        return;
+      }
+      const data = await res.json();
+
+      console.log('[FEED] raw /api/feed response', data);
+
+      const list = Array.isArray(data.posts) ? data.posts : [];
+      const normalized = list
+        .map((row) => {
+          const n = normalizePost(row);
+          console.log('[FEED] normalizePost →', n);
+          return n;
+        })
+        .filter(Boolean);
+
+      console.log('[FEED] setting posts →', normalized);
+      setPosts(normalized);
+    } catch (err) {
+      console.error('Feed GET error:', err);
+    }
+  };
+
   // Load posts on mount
   useEffect(() => {
-    let cancelled = false;
-
-    async function loadFeed() {
-      try {
-        console.log('[FEED] loadFeed: fetching /api/feed');
-        const res = await fetch('/api/feed');
-        if (!res.ok) {
-          console.error('Feed GET failed:', await res.text());
-          return;
-        }
-        const data = await res.json();
-        if (cancelled) return;
-
-        console.log('[FEED] raw /api/feed response', data);
-
-        const list = Array.isArray(data.posts) ? data.posts : [];
-        const normalized = list
-          .map((row) => {
-            const n = normalizePost(row);
-            console.log('[FEED] normalizePost →', n);
-            return n;
-          })
-          .filter(Boolean);
-
-        console.log('[FEED] setting posts →', normalized);
-        setPosts(normalized);
-      } catch (err) {
-        console.error('Feed GET error:', err);
-      }
-    }
-
-    loadFeed();
-    return () => {
-      cancelled = true;
-    };
+    reloadFeed();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []); // run once
 
   // Lock scroll when composer open
@@ -127,17 +123,10 @@ export default function Feed() {
       }
 
       const data = await res.json();
-      const saved = data.post;
+      console.log('[FEED] POST /api/feed response', data);
 
-      // 🔹 Force the current user's avatar onto the new post
-      const safePost = normalizePost({
-        ...saved,
-        authorAvatar: currentUserAvatar,
-        // Fallback in case API doesn't echo attachments for some reason
-        attachments: saved?.attachments ?? payload.attachments,
-      });
-
-      setPosts((prev) => (safePost ? [safePost, ...prev] : prev));
+      // 🔁 Instead of local echo, immediately reload from API
+      await reloadFeed();
       setShowComposer(false);
     } catch (err) {
       console.error('Feed POST error:', err);
