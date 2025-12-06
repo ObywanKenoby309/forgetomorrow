@@ -25,14 +25,17 @@ export default function RecruiterLayout({
 }) {
   const hasRight = Boolean(right);
 
-  // --- Mobile detection (same pattern we used for Seeker/Coach) ---
-  const [isMobile, setIsMobile] = useState(false);
+  // --- Mobile detection ---
+  // Default to "mobile" to be safe; desktop will correct itself after effect runs.
+  const [isMobile, setIsMobile] = useState(true);
   const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false);
 
   useEffect(() => {
     const handleResize = () => {
       if (typeof window !== 'undefined') {
-        setIsMobile(window.innerWidth < 768);
+        // Treat screens narrower than 1024px as "mobile" layout.
+        const width = window.innerWidth;
+        setIsMobile(width < 1024);
       }
     };
 
