@@ -2,6 +2,39 @@
 import Head from 'next/head';
 
 export default function SettingsPage() {
+  // simple click handler for the billing button
+  async function handleManageBillingClick() {
+    try {
+      const res = await fetch('/api/billing/portal', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+      });
+
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}));
+        const message =
+          data?.error ||
+          'We could not open the billing portal right now. Please contact support.';
+        alert(message);
+        return;
+      }
+
+      const data = await res.json();
+      if (data?.url) {
+        window.location.href = data.url;
+      } else {
+        alert(
+          'We were unable to open the billing portal. Please contact support@forgetomorrow.com.'
+        );
+      }
+    } catch (err) {
+      console.error('[Settings] Billing portal error:', err);
+      alert(
+        'Something went wrong opening billing. Please contact support@forgetomorrow.com.'
+      );
+    }
+  }
+
   return (
     <>
       <Head>
@@ -16,7 +49,7 @@ export default function SettingsPage() {
               Settings
             </h1>
             <p className="text-sm md:text-base text-[#546E7A]">
-              Manage your account, privacy, and how your profile appears across ForgeTomorrow.
+              Manage your account, privacy, billing, and how your profile appears across ForgeTomorrow.
             </p>
           </header>
 
@@ -146,7 +179,7 @@ export default function SettingsPage() {
             </div>
           </section>
 
-          {/* Billing & subscription (new) */}
+          {/* Billing & subscription */}
           <section className="bg-white rounded-2xl shadow-sm border border-[#CFD8DC] p-6 md:p-8 space-y-5">
             <div className="flex items-center justify-between gap-4">
               <h2 className="text-xl font-semibold text-[#263238]">
@@ -169,10 +202,10 @@ export default function SettingsPage() {
                     You&apos;re on the <span className="font-semibold">Seeker Free</span> plan.
                   </p>
                 </div>
-                {/* TODO: Wire this to Stripe billing portal or in-app upgrade flow */}
                 <div className="flex flex-wrap gap-2">
                   <button
                     type="button"
+                    onClick={handleManageBillingClick}
                     className="px-4 py-2 rounded-full text-xs font-semibold bg-[#FF7043] text-white hover:bg-[#F4511E] transition"
                   >
                     Manage billing
@@ -194,9 +227,8 @@ export default function SettingsPage() {
                   Invoices &amp; receipts
                 </p>
                 <p className="text-xs text-[#78909C]">
-                  {/* TODO: Replace with real invoice list once wired to Stripe */}
-                  You&apos;ll see a history of your invoices and receipts here once billing is fully connected.
-                  For now, reach out to{' '}
+                  You&apos;ll see a history of your invoices and receipts here once
+                  billing is fully connected. For now, reach out to{' '}
                   <a
                     href="mailto:support@forgetomorrow.com"
                     className="text-[#FF7043] hover:underline"
@@ -209,7 +241,7 @@ export default function SettingsPage() {
             </div>
           </section>
 
-          {/* Appearance / avatar */}
+          {/* Profile appearance */}
           <section className="bg-white rounded-2xl shadow-sm border border-[#CFD8DC] p-6 md:p-8 space-y-5">
             <div className="flex items-center justify-between gap-4">
               <h2 className="text-xl font-semibold text-[#263238]">
