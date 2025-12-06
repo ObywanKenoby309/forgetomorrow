@@ -137,6 +137,28 @@ model PinnedJob {
 }
 
 // ============================================================================
+//  EXTERNAL / INGESTED JOB FEED (for cron imports)
+// ============================================================================
+
+model ExternalJob {
+  id          String   @id @default(cuid())
+  title       String?  
+  company     String?  @default("Not Provided")
+  location    String?  @default("Not Provided")
+  url         String?  @default("Not Provided")
+  description String?
+  salary      String?
+  tags        String?
+  publishedAt DateTime @default(now())
+  source      String   // "remotive", "himalayas", etc.
+  createdAt   DateTime? @default(now())
+  updatedAt   DateTime? @updatedAt
+
+  @@index([source])
+  @@map("external_jobs") // physical table name
+}
+
+// ============================================================================
 //  RESUMES, COVERS, AND SCAN LOGS
 // ============================================================================
 
