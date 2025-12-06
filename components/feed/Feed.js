@@ -22,6 +22,9 @@ export default function Feed() {
     emailUsername ||
     'You';
 
+  const currentUserAvatar =
+    session?.user?.avatarUrl || session?.user?.image || null;
+
   // Normalize post shape coming from API
   const normalizePost = (row) => {
     if (!row) return null;
@@ -35,7 +38,12 @@ export default function Feed() {
       id: row.id,
       authorId: row.authorId ?? currentUserId,
       author: row.author ?? row.authorName ?? currentUserName,
-      authorAvatar: row.authorAvatar ?? null, // 🔹 carry avatar from API → UI
+      // 🔹 Prefer API-provided avatar, otherwise if it's the current user, fall back to their avatar
+      authorAvatar:
+        row.authorAvatar ??
+        (row.authorId && row.authorId === currentUserId
+          ? currentUserAvatar
+          : null),
       body: row.body ?? row.content ?? '',
       type: row.type ?? 'business',
       createdAt,
@@ -121,8 +129,10 @@ export default function Feed() {
       const data = await res.json();
       const saved = data.post;
 
+      // 🔹 Force the current user's avatar onto the new post
       const safePost = normalizePost({
         ...saved,
+        authorAvatar: currentUserAvatar,
         // Fallback in case API doesn't echo attachments for some reason
         attachments: saved?.attachments ?? payload.attachments,
       });
