@@ -10,64 +10,9 @@ import { SecondaryButton } from "@/components/ui/Buttons";
 import { getClientSession } from "@/lib/auth-client";
 
 /* ---------------------------------------------
-   PERSONA WARNING MODAL
----------------------------------------------- */
-function PersonaWarningModal({ open, onConfirm, onCancel }) {
-  const [dontRemind, setDontRemind] = useState(false);
-
-  useEffect(() => {
-    if (!open) {
-      setDontRemind(false);
-    }
-  }, [open]);
-
-  if (!open) return null;
-
-  return (
-    <div className="fixed inset-0 z-[200] flex items-center justify-center">
-      <div className="absolute inset-0 bg-black/50" onClick={onCancel} />
-      <div className="relative w-full max-w-md rounded-lg bg-white shadow-xl border p-6">
-        <h2 className="text-lg font-semibold mb-2">
-          You&apos;re switching to your Personal persona
-        </h2>
-        <p className="text-sm text-slate-600 mb-3">
-          Messages sent as <strong>Personal</strong> will appear in{" "}
-          <span className="font-medium">The Signal</span>, not your recruiter
-          inbox. Recipients will see you as your personal identity, not your
-          recruiter role.
-        </p>
-        <label className="flex items-center gap-2 text-sm text-slate-600 mb-4">
-          <input
-            type="checkbox"
-            className="h-4 w-4"
-            checked={dontRemind}
-            onChange={(e) => setDontRemind(e.target.checked)}
-          />
-          <span>Don&apos;t remind me again</span>
-        </label>
-        <div className="flex justify-end gap-2">
-          <button
-            onClick={onCancel}
-            className="px-4 py-2 rounded border text-sm hover:bg-slate-50"
-          >
-            Cancel
-          </button>
-          <button
-            onClick={() => onConfirm(dontRemind)}
-            className="px-4 py-2 rounded text-sm text-white bg-[#FF7043] hover:bg-[#F4511E]"
-          >
-            Continue
-          </button>
-        </div>
-      </div>
-    </div>
-  );
-}
-
-/* ---------------------------------------------
    HEADER BAR
 ---------------------------------------------- */
-function HeaderBar({ onOpenBulk, persona, onPersonaChange }) {
+function HeaderBar({ onOpenBulk }) {
   const { isEnterprise } = usePlan();
 
   return (
@@ -80,22 +25,7 @@ function HeaderBar({ onOpenBulk, persona, onPersonaChange }) {
           Enterprise.
         </p>
       </div>
-      <div className="justify-self-center md:justify-self-end flex flex-col items-center md:items-end gap-2">
-        {/* Persona selector */}
-        <div className="flex items-center gap-2">
-          <span className="text-[11px] uppercase tracking-wide text-slate-500">
-            Send as
-          </span>
-          <select
-            value={persona}
-            onChange={(e) => onPersonaChange?.(e.target.value)}
-            className="border rounded px-2 py-1 text-xs bg-white"
-          >
-            <option value="recruiter">Recruiter</option>
-            <option value="personal">Personal</option>
-          </select>
-        </div>
-        {/* Bulk button */}
+      <div className="justify-self-center md:justify-self-end">
         {isEnterprise ? (
           <SecondaryButton onClick={onOpenBulk}>Bulk Message</SecondaryButton>
         ) : (
@@ -212,13 +142,6 @@ export default function MessagingPage() {
   const [currentUserId, setCurrentUserId] = useState(null);
   const [loadingUser, setLoadingUser] = useState(true);
 
-  // persona: "recruiter" | "personal"
-  const [persona, setPersona] = useState("recruiter");
-  const [personaWarningOpen, setPersonaWarningOpen] = useState(false);
-  const [pendingPersona, setPendingPersona] = useState(null);
-  const [personaWarningSuppressed, setPersonaWarningSuppressed] =
-    useState(false);
-
   const queryConversationId =
     (router.query.c && String(router.query.c)) ||
     (router.query.conversationId && String(router.query.conversationId)) ||
@@ -227,57 +150,9 @@ export default function MessagingPage() {
   const prefillText =
     typeof router.query.prefill === "string" ? router.query.prefill : "";
 
-  // ---------------------------------------------
-  //  Load persona warning suppression from localStorage
-  // ---------------------------------------------
-  useEffect(() => {
-    if (typeof window === "undefined") return;
-    try {
-      const raw = localStorage.getItem("ft_persona_warning_suppressed");
-      if (raw === "true") {
-        setPersonaWarningSuppressed(true);
-      }
-    } catch {
-      // ignore
-    }
-  }, []);
-
-  const handlePersonaChange = (next) => {
-    if (next === persona) return;
-
-    if (next === "personal" && !personaWarningSuppressed) {
-      setPendingPersona(next);
-      setPersonaWarningOpen(true);
-      return;
-    }
-
-    setPersona(next);
-  };
-
-  const handlePersonaConfirm = (dontRemind) => {
-    setPersonaWarningOpen(false);
-    if (pendingPersona) {
-      setPersona(pendingPersona);
-      setPendingPersona(null);
-    }
-    if (dontRemind && typeof window !== "undefined") {
-      try {
-        localStorage.setItem("ft_persona_warning_suppressed", "true");
-      } catch {
-        // ignore
-      }
-      setPersonaWarningSuppressed(true);
-    }
-  };
-
-  const handlePersonaCancel = () => {
-    setPersonaWarningOpen(false);
-    setPendingPersona(null);
-  };
-
-  // ---------------------------------------------
-  // 1) LOAD USER — avoid false redirect during hydration
-  // ---------------------------------------------
+  /* ---------------------------------------------
+     1) LOAD USER — avoid false redirects
+  ---------------------------------------------- */
   useEffect(() => {
     let cancelled = false;
 
@@ -285,20 +160,28 @@ export default function MessagingPage() {
       try {
         const session = await getClientSession();
 
-        // Hydration delay — NextAuth may briefly return null
+        // Hydration delay: don't redirect yet if session is temporarily null
         if (!session) return;
 
         if (!session.user?.id) {
-          if (!cancelled) await router.replace("/auth/signin");
+          if (!cancelled) {
+            await router.replace("/auth/signin");
+          }
           return;
         }
 
-        if (!cancelled) setCurrentUserId(session.user.id);
+        if (!cancelled) {
+          setCurrentUserId(session.user.id);
+        }
       } catch (err) {
         console.error("Failed to load session for recruiter messaging:", err);
-        if (!cancelled) await router.replace("/auth/signin");
+        if (!cancelled) {
+          await router.replace("/auth/signin");
+        }
       } finally {
-        if (!cancelled) setLoadingUser(false);
+        if (!cancelled) {
+          setLoadingUser(false);
+        }
       }
     }
 
@@ -308,11 +191,13 @@ export default function MessagingPage() {
     };
   }, [router]);
 
-  // ---------------------------------------------
-  // 2) fetchJson helper with x-user-id
-  // ---------------------------------------------
+  /* ---------------------------------------------
+     2) fetchJson helper
+  ---------------------------------------------- */
   async function fetchJson(url, options = {}) {
-    if (!currentUserId) throw new Error("No current user id resolved yet");
+    if (!currentUserId) {
+      throw new Error("No current user id resolved yet");
+    }
 
     const res = await fetch(url, {
       ...options,
@@ -331,9 +216,9 @@ export default function MessagingPage() {
     return res.json();
   }
 
-  // ---------------------------------------------
-  // 3) LOAD THREADS (Recruiter inbox only)
-  // ---------------------------------------------
+  /* ---------------------------------------------
+     3) LOAD THREADS
+  ---------------------------------------------- */
   useEffect(() => {
     if (!currentUserId) return;
     let cancelled = false;
@@ -411,14 +296,13 @@ export default function MessagingPage() {
     };
   }, [queryConversationId, currentUserId]);
 
-  // ---------------------------------------------
-  // 4) SEND MESSAGES — route by persona
-  // ---------------------------------------------
+  /* ---------------------------------------------
+     4) SEND MESSAGES
+  ---------------------------------------------- */
   const onSend = async (threadId, text) => {
     if (!text || !String(text).trim()) return;
 
     const trimmed = text.trim();
-    const channel = persona === "personal" ? "seeker" : "recruiter";
 
     try {
       const data = await fetchJson("/api/messages", {
@@ -426,7 +310,7 @@ export default function MessagingPage() {
         body: JSON.stringify({
           conversationId: threadId,
           content: trimmed,
-          channel,
+          channel: "recruiter",
         }),
       });
 
@@ -456,64 +340,45 @@ export default function MessagingPage() {
     }
   };
 
-  // ---------------------------------------------
-  //  LOADING STATE
-  // ---------------------------------------------
-  if (loadingUser || !currentUserId) {
+  /* ---------------------------------------------
+     LOADING STATE (only while session resolves)
+  ---------------------------------------------- */
+  if (loadingUser) {
     return (
       <PlanProvider>
         <RecruiterLayout
           title="Messaging — ForgeTomorrow"
-          header={
-            <HeaderBar
-              onOpenBulk={() => {}}
-              persona={persona}
-              onPersonaChange={handlePersonaChange}
-            />
-          }
+          header={<HeaderBar onOpenBulk={() => {}} />}
           right={<RightToolsCard />}
           activeNav="messaging"
         >
           <div className="h-64 flex items-center justify-center text-slate-500">
-            Loading your messaging inbox…
+            Loading…
           </div>
         </RecruiterLayout>
       </PlanProvider>
     );
   }
 
-  // ---------------------------------------------
-  //  RENDER PAGE
-  // ---------------------------------------------
+  /* ---------------------------------------------
+     RENDER PAGE (even if threads = [])
+  ---------------------------------------------- */
   return (
     <PlanProvider>
       <RecruiterLayout
         title="Messaging — ForgeTomorrow"
-        header={
-          <HeaderBar
-            onOpenBulk={() => setBulkOpen(true)}
-            persona={persona}
-            onPersonaChange={handlePersonaChange}
-          />
-        }
+        header={<HeaderBar onOpenBulk={() => setBulkOpen(true)} />}
         right={<RightToolsCard />}
         activeNav="messaging"
       >
         <Body
           threads={threads}
           onSend={onSend}
-          // No fake candidates; Bulk modal will show "No candidates available."
-          candidatesFlat={[]}
+          candidatesFlat={[]} // no fake placeholder candidates
           bulkOpen={bulkOpen}
           setBulkOpen={setBulkOpen}
           initialThreadId={initialThreadId}
           prefillText={prefillText}
-        />
-
-        <PersonaWarningModal
-          open={personaWarningOpen}
-          onConfirm={handlePersonaConfirm}
-          onCancel={handlePersonaCancel}
         />
       </RecruiterLayout>
     </PlanProvider>
