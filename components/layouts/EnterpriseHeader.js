@@ -214,7 +214,7 @@ export default function EnterpriseHeader({
                   <div className="relative" ref={profileRef}>
                     <button
                       onClick={() => setOpenProfile((v) => !v)}
-                      className="flex items-center gap-3 px-3 py-2 rounded-md hover:bg-[#333] focus-visible:ring-2 focus-visible:ring-orange-500"
+                      className="hidden md:flex items-center gap-3 px-3 py-2 rounded-md hover:bg-[#333] focus-visible:ring-2 focus-visible:ring-orange-500"
                       aria-haspopup="true"
                       aria-expanded={openProfile}
                     >
@@ -312,54 +312,61 @@ export default function EnterpriseHeader({
         </nav>
       </header>
 
-      {/* MOBILE OVERLAY MENU (unchanged behavior) */}
+      {/* MOBILE OVERLAY MENU — now a centered panel, not full-screen panel */}
       {openMobile && (
-        <div className="fixed inset-0 z-[99999] bg-[#2a2a2a] overflow-y-auto">
-          <div className="px-8 py-12 min-h-screen flex flex-col">
-            <button
-              onClick={() => setOpenMobile(false)}
-              className="self-end p-4 mb-12 focus-visible:ring-4 focus-visible:ring-orange-500 rounded-full"
-              aria-label="Close menu"
-            >
-              <svg
-                className="h-12 w-12 text-gray-400 hover:text-white"
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
+        <div className="fixed inset-0 z-[99999] bg-black/60 flex items-start justify-center overflow-y-auto">
+          <div className="mt-10 mb-10 w-full max-w-md bg-[#2a2a2a] rounded-3xl px-6 py-8 flex flex-col shadow-2xl">
+            {/* Close button */}
+            <div className="flex justify-end mb-4">
+              <button
+                onClick={() => setOpenMobile(false)}
+                className="p-2 focus-visible:ring-4 focus-visible:ring-orange-500 rounded-full"
+                aria-label="Close menu"
               >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth={2}
-                  d="M6 18L18 6M6 6l12 12"
-                />
-              </svg>
-            </button>
+                <svg
+                  className="h-8 w-8 text-gray-400 hover:text-white"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M6 18L18 6M6 6l12 12"
+                  />
+                </svg>
+              </button>
+            </div>
 
-            {/* Brand */}
-            <Link
-              href={brandHref}
-              onClick={() => setOpenMobile(false)}
-              className="flex items-center gap-6 mb-20"
-            >
+            {/* Brand + optional avatar */}
+            <div className="flex items-center gap-4 mb-8">
               <img
                 src="/favicon-32x32.png"
                 alt={brandLabel}
-                className="h-16 w-16 rounded"
+                className="h-10 w-10 rounded"
               />
-              <div className="text-[#FF7043] font-black text-5xl">
-                {brandLabel}
+              <div className="flex flex-col">
+                <div className="text-[#FF7043] font-black text-2xl">
+                  {brandLabel}
+                </div>
+                {!publicVariant && showUserMenu && (
+                  <div className="flex items-center gap-2 mt-1 text-xs text-gray-300">
+                    <Avatar avatarUrl={avatarUrl} initials={initials} size="xs" />
+                    <span>Signed in</span>
+                  </div>
+                )}
               </div>
-            </Link>
+            </div>
 
             {/* Nav + account actions / CTA */}
-            <nav className="flex flex-col gap-12 flex-1">
+            <nav className="flex flex-col gap-6 flex-1">
               {navItems.map((item) => (
                 <Link
                   key={item.href}
                   href={item.href}
                   onClick={() => setOpenMobile(false)}
-                  className="text-4xl font-medium text-gray-300 hover:text-[#FF7043] focus:text-[#FF7043] focus:outline-none focus:ring-4 focus:ring-orange-500 rounded-2xl py-6 transition"
+                  className="text-xl font-medium text-gray-300 hover:text-[#FF7043] focus:text-[#FF7043] focus:outline-none focus:ring-4 focus:ring-orange-500 rounded-xl py-3 transition"
                 >
                   {item.label}
                 </Link>
@@ -369,18 +376,18 @@ export default function EnterpriseHeader({
                 <Link
                   href="/pricing"
                   onClick={() => setOpenMobile(false)}
-                  className="bg-[#FF7043] text-white text-4xl font-bold text-center py-12 rounded-3xl hover:bg-orange-600 focus:outline-none focus:ring-4 focus:ring-orange-300 transition shadow-2xl"
+                  className="bg-[#FF7043] text-white text-2xl font-bold text-center py-5 rounded-2xl hover:bg-orange-600 focus:outline-none focus:ring-4 focus:ring-orange-300 transition shadow-xl"
                 >
                   Get Started
                 </Link>
               ) : (
-                <div className="mt-10 space-y-6 text-3xl">
+                <div className="mt-6 space-y-4 text-lg">
                   <button
                     onClick={() => {
                       setOpenMobile(false);
                       router.push(optionsHref);
                     }}
-                    className="w-full text-left text-gray-200 hover:text-[#FF7043] focus:outline-none focus:ring-4 focus:ring-orange-500 rounded-2xl py-4"
+                    className="w-full text-left text-gray-200 hover:text-[#FF7043] focus:outline-none focus:ring-4 focus:ring-orange-500 rounded-xl py-3"
                   >
                     Options
                   </button>
@@ -389,7 +396,7 @@ export default function EnterpriseHeader({
                       setOpenMobile(false);
                       router.push(supportHref);
                     }}
-                    className="w-full text-left text-gray-200 hover:text-[#FF7043] focus:outline-none focus:ring-4 focus:ring-orange-500 rounded-2xl py-4"
+                    className="w-full text-left text-gray-200 hover:text-[#FF7043] focus:outline-none focus:ring-4 focus:ring-orange-500 rounded-xl py-3"
                   >
                     Support
                   </button>
@@ -398,7 +405,7 @@ export default function EnterpriseHeader({
                       setOpenMobile(false);
                       router.push("/logout");
                     }}
-                    className="w-full text-left text-gray-200 hover:text-[#FF7043] focus:outline-none focus:ring-4 focus:ring-orange-500 rounded-2xl py-4"
+                    className="w-full text-left text-gray-200 hover:text-[#FF7043] focus:outline-none focus:ring-4 focus:ring-orange-500 rounded-xl py-3"
                   >
                     Log Out
                   </button>
