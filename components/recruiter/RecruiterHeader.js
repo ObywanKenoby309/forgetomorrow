@@ -18,10 +18,9 @@ export default function RecruiterHeader() {
       navItems={navItems}
       showUpgrade={true}
       alignWithGrid={true}
-
-      // 🔁 FIXED: point to universal Settings page
+      // ✅ Universal Settings page
       optionsHref="/settings"
-
+      // ✅ Support (EnterpriseHeader will add returnTo)
       supportHref="/support"
     />
   );

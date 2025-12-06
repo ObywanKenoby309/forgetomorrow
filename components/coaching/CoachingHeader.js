@@ -15,12 +15,13 @@ export default function CoachingHeader() {
     <EnterpriseHeader
       brandHref="/coaching-dashboard"
       brandLabel="ForgeTomorrow"
-      sectionLabel="Coaching Suite"  // triggers badge suppression
+      sectionLabel="Coaching Suite" // triggers badge suppression
       navItems={navItems}
       showUpgrade={false}
       alignWithGrid={true}
-      // 🔁 changed from /coaching/options → /settings
+      // ✅ Universal Settings page
       optionsHref="/settings"
+      // ✅ Support (EnterpriseHeader will add returnTo)
       supportHref="/support"
     />
   );
