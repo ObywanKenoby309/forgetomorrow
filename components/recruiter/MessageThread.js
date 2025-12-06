@@ -56,7 +56,7 @@ export default function MessageThread({
   }, [activeId, active?.messages?.length]);
 
   useEffect(() => {
-    // fake “candidate is typing” when you focus the input for a bit
+    // fake “candidate is typing” when you toggle the checkbox
     let t;
     if (activeId) {
       t = setTimeout(() => setIsTyping(false), 0);
@@ -77,7 +77,8 @@ export default function MessageThread({
       <aside className="md:col-span-1 rounded-lg border bg-white divide-y">
         {threads.length === 0 && (
           <div className="px-4 py-6 text-sm text-slate-500">
-            No conversations yet.
+            No conversations yet. Messages you send as{" "}
+            <span className="font-medium">Recruiter</span> will show up here.
           </div>
         )}
         {threads.map((t) => (
@@ -106,7 +107,9 @@ export default function MessageThread({
       {/* Active thread */}
       <section className="md:col-span-2 rounded-lg border bg-white p-4 flex flex-col">
         {!active ? (
-          <div className="text-sm text-slate-500">Select a conversation.</div>
+          <div className="text-sm text-slate-500">
+            Select a conversation to view messages.
+          </div>
         ) : (
           <>
             <div className="flex items-center justify-between mb-2">
