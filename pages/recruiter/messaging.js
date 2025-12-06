@@ -99,6 +99,22 @@ function Body({
 
   return (
     <main className="space-y-6">
+      {/* Explainer: how to start new threads */}
+      <div className="mb-2 rounded-md border border-slate-200 bg-slate-50 px-4 py-3 text-xs text-slate-700">
+        <p className="text-[11px] font-semibold uppercase tracking-wide text-slate-500">
+          How messaging works
+        </p>
+        <p className="mt-1">
+          To start a new conversation, open your{" "}
+          <span className="font-semibold">Candidates</span> view and click{" "}
+          <span className="font-mono text-[11px]">Message</span> on any card.
+          We&apos;ll ask whether to use your{" "}
+          <span className="font-semibold">Recruiter inbox</span> or your{" "}
+          <span className="font-semibold">Signal (personal)</span> inbox, and
+          that thread will appear here.
+        </p>
+      </div>
+
       <MessageThread
         threads={threads}
         initialThreadId={initialThreadId || threads[0]?.id}

@@ -1,134 +1,172 @@
-// components/recruiter/CandidateList.js
-import { useMemo, useState } from "react";
-
-function CandidateCard({ c, isEnterprise, onView, onMessage, onWhy }) {
-  return (
-    <div className="rounded-lg border bg-white p-4">
-      <div className="font-medium">{c.name}</div>
-      <div className="text-sm text-slate-500">
-        {c.role} • {c.location}
-      </div>
-
-      <div className="mt-2 text-sm">
-        Match Score:{" "}
-        {isEnterprise ? (
-          <span className="font-semibold">{c.match}%</span>
-        ) : (
-          <span className="text-slate-500">🔒 Upgrade for AI Match %</span>
-        )}
-      </div>
-
-      <div className="mt-3 flex items-center gap-2">
-        {/* Primary: brand orange */}
-        <button
-          type="button"
-          className="rounded px-3 py-2 text-sm font-medium text-white bg-[#FF7043] hover:bg-[#F4511E] transition-colors"
-          onClick={() => onView?.(c)}
-        >
-          View Profile
-        </button>
-
-        {/* Secondary: subtle outline */}
-        <button
-          type="button"
-          className="rounded border border-slate-300 text-slate-700 hover:bg-slate-50 text-sm px-3 py-2 transition-colors"
-          onClick={() => onMessage?.(c)}
-        >
-          Message
-        </button>
-
-        {/* WHY (tertiary) — only renders if parent passed onWhy */}
-        {onWhy && (
-          <button
-            type="button"
-            aria-label={`Why ${c.name} matched`}
-            className="rounded border border-[#FF7043] text-[#FF7043] hover:bg-[#FFEDE6] text-xs px-2 py-1 font-semibold transition-colors"
-            onClick={() => onWhy(c)}
-          >
-            WHY
-          </button>
-        )}
-      </div>
-    </div>
-  );
-}
+// components/recruiter/CandidateList.jsx
+import React from "react";
 
 export default function CandidateList({
   candidates = [],
   isEnterprise = false,
   onView,
   onMessage,
-  onWhy, // ← NEW
-  showFilters = true,
-  query: externalQuery = "",
-  locationFilter: externalLocation = "",
-  booleanQuery: externalBoolean = "",
-  ...rest
+  onWhy,
+  showFilters,      // currently unused but kept for compatibility
+  showFilterBar,    // currently unused but kept for compatibility
+  filtersVisible,   // currently unused but kept for compatibility
+  query,
+  locationFilter,
+  booleanQuery,
 }) {
-  // Internal state (only when showFilters === true)
-  const [query, setQuery] = useState("");
-  const [location, setLocation] = useState("");
-  const [boolQ, setBoolQ] = useState("");
+  const hasCandidates = Array.isArray(candidates) && candidates.length > 0;
 
-  const effectiveQuery = showFilters ? query : externalQuery;
-  const effectiveLocation = showFilters ? location : externalLocation;
-  const effectiveBoolean = showFilters ? boolQ : externalBoolean;
-
-  const filtered = useMemo(() => {
-    const q = (effectiveQuery || "").trim().toLowerCase();
-    const loc = (effectiveLocation || "").trim().toLowerCase();
-    return candidates.filter((c) => {
-      const okQ = !q || `${c.name} ${c.role}`.toLowerCase().includes(q);
-      const okL = !loc || (c.location || "").toLowerCase().includes(loc);
-      return okQ && okL;
-    });
-  }, [candidates, effectiveQuery, effectiveLocation, effectiveBoolean]);
+  if (!hasCandidates) {
+    return (
+      <div className="mt-4 rounded-lg border border-slate-200 bg-white px-4 py-6 text-sm text-slate-600">
+        <p className="font-medium text-slate-800 mb-1">
+          No candidates found yet
+        </p>
+        <p className="text-xs text-slate-500">
+          Adjust your search filters above, or widen your criteria. As your
+          automation rules run, new candidates that match your filters will
+          appear here.
+        </p>
+      </div>
+    );
+  }
 
   return (
-    <>
-      {/* OPTIONAL internal filters */}
-      {showFilters && (
-        <div className="mb-4 grid grid-cols-1 sm:grid-cols-3 gap-3">
-          <input
-            className="border rounded px-3 py-2 text-sm w-full focus:outline-none focus:ring-2 focus:ring-[#FF7043]"
-            placeholder="Search by name or role…"
-            value={query}
-            onChange={(e) => setQuery(e.target.value)}
-          />
-          <input
-            className="border rounded px-3 py-2 text-sm w-full focus:outline-none focus:ring-2 focus:ring-[#FF7043]"
-            placeholder="Filter by location…"
-            value={location}
-            onChange={(e) => setLocation(e.target.value)}
-          />
-          <input
-            className="border rounded px-3 py-2 text-sm w-full focus:outline-none focus:ring-2 focus:ring-[#FF7043]"
-            placeholder="Boolean Search (optional)…"
-            value={boolQ}
-            onChange={(e) => setBoolQ(e.target.value)}
-          />
+    <div className="mt-4 space-y-3">
+      {candidates.map((c) => (
+        <CandidateCard
+          key={c.id}
+          candidate={c}
+          isEnterprise={isEnterprise}
+          onView={onView}
+          onMessage={onMessage}
+          onWhy={onWhy}
+        />
+      ))}
+    </div>
+  );
+}
+
+function CandidateCard({ candidate, isEnterprise, onView, onMessage, onWhy }) {
+  const {
+    id,
+    name,
+    title,
+    role,
+    currentTitle,
+    location,
+    match,
+    tags,
+    workStatus,
+    preferredWorkType,
+  } = candidate;
+
+  const displayTitle = role || title || currentTitle || "Candidate";
+  const matchLabel =
+    typeof match === "number" ? `${match.toFixed(0)}% match` : null;
+
+  const tagList = Array.isArray(tags)
+    ? tags
+    : typeof tags === "string" && tags.trim()
+    ? tags.split(",").map((t) => t.trim()).filter(Boolean)
+    : [];
+
+  return (
+    <div className="flex flex-col gap-3 rounded-lg border border-slate-200 bg-white px-4 py-3 shadow-sm sm:flex-row sm:items-start sm:justify-between">
+      {/* Left: main info */}
+      <div className="flex-1 min-w-0">
+        <div className="flex items-start gap-2">
+          <div className="flex-1 min-w-0">
+            <h2 className="truncate text-sm font-semibold text-slate-900">
+              {name || "Unnamed candidate"}
+            </h2>
+            <p className="mt-0.5 text-xs text-slate-600 truncate">
+              {displayTitle}
+            </p>
+            <p className="mt-0.5 text-[11px] text-slate-500">
+              {location && <span>{location}</span>}
+              {location && (workStatus || preferredWorkType) && (
+                <span className="mx-1 text-slate-400">•</span>
+              )}
+              {workStatus && (
+                <span className="capitalize">
+                  {workStatus.replace(/_/g, " ")}
+                </span>
+              )}
+              {preferredWorkType && (
+                <>
+                  <span className="mx-1 text-slate-400">•</span>
+                  <span className="capitalize">
+                    {preferredWorkType.replace(/_/g, " ")}
+                  </span>
+                </>
+              )}
+            </p>
+          </div>
+
+          {matchLabel && (
+            <span className="ml-2 inline-flex shrink-0 items-center rounded-full border border-[#FF7043]/40 bg-[#FFEDE6] px-2 py-0.5 text-[11px] font-semibold text-[#D84315]">
+              {matchLabel}
+            </span>
+          )}
         </div>
-      )}
 
-      {/* Grid */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
-        {filtered.map((c) => (
-          <CandidateCard
-            key={c.id}
-            c={c}
-            isEnterprise={isEnterprise}
-            onView={onView}
-            onMessage={onMessage}
-            onWhy={onWhy}
-          />
-        ))}
-
-        {filtered.length === 0 && (
-          <div className="text-sm text-slate-500 col-span-full border rounded bg-white p-4">
-            No candidates match your filters.
+        {tagList.length > 0 && (
+          <div className="mt-2 flex flex-wrap gap-1">
+            {tagList.map((tag) => (
+              <span
+                key={tag}
+                className="inline-flex items-center rounded-full bg-slate-100 px-2 py-0.5 text-[10px] font-medium text-slate-700"
+              >
+                {tag}
+              </span>
+            ))}
           </div>
         )}
       </div>
-    </>
+
+      {/* Right: actions */}
+      <div className="flex flex-col items-stretch gap-2 sm:items-end sm:justify-between">
+        <div className="flex flex-wrap items-center justify-start gap-2 sm:justify-end">
+          {/* Primary CTA: Message */}
+          {typeof onMessage === "function" && (
+            <button
+              type="button"
+              onClick={() => onMessage(candidate)}
+              className="inline-flex items-center justify-center rounded-full bg-[#FF7043] px-3 py-1.5 text-xs font-semibold text-white shadow-sm hover:bg-[#F4511E] focus:outline-none focus:ring-2 focus:ring-offset-1 focus:ring-[#FF7043]"
+            >
+              Message
+            </button>
+          )}
+
+          {/* Secondary: View profile */}
+          {typeof onView === "function" && (
+            <button
+              type="button"
+              onClick={() => onView(candidate)}
+              className="inline-flex items-center justify-center rounded-full border border-slate-300 px-3 py-1.5 text-xs font-medium text-slate-700 hover:bg-slate-50 focus:outline-none focus:ring-2 focus:ring-offset-1 focus:ring-slate-300"
+            >
+              View profile
+            </button>
+          )}
+
+          {/* WHY button (if provided) */}
+          {typeof onWhy === "function" && (
+            <button
+              type="button"
+              onClick={() => onWhy(candidate)}
+              className="inline-flex items-center justify-center rounded-full border border-slate-200 px-3 py-1.5 text-[11px] font-semibold text-slate-700 hover:bg-slate-50 focus:outline-none focus:ring-2 focus:ring-offset-1 focus:ring-slate-200"
+            >
+              WHY this candidate
+            </button>
+          )}
+        </div>
+
+        <p className="mt-1 text-[10px] text-slate-500 text-right max-w-[220px]">
+          New threads start here. Your choice of Recruiter inbox or Signal
+          (personal) inbox happens on the next step.
+        </p>
+      </div>
+    </div>
   );
 }
