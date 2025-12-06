@@ -19,7 +19,8 @@ export default function CoachingHeader() {
       navItems={navItems}
       showUpgrade={false}
       alignWithGrid={true}
-      optionsHref="/coaching/options"
+      // 🔁 changed from /coaching/options → /settings
+      optionsHref="/settings"
       supportHref="/support"
     />
   );

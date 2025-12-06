@@ -16,10 +16,13 @@ export default function RecruiterHeader() {
       brandLabel="ForgeTomorrow"
       sectionLabel="Recruiter Suite"
       navItems={navItems}
-      showUpgrade={true}          // ✅ recruiters still see upgrade
-      alignWithGrid={true}        // ✅ keep layout aligned
-      optionsHref="/recruiter/options" // ✅ settings page for recruiters
-      supportHref="/support"           // ✅ consistent support link
+      showUpgrade={true}
+      alignWithGrid={true}
+
+      // 🔁 FIXED: point to universal Settings page
+      optionsHref="/settings"
+
+      supportHref="/support"
     />
   );
 }

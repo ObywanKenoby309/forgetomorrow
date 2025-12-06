@@ -43,7 +43,8 @@ export default function SeekerHeader() {
       navItems={navItems}
       showUpgrade={false}
       alignWithGrid={true}
-      optionsHref={withChrome("/seeker/options")}
+      // 🔁 changed from /seeker/options → /settings (still preserving chrome)
+      optionsHref={withChrome("/settings")}
       supportHref="/support"
     />
   );
