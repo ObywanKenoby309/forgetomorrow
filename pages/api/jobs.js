@@ -63,6 +63,8 @@ export default async function handler(req, res) {
     return res.status(200).json({ jobs: fallbackJobs });
   }
 
+  let jobs = [];
+
   try {
     const client = await dbPool.connect();
     try {
@@ -79,10 +81,10 @@ export default async function handler(req, res) {
           salary,
           tags,
           source,
-          publishedAt AS "publishedat"
+          "publishedAt"
         FROM jobs
         ORDER BY
-          "publishedat" DESC NULLS LAST,
+          "publishedAt" DESC NULLS LAST,
           id DESC
         LIMIT 200;
         `
@@ -90,35 +92,41 @@ export default async function handler(req, res) {
 
       const rows = result.rows || [];
 
-      if (!rows.length) {
-        console.warn('[jobs] No jobs found; using fallback');
-        return res.status(200).json({ jobs: fallbackJobs });
-      }
+      jobs = rows.map((row) => {
+        // Handle different casings just in case
+        const published =
+          row.publishedat ||
+          row.publishedAt ||
+          row.published_at ||
+          null;
 
-      const jobs = rows.map((row) => ({
-        id: row.id,
-        title: row.title,
-        company: row.company,
-        location: row.location,
-        description: row.description,
-        url: row.url,
-        salary: row.salary,
-        tags: row.tags,
-        source: row.source || 'External',
-        origin: 'external',
-        // normalized to ISO string for the frontend filter logic
-        publishedat: row.publishedat
-          ? new Date(row.publishedat).toISOString()
-          : new Date().toISOString(),
-      }));
-
-      return res.status(200).json({ jobs });
+        return {
+          id: row.id,
+          title: row.title,
+          company: row.company,
+          location: row.location,
+          description: row.description,
+          url: row.url,
+          salary: row.salary,
+          tags: row.tags,
+          source: row.source || 'External',
+          origin: 'external',
+          publishedat: published
+            ? new Date(published).toISOString()
+            : new Date().toISOString(),
+        };
+      });
     } finally {
       client.release();
     }
   } catch (error) {
     console.error('[jobs] Postgres jobs error:', error);
-    console.warn('[jobs] Using fallback jobs due to error');
+  }
+
+  if (!jobs.length) {
+    console.warn('[jobs] No jobs found; using fallback');
     return res.status(200).json({ jobs: fallbackJobs });
   }
+
+  return res.status(200).json({ jobs });
 }
