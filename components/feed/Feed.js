@@ -80,8 +80,9 @@ export default function Feed() {
       }
 
       // Combine & sort by date
-      const combined = [...community, ...remoteJobs]
-        .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+      const combined = [...community, ...remoteJobs].sort(
+        (a, b) => new Date(b.createdAt) - new Date(a.createdAt)
+      );
 
       setPosts(combined);
     } catch (err) {
@@ -99,7 +100,6 @@ export default function Feed() {
 
   // Composer & reply handlers stay the same (only affect community posts)
   const handleNewPost = async (postFromComposer) => {
-    // unchanged — still posts to /api/feed
     const payload = {
       text: postFromComposer.body ?? '',
       type: postFromComposer.type,
@@ -120,8 +120,13 @@ export default function Feed() {
     }
   };
 
-  const handleReply = async (postId, text) => { /* unchanged */ };
-  const handleDelete = async (postId) => { /* unchanged */ };
+  const handleReply = async (postId, text) => {
+    // unchanged – implement if/when needed
+  };
+
+  const handleDelete = async (postId) => {
+    // unchanged – implement if/when needed
+  };
 
   return (
     <div className="mx-auto w-full max-w-none px-2 sm:px-6 pt-6 pb-10">
@@ -142,9 +147,12 @@ export default function Feed() {
         </div>
       </div>
 
-      {/* Composer & PostList unchanged */}
+      {/* Composer trigger */}
       <div className="bg-white rounded-lg shadow p-4 mb-4">
-        <button onClick={() => setShowComposer(true)} className="w-full text-left text-gray-600 px-3 py-2 border rounded-md hover:bg-gray-50">
+        <button
+          onClick={() => setShowComposer(true)}
+          className="w-full text-left text-gray-600 px-3 py-2 border rounded-md hover:bg-gray-50"
+        >
           Start a post…
         </button>
       </div>
@@ -158,8 +166,16 @@ export default function Feed() {
       />
 
       {showComposer && (
-        // composer overlay unchanged
-        …
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
+          <div className="bg-white rounded-lg shadow-xl max-w-lg w-full p-4">
+            <PostComposer
+              onCancel={() => setShowComposer(false)}
+              onSubmit={handleNewPost}
+              currentUserName={currentUserName}
+              currentUserAvatar={currentUserAvatar}
+            />
+          </div>
+        </div>
       )}
     </div>
   );
