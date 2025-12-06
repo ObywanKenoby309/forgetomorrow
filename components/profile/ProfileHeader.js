@@ -1,3 +1,4 @@
+// components/profile/ProfileHeader.js
 'use client';
 
 import React, { useEffect, useState } from 'react';
@@ -177,7 +178,7 @@ export default function ProfileHeader() {
       // 🔔 broadcast to the rest of the app (layouts using useUserWallpaper)
       if (typeof window !== 'undefined') {
         window.dispatchEvent(
-          new CustomEvent('profile:wallpaper-updated', {
+          new CustomEvent('profileHeaderUpdated', {
             detail: {
               wallpaperUrl: effectiveWallpaper,
             },
@@ -715,7 +716,14 @@ export default function ProfileHeader() {
             </div>
 
             {/* Mode + height controls */}
-            <div style={{ display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap' }}>
+            <div
+              style={{
+                display: 'flex',
+                gap: 8,
+                alignItems: 'center',
+                flexWrap: 'wrap',
+              }}
+            >
               <span style={{ fontSize: 13, fontWeight: 600 }}>Banner mode</span>
               <ModeToggle value={bannerMode} onChange={setBannerMode} />
             </div>
@@ -734,7 +742,9 @@ export default function ProfileHeader() {
 
             {bannerMode === 'cover' && (
               <div style={{ display: 'grid', gap: 6 }}>
-                <span style={{ fontSize: 13, fontWeight: 600 }}>Vertical focus (cover)</span>
+                <span style={{ fontSize: 13, fontWeight: 600 }}>
+                  Vertical focus (cover)
+                </span>
                 <input
                   type="range"
                   min={0}
@@ -775,7 +785,14 @@ export default function ProfileHeader() {
               </small>
             )}
 
-            <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8, marginTop: 8 }}>
+            <div
+              style={{
+                display: 'flex',
+                justifyContent: 'flex-end',
+                gap: 8,
+                marginTop: 8,
+              }}
+            >
               <button
                 onClick={() => setEditOpen(false)}
                 style={{

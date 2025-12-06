@@ -14,24 +14,27 @@ function tsFmt(ts) {
  * - threads: [{id, candidate, snippet, messages:[{id, from:'recruiter'|'candidate', text, ts, status?:'sent'|'read'}], unread?: number}]
  * - initialThreadId?: number|string
  * - onSend?: (threadId, messageText) => void
- * - onInsertSavedReply?: (setDraft) => void   // called by SavedReplies to insert text
  */
 export default function MessageThread({
   threads = [],
   initialThreadId,
   onSend,
-  onInsertSavedReply,
 }) {
   const [activeId, setActiveId] = useState(
     initialThreadId ?? threads[0]?.id ?? null
   );
+
   const active = useMemo(
     () => threads.find((t) => t.id === activeId) || null,
     [threads, activeId]
   );
+
   const [draft, setDraft] = useState("");
   const [isTyping, setIsTyping] = useState(false);
   const scrollRef = useRef(null);
+
+  const hasThreads = threads.length > 0;
+  const canCompose = hasThreads && !!active;
 
   // 🔁 Keep activeId in sync with initialThreadId / threads when they change
   useEffect(() => {
@@ -39,7 +42,6 @@ export default function MessageThread({
     setActiveId((prev) => {
       // If we already have a valid activeId that still exists, keep it
       if (prev && threads.some((t) => t.id === prev)) {
-        // But if initialThreadId is explicitly set and different, respect that
         if (initialThreadId && prev !== initialThreadId) {
           return initialThreadId;
         }
@@ -49,14 +51,15 @@ export default function MessageThread({
     });
   }, [initialThreadId, threads]);
 
+  // Auto-scroll to bottom when switching threads or adding messages
   useEffect(() => {
     if (scrollRef.current) {
       scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
     }
   }, [activeId, active?.messages?.length]);
 
+  // Reset fake “typing” when thread changes
   useEffect(() => {
-    // fake “candidate is typing” when you toggle the checkbox
     let t;
     if (activeId) {
       t = setTimeout(() => setIsTyping(false), 0);
@@ -66,21 +69,39 @@ export default function MessageThread({
 
   const handleSend = () => {
     const text = draft.trim();
-    if (!text || !active) return;
+    if (!text || !canCompose) return;
     onSend?.(active.id, text);
     setDraft("");
   };
+
+  const inputPlaceholder = hasThreads
+    ? "Type a message…"
+    : "Start from a candidate card and choose ‘Send as Recruiter’ to open a conversation.";
 
   return (
     <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
       {/* Threads list */}
       <aside className="md:col-span-1 rounded-lg border bg-white divide-y">
-        {threads.length === 0 && (
+        {/* Header for clarity */}
+        <div className="px-4 py-3 border-b bg-slate-50">
+          <div className="text-xs font-semibold tracking-wide text-slate-600 uppercase">
+            Recruiter Inbox
+          </div>
+          <p className="mt-1 text-[11px] text-slate-500 leading-snug">
+            Conversations you start as a{" "}
+            <span className="font-semibold">Recruiter</span> will show here.
+            Personal DMs live in{" "}
+            <span className="font-semibold">The Signal</span>.
+          </p>
+        </div>
+
+        {!hasThreads && (
           <div className="px-4 py-6 text-sm text-slate-500">
             No conversations yet. Messages you send as{" "}
-            <span className="font-medium">Recruiter</span> will show up here.
+            <span className="font-semibold">Recruiter</span> will show up here.
           </div>
         )}
+
         {threads.map((t) => (
           <button
             key={t.id}
@@ -90,7 +111,7 @@ export default function MessageThread({
             }`}
           >
             <div className="flex items-center justify-between">
-              <div className="font-medium">{t.candidate}</div>
+              <div className="font-medium truncate">{t.candidate}</div>
               {t.unread ? (
                 <span className="ml-2 text-[10px] px-1.5 py-[2px] rounded bg-emerald-100 text-emerald-700 border border-emerald-200">
                   {t.unread}
@@ -98,17 +119,35 @@ export default function MessageThread({
               ) : null}
             </div>
             <div className="text-xs text-slate-500 truncate">
-              {t.snippet || "—"}
+              {t.snippet || "No messages yet."}
             </div>
           </button>
         ))}
       </aside>
 
-      {/* Active thread */}
+      {/* Active thread + composer */}
       <section className="md:col-span-2 rounded-lg border bg-white p-4 flex flex-col">
-        {!active ? (
-          <div className="text-sm text-slate-500">
-            Select a conversation to view messages.
+        {!hasThreads ? (
+          // Global empty state when there are zero conversations
+          <div className="flex-1 flex flex-col items-center justify-center text-center text-sm text-slate-500 space-y-2">
+            <div className="text-base font-semibold text-slate-700">
+              No recruiter conversations yet
+            </div>
+            <p className="max-w-md text-xs text-slate-500">
+              This inbox is for conversations you start as{" "}
+              <span className="font-semibold">Recruiter</span>. To begin,
+              open a candidate card and choose to send a message as Recruiter.
+              When candidates reply, the full thread will appear here.
+            </p>
+            <p className="max-w-md text-[11px] text-slate-400">
+              Personal one-to-one messages still flow through{" "}
+              <span className="font-semibold">The Signal</span>. You pick your
+              persona; the system routes each message to the right inbox.
+            </p>
+          </div>
+        ) : !active ? (
+          <div className="flex-1 flex items-center justify-center text-sm text-slate-500">
+            Select a conversation from the list to view messages.
           </div>
         ) : (
           <>
@@ -162,9 +201,10 @@ export default function MessageThread({
                 </ul>
               ) : (
                 <div className="text-slate-500">
-                  No messages yet. Say hello!
+                  No messages in this conversation yet. Start by saying hello.
                 </div>
               )}
+
               {isTyping && (
                 <div className="mt-2 flex justify-start">
                   <div className="px-3 py-2 rounded bg-white border text-slate-500 text-[13px]">
@@ -173,36 +213,38 @@ export default function MessageThread({
                 </div>
               )}
             </div>
-
-            <div className="mt-3 flex items-center gap-2">
-              <input
-                className="flex-1 border rounded px-3 py-2 text-sm"
-                placeholder="Type a message…"
-                value={draft}
-                onChange={(e) => setDraft(e.target.value)}
-                onKeyDown={(e) => {
-                  if ((e.metaKey || e.ctrlKey) && e.key === "Enter")
-                    handleSend();
-                }}
-              />
-              <button
-                className="rounded bg-black text-white text-sm px-3 py-2"
-                onClick={handleSend}
-                disabled={!draft.trim() || !active}
-                title="Ctrl/Cmd+Enter to send"
-              >
-                Send
-              </button>
-              <button
-                className="rounded border text-sm px-3 py-2"
-                onClick={() => onInsertSavedReply?.(setDraft)}
-                title="Insert saved reply"
-              >
-                Saved Replies
-              </button>
-            </div>
           </>
         )}
+
+        {/* Composer row — always visible, disabled when there is no active thread */}
+        <div className="mt-3 flex items-center gap-2">
+          <input
+            className="flex-1 border rounded px-3 py-2 text-sm disabled:bg-slate-100 disabled:text-slate-400"
+            placeholder={inputPlaceholder}
+            value={draft}
+            onChange={(e) => setDraft(e.target.value)}
+            disabled={!canCompose}
+            onKeyDown={(e) => {
+              if ((e.metaKey || e.ctrlKey) && e.key === "Enter") handleSend();
+            }}
+          />
+          <button
+            className={`rounded text-sm px-3 py-2 ${
+              canCompose
+                ? "bg-black text-white"
+                : "bg-slate-300 text-slate-600 cursor-not-allowed"
+            }`}
+            onClick={handleSend}
+            disabled={!canCompose || !draft.trim()}
+            title={
+              canCompose
+                ? "Ctrl/Cmd+Enter to send"
+                : "Open a recruiter conversation from a candidate card to send"
+            }
+          >
+            Send
+          </button>
+        </div>
       </section>
     </div>
   );
