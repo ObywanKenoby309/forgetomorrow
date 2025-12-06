@@ -1,4 +1,4 @@
-// components/layouts/EnterpriseHeader.js ← with real plan from session
+// components/layouts/EnterpriseHeader.js ← with real plan from session + chrome/returnTo for Settings & Support
 import Link from "next/link";
 import { useRouter } from "next/router";
 import { useEffect, useRef, useState } from "react";
@@ -14,7 +14,7 @@ export default function EnterpriseHeader({
   navItems = [],
   showUpgrade = true,
   supportHref = "/support",
-  // 🔁 changed from "/recruiter/options" → "/settings"
+  // default settings route (can be overridden by caller)
   optionsHref = "/settings",
   alignWithGrid = true,
   planLabel,
@@ -113,6 +113,39 @@ export default function EnterpriseHeader({
       : "Small Business";
 
   const navInRight = publicVariant && !showUserMenu;
+
+  // ──────────────────────────────────────────────────────────────
+  // 🔁 Chrome + returnTo wiring for Settings & Support
+  // ──────────────────────────────────────────────────────────────
+
+  const currentPath = router.asPath || "/";
+
+  const queryChrome = (router.query?.chrome || "").toString().toLowerCase();
+  let inferredChrome = queryChrome;
+
+  if (!inferredChrome) {
+    const label = (sectionLabel || "").toLowerCase();
+    if (label.includes("job seeker")) inferredChrome = "seeker";
+    else if (label.includes("recruiter")) inferredChrome = "recruiter";
+    else if (label.includes("coaching")) inferredChrome = "coach";
+    else inferredChrome = "public";
+  }
+
+  const buildUrlWithContext = (baseHref) => {
+    if (!baseHref) return currentPath;
+
+    const params = [];
+    if (inferredChrome) {
+      params.push(`chrome=${encodeURIComponent(inferredChrome)}`);
+    }
+    params.push(`returnTo=${encodeURIComponent(currentPath)}`);
+
+    const sep = baseHref.includes("?") ? "&" : "?";
+    return `${baseHref}${sep}${params.join("&")}`;
+  };
+
+  const resolvedOptionsHref = buildUrlWithContext(optionsHref);
+  const resolvedSupportHref = buildUrlWithContext(supportHref);
 
   return (
     <>
@@ -239,15 +272,14 @@ export default function EnterpriseHeader({
                         className="absolute right-0 mt-2 w-48 bg-[#2f2f2f] border border-[#3a3a3a] rounded-md shadow-xl"
                       >
                         <Link
-                          href={optionsHref}
+                          href={resolvedOptionsHref}
                           className="block px-4 py-3 text-sm hover:bg-[#333]"
                           role="menuitem"
                         >
-                          {/* 🔁 changed label Options → Settings */}
                           Settings
                         </Link>
                         <Link
-                          href={supportHref}
+                          href={resolvedSupportHref}
                           className="block px-4 py-3 text-sm hover:bg-[#333]"
                           role="menuitem"
                         >
@@ -314,7 +346,7 @@ export default function EnterpriseHeader({
         </nav>
       </header>
 
-      {/* MOBILE OVERLAY MENU — now a centered panel, not full-screen panel */}
+      {/* MOBILE OVERLAY MENU — centered panel */}
       {openMobile && (
         <div className="fixed inset-0 z-[99999] bg-black/60 flex items-start justify-center overflow-y-auto">
           <div className="mt-10 mb-10 w-full max-w-md bg-[#2a2a2a] rounded-3xl px-6 py-8 flex flex-col shadow-2xl">
@@ -325,7 +357,7 @@ export default function EnterpriseHeader({
                 className="p-2 focus-visible:ring-4 focus-visible:ring-orange-500 rounded-full"
                 aria-label="Close menu"
               >
-                <svg
+              <svg
                   className="h-8 w-8 text-gray-400 hover:text-white"
                   fill="none"
                   stroke="currentColor"
@@ -374,7 +406,7 @@ export default function EnterpriseHeader({
                 </Link>
               ))}
 
-              {(publicVariant || !showUserMenu) ? (
+              {publicVariant || !showUserMenu ? (
                 <Link
                   href="/pricing"
                   onClick={() => setOpenMobile(false)}
@@ -387,17 +419,16 @@ export default function EnterpriseHeader({
                   <button
                     onClick={() => {
                       setOpenMobile(false);
-                      router.push(optionsHref);
+                      router.push(resolvedOptionsHref);
                     }}
                     className="w-full text-left text-gray-200 hover:text-[#FF7043] focus:outline-none focus:ring-4 focus:ring-orange-500 rounded-xl py-3"
                   >
-                    {/* 🔁 changed label Options → Settings */}
                     Settings
                   </button>
                   <button
                     onClick={() => {
                       setOpenMobile(false);
-                      router.push(supportHref);
+                      router.push(resolvedSupportHref);
                     }}
                     className="w-full text-left text-gray-200 hover:text-[#FF7043] focus:outline-none focus:ring-4 focus:ring-orange-500 rounded-xl py-3"
                   >
