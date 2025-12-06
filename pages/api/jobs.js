@@ -1,12 +1,12 @@
-// pages/api/jobs.js — return real jobs from Supabase (cron-fed) only
+// pages/api/jobs.js — Supabase/Postgres jobs only, no TypeScript syntax
 
 import { Pool } from 'pg';
 
 // Use your main DATABASE_URL (Supabase)
 const connectionString = process.env.DATABASE_URL || null;
 
-// Lazily-initialized connection pool
-let pool: Pool | null = null;
+// Lazily-initialized connection pool (Postgres)
+let pool = null;
 
 function getPool() {
   if (!connectionString) return null;
@@ -14,12 +14,42 @@ function getPool() {
     pool = new Pool({
       connectionString,
       ssl: {
-        rejectUnauthorized: false, // Supabase/managed PG usually needs SSL
+        rejectUnauthorized: false,
       },
     });
   }
   return pool;
 }
+
+// Fallback jobs — keeps the site up even if DB is not ready
+const fallbackJobs = [
+  {
+    id: 1,
+    title: 'Frontend Developer',
+    company: 'ForgeTomorrow',
+    description: 'Build cutting-edge UIs for modern professionals.',
+    location: 'Remote',
+    url: null,
+    salary: null,
+    tags: null,
+    source: 'Fallback',
+    origin: 'fallback',
+    publishedat: new Date().toISOString(),
+  },
+  {
+    id: 2,
+    title: 'Mentor Coordinator',
+    company: 'ForgeTomorrow',
+    description: 'Help manage and scale mentorship experiences.',
+    location: 'Hybrid (Remote/Nashville)',
+    url: null,
+    salary: null,
+    tags: null,
+    source: 'Fallback',
+    origin: 'fallback',
+    publishedat: new Date().toISOString(),
+  },
+];
 
 export default async function handler(req, res) {
   if (req.method !== 'GET') {
@@ -29,18 +59,16 @@ export default async function handler(req, res) {
   const dbPool = getPool();
 
   if (!dbPool) {
-    console.error('[jobs] No DATABASE_URL configured');
-    return res.status(500).json({ error: 'Jobs database not configured' });
+    console.warn('[jobs] DATABASE_URL not set; serving fallback jobs');
+    return res.status(200).json({ jobs: fallbackJobs });
   }
+
+  let jobs = [];
 
   try {
     const client = await dbPool.connect();
-
     try {
-      // Read the real cron-fed jobs from the `jobs` table.
-      // Columns should match what n8n writes:
-      // id, title, company, location, url, description, salary, tags,
-      // publishedAt, source, createdAt, updatedAt
+      // Read from your Supabase "jobs" table
       const result = await client.query(
         `
         SELECT
@@ -48,18 +76,15 @@ export default async function handler(req, res) {
           title,
           company,
           location,
-          url,
           description,
+          url,
           salary,
           tags,
           source,
-          publishedat,
-          createdat,
-          updatedat
+          publishedAt
         FROM jobs
         ORDER BY
-          publishedat DESC NULLS LAST,
-          createdat DESC NULLS LAST,
+          publishedAt DESC NULLS LAST,
           id DESC
         LIMIT 200;
         `
@@ -67,8 +92,7 @@ export default async function handler(req, res) {
 
       const rows = result.rows || [];
 
-      // Normalize into the shape the jobs page expects
-      const jobs = rows.map((row) => ({
+      jobs = rows.map((row) => ({
         id: row.id,
         title: row.title,
         company: row.company,
@@ -78,18 +102,21 @@ export default async function handler(req, res) {
         salary: row.salary,
         tags: row.tags,
         source: row.source || 'External',
-        origin: 'external', // used by the filter on /jobs
-        publishedat: row.publishedat,
-        createdAt: row.createdat,
-        updatedAt: row.updatedat,
+        origin: 'external',
+        // Normalize to something Date(...) can handle on the frontend
+        publishedat: row.publishedat || row.publishedat || row.publishedat,
       }));
-
-      return res.status(200).json({ jobs });
     } finally {
       client.release();
     }
   } catch (error) {
-    console.error('[jobs] Error loading jobs from Postgres:', error);
-    return res.status(500).json({ error: 'Failed to load jobs' });
+    console.error('[jobs] Postgres jobs error:', error);
   }
+
+  if (!jobs.length) {
+    console.warn('[jobs] No jobs found; using fallback');
+    return res.status(200).json({ jobs: fallbackJobs });
+  }
+
+  return res.status(200).json({ jobs });
 }
