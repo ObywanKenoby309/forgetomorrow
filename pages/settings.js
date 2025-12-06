@@ -16,7 +16,7 @@ export default function SettingsPage() {
               Settings
             </h1>
             <p className="text-sm md:text-base text-[#546E7A]">
-              Manage your account, privacy, and profile appearance.
+              Manage your account, privacy, and how your profile appears across ForgeTomorrow.
             </p>
           </header>
 
@@ -76,7 +76,7 @@ export default function SettingsPage() {
           <section className="bg-white rounded-2xl shadow-sm border border-[#CFD8DC] p-6 md:p-8 space-y-5">
             <div className="flex items-center justify-between gap-4">
               <h2 className="text-xl font-semibold text-[#263238]">
-                Privacy & data
+                Privacy &amp; data
               </h2>
               <span className="text-xs uppercase tracking-wide text-[#B0BEC5]">
                 Compliance
@@ -88,7 +88,7 @@ export default function SettingsPage() {
               <div className="flex items-start justify-between gap-4">
                 <div>
                   <p className="text-sm font-medium text-[#37474F]">
-                    Email updates & product news
+                    Email updates &amp; product news
                   </p>
                   <p className="text-xs text-[#78909C]">
                     Get occasional updates about new features, product changes,
@@ -142,6 +142,69 @@ export default function SettingsPage() {
                 >
                   Delete account
                 </button>
+              </div>
+            </div>
+          </section>
+
+          {/* Billing & subscription (new) */}
+          <section className="bg-white rounded-2xl shadow-sm border border-[#CFD8DC] p-6 md:p-8 space-y-5">
+            <div className="flex items-center justify-between gap-4">
+              <h2 className="text-xl font-semibold text-[#263238]">
+                Billing &amp; subscription
+              </h2>
+              <span className="text-xs uppercase tracking-wide text-[#B0BEC5]">
+                Plan
+              </span>
+            </div>
+
+            <div className="space-y-4">
+              {/* Current plan summary – static for now */}
+              <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-3">
+                <div>
+                  <p className="text-sm font-medium text-[#37474F]">
+                    Current plan
+                  </p>
+                  <p className="text-xs text-[#78909C]">
+                    {/* TODO: Replace with real plan name from session / DB */}
+                    You&apos;re on the <span className="font-semibold">Seeker Free</span> plan.
+                  </p>
+                </div>
+                {/* TODO: Wire this to Stripe billing portal or in-app upgrade flow */}
+                <div className="flex flex-wrap gap-2">
+                  <button
+                    type="button"
+                    className="px-4 py-2 rounded-full text-xs font-semibold bg-[#FF7043] text-white hover:bg-[#F4511E] transition"
+                  >
+                    Manage billing
+                  </button>
+                  <button
+                    type="button"
+                    className="px-4 py-2 rounded-full text-xs font-medium border border-[#CFD8DC] text-[#455A64] hover:bg-[#ECEFF1] transition"
+                  >
+                    View plans
+                  </button>
+                </div>
+              </div>
+
+              <hr className="border-[#ECEFF1]" />
+
+              {/* Invoices / receipts placeholder */}
+              <div className="space-y-2">
+                <p className="text-sm font-medium text-[#37474F]">
+                  Invoices &amp; receipts
+                </p>
+                <p className="text-xs text-[#78909C]">
+                  {/* TODO: Replace with real invoice list once wired to Stripe */}
+                  You&apos;ll see a history of your invoices and receipts here once billing is fully connected.
+                  For now, reach out to{' '}
+                  <a
+                    href="mailto:support@forgetomorrow.com"
+                    className="text-[#FF7043] hover:underline"
+                  >
+                    support@forgetomorrow.com
+                  </a>{' '}
+                  if you need help with a payment.
+                </p>
               </div>
             </div>
           </section>

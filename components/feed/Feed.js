@@ -35,6 +35,7 @@ export default function Feed() {
       id: row.id,
       authorId: row.authorId ?? currentUserId,
       author: row.author ?? row.authorName ?? currentUserName,
+      authorAvatar: row.authorAvatar ?? null, // 🔹 carry avatar from API → UI
       body: row.body ?? row.content ?? '',
       type: row.type ?? 'business',
       createdAt,
@@ -62,11 +63,13 @@ export default function Feed() {
         console.log('[FEED] raw /api/feed response', data);
 
         const list = Array.isArray(data.posts) ? data.posts : [];
-        const normalized = list.map((row) => {
-          const n = normalizePost(row);
-          console.log('[FEED] normalizePost →', n);
-          return n;
-        }).filter(Boolean);
+        const normalized = list
+          .map((row) => {
+            const n = normalizePost(row);
+            console.log('[FEED] normalizePost →', n);
+            return n;
+          })
+          .filter(Boolean);
 
         console.log('[FEED] setting posts →', normalized);
         setPosts(normalized);
