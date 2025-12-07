@@ -99,6 +99,15 @@ export default function PublicProfile({ user }) {
   const skills = parseArrayField(skillsJson, []);
   const languages = parseArrayField(languagesJson, []);
 
+  const displayHeadline =
+    headline || 'ForgeTomorrow member';
+
+  const aboutText =
+    aboutMe ||
+    `${fullName} hasn’t added an About section yet. This public profile is still being set up.`;
+
+  const hasSkillsOrLanguages = skills.length > 0 || languages.length > 0;
+
   return (
     <>
       <Head>
@@ -115,6 +124,7 @@ export default function PublicProfile({ user }) {
           margin: '0 auto',
           padding: '20px',
           minHeight: '80vh',
+          background: '#fafafa',
         }}
       >
         {/* Cover banner */}
@@ -172,7 +182,7 @@ export default function PublicProfile({ user }) {
               <p style={{ margin: '4px 0', color: '#607D8B' }}>{pronouns}</p>
             )}
 
-            {headline && (
+            {displayHeadline && (
               <p
                 style={{
                   margin: '6px 0',
@@ -180,7 +190,7 @@ export default function PublicProfile({ user }) {
                   color: '#455A64',
                 }}
               >
-                {headline}
+                {displayHeadline}
               </p>
             )}
 
@@ -256,135 +266,135 @@ export default function PublicProfile({ user }) {
           This is a public ForgeTomorrow profile.
         </div>
 
-        {/* About section */}
-        {aboutMe && (
-          <section
+        {/* About section (always shown with fallback text) */}
+        <section
+          style={{
+            marginTop: 24,
+            padding: 20,
+            borderRadius: 12,
+            background: 'white',
+            border: '1px solid #e0e0e0',
+          }}
+        >
+          <h2
             style={{
-              marginTop: 24,
-              padding: 20,
-              borderRadius: 12,
-              background: 'white',
-              border: '1px solid #e0e0e0',
+              margin: '0 0 8px',
+              fontSize: 18,
+              fontWeight: 600,
+              color: '#263238',
             }}
           >
-            <h2
-              style={{
-                margin: '0 0 8px',
-                fontSize: 18,
-                fontWeight: 600,
-                color: '#263238',
-              }}
-            >
-              About
-            </h2>
-            <p
-              style={{
-                margin: 0,
-                fontSize: 14,
-                lineHeight: 1.6,
-                color: '#455A64',
-                whiteSpace: 'pre-line',
-              }}
-            >
-              {aboutMe}
-            </p>
-          </section>
-        )}
-
-        {/* Skills / Languages */}
-        {(skills.length > 0 || languages.length > 0) && (
-          <section
+            About
+          </h2>
+          <p
             style={{
-              marginTop: 24,
-              display: 'grid',
-              gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))',
-              gap: 16,
+              margin: 0,
+              fontSize: 14,
+              lineHeight: 1.6,
+              color: '#455A64',
+              whiteSpace: 'pre-line',
             }}
           >
-            {skills.length > 0 && (
-              <div
-                style={{
-                  padding: 20,
-                  borderRadius: 12,
-                  background: 'white',
-                  border: '1px solid #e0e0e0',
-                }}
-              >
-                <h2
-                  style={{
-                    margin: '0 0 8px',
-                    fontSize: 16,
-                    fontWeight: 600,
-                    color: '#263238',
-                  }}
-                >
-                  Skills
-                </h2>
-                <div
-                  style={{
-                    display: 'flex',
-                    flexWrap: 'wrap',
-                    gap: 8,
-                    marginTop: 6,
-                  }}
-                >
-                  {skills.map((skill) => (
-                    <span
-                      key={skill}
-                      style={{
-                        fontSize: 12,
-                        padding: '4px 8px',
-                        borderRadius: 999,
-                        background: '#ECEFF1',
-                        color: '#37474F',
-                      }}
-                    >
-                      {skill}
-                    </span>
-                  ))}
-                </div>
-              </div>
-            )}
+            {aboutText}
+          </p>
+        </section>
 
-            {languages.length > 0 && (
-              <div
+        {/* Skills / Languages / Profile details */}
+        <section
+          style={{
+            marginTop: 24,
+            display: 'grid',
+            gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))',
+            gap: 16,
+          }}
+        >
+          {skills.length > 0 && (
+            <div
+              style={{
+                padding: 20,
+                borderRadius: 12,
+                background: 'white',
+                border: '1px solid #e0e0e0',
+              }}
+            >
+              <h2
                 style={{
-                  padding: 20,
-                  borderRadius: 12,
-                  background: 'white',
-                  border: '1px solid #e0e0e0',
+                  margin: '0 0 8px',
+                  fontSize: 16,
+                  fontWeight: 600,
+                  color: '#263238',
                 }}
               >
-                <h2
-                  style={{
-                    margin: '0 0 8px',
-                    fontSize: 16,
-                    fontWeight: 600,
-                    color: '#263238',
-                  }}
-                >
-                  Languages
-                </h2>
-                <ul
-                  style={{
-                    listStyle: 'none',
-                    padding: 0,
-                    margin: 0,
-                    fontSize: 13,
-                    color: '#455A64',
-                  }}
-                >
-                  {languages.map((lang) => (
-                    <li key={lang} style={{ marginBottom: 4 }}>
-                      {lang}
-                    </li>
-                  ))}
-                </ul>
+                Skills
+              </h2>
+              <div
+                style={{
+                  display: 'flex',
+                  flexWrap: 'wrap',
+                  gap: 8,
+                  marginTop: 6,
+                }}
+              >
+                {skills.map((skill) => (
+                  <span
+                    key={skill}
+                    style={{
+                      fontSize: 12,
+                      padding: '4px 8px',
+                      borderRadius: 999,
+                      background: '#ECEFF1',
+                      color: '#37474F',
+                    }}
+                  >
+                    {skill}
+                  </span>
+                ))}
               </div>
-            )}
-          </section>
-        )}
-      </main>
-    </>
-  );
-}
+            </div>
+          )}
+
+          {languages.length > 0 && (
+            <div
+              style={{
+                padding: 20,
+                borderRadius: 12,
+                background: 'white',
+                border: '1px solid #e0e0e0',
+              }}
+            >
+              <h2
+                style={{
+                  margin: '0 0 8px',
+                  fontSize: 16,
+                  fontWeight: 600,
+                  color: '#263238',
+                }}
+              >
+                Languages
+              </h2>
+              <ul
+                style={{
+                  listStyle: 'none',
+                  padding: 0,
+                  margin: 0,
+                  fontSize: 13,
+                  color: '#455A64',
+                }}
+              >
+                {languages.map((lang) => (
+                  <li key={lang} style={{ marginBottom: 4 }}>
+                    {lang}
+                  </li>
+                ))}
+              </ul>
+            </div>
+          )}
+
+          {/* Fallback card if no skills or languages yet */}
+          {!hasSkillsOrLanguages && (
+            <div
+              style={{
+                padding: 20,
+                borderRadius: 12,
+            
+::contentReference[oaicite:0]{index=0}
