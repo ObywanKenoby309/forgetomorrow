@@ -1,9 +1,12 @@
-// pages/api/jobs.js — Supabase/Postgres jobs only, with debug count
+// pages/api/jobs.js — Supabase/Postgres jobs only, with SSL override
 
 import { Pool } from 'pg';
 
+// Force Node to stop rejecting the Supabase cert
+process.env.NODE_TLS_REJECT_UNAUTHORIZED = '0';
+
 // Use your main DATABASE_URL (Supabase)
-const connectionString = process.env.DATABASE_URL || null;
+const connectionString = process.env.DATABASE_URL || '';
 
 // Lazily-initialized connection pool (Postgres)
 let pool = null;
@@ -14,7 +17,8 @@ function getPool() {
     pool = new Pool({
       connectionString,
       ssl: {
-        require: true,
+        // We are explicitly telling pg to use SSL but not to freak out
+        // about the self-signed certificate.
         rejectUnauthorized: false,
       },
     });
@@ -31,7 +35,11 @@ export default async function handler(req, res) {
 
   if (!dbPool) {
     console.warn('[jobs] DATABASE_URL not set; returning empty list');
-    return res.status(200).json({ jobs: [], debugTotal: 0, debugNote: 'No DATABASE_URL' });
+    return res.status(200).json({
+      jobs: [],
+      debugTotal: 0,
+      debugNote: 'No DATABASE_URL in environment',
+    });
   }
 
   let jobs = [];
@@ -40,7 +48,7 @@ export default async function handler(req, res) {
   try {
     const client = await dbPool.connect();
     try {
-      // Minimal, safe query: only select columns we KNOW exist
+      // Minimal safe query: only columns we know exist
       const result = await client.query(
         `
         SELECT
@@ -48,9 +56,11 @@ export default async function handler(req, res) {
           title,
           company,
           location,
-          description
+          description,
+          "createdAt"
         FROM jobs
         ORDER BY
+          "createdAt" DESC NULLS LAST,
           id DESC
         LIMIT 200;
         `
@@ -60,8 +70,6 @@ export default async function handler(req, res) {
       debugTotal = rows.length;
 
       jobs = rows.map((row) => {
-        // Try to infer a "published" date if any timestamp columns exist,
-        // but don't trust or require it to be there
         const created =
           row.createdAt ||
           row.createdat ||
