@@ -362,7 +362,7 @@ export default function CoachMessagingPage() {
   if (loadingUser) {
     return (
       <PlanProvider>
-        <CoachLayout
+        <CoachingLayout
           title="Messaging — ForgeTomorrow"
           header={<HeaderBar onOpenBulk={() => {}} />}
           right={<RightToolsCard />}
@@ -371,7 +371,7 @@ export default function CoachMessagingPage() {
           <div className="h-64 flex items-center justify-center text-slate-500">
             Loading…
           </div>
-        </CoachLayout>
+        </CoachingLayout>
       </PlanProvider>
     );
   }
@@ -381,7 +381,7 @@ export default function CoachMessagingPage() {
   ---------------------------------------------- */
   return (
     <PlanProvider>
-      <CoachLayout
+      <CoachingLayout
         title="Messaging — ForgeTomorrow"
         header={<HeaderBar onOpenBulk={() => setBulkOpen(true)} />}
         right={<RightToolsCard />}
@@ -396,7 +396,7 @@ export default function CoachMessagingPage() {
           initialThreadId={initialThreadId}
           prefillText={prefillText}
         />
-      </CoachLayout>
+      </CoachingLayout>
     </PlanProvider>
   );
 }
