@@ -25,65 +25,53 @@ export default async function handler(req, res) {
       return res.status(404).json({ error: 'User not found' });
     }
 
-    // ─────────────────────────────────────────────────────────────
-    //  INPUTS
-    //  - channel: which inbox / workspace this belongs to
-    //      e.g. "recruiter", "coach", "signal", "recruiter-signal"
-    //  - targetUserId: generic user id we’re messaging
-    //  - candidateId: legacy name for targetUserId (kept for compatibility)
-    // ─────────────────────────────────────────────────────────────
-    const { candidateId, targetUserId, channel: rawChannel } = req.body || {};
+    const { candidateId, targetUserId, channel } = req.body || {};
 
-    // Backwards-compatible: if caller doesn’t send channel, default to recruiter.
-    const channel =
-      typeof rawChannel === 'string' && rawChannel.trim().length > 0
-        ? rawChannel.trim()
-        : 'recruiter';
+    // Support both legacy `candidateId` and new `targetUserId`
+    const rawTarget =
+      (typeof targetUserId === 'string' && targetUserId.trim()) ||
+      (typeof candidateId === 'string' && candidateId.trim()) ||
+      null;
 
-    const resolvedTargetId =
-      typeof targetUserId === 'string' && targetUserId.trim().length > 0
-        ? targetUserId.trim()
-        : typeof candidateId === 'string' && candidateId.trim().length > 0
-        ? candidateId.trim()
-        : null;
-
-    if (!resolvedTargetId) {
+    if (!rawTarget) {
       return res.status(400).json({
-        error:
-          'Missing or invalid "targetUserId" (or legacy "candidateId") in request body.',
+        error: 'Missing or invalid "targetUserId" (or legacy "candidateId")',
       });
     }
 
-    if (resolvedTargetId === me.id) {
+    if (rawTarget === me.id) {
       return res
         .status(400)
         .json({ error: 'You cannot start a thread with yourself.' });
     }
 
-    // Make sure the target user exists
-    const targetUser = await prisma.user.findUnique({
-      where: { id: resolvedTargetId },
+    // Make sure the other user exists
+    const target = await prisma.user.findUnique({
+      where: { id: rawTarget },
       select: { id: true },
     });
 
-    if (!targetUser) {
+    if (!target) {
       return res.status(404).json({ error: 'Target user not found' });
     }
 
-    // ─────────────────────────────────────────────────────────────
-    //  LOOK FOR EXISTING 1:1 CONVERSATION IN THIS CHANNEL
-    //  (e.g. recruiter, coach, signal…)
-    // ─────────────────────────────────────────────────────────────
+    // Channel: default recruiter, or explicitly "coach" etc.
+    const convChannel =
+      typeof channel === 'string' && channel.trim().length > 0
+        ? channel.trim()
+        : 'recruiter';
+
+    // Look for an existing 1:1 conversation in this channel between these two
     const existing = await prisma.conversation.findFirst({
       where: {
-        channel, // now dynamic: "recruiter", "coach", etc.
+        channel: convChannel,
         participants: {
           some: { userId: me.id },
         },
         AND: [
           {
             participants: {
-              some: { userId: resolvedTargetId },
+              some: { userId: target.id },
             },
           },
         ],
@@ -94,19 +82,16 @@ export default async function handler(req, res) {
     if (existing) {
       return res.status(200).json({
         conversationId: existing.id,
-        channel,
         created: false,
       });
     }
 
-    // ─────────────────────────────────────────────────────────────
-    //  CREATE NEW CONVERSATION + PARTICIPANTS
-    // ─────────────────────────────────────────────────────────────
+    // Create a new conversation + participants
     const convo = await prisma.conversation.create({
       data: {
         isGroup: false,
         title: null,
-        channel, // <- key: supports recruiter, coach, signal, etc.
+        channel: convChannel,
         participants: {
           create: [
             {
@@ -114,7 +99,7 @@ export default async function handler(req, res) {
               role: 'owner',
             },
             {
-              userId: resolvedTargetId,
+              userId: target.id,
               role: 'member',
             },
           ],
@@ -125,13 +110,12 @@ export default async function handler(req, res) {
 
     return res.status(200).json({
       conversationId: convo.id,
-      channel,
       created: true,
     });
   } catch (err) {
     console.error('[messages/start-thread] error', err);
-    return res
-      .status(500)
-      .json({ error: 'Failed to start or find a conversation.' });
+    return res.status(500).json({
+      error: 'Failed to start or find a conversation.',
+    });
   }
 }

@@ -2,7 +2,7 @@
 import { useState, useEffect } from "react";
 import { useRouter } from "next/router";
 import { PlanProvider, usePlan } from "@/context/PlanContext";
-import CoachLayout from "@/components/layouts/CoachLayout";
+import CoachingLayout from "@/components/layouts/CoachingLayout";
 import MessageThread from "@/components/recruiter/MessageThread";
 import SavedReplies from "@/components/recruiter/SavedReplies";
 import BulkMessageModal from "@/components/recruiter/BulkMessageModal";
