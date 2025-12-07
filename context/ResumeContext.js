@@ -182,6 +182,20 @@ export function ResumeProvider({ children }) {
     customSections,
   ]);
 
+  // ---------- Friendly auto-name helper (for ATS-friendly titles) ----------
+  const buildResumeName = () => {
+    const namePart = (formData.fullName || '').trim();
+    const rolePart = (formData.targetedRole || '').trim();
+
+    const base = namePart || 'Resume';
+    const role = rolePart || 'General';
+
+    // e.g. "Eric James - Customer Success Leader - 2025-12-07"
+    const date = new Date().toISOString().slice(0, 10);
+
+    return `${base} - ${role} - ${date}`;
+  };
+
   // -------- Manual Save (for "Save Resume" button) --------
   const saveResume = async () => {
     const now = nowIso();
@@ -200,12 +214,13 @@ export function ResumeProvider({ children }) {
       customSections,
     };
 
-    const title = formData.fullName || 'Untitled Resume';
+    // Use friendly auto-name instead of "Untitled Resume"
+    const title = buildResumeName();
 
-    // Local snapshot (temporary before DB save)
+    // Local snapshot (for sidebar / client state)
     let snapshot = {
       id: `${Date.now()}`, // temporary ID before DB save
-      title,
+      name: title,
       createdAt: now,
       updatedAt: now,
       isPrimary: true,
@@ -221,7 +236,6 @@ export function ResumeProvider({ children }) {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          // API expects: name, content, setPrimary
           name: title,
           content: data,
           setPrimary: true,
@@ -235,27 +249,37 @@ export function ResumeProvider({ children }) {
         if (dbResume && dbResume.id) {
           // Replace the local snapshot with the DB-backed one
           setResumes((prev) => {
+            // clear previous primaries in local state if needed
             const withoutTemp = prev.filter((r) => r.id !== snapshot.id);
-
             return [
-              // If this one is primary, clear others locally
               ...withoutTemp.map((r) =>
                 dbResume.isPrimary ? { ...r, isPrimary: false } : r
               ),
               {
                 id: dbResume.id,
-                title: dbResume.name || title,
-                createdAt: dbResume.createdAt || now,
-                updatedAt: dbResume.updatedAt || now,
+                name: dbResume.name,
+                createdAt: dbResume.createdAt,
+                updatedAt: dbResume.updatedAt,
                 isPrimary: dbResume.isPrimary,
-                // keep the rich builder payload locally
-                data,
+                data: dbResume.content
+                  ? (() => {
+                      try {
+                        // content is stored as JSON string in DB
+                        return JSON.parse(dbResume.content);
+                      } catch {
+                        return data;
+                      }
+                    })()
+                  : data,
               },
             ];
           });
         }
       } else {
-        console.warn('[ResumeContext] Failed to save resume to backend', res.status);
+        console.warn(
+          '[ResumeContext] Failed to save resume to backend',
+          res.status
+        );
       }
     } catch (err) {
       console.error('[ResumeContext] Error saving resume to backend', err);
@@ -265,20 +289,33 @@ export function ResumeProvider({ children }) {
   return (
     <ResumeContext.Provider
       value={{
-        formData, setFormData,
-        summary, setSummary,
-        experiences, setExperiences,
-        projects, setProjects,
-        volunteerExperiences, setVolunteerExperiences,
-        educationList, setEducationList,
-        certifications, setCertifications,
-        languages, setLanguages,
-        skills, setSkills,
-        achievements, setAchievements,
-        customSections, setCustomSections,
-        resumes, setResumes,
+        formData,
+        setFormData,
+        summary,
+        setSummary,
+        experiences,
+        setExperiences,
+        projects,
+        setProjects,
+        volunteerExperiences,
+        setVolunteerExperiences,
+        educationList,
+        setEducationList,
+        certifications,
+        setCertifications,
+        languages,
+        setLanguages,
+        skills,
+        setSkills,
+        achievements,
+        setAchievements,
+        customSections,
+        setCustomSections,
+        resumes,
+        setResumes,
         lastAutosaveAt,
-        saveEventAt, setSaveEventAt, // expose for manual save toast
+        saveEventAt,
+        setSaveEventAt,
 
         // Shared backup API
         summaryBackup,

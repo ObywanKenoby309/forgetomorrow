@@ -94,6 +94,12 @@ const TEMPLATES = [
   },
 ];
 
+// 🔹 Preview image paths for each template (screenshots you provide)
+const TEMPLATE_PREVIEW_IMAGES = {
+  reverse: '/images/resume-templates/reverse-preview.png',
+  hybrid: '/images/resume-templates/hybrid-preview.png',
+};
+
 function TemplatePreviewModal({ open, onClose, tpl, buildCreateHref }) {
   if (!open || !tpl) return null;
 
@@ -342,7 +348,6 @@ export default function ResumeCoverLanding() {
 
     // 2) Extract text for auto-fill in the builder
     try {
-      // 🔧 FIX: always attempt to parse, even for larger files
       const raw = await extractTextFromFile(file);
 
       if (raw && typeof window !== 'undefined') {
@@ -442,8 +447,6 @@ export default function ResumeCoverLanding() {
     </Card>
   );
 
-  // ... rest of the file (ATSContextBanner, ATSWhyBanner, TemplatesRow, layout) stays exactly the same
-
   const ATSContextBanner =
     atsPack && atsPack.job ? (
       <Card
@@ -504,6 +507,8 @@ export default function ResumeCoverLanding() {
           const disabled = tpl.pro && !canUseHybrid;
           const href = disabled ? '/pricing' : buildCreateHref({ template: tpl.key });
 
+          const previewSrc = TEMPLATE_PREVIEW_IMAGES[tpl.key];
+
           return (
             <div
               key={tpl.key}
@@ -541,6 +546,8 @@ export default function ResumeCoverLanding() {
               >
                 {tpl.tagline}
               </p>
+
+              {/* 🔹 Preview image frame */}
               <div
                 style={{
                   height: 140,
@@ -548,8 +555,26 @@ export default function ResumeCoverLanding() {
                   border: '2px dashed #CFD8DC',
                   borderRadius: 12,
                   marginBottom: 16,
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  overflow: 'hidden',
                 }}
-              />
+              >
+                {previewSrc ? (
+                  <img
+                    src={previewSrc}
+                    alt={`${tpl.name} template preview`}
+                    style={{
+                      maxWidth: '100%',
+                      maxHeight: '100%',
+                      objectFit: 'contain',
+                      display: 'block',
+                    }}
+                  />
+                ) : null}
+              </div>
+
               <PrimaryButton href={href} disabled={disabled}>
                 {tpl.pro && tier !== 'pro' ? 'Upgrade for Hybrid' : 'Use template'}
               </PrimaryButton>
