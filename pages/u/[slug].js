@@ -1,5 +1,7 @@
 // pages/u/[slug].js
 import Head from 'next/head';
+import Link from 'next/link';
+import { useEffect, useState } from 'react';
 import { prisma } from '@/lib/prisma';
 
 // Safe helpers for parsing skills / languages from JSON
@@ -91,6 +93,7 @@ export async function getServerSideProps(context) {
 
 export default function PublicProfile({ user, primaryResume }) {
   const {
+    id: ownerId,
     name,
     headline,
     pronouns,
@@ -109,6 +112,33 @@ export default function PublicProfile({ user, primaryResume }) {
     corporateBannerKey,
     corporateBannerLocked,
   } = user;
+
+  const [viewerId, setViewerId] = useState(null);
+  const [isOwner, setIsOwner] = useState(false);
+
+  // Detect logged-in viewer so we can show "Open in builder" only to the owner
+  useEffect(() => {
+    let cancelled = false;
+
+    async function loadViewer() {
+      try {
+        const res = await fetch('/api/auth/me');
+        if (!res.ok) return;
+        const data = await res.json();
+        if (cancelled) return;
+        const vId = data?.user?.id || null;
+        setViewerId(vId);
+        setIsOwner(Boolean(vId && vId === ownerId));
+      } catch (err) {
+        console.error('[PublicProfile] Failed to load viewer', err);
+      }
+    }
+
+    loadViewer();
+    return () => {
+      cancelled = true;
+    };
+  }, [ownerId]);
 
   const fullName = name || 'Unknown User';
   const profileUrl = `https://forgetomorrow.com/u/${slug}`;
@@ -190,6 +220,8 @@ export default function PublicProfile({ user, primaryResume }) {
               background: 'white',
               display: 'flex',
               gap: 20,
+              flexWrap: 'wrap',          // ✅ lets content wrap nicely on mobile
+              alignItems: 'flex-start',
             }}
           >
             <img
@@ -201,10 +233,11 @@ export default function PublicProfile({ user, primaryResume }) {
                 borderRadius: '50%',
                 objectFit: 'cover',
                 border: '4px solid #FF7043',
+                flexShrink: 0,           // ✅ keeps avatar from squishing / clipping
               }}
             />
 
-            <div style={{ flex: 1 }}>
+            <div style={{ flex: 1, minWidth: 0 }}>
               <h1
                 style={{
                   margin: 0,
@@ -371,7 +404,7 @@ export default function PublicProfile({ user, primaryResume }) {
               </p>
               <p
                 style={{
-                  margin: 0,
+                  margin: '0 0 10px',
                   fontSize: 12,
                   color: '#78909C',
                 }}
@@ -379,6 +412,25 @@ export default function PublicProfile({ user, primaryResume }) {
                 This resume is currently marked as primary in ForgeTomorrow and is used
                 across recruiter views and applications.
               </p>
+
+              {isOwner && (
+                <Link
+                  href="/resume/create"
+                  style={{
+                    display: 'inline-block',
+                    marginTop: 4,
+                    padding: '6px 12px',
+                    borderRadius: 999,
+                    background: '#FF7043',
+                    color: 'white',
+                    fontSize: 13,
+                    fontWeight: 600,
+                    textDecoration: 'none',
+                  }}
+                >
+                  Open in builder
+                </Link>
+              )}
             </section>
           )}
 
