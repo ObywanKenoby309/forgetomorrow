@@ -168,6 +168,12 @@ export default function ResumeCoverLanding() {
   const [usage, setUsage] = useState({ used: 0, limit: 3 }); // AI generations
   const [savedResumes, setSavedResumes] = useState([]); // [] until DB wiring
 
+  // Upload status for user confirmation
+  const [uploadState, setUploadState] = useState({
+    status: 'idle', // 'idle' | 'uploading' | 'uploaded' | 'error'
+    message: '',
+  });
+
   // Context: ATS pack + job params from jobs page
   const [atsPack, setAtsPack] = useState(null);
   const [atsSource, setAtsSource] = useState(null); // e.g., 'ats'
@@ -269,7 +275,11 @@ export default function ResumeCoverLanding() {
     return withChrome(basePath);
   };
 
-  const onUploadClick = () => fileRef.current?.click();
+  const onUploadClick = () => {
+    // Reset state each time user starts a new upload
+    setUploadState({ status: 'idle', message: '' });
+    fileRef.current?.click();
+  };
 
   // When a file is picked:
   // 1) Upload to /api/resume/upload for storage + keywords.
@@ -277,7 +287,15 @@ export default function ResumeCoverLanding() {
   // 3) Navigate to /resume/create?uploaded=1&... so the builder can hydrate.
   const onFilePicked = async (event) => {
     const file = event?.target?.files?.[0] || fileRef.current?.files?.[0];
-    if (!file) return;
+    if (!file) {
+      setUploadState({ status: 'idle', message: '' });
+      return;
+    }
+
+    setUploadState({
+      status: 'uploading',
+      message: 'Uploading your resume…',
+    });
 
     // 1) Upload to backend
     try {
@@ -300,11 +318,26 @@ export default function ResumeCoverLanding() {
             })
           );
         }
+
+        setUploadState({
+          status: 'uploading',
+          message: 'Resume uploaded. Preparing your builder…',
+        });
       } else {
         console.warn('[resume-cover] Resume upload failed with status', res.status);
+        setUploadState({
+          status: 'error',
+          message:
+            'We could not save your resume yet. You can still continue to the builder, but the upload may not be stored.',
+        });
       }
     } catch (err) {
       console.error('[resume-cover] Resume upload error', err);
+      setUploadState({
+        status: 'error',
+        message:
+          'Something went wrong while uploading your resume. You can still continue to the builder.',
+      });
     }
 
     // 2) Extract text for auto-fill in the builder
@@ -320,9 +353,17 @@ export default function ResumeCoverLanding() {
       }
     } catch (err) {
       console.error('[resume-cover] Failed to extract resume text for auto-fill', err);
+      // do not override existing status; just log
     }
 
     // 3) Navigate to builder with uploaded flag + ATS/job context
+    if (uploadState.status !== 'error') {
+      setUploadState({
+        status: 'uploaded',
+        message: 'Resume uploaded. Opening the builder…',
+      });
+    }
+
     router.push(buildCreateHref({ uploaded: true }));
   };
 
@@ -370,6 +411,23 @@ export default function ResumeCoverLanding() {
           </SoftLink>
         </div>
       </div>
+
+      {/* Upload status / confirmation */}
+      {uploadState.status !== 'idle' && (
+        <div
+          style={{
+            marginTop: 12,
+            fontSize: 14,
+            color:
+              uploadState.status === 'error'
+                ? '#B71C1C'
+                : '#2E7D32',
+          }}
+        >
+          {uploadState.message}
+        </div>
+      )}
+
       {tier === 'basic' && usage && typeof usage.used === 'number' && (
         <div style={{ marginTop: 16, color: '#666', fontSize: 14 }}>
           Free tier:{' '}
