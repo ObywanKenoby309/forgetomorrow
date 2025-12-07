@@ -1,4 +1,4 @@
-// middleware.js — PUBLIC PAGES with /u/:slug bypass
+// middleware.js — Updated PUBLIC PAGES version with profile + asset bypass
 import { NextResponse } from "next/server";
 import { Ratelimit } from "@upstash/ratelimit";
 import { Redis } from "@upstash/redis";
@@ -57,13 +57,16 @@ function isPublicPath(pathname) {
   if (pathname.startsWith("/features/")) return true;
   if (pathname.startsWith("/feedback/")) return true;
 
-  // Public assets
-  if (pathname.startsWith("/api/auth/")) return true;
+  // Public assets (Next, icons, images, corp banners, wallpapers)
   if (pathname.startsWith("/_next")) return true;
   if (pathname.startsWith("/static")) return true;
   if (pathname.startsWith("/favicon")) return true;
   if (pathname.startsWith("/images")) return true;
   if (pathname.startsWith("/icons")) return true;
+
+  // 🔥 Allow corporate banners and wallpaper assets publicly
+  if (pathname.startsWith("/corporate-banners")) return true;
+  if (pathname.startsWith("/wallpapers")) return true;
 
   // Signup / Register flow
   if (SIGNUPS_OPEN && pathname.startsWith("/signup")) return true;
@@ -79,7 +82,7 @@ export async function middleware(req) {
     return NextResponse.next();
   }
 
-  // 2. Always allow public profile slugs (/u and /u/:slug) — explicit bypass
+  // 2. Always allow public profile slugs (/u and /u/:slug)
   if (pathname === "/u" || pathname.startsWith("/u/")) {
     return NextResponse.next();
   }
