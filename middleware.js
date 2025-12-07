@@ -82,6 +82,11 @@ export async function middleware(req) {
     return NextResponse.next();
   }
 
+  // 1b. Always allow public resume PDF download
+  if (pathname.startsWith("/api/resume/public-download")) {
+    return NextResponse.next();
+  }
+
   // 2. Always allow public profile slugs (/u and /u/:slug)
   if (pathname === "/u" || pathname.startsWith("/u/")) {
     return NextResponse.next();

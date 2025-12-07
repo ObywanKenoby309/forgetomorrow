@@ -37,25 +37,25 @@ export async function getServerSideProps(context) {
   const user = await prisma.user.findUnique({
     where: { slug },
     select: {
-      id: true,
-      slug: true,
-      name: true,
-      firstName: true,
-      lastName: true,
-      headline: true,
-      pronouns: true,
-      location: true,
-      status: true,
-      avatarUrl: true,
-      coverUrl: true,
-      aboutMe: true,
-      skillsJson: true,
-      languagesJson: true,
-      bannerMode: true,
+      id:           true,
+      slug:         true,
+      name:         true,
+      firstName:    true,
+      lastName:     true,
+      headline:     true,
+      pronouns:     true,
+      location:     true,
+      status:       true,
+      avatarUrl:    true,
+      coverUrl:     true,
+      aboutMe:      true,
+      skillsJson:   true,
+      languagesJson:true,
+      bannerMode:   true,
       bannerHeight: true,
       bannerFocalY: true,
       wallpaperUrl: true,
-      corporateBannerKey: true,
+      corporateBannerKey:    true,
       corporateBannerLocked: true,
 
       // Primary resume
@@ -64,8 +64,8 @@ export async function getServerSideProps(context) {
         orderBy: { updatedAt: 'desc' },
         take: 1,
         select: {
-          id: true,
-          name: true,
+          id:        true,
+          name:      true,
           updatedAt: true,
         },
       },
@@ -77,7 +77,8 @@ export async function getServerSideProps(context) {
   }
 
   const { resumes, ...userSafe } = user;
-  const primaryResume = resumes && resumes.length > 0 ? resumes[0] : null;
+  const primaryResume =
+    resumes && resumes.length > 0 ? resumes[0] : null;
 
   return {
     props: {
@@ -129,9 +130,12 @@ export default function PublicProfile({ user, primaryResume }) {
   }
 
   const bannerBackgroundPosition =
-    typeof bannerFocalY === 'number' ? `center ${bannerFocalY}%` : 'center';
+    typeof bannerFocalY === 'number'
+      ? `center ${bannerFocalY}%`
+      : 'center';
 
-  const bannerBackgroundSize = bannerMode === 'fit' ? 'contain' : 'cover';
+  const bannerBackgroundSize =
+    bannerMode === 'fit' ? 'contain' : 'cover';
 
   return (
     <>
@@ -151,15 +155,6 @@ export default function PublicProfile({ user, primaryResume }) {
             background-repeat: no-repeat !important;
             width: 100% !important;
           }
-
-          .public-main {
-            padding: 0 10px 32px !important;
-          }
-
-          .public-header-card {
-            flex-direction: column !important;
-            align-items: flex-start !important;
-          }
         }
       `}</style>
 
@@ -177,7 +172,6 @@ export default function PublicProfile({ user, primaryResume }) {
         }}
       >
         <main
-          className="public-main"
           style={{
             maxWidth: 860,
             margin: '0 auto',
@@ -203,7 +197,6 @@ export default function PublicProfile({ user, primaryResume }) {
 
           {/* Header card */}
           <section
-            className="public-header-card"
             style={{
               border: '1px solid #e0e0e0',
               borderRadius: 12,
@@ -392,9 +385,13 @@ export default function PublicProfile({ user, primaryResume }) {
                 {new Date(primaryResume.updatedAt).toLocaleDateString()}
               </p>
 
-              {/* DOWNLOAD BUTTON → PUBLIC PDF ENDPOINT */}
+              {/* DOWNLOAD BUTTON → public PDF via slug, always primary */}
               <a
-                href={`/api/resume/public-download?slug=${encodeURIComponent(slug)}`}
+                href={`/api/resume/public-download?slug=${encodeURIComponent(
+                  slug
+                )}`}
+                target="_blank"
+                rel="noopener noreferrer"
                 style={{
                   display: 'inline-block',
                   marginTop: 10,
