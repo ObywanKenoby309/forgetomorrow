@@ -1,13 +1,16 @@
 // pages/pricing.js
 import Head from "next/head";
 import { useState, useEffect } from "react";
-import { loadStripe } from "@stripe/stripe-js";
 
 export const dynamic = "force-dynamic";
-const stripePromise = loadStripe(process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY);
 
 const plans = {
-  "job-seeker-free": { key: "job-seeker-free", name: "Job Seeker (Free)", price: "$0", button: "Get Started" },
+  "job-seeker-free": {
+    key: "job-seeker-free",
+    name: "Job Seeker (Free)",
+    price: "$0",
+    button: "Get Started",
+  },
   "job-seeker-pro": {
     key: "job-seeker-pro",
     name: "Job Seeker (Pro)",
@@ -39,21 +42,22 @@ const plans = {
 
 export default function PricingPage() {
   const [loading, setLoading] = useState(null);
-  const [isMobile, setIsMobile] = useState(false);
+
+  // ✅ Mobile-first to avoid broken first paint on phones
+  const [isMobile, setIsMobile] = useState(true);
 
   useEffect(() => {
-    // Only run on client
     const handleResize = () => {
-      setIsMobile(window.innerWidth < 768); // mobile breakpoint
+      if (typeof window === "undefined") return;
+      setIsMobile(window.innerWidth < 768);
     };
 
-    handleResize();
+    handleResize(); // run once on mount
     window.addEventListener("resize", handleResize);
-
     return () => window.removeEventListener("resize", handleResize);
   }, []);
 
-  // ONE CLEAN handler — routes every plan correctly
+  // Single click handler — routes every plan
   const handleClick = (planKey) => {
     setLoading(planKey);
 
@@ -63,15 +67,15 @@ export default function PricingPage() {
       return;
     }
 
-    // Every other plan (free + paid) goes to the new staged registration page
+    // All other plans → staged registration page
     window.location.href = `/register/${planKey}`;
   };
 
   const containerStyle = {
     display: isMobile ? "block" : "grid",
-    gridTemplateColumns: isMobile ? "1fr" : "1fr 320px",
+    gridTemplateColumns: isMobile ? "1fr" : "minmax(0, 2fr) 320px",
     gap: isMobile ? 24 : 40,
-    padding: isMobile ? "24px 16px" : "40px 20px",
+    padding: isMobile ? "24px 16px 40px" : "40px 20px 60px",
     alignItems: "start",
     maxWidth: 1200,
     margin: "0 auto",
@@ -122,47 +126,98 @@ export default function PricingPage() {
               }}
             >
               <div>
-                <h2 style={{ fontSize: "1.25rem", marginBottom: 6, color: "#111", fontWeight: 700 }}>
+                <h2
+                  style={{
+                    fontSize: "1.25rem",
+                    marginBottom: 6,
+                    color: "#111",
+                    fontWeight: 700,
+                  }}
+                >
                   {plan.name}
                 </h2>
-                <p style={{ fontSize: "1.6rem", fontWeight: 700, margin: "8px 0 18px", color: "#111" }}>
+                <p
+                  style={{
+                    fontSize: "1.6rem",
+                    fontWeight: 700,
+                    margin: "8px 0 18px",
+                    color: "#111",
+                  }}
+                >
                   {plan.price}
                 </p>
 
-                <div style={{ fontSize: "0.95rem", lineHeight: "1.5", color: "#222", marginBottom: 18 }}>
+                <div
+                  style={{
+                    fontSize: "0.95rem",
+                    lineHeight: "1.5",
+                    color: "#222",
+                    marginBottom: 18,
+                  }}
+                >
                   {key === "job-seeker-free" && (
                     <>
-                      <p style={{ margin: "6px 0" }}>• 1x1 Unlimited messaging (Direct Contacts)</p>
-                      <p style={{ margin: "6px 0" }}>• View verified job listings</p>
-                      <p style={{ margin: "6px 0" }}>• Resume & cover letter builder (limited)</p>
+                      <p style={{ margin: "6px 0" }}>
+                        • 1x1 Unlimited messaging (Direct Contacts)
+                      </p>
+                      <p style={{ margin: "6px 0" }}>
+                        • View verified job listings
+                      </p>
+                      <p style={{ margin: "6px 0" }}>
+                        • Resume & cover letter builder (limited)
+                      </p>
                     </>
                   )}
                   {key === "job-seeker-pro" && (
                     <>
-                      <p style={{ margin: "6px 0" }}>• Profile analytics & insights</p>
-                      <p style={{ margin: "6px 0" }}>• Unlimited AI resume & cover letters</p>
-                      <p style={{ margin: "6px 0" }}>• Priority listings & search filters</p>
+                      <p style={{ margin: "6px 0" }}>
+                        • Profile analytics & insights
+                      </p>
+                      <p style={{ margin: "6px 0" }}>
+                        • Unlimited AI resume & cover letters
+                      </p>
+                      <p style={{ margin: "6px 0" }}>
+                        • Priority listings & search filters
+                      </p>
                     </>
                   )}
                   {key === "coach-mentor" && (
                     <>
-                      <p style={{ margin: "6px 0" }}>• Mentee tracking & analytics</p>
-                      <p style={{ margin: "6px 0" }}>• Client organizer and templates</p>
-                      <p style={{ margin: "6px 0" }}>• Daily agenda & newsletter tools</p>
+                      <p style={{ margin: "6px 0" }}>
+                        • Mentee tracking & analytics
+                      </p>
+                      <p style={{ margin: "6px 0" }}>
+                        • Client organizer and templates
+                      </p>
+                      <p style={{ margin: "6px 0" }}>
+                        • Daily agenda & newsletter tools
+                      </p>
                     </>
                   )}
                   {key === "recruiter-smb" && (
                     <>
-                      <p style={{ margin: "6px 0" }}>• Limited seats for recruiters</p>
-                      <p style={{ margin: "6px 0" }}>• Job posting board & candidate tracker</p>
-                      <p style={{ margin: "6px 0" }}>• Group messaging & team calendar</p>
+                      <p style={{ margin: "6px 0" }}>
+                        • Limited seats for recruiters
+                      </p>
+                      <p style={{ margin: "6px 0" }}>
+                        • Job posting board & candidate tracker
+                      </p>
+                      <p style={{ margin: "6px 0" }}>
+                        • Group messaging & team calendar
+                      </p>
                     </>
                   )}
                   {key === "enterprise-recruiter" && (
                     <>
-                      <p style={{ margin: "6px 0" }}>• Tailored seats for your business</p>
-                      <p style={{ margin: "6px 0" }}>• Advanced candidate filtering & ATS match</p>
-                      <p style={{ margin: "6px 0" }}>• Job posting analytics & account management</p>
+                      <p style={{ margin: "6px 0" }}>
+                        • Tailored seats for your business
+                      </p>
+                      <p style={{ margin: "6px 0" }}>
+                        • Advanced candidate filtering & ATS match
+                      </p>
+                      <p style={{ margin: "6px 0" }}>
+                        • Job posting analytics & account management
+                      </p>
                     </>
                   )}
                 </div>
@@ -189,7 +244,13 @@ export default function PricingPage() {
                 {key === "enterprise-recruiter" && (
                   <a
                     href="mailto:sales@forgetomorrow.com"
-                    style={{ display: "block", marginTop: 12, textAlign: "center", color: "#111", textDecoration: "underline" }}
+                    style={{
+                      display: "block",
+                      marginTop: 12,
+                      textAlign: "center",
+                      color: "#111",
+                      textDecoration: "underline",
+                    }}
                   >
                     Or email sales@forgetomorrow.com
                   </a>
@@ -201,7 +262,13 @@ export default function PricingPage() {
 
         <aside style={asideStyle}>
           <h3 style={{ fontSize: "1.25rem", marginBottom: 12 }}>Need Help?</h3>
-          <p style={{ marginBottom: 16, fontSize: "0.95rem", color: "#ddd" }}>
+          <p
+            style={{
+              marginBottom: 16,
+              fontSize: "0.95rem",
+              color: "#ddd",
+            }}
+          >
             Our team is here to guide you in choosing the right plan.
           </p>
           <button
@@ -218,12 +285,19 @@ export default function PricingPage() {
           >
             Contact Support
           </button>
-          <div style={{ marginTop: 18, fontSize: "0.85rem", color: "#bbb" }}>
+          <div
+            style={{
+              marginTop: 18,
+              fontSize: "0.85rem",
+              color: "#bbb",
+            }}
+          >
             <p style={{ marginBottom: 6 }}>
               After registration you’ll receive a verification email.
             </p>
             <p>
-              Free accounts activate instantly. Paid plans proceed to secure checkout.
+              Free accounts activate instantly. Paid plans proceed to secure
+              checkout.
             </p>
           </div>
         </aside>
