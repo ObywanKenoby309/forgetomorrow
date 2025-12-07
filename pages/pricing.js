@@ -40,11 +40,19 @@ const plans = {
   },
 };
 
+// group plans by persona so desktop doesn’t become a tall list
+const personaGroups = {
+  seeker: ["job-seeker-free", "job-seeker-pro"],
+  coach: ["coach-mentor"],
+  recruiter: ["recruiter-smb", "enterprise-recruiter"],
+};
+
 export default function PricingPage() {
   const [loading, setLoading] = useState(null);
 
   // ✅ Mobile-first to avoid broken first paint on phones
   const [isMobile, setIsMobile] = useState(true);
+  const [activePersona, setActivePersona] = useState("seeker");
 
   useEffect(() => {
     const handleResize = () => {
@@ -91,6 +99,27 @@ export default function PricingPage() {
     marginTop: isMobile ? 24 : 0,
   };
 
+  const visiblePlanKeys = personaGroups[activePersona] || [];
+
+  const personaButtonBase = {
+    flex: isMobile ? "0 0 auto" : "1 0 0",
+    padding: "10px 14px",
+    borderRadius: 999,
+    border: "1px solid #ccc",
+    background: "#fff",
+    fontSize: "0.95rem",
+    fontWeight: 600,
+    cursor: "pointer",
+    textAlign: "center",
+  };
+
+  const personaButtonActive = {
+    ...personaButtonBase,
+    background: "#FF7043",
+    borderColor: "#FF7043",
+    color: "#fff",
+  };
+
   return (
     <>
       <Head>
@@ -98,166 +127,223 @@ export default function PricingPage() {
       </Head>
 
       <div style={containerStyle}>
+        <div style={{ marginBottom: isMobile ? 20 : 24 }}>
+          <p
+            style={{
+              fontSize: "0.9rem",
+              marginBottom: 8,
+              color: "#444",
+            }}
+          >
+            Choose who you’re signing up as:
+          </p>
+          <div
+            style={{
+              display: "flex",
+              flexDirection: isMobile ? "column" : "row",
+              gap: isMobile ? 8 : 12,
+            }}
+          >
+            <button
+              type="button"
+              onClick={() => setActivePersona("seeker")}
+              style={
+                activePersona === "seeker"
+                  ? personaButtonActive
+                  : personaButtonBase
+              }
+            >
+              Job Seeker
+            </button>
+            <button
+              type="button"
+              onClick={() => setActivePersona("coach")}
+              style={
+                activePersona === "coach"
+                  ? personaButtonActive
+                  : personaButtonBase
+              }
+            >
+              Coach / Mentor
+            </button>
+            <button
+              type="button"
+              onClick={() => setActivePersona("recruiter")}
+              style={
+                activePersona === "recruiter"
+                  ? personaButtonActive
+                  : personaButtonBase
+              }
+            >
+              Recruiter / Team
+            </button>
+          </div>
+        </div>
+
         <main
           style={{
             display: "grid",
-            gridTemplateColumns: "repeat(auto-fit, minmax(280px, 1fr))",
+            gridTemplateColumns: isMobile
+              ? "1fr"
+              : "repeat(auto-fit, minmax(280px, 1fr))",
             gap: 24,
           }}
         >
-          {Object.entries(plans).map(([key, plan]) => (
-            <div
-              key={key}
-              tabIndex={0}
-              role="region"
-              aria-label={`${plan.name} plan`}
-              style={{
-                border: "2px solid #111",
-                borderRadius: 12,
-                padding: 24,
-                textAlign: "left",
-                background: "#ffffff",
-                color: "#111",
-                boxShadow: "0 6px 20px rgba(0,0,0,0.04)",
-                display: "flex",
-                flexDirection: "column",
-                justifyContent: "space-between",
-                minHeight: 260,
-              }}
-            >
-              <div>
-                <h2
-                  style={{
-                    fontSize: "1.25rem",
-                    marginBottom: 6,
-                    color: "#111",
-                    fontWeight: 700,
-                  }}
-                >
-                  {plan.name}
-                </h2>
-                <p
-                  style={{
-                    fontSize: "1.6rem",
-                    fontWeight: 700,
-                    margin: "8px 0 18px",
-                    color: "#111",
-                  }}
-                >
-                  {plan.price}
-                </p>
+          {Object.entries(plans)
+            .filter(([key]) => visiblePlanKeys.includes(key))
+            .map(([key, plan]) => (
+              <div
+                key={key}
+                tabIndex={0}
+                role="region"
+                aria-label={`${plan.name} plan`}
+                style={{
+                  border: "2px solid #111",
+                  borderRadius: 12,
+                  padding: 24,
+                  textAlign: "left",
+                  background: "#ffffff",
+                  color: "#111",
+                  boxShadow: "0 6px 20px rgba(0,0,0,0.04)",
+                  display: "flex",
+                  flexDirection: "column",
+                  justifyContent: "space-between",
+                  minHeight: 260,
+                }}
+              >
+                <div>
+                  <h2
+                    style={{
+                      fontSize: "1.25rem",
+                      marginBottom: 6,
+                      color: "#111",
+                      fontWeight: 700,
+                    }}
+                  >
+                    {plan.name}
+                  </h2>
+                  <p
+                    style={{
+                      fontSize: "1.6rem",
+                      fontWeight: 700,
+                      margin: "8px 0 18px",
+                      color: "#111",
+                    }}
+                  >
+                    {plan.price}
+                  </p>
 
-                <div
-                  style={{
-                    fontSize: "0.95rem",
-                    lineHeight: "1.5",
-                    color: "#222",
-                    marginBottom: 18,
-                  }}
-                >
-                  {key === "job-seeker-free" && (
-                    <>
-                      <p style={{ margin: "6px 0" }}>
-                        • 1x1 Unlimited messaging (Direct Contacts)
-                      </p>
-                      <p style={{ margin: "6px 0" }}>
-                        • View verified job listings
-                      </p>
-                      <p style={{ margin: "6px 0" }}>
-                        • Resume & cover letter builder (limited)
-                      </p>
-                    </>
-                  )}
-                  {key === "job-seeker-pro" && (
-                    <>
-                      <p style={{ margin: "6px 0" }}>
-                        • Profile analytics & insights
-                      </p>
-                      <p style={{ margin: "6px 0" }}>
-                        • Unlimited AI resume & cover letters
-                      </p>
-                      <p style={{ margin: "6px 0" }}>
-                        • Priority listings & search filters
-                      </p>
-                    </>
-                  )}
-                  {key === "coach-mentor" && (
-                    <>
-                      <p style={{ margin: "6px 0" }}>
-                        • Mentee tracking & analytics
-                      </p>
-                      <p style={{ margin: "6px 0" }}>
-                        • Client organizer and templates
-                      </p>
-                      <p style={{ margin: "6px 0" }}>
-                        • Daily agenda & newsletter tools
-                      </p>
-                    </>
-                  )}
-                  {key === "recruiter-smb" && (
-                    <>
-                      <p style={{ margin: "6px 0" }}>
-                        • Limited seats for recruiters
-                      </p>
-                      <p style={{ margin: "6px 0" }}>
-                        • Job posting board & candidate tracker
-                      </p>
-                      <p style={{ margin: "6px 0" }}>
-                        • Group messaging & team calendar
-                      </p>
-                    </>
-                  )}
+                  <div
+                    style={{
+                      fontSize: "0.95rem",
+                      lineHeight: "1.5",
+                      color: "#222",
+                      marginBottom: 18,
+                    }}
+                  >
+                    {key === "job-seeker-free" && (
+                      <>
+                        <p style={{ margin: "6px 0" }}>
+                          • 1x1 Unlimited messaging (Direct Contacts)
+                        </p>
+                        <p style={{ margin: "6px 0" }}>
+                          • View verified job listings
+                        </p>
+                        <p style={{ margin: "6px 0" }}>
+                          • Resume & cover letter builder (limited)
+                        </p>
+                      </>
+                    )}
+                    {key === "job-seeker-pro" && (
+                      <>
+                        <p style={{ margin: "6px 0" }}>
+                          • Profile analytics & insights
+                        </p>
+                        <p style={{ margin: "6px 0" }}>
+                          • Unlimited AI resume & cover letters
+                        </p>
+                        <p style={{ margin: "6px 0" }}>
+                          • Priority listings & search filters
+                        </p>
+                      </>
+                    )}
+                    {key === "coach-mentor" && (
+                      <>
+                        <p style={{ margin: "6px 0" }}>
+                          • Mentee tracking & analytics
+                        </p>
+                        <p style={{ margin: "6px 0" }}>
+                          • Client organizer and templates
+                        </p>
+                        <p style={{ margin: "6px 0" }}>
+                          • Daily agenda & newsletter tools
+                        </p>
+                      </>
+                    )}
+                    {key === "recruiter-smb" && (
+                      <>
+                        <p style={{ margin: "6px 0" }}>
+                          • Limited seats for recruiters
+                        </p>
+                          <p style={{ margin: "6px 0" }}>
+                          • Job posting board & candidate tracker
+                        </p>
+                        <p style={{ margin: "6px 0" }}>
+                          • Group messaging & team calendar
+                        </p>
+                      </>
+                    )}
+                    {key === "enterprise-recruiter" && (
+                      <>
+                        <p style={{ margin: "6px 0" }}>
+                          • Tailored seats for your business
+                        </p>
+                        <p style={{ margin: "6px 0" }}>
+                          • Advanced candidate filtering & ATS match
+                        </p>
+                        <p style={{ margin: "6px 0" }}>
+                          • Job posting analytics & account management
+                        </p>
+                      </>
+                    )}
+                  </div>
+                </div>
+
+                <div>
+                  <button
+                    onClick={() => handleClick(key)}
+                    disabled={loading === key}
+                    style={{
+                      width: "100%",
+                      padding: "12px 14px",
+                      background: "#FF7043",
+                      color: "white",
+                      border: "none",
+                      borderRadius: 8,
+                      fontWeight: 700,
+                      cursor: "pointer",
+                    }}
+                  >
+                    {loading === key ? "Loading…" : plan.button}
+                  </button>
+
                   {key === "enterprise-recruiter" && (
-                    <>
-                      <p style={{ margin: "6px 0" }}>
-                        • Tailored seats for your business
-                      </p>
-                      <p style={{ margin: "6px 0" }}>
-                        • Advanced candidate filtering & ATS match
-                      </p>
-                      <p style={{ margin: "6px 0" }}>
-                        • Job posting analytics & account management
-                      </p>
-                    </>
+                    <a
+                      href="mailto:sales@forgetomorrow.com"
+                      style={{
+                        display: "block",
+                        marginTop: 12,
+                        textAlign: "center",
+                        color: "#111",
+                        textDecoration: "underline",
+                      }}
+                    >
+                      Or email sales@forgetomorrow.com
+                    </a>
                   )}
                 </div>
               </div>
-
-              <div>
-                <button
-                  onClick={() => handleClick(key)}
-                  disabled={loading === key}
-                  style={{
-                    width: "100%",
-                    padding: "12px 14px",
-                    background: "#FF7043",
-                    color: "white",
-                    border: "none",
-                    borderRadius: 8,
-                    fontWeight: 700,
-                    cursor: "pointer",
-                  }}
-                >
-                  {loading === key ? "Loading…" : plan.button}
-                </button>
-
-                {key === "enterprise-recruiter" && (
-                  <a
-                    href="mailto:sales@forgetomorrow.com"
-                    style={{
-                      display: "block",
-                      marginTop: 12,
-                      textAlign: "center",
-                      color: "#111",
-                      textDecoration: "underline",
-                    }}
-                  >
-                    Or email sales@forgetomorrow.com
-                  </a>
-                )}
-              </div>
-            </div>
-          ))}
+            ))}
         </main>
 
         <aside style={asideStyle}>
