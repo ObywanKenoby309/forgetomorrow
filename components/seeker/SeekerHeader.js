@@ -32,7 +32,8 @@ export default function SeekerHeader() {
     href: withChrome(item.href),
   }));
 
-  const planLabel = isEnterprise ? "Pro" : "Basic";
+  // 🔹 Show clear plan labels in header
+  const planLabel = isEnterprise ? "Seeker Pro" : "Seeker Free";
 
   return (
     <EnterpriseHeader
