@@ -18,7 +18,7 @@ function Card({ children, style }) {
     <section
       style={{
         background: 'white',
-        border: '1px solid #eee',
+        border: '1px solid '#eee',
         borderRadius: 12,
         boxShadow: '0 2px 6px rgba(0,0,0,0.06)',
         padding: 16,
@@ -342,10 +342,8 @@ export default function ResumeCoverLanding() {
 
     // 2) Extract text for auto-fill in the builder
     try {
-      const raw =
-        file.size > 1_500_000
-          ? null // for very large files we’ll skip client parsing for now
-          : await extractTextFromFile(file);
+      // 🔧 FIX: always attempt to parse, even for larger files
+      const raw = await extractTextFromFile(file);
 
       if (raw && typeof window !== 'undefined') {
         const clean = normalizeJobText(raw);
@@ -444,9 +442,8 @@ export default function ResumeCoverLanding() {
     </Card>
   );
 
-  // ─────────────────────────────────────────────────────────────
-  // ATS context banner (when coming from ATSResultPanel)
-  // ─────────────────────────────────────────────────────────────
+  // ... rest of the file (ATSContextBanner, ATSWhyBanner, TemplatesRow, layout) stays exactly the same
+
   const ATSContextBanner =
     atsPack && atsPack.job ? (
       <Card
