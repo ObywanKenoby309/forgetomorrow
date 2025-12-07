@@ -1,7 +1,5 @@
 // pages/u/[slug].js
 import Head from 'next/head';
-import Link from 'next/link';
-import { useEffect, useState } from 'react';
 import { prisma } from '@/lib/prisma';
 
 // Safe helpers for parsing skills / languages from JSON
@@ -60,7 +58,6 @@ export async function getServerSideProps(context) {
       corporateBannerKey: true,
       corporateBannerLocked: true,
 
-      // 👇 primary resume (if any)
       resumes: {
         where: { isPrimary: true },
         orderBy: { updatedAt: 'desc' },
@@ -69,15 +66,14 @@ export async function getServerSideProps(context) {
           id: true,
           name: true,
           updatedAt: true,
+          fileUrl: true,
         },
       },
     },
   });
 
   if (!user) {
-    return {
-      notFound: true,
-    };
+    return { notFound: true };
   }
 
   const { resumes, ...userSafe } = user;
@@ -93,7 +89,6 @@ export async function getServerSideProps(context) {
 
 export default function PublicProfile({ user, primaryResume }) {
   const {
-    id: ownerId,
     name,
     headline,
     pronouns,
@@ -112,33 +107,6 @@ export default function PublicProfile({ user, primaryResume }) {
     corporateBannerKey,
     corporateBannerLocked,
   } = user;
-
-  const [viewerId, setViewerId] = useState(null);
-  const [isOwner, setIsOwner] = useState(false);
-
-  // Detect logged-in viewer so we can show "Open in builder" only to the owner
-  useEffect(() => {
-    let cancelled = false;
-
-    async function loadViewer() {
-      try {
-        const res = await fetch('/api/auth/me');
-        if (!res.ok) return;
-        const data = await res.json();
-        if (cancelled) return;
-        const vId = data?.user?.id || null;
-        setViewerId(vId);
-        setIsOwner(Boolean(vId && vId === ownerId));
-      } catch (err) {
-        console.error('[PublicProfile] Failed to load viewer', err);
-      }
-    }
-
-    loadViewer();
-    return () => {
-      cancelled = true;
-    };
-  }, [ownerId]);
 
   const fullName = name || 'Unknown User';
   const profileUrl = `https://forgetomorrow.com/u/${slug}`;
@@ -169,11 +137,20 @@ export default function PublicProfile({ user, primaryResume }) {
     <>
       <Head>
         <title>{fullName} – ForgeTomorrow Profile</title>
-        <meta
-          name="description"
-          content={`View the professional profile of ${fullName} on ForgeTomorrow.`}
-        />
+        <meta name="description" content={`View the professional profile of ${fullName} on ForgeTomorrow.`} />
       </Head>
+
+      {/* FULL WIDTH FIX — MOBILE */}
+      <style jsx>{`
+        @media (max-width: 640px) {
+          .public-profile-banner-wrapper {
+            margin-left: calc(-1 * 20px);
+            margin-right: calc(-1 * 20px);
+            width: calc(100% + 40px);
+            border-radius: 0 !important;
+          }
+        }
+      `}</style>
 
       <div
         style={{
@@ -188,16 +165,11 @@ export default function PublicProfile({ user, primaryResume }) {
           padding: '20px 0',
         }}
       >
-        <main
-          style={{
-            maxWidth: 860,
-            margin: '0 auto',
-            padding: '0 20px 40px',
-            minHeight: '80vh',
-          }}
-        >
+        <main style={{ maxWidth: 860, margin: '0 auto', padding: '0 20px 40px', minHeight: '80vh' }}>
+          
           {/* Banner */}
           <div
+            className="public-profile-banner-wrapper"
             style={{
               width: '100%',
               height: resolvedBannerHeight,
@@ -207,7 +179,6 @@ export default function PublicProfile({ user, primaryResume }) {
               backgroundRepeat: 'no-repeat',
               borderRadius: 12,
               marginBottom: 20,
-              backgroundColor: '#112033',
             }}
           />
 
@@ -220,8 +191,7 @@ export default function PublicProfile({ user, primaryResume }) {
               background: 'white',
               display: 'flex',
               gap: 20,
-              flexWrap: 'wrap',          // ✅ lets content wrap nicely on mobile
-              alignItems: 'flex-start',
+              flexWrap: 'wrap',
             }}
           >
             <img
@@ -233,48 +203,21 @@ export default function PublicProfile({ user, primaryResume }) {
                 borderRadius: '50%',
                 objectFit: 'cover',
                 border: '4px solid #FF7043',
-                flexShrink: 0,           // ✅ keeps avatar from squishing / clipping
               }}
             />
 
-            <div style={{ flex: 1, minWidth: 0 }}>
-              <h1
-                style={{
-                  margin: 0,
-                  fontSize: 26,
-                  fontWeight: 700,
-                  color: '#263238',
-                }}
-              >
-                {fullName}
-              </h1>
+            <div style={{ flex: 1, minWidth: 200 }}>
+              <h1 style={{ margin: 0, fontSize: 26, fontWeight: 700, color: '#263238' }}>{fullName}</h1>
 
-              {pronouns && (
-                <p style={{ margin: '4px 0', color: '#607D8B' }}>{pronouns}</p>
-              )}
+              {pronouns && <p style={{ margin: '4px 0', color: '#607D8B' }}>{pronouns}</p>}
 
               {headline && (
-                <p
-                  style={{
-                    margin: '6px 0',
-                    fontSize: 16,
-                    color: '#455A64',
-                  }}
-                >
-                  {headline}
-                </p>
+                <p style={{ margin: '6px 0', fontSize: 16, color: '#455A64' }}>{headline}</p>
               )}
 
               {(location || status) && (
-                <p
-                  style={{
-                    margin: '6px 0',
-                    fontSize: 14,
-                    color: '#455A64',
-                  }}
-                >
-                  {location && `Location: ${location}`}{' '}
-                  {status && `• ${status}`}
+                <p style={{ margin: '6px 0', fontSize: 14, color: '#455A64' }}>
+                  {location && `Location: ${location}`} {status && `• ${status}`}
                 </p>
               )}
 
@@ -301,10 +244,7 @@ export default function PublicProfile({ user, primaryResume }) {
                 </span>
 
                 <button
-                  onClick={() =>
-                    typeof navigator !== 'undefined' &&
-                    navigator.clipboard?.writeText(profileUrl)
-                  }
+                  onClick={() => navigator?.clipboard?.writeText(profileUrl)}
                   style={{
                     background: '#FF7043',
                     color: 'white',
@@ -347,14 +287,7 @@ export default function PublicProfile({ user, primaryResume }) {
                 border: '1px solid #e0e0e0',
               }}
             >
-              <h2
-                style={{
-                  margin: '0 0 8px',
-                  fontSize: 18,
-                  fontWeight: 600,
-                  color: '#263238',
-                }}
-              >
+              <h2 style={{ margin: '0 0 8px', fontSize: 18, fontWeight: 600, color: '#263238' }}>
                 About
               </h2>
               <p
@@ -371,7 +304,7 @@ export default function PublicProfile({ user, primaryResume }) {
             </section>
           )}
 
-          {/* Primary Resume (public) */}
+          {/* Primary Resume – PUBLIC VIEW WITH BUTTON */}
           {primaryResume && (
             <section
               style={{
@@ -382,54 +315,38 @@ export default function PublicProfile({ user, primaryResume }) {
                 border: '1px solid #e0e0e0',
               }}
             >
-              <h2
-                style={{
-                  margin: '0 0 8px',
-                  fontSize: 18,
-                  fontWeight: 600,
-                  color: '#263238',
-                }}
-              >
+              <h2 style={{ margin: '0 0 8px', fontSize: 18, fontWeight: 600, color: '#263238' }}>
                 Primary Resume
               </h2>
-              <p
-                style={{
-                  margin: '0 0 6px',
-                  fontSize: 14,
-                  color: '#455A64',
-                }}
-              >
+
+              <p style={{ margin: '0 0 6px', fontSize: 14, color: '#455A64' }}>
                 {primaryResume.name || 'Primary resume'} · Last updated{' '}
                 {new Date(primaryResume.updatedAt).toLocaleDateString()}
               </p>
-              <p
-                style={{
-                  margin: '0 0 10px',
-                  fontSize: 12,
-                  color: '#78909C',
-                }}
-              >
-                This resume is currently marked as primary in ForgeTomorrow and is used
-                across recruiter views and applications.
-              </p>
 
-              {isOwner && (
-                <Link
-                  href="/resume/create"
+              {primaryResume.fileUrl ? (
+                <a
+                  href={primaryResume.fileUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
                   style={{
                     display: 'inline-block',
-                    marginTop: 4,
-                    padding: '6px 12px',
-                    borderRadius: 999,
+                    marginTop: 10,
+                    padding: '8px 14px',
                     background: '#FF7043',
                     color: 'white',
-                    fontSize: 13,
                     fontWeight: 600,
+                    borderRadius: 6,
                     textDecoration: 'none',
+                    fontSize: 14,
                   }}
                 >
-                  Open in builder
-                </Link>
+                  View Resume
+                </a>
+              ) : (
+                <p style={{ fontSize: 12, color: '#B0BEC5' }}>
+                  Resume file not available.
+                </p>
               )}
             </section>
           )}
@@ -453,24 +370,11 @@ export default function PublicProfile({ user, primaryResume }) {
                     border: '1px solid #e0e0e0',
                   }}
                 >
-                  <h2
-                    style={{
-                      margin: '0 0 8px',
-                      fontSize: 16,
-                      fontWeight: 600,
-                      color: '#263238',
-                    }}
-                  >
+                  <h2 style={{ margin: '0 0 8px', fontSize: 16, fontWeight: 600, color: '#263238' }}>
                     Skills
                   </h2>
-                  <div
-                    style={{
-                      display: 'flex',
-                      flexWrap: 'wrap',
-                      gap: 8,
-                      marginTop: 6,
-                    }}
-                  >
+
+                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, marginTop: 6 }}>
                     {skills.map((skill) => (
                       <span
                         key={skill}
@@ -498,29 +402,12 @@ export default function PublicProfile({ user, primaryResume }) {
                     border: '1px solid #e0e0e0',
                   }}
                 >
-                  <h2
-                    style={{
-                      margin: '0 0 8px',
-                      fontSize: 16,
-                      fontWeight: 600,
-                      color: '#263238',
-                    }}
-                  >
+                  <h2 style={{ margin: '0 0 8px', fontSize: 16, fontWeight: 600, color: '#263238' }}>
                     Languages
                   </h2>
-                  <ul
-                    style={{
-                      listStyle: 'none',
-                      padding: 0,
-                      margin: 0,
-                      fontSize: 13,
-                      color: '#455A64',
-                    }}
-                  >
+                  <ul style={{ listStyle: 'none', padding: 0, margin: 0, fontSize: 13, color: '#455A64' }}>
                     {languages.map((lang) => (
-                      <li key={lang} style={{ marginBottom: 4 }}>
-                        {lang}
-                      </li>
+                      <li key={lang} style={{ marginBottom: 4 }}>{lang}</li>
                     ))}
                   </ul>
                 </div>
