@@ -57,6 +57,9 @@ function isPublicPath(pathname) {
   if (pathname.startsWith("/features/")) return true;
   if (pathname.startsWith("/feedback/")) return true;
 
+  // Public profile slugs
+  if (pathname === "/u" || pathname.startsWith("/u/")) return true;
+
   // Public assets
   if (pathname.startsWith("/api/auth/")) return true;
   if (pathname.startsWith("/_next")) return true;
