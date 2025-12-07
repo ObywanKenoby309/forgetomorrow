@@ -38,7 +38,7 @@ export default async function handler(req, res) {
   try {
     const client = await dbPool.connect();
     try {
-      // Read from your Supabase "jobs" table
+      // Minimal, ultra-safe query: only select columns we KNOW exist
       const result = await client.query(
         `
         SELECT
@@ -46,11 +46,9 @@ export default async function handler(req, res) {
           title,
           company,
           location,
-          description,
-          "createdAt"
+          description
         FROM jobs
         ORDER BY
-          "createdAt" DESC NULLS LAST,
           id DESC
         LIMIT 200;
         `
@@ -59,6 +57,8 @@ export default async function handler(req, res) {
       const rows = result.rows || [];
 
       jobs = rows.map((row) => {
+        // Try to derive a "published" date if any timestamp columns exist,
+        // but don't trust them or depend on them
         const created =
           row.createdAt ||
           row.createdat ||
@@ -88,6 +88,7 @@ export default async function handler(req, res) {
     }
   } catch (error) {
     console.error('[jobs] Postgres jobs error:', error);
+    // On error, return an empty array so frontend doesn't break
     return res.status(200).json({ jobs: [] });
   }
 
