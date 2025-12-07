@@ -182,6 +182,83 @@ export function ResumeProvider({ children }) {
     customSections,
   ]);
 
+  // -------- Manual Save (for "Save Resume" button) --------
+  const saveResume = async () => {
+    const now = nowIso();
+
+    const data = {
+      formData,
+      summary,
+      experiences,
+      projects,
+      volunteerExperiences,
+      educationList,
+      certifications,
+      languages,
+      skills,
+      achievements,
+      customSections,
+    };
+
+    const title = formData.fullName || 'Untitled Resume';
+
+    // Local snapshot
+    let snapshot = {
+      id: `${Date.now()}`, // temporary ID before DB save
+      title,
+      createdAt: now,
+      updatedAt: now,
+      isPrimary: true,
+      data,
+    };
+
+    setResumes((prev) => [...prev, snapshot]);
+    setSaveEventAt(now);
+
+    // Try to persist to backend
+    try {
+      const res = await fetch('/api/resume/save', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          title,
+          data,
+          isPrimary: true,
+        }),
+      });
+
+      if (res.ok) {
+        const json = await res.json();
+        const dbResume = json.resume;
+
+        if (dbResume && dbResume.id) {
+          // Replace the local snapshot with the DB-backed one
+          setResumes((prev) => {
+            // clear previous primaries in local state if needed
+            const withoutTemp = prev.filter((r) => r.id !== snapshot.id);
+            return [
+              ...withoutTemp.map((r) =>
+                dbResume.isPrimary ? { ...r, isPrimary: false } : r
+              ),
+              {
+                id: dbResume.id,
+                title: dbResume.title,
+                createdAt: dbResume.createdAt,
+                updatedAt: dbResume.updatedAt,
+                isPrimary: dbResume.isPrimary,
+                data: dbResume.data,
+              },
+            ];
+          });
+        }
+      } else {
+        console.warn('[ResumeContext] Failed to save resume to backend', res.status);
+      }
+    } catch (err) {
+      console.error('[ResumeContext] Error saving resume to backend', err);
+    }
+  };
+
   return (
     <ResumeContext.Provider
       value={{
@@ -206,6 +283,9 @@ export function ResumeProvider({ children }) {
         revertSummaryBackup,
         clearSummaryBackup,
         setSummaryWithBackup,
+
+        // Manual save for the big green button
+        saveResume,
       }}
     >
       {children}

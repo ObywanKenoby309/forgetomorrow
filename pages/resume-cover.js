@@ -8,6 +8,7 @@ import { getClientSession } from '@/lib/auth-client';
 import ProfileResumeAttach from '@/components/profile/ProfileResumeAttach';
 import ProfileCoverAttach from '@/components/profile/ProfileCoverAttach';
 import SectionHint from '@/components/SectionHint';
+import { extractTextFromFile, normalizeJobText } from '@/lib/jd/ingest';
 
 const ORANGE = '#FF7043';
 const SLATE = '#455A64';
@@ -180,15 +181,24 @@ export default function ResumeCoverLanding() {
 
         if (session?.user) {
           setUser(session.user);
+
+          // Load saved resumes from backend
+          try {
+            const res = await fetch('/api/resume/list');
+            if (res.ok) {
+              const json = await res.json();
+              setSavedResumes(json.resumes || []);
+            }
+          } catch (err) {
+            console.error('[resume-cover] Failed to load resumes', err);
+          }
         } else {
-          // Rely on global auth / middleware instead of forcing /login here
           console.warn('[resume-cover] No session user found on client init');
         }
 
         // TODO: Replace these placeholders with real DB-driven values
         setTier((prev) => prev); // keep 'basic' for now
         setUsage((prev) => prev); // { used: 0, limit: 3 } for now
-        setSavedResumes((prev) => prev); // empty until wired
       } catch (err) {
         console.error('[resume-cover] Failed to init session/usage', err);
       }
@@ -261,8 +271,58 @@ export default function ResumeCoverLanding() {
 
   const onUploadClick = () => fileRef.current?.click();
 
-  const onFilePicked = () => {
-    // Imported resume → still honor ATS + job context + chrome
+  // When a file is picked:
+  // 1) Upload to /api/resume/upload for storage + keywords.
+  // 2) Extract text client-side and stash in localStorage.
+  // 3) Navigate to /resume/create?uploaded=1&... so the builder can hydrate.
+  const onFilePicked = async (event) => {
+    const file = event?.target?.files?.[0] || fileRef.current?.files?.[0];
+    if (!file) return;
+
+    // 1) Upload to backend
+    try {
+      const formData = new FormData();
+      formData.append('resume', file);
+
+      const res = await fetch('/api/resume/upload', {
+        method: 'POST',
+        body: formData,
+      });
+
+      if (res.ok) {
+        const payload = await res.json();
+        if (typeof window !== 'undefined') {
+          window.localStorage.setItem(
+            'ft_last_uploaded_resume_meta',
+            JSON.stringify({
+              ...payload,
+              originalName: file.name,
+            })
+          );
+        }
+      } else {
+        console.warn('[resume-cover] Resume upload failed with status', res.status);
+      }
+    } catch (err) {
+      console.error('[resume-cover] Resume upload error', err);
+    }
+
+    // 2) Extract text for auto-fill in the builder
+    try {
+      const raw =
+        file.size > 1_500_000
+          ? null // for very large files we’ll skip client parsing for now
+          : await extractTextFromFile(file);
+
+      if (raw && typeof window !== 'undefined') {
+        const clean = normalizeJobText(raw);
+        window.localStorage.setItem('ft_last_uploaded_resume_text', clean);
+      }
+    } catch (err) {
+      console.error('[resume-cover] Failed to extract resume text for auto-fill', err);
+    }
+
+    // 3) Navigate to builder with uploaded flag + ATS/job context
     router.push(buildCreateHref({ uploaded: true }));
   };
 

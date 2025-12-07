@@ -126,6 +126,7 @@ export default function CreateResumePage() {
 
   const fileInputRef = useRef(null);
   const dropRef = useRef(null);
+  const hasAppliedUploadRef = useRef(false); // ensure we only parse once per uploaded flow
 
   const {
     formData,
@@ -185,9 +186,50 @@ export default function CreateResumePage() {
     experiences?.length > 0,
     experiences.every((e) => e.title && e.company && e.bullets?.length >= 2),
   ];
-  const progress = Math.round((checks.filter(Boolean).length / 4) * 100);
 
-  // NEW: treat "complete" as exactly 100% progress
+  // Detect if the resume is effectively empty and clamp progress to 0 in that case
+  const hasAnyResumeContent =
+    (formData &&
+      (formData.fullName ||
+        formData.name ||
+        formData.email ||
+        formData.phone ||
+        formData.location ||
+        formData.linkedin ||
+        formData.github ||
+        formData.portfolio ||
+        formData.forgeUrl ||
+        formData.ftProfile ||
+        formData.targetedRole)) ||
+    (summary && summary.trim().length > 0) ||
+    (skills && skills.length > 0) ||
+    (experiences &&
+      experiences.some(
+        (e) =>
+          e.title ||
+          e.company ||
+          (Array.isArray(e.bullets) && e.bullets.length > 0)
+      )) ||
+    (educationList &&
+      educationList.some(
+        (edu) => edu.school || edu.institution || edu.degree || edu.field
+      )) ||
+    (projects &&
+      projects.some(
+        (p) =>
+          p.title ||
+          p.company ||
+          (Array.isArray(p.bullets) && p.bullets.length > 0)
+      )) ||
+    (certifications && certifications.length > 0) ||
+    (customSections && customSections.length > 0);
+
+  let progress = Math.round((checks.filter(Boolean).length / 4) * 100);
+  if (!hasAnyResumeContent) {
+    progress = 0;
+  }
+
+  // treat "complete" as exactly 100% progress
   const isResumeComplete = progress === 100;
 
   // Load resume template
@@ -251,7 +293,8 @@ export default function CreateResumePage() {
 
   const resumeData = {
     personalInfo: {
-      name: formData.name || 'Your Name',
+      // Use fullName if available, fall back to name
+      name: formData.fullName || formData.name || 'Your Name',
       targetedRole: formData.targetedRole || '',
       email: formData.email || '',
       phone: formData.phone || '',
@@ -259,6 +302,8 @@ export default function CreateResumePage() {
       linkedin: formData.linkedin || '',
       github: formData.github || '',
       portfolio: formData.portfolio || '',
+      // Pass the ForgeTomorrow profile URL into the templates
+      ftProfile: formData.forgeUrl || formData.ftProfile || '',
     },
     summary: summary || '',
     workExperiences: experiences,
@@ -268,6 +313,63 @@ export default function CreateResumePage() {
     skills: skills,
     customSections: customSections,
   };
+
+  // ─────────────────────────────────────────────────────────────
+  // Autofill from uploaded resume text (from resume-cover → localStorage)
+  // ─────────────────────────────────────────────────────────────
+  useEffect(() => {
+    if (!router.isReady) return;
+    if (hasAppliedUploadRef.current) return;
+
+    const { uploaded } = router.query || {};
+    const uploadedFlag = String(uploaded || '').toLowerCase();
+
+    if (uploadedFlag !== '1' && uploadedFlag !== 'true') return;
+    if (typeof window === 'undefined') return;
+
+    try {
+      const raw = window.localStorage.getItem('ft_last_uploaded_resume_text');
+      if (!raw) return;
+
+      const text = raw;
+      const lines = text
+        .split(/\r?\n/)
+        .map((l) => l.trim())
+        .filter(Boolean);
+
+      // Naive name guess: first non-empty line if we don't already have a fullName/name
+      let guessedName = formData.fullName || formData.name || '';
+      if (!guessedName && lines.length > 0) {
+        guessedName = lines[0];
+      }
+
+      // Email
+      const emailMatch = text.match(/[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}/i);
+      const guessedEmail = emailMatch ? emailMatch[0] : '';
+
+      // Phone (very loose pattern, but good enough for first pass)
+      const phoneMatch = text.match(/(\+?\d[\d\s\-().]{7,}\d)/);
+      const guessedPhone = phoneMatch ? phoneMatch[0].trim() : '';
+
+      // Only fill fields that are currently empty so we don't clobber existing formData
+      setFormData((prev) => ({
+        ...prev,
+        fullName: prev.fullName || guessedName || '',
+        email: prev.email || guessedEmail || '',
+        phone: prev.phone || guessedPhone || '',
+      }));
+
+      // If summary is empty, drop in the raw text as a starting point (capped length)
+      if (!summary || !summary.trim()) {
+        const capped = text.length > 4000 ? text.slice(0, 4000) : text;
+        setSummary(capped);
+      }
+
+      hasAppliedUploadRef.current = true;
+    } catch (err) {
+      console.error('[resume/create] Failed to auto-fill from uploaded resume', err);
+    }
+  }, [router.isReady, router.query, formData.fullName, formData.name, summary, setFormData, setSummary]);
 
   // ─────────────────────────────────────────────────────────────
   // Apply ATS pack + JD context from resume-cover
