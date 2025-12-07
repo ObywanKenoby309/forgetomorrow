@@ -66,7 +66,7 @@ function isPublicPath(pathname) {
 
   // 🔥 Allow corporate banners and wallpaper assets publicly
   if (pathname.startsWith("/corporate-banners")) return true;
-  if (pathname.startsWith("/wallpapers")) return true;
+  if (pathname.startsWith("/profile-wallpapers")) return true;
 
   // Signup / Register flow
   if (SIGNUPS_OPEN && pathname.startsWith("/signup")) return true;
