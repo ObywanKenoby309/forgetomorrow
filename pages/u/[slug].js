@@ -29,6 +29,10 @@ export async function getServerSideProps(context) {
       bannerHeight: true,
       bannerFocalY: true,
       wallpaperUrl: true,
+
+      // Corporate banner override (ForgeTomorrow staff only)
+      corporateBannerKey: true,
+      corporateBannerLocked: true,
     },
   });
 
@@ -101,6 +105,8 @@ export default function PublicProfile({ user }) {
     bannerHeight,
     bannerFocalY,
     wallpaperUrl,
+    corporateBannerKey,
+    corporateBannerLocked,
   } = user;
 
   const fullName = name || 'Unknown User';
@@ -109,14 +115,21 @@ export default function PublicProfile({ user }) {
   const skills = parseArrayField(skillsJson, []);
   const languages = parseArrayField(languagesJson, []);
 
-  // ── Banner logic: prefer coverUrl, then wallpaperUrl, then gradient ────────
+  // ── Banner logic: corporate override → coverUrl → wallpaperUrl → gradient ──
   const resolvedBannerHeight = bannerHeight || 260;
 
-  const bannerBackgroundImage = coverUrl
-    ? `url(${coverUrl})`
-    : wallpaperUrl
-    ? `url(${wallpaperUrl})`
-    : 'linear-gradient(135deg, #112033, #455A64)';
+  let bannerBackgroundImage;
+
+  if (corporateBannerLocked && corporateBannerKey) {
+    // e.g. corporateBannerKey = "CEO" → /corporate-banners/CEO.png
+    bannerBackgroundImage = `url(/corporate-banners/${corporateBannerKey}.png)`;
+  } else if (coverUrl) {
+    bannerBackgroundImage = `url(${coverUrl})`;
+  } else if (wallpaperUrl) {
+    bannerBackgroundImage = `url(${wallpaperUrl})`;
+  } else {
+    bannerBackgroundImage = 'linear-gradient(135deg, #112033, #455A64)';
+  }
 
   const bannerBackgroundPosition =
     typeof bannerFocalY === 'number'
