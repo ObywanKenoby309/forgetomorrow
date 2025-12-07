@@ -1,4 +1,4 @@
-// pages/api/jobs.js — Supabase/Postgres jobs only, no TypeScript syntax
+// pages/api/jobs.js — Supabase/Postgres jobs only, no fallback
 
 import { Pool } from 'pg';
 
@@ -21,36 +21,6 @@ function getPool() {
   return pool;
 }
 
-// Fallback jobs — keeps the site up even if DB is not ready
-const fallbackJobs = [
-  {
-    id: 1,
-    title: 'Frontend Developer',
-    company: 'ForgeTomorrow',
-    description: 'Build cutting-edge UIs for modern professionals.',
-    location: 'Remote',
-    url: null,
-    salary: null,
-    tags: null,
-    source: 'Fallback',
-    origin: 'fallback',
-    publishedat: new Date().toISOString(),
-  },
-  {
-    id: 2,
-    title: 'Mentor Coordinator',
-    company: 'ForgeTomorrow',
-    description: 'Help manage and scale mentorship experiences.',
-    location: 'Hybrid (Remote/Nashville)',
-    url: null,
-    salary: null,
-    tags: null,
-    source: 'Fallback',
-    origin: 'fallback',
-    publishedat: new Date().toISOString(),
-  },
-];
-
 export default async function handler(req, res) {
   if (req.method !== 'GET') {
     return res.status(405).json({ error: 'Method not allowed' });
@@ -59,8 +29,8 @@ export default async function handler(req, res) {
   const dbPool = getPool();
 
   if (!dbPool) {
-    console.warn('[jobs] DATABASE_URL not set; serving fallback jobs');
-    return res.status(200).json({ jobs: fallbackJobs });
+    console.warn('[jobs] DATABASE_URL not set; returning empty list');
+    return res.status(200).json({ jobs: [] });
   }
 
   let jobs = [];
@@ -77,14 +47,10 @@ export default async function handler(req, res) {
           company,
           location,
           description,
-          url,
-          salary,
-          tags,
-          source,
-          "publishedAt"
+          "createdAt"
         FROM jobs
         ORDER BY
-          "publishedAt" DESC NULLS LAST,
+          "createdAt" DESC NULLS LAST,
           id DESC
         LIMIT 200;
         `
@@ -93,12 +59,15 @@ export default async function handler(req, res) {
       const rows = result.rows || [];
 
       jobs = rows.map((row) => {
-        // Handle different casings just in case
-        const published =
-          row.publishedat ||
-          row.publishedAt ||
-          row.published_at ||
+        const created =
+          row.createdAt ||
+          row.createdat ||
+          row.created_at ||
           null;
+
+        const publishedIso = created
+          ? new Date(created).toISOString()
+          : new Date().toISOString();
 
         return {
           id: row.id,
@@ -106,14 +75,12 @@ export default async function handler(req, res) {
           company: row.company,
           location: row.location,
           description: row.description,
-          url: row.url,
-          salary: row.salary,
-          tags: row.tags,
-          source: row.source || 'External',
+          url: null,
+          salary: null,
+          tags: null,
+          source: 'External',
           origin: 'external',
-          publishedat: published
-            ? new Date(published).toISOString()
-            : new Date().toISOString(),
+          publishedat: publishedIso,
         };
       });
     } finally {
@@ -121,11 +88,7 @@ export default async function handler(req, res) {
     }
   } catch (error) {
     console.error('[jobs] Postgres jobs error:', error);
-  }
-
-  if (!jobs.length) {
-    console.warn('[jobs] No jobs found; using fallback');
-    return res.status(200).json({ jobs: fallbackJobs });
+    return res.status(200).json({ jobs: [] });
   }
 
   return res.status(200).json({ jobs });
