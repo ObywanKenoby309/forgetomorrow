@@ -187,6 +187,9 @@ export default function CreateResumePage() {
   ];
   const progress = Math.round((checks.filter(Boolean).length / 4) * 100);
 
+  // NEW: treat "complete" as exactly 100% progress
+  const isResumeComplete = progress === 100;
+
   // Load resume template
   useEffect(() => {
     if (!router.isReady) return;
@@ -421,11 +424,7 @@ export default function CreateResumePage() {
             required
           >
             <div style={{ display: 'grid', gap: 32 }}>
-              <ContactInfoSection
-                embedded
-                formData={formData}
-                setFormData={setFormData}
-              />
+              <ContactInfoSection embedded formData={formData} setFormData={setFormData} />
               <WorkExperienceSection
                 embedded
                 experiences={experiences}
@@ -449,16 +448,8 @@ export default function CreateResumePage() {
             onToggle={() => setOpenOptional((v) => !v)}
           >
             <div style={{ display: 'grid', gap: 32 }}>
-              <SummarySection
-                embedded
-                summary={summary}
-                setSummary={setSummary}
-              />
-              <ProjectsSection
-                embedded
-                projects={projects}
-                setProjects={setProjects}
-              />
+              <SummarySection embedded summary={summary} setSummary={setSummary} />
+              <ProjectsSection embedded projects={projects} setProjects={setProjects} />
               <CertificationsSection
                 embedded
                 certifications={certifications}
@@ -478,7 +469,7 @@ export default function CreateResumePage() {
               <>
                 <span style={{ fontWeight: 800 }}>The Forge Hammer</span>
                 <span style={{ fontWeight: 400 }}>
-                  {' – where our AI hammer, your resume steel, and employers\' job fire work together.'}
+                  {" – where our AI hammer, your resume steel, and employers' job fire work together."}
                 </span>
               </>
             }
@@ -489,9 +480,7 @@ export default function CreateResumePage() {
             {atsPack ? (
               <div style={{ display: 'grid', gap: 10, marginBottom: 16 }}>
                 <Banner tone="blue">
-                  <div style={{ fontWeight: 800, marginBottom: 4 }}>
-                    🔥 Job Fire Loaded
-                  </div>
+                  <div style={{ fontWeight: 800, marginBottom: 4 }}>🔥 Job Fire Loaded</div>
 
                   <div style={{ fontSize: 14, marginBottom: 6 }}>
                     This job is now the <strong>fire</strong> heating your resume steel.
@@ -548,16 +537,13 @@ export default function CreateResumePage() {
             ) : (
               // No ATS pack yet → show FIRE PRO TIP
               <Banner>
-                <div style={{ fontWeight: 800, marginBottom: 4 }}>
-                  🔥 Add the fire.
-                </div>
+                <div style={{ fontWeight: 800, marginBottom: 4 }}>🔥 Add the fire.</div>
 
                 <div style={{ fontSize: 14 }}>
-                  Your resume is the <strong>steel</strong>. This page is the{' '}
-                  <strong>anvil</strong>. The AI tools are your <strong>hammer</strong>.
-                  Add a job description to supply the <strong>fire</strong> — and unlock
-                  AI-powered ATS scoring, keyword suggestions, and tailored guidance for
-                  this specific role.
+                  Your resume is the <strong>steel</strong>. This page is the <strong>anvil</strong>.
+                  The AI tools are your <strong>hammer</strong>. Add a job description to supply the{' '}
+                  <strong>fire</strong> — and unlock AI-powered ATS scoring, keyword suggestions, and
+                  tailored guidance for this specific role.
                 </div>
               </Banner>
             )}
@@ -674,7 +660,7 @@ export default function CreateResumePage() {
         </div>
       </div>
 
-      {/* EXPORT BUTTONS */}
+      {/* EXPORT BUTTONS + PROGRESS + NEXT STEP */}
       <div className="fixed bottom-24 right-6 z-10 flex items-center gap-2 bg-white/90 backdrop-blur-sm p-2 rounded-full shadow-2xl border">
         {/* ATS PDF */}
         {router.query.template === 'hybrid' ? (
@@ -690,6 +676,7 @@ export default function CreateResumePage() {
             </div>
           </ReverseATSButton>
         )}
+
         {/* DESIGNED PDF */}
         <DesignedPDFButton
           data={resumeData}
@@ -699,24 +686,20 @@ export default function CreateResumePage() {
             Designed PDF
           </div>
         </DesignedPDFButton>
-        {/* SAVE + PROGRESS */}
+
+        {/* SAVE */}
         <button
           onClick={saveResume}
           className="bg-green-600 text-white px-4 py-2 rounded-full font-bold text-xs hover:bg-green-700 transition-all"
         >
           Save Resume
         </button>
+
+        {/* PROGRESS */}
         <div className="bg-white px-3 py-1.5 rounded-full flex items-center gap-1.5 border text-xs ml-1">
           <div className="relative">
             <svg className="w-6 h-6">
-              <circle
-                cx="12"
-                cy="12"
-                r="10"
-                fill="none"
-                stroke="#E5E7EB"
-                strokeWidth="2.5"
-              />
+              <circle cx="12" cy="12" r="10" fill="none" stroke="#E5E7EB" strokeWidth="2.5" />
               <circle
                 cx="12"
                 cy="12"
@@ -728,30 +711,28 @@ export default function CreateResumePage() {
                 className="transition-all duration-500"
               />
             </svg>
-            <span className="absolute inset-0 flex items-center justifyCenter text-xs font-bold text-gray-700">
+            <span className="absolute inset-0 flex items-center justify-center text-[10px] font-bold text-gray-700">
               {progress}%
             </span>
           </div>
           <span className="font-semibold text-gray-600">Ready</span>
         </div>
+
+        {/* NEXT STEP → ONLY WHEN 100% */}
+        {isResumeComplete && (
+          <button
+            onClick={() => router.push(withChrome('/cover/create'))}
+            className="ml-2 bg-purple-600 text-white px-4 py-2 rounded-full font-bold text-xs hover:bg-purple-700 transition-all"
+          >
+            Next: Build Cover Letter
+          </button>
+        )}
       </div>
 
       {/* BULK EXPORT CTA */}
       <div className="mt-6 max-w-4xl mx-auto">
         <BulkExportCTA />
       </div>
-
-      {/* SMART CTA */}
-      {isResumeValid && (
-        <div className="fixed bottom-6 left-1/2 transform -translate-x-1/2 z-50 md:bottom-28 md:left-auto md:right-6 md:transform-none">
-          <button
-            onClick={() => router.push(withChrome('/cover/create'))}
-            className="bg-purple-600 text-white px-6 py-3 rounded-full font-bold text-lg shadow-xl hover:bg-purple-700 transition-all transform hover:scale-105"
-          >
-            Next: Build Cover Letter
-          </button>
-        </div>
-      )}
 
       {/* TOAST */}
       {showToast && (
