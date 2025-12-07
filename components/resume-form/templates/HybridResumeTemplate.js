@@ -41,21 +41,39 @@ export default function HybridResumeTemplate({ data }) {
 
         {/* CONTACT LINE */}
         {contactLine && (
-          <p style={{ fontSize: '11pt', marginTop: '4pt', color: '#666' }}>
+          <p
+            style={{
+              fontSize: '11pt',
+              margin: '4pt 0 0 0',
+              color: '#666',
+            }}
+          >
             {contactLine}
           </p>
         )}
 
         {/* PORTFOLIO */}
         {personalInfo.portfolio && (
-          <p style={{ fontSize: '11pt', margin: '2pt 0 0 0', color: '#666' }}>
+          <p
+            style={{
+              fontSize: '11pt',
+              margin: '2pt 0 0 0',
+              color: '#666',
+            }}
+          >
             {personalInfo.portfolio}
           </p>
         )}
 
-        {/* FT PROFILE */}
+        {/* FT PROFILE (slug URL) */}
         {personalInfo.ftProfile && (
-          <p style={{ fontSize: '11pt', margin: '2pt 0 0 0', color: '#666' }}>
+          <p
+            style={{
+              fontSize: '11pt',
+              margin: '2pt 0 0 0',
+              color: '#666',
+            }}
+          >
             {personalInfo.ftProfile}
           </p>
         )}
@@ -66,7 +84,7 @@ export default function HybridResumeTemplate({ data }) {
             style={{
               fontSize: '12pt',
               fontStyle: 'italic',
-              marginTop: '8pt',
+              margin: '8pt 0 0 0',
               color: '#444',
             }}
           >
@@ -82,26 +100,25 @@ export default function HybridResumeTemplate({ data }) {
             style={{
               fontSize: '13pt',
               fontWeight: 'bold',
-              marginBottom: '6pt',
+              margin: '0 0 6pt 0',
               borderBottom: '1pt solid #000',
               textTransform: 'uppercase',
             }}
           >
             Professional Summary
           </h2>
-          <p style={{ margin: 0 }}>{summary}</p>
+          <p style={{ margin: 0, fontSize: '11pt' }}>{summary}</p>
         </div>
       )}
 
-      {/* SKILLS + EXPERIENCE TWO-COLUMN */}
-      <div style={{ display: 'flex', gap: '24pt', marginBottom: '16pt' }}>
-        {/* LEFT - SKILLS */}
-        <div style={{ flex: 1 }}>
+      {/* SKILLS (FULL WIDTH) */}
+      {skills.length > 0 && (
+        <div style={{ marginBottom: '16pt' }}>
           <h2
             style={{
               fontSize: '13pt',
               fontWeight: 'bold',
-              marginBottom: '6pt',
+              margin: '0 0 6pt 0',
               borderBottom: '1pt solid #000',
               textTransform: 'uppercase',
             }}
@@ -114,6 +131,7 @@ export default function HybridResumeTemplate({ data }) {
                 key={i}
                 style={{
                   margin: '2pt 0',
+                  fontSize: '11pt',
                   breakInside: 'avoid',
                 }}
               >
@@ -122,21 +140,22 @@ export default function HybridResumeTemplate({ data }) {
             ))}
           </div>
         </div>
+      )}
 
-        {/* RIGHT - EXPERIENCE */}
-        <div style={{ flex: 2 }}>
+      {/* EXPERIENCE (FULL WIDTH) */}
+      {workExperiences.length > 0 && (
+        <div style={{ marginBottom: '16pt' }}>
           <h2
             style={{
               fontSize: '13pt',
               fontWeight: 'bold',
-              marginBottom: '6pt',
+              margin: '0 0 6pt 0',
               borderBottom: '1pt solid #000',
               textTransform: 'uppercase',
             }}
           >
             Experience
           </h2>
-
           {workExperiences.map((exp, i) => (
             <div key={i} style={{ marginBottom: '12pt' }}>
               <div
@@ -147,22 +166,29 @@ export default function HybridResumeTemplate({ data }) {
                 }}
               >
                 <div>
-                  <strong>{exp.title || exp.jobTitle}</strong>
-                  <span style={{ marginLeft: '8pt', color: '#444' }}>
+                  <strong style={{ fontSize: '11pt' }}>
+                    {exp.title || exp.jobTitle}
+                  </strong>
+                  <span
+                    style={{
+                      color: '#444',
+                      marginLeft: '8pt',
+                    }}
+                  >
                     {exp.company}
+                    {exp.location && ` • ${exp.location}`}
                   </span>
                 </div>
                 <span
                   style={{
                     fontSize: '10pt',
                     color: '#666',
-                    whiteSpace: 'nowrap', // prevent the date from breaking oddly
+                    whiteSpace: 'nowrap',
                   }}
                 >
                   {exp.startDate} – {exp.endDate || 'Present'}
                 </span>
               </div>
-
               {(exp.bullets || []).map((b, bi) => (
                 <p
                   key={bi}
@@ -177,7 +203,7 @@ export default function HybridResumeTemplate({ data }) {
             </div>
           ))}
         </div>
-      </div>
+      )}
 
       {/* PROJECTS */}
       {projects.length > 0 && (
@@ -186,14 +212,13 @@ export default function HybridResumeTemplate({ data }) {
             style={{
               fontSize: '13pt',
               fontWeight: 'bold',
-              marginBottom: '6pt',
+              margin: '0 0 6pt 0',
               borderBottom: '1pt solid #000',
               textTransform: 'uppercase',
             }}
           >
             Projects
           </h2>
-
           {projects.map((proj, i) => (
             <div key={i} style={{ marginBottom: '10pt' }}>
               <div
@@ -204,25 +229,31 @@ export default function HybridResumeTemplate({ data }) {
                 }}
               >
                 <div>
-                  <strong>{proj.title || proj.name}</strong>
-                  <span style={{ marginLeft: '8pt', color: '#444' }}>
+                  <strong style={{ fontSize: '11pt' }}>
+                    {proj.title || proj.name}
+                  </strong>
+                  <span
+                    style={{
+                      color: '#444',
+                      marginLeft: '8pt',
+                    }}
+                  >
                     {proj.company || proj.org || proj.client}
+                    {proj.location && ` • ${proj.location}`}
                   </span>
                 </div>
-
                 {(proj.startDate || proj.endDate) && (
                   <span
                     style={{
                       fontSize: '10pt',
                       color: '#666',
-                      whiteSpace: 'nowrap', // same fix here
+                      whiteSpace: 'nowrap',
                     }}
                   >
                     {proj.startDate} – {proj.endDate || 'Present'}
                   </span>
                 )}
               </div>
-
               {(proj.bullets || []).map((b, bi) => (
                 <p
                   key={bi}
@@ -234,7 +265,6 @@ export default function HybridResumeTemplate({ data }) {
                   • {b}
                 </p>
               ))}
-
               {proj.description &&
                 (!proj.bullets || proj.bullets.length === 0) && (
                   <p
@@ -258,28 +288,36 @@ export default function HybridResumeTemplate({ data }) {
             style={{
               fontSize: '13pt',
               fontWeight: 'bold',
-              marginBottom: '6pt',
+              margin: '0 0 6pt 0',
               borderBottom: '1pt solid #000',
               textTransform: 'uppercase',
             }}
           >
             Education
           </h2>
-
           {educationList.map((edu, i) => (
             <div key={i} style={{ marginBottom: '10pt' }}>
+              {/* Degree + Field */}
               <div
                 style={{
                   fontWeight: 'bold',
                   fontSize: '11pt',
                 }}
               >
-                {edu.degree} {edu.field}
+                {edu.degree} {edu.field && `${edu.field}`}
               </div>
+
+              {/* Institution / School */}
               <div style={{ fontSize: '10pt' }}>
-                {edu.institution || edu.school}
-                {edu.location && ` • ${edu.location}`}
+                {(edu.institution || edu.school) && (
+                  <>
+                    {edu.institution || edu.school}{' '}
+                    {edu.location && `• ${edu.location}`}
+                  </>
+                )}
               </div>
+
+              {/* Dates */}
               <div
                 style={{
                   fontSize: '10pt',
@@ -290,6 +328,7 @@ export default function HybridResumeTemplate({ data }) {
                 {edu.startDate} – {edu.endDate || 'Present'}
               </div>
 
+              {/* Description / Details */}
               {edu.description && (
                 <div
                   style={{
@@ -300,46 +339,95 @@ export default function HybridResumeTemplate({ data }) {
                   {edu.description}
                 </div>
               )}
+              {edu.details && !edu.description && (
+                <div
+                  style={{
+                    marginTop: '3pt',
+                    fontSize: '10pt',
+                  }}
+                >
+                  {edu.details}
+                </div>
+              )}
             </div>
           ))}
         </div>
       )}
 
-      {/* CERTIFICATIONS */}
+      {/* CERTIFICATIONS / TRAINING */}
       {certifications.length > 0 && (
         <div style={{ marginBottom: '16pt' }}>
           <h2
             style={{
               fontSize: '13pt',
               fontWeight: 'bold',
-              marginBottom: '6pt',
+              margin: '0 0 6pt 0',
               borderBottom: '1pt solid #000',
               textTransform: 'uppercase',
             }}
           >
-            Certifications & Training
+            Certifications &amp; Training
           </h2>
+          {certifications.map((cert, i) => {
+            // Simple string support
+            if (typeof cert === 'string') {
+              return (
+                <div
+                  key={i}
+                  style={{
+                    marginBottom: '6pt',
+                    fontSize: '11pt',
+                  }}
+                >
+                  {cert}
+                </div>
+              );
+            }
 
-          {certifications.map((cert, i) => (
-            <div key={i} style={{ marginBottom: '8pt' }}>
-              <div
-                style={{
-                  fontWeight: 'bold',
-                  fontSize: '11pt',
-                }}
-              >
-                {cert.name || cert.title}
+            const title =
+              cert.name || cert.title || cert.certification;
+            const org =
+              cert.issuer || cert.organization || cert.provider;
+            const date =
+              cert.date || cert.issued || cert.obtained;
+            const desc =
+              cert.description || cert.details;
+
+            return (
+              <div key={i} style={{ marginBottom: '8pt' }}>
+                <div
+                  style={{
+                    fontWeight: 'bold',
+                    fontSize: '11pt',
+                  }}
+                >
+                  {title}
+                </div>
+                {(org || date) && (
+                  <div
+                    style={{
+                      fontSize: '10pt',
+                      color: '#444',
+                    }}
+                  >
+                    {org}
+                    {org && date && ' • '}
+                    {date}
+                  </div>
+                )}
+                {desc && (
+                  <div
+                    style={{
+                      marginTop: '3pt',
+                      fontSize: '10pt',
+                    }}
+                  >
+                    {desc}
+                  </div>
+                )}
               </div>
-              <div
-                style={{
-                  fontSize: '10pt',
-                  color: '#444',
-                }}
-              >
-                {cert.organization || cert.issuer}
-              </div>
-            </div>
-          ))}
+            );
+          })}
         </div>
       )}
 
@@ -368,7 +456,7 @@ export default function HybridResumeTemplate({ data }) {
                 style={{
                   fontSize: '13pt',
                   fontWeight: 'bold',
-                  marginBottom: '6pt',
+                  margin: '0 0 6pt 0',
                   borderBottom: '1pt solid #000',
                   textTransform: 'uppercase',
                 }}
