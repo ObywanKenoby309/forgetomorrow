@@ -61,26 +61,34 @@ export const authOptions: NextAuthOptions = {
   secret: process.env.NEXTAUTH_SECRET,
 
   callbacks: {
-    // 🔑 Redirect behavior: respect callbackUrl, but never dump a logged-in user back on bare "/"
+    // 🔑 Redirect behavior: sanitize URL and route via /auth/signin for role-based dashboards
     async redirect({ url, baseUrl }) {
-      // If NextAuth wants to send us to the bare base URL, route through /auth/signin
-      // so getServerSideProps there can push the user to the correct dashboard.
-      if (url === baseUrl || url === `${baseUrl}/`) {
-        return `${baseUrl}/auth/signin`;
+      // Helper to strip CR/LF and trim whitespace from any URL we use in a Location header
+      const clean = (value: string) => value.replace(/[\r\n]/g, "").trim();
+
+      const cleanBase = clean(baseUrl);
+      const rawUrl = url || cleanBase;
+      const cleanUrl = clean(rawUrl);
+
+      // If NextAuth wants to send us to the bare base URL,
+      // route through /auth/signin so getServerSideProps can
+      // push the user to the correct dashboard by role/plan.
+      if (cleanUrl === cleanBase || cleanUrl === `${cleanBase}/`) {
+        return `${cleanBase}/auth/signin`;
       }
 
-      // Allow relative URLs (/seeker-dashboard, /coaching-dashboard, /auth/signin, etc.)
-      if (url.startsWith("/")) {
-        return `${baseUrl}${url}`;
+      // Allow relative URLs (/seeker-dashboard, /recruiter/dashboard, /auth/signin, etc.)
+      if (cleanUrl.startsWith("/")) {
+        return `${cleanBase}${cleanUrl}`;
       }
 
       // Allow same-origin absolute URLs (e.g. https://forgetomorrow.com/auth/signin)
-      if (url.startsWith(baseUrl)) {
-        return url;
+      if (cleanUrl.startsWith(cleanBase)) {
+        return cleanUrl;
       }
 
       // Fallback: if something weird happens, go to sign-in router instead of marketing home
-      return `${baseUrl}/auth/signin`;
+      return `${cleanBase}/auth/signin`;
     },
 
     async jwt({ token, user }) {
@@ -99,8 +107,8 @@ export const authOptions: NextAuthOptions = {
         session.user.id = token.sub!;
         (session.user as any).role = token.role;
         (session.user as any).plan = token.plan;
-        (session.user as any).stripeCustomerId = (token as any)
-          .stripeCustomerId;
+        (session.user as any).stripeCustomerId =
+          (token as any).stripeCustomerId;
         (session.user as any).accountKey =
           ((token as any).accountKey as string | null) ?? null;
       }
