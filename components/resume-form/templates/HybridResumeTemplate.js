@@ -4,12 +4,18 @@ export default function HybridResumeTemplate({ data }) {
     personalInfo,
     summary,
     workExperiences = [],
-    projects = [],          // ← NEW
+    projects = [],
     educationList = [],
     skills = [],
     certifications = [],
     customSections = [],
   } = data;
+
+  const contactLine = [
+    personalInfo.email,
+    personalInfo.phone,
+    personalInfo.location,
+  ].filter(Boolean).join(" | ");
 
   return (
     <div
@@ -25,34 +31,40 @@ export default function HybridResumeTemplate({ data }) {
     >
       {/* HEADER */}
       <div style={{ textAlign: 'center', marginBottom: '20pt' }}>
+        
+        {/* NAME */}
         <h1 style={{ fontSize: '28pt', fontWeight: 'bold', margin: 0 }}>
           {personalInfo.name}
         </h1>
-        <p
-          style={{
-            fontSize: '11pt',
-            margin: '4pt 0 0 0',
-            color: '#666',
-          }}
-        >
-          {[
-            personalInfo.email,
-            personalInfo.phone,
-            personalInfo.location,
-            personalInfo.linkedin,
-            personalInfo.github,
-            personalInfo.portfolio,
-            personalInfo.ftProfile,
-          ]
-            .filter(Boolean)
-            .join(' | ')}
-        </p>
+
+        {/* CONTACT LINE */}
+        {contactLine && (
+          <p style={{ fontSize: '11pt', marginTop: '4pt', color: '#666' }}>
+            {contactLine}
+          </p>
+        )}
+
+        {/* PORTFOLIO */}
+        {personalInfo.portfolio && (
+          <p style={{ fontSize: '11pt', margin: '2pt 0 0 0', color: '#666' }}>
+            {personalInfo.portfolio}
+          </p>
+        )}
+
+        {/* FT PROFILE */}
+        {personalInfo.ftProfile && (
+          <p style={{ fontSize: '11pt', margin: '2pt 0 0 0', color: '#666' }}>
+            {personalInfo.ftProfile}
+          </p>
+        )}
+
+        {/* TARGETED ROLE */}
         {personalInfo.targetedRole && (
           <p
             style={{
               fontSize: '12pt',
               fontStyle: 'italic',
-              margin: '8pt 0 0 0',
+              marginTop: '8pt',
               color: '#444',
             }}
           >
@@ -68,32 +80,27 @@ export default function HybridResumeTemplate({ data }) {
             style={{
               fontSize: '13pt',
               fontWeight: 'bold',
-              margin: '0 0 6pt 0',
+              marginBottom: '6pt',
               borderBottom: '1pt solid #000',
               textTransform: 'uppercase',
             }}
           >
             Professional Summary
           </h2>
-          <p style={{ margin: 0, fontSize: '11pt' }}>{summary}</p>
+          <p>{summary}</p>
         </div>
       )}
 
-      {/* TWO-COLUMN: SKILLS + EXPERIENCE */}
-      <div
-        style={{
-          display: 'flex',
-          gap: '24pt',
-          marginBottom: '16pt',
-        }}
-      >
-        {/* LEFT: SKILLS */}
+      {/* SKILLS + EXPERIENCE TWO-COLUMN */}
+      <div style={{ display: 'flex', gap: '24pt', marginBottom: '16pt' }}>
+ 
+        {/* LEFT - SKILLS */}
         <div style={{ flex: 1 }}>
           <h2
             style={{
               fontSize: '13pt',
               fontWeight: 'bold',
-              margin: '0 0 6pt 0',
+              marginBottom: '6pt',
               borderBottom: '1pt solid #000',
               textTransform: 'uppercase',
             }}
@@ -102,71 +109,43 @@ export default function HybridResumeTemplate({ data }) {
           </h2>
           <div style={{ columns: 2, columnGap: '12pt' }}>
             {skills.map((skill, i) => (
-              <p
-                key={i}
-                style={{
-                  margin: '2pt 0',
-                  fontSize: '11pt',
-                  breakInside: 'avoid',
-                }}
-              >
+              <p key={i} style={{ margin: '2pt 0', breakInside: 'avoid' }}>
                 • {skill}
               </p>
             ))}
           </div>
         </div>
 
-        {/* RIGHT: EXPERIENCE */}
+        {/* RIGHT - EXPERIENCE */}
         <div style={{ flex: 2 }}>
           <h2
             style={{
               fontSize: '13pt',
               fontWeight: 'bold',
-              margin: '0 0 6pt 0',
+              marginBottom: '6pt',
               borderBottom: '1pt solid #000',
               textTransform: 'uppercase',
             }}
           >
             Experience
           </h2>
+
           {workExperiences.map((exp, i) => (
             <div key={i} style={{ marginBottom: '12pt' }}>
-              <div
-                style={{
-                  display: 'flex',
-                  justifyContent: 'space-between',
-                }}
-              >
+              <div style={{ display: 'flex', justifyContent: 'space-between' }}>
                 <div>
-                  <strong style={{ fontSize: '11pt' }}>
-                    {exp.title || exp.jobTitle}
-                  </strong>
-                  <span
-                    style={{
-                      color: '#444',
-                      marginLeft: '8pt',
-                    }}
-                  >
+                  <strong>{exp.title || exp.jobTitle}</strong>
+                  <span style={{ marginLeft: '8pt', color: '#444' }}>
                     {exp.company}
                   </span>
                 </div>
-                <span
-                  style={{
-                    fontSize: '10pt',
-                    color: '#666',
-                  }}
-                >
-                  {exp.startDate} – {exp.endDate || 'Present'}
+                <span style={{ fontSize: '10pt', color: '#666' }}>
+                  {exp.startDate} – {exp.endDate || "Present"}
                 </span>
               </div>
+
               {(exp.bullets || []).map((b, bi) => (
-                <p
-                  key={bi}
-                  style={{
-                    margin: '2pt 0 2pt 16pt',
-                    fontSize: '11pt',
-                  }}
-                >
+                <p key={bi} style={{ margin: '2pt 0 2pt 16pt' }}>
                   • {b}
                 </p>
               ))}
@@ -182,67 +161,39 @@ export default function HybridResumeTemplate({ data }) {
             style={{
               fontSize: '13pt',
               fontWeight: 'bold',
-              margin: '0 0 6pt 0',
+              marginBottom: '6pt',
               borderBottom: '1pt solid #000',
               textTransform: 'uppercase',
             }}
           >
             Projects
           </h2>
+
           {projects.map((proj, i) => (
             <div key={i} style={{ marginBottom: '10pt' }}>
-              <div
-                style={{
-                  display: 'flex',
-                  justifyContent: 'space-between',
-                }}
-              >
+              <div style={{ display: 'flex', justifyContent: 'space-between' }}>
                 <div>
-                  <strong style={{ fontSize: '11pt' }}>
-                    {proj.title || proj.name}
-                  </strong>
-                  <span
-                    style={{
-                      color: '#444',
-                      marginLeft: '8pt',
-                    }}
-                  >
+                  <strong>{proj.title || proj.name}</strong>
+                  <span style={{ marginLeft: '8pt', color: '#444' }}>
                     {proj.company || proj.org || proj.client}
                   </span>
                 </div>
+
                 {(proj.startDate || proj.endDate) && (
-                  <span
-                    style={{
-                      fontSize: '10pt',
-                      color: '#666',
-                    }}
-                  >
-                    {proj.startDate} – {proj.endDate || 'Present'}
+                  <span style={{ fontSize: '10pt', color: '#666' }}>
+                    {proj.startDate} – {proj.endDate || "Present"}
                   </span>
                 )}
               </div>
 
               {(proj.bullets || []).map((b, bi) => (
-                <p
-                  key={bi}
-                  style={{
-                    margin: '2pt 0 2pt 16pt',
-                    fontSize: '11pt',
-                  }}
-                >
+                <p key={bi} style={{ margin: '2pt 0 2pt 16pt' }}>
                   • {b}
                 </p>
               ))}
 
               {proj.description && (!proj.bullets || proj.bullets.length === 0) && (
-                <p
-                  style={{
-                    margin: '2pt 0 2pt 16pt',
-                    fontSize: '11pt',
-                  }}
-                >
-                  {proj.description}
-                </p>
+                <p style={{ margin: '2pt 0 2pt 16pt' }}>{proj.description}</p>
               )}
             </div>
           ))}
@@ -256,65 +207,30 @@ export default function HybridResumeTemplate({ data }) {
             style={{
               fontSize: '13pt',
               fontWeight: 'bold',
-              margin: '0 0 6pt 0',
+              marginBottom: '6pt',
               borderBottom: '1pt solid #000',
               textTransform: 'uppercase',
             }}
           >
             Education
           </h2>
+
           {educationList.map((edu, i) => (
             <div key={i} style={{ marginBottom: '10pt' }}>
-              {/* Degree + Field */}
-              <div
-                style={{
-                  fontWeight: 'bold',
-                  fontSize: '11pt',
-                }}
-              >
-                {edu.degree}{' '}
-                {edu.field && `${edu.field}`}
+              <div style={{ fontWeight: 'bold' }}>
+                {edu.degree} {edu.field}
               </div>
-
-              {/* Institution / School */}
               <div style={{ fontSize: '10pt' }}>
-                {(edu.institution || edu.school) && (
-                  <>
-                    {edu.institution || edu.school}{' '}
-                    {edu.location && `• ${edu.location}`}
-                  </>
-                )}
+                {edu.institution || edu.school}
+                {edu.location && ` • ${edu.location}`}
+              </div>
+              <div style={{ fontSize: '10pt', color: '#666' }}>
+                {edu.startDate} – {edu.endDate || "Present"}
               </div>
 
-              {/* Dates */}
-              <div
-                style={{
-                  fontSize: '10pt',
-                  color: '#666',
-                }}
-              >
-                {edu.startDate} – {edu.endDate || 'Present'}
-              </div>
-
-              {/* Description / Details */}
               {edu.description && (
-                <div
-                  style={{
-                    marginTop: '3pt',
-                    fontSize: '10pt',
-                  }}
-                >
+                <div style={{ marginTop: '3pt', fontSize: '10pt' }}>
                   {edu.description}
-                </div>
-              )}
-              {edu.details && !edu.description && (
-                <div
-                  style={{
-                    marginTop: '3pt',
-                    fontSize: '10pt',
-                  }}
-                >
-                  {edu.details}
                 </div>
               )}
             </div>
@@ -322,154 +238,61 @@ export default function HybridResumeTemplate({ data }) {
         </div>
       )}
 
-      {/* CERTIFICATIONS / TRAINING */}
+      {/* CERTIFICATIONS */}
       {certifications.length > 0 && (
         <div style={{ marginBottom: '16pt' }}>
           <h2
             style={{
               fontSize: '13pt',
               fontWeight: 'bold',
-              margin: '0 0 6pt 0',
+              marginBottom: '6pt',
               borderBottom: '1pt solid #000',
               textTransform: 'uppercase',
             }}
           >
-            Certifications &amp; Training
+            Certifications & Training
           </h2>
-          {certifications.map((cert, i) => {
-            // Simple string support
-            if (typeof cert === 'string') {
-              return (
-                <div
-                  key={i}
-                  style={{
-                    marginBottom: '6pt',
-                    fontSize: '11pt',
-                  }}
-                >
-                  {cert}
-                </div>
-              );
-            }
 
-            const title =
-              cert.name ||
-              cert.title ||
-              cert.certification;
-            const org =
-              cert.issuer ||
-              cert.organization ||
-              cert.provider;
-            const date =
-              cert.date ||
-              cert.issued ||
-              cert.obtained;
-            const desc =
-              cert.description || cert.details;
-
-            return (
-              <div key={i} style={{ marginBottom: '8pt' }}>
-                <div
-                  style={{
-                    fontWeight: 'bold',
-                    fontSize: '11pt',
-                  }}
-                >
-                  {title}
-                </div>
-                {(org || date) && (
-                  <div
-                    style={{
-                      fontSize: '10pt',
-                      color: '#444',
-                    }}
-                  >
-                    {org}
-                    {org && date && ' • '}
-                    {date}
-                  </div>
-                )}
-                {desc && (
-                  <div
-                    style={{
-                      marginTop: '3pt',
-                      fontSize: '10pt',
-                    }}
-                  >
-                    {desc}
-                  </div>
-                )}
+          {certifications.map((cert, i) => (
+            <div key={i} style={{ marginBottom: '8pt' }}>
+              <div style={{ fontWeight: 'bold' }}>
+                {cert.name || cert.title}
               </div>
-            );
-          })}
+              <div style={{ fontSize: '10pt', color: '#444' }}>
+                {cert.organization || cert.issuer}
+              </div>
+            </div>
+          ))}
         </div>
       )}
 
       {/* CUSTOM SECTIONS */}
       {customSections.length > 0 &&
-        customSections.map((section, i) => {
-          if (!section) return null;
+        customSections.map((section, i) => (
+          <div key={i} style={{ marginBottom: '16pt' }}>
+            <h2
+              style={{
+                fontSize: '13pt',
+                fontWeight: 'bold',
+                marginBottom: '6pt',
+                borderBottom: '1pt solid #000',
+                textTransform: 'uppercase',
+              }}
+            >
+              {section.title || section.heading || "Additional Information"}
+            </h2>
 
-          const title =
-            section.title ||
-            section.heading ||
-            'Additional Information';
-
-          const items = Array.isArray(section.items)
-            ? section.items
-            : null;
-
-          const content =
-            section.content ||
-            section.text ||
-            section.body;
-
-          return (
-            <div key={i} style={{ marginBottom: '16pt' }}>
-              <h2
-                style={{
-                  fontSize: '13pt',
-                  fontWeight: 'bold',
-                  margin: '0 0 6pt 0',
-                  borderBottom: '1pt solid #000',
-                  textTransform: 'uppercase',
-                }}
-              >
-                {title}
-              </h2>
-
-              {items && items.length > 0 ? (
-                <ul
-                  style={{
-                    margin: 0,
-                    paddingLeft: '16pt',
-                    fontSize: '11pt',
-                  }}
-                >
-                  {items.map((item, idx) => (
-                    <li
-                      key={idx}
-                      style={{ marginBottom: '3pt' }}
-                    >
-                      {item}
-                    </li>
-                  ))}
-                </ul>
-              ) : (
-                content && (
-                  <p
-                    style={{
-                      margin: 0,
-                      fontSize: '11pt',
-                    }}
-                  >
-                    {content}
-                  </p>
-                )
-              )}
-            </div>
-          );
-        })}
+            {Array.isArray(section.items) ? (
+              <ul style={{ margin: 0, paddingLeft: '16pt' }}>
+                {section.items.map((item, idx) => (
+                  <li key={idx} style={{ marginBottom: '3pt' }}>{item}</li>
+                ))}
+              </ul>
+            ) : (
+              section.content && <p>{section.content}</p>
+            )}
+          </div>
+        )}
     </div>
   );
 }

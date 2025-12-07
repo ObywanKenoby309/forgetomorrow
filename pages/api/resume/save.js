@@ -28,15 +28,21 @@ export default async function handler(req, res) {
     const userId = user.id;
 
     const {
-      id,          // optional — if present, update instead of create
+      id,         // optional — if present, update instead of create
       name,
-      content,
-      setPrimary,  // optional boolean
+      content,    // can be object or string from the builder
+      setPrimary, // optional boolean
     } = req.body || {};
 
-    if (!name || !content) {
+    // name is required; content just needs to be non-null/undefined
+    if (!name || content === undefined || content === null) {
       return res.status(400).json({ error: 'Missing "name" or "content"' });
     }
+
+    // Prisma expects String here, but the builder sends an object.
+    // Safely serialize to JSON, but avoid double-stringifying.
+    const serializedContent =
+      typeof content === 'string' ? content : JSON.stringify(content);
 
     const existingCount = await prisma.resume.count({
       where: { userId },
@@ -81,7 +87,7 @@ export default async function handler(req, res) {
         where: { id: Number(id) },
         data: {
           name,
-          content,
+          content: serializedContent,
           // if caller wants primary, use it; otherwise keep the existing flag
           isPrimary: shouldBePrimary ? true : targetResume.isPrimary,
         },
@@ -91,7 +97,7 @@ export default async function handler(req, res) {
         data: {
           userId,
           name,
-          content,
+          content: serializedContent,
           isPrimary: shouldBePrimary,
         },
       });
