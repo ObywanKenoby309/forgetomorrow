@@ -23,6 +23,12 @@ export async function getServerSideProps(context) {
       aboutMe: true,
       skillsJson: true,
       languagesJson: true,
+
+      // Banner / background fields
+      bannerMode: true,
+      bannerHeight: true,
+      bannerFocalY: true,
+      wallpaperUrl: true,
     },
   });
 
@@ -91,6 +97,10 @@ export default function PublicProfile({ user }) {
     aboutMe,
     skillsJson,
     languagesJson,
+    bannerMode,
+    bannerHeight,
+    bannerFocalY,
+    wallpaperUrl,
   } = user;
 
   const fullName = name || 'Unknown User';
@@ -99,14 +109,22 @@ export default function PublicProfile({ user }) {
   const skills = parseArrayField(skillsJson, []);
   const languages = parseArrayField(languagesJson, []);
 
-  const displayHeadline =
-    headline || 'ForgeTomorrow member';
+  // ── Banner logic: prefer coverUrl, then wallpaperUrl, then gradient ────────
+  const resolvedBannerHeight = bannerHeight || 260;
 
-  const aboutText =
-    aboutMe ||
-    `${fullName} hasn’t added an About section yet. This public profile is still being set up.`;
+  const bannerBackgroundImage = coverUrl
+    ? `url(${coverUrl})`
+    : wallpaperUrl
+    ? `url(${wallpaperUrl})`
+    : 'linear-gradient(135deg, #112033, #455A64)';
 
-  const hasSkillsOrLanguages = skills.length > 0 || languages.length > 0;
+  const bannerBackgroundPosition =
+    typeof bannerFocalY === 'number'
+      ? `center ${bannerFocalY}%`
+      : 'center';
+
+  const bannerBackgroundSize =
+    bannerMode === 'fit' ? 'contain' : 'cover';
 
   return (
     <>
@@ -124,23 +142,22 @@ export default function PublicProfile({ user }) {
           margin: '0 auto',
           padding: '20px',
           minHeight: '80vh',
-          background: '#fafafa',
         }}
       >
-        {/* Cover banner */}
-        {coverUrl && (
-          <div
-            style={{
-              width: '100%',
-              height: 260,
-              backgroundImage: `url(${coverUrl})`,
-              backgroundSize: 'cover',
-              backgroundPosition: 'center',
-              borderRadius: 12,
-              marginBottom: 20,
-            }}
-          />
-        )}
+        {/* Cover / banner (always rendered with fallback) */}
+        <div
+          style={{
+            width: '100%',
+            height: resolvedBannerHeight,
+            backgroundImage: bannerBackgroundImage,
+            backgroundSize: bannerBackgroundSize,
+            backgroundPosition: bannerBackgroundPosition,
+            backgroundRepeat: 'no-repeat',
+            borderRadius: 12,
+            marginBottom: 20,
+            backgroundColor: '#112033', // backup if image fails
+          }}
+        />
 
         {/* Header card */}
         <section
@@ -182,7 +199,7 @@ export default function PublicProfile({ user }) {
               <p style={{ margin: '4px 0', color: '#607D8B' }}>{pronouns}</p>
             )}
 
-            {displayHeadline && (
+            {headline && (
               <p
                 style={{
                   margin: '6px 0',
@@ -190,7 +207,7 @@ export default function PublicProfile({ user }) {
                   color: '#455A64',
                 }}
               >
-                {displayHeadline}
+                {headline}
               </p>
             )}
 
@@ -266,135 +283,135 @@ export default function PublicProfile({ user }) {
           This is a public ForgeTomorrow profile.
         </div>
 
-        {/* About section (always shown with fallback text) */}
-        <section
-          style={{
-            marginTop: 24,
-            padding: 20,
-            borderRadius: 12,
-            background: 'white',
-            border: '1px solid #e0e0e0',
-          }}
-        >
-          <h2
+        {/* About section */}
+        {aboutMe && (
+          <section
             style={{
-              margin: '0 0 8px',
-              fontSize: 18,
-              fontWeight: 600,
-              color: '#263238',
+              marginTop: 24,
+              padding: 20,
+              borderRadius: 12,
+              background: 'white',
+              border: '1px solid #e0e0e0',
             }}
           >
-            About
-          </h2>
-          <p
-            style={{
-              margin: 0,
-              fontSize: 14,
-              lineHeight: 1.6,
-              color: '#455A64',
-              whiteSpace: 'pre-line',
-            }}
-          >
-            {aboutText}
-          </p>
-        </section>
-
-        {/* Skills / Languages / Profile details */}
-        <section
-          style={{
-            marginTop: 24,
-            display: 'grid',
-            gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))',
-            gap: 16,
-          }}
-        >
-          {skills.length > 0 && (
-            <div
+            <h2
               style={{
-                padding: 20,
-                borderRadius: 12,
-                background: 'white',
-                border: '1px solid #e0e0e0',
+                margin: '0 0 8px',
+                fontSize: 18,
+                fontWeight: 600,
+                color: '#263238',
               }}
             >
-              <h2
-                style={{
-                  margin: '0 0 8px',
-                  fontSize: 16,
-                  fontWeight: 600,
-                  color: '#263238',
-                }}
-              >
-                Skills
-              </h2>
+              About
+            </h2>
+            <p
+              style={{
+                margin: 0,
+                fontSize: 14,
+                lineHeight: 1.6,
+                color: '#455A64',
+                whiteSpace: 'pre-line',
+              }}
+            >
+              {aboutMe}
+            </p>
+          </section>
+        )}
+
+        {/* Skills / Languages */}
+        {(skills.length > 0 || languages.length > 0) && (
+          <section
+            style={{
+              marginTop: 24,
+              display: 'grid',
+              gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))',
+              gap: 16,
+            }}
+          >
+            {skills.length > 0 && (
               <div
                 style={{
-                  display: 'flex',
-                  flexWrap: 'wrap',
-                  gap: 8,
-                  marginTop: 6,
+                  padding: 20,
+                  borderRadius: 12,
+                  background: 'white',
+                  border: '1px solid #e0e0e0',
                 }}
               >
-                {skills.map((skill) => (
-                  <span
-                    key={skill}
-                    style={{
-                      fontSize: 12,
-                      padding: '4px 8px',
-                      borderRadius: 999,
-                      background: '#ECEFF1',
-                      color: '#37474F',
-                    }}
-                  >
-                    {skill}
-                  </span>
-                ))}
+                <h2
+                  style={{
+                    margin: '0 0 8px',
+                    fontSize: 16,
+                    fontWeight: 600,
+                    color: '#263238',
+                  }}
+                >
+                  Skills
+                </h2>
+                <div
+                  style={{
+                    display: 'flex',
+                    flexWrap: 'wrap',
+                    gap: 8,
+                    marginTop: 6,
+                  }}
+                >
+                  {skills.map((skill) => (
+                    <span
+                      key={skill}
+                      style={{
+                        fontSize: 12,
+                        padding: '4px 8px',
+                        borderRadius: 999,
+                        background: '#ECEFF1',
+                        color: '#37474F',
+                      }}
+                    >
+                      {skill}
+                    </span>
+                  ))}
+                </div>
               </div>
-            </div>
-          )}
+            )}
 
-          {languages.length > 0 && (
-            <div
-              style={{
-                padding: 20,
-                borderRadius: 12,
-                background: 'white',
-                border: '1px solid #e0e0e0',
-              }}
-            >
-              <h2
+            {languages.length > 0 && (
+              <div
                 style={{
-                  margin: '0 0 8px',
-                  fontSize: 16,
-                  fontWeight: 600,
-                  color: '#263238',
+                  padding: 20,
+                  borderRadius: 12,
+                  background: 'white',
+                  border: '1px solid #e0e0e0',
                 }}
               >
-                Languages
-              </h2>
-              <ul
-                style={{
-                  listStyle: 'none',
-                  padding: 0,
-                  margin: 0,
-                  fontSize: 13,
-                  color: '#455A64',
-                }}
-              >
-                {languages.map((lang) => (
-                  <li key={lang} style={{ marginBottom: 4 }}>
-                    {lang}
-                  </li>
-                ))}
-              </ul>
-            </div>
-          )}
-
-          {/* Fallback card if no skills or languages yet */}
-          {!hasSkillsOrLanguages && (
-            <div
-              style={{
-                padding: 20,
-                borderRadius: 12,
-            
-::contentReference[oaicite:0]{index=0}
+                <h2
+                  style={{
+                    margin: '0 0 8px',
+                    fontSize: 16,
+                    fontWeight: 600,
+                    color: '#263238',
+                  }}
+                >
+                  Languages
+                </h2>
+                <ul
+                  style={{
+                    listStyle: 'none',
+                    padding: 0,
+                    margin: 0,
+                    fontSize: 13,
+                    color: '#455A64',
+                  }}
+                >
+                  {languages.map((lang) => (
+                    <li key={lang} style={{ marginBottom: 4 }}>
+                      {lang}
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            )}
+          </section>
+        )}
+      </main>
+    </>
+  );
+}
