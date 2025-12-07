@@ -15,7 +15,7 @@ const BASE_NAV_ITEMS = [
 
 export default function SeekerHeader() {
   const router = useRouter();
-  const { isEnterprise } = usePlan(); // treat "paid" state as true -> Pro
+  const { tier, isProTier } = usePlan(); // ⬅️ use raw Tier to determine seeker label
 
   // If we came in from recruiter/coach chrome, keep that on all links
   const chrome = String(router.query.chrome || "").toLowerCase();
@@ -32,8 +32,10 @@ export default function SeekerHeader() {
     href: withChrome(item.href),
   }));
 
-  // 🔹 Show clear plan labels in header
-  const planLabel = isEnterprise ? "Seeker Pro" : "Seeker Free";
+  // 🔹 Seeker plan label is based on Tier:
+  //     - PRO      → "Seeker Pro"
+  //     - anything → "Seeker Free"
+  const planLabel = isProTier ? "Seeker Pro" : "Seeker Free";
 
   return (
     <EnterpriseHeader

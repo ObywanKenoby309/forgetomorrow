@@ -10,7 +10,8 @@ import { useRouter } from "next/router";
 
 /**
  * Access/Plan context:
- * - plan: "small" | "enterprise"
+ * - plan: "small" | "enterprise"           ← recruiter-facing packaging
+ * - tier: "FREE" | "PRO" | "COACH" | "SMALL_BIZ" | "ENTERPRISE" (Prisma enum)
  * - role: "recruiter" | "admin" | "owner" | "billing" | "hiringManager" | "site_admin"
  * - features: string[]
  *
@@ -20,7 +21,7 @@ import { useRouter } from "next/router";
  *   ?features=why_plus,ats_greenhouse
  *
  * LocalStorage keys:
- *   ft_recruiter_plan, ft_role, ft_features (JSON array)
+ *   ft_recruiter_plan, ft_role, ft_features (JSON array), ft_tier
  */
 
 const PlanContext = createContext(null);
@@ -29,9 +30,12 @@ export function PlanProvider({ children }) {
   const router = useRouter();
 
   // State
-  const [plan, setPlan] = useState("small");
+  const [plan, setPlan] = useState("small"); // recruiter packaging: "small" | "enterprise"
   const [role, setRole] = useState("recruiter");
   const [features, setFeatures] = useState([]);
+
+  // Raw Tier enum from user (FREE | PRO | COACH | SMALL_BIZ | ENTERPRISE)
+  const [tier, setTier] = useState(null);
 
   // Track if query params have explicitly overridden plan/role
   const [hasQueryPlanOverride, setHasQueryPlanOverride] = useState(false);
@@ -43,15 +47,23 @@ export function PlanProvider({ children }) {
   useEffect(() => {
     try {
       if (typeof window === "undefined") return;
+
       const savedPlan = localStorage.getItem("ft_recruiter_plan");
       const savedRole = localStorage.getItem("ft_role");
       const savedFeatures = JSON.parse(
         localStorage.getItem("ft_features") || "[]"
       );
+      const savedTier = localStorage.getItem("ft_tier");
 
-      if (savedPlan === "enterprise" || savedPlan === "small") setPlan(savedPlan);
+      if (savedPlan === "enterprise" || savedPlan === "small") {
+        setPlan(savedPlan);
+      }
       if (savedRole) setRole(savedRole);
       if (Array.isArray(savedFeatures)) setFeatures(savedFeatures);
+
+      if (typeof savedTier === "string" && savedTier.length > 0) {
+        setTier(savedTier);
+      }
     } catch {
       /* noop */
     }
@@ -118,9 +130,10 @@ export function PlanProvider({ children }) {
   //
   //    - Only runs if there is NO ?plan override.
   //    - Maps Prisma enums → local "small"/"enterprise" + role.
+  //    - Also preserves raw Tier enum for seeker headers, etc.
   // ─────────────────────────────────────────────
   useEffect(() => {
-    // Don’t fight an explicit ?plan=... override
+    // Don’t fight explicit ?plan / ?role overrides
     if (hasQueryPlanOverride && hasQueryRoleOverride) return;
 
     let cancelled = false;
@@ -133,6 +146,17 @@ export function PlanProvider({ children }) {
         const json = await res.json();
         const user = json?.user;
         if (!user || cancelled) return;
+
+        // Persist raw Tier for seekers, etc.
+        const serverTier = user.plan || null;
+        if (!cancelled) {
+          setTier(serverTier);
+          try {
+            if (serverTier) {
+              localStorage.setItem("ft_tier", serverTier);
+            }
+          } catch {}
+        }
 
         // Map Tier enum → "small" | "enterprise"
         // Tier: FREE | PRO | COACH | SMALL_BIZ | ENTERPRISE
@@ -268,12 +292,16 @@ export function PlanProvider({ children }) {
       role,
       setRole,
 
-      // plan
+      // recruiter-facing plan
       plan,
       isEnterprise,
       isSmall,
       setPlan,
       togglePlan,
+
+      // raw Tier from user (FREE / PRO / COACH / SMALL_BIZ / ENTERPRISE)
+      tier,
+      isProTier: tier === "PRO",
 
       // features
       features,
@@ -288,7 +316,7 @@ export function PlanProvider({ children }) {
       // capabilities
       can,
     };
-  }, [plan, role, features]);
+  }, [plan, role, features, tier]);
 
   return (
     <PlanContext.Provider value={value}>{children}</PlanContext.Provider>

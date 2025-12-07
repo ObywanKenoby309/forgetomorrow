@@ -114,7 +114,13 @@ export default function CoverLetterPage() {
 
   const fileInputRef = useRef(null);
   const dropRef = useRef(null);
-  const { formData = {}, saveEventAt } = useContext(ResumeContext);
+
+  // ✅ Pull experiences from context so AI Tailor can use them
+  const {
+    formData = {},
+    saveEventAt,
+    experiences = [],
+  } = useContext(ResumeContext);
 
   const [jd, setJd] = useState('');
   const [isLoading, setIsLoading] = useState(false);
@@ -127,7 +133,11 @@ export default function CoverLetterPage() {
   const [body, setBody] = useState('');
   const [closing, setClosing] = useState('');
   const [signoff, setSignoff] = useState('Sincerely,');
-  const [portfolio, setPortfolio] = useState(formData?.portfolio || '');
+
+  // ✅ Portfolio now also falls back to Forge URL / FT profile
+  const [portfolio, setPortfolio] = useState(
+    formData?.portfolio || formData?.forgeUrl || formData?.ftProfile || ''
+  );
 
   const [openRequired, setOpenRequired] = useState(true);
   const [openContent, setOpenContent] = useState(true);
@@ -142,8 +152,9 @@ export default function CoverLetterPage() {
       })
     : '';
 
+  // ✅ FullName now falls back to formData.name so the resume name shows up
   const letterData = {
-    fullName: formData.fullName || 'Your Name',
+    fullName: formData.fullName || formData.name || 'Your Name',
     email: formData.email || '',
     phone: formData.phone || '',
     location: formData.location || '',
@@ -245,13 +256,13 @@ export default function CoverLetterPage() {
     setIsLoading(true);
 
     try {
-      const experiences = formData.workExperiences || [];
-      const expText = experiences
+      // ✅ Use experiences from ResumeContext instead of formData.workExperiences
+      const expText = (experiences || [])
         .map(
           (exp) =>
-            `${exp.jobTitle} at ${exp.company}: ${
-              exp.bullets?.join('. ') || ''
-            }`
+            `${exp.jobTitle || exp.title || 'Role'} at ${
+              exp.company || 'Company'
+            }: ${exp.bullets?.join('. ') || ''}`
         )
         .filter(Boolean)
         .join('\n');
