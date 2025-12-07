@@ -149,15 +149,22 @@ export default function PublicProfile({ user }) {
         />
       </Head>
 
+      {/* Main uses user's wallpaper (or gradient) as page background */}
       <main
         style={{
           maxWidth: 860,
           margin: '0 auto',
           padding: '20px',
           minHeight: '80vh',
+          backgroundImage: wallpaperUrl
+            ? `url(${wallpaperUrl})`
+            : 'linear-gradient(135deg, #112033, #1c2a3c)',
+          backgroundSize: 'cover',
+          backgroundPosition: 'center',
+          backgroundRepeat: 'no-repeat',
         }}
       >
-        {/* Cover / banner (always rendered with fallback) */}
+        {/* Cover / banner */}
         <div
           style={{
             width: '100%',
@@ -296,7 +303,7 @@ export default function PublicProfile({ user }) {
           This is a public ForgeTomorrow profile.
         </div>
 
-        {/* About section */}
+        {/* About section (card) */}
         {aboutMe && (
           <section
             style={{
@@ -331,7 +338,7 @@ export default function PublicProfile({ user }) {
           </section>
         )}
 
-        {/* Skills / Languages */}
+        {/* Skills / Languages (cards) */}
         {(skills.length > 0 || languages.length > 0) && (
           <section
             style={{

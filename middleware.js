@@ -1,4 +1,4 @@
-// middleware.js — Updated PUBLIC PAGES version
+// middleware.js — PUBLIC PAGES with /u/:slug bypass
 import { NextResponse } from "next/server";
 import { Ratelimit } from "@upstash/ratelimit";
 import { Redis } from "@upstash/redis";
@@ -57,9 +57,6 @@ function isPublicPath(pathname) {
   if (pathname.startsWith("/features/")) return true;
   if (pathname.startsWith("/feedback/")) return true;
 
-  // Public profile slugs
-  if (pathname === "/u" || pathname.startsWith("/u/")) return true;
-
   // Public assets
   if (pathname.startsWith("/api/auth/")) return true;
   if (pathname.startsWith("/_next")) return true;
@@ -82,12 +79,17 @@ export async function middleware(req) {
     return NextResponse.next();
   }
 
-  // 2. Public routes
+  // 2. Always allow public profile slugs (/u and /u/:slug) — explicit bypass
+  if (pathname === "/u" || pathname.startsWith("/u/")) {
+    return NextResponse.next();
+  }
+
+  // 3. Other public routes
   if (isPublicPath(pathname)) {
     return NextResponse.next();
   }
 
-  // 3. SITE_LOCK protected mode
+  // 4. SITE_LOCK protected mode
   if (SITE_LOCK) {
     const hasSession = req.cookies
       .getAll()
@@ -101,7 +103,7 @@ export async function middleware(req) {
     }
   }
 
-  // 4. Rate limiting
+  // 5. Rate limiting
   if (ratelimit) {
     const ip = req.ip ?? req.headers.get("x-forwarded-for") ?? "anonymous";
     const { success } = await ratelimit.limit(ip);
