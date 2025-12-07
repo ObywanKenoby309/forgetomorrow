@@ -83,7 +83,7 @@ export default function HybridResumeTemplate({ data }) {
               fontSize: '13pt',
               fontWeight: 'bold',
               marginBottom: '6pt',
-              borderBottom: '1pt solid '#000',
+              borderBottom: '1pt solid #000',
               textTransform: 'uppercase',
             }}
           >
