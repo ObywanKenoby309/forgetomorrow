@@ -6,14 +6,22 @@ export const ResumeContext = createContext();
 const SUMMARY_BACKUP_KEY = 'ft_summary_backup_v1';
 
 export function ResumeProvider({ children }) {
+  // -----------------------------
+  // Resume Builder State
+  // -----------------------------
   const [formData, setFormData] = useState({
     fullName: '',
     email: '',
     phone: '',
     location: '',
+    linkedin: '',
+    github: '',
     portfolio: '',
     forgeUrl: '',
+    ftProfile: '',
+    targetedRole: '',
   });
+
   const [summary, setSummary] = useState('');
   const [experiences, setExperiences] = useState([]);
   const [projects, setProjects] = useState([]);
@@ -24,18 +32,23 @@ export function ResumeProvider({ children }) {
   const [skills, setSkills] = useState([]);
   const [achievements, setAchievements] = useState([]);
   const [customSections, setCustomSections] = useState([]);
+
+  const [template, setTemplate] = useState('reverse'); // ← NEW: store which template they chose
+
   const [resumes, setResumes] = useState([]);
 
-  // timestamps to show “Last saved” + toast
-  const [lastAutosaveAt, setLastAutosaveAt] = useState(null); // ISO string
-  const [saveEventAt, setSaveEventAt] = useState(null);       // ISO string (autosave or manual)
+  // Timestamps
+  const [lastAutosaveAt, setLastAutosaveAt] = useState(null);
+  const [saveEventAt, setSaveEventAt] = useState(null);
 
   const lastSaveRef = useRef(null);
 
-  // -------- Shared Summary Backup (for local tools + future API flows) --------
-  const [summaryBackup, setSummaryBackup] = useState({ text: '', savedAt: '' });
-
+  // -----------------------------
+  // Summary Backup (unchanged)
+  // -----------------------------
   const nowIso = () => new Date().toISOString();
+
+  const [summaryBackup, setSummaryBackup] = useState({ text: '', savedAt: '' });
 
   const loadSummaryBackup = () => {
     if (typeof window === 'undefined') return;
@@ -47,9 +60,7 @@ export function ResumeProvider({ children }) {
         text: parsed?.text || '',
         savedAt: parsed?.savedAt || '',
       });
-    } catch {
-      // ignore parse errors
-    }
+    } catch {}
   };
 
   const persistSummaryBackup = (text) => {
@@ -58,36 +69,10 @@ export function ResumeProvider({ children }) {
     try {
       localStorage.setItem(SUMMARY_BACKUP_KEY, JSON.stringify(payload));
       setSummaryBackup(payload);
-      setSaveEventAt(payload.savedAt); // nudge any toast mechanism you already have
-    } catch {
-      // ignore storage errors
-    }
+      setSaveEventAt(payload.savedAt);
+    } catch {}
   };
 
-  const saveSummaryBackup = (overrideText) => {
-    persistSummaryBackup(overrideText ?? summary);
-  };
-
-  const revertSummaryBackup = () => {
-    if (!summaryBackup.text) return;
-    setSummary(summaryBackup.text);
-    setSaveEventAt(nowIso());
-  };
-
-  const clearSummaryBackup = () => {
-    if (typeof window !== 'undefined') {
-      localStorage.removeItem(SUMMARY_BACKUP_KEY);
-    }
-    setSummaryBackup({ text: '', savedAt: '' });
-  };
-
-  /**
-   * setSummaryWithBackup(next)
-   * Auto-saves current summary into backup if:
-   *  - no backup exists, or
-   *  - backup differs from current
-   * Then sets the new summary.
-   */
   const setSummaryWithBackup = (next) => {
     const current = summary || '';
     if (!summaryBackup.text || summaryBackup.text !== current) {
@@ -97,46 +82,34 @@ export function ResumeProvider({ children }) {
     setSaveEventAt(nowIso());
   };
 
-  // Restore saved snapshots + in-progress draft on mount
+  // -----------------------------
+  // Load Draft from localStorage
+  // -----------------------------
   useEffect(() => {
     try {
-      const savedResumes = localStorage.getItem('ft_saved_resumes');
-      if (savedResumes) setResumes(JSON.parse(savedResumes));
-
       const draft = localStorage.getItem('ft_current_resume_draft');
       if (draft) {
-        const parsed = JSON.parse(draft);
-        setFormData(parsed.formData || {});
-        setSummary(parsed.summary || '');
-        setExperiences(parsed.experiences || []);
-        setProjects(parsed.projects || []);
-        setVolunteerExperiences(parsed.volunteerExperiences || []);
-        setEducationList(parsed.educationList || []);
-        setCertifications(parsed.certifications || []);
-        setLanguages(parsed.languages || []);
-        setSkills(parsed.skills || []);
-        setAchievements(parsed.achievements || []);
-        setCustomSections(parsed.customSections || []);
+        const d = JSON.parse(draft);
+        setFormData(d.formData || {});
+        setSummary(d.summary || '');
+        setExperiences(d.experiences || []);
+        setProjects(d.projects || []);
+        setVolunteerExperiences(d.volunteerExperiences || []);
+        setEducationList(d.educationList || []);
+        setCertifications(d.certifications || []);
+        setLanguages(d.languages || []);
+        setSkills(d.skills || []);
+        setAchievements(d.achievements || []);
+        setCustomSections(d.customSections || []);
+        setTemplate(d.template || 'reverse');
       }
-    } catch {
-      // ignore parse/storage errors
-    }
-
-    // Load shared backup after mount
+    } catch {}
     loadSummaryBackup();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  // Persist snapshots list when "resumes" changes
-  useEffect(() => {
-    try {
-      localStorage.setItem('ft_saved_resumes', JSON.stringify(resumes));
-    } catch {
-      // ignore storage errors
-    }
-  }, [resumes]);
-
-  // Autosave current draft every 10 seconds if changed
+  // -----------------------------
+  // Autosave Draft
+  // -----------------------------
   useEffect(() => {
     const interval = setInterval(() => {
       const draft = {
@@ -151,22 +124,20 @@ export function ResumeProvider({ children }) {
         skills,
         achievements,
         customSections,
+        template, // ← NEW
       };
-      const draftString = JSON.stringify(draft);
 
-      if (lastSaveRef.current !== draftString) {
-        try {
-          localStorage.setItem('ft_current_resume_draft', draftString);
-          lastSaveRef.current = draftString;
+      const str = JSON.stringify(draft);
+      if (lastSaveRef.current !== str) {
+        lastSaveRef.current = str;
+        localStorage.setItem('ft_current_resume_draft', str);
 
-          const now = nowIso();
-          setLastAutosaveAt(now);
-          setSaveEventAt(now); // triggers toast
-        } catch {
-          /* ignore */
-        }
+        const now = nowIso();
+        setLastAutosaveAt(now);
+        setSaveEventAt(now);
       }
-    }, 10000); // 10s
+    }, 10000);
+
     return () => clearInterval(interval);
   }, [
     formData,
@@ -180,64 +151,77 @@ export function ResumeProvider({ children }) {
     skills,
     achievements,
     customSections,
+    template,
   ]);
 
-  // ---------- Friendly auto-name helper (for ATS-friendly titles) ----------
+  // -----------------------------
+  // Build Friendly Resume Name
+  // -----------------------------
   const buildResumeName = () => {
-    const namePart = (formData.fullName || '').trim();
-    const rolePart = (formData.targetedRole || '').trim();
-
-    const base = namePart || 'Resume';
-    const role = rolePart || 'General';
-
-    // e.g. "Eric James - Customer Success Leader - 2025-12-07"
+    const n = (formData.fullName || 'Resume').trim();
+    const r = (formData.targetedRole || 'General').trim();
     const date = new Date().toISOString().slice(0, 10);
-
-    return `${base} - ${role} - ${date}`;
+    return `${n} - ${r} - ${date}`;
   };
 
-  // -------- Manual Save (for "Save Resume" button) --------
+  // -----------------------------
+  // BUILD CORRECT resumeData FORMAT (the key fix)
+  // -----------------------------
+  const buildResumeData = () => ({
+    template,
+    personalInfo: {
+      name: formData.fullName || '',
+      targetedRole: formData.targetedRole || '',
+      email: formData.email || '',
+      phone: formData.phone || '',
+      location: formData.location || '',
+      linkedin: formData.linkedin || '',
+      github: formData.github || '',
+      portfolio: formData.portfolio || '',
+      ftProfile: formData.forgeUrl || formData.ftProfile || '',
+    },
+    summary,
+    workExperiences: experiences,
+    projects,
+    volunteerExperiences,
+    educationList,
+    certifications,
+    languages,
+    skills,
+    achievements,
+    customSections,
+  });
+
+  // -----------------------------
+  // MANUAL SAVE → DB
+  // -----------------------------
   const saveResume = async () => {
     const now = nowIso();
-
-    const data = {
-      formData,
-      summary,
-      experiences,
-      projects,
-      volunteerExperiences,
-      educationList,
-      certifications,
-      languages,
-      skills,
-      achievements,
-      customSections,
-    };
-
-    // Use friendly auto-name instead of "Untitled Resume"
     const title = buildResumeName();
 
-    // Local snapshot (for sidebar / client state)
-    let snapshot = {
-      id: `${Date.now()}`, // temporary ID before DB save
+    // The CORRECT resume object
+    const resumeData = buildResumeData();
+
+    // Local snapshot
+    const snapshot = {
+      id: `${Date.now()}`,
       name: title,
       createdAt: now,
       updatedAt: now,
       isPrimary: true,
-      data,
+      data: resumeData,
     };
 
     setResumes((prev) => [...prev, snapshot]);
     setSaveEventAt(now);
 
-    // Try to persist to backend
     try {
       const res = await fetch('/api/resume/save', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           name: title,
-          content: data,
+          content: resumeData, // ← The CORRECT format goes to DB
           setPrimary: true,
         }),
       });
@@ -246,43 +230,35 @@ export function ResumeProvider({ children }) {
         const json = await res.json();
         const dbResume = json.resume;
 
-        if (dbResume && dbResume.id) {
-          // Replace the local snapshot with the DB-backed one
+        if (dbResume?.id) {
+          const cleaned = {
+            id: dbResume.id,
+            name: dbResume.name,
+            createdAt: dbResume.createdAt,
+            updatedAt: dbResume.updatedAt,
+            isPrimary: dbResume.isPrimary,
+            data: (() => {
+              try {
+                return JSON.parse(dbResume.content);
+              } catch {
+                return resumeData;
+              }
+            })(),
+          };
+
           setResumes((prev) => {
-            // clear previous primaries in local state if needed
             const withoutTemp = prev.filter((r) => r.id !== snapshot.id);
             return [
               ...withoutTemp.map((r) =>
                 dbResume.isPrimary ? { ...r, isPrimary: false } : r
               ),
-              {
-                id: dbResume.id,
-                name: dbResume.name,
-                createdAt: dbResume.createdAt,
-                updatedAt: dbResume.updatedAt,
-                isPrimary: dbResume.isPrimary,
-                data: dbResume.content
-                  ? (() => {
-                      try {
-                        // content is stored as JSON string in DB
-                        return JSON.parse(dbResume.content);
-                      } catch {
-                        return data;
-                      }
-                    })()
-                  : data,
-              },
+              cleaned,
             ];
           });
         }
-      } else {
-        console.warn(
-          '[ResumeContext] Failed to save resume to backend',
-          res.status
-        );
       }
-    } catch (err) {
-      console.error('[ResumeContext] Error saving resume to backend', err);
+    } catch (e) {
+      console.error('[ResumeContext] Error saving:', e);
     }
   };
 
@@ -293,6 +269,7 @@ export function ResumeProvider({ children }) {
         setFormData,
         summary,
         setSummary,
+        setSummaryWithBackup,
         experiences,
         setExperiences,
         projects,
@@ -311,20 +288,16 @@ export function ResumeProvider({ children }) {
         setAchievements,
         customSections,
         setCustomSections,
+
+        template,
+        setTemplate,
+
         resumes,
         setResumes,
         lastAutosaveAt,
         saveEventAt,
         setSaveEventAt,
 
-        // Shared backup API
-        summaryBackup,
-        saveSummaryBackup,
-        revertSummaryBackup,
-        clearSummaryBackup,
-        setSummaryWithBackup,
-
-        // Manual save for the big green button
         saveResume,
       }}
     >

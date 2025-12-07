@@ -12,7 +12,7 @@ export default async function handler(req, res) {
   try {
     const session = await getServerSession(req, res, authOptions);
 
-    if (!session || !session.user || !session.user.email) {
+    if (!session?.user?.email) {
       return res.status(401).json({ error: 'Not authenticated' });
     }
 
@@ -27,36 +27,65 @@ export default async function handler(req, res) {
 
     const userId = user.id;
 
+    // ---------------------------------------------------------------------
+    // REQUIRED FIELDS
+    // ---------------------------------------------------------------------
     const {
-      id,         // optional — if present, update instead of create
+      id,             // resume id if updating
       name,
-      content,    // can be object or string from the builder
-      setPrimary, // optional boolean
+      content,        // MUST contain template + data
+      template,       // FE: ensure resume builder passes this each save
+      setPrimary,
     } = req.body || {};
 
-    // name is required; content just needs to be non-null/undefined
-    if (!name || content === undefined || content === null) {
-      return res.status(400).json({ error: 'Missing "name" or "content"' });
+    if (!name) {
+      return res.status(400).json({ error: 'Missing "name"' });
     }
 
-    // Prisma expects String here, but the builder sends an object.
-    // Safely serialize to JSON, but avoid double-stringifying.
+    if (!content) {
+      return res.status(400).json({ error: 'Missing resume content' });
+    }
+
+    // ---------------------------------------------------------------------
+    // NORMALIZE CONTENT PAYLOAD
+    // We accept:
+    // 1) Old format: { ... }
+    // 2) New format: { template, data }
+    // ---------------------------------------------------------------------
+    let normalized = {};
+
+    if (content.template && content.data) {
+      // Already in correct format
+      normalized = content;
+    } else {
+      // Old format from builder → wrap it
+      normalized = {
+        template: template || 'hybrid', // fallback to hybrid
+        data: content,
+      };
+    }
+
     const serializedContent =
-      typeof content === 'string' ? content : JSON.stringify(content);
+      typeof normalized === 'string'
+        ? normalized
+        : JSON.stringify(normalized);
 
-    const existingCount = await prisma.resume.count({
-      where: { userId },
-    });
+    // ---------------------------------------------------------------------
+    // CHECK RESUME LIMIT
+    // ---------------------------------------------------------------------
+    const existingCount = await prisma.resume.count({ where: { userId } });
 
-    // If creating a new resume (no id) enforce max 5
     if (!id && existingCount >= 5) {
-      return res.status(400).json({
-        error: 'Resume limit reached (max 5). Delete one before adding another.',
-        limit: 5,
-      });
+      return res
+        .status(400)
+        .json({ error: 'Resume limit reached (max 5).', limit: 5 });
     }
 
+    // ---------------------------------------------------------------------
+    // FIND TARGET IF UPDATING
+    // ---------------------------------------------------------------------
     let targetResume = null;
+
     if (id) {
       targetResume = await prisma.resume.findFirst({
         where: { id: Number(id), userId },
@@ -67,12 +96,12 @@ export default async function handler(req, res) {
       }
     }
 
-    // Decide if this resume should be primary
+    // ---------------------------------------------------------------------
+    // DETERMINE PRIMARY
+    // ---------------------------------------------------------------------
     const shouldBePrimary =
-      Boolean(setPrimary) ||
-      (!id && existingCount === 0); // first ever resume => primary by default
+      Boolean(setPrimary) || (!id && existingCount === 0);
 
-    // If this should be primary, clear primary flag on all others first
     if (shouldBePrimary) {
       await prisma.resume.updateMany({
         where: { userId },
@@ -80,6 +109,9 @@ export default async function handler(req, res) {
       });
     }
 
+    // ---------------------------------------------------------------------
+    // SAVE RESUME
+    // ---------------------------------------------------------------------
     let saved;
 
     if (id) {
@@ -88,7 +120,6 @@ export default async function handler(req, res) {
         data: {
           name,
           content: serializedContent,
-          // if caller wants primary, use it; otherwise keep the existing flag
           isPrimary: shouldBePrimary ? true : targetResume.isPrimary,
         },
       });
@@ -107,6 +138,7 @@ export default async function handler(req, res) {
       resume: saved,
       limit: 5,
     });
+
   } catch (err) {
     console.error('[resume/save] Error', err);
     return res.status(500).json({ error: 'Internal server error' });

@@ -2,13 +2,29 @@
 import Head from 'next/head';
 import { prisma } from '@/lib/prisma';
 
-// Safe JSON array parser
+// Safe helpers for parsing skills / languages from JSON
 function parseArrayField(raw, fallback = []) {
   if (!raw) return fallback;
+
   try {
     const parsed = typeof raw === 'string' ? JSON.parse(raw) : raw;
-    if (Array.isArray(parsed)) return parsed.filter(Boolean);
-    if (parsed?.items && Array.isArray(parsed.items)) return parsed.items.filter(Boolean);
+
+    if (Array.isArray(parsed)) {
+      return parsed
+        .map((item) =>
+          typeof item === 'string' ? item : item?.name || item?.label || ''
+        )
+        .filter(Boolean);
+    }
+
+    if (parsed && typeof parsed === 'object' && Array.isArray(parsed.items)) {
+      return parsed.items
+        .map((item) =>
+          typeof item === 'string' ? item : item?.name || item?.label || ''
+        )
+        .filter(Boolean);
+    }
+
     return fallback;
   } catch {
     return fallback;
@@ -35,7 +51,6 @@ export async function getServerSideProps(context) {
       aboutMe: true,
       skillsJson: true,
       languagesJson: true,
-
       bannerMode: true,
       bannerHeight: true,
       bannerFocalY: true,
@@ -43,6 +58,7 @@ export async function getServerSideProps(context) {
       corporateBannerKey: true,
       corporateBannerLocked: true,
 
+      // Primary resume
       resumes: {
         where: { isPrimary: true },
         orderBy: { updatedAt: 'desc' },
@@ -50,8 +66,7 @@ export async function getServerSideProps(context) {
         select: {
           id: true,
           name: true,
-          updatedAt: true,
-          // ⚠️ No fileUrl in schema — do NOT select it
+          updatedAt: true
         },
       },
     },
@@ -61,11 +76,13 @@ export async function getServerSideProps(context) {
     return { notFound: true };
   }
 
-  const primaryResume = user.resumes?.[0] || null;
+  const { resumes, ...userSafe } = user;
+  const primaryResume =
+    resumes && resumes.length > 0 ? resumes[0] : null;
 
   return {
     props: {
-      user: JSON.parse(JSON.stringify({ ...user, resumes: undefined })),
+      user: JSON.parse(JSON.stringify(userSafe)),
       primaryResume: primaryResume ? JSON.parse(JSON.stringify(primaryResume)) : null,
     },
   };
@@ -80,20 +97,19 @@ export default function PublicProfile({ user, primaryResume }) {
     status,
     avatarUrl,
     coverUrl,
+    slug,
     aboutMe,
     skillsJson,
     languagesJson,
-
-    wallpaperUrl,
     bannerMode,
     bannerHeight,
     bannerFocalY,
+    wallpaperUrl,
     corporateBannerKey,
     corporateBannerLocked,
-    slug,
   } = user;
 
-  const fullName = name || 'ForgeTomorrow User';
+  const fullName = name || 'Unknown User';
   const profileUrl = `https://forgetomorrow.com/u/${slug}`;
 
   const skills = parseArrayField(skillsJson, []);
@@ -101,7 +117,6 @@ export default function PublicProfile({ user, primaryResume }) {
 
   const resolvedBannerHeight = bannerHeight || 260;
 
-  // MOBILE-FRIENDLY BANNER FIX
   let bannerBackgroundImage;
 
   if (corporateBannerLocked && corporateBannerKey) {
@@ -115,16 +130,33 @@ export default function PublicProfile({ user, primaryResume }) {
   }
 
   const bannerBackgroundPosition =
-    typeof bannerFocalY === 'number' ? `center ${bannerFocalY}%` : 'center';
+    typeof bannerFocalY === 'number'
+      ? `center ${bannerFocalY}%`
+      : 'center';
 
-  // ⭐ MOBILE FIX — force object-fit style behavior
-  const bannerBackgroundSize = '100% auto; max-width:100%;';
+  const bannerBackgroundSize =
+    bannerMode === 'fit' ? 'contain' : 'cover';
 
   return (
     <>
       <Head>
         <title>{fullName} – ForgeTomorrow Profile</title>
+        <meta
+          name="description"
+          content={`View the professional profile of ${fullName} on ForgeTomorrow.`}
+        />
       </Head>
+
+      <style>{`
+        @media (max-width: 640px) {
+          .public-banner {
+            background-size: contain !important;
+            background-position: center !important;
+            background-repeat: no-repeat !important;
+            width: 100% !important;
+          }
+        }
+      `}</style>
 
       <div
         style={{
@@ -135,6 +167,7 @@ export default function PublicProfile({ user, primaryResume }) {
             : 'linear-gradient(135deg, #112033, #1c2a3c)',
           backgroundSize: 'cover',
           backgroundPosition: 'center',
+          backgroundRepeat: 'no-repeat',
           padding: '20px 0',
         }}
       >
@@ -143,37 +176,39 @@ export default function PublicProfile({ user, primaryResume }) {
             maxWidth: 860,
             margin: '0 auto',
             padding: '0 20px 40px',
+            minHeight: '80vh',
           }}
         >
-          {/* BANNER - MOBILE SAFE */}
+          {/* Banner */}
           <div
+            className="public-banner"
             style={{
               width: '100%',
               height: resolvedBannerHeight,
               backgroundImage: bannerBackgroundImage,
-              backgroundRepeat: 'no-repeat',
+              backgroundSize: bannerBackgroundSize,
               backgroundPosition: bannerBackgroundPosition,
-              backgroundSize: 'cover', // cover is OK — below we force containment via wrapper
+              backgroundRepeat: 'no-repeat',
               borderRadius: 12,
               marginBottom: 20,
-              overflow: 'hidden',
+              backgroundColor: '#112033',
             }}
           />
 
-          {/* HEADER CARD */}
+          {/* Header card */}
           <section
             style={{
-              background: 'white',
+              border: '1px solid #e0e0e0',
               borderRadius: 12,
               padding: 20,
-              border: '1px solid #e0e0e0',
+              background: 'white',
               display: 'flex',
               gap: 20,
             }}
           >
             <img
               src={avatarUrl || '/demo-profile.jpg'}
-              alt="Profile"
+              alt="Profile photo"
               style={{
                 width: 120,
                 height: 120,
@@ -184,43 +219,84 @@ export default function PublicProfile({ user, primaryResume }) {
             />
 
             <div style={{ flex: 1 }}>
-              <h1 style={{ margin: 0, fontSize: 26, fontWeight: 700 }}>{fullName}</h1>
+              <h1
+                style={{
+                  margin: 0,
+                  fontSize: 26,
+                  fontWeight: 700,
+                  color: '#263238',
+                }}
+              >
+                {fullName}
+              </h1>
 
-              {pronouns && <p style={{ margin: '4px 0' }}>{pronouns}</p>}
+              {pronouns && (
+                <p style={{ margin: '4px 0', color: '#607D8B' }}>{pronouns}</p>
+              )}
+
               {headline && (
-                <p style={{ margin: '6px 0', fontSize: 16, color: '#455A64' }}>
+                <p
+                  style={{
+                    margin: '6px 0',
+                    fontSize: 16,
+                    color: '#455A64',
+                  }}
+                >
                   {headline}
                 </p>
               )}
+
               {(location || status) && (
-                <p style={{ margin: '6px 0', fontSize: 14, color: '#455A64' }}>
-                  {location || ''} {status ? `• ${status}` : ''}
+                <p
+                  style={{
+                    margin: '6px 0',
+                    fontSize: 14,
+                    color: '#455A64',
+                  }}
+                >
+                  {location && `Location: ${location}`}{' '}
+                  {status && `• ${status}`}
                 </p>
               )}
 
-              <div style={{ marginTop: 10, display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+              <div
+                style={{
+                  marginTop: 10,
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: 8,
+                  flexWrap: 'wrap',
+                }}
+              >
                 <span
                   style={{
+                    fontSize: 13,
+                    color: '#455A64',
                     background: '#ECEFF1',
                     padding: '4px 8px',
                     borderRadius: 6,
-                    fontSize: 13,
+                    wordBreak: 'break-all',
                   }}
                 >
                   {profileUrl}
                 </span>
+
                 <button
-                  onClick={() => navigator.clipboard?.writeText(profileUrl)}
+                  onClick={() =>
+                    typeof navigator !== 'undefined' &&
+                    navigator.clipboard?.writeText(profileUrl)
+                  }
                   style={{
                     background: '#FF7043',
                     color: 'white',
                     border: 'none',
-                    padding: '6px 10px',
+                    padding: '5px 10px',
                     borderRadius: 6,
+                    cursor: 'pointer',
                     fontSize: 13,
                     fontWeight: 600,
-                    cursor: 'pointer',
                   }}
+                  type="button"
                 >
                   Copy
                 </button>
@@ -228,79 +304,155 @@ export default function PublicProfile({ user, primaryResume }) {
             </div>
           </section>
 
-          {/* ABOUT */}
+          {/* Public ribbon */}
+          <div
+            style={{
+              marginTop: 16,
+              fontSize: 12,
+              color: '#ECEFF1',
+              textAlign: 'center',
+              textShadow: '0 1px 3px rgba(0,0,0,0.5)',
+            }}
+          >
+            This is a public ForgeTomorrow profile.
+          </div>
+
+          {/* About */}
           {aboutMe && (
             <section
               style={{
                 marginTop: 24,
                 padding: 20,
-                background: 'white',
                 borderRadius: 12,
+                background: 'white',
                 border: '1px solid #e0e0e0',
               }}
             >
-              <h2 style={{ margin: '0 0 8px', fontSize: 18 }}>About</h2>
-              <p style={{ whiteSpace: 'pre-line', color: '#455A64' }}>{aboutMe}</p>
+              <h2
+                style={{
+                  margin: '0 0 8px',
+                  fontSize: 18,
+                  fontWeight: 600,
+                  color: '#263238',
+                }}
+              >
+                About
+              </h2>
+              <p
+                style={{
+                  margin: 0,
+                  fontSize: 14,
+                  lineHeight: 1.6,
+                  color: '#455A64',
+                  whiteSpace: 'pre-line',
+                }}
+              >
+                {aboutMe}
+              </p>
             </section>
           )}
 
-          {/* PRIMARY RESUME SECTION */}
+          {/* Primary Resume (public) */}
           {primaryResume && (
             <section
               style={{
                 marginTop: 24,
                 padding: 20,
-                background: 'white',
                 borderRadius: 12,
+                background: 'white',
                 border: '1px solid #e0e0e0',
               }}
             >
-              <h2 style={{ margin: 0, fontSize: 18 }}>Primary Resume</h2>
+              <h2
+                style={{
+                  margin: '0 0 8px',
+                  fontSize: 18,
+                  fontWeight: 600,
+                  color: '#263238',
+                }}
+              >
+                Primary Resume
+              </h2>
 
-              <p style={{ margin: '6px 0', color: '#455A64', fontSize: 14 }}>
-                {primaryResume.name || 'Primary Resume'} · Last updated{' '}
+              <p
+                style={{
+                  margin: '0 0 6px',
+                  fontSize: 14,
+                  color: '#455A64',
+                }}
+              >
+                {primaryResume.name || 'Primary resume'} · Last updated{' '}
                 {new Date(primaryResume.updatedAt).toLocaleDateString()}
               </p>
 
-              <p style={{ margin: 0, fontSize: 12, color: '#78909C' }}>
-                Recruiters reviewing this profile can request or view this resume through
-                your applications.
-              </p>
+              {/* DOWNLOAD BUTTON */}
+              <a
+                href={`/api/resume/download?id=${primaryResume.id}`}
+                target="_blank"
+                rel="noopener noreferrer"
+                style={{
+                  display: 'inline-block',
+                  marginTop: 10,
+                  fontSize: 14,
+                  color: '#FF7043',
+                  textDecoration: 'underline',
+                  fontWeight: 600,
+                }}
+              >
+                Download Resume
+              </a>
             </section>
           )}
 
-          {/* SKILLS / LANGUAGES */}
+          {/* Skills / Languages */}
           {(skills.length > 0 || languages.length > 0) && (
             <section
               style={{
                 marginTop: 24,
                 display: 'grid',
-                gap: 16,
                 gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))',
+                gap: 16,
               }}
             >
               {skills.length > 0 && (
                 <div
                   style={{
-                    background: 'white',
                     padding: 20,
                     borderRadius: 12,
+                    background: 'white',
                     border: '1px solid #e0e0e0',
                   }}
                 >
-                  <h3 style={{ margin: 0, fontSize: 16 }}>Skills</h3>
-                  <div style={{ marginTop: 6, display: 'flex', gap: 8, flexWrap: 'wrap' }}>
-                    {skills.map((s) => (
+                  <h2
+                    style={{
+                      margin: '0 0 8px',
+                      fontSize: 16,
+                      fontWeight: 600,
+                      color: '#263238',
+                    }}
+                  >
+                    Skills
+                  </h2>
+                  <div
+                    style={{
+                      display: 'flex',
+                      flexWrap: 'wrap',
+                      gap: 8,
+                      marginTop: 6,
+                    }}
+                  >
+                    {skills.map((skill) => (
                       <span
-                        key={s}
+                        key={skill}
                         style={{
-                          background: '#ECEFF1',
+                          fontSize: 12,
                           padding: '4px 8px',
                           borderRadius: 999,
-                          fontSize: 12,
+                          background: '#ECEFF1',
+                          color: '#37474F',
                         }}
                       >
-                        {s}
+                        {skill}
                       </span>
                     ))}
                   </div>
@@ -310,17 +462,34 @@ export default function PublicProfile({ user, primaryResume }) {
               {languages.length > 0 && (
                 <div
                   style={{
-                    background: 'white',
                     padding: 20,
                     borderRadius: 12,
+                    background: 'white',
                     border: '1px solid #e0e0e0',
                   }}
                 >
-                  <h3 style={{ margin: 0, fontSize: 16 }}>Languages</h3>
-                  <ul style={{ marginTop: 8, padding: 0, listStyle: 'none' }}>
-                    {languages.map((l) => (
-                      <li key={l} style={{ fontSize: 13, marginBottom: 4 }}>
-                        {l}
+                  <h2
+                    style={{
+                      margin: '0 0 8px',
+                      fontSize: 16,
+                      fontWeight: 600,
+                      color: '#263238',
+                    }}
+                  >
+                    Languages
+                  </h2>
+                  <ul
+                    style={{
+                      listStyle: 'none',
+                      padding: 0,
+                      margin: 0,
+                      fontSize: 13,
+                      color: '#455A64',
+                    }}
+                  >
+                    {languages.map((lang) => (
+                      <li key={lang} style={{ marginBottom: 4 }}>
+                        {lang}
                       </li>
                     ))}
                   </ul>
