@@ -18,7 +18,7 @@ function Card({ children, style }) {
     <section
       style={{
         background: 'white',
-        border: '1px solid '#eee',
+        border: '1px solid #eee',
         borderRadius: 12,
         boxShadow: '0 2px 6px rgba(0,0,0,0.06)',
         padding: 16,
