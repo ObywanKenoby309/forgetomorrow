@@ -14,12 +14,15 @@ export async function getServerSideProps(context) {
       name: true,
       firstName: true,
       lastName: true,
-      headline: true,     // Add later if stored
-      pronouns: true,     // Add later if stored
-      location: true,     // Add later if stored
-      status: true,       // Add later if stored
-      avatarUrl: true,    // Add later if stored
-      coverUrl: true,     // Add later if stored
+      headline: true,
+      pronouns: true,
+      location: true,
+      status: true,
+      avatarUrl: true,
+      coverUrl: true,
+      aboutMe: true,
+      skillsJson: true,
+      languagesJson: true,
     },
   });
 
@@ -36,6 +39,45 @@ export async function getServerSideProps(context) {
   };
 }
 
+// Safe helpers for parsing skills / languages from JSON
+function parseArrayField(raw, fallback = []) {
+  if (!raw) return fallback;
+
+  try {
+    const parsed = typeof raw === 'string' ? JSON.parse(raw) : raw;
+
+    // skillsJson is usually ["Leadership","Azure",...]
+    if (Array.isArray(parsed)) {
+      // normalize to string array
+      return parsed
+        .map((item) =>
+          typeof item === 'string'
+            ? item
+            : item?.name || item?.label || ''
+        )
+        .filter(Boolean);
+    }
+
+    // languagesJson is usually [{ name, level }]
+    if (parsed && typeof parsed === 'object') {
+      // allow { name: 'English' } or { items: [...] }
+      if (Array.isArray(parsed.items)) {
+        return parsed.items
+          .map((item) =>
+            typeof item === 'string'
+              ? item
+              : item?.name || item?.label || ''
+          )
+          .filter(Boolean);
+      }
+    }
+
+    return fallback;
+  } catch {
+    return fallback;
+  }
+}
+
 export default function PublicProfile({ user }) {
   const {
     name,
@@ -46,10 +88,16 @@ export default function PublicProfile({ user }) {
     avatarUrl,
     coverUrl,
     slug,
+    aboutMe,
+    skillsJson,
+    languagesJson,
   } = user;
 
   const fullName = name || 'Unknown User';
   const profileUrl = `https://forgetomorrow.com/u/${slug}`;
+
+  const skills = parseArrayField(skillsJson, []);
+  const languages = parseArrayField(languagesJson, []);
 
   return (
     <>
@@ -84,7 +132,7 @@ export default function PublicProfile({ user }) {
           />
         )}
 
-        {/* Card */}
+        {/* Header card */}
         <section
           style={{
             border: '1px solid #e0e0e0',
@@ -144,7 +192,8 @@ export default function PublicProfile({ user }) {
                   color: '#455A64',
                 }}
               >
-                {location && `Location: ${location}`} {status && `• ${status}`}
+                {location && `Location: ${location}`}{' '}
+                {status && `• ${status}`}
               </p>
             )}
 
@@ -155,6 +204,7 @@ export default function PublicProfile({ user }) {
                 display: 'flex',
                 alignItems: 'center',
                 gap: 8,
+                flexWrap: 'wrap',
               }}
             >
               <span
@@ -164,6 +214,7 @@ export default function PublicProfile({ user }) {
                   background: '#ECEFF1',
                   padding: '4px 8px',
                   borderRadius: 6,
+                  wordBreak: 'break-all',
                 }}
               >
                 {profileUrl}
@@ -171,7 +222,10 @@ export default function PublicProfile({ user }) {
 
               {/* Copy button */}
               <button
-                onClick={() => navigator.clipboard.writeText(profileUrl)}
+                onClick={() =>
+                  typeof navigator !== 'undefined' &&
+                  navigator.clipboard?.writeText(profileUrl)
+                }
                 style={{
                   background: '#FF7043',
                   color: 'white',
@@ -182,6 +236,7 @@ export default function PublicProfile({ user }) {
                   fontSize: 13,
                   fontWeight: 600,
                 }}
+                type="button"
               >
                 Copy
               </button>
@@ -189,7 +244,7 @@ export default function PublicProfile({ user }) {
           </div>
         </section>
 
-        {/* Ribbon */}
+        {/* Public ribbon */}
         <div
           style={{
             marginTop: 16,
@@ -200,6 +255,135 @@ export default function PublicProfile({ user }) {
         >
           This is a public ForgeTomorrow profile.
         </div>
+
+        {/* About section */}
+        {aboutMe && (
+          <section
+            style={{
+              marginTop: 24,
+              padding: 20,
+              borderRadius: 12,
+              background: 'white',
+              border: '1px solid #e0e0e0',
+            }}
+          >
+            <h2
+              style={{
+                margin: '0 0 8px',
+                fontSize: 18,
+                fontWeight: 600,
+                color: '#263238',
+              }}
+            >
+              About
+            </h2>
+            <p
+              style={{
+                margin: 0,
+                fontSize: 14,
+                lineHeight: 1.6,
+                color: '#455A64',
+                whiteSpace: 'pre-line',
+              }}
+            >
+              {aboutMe}
+            </p>
+          </section>
+        )}
+
+        {/* Skills / Languages */}
+        {(skills.length > 0 || languages.length > 0) && (
+          <section
+            style={{
+              marginTop: 24,
+              display: 'grid',
+              gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))',
+              gap: 16,
+            }}
+          >
+            {skills.length > 0 && (
+              <div
+                style={{
+                  padding: 20,
+                  borderRadius: 12,
+                  background: 'white',
+                  border: '1px solid #e0e0e0',
+                }}
+              >
+                <h2
+                  style={{
+                    margin: '0 0 8px',
+                    fontSize: 16,
+                    fontWeight: 600,
+                    color: '#263238',
+                  }}
+                >
+                  Skills
+                </h2>
+                <div
+                  style={{
+                    display: 'flex',
+                    flexWrap: 'wrap',
+                    gap: 8,
+                    marginTop: 6,
+                  }}
+                >
+                  {skills.map((skill) => (
+                    <span
+                      key={skill}
+                      style={{
+                        fontSize: 12,
+                        padding: '4px 8px',
+                        borderRadius: 999,
+                        background: '#ECEFF1',
+                        color: '#37474F',
+                      }}
+                    >
+                      {skill}
+                    </span>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {languages.length > 0 && (
+              <div
+                style={{
+                  padding: 20,
+                  borderRadius: 12,
+                  background: 'white',
+                  border: '1px solid #e0e0e0',
+                }}
+              >
+                <h2
+                  style={{
+                    margin: '0 0 8px',
+                    fontSize: 16,
+                    fontWeight: 600,
+                    color: '#263238',
+                  }}
+                >
+                  Languages
+                </h2>
+                <ul
+                  style={{
+                    listStyle: 'none',
+                    padding: 0,
+                    margin: 0,
+                    fontSize: 13,
+                    color: '#455A64',
+                  }}
+                >
+                  {languages.map((lang) => (
+                    <li key={lang} style={{ marginBottom: 4 }}>
+                      {lang}
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            )}
+          </section>
+        )}
       </main>
     </>
   );
