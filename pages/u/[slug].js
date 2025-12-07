@@ -66,7 +66,7 @@ export async function getServerSideProps(context) {
         select: {
           id: true,
           name: true,
-          updatedAt: true
+          updatedAt: true,
         },
       },
     },
@@ -77,8 +77,7 @@ export async function getServerSideProps(context) {
   }
 
   const { resumes, ...userSafe } = user;
-  const primaryResume =
-    resumes && resumes.length > 0 ? resumes[0] : null;
+  const primaryResume = resumes && resumes.length > 0 ? resumes[0] : null;
 
   return {
     props: {
@@ -130,12 +129,9 @@ export default function PublicProfile({ user, primaryResume }) {
   }
 
   const bannerBackgroundPosition =
-    typeof bannerFocalY === 'number'
-      ? `center ${bannerFocalY}%`
-      : 'center';
+    typeof bannerFocalY === 'number' ? `center ${bannerFocalY}%` : 'center';
 
-  const bannerBackgroundSize =
-    bannerMode === 'fit' ? 'contain' : 'cover';
+  const bannerBackgroundSize = bannerMode === 'fit' ? 'contain' : 'cover';
 
   return (
     <>
@@ -155,6 +151,15 @@ export default function PublicProfile({ user, primaryResume }) {
             background-repeat: no-repeat !important;
             width: 100% !important;
           }
+
+          .public-main {
+            padding: 0 10px 32px !important;
+          }
+
+          .public-header-card {
+            flex-direction: column !important;
+            align-items: flex-start !important;
+          }
         }
       `}</style>
 
@@ -172,6 +177,7 @@ export default function PublicProfile({ user, primaryResume }) {
         }}
       >
         <main
+          className="public-main"
           style={{
             maxWidth: 860,
             margin: '0 auto',
@@ -197,6 +203,7 @@ export default function PublicProfile({ user, primaryResume }) {
 
           {/* Header card */}
           <section
+            className="public-header-card"
             style={{
               border: '1px solid #e0e0e0',
               borderRadius: 12,
@@ -385,11 +392,9 @@ export default function PublicProfile({ user, primaryResume }) {
                 {new Date(primaryResume.updatedAt).toLocaleDateString()}
               </p>
 
-              {/* DOWNLOAD BUTTON */}
+              {/* DOWNLOAD BUTTON → PUBLIC PDF ENDPOINT */}
               <a
-                href={`/api/resume/download?id=${primaryResume.id}`}
-                target="_blank"
-                rel="noopener noreferrer"
+                href={`/api/resume/public-download?slug=${encodeURIComponent(slug)}`}
                 style={{
                   display: 'inline-block',
                   marginTop: 10,
@@ -399,7 +404,7 @@ export default function PublicProfile({ user, primaryResume }) {
                   fontWeight: 600,
                 }}
               >
-                Download Resume
+                Download Resume (PDF)
               </a>
             </section>
           )}
