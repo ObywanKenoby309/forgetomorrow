@@ -252,6 +252,35 @@ export default function CreateResumePage() {
     }
   }, [saveEventAt]);
 
+  // 🔹 Auto-load ForgeTomorrow profile URL for the authenticated user
+  useEffect(() => {
+    async function loadForgeProfileUrl() {
+      try {
+        // If user already filled it, don't override
+        if (formData.forgeUrl || formData.ftProfile) return;
+
+        const res = await fetch('/api/auth/me');
+        if (!res.ok) return;
+
+        const json = await res.json();
+        const user = json.user;
+        if (!user || !user.slug) return;
+
+        const fullProfileUrl = `https://forgetomorrow.com/u/${user.slug}`;
+
+        setFormData((prev) => ({
+          ...prev,
+          forgeUrl: prev.forgeUrl || fullProfileUrl,
+          ftProfile: prev.ftProfile || fullProfileUrl,
+        }));
+      } catch (err) {
+        console.error('[resume/create] Failed to auto-load Forge profile URL', err);
+      }
+    }
+
+    loadForgeProfileUrl();
+  }, [formData.forgeUrl, formData.ftProfile, setFormData]);
+
   // Handle manual JD file upload / drop
   const handleFile = async (file) => {
     if (!file) return;
