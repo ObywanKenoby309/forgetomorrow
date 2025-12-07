@@ -8,6 +8,7 @@ dev.db.env
 # Vercel + Next.js + Node
 .vercel
 node_modules/
+.prisma
 .next/
 dist/
 out/

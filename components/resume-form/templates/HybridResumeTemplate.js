@@ -4,6 +4,7 @@ export default function HybridResumeTemplate({ data }) {
     personalInfo,
     summary,
     workExperiences = [],
+    projects = [],          // ← NEW
     educationList = [],
     skills = [],
     certifications = [],
@@ -173,6 +174,80 @@ export default function HybridResumeTemplate({ data }) {
           ))}
         </div>
       </div>
+
+      {/* PROJECTS */}
+      {projects.length > 0 && (
+        <div style={{ marginBottom: '16pt' }}>
+          <h2
+            style={{
+              fontSize: '13pt',
+              fontWeight: 'bold',
+              margin: '0 0 6pt 0',
+              borderBottom: '1pt solid #000',
+              textTransform: 'uppercase',
+            }}
+          >
+            Projects
+          </h2>
+          {projects.map((proj, i) => (
+            <div key={i} style={{ marginBottom: '10pt' }}>
+              <div
+                style={{
+                  display: 'flex',
+                  justifyContent: 'space-between',
+                }}
+              >
+                <div>
+                  <strong style={{ fontSize: '11pt' }}>
+                    {proj.title || proj.name}
+                  </strong>
+                  <span
+                    style={{
+                      color: '#444',
+                      marginLeft: '8pt',
+                    }}
+                  >
+                    {proj.company || proj.org || proj.client}
+                  </span>
+                </div>
+                {(proj.startDate || proj.endDate) && (
+                  <span
+                    style={{
+                      fontSize: '10pt',
+                      color: '#666',
+                    }}
+                  >
+                    {proj.startDate} – {proj.endDate || 'Present'}
+                  </span>
+                )}
+              </div>
+
+              {(proj.bullets || []).map((b, bi) => (
+                <p
+                  key={bi}
+                  style={{
+                    margin: '2pt 0 2pt 16pt',
+                    fontSize: '11pt',
+                  }}
+                >
+                  • {b}
+                </p>
+              ))}
+
+              {proj.description && (!proj.bullets || proj.bullets.length === 0) && (
+                <p
+                  style={{
+                    margin: '2pt 0 2pt 16pt',
+                    fontSize: '11pt',
+                  }}
+                >
+                  {proj.description}
+                </p>
+              )}
+            </div>
+          ))}
+        </div>
+      )}
 
       {/* EDUCATION */}
       {educationList.length > 0 && (

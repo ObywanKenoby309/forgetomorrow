@@ -11,6 +11,7 @@ export default async function handler(req, res) {
 
   try {
     const session = await getServerSession(req, res, authOptions);
+
     if (!session || !session.user || !session.user.email) {
       return res.status(401).json({ error: 'Not authenticated' });
     }
@@ -24,32 +25,84 @@ export default async function handler(req, res) {
       return res.status(404).json({ error: 'User not found' });
     }
 
-    const { title, data, isPrimary } = req.body || {};
+    const userId = user.id;
 
-    if (!title || !data) {
-      return res.status(400).json({ error: 'Missing "title" or "data" in request body.' });
+    const {
+      id,          // optional — if present, update instead of create
+      name,
+      content,
+      setPrimary,  // optional boolean
+    } = req.body || {};
+
+    if (!name || !content) {
+      return res.status(400).json({ error: 'Missing "name" or "content"' });
     }
 
-    // If this should be the primary resume, clear existing primaries
-    if (isPrimary) {
+    const existingCount = await prisma.resume.count({
+      where: { userId },
+    });
+
+    // If creating a new resume (no id) enforce max 5
+    if (!id && existingCount >= 5) {
+      return res.status(400).json({
+        error: 'Resume limit reached (max 5). Delete one before adding another.',
+        limit: 5,
+      });
+    }
+
+    let targetResume = null;
+    if (id) {
+      targetResume = await prisma.resume.findFirst({
+        where: { id: Number(id), userId },
+      });
+
+      if (!targetResume) {
+        return res.status(404).json({ error: 'Resume not found for this user' });
+      }
+    }
+
+    // Decide if this resume should be primary
+    const shouldBePrimary =
+      Boolean(setPrimary) ||
+      (!id && existingCount === 0); // first ever resume => primary by default
+
+    // If this should be primary, clear primary flag on all others first
+    if (shouldBePrimary) {
       await prisma.resume.updateMany({
-        where: { userId: user.id, isPrimary: true },
+        where: { userId },
         data: { isPrimary: false },
       });
     }
 
-    const resume = await prisma.resume.create({
-      data: {
-        userId: user.id,
-        title: String(title),
-        data,
-        isPrimary: !!isPrimary,
-      },
-    });
+    let saved;
 
-    return res.status(200).json({ resume });
+    if (id) {
+      saved = await prisma.resume.update({
+        where: { id: Number(id) },
+        data: {
+          name,
+          content,
+          // if caller wants primary, use it; otherwise keep the existing flag
+          isPrimary: shouldBePrimary ? true : targetResume.isPrimary,
+        },
+      });
+    } else {
+      saved = await prisma.resume.create({
+        data: {
+          userId,
+          name,
+          content,
+          isPrimary: shouldBePrimary,
+        },
+      });
+    }
+
+    return res.status(200).json({
+      resume: saved,
+      limit: 5,
+    });
   } catch (err) {
-    console.error('[api/resume/save] Error:', err);
-    return res.status(500).json({ error: 'Failed to save resume.' });
+    console.error('[resume/save] Error', err);
+    return res.status(500).json({ error: 'Internal server error' });
   }
 }

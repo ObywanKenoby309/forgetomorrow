@@ -11,6 +11,7 @@ export default async function handler(req, res) {
 
   try {
     const session = await getServerSession(req, res, authOptions);
+
     if (!session || !session.user || !session.user.email) {
       return res.status(401).json({ error: 'Not authenticated' });
     }
@@ -26,12 +27,19 @@ export default async function handler(req, res) {
 
     const resumes = await prisma.resume.findMany({
       where: { userId: user.id },
-      orderBy: { updatedAt: 'desc' },
+      orderBy: [
+        { isPrimary: 'desc' }, // primary first
+        { createdAt: 'desc' }, // newest next
+      ],
     });
 
-    return res.status(200).json({ resumes });
+    return res.status(200).json({
+      resumes,
+      limit: 5,
+      count: resumes.length,
+    });
   } catch (err) {
-    console.error('[api/resume/list] Error:', err);
-    return res.status(500).json({ error: 'Failed to load resumes.' });
+    console.error('[resume/list] Error', err);
+    return res.status(500).json({ error: 'Internal server error' });
   }
 }
