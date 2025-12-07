@@ -1,153 +1,172 @@
 // components/resume/ResumeRightRail.js
-import React, { useEffect, useState } from 'react';
+import { useState } from 'react';
 import Link from 'next/link';
 
 const ORANGE = '#FF7043';
 
-// Lightweight Card used only inside this rail
-function Card({ children, style }) {
-  return (
-    <section
-      style={{
-        background: 'white',
-        border: '1px solid #eee',
-        borderRadius: 12,
-        boxShadow: '0 2px 6px rgba(0,0,0,0.06)',
-        padding: 16,
-        ...style,
-      }}
-    >
-      {children}
-    </section>
-  );
-}
-
-/**
- * ResumeRightRail
- * Reusable “Continue where you left off” rail with optional Tips panel.
- *
- * Props:
- * - storageKey: localStorage key to read recent items from (default 'ft_saved_resumes')
- * - title: title for the recent section (default 'Continue where you left off')
- * - onContinueHref: href for the “Continue” CTA per item (default '/resume/create')
- * - viewAllHref: href for the “View all” link under the list (default '/resume/create')
- * - limit: max items to show (default 3)
- * - tips: optional ReactNode to replace the default Tips card
- */
 export default function ResumeRightRail({
-  storageKey = 'ft_saved_resumes',
-  title = 'Continue where you left off',
-  onContinueHref = '/resume/create',
-  viewAllHref = '/resume/create',
-  limit = 3,
-  tips,
+  savedResumes = [],
+  usage,
+  tier,
 }) {
-  const [recent, setRecent] = useState([]);
+  const [workingId, setWorkingId] = useState(null);
 
-  useEffect(() => {
+  const limitedResumes = (savedResumes || [])
+    .slice()
+    .sort((a, b) => new Date(b.updatedAt) - new Date(a.updatedAt))
+    .slice(0, 3);
+
+  const handleSetPrimary = async (id) => {
     try {
-      const raw = typeof window !== 'undefined' ? localStorage.getItem(storageKey) : null;
-      const list = raw ? JSON.parse(raw) : [];
-      const sorted = Array.isArray(list)
-        ? [...list].sort((a, b) => (b.updatedAt || '').localeCompare(a.updatedAt || ''))
-        : [];
-      setRecent(sorted.slice(0, limit));
-    } catch {
-      setRecent([]);
+      setWorkingId(id);
+      const res = await fetch('/api/resume/setPrimary', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ resumeId: id }),
+      });
+
+      if (!res.ok) {
+        console.error('[ResumeRightRail] setPrimary failed', await res.text());
+        alert('Could not set primary resume yet. Please try again.');
+        setWorkingId(null);
+        return;
+      }
+
+      // For now: hard refresh so the bottom "Primary Resume" card
+      // + this rail both show the updated primary.
+      window.location.reload();
+    } catch (err) {
+      console.error('[ResumeRightRail] setPrimary error', err);
+      alert('Something went wrong. Please try again.');
+      setWorkingId(null);
     }
-  }, [storageKey, limit]);
+  };
+
+  const handleDelete = async (id) => {
+    if (!window.confirm('Delete this saved resume? This cannot be undone.')) {
+      return;
+    }
+
+    try {
+      setWorkingId(id);
+      const res = await fetch('/api/resume/delete', {
+        method: 'DELETE',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ id }),
+      });
+
+      if (!res.ok) {
+        console.error('[ResumeRightRail] delete failed', await res.text());
+        alert('Could not delete this resume. Please try again.');
+        setWorkingId(null);
+        return;
+      }
+
+      // Soft refresh: just remove from local list
+      const json = await res.json();
+      if (json.success) {
+        const next = limitedResumes.filter((r) => r.id !== id);
+        // we can't directly change parent prop, so just reload for now
+        window.location.reload();
+      } else {
+        alert(json.error || 'Could not delete this resume.');
+      }
+    } catch (err) {
+      console.error('[ResumeRightRail] delete error', err);
+      alert('Something went wrong. Please try again.');
+    } finally {
+      setWorkingId(null);
+    }
+  };
 
   return (
-    <div style={{ display: 'grid', gap: 12 }}>
-      <Card>
-        <div style={{ fontWeight: 800, marginBottom: 6 }}>{title}</div>
+    <aside className="space-y-4">
+      {/* Continue where you left off */}
+      <section className="bg-white rounded-2xl shadow-md p-4">
+        <h3 className="font-bold text-sm text-gray-900 mb-2">
+          Continue where you left off
+        </h3>
 
-        {recent.length ? (
-          <div style={{ display: 'grid', gap: 8 }}>
-            {recent.map((r) => (
-              <div
-                key={r.id || r.updatedAt || Math.random()}
-                style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'space-between',
-                  gap: 8,
-                  border: '1px solid #eee',
-                  borderRadius: 10,
-                  padding: '8px 10px',
-                }}
-              >
-                <div style={{ minWidth: 0 }}>
-                  <div
-                    style={{
-                      fontWeight: 700,
-                      whiteSpace: 'nowrap',
-                      overflow: 'hidden',
-                      textOverflow: 'ellipsis',
-                    }}
-                    title={r.fullName || 'Untitled Resume'}
-                  >
-                    {r.fullName || 'Untitled Resume'}
+        {limitedResumes.length === 0 ? (
+          <p className="text-xs text-gray-600">
+            Start your first resume to see it here. We’ll keep your recent versions handy.
+          </p>
+        ) : (
+          <div className="space-y-2">
+            {limitedResumes.map((resume) => {
+              const name = resume.name || 'Untitled Resume';
+              const updated =
+                resume.updatedAt &&
+                new Date(resume.updatedAt).toLocaleDateString();
+
+              return (
+                <div
+                  key={resume.id}
+                  className="border border-gray-200 rounded-xl px-3 py-2 flex flex-col gap-1"
+                >
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <div className="text-sm font-semibold text-gray-900">
+                        {name}
+                      </div>
+                      {updated && (
+                        <div className="text-[11px] text-gray-500">
+                          Last updated {updated}
+                        </div>
+                      )}
+                    </div>
+                    <Link
+                      href={`/resume/create?id=${resume.id}`}
+                      className="bg-[#FF7043] text-white text-xs font-bold px-3 py-1 rounded-full hover:bg-[#ff865f]"
+                    >
+                      Continue
+                    </Link>
                   </div>
-                  <div style={{ color: '#78909C', fontSize: 12 }}>
-                    Last updated{' '}
-                    {new Date(r.updatedAt || Date.now()).toLocaleDateString()}
+
+                  <div className="flex items-center justify-between mt-1">
+                    <button
+                      type="button"
+                      onClick={() => handleSetPrimary(resume.id)}
+                      disabled={workingId === resume.id}
+                      className="text-[11px] font-semibold text-[#FF7043] hover:underline disabled:opacity-60"
+                    >
+                      {workingId === resume.id
+                        ? 'Setting…'
+                        : 'Make this my primary'}
+                    </button>
+
+                    <button
+                      type="button"
+                      onClick={() => handleDelete(resume.id)}
+                      disabled={workingId === resume.id}
+                      className="text-[11px] text-gray-500 hover:text-red-600 hover:underline disabled:opacity-60"
+                    >
+                      Delete
+                    </button>
                   </div>
                 </div>
-
-                <Link
-                  href={onContinueHref}
-                  style={{
-                    background: ORANGE,
-                    color: 'white',
-                    border: '1px solid rgba(0,0,0,0.06)',
-                    borderRadius: 10,
-                    padding: '8px 10px',
-                    fontWeight: 800,
-                    textDecoration: 'none',
-                    whiteSpace: 'nowrap',
-                  }}
-                >
-                  Continue
-                </Link>
-              </div>
-            ))}
-
-            <Link
-              href={viewAllHref}
-              style={{ color: ORANGE, fontWeight: 700, textDecoration: 'none' }}
-            >
-              View all saved versions
-            </Link>
+              );
+            })}
           </div>
-        ) : (
-          <div style={{ color: '#78909C', fontSize: 14 }}>No saved resumes yet.</div>
         )}
-      </Card>
+      </section>
 
-      {/* Tips card (default content unless a custom `tips` node is passed) */}
-      {tips ? (
-        <Card>{tips}</Card>
-      ) : (
-        <Card>
-          <div style={{ fontWeight: 800, marginBottom: 6 }}>Tips</div>
-          <ul
-            style={{
-              margin: 0,
-              paddingLeft: 18,
-              color: '#607D8B',
-              fontSize: 14,
-              display: 'grid',
-              gap: 6,
-            }}
-          >
-            <li>
-              We recommend <strong>Reverse</strong> or <strong>Hybrid</strong> for best ATS results.
-            </li>
-            <li>Upload an existing resume if you’d rather improve it.</li>
-          </ul>
-        </Card>
-      )}
-    </div>
+      {/* Tips card (unchanged from your earlier design) */}
+      <section className="bg-white rounded-2xl shadow-md p-4">
+        <h3 className="text-sm font-bold text-gray-900 mb-2">Tips</h3>
+        <p className="text-xs text-gray-700 mb-2">
+          We recommend <span className="font-semibold">Reverse</span> or{' '}
+          <span className="font-semibold">Hybrid</span> for best ATS results.
+        </p>
+        <p className="text-xs text-gray-700 mb-2">
+          Upload an existing resume if you’d rather improve it.
+        </p>
+        <p className="text-xs text-gray-700">
+          Keep one primary resume linked to your profile so recruiters see your best fit first.
+        </p>
+      </section>
+
+      {/* You can keep your bottom “Need help?” support bubble as-is */}
+    </aside>
   );
 }

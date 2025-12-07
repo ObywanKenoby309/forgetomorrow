@@ -18,7 +18,8 @@ export default async function handler(req, res) {
 
     const userId = session.user.id;
 
-    const [primaryResume, primaryCover] = await Promise.all([
+    // 1) Try explicit primaries
+    const [explicitPrimaryResume, explicitPrimaryCover] = await Promise.all([
       prisma.resume.findFirst({
         where: { userId, isPrimary: true },
         orderBy: { updatedAt: 'desc' },
@@ -40,6 +41,36 @@ export default async function handler(req, res) {
         },
       }),
     ]);
+
+    let primaryResume = explicitPrimaryResume;
+    let primaryCover = explicitPrimaryCover;
+
+    // 2) Fallbacks: newest resume / cover if no explicit primary yet
+    if (!primaryResume) {
+      primaryResume = await prisma.resume.findFirst({
+        where: { userId },
+        orderBy: { updatedAt: 'desc' },
+        select: {
+          id: true,
+          name: true,
+          createdAt: true,
+          updatedAt: true,
+        },
+      });
+    }
+
+    if (!primaryCover) {
+      primaryCover = await prisma.cover.findFirst({
+        where: { userId },
+        orderBy: { updatedAt: 'desc' },
+        select: {
+          id: true,
+          name: true,
+          createdAt: true,
+          updatedAt: true,
+        },
+      });
+    }
 
     return res.status(200).json({
       primaryResume: primaryResume || null,
