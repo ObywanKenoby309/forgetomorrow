@@ -1,5 +1,38 @@
 // pages/api/auth/verify.js
 import { prisma } from "@/lib/prisma";
+import { normalizeSlug, hasBannedTerm, randomSuffix } from "@/lib/slug";
+
+// Generate a clean unique slug for the new user
+async function generateUniqueSlug(firstName, lastName) {
+  const base = normalizeSlug(`${firstName || ""}-${lastName || ""}`);
+
+  // If name reduces to empty or garbage, fallback
+  const safeBase = base || "user";
+
+  let attempt = 0;
+  while (attempt < 10) {
+    const candidate = `${safeBase}-${randomSuffix(5)}`;
+
+    // Check banned content
+    if (hasBannedTerm(candidate)) {
+      attempt++;
+      continue;
+    }
+
+    // Check DB uniqueness
+    const exists = await prisma.user.findUnique({
+      where: { slug: candidate },
+      select: { id: true },
+    });
+
+    if (!exists) return candidate;
+
+    attempt++;
+  }
+
+  // If all attempts fail — generate a fully random slug
+  return `user-${randomSuffix(8)}`;
+}
 
 export default async function handler(req, res) {
   if (req.method !== "GET") {
@@ -18,11 +51,15 @@ export default async function handler(req, res) {
     });
 
     if (!vt) {
-      return res.status(400).send("This link is invalid or has already been used.");
+      return res
+        .status(400)
+        .send("This link is invalid or has already been used.");
     }
 
     if (vt.expiresAt < new Date()) {
-      return res.status(400).send("This link has expired. Please sign up again.");
+      return res
+        .status(400)
+        .send("This link has expired. Please sign up again.");
     }
 
     // Check if a user already exists for this email
@@ -31,6 +68,9 @@ export default async function handler(req, res) {
     });
 
     if (!user) {
+      // NEW — generate slug BEFORE creating user
+      const slug = await generateUniqueSlug(vt.firstName, vt.lastName);
+
       // Create a new user record from the token payload
       user = await prisma.user.create({
         data: {
@@ -42,6 +82,7 @@ export default async function handler(req, res) {
           emailVerified: true,
           newsletter: vt.newsletter ?? false,
           plan: "FREE",
+          slug, // ← NEW: auto-generated profile slug
         },
       });
     } else if (!user.emailVerified) {
