@@ -2,10 +2,38 @@
 import Head from 'next/head';
 import { prisma } from '@/lib/prisma';
 
+// Safe helpers for parsing skills / languages from JSON
+function parseArrayField(raw, fallback = []) {
+  if (!raw) return fallback;
+
+  try {
+    const parsed = typeof raw === 'string' ? JSON.parse(raw) : raw;
+
+    if (Array.isArray(parsed)) {
+      return parsed
+        .map((item) =>
+          typeof item === 'string' ? item : item?.name || item?.label || ''
+        )
+        .filter(Boolean);
+    }
+
+    if (parsed && typeof parsed === 'object' && Array.isArray(parsed.items)) {
+      return parsed.items
+        .map((item) =>
+          typeof item === 'string' ? item : item?.name || item?.label || ''
+        )
+        .filter(Boolean);
+    }
+
+    return fallback;
+  } catch {
+    return fallback;
+  }
+}
+
 export async function getServerSideProps(context) {
   const { slug } = context.params;
 
-  // Look up user by slug (public profile fields only)
   const user = await prisma.user.findUnique({
     where: { slug },
     select: {
@@ -23,30 +51,21 @@ export async function getServerSideProps(context) {
       aboutMe: true,
       skillsJson: true,
       languagesJson: true,
-
-      // Banner / background fields
       bannerMode: true,
       bannerHeight: true,
       bannerFocalY: true,
       wallpaperUrl: true,
-
-      // Corporate banner override (ForgeTomorrow staff only)
       corporateBannerKey: true,
       corporateBannerLocked: true,
 
-      // Public resume (only isPublic = true, prefer isPrimary)
+      // 👇 primary resume (if any)
       resumes: {
-        where: { isPublic: true },
-        orderBy: [
-          { isPrimary: 'desc' },
-          { updatedAt: 'desc' },
-        ],
+        where: { isPrimary: true },
+        orderBy: { updatedAt: 'desc' },
         take: 1,
         select: {
           id: true,
           name: true,
-          content: true,
-          createdAt: true,
           updatedAt: true,
         },
       },
@@ -60,120 +79,17 @@ export async function getServerSideProps(context) {
   }
 
   const { resumes, ...userSafe } = user;
-  const publicResume = resumes && resumes.length > 0 ? resumes[0] : null;
+  const primaryResume = resumes && resumes.length > 0 ? resumes[0] : null;
 
   return {
     props: {
       user: JSON.parse(JSON.stringify(userSafe)),
-      publicResume: publicResume
-        ? JSON.parse(JSON.stringify(publicResume))
-        : null,
+      primaryResume: primaryResume ? JSON.parse(JSON.stringify(primaryResume)) : null,
     },
   };
 }
 
-// Safe helpers for parsing skills / languages from JSON
-function parseArrayField(raw, fallback = []) {
-  if (!raw) return fallback;
-
-  try {
-    const parsed = typeof raw === 'string' ? JSON.parse(raw) : raw;
-
-    // skillsJson is usually ["Leadership","Azure",...]
-    if (Array.isArray(parsed)) {
-      // normalize to string array
-      return parsed
-        .map((item) =>
-          typeof item === 'string'
-            ? item
-            : item?.name || item?.label || ''
-        )
-        .filter(Boolean);
-    }
-
-    // languagesJson is usually [{ name, level }]
-    if (parsed && typeof parsed === 'object') {
-      // allow { name: 'English' } or { items: [...] }
-      if (Array.isArray(parsed.items)) {
-        return parsed.items
-          .map((item) =>
-            typeof item === 'string'
-              ? item
-              : item?.name || item?.label || ''
-          )
-          .filter(Boolean);
-      }
-    }
-
-    return fallback;
-  } catch {
-    return fallback;
-  }
-}
-
-// Try to pull some human-readable bits out of resume.content JSON
-function parseResumeContent(rawContent) {
-  if (!rawContent) return null;
-
-  try {
-    const data =
-      typeof rawContent === 'string' ? JSON.parse(rawContent) : rawContent;
-
-    // Try common keys based on your builder structure
-    const summary =
-      data.summary ||
-      data.professionalSummary ||
-      data.profile ||
-      '';
-
-    const experiences =
-      (Array.isArray(data.experiences) && data.experiences) ||
-      (Array.isArray(data.workExperiences) && data.workExperiences) ||
-      [];
-
-    const expPreview = experiences.slice(0, 3).map((exp) => {
-      if (typeof exp === 'string') return { title: exp };
-      return {
-        title:
-          exp.title ||
-          exp.role ||
-          exp.position ||
-          '',
-        company: exp.company || exp.employer || '',
-        dates:
-          exp.dates ||
-          exp.dateRange ||
-          '',
-      };
-    });
-
-    const skillsFromResume =
-      (Array.isArray(data.skills) && data.skills) ||
-      (Array.isArray(data.skillList) && data.skillList) ||
-      [];
-
-    const normalizedSkills = skillsFromResume
-      .map((s) =>
-        typeof s === 'string' ? s : s?.name || s?.label || ''
-      )
-      .filter(Boolean)
-      .slice(0, 15);
-
-    if (!summary && expPreview.length === 0 && normalizedSkills.length === 0) {
-      return null;
-    }
-
-    return {
-      summary,
-      experiences: expPreview,
-      skills: normalizedSkills,
-    };
-  } catch {
-    return null;
-  }
-}
-
-export default function PublicProfile({ user, publicResume }) {
+export default function PublicProfile({ user, primaryResume }) {
   const {
     name,
     headline,
@@ -200,17 +116,11 @@ export default function PublicProfile({ user, publicResume }) {
   const skills = parseArrayField(skillsJson, []);
   const languages = parseArrayField(languagesJson, []);
 
-  const resumePreview = publicResume
-    ? parseResumeContent(publicResume.content)
-    : null;
-
-  // ── Banner logic: corporate override → coverUrl → wallpaperUrl → gradient ──
   const resolvedBannerHeight = bannerHeight || 260;
 
   let bannerBackgroundImage;
 
   if (corporateBannerLocked && corporateBannerKey) {
-    // e.g. corporateBannerKey = "CEO" → /corporate-banners/CEO.png
     bannerBackgroundImage = `url(/corporate-banners/${corporateBannerKey}.png)`;
   } else if (coverUrl) {
     bannerBackgroundImage = `url(${coverUrl})`;
@@ -221,12 +131,9 @@ export default function PublicProfile({ user, publicResume }) {
   }
 
   const bannerBackgroundPosition =
-    typeof bannerFocalY === 'number'
-      ? `center ${bannerFocalY}%`
-      : 'center';
+    typeof bannerFocalY === 'number' ? `center ${bannerFocalY}%` : 'center';
 
-  const bannerBackgroundSize =
-    bannerMode === 'fit' ? 'contain' : 'cover';
+  const bannerBackgroundSize = bannerMode === 'fit' ? 'contain' : 'cover';
 
   return (
     <>
@@ -238,7 +145,6 @@ export default function PublicProfile({ user, publicResume }) {
         />
       </Head>
 
-      {/* Full-page background: user's wallpaper or gradient */}
       <div
         style={{
           minHeight: '100vh',
@@ -252,7 +158,6 @@ export default function PublicProfile({ user, publicResume }) {
           padding: '20px 0',
         }}
       >
-        {/* Centered content column with cards */}
         <main
           style={{
             maxWidth: 860,
@@ -261,7 +166,7 @@ export default function PublicProfile({ user, publicResume }) {
             minHeight: '80vh',
           }}
         >
-          {/* Cover / banner */}
+          {/* Banner */}
           <div
             style={{
               width: '100%',
@@ -272,7 +177,7 @@ export default function PublicProfile({ user, publicResume }) {
               backgroundRepeat: 'no-repeat',
               borderRadius: 12,
               marginBottom: 20,
-              backgroundColor: '#112033', // backup if image fails
+              backgroundColor: '#112033',
             }}
           />
 
@@ -287,7 +192,6 @@ export default function PublicProfile({ user, publicResume }) {
               gap: 20,
             }}
           >
-            {/* Avatar */}
             <img
               src={avatarUrl || '/demo-profile.jpg'}
               alt="Profile photo"
@@ -313,9 +217,7 @@ export default function PublicProfile({ user, publicResume }) {
               </h1>
 
               {pronouns && (
-                <p style={{ margin: '4px 0', color: '#607D8B' }}>
-                  {pronouns}
-                </p>
+                <p style={{ margin: '4px 0', color: '#607D8B' }}>{pronouns}</p>
               )}
 
               {headline && (
@@ -343,7 +245,6 @@ export default function PublicProfile({ user, publicResume }) {
                 </p>
               )}
 
-              {/* Public URL display */}
               <div
                 style={{
                   marginTop: 10,
@@ -366,7 +267,6 @@ export default function PublicProfile({ user, publicResume }) {
                   {profileUrl}
                 </span>
 
-                {/* Copy button */}
                 <button
                   onClick={() =>
                     typeof navigator !== 'undefined' &&
@@ -403,7 +303,7 @@ export default function PublicProfile({ user, publicResume }) {
             This is a public ForgeTomorrow profile.
           </div>
 
-          {/* About section (card) */}
+          {/* About */}
           {aboutMe && (
             <section
               style={{
@@ -438,8 +338,8 @@ export default function PublicProfile({ user, publicResume }) {
             </section>
           )}
 
-          {/* Public Resume card */}
-          {publicResume && (
+          {/* Primary Resume (public) */}
+          {primaryResume && (
             <section
               style={{
                 marginTop: 24,
@@ -457,135 +357,32 @@ export default function PublicProfile({ user, publicResume }) {
                   color: '#263238',
                 }}
               >
-                Public Resume
+                Primary Resume
               </h2>
               <p
                 style={{
-                  margin: '0 0 10px',
+                  margin: '0 0 6px',
                   fontSize: 14,
-                  color: '#607D8B',
+                  color: '#455A64',
                 }}
               >
-                {publicResume.name || 'Primary resume'} · Last updated{' '}
-                {new Date(publicResume.updatedAt).toLocaleDateString()}
+                {primaryResume.name || 'Primary resume'} · Last updated{' '}
+                {new Date(primaryResume.updatedAt).toLocaleDateString()}
               </p>
-
-              {resumePreview ? (
-                <>
-                  {resumePreview.summary && (
-                    <div style={{ marginBottom: 14 }}>
-                      <h3
-                        style={{
-                          margin: '0 0 4px',
-                          fontSize: 14,
-                          fontWeight: 600,
-                          color: '#37474F',
-                        }}
-                      >
-                        Summary
-                      </h3>
-                      <p
-                        style={{
-                          margin: 0,
-                          fontSize: 13,
-                          color: '#455A64',
-                          whiteSpace: 'pre-line',
-                        }}
-                      >
-                        {resumePreview.summary}
-                      </p>
-                    </div>
-                  )}
-
-                  {resumePreview.experiences &&
-                    resumePreview.experiences.length > 0 && (
-                      <div style={{ marginBottom: 14 }}>
-                        <h3
-                          style={{
-                            margin: '0 0 4px',
-                            fontSize: 14,
-                            fontWeight: 600,
-                            color: '#37474F',
-                          }}
-                        >
-                          Recent Roles
-                        </h3>
-                        <ul
-                          style={{
-                            listStyle: 'none',
-                            padding: 0,
-                            margin: 0,
-                            fontSize: 13,
-                            color: '#455A64',
-                          }}
-                        >
-                          {resumePreview.experiences.map((exp, idx) => (
-                            <li key={idx} style={{ marginBottom: 4 }}>
-                              <strong>{exp.title}</strong>
-                              {exp.company && ` · ${exp.company}`}
-                              {exp.dates && ` (${exp.dates})`}
-                            </li>
-                          ))}
-                        </ul>
-                      </div>
-                    )}
-
-                  {resumePreview.skills &&
-                    resumePreview.skills.length > 0 && (
-                      <div>
-                        <h3
-                          style={{
-                            margin: '0 0 4px',
-                            fontSize: 14,
-                            fontWeight: 600,
-                            color: '#37474F',
-                          }}
-                        >
-                          Key Skills
-                        </h3>
-                        <div
-                          style={{
-                            display: 'flex',
-                            flexWrap: 'wrap',
-                            gap: 6,
-                            marginTop: 4,
-                          }}
-                        >
-                          {resumePreview.skills.map((skill) => (
-                            <span
-                              key={skill}
-                              style={{
-                                fontSize: 12,
-                                padding: '3px 7px',
-                                borderRadius: 999,
-                                background: '#ECEFF1',
-                                color: '#37474F',
-                              }}
-                            >
-                              {skill}
-                            </span>
-                          ))}
-                        </div>
-                      </div>
-                    )}
-                </>
-              ) : (
-                <p
-                  style={{
-                    margin: 0,
-                    fontSize: 13,
-                    color: '#455A64',
-                  }}
-                >
-                  This user has chosen to publish a resume. A simplified
-                  preview is shown here; some formatting may differ from the
-                  full internal view.
-                </p>
-              )}
+              <p
+                style={{
+                  margin: 0,
+                  fontSize: 12,
+                  color: '#78909C',
+                }}
+              >
+                This resume is currently marked as primary in ForgeTomorrow and is used
+                across recruiter views and applications.
+              </p>
             </section>
           )}
 
-          {/* Skills / Languages (cards) */}
+          {/* Skills / Languages */}
           {(skills.length > 0 || languages.length > 0) && (
             <section
               style={{

@@ -1,163 +1,77 @@
 // components/profile/ProfileResumeAttach.js
-import React, { useEffect, useState } from 'react';
-import { useRouter } from 'next/router';
+import { useEffect, useState } from 'react';
+import Link from 'next/link';
+
+const ORANGE = '#FF7043';
 
 export default function ProfileResumeAttach({ withChrome }) {
-  const [resumes, setResumes] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [primaryResume, setPrimaryResume] = useState(null);
   const [error, setError] = useState('');
-  const router = useRouter();
-  
-  const loadResumes = async () => {
-    setLoading(true);
-    setError('');
-    try {
-      const res = await fetch('/api/profile/resume');
-      if (!res.ok) {
-        const err = await res.json().catch(() => ({}));
-        throw new Error(err.error || 'Failed to load resumes.');
-      }
-      const data = await res.json();
-      setResumes(data.resumes || []);
-    } catch (err) {
-      console.error('loadResumes', err);
-      setError(err.message || 'Failed to load resumes.');
-    } finally {
-      setLoading(false);
-    }
-  };
+
+  const createHref = withChrome ? withChrome('/resume/create') : '/resume/create';
 
   useEffect(() => {
-    loadResumes();
+    let cancelled = false;
+
+    async function loadPrimaries() {
+      try {
+        const res = await fetch('/api/profile/primaries');
+        if (!res.ok) {
+          throw new Error(`HTTP ${res.status}`);
+        }
+        const data = await res.json();
+        if (!cancelled) {
+          setPrimaryResume(data.primaryResume || null);
+        }
+      } catch (err) {
+        console.error('[ProfileResumeAttach] Failed to load primary resume', err);
+        if (!cancelled) {
+          setError('We could not load your primary resume.');
+        }
+      } finally {
+        if (!cancelled) setLoading(false);
+      }
+    }
+
+    loadPrimaries();
+    return () => {
+      cancelled = true;
+    };
   }, []);
 
-  const primary =
-    resumes.find((r) => r.isPrimary) || resumes[0] || null;
-
-  const handleNew = () => {
-  if (withChrome) {
-    window.location.href = withChrome('/resume-cover');
-  } else {
-    window.location.href = 'https://www.forgetomorrow.com/resume-cover';
-  }
-};
-
-  const handleEdit = () => {
-  if (!primary) return;
-
-  if (withChrome) {
-    // Route through the app shell (preserve chrome param)
-    window.location.href = withChrome('/resume-cover');
-  } else {
-    // Fallback if outside the chrome layout
-    window.location.href = 'https://www.forgetomorrow.com/resume-cover';
-  }
-};
-
   return (
-    <section
-      style={{
-        border: '1px solid #eee',
-        borderRadius: 12,
-        padding: 16,
-        background: 'white',
-        boxShadow: '0 2px 6px rgba(0,0,0,0.06)',
-      }}
-    >
-      <div
-        style={{
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'space-between',
-          marginBottom: 8,
-        }}
-      >
-        <h3
-          style={{
-            margin: 0,
-            color: '#FF7043',
-            fontWeight: 700,
-            fontSize: '1.1rem',
-          }}
+    <section className="bg-white rounded-2xl shadow-md p-5 flex flex-col gap-2">
+      <div className="flex items-center justify-between">
+        <h3 className="text-orange-600 font-bold text-lg">Primary Resume</h3>
+        <Link
+          href={createHref}
+          className="border border-orange-500 text-orange-600 px-3 py-1 rounded-full text-sm font-semibold hover:bg-orange-50"
         >
-          Primary Resume
-        </h3>
-
-        <div style={{ display: 'flex', gap: 8 }}>
-          {primary && (
-            <button
-              type="button"
-              onClick={handleEdit}
-              style={{
-                background: 'white',
-                color: '#FF7043',
-                border: '1px solid #FF7043',
-                borderRadius: 10,
-                padding: '6px 10px',
-                fontWeight: 700,
-                cursor: 'pointer',
-                fontSize: '0.875rem',
-              }}
-            >
-              Edit in builder
-            </button>
-          )}
-          <button
-            type="button"
-            onClick={handleNew}
-            style={{
-              background: 'white',
-              color: '#FF7043',
-              border: '1px solid #FF7043',
-              borderRadius: 10,
-              padding: '6px 10px',
-              fontWeight: 700,
-              cursor: 'pointer',
-              fontSize: '0.875rem',
-            }}
-          >
-            New resume
-          </button>
-        </div>
+          New resume
+        </Link>
       </div>
 
       {loading ? (
-        <p style={{ margin: 0, color: '#718096', fontSize: '0.9375rem' }}>
-          Loading resumes…
-        </p>
-      ) : resumes.length === 0 ? (
-        <p style={{ margin: 0, color: '#718096', fontSize: '0.9375rem' }}>
-          No resumes saved yet. Use the Resume Builder to create one and set it
-          as your primary.
+        <p className="text-sm text-gray-500">Loading…</p>
+      ) : error ? (
+        <p className="text-sm text-red-600">{error}</p>
+      ) : primaryResume ? (
+        <p className="text-sm text-gray-700">
+          <span className="font-semibold">{primaryResume.name}</span>
+          {' · Last updated '}
+          {new Date(primaryResume.updatedAt).toLocaleDateString()}
         </p>
       ) : (
-        <div style={{ display: 'grid', gap: 6 }}>
-          <div style={{ fontSize: 13, color: '#607D8B' }}>
-            Primary:{' '}
-            <strong style={{ color: '#263238' }}>
-              {primary.name || `Resume ${primary.id}`}
-            </strong>
-          </div>
-          {primary.updatedAt && (
-            <div style={{ fontSize: 12, color: '#90A4AE' }}>
-              Last updated:{' '}
-              {new Date(primary.updatedAt).toLocaleDateString()}
-            </div>
-          )}
-        </div>
-      )}
-
-      {error && (
-        <p
-          style={{
-            marginTop: 8,
-            color: '#e53e3e',
-            fontSize: '0.875rem',
-          }}
-        >
-          {error}
+        <p className="text-sm text-gray-600">
+          No resumes saved yet. Use the Resume Builder to create one and set it as your
+          primary.
         </p>
       )}
+
+      <p className="text-xs text-gray-500 mt-1">
+        This is the resume recruiters will see first on your ForgeTomorrow profile.
+      </p>
     </section>
   );
 }
