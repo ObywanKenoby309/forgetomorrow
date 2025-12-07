@@ -8,14 +8,8 @@ export default function CoachingClientsPage() {
   const [search, setSearch] = useState('');
   const [status, setStatus] = useState('All');
 
-  // --- Mock data (state, so Delete can modify it) ---
-  const [clients, setClients] = useState([
-    { name: 'Alex Turner', email: 'alex.turner@example.com', status: 'Active',   next: 'Aug 14, 10:00 AM', last: 'Aug 10' },
-    { name: 'Priya N.',    email: 'priya.n@example.com',     status: 'Active',   next: 'Aug 15, 1:30 PM', last: 'Aug 11' },
-    { name: 'Michael R.',  email: 'michael.r@example.com',   status: 'At Risk',  next: 'Aug 13, 3:00 PM', last: 'Aug 07' },
-    { name: 'Dana C.',     email: 'dana.c@example.com',      status: 'New Intake', next: 'Aug 16, 9:00 AM', last: 'Aug 12' },
-    { name: 'Robert L.',   email: 'robert.l@example.com',    status: 'Active',   next: 'Aug 19, 2:30 PM', last: 'Aug 09' },
-  ]);
+  // --- Client list (empty; ready for live data injection later) ---
+  const [clients, setClients] = useState([]);
   // ---------------------------------------------------
 
   const filtered = useMemo(() => {
@@ -185,7 +179,7 @@ export default function CoachingClientsPage() {
                         borderRadius: 10,
                       }}
                     >
-                      No clients match your filters.
+                      No clients yet. Once you add clients, they will appear here.
                     </td>
                   </tr>
                 )}

@@ -1,11 +1,11 @@
-// pages/api/resume/delete.js
+// pages/api/resume/download.js
 import { getServerSession } from 'next-auth/next';
 import { authOptions } from '../auth/[...nextauth]';
 import { prisma } from '@/lib/prisma';
 
 export default async function handler(req, res) {
-  if (req.method !== 'POST') {
-    res.setHeader('Allow', ['POST']);
+  if (req.method !== 'GET') {
+    res.setHeader('Allow', ['GET']);
     return res.status(405).json({ error: 'Method not allowed' });
   }
 
@@ -26,46 +26,37 @@ export default async function handler(req, res) {
     }
 
     const userId = user.id;
-    const { id } = req.body || {};
+    const { id } = req.query || {};
     const resumeId = Number(id);
 
     if (!resumeId || Number.isNaN(resumeId)) {
       return res.status(400).json({ error: 'Invalid resume id' });
     }
 
-    const existing = await prisma.resume.findFirst({
+    const resume = await prisma.resume.findFirst({
       where: { id: resumeId, userId },
     });
 
-    if (!existing) {
+    if (!resume) {
       return res.status(404).json({ error: 'Resume not found for this user' });
     }
 
-    const wasPrimary = existing.isPrimary;
+    const baseName =
+      (resume.name && resume.name.trim()) || 'resume';
 
-    // Delete the resume
-    await prisma.resume.delete({
-      where: { id: resumeId },
-    });
+    // very simple filename sanitizing
+    const safeName = baseName.replace(/[^a-z0-9_\-]+/gi, '_');
 
-    // If it was primary, promote the newest remaining resume to primary (if any)
-    if (wasPrimary) {
-      const newest = await prisma.resume.findFirst({
-        where: { userId },
-        orderBy: { updatedAt: 'desc' },
-      });
+    res.setHeader('Content-Type', 'application/json; charset=utf-8');
+    res.setHeader(
+      'Content-Disposition',
+      `attachment; filename="${safeName}.json"`
+    );
 
-      if (newest) {
-        await prisma.resume.update({
-          where: { id: newest.id },
-          data: { isPrimary: true },
-        });
-      }
-    }
-
-    return res.status(200).json({ success: true });
+    // resume.content is already a string (JSON from builder)
+    return res.status(200).send(resume.content);
   } catch (err) {
-    console.error('[api/resume/delete] error:', err);
+    console.error('[api/resume/download] error:', err);
     return res.status(500).json({ error: 'Internal server error' });
   }
 }

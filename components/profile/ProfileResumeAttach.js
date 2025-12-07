@@ -1,10 +1,13 @@
 // components/profile/ProfileResumeAttach.js
 import { useEffect, useState } from 'react';
+import { useRouter } from 'next/router';
 import Link from 'next/link';
 
 const ORANGE = '#FF7043';
 
 export default function ProfileResumeAttach({ withChrome }) {
+  const router = useRouter();
+
   const [loading, setLoading] = useState(true);
   const [resumes, setResumes] = useState([]);
   const [error, setError] = useState('');
@@ -19,7 +22,7 @@ export default function ProfileResumeAttach({ withChrome }) {
 
     async function loadResumes() {
       try {
-        // Expecting { resumes: [{ id, name, updatedAt, isPrimary, fileUrl? }, ...] }
+        // Expecting { resumes: [{ id, name, updatedAt, isPrimary }, ...] }
         const res = await fetch('/api/resume/list');
         if (!res.ok) {
           throw new Error(`HTTP ${res.status}`);
@@ -74,6 +77,13 @@ export default function ProfileResumeAttach({ withChrome }) {
     }
   };
 
+  const handleOpenInBuilder = (resumeId) => {
+    if (!resumeId) return;
+    const base = `/resume/create?id=${resumeId}`;
+    const href = withChrome ? withChrome(base) : base;
+    router.push(href);
+  };
+
   const renderPrimarySummary = () => {
     if (loading) {
       return <p className="text-sm text-gray-500">Loading…</p>;
@@ -116,16 +126,13 @@ export default function ProfileResumeAttach({ withChrome }) {
             </>
           )}
         </p>
-        {primaryResume.fileUrl && (
-          <a
-            href={primaryResume.fileUrl}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="text-xs text-orange-600 underline"
-          >
-            Download primary resume
-          </a>
-        )}
+        <button
+          type="button"
+          onClick={() => handleOpenInBuilder(primaryResume.id)}
+          className="text-xs text-orange-600 underline text-left"
+        >
+          Open in builder to download / edit
+        </button>
       </div>
     );
   };
@@ -181,16 +188,13 @@ export default function ProfileResumeAttach({ withChrome }) {
                         {resume.updatedAt &&
                           `Updated ${new Date(resume.updatedAt).toLocaleDateString()}`}
                       </p>
-                      {resume.fileUrl && (
-                        <a
-                          href={resume.fileUrl}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="text-xs text-orange-600 underline"
-                        >
-                          Download
-                        </a>
-                      )}
+                      <button
+                        type="button"
+                        onClick={() => handleOpenInBuilder(resume.id)}
+                        className="text-xs text-orange-600 underline"
+                      >
+                        Open in builder
+                      </button>
                     </div>
 
                     <div className="flex items-center gap-2 shrink-0">
