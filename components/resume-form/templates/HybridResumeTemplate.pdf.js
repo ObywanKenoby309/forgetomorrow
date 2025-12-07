@@ -436,70 +436,67 @@ export default function HybridResumeTemplate({ data }) {
       )}
 
       {/* CUSTOM SECTIONS */}
-      {customSections.length > 0 &&
-        customSections.map((section, i) => {
-          if (!section) return null;
+{customSections.length > 0 &&
+  customSections.map((section, i) => {
+    if (!section) return null;
 
-          const title =
-            section.title ||
-            section.heading ||
-            'Additional Information';
+    const title =
+      section.title ||
+      section.heading ||
+      'Additional Information';
 
-          const items = Array.isArray(section.items)
-            ? section.items
-            : null;
+    const items = Array.isArray(section.items)
+      ? section.items
+      : null;
 
-          const content =
-            section.content ||
-            section.text ||
-            section.body;
+    const content =
+      section.content ||
+      section.text ||
+      section.body;
 
-          return (
-            <div key={i} style={{ marginBottom: '16pt' }}>
-              <h2
-                style={{
-                  fontSize: '13pt',
-                  fontWeight: 'bold',
-                  margin: '0 0 6pt 0',
-                  borderBottom: '1pt solid #000',
-                  textTransform: 'uppercase',
-                }}
+    return (
+      <div key={i} style={{ marginBottom: '16pt' }}>
+        <h2
+          style={{
+            fontSize: '13pt',
+            fontWeight: 'bold',
+            margin: '0 0 6pt 0',
+            borderBottom: '1pt solid #000',
+            textTransform: 'uppercase',
+          }}
+        >
+          {title}
+        </h2>
+
+        {items && items.length > 0 ? (
+          <ul
+            style={{
+              margin: 0,
+              paddingLeft: '16pt',
+              fontSize: '11pt',
+            }}
+          >
+            {items.map((item, idx) => (
+              <li
+                key={idx}
+                style={{ marginBottom: '3pt' }}
               >
-                {title}
-              </h2>
-
-              {items && items.length > 0 ? (
-                <ul
-                  style={{
-                    margin: 0,
-                    paddingLeft: '16pt',
-                    fontSize: '11pt',
-                  }}
-                >
-                  {items.map((item, idx) => (
-                    <li
-                      key={idx}
-                      style={{ marginBottom: '3pt' }}
-                    >
-                      {item}
-                    </li>
-                  ))}
-                </ul>
-              ) : (
-                content && (
-                  <p
-                    style={{
-                      margin: 0,
-                      fontSize: '11pt',
-                    }}
-                  >
-                    {content}
-                  </p>
-                )
-              )}
-            </div>
-          );
-        })}
-    </div>
-  );
-}
+                {item}
+              </li>
+            ))}
+          </ul>
+        ) : (
+          content && (
+            <p
+              style={{
+                margin: 0,
+                fontSize: '11pt',
+              }}
+            >
+              {content}
+            </p>
+          )
+        )}
+      </div>
+    );
+  })}
