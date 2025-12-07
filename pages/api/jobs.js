@@ -1,4 +1,4 @@
-// pages/api/jobs.js — Supabase/Postgres jobs only, no fallback
+// pages/api/jobs.js — Supabase/Postgres jobs only, with debug count
 
 import { Pool } from 'pg';
 
@@ -30,15 +30,16 @@ export default async function handler(req, res) {
 
   if (!dbPool) {
     console.warn('[jobs] DATABASE_URL not set; returning empty list');
-    return res.status(200).json({ jobs: [] });
+    return res.status(200).json({ jobs: [], debugTotal: 0, debugNote: 'No DATABASE_URL' });
   }
 
   let jobs = [];
+  let debugTotal = 0;
 
   try {
     const client = await dbPool.connect();
     try {
-      // Minimal, ultra-safe query: only select columns we KNOW exist
+      // Minimal, safe query: only select columns we KNOW exist
       const result = await client.query(
         `
         SELECT
@@ -55,10 +56,11 @@ export default async function handler(req, res) {
       );
 
       const rows = result.rows || [];
+      debugTotal = rows.length;
 
       jobs = rows.map((row) => {
-        // Try to derive a "published" date if any timestamp columns exist,
-        // but don't trust them or depend on them
+        // Try to infer a "published" date if any timestamp columns exist,
+        // but don't trust or require it to be there
         const created =
           row.createdAt ||
           row.createdat ||
@@ -88,9 +90,12 @@ export default async function handler(req, res) {
     }
   } catch (error) {
     console.error('[jobs] Postgres jobs error:', error);
-    // On error, return an empty array so frontend doesn't break
-    return res.status(200).json({ jobs: [] });
+    return res.status(200).json({
+      jobs: [],
+      debugTotal: 0,
+      debugError: error.message ?? 'unknown error',
+    });
   }
 
-  return res.status(200).json({ jobs });
+  return res.status(200).json({ jobs, debugTotal });
 }
