@@ -202,7 +202,7 @@ export function ResumeProvider({ children }) {
 
     const title = formData.fullName || 'Untitled Resume';
 
-    // Local snapshot
+    // Local snapshot (temporary before DB save)
     let snapshot = {
       id: `${Date.now()}`, // temporary ID before DB save
       title,
@@ -221,9 +221,10 @@ export function ResumeProvider({ children }) {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          title,
-          data,
-          isPrimary: true,
+          // API expects: name, content, setPrimary
+          name: title,
+          content: data,
+          setPrimary: true,
         }),
       });
 
@@ -234,19 +235,21 @@ export function ResumeProvider({ children }) {
         if (dbResume && dbResume.id) {
           // Replace the local snapshot with the DB-backed one
           setResumes((prev) => {
-            // clear previous primaries in local state if needed
             const withoutTemp = prev.filter((r) => r.id !== snapshot.id);
+
             return [
+              // If this one is primary, clear others locally
               ...withoutTemp.map((r) =>
                 dbResume.isPrimary ? { ...r, isPrimary: false } : r
               ),
               {
                 id: dbResume.id,
-                title: dbResume.title,
-                createdAt: dbResume.createdAt,
-                updatedAt: dbResume.updatedAt,
+                title: dbResume.name || title,
+                createdAt: dbResume.createdAt || now,
+                updatedAt: dbResume.updatedAt || now,
                 isPrimary: dbResume.isPrimary,
-                data: dbResume.data,
+                // keep the rich builder payload locally
+                data,
               },
             ];
           });
