@@ -15,6 +15,16 @@ export default function JobApplyModal({ job, onClose }) {
     );
   }
 
+  function buildFallbackSearch(job) {
+    const parts = [];
+    if (job?.title) parts.push(job.title);
+    if (job?.company) parts.push(job.company);
+    parts.push("careers");
+
+    const query = encodeURIComponent(parts.join(" "));
+    return `https://www.google.com/search?q=${query}`;
+  }
+
   async function handleSubmit(e) {
     if (e && typeof e.preventDefault === "function") {
       e.preventDefault();
@@ -31,25 +41,22 @@ export default function JobApplyModal({ job, onClose }) {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          jobId: job.id,
-          title: job.title,
-          source: job.source,
+          jobId: job?.id,
+          title: job?.title,
+          source: job?.source,
           applyLink,
         }),
       });
 
-      if (job.source === "External") {
-        if (!applyLink) {
-          alert(
-            "This job does not have an external application link configured yet. Please check back soon."
-          );
-          setSubmitting(false);
-          return;
-        }
+      if (job?.source === "External") {
+        // If we don't have a configured external link, fall back to
+        // a Google "careers" search for this job / company.
+        const finalUrl = applyLink || buildFallbackSearch(job);
 
-        window.open(applyLink, "_blank", "noopener,noreferrer");
+        window.open(finalUrl, "_blank", "noopener,noreferrer");
       } else {
-        alert(`Application submitted for: ${job.title}`);
+        // Internal / pipeline-only jobs
+        alert(`Application submitted for: ${job?.title || "this job"}`);
       }
 
       if (typeof onClose === "function") {
@@ -57,6 +64,7 @@ export default function JobApplyModal({ job, onClose }) {
       }
     } catch (err) {
       console.error("Error submitting application:", err);
+      // This is the only error the user will ever see now.
       alert(
         "Something went wrong while starting your application. Please try again."
       );
@@ -73,8 +81,8 @@ export default function JobApplyModal({ job, onClose }) {
         </h2>
         <p className="text-sm text-gray-600 mb-4">
           We will record this application in your pipeline. For external jobs,
-          you will also be redirected to the employer&apos;s site to complete
-          your application.
+          you will also be redirected to the employer&apos;s site (or a careers
+          search) to complete your application.
         </p>
 
         <form onSubmit={handleSubmit}>
