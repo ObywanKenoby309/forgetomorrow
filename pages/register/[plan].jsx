@@ -14,19 +14,19 @@ const planInfo = {
     name: 'Job Seeker Pro',
     price: '$9.99 / month',
     tier: 'PRO',
-    priceId: 'price_1SVFSG0l9wtvF7U5zkEte7yY',
+    priceId: 'price_1SUQc00l9wtvF7U5IBMnBjFv',
   },
   'coach-mentor': {
     name: 'Coach & Mentor',
     price: '$39.99 / month',
     tier: 'COACH',
-    priceId: 'price_1SVFRp0l9wtvF7U5mkqdFHRs',
+    priceId: 'price_1SUQcs0l9wtvF7U56uwkzuzE',
   },
   'recruiter-smb': {
     name: 'Recruiter SMB',
     price: '$99.99 / month',
     tier: 'SMALL_BIZ',
-    priceId: 'price_1SVFR20l9wtvF7U5Nrduc7Bj',
+    priceId: 'price_1SUQdf0l9wtvF7U5h6K9BjhU',
   },
 };
 
