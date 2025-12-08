@@ -68,7 +68,8 @@ export default function App({ Component, pageProps: { session, ...pageProps } })
 
   const isCoachingRoute =
     router.pathname === '/coaching-dashboard' ||
-    router.pathname.startsWith('/dashboard/coaching');
+    router.pathname.startsWith('/dashboard/coaching') ||
+    router.pathname.startsWith('/coach'); // 👈 NEW: treat /coach/* as coaching/internal
 
   const isSettingsRoute = router.pathname === '/settings';
 
