@@ -819,7 +819,7 @@ function Jobs() {
                       cursor: 'pointer',
                       border: isSelected
                         ? '2px solid #FF7043'
-                        : '1px solid #e0e0e0',
+                        : '1px solid #e0e0e0', // ← fixed quotes
                     }}
                     onClick={() => handleSelectJob(job)}
                   >
@@ -1138,15 +1138,15 @@ function Jobs() {
                           color: isJobPinned(selectedJob)
                             ? '#D32F2F'
                             : '#FF7043',
-                          padding: '6px 12px',
+                          padding: '6px 10px',
                           borderRadius: 999,
                           border: `1px solid ${
                             isJobPinned(selectedJob) ? '#D32F2F' : '#FF7043'
                           }`,
                           fontWeight: 600,
-                          fontSize: 13,
+                          fontSize: 12,
                           cursor: 'pointer',
-                          minWidth: 80,
+                          minWidth: 72,
                         }}
                         aria-pressed={isJobPinned(selectedJob)}
                       >
@@ -1159,13 +1159,13 @@ function Jobs() {
                         style={{
                           background: '#FF7043',
                           color: 'white',
-                          padding: '6px 16px',
+                          padding: '6px 14px',
                           borderRadius: 999,
                           border: 'none',
                           fontWeight: 600,
-                          fontSize: 13,
+                          fontSize: 12,
                           cursor: 'pointer',
-                          minWidth: 90,
+                          minWidth: 78,
                         }}
                       >
                         Apply
@@ -1185,11 +1185,11 @@ function Jobs() {
                             style={{
                               background: 'white',
                               color: '#FF7043',
-                              padding: '6px 12px',
+                              padding: '6px 10px',
                               borderRadius: 999,
                               border: '1px solid #FF7043',
                               fontWeight: 600,
-                              fontSize: 13,
+                              fontSize: 12,
                               cursor: 'pointer',
                               whiteSpace: 'nowrap',
                             }}
@@ -1205,12 +1205,12 @@ function Jobs() {
                           href={selectedJobApplyLink}
                           target="_blank"
                           style={{
-                            padding: '6px 12px',
+                            padding: '6px 10px',
                             borderRadius: 8,
                             border: '1px solid #ddd',
                             color: '#263238',
                             textDecoration: 'none',
-                            fontSize: 13,
+                            fontSize: 12,
                             whiteSpace: 'nowrap',
                           }}
                         >
