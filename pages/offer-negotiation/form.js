@@ -1,62 +1,71 @@
 // pages/offer-negotiation/form.js
 
 import React from 'react';
+import Head from 'next/head';
 import { useRouter } from 'next/router';
-import SeekerSidebar from '../../components/SeekerSidebar';
-import NegotiationInputForm from '../../components/offer-negotiation/NegotiationInputForm';
+import SeekerLayout from '@/components/layouts/SeekerLayout';
+import NegotiationInputForm from '@/components/offer-negotiation/NegotiationInputForm';
 
 export default function OfferNegotiationFormPage() {
   const router = useRouter();
 
   const handleFormSubmit = (formData) => {
-    // NOTE: For now we serialize into the query string.
-    // If payloads get large, we can switch to:
-    // - POST to an API and pass back an ID, or
-    // - use sessionStorage/localStorage as a short-lived stash.
     const query = encodeURIComponent(JSON.stringify(formData));
     router.push(`/offer-negotiation/results?data=${query}`);
   };
 
-  return (
-    <div
+  const Header = (
+    <section
+      aria-label="Offer negotiation form header"
       style={{
-        display: 'grid',
-        gridTemplateColumns: '300px minmax(0, 1fr) 300px',
-        gap: '20px',
-        padding: '120px 20px 20px',
-        minHeight: '100vh',
-        backgroundColor: '#ECEFF1',
+        background: 'white',
+        borderRadius: 12,
+        padding: 16,
+        boxShadow: '0 2px 6px rgba(0,0,0,0.06)',
+        border: '1px solid #eee',
+        textAlign: 'center',
       }}
     >
-      <SeekerSidebar />
-
-      <main
+      <h1
         style={{
-          display: 'flex',
-          justifyContent: 'center',
+          margin: 0,
+          color: '#FF7043',
+          fontSize: 24,
+          fontWeight: 800,
         }}
       >
-        <div
-          style={{
-            backgroundColor: 'white',
-            borderRadius: '8px',
-            boxShadow: '0 2px 8px rgba(0,0,0,0.1)',
-            padding: '32px',
-            maxWidth: '800px',
-            width: '100%',
-          }}
-        >
-          <NegotiationInputForm onSubmit={handleFormSubmit} />
-        </div>
-      </main>
-
-      <aside
+        Offer Details
+      </h1>
+      <p
         style={{
-          backgroundColor: '#ECEFF1',
-          borderRadius: '8px',
-          width: '300px',
+          margin: '6px auto 0',
+          color: '#607D8B',
+          maxWidth: 720,
         }}
-      />
-    </div>
+      >
+        Share your offer, current role, and priorities. We’ll help you shape a
+        negotiation plan that respects your value.
+      </p>
+    </section>
+  );
+
+  return (
+    <>
+      <Head>
+        <title>Offer Details | ForgeTomorrow</title>
+      </Head>
+      <SeekerLayout
+        title="Offer Details | ForgeTomorrow"
+        header={Header}
+        right={null}
+        activeNav={null}
+      >
+        <div className="w-full max-w-3xl mx-auto">
+          <div className="bg-white border border-gray-200 rounded-xl p-6 shadow-sm">
+            <NegotiationInputForm onSubmit={handleFormSubmit} />
+          </div>
+        </div>
+      </SeekerLayout>
+    </>
   );
 }
