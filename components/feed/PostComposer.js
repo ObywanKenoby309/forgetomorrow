@@ -93,7 +93,6 @@ export default function PostComposer({ onPost, onCancel }) {
     const body = text.trim();
     if (!canPost) return;
 
-    // ❌ no more author: 'You'
     onPost?.({
       id:
         (typeof crypto !== 'undefined' && crypto.randomUUID?.()) ||
@@ -223,7 +222,7 @@ export default function PostComposer({ onPost, onCancel }) {
         </div>
       )}
 
-      {/* Layout: buttons inside the card, not stretched */}
+      {/* Bottom controls – inside the card, not stretched */}
       <div className="mt-3 flex flex-col gap-3 sm:flex-row sm:items-center sm:gap-4">
         {/* Left: attachment controls */}
         <div className="flex flex-wrap items-center gap-3 text-sm text-gray-700">
@@ -244,3 +243,119 @@ export default function PostComposer({ onPost, onCancel }) {
           >
             <span role="img" aria-label="photo">
               📷
+            </span>
+            Photo
+          </label>
+
+          <input
+            id="feed-video-input"
+            type="file"
+            accept="video/mp4,video/webm"
+            multiple
+            className="hidden"
+            onChange={(e) => {
+              addVideos(e.target.files);
+              e.target.value = '';
+            }}
+          />
+          <label
+            htmlFor="feed-video-input"
+            className="inline-flex items-center gap-1 hover:text-gray-900 cursor-pointer"
+          >
+            <span role="img" aria-label="video">
+              🎥
+            </span>
+            Video
+          </label>
+
+          <button
+            type="button"
+            className="inline-flex items-center gap-1 hover:text-gray-900"
+            onClick={() => setShowLinkInput((v) => !v)}
+          >
+            <span role="img" aria-label="link">
+              🔗
+            </span>
+            Link
+          </button>
+
+          <button
+            type="button"
+            className="inline-flex items-center gap-1 hover:text-gray-900"
+            onClick={() => setShowEmojiBar((v) => !v)}
+          >
+            <span role="img" aria-label="emoji">
+              🙂
+            </span>
+            Emoji
+          </button>
+        </div>
+
+        {/* Right: type selector + Post/Cancel */}
+        <div className="flex flex-wrap items-center justify-start gap-2 sm:gap-3">
+          <label className="text-sm text-gray-600 hidden sm:block">
+            Post as<span className="text-red-500">*</span>:
+          </label>
+
+          <div className="inline-flex rounded-md border overflow-hidden">
+            <button
+              type="button"
+              onClick={() => setPostType('business')}
+              className={`px-3 py-1 text-sm ${
+                postType === 'business'
+                  ? 'bg-[#ff8a65] text-white'
+                  : 'bg-white'
+              }`}
+              aria-pressed={postType === 'business'}
+            >
+              Business
+            </button>
+            <button
+              type="button"
+              onClick={() => setPostType('personal')}
+              className={`px-3 py-1 text-sm ${
+                postType === 'personal'
+                  ? 'bg-[#ff8a65] text-white'
+                  : 'bg-white'
+              }`}
+              aria-pressed={postType === 'personal'}
+            >
+              Personal
+            </button>
+          </div>
+
+          <button
+            type="button"
+            onClick={submit}
+            disabled={!canPost}
+            className="bg-[#ff7043] text-white font-semibold px-4 py-2 rounded-md disabled:opacity-40 disabled:cursor-not-allowed"
+            title={
+              !canPost
+                ? 'Write something and choose Business or Personal'
+                : 'Post'
+            }
+          >
+            Post
+          </button>
+
+          {onCancel && (
+            <button
+              type="button"
+              onClick={onCancel}
+              className="px-3 py-2 rounded-md border text-sm"
+            >
+              Cancel
+            </button>
+          )}
+        </div>
+      </div>
+
+      {/* gentle nudge when type unselected */}
+      {!postType && text.trim() && (
+        <div className="mt-2 text-xs text-red-500">
+          Please choose Business or Personal before posting.
+        </div>
+      )}
+    </section>
+  );
+}
