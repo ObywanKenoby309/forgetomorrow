@@ -129,7 +129,44 @@ export default function SeekerDashboard() {
 
   const RightRail = (
     <div className="grid gap-4">
+      {/* Existing seeker shortcuts / common tools */}
       <SeekerRightColumn variant="dashboard" />
+
+      {/* Resume + Cover builder quick access */}
+      <section className="bg-white border border-gray-200 rounded-xl p-4 shadow-sm">
+        <h2 className="text-sm font-semibold text-gray-900 mb-1">
+          Resume & Cover
+        </h2>
+        <p className="text-xs text-gray-600 mb-3">
+          Keep your resume and cover letter updated in one place.
+        </p>
+        <div className="flex flex-wrap gap-2">
+          <Link
+            href={withChrome('/resume/create')}
+            className="inline-flex items-center justify-center px-3 py-1.5 rounded-full text-xs font-semibold bg-orange-50 text-orange-700 hover:bg-orange-100"
+          >
+            Open resume builder
+          </Link>
+          <Link
+            href={withChrome('/cover/create')}
+            className="inline-flex items-center justify-center px-3 py-1.5 rounded-full text-xs font-semibold bg-slate-50 text-slate-800 hover:bg-slate-100"
+          >
+            Open cover letter
+          </Link>
+        </div>
+      </section>
+
+      {/* Career roadmap teaser (no broken links) */}
+      <section className="bg-white border border-gray-200 rounded-xl p-4 shadow-sm">
+        <h2 className="text-sm font-semibold text-gray-900 mb-1">
+          Career Roadmap
+        </h2>
+        <p className="text-xs text-gray-600">
+          Soon you&apos;ll be able to map your next 2–3 roles, skills, and
+          milestones here. For now, use your dashboard and The Hearth to plan
+          your next move.
+        </p>
+      </section>
     </div>
   );
 

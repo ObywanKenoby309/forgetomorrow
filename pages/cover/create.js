@@ -122,6 +122,9 @@ export default function CoverLetterPage() {
     experiences = [],
   } = useContext(ResumeContext);
 
+  // 🔹 Safely read personal info from resume builder (name/email/etc.)
+  const personalInfo = formData.personalInfo || {};
+
   const [jd, setJd] = useState('');
   const [isLoading, setIsLoading] = useState(false);
 
@@ -136,7 +139,11 @@ export default function CoverLetterPage() {
 
   // ✅ Portfolio now also falls back to Forge URL / FT profile
   const [portfolio, setPortfolio] = useState(
-    formData?.portfolio || formData?.forgeUrl || formData?.ftProfile || ''
+    formData?.portfolio ||
+      formData?.forgeUrl ||
+      formData?.ftProfile ||
+      personalInfo?.portfolio ||
+      ''
   );
 
   const [openRequired, setOpenRequired] = useState(true);
@@ -152,12 +159,17 @@ export default function CoverLetterPage() {
       })
     : '';
 
-  // ✅ FullName now falls back to formData.name so the resume name shows up
+  // ✅ FullName and contact details now also check personalInfo from resume
   const letterData = {
-    fullName: formData.fullName || formData.name || 'Your Name',
-    email: formData.email || '',
-    phone: formData.phone || '',
-    location: formData.location || '',
+    fullName:
+      personalInfo.fullName ||
+      personalInfo.name ||
+      formData.fullName ||
+      formData.name ||
+      'Your Name',
+    email: personalInfo.email || formData.email || '',
+    phone: personalInfo.phone || formData.phone || '',
+    location: personalInfo.location || formData.location || '',
     portfolio: portfolio || '',
     recipient: recipient || 'Hiring Manager',
     company: company || 'the company',

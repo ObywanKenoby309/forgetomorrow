@@ -14,7 +14,8 @@ function Chevron({ open }) {
       aria-hidden="true"
       style={{
         display: 'inline-block',
-        width: 0, height: 0,
+        width: 0,
+        height: 0,
         borderTop: '6px solid transparent',
         borderBottom: '6px solid transparent',
         borderLeft: `8px solid ${ORANGE}`,
@@ -68,8 +69,12 @@ function NavItem({ href, label, active, badge }) {
     <Link
       href={href}
       style={base}
-      onMouseEnter={(e) => { if (!active) e.currentTarget.style.background = ORANGE_SOFT; }}
-      onMouseLeave={(e) => { if (!active) e.currentTarget.style.background = CARD_BG; }}
+      onMouseEnter={(e) => {
+        if (!active) e.currentTarget.style.background = ORANGE_SOFT;
+      }}
+      onMouseLeave={(e) => {
+        if (!active) e.currentTarget.style.background = CARD_BG;
+      }}
     >
       <span style={{ flex: '0 1 auto' }}>{label}</span>
       <Badge value={badge} />
@@ -86,10 +91,16 @@ function Section({ title, children, defaultOpen = false }) {
         onClick={() => setOpen(!open)}
         aria-expanded={open}
         style={{
-          display: 'flex', alignItems: 'center', gap: 10,
-          borderRadius: 12, padding: '10px 14px',
-          background: CARD_BG, border: `1px solid ${CARD_BORDER}`,
-          fontWeight: 800, color: TEXT_MAIN, cursor: 'pointer',
+          display: 'flex',
+          alignItems: 'center',
+          gap: 10,
+          borderRadius: 12,
+          padding: '10px 14px',
+          background: CARD_BG,
+          border: `1px solid ${CARD_BORDER}`,
+          fontWeight: 800,
+          color: TEXT_MAIN,
+          cursor: 'pointer',
         }}
       >
         <Chevron open={open} />
@@ -99,10 +110,12 @@ function Section({ title, children, defaultOpen = false }) {
       {open && (
         <div
           style={{
-            display: 'grid', gap: 8,
+            display: 'grid',
+            gap: 8,
             background: '#F9FAFB',
             border: `1px solid ${CARD_BORDER}`,
-            borderRadius: 12, padding: 8,
+            borderRadius: 12,
+            padding: 8,
           }}
         >
           {children}
@@ -118,6 +131,23 @@ export default function CoachingSidebar({
   // now also supports "connections" for default open/closed
   initialOpen = { coaching: false, seeker: false, connections: false },
 }) {
+  // make sections auto-open if the current active item lives inside them
+  const isConnectionsActive = ['contacts', 'messages', 'feed'].includes(active);
+  const isCoachingActive = [
+    'clients',
+    'sessions',
+    'calendar',
+    'resources',
+    'feedback',
+    'coach-messages',
+  ].includes(active);
+  const isSeekerActive = [
+    'seeker-dashboard',
+    'resume-cover',
+    'roadmap',
+    'seeker-calendar',
+  ].includes(active);
+
   return (
     <nav
       style={{
@@ -143,8 +173,11 @@ export default function CoachingSidebar({
         active={active === 'overview'}
       />
 
-      {/* 3) Connections (section, like Seeker) */}
-      <Section title="Connections" defaultOpen={!!initialOpen.connections}>
+      {/* 3) Connections */}
+      <Section
+        title="Connections"
+        defaultOpen={!!initialOpen.connections || isConnectionsActive}
+      >
         <NavItem
           href="/seeker/contact-center?chrome=coach"
           label="Contact Center"
@@ -165,7 +198,10 @@ export default function CoachingSidebar({
       </Section>
 
       {/* 4) Coaching Tools */}
-      <Section title="Coaching Tools" defaultOpen={!!initialOpen.coaching}>
+      <Section
+        title="Coaching Tools"
+        defaultOpen={!!initialOpen.coaching || isCoachingActive}
+      >
         <NavItem
           href="/dashboard/coaching/clients"
           label="Clients"
@@ -194,9 +230,15 @@ export default function CoachingSidebar({
           active={active === 'feedback'}
           badge={counts.feedback}
         />
+        {/* NEW: Coaching Messaging */}
+        <NavItem
+          href="/coaching/messaging"
+          label="Messaging"
+          active={active === 'coach-messages'}
+        />
       </Section>
 
-      {/* 5) Jobs (standalone buffer) */}
+      {/* 5) Jobs (standalone) */}
       <NavItem
         href="/jobs?chrome=coach"
         label="Jobs"
@@ -204,7 +246,10 @@ export default function CoachingSidebar({
       />
 
       {/* 6) Seeker Tools */}
-      <Section title="Seeker Tools" defaultOpen={!!initialOpen.seeker}>
+      <Section
+        title="Seeker Tools"
+        defaultOpen={!!initialOpen.seeker || isSeekerActive}
+      >
         <NavItem
           href="/seeker-dashboard?chrome=coach"
           label="Seeker Dashboard"
@@ -230,7 +275,7 @@ export default function CoachingSidebar({
 
       {/* 7) The Hearth */}
       <NavItem
-        href="/seeker/the-hearth?chrome=coach"
+        href="/coach/the-hearth?chrome=coach"
         label="The Hearth"
         active={active === 'hearth'}
       />

@@ -1,6 +1,5 @@
 // pages/the-hearth.js
 import SeekerLayout from '@/components/layouts/SeekerLayout';
-import SeekerRightColumn from '@/components/seeker/SeekerRightColumn';
 import HearthCenter from '@/components/community/HearthCenter';
 import Link from 'next/link';
 
@@ -43,9 +42,7 @@ function HeaderBox() {
 function RightRail() {
   return (
     <div style={{ display: 'grid', gap: 12 }}>
-      <SeekerRightColumn variant="community" />
-
-      {/* Extra quick links */}
+      {/* Community guidelines + support */}
       <div
         style={{
           background: 'white',
@@ -53,11 +50,25 @@ function RightRail() {
           padding: 12,
           display: 'grid',
           gap: 8,
+          boxShadow: '0 2px 6px rgba(0,0,0,0.06)',
+          border: '1px solid #eee',
         }}
       >
-        <div style={{ fontWeight: 800, color: '#37474F' }}>Shortcuts</div>
-        <Link href="/about" style={{ color: '#FF7043', fontWeight: 600 }}>Community Guidelines</Link>
-        <Link href="/support" style={{ color: '#FF7043', fontWeight: 600 }}>Get Support</Link>
+        <div style={{ fontWeight: 800, color: '#37474F' }}>
+          Community Guidelines & Support
+        </div>
+        <Link
+          href="/about"
+          style={{ color: '#FF7043', fontWeight: 600 }}
+        >
+          Community Guidelines
+        </Link>
+        <Link
+          href="/support"
+          style={{ color: '#FF7043', fontWeight: 600 }}
+        >
+          Get Support
+        </Link>
       </div>
 
       {/* Rules */}
@@ -68,6 +79,8 @@ function RightRail() {
           padding: 12,
           display: 'grid',
           gap: 6,
+          boxShadow: '0 2px 6px rgba(0,0,0,0.06)',
+          border: '1px solid #eee',
         }}
       >
         <div style={{ fontWeight: 800, color: '#37474F' }}>Community Rules</div>
@@ -76,6 +89,31 @@ function RightRail() {
           <li>No spam or solicitations</li>
           <li>Keep personal info private</li>
         </ul>
+      </div>
+
+      {/* Advertisement slot for The Hearth */}
+      <div
+        style={{
+          background: 'white',
+          borderRadius: 10,
+          padding: 12,
+          boxShadow: '0 2px 6px rgba(0,0,0,0.06)',
+          border: '1px solid #eee',
+        }}
+      >
+        <div style={{ fontWeight: 800, color: '#37474F', marginBottom: 4 }}>
+          Partner Spotlight
+        </div>
+        <p style={{ margin: 0, color: '#607D8B', fontSize: 13 }}>
+          Your advertisement could be here. Contact{' '}
+          <a
+            href="mailto:sales@forgetomorrow.com"
+            style={{ color: '#FF7043', fontWeight: 600 }}
+          >
+            sales@forgetomorrow.com
+          </a>
+          .
+        </p>
       </div>
     </div>
   );

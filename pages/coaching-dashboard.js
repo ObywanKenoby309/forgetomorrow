@@ -85,14 +85,9 @@ export default function CoachingDashboardPage() {
     .sort((a, b) => (a.date + a.time).localeCompare(b.date + b.time))
     .slice(0, 3);
 
-  // --- Clients (mock list for the table) ---
-  const clients = [
-    { name: 'Alex Turner', status: 'Active', next: 'Aug 14, 10:00 AM' },
-    { name: 'Priya N.', status: 'Active', next: 'Aug 15, 1:30 PM' },
-    { name: 'Michael R.', status: 'At Risk', next: 'Aug 13, 3:00 PM' },
-    { name: 'Dana C.', status: 'New Intake', next: 'Aug 16, 9:00 AM' },
-    { name: 'Robert L.', status: 'Active', next: 'Aug 19, 2:30 PM' },
-  ];
+  // --- Clients (dashboard table) ---
+  // NOTE: remove hard-coded demo names; show neutral empty state instead.
+  const clients = [];
 
   return (
     <CoachingLayout
@@ -179,56 +174,74 @@ export default function CoachingDashboardPage() {
 
         {/* Clients (compact table) */}
         <Section title="Clients">
-          <div style={{ overflowX: 'auto' }}>
-            <table
+          {clients.length === 0 ? (
+            <div
               style={{
-                width: '100%',
-                borderCollapse: 'separate',
-                borderSpacing: 0,
+                padding: 16,
                 background: 'white',
-                border: '1px solid #eee',
                 borderRadius: 10,
-                overflow: 'hidden',
+                border: '1px solid #eee',
+                color: '#90A4AE',
+                fontSize: 14,
               }}
             >
-              <thead>
-                <tr style={{ background: '#FAFAFA' }}>
-                  <Th>Name</Th>
-                  <Th>Status</Th>
-                  <Th>Next Session</Th>
-                </tr>
-              </thead>
-              <tbody>
-                {clients.map((c) => {
-                  const { background, color } = getStatusStyles(c.status);
-                  return (
-                    <tr key={c.name} style={{ borderTop: '1px solid #eee' }}>
-                      <Td strong>{c.name}</Td>
-                      <Td>
-                        <span
-                          style={{
-                            fontSize: 12,
-                            background,
-                            color,
-                            padding: '4px 8px',
-                            borderRadius: 999,
-                          }}
-                        >
-                          {c.status}
-                        </span>
-                      </Td>
-                      <Td>{c.next}</Td>
+              No clients yet. Once you start working with clients, a quick snapshot of their status
+              will appear here.
+            </div>
+          ) : (
+            <>
+              <div style={{ overflowX: 'auto' }}>
+                <table
+                  style={{
+                    width: '100%',
+                    borderCollapse: 'separate',
+                    borderSpacing: 0,
+                    background: 'white',
+                    border: '1px solid #eee',
+                    borderRadius: 10,
+                    overflow: 'hidden',
+                  }}
+                >
+                  <thead>
+                    <tr style={{ background: '#FAFAFA' }}>
+                      <Th>Name</Th>
+                      <Th>Status</Th>
+                      <Th>Next Session</Th>
                     </tr>
-                  );
-                })}
-              </tbody>
-            </table>
-          </div>
-          <div style={{ textAlign: 'right', marginTop: 10 }}>
-            <Link href="/dashboard/coaching/clients" style={{ color: '#FF7043', fontWeight: 600 }}>
-              View all clients
-            </Link>
-          </div>
+                  </thead>
+                  <tbody>
+                    {clients.map((c) => {
+                      const { background, color } = getStatusStyles(c.status);
+                      return (
+                        <tr key={c.name} style={{ borderTop: '1px solid #eee' }}>
+                          <Td strong>{c.name}</Td>
+                          <Td>
+                            <span
+                              style={{
+                                fontSize: 12,
+                                background,
+                                color,
+                                padding: '4px 8px',
+                                borderRadius: 999,
+                              }}
+                            >
+                              {c.status}
+                            </span>
+                          </Td>
+                          <Td>{c.next}</Td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </div>
+              <div style={{ textAlign: 'right', marginTop: 10 }}>
+                <Link href="/dashboard/coaching/clients" style={{ color: '#FF7043', fontWeight: 600 }}>
+                  View all clients
+                </Link>
+              </div>
+            </>
+          )}
         </Section>
 
         {/* CSAT Overview (with Refresh button) */}

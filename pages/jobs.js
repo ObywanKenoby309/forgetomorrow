@@ -173,28 +173,26 @@ function PageHeader() {
 function RightRail() {
   return (
     <nav
-      aria-label="Job listing shortcuts"
+      aria-label="Job page advertisements"
       style={{ display: 'grid', gap: 12 }}
     >
       <div
         style={{
-          background: '#2a2a2a',
-          border: '1px solid #3a3a3a',
+          background: '#1f1f1f',
+          border: '1px solid #333',
           borderRadius: 12,
           padding: 16,
           color: 'white',
         }}
       >
-        <div style={{ fontWeight: 700, marginBottom: 8 }}>Shortcuts</div>
-        <Link
-          href="/jobs"
-          style={{ color: '#FF7043', display: 'block', marginBottom: 6 }}
-        >
-          All Jobs
-        </Link>
-        <Link href="/resume-cover" style={{ color: '#FF7043' }}>
-          Resume Builder
-        </Link>
+        <div style={{ fontWeight: 700, marginBottom: 6, fontSize: 14 }}>
+          Hiring for your team?
+        </div>
+        <p style={{ fontSize: 13, margin: 0, lineHeight: 1.5 }}>
+          Your advertisement could be here.
+          <br />
+          Contact <span style={{ fontWeight: 700 }}>sales@forgetomorrow.com</span>.
+        </p>
       </div>
     </nav>
   );

@@ -51,7 +51,7 @@ function HeaderBar({ onOpenBulk }) {
 }
 
 /* ---------------------------------------------
-   RIGHT SIDEBAR CARD
+   RIGHT SIDEBAR CARD + AD SLOT
 ---------------------------------------------- */
 function RightToolsCard() {
   return (
@@ -60,6 +60,31 @@ function RightToolsCard() {
       <div className="text-sm text-slate-600 space-y-2">
         <p>Keep bulk messages short and human.</p>
         <p>Use saved replies for common touchpoints, then personalize.</p>
+      </div>
+    </div>
+  );
+}
+
+function RightRail() {
+  return (
+    <div className="space-y-4">
+      <RightToolsCard />
+
+      {/* Advertisement slot */}
+      <div className="rounded-lg border bg-white p-4">
+        <div className="font-medium mb-2">Sponsored</div>
+        <div className="text-sm text-slate-600">
+          Your advertisement could be here.
+          <br />
+          Contact{" "}
+          <a
+            href="mailto:sales@forgetomorrow.com"
+            className="text-[#FF7043] underline"
+          >
+            sales@forgetomorrow.com
+          </a>
+          .
+        </div>
       </div>
     </div>
   );
@@ -213,8 +238,7 @@ export default function CoachMessagingPage() {
   async function fetchJson(url, options = {}) {
     if (!currentUserId) {
       throw new Error("No current user id resolved yet");
-    }
-
+      }
     const res = await fetch(url, {
       ...options,
       headers: {
@@ -365,8 +389,9 @@ export default function CoachMessagingPage() {
         <CoachingLayout
           title="Messaging — ForgeTomorrow"
           header={<HeaderBar onOpenBulk={() => {}} />}
-          right={<RightToolsCard />}
+          right={<RightRail />}
           activeNav="messaging"
+          footer={null}
         >
           <div className="h-64 flex items-center justify-center text-slate-500">
             Loading…
@@ -384,8 +409,9 @@ export default function CoachMessagingPage() {
       <CoachingLayout
         title="Messaging — ForgeTomorrow"
         header={<HeaderBar onOpenBulk={() => setBulkOpen(true)} />}
-        right={<RightToolsCard />}
+        right={<RightRail />}
         activeNav="messaging"
+        footer={null}
       >
         <Body
           threads={threads}
