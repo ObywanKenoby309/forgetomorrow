@@ -9,9 +9,9 @@ export default function CoachingSessionsCalendarPage() {
   return (
     <CoachingLayout
       title="Sessions Calendar | ForgeTomorrow"
-      activeNav="calendar" // <- highlight Calendar in sidebar
+      activeNav="calendar" // calendar tab highlighted in sidebar
       headerDescription="View, add, and manage upcoming coaching sessions in calendar view."
-      right={null} // full-width calendar
+      right={null} // full-width calendar, no right rail
       sidebarInitialOpen={{ coaching: true, seeker: false }}
     >
       {/* Center column content */}
@@ -19,7 +19,8 @@ export default function CoachingSessionsCalendarPage() {
         <CalendarInterface
           title="Sessions Calendar"
           storageKey={STORAGE_KEY}
-          seed={[]} // <- no fake seed data; calendar starts empty
+          // no fake seed data; calendar will start empty and use whatever the coach adds
+          seed={[]}
           typeChoices={['Strategy', 'Resume', 'Interview']}
           statusChoices={['Scheduled', 'Completed', 'No-show']}
           backHref="/dashboard/coaching/sessions"

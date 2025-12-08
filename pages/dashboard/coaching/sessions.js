@@ -23,9 +23,10 @@ export default function CoachingSessionsPage() {
   const [type, setType] = useState('All');
   const [status, setStatus] = useState('All');
 
-  // Sessions state + persistence
+  // Sessions state + persistence (NO SEED DATA)
   const [sessions, setSessions] = useState([]);
 
+  // Load from localStorage only; start empty if nothing saved
   useEffect(() => {
     if (typeof window === 'undefined') return;
     try {
@@ -36,6 +37,7 @@ export default function CoachingSessionsPage() {
     }
   }, []);
 
+  // Persist any changes back to localStorage
   useEffect(() => {
     if (typeof window === 'undefined') return;
     try {
@@ -143,7 +145,13 @@ export default function CoachingSessionsPage() {
 
   const openEdit = (idx) => {
     const s = sessions[idx];
-    setForm({ date: s.date, time: s.time, client: s.client, type: s.type, status: s.status });
+    setForm({
+      date: s.date,
+      time: s.time,
+      client: s.client,
+      type: s.type,
+      status: s.status,
+    });
     setModal({ open: true, mode: 'edit', index: idx });
   };
 
@@ -368,7 +376,7 @@ export default function CoachingSessionsPage() {
                           style={{
                             background: 'white',
                             color: '#C62828',
-                            border: '1px solid #C62828',
+                            border: '1px solid '#C62828',
                             borderRadius: 6,
                             padding: '4px 8px',
                             fontSize: 11,
@@ -475,13 +483,7 @@ export default function CoachingSessionsPage() {
               </select>
             </label>
 
-            <div
-              style={{
-                display: 'flex',
-                justifyContent: 'space-between',
-                marginTop: 10,
-              }}
-            >
+            <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: 10 }}>
               {modal.mode === 'edit' && (
                 <button
                   type="button"
