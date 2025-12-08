@@ -122,6 +122,7 @@ export default function MemberProfile({ user, primaryResume }) {
     bannerMode,
     bannerHeight,
     bannerFocalY,
+    wallpaperUrl,
     corporateBannerKey,
     corporateBannerLocked,
     isProfilePublic,
@@ -177,7 +178,7 @@ export default function MemberProfile({ user, primaryResume }) {
       if (!res.ok) {
         const text = await res.text();
         console.error('contacts/request failed:', text);
-        alert('We could not send your connection request. Please try again.');
+        // Silent fail for user; keep button as-is
         return;
       }
 
@@ -185,16 +186,14 @@ export default function MemberProfile({ user, primaryResume }) {
 
       if (data.alreadyConnected) {
         setConnectStatus('connected');
-        alert('You are already connected with this member.');
       } else if (data.alreadyRequested) {
         setConnectStatus('requested');
-        alert('You already have a pending request with this member.');
       } else {
         setConnectStatus('requested');
       }
     } catch (err) {
       console.error('contacts/request error:', err);
-      alert('We could not send your connection request. Please try again.');
+      // Silent fail; user can try again
     }
   };
 
@@ -265,7 +264,34 @@ export default function MemberProfile({ user, primaryResume }) {
         right={RightRail}
         activeNav="contacts"
       >
-        <div className="w-full max-w-6xl mx-auto px-4 md:px-6 pb-8 space-y-5">
+        {/* Wallpaper from the viewed user */}
+        {wallpaperUrl && (
+          <>
+            <div
+              style={{
+                position: 'fixed',
+                inset: 0,
+                zIndex: 0,
+                backgroundImage: `url(${wallpaperUrl})`,
+                backgroundSize: 'cover',
+                backgroundPosition: 'center',
+              }}
+            />
+            <div
+              style={{
+                position: 'fixed',
+                inset: 0,
+                zIndex: 0,
+                backgroundColor: 'rgba(0,0,0,0.45)',
+              }}
+            />
+          </>
+        )}
+
+        <div
+          className="w-full max-w-6xl mx-auto px-4 md:px-6 pb-8 space-y-5"
+          style={{ position: 'relative', zIndex: 1 }}
+        >
           {/* Banner */}
           <div
             className="member-banner"
@@ -281,6 +307,25 @@ export default function MemberProfile({ user, primaryResume }) {
               backgroundColor: '#112033',
             }}
           />
+
+          {/* Privacy note for non-public profiles */}
+          {!isProfilePublic && (
+            <section
+              style={{
+                marginTop: 0,
+                marginBottom: 8,
+                padding: 12,
+                borderRadius: 10,
+                background: '#FFF3E0',
+                border: '1px solid #FFE0B2',
+                color: '#BF360C',
+                fontSize: 13,
+              }}
+            >
+              This member has their profile set to non-public. You can still send
+              a message or connection request to start a conversation.
+            </section>
+          )}
 
           {/* Header card */}
           <section
@@ -321,7 +366,9 @@ export default function MemberProfile({ user, primaryResume }) {
               </h2>
 
               {pronouns && (
-                <p style={{ margin: '4px 0', color: '#607D8B' }}>{pronouns}</p>
+                <p style={{ margin: '4px 0', color: '#607D8B' }}>
+                  {pronouns}
+                </p>
               )}
 
               {headline && (
@@ -379,7 +426,8 @@ export default function MemberProfile({ user, primaryResume }) {
                   onClick={handleConnect}
                   style={{
                     background:
-                      connectStatus === 'requested' || connectStatus === 'connected'
+                      connectStatus === 'requested' ||
+                      connectStatus === 'connected'
                         ? '#FFE0B2'
                         : 'white',
                     color: '#FF7043',
@@ -387,11 +435,17 @@ export default function MemberProfile({ user, primaryResume }) {
                     padding: '8px 14px',
                     borderRadius: 999,
                     cursor:
-                      connectStatus === 'requested' || connectStatus === 'connected'
+                      connectStatus === 'requested' ||
+                      connectStatus === 'connected'
                         ? 'default'
                         : 'pointer',
                     fontSize: 14,
                     fontWeight: 700,
+                    opacity:
+                      connectStatus === 'requested' ||
+                      connectStatus === 'connected'
+                        ? 0.9
+                        : 1,
                   }}
                 >
                   {connectStatus === 'connected'
@@ -400,6 +454,8 @@ export default function MemberProfile({ user, primaryResume }) {
                     ? 'Requested'
                     : 'Connect'}
                 </button>
+                {/* Intentionally no "View public profile" button */}
+                {publicProfileUrl && null}
               </div>
             </div>
           </section>
