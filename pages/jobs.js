@@ -1119,84 +1119,84 @@ function Jobs() {
                     {/* ACTION ROW: Pin | Apply | ATS Alignment | Open original */}
 <div
   style={{
-    display: 'flex',
-    flexDirection: 'row',
-    justifyContent: 'flex-start',
-    alignItems: 'center',
-    flexWrap: 'wrap',        // allow wrap on small screens
+    display: "flex",
+    flexDirection: "row",
+    justifyContent: "center",
+    alignItems: "center",
     gap: 8,
     marginTop: 12,
-    overflowX: 'visible',
-    paddingBottom: 2,
+    width: "100%",
+    flexWrap: "nowrap",
   }}
 >
+  {/* Pin */}
   <button
     type="button"
     onClick={() => togglePin(selectedJob)}
     style={{
-      background: 'white',
-      color: isJobPinned(selectedJob) ? '#D32F2F' : '#FF7043',
-      padding: '6px 12px',
+      background: "white",
+      color: isJobPinned(selectedJob) ? "#D32F2F" : "#FF7043",
+      padding: "6px 10px",
       borderRadius: 999,
-      border: `1px solid ${
-        isJobPinned(selectedJob) ? '#D32F2F' : '#FF7043'
-      }`,
+      border: `1px solid ${isJobPinned(selectedJob) ? "#D32F2F" : "#FF7043"}`,
       fontWeight: 600,
       fontSize: 13,
-      cursor: 'pointer',
-      minWidth: 80,
+      minWidth: 70,
+      textAlign: "center",
+      whiteSpace: "nowrap",
     }}
-    aria-pressed={isJobPinned(selectedJob)}
   >
-    {isJobPinned(selectedJob) ? 'Unpin job' : 'Pin job'}
+    {isJobPinned(selectedJob) ? "Unpin" : "Pin job"}
   </button>
 
+  {/* Apply */}
   <button
     type="button"
     onClick={() => handleApplyClick(selectedJob)}
     style={{
-      background: '#FF7043',
-      color: 'white',
-      padding: '6px 16px',
+      background: "#FF7043",
+      color: "white",
+      padding: "6px 16px",
       borderRadius: 999,
-      border: 'none',
-      fontWeight: 600,
+      border: "none",
+      fontWeight: 700,
       fontSize: 13,
-      cursor: 'pointer',
-      minWidth: 90,
+      minWidth: 70,
+      whiteSpace: "nowrap",
     }}
   >
     Apply
   </button>
 
-  {isPaidUser && (
-    <div
+  {/* ATS */}
+  <div
+    style={{
+      display: "flex",
+      alignItems: "center",
+      gap: 4,
+      whiteSpace: "nowrap",
+    }}
+  >
+    <button
+      type="button"
+      onClick={() => handleATSAlign(selectedJob)}
       style={{
-        display: 'inline-flex',
-        alignItems: 'center',
-        gap: 6,
+        background: "white",
+        color: "#FF7043",
+        padding: "6px 12px",
+        borderRadius: 999,
+        border: "1px solid #FF7043",
+        fontWeight: 600,
+        fontSize: 13,
+        whiteSpace: "nowrap",
       }}
     >
-      <button
-        type="button"
-        onClick={() => handleATSAlign(selectedJob)}
-        style={{
-          background: 'white',
-          color: '#FF7043',
-          padding: '6px 12px',
-          borderRadius: 999,
-          border: '1px solid #FF7043',
-          fontWeight: 600,
-          fontSize: 13,
-          cursor: 'pointer',
-          whiteSpace: 'nowrap',
-        }}
-      >
-        ATS Alignment
-      </button>
-      <ATSInfo />
-    </div>
-  )}
+      ATS Align.
+    </button>
+    <ATSInfo />
+  </div>
+</div>
+
 
   {selectedJobApplyLink && (
     <Link
