@@ -37,22 +37,25 @@ export default function JobApplyModal({ job, onClose }) {
 
     try {
       // Record application / interest for Pipeline
-      await fetch("/api/jobs/apply", {
+      // This matches pages/api/apply.js (jobId, resumeId, coverId)
+      const res = await fetch("/api/apply", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           jobId: job?.id,
-          title: job?.title,
-          source: job?.source,
-          applyLink,
+          resumeId: null,
+          coverId: null,
         }),
       });
+
+      if (!res.ok) {
+        throw new Error("Failed to submit application");
+      }
 
       if (job?.source === "External") {
         // If we don't have a configured external link, fall back to
         // a Google "careers" search for this job / company.
         const finalUrl = applyLink || buildFallbackSearch(job);
-
         window.open(finalUrl, "_blank", "noopener,noreferrer");
       } else {
         // Internal / pipeline-only jobs
@@ -64,7 +67,6 @@ export default function JobApplyModal({ job, onClose }) {
       }
     } catch (err) {
       console.error("Error submitting application:", err);
-      // This is the only error the user will ever see now.
       alert(
         "Something went wrong while starting your application. Please try again."
       );

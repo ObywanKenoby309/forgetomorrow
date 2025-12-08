@@ -25,12 +25,12 @@ export default async function handler(req, res) {
       data: {
         userId: session.user.id,
         jobId,
-        resumeId,
-        coverId,
+        resumeId: resumeId || null,
+        coverId: coverId || null,
       },
     });
 
-    // Increment job applications count
+    // Increment job applications count (if this field exists on your Job model)
     await prisma.job.update({
       where: { id: jobId },
       data: { applications: { increment: 1 } },

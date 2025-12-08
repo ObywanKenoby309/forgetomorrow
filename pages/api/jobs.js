@@ -1,5 +1,4 @@
 // pages/api/jobs.js — Supabase/Postgres jobs only, with SSL override
-
 import { Pool } from 'pg';
 
 // Force Node to stop rejecting the Supabase cert
@@ -17,8 +16,7 @@ function getPool() {
     pool = new Pool({
       connectionString,
       ssl: {
-        // We are explicitly telling pg to use SSL but not to freak out
-        // about the self-signed certificate.
+        // Use SSL but ignore self-signed cert issue
         rejectUnauthorized: false,
       },
     });
@@ -48,7 +46,6 @@ export default async function handler(req, res) {
   try {
     const client = await dbPool.connect();
     try {
-      // Minimal safe query: only columns we know exist
       const result = await client.query(
         `
         SELECT
