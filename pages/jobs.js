@@ -1,4 +1,5 @@
-// pages/jobs.js — robust filters + list/detail layout + formatting + ATS alignment (floating panel)
+// pages/jobs.js — filters + list/detail + Apply + ATS Alignment row
+
 import { useEffect, useState } from 'react';
 import { JobPipelineProvider, useJobPipeline } from '../context/JobPipelineContext';
 import { Card, CardHeader, CardTitle, CardContent, CardSubtle } from '../components/ui/Card';
@@ -8,19 +9,17 @@ import ATSInfo from '../components/seeker/ATSInfo';
 import ATSResultPanel from '../components/seeker/ATSResultPanel';
 
 // ──────────────────────────────────────────────────────────────
-// Lightweight layout shell (no internal-auth logic)
+// Lightweight layout shell
 // ──────────────────────────────────────────────────────────────
 function PageShell({ header, right, children }) {
   return (
     <div className="px-4 md:px-8 pb-10">
       <div className="max-w-7xl mx-auto grid grid-cols-1 lg:grid-cols-[minmax(0,1.8fr)_minmax(260px,0.7fr)] gap-6">
-        {/* Main column */}
         <div className="space-y-4">
           {header}
           {children}
         </div>
 
-        {/* Right rail */}
         <aside className="hidden lg:block" aria-label="Job tools">
           {right}
         </aside>
@@ -30,7 +29,7 @@ function PageShell({ header, right, children }) {
 }
 
 // ──────────────────────────────────────────────────────────────
-// Apply Modal
+// Apply Modal (internal jobs)
 // ──────────────────────────────────────────────────────────────
 function ApplyModal({ open, onClose, job, onApplied, isPaidUser, onResumeAlign }) {
   const [name, setName] = useState('');
@@ -47,7 +46,6 @@ function ApplyModal({ open, onClose, job, onApplied, isPaidUser, onResumeAlign }
 
   const handleSubmit = (e) => {
     e.preventDefault();
-    // This is a seeker-side tracker, not a literal submission to an external ATS.
     onApplied(job);
     onClose();
     alert(
@@ -142,7 +140,7 @@ function ApplyModal({ open, onClose, job, onApplied, isPaidUser, onResumeAlign }
 }
 
 // ──────────────────────────────────────────────────────────────
-// Page Header
+// Header + right rail
 // ──────────────────────────────────────────────────────────────
 function PageHeader() {
   return (
@@ -170,9 +168,6 @@ function PageHeader() {
   );
 }
 
-// ──────────────────────────────────────────────────────────────
-// Right Rail
-// ──────────────────────────────────────────────────────────────
 function RightRail() {
   return (
     <nav
@@ -202,7 +197,7 @@ function RightRail() {
 }
 
 // ──────────────────────────────────────────────────────────────
-// Helper: infer location type from location string
+// Helpers
 // ──────────────────────────────────────────────────────────────
 function inferLocationType(location) {
   if (!location) return '';
@@ -212,13 +207,11 @@ function inferLocationType(location) {
   return 'On-site';
 }
 
-// Helper: resolve best external application link field
 function getApplyLink(job) {
   if (!job) return '';
   return job.url || job.externalUrl || job.link || job.applyUrl || '';
 }
 
-// Helper: build a fallback Google careers search
 function buildFallbackSearch(job) {
   if (!job) return 'https://www.google.com/search?q=careers';
 
@@ -244,7 +237,7 @@ function Jobs() {
 
   const [selectedJob, setSelectedJob] = useState(null);
 
-  // ATS result state for the selected job
+  // ATS result state
   const [atsLoading, setAtsLoading] = useState(false);
   const [atsError, setAtsError] = useState(null);
   const [atsResult, setAtsResult] = useState(null);
@@ -255,17 +248,17 @@ function Jobs() {
   const [keyword, setKeyword] = useState('');
   const [companyFilter, setCompanyFilter] = useState('');
   const [locationFilter, setLocationFilter] = useState('');
-  const [locationTypeFilter, setLocationTypeFilter] = useState(''); // '', 'Remote', 'Hybrid', 'On-site'
+  const [locationTypeFilter, setLocationTypeFilter] = useState('');
   const [daysFilter, setDaysFilter] = useState('');
-  const [sourceFilter, setSourceFilter] = useState(''); // '', 'external', 'internal'
+  const [sourceFilter, setSourceFilter] = useState('');
 
-  // Pagination for left list
+  // Pagination
   const [pageSize, setPageSize] = useState(20);
   const [currentPage, setCurrentPage] = useState(1);
 
   const isPaidUser = true;
 
-  // 🔸 Track pinned jobs for the logged-in seeker
+  // pinned job ids
   const [pinnedIds, setPinnedIds] = useState(new Set());
 
   useEffect(() => {
@@ -289,7 +282,6 @@ function Jobs() {
     fetchJobs();
   }, [addViewedJob]);
 
-  // Load pinned job IDs once so the detail panel can show Pin / Unpin
   useEffect(() => {
     let cancelled = false;
 
@@ -298,10 +290,8 @@ function Jobs() {
         const res = await fetch('/api/seeker/pinned-jobs');
         if (!res.ok) return;
         const data = await res.json();
-        const ids = new Set((data.jobs || []).map((j) => j.id)); // API returns job.id
-        if (!cancelled) {
-          setPinnedIds(ids);
-        }
+        const ids = new Set((data.jobs || []).map((j) => j.id));
+        if (!cancelled) setPinnedIds(ids);
       } catch (err) {
         console.error('[Jobs] failed to load pinned jobs', err);
       }
@@ -331,7 +321,7 @@ function Jobs() {
       try {
         data = text ? JSON.parse(text) : {};
       } catch {
-        // non-JSON body, keep data as {}
+        // ignore
       }
 
       console.log('[togglePin] status', res.status, 'body:', data || text);
@@ -342,11 +332,8 @@ function Jobs() {
 
       setPinnedIds((prev) => {
         const next = new Set(prev);
-        if (currentlyPinned) {
-          next.delete(job.id);
-        } else {
-          next.add(job.id);
-        }
+        if (currentlyPinned) next.delete(job.id);
+        else next.add(job.id);
         return next;
       });
     } catch (err) {
@@ -360,7 +347,7 @@ function Jobs() {
     }
   };
 
-  // 🔧 Apply click behavior: external vs internal
+  // Apply click behaviour
   const handleApplyClick = (job) => {
     if (!job) return;
 
@@ -368,33 +355,24 @@ function Jobs() {
     const applyLink = getApplyLink(job);
     const isExternal = origin === 'external';
 
-    // External jobs (RSS / feeds): track + send them to employer or careers search
     if (isExternal) {
       const finalUrl = applyLink || buildFallbackSearch(job);
-
-      // Track in seeker pipeline so "Applied Jobs" stays honest
       addAppliedJob(job);
-
       if (typeof window !== 'undefined') {
         window.open(finalUrl, '_blank', 'noopener,noreferrer');
       }
-
       return;
     }
 
-    // Internal jobs (Forge recruiters): use the modal as a tracker for now.
     setApplyJob(job);
     setApplyOpen(true);
   };
 
   const handleResumeAlign = (job) => {
     if (!job) return;
-
-    // Send them into the resume template chooser and copy the JD
     window.location.href = `/resume-cover?jobId=${job.id}&copyJD=true`;
   };
 
-  // ATS Alignment handler
   const handleATSAlign = async (job) => {
     if (!job) return;
 
@@ -411,9 +389,7 @@ function Jobs() {
         body: JSON.stringify({ jobId: job.id }),
       });
 
-      if (!res.ok) {
-        throw new Error(`ATS API failed (status ${res.status})`);
-      }
+      if (!res.ok) throw new Error(`ATS API failed (status ${res.status})`);
 
       const payload = await res.json();
 
@@ -426,8 +402,6 @@ function Jobs() {
       });
     } catch (err) {
       console.error('[Jobs] ATS align error', err);
-
-      // Dev-friendly fallback so the feature still demos nicely
       setAtsError(null);
       setAtsResult({
         score: 78,
@@ -470,15 +444,12 @@ function Jobs() {
   const handleSelectJob = (job) => {
     setSelectedJob(job);
     addViewedJob(job);
-    // Reset ATS panel when switching jobs
     setAtsResult(null);
     setAtsError(null);
     setAtsPanelOpen(false);
   };
 
-  // ──────────────────────────────────────────────────────────
-  // Robust client-side filtering
-  // ──────────────────────────────────────────────────────────
+  // Filtering
   const normalizedKeyword = keyword.trim().toLowerCase();
   const normalizedCompany = companyFilter.trim().toLowerCase();
   const normalizedLocation = locationFilter.trim().toLowerCase();
@@ -512,9 +483,7 @@ function Jobs() {
 
     if (locationTypeFilter) {
       const inferred = inferLocationType(job.location || '');
-      if (inferred !== locationTypeFilter) {
-        return false;
-      }
+      if (inferred !== locationTypeFilter) return false;
     }
 
     if (sourceFilter) {
@@ -524,47 +493,32 @@ function Jobs() {
     }
 
     if (hasDaysFilter) {
-      if (!job.publishedat) {
-        return false;
-      }
+      if (!job.publishedat) return false;
       const d = new Date(job.publishedat);
-      if (Number.isNaN(d.getTime())) {
-        return false;
-      }
-      if (d.getTime() < cutoffTime) {
-        return false;
-      }
+      if (Number.isNaN(d.getTime())) return false;
+      if (d.getTime() < cutoffTime) return false;
     }
 
     return true;
   });
 
-  // Reset page if filtered list shrinks
   useEffect(() => {
-    const totalPages = Math.max(1, Math.ceil(filteredJobs.length / pageSize));
-    if (currentPage > totalPages) {
-      setCurrentPage(1);
-    }
+    const totalPagesLocal = Math.max(1, Math.ceil(filteredJobs.length / pageSize));
+    if (currentPage > totalPagesLocal) setCurrentPage(1);
   }, [filteredJobs.length, pageSize, currentPage]);
 
-  // Pagination slice for left list
   const totalPages = Math.max(1, Math.ceil(filteredJobs.length / pageSize));
   const startIndex = (currentPage - 1) * pageSize;
   const pagedJobs = filteredJobs.slice(startIndex, startIndex + pageSize);
 
-  // Numbered pagination (First … pages … Last)
   const pageNumbers = [];
   const windowSize = 3;
   const startPage = Math.max(1, currentPage - windowSize);
   const endPage = Math.min(totalPages, currentPage + windowSize);
 
-  for (let p = startPage; p <= endPage; p += 1) {
-    pageNumbers.push(p);
-  }
+  for (let p = startPage; p <= endPage; p += 1) pageNumbers.push(p);
 
-  // Recent viewed jobs (last 6, most recent first)
   const recentViewed = viewedJobs.slice(-6).reverse();
-
   const selectedJobApplyLink = selectedJob ? getApplyLink(selectedJob) : '';
 
   if (loading) {
@@ -708,7 +662,7 @@ function Jobs() {
                 </select>
               </div>
 
-              {/* Source (internal vs external) */}
+              {/* Source */}
               <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
                 <label
                   htmlFor="jobs-filter-source"
@@ -802,7 +756,7 @@ function Jobs() {
           </CardContent>
         </Card>
 
-        {/* Two-column layout: LEFT list (scroll) + RIGHT full detail (sticky) */}
+        {/* Two-column layout */}
         <div
           style={{
             display: 'grid',
@@ -811,7 +765,7 @@ function Jobs() {
             alignItems: 'flex-start',
           }}
         >
-          {/* LEFT: scrollable list + pagination at bottom */}
+          {/* LEFT: list */}
           <section
             aria-label="Job results"
             style={{
@@ -821,7 +775,6 @@ function Jobs() {
               gap: 12,
             }}
           >
-            {/* Scrollable cards */}
             <div
               style={{
                 flex: 1,
@@ -871,7 +824,6 @@ function Jobs() {
                     onClick={() => handleSelectJob(job)}
                   >
                     <CardHeader>
-                      {/* Title + company */}
                       <div
                         style={{
                           display: 'flex',
@@ -903,7 +855,6 @@ function Jobs() {
                         </div>
                       </div>
 
-                      {/* Location row */}
                       <div
                         style={{
                           marginTop: 4,
@@ -959,7 +910,7 @@ function Jobs() {
               })}
             </div>
 
-            {/* Pagination controls UNDER the cards */}
+            {/* Pagination controls */}
             {filteredJobs.length > pageSize && (
               <nav
                 aria-label="Job results pagination"
@@ -974,7 +925,6 @@ function Jobs() {
                   flexWrap: 'wrap',
                 }}
               >
-                {/* First */}
                 <button
                   type="button"
                   disabled={currentPage === 1}
@@ -994,10 +944,8 @@ function Jobs() {
                   First
                 </button>
 
-                {/* Ellipsis before if needed */}
                 {startPage > 1 && <span aria-hidden="true">…</span>}
 
-                {/* Page numbers */}
                 {pageNumbers.map((p) => (
                   <button
                     key={p}
@@ -1022,12 +970,10 @@ function Jobs() {
                   </button>
                 ))}
 
-                {/* Ellipsis after if needed */}
                 {endPage < totalPages && (
                   <span aria-hidden="true">…</span>
                 )}
 
-                {/* Last */}
                 <button
                   type="button"
                   disabled={currentPage === totalPages}
@@ -1054,7 +1000,7 @@ function Jobs() {
             )}
           </section>
 
-          {/* RIGHT: Sticky full job view, formatted */}
+          {/* RIGHT: sticky full job view */}
           <section aria-label="Selected job details">
             <Card
               as="article"
@@ -1119,7 +1065,7 @@ function Jobs() {
                       gap: 12,
                     }}
                   >
-                    {/* Full description (scrollable + formatted paragraphs) */}
+                    {/* Description */}
                     <div
                       style={{
                         flex: 1,
@@ -1158,9 +1104,7 @@ function Jobs() {
                             key={idx}
                             style={{
                               margin:
-                                idx === 0
-                                  ? '0 0 10px'
-                                  : '10px 0 0',
+                                idx === 0 ? '0 0 10px' : '10px 0 0',
                               color: '#37474F',
                               fontSize: 14,
                               lineHeight: 1.6,
@@ -1172,56 +1116,53 @@ function Jobs() {
                       })()}
                     </div>
 
-                    {/* Actions row at the bottom */}
+                    {/* ACTION ROW: Pin | Apply | ATS Alignment | Open original */}
                     <div
                       style={{
                         display: 'flex',
                         flexWrap: 'wrap',
-                        gap: 8,
-                        marginTop: 10,
-                        justifyContent: 'center',
+                        gap: 10,
+                        marginTop: 8,
+                        justifyContent: 'flex-end',
                       }}
                     >
-                      {/* Pin / Unpin job */}
                       <button
                         type="button"
                         onClick={() => togglePin(selectedJob)}
                         style={{
                           background: 'white',
-                          color: isJobPinned(selectedJob) ? '#D32F2F' : '#FF7043',
-                          padding: '8px 18px',
-                          borderRadius: 999,
+                          color: isJobPinned(selectedJob)
+                            ? '#D32F2F'
+                            : '#FF7043',
+                          padding: '10px 16px',
+                          borderRadius: 8,
                           border: `1px solid ${
                             isJobPinned(selectedJob) ? '#D32F2F' : '#FF7043'
                           }`,
                           fontWeight: 700,
                           cursor: 'pointer',
-                          fontSize: 14,
                         }}
                         aria-pressed={isJobPinned(selectedJob)}
                       >
-                        {isJobPinned(selectedJob) ? 'Unpin Job' : 'Pin Job'}
+                        {isJobPinned(selectedJob) ? 'Unpin job' : 'Pin job'}
                       </button>
 
-                      {/* Apply button (solid orange) */}
                       <button
                         type="button"
                         onClick={() => handleApplyClick(selectedJob)}
                         style={{
                           background: '#FF7043',
                           color: 'white',
-                          padding: '8px 22px',
-                          borderRadius: 999,
+                          padding: '10px 16px',
+                          borderRadius: 8,
                           border: 'none',
                           fontWeight: 700,
                           cursor: 'pointer',
-                          fontSize: 14,
                         }}
                       >
                         Apply
                       </button>
 
-                      {/* ATS Alignment + info icon */}
                       {isPaidUser && (
                         <div
                           style={{
@@ -1236,12 +1177,11 @@ function Jobs() {
                             style={{
                               background: 'white',
                               color: '#FF7043',
-                              padding: '8px 18px',
-                              borderRadius: 999,
+                              padding: '10px 16px',
+                              borderRadius: 8,
                               border: '1px solid #FF7043',
                               fontWeight: 700,
                               cursor: 'pointer',
-                              fontSize: 14,
                             }}
                           >
                             ATS Alignment
@@ -1250,18 +1190,17 @@ function Jobs() {
                         </div>
                       )}
 
-                      {/* Optional: keep original posting link as a subtle secondary action */}
                       {selectedJobApplyLink && (
                         <Link
                           href={selectedJobApplyLink}
                           target="_blank"
                           style={{
-                            padding: '8px 14px',
-                            borderRadius: 999,
+                            padding: '10px 16px',
+                            borderRadius: 8,
                             border: '1px solid #ddd',
                             color: '#263238',
                             textDecoration: 'none',
-                            fontSize: 13,
+                            fontSize: 14,
                           }}
                         >
                           Open original posting
@@ -1292,7 +1231,7 @@ function Jobs() {
           </section>
         </div>
 
-        {/* Bottom: two compact cards side-by-side */}
+        {/* Bottom row: Recently viewed + Applied Jobs */}
         <div
           style={{
             display: 'grid',
@@ -1300,7 +1239,6 @@ function Jobs() {
             gap: 16,
           }}
         >
-          {/* Recently Viewed */}
           <Card as="section" aria-labelledby="jobs-recent-heading">
             <CardHeader>
               <CardTitle
@@ -1337,7 +1275,6 @@ function Jobs() {
             </CardContent>
           </Card>
 
-          {/* Applied Jobs */}
           <Card as="section" aria-labelledby="jobs-applied-heading">
             <CardHeader>
               <CardTitle
@@ -1386,7 +1323,7 @@ function Jobs() {
         onResumeAlign={handleResumeAlign}
       />
 
-      {/* Floating ATS Result Panel */}
+      {/* ATS Result Panel */}
       <ATSResultPanel
         open={atsPanelOpen}
         onClose={() => setAtsPanelOpen(false)}
