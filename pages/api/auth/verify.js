@@ -2,24 +2,24 @@
 import { prisma } from "@/lib/prisma";
 import { normalizeSlug, hasBannedTerm, randomSuffix } from "@/lib/slug";
 
-// Generate a clean unique slug for the new user
+// NOTE: We are no longer creating the user here.
+// User creation + password setup is handled by /api/auth/verify-email
+// after the user lands on /verify-email and submits the form.
+
+// (We keep generateUniqueSlug here in case you want to reuse it later)
 async function generateUniqueSlug(firstName, lastName) {
   const base = normalizeSlug(`${firstName || ""}-${lastName || ""}`);
-
-  // If name reduces to empty or garbage, fallback
   const safeBase = base || "user";
 
   let attempt = 0;
   while (attempt < 10) {
     const candidate = `${safeBase}-${randomSuffix(5)}`;
 
-    // Check banned content
     if (hasBannedTerm(candidate)) {
       attempt++;
       continue;
     }
 
-    // Check DB uniqueness
     const exists = await prisma.user.findUnique({
       where: { slug: candidate },
       select: { id: true },
@@ -30,7 +30,6 @@ async function generateUniqueSlug(firstName, lastName) {
     attempt++;
   }
 
-  // If all attempts fail — generate a fully random slug
   return `user-${randomSuffix(8)}`;
 }
 
@@ -62,105 +61,27 @@ export default async function handler(req, res) {
         .send("This link has expired. Please sign up again.");
     }
 
-    // Check if a user already exists for this email
-    let user = await prisma.user.findUnique({
-      where: { email: vt.email },
+    // ✅ NEW BEHAVIOR:
+    // Instead of creating the user + deleting the token here,
+    // just redirect the user to the React "verify-email" page
+    // so they can set their password.
+    //
+    // The /verify-email page will POST to /api/auth/verify-email,
+    // which will:
+    //  - validate the token again
+    //  - hash the password
+    //  - create the user
+    //  - delete the token
+    //
+    // We pass email + plan as query params for display only.
+    const searchParams = new URLSearchParams({
+      token,
+      email: vt.email,
+      plan: vt.plan || "FREE",
     });
 
-    if (!user) {
-      // NEW — generate slug BEFORE creating user
-      const slug = await generateUniqueSlug(vt.firstName, vt.lastName);
-
-      // Create a new user record from the token payload
-      user = await prisma.user.create({
-        data: {
-          email: vt.email,
-          firstName: vt.firstName || null,
-          lastName: vt.lastName || null,
-          name: [vt.firstName, vt.lastName].filter(Boolean).join(" ") || null,
-          passwordHash: vt.passwordHash,
-          emailVerified: true,
-          newsletter: vt.newsletter ?? false,
-          plan: "FREE",
-          slug, // ← NEW: auto-generated profile slug
-        },
-      });
-    } else if (!user.emailVerified) {
-      // Mark existing user as verified if needed
-      user = await prisma.user.update({
-        where: { id: user.id },
-        data: { emailVerified: true },
-      });
-    }
-
-    // Clean up token so it can't be reused
-    await prisma.verificationToken.delete({
-      where: { token },
-    });
-
-    // For now, just send a simple success page.
-    // Later we can redirect to a dedicated "verified" landing page.
-    res.setHeader("Content-Type", "text/html; charset=utf-8");
-    return res.status(200).send(`
-      <!doctype html>
-      <html>
-        <head>
-          <meta charset="utf-8" />
-          <title>ForgeTomorrow – Email verified</title>
-          <style>
-            body {
-              font-family: system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;
-              background: #0B1724;
-              color: #F9FAFB;
-              display: flex;
-              align-items: center;
-              justify-content: center;
-              min-height: 100vh;
-              margin: 0;
-            }
-            .card {
-              background: #F5F7FA;
-              color: #111827;
-              border-radius: 16px;
-              padding: 24px 28px;
-              max-width: 480px;
-              box-shadow: 0 10px 30px rgba(0,0,0,0.25);
-              text-align: center;
-            }
-            h1 {
-              margin: 0 0 8px;
-              font-size: 1.5rem;
-              color: #FF7043;
-            }
-            p {
-              margin: 4px 0;
-              font-size: 0.9rem;
-            }
-            a.button {
-              display: inline-block;
-              margin-top: 16px;
-              padding: 10px 18px;
-              border-radius: 999px;
-              background: #FF7043;
-              color: white;
-              text-decoration: none;
-              font-weight: 600;
-              font-size: 0.9rem;
-            }
-          </style>
-        </head>
-        <body>
-          <div class="card">
-            <h1>Email verified</h1>
-            <p>Your ForgeTomorrow account is ready.</p>
-            <p>You can now sign in and complete your profile.</p>
-            <a class="button" href="https://www.forgetomorrow.com/login">
-              Go to sign in
-            </a>
-          </div>
-        </body>
-      </html>
-    `);
+    // Relative redirect keeps domain correct (prod, preview, local).
+    res.redirect(302, `/verify-email?${searchParams.toString()}`);
   } catch (err) {
     console.error("[verify] error:", err);
     return res.status(500).send("Internal server error.");
