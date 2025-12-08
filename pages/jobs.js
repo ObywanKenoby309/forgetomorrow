@@ -819,7 +819,7 @@ function Jobs() {
                       cursor: 'pointer',
                       border: isSelected
                         ? '2px solid #FF7043'
-                        : '1px solid '#e0e0e0',
+                        : '1px solid #e0e0e0',
                     }}
                     onClick={() => handleSelectJob(job)}
                   >
