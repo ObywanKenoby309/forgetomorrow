@@ -13,8 +13,11 @@ export default function Feed() {
   const currentUserId = session?.user?.id || 'me';
   const currentUserName =
     session?.user?.name ||
-    [session?.user?.firstName, session?.user?.lastName].filter(Boolean).join(' ') ||
-    (session?.user?.email?.split('@')[0] ?? 'You');
+    [session?.user?.firstName, session?.user?.lastName]
+      .filter(Boolean)
+      .join(' ') ||
+    // ❌ removed "You" fallback – we never want that saved or reused for authors
+    (session?.user?.email?.split('@')[0] ?? '');
   const currentUserAvatar = session?.user?.avatarUrl || session?.user?.image || null;
 
   // Normalize community post shape
@@ -27,7 +30,8 @@ export default function Feed() {
 
     try {
       // if content is JSON with { body, attachments }
-      const parsed = JSON.parse(row.content);
+      const parsed =
+        typeof row.content === 'string' ? JSON.parse(row.content) : null;
       if (parsed?.body) body = parsed.body;
       if (Array.isArray(parsed?.attachments)) attachments = parsed.attachments;
     } catch {
@@ -36,9 +40,10 @@ export default function Feed() {
 
     return {
       id: row.id,
-      authorId: row.authorId ?? currentUserId,
-      author: row.authorName ?? currentUserName,
-      authorAvatar: row.authorAvatar ?? (row.authorId === currentUserId ? currentUserAvatar : null),
+      // ✅ show the *real* author from the row, never the viewer
+      authorId: row.authorId ?? null,
+      author: row.authorName || row.author || 'Member',
+      authorAvatar: row.authorAvatar || null,
       body,
       type: row.type ?? 'business',
       createdAt: new Date(row.createdAt).toISOString(),
@@ -74,7 +79,9 @@ export default function Feed() {
       const feedRes = await fetch('/api/feed');
       if (feedRes.ok) {
         const feedData = await feedRes.json();
-        community = (feedData.posts || []).map(normalizeCommunityPost).filter(Boolean);
+        community = (feedData.posts || [])
+          .map(normalizeCommunityPost)
+          .filter(Boolean);
       }
 
       // 2. Get remote jobs if we want them
@@ -137,7 +144,7 @@ export default function Feed() {
     }
   };
 
-  // ✅ Replies (text or emoji) — update comments immediately in state
+  // ✅ Replies (text or emoji-as-text) — update comments immediately in state
   const handleReply = (postId, text) => {
     if (!postId || !text || !text.trim()) return;
     const trimmed = text.trim();

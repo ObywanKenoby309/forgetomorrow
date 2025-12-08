@@ -8,6 +8,7 @@ export default function PostList({
   filter,
   onReply,
   onDelete,
+  onReact,
   currentUserId,
 }) {
   const [activePostId, setActivePostId] = useState(null);
@@ -43,6 +44,10 @@ export default function PostList({
     }
   };
 
+  const handleReactInternal = (postId, emoji) => {
+    onReact?.(postId, emoji);
+  };
+
   return (
     <>
       <div className="space-y-3">
@@ -65,6 +70,7 @@ export default function PostList({
                 onOpenComments={handleOpenComments}
                 currentUserId={currentUserId}
                 onDelete={handleDeleteInternal}
+                onReact={handleReactInternal}
               />
             );
           })

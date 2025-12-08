@@ -7,11 +7,13 @@ export default function PostCard({
   onReply,
   onOpenComments,
   onDelete,
+  onReact,
   currentUserId,
 }) {
   const [reply, setReply] = useState('');
   const [reported, setReported] = useState(false);
   const [reportMessage, setReportMessage] = useState('');
+  const [showProfileMenu, setShowProfileMenu] = useState(false);
 
   const isOwner = currentUserId && post.authorId === currentUserId;
   const hasComments = (post.comments?.length || 0) > 0;
@@ -22,12 +24,6 @@ export default function PostCard({
     if (!t) return;
     onReply?.(post.id, t);
     setReply('');
-  };
-
-  // 👉 Emojis: send immediately as reply (no Reply button needed)
-  const handleEmojiPick = (emoji) => {
-    if (!emoji) return;
-    onReply?.(post.id, emoji);
   };
 
   const handleDeleteClick = () => {
@@ -74,32 +70,91 @@ export default function PostCard({
     }
   })();
 
+  // Aggregate reactions like 🔥 2, ❤️ 1
+  const reactionCounts = (() => {
+    const counts = {};
+    if (Array.isArray(post.reactions)) {
+      for (const r of post.reactions) {
+        if (!r || !r.emoji) continue;
+        counts[r.emoji] = (counts[r.emoji] || 0) + 1;
+      }
+    }
+    return counts;
+  })();
+
+  const hasReactions = Object.keys(reactionCounts).length > 0;
+
   return (
     <article
       id={`post-${post.id}`}
-      className="bg-white rounded-lg shadow p-4"
+      className="bg-white rounded-lg shadow p-4 relative"
     >
-      {/* header with avatar */}
+      {/* header with avatar + profile menu trigger */}
       <header className="mb-2 flex items-center gap-3">
-        {post.authorAvatar ? (
-          <img
-            src={post.authorAvatar}
-            alt={post.author || 'Author'}
-            className="w-9 h-9 rounded-full object-cover bg-gray-200 flex-shrink-0"
-          />
-        ) : (
-          <div className="w-9 h-9 rounded-full bg-gray-200 flex items-center justify-center text-xs text-gray-500 flex-shrink-0">
-            {post.author?.charAt(0)?.toUpperCase() || '?'}
+        <button
+          type="button"
+          onClick={() => setShowProfileMenu((v) => !v)}
+          className="flex items-center gap-3 text-left"
+        >
+          {post.authorAvatar ? (
+            <img
+              src={post.authorAvatar}
+              alt={post.author || 'Author'}
+              className="w-9 h-9 rounded-full object-cover bg-gray-200 flex-shrink-0"
+            />
+          ) : (
+            <div className="w-9 h-9 rounded-full bg-gray-200 flex items-center justify-center text-xs text-gray-500 flex-shrink-0">
+              {post.author?.charAt(0)?.toUpperCase() || '?'}
+            </div>
+          )}
+          <div>
+            <div className="font-semibold">{post.author || 'Member'}</div>
+            <div className="text-xs text-gray-500">
+              {createdAtLabel}
+              {' • '}
+              {post.type === 'personal' ? 'Personal' : 'Business'}
+            </div>
+          </div>
+        </button>
+
+        {/* simple inline profile actions menu */}
+        {showProfileMenu && (
+          <div className="absolute top-12 left-4 z-20 bg-white border rounded-lg shadow-lg text-sm w-52">
+            <div className="px-3 py-2 border-b font-semibold">
+              {post.author || 'Member'}
+            </div>
+            <button
+              type="button"
+              className="w-full text-left px-3 py-2 hover:bg-gray-50"
+              // TODO: wire to real profile route once ready
+              onClick={() => {
+                setShowProfileMenu(false);
+              }}
+            >
+              View profile (coming soon)
+            </button>
+            <button
+              type="button"
+              className="w-full text-left px-3 py-2 hover:bg-gray-50"
+              // TODO: wire to messaging once ready
+              onClick={() => {
+                setShowProfileMenu(false);
+              }}
+            >
+              Message (coming soon)
+            </button>
+            <button
+              type="button"
+              className="w-full text-left px-3 py-2 hover:bg-gray-50"
+              // TODO: wire to connection flow once ready
+              onClick={() => {
+                setShowProfileMenu(false);
+              }}
+            >
+              Connect (coming soon)
+            </button>
           </div>
         )}
-        <div>
-          <div className="font-semibold">{post.author}</div>
-          <div className="text-xs text-gray-500">
-            {createdAtLabel}
-            {' • '}
-            {post.type === 'personal' ? 'Personal' : 'Business'}
-          </div>
-        </div>
       </header>
 
       {/* body text */}
@@ -146,7 +201,7 @@ export default function PostCard({
       )}
 
       {/* meta row */}
-      <div className="text-sm text-gray-600 mb-3 flex items-center gap-4">
+      <div className="text-sm text-gray-600 mb-2 flex items-center gap-4">
         <span>👍 {post.likes ?? 0}</span>
         <button
           type="button"
@@ -154,9 +209,24 @@ export default function PostCard({
           className="hover:underline"
           title="View comments"
         >
-          💬 {post.comments.length} Comments
+          💬 {post.comments?.length || 0} Comments
         </button>
       </div>
+
+      {/* reactions row (emoji chips) */}
+      {hasReactions && (
+        <div className="text-sm text-gray-600 mb-3 flex flex-wrap gap-2">
+          {Object.entries(reactionCounts).map(([emoji, count]) => (
+            <span
+              key={emoji}
+              className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-gray-100"
+            >
+              <span>{emoji}</span>
+              <span className="text-xs text-gray-700">{count}</span>
+            </span>
+          ))}
+        </div>
+      )}
 
       {/* comments preview */}
       {hasComments && (
@@ -244,8 +314,13 @@ export default function PostCard({
           <div className="text-xs text-gray-600 mt-1">{reportMessage}</div>
         )}
 
-        {/* ✅ Emoji bar: send immediately */}
-        <QuickEmojiBar onPick={handleEmojiPick} />
+        {/* ✅ Emoji bar: now calls onReact instead of onReply */}
+        <QuickEmojiBar
+          onPick={(emoji) => {
+            if (!emoji) return;
+            onReact?.(post.id, emoji);
+          }}
+        />
       </div>
     </article>
   );
