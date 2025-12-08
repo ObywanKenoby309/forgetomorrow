@@ -469,10 +469,11 @@ function Jobs() {
     : null;
 
   const filteredJobs = jobs.filter((job) => {
-    const title = (job.title || '').toLowerCase();
-    const company = (job.company || '').toLowerCase();
-    the description = (job.description || '').toLowerCase();
-    const tags = (job.tags || '').toString().toLowerCase();
+  const title = (job.title || '').toLowerCase();
+  const company = (job.company || '').toLowerCase();
+  const location = (job.location || '').toLowerCase();
+  const description = (job.description || '').toLowerCase();
+  const tags = (job.tags || '').toString().toLowerCase();
 
     if (normalizedKeyword) {
       const haystack = `${title} ${company} ${location} ${description} ${tags}`;
