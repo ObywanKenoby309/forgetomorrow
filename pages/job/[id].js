@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react';
 import Head from 'next/head';
 import Link from 'next/link';
 import { track } from '@/lib/track';
+import JobApplyModal from '@/components/jobs/JobApplyModal';
 
 export default function PublicJobView() {
   const router = useRouter();
@@ -11,6 +12,7 @@ export default function PublicJobView() {
 
   const [job, setJob] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [showApplyModal, setShowApplyModal] = useState(false);
 
   // Fire a JOB_VIEW when the page knows the jobId
   useEffect(() => {
@@ -18,7 +20,7 @@ export default function PublicJobView() {
     track('JOB_VIEW', { jobId });
   }, [jobId]);
 
-  // (Optional) try to load job details if you have an API like /api/jobs/[id]
+  // Load job details if you have an API like /api/jobs/[id]
   useEffect(() => {
     let active = true;
     async function run() {
@@ -35,35 +37,65 @@ export default function PublicJobView() {
       }
     }
     run();
-    return () => { active = false; };
+    return () => {
+      active = false;
+    };
   }, [jobId]);
 
   return (
     <>
-      <Head><title>{job?.title ? `${job.title} — Job` : 'Job'}</title></Head>
+      <Head>
+        <title>{job?.title ? `${job.title} — Job` : 'Job'}</title>
+      </Head>
 
       <main className="max-w-3xl mx-auto p-6 space-y-4">
         <Link href="/jobs" className="text-sm" style={{ color: '#FF7043' }}>
           ← Back to jobs
         </Link>
 
-        <h1 className="text-2xl font-bold" style={{ color: '#263238' }}>
-          {job?.title || (loading ? 'Loading…' : `Job ${jobId}`)}
-        </h1>
+        <div className="flex items-start justify-between gap-4">
+          <div>
+            <h1 className="text-2xl font-bold" style={{ color: '#263238' }}>
+              {job?.title || (loading ? 'Loading…' : `Job ${jobId}`)}
+            </h1>
 
-        {job?.company && (
-          <div className="text-sm" style={{ color: '#607D8B' }}>
-            {job.company}
+            {job?.company && (
+              <div className="text-sm" style={{ color: '#607D8B' }}>
+                {job.company}
+              </div>
+            )}
           </div>
-        )}
+
+          {/* APPLY BUTTON */}
+          {!loading && job && (
+            <button
+              type="button"
+              onClick={() => setShowApplyModal(true)}
+              className="px-4 py-2 rounded-md text-sm font-semibold shadow-sm"
+              style={{ backgroundColor: '#FF7043', color: '#FFFFFF' }}
+            >
+              Apply for this job
+            </button>
+          )}
+        </div>
 
         <section className="bg-white border rounded-lg p-4">
-          {job?.description
-            ? <div dangerouslySetInnerHTML={{ __html: job.description }} />
-            : <p style={{ color: '#607D8B' }}>
-                {loading ? 'Loading details…' : 'No job details available.'}
-              </p>}
+          {job?.description ? (
+            <div dangerouslySetInnerHTML={{ __html: job.description }} />
+          ) : (
+            <p style={{ color: '#607D8B' }}>
+              {loading ? 'Loading details…' : 'No job details available.'}
+            </p>
+          )}
         </section>
+
+        {/* APPLY MODAL */}
+        {showApplyModal && job && (
+          <JobApplyModal
+            job={job}
+            onClose={() => setShowApplyModal(false)}
+          />
+        )}
       </main>
     </>
   );
