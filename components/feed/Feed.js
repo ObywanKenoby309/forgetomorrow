@@ -17,7 +17,8 @@ export default function Feed() {
       .filter(Boolean)
       .join(' ') ||
     (session?.user?.email?.split('@')[0] ?? '');
-  const currentUserAvatar = session?.user?.avatarUrl || session?.user?.image || null;
+  const currentUserAvatar =
+    session?.user?.avatarUrl || session?.user?.image || null;
 
   // Normalize community post shape (matches your DB feedPost rows)
   const normalizeCommunityPost = (row) => {
@@ -50,7 +51,7 @@ export default function Feed() {
     };
   };
 
-  // Normalize remote job shape (so PostList can display it)
+  // Normalize remote job shape
   const normalizeJob = (job) => ({
     id: `job-${job.id}`,
     author: job.company,
@@ -138,14 +139,15 @@ export default function Feed() {
     }
   };
 
-  // ✅ Replies (text OR emoji) — go through /api/feed/comments and update state
+  // Replies (text OR emoji) — hit /api/feed/comments AND update state
   const handleReply = async (postId, text) => {
     if (!postId || !text || !text.trim()) return;
     const trimmed = text.trim();
 
-    // Don't allow replies on remote jobs
+    // Don’t try to comment on remote jobs
     if (String(postId).startsWith('job-')) return;
 
+    // Persist to DB
     try {
       const res = await fetch('/api/feed/comments', {
         method: 'POST',
@@ -157,29 +159,43 @@ export default function Feed() {
         console.error('Comment failed', await res.text());
         return;
       }
-
-      const data = await res.json();
-      const updatedPost = normalizeCommunityPost(data.post);
-
-      setPosts((prev) =>
-        prev.map((p) => (p.id === updatedPost.id ? { ...p, ...updatedPost } : p))
-      );
     } catch (err) {
       console.error('Comment error:', err);
+      return;
     }
+
+    // Update UI immediately
+    const newComment = {
+      by: currentUserName || 'You',
+      text: trimmed,
+      avatarUrl: currentUserAvatar || null,
+      at: new Date().toISOString(),
+    };
+
+    setPosts((prev) =>
+      prev.map((p) =>
+        p.id === postId
+          ? {
+              ...p,
+              comments: Array.isArray(p.comments)
+                ? [...p.comments, newComment]
+                : [newComment],
+            }
+          : p
+      )
+    );
   };
 
-  // ✅ Emoji reactions in QuickEmojiBar: just treat as a reply comment
+  // Emoji reactions: just treated as replies
   const handleReact = (postId, emoji) => {
     if (!emoji) return;
     handleReply(postId, emoji);
   };
 
-  // ✅ Delete — removes post from UI + hits /api/feed/[id]
+  // Delete — removes post from UI + hits /api/feed/[id]
   const handleDelete = async (postId) => {
     if (!postId) return;
-
-    if (String(postId).startsWith('job-')) return; // never delete remote jobs here
+    if (String(postId).startsWith('job-')) return; // never delete remote jobs from here
 
     // optimistic UI update
     setPosts((prev) => prev.filter((p) => p.id !== postId));
@@ -227,7 +243,7 @@ export default function Feed() {
         filter={filter}
         onReply={handleReply}
         onDelete={handleDelete}
-        onReact={handleReact}   {/* ← wire emojis */}
+        onReact={handleReact}
         currentUserId={currentUserId}
       />
 
