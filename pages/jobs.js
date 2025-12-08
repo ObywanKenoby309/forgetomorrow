@@ -218,6 +218,19 @@ function getApplyLink(job) {
   return job.url || job.externalUrl || job.link || job.applyUrl || '';
 }
 
+// Helper: build a fallback Google careers search
+function buildFallbackSearch(job) {
+  if (!job) return 'https://www.google.com/search?q=careers';
+
+  const parts = [];
+  if (job.title) parts.push(job.title);
+  if (job.company) parts.push(job.company);
+  parts.push('careers');
+
+  const query = encodeURIComponent(parts.join(' '));
+  return `https://www.google.com/search?q=${query}`;
+}
+
 // ──────────────────────────────────────────────────────────────
 // Main Jobs Component
 // ──────────────────────────────────────────────────────────────
@@ -353,21 +366,17 @@ function Jobs() {
 
     const origin = (job.origin || '').toLowerCase();
     const applyLink = getApplyLink(job);
+    const isExternal = origin === 'external';
 
-    // External jobs (RSS / feeds): send them to the employer site.
-    if (origin === 'external') {
-      if (!applyLink) {
-        alert(
-          'This job does not have an external application link configured yet. Please check back soon.'
-        );
-        return;
-      }
+    // External jobs (RSS / feeds): track + send them to employer or careers search
+    if (isExternal) {
+      const finalUrl = applyLink || buildFallbackSearch(job);
 
-      // Track in seeker pipeline so "Applied Jobs" stays honest.
+      // Track in seeker pipeline so "Applied Jobs" stays honest
       addAppliedJob(job);
 
       if (typeof window !== 'undefined') {
-        window.open(applyLink, '_blank', 'noopener,noreferrer');
+        window.open(finalUrl, '_blank', 'noopener,noreferrer');
       }
 
       return;
