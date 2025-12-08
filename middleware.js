@@ -1,4 +1,4 @@
-// middleware.js — Updated PUBLIC PAGES version with profile + asset bypass
+// middleware.js — Updated PUBLIC PAGES version with profile + asset + billing/stripe bypass
 import { NextResponse } from "next/server";
 import { Ratelimit } from "@upstash/ratelimit";
 import { Redis } from "@upstash/redis";
@@ -84,6 +84,17 @@ export async function middleware(req) {
 
   // 1b. Always allow public resume PDF download
   if (pathname.startsWith("/api/resume/public-download")) {
+    return NextResponse.next();
+  }
+
+  // 1c. Always allow Stripe/Billing webhooks + checkout/success/cancel
+  if (
+    pathname.startsWith("/api/stripe") ||
+    pathname.startsWith("/api/billing") ||
+    pathname === "/billing/checkout" ||
+    pathname === "/billing/success" ||
+    pathname === "/billing/cancel"
+  ) {
     return NextResponse.next();
   }
 
