@@ -254,13 +254,20 @@ Return your answer as valid JSON with this shape:
 
               <div className="mt-4 flex flex-wrap gap-3 items-center">
                 <Link
-                  href={selectedJob.url || '#'}
-                  target="_blank"
-                  className="inline-flex items-center justify-center px-4 py-2 rounded-lg bg-[#FF7043] text-white font-semibold hover:bg-[#ff8a5f] transition disabled:opacity-60 disabled:cursor-not-allowed"
-                >
-                  Apply →
-                </Link>
-
+  href={selectedJob.url || '#'}
+  target="_blank"
+  rel="noopener noreferrer"
+  className="inline-flex items-center justify-center px-4 py-2 rounded-lg bg-[#FF7043] text-white font-semibold hover:bg-[#ff8a5f] transition disabled:opacity-60 disabled:cursor-not-allowed"
+  onClick={(e) => {
+    if (!selectedJob.url) {
+      e.preventDefault();
+      // Later we can replace with a nice toast, but for launch:
+      alert('This job does not have an external application link configured yet. Please check back soon.');
+    }
+  }}
+>
+  Apply →
+</Link>
                 <button
                   onClick={() => handleRunATS(selectedJob)}
                   disabled={atsLoading}
