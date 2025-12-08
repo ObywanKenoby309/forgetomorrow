@@ -7,6 +7,9 @@ export default function PostComposer({ onPost, onCancel }) {
   const [attachments, setAttachments] = useState([]); // [{type, url, name}]
   const [showLinkInput, setShowLinkInput] = useState(false);
   const [linkValue, setLinkValue] = useState('');
+  const [showEmojiBar, setShowEmojiBar] = useState(false);
+
+  const EMOJIS = ['🔥', '💼', '🤝', '🚀', '🙏', '💪', '🛠️', '❤️'];
 
   const canPost =
     text.trim().length > 0 &&
@@ -81,13 +84,17 @@ export default function PostComposer({ onPost, onCancel }) {
     });
   };
 
+  const addEmoji = (emoji) => {
+    setText((prev) => (prev || '') + emoji);
+  };
+
   // ---- Submit ----
   const submit = () => {
     const body = text.trim();
     if (!canPost) return;
 
     onPost?.({
-      id: crypto.randomUUID?.() || String(Date.now()),
+      id: (typeof crypto !== 'undefined' && crypto.randomUUID?.()) || String(Date.now()),
       author: 'You',
       createdAt: Date.now(),
       body,
@@ -106,6 +113,7 @@ export default function PostComposer({ onPost, onCancel }) {
     setAttachments([]);
     setShowLinkInput(false);
     setLinkValue('');
+    setShowEmojiBar(false);
   };
 
   return (
@@ -197,6 +205,22 @@ export default function PostComposer({ onPost, onCancel }) {
         </div>
       )}
 
+      {/* Emoji bar */}
+      {showEmojiBar && (
+        <div className="mt-3 flex flex-wrap gap-2 text-lg">
+          {EMOJIS.map((emoji) => (
+            <button
+              key={emoji}
+              type="button"
+              onClick={() => addEmoji(emoji)}
+              className="px-2 py-1 border rounded-md hover:bg-gray-100"
+            >
+              {emoji}
+            </button>
+          ))}
+        </div>
+      )}
+
       <div className="mt-3 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         {/* Left: attachment controls */}
         <div className="flex items-center gap-3 text-sm text-gray-700">
@@ -251,6 +275,17 @@ export default function PostComposer({ onPost, onCancel }) {
               🔗
             </span>
             Link
+          </button>
+
+          <button
+            type="button"
+            className="inline-flex items-center gap-1 hover:text-gray-900"
+            onClick={() => setShowEmojiBar((v) => !v)}
+          >
+            <span role="img" aria-label="emoji">
+              🙂
+            </span>
+            Emoji
           </button>
         </div>
 

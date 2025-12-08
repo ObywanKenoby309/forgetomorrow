@@ -20,13 +20,20 @@ export default function Feed() {
   // Normalize community post shape
   const normalizeCommunityPost = (row) => {
     if (!row) return null;
-    let body = row.content || '';
+
+    // pull body from any of the likely fields
+    let body = row.content || row.text || row.body || '';
     let attachments = [];
+
     try {
+      // if content is JSON with { body, attachments }
       const parsed = JSON.parse(row.content);
       if (parsed?.body) body = parsed.body;
       if (Array.isArray(parsed?.attachments)) attachments = parsed.attachments;
-    } catch {}
+    } catch {
+      // not JSON – just fall back to the raw body above
+    }
+
     return {
       id: row.id,
       authorId: row.authorId ?? currentUserId,
@@ -100,11 +107,19 @@ export default function Feed() {
 
   // Composer & reply handlers stay the same (only affect community posts)
   const handleNewPost = async (postFromComposer) => {
+    const body = postFromComposer.body ?? '';
+
+    // send both "content" and "text" so the API + DB are happy
     const payload = {
-      text: postFromComposer.body ?? '',
+      content: JSON.stringify({
+        body,
+        attachments: postFromComposer.attachments ?? [],
+      }),
+      text: body,
       type: postFromComposer.type,
       attachments: postFromComposer.attachments ?? [],
     };
+
     try {
       const res = await fetch('/api/feed', {
         method: 'POST',
@@ -114,6 +129,8 @@ export default function Feed() {
       if (res.ok) {
         await reloadFeed();
         setShowComposer(false);
+      } else {
+        console.error('Post failed', await res.text());
       }
     } catch (err) {
       console.error('Post failed', err);
@@ -166,10 +183,13 @@ export default function Feed() {
       />
 
       {showComposer && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/40"
+          onClick={() => setShowComposer(false)} // click backdrop to close
+        >
           <div
             className="bg-white rounded-lg shadow-xl max-w-lg w-full p-4"
-            onClick={(e) => e.stopPropagation()}
+            onClick={(e) => e.stopPropagation()} // keep clicks inside from closing
           >
             <PostComposer
               onPost={handleNewPost}
