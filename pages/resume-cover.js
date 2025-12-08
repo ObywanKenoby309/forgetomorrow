@@ -602,17 +602,43 @@ export default function ResumeCoverLanding() {
     </Card>
   );
 
+  // 🔸 Page-specific right-rail ad for resume/cover
+  const RightRail = (
+    <div className="grid gap-3">
+      <ResumeRightRail savedResumes={savedResumes} usage={usage} tier={tier} />
+
+      <section
+        style={{
+          background: 'white',
+          borderRadius: 10,
+          padding: 12,
+          boxShadow: '0 2px 6px rgba(0,0,0,0.06)',
+          border: '1px solid #eee',
+        }}
+      >
+        <div style={{ fontWeight: 800, color: '#37474F', marginBottom: 4 }}>
+          Resume Services Spotlight
+        </div>
+        <p style={{ margin: 0, color: '#607D8B', fontSize: 13 }}>
+          Offer resume reviews, interview prep, or job search programs to ForgeTomorrow
+          seekers. Email{' '}
+          <a
+            href="mailto:sales@forgetomorrow.com"
+            style={{ color: '#FF7043', fontWeight: 600 }}
+          >
+            sales@forgetomorrow.com
+          </a>{' '}
+          to claim this slot.
+        </p>
+      </section>
+    </div>
+  );
+
   return (
     <SeekerLayout
       title="Resume & Cover | ForgeTomorrow"
       header={HeaderHero}
-      right={
-        <ResumeRightRail
-          savedResumes={savedResumes}
-          usage={usage}
-          tier={tier}
-        />
-      }
+      right={RightRail}
       activeNav="resume-cover"
     >
       <div style={{ maxWidth: 1080, margin: '0 auto', padding: '0 16px' }}>

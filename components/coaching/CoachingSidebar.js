@@ -275,7 +275,7 @@ export default function CoachingSidebar({
 
       {/* 7) The Hearth */}
       <NavItem
-        href="/coach/the-hearth?chrome=coach"
+        href="/the-hearth?chrome=coach"
         label="The Hearth"
         active={active === 'hearth'}
       />

@@ -1,6 +1,5 @@
 // pages/roadmap.js
 import { useState } from 'react';
-import Link from 'next/link';
 import SeekerLayout from '@/components/layouts/SeekerLayout';
 import ToolkitLanding from '../components/roadmap/ToolkitLanding';
 import ProfileDevelopment from '../components/roadmap/ProfileDevelopment';
@@ -11,42 +10,123 @@ export default function CareerRoadmap() {
   const [activeModule, setActiveModule] = useState(null);
 
   const RightColumn = (
-    <div style={{ display: 'grid', gap: 10 }}>
-      <div style={{ color: 'white', fontWeight: 700, marginBottom: 4 }}>Shortcuts</div>
-      <ul style={{ listStyle: 'none', margin: 0, padding: 0, display: 'grid', gap: 8 }}>
-        <li>
-          <button
-            onClick={() => setActiveModule(null)}
-            style={{ background: 'none', border: 'none', padding: 0, cursor: 'pointer', color: '#FF7043', fontWeight: 600 }}
+    <div style={{ display: 'grid', gap: 12 }}>
+      {/* Toolkit shortcuts */}
+      <div
+        style={{
+          background: 'white',
+          borderRadius: 10,
+          padding: 12,
+          display: 'grid',
+          gap: 8,
+          boxShadow: '0 2px 6px rgba(0,0,0,0.06)',
+          border: '1px solid #eee',
+        }}
+      >
+        <div style={{ fontWeight: 800, color: '#37474F', marginBottom: 4 }}>
+          Toolkit Shortcuts
+        </div>
+        <ul
+          style={{
+            listStyle: 'none',
+            margin: 0,
+            padding: 0,
+            display: 'grid',
+            gap: 8,
+          }}
+        >
+          <li>
+            <button
+              onClick={() => setActiveModule(null)}
+              style={{
+                background: 'none',
+                border: 'none',
+                padding: 0,
+                cursor: 'pointer',
+                color: '#FF7043',
+                fontWeight: 600,
+                textAlign: 'left',
+              }}
+            >
+              Toolkit Overview
+            </button>
+          </li>
+          <li>
+            <button
+              onClick={() => setActiveModule('profile')}
+              style={{
+                background: 'none',
+                border: 'none',
+                padding: 0,
+                cursor: 'pointer',
+                color: '#FF7043',
+                fontWeight: 600,
+                textAlign: 'left',
+              }}
+            >
+              Profile Development
+            </button>
+          </li>
+          <li>
+            <button
+              onClick={() => setActiveModule('offer')}
+              style={{
+                background: 'none',
+                border: 'none',
+                padding: 0,
+                cursor: 'pointer',
+                color: '#FF7043',
+                fontWeight: 600,
+                textAlign: 'left',
+              }}
+            >
+              Offer Negotiation
+            </button>
+          </li>
+          <li>
+            <button
+              onClick={() => setActiveModule('onboarding')}
+              style={{
+                background: 'none',
+                border: 'none',
+                padding: 0,
+                cursor: 'pointer',
+                color: '#FF7043',
+                fontWeight: 600,
+                textAlign: 'left',
+              }}
+            >
+              Onboarding & Growth
+            </button>
+          </li>
+        </ul>
+      </div>
+
+      {/* Page-specific ad slot for Roadmap */}
+      <div
+        style={{
+          background: 'white',
+          borderRadius: 10,
+          padding: 12,
+          boxShadow: '0 2px 6px rgba(0,0,0,0.06)',
+          border: '1px solid #eee',
+        }}
+      >
+        <div style={{ fontWeight: 800, color: '#37474F', marginBottom: 4 }}>
+          Career Programs Spotlight
+        </div>
+        <p style={{ margin: 0, color: '#607D8B', fontSize: 13 }}>
+          Feature your bootcamp, coaching program, or upskilling course alongside the
+          Career Development Toolkit. Email{' '}
+          <a
+            href="mailto:sales@forgetomorrow.com"
+            style={{ color: '#FF7043', fontWeight: 600 }}
           >
-            Toolkit Overview
-          </button>
-        </li>
-        <li>
-          <button
-            onClick={() => setActiveModule('profile')}
-            style={{ background: 'none', border: 'none', padding: 0, cursor: 'pointer', color: '#FF7043', fontWeight: 600 }}
-          >
-            Profile Development
-          </button>
-        </li>
-        <li>
-          <button
-            onClick={() => setActiveModule('offer')}
-            style={{ background: 'none', border: 'none', padding: 0, cursor: 'pointer', color: '#FF7043', fontWeight: 600 }}
-          >
-            Offer Negotiation
-          </button>
-        </li>
-        <li>
-          <button
-            onClick={() => setActiveModule('onboarding')}
-            style={{ background: 'none', border: 'none', padding: 0, cursor: 'pointer', color: '#FF7043', fontWeight: 600 }}
-          >
-            Onboarding & Growth
-          </button>
-        </li>
-      </ul>
+            sales@forgetomorrow.com
+          </a>{' '}
+          for Roadmap placement.
+        </p>
+      </div>
     </div>
   );
 
@@ -83,9 +163,10 @@ export default function CareerRoadmap() {
                 textAlign: 'center',
               }}
             >
-              Welcome to your Career Development Toolkit! This powerful AI-driven resource guides you through every stage
-              of your job search and early career growth. Get personalized insights on your resume, job offers, and
-              onboarding success to help build the career you deserve.
+              Welcome to your Career Development Toolkit! This powerful AI-driven resource
+              guides you through every stage of your job search and early career growth.
+              Get personalized insights on your resume, job offers, and onboarding success
+              to help build the career you deserve.
             </p>
             <ul
               style={{
@@ -101,9 +182,18 @@ export default function CareerRoadmap() {
               }}
             >
               <li>Tailored recommendations based on your unique skills and goals</li>
-              <li>Step-by-step guidance through Profile Development, Offer Negotiation, and Onboarding & Growth</li>
-              <li>Practical tools to help you land your ideal job and thrive in your new role</li>
-              <li>Flexibility to work independently or collaborate with a trainer, mentor, or coach</li>
+              <li>
+                Step-by-step guidance through Profile Development, Offer Negotiation, and
+                Onboarding & Growth
+              </li>
+              <li>
+                Practical tools to help you land your ideal job and thrive in your new
+                role
+              </li>
+              <li>
+                Flexibility to work independently or collaborate with a trainer, mentor,
+                or coach
+              </li>
             </ul>
             <p
               style={{
@@ -116,9 +206,10 @@ export default function CareerRoadmap() {
                 textAlign: 'center',
               }}
             >
-              <strong>Usage Note:</strong> Free users receive one full roadmap experience. Please upload a complete resume
-              via our AI-powered resume builder to get started. Subscribers enjoy up to one personalized roadmap per month
-              and access to advanced features.
+              <strong>Usage Note:</strong> Free users receive one full roadmap experience.
+              Please upload a complete resume via our AI-powered resume builder to get
+              started. Subscribers enjoy up to one personalized roadmap per month and
+              access to advanced features.
             </p>
             <p
               style={{
