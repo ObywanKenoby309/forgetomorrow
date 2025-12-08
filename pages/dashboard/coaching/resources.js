@@ -4,13 +4,8 @@ import CoachingLayout from '@/components/layouts/CoachingLayout';
 import CoachingRightColumn from '@/components/coaching/CoachingRightColumn';
 
 export default function CoachingResourcesPage() {
-  // --- Mock data ---
-  const recent = [
-    { title: 'Client Intake Template', type: 'Template', owner: 'Ops',      updated: 'Aug 10, 2025', link: '#templates' },
-    { title: 'Resume Review Checklist', type: 'Guide',   owner: 'Coaching', updated: 'Aug 09, 2025', link: '#library' },
-    { title: 'Announcement: New Scheduler', type: 'Announcement', owner: 'Product', updated: 'Aug 08, 2025', link: '#announcements' },
-  ];
-  // ------------------
+  // --- No fake recent data at launch ---
+  const recent = [];
 
   const card = (href, title, desc) => (
     <div
@@ -42,7 +37,6 @@ export default function CoachingResourcesPage() {
       sidebarInitialOpen={{ coaching: true, seeker: false }}
     >
       {/* Center column content */}
-      {/* CHANGED: remove maxWidth cap so center column can use full width */}
       <div style={{ display: 'grid', gap: 16, width: '100%' }}>
         {/* Top cards linking to anchors and newsletter */}
         <section
@@ -54,7 +48,14 @@ export default function CoachingResourcesPage() {
             border: '1px solid #eee',
           }}
         >
-          <h2 style={{ color: '#FF7043', marginTop: 0, marginBottom: 12, fontWeight: 'bold' }}>
+          <h2
+            style={{
+              color: '#FF7043',
+              marginTop: 0,
+              marginBottom: 12,
+              fontWeight: 'bold',
+            }}
+          >
             Docs & Tools
           </h2>
           <div
@@ -64,11 +65,31 @@ export default function CoachingResourcesPage() {
               gap: 12,
             }}
           >
-            {card('#templates', 'Templates', 'Standard documents for repeatable coaching workflows.')}
-            {card('#library', 'Resource Library', 'Guides, checklists, and curated materials.')}
-            {card('#announcements', 'Announcements', 'What’s new and important this week.')}
-            {card('/dashboard/coaching/newsletter', 'Newsletter', 'Compose and send a broadcast message to clients.')}
-            {card('/resources/mentors/spotlight/new', 'Create a Spotlight Card', 'Highlight a mentor with a custom spotlight.')}
+            {card(
+              '#templates',
+              'Templates',
+              'Standard documents for repeatable coaching workflows.'
+            )}
+            {card(
+              '#library',
+              'Resource Library',
+              'Guides, checklists, and curated materials.'
+            )}
+            {card(
+              '#announcements',
+              'Announcements',
+              'What’s new and important this week.'
+            )}
+            {card(
+              '/dashboard/coaching/newsletter',
+              'Newsletter',
+              'Compose and send a broadcast message to clients.'
+            )}
+            {card(
+              '/resources/mentors/spotlight/new',
+              'Create a Spotlight Card',
+              'Highlight a mentor with a custom spotlight.'
+            )}
           </div>
         </section>
 
@@ -95,7 +116,15 @@ export default function CoachingResourcesPage() {
             border: '1px solid #eee',
           }}
         >
-          <h2 style={{ color: '#FF7043', marginTop: 0, marginBottom: 12 }}>Recently Added</h2>
+          <h2
+            style={{
+              color: '#FF7043',
+              marginTop: 0,
+              marginBottom: 12,
+            }}
+          >
+            Recently Added
+          </h2>
           <div style={{ overflowX: 'auto' }}>
             <table
               style={{
@@ -118,28 +147,51 @@ export default function CoachingResourcesPage() {
                 </tr>
               </thead>
               <tbody>
-                {recent.map((r) => (
-                  <tr key={r.title} style={{ borderTop: '1px solid #eee' }}>
-                    <Td strong>{r.title}</Td>
-                    <Td>{r.type}</Td>
-                    <Td>{r.owner}</Td>
-                    <Td>{r.updated}</Td>
-                    <Td>
-                      <span
-                        onClick={() => (window.location.href = r.link)}
-                        style={{ color: '#FF7043', fontWeight: 600, cursor: 'pointer' }}
-                      >
-                        View
-                      </span>
-                    </Td>
+                {recent.length === 0 ? (
+                  <tr>
+                    <td
+                      colSpan={5}
+                      style={{
+                        padding: 16,
+                        color: '#90A4AE',
+                        textAlign: 'center',
+                      }}
+                    >
+                      No resources have been added yet. When you publish templates
+                      or guides, they will appear here.
+                    </td>
                   </tr>
-                ))}
+                ) : (
+                  recent.map((r) => (
+                    <tr
+                      key={r.title}
+                      style={{ borderTop: '1px solid #eee' }}
+                    >
+                      <Td strong>{r.title}</Td>
+                      <Td>{r.type}</Td>
+                      <Td>{r.owner}</Td>
+                      <Td>{r.updated}</Td>
+                      <Td>
+                        <span
+                          onClick={() => (window.location.href = r.link)}
+                          style={{
+                            color: '#FF7043',
+                            fontWeight: 600,
+                            cursor: 'pointer',
+                          }}
+                        >
+                          View
+                        </span>
+                      </Td>
+                    </tr>
+                  ))
+                )}
               </tbody>
             </table>
           </div>
         </section>
 
-        {/* Simple note to replace the old right-side "Coming Soon" box */}
+        {/* Simple note instead of vague coming soon box */}
         <section
           style={{
             background: 'white',
@@ -149,9 +201,17 @@ export default function CoachingResourcesPage() {
             border: '1px solid #eee',
           }}
         >
-          <h3 style={{ color: '#FF7043', marginTop: 0 }}>Coming Soon</h3>
+          <h3
+            style={{
+              color: '#FF7043',
+              marginTop: 0,
+            }}
+          >
+            Coming Soon
+          </h3>
           <p style={{ color: '#607D8B', marginTop: 0 }}>
-            Additional modules and shared assets will appear here as they’re published.
+            As we roll out more coaching materials, shared assets and key links will be
+            listed here for quick access.
           </p>
         </section>
       </div>

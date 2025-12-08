@@ -4,7 +4,6 @@ import Head from 'next/head';
 import Link from 'next/link';
 import { useRouter } from 'next/router';
 import SeekerLayout from '@/components/layouts/SeekerLayout';
-import SeekerRightColumn from '@/components/seeker/SeekerRightColumn';
 import PinnedJobsPreview from '@/components/PinnedJobsPreview';
 import KpiRow from '@/components/seeker/dashboard/KpiRow';
 import FunnelChart from '@/components/seeker/dashboard/FunnelChart';
@@ -129,13 +128,10 @@ export default function SeekerDashboard() {
 
   const RightRail = (
     <div className="grid gap-4">
-      {/* Existing seeker shortcuts / common tools */}
-      <SeekerRightColumn variant="dashboard" />
-
-      {/* Resume + Cover builder quick access */}
+      {/* 1) Resume + Cover builder quick access */}
       <section className="bg-white border border-gray-200 rounded-xl p-4 shadow-sm">
         <h2 className="text-sm font-semibold text-gray-900 mb-1">
-          Resume & Cover
+          Resume &amp; Cover
         </h2>
         <p className="text-xs text-gray-600 mb-3">
           Keep your resume and cover letter updated in one place.
@@ -156,15 +152,31 @@ export default function SeekerDashboard() {
         </div>
       </section>
 
-      {/* Career roadmap teaser (no broken links) */}
+      {/* 2) Career roadmap teaser */}
       <section className="bg-white border border-gray-200 rounded-xl p-4 shadow-sm">
         <h2 className="text-sm font-semibold text-gray-900 mb-1">
           Career Roadmap
         </h2>
         <p className="text-xs text-gray-600">
-          Soon you&apos;ll be able to map your next 2–3 roles, skills, and
-          milestones here. For now, use your dashboard and The Hearth to plan
-          your next move.
+          Soon you&apos;ll be able to map your next 2–3 roles, skills, and milestones
+          here. For now, use your dashboard and The Hearth to plan your next move.
+        </p>
+      </section>
+
+      {/* 3) Advertisement / Partner Spotlight */}
+      <section className="bg-white border border-gray-200 rounded-xl p-4 shadow-sm">
+        <h2 className="text-sm font-semibold text-gray-900 mb-1">
+          Partner Spotlight
+        </h2>
+        <p className="text-xs text-gray-600">
+          Your advertisement could be here. Contact{' '}
+          <a
+            href="mailto:sales@forgetomorrow.com"
+            className="text-orange-600 font-semibold"
+          >
+            sales@forgetomorrow.com
+          </a>
+          .
         </p>
       </section>
     </div>

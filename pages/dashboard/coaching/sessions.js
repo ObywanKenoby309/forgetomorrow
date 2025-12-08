@@ -19,38 +19,30 @@ function toLocalDateTime(dateStr, timeStr = '00:00') {
   return new Date(y, (m || 1) - 1, d || 1, hh || 0, mm || 0);
 }
 
-// Seed data (used only if nothing is saved yet)
-const seedSessions = [
-  { date: '2025-08-12', time: '09:00', client: 'Alex Turner',  type: 'Strategy',  status: 'Scheduled' },
-  { date: '2025-08-12', time: '11:30', client: 'Priya N.',     type: 'Resume',    status: 'Scheduled' },
-  { date: '2025-08-12', time: '14:00', client: 'Michael R.',   type: 'Interview', status: 'Scheduled' },
-  { date: '2025-08-13', time: '10:00', client: 'Dana C.',      type: 'Strategy',  status: 'Scheduled' },
-  { date: '2025-08-15', time: '13:00', client: 'Robert L.',    type: 'Resume',    status: 'Completed' },
-  { date: '2025-08-16', time: '09:30', client: 'Jia L.',       type: 'Interview', status: 'No-show'  },
-];
-
 export default function CoachingSessionsPage() {
   const [type, setType] = useState('All');
   const [status, setStatus] = useState('All');
 
   // Sessions state + persistence
   const [sessions, setSessions] = useState([]);
+
   useEffect(() => {
     if (typeof window === 'undefined') return;
     try {
       const saved = JSON.parse(localStorage.getItem(STORAGE_KEY) || '[]');
-      if (Array.isArray(saved) && saved.length) setSessions(saved);
-      else {
-        localStorage.setItem(STORAGE_KEY, JSON.stringify(seedSessions));
-        setSessions(seedSessions);
-      }
-    } catch {}
+      setSessions(Array.isArray(saved) ? saved : []);
+    } catch {
+      setSessions([]);
+    }
   }, []);
+
   useEffect(() => {
     if (typeof window === 'undefined') return;
     try {
       localStorage.setItem(STORAGE_KEY, JSON.stringify(sessions));
-    } catch {}
+    } catch {
+      // ignore
+    }
   }, [sessions]);
 
   // Filtering
@@ -94,7 +86,16 @@ export default function CoachingSessionsPage() {
     };
     const { bg, fg } = map[text] || { bg: '#FFF3E0', fg: '#E65100' };
     return (
-      <span style={{ fontSize: 12, background: bg, color: fg, padding: '4px 8px', borderRadius: 999, whiteSpace: 'nowrap' }}>
+      <span
+        style={{
+          fontSize: 12,
+          background: bg,
+          color: fg,
+          padding: '4px 8px',
+          borderRadius: 999,
+          whiteSpace: 'nowrap',
+        }}
+      >
         {text}
       </span>
     );
@@ -130,7 +131,13 @@ export default function CoachingSessionsPage() {
   const update = (k, v) => setForm((f) => ({ ...f, [k]: v }));
 
   const openAdd = () => {
-    setForm({ date: localISODate(), time: '09:00', client: '', type: 'Strategy', status: 'Scheduled' });
+    setForm({
+      date: localISODate(),
+      time: '09:00',
+      client: '',
+      type: 'Strategy',
+      status: 'Scheduled',
+    });
     setModal({ open: true, mode: 'add', index: null });
   };
 
@@ -191,7 +198,6 @@ export default function CoachingSessionsPage() {
       sidebarInitialOpen={{ coaching: true, seeker: false }}
     >
       {/* Center column content */}
-      {/* CHANGED: remove maxWidth cap so center column can use full width */}
       <div style={{ display: 'grid', gap: 16, width: '100%' }}>
         {/* Filters + actions */}
         <section
@@ -203,11 +209,24 @@ export default function CoachingSessionsPage() {
             border: '1px solid #eee',
           }}
         >
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr auto auto', gap: 12, alignItems: 'center' }}>
+          <div
+            style={{
+              display: 'grid',
+              gridTemplateColumns: '1fr 1fr auto auto',
+              gap: 12,
+              alignItems: 'center',
+            }}
+          >
             <select
               value={type}
               onChange={(e) => setType(e.target.value)}
-              style={{ border: '1px solid #ddd', borderRadius: 10, padding: '10px 12px', outline: 'none', background: 'white' }}
+              style={{
+                border: '1px solid #ddd',
+                borderRadius: 10,
+                padding: '10px 12px',
+                outline: 'none',
+                background: 'white',
+              }}
             >
               <option value="All">All Types</option>
               <option value="Strategy">Strategy</option>
@@ -218,7 +237,13 @@ export default function CoachingSessionsPage() {
             <select
               value={status}
               onChange={(e) => setStatus(e.target.value)}
-              style={{ border: '1px solid #ddd', borderRadius: 10, padding: '10px 12px', outline: 'none', background: 'white' }}
+              style={{
+                border: '1px solid #ddd',
+                borderRadius: 10,
+                padding: '10px 12px',
+                outline: 'none',
+                background: 'white',
+              }}
             >
               <option value="All">All Statuses</option>
               <option value="Scheduled">Scheduled</option>
@@ -226,7 +251,10 @@ export default function CoachingSessionsPage() {
               <option value="No-show">No-show</option>
             </select>
 
-            <Link href="/dashboard/coaching/sessions/calendar" style={{ color: '#FF7043', fontWeight: 700 }}>
+            <Link
+              href="/dashboard/coaching/sessions/calendar"
+              style={{ color: '#FF7043', fontWeight: 700 }}
+            >
               Calendar View →
             </Link>
 
@@ -286,8 +314,18 @@ export default function CoachingSessionsPage() {
 
           {orderedDates.map((d) => (
             <div key={d} style={{ marginBottom: 16 }}>
-              <div style={{ fontWeight: 700, marginBottom: 8, color: '#263238' }}>{friendlyLabel(d)}</div>
-              <ul style={{ margin: 0, padding: 0, listStyle: 'none', display: 'grid', gap: 8 }}>
+              <div style={{ fontWeight: 700, marginBottom: 8, color: '#263238' }}>
+                {friendlyLabel(d)}
+              </div>
+              <ul
+                style={{
+                  margin: 0,
+                  padding: 0,
+                  listStyle: 'none',
+                  display: 'grid',
+                  gap: 8,
+                }}
+              >
                 {groups[d].map((s, idx) => {
                   const masterIdx = findIndexOf(s);
                   return (
@@ -347,7 +385,9 @@ export default function CoachingSessionsPage() {
             </div>
           ))}
 
-          {orderedDates.length === 0 && <div style={{ color: '#90A4AE' }}>No sessions match your filters.</div>}
+          {orderedDates.length === 0 && (
+            <div style={{ color: '#90A4AE' }}>No sessions match your filters.</div>
+          )}
         </section>
       </div>
 
@@ -356,7 +396,10 @@ export default function CoachingSessionsPage() {
         <div
           style={{
             position: 'fixed',
-            top: 0, left: 0, right: 0, bottom: 0,
+            top: 0,
+            left: 0,
+            right: 0,
+            bottom: 0,
             background: 'rgba(0,0,0,0.4)',
             display: 'flex',
             justifyContent: 'center',
@@ -409,7 +452,11 @@ export default function CoachingSessionsPage() {
             </label>
             <label>
               Type:
-              <select value={form.type} onChange={(e) => update('type', e.target.value)} style={{ width: '100%', padding: 6 }}>
+              <select
+                value={form.type}
+                onChange={(e) => update('type', e.target.value)}
+                style={{ width: '100%', padding: 6 }}
+              >
                 <option value="Strategy">Strategy</option>
                 <option value="Resume">Resume</option>
                 <option value="Interview">Interview</option>
@@ -417,14 +464,24 @@ export default function CoachingSessionsPage() {
             </label>
             <label>
               Status:
-              <select value={form.status} onChange={(e) => update('status', e.target.value)} style={{ width: '100%', padding: 6 }}>
+              <select
+                value={form.status}
+                onChange={(e) => update('status', e.target.value)}
+                style={{ width: '100%', padding: 6 }}
+              >
                 <option value="Scheduled">Scheduled</option>
                 <option value="Completed">Completed</option>
                 <option value="No-show">No-show</option>
               </select>
             </label>
 
-            <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: 10 }}>
+            <div
+              style={{
+                display: 'flex',
+                justifyContent: 'space-between',
+                marginTop: 10,
+              }}
+            >
               {modal.mode === 'edit' && (
                 <button
                   type="button"

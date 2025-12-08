@@ -34,18 +34,28 @@ export default function CoachingDashboardPage() {
     }
   }, []);
 
-  useEffect(() => { loadCsat(); }, [loadCsat]);
+  useEffect(() => {
+    loadCsat();
+  }, [loadCsat]);
 
   const refreshCsat = () => {
     setRefreshing(true);
-    setTimeout(() => { loadCsat(); setRefreshing(false); }, 120);
+    setTimeout(() => {
+      loadCsat();
+      setRefreshing(false);
+    }, 120);
   };
 
   const avgScore =
     csat.length > 0
       ? (
           csat.reduce(
-            (sum, r) => sum + (Number(r.satisfaction) + Number(r.timeliness) + Number(r.quality)) / 3,
+            (sum, r) =>
+              sum +
+              (Number(r.satisfaction) +
+                Number(r.timeliness) +
+                Number(r.quality)) /
+                3,
             0
           ) / csat.length
         ).toFixed(1)
@@ -74,35 +84,45 @@ export default function CoachingDashboardPage() {
   const kpis = [
     { label: 'Sessions Today', value: sessionsToday.length },
     { label: 'Active Clients', value: activeClients },
-    { label: 'Follow-ups Due', value: 6 }, // placeholder until you have real logic
+    // Follow-up logic not wired yet; show 0 instead of a fake number
+    { label: 'Follow-ups Due', value: 0 },
   ];
 
   // ---- Upcoming Sessions (next 3 from "now") ----
   const toDate = (d, t) => new Date(`${d}T${t}:00`);
   const now = new Date();
   const upcomingNext3 = sessions
-    .filter((s) => toDate(s.date, s.time) >= now)
+    .filter((s) => {
+      if (!s.date || !s.time) return false;
+      return toDate(s.date, s.time) >= now;
+    })
     .sort((a, b) => (a.date + a.time).localeCompare(b.date + b.time))
     .slice(0, 3);
 
-  // --- Clients (dashboard table) ---
-  // NOTE: remove hard-coded demo names; show neutral empty state instead.
+  // --- Clients (dashboard snapshot) ---
+  // NOTE: no fake demo names; snapshot is empty until wired to real data.
   const clients = [];
 
   return (
     <CoachingLayout
       title="Coaching Dashboard | ForgeTomorrow"
-      activeNav="overview" // <- ensures default title "Your Coaching Dashboard"
+      activeNav="overview" // default coaching dashboard highlight
       headerDescription="Track client progress, manage sessions, and review feedback — all in one place."
       right={<CoachingRightColumn />}
       sidebarInitialOpen={{ coaching: true, seeker: false }}
     >
       {/* Center column content */}
-      {/* CHANGED: remove maxWidth cap so center column can use full width */}
       <div style={{ display: 'grid', gap: 16, width: '100%' }}>
         {/* Today (KPI strip + sessions list) */}
         <Section title="Today">
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, minmax(0, 1fr))', gap: 12, marginBottom: 12 }}>
+          <div
+            style={{
+              display: 'grid',
+              gridTemplateColumns: 'repeat(3, minmax(0, 1fr))',
+              gap: 12,
+              marginBottom: 12,
+            }}
+          >
             {kpis.map((k) => (
               <KPI key={k.label} label={k.label} value={k.value} />
             ))}
@@ -110,9 +130,20 @@ export default function CoachingDashboardPage() {
 
           <div style={grid3}>
             <Card title="Upcoming Sessions">
-              <ul style={{ margin: 0, padding: 0, listStyle: 'none', display: 'grid', gap: 8 }}>
+              <ul
+                style={{
+                  margin: 0,
+                  padding: 0,
+                  listStyle: 'none',
+                  display: 'grid',
+                  gap: 8,
+                }}
+              >
                 {upcomingNext3.length === 0 ? (
-                  <li style={{ color: '#90A4AE' }}>No upcoming sessions.</li>
+                  <li style={{ color: '#90A4AE' }}>
+                    No upcoming sessions yet. Once you add sessions in the calendar,
+                    they will appear here.
+                  </li>
                 ) : (
                   upcomingNext3.map((s, idx) => {
                     const { background, color } =
@@ -133,10 +164,22 @@ export default function CoachingDashboardPage() {
                           gap: 10,
                         }}
                       >
-                        <span style={{ fontWeight: 600, minWidth: 72 }}>{s.time}</span>
-                        <div style={{ display: 'grid', gap: 2, flex: 1 }}>
+                        <span style={{ fontWeight: 600, minWidth: 72 }}>
+                          {s.time}
+                        </span>
+                        <div
+                          style={{
+                            display: 'grid',
+                            gap: 2,
+                            flex: 1,
+                          }}
+                        >
                           <span style={{ color: '#455A64' }}>{s.client}</span>
-                          <span style={{ color: '#90A4AE', fontSize: 12 }}>{s.type}</span>
+                          <span
+                            style={{ color: '#90A4AE', fontSize: 12 }}
+                          >
+                            {s.type}
+                          </span>
                         </div>
                         <span
                           style={{
@@ -156,18 +199,27 @@ export default function CoachingDashboardPage() {
                 )}
               </ul>
               <div style={{ textAlign: 'right', marginTop: 10 }}>
-                <Link href="/dashboard/coaching/sessions" style={{ color: '#FF7043', fontWeight: 600 }}>
+                <Link
+                  href="/dashboard/coaching/sessions"
+                  style={{ color: '#FF7043', fontWeight: 600 }}
+                >
                   View schedule
                 </Link>
               </div>
             </Card>
 
             <Card title="New Client Intakes">
-              <div style={{ color: '#455A64' }}>2 new intakes pending review.</div>
+              <div style={{ color: '#455A64' }}>
+                Intake tracking and alerts will appear here once wired to your
+                client onboarding flow.
+              </div>
             </Card>
 
             <Card title="Follow-ups Due">
-              <div style={{ color: '#455A64' }}>6 follow-ups due by 5 PM.</div>
+              <div style={{ color: '#455A64' }}>
+                Follow-up reminders will be calculated from your sessions and notes.
+                For now, this card stays at zero until that logic is live.
+              </div>
             </Card>
           </div>
         </Section>
@@ -185,8 +237,8 @@ export default function CoachingDashboardPage() {
                 fontSize: 14,
               }}
             >
-              No clients yet. Once you start working with clients, a quick snapshot of their status
-              will appear here.
+              No clients yet. Once you start working with clients, a quick snapshot
+              of their status will appear here.
             </div>
           ) : (
             <>
@@ -213,7 +265,10 @@ export default function CoachingDashboardPage() {
                     {clients.map((c) => {
                       const { background, color } = getStatusStyles(c.status);
                       return (
-                        <tr key={c.name} style={{ borderTop: '1px solid #eee' }}>
+                        <tr
+                          key={c.name}
+                          style={{ borderTop: '1px solid #eee' }}
+                        >
                           <Td strong>{c.name}</Td>
                           <Td>
                             <span
@@ -236,7 +291,10 @@ export default function CoachingDashboardPage() {
                 </table>
               </div>
               <div style={{ textAlign: 'right', marginTop: 10 }}>
-                <Link href="/dashboard/coaching/clients" style={{ color: '#FF7043', fontWeight: 600 }}>
+                <Link
+                  href="/dashboard/coaching/clients"
+                  style={{ color: '#FF7043', fontWeight: 600 }}
+                >
                   View all clients
                 </Link>
               </div>
@@ -270,15 +328,43 @@ export default function CoachingDashboardPage() {
         >
           <div style={grid3}>
             <Card title="Average Score">
-              <div style={{ display: 'flex', alignItems: 'baseline', gap: 8 }}>
-                <div style={{ fontSize: 28, fontWeight: 800, color: '#263238' }}>{avgScore}</div>
-                <div style={{ color: '#90A4AE', fontSize: 12 }}>/ 5</div>
+              <div
+                style={{
+                  display: 'flex',
+                  alignItems: 'baseline',
+                  gap: 8,
+                }}
+              >
+                <div
+                  style={{
+                    fontSize: 28,
+                    fontWeight: 800,
+                    color: '#263238',
+                  }}
+                >
+                  {avgScore}
+                </div>
+                <div
+                  style={{ color: '#90A4AE', fontSize: 12 }}
+                >
+                  / 5
+                </div>
               </div>
-              <div style={{ color: '#607D8B', fontSize: 13, marginTop: 4 }}>
-                Based on {totalResponses} {totalResponses === 1 ? 'response' : 'responses'}
+              <div
+                style={{
+                  color: '#607D8B',
+                  fontSize: 13,
+                  marginTop: 4,
+                }}
+              >
+                Based on {totalResponses}{' '}
+                {totalResponses === 1 ? 'response' : 'responses'}
               </div>
               <div style={{ marginTop: 10 }}>
-                <Link href="/dashboard/coaching/feedback" style={{ color: '#FF7043', fontWeight: 600 }}>
+                <Link
+                  href="/dashboard/coaching/feedback"
+                  style={{ color: '#FF7043', fontWeight: 600 }}
+                >
                   Open feedback
                 </Link>
               </div>
@@ -286,11 +372,26 @@ export default function CoachingDashboardPage() {
 
             <Card title="Recent Feedback">
               {recent.length === 0 ? (
-                <div style={{ color: '#90A4AE' }}>No responses yet.</div>
+                <div style={{ color: '#90A4AE' }}>
+                  No responses yet.
+                </div>
               ) : (
-                <ul style={{ margin: 0, padding: 0, listStyle: 'none', display: 'grid', gap: 8 }}>
+                <ul
+                  style={{
+                    margin: 0,
+                    padding: 0,
+                    listStyle: 'none',
+                    display: 'grid',
+                    gap: 8,
+                  }}
+                >
                   {recent.map((r) => {
-                    const avg = ((Number(r.satisfaction) + Number(r.timeliness) + Number(r.quality)) / 3).toFixed(1);
+                    const avg = (
+                      (Number(r.satisfaction) +
+                        Number(r.timeliness) +
+                        Number(r.quality)) /
+                      3
+                    ).toFixed(1);
                     const comment = (r.comment || '').trim();
                     return (
                       <li
@@ -302,22 +403,64 @@ export default function CoachingDashboardPage() {
                           background: 'white',
                         }}
                       >
-                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline' }}>
-                          <div style={{ fontWeight: 700, color: '#263238' }}>{avg}/5</div>
-                          <div style={{ color: '#90A4AE', fontSize: 12 }}>
-                            {new Date(r.createdAt).toLocaleString(undefined, {
-                              month: 'short',
-                              day: 'numeric',
-                              hour: 'numeric',
-                              minute: '2-digit',
-                            })}
+                        <div
+                          style={{
+                            display: 'flex',
+                            justifyContent: 'space-between',
+                            alignItems: 'baseline',
+                          }}
+                        >
+                          <div
+                            style={{
+                              fontWeight: 700,
+                              color: '#263238',
+                            }}
+                          >
+                            {avg}/5
+                          </div>
+                          <div
+                            style={{
+                              color: '#90A4AE',
+                              fontSize: 12,
+                            }}
+                          >
+                            {new Date(r.createdAt).toLocaleString(
+                              undefined,
+                              {
+                                month: 'short',
+                                day: 'numeric',
+                                hour: 'numeric',
+                                minute: '2-digit',
+                              }
+                            )}
                           </div>
                         </div>
-                        <div style={{ color: '#455A64', marginTop: 4 }}>
-                          {comment ? comment : <span style={{ color: '#90A4AE' }}>(No comment)</span>}
+                        <div
+                          style={{
+                            color: '#455A64',
+                            marginTop: 4,
+                          }}
+                        >
+                          {comment ? (
+                            comment
+                          ) : (
+                            <span
+                              style={{ color: '#90A4AE' }}
+                            >
+                              (No comment)
+                            </span>
+                          )}
                         </div>
                         {r.anonymous ? (
-                          <div style={{ color: '#90A4AE', fontSize: 12, marginTop: 4 }}>Anonymous</div>
+                          <div
+                            style={{
+                              color: '#90A4AE',
+                              fontSize: 12,
+                              marginTop: 4,
+                            }}
+                          >
+                            Anonymous
+                          </div>
                         ) : null}
                       </li>
                     );
@@ -374,7 +517,15 @@ function Section({ title, children, action = null }) {
           justifyContent: 'space-between',
         }}
       >
-        <div style={{ color: '#FF7043', fontWeight: 700, fontSize: 18 }}>{title}</div>
+        <div
+          style={{
+            color: '#FF7043',
+            fontWeight: 700,
+            fontSize: 18,
+          }}
+        >
+          {title}
+        </div>
         {action}
       </div>
       <div>{children}</div>
@@ -394,7 +545,9 @@ function Card({ title, children }) {
       }}
     >
       <div style={{ fontWeight: 600, marginBottom: 8 }}>{title}</div>
-      {children || <div style={{ color: '#90A4AE' }}>Coming soon…</div>}
+      {children || (
+        <div style={{ color: '#90A4AE' }}>Coming soon…</div>
+      )}
     </div>
   );
 }
@@ -414,8 +567,24 @@ function KPI({ label, value }) {
         gap: 4,
       }}
     >
-      <div style={{ fontSize: 12, color: '#607D8B', fontWeight: 600 }}>{label}</div>
-      <div style={{ fontSize: 22, fontWeight: 800, color: '#263238' }}>{value}</div>
+      <div
+        style={{
+          fontSize: 12,
+          color: '#607D8B',
+          fontWeight: 600,
+        }}
+      >
+        {label}
+      </div>
+      <div
+        style={{
+          fontSize: 22,
+          fontWeight: 800,
+          color: '#263238',
+        }}
+      >
+        {value}
+      </div>
     </div>
   );
 }
@@ -454,7 +623,13 @@ function Td({ children, strong = false }) {
 
 function Row({ label, value }) {
   return (
-    <div style={{ display: 'flex', justifyContent: 'space-between', color: '#455A64' }}>
+    <div
+      style={{
+        display: 'flex',
+        justifyContent: 'space-between',
+        color: '#455A64',
+      }}
+    >
       <span>{label}</span>
       <span style={{ fontWeight: 700 }}>{value}/5</span>
     </div>
