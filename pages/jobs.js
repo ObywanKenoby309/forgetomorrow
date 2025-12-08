@@ -1120,10 +1120,11 @@ function Jobs() {
                     <div
                       style={{
                         display: 'flex',
+                        justifyContent: 'center',
+                        alignItems: 'center',
                         flexWrap: 'wrap',
                         gap: 10,
-                        marginTop: 8,
-                        justifyContent: 'flex-end',
+                        marginTop: 16,
                       }}
                     >
                       <button
@@ -1135,12 +1136,13 @@ function Jobs() {
                             ? '#D32F2F'
                             : '#FF7043',
                           padding: '10px 16px',
-                          borderRadius: 8,
+                          borderRadius: 999,
                           border: `1px solid ${
                             isJobPinned(selectedJob) ? '#D32F2F' : '#FF7043'
                           }`,
                           fontWeight: 700,
                           cursor: 'pointer',
+                          minWidth: 96,
                         }}
                         aria-pressed={isJobPinned(selectedJob)}
                       >
@@ -1153,11 +1155,12 @@ function Jobs() {
                         style={{
                           background: '#FF7043',
                           color: 'white',
-                          padding: '10px 16px',
-                          borderRadius: 8,
+                          padding: '10px 24px',
+                          borderRadius: 999,
                           border: 'none',
                           fontWeight: 700,
                           cursor: 'pointer',
+                          minWidth: 96,
                         }}
                       >
                         Apply
@@ -1178,10 +1181,11 @@ function Jobs() {
                               background: 'white',
                               color: '#FF7043',
                               padding: '10px 16px',
-                              borderRadius: 8,
+                              borderRadius: 999,
                               border: '1px solid #FF7043',
                               fontWeight: 700,
                               cursor: 'pointer',
+                              whiteSpace: 'nowrap',
                             }}
                           >
                             ATS Alignment
@@ -1201,6 +1205,7 @@ function Jobs() {
                             color: '#263238',
                             textDecoration: 'none',
                             fontSize: 14,
+                            whiteSpace: 'nowrap',
                           }}
                         >
                           Open original posting
