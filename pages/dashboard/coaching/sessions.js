@@ -376,7 +376,7 @@ export default function CoachingSessionsPage() {
                           style={{
                             background: 'white',
                             color: '#C62828',
-                            border: '1px solid '#C62828',
+                            border: '1px solid #C62828',
                             borderRadius: 6,
                             padding: '4px 8px',
                             fontSize: 11,
