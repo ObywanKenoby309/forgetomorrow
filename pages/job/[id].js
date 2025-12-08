@@ -4,7 +4,7 @@ import { useEffect, useState } from 'react';
 import Head from 'next/head';
 import Link from 'next/link';
 import { track } from '@/lib/track';
-import JobApplyModal from '@/components/jobs/JobApplyModal';
+import JobApplyModal from '@/components/JobApplyModal';
 
 export default function PublicJobView() {
   const router = useRouter();
