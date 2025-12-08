@@ -1,5 +1,6 @@
 // components/feed/PostCard.js
 import { useState } from 'react';
+import { useRouter } from 'next/router';
 import QuickEmojiBar from './QuickEmojiBar';
 
 export default function PostCard({
@@ -10,6 +11,8 @@ export default function PostCard({
   onReact,
   currentUserId,
 }) {
+  const router = useRouter();
+
   const [reply, setReply] = useState('');
   const [reported, setReported] = useState(false);
   const [reportMessage, setReportMessage] = useState('');
@@ -84,6 +87,60 @@ export default function PostCard({
 
   const hasReactions = Object.keys(reactionCounts).length > 0;
 
+  const authorId = post.authorId || '';
+  const authorName = post.author || 'Member';
+
+  const goToProfile = () => {
+    if (!authorId) return;
+    const params = new URLSearchParams();
+    params.set('userId', authorId);
+
+    setShowProfileMenu(false);
+    router.push(`/member-profile?${params.toString()}`);
+  };
+
+  const goToMessages = () => {
+    const params = new URLSearchParams();
+    if (authorId) params.set('toId', authorId);
+    if (authorName) params.set('toName', authorName);
+
+    setShowProfileMenu(false);
+    router.push(`/seeker/messages?${params.toString()}`);
+  };
+
+  const goToConnect = async () => {
+    if (!authorId) return;
+
+    try {
+      const res = await fetch('/api/contacts/request', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ toUserId: authorId }),
+      });
+
+      if (!res.ok) {
+        console.error('contacts/request from PostCard failed', await res.text());
+        alert('We could not send your connection request. Please try again.');
+        return;
+      }
+
+      const data = await res.json();
+
+      if (data.alreadyConnected) {
+        alert('You are already connected with this member.');
+      } else if (data.alreadyRequested) {
+        alert('You already have a pending request with this member.');
+      } else {
+        alert('Connection request sent.');
+      }
+    } catch (err) {
+      console.error('contacts/request from PostCard error', err);
+      alert('We could not send your connection request. Please try again.');
+    } finally {
+      setShowProfileMenu(false);
+    }
+  };
+
   return (
     <article
       id={`post-${post.id}`}
@@ -117,7 +174,7 @@ export default function PostCard({
           </div>
         </button>
 
-        {/* simple inline profile actions menu */}
+        {/* inline profile actions menu */}
         {showProfileMenu && (
           <div className="absolute top-12 left-4 z-20 bg-white border rounded-lg shadow-lg text-sm w-52">
             <div className="px-3 py-2 border-b font-semibold">
@@ -126,32 +183,23 @@ export default function PostCard({
             <button
               type="button"
               className="w-full text-left px-3 py-2 hover:bg-gray-50"
-              // TODO: wire to real profile route once ready
-              onClick={() => {
-                setShowProfileMenu(false);
-              }}
+              onClick={goToProfile}
             >
-              View profile (coming soon)
+              View profile
             </button>
             <button
               type="button"
               className="w-full text-left px-3 py-2 hover:bg-gray-50"
-              // TODO: wire to messaging once ready
-              onClick={() => {
-                setShowProfileMenu(false);
-              }}
+              onClick={goToMessages}
             >
-              Message (coming soon)
+              Message
             </button>
             <button
               type="button"
               className="w-full text-left px-3 py-2 hover:bg-gray-50"
-              // TODO: wire to connection flow once ready
-              onClick={() => {
-                setShowProfileMenu(false);
-              }}
+              onClick={goToConnect}
             >
-              Connect (coming soon)
+              Connect
             </button>
           </div>
         )}
@@ -314,7 +362,7 @@ export default function PostCard({
           <div className="text-xs text-gray-600 mt-1">{reportMessage}</div>
         )}
 
-        {/* ✅ Emoji bar: now calls onReact instead of onReply */}
+        {/* Emoji bar */}
         <QuickEmojiBar
           onPick={(emoji) => {
             if (!emoji) return;

@@ -9,12 +9,19 @@ function Card({ title, children }) {
         background: "white",
         borderRadius: 12,
         padding: 12,
-        border: "1px solid #eee",
+        border: "1px solid "#eee",
         boxShadow: "0 2px 6px rgba(0,0,0,0.06)",
       }}
     >
       {title && (
-        <h3 style={{ margin: 0, marginBottom: 8, fontWeight: 800, color: "#263238" }}>
+        <h3
+          style={{
+            margin: 0,
+            marginBottom: 8,
+            fontWeight: 800,
+            color: "#263238",
+          }}
+        >
           {title}
         </h3>
       )}
@@ -23,7 +30,10 @@ function Card({ title, children }) {
   );
 }
 
-export default function SeekerRightColumn({ variant = "default", showShortcuts = true }) {
+export default function SeekerRightColumn({
+  variant = "default",
+  showShortcuts = true,
+}) {
   // Common shortcuts block
   const Shortcuts = (
     <Card title="Shortcuts">
@@ -74,7 +84,8 @@ export default function SeekerRightColumn({ variant = "default", showShortcuts =
 
   return (
     <div className="grid gap-3">
-      {showShortcuts && Shortcuts}
+      {/* Hide shortcuts on the main feed page */}
+      {showShortcuts && variant !== "feed" && Shortcuts}
 
       {variant === "feed" && (
         <>

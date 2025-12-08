@@ -1120,10 +1120,11 @@ function Jobs() {
                     <div
                       style={{
                         display: 'flex',
-                        justifyContent: 'center',
+                        flexDirection: 'row',
+                        justifyContent: 'flex-start',
                         alignItems: 'center',
                         flexWrap: 'wrap',
-                        gap: 10,
+                        gap: 12,
                         marginTop: 16,
                       }}
                     >

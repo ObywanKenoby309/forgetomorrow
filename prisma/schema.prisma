@@ -30,6 +30,13 @@ enum Tier {
   ENTERPRISE
 }
 
+enum ContactRequestStatus {
+  PENDING
+  ACCEPTED
+  DECLINED
+  CANCELED
+}
+
 // ============================================================================
 //  JOBS, APPLICATIONS, INTERVIEWS & OFFERS
 // ============================================================================
@@ -311,6 +318,37 @@ model CoachingClient {
   @@index([coachId])
   @@index([clientId])
   @@map("coaching_clients")
+}
+
+// ============================================================================
+//  CONTACTS / NETWORK
+// ============================================================================
+
+model Contact {
+  id            String   @id @default(cuid())
+  userId        String
+  contactUserId String
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  @@unique([userId, contactUserId])
+  @@index([userId])
+  @@index([contactUserId])
+  @@map("contacts")
+}
+
+model ContactRequest {
+  id         String               @id @default(cuid())
+  fromUserId String
+  toUserId   String
+  status     ContactRequestStatus @default(PENDING)
+  createdAt  DateTime             @default(now())
+  updatedAt  DateTime             @updatedAt
+
+  @@unique([fromUserId, toUserId])
+  @@index([fromUserId])
+  @@index([toUserId])
+  @@map("contact_requests")
 }
 
 // ============================================================================

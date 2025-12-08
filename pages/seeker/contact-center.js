@@ -1,5 +1,5 @@
 // pages/seeker/contact-center.js
-import React, { useMemo, useState } from 'react';
+import React, { useMemo, useState, useEffect } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/router';
 
@@ -19,14 +19,45 @@ export default function SeekerContactCenter() {
   const withChrome = (path) =>
     chrome ? `${path}${path.includes('?') ? '&' : '?'}chrome=${chrome}` : path;
 
-  // --- Data placeholders (no fake people for launch) ---
-  // These will be wired to real user/connection data later.
-  const contacts = [];
-  const incomingRequests = [];
-  const outgoingRequests = [];
-  const groups = [];
-  const pages = [];
-  const newsletters = [];
+  // --- Live data from /api/contacts/summary ---
+  const [contacts, setContacts] = useState([]);
+  const [incomingRequests, setIncomingRequests] = useState([]);
+  const [outgoingRequests, setOutgoingRequests] = useState([]);
+  const [loading, setLoading] = useState(true);
+
+  // Future: groups/pages/newsletters; keep empty for launch
+  const [groups] = useState([]);
+  const [pages] = useState([]);
+  const [newsletters] = useState([]);
+
+  const reloadSummary = async () => {
+    try {
+      setLoading(true);
+      const res = await fetch('/api/contacts/summary');
+      if (!res.ok) {
+        console.error('contacts/summary failed', await res.text());
+        setContacts([]);
+        setIncomingRequests([]);
+        setOutgoingRequests([]);
+        return;
+      }
+      const data = await res.json();
+      setContacts(data.contacts || []);
+      setIncomingRequests(data.incoming || []);
+      setOutgoingRequests(data.outgoing || []);
+    } catch (err) {
+      console.error('contacts/summary error', err);
+      setContacts([]);
+      setIncomingRequests([]);
+      setOutgoingRequests([]);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    reloadSummary();
+  }, []);
 
   // --- Counts for tabs/badges ---
   const counts = useMemo(
@@ -38,15 +69,105 @@ export default function SeekerContactCenter() {
     [contacts, incomingRequests, outgoingRequests]
   );
 
-  // --- Handlers (stubbed) ---
-  const handleViewProfile = (c) =>
-    alert(`View profile for ${c.name} (coming soon)`);
-  const handleAccept = (r) => alert(`Accepted request from ${r.name}`);
-  const handleDecline = (r) => alert(`Declined request from ${r.name}`);
-  const handleCancel = (r) => alert(`Canceled request to ${r.name}`);
-  const openGroup = (g) => alert(`Open group: ${g.name}`);
-  const openPage = (p) => alert(`Open page: ${p.name}`);
-  const openNewsletter = (n) => alert(`Open newsletter: ${n.title}`);
+  // --- Helpers to get the "user" off different shapes ---
+  const getPersonFromItem = (item) => {
+    if (!item) return null;
+
+    // Incoming/outgoing from API: { requestId, from: {...} } / { requestId, to: {...} }
+    if (item.from) return item.from;
+    if (item.to) return item.to;
+
+    // Fallback: contacts or older shapes
+    return item;
+  };
+
+  // --- Handlers wired to real routes ---
+  const handleViewProfile = (item) => {
+    const person = getPersonFromItem(item);
+    if (!person?.id) return;
+
+    const params = new URLSearchParams();
+    params.set('userId', person.id);
+
+    router.push(withChrome(`/member-profile?${params.toString()}`));
+  };
+
+  const handleAccept = async (item) => {
+    const requestId = item.requestId || item.id;
+    if (!requestId) return;
+
+    try {
+      const res = await fetch('/api/contacts/respond', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ requestId, action: 'accept' }),
+      });
+      if (!res.ok) {
+        console.error('contacts/respond accept failed', await res.text());
+        alert('We could not accept this invitation. Please try again.');
+        return;
+      }
+      await reloadSummary();
+    } catch (err) {
+      console.error('contacts/respond accept error', err);
+      alert('We could not accept this invitation. Please try again.');
+    }
+  };
+
+  const handleDecline = async (item) => {
+    const requestId = item.requestId || item.id;
+    if (!requestId) return;
+
+    try {
+      const res = await fetch('/api/contacts/respond', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ requestId, action: 'decline' }),
+      });
+      if (!res.ok) {
+        console.error('contacts/respond decline failed', await res.text());
+        alert('We could not decline this invitation. Please try again.');
+        return;
+      }
+      await reloadSummary();
+    } catch (err) {
+      console.error('contacts/respond decline error', err);
+      alert('We could not decline this invitation. Please try again.');
+    }
+  };
+
+  // For now "Cancel" uses the same decline path (handled by /api/contacts/respond)
+  const handleCancel = async (item) => {
+    const requestId = item.requestId || item.id;
+    if (!requestId) return;
+
+    try {
+      const res = await fetch('/api/contacts/respond', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ requestId, action: 'decline' }),
+      });
+      if (!res.ok) {
+        console.error('contacts/respond cancel failed', await res.text());
+        alert('We could not cancel this request. Please try again.');
+        return;
+      }
+      await reloadSummary();
+    } catch (err) {
+      console.error('contacts/respond cancel error', err);
+      alert('We could not cancel this request. Please try again.');
+    }
+  };
+
+  const openGroup = (g) => {
+    console.log('Open group (future)', g);
+  };
+  const openPage = (p) => {
+    console.log('Open page (future)', p);
+  };
+  const openNewsletter = (n) => {
+    console.log('Open newsletter (future)', n);
+  };
 
   // --- Header card ---
   const HeaderBox = (
@@ -131,7 +252,7 @@ export default function SeekerContactCenter() {
     </Link>
   );
 
-  // Collapsible contacts (default open per your last version)
+  // Collapsible contacts (default open)
   const [showContacts, setShowContacts] = useState(true);
   const topContacts = useMemo(() => contacts.slice(0, 5), [contacts]);
 
@@ -229,6 +350,7 @@ export default function SeekerContactCenter() {
             <ContactsList
               contacts={topContacts}
               onViewProfile={handleViewProfile}
+              loading={loading}
             />
             <div style={{ marginTop: 8 }}>
               <Link
