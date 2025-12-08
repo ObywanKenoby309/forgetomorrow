@@ -73,7 +73,11 @@ export default function SignIn({ csrfToken, error }: SignInProps) {
         <input name="csrfToken" type="hidden" defaultValue={csrfToken ?? ''} />
 
         {/* 🔁 After successful login, come back here so getServerSideProps can route by plan */}
-        <input name="callbackUrl" type="hidden" value="/auth/signin" />
+        <input
+          name="callbackUrl"
+          type="hidden"
+          value="/auth/signin"
+        />
 
         <div style={{ marginBottom: 16 }}>
           <label
@@ -151,34 +155,6 @@ export default function SignIn({ csrfToken, error }: SignInProps) {
       >
         After signing in, you’ll land on your personal dashboard.
       </p>
-
-      {/* 🔑 Help users who just came from an email link and still need to set a password */}
-      <div
-        style={{
-          marginTop: 16,
-          textAlign: 'center',
-          fontSize: 13,
-          color: '#555',
-        }}
-      >
-        <p style={{ marginBottom: 8 }}>
-          Just confirmed your email and don&apos;t have a password yet?
-        </p>
-        <a
-          href="/auth/create-password"
-          style={{
-            display: 'inline-block',
-            padding: '8px 14px',
-            borderRadius: 999,
-            border: '1px solid #FF7043',
-            color: '#FF7043',
-            textDecoration: 'none',
-            fontWeight: 600,
-          }}
-        >
-          Create your password
-        </a>
-      </div>
     </main>
   );
 }
@@ -191,36 +167,36 @@ export async function getServerSideProps(context: any) {
 
   // Already logged in → send to the RIGHT dashboard
   if (session?.user) {
-    const role = String((session.user as any).role || '').toUpperCase();
-    const plan = String((session.user as any).plan || '').toUpperCase();
+    const role = String((session.user as any).role || "").toUpperCase();
+    const plan = String((session.user as any).plan || "").toUpperCase();
 
     // 1) Recruiter (SMALL_BIZ / ENTERPRISE)
-    if (role === 'RECRUITER') {
+    if (role === "RECRUITER") {
       // If you ever want a different page for SMB vs ENT, you can branch on `plan` here.
       // For now, they both land on the same recruiter dashboard.
       return {
         redirect: {
-          destination: '/recruiter/dashboard',
+          destination: "/recruiter/dashboard",
           permanent: false,
         },
       };
     }
 
     // 2) Coach
-    if (role === 'COACH') {
+    if (role === "COACH") {
       return {
         redirect: {
-          destination: '/coaching-dashboard', // or /coach/clients if that’s your real hub
+          destination: "/coaching-dashboard", // or /coach/clients if that’s your real hub
           permanent: false,
         },
       };
     }
 
     // 3) Admin (optional)
-    if (role === 'ADMIN') {
+    if (role === "ADMIN") {
       return {
         redirect: {
-          destination: '/admin',
+          destination: "/admin",
           permanent: false,
         },
       };
@@ -229,7 +205,7 @@ export async function getServerSideProps(context: any) {
     // 4) Default: Seeker (FREE / PRO)
     return {
       redirect: {
-        destination: '/seeker-dashboard',
+        destination: "/seeker-dashboard",
         permanent: false,
       },
     };
