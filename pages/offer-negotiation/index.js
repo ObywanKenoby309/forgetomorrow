@@ -1,14 +1,16 @@
+// pages/offer-negotiation/index.js
+
 import React from 'react';
 import OfferNegotiationLanding from '../../components/offer-negotiation/OfferNegotiationLanding';
 
 export default function OfferNegotiationPage() {
-  // TODO: Replace with real user subscription & usage data
-  const isPaidUser = true; 
-  const remainingUses = 3;
+  // For launch: no fake counters or gating here.
+  // OfferNegotiationLanding should safely handle missing props
+  // and treat the tool as open access until billing is wired.
 
   return (
     <div className="min-h-screen bg-[#ECEFF1] p-8">
-      <OfferNegotiationLanding remainingUses={remainingUses} isPaidUser={isPaidUser} />
+      <OfferNegotiationLanding />
     </div>
   );
 }

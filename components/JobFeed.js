@@ -1,4 +1,4 @@
-// components/JobFeed.js
+// components/JobFeed.js 
 'use client';
 
 import { useState, useEffect } from 'react';
@@ -172,6 +172,10 @@ Return your answer as valid JSON with this shape:
     }
   }
 
+  // Helper to resolve the best external link field
+  const getApplyLink = (job) =>
+    job?.url || job?.externalUrl || job?.link || job?.applyUrl || '';
+
   if (loading) {
     return (
       <p className="text-gray-400 text-center mt-10">
@@ -187,6 +191,8 @@ Return your answer as valid JSON with this shape:
       </p>
     );
   }
+
+  const selectedApplyLink = getApplyLink(selectedJob);
 
   return (
     <div className="max-w-6xl mx-auto px-6 py-12 grid md:grid-cols-[2fr_3fr] gap-8">
@@ -254,20 +260,22 @@ Return your answer as valid JSON with this shape:
 
               <div className="mt-4 flex flex-wrap gap-3 items-center">
                 <Link
-  href={selectedJob.url || '#'}
-  target="_blank"
-  rel="noopener noreferrer"
-  className="inline-flex items-center justify-center px-4 py-2 rounded-lg bg-[#FF7043] text-white font-semibold hover:bg-[#ff8a5f] transition disabled:opacity-60 disabled:cursor-not-allowed"
-  onClick={(e) => {
-    if (!selectedJob.url) {
-      e.preventDefault();
-      // Later we can replace with a nice toast, but for launch:
-      alert('This job does not have an external application link configured yet. Please check back soon.');
-    }
-  }}
->
-  Apply →
-</Link>
+                  href={selectedApplyLink || '#'}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="inline-flex items-center justify-center px-4 py-2 rounded-lg bg-[#FF7043] text-white font-semibold hover:bg-[#ff8a5f] transition disabled:opacity-60 disabled:cursor-not-allowed"
+                  onClick={(e) => {
+                    if (!selectedApplyLink) {
+                      e.preventDefault();
+                      // Later we can replace with a nice toast, but for launch:
+                      alert(
+                        'This job does not have an external application link configured yet. Please check back soon.'
+                      );
+                    }
+                  }}
+                >
+                  Apply →
+                </Link>
                 <button
                   onClick={() => handleRunATS(selectedJob)}
                   disabled={atsLoading}

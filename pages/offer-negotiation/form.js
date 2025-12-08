@@ -1,3 +1,5 @@
+// pages/offer-negotiation/form.js
+
 import React from 'react';
 import { useRouter } from 'next/router';
 import SeekerSidebar from '../../components/SeekerSidebar';
@@ -7,6 +9,10 @@ export default function OfferNegotiationFormPage() {
   const router = useRouter();
 
   const handleFormSubmit = (formData) => {
+    // NOTE: For now we serialize into the query string.
+    // If payloads get large, we can switch to:
+    // - POST to an API and pass back an ID, or
+    // - use sessionStorage/localStorage as a short-lived stash.
     const query = encodeURIComponent(JSON.stringify(formData));
     router.push(`/offer-negotiation/results?data=${query}`);
   };

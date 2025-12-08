@@ -101,7 +101,7 @@ function ApplyModal({ open, onClose, job, onApplied, isPaidUser, onResumeAlign }
             <input
               id="apply-email"
               type="email"
-placeholder="you@example.com"
+              placeholder="you@example.com"
               required
               value={email}
               onChange={(e) => setEmail(e.target.value)}
@@ -210,6 +210,12 @@ function inferLocationType(location) {
   if (lower.includes('remote')) return 'Remote';
   if (lower.includes('hybrid')) return 'Hybrid';
   return 'On-site';
+}
+
+// Helper: resolve best external application link field
+function getApplyLink(job) {
+  if (!job) return '';
+  return job.url || job.externalUrl || job.link || job.applyUrl || '';
 }
 
 // ──────────────────────────────────────────────────────────────
@@ -346,10 +352,11 @@ function Jobs() {
     if (!job) return;
 
     const origin = (job.origin || '').toLowerCase();
+    const applyLink = getApplyLink(job);
 
     // External jobs (RSS / feeds): send them to the employer site.
     if (origin === 'external') {
-      if (!job.url) {
+      if (!applyLink) {
         alert(
           'This job does not have an external application link configured yet. Please check back soon.'
         );
@@ -360,7 +367,7 @@ function Jobs() {
       addAppliedJob(job);
 
       if (typeof window !== 'undefined') {
-        window.open(job.url, '_blank', 'noopener,noreferrer');
+        window.open(applyLink, '_blank', 'noopener,noreferrer');
       }
 
       return;
@@ -548,6 +555,8 @@ function Jobs() {
 
   // Recent viewed jobs (last 6, most recent first)
   const recentViewed = viewedJobs.slice(-6).reverse();
+
+  const selectedJobApplyLink = selectedJob ? getApplyLink(selectedJob) : '';
 
   if (loading) {
     return (
@@ -1231,9 +1240,9 @@ function Jobs() {
                         </div>
                       )}
 
-                      {selectedJob.url && (
+                      {selectedJobApplyLink && (
                         <Link
-                          href={selectedJob.url}
+                          href={selectedJobApplyLink}
                           target="_blank"
                           style={{
                             padding: '10px 16px',
