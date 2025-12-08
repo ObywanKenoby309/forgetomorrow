@@ -9,7 +9,7 @@ function Card({ title, children }) {
         background: "white",
         borderRadius: 12,
         padding: 12,
-        border: "1px solid "#eee",
+        border: "1px solid #eee",
         boxShadow: "0 2px 6px rgba(0,0,0,0.06)",
       }}
     >
