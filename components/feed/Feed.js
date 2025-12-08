@@ -167,10 +167,13 @@ export default function Feed() {
 
       {showComposer && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
-          <div className="bg-white rounded-lg shadow-xl max-w-lg w-full p-4">
+          <div
+            className="bg-white rounded-lg shadow-xl max-w-lg w-full p-4"
+            onClick={(e) => e.stopPropagation()}
+          >
             <PostComposer
+              onPost={handleNewPost}
               onCancel={() => setShowComposer(false)}
-              onSubmit={handleNewPost}
               currentUserName={currentUserName}
               currentUserAvatar={currentUserAvatar}
             />
