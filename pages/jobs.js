@@ -253,7 +253,7 @@ function Jobs() {
 
   // Filters
   const [keyword, setKeyword] = useState('');
-  the [companyFilter, setCompanyFilter] = useState('');
+  const [companyFilter, setCompanyFilter] = useState('');
   const [locationFilter, setLocationFilter] = useState('');
   const [locationTypeFilter, setLocationTypeFilter] = useState(''); // '', 'Remote', 'Hybrid', 'On-site'
   const [daysFilter, setDaysFilter] = useState('');
