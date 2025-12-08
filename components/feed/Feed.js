@@ -16,31 +16,27 @@ export default function Feed() {
     [session?.user?.firstName, session?.user?.lastName]
       .filter(Boolean)
       .join(' ') ||
-    // ❌ removed "You" fallback – we never want that saved or reused for authors
     (session?.user?.email?.split('@')[0] ?? '');
   const currentUserAvatar = session?.user?.avatarUrl || session?.user?.image || null;
 
-  // Normalize community post shape
+  // Normalize community post shape (matches your DB feedPost rows)
   const normalizeCommunityPost = (row) => {
     if (!row) return null;
 
-    // pull body from any of the likely fields
     let body = row.content || row.text || row.body || '';
     let attachments = [];
 
     try {
-      // if content is JSON with { body, attachments }
       const parsed =
         typeof row.content === 'string' ? JSON.parse(row.content) : null;
       if (parsed?.body) body = parsed.body;
       if (Array.isArray(parsed?.attachments)) attachments = parsed.attachments;
     } catch {
-      // not JSON – just fall back to the raw body above
+      // not JSON – just fall back to raw body above
     }
 
     return {
       id: row.id,
-      // ✅ show the *real* author from the row, never the viewer
       authorId: row.authorId ?? null,
       author: row.authorName || row.author || 'Member',
       authorAvatar: row.authorAvatar || null,
@@ -106,17 +102,15 @@ export default function Feed() {
 
   useEffect(() => {
     reloadFeed();
-    // Refresh every 5 minutes for fresh jobs
     const interval = setInterval(reloadFeed, 5 * 60 * 1000);
     return () => clearInterval(interval);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [filter]);
 
-  // New post from composer
+  // New post from composer → saved via /api/feed
   const handleNewPost = async (postFromComposer) => {
     const body = postFromComposer.body ?? '';
 
-    // send both "content" and "text" so the API + DB are happy
     const payload = {
       content: JSON.stringify({
         body,
@@ -144,41 +138,48 @@ export default function Feed() {
     }
   };
 
-  // ✅ Replies (text or emoji-as-text) — update comments immediately in state
-  const handleReply = (postId, text) => {
+  // ✅ Replies (text OR emoji) — go through /api/feed/comments and update state
+  const handleReply = async (postId, text) => {
     if (!postId || !text || !text.trim()) return;
     const trimmed = text.trim();
 
-    const newComment = {
-      by: currentUserName || 'You',
-      text: trimmed,
-      avatarUrl: currentUserAvatar || null,
-      createdAt: new Date().toISOString(),
-    };
+    // Don't allow replies on remote jobs
+    if (String(postId).startsWith('job-')) return;
 
-    setPosts((prev) =>
-      prev.map((p) =>
-        p.id === postId
-          ? {
-              ...p,
-              comments: Array.isArray(p.comments)
-                ? [...p.comments, newComment]
-                : [newComment],
-            }
-          : p
-      )
-    );
+    try {
+      const res = await fetch('/api/feed/comments', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ postId, text: trimmed }),
+      });
 
-    // You can later wire a real API call here (no guessing now)
-    // e.g. POST /api/feed/{postId}/comments
+      if (!res.ok) {
+        console.error('Comment failed', await res.text());
+        return;
+      }
+
+      const data = await res.json();
+      const updatedPost = normalizeCommunityPost(data.post);
+
+      setPosts((prev) =>
+        prev.map((p) => (p.id === updatedPost.id ? { ...p, ...updatedPost } : p))
+      );
+    } catch (err) {
+      console.error('Comment error:', err);
+    }
   };
 
-  // ✅ Delete — removes post from UI + tries backend delete
+  // ✅ Emoji reactions in QuickEmojiBar: just treat as a reply comment
+  const handleReact = (postId, emoji) => {
+    if (!emoji) return;
+    handleReply(postId, emoji);
+  };
+
+  // ✅ Delete — removes post from UI + hits /api/feed/[id]
   const handleDelete = async (postId) => {
     if (!postId) return;
 
-    // Never try to delete remote jobs via feed delete
-    if (String(postId).startsWith('job-')) return;
+    if (String(postId).startsWith('job-')) return; // never delete remote jobs here
 
     // optimistic UI update
     setPosts((prev) => prev.filter((p) => p.id !== postId));
@@ -189,7 +190,6 @@ export default function Feed() {
       });
     } catch (err) {
       console.error('Delete failed:', err);
-      // If delete fails, you can optionally reloadFeed() later
     }
   };
 
@@ -227,17 +227,18 @@ export default function Feed() {
         filter={filter}
         onReply={handleReply}
         onDelete={handleDelete}
+        onReact={handleReact}   {/* ← wire emojis */}
         currentUserId={currentUserId}
       />
 
       {showComposer && (
         <div
           className="fixed inset-0 z-50 flex items-center justify-center bg-black/40"
-          onClick={() => setShowComposer(false)} // click backdrop to close
+          onClick={() => setShowComposer(false)}
         >
           <div
             className="bg-white rounded-lg shadow-xl max-w-lg w-full p-4"
-            onClick={(e) => e.stopPropagation()} // keep clicks inside from closing
+            onClick={(e) => e.stopPropagation()}
           >
             <PostComposer
               onPost={handleNewPost}
