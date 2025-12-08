@@ -1117,103 +1117,127 @@ function Jobs() {
                     </div>
 
                     {/* ACTION ROW: Pin | Apply | ATS Alignment | Open original */}
-<div
-  style={{
-    display: 'flex',
-    flexDirection: 'row',
-    justifyContent: 'flex-start',
-    alignItems: 'center',
-    flexWrap: 'nowrap',      // keep buttons on one line
-    gap: 10,
-    marginTop: 16,
-    overflowX: 'auto',       // allow horizontal scroll on very small screens
-    paddingBottom: 4,
-  }}
->
-  <button
-    type="button"
-    onClick={() => togglePin(selectedJob)}
-    style={{
-      background: 'white',
-      color: isJobPinned(selectedJob) ? '#D32F2F' : '#FF7043',
-      padding: '10px 16px',
-      borderRadius: 999,
-      border: `1px solid ${
-        isJobPinned(selectedJob) ? '#D32F2F' : '#FF7043'
-      }`,
-      fontWeight: 700,
-      cursor: 'pointer',
-      minWidth: 96,
-    }}
-    aria-pressed={isJobPinned(selectedJob)}
-  >
-    {isJobPinned(selectedJob) ? 'Unpin job' : 'Pin job'}
-  </button>
+                    <div
+                      style={{
+                        display: 'flex',
+                        flexDirection: 'row',
+                        justifyContent: 'flex-start',
+                        alignItems: 'center',
+                        flexWrap: 'nowrap', // keep buttons on one line
+                        gap: 10,
+                        marginTop: 16,
+                        overflowX: 'auto', // allow horizontal scroll on very small screens
+                        paddingBottom: 4,
+                      }}
+                    >
+                      <button
+                        type="button"
+                        onClick={() => togglePin(selectedJob)}
+                        style={{
+                          background: 'white',
+                          color: isJobPinned(selectedJob)
+                            ? '#D32F2F'
+                            : '#FF7043',
+                          padding: '10px 16px',
+                          borderRadius: 999,
+                          border: `1px solid ${
+                            isJobPinned(selectedJob) ? '#D32F2F' : '#FF7043'
+                          }`,
+                          fontWeight: 700,
+                          cursor: 'pointer',
+                          minWidth: 96,
+                        }}
+                        aria-pressed={isJobPinned(selectedJob)}
+                      >
+                        {isJobPinned(selectedJob) ? 'Unpin job' : 'Pin job'}
+                      </button>
 
-  <button
-    type="button"
-    onClick={() => handleApplyClick(selectedJob)}
-    style={{
-      background: '#FF7043',
-      color: 'white',
-      padding: '10px 24px',
-      borderRadius: 999,
-      border: 'none',
-      fontWeight: 700,
-      cursor: 'pointer',
-      minWidth: 96,
-    }}
-  >
-    Apply
-  </button>
+                      <button
+                        type="button"
+                        onClick={() => handleApplyClick(selectedJob)}
+                        style={{
+                          background: '#FF7043',
+                          color: 'white',
+                          padding: '10px 24px',
+                          borderRadius: 999,
+                          border: 'none',
+                          fontWeight: 700,
+                          cursor: 'pointer',
+                          minWidth: 96,
+                        }}
+                      >
+                        Apply
+                      </button>
 
-  {isPaidUser && (
-    <div
-      style={{
-        display: 'inline-flex',
-        alignItems: 'center',
-        gap: 6,
-      }}
-    >
-      <button
-        type="button"
-        onClick={() => handleATSAlign(selectedJob)}
-        style={{
-          background: 'white',
-          color: '#FF7043',
-          padding: '10px 16px',
-          borderRadius: 999,
-          border: '1px solid #FF7043',
-          fontWeight: 700,
-          cursor: 'pointer',
-          whiteSpace: 'nowrap',
-        }}
-      >
-        ATS Alignment
-      </button>
-      <ATSInfo />
-    </div>
-  )}
+                      {isPaidUser && (
+                        <div
+                          style={{
+                            display: 'inline-flex',
+                            alignItems: 'center',
+                            gap: 6,
+                          }}
+                        >
+                          <button
+                            type="button"
+                            onClick={() => handleATSAlign(selectedJob)}
+                            style={{
+                              background: 'white',
+                              color: '#FF7043',
+                              padding: '10px 16px',
+                              borderRadius: 999,
+                              border: '1px solid #FF7043',
+                              fontWeight: 700,
+                              cursor: 'pointer',
+                              whiteSpace: 'nowrap',
+                            }}
+                          >
+                            ATS Alignment
+                          </button>
+                          <ATSInfo />
+                        </div>
+                      )}
 
-  {selectedJobApplyLink && (
-    <Link
-      href={selectedJobApplyLink}
-      target="_blank"
-      style={{
-        padding: '10px 16px',
-        borderRadius: 8,
-        border: '1px solid #ddd',
-        color: '#263238',
-        textDecoration: 'none',
-        fontSize: 14,
-        whiteSpace: 'nowrap',
-      }}
-    >
-      Open original posting
-    </Link>
-  )}
-</div>
-
+                      {selectedJobApplyLink && (
+                        <Link
+                          href={selectedJobApplyLink}
+                          target="_blank"
+                          style={{
+                            padding: '10px 16px',
+                            borderRadius: 8,
+                            border: '1px solid #ddd',
+                            color: '#263238',
+                            textDecoration: 'none',
+                            fontSize: 14,
+                            whiteSpace: 'nowrap',
+                          }}
+                        >
+                          Open original posting
+                        </Link>
+                      )}
+                    </div>
+                  </CardContent>
+                </>
+              ) : (
+                <CardContent>
+                  <h3
+                    style={{
+                      margin: '0 0 8px',
+                      fontSize: 18,
+                      fontWeight: 600,
+                      color: '#263238',
+                    }}
+                  >
+                    Select a job
+                  </h3>
+                  <p style={{ color: '#78909C', fontSize: 14 }}>
+                    Choose a job from the list on the left to view full details
+                    here.
+                  </p>
+                </CardContent>
+              )}
+            </Card>
+          </section>
+        </div>
 
         {/* Bottom row: Recently viewed + Applied Jobs */}
         <div
