@@ -1,5 +1,5 @@
 // pages/member-profile.js
-import React from 'react';
+import React, { useState } from 'react';
 import Head from 'next/head';
 import { useRouter } from 'next/router';
 import SeekerLayout from '@/components/layouts/SeekerLayout';
@@ -75,7 +75,6 @@ export async function getServerSideProps(context) {
     return { notFound: true };
   }
 
-  // Primary resume (for public, same as /u/[slug])
   const resumes = await prisma.resume.findMany({
     where: { userId: user.id, isPrimary: true },
     orderBy: { updatedAt: 'desc' },
@@ -128,6 +127,8 @@ export default function MemberProfile({ user, primaryResume }) {
     isProfilePublic,
   } = user;
 
+  const [connectStatus, setConnectStatus] = useState('idle'); // idle | requested | connected
+
   const fullName =
     name || [firstName, lastName].filter(Boolean).join(' ') || 'Member';
 
@@ -147,9 +148,7 @@ export default function MemberProfile({ user, primaryResume }) {
   }
 
   const bannerBackgroundPosition =
-    typeof bannerFocalY === 'number'
-      ? `center ${bannerFocalY}%`
-      : 'center';
+    typeof bannerFocalY === 'number' ? `center ${bannerFocalY}%` : 'center';
 
   const bannerBackgroundSize = bannerMode === 'fit' ? 'contain' : 'cover';
 
@@ -162,10 +161,12 @@ export default function MemberProfile({ user, primaryResume }) {
     const params = new URLSearchParams();
     params.set('toId', id);
     params.set('toName', fullName);
-    router.push(withChrome(`/messages?${params.toString()}`));
+    router.push(withChrome(`/seeker/messages?${params.toString()}`));
   };
 
   const handleConnect = async () => {
+    if (connectStatus === 'requested' || connectStatus === 'connected') return;
+
     try {
       const res = await fetch('/api/contacts/request', {
         method: 'POST',
@@ -183,11 +184,13 @@ export default function MemberProfile({ user, primaryResume }) {
       const data = await res.json();
 
       if (data.alreadyConnected) {
+        setConnectStatus('connected');
         alert('You are already connected with this member.');
       } else if (data.alreadyRequested) {
+        setConnectStatus('requested');
         alert('You already have a pending request with this member.');
       } else {
-        alert('Connection request sent.');
+        setConnectStatus('requested');
       }
     } catch (err) {
       console.error('contacts/request error:', err);
@@ -375,39 +378,28 @@ export default function MemberProfile({ user, primaryResume }) {
                   type="button"
                   onClick={handleConnect}
                   style={{
-                    background: 'white',
+                    background:
+                      connectStatus === 'requested' || connectStatus === 'connected'
+                        ? '#FFE0B2'
+                        : 'white',
                     color: '#FF7043',
                     border: '1px solid #FF7043',
                     padding: '8px 14px',
                     borderRadius: 999,
-                    cursor: 'pointer',
+                    cursor:
+                      connectStatus === 'requested' || connectStatus === 'connected'
+                        ? 'default'
+                        : 'pointer',
                     fontSize: 14,
                     fontWeight: 700,
                   }}
                 >
-                  Connect
+                  {connectStatus === 'connected'
+                    ? 'Connected'
+                    : connectStatus === 'requested'
+                    ? 'Requested'
+                    : 'Connect'}
                 </button>
-
-                {publicProfileUrl && (
-                  <button
-                    type="button"
-                    onClick={() =>
-                      window.open(publicProfileUrl, '_blank', 'noopener,noreferrer')
-                    }
-                    style={{
-                      background: 'white',
-                      color: '#455A64',
-                      border: '1px solid #CFD8DC',
-                      padding: '8px 14px',
-                      borderRadius: 999,
-                      cursor: 'pointer',
-                      fontSize: 13,
-                      fontWeight: 600,
-                    }}
-                  >
-                    View public profile
-                  </button>
-                )}
               </div>
             </div>
           </section>
@@ -447,7 +439,7 @@ export default function MemberProfile({ user, primaryResume }) {
             </section>
           )}
 
-          {/* Primary Resume (internal view, only if profile is public like slug) */}
+          {/* Primary Resume */}
           {isProfilePublic && primaryResume && slug && (
             <section
               style={{
@@ -506,8 +498,7 @@ export default function MemberProfile({ user, primaryResume }) {
               style={{
                 marginTop: 8,
                 display: 'grid',
-                gridTemplateColumns:
-                  'repeat(auto-fit, minmax(220px, 1fr))',
+                gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))',
                 gap: 16,
               }}
             >

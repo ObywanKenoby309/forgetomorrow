@@ -18,6 +18,10 @@ export default function PostCard({
   const [reportMessage, setReportMessage] = useState('');
   const [showProfileMenu, setShowProfileMenu] = useState(false);
 
+  const chrome = String(router.query.chrome || '').toLowerCase();
+  const withChrome = (path) =>
+    chrome ? `${path}${path.includes('?') ? '&' : '?'}chrome=${chrome}` : path;
+
   const isOwner = currentUserId && post.authorId === currentUserId;
   const hasComments = (post.comments?.length || 0) > 0;
   const previewCount = 2;
@@ -88,7 +92,11 @@ export default function PostCard({
   const hasReactions = Object.keys(reactionCounts).length > 0;
 
   const authorId = post.authorId || '';
-  const authorName = post.author || 'Member';
+  const authorName =
+    post.author ||
+    post.authorName ||
+    [post.authorFirstName, post.authorLastName].filter(Boolean).join(' ') ||
+    'Member';
 
   const goToProfile = () => {
     if (!authorId) return;
@@ -96,49 +104,30 @@ export default function PostCard({
     params.set('userId', authorId);
 
     setShowProfileMenu(false);
-    router.push(`/member-profile?${params.toString()}`);
+    router.push(withChrome(`/member-profile?${params.toString()}`));
   };
 
   const goToMessages = () => {
+    if (!authorId) return;
     const params = new URLSearchParams();
-    if (authorId) params.set('toId', authorId);
+    params.set('toId', authorId);
     if (authorName) params.set('toName', authorName);
 
     setShowProfileMenu(false);
-    router.push(`/seeker/messages?${params.toString()}`);
+    // 🔹 Canonical DM inbox = The Signal at /seeker/messages
+    router.push(withChrome(`/seeker/messages?${params.toString()}`));
   };
 
-  const goToConnect = async () => {
+  const goToConnect = () => {
     if (!authorId) return;
+    const params = new URLSearchParams();
+    params.set('toId', authorId);
+    if (authorName) params.set('toName', authorName);
 
-    try {
-      const res = await fetch('/api/contacts/request', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ toUserId: authorId }),
-      });
-
-      if (!res.ok) {
-        console.error('contacts/request from PostCard failed', await res.text());
-        alert('We could not send your connection request. Please try again.');
-        return;
-      }
-
-      const data = await res.json();
-
-      if (data.alreadyConnected) {
-        alert('You are already connected with this member.');
-      } else if (data.alreadyRequested) {
-        alert('You already have a pending request with this member.');
-      } else {
-        alert('Connection request sent.');
-      }
-    } catch (err) {
-      console.error('contacts/request from PostCard error', err);
-      alert('We could not send your connection request. Please try again.');
-    } finally {
-      setShowProfileMenu(false);
-    }
+    setShowProfileMenu(false);
+    // For now this goes to Contact Center; we’ll wire direct request UX on the
+    // Member Profile button (primary place for “Connect”).
+    router.push(withChrome(`/seeker/contact-center?${params.toString()}`));
   };
 
   return (
@@ -156,16 +145,16 @@ export default function PostCard({
           {post.authorAvatar ? (
             <img
               src={post.authorAvatar}
-              alt={post.author || 'Author'}
+              alt={authorName}
               className="w-9 h-9 rounded-full object-cover bg-gray-200 flex-shrink-0"
             />
           ) : (
             <div className="w-9 h-9 rounded-full bg-gray-200 flex items-center justify-center text-xs text-gray-500 flex-shrink-0">
-              {post.author?.charAt(0)?.toUpperCase() || '?'}
+              {authorName?.charAt(0)?.toUpperCase() || '?'}
             </div>
           )}
           <div>
-            <div className="font-semibold">{post.author || 'Member'}</div>
+            <div className="font-semibold">{authorName}</div>
             <div className="text-xs text-gray-500">
               {createdAtLabel}
               {' • '}
@@ -178,7 +167,7 @@ export default function PostCard({
         {showProfileMenu && (
           <div className="absolute top-12 left-4 z-20 bg-white border rounded-lg shadow-lg text-sm w-52">
             <div className="px-3 py-2 border-b font-semibold">
-              {post.author || 'Member'}
+              {authorName}
             </div>
             <button
               type="button"

@@ -1,123 +1,73 @@
 // components/signal/ConversationList.js
-import React, { useMemo, useState } from 'react';
-
 export default function ConversationList({
-  conversations = [],
-  activeId,
+  threads,
+  loading,
+  activeConversationId,
   onSelect,
 }) {
-  const [q, setQ] = useState('');
-
-  const filtered = useMemo(() => {
-    const s = q.trim().toLowerCase();
-    if (!s) return conversations;
-    return conversations.filter(c =>
-      c.name.toLowerCase().includes(s) ||
-      (c.lastMessage || '').toLowerCase().includes(s)
-    );
-  }, [q, conversations]);
-
-  const wrap = {
-    display: 'grid',
-    gridTemplateRows: 'auto 1fr',
-    gap: 8,
-    height: '100%',
-  };
-
   return (
-    <aside style={wrap}>
-      <input
-        value={q}
-        onChange={(e) => setQ(e.target.value)}
-        placeholder="Search conversations…"
-        style={{
-          border: '1px solid #E5E7EB',
-          borderRadius: 10,
-          padding: '10px 12px',
-          outline: 'none',
-        }}
-        aria-label="Search conversations"
-      />
+    <section className="bg-white rounded-lg shadow p-4 border border-gray-100">
+      <h2 className="text-sm font-semibold text-gray-800 mb-2">
+        Conversations
+      </h2>
 
-      <div
-        style={{
-          overflowY: 'auto',
-          border: '1px solid #EEF2F7',
-          borderRadius: 10,
-          padding: 6,
-          background: 'white',
-        }}
-      >
-        {filtered.map((c) => {
-          const isActive = c.id === activeId;
-          return (
-            <button
-              key={c.id}
-              onClick={() => onSelect?.(c.id)}
-              style={{
-                width: '100%',
-                textAlign: 'left',
-                display: 'grid',
-                gridTemplateColumns: '40px 1fr auto',
-                gap: 10,
-                padding: 10,
-                borderRadius: 10,
-                border: '1px solid #EEF2F7',
-                background: isActive ? '#FFF7F2' : 'white',
-                cursor: 'pointer',
-                marginBottom: 8,
-              }}
-              aria-current={isActive ? 'true' : 'false'}
+      {loading ? (
+        <p className="text-xs text-gray-500">Loading conversations…</p>
+      ) : !threads || threads.length === 0 ? (
+        <p className="text-xs text-gray-600">
+          No conversations in The Signal yet.
+          <br />
+          Start a conversation from a member profile or candidate card.
+        </p>
+      ) : (
+        <ul className="divide-y divide-gray-100">
+          {threads.map((t) => (
+            <li
+              key={t.id}
+              className={`py-2 px-1 flex items-start gap-3 cursor-pointer rounded-md ${
+                t.id === activeConversationId
+                  ? 'bg-[#FFF3E9]'
+                  : 'hover:bg-gray-50'
+              }`}
+              onClick={() => onSelect && onSelect(t)}
             >
-              <img
-                src={c.avatar}
-                alt=""
-                width={40}
-                height={40}
-                style={{ borderRadius: '50%', objectFit: 'cover', border: '2px solid #FF7043' }}
-              />
-              <div style={{ overflow: 'hidden' }}>
-                <div style={{ fontWeight: 700, color: '#111827' }}>{c.name}</div>
-                <div
-                  style={{
-                    fontSize: 12,
-                    color: '#6B7280',
-                    whiteSpace: 'nowrap',
-                    overflow: 'hidden',
-                    textOverflow: 'ellipsis',
-                  }}
-                  title={c.lastMessage}
-                >
-                  {c.lastMessage}
-                </div>
-              </div>
-              <div style={{ textAlign: 'right' }}>
-                <div style={{ fontSize: 11, color: '#94A3B8' }}>{c.time}</div>
-                {c.unread > 0 && (
-                  <span
-                    style={{
-                      background: '#FF7043',
-                      color: 'white',
-                      borderRadius: 999,
-                      padding: '1px 6px',
-                      fontSize: 11,
-                      fontWeight: 800,
-                    }}
-                    aria-label={`${c.unread} unread`}
-                  >
-                    {c.unread}
-                  </span>
+              <div className="flex-shrink-0">
+                {t.otherAvatarUrl ? (
+                  <img
+                    src={t.otherAvatarUrl}
+                    alt={t.title}
+                    className="w-8 h-8 rounded-full object-cover"
+                  />
+                ) : (
+                  <div className="w-8 h-8 rounded-full bg-gray-200 flex items-center justify-center text-xs text-gray-600">
+                    {t.title?.charAt(0)?.toUpperCase() || '?'}
+                  </div>
                 )}
               </div>
-            </button>
-          );
-        })}
-        {filtered.length === 0 && (
-          <div style={{ color: '#94A3B8', fontStyle: 'italic', padding: 12 }}>
-            No conversations
-          </div>
-        )}
-      </div>
-    </aside>
+              <div className="flex-1 min-w-0">
+                <div className="flex items-center justify-between gap-2">
+                  <p className="text-sm font-semibold text-gray-800 truncate">
+                    {t.title}
+                  </p>
+                  {t.lastMessageAt && (
+                    <span className="text-[10px] text-gray-500 whitespace-nowrap">
+                      {new Date(t.lastMessageAt).toLocaleTimeString([], {
+                        hour: '2-digit',
+                        minute: '2-digit',
+                      })}
+                    </span>
+                  )}
+                </div>
+                {t.lastMessage && (
+                  <p className="text-xs text-gray-600 truncate">
+                    {t.lastMessage}
+                  </p>
+                )}
+              </div>
+            </li>
+          ))}
+        </ul>
+      )}
+    </section>
   );
 }

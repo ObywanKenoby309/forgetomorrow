@@ -64,6 +64,8 @@ export default function App({ Component, pageProps: { session, ...pageProps } })
       '/profile',
       '/profile-analytics',
       '/feed',
+	  '/member-profile',
+	  '/messages',
     ].includes(router.pathname);
 
   const isCoachingRoute =
