@@ -253,7 +253,7 @@ function Jobs() {
 
   // Filters
   const [keyword, setKeyword] = useState('');
-  const [companyFilter, setCompanyFilter] = useState('');
+  the [companyFilter, setCompanyFilter] = useState('');
   const [locationFilter, setLocationFilter] = useState('');
   const [locationTypeFilter, setLocationTypeFilter] = useState(''); // '', 'Remote', 'Hybrid', 'On-site'
   const [daysFilter, setDaysFilter] = useState('');
@@ -1177,9 +1177,9 @@ function Jobs() {
                       style={{
                         display: 'flex',
                         flexWrap: 'wrap',
-                        gap: 10,
-                        marginTop: 8,
-                        justifyContent: 'flex-end',
+                        gap: 8,
+                        marginTop: 10,
+                        justifyContent: 'center',
                       }}
                     >
                       {/* Pin / Unpin job */}
@@ -1188,40 +1188,40 @@ function Jobs() {
                         onClick={() => togglePin(selectedJob)}
                         style={{
                           background: 'white',
-                          color: isJobPinned(selectedJob)
-                            ? '#D32F2F'
-                            : '#FF7043',
-                          padding: '10px 16px',
-                          borderRadius: 8,
+                          color: isJobPinned(selectedJob) ? '#D32F2F' : '#FF7043',
+                          padding: '8px 18px',
+                          borderRadius: 999,
                           border: `1px solid ${
                             isJobPinned(selectedJob) ? '#D32F2F' : '#FF7043'
                           }`,
                           fontWeight: 700,
                           cursor: 'pointer',
+                          fontSize: 14,
                         }}
                         aria-pressed={isJobPinned(selectedJob)}
                       >
-                        {isJobPinned(selectedJob)
-                          ? 'Unpin job'
-                          : 'Pin job'}
+                        {isJobPinned(selectedJob) ? 'Unpin Job' : 'Pin Job'}
                       </button>
 
+                      {/* Apply button (solid orange) */}
                       <button
                         type="button"
                         onClick={() => handleApplyClick(selectedJob)}
                         style={{
                           background: '#FF7043',
                           color: 'white',
-                          padding: '10px 16px',
-                          borderRadius: 8,
+                          padding: '8px 22px',
+                          borderRadius: 999,
                           border: 'none',
                           fontWeight: 700,
                           cursor: 'pointer',
+                          fontSize: 14,
                         }}
                       >
                         Apply
                       </button>
 
+                      {/* ATS Alignment + info icon */}
                       {isPaidUser && (
                         <div
                           style={{
@@ -1236,11 +1236,12 @@ function Jobs() {
                             style={{
                               background: 'white',
                               color: '#FF7043',
-                              padding: '10px 16px',
-                              borderRadius: 8,
+                              padding: '8px 18px',
+                              borderRadius: 999,
                               border: '1px solid #FF7043',
                               fontWeight: 700,
                               cursor: 'pointer',
+                              fontSize: 14,
                             }}
                           >
                             ATS Alignment
@@ -1249,17 +1250,18 @@ function Jobs() {
                         </div>
                       )}
 
+                      {/* Optional: keep original posting link as a subtle secondary action */}
                       {selectedJobApplyLink && (
                         <Link
                           href={selectedJobApplyLink}
                           target="_blank"
                           style={{
-                            padding: '10px 16px',
-                            borderRadius: 8,
+                            padding: '8px 14px',
+                            borderRadius: 999,
                             border: '1px solid #ddd',
                             color: '#263238',
                             textDecoration: 'none',
-                            fontSize: 14,
+                            fontSize: 13,
                           }}
                         >
                           Open original posting
