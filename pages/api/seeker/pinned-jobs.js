@@ -1,32 +1,53 @@
 // pages/api/seeker/pinned-jobs.js
-// Temporary placeholder so the app builds cleanly.
-// TODO: Wire this to real pinned-jobs storage (Prisma) later.
+import { getServerSession } from 'next-auth/next';
+import { authOptions } from '../auth/[...nextauth]';
+import { prisma } from '@/lib/prisma';
 
 export default async function handler(req, res) {
-  try {
-    if (req.method === 'GET') {
-      // For now, just return an empty list so the dashboard preview
-      // and pinned-jobs page don't crash.
-      return res.status(200).json({ jobs: [] });
-    }
-
-    if (req.method === 'POST') {
-      // Called when user clicks "Pin Job"
-      return res
-        .status(501)
-        .json({ error: 'Pinned jobs API not fully wired yet (POST placeholder).' });
-    }
-
-    if (req.method === 'DELETE') {
-      // Called when user unpins a job
-      return res
-        .status(501)
-        .json({ error: 'Pinned jobs API not fully wired yet (DELETE placeholder).' });
-    }
-
+  if (req.method !== 'GET') {
+    res.setHeader('Allow', ['GET']);
     return res.status(405).json({ error: 'Method not allowed' });
+  }
+
+  try {
+    const session = await getServerSession(req, res, authOptions);
+    if (!session || !session.user || !session.user.id) {
+      return res.status(401).json({ error: 'Not authenticated' });
+    }
+
+    const userId = session.user.id;
+    const { limit } = req.query;
+    const take =
+      typeof limit === 'string' && !Number.isNaN(parseInt(limit, 10))
+        ? Math.min(parseInt(limit, 10), 50)
+        : undefined;
+
+    const pinned = await prisma.pinnedJob.findMany({
+      where: { userId },
+      include: {
+        job: true, // assumes relation field is `job`
+      },
+      orderBy: {
+        pinnedAt: 'desc',
+      },
+      ...(take ? { take } : {}),
+    });
+
+    const jobs = pinned.map((p) => ({
+      // ID of the underlying job (used for /jobs/apply/:id)
+      id: p.jobId,
+      // ID of the pinned record (if you later need it for unpin)
+      pinnedId: p.id,
+      title: p.job ? p.job.title : '',
+      company: p.job ? p.job.company : '',
+      location: p.job ? p.job.location : '',
+      url: p.job ? p.job.url || null : null,
+      pinnedAt: p.pinnedAt,
+    }));
+
+    return res.status(200).json({ jobs });
   } catch (err) {
-    console.error('[pinned-jobs] unexpected error', err);
-    return res.status(500).json({ error: 'Internal server error' });
+    console.error('[GET /api/seeker/pinned-jobs] error', err);
+    return res.status(500).json({ error: 'Failed to load pinned jobs' });
   }
 }
