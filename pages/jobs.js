@@ -819,7 +819,7 @@ function Jobs() {
                       cursor: 'pointer',
                       border: isSelected
                         ? '2px solid #FF7043'
-                        : '1px solid #e0e0e0',
+                        : '1px solid '#e0e0e0',
                     }}
                     onClick={() => handleSelectJob(job)}
                   >
@@ -1117,105 +1117,107 @@ function Jobs() {
                     </div>
 
                     {/* ACTION ROW: Pin | Apply | ATS Alignment | Open original */}
-<div
-  style={{
-    display: "flex",
-    flexDirection: "row",
-    justifyContent: "center",
-    alignItems: "center",
-    gap: 8,
-    marginTop: 12,
-    width: "100%",
-    flexWrap: "nowrap",
-  }}
->
-  {/* Pin */}
-  <button
-    type="button"
-    onClick={() => togglePin(selectedJob)}
-    style={{
-      background: "white",
-      color: isJobPinned(selectedJob) ? "#D32F2F" : "#FF7043",
-      padding: "6px 10px",
-      borderRadius: 999,
-      border: `1px solid ${isJobPinned(selectedJob) ? "#D32F2F" : "#FF7043"}`,
-      fontWeight: 600,
-      fontSize: 13,
-      minWidth: 70,
-      textAlign: "center",
-      whiteSpace: "nowrap",
-    }}
-  >
-    {isJobPinned(selectedJob) ? "Unpin" : "Pin job"}
-  </button>
+                    <div
+                      style={{
+                        display: 'flex',
+                        flexDirection: 'row',
+                        justifyContent: 'flex-start',
+                        alignItems: 'center',
+                        flexWrap: 'wrap', // allow wrap on small screens
+                        gap: 8,
+                        marginTop: 12,
+                        overflowX: 'visible',
+                        paddingBottom: 2,
+                      }}
+                    >
+                      <button
+                        type="button"
+                        onClick={() => togglePin(selectedJob)}
+                        style={{
+                          background: 'white',
+                          color: isJobPinned(selectedJob)
+                            ? '#D32F2F'
+                            : '#FF7043',
+                          padding: '6px 12px',
+                          borderRadius: 999,
+                          border: `1px solid ${
+                            isJobPinned(selectedJob) ? '#D32F2F' : '#FF7043'
+                          }`,
+                          fontWeight: 600,
+                          fontSize: 13,
+                          cursor: 'pointer',
+                          minWidth: 80,
+                        }}
+                        aria-pressed={isJobPinned(selectedJob)}
+                      >
+                        {isJobPinned(selectedJob) ? 'Unpin job' : 'Pin job'}
+                      </button>
 
-  {/* Apply */}
-  <button
-    type="button"
-    onClick={() => handleApplyClick(selectedJob)}
-    style={{
-      background: "#FF7043",
-      color: "white",
-      padding: "6px 16px",
-      borderRadius: 999,
-      border: "none",
-      fontWeight: 700,
-      fontSize: 13,
-      minWidth: 70,
-      whiteSpace: "nowrap",
-    }}
-  >
-    Apply
-  </button>
+                      <button
+                        type="button"
+                        onClick={() => handleApplyClick(selectedJob)}
+                        style={{
+                          background: '#FF7043',
+                          color: 'white',
+                          padding: '6px 16px',
+                          borderRadius: 999,
+                          border: 'none',
+                          fontWeight: 600,
+                          fontSize: 13,
+                          cursor: 'pointer',
+                          minWidth: 90,
+                        }}
+                      >
+                        Apply
+                      </button>
 
-  {/* ATS */}
-  <div
-    style={{
-      display: "flex",
-      alignItems: "center",
-      gap: 4,
-      whiteSpace: "nowrap",
-    }}
-  >
-    <button
-      type="button"
-      onClick={() => handleATSAlign(selectedJob)}
-      style={{
-        background: "white",
-        color: "#FF7043",
-        padding: "6px 12px",
-        borderRadius: 999,
-        border: "1px solid #FF7043",
-        fontWeight: 600,
-        fontSize: 13,
-        whiteSpace: "nowrap",
-      }}
-    >
-      ATS Align.
-    </button>
-    <ATSInfo />
-  </div>
-</div>
+                      {isPaidUser && (
+                        <div
+                          style={{
+                            display: 'inline-flex',
+                            alignItems: 'center',
+                            gap: 6,
+                          }}
+                        >
+                          <button
+                            type="button"
+                            onClick={() => handleATSAlign(selectedJob)}
+                            style={{
+                              background: 'white',
+                              color: '#FF7043',
+                              padding: '6px 12px',
+                              borderRadius: 999,
+                              border: '1px solid #FF7043',
+                              fontWeight: 600,
+                              fontSize: 13,
+                              cursor: 'pointer',
+                              whiteSpace: 'nowrap',
+                            }}
+                          >
+                            ATS Alignment
+                          </button>
+                          <ATSInfo />
+                        </div>
+                      )}
 
-
-  {selectedJobApplyLink && (
-    <Link
-      href={selectedJobApplyLink}
-      target="_blank"
-      style={{
-        padding: '6px 12px',
-        borderRadius: 8,
-        border: '1px solid #ddd',
-        color: '#263238',
-        textDecoration: 'none',
-        fontSize: 13,
-        whiteSpace: 'nowrap',
-      }}
-    >
-      Open original posting
-    </Link>
-  )}
-</div>
+                      {selectedJobApplyLink && (
+                        <Link
+                          href={selectedJobApplyLink}
+                          target="_blank"
+                          style={{
+                            padding: '6px 12px',
+                            borderRadius: 8,
+                            border: '1px solid #ddd',
+                            color: '#263238',
+                            textDecoration: 'none',
+                            fontSize: 13,
+                            whiteSpace: 'nowrap',
+                          }}
+                        >
+                          Open original posting
+                        </Link>
+                      )}
+                    </div>
                   </CardContent>
                 </>
               ) : (
