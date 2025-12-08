@@ -105,7 +105,7 @@ export default function Feed() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [filter]);
 
-  // Composer & reply handlers stay the same (only affect community posts)
+  // New post from composer
   const handleNewPost = async (postFromComposer) => {
     const body = postFromComposer.body ?? '';
 
@@ -137,12 +137,53 @@ export default function Feed() {
     }
   };
 
-  const handleReply = async (postId, text) => {
-    // unchanged – implement if/when needed
+  // ✅ Replies (text or emoji) — update comments immediately in state
+  const handleReply = (postId, text) => {
+    if (!postId || !text || !text.trim()) return;
+    const trimmed = text.trim();
+
+    const newComment = {
+      by: currentUserName || 'You',
+      text: trimmed,
+      avatarUrl: currentUserAvatar || null,
+      createdAt: new Date().toISOString(),
+    };
+
+    setPosts((prev) =>
+      prev.map((p) =>
+        p.id === postId
+          ? {
+              ...p,
+              comments: Array.isArray(p.comments)
+                ? [...p.comments, newComment]
+                : [newComment],
+            }
+          : p
+      )
+    );
+
+    // You can later wire a real API call here (no guessing now)
+    // e.g. POST /api/feed/{postId}/comments
   };
 
+  // ✅ Delete — removes post from UI + tries backend delete
   const handleDelete = async (postId) => {
-    // unchanged – implement if/when needed
+    if (!postId) return;
+
+    // Never try to delete remote jobs via feed delete
+    if (String(postId).startsWith('job-')) return;
+
+    // optimistic UI update
+    setPosts((prev) => prev.filter((p) => p.id !== postId));
+
+    try {
+      await fetch(`/api/feed/${postId}`, {
+        method: 'DELETE',
+      });
+    } catch (err) {
+      console.error('Delete failed:', err);
+      // If delete fails, you can optionally reloadFeed() later
+    }
   };
 
   return (

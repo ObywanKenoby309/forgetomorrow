@@ -16,43 +16,31 @@ import NewslettersList from '@/components/NewslettersList';
 export default function SeekerContactCenter() {
   const router = useRouter();
   const chrome = String(router.query.chrome || '').toLowerCase();
-  const withChrome = (path) => (chrome ? `${path}${path.includes('?') ? '&' : '?'}chrome=${chrome}` : path);
+  const withChrome = (path) =>
+    chrome ? `${path}${path.includes('?') ? '&' : '?'}chrome=${chrome}` : path;
 
-  // --- Mock data (replace later) ---
-  const contacts = [
-    { id: 1, name: 'Jane Doe', status: 'Open to Opportunities', photo: 'https://via.placeholder.com/48' },
-    { id: 4, name: 'Chris Park', status: 'Hiring', photo: 'https://via.placeholder.com/48' },
-  ];
-
-  const incomingRequests = [
-    { id: 2, name: 'John Smith', photo: 'https://via.placeholder.com/48', note: 'Let’s connect about CX roles' },
-  ];
-
-  const outgoingRequests = [
-    { id: 3, name: 'Alex Johnson', photo: 'https://via.placeholder.com/48', note: 'Sent 2 days ago' },
-  ];
-
-  const groups = [
-    { id: 'g1', name: 'Customer Success Leaders', members: 1240, category: 'Customer Success' },
-  ];
-
-  const pages = [
-    { id: 'p1', name: 'ForgeTomorrow', industry: 'Talent • HR' },
-  ];
-
-  const newsletters = [
-    { id: 'n1', title: 'Weekly CS Digest', frequency: 'Weekly', source: 'ForgeTomorrow' },
-  ];
+  // --- Data placeholders (no fake people for launch) ---
+  // These will be wired to real user/connection data later.
+  const contacts = [];
+  const incomingRequests = [];
+  const outgoingRequests = [];
+  const groups = [];
+  const pages = [];
+  const newsletters = [];
 
   // --- Counts for tabs/badges ---
-  const counts = useMemo(() => ({
-    contacts: contacts.length,
-    invitesIn: incomingRequests.length,
-    invitesOut: outgoingRequests.length,
-  }), [contacts, incomingRequests, outgoingRequests]);
+  const counts = useMemo(
+    () => ({
+      contacts: contacts.length,
+      invitesIn: incomingRequests.length,
+      invitesOut: outgoingRequests.length,
+    }),
+    [contacts, incomingRequests, outgoingRequests]
+  );
 
   // --- Handlers (stubbed) ---
-  const handleViewProfile = (c) => alert(`View profile for ${c.name} (coming soon)`);
+  const handleViewProfile = (c) =>
+    alert(`View profile for ${c.name} (coming soon)`);
   const handleAccept = (r) => alert(`Accepted request from ${r.name}`);
   const handleDecline = (r) => alert(`Declined request from ${r.name}`);
   const handleCancel = (r) => alert(`Canceled request to ${r.name}`);
@@ -72,12 +60,28 @@ export default function SeekerContactCenter() {
         textAlign: 'center',
       }}
     >
-      <h1 style={{ margin: 0, color: '#FF7043', fontSize: 24, fontWeight: 800 }}>
+      <h1
+        style={{
+          margin: 0,
+          color: '#FF7043',
+          fontSize: 24,
+          fontWeight: 800,
+        }}
+      >
         Contact Center
       </h1>
-      <p style={{ margin: '6px auto 0', color: '#607D8B', maxWidth: 720 }}>
+      <p
+        style={{
+          margin: '6px auto 0',
+          color: '#607D8B',
+          maxWidth: 720,
+        }}
+      >
         Manage your contacts, invitations, and community touchpoints. Jump into{' '}
-        <Link href={withChrome('/seeker/messages')} style={{ color: '#FF7043', fontWeight: 700 }}>
+        <Link
+          href={withChrome('/seeker/messages')}
+          style={{ color: '#FF7043', fontWeight: 700 }}
+        >
           The Signal
         </Link>{' '}
         to chat.
@@ -139,27 +143,79 @@ export default function SeekerContactCenter() {
       activeNav="contacts"
     >
       {/* Tabs row */}
-      <section style={{ background: 'white', borderRadius: 12, padding: 12, border: '1px solid #eee', boxShadow: '0 2px 6px rgba(0,0,0,0.06)' }}>
+      <section
+        style={{
+          background: 'white',
+          borderRadius: 12,
+          padding: 12,
+          border: '1px solid #eee',
+          boxShadow: '0 2px 6px rgba(0,0,0,0.06)',
+        }}
+      >
         <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
-          <TabButton href="/seeker/contact-center" label="Contacts" badge={counts.contacts} active />
+          <TabButton
+            href="/seeker/contact-center"
+            label="Contacts"
+            badge={counts.contacts}
+            active
+          />
           <TabButton href="/seeker/messages" label="The Signal" />
-          <TabButton href="/seeker/contact-center#invites" label="Invites (Incoming)" badge={counts.invitesIn} />
-          <TabButton href="/seeker/contact-center#requests" label="Requests (Outgoing)" badge={counts.invitesOut} />
+          <TabButton
+            href="/seeker/contact-center#invites"
+            label="Invites (Incoming)"
+            badge={counts.invitesIn}
+          />
+          <TabButton
+            href="/seeker/contact-center#requests"
+            label="Requests (Outgoing)"
+            badge={counts.invitesOut}
+          />
         </div>
       </section>
 
       {/* Contacts */}
-      <section style={{ background: 'white', borderRadius: 12, padding: 16, border: '1px solid #eee', boxShadow: '0 2px 6px rgba(0,0,0,0.06)' }}>
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 }}>
+      <section
+        style={{
+          background: 'white',
+          borderRadius: 12,
+          padding: 16,
+          border: '1px solid #eee',
+          boxShadow: '0 2px 6px rgba(0,0,0,0.06)',
+        }}
+      >
+        <div
+          style={{
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            marginBottom: 8,
+          }}
+        >
           <h2 style={{ color: '#FF7043', margin: 0 }}>Contacts</h2>
           <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-            <span style={{ fontSize: 12, fontWeight: 800, padding: '2px 8px', borderRadius: 999, background: '#F1F5F9', color: '#334155' }}>
+            <span
+              style={{
+                fontSize: 12,
+                fontWeight: 800,
+                padding: '2px 8px',
+                borderRadius: 999,
+                background: '#F1F5F9',
+                color: '#334155',
+              }}
+            >
               {contacts.length}
             </span>
             <button
               type="button"
               onClick={() => setShowContacts((v) => !v)}
-              style={{ fontSize: 13, padding: '6px 10px', border: '1px solid #e5e7eb', borderRadius: 8, background: 'white', cursor: 'pointer' }}
+              style={{
+                fontSize: 13,
+                padding: '6px 10px',
+                border: '1px solid #e5e7eb',
+                borderRadius: 8,
+                background: 'white',
+                cursor: 'pointer',
+              }}
               aria-expanded={showContacts}
               aria-controls="contacts-panel"
             >
@@ -170,9 +226,15 @@ export default function SeekerContactCenter() {
 
         {showContacts && (
           <div id="contacts-panel">
-            <ContactsList contacts={topContacts} onViewProfile={handleViewProfile} />
+            <ContactsList
+              contacts={topContacts}
+              onViewProfile={handleViewProfile}
+            />
             <div style={{ marginTop: 8 }}>
-              <Link href={withChrome('/seeker/contacts')} style={{ color: '#FF7043', fontWeight: 700 }}>
+              <Link
+                href={withChrome('/seeker/contacts')}
+                style={{ color: '#FF7043', fontWeight: 700 }}
+              >
                 View all contacts →
               </Link>
             </div>
@@ -181,7 +243,16 @@ export default function SeekerContactCenter() {
       </section>
 
       {/* Pending Invites (Incoming) */}
-      <section id="invites" style={{ background: 'white', borderRadius: 12, padding: 16, border: '1px solid #eee', boxShadow: '0 2px 6px rgba(0,0,0,0.06)' }}>
+      <section
+        id="invites"
+        style={{
+          background: 'white',
+          borderRadius: 12,
+          padding: 16,
+          border: '1px solid #eee',
+          boxShadow: '0 2px 6px rgba(0,0,0,0.06)',
+        }}
+      >
         <h2 style={{ color: '#FF7043', marginTop: 0 }}>Pending Invites</h2>
         <IncomingRequestsList
           items={incomingRequests}
@@ -192,7 +263,16 @@ export default function SeekerContactCenter() {
       </section>
 
       {/* Pending Requests (Outgoing) */}
-      <section id="requests" style={{ background: 'white', borderRadius: 12, padding: 16, border: '1px solid #eee', boxShadow: '0 2px 6px rgba(0,0,0,0.06)' }}>
+      <section
+        id="requests"
+        style={{
+          background: 'white',
+          borderRadius: 12,
+          padding: 16,
+          border: '1px solid #eee',
+          boxShadow: '0 2px 6px rgba(0,0,0,0.06)',
+        }}
+      >
         <h2 style={{ color: '#FF7043', marginTop: 0 }}>Pending Requests</h2>
         <OutgoingRequestsList
           items={outgoingRequests}
@@ -202,19 +282,43 @@ export default function SeekerContactCenter() {
       </section>
 
       {/* Groups */}
-      <section style={{ background: 'white', borderRadius: 12, padding: 16, border: '1px solid #eee', boxShadow: '0 2px 6px rgba(0,0,0,0.06)' }}>
+      <section
+        style={{
+          background: 'white',
+          borderRadius: 12,
+          padding: 16,
+          border: '1px solid #eee',
+          boxShadow: '0 2px 6px rgba(0,0,0,0.06)',
+        }}
+      >
         <h2 style={{ color: '#FF7043', marginTop: 0 }}>Groups</h2>
         <GroupsList groups={groups} onOpen={openGroup} />
       </section>
 
       {/* Pages */}
-      <section style={{ background: 'white', borderRadius: 12, padding: 16, border: '1px solid #eee', boxShadow: '0 2px 6px rgba(0,0,0,0.06)' }}>
+      <section
+        style={{
+          background: 'white',
+          borderRadius: 12,
+          padding: 16,
+          border: '1px solid #eee',
+          boxShadow: '0 2px 6px rgba(0,0,0,0.06)',
+        }}
+      >
         <h2 style={{ color: '#FF7043', marginTop: 0 }}>Pages</h2>
         <PagesList pages={pages} onOpen={openPage} />
       </section>
 
       {/* Newsletters */}
-      <section style={{ background: 'white', borderRadius: 12, padding: 16, border: '1px solid #eee', boxShadow: '0 2px 6px rgba(0,0,0,0.06)' }}>
+      <section
+        style={{
+          background: 'white',
+          borderRadius: 12,
+          padding: 16,
+          border: '1px solid #eee',
+          boxShadow: '0 2px 6px rgba(0,0,0,0.06)',
+        }}
+      >
         <h2 style={{ color: '#FF7043', marginTop: 0 }}>Newsletters</h2>
         <NewslettersList items={newsletters} onOpen={openNewsletter} />
       </section>

@@ -24,8 +24,10 @@ export default function PostCard({
     setReply('');
   };
 
-  const addEmoji = (emoji) => {
-    setReply((prev) => (prev ? `${prev} ${emoji}` : emoji));
+  // 👉 Emojis: send immediately as reply (no Reply button needed)
+  const handleEmojiPick = (emoji) => {
+    if (!emoji) return;
+    onReply?.(post.id, emoji);
   };
 
   const handleDeleteClick = () => {
@@ -242,8 +244,8 @@ export default function PostCard({
           <div className="text-xs text-gray-600 mt-1">{reportMessage}</div>
         )}
 
-        {/* emoji bar just injects emoji into reply input */}
-        <QuickEmojiBar onPick={addEmoji} />
+        {/* ✅ Emoji bar: send immediately */}
+        <QuickEmojiBar onPick={handleEmojiPick} />
       </div>
     </article>
   );

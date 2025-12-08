@@ -221,9 +221,10 @@ export default function PostComposer({ onPost, onCancel }) {
         </div>
       )}
 
-      <div className="mt-3 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+      {/* ✅ Layout tightened here so buttons stay inside, not stretched */}
+      <div className="mt-3 flex flex-col gap-3 sm:flex-row sm:items-center sm:gap-4">
         {/* Left: attachment controls */}
-        <div className="flex items-center gap-3 text-sm text-gray-700">
+        <div className="flex flex-wrap items-center gap-3 text-sm text-gray-700">
           <input
             id="feed-image-input"
             type="file"
@@ -290,7 +291,7 @@ export default function PostComposer({ onPost, onCancel }) {
         </div>
 
         {/* Right: type selector + Post/Cancel */}
-        <div className="flex items-center gap-2 sm:gap-3">
+        <div className="flex flex-wrap items-center justify-start gap-2 sm:gap-3">
           <label className="text-sm text-gray-600 hidden sm:block">
             Post as<span className="text-red-500">*</span>:
           </label>
