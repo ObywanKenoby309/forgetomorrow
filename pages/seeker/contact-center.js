@@ -30,6 +30,10 @@ export default function SeekerContactCenter() {
   const [pages] = useState([]);
   const [newsletters] = useState([]);
 
+  // --- Recent profile views ---
+  const [profileViews, setProfileViews] = useState([]);
+  const [pvLoading, setPvLoading] = useState(true);
+
   const reloadSummary = async () => {
     try {
       setLoading(true);
@@ -55,8 +59,28 @@ export default function SeekerContactCenter() {
     }
   };
 
+  const reloadProfileViews = async () => {
+    try {
+      setPvLoading(true);
+      const res = await fetch('/api/profile/views?limit=5');
+      if (!res.ok) {
+        console.error('profile/views failed', await res.text());
+        setProfileViews([]);
+        return;
+      }
+      const data = await res.json();
+      setProfileViews(data.views || []);
+    } catch (err) {
+      console.error('profile/views error', err);
+      setProfileViews([]);
+    } finally {
+      setPvLoading(false);
+    }
+  };
+
   useEffect(() => {
     reloadSummary();
+    reloadProfileViews();
   }, []);
 
   // --- Counts for tabs/badges ---
@@ -256,6 +280,15 @@ export default function SeekerContactCenter() {
   const [showContacts, setShowContacts] = useState(true);
   const topContacts = useMemo(() => contacts.slice(0, 5), [contacts]);
 
+  const formatDateTime = (iso) => {
+    try {
+      const d = new Date(iso);
+      return d.toLocaleString();
+    } catch {
+      return '';
+    }
+  };
+
   return (
     <SeekerLayout
       title="Contact Center | ForgeTomorrow"
@@ -364,43 +397,139 @@ export default function SeekerContactCenter() {
         )}
       </section>
 
-      {/* Pending Invites (Incoming) */}
+      {/* Pending + Profile Views grid */}
       <section
-        id="invites"
         style={{
-          background: 'white',
-          borderRadius: 12,
-          padding: 16,
-          border: '1px solid #eee',
-          boxShadow: '0 2px 6px rgba(0,0,0,0.06)',
+          display: 'grid',
+          gap: 12,
+          gridTemplateColumns: 'repeat(auto-fit, minmax(260px, 1fr))',
         }}
       >
-        <h2 style={{ color: '#FF7043', marginTop: 0 }}>Pending Invites</h2>
-        <IncomingRequestsList
-          items={incomingRequests}
-          onAccept={handleAccept}
-          onDecline={handleDecline}
-          onViewProfile={handleViewProfile}
-        />
-      </section>
+        {/* Pending Invites (Incoming) */}
+        <section
+          id="invites"
+          style={{
+            background: 'white',
+            borderRadius: 12,
+            padding: 16,
+            border: '1px solid #eee',
+            boxShadow: '0 2px 6px rgba(0,0,0,0.06)',
+          }}
+        >
+          <h2 style={{ color: '#FF7043', marginTop: 0 }}>Pending Invites</h2>
+          <IncomingRequestsList
+            items={incomingRequests}
+            onAccept={handleAccept}
+            onDecline={handleDecline}
+            onViewProfile={handleViewProfile}
+          />
+          <div style={{ marginTop: 8 }}>
+            <Link
+              href={withChrome('/seeker/contacts?view=incoming')}
+              style={{ color: '#FF7043', fontWeight: 700 }}
+            >
+              View all incoming →
+            </Link>
+          </div>
+        </section>
 
-      {/* Pending Requests (Outgoing) */}
-      <section
-        id="requests"
-        style={{
-          background: 'white',
-          borderRadius: 12,
-          padding: 16,
-          border: '1px solid #eee',
-          boxShadow: '0 2px 6px rgba(0,0,0,0.06)',
-        }}
-      >
-        <h2 style={{ color: '#FF7043', marginTop: 0 }}>Pending Requests</h2>
-        <OutgoingRequestsList
-          items={outgoingRequests}
-          onCancel={handleCancel}
-          onViewProfile={handleViewProfile}
-        />
+        {/* Pending Requests (Outgoing) */}
+        <section
+          id="requests"
+          style={{
+            background: 'white',
+            borderRadius: 12,
+            padding: 16,
+            border: '1px solid #eee',
+            boxShadow: '0 2px 6px rgba(0,0,0,0.06)',
+          }}
+        >
+          <h2 style={{ color: '#FF7043', marginTop: 0 }}>Pending Requests</h2>
+          <OutgoingRequestsList
+            items={outgoingRequests}
+            onCancel={handleCancel}
+            onViewProfile={handleViewProfile}
+          />
+          <div style={{ marginTop: 8 }}>
+            <Link
+              href={withChrome('/seeker/contacts?view=outgoing')}
+              style={{ color: '#FF7043', fontWeight: 700 }}
+            >
+              View all outgoing →
+            </Link>
+          </div>
+        </section>
+
+        {/* Recent Profile Views */}
+        <section
+          style={{
+            background: 'white',
+            borderRadius: 12,
+            padding: 16,
+            border: '1px solid #eee',
+            boxShadow: '0 2px 6px rgba(0,0,0,0.06)',
+          }}
+        >
+          <h2 style={{ color: '#FF7043', marginTop: 0 }}>Recent Profile Views</h2>
+          {pvLoading ? (
+            <p style={{ color: '#607D8B', fontSize: 14 }}>Loading views…</p>
+          ) : profileViews.length === 0 ? (
+            <p style={{ color: '#607D8B', fontSize: 14 }}>
+              No one has viewed your profile yet. Once recruiters, coaches, or peers
+              visit your profile, you&apos;ll see them here.
+            </p>
+          ) : (
+            <ul
+              style={{
+                listStyle: 'none',
+                margin: 0,
+                padding: 0,
+                display: 'grid',
+                gap: 8,
+              }}
+            >
+              {profileViews.map((v) => (
+                <li
+                  key={v.id}
+                  style={{
+                    display: 'flex',
+                    flexDirection: 'column',
+                    padding: '6px 8px',
+                    borderRadius: 8,
+                    background: '#F9FAFB',
+                  }}
+                >
+                  <span
+                    style={{
+                      fontWeight: 600,
+                      color: v.viewer?.name ? '#111827' : '#6B7280',
+                      fontSize: 14,
+                    }}
+                  >
+                    {v.viewer?.name || 'Anonymous ForgeTomorrow member'}
+                  </span>
+                  <span
+                    style={{
+                      fontSize: 12,
+                      color: '#6B7280',
+                    }}
+                  >
+                    Viewed your profile • {formatDateTime(v.createdAt)}
+                  </span>
+                </li>
+              ))}
+            </ul>
+          )}
+
+          <div style={{ marginTop: 8 }}>
+            <Link
+              href={withChrome('/seeker/profile-views')}
+              style={{ color: '#FF7043', fontWeight: 700 }}
+            >
+              View all profile views →
+            </Link>
+          </div>
+        </section>
       </section>
 
       {/* Groups */}

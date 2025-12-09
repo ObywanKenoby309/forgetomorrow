@@ -638,3 +638,15 @@ model SupportTicket {
 
   status         String   // OPEN, IN_PROGRESS, AWAITING_USER, RESOLVED, CLOSED
 }
+
+// ============================================================================
+//  PROFILE VIEWS — WHO'S LOOKING AT YOU
+// ============================================================================
+
+model ProfileView {
+  id        String   @id @default(cuid())
+  viewerId  String?  // null if anonymous or not logged in
+  targetId  String   // the user whose profile was viewed
+  source    String?  // e.g. "profile", "job-detail", etc.
+  createdAt DateTime @default(now())
+}

@@ -1,5 +1,5 @@
 // pages/member-profile.js
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import Head from 'next/head';
 import { useRouter } from 'next/router';
 import SeekerLayout from '@/components/layouts/SeekerLayout';
@@ -155,6 +155,27 @@ export default function MemberProfile({ user, primaryResume }) {
     typeof bannerFocalY === 'number' ? `center ${bannerFocalY}%` : 'center';
 
   const bannerBackgroundSize = bannerMode === 'fit' ? 'contain' : 'cover';
+
+  // ─────────────────────────────────────────────────────────────
+  // Profile View Logging (Step 5)
+  // Logs that the current user viewed this profile.
+  // API will infer viewer from session; we just send targetId + source.
+  // ─────────────────────────────────────────────────────────────
+  useEffect(() => {
+    if (!id) return;
+
+    // fire-and-forget; errors only logged to console
+    fetch('/api/profile/views', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        targetId: id,
+        source: 'member-profile',
+      }),
+    }).catch((err) => {
+      console.error('Failed to log profile view', err);
+    });
+  }, [id]);
 
   // Actions
   const handleMessage = () => {
