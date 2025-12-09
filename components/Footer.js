@@ -44,7 +44,7 @@ export default function Footer() {
               Terms
             </Link>
             <Link
-              href="/community-guildelines"
+              href="/community-guidelines"
               className="hover:text-[#FF7043] transition"
             >
               Community Guidelines
