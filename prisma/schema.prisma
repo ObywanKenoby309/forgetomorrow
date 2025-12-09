@@ -548,6 +548,8 @@ model Conversation {
   messages     Message[]
   participants ConversationParticipant[]
 
+  @@index([channel])
+  @@index([createdAt])
   @@map("conversations")
 }
 
@@ -576,7 +578,7 @@ model Message {
   conversation Conversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
   sender       User         @relation("UserMessages", fields: [senderId], references: [id])
 
-  @@index([conversationId])
+  @@index([conversationId, createdAt])
   @@index([senderId])
   @@map("messages")
 }

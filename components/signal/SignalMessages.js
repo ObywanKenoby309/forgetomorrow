@@ -6,6 +6,15 @@ export default function SignalMessages() {
   const router = useRouter();
   const { toId, toName } = router.query;
 
+  // derive channel from chrome (so we can later separate seeker / coach / recruiter if needed)
+  const chrome = String(router.query.chrome || '').toLowerCase();
+  const channel =
+    chrome === 'coach'
+      ? 'coach'
+      : chrome === 'recruiter'
+      ? 'recruiter'
+      : 'seeker';
+
   const [threads, setThreads] = useState([]);
   const [threadsLoading, setThreadsLoading] = useState(true);
 
@@ -64,7 +73,7 @@ export default function SignalMessages() {
     fetchThreads();
   }, [fetchThreads]);
 
-  // Deep link: /seeker/messages?toId=...&toName=...
+  // Handle deep link from profile / post card (?toId= / ?toName=)
   useEffect(() => {
     if (!router.isReady) return;
 
@@ -78,7 +87,7 @@ export default function SignalMessages() {
         const res = await fetch('/api/signal/start-or-get', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ toUserId: rawToId }),
+          body: JSON.stringify({ toUserId: rawToId, channel }),
         });
         if (!res.ok) throw new Error(await res.text());
         const data = await res.json();
@@ -87,10 +96,7 @@ export default function SignalMessages() {
         const otherUser = data.otherUser;
 
         const title =
-          otherUser?.name ||
-          rawToName ||
-          convo?.title ||
-          'Conversation';
+          otherUser?.name || rawToName || convo?.title || 'Conversation';
 
         setActiveConversationId(convo.id);
         setActiveTitle(title);
@@ -98,13 +104,24 @@ export default function SignalMessages() {
 
         await fetchThreads();
         await fetchMessages(convo.id);
+
+        // 🔹 Clean the URL so users don’t see toId / toName
+        const cleanQuery = { ...router.query };
+        delete cleanQuery.toId;
+        delete cleanQuery.toName;
+
+        router.replace(
+          { pathname: router.pathname, query: cleanQuery },
+          undefined,
+          { shallow: true }
+        );
       } catch (err) {
         console.error('start-or-get error:', err);
       }
     }
 
     start();
-  }, [router.isReady, toId, toName, fetchThreads, fetchMessages]);
+  }, [router.isReady, toId, toName, channel, router, fetchThreads, fetchMessages]);
 
   const handleSend = async (e) => {
     e?.preventDefault?.();
