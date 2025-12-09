@@ -23,7 +23,11 @@ export default function PostCard({
     chrome ? `${path}${path.includes('?') ? '&' : '?'}chrome=${chrome}` : path;
 
   const isOwner = currentUserId && post.authorId === currentUserId;
-  const hasComments = (post.comments?.length || 0) > 0;
+
+  const totalComments = Array.isArray(post.comments)
+    ? post.comments.length
+    : 0;
+  const hasComments = totalComments > 0;
   const previewCount = 2;
 
   const sendReply = () => {
@@ -109,24 +113,27 @@ export default function PostCard({
 
   const goToMessages = () => {
     if (!authorId) return;
+
     const params = new URLSearchParams();
     params.set('toId', authorId);
     if (authorName) params.set('toName', authorName);
 
     setShowProfileMenu(false);
-    // 🔹 Canonical DM inbox = The Signal at /seeker/messages
+    // ✅ Canonical DM inbox = The Signal at /seeker/messages
+    // This will deep-link into SignalMessages and open the thread with this member.
     router.push(withChrome(`/seeker/messages?${params.toString()}`));
   };
 
   const goToConnect = () => {
     if (!authorId) return;
+
     const params = new URLSearchParams();
     params.set('toId', authorId);
     if (authorName) params.set('toName', authorName);
 
     setShowProfileMenu(false);
-    // For now this goes to Contact Center; we’ll wire direct request UX on the
-    // Member Profile button (primary place for “Connect”).
+    // For now: still routes to Contact Center.
+    // The “primary” Connect UX is on Member Profile where we hit /api/contacts/request.
     router.push(withChrome(`/seeker/contact-center?${params.toString()}`));
   };
 
@@ -176,20 +183,24 @@ export default function PostCard({
             >
               View profile
             </button>
-            <button
-              type="button"
-              className="w-full text-left px-3 py-2 hover:bg-gray-50"
-              onClick={goToMessages}
-            >
-              Message
-            </button>
-            <button
-              type="button"
-              className="w-full text-left px-3 py-2 hover:bg-gray-50"
-              onClick={goToConnect}
-            >
-              Connect
-            </button>
+            {!isOwner && (
+              <>
+                <button
+                  type="button"
+                  className="w-full text-left px-3 py-2 hover:bg-gray-50"
+                  onClick={goToMessages}
+                >
+                  Message
+                </button>
+                <button
+                  type="button"
+                  className="w-full text-left px-3 py-2 hover:bg-gray-50"
+                  onClick={goToConnect}
+                >
+                  Connect
+                </button>
+              </>
+            )}
           </div>
         )}
       </header>
@@ -246,7 +257,7 @@ export default function PostCard({
           className="hover:underline"
           title="View comments"
         >
-          💬 {post.comments?.length || 0} Comments
+          💬 {totalComments} Comments
         </button>
       </div>
 
@@ -268,7 +279,7 @@ export default function PostCard({
       {/* comments preview */}
       {hasComments && (
         <div className="space-y-2 mb-2">
-          {post.comments.slice(0, previewCount).map((c, i) => (
+          {(post.comments || []).slice(0, previewCount).map((c, i) => (
             <div key={i} className="text-sm flex items-start gap-2">
               {c.avatarUrl ? (
                 <img
@@ -290,13 +301,13 @@ export default function PostCard({
       )}
 
       {/* "view all" link */}
-      {post.comments.length > previewCount && (
+      {totalComments > previewCount && (
         <button
           type="button"
           onClick={() => onOpenComments?.(post)}
           className="text-xs text-gray-600 hover:underline mb-3"
         >
-          View all {post.comments.length} comments
+          View all {totalComments} comments
         </button>
       )}
 

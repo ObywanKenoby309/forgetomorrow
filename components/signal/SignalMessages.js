@@ -19,7 +19,6 @@ export default function SignalMessages() {
   const [composer, setComposer] = useState('');
   const [sending, setSending] = useState(false);
 
-  // Fetch list of threads for left panel
   const fetchThreads = useCallback(async () => {
     setThreadsLoading(true);
     try {
@@ -35,7 +34,6 @@ export default function SignalMessages() {
     }
   }, []);
 
-  // Fetch messages for an active conversation
   const fetchMessages = useCallback(async (conversationId) => {
     if (!conversationId) return;
     setMessagesLoading(true);
@@ -55,7 +53,6 @@ export default function SignalMessages() {
   }, []);
 
   const openConversation = async (thread) => {
-    if (!thread?.id) return;
     setActiveConversationId(thread.id);
     setActiveTitle(thread.title || 'Conversation');
     setActiveOtherUserId(thread.otherUserId || null);
@@ -67,7 +64,7 @@ export default function SignalMessages() {
     fetchThreads();
   }, [fetchThreads]);
 
-  // Deep link handler: /seeker/messages?toId=...&toName=...
+  // Deep link: /seeker/messages?toId=...&toName=...
   useEffect(() => {
     if (!router.isReady) return;
 
@@ -83,14 +80,11 @@ export default function SignalMessages() {
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ toUserId: rawToId }),
         });
-
         if (!res.ok) throw new Error(await res.text());
         const data = await res.json();
 
         const convo = data.conversation;
         const otherUser = data.otherUser;
-
-        if (!convo?.id) return;
 
         const title =
           otherUser?.name ||
@@ -102,7 +96,6 @@ export default function SignalMessages() {
         setActiveTitle(title);
         setActiveOtherUserId(otherUser?.id || rawToId);
 
-        // Refresh threads list and messages for this conversation
         await fetchThreads();
         await fetchMessages(convo.id);
       } catch (err) {
@@ -144,8 +137,6 @@ export default function SignalMessages() {
 
       setMessages((prev) => [...prev, newMessage]);
       setComposer('');
-
-      // Update thread preview (lastMessage, lastMessageAt, etc.)
       await fetchThreads();
     } catch (err) {
       console.error('send error:', err);

@@ -122,9 +122,9 @@ export default function MemberProfile({ user, primaryResume }) {
     bannerMode,
     bannerHeight,
     bannerFocalY,
-    wallpaperUrl,
     corporateBannerKey,
     corporateBannerLocked,
+    wallpaperUrl,
     isProfilePublic,
   } = user;
 
@@ -140,7 +140,10 @@ export default function MemberProfile({ user, primaryResume }) {
 
   let bannerBackgroundImage;
 
-  if (corporateBannerLocked && corporateBannerKey) {
+  // Prefer user's wallpaper for a cinematic header, then fall back
+  if (wallpaperUrl) {
+    bannerBackgroundImage = `url(${wallpaperUrl})`;
+  } else if (corporateBannerLocked && corporateBannerKey) {
     bannerBackgroundImage = `url(/corporate-banners/${corporateBannerKey}.png)`;
   } else if (coverUrl) {
     bannerBackgroundImage = `url(${coverUrl})`;
@@ -153,15 +156,12 @@ export default function MemberProfile({ user, primaryResume }) {
 
   const bannerBackgroundSize = bannerMode === 'fit' ? 'contain' : 'cover';
 
-  const publicProfileUrl = slug
-    ? `https://forgetomorrow.com/u/${slug}`
-    : null;
-
   // Actions
   const handleMessage = () => {
     const params = new URLSearchParams();
     params.set('toId', id);
     params.set('toName', fullName);
+
     router.push(withChrome(`/seeker/messages?${params.toString()}`));
   };
 
@@ -178,7 +178,7 @@ export default function MemberProfile({ user, primaryResume }) {
       if (!res.ok) {
         const text = await res.text();
         console.error('contacts/request failed:', text);
-        // Silent fail for user; keep button as-is
+        alert('We could not send your connection request. Please try again.');
         return;
       }
 
@@ -186,14 +186,19 @@ export default function MemberProfile({ user, primaryResume }) {
 
       if (data.alreadyConnected) {
         setConnectStatus('connected');
-      } else if (data.alreadyRequested) {
-        setConnectStatus('requested');
-      } else {
-        setConnectStatus('requested');
+        return;
       }
+
+      if (data.alreadyRequested) {
+        setConnectStatus('requested');
+        return;
+      }
+
+      // Fresh request
+      setConnectStatus('requested');
     } catch (err) {
       console.error('contacts/request error:', err);
-      // Silent fail; user can try again
+      alert('We could not send your connection request. Please try again.');
     }
   };
 
@@ -225,7 +230,7 @@ export default function MemberProfile({ user, primaryResume }) {
           maxWidth: 720,
         }}
       >
-        View a community member&apos;s public profile, resume, and details in a
+        View a community member&apos;s profile, resume, and details in a
         read-only view.
       </p>
     </section>
@@ -264,34 +269,7 @@ export default function MemberProfile({ user, primaryResume }) {
         right={RightRail}
         activeNav="contacts"
       >
-        {/* Wallpaper from the viewed user */}
-        {wallpaperUrl && (
-          <>
-            <div
-              style={{
-                position: 'fixed',
-                inset: 0,
-                zIndex: 0,
-                backgroundImage: `url(${wallpaperUrl})`,
-                backgroundSize: 'cover',
-                backgroundPosition: 'center',
-              }}
-            />
-            <div
-              style={{
-                position: 'fixed',
-                inset: 0,
-                zIndex: 0,
-                backgroundColor: 'rgba(0,0,0,0.45)',
-              }}
-            />
-          </>
-        )}
-
-        <div
-          className="w-full max-w-6xl mx-auto px-4 md:px-6 pb-8 space-y-5"
-          style={{ position: 'relative', zIndex: 1 }}
-        >
+        <div className="w-full max-w-6xl mx-auto px-4 md:px-6 pb-8 space-y-5">
           {/* Banner */}
           <div
             className="member-banner"
@@ -307,25 +285,6 @@ export default function MemberProfile({ user, primaryResume }) {
               backgroundColor: '#112033',
             }}
           />
-
-          {/* Privacy note for non-public profiles */}
-          {!isProfilePublic && (
-            <section
-              style={{
-                marginTop: 0,
-                marginBottom: 8,
-                padding: 12,
-                borderRadius: 10,
-                background: '#FFF3E0',
-                border: '1px solid #FFE0B2',
-                color: '#BF360C',
-                fontSize: 13,
-              }}
-            >
-              This member has their profile set to non-public. You can still send
-              a message or connection request to start a conversation.
-            </section>
-          )}
 
           {/* Header card */}
           <section
@@ -366,9 +325,7 @@ export default function MemberProfile({ user, primaryResume }) {
               </h2>
 
               {pronouns && (
-                <p style={{ margin: '4px 0', color: '#607D8B' }}>
-                  {pronouns}
-                </p>
+                <p style={{ margin: '4px 0', color: '#607D8B' }}>{pronouns}</p>
               )}
 
               {headline && (
@@ -441,11 +398,6 @@ export default function MemberProfile({ user, primaryResume }) {
                         : 'pointer',
                     fontSize: 14,
                     fontWeight: 700,
-                    opacity:
-                      connectStatus === 'requested' ||
-                      connectStatus === 'connected'
-                        ? 0.9
-                        : 1,
                   }}
                 >
                   {connectStatus === 'connected'
@@ -454,11 +406,33 @@ export default function MemberProfile({ user, primaryResume }) {
                     ? 'Requested'
                     : 'Connect'}
                 </button>
-                {/* Intentionally no "View public profile" button */}
-                {publicProfileUrl && null}
               </div>
             </div>
           </section>
+
+          {/* Non-public profile notice */}
+          {!isProfilePublic && (
+            <section
+              style={{
+                marginTop: 8,
+                padding: 16,
+                borderRadius: 12,
+                border: '1px dashed #FFCC80',
+                background: '#FFF8E1',
+              }}
+            >
+              <p
+                style={{
+                  margin: 0,
+                  fontSize: 13,
+                  color: '#BF360C',
+                }}
+              >
+                This member has set their public profile to private. Send a
+                message or connection request to start a conversation.
+              </p>
+            </section>
+          )}
 
           {/* About */}
           {aboutMe && (
@@ -495,7 +469,7 @@ export default function MemberProfile({ user, primaryResume }) {
             </section>
           )}
 
-          {/* Primary Resume */}
+          {/* Primary Resume (only if profile is public and slug exists) */}
           {isProfilePublic && primaryResume && slug && (
             <section
               style={{
