@@ -36,6 +36,33 @@ export default function Feed() {
       // not JSON – just fall back to raw body above
     }
 
+    // Reactions from API (Json field)
+    let reactions = [];
+    const rawReactions = row.reactions;
+
+    if (Array.isArray(rawReactions)) {
+      reactions = rawReactions;
+    } else if (typeof rawReactions === 'string') {
+      try {
+        const parsed = JSON.parse(rawReactions);
+        if (Array.isArray(parsed)) reactions = parsed;
+      } catch {
+        // ignore bad JSON
+      }
+    } else if (rawReactions && typeof rawReactions === 'object') {
+      reactions = Array.isArray(rawReactions) ? rawReactions : [];
+    }
+
+    const reactionCount = Array.isArray(reactions)
+      ? reactions.reduce(
+          (sum, r) => sum + (typeof r.count === 'number' ? r.count : 0),
+          0
+        )
+      : 0;
+
+    // Comments
+    const comments = Array.isArray(row.comments) ? row.comments : [];
+
     return {
       id: row.id,
       authorId: row.authorId ?? null,
@@ -44,9 +71,10 @@ export default function Feed() {
       body,
       type: row.type ?? 'business',
       createdAt: new Date(row.createdAt).toISOString(),
-      likes: row.likes ?? 0,
-      comments: Array.isArray(row.comments) ? row.comments : [],
+      likes: reactionCount, // 🔥 use reaction total as the visible count
+      comments,
       attachments,
+      reactions,
       isJob: false,
     };
   };
@@ -139,7 +167,7 @@ export default function Feed() {
     }
   };
 
-  // Replies (text OR emoji) — hit /api/feed/comments AND update state
+  // Replies (text) — hit /api/feed/comments AND update state
   const handleReply = async (postId, text) => {
     if (!postId || !text || !text.trim()) return;
     const trimmed = text.trim();
@@ -186,10 +214,48 @@ export default function Feed() {
     );
   };
 
-  // Emoji reactions: just treated as replies
-  const handleReact = (postId, emoji) => {
+  // Emoji reactions — hit /api/feed/react and update reactions + likes
+  const handleReact = async (postId, emoji) => {
     if (!emoji) return;
-    handleReply(postId, emoji);
+    if (!postId && postId !== 0) return;
+
+    // Never react on remote jobs
+    if (String(postId).startsWith('job-')) return;
+
+    try {
+      const res = await fetch('/api/feed/react', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ postId, emoji }),
+      });
+
+      if (!res.ok) {
+        console.error('React failed', await res.text());
+        return;
+      }
+
+      const data = await res.json();
+      const reactions = Array.isArray(data.reactions) ? data.reactions : [];
+
+      const reactionCount = reactions.reduce(
+        (sum, r) => sum + (typeof r.count === 'number' ? r.count : 0),
+        0
+      );
+
+      setPosts((prev) =>
+        prev.map((p) =>
+          p.id === postId
+            ? {
+                ...p,
+                reactions,
+                likes: reactionCount,
+              }
+            : p
+        )
+      );
+    } catch (err) {
+      console.error('React error:', err);
+    }
   };
 
   // Delete — removes post from UI + hits /api/feed/[id]

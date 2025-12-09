@@ -758,6 +758,7 @@ model FeedPost {
   type       String   @default("business") // "business" | "personal"
   likes      Int      @default(0)
   comments   Json     @default("[]") // [{ by, text, at }]
+  reactions  Json     @default("[]") // [{ emoji, userIds, count }]
   createdAt  DateTime @default(now())
   updatedAt  DateTime @updatedAt
 

@@ -34,6 +34,24 @@ function mapFeedPostRow(row, userMap) {
     }
   }
 
+  // 🔹 Safely parse reactions coming back from Prisma
+  let reactions = [];
+  const rawReactions = row.reactions;
+
+  if (Array.isArray(rawReactions)) {
+    reactions = rawReactions;
+  } else if (typeof rawReactions === 'string') {
+    try {
+      const parsed = JSON.parse(rawReactions);
+      if (Array.isArray(parsed)) reactions = parsed;
+    } catch {
+      // ignore bad JSON, keep empty
+    }
+  } else if (rawReactions && typeof rawReactions === 'object') {
+    // Prisma Json may already be parsed
+    reactions = Array.isArray(rawReactions) ? rawReactions : [];
+  }
+
   // 🔹 Lookup author avatar from userMap (if provided)
   let authorAvatar = null;
   if (userMap && row.authorId) {
@@ -54,6 +72,7 @@ function mapFeedPostRow(row, userMap) {
     likes: row.likes ?? 0,
     comments,
     attachments,
+    reactions,
   };
 }
 
@@ -120,7 +139,7 @@ export default async function handler(req, res) {
           authorName,
           content: JSON.stringify(contentObj),
           type: type === 'personal' ? 'personal' : 'business',
-          // likes + comments use defaults from schema
+          // likes, comments, reactions use defaults from schema
         },
       });
 
