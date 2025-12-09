@@ -1125,9 +1125,9 @@ function Jobs() {
                         alignItems: 'center',
                         flexWrap: 'nowrap',      // force single row
                         gap: 6,
-                        marginTop: 10,
+                        marginTop: 2,
                         overflowX: 'auto',       // allow horizontal scroll on very small screens
-                        padding: '2px 0 4px',
+                        padding: '0px 0 0px',
                       }}
                     >
                       <button
