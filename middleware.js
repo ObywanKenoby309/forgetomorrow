@@ -38,6 +38,7 @@ const PUBLIC_PATHS = new Set([
   "/blog",                 // Blog landing
   "/privacy",              // Privacy Policy
   "/terms",                // Terms of Service
+  "/community-guidelines", // Community Guidelines
   "/security",             // Security
   "/accessibility",        // Accessibility
   "/tracking-policy",      // Cookies / Tracking
