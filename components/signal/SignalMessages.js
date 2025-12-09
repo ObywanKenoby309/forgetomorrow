@@ -4,16 +4,7 @@ import { useRouter } from 'next/router';
 
 export default function SignalMessages() {
   const router = useRouter();
-  const { toId, toName } = router.query;
-
-  // derive channel from chrome (so we can later separate seeker / coach / recruiter if needed)
-  const chrome = String(router.query.chrome || '').toLowerCase();
-  const channel =
-    chrome === 'coach'
-      ? 'coach'
-      : chrome === 'recruiter'
-      ? 'recruiter'
-      : 'seeker';
+  const { toId, toName, told, chrome } = router.query;
 
   const [threads, setThreads] = useState([]);
   const [threadsLoading, setThreadsLoading] = useState(true);
@@ -73,21 +64,25 @@ export default function SignalMessages() {
     fetchThreads();
   }, [fetchThreads]);
 
-  // Handle deep link from profile / post card (?toId= / ?toName=)
+  // Deep link handler: start or get a conversation for ?toId / ?told
   useEffect(() => {
     if (!router.isReady) return;
 
-    const rawToId = Array.isArray(toId) ? toId[0] : toId;
-    const rawToName = Array.isArray(toName) ? toName[0] : toName;
+    // Support both new (toId) and old (told) query param names
+    const deepLinkIdRaw = Array.isArray(toId || told)
+      ? (toId || told)[0]
+      : (toId || told);
 
-    if (!rawToId) return;
+    const deepLinkNameRaw = Array.isArray(toName) ? toName[0] : toName;
+
+    if (!deepLinkIdRaw) return;
 
     async function start() {
       try {
         const res = await fetch('/api/signal/start-or-get', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ toUserId: rawToId, channel }),
+          body: JSON.stringify({ toUserId: deepLinkIdRaw }),
         });
         if (!res.ok) throw new Error(await res.text());
         const data = await res.json();
@@ -96,19 +91,21 @@ export default function SignalMessages() {
         const otherUser = data.otherUser;
 
         const title =
-          otherUser?.name || rawToName || convo?.title || 'Conversation';
+          otherUser?.name ||
+          deepLinkNameRaw ||
+          convo?.title ||
+          'Conversation';
 
         setActiveConversationId(convo.id);
         setActiveTitle(title);
-        setActiveOtherUserId(otherUser?.id || rawToId);
+        setActiveOtherUserId(otherUser?.id || deepLinkIdRaw);
 
         await fetchThreads();
         await fetchMessages(convo.id);
 
-        // 🔹 Clean the URL so users don’t see toId / toName
-        const cleanQuery = { ...router.query };
-        delete cleanQuery.toId;
-        delete cleanQuery.toName;
+        // 🧹 Clean up URL so users don't see internal IDs
+        const cleanQuery = {};
+        if (chrome) cleanQuery.chrome = chrome; // keep workspace chrome only
 
         router.replace(
           { pathname: router.pathname, query: cleanQuery },
@@ -116,12 +113,12 @@ export default function SignalMessages() {
           { shallow: true }
         );
       } catch (err) {
-        console.error('start-or-get error:', err);
+        console.error('signal start-or-get error:', err);
       }
     }
 
     start();
-  }, [router.isReady, toId, toName, channel, router, fetchThreads, fetchMessages]);
+  }, [router.isReady, toId, told, toName, chrome, fetchThreads, fetchMessages, router]);
 
   const handleSend = async (e) => {
     e?.preventDefault?.();
