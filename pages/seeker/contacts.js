@@ -1,5 +1,5 @@
 // pages/seeker/contacts.js
-import React, { useMemo } from 'react';
+import React, { useMemo, useState, useEffect } from 'react';
 import Head from 'next/head';
 import Link from 'next/link';
 import { useRouter } from 'next/router';
@@ -36,6 +36,32 @@ export default function SeekerContactsGatePage() {
   }, [chrome]);
 
   const homeHref = withChrome('/seeker-dashboard');
+
+  // 🔹 Live contacts state (no more fake people)
+  const [contacts, setContacts] = useState([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    async function loadContacts() {
+      try {
+        const res = await fetch('/api/contacts/summary');
+        if (!res.ok) {
+          console.error('contacts/summary failed in /seeker/contacts', await res.text());
+          setContacts([]);
+          return;
+        }
+        const data = await res.json();
+        setContacts(data.contacts || []);
+      } catch (err) {
+        console.error('contacts/summary error in /seeker/contacts', err);
+        setContacts([]);
+      } finally {
+        setLoading(false);
+      }
+    }
+
+    loadContacts();
+  }, []);
 
   // 🔸 Right rail – gives us space for shortcuts / ads
   const rightRail = (
@@ -94,7 +120,7 @@ export default function SeekerContactsGatePage() {
 
       {/* Center column, similar to Coaching Dashboard width */}
       <div className="w-full max-w-5xl mx-auto px-2 md:px-0">
-        <ContactsOrganizer contacts={contacts} />
+        <ContactsOrganizer contacts={contacts} loading={loading} />
       </div>
     </Layout>
   );
