@@ -11,6 +11,7 @@ export default async function handler(req, res) {
 
   try {
     const session = await getServerSession(req, res, authOptions);
+
     if (!session?.user?.id) {
       return res.status(401).json({ error: 'Not authenticated' });
     }
@@ -21,11 +22,14 @@ export default async function handler(req, res) {
     if (!toUserId || typeof toUserId !== 'string') {
       return res.status(400).json({ error: 'Missing toUserId' });
     }
+
     if (toUserId === userId) {
       return res.status(400).json({ error: 'You cannot message yourself.' });
     }
 
-    // Try to find an existing 1:1 conversation between these two users
+    // ─────────────────────────────────────────────────────────────
+    // 1. Try to find an existing 1:1 conversation for these users
+    // ─────────────────────────────────────────────────────────────
     let conversation = await prisma.conversation.findFirst({
       where: {
         isGroup: false,
@@ -39,10 +43,15 @@ export default async function handler(req, res) {
           },
         },
       },
+      include: {
+        participants: true,
+      },
     });
 
+    // ─────────────────────────────────────────────────────────────
+    // 2. If not found, create it (plus participants)
+    // ─────────────────────────────────────────────────────────────
     if (!conversation) {
-      // Create conversation + participants
       conversation = await prisma.conversation.create({
         data: {
           isGroup: false,
@@ -57,7 +66,9 @@ export default async function handler(req, res) {
       });
     }
 
-    // Fetch the "other" user for display
+    // ─────────────────────────────────────────────────────────────
+    // 3. Fetch the "other" user for display
+    // ─────────────────────────────────────────────────────────────
     const otherUser = await prisma.user.findUnique({
       where: { id: toUserId },
       select: {
@@ -92,6 +103,13 @@ export default async function handler(req, res) {
     });
   } catch (err) {
     console.error('signal/start-or-get error:', err);
-    return res.status(500).json({ error: 'Internal server error' });
+
+    // TEMPORARY: surface detail so you can actually see the prisma/DB problem.
+    // Once this is stable, we can hide `detail` again.
+    return res.status(500).json({
+      error: 'Internal server error',
+      detail: String(err),
+      code: err?.code || null,
+    });
   }
 }
