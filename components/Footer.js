@@ -43,6 +43,12 @@ export default function Footer() {
             <Link href="/terms" className="hover:text-[#FF7043] transition">
               Terms
             </Link>
+            <Link
+              href="/community-guildelines"
+              className="hover:text-[#FF7043] transition"
+            >
+              Community Guidelines
+            </Link>
             <Link href="/security" className="hover:text-[#FF7043] transition">
               Security
             </Link>

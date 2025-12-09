@@ -24,7 +24,7 @@ export default function Privacy() {
           >
             FORGE TOMORROW – PRIVACY POLICY
           </h1>
-          <p className="text-gray-600 mb-10">Last Updated: November 27, 2025</p>
+          <p className="text-gray-600 mb-10">Last Updated: December 2025</p>
 
           <div className="prose prose-lg max-w-none text-gray-700 space-y-10">
             {/* 1. Introduction */}
@@ -459,9 +459,23 @@ export default function Privacy() {
               <h2 className="text-2xl font-semibold text-gray-900">13. Children</h2>
               <p className="mt-4">
                 Our Services are not directed to individuals under 16 years of age, and
-                we do not knowingly collect personal data from children under 16. If we
-                learn that we have collected personal data from a child under 16, we
-                will take steps to delete that information as soon as possible.
+                we do not knowingly collect personal data from children under 16. When
+                you register for an account, you are asked to confirm that you are at
+                least 16 years of age. If we learn that we have collected personal data
+                from a child under 16, we will take steps to delete that information as
+                soon as possible and may suspend or terminate the associated account.
+              </p>
+              <p className="mt-4">
+                If you are a parent or legal guardian and believe that your child has
+                provided personal data to us in violation of this Policy, please
+                contact us at{' '}
+                <a
+                  href="mailto:privacy@forgetomorrow.com"
+                  className="text-orange-600 underline"
+                >
+                  privacy@forgetomorrow.com
+                </a>{' '}
+                so we can review and, where appropriate, delete the information.
               </p>
             </section>
 
@@ -506,8 +520,7 @@ export default function Privacy() {
                 Registered address: PO Box, Cottontown, TN, USA
               </p>
               <p className="mt-3">
-                <span className="font-semibold">Effective Date:</span> November 27,
-                2025
+                <span className="font-semibold">Effective Date:</span> December 2025
               </p>
             </section>
           </div>

@@ -55,40 +55,24 @@ function RightRail() {
         }}
       >
         <div style={{ fontWeight: 800, color: '#37474F' }}>
-          Community Guidelines & Support
+          Community Guidelines &amp; Support
         </div>
         <Link
-          href="/about"
+          href="/community-guildelines"
           style={{ color: '#FF7043', fontWeight: 600 }}
         >
           Community Guidelines
         </Link>
-        <Link
-          href="/support"
-          style={{ color: '#FF7043', fontWeight: 600 }}
+        <p
+          style={{
+            margin: 0,
+            color: '#607D8B',
+            fontSize: 13,
+          }}
         >
-          Get Support
-        </Link>
-      </div>
-
-      {/* Rules */}
-      <div
-        style={{
-          background: 'white',
-          borderRadius: 10,
-          padding: 12,
-          display: 'grid',
-          gap: 6,
-          boxShadow: '0 2px 6px rgba(0,0,0,0.06)',
-          border: '1px solid #eee',
-        }}
-      >
-        <div style={{ fontWeight: 800, color: '#37474F' }}>Community Rules</div>
-        <ul style={{ margin: 0, paddingLeft: 18, color: '#607D8B', fontSize: 13 }}>
-          <li>Be respectful and constructive</li>
-          <li>No spam or solicitations</li>
-          <li>Keep personal info private</li>
-        </ul>
+          Need help? Use the orange “Need help? Chat with Support” button at the
+          bottom-right of the screen to contact our team.
+        </p>
       </div>
 
       {/* Advertisement slot for The Hearth */}

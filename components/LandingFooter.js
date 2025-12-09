@@ -71,6 +71,14 @@ export default function LandingFooter() {
                 </Link>
               </li>
               <li>
+                <Link
+                  href="/community-guildelines"
+                  className="hover:text-[#FF7043] focus:text-[#FF7043] transition"
+                >
+                  Community Guidelines
+                </Link>
+              </li>
+              <li>
                 <Link href="/security" className="hover:text-[#FF7043] focus:text-[#FF7043] transition">
                   Security
                 </Link>

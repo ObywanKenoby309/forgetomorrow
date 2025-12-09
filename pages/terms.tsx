@@ -21,7 +21,7 @@ export default function Terms() {
           >
             FORGE TOMORROW – TERMS OF SERVICE
           </h1>
-          <p className="text-gray-600 mb-10">Last Updated: November 2025</p>
+          <p className="text-gray-600 mb-10">Last Updated: December 2025</p>
 
           <div className="prose prose-lg max-w-none text-gray-700 space-y-8">
             {/* 1. Introduction */}
@@ -58,6 +58,15 @@ export default function Terms() {
                 <li>Not be prohibited by applicable laws from using our Services.</li>
                 <li>Have authority to bind an entity if registering on its behalf.</li>
               </ul>
+              <p className="mt-4">
+                We do not knowingly permit individuals under the age of 16 to create an
+                account or use the Services. By using the Services, you represent and
+                warrant that you meet this minimum age requirement. If we learn that an
+                account has been created by someone under 16, we may suspend or
+                terminate the account and take reasonable steps to delete associated
+                personal information, consistent with our Privacy Policy and applicable
+                law.
+              </p>
             </section>
 
             {/* 3. Account Types */}

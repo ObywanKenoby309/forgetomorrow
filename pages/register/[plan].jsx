@@ -1,4 +1,4 @@
-// pages/register/[plan].jsx ← UPDATED FOR FIRST/LAST NAME + PREVERIFY
+// pages/register/[plan].jsx ← UPDATED FOR FIRST/LAST NAME + PREVERIFY + AGE CONFIRMATION
 import { useRouter } from 'next/router';
 import { useState, useEffect } from 'react';
 import Script from 'next/script';
@@ -61,7 +61,9 @@ export default function RegisterPlan() {
     }
 
     if (!terms) {
-      setError('You must agree to the Terms');
+      setError(
+        'You must confirm you are at least 16 years of age and agree to the Terms.'
+      );
       return;
     }
 
@@ -191,7 +193,7 @@ export default function RegisterPlan() {
                 required
               />
               <span>
-                I agree to the{' '}
+                I confirm that I am at least 16 years of age and agree to the{' '}
                 <a href="/terms" className="text-orange-600 underline">
                   Terms
                 </a>{' '}
@@ -199,6 +201,7 @@ export default function RegisterPlan() {
                 <a href="/privacy" className="text-orange-600 underline">
                   Privacy Policy
                 </a>
+                .
               </span>
             </label>
 
