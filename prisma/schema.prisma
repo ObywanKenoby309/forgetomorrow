@@ -303,14 +303,14 @@ model UserConsent {
 // ============================================================================
 
 model CoachingClient {
-  id          String   @id @default(cuid())
+  id          String    @id @default(cuid())
   coachId     String
   clientId    String
-  status      String   @default("Active") // "Active" | "At Risk" | "New Intake"
+  status      String    @default("Active") // "Active" | "At Risk" | "New Intake"
   nextSession DateTime?
   lastContact DateTime?
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
 
   coach  User @relation("CoachClientsCoach", fields: [coachId], references: [id], onDelete: Cascade)
   client User @relation("CoachClientsClient", fields: [clientId], references: [id], onDelete: Cascade)
@@ -378,8 +378,8 @@ model User {
 
   // Banner / Display
   bannerMode      String? // "cover" | "fit"
-  bannerHeight    Int?    // 80–220
-  bannerFocalY    Int?    // 0–100
+  bannerHeight    Int? // 80–220
+  bannerFocalY    Int? // 0–100
   isProfilePublic Boolean @default(false)
   wallpaperUrl    String?
 
@@ -431,10 +431,21 @@ model User {
   conversationParticipants ConversationParticipant[] @relation("UserConversationParticipants")
   blocksInitiated          UserBlock[]               @relation("UserBlocksAsBlocker")
   blocksReceived           UserBlock[]               @relation("UserBlocksAsBlocked")
+  messageReactions         MessageReaction[]         @relation("UserMessageReactions")
+  reportsFiled             ConversationReport[]      @relation("UserReportsAsReporter")
+  reportsReceived          ConversationReport[]      @relation("UserReportsAsReported")
 
   // Coaching relations
   coachingClientsAsCoach  CoachingClient[] @relation("CoachClientsCoach")
   coachingClientsAsClient CoachingClient[] @relation("CoachClientsClient")
+
+  // Social / community relations
+  groupMemberships        GroupMembership[]
+  ownedGroups             Group[]
+  ownedPages              Page[]
+  pageFollows             PageFollower[]
+  ownedNewsletters        Newsletter[]
+  newsletterSubscriptions NewsletterSubscription[]
 
   // ── Corporate appearance overrides (ForgeTomorrow staff only) ─────────────
   corporateBannerKey    String? // e.g. "CEO", "CFO", "STAFF_GENERAL"
@@ -530,7 +541,7 @@ model RecruiterCandidateAutomation {
 }
 
 // ============================================================================
-//  MESSAGING — CONVERSATIONS, MESSAGES, BLOCKS
+//  MESSAGING — CONVERSATIONS, MESSAGES, BLOCKS, REACTIONS, REPORTS
 // ============================================================================
 
 model Conversation {
@@ -547,6 +558,7 @@ model Conversation {
 
   messages     Message[]
   participants ConversationParticipant[]
+  reports      ConversationReport[]
 
   @@index([channel])
   @@index([createdAt])
@@ -575,8 +587,10 @@ model Message {
   content        String
   createdAt      DateTime @default(now())
 
-  conversation Conversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
-  sender       User         @relation("UserMessages", fields: [senderId], references: [id])
+  conversation Conversation         @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+  sender       User                 @relation("UserMessages", fields: [senderId], references: [id])
+  reactions    MessageReaction[]
+  reports      ConversationReport[]
 
   @@index([conversationId, createdAt])
   @@index([senderId])
@@ -598,6 +612,140 @@ model UserBlock {
   @@map("user_blocks")
 }
 
+model MessageReaction {
+  id        Int      @id @default(autoincrement())
+  messageId Int
+  userId    String
+  emoji     String // raw emoji character
+  createdAt DateTime @default(now())
+
+  message Message @relation(fields: [messageId], references: [id], onDelete: Cascade)
+  user    User    @relation("UserMessageReactions", fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([messageId])
+  @@index([userId])
+  @@map("message_reactions")
+}
+
+model ConversationReport {
+  id             Int      @id @default(autoincrement())
+  conversationId Int
+  reporterId     String
+  reportedUserId String?
+  messageId      Int?
+  reason         String // short code or label
+  details        String? // optional free-text
+  status         String   @default("OPEN") // OPEN, REVIEWING, RESOLVED, DISMISSED
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  conversation Conversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+  reporter     User         @relation("UserReportsAsReporter", fields: [reporterId], references: [id], onDelete: Cascade)
+  reportedUser User?        @relation("UserReportsAsReported", fields: [reportedUserId], references: [id], onDelete: Cascade)
+  message      Message?     @relation(fields: [messageId], references: [id], onDelete: SetNull)
+
+  @@index([conversationId])
+  @@index([reporterId])
+  @@index([reportedUserId])
+  @@index([messageId])
+  @@map("conversation_reports")
+}
+
+// ============================================================================
+//  SOCIAL OBJECTS — GROUPS, PAGES, NEWSLETTERS
+// ============================================================================
+
+model Group {
+  id          String   @id @default(cuid())
+  name        String
+  description String?
+  ownerId     String
+  isPrivate   Boolean  @default(false)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  owner       User              @relation(fields: [ownerId], references: [id], onDelete: Cascade)
+  memberships GroupMembership[]
+
+  @@index([ownerId])
+  @@map("groups")
+}
+
+model GroupMembership {
+  id       String   @id @default(cuid())
+  groupId  String
+  userId   String
+  role     String? // "owner" | "moderator" | "member"
+  joinedAt DateTime @default(now())
+
+  group Group @relation(fields: [groupId], references: [id], onDelete: Cascade)
+  user  User  @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([groupId, userId])
+  @@index([userId])
+  @@map("group_memberships")
+}
+
+model Page {
+  id          String   @id @default(cuid())
+  name        String
+  description String?
+  ownerId     String
+  website     String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  owner     User           @relation(fields: [ownerId], references: [id], onDelete: Cascade)
+  followers PageFollower[]
+
+  @@index([ownerId])
+  @@map("pages")
+}
+
+model PageFollower {
+  id         String   @id @default(cuid())
+  pageId     String
+  userId     String
+  followedAt DateTime @default(now())
+
+  page Page @relation(fields: [pageId], references: [id], onDelete: Cascade)
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([pageId, userId])
+  @@index([userId])
+  @@map("page_followers")
+}
+
+model Newsletter {
+  id          String   @id @default(cuid())
+  title       String
+  description String?
+  ownerId     String
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  owner         User                     @relation(fields: [ownerId], references: [id], onDelete: Cascade)
+  subscriptions NewsletterSubscription[]
+
+  @@index([ownerId])
+  @@map("newsletters")
+}
+
+model NewsletterSubscription {
+  id             String    @id @default(cuid())
+  newsletterId   String
+  userId         String
+  subscribedAt   DateTime  @default(now())
+  unsubscribedAt DateTime?
+
+  newsletter Newsletter @relation(fields: [newsletterId], references: [id], onDelete: Cascade)
+  user       User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([newsletterId, userId])
+  @@index([userId])
+  @@map("newsletter_subscriptions")
+}
+
 // ============================================================================
 //  COMMUNITY FEED
 // ============================================================================
@@ -609,7 +757,7 @@ model FeedPost {
   content    String
   type       String   @default("business") // "business" | "personal"
   likes      Int      @default(0)
-  comments   Json     @default("[]")       // [{ by, text, at }]
+  comments   Json     @default("[]") // [{ by, text, at }]
   createdAt  DateTime @default(now())
   updatedAt  DateTime @updatedAt
 
@@ -622,21 +770,21 @@ model FeedPost {
 // ============================================================================
 
 model SupportTicket {
-  id             String   @id @default(cuid())
-  createdAt      DateTime @default(now())
-  updatedAt      DateTime @updatedAt
+  id        String   @id @default(cuid())
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
-  userId         String?  // the logged-in user's ID (if available)
-  userEmail      String?  // fallback for anonymous / external support
+  userId    String? // the logged-in user's ID (if available)
+  userEmail String? // fallback for anonymous / external support
 
   subject        String
   initialMessage String
 
-  source         String   // e.g. "support-chat", "email"
-  personaId      String?  // daniel, barbara, etc.
-  intent         String?  // technical, billing, recruiter, emotional, general
+  source    String // e.g. "support-chat", "email"
+  personaId String? // daniel, barbara, etc.
+  intent    String? // technical, billing, recruiter, emotional, general
 
-  status         String   // OPEN, IN_PROGRESS, AWAITING_USER, RESOLVED, CLOSED
+  status String // OPEN, IN_PROGRESS, AWAITING_USER, RESOLVED, CLOSED
 }
 
 // ============================================================================
@@ -645,8 +793,12 @@ model SupportTicket {
 
 model ProfileView {
   id        String   @id @default(cuid())
-  viewerId  String?  // null if anonymous or not logged in
-  targetId  String   // the user whose profile was viewed
-  source    String?  // e.g. "profile", "job-detail", etc.
+  viewerId  String? // null if anonymous or not logged in
+  targetId  String // the user whose profile was viewed
+  source    String? // e.g. "profile", "job-detail", etc.
   createdAt DateTime @default(now())
+
+  @@index([targetId])
+  @@index([viewerId])
+  @@map("profile_views")
 }

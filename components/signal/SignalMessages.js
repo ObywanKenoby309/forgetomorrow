@@ -19,6 +19,9 @@ export default function SignalMessages() {
   const [composer, setComposer] = useState('');
   const [sending, setSending] = useState(false);
 
+  // 🔹 Local block state for the active conversation
+  const [isBlocked, setIsBlocked] = useState(false);
+
   const fetchThreads = useCallback(async () => {
     setThreadsLoading(true);
     try {
@@ -56,6 +59,10 @@ export default function SignalMessages() {
     setActiveConversationId(thread.id);
     setActiveTitle(thread.title || 'Conversation');
     setActiveOtherUserId(thread.otherUserId || null);
+
+    // Reset any prior "blocked" banner when switching threads
+    setIsBlocked(false);
+
     await fetchMessages(thread.id);
   };
 
@@ -99,6 +106,7 @@ export default function SignalMessages() {
         setActiveConversationId(convo.id);
         setActiveTitle(title);
         setActiveOtherUserId(otherUser?.id || deepLinkIdRaw);
+        setIsBlocked(false); // new conversation, assume not blocked (server will enforce if so)
 
         await fetchThreads();
         await fetchMessages(convo.id);
@@ -122,7 +130,7 @@ export default function SignalMessages() {
 
   const handleSend = async (e) => {
     e?.preventDefault?.();
-    if (!activeConversationId || !composer.trim() || sending) return;
+    if (!activeConversationId || !composer.trim() || sending || isBlocked) return;
 
     setSending(true);
     try {
@@ -135,7 +143,20 @@ export default function SignalMessages() {
         }),
       });
 
-      if (!res.ok) throw new Error(await res.text());
+      if (!res.ok) {
+        const text = await res.text();
+        console.error('send error payload:', text);
+
+        // If server enforces block, we surface that and flip local state
+        if (res.status === 403) {
+          setIsBlocked(true);
+          alert('Messaging is blocked between you and this member.');
+          return;
+        }
+
+        throw new Error(text);
+      }
+
       const data = await res.json();
 
       const newMessage = {
@@ -157,6 +178,76 @@ export default function SignalMessages() {
       alert('We could not send your message. Please try again.');
     } finally {
       setSending(false);
+    }
+  };
+
+  // 🔹 Block this member
+  const handleBlock = async () => {
+    if (!activeOtherUserId) {
+      alert('We could not determine which member to block.');
+      return;
+    }
+
+    const confirmed = window.confirm(
+      'Are you sure you want to block this member? ' +
+        'They will no longer be able to message you, and you will not see new messages from them.'
+    );
+    if (!confirmed) return;
+
+    try {
+      const res = await fetch('/api/signal/block', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ targetUserId: activeOtherUserId }),
+      });
+
+      if (!res.ok) {
+        console.error('block error status:', res.status, await res.text());
+        alert('We could not block this member. Please try again.');
+        return;
+      }
+
+      setIsBlocked(true);
+      setComposer('');
+    } catch (err) {
+      console.error('block error:', err);
+      alert('We could not block this member. Please try again.');
+    }
+  };
+
+  // 🔹 Report this conversation
+  const handleReport = async () => {
+    if (!activeConversationId || !activeOtherUserId) {
+      alert('We could not determine which conversation to report.');
+      return;
+    }
+
+    const reason = window.prompt(
+      'Tell us briefly what happened. This will go to the ForgeTomorrow support team.'
+    );
+    if (reason === null) return; // user cancelled
+
+    try {
+      const res = await fetch('/api/signal/report', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          conversationId: activeConversationId,
+          targetUserId: activeOtherUserId,
+          reason: reason.trim(),
+        }),
+      });
+
+      if (!res.ok) {
+        console.error('report error status:', res.status, await res.text());
+        alert('We could not submit your report. Please try again.');
+        return;
+      }
+
+      alert('Thank you. Your report has been submitted to our team.');
+    } catch (err) {
+      console.error('report error:', err);
+      alert('We could not submit your report. Please try again.');
     }
   };
 
@@ -229,17 +320,45 @@ export default function SignalMessages() {
 
       {/* Right: Active conversation */}
       <section className="bg-white rounded-lg shadow p-4 border border-gray-100 flex flex-col">
-        <h2 className="text-sm font-semibold text-gray-800 mb-2">
-          {activeConversationId
-            ? activeTitle || 'Conversation'
-            : 'Your Signal inbox is ready'}
-        </h2>
+        <div className="flex items-center justify-between mb-2 gap-2">
+          <h2 className="text-sm font-semibold text-gray-800">
+            {activeConversationId
+              ? activeTitle || 'Conversation'
+              : 'Your Signal inbox is ready'}
+          </h2>
+
+          {activeConversationId && (
+            <div className="flex items-center gap-2">
+              <button
+                type="button"
+                onClick={handleReport}
+                className="text-[11px] px-2 py-1 border border-gray-300 rounded-md text-gray-700 hover:bg-gray-50"
+              >
+                Report
+              </button>
+              <button
+                type="button"
+                onClick={handleBlock}
+                className="text-[11px] px-2 py-1 border border-red-300 rounded-md text-red-700 hover:bg-red-50"
+              >
+                Block
+              </button>
+            </div>
+          )}
+        </div>
 
         {!activeConversationId && (
           <p className="text-xs text-gray-600 mb-3">
             Start a conversation from a profile, candidate card, or coaching
             listing. Once you send a message, the thread will appear here.
           </p>
+        )}
+
+        {activeConversationId && isBlocked && (
+          <div className="mb-3 text-[11px] text-red-700 bg-red-50 border border-red-200 rounded-md px-3 py-2">
+            You have blocked this member. You will not be able to send new
+            messages in this conversation.
+          </div>
         )}
 
         {/* Messages list */}
@@ -295,18 +414,22 @@ export default function SignalMessages() {
           <textarea
             value={composer}
             onChange={(e) => setComposer(e.target.value)}
-            disabled={!activeConversationId}
+            disabled={!activeConversationId || isBlocked}
             placeholder={
-              activeConversationId
-                ? `Write a message to ${activeTitle || 'this member'}…`
-                : 'Select a conversation to start messaging…'
+              !activeConversationId
+                ? 'Select a conversation to start messaging…'
+                : isBlocked
+                ? 'You have blocked this member.'
+                : `Write a message to ${activeTitle || 'this member'}…`
             }
             className="w-full border rounded-md px-3 py-2 text-sm min-h-[80px] disabled:bg-gray-50"
           />
           <div className="flex justify-end">
             <button
               type="submit"
-              disabled={!activeConversationId || !composer.trim() || sending}
+              disabled={
+                !activeConversationId || !composer.trim() || sending || isBlocked
+              }
               className="px-4 py-2 rounded-md bg-[#ff8a65] text-white text-sm font-semibold disabled:opacity-50"
             >
               Send
