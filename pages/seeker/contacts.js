@@ -44,19 +44,6 @@ export default function SeekerContactsGatePage() {
     </div>
   );
 
-  // Mock data (placeholder for now; we’ll remove for live)
-  const contacts = useMemo(
-    () => [
-      { id: 1, name: 'Jane Doe', status: 'Open to Opportunities', photo: 'https://via.placeholder.com/64' },
-      { id: 2, name: 'John Smith', status: 'Looking for Remote Roles', photo: 'https://via.placeholder.com/64' },
-      { id: 3, name: 'Alex Johnson', status: 'Networking', photo: 'https://via.placeholder.com/64' },
-      { id: 4, name: 'Chris Park', status: 'Hiring', photo: 'https://via.placeholder.com/64' },
-      { id: 5, name: 'Priya N.', status: 'Open to Projects', photo: 'https://via.placeholder.com/64' },
-      { id: 6, name: 'Michael R.', status: 'Exploring', photo: 'https://via.placeholder.com/64' },
-    ],
-    []
-  );
-
   const HeaderBox = (
     <section
       style={{
