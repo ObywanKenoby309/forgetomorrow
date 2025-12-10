@@ -331,6 +331,9 @@ model Contact {
   createdAt     DateTime @default(now())
   updatedAt     DateTime @updatedAt
 
+  user        User @relation("UserContacts", fields: [userId], references: [id], onDelete: Cascade)
+  contactUser User @relation("UserContactsAsContact", fields: [contactUserId], references: [id], onDelete: Cascade)
+
   @@unique([userId, contactUserId])
   @@index([userId])
   @@index([contactUserId])
@@ -344,6 +347,9 @@ model ContactRequest {
   status     ContactRequestStatus @default(PENDING)
   createdAt  DateTime             @default(now())
   updatedAt  DateTime             @updatedAt
+
+  fromUser User @relation("UserContactRequestsFrom", fields: [fromUserId], references: [id], onDelete: Cascade)
+  toUser   User @relation("UserContactRequestsTo", fields: [toUserId], references: [id], onDelete: Cascade)
 
   @@unique([fromUserId, toUserId])
   @@index([fromUserId])
@@ -378,8 +384,8 @@ model User {
 
   // Banner / Display
   bannerMode      String? // "cover" | "fit"
-  bannerHeight    Int? // 80–220
-  bannerFocalY    Int? // 0–100
+  bannerHeight    Int?    // 80–220
+  bannerFocalY    Int?    // 0–100
   isProfilePublic Boolean @default(false)
   wallpaperUrl    String?
 
@@ -438,6 +444,12 @@ model User {
   // Coaching relations
   coachingClientsAsCoach  CoachingClient[] @relation("CoachClientsCoach")
   coachingClientsAsClient CoachingClient[] @relation("CoachClientsClient")
+
+  // Network / contacts
+  contacts                Contact[]        @relation("UserContacts")
+  contactsAsContact       Contact[]        @relation("UserContactsAsContact")
+  contactRequestsSent     ContactRequest[] @relation("UserContactRequestsFrom")
+  contactRequestsReceived ContactRequest[] @relation("UserContactRequestsTo")
 
   // Social / community relations
   groupMemberships        GroupMembership[]
@@ -758,7 +770,6 @@ model FeedPost {
   type       String   @default("business") // "business" | "personal"
   likes      Int      @default(0)
   comments   Json     @default("[]") // [{ by, text, at }]
-  reactions  Json     @default("[]") // [{ emoji, userIds, count }]
   createdAt  DateTime @default(now())
   updatedAt  DateTime @updatedAt
 
