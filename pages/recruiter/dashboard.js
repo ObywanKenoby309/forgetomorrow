@@ -42,6 +42,10 @@ function RightToolsCard() {
           <SecondaryButton href="/recruiter/job-postings" size="sm">
             Manage Jobs
           </SecondaryButton>
+          {/* NEW: link to the Job Tracker MVP */}
+          <SecondaryButton href="/recruiter/job-tracker" size="sm">
+            Job Tracker
+          </SecondaryButton>
         </div>
       </div>
     </div>
@@ -98,7 +102,7 @@ function DashboardBody() {
         }
       } finally {
         if (isMounted) {
-          setIsLoading(false);
+          isMounted && setIsLoading(false);
         }
       }
     }

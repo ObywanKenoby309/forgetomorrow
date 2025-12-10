@@ -25,36 +25,17 @@ function SupportHeaderBox({ chrome }) {
       'Whether you’re supporting clients, building programs, or using coaching tools, this is your home base for questions, feedback, and help staying focused on your clients.';
   }
 
+  // New: proper title card formatting, always readable on wallpapers
   return (
-    <section
-      style={{
-        background: 'white',
-        borderRadius: 12,
-        padding: 16,
-        border: '1px solid #eee',
-        boxShadow: '0 2px 6px rgba(0,0,0,0.06)',
-        textAlign: 'center',
-      }}
-    >
-      <h1
-        style={{
-          margin: 0,
-          color: '#FF7043',
-          fontSize: 28,
-          fontWeight: 800,
-        }}
-      >
-        {title}
-      </h1>
-      <p
-        style={{
-          margin: '6px auto 0',
-          color: '#607D8B',
-          maxWidth: 640,
-        }}
-      >
-        {subtitle}
-      </p>
+    <section className="px-4 pt-4 md:pt-6">
+      <div className="max-w-4xl mx-auto rounded-2xl border border-slate-200 bg-white/95 backdrop-blur-sm shadow-md px-5 py-4 md:px-8 md:py-6 text-center">
+        <h1 className="m-0 text-2xl md:text-3xl font-extrabold tracking-tight text-[#FF7043]">
+          {title}
+        </h1>
+        <p className="mt-2 text-sm md:text-base text-slate-600 max-w-2xl mx-auto">
+          {subtitle}
+        </p>
+      </div>
     </section>
   );
 }
