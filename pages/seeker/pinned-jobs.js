@@ -4,7 +4,7 @@ import Link from 'next/link';
 import { useRouter } from 'next/router';
 import SeekerLayout from '@/components/layouts/SeekerLayout';
 import SeekerRightColumn from '@/components/seeker/SeekerRightColumn';
-import { getClientSession } from '@/lib/auth-client';
+// import { getClientSession } from '@/lib/auth-client'; // 🔥 No longer needed
 
 export default function PinnedJobsPage() {
   const router = useRouter();
@@ -13,14 +13,16 @@ export default function PinnedJobsPage() {
 
   useEffect(() => {
     async function load() {
-      const session = await getClientSession();
-      if (!session?.user?.id) {
-        router.push('/login');
-        return;
-      }
-
       try {
         const res = await fetch('/api/seeker/pinned-jobs');
+
+        // If user is not authenticated, send them to sign-in and preserve "from"
+        if (res.status === 401 || res.status === 403) {
+          const url = `/auth/signin?from=${encodeURIComponent('/seeker/pinned-jobs')}`;
+          router.push(url);
+          return;
+        }
+
         if (res.ok) {
           const data = await res.json().catch(() => ({}));
           const jobs = Array.isArray(data.jobs) ? data.jobs : [];
