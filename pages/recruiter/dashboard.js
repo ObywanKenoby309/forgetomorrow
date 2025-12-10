@@ -91,9 +91,9 @@ function DashboardBody() {
       } catch (err) {
         console.error("[RecruiterDashboard] Error loading analytics:", err);
         if (isMounted) {
-          // We’ll still render safe fallback values below
+          // Soft message, but no fake fallback numbers
           setError(
-            "We had trouble loading live analytics. Showing fallback values for now."
+            "We had trouble loading live analytics. This dashboard will update automatically when data is available."
           );
         }
       } finally {
@@ -110,7 +110,7 @@ function DashboardBody() {
   }, []);
 
   // ──────────────────────────────────────────────────────────────
-  // Derive stats + snapshot from analyticsData (or fall back)
+  // Derive stats + snapshot from analyticsData (no fake fallbacks)
   // ──────────────────────────────────────────────────────────────
   const kpis = analyticsData?.kpis || null;
   const sourcesArray = Array.isArray(analyticsData?.sources)
@@ -138,11 +138,11 @@ function DashboardBody() {
         },
       ]
     : [
-        // Fallbacks when analytics API is unavailable
-        { label: "Open Jobs", value: 3 },
-        { label: "Active Candidates", value: 18 },
-        { label: "Messages Waiting", value: 5 },
-        { label: "Applications (7d)", value: 42 },
+        // Neutral placeholders when analytics API is unavailable
+        { label: "Total Views", value: "—" },
+        { label: "Total Applies", value: "—" },
+        { label: "Avg Time-to-Fill", value: "—" },
+        { label: "Conversion (View→Apply)", value: "—" },
       ];
 
   const analyticsSnapshot = kpis
@@ -157,19 +157,12 @@ function DashboardBody() {
             : null,
         conversionViewToApply: kpis.conversionRatePct ?? 0,
       }
-    : {
-        timeToHireDays: 18,
-        topSourceLabel: "Community Hubs",
-        topSourcePercent: 38,
-        conversionViewToApply: 4.7,
-      };
+    : null;
 
-  // Top candidates still stubbed for now (future: wire to actual matching)
-  const topCandidates = [
-    { name: "Jane D.", title: "Sr. CSM", matchPercent: 92 },
-    { name: "Omar R.", title: "Onboarding Lead", matchPercent: 88 },
-    { name: "Priya K.", title: "Solutions Architect", matchPercent: 86 },
-  ];
+  // Top candidates: no fake names, just wait for real data later
+  const topCandidates = Array.isArray(analyticsData?.topCandidates)
+    ? analyticsData.topCandidates
+    : [];
 
   return (
     <div className="space-y-6 min-w-0">
@@ -193,7 +186,7 @@ function DashboardBody() {
                 <div className="h-7 w-10 bg-slate-200 rounded" />
               </div>
             ))
-          : // Live or fallback stats
+          : // Live or neutral stats
             stats.map((t) => (
               <div key={t.label} className="rounded-lg border bg-white p-4">
                 <div className="text-sm font-medium text-[#FF7043] truncate">
@@ -215,20 +208,26 @@ function DashboardBody() {
               <li className="h-3 bg-slate-200 rounded w-2/3" />
             </ul>
           ) : isEnterprise ? (
-            <ul className="text-sm grid gap-2">
-              {topCandidates.map((c) => (
-                <li key={`${c.name}-${c.title}`}>
-                  • {c.name} — {c.title} ({c.matchPercent}% match)
-                </li>
-              ))}
-            </ul>
+            topCandidates.length === 0 ? (
+              <div className="text-sm text-slate-500">
+                AI recommendations will appear here once candidates start
+                interacting with your jobs.
+              </div>
+            ) : (
+              <ul className="text-sm grid gap-2">
+                {topCandidates.map((c) => (
+                  <li key={`${c.id || c.email || c.name}-${c.title}`}>
+                    • {c.name} — {c.title} ({c.matchPercent}% match)
+                  </li>
+                ))}
+              </ul>
+            )
           ) : (
             <FeatureLock label="AI Candidate Recommendations">
-              <ul className="text-sm grid gap-2">
-                <li>• Candidate A — (preview)</li>
-                <li>• Candidate B — (preview)</li>
-                <li>• Candidate C — (preview)</li>
-              </ul>
+              <div className="text-sm text-slate-500">
+                Upgrade to Enterprise to unlock AI-powered candidate matching in
+                this panel.
+              </div>
             </FeatureLock>
           )}
         </Panel>
@@ -242,29 +241,37 @@ function DashboardBody() {
               <div className="h-3 bg-slate-200 rounded w-1/2" />
             </div>
           ) : isEnterprise ? (
-            <div className="text-sm grid gap-2">
-              <div>Time-to-Hire: {analyticsSnapshot.timeToHireDays} days</div>
-              <div>
-                Top Source: {analyticsSnapshot.topSourceLabel}
-                {typeof analyticsSnapshot.topSourcePercent === "number"
-                  ? ` (${analyticsSnapshot.topSourcePercent}%)`
-                  : ""}
+            analyticsSnapshot ? (
+              <div className="text-sm grid gap-2">
+                <div>
+                  Time-to-Hire: {analyticsSnapshot.timeToHireDays} days
+                </div>
+                <div>
+                  Top Source: {analyticsSnapshot.topSourceLabel}
+                  {typeof analyticsSnapshot.topSourcePercent === "number"
+                    ? ` (${analyticsSnapshot.topSourcePercent}%)`
+                    : ""}
+                </div>
+                <div>
+                  Conversion (View→Apply):{" "}
+                  {analyticsSnapshot.conversionViewToApply}%
+                </div>
+                <div className="pt-1 text-[11px] text-slate-500">
+                  For deeper breakdowns, open full Analytics and adjust time
+                  range, job, recruiter, or company filters.
+                </div>
               </div>
-              <div>
-                Conversion (View→Apply): {analyticsSnapshot.conversionViewToApply}%
+            ) : (
+              <div className="text-sm text-slate-500">
+                Analytics will appear here once your jobs start receiving views
+                and applications.
               </div>
-              <div className="pt-1 text-[11px] text-slate-500">
-                For deeper breakdowns, open full Analytics and adjust time range,
-                job, recruiter, or company filters.
-              </div>
-            </div>
+            )
           ) : (
             // Locked mode wrapped for identical padding/margins
             <FeatureLock label="Analytics Snapshot">
-              <div className="text-sm grid gap-2">
-                <div>Views</div>
-                <div>Applies</div>
-                <div>Conversion (preview)</div>
+              <div className="text-sm text-slate-500">
+                Upgrade to Enterprise to see detailed analytics for your roles.
               </div>
             </FeatureLock>
           )}
