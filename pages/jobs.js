@@ -127,7 +127,7 @@ function ApplyModal({ open, onClose, job, onApplied, isPaidUser, onResumeAlign }
             </button>
             <button
               type="submit"
-              className="rounded-md px-5 py-2 font-semibold text-white"
+              className="rounded-md px-5 py-2 text-sm font-semibold text-white"
               style={{ background: '#FF7043' }}
             >
               Submit application
@@ -242,6 +242,22 @@ function getJobStatus(job) {
 
 function canApply(job) {
   return getJobStatus(job) === 'Open';
+}
+
+// Internal vs external job detector (used for styling + filters)
+function isInternalJob(job) {
+  if (!job) return false;
+  const origin = (job.origin || '').toLowerCase();
+  const source = (job.source || '').toLowerCase();
+
+  return (
+    origin === 'internal' ||
+    source === 'internal' ||
+    source === 'forge' ||
+    source === 'forge recruiter' ||
+    source === 'forgetomorrow' ||
+    source === 'forgetomorrow recruiter'
+  );
 }
 
 // ──────────────────────────────────────────────────────────────
@@ -534,9 +550,9 @@ function Jobs() {
     }
 
     if (sourceFilter) {
-      const origin = (job.origin || '').toLowerCase();
-      if (sourceFilter === 'external' && origin !== 'external') return false;
-      if (sourceFilter === 'internal' && origin !== 'internal') return false;
+      const internal = isInternalJob(job);
+      if (sourceFilter === 'external' && internal) return false;
+      if (sourceFilter === 'internal' && !internal) return false;
     }
 
     if (hasDaysFilter) {
@@ -574,8 +590,10 @@ function Jobs() {
     !!selectedJob &&
     appliedJobs.some((j) => j && j.id === selectedJob.id);
 
-  const selectedOrigin = (selectedJob?.origin || '').toLowerCase();
-  const isSelectedInternal = selectedOrigin === 'internal';
+  const isSelectedInternal = isInternalJob(selectedJob);
+  const selectedSourceLabel = isSelectedInternal
+    ? 'Forge recruiter'
+    : (selectedJob?.source || 'External');
 
   if (loading) {
     return (
@@ -853,8 +871,10 @@ function Jobs() {
                 const locationType = inferLocationType(location);
                 const status = getJobStatus(job);
 
-                const origin = (job.origin || '').toLowerCase();
-                const isInternal = origin === 'internal';
+                const internal = isInternalJob(job);
+                const displaySource = internal
+                  ? 'Forge recruiter'
+                  : (job.source || 'External');
 
                 let postedLabel = 'Date not provided';
                 if (job.publishedat) {
@@ -870,23 +890,23 @@ function Jobs() {
 
                 const isSelected = selectedJob && selectedJob.id === job.id;
 
-                const cardBackground = isInternal
+                const cardBackground = internal
                   ? 'linear-gradient(135deg, #0B1724, #112033)'
                   : '#FFFFFF';
 
                 const cardBorder = isSelected
                   ? '2px solid #FF7043'
-                  : isInternal
+                  : internal
                   ? '1px solid rgba(255,112,67,0.7)'
                   : '1px solid #e0e0e0';
 
-                const cardShadow = isInternal
+                const cardShadow = internal
                   ? '0 0 18px rgba(0,0,0,0.5)'
                   : '0 2px 6px rgba(0,0,0,0.04)';
 
-                const titleColor = isInternal ? '#FFFFFF' : '#263238';
-                const subtleColor = isInternal ? '#CFD8DC' : '#607D8B';
-                const textColor = isInternal ? '#ECEFF1' : '#455A64';
+                const titleColor = internal ? '#FFFFFF' : '#263238';
+                const subtleColor = internal ? '#CFD8DC' : '#607D8B';
+                const textColor = internal ? '#ECEFF1' : '#455A64';
 
                 return (
                   <Card
@@ -900,11 +920,12 @@ function Jobs() {
                       boxShadow: cardShadow,
                       position: 'relative',
                       overflow: 'hidden',
+                      minHeight: internal ? 112 : 96, // bump height so cards aren't too skinny
                     }}
                     onClick={() => handleSelectJob(job)}
                   >
                     {/* Subtle Forge watermark for internal postings */}
-                    {isInternal && (
+                    {internal && (
                       <div
                         aria-hidden="true"
                         style={{
@@ -940,7 +961,7 @@ function Jobs() {
                             {job.company}
                           </CardSubtle>
 
-                          {isInternal && (
+                          {internal && (
                             <div
                               style={{
                                 marginTop: 4,
@@ -977,7 +998,7 @@ function Jobs() {
                           <div
                             style={{
                               fontSize: 13,
-                              color: isInternal ? '#FFFFFF' : '#455A64',
+                              color: internal ? '#FFFFFF' : '#455A64',
                               fontWeight: 500,
                             }}
                           >
@@ -1004,7 +1025,7 @@ function Jobs() {
                               borderRadius: 999,
                               border: '1px solid rgba(207,216,220,0.7)',
                               fontSize: 12,
-                              backgroundColor: isInternal
+                              backgroundColor: internal
                                 ? 'rgba(38,50,56,0.8)'
                                 : 'transparent',
                             }}
@@ -1046,7 +1067,7 @@ function Jobs() {
                         {snippet || 'No description provided.'}
                       </p>
 
-                      {job.source && (
+                      {displaySource && (
                         <div
                           style={{
                             fontSize: 12,
@@ -1054,7 +1075,7 @@ function Jobs() {
                             marginBottom: 6,
                           }}
                         >
-                          Source: {job.source}
+                          Source: {displaySource}
                         </div>
                       )}
                     </CardContent>
@@ -1112,8 +1133,7 @@ function Jobs() {
                         p === currentPage ? '#FF7043' : 'white',
                       color:
                         p === currentPage ? 'white' : '#263238',
-                      cursor:
-                        p === currentPage ? 'default' : 'pointer',
+                      cursor: p === currentPage ? 'default' : 'pointer',
                       fontWeight: p === currentPage ? 700 : 500,
                     }}
                     aria-current={p === currentPage ? 'page' : undefined}
@@ -1141,8 +1161,7 @@ function Jobs() {
                         : 'white',
                     cursor:
                       currentPage === totalPages
-                        ? 'default'
-                        : 'pointer',
+                        ? 'default' : 'pointer',
                     fontWeight: 500,
                   }}
                   aria-label="Go to last page"
@@ -1234,7 +1253,7 @@ function Jobs() {
                           {inferLocationType(selectedJob.location || '')}
                         </span>
                       )}
-                      {selectedJob.source && (
+                      {selectedSourceLabel && (
                         <span
                           style={{
                             padding: '2px 8px',
@@ -1243,7 +1262,7 @@ function Jobs() {
                             fontSize: 12,
                           }}
                         >
-                          Source: {selectedJob.source}
+                          Source: {selectedSourceLabel}
                         </span>
                       )}
                     </div>
