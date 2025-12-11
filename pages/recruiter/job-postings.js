@@ -41,8 +41,8 @@ function Body({ rows, loading, error, onEdit, onView, onClose }) {
       (rows || []).map((j) => ({
         ...j,
         // Map Prisma fields → table expectations
-        views: j.viewsCount ?? 0,
-        applications: j.applicationsCount ?? 0,
+        views: j.viewsCount ?? j.views ?? 0,
+        applications: j.applicationsCount ?? j.applications ?? 0,
       })),
     [rows]
   );
@@ -52,23 +52,20 @@ function Body({ rows, loading, error, onEdit, onView, onClose }) {
       {/* Error banner (only for real failures) */}
       {error && (
         <div className="rounded-lg border border-red-200 bg-red-50 p-4 text-sm text-red-800">
-          <div className="font-semibold mb-1">We had trouble loading job postings.</div>
+          <div className="font-semibold mb-1">
+            We had trouble loading job postings.
+          </div>
           <p>
-            The system couldn't load your latest postings. Our team is notified automatically.
-            If you don't see an update or status communication within 30 minutes, please contact
-            Support so we can investigate.
+            The system couldn't load your latest postings. Our team is notified
+            automatically. If you don't see an update or status communication
+            within 30 minutes, please contact Support so we can investigate.
           </p>
         </div>
       )}
 
       {/* Table */}
       <div className="rounded-lg border bg-white p-2 sm:p-4">
-        <JobTable
-          jobs={tableRows}
-          onEdit={onEdit}
-          onView={onView}
-          onClose={onClose}
-        />
+        <JobTable jobs={tableRows} onEdit={onEdit} onView={onView} onClose={onClose} />
         {loading && (
           <div className="px-4 py-3 text-xs text-slate-500 text-right">
             Refreshing job postings…
@@ -80,7 +77,8 @@ function Body({ rows, loading, error, onEdit, onView, onClose }) {
       <div className="rounded-lg border bg-white p-4 text-sm">
         <div className="font-medium mb-2">Job Performance (Preview)</div>
         <div className="text-slate-500">
-          This area will pull per-job funnel metrics from Recruiter Analytics in a later pass.
+          This area will pull per-job funnel metrics from Recruiter Analytics in
+          a later pass.
         </div>
       </div>
     </main>
@@ -93,6 +91,10 @@ export default function JobPostingsPage() {
   const [loading, setLoading] = useState(false);
   const [loadError, setLoadError] = useState(null);
 
+  // NEW: track whether we are creating / editing / viewing
+  const [editingJob, setEditingJob] = useState(null);
+  const [modalMode, setModalMode] = useState("create"); // "create" | "edit" | "view"
+
   // ──────────────────────────────────────────────────────────────
   // Load job postings for the current recruiter
   // ──────────────────────────────────────────────────────────────
@@ -104,7 +106,6 @@ export default function JobPostingsPage() {
       const res = await fetch("/api/recruiter/job-postings");
       let json = null;
 
-      // Try to parse JSON either way so we can read error messages
       try {
         json = await res.json();
       } catch {
@@ -112,7 +113,6 @@ export default function JobPostingsPage() {
       }
 
       if (!res.ok) {
-        // 401/403/404 are "non-fatal": just show an empty table, no scary banner
         if (res.status === 401 || res.status === 403 || res.status === 404) {
           console.warn("[JobPostings] non-fatal status", res.status, json);
           setRows([]);
@@ -140,14 +140,34 @@ export default function JobPostingsPage() {
   // Handlers
   // ──────────────────────────────────────────────────────────────
 
-  // Create new job
-  const handleSaveJob = async (data) => {
+  const openCreateModal = () => {
+    setEditingJob(null);
+    setModalMode("create");
+    setOpen(true);
+  };
+
+  const handleSaveJob = async (formData) => {
     try {
-      const res = await fetch("/api/recruiter/job-postings", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(data),
-      });
+      let res;
+
+      if (editingJob?.id && modalMode === "edit") {
+        // UPDATE existing job
+        res = await fetch("/api/recruiter/job-postings", {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            id: editingJob.id,
+            ...formData,
+          }),
+        });
+      } else {
+        // CREATE new job
+        res = await fetch("/api/recruiter/job-postings", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(formData),
+        });
+      }
 
       if (!res.ok) {
         const errJson = await res.json().catch(() => ({}));
@@ -155,13 +175,21 @@ export default function JobPostingsPage() {
       }
 
       const json = await res.json();
-      const newJob = json.job;
+      const savedJob = json.job;
 
-      if (newJob) {
-        setRows((prev) => [newJob, ...prev]);
+      if (savedJob) {
+        if (editingJob?.id && modalMode === "edit") {
+          setRows((prev) =>
+            prev.map((j) => (j.id === savedJob.id ? savedJob : j))
+          );
+        } else {
+          setRows((prev) => [savedJob, ...prev]);
+        }
       }
 
       setOpen(false);
+      setEditingJob(null);
+      setModalMode("create");
     } catch (err) {
       console.error("[JobPostings] save error", err);
       alert(
@@ -170,19 +198,19 @@ export default function JobPostingsPage() {
     }
   };
 
-  // Placeholder edit / view for now (front-end only)
   const handleEdit = (job) => {
-    console.log("Edit (future wiring)", job);
-    // Future: open modal pre-filled and PATCH /api/recruiter/job-postings
+    setEditingJob(job);
+    setModalMode("edit");
+    setOpen(true);
   };
 
   const handleView = (job) => {
-    console.log("View (future wiring)", job);
-    // Future: navigate to /job/[id] or recruiter detail view
+    setEditingJob(job);
+    setModalMode("view");
+    setOpen(true);
   };
 
-  // Close (update status → "Closed")
-  const handleClose = async (job) => {
+  const handleCloseJob = async (job) => {
     if (!job?.id) return;
     const confirmClose = window.confirm(
       `Mark "${job.title}" as Closed? Candidates will no longer see it as open.`
@@ -214,11 +242,17 @@ export default function JobPostingsPage() {
     }
   };
 
+  const handleModalClose = () => {
+    setOpen(false);
+    setEditingJob(null);
+    setModalMode("create");
+  };
+
   return (
     <PlanProvider>
       <RecruiterLayout
         title="Job Postings — ForgeTomorrow"
-        header={<HeaderBar onOpenModal={() => setOpen(true)} />}
+        header={<HeaderBar onOpenModal={openCreateModal} />}
         right={<RightToolsCard />}
       >
         <Body
@@ -227,12 +261,14 @@ export default function JobPostingsPage() {
           error={loadError}
           onEdit={handleEdit}
           onView={handleView}
-          onClose={handleClose}
+          onClose={handleCloseJob}
         />
 
         <JobFormModal
           open={open}
-          onClose={() => setOpen(false)}
+          mode={modalMode}
+          initialJob={editingJob}
+          onClose={handleModalClose}
           onSave={handleSaveJob}
         />
       </RecruiterLayout>

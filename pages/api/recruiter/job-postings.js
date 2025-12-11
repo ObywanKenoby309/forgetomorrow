@@ -12,7 +12,6 @@ async function requireRecruiterSession(req, res) {
     return null;
   }
 
-  // Optional: basic role gate — only recruiters & admins can use this endpoint
   const role = (session.user /** as any */)?.role || "SEEKER";
   if (!["RECRUITER", "ADMIN"].includes(String(role))) {
     res.status(403).json({ error: "Insufficient permissions" });
@@ -31,24 +30,24 @@ export default async function handler(req, res) {
 
   try {
     if (req.method === "GET") {
-      // Fetch all jobs owned by this user (later we can expand to account-level)
       const jobs = await prisma.job.findMany({
         where: { userId },
         orderBy: { createdAt: "desc" },
       });
 
-      // Shape to match your JobTable expectations
       const rows = jobs.map((job) => ({
         id: job.id,
         title: job.title,
         company: job.company,
         worksite: job.worksite,
         location: job.location,
+        type: job.type,
+        compensation: job.compensation,
+        description: job.description,
         status: job.status,
         urgent: job.urgent,
         views: job.viewsCount,
         applications: job.applicationsCount,
-        // For future debugging / admin UI:
         accountKey: job.accountKey,
         createdAt: job.createdAt,
       }));
@@ -71,7 +70,8 @@ export default async function handler(req, res) {
 
       if (!title || !company || !worksite || !location || !description) {
         return res.status(400).json({
-          error: "Missing required fields (title, company, worksite, location, description).",
+          error:
+            "Missing required fields (title, company, worksite, location, description).",
         });
       }
 
@@ -87,7 +87,7 @@ export default async function handler(req, res) {
           status,
           urgent: Boolean(urgent),
           userId,
-          accountKey, // 🔸 KEY LINE: tie posting to the account/org
+          accountKey,
         },
       });
 
@@ -98,6 +98,9 @@ export default async function handler(req, res) {
           company: job.company,
           worksite: job.worksite,
           location: job.location,
+          type: job.type,
+          compensation: job.compensation,
+          description: job.description,
           status: job.status,
           urgent: job.urgent,
           views: job.viewsCount,
@@ -109,24 +112,50 @@ export default async function handler(req, res) {
     }
 
     if (req.method === "PATCH") {
-      const { id, status, urgent } = req.body || {};
+      const {
+        id,
+        title,
+        company,
+        worksite,
+        location,
+        type,
+        compensation,
+        description,
+        status,
+        urgent,
+      } = req.body || {};
+
       if (!id) {
         return res.status(400).json({ error: "Job id is required." });
       }
 
-      // Ensure the job belongs to the current user (basic multitenant guard)
       const existing = await prisma.job.findFirst({
         where: { id: Number(id), userId },
       });
 
       if (!existing) {
-        return res.status(404).json({ error: "Job not found or not owned by this recruiter." });
+        return res
+          .status(404)
+          .json({ error: "Job not found or not owned by this recruiter." });
       }
 
       const updated = await prisma.job.update({
         where: { id: existing.id },
         data: {
-          status: status ?? existing.status,
+          title: typeof title !== "undefined" ? title : existing.title,
+          company: typeof company !== "undefined" ? company : existing.company,
+          worksite: typeof worksite !== "undefined" ? worksite : existing.worksite,
+          location: typeof location !== "undefined" ? location : existing.location,
+          type: typeof type !== "undefined" ? type : existing.type,
+          compensation:
+            typeof compensation !== "undefined"
+              ? compensation
+              : existing.compensation,
+          description:
+            typeof description !== "undefined"
+              ? description
+              : existing.description,
+          status: typeof status !== "undefined" ? status : existing.status,
           urgent:
             typeof urgent === "boolean" ? urgent : existing.urgent,
         },
@@ -139,6 +168,9 @@ export default async function handler(req, res) {
           company: updated.company,
           worksite: updated.worksite,
           location: updated.location,
+          type: updated.type,
+          compensation: updated.compensation,
+          description: updated.description,
           status: updated.status,
           urgent: updated.urgent,
           views: updated.viewsCount,

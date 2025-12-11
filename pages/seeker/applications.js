@@ -13,6 +13,11 @@ import { colorFor } from '@/components/seeker/dashboard/seekerColors';
 const STORAGE_KEY = 'applicationsTracker';
 const STAGES = ['Pinned', 'Applied', 'Interviewing', 'Offers', 'Rejected'];
 
+// Friendly display labels (logic still uses original keys)
+const DISPLAY_LABELS = {
+  Rejected: 'Closed Out',
+};
+
 // empty tracker: no seeded/demo applications
 const EMPTY_TRACKER = {
   Pinned: [],
@@ -23,22 +28,29 @@ const EMPTY_TRACKER = {
 };
 
 // map stage -> palette key
-// NOTE: Rejected now uses a neutral palette instead of a "failure/red" color.
+// NOTE: Rejected now uses a softer "info" palette instead of a failure/red color.
 const stageKey = (stage) =>
   ({
     Pinned: 'neutral',
     Applied: 'applied',
     Interviewing: 'interviewing',
     Offers: 'offers',
-    Rejected: 'neutral', // changed from 'rejected' to 'neutral' for softer UX
+    Rejected: 'info', // was 'rejected' → 'neutral', now 'info' for distinct non-failure color
   }[stage] || 'info');
 
 function StageStrip({ tracker }) {
   return (
-    <div style={{ display: 'grid', gap: 12, gridTemplateColumns: 'repeat(5, minmax(0,1fr))' }}>
+    <div
+      style={{
+        display: 'grid',
+        gap: 12,
+        gridTemplateColumns: 'repeat(5, minmax(0,1fr))',
+      }}
+    >
       {STAGES.map((stage) => {
         const count = tracker?.[stage]?.length || 0;
         const c = colorFor(stageKey(stage));
+        const label = DISPLAY_LABELS[stage] || stage;
         return (
           <div
             key={stage}
@@ -52,8 +64,16 @@ function StageStrip({ tracker }) {
               gap: 4,
             }}
           >
-            <div style={{ fontSize: 12, opacity: 0.9 }}>{stage}</div>
-            <div style={{ fontSize: 20, fontWeight: 800, lineHeight: 1 }}>{count}</div>
+            <div style={{ fontSize: 12, opacity: 0.9 }}>{label}</div>
+            <div
+              style={{
+                fontSize: 20,
+                fontWeight: 800,
+                lineHeight: 1,
+              }}
+            >
+              {count}
+            </div>
           </div>
         );
       })}
