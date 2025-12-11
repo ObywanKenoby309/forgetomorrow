@@ -1,7 +1,7 @@
 // pages/api/recruiter/job-tracker.js
 
 import { getServerSession } from "next-auth/next";
-// ✅ Use the same authOptions as the NextAuth route (no PrismaAdapter mismatch)
+// ✅ Use the same authOptions as the NextAuth route
 import { authOptions } from "../auth/[...nextauth]";
 import { prisma } from "@/lib/prisma";
 
@@ -12,18 +12,19 @@ export default async function handler(req, res) {
 
   try {
     const session = await getServerSession(req, res, authOptions);
+
     if (!session?.user?.id) {
       return res.status(401).json({ error: "Unauthorized" });
     }
 
     const userId = session.user.id;
 
-    // Fetch the recruiter user to get accountKey (tenant/org scope)
+    // Get the user (mainly to confirm they exist; we won't rely on accountKey yet)
     const dbUser = await prisma.user.findUnique({
       where: { id: userId },
       select: {
         id: true,
-        accountKey: true,
+        // accountKey: true, // we’re not using this yet in the query to avoid DB mismatches
       },
     });
 
@@ -32,11 +33,10 @@ export default async function handler(req, res) {
     }
 
     // ─────────────────────────────────────────────────────────────
-    // Scope: org-level if accountKey present; else user-owned jobs
+    // Scope: for MVP, just jobs owned by this user.
+    // We’ll add org-level (accountKey) later once migrations are 100% in sync.
     // ─────────────────────────────────────────────────────────────
-    const baseJobWhere = dbUser.accountKey
-      ? { accountKey: dbUser.accountKey }
-      : { userId: dbUser.id };
+    const baseJobWhere = { userId: dbUser.id };
 
     // Active jobs = status "Open" only (no drafts, no closed/filled)
     const activeJobWhere = {
@@ -44,12 +44,10 @@ export default async function handler(req, res) {
       status: "Open",
     };
 
-    // ─────────────────────────────────────────────────────────────
-    // 1) Load active jobs with related events (views, apps, etc.)
-    // ─────────────────────────────────────────────────────────────
     const now = new Date();
     const since24h = new Date(now.getTime() - 24 * 60 * 60 * 1000);
 
+    // 1) Load active jobs with related events
     const activeJobs = await prisma.job.findMany({
       where: activeJobWhere,
       include: {
@@ -84,9 +82,7 @@ export default async function handler(req, res) {
       },
     });
 
-    // ─────────────────────────────────────────────────────────────
-    // 2) Summary metrics for active jobs
-    // ─────────────────────────────────────────────────────────────
+    // 2) Summary metrics
     const openJobsCount = activeJobs.length;
 
     let totalApplicants = 0;
@@ -101,10 +97,7 @@ export default async function handler(req, res) {
 
     const activeCandidates = activeCandidateIds.size;
 
-    // ─────────────────────────────────────────────────────────────
-    // 3) Avg time-to-fill across "Closed"/"Filled" jobs
-    //    (Job createdAt → updatedAt, as a simple first pass)
-    // ─────────────────────────────────────────────────────────────
+    // 3) Avg time-to-fill across Closed/Filled jobs
     const filledJobs = await prisma.job.findMany({
       where: {
         ...baseJobWhere,
@@ -129,9 +122,7 @@ export default async function handler(req, res) {
       avgTimeToFillDays = Math.round(totalDays / filledJobs.length);
     }
 
-    // ─────────────────────────────────────────────────────────────
-    // 4) Build per-job rows for the tracker table
-    // ─────────────────────────────────────────────────────────────
+    // 4) Per-job rows
     const jobs = activeJobs.map((job) => {
       const views = job.views.length;
       const applies = job.applications.length;
@@ -140,7 +131,6 @@ export default async function handler(req, res) {
         (app) => app.appliedAt && app.appliedAt >= since24h
       ).length;
 
-      // Last activity = latest of app / interview / offer / job update
       const lastAppAt = job.applications.reduce(
         (latest, app) =>
           !latest || app.appliedAt > latest ? app.appliedAt : latest,
@@ -177,9 +167,6 @@ export default async function handler(req, res) {
       };
     });
 
-    // ─────────────────────────────────────────────────────────────
-    // 5) Final payload
-    // ─────────────────────────────────────────────────────────────
     const summary = {
       openJobs: openJobsCount,
       totalApplicants,
@@ -193,8 +180,13 @@ export default async function handler(req, res) {
     });
   } catch (err) {
     console.error("[API] /api/recruiter/job-tracker error:", err);
-    return res
-      .status(500)
-      .json({ error: "Failed to load recruiter job tracker." });
+
+    // 🔍 TEMP: surface details so we can debug from the browser if needed
+    return res.status(500).json({
+      error: "Failed to load recruiter job tracker.",
+      message: err?.message || null,
+      code: err?.code || null,
+      meta: err?.meta || null,
+    });
   }
 }
