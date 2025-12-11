@@ -8,7 +8,7 @@ export default function KpiRow({
   viewed = 0,
   interviewing = 0,
   offers = 0,
-  rejected = 0,
+  rejected = 0,          // we’re reusing this as “Total Applied” for now
   lastApplicationSent,
 }) {
   const router = useRouter();
@@ -36,7 +36,7 @@ export default function KpiRow({
 
   // === KPI TILE ===
   const Tile = ({ title, value, stage, pulse = false }) => {
-    const { bg, text } = kpiColors(stage);
+    const { bg, text, border } = kpiColors(stage);
     return (
       <div
         style={{
@@ -44,7 +44,7 @@ export default function KpiRow({
           color: text,
           borderRadius: 12,
           padding: '12px 16px',
-          border: `1px solid rgba(0,0,0,0.08)`,
+          border: `1px solid ${border || 'rgba(0,0,0,0.08)'}`,
           display: 'grid',
           gap: 4,
           minWidth: 0,
@@ -106,7 +106,6 @@ export default function KpiRow({
         }}
         onClick={() => router.push('/resume-cover')}
       >
-        {/* LEFT: TEXT */}
         <div>
           <div style={{ fontSize: 18, fontWeight: 700 }}>
             87% get interviews in 7 days
@@ -115,8 +114,6 @@ export default function KpiRow({
             <em>with a role-aligned resume</em>
           </div>
         </div>
-
-        {/* RIGHT: BUTTON */}
         <div
           style={{
             background: 'rgba(255, 255, 255, 0.25)',
@@ -154,16 +151,21 @@ export default function KpiRow({
         pulse={true}
       />
       <Tile title="Offers Received" value={offers} stage="offers" />
-      <Tile title="Total Applied" value={rejected} stage="info" />
-      <Tile title="Last Sent" value={lastApplicationSent || '—'} stage="info" />
+      {/* Now a neutral gray stat tile */}
+      <Tile title="Total Applied" value={rejected} stage="neutral" />
+      {/* Meta / date tile in teal */}
+      <Tile
+        title="Last Sent"
+        value={lastApplicationSent || '—'}
+        stage="info"
+      />
 
-      {/* CTA BANNER */}
       <CtaBanner />
     </div>
   );
 }
 
-// === CSS ANIMATIONS ===
+// CSS animations injected once
 const styles = `
   @keyframes pulse {
     0%, 100% { opacity: 0.6; }
@@ -178,7 +180,6 @@ const styles = `
     to { transform: translateY(0); opacity: 1; }
   }
 `;
-
 if (typeof document !== 'undefined') {
   const styleSheet = document.createElement('style');
   styleSheet.textContent = styles;

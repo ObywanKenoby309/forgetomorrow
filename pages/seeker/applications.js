@@ -50,7 +50,6 @@ function StageStrip({ tracker }) {
       {STAGES.map((stage) => {
         const count = tracker?.[stage]?.length || 0;
         const c = colorFor(stageKey(stage));
-        const label = DISPLAY_LABELS[stage] || stage;
         return (
           <div
             key={stage}
@@ -64,7 +63,9 @@ function StageStrip({ tracker }) {
               gap: 4,
             }}
           >
-            <div style={{ fontSize: 12, opacity: 0.9 }}>{label}</div>
+            <div style={{ fontSize: 12, opacity: 0.9, whiteSpace: 'nowrap' }}>
+              {stage}
+            </div>
             <div
               style={{
                 fontSize: 20,

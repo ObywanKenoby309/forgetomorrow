@@ -3,32 +3,35 @@ import React from 'react';
 import ApplicationCard from './ApplicationCard';
 import { colorFor } from '@/components/seeker/dashboard/seekerColors';
 
-const STAGES = ['Pinned', 'Applied', 'Interviewing', 'Offers', 'Rejected'];
+const STAGES = ['Pinned', 'Applied', 'Interviewing', 'Offers', 'Closed Out'];
 
-// Friendly display labels (logic still uses original keys)
-const DISPLAY_LABELS = {
-  Rejected: 'Closed Out',
-};
-
-// map stage -> palette key
-// NOTE: Rejected now uses a softer "info" palette instead of failure/red.
 const stageKey = (stage) =>
   ({
     Pinned: 'pinned',          // or 'brand'
     Applied: 'applied',
     Interviewing: 'interviewing',
     Offers: 'offers',
-    Rejected: 'info',
-  }[stage] || 'info');
+    'Closed Out': 'info',
+  }[stage] || 'neutral');
 
 export default function ApplicationsBoard({
-  stagesData = { Pinned: [], Applied: [], Interviewing: [], Offers: [], Rejected: [] },
-  onAdd, onMove, onEdit, onDelete, onView,
+  stagesData = {
+    Pinned: [],
+    Applied: [],
+    Interviewing: [],
+    Offers: [],
+    'Closed Out': [],
+  },
+  onAdd,
+  onMove,
+  onEdit,
+  onDelete,
+  onView,
   compact = false,
-  columns = 5,              // number OR "auto"
+  columns = 5,
   title = 'Job Application Tracker',
-  actions = null,           // right side
-  leftActions = null,       // left side (next to title)
+  actions = null,
+  leftActions = null,
 }) {
   const wrapStyle = {
     background: 'white',
@@ -102,8 +105,6 @@ export default function ApplicationsBoard({
         {STAGES.map((stage) => {
           const c = colorFor(stageKey(stage));
           const items = stagesData[stage] || [];
-          const label = DISPLAY_LABELS[stage] || stage;
-
           return (
             <div key={stage} style={columnStyle}>
               {/* Color-coded header pill with live count */}
@@ -111,6 +112,7 @@ export default function ApplicationsBoard({
                 style={{
                   display: 'inline-flex',
                   alignItems: 'center',
+                  justifyContent: 'space-between',
                   gap: 8,
                   padding: '6px 10px',
                   borderRadius: 999,
@@ -119,9 +121,10 @@ export default function ApplicationsBoard({
                   border: `1px solid ${c.solid}`,
                   marginBottom: compact ? 6 : 8,
                   fontWeight: 700,
+                  whiteSpace: 'nowrap', // keep “Closed Out” on one line
                 }}
               >
-                <span>{label}</span>
+                <span>{stage}</span>
                 <span style={{ fontWeight: 900 }}>{items.length}</span>
               </div>
 
