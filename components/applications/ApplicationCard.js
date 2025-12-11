@@ -18,7 +18,7 @@ export default function ApplicationCard({
   return (
     <div
       style={{
-        border: '1px solid '#eee',
+        border: '1px solid #eee',
         borderRadius: '10px',
         padding: '10px',
         marginBottom: '10px',
