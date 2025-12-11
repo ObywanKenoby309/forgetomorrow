@@ -11,97 +11,6 @@ export default function CareerRoadmap() {
 
   const RightColumn = (
     <div style={{ display: 'grid', gap: 12 }}>
-      {/* Toolkit shortcuts */}
-      <div
-        style={{
-          background: 'white',
-          borderRadius: 10,
-          padding: 12,
-          display: 'grid',
-          gap: 8,
-          boxShadow: '0 2px 6px rgba(0,0,0,0.06)',
-          border: '1px solid #eee',
-        }}
-      >
-        <div style={{ fontWeight: 800, color: '#37474F', marginBottom: 4 }}>
-          Toolkit Shortcuts
-        </div>
-        <ul
-          style={{
-            listStyle: 'none',
-            margin: 0,
-            padding: 0,
-            display: 'grid',
-            gap: 8,
-          }}
-        >
-          <li>
-            <button
-              onClick={() => setActiveModule(null)}
-              style={{
-                background: 'none',
-                border: 'none',
-                padding: 0,
-                cursor: 'pointer',
-                color: '#FF7043',
-                fontWeight: 600,
-                textAlign: 'left',
-              }}
-            >
-              Toolkit Overview
-            </button>
-          </li>
-          <li>
-            <button
-              onClick={() => setActiveModule('profile')}
-              style={{
-                background: 'none',
-                border: 'none',
-                padding: 0,
-                cursor: 'pointer',
-                color: '#FF7043',
-                fontWeight: 600,
-                textAlign: 'left',
-              }}
-            >
-              Profile Development
-            </button>
-          </li>
-          <li>
-            <button
-              onClick={() => setActiveModule('offer')}
-              style={{
-                background: 'none',
-                border: 'none',
-                padding: 0,
-                cursor: 'pointer',
-                color: '#FF7043',
-                fontWeight: 600,
-                textAlign: 'left',
-              }}
-            >
-              Offer Negotiation
-            </button>
-          </li>
-          <li>
-            <button
-              onClick={() => setActiveModule('onboarding')}
-              style={{
-                background: 'none',
-                border: 'none',
-                padding: 0,
-                cursor: 'pointer',
-                color: '#FF7043',
-                fontWeight: 600,
-                textAlign: 'left',
-              }}
-            >
-              Onboarding & Growth
-            </button>
-          </li>
-        </ul>
-      </div>
-
       {/* Page-specific ad slot for Roadmap */}
       <div
         style={{
@@ -127,6 +36,25 @@ export default function CareerRoadmap() {
           for Roadmap placement.
         </p>
       </div>
+
+      {/* Future: video + transcript / detailed guides */}
+      <div
+        style={{
+          background: 'white',
+          borderRadius: 10,
+          padding: 12,
+          boxShadow: '0 2px 6px rgba(0,0,0,0.06)',
+          border: '1px solid #eee',
+        }}
+      >
+        <div style={{ fontWeight: 800, color: '#37474F', marginBottom: 4 }}>
+          Toolkit Guides
+        </div>
+        <p style={{ margin: 0, color: '#607D8B', fontSize: 13 }}>
+          Coming soon: video walkthroughs, transcripts, and step-by-step written guides
+          for each module in your Career Development Toolkit.
+        </p>
+      </div>
     </div>
   );
 
@@ -134,7 +62,7 @@ export default function CareerRoadmap() {
     <SeekerLayout
       title="Career Development Toolkit | ForgeTomorrow"
       headerTitle="Your Personalized Career Roadmap"
-      headerDescription="A guided, AI-driven path through profile building, offer negotiation, and your first 90 days."
+      headerDescription="A guided, AI-supported path through profile building, offer negotiation, and long-term growth."
       right={RightColumn}
     >
       {/* Center column content */}
@@ -148,6 +76,7 @@ export default function CareerRoadmap() {
           width: '100%',
           display: 'grid',
           gap: 16,
+          alignSelf: 'flex-start', // lift to align with side rails
         }}
       >
         {!activeModule && (
@@ -163,11 +92,11 @@ export default function CareerRoadmap() {
                 textAlign: 'center',
               }}
             >
-              Welcome to your Career Development Toolkit! This powerful AI-driven resource
-              guides you through every stage of your job search and early career growth.
-              Get personalized insights on your resume, job offers, and onboarding success
-              to help build the career you deserve.
+              Your Career Development Toolkit is a guided, AI-supported workspace that
+              helps you grow at every stage of your career — from sharpening your
+              ForgeTomorrow profile to navigating offers and planning your next move.
             </p>
+
             <ul
               style={{
                 color: '#4A5568',
@@ -181,20 +110,21 @@ export default function CareerRoadmap() {
                 gap: 8,
               }}
             >
-              <li>Tailored recommendations based on your unique skills and goals</li>
+              <li>Personalized guidance based on your goals, skills, and experience</li>
               <li>
-                Step-by-step guidance through Profile Development, Offer Negotiation, and
-                Onboarding & Growth
+                Clear, step-by-step support for job search, negotiations, and career
+                transitions
               </li>
               <li>
-                Practical tools to help you land your ideal job and thrive in your new
-                role
+                Insights to help you position yourself, strengthen your profile, and move
+                into the roles you want
               </li>
               <li>
-                Flexibility to work independently or collaborate with a trainer, mentor,
-                or coach
+                Tools for compensation conversations, internal mobility, and long-term
+                growth
               </li>
             </ul>
+
             <p
               style={{
                 color: '#4A5568',
@@ -206,11 +136,12 @@ export default function CareerRoadmap() {
                 textAlign: 'center',
               }}
             >
-              <strong>Usage Note:</strong> Free users receive one full roadmap experience.
-              Please upload a complete resume via our AI-powered resume builder to get
-              started. Subscribers enjoy up to one personalized roadmap per month and
-              access to advanced features.
+              <strong>Usage Note:</strong> Free plan users receive one full personalized
+              roadmap experience. Please upload a complete resume through the resume or
+              cover letter builder before beginning. Subscribers enjoy one new roadmap per
+              month and access to advanced guidance features.
             </p>
+
             <p
               style={{
                 color: '#4A5568',
@@ -221,8 +152,9 @@ export default function CareerRoadmap() {
                 textAlign: 'center',
               }}
             >
-              When you’re ready, choose a module below to begin shaping your future!
+              Choose a module below to get started:
             </p>
+
             <ToolkitLanding onSelectModule={setActiveModule} />
           </>
         )}
@@ -277,7 +209,7 @@ export default function CareerRoadmap() {
           </>
         )}
 
-        {/* ONBOARDING & GROWTH */}
+        {/* ONBOARDING & GROWTH (Career Strategy & Growth content lives here) */}
         {activeModule === 'onboarding' && (
           <>
             <button
