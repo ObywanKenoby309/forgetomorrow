@@ -23,8 +23,15 @@ const EMPTY_TRACKER = {
 };
 
 // map stage -> palette key
+// NOTE: Rejected now uses a neutral palette instead of a "failure/red" color.
 const stageKey = (stage) =>
-  ({ Pinned: 'neutral', Applied: 'applied', Interviewing: 'interviewing', Offers: 'offers', Rejected: 'rejected' }[stage] || 'info');
+  ({
+    Pinned: 'neutral',
+    Applied: 'applied',
+    Interviewing: 'interviewing',
+    Offers: 'offers',
+    Rejected: 'neutral', // changed from 'rejected' to 'neutral' for softer UX
+  }[stage] || 'info');
 
 function StageStrip({ tracker }) {
   return (
@@ -72,9 +79,10 @@ export default function SeekerApplicationsPage() {
   // hydrate from localStorage if user has saved tracker
   useEffect(() => {
     try {
-      const saved = typeof window !== 'undefined'
-        ? window.localStorage.getItem(STORAGE_KEY)
-        : null;
+      const saved =
+        typeof window !== 'undefined'
+          ? window.localStorage.getItem(STORAGE_KEY)
+          : null;
 
       if (saved) {
         const parsed = JSON.parse(saved);
