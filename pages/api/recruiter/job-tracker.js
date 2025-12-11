@@ -83,17 +83,20 @@ export default async function handler(req, res) {
       },
     });
 
+    const safeJobs = Array.isArray(activeJobs) ? activeJobs : [];
+
     // ─────────────────────────────────────────────────────────────
     // 2) Summary metrics for active jobs
     // ─────────────────────────────────────────────────────────────
-    const openJobsCount = activeJobs.length;
+    const openJobsCount = safeJobs.length;
 
     let totalApplicants = 0;
     const activeCandidateIds = new Set();
 
-    activeJobs.forEach((job) => {
-      totalApplicants += job.applications.length;
-      job.applications.forEach((app) => {
+    safeJobs.forEach((job) => {
+      const apps = Array.isArray(job.applications) ? job.applications : [];
+      totalApplicants += apps.length;
+      apps.forEach((app) => {
         if (app.userId) activeCandidateIds.add(app.userId);
       });
     });
@@ -102,7 +105,6 @@ export default async function handler(req, res) {
 
     // ─────────────────────────────────────────────────────────────
     // 3) Avg time-to-fill across "Closed"/"Filled" jobs
-    //    (Job createdAt → updatedAt, as a simple first pass)
     // ─────────────────────────────────────────────────────────────
     const filledJobs = await prisma.job.findMany({
       where: {
@@ -116,7 +118,7 @@ export default async function handler(req, res) {
     });
 
     let avgTimeToFillDays = null;
-    if (filledJobs.length > 0) {
+    if (Array.isArray(filledJobs) && filledJobs.length > 0) {
       const totalDays = filledJobs.reduce((sum, job) => {
         const created = job.createdAt;
         const filled = job.updatedAt || job.createdAt;
@@ -131,33 +133,42 @@ export default async function handler(req, res) {
     // ─────────────────────────────────────────────────────────────
     // 4) Build per-job rows for the tracker table
     // ─────────────────────────────────────────────────────────────
-    const jobs = activeJobs.map((job) => {
-      const views = job.views.length;
-      const applies = job.applications.length;
+    const jobs = safeJobs.map((job) => {
+      const viewsArr = Array.isArray(job.views) ? job.views : [];
+      const appsArr = Array.isArray(job.applications) ? job.applications : [];
+      const interviewsArr = Array.isArray(job.interviews) ? job.interviews : [];
+      const offersArr = Array.isArray(job.offers) ? job.offers : [];
 
-      const newApplicants = job.applications.filter(
+      const views = viewsArr.length;
+      const applies = appsArr.length;
+
+      const newApplicants = appsArr.filter(
         (app) => app.appliedAt && app.appliedAt >= since24h
       ).length;
 
       // Last activity = latest of app / interview / offer / job update
-      const lastAppAt = job.applications.reduce(
+      const lastAppAt = appsArr.reduce(
         (latest, app) =>
           !latest || app.appliedAt > latest ? app.appliedAt : latest,
         null
       );
-      const lastInterviewAt = job.interviews.reduce(
+      const lastInterviewAt = interviewsArr.reduce(
         (latest, iv) =>
           !latest || iv.scheduledAt > latest ? iv.scheduledAt : latest,
         null
       );
-      const lastOfferAt = job.offers.reduce(
+      const lastOfferAt = offersArr.reduce(
         (latest, offer) =>
           !latest || offer.receivedAt > latest ? offer.receivedAt : latest,
         null
       );
 
-      let lastActivityDate =
-        lastAppAt || lastInterviewAt || lastOfferAt || job.updatedAt || job.createdAt;
+      const lastActivityDate =
+        lastAppAt ||
+        lastInterviewAt ||
+        lastOfferAt ||
+        job.updatedAt ||
+        job.createdAt;
 
       const lastActivity =
         lastActivityDate instanceof Date
@@ -192,8 +203,11 @@ export default async function handler(req, res) {
     });
   } catch (err) {
     console.error("[API] /api/recruiter/job-tracker error:", err);
-    return res
-      .status(500)
-      .json({ error: "Failed to load recruiter job tracker." });
+    // Expose the actual error message so we can see it in the Network tab
+    return res.status(500).json({
+      error:
+        err?.message ||
+        "Failed to load recruiter job tracker (no additional error message).",
+    });
   }
 }
