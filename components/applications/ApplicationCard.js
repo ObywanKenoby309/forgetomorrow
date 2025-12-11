@@ -1,7 +1,8 @@
+// components/applications/ApplicationCard.js
 import React from 'react';
 import { FaArrowLeft, FaArrowRight, FaEdit, FaEye } from 'react-icons/fa';
 
-const DEFAULT_STAGES = ["Pinned", "Applied", "Interviewing", "Offers", "Rejected"];
+const DEFAULT_STAGES = ['Pinned', 'Applied', 'Interviewing', 'Offers', 'Rejected'];
 
 export default function ApplicationCard({
   job,
@@ -17,7 +18,7 @@ export default function ApplicationCard({
   return (
     <div
       style={{
-        border: '1px solid #eee',
+        border: '1px solid '#eee',
         borderRadius: '10px',
         padding: '10px',
         marginBottom: '10px',
@@ -29,9 +30,12 @@ export default function ApplicationCard({
     >
       <div style={{ fontWeight: 600 }}>{job.title}</div>
       <div style={{ color: '#546E7A', fontSize: 13 }}>
-        {job.company}{job.location ? ` • ${job.location}` : ''}
+        {job.company}
+        {job.location ? ` • ${job.location}` : ''}
       </div>
-      <div style={{ fontSize: 12, color: '#607D8B' }}>Added: {job.dateAdded}</div>
+      <div style={{ fontSize: 12, color: '#607D8B' }}>
+        Added: {job.dateAdded}
+      </div>
 
       {/* Buttons row */}
       <div

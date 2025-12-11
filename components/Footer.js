@@ -1,10 +1,10 @@
+// components/Footer.js
 import Link from "next/link";
 
 export default function Footer() {
   return (
     <footer className="bg-[#1a1a1a] text-gray-300 py-8">
       <div className="max-w-7xl mx-auto px-4">
-
         {/* Top row: utility/help */}
         <nav
           aria-label="Internal utilities"
@@ -32,7 +32,6 @@ export default function Footer() {
 
         {/* Bottom row: legal + copyright */}
         <div className="flex flex-col items-center gap-3 text-xs md:flex-row md:justify-between text-gray-400">
-
           <nav
             aria-label="Legal"
             className="flex flex-wrap justify-center gap-x-4 gap-y-2"
@@ -63,23 +62,27 @@ export default function Footer() {
             </Link>
           </nav>
 
-          <div className="flex flex-col items-center md:items-end gap-1">
-
-            {/* Patent Notice (Option B placement) */}
-            <p className="text-[10px] text-gray-500 max-w-md text-center md:text-right leading-tight mb-1">
-              ForgeTomorrow’s technologies — including its AI explainability engine, recruiter analytics systems,
-              human–AI workflow orchestration models, and adaptive career-matching platform — are protected under
-              multiple U.S. and international patent filings (pending). Unauthorized reproduction, reverse engineering,
-              or replication of these systems is prohibited.
+          <div className="flex flex-col items-center md:items-center gap-1">
+            {/* Patent Notice */}
+            <p className="text-[10px] text-gray-500 max-w-md text-center md:text-center leading-tight mb-1">
+              ForgeTomorrow’s technologies — including its AI explainability
+              engine, recruiter analytics systems, human–AI workflow
+              orchestration models, and adaptive career-matching platform — are
+              protected under multiple U.S. and international patent filings
+              (pending). Unauthorized reproduction, reverse engineering, or
+              replication of these systems is prohibited.
             </p>
 
             <p className="text-xs">
               © {new Date().getFullYear()} ForgeTomorrow • v0.1.0
             </p>
 
-            <p className="text-xs text-gray-500 max-w-md text-center md:text-right leading-tight">
-              *87% of job seekers using ATS-optimized resumes receive at least one interview within 7 days of applying.{" "}
-              <em>Source: Jobscan 2024 Applicant Study (n=1,200)</em>. Results vary.
+            {/* Alignment statistic – ATS wording removed, centered to avoid help bubble overlap */}
+            <p className="text-xs text-gray-500 max-w-md text-center md:text-center leading-tight">
+              *87% of job seekers using role-aligned, job-ready resumes receive
+              at least one interview within 7 days of applying.{" "}
+              <em>Source: Jobscan 2024 Applicant Study (n=1,200)</em>. Results
+              vary.
             </p>
           </div>
         </div>

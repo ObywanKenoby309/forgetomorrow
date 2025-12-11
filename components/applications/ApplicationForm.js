@@ -23,6 +23,11 @@ export default function ApplicationForm({
   const [dirty, setDirty] = useState(false);
   const firstFieldRef = useRef(null);
 
+  // Friendly display labels (logic still uses original keys)
+  const DISPLAY_LABELS = {
+    Rejected: 'Closed Out',
+  };
+
   useEffect(() => {
     if (firstFieldRef.current) firstFieldRef.current.focus();
 
@@ -66,7 +71,12 @@ export default function ApplicationForm({
     outline: 'none',
   };
 
-  const labelStyle = { fontSize: 12, color: '#607D8B', marginBottom: 4, display: 'block' };
+  const labelStyle = {
+    fontSize: 12,
+    color: '#607D8B',
+    marginBottom: 4,
+    display: 'block',
+  };
 
   return (
     <div
@@ -76,11 +86,11 @@ export default function ApplicationForm({
         inset: 0,
         background: 'rgba(0,0,0,0.5)',
         display: 'flex',
-        alignItems: 'flex-start',  // push modal to the top
+        alignItems: 'flex-start', // push modal to the top
         justifyContent: 'center',
-        paddingTop: '80px',  // adjust this to control how far below navbar
+        paddingTop: '80px', // adjust this to control how far below navbar
         zIndex: 1000,
-		overflowY: 'auto',  // so it scrolls if content is taller than screen
+        overflowY: 'auto', // so it scrolls if content is taller than screen
       }}
     >
       <div
@@ -91,11 +101,11 @@ export default function ApplicationForm({
           padding: '0 0 16px 0', // was 20px bottom
           width: '100%',
           maxWidth: 480,
-          maxHeight: '85vh',     // ✅ cap overall height
+          maxHeight: '85vh', // ✅ cap overall height
           boxShadow: '0 8px 24px rgba(0,0,0,0.15)',
           display: 'flex',
           flexDirection: 'column',
-          overflow: 'hidden',    // ✅ let inner body scroll instead
+          overflow: 'hidden', // ✅ let inner body scroll instead
         }}
       >
         {/* Sticky header */}
@@ -137,9 +147,9 @@ export default function ApplicationForm({
           onSubmit={handleSubmit}
           style={{
             display: 'grid',
-            gap: 8,               // was 12
-            padding: '16px',      // was 20px
-            overflowY: 'auto',    // ✅ body scrolls if needed
+            gap: 8, // was 12
+            padding: '16px', // was 20px
+            overflowY: 'auto', // ✅ body scrolls if needed
           }}
         >
           <div>
@@ -185,12 +195,18 @@ export default function ApplicationForm({
               name="notes"
               value={form.notes}
               onChange={handleChange}
-              rows={2}                          // was 3
+              rows={2} // was 3
               style={{ ...inputStyle, resize: 'vertical' }}
             />
           </div>
 
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 /* was 10 */ }}>
+          <div
+            style={{
+              display: 'grid',
+              gridTemplateColumns: '1fr 1fr',
+              gap: 8, // was 10
+            }}
+          >
             <div>
               <label style={labelStyle}>Date Added</label>
               <input
@@ -211,7 +227,7 @@ export default function ApplicationForm({
               >
                 {stages.map((s) => (
                   <option key={s} value={s}>
-                    {s}
+                    {DISPLAY_LABELS[s] || s}
                   </option>
                 ))}
               </select>
@@ -222,8 +238,8 @@ export default function ApplicationForm({
             style={{
               display: 'flex',
               justifyContent: 'flex-end',
-              gap: 8,            // was 10
-              marginTop: 6,      // was 8
+              gap: 8, // was 10
+              marginTop: 6, // was 8
             }}
           >
             <button

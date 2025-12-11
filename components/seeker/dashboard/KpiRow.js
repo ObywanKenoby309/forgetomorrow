@@ -36,7 +36,7 @@ export default function KpiRow({
 
   // === KPI TILE ===
   const Tile = ({ title, value, stage, pulse = false }) => {
-    const { bg, text, border } = kpiColors(stage);
+    const { bg, text } = kpiColors(stage);
     return (
       <div
         style={{
@@ -44,11 +44,13 @@ export default function KpiRow({
           color: text,
           borderRadius: 12,
           padding: '12px 16px',
-          border: `1px solid ${border || 'rgba(0,0,0,0.08)'}`,
+          border: `1px solid rgba(0,0,0,0.08)`,
           display: 'grid',
           gap: 4,
           minWidth: 0,
-          boxShadow: pulse ? '0 0 20px rgba(255, 112, 67, 0.6)' : '0 1px 3px rgba(0,0,0,0.1)',
+          boxShadow: pulse
+            ? '0 0 20px rgba(255, 112, 67, 0.6)'
+            : '0 1px 3px rgba(0,0,0,0.1)',
           transition: 'all 0.3s ease',
           cursor: pulse ? 'pointer' : 'default',
           position: 'relative',
@@ -61,7 +63,8 @@ export default function KpiRow({
             style={{
               position: 'absolute',
               inset: 0,
-              background: 'radial-gradient(circle, rgba(255,112,67,0.3) 0%, transparent 70%)',
+              background:
+                'radial-gradient(circle, rgba(255,112,67,0.3) 0%, transparent 70%)',
               animation: 'pulse 2s infinite',
             }}
           />
@@ -109,7 +112,7 @@ export default function KpiRow({
             87% get interviews in 7 days
           </div>
           <div style={{ fontSize: 14, opacity: 0.95, marginTop: 2 }}>
-            <em>with an ATS-aligned resume</em>
+            <em>with a role-aligned resume</em>
           </div>
         </div>
 
@@ -135,12 +138,23 @@ export default function KpiRow({
 
   // === MAIN RETURN ===
   return (
-    <div style={{ display: 'grid', gap: 12, gridTemplateColumns: 'repeat(6, minmax(0, 1fr))' }}>
-      <Tile title="Applications Sent" value={applied} stage="applied" />
+    <div
+      style={{
+        display: 'grid',
+        gap: 12,
+        gridTemplateColumns: 'repeat(6, minmax(0, 1fr))',
+      }}
+    >
+      <Tile title="Submitted" value={applied} stage="applied" />
       <Tile title="Viewed by Employers" value={viewed} stage="viewed" />
-      <Tile title="Interviews Scheduled" value={interviewing} stage="interviewing" pulse={true} />
+      <Tile
+        title="Interviews Scheduled"
+        value={interviewing}
+        stage="interviewing"
+        pulse={true}
+      />
       <Tile title="Offers Received" value={offers} stage="offers" />
-      <Tile title="Rejected" value={rejected} stage="rejected" />
+      <Tile title="Total Applied" value={rejected} stage="info" />
       <Tile title="Last Sent" value={lastApplicationSent || '—'} stage="info" />
 
       {/* CTA BANNER */}

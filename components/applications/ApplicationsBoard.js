@@ -1,16 +1,25 @@
+// components/applications/ApplicationsBoard.js
 import React from 'react';
 import ApplicationCard from './ApplicationCard';
 import { colorFor } from '@/components/seeker/dashboard/seekerColors';
 
 const STAGES = ['Pinned', 'Applied', 'Interviewing', 'Offers', 'Rejected'];
 
-const stageKey = (stage) => ({
-  Pinned: 'pinned',          // or 'brand'
-  Applied: 'applied',
-  Interviewing: 'interviewing',
-  Offers: 'offers',
-  Rejected: 'rejected',
-}[stage] || 'info');
+// Friendly display labels (logic still uses original keys)
+const DISPLAY_LABELS = {
+  Rejected: 'Closed Out',
+};
+
+// map stage -> palette key
+// NOTE: Rejected now uses a softer "info" palette instead of failure/red.
+const stageKey = (stage) =>
+  ({
+    Pinned: 'pinned',          // or 'brand'
+    Applied: 'applied',
+    Interviewing: 'interviewing',
+    Offers: 'offers',
+    Rejected: 'info',
+  }[stage] || 'info');
 
 export default function ApplicationsBoard({
   stagesData = { Pinned: [], Applied: [], Interviewing: [], Offers: [], Rejected: [] },
@@ -56,8 +65,22 @@ export default function ApplicationsBoard({
           flexWrap: 'wrap',
         }}
       >
-        <div style={{ display: 'flex', alignItems: 'center', gap: 12, flex: '1 1 auto', minWidth: 240 }}>
-          <h2 style={{ color: '#FF7043', margin: 0, fontSize: compact ? '1.05rem' : '1.25rem' }}>
+        <div
+          style={{
+            display: 'flex',
+            alignItems: 'center',
+            gap: 12,
+            flex: '1 1 auto',
+            minWidth: 240,
+          }}
+        >
+          <h2
+            style={{
+              color: '#FF7043',
+              margin: 0,
+              fontSize: compact ? '1.05rem' : '1.25rem',
+            }}
+          >
             {title}
           </h2>
           {leftActions}
@@ -79,6 +102,8 @@ export default function ApplicationsBoard({
         {STAGES.map((stage) => {
           const c = colorFor(stageKey(stage));
           const items = stagesData[stage] || [];
+          const label = DISPLAY_LABELS[stage] || stage;
+
           return (
             <div key={stage} style={columnStyle}>
               {/* Color-coded header pill with live count */}
@@ -96,7 +121,7 @@ export default function ApplicationsBoard({
                   fontWeight: 700,
                 }}
               >
-                <span>{stage}</span>
+                <span>{label}</span>
                 <span style={{ fontWeight: 900 }}>{items.length}</span>
               </div>
 
@@ -115,7 +140,14 @@ export default function ApplicationsBoard({
                   />
                 ))
               ) : (
-                <div style={{ color: '#90A4AE', fontSize: compact ? 12 : 14 }}>No items.</div>
+                <div
+                  style={{
+                    color: '#90A4AE',
+                    fontSize: compact ? 12 : 14,
+                  }}
+                >
+                  No items.
+                </div>
               )}
             </div>
           );

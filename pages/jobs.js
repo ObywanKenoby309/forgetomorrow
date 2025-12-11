@@ -224,6 +224,26 @@ function buildFallbackSearch(job) {
   return `https://www.google.com/search?q=${query}`;
 }
 
+// Normalize status strings coming from DB / API
+function getJobStatus(job) {
+  const raw = (job?.status || '').toString().trim();
+  if (!raw) return 'Open';
+
+  const upper = raw.toUpperCase();
+
+  if (upper === 'DRAFT') return 'Draft';
+  if (upper === 'OPEN') return 'Open';
+  if (upper === 'REVIEWING' || upper === 'REVIEWING APPLICANTS') return 'Reviewing';
+  if (upper === 'CLOSED') return 'Closed';
+
+  // Fallback: treat unknown as Open for seekers
+  return raw;
+}
+
+function canApply(job) {
+  return getJobStatus(job) === 'Open';
+}
+
 // ──────────────────────────────────────────────────────────────
 // Main Jobs Component
 // ──────────────────────────────────────────────────────────────
@@ -462,6 +482,33 @@ function Jobs() {
     : null;
 
   const filteredJobs = jobs.filter((job) => {
+    // 1) Status-based feed behavior
+    const status = getJobStatus(job);
+
+    // Hide drafts from seeker feed entirely
+    if (status === 'Draft') {
+      return false;
+    }
+
+    // Hide closed jobs after 3 days (based on updatedAt or publishedat)
+    if (status === 'Closed') {
+      const threeDaysAgo = now.getTime() - 3 * 24 * 60 * 60 * 1000;
+      const updated =
+        job.updatedAt ||
+        job.updatedat ||
+        job.updated_at ||
+        job.publishedat ||
+        null;
+
+      if (updated) {
+        const closedDate = new Date(updated);
+        if (!Number.isNaN(closedDate.getTime()) && closedDate.getTime() < threeDaysAgo) {
+          return false;
+        }
+      }
+    }
+
+    // Existing filters
     const title = (job.title || '').toLowerCase();
     const company = (job.company || '').toLowerCase();
     const location = (job.location || '').toLowerCase();
@@ -520,6 +567,15 @@ function Jobs() {
 
   const recentViewed = viewedJobs.slice(-6).reverse();
   const selectedJobApplyLink = selectedJob ? getApplyLink(selectedJob) : '';
+
+  const selectedStatus = selectedJob ? getJobStatus(selectedJob) : null;
+  const canApplySelected = selectedJob ? canApply(selectedJob) : false;
+  const hasAppliedToSelected =
+    !!selectedJob &&
+    appliedJobs.some((j) => j && j.id === selectedJob.id);
+
+  const selectedOrigin = (selectedJob?.origin || '').toLowerCase();
+  const isSelectedInternal = selectedOrigin === 'internal';
 
   if (loading) {
     return (
@@ -795,6 +851,10 @@ function Jobs() {
 
                 const location = job.location || '';
                 const locationType = inferLocationType(location);
+                const status = getJobStatus(job);
+
+                const origin = (job.origin || '').toLowerCase();
+                const isInternal = origin === 'internal';
 
                 let postedLabel = 'Date not provided';
                 if (job.publishedat) {
@@ -810,6 +870,24 @@ function Jobs() {
 
                 const isSelected = selectedJob && selectedJob.id === job.id;
 
+                const cardBackground = isInternal
+                  ? 'linear-gradient(135deg, #0B1724, #112033)'
+                  : '#FFFFFF';
+
+                const cardBorder = isSelected
+                  ? '2px solid #FF7043'
+                  : isInternal
+                  ? '1px solid rgba(255,112,67,0.7)'
+                  : '1px solid #e0e0e0';
+
+                const cardShadow = isInternal
+                  ? '0 0 18px rgba(0,0,0,0.5)'
+                  : '0 2px 6px rgba(0,0,0,0.04)';
+
+                const titleColor = isInternal ? '#FFFFFF' : '#263238';
+                const subtleColor = isInternal ? '#CFD8DC' : '#607D8B';
+                const textColor = isInternal ? '#ECEFF1' : '#455A64';
+
                 return (
                   <Card
                     key={job.id}
@@ -817,12 +895,34 @@ function Jobs() {
                     aria-label={`${job.title} at ${job.company || 'Unknown company'}`}
                     style={{
                       cursor: 'pointer',
-                      border: isSelected
-                        ? '2px solid #FF7043'
-                        : '1px solid #e0e0e0',
+                      border: cardBorder,
+                      background: cardBackground,
+                      boxShadow: cardShadow,
+                      position: 'relative',
+                      overflow: 'hidden',
                     }}
                     onClick={() => handleSelectJob(job)}
                   >
+                    {/* Subtle Forge watermark for internal postings */}
+                    {isInternal && (
+                      <div
+                        aria-hidden="true"
+                        style={{
+                          position: 'absolute',
+                          right: -40,
+                          bottom: -20,
+                          fontSize: 64,
+                          fontWeight: 800,
+                          letterSpacing: 4,
+                          color: 'rgba(255,255,255,0.03)',
+                          textTransform: 'uppercase',
+                          pointerEvents: 'none',
+                        }}
+                      >
+                        Forge
+                      </div>
+                    )}
+
                     <CardHeader>
                       <div
                         style={{
@@ -833,20 +933,51 @@ function Jobs() {
                         }}
                       >
                         <div>
-                          <CardTitle>{job.title}</CardTitle>
-                          <CardSubtle>{job.company}</CardSubtle>
+                          <CardTitle style={{ color: titleColor }}>
+                            {job.title}
+                          </CardTitle>
+                          <CardSubtle style={{ color: subtleColor }}>
+                            {job.company}
+                          </CardSubtle>
+
+                          {isInternal && (
+                            <div
+                              style={{
+                                marginTop: 4,
+                                display: 'inline-flex',
+                                alignItems: 'center',
+                                gap: 6,
+                                padding: '2px 8px',
+                                borderRadius: 999,
+                                border: '1px solid rgba(255,255,255,0.2)',
+                                background: 'rgba(17,32,51,0.9)',
+                                fontSize: 11,
+                                color: '#FFCC80',
+                              }}
+                            >
+                              <span
+                                style={{
+                                  width: 6,
+                                  height: 6,
+                                  borderRadius: '999px',
+                                  backgroundColor: '#FF7043',
+                                }}
+                              />
+                              ForgeTomorrow recruiter posting
+                            </div>
+                          )}
                         </div>
                         <div
                           style={{ textAlign: 'right', minWidth: 120 }}
                           aria-label={`Posted ${postedLabel}`}
                         >
-                          <div style={{ fontSize: 12, color: '#78909C' }}>
+                          <div style={{ fontSize: 12, color: subtleColor }}>
                             Posted
                           </div>
                           <div
                             style={{
                               fontSize: 13,
-                              color: '#455A64',
+                              color: isInternal ? '#FFFFFF' : '#455A64',
                               fontWeight: 500,
                             }}
                           >
@@ -862,7 +993,7 @@ function Jobs() {
                           flexWrap: 'wrap',
                           gap: 8,
                           fontSize: 13,
-                          color: '#607D8B',
+                          color: subtleColor,
                         }}
                       >
                         <span>{location || 'Location not provided'}</span>
@@ -871,11 +1002,33 @@ function Jobs() {
                             style={{
                               padding: '2px 8px',
                               borderRadius: 999,
-                              border: '1px solid #CFD8DC',
+                              border: '1px solid rgba(207,216,220,0.7)',
                               fontSize: 12,
+                              backgroundColor: isInternal
+                                ? 'rgba(38,50,56,0.8)'
+                                : 'transparent',
                             }}
                           >
                             {locationType}
+                          </span>
+                        )}
+
+                        {status && status !== 'Open' && (
+                          <span
+                            style={{
+                              padding: '2px 8px',
+                              borderRadius: 999,
+                              border: '1px solid #FFCC80',
+                              fontSize: 12,
+                              backgroundColor:
+                                status === 'Reviewing' ? '#FFF3E0' : '#ECEFF1',
+                              color:
+                                status === 'Reviewing' ? '#E65100' : '#455A64',
+                            }}
+                          >
+                            {status === 'Reviewing'
+                              ? 'Reviewing applicants'
+                              : status}
                           </span>
                         )}
                       </div>
@@ -885,7 +1038,7 @@ function Jobs() {
                       <p
                         style={{
                           margin: '0 0 10px',
-                          color: '#455A64',
+                          color: textColor,
                           fontSize: 14,
                           lineHeight: 1.4,
                         }}
@@ -897,7 +1050,7 @@ function Jobs() {
                         <div
                           style={{
                             fontSize: 12,
-                            color: '#78909C',
+                            color: subtleColor,
                             marginBottom: 6,
                           }}
                         >
@@ -1015,11 +1168,49 @@ function Jobs() {
               {selectedJob ? (
                 <>
                   <CardHeader>
-                    <CardTitle>{selectedJob.title}</CardTitle>
-                    <CardSubtle>
-                      {selectedJob.company} —{' '}
-                      {selectedJob.location || 'Location not provided'}
-                    </CardSubtle>
+                    <div
+                      style={{
+                        display: 'flex',
+                        flexDirection: 'column',
+                        gap: 6,
+                      }}
+                    >
+                      {isSelectedInternal && (
+                        <div
+                          style={{
+                            alignSelf: 'flex-start',
+                            padding: '3px 10px',
+                            borderRadius: 999,
+                            border: '1px solid rgba(17,32,51,0.16)',
+                            background:
+                              'linear-gradient(135deg, #0B1724, #112033)',
+                            fontSize: 11,
+                            color: '#FFCC80',
+                            display: 'inline-flex',
+                            alignItems: 'center',
+                            gap: 6,
+                          }}
+                        >
+                          <span
+                            style={{
+                              width: 6,
+                              height: 6,
+                              borderRadius: '999px',
+                              backgroundColor: '#FF7043',
+                            }}
+                          />
+                          ForgeTomorrow recruiter posting
+                        </div>
+                      )}
+
+                      <div>
+                        <CardTitle>{selectedJob.title}</CardTitle>
+                        <CardSubtle>
+                          {selectedJob.company} —{' '}
+                          {selectedJob.location || 'Location not provided'}
+                        </CardSubtle>
+                      </div>
+                    </div>
 
                     <div
                       style={{
@@ -1154,21 +1345,28 @@ function Jobs() {
 
                       <button
                         type="button"
-                        onClick={() => handleApplyClick(selectedJob)}
+                        onClick={() => {
+                          if (canApplySelected) handleApplyClick(selectedJob);
+                        }}
+                        disabled={!canApplySelected}
                         style={{
-                          background: '#FF7043',
-                          color: 'white',
+                          background: canApplySelected ? '#FF7043' : '#CFD8DC',
+                          color: canApplySelected ? 'white' : '#607D8B',
                           padding: '4px 14px',
                           borderRadius: 999,
                           border: 'none',
                           fontWeight: 600,
                           fontSize: 12,
-                          cursor: 'pointer',
+                          cursor: canApplySelected ? 'pointer' : 'default',
                           minWidth: 70,
                           whiteSpace: 'nowrap',
                         }}
                       >
-                        Apply
+                        {selectedStatus === 'Reviewing'
+                          ? 'Applications paused'
+                          : selectedStatus === 'Closed'
+                          ? 'Closed'
+                          : 'Apply'}
                       </button>
 
                       {isPaidUser && (
@@ -1219,6 +1417,57 @@ function Jobs() {
                         </Link>
                       )}
                     </div>
+
+                    {/* Status-aware thank-you / info banner */}
+                    {selectedStatus === 'Reviewing' && (
+                      <div
+                        style={{
+                          marginTop: 8,
+                          padding: '8px 10px',
+                          borderRadius: 8,
+                          border: '1px solid #FFCC80',
+                          backgroundColor: '#FFF3E0',
+                          fontSize: 12,
+                          color: '#E65100',
+                        }}
+                      >
+                        <p style={{ margin: 0, fontWeight: 600 }}>
+                          {hasAppliedToSelected
+                            ? 'Thank you for applying.'
+                            : 'This employer is now reviewing applicants.'}
+                        </p>
+                        <p style={{ margin: '4px 0 0' }}>
+                          {hasAppliedToSelected
+                            ? 'This employer is now reviewing applicants for this role. You’ll see updates here as they take action.'
+                            : 'New applications are paused. Thank you to everyone who applied.'}
+                        </p>
+                      </div>
+                    )}
+
+                    {selectedStatus === 'Closed' && (
+                      <div
+                        style={{
+                          marginTop: 8,
+                          padding: '8px 10px',
+                          borderRadius: 8,
+                          border: '1px solid #CFD8DC',
+                          backgroundColor: '#ECEFF1',
+                          fontSize: 12,
+                          color: '#455A64',
+                        }}
+                      >
+                        <p style={{ margin: 0, fontWeight: 600 }}>
+                          {hasAppliedToSelected
+                            ? 'Thank you for applying.'
+                            : 'This posting is now closed.'}
+                        </p>
+                        <p style={{ margin: '4px 0 0' }}>
+                          {hasAppliedToSelected
+                            ? 'If you are selected for next steps, the employer will reach out directly.'
+                            : 'Stay tuned for future opportunities from this employer.'}
+                        </p>
+                      </div>
+                    )}
                   </CardContent>
                 </>
               ) : (

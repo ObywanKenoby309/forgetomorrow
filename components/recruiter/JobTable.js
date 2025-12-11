@@ -5,6 +5,7 @@ const statusClass = (s) =>
   ({
     Open: "bg-emerald-50 text-emerald-700 border-emerald-200",
     Draft: "bg-amber-50 text-amber-700 border-amber-200",
+    Reviewing: "bg-blue-50 text-blue-700 border-blue-200",
     Closed: "bg-slate-100 text-slate-700 border-slate-300",
     Unknown: "bg-slate-100 text-slate-700 border-slate-300",
   }[s] || "bg-slate-100 text-slate-700 border-slate-300");
@@ -75,8 +76,9 @@ export default function JobTable({ jobs = [], onEdit, onView, onClose }) {
             onChange={(e) => setFilter({ ...filter, status: e.target.value })}
           >
             <option value="">All Status</option>
-            <option>Open</option>
             <option>Draft</option>
+            <option>Open</option>
+            <option value="Reviewing">Reviewing</option>
             <option>Closed</option>
           </select>
         </div>
@@ -140,7 +142,7 @@ export default function JobTable({ jobs = [], onEdit, onView, onClose }) {
                         status
                       )}`}
                     >
-                      {status}
+                      {status === "Reviewing" ? "Reviewing applicants" : status}
                     </span>
                   </td>
                   <td className="px-4 py-3 text-center">
@@ -185,7 +187,7 @@ export default function JobTable({ jobs = [], onEdit, onView, onClose }) {
                 >
                   {filter.status || filter.urgent
                     ? "No jobs match your filters."
-                    : "No jobs yet. Click “Post a Job” to create your first listing."}
+                    : 'No jobs yet. Click “Post a Job” to create your first listing.'}
                 </td>
               </tr>
             )}

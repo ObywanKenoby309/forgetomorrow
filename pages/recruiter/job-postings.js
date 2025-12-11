@@ -1,277 +1,196 @@
-// pages/recruiter/job-postings.js
-import { useEffect, useState, useCallback, useMemo } from "react";
-import { PlanProvider } from "@/context/PlanContext";
-import RecruiterLayout from "@/components/layouts/RecruiterLayout";
-import JobTable from "@/components/recruiter/JobTable";
-import JobFormModal from "@/components/recruiter/JobFormModal";
-import { PrimaryButton } from "@/components/ui/Buttons";
+// pages/api/recruiter/job-postings.js
 
-function HeaderBar({ onOpenModal }) {
-  return (
-    <div className="grid grid-cols-1 md:grid-cols-3 items-center gap-3">
-      <div className="hidden md:block" />
-      <div className="text-center">
-        <h1 className="text-2xl font-bold text-[#FF7043]">Job Postings</h1>
-        <p className="text-sm text-slate-600 mt-1 max-w-xl mx-auto">
-          Create and manage roles, then track performance and applications.
-        </p>
-      </div>
-      <div className="justify-self-center md:justify-self-end">
-        <PrimaryButton onClick={onOpenModal}>Post a Job</PrimaryButton>
-      </div>
-    </div>
-  );
+import { getServerSession } from "next-auth/next";
+import { authOptions } from "../auth/[...nextauth]";
+import { prisma } from "@/lib/prisma";
+
+async function requireRecruiterSession(req, res) {
+  const session = await getServerSession(req, res, authOptions);
+
+  if (!session?.user?.email || !session.user.id) {
+    res.status(401).json({ error: "Not authenticated" });
+    return null;
+  }
+
+  // Optional: basic role gate — only recruiters & admins can use this endpoint
+  const role = (session.user /** as any */)?.role || "SEEKER";
+  if (!["RECRUITER", "ADMIN"].includes(String(role))) {
+    res.status(403).json({ error: "Insufficient permissions" });
+    return null;
+  }
+
+  return session;
 }
 
-function RightToolsCard() {
-  return (
-    <div className="rounded-lg border bg-white p-4">
-      <div className="font-medium mb-2">Tips</div>
-      <div className="text-sm text-slate-600 space-y-2">
-        <p>Use clear titles and must-have skills up top.</p>
-        <p>Keep requirements lean to boost applies.</p>
-      </div>
-    </div>
-  );
+// Derived seeker-facing meta from status
+function buildSeekerMeta(job) {
+  const status = job.status || "Draft";
+
+  let seekerVisible = false;
+  let allowNewApplications = false;
+  let seekerBanner = "";
+
+  if (status === "Draft") {
+    seekerVisible = false;
+  } else if (status === "Open") {
+    seekerVisible = true;
+    allowNewApplications = true;
+  } else if (status === "Reviewing") {
+    seekerVisible = true;
+    allowNewApplications = false;
+    seekerBanner =
+      "This employer is now reviewing applicants. Thank you to those who applied.";
+  } else if (status === "Closed") {
+    seekerVisible = false; // will still be available to recruiter, just not shown in seeker feed
+    allowNewApplications = false;
+    seekerBanner =
+      "This posting is now closed. Stay tuned for future opportunities.";
+  }
+
+  return { seekerVisible, allowNewApplications, seekerBanner };
 }
 
-function Body({ rows, loading, error, onEdit, onView, onClose }) {
-  const tableRows = useMemo(
-    () =>
-      (rows || []).map((j) => ({
-        ...j,
-        // Map Prisma fields → table expectations
-        views: j.viewsCount ?? j.views ?? 0,
-        applications: j.applicationsCount ?? j.applications ?? 0,
-      })),
-    [rows]
-  );
+function shapeJob(job) {
+  const seekerMeta = buildSeekerMeta(job);
 
-  return (
-    <main className="space-y-6">
-      {/* Error banner (only for real failures) */}
-      {error && (
-        <div className="rounded-lg border border-red-200 bg-red-50 p-4 text-sm text-red-800">
-          <div className="font-semibold mb-1">
-            We had trouble loading job postings.
-          </div>
-          <p>
-            The system couldn't load your latest postings. Our team is notified
-            automatically. If you don't see an update or status communication
-            within 30 minutes, please contact Support so we can investigate.
-          </p>
-        </div>
-      )}
-
-      {/* Table */}
-      <div className="rounded-lg border bg-white p-2 sm:p-4">
-        <JobTable jobs={tableRows} onEdit={onEdit} onView={onView} onClose={onClose} />
-        {loading && (
-          <div className="px-4 py-3 text-xs text-slate-500 text-right">
-            Refreshing job postings…
-          </div>
-        )}
-      </div>
-
-      {/* Performance preview – wired later to analytics */}
-      <div className="rounded-lg border bg-white p-4 text-sm">
-        <div className="font-medium mb-2">Job Performance (Preview)</div>
-        <div className="text-slate-500">
-          This area will pull per-job funnel metrics from Recruiter Analytics in
-          a later pass.
-        </div>
-      </div>
-    </main>
-  );
+  return {
+    id: job.id,
+    title: job.title,
+    company: job.company,
+    worksite: job.worksite,
+    location: job.location,
+    status: job.status,
+    urgent: job.urgent,
+    views: job.viewsCount,
+    applications: job.applicationsCount,
+    type: job.type,
+    compensation: job.compensation,
+    description: job.description,
+    accountKey: job.accountKey,
+    createdAt: job.createdAt,
+    // 🔸 Seeker-facing meta (derived only, no DB fields required)
+    seekerVisible: seekerMeta.seekerVisible,
+    allowNewApplications: seekerMeta.allowNewApplications,
+    seekerBanner: seekerMeta.seekerBanner,
+  };
 }
 
-export default function JobPostingsPage() {
-  const [open, setOpen] = useState(false);
-  const [rows, setRows] = useState([]);
-  const [loading, setLoading] = useState(false);
-  const [loadError, setLoadError] = useState(null);
+export default async function handler(req, res) {
+  const session = await requireRecruiterSession(req, res);
+  if (!session) return;
 
-  // NEW: track whether we are creating / editing / viewing
-  const [editingJob, setEditingJob] = useState(null);
-  const [modalMode, setModalMode] = useState("create"); // "create" | "edit" | "view"
+  const userId = session.user.id;
+  const accountKey = (session.user /** as any */).accountKey || null;
 
-  // ──────────────────────────────────────────────────────────────
-  // Load job postings for the current recruiter
-  // ──────────────────────────────────────────────────────────────
-  const loadJobs = useCallback(async () => {
-    try {
-      setLoading(true);
-      setLoadError(null);
-
-      const res = await fetch("/api/recruiter/job-postings");
-      let json = null;
-
-      try {
-        json = await res.json();
-      } catch {
-        json = null;
-      }
-
-      if (!res.ok) {
-        if (res.status === 401 || res.status === 403 || res.status === 404) {
-          console.warn("[JobPostings] non-fatal status", res.status, json);
-          setRows([]);
-          return;
-        }
-
-        const message = json?.error || `HTTP ${res.status}`;
-        throw new Error(message);
-      }
-
-      setRows(Array.isArray(json?.jobs) ? json.jobs : []);
-    } catch (err) {
-      console.error("[JobPostings] load error", err);
-      setLoadError(err);
-    } finally {
-      setLoading(false);
-    }
-  }, []);
-
-  useEffect(() => {
-    loadJobs();
-  }, [loadJobs]);
-
-  // ──────────────────────────────────────────────────────────────
-  // Handlers
-  // ──────────────────────────────────────────────────────────────
-
-  const openCreateModal = () => {
-    setEditingJob(null);
-    setModalMode("create");
-    setOpen(true);
-  };
-
-  const handleSaveJob = async (formData) => {
-    try {
-      let res;
-
-      if (editingJob?.id && modalMode === "edit") {
-        // UPDATE existing job
-        res = await fetch("/api/recruiter/job-postings", {
-          method: "PATCH",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            id: editingJob.id,
-            ...formData,
-          }),
-        });
-      } else {
-        // CREATE new job
-        res = await fetch("/api/recruiter/job-postings", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify(formData),
-        });
-      }
-
-      if (!res.ok) {
-        const errJson = await res.json().catch(() => ({}));
-        throw new Error(errJson.error || `HTTP ${res.status}`);
-      }
-
-      const json = await res.json();
-      const savedJob = json.job;
-
-      if (savedJob) {
-        if (editingJob?.id && modalMode === "edit") {
-          setRows((prev) =>
-            prev.map((j) => (j.id === savedJob.id ? savedJob : j))
-          );
-        } else {
-          setRows((prev) => [savedJob, ...prev]);
-        }
-      }
-
-      setOpen(false);
-      setEditingJob(null);
-      setModalMode("create");
-    } catch (err) {
-      console.error("[JobPostings] save error", err);
-      alert(
-        "We couldn't save this job posting. Please try again in a moment, and contact Support if the issue continues."
-      );
-    }
-  };
-
-  const handleEdit = (job) => {
-    setEditingJob(job);
-    setModalMode("edit");
-    setOpen(true);
-  };
-
-  const handleView = (job) => {
-    setEditingJob(job);
-    setModalMode("view");
-    setOpen(true);
-  };
-
-  const handleCloseJob = async (job) => {
-    if (!job?.id) return;
-    const confirmClose = window.confirm(
-      `Mark "${job.title}" as Closed? Candidates will no longer see it as open.`
-    );
-    if (!confirmClose) return;
-
-    try {
-      const res = await fetch("/api/recruiter/job-postings", {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ id: job.id, status: "Closed" }),
+  try {
+    if (req.method === "GET") {
+      // Fetch all jobs owned by this user (later we can expand to account-level)
+      const jobs = await prisma.job.findMany({
+        where: { userId },
+        orderBy: { createdAt: "desc" },
       });
 
-      if (!res.ok) {
-        const errJson = await res.json().catch(() => ({}));
-        throw new Error(errJson.error || `HTTP ${res.status}`);
-      }
+      const rows = jobs.map(shapeJob);
 
-      const json = await res.json();
-      const updated = json.job;
-      if (updated) {
-        setRows((prev) => prev.map((j) => (j.id === updated.id ? updated : j)));
-      }
-    } catch (err) {
-      console.error("[JobPostings] close error", err);
-      alert(
-        "We couldn't update this job's status. Please refresh and try again, and contact Support if it keeps happening."
-      );
+      return res.status(200).json({ jobs: rows });
     }
-  };
 
-  const handleModalClose = () => {
-    setOpen(false);
-    setEditingJob(null);
-    setModalMode("create");
-  };
+    if (req.method === "POST") {
+      const {
+        title,
+        company,
+        worksite,
+        location,
+        type,
+        compensation,
+        description,
+        status = "Draft",
+        urgent = false,
+      } = req.body || {};
 
-  return (
-    <PlanProvider>
-      <RecruiterLayout
-        title="Job Postings — ForgeTomorrow"
-        header={<HeaderBar onOpenModal={openCreateModal} />}
-        right={<RightToolsCard />}
-      >
-        <Body
-          rows={rows}
-          loading={loading}
-          error={loadError}
-          onEdit={handleEdit}
-          onView={handleView}
-          onClose={handleCloseJob}
-        />
+      if (!title || !company || !worksite || !location || !description) {
+        return res.status(400).json({
+          error:
+            "Missing required fields (title, company, worksite, location, description).",
+        });
+      }
 
-        <JobFormModal
-          open={open}
-          mode={modalMode}
-          initialJob={editingJob}
-          onClose={handleModalClose}
-          onSave={handleSaveJob}
-        />
-      </RecruiterLayout>
-    </PlanProvider>
-  );
+      const job = await prisma.job.create({
+        data: {
+          title,
+          company,
+          worksite,
+          location,
+          type: type || null,
+          compensation: compensation || null,
+          description,
+          status,
+          urgent: Boolean(urgent),
+          userId,
+          accountKey, // 🔸 tie posting to the account/org
+        },
+      });
+
+      return res.status(201).json({
+        job: shapeJob(job),
+      });
+    }
+
+    if (req.method === "PATCH") {
+      const {
+        id,
+        status,
+        urgent,
+        title,
+        company,
+        worksite,
+        location,
+        type,
+        compensation,
+        description,
+      } = req.body || {};
+
+      if (!id) {
+        return res.status(400).json({ error: "Job id is required." });
+      }
+
+      // Ensure the job belongs to the current user (basic multitenant guard)
+      const existing = await prisma.job.findFirst({
+        where: { id: Number(id), userId },
+      });
+
+      if (!existing) {
+        return res
+          .status(404)
+          .json({ error: "Job not found or not owned by this recruiter." });
+      }
+
+      const updated = await prisma.job.update({
+        where: { id: existing.id },
+        data: {
+          title: title ?? existing.title,
+          company: company ?? existing.company,
+          worksite: worksite ?? existing.worksite,
+          location: location ?? existing.location,
+          type: type ?? existing.type,
+          compensation: compensation ?? existing.compensation,
+          description: description ?? existing.description,
+          status: status ?? existing.status,
+          urgent: typeof urgent === "boolean" ? urgent : existing.urgent,
+        },
+      });
+
+      return res.status(200).json({
+        job: shapeJob(updated),
+      });
+    }
+
+    res.setHeader("Allow", "GET,POST,PATCH");
+    return res.status(405).json({ error: "Method not allowed" });
+  } catch (err) {
+    console.error("[api/recruiter/job-postings] error:", err);
+    return res.status(500).json({
+      error: "Unexpected error while handling recruiter job postings.",
+    });
+  }
 }
