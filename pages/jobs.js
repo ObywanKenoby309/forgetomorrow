@@ -991,7 +991,7 @@ function Jobs() {
                       boxShadow: cardShadow,
                       position: 'relative',
                       overflow: 'hidden',
-                      minHeight: isDarkCard ? 128 : 112,
+                      minHeight: 128, // uniform height so external + internal feel aligned
                     }}
                     onClick={() => handleSelectJob(job)}
                   >
