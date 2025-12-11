@@ -12,22 +12,28 @@ const stageKey = (stage) =>
     Applied: 'applied',
     Interviewing: 'interviewing',
     Offers: 'offers',
-    // keep using the same palette key so colors stay consistent
-    'Closed Out': 'rejected',
+    // ✅ calm / neutral palette for final stage
+    'Closed Out': 'info',
   }[stage] || 'info');
 
 export default function ApplicationsBoard({
-  stagesData = { Pinned: [], Applied: [], Interviewing: [], Offers: [], 'Closed Out': [] },
+  stagesData = {
+    Pinned: [],
+    Applied: [],
+    Interviewing: [],
+    Offers: [],
+    'Closed Out': [],
+  },
   onAdd,
   onMove,
   onEdit,
   onDelete,
   onView,
   compact = false,
-  columns = 5, // number OR "auto"
+  columns = 5,              // number OR "auto"
   title = 'Job Application Tracker',
-  actions = null, // right side
-  leftActions = null, // left side (next to title)
+  actions = null,           // right side
+  leftActions = null,       // left side (next to title)
 }) {
   const wrapStyle = {
     background: 'white',
