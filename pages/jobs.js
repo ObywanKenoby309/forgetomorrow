@@ -623,44 +623,21 @@ function Jobs() {
     ? '1px solid rgba(17,32,51,0.35)'
     : '1px solid #E0E0E0';
 
+  const selectedDetailBackground = selectedIsFtOfficial
+    ? 'linear-gradient(135deg, #FF7043, #FF8A65)'
+    : selectedIsPartner
+    ? 'linear-gradient(135deg, #0B1724, #112033)'
+    : '#FFFFFF';
+
+  const detailTitleColor = selectedIsDark ? '#FFFFFF' : '#263238';
+  const detailSubtleColor = selectedIsDark ? '#CFD8DC' : '#607D8B';
+  const detailBodyColor = selectedIsDark ? '#ECEFF1' : '#37474F';
+
   const selectedChipLabel = selectedIsFtOfficial
     ? 'ForgeTomorrow official posting'
     : isSelectedInternal
     ? 'ForgeTomorrow recruiter posting'
     : null;
-
-  const selectedHeaderBg = selectedIsFtOfficial
-    ? 'linear-gradient(135deg, #FF7043, #FF8A65)'
-    : selectedIsPartner
-    ? 'linear-gradient(135deg, #0B1724, #112033)'
-    : '#F5F8FA';
-
-  const selectedHeaderTitleColor = selectedIsDark ? '#FFFFFF' : '#263238';
-  const selectedHeaderSubtleColor = selectedIsDark ? '#CFD8DC' : '#607D8B';
-
-  const selectedLogoUrl =
-    selectedJob &&
-    (selectedJob.logoUrl ||
-      (selectedIsFtOfficial ? '/images/logo-color.png' : null));
-
-  // Status banner color logic: orange secondary for partners, blue for FT
-  let reviewingBorder = '#FFCC80';
-  let reviewingBg = '#FFF3E0';
-  let reviewingColor = '#E65100';
-
-  let closedBorder = '#CFD8DC';
-  let closedBg = '#ECEFF1';
-  let closedColor = '#455A64';
-
-  if (selectedIsFtOfficial) {
-    reviewingBorder = '#BBDEFB';
-    reviewingBg = '#E3F2FD';
-    reviewingColor = '#0D47A1';
-
-    closedBorder = '#BBDEFB';
-    closedBg = '#E3F2FD';
-    closedColor = '#0D47A1';
-  }
 
   if (loading) {
     return (
@@ -927,23 +904,12 @@ function Jobs() {
               }}
             >
               {pagedJobs.map((job) => {
-                const tier = getJobTier(job);
-                const isFtOfficial = tier === 'ft-official';
-                const isPartner = tier === 'partner';
-                const isExternalTier = tier === 'external';
-                const isDarkCard = isFtOfficial || isPartner;
-
                 const rawDesc = job.description || '';
                 const cleanDesc = rawDesc.replace(/<[^>]*>/g, '');
-                let snippet = '';
-
-                // Only show snippets for internal / partner / FT cards.
-                if (!isExternalTier && cleanDesc.length > 0) {
-                  snippet =
-                    cleanDesc.length > 160
-                      ? `${cleanDesc.slice(0, 160)}…`
-                      : cleanDesc;
-                }
+                const snippet =
+                  cleanDesc.length > 160
+                    ? `${cleanDesc.slice(0, 160)}…`
+                    : cleanDesc;
 
                 const location = job.location || '';
                 const locationType = inferLocationType(location);
@@ -968,6 +934,12 @@ function Jobs() {
 
                 const isSelected = selectedJob && selectedJob.id === job.id;
 
+                const tier = getJobTier(job);
+                const isFtOfficial = tier === 'ft-official';
+                const isPartner = tier === 'partner';
+                const isExternalTier = tier === 'external';
+                const isDarkCard = isFtOfficial || isPartner;
+
                 const logoUrl =
                   job.logoUrl ||
                   (isFtOfficial ? '/images/logo-color.png' : null);
@@ -977,21 +949,19 @@ function Jobs() {
                 let cardShadow;
 
                 if (isFtOfficial) {
-                  // ForgeTomorrow house roles – orange primary
                   cardBackground = 'linear-gradient(135deg, #FF7043, #FF8A65)';
                   cardBorder = isSelected
                     ? '2px solid #FFFFFF'
                     : '1px solid #FFCC80';
                   cardShadow = '0 0 20px rgba(0,0,0,0.45)';
                 } else if (isPartner) {
-                  // Partner recruiter roles – Azure primary
                   cardBackground = 'linear-gradient(135deg, #0B1724, #112033)';
                   cardBorder = isSelected
                     ? '2px solid #FF7043'
                     : '1px solid rgba(255,112,67,0.7)';
                   cardShadow = '0 0 18px rgba(0,0,0,0.5)';
                 } else {
-                  // External scraped jobs
+                  // external
                   cardBackground = '#FFFFFF';
                   cardBorder = isSelected
                     ? '2px solid #FF7043'
@@ -1178,7 +1148,9 @@ function Jobs() {
                     </CardHeader>
 
                     <CardContent>
-                      {snippet && (
+                      {/* Description snippet: internal only.
+                          Scraped/external cards stay clean and compact. */}
+                      {!isExternalTier && (
                         <p
                           style={{
                             margin: '0 0 10px',
@@ -1187,7 +1159,7 @@ function Jobs() {
                             lineHeight: 1.4,
                           }}
                         >
-                          {snippet}
+                          {snippet || 'No description provided.'}
                         </p>
                       )}
 
@@ -1195,8 +1167,9 @@ function Jobs() {
                         <div
                           style={{
                             fontSize: 12,
-                            color: subtleColor,
-                            marginBottom: 6,
+                            color: isDarkCard ? subtleColor : '#455A64',
+                            marginBottom: 4,
+                            fontWeight: isExternalTier ? 600 : 400,
                           }}
                         >
                           Source: {displaySource}
@@ -1308,146 +1281,68 @@ function Jobs() {
                 flexDirection: 'column',
                 border: selectedDetailBorder,
                 boxShadow: selectedIsDark
-                  ? '0 0 14px rgba(0,0,0,0.15)'
+                  ? '0 0 14px rgba(0,0,0,0.25)'
                   : '0 2px 8px rgba(0,0,0,0.06)',
-                backgroundColor: '#FFFFFF',
-                overflow: 'hidden',
+                background: selectedDetailBackground,
               }}
             >
               {selectedJob ? (
                 <>
-                  <CardHeader
-                    style={{
-                      background: selectedHeaderBg,
-                      borderBottom: '1px solid rgba(0,0,0,0.06)',
-                    }}
-                  >
+                  <CardHeader>
                     <div
                       style={{
                         display: 'flex',
-                        justifyContent: 'space-between',
-                        gap: 12,
-                        alignItems: 'flex-start',
-                        flexWrap: 'wrap',
+                        flexDirection: 'column',
+                        gap: 6,
                       }}
                     >
-                      <div
-                        style={{
-                          display: 'flex',
-                          gap: 10,
-                          alignItems: 'flex-start',
-                          minWidth: 0,
-                        }}
-                      >
-                        {selectedLogoUrl && (
-                          <div
+                      {selectedChipLabel && (
+                        <div
+                          style={{
+                            alignSelf: 'flex-start',
+                            padding: '3px 10px',
+                            borderRadius: 999,
+                            border: '1px solid rgba(17,32,51,0.16)',
+                            background:
+                              'linear-gradient(135deg, #0B1724, #112033)',
+                            fontSize: 11,
+                            color: '#FFCC80',
+                            display: 'inline-flex',
+                            alignItems: 'center',
+                            gap: 6,
+                          }}
+                        >
+                          <span
                             style={{
-                              width: 44,
-                              height: 44,
-                              borderRadius: 14,
-                              overflow: 'hidden',
-                              backgroundColor: selectedIsFtOfficial
-                                ? 'rgba(0,0,0,0.25)'
-                                : selectedIsPartner
-                                ? 'rgba(0,0,0,0.35)'
-                                : '#ECEFF1',
-                              display: 'flex',
-                              alignItems: 'center',
-                              justifyContent: 'center',
-                              flexShrink: 0,
+                              width: 6,
+                              height: 6,
+                              borderRadius: '999px',
+                              backgroundColor: '#FF7043',
                             }}
-                          >
-                            <img
-                              src={selectedLogoUrl}
-                              alt={`${selectedJob.company || 'Company'} logo`}
-                              style={{
-                                maxWidth: '70%',
-                                maxHeight: '70%',
-                                objectFit: 'contain',
-                              }}
-                            />
-                          </div>
-                        )}
-
-                        <div style={{ minWidth: 0 }}>
-                          {selectedChipLabel && (
-                            <div
-                              style={{
-                                alignSelf: 'flex-start',
-                                marginBottom: 4,
-                                padding: '3px 10px',
-                                borderRadius: 999,
-                                border: '1px solid rgba(17,32,51,0.18)',
-                                background: selectedIsFtOfficial
-                                  ? 'rgba(0,0,0,0.25)'
-                                  : selectedIsPartner
-                                  ? 'linear-gradient(135deg, #0B1724, #112033)'
-                                  : '#ECEFF1',
-                                fontSize: 11,
-                                color: selectedIsDark ? '#FFCC80' : '#455A64',
-                                display: 'inline-flex',
-                                alignItems: 'center',
-                                gap: 6,
-                              }}
-                            >
-                              <span
-                                style={{
-                                  width: 6,
-                                  height: 6,
-                                  borderRadius: '999px',
-                                  backgroundColor: '#FF7043',
-                                }}
-                              />
-                              {selectedChipLabel}
-                            </div>
-                          )}
-
-                          <CardTitle style={{ color: selectedHeaderTitleColor }}>
-                            {selectedJob.title}
-                          </CardTitle>
-                          <CardSubtle style={{ color: selectedHeaderSubtleColor }}>
-                            {selectedJob.company} —{' '}
-                            {selectedJob.location || 'Location not provided'}
-                          </CardSubtle>
+                          />
+                          {selectedChipLabel}
                         </div>
-                      </div>
+                      )}
 
-                      <div
-                        style={{
-                          marginTop: 4,
-                          fontSize: 13,
-                          color: selectedHeaderSubtleColor,
-                          textAlign: 'right',
-                          minWidth: 120,
-                        }}
-                      >
-                        {selectedSourceLabel && (
-                          <div
-                            style={{
-                              padding: '2px 8px',
-                              borderRadius: 999,
-                              border: '1px solid rgba(207,216,220,0.7)',
-                              fontSize: 12,
-                              display: 'inline-block',
-                              backgroundColor: selectedIsDark
-                                ? 'rgba(0,0,0,0.25)'
-                                : 'rgba(255,255,255,0.6)',
-                            }}
-                          >
-                            Source: {selectedSourceLabel}
-                          </div>
-                        )}
+                      <div>
+                        <CardTitle style={{ color: detailTitleColor }}>
+                          {selectedJob.title}
+                        </CardTitle>
+                        <CardSubtle style={{ color: detailSubtleColor }}>
+                          {selectedJob.company} —{' '}
+                          {selectedJob.location || 'Location not provided'}
+                        </CardSubtle>
                       </div>
                     </div>
 
                     <div
                       style={{
-                        marginTop: 8,
+                        marginTop: 6,
                         display: 'flex',
                         flexWrap: 'wrap',
                         gap: 10,
                         fontSize: 13,
-                        color: selectedHeaderSubtleColor,
+                        color: detailSubtleColor,
                       }}
                     >
                       {inferLocationType(selectedJob.location || '') && (
@@ -1458,11 +1353,28 @@ function Jobs() {
                             border: '1px solid #CFD8DC',
                             fontSize: 12,
                             backgroundColor: selectedIsDark
-                              ? 'rgba(0,0,0,0.25)'
-                              : 'rgba(255,255,255,0.7)',
+                              ? 'rgba(38,50,56,0.8)'
+                              : 'transparent',
+                            color: selectedIsDark ? '#ECEFF1' : '#455A64',
                           }}
                         >
                           {inferLocationType(selectedJob.location || '')}
+                        </span>
+                      )}
+                      {selectedSourceLabel && (
+                        <span
+                          style={{
+                            padding: '2px 8px',
+                            borderRadius: 999,
+                            border: '1px solid #CFD8DC',
+                            fontSize: 12,
+                            backgroundColor: selectedIsDark
+                              ? 'rgba(38,50,56,0.8)'
+                              : 'transparent',
+                            color: selectedIsDark ? '#ECEFF1' : '#455A64',
+                          }}
+                        >
+                          Source: {selectedSourceLabel}
                         </span>
                       )}
                     </div>
@@ -1473,7 +1385,6 @@ function Jobs() {
                       display: 'flex',
                       flexDirection: 'column',
                       gap: 12,
-                      backgroundColor: '#FFFFFF',
                     }}
                   >
                     {/* Description */}
@@ -1500,7 +1411,7 @@ function Jobs() {
                             <p
                               style={{
                                 margin: 0,
-                                color: '#37474F',
+                                color: detailBodyColor,
                                 fontSize: 14,
                                 lineHeight: 1.6,
                               }}
@@ -1516,7 +1427,7 @@ function Jobs() {
                             style={{
                               margin:
                                 idx === 0 ? '0 0 10px' : '10px 0 0',
-                              color: '#37474F',
+                              color: detailBodyColor,
                               fontSize: 14,
                               lineHeight: 1.6,
                             }}
@@ -1527,7 +1438,8 @@ function Jobs() {
                       })()}
                     </div>
 
-                    {/* ACTION ROW: Pin | Apply | Resume-Role Align | Open original */}
+                    {/* ACTION ROW: Pin | Apply | Resume-Role Align | Open original
+                        Only when job is actually Open */}
                     {selectedStatus === 'Open' && (
                       <div
                         style={{
@@ -1632,6 +1544,7 @@ function Jobs() {
                               textDecoration: 'none',
                               fontSize: 12,
                               whiteSpace: 'nowrap',
+                              backgroundColor: 'white',
                             }}
                           >
                             Open original posting
@@ -1647,10 +1560,10 @@ function Jobs() {
                           marginTop: 8,
                           padding: '8px 10px',
                           borderRadius: 8,
-                          border: `1px solid ${reviewingBorder}`,
-                          backgroundColor: reviewingBg,
+                          border: '1px solid #FFCC80',
+                          backgroundColor: '#FFF3E0',
                           fontSize: 12,
-                          color: reviewingColor,
+                          color: '#E65100',
                         }}
                       >
                         <p style={{ margin: 0, fontWeight: 600 }}>
@@ -1672,10 +1585,10 @@ function Jobs() {
                           marginTop: 8,
                           padding: '8px 10px',
                           borderRadius: 8,
-                          border: `1px solid ${closedBorder}`,
-                          backgroundColor: closedBg,
+                          border: '1px solid #CFD8DC',
+                          backgroundColor: '#ECEFF1',
                           fontSize: 12,
-                          color: closedColor,
+                          color: '#455A64',
                         }}
                       >
                         <p style={{ margin: 0, fontWeight: 600 }}>
