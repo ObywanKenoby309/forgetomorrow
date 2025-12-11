@@ -920,7 +920,7 @@ function Jobs() {
                       boxShadow: cardShadow,
                       position: 'relative',
                       overflow: 'hidden',
-                      minHeight: internal ? 112 : 96, // bump height so cards aren't too skinny
+                      minHeight: internal ? 112 : 96, // raise card height so they aren’t too skinny
                     }}
                     onClick={() => handleSelectJob(job)}
                   >
@@ -1326,96 +1326,96 @@ function Jobs() {
                       })()}
                     </div>
 
-                    {/* ACTION ROW: Pin | Apply | ATS Alignment | Open original */}
-                    <div
-                      style={{
-                        display: 'flex',
-                        flexDirection: 'row',
-                        justifyContent: 'flex-start',
-                        alignItems: 'center',
-                        flexWrap: 'nowrap',      // force single row
-                        gap: 6,
-                        marginTop: 2,
-                        overflowX: 'auto',       // allow horizontal scroll on very small screens
-                        padding: '0px 0 0px',
-                      }}
-                    >
-                      <button
-                        type="button"
-                        onClick={() => togglePin(selectedJob)}
-                        style={{
-                          background: 'white',
-                          color: isJobPinned(selectedJob) ? '#D32F2F' : '#FF7043',
-                          padding: '4px 10px',
-                          borderRadius: 999,
-                          border: `1px solid ${
-                            isJobPinned(selectedJob) ? '#D32F2F' : '#FF7043'
-                          }`,
-                          fontWeight: 600,
-                          fontSize: 12,
-                          cursor: 'pointer',
-                          minWidth: 70,
-                          whiteSpace: 'nowrap',
-                        }}
-                        aria-pressed={isJobPinned(selectedJob)}
-                      >
-                        {isJobPinned(selectedJob) ? 'Unpin job' : 'Pin job'}
-                      </button>
+                    {/* ACTION ROW: Pin | Apply | Resume-Role Align | Open original */}
+<div
+  style={{
+    display: 'flex',
+    flexDirection: 'row',
+    justifyContent: 'flex-start',
+    alignItems: 'center',
+    flexWrap: 'nowrap',
+    gap: 6,
+    marginTop: -4,          // 💥 lifts the row upward slightly
+    overflowX: 'auto',
+    padding: '0 0 4px',     // subtle bottom spacing
+  }}
+>
+  <button
+    type="button"
+    onClick={() => togglePin(selectedJob)}
+    style={{
+      background: 'white',
+      color: isJobPinned(selectedJob) ? '#D32F2F' : '#FF7043',
+      padding: '4px 10px',
+      borderRadius: 999,
+      border: `1px solid ${
+        isJobPinned(selectedJob) ? '#D32F2F' : '#FF7043'
+      }`,
+      fontWeight: 600,
+      fontSize: 12,
+      cursor: 'pointer',
+      minWidth: 70,
+      whiteSpace: 'nowrap',
+    }}
+    aria-pressed={isJobPinned(selectedJob)}
+  >
+    {isJobPinned(selectedJob) ? 'Unpin job' : 'Pin job'}
+  </button>
 
-                      <button
-                        type="button"
-                        onClick={() => {
-                          if (canApplySelected) handleApplyClick(selectedJob);
-                        }}
-                        disabled={!canApplySelected}
-                        style={{
-                          background: canApplySelected ? '#FF7043' : '#CFD8DC',
-                          color: canApplySelected ? 'white' : '#607D8B',
-                          padding: '4px 14px',
-                          borderRadius: 999,
-                          border: 'none',
-                          fontWeight: 600,
-                          fontSize: 12,
-                          cursor: canApplySelected ? 'pointer' : 'default',
-                          minWidth: 70,
-                          whiteSpace: 'nowrap',
-                        }}
-                      >
-                        {selectedStatus === 'Reviewing'
-                          ? 'Applications paused'
-                          : selectedStatus === 'Closed'
-                          ? 'Closed'
-                          : 'Apply'}
-                      </button>
+  <button
+    type="button"
+    onClick={() => {
+      if (canApplySelected) handleApplyClick(selectedJob);
+    }}
+    disabled={!canApplySelected}
+    style={{
+      background: canApplySelected ? '#FF7043' : '#CFD8DC',
+      color: canApplySelected ? 'white' : '#607D8B',
+      padding: '4px 14px',
+      borderRadius: 999,
+      border: 'none',
+      fontWeight: 600,
+      fontSize: 12,
+      cursor: canApplySelected ? 'pointer' : 'default',
+      minWidth: 70,
+      whiteSpace: 'nowrap',
+    }}
+  >
+    {selectedStatus === 'Reviewing'
+      ? 'Applications paused'
+      : selectedStatus === 'Closed'
+      ? 'Closed'
+      : 'Apply'}
+  </button>
 
-                      {isPaidUser && (
-                        <div
-                          style={{
-                            display: 'inline-flex',
-                            alignItems: 'center',
-                            gap: 4,
-                            whiteSpace: 'nowrap',
-                          }}
-                        >
-                          <button
-                            type="button"
-                            onClick={() => handleATSAlign(selectedJob)}
-                            style={{
-                              background: 'white',
-                              color: '#FF7043',
-                              padding: '4px 10px',
-                              borderRadius: 999,
-                              border: '1px solid #FF7043',
-                              fontWeight: 600,
-                              fontSize: 12,
-                              cursor: 'pointer',
-                              whiteSpace: 'nowrap',
-                            }}
-                          >
-                            ATS Alignment
-                          </button>
-                          <ATSInfo />
-                        </div>
+  {isPaidUser && (
+    <div
+      style={{
+        display: 'inline-flex',
+        alignItems: 'center',
+        gap: 4,
+        whiteSpace: 'nowrap',
+      }}
+    >
+      <button
+        type="button"
+        onClick={() => handleATSAlign(selectedJob)}
+        style={{
+          background: 'white',
+          color: '#FF7043',
+          padding: '4px 10px',
+          borderRadius: 999,
+          border: '1px solid #FF7043',
+          fontWeight: 600,
+          fontSize: 12,
+          cursor: 'pointer',
+          whiteSpace: 'nowrap',
+        }}
+      >
+        Resume-Role Align     {/* 💥 updated label */}
+      </button>
+      <ATSInfo />
+    </div>
                       )}
 
                       {selectedJobApplyLink && (

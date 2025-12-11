@@ -74,15 +74,14 @@ export default function Footer() {
 
         {/* Bottom row: patent + copyright (compact) */}
         <div className="flex flex-col items-center gap-1 md:flex-row md:justify-between">
-          <p className="text-[10px] text-gray-500 max-w-2xl text-center md:text-left leading-snug">
-            ForgeTomorrow’s technologies — including its AI explainability
-            engine, recruiter analytics systems, human–AI workflow orchestration
-            models, and adaptive career-matching platform — are protected under
-            multiple U.S. and international patent filings (pending).
-            Unauthorized reproduction, reverse engineering, or replication of
-            these systems is prohibited.
-          </p>
-
+          <p className="text-[10px] text-gray-500 max-w-2xl text-center md:text-left leading-snug md:pl-3">
+  ForgeTomorrow’s technologies — including its AI explainability
+  engine, recruiter analytics systems, human–AI workflow orchestration
+  models, and adaptive career-matching platform — are protected under
+  multiple U.S. and international patent filings (pending).
+  Unauthorized reproduction, reverse engineering, or replication of
+  these systems is prohibited.
+</p>
           <p className="text-xs text-gray-400 mt-1 md:mt-0">
             © {year} ForgeTomorrow • v0.1.0
           </p>

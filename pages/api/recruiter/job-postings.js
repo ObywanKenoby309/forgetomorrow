@@ -41,7 +41,8 @@ function buildSeekerMeta(job) {
     seekerBanner =
       "This employer is now reviewing applicants. Thank you to those who applied.";
   } else if (status === "Closed") {
-    seekerVisible = false; // will still be available to recruiter, just not shown in seeker feed
+    // still visible to recruiter, hidden from seeker feed (jobs page handles timing)
+    seekerVisible = false;
     allowNewApplications = false;
     seekerBanner =
       "This posting is now closed. Stay tuned for future opportunities.";
@@ -68,6 +69,10 @@ function shapeJob(job) {
     description: job.description,
     accountKey: job.accountKey,
     createdAt: job.createdAt,
+    // origin + source + published date so seeker feed can style correctly
+    origin: job.origin,
+    source: job.source,
+    publishedat: job.publishedat,
     // 🔸 Seeker-facing meta (derived only, no DB fields required)
     seekerVisible: seekerMeta.seekerVisible,
     allowNewApplications: seekerMeta.allowNewApplications,
@@ -115,6 +120,8 @@ export default async function handler(req, res) {
         });
       }
 
+      const now = new Date();
+
       const job = await prisma.job.create({
         data: {
           title,
@@ -128,6 +135,13 @@ export default async function handler(req, res) {
           urgent: Boolean(urgent),
           userId,
           accountKey, // 🔸 tie posting to the account/org
+
+          // Make sure recruiter-created jobs are clearly internal
+          origin: "internal",
+          source: "Forge recruiter",
+
+          // Use a consistent published date so seeker "Posted" label works
+          publishedat: now,
         },
       });
 
@@ -165,6 +179,14 @@ export default async function handler(req, res) {
           .json({ error: "Job not found or not owned by this recruiter." });
       }
 
+      const nextStatus = status ?? existing.status;
+
+      // Preserve existing publishedat if present, otherwise set it now
+      const nextPublishedAt =
+        existing.publishedat ||
+        existing.createdAt ||
+        new Date();
+
       const updated = await prisma.job.update({
         where: { id: existing.id },
         data: {
@@ -175,8 +197,13 @@ export default async function handler(req, res) {
           type: type ?? existing.type,
           compensation: compensation ?? existing.compensation,
           description: description ?? existing.description,
-          status: status ?? existing.status,
+          status: nextStatus,
           urgent: typeof urgent === "boolean" ? urgent : existing.urgent,
+
+          // Ensure recruiter postings stay marked as internal
+          origin: existing.origin || "internal",
+          source: existing.source || "Forge recruiter",
+          publishedat: nextPublishedAt,
         },
       });
 
