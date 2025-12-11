@@ -3,35 +3,31 @@ import React from 'react';
 import ApplicationCard from './ApplicationCard';
 import { colorFor } from '@/components/seeker/dashboard/seekerColors';
 
+// 🔸 Use the same stages as the tracker
 const STAGES = ['Pinned', 'Applied', 'Interviewing', 'Offers', 'Closed Out'];
 
 const stageKey = (stage) =>
   ({
-    Pinned: 'neutral',
+    Pinned: 'pinned',          // or 'brand'
     Applied: 'applied',
     Interviewing: 'interviewing',
     Offers: 'offers',
-    'Closed Out': 'info',
-  }[stage] || 'neutral');
+    // keep using the same palette key so colors stay consistent
+    'Closed Out': 'rejected',
+  }[stage] || 'info');
 
 export default function ApplicationsBoard({
-  stagesData = {
-    Pinned: [],
-    Applied: [],
-    Interviewing: [],
-    Offers: [],
-    'Closed Out': [],
-  },
+  stagesData = { Pinned: [], Applied: [], Interviewing: [], Offers: [], 'Closed Out': [] },
   onAdd,
   onMove,
   onEdit,
   onDelete,
   onView,
   compact = false,
-  columns = 5,
+  columns = 5, // number OR "auto"
   title = 'Job Application Tracker',
-  actions = null,
-  leftActions = null,
+  actions = null, // right side
+  leftActions = null, // left side (next to title)
 }) {
   const wrapStyle = {
     background: 'white',
@@ -105,6 +101,7 @@ export default function ApplicationsBoard({
         {STAGES.map((stage) => {
           const c = colorFor(stageKey(stage));
           const items = stagesData[stage] || [];
+
           return (
             <div key={stage} style={columnStyle}>
               {/* Color-coded header pill with live count */}
@@ -112,6 +109,7 @@ export default function ApplicationsBoard({
                 style={{
                   display: 'inline-flex',
                   alignItems: 'center',
+                  justifyContent: 'center',
                   gap: 8,
                   padding: '6px 10px',
                   borderRadius: 999,
@@ -120,9 +118,16 @@ export default function ApplicationsBoard({
                   border: `1px solid ${c.solid}`,
                   marginBottom: compact ? 6 : 8,
                   fontWeight: 700,
+                  width: '100%',
                 }}
               >
-                <span>{stage}</span>
+                <span
+                  style={{
+                    whiteSpace: 'nowrap', // 🔸 keeps "Closed Out" on one line
+                  }}
+                >
+                  {stage}
+                </span>
                 <span style={{ fontWeight: 900 }}>{items.length}</span>
               </div>
 
@@ -141,12 +146,7 @@ export default function ApplicationsBoard({
                   />
                 ))
               ) : (
-                <div
-                  style={{
-                    color: '#90A4AE',
-                    fontSize: compact ? 12 : 14,
-                  }}
-                >
+                <div style={{ color: '#90A4AE', fontSize: compact ? 12 : 14 }}>
                   No items.
                 </div>
               )}

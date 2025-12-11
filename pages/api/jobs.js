@@ -86,6 +86,10 @@ export default async function handler(req, res) {
             origin: 'external',
             status: 'Open', // external feed jobs are treated as open
             publishedat: publishedIso,
+
+            // 🔸 styling metadata
+            tier: 'external',
+            logoUrl: null,
           };
         });
       } finally {
@@ -120,6 +124,16 @@ export default async function handler(req, res) {
         ? new Date(published).toISOString()
         : new Date().toISOString();
 
+      const companyName = (job.company || '').trim();
+      const isFtOfficial =
+        companyName.toLowerCase() === 'forgetomorrow';
+
+      const tier = isFtOfficial ? 'ft-official' : 'partner';
+
+      const logoUrl = isFtOfficial
+        ? '/images/logo-color.png'
+        : null;
+
       return {
         id: job.id,
         title: job.title,
@@ -135,6 +149,10 @@ export default async function handler(req, res) {
         status: job.status || 'Open',
         publishedat: publishedIso,
         updatedAt: job.updatedAt || null,
+
+        // 🔸 styling metadata for the UI
+        tier,
+        logoUrl,
       };
     });
   } catch (error) {

@@ -260,6 +260,23 @@ function isInternalJob(job) {
   );
 }
 
+// Tier helper: 'ft-official' | 'partner' | 'external'
+function getJobTier(job) {
+  if (!job) return 'external';
+
+  const rawTier = job.tier;
+  if (rawTier === 'ft-official' || rawTier === 'partner' || rawTier === 'external') {
+    return rawTier;
+  }
+
+  const internal = isInternalJob(job);
+  if (!internal) return 'external';
+
+  const company = (job.company || '').trim().toLowerCase();
+  if (company === 'forgetomorrow') return 'ft-official';
+  return 'partner';
+}
+
 // ──────────────────────────────────────────────────────────────
 // Main Jobs Component
 // ──────────────────────────────────────────────────────────────
@@ -595,6 +612,23 @@ function Jobs() {
     ? 'Forge recruiter'
     : (selectedJob?.source || 'External');
 
+  const selectedTier = getJobTier(selectedJob);
+  const selectedIsFtOfficial = selectedTier === 'ft-official';
+  const selectedIsPartner = selectedTier === 'partner';
+  const selectedIsDark = selectedIsFtOfficial || selectedIsPartner;
+
+  const selectedDetailBorder = selectedIsFtOfficial
+    ? '2px solid #FF7043'
+    : selectedIsPartner
+    ? '1px solid rgba(17,32,51,0.35)'
+    : '1px solid #E0E0E0';
+
+  const selectedChipLabel = selectedIsFtOfficial
+    ? 'ForgeTomorrow official posting'
+    : isSelectedInternal
+    ? 'ForgeTomorrow recruiter posting'
+    : null;
+
   if (loading) {
     return (
       <PageShell header={<PageHeader />} right={<RightRail />}>
@@ -890,23 +924,50 @@ function Jobs() {
 
                 const isSelected = selectedJob && selectedJob.id === job.id;
 
-                const cardBackground = internal
-                  ? 'linear-gradient(135deg, #0B1724, #112033)'
-                  : '#FFFFFF';
+                const tier = getJobTier(job);
+                const isFtOfficial = tier === 'ft-official';
+                const isPartner = tier === 'partner';
+                const isExternal = tier === 'external';
+                const isDarkCard = isFtOfficial || isPartner;
 
-                const cardBorder = isSelected
-                  ? '2px solid #FF7043'
+                const logoUrl =
+                  job.logoUrl ||
+                  (isFtOfficial ? '/images/logo-color.png' : null);
+
+                let cardBackground;
+                let cardBorder;
+                let cardShadow;
+
+                if (isFtOfficial) {
+                  cardBackground = 'linear-gradient(135deg, #FF7043, #FF8A65)';
+                  cardBorder = isSelected
+                    ? '2px solid #FFFFFF'
+                    : '1px solid #FFCC80';
+                  cardShadow = '0 0 20px rgba(0,0,0,0.45)';
+                } else if (isPartner) {
+                  cardBackground = 'linear-gradient(135deg, #0B1724, #112033)';
+                  cardBorder = isSelected
+                    ? '2px solid #FF7043'
+                    : '1px solid rgba(255,112,67,0.7)';
+                  cardShadow = '0 0 18px rgba(0,0,0,0.5)';
+                } else {
+                  // external
+                  cardBackground = '#FFFFFF';
+                  cardBorder = isSelected
+                    ? '2px solid #FF7043'
+                    : '1px solid #e0e0e0';
+                  cardShadow = '0 2px 6px rgba(0,0,0,0.04)';
+                }
+
+                const titleColor = isDarkCard ? '#FFFFFF' : '#263238';
+                const subtleColor = isDarkCard ? '#CFD8DC' : '#607D8B';
+                const textColor = isDarkCard ? '#ECEFF1' : '#455A64';
+
+                const chipLabel = isFtOfficial
+                  ? 'ForgeTomorrow official posting'
                   : internal
-                  ? '1px solid rgba(255,112,67,0.7)'
-                  : '1px solid #e0e0e0';
-
-                const cardShadow = internal
-                  ? '0 0 18px rgba(0,0,0,0.5)'
-                  : '0 2px 6px rgba(0,0,0,0.04)';
-
-                const titleColor = internal ? '#FFFFFF' : '#263238';
-                const subtleColor = internal ? '#CFD8DC' : '#607D8B';
-                const textColor = internal ? '#ECEFF1' : '#455A64';
+                  ? 'ForgeTomorrow recruiter partner'
+                  : null;
 
                 return (
                   <Card
@@ -920,30 +981,10 @@ function Jobs() {
                       boxShadow: cardShadow,
                       position: 'relative',
                       overflow: 'hidden',
-                      minHeight: internal ? 112 : 96, // raise card height so they aren’t too skinny
+                      minHeight: isDarkCard ? 128 : 112, // slightly taller for internal / FT
                     }}
                     onClick={() => handleSelectJob(job)}
                   >
-                    {/* Subtle Forge watermark for internal postings */}
-                    {internal && (
-                      <div
-                        aria-hidden="true"
-                        style={{
-                          position: 'absolute',
-                          right: -40,
-                          bottom: -20,
-                          fontSize: 64,
-                          fontWeight: 800,
-                          letterSpacing: 4,
-                          color: 'rgba(255,255,255,0.03)',
-                          textTransform: 'uppercase',
-                          pointerEvents: 'none',
-                        }}
-                      >
-                        Forge
-                      </div>
-                    )}
-
                     <CardHeader>
                       <div
                         style={{
@@ -953,41 +994,83 @@ function Jobs() {
                           flexWrap: 'wrap',
                         }}
                       >
-                        <div>
-                          <CardTitle style={{ color: titleColor }}>
-                            {job.title}
-                          </CardTitle>
-                          <CardSubtle style={{ color: subtleColor }}>
-                            {job.company}
-                          </CardSubtle>
-
-                          {internal && (
+                        <div
+                          style={{
+                            display: 'flex',
+                            gap: 10,
+                            alignItems: 'flex-start',
+                          }}
+                        >
+                          {logoUrl && (
                             <div
                               style={{
-                                marginTop: 4,
-                                display: 'inline-flex',
+                                width: 40,
+                                height: 40,
+                                borderRadius: 12,
+                                overflow: 'hidden',
+                                backgroundColor: isFtOfficial
+                                  ? 'rgba(0,0,0,0.25)'
+                                  : 'rgba(0,0,0,0.4)',
+                                display: 'flex',
                                 alignItems: 'center',
-                                gap: 6,
-                                padding: '2px 8px',
-                                borderRadius: 999,
-                                border: '1px solid rgba(255,255,255,0.2)',
-                                background: 'rgba(17,32,51,0.9)',
-                                fontSize: 11,
-                                color: '#FFCC80',
+                                justifyContent: 'center',
+                                flexShrink: 0,
                               }}
                             >
-                              <span
+                              {/* basic img; can swap to next/image later */}
+                              <img
+                                src={logoUrl}
+                                alt={`${job.company || 'Company'} logo`}
                                 style={{
-                                  width: 6,
-                                  height: 6,
-                                  borderRadius: '999px',
-                                  backgroundColor: '#FF7043',
+                                  maxWidth: '70%',
+                                  maxHeight: '70%',
+                                  objectFit: 'contain',
                                 }}
                               />
-                              ForgeTomorrow recruiter posting
                             </div>
                           )}
+
+                          <div>
+                            <CardTitle style={{ color: titleColor }}>
+                              {job.title}
+                            </CardTitle>
+                            <CardSubtle style={{ color: subtleColor }}>
+                              {job.company}
+                            </CardSubtle>
+
+                            {chipLabel && (
+                              <div
+                                style={{
+                                  marginTop: 4,
+                                  display: 'inline-flex',
+                                  alignItems: 'center',
+                                  gap: 6,
+                                  padding: '2px 8px',
+                                  borderRadius: 999,
+                                  border: isFtOfficial
+                                    ? '1px solid rgba(255,255,255,0.4)'
+                                    : '1px solid rgba(255,255,255,0.2)',
+                                  background: isFtOfficial
+                                    ? 'rgba(0,0,0,0.25)'
+                                    : 'rgba(17,32,51,0.9)',
+                                  fontSize: 11,
+                                  color: '#FFCC80',
+                                }}
+                              >
+                                <span
+                                  style={{
+                                    width: 6,
+                                    height: 6,
+                                    borderRadius: '999px',
+                                    backgroundColor: '#FF7043',
+                                  }}
+                                />
+                                {chipLabel}
+                              </div>
+                            )}
+                          </div>
                         </div>
+
                         <div
                           style={{ textAlign: 'right', minWidth: 120 }}
                           aria-label={`Posted ${postedLabel}`}
@@ -998,7 +1081,7 @@ function Jobs() {
                           <div
                             style={{
                               fontSize: 13,
-                              color: internal ? '#FFFFFF' : '#455A64',
+                              color: isDarkCard ? '#FFFFFF' : '#455A64',
                               fontWeight: 500,
                             }}
                           >
@@ -1025,7 +1108,7 @@ function Jobs() {
                               borderRadius: 999,
                               border: '1px solid rgba(207,216,220,0.7)',
                               fontSize: 12,
-                              backgroundColor: internal
+                              backgroundColor: isDarkCard
                                 ? 'rgba(38,50,56,0.8)'
                                 : 'transparent',
                             }}
@@ -1182,6 +1265,10 @@ function Jobs() {
                 maxHeight: '80vh',
                 display: 'flex',
                 flexDirection: 'column',
+                border: selectedDetailBorder,
+                boxShadow: selectedIsDark
+                  ? '0 0 14px rgba(0,0,0,0.15)'
+                  : '0 2px 8px rgba(0,0,0,0.06)',
               }}
             >
               {selectedJob ? (
@@ -1194,7 +1281,7 @@ function Jobs() {
                         gap: 6,
                       }}
                     >
-                      {isSelectedInternal && (
+                      {selectedChipLabel && (
                         <div
                           style={{
                             alignSelf: 'flex-start',
@@ -1218,7 +1305,7 @@ function Jobs() {
                               backgroundColor: '#FF7043',
                             }}
                           />
-                          ForgeTomorrow recruiter posting
+                          {selectedChipLabel}
                         </div>
                       )}
 
@@ -1336,7 +1423,7 @@ function Jobs() {
                           alignItems: 'center',
                           flexWrap: 'nowrap',
                           gap: 6,
-                          marginTop: -4,      // lifts the row slightly
+                          marginTop: -4,
                           overflowX: 'auto',
                           padding: '0 0 4px',
                         }}
