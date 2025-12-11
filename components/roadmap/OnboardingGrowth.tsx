@@ -143,7 +143,6 @@ export default function OnboardingGrowth() {
         )}
       </div>
     );
-  }
 
   // components/roadmap/OnboardingGrowth.tsx
 import { useState, useEffect } from 'react';
