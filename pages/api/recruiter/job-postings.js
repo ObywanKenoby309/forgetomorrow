@@ -69,7 +69,7 @@ function shapeJob(job) {
     description: job.description,
     accountKey: job.accountKey,
     createdAt: job.createdAt,
-    // origin + source + published date so seeker feed can style correctly
+    // These may be undefined on this model; that’s fine.
     origin: job.origin,
     source: job.source,
     publishedat: job.publishedat,
@@ -126,28 +126,20 @@ export default async function handler(req, res) {
         });
       }
 
-      const now = new Date();
-
       const job = await prisma.job.create({
         data: {
           title: safeText(title),
           company: safeText(company),
           worksite: safeText(worksite),
           location: safeText(location),
-          type: safeText(type, ""),                 // 👈 no null
-          compensation: safeText(compensation, ""), // 👈 no null
+          type: safeText(type, ""),                 // no null
+          compensation: safeText(compensation, ""), // no null
           description: safeText(description),
           status,
           urgent: Boolean(urgent),
           userId,
           accountKey, // 🔸 tie posting to the account/org
-
-          // Make sure recruiter-created jobs are clearly internal
-          origin: "internal",
-          source: "Forge recruiter",
-
-          // Use a consistent published date so seeker "Posted" label works
-          publishedat: now,
+          // createdAt / updatedAt handled by Prisma / DB
         },
       });
 
@@ -187,10 +179,6 @@ export default async function handler(req, res) {
 
       const nextStatus = status ?? existing.status;
 
-      // Preserve existing publishedat if present, otherwise set it now
-      const nextPublishedAt =
-        existing.publishedat || existing.createdAt || new Date();
-
       const updated = await prisma.job.update({
         where: { id: existing.id },
         data: {
@@ -203,9 +191,7 @@ export default async function handler(req, res) {
           location:
             location !== undefined ? safeText(location) : existing.location,
           type:
-            type !== undefined
-              ? safeText(type, "")
-              : existing.type,
+            type !== undefined ? safeText(type, "") : existing.type,
           compensation:
             compensation !== undefined
               ? safeText(compensation, "")
@@ -217,11 +203,8 @@ export default async function handler(req, res) {
           status: nextStatus,
           urgent:
             typeof urgent === "boolean" ? urgent : existing.urgent,
-
-          // Ensure recruiter postings stay marked as internal
-          origin: existing.origin || "internal",
-          source: existing.source || "Forge recruiter",
-          publishedat: nextPublishedAt,
+          // origin/source/publishedat NOT written here – those fields
+          // don’t exist on this model and are handled elsewhere.
         },
       });
 
