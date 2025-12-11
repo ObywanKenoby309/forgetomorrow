@@ -80,6 +80,12 @@ function shapeJob(job) {
   };
 }
 
+// Helper to avoid writing `null` into text columns
+function safeText(value, fallback = "") {
+  if (value === undefined || value === null) return fallback;
+  return String(value);
+}
+
 export default async function handler(req, res) {
   const session = await requireRecruiterSession(req, res);
   if (!session) return;
@@ -124,13 +130,13 @@ export default async function handler(req, res) {
 
       const job = await prisma.job.create({
         data: {
-          title,
-          company,
-          worksite,
-          location,
-          type: type || null,
-          compensation: compensation || null,
-          description,
+          title: safeText(title),
+          company: safeText(company),
+          worksite: safeText(worksite),
+          location: safeText(location),
+          type: safeText(type, ""),                 // 👈 no null
+          compensation: safeText(compensation, ""), // 👈 no null
+          description: safeText(description),
           status,
           urgent: Boolean(urgent),
           userId,
@@ -183,22 +189,34 @@ export default async function handler(req, res) {
 
       // Preserve existing publishedat if present, otherwise set it now
       const nextPublishedAt =
-        existing.publishedat ||
-        existing.createdAt ||
-        new Date();
+        existing.publishedat || existing.createdAt || new Date();
 
       const updated = await prisma.job.update({
         where: { id: existing.id },
         data: {
-          title: title ?? existing.title,
-          company: company ?? existing.company,
-          worksite: worksite ?? existing.worksite,
-          location: location ?? existing.location,
-          type: type ?? existing.type,
-          compensation: compensation ?? existing.compensation,
-          description: description ?? existing.description,
+          title:
+            title !== undefined ? safeText(title) : existing.title,
+          company:
+            company !== undefined ? safeText(company) : existing.company,
+          worksite:
+            worksite !== undefined ? safeText(worksite) : existing.worksite,
+          location:
+            location !== undefined ? safeText(location) : existing.location,
+          type:
+            type !== undefined
+              ? safeText(type, "")
+              : existing.type,
+          compensation:
+            compensation !== undefined
+              ? safeText(compensation, "")
+              : existing.compensation,
+          description:
+            description !== undefined
+              ? safeText(description)
+              : existing.description,
           status: nextStatus,
-          urgent: typeof urgent === "boolean" ? urgent : existing.urgent,
+          urgent:
+            typeof urgent === "boolean" ? urgent : existing.urgent,
 
           // Ensure recruiter postings stay marked as internal
           origin: existing.origin || "internal",
@@ -218,6 +236,9 @@ export default async function handler(req, res) {
     console.error("[api/recruiter/job-postings] error:", err);
     return res.status(500).json({
       error: "Unexpected error while handling recruiter job postings.",
+      detail: err?.message || null,
+      code: err?.code || null,
+      meta: err?.meta || null,
     });
   }
 }
