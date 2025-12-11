@@ -1,11 +1,13 @@
-// pages/api/jobs.js — Supabase/Postgres jobs + internal recruiter jobs (Prisma), with SSL override
+// pages/api/jobs.js — combine external Supabase jobs + internal recruiter jobs (Prisma)
+// with SSL override for Supabase
+
 import { Pool } from 'pg';
 import { prisma } from '@/lib/prisma';
 
 // Force Node to stop rejecting the Supabase cert
 process.env.NODE_TLS_REJECT_UNAUTHORIZED = '0';
 
-// Use your main DATABASE_URL (Supabase for external jobs)
+// Use your main DATABASE_URL (Supabase)
 const connectionString = process.env.DATABASE_URL || '';
 
 // Lazily-initialized connection pool (Postgres)
@@ -25,64 +27,6 @@ function getPool() {
   return pool;
 }
 
-// Shape external / cron-fed jobs
-function shapeExternalJob(row) {
-  const created =
-    row.createdAt ||
-    row.createdat ||
-    row.created_at ||
-    null;
-
-  const publishedIso = created
-    ? new Date(created).toISOString()
-    : new Date().toISOString();
-
-  const title = row.title || '';
-  const company = row.company || '';
-
-  return {
-    id: row.id,
-    title,
-    company: company || null,
-    location: row.location || null,
-    description: row.description || '',
-    url: null,
-    salary: null,
-    tags: null,
-    source: 'External',
-    origin: 'external',
-    status: 'Open', // external feed treated as open for now
-    publishedat: publishedIso,
-  };
-}
-
-// Shape internal recruiter-created jobs (Prisma Job model)
-function shapeInternalJob(job) {
-  const published =
-    job.publishedat ||
-    job.createdAt ||
-    null;
-
-  const publishedIso = published
-    ? new Date(published).toISOString()
-    : new Date().toISOString();
-
-  return {
-    id: job.id,
-    title: job.title,
-    company: job.company || null,
-    location: job.location || null,
-    description: job.description || '',
-    url: null,
-    salary: job.compensation || null,
-    tags: null,
-    source: job.source || 'Forge recruiter',
-    origin: job.origin || 'internal',
-    status: job.status || 'Open',
-    publishedat: publishedIso,
-  };
-}
-
 export default async function handler(req, res) {
   if (req.method !== 'GET') {
     return res.status(405).json({ error: 'Method not allowed' });
@@ -90,81 +34,124 @@ export default async function handler(req, res) {
 
   const dbPool = getPool();
 
-  if (!dbPool) {
-    console.warn('[jobs] DATABASE_URL not set; returning empty list');
-    return res.status(200).json({
-      jobs: [],
-      debugTotal: 0,
-      debugNote: 'No DATABASE_URL in environment',
-    });
-  }
-
   let externalJobs = [];
   let internalJobs = [];
 
-  // ─────────────────────────────────────────
-  // 1) External jobs from Supabase/Postgres
-  // ─────────────────────────────────────────
-  try {
-    const client = await dbPool.connect();
+  // 1) External jobs from Supabase
+  if (!dbPool) {
+    console.warn('[jobs] DATABASE_URL not set; skipping external jobs');
+  } else {
     try {
-      const result = await client.query(
-        `
-        SELECT
-          id,
-          title,
-          company,
-          location,
-          description,
-          "createdAt"
-        FROM jobs
-        ORDER BY
-          "createdAt" DESC NULLS LAST,
-          id DESC
-        LIMIT 200;
-        `
-      );
+      const client = await dbPool.connect();
+      try {
+        const result = await client.query(
+          `
+          SELECT
+            id,
+            title,
+            company,
+            location,
+            description,
+            "createdAt"
+          FROM jobs
+          ORDER BY
+            "createdAt" DESC NULLS LAST,
+            id DESC
+          LIMIT 200;
+          `
+        );
 
-      const rows = result.rows || [];
-      externalJobs = rows.map(shapeExternalJob);
+        externalJobs = (result.rows || []).map((row) => {
+          const created =
+            row.createdAt ||
+            row.createdat ||
+            row.created_at ||
+            null;
 
-      // TEMP: filter out earlier test rows so they don't appear as external
-      externalJobs = externalJobs.filter((job) => {
-        const title = (job.title || '').toLowerCase();
-        const company = (job.company || '').toLowerCase();
+          const publishedIso = created
+            ? new Date(created).toISOString()
+            : new Date().toISOString();
 
-        // adjust these if you know the exact test names
-        if (title.includes('test role')) return false;
-        if (company === 'test') return false;
-
-        return true;
-      });
-    } finally {
-      client.release();
+          return {
+            id: row.id,
+            title: row.title,
+            company: row.company,
+            location: row.location,
+            description: row.description,
+            url: null,
+            salary: null,
+            tags: null,
+            // external feed jobs
+            source: 'External',
+            origin: 'external',
+            status: 'Open', // external feed jobs are treated as open
+            publishedat: publishedIso,
+          };
+        });
+      } finally {
+        client.release();
+      }
+    } catch (error) {
+      console.error('[jobs] Postgres external jobs error:', error);
     }
-  } catch (error) {
-    console.error('[jobs] Postgres jobs error:', error);
-    // If external feed fails, still allow internal recruiter jobs below
-    externalJobs = [];
   }
 
-  // ─────────────────────────────────────────
-  // 2) Internal recruiter-created jobs (Prisma)
-  // ─────────────────────────────────────────
+  // 2) Internal recruiter jobs from Prisma
   try {
     const prismaJobs = await prisma.job.findMany({
-      orderBy: { createdAt: 'desc' },
-      take: 200,
+      // hide Drafts from the public feed
+      where: {
+        status: {
+          not: 'Draft',
+        },
+      },
+      orderBy: {
+        createdAt: 'desc',
+      },
     });
 
-    internalJobs = prismaJobs.map(shapeInternalJob);
-  } catch (err) {
-    console.error('[jobs] Prisma recruiter jobs error:', err);
-    internalJobs = [];
+    internalJobs = prismaJobs.map((job) => {
+      const published =
+        job.publishedat ||
+        job.createdAt ||
+        null;
+
+      const publishedIso = published
+        ? new Date(published).toISOString()
+        : new Date().toISOString();
+
+      return {
+        id: job.id,
+        title: job.title,
+        company: job.company,
+        location: job.location,
+        description: job.description,
+        url: null,
+        salary: job.compensation || null,
+        tags: null,
+        // 🔸 mark these as internal recruiter postings
+        source: 'Forge recruiter',
+        origin: 'internal',
+        status: job.status || 'Open',
+        publishedat: publishedIso,
+        updatedAt: job.updatedAt || null,
+      };
+    });
+  } catch (error) {
+    console.error('[jobs] Prisma internal jobs error:', error);
   }
 
-  const jobs = [...externalJobs, ...internalJobs];
-  const debugTotal = jobs.length;
+  // 3) Merge and sort by published date (newest first)
+  const allJobs = [...internalJobs, ...externalJobs].sort((a, b) => {
+    const da = a.publishedat ? new Date(a.publishedat).getTime() : 0;
+    const db = b.publishedat ? new Date(b.publishedat).getTime() : 0;
+    return db - da;
+  });
 
-  return res.status(200).json({ jobs, debugTotal });
+  return res.status(200).json({
+    jobs: allJobs,
+    debugTotal: allJobs.length,
+    debugExternalCount: externalJobs.length,
+    debugInternalCount: internalJobs.length,
+  });
 }
