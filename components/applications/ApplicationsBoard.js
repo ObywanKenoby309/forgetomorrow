@@ -7,7 +7,7 @@ const STAGES = ['Pinned', 'Applied', 'Interviewing', 'Offers', 'Closed Out'];
 
 const stageKey = (stage) =>
   ({
-    Pinned: 'pinned',          // or 'brand'
+    Pinned: 'neutral',
     Applied: 'applied',
     Interviewing: 'interviewing',
     Offers: 'offers',
@@ -112,7 +112,6 @@ export default function ApplicationsBoard({
                 style={{
                   display: 'inline-flex',
                   alignItems: 'center',
-                  justifyContent: 'space-between',
                   gap: 8,
                   padding: '6px 10px',
                   borderRadius: 999,
@@ -121,7 +120,6 @@ export default function ApplicationsBoard({
                   border: `1px solid ${c.solid}`,
                   marginBottom: compact ? 6 : 8,
                   fontWeight: 700,
-                  whiteSpace: 'nowrap', // keep “Closed Out” on one line
                 }}
               >
                 <span>{stage}</span>

@@ -6,7 +6,8 @@ export default function ApplicationForm({
   initial,
   onClose,
   onSave,
-  stages = []
+  onDelete,          // 🔹 optional delete handler (edit mode)
+  stages = [],
 }) {
   const [form, setForm] = useState({
     id: initial?.id || null,
@@ -22,11 +23,6 @@ export default function ApplicationForm({
 
   const [dirty, setDirty] = useState(false);
   const firstFieldRef = useRef(null);
-
-  // Friendly display labels (logic still uses original keys)
-  const DISPLAY_LABELS = {
-    Rejected: 'Closed Out',
-  };
 
   useEffect(() => {
     if (firstFieldRef.current) firstFieldRef.current.focus();
@@ -62,11 +58,17 @@ export default function ApplicationForm({
     onSave(form);
   };
 
+  const handleDeleteClick = () => {
+    if (!onDelete || !form.id) return;
+    if (!confirm('Delete this application?')) return;
+    onDelete(form.id, form.originalStage || form.status);
+  };
+
   // 🔻 slightly tighter inputs to reduce overall height
   const inputStyle = {
     border: '1px solid #DADCE0',
     borderRadius: '8px',
-    padding: '8px 10px', // was 10px 12px
+    padding: '8px 10px',
     width: '100%',
     outline: 'none',
   };
@@ -86,11 +88,11 @@ export default function ApplicationForm({
         inset: 0,
         background: 'rgba(0,0,0,0.5)',
         display: 'flex',
-        alignItems: 'flex-start', // push modal to the top
+        alignItems: 'flex-start',
         justifyContent: 'center',
-        paddingTop: '80px', // adjust this to control how far below navbar
+        paddingTop: '80px',
         zIndex: 1000,
-        overflowY: 'auto', // so it scrolls if content is taller than screen
+        overflowY: 'auto',
       }}
     >
       <div
@@ -98,14 +100,14 @@ export default function ApplicationForm({
         style={{
           background: 'white',
           borderRadius: '12px',
-          padding: '0 0 16px 0', // was 20px bottom
+          padding: '0 0 16px 0',
           width: '100%',
           maxWidth: 480,
-          maxHeight: '85vh', // ✅ cap overall height
+          maxHeight: '85vh',
           boxShadow: '0 8px 24px rgba(0,0,0,0.15)',
           display: 'flex',
           flexDirection: 'column',
-          overflow: 'hidden', // ✅ let inner body scroll instead
+          overflow: 'hidden',
         }}
       >
         {/* Sticky header */}
@@ -114,7 +116,7 @@ export default function ApplicationForm({
             display: 'flex',
             justifyContent: 'space-between',
             alignItems: 'center',
-            padding: '12px 16px', // was 16px 20px
+            padding: '12px 16px',
             borderBottom: '1px solid #eee',
             position: 'sticky',
             top: 0,
@@ -147,9 +149,9 @@ export default function ApplicationForm({
           onSubmit={handleSubmit}
           style={{
             display: 'grid',
-            gap: 8, // was 12
-            padding: '16px', // was 20px
-            overflowY: 'auto', // ✅ body scrolls if needed
+            gap: 8,
+            padding: '16px',
+            overflowY: 'auto',
           }}
         >
           <div>
@@ -195,7 +197,7 @@ export default function ApplicationForm({
               name="notes"
               value={form.notes}
               onChange={handleChange}
-              rows={2} // was 3
+              rows={2}
               style={{ ...inputStyle, resize: 'vertical' }}
             />
           </div>
@@ -204,7 +206,7 @@ export default function ApplicationForm({
             style={{
               display: 'grid',
               gridTemplateColumns: '1fr 1fr',
-              gap: 8, // was 10
+              gap: 8,
             }}
           >
             <div>
@@ -227,7 +229,7 @@ export default function ApplicationForm({
               >
                 {stages.map((s) => (
                   <option key={s} value={s}>
-                    {DISPLAY_LABELS[s] || s}
+                    {s}
                   </option>
                 ))}
               </select>
@@ -238,15 +240,33 @@ export default function ApplicationForm({
             style={{
               display: 'flex',
               justifyContent: 'flex-end',
-              gap: 8, // was 10
-              marginTop: 6, // was 8
+              gap: 8,
+              marginTop: 6,
             }}
           >
+            {mode === 'edit' && onDelete && (
+              <button
+                type="button"
+                onClick={handleDeleteClick}
+                style={{
+                  padding: '6px 10px',
+                  borderRadius: 6,
+                  border: '1px solid #e53935',
+                  background: 'white',
+                  color: '#e53935',
+                  cursor: 'pointer',
+                  marginRight: 'auto',
+                }}
+              >
+                Delete
+              </button>
+            )}
+
             <button
               type="button"
               onClick={onClose}
               style={{
-                padding: '6px 10px', // was 8px 12px
+                padding: '6px 10px',
                 borderRadius: 6,
                 border: '1px solid #ccc',
                 background: 'white',
@@ -261,7 +281,7 @@ export default function ApplicationForm({
                 backgroundColor: '#FF7043',
                 color: 'white',
                 border: 'none',
-                padding: '6px 12px', // was 8px 14px
+                padding: '6px 12px',
                 borderRadius: '6px',
                 cursor: 'pointer',
                 fontWeight: 700,

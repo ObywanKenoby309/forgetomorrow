@@ -11,12 +11,9 @@ import ApplicationsBoard from '@/components/applications/ApplicationsBoard';
 import { colorFor } from '@/components/seeker/dashboard/seekerColors';
 
 const STORAGE_KEY = 'applicationsTracker';
-const STAGES = ['Pinned', 'Applied', 'Interviewing', 'Offers', 'Rejected'];
 
-// Friendly display labels (logic still uses original keys)
-const DISPLAY_LABELS = {
-  Rejected: 'Closed Out',
-};
+// Internal stage keys (and display labels) — single source of truth
+const STAGES = ['Pinned', 'Applied', 'Interviewing', 'Offers', 'Closed Out'];
 
 // empty tracker: no seeded/demo applications
 const EMPTY_TRACKER = {
@@ -24,19 +21,18 @@ const EMPTY_TRACKER = {
   Applied: [],
   Interviewing: [],
   Offers: [],
-  Rejected: [],
+  'Closed Out': [],
 };
 
 // map stage -> palette key
-// NOTE: Rejected now uses a softer "info" palette instead of a failure/red color.
 const stageKey = (stage) =>
   ({
     Pinned: 'neutral',
     Applied: 'applied',
     Interviewing: 'interviewing',
     Offers: 'offers',
-    Rejected: 'info', // was 'rejected' → 'neutral', now 'info' for distinct non-failure color
-  }[stage] || 'info');
+    'Closed Out': 'info', // calm teal, not "failure"
+  }[stage] || 'neutral');
 
 function StageStrip({ tracker }) {
   return (
@@ -63,16 +59,8 @@ function StageStrip({ tracker }) {
               gap: 4,
             }}
           >
-            <div style={{ fontSize: 12, opacity: 0.9, whiteSpace: 'nowrap' }}>
-              {stage}
-            </div>
-            <div
-              style={{
-                fontSize: 20,
-                fontWeight: 800,
-                lineHeight: 1,
-              }}
-            >
+            <div style={{ fontSize: 12, opacity: 0.9 }}>{stage}</div>
+            <div style={{ fontSize: 20, fontWeight: 800, lineHeight: 1 }}>
               {count}
             </div>
           </div>
@@ -108,22 +96,22 @@ export default function SeekerApplicationsPage() {
       if (saved) {
         const parsed = JSON.parse(saved);
         if (parsed && typeof parsed === 'object') {
+          // migrate legacy "Rejected" bucket into "Closed Out"
+          const legacyRejected = parsed.Rejected || [];
           setTracker({
             Pinned: parsed.Pinned || [],
             Applied: parsed.Applied || [],
             Interviewing: parsed.Interviewing || [],
             Offers: parsed.Offers || [],
-            Rejected: parsed.Rejected || [],
+            'Closed Out': parsed['Closed Out'] || legacyRejected || [],
           });
         }
       } else {
-        // ensure a clean starting state is persisted
         if (typeof window !== 'undefined') {
           window.localStorage.setItem(STORAGE_KEY, JSON.stringify(EMPTY_TRACKER));
         }
       }
     } catch {
-      // if anything goes wrong, just keep an empty tracker
       setTracker(EMPTY_TRACKER);
     }
   }, []);
@@ -145,6 +133,7 @@ export default function SeekerApplicationsPage() {
     const id = Date.now().toString();
     const dateAdded = app.dateAdded || new Date().toISOString().split('T')[0];
     const targetStage = STAGES_LIST.includes(app.status) ? app.status : 'Pinned';
+
     const newJob = {
       id,
       title: app.title,
@@ -154,6 +143,7 @@ export default function SeekerApplicationsPage() {
       notes: app.notes || '',
       dateAdded,
     };
+
     setTracker((prev) => ({
       ...prev,
       [targetStage]: [newJob, ...(prev[targetStage] || [])],
@@ -169,10 +159,13 @@ export default function SeekerApplicationsPage() {
     setTracker((prev) => {
       const item = prev[fromStage].find((j) => j.id === id);
       if (!item) return prev;
+
+      const nextStage = STAGES_LIST[targetIndex];
+
       return {
         ...prev,
         [fromStage]: prev[fromStage].filter((j) => j.id !== id),
-        [STAGES_LIST[targetIndex]]: [item, ...(prev[STAGES_LIST[targetIndex]] || [])],
+        [nextStage]: [item, ...(prev[nextStage] || [])],
       };
     });
   };
@@ -350,6 +343,11 @@ export default function SeekerApplicationsPage() {
             setJobToEdit(null);
           }}
           onSave={formMode === 'add' ? addApplication : saveEdits}
+          onDelete={
+            formMode === 'edit' && jobToEdit
+              ? (id, stage) => deleteApplication(id, stage)
+              : undefined
+          }
           initial={
             formMode === 'edit' && jobToEdit
               ? {
