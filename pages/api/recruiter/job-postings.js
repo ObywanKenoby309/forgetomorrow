@@ -12,6 +12,7 @@ async function requireRecruiterSession(req, res) {
     return null;
   }
 
+  // Optional: basic role gate — only recruiters & admins can use this endpoint
   const role = (session.user /** as any */)?.role || "SEEKER";
   if (!["RECRUITER", "ADMIN"].includes(String(role))) {
     res.status(403).json({ error: "Insufficient permissions" });
@@ -19,6 +20,59 @@ async function requireRecruiterSession(req, res) {
   }
 
   return session;
+}
+
+// Derived seeker-facing meta from status
+function buildSeekerMeta(job) {
+  const status = job.status || "Draft";
+
+  let seekerVisible = false;
+  let allowNewApplications = false;
+  let seekerBanner = "";
+
+  if (status === "Draft") {
+    seekerVisible = false;
+  } else if (status === "Open") {
+    seekerVisible = true;
+    allowNewApplications = true;
+  } else if (status === "Reviewing") {
+    seekerVisible = true;
+    allowNewApplications = false;
+    seekerBanner =
+      "This employer is now reviewing applicants. Thank you to those who applied.";
+  } else if (status === "Closed") {
+    seekerVisible = false; // will still be available to recruiter, just not shown in seeker feed
+    allowNewApplications = false;
+    seekerBanner =
+      "This posting is now closed. Stay tuned for future opportunities.";
+  }
+
+  return { seekerVisible, allowNewApplications, seekerBanner };
+}
+
+function shapeJob(job) {
+  const seekerMeta = buildSeekerMeta(job);
+
+  return {
+    id: job.id,
+    title: job.title,
+    company: job.company,
+    worksite: job.worksite,
+    location: job.location,
+    status: job.status,
+    urgent: job.urgent,
+    views: job.viewsCount,
+    applications: job.applicationsCount,
+    type: job.type,
+    compensation: job.compensation,
+    description: job.description,
+    accountKey: job.accountKey,
+    createdAt: job.createdAt,
+    // 🔸 Seeker-facing meta (derived only, no DB fields required)
+    seekerVisible: seekerMeta.seekerVisible,
+    allowNewApplications: seekerMeta.allowNewApplications,
+    seekerBanner: seekerMeta.seekerBanner,
+  };
 }
 
 export default async function handler(req, res) {
@@ -30,27 +84,13 @@ export default async function handler(req, res) {
 
   try {
     if (req.method === "GET") {
+      // Fetch all jobs owned by this user (later we can expand to account-level)
       const jobs = await prisma.job.findMany({
         where: { userId },
         orderBy: { createdAt: "desc" },
       });
 
-      const rows = jobs.map((job) => ({
-        id: job.id,
-        title: job.title,
-        company: job.company,
-        worksite: job.worksite,
-        location: job.location,
-        type: job.type,
-        compensation: job.compensation,
-        description: job.description,
-        status: job.status,
-        urgent: job.urgent,
-        views: job.viewsCount,
-        applications: job.applicationsCount,
-        accountKey: job.accountKey,
-        createdAt: job.createdAt,
-      }));
+      const rows = jobs.map(shapeJob);
 
       return res.status(200).json({ jobs: rows });
     }
@@ -87,33 +127,20 @@ export default async function handler(req, res) {
           status,
           urgent: Boolean(urgent),
           userId,
-          accountKey,
+          accountKey, // 🔸 tie posting to the account/org
         },
       });
 
       return res.status(201).json({
-        job: {
-          id: job.id,
-          title: job.title,
-          company: job.company,
-          worksite: job.worksite,
-          location: job.location,
-          type: job.type,
-          compensation: job.compensation,
-          description: job.description,
-          status: job.status,
-          urgent: job.urgent,
-          views: job.viewsCount,
-          applications: job.applicationsCount,
-          accountKey: job.accountKey,
-          createdAt: job.createdAt,
-        },
+        job: shapeJob(job),
       });
     }
 
     if (req.method === "PATCH") {
       const {
         id,
+        status,
+        urgent,
         title,
         company,
         worksite,
@@ -121,14 +148,13 @@ export default async function handler(req, res) {
         type,
         compensation,
         description,
-        status,
-        urgent,
       } = req.body || {};
 
       if (!id) {
         return res.status(400).json({ error: "Job id is required." });
       }
 
+      // Ensure the job belongs to the current user (basic multitenant guard)
       const existing = await prisma.job.findFirst({
         where: { id: Number(id), userId },
       });
@@ -142,42 +168,20 @@ export default async function handler(req, res) {
       const updated = await prisma.job.update({
         where: { id: existing.id },
         data: {
-          title: typeof title !== "undefined" ? title : existing.title,
-          company: typeof company !== "undefined" ? company : existing.company,
-          worksite: typeof worksite !== "undefined" ? worksite : existing.worksite,
-          location: typeof location !== "undefined" ? location : existing.location,
-          type: typeof type !== "undefined" ? type : existing.type,
-          compensation:
-            typeof compensation !== "undefined"
-              ? compensation
-              : existing.compensation,
-          description:
-            typeof description !== "undefined"
-              ? description
-              : existing.description,
-          status: typeof status !== "undefined" ? status : existing.status,
-          urgent:
-            typeof urgent === "boolean" ? urgent : existing.urgent,
+          title: title ?? existing.title,
+          company: company ?? existing.company,
+          worksite: worksite ?? existing.worksite,
+          location: location ?? existing.location,
+          type: type ?? existing.type,
+          compensation: compensation ?? existing.compensation,
+          description: description ?? existing.description,
+          status: status ?? existing.status,
+          urgent: typeof urgent === "boolean" ? urgent : existing.urgent,
         },
       });
 
       return res.status(200).json({
-        job: {
-          id: updated.id,
-          title: updated.title,
-          company: updated.company,
-          worksite: updated.worksite,
-          location: updated.location,
-          type: updated.type,
-          compensation: updated.compensation,
-          description: updated.description,
-          status: updated.status,
-          urgent: updated.urgent,
-          views: updated.viewsCount,
-          applications: updated.applicationsCount,
-          accountKey: updated.accountKey,
-          createdAt: updated.createdAt,
-        },
+        job: shapeJob(updated),
       });
     }
 
