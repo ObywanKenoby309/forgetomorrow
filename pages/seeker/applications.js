@@ -57,10 +57,25 @@ function StageStrip({ tracker }) {
               padding: '10px 12px',
               display: 'grid',
               gap: 4,
+              textAlign: 'center',         // 🔹 center label + number
             }}
           >
-            <div style={{ fontSize: 12, opacity: 0.9 }}>{stage}</div>
-            <div style={{ fontSize: 20, fontWeight: 800, lineHeight: 1 }}>
+            <div
+              style={{
+                fontSize: 12,
+                opacity: 0.9,
+                whiteSpace: 'nowrap',       // 🔹 keep "Closed Out" on one line
+              }}
+            >
+              {stage}
+            </div>
+            <div
+              style={{
+                fontSize: 20,
+                fontWeight: 800,
+                lineHeight: 1,
+              }}
+            >
               {count}
             </div>
           </div>

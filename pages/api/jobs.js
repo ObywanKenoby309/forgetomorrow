@@ -37,10 +37,13 @@ function shapeExternalJob(row) {
     ? new Date(created).toISOString()
     : new Date().toISOString();
 
+  const title = row.title || '';
+  const company = row.company || '';
+
   return {
     id: row.id,
-    title: row.title,
-    company: row.company || null,
+    title,
+    company: company || null,
     location: row.location || null,
     description: row.description || '',
     url: null,
@@ -48,7 +51,7 @@ function shapeExternalJob(row) {
     tags: null,
     source: 'External',
     origin: 'external',
-    status: 'Open', // external feed treated as open
+    status: 'Open', // external feed treated as open for now
     publishedat: publishedIso,
   };
 }
@@ -73,8 +76,8 @@ function shapeInternalJob(job) {
     url: null,
     salary: job.compensation || null,
     tags: null,
-    source: 'Forge recruiter',
-    origin: 'internal',
+    source: job.source || 'Forge recruiter',
+    origin: job.origin || 'internal',
     status: job.status || 'Open',
     publishedat: publishedIso,
   };
@@ -99,10 +102,10 @@ export default async function handler(req, res) {
   let externalJobs = [];
   let internalJobs = [];
 
+  // ─────────────────────────────────────────
+  // 1) External jobs from Supabase/Postgres
+  // ─────────────────────────────────────────
   try {
-    // ─────────────────────────────────────────
-    // 1) External jobs from Supabase/Postgres
-    // ─────────────────────────────────────────
     const client = await dbPool.connect();
     try {
       const result = await client.query(
@@ -124,6 +127,18 @@ export default async function handler(req, res) {
 
       const rows = result.rows || [];
       externalJobs = rows.map(shapeExternalJob);
+
+      // TEMP: filter out earlier test rows so they don't appear as external
+      externalJobs = externalJobs.filter((job) => {
+        const title = (job.title || '').toLowerCase();
+        const company = (job.company || '').toLowerCase();
+
+        // adjust these if you know the exact test names
+        if (title.includes('test role')) return false;
+        if (company === 'test') return false;
+
+        return true;
+      });
     } finally {
       client.release();
     }
@@ -133,19 +148,16 @@ export default async function handler(req, res) {
     externalJobs = [];
   }
 
+  // ─────────────────────────────────────────
+  // 2) Internal recruiter-created jobs (Prisma)
+  // ─────────────────────────────────────────
   try {
-    // ─────────────────────────────────────────
-    // 2) Internal recruiter-created jobs (Prisma)
-    // ─────────────────────────────────────────
-    internalJobs = await prisma.job.findMany({
-      // Drafts will be filtered out again on the front-end,
-      // but you can also filter here if you prefer:
-      // where: { status: { not: 'Draft' } },
+    const prismaJobs = await prisma.job.findMany({
       orderBy: { createdAt: 'desc' },
       take: 200,
     });
 
-    internalJobs = internalJobs.map(shapeInternalJob);
+    internalJobs = prismaJobs.map(shapeInternalJob);
   } catch (err) {
     console.error('[jobs] Prisma recruiter jobs error:', err);
     internalJobs = [];
