@@ -83,25 +83,22 @@ export default function SeekerContactCenter() {
     reloadProfileViews();
   }, []);
 
-  // --- Counts for tabs/badges ---
+  // --- Counts for toolbar badges ---
   const counts = useMemo(
     () => ({
       contacts: contacts.length,
       invitesIn: incomingRequests.length,
       invitesOut: outgoingRequests.length,
+      profileViews: profileViews.length,
     }),
-    [contacts, incomingRequests, outgoingRequests]
+    [contacts, incomingRequests, outgoingRequests, profileViews]
   );
 
   // --- Helpers to get the "user" from different shapes ---
   const getPersonFromItem = (item) => {
     if (!item) return null;
-
-    // Incoming/outgoing from API: { requestId, from: {...} } / { requestId, to: {...} }
     if (item.from) return item.from;
     if (item.to) return item.to;
-
-    // Fallback: contacts or older shapes
     return item;
   };
 
@@ -160,7 +157,6 @@ export default function SeekerContactCenter() {
     }
   };
 
-  // Outgoing cancel
   const handleCancel = async (item) => {
     const requestId = item.requestId || item.id;
     if (!requestId) return;
@@ -252,14 +248,16 @@ export default function SeekerContactCenter() {
           maxWidth: 720,
         }}
       >
-        Manage your contacts, invitations, and community touchpoints. Jump into{' '}
+        See who you&apos;re connected with, who&apos;s trying to reach you, and
+        who&apos;s been looking at your profile. When you&apos;re ready to talk,
+        jump into{' '}
         <Link
           href={withChrome('/seeker/messages')}
           style={{ color: '#FF7043', fontWeight: 700 }}
         >
           The Signal
-        </Link>{' '}
-        to chat.
+        </Link>
+        .
       </p>
     </section>
   );
@@ -271,7 +269,7 @@ export default function SeekerContactCenter() {
     </div>
   );
 
-  // --- Tabs row ---
+  // --- Toolbar row (future-proof: real pages, not anchors) ---
   const TabButton = ({ href, label, badge, active = false }) => (
     <Link
       href={withChrome(href)}
@@ -306,7 +304,7 @@ export default function SeekerContactCenter() {
     </Link>
   );
 
-  // Collapsible contacts (default open)
+  // Contacts preview + toggler
   const [showContacts, setShowContacts] = useState(true);
   const topContacts = useMemo(() => contacts.slice(0, 5), [contacts]);
 
@@ -319,6 +317,18 @@ export default function SeekerContactCenter() {
     }
   };
 
+  const incomingPreview = useMemo(
+    () => incomingRequests.slice(0, 3),
+    [incomingRequests]
+  );
+  const outgoingPreview = useMemo(
+    () => outgoingRequests.slice(0, 3),
+    [outgoingRequests]
+  );
+
+  const nothingNeedingAttention =
+    incomingRequests.length === 0 && outgoingRequests.length === 0;
+
   return (
     <SeekerLayout
       title="Contact Center | ForgeTomorrow"
@@ -326,7 +336,7 @@ export default function SeekerContactCenter() {
       right={RightRail}
       activeNav="contacts"
     >
-      {/* Tabs row */}
+      {/* Toolbar */}
       <section
         style={{
           background: 'white',
@@ -343,21 +353,25 @@ export default function SeekerContactCenter() {
             badge={counts.contacts}
             active
           />
-          <TabButton href="/seeker/messages" label="The Signal" />
           <TabButton
-            href="/seeker/contact-center#invites"
-            label="Invites (Incoming)"
+            href="/seeker/contact-incoming"
+            label="Invites"
             badge={counts.invitesIn}
           />
           <TabButton
-            href="/seeker/contact-center#requests"
-            label="Requests (Outgoing)"
+            href="/seeker/contact-outgoing"
+            label="Requests"
             badge={counts.invitesOut}
+          />
+          <TabButton
+            href="/seeker/profile-views"
+            label="Profile Views"
+            badge={counts.profileViews}
           />
         </div>
       </section>
 
-      {/* Contacts */}
+      {/* Needs Your Attention */}
       <section
         style={{
           background: 'white',
@@ -367,78 +381,93 @@ export default function SeekerContactCenter() {
           boxShadow: '0 2px 6px rgba(0,0,0,0.06)',
         }}
       >
-        <div
+        <h2
           style={{
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'space-between',
+            color: '#FF7043',
+            marginTop: 0,
             marginBottom: 8,
           }}
         >
-          <h2 style={{ color: '#FF7043', margin: 0 }}>Contacts</h2>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-            <span
-              style={{
-                fontSize: 12,
-                fontWeight: 800,
-                padding: '2px 8px',
-                borderRadius: 999,
-                background: '#F1F5F9',
-                color: '#334155',
-              }}
-            >
-              {contacts.length}
-            </span>
-            <button
-              type="button"
-              onClick={() => setShowContacts((v) => !v)}
-              style={{
-                fontSize: 13,
-                padding: '6px 10px',
-                border: '1px solid #e5e7eb',
-                borderRadius: 8,
-                background: 'white',
-                cursor: 'pointer',
-              }}
-              aria-expanded={showContacts}
-              aria-controls="contacts-panel"
-            >
-              {showContacts ? 'Hide' : 'Show'}
-            </button>
-          </div>
-        </div>
+          Needs your attention
+        </h2>
 
-        {showContacts && (
-          <div id="contacts-panel">
-            <ContactsList
-              contacts={topContacts}
-              onViewProfile={handleViewProfile}
-              onDisconnect={handleDisconnect}
-              loading={loading}
-            />
-            <div style={{ marginTop: 8 }}>
-              <Link
-                href={withChrome('/seeker/contacts')}
-                style={{ color: '#FF7043', fontWeight: 700 }}
-              >
-                View all contacts →
-              </Link>
-            </div>
+        {nothingNeedingAttention ? (
+          <p style={{ color: '#607D8B', fontSize: 14, marginBottom: 0 }}>
+            You&apos;re all caught up. When new invites or requests come in,
+            they&apos;ll appear here first.
+          </p>
+        ) : (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+            {incomingRequests.length > 0 && (
+              <div>
+                <h3
+                  style={{
+                    margin: 0,
+                    fontSize: 14,
+                    color: '#374151',
+                    fontWeight: 700,
+                  }}
+                >
+                  Invites waiting on you
+                </h3>
+                <IncomingRequestsList
+                  items={incomingPreview}
+                  onAccept={handleAccept}
+                  onDecline={handleDecline}
+                  onViewProfile={handleViewProfile}
+                />
+                <div style={{ marginTop: 6 }}>
+                  <Link
+                    href={withChrome('/seeker/contact-incoming')}
+                    style={{ color: '#FF7043', fontWeight: 700, fontSize: 13 }}
+                  >
+                    Review all invites →
+                  </Link>
+                </div>
+              </div>
+            )}
+
+            {outgoingRequests.length > 0 && (
+              <div>
+                <h3
+                  style={{
+                    margin: 0,
+                    fontSize: 14,
+                    color: '#374151',
+                    fontWeight: 700,
+                  }}
+                >
+                  Requests you&apos;ve sent
+                </h3>
+                <OutgoingRequestsList
+                  items={outgoingPreview}
+                  onCancel={handleCancel}
+                  onViewProfile={handleViewProfile}
+                />
+                <div style={{ marginTop: 6 }}>
+                  <Link
+                    href={withChrome('/seeker/contact-outgoing')}
+                    style={{ color: '#FF7043', fontWeight: 700, fontSize: 13 }}
+                  >
+                    Review all requests →
+                  </Link>
+                </div>
+              </div>
+            )}
           </div>
         )}
       </section>
 
-      {/* Pending + Profile Views grid */}
+      {/* Contacts + Profile Views side-by-side (but roomy) */}
       <section
         style={{
           display: 'grid',
           gap: 12,
-          gridTemplateColumns: 'repeat(auto-fit, minmax(260px, 1fr))',
+          gridTemplateColumns: 'minmax(0, 1.4fr) minmax(0, 1fr)',
         }}
       >
-        {/* Pending Invites (Incoming) */}
+        {/* Contacts */}
         <section
-          id="invites"
           style={{
             background: 'white',
             borderRadius: 12,
@@ -447,48 +476,66 @@ export default function SeekerContactCenter() {
             boxShadow: '0 2px 6px rgba(0,0,0,0.06)',
           }}
         >
-          <h2 style={{ color: '#FF7043', marginTop: 0 }}>Pending Invites</h2>
-          <IncomingRequestsList
-            items={incomingRequests}
-            onAccept={handleAccept}
-            onDecline={handleDecline}
-            onViewProfile={handleViewProfile}
-          />
-          <div style={{ marginTop: 8 }}>
-            <Link
-              href={withChrome('/seeker/contact-incoming')}
-              style={{ color: '#FF7043', fontWeight: 700 }}
-            >
-              View all incoming →
-            </Link>
+          <div
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'space-between',
+              marginBottom: 8,
+            }}
+          >
+            <h2 style={{ color: '#FF7043', margin: 0 }}>Contacts</h2>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+              <span
+                style={{
+                  fontSize: 12,
+                  fontWeight: 800,
+                  padding: '2px 8px',
+                  borderRadius: 999,
+                  background: '#F1F5F9',
+                  color: '#334155',
+                }}
+              >
+                {contacts.length}
+              </span>
+              <button
+                type="button"
+                onClick={() => setShowContacts((v) => !v)}
+                style={{
+                  fontSize: 13,
+                  padding: '6px 10px',
+                  border: '1px solid #e5e7eb',
+                  borderRadius: 8,
+                  background: 'white',
+                  cursor: 'pointer',
+                }}
+                aria-expanded={showContacts}
+                aria-controls="contacts-panel"
+              >
+                {showContacts ? 'Hide' : 'Show'}
+              </button>
+            </div>
           </div>
-        </section>
 
-        {/* Pending Requests (Outgoing) */}
-        <section
-          id="requests"
-          style={{
-            background: 'white',
-            borderRadius: 12,
-            padding: 16,
-            border: '1px solid #eee',
-            boxShadow: '0 2px 6px rgba(0,0,0,0.06)',
-          }}
-        >
-          <h2 style={{ color: '#FF7043', marginTop: 0 }}>Pending Requests</h2>
-          <OutgoingRequestsList
-            items={outgoingRequests}
-            onCancel={handleCancel}
-            onViewProfile={handleViewProfile}
-          />
-          <div style={{ marginTop: 8 }}>
-            <Link
-              href={withChrome('/seeker/contact-outgoing')}
-              style={{ color: '#FF7043', fontWeight: 700 }}
-            >
-              View all outgoing →
-            </Link>
-          </div>
+          {showContacts && (
+            <div id="contacts-panel">
+              <ContactsList
+                contacts={topContacts}
+                onViewProfile={handleViewProfile}
+                // onDisconnect is wired server-side; UI can adopt it later
+                onDisconnect={handleDisconnect}
+                loading={loading}
+              />
+              <div style={{ marginTop: 8 }}>
+                <Link
+                  href={withChrome('/seeker/contacts')}
+                  style={{ color: '#FF7043', fontWeight: 700 }}
+                >
+                  View all contacts →
+                </Link>
+              </div>
+            </div>
+          )}
         </section>
 
         {/* Recent Profile Views */}
@@ -506,8 +553,8 @@ export default function SeekerContactCenter() {
             <p style={{ color: '#607D8B', fontSize: 14 }}>Loading views…</p>
           ) : profileViews.length === 0 ? (
             <p style={{ color: '#607D8B', fontSize: 14 }}>
-              No one has viewed your profile yet. Once recruiters, coaches, or peers
-              visit your profile, you&apos;ll see them here.
+              No one has viewed your profile yet. Once recruiters, coaches, or
+              peers visit your profile, you&apos;ll see them here.
             </p>
           ) : (
             <ul
