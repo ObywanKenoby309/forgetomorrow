@@ -201,7 +201,7 @@ export default function SeekerContactCenter() {
         borderRadius: 12,
         padding: 16,
         boxShadow: '0 2px 6px rgba(0,0,0,0.06)',
-        border: '1px solid '#eee',
+        border: '1px solid #eee',
         textAlign: 'center',
       }}
     >
