@@ -65,7 +65,50 @@ export default function MemberActions({
   const messageUser = async () => {
     if (!targetUserId || isSelf) return;
 
-    // Front-end gate with same logic as /api/signal/start-or-get
+    // 🔹 FRONT-END GATE: require connection before DM
+    if (status === 'loading') {
+      alert(
+        'We are still checking your relationship with this member. Please try again in a moment.'
+      );
+      onClose?.();
+      return;
+    }
+
+    if (status === 'none') {
+      alert(
+        'To keep DMs respectful, please send a connection request first. Once you are connected, you can open a private conversation from The Signal.'
+      );
+      onClose?.();
+      return;
+    }
+
+    if (status === 'outgoing') {
+      alert(
+        'You already have a pending connection request with this member. Once they accept, you can message them from The Signal.'
+      );
+      onClose?.();
+      return;
+    }
+
+    if (status === 'incoming') {
+      alert(
+        'This member has already sent you an invitation. Visit your Contact Center → Invites to accept it. After you accept, you can message them from The Signal.'
+      );
+      onClose?.();
+      return;
+    }
+
+    // 🔹 Only CONNECTED can actually open / start a DM
+    if (status !== 'connected') {
+      // Fallback safety — should not hit, but just in case.
+      alert(
+        'You need to be connected with this member before opening a private conversation.'
+      );
+      onClose?.();
+      return;
+    }
+
+    // From here, we’re connected → safe to ask the backend to start/get convo
     try {
       const res = await fetch('/api/signal/start-or-get', {
         method: 'POST',
@@ -98,7 +141,7 @@ export default function MemberActions({
           } else {
             alert(
               msg ||
-                'You need to be connected with this member before opening a private conversation.'
+                'You need additional permission to message this member at this time.'
             );
           }
 
@@ -206,7 +249,7 @@ export default function MemberActions({
     <>
       <Button onClick={viewProfile}>View profile</Button>
 
-      {/* Message is always visible, but gated by backend + advisory */}
+      {/* Message is always visible, but front-end gated by status */}
       {!isSelf && <Button onClick={messageUser}>Message</Button>}
 
       {status === 'none' && <Button onClick={sendConnect}>Connect</Button>}
