@@ -20,10 +20,7 @@ export default async function handler(req, res) {
     // 1) Contacts (everyone you're connected to, regardless of who initiated)
     const contactsRows = await prisma.contact.findMany({
       where: {
-        OR: [
-          { userId },
-          { contactUserId: userId },
-        ],
+        OR: [{ userId }, { contactUserId: userId }],
       },
       include: {
         user: true,
@@ -32,24 +29,34 @@ export default async function handler(req, res) {
       orderBy: { createdAt: 'desc' },
     });
 
-    const contacts = contactsRows.map((c) => {
-      const other =
-        c.userId === userId ? c.contactUser : c.user;
+    // 🔹 Dedupe by the "other user id" so each connection shows once per side
+    const contactsMap = new Map();
 
-      const name =
-        other?.name ||
-        [other?.firstName, other?.lastName].filter(Boolean).join(' ') ||
-        'Member';
+    for (const c of contactsRows) {
+      const other = c.userId === userId ? c.contactUser : c.user;
+      if (!other) continue;
 
-      return {
-        id: other?.id || '',
-        name,
-        headline: other?.headline || '',
-        location: other?.location || '',
-        status: other?.status || '',
-        avatarUrl: other?.avatarUrl || other?.image || null,
-      };
-    });
+      const otherId = other.id;
+      if (!otherId) continue;
+
+      if (!contactsMap.has(otherId)) {
+        const name =
+          other.name ||
+          [other.firstName, other.lastName].filter(Boolean).join(' ') ||
+          'Member';
+
+        contactsMap.set(otherId, {
+          id: otherId, // keep using the other user's id as before
+          name,
+          headline: other.headline || '',
+          location: other.location || '',
+          status: other.status || '',
+          avatarUrl: other.avatarUrl || other.image || null,
+        });
+      }
+    }
+
+    const contacts = Array.from(contactsMap.values());
 
     // 2) Incoming requests (to you, pending)
     const incomingRequests = await prisma.contactRequest.findMany({
@@ -153,13 +160,13 @@ export default async function handler(req, res) {
               avatarUrl: u.avatarUrl || null,
             }
           : {
-            id: r.toUserId,
-            name: 'Member',
-            headline: '',
-            location: '',
-            status: '',
-            avatarUrl: null,
-          },
+              id: r.toUserId,
+              name: 'Member',
+              headline: '',
+              location: '',
+              status: '',
+              avatarUrl: null,
+            },
       };
     });
 
