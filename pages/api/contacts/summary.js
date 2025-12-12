@@ -17,41 +17,39 @@ export default async function handler(req, res) {
 
     const userId = session.user.id;
 
-    // 1) Contacts (everyone you're connected to)
+    // 1) Contacts (everyone you're connected to, regardless of who initiated)
     const contactsRows = await prisma.contact.findMany({
-      where: { userId },
+      where: {
+        OR: [
+          { userId },
+          { contactUserId: userId },
+        ],
+      },
+      include: {
+        user: true,
+        contactUser: true,
+      },
+      orderBy: { createdAt: 'desc' },
     });
 
-    const contactUserIds = contactsRows.map((c) => c.contactUserId);
+    const contacts = contactsRows.map((c) => {
+      const other =
+        c.userId === userId ? c.contactUser : c.user;
 
-    const contactUsers =
-      contactUserIds.length === 0
-        ? []
-        : await prisma.user.findMany({
-            where: { id: { in: contactUserIds } },
-            select: {
-              id: true,
-              name: true,
-              firstName: true,
-              lastName: true,
-              headline: true,
-              location: true,
-              status: true,
-              avatarUrl: true,
-            },
-          });
+      const name =
+        other?.name ||
+        [other?.firstName, other?.lastName].filter(Boolean).join(' ') ||
+        'Member';
 
-    const contacts = contactUsers.map((u) => ({
-      id: u.id,
-      name:
-        u.name ||
-        [u.firstName, u.lastName].filter(Boolean).join(' ') ||
-        'Member',
-      headline: u.headline || '',
-      location: u.location || '',
-      status: u.status || '',
-      avatarUrl: u.avatarUrl || null,
-    }));
+      return {
+        id: other?.id || '',
+        name,
+        headline: other?.headline || '',
+        location: other?.location || '',
+        status: other?.status || '',
+        avatarUrl: other?.avatarUrl || other?.image || null,
+      };
+    });
 
     // 2) Incoming requests (to you, pending)
     const incomingRequests = await prisma.contactRequest.findMany({
@@ -84,7 +82,9 @@ export default async function handler(req, res) {
         u?.name ||
         [u?.firstName, u?.lastName].filter(Boolean).join(' ') ||
         'Member';
+
       return {
+        id: r.id,
         requestId: r.id,
         createdAt: r.createdAt,
         from: u
@@ -138,7 +138,9 @@ export default async function handler(req, res) {
         u?.name ||
         [u?.firstName, u?.lastName].filter(Boolean).join(' ') ||
         'Member';
+
       return {
+        id: r.id,
         requestId: r.id,
         createdAt: r.createdAt,
         to: u
@@ -151,13 +153,13 @@ export default async function handler(req, res) {
               avatarUrl: u.avatarUrl || null,
             }
           : {
-              id: r.toUserId,
-              name: 'Member',
-              headline: '',
-              location: '',
-              status: '',
-              avatarUrl: null,
-            },
+            id: r.toUserId,
+            name: 'Member',
+            headline: '',
+            location: '',
+            status: '',
+            avatarUrl: null,
+          },
       };
     });
 

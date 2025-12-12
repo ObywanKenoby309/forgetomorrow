@@ -160,7 +160,7 @@ export default function SeekerContactCenter() {
     }
   };
 
-  // For now "Cancel" uses the same decline path (handled by /api/contacts/respond)
+  // For outgoing, use explicit "cancel" so it matches /api/contacts/respond
   const handleCancel = async (item) => {
     const requestId = item.requestId || item.id;
     if (!requestId) return;
@@ -169,7 +169,7 @@ export default function SeekerContactCenter() {
       const res = await fetch('/api/contacts/respond', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ requestId, action: 'decline' }),
+        body: JSON.stringify({ requestId, action: 'cancel' }), // <-- changed from 'decline'
       });
       if (!res.ok) {
         console.error('contacts/respond cancel failed', await res.text());
@@ -348,7 +348,7 @@ export default function SeekerContactCenter() {
           <h2 style={{ color: '#FF7043', margin: 0 }}>Contacts</h2>
           <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
             <span
-              style={{
+              style({
                 fontSize: 12,
                 fontWeight: 800,
                 padding: '2px 8px',
