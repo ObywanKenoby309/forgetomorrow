@@ -19,11 +19,11 @@ export default async function handler(req, res) {
     const { requestId, action } = req.body || {};
 
     if (!requestId || typeof requestId !== 'string') {
-      return res.status(400).json({ error: 'Missing requestId' });
+      return res.status(400).json({ error: 'Missing or invalid requestId' });
     }
 
-    if (!action) {
-      return res.status(400).json({ error: 'Missing action' });
+    if (!['accept', 'decline', 'cancel'].includes(action)) {
+      return res.status(400).json({ error: 'Invalid action' });
     }
 
     const request = await prisma.contactRequest.findUnique({
@@ -31,84 +31,95 @@ export default async function handler(req, res) {
     });
 
     if (!request) {
-      return res.status(404).json({ error: 'Request not found' });
+      return res.status(404).json({ error: 'Contact request not found' });
     }
 
-    const isSender = request.fromUserId === userId;
-    const isRecipient = request.toUserId === userId;
+    const isIncoming = request.toUserId === userId;
+    const isOutgoing = request.fromUserId === userId;
 
-    if (!isSender && !isRecipient) {
-      return res.status(403).json({ error: 'Not allowed for this request' });
+    if (!isIncoming && !isOutgoing) {
+      return res
+        .status(403)
+        .json({ error: 'Not allowed to modify this request' });
     }
 
-    // --- Accept: only recipient can accept ---
+    // ── ACCEPT ────────────────────────────────────────────────────────────────
     if (action === 'accept') {
-      if (!isRecipient) {
+      if (!isIncoming) {
         return res
           .status(403)
-          .json({ error: 'Only the recipient can accept this request' });
+          .json({ error: 'Only the recipient can accept a request' });
       }
 
-      if (request.status === 'ACCEPTED') {
-        return res.status(200).json({ ok: true, status: request.status });
-      }
+      // Mark accepted
+      await prisma.contactRequest.update({
+        where: { id: requestId },
+        data: { status: 'ACCEPTED' },
+      });
 
-      // Create contact if it doesn't exist yet
-      const existingContact = await prisma.contact.findFirst({
-        where: {
-          OR: [
-            {
+      // Create reciprocal contacts (both directions)
+      await prisma.$transaction([
+        prisma.contact.upsert({
+          where: {
+            userId_contactUserId: {
               userId: request.fromUserId,
               contactUserId: request.toUserId,
             },
-            {
-              userId: request.toUserId,
-              contactUserId: request.fromUserId,
-            },
-          ],
-        },
-      });
-
-      if (!existingContact) {
-        await prisma.contact.create({
-          data: {
+          },
+          update: {},
+          create: {
             userId: request.fromUserId,
             contactUserId: request.toUserId,
           },
-        });
-      }
-
-      await prisma.contactRequest.update({
-        where: { id: request.id },
-        data: { status: 'ACCEPTED' },
-      });
+        }),
+        prisma.contact.upsert({
+          where: {
+            userId_contactUserId: {
+              userId: request.toUserId,
+              contactUserId: request.fromUserId,
+            },
+          },
+          update: {},
+          create: {
+            userId: request.toUserId,
+            contactUserId: request.fromUserId,
+          },
+        }),
+      ]);
 
       return res.status(200).json({ ok: true, status: 'ACCEPTED' });
     }
 
-    // --- Decline / Cancel logic ---
+    // ── DECLINE / CANCEL ─────────────────────────────────────────────────────
     if (action === 'decline' || action === 'cancel') {
-      let newStatus;
+      // Recipient declining → DECLINED
+      if (isIncoming) {
+        await prisma.contactRequest.update({
+          where: { id: requestId },
+          data: { status: 'DECLINED' },
+        });
 
-      if (isRecipient) {
-        newStatus = 'DECLINED';
-      } else if (isSender) {
-        newStatus = 'CANCELED';
-      } else {
-        return res.status(403).json({ error: 'Not allowed' });
+        return res.status(200).json({ ok: true, status: 'DECLINED' });
       }
 
-      await prisma.contactRequest.update({
-        where: { id: request.id },
-        data: { status: newStatus },
-      });
+      // Sender backing out → treat as CANCELED
+      if (isOutgoing) {
+        await prisma.contactRequest.update({
+          where: { id: requestId },
+          data: { status: 'CANCELED' },
+        });
 
-      return res.status(200).json({ ok: true, status: newStatus });
+        return res.status(200).json({ ok: true, status: 'CANCELED' });
+      }
+
+      // Shouldn’t reach here, but just in case:
+      return res.status(403).json({ error: 'Not allowed' });
     }
 
+    // Fallback (should never hit because we validated `action` above)
     return res.status(400).json({ error: 'Unknown action' });
   } catch (err) {
-    console.error('contacts/respond error:', err);
+    console.error('[contacts/respond] error', err);
     return res.status(500).json({ error: 'Internal server error' });
   }
 }

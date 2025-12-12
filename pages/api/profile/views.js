@@ -12,8 +12,10 @@ export default async function handler(req, res) {
     try {
       const { targetUserId, source } = req.body || {};
 
+      // If targetUserId is missing, fail soft instead of throwing a 400
+      // This avoids noisy console errors if some caller forgets to pass it.
       if (!targetUserId) {
-        return res.status(400).json({ error: 'targetUserId is required' });
+        return res.status(204).end();
       }
 
       // Do not log self-views
