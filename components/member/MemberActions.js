@@ -5,7 +5,8 @@ import { useRouter } from 'next/router';
 export default function MemberActions({
   targetUserId,
   targetName = 'Member',
-  layout = 'menu', // menu | inline
+  targetRole = null, // NEW: COACH | RECRUITER | etc.
+  layout = 'menu', // menu | inline (future)
   onClose,
 }) {
   const router = useRouter();
@@ -19,10 +20,14 @@ export default function MemberActions({
 
   const [requestId, setRequestId] = useState(null);
 
-  // NOTE:
-  // We intentionally do not try to infer "self" here.
+  // We intentionally do not infer "self" here.
   // Backend already blocks self-connect and self-message.
   const isSelf = false;
+
+  const normalizedRole =
+    typeof targetRole === 'string' ? targetRole.toUpperCase() : null;
+  const isCoach = normalizedRole === 'COACH';
+  const isRecruiter = normalizedRole === 'RECRUITER';
 
   // ── Load relationship status ────────────────────────────
   useEffect(() => {
@@ -30,9 +35,7 @@ export default function MemberActions({
 
     async function loadStatus() {
       try {
-        const res = await fetch(
-          `/api/contacts/status?userId=${targetUserId}`
-        );
+        const res = await fetch(`/api/contacts/status?userId=${targetUserId}`);
         if (!res.ok) throw new Error(await res.text());
 
         const data = await res.json();
@@ -57,6 +60,33 @@ export default function MemberActions({
 
   const messageUser = () => {
     if (!targetUserId || isSelf) return;
+
+    // Front-end DM gate for coaches / recruiters when NOT connected
+    if ((isCoach || isRecruiter) && status !== 'connected') {
+      const baseName = targetName || 'this member';
+
+      if (isCoach) {
+        window.alert(
+          `To respect the privacy of coaches, please send a connection request ` +
+            `or explore ${baseName}'s mentorship offerings before messaging.\n\n` +
+            `You can find coaches under Mentorship Programs.`
+        );
+      } else if (isRecruiter) {
+        window.alert(
+          `To respect the privacy of recruiters, please send a connection ` +
+            `request before opening a private conversation with ${baseName}.`
+        );
+      } else {
+        window.alert(
+          `You need to be connected with ${baseName} before opening a private conversation.`
+        );
+      }
+
+      onClose?.();
+      return;
+    }
+
+    // Normal DM path
     onClose?.();
 
     const params = new URLSearchParams();
@@ -130,9 +160,7 @@ export default function MemberActions({
       onClick={onClick}
       disabled={disabled}
       className={`w-full text-left px-3 py-2 text-sm ${
-        disabled
-          ? 'text-gray-400 cursor-default'
-          : 'hover:bg-gray-50'
+        disabled ? 'text-gray-400 cursor-default' : 'hover:bg-gray-50'
       }`}
     >
       {children}
@@ -145,18 +173,12 @@ export default function MemberActions({
     <>
       <Button onClick={viewProfile}>View profile</Button>
 
-      {/* ✅ Message is now always available for non-self users */}
-      {!isSelf && (
-        <Button onClick={messageUser}>Message</Button>
-      )}
+      {/* Message always visible; DM rules enforced in messageUser + backend */}
+      {!isSelf && <Button onClick={messageUser}>Message</Button>}
 
-      {status === 'none' && (
-        <Button onClick={sendConnect}>Connect</Button>
-      )}
+      {status === 'none' && <Button onClick={sendConnect}>Connect</Button>}
 
-      {status === 'outgoing' && (
-        <Button disabled>Requested</Button>
-      )}
+      {status === 'outgoing' && <Button disabled>Requested</Button>}
 
       {status === 'incoming' && (
         <>

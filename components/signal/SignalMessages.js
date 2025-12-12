@@ -22,6 +22,10 @@ export default function SignalMessages() {
   // 🔹 Local block state for the active conversation
   const [isBlocked, setIsBlocked] = useState(false);
 
+  // 🔹 Coach/Recruiter DM gate banner
+  // { role: 'COACH' | 'RECRUITER' | null, message: string, name?: string }
+  const [connectionGate, setConnectionGate] = useState(null);
+
   const fetchThreads = useCallback(async () => {
     setThreadsLoading(true);
     try {
@@ -59,7 +63,11 @@ export default function SignalMessages() {
     setActiveConversationId(thread.id);
     setActiveTitle(thread.title || 'Conversation');
     setActiveOtherUserId(thread.otherUserId || null);
+
+    // Opening a valid thread clears any prior gate/block state
     setIsBlocked(false);
+    setConnectionGate(null);
+
     await fetchMessages(thread.id);
   };
 
@@ -90,43 +98,56 @@ export default function SignalMessages() {
         });
 
         // ─────────────────────────────────────
-        //  DM gating: show friendly message
+        //  DM gating: show friendly banner
         // ─────────────────────────────────────
         if (!res.ok) {
+          let payload = null;
+          try {
+            payload = await res.json();
+          } catch {
+            // ignore JSON parse errors
+          }
+
           if (res.status === 403) {
-            let payload = null;
-            try {
-              payload = await res.json();
-            } catch {
-              // ignore JSON parse errors, fall back to generic
+            const role =
+              (payload?.role || payload?.Role || '').toString().toUpperCase() ||
+              null;
+            const explicitError = payload?.error;
+
+            if (explicitError === 'CONNECTION_REQUIRED' || role) {
+              const fallbackMessage =
+                role === 'COACH'
+                  ? 'To respect the privacy of coaches, please send a connection request or explore their mentorship offerings before messaging.'
+                  : role === 'RECRUITER'
+                  ? 'To respect the privacy of recruiters, please send a connection request before opening a private conversation.'
+                  : 'You need to be connected with this member before opening a private conversation.';
+
+              setActiveConversationId(null);
+              setActiveTitle('');
+              setActiveOtherUserId(deepLinkIdRaw);
+              setIsBlocked(false);
+
+              setConnectionGate({
+                role,
+                message: payload?.message || fallbackMessage,
+                name: deepLinkNameRaw || 'this member',
+              });
+
+              // Clean URL so the blocked deep link doesn’t hang around
+              const cleanQuery = {};
+              if (chrome) cleanQuery.chrome = chrome;
+
+              router.replace(
+                { pathname: router.pathname, query: cleanQuery },
+                undefined,
+                { shallow: true }
+              );
+              return;
             }
-
-            const role = payload?.role;
-            const msg = payload?.message;
-
-            if (role === 'COACH') {
-              alert(
-                msg ||
-                  'To respect the privacy of coaches, please send a connection request or explore their mentorship offerings before messaging.'
-              );
-            } else if (role === 'RECRUITER') {
-              alert(
-                msg ||
-                  'To respect the privacy of recruiters, please send a connection request before opening a private conversation.'
-              );
-            } else {
-              alert(
-                msg ||
-                  'You need to be connected with this member before opening a private conversation.'
-              );
-            }
-
-            // Do not open conversation; just stop here.
-            return;
           }
 
           // Other errors (401, 500, etc.)
-          const text = await res.text();
+          const text = payload || (await res.text());
           console.error('signal start-or-get error payload:', text);
           return;
         }
@@ -145,7 +166,9 @@ export default function SignalMessages() {
         setActiveConversationId(convo.id);
         setActiveTitle(title);
         setActiveOtherUserId(otherUser?.id || deepLinkIdRaw);
-        setIsBlocked(false); // new conversation, assume not blocked; server enforces block separately
+
+        setIsBlocked(false);
+        setConnectionGate(null);
 
         await fetchThreads();
         await fetchMessages(convo.id);
@@ -320,6 +343,7 @@ export default function SignalMessages() {
       setActiveOtherUserId(null);
       setMessages([]);
       setIsBlocked(false);
+      setConnectionGate(null);
 
       await fetchThreads();
     } catch (err) {
@@ -436,6 +460,16 @@ export default function SignalMessages() {
             Start a conversation from a profile, candidate card, or coaching
             listing. Once you send a message, the thread will appear here.
           </p>
+        )}
+
+        {/* 🔸 Connection-required banner for coach / recruiter */}
+        {connectionGate && (
+          <div className="mb-3 text-[11px] text-amber-900 bg-amber-50 border border-amber-200 rounded-md px-3 py-2">
+            <div className="font-semibold text-[12px] mb-1">
+              Private messaging locked
+            </div>
+            <p className="mb-0">{connectionGate.message}</p>
+          </div>
         )}
 
         {activeConversationId && isBlocked && (
