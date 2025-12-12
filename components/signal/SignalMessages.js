@@ -72,6 +72,7 @@ export default function SignalMessages() {
   useEffect(() => {
     if (!router.isReady) return;
 
+    // Support both new (toId) and old (told) query param names
     const deepLinkIdRaw = Array.isArray(toId || told)
       ? (toId || told)[0]
       : (toId || told);
@@ -87,7 +88,49 @@ export default function SignalMessages() {
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ toUserId: deepLinkIdRaw }),
         });
-        if (!res.ok) throw new Error(await res.text());
+
+        // ─────────────────────────────────────
+        //  DM gating: show friendly message
+        // ─────────────────────────────────────
+        if (!res.ok) {
+          if (res.status === 403) {
+            let payload = null;
+            try {
+              payload = await res.json();
+            } catch {
+              // ignore JSON parse errors, fall back to generic
+            }
+
+            const role = payload?.role;
+            const msg = payload?.message;
+
+            if (role === 'COACH') {
+              alert(
+                msg ||
+                  'To respect the privacy of coaches, please send a connection request or explore their mentorship offerings before messaging.'
+              );
+            } else if (role === 'RECRUITER') {
+              alert(
+                msg ||
+                  'To respect the privacy of recruiters, please send a connection request before opening a private conversation.'
+              );
+            } else {
+              alert(
+                msg ||
+                  'You need to be connected with this member before opening a private conversation.'
+              );
+            }
+
+            // Do not open conversation; just stop here.
+            return;
+          }
+
+          // Other errors (401, 500, etc.)
+          const text = await res.text();
+          console.error('signal start-or-get error payload:', text);
+          return;
+        }
+
         const data = await res.json();
 
         const convo = data.conversation;
@@ -102,13 +145,14 @@ export default function SignalMessages() {
         setActiveConversationId(convo.id);
         setActiveTitle(title);
         setActiveOtherUserId(otherUser?.id || deepLinkIdRaw);
-        setIsBlocked(false);
+        setIsBlocked(false); // new conversation, assume not blocked; server enforces block separately
 
         await fetchThreads();
         await fetchMessages(convo.id);
 
+        // 🧹 Clean up URL so users don't see internal IDs
         const cleanQuery = {};
-        if (chrome) cleanQuery.chrome = chrome;
+        if (chrome) cleanQuery.chrome = chrome; // keep workspace chrome only
 
         router.replace(
           { pathname: router.pathname, query: cleanQuery },

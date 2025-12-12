@@ -28,6 +28,61 @@ export default async function handler(req, res) {
     }
 
     // ─────────────────────────────────────────────────────────────
+    // 0. Load target user (for role + display)
+    // ─────────────────────────────────────────────────────────────
+    const target = await prisma.user.findUnique({
+      where: { id: toUserId },
+      select: {
+        id: true,
+        name: true,
+        firstName: true,
+        lastName: true,
+        avatarUrl: true,
+        headline: true,
+        role: true, // enum UserRole (e.g. SEEKER / COACH / RECRUITER / ADMIN)
+      },
+    });
+
+    if (!target) {
+      return res.status(404).json({ error: 'Member not found.' });
+    }
+
+    const targetRole = target.role;
+    const otherName =
+      target.name ||
+      [target.firstName, target.lastName].filter(Boolean).join(' ') ||
+      'Member';
+
+    // ─────────────────────────────────────────────────────────────
+    // 0.5 DM GATE: Coach / Recruiter require connection first
+    // ─────────────────────────────────────────────────────────────
+    const normalizedRole = typeof targetRole === 'string'
+      ? targetRole.toUpperCase()
+      : null;
+
+    if (normalizedRole === 'COACH' || normalizedRole === 'RECRUITER') {
+      const existingContact = await prisma.contact.findFirst({
+        where: {
+          OR: [
+            { userId, contactUserId: toUserId },
+            { userId: toUserId, contactUserId: userId },
+          ],
+        },
+      });
+
+      if (!existingContact) {
+        return res.status(403).json({
+          error: 'CONNECTION_REQUIRED',
+          role: normalizedRole,
+          message:
+            normalizedRole === 'COACH'
+              ? 'To respect the privacy of coaches, please send a connection request or explore their mentorship offerings before messaging.'
+              : 'To respect the privacy of recruiters, please send a connection request before opening a private conversation.',
+        });
+      }
+    }
+
+    // ─────────────────────────────────────────────────────────────
     // 1. Try to find an existing 1:1 conversation for these users
     // ─────────────────────────────────────────────────────────────
     let conversation = await prisma.conversation.findFirst({
@@ -57,35 +112,16 @@ export default async function handler(req, res) {
           isGroup: false,
           channel,
           participants: {
-            create: [
-              { userId },
-              { userId: toUserId },
-            ],
+            // keep same shape as your original (no roles to avoid schema mismatch)
+            create: [{ userId }, { userId: toUserId }],
           },
         },
       });
     }
 
     // ─────────────────────────────────────────────────────────────
-    // 3. Fetch the "other" user for display
+    // 3. Return same shape as your original (plus role on otherUser)
     // ─────────────────────────────────────────────────────────────
-    const otherUser = await prisma.user.findUnique({
-      where: { id: toUserId },
-      select: {
-        id: true,
-        name: true,
-        firstName: true,
-        lastName: true,
-        avatarUrl: true,
-        headline: true,
-      },
-    });
-
-    const otherName =
-      otherUser?.name ||
-      [otherUser?.firstName, otherUser?.lastName].filter(Boolean).join(' ') ||
-      'Member';
-
     return res.status(200).json({
       ok: true,
       conversation: {
@@ -95,17 +131,16 @@ export default async function handler(req, res) {
         channel: conversation.channel,
       },
       otherUser: {
-        id: otherUser?.id || toUserId,
+        id: target.id,
         name: otherName,
-        avatarUrl: otherUser?.avatarUrl || null,
-        headline: otherUser?.headline || '',
+        avatarUrl: target.avatarUrl || null,
+        headline: target.headline || '',
+        role: targetRole || null,
       },
     });
   } catch (err) {
     console.error('signal/start-or-get error:', err);
 
-    // TEMPORARY: surface detail so you can actually see the prisma/DB problem.
-    // Once this is stable, we can hide `detail` again.
     return res.status(500).json({
       error: 'Internal server error',
       detail: String(err),
