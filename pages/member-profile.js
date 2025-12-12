@@ -157,9 +157,7 @@ export default function MemberProfile({ user, primaryResume }) {
   const bannerBackgroundSize = bannerMode === 'fit' ? 'contain' : 'cover';
 
   // ─────────────────────────────────────────────────────────────
-  // Profile View Logging (Step 5)
-  // Logs that the current user viewed this profile.
-  // API will infer viewer from session; we just send targetId + source.
+  // Profile View Logging
   // ─────────────────────────────────────────────────────────────
   useEffect(() => {
     if (!id) return;
@@ -178,12 +176,64 @@ export default function MemberProfile({ user, primaryResume }) {
   }, [id]);
 
   // Actions
-  const handleMessage = () => {
-    const params = new URLSearchParams();
-    params.set('toId', id);
-    params.set('toName', fullName);
+  const handleMessage = async () => {
+    if (!id) return;
 
-    router.push(withChrome(`/seeker/messages?${params.toString()}`));
+    try {
+      const res = await fetch('/api/signal/start-or-get', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ toUserId: id }),
+      });
+
+      if (!res.ok) {
+        if (res.status === 403) {
+          let payload = null;
+          try {
+            payload = await res.json();
+          } catch {
+            // ignore parse error, fall back to generic text
+          }
+
+          const role = payload?.role;
+          const msg = payload?.message;
+
+          if (role === 'COACH') {
+            alert(
+              msg ||
+                'To respect the privacy of coaches, please send a connection request or explore their mentorship offerings before messaging.'
+            );
+          } else if (role === 'RECRUITER') {
+            alert(
+              msg ||
+                'To keep DMs respectful, please send a connection request first. Once you are connected, you can open a private conversation from The Signal.'
+            );
+          } else {
+            alert(
+              msg ||
+                'You need to be connected with this member before opening a private conversation.'
+            );
+          }
+
+          return;
+        }
+
+        const text = await res.text();
+        console.error('signal/start-or-get error (member-profile):', text);
+        alert('We could not open this conversation. Please try again.');
+        return;
+      }
+
+      // Allowed: route into The Signal with prefilled target
+      const params = new URLSearchParams();
+      params.set('toId', id);
+      params.set('toName', fullName);
+
+      router.push(withChrome(`/seeker/messages?${params.toString()}`));
+    } catch (err) {
+      console.error('messageUser error (member-profile):', err);
+      alert('We could not open this conversation. Please try again.');
+    }
   };
 
   const handleConnect = async () => {

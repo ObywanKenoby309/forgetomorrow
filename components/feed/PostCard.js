@@ -17,7 +17,11 @@ export default function PostCard({
   const [reply, setReply] = useState('');
   const [reported, setReported] = useState(false);
   const [reportMessage, setReportMessage] = useState('');
-  const [showProfileMenu, setShowProfileMenu] = useState(false);
+  const [profileMenu, setProfileMenu] = useState({
+    open: false,
+    userId: null,
+    name: 'Member',
+  });
 
   const chrome = String(router.query.chrome || '').toLowerCase();
   const withChrome = (path) =>
@@ -103,6 +107,21 @@ export default function PostCard({
     [post.authorFirstName, post.authorLastName].filter(Boolean).join(' ') ||
     'Member';
 
+  const openProfileMenu = (userId, name) => {
+    if (!userId) return;
+    setProfileMenu((prev) => {
+      const isSame = prev.open && prev.userId === userId;
+      return {
+        open: !isSame,
+        userId,
+        name: name || 'Member',
+      };
+    });
+  };
+
+  const closeProfileMenu = () =>
+    setProfileMenu({ open: false, userId: null, name: 'Member' });
+
   return (
     <article
       id={`post-${post.id}`}
@@ -112,7 +131,7 @@ export default function PostCard({
       <header className="mb-2 flex items-center gap-3">
         <button
           type="button"
-          onClick={() => setShowProfileMenu((v) => !v)}
+          onClick={() => openProfileMenu(authorId, authorName)}
           className="flex items-center gap-3 text-left"
         >
           {post.authorAvatar ? (
@@ -136,17 +155,17 @@ export default function PostCard({
           </div>
         </button>
 
-        {/* inline profile actions menu */}
-        {showProfileMenu && authorId && (
+        {/* inline profile actions menu (reused for post author + comment authors) */}
+        {profileMenu.open && profileMenu.userId && (
           <div className="absolute top-12 left-4 z-20 bg-white border rounded-lg shadow-lg text-sm w-52">
             <div className="px-3 py-2 border-b font-semibold">
-              {authorName}
+              {profileMenu.name}
             </div>
             <MemberActions
-              targetUserId={authorId}
-              targetName={authorName}
+              targetUserId={profileMenu.userId}
+              targetName={profileMenu.name}
               layout="menu"
-              onClose={() => setShowProfileMenu(false)}
+              onClose={closeProfileMenu}
             />
           </div>
         )}
@@ -226,24 +245,45 @@ export default function PostCard({
       {/* comments preview */}
       {hasComments && (
         <div className="space-y-2 mb-2">
-          {(post.comments || []).slice(0, previewCount).map((c, i) => (
-            <div key={i} className="text-sm flex items-start gap-2">
-              {c.avatarUrl ? (
-                <img
-                  src={c.avatarUrl}
-                  alt={c.by || 'User'}
-                  className="w-6 h-6 rounded-full object-cover bg-gray-200 mt-0.5 flex-shrink-0"
-                />
-              ) : (
-                <div className="w-6 h-6 rounded-full bg-gray-200 flex items-center justify-center text-[10px] text-gray-500 mt-0.5 flex-shrink-0">
-                  {c.by?.charAt(0)?.toUpperCase() || '?'}
+          {(post.comments || []).slice(0, previewCount).map((c, i) => {
+            const commentUserId =
+              c.userId || c.byUserId || c.authorId || null;
+            const commentName = c.by || 'Member';
+
+            const openCommentMenu = () =>
+              commentUserId && openProfileMenu(commentUserId, commentName);
+
+            return (
+              <div key={i} className="text-sm flex items-start gap-2">
+                <button
+                  type="button"
+                  onClick={openCommentMenu}
+                  className="mt-0.5 flex-shrink-0"
+                >
+                  {c.avatarUrl ? (
+                    <img
+                      src={c.avatarUrl}
+                      alt={commentName}
+                      className="w-6 h-6 rounded-full object-cover bg-gray-200"
+                    />
+                  ) : (
+                    <div className="w-6 h-6 rounded-full bg-gray-200 flex items-center justify-center text-[10px] text-gray-500">
+                      {commentName?.charAt(0)?.toUpperCase() || '?'}
+                    </div>
+                  )}
+                </button>
+                <div>
+                  <span
+                    className="font-medium cursor-pointer"
+                    onClick={openCommentMenu}
+                  >
+                    {commentName}:
+                  </span>{' '}
+                  {c.text}
                 </div>
-              )}
-              <div>
-                <span className="font-medium">{c.by}:</span> {c.text}
               </div>
-            </div>
-          ))}
+            );
+          })}
         </div>
       )}
 

@@ -194,6 +194,8 @@ export default function Feed() {
 
     // Update UI immediately
     const newComment = {
+      userId: currentUserId || null,     // 🔹 so MemberActions can target
+      byUserId: currentUserId || null,   // 🔹 in case older comments use this field
       by: currentUserName || 'You',
       text: trimmed,
       avatarUrl: currentUserAvatar || null,
