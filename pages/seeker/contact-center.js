@@ -93,7 +93,7 @@ export default function SeekerContactCenter() {
     [contacts, incomingRequests, outgoingRequests]
   );
 
-  // --- Helpers to get the "user" off different shapes ---
+  // --- Helpers to get the "user" from different shapes ---
   const getPersonFromItem = (item) => {
     if (!item) return null;
 
@@ -169,7 +169,7 @@ export default function SeekerContactCenter() {
       const res = await fetch('/api/contacts/respond', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ requestId, action: 'cancel' }), // <-- changed from 'decline'
+        body: JSON.stringify({ requestId, action: 'cancel' }),
       });
       if (!res.ok) {
         console.error('contacts/respond cancel failed', await res.text());
@@ -201,7 +201,7 @@ export default function SeekerContactCenter() {
         borderRadius: 12,
         padding: 16,
         boxShadow: '0 2px 6px rgba(0,0,0,0.06)',
-        border: '1px solid #eee',
+        border: '1px solid '#eee',
         textAlign: 'center',
       }}
     >
@@ -348,7 +348,7 @@ export default function SeekerContactCenter() {
           <h2 style={{ color: '#FF7043', margin: 0 }}>Contacts</h2>
           <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
             <span
-              style({
+              style={{
                 fontSize: 12,
                 fontWeight: 800,
                 padding: '2px 8px',
