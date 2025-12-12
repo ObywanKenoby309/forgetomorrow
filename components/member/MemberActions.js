@@ -14,13 +14,17 @@ export default function MemberActions({
   const withChrome = (path) =>
     chrome ? `${path}${path.includes('?') ? '&' : '?'}chrome=${chrome}` : path;
 
-  const [status, setStatus] = useState('loading'); 
+  const [status, setStatus] = useState('loading');
   // loading | none | outgoing | incoming | connected
 
   const [requestId, setRequestId] = useState(null);
-  const isSelf = false; // backend already blocks self-connect
 
-  // 🔹 Fetch relationship status
+  // NOTE:
+  // We intentionally do not try to infer "self" here.
+  // Backend already blocks self-connect and self-message.
+  const isSelf = false;
+
+  // ── Load relationship status ────────────────────────────
   useEffect(() => {
     if (!targetUserId) return;
 
@@ -52,7 +56,7 @@ export default function MemberActions({
   };
 
   const messageUser = () => {
-    if (!targetUserId) return;
+    if (!targetUserId || isSelf) return;
     onClose?.();
 
     const params = new URLSearchParams();
@@ -141,7 +145,8 @@ export default function MemberActions({
     <>
       <Button onClick={viewProfile}>View profile</Button>
 
-      {status === 'connected' && (
+      {/* ✅ Message is now always available for non-self users */}
+      {!isSelf && (
         <Button onClick={messageUser}>Message</Button>
       )}
 
