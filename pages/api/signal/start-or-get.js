@@ -56,9 +56,8 @@ export default async function handler(req, res) {
     // ─────────────────────────────────────────────────────────────
     // 0.5 DM GATE: Coach / Recruiter require connection first
     // ─────────────────────────────────────────────────────────────
-    const normalizedRole = typeof targetRole === 'string'
-      ? targetRole.toUpperCase()
-      : null;
+    const normalizedRole =
+      typeof targetRole === 'string' ? targetRole.toUpperCase() : null;
 
     if (normalizedRole === 'COACH' || normalizedRole === 'RECRUITER') {
       const existingContact = await prisma.contact.findFirst({
@@ -71,13 +70,16 @@ export default async function handler(req, res) {
       });
 
       if (!existingContact) {
-        return res.status(403).json({
-          error: 'CONNECTION_REQUIRED',
+        const isCoach = normalizedRole === 'COACH';
+
+        return res.status(200).json({
+          ok: false,
+          blocked: true,
+          blockReason: 'ROLE_GATE',
           role: normalizedRole,
-          message:
-            normalizedRole === 'COACH'
-              ? 'To respect the privacy of coaches, please send a connection request or explore their mentorship offerings before messaging.'
-              : 'To respect the privacy of recruiters, please send a connection request before opening a private conversation.',
+          message: isCoach
+            ? 'To respect the privacy of coaches, please send a connection request or engage through their mentorship programs before opening a private conversation.'
+            : 'To respect the privacy of recruiters, please send a connection request before opening a private conversation.',
         });
       }
     }
