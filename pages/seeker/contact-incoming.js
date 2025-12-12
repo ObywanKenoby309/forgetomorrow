@@ -7,7 +7,6 @@ import SeekerLayout from '@/components/layouts/SeekerLayout';
 import SeekerRightColumn from '@/components/seeker/SeekerRightColumn';
 
 import IncomingRequestsList from '@/components/IncomingRequestsList';
-import OutgoingRequestsList from '@/components/OutgoingRequestsList';
 
 export default function SeekerIncomingInvitesPage() {
   const router = useRouter();
@@ -116,28 +115,6 @@ export default function SeekerIncomingInvitesPage() {
     } catch (err) {
       console.error('contacts/respond decline error', err);
       alert('We could not decline this invitation. Please try again.');
-    }
-  };
-
-  const handleCancel = async (item) => {
-    const requestId = item.requestId || item.id;
-    if (!requestId) return;
-
-    try {
-      const res = await fetch('/api/contacts/respond', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ requestId, action: 'cancel' }),
-      });
-      if (!res.ok) {
-        console.error('contacts/respond cancel failed', await res.text());
-        alert('We could not cancel this request. Please try again.');
-        return;
-      }
-      await reloadSummary();
-    } catch (err) {
-      console.error('contacts/respond cancel error', err);
-      alert('We could not cancel this request. Please try again.');
     }
   };
 
@@ -274,38 +251,10 @@ export default function SeekerIncomingInvitesPage() {
         />
         <div style={{ marginTop: 12, fontSize: 14 }}>
           <Link
-            href={withChrome('/seeker/contact-center')}
+            href={withChrome('/seeker/contacts')}
             style={{ color: '#FF7043', fontWeight: 700 }}
           >
             Go to Contacts →
-          </Link>
-        </div>
-      </section>
-
-      {/* Optional: small panel for outgoing preview */}
-      <section
-        style={{
-          background: 'white',
-          borderRadius: 12,
-          padding: 16,
-          border: '1px solid #eee',
-          boxShadow: '0 2px 6px rgba(0,0,0,0.06)',
-        }}
-      >
-        <h3 style={{ color: '#FF7043', marginTop: 0, marginBottom: 8 }}>
-          Your Pending Requests
-        </h3>
-        <OutgoingRequestsList
-          items={outgoingRequests.slice(0, 3)}
-          onCancel={handleCancel}
-          onViewProfile={handleViewProfile}
-        />
-        <div style={{ marginTop: 8, fontSize: 14 }}>
-          <Link
-            href={withChrome('/seeker/contact-outgoing')}
-            style={{ color: '#FF7043', fontWeight: 700 }}
-          >
-            View all outgoing →
           </Link>
         </div>
       </section>
