@@ -2,6 +2,8 @@
 import { useState } from 'react';
 import { useRouter } from 'next/router';
 import QuickEmojiBar from './QuickEmojiBar';
+import { useConnect } from '../actions/useConnect';
+import { useProfileViewLogger } from '../actions/useProfileViewLogger';
 
 export default function PostCard({
   post,
@@ -17,6 +19,9 @@ export default function PostCard({
   const [reported, setReported] = useState(false);
   const [reportMessage, setReportMessage] = useState('');
   const [showProfileMenu, setShowProfileMenu] = useState(false);
+
+  const { connectWith } = useConnect();
+  const { logView } = useProfileViewLogger();
 
   const chrome = String(router.query.chrome || '').toLowerCase();
   const withChrome = (path) =>
@@ -102,12 +107,17 @@ export default function PostCard({
     [post.authorFirstName, post.authorLastName].filter(Boolean).join(' ') ||
     'Member';
 
-  const goToProfile = () => {
+  const goToProfile = async () => {
     if (!authorId) return;
+
     const params = new URLSearchParams();
     params.set('userId', authorId);
 
     setShowProfileMenu(false);
+
+    // Log view (fire-and-forget semantics; we await here just to keep ordering)
+    await logView(authorId, 'feed-post');
+
     router.push(withChrome(`/member-profile?${params.toString()}`));
   };
 
@@ -120,20 +130,34 @@ export default function PostCard({
 
     setShowProfileMenu(false);
     // ✅ Canonical DM inbox = The Signal at /seeker/messages
-    // This will deep-link into SignalMessages and open the thread with this member.
     router.push(withChrome(`/seeker/messages?${params.toString()}`));
   };
 
-  const goToConnect = () => {
+  const goToConnect = async () => {
     if (!authorId) return;
 
-    const params = new URLSearchParams();
-    params.set('toId', authorId);
-    if (authorName) params.set('toName', authorName);
+    const result = await connectWith(authorId);
 
     setShowProfileMenu(false);
-    // For now: still routes to Contact Center.
-    // The “primary” Connect UX is on Member Profile where we hit /api/contacts/request.
+
+    if (!result.ok) {
+      if (result.errorMessage) {
+        alert(result.errorMessage);
+      }
+      return;
+    }
+
+    // Optional UX: tiny feedback for already-connected/requested
+    if (result.alreadyConnected) {
+      // You’re already contacts – we could later deep-link to messaging.
+      // For now, just fall through to Contact Center.
+    } else if (result.alreadyRequested) {
+      // Request is already pending; again, we simply route to outgoing for clarity.
+    }
+
+    // Route to Contact Center (Outgoing view) so they can see their pending request
+    const params = new URLSearchParams();
+    params.set('view', 'outgoing');
     router.push(withChrome(`/seeker/contact-center?${params.toString()}`));
   };
 
