@@ -22,10 +22,6 @@ export default function SignalMessages() {
   // 🔹 Local block state for the active conversation
   const [isBlocked, setIsBlocked] = useState(false);
 
-  // 🔹 Coach/Recruiter DM gate banner
-  // { role: 'COACH' | 'RECRUITER' | null, message: string, name?: string }
-  const [connectionGate, setConnectionGate] = useState(null);
-
   const fetchThreads = useCallback(async () => {
     setThreadsLoading(true);
     try {
@@ -63,11 +59,7 @@ export default function SignalMessages() {
     setActiveConversationId(thread.id);
     setActiveTitle(thread.title || 'Conversation');
     setActiveOtherUserId(thread.otherUserId || null);
-
-    // Opening a valid thread clears any prior gate/block state
     setIsBlocked(false);
-    setConnectionGate(null);
-
     await fetchMessages(thread.id);
   };
 
@@ -76,123 +68,44 @@ export default function SignalMessages() {
     fetchThreads();
   }, [fetchThreads]);
 
-  // Deep link handler: start or get a conversation for ?toId / ?told
+  // 🔹 Deep-link handler:
+  // Use ?toId / ?told purely to select a thread AFTER threads are loaded.
   useEffect(() => {
     if (!router.isReady) return;
 
-    // Support both new (toId) and old (told) query param names
     const deepLinkIdRaw = Array.isArray(toId || told)
       ? (toId || told)[0]
       : (toId || told);
 
-    const deepLinkNameRaw = Array.isArray(toName) ? toName[0] : toName;
-
     if (!deepLinkIdRaw) return;
+    if (threadsLoading) return;
 
-    async function start() {
-      try {
-        const res = await fetch('/api/signal/start-or-get', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ toUserId: deepLinkIdRaw }),
-        });
+    // Find a thread where otherUserId matches the deep-link target
+    const match = threads.find(
+      (t) =>
+        t.otherUserId &&
+        String(t.otherUserId) === String(deepLinkIdRaw)
+    );
 
-        // ─────────────────────────────────────
-        //  DM gating: show friendly banner
-        // ─────────────────────────────────────
-        if (!res.ok) {
-          let payload = null;
-          try {
-            payload = await res.json();
-          } catch {
-            // ignore JSON parse errors
-          }
-
-          if (res.status === 403) {
-            const role =
-              (payload?.role || payload?.Role || '').toString().toUpperCase() ||
-              null;
-            const explicitError = payload?.error;
-
-            if (explicitError === 'CONNECTION_REQUIRED' || role) {
-              const fallbackMessage =
-                role === 'COACH'
-                  ? 'To respect the privacy of coaches, please send a connection request or explore their mentorship offerings before messaging.'
-                  : role === 'RECRUITER'
-                  ? 'To respect the privacy of recruiters, please send a connection request before opening a private conversation.'
-                  : 'You need to be connected with this member before opening a private conversation.';
-
-              setActiveConversationId(null);
-              setActiveTitle('');
-              setActiveOtherUserId(deepLinkIdRaw);
-              setIsBlocked(false);
-
-              setConnectionGate({
-                role,
-                message: payload?.message || fallbackMessage,
-                name: deepLinkNameRaw || 'this member',
-              });
-
-              // Clean URL so the blocked deep link doesn’t hang around
-              const cleanQuery = {};
-              if (chrome) cleanQuery.chrome = chrome;
-
-              router.replace(
-                { pathname: router.pathname, query: cleanQuery },
-                undefined,
-                { shallow: true }
-              );
-              return;
-            }
-          }
-
-          // Other errors (401, 500, etc.)
-          const text = payload || (await res.text());
-          console.error('signal start-or-get error payload:', text);
-          return;
-        }
-
-        const data = await res.json();
-
-        const convo = data.conversation;
-        const otherUser = data.otherUser;
-
-        const title =
-          otherUser?.name ||
-          deepLinkNameRaw ||
-          convo?.title ||
-          'Conversation';
-
-        setActiveConversationId(convo.id);
-        setActiveTitle(title);
-        setActiveOtherUserId(otherUser?.id || deepLinkIdRaw);
-
-        setIsBlocked(false);
-        setConnectionGate(null);
-
-        await fetchThreads();
-        await fetchMessages(convo.id);
-
-        // 🧹 Clean up URL so users don't see internal IDs
-        const cleanQuery = {};
-        if (chrome) cleanQuery.chrome = chrome; // keep workspace chrome only
-
-        router.replace(
-          { pathname: router.pathname, query: cleanQuery },
-          undefined,
-          { shallow: true }
-        );
-      } catch (err) {
-        console.error('signal start-or-get error:', err);
-      }
+    if (match) {
+      openConversation(match);
     }
 
-    start();
-  }, [router.isReady, toId, told, toName, chrome, fetchThreads, fetchMessages, router]);
+    // Clean the URL (keep chrome only)
+    const cleanQuery = {};
+    if (chrome) cleanQuery.chrome = chrome;
+
+    router.replace(
+      { pathname: router.pathname, query: cleanQuery },
+      undefined,
+      { shallow: true }
+    );
+  }, [router.isReady, toId, told, chrome, threads, threadsLoading, fetchMessages]); // openConversation uses fetchMessages
 
   const handleSend = async (e) => {
     e?.preventDefault?.();
-    if (!activeConversationId || !composer.trim() || sending || isBlocked) return;
+    if (!activeConversationId || !composer.trim() || sending || isBlocked)
+      return;
 
     setSending(true);
     try {
@@ -343,7 +256,6 @@ export default function SignalMessages() {
       setActiveOtherUserId(null);
       setMessages([]);
       setIsBlocked(false);
-      setConnectionGate(null);
 
       await fetchThreads();
     } catch (err) {
@@ -460,16 +372,6 @@ export default function SignalMessages() {
             Start a conversation from a profile, candidate card, or coaching
             listing. Once you send a message, the thread will appear here.
           </p>
-        )}
-
-        {/* 🔸 Connection-required banner for coach / recruiter */}
-        {connectionGate && (
-          <div className="mb-3 text-[11px] text-amber-900 bg-amber-50 border border-amber-200 rounded-md px-3 py-2">
-            <div className="font-semibold text-[12px] mb-1">
-              Private messaging locked
-            </div>
-            <p className="mb-0">{connectionGate.message}</p>
-          </div>
         )}
 
         {activeConversationId && isBlocked && (
