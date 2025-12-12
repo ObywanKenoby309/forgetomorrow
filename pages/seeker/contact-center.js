@@ -269,40 +269,48 @@ export default function SeekerContactCenter() {
     </div>
   );
 
-  // --- Toolbar row (future-proof: real pages, not anchors) ---
-  const TabButton = ({ href, label, badge, active = false }) => (
-    <Link
-      href={withChrome(href)}
-      style={{
-        display: 'inline-flex',
-        alignItems: 'center',
-        gap: 8,
-        padding: '8px 12px',
-        borderRadius: 10,
-        border: '1px solid #eee',
-        background: active ? '#FFF3E9' : 'white',
-        color: active ? '#D84315' : '#374151',
-        fontWeight: 700,
-        textDecoration: 'none',
-      }}
-    >
-      <span>{label}</span>
-      {typeof badge === 'number' && (
-        <span
-          style={{
-            background: '#ECEFF1',
-            color: '#374151',
-            borderRadius: 999,
-            padding: '2px 8px',
-            fontSize: 12,
-            fontWeight: 800,
-          }}
-        >
-          {badge}
-        </span>
-      )}
-    </Link>
-  );
+  // --- Toolbar row (priority-aware highlighting) ---
+  const TabButton = ({ href, label, badge, highlight = false }) => {
+    const hasBadge = typeof badge === 'number' && badge > 0;
+
+    const bg = highlight && hasBadge ? '#FFF3E9' : 'white';
+    const border = highlight && hasBadge ? '#FFCCBC' : '#eee';
+    const color = highlight && hasBadge ? '#D84315' : '#374151';
+
+    return (
+      <Link
+        href={withChrome(href)}
+        style={{
+          display: 'inline-flex',
+          alignItems: 'center',
+          gap: 8,
+          padding: '8px 12px',
+          borderRadius: 10,
+          border: `1px solid ${border}`,
+          background: bg,
+          color,
+          fontWeight: 700,
+          textDecoration: 'none',
+        }}
+      >
+        <span>{label}</span>
+        {typeof badge === 'number' && (
+          <span
+            style={{
+              background: hasBadge ? '#FFE0B2' : '#ECEFF1',
+              color: '#374151',
+              borderRadius: 999,
+              padding: '2px 8px',
+              fontSize: 12,
+              fontWeight: 800,
+            }}
+          >
+            {badge}
+          </span>
+        )}
+      </Link>
+    );
+  };
 
   // Contacts preview + toggler
   const [showContacts, setShowContacts] = useState(true);
@@ -329,6 +337,17 @@ export default function SeekerContactCenter() {
   const nothingNeedingAttention =
     incomingRequests.length === 0 && outgoingRequests.length === 0;
 
+  // subtle accent when something actually needs attention
+  const attentionCardStyle = {
+    background: 'white',
+    borderRadius: 12,
+    padding: 16,
+    border: `1px solid ${nothingNeedingAttention ? '#eee' : '#FFCCBC'}`,
+    boxShadow: nothingNeedingAttention
+      ? '0 2px 6px rgba(0,0,0,0.06)'
+      : '0 0 0 1px #FFE0B2 inset, 0 2px 6px rgba(0,0,0,0.06)',
+  };
+
   return (
     <SeekerLayout
       title="Contact Center | ForgeTomorrow"
@@ -347,40 +366,37 @@ export default function SeekerContactCenter() {
         }}
       >
         <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
+          {/* Contacts = neutral (reference), no urgency coloring */}
           <TabButton
             href="/seeker/contact-center"
             label="Contacts"
             badge={counts.contacts}
-            active
+            highlight={false}
           />
+          {/* Invites / Requests / Profile Views highlight only when they have counts */}
           <TabButton
             href="/seeker/contact-incoming"
             label="Invites"
             badge={counts.invitesIn}
+            highlight={counts.invitesIn > 0}
           />
           <TabButton
             href="/seeker/contact-outgoing"
             label="Requests"
             badge={counts.invitesOut}
+            highlight={counts.invitesOut > 0}
           />
           <TabButton
             href="/seeker/profile-views"
             label="Profile Views"
             badge={counts.profileViews}
+            highlight={counts.profileViews > 0}
           />
         </div>
       </section>
 
       {/* Needs Your Attention */}
-      <section
-        style={{
-          background: 'white',
-          borderRadius: 12,
-          padding: 16,
-          border: '1px solid #eee',
-          boxShadow: '0 2px 6px rgba(0,0,0,0.06)',
-        }}
-      >
+      <section style={attentionCardStyle}>
         <h2
           style={{
             color: '#FF7043',
@@ -522,7 +538,6 @@ export default function SeekerContactCenter() {
               <ContactsList
                 contacts={topContacts}
                 onViewProfile={handleViewProfile}
-                // onDisconnect is wired server-side; UI can adopt it later
                 onDisconnect={handleDisconnect}
                 loading={loading}
               />
