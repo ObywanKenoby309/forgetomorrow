@@ -1,16 +1,17 @@
 // components/member/MemberActions.js
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/router';
+import { useProfileViewLogger } from '../actions/useProfileViewLogger';
 
 export default function MemberActions({
   targetUserId,
   targetName = 'Member',
-  targetRole = null, // NEW: COACH | RECRUITER | etc.
   layout = 'menu', // menu | inline (future)
   onClose,
 }) {
   const router = useRouter();
   const chrome = String(router.query.chrome || '').toLowerCase();
+  const { logView } = useProfileViewLogger();
 
   const withChrome = (path) =>
     chrome ? `${path}${path.includes('?') ? '&' : '?'}chrome=${chrome}` : path;
@@ -20,14 +21,10 @@ export default function MemberActions({
 
   const [requestId, setRequestId] = useState(null);
 
-  // We intentionally do not infer "self" here.
+  // NOTE:
+  // We intentionally do not try to infer "self" here.
   // Backend already blocks self-connect and self-message.
   const isSelf = false;
-
-  const normalizedRole =
-    typeof targetRole === 'string' ? targetRole.toUpperCase() : null;
-  const isCoach = normalizedRole === 'COACH';
-  const isRecruiter = normalizedRole === 'RECRUITER';
 
   // ── Load relationship status ────────────────────────────
   useEffect(() => {
@@ -54,46 +51,80 @@ export default function MemberActions({
 
   const viewProfile = async () => {
     if (!targetUserId) return;
+    // log profile view for analytics
+    try {
+      await logView(targetUserId, 'member-actions');
+    } catch (err) {
+      console.error('logView error in MemberActions:', err);
+    }
+
     onClose?.();
     router.push(withChrome(`/member-profile?userId=${targetUserId}`));
   };
 
-  const messageUser = () => {
+  const messageUser = async () => {
     if (!targetUserId || isSelf) return;
 
-    // Front-end DM gate for coaches / recruiters when NOT connected
-    if ((isCoach || isRecruiter) && status !== 'connected') {
-      const baseName = targetName || 'this member';
+    // Front-end gate with same logic as /api/signal/start-or-get
+    try {
+      const res = await fetch('/api/signal/start-or-get', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ toUserId: targetUserId }),
+      });
 
-      if (isCoach) {
-        window.alert(
-          `To respect the privacy of coaches, please send a connection request ` +
-            `or explore ${baseName}'s mentorship offerings before messaging.\n\n` +
-            `You can find coaches under Mentorship Programs.`
-        );
-      } else if (isRecruiter) {
-        window.alert(
-          `To respect the privacy of recruiters, please send a connection ` +
-            `request before opening a private conversation with ${baseName}.`
-        );
-      } else {
-        window.alert(
-          `You need to be connected with ${baseName} before opening a private conversation.`
-        );
+      if (!res.ok) {
+        if (res.status === 403) {
+          let payload = null;
+          try {
+            payload = await res.json();
+          } catch {
+            // ignore parse issues; use generic text
+          }
+
+          const role = payload?.role;
+          const msg = payload?.message;
+
+          if (role === 'COACH') {
+            alert(
+              msg ||
+                'To respect the privacy of coaches, please send a connection request or explore their mentorship offerings before messaging.'
+            );
+          } else if (role === 'RECRUITER') {
+            alert(
+              msg ||
+                'To respect the privacy of recruiters, please send a connection request before opening a private conversation.'
+            );
+          } else {
+            alert(
+              msg ||
+                'You need to be connected with this member before opening a private conversation.'
+            );
+          }
+
+          onClose?.();
+          return;
+        }
+
+        const text = await res.text();
+        console.error('signal/start-or-get error (MemberActions):', text);
+        alert('We could not open this conversation. Please try again.');
+        onClose?.();
+        return;
       }
 
+      // Allowed: we can safely route into The Signal.
+      const params = new URLSearchParams();
+      params.set('toId', targetUserId);
+      if (targetName) params.set('toName', targetName);
+
       onClose?.();
-      return;
+      router.push(withChrome(`/seeker/messages?${params.toString()}`));
+    } catch (err) {
+      console.error('messageUser error (MemberActions):', err);
+      alert('We could not open this conversation. Please try again.');
+      onClose?.();
     }
-
-    // Normal DM path
-    onClose?.();
-
-    const params = new URLSearchParams();
-    params.set('toId', targetUserId);
-    params.set('toName', targetName);
-
-    router.push(withChrome(`/seeker/messages?${params.toString()}`));
   };
 
   const sendConnect = async () => {
@@ -111,6 +142,8 @@ export default function MemberActions({
       const data = await res.json();
       setStatus('outgoing');
       setRequestId(data.requestId || null);
+
+      alert('Connection request sent.');
     } catch (err) {
       console.error('connect error:', err);
       alert('We could not send your connection request. Please try again.');
@@ -173,7 +206,7 @@ export default function MemberActions({
     <>
       <Button onClick={viewProfile}>View profile</Button>
 
-      {/* Message always visible; DM rules enforced in messageUser + backend */}
+      {/* Message is always visible, but gated by backend + advisory */}
       {!isSelf && <Button onClick={messageUser}>Message</Button>}
 
       {status === 'none' && <Button onClick={sendConnect}>Connect</Button>}
