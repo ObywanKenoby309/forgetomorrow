@@ -2,8 +2,7 @@
 import { useState } from 'react';
 import { useRouter } from 'next/router';
 import QuickEmojiBar from './QuickEmojiBar';
-import { useConnect } from '../actions/useConnect';
-import { useProfileViewLogger } from '../actions/useProfileViewLogger';
+import MemberActions from '../member/MemberActions';
 
 export default function PostCard({
   post,
@@ -19,9 +18,6 @@ export default function PostCard({
   const [reported, setReported] = useState(false);
   const [reportMessage, setReportMessage] = useState('');
   const [showProfileMenu, setShowProfileMenu] = useState(false);
-
-  const { connectWith } = useConnect();
-  const { logView } = useProfileViewLogger();
 
   const chrome = String(router.query.chrome || '').toLowerCase();
   const withChrome = (path) =>
@@ -107,60 +103,6 @@ export default function PostCard({
     [post.authorFirstName, post.authorLastName].filter(Boolean).join(' ') ||
     'Member';
 
-  const goToProfile = async () => {
-    if (!authorId) return;
-
-    const params = new URLSearchParams();
-    params.set('userId', authorId);
-
-    setShowProfileMenu(false);
-
-    // Log view (fire-and-forget semantics; we await here just to keep ordering)
-    await logView(authorId, 'feed-post');
-
-    router.push(withChrome(`/member-profile?${params.toString()}`));
-  };
-
-  const goToMessages = () => {
-    if (!authorId) return;
-
-    const params = new URLSearchParams();
-    params.set('toId', authorId);
-    if (authorName) params.set('toName', authorName);
-
-    setShowProfileMenu(false);
-    // ✅ Canonical DM inbox = The Signal at /seeker/messages
-    router.push(withChrome(`/seeker/messages?${params.toString()}`));
-  };
-
-  const goToConnect = async () => {
-    if (!authorId) return;
-
-    const result = await connectWith(authorId);
-
-    setShowProfileMenu(false);
-
-    if (!result.ok) {
-      if (result.errorMessage) {
-        alert(result.errorMessage);
-      }
-      return;
-    }
-
-    // Optional UX: tiny feedback for already-connected/requested
-    if (result.alreadyConnected) {
-      // You’re already contacts – we could later deep-link to messaging.
-      // For now, just fall through to Contact Center.
-    } else if (result.alreadyRequested) {
-      // Request is already pending; again, we simply route to outgoing for clarity.
-    }
-
-    // Route to Contact Center (Outgoing view) so they can see their pending request
-    const params = new URLSearchParams();
-    params.set('view', 'outgoing');
-    router.push(withChrome(`/seeker/contact-center?${params.toString()}`));
-  };
-
   return (
     <article
       id={`post-${post.id}`}
@@ -200,30 +142,22 @@ export default function PostCard({
             <div className="px-3 py-2 border-b font-semibold">
               {authorName}
             </div>
-            <button
-              type="button"
-              className="w-full text-left px-3 py-2 hover:bg-gray-50"
-              onClick={goToProfile}
-            >
-              View profile
-            </button>
+
+            {/* Centralized View / Message / Connect logic */}
             {!isOwner && (
-              <>
-                <button
-                  type="button"
-                  className="w-full text-left px-3 py-2 hover:bg-gray-50"
-                  onClick={goToMessages}
-                >
-                  Message
-                </button>
-                <button
-                  type="button"
-                  className="w-full text-left px-3 py-2 hover:bg-gray-50"
-                  onClick={goToConnect}
-                >
-                  Connect
-                </button>
-              </>
+              <MemberActions
+                targetUserId={authorId}
+                targetName={authorName}
+                chrome={chrome}
+                onClose={() => setShowProfileMenu(false)}
+              />
+            )}
+
+            {/* Owner just sees a basic label — no self-connect */}
+            {isOwner && (
+              <div className="px-3 py-2 text-xs text-gray-500">
+                This is your post.
+              </div>
             )}
           </div>
         )}
