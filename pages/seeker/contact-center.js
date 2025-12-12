@@ -160,7 +160,7 @@ export default function SeekerContactCenter() {
     }
   };
 
-  // For outgoing, use explicit "cancel" so it matches /api/contacts/respond
+  // Outgoing cancel
   const handleCancel = async (item) => {
     const requestId = item.requestId || item.id;
     if (!requestId) return;
@@ -180,6 +180,36 @@ export default function SeekerContactCenter() {
     } catch (err) {
       console.error('contacts/respond cancel error', err);
       alert('We could not cancel this request. Please try again.');
+    }
+  };
+
+  // 🔹 Disconnect a contact entirely
+  const handleDisconnect = async (item) => {
+    const person = getPersonFromItem(item);
+    if (!person?.id) return;
+
+    const confirmed = window.confirm(
+      `Are you sure you want to disconnect from ${person.name || 'this member'}?`
+    );
+    if (!confirmed) return;
+
+    try {
+      const res = await fetch('/api/contacts/remove', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ contactUserId: person.id }),
+      });
+
+      if (!res.ok) {
+        console.error('contacts/remove failed', await res.text());
+        alert('We could not disconnect this contact. Please try again.');
+        return;
+      }
+
+      await reloadSummary();
+    } catch (err) {
+      console.error('contacts/remove error', err);
+      alert('We could not disconnect this contact. Please try again.');
     }
   };
 
@@ -315,12 +345,12 @@ export default function SeekerContactCenter() {
           />
           <TabButton href="/seeker/messages" label="The Signal" />
           <TabButton
-            href="/seeker/contact-incoming"
+            href="/seeker/contact-center#invites"
             label="Invites (Incoming)"
             badge={counts.invitesIn}
           />
           <TabButton
-            href="/seeker/contact-outgoing"
+            href="/seeker/contact-center#requests"
             label="Requests (Outgoing)"
             badge={counts.invitesOut}
           />
@@ -383,6 +413,7 @@ export default function SeekerContactCenter() {
             <ContactsList
               contacts={topContacts}
               onViewProfile={handleViewProfile}
+              onDisconnect={handleDisconnect}
               loading={loading}
             />
             <div style={{ marginTop: 8 }}>

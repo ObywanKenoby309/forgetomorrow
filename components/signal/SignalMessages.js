@@ -59,10 +59,7 @@ export default function SignalMessages() {
     setActiveConversationId(thread.id);
     setActiveTitle(thread.title || 'Conversation');
     setActiveOtherUserId(thread.otherUserId || null);
-
-    // Reset any prior "blocked" banner when switching threads
     setIsBlocked(false);
-
     await fetchMessages(thread.id);
   };
 
@@ -75,7 +72,6 @@ export default function SignalMessages() {
   useEffect(() => {
     if (!router.isReady) return;
 
-    // Support both new (toId) and old (told) query param names
     const deepLinkIdRaw = Array.isArray(toId || told)
       ? (toId || told)[0]
       : (toId || told);
@@ -106,14 +102,13 @@ export default function SignalMessages() {
         setActiveConversationId(convo.id);
         setActiveTitle(title);
         setActiveOtherUserId(otherUser?.id || deepLinkIdRaw);
-        setIsBlocked(false); // new conversation, assume not blocked (server will enforce if so)
+        setIsBlocked(false);
 
         await fetchThreads();
         await fetchMessages(convo.id);
 
-        // 🧹 Clean up URL so users don't see internal IDs
         const cleanQuery = {};
-        if (chrome) cleanQuery.chrome = chrome; // keep workspace chrome only
+        if (chrome) cleanQuery.chrome = chrome;
 
         router.replace(
           { pathname: router.pathname, query: cleanQuery },
@@ -147,7 +142,6 @@ export default function SignalMessages() {
         const text = await res.text();
         console.error('send error payload:', text);
 
-        // If server enforces block, we surface that and flip local state
         if (res.status === 403) {
           setIsBlocked(true);
           alert('Messaging is blocked between you and this member.');
@@ -225,7 +219,7 @@ export default function SignalMessages() {
     const reason = window.prompt(
       'Tell us briefly what happened. This will go to the ForgeTomorrow support team.'
     );
-    if (reason === null) return; // user cancelled
+    if (reason === null) return;
 
     try {
       const res = await fetch('/api/signal/report', {
@@ -248,6 +242,45 @@ export default function SignalMessages() {
     } catch (err) {
       console.error('report error:', err);
       alert('We could not submit your report. Please try again.');
+    }
+  };
+
+  // 🔹 Delete this conversation
+  const handleDeleteConversation = async () => {
+    if (!activeConversationId) {
+      alert('No active conversation selected.');
+      return;
+    }
+
+    const confirmed = window.confirm(
+      'Delete this conversation for both participants? This cannot be undone.'
+    );
+    if (!confirmed) return;
+
+    try {
+      const res = await fetch('/api/signal/delete', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ conversationId: activeConversationId }),
+      });
+
+      if (!res.ok) {
+        console.error('delete error status:', res.status, await res.text());
+        alert('We could not delete this conversation. Please try again.');
+        return;
+      }
+
+      // Clear active state and refresh threads
+      setActiveConversationId(null);
+      setActiveTitle('');
+      setActiveOtherUserId(null);
+      setMessages([]);
+      setIsBlocked(false);
+
+      await fetchThreads();
+    } catch (err) {
+      console.error('delete error:', err);
+      alert('We could not delete this conversation. Please try again.');
     }
   };
 
@@ -329,6 +362,13 @@ export default function SignalMessages() {
 
           {activeConversationId && (
             <div className="flex items-center gap-2">
+              <button
+                type="button"
+                onClick={handleDeleteConversation}
+                className="text-[11px] px-2 py-1 border border-gray-300 rounded-md text-gray-700 hover:bg-gray-50"
+              >
+                Delete chat
+              </button>
               <button
                 type="button"
                 onClick={handleReport}
