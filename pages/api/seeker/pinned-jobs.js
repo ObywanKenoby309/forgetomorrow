@@ -4,13 +4,21 @@ import { authOptions } from '../auth/[...nextauth]';
 import { prisma } from '@/lib/prisma';
 
 export default async function handler(req, res) {
-  // --- Ensure user is authenticated for all methods ---
-  const session = await getServerSession(req, res, authOptions);
+  let session;
+  try {
+    session = await getServerSession(req, res, authOptions);
+  } catch (err) {
+    console.error('[PinnedJobs] session error', err);
+    return res.status(500).json({ error: 'Failed to get session' });
+  }
+
   if (!session || !session.user || !session.user.id) {
     return res.status(401).json({ error: 'Not authenticated' });
   }
+
   const userId = session.user.id;
 
+  // ----------------- GET: list pinned jobs -----------------
   if (req.method === 'GET') {
     try {
       const { limit } = req.query;
@@ -21,19 +29,13 @@ export default async function handler(req, res) {
 
       const pinned = await prisma.pinnedJob.findMany({
         where: { userId },
-        include: {
-          job: true, // assumes relation field is `job`
-        },
-        orderBy: {
-          pinnedAt: 'desc',
-        },
+        include: { job: true }, // assumes relation field is `job`
+        orderBy: { pinnedAt: 'desc' },
         ...(take ? { take } : {}),
       });
 
       const jobs = pinned.map((p) => ({
-        // ID of the underlying job (used for /jobs/apply/:id)
         id: p.jobId,
-        // ID of the pinned record (if you later need it for unpin)
         pinnedId: p.id,
         title: p.job ? p.job.title : '',
         company: p.job ? p.job.company : '',
@@ -49,40 +51,40 @@ export default async function handler(req, res) {
     }
   }
 
+  // ----------------- POST: toggle pin / unpin -----------------
   if (req.method === 'POST') {
-    // Toggle pin/unpin for a given jobId
     try {
       const { jobId } = req.body || {};
 
-      if (!jobId) {
+      if (jobId === undefined || jobId === null) {
         return res.status(400).json({ error: 'jobId is required' });
       }
 
-      // Ensure jobId is a string/number that matches your schema
-      const normalizedJobId =
-        typeof jobId === 'string' ? jobId : String(jobId);
+      const numericJobId =
+        typeof jobId === 'number' ? jobId : parseInt(jobId, 10);
 
-      // Check if already pinned
+      if (Number.isNaN(numericJobId)) {
+        return res.status(400).json({ error: 'jobId must be a number' });
+      }
+
       const existing = await prisma.pinnedJob.findFirst({
         where: {
           userId,
-          jobId: normalizedJobId,
+          jobId: numericJobId,
         },
       });
 
       if (existing) {
-        // Unpin
         await prisma.pinnedJob.delete({
           where: { id: existing.id },
         });
         return res.status(200).json({ pinned: false });
       }
 
-      // Pin
       const created = await prisma.pinnedJob.create({
         data: {
           userId,
-          jobId: normalizedJobId,
+          jobId: numericJobId,
         },
       });
 
@@ -93,7 +95,7 @@ export default async function handler(req, res) {
     }
   }
 
-  // Any other method is not allowed
+  // Anything else (PUT, PATCH, etc.)
   res.setHeader('Allow', ['GET', 'POST']);
   return res.status(405).json({ error: 'Method not allowed' });
 }
