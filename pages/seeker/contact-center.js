@@ -315,12 +315,12 @@ export default function SeekerContactCenter() {
           />
           <TabButton href="/seeker/messages" label="The Signal" />
           <TabButton
-            href="/seeker/contact-center#invites"
+            href="/seeker/contact-incoming"
             label="Invites (Incoming)"
             badge={counts.invitesIn}
           />
           <TabButton
-            href="/seeker/contact-center#requests"
+            href="/seeker/contact-outgoing"
             label="Requests (Outgoing)"
             badge={counts.invitesOut}
           />
@@ -425,7 +425,7 @@ export default function SeekerContactCenter() {
           />
           <div style={{ marginTop: 8 }}>
             <Link
-              href={withChrome('/seeker/contacts?view=incoming')}
+              href={withChrome('/seeker/contact-incoming')}
               style={{ color: '#FF7043', fontWeight: 700 }}
             >
               View all incoming →
@@ -452,7 +452,7 @@ export default function SeekerContactCenter() {
           />
           <div style={{ marginTop: 8 }}>
             <Link
-              href={withChrome('/seeker/contacts?view=outgoing')}
+              href={withChrome('/seeker/contact-outgoing')}
               style={{ color: '#FF7043', fontWeight: 700 }}
             >
               View all outgoing →
