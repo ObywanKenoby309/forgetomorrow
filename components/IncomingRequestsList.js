@@ -14,14 +14,24 @@ export default function IncomingRequestsList({
   return (
     <div style={{ display: 'grid', gap: 8 }}>
       {items.map((p) => {
-        // API shape from /api/contacts/summary:
-        // { id, requestId, createdAt, from: { ...user fields... } }
+        // Shape from /api/contacts/summary:
+        // {
+        //   id, requestId, createdAt,
+        //   from: { id, name, headline, location, status, avatarUrl }
+        // }
         const person = p.from || p;
         const displayName = person.name || 'Member';
         const avatar =
           person.avatarUrl || person.photo || '/demo-profile.jpg';
-        const note =
-          p.note || person.headline || person.status || '';
+
+        const headline = person.headline || '';
+        const location = person.location || '';
+        const statusText = person.status || '';
+
+        // meta line: "Location • Status" or just one of them
+        let meta = '';
+        if (location && statusText) meta = `${location} • ${statusText}`;
+        else meta = location || statusText;
 
         const requestKey = p.requestId || p.id;
 
@@ -45,21 +55,47 @@ export default function IncomingRequestsList({
               style={{ borderRadius: 999, objectFit: 'cover' }}
             />
             <div style={{ flex: 1, minWidth: 0 }}>
+              {/* Name */}
               <div
                 style={{
                   fontWeight: 700,
                   color: '#263238',
-                  whiteSpace: 'nowrap',
-                  overflow: 'hidden',
-                  textOverflow: 'ellipsis',
+                  fontSize: 14,
+                  overflowWrap: 'anywhere',
                 }}
               >
                 {displayName}
               </div>
-              {note ? (
-                <div style={{ fontSize: 12, color: '#607D8B' }}>{note}</div>
+
+              {/* Headline / role */}
+              {headline ? (
+                <div
+                  style={{
+                    marginTop: 2,
+                    fontSize: 12,
+                    color: '#546E7A',
+                    overflowWrap: 'anywhere',
+                  }}
+                >
+                  {headline}
+                </div>
+              ) : null}
+
+              {/* Location • Status */}
+              {meta ? (
+                <div
+                  style={{
+                    marginTop: 2,
+                    fontSize: 12,
+                    color: '#90A4AE',
+                    overflowWrap: 'anywhere',
+                  }}
+                >
+                  {meta}
+                </div>
               ) : null}
             </div>
+
             <div style={{ display: 'flex', gap: 8 }}>
               <button
                 type="button"
@@ -68,10 +104,12 @@ export default function IncomingRequestsList({
                   background: '#E8F5E9',
                   color: '#1B5E20',
                   border: '1px solid #C8E6C9',
-                  borderRadius: 8,
-                  padding: '6px 10px',
-                  fontWeight: 700,
+                  borderRadius: 6,
+                  padding: '6px 12px',
+                  fontWeight: 600,
+                  fontSize: 14,
                   cursor: 'pointer',
+                  minWidth: 70,
                 }}
               >
                 Accept
@@ -83,10 +121,12 @@ export default function IncomingRequestsList({
                   background: '#FFEBEE',
                   color: '#B71C1C',
                   border: '1px solid #FFCDD2',
-                  borderRadius: 8,
-                  padding: '6px 10px',
-                  fontWeight: 700,
+                  borderRadius: 6,
+                  padding: '6px 12px',
+                  fontWeight: 600,
+                  fontSize: 14,
                   cursor: 'pointer',
+                  minWidth: 70,
                 }}
               >
                 Decline
@@ -98,10 +138,12 @@ export default function IncomingRequestsList({
                   background: 'white',
                   color: '#455A64',
                   border: '1px solid #CFD8DC',
-                  borderRadius: 8,
-                  padding: '6px 10px',
-                  fontWeight: 700,
+                  borderRadius: 6,
+                  padding: '6px 12px',
+                  fontWeight: 600,
+                  fontSize: 14,
                   cursor: 'pointer',
+                  minWidth: 70,
                 }}
               >
                 View
