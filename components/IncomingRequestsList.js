@@ -1,28 +1,33 @@
-// components/OutgoingRequestsList.js
+// components/IncomingRequestsList.js
 import React from 'react';
 
-export default function OutgoingRequestsList({
+export default function IncomingRequestsList({
   items = [],
-  onCancel,
+  onAccept,
+  onDecline,
   onViewProfile,
 }) {
   if (!items.length) {
-    return <div style={{ color: '#607D8B' }}>No outgoing requests.</div>;
+    return <div style={{ color: '#607D8B' }}>No incoming invites.</div>;
   }
 
   return (
     <div style={{ display: 'grid', gap: 8 }}>
       {items.map((p) => {
-        const person = p.to || p; // API shape: { to: {...} }
+        // API shape from /api/contacts/summary:
+        // { id, requestId, createdAt, from: { ...user fields... } }
+        const person = p.from || p;
         const displayName = person.name || 'Member';
         const avatar =
           person.avatarUrl || person.photo || '/demo-profile.jpg';
         const note =
           p.note || person.headline || person.status || '';
 
+        const requestKey = p.requestId || p.id;
+
         return (
           <div
-            key={p.requestId || p.id}
+            key={requestKey}
             style={{
               display: 'flex',
               alignItems: 'center',
@@ -57,9 +62,25 @@ export default function OutgoingRequestsList({
             </div>
             <div style={{ display: 'flex', gap: 8 }}>
               <button
-                onClick={() => onCancel?.(p)}
+                type="button"
+                onClick={() => onAccept?.(p)}
                 style={{
-                  background: 'white',
+                  background: '#E8F5E9',
+                  color: '#1B5E20',
+                  border: '1px solid #C8E6C9',
+                  borderRadius: 8,
+                  padding: '6px 10px',
+                  fontWeight: 700,
+                  cursor: 'pointer',
+                }}
+              >
+                Accept
+              </button>
+              <button
+                type="button"
+                onClick={() => onDecline?.(p)}
+                style={{
+                  background: '#FFEBEE',
                   color: '#B71C1C',
                   border: '1px solid #FFCDD2',
                   borderRadius: 8,
@@ -68,9 +89,10 @@ export default function OutgoingRequestsList({
                   cursor: 'pointer',
                 }}
               >
-                Cancel
+                Decline
               </button>
               <button
+                type="button"
                 onClick={() => onViewProfile?.(p)}
                 style={{
                   background: 'white',
