@@ -1,101 +1,114 @@
-// pages/api/seeker/pinned-jobs.js
-import { getServerSession } from 'next-auth/next';
-import { authOptions } from '../auth/[...nextauth]';
-import { prisma } from '@/lib/prisma';
+// pages/seeker/pinned-jobs.js
+import React, { useEffect, useState } from 'react';
+import Link from 'next/link';
+import { useRouter } from 'next/router';
+import SeekerLayout from '@/components/layouts/SeekerLayout';
+import SeekerRightColumn from '@/components/seeker/SeekerRightColumn';
 
-export default async function handler(req, res) {
-  let session;
-  try {
-    session = await getServerSession(req, res, authOptions);
-  } catch (err) {
-    console.error('[PinnedJobs] session error', err);
-    return res.status(500).json({ error: 'Failed to get session' });
-  }
+export default function PinnedJobsPage() {
+  const router = useRouter();
+  const [pinned, setPinned] = useState([]);
+  const [loading, setLoading] = useState(true);
 
-  if (!session || !session.user || !session.user.id) {
-    return res.status(401).json({ error: 'Not authenticated' });
-  }
+  useEffect(() => {
+    async function load() {
+      try {
+        const res = await fetch('/api/seeker/pinned-jobs');
 
-  const userId = session.user.id;
+        if (res.status === 401 || res.status === 403) {
+          router.push(
+            `/auth/signin?from=${encodeURIComponent('/seeker/pinned-jobs')}`
+          );
+          return;
+        }
 
-  // ----------------- GET: list pinned jobs -----------------
-  if (req.method === 'GET') {
+        if (res.ok) {
+          const data = await res.json();
+          setPinned(Array.isArray(data.jobs) ? data.jobs : []);
+        } else {
+          setPinned([]);
+        }
+      } catch (err) {
+        console.error('Pinned jobs load error:', err);
+        setPinned([]);
+      } finally {
+        setLoading(false);
+      }
+    }
+
+    load();
+  }, [router]);
+
+  async function unpinJob(job) {
     try {
-      const { limit } = req.query;
-      const take =
-        typeof limit === 'string' && !Number.isNaN(parseInt(limit, 10))
-          ? Math.min(parseInt(limit, 10), 50)
-          : undefined;
-
-      const pinned = await prisma.pinnedJob.findMany({
-        where: { userId },
-        include: { job: true }, // assumes relation field is `job`
-        orderBy: { pinnedAt: 'desc' },
-        ...(take ? { take } : {}),
+      const res = await fetch('/api/seeker/pinned-jobs', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ jobId: job.id }),
       });
 
-      const jobs = pinned.map((p) => ({
-        id: p.jobId,
-        pinnedId: p.id,
-        title: p.job ? p.job.title : '',
-        company: p.job ? p.job.company : '',
-        location: p.job ? p.job.location : '',
-        url: p.job ? p.job.url || null : null,
-        pinnedAt: p.pinnedAt,
-      }));
+      if (!res.ok) {
+        console.error('Failed to unpin job');
+        return;
+      }
 
-      return res.status(200).json({ jobs });
+      // DB is updated — now update UI
+      setPinned((prev) => prev.filter((j) => j.id !== job.id));
     } catch (err) {
-      console.error('[GET /api/seeker/pinned-jobs] error', err);
-      return res.status(500).json({ error: 'Failed to load pinned jobs' });
+      console.error('Unpin error:', err);
     }
   }
 
-  // ----------------- POST: toggle pin / unpin -----------------
-  if (req.method === 'POST') {
-    try {
-      const { jobId } = req.body || {};
+  const Header = (
+    <section className="bg-white border border-gray-200 rounded-xl p-8 text-center shadow-sm">
+      <h1 className="text-3xl font-bold text-orange-600">Your Pinned Jobs</h1>
+      <p className="text-gray-600 mt-3 max-w-2xl mx-auto">
+        These are the roles you’ve flagged as worth fighting for.
+      </p>
+    </section>
+  );
 
-      if (jobId === undefined || jobId === null) {
-        return res.status(400).json({ error: 'jobId is required' });
-      }
+  const RightRail = <SeekerRightColumn variant="pinned" />;
 
-      const numericJobId =
-        typeof jobId === 'number' ? jobId : parseInt(jobId, 10);
-
-      if (Number.isNaN(numericJobId)) {
-        return res.status(400).json({ error: 'jobId must be a number' });
-      }
-
-      const existing = await prisma.pinnedJob.findFirst({
-        where: {
-          userId,
-          jobId: numericJobId,
-        },
-      });
-
-      if (existing) {
-        await prisma.pinnedJob.delete({
-          where: { id: existing.id },
-        });
-        return res.status(200).json({ pinned: false });
-      }
-
-      const created = await prisma.pinnedJob.create({
-        data: {
-          userId,
-          jobId: numericJobId,
-        },
-      });
-
-      return res.status(200).json({ pinned: true, id: created.id });
-    } catch (err) {
-      console.error('[POST /api/seeker/pinned-jobs] error', err);
-      return res.status(500).json({ error: 'Failed to toggle pinned job' });
-    }
+  if (loading) {
+    return (
+      <SeekerLayout header={Header} right={RightRail}>
+        <div className="text-center py-20">Loading your pinned jobs...</div>
+      </SeekerLayout>
+    );
   }
 
-  // Anything else (PUT, PATCH, etc.)
-  res.setHeader('Allow', ['GET', 'POST']);
-  return res.status(405).json({ error: 'Method not allowed' });
+  return (
+    <SeekerLayout title="Pinned Jobs" header={Header} right={RightRail} activeNav="pinned">
+      <div className="grid gap-7 px-6">
+        {pinned.length === 0 ? (
+          <div className="text-center py-24 bg-gray-50 rounded-2xl">
+            <h3 className="text-2xl font-bold text-gray-800">No pinned jobs yet</h3>
+          </div>
+        ) : (
+          pinned.map((job) => (
+            <div
+              key={job.id}
+              className="bg-white border rounded-xl p-7 shadow-sm"
+            >
+              <div className="flex justify-between items-start">
+                <div>
+                  <h3 className="text-xl font-bold">{job.title}</h3>
+                  <p className="text-gray-600">{job.company}</p>
+                </div>
+
+                <button
+                  onClick={() => unpinJob(job)}
+                  className="text-gray-400 hover:text-red-600"
+                  title="Unpin"
+                >
+                  🗑️
+                </button>
+              </div>
+            </div>
+          ))
+        )}
+      </div>
+    </SeekerLayout>
+  );
 }

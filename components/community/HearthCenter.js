@@ -19,19 +19,19 @@ export default function HearthCenter() {
     {
       title: 'Community Events',
       desc: 'Join workshops, webinars, and networking events tailored for growth.',
-      href: '/hearth/events',
+      href: '/seeker/the-hearth/events',
       status: 'Coming Soon',
     },
     {
       title: 'Discussion Forums',
       desc: 'Engage in meaningful conversations and share knowledge.',
-      href: '/hearth/forums',
+      href: '/seeker/the-hearth/forums',
       status: 'Coming Soon',
     },
     {
       title: 'Resource Library',
       desc: 'Access articles, guides, and tools to support your professional growth.',
-      href: '/hearth/resources',
+      href: '/seeker/the-hearth/resources',
       status: 'New!',
     },
   ];
