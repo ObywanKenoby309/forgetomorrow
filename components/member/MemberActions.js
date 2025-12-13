@@ -8,7 +8,6 @@ export default function MemberActions({
   targetName = 'Member',
   layout = 'menu', // menu | inline (future)
   onClose,
-  showMessage = true, // NEW: allow callers to hide "Message"
 }) {
   const router = useRouter();
   const chrome = String(router.query.chrome || '').toLowerCase();
@@ -17,10 +16,14 @@ export default function MemberActions({
   const withChrome = (path) =>
     chrome ? `${path}${path.includes('?') ? '&' : '?'}chrome=${chrome}` : path;
 
-  const [status, setStatus] = useState('loading'); // loading | none | outgoing | incoming | connected
+  const [status, setStatus] = useState('loading');
+  // loading | none | outgoing | incoming | connected
+
   const [requestId, setRequestId] = useState(null);
 
-  // Backend already blocks self-connect / self-message.
+  // NOTE:
+  // We intentionally do not try to infer "self" here.
+  // Backend already blocks self-connect and self-message.
   const isSelf = false;
 
   // ── Load relationship status ────────────────────────────
@@ -38,6 +41,7 @@ export default function MemberActions({
       } catch (err) {
         console.error('MemberActions status error:', err);
         setStatus('none');
+        setRequestId(null);
       }
     }
 
@@ -98,6 +102,7 @@ export default function MemberActions({
 
     // 🔹 Only CONNECTED can actually open / start a DM
     if (status !== 'connected') {
+      // Fallback safety — should not hit, but just in case.
       alert(
         'You need to be connected with this member before opening a private conversation.'
       );
@@ -180,10 +185,33 @@ export default function MemberActions({
       if (!res.ok) throw new Error(await res.text());
 
       const data = await res.json();
-      setStatus('outgoing');
-      setRequestId(data.requestId || null);
 
-      alert('Connection request sent.');
+      if (data.alreadyConnected) {
+        // Backend says they are already contacts
+        setStatus('connected');
+        setRequestId(null);
+        alert('You are already connected with this member.');
+      } else if (data.alreadyRequested && data.status === 'PENDING') {
+        // There is an existing pending request in either direction
+        setStatus('outgoing');
+        setRequestId(data.requestId || null);
+        alert(
+          'You already have a pending connection request with this member.'
+        );
+      } else if (data.status === 'PENDING') {
+        // Fresh or reopened request
+        setStatus('outgoing');
+        setRequestId(data.requestId || null);
+        alert(
+          data.reopened
+            ? 'Connection request re-sent.'
+            : 'Connection request sent.'
+        );
+      } else {
+        // Fallback; should not normally hit
+        console.warn('Unexpected contacts/request payload:', data);
+        alert('We could not send your connection request. Please try again.');
+      }
     } catch (err) {
       console.error('connect error:', err);
       alert('We could not send your connection request. Please try again.');
@@ -220,6 +248,7 @@ export default function MemberActions({
         body: JSON.stringify({ requestId, action: 'decline' }),
       });
       setStatus('none');
+      setRequestId(null);
     } catch (err) {
       console.error('decline error:', err);
     }
@@ -246,10 +275,8 @@ export default function MemberActions({
     <>
       <Button onClick={viewProfile}>View profile</Button>
 
-      {/* Message is optionally visible, but still gated by status */}
-      {!isSelf && showMessage && (
-        <Button onClick={messageUser}>Message</Button>
-      )}
+      {/* Message is always visible, but front-end gated by status */}
+      {!isSelf && <Button onClick={messageUser}>Message</Button>}
 
       {status === 'none' && <Button onClick={sendConnect}>Connect</Button>}
 
