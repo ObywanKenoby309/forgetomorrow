@@ -238,7 +238,7 @@ export default function CoachMessagingPage() {
   async function fetchJson(url, options = {}) {
     if (!currentUserId) {
       throw new Error("No current user id resolved yet");
-      }
+    }
     const res = await fetch(url, {
       ...options,
       headers: {
@@ -390,7 +390,7 @@ export default function CoachMessagingPage() {
           title="Messaging — ForgeTomorrow"
           header={<HeaderBar onOpenBulk={() => {}} />}
           right={<RightRail />}
-          activeNav="messaging"
+          activeNav="coach-messages"
           footer={null}
         >
           <div className="h-64 flex items-center justify-center text-slate-500">
@@ -410,7 +410,7 @@ export default function CoachMessagingPage() {
         title="Messaging — ForgeTomorrow"
         header={<HeaderBar onOpenBulk={() => setBulkOpen(true)} />}
         right={<RightRail />}
-        activeNav="messaging"
+        activeNav="coach-messages"
         footer={null}
       >
         <Body

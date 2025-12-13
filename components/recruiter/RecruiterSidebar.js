@@ -251,7 +251,7 @@ export default function RecruiterSidebar({
       {/* Hearth / Resources */}
       <SectionLabel>Resources</SectionLabel>
       <NavItem
-        href={`/seeker/the-hearth?chrome=${chromeRecruiter}`}
+        href={`/the-hearth?chrome=${chromeRecruiter}`}
         label="The Hearth"
         active={active === 'hearth'}
       />

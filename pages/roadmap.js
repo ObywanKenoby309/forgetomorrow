@@ -3,6 +3,9 @@ import { useState } from 'react';
 import { useRouter } from 'next/router';
 
 import SeekerLayout from '@/components/layouts/SeekerLayout';
+import CoachingLayout from '@/components/layouts/CoachingLayout';
+import RecruiterLayout from '@/components/layouts/RecruiterLayout';
+
 import ToolkitLanding from '../components/roadmap/ToolkitLanding';
 import ProfileDevelopment from '../components/roadmap/ProfileDevelopment';
 import OfferNegotiation from '../components/roadmap/OfferNegotiation';
@@ -15,6 +18,17 @@ export default function CareerRoadmap() {
   const chrome = String(router.query.chrome || '').toLowerCase();
   const withChrome = (path) =>
     chrome ? `${path}${path.includes('?') ? '&' : '?'}chrome=${chrome}` : path;
+
+  // ─────────────────────────────────────────────
+  // Choose layout by chrome + set activeNav
+  // ─────────────────────────────────────────────
+  let Layout = SeekerLayout;
+
+  if (chrome === 'coach') {
+    Layout = CoachingLayout;
+  } else if (chrome === 'recruiter-smb' || chrome === 'recruiter-ent') {
+    Layout = RecruiterLayout;
+  }
 
   const RightColumn = (
     <div style={{ display: 'grid', gap: 12 }}>
@@ -47,11 +61,12 @@ export default function CareerRoadmap() {
   );
 
   return (
-    <SeekerLayout
+    <Layout
       title="Career Development Toolkit | ForgeTomorrow"
       headerTitle="Your Personalized Career Roadmap"
       headerDescription="A guided, AI-supported path through profile building, offer negotiation, and your first year of growth."
       right={RightColumn}
+      activeNav="roadmap"
     >
       {/* Center column content */}
       <div
@@ -230,6 +245,6 @@ export default function CareerRoadmap() {
           </>
         )}
       </div>
-    </SeekerLayout>
+    </Layout>
   );
 }
