@@ -1,3 +1,4 @@
+// pages/hearth/events.js
 import Link from 'next/link';
 import { useRouter } from 'next/router';
 import SeekerLayout from '@/components/layouts/SeekerLayout';
@@ -36,15 +37,9 @@ function RightRail({ withChrome }) {
         </div>
         <div style={{ display: 'grid', gap: 8 }}>
           <Link href={withChrome('/the-hearth')}>Back to Hearth</Link>
-          <Link href={withChrome('/seeker/the-hearth/mentorship')}>
-            Mentorship Programs
-          </Link>
-          <Link href={withChrome('/seeker/the-hearth/resources')}>
-            Resource Library
-          </Link>
-          <Link href={withChrome('/seeker/the-hearth/forums')}>
-            Discussion Forums
-          </Link>
+          <Link href={withChrome('/hearth/spotlights')}>Mentorship Programs</Link>
+          <Link href={withChrome('/hearth/resources')}>Resource Library</Link>
+          <Link href={withChrome('/hearth/forums')}>Discussion Forums</Link>
         </div>
       </div>
     </div>
@@ -79,7 +74,8 @@ const Header = (
         maxWidth: 720,
       }}
     >
-      Workshops, webinars, and networking. RSVP and add to calendar—once events go live.
+      Workshops, webinars, and networking. Event listings will appear here once we open
+      the calendar to the community.
     </p>
   </section>
 );
@@ -87,6 +83,7 @@ const Header = (
 export default function HearthEventsPage() {
   const router = useRouter();
   const chrome = String(router.query.chrome || 'seeker').toLowerCase();
+
   const withChrome = (path) =>
     chrome ? `${path}${path.includes('?') ? '&' : '?'}chrome=${chrome}` : path;
 
@@ -122,15 +119,16 @@ export default function HearthEventsPage() {
               marginBottom: 6,
             }}
           >
-            No upcoming community events yet
+            Event calendar not enabled yet
           </div>
           <p style={{ color: '#607D8B', marginTop: 4 }}>
-            Live resume clinics, recruiter AMAs, and networking sessions will appear
-            here once we begin scheduling community events.
+            Live resume clinics, recruiter AMAs, and networking sessions will appear here
+            once we finish setting up scheduling and moderation.
           </p>
           <p style={{ color: '#607D8B', marginTop: 8 }}>
-            When events are available, you’ll be able to RSVP and add them directly to
-            your calendar from this page.
+            For now, you can keep an eye on this space to see that the Events area is
+            wired and ready—content will begin rolling out once we’re confident in the
+            safety and experience.
           </p>
         </div>
       </section>

@@ -1,3 +1,4 @@
+// pages/hearth/forums.js
 import Link from 'next/link';
 import { useRouter } from 'next/router';
 import SeekerLayout from '@/components/layouts/SeekerLayout';
@@ -44,15 +45,9 @@ export default function HearthForumsPage() {
         </div>
         <div style={{ display: 'grid', gap: 8 }}>
           <Link href={withChrome('/the-hearth')}>Back to Hearth</Link>
-          <Link href={withChrome('/seeker/the-hearth/mentorship')}>
-            Mentorship Programs
-          </Link>
-          <Link href={withChrome('/seeker/the-hearth/events')}>
-            Community Events
-          </Link>
-          <Link href={withChrome('/seeker/the-hearth/resources')}>
-            Resource Library
-          </Link>
+          <Link href={withChrome('/hearth/spotlights')}>Mentorship Programs</Link>
+          <Link href={withChrome('/hearth/events')}>Community Events</Link>
+          <Link href={withChrome('/hearth/resources')}>Resource Library</Link>
         </div>
       </div>
     </div>
@@ -81,7 +76,8 @@ export default function HearthForumsPage() {
           maxWidth: 720,
         }}
       >
-        Coming soon — topic threads, replies, and reputation.
+        Topic threads, replies, and reputation are on the roadmap. This area is wired and
+        visible now so we can finalize moderation before opening it up.
       </p>
     </section>
   );
@@ -110,11 +106,16 @@ export default function HearthForumsPage() {
             color: '#37474F',
           }}
         >
-          🔒 Not Yet Enabled
+          Forums not enabled yet
         </div>
         <p style={{ color: '#607D8B', marginTop: 6 }}>
-          We’re polishing threads, mentions, and moderation workflows before we open
-          forums to the community.
+          We’re finishing moderation tools, spam protection, and reporting workflows so
+          that conversations here stay healthy and constructive.
+        </p>
+        <p style={{ color: '#607D8B', marginTop: 8 }}>
+          Once everything is ready, this space will open for topic-based threads,
+          replies, and community reputation. For now, you can navigate here to see that
+          the Forums area is in place and under review.
         </p>
       </section>
     </Layout>

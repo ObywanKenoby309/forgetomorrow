@@ -1,3 +1,4 @@
+// pages/hearth/resources.js
 import { useState, useEffect, useRef } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/router';
@@ -38,15 +39,9 @@ function RightRail({ withChrome }) {
         </div>
         <div style={{ display: 'grid', gap: 8 }}>
           <Link href={withChrome('/the-hearth')}>Back to Hearth</Link>
-          <Link href={withChrome('/seeker/the-hearth/mentorship')}>
-            Mentorship Programs
-          </Link>
-          <Link href={withChrome('/seeker/the-hearth/events')}>
-            Community Events
-          </Link>
-          <Link href={withChrome('/seeker/the-hearth/forums')}>
-            Discussion Forums
-          </Link>
+          <Link href={withChrome('/hearth/spotlights')}>Mentorship Programs</Link>
+          <Link href={withChrome('/hearth/events')}>Community Events</Link>
+          <Link href={withChrome('/hearth/forums')}>Discussion Forums</Link>
         </div>
       </div>
     </div>
@@ -82,7 +77,7 @@ const Header = (
       }}
     >
       Browse core learning sections now. Articles and guides today; paid certs and
-      courses later.
+      courses later, once we finish moderation and curation workflows.
     </p>
   </section>
 );
@@ -302,6 +297,7 @@ function SectionViewer({ selectedSection }) {
 export default function HearthResourcesPage() {
   const router = useRouter();
   const chrome = String(router.query.chrome || 'seeker').toLowerCase();
+
   const withChrome = (path) =>
     chrome ? `${path}${path.includes('?') ? '&' : '?'}chrome=${chrome}` : path;
 

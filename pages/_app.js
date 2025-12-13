@@ -50,13 +50,13 @@ export default function App({ Component, pageProps: { session, ...pageProps } })
 
   const isRecruiterRoute = router.pathname.startsWith('/recruiter');
 
-  // 🔸 UPDATED: treat /hearth/* as internal seeker routes so wallpaper applies
+  // 🔹 Treat all Hearth routes as internal seeker-style pages
   const isSeekerRoute =
     router.pathname.startsWith('/seeker') ||
     router.pathname.startsWith('/resume') ||
     router.pathname.startsWith('/cover') ||
     router.pathname.startsWith('/apply') ||
-    router.pathname.startsWith('/hearth') || // 👈 NEW LINE
+    router.pathname.startsWith('/hearth') ||                 // 👈 NEW: /hearth/*
     [
       '/the-hearth',
       '/jobs',
@@ -74,7 +74,7 @@ export default function App({ Component, pageProps: { session, ...pageProps } })
   const isCoachingRoute =
     router.pathname === '/coaching-dashboard' ||
     router.pathname.startsWith('/dashboard/coaching') ||
-    router.pathname.startsWith('/coach'); // 👈 treat /coach/* as coaching/internal
+    router.pathname.startsWith('/coach');
 
   const isSettingsRoute = router.pathname === '/settings';
 
@@ -82,7 +82,7 @@ export default function App({ Component, pageProps: { session, ...pageProps } })
   const isSupportRoute =
     router.pathname === '/support' ||
     router.pathname === '/support/chat' ||
-    router.pathname.startsWith('/support/'); // 🔒 covers /support/ticket/[id] etc.
+    router.pathname.startsWith('/support/');
 
   const isPublicByPath =
     !isRecruiterRoute &&
@@ -182,9 +182,7 @@ export default function App({ Component, pageProps: { session, ...pageProps } })
       )}
 
       <div className="relative min-h-screen">
-        {/* ─────────────────────────────────────────────
-            BACKGROUND LAYERS
-           ───────────────────────────────────────────── */}
+        {/* BACKGROUND LAYERS */}
 
         {/* 1) Forge hammer background for public marketing pages */}
         {useForgeBackground && (
@@ -202,7 +200,7 @@ export default function App({ Component, pageProps: { session, ...pageProps } })
           </>
         )}
 
-        {/* 2) User wallpaper for INTERNAL pages only (seeker / recruiter / coaching / settings / support) */}
+        {/* 2) User wallpaper for INTERNAL pages */}
         {shouldUseWallpaper && (
           <>
             <div
@@ -214,20 +212,16 @@ export default function App({ Component, pageProps: { session, ...pageProps } })
                 backgroundAttachment: 'fixed',
               }}
             />
-            {/* Slight dark overlay for contrast */}
             <div className="fixed inset-0 bg-black/40 z-0" />
           </>
         )}
 
-        {/* ─────────────────────────────────────────────
-            FOREGROUND CONTENT
-           ───────────────────────────────────────────── */}
+        {/* FOREGROUND CONTENT */}
         <div
           className={`relative z-10 min-h-screen flex flex-col justify-between ${
             shouldUseGrayInternalBg ? 'bg-[#ECEFF1]' : ''
           }`}
         >
-          {/* 🔐 Auth context */}
           <SessionProvider session={session}>
             <PlanProvider>
               <ResumeProvider>
@@ -242,7 +236,7 @@ export default function App({ Component, pageProps: { session, ...pageProps } })
 
             {renderLandingHeader ? <LandingFooter /> : <Footer />}
 
-            {/* Global Support Floating Button (HelpDesk personas) */}
+            {/* Global Support Floating Button */}
             <SupportFloatingButton />
           </SessionProvider>
         </div>

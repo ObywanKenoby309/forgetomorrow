@@ -1,6 +1,6 @@
 // components/community/HearthCenter.js
-import React from 'react';
 import Link from 'next/link';
+import React from 'react';
 import { useRouter } from 'next/router';
 
 export default function HearthCenter() {
@@ -14,26 +14,22 @@ export default function HearthCenter() {
     {
       title: 'Mentorship Programs',
       desc: 'Connect with experienced mentors to guide your career journey.',
-      href: withChrome('/hearth/spotlights'),
-      status: 'Live (under moderation)',
+      href: '/hearth/spotlights',
     },
     {
       title: 'Community Events',
       desc: 'Join workshops, webinars, and networking events tailored for growth.',
-      href: withChrome('/hearth/events'),
-      status: 'Coming soon (read-only shell)',
+      href: '/hearth/events',
     },
     {
       title: 'Discussion Forums',
       desc: 'Engage in meaningful conversations and share knowledge.',
-      href: withChrome('/hearth/forums'),
-      status: 'Coming soon (moderation mode)',
+      href: '/hearth/forums',
     },
     {
       title: 'Resource Library',
       desc: 'Access articles, guides, and tools to support your professional growth.',
-      href: withChrome('/hearth/resources'),
-      status: 'Live (content being added)',
+      href: '/hearth/resources',
     },
   ];
 
@@ -54,10 +50,10 @@ export default function HearthCenter() {
           gap: 16,
         }}
       >
-        {tiles.map(({ title, desc, href, status }) => (
+        {tiles.map(({ title, desc, href }) => (
           <Link
             key={title}
-            href={href}
+            href={withChrome(href)}
             style={{
               background: '#F5F5F5',
               borderRadius: 12,
@@ -88,20 +84,9 @@ export default function HearthCenter() {
             >
               {title}
             </h2>
-            <p style={{ color: '#37474F', margin: 0 }}>{desc}</p>
+            <p style={{ color: '#37474F', marginBottom: 8 }}>{desc}</p>
             <div
               style={{
-                marginTop: 8,
-                fontSize: 12,
-                fontWeight: 600,
-                color: '#90A4AE',
-              }}
-            >
-              {status}
-            </div>
-            <div
-              style={{
-                marginTop: 4,
                 fontSize: 13,
                 fontWeight: 700,
                 color: '#FF7043',
