@@ -12,27 +12,12 @@ import {
 } from '@/components/ui/Card';
 
 import SeekerLayout from '@/components/layouts/SeekerLayout';
-import CoachingLayout from '@/components/layouts/CoachingLayout';
-import RecruiterLayout from '@/components/layouts/RecruiterLayout';
 
 const STORAGE_KEY = 'hearthSpotlights_v1';
-
-function makeLayout(chromeRaw) {
-  let Layout = SeekerLayout;
-
-  if (chromeRaw === 'coach') {
-    Layout = CoachingLayout;
-  } else if (chromeRaw === 'recruiter-smb' || chromeRaw === 'recruiter-ent') {
-    Layout = RecruiterLayout;
-  }
-
-  return Layout;
-}
 
 export default function HearthSpotlightsPage() {
   const router = useRouter();
   const chrome = String(router.query.chrome || 'seeker').toLowerCase();
-  const Layout = makeLayout(chrome);
 
   const withChrome = (path) =>
     chrome ? `${path}${path.includes('?') ? '&' : '?'}chrome=${chrome}` : path;
@@ -76,26 +61,24 @@ export default function HearthSpotlightsPage() {
   const hasAnyReal = ads.length > 0;
 
   return (
-    <Layout
+    <SeekerLayout
       title="Hearth Spotlight | ForgeTomorrow"
       header={null}
       right={null}
       activeNav={null}
     >
-      {/* ===== Custom Hearth Layout (breaks default sidebar dominance) ===== */}
+      {/* HARD OVERRIDE LAYOUT */}
       <div
         style={{
           display: 'grid',
           gridTemplateColumns: '280px minmax(0,1fr) 280px',
-          gridTemplateRows: 'auto auto 1fr',
-          gap: 20,
-          padding: '20px 0',
+          gridTemplateRows: 'auto auto',
+          gap: 24,
+          padding: '24px 0',
           alignItems: 'start',
         }}
       >
-        {/* ===== HEADER ROW ===== */}
-
-        {/* Back button */}
+        {/* HEADER ROW */}
         <div>
           <Link
             href={withChrome('/the-hearth')}
@@ -105,7 +88,7 @@ export default function HearthSpotlightsPage() {
               color: 'white',
               fontWeight: 700,
               textAlign: 'center',
-              padding: '10px 14px',
+              padding: '12px 14px',
               borderRadius: 10,
               textDecoration: 'none',
             }}
@@ -114,15 +97,14 @@ export default function HearthSpotlightsPage() {
           </Link>
         </div>
 
-        {/* Title card */}
         <Card style={{ textAlign: 'center' }}>
           <CardHeader>
             <CardTitle
               style={{
-                fontSize: 26,
+                fontSize: 28,
                 fontWeight: 800,
                 color: '#FF7043',
-                marginBottom: 4,
+                marginBottom: 6,
               }}
             >
               Hearth Spotlight
@@ -133,7 +115,6 @@ export default function HearthSpotlightsPage() {
           </CardHeader>
         </Card>
 
-        {/* Coming soon */}
         <Card>
           <CardHeader>
             <CardTitle style={{ fontSize: 16 }}>Coming soon</CardTitle>
@@ -144,14 +125,11 @@ export default function HearthSpotlightsPage() {
           </CardContent>
         </Card>
 
-        {/* ===== CONTENT ROW ===== */}
-
-        {/* Filters */}
+        {/* CONTENT ROW */}
         <div>
           <SpotlightFilters onChange={setFilters} />
         </div>
 
-        {/* Spotlight list / empty state */}
         <Card>
           {!hasAnyReal && (
             <>
@@ -189,9 +167,8 @@ export default function HearthSpotlightsPage() {
           ))}
         </Card>
 
-        {/* Right column spacer */}
         <div />
       </div>
-    </Layout>
+    </SeekerLayout>
   );
 }
