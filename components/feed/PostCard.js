@@ -2,7 +2,7 @@
 import { useState } from 'react';
 import { useRouter } from 'next/router';
 import QuickEmojiBar from './QuickEmojiBar';
-import MemberActions from '../member/MemberActions';
+import MemberAvatarActions from '../member/MemberAvatarActions';
 
 export default function PostCard({
   post,
@@ -17,11 +17,6 @@ export default function PostCard({
   const [reply, setReply] = useState('');
   const [reported, setReported] = useState(false);
   const [reportMessage, setReportMessage] = useState('');
-  const [profileMenu, setProfileMenu] = useState({
-    open: false,
-    userId: null,
-    name: 'Member',
-  });
 
   const chrome = String(router.query.chrome || '').toLowerCase();
   const withChrome = (path) =>
@@ -107,68 +102,42 @@ export default function PostCard({
     [post.authorFirstName, post.authorLastName].filter(Boolean).join(' ') ||
     'Member';
 
-  const openProfileMenu = (userId, name) => {
-    if (!userId) return;
-    setProfileMenu((prev) => {
-      const isSame = prev.open && prev.userId === userId;
-      return {
-        open: !isSame,
-        userId,
-        name: name || 'Member',
-      };
-    });
-  };
-
-  const closeProfileMenu = () =>
-    setProfileMenu({ open: false, userId: null, name: 'Member' });
-
   return (
     <article
       id={`post-${post.id}`}
       className="bg-white rounded-lg shadow p-4 relative"
     >
-      {/* header with avatar + profile menu trigger */}
+      {/* header with avatar + member actions wrapper */}
       <header className="mb-2 flex items-center gap-3">
-        <button
-          type="button"
-          onClick={() => openProfileMenu(authorId, authorName)}
-          className="flex items-center gap-3 text-left"
+        <MemberAvatarActions
+          targetUserId={authorId}
+          targetName={authorName}
         >
-          {post.authorAvatar ? (
-            <img
-              src={post.authorAvatar}
-              alt={authorName}
-              className="w-9 h-9 rounded-full object-cover bg-gray-200 flex-shrink-0"
-            />
-          ) : (
-            <div className="w-9 h-9 rounded-full bg-gray-200 flex items-center justify-center text-xs text-gray-500 flex-shrink-0">
-              {authorName?.charAt(0)?.toUpperCase() || '?'}
+          <button
+            type="button"
+            className="flex items-center gap-3 text-left cursor-pointer"
+          >
+            {post.authorAvatar ? (
+              <img
+                src={post.authorAvatar}
+                alt={authorName}
+                className="w-9 h-9 rounded-full object-cover bg-gray-200 flex-shrink-0"
+              />
+            ) : (
+              <div className="w-9 h-9 rounded-full bg-gray-200 flex items-center justify-center text-xs text-gray-500 flex-shrink-0">
+                {authorName?.charAt(0)?.toUpperCase() || '?'}
+              </div>
+            )}
+            <div>
+              <div className="font-semibold">{authorName}</div>
+              <div className="text-xs text-gray-500">
+                {createdAtLabel}
+                {' • '}
+                {post.type === 'personal' ? 'Personal' : 'Business'}
+              </div>
             </div>
-          )}
-          <div>
-            <div className="font-semibold">{authorName}</div>
-            <div className="text-xs text-gray-500">
-              {createdAtLabel}
-              {' • '}
-              {post.type === 'personal' ? 'Personal' : 'Business'}
-            </div>
-          </div>
-        </button>
-
-        {/* inline profile actions menu (reused for post author + comment authors) */}
-        {profileMenu.open && profileMenu.userId && (
-          <div className="absolute top-12 left-4 z-20 bg-white border rounded-lg shadow-lg text-sm w-52">
-            <div className="px-3 py-2 border-b font-semibold">
-              {profileMenu.name}
-            </div>
-            <MemberActions
-              targetUserId={profileMenu.userId}
-              targetName={profileMenu.name}
-              layout="menu"
-              onClose={closeProfileMenu}
-            />
-          </div>
-        )}
+          </button>
+        </MemberAvatarActions>
       </header>
 
       {/* body text */}
@@ -250,37 +219,31 @@ export default function PostCard({
               c.userId || c.byUserId || c.authorId || null;
             const commentName = c.by || 'Member';
 
-            const openCommentMenu = () =>
-              commentUserId && openProfileMenu(commentUserId, commentName);
-
             return (
               <div key={i} className="text-sm flex items-start gap-2">
-                <button
-                  type="button"
-                  onClick={openCommentMenu}
-                  className="mt-0.5 flex-shrink-0"
+                <MemberAvatarActions
+                  targetUserId={commentUserId}
+                  targetName={commentName}
                 >
-                  {c.avatarUrl ? (
-                    <img
-                      src={c.avatarUrl}
-                      alt={commentName}
-                      className="w-6 h-6 rounded-full object-cover bg-gray-200"
-                    />
-                  ) : (
-                    <div className="w-6 h-6 rounded-full bg-gray-200 flex items-center justify-center text-[10px] text-gray-500">
-                      {commentName?.charAt(0)?.toUpperCase() || '?'}
-                    </div>
-                  )}
-                </button>
-                <div>
-                  <span
-                    className="font-medium cursor-pointer"
-                    onClick={openCommentMenu}
+                  <button
+                    type="button"
+                    className="mt-0.5 flex-shrink-0 cursor-pointer flex items-center gap-2"
                   >
-                    {commentName}:
-                  </span>{' '}
-                  {c.text}
-                </div>
+                    {c.avatarUrl ? (
+                      <img
+                        src={c.avatarUrl}
+                        alt={commentName}
+                        className="w-6 h-6 rounded-full object-cover bg-gray-200"
+                      />
+                    ) : (
+                      <div className="w-6 h-6 rounded-full bg-gray-200 flex items-center justify-center text-[10px] text-gray-500">
+                        {commentName?.charAt(0)?.toUpperCase() || '?'}
+                      </div>
+                    )}
+                    <span className="font-medium">{commentName}:</span>
+                  </button>
+                </MemberAvatarActions>
+                <div>{c.text}</div>
               </div>
             );
           })}

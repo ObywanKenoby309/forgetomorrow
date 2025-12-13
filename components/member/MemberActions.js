@@ -8,6 +8,7 @@ export default function MemberActions({
   targetName = 'Member',
   layout = 'menu', // menu | inline (future)
   onClose,
+  showMessage = true, // NEW: allow callers to hide "Message"
 }) {
   const router = useRouter();
   const chrome = String(router.query.chrome || '').toLowerCase();
@@ -16,14 +17,10 @@ export default function MemberActions({
   const withChrome = (path) =>
     chrome ? `${path}${path.includes('?') ? '&' : '?'}chrome=${chrome}` : path;
 
-  const [status, setStatus] = useState('loading');
-  // loading | none | outgoing | incoming | connected
-
+  const [status, setStatus] = useState('loading'); // loading | none | outgoing | incoming | connected
   const [requestId, setRequestId] = useState(null);
 
-  // NOTE:
-  // We intentionally do not try to infer "self" here.
-  // Backend already blocks self-connect and self-message.
+  // Backend already blocks self-connect / self-message.
   const isSelf = false;
 
   // ── Load relationship status ────────────────────────────
@@ -101,7 +98,6 @@ export default function MemberActions({
 
     // 🔹 Only CONNECTED can actually open / start a DM
     if (status !== 'connected') {
-      // Fallback safety — should not hit, but just in case.
       alert(
         'You need to be connected with this member before opening a private conversation.'
       );
@@ -250,8 +246,10 @@ export default function MemberActions({
     <>
       <Button onClick={viewProfile}>View profile</Button>
 
-      {/* Message is always visible, but front-end gated by status */}
-      {!isSelf && <Button onClick={messageUser}>Message</Button>}
+      {/* Message is optionally visible, but still gated by status */}
+      {!isSelf && showMessage && (
+        <Button onClick={messageUser}>Message</Button>
+      )}
 
       {status === 'none' && <Button onClick={sendConnect}>Connect</Button>}
 
