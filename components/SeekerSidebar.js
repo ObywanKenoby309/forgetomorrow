@@ -61,7 +61,6 @@ function NavItem({ href, label, active, badge }) {
         if (!active) e.currentTarget.style.background = 'transparent';
       }}
     >
-      {/* Left accent bar for active */}
       {active && (
         <span
           aria-hidden="true"
@@ -121,7 +120,7 @@ export default function SeekerSidebar({
       {/* Profile */}
       <NavItem href="/profile" label="Profile" active={active === 'profile'} />
 
-      {/* Connections group */}
+      {/* Connections */}
       <SectionLabel>Connections</SectionLabel>
       <NavItem
         href="/seeker/contact-center"
@@ -142,7 +141,7 @@ export default function SeekerSidebar({
         badge={counts.feed}
       />
 
-      {/* Tools group */}
+      {/* Tools */}
       <SectionLabel>Tools</SectionLabel>
       <NavItem
         href="/seeker-dashboard"
@@ -169,7 +168,7 @@ export default function SeekerSidebar({
       {/* Resources */}
       <SectionLabel>Resources</SectionLabel>
       <NavItem
-        href="/seeker/the-hearth"
+        href="/the-hearth"
         label="The Hearth"
         active={active === 'the-hearth'}
       />

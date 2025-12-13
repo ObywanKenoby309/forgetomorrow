@@ -109,7 +109,6 @@ export default function CoachingSidebar({
     signal: 0,
     feed: 0,
   },
-  initialOpen = { coaching: false, seeker: false, connections: false }, // kept for compatibility (unused)
 }) {
   return (
     <nav
@@ -231,7 +230,7 @@ export default function CoachingSidebar({
       {/* Hearth */}
       <SectionLabel>Resources</SectionLabel>
       <NavItem
-        href="/seeker/the-hearth?chrome=coach"
+        href="/the-hearth?chrome=coach"
         label="The Hearth"
         active={active === 'hearth'}
       />

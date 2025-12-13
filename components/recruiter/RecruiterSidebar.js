@@ -104,21 +104,15 @@ export default function RecruiterSidebar({
   active = 'dashboard',
   role: roleProp,
   variant,
-  counts = {
-    candidates: 0,
-    jobs: 0,
-    messages: 0,
-    connections: 0,
-    signal: 0,
-    feed: 0,
-  },
-  initialOpen = { recruiter: true, seeker: false, connections: false }, // kept for compatibility (unused)
+  counts = { connections: 0, signal: 0, feed: 0 },
 }) {
   const { isEnterprise: planIsEnterprise, can, role: ctxRole } = usePlan();
 
   const role = roleProp || ctxRole;
   const isEnterprise =
-    typeof variant === 'string' ? variant === 'enterprise' : planIsEnterprise;
+    typeof variant === 'string'
+      ? variant === 'enterprise'
+      : planIsEnterprise;
 
   const chromeRecruiter = isEnterprise ? 'recruiter-ent' : 'recruiter-smb';
   const canSeeSettings = can('recruiter.settings.view');
@@ -179,25 +173,23 @@ export default function RecruiterSidebar({
         href="/recruiter/candidates"
         label="Candidates"
         active={active === 'candidates'}
-        badge={counts.candidates}
       />
       <NavItem
         href="/recruiter/job-postings"
         label="Job Posting"
         active={active === 'job-postings'}
-        badge={counts.jobs}
       />
       <NavItem
         href="/recruiter/messaging"
         label="Messaging"
         active={active === 'messaging'}
-        badge={counts.messages}
       />
       <NavItem
         href="/recruiter/calendar"
         label="Calendar"
         active={active === 'calendar'}
       />
+
       {isEnterprise && (
         <>
           <NavItem
@@ -212,6 +204,7 @@ export default function RecruiterSidebar({
           />
         </>
       )}
+
       {canSeeSettings && (
         <NavItem
           href="/recruiter/settings"
@@ -220,7 +213,7 @@ export default function RecruiterSidebar({
         />
       )}
 
-      {/* Seeker Tools */}
+      {/* Seeker Tools (recruiter chrome) */}
       <SectionLabel>Seeker Tools</SectionLabel>
       <NavItem
         href={`/seeker-dashboard?chrome=${chromeRecruiter}`}
@@ -234,7 +227,7 @@ export default function RecruiterSidebar({
       />
       <NavItem
         href={`/resume-cover?chrome=${chromeRecruiter}`}
-        label="Resume &amp; Cover"
+        label="Resume & Cover"
         active={active === 'resume-cover'}
       />
       <NavItem
@@ -248,7 +241,7 @@ export default function RecruiterSidebar({
         active={active === 'seeker-calendar'}
       />
 
-      {/* Hearth / Resources */}
+      {/* Resources */}
       <SectionLabel>Resources</SectionLabel>
       <NavItem
         href={`/the-hearth?chrome=${chromeRecruiter}`}
