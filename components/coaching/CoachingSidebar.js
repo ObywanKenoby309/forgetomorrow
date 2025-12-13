@@ -101,11 +101,19 @@ function SectionLabel({ children }) {
 
 export default function CoachingSidebar({
   active = 'overview',
-  counts = { clients: 0, sessions: 0, feedback: 0, connections: 0, signal: 0 },
+  counts = {
+    clients: 0,
+    sessions: 0,
+    feedback: 0,
+    connections: 0,
+    signal: 0,
+    feed: 0,
+  },
   initialOpen = { coaching: false, seeker: false, connections: false }, // kept for compatibility (unused)
 }) {
   return (
     <nav
+      aria-label="Coach navigation"
       style={{
         display: 'grid',
         gap: 6,
@@ -150,6 +158,7 @@ export default function CoachingSidebar({
         href="/feed?chrome=coach"
         label="Community Feed"
         active={active === 'feed'}
+        badge={counts.feed}
       />
 
       {/* Coaching Tools */}
@@ -222,7 +231,7 @@ export default function CoachingSidebar({
       {/* Hearth */}
       <SectionLabel>Resources</SectionLabel>
       <NavItem
-        href="/the-hearth?chrome=coach"
+        href="/seeker/the-hearth?chrome=coach"
         label="The Hearth"
         active={active === 'hearth'}
       />

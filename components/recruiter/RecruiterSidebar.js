@@ -110,6 +110,7 @@ export default function RecruiterSidebar({
     messages: 0,
     connections: 0,
     signal: 0,
+    feed: 0,
   },
   initialOpen = { recruiter: true, seeker: false, connections: false }, // kept for compatibility (unused)
 }) {
@@ -124,6 +125,7 @@ export default function RecruiterSidebar({
 
   return (
     <nav
+      aria-label="Recruiter navigation"
       style={{
         display: 'grid',
         gap: 6,
@@ -168,6 +170,7 @@ export default function RecruiterSidebar({
         href={`/feed?chrome=${chromeRecruiter}`}
         label="Community Feed"
         active={active === 'feed'}
+        badge={counts.feed}
       />
 
       {/* Recruiter Tools */}

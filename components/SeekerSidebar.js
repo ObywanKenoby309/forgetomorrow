@@ -103,10 +103,11 @@ function SectionLabel({ children }) {
 
 export default function SeekerSidebar({
   active = '',
-  counts = { connections: 0, signal: 0 },
+  counts = { connections: 0, signal: 0, feed: 0 },
 }) {
   return (
     <nav
+      aria-label="Seeker navigation"
       style={{
         background: CARD_BG,
         borderRadius: 16,
@@ -138,6 +139,7 @@ export default function SeekerSidebar({
         href="/feed"
         label="Community Feed"
         active={active === 'feed'}
+        badge={counts.feed}
       />
 
       {/* Tools group */}

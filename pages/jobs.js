@@ -1043,7 +1043,18 @@ function Jobs() {
                           )}
 
                           <div>
-                            <CardTitle style={{ color: titleColor }}>
+                            {/* TITLE: clamp to 2 lines so it only wraps under itself */}
+                            <CardTitle
+                              style={{
+                                color: titleColor,
+                                display: '-webkit-box',
+                                WebkitBoxOrient: 'vertical',
+                                WebkitLineClamp: 2,
+                                overflow: 'hidden',
+                                lineHeight: 1.3,
+                                maxHeight: '2.6em',
+                              }}
+                            >
                               {job.title}
                             </CardTitle>
                             <CardSubtle style={{ color: subtleColor }}>
