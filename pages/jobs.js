@@ -1121,84 +1121,87 @@ function Jobs() {
                       </div>
 
                       <div
-                        style={{
-                          marginTop: 4,
-                          display: 'flex',
-                          flexWrap: 'wrap',
-                          gap: 8,
-                          fontSize: 13,
-                          color: subtleColor,
-                        }}
-                      >
-                        <span>{location || 'Location not provided'}</span>
-                        {locationType && (
-                          <span
-                            style={{
-                              padding: '2px 8px',
-                              borderRadius: 999,
-                              border: '1px solid rgba(207,216,220,0.7)',
-                              fontSize: 12,
-                              backgroundColor: isDarkCard
-                                ? 'rgba(38,50,56,0.8)'
-                                : 'transparent',
-                            }}
-                          >
-                            {locationType}
-                          </span>
-                        )}
+  style={{
+    marginTop: 4,
+    display: 'flex',
+    flexWrap: 'wrap',
+    gap: 8,
+    fontSize: 13,
+    color: subtleColor,
+  }}
+>
+  <span>{location || 'Location not provided'}</span>
 
-                        {status && status !== 'Open' && (
-                          <span
-                            style={{
-                              padding: '2px 8px',
-                              borderRadius: 999,
-                              border: '1px solid #FFCC80',
-                              fontSize: 12,
-                              backgroundColor:
-                                status === 'Reviewing' ? '#FFF3E0' : '#ECEFF1',
-                              color:
-                                status === 'Reviewing' ? '#E65100' : '#455A64',
-                            }}
-                          >
-                            {status === 'Reviewing'
-                              ? 'Reviewing applicants'
-                              : status}
-                          </span>
-                        )}
-                      </div>
-                    </CardHeader>
+  {locationType && (
+    <span
+      style={{
+        padding: '2px 8px',
+        borderRadius: 999,
+        border: '1px solid rgba(207,216,220,0.7)',
+        fontSize: 12,
+        backgroundColor: isDarkCard
+          ? 'rgba(38,50,56,0.8)'
+          : 'transparent',
+      }}
+    >
+      {locationType}
+    </span>
+  )}
 
-                    <CardContent>
-                      {/* Description snippet: internal only.
-                          Scraped/external cards stay clean and compact. */}
-                      {showSnippet && (
-                        <p
-                          style={{
-                            margin: '0 0 10px',
-                            color: textColor,
-                            fontSize: 14,
-                            lineHeight: 1.4,
-                          }}
-                        >
-                          {snippet || 'No description provided.'}
-                        </p>
-                      )}
+  {displaySource && (
+    <span
+      style={{
+        padding: '2px 8px',
+        borderRadius: 999,
+        border: '1px solid rgba(207,216,220,0.7)',
+        fontSize: 12,
+        backgroundColor: isDarkCard
+          ? 'rgba(38,50,56,0.8)'
+          : 'transparent',
+      }}
+    >
+      Source: {displaySource}
+    </span>
+  )}
 
-                      {displaySource && (
-                        <div
-                          style={{
-                            marginTop: showSnippet ? 4 : 0,
-                            display: 'flex',
-                            justifyContent: 'flex-end',
-                            fontSize: 12,
-                            color: isDarkCard ? subtleColor : '#455A64',
-                            fontWeight: isExternalTier ? 600 : 400,
-                          }}
-                        >
-                          <span>Source: {displaySource}</span>
-                        </div>
-                      )}
-                    </CardContent>
+  {status && status !== 'Open' && (
+    <span
+      style={{
+        padding: '2px 8px',
+        borderRadius: 999,
+        border: '1px solid #FFCC80',
+        fontSize: 12,
+        backgroundColor:
+          status === 'Reviewing' ? '#FFF3E0' : '#ECEFF1',
+        color:
+          status === 'Reviewing' ? '#E65100' : '#455A64',
+      }}
+    >
+      {status === 'Reviewing'
+        ? 'Reviewing applicants'
+        : status}
+    </span>
+  )}
+</div>
+</CardHeader>
+
+<CardContent>
+  {/* Description snippet: internal only.
+      Scraped/external cards stay clean and compact. */}
+  {showSnippet && (
+    <p
+      style={{
+        margin: '0 0 10px',
+        color: textColor,
+        fontSize: 14,
+        lineHeight: 1.4,
+      }}
+    >
+      {snippet || 'No description provided.'}
+    </p>
+  )}
+</CardContent>
+
                   </Card>
                 );
               })}
@@ -1463,19 +1466,19 @@ function Jobs() {
 
                     {/* ACTION ROW */}
                     {selectedStatus === 'Open' && (
-                      <div
-                        style={{
-                          display: 'flex',
-                          flexDirection: 'row',
-                          justifyContent: 'flex-start',
-                          alignItems: 'center',
-                          flexWrap: 'nowrap',
-                          gap: 6,
-                          marginTop: -4,
-                          overflowX: 'auto',
-                          padding: '0 0 4px',
-                        }}
-                      >
+  <div
+    style={{
+      display: 'flex',
+      flexDirection: 'row',
+      justifyContent: 'flex-start',
+      alignItems: 'center',
+      flexWrap: 'wrap',      // allow second line if needed
+      gap: 6,
+      marginTop: 0,
+      padding: '4px 0 0',
+      overflowX: 'visible',  // no horizontal scroll for actions
+    }}
+  >
                         <button
                           type="button"
                           onClick={() => togglePin(selectedJob)}
