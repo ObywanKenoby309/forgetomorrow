@@ -8,6 +8,7 @@ const CARD_BG = '#FFFFFF';
 const CARD_BORDER = '#E6E6E6';
 const TEXT_MAIN = '#263238';
 
+// ───────────────── Chevron ─────────────────
 function Chevron({ open }) {
   return (
     <span
@@ -26,6 +27,7 @@ function Chevron({ open }) {
   );
 }
 
+// ───────────────── Badge ─────────────────
 function Badge({ value }) {
   if (!value) return null;
   return (
@@ -51,6 +53,7 @@ function Badge({ value }) {
   );
 }
 
+// ───────────────── Nav Item ─────────────────
 function NavItem({ href, label, active, badge }) {
   const base = {
     display: 'flex',
@@ -83,6 +86,7 @@ function NavItem({ href, label, active, badge }) {
   );
 }
 
+// ───────────────── Section ─────────────────
 function Section({ title, children, defaultOpen = false }) {
   const [open, setOpen] = useState(defaultOpen);
 
@@ -127,9 +131,9 @@ function Section({ title, children, defaultOpen = false }) {
   );
 }
 
+// ───────────────── MAIN: CoachingSidebar ─────────────────
 export default function CoachingSidebar({
   active = 'overview',
-  initialOpen = { coaching: false, seeker: false, connections: false },
 }) {
   const [counts, setCounts] = useState({ connections: 0, signal: 0 });
 
@@ -191,32 +195,23 @@ export default function CoachingSidebar({
   ].includes(active);
 
   return (
-    <nav
-      style={{
-        display: 'grid',
-        gap: 12,
-        position: 'sticky',
-        top: 24,
-        alignSelf: 'start',
-        height: 'fit-content',
-      }}
-    >
+    <nav style={{ display: 'grid', gap: 12 }}>
+      {/* Profile */}
       <NavItem
         href="/profile?chrome=coach"
         label="Profile"
         active={active === 'profile'}
       />
 
+      {/* Overview (coach dashboard) */}
       <NavItem
         href="/coaching-dashboard"
         label="Overview"
         active={active === 'overview'}
       />
 
-      <Section
-        title="Connections"
-        defaultOpen={!!initialOpen.connections || isConnectionsActive}
-      >
+      {/* Connections */}
+      <Section title="Connections" defaultOpen={isConnectionsActive}>
         <NavItem
           href="/seeker/contact-center?chrome=coach"
           label="Contact Center"
@@ -236,10 +231,8 @@ export default function CoachingSidebar({
         />
       </Section>
 
-      <Section
-        title="Coaching Tools"
-        defaultOpen={!!initialOpen.coaching || isCoachingActive}
-      >
+      {/* Coaching Tools */}
+      <Section title="Coaching Tools" defaultOpen={isCoachingActive}>
         <NavItem
           href="/dashboard/coaching/clients"
           label="Clients"
@@ -272,16 +265,15 @@ export default function CoachingSidebar({
         />
       </Section>
 
+      {/* Jobs (coach view of jobs page) */}
       <NavItem
         href="/jobs?chrome=coach"
         label="Jobs"
         active={active === 'jobs'}
       />
 
-      <Section
-        title="Seeker Tools"
-        defaultOpen={!!initialOpen.seeker || isSeekerActive}
-      >
+      {/* Seeker Tools (coach controlling seeker-facing tools) */}
+      <Section title="Seeker Tools" defaultOpen={isSeekerActive}>
         <NavItem
           href="/seeker-dashboard?chrome=coach"
           label="Seeker Dashboard"
@@ -304,6 +296,7 @@ export default function CoachingSidebar({
         />
       </Section>
 
+      {/* Hearth */}
       <NavItem
         href="/the-hearth?chrome=coach"
         label="The Hearth"

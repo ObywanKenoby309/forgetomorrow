@@ -9,6 +9,7 @@ const CARD_BG = '#FFFFFF';
 const CARD_BORDER = '#E6E6E6';
 const TEXT_MAIN = '#263238';
 
+// ───────────────── Chevron ─────────────────
 function Chevron({ open }) {
   return (
     <span
@@ -27,6 +28,7 @@ function Chevron({ open }) {
   );
 }
 
+// ───────────────── Badge ─────────────────
 function Badge({ value }) {
   if (!value) return null;
   return (
@@ -52,6 +54,7 @@ function Badge({ value }) {
   );
 }
 
+// ───────────────── Nav Item ─────────────────
 function NavItem({ href, label, active, badge }) {
   const base = {
     display: 'flex',
@@ -79,12 +82,13 @@ function NavItem({ href, label, active, badge }) {
         if (!active) e.currentTarget.style.background = CARD_BG;
       }}
     >
-      <span>{label}</span>
+      <span style={{ flex: '0 1 auto' }}>{label}</span>
       <Badge value={badge} />
     </Link>
   );
 }
 
+// ───────────────── Section ─────────────────
 function Section({ title, children, defaultOpen = false }) {
   const [open, setOpen] = useState(defaultOpen);
 
@@ -129,11 +133,11 @@ function Section({ title, children, defaultOpen = false }) {
   );
 }
 
+// ───────────────── MAIN: RecruiterSidebar ─────────────────
 export default function RecruiterSidebar({
   active = 'dashboard',
   role: roleProp,
   variant,
-  initialOpen = { recruiter: true, seeker: false, connections: false },
 }) {
   const { isEnterprise: planIsEnterprise, can, role: ctxRole } = usePlan();
 
@@ -192,30 +196,42 @@ export default function RecruiterSidebar({
   const chromeRecruiter = isEnterprise ? 'recruiter-ent' : 'recruiter-smb';
   const canSeeSettings = can('recruiter.settings.view');
 
+  const isConnectionsActive = ['contacts', 'messages', 'feed'].includes(active);
+  const isRecruiterToolsActive = [
+    'candidates',
+    'job-postings',
+    'messaging',
+    'calendar',
+    'analytics',
+    'pools',
+    'settings',
+  ].includes(active);
+  const isSeekerToolsActive = [
+    'seeker-dashboard',
+    'jobs',
+    'resume-cover',
+    'roadmap',
+    'seeker-calendar',
+  ].includes(active);
+
   return (
-    <nav
-      style={{
-        display: 'grid',
-        gap: 12,
-        position: 'sticky',
-        top: 24,
-        alignSelf: 'start',
-        height: 'fit-content',
-      }}
-    >
+    <nav style={{ display: 'grid', gap: 12 }}>
+      {/* Profile */}
       <NavItem
         href={`/profile?chrome=${chromeRecruiter}`}
         label="Profile"
         active={active === 'profile'}
       />
 
+      {/* Overview (recruiter dashboard) */}
       <NavItem
         href="/recruiter/dashboard"
         label="Overview"
         active={active === 'dashboard'}
       />
 
-      <Section title="Connections" defaultOpen={!!initialOpen.connections}>
+      {/* Connections */}
+      <Section title="Connections" defaultOpen={isConnectionsActive}>
         <NavItem
           href={`/seeker/contact-center?chrome=${chromeRecruiter}`}
           label="Contact Center"
@@ -235,7 +251,8 @@ export default function RecruiterSidebar({
         />
       </Section>
 
-      <Section title="Recruiter Tools" defaultOpen={!!initialOpen.recruiter}>
+      {/* Recruiter Tools */}
+      <Section title="Recruiter Tools" defaultOpen={isRecruiterToolsActive}>
         <NavItem
           href="/recruiter/candidates"
           label="Candidates"
@@ -281,7 +298,8 @@ export default function RecruiterSidebar({
         )}
       </Section>
 
-      <Section title="Seeker Tools" defaultOpen={!!initialOpen.seeker}>
+      {/* Seeker Tools */}
+      <Section title="Seeker Tools" defaultOpen={isSeekerToolsActive}>
         <NavItem
           href={`/seeker-dashboard?chrome=${chromeRecruiter}`}
           label="Seeker Dashboard"
@@ -309,6 +327,7 @@ export default function RecruiterSidebar({
         />
       </Section>
 
+      {/* Hearth */}
       <NavItem
         href={`/seeker/the-hearth?chrome=${chromeRecruiter}`}
         label="The Hearth"

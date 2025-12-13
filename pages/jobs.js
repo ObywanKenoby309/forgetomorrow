@@ -979,6 +979,9 @@ function Jobs() {
                   ? 'ForgeTomorrow recruiter partner'
                   : null;
 
+                // 🔸 NEW: internal jobs get snippet, externals stay compact
+                const showSnippet = internal;
+
                 return (
                   <Card
                     key={job.id}
@@ -991,7 +994,7 @@ function Jobs() {
                       boxShadow: cardShadow,
                       position: 'relative',
                       overflow: 'hidden',
-                      minHeight: 128, // uniform height so external + internal feel aligned
+                      minHeight: 128,
                     }}
                     onClick={() => handleSelectJob(job)}
                   >
@@ -1148,17 +1151,20 @@ function Jobs() {
                     </CardHeader>
 
                     <CardContent>
-                      {/* Description snippet: shown for all jobs so card height stays consistent */}
-                      <p
-                        style={{
-                          margin: '0 0 10px',
-                          color: textColor,
-                          fontSize: 14,
-                          lineHeight: 1.4,
-                        }}
-                      >
-                        {snippet || 'No description provided.'}
-                      </p>
+                      {/* Description snippet: internal only.
+                          Scraped/external cards stay clean and compact. */}
+                      {showSnippet && (
+                        <p
+                          style={{
+                            margin: '0 0 10px',
+                            color: textColor,
+                            fontSize: 14,
+                            lineHeight: 1.4,
+                          }}
+                        >
+                          {snippet || 'No description provided.'}
+                        </p>
+                      )}
 
                       {displaySource && (
                         <div
@@ -1435,8 +1441,7 @@ function Jobs() {
                       })()}
                     </div>
 
-                    {/* ACTION ROW: Pin | Apply | Resume-Role Align | Open original
-                        Only when job is actually Open */}
+                    {/* ACTION ROW */}
                     {selectedStatus === 'Open' && (
                       <div
                         style={{
