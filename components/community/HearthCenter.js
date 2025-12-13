@@ -1,19 +1,40 @@
 // components/community/HearthCenter.js
-import Link from 'next/link';
 import React from 'react';
+import Link from 'next/link';
+import { useRouter } from 'next/router';
 
 export default function HearthCenter() {
-  const alertComingSoon = (feature) => () => alert(`${feature} feature coming soon!`);
+  const router = useRouter();
+  const chrome = String(router.query.chrome || 'seeker').toLowerCase();
+
+  const withChrome = (path) =>
+    chrome ? `${path}${path.includes('?') ? '&' : '?'}chrome=${chrome}` : path;
 
   const tiles = [
     {
       title: 'Mentorship Programs',
       desc: 'Connect with experienced mentors to guide your career journey.',
-      href: '/hearth/spotlights', // wired
+      href: withChrome('/hearth/spotlights'),
+      status: 'Live (under moderation)',
     },
-    { title: 'Community Events', desc: 'Join workshops, webinars, and networking events tailored for growth.' },
-    { title: 'Discussion Forums', desc: 'Engage in meaningful conversations and share knowledge.' },
-    { title: 'Resource Library', desc: 'Access articles, guides, and tools to support your professional growth.' },
+    {
+      title: 'Community Events',
+      desc: 'Join workshops, webinars, and networking events tailored for growth.',
+      href: withChrome('/hearth/events'),
+      status: 'Coming soon (read-only shell)',
+    },
+    {
+      title: 'Discussion Forums',
+      desc: 'Engage in meaningful conversations and share knowledge.',
+      href: withChrome('/hearth/forums'),
+      status: 'Coming soon (moderation mode)',
+    },
+    {
+      title: 'Resource Library',
+      desc: 'Access articles, guides, and tools to support your professional growth.',
+      href: withChrome('/hearth/resources'),
+      status: 'Live (content being added)',
+    },
   ];
 
   return (
@@ -33,62 +54,63 @@ export default function HearthCenter() {
           gap: 16,
         }}
       >
-        {tiles.map(({ title, desc, href }) =>
-          href ? (
-            <Link
-              key={title}
-              href={href}
+        {tiles.map(({ title, desc, href, status }) => (
+          <Link
+            key={title}
+            href={href}
+            style={{
+              background: '#F5F5F5',
+              borderRadius: 12,
+              padding: 16,
+              boxShadow: '0 1px 4px rgba(0,0,0,0.06)',
+              textDecoration: 'none',
+              transition: 'box-shadow 160ms ease, transform 80ms ease',
+              display: 'block',
+            }}
+            onMouseEnter={(e) => {
+              e.currentTarget.style.boxShadow =
+                '0 2px 10px rgba(0,0,0,0.10)';
+              e.currentTarget.style.transform = 'translateY(-1px)';
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.boxShadow =
+                '0 1px 4px rgba(0,0,0,0.06)';
+              e.currentTarget.style.transform = 'translateY(0)';
+            }}
+          >
+            <h2
               style={{
-                background: '#F5F5F5',
-                borderRadius: 12,
-                padding: 16,
-                boxShadow: '0 1px 4px rgba(0,0,0,0.06)',
-                textDecoration: 'none',
-                transition: 'box-shadow 160ms ease, transform 80ms ease',
-                display: 'block',
-              }}
-              onMouseEnter={(e) => {
-                e.currentTarget.style.boxShadow = '0 2px 10px rgba(0,0,0,0.10)';
-                e.currentTarget.style.transform = 'translateY(-1px)';
-              }}
-              onMouseLeave={(e) => {
-                e.currentTarget.style.boxShadow = '0 1px 4px rgba(0,0,0,0.06)';
-                e.currentTarget.style.transform = 'translateY(0)';
+                fontSize: 20,
+                fontWeight: 700,
+                marginBottom: 8,
+                color: '#FF7043',
               }}
             >
-              <h2 style={{ fontSize: 20, fontWeight: 700, marginBottom: 8, color: '#FF7043' }}>
-                {title}
-              </h2>
-              <p style={{ color: '#37474F' }}>{desc}</p>
-            </Link>
-          ) : (
+              {title}
+            </h2>
+            <p style={{ color: '#37474F', margin: 0 }}>{desc}</p>
             <div
-              key={title}
-              role="button"
-              tabIndex={0}
-              onClick={alertComingSoon(title)}
-              onKeyDown={(e) => {
-                if (e.key === 'Enter' || e.key === ' ') {
-                  e.preventDefault();
-                  alertComingSoon(title)();
-                }
-              }}
-              aria-label={title}
               style={{
-                background: '#F5F5F5',
-                borderRadius: 12,
-                padding: 16,
-                boxShadow: '0 1px 4px rgba(0,0,0,0.06)',
-                cursor: 'pointer',
+                marginTop: 8,
+                fontSize: 12,
+                fontWeight: 600,
+                color: '#90A4AE',
               }}
             >
-              <h2 style={{ fontSize: 20, fontWeight: 700, marginBottom: 8, color: '#FF7043' }}>
-                {title}
-              </h2>
-              <p style={{ color: '#37474F' }}>{desc}</p>
+              {status}
             </div>
-          )
-        )}
+            <div
+              style={{
+                marginTop: 4,
+                fontSize: 13,
+                fontWeight: 700,
+                color: '#FF7043',
+              }}
+            >
+              Open →
+            </div>
+          </Link>
+        ))}
       </div>
     </section>
   );

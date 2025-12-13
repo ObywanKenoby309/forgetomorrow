@@ -49,11 +49,14 @@ export default function App({ Component, pageProps: { session, ...pageProps } })
   const { wallpaperUrl } = useUserWallpaper();
 
   const isRecruiterRoute = router.pathname.startsWith('/recruiter');
+
+  // 🔸 UPDATED: treat /hearth/* as internal seeker routes so wallpaper applies
   const isSeekerRoute =
     router.pathname.startsWith('/seeker') ||
     router.pathname.startsWith('/resume') ||
     router.pathname.startsWith('/cover') ||
     router.pathname.startsWith('/apply') ||
+    router.pathname.startsWith('/hearth') || // 👈 NEW LINE
     [
       '/the-hearth',
       '/jobs',
@@ -64,14 +67,14 @@ export default function App({ Component, pageProps: { session, ...pageProps } })
       '/profile',
       '/profile-analytics',
       '/feed',
-	  '/member-profile',
-	  '/messages',
+      '/member-profile',
+      '/messages',
     ].includes(router.pathname);
 
   const isCoachingRoute =
     router.pathname === '/coaching-dashboard' ||
     router.pathname.startsWith('/dashboard/coaching') ||
-    router.pathname.startsWith('/coach'); // 👈 NEW: treat /coach/* as coaching/internal
+    router.pathname.startsWith('/coach'); // 👈 treat /coach/* as coaching/internal
 
   const isSettingsRoute = router.pathname === '/settings';
 
@@ -79,7 +82,7 @@ export default function App({ Component, pageProps: { session, ...pageProps } })
   const isSupportRoute =
     router.pathname === '/support' ||
     router.pathname === '/support/chat' ||
-    router.pathname.startsWith('/support/'); // 🔒 NEW: covers /support/ticket/[id] and any future nested routes
+    router.pathname.startsWith('/support/'); // 🔒 covers /support/ticket/[id] etc.
 
   const isPublicByPath =
     !isRecruiterRoute &&
