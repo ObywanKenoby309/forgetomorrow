@@ -1148,20 +1148,17 @@ function Jobs() {
                     </CardHeader>
 
                     <CardContent>
-                      {/* Description snippet: internal only.
-                          Scraped/external cards stay clean and compact. */}
-                      {!isExternalTier && (
-                        <p
-                          style={{
-                            margin: '0 0 10px',
-                            color: textColor,
-                            fontSize: 14,
-                            lineHeight: 1.4,
-                          }}
-                        >
-                          {snippet || 'No description provided.'}
-                        </p>
-                      )}
+                      {/* Description snippet: shown for all jobs so card height stays consistent */}
+                      <p
+                        style={{
+                          margin: '0 0 10px',
+                          color: textColor,
+                          fontSize: 14,
+                          lineHeight: 1.4,
+                        }}
+                      >
+                        {snippet || 'No description provided.'}
+                      </p>
 
                       {displaySource && (
                         <div
