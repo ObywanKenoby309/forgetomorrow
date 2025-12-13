@@ -1,5 +1,8 @@
 // pages/the-hearth.js
+import { useRouter } from 'next/router';
 import SeekerLayout from '@/components/layouts/SeekerLayout';
+import CoachingLayout from '@/components/layouts/CoachingLayout';
+import RecruiterLayout from '@/components/layouts/RecruiterLayout';
 import HearthCenter from '@/components/community/HearthCenter';
 import Link from 'next/link';
 
@@ -104,14 +107,28 @@ function RightRail() {
 }
 
 export default function TheHearth() {
+  const router = useRouter();
+  const chromeRaw = String(router.query.chrome || 'seeker').toLowerCase();
+
+  let Layout = SeekerLayout;
+  let activeNav = 'the-hearth';
+
+  if (chromeRaw === 'coach') {
+    Layout = CoachingLayout;
+    activeNav = 'hearth';
+  } else if (chromeRaw === 'recruiter-smb' || chromeRaw === 'recruiter-ent') {
+    Layout = RecruiterLayout;
+    activeNav = 'hearth';
+  }
+
   return (
-    <SeekerLayout
+    <Layout
       title="ForgeTomorrow — The Hearth"
       header={<HeaderBox />}
       right={<RightRail />}
-      activeNav="the-hearth"
+      activeNav={activeNav}
     >
       <HearthCenter />
-    </SeekerLayout>
+    </Layout>
   );
 }
