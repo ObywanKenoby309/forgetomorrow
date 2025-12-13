@@ -1,4 +1,3 @@
-// components/community/HearthCenter.js
 import Link from 'next/link';
 import React from 'react';
 import { useRouter } from 'next/router';
@@ -15,21 +14,25 @@ export default function HearthCenter() {
       title: 'Mentorship Programs',
       desc: 'Connect with experienced mentors to guide your career journey.',
       href: '/hearth/spotlights',
+      status: 'New!',
     },
     {
       title: 'Community Events',
       desc: 'Join workshops, webinars, and networking events tailored for growth.',
       href: '/hearth/events',
+      status: 'Coming Soon',
     },
     {
       title: 'Discussion Forums',
       desc: 'Engage in meaningful conversations and share knowledge.',
       href: '/hearth/forums',
+      status: 'Coming Soon',
     },
     {
       title: 'Resource Library',
       desc: 'Access articles, guides, and tools to support your professional growth.',
       href: '/hearth/resources',
+      status: 'New!',
     },
   ];
 
@@ -50,7 +53,7 @@ export default function HearthCenter() {
           gap: 16,
         }}
       >
-        {tiles.map(({ title, desc, href }) => (
+        {tiles.map(({ title, desc, href, status }) => (
           <Link
             key={title}
             href={withChrome(href)}
@@ -92,7 +95,7 @@ export default function HearthCenter() {
                 color: '#FF7043',
               }}
             >
-              Open →
+              {status}
             </div>
           </Link>
         ))}
