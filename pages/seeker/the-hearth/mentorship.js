@@ -1,9 +1,14 @@
-import Link from 'next/link';
+// pages/seeker/the-hearth/mentorship.js
 import { useRouter } from 'next/router';
+import Link from 'next/link';
+
 import SeekerLayout from '@/components/layouts/SeekerLayout';
 import CoachingLayout from '@/components/layouts/CoachingLayout';
 import RecruiterLayout from '@/components/layouts/RecruiterLayout';
 
+// ─────────────────────────────────────────────
+// Shared chrome helper (same pattern as /the-hearth)
+// ─────────────────────────────────────────────
 function makeLayout(chromeRaw) {
   let Layout = SeekerLayout;
   let activeNav = 'the-hearth';
@@ -19,6 +24,9 @@ function makeLayout(chromeRaw) {
   return { Layout, activeNav };
 }
 
+// ─────────────────────────────────────────────
+// Right rail shortcuts (no full-page background)
+// ─────────────────────────────────────────────
 function RightRail({ withChrome }) {
   return (
     <div style={{ display: 'grid', gap: 12 }}>
@@ -31,26 +39,23 @@ function RightRail({ withChrome }) {
           boxShadow: '0 2px 6px rgba(0,0,0,0.06)',
         }}
       >
-        <div style={{ fontWeight: 800, color: 'black', marginBottom: 8 }}>
+        <div style={{ fontWeight: 800, color: '#263238', marginBottom: 8 }}>
           Shortcuts
         </div>
         <div style={{ display: 'grid', gap: 8 }}>
-          <Link href={withChrome('/the-hearth')}>Back to Hearth</Link>
-          <Link href={withChrome('/seeker/the-hearth/events')}>
-            Community Events
-          </Link>
-          <Link href={withChrome('/seeker/the-hearth/resources')}>
-            Resource Library
-          </Link>
-          <Link href={withChrome('/seeker/the-hearth/forums')}>
-            Discussion Forums
-          </Link>
+          <Link href={withChrome('/the-hearth')}>Back to The Hearth</Link>
+          <Link href={withChrome('/seeker/the-hearth/events')}>Community Events</Link>
+          <Link href={withChrome('/seeker/the-hearth/resources')}>Resource Library</Link>
+          <Link href={withChrome('/seeker/the-hearth/forums')}>Discussion Forums</Link>
         </div>
       </div>
     </div>
   );
 }
 
+// ─────────────────────────────────────────────
+// Header — card only, no global background
+// ─────────────────────────────────────────────
 const Header = (
   <section
     style={{
@@ -79,14 +84,18 @@ const Header = (
         maxWidth: 720,
       }}
     >
-      Discover mentors by specialty, experience, and availability—coming soon.
+      Discover mentors by specialty, experience, and availability — coming soon.
     </p>
   </section>
 );
 
+// ─────────────────────────────────────────────
+// Page component
+// ─────────────────────────────────────────────
 export default function HearthMentorshipPage() {
   const router = useRouter();
   const chrome = String(router.query.chrome || 'seeker').toLowerCase();
+
   const withChrome = (path) =>
     chrome ? `${path}${path.includes('?') ? '&' : '?'}chrome=${chrome}` : path;
 
@@ -106,6 +115,7 @@ export default function HearthMentorshipPage() {
           borderRadius: 12,
           padding: 20,
           boxShadow: '0 2px 6px rgba(0,0,0,0.06)',
+          textAlign: 'left',
         }}
       >
         <div
@@ -124,8 +134,8 @@ export default function HearthMentorshipPage() {
           availability, and style of support.
         </p>
         <p style={{ color: '#607D8B', marginTop: 8 }}>
-          If you’re interested in mentoring when this launches, please contact our
-          support team using the orange support button in the lower-right corner.
+          If you’re interested in mentoring when this launches, please contact our support
+          team using the orange support button in the lower-right corner.
         </p>
       </section>
     </Layout>

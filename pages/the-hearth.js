@@ -5,13 +5,14 @@ import CoachingLayout from '@/components/layouts/CoachingLayout';
 import RecruiterLayout from '@/components/layouts/RecruiterLayout';
 import HearthCenter from '@/components/community/HearthCenter';
 import Link from 'next/link';
+import SupportFloatingButton from '@/components/SupportFloatingButton';
 
 function HeaderBox() {
   return (
     <section
       style={{
         background: 'white',
-        border: '1px solid #eee',
+        border: '1px solid '#eee',
         borderRadius: 12,
         padding: 16,
         boxShadow: '0 2px 6px rgba(0,0,0,0.06)',
@@ -128,7 +129,10 @@ export default function TheHearth() {
       right={<RightRail />}
       activeNav={activeNav}
     >
-      <HearthCenter />
+      <>
+        <HearthCenter />
+        <SupportFloatingButton />
+      </>
     </Layout>
   );
 }
