@@ -1,6 +1,7 @@
 // components/signal/SignalMessages.js
-import { useEffect, useState, useCallback } from 'react';
+import { useEffect, useState, useCallback, useRef } from 'react';
 import { useRouter } from 'next/router';
+import MemberActions from '../member/MemberActions';
 
 export default function SignalMessages() {
   const router = useRouter();
@@ -21,6 +22,14 @@ export default function SignalMessages() {
 
   // 🔹 Local block state for the active conversation
   const [isBlocked, setIsBlocked] = useState(false);
+
+  // 🔹 Inline member menu for conversation list avatars
+  const [profileMenu, setProfileMenu] = useState({
+    open: false,
+    userId: null,
+    name: 'Member',
+  });
+  const menuRef = useRef(null);
 
   const fetchThreads = useCallback(async () => {
     setThreadsLoading(true);
@@ -63,35 +72,61 @@ export default function SignalMessages() {
     await fetchMessages(thread.id);
   };
 
+  // ── Profile menu helpers (left column avatars) ─────────────────────────────
+  const openProfileMenu = (userId, name) => {
+    if (!userId) return;
+    setProfileMenu((prev) => {
+      const isSame = prev.open && prev.userId === userId;
+      return {
+        open: !isSame,
+        userId,
+        name: name || 'Member',
+      };
+    });
+  };
+
+  const closeProfileMenu = () =>
+    setProfileMenu({ open: false, userId: null, name: 'Member' });
+
+  // Close on outside click
+  useEffect(() => {
+    if (!profileMenu.open) return;
+
+    function handleClickOutside(e) {
+      if (menuRef.current && !menuRef.current.contains(e.target)) {
+        closeProfileMenu();
+      }
+    }
+
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, [profileMenu.open]);
+
   // Initial load of threads
   useEffect(() => {
     fetchThreads();
   }, [fetchThreads]);
 
-  // 🔹 Deep-link handler:
-  // Use ?toId / ?told purely to select a thread AFTER threads are loaded.
+  // 🔹 Deep-link handler (select thread after threads load) ───────────────────
   useEffect(() => {
     if (!router.isReady) return;
 
     const deepLinkIdRaw = Array.isArray(toId || told)
       ? (toId || told)[0]
-      : (toId || told);
+      : toId || told;
 
     if (!deepLinkIdRaw) return;
     if (threadsLoading) return;
 
-    // Find a thread where otherUserId matches the deep-link target
     const match = threads.find(
       (t) =>
-        t.otherUserId &&
-        String(t.otherUserId) === String(deepLinkIdRaw)
+        t.otherUserId && String(t.otherUserId) === String(deepLinkIdRaw)
     );
 
     if (match) {
       openConversation(match);
     }
 
-    // Clean the URL (keep chrome only)
     const cleanQuery = {};
     if (chrome) cleanQuery.chrome = chrome;
 
@@ -100,7 +135,7 @@ export default function SignalMessages() {
       undefined,
       { shallow: true }
     );
-  }, [router.isReady, toId, told, chrome, threads, threadsLoading, fetchMessages]); // openConversation uses fetchMessages
+  }, [router.isReady, toId, told, chrome, threads, threadsLoading, fetchMessages]);
 
   const handleSend = async (e) => {
     e?.preventDefault?.();
@@ -250,7 +285,6 @@ export default function SignalMessages() {
         return;
       }
 
-      // Clear active state and refresh threads
       setActiveConversationId(null);
       setActiveTitle('');
       setActiveOtherUserId(null);
@@ -282,51 +316,89 @@ export default function SignalMessages() {
           </p>
         ) : (
           <ul className="divide-y divide-gray-100">
-            {threads.map((t) => (
-              <li
-                key={t.id}
-                className={`py-2 px-1 flex items-start gap-3 cursor-pointer rounded-md ${
-                  t.id === activeConversationId
-                    ? 'bg-[#FFF3E9]'
-                    : 'hover:bg-gray-50'
-                }`}
-                onClick={() => openConversation(t)}
-              >
-                <div className="flex-shrink-0">
-                  {t.otherAvatarUrl ? (
-                    <img
-                      src={t.otherAvatarUrl}
-                      alt={t.title}
-                      className="w-8 h-8 rounded-full object-cover"
-                    />
-                  ) : (
-                    <div className="w-8 h-8 rounded-full bg-gray-200 flex items-center justify-center text-xs text-gray-600">
-                      {t.title?.charAt(0)?.toUpperCase() || '?'}
+            {threads.map((t) => {
+              const otherId = t.otherUserId || null;
+              const otherName = t.title || 'Member';
+
+              const openMenu = (e) => {
+                e.stopPropagation();
+                if (!otherId) return;
+                openProfileMenu(otherId, otherName);
+              };
+
+              const isActive = t.id === activeConversationId;
+              const showMenu =
+                profileMenu.open && profileMenu.userId === otherId;
+
+              return (
+                <li
+                  key={t.id}
+                  className={`relative py-2 px-1 flex items-start gap-3 cursor-pointer rounded-md ${
+                    isActive ? 'bg-[#FFF3E9]' : 'hover:bg-gray-50'
+                  }`}
+                  onClick={() => openConversation(t)}
+                >
+                  {/* Avatar → Member actions menu trigger */}
+                  <button
+                    type="button"
+                    onClick={openMenu}
+                    className="flex-shrink-0"
+                  >
+                    {t.otherAvatarUrl ? (
+                      <img
+                        src={t.otherAvatarUrl}
+                        alt={otherName}
+                        className="w-8 h-8 rounded-full object-cover"
+                      />
+                    ) : (
+                      <div className="w-8 h-8 rounded-full bg-gray-200 flex items-center justify-center text-xs text-gray-600">
+                        {otherName?.charAt(0)?.toUpperCase() || '?'}
+                      </div>
+                    )}
+                  </button>
+
+                  {/* Inline member actions dropdown */}
+                  {showMenu && otherId && (
+                    <div
+                      ref={menuRef}
+                      onClick={(e) => e.stopPropagation()}
+                      className="absolute z-20 left-10 top-8 bg-white border rounded-lg shadow-lg text-sm w-52"
+                    >
+                      <div className="px-3 py-2 border-b font-semibold">
+                        {profileMenu.name}
+                      </div>
+                      <MemberActions
+                        targetUserId={profileMenu.userId}
+                        targetName={profileMenu.name}
+                        layout="menu"
+                        onClose={closeProfileMenu}
+                      />
                     </div>
                   )}
-                </div>
-                <div className="flex-1 min-w-0">
-                  <div className="flex items-center justify-between gap-2">
-                    <p className="text-sm font-semibold text-gray-800 truncate">
-                      {t.title}
-                    </p>
-                    {t.lastMessageAt && (
-                      <span className="text-[10px] text-gray-500 whitespace-nowrap">
-                        {new Date(t.lastMessageAt).toLocaleTimeString([], {
-                          hour: '2-digit',
-                          minute: '2-digit',
-                        })}
-                      </span>
+
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center justify-between gap-2">
+                      <p className="text-sm font-semibold text-gray-800 truncate">
+                        {t.title}
+                      </p>
+                      {t.lastMessageAt && (
+                        <span className="text-[10px] text-gray-500 whitespace-nowrap">
+                          {new Date(t.lastMessageAt).toLocaleTimeString([], {
+                            hour: '2-digit',
+                            minute: '2-digit',
+                          })}
+                        </span>
+                      )}
+                    </div>
+                    {t.lastMessage && (
+                      <p className="text-xs text-gray-600 truncate">
+                        {t.lastMessage}
+                      </p>
                     )}
                   </div>
-                  {t.lastMessage && (
-                    <p className="text-xs text-gray-600 truncate">
-                      {t.lastMessage}
-                    </p>
-                  )}
-                </div>
-              </li>
-            ))}
+                </li>
+              );
+            })}
           </ul>
         )}
       </section>
