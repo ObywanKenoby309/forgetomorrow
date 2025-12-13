@@ -51,6 +51,7 @@ export default function MemberActions({
 
   const viewProfile = async () => {
     if (!targetUserId) return;
+
     // log profile view for analytics
     try {
       await logView(targetUserId, 'member-actions');

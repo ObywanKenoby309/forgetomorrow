@@ -89,20 +89,25 @@ export default async function handler(req, res) {
     const userId = session.user.id;
     const { postId, emoji } = req.body || {};
 
-    if (!postId && postId !== 0) {
+    // Basic validation
+    if (postId === undefined || postId === null || postId === '') {
       return res.status(400).json({ error: 'postId is required' });
     }
     if (!emoji || typeof emoji !== 'string') {
       return res.status(400).json({ error: 'emoji is required' });
     }
 
-    const numericPostId = Number(postId);
-    if (!numericPostId || Number.isNaN(numericPostId)) {
-      return res.status(400).json({ error: 'Invalid postId' });
-    }
+    // Support either numeric or string post IDs, so we don't blow up on CUIDs
+    const maybeNumber = Number(postId);
+    const useNumeric =
+      !Number.isNaN(maybeNumber) && `${maybeNumber}` === `${postId}`;
+
+    const where = useNumeric
+      ? { id: maybeNumber }
+      : { id: String(postId) };
 
     const existing = await prisma.feedPost.findUnique({
-      where: { id: numericPostId },
+      where,
       select: { id: true, reactions: true },
     });
 
@@ -114,7 +119,7 @@ export default async function handler(req, res) {
     const updatedReactions = toggleReaction(currentReactions, userId, emoji);
 
     const saved = await prisma.feedPost.update({
-      where: { id: numericPostId },
+      where,
       data: {
         reactions: updatedReactions,
       },

@@ -53,6 +53,8 @@ export default async function handler(req, res) {
     }
 
     const user = session.user;
+    const viewerId = user.id; // ✅ capture commenter id
+
     const displayName =
       user.name ||
       [user.firstName, user.lastName].filter(Boolean).join(' ') ||
@@ -65,10 +67,11 @@ export default async function handler(req, res) {
       : [];
 
     const newComment = {
+      authorId: viewerId,       // ✅ NEW: id for MemberActions
       by: displayName,
       text: trimmed,
       at: new Date().toISOString(),
-      avatarUrl, // ✅ used in UI for commenter avatar
+      avatarUrl,                // used in UI for commenter avatar
     };
 
     const updated = await prisma.feedPost.update({
