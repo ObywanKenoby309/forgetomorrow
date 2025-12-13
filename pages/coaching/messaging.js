@@ -1,4 +1,4 @@
-// pages/coach/messaging.js
+// pages/coaching/messaging.js
 import { useState, useEffect } from "react";
 import { useRouter } from "next/router";
 import { PlanProvider, usePlan } from "@/context/PlanContext";
@@ -8,6 +8,26 @@ import SavedReplies from "@/components/recruiter/SavedReplies";
 import BulkMessageModal from "@/components/recruiter/BulkMessageModal";
 import { SecondaryButton } from "@/components/ui/Buttons";
 import { getClientSession } from "@/lib/auth-client";
+
+/* ---------------------------------------------
+   HEADER CARD WRAPPER (matches CoachingLayout default)
+---------------------------------------------- */
+function HeaderCard({ children }) {
+  return (
+    <section
+      style={{
+        background: "white",
+        border: "1px solid #eee",
+        borderRadius: 12,
+        padding: 16,
+        boxShadow: "0 2px 6px rgba(0,0,0,0.06)",
+        textAlign: "center",
+      }}
+    >
+      {children}
+    </section>
+  );
+}
 
 /* ---------------------------------------------
    HEADER BAR
@@ -77,12 +97,12 @@ function RightRail() {
           Your advertisement could be here.
           <br />
           Contact{" "}
-          <a
-            href="mailto:sales@forgetomorrow.com"
-            className="text-[#FF7043] underline"
-          >
-            sales@forgetomorrow.com
-          </a>
+            <a
+              href="mailto:sales@forgetomorrow.com"
+              className="text-[#FF7043] underline"
+            >
+              sales@forgetomorrow.com
+            </a>
           .
         </div>
       </div>
@@ -388,7 +408,11 @@ export default function CoachMessagingPage() {
       <PlanProvider>
         <CoachingLayout
           title="Messaging — ForgeTomorrow"
-          header={<HeaderBar onOpenBulk={() => {}} />}
+          header={
+            <HeaderCard>
+              <HeaderBar onOpenBulk={() => {}} />
+            </HeaderCard>
+          }
           right={<RightRail />}
           activeNav="coach-messages"
           footer={null}
@@ -408,7 +432,11 @@ export default function CoachMessagingPage() {
     <PlanProvider>
       <CoachingLayout
         title="Messaging — ForgeTomorrow"
-        header={<HeaderBar onOpenBulk={() => setBulkOpen(true)} />}
+        header={
+          <HeaderCard>
+            <HeaderBar onOpenBulk={() => setBulkOpen(true)} />
+          </HeaderCard>
+        }
         right={<RightRail />}
         activeNav="coach-messages"
         footer={null}
