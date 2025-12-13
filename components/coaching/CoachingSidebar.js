@@ -65,6 +65,7 @@ function NavItem({ href, label, active, badge }) {
     border: `1px solid ${CARD_BORDER}`,
     transition: 'background 120ms ease, color 120ms ease',
   };
+
   return (
     <Link
       href={href}
@@ -84,6 +85,7 @@ function NavItem({ href, label, active, badge }) {
 
 function Section({ title, children, defaultOpen = false }) {
   const [open, setOpen] = useState(defaultOpen);
+
   return (
     <div style={{ display: 'grid', gap: 8 }}>
       <button
@@ -103,7 +105,7 @@ function Section({ title, children, defaultOpen = false }) {
           cursor: 'pointer',
         }}
       >
-        <Chevron(open={open}) />
+        <Chevron open={open} />
         <span>{title}</span>
       </button>
 
@@ -129,10 +131,7 @@ export default function CoachingSidebar({
   active = 'overview',
   initialOpen = { coaching: false, seeker: false, connections: false },
 }) {
-  const [counts, setCounts] = useState({
-    connections: 0,
-    signal: 0,
-  });
+  const [counts, setCounts] = useState({ connections: 0, signal: 0 });
 
   useEffect(() => {
     let isMounted = true;
@@ -163,9 +162,7 @@ export default function CoachingSidebar({
           signal = Array.isArray(data.threads) ? data.threads.length : 0;
         }
 
-        if (isMounted) {
-          setCounts({ connections, signal });
-        }
+        if (isMounted) setCounts({ connections, signal });
       } catch (err) {
         console.error('CoachingSidebar counts error:', err);
       }
