@@ -61,7 +61,7 @@ function RightRail() {
           Community Guidelines &amp; Support
         </div>
         <Link
-          href="/community-guildelines"
+          href="/community-guidelines"
           style={{ color: '#FF7043', fontWeight: 600 }}
         >
           Community Guidelines

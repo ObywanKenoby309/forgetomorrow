@@ -201,7 +201,7 @@ export default function CoachingSessionsPage() {
     <CoachingLayout
       title="Sessions | ForgeTomorrow"
       activeNav="sessions"
-      headerDescription="Manage, add, and track coaching sessions."
+      headerDescription="Manage, add, and track your coaching sessions."
       right={<CoachingRightColumn />}
       sidebarInitialOpen={{ coaching: true, seeker: false }}
     >
@@ -394,7 +394,13 @@ export default function CoachingSessionsPage() {
           ))}
 
           {orderedDates.length === 0 && (
-            <div style={{ color: '#90A4AE' }}>No sessions match your filters.</div>
+            <div style={{ color: '#90A4AE', fontSize: 14 }}>
+              <p style={{ margin: 0 }}>No sessions yet.</p>
+              <p style={{ margin: '2px 0 0' }}>
+                Use “+ Add Session” above to start your agenda. If you expected to see sessions,
+                try adjusting your filters.
+              </p>
+            </div>
           )}
         </section>
       </div>

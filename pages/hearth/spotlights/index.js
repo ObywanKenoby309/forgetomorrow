@@ -13,36 +13,6 @@ function localISODate(d = new Date()) {
   return `${y}-${m}-${day}`;
 }
 
-// Sample cards to show when no real data exists
-const SAMPLE_SPOTLIGHTS = [
-  {
-    id: 'sample-1',
-    name: 'Jordan M.',
-    headline: 'Senior Product Manager • PM Coaching',
-    specialties: ['Product Strategy', 'Roadmapping', 'Interview Prep'],
-    summary:
-      'Happy to help you prep for PM interviews, sharpen your product sense, or review your case approach.',
-    availability: 'Evenings (ET)',
-    rate: 'Free',
-    contactEmail: 'mentor+jordan@example.com',
-    contactLink: 'https://example.com/jordan',
-    createdAt: localISODate(),
-  },
-  {
-    id: 'sample-2',
-    name: 'Riley S.',
-    headline: 'Staff Engineer • Technical Mentorship',
-    specialties: ['System Design', 'Code Reviews', 'Career Growth'],
-    summary:
-      'Offering mock system design sessions and feedback on career planning for ICs targeting Senior+.',
-    availability: 'Weekends',
-    rate: 'Sliding scale',
-    contactEmail: 'mentor+riley@example.com',
-    contactLink: 'https://example.com/riley',
-    createdAt: localISODate(),
-  },
-];
-
 export default function HearthSpotlightsPage() {
   const [ads, setAds] = useState([]);
   const [filters, setFilters] = useState(null);
@@ -74,12 +44,16 @@ export default function HearthSpotlightsPage() {
 
     // Specialties (OR logic)
     if (filters.specialties?.length) {
-      arr = arr.filter((a) => (a.specialties || []).some((s) => filters.specialties.includes(s)));
+      arr = arr.filter((a) =>
+        (a.specialties || []).some((s) => filters.specialties.includes(s))
+      );
     }
 
     // Availability
     if (filters.availability && filters.availability !== 'Any') {
-      arr = arr.filter((a) => (a.availability || 'Open to discuss') === filters.availability);
+      arr = arr.filter(
+        (a) => (a.availability || 'Open to discuss') === filters.availability
+      );
     }
 
     // Rate
@@ -98,8 +72,7 @@ export default function HearthSpotlightsPage() {
     return arr;
   }, [ads, filters]);
 
-  // If no real data, we’ll show sample cards in the UI (but do not mix them into storage).
-  const showSamples = filtered.length === 0 && ads.length === 0;
+  const hasAnyReal = ads.length > 0;
 
   return (
     <div
@@ -112,7 +85,7 @@ export default function HearthSpotlightsPage() {
           "filters content right"
         `,
         gap: 20,
-        padding: '120px 20px 20px',
+        padding: '30px 20px 20px',
         minHeight: '100vh',
         backgroundColor: '#ECEFF1',
       }}
@@ -168,13 +141,20 @@ export default function HearthSpotlightsPage() {
             margin: '4px 0 0 0',
           }}
         >
-          Find a mentor offering help right now.
+          Find a mentor or guide who is actively offering help.
         </p>
       </section>
 
       {/* Middle content: center container w/ maxWidth to prevent “pull left” */}
       <main style={{ gridArea: 'content' }}>
-        <div style={{ maxWidth: 860, margin: '0 auto', display: 'grid', gap: 12 }}>
+        <div
+          style={{
+            maxWidth: 860,
+            margin: '0 auto',
+            display: 'grid',
+            gap: 12,
+          }}
+        >
           {/* Results list (stacked, one per row) */}
           <section
             style={{
@@ -183,28 +163,77 @@ export default function HearthSpotlightsPage() {
               gap: 12,
             }}
           >
-            {/* Empty state */}
-            {filtered.length === 0 && !showSamples && (
+            {/* Empty state when there *are* real ads but filters hide them */}
+            {filtered.length === 0 && hasAnyReal && (
               <Card style={{ color: '#90A4AE' }}>
-                No spotlights match your filters. Try clearing some options.
+                <CardContent>
+                  <p style={{ margin: 0 }}>
+                    No spotlights match your filters. Try clearing or adjusting your
+                    search.
+                  </p>
+                </CardContent>
+              </Card>
+            )}
+
+            {/* Fully empty state when there is no data at all */}
+            {filtered.length === 0 && !hasAnyReal && (
+              <Card>
+                <CardHeader>
+                  <CardTitle style={{ fontSize: 18, margin: 0, color: '#263238' }}>
+                    No Hearth Spotlights yet
+                  </CardTitle>
+                  <CardSubtle style={{ marginTop: 4 }}>
+                    This is where community mentors and helpers will appear.
+                  </CardSubtle>
+                </CardHeader>
+                <CardContent>
+                  <p style={{ margin: 0, color: '#455A64', fontSize: 14 }}>
+                    We haven’t published any spotlights yet. As mentors join The Hearth
+                    and opt in, you’ll be able to search and contact them here.
+                  </p>
+                </CardContent>
               </Card>
             )}
 
             {/* Real spotlights */}
             {filtered.map((a) => (
               <Card key={a.id}>
-                <CardHeader style={{ display: 'flex', justifyContent: 'space-between', gap: 12 }}>
+                <CardHeader
+                  style={{
+                    display: 'flex',
+                    justifyContent: 'space-between',
+                    gap: 12,
+                  }}
+                >
                   <div>
                     <CardSubtle>{a.name}</CardSubtle>
-                    <CardTitle style={{ marginTop: 2 }}>{a.headline || 'Mentor'}</CardTitle>
+                    <CardTitle style={{ marginTop: 2 }}>
+                      {a.headline || 'Mentor'}
+                    </CardTitle>
                   </div>
-                  <span style={{ fontSize: 12, color: '#90A4AE', alignSelf: 'start' }}>
-                    Posted {a.createdAt ? a.createdAt.slice(0, 10) : localISODate()}
+                  <span
+                    style={{
+                      fontSize: 12,
+                      color: '#90A4AE',
+                      alignSelf: 'start',
+                    }}
+                  >
+                    Posted{' '}
+                    {a.createdAt
+                      ? (a.createdAt || '').slice(0, 10)
+                      : localISODate()}
                   </span>
                 </CardHeader>
 
                 {a.specialties?.length > 0 && (
-                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, marginBottom: 6 }}>
+                  <div
+                    style={{
+                      display: 'flex',
+                      flexWrap: 'wrap',
+                      gap: 6,
+                      marginBottom: 6,
+                    }}
+                  >
                     {a.specialties.map((s, i) => (
                       <span
                         key={i}
@@ -228,7 +257,14 @@ export default function HearthSpotlightsPage() {
                   </CardContent>
                 )}
 
-                <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', marginTop: 6 }}>
+                <div
+                  style={{
+                    display: 'flex',
+                    gap: 8,
+                    flexWrap: 'wrap',
+                    marginTop: 6,
+                  }}
+                >
                   {a.contactEmail && (
                     <Link
                       href={`mailto:${a.contactEmail}?subject=Hearth Spotlight: ${encodeURIComponent(
@@ -265,95 +301,30 @@ export default function HearthSpotlightsPage() {
                     </Link>
                   )}
                   {a.availability && (
-                    <span style={{ alignSelf: 'center', fontSize: 12, color: '#607D8B' }}>
+                    <span
+                      style={{
+                        alignSelf: 'center',
+                        fontSize: 12,
+                        color: '#607D8B',
+                      }}
+                    >
                       Availability: {a.availability}
                     </span>
                   )}
                   {a.rate && (
-                    <span style={{ alignSelf: 'center', fontSize: 12, color: '#607D8B' }}>
+                    <span
+                      style={{
+                        alignSelf: 'center',
+                        fontSize: 12,
+                        color: '#607D8B',
+                      }}
+                    >
                       Rate: {a.rate}
                     </span>
                   )}
                 </div>
               </Card>
             ))}
-
-            {/* Sample spotlights (only when there’s no real data at all) */}
-            {showSamples &&
-              SAMPLE_SPOTLIGHTS.map((a) => (
-                <Card key={a.id}>
-                  <CardHeader style={{ display: 'flex', justifyContent: 'space-between', gap: 12 }}>
-                    <div>
-                      <CardSubtle>
-                        {a.name} • <em style={{ color: '#90A4AE' }}>Sample</em>
-                      </CardSubtle>
-                      <CardTitle style={{ marginTop: 2 }}>{a.headline}</CardTitle>
-                    </div>
-                    <span style={{ fontSize: 12, color: '#90A4AE', alignSelf: 'start' }}>
-                      Posted {a.createdAt}
-                    </span>
-                  </CardHeader>
-
-                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, marginBottom: 6 }}>
-                    {a.specialties.map((s, i) => (
-                      <span
-                        key={i}
-                        style={{
-                          fontSize: 12,
-                          background: '#FFF3E0',
-                          color: '#E65100',
-                          padding: '2px 6px',
-                          borderRadius: 999,
-                        }}
-                      >
-                        {s}
-                      </span>
-                    ))}
-                  </div>
-
-                  <CardContent>
-                    <p style={{ margin: 0, color: '#455A64' }}>{a.summary}</p>
-                  </CardContent>
-
-                  <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', marginTop: 6 }}>
-                    <Link
-                      href={`mailto:${a.contactEmail}?subject=Hearth Spotlight: ${encodeURIComponent(a.headline)}`}
-                      style={{
-                        background: '#FF7043',
-                        color: 'white',
-                        borderRadius: 10,
-                        padding: '10px 12px',
-                        fontWeight: 700,
-                        textDecoration: 'none',
-                      }}
-                    >
-                      Email
-                    </Link>
-                    <Link
-                      href={a.contactLink}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      style={{
-                        background: 'white',
-                        color: '#FF7043',
-                        border: '1px solid #FF7043',
-                        borderRadius: 10,
-                        padding: '10px 12px',
-                        fontWeight: 700,
-                        textDecoration: 'none',
-                      }}
-                    >
-                      Learn More
-                    </Link>
-                    <span style={{ alignSelf: 'center', fontSize: 12, color: '#607D8B' }}>
-                      Availability: {a.availability}
-                    </span>
-                    <span style={{ alignSelf: 'center', fontSize: 12, color: '#607D8B' }}>
-                      Rate: {a.rate}
-                    </span>
-                  </div>
-                </Card>
-              ))}
           </section>
         </div>
       </main>
@@ -371,9 +342,18 @@ export default function HearthSpotlightsPage() {
           minHeight: 120,
         }}
       >
-        <div style={{ fontWeight: 700, color: '#263238', marginBottom: 6 }}>Coming soon</div>
+        <div
+          style={{
+            fontWeight: 700,
+            color: '#263238',
+            marginBottom: 6,
+          }}
+        >
+          Coming soon
+        </div>
         <div style={{ color: '#90A4AE', fontSize: 14 }}>
-          This space is reserved for future Spotlights features.
+          This space is reserved for future Spotlights tools, such as posting and managing
+          your own mentorship offers.
         </div>
       </aside>
     </div>
