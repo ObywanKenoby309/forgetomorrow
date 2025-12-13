@@ -1,15 +1,50 @@
 import Link from 'next/link';
+import { useRouter } from 'next/router';
 import SeekerLayout from '@/components/layouts/SeekerLayout';
+import CoachingLayout from '@/components/layouts/CoachingLayout';
+import RecruiterLayout from '@/components/layouts/RecruiterLayout';
 
-function RightRail() {
+function makeLayout(chromeRaw) {
+  let Layout = SeekerLayout;
+  let activeNav = 'the-hearth';
+
+  if (chromeRaw === 'coach') {
+    Layout = CoachingLayout;
+    activeNav = 'hearth';
+  } else if (chromeRaw === 'recruiter-smb' || chromeRaw === 'recruiter-ent') {
+    Layout = RecruiterLayout;
+    activeNav = 'hearth';
+  }
+
+  return { Layout, activeNav };
+}
+
+function RightRail({ withChrome }) {
   return (
     <div style={{ display: 'grid', gap: 12 }}>
-      <div style={{ background: 'white', border: '1px solid #eee', borderRadius: 12, padding: 12, boxShadow: '0 2px 6px rgba(0,0,0,0.06)' }}>
-        <div style={{ fontWeight: 800, color: 'black', marginBottom: 8 }}>Shortcuts</div>
+      <div
+        style={{
+          background: 'white',
+          border: '1px solid #eee',
+          borderRadius: 12,
+          padding: 12,
+          boxShadow: '0 2px 6px rgba(0,0,0,0.06)',
+        }}
+      >
+        <div style={{ fontWeight: 800, color: 'black', marginBottom: 8 }}>
+          Shortcuts
+        </div>
         <div style={{ display: 'grid', gap: 8 }}>
-          <Link href="/seeker/the-hearth">Back to Hearth</Link>
-          <Link href="/seeker/the-hearth/mentorship">Mentorship Programs</Link>
-          <Link href="/seeker/the-hearth/resources">Resource Library</Link>
+          <Link href={withChrome('/the-hearth')}>Back to Hearth</Link>
+          <Link href={withChrome('/seeker/the-hearth/mentorship')}>
+            Mentorship Programs
+          </Link>
+          <Link href={withChrome('/seeker/the-hearth/resources')}>
+            Resource Library
+          </Link>
+          <Link href={withChrome('/seeker/the-hearth/forums')}>
+            Discussion Forums
+          </Link>
         </div>
       </div>
     </div>
@@ -17,45 +52,88 @@ function RightRail() {
 }
 
 const Header = (
-  <section style={{
-    background: 'white', border: '1px solid #eee', borderRadius: 12,
-    padding: 16, boxShadow: '0 2px 6px rgba(0,0,0,0.06)', textAlign: 'center'
-  }}>
-    <h1 style={{ margin: 0, color: '#FF7043', fontSize: 24, fontWeight: 800 }}>Community Events</h1>
-    <p style={{ margin: '6px auto 0', color: '#607D8B', maxWidth: 720 }}>
-      Workshops, webinars, and networking. RSVP and add to calendar.
+  <section
+    style={{
+      background: 'white',
+      border: '1px solid #eee',
+      borderRadius: 12,
+      padding: 16,
+      boxShadow: '0 2px 6px rgba(0,0,0,0.06)',
+      textAlign: 'center',
+    }}
+  >
+    <h1
+      style={{
+        margin: 0,
+        color: '#FF7043',
+        fontSize: 24,
+        fontWeight: 800,
+      }}
+    >
+      Community Events
+    </h1>
+    <p
+      style={{
+        margin: '6px auto 0',
+        color: '#607D8B',
+        maxWidth: 720,
+      }}
+    >
+      Workshops, webinars, and networking. RSVP and add to calendar—once events go live.
     </p>
   </section>
 );
 
-export default function SeekerHearthEvents() {
-  const Event = ({ title, when, where, desc }) => (
-    <div style={{ background: 'white', border: '1px solid #eee', borderRadius: 12, padding: 16, boxShadow: '0 2px 6px rgba(0,0,0,0.06)' }}>
-      <div style={{ fontWeight: 800, color: '#263238' }}>{title}</div>
-      <div style={{ color: '#607D8B', fontSize: 14, marginTop: 2 }}>{when} • {where}</div>
-      <p style={{ color: '#455A64', marginTop: 8 }}>{desc}</p>
-      <button
-        style={{ marginTop: 8, background: '#FF7043', color: 'white', padding: '8px 12px', borderRadius: 8, border: 'none', fontWeight: 700 }}
-        onClick={() => alert('RSVP saved (placeholder)')}
-      >
-        RSVP
-      </button>
-    </div>
-  );
+export default function HearthEventsPage() {
+  const router = useRouter();
+  const chrome = String(router.query.chrome || 'seeker').toLowerCase();
+  const withChrome = (path) =>
+    chrome ? `${path}${path.includes('?') ? '&' : '?'}chrome=${chrome}` : path;
+
+  const { Layout, activeNav } = makeLayout(chrome);
 
   return (
-    <SeekerLayout
+    <Layout
       title="Events | ForgeTomorrow"
       header={Header}
-      right={<RightRail />}
-      activeNav="the-hearth"
+      right={<RightRail withChrome={withChrome} />}
+      activeNav={activeNav}
     >
-      <section style={{ display: 'grid', gap: 12 }}>
-        <Event title="Resume Clinic Live" when="Thu, 7pm CT" where="Virtual"
-               desc="Hands‑on resume tightening with live Q&A." />
-        <Event title="CSM Roundtable" when="Next Tue, 6pm CT" where="Nashville (Hybrid)"
-               desc="Discussion on value realization & adoption plays." />
+      <section
+        style={{
+          display: 'grid',
+          gap: 12,
+        }}
+      >
+        <div
+          style={{
+            background: 'white',
+            border: '1px dashed #B0BEC5',
+            borderRadius: 12,
+            padding: 20,
+            boxShadow: '0 2px 6px rgba(0,0,0,0.06)',
+          }}
+        >
+          <div
+            style={{
+              fontSize: 18,
+              fontWeight: 800,
+              color: '#37474F',
+              marginBottom: 6,
+            }}
+          >
+            No upcoming community events yet
+          </div>
+          <p style={{ color: '#607D8B', marginTop: 4 }}>
+            Live resume clinics, recruiter AMAs, and networking sessions will appear
+            here once we begin scheduling community events.
+          </p>
+          <p style={{ color: '#607D8B', marginTop: 8 }}>
+            When events are available, you’ll be able to RSVP and add them directly to
+            your calendar from this page.
+          </p>
+        </div>
       </section>
-    </SeekerLayout>
+    </Layout>
   );
 }

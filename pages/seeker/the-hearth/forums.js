@@ -1,50 +1,122 @@
 import Link from 'next/link';
+import { useRouter } from 'next/router';
 import SeekerLayout from '@/components/layouts/SeekerLayout';
+import CoachingLayout from '@/components/layouts/CoachingLayout';
+import RecruiterLayout from '@/components/layouts/RecruiterLayout';
 
-function RightRail() {
-  return (
+function makeLayout(chromeRaw) {
+  let Layout = SeekerLayout;
+  let activeNav = 'the-hearth';
+
+  if (chromeRaw === 'coach') {
+    Layout = CoachingLayout;
+    activeNav = 'hearth';
+  } else if (chromeRaw === 'recruiter-smb' || chromeRaw === 'recruiter-ent') {
+    Layout = RecruiterLayout;
+    activeNav = 'hearth';
+  }
+
+  return { Layout, activeNav };
+}
+
+export default function HearthForumsPage() {
+  const router = useRouter();
+  const chrome = String(router.query.chrome || 'seeker').toLowerCase();
+
+  const withChrome = (path) =>
+    chrome ? `${path}${path.includes('?') ? '&' : '?'}chrome=${chrome}` : path;
+
+  const { Layout, activeNav } = makeLayout(chrome);
+
+  const RightRail = (
     <div style={{ display: 'grid', gap: 12 }}>
-      <div style={{ background: 'white', border: '1px solid #eee', borderRadius: 12, padding: 12, boxShadow: '0 2px 6px rgba(0,0,0,0.06)' }}>
-        <div style={{ fontWeight: 800, color: 'black', marginBottom: 8 }}>Shortcuts</div>
+      <div
+        style={{
+          background: 'white',
+          border: '1px solid #eee',
+          borderRadius: 12,
+          padding: 12,
+          boxShadow: '0 2px 6px rgba(0,0,0,0.06)',
+        }}
+      >
+        <div style={{ fontWeight: 800, color: 'black', marginBottom: 8 }}>
+          Shortcuts
+        </div>
         <div style={{ display: 'grid', gap: 8 }}>
-          <Link href="/seeker/the-hearth">Back to Hearth</Link>
-          <Link href="/seeker/the-hearth/mentorship">Mentorship Programs</Link>
-          <Link href="/seeker/the-hearth/events">Community Events</Link>
+          <Link href={withChrome('/the-hearth')}>Back to Hearth</Link>
+          <Link href={withChrome('/seeker/the-hearth/mentorship')}>
+            Mentorship Programs
+          </Link>
+          <Link href={withChrome('/seeker/the-hearth/events')}>
+            Community Events
+          </Link>
+          <Link href={withChrome('/seeker/the-hearth/resources')}>
+            Resource Library
+          </Link>
         </div>
       </div>
     </div>
   );
-}
 
-const Header = (
-  <section style={{
-    background: 'white', border: '1px solid #eee', borderRadius: 12,
-    padding: 16, boxShadow: '0 2px 6px rgba(0,0,0,0.06)', textAlign: 'center'
-  }}>
-    <h1 style={{ margin: 0, color: '#FF7043', fontSize: 24, fontWeight: 800 }}>Discussion Forums</h1>
-    <p style={{ margin: '6px auto 0', color: '#607D8B', maxWidth: 720 }}>
-      Coming soon — topic threads, replies, and reputation.
-    </p>
-  </section>
-);
+  const Header = (
+    <section
+      style={{
+        background: 'white',
+        border: '1px solid #eee',
+        borderRadius: 12,
+        padding: 16,
+        boxShadow: '0 2px 6px rgba(0,0,0,0.06)',
+        textAlign: 'center',
+      }}
+    >
+      <h1
+        style={{ margin: 0, color: '#FF7043', fontSize: 24, fontWeight: 800 }}
+      >
+        Discussion Forums
+      </h1>
+      <p
+        style={{
+          margin: '6px auto 0',
+          color: '#607D8B',
+          maxWidth: 720,
+        }}
+      >
+        Coming soon — topic threads, replies, and reputation.
+      </p>
+    </section>
+  );
 
-export default function SeekerHearthForums() {
   return (
-    <SeekerLayout
+    <Layout
       title="Forums | ForgeTomorrow"
       header={Header}
-      right={<RightRail />}
-      activeNav="the-hearth"
+      right={RightRail}
+      activeNav={activeNav}
     >
-      <section style={{
-        background: 'white', border: '1px dashed #B0BEC5', borderRadius: 12,
-        padding: 20, boxShadow: '0 2px 6px rgba(0,0,0,0.06)', textAlign: 'center'
-      }}>
-        <div style={{ fontSize: 18, fontWeight: 800, color: '#37474F' }}>🔒 Not Yet Enabled</div>
+      <section
+        style={{
+          background: 'white',
+          border: '1px dashed #B0BEC5',
+          borderRadius: 12,
+          padding: 20,
+          boxShadow: '0 2px 6px rgba(0,0,0,0.06)',
+          textAlign: 'center',
+        }}
+      >
+        <div
+          style={{
+            fontSize: 18,
+            fontWeight: 800,
+            color: '#37474F',
+          }}
+        >
+          🔒 Not Yet Enabled
+        </div>
         <p style={{ color: '#607D8B', marginTop: 6 }}>
-          We’re polishing threads, mentions, and moderation. Stay tuned!
+          We’re polishing threads, mentions, and moderation workflows before we open
+          forums to the community.
         </p>
       </section>
-    </SeekerLayout>
+    </Layout>
   );
 }

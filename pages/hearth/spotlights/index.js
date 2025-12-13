@@ -1,8 +1,15 @@
 // pages/hearth/spotlights/index.js
 import React, { useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
+import { useRouter } from 'next/router';
 import SpotlightFilters from '../../../components/spotlights/SpotlightFilters.js';
-import { Card, CardHeader, CardTitle, CardContent, CardSubtle } from '../../../components/ui/Card';
+import {
+  Card,
+  CardHeader,
+  CardTitle,
+  CardContent,
+  CardSubtle,
+} from '../../../components/ui/Card';
 
 const STORAGE_KEY = 'hearthSpotlights_v1';
 
@@ -16,6 +23,12 @@ function localISODate(d = new Date()) {
 export default function HearthSpotlightsPage() {
   const [ads, setAds] = useState([]);
   const [filters, setFilters] = useState(null);
+
+  const router = useRouter();
+  const chrome = String(router.query.chrome || '').toLowerCase();
+
+  const withChrome = (path) =>
+    chrome ? `${path}${path.includes('?') ? '&' : '?'}chrome=${chrome}` : path;
 
   useEffect(() => {
     if (typeof window === 'undefined') return;
@@ -93,7 +106,7 @@ export default function HearthSpotlightsPage() {
       {/* Left: Back + Filters (spans both rows) */}
       <aside style={{ gridArea: 'filters', alignSelf: 'start' }}>
         <Link
-          href="/the-hearth"
+          href={withChrome('/the-hearth')}
           style={{
             display: 'block',
             backgroundColor: '#FF7043',
@@ -179,7 +192,9 @@ export default function HearthSpotlightsPage() {
             {filtered.length === 0 && !hasAnyReal && (
               <Card>
                 <CardHeader>
-                  <CardTitle style={{ fontSize: 18, margin: 0, color: '#263238' }}>
+                  <CardTitle
+                    style={{ fontSize: 18, margin: 0, color: '#263238' }}
+                  >
                     No Hearth Spotlights yet
                   </CardTitle>
                   <CardSubtle style={{ marginTop: 4 }}>

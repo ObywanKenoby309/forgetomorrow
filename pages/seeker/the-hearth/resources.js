@@ -1,9 +1,27 @@
 import { useState, useEffect, useRef } from 'react';
 import Link from 'next/link';
+import { useRouter } from 'next/router';
 import SeekerLayout from '@/components/layouts/SeekerLayout';
+import CoachingLayout from '@/components/layouts/CoachingLayout';
+import RecruiterLayout from '@/components/layouts/RecruiterLayout';
 import { SECTION_DETAILS } from '@/lib/resourceSections';
 
-function RightRail() {
+function makeLayout(chromeRaw) {
+  let Layout = SeekerLayout;
+  let activeNav = 'the-hearth';
+
+  if (chromeRaw === 'coach') {
+    Layout = CoachingLayout;
+    activeNav = 'hearth';
+  } else if (chromeRaw === 'recruiter-smb' || chromeRaw === 'recruiter-ent') {
+    Layout = RecruiterLayout;
+    activeNav = 'hearth';
+  }
+
+  return { Layout, activeNav };
+}
+
+function RightRail({ withChrome }) {
   return (
     <div style={{ display: 'grid', gap: 12 }}>
       <div
@@ -19,10 +37,16 @@ function RightRail() {
           Shortcuts
         </div>
         <div style={{ display: 'grid', gap: 8 }}>
-          <Link href="/seeker/the-hearth">Back to Hearth</Link>
-          <Link href="/seeker/the-hearth/mentorship">Mentorship Programs</Link>
-          <Link href="/seeker/the-hearth/events">Community Events</Link>
-          <Link href="/seeker/the-hearth/forums">Discussion Forums</Link>
+          <Link href={withChrome('/the-hearth')}>Back to Hearth</Link>
+          <Link href={withChrome('/seeker/the-hearth/mentorship')}>
+            Mentorship Programs
+          </Link>
+          <Link href={withChrome('/seeker/the-hearth/events')}>
+            Community Events
+          </Link>
+          <Link href={withChrome('/seeker/the-hearth/forums')}>
+            Discussion Forums
+          </Link>
         </div>
       </div>
     </div>
@@ -57,8 +81,8 @@ const Header = (
         maxWidth: 720,
       }}
     >
-      Browse core learning sections now. Articles and guides today; paid certs
-      and courses later.
+      Browse core learning sections now. Articles and guides today; paid certs and
+      courses later.
     </p>
   </section>
 );
@@ -68,7 +92,7 @@ const SECTION_CARDS = [
   {
     title: 'ForgeTomorrow Platform Tutorials',
     blurb:
-      'Learn how to use the ForgeTomorrow tools themselves: the resume builder, SmartNetworking, and negotiation support-so the platform works like a co-pilot in your job search.',
+      'Learn how to use the ForgeTomorrow tools themselves: the resume builder, SmartNetworking, and negotiation support—so the platform works like a co-pilot in your job search.',
   },
   {
     title: 'Job Search Foundations',
@@ -83,17 +107,17 @@ const SECTION_CARDS = [
   {
     title: 'Interviews & Preparation',
     blurb:
-      'Get ready fast and show up confident. Use 30-minute prep checklists, STAR story banks, strong questions to ask, and a simple structure for Tell me about yourself.',
+      'Get ready fast and show up confident. Use prep checklists, STAR story banks, strong questions to ask, and a simple structure for “Tell me about yourself.”',
   },
   {
     title: 'Negotiation & Compensation',
     blurb:
-      'Research your market value, anchor your range, and negotiate with confidence. Includes counteroffer scripts, benefits negotiation phrasing, and how to respond to fixed-budget offers.',
+      'Research your market value, anchor your range, and negotiate with confidence. Includes counteroffer scripts, benefits phrasing, and how to respond to fixed-budget offers.',
   },
   {
     title: 'Networking & Personal Branding',
     blurb:
-      'Network without feeling awkward and build a simple, consistent professional brand in 10 minutes a day. Includes ready-made outreach and follow-up message scripts.',
+      'Network without feeling awkward and build a simple, consistent professional brand in 10 minutes a day. Includes ready-made outreach and follow-up scripts.',
   },
   {
     title: 'Career Development & Skill Growth',
@@ -103,7 +127,7 @@ const SECTION_CARDS = [
   {
     title: 'Special Situations & Tough Scenarios',
     blurb:
-      'Handle job gaps, layoffs, and career pivots with confidence. Learn how to talk about your story honestly while staying future-focused and resilient through rejection.',
+      'Handle job gaps, layoffs, and career pivots with confidence. Learn how to talk about your story honestly while staying future-focused and resilient.',
   },
 ];
 
@@ -115,7 +139,6 @@ function SectionViewer({ selectedSection }) {
   const articleRefs = useRef([]);
 
   useEffect(() => {
-    // Reset expanded article when switching sections
     setExpandedIndex(0);
   }, [selectedSection]);
 
@@ -135,9 +158,9 @@ function SectionViewer({ selectedSection }) {
           Pick a learning section
         </div>
         <p style={{ color: '#455A64', marginTop: 6 }}>
-          Select a section on the left to see what is inside. Each area includes
-          focused guides, checklists, and scripts designed to move your job
-          search forward without overwhelm.
+          Select a section on the left to see what is inside. Each area includes focused
+          guides, checklists, and scripts designed to move your career forward without
+          overwhelm.
         </p>
       </div>
     );
@@ -180,7 +203,6 @@ function SectionViewer({ selectedSection }) {
         </ul>
       )}
 
-      {/* Expandable article list with scroll-to behavior */}
       {hasArticles && (
         <div style={{ marginTop: 14 }}>
           {details.articles.map((article, idx) => {
@@ -212,7 +234,7 @@ function SectionViewer({ selectedSection }) {
                           block: 'start',
                         });
                       } catch {
-                        // ignore if scrollIntoView is not supported
+                        // ignore
                       }
                     }
                   }}
@@ -277,7 +299,14 @@ function SectionViewer({ selectedSection }) {
 // ─────────────────────────────────────────────
 // Page component
 // ─────────────────────────────────────────────
-export default function SeekerHearthResources() {
+export default function HearthResourcesPage() {
+  const router = useRouter();
+  const chrome = String(router.query.chrome || 'seeker').toLowerCase();
+  const withChrome = (path) =>
+    chrome ? `${path}${path.includes('?') ? '&' : '?'}chrome=${chrome}` : path;
+
+  const { Layout, activeNav } = makeLayout(chrome);
+
   const [selectedSection, setSelectedSection] = useState(null);
   const [searchTerm, setSearchTerm] = useState('');
 
@@ -320,11 +349,11 @@ export default function SeekerHearthResources() {
   );
 
   return (
-    <SeekerLayout
+    <Layout
       title="Resources | ForgeTomorrow"
       header={Header}
-      right={<RightRail />}
-      activeNav="the-hearth"
+      right={<RightRail withChrome={withChrome} />}
+      activeNav={activeNav}
     >
       <section
         style={{
@@ -336,7 +365,6 @@ export default function SeekerHearthResources() {
       >
         {/* Left: filter + section list */}
         <div style={{ display: 'grid', gap: 12 }}>
-          {/* Simple "candidates-style" filter bar */}
           <div
             style={{
               background: 'white',
@@ -394,6 +422,6 @@ export default function SeekerHearthResources() {
         {/* Right: viewer pane */}
         <SectionViewer selectedSection={selectedSection} />
       </section>
-    </SeekerLayout>
+    </Layout>
   );
 }
