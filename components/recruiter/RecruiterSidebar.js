@@ -1,34 +1,13 @@
 // components/recruiter/RecruiterSidebar.js
-import React, { useEffect, useState } from 'react';
+import React from 'react';
 import Link from 'next/link';
 import { usePlan } from '@/context/PlanContext';
 
 const ORANGE = '#FF7043';
 const ORANGE_SOFT = '#FFEDE6';
 const CARD_BG = '#FFFFFF';
-const CARD_BORDER = '#E6E6E6';
 const TEXT_MAIN = '#263238';
 
-// ───────────────── Chevron ─────────────────
-function Chevron({ open }) {
-  return (
-    <span
-      aria-hidden="true"
-      style={{
-        display: 'inline-block',
-        width: 0,
-        height: 0,
-        borderTop: '6px solid transparent',
-        borderBottom: '6px solid transparent',
-        borderLeft: `8px solid ${ORANGE}`,
-        transition: 'transform 120ms ease',
-        transform: open ? 'rotate(90deg)' : 'rotate(0deg)',
-      }}
-    />
-  );
-}
-
-// ───────────────── Badge ─────────────────
 function Badge({ value }) {
   if (!value) return null;
   return (
@@ -54,20 +33,21 @@ function Badge({ value }) {
   );
 }
 
-// ───────────────── Nav Item ─────────────────
 function NavItem({ href, label, active, badge }) {
   const base = {
+    position: 'relative',
     display: 'flex',
     alignItems: 'center',
     gap: 10,
-    borderRadius: 12,
-    padding: '10px 14px',
+    padding: '8px 12px',
     textDecoration: 'none',
-    fontWeight: 700,
+    fontWeight: 600,
+    fontSize: 14,
     color: active ? '#FFFFFF' : TEXT_MAIN,
-    background: active ? ORANGE : CARD_BG,
-    border: `1px solid ${CARD_BORDER}`,
-    transition: 'background 120ms ease, color 120ms ease',
+    background: active ? ORANGE : 'transparent',
+    borderRadius: 10,
+    transition:
+      'background 120ms ease, color 120ms ease, box-shadow 120ms ease, transform 80ms ease',
   };
 
   return (
@@ -79,115 +59,61 @@ function NavItem({ href, label, active, badge }) {
         if (!active) e.currentTarget.style.background = ORANGE_SOFT;
       }}
       onMouseLeave={(e) => {
-        if (!active) e.currentTarget.style.background = CARD_BG;
+        if (!active) e.currentTarget.style.background = 'transparent';
       }}
     >
-      <span style={{ flex: '0 1 auto' }}>{label}</span>
+      {active && (
+        <span
+          aria-hidden="true"
+          style={{
+            position: 'absolute',
+            left: 0,
+            top: 6,
+            bottom: 6,
+            width: 3,
+            borderRadius: 999,
+            background: '#FFFFFF',
+            opacity: 0.8,
+          }}
+        />
+      )}
+      <span style={{ marginLeft: active ? 6 : 0 }}>{label}</span>
       <Badge value={badge} />
     </Link>
   );
 }
 
-// ───────────────── Section ─────────────────
-function Section({ title, children, defaultOpen = false }) {
-  const [open, setOpen] = useState(defaultOpen);
-
+function SectionLabel({ children }) {
   return (
-    <div style={{ display: 'grid', gap: 8 }}>
-      <button
-        type="button"
-        onClick={() => setOpen(!open)}
-        aria-expanded={open}
-        style={{
-          display: 'flex',
-          alignItems: 'center',
-          gap: 10,
-          borderRadius: 12,
-          padding: '10px 14px',
-          background: CARD_BG,
-          border: `1px solid ${CARD_BORDER}`,
-          fontWeight: 800,
-          color: TEXT_MAIN,
-          cursor: 'pointer',
-        }}
-      >
-        <Chevron open={open} />
-        <span>{title}</span>
-      </button>
-
-      {open && (
-        <div
-          style={{
-            display: 'grid',
-            gap: 8,
-            background: '#F9FAFB',
-            border: `1px solid ${CARD_BORDER}`,
-            borderRadius: 12,
-            padding: 8,
-          }}
-        >
-          {children}
-        </div>
-      )}
+    <div
+      style={{
+        fontSize: 10,
+        fontWeight: 700,
+        letterSpacing: '0.08em',
+        textTransform: 'uppercase',
+        color: '#90A4AE',
+        padding: '4px 2px 0',
+      }}
+    >
+      {children}
     </div>
   );
 }
 
-// ───────────────── MAIN: RecruiterSidebar ─────────────────
 export default function RecruiterSidebar({
   active = 'dashboard',
   role: roleProp,
   variant,
-}) {
-  const { isEnterprise: planIsEnterprise, can, role: ctxRole } = usePlan();
-
-  const [counts, setCounts] = useState({
+  counts = {
+    candidates: 0,
+    jobs: 0,
+    messages: 0,
     connections: 0,
     signal: 0,
-  });
-
-  useEffect(() => {
-    let isMounted = true;
-
-    async function loadCounts() {
-      try {
-        const [contactsRes, threadsRes] = await Promise.all([
-          fetch('/api/contacts/summary'),
-          fetch('/api/signal/threads'),
-        ]);
-
-        let connections = 0;
-        let signal = 0;
-
-        if (contactsRes.ok) {
-          const data = await contactsRes.json();
-          const incoming = Array.isArray(data.incoming)
-            ? data.incoming.length
-            : 0;
-          const outgoing = Array.isArray(data.outgoing)
-            ? data.outgoing.length
-            : 0;
-          connections = incoming + outgoing;
-        }
-
-        if (threadsRes.ok) {
-          const data = await threadsRes.json();
-          signal = Array.isArray(data.threads) ? data.threads.length : 0;
-        }
-
-        if (isMounted) {
-          setCounts({ connections, signal });
-        }
-      } catch (err) {
-        console.error('RecruiterSidebar counts error:', err);
-      }
-    }
-
-    loadCounts();
-    return () => {
-      isMounted = false;
-    };
-  }, []);
+  },
+  initialOpen = { recruiter: true, seeker: false, connections: false }, // kept for compatibility (unused)
+}) {
+  const { isEnterprise: planIsEnterprise, can, role: ctxRole } = usePlan();
 
   const role = roleProp || ctxRole;
   const isEnterprise =
@@ -196,34 +122,28 @@ export default function RecruiterSidebar({
   const chromeRecruiter = isEnterprise ? 'recruiter-ent' : 'recruiter-smb';
   const canSeeSettings = can('recruiter.settings.view');
 
-  const isConnectionsActive = ['contacts', 'messages', 'feed'].includes(active);
-  const isRecruiterToolsActive = [
-    'candidates',
-    'job-postings',
-    'messaging',
-    'calendar',
-    'analytics',
-    'pools',
-    'settings',
-  ].includes(active);
-  const isSeekerToolsActive = [
-    'seeker-dashboard',
-    'jobs',
-    'resume-cover',
-    'roadmap',
-    'seeker-calendar',
-  ].includes(active);
-
   return (
-    <nav style={{ display: 'grid', gap: 12 }}>
-      {/* Profile */}
+    <nav
+      style={{
+        display: 'grid',
+        gap: 6,
+        position: 'sticky',
+        top: 24,
+        alignSelf: 'start',
+        height: 'fit-content',
+        background: CARD_BG,
+        borderRadius: 16,
+        border: '1px solid #E5E7EB',
+        boxShadow: '0 2px 8px rgba(15, 23, 42, 0.05)',
+        padding: 12,
+      }}
+    >
+      {/* Profile + Overview */}
       <NavItem
         href={`/profile?chrome=${chromeRecruiter}`}
         label="Profile"
         active={active === 'profile'}
       />
-
-      {/* Overview (recruiter dashboard) */}
       <NavItem
         href="/recruiter/dashboard"
         label="Overview"
@@ -231,103 +151,102 @@ export default function RecruiterSidebar({
       />
 
       {/* Connections */}
-      <Section title="Connections" defaultOpen={isConnectionsActive}>
-        <NavItem
-          href={`/seeker/contact-center?chrome=${chromeRecruiter}`}
-          label="Contact Center"
-          active={active === 'contacts'}
-          badge={counts.connections}
-        />
-        <NavItem
-          href={`/seeker/messages?chrome=${chromeRecruiter}`}
-          label="The Signal"
-          active={active === 'messages'}
-          badge={counts.signal}
-        />
-        <NavItem
-          href={`/feed?chrome=${chromeRecruiter}`}
-          label="Community Feed"
-          active={active === 'feed'}
-        />
-      </Section>
+      <SectionLabel>Connections</SectionLabel>
+      <NavItem
+        href={`/seeker/contact-center?chrome=${chromeRecruiter}`}
+        label="Contact Center"
+        active={active === 'contacts'}
+        badge={counts.connections}
+      />
+      <NavItem
+        href={`/seeker/messages?chrome=${chromeRecruiter}`}
+        label="The Signal"
+        active={active === 'messages'}
+        badge={counts.signal}
+      />
+      <NavItem
+        href={`/feed?chrome=${chromeRecruiter}`}
+        label="Community Feed"
+        active={active === 'feed'}
+      />
 
       {/* Recruiter Tools */}
-      <Section title="Recruiter Tools" defaultOpen={isRecruiterToolsActive}>
-        <NavItem
-          href="/recruiter/candidates"
-          label="Candidates"
-          active={active === 'candidates'}
-        />
-        <NavItem
-          href="/recruiter/job-postings"
-          label="Job Posting"
-          active={active === 'job-postings'}
-        />
-        <NavItem
-          href="/recruiter/messaging"
-          label="Messaging"
-          active={active === 'messaging'}
-        />
-        <NavItem
-          href="/recruiter/calendar"
-          label="Calendar"
-          active={active === 'calendar'}
-        />
-
-        {isEnterprise && (
-          <>
-            <NavItem
-              href="/recruiter/analytics"
-              label="Analytics"
-              active={active === 'analytics'}
-            />
-            <NavItem
-              href="/recruiter/pools"
-              label="Talent Pools"
-              active={active === 'pools'}
-            />
-          </>
-        )}
-
-        {canSeeSettings && (
+      <SectionLabel>Recruiter Tools</SectionLabel>
+      <NavItem
+        href="/recruiter/candidates"
+        label="Candidates"
+        active={active === 'candidates'}
+        badge={counts.candidates}
+      />
+      <NavItem
+        href="/recruiter/job-postings"
+        label="Job Posting"
+        active={active === 'job-postings'}
+        badge={counts.jobs}
+      />
+      <NavItem
+        href="/recruiter/messaging"
+        label="Messaging"
+        active={active === 'messaging'}
+        badge={counts.messages}
+      />
+      <NavItem
+        href="/recruiter/calendar"
+        label="Calendar"
+        active={active === 'calendar'}
+      />
+      {isEnterprise && (
+        <>
           <NavItem
-            href="/recruiter/settings"
-            label="Settings"
-            active={active === 'settings'}
+            href="/recruiter/analytics"
+            label="Analytics"
+            active={active === 'analytics'}
           />
-        )}
-      </Section>
+          <NavItem
+            href="/recruiter/pools"
+            label="Talent Pools"
+            active={active === 'pools'}
+          />
+        </>
+      )}
+      {canSeeSettings && (
+        <NavItem
+          href="/recruiter/settings"
+          label="Settings"
+          active={active === 'settings'}
+        />
+      )}
 
       {/* Seeker Tools */}
-      <Section title="Seeker Tools" defaultOpen={isSeekerToolsActive}>
-        <NavItem
-          href={`/seeker-dashboard?chrome=${chromeRecruiter}`}
-          label="Seeker Dashboard"
-          active={active === 'seeker-dashboard'}
-        />
-        <NavItem
-          href={`/jobs?chrome=${chromeRecruiter}`}
-          label="Apply to Jobs"
-          active={active === 'jobs'}
-        />
-        <NavItem
-          href={`/resume-cover?chrome=${chromeRecruiter}`}
-          label="Resume & Cover"
-          active={active === 'resume-cover'}
-        />
-        <NavItem
-          href={`/roadmap?chrome=${chromeRecruiter}`}
-          label="Career Roadmap"
-          active={active === 'roadmap'}
-        />
-        <NavItem
-          href={`/seeker/calendar?chrome=${chromeRecruiter}`}
-          label="Seeker Calendar"
-          active={active === 'seeker-calendar'}
-        />
-      </Section>
+      <SectionLabel>Seeker Tools</SectionLabel>
+      <NavItem
+        href={`/seeker-dashboard?chrome=${chromeRecruiter}`}
+        label="Seeker Dashboard"
+        active={active === 'seeker-dashboard'}
+      />
+      <NavItem
+        href={`/jobs?chrome=${chromeRecruiter}`}
+        label="Apply to Jobs"
+        active={active === 'jobs'}
+      />
+      <NavItem
+        href={`/resume-cover?chrome=${chromeRecruiter}`}
+        label="Resume &amp; Cover"
+        active={active === 'resume-cover'}
+      />
+      <NavItem
+        href={`/roadmap?chrome=${chromeRecruiter}`}
+        label="Career Roadmap"
+        active={active === 'roadmap'}
+      />
+      <NavItem
+        href={`/seeker/calendar?chrome=${chromeRecruiter}`}
+        label="Seeker Calendar"
+        active={active === 'seeker-calendar'}
+      />
 
-      {/* Hearth */}
+      {/* Hearth / Resources */}
+      <SectionLabel>Resources</SectionLabel>
       <NavItem
         href={`/seeker/the-hearth?chrome=${chromeRecruiter}`}
         label="The Hearth"
