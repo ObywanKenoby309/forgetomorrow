@@ -17,7 +17,6 @@ function normalizeReactions(raw) {
   }
 
   if (typeof raw === 'object') {
-    // If somehow stored as object map, convert to array
     return Array.isArray(raw) ? raw : [];
   }
 
@@ -29,7 +28,6 @@ function toggleReaction(reactions, userId, emoji) {
   const idx = next.findIndex((r) => r && r.emoji === emoji);
 
   if (idx === -1) {
-    // First time anyone has used this emoji
     next.push({
       emoji,
       count: 1,
@@ -43,14 +41,12 @@ function toggleReaction(reactions, userId, emoji) {
   const hasUser = existingUserIds.includes(userId);
 
   if (hasUser) {
-    // Toggle OFF for this user
     const newUserIds = existingUserIds.filter((id) => id !== userId);
     const baseCount =
       typeof entry.count === 'number' ? entry.count : existingUserIds.length;
     const newCount = Math.max(0, baseCount - 1);
 
     if (newCount <= 0 && newUserIds.length === 0) {
-      // Remove the reaction bucket entirely
       next.splice(idx, 1);
     } else {
       next[idx] = {
@@ -60,10 +56,10 @@ function toggleReaction(reactions, userId, emoji) {
       };
     }
   } else {
-    // Toggle ON for this user
     const newUserIds = [...existingUserIds, userId];
     const baseCount =
       typeof entry.count === 'number' ? entry.count : existingUserIds.length;
+
     next[idx] = {
       ...entry,
       userIds: newUserIds,
@@ -89,25 +85,29 @@ export default async function handler(req, res) {
     const userId = session.user.id;
     const { postId, emoji } = req.body || {};
 
-    // Basic validation
-    if (postId === undefined || postId === null || postId === '') {
+    if (postId === undefined || postId === null) {
       return res.status(400).json({ error: 'postId is required' });
     }
     if (!emoji || typeof emoji !== 'string') {
       return res.status(400).json({ error: 'emoji is required' });
     }
 
-    // Support either numeric or string post IDs, so we don't blow up on CUIDs
-    const maybeNumber = Number(postId);
-    const useNumeric =
-      !Number.isNaN(maybeNumber) && `${maybeNumber}` === `${postId}`;
+    // Support both Int and String IDs
+    const rawId = postId;
+    let whereId;
 
-    const where = useNumeric
-      ? { id: maybeNumber }
-      : { id: String(postId) };
+    if (typeof rawId === 'number') {
+      whereId = rawId;
+    } else if (typeof rawId === 'string' && /^\d+$/.test(rawId)) {
+      // numeric string → Int ID
+      whereId = Number(rawId);
+    } else {
+      // cuid / uuid / any other string
+      whereId = String(rawId);
+    }
 
     const existing = await prisma.feedPost.findUnique({
-      where,
+      where: { id: whereId },
       select: { id: true, reactions: true },
     });
 
@@ -118,13 +118,31 @@ export default async function handler(req, res) {
     const currentReactions = normalizeReactions(existing.reactions);
     const updatedReactions = toggleReaction(currentReactions, userId, emoji);
 
-    const saved = await prisma.feedPost.update({
-      where,
-      data: {
-        reactions: updatedReactions,
-      },
-      select: { id: true, reactions: true },
-    });
+    let saved;
+    try {
+      saved = await prisma.feedPost.update({
+        where: { id: whereId },
+        data: {
+          reactions: updatedReactions,
+        },
+        select: { id: true, reactions: true },
+      });
+    } catch (err) {
+      console.error('[FEED REACT UPDATE ERROR]', err);
+
+      // If the DB schema does not yet have `reactions`, fail gracefully
+      const msg = err?.message || '';
+      if (msg.includes('Unknown argument') && msg.includes('reactions')) {
+        // Don’t crash the UI; just no-op for now
+        return res.status(200).json({
+          postId: existing.id,
+          reactions: currentReactions,
+          note: 'reactions field missing from schema; update Prisma model to persist.',
+        });
+      }
+
+      throw err;
+    }
 
     return res.status(200).json({
       postId: saved.id,
