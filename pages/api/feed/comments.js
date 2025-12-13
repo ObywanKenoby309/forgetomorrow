@@ -33,9 +33,9 @@ export default async function handler(req, res) {
     const trimmed = (text || '').trim();
 
     if (!postId || !trimmed) {
-      return res
-        .status(400)
-        .json({ error: 'Post id and non-empty text are required.' });
+      return res.status(400).json({
+        error: 'Post id and non-empty text are required.',
+      });
     }
 
     const idNum =
@@ -53,7 +53,7 @@ export default async function handler(req, res) {
     }
 
     const user = session.user;
-    const viewerId = user.id; // ✅ capture commenter id
+    const viewerId = user.id; // ✅ commenter id
 
     const displayName =
       user.name ||
@@ -67,11 +67,12 @@ export default async function handler(req, res) {
       : [];
 
     const newComment = {
-      authorId: viewerId,       // ✅ NEW: id for MemberActions
+      // 🔹 This is what the UI will use to open MemberActions for the commenter
+      authorId: viewerId,
       by: displayName,
       text: trimmed,
       at: new Date().toISOString(),
-      avatarUrl,                // used in UI for commenter avatar
+      avatarUrl, // used in UI for commenter avatar
     };
 
     const updated = await prisma.feedPost.update({
