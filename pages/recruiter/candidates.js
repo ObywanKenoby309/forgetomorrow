@@ -880,6 +880,7 @@ export default function CandidatesPage() {
         title="Candidates — ForgeTomorrow"
         header={<HeaderOnly />}
         right={<RightCard />}
+        activeNav="candidates"  // 🔸 highlight "Candidates" in Recruiter sidebar
       >
         <Body />
       </RecruiterLayout>

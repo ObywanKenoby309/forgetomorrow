@@ -979,7 +979,7 @@ function Jobs() {
                   ? 'ForgeTomorrow recruiter partner'
                   : null;
 
-                // 🔸 NEW: internal jobs get snippet, externals stay compact
+                // internal jobs get snippet, externals stay compact
                 const showSnippet = internal;
 
                 return (
@@ -1004,7 +1004,7 @@ function Jobs() {
                           display: 'flex',
                           justifyContent: 'space-between',
                           gap: 8,
-                          flexWrap: 'wrap',
+                          flexWrap: 'nowrap',
                         }}
                       >
                         <div
@@ -1012,6 +1012,8 @@ function Jobs() {
                             display: 'flex',
                             gap: 10,
                             alignItems: 'flex-start',
+                            flex: 1,
+                            minWidth: 0,
                           }}
                         >
                           {logoUrl && (
@@ -1051,6 +1053,7 @@ function Jobs() {
                                 WebkitBoxOrient: 'vertical',
                                 WebkitLineClamp: 2,
                                 overflow: 'hidden',
+                                textOverflow: 'ellipsis',
                                 lineHeight: 1.3,
                                 maxHeight: '2.6em',
                               }}
@@ -1095,7 +1098,11 @@ function Jobs() {
                         </div>
 
                         <div
-                          style={{ textAlign: 'right', minWidth: 120 }}
+                          style={{
+                            textAlign: 'right',
+                            minWidth: 120,
+                            flexShrink: 0,
+                          }}
                           aria-label={`Posted ${postedLabel}`}
                         >
                           <div style={{ fontSize: 12, color: subtleColor }}>
@@ -1180,13 +1187,15 @@ function Jobs() {
                       {displaySource && (
                         <div
                           style={{
+                            marginTop: showSnippet ? 4 : 0,
+                            display: 'flex',
+                            justifyContent: 'flex-end',
                             fontSize: 12,
                             color: isDarkCard ? subtleColor : '#455A64',
-                            marginBottom: 4,
                             fontWeight: isExternalTier ? 600 : 400,
                           }}
                         >
-                          Source: {displaySource}
+                          <span>Source: {displaySource}</span>
                         </div>
                       )}
                     </CardContent>

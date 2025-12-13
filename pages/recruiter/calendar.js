@@ -1,13 +1,11 @@
+// pages/recruiter/calendar.js
 import React from 'react';
-import SeekerLayout from '@/components/layouts/SeekerLayout';
+import { PlanProvider } from '@/context/PlanContext';
+import RecruiterLayout from '@/components/layouts/RecruiterLayout';
 import RecruiterCalendar from '@/components/calendar/RecruiterCalendar';
 
-const seed = [
-  { date: '2025-08-12', time: '09:00', title: 'Intake — ACME (Backend Eng)',  type: 'Intake',     status: 'Scheduled' },
-  { date: '2025-08-12', time: '11:00', title: 'Outreach: 8 candidates',       type: 'Outreach',   status: 'Scheduled' },
-  { date: '2025-08-13', time: '10:30', title: 'Phone Screen — J. Rivera',     type: 'Interview',  status: 'Scheduled' },
-  { date: '2025-08-14', time: '15:00', title: 'Offer Review — Contoso',       type: 'Offer',      status: 'Scheduled' },
-];
+// 🔒 Live storage key (separate from any old mock keys)
+const STORAGE_KEY = 'recruiterCalendar_live_v1';
 
 export default function RecruiterCalendarPage() {
   const HeaderBox = (
@@ -21,30 +19,46 @@ export default function RecruiterCalendarPage() {
         textAlign: 'center',
       }}
     >
-      <h1 style={{ margin: 0, color: '#FF7043', fontSize: 24, fontWeight: 800 }}>
+      <h1
+        style={{
+          margin: 0,
+          color: '#FF7043',
+          fontSize: 24,
+          fontWeight: 800,
+        }}
+      >
         Recruiter Calendar
       </h1>
-      <p style={{ margin: '6px auto 0', color: '#607D8B', maxWidth: 720 }}>
-        Block interviews, intakes, outreach blocks, and offer milestones—all in one place.
+      <p
+        style={{
+          margin: '6px auto 0',
+          color: '#607D8B',
+          maxWidth: 720,
+        }}
+      >
+        Block interviews, intakes, outreach blocks, and offer milestones—all in
+        one place.
       </p>
     </section>
   );
 
   return (
-    <SeekerLayout
-      title="Recruiter Calendar | ForgeTomorrow"
-      header={HeaderBox}
-      right={null}
-      activeNav="calendar"
-      forceChrome="recruiter-smb"
-      rightVariant="light"
-    >
-      <div style={{ width: '100%' }}>
-        <RecruiterCalendar
-          title="Month View"
-          seed={seed}            // ✅ optional seeding
-        />
-      </div>
-    </SeekerLayout>
+    <PlanProvider>
+      <RecruiterLayout
+        title="Recruiter Calendar | ForgeTomorrow"
+        header={HeaderBox}
+        right={null}
+        activeNav="calendar"
+      >
+        {/* Full-width recruiter calendar, no mock data */}
+        <div style={{ width: '100%' }}>
+          <RecruiterCalendar
+            title="Month View"
+            storageKey={STORAGE_KEY}
+            seed={[]} // 🚫 no placeholders — live events only
+          />
+        </div>
+      </RecruiterLayout>
+    </PlanProvider>
   );
 }

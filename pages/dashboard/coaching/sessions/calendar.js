@@ -3,7 +3,8 @@ import React from 'react';
 import CoachingLayout from '@/components/layouts/CoachingLayout';
 import CalendarInterface from '@/components/calendar/CalendarInterface';
 
-const STORAGE_KEY = 'coachSessions_v1';
+// 🔒 Live storage key so any old mock data doesn't leak in
+const STORAGE_KEY = 'coachSessions_live_v1';
 
 export default function CoachingSessionsCalendarPage() {
   return (

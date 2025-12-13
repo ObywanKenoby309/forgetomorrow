@@ -26,8 +26,16 @@ const weekDiff = (a, b) => {
 export default function SeekerDashboard() {
   const router = useRouter();
   const chrome = String(router.query.chrome || '').toLowerCase();
+
   const withChrome = (path) =>
     chrome ? `${path}${path.includes('?') ? '&' : '?'}chrome=${chrome}` : path;
+
+  // Decide which sidebar item should be highlighted
+  const chromeKey = chrome || 'seeker';
+  const seekerActiveNav =
+    chromeKey === 'coach' || chromeKey.startsWith('recruiter')
+      ? 'seeker-dashboard' // Coach / Recruiter sidebars → Seeker Tools → Seeker Dashboard
+      : 'dashboard'; // Native seeker sidebar
 
   const [kpi, setKpi] = useState(null);
   const [weeks, setWeeks] = useState([]);
@@ -38,7 +46,6 @@ export default function SeekerDashboard() {
 
     async function loadData() {
       try {
-        // 🔹 No more client-side redirect.
         // Just try to load dashboard data; fall back gracefully if it fails.
         const res = await fetch('/api/seeker/dashboard-data');
 
@@ -87,7 +94,7 @@ export default function SeekerDashboard() {
       } catch (err) {
         console.error('Dashboard load error:', err);
         if (!cancelled) {
-          // 🔹 Fallback: show empty stats but KEEP the user on the page
+          // Fallback: show empty stats but KEEP the user on the page
           setKpi({
             applied: 0,
             viewed: 0,
@@ -109,7 +116,7 @@ export default function SeekerDashboard() {
     return () => {
       cancelled = true;
     };
-    // 👇 run ONCE on mount
+    // run once on mount
   }, []);
 
   const HeaderBox = (
@@ -188,7 +195,12 @@ export default function SeekerDashboard() {
         <Head>
           <title>Loading… | ForgeTomorrow</title>
         </Head>
-        <SeekerLayout title="Loading..." header={HeaderBox} right={RightRail}>
+        <SeekerLayout
+          title="Loading..."
+          header={HeaderBox}
+          right={RightRail}
+          activeNav={seekerActiveNav}
+        >
           <div className="flex items-center justify-center h-64 text-gray-500">
             Loading your progress...
           </div>
@@ -206,7 +218,7 @@ export default function SeekerDashboard() {
         title="Seeker Dashboard | ForgeTomorrow"
         header={HeaderBox}
         right={RightRail}
-        activeNav="dashboard"
+        activeNav={seekerActiveNav}
       >
         <div className="grid gap-6">
           {/* KPI Row */}

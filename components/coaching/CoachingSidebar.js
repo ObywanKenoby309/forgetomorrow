@@ -200,7 +200,7 @@ export default function CoachingSidebar({
       <SectionLabel>Jobs</SectionLabel>
       <NavItem
         href="/jobs?chrome=coach"
-        label="Jobs"
+        label="Apply to Jobs"
         active={active === 'jobs'}
       />
 

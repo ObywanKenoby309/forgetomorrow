@@ -254,6 +254,7 @@ export default function JobPostingsPage() {
         title="Job Postings — ForgeTomorrow"
         header={<HeaderBar onOpenModal={openCreateModal} />}
         right={<RightToolsCard />}
+        activeNav="job-postings"   // 🔸 highlight "Job Posting" in recruiter sidebar
       >
         <Body
           rows={rows}

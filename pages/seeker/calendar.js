@@ -1,17 +1,25 @@
 // pages/seeker/calendar.js
 import React from 'react';
+import { useRouter } from 'next/router';
 import SeekerLayout from '@/components/layouts/SeekerLayout';
 import SeekerCalendar from '@/components/calendar/SeekerCalendar';
 
-const STORAGE_KEY = 'seekerCalendar_v1';
-
-const seed = [
-  { date: '2025-08-12', time: '09:00', title: 'Phone Screen — Acme', type: 'Interview', status: 'Scheduled', notes: '' },
-  { date: '2025-08-12', time: '13:00', title: 'Submit Resume to Northwind', type: 'Application', status: 'Scheduled', notes: '' },
-  { date: '2025-08-13', time: '10:00', title: 'Portfolio Review', type: 'Task', status: 'Scheduled', notes: '' },
-];
+// 🔒 New LIVE storage key to prevent legacy mock bleed-through
+const STORAGE_KEY = 'seekerCalendar_live_v1';
 
 export default function SeekerCalendarPage() {
+  const router = useRouter();
+  const chrome = String(router.query.chrome || '').toLowerCase();
+
+  // Decide which sidebar nav key to use based on chrome:
+  // - Native seeker → "calendar"
+  // - Coach / Recruiter chrome → "seeker-calendar" (Seeker Tools section)
+  const chromeKey = chrome || 'seeker';
+  const activeNav =
+    chromeKey === 'coach' || chromeKey.startsWith('recruiter')
+      ? 'seeker-calendar'
+      : 'calendar';
+
   const HeaderBox = (
     <section
       style={{
@@ -23,8 +31,23 @@ export default function SeekerCalendarPage() {
         textAlign: 'center',
       }}
     >
-      <h1 style={{ margin: 0, color: '#FF7043', fontSize: 24, fontWeight: 800 }}>Your Calendar</h1>
-      <p style={{ margin: '6px auto 0', color: '#607D8B', maxWidth: 720 }}>
+      <h1
+        style={{
+          margin: 0,
+          color: '#FF7043',
+          fontSize: 24,
+          fontWeight: 800,
+        }}
+      >
+        Your Calendar
+      </h1>
+      <p
+        style={{
+          margin: '6px auto 0',
+          color: '#607D8B',
+          maxWidth: 720,
+        }}
+      >
         Track interviews, application deadlines, and tasks in one place.
       </p>
     </section>
@@ -35,14 +58,14 @@ export default function SeekerCalendarPage() {
       title="Calendar | ForgeTomorrow"
       header={HeaderBox}
       right={null}
-      activeNav="calendar"
+      activeNav={activeNav}
     >
-      {/* No width-constraining wrapper here so the calendar stretches fully */}
+      {/* Full-width calendar, live mode only */}
       <SeekerCalendar
         title="Month View"
         storageKey={STORAGE_KEY}
-        seed={seed}
-        // omit typeChoices/statusChoices to use the full defaults
+        seed={[]} // 🚫 no mock data — live only
+        // omit typeChoices/statusChoices to use full defaults
       />
     </SeekerLayout>
   );
