@@ -221,11 +221,6 @@ export default function CoachingSidebar({
         label="Career Roadmap"
         active={active === 'roadmap'}
       />
-      <NavItem
-        href="/seeker/calendar?chrome=coach"
-        label="Seeker Calendar"
-        active={active === 'seeker-calendar'}
-      />
 
       {/* Hearth */}
       <SectionLabel>Resources</SectionLabel>

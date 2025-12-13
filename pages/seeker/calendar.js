@@ -1,24 +1,37 @@
 // pages/seeker/calendar.js
-import React from 'react';
+import React, { useEffect } from 'react';
 import { useRouter } from 'next/router';
 import SeekerLayout from '@/components/layouts/SeekerLayout';
 import SeekerCalendar from '@/components/calendar/SeekerCalendar';
 
-// 🔒 New LIVE storage key to prevent legacy mock bleed-through
+// 🔒 Live storage key — no mock bleed
 const STORAGE_KEY = 'seekerCalendar_live_v1';
 
 export default function SeekerCalendarPage() {
   const router = useRouter();
-  const chrome = String(router.query.chrome || '').toLowerCase();
+  const chrome = String(router.query.chrome || 'seeker').toLowerCase();
 
-  // Decide which sidebar nav key to use based on chrome:
-  // - Native seeker → "calendar"
-  // - Coach / Recruiter chrome → "seeker-calendar" (Seeker Tools section)
-  const chromeKey = chrome || 'seeker';
-  const activeNav =
-    chromeKey === 'coach' || chromeKey.startsWith('recruiter')
-      ? 'seeker-calendar'
-      : 'calendar';
+  /**
+   * 🚨 HARD GATE
+   * Only SEEKERS are allowed on this page.
+   * Coaches / Recruiters are redirected to their own calendar.
+   */
+  useEffect(() => {
+    if (chrome === 'coach') {
+      router.replace('/dashboard/coaching/sessions/calendar');
+      return;
+    }
+
+    if (chrome.startsWith('recruiter')) {
+      router.replace('/dashboard/recruiter/calendar');
+      return;
+    }
+  }, [chrome, router]);
+
+  // If someone is being redirected, render nothing
+  if (chrome === 'coach' || chrome.startsWith('recruiter')) {
+    return null;
+  }
 
   const HeaderBox = (
     <section
@@ -58,14 +71,12 @@ export default function SeekerCalendarPage() {
       title="Calendar | ForgeTomorrow"
       header={HeaderBox}
       right={null}
-      activeNav={activeNav}
+      activeNav="calendar"
     >
-      {/* Full-width calendar, live mode only */}
       <SeekerCalendar
         title="Month View"
         storageKey={STORAGE_KEY}
-        seed={[]} // 🚫 no mock data — live only
-        // omit typeChoices/statusChoices to use full defaults
+        seed={[]} // 🚫 LIVE ONLY
       />
     </SeekerLayout>
   );

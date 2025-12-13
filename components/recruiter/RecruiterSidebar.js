@@ -235,11 +235,6 @@ export default function RecruiterSidebar({
         label="Career Roadmap"
         active={active === 'roadmap'}
       />
-      <NavItem
-        href={`/seeker/calendar?chrome=${chromeRecruiter}`}
-        label="Seeker Calendar"
-        active={active === 'seeker-calendar'}
-      />
 
       {/* Resources */}
       <SectionLabel>Resources</SectionLabel>
