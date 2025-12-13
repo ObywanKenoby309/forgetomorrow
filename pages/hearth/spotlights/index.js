@@ -1,7 +1,8 @@
+// pages/hearth/spotlights/index.js
 import React, { useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/router';
-import SpotlightFilters from '../../../components/spotlights/SpotlightFilters.js';
+import SpotlightFilters from '../../../components/spotlights/SpotlightFilters';
 import {
   Card,
   CardHeader,
@@ -15,13 +16,6 @@ import CoachingLayout from '@/components/layouts/CoachingLayout';
 import RecruiterLayout from '@/components/layouts/RecruiterLayout';
 
 const STORAGE_KEY = 'hearthSpotlights_v1';
-
-function localISODate(d = new Date()) {
-  const y = d.getFullYear();
-  const m = String(d.getMonth() + 1).padStart(2, '0');
-  const day = String(d.getDate()).padStart(2, '0');
-  return `${y}-${m}-${day}`;
-}
 
 function makeLayout(chromeRaw) {
   let Layout = SeekerLayout;
@@ -41,11 +35,10 @@ function makeLayout(chromeRaw) {
 export default function HearthSpotlightsPage() {
   const router = useRouter();
   const chrome = String(router.query.chrome || 'seeker').toLowerCase();
+  const { Layout, activeNav } = makeLayout(chrome);
 
   const withChrome = (path) =>
     chrome ? `${path}${path.includes('?') ? '&' : '?'}chrome=${chrome}` : path;
-
-  const { Layout, activeNav } = makeLayout(chrome);
 
   const [ads, setAds] = useState([]);
   const [filters, setFilters] = useState(null);
@@ -61,41 +54,14 @@ export default function HearthSpotlightsPage() {
   }, []);
 
   const filtered = useMemo(() => {
+    if (!filters) return ads;
     let arr = [...ads];
-    if (!filters) return arr;
-
-    const term = (filters.q || '').trim().toLowerCase();
+    const term = (filters.q || '').toLowerCase();
     if (term) {
       arr = arr.filter((a) =>
-        [a.name, a.headline, a.summary, (a.specialties || []).join(' ')]
-          .join(' ')
-          .toLowerCase()
-          .includes(term)
+        [a.name, a.headline, a.summary].join(' ').toLowerCase().includes(term)
       );
     }
-
-    if (filters.specialties?.length) {
-      arr = arr.filter((a) =>
-        (a.specialties || []).some((s) => filters.specialties.includes(s))
-      );
-    }
-
-    if (filters.availability && filters.availability !== 'Any') {
-      arr = arr.filter(
-        (a) => (a.availability || 'Open to discuss') === filters.availability
-      );
-    }
-
-    if (filters.rate?.length) {
-      arr = arr.filter((a) => filters.rate.includes(a.rate || 'Free'));
-    }
-
-    if (filters.sort === 'Name A–Z') {
-      arr.sort((a, b) => (a.name || '').localeCompare(b.name || ''));
-    } else {
-      arr.sort((a, b) => (b.createdAt || '').localeCompare(a.createdAt || ''));
-    }
-
     return arr;
   }, [ads, filters]);
 
@@ -111,108 +77,79 @@ export default function HearthSpotlightsPage() {
       <div
         style={{
           display: 'grid',
-          gridTemplateColumns: '280px minmax(0,1fr) 280px',
+          gridTemplateColumns: '260px minmax(0,1fr) 260px',
+          gridTemplateRows: 'auto 1fr',
           gap: 20,
           padding: '20px 0',
-          minHeight: '60vh',
         }}
       >
-        {/* LEFT */}
-        <aside>
+        {/* HEADER ROW */}
+        <div>
           <Link
             href={withChrome('/the-hearth')}
             style={{
               display: 'block',
-              backgroundColor: '#FF7043',
+              background: '#FF7043',
               color: 'white',
               fontWeight: 700,
               textAlign: 'center',
-              padding: '10px 14px',
+              padding: '10px',
               borderRadius: 8,
-              marginBottom: 16,
               textDecoration: 'none',
             }}
           >
             ← Back to The Hearth
           </Link>
+        </div>
 
+        <Card style={{ textAlign: 'center' }}>
+          <CardHeader>
+            <CardTitle style={{ color: '#FF7043', fontSize: 28 }}>
+              Hearth Spotlight
+            </CardTitle>
+            <CardSubtle>
+              Find a mentor or guide who is actively offering help.
+            </CardSubtle>
+          </CardHeader>
+        </Card>
+
+        <Card>
+          <CardHeader>
+            <CardTitle style={{ fontSize: 16 }}>Coming soon</CardTitle>
+          </CardHeader>
+          <CardContent style={{ fontSize: 14, color: '#90A4AE' }}>
+            This space is reserved for future Spotlights tools.
+          </CardContent>
+        </Card>
+
+        {/* CONTENT ROW */}
+        <div>
           <SpotlightFilters onChange={setFilters} />
-        </aside>
+        </div>
 
-        {/* CENTER */}
-        <main style={{ display: 'grid', gap: 16 }}>
-          {/* Header card */}
-          <Card style={{ textAlign: 'center' }}>
-            <CardHeader>
-              <CardTitle
-                style={{
-                  fontSize: 28,
-                  fontWeight: 800,
-                  color: '#FF7043',
-                  marginBottom: 4,
-                }}
-              >
-                Hearth Spotlight
-              </CardTitle>
-              <CardSubtle>
-                Find a mentor or guide who is actively offering help.
-              </CardSubtle>
-            </CardHeader>
-          </Card>
-
-          {/* Content card */}
-          {filtered.length === 0 && !hasAnyReal && (
-            <Card>
+        <Card>
+          {!hasAnyReal && (
+            <>
               <CardHeader style={{ textAlign: 'center' }}>
                 <CardTitle>No Hearth Spotlights yet</CardTitle>
                 <CardSubtle>
                   This is where community mentors and helpers will appear.
                 </CardSubtle>
               </CardHeader>
-              <CardContent style={{ textAlign: 'center' }}>
-                <p style={{ margin: 0, color: '#607D8B' }}>
-                  As mentors join The Hearth and opt in, you’ll be able to browse and
-                  connect with them here.
-                </p>
-              </CardContent>
-            </Card>
-          )}
-
-          {filtered.length === 0 && hasAnyReal && (
-            <Card>
-              <CardContent>
-                No spotlights match your filters. Try adjusting your search.
-              </CardContent>
-            </Card>
+            </>
           )}
 
           {filtered.map((a) => (
             <Card key={a.id}>
               <CardHeader>
-                <CardSubtle>{a.name}</CardSubtle>
                 <CardTitle>{a.headline || 'Mentor'}</CardTitle>
               </CardHeader>
-              {a.summary && (
-                <CardContent>
-                  <p>{a.summary}</p>
-                </CardContent>
-              )}
+              {a.summary && <CardContent>{a.summary}</CardContent>}
             </Card>
           ))}
-        </main>
+        </Card>
 
-        {/* RIGHT */}
-        <aside>
-          <Card>
-            <CardHeader>
-              <CardTitle style={{ fontSize: 16 }}>Coming soon</CardTitle>
-            </CardHeader>
-            <CardContent style={{ fontSize: 14, color: '#90A4AE' }}>
-              This space is reserved for future Spotlights tools, including posting and
-              managing mentorship offers.
-            </CardContent>
-          </Card>
-        </aside>
+        <div /> {/* empty right column */}
       </div>
     </Layout>
   );

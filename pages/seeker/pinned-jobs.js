@@ -4,7 +4,6 @@ import Link from 'next/link';
 import { useRouter } from 'next/router';
 import SeekerLayout from '@/components/layouts/SeekerLayout';
 import SeekerRightColumn from '@/components/seeker/SeekerRightColumn';
-// import { getClientSession } from '@/lib/auth-client'; // 🔥 No longer needed
 
 export default function PinnedJobsPage() {
   const router = useRouter();
@@ -16,17 +15,16 @@ export default function PinnedJobsPage() {
       try {
         const res = await fetch('/api/seeker/pinned-jobs');
 
-        // If user is not authenticated, send them to sign-in and preserve "from"
         if (res.status === 401 || res.status === 403) {
-          const url = `/auth/signin?from=${encodeURIComponent('/seeker/pinned-jobs')}`;
-          router.push(url);
+          router.push(
+            `/auth/signin?from=${encodeURIComponent('/seeker/pinned-jobs')}`
+          );
           return;
         }
 
         if (res.ok) {
           const data = await res.json().catch(() => ({}));
-          const jobs = Array.isArray(data.jobs) ? data.jobs : [];
-          setPinned(jobs);
+          setPinned(Array.isArray(data.jobs) ? data.jobs : []);
         } else {
           setPinned([]);
         }
@@ -40,6 +38,30 @@ export default function PinnedJobsPage() {
 
     load();
   }, [router]);
+
+  async function unpinJob(job) {
+    try {
+      const id = job.pinnedId || job.id;
+
+      const res = await fetch('/api/seeker/pinned-jobs', {
+        method: 'DELETE',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ id }),
+      });
+
+      if (!res.ok) {
+        console.error('Failed to unpin job');
+        return;
+      }
+
+      // Optimistic UI update
+      setPinned((prev) =>
+        prev.filter((j) => (j.pinnedId || j.id) !== id)
+      );
+    } catch (err) {
+      console.error('Unpin error:', err);
+    }
+  }
 
   const Header = (
     <section className="bg-white border border-gray-200 rounded-xl p-8 text-center shadow-sm">
@@ -99,15 +121,10 @@ export default function PinnedJobsPage() {
                       {job.company || 'Unknown company'}
                       {job.location ? ` • ${job.location}` : ''}
                     </p>
-                    {job.pinnedAt && (
-                      <p className="text-sm text-gray-500 mt-3">
-                        Pinned on {new Date(job.pinnedAt).toLocaleDateString()}
-                      </p>
-                    )}
                   </div>
 
                   <button
-                    onClick={() => alert('Unpin coming soon')}
+                    onClick={() => unpinJob(job)}
                     className="text-gray-400 hover:text-red-600 transition"
                     title="Unpin"
                   >
@@ -129,48 +146,11 @@ export default function PinnedJobsPage() {
                 <div className="flex flex-col sm:flex-row gap-4">
                   {job.id && (
                     <Link href={`/jobs/apply/${job.id}`} className="flex-1">
-                      <button className="w-full bg-orange-600 hover:bg-orange-700 text-white font-bold py-3.5 px-8 rounded-lg transition text-base">
+                      <button className="w-full bg-orange-600 hover:bg-orange-700 text-white font-bold py-3.5 px-8 rounded-lg transition">
                         Apply Now
                       </button>
                     </Link>
                   )}
-
-                  {job.company && (
-                    <a
-                      href={`https://google.com/search?q=${encodeURIComponent(
-                        `${job.company} careers`
-                      )}`}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="flex-1"
-                    >
-                      <button className="w-full border border-gray-300 text-gray-700 hover:bg-gray-50 font-medium py-3.5 px-8 rounded-lg transition text-base flex items-center justify-center gap-2">
-                        <svg
-                          className="w-5 h-5"
-                          fill="none"
-                          stroke="currentColor"
-                          viewBox="0 0 24 24"
-                        >
-                          <path
-                            strokeLinecap="round"
-                            strokeWidth={2}
-                            d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"
-                          />
-                        </svg>
-                        Company Site
-                      </button>
-                    </a>
-                  )}
-                </div>
-
-                <div className="mt-5 text-center text-sm text-gray-500">
-                  Want a custom AI cover letter? →{' '}
-                  <Link
-                    href="/resume-cover"
-                    className="text-orange-600 font-medium hover:underline"
-                  >
-                    Open the Creator Tool
-                  </Link>
                 </div>
               </div>
             ))
