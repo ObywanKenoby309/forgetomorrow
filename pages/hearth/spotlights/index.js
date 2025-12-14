@@ -13,7 +13,7 @@ import {
 } from '@/components/ui/Card';
 
 import SeekerLayout from '@/components/layouts/SeekerLayout';
-import SupportFloatingButton from '@/components/support/SupportFloatingButton';
+import SupportFloatingButton from '@/components/SupportFloatingButton';
 
 const STORAGE_KEY = 'hearthSpotlights_v1';
 
