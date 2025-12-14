@@ -13,7 +13,7 @@ import {
 } from '@/components/ui/Card';
 
 import SeekerLayout from '@/components/layouts/SeekerLayout';
-import SupportFloatingButton from '@/components/SupportFloatingButton'; // ⬅ support button
+import SupportFloatingButton from '@/components/support/SupportFloatingButton';
 
 const STORAGE_KEY = 'hearthSpotlights_v1';
 
@@ -73,9 +73,11 @@ export default function HearthSpotlightsPage() {
           color: 'white',
           fontWeight: 700,
           textAlign: 'center',
-          padding: '12px 14px',
+          padding: '12px 18px',
           borderRadius: 10,
           textDecoration: 'none',
+          minWidth: 260,
+          maxWidth: 320,
         }}
       >
         ← Back to The Hearth
@@ -85,25 +87,27 @@ export default function HearthSpotlightsPage() {
     </div>
   );
 
-  // CENTER HEADER CARD: Hearth Spotlight
+  // CENTER HEADER CARD: Hearth Spotlight (narrower)
   const HeaderCard = (
-    <Card style={{ textAlign: 'center' }}>
-      <CardHeader>
-        <CardTitle
-          style={{
-            fontSize: 28,
-            fontWeight: 800,
-            color: '#FF7043',
-            marginBottom: 6,
-          }}
-        >
-          Hearth Spotlight
-        </CardTitle>
-        <CardSubtle>
-          Find a mentor or guide who is actively offering help.
-        </CardSubtle>
-      </CardHeader>
-    </Card>
+    <div style={{ maxWidth: 900, margin: '0 auto' }}>
+      <Card style={{ textAlign: 'center' }}>
+        <CardHeader>
+          <CardTitle
+            style={{
+              fontSize: 28,
+              fontWeight: 800,
+              color: '#FF7043',
+              marginBottom: 6,
+            }}
+          >
+            Hearth Spotlight
+          </CardTitle>
+          <CardSubtle>
+            Find a mentor or guide who is actively offering help.
+          </CardSubtle>
+        </CardHeader>
+      </Card>
+    </div>
   );
 
   // RIGHT COLUMN: Coming Soon card
@@ -127,10 +131,10 @@ export default function HearthSpotlightsPage() {
       right={RightColumn}
       activeNav="hearth"
     >
-      {/* Center column content, tightened + centered */}
+      {/* Center column content, widened to the right */}
       <div
         style={{
-          maxWidth: 900,
+          maxWidth: 1040,
           margin: '0 auto',
           display: 'grid',
           gap: 16,
@@ -174,7 +178,6 @@ export default function HearthSpotlightsPage() {
         ))}
       </div>
 
-      {/* Support button back in place */}
       <SupportFloatingButton />
     </SeekerLayout>
   );
