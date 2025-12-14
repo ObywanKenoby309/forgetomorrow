@@ -50,6 +50,18 @@ function normalizeSessions(raw) {
       }
     }
 
+    const clientId =
+      typeof s.clientId === 'string' && s.clientId.length > 0
+        ? s.clientId
+        : null;
+
+    const clientType =
+      s.clientType === 'internal' || s.clientType === 'external'
+        ? s.clientType
+        : clientId
+        ? 'internal'
+        : 'external';
+
     return {
       id: s.id,
       date: finalDate || localISODate(),
@@ -57,6 +69,8 @@ function normalizeSessions(raw) {
       client,
       type: s.type || 'Strategy',
       status: s.status || 'Scheduled',
+      clientId,
+      clientType,
     };
   });
 }
@@ -193,47 +207,161 @@ export default function CoachingSessionsPage() {
 
   // ---------- Add/Edit/Delete Modal ----------
   const [modal, setModal] = useState({ open: false, mode: 'add', id: null });
+
   const [form, setForm] = useState({
     date: localISODate(),
     time: '09:00',
-    client: '',
+    clientName: '',
+    clientType: 'external', // 'internal' | 'external'
+    clientUserId: null,
     type: 'Strategy',
     status: 'Scheduled',
   });
 
-  const update = (k, v) => setForm((f) => ({ ...f, [k]: v }));
+  const update = (k, v) =>
+    setForm((f) => ({
+      ...f,
+      [k]: v,
+    }));
+
+  // Search state for internal clients
+  const [clientSearchTerm, setClientSearchTerm] = useState('');
+  const [clientResults, setClientResults] = useState([]);
+  const [clientSearchLoading, setClientSearchLoading] = useState(false);
+  const [clientSearchError, setClientSearchError] = useState('');
+
+  // Fetch contacts when searching internal clients
+  useEffect(() => {
+    if (form.clientType !== 'internal') return;
+
+    const term = clientSearchTerm.trim();
+    if (!term) {
+      setClientResults([]);
+      setClientSearchError('');
+      return;
+    }
+
+    let active = true;
+    const controller = new AbortController();
+
+    async function run() {
+      try {
+        setClientSearchLoading(true);
+        setClientSearchError('');
+        const res = await fetch(
+          `/api/coaching/client-search?q=${encodeURIComponent(term)}`,
+          { signal: controller.signal }
+        );
+        if (!res.ok) {
+          if (!active) return;
+          setClientResults([]);
+          setClientSearchError('Search failed. Try again.');
+          return;
+        }
+        const data = await res.json().catch(() => ({}));
+        const results = Array.isArray(data.results) ? data.results : [];
+        if (active) {
+          setClientResults(results);
+        }
+      } catch (err) {
+        if (!active) return;
+        if (err.name === 'AbortError') return;
+        console.error('Client search error', err);
+        setClientResults([]);
+        setClientSearchError('Search failed. Try again.');
+      } finally {
+        if (active) {
+          setClientSearchLoading(false);
+        }
+      }
+    }
+
+    run();
+    return () => {
+      active = false;
+      controller.abort();
+    };
+  }, [clientSearchTerm, form.clientType]);
+
+  const selectClient = (c) => {
+    const display = c.name || c.email;
+    setForm((f) => ({
+      ...f,
+      clientType: 'internal',
+      clientUserId: c.id,
+      clientName: display,
+    }));
+    setClientSearchTerm(display);
+    setClientResults([]);
+    setClientSearchError('');
+  };
+
+  const clearSelectedClient = () => {
+    setForm((f) => ({
+      ...f,
+      clientUserId: null,
+      clientName: '',
+    }));
+    setClientSearchTerm('');
+    setClientResults([]);
+    setClientSearchError('');
+  };
 
   const openAdd = () => {
     setForm({
       date: localISODate(),
       time: '09:00',
-      client: '',
+      clientName: '',
+      clientType: 'external',
+      clientUserId: null,
       type: 'Strategy',
       status: 'Scheduled',
     });
+    setClientSearchTerm('');
+    setClientResults([]);
+    setClientSearchError('');
     setModal({ open: true, mode: 'add', id: null });
   };
 
   const openEdit = (id) => {
     const s = sessions.find((x) => x.id === id);
     if (!s) return;
+
+    const isInternal = !!s.clientId;
+
     setForm({
       date: s.date,
       time: s.time,
-      client: s.client,
+      clientName: s.client,
+      clientType: isInternal ? 'internal' : 'external',
+      clientUserId: isInternal ? s.clientId : null,
       type: s.type,
       status: s.status,
     });
+
+    setClientSearchTerm(s.client || '');
+    setClientResults([]);
+    setClientSearchError('');
     setModal({ open: true, mode: 'edit', id });
   };
 
   // ---- Create ----
   const saveAdd = async (e) => {
     e.preventDefault();
-    if (!form.client.trim()) {
-      alert('Please enter a client name.');
-      return;
+    const name = (form.clientName || '').trim();
+
+    if (form.clientType === 'internal') {
+      if (!form.clientUserId) {
+        alert('Please select a Forge contact for this client.');
+        return;
+      }
+    } else {
+      if (!name) {
+        alert('Please enter a client name.');
+        return;
+      }
     }
+
     try {
       setSaving(true);
       const res = await fetch(API_URL, {
@@ -242,7 +370,10 @@ export default function CoachingSessionsPage() {
         body: JSON.stringify({
           date: form.date,
           time: form.time,
-          client: form.client.trim(),
+          clientType: form.clientType,
+          clientUserId:
+            form.clientType === 'internal' ? form.clientUserId : null,
+          clientName: name,
           type: form.type,
           status: form.status,
         }),
@@ -279,9 +410,19 @@ export default function CoachingSessionsPage() {
   const saveEdit = async (e) => {
     e.preventDefault();
     if (!modal.id) return;
-    if (!form.client.trim()) {
-      alert('Please enter a client name.');
-      return;
+
+    const name = (form.clientName || '').trim();
+
+    if (form.clientType === 'internal') {
+      if (!form.clientUserId) {
+        alert('Please select a Forge contact for this client.');
+        return;
+      }
+    } else {
+      if (!name) {
+        alert('Please enter a client name.');
+        return;
+      }
     }
 
     try {
@@ -293,7 +434,10 @@ export default function CoachingSessionsPage() {
           id: modal.id,
           date: form.date,
           time: form.time,
-          client: form.client.trim(),
+          clientType: form.clientType,
+          clientUserId:
+            form.clientType === 'internal' ? form.clientUserId : null,
+          clientName: name,
           type: form.type,
           status: form.status,
         }),
@@ -604,7 +748,7 @@ export default function CoachingSessionsPage() {
               background: 'white',
               borderRadius: 12,
               padding: 20,
-              width: 400,
+              width: 440,
               display: 'flex',
               flexDirection: 'column',
               gap: 12,
@@ -632,15 +776,176 @@ export default function CoachingSessionsPage() {
                 style={{ width: '100%', padding: 6 }}
               />
             </label>
-            <label>
-              Client Name:
-              <input
-                type="text"
-                value={form.client}
-                onChange={(e) => update('client', e.target.value)}
-                style={{ width: '100%', padding: 6 }}
-              />
-            </label>
+
+            {/* Client type toggle */}
+            <div>
+              <div
+                style={{
+                  fontSize: 13,
+                  fontWeight: 600,
+                  marginBottom: 4,
+                }}
+              >
+                Client Type
+              </div>
+              <div style={{ display: 'flex', gap: 16 }}>
+                <label style={{ fontSize: 13, cursor: 'pointer' }}>
+                  <input
+                    type="radio"
+                    name="clientType"
+                    value="internal"
+                    checked={form.clientType === 'internal'}
+                    onChange={() => {
+                      update('clientType', 'internal');
+                      // When switching to internal, clear external-only fields
+                      update('clientUserId', null);
+                      setClientSearchTerm(form.clientName || '');
+                      setClientResults([]);
+                      setClientSearchError('');
+                    }}
+                    style={{ marginRight: 6 }}
+                  />
+                  Forge user (from my contacts)
+                </label>
+                <label style={{ fontSize: 13, cursor: 'pointer' }}>
+                  <input
+                    type="radio"
+                    name="clientType"
+                    value="external"
+                    checked={form.clientType === 'external'}
+                    onChange={() => {
+                      update('clientType', 'external');
+                      update('clientUserId', null);
+                      setClientSearchTerm('');
+                      setClientResults([]);
+                      setClientSearchError('');
+                    }}
+                    style={{ marginRight: 6 }}
+                  />
+                  External client (not in Forge)
+                </label>
+              </div>
+            </div>
+
+            {/* Internal client search */}
+            {form.clientType === 'internal' && (
+              <div>
+                <div
+                  style={{
+                    fontSize: 13,
+                    marginBottom: 4,
+                    fontWeight: 500,
+                  }}
+                >
+                  Client (from your contacts)
+                </div>
+                <input
+                  type="text"
+                  placeholder="Type a name, email, or headline…"
+                  value={clientSearchTerm}
+                  onChange={(e) => setClientSearchTerm(e.target.value)}
+                  style={{ width: '100%', padding: 6, marginBottom: 4 }}
+                />
+                {form.clientUserId && (
+                  <div
+                    style={{
+                      fontSize: 12,
+                      marginBottom: 4,
+                      color: '#455A64',
+                      display: 'flex',
+                      justifyContent: 'space-between',
+                      alignItems: 'center',
+                    }}
+                  >
+                    <span>Selected: {form.clientName || '(no name)'}</span>
+                    <button
+                      type="button"
+                      onClick={clearSelectedClient}
+                      style={{
+                        fontSize: 11,
+                        border: 'none',
+                        background: 'transparent',
+                        color: '#C62828',
+                        cursor: 'pointer',
+                        textDecoration: 'underline',
+                      }}
+                    >
+                      Clear
+                    </button>
+                  </div>
+                )}
+                {clientSearchLoading && (
+                  <div style={{ fontSize: 12, color: '#90A4AE' }}>
+                    Searching…
+                  </div>
+                )}
+                {clientSearchError && (
+                  <div style={{ fontSize: 12, color: '#C62828' }}>
+                    {clientSearchError}
+                  </div>
+                )}
+                {clientResults.length > 0 && (
+                  <ul
+                    style={{
+                      listStyle: 'none',
+                      margin: '4px 0 0',
+                      padding: 0,
+                      maxHeight: 160,
+                      overflowY: 'auto',
+                      border: '1px solid #eee',
+                      borderRadius: 8,
+                    }}
+                  >
+                    {clientResults.map((r) => (
+                      <li
+                        key={r.id}
+                        onClick={() => selectClient(r)}
+                        style={{
+                          padding: '6px 8px',
+                          fontSize: 13,
+                          cursor: 'pointer',
+                          borderBottom: '1px solid #f0f0f0',
+                        }}
+                      >
+                        <div style={{ fontWeight: 600 }}>{r.name}</div>
+                        <div
+                          style={{
+                            fontSize: 12,
+                            color: '#607D8B',
+                          }}
+                        >
+                          {r.email}
+                          {r.headline ? ` • ${r.headline}` : ''}
+                        </div>
+                      </li>
+                    ))}
+                  </ul>
+                )}
+                {clientResults.length === 0 &&
+                  clientSearchTerm.trim() &&
+                  !clientSearchLoading &&
+                  !clientSearchError && (
+                    <div style={{ fontSize: 12, color: '#90A4AE' }}>
+                      No contacts matched that search.
+                    </div>
+                  )}
+              </div>
+            )}
+
+            {/* External client name input */}
+            {form.clientType === 'external' && (
+              <label>
+                Client Name:
+                <input
+                  type="text"
+                  value={form.clientName}
+                  onChange={(e) => update('clientName', e.target.value)}
+                  style={{ width: '100%', padding: 6 }}
+                  placeholder="e.g. John Doe (Acme Corp)"
+                />
+              </label>
+            )}
+
             <label>
               Type:
               <select

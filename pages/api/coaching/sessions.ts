@@ -24,13 +24,18 @@ function splitDateTime(d: Date) {
 // Normalize a CoachingSession row → UI payload
 function toSessionPayload(row: any, clientDisplay?: string | null) {
   const { date, time } = splitDateTime(row.startAt);
+  const clientId: string | null = row.clientId ?? null;
+  const clientType: 'internal' | 'external' = clientId ? 'internal' : 'external';
+
   return {
-    id: row.id,
+    id: row.id as string,
     date,
     time,
     client: clientDisplay ?? '',
-    type: row.type,
-    status: row.status,
+    type: row.type as string,
+    status: row.status as string,
+    clientId,
+    clientType,
   };
 }
 
@@ -58,17 +63,19 @@ export default async function handler(
           startAt: true,
           type: true,
           status: true,
+          notes: true,
         },
       });
 
-      // Optionally hydrate client display names if clientId exists
-const clientIds = Array.from(
-  new Set(
-    rows
-      .map((r) => r.clientId)
-      .filter((id): id is string => typeof id === 'string' && id.length > 0)
-  )
-);
+      // Collect internal client IDs from this coach's sessions
+      const clientIds = Array.from(
+        new Set(
+          rows
+            .map((r) => r.clientId)
+            .filter((id): id is string => typeof id === 'string' && id.length > 0)
+        )
+      );
+
       const clients =
         clientIds.length > 0
           ? await prisma.user.findMany({
@@ -83,16 +90,22 @@ const clientIds = Array.from(
             })
           : [];
 
-      const clientMap = new Map<
-        string,
-        { name: string | null; firstName: string | null; lastName: string | null; email: string }
-      >();
+      type ClientDisplay = {
+        name: string | null;
+        firstName: string | null;
+        lastName: string | null;
+        email: string;
+      };
+
+      const clientMap = new Map<string, ClientDisplay>();
       for (const c of clients) {
         clientMap.set(c.id, c);
       }
 
       const sessions = rows.map((row) => {
         let display: string | null = null;
+
+        // Internal client: derive from User
         if (row.clientId) {
           const c = clientMap.get(row.clientId);
           if (c) {
@@ -102,6 +115,12 @@ const clientIds = Array.from(
               c.email;
           }
         }
+
+        // External: parse from notes if we stored it
+        if (!display && row.notes && row.notes.startsWith('Client (free text):')) {
+          display = row.notes.replace(/^Client \(free text\):\s*/, '');
+        }
+
         return toSessionPayload(row, display);
       });
 
@@ -110,7 +129,23 @@ const clientIds = Array.from(
 
     // ───────────── POST: create session ─────────────
     if (req.method === 'POST') {
-      const { date, time, client, type, status } = req.body || {};
+      const {
+        date,
+        time,
+        clientType,
+        clientUserId,
+        clientName,
+        type,
+        status,
+      } = (req.body || {}) as {
+        date?: string;
+        time?: string;
+        clientType?: 'internal' | 'external';
+        clientUserId?: string | null;
+        clientName?: string;
+        type?: string;
+        status?: string;
+      };
 
       if (!date || !time) {
         return res.status(400).json({ error: 'Missing date or time' });
@@ -118,53 +153,116 @@ const clientIds = Array.from(
 
       const startAt = toStartAt(String(date), String(time));
 
+      let clientId: string | null = null;
+      let notes: string | undefined;
+
+      if (clientType === 'internal') {
+        if (!clientUserId) {
+          return res.status(400).json({ error: 'Missing clientUserId for internal client' });
+        }
+        clientId = String(clientUserId);
+        // Optional: store a hint in notes if you want
+        notes = clientName ? `Client (internal display): ${String(clientName)}` : undefined;
+      } else {
+        // Default to external if not specified
+        const name = (clientName || '').trim();
+        if (!name) {
+          return res.status(400).json({ error: 'Missing client name for external client' });
+        }
+        clientId = null;
+        notes = `Client (free text): ${name}`;
+      }
+
       const created = await prisma.coachingSession.create({
         data: {
           coachId,
-          clientId: null, // MVP: free-text clients only
+          clientId,
           startAt,
+          durationMin: 60,
           type: type || 'Strategy',
           status: status || 'Scheduled',
-          // We park the client display name in notes for now so it’s not lost.
-          notes: client ? `Client (free text): ${String(client)}` : undefined,
+          notes,
         },
       });
 
+      const displayName = (clientName || '').trim();
       return res
         .status(201)
-        .json({ session: toSessionPayload(created, client || '') });
+        .json({ session: toSessionPayload(created, displayName || undefined) });
     }
 
     // ───────────── PUT: update session ─────────────
     if (req.method === 'PUT') {
-      const { id, date, time, client, type, status } = req.body || {};
+      const {
+        id,
+        date,
+        time,
+        clientType,
+        clientUserId,
+        clientName,
+        type,
+        status,
+      } = (req.body || {}) as {
+        id?: string;
+        date?: string;
+        time?: string;
+        clientType?: 'internal' | 'external';
+        clientUserId?: string | null;
+        clientName?: string;
+        type?: string;
+        status?: string;
+      };
 
-      if (!id || !date || !time) {
-        return res
-          .status(400)
-          .json({ error: 'Missing id, date, or time for update' });
+      if (!id) {
+        return res.status(400).json({ error: 'Missing id for update' });
       }
 
-      const startAt = toStartAt(String(date), String(time));
+      const data: any = {};
+
+      if (date && time) {
+        data.startAt = toStartAt(String(date), String(time));
+      }
+
+      // Handle client identity changes
+      if (clientType === 'internal') {
+        if (!clientUserId) {
+          return res
+            .status(400)
+            .json({ error: 'Missing clientUserId for internal client' });
+        }
+        data.clientId = String(clientUserId);
+        data.notes = clientName
+          ? `Client (internal display): ${String(clientName)}`
+          : undefined;
+      } else if (clientType === 'external') {
+        const name = (clientName || '').trim();
+        if (!name) {
+          return res
+            .status(400)
+            .json({ error: 'Missing client name for external client' });
+        }
+        data.clientId = null;
+        data.notes = `Client (free text): ${name}`;
+      }
+
+      if (typeof type === 'string') data.type = type;
+      if (typeof status === 'string') data.status = status;
 
       const updated = await prisma.coachingSession.update({
         where: { id: String(id) },
-        data: {
-          startAt,
-          type: type || 'Strategy',
-          status: status || 'Scheduled',
-          notes: client ? `Client (free text): ${String(client)}` : undefined,
-        },
+        data,
       });
 
+      const displayName = (clientName || '').trim();
       return res
         .status(200)
-        .json({ session: toSessionPayload(updated, client || '') });
+        .json({ session: toSessionPayload(updated, displayName || undefined) });
     }
 
     // ───────────── DELETE: delete session ─────────────
     if (req.method === 'DELETE') {
-      const { id } = req.body || {};
+      const { id } = (req.body || {}) as { id?: string };
+
       if (!id) {
         return res.status(400).json({ error: 'Missing id' });
       }
