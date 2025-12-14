@@ -543,96 +543,112 @@ export default function CoachingClientsPage() {
                   style={{ width: '100%', padding: 8, marginBottom: 8 }}
                 />
                 <div
-                  style={{
-                    maxHeight: 160,
-                    overflowY: 'auto',
-                    border: '1px solid #eee',
-                    borderRadius: 8,
-                    padding: 4,
-                    marginBottom: 10,
-                    background: '#FAFAFA',
-                  }}
-                >
-                  {contactLoading && (
-                    <div
-                      style={{
-                        padding: 6,
-                        fontSize: 12,
-                        color: '#90A4AE',
-                      }}
-                    >
-                      Searching...
-                    </div>
-                  )}
-                  {!contactLoading && contactResults.length === 0 && (
-                    <div
-                      style={{
-                        padding: 6,
-                        fontSize: 12,
-                        color: '#90A4AE',
-                      }}
-                    >
-                      No contacts yet. Add contacts first, then promote them to
-                      clients here - or switch to "External client".
-                    </div>
-                  )}
-                  {contactResults.map((c) => {
-                    const isSelected =
-                      selectedContact && selectedContact.id === c.id;
-                    return (
-                      <div
-                        key={c.id}
-                        onClick={() => setSelectedContact(c)}
-                        style={{
-                          display: 'flex',
-                          justifyContent: 'space-between',
-                          alignItems: 'center',
-                          padding: '6px 8px',
-                          marginBottom: 4,
-                          borderRadius: 6,
-                          cursor: 'pointer',
-                          background: isSelected ? '#FFE0B2' : 'white',
-                          border: isSelected
-                            ? '1px solid #FF7043'
-                            : '1px solid #eee',
-                        }}
-                      >
-                        <div>
-                          <div
-                            style={{
-                              fontWeight: 600,
-                              fontSize: 13,
-                              color: '#37474F',
-                            }}
-                          >
-                            {c.name || c.displayName || c.email}
-                          </div>
-                          {c.email && (
-                            <div
-                              style={{
-                                fontSize: 12,
-                                color: '#78909C',
-                              }}
-                            >
-                              {c.email}
-                            </div>
-                          )}
-                        </div>
-                        {isSelected && (
-                          <span
-                            style={{
-                              fontSize: 11,
-                              color: '#E65100',
-                              fontWeight: 700,
-                            }}
-                          >
-                            Selected
-                          </span>
-                        )}
-                      </div>
-                    );
-                  })}
-                </div>
+  style={{
+    maxHeight: 160,
+    overflowY: 'auto',
+    border: '1px solid #eee',
+    borderRadius: 8,
+    padding: 4,
+    marginBottom: 10,
+    background: '#FAFAFA',
+  }}
+>
+  {contactLoading && (
+    <div
+      style={{
+        padding: 6,
+        fontSize: 12,
+        color: '#90A4AE',
+      }}
+    >
+      Searching…
+    </div>
+  )}
+
+  {!contactLoading &&
+    !contactQuery.trim() &&
+    contactResults.length === 0 && (
+      <div
+        style={{
+          padding: 6,
+          fontSize: 12,
+          color: '#90A4AE',
+        }}
+      >
+        Start typing to search your contacts.
+      </div>
+    )}
+
+  {!contactLoading &&
+    contactQuery.trim() &&
+    contactResults.length === 0 && (
+      <div
+        style={{
+          padding: 6,
+          fontSize: 12,
+          color: '#90A4AE',
+        }}
+      >
+        No contacts matched that search. You can add them as an external client
+        instead.
+      </div>
+    )}
+
+  {contactResults.map((c) => {
+    const isSelected = selectedContact && selectedContact.id === c.id;
+    return (
+      <div
+        key={c.id}
+        onClick={() => setSelectedContact(c)}
+        style={{
+          display: 'flex',
+          justifyContent: 'space-between',
+          alignItems: 'center',
+          padding: '6px 8px',
+          marginBottom: 4,
+          borderRadius: 6,
+          cursor: 'pointer',
+          background: isSelected ? '#FFE0B2' : 'white',
+          border: isSelected ? '1px solid #FF7043' : '1px solid #eee',
+        }}
+      >
+        <div>
+          <div
+            style={{
+              fontWeight: 600,
+              fontSize: 13,
+              color: '#37474F',
+            }}
+          >
+            {c.name || c.displayName || c.email}
+          </div>
+          {c.email && (
+            <div
+              style={{
+                fontSize: 12,
+                color: '#78909C',
+              }}
+            >
+              {c.email}
+            </div>
+          )}
+        </div>
+        {isSelected && (
+          <span
+            style={{
+              fontSize: 11,
+              color: '#E65100',
+              fontWeight: 700,
+            }}
+          >
+            Selected
+          </span>
+        )}
+      </div>
+    );
+  })}
+</div>
+
 
                 <label style={{ fontSize: 13, color: '#455A64' }}>
                   Status
