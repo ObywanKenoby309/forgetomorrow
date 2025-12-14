@@ -13,6 +13,7 @@ import {
 } from '@/components/ui/Card';
 
 import SeekerLayout from '@/components/layouts/SeekerLayout';
+import SupportFloatingButton from '@/components/support/SupportFloatingButton'; // ⬅ support button
 
 const STORAGE_KEY = 'hearthSpotlights_v1';
 
@@ -126,43 +127,55 @@ export default function HearthSpotlightsPage() {
       right={RightColumn}
       activeNav="hearth"
     >
-      {/* Main content lives in the center column under the header */}
-      {!hasAnyReal && (
-        <Card>
-          <CardHeader style={{ textAlign: 'center' }}>
-            <CardTitle>No Hearth Spotlights yet</CardTitle>
-            <CardSubtle>
-              This is where community mentors and helpers will appear.
-            </CardSubtle>
-          </CardHeader>
-          <CardContent style={{ textAlign: 'center', color: '#607D8B' }}>
-            As mentors join The Hearth and opt in, you’ll be able to browse and
-            connect with them here.
-          </CardContent>
-        </Card>
-      )}
-
-      {hasAnyReal && filtered.length === 0 && (
-        <Card>
-          <CardContent style={{ color: '#90A4AE' }}>
-            No spotlights match your filters.
-          </CardContent>
-        </Card>
-      )}
-
-      {filtered.map((a) => (
-        <Card key={a.id}>
-          <CardHeader>
-            <CardSubtle>{a.name}</CardSubtle>
-            <CardTitle>{a.headline || 'Mentor'}</CardTitle>
-          </CardHeader>
-          {a.summary && (
-            <CardContent style={{ color: '#455A64' }}>
-              {a.summary}
+      {/* Center column content, tightened + centered */}
+      <div
+        style={{
+          maxWidth: 900,
+          margin: '0 auto',
+          display: 'grid',
+          gap: 16,
+        }}
+      >
+        {!hasAnyReal && (
+          <Card>
+            <CardHeader style={{ textAlign: 'center' }}>
+              <CardTitle>No Hearth Spotlights yet</CardTitle>
+              <CardSubtle>
+                This is where community mentors and helpers will appear.
+              </CardSubtle>
+            </CardHeader>
+            <CardContent style={{ textAlign: 'center', color: '#607D8B' }}>
+              As mentors join The Hearth and opt in, you’ll be able to browse and
+              connect with them here.
             </CardContent>
-          )}
-        </Card>
-      ))}
+          </Card>
+        )}
+
+        {hasAnyReal && filtered.length === 0 && (
+          <Card>
+            <CardContent style={{ color: '#90A4AE' }}>
+              No spotlights match your filters.
+            </CardContent>
+          </Card>
+        )}
+
+        {filtered.map((a) => (
+          <Card key={a.id}>
+            <CardHeader>
+              <CardSubtle>{a.name}</CardSubtle>
+              <CardTitle>{a.headline || 'Mentor'}</CardTitle>
+            </CardHeader>
+            {a.summary && (
+              <CardContent style={{ color: '#455A64' }}>
+                {a.summary}
+              </CardContent>
+            )}
+          </Card>
+        ))}
+      </div>
+
+      {/* Support button back in place */}
+      <SupportFloatingButton />
     </SeekerLayout>
   );
 }
