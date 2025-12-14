@@ -12,42 +12,13 @@ export default function SupportFloatingButton() {
     return null;
   }
 
-  // Hide entirely for non-authenticated users (keeps HelpDesk off public pages)
+  // Hide entirely for non-authenticated users
   if (!session?.user) {
     return null;
   }
 
-  // Optional: hide on auth pages or support page itself
-  const hideOnRoutes = new Set(['/auth/signin', '/auth/signup', '/support']);
-  if (hideOnRoutes.has(router.pathname)) {
-    return null;
-  }
-
-  // Only show on *app* surfaces, never on public marketing pages.
-  // Add new app sections here as needed.
-  const pathname = router.pathname || '';
-  const allowedPrefixes = [
-    '/seeker',
-    '/recruiter',
-    '/coaching',
-    '/jobs',
-    '/resume',
-    '/cover',
-    '/roadmap',
-    '/feed',
-    '/profile',
-    '/seeker-dashboard',
-    '/recruiter-dashboard',
-    '/coaching-dashboard',
-    '/support', // still treated as app, but hidden above by hideOnRoutes
-  ];
-
-  const isAllowed = allowedPrefixes.some((prefix) =>
-    pathname.startsWith(prefix)
-  );
-
-  if (!isAllowed) {
-    // e.g. '/', '/pricing', '/about', etc. → no floating button
+  // Hide ONLY on the support page itself (already there)
+  if (router.pathname === '/support') {
     return null;
   }
 
@@ -72,8 +43,8 @@ export default function SupportFloatingButton() {
 
   const supportHref = chrome ? `/support?chrome=${chrome}` : '/support';
 
-  const handleClick = (e) => {
-    // Hook for any future page-specific logic on click
+  const handleClick = () => {
+    // hook for future logic if needed
   };
 
   return (
@@ -84,7 +55,8 @@ export default function SupportFloatingButton() {
           className="
             flex items-center gap-2 px-4 py-3 rounded-full shadow-lg
             bg-[#FF7043] text-white text-sm font-medium
-            hover:brightness-110 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-[#FF7043]
+            hover:brightness-110 focus:outline-none focus:ring-2
+            focus:ring-offset-2 focus:ring-[#FF7043]
           "
         >
           <span className="inline-block w-2 h-2 rounded-full bg-lime-300" />
