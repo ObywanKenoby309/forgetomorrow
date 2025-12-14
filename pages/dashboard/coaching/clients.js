@@ -400,7 +400,7 @@ export default function CoachingClientsPage() {
                             )}`}
                             style={{
                               background: 'white',
-                              border: '1px solid '#eee',
+                              border: '1px solid #eee',
                               borderRadius: 8,
                               padding: '6px 10px',
                               cursor: 'pointer',
