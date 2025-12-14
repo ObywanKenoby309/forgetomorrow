@@ -49,7 +49,7 @@ export default function SpotlightFilters({ onChange, initial }) {
         position: 'sticky',
         top: 100,
         alignSelf: 'start',
-        width: 280,
+        width: '100%',
         background: 'white',
         border: '1px solid #eee',
         borderRadius: 12,
