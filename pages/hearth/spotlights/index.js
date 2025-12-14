@@ -20,7 +20,7 @@ import CoachingHeader from '@/components/coaching/CoachingHeader';
 import RecruiterHeader from '@/components/recruiter/RecruiterHeader';
 
 // footer
-import InternalFooter from '@/components/InternalFooter';
+import Footer from '@/components/Footer';
 
 // support button
 import SupportFloatingButton from '@/components/SupportFloatingButton';
@@ -204,7 +204,7 @@ export default function HearthSpotlightsPage() {
           </div>
         </div>
 
-        <InternalFooter />
+        <Footer />
         <SupportFloatingButton />
       </div>
     </>
