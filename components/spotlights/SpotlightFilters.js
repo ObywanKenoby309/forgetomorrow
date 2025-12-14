@@ -86,7 +86,7 @@ export default function SpotlightFilters({ onChange, initial }) {
         <input
           value={filters.q}
           onChange={(e) => setFilters((f) => ({ ...f, q: e.target.value }))}
-          placeholder="e.g., resume, interview, name…"
+          placeholder="e.g., resume, interview, etc."
           style={input}
         />
       </div>
