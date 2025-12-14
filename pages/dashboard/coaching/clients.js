@@ -720,7 +720,7 @@ export default function CoachingClientsPage() {
                 style={{
                   background: 'white',
                   color: '#FF7043',
-                  border: '1px solid '#FF7043',
+                  border: '1px solid #FF7043',
                   borderRadius: 10,
                   padding: '8px 12px',
                   fontWeight: 600,
