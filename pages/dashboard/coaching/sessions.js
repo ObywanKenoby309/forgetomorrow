@@ -4,97 +4,47 @@ import Link from 'next/link';
 import CoachingLayout from '@/components/layouts/CoachingLayout';
 import CoachingRightColumn from '@/components/coaching/CoachingRightColumn';
 
-const API_URL = '/api/coaching/sessions';
-
-// --- Helpers to avoid UTC drift ---
+// --- Helpers to avoid UTC drift in labels (local display only) ---
 function localISODate(d = new Date()) {
   const y = d.getFullYear();
   const m = String(d.getMonth() + 1).padStart(2, '0');
   const day = String(d.getDate()).padStart(2, '0');
   return `${y}-${m}-${day}`;
 }
-
 function toLocalDateTime(dateStr, timeStr = '00:00') {
-  const [y, m, d] = (dateStr || '').split('-').map(Number);
-  const [hh, mm] = (timeStr || '00:00').split(':').map(Number);
-  return new Date(y || 1970, (m || 1) - 1, d || 1, hh || 0, mm || 0);
-}
-
-// Normalize API shape → UI shape
-function normalizeSessions(raw) {
-  if (!Array.isArray(raw)) return [];
-
-  return raw.map((s) => {
-    // If API already returns date/time/client
-    const date = s.date || s.sessionDate || null;
-    const time = s.time || s.sessionTime || null;
-    const client =
-      s.client ||
-      s.clientName ||
-      s.client_name ||
-      ''; // display only
-
-    // Fallback: derive from startAt if needed
-    let finalDate = date;
-    let finalTime = time;
-    if (!finalDate || !finalTime) {
-      const start = s.startAt || s.start_at;
-      if (start) {
-        const dt = new Date(start);
-        const y = dt.getFullYear();
-        const m = String(dt.getMonth() + 1).padStart(2, '0');
-        const d = String(dt.getDate()).padStart(2, '0');
-        const hh = String(dt.getHours()).padStart(2, '0');
-        const mm = String(dt.getMinutes()).padStart(2, '0');
-        finalDate = `${y}-${m}-${d}`;
-        finalTime = `${hh}:${mm}`;
-      }
-    }
-
-    return {
-      id: s.id,
-      date: finalDate || localISODate(),
-      time: finalTime || '09:00',
-      client,
-      type: s.type || 'Strategy',
-      status: s.status || 'Scheduled',
-    };
-  });
+  const [y, m, d] = dateStr.split('-').map(Number);
+  const [hh, mm] = timeStr.split(':').map(Number);
+  return new Date(y, (m || 1) - 1, d || 1, hh || 0, mm || 0);
 }
 
 export default function CoachingSessionsPage() {
   const [type, setType] = useState('All');
   const [status, setStatus] = useState('All');
 
-  // Sessions from DB
+  // Sessions are now DB-backed via API
   const [sessions, setSessions] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [saving, setSaving] = useState(false);
 
-  // -------- Load from DB --------
+  // Load from API on mount
   useEffect(() => {
     let cancelled = false;
 
     async function load() {
       try {
-        setLoading(true);
-        const res = await fetch(API_URL);
+        const res = await fetch('/api/coaching/sessions');
         if (!res.ok) {
           console.error('Failed to load sessions', res.status);
           if (!cancelled) setSessions([]);
           return;
         }
         const data = await res.json().catch(() => ({}));
-        const raw = Array.isArray(data) ? data : data.sessions || [];
-        const normalized = normalizeSessions(raw);
-        if (!cancelled) {
-          // Order globally by start time
-          normalized.sort(
-            (a, b) =>
-              toLocalDateTime(a.date, a.time) - toLocalDateTime(b.date, b.time)
-          );
-          setSessions(normalized);
-        }
+        const list = Array.isArray(data.sessions) ? data.sessions : [];
+        // sort by datetime so groups come out sane
+        list.sort(
+          (a, b) =>
+            toLocalDateTime(a.date, a.time) - toLocalDateTime(b.date, b.time)
+        );
+        if (!cancelled) setSessions(list);
       } catch (err) {
         console.error('Error loading sessions', err);
         if (!cancelled) setSessions([]);
@@ -109,7 +59,7 @@ export default function CoachingSessionsPage() {
     };
   }, []);
 
-  // -------- Filters --------
+  // Filtering
   const filtered = useMemo(() => {
     return sessions.filter((s) => {
       const byType = type === 'All' ? true : s.type === type;
@@ -126,22 +76,20 @@ export default function CoachingSessionsPage() {
     }, {});
     Object.keys(g).forEach((k) =>
       g[k].sort(
-        (a, b) =>
-          toLocalDateTime(a.date, a.time) - toLocalDateTime(b.date, b.time)
+        (a, b) => toLocalDateTime(a.date, a.time) - toLocalDateTime(b.date, b.time)
       )
     );
     return g;
   }, [filtered]);
 
   const orderedDates = Object.keys(groups).sort();
-
   const friendlyLabel = (iso) => {
     const todayISO = localISODate();
     const tomorrowISO = localISODate(new Date(Date.now() + 86400000));
     if (iso === todayISO) return 'Today';
     if (iso === tomorrowISO) return 'Tomorrow';
     const [yy, mm, dd] = iso.split('-').map(Number);
-    const d = new Date(yy, (mm || 1) - 1, dd || 1);
+    const d = new Date(yy, mm - 1, dd);
     return d.toLocaleDateString(undefined, {
       month: 'short',
       day: 'numeric',
@@ -192,7 +140,7 @@ export default function CoachingSessionsPage() {
   );
 
   // ---------- Add/Edit/Delete Modal ----------
-  const [modal, setModal] = useState({ open: false, mode: 'add', id: null });
+  const [modal, setModal] = useState({ open: false, mode: 'add', index: null });
   const [form, setForm] = useState({
     date: localISODate(),
     time: '09:00',
@@ -211,12 +159,13 @@ export default function CoachingSessionsPage() {
       type: 'Strategy',
       status: 'Scheduled',
     });
-    setModal({ open: true, mode: 'add', id: null });
+    setModal({ open: true, mode: 'add', index: null });
   };
 
-  const openEdit = (id) => {
-    const s = sessions.find((x) => x.id === id);
+  const openEdit = (idx) => {
+    const s = filtered[idx]; // index relative to filtered view
     if (!s) return;
+
     setForm({
       date: s.date,
       time: s.time,
@@ -224,19 +173,20 @@ export default function CoachingSessionsPage() {
       type: s.type,
       status: s.status,
     });
-    setModal({ open: true, mode: 'edit', id });
+
+    // we store the session's ID as well so we can PUT/DELETE
+    setModal({ open: true, mode: 'edit', index: s.id });
   };
 
-  // ---- Create ----
   const saveAdd = async (e) => {
     e.preventDefault();
     if (!form.client.trim()) {
       alert('Please enter a client name.');
       return;
     }
+
     try {
-      setSaving(true);
-      const res = await fetch(API_URL, {
+      const res = await fetch('/api/coaching/sessions', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -247,50 +197,48 @@ export default function CoachingSessionsPage() {
           status: form.status,
         }),
       });
+
       if (!res.ok) {
         console.error('Failed to create session', res.status);
-        alert('Could not save session. Please try again.');
+        alert('Could not create session. Please try again.');
         return;
       }
+
       const data = await res.json().catch(() => ({}));
-      const created = data.session || data;
-      const [normalized] = normalizeSessions([created]);
+      const created = data.session;
+
+      if (!created) return;
 
       setSessions((prev) => {
-        const next = [...prev, normalized];
+        const next = [...prev, created];
         next.sort(
           (a, b) =>
-            toLocalDateTime(a.date, a.time) -
-            toLocalDateTime(b.date, b.time)
+            toLocalDateTime(a.date, a.time) - toLocalDateTime(b.date, b.time)
         );
         return next;
       });
 
-      setModal({ open: false, mode: 'add', id: null });
+      setModal({ open: false, mode: 'add', index: null });
     } catch (err) {
       console.error('Error creating session', err);
-      alert('Could not save session. Please try again.');
-    } finally {
-      setSaving(false);
+      alert('Could not create session. Please try again.');
     }
   };
 
-  // ---- Update ----
   const saveEdit = async (e) => {
     e.preventDefault();
-    if (!modal.id) return;
+    if (!modal.index) return; // we stored the ID here
     if (!form.client.trim()) {
       alert('Please enter a client name.');
       return;
     }
 
     try {
-      setSaving(true);
-      const res = await fetch(API_URL, {
+      const res = await fetch('/api/coaching/sessions', {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          id: modal.id,
+          id: modal.index,
           date: form.date,
           time: form.time,
           client: form.client.trim(),
@@ -298,63 +246,60 @@ export default function CoachingSessionsPage() {
           status: form.status,
         }),
       });
+
       if (!res.ok) {
         console.error('Failed to update session', res.status);
         alert('Could not update session. Please try again.');
         return;
       }
+
       const data = await res.json().catch(() => ({}));
-      const updated = data.session || data;
-      const [normalized] = normalizeSessions([updated]);
+      const updated = data.session;
+      if (!updated) return;
 
       setSessions((prev) => {
-        const next = prev.map((s) =>
-          s.id === normalized.id ? normalized : s
-        );
+        const next = prev.map((s) => (s.id === updated.id ? updated : s));
         next.sort(
           (a, b) =>
-            toLocalDateTime(a.date, a.time) -
-            toLocalDateTime(b.date, b.time)
+            toLocalDateTime(a.date, a.time) - toLocalDateTime(b.date, b.time)
         );
         return next;
       });
 
-      setModal({ open: false, mode: 'add', id: null });
+      setModal({ open: false, mode: 'add', index: null });
     } catch (err) {
       console.error('Error updating session', err);
       alert('Could not update session. Please try again.');
-    } finally {
-      setSaving(false);
     }
   };
 
-  // ---- Delete ----
   const deleteSession = async (id) => {
     if (!id) return;
     if (!confirm('Delete this session?')) return;
 
     try {
-      setSaving(true);
-      const res = await fetch(API_URL, {
+      const res = await fetch('/api/coaching/sessions', {
         method: 'DELETE',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ id }),
       });
+
       if (!res.ok) {
         console.error('Failed to delete session', res.status);
         alert('Could not delete session. Please try again.');
         return;
       }
+
       setSessions((prev) => prev.filter((s) => s.id !== id));
-      setModal({ open: false, mode: 'add', id: null });
+      setModal({ open: false, mode: 'add', index: null });
     } catch (err) {
       console.error('Error deleting session', err);
       alert('Could not delete session. Please try again.');
-    } finally {
-      setSaving(false);
     }
   };
 
+  // We need a stable way to go from each rendered row back to its ID.
+  // filtered/grouped items already *are* the objects with `id`, so we pass `s.id`.
   return (
     <CoachingLayout
       title="Sessions | ForgeTomorrow"
@@ -453,13 +398,7 @@ export default function CoachingSessionsPage() {
             border: '1px solid #eee',
           }}
         >
-          <h2
-            style={{
-              color: '#FF7043',
-              marginTop: 0,
-              marginBottom: 12,
-            }}
-          >
+          <h2 style={{ color: '#FF7043', marginTop: 0, marginBottom: 12 }}>
             Agenda
           </h2>
 
@@ -535,7 +474,7 @@ export default function CoachingSessionsPage() {
                       <div style={{ display: 'flex', gap: 6 }}>
                         <button
                           type="button"
-                          onClick={() => openEdit(s.id)}
+                          onClick={() => openEdit(sessions.findIndex((x) => x.id === s.id))}
                           style={{
                             background: '#FFF3E0',
                             color: '#E65100',
@@ -548,7 +487,7 @@ export default function CoachingSessionsPage() {
                         >
                           Edit
                         </button>
-                          <button
+                        <button
                           type="button"
                           onClick={() => deleteSession(s.id)}
                           style={{
@@ -574,8 +513,8 @@ export default function CoachingSessionsPage() {
             <div style={{ color: '#90A4AE', fontSize: 14 }}>
               <p style={{ margin: 0 }}>No sessions yet.</p>
               <p style={{ margin: '2px 0 0' }}>
-                Use “+ Add Session” above to start your agenda. If you expected
-                to see sessions, try adjusting your filters.
+                Use “+ Add Session” above to start your agenda. If you
+                expected to see sessions, try adjusting your filters.
               </p>
             </div>
           )}
@@ -676,7 +615,7 @@ export default function CoachingSessionsPage() {
               {modal.mode === 'edit' && (
                 <button
                   type="button"
-                  onClick={() => deleteSession(modal.id)}
+                  onClick={() => deleteSession(modal.index)}
                   style={{
                     background: 'white',
                     color: '#C62828',
@@ -686,7 +625,6 @@ export default function CoachingSessionsPage() {
                     fontWeight: 700,
                     cursor: 'pointer',
                   }}
-                  disabled={saving}
                 >
                   Delete
                 </button>
@@ -703,14 +641,13 @@ export default function CoachingSessionsPage() {
                     fontWeight: 700,
                     cursor: 'pointer',
                   }}
-                  disabled={saving}
                 >
-                  {saving ? 'Saving…' : 'Save'}
+                  Save
                 </button>
                 <button
                   type="button"
                   onClick={() =>
-                    setModal({ open: false, mode: 'add', id: null })
+                    setModal({ open: false, mode: 'add', index: null })
                   }
                   style={{
                     background: 'white',
@@ -721,7 +658,6 @@ export default function CoachingSessionsPage() {
                     fontWeight: 700,
                     cursor: 'pointer',
                   }}
-                  disabled={saving}
                 >
                   Cancel
                 </button>
