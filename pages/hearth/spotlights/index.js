@@ -19,10 +19,7 @@ import SeekerHeader from '@/components/seeker/SeekerHeader';
 import CoachingHeader from '@/components/coaching/CoachingHeader';
 import RecruiterHeader from '@/components/recruiter/RecruiterHeader';
 
-// footer
-import Footer from '@/components/Footer';
-
-// support button
+// support
 import SupportFloatingButton from '@/components/SupportFloatingButton';
 
 const STORAGE_KEY = 'hearthSpotlights_v1';
@@ -110,7 +107,7 @@ export default function HearthSpotlightsPage() {
               maxWidth: 1400,
               margin: '0 auto',
               display: 'grid',
-              gridTemplateColumns: '260px minmax(0,1fr) 260px',
+              gridTemplateColumns: '220px minmax(0,1fr) 260px', // ✅ LEFT REDUCED
               gap: 24,
               alignItems: 'start',
             }}
@@ -120,6 +117,7 @@ export default function HearthSpotlightsPage() {
               <Link
                 href={withChrome('/the-hearth')}
                 style={{
+                  width: '100%',              // ✅ MATCH FILTER WIDTH
                   background: '#FF7043',
                   color: 'white',
                   fontWeight: 700,
@@ -137,26 +135,26 @@ export default function HearthSpotlightsPage() {
 
             {/* CENTER */}
             <div style={{ display: 'grid', gap: 16 }}>
-              <div style={{ maxWidth: 920, margin: '0 auto' }}>
-                <Card style={{ textAlign: 'center' }}>
-                  <CardHeader>
-                    <CardTitle
-                      style={{
-                        fontSize: 28,
-                        fontWeight: 800,
-                        color: '#FF7043',
-                      }}
-                    >
-                      Hearth Spotlight
-                    </CardTitle>
-                    <CardSubtle>
-                      Find a mentor or guide who is actively offering help.
-                    </CardSubtle>
-                  </CardHeader>
-                </Card>
-              </div>
+              {/* TITLE CARD — FULL CENTER WIDTH */}
+              <Card style={{ textAlign: 'center', maxWidth: 1100, margin: '0 auto' }}>
+                <CardHeader>
+                  <CardTitle
+                    style={{
+                      fontSize: 28,
+                      fontWeight: 800,
+                      color: '#FF7043',
+                    }}
+                  >
+                    Hearth Spotlight
+                  </CardTitle>
+                  <CardSubtle>
+                    Find a mentor or guide who is actively offering help.
+                  </CardSubtle>
+                </CardHeader>
+              </Card>
 
-              <div style={{ maxWidth: 1100, marginLeft: 0 }}>
+              {/* CONTENT CARD — SAME WIDTH */}
+              <div style={{ maxWidth: 1100, margin: '0 auto', width: '100%' }}>
                 {!hasAnyReal && (
                   <Card>
                     <CardHeader style={{ textAlign: 'center' }}>
@@ -184,9 +182,7 @@ export default function HearthSpotlightsPage() {
                       <CardSubtle>{a.name}</CardSubtle>
                       <CardTitle>{a.headline || 'Mentor'}</CardTitle>
                     </CardHeader>
-                    {a.summary && (
-                      <CardContent>{a.summary}</CardContent>
-                    )}
+                    {a.summary && <CardContent>{a.summary}</CardContent>}
                   </Card>
                 ))}
               </div>
@@ -204,7 +200,6 @@ export default function HearthSpotlightsPage() {
           </div>
         </div>
 
-        <Footer />
         <SupportFloatingButton />
       </div>
     </>
