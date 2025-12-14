@@ -461,7 +461,7 @@ export default function CoachingClientsPage() {
                           padding: 16,
                           color: '#90A4AE',
                           background: 'white',
-                          border: '1px solid '#eee',
+                          border: '1px solid #eee',
                           borderRadius: 10,
                         }}
                       >
