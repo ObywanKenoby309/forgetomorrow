@@ -134,43 +134,46 @@ export default function CoachingClientsPage() {
   };
 
   // ─────────────────────────────────────────────
-  // Contacts search (for internal Add Client)
-  // ─────────────────────────────────────────────
-  const searchContacts = async (query) => {
-    setContactQuery(query);
-    setSelectedContact(null);
+// Contacts search (for internal Add Client)
+// ─────────────────────────────────────────────
+const searchContacts = async (query) => {
+  setContactQuery(query);
+  setSelectedContact(null);
 
-    const trimmed = query.trim();
-    if (!trimmed) {
+  const trimmed = query.trim();
+  if (!trimmed) {
+    setContactResults([]);
+    return;
+  }
+
+  try {
+    setContactLoading(true);
+    // 🔧 IMPORTANT: match the Sessions page – no extra channel param
+    const res = await fetch(
+      `/api/contacts/search?q=${encodeURIComponent(trimmed)}`
+    );
+
+    if (!res.ok) {
+      console.error('Failed to search contacts:', await res.text());
       setContactResults([]);
       return;
     }
 
-    try {
-      setContactLoading(true);
-      const res = await fetch(
-        `/api/contacts/search?q=${encodeURIComponent(trimmed)}&channel=coach`
-      );
-      if (!res.ok) {
-        console.error('Failed to search contacts:', await res.text());
-        setContactResults([]);
-        return;
-      }
+    const data = await res.json();
+    const list =
+      Array.isArray(data.contacts) ||
+      Array.isArray(data.results)
+        ? (data.contacts || data.results)
+        : [];
 
-      const data = await res.json();
-      const list =
-        Array.isArray(data.results) ||
-        Array.isArray(data.contacts)
-          ? (data.results || data.contacts)
-          : [];
-      setContactResults(list);
-    } catch (err) {
-      console.error('Error searching contacts:', err);
-      setContactResults([]);
-    } finally {
-      setContactLoading(false);
-    }
-  };
+    setContactResults(list);
+  } catch (err) {
+    console.error('Error searching contacts:', err);
+    setContactResults([]);
+  } finally {
+    setContactLoading(false);
+  }
+};
 
   const openAddClientModal = () => {
     setModalMode('internal');
