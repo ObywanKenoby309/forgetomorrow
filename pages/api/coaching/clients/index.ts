@@ -6,10 +6,7 @@ import { prisma } from '@/lib/prisma';
 
 function toDisplayName(user: any | null, fallbackName?: string | null) {
   if (!user) {
-    return (
-      fallbackName ||
-      ''
-    );
+    return fallbackName || '';
   }
 
   return (
@@ -30,12 +27,11 @@ function toClientPayload(row: any, user: any | null) {
     name: displayName,
     email,
     status: row.status as string,
-    // these are optional – if your model doesn’t have them,
-    // remove them from the select + here
+    // optional date fields
     next: row.nextSessionAt ? row.nextSessionAt.toISOString() : null,
     last: row.lastContactAt ? row.lastContactAt.toISOString() : null,
     // for internal clients we expose the underlying Forge user id
-    clientId: row.clientUserId ?? null,
+    clientId: row.clientId ?? null,
   };
 }
 
@@ -59,7 +55,7 @@ export default async function handler(
         select: {
           id: true,
           coachId: true,
-          clientUserId: true,
+          clientId: true,
           name: true,
           email: true,
           status: true,
@@ -71,7 +67,7 @@ export default async function handler(
       const userIds = Array.from(
         new Set(
           rows
-            .map((r) => r.clientUserId)
+            .map((r) => r.clientId)
             .filter((id): id is string => !!id)
         )
       );
@@ -98,7 +94,7 @@ export default async function handler(
       const clients = rows.map((row) =>
         toClientPayload(
           row,
-          row.clientUserId ? userMap.get(row.clientUserId) || null : null
+          row.clientId ? userMap.get(row.clientId) || null : null
         )
       );
 
@@ -134,7 +130,7 @@ export default async function handler(
         const existing = await prisma.coachingClient.findFirst({
           where: {
             coachId,
-            clientUserId: contactUserId,
+            clientId: contactUserId,
           },
         });
 
@@ -165,7 +161,7 @@ export default async function handler(
           row = await prisma.coachingClient.create({
             data: {
               coachId,
-              clientUserId: contactUserId,
+              clientId: contactUserId,
               name: displayName,
               email: userEmail,
               status: finalStatus,
@@ -175,7 +171,7 @@ export default async function handler(
 
         // Rehydrate with linked user for payload
         const user = await prisma.user.findUnique({
-          where: { id: row.clientUserId! },
+          where: { id: row.clientId! },
           select: {
             id: true,
             name: true,
@@ -201,7 +197,7 @@ export default async function handler(
       const row = await prisma.coachingClient.create({
         data: {
           coachId,
-          clientUserId: null,
+          clientId: null,
           name: extName,
           email: email?.trim() || null,
           status: finalStatus,
