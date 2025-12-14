@@ -76,12 +76,9 @@ export default function CoachingClientsPage() {
     if (!confirm('Delete this client? This cannot be undone.')) return;
 
     try {
-      const res = await fetch(
-        `/api/coaching/clients/${encodeURIComponent(id)}`,
-        {
-          method: 'DELETE',
-        }
-      );
+      const res = await fetch(`/api/coaching/clients/${encodeURIComponent(id)}`, {
+        method: 'DELETE',
+      });
 
       if (!res.ok) {
         console.error('Failed to delete coaching client:', await res.text());
@@ -134,46 +131,49 @@ export default function CoachingClientsPage() {
   };
 
   // ─────────────────────────────────────────────
-// Contacts search (for internal Add Client)
-// ─────────────────────────────────────────────
-const searchContacts = async (query) => {
-  setContactQuery(query);
-  setSelectedContact(null);
+  // Contacts search (for internal Add Client)
+  // ─────────────────────────────────────────────
+  const searchContacts = async (query) => {
+    setContactQuery(query);
+    setSelectedContact(null);
 
-  const trimmed = query.trim();
-  if (!trimmed) {
-    setContactResults([]);
-    return;
-  }
-
-  try {
-    setContactLoading(true);
-    // 🔧 IMPORTANT: match the Sessions page – no extra channel param
-    const res = await fetch(
-      `/api/contacts/search?q=${encodeURIComponent(trimmed)}`
-    );
-
-    if (!res.ok) {
-      console.error('Failed to search contacts:', await res.text());
+    const trimmed = query.trim();
+    if (!trimmed) {
       setContactResults([]);
       return;
     }
 
-    const data = await res.json();
-    const list =
-      Array.isArray(data.contacts) ||
-      Array.isArray(data.results)
-        ? (data.contacts || data.results)
-        : [];
+    try {
+      setContactLoading(true);
 
-    setContactResults(list);
-  } catch (err) {
-    console.error('Error searching contacts:', err);
-    setContactResults([]);
-  } finally {
-    setContactLoading(false);
-  }
-};
+      const res = await fetch(
+        `/api/contacts/search?q=${encodeURIComponent(trimmed)}`
+      );
+
+      if (!res.ok) {
+        console.error('Failed to search contacts:', await res.text());
+        setContactResults([]);
+        return;
+      }
+
+      const data = await res.json();
+
+      let list = [];
+      if (Array.isArray(data.contacts)) {
+        list = data.contacts;
+      } else if (Array.isArray(data.results)) {
+        // fallback if we ever reuse older shape
+        list = data.results;
+      }
+
+      setContactResults(list);
+    } catch (err) {
+      console.error('Error searching contacts:', err);
+      setContactResults([]);
+    } finally {
+      setContactLoading(false);
+    }
+  };
 
   const openAddClientModal = () => {
     setModalMode('internal');
@@ -218,10 +218,9 @@ const searchContacts = async (query) => {
           ? {
               mode: 'internal',
               status: newClientStatus,
-              // server will interpret this; we send both in case
-              contactId: selectedContact.id,
-              contactUserId:
-                selectedContact.userId || selectedContact.contactUserId,
+              // contact row id + user id from /api/contacts/search
+              contactId: selectedContact.contactId,
+              contactUserId: selectedContact.id,
             }
           : {
               mode: 'external',
@@ -250,7 +249,6 @@ const searchContacts = async (query) => {
       // Merge new client into list
       setClients((prev) => {
         if (!created || !created.id) return prev;
-        // Avoid duplicates if API already returns it in the list for some reason
         const existingIndex = prev.findIndex((c) => c.id === created.id);
         if (existingIndex >= 0) {
           const copy = [...prev];
@@ -402,7 +400,7 @@ const searchContacts = async (query) => {
                             )}`}
                             style={{
                               background: 'white',
-                              border: '1px solid #eee',
+                              border: '1px solid '#eee',
                               borderRadius: 8,
                               padding: '6px 10px',
                               cursor: 'pointer',
@@ -588,10 +586,10 @@ const searchContacts = async (query) => {
                   )}
                   {contactResults.map((c) => {
                     const isSelected =
-                      selectedContact && selectedContact.id === c.id;
+                      selectedContact && selectedContact.contactId === c.contactId;
                     return (
                       <div
-                        key={c.id}
+                        key={c.contactId || c.id}
                         onClick={() => setSelectedContact(c)}
                         style={{
                           display: 'flex',
@@ -740,7 +738,7 @@ const searchContacts = async (query) => {
                 Cancel
               </button>
               <button
-                type="submit"
+                type="submit'
                 disabled={saving}
                 style={{
                   background: '#FF7043',
@@ -771,7 +769,7 @@ const sectionStyle = {
   border: '1px solid #eee',
 };
 const inputStyle = {
-  border: '1px solid #ddd',
+  border: '1px solid '#ddd',
   borderRadius: 10,
   padding: '10px 12px',
   outline: 'none',
