@@ -101,23 +101,24 @@ export default function HearthSpotlightsPage() {
       <div style={backgroundStyle}>
         <Header />
 
+        {/* ===== PAGE CONTAINER ===== */}
         <div style={{ padding: 16 }}>
           <div
             style={{
               maxWidth: 1400,
               margin: '0 auto',
               display: 'grid',
-              gridTemplateColumns: '220px minmax(0,1fr) 260px', // ✅ LEFT REDUCED
+              gridTemplateColumns: '220px minmax(0,1fr) 300px',
               gap: 24,
               alignItems: 'start',
             }}
           >
-            {/* LEFT */}
+            {/* LEFT COLUMN */}
             <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
               <Link
                 href={withChrome('/the-hearth')}
                 style={{
-                  width: '100%',              // ✅ MATCH FILTER WIDTH
+                  width: '100%',
                   background: '#FF7043',
                   color: 'white',
                   fontWeight: 700,
@@ -133,10 +134,10 @@ export default function HearthSpotlightsPage() {
               <SpotlightFilters onChange={setFilters} />
             </div>
 
-            {/* CENTER */}
+            {/* CENTER COLUMN */}
             <div style={{ display: 'grid', gap: 16 }}>
-              {/* TITLE CARD — FULL CENTER WIDTH */}
-              <Card style={{ textAlign: 'center', maxWidth: 1100, margin: '0 auto' }}>
+              {/* TITLE CARD – SAME WIDTH AS CONTENT */}
+              <Card style={{ textAlign: 'center' }}>
                 <CardHeader>
                   <CardTitle
                     style={{
@@ -153,42 +154,40 @@ export default function HearthSpotlightsPage() {
                 </CardHeader>
               </Card>
 
-              {/* CONTENT CARD — SAME WIDTH */}
-              <div style={{ maxWidth: 1100, margin: '0 auto', width: '100%' }}>
-                {!hasAnyReal && (
-                  <Card>
-                    <CardHeader style={{ textAlign: 'center' }}>
-                      <CardTitle>No Hearth Spotlights yet</CardTitle>
-                      <CardSubtle>
-                        This is where community mentors and helpers will appear.
-                      </CardSubtle>
-                    </CardHeader>
-                    <CardContent style={{ textAlign: 'center' }}>
-                      As mentors join The Hearth and opt in, you’ll be able to browse and
-                      connect with them here.
-                    </CardContent>
-                  </Card>
-                )}
+              {/* CONTENT */}
+              {!hasAnyReal && (
+                <Card>
+                  <CardHeader style={{ textAlign: 'center' }}>
+                    <CardTitle>No Hearth Spotlights yet</CardTitle>
+                    <CardSubtle>
+                      This is where community mentors and helpers will appear.
+                    </CardSubtle>
+                  </CardHeader>
+                  <CardContent style={{ textAlign: 'center' }}>
+                    As mentors join The Hearth and opt in, you’ll be able to browse and
+                    connect with them here.
+                  </CardContent>
+                </Card>
+              )}
 
-                {hasAnyReal && filtered.length === 0 && (
-                  <Card>
-                    <CardContent>No spotlights match your filters.</CardContent>
-                  </Card>
-                )}
+              {hasAnyReal && filtered.length === 0 && (
+                <Card>
+                  <CardContent>No spotlights match your filters.</CardContent>
+                </Card>
+              )}
 
-                {filtered.map((a) => (
-                  <Card key={a.id}>
-                    <CardHeader>
-                      <CardSubtle>{a.name}</CardSubtle>
-                      <CardTitle>{a.headline || 'Mentor'}</CardTitle>
-                    </CardHeader>
-                    {a.summary && <CardContent>{a.summary}</CardContent>}
-                  </Card>
-                ))}
-              </div>
+              {filtered.map((a) => (
+                <Card key={a.id}>
+                  <CardHeader>
+                    <CardSubtle>{a.name}</CardSubtle>
+                    <CardTitle>{a.headline || 'Mentor'}</CardTitle>
+                  </CardHeader>
+                  {a.summary && <CardContent>{a.summary}</CardContent>}
+                </Card>
+              ))}
             </div>
 
-            {/* RIGHT */}
+            {/* RIGHT COLUMN */}
             <Card>
               <CardHeader>
                 <CardTitle style={{ fontSize: 16 }}>Coming soon</CardTitle>
@@ -200,6 +199,7 @@ export default function HearthSpotlightsPage() {
           </div>
         </div>
 
+        {/* SUPPORT FLOATING BUTTON — RESTORED */}
         <SupportFloatingButton />
       </div>
     </>
