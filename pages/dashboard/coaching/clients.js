@@ -438,7 +438,7 @@ export default function CoachingClientsPage() {
                           onClick={() => handleDelete(c.id)}
                           style={{
                             background: 'white',
-                            border: '1px solid '#FF7043',
+                            border: '1px solid #FF7043',
                             color: '#FF7043',
                             borderRadius: 8,
                             padding: '6px 10px',
