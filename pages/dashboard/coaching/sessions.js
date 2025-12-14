@@ -248,18 +248,28 @@ export default function CoachingSessionsPage() {
       try {
         setClientSearchLoading(true);
         setClientSearchError('');
+
+        // 🔁 NEW: use unified contacts search endpoint (same as Clients page)
         const res = await fetch(
-          `/api/coaching/client-search?q=${encodeURIComponent(term)}`,
+          `/api/contacts/search?q=${encodeURIComponent(term)}`,
           { signal: controller.signal }
         );
+
         if (!res.ok) {
           if (!active) return;
+          console.error('Contacts search failed:', await res.text());
           setClientResults([]);
           setClientSearchError('Search failed. Try again.');
           return;
         }
+
         const data = await res.json().catch(() => ({}));
-        const results = Array.isArray(data.results) ? data.results : [];
+        const results =
+          Array.isArray(data.contacts) ||
+          Array.isArray(data.results)
+            ? (data.contacts || data.results)
+            : [];
+
         if (active) {
           setClientResults(results);
         }
@@ -698,7 +708,7 @@ export default function CoachingSessionsPage() {
                           style={{
                             background: 'white',
                             color: '#C62828',
-                            border: '1px solid #C62828',
+                            border: '1px solid '#C62828',
                             borderRadius: 6,
                             padding: '4px 8px',
                             fontSize: 11,
@@ -797,7 +807,6 @@ export default function CoachingSessionsPage() {
                     checked={form.clientType === 'internal'}
                     onChange={() => {
                       update('clientType', 'internal');
-                      // When switching to internal, clear external-only fields
                       update('clientUserId', null);
                       setClientSearchTerm(form.clientName || '');
                       setClientResults([]);
