@@ -528,7 +528,7 @@ export default function CoachingSessionsPage() {
             borderRadius: 12,
             padding: 20,
             boxShadow: '0 2px 6px rgba(0,0,0,0.06)',
-            border: '1px solid '#eee',
+            border: '1px solid #eee',
           }}
         >
           <div
