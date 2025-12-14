@@ -310,17 +310,19 @@ model UserConsent {
 // ============================================================================
 
 model CoachingClient {
-  id          String    @id @default(cuid())
+  id          String   @id @default(cuid())
   coachId     String
-  clientId    String
-  status      String    @default("Active") // "Active" | "At Risk" | "New Intake"
+  clientId    String?       // null = external client
+  name        String        // display name (stored for both internal + external)
+  email       String?       // optional email
+  status      String   @default("Active") // "Active" | "At Risk" | "New Intake"
   nextSession DateTime?
   lastContact DateTime?
-  createdAt   DateTime  @default(now())
-  updatedAt   DateTime  @updatedAt
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
 
-  coach  User @relation("CoachClientsCoach", fields: [coachId], references: [id], onDelete: Cascade)
-  client User @relation("CoachClientsClient", fields: [clientId], references: [id], onDelete: Cascade)
+  coach  User  @relation("CoachClientsCoach", fields: [coachId], references: [id], onDelete: Cascade)
+  client User? @relation("CoachClientsClient", fields: [clientId], references: [id], onDelete: Cascade)
 
   // Sessions tied to this specific coach–client relationship
   sessions CoachingSession[] @relation("ClientSessions")

@@ -19,6 +19,7 @@ function toDisplayName(user: any | null, fallbackName?: string | null) {
 }
 
 function toClientPayload(row: any, user: any | null) {
+  // For internal clients, we *can* override display with latest user info.
   const displayName = toDisplayName(user, row.name);
   const email = user?.email || row.email || null;
 
@@ -26,10 +27,10 @@ function toClientPayload(row: any, user: any | null) {
     id: row.id as string,
     name: displayName,
     email,
-    status: (row.status as string) || 'Active',
-    next: row.nextSessionAt ? row.nextSessionAt.toISOString() : null,
-    last: row.lastContactAt ? row.lastContactAt.toISOString() : null,
-    // for internal clients we expose the underlying Forge user id
+    status: row.status as string,
+    next: row.nextSession ? row.nextSession.toISOString() : null,
+    last: row.lastContact ? row.lastContact.toISOString() : null,
+    // For internal clients we expose the underlying Forge user id
     clientId: row.clientId ?? null,
   };
 }
@@ -58,16 +59,16 @@ export default async function handler(
           name: true,
           email: true,
           status: true,
-          nextSessionAt: true,
-          lastContactAt: true,
-        } as any, // ← bypass Prisma's narrow type here
+          nextSession: true,
+          lastContact: true,
+        },
       });
 
       const userIds = Array.from(
         new Set(
           rows
-            .map((r: any) => r.clientId)
-            .filter((id: any): id is string => !!id)
+            .map((r) => r.clientId)
+            .filter((id): id is string => !!id)
         )
       );
 
@@ -90,7 +91,7 @@ export default async function handler(
         userMap.set(u.id, u);
       }
 
-      const clients = rows.map((row: any) =>
+      const clients = rows.map((row) =>
         toClientPayload(
           row,
           row.clientId ? userMap.get(row.clientId) || null : null
@@ -118,6 +119,7 @@ export default async function handler(
 
       const finalStatus = status || 'Active';
 
+      // Internal client: must point at a Forge user (User.id)
       if (mode === 'internal') {
         if (!contactUserId) {
           return res
@@ -133,13 +135,13 @@ export default async function handler(
           },
         });
 
-        let row: any;
+        let row;
         if (existing) {
           row = await prisma.coachingClient.update({
             where: { id: existing.id },
             data: {
               status: finalStatus,
-            } as any, // in case status isn't in the generated type
+            },
           });
         } else {
           // Pull basic user info to seed name/email
@@ -164,7 +166,7 @@ export default async function handler(
               name: displayName,
               email: userEmail,
               status: finalStatus,
-            } as any, // keep JS behavior, ignore TS whining
+            },
           });
         }
 
@@ -193,14 +195,14 @@ export default async function handler(
           .json({ error: 'Missing name for external client' });
       }
 
-      const row: any = await prisma.coachingClient.create({
+      const row = await prisma.coachingClient.create({
         data: {
           coachId,
-          clientId: null,
+          clientId: null, // external client; no Forge user yet
           name: extName,
           email: email?.trim() || null,
           status: finalStatus,
-        } as any,
+        },
       });
 
       return res.status(201).json({
@@ -208,7 +210,6 @@ export default async function handler(
       });
     }
 
-    // If we got here, the method is not allowed
     res.setHeader('Allow', ['GET', 'POST']);
     return res.status(405).json({ error: 'Method not allowed' });
   } catch (err) {
