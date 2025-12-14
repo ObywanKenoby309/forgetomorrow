@@ -188,7 +188,7 @@ export default function CoachingClientsPage() {
   };
 
   // Save client (internal or external)
-  const handleSaveClient = async (e) => {
+    const handleSaveClient = async (e) => {
     e.preventDefault();
 
     if (modalMode === 'internal') {
@@ -211,9 +211,10 @@ export default function CoachingClientsPage() {
           ? {
               mode: 'internal',
               status: newClientStatus,
-              contactId: selectedContact.id,
-              contactUserId:
-                selectedContact.userId || selectedContact.contactUserId,
+              // ✅ This is the Forge user id from /api/contacts/search
+              contactUserId: selectedContact.id,
+              // (optional) keep contactId if you want it later
+              contactId: selectedContact.contactId,
             }
           : {
               mode: 'external',
