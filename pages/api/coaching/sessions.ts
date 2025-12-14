@@ -62,10 +62,13 @@ export default async function handler(
       });
 
       // Optionally hydrate client display names if clientId exists
-      const clientIds = Array.from(
-        new Set(rows.map((r) => r.clientId).filter(Boolean)) as string[]
-      );
-
+const clientIds = Array.from(
+  new Set(
+    rows
+      .map((r) => r.clientId)
+      .filter((id): id is string => typeof id === 'string' && id.length > 0)
+  )
+);
       const clients =
         clientIds.length > 0
           ? await prisma.user.findMany({
