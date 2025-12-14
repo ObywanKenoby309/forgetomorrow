@@ -76,9 +76,12 @@ export default function CoachingClientsPage() {
     if (!confirm('Delete this client? This cannot be undone.')) return;
 
     try {
-      const res = await fetch(`/api/coaching/clients/${encodeURIComponent(id)}`, {
-        method: 'DELETE',
-      });
+      const res = await fetch(
+        `/api/coaching/clients/${encodeURIComponent(id)}`,
+        {
+          method: 'DELETE',
+        }
+      );
 
       if (!res.ok) {
         console.error('Failed to delete coaching client:', await res.text());
@@ -122,7 +125,6 @@ export default function CoachingClientsPage() {
         return;
       }
 
-      // Send coach into their messaging inbox for this conversation
       window.location.href = `/coach/messaging?conversationId=${conversationId}`;
     } catch (err) {
       console.error('Error starting coach thread:', err);
@@ -130,9 +132,7 @@ export default function CoachingClientsPage() {
     }
   };
 
-  // ─────────────────────────────────────────────
   // Contacts search (for internal Add Client)
-  // ─────────────────────────────────────────────
   const searchContacts = async (query) => {
     setContactQuery(query);
     setSelectedContact(null);
@@ -145,7 +145,6 @@ export default function CoachingClientsPage() {
 
     try {
       setContactLoading(true);
-
       const res = await fetch(
         `/api/contacts/search?q=${encodeURIComponent(trimmed)}`
       );
@@ -157,14 +156,10 @@ export default function CoachingClientsPage() {
       }
 
       const data = await res.json();
-
-      let list = [];
-      if (Array.isArray(data.contacts)) {
-        list = data.contacts;
-      } else if (Array.isArray(data.results)) {
-        // fallback if we ever reuse older shape
-        list = data.results;
-      }
+      const list =
+        Array.isArray(data.contacts) || Array.isArray(data.results)
+          ? (data.contacts || data.results)
+          : [];
 
       setContactResults(list);
     } catch (err) {
@@ -192,9 +187,7 @@ export default function CoachingClientsPage() {
     setModalOpen(false);
   };
 
-  // ─────────────────────────────────────────────
   // Save client (internal or external)
-  // ─────────────────────────────────────────────
   const handleSaveClient = async (e) => {
     e.preventDefault();
 
@@ -218,9 +211,9 @@ export default function CoachingClientsPage() {
           ? {
               mode: 'internal',
               status: newClientStatus,
-              // contact row id + user id from /api/contacts/search
-              contactId: selectedContact.contactId,
-              contactUserId: selectedContact.id,
+              contactId: selectedContact.id,
+              contactUserId:
+                selectedContact.userId || selectedContact.contactUserId,
             }
           : {
               mode: 'external',
@@ -246,7 +239,7 @@ export default function CoachingClientsPage() {
       }
 
       const created = json.client || json;
-      // Merge new client into list
+
       setClients((prev) => {
         if (!created || !created.id) return prev;
         const existingIndex = prev.findIndex((c) => c.id === created.id);
@@ -271,11 +264,10 @@ export default function CoachingClientsPage() {
     <CoachingLayout
       title="Clients | ForgeTomorrow"
       activeNav="clients"
-      headerDescription="Search, filter, and manage your coaching clients. Clients typically start as contacts — you can add them from your contact list or create external clients for people you coach off-platform."
+      headerDescription="Search, filter, and manage your coaching clients. Clients typically start as contacts - you can add them from your contact list or create external clients for people you coach off-platform."
       right={<CoachingRightColumn />}
       sidebarInitialOpen={{ coaching: true, seeker: false }}
     >
-      {/* Center column content */}
       <div style={{ display: 'grid', gap: 16, width: '100%' }}>
         {/* Filters */}
         <section style={sectionStyle}>
@@ -289,7 +281,7 @@ export default function CoachingClientsPage() {
             <input
               value={search}
               onChange={(e) => setSearch(e.target.value)}
-              placeholder="Search by name or email…"
+              placeholder="Search by name or email..."
               style={inputStyle}
             />
             <select
@@ -332,7 +324,7 @@ export default function CoachingClientsPage() {
           </p>
 
           {loading ? (
-            <div style={{ padding: 16, color: '#90A4AE' }}>Loading clients…</div>
+            <div style={{ padding: 16, color: '#90A4AE' }}>Loading clients...</div>
           ) : (
             <div style={{ overflowX: 'auto' }}>
               <table
@@ -466,7 +458,7 @@ export default function CoachingClientsPage() {
                           borderRadius: 10,
                         }}
                       >
-                        No clients yet. Use “Add Client” to bring in someone
+                        No clients yet. Use "Add Client" to bring in someone
                         from your contacts or add an external client.
                       </td>
                     </tr>
@@ -541,13 +533,13 @@ export default function CoachingClientsPage() {
                     color: '#78909C',
                   }}
                 >
-                  Search your contacts to add someone you’re coaching.
+                  Search your contacts to add someone you are coaching.
                 </p>
                 <input
                   type="text"
                   value={contactQuery}
                   onChange={(e) => searchContacts(e.target.value)}
-                  placeholder="Start typing a name or email…"
+                  placeholder="Start typing a name or email..."
                   style={{ width: '100%', padding: 8, marginBottom: 8 }}
                 />
                 <div
@@ -569,7 +561,7 @@ export default function CoachingClientsPage() {
                         color: '#90A4AE',
                       }}
                     >
-                      Searching…
+                      Searching...
                     </div>
                   )}
                   {!contactLoading && contactResults.length === 0 && (
@@ -581,15 +573,15 @@ export default function CoachingClientsPage() {
                       }}
                     >
                       No contacts yet. Add contacts first, then promote them to
-                      clients here — or switch to “External client”.
+                      clients here - or switch to "External client".
                     </div>
                   )}
                   {contactResults.map((c) => {
                     const isSelected =
-                      selectedContact && selectedContact.contactId === c.contactId;
+                      selectedContact && selectedContact.id === c.id;
                     return (
                       <div
-                        key={c.contactId || c.id}
+                        key={c.id}
                         onClick={() => setSelectedContact(c)}
                         style={{
                           display: 'flex',
@@ -665,7 +657,7 @@ export default function CoachingClientsPage() {
                     color: '#78909C',
                   }}
                 >
-                  Use this for people you coach who don’t have a ForgeTomorrow
+                  Use this for people you coach who do not have a ForgeTomorrow
                   account yet.
                 </p>
                 <label style={{ fontSize: 13, color: '#455A64' }}>
@@ -728,7 +720,7 @@ export default function CoachingClientsPage() {
                 style={{
                   background: 'white',
                   color: '#FF7043',
-                  border: '1px solid #FF7043',
+                  border: '1px solid '#FF7043',
                   borderRadius: 10,
                   padding: '8px 12px',
                   fontWeight: 600,
@@ -738,7 +730,7 @@ export default function CoachingClientsPage() {
                 Cancel
               </button>
               <button
-                type="submit'
+                type="submit"
                 disabled={saving}
                 style={{
                   background: '#FF7043',
@@ -750,7 +742,7 @@ export default function CoachingClientsPage() {
                   cursor: 'pointer',
                 }}
               >
-                {saving ? 'Saving…' : 'Save Client'}
+                {saving ? 'Saving...' : 'Save Client'}
               </button>
             </div>
           </form>
@@ -768,13 +760,15 @@ const sectionStyle = {
   boxShadow: '0 2px 6px rgba(0,0,0,0.06)',
   border: '1px solid #eee',
 };
+
 const inputStyle = {
-  border: '1px solid '#ddd',
+  border: '1px solid #ddd',
   borderRadius: 10,
   padding: '10px 12px',
   outline: 'none',
   background: 'white',
 };
+
 const primaryBtn = {
   background: '#FF7043',
   color: 'white',
@@ -800,6 +794,7 @@ function Th({ children }) {
     </th>
   );
 }
+
 function Td({ children, strong = false }) {
   return (
     <td
