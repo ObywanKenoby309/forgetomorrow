@@ -50,6 +50,13 @@ model Job {
   type              String?
   compensation      String?
   description       String
+
+  // These exist in the DB already — keep them to avoid data loss
+  salary            String?
+  source            String?
+  tags              String?
+  url               String?
+
   status            String   @default("Draft")
   urgent            Boolean  @default(false)
   viewsCount        Int      @default(0)
@@ -315,9 +322,49 @@ model CoachingClient {
   coach  User @relation("CoachClientsCoach", fields: [coachId], references: [id], onDelete: Cascade)
   client User @relation("CoachClientsClient", fields: [clientId], references: [id], onDelete: Cascade)
 
+  // Sessions tied to this specific coach–client relationship
+  sessions CoachingSession[] @relation("ClientSessions")
+
   @@index([coachId])
   @@index([clientId])
   @@map("coaching_clients")
+}
+
+model CoachingSession {
+  id       String @id @default(cuid())
+  coachId  String
+  clientId String?  // optional: anonymous or one-off sessions
+
+  // Optional link to a specific CoachingClient row
+  coachingClientId String?
+  coachingClient   CoachingClient? @relation("ClientSessions", fields: [coachingClientId], references: [id])
+
+  // Full start time in UTC; frontend can split into date/time
+  startAt     DateTime
+  durationMin Int      @default(60)
+
+  // e.g. "Strategy", "Resume", "Interview", "Other"
+  type   String @default("Strategy")
+
+  // e.g. "Scheduled", "Completed", "No-show", "Cancelled"
+  status String @default("Scheduled")
+
+  // Drives “Follow-ups Due”
+  followUpDueAt DateTime?
+  followUpDone  Boolean  @default(false)
+
+  notes     String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  coach  User  @relation("CoachSessionsCoach", fields: [coachId], references: [id], onDelete: Cascade)
+  client User? @relation("CoachSessionsClient", fields: [clientId], references: [id], onDelete: Cascade)
+
+  @@index([coachId])
+  @@index([clientId])
+  @@index([startAt])
+  @@index([coachingClientId])
+  @@map("coaching_sessions")
 }
 
 // ============================================================================
@@ -442,8 +489,10 @@ model User {
   reportsReceived          ConversationReport[]      @relation("UserReportsAsReported")
 
   // Coaching relations
-  coachingClientsAsCoach  CoachingClient[] @relation("CoachClientsCoach")
-  coachingClientsAsClient CoachingClient[] @relation("CoachClientsClient")
+  coachingClientsAsCoach   CoachingClient[]  @relation("CoachClientsCoach")
+  coachingClientsAsClient  CoachingClient[]  @relation("CoachClientsClient")
+  coachingSessionsAsCoach  CoachingSession[] @relation("CoachSessionsCoach")
+  coachingSessionsAsClient CoachingSession[] @relation("CoachSessionsClient")
 
   // Network / contacts
   contacts                Contact[]        @relation("UserContacts")

@@ -1,10 +1,8 @@
 // pages/dashboard/coaching/sessions.js
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useState, useCallback } from 'react';
 import Link from 'next/link';
 import CoachingLayout from '@/components/layouts/CoachingLayout';
 import CoachingRightColumn from '@/components/coaching/CoachingRightColumn';
-
-const STORAGE_KEY = 'coachSessions_v1';
 
 // --- Helpers to avoid UTC drift ---
 function localISODate(d = new Date()) {
@@ -13,6 +11,7 @@ function localISODate(d = new Date()) {
   const day = String(d.getDate()).padStart(2, '0');
   return `${y}-${m}-${day}`;
 }
+
 function toLocalDateTime(dateStr, timeStr = '00:00') {
   const [y, m, d] = dateStr.split('-').map(Number);
   const [hh, mm] = timeStr.split(':').map(Number);
@@ -23,29 +22,39 @@ export default function CoachingSessionsPage() {
   const [type, setType] = useState('All');
   const [status, setStatus] = useState('All');
 
-  // Sessions state + persistence (NO SEED DATA)
+  // Sessions from API (no localStorage anymore)
   const [sessions, setSessions] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState(null);
 
-  // Load from localStorage only; start empty if nothing saved
-  useEffect(() => {
-    if (typeof window === 'undefined') return;
+  // ---- Load sessions from API ----
+  const loadSessions = useCallback(async () => {
+    setLoadError(null);
     try {
-      const saved = JSON.parse(localStorage.getItem(STORAGE_KEY) || '[]');
-      setSessions(Array.isArray(saved) ? saved : []);
-    } catch {
+      const res = await fetch('/api/coaching/sessions');
+      if (!res.ok) {
+        throw new Error('Failed to load sessions');
+      }
+      const data = await res.json().catch(() => ({}));
+      const list = Array.isArray(data.sessions) ? data.sessions : [];
+      // Expect shape: { id, date, time, client, type, status }
+      list.sort(
+        (a, b) =>
+          toLocalDateTime(a.date, a.time) - toLocalDateTime(b.date, b.time)
+      );
+      setSessions(list);
+    } catch (err) {
+      console.error('Error loading sessions', err);
+      setLoadError('Unable to load sessions.');
       setSessions([]);
+    } finally {
+      setLoading(false);
     }
   }, []);
 
-  // Persist any changes back to localStorage
   useEffect(() => {
-    if (typeof window === 'undefined') return;
-    try {
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(sessions));
-    } catch {
-      // ignore
-    }
-  }, [sessions]);
+    loadSessions();
+  }, [loadSessions]);
 
   // Filtering
   const filtered = useMemo(() => {
@@ -63,7 +72,10 @@ export default function CoachingSessionsPage() {
       return acc;
     }, {});
     Object.keys(g).forEach((k) =>
-      g[k].sort((a, b) => toLocalDateTime(a.date, a.time) - toLocalDateTime(b.date, b.time))
+      g[k].sort(
+        (a, b) =>
+          toLocalDateTime(a.date, a.time) - toLocalDateTime(b.date, b.time)
+      )
     );
     return g;
   }, [filtered]);
@@ -76,7 +88,11 @@ export default function CoachingSessionsPage() {
     if (iso === tomorrowISO) return 'Tomorrow';
     const [yy, mm, dd] = iso.split('-').map(Number);
     const d = new Date(yy, mm - 1, dd);
-    return d.toLocaleDateString(undefined, { month: 'short', day: 'numeric', weekday: 'short' });
+    return d.toLocaleDateString(undefined, {
+      month: 'short',
+      day: 'numeric',
+      weekday: 'short',
+    });
   };
 
   // Status badge
@@ -145,6 +161,7 @@ export default function CoachingSessionsPage() {
 
   const openEdit = (idx) => {
     const s = sessions[idx];
+    if (!s) return;
     setForm({
       date: s.date,
       time: s.time,
@@ -155,46 +172,123 @@ export default function CoachingSessionsPage() {
     setModal({ open: true, mode: 'edit', index: idx });
   };
 
-  const saveAdd = (e) => {
+  const saveAdd = async (e) => {
     e.preventDefault();
-    if (!form.client.trim()) return alert('Please enter a client name.');
-    const rec = { ...form, client: form.client.trim() };
-    setSessions((prev) => {
-      const next = [...prev, rec];
-      next.sort((a, b) => toLocalDateTime(a.date, a.time) - toLocalDateTime(b.date, b.time));
-      return next;
-    });
-    setModal({ open: false, mode: 'add', index: null });
+    if (!form.client.trim()) {
+      alert('Please enter a client name.');
+      return;
+    }
+
+    try {
+      const payload = {
+        date: form.date,
+        time: form.time,
+        client: form.client.trim(),
+        type: form.type,
+        status: form.status,
+      };
+
+      const res = await fetch('/api/coaching/sessions', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload),
+      });
+
+      if (!res.ok) {
+        throw new Error('Failed to create session');
+      }
+
+      await loadSessions();
+      setModal({ open: false, mode: 'add', index: null });
+    } catch (err) {
+      console.error('Error creating session', err);
+      alert('There was a problem saving this session. Please try again.');
+    }
   };
 
-  const saveEdit = (e) => {
+  const saveEdit = async (e) => {
     e.preventDefault();
     if (modal.index == null) return;
-    if (!form.client.trim()) return alert('Please enter a client name.');
-    setSessions((prev) => {
-      const next = [...prev];
-      next[modal.index] = { ...form, client: form.client.trim() };
-      next.sort((a, b) => toLocalDateTime(a.date, a.time) - toLocalDateTime(b.date, b.time));
-      return next;
-    });
-    setModal({ open: false, mode: 'add', index: null });
+    if (!form.client.trim()) {
+      alert('Please enter a client name.');
+      return;
+    }
+
+    const current = sessions[modal.index];
+    if (!current || !current.id) {
+      alert('Unable to identify this session. Try refreshing the page.');
+      return;
+    }
+
+    try {
+      const payload = {
+        id: current.id,
+        date: form.date,
+        time: form.time,
+        client: form.client.trim(),
+        type: form.type,
+        status: form.status,
+      };
+
+      const res = await fetch('/api/coaching/sessions', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload),
+      });
+
+      if (!res.ok) {
+        throw new Error('Failed to update session');
+      }
+
+      await loadSessions();
+      setModal({ open: false, mode: 'add', index: null });
+    } catch (err) {
+      console.error('Error updating session', err);
+      alert('There was a problem updating this session. Please try again.');
+    }
   };
 
-  const deleteSession = (idx) => {
+  const deleteSession = async (idx) => {
+    const current = sessions[idx];
+    if (!current) return;
     if (!confirm('Delete this session?')) return;
-    setSessions((prev) => prev.filter((_, i) => i !== idx));
-    setModal({ open: false, mode: 'add', index: null });
+
+    if (!current.id) {
+      // Fallback: local-only delete if somehow no id
+      setSessions((prev) => prev.filter((_, i) => i !== idx));
+      setModal({ open: false, mode: 'add', index: null });
+      return;
+    }
+
+    try {
+      const res = await fetch('/api/coaching/sessions', {
+        method: 'DELETE',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ id: current.id }),
+      });
+
+      if (!res.ok) {
+        throw new Error('Failed to delete session');
+      }
+
+      await loadSessions();
+      setModal({ open: false, mode: 'add', index: null });
+    } catch (err) {
+      console.error('Error deleting session', err);
+      alert('There was a problem deleting this session. Please try again.');
+    }
   };
 
   // Find the index in the master sessions array for a rendered item
   const findIndexOf = (s) =>
     sessions.findIndex(
       (x) =>
-        x.date === s.date &&
-        x.time === s.time &&
-        x.client === s.client &&
-        x.type === s.type &&
-        x.status === s.status
+        x.id === s.id ||
+        (x.date === s.date &&
+          x.time === s.time &&
+          x.client === s.client &&
+          x.type === s.type &&
+          x.status === s.status)
     );
 
   return (
@@ -295,7 +389,26 @@ export default function CoachingSessionsPage() {
             border: '1px solid #eee',
           }}
         >
-          <h2 style={{ color: '#FF7043', marginTop: 0, marginBottom: 12 }}>Agenda</h2>
+          <h2 style={{ color: '#FF7043', marginTop: 0, marginBottom: 12 }}>
+            Agenda
+          </h2>
+
+          {loading && (
+            <div style={{ color: '#90A4AE', fontSize: 14, marginBottom: 8 }}>
+              Loading sessions…
+            </div>
+          )}
+          {loadError && (
+            <div
+              style={{
+                color: '#C62828',
+                fontSize: 13,
+                marginBottom: 8,
+              }}
+            >
+              {loadError}
+            </div>
+          )}
 
           {/* Header row with Actions column */}
           <div
@@ -322,7 +435,13 @@ export default function CoachingSessionsPage() {
 
           {orderedDates.map((d) => (
             <div key={d} style={{ marginBottom: 16 }}>
-              <div style={{ fontWeight: 700, marginBottom: 8, color: '#263238' }}>
+              <div
+                style={{
+                  fontWeight: 700,
+                  marginBottom: 8,
+                  color: '#263238',
+                }}
+              >
                 {friendlyLabel(d)}
               </div>
               <ul
@@ -338,7 +457,7 @@ export default function CoachingSessionsPage() {
                   const masterIdx = findIndexOf(s);
                   return (
                     <li
-                      key={`${d}-${idx}`}
+                      key={s.id || `${d}-${idx}`}
                       style={{
                         display: 'grid',
                         gridTemplateColumns: '90px 1fr 120px 120px 110px',
@@ -393,12 +512,12 @@ export default function CoachingSessionsPage() {
             </div>
           ))}
 
-          {orderedDates.length === 0 && (
+          {!loading && orderedDates.length === 0 && (
             <div style={{ color: '#90A4AE', fontSize: 14 }}>
               <p style={{ margin: 0 }}>No sessions yet.</p>
               <p style={{ margin: '2px 0 0' }}>
-                Use “+ Add Session” above to start your agenda. If you expected to see sessions,
-                try adjusting your filters.
+                Use “+ Add Session” above to start your agenda. If you expected
+                to see sessions, try adjusting your filters.
               </p>
             </div>
           )}
@@ -489,7 +608,13 @@ export default function CoachingSessionsPage() {
               </select>
             </label>
 
-            <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: 10 }}>
+            <div
+              style={{
+                display: 'flex',
+                justifyContent: 'space-between',
+                marginTop: 10,
+              }}
+            >
               {modal.mode === 'edit' && (
                 <button
                   type="button"
@@ -524,7 +649,9 @@ export default function CoachingSessionsPage() {
                 </button>
                 <button
                   type="button"
-                  onClick={() => setModal({ open: false, mode: 'add', index: null })}
+                  onClick={() =>
+                    setModal({ open: false, mode: 'add', index: null })
+                  }
                   style={{
                     background: 'white',
                     color: '#FF7043',
@@ -545,3 +672,9 @@ export default function CoachingSessionsPage() {
     </CoachingLayout>
   );
 }
+
+const grid3 = {
+  display: 'grid',
+  gridTemplateColumns: 'repeat(3, minmax(0, 1fr))',
+  gap: 12,
+};

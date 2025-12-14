@@ -1,11 +1,12 @@
 // pages/coaching-dashboard.js
 import React, { useEffect, useState, useCallback } from 'react';
 import Link from 'next/link';
+import { useRouter } from 'next/router';
 import CoachingLayout from '@/components/layouts/CoachingLayout';
 import CoachingRightColumn from '@/components/coaching/CoachingRightColumn';
+import { getClientSession } from '@/lib/auth-client';
 
-const STORAGE_KEY = 'coachCSAT_v1';
-const SESSIONS_KEY = 'coachSessions_v1';
+const STORAGE_KEY = 'coachCSAT_v1'; // still local-only CSAT for now
 
 // Uniform status colors shared across dashboard (matches Clients list)
 function getStatusStyles(status) {
@@ -19,8 +20,33 @@ function getStatusStyles(status) {
   return { background: '#E8F5E9', color: '#2E7D32' };
 }
 
+// Small helpers for displaying dates/times from ISO strings
+function formatTime(iso) {
+  if (!iso) return '';
+  const d = new Date(iso);
+  if (Number.isNaN(d.getTime())) return '';
+  return d.toLocaleTimeString(undefined, {
+    hour: 'numeric',
+    minute: '2-digit',
+  });
+}
+
+function formatDateTimeShort(iso) {
+  if (!iso) return '';
+  const d = new Date(iso);
+  if (Number.isNaN(d.getTime())) return '';
+  return d.toLocaleString(undefined, {
+    month: 'short',
+    day: 'numeric',
+    hour: 'numeric',
+    minute: '2-digit',
+  });
+}
+
 export default function CoachingDashboardPage() {
-  // ---- CSAT: load from localStorage ----
+  const router = useRouter();
+
+  // ---- CSAT: load from localStorage (Phase 1: still client-only) ----
   const [csat, setCsat] = useState([]);
   const [refreshing, setRefreshing] = useState(false);
 
@@ -63,45 +89,82 @@ export default function CoachingDashboardPage() {
   const totalResponses = csat.length;
   const recent = csat.slice(0, 3);
 
-  // ---- Sessions: load from localStorage so Dashboard stays in sync with Sessions/Calendar ----
-  const [sessions, setSessions] = useState([]);
+  // ---- REAL DATA: Coaching overview from API (sessions + clients + follow-ups) ----
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');
+  const [overview, setOverview] = useState({
+    kpis: {
+      sessionsToday: 0,
+      activeClients: 0,
+      followUpsDue: 0,
+    },
+    upcomingSessions: [],
+    clients: [],
+  });
 
   useEffect(() => {
-    if (typeof window === 'undefined') return;
-    try {
-      const saved = JSON.parse(localStorage.getItem(SESSIONS_KEY) || '[]');
-      setSessions(Array.isArray(saved) ? saved : []);
-    } catch {
-      setSessions([]);
-    }
-  }, []);
+    let cancelled = false;
 
-  // ---- KPIs derived from sessions storage ----
-  const todayISO = new Date().toISOString().slice(0, 10);
-  const sessionsToday = sessions.filter((s) => s.date === todayISO);
-  const activeClients = new Set(sessions.map((s) => s.client)).size;
+    async function init() {
+      if (typeof window === 'undefined') return;
+
+      try {
+        const session = await getClientSession();
+        const userId = session?.user?.id;
+
+        if (!userId) {
+          router.push('/login');
+          return;
+        }
+
+        const res = await fetch(
+          `/api/dashboard/coaching/overview?coachId=${encodeURIComponent(
+            userId
+          )}`
+        );
+
+        if (!res.ok) {
+          throw new Error('Failed to load coaching overview');
+        }
+
+        const data = await res.json();
+
+        if (!cancelled) {
+          setOverview({
+            kpis: data.kpis || {
+              sessionsToday: 0,
+              activeClients: 0,
+              followUpsDue: 0,
+            },
+            upcomingSessions: Array.isArray(data.upcomingSessions)
+              ? data.upcomingSessions
+              : [],
+            clients: Array.isArray(data.clients) ? data.clients : [],
+          });
+          setLoading(false);
+        }
+      } catch (err) {
+        console.error('Error loading coaching overview:', err);
+        if (!cancelled) {
+          setError('Unable to load your coaching overview right now.');
+          setLoading(false);
+        }
+      }
+    }
+
+    init();
+    return () => {
+      cancelled = true;
+    };
+  }, [router]);
+
+  const { kpis: kpiData, upcomingSessions, clients } = overview;
 
   const kpis = [
-    { label: 'Sessions Today', value: sessionsToday.length },
-    { label: 'Active Clients', value: activeClients },
-    // Follow-up logic not wired yet; show 0 instead of a fake number
-    { label: 'Follow-ups Due', value: 0 },
+    { label: 'Sessions Today', value: kpiData.sessionsToday },
+    { label: 'Active Clients', value: kpiData.activeClients },
+    { label: 'Follow-ups Due', value: kpiData.followUpsDue },
   ];
-
-  // ---- Upcoming Sessions (next 3 from "now") ----
-  const toDate = (d, t) => new Date(`${d}T${t}:00`);
-  const now = new Date();
-  const upcomingNext3 = sessions
-    .filter((s) => {
-      if (!s.date || !s.time) return false;
-      return toDate(s.date, s.time) >= now;
-    })
-    .sort((a, b) => (a.date + a.time).localeCompare(b.date + b.time))
-    .slice(0, 3);
-
-  // --- Clients (dashboard snapshot) ---
-  // NOTE: no fake demo names; snapshot is empty until wired to real data.
-  const clients = [];
 
   return (
     <CoachingLayout
@@ -113,6 +176,22 @@ export default function CoachingDashboardPage() {
     >
       {/* Center column content */}
       <div style={{ display: 'grid', gap: 16, width: '100%' }}>
+        {/* Error banner (if API fails) */}
+        {error && (
+          <div
+            style={{
+              background: '#FDECEA',
+              borderRadius: 8,
+              padding: 10,
+              border: '1px solid #FFCDD2',
+              color: '#C62828',
+              fontSize: 13,
+            }}
+          >
+            {error}
+          </div>
+        )}
+
         {/* Today (KPI strip + sessions list) */}
         <Section title="Today">
           <div
@@ -130,74 +209,84 @@ export default function CoachingDashboardPage() {
 
           <div style={grid3}>
             <Card title="Upcoming Sessions">
-              <ul
-                style={{
-                  margin: 0,
-                  padding: 0,
-                  listStyle: 'none',
-                  display: 'grid',
-                  gap: 8,
-                }}
-              >
-                {upcomingNext3.length === 0 ? (
-                  <li style={{ color: '#90A4AE' }}>
-                    No upcoming sessions yet. Once you add sessions in the calendar,
-                    they will appear here.
-                  </li>
-                ) : (
-                  upcomingNext3.map((s, idx) => {
-                    const { background, color } =
-                      typeof getStatusStyles === 'function'
-                        ? getStatusStyles(s.status || 'Active')
-                        : { background: '#E3F2FD', color: '#1565C0' };
-                    return (
-                      <li
-                        key={`${s.date}-${s.time}-${idx}`}
-                        style={{
-                          display: 'flex',
-                          alignItems: 'center',
-                          justifyContent: 'space-between',
-                          border: '1px solid #eee',
-                          borderRadius: 8,
-                          padding: '8px 10px',
-                          background: 'white',
-                          gap: 10,
-                        }}
-                      >
-                        <span style={{ fontWeight: 600, minWidth: 72 }}>
-                          {s.time}
-                        </span>
-                        <div
+              {loading ? (
+                <div style={{ color: '#90A4AE', fontSize: 14 }}>
+                  Loading upcoming sessions…
+                </div>
+              ) : (
+                <ul
+                  style={{
+                    margin: 0,
+                    padding: 0,
+                    listStyle: 'none',
+                    display: 'grid',
+                    gap: 8,
+                  }}
+                >
+                  {upcomingSessions.length === 0 ? (
+                    <li style={{ color: '#90A4AE' }}>
+                      No upcoming sessions yet. Once you add sessions in the
+                      calendar, they will appear here.
+                    </li>
+                  ) : (
+                    upcomingSessions.map((s) => {
+                      const { background, color } = getStatusStyles(
+                        s.status || 'Active'
+                      );
+                      return (
+                        <li
+                          key={s.id}
                           style={{
-                            display: 'grid',
-                            gap: 2,
-                            flex: 1,
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'space-between',
+                            border: '1px solid #eee',
+                            borderRadius: 8,
+                            padding: '8px 10px',
+                            background: 'white',
+                            gap: 10,
                           }}
                         >
-                          <span style={{ color: '#455A64' }}>{s.client}</span>
-                          <span
-                            style={{ color: '#90A4AE', fontSize: 12 }}
-                          >
-                            {s.type}
+                          <span style={{ fontWeight: 600, minWidth: 72 }}>
+                            {formatTime(s.startAt) || '—'}
                           </span>
-                        </div>
-                        <span
-                          style={{
-                            fontSize: 12,
-                            background,
-                            color,
-                            padding: '4px 8px',
-                            borderRadius: 999,
-                            whiteSpace: 'nowrap',
-                          }}
-                        >
-                          {s.status || 'Scheduled'}
-                        </span>
-                      </li>
-                    );
-                  })
-                )}
-              </ul>
+                          <div
+                            style={{
+                              display: 'grid',
+                              gap: 2,
+                              flex: 1,
+                            }}
+                          >
+                            <span style={{ color: '#455A64' }}>
+                              {s.clientName || 'Client'}
+                            </span>
+                            <span
+                              style={{
+                                color: '#90A4AE',
+                                fontSize: 12,
+                              }}
+                            >
+                              {s.type || 'Session'}
+                            </span>
+                          </div>
+                          <span
+                            style={{
+                              fontSize: 12,
+                              background,
+                              color,
+                              padding: '4px 8px',
+                              borderRadius: 999,
+                              whiteSpace: 'nowrap',
+                            }}
+                          >
+                            {s.status || 'Scheduled'}
+                          </span>
+                        </li>
+                      );
+                    })
+                  )}
+                </ul>
+              )}
               <div style={{ textAlign: 'right', marginTop: 10 }}>
                 <Link
                   href="/dashboard/coaching/sessions"
@@ -209,16 +298,25 @@ export default function CoachingDashboardPage() {
             </Card>
 
             <Card title="New Client Intakes">
-              <div style={{ color: '#455A64' }}>
-                Intake tracking and alerts will appear here once wired to your
-                client onboarding flow.
+              <div style={{ color: '#455A64', fontSize: 14 }}>
+                Intake tracking and alerts will appear here as your client
+                onboarding flow goes live. For now, monitor new{' '}
+                <Link
+                  href="/dashboard/coaching/clients"
+                  style={{ color: '#FF7043', fontWeight: 600 }}
+                >
+                  coaching clients
+                </Link>{' '}
+                for early-stage relationships.
               </div>
             </Card>
 
             <Card title="Follow-ups Due">
-              <div style={{ color: '#455A64' }}>
-                Follow-up reminders will be calculated from your sessions and notes.
-                For now, this card stays at zero until that logic is live.
+              <div style={{ color: '#455A64', fontSize: 14 }}>
+                Follow-up reminders are calculated from your coaching sessions
+                (using <code>followUpDueAt</code> and <code>followUpDone</code>
+                ). As you complete sessions and set follow-ups, this number will
+                update automatically.
               </div>
             </Card>
           </div>
@@ -226,7 +324,7 @@ export default function CoachingDashboardPage() {
 
         {/* Clients (compact table) */}
         <Section title="Clients">
-          {clients.length === 0 ? (
+          {loading ? (
             <div
               style={{
                 padding: 16,
@@ -237,8 +335,21 @@ export default function CoachingDashboardPage() {
                 fontSize: 14,
               }}
             >
-              No clients yet. Once you start working with clients, a quick snapshot
-              of their status will appear here.
+              Loading clients…
+            </div>
+          ) : clients.length === 0 ? (
+            <div
+              style={{
+                padding: 16,
+                background: 'white',
+                borderRadius: 10,
+                border: '1px solid #eee',
+                color: '#90A4AE',
+                fontSize: 14,
+              }}
+            >
+              No clients yet. Once you start working with clients, a quick
+              snapshot of their status will appear here.
             </div>
           ) : (
             <>
@@ -266,7 +377,7 @@ export default function CoachingDashboardPage() {
                       const { background, color } = getStatusStyles(c.status);
                       return (
                         <tr
-                          key={c.name}
+                          key={c.id}
                           style={{ borderTop: '1px solid #eee' }}
                         >
                           <Td strong>{c.name}</Td>
@@ -283,7 +394,11 @@ export default function CoachingDashboardPage() {
                               {c.status}
                             </span>
                           </Td>
-                          <Td>{c.next}</Td>
+                          <Td>
+                            {c.nextSession
+                              ? formatDateTimeShort(c.nextSession)
+                              : '—'}
+                          </Td>
                         </tr>
                       );
                     })}
@@ -344,11 +459,7 @@ export default function CoachingDashboardPage() {
                 >
                   {avgScore}
                 </div>
-                <div
-                  style={{ color: '#90A4AE', fontSize: 12 }}
-                >
-                  / 5
-                </div>
+                <div style={{ color: '#90A4AE', fontSize: 12 }}>/ 5</div>
               </div>
               <div
                 style={{
@@ -372,9 +483,7 @@ export default function CoachingDashboardPage() {
 
             <Card title="Recent Feedback">
               {recent.length === 0 ? (
-                <div style={{ color: '#90A4AE' }}>
-                  No responses yet.
-                </div>
+                <div style={{ color: '#90A4AE' }}>No responses yet.</div>
               ) : (
                 <ul
                   style={{
@@ -444,9 +553,7 @@ export default function CoachingDashboardPage() {
                           {comment ? (
                             comment
                           ) : (
-                            <span
-                              style={{ color: '#90A4AE' }}
-                            >
+                            <span style={{ color: '#90A4AE' }}>
                               (No comment)
                             </span>
                           )}
@@ -545,9 +652,7 @@ function Card({ title, children }) {
       }}
     >
       <div style={{ fontWeight: 600, marginBottom: 8 }}>{title}</div>
-      {children || (
-        <div style={{ color: '#90A4AE' }}>Coming soon…</div>
-      )}
+      {children || <div style={{ color: '#90A4AE' }}>Coming soon…</div>}
     </div>
   );
 }
