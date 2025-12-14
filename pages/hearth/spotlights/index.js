@@ -1,3 +1,4 @@
+// pages/hearth/spotlights/index.js
 import React, { useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/router';
@@ -60,115 +61,108 @@ export default function HearthSpotlightsPage() {
 
   const hasAnyReal = ads.length > 0;
 
+  // LEFT COLUMN: Back CTA + Filters (replaces sidebar)
+  const LeftColumn = (
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+      <Link
+        href={withChrome('/the-hearth')}
+        style={{
+          display: 'block',
+          background: '#FF7043',
+          color: 'white',
+          fontWeight: 700,
+          textAlign: 'center',
+          padding: '12px 14px',
+          borderRadius: 10,
+          textDecoration: 'none',
+        }}
+      >
+        ← Back to The Hearth
+      </Link>
+
+      <SpotlightFilters onChange={setFilters} />
+    </div>
+  );
+
+  // CENTER HEADER CARD: Hearth Spotlight
+  const HeaderCard = (
+    <Card style={{ textAlign: 'center' }}>
+      <CardHeader>
+        <CardTitle
+          style={{
+            fontSize: 28,
+            fontWeight: 800,
+            color: '#FF7043',
+            marginBottom: 6,
+          }}
+        >
+          Hearth Spotlight
+        </CardTitle>
+        <CardSubtle>
+          Find a mentor or guide who is actively offering help.
+        </CardSubtle>
+      </CardHeader>
+    </Card>
+  );
+
+  // RIGHT COLUMN: Coming Soon card
+  const RightColumn = (
+    <Card>
+      <CardHeader>
+        <CardTitle style={{ fontSize: 16 }}>Coming soon</CardTitle>
+      </CardHeader>
+      <CardContent style={{ fontSize: 14, color: '#90A4AE' }}>
+        This space is reserved for future Spotlights tools, such as posting and
+        managing your own mentorship offers.
+      </CardContent>
+    </Card>
+  );
+
   return (
     <SeekerLayout
       title="Hearth Spotlight | ForgeTomorrow"
-      header={null}
-      right={null}
-      activeNav={null}
+      header={HeaderCard}
+      left={LeftColumn}
+      right={RightColumn}
+      activeNav="hearth"
     >
-      {/* HARD OVERRIDE LAYOUT */}
-      <div
-        style={{
-          display: 'grid',
-          gridTemplateColumns: '280px minmax(0,1fr) 280px',
-          gridTemplateRows: 'auto auto',
-          gap: 24,
-          padding: '24px 0',
-          alignItems: 'start',
-        }}
-      >
-        {/* HEADER ROW */}
-        <div>
-          <Link
-            href={withChrome('/the-hearth')}
-            style={{
-              display: 'block',
-              background: '#FF7043',
-              color: 'white',
-              fontWeight: 700,
-              textAlign: 'center',
-              padding: '12px 14px',
-              borderRadius: 10,
-              textDecoration: 'none',
-            }}
-          >
-            ← Back to The Hearth
-          </Link>
-        </div>
-
-        <Card style={{ textAlign: 'center' }}>
-          <CardHeader>
-            <CardTitle
-              style={{
-                fontSize: 28,
-                fontWeight: 800,
-                color: '#FF7043',
-                marginBottom: 6,
-              }}
-            >
-              Hearth Spotlight
-            </CardTitle>
+      {/* Main content lives in the center column under the header */}
+      {!hasAnyReal && (
+        <Card>
+          <CardHeader style={{ textAlign: 'center' }}>
+            <CardTitle>No Hearth Spotlights yet</CardTitle>
             <CardSubtle>
-              Find a mentor or guide who is actively offering help.
+              This is where community mentors and helpers will appear.
             </CardSubtle>
           </CardHeader>
-        </Card>
-
-        <Card>
-          <CardHeader>
-            <CardTitle style={{ fontSize: 16 }}>Coming soon</CardTitle>
-          </CardHeader>
-          <CardContent style={{ fontSize: 14, color: '#90A4AE' }}>
-            This space is reserved for future Spotlights tools, such as posting and
-            managing your own mentorship offers.
+          <CardContent style={{ textAlign: 'center', color: '#607D8B' }}>
+            As mentors join The Hearth and opt in, you’ll be able to browse and
+            connect with them here.
           </CardContent>
         </Card>
+      )}
 
-        {/* CONTENT ROW */}
-        <div>
-          <SpotlightFilters onChange={setFilters} />
-        </div>
-
+      {hasAnyReal && filtered.length === 0 && (
         <Card>
-          {!hasAnyReal && (
-            <>
-              <CardHeader style={{ textAlign: 'center' }}>
-                <CardTitle>No Hearth Spotlights yet</CardTitle>
-                <CardSubtle>
-                  This is where community mentors and helpers will appear.
-                </CardSubtle>
-              </CardHeader>
-              <CardContent style={{ textAlign: 'center', color: '#607D8B' }}>
-                As mentors join The Hearth and opt in, you’ll be able to browse and
-                connect with them here.
-              </CardContent>
-            </>
-          )}
+          <CardContent style={{ color: '#90A4AE' }}>
+            No spotlights match your filters.
+          </CardContent>
+        </Card>
+      )}
 
-          {hasAnyReal && filtered.length === 0 && (
-            <CardContent style={{ color: '#90A4AE' }}>
-              No spotlights match your filters.
+      {filtered.map((a) => (
+        <Card key={a.id}>
+          <CardHeader>
+            <CardSubtle>{a.name}</CardSubtle>
+            <CardTitle>{a.headline || 'Mentor'}</CardTitle>
+          </CardHeader>
+          {a.summary && (
+            <CardContent style={{ color: '#455A64' }}>
+              {a.summary}
             </CardContent>
           )}
-
-          {filtered.map((a) => (
-            <Card key={a.id}>
-              <CardHeader>
-                <CardSubtle>{a.name}</CardSubtle>
-                <CardTitle>{a.headline || 'Mentor'}</CardTitle>
-              </CardHeader>
-              {a.summary && (
-                <CardContent style={{ color: '#455A64' }}>
-                  {a.summary}
-                </CardContent>
-              )}
-            </Card>
-          ))}
         </Card>
-
-        <div />
-      </div>
+      ))}
     </SeekerLayout>
   );
 }
