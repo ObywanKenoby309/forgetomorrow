@@ -19,11 +19,10 @@ export default function CalendarEventForm({
     type: initial?.type || (typeChoices[0] || 'Task'),
     status: initial?.status || (statusChoices[0] || 'Scheduled'),
     notes: initial?.notes || '',
-    // 🔹 NEW: participants line (comma-separated names/emails)
-    participants: initial?.participants || '',
     date: initial?.date || new Date().toISOString().slice(0, 10),
     idx: typeof initial?.idx === 'number' ? initial.idx : null,
     origDate: initial?.date || null,
+    participants: initial?.participants || '', // 🔹 NEW
   }));
 
   useEffect(() => {
@@ -53,7 +52,7 @@ export default function CalendarEventForm({
   const handleSubmit = (e) => {
     e.preventDefault();
     if (!form.title.trim()) return alert('Title is required.');
-    onSave(form); // 🔹 participants is now included in form
+    onSave(form);
   };
 
   return (
@@ -122,19 +121,7 @@ export default function CalendarEventForm({
               value={form.title}
               onChange={handleChange}
               style={input}
-              placeholder="e.g., Strategy Session with Eric"
-            />
-          </div>
-
-          {/* 🔹 NEW: Participants line */}
-          <div>
-            <label style={label}>Participants</label>
-            <input
-              name="participants"
-              value={form.participants}
-              onChange={handleChange}
-              style={input}
-              placeholder="e.g., John Smith, Jane Doe"
+              placeholder="e.g., Strategy Session with Jane Doe"
             />
           </div>
 
@@ -207,6 +194,17 @@ export default function CalendarEventForm({
           </div>
 
           <div>
+            <label style={label}>Participants (names / emails)</label>
+            <input
+              name="participants"
+              value={form.participants}
+              onChange={handleChange}
+              style={input}
+              placeholder="e.g., Jane Doe (jane@example.com)"
+            />
+          </div>
+
+          <div>
             <label style={label}>Notes</label>
             <textarea
               name="notes"
@@ -252,7 +250,9 @@ export default function CalendarEventForm({
                     gap: 8,
                   }}
                 >
-                  <span style={{ color: '#B71C1C', fontSize: 12 }}>
+                  <span
+                    style={{ color: '#B71C1C', fontSize: 12 }}
+                  >
                     Delete this item?
                   </span>
                   <button

@@ -10,60 +10,48 @@ import CalendarEventForm from './CalendarEventForm';
 function startOfMonth(date) {
   return new Date(date.getFullYear(), date.getMonth(), 1);
 }
+
 function addMonths(date, delta) {
   return new Date(date.getFullYear(), date.getMonth() + delta, 1);
 }
+
 function fmtYMD(d) {
   const y = d.getFullYear();
   const m = String(d.getMonth() + 1).padStart(2, '0');
   const day = String(d.getDate()).padStart(2, '0');
   return `${y}-${m}-${day}`;
 }
+
 const WEEKDAYS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
 
 export default function CoachingSessionsCalendarInterface({
   title = 'Calendar',
-  storageKey = 'calendar_v1',
+  storageKey = 'calendar_v1', // kept for API compatibility; no longer used
   seed = [],
-  typeChoices = ['Interview', 'Application', 'Coaching', 'Task', 'Appointment'],
-  statusChoices = ['Scheduled', 'Completed', 'Cancelled', 'No-show'],
+  typeChoices = ['Strategy', 'Resume', 'Interview'],
+  statusChoices = ['Scheduled', 'Completed', 'No-show'],
   addLabel = '+ Add Session',
   eventNudge = 0,
   eventWidthDeduct = 10,
 }) {
-  // ---------- storage ----------
+  // ---------- events derived from seed (DB is source of truth) ----------
   const [events, setEvents] = useState({});
-  useEffect(() => {
-    try {
-      const saved = localStorage.getItem(storageKey);
-      if (saved) {
-        setEvents(JSON.parse(saved));
-      } else {
-        const seeded = seed.reduce((acc, e) => {
-          const key = e.date;
-          acc[key] = acc[key] || [];
-          acc[key].push(e);
-          return acc;
-        }, {});
-        setEvents(seeded);
-        localStorage.setItem(storageKey, JSON.stringify(seeded));
-      }
-    } catch {
-      // ignore storage failures
-    }
-  }, [storageKey, seed]);
 
-  const persist = useCallback(
-    (next) => {
-      setEvents(next);
-      try {
-        localStorage.setItem(storageKey, JSON.stringify(next));
-      } catch {
-        // ignore
-      }
-    },
-    [storageKey]
-  );
+  useEffect(() => {
+    const seeded = (Array.isArray(seed) ? seed : []).reduce((acc, e) => {
+      if (!e?.date) return acc;
+      const key = e.date;
+      acc[key] = acc[key] || [];
+      acc[key].push(e);
+      return acc;
+    }, {});
+    setEvents(seeded);
+  }, [seed]);
+
+  // Local edits only live in React state for now
+  const persist = useCallback((next) => {
+    setEvents(next);
+  }, []);
 
   // ---------- month nav ----------
   const [cursor, setCursor] = useState(() => startOfMonth(new Date()));
@@ -123,7 +111,7 @@ export default function CoachingSessionsCalendarInterface({
       type: payload.type,
       status: payload.status,
       notes: payload.notes || '',
-      participants: payload.participants || '', // 🔹 NEW
+      participants: payload.participants || '',
     };
 
     const next = structuredClone(events);
@@ -159,7 +147,7 @@ export default function CoachingSessionsCalendarInterface({
     setFormInitial(null);
   };
 
-  // header “Add Session” button uses today as default date
+  // Header “Add Session” button uses today as default date
   const todayStr = fmtYMD(new Date());
   const handleAddFromHeader = () => addItem(todayStr);
 
@@ -607,8 +595,6 @@ export default function CoachingSessionsCalendarInterface({
                     );
                   })}
                 </div>
-
-                {/* No click handler on the day itself, no per-day + button */}
               </div>
             );
           })}
