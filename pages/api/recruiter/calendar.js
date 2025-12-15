@@ -1,5 +1,5 @@
 // pages/api/recruiter/calendar.js
-import prisma from '@/lib/prisma';
+import { prisma } from '@/lib/prisma'; // ⬅️ CHANGED: named import
 import { getServerSession } from 'next-auth/next';
 import { authOptions } from '@/lib/auth';
 
