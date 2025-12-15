@@ -1,3 +1,4 @@
+// pages/dashboard/coaching/sessions/calendar.js
 import React, { useEffect, useState, useCallback } from 'react';
 import CoachingLayout from '@/components/layouts/CoachingLayout';
 import CoachingSessionsCalendarInterface from '@/components/calendar/CoachingSessionsCalendarInterface';
@@ -19,19 +20,32 @@ export default function CoachingSessionsCalendarPage() {
       const data = await res.json().catch(() => ({}));
       const rows = Array.isArray(data) ? data : data.sessions || [];
 
-      const mapped = rows.map((s) => ({
-        id: s.id,
-        date: s.date,
-        time: s.time || '09:00',
-        title: s.client
-          ? `${s.client} – ${s.type || 'Session'}`
-          : s.type || 'Session',
-        client: s.client || '',
-        type: s.type || 'Strategy',
-        status: s.status || 'Scheduled',
-        notes: s.notes || '',
-        participants: s.participants || '',
-      }));
+      const mapped = rows.map((s) => {
+        const client = s.client || s.clientName || s.client_name || '';
+        const clientId = s.clientId || s.client_id || null;
+        const clientType =
+          s.clientType === 'internal' || s.clientType === 'external'
+            ? s.clientType
+            : clientId
+            ? 'internal'
+            : 'external';
+
+        return {
+          id: s.id,
+          date: s.date,
+          time: s.time || '09:00',
+          title: client
+            ? `${client} – ${s.type || 'Session'}`
+            : s.type || 'Session',
+          client,
+          clientId,
+          clientType,
+          type: s.type || 'Strategy',
+          status: s.status || 'Scheduled',
+          notes: s.notes || '',
+          participants: s.participants || '',
+        };
+      });
 
       setSessions(mapped);
     } catch (err) {
