@@ -22,7 +22,11 @@ function splitDateTime(d: Date) {
 }
 
 // Normalize a CoachingSession row → UI payload
-function toSessionPayload(row: any, clientDisplay?: string | null) {
+function toSessionPayload(
+  row: any,
+  clientDisplay?: string | null,
+  participants?: string | null
+) {
   const { date, time } = splitDateTime(row.startAt);
   const clientId: string | null = row.clientId ?? null;
   const clientType: 'internal' | 'external' = clientId ? 'internal' : 'external';
@@ -36,6 +40,8 @@ function toSessionPayload(row: any, clientDisplay?: string | null) {
     status: row.status as string,
     clientId,
     clientType,
+    notes: row.notes || '',
+    participants: participants || '',
   };
 }
 
@@ -72,7 +78,9 @@ export default async function handler(
         new Set(
           rows
             .map((r) => r.clientId)
-            .filter((id): id is string => typeof id === 'string' && id.length > 0)
+            .filter(
+              (id): id is string => typeof id === 'string' && id.length > 0
+            )
         )
       );
 
@@ -104,24 +112,34 @@ export default async function handler(
 
       const sessions = rows.map((row) => {
         let display: string | null = null;
+        let participants: string | null = null;
 
         // Internal client: derive from User
         if (row.clientId) {
           const c = clientMap.get(row.clientId);
           if (c) {
-            display =
+            const namePart =
               c.name ||
               `${c.firstName || ''} ${c.lastName || ''}`.trim() ||
               c.email;
+            display = namePart;
+            participants = c.email ? `${namePart} (${c.email})` : namePart;
           }
         }
 
         // External: parse from notes if we stored it
-        if (!display && row.notes && row.notes.startsWith('Client (free text):')) {
-          display = row.notes.replace(/^Client \(free text\):\s*/, '');
+        if (!display && row.notes && typeof row.notes === 'string') {
+          // notes may look like:
+          // "Client (free text): John Doe (john@example.com) | some notes..."
+          const firstLine = row.notes.split('|')[0].trim();
+          if (firstLine.startsWith('Client (free text):')) {
+            const val = firstLine.replace(/^Client \(free text\):\s*/, '');
+            display = val || null;
+            participants = val || null;
+          }
         }
 
-        return toSessionPayload(row, display);
+        return toSessionPayload(row, display, participants);
       });
 
       return res.status(200).json({ sessions });
@@ -137,6 +155,8 @@ export default async function handler(
         clientName,
         type,
         status,
+        participants,
+        notes,
       } = (req.body || {}) as {
         date?: string;
         time?: string;
@@ -145,6 +165,8 @@ export default async function handler(
         clientName?: string;
         type?: string;
         status?: string;
+        participants?: string;
+        notes?: string;
       };
 
       if (!date || !time) {
@@ -154,23 +176,32 @@ export default async function handler(
       const startAt = toStartAt(String(date), String(time));
 
       let clientId: string | null = null;
-      let notes: string | undefined;
+      let storedNotes: string | undefined;
 
       if (clientType === 'internal') {
         if (!clientUserId) {
-          return res.status(400).json({ error: 'Missing clientUserId for internal client' });
+          return res
+            .status(400)
+            .json({ error: 'Missing clientUserId for internal client' });
         }
         clientId = String(clientUserId);
-        // Optional: store a hint in notes if you want
-        notes = clientName ? `Client (internal display): ${String(clientName)}` : undefined;
+
+        const label = clientName
+          ? `Client (internal display): ${String(clientName)}`
+          : undefined;
+
+        storedNotes = [label, notes].filter(Boolean).join(' | ');
       } else {
         // Default to external if not specified
-        const name = (clientName || '').trim();
-        if (!name) {
-          return res.status(400).json({ error: 'Missing client name for external client' });
+        const freeText = (participants || clientName || '').trim();
+        if (!freeText) {
+          return res
+            .status(400)
+            .json({ error: 'Missing client/participant info for external client' });
         }
         clientId = null;
-        notes = `Client (free text): ${name}`;
+        const label = `Client (free text): ${freeText}`;
+        storedNotes = [label, notes].filter(Boolean).join(' | ');
       }
 
       const created = await prisma.coachingSession.create({
@@ -181,14 +212,22 @@ export default async function handler(
           durationMin: 60,
           type: type || 'Strategy',
           status: status || 'Scheduled',
-          notes,
+          notes: storedNotes,
         },
       });
 
-      const displayName = (clientName || '').trim();
+      const displayName = (clientName || '').trim() || null;
+      let participantsOut: string | null = null;
+
+      if (clientType === 'internal') {
+        participantsOut = displayName;
+      } else {
+        participantsOut = (participants || clientName || '').trim() || null;
+      }
+
       return res
         .status(201)
-        .json({ session: toSessionPayload(created, displayName || undefined) });
+        .json({ session: toSessionPayload(created, displayName, participantsOut) });
     }
 
     // ───────────── PUT: update session ─────────────
@@ -202,6 +241,8 @@ export default async function handler(
         clientName,
         type,
         status,
+        participants,
+        notes,
       } = (req.body || {}) as {
         id?: string;
         date?: string;
@@ -211,6 +252,8 @@ export default async function handler(
         clientName?: string;
         type?: string;
         status?: string;
+        participants?: string;
+        notes?: string;
       };
 
       if (!id) {
@@ -231,18 +274,23 @@ export default async function handler(
             .json({ error: 'Missing clientUserId for internal client' });
         }
         data.clientId = String(clientUserId);
-        data.notes = clientName
+        const label = clientName
           ? `Client (internal display): ${String(clientName)}`
           : undefined;
+        data.notes = [label, notes].filter(Boolean).join(' | ');
       } else if (clientType === 'external') {
-        const name = (clientName || '').trim();
-        if (!name) {
+        const freeText = (participants || clientName || '').trim();
+        if (!freeText) {
           return res
             .status(400)
-            .json({ error: 'Missing client name for external client' });
+            .json({ error: 'Missing client/participant info for external client' });
         }
         data.clientId = null;
-        data.notes = `Client (free text): ${name}`;
+        const label = `Client (free text): ${freeText}`;
+        data.notes = [label, notes].filter(Boolean).join(' | ');
+      } else if (typeof notes === 'string') {
+        // If clientType isn't being changed but we got notes, allow direct notes update.
+        data.notes = notes;
       }
 
       if (typeof type === 'string') data.type = type;
@@ -253,10 +301,26 @@ export default async function handler(
         data,
       });
 
-      const displayName = (clientName || '').trim();
+      // Re-derive display & participants the same way as GET
+      let displayName: string | null = null;
+      let participantsOut: string | null = null;
+
+      if (data.clientId) {
+        // If we just pointed to an internal client, the GET will compute display from user anyway.
+        displayName = clientName ? clientName.trim() || null : null;
+        participantsOut = displayName;
+      } else if (data.notes && typeof data.notes === 'string') {
+        const firstLine = data.notes.split('|')[0].trim();
+        if (firstLine.startsWith('Client (free text):')) {
+          const val = firstLine.replace(/^Client \(free text\):\s*/, '');
+          displayName = val || null;
+          participantsOut = val || null;
+        }
+      }
+
       return res
         .status(200)
-        .json({ session: toSessionPayload(updated, displayName || undefined) });
+        .json({ session: toSessionPayload(updated, displayName, participantsOut) });
     }
 
     // ───────────── DELETE: delete session ─────────────
