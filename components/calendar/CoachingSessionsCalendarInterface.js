@@ -26,7 +26,7 @@ const MAX_PER_DAY = 3;
 ───────────────────────────── */
 export default function CoachingSessionsCalendarInterface({
   title = 'Sessions Calendar',
-  events = [],
+  events = [],   // [{ id, date, time, client, clientType, clientUserId, type, status, notes }]
   onRefresh,
 }) {
   /* ───────── Month nav ───────── */
@@ -82,9 +82,11 @@ export default function CoachingSessionsCalendarInterface({
     setEditorMode('add');
     setEditingId(null);
     setEditorInitial({
-      title: '',
       date: date || todayStr,
       time: '09:00',
+      clientType: 'external',
+      clientUserId: null,
+      clientName: '',
       type: 'Strategy',
       status: 'Scheduled',
       notes: '',
@@ -93,12 +95,23 @@ export default function CoachingSessionsCalendarInterface({
   };
 
   const openEdit = (s) => {
+    const clientUserId = s.clientUserId || s.clientId || null;
+    const clientTypeExplicit =
+      s.clientType === 'internal' || s.clientType === 'external'
+        ? s.clientType
+        : null;
+    const clientType =
+      clientTypeExplicit ||
+      (clientUserId ? 'internal' : 'external');
+
     setEditorMode('edit');
     setEditingId(s.id);
     setEditorInitial({
-      title: s.client || s.title || '',
       date: s.date,
       time: s.time,
+      clientType,
+      clientUserId,
+      clientName: s.client || s.clientName || '',
       type: s.type,
       status: s.status,
       notes: s.notes || '',
@@ -111,6 +124,7 @@ export default function CoachingSessionsCalendarInterface({
     setEditorOpen(false);
     setEditorInitial(null);
     setEditingId(null);
+    setEditorMode('add');
   };
 
   /* ───────── Save / delete ───────── */
@@ -120,32 +134,59 @@ export default function CoachingSessionsCalendarInterface({
       return;
     }
 
+    const name = (form.clientName || '').trim();
+
+    if (form.clientType === 'internal') {
+      if (!form.clientUserId) {
+        alert('Please select a Forge contact for this client.');
+        return;
+      }
+    } else {
+      if (!name) {
+        alert('Please enter a client name.');
+        return;
+      }
+    }
+
+    const payloadBase = {
+      date: form.date,
+      time: form.time,
+      clientType: form.clientType,
+      clientUserId:
+        form.clientType === 'internal' ? form.clientUserId : null,
+      clientName: name,
+      type: form.type,
+      status: form.status,
+      notes: form.notes || '',
+    };
+
     try {
       setSaving(true);
-      await fetch('/api/coaching/sessions', {
-        method: editorMode === 'edit' ? 'PUT' : 'POST',
+      const method =
+        editorMode === 'edit' && editingId ? 'PUT' : 'POST';
+
+      const res = await fetch('/api/coaching/sessions', {
+        method,
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(
-          editorMode === 'edit'
-            ? {
-                id: editingId,
-                date: form.date,
-                time: form.time,
-                type: form.type,
-                status: form.status,
-                notes: form.notes,
-              }
-            : {
-                date: form.date,
-                time: form.time,
-                clientType: 'external',
-                clientName: form.title || 'Coaching Session',
-                type: form.type,
-                status: form.status,
-                notes: form.notes,
-              }
+          method === 'PUT'
+            ? { id: editingId, ...payloadBase }
+            : payloadBase
         ),
       });
+
+      if (!res.ok) {
+        console.error(
+          'Failed to save coaching session (calendar)',
+          res.status,
+          await res.text().catch(() => '')
+        );
+        alert('Could not save session. Please try again.');
+        return;
+      }
+    } catch (err) {
+      console.error('Error saving coaching session (calendar):', err);
+      alert('Could not save session. Please try again.');
     } finally {
       setSaving(false);
       closeEditor();
@@ -159,11 +200,23 @@ export default function CoachingSessionsCalendarInterface({
 
     try {
       setSaving(true);
-      await fetch('/api/coaching/sessions', {
+      const res = await fetch('/api/coaching/sessions', {
         method: 'DELETE',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ id: editingId }),
       });
+      if (!res.ok) {
+        console.error(
+          'Failed to delete coaching session (calendar)',
+          res.status,
+          await res.text().catch(() => '')
+        );
+        alert('Could not delete session. Please try again.');
+        return;
+      }
+    } catch (err) {
+      console.error('Error deleting coaching session (calendar):', err);
+      alert('Could not delete session. Please try again.');
     } finally {
       setSaving(false);
       closeEditor();
@@ -318,6 +371,7 @@ export default function CoachingSessionsCalendarInterface({
           onDelete={editorMode === 'edit' ? deleteSession : undefined}
           typeChoices={['Strategy', 'Resume', 'Interview']}
           statusChoices={['Scheduled', 'Completed', 'No-show']}
+          saving={saving}
         />
       )}
     </section>

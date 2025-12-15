@@ -3,6 +3,46 @@ import React, { useEffect, useState, useCallback } from 'react';
 import CoachingLayout from '@/components/layouts/CoachingLayout';
 import CoachingSessionsCalendarInterface from '@/components/calendar/CoachingSessionsCalendarInterface';
 
+const API_URL = '/api/coaching/sessions';
+
+function mapRowsToEvents(rows) {
+  return rows.map((s) => {
+    const date = s.date || s.sessionDate || null;
+    const time = s.time || s.sessionTime || '09:00';
+    const client =
+      s.client ||
+      s.clientName ||
+      s.client_name ||
+      '';
+
+    const clientUserId =
+      typeof s.clientId === 'string' && s.clientId.length > 0
+        ? s.clientId
+        : s.clientUserId || null;
+
+    const clientTypeExplicit =
+      s.clientType === 'internal' || s.clientType === 'external'
+        ? s.clientType
+        : null;
+
+    const clientType =
+      clientTypeExplicit ||
+      (clientUserId ? 'internal' : 'external');
+
+    return {
+      id: s.id,
+      date,
+      time,
+      client,
+      clientType,
+      clientUserId,
+      type: s.type || 'Strategy',
+      status: s.status || 'Scheduled',
+      notes: s.notes || '',
+    };
+  });
+}
+
 export default function CoachingSessionsCalendarPage() {
   const [sessions, setSessions] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -10,7 +50,7 @@ export default function CoachingSessionsCalendarPage() {
   const loadSessions = useCallback(async () => {
     try {
       setLoading(true);
-      const res = await fetch('/api/coaching/sessions');
+      const res = await fetch(API_URL);
       if (!res.ok) {
         console.error('Failed to load coaching sessions for calendar');
         setSessions([]);
@@ -19,33 +59,7 @@ export default function CoachingSessionsCalendarPage() {
 
       const data = await res.json().catch(() => ({}));
       const rows = Array.isArray(data) ? data : data.sessions || [];
-
-      const mapped = rows.map((s) => {
-        const client = s.client || s.clientName || s.client_name || '';
-        const clientId = s.clientId || s.client_id || null;
-        const clientType =
-          s.clientType === 'internal' || s.clientType === 'external'
-            ? s.clientType
-            : clientId
-            ? 'internal'
-            : 'external';
-
-        return {
-          id: s.id,
-          date: s.date,
-          time: s.time || '09:00',
-          title: client
-            ? `${client} – ${s.type || 'Session'}`
-            : s.type || 'Session',
-          client,
-          clientId,
-          clientType,
-          type: s.type || 'Strategy',
-          status: s.status || 'Scheduled',
-          notes: s.notes || '',
-          participants: s.participants || '',
-        };
-      });
+      const mapped = mapRowsToEvents(rows);
 
       setSessions(mapped);
     } catch (err) {
