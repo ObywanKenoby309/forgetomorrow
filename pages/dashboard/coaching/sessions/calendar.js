@@ -35,17 +35,14 @@ export default function CoachingSessionsCalendarPage() {
         // { id, date, time, client, type, status, clientId, clientType }
         const mapped = rows.map((s) => ({
           id: s.id,
-          date: s.date,                 // "YYYY-MM-DD"
-          time: s.time || '09:00',      // "HH:MM"
+          date: s.date,              // "YYYY-MM-DD"
+          time: s.time || '09:00',   // "HH:MM"
           title: s.client
             ? `${s.client} – ${s.type || 'Session'}`
             : s.type || 'Session',
-          client: s.client || '',
           type: s.type || 'Strategy',
           status: s.status || 'Scheduled',
           notes: '',
-          // show primary participant(s) under the title in the calendar
-          participants: s.client || '',
         }));
 
         if (!cancelled) {
@@ -69,7 +66,7 @@ export default function CoachingSessionsCalendarPage() {
     <CoachingLayout
       title="Sessions Calendar | ForgeTomorrow"
       activeNav="calendar"
-      headerDescription="This is your command center for coaching time—use Add Session to schedule, and tap any block to edit."
+      headerDescription="This is your command center for coaching time—tap a session to edit it, or add new time directly from the calendar."
       right={null} // full-width calendar
       sidebarInitialOpen={{ coaching: true, seeker: false }}
     >
@@ -85,8 +82,8 @@ export default function CoachingSessionsCalendarPage() {
           title={loading ? 'Sessions Calendar (loading…)' : 'Sessions Calendar'}
           storageKey={STORAGE_KEY}
           seed={seedEvents}
-          typeChoices={['Strategy', 'Resume', 'Interview']}
-          statusChoices={['Scheduled', 'Completed', 'No-show']}
+          typeChoices={['Strategy', 'Resume', 'Interview', 'Other']}
+          statusChoices={['Scheduled', 'Completed', 'No-show', 'Cancelled']}
           addLabel="+ Add Session"
         />
       </div>
