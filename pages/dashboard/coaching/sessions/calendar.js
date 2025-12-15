@@ -35,15 +35,17 @@ export default function CoachingSessionsCalendarPage() {
         // { id, date, time, client, type, status, clientId, clientType }
         const mapped = rows.map((s) => ({
           id: s.id,
-          date: s.date, // "YYYY-MM-DD"
-          time: s.time || '09:00', // "HH:MM"
+          date: s.date,                 // "YYYY-MM-DD"
+          time: s.time || '09:00',      // "HH:MM"
           title: s.client
             ? `${s.client} – ${s.type || 'Session'}`
             : s.type || 'Session',
+          client: s.client || '',
           type: s.type || 'Strategy',
           status: s.status || 'Scheduled',
-          // leave notes empty for now; coach can still add notes
           notes: '',
+          // show primary participant(s) under the title in the calendar
+          participants: s.client || '',
         }));
 
         if (!cancelled) {
@@ -67,11 +69,10 @@ export default function CoachingSessionsCalendarPage() {
     <CoachingLayout
       title="Sessions Calendar | ForgeTomorrow"
       activeNav="calendar"
-      headerDescription="This is your command center for coaching time—tap a day to add a session, drag your eyes across the week, and feel fully booked (in a good way)."
+      headerDescription="This is your command center for coaching time—use Add Session to schedule, and tap any block to edit."
       right={null} // full-width calendar
       sidebarInitialOpen={{ coaching: true, seeker: false }}
     >
-      {/* Full-width, slightly separated canvas so the calendar feels premium */}
       <div
         style={{
           display: 'grid',
@@ -80,14 +81,12 @@ export default function CoachingSessionsCalendarPage() {
           paddingBottom: 8,
         }}
       >
-        <CalendarInterface
+        <CoachingSessionsCalendarInterface
           title={loading ? 'Sessions Calendar (loading…)' : 'Sessions Calendar'}
           storageKey={STORAGE_KEY}
-          // 🔁 Seed with live CoachingSession rows for this coach
           seed={seedEvents}
           typeChoices={['Strategy', 'Resume', 'Interview']}
           statusChoices={['Scheduled', 'Completed', 'No-show']}
-          backHref="/dashboard/coaching/sessions"
           addLabel="+ Add Session"
         />
       </div>
