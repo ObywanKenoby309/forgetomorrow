@@ -1,7 +1,7 @@
 // pages/dashboard/coaching/sessions/calendar.js
 import React, { useEffect, useState } from 'react';
 import CoachingLayout from '@/components/layouts/CoachingLayout';
-import CalendarInterface from '@/components/calendar/CalendarInterface';
+import CoachingSessionsCalendarInterface from '@/components/calendar/CoachingSessionsCalendarInterface';
 
 // 🔒 LIVE storage key (keeps any manual-only items the coach adds)
 const STORAGE_KEY = 'coachSessions_live_v1';
