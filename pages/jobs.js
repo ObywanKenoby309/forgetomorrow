@@ -322,10 +322,10 @@ function Jobs() {
         const list = (data && data.jobs) || [];
         setJobs(list);
         if (list.length > 0) {
+          // ✅ Only set initial selection – do NOT record as "viewed" automatically
           setSelectedJob(list[0]);
-          addViewedJob(list[0]);
         }
-        list.forEach(addViewedJob);
+        // ✅ Removed: list.forEach(addViewedJob);
       } catch (err) {
         console.error(err);
       } finally {
@@ -496,6 +496,7 @@ function Jobs() {
 
   const handleSelectJob = (job) => {
     setSelectedJob(job);
+    // ✅ Recently viewed now updates ONLY when user actively selects a job
     addViewedJob(job);
     setAtsResult(null);
     setAtsError(null);
@@ -1472,11 +1473,11 @@ function Jobs() {
       flexDirection: 'row',
       justifyContent: 'flex-start',
       alignItems: 'center',
-      flexWrap: 'wrap',      // allow second line if needed
+      flexWrap: 'nowrap',      // ✅ keep everything in a single row
       gap: 6,
       marginTop: 0,
       padding: '4px 0 0',
-      overflowX: 'visible',  // no horizontal scroll for actions
+      overflowX: 'auto',       // ✅ allow horizontal scroll on smaller widths instead of stacking
     }}
   >
                         <button

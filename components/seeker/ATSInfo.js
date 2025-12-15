@@ -12,7 +12,7 @@ export default function ATSInfo() {
       {/* Orange "i" badge */}
       <button
         onClick={() => setOpen(true)}
-        aria-label="About ATS alignment"
+        aria-label="About Resume-Role Alignment"
         style={{
           width: 22,
           height: 22,
@@ -45,7 +45,7 @@ export default function ATSInfo() {
           >
             <div className="flex items-center justify-between mb-3">
               <h3 className="text-xl font-semibold" style={{ color: '#263238' }}>
-                ATS Alignment Help
+                Resume-Role Alignment
               </h3>
               <button
                 onClick={() => setOpen(false)}
@@ -56,20 +56,19 @@ export default function ATSInfo() {
             </div>
 
             <p className="text-sm text-slate-700 mb-3">
-              ATS Alignment gives you a fast, AI-assisted score showing how well your
-              resume or profile matches a job posting.
+              Resume-Role Alignment is a quick AI helper that shows how well your resume
+              lines up with this job.
             </p>
 
             <ul className="list-disc list-inside space-y-1 text-sm text-slate-700">
-              <li>Analyzes your skills against the job requirements</li>
-              <li>Estimates your match score (0–100%)</li>
-              <li>Explains the top reasons for the score</li>
-              <li>Suggests resume bullet improvements to help you match better</li>
+              <li>Highlights key skills and keywords from the job</li>
+              <li>Shows where your resume is strong or light</li>
+              <li>Suggests simple edits you can make before applying</li>
             </ul>
 
             <p className="text-xs text-slate-500 mt-3">
-              This is a guidance tool — no ATS system can guarantee results, but this
-              helps you see how you appear from a recruiter’s perspective.
+              This is a guidance tool - it cannot guarantee results, but it can help you
+              tune your resume for each role.
             </p>
           </div>
         </div>
