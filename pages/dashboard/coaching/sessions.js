@@ -3,6 +3,7 @@ import React, { useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
 import CoachingLayout from '@/components/layouts/CoachingLayout';
 import CoachingRightColumn from '@/components/coaching/CoachingRightColumn';
+import CoachSessionEditor from '@/components/calendar/CoachSessionEditor';
 
 const API_URL = '/api/coaching/sessions';
 
@@ -71,6 +72,7 @@ function normalizeSessions(raw) {
       status: s.status || 'Scheduled',
       clientId,
       clientType,
+      notes: s.notes || '',
     };
   });
 }
@@ -82,7 +84,6 @@ export default function CoachingSessionsPage() {
   // Sessions from DB
   const [sessions, setSessions] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [saving, setSaving] = useState(false);
 
   // -------- Load from DB --------
   useEffect(() => {
@@ -207,292 +208,81 @@ export default function CoachingSessionsPage() {
     </span>
   );
 
-  // ---------- Add/Edit/Delete Modal ----------
-  const [modal, setModal] = useState({ open: false, mode: 'add', id: null });
-
-  const [form, setForm] = useState({
-    date: localISODate(),
-    time: '09:00',
-    clientName: '',
-    clientType: 'external', // 'internal' | 'external'
-    clientUserId: null,
-    type: 'Strategy',
-    status: 'Scheduled',
+  // ---------- Add/Edit using CoachSessionEditor ----------
+  const [editorState, setEditorState] = useState({
+    open: false,
+    mode: 'add',
+    initial: null,
   });
 
-  const update = (k, v) =>
-    setForm((f) => ({
-      ...f,
-      [k]: v,
-    }));
-
-  // Search state for internal clients
-  const [clientSearchTerm, setClientSearchTerm] = useState('');
-  const [clientResults, setClientResults] = useState([]);
-  const [clientSearchLoading, setClientSearchLoading] = useState(false);
-  const [clientSearchError, setClientSearchError] = useState('');
-
-  // Fetch contacts when searching internal clients
-  useEffect(() => {
-    if (form.clientType !== 'internal') return;
-
-    const term = clientSearchTerm.trim();
-    if (!term) {
-      setClientResults([]);
-      setClientSearchError('');
-      return;
-    }
-
-    let active = true;
-    const controller = new AbortController();
-
-    async function run() {
-      try {
-        setClientSearchLoading(true);
-        setClientSearchError('');
-
-        // 🔁 unified contacts search endpoint (same as Clients page)
-        const res = await fetch(
-          `/api/contacts/search?q=${encodeURIComponent(term)}`,
-          { signal: controller.signal }
-        );
-
-        if (!res.ok) {
-          if (!active) return;
-          console.error('Contacts search failed:', await res.text());
-          setClientResults([]);
-          setClientSearchError('Search failed. Try again.');
-          return;
-        }
-
-        const data = await res.json().catch(() => ({}));
-
-        let results = [];
-        if (Array.isArray(data.contacts)) {
-          results = data.contacts;
-        } else if (Array.isArray(data.results)) {
-          results = data.results;
-        }
-
-        if (active) {
-          setClientResults(results);
-        }
-      } catch (err) {
-        if (!active) return;
-        if (err.name === 'AbortError') return;
-        console.error('Client search error', err);
-        setClientResults([]);
-        setClientSearchError('Search failed. Try again.');
-      } finally {
-        if (active) {
-          setClientSearchLoading(false);
-        }
-      }
-    }
-
-    run();
-    return () => {
-      active = false;
-      controller.abort();
-    };
-  }, [clientSearchTerm, form.clientType]);
-
-  const selectClient = (c) => {
-    const display = c.name || c.email;
-    setForm((f) => ({
-      ...f,
-      clientType: 'internal',
-      clientUserId: c.id,
-      clientName: display,
-    }));
-    setClientSearchTerm(display);
-    setClientResults([]);
-    setClientSearchError('');
-  };
-
-  const clearSelectedClient = () => {
-    setForm((f) => ({
-      ...f,
-      clientUserId: null,
-      clientName: '',
-    }));
-    setClientSearchTerm('');
-    setClientResults([]);
-    setClientSearchError('');
-  };
-
   const openAdd = () => {
-    setForm({
-      date: localISODate(),
-      time: '09:00',
-      clientName: '',
-      clientType: 'external',
-      clientUserId: null,
-      type: 'Strategy',
-      status: 'Scheduled',
+    setEditorState({
+      open: true,
+      mode: 'add',
+      initial: {
+        date: localISODate(),
+        time: '09:00',
+        clientName: '',
+        clientType: 'external',
+        clientUserId: null,
+        type: 'Strategy',
+        status: 'Scheduled',
+        notes: '',
+      },
     });
-    setClientSearchTerm('');
-    setClientResults([]);
-    setClientSearchError('');
-    setModal({ open: true, mode: 'add', id: null });
   };
 
   const openEdit = (id) => {
     const s = sessions.find((x) => x.id === id);
     if (!s) return;
 
-    const isInternal = !!s.clientId;
-
-    setForm({
-      date: s.date,
-      time: s.time,
-      clientName: s.client,
-      clientType: isInternal ? 'internal' : 'external',
-      clientUserId: isInternal ? s.clientId : null,
-      type: s.type,
-      status: s.status,
+    setEditorState({
+      open: true,
+      mode: 'edit',
+      initial: {
+        id: s.id,
+        date: s.date,
+        time: s.time,
+        clientName: s.client,
+        clientType: s.clientType || (s.clientId ? 'internal' : 'external'),
+        clientUserId: s.clientId || null,
+        type: s.type,
+        status: s.status,
+        notes: s.notes || '',
+      },
     });
-
-    setClientSearchTerm(s.client || '');
-    setClientResults([]);
-    setClientSearchError('');
-    setModal({ open: true, mode: 'edit', id });
   };
 
-  // ---- Create ----
-  const saveAdd = async (e) => {
-    e.preventDefault();
-    const name = (form.clientName || '').trim();
+  const closeEditor = () =>
+    setEditorState({ open: false, mode: 'add', initial: null });
 
-    if (form.clientType === 'internal') {
-      if (!form.clientUserId) {
-        alert('Please select a Forge contact for this client.');
-        return;
-      }
-    } else {
-      if (!name) {
-        alert('Please enter a client name.');
-        return;
-      }
-    }
-
-    try {
-      setSaving(true);
-      const res = await fetch(API_URL, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          date: form.date,
-          time: form.time,
-          clientType: form.clientType,
-          clientUserId:
-            form.clientType === 'internal' ? form.clientUserId : null,
-          clientName: name,
-          type: form.type,
-          status: form.status,
-        }),
-      });
-      if (!res.ok) {
-        console.error('Failed to create session', res.status);
-        alert('Could not save session. Please try again.');
-        return;
-      }
-      const data = await res.json().catch(() => ({}));
-      const created = data.session || data;
-      const [normalized] = normalizeSessions([created]);
-
-      setSessions((prev) => {
-        const next = [...prev, normalized];
-        next.sort(
-          (a, b) =>
-            toLocalDateTime(a.date, a.time) -
-            toLocalDateTime(b.date, b.time)
-        );
-        return next;
-      });
-
-      setModal({ open: false, mode: 'add', id: null });
-    } catch (err) {
-      console.error('Error creating session', err);
-      alert('Could not save session. Please try again.');
-    } finally {
-      setSaving(false);
-    }
+  const handleSaved = (session) => {
+    const [normalized] = normalizeSessions([session]);
+    setSessions((prev) => {
+      const exists = prev.some((s) => s.id === normalized.id);
+      const next = exists
+        ? prev.map((s) => (s.id === normalized.id ? normalized : s))
+        : [...prev, normalized];
+      next.sort(
+        (a, b) =>
+          toLocalDateTime(a.date, a.time) -
+          toLocalDateTime(b.date, b.time)
+      );
+      return next;
+    });
+    closeEditor();
   };
 
-  // ---- Update ----
-  const saveEdit = async (e) => {
-    e.preventDefault();
-    if (!modal.id) return;
-
-    const name = (form.clientName || '').trim();
-
-    if (form.clientType === 'internal') {
-      if (!form.clientUserId) {
-        alert('Please select a Forge contact for this client.');
-        return;
-      }
-    } else {
-      if (!name) {
-        alert('Please enter a client name.');
-        return;
-      }
-    }
-
-    try {
-      setSaving(true);
-      const res = await fetch(API_URL, {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          id: modal.id,
-          date: form.date,
-          time: form.time,
-          clientType: form.clientType,
-          clientUserId:
-            form.clientType === 'internal' ? form.clientUserId : null,
-          clientName: name,
-          type: form.type,
-          status: form.status,
-        }),
-      });
-      if (!res.ok) {
-        console.error('Failed to update session', res.status);
-        alert('Could not update session. Please try again.');
-        return;
-      }
-      const data = await res.json().catch(() => ({}));
-      const updated = data.session || data;
-      const [normalized] = normalizeSessions([updated]);
-
-      setSessions((prev) => {
-        const next = prev.map((s) =>
-          s.id === normalized.id ? normalized : s
-        );
-        next.sort(
-          (a, b) =>
-            toLocalDateTime(a.date, a.time) -
-            toLocalDateTime(b.date, b.time)
-        );
-        return next;
-      });
-
-      setModal({ open: false, mode: 'add', id: null });
-    } catch (err) {
-      console.error('Error updating session', err);
-      alert('Could not update session. Please try again.');
-    } finally {
-      setSaving(false);
-    }
+  const handleDeleted = (id) => {
+    setSessions((prev) => prev.filter((s) => s.id !== id));
+    closeEditor();
   };
 
-  // ---- Delete ----
   const deleteSession = async (id) => {
     if (!id) return;
     if (!confirm('Delete this session?')) return;
 
     try {
-      setSaving(true);
       const res = await fetch(API_URL, {
         method: 'DELETE',
         headers: { 'Content-Type': 'application/json' },
@@ -504,12 +294,9 @@ export default function CoachingSessionsPage() {
         return;
       }
       setSessions((prev) => prev.filter((s) => s.id !== id));
-      setModal({ open: false, mode: 'add', id: null });
     } catch (err) {
       console.error('Error deleting session', err);
       alert('Could not delete session. Please try again.');
-    } finally {
-      setSaving(false);
     }
   };
 
@@ -612,7 +399,7 @@ export default function CoachingSessionsPage() {
             </Link>
 
             <button
-              type="button"
+              type="button'
               onClick={openAdd}
               style={{
                 background: '#FF7043',
@@ -824,406 +611,15 @@ export default function CoachingSessionsPage() {
         </section>
       </div>
 
-      {/* Modal */}
-      {modal.open && (
-        <div
-          style={{
-            position: 'fixed',
-            top: 0,
-            left: 0,
-            right: 0,
-            bottom: 0,
-            background: 'rgba(15,23,42,0.60)',
-            display: 'flex',
-            justifyContent: 'center',
-            alignItems: 'center',
-            zIndex: 9999,
-            backdropFilter: 'blur(4px)',
-          }}
-        >
-          <form
-            onSubmit={modal.mode === 'add' ? saveAdd : saveEdit}
-            style={{
-              background: 'linear-gradient(135deg,#FFFFFF,#F9FAFB)',
-              borderRadius: 16,
-              padding: 22,
-              width: 460,
-              display: 'flex',
-              flexDirection: 'column',
-              gap: 12,
-              boxShadow: '0 24px 60px rgba(15,23,42,0.55)',
-              border: '1px solid rgba(148,163,184,0.7)',
-            }}
-          >
-            <h3
-              style={{
-                margin: 0,
-                color: '#112033',
-                fontSize: 18,
-                display: 'flex',
-                justifyContent: 'space-between',
-                alignItems: 'center',
-              }}
-            >
-              <span>
-                {modal.mode === 'add' ? 'Add Session' : 'Edit Session'}
-              </span>
-              <span
-                style={{
-                  fontSize: 11,
-                  fontWeight: 600,
-                  color: '#9CA3AF',
-                  textTransform: 'uppercase',
-                  letterSpacing: '0.12em',
-                }}
-              >
-                Coaching
-              </span>
-            </h3>
-
-            <label style={{ fontSize: 13, color: '#4B5563' }}>
-              <span style={{ display: 'block', marginBottom: 4 }}>Date</span>
-              <input
-                type="date"
-                value={form.date}
-                onChange={(e) => update('date', e.target.value)}
-                style={{
-                  width: '100%',
-                  padding: 8,
-                  borderRadius: 10,
-                  border: '1px solid rgba(148,163,184,0.9)',
-                  fontSize: 13,
-                }}
-              />
-            </label>
-            <label style={{ fontSize: 13, color: '#4B5563' }}>
-              <span style={{ display: 'block', marginBottom: 4 }}>Time</span>
-              <input
-                type="time"
-                value={form.time}
-                onChange={(e) => update('time', e.target.value)}
-                style={{
-                  width: '100%',
-                  padding: 8,
-                  borderRadius: 10,
-                  border: '1px solid rgba(148,163,184,0.9)',
-                  fontSize: 13,
-                }}
-              />
-            </label>
-
-            {/* Client type toggle */}
-            <div>
-              <div
-                style={{
-                  fontSize: 13,
-                  fontWeight: 600,
-                  marginBottom: 4,
-                  color: '#374151',
-                }}
-              >
-                Client Type
-              </div>
-              <div style={{ display: 'flex', gap: 16 }}>
-                <label
-                  style={{
-                    fontSize: 13,
-                    cursor: 'pointer',
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: 6,
-                    color: '#111827',
-                  }}
-                >
-                  <input
-                    type="radio"
-                    name="clientType"
-                    value="internal"
-                    checked={form.clientType === 'internal'}
-                    onChange={() => {
-                      update('clientType', 'internal');
-                      // When switching to internal, clear external-only fields
-                      update('clientUserId', null);
-                      setClientSearchTerm(form.clientName || '');
-                      setClientResults([]);
-                      setClientSearchError('');
-                    }}
-                    style={{ marginRight: 0 }}
-                  />
-                  <span>Forge user (from my contacts)</span>
-                </label>
-                <label
-                  style={{
-                    fontSize: 13,
-                    cursor: 'pointer',
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: 6,
-                    color: '#111827',
-                  }}
-                >
-                  <input
-                    type="radio"
-                    name="clientType"
-                    value="external"
-                    checked={form.clientType === 'external'}
-                    onChange={() => {
-                      update('clientType', 'external');
-                      update('clientUserId', null);
-                      setClientSearchTerm('');
-                      setClientResults([]);
-                      setClientSearchError('');
-                    }}
-                    style={{ marginRight: 0 }}
-                  />
-                  <span>External client (not in Forge)</span>
-                </label>
-              </div>
-            </div>
-
-            {/* Internal client search */}
-            {form.clientType === 'internal' && (
-              <div>
-                <div
-                  style={{
-                    fontSize: 13,
-                    marginBottom: 4,
-                    fontWeight: 500,
-                    color: '#374151',
-                  }}
-                >
-                  Client (from your contacts)
-                </div>
-                <input
-                  type="text"
-                  placeholder="Type a name, email, or headline…"
-                  value={clientSearchTerm}
-                  onChange={(e) => setClientSearchTerm(e.target.value)}
-                  style={{
-                    width: '100%',
-                    padding: 8,
-                    marginBottom: 4,
-                    borderRadius: 10,
-                    border: '1px solid rgba(148,163,184,0.9)',
-                    fontSize: 13,
-                  }}
-                />
-                {form.clientUserId && (
-                  <div
-                    style={{
-                      fontSize: 12,
-                      marginBottom: 4,
-                      color: '#4B5563',
-                      display: 'flex',
-                      justifyContent: 'space-between',
-                      alignItems: 'center',
-                    }}
-                  >
-                    <span>Selected: {form.clientName || '(no name)'}</span>
-                    <button
-                      type="button"
-                      onClick={clearSelectedClient}
-                      style={{
-                        fontSize: 11,
-                        border: 'none',
-                        background: 'transparent',
-                        color: '#B91C1C',
-                        cursor: 'pointer',
-                        textDecoration: 'underline',
-                      }}
-                    >
-                      Clear
-                    </button>
-                  </div>
-                )}
-                {clientSearchLoading && (
-                  <div style={{ fontSize: 12, color: '#9CA3AF' }}>
-                    Searching…
-                  </div>
-                )}
-                {clientSearchError && (
-                  <div style={{ fontSize: 12, color: '#C62828' }}>
-                    {clientSearchError}
-                  </div>
-                )}
-                {clientResults.length > 0 && (
-                  <ul
-                    style={{
-                      listStyle: 'none',
-                      margin: '4px 0 0',
-                      padding: 0,
-                      maxHeight: 160,
-                      overflowY: 'auto',
-                      border: '1px solid #E5E7EB',
-                      borderRadius: 10,
-                      background: '#FFFFFF',
-                    }}
-                  >
-                    {clientResults.map((r) => (
-                      <li
-                        key={r.id}
-                        onClick={() => selectClient(r)}
-                        style={{
-                          padding: '7px 9px',
-                          fontSize: 13,
-                          cursor: 'pointer',
-                          borderBottom: '1px solid #F3F4F6',
-                        }}
-                      >
-                        <div style={{ fontWeight: 600, color: '#111827' }}>
-                          {r.name}
-                        </div>
-                        <div
-                          style={{
-                            fontSize: 12,
-                            color: '#6B7280',
-                          }}
-                        >
-                          {r.email}
-                          {r.headline ? ` • ${r.headline}` : ''}
-                        </div>
-                      </li>
-                    ))}
-                  </ul>
-                )}
-                {clientResults.length === 0 &&
-                  clientSearchTerm.trim() &&
-                  !clientSearchLoading &&
-                  !clientSearchError && (
-                    <div style={{ fontSize: 12, color: '#9CA3AF' }}>
-                      No contacts matched that search.
-                    </div>
-                  )}
-              </div>
-            )}
-
-            {/* External client name input */}
-            {form.clientType === 'external' && (
-              <label style={{ fontSize: 13, color: '#4B5563' }}>
-                <span style={{ display: 'block', marginBottom: 4 }}>
-                  Client Name
-                </span>
-                <input
-                  type="text"
-                  value={form.clientName}
-                  onChange={(e) => update('clientName', e.target.value)}
-                  style={{
-                    width: '100%',
-                    padding: 8,
-                    borderRadius: 10,
-                    border: '1px solid rgba(148,163,184,0.9)',
-                    fontSize: 13,
-                  }}
-                  placeholder="e.g. John Doe (Acme Corp)"
-                />
-              </label>
-            )}
-
-            <label style={{ fontSize: 13, color: '#4B5563' }}>
-              <span style={{ display: 'block', marginBottom: 4 }}>Type</span>
-              <select
-                value={form.type}
-                onChange={(e) => update('type', e.target.value)}
-                style={{
-                  width: '100%',
-                  padding: 8,
-                  borderRadius: 10,
-                  border: '1px solid rgba(148,163,184,0.9)',
-                  fontSize: 13,
-                }}
-              >
-                <option value="Strategy">Strategy</option>
-                <option value="Resume">Resume</option>
-                <option value="Interview">Interview</option>
-              </select>
-            </label>
-            <label style={{ fontSize: 13, color: '#4B5563' }}>
-              <span style={{ display: 'block', marginBottom: 4 }}>Status</span>
-              <select
-                value={form.status}
-                onChange={(e) => update('status', e.target.value)}
-                style={{
-                  width: '100%',
-                  padding: 8,
-                  borderRadius: 10,
-                  border: '1px solid rgba(148,163,184,0.9)',
-                  fontSize: 13,
-                }}
-              >
-                <option value="Scheduled">Scheduled</option>
-                <option value="Completed">Completed</option>
-                <option value="No-show">No-show</option>
-              </select>
-            </label>
-
-            <div
-              style={{
-                display: 'flex',
-                justifyContent: 'space-between',
-                marginTop: 10,
-                alignItems: 'center',
-              }}
-            >
-              {modal.mode === 'edit' && (
-                <button
-                  type="button"
-                  onClick={() => deleteSession(modal.id)}
-                  style={{
-                    background: 'white',
-                    color: '#B91C1C',
-                    border: '1px solid rgba(248,113,113,0.9)',
-                    borderRadius: 999,
-                    padding: '9px 14px',
-                    fontWeight: 700,
-                    cursor: 'pointer',
-                    fontSize: 13,
-                  }}
-                  disabled={saving}
-                >
-                  Delete
-                </button>
-              )}
-              <div style={{ display: 'flex', gap: 8, marginLeft: 'auto' }}>
-                <button
-                  type="submit"
-                  style={{
-                    background: '#FF7043',
-                    color: 'white',
-                    border: 'none',
-                    borderRadius: 999,
-                    padding: '9px 16px',
-                    fontWeight: 700,
-                    cursor: 'pointer',
-                    fontSize: 13,
-                    boxShadow: '0 12px 26px rgba(255,112,67,0.45)',
-                  }}
-                  disabled={saving}
-                >
-                  {saving ? 'Saving…' : 'Save'}
-                </button>
-                <button
-                  type="button"
-                  onClick={() =>
-                    setModal({ open: false, mode: 'add', id: null })
-                  }
-                  style={{
-                    background: 'white',
-                    color: '#FF7043',
-                    border: '1px solid rgba(255,112,67,0.8)',
-                    borderRadius: 999,
-                    padding: '9px 16px',
-                    fontWeight: 700,
-                    cursor: 'pointer',
-                    fontSize: 13,
-                  }}
-                  disabled={saving}
-                >
-                  Cancel
-                </button>
-              </div>
-            </div>
-          </form>
-        </div>
+      {/* Editor Modal */}
+      {editorState.open && (
+        <CoachSessionEditor
+          mode={editorState.mode}
+          initial={editorState.initial}
+          onClose={closeEditor}
+          onSaved={handleSaved}
+          onDeleted={handleDeleted}
+        />
       )}
     </CoachingLayout>
   );

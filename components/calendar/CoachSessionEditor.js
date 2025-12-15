@@ -137,19 +137,19 @@ export default function CoachSessionEditor({
   // ─────────────────────────────
   const label = {
     fontSize: 12,
-    color: '#607D8B',
+    color: '#64748B',
     marginBottom: 4,
     display: 'block',
   };
 
   const input = {
-    border: '1px solid #DADCE0',
-    borderRadius: 8,
+    border: '1px solid rgba(148,163,184,0.7)',
+    borderRadius: 10,
     padding: '8px 10px',
     width: '100%',
     outline: 'none',
     background: '#FFFFFF',
-    color: '#263238',
+    color: '#0f172a',
     fontSize: 14,
   };
 
@@ -158,24 +158,26 @@ export default function CoachSessionEditor({
       style={{
         position: 'fixed',
         inset: 0,
-        background: 'rgba(0,0,0,0.45)',
+        background: 'rgba(15,23,42,0.60)',
         display: 'grid',
         placeItems: 'center',
         padding: 16,
         zIndex: 1000,
+        backdropFilter: 'blur(4px)',
       }}
       onClick={onClose}
     >
       <div
         onClick={(e) => e.stopPropagation()}
         style={{
-          background: 'white',
+          background: 'linear-gradient(135deg,#FFFFFF,#F9FAFB)',
           borderRadius: 16,
           width: '100%',
           maxWidth: 520,
-          boxShadow: '0 8px 24px rgba(0,0,0,0.15)',
+          boxShadow: '0 24px 60px rgba(15,23,42,0.55)',
           overflow: 'hidden',
-          color: '#263238',
+          color: '#0f172a',
+          border: '1px solid rgba(148,163,184,0.7)',
         }}
       >
         {/* Header */}
@@ -185,14 +187,14 @@ export default function CoachSessionEditor({
             justifyContent: 'space-between',
             alignItems: 'center',
             padding: '14px 18px',
-            borderBottom: '1px solid #eee',
+            borderBottom: '1px solid rgba(226,232,240,0.9)',
           }}
         >
           <div>
             <h3
               style={{
                 margin: 0,
-                color: '#263238',
+                color: '#112033',
                 fontSize: 18,
                 fontWeight: 700,
               }}
@@ -259,7 +261,7 @@ export default function CoachSessionEditor({
               <span style={label}>Client Type</span>
             </div>
             <div style={{ display: 'flex', gap: 24, fontSize: 13 }}>
-              <label style={{ cursor: 'pointer', color: '#37474F' }}>
+              <label style={{ cursor: 'pointer', color: '#111827' }}>
                 <input
                   type="radio"
                   name="clientType"
@@ -272,7 +274,7 @@ export default function CoachSessionEditor({
                 />
                 Forge user (from my contacts)
               </label>
-              <label style={{ cursor: 'pointer', color: '#37474F' }}>
+              <label style={{ cursor: 'pointer', color: '#111827' }}>
                 <input
                   type="radio"
                   name="clientType"
@@ -343,8 +345,9 @@ export default function CoachSessionEditor({
                     padding: 0,
                     maxHeight: 160,
                     overflowY: 'auto',
-                    border: '1px solid #eee',
+                    border: '1px solid #E2E8F0',
                     borderRadius: 8,
+                    background: '#FFFFFF',
                   }}
                 >
                   {results.map((r) => (
@@ -355,7 +358,7 @@ export default function CoachSessionEditor({
                         padding: '6px 8px',
                         fontSize: 13,
                         cursor: 'pointer',
-                        borderBottom: '1px solid #f0f0f0',
+                        borderBottom: '1px solid #F1F5F9',
                       }}
                     >
                       <div style={{ fontWeight: 600 }}>{r.name}</div>
@@ -450,9 +453,9 @@ export default function CoachSessionEditor({
                 onClick={remove}
                 disabled={saving}
                 style={{
-                  background: 'white',
-                  color: '#C62828',
-                  border: '1px solid #FFCDD2',
+                  background: '#FFFFFF',
+                  color: '#B91C1C',
+                  border: '1px solid rgba(248,113,113,0.9)',
                   padding: '8px 16px',
                   borderRadius: 999,
                   fontWeight: 700,
@@ -472,9 +475,9 @@ export default function CoachSessionEditor({
                 onClick={onClose}
                 disabled={saving}
                 style={{
-                  background: 'white',
-                  border: '1px solid #CFD8DC',
-                  color: '#455A64',
+                  background: '#FFFFFF',
+                  border: '1px solid rgba(255,112,67,0.8)',
+                  color: '#FF7043',
                   padding: '8px 16px',
                   borderRadius: 999,
                   fontWeight: 600,
@@ -489,14 +492,14 @@ export default function CoachSessionEditor({
                 disabled={saving}
                 style={{
                   background: '#FF7043',
-                  color: 'white',
+                  color: '#FFFFFF',
                   border: 'none',
                   padding: '8px 20px',
                   borderRadius: 999,
                   fontWeight: 700,
                   fontSize: 14,
                   cursor: 'pointer',
-                  boxShadow: '0 4px 12px rgba(255,112,67,0.4)',
+                  boxShadow: '0 12px 26px rgba(255,112,67,0.45)',
                 }}
               >
                 {saving ? 'Saving…' : 'Save'}

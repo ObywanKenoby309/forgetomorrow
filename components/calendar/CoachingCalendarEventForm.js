@@ -9,7 +9,7 @@ export default function CoachingCalendarEventForm({
   onDelete,
   typeChoices = [],
   statusChoices = [],
-  saving = false, // <-- NEW: receive saving from parent, default false
+  saving = false, // receive saving from parent, default false
 }) {
   const firstRef = useRef(null);
   const [confirmingDelete, setConfirmingDelete] = useState(false);
@@ -35,19 +35,19 @@ export default function CoachingCalendarEventForm({
 
   const label = {
     fontSize: 12,
-    color: '#607D8B',
+    color: '#64748B',
     marginBottom: 4,
     display: 'block',
   };
 
   const input = {
-    border: '1px solid #DADCE0',
-    borderRadius: 8,
+    border: '1px solid rgba(148,163,184,0.7)',
+    borderRadius: 10,
     padding: '8px 10px',
     width: '100%',
     outline: 'none',
     background: '#FFFFFF',
-    color: '#263238',
+    color: '#0f172a',
     fontSize: 14,
   };
 
@@ -66,23 +66,29 @@ export default function CoachingCalendarEventForm({
       style={{
         position: 'fixed',
         inset: 0,
-        background: 'rgba(0,0,0,0.45)',
-        display: 'grid',
-        placeItems: 'center',
+        background: 'rgba(15,23,42,0.60)',
+        display: 'flex',
+        justifyContent: 'center',
+        alignItems: 'center',
         padding: 16,
         zIndex: 1000,
+        backdropFilter: 'blur(4px)',
       }}
     >
       <div
         onClick={(e) => e.stopPropagation()}
         style={{
-          background: 'white',
+          background: 'linear-gradient(135deg,#FFFFFF,#F9FAFB)',
           borderRadius: 16,
           width: '100%',
-          maxWidth: 520,
-          boxShadow: '0 8px 24px rgba(0,0,0,0.15)',
+          maxWidth: 480,
+          boxShadow: '0 24px 60px rgba(15,23,42,0.55)',
           overflow: 'hidden',
-          color: '#263238',
+          color: '#0f172a',
+          border: '1px solid rgba(148,163,184,0.7)',
+          padding: 20,
+          display: 'grid',
+          gap: 12,
         }}
       >
         {/* Header */}
@@ -91,35 +97,35 @@ export default function CoachingCalendarEventForm({
             display: 'flex',
             justifyContent: 'space-between',
             alignItems: 'center',
-            padding: '12px 16px',
-            borderBottom: '1px solid #eee',
+            marginBottom: 4,
           }}
         >
-          <div>
-            <h3 style={{ margin: 0, color: '#263238', fontSize: 18 }}>
-              {mode === 'edit' ? 'Edit Session' : 'Add Session'}
-            </h3>
-          </div>
-          <button
-            onClick={onClose}
+          <h3
             style={{
-              background: 'transparent',
-              border: 'none',
-              fontSize: 22,
-              lineHeight: 1,
-              cursor: 'pointer',
-              color: '#999',
+              margin: 0,
+              color: '#112033',
+              fontSize: 18,
+              fontWeight: 700,
             }}
-            aria-label="Close"
           >
-            ×
-          </button>
+            {mode === 'edit' ? 'Edit Session' : 'Add Session'}
+          </h3>
+          <span
+            style={{
+              fontSize: 11,
+              letterSpacing: '0.12em',
+              textTransform: 'uppercase',
+              color: '#94A3B8',
+            }}
+          >
+            Coaching
+          </span>
         </div>
 
         {/* Body */}
         <form
           onSubmit={handleSubmit}
-          style={{ display: 'grid', gap: 12, padding: 16 }}
+          style={{ display: 'grid', gap: 12, marginTop: 4 }}
         >
           <div>
             <label style={label}>Title *</label>
@@ -137,7 +143,7 @@ export default function CoachingCalendarEventForm({
             style={{
               display: 'grid',
               gridTemplateColumns: '1fr 1fr',
-              gap: 10,
+              gap: 12,
             }}
           >
             <div>
@@ -166,7 +172,7 @@ export default function CoachingCalendarEventForm({
             style={{
               display: 'grid',
               gridTemplateColumns: '1fr 1fr',
-              gap: 10,
+              gap: 12,
             }}
           >
             <div>
@@ -219,7 +225,12 @@ export default function CoachingCalendarEventForm({
               value={form.notes}
               onChange={handleChange}
               rows={3}
-              style={{ ...input, resize: 'vertical' }}
+              style={{
+                ...input,
+                resize: 'vertical',
+                minHeight: 90,
+                whiteSpace: 'pre-wrap',
+              }}
             />
           </div>
 
@@ -238,15 +249,16 @@ export default function CoachingCalendarEventForm({
                   type="button"
                   onClick={() => setConfirmingDelete(true)}
                   style={{
-                    background: 'white',
-                    color: '#B71C1C',
-                    border: '1px solid #F5C6CB',
-                    padding: '6px 10px',
+                    background: '#FFFFFF',
+                    color: '#B91C1C',
+                    border: '1px solid rgba(248,113,113,0.8)',
+                    padding: '7px 12px',
                     borderRadius: 999,
                     cursor: 'pointer',
                     fontWeight: 600,
                     fontSize: 13,
                   }}
+                  disabled={saving}
                 >
                   Delete
                 </button>
@@ -256,22 +268,24 @@ export default function CoachingCalendarEventForm({
                     display: 'flex',
                     alignItems: 'center',
                     gap: 8,
+                    fontSize: 12,
                   }}
                 >
-                  <span style={{ color: '#B71C1C', fontSize: 12 }}>
+                  <span style={{ color: '#B91C1C' }}>
                     Delete this session?
                   </span>
                   <button
                     type="button"
                     onClick={() => setConfirmingDelete(false)}
                     style={{
-                      background: 'white',
-                      border: '1px solid #ccc',
-                      padding: '6px 10px',
-                      borderRadius: 6,
+                      background: '#FFFFFF',
+                      border: '1px solid rgba(148,163,184,0.8)',
+                      padding: '5px 10px',
+                      borderRadius: 8,
                       cursor: 'pointer',
-                      fontSize: 13,
+                      fontSize: 12,
                     }}
+                    disabled={saving}
                   >
                     Cancel
                   </button>
@@ -285,16 +299,17 @@ export default function CoachingCalendarEventForm({
                     }
                     style={{
                       background: '#E53935',
-                      color: 'white',
+                      color: '#FFFFFF',
                       border: 'none',
                       padding: '6px 12px',
-                      borderRadius: 6,
+                      borderRadius: 8,
                       cursor: 'pointer',
                       fontWeight: 600,
-                      fontSize: 13,
+                      fontSize: 12,
                     }}
+                    disabled={saving}
                   >
-                    Confirm Delete
+                    Confirm
                   </button>
                 </div>
               )
@@ -303,31 +318,37 @@ export default function CoachingCalendarEventForm({
             )}
 
             {!confirmingDelete && (
-              <div style={{ display: 'flex', gap: 8 }}>
+              <div style={{ display: 'flex', gap: 8, marginLeft: 'auto' }}>
                 <button
                   type="button"
                   onClick={onClose}
                   style={{
-                    background: 'white',
-                    border: '1px solid #ccc',
-                    padding: '8px 12px',
-                    borderRadius: 8,
+                    background: '#FFFFFF',
+                    border: '1px solid rgba(255,112,67,0.8)',
+                    padding: '8px 14px',
+                    borderRadius: 999,
                     cursor: 'pointer',
+                    fontSize: 13,
+                    fontWeight: 600,
+                    color: '#FF7043',
                   }}
+                  disabled={saving}
                 >
                   Cancel
                 </button>
                 <button
                   type="submit"
-                  disabled={saving} // <-- now safe: saving always defined
+                  disabled={saving}
                   style={{
                     background: '#FF7043',
-                    color: 'white',
+                    color: '#FFFFFF',
                     border: 'none',
-                    padding: '8px 12px',
-                    borderRadius: 8,
+                    padding: '8px 18px',
+                    borderRadius: 999,
                     cursor: 'pointer',
                     fontWeight: 700,
+                    fontSize: 14,
+                    boxShadow: '0 12px 26px rgba(255,112,67,0.45)',
                     opacity: saving ? 0.7 : 1,
                   }}
                 >
