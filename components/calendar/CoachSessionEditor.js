@@ -31,7 +31,7 @@ export default function CoachSessionEditor({
   useEffect(() => {
     if (initial) {
       setForm((f) => ({ ...f, ...initial }));
-      setSearch(initial.clientName || '');
+      setSearch(initial.clientName || initial.client || '');
     }
   }, [initial]);
 
@@ -132,174 +132,379 @@ export default function CoachSessionEditor({
     }
   };
 
+  // ─────────────────────────────
+  // Shared styles (match calendar modal)
+  // ─────────────────────────────
+  const label = {
+    fontSize: 12,
+    color: '#607D8B',
+    marginBottom: 4,
+    display: 'block',
+  };
+
+  const input = {
+    border: '1px solid #DADCE0',
+    borderRadius: 8,
+    padding: '8px 10px',
+    width: '100%',
+    outline: 'none',
+    background: '#FFFFFF',
+    color: '#263238',
+    fontSize: 14,
+  };
+
   return (
     <div
       style={{
         position: 'fixed',
         inset: 0,
-        background: 'rgba(0,0,0,0.4)',
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center',
-        zIndex: 9999,
+        background: 'rgba(0,0,0,0.45)',
+        display: 'grid',
+        placeItems: 'center',
+        padding: 16,
+        zIndex: 1000,
       }}
+      onClick={onClose}
     >
-      <form
-        onSubmit={save}
+      <div
+        onClick={(e) => e.stopPropagation()}
         style={{
           background: 'white',
-          width: 480,
-          borderRadius: 12,
-          padding: 20,
-          display: 'grid',
-          gap: 12,
+          borderRadius: 16,
+          width: '100%',
+          maxWidth: 520,
+          boxShadow: '0 8px 24px rgba(0,0,0,0.15)',
+          overflow: 'hidden',
+          color: '#263238',
         }}
       >
-        <h3 style={{ margin: 0, color: '#FF7043' }}>
-          {mode === 'add' ? 'Add Session' : 'Edit Session'}
-        </h3>
-
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
-          <label>
-            Date
-            <input
-              type="date"
-              value={form.date}
-              onChange={(e) => update('date', e.target.value)}
-              style={{ width: '100%' }}
-            />
-          </label>
-          <label>
-            Time
-            <input
-              type="time"
-              value={form.time}
-              onChange={(e) => update('time', e.target.value)}
-              style={{ width: '100%' }}
-            />
-          </label>
-        </div>
-
-        <div>
-          <strong>Client Type</strong>
-          <div style={{ display: 'flex', gap: 16 }}>
-            <label>
-              <input
-                type="radio"
-                checked={form.clientType === 'internal'}
-                onChange={() =>
-                  update('clientType', 'internal') ||
-                  update('clientUserId', null)
-                }
-              />
-              Forge user
-            </label>
-            <label>
-              <input
-                type="radio"
-                checked={form.clientType === 'external'}
-                onChange={() =>
-                  update('clientType', 'external') ||
-                  update('clientUserId', null)
-                }
-              />
-              External
-            </label>
-          </div>
-        </div>
-
-        {form.clientType === 'internal' ? (
+        {/* Header */}
+        <div
+          style={{
+            display: 'flex',
+            justifyContent: 'space-between',
+            alignItems: 'center',
+            padding: '14px 18px',
+            borderBottom: '1px solid #eee',
+          }}
+        >
           <div>
-            <input
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-              placeholder="Search contacts…"
-              style={{ width: '100%' }}
-            />
-            {searching && <div>Searching…</div>}
-            {results.map((r) => (
-              <div
-                key={r.id}
-                onClick={() => selectClient(r)}
-                style={{ cursor: 'pointer', padding: 4 }}
-              >
-                {r.name || r.email}
-              </div>
-            ))}
+            <h3
+              style={{
+                margin: 0,
+                color: '#263238',
+                fontSize: 18,
+                fontWeight: 700,
+              }}
+            >
+              {mode === 'add' ? 'Add Session' : 'Edit Session'}
+            </h3>
           </div>
-        ) : (
-          <label>
-            Client Name
-            <input
-              value={form.clientName}
-              onChange={(e) => update('clientName', e.target.value)}
-              style={{ width: '100%' }}
-            />
-          </label>
-        )}
-
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
-          <label>
-            Type
-            <select
-              value={form.type}
-              onChange={(e) => update('type', e.target.value)}
-            >
-              <option>Strategy</option>
-              <option>Resume</option>
-              <option>Interview</option>
-            </select>
-          </label>
-          <label>
-            Status
-            <select
-              value={form.status}
-              onChange={(e) => update('status', e.target.value)}
-            >
-              <option>Scheduled</option>
-              <option>Completed</option>
-              <option>No-show</option>
-            </select>
-          </label>
-        </div>
-
-        <label>
-          Notes
-          <textarea
-            value={form.notes}
-            onChange={(e) => update('notes', e.target.value)}
+          <div
             style={{
-              width: '100%',
-              minHeight: 90,
-              border: '1px solid #ddd',
-              resize: 'vertical',
-              whiteSpace: 'pre-wrap',
-              wordWrap: 'break-word',
+              fontSize: 11,
+              letterSpacing: 1.4,
+              textTransform: 'uppercase',
+              color: '#90A4AE',
+              marginRight: 8,
             }}
-          />
-        </label>
-
-        <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-          {mode === 'edit' && (
-            <button
-              type="button"
-              onClick={remove}
-              disabled={saving}
-              style={{ color: '#C62828' }}
-            >
-              Delete
-            </button>
-          )}
-          <div style={{ display: 'flex', gap: 8 }}>
-            <button type="submit" disabled={saving}>
-              Save
-            </button>
-            <button type="button" onClick={onClose}>
-              Cancel
-            </button>
+          >
+            Coaching
           </div>
         </div>
-      </form>
+
+        {/* Body */}
+        <form
+          onSubmit={save}
+          style={{ display: 'grid', gap: 14, padding: '16px 18px 18px' }}
+        >
+          {/* Date / Time */}
+          <div
+            style={{
+              display: 'grid',
+              gridTemplateColumns: '1fr 1fr',
+              gap: 12,
+            }}
+          >
+            <div>
+              <label style={label}>Date</label>
+              <input
+                type="date"
+                value={form.date}
+                onChange={(e) => update('date', e.target.value)}
+                style={input}
+              />
+            </div>
+            <div>
+              <label style={label}>Time</label>
+              <input
+                type="time"
+                value={form.time}
+                onChange={(e) => update('time', e.target.value)}
+                style={input}
+              />
+            </div>
+          </div>
+
+          {/* Client type */}
+          <div>
+            <div
+              style={{
+                display: 'flex',
+                justifyContent: 'space-between',
+                alignItems: 'baseline',
+                marginBottom: 4,
+              }}
+            >
+              <span style={label}>Client Type</span>
+            </div>
+            <div style={{ display: 'flex', gap: 24, fontSize: 13 }}>
+              <label style={{ cursor: 'pointer', color: '#37474F' }}>
+                <input
+                  type="radio"
+                  name="clientType"
+                  checked={form.clientType === 'internal'}
+                  onChange={() => {
+                    update('clientType', 'internal');
+                    update('clientUserId', null);
+                  }}
+                  style={{ marginRight: 6 }}
+                />
+                Forge user (from my contacts)
+              </label>
+              <label style={{ cursor: 'pointer', color: '#37474F' }}>
+                <input
+                  type="radio"
+                  name="clientType"
+                  checked={form.clientType === 'external'}
+                  onChange={() => {
+                    update('clientType', 'external');
+                    update('clientUserId', null);
+                  }}
+                  style={{ marginRight: 6 }}
+                />
+                External client (not in Forge)
+              </label>
+            </div>
+          </div>
+
+          {/* Internal / external client blocks */}
+          {form.clientType === 'internal' ? (
+            <div>
+              <div style={label}>Client (from your contacts)</div>
+              <input
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+                placeholder="Type a name, email, or headline…"
+                style={{ ...input, marginBottom: 6 }}
+              />
+              {form.clientUserId && (
+                <div
+                  style={{
+                    fontSize: 12,
+                    marginBottom: 4,
+                    color: '#455A64',
+                    display: 'flex',
+                    justifyContent: 'space-between',
+                    alignItems: 'center',
+                  }}
+                >
+                  <span>Selected: {form.clientName || '(no name)'}</span>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      update('clientUserId', null);
+                      update('clientName', '');
+                      setSearch('');
+                    }}
+                    style={{
+                      fontSize: 11,
+                      border: 'none',
+                      background: 'transparent',
+                      color: '#C62828',
+                      cursor: 'pointer',
+                      textDecoration: 'underline',
+                    }}
+                  >
+                    Clear
+                  </button>
+                </div>
+              )}
+              {searching && (
+                <div style={{ fontSize: 12, color: '#90A4AE' }}>
+                  Searching…
+                </div>
+              )}
+              {results.length > 0 && (
+                <ul
+                  style={{
+                    listStyle: 'none',
+                    margin: '4px 0 0',
+                    padding: 0,
+                    maxHeight: 160,
+                    overflowY: 'auto',
+                    border: '1px solid #eee',
+                    borderRadius: 8,
+                  }}
+                >
+                  {results.map((r) => (
+                    <li
+                      key={r.id}
+                      onClick={() => selectClient(r)}
+                      style={{
+                        padding: '6px 8px',
+                        fontSize: 13,
+                        cursor: 'pointer',
+                        borderBottom: '1px solid #f0f0f0',
+                      }}
+                    >
+                      <div style={{ fontWeight: 600 }}>{r.name}</div>
+                      <div
+                        style={{
+                          fontSize: 12,
+                          color: '#607D8B',
+                        }}
+                      >
+                        {r.email}
+                        {r.headline ? ` • ${r.headline}` : ''}
+                      </div>
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </div>
+          ) : (
+            <div>
+              <label style={label}>Client</label>
+              <input
+                value={form.clientName}
+                onChange={(e) => update('clientName', e.target.value)}
+                style={input}
+                placeholder="e.g. Jane Doe (Acme Corp)"
+              />
+            </div>
+          )}
+
+          {/* Type / Status */}
+          <div
+            style={{
+              display: 'grid',
+              gridTemplateColumns: '1fr 1fr',
+              gap: 12,
+            }}
+          >
+            <div>
+              <label style={label}>Type</label>
+              <select
+                value={form.type}
+                onChange={(e) => update('type', e.target.value)}
+                style={input}
+              >
+                <option value="Strategy">Strategy</option>
+                <option value="Resume">Resume</option>
+                <option value="Interview">Interview</option>
+              </select>
+            </div>
+            <div>
+              <label style={label}>Status</label>
+              <select
+                value={form.status}
+                onChange={(e) => update('status', e.target.value)}
+                style={input}
+              >
+                <option value="Scheduled">Scheduled</option>
+                <option value="Completed">Completed</option>
+                <option value="No-show">No-show</option>
+              </select>
+            </div>
+          </div>
+
+          {/* Notes */}
+          <div>
+            <label style={label}>Notes</label>
+            <textarea
+              value={form.notes}
+              onChange={(e) => update('notes', e.target.value)}
+              style={{
+                ...input,
+                minHeight: 100,
+                resize: 'vertical',
+                whiteSpace: 'pre-wrap',
+                wordWrap: 'break-word',
+              }}
+            />
+          </div>
+
+          {/* Footer buttons */}
+          <div
+            style={{
+              display: 'flex',
+              justifyContent: 'space-between',
+              alignItems: 'center',
+              marginTop: 4,
+            }}
+          >
+            {mode === 'edit' ? (
+              <button
+                type="button"
+                onClick={remove}
+                disabled={saving}
+                style={{
+                  background: 'white',
+                  color: '#C62828',
+                  border: '1px solid #FFCDD2',
+                  padding: '8px 16px',
+                  borderRadius: 999,
+                  fontWeight: 700,
+                  fontSize: 13,
+                  cursor: 'pointer',
+                }}
+              >
+                Delete
+              </button>
+            ) : (
+              <span />
+            )}
+
+            <div style={{ display: 'flex', gap: 8 }}>
+              <button
+                type="button"
+                onClick={onClose}
+                disabled={saving}
+                style={{
+                  background: 'white',
+                  border: '1px solid #CFD8DC',
+                  color: '#455A64',
+                  padding: '8px 16px',
+                  borderRadius: 999,
+                  fontWeight: 600,
+                  fontSize: 13,
+                  cursor: 'pointer',
+                }}
+              >
+                Cancel
+              </button>
+              <button
+                type="submit"
+                disabled={saving}
+                style={{
+                  background: '#FF7043',
+                  color: 'white',
+                  border: 'none',
+                  padding: '8px 20px',
+                  borderRadius: 999,
+                  fontWeight: 700,
+                  fontSize: 14,
+                  cursor: 'pointer',
+                  boxShadow: '0 4px 12px rgba(255,112,67,0.4)',
+                }}
+              >
+                {saving ? 'Saving…' : 'Save'}
+              </button>
+            </div>
+          </div>
+        </form>
+      </div>
     </div>
   );
 }

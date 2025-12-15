@@ -1,6 +1,6 @@
 // components/calendar/CoachingSessionsCalendarInterface.js
 import React, { useMemo, useState } from 'react';
-import CalendarEventForm from './CalendarEventForm';
+import CoachingCalendarEventForm from './CoachingCalendarEventForm';
 
 /* ─────────────────────────────
    Date helpers
@@ -310,7 +310,7 @@ export default function CoachingSessionsCalendarInterface({
       </div>
 
       {editorOpen && (
-        <CalendarEventForm
+        <CoachingCalendarEventForm
           mode={editorMode}
           initial={editorInitial}
           onClose={closeEditor}
