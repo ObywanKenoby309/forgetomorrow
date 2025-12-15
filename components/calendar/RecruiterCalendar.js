@@ -103,10 +103,12 @@ function normalizeEvent(raw) {
       ? 'internal'
       : 'external';
 
+  // 🔹 unify scope/calendarScope, default to 'personal'
+  const rawScope = raw.scope || raw.calendarScope;
   const scope =
-    raw.scope === 'personal' || raw.scope === 'team'
-      ? raw.scope
-      : 'team';
+    rawScope === 'personal' || rawScope === 'team'
+      ? rawScope
+      : 'personal';
 
   return {
     id: raw.id,
@@ -171,8 +173,8 @@ export default function RecruiterCalendar({
   const toNext = () => setCursor((c) => addMonths(c, 1));
   const toToday = () => setCursor(startOfMonth(new Date()));
 
-  // Team vs Personal view
-  const [viewScope, setViewScope] = useState('team'); // 'team' | 'personal'
+  // 🔹 Personal is the default view; team is the secondary/shared view.
+  const [viewScope, setViewScope] = useState('personal'); // 'team' | 'personal'
 
   // Events and loading
   const [events, setEvents] = useState(() => normalizeEvents(seed));
@@ -210,7 +212,10 @@ export default function RecruiterCalendar({
           setEvents(normalizeEvents(raw));
         }
       } catch (err) {
-        console.warn('Recruiter calendar load failed (using seed/local only):', err);
+        console.warn(
+          'Recruiter calendar load failed (using seed/local only):',
+          err
+        );
       } finally {
         if (!cancelled) setLoading(false);
       }
@@ -223,11 +228,13 @@ export default function RecruiterCalendar({
   }, []);
 
   // Filter by scope for rendering
+  // 🔹 Team view: ONLY team events
+  // 🔹 Personal view: team + personal (everything relevant to me)
   const scopedEvents = useMemo(() => {
     return events.filter((e) =>
       viewScope === 'team'
         ? e.scope === 'team'
-        : true // personal view shows BOTH team + personal
+        : true
     );
   }, [events, viewScope]);
 
@@ -487,6 +494,9 @@ export default function RecruiterCalendar({
 
   const openAdd = () => {
     const today = new Date().toISOString().slice(0, 10);
+    const defaultScope =
+      viewScope === 'team' ? 'team' : 'personal';
+
     setModal({
       open: true,
       mode: 'add',
@@ -501,7 +511,9 @@ export default function RecruiterCalendar({
         candidateType: 'external',
         candidateUserId: null,
         candidateName: '',
-        scope: viewScope || 'team',
+        // seed both names so form + normalization stay in sync
+        calendarScope: defaultScope,
+        scope: defaultScope,
       },
     });
   };
@@ -513,7 +525,11 @@ export default function RecruiterCalendar({
       open: true,
       mode: 'edit',
       eventId,
-      initial: existing,
+      // form knows how to read scope/calendarScope; we pass both here
+      initial: {
+        ...existing,
+        calendarScope: existing.scope,
+      },
     });
   };
 
@@ -550,7 +566,11 @@ export default function RecruiterCalendar({
     try {
       setSaving(true);
 
-      // Optimistic payload
+      const scopeFromForm =
+        formData.calendarScope === 'team' || formData.calendarScope === 'personal'
+          ? formData.calendarScope
+          : 'personal';
+
       const payload = {
         id: eventId,
         title: formData.title,
@@ -562,10 +582,10 @@ export default function RecruiterCalendar({
         candidateType: formData.candidateType,
         candidateUserId: formData.candidateUserId,
         candidateName: formData.candidateName,
-        scope: formData.scope,
+        // 🔹 backend + local both use `scope`
+        scope: scopeFromForm,
       };
 
-      // Try API first; fall back to local-only if it fails/not implemented
       let finalEvent = payload;
 
       try {
@@ -583,10 +603,16 @@ export default function RecruiterCalendar({
             ...(raw || {}),
           };
         } else {
-          console.warn('Recruiter calendar save failed (using optimistic local update). Status:', res.status);
+          console.warn(
+            'Recruiter calendar save failed (using optimistic local update). Status:',
+            res.status
+          );
         }
       } catch (err) {
-        console.warn('Recruiter calendar save API error (using optimistic local update):', err);
+        console.warn(
+          'Recruiter calendar save API error (using optimistic local update):',
+          err
+        );
       }
 
       upsertLocal(finalEvent, mode, eventId);
@@ -611,10 +637,16 @@ export default function RecruiterCalendar({
         });
 
         if (!res.ok) {
-          console.warn('Recruiter calendar delete failed (removing locally anyway). Status:', res.status);
+          console.warn(
+            'Recruiter calendar delete failed (removing locally anyway). Status:',
+            res.status
+          );
         }
       } catch (err) {
-        console.warn('Recruiter calendar delete API error (removing locally anyway):', err);
+        console.warn(
+          'Recruiter calendar delete API error (removing locally anyway):',
+          err
+        );
       }
 
       setEvents((prev) => prev.filter((e) => e.id !== eventId));
@@ -663,29 +695,8 @@ export default function RecruiterCalendar({
           </div>
         </div>
 
-        {/* Team / Personal toggle */}
+        {/* Personal / Team toggle — personal first */}
         <div style={scopeToggleWrap}>
-          <button
-            type="button"
-            onClick={() => setViewScope('team')}
-            style={{
-              ...scopeBtnBase,
-              border:
-                viewScope === 'team'
-                  ? '1px solid #1A4B8F'
-                  : scopeBtnBase.border,
-              background:
-                viewScope === 'team'
-                  ? 'rgba(26,75,143,0.08)'
-                  : scopeBtnBase.background,
-              color:
-                viewScope === 'team'
-                  ? '#1A4B8F'
-                  : scopeBtnBase.color,
-            }}
-          >
-            Team
-          </button>
           <button
             type="button"
             onClick={() => setViewScope('personal')}
@@ -705,7 +716,28 @@ export default function RecruiterCalendar({
                   : scopeBtnBase.color,
             }}
           >
-            Personal
+            Personal (me)
+          </button>
+          <button
+            type="button"
+            onClick={() => setViewScope('team')}
+            style={{
+              ...scopeBtnBase,
+              border:
+                viewScope === 'team'
+                  ? '1px solid #1A4B8F'
+                  : scopeBtnBase.border,
+              background:
+                viewScope === 'team'
+                  ? 'rgba(26,75,143,0.08)'
+                  : scopeBtnBase.background,
+              color:
+                viewScope === 'team'
+                  ? '#1A4B8F'
+                  : scopeBtnBase.color,
+            }}
+          >
+            Team (shared)
           </button>
         </div>
 
@@ -790,7 +822,13 @@ export default function RecruiterCalendar({
                   )}
 
                   {loading && list.length === 0 && key === todayStr && (
-                    <div style={{ fontSize: 11, color: '#90A4AE', marginTop: 4 }}>
+                    <div
+                      style={{
+                        fontSize: 11,
+                        color: '#90A4AE',
+                        marginTop: 4,
+                      }}
+                    >
                       Loading…
                     </div>
                   )}

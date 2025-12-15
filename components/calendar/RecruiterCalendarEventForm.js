@@ -3,7 +3,7 @@ import React, { useEffect, useRef, useState } from 'react';
 
 export default function RecruiterCalendarEventForm({
   mode = 'add', // 'add' | 'edit'
-  initial = null, // { id?, title, date, time, candidateType, candidateUserId, candidateName, type, status, notes, calendarScope }
+  initial = null, // { id?, title, date, time, candidateType, candidateUserId, candidateName, type, status, notes, scope/calendarScope }
   onClose,
   onSave,
   onDelete,
@@ -25,10 +25,12 @@ export default function RecruiterCalendarEventForm({
         ? 'internal'
         : 'external';
 
+    const rawScope =
+      initial?.calendarScope || initial?.scope;
     const calendarScope =
-      initial?.calendarScope === 'personal' || initial?.calendarScope === 'team'
-        ? initial.calendarScope
-        : 'team';
+      rawScope === 'personal' || rawScope === 'team'
+        ? rawScope
+        : 'personal';
 
     return {
       title: initial?.title || '',
@@ -250,7 +252,7 @@ export default function RecruiterCalendarEventForm({
           border: '1px solid rgba(148,163,184,0.7)',
         }}
       >
-        {/* Header with title + calendar toggle (Option 2 layout) */}
+        {/* Header with title + calendar toggle (Option 2 layout, Personal first) */}
         <div
           style={{
             display: 'flex',
@@ -296,19 +298,19 @@ export default function RecruiterCalendarEventForm({
             <div style={{ display: 'flex', gap: 8 }}>
               <button
                 type="button"
-                onClick={() => update('calendarScope', 'team')}
-                style={calendarToggleButton(form.calendarScope === 'team')}
-                disabled={saving}
-              >
-                Team
-              </button>
-              <button
-                type="button"
                 onClick={() => update('calendarScope', 'personal')}
                 style={calendarToggleButton(form.calendarScope === 'personal')}
                 disabled={saving}
               >
                 Personal (only me)
+              </button>
+              <button
+                type="button"
+                onClick={() => update('calendarScope', 'team')}
+                style={calendarToggleButton(form.calendarScope === 'team')}
+                disabled={saving}
+              >
+                Team (shared)
               </button>
             </div>
           </div>
