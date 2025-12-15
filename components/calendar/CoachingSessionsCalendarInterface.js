@@ -10,48 +10,58 @@ import CalendarEventForm from './CalendarEventForm';
 function startOfMonth(date) {
   return new Date(date.getFullYear(), date.getMonth(), 1);
 }
-
 function addMonths(date, delta) {
   return new Date(date.getFullYear(), date.getMonth() + delta, 1);
 }
-
 function fmtYMD(d) {
   const y = d.getFullYear();
   const m = String(d.getMonth() + 1).padStart(2, '0');
   const day = String(d.getDate()).padStart(2, '0');
   return `${y}-${m}-${day}`;
 }
-
 const WEEKDAYS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
 
 export default function CoachingSessionsCalendarInterface({
   title = 'Calendar',
-  storageKey = 'calendar_v1', // kept for API compatibility; no longer used
+  storageKey = 'calendar_v1',
   seed = [],
   typeChoices = ['Strategy', 'Resume', 'Interview'],
   statusChoices = ['Scheduled', 'Completed', 'No-show'],
   addLabel = '+ Add Session',
-  eventNudge = 0,
-  eventWidthDeduct = 10,
 }) {
-  // ---------- events derived from seed (DB is source of truth) ----------
+  // ---------- storage ----------
   const [events, setEvents] = useState({});
-
   useEffect(() => {
-    const seeded = (Array.isArray(seed) ? seed : []).reduce((acc, e) => {
-      if (!e?.date) return acc;
-      const key = e.date;
-      acc[key] = acc[key] || [];
-      acc[key].push(e);
-      return acc;
-    }, {});
-    setEvents(seeded);
-  }, [seed]);
+    try {
+      const saved = localStorage.getItem(storageKey);
+      if (saved) {
+        setEvents(JSON.parse(saved));
+      } else {
+        const seeded = seed.reduce((acc, e) => {
+          const key = e.date;
+          acc[key] = acc[key] || [];
+          acc[key].push(e);
+          return acc;
+        }, {});
+        setEvents(seeded);
+        localStorage.setItem(storageKey, JSON.stringify(seeded));
+      }
+    } catch {
+      // ignore storage failures
+    }
+  }, [storageKey, seed]);
 
-  // Local edits only live in React state for now
-  const persist = useCallback((next) => {
-    setEvents(next);
-  }, []);
+  const persist = useCallback(
+    (next) => {
+      setEvents(next);
+      try {
+        localStorage.setItem(storageKey, JSON.stringify(next));
+      } catch {
+        // ignore
+      }
+    },
+    [storageKey]
+  );
 
   // ---------- month nav ----------
   const [cursor, setCursor] = useState(() => startOfMonth(new Date()));
@@ -88,10 +98,15 @@ export default function CoachingSessionsCalendarInterface({
   const [formMode, setFormMode] = useState('add'); // 'add' | 'edit'
   const [formInitial, setFormInitial] = useState(null); // { date, idx?, title, time, type, status }
 
-  const addItem = (dateStr) => {
+  const addItemForDate = (dateStr) => {
     setFormInitial({ date: dateStr });
     setFormMode('add');
     setFormOpen(true);
+  };
+
+  const addItemToday = () => {
+    const todayStr = fmtYMD(new Date());
+    addItemForDate(todayStr);
   };
 
   const editItem = (dateStr, item, idx) => {
@@ -147,11 +162,9 @@ export default function CoachingSessionsCalendarInterface({
     setFormInitial(null);
   };
 
-  // Header “Add Session” button uses today as default date
-  const todayStr = fmtYMD(new Date());
-  const handleAddFromHeader = () => addItem(todayStr);
-
   // ---------- visual helpers ----------
+  const todayStr = fmtYMD(new Date());
+
   const typeColors = (type) => {
     const t = (type || '').toLowerCase();
     if (t === 'strategy') {
@@ -176,26 +189,19 @@ export default function CoachingSessionsCalendarInterface({
 
   // ---------- styles ----------
   const wrap = {
-    background:
-      'linear-gradient(145deg, rgba(17,32,51,0.96), rgba(25,118,210,0.85))',
+    background: 'transparent',
     borderRadius: 18,
-    border: '1px solid rgba(255,255,255,0.08)',
-    boxShadow:
-      '0 18px 45px rgba(0,0,0,0.38), 0 0 0 1px rgba(255,255,255,0.03)',
-    padding: 16,
+    padding: 4,
     width: '100%',
     boxSizing: 'border-box',
-    color: 'white',
-    position: 'relative',
-    overflow: 'hidden',
   };
 
   const innerCard = {
-    background: 'rgba(255,255,255,0.96)',
-    borderRadius: 14,
-    padding: 14,
-    boxShadow: '0 10px 25px rgba(0,0,0,0.18)',
-    border: '1px solid #e0e4ee',
+    background: 'rgba(255,255,255,0.97)',
+    borderRadius: 16,
+    padding: 16,
+    boxShadow: '0 14px 40px rgba(0,0,0,0.26)',
+    border: '1px solid rgba(255,255,255,0.2)',
     color: '#263238',
   };
 
@@ -204,7 +210,7 @@ export default function CoachingSessionsCalendarInterface({
     gridTemplateColumns: 'minmax(0, 2fr) minmax(0, 1.8fr)',
     alignItems: 'center',
     gap: 8,
-    marginBottom: 12,
+    marginBottom: 14,
   };
 
   const headLeft = {
@@ -215,7 +221,7 @@ export default function CoachingSessionsCalendarInterface({
 
   const headTitle = {
     fontWeight: 800,
-    fontSize: 18,
+    fontSize: 20,
     color: '#102027',
   };
 
@@ -238,13 +244,13 @@ export default function CoachingSessionsCalendarInterface({
   };
 
   const monthChip = {
-    padding: '6px 10px',
+    padding: '6px 12px',
     borderRadius: 999,
     background: '#102A43',
     color: '#E3F2FD',
     fontSize: 13,
     fontWeight: 700,
-    border: '1px solid rgba(255,255,255,0.12)',
+    border: '1px solid rgba(255,255,255,0.16)',
   };
 
   const headBtns = {
@@ -269,7 +275,7 @@ export default function CoachingSessionsCalendarInterface({
   };
 
   const todayPill = {
-    background: 'transparent',
+    background: '#ECEFF1',
     border: '1px solid #90CAF9',
     color: '#1565C0',
     padding: '4px 10px',
@@ -283,12 +289,12 @@ export default function CoachingSessionsCalendarInterface({
     background: '#FF7043',
     border: 'none',
     color: 'white',
-    padding: '6px 14px',
+    padding: '6px 16px',
     borderRadius: 999,
     cursor: 'pointer',
     fontWeight: 700,
     fontSize: 11,
-    boxShadow: '0 6px 16px rgba(255,112,67,0.55)',
+    boxShadow: '0 8px 18px rgba(255,112,67,0.55)',
     whiteSpace: 'nowrap',
   };
 
@@ -320,7 +326,7 @@ export default function CoachingSessionsCalendarInterface({
   const grid = {
     display: 'grid',
     gridTemplateColumns: 'repeat(7, minmax(0, 1fr))',
-    gridAutoRows: 'minmax(110px, 1fr)',
+    gridAutoRows: 'minmax(120px, 1fr)',
     gap: 6,
   };
 
@@ -334,7 +340,7 @@ export default function CoachingSessionsCalendarInterface({
   };
 
   const cell = (inMonth, isToday) => ({
-    borderRadius: 12,
+    borderRadius: 14,
     padding: 8,
     background: isToday
       ? 'linear-gradient(135deg, #FFF3E0, #E3F2FD)'
@@ -364,31 +370,31 @@ export default function CoachingSessionsCalendarInterface({
 
   const eventsWrap = {
     display: 'grid',
-    gap: 4,
-    marginTop: 4,
+    gap: 6,
+    marginTop: 6,
     paddingRight: 2,
   };
 
+  // full-width event cards (fix for skinny pills)
   const eventCard = (stripColor) => ({
-    marginTop: 2,
+    marginTop: 0,
     padding: '6px 8px 6px 6px',
-    borderRadius: 9,
+    borderRadius: 10,
     border: '1px solid #E0E4EE',
     position: 'relative',
-    left: eventNudge,
-    width: `calc(100% - ${eventWidthDeduct}px)`,
+    width: '100%',
     background: '#F9FBFF',
     color: '#263238',
     fontSize: 11,
     display: 'grid',
-    gridTemplateColumns: '3px 1fr',
-    gap: 6,
+    gridTemplateColumns: '4px 1fr',
+    gap: 8,
     cursor: 'pointer',
     boxShadow: '0 1px 2px rgba(15,23,42,0.15)',
   });
 
   const eventStrip = (stripColor) => ({
-    width: 3,
+    width: 4,
     borderRadius: 999,
     background: stripColor,
   });
@@ -501,7 +507,7 @@ export default function CoachingSessionsCalendarInterface({
               <button
                 type="button"
                 style={headerAddBtn}
-                onClick={handleAddFromHeader}
+                onClick={addItemToday}
               >
                 {addLabel}
               </button>
