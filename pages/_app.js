@@ -45,18 +45,18 @@ function RouteTracker() {
 export default function App({ Component, pageProps: { session, ...pageProps } }) {
   const router = useRouter();
 
-  // 🔹 Pull user wallpaper (internal pages only)
+  // Pull user wallpaper (internal pages only)
   const { wallpaperUrl } = useUserWallpaper();
 
   const isRecruiterRoute = router.pathname.startsWith('/recruiter');
 
-  // 🔹 Treat all Hearth routes as internal seeker-style pages
+  // Treat all Hearth routes as internal seeker-style pages
   const isSeekerRoute =
     router.pathname.startsWith('/seeker') ||
     router.pathname.startsWith('/resume') ||
     router.pathname.startsWith('/cover') ||
     router.pathname.startsWith('/apply') ||
-    router.pathname.startsWith('/hearth') || // 👈 NEW: /hearth/*
+    router.pathname.startsWith('/hearth') ||
     [
       '/the-hearth',
       '/jobs',
@@ -78,7 +78,7 @@ export default function App({ Component, pageProps: { session, ...pageProps } })
 
   const isSettingsRoute = router.pathname === '/settings';
 
-  // 🔹 Treat Support Center as INTERNAL (shared tool for logged-in users)
+  // Treat Support Center as internal (shared tool for logged-in users)
   const isSupportRoute =
     router.pathname === '/support' ||
     router.pathname === '/support/chat' ||
@@ -140,12 +140,13 @@ export default function App({ Component, pageProps: { session, ...pageProps } })
   const useForgeBackground =
     !isUniversalPage &&
     isPublicEffective &&
-    ['/', '/about', '/features', '/press'].includes(router.pathname);
+    ['/', '/about', '/features', '/press', '/status'].includes(router.pathname);
+  //                                                       ^ added /status
 
   const forgeBgPosition = router.pathname === '/' ? '35% center' : 'center';
   const renderLandingHeader = isPublicEffective && !isUniversalPage;
 
-  // 🔒 Only load cookie banner on production hostname
+  // Only load cookie banner on production hostname
   const isBrowser = typeof window !== 'undefined';
   const hostname = isBrowser ? window.location.hostname : '';
   const shouldLoadCookieScript =
@@ -153,16 +154,16 @@ export default function App({ Component, pageProps: { session, ...pageProps } })
     (hostname === 'forgetomorrow.com' ||
       hostname.endsWith('.forgetomorrow.com'));
 
-  // 🔹 Decide if we should show user wallpaper (INTERNAL ONLY)
+  // Decide if we should show user wallpaper (internal only)
   const shouldUseWallpaper =
     !isUniversalPage &&
-    !isPublicEffective && // never on public-facing pages
+    !isPublicEffective &&
     !!wallpaperUrl;
 
-  // 🔹 Decide if internal shell should be gray (when no wallpaper)
+  // Decide if internal shell should be gray (when no wallpaper)
   const shouldUseGrayInternalBg =
     !useForgeBackground &&
-    !isPublicEffective && // only for internal shells
+    !isPublicEffective &&
     !wallpaperUrl;
 
   return (
@@ -170,14 +171,14 @@ export default function App({ Component, pageProps: { session, ...pageProps } })
       <Head>
         <title>ForgeTomorrow</title>
         <meta name="viewport" content="width=device-width, initial-scale=1" />
-        {/* === COOKIE-SCRIPT — ONLY ONE BANNER NOW (PROD ONLY) === */}
+        {/* Cookie Script (prod only) */}
       </Head>
 
       {shouldLoadCookieScript && (
         <Script
           src="https://cdn.cookie-script.com/s/ff274d476e18526f8fd0a8c8114bbaf3.js"
           strategy="afterInteractive"
-          onLoad={() => console.log('✅ Cookie banner initialized once (prod)')}
+          onLoad={() => console.log('Cookie banner initialized once (prod)')}
         />
       )}
 
@@ -200,7 +201,7 @@ export default function App({ Component, pageProps: { session, ...pageProps } })
           </>
         )}
 
-        {/* 2) User wallpaper for INTERNAL pages */}
+        {/* 2) User wallpaper for internal pages */}
         {shouldUseWallpaper && (
           <>
             <div
@@ -236,7 +237,7 @@ export default function App({ Component, pageProps: { session, ...pageProps } })
 
             {renderLandingHeader ? <LandingFooter /> : <Footer />}
 
-            {/* Global Support Floating Button — INTERNAL PAGES ONLY */}
+            {/* Support Floating Button - internal pages only */}
             {!isPublicEffective && <SupportFloatingButton />}
           </SessionProvider>
         </div>
