@@ -511,8 +511,11 @@ model User {
   newsletterSubscriptions NewsletterSubscription[]
 
   // Recruiter calendar relations
-  recruiterCalendarOwnedItems     RecruiterCalendarItem[] @relation("UserRecruiterCalendarOwner")
-  recruiterCalendarAsCandidate    RecruiterCalendarItem[] @relation("UserRecruiterCalendarCandidate")
+  recruiterCalendarOwnedItems  RecruiterCalendarItem[] @relation("UserRecruiterCalendarOwner")
+  recruiterCalendarAsCandidate RecruiterCalendarItem[] @relation("UserRecruiterCalendarCandidate")
+
+  // Seeker calendar relations
+  seekerCalendarItems SeekerCalendarItem[] @relation("UserSeekerCalendarItems")
 
   // ── Corporate appearance overrides (ForgeTomorrow staff only) ─────────────
   corporateBannerKey    String? // e.g. "CEO", "CFO", "STAFF_GENERAL"
@@ -652,6 +655,40 @@ model RecruiterCalendarItem {
 }
 
 // ============================================================================
+//  SEEKER CALENDAR ITEMS
+// ============================================================================
+
+model SeekerCalendarItem {
+  id String @id @default(cuid())
+
+  // Owner (seeker)
+  userId String
+  user   User @relation("UserSeekerCalendarItems", fields: [userId], references: [id], onDelete: Cascade)
+
+  // Time
+  date DateTime
+  time String?
+
+  // Core info
+  title  String
+  type   String  @default("Interview") // Interview / Deadline / Reminder / Task etc.
+  status String  @default("Scheduled")
+  notes  String?
+
+  // Where this came from: 'personal' | 'coach' | 'recruiter' | 'system'
+  source       String  @default("personal")
+  sourceItemId String? // optional foreign key token back to recruiter/coach item
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([userId])
+  @@index([date])
+  @@index([source])
+  @@map("seeker_calendar_items")
+}
+
+// ============================================================================
 //  MESSAGING — CONVERSATIONS, MESSAGES, BLOCKS, REACTIONS, REPORTS
 // ============================================================================
 
@@ -665,7 +702,7 @@ model Conversation {
   channel String?
 
   createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  updatedAt DateTime @default(now())
 
   messages     Message[]
   participants ConversationParticipant[]

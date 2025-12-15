@@ -4,7 +4,7 @@ import { useRouter } from 'next/router';
 import SeekerLayout from '@/components/layouts/SeekerLayout';
 import SeekerCalendar from '@/components/calendar/SeekerCalendar';
 
-// 🔒 Live storage key — no mock bleed
+// 🔒 Live storage key — not used by the interface, kept for compatibility
 const STORAGE_KEY = 'seekerCalendar_live_v1';
 
 export default function SeekerCalendarPage() {
@@ -52,7 +52,7 @@ export default function SeekerCalendarPage() {
           fontWeight: 800,
         }}
       >
-        Your Calendar
+        Calendar
       </h1>
       <p
         style={{
@@ -61,7 +61,8 @@ export default function SeekerCalendarPage() {
           maxWidth: 720,
         }}
       >
-        Track interviews, application deadlines, and tasks in one place.
+        This is your command center for your time—scan your schedule at a
+        glance and keep interviews, deadlines, and tasks in one place.
       </p>
     </section>
   );
@@ -74,9 +75,9 @@ export default function SeekerCalendarPage() {
       activeNav="calendar"
     >
       <SeekerCalendar
-        title="Month View"
+        title="Calendar"
         storageKey={STORAGE_KEY}
-        seed={[]} // 🚫 LIVE ONLY
+        seed={[]} // currently unused by the interface – live-only
       />
     </SeekerLayout>
   );

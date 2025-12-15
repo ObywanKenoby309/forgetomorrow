@@ -1,7 +1,7 @@
 // components/calendar/SeekerCalendarInterface.js
-import React, { useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
+import SeekerCalendarEventForm from './SeekerCalendarEventForm';
 
-// Brand-friendly, neutral calendar for Seekers
 const WEEKDAYS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
 const MAX_PER_DAY = 3;
 
@@ -19,12 +19,11 @@ function fmtYMD(d) {
   return `${y}-${m}-${day}`;
 }
 
-/* ---------------- type colors (muted blues + gray, orange accent) ---------------- */
+/* ---------------- type colors ---------------- */
 function typeColors(type) {
   const t = (type || '').toLowerCase();
 
   if (t === 'strategy') {
-    // primary orange hint
     return {
       strip: '#FF7043',
       pillBg: '#FFF3E0',
@@ -32,7 +31,6 @@ function typeColors(type) {
     };
   }
   if (t === 'resume') {
-    // steel/brand blue
     return {
       strip: '#1A4B8F',
       pillBg: '#E3EDF7',
@@ -40,14 +38,12 @@ function typeColors(type) {
     };
   }
   if (t === 'interview') {
-    // slate / neutral
     return {
       strip: '#455A64',
       pillBg: '#ECEFF1',
       pillFg: '#263238',
     };
   }
-  // default neutral
   return {
     strip: '#90A4AE',
     pillBg: '#F5F7FB',
@@ -57,10 +53,19 @@ function typeColors(type) {
 
 /* ---------------- component ---------------- */
 export default function SeekerCalendarInterface({
-  title = 'My Calendar',
-  // events: [{ id, date:"YYYY-MM-DD", time, title, type }]
+  title = 'Calendar',
+  // optional initial events: [{ id, date:"YYYY-MM-DD", time, title, type, notes }]
   events = [],
+  onEventsChange, // optional callback for when events change (for future API wiring)
 }) {
+  /* ---------- local events state ---------- */
+  const [localEvents, setLocalEvents] = useState(events || []);
+
+  // if parent ever starts feeding DB-backed events, keep in sync
+  useEffect(() => {
+    setLocalEvents(events || []);
+  }, [events]);
+
   /* ---------- month nav ---------- */
   const [cursor, setCursor] = useState(() => startOfMonth(new Date()));
   const monthName = useMemo(
@@ -78,13 +83,13 @@ export default function SeekerCalendarInterface({
   /* ---------- group by date ---------- */
   const eventsByDate = useMemo(() => {
     const map = {};
-    for (const e of events || []) {
+    for (const e of localEvents || []) {
       if (!e || !e.date) continue;
       if (!map[e.date]) map[e.date] = [];
       map[e.date].push(e);
     }
     return map;
-  }, [events]);
+  }, [localEvents]);
 
   /* ---------- grid ---------- */
   const days = useMemo(() => {
@@ -103,6 +108,84 @@ export default function SeekerCalendarInterface({
   }, [cursor]);
 
   const todayStr = fmtYMD(new Date());
+
+  /* ---------- editor state ---------- */
+  const [editorOpen, setEditorOpen] = useState(false);
+  const [editorMode, setEditorMode] = useState('add');
+  const [editorInitial, setEditorInitial] = useState(null);
+  const [editingId, setEditingId] = useState(null);
+  const [saving, setSaving] = useState(false);
+
+  const openAdd = (date) => {
+    setEditorMode('add');
+    setEditingId(null);
+    setEditorInitial({
+      date: date || todayStr,
+      time: '09:00',
+      title: '',
+      type: 'Interview',
+      notes: '',
+    });
+    setEditorOpen(true);
+  };
+
+  const openEdit = (e) => {
+    setEditorMode('edit');
+    setEditingId(e.id);
+    setEditorInitial({
+      date: e.date,
+      time: e.time || '09:00',
+      title: e.title || '',
+      type: e.type || 'Interview',
+      notes: e.notes || '',
+    });
+    setEditorOpen(true);
+  };
+
+  const closeEditor = () => {
+    if (saving) return;
+    setEditorOpen(false);
+    setEditorInitial(null);
+    setEditingId(null);
+    setEditorMode('add');
+  };
+
+  const applyEvents = (next) => {
+    setLocalEvents(next);
+    onEventsChange?.(next);
+  };
+
+  const saveEvent = async (form) => {
+    // Here it's local-only; later we can drop in API calls
+    setSaving(true);
+    try {
+      if (editorMode === 'edit' && editingId) {
+        const next = localEvents.map((e) =>
+          e.id === editingId ? { ...e, ...form } : e
+        );
+        applyEvents(next);
+      } else {
+        const id = `local-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+        const next = [...localEvents, { id, ...form }];
+        applyEvents(next);
+      }
+      closeEditor();
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const deleteEvent = async () => {
+    if (!editingId) return;
+    setSaving(true);
+    try {
+      const next = localEvents.filter((e) => e.id !== editingId);
+      applyEvents(next);
+      closeEditor();
+    } finally {
+      setSaving(false);
+    }
+  };
 
   /* ---------- styles ---------- */
   const shell = {
@@ -131,7 +214,7 @@ export default function SeekerCalendarInterface({
   const titleStyle = {
     fontWeight: 800,
     fontSize: 18,
-    color: '#112033', // Steel Azure-ish
+    color: '#263238',
   };
 
   const subtitleStyle = {
@@ -213,6 +296,7 @@ export default function SeekerCalendarInterface({
     display: 'flex',
     flexDirection: 'column',
     minWidth: 0,
+    cursor: 'pointer',
   });
 
   const dateBadge = (isToday) => ({
@@ -245,6 +329,7 @@ export default function SeekerCalendarInterface({
     display: 'grid',
     gridTemplateColumns: '3px 1fr',
     gap: 6,
+    cursor: 'pointer',
   });
 
   const eventStrip = (stripColor) => ({
@@ -306,24 +391,35 @@ export default function SeekerCalendarInterface({
       <div style={header}>
         <div style={titleBlock}>
           <div style={titleStyle}>{title}</div>
-          <div style={subtitleStyle}>
-            {monthName} · Your personal schedule at a glance.
-          </div>
+          <div style={subtitleStyle}>{monthName}</div>
         </div>
 
         <div style={navGroup}>
-          <button type="button" style={navBtn} onClick={toPrev} aria-label="Previous month">
+          <button
+            type="button"
+            style={navBtn}
+            onClick={toPrev}
+            aria-label="Previous month"
+          >
             ◀
           </button>
           <button type="button" style={todayBtn} onClick={toToday}>
             Today
           </button>
-          <button type="button" style={navBtn} onClick={toNext} aria-label="Next month">
+          <button
+            type="button"
+            style={navBtn}
+            onClick={toNext}
+            aria-label="Next month"
+          >
             ▶
           </button>
-          {/* Placeholder add button – visual only for now */}
-          <button type="button" style={addBtn}>
-            + Add Item
+          <button
+            type="button"
+            style={addBtn}
+            onClick={() => openAdd()}
+          >
+            + Add Event
           </button>
         </div>
       </div>
@@ -346,7 +442,11 @@ export default function SeekerCalendarInterface({
           const extra = list.length - visible.length;
 
           return (
-            <div key={key} style={cell(inMonth, isToday)}>
+            <div
+              key={key}
+              style={cell(inMonth, isToday)}
+              onClick={() => openAdd(key)}
+            >
               <div style={dateBadge(isToday)}>{date.getDate()}</div>
 
               <div style={eventsWrap}>
@@ -357,6 +457,10 @@ export default function SeekerCalendarInterface({
                     <div
                       key={e.id || `${key}-${e.time || ''}-${e.title || ''}`}
                       style={eventCard(strip)}
+                      onClick={(event) => {
+                        event.stopPropagation();
+                        openEdit(e);
+                      }}
                     >
                       <div style={eventStrip(strip)} />
                       <div style={eventContent}>
@@ -367,25 +471,30 @@ export default function SeekerCalendarInterface({
                           <div style={eventTime}>{e.time || ''}</div>
                         </div>
                         {e.type && (
-                          <span style={typePill(pillBg, pillFg)}>
-                            {e.type}
-                          </span>
+                          <span style={typePill(pillBg, pillFg)}>{e.type}</span>
                         )}
                       </div>
                     </div>
                   );
                 })}
 
-                {extra > 0 && (
-                  <div style={moreRow}>
-                    +{extra} more
-                  </div>
-                )}
+                {extra > 0 && <div style={moreRow}>+{extra} more</div>}
               </div>
             </div>
           );
         })}
       </div>
+
+      {editorOpen && (
+        <SeekerCalendarEventForm
+          mode={editorMode}
+          initial={editorInitial}
+          onClose={closeEditor}
+          onSave={saveEvent}
+          onDelete={editorMode === 'edit' ? deleteEvent : undefined}
+          saving={saving}
+        />
+      )}
     </section>
   );
 }
