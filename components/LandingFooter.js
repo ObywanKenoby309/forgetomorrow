@@ -53,6 +53,11 @@ export default function LandingFooter() {
                   Help Center
                 </Link>
               </li>
+			  <li>
+                <Link href="/status" className="hover:text-[#FF7043] focus:text-[#FF7043] transition">
+                  Status
+                </Link>
+              </li>
             </ul>
           </div>
 
