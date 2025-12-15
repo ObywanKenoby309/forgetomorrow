@@ -1,5 +1,6 @@
 // components/calendar/CoachingSessionsCalendarInterface.js
 import React, { useMemo, useState } from 'react';
+import { useRouter } from 'next/router';
 
 function startOfMonth(date) {
   return new Date(date.getFullYear(), date.getMonth(), 1);
@@ -15,11 +16,14 @@ function fmtYMD(d) {
 }
 
 const WEEKDAYS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+const MAX_PER_DAY = 3;
 
 export default function CoachingSessionsCalendarInterface({
   title = 'Sessions Calendar',
   events = [], // [{ id, date, time, title, client, type, status, notes, participants }]
 }) {
+  const router = useRouter();
+
   // ---------- month nav (pure UI) ----------
   const [cursor, setCursor] = useState(() => startOfMonth(new Date()));
   const monthName = useMemo(
@@ -63,6 +67,20 @@ export default function CoachingSessionsCalendarInterface({
   }, [cursor]);
 
   const todayStr = fmtYMD(new Date());
+
+  // ---------- detail modal state ----------
+  const [detailOpen, setDetailOpen] = useState(false);
+  const [detailEvent, setDetailEvent] = useState(null);
+
+  const openDetails = (evt) => {
+    setDetailEvent(evt);
+    setDetailOpen(true);
+  };
+
+  const closeDetails = () => {
+    setDetailOpen(false);
+    setDetailEvent(null);
+  };
 
   // ---------- visual helpers ----------
   const typeColors = (type) => {
@@ -249,6 +267,7 @@ export default function CoachingSessionsCalendarInterface({
       ? '0 0 0 1px rgba(255,112,67,0.45)'
       : '0 1px 3px rgba(15,23,42,0.06)',
     border: isToday ? '1px solid rgba(255,112,67,0.75)' : '1px solid #E6E9EF',
+    cursor: 'pointer',
   });
 
   const dateBadge = (isToday) => ({
@@ -282,7 +301,7 @@ export default function CoachingSessionsCalendarInterface({
     display: 'grid',
     gridTemplateColumns: '3px 1fr',
     gap: 6,
-    cursor: 'default',
+    cursor: 'pointer',
     boxShadow: '0 1px 2px rgba(15,23,42,0.15)',
   });
 
@@ -362,6 +381,12 @@ export default function CoachingSessionsCalendarInterface({
     whiteSpace: 'nowrap',
   };
 
+  const moreRow = {
+    marginTop: 2,
+    fontSize: 10,
+    color: '#90A4AE',
+  };
+
   // ---------- render ----------
   return (
     <section style={wrap}>
@@ -371,8 +396,8 @@ export default function CoachingSessionsCalendarInterface({
           <div style={headLeft}>
             <div style={headTitle}>{title}</div>
             <div style={headSubtitle}>
-              {monthName} · Scroll through your month and scan every booked
-              session at a glance.
+              {monthName} · Scan your booked time at a glance. Click a day to
+              open the scheduler.
             </div>
           </div>
 
@@ -442,12 +467,21 @@ export default function CoachingSessionsCalendarInterface({
           {days.map(({ date, inMonth, key }) => {
             const isToday = key === todayStr;
             const list = eventsByDate[key] || [];
+            const visible = list.slice(0, MAX_PER_DAY);
+            const extra = list.length - visible.length;
+
             return (
-              <div key={key} style={cell(inMonth, isToday)}>
+              <div
+                key={key}
+                style={cell(inMonth, isToday)}
+                onClick={() =>
+                  router.push(`/dashboard/coaching/sessions?date=${key}`)
+                }
+              >
                 <div style={dateBadge(isToday)}>{date.getDate()}</div>
 
                 <div style={eventsWrap}>
-                  {list.map((e) => {
+                  {visible.map((e) => {
                     const { strip, pillBg, pillFg } = typeColors(e.type);
                     const statusColor = statusDotColor(e.status);
 
@@ -455,6 +489,10 @@ export default function CoachingSessionsCalendarInterface({
                       <div
                         key={e.id || `${key}-${e.time}-${e.title}`}
                         style={eventCard(strip)}
+                        onClick={(evt) => {
+                          evt.stopPropagation(); // don’t trigger day navigation
+                          openDetails(e);
+                        }}
                       >
                         <div style={eventStrip(strip)} />
                         <div style={eventContent}>
@@ -479,19 +517,146 @@ export default function CoachingSessionsCalendarInterface({
                             </div>
                             <div style={statusRow}>
                               <span style={statusDot(statusColor)} />
-                              <span>{e.status || 'Scheduled'}</span>
+                              {/* Only show text if not Scheduled */}
+                              {e.status &&
+                                e.status.toLowerCase() !== 'scheduled' && (
+                                  <span>{e.status}</span>
+                                )}
                             </div>
                           </div>
                         </div>
                       </div>
                     );
                   })}
+
+                  {extra > 0 && (
+                    <div style={moreRow}>+{extra} more</div>
+                  )}
                 </div>
               </div>
             );
           })}
         </div>
       </div>
+
+      {/* Details modal (read-only) */}
+      {detailOpen && detailEvent && (
+        <div
+          onClick={closeDetails}
+          style={{
+            position: 'fixed',
+            inset: 0,
+            background: 'rgba(0,0,0,0.45)',
+            display: 'grid',
+            placeItems: 'center',
+            padding: 16,
+            zIndex: 1000,
+          }}
+        >
+          <div
+            onClick={(e) => e.stopPropagation()}
+            style={{
+              background: 'white',
+              borderRadius: 12,
+              width: '100%',
+              maxWidth: 520,
+              boxShadow: '0 8px 24px rgba(0,0,0,0.18)',
+              overflow: 'hidden',
+            }}
+          >
+            <div
+              style={{
+                display: 'flex',
+                justifyContent: 'space-between',
+                alignItems: 'center',
+                padding: '12px 16px',
+                borderBottom: '1px solid #eee',
+              }}
+            >
+              <h3 style={{ margin: 0, color: '#FF7043' }}>
+                Session Details
+              </h3>
+              <button
+                onClick={closeDetails}
+                style={{
+                  background: 'transparent',
+                  border: 'none',
+                  fontSize: 22,
+                  lineHeight: 1,
+                  cursor: 'pointer',
+                  color: '#999',
+                }}
+                aria-label="Close"
+              >
+                ×
+              </button>
+            </div>
+
+            <div
+              style={{
+                display: 'grid',
+                gap: 10,
+                padding: 16,
+                fontSize: 14,
+                color: '#37474F',
+              }}
+            >
+              <div>
+                <strong>Title</strong>
+                <div>{detailEvent.title || detailEvent.client || 'Session'}</div>
+              </div>
+
+              <div
+                style={{
+                  display: 'grid',
+                  gridTemplateColumns: '1fr 1fr',
+                  gap: 10,
+                }}
+              >
+                <div>
+                  <strong>Date</strong>
+                  <div>{detailEvent.date}</div>
+                </div>
+                <div>
+                  <strong>Time</strong>
+                  <div>{detailEvent.time}</div>
+                </div>
+              </div>
+
+              <div
+                style={{
+                  display: 'grid',
+                  gridTemplateColumns: '1fr 1fr',
+                  gap: 10,
+                }}
+              >
+                <div>
+                  <strong>Type</strong>
+                  <div>{detailEvent.type}</div>
+                </div>
+                <div>
+                  <strong>Status</strong>
+                  <div>{detailEvent.status}</div>
+                </div>
+              </div>
+
+              {detailEvent.participants && (
+                <div>
+                  <strong>Participants</strong>
+                  <div>{detailEvent.participants}</div>
+                </div>
+              )}
+
+              {detailEvent.notes && (
+                <div>
+                  <strong>Notes</strong>
+                  <div>{detailEvent.notes}</div>
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
     </section>
   );
 }
