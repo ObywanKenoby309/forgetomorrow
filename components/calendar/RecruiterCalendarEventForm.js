@@ -3,7 +3,7 @@ import React, { useEffect, useRef, useState } from 'react';
 
 export default function RecruiterCalendarEventForm({
   mode = 'add', // 'add' | 'edit'
-  initial = null,
+  initial = null, // { id?, title, date, time, candidateType, candidateUserId, candidateName, type, status, notes, calendarScope }
   onClose,
   onSave,
   onDelete,
@@ -14,39 +14,46 @@ export default function RecruiterCalendarEventForm({
   const firstRef = useRef(null);
   const [confirmingDelete, setConfirmingDelete] = useState(false);
 
+  // ───────────── Form state ─────────────
   const [form, setForm] = useState(() => {
     const today = new Date().toISOString().slice(0, 10);
 
-    const initialCandidateType =
+    const candidateType =
       initial?.candidateType === 'internal' || initial?.candidateType === 'external'
         ? initial.candidateType
         : initial?.candidateUserId
         ? 'internal'
         : 'external';
 
-    const initialScope =
-      initial?.scope === 'team' || initial?.scope === 'personal'
-        ? initial.scope
+    const calendarScope =
+      initial?.calendarScope === 'personal' || initial?.calendarScope === 'team'
+        ? initial.calendarScope
         : 'team';
 
     return {
       title: initial?.title || '',
       date: initial?.date || today,
       time: initial?.time || '09:00',
-      type: initial?.type || typeChoices[0] || 'Interview',
-      status: initial?.status || statusChoices[0] || 'Scheduled',
-      notes: initial?.notes || '',
-      candidateType: initialCandidateType,
+      candidateType,
       candidateUserId: initial?.candidateUserId || null,
       candidateName:
         initial?.candidateName ||
         initial?.candidate ||
         '',
-      scope: initialScope, // 'team' | 'personal'
+      type: initial?.type || typeChoices[0] || 'Interview',
+      status: initial?.status || statusChoices[0] || 'Scheduled',
+      notes: initial?.notes || '',
+      calendarScope, // 'team' | 'personal'
     };
   });
 
-  // Contacts search state (for internal candidates)
+  const update = (key, value) =>
+    setForm((f) => ({
+      ...f,
+      [key]: value,
+    }));
+
+  // ───────────── Contacts search (internal candidates) ─────────────
   const [candidateSearchTerm, setCandidateSearchTerm] = useState(
     (initial?.candidateType === 'internal' &&
       (initial?.candidateName || initial?.candidate)) ||
@@ -56,12 +63,6 @@ export default function RecruiterCalendarEventForm({
   const [candidateSearchLoading, setCandidateSearchLoading] = useState(false);
   const [candidateSearchError, setCandidateSearchError] = useState('');
 
-  const update = (key, value) =>
-    setForm((f) => ({
-      ...f,
-      [key]: value,
-    }));
-
   useEffect(() => {
     if (firstRef.current) firstRef.current.focus();
     const onEsc = (e) => e.key === 'Escape' && onClose?.();
@@ -69,7 +70,6 @@ export default function RecruiterCalendarEventForm({
     return () => document.removeEventListener('keydown', onEsc);
   }, [onClose]);
 
-  // Internal contacts search
   useEffect(() => {
     if (form.candidateType !== 'internal') return;
 
@@ -102,7 +102,6 @@ export default function RecruiterCalendarEventForm({
         }
 
         const data = await res.json().catch(() => ({}));
-
         let results = [];
         if (Array.isArray(data.contacts)) {
           results = data.contacts;
@@ -157,6 +156,7 @@ export default function RecruiterCalendarEventForm({
     setCandidateSearchError('');
   };
 
+  // ───────────── Styles ─────────────
   const label = {
     fontSize: 12,
     color: '#607D8B',
@@ -175,10 +175,24 @@ export default function RecruiterCalendarEventForm({
     fontSize: 14,
   };
 
+  const calendarToggleButton = (active) => ({
+    borderRadius: 999,
+    border: active ? '1px solid #1A4B8F' : '1px solid #CFD8DC',
+    background: active ? 'rgba(26,75,143,0.08)' : '#FFFFFF',
+    color: active ? '#1A4B8F' : '#455A64',
+    padding: '6px 12px',
+    fontSize: 12,
+    fontWeight: 600,
+    cursor: 'pointer',
+    minWidth: 70,
+  });
+
+  // ───────────── Submit ─────────────
   const handleSubmit = (e) => {
     e.preventDefault();
 
-    if (!form.title.trim()) {
+    const title = (form.title || '').trim();
+    if (!title) {
       alert('Title is required.');
       return;
     }
@@ -187,15 +201,15 @@ export default function RecruiterCalendarEventForm({
       return;
     }
 
-    const candidateNameTrimmed = (form.candidateName || '').trim();
+    const name = (form.candidateName || '').trim();
 
     if (form.candidateType === 'internal') {
       if (!form.candidateUserId) {
-        alert('Please select a Forge contact for this candidate.');
+        alert('Please select a Forge candidate from your contacts.');
         return;
       }
     } else {
-      if (!candidateNameTrimmed) {
+      if (!name) {
         alert('Please enter a candidate name.');
         return;
       }
@@ -203,10 +217,12 @@ export default function RecruiterCalendarEventForm({
 
     onSave?.({
       ...form,
-      candidateName: candidateNameTrimmed,
+      title,
+      candidateName: name,
     });
   };
 
+  // ───────────── Render ─────────────
   return (
     <div
       onClick={onClose}
@@ -227,21 +243,22 @@ export default function RecruiterCalendarEventForm({
           background: 'linear-gradient(135deg,#FFFFFF,#F9FAFB)',
           borderRadius: 16,
           width: '100%',
-          maxWidth: 540,
+          maxWidth: 860,
           boxShadow: '0 24px 60px rgba(15,23,42,0.55)',
           overflow: 'hidden',
           color: '#263238',
           border: '1px solid rgba(148,163,184,0.7)',
         }}
       >
-        {/* Header */}
+        {/* Header with title + calendar toggle (Option 2 layout) */}
         <div
           style={{
             display: 'flex',
             justifyContent: 'space-between',
             alignItems: 'center',
-            padding: '14px 18px',
+            padding: '14px 20px',
             borderBottom: '1px solid #E5E7EB',
+            gap: 16,
           }}
         >
           <div>
@@ -250,41 +267,70 @@ export default function RecruiterCalendarEventForm({
                 margin: 0,
                 color: '#112033',
                 fontSize: 18,
-                fontWeight: 800,
+                fontWeight: 700,
               }}
             >
               {mode === 'edit' ? 'Edit Calendar Item' : 'Add Calendar Item'}
             </h3>
           </div>
-          <button
-            type="button"
-            onClick={onClose}
+
+          <div
             style={{
-              border: 'none',
-              background: 'transparent',
-              fontSize: 18,
-              cursor: 'pointer',
-              color: '#90A4AE',
-              lineHeight: 1,
+              display: 'flex',
+              flexDirection: 'column',
+              alignItems: 'flex-end',
+              gap: 6,
             }}
-            aria-label="Close"
           >
-            ×
-          </button>
+            <span
+              style={{
+                fontSize: 11,
+                textTransform: 'uppercase',
+                letterSpacing: '0.12em',
+                color: '#90A4AE',
+                fontWeight: 600,
+              }}
+            >
+              Calendar
+            </span>
+            <div style={{ display: 'flex', gap: 8 }}>
+              <button
+                type="button"
+                onClick={() => update('calendarScope', 'team')}
+                style={calendarToggleButton(form.calendarScope === 'team')}
+                disabled={saving}
+              >
+                Team
+              </button>
+              <button
+                type="button"
+                onClick={() => update('calendarScope', 'personal')}
+                style={calendarToggleButton(form.calendarScope === 'personal')}
+                disabled={saving}
+              >
+                Personal (only me)
+              </button>
+            </div>
+          </div>
         </div>
 
         {/* Body */}
         <form
           onSubmit={handleSubmit}
-          style={{ display: 'grid', gap: 14, padding: '16px 18px 18px' }}
+          style={{
+            display: 'grid',
+            gap: 14,
+            padding: '16px 20px 20px',
+          }}
         >
           {/* Title */}
           <div>
-            <label style={label}>Title *</label>
+            <label style={label}>
+              Title <span style={{ color: '#EF6C00' }}>*</span>
+            </label>
             <input
               ref={firstRef}
               type="text"
-              name="title"
               value={form.title}
               onChange={(e) => update('title', e.target.value)}
               style={input}
@@ -294,16 +340,7 @@ export default function RecruiterCalendarEventForm({
 
           {/* Candidate type */}
           <div>
-            <div
-              style={{
-                display: 'flex',
-                justifyContent: 'space-between',
-                alignItems: 'baseline',
-                marginBottom: 4,
-              }}
-            >
-              <span style={label}>Candidate Type</span>
-            </div>
+            <div style={{ ...label, marginBottom: 4 }}>Candidate Type</div>
             <div style={{ display: 'flex', gap: 24, fontSize: 13 }}>
               <label style={{ cursor: 'pointer', color: '#37474F' }}>
                 <input
@@ -363,7 +400,7 @@ export default function RecruiterCalendarEventForm({
                   }}
                 >
                   <span>
-                    Selected: {form.candidateName || '(no name)'}
+                    Selected: {form.candidateName || '(no name provided)'}
                   </span>
                   <button
                     type="button"
@@ -522,72 +559,13 @@ export default function RecruiterCalendarEventForm({
               >
                 {(statusChoices.length
                   ? statusChoices
-                  : ['Scheduled', 'Completed', 'Rescheduled', 'Cancelled']
+                  : ['Scheduled', 'Completed', 'Canceled']
                 ).map((s) => (
                   <option key={s} value={s}>
                     {s}
                   </option>
                 ))}
               </select>
-            </div>
-          </div>
-
-          {/* Scope: Team vs Personal */}
-          <div>
-            <div style={label}>Calendar</div>
-            <div style={{ display: 'flex', gap: 8 }}>
-              <button
-                type="button"
-                onClick={() => update('scope', 'team')}
-                style={{
-                  flex: '0 0 auto',
-                  padding: '6px 12px',
-                  borderRadius: 999,
-                  border:
-                    form.scope === 'team'
-                      ? '1px solid #1A4B8F'
-                      : '1px solid #CFD8DC',
-                  background:
-                    form.scope === 'team'
-                      ? 'rgba(26,75,143,0.08)'
-                      : '#FFFFFF',
-                  color:
-                    form.scope === 'team'
-                      ? '#1A4B8F'
-                      : '#455A64',
-                  fontSize: 12,
-                  fontWeight: 600,
-                  cursor: 'pointer',
-                }}
-              >
-                Team
-              </button>
-              <button
-                type="button"
-                onClick={() => update('scope', 'personal')}
-                style={{
-                  flex: '0 0 auto',
-                  padding: '6px 12px',
-                  borderRadius: 999,
-                  border:
-                    form.scope === 'personal'
-                      ? '1px solid #FF7043'
-                      : '1px solid #CFD8DC',
-                  background:
-                    form.scope === 'personal'
-                      ? 'rgba(255,112,67,0.08)'
-                      : '#FFFFFF',
-                  color:
-                    form.scope === 'personal'
-                      ? '#FF7043'
-                      : '#455A64',
-                  fontSize: 12,
-                  fontWeight: 600,
-                  cursor: 'pointer',
-                }}
-              >
-                Personal (only me)
-              </button>
             </div>
           </div>
 
@@ -640,7 +618,7 @@ export default function RecruiterCalendarEventForm({
                   }}
                 >
                   <span style={{ color: '#B71C1C', fontSize: 12 }}>
-                    Delete this item?
+                    Delete this calendar item?
                   </span>
                   <button
                     type="button"
@@ -715,7 +693,11 @@ export default function RecruiterCalendarEventForm({
                     opacity: saving ? 0.7 : 1,
                   }}
                 >
-                  {saving ? 'Saving…' : 'Save'}
+                  {saving
+                    ? 'Saving…'
+                    : mode === 'edit'
+                    ? 'Save Changes'
+                    : 'Save'}
                 </button>
               </div>
             )}
