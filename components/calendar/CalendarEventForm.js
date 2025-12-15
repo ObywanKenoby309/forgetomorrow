@@ -22,7 +22,7 @@ export default function CalendarEventForm({
     date: initial?.date || new Date().toISOString().slice(0, 10),
     idx: typeof initial?.idx === 'number' ? initial.idx : null,
     origDate: initial?.date || null,
-    participants: initial?.participants || '', // 🔹 NEW
+    participants: initial?.participants || '',
   }));
 
   useEffect(() => {
@@ -38,12 +38,17 @@ export default function CalendarEventForm({
     marginBottom: 4,
     display: 'block',
   };
+
+  // Explicit colors so text is visible regardless of global theme
   const input = {
     border: '1px solid #DADCE0',
     borderRadius: 8,
     padding: '8px 10px',
     width: '100%',
     outline: 'none',
+    background: '#FFFFFF',
+    color: '#263238',
+    fontSize: 14,
   };
 
   const handleChange = (e) =>
@@ -77,6 +82,7 @@ export default function CalendarEventForm({
           maxWidth: 520,
           boxShadow: '0 8px 24px rgba(0,0,0,0.15)',
           overflow: 'hidden',
+          color: '#263238',
         }}
       >
         {/* Header */}
@@ -250,9 +256,7 @@ export default function CalendarEventForm({
                     gap: 8,
                   }}
                 >
-                  <span
-                    style={{ color: '#B71C1C', fontSize: 12 }}
-                  >
+                  <span style={{ color: '#B71C1C', fontSize: 12 }}>
                     Delete this item?
                   </span>
                   <button
