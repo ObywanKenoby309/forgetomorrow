@@ -1,5 +1,5 @@
 // pages/api/recruiter/calendar.js
-import prisma from '@/lib/prisma';
+import { prisma } from '@/lib/prisma';
 import { getClientSession } from '@/lib/auth-client'; // adjust if your auth helper lives elsewhere
 
 function toDateOnlyString(date) {
