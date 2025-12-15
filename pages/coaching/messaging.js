@@ -1,7 +1,7 @@
 // pages/coaching/messaging.js
 import { useState, useEffect } from "react";
 import { useRouter } from "next/router";
-import { PlanProvider, usePlan } from "@/context/PlanContext";
+import { PlanProvider } from "@/context/PlanContext";
 import CoachingLayout from "@/components/layouts/CoachingLayout";
 import MessageThread from "@/components/recruiter/MessageThread";
 import SavedReplies from "@/components/recruiter/SavedReplies";
@@ -10,7 +10,7 @@ import { SecondaryButton } from "@/components/ui/Buttons";
 import { getClientSession } from "@/lib/auth-client";
 
 /* ---------------------------------------------
-   HEADER CARD WRAPPER (matches CoachingLayout default)
+   HEADER CARD WRAPPER
 ---------------------------------------------- */
 function HeaderCard({ children }) {
   return (
@@ -33,53 +33,35 @@ function HeaderCard({ children }) {
    HEADER BAR
 ---------------------------------------------- */
 function HeaderBar({ onOpenBulk }) {
-  const { isEnterprise } = usePlan();
-
   return (
     <div className="grid grid-cols-1 md:grid-cols-3 items-center gap-3">
       <div className="hidden md:block" />
       <div className="text-center">
         <h1 className="text-2xl font-bold text-[#FF7043]">Messaging</h1>
         <p className="text-sm text-slate-600 mt-1 max-w-xl mx-auto">
-          View and reply to conversations with seekers and clients. Bulk
-          messaging is available on Enterprise.
+          Communicate with your clients and seekers in one place. Send one-to-one
+          messages or group updates to support the people you’re actively coaching.
         </p>
       </div>
       <div className="justify-self-center md:justify-self-end">
-        {isEnterprise ? (
-          <SecondaryButton onClick={onOpenBulk}>Bulk Message</SecondaryButton>
-        ) : (
-          <span className="relative inline-block align-middle group">
-            <SecondaryButton onClick={(e) => e.preventDefault()}>
-              Bulk Message
-            </SecondaryButton>
-            <span
-              className="
-                absolute -top-10 right-0 hidden group-hover:block
-                whitespace-nowrap rounded-md border bg-white px-3 py-1 text-xs
-                shadow-md text-slate-700
-              "
-              style={{ zIndex: 30 }}
-            >
-              🔒 Upgrade to use Bulk Messaging
-            </span>
-          </span>
-        )}
+        <SecondaryButton onClick={onOpenBulk}>
+          Group Message
+        </SecondaryButton>
       </div>
     </div>
   );
 }
 
 /* ---------------------------------------------
-   RIGHT SIDEBAR CARD + AD SLOT
+   RIGHT SIDEBAR
 ---------------------------------------------- */
 function RightToolsCard() {
   return (
     <div className="rounded-lg border bg-white p-4">
       <div className="font-medium mb-2">Tips</div>
       <div className="text-sm text-slate-600 space-y-2">
-        <p>Keep bulk messages short and human.</p>
-        <p>Use saved replies for common touchpoints, then personalize.</p>
+        <p>Group messages work best for updates, reminders, and shared guidance.</p>
+        <p>Saved replies can help with common check-ins — personal notes still matter.</p>
       </div>
     </div>
   );
@@ -90,19 +72,18 @@ function RightRail() {
     <div className="space-y-4">
       <RightToolsCard />
 
-      {/* Advertisement slot */}
       <div className="rounded-lg border bg-white p-4">
         <div className="font-medium mb-2">Sponsored</div>
         <div className="text-sm text-slate-600">
           Your advertisement could be here.
           <br />
           Contact{" "}
-            <a
-              href="mailto:sales@forgetomorrow.com"
-              className="text-[#FF7043] underline"
-            >
-              sales@forgetomorrow.com
-            </a>
+          <a
+            href="mailto:sales@forgetomorrow.com"
+            className="text-[#FF7043] underline"
+          >
+            sales@forgetomorrow.com
+          </a>
           .
         </div>
       </div>
@@ -122,14 +103,11 @@ function Body({
   initialThreadId,
   prefillText,
 }) {
-  const { isEnterprise } = usePlan();
-
   const onBulkSend = (ids, text) => {
-    console.log("COACH BULK SEND", { ids, text });
+    console.log("COACH GROUP SEND", { ids, text });
     setBulkOpen(false);
   };
 
-  // Prefill logic when arriving from Coach → Clients → Message seeker
   useEffect(() => {
     if (!initialThreadId) return;
     if (!prefillText || !prefillText.trim()) return;
@@ -144,19 +122,15 @@ function Body({
 
   return (
     <main className="space-y-6">
-      {/* Explainer: how to start new threads */}
       <div className="mb-2 rounded-md border border-slate-200 bg-slate-50 px-4 py-3 text-xs text-slate-700">
         <p className="text-[11px] font-semibold uppercase tracking-wide text-slate-500">
           How messaging works
         </p>
         <p className="mt-1">
-          To start a new conversation, open your{" "}
-          <span className="font-semibold">Clients</span> (or Seekers) view and
-          click <span className="font-mono text-[11px]">Message</span> on any
-          card. We&apos;ll ask whether to use your{" "}
-          <span className="font-semibold">Coach inbox</span> or your{" "}
-          <span className="font-semibold">Signal (personal)</span> inbox, and
-          that thread will appear here.
+          Start conversations from a client or seeker profile by clicking{" "}
+          <span className="font-semibold">Message</span>. You can also send group
+          updates for newsletters, reminders, or shared guidance. All replies stay
+          organized here so you can focus on coaching.
         </p>
       </div>
 
@@ -179,14 +153,12 @@ function Body({
         }}
       />
 
-      {isEnterprise && (
-        <BulkMessageModal
-          open={bulkOpen}
-          onClose={() => setBulkOpen(false)}
-          candidates={candidatesFlat}
-          onSend={onBulkSend}
-        />
-      )}
+      <BulkMessageModal
+        open={bulkOpen}
+        onClose={() => setBulkOpen(false)}
+        candidates={candidatesFlat}
+        onSend={onBulkSend}
+      />
     </main>
   );
 }
@@ -211,38 +183,25 @@ export default function CoachMessagingPage() {
   const prefillText =
     typeof router.query.prefill === "string" ? router.query.prefill : "";
 
-  /* ---------------------------------------------
-     1) LOAD USER — avoid false redirects
-  ---------------------------------------------- */
   useEffect(() => {
     let cancelled = false;
 
     async function loadUser() {
       try {
         const session = await getClientSession();
-
-        // Hydration delay: don't redirect yet if session is temporarily null
         if (!session) return;
 
         if (!session.user?.id) {
-          if (!cancelled) {
-            await router.replace("/auth/signin");
-          }
+          if (!cancelled) await router.replace("/auth/signin");
           return;
         }
 
-        if (!cancelled) {
-          setCurrentUserId(session.user.id);
-        }
+        if (!cancelled) setCurrentUserId(session.user.id);
       } catch (err) {
         console.error("Failed to load session for coach messaging:", err);
-        if (!cancelled) {
-          await router.replace("/auth/signin");
-        }
+        if (!cancelled) await router.replace("/auth/signin");
       } finally {
-        if (!cancelled) {
-          setLoadingUser(false);
-        }
+        if (!cancelled) setLoadingUser(false);
       }
     }
 
@@ -252,9 +211,6 @@ export default function CoachMessagingPage() {
     };
   }, [router]);
 
-  /* ---------------------------------------------
-     2) fetchJson helper
-  ---------------------------------------------- */
   async function fetchJson(url, options = {}) {
     if (!currentUserId) {
       throw new Error("No current user id resolved yet");
@@ -276,9 +232,6 @@ export default function CoachMessagingPage() {
     return res.json();
   }
 
-  /* ---------------------------------------------
-     3) LOAD THREADS  (channel=coach)
-  ---------------------------------------------- */
   useEffect(() => {
     if (!currentUserId) return;
     let cancelled = false;
@@ -356,12 +309,8 @@ export default function CoachMessagingPage() {
     };
   }, [queryConversationId, currentUserId]);
 
-  /* ---------------------------------------------
-     4) SEND MESSAGES  (channel=coach)
-  ---------------------------------------------- */
   const onSend = async (threadId, text) => {
     if (!text || !String(text).trim()) return;
-
     const trimmed = text.trim();
 
     try {
@@ -400,9 +349,6 @@ export default function CoachMessagingPage() {
     }
   };
 
-  /* ---------------------------------------------
-     LOADING STATE (only while session resolves)
-  ---------------------------------------------- */
   if (loadingUser) {
     return (
       <PlanProvider>
@@ -425,9 +371,6 @@ export default function CoachMessagingPage() {
     );
   }
 
-  /* ---------------------------------------------
-     RENDER PAGE (even if threads = [])
-  ---------------------------------------------- */
   return (
     <PlanProvider>
       <CoachingLayout
@@ -444,7 +387,7 @@ export default function CoachMessagingPage() {
         <Body
           threads={threads}
           onSend={onSend}
-          candidatesFlat={[]} // no fake placeholder clients
+          candidatesFlat={[]}
           bulkOpen={bulkOpen}
           setBulkOpen={setBulkOpen}
           initialThreadId={initialThreadId}
