@@ -1,15 +1,19 @@
 // pages/seeker/calendar.js
-import React, { useEffect } from 'react';
+import React, { useEffect, useState, useCallback } from 'react';
 import { useRouter } from 'next/router';
 import SeekerLayout from '@/components/layouts/SeekerLayout';
 import SeekerCalendar from '@/components/calendar/SeekerCalendar';
 
-// 🔒 Live storage key — not used by the interface, kept for compatibility
+// 🔒 Key is kept for historical reasons; no localStorage usage anymore
 const STORAGE_KEY = 'seekerCalendar_live_v1';
+const API_URL = '/api/seeker/calendar';
 
 export default function SeekerCalendarPage() {
   const router = useRouter();
   const chrome = String(router.query.chrome || 'seeker').toLowerCase();
+
+  const [events, setEvents] = useState([]);
+  const [loading, setLoading] = useState(true);
 
   /**
    * 🚨 HARD GATE
@@ -33,6 +37,49 @@ export default function SeekerCalendarPage() {
     return null;
   }
 
+  const loadEvents = useCallback(async () => {
+    try {
+      setLoading(true);
+
+      const res = await fetch(API_URL);
+      if (res.status === 401) {
+        // Not logged in → send to login
+        router.push('/login');
+        return;
+      }
+
+      if (!res.ok) {
+        console.error('Failed to load seeker calendar items:', res.status);
+        setEvents([]);
+        return;
+      }
+
+      const data = await res.json().catch(() => ({}));
+      const items = Array.isArray(data.items) ? data.items : [];
+
+      const mapped = items.map((item) => ({
+        id: item.id,
+        date: item.date ? String(item.date).slice(0, 10) : null, // YYYY-MM-DD
+        time: item.time || '',
+        title: item.title || '',
+        type: item.type || '',
+        status: item.status || '',
+        notes: item.notes || '',
+      }));
+
+      setEvents(mapped);
+    } catch (err) {
+      console.error('Error loading seeker calendar items:', err);
+      setEvents([]);
+    } finally {
+      setLoading(false);
+    }
+  }, [router]);
+
+  useEffect(() => {
+    loadEvents();
+  }, [loadEvents]);
+
   const HeaderBox = (
     <section
       style={{
@@ -52,7 +99,7 @@ export default function SeekerCalendarPage() {
           fontWeight: 800,
         }}
       >
-        Calendar
+        Your Calendar
       </h1>
       <p
         style={{
@@ -61,8 +108,7 @@ export default function SeekerCalendarPage() {
           maxWidth: 720,
         }}
       >
-        This is your command center for your time—scan your schedule at a
-        glance and keep interviews, deadlines, and tasks in one place.
+        Track interviews, application deadlines, and tasks in one place.
       </p>
     </section>
   );
@@ -75,9 +121,10 @@ export default function SeekerCalendarPage() {
       activeNav="calendar"
     >
       <SeekerCalendar
-        title="Calendar"
-        storageKey={STORAGE_KEY}
-        seed={[]} // currently unused by the interface – live-only
+        title={loading ? 'My Calendar (loading…) ' : 'My Calendar'}
+        events={events}
+        onRefresh={loadEvents}
+        storageKey={STORAGE_KEY} // harmless; calendar ignores it
       />
     </SeekerLayout>
   );

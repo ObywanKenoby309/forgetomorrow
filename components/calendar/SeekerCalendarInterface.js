@@ -1,7 +1,8 @@
 // components/calendar/SeekerCalendarInterface.js
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useMemo, useState } from 'react';
 import SeekerCalendarEventForm from './SeekerCalendarEventForm';
 
+// Brand-friendly, neutral calendar for Seekers
 const WEEKDAYS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
 const MAX_PER_DAY = 3;
 
@@ -19,11 +20,12 @@ function fmtYMD(d) {
   return `${y}-${m}-${day}`;
 }
 
-/* ---------------- type colors ---------------- */
+/* ---------------- type colors (muted blues + gray, orange accent) ---------------- */
 function typeColors(type) {
   const t = (type || '').toLowerCase();
 
   if (t === 'strategy') {
+    // primary orange hint
     return {
       strip: '#FF7043',
       pillBg: '#FFF3E0',
@@ -31,6 +33,7 @@ function typeColors(type) {
     };
   }
   if (t === 'resume') {
+    // steel/brand blue
     return {
       strip: '#1A4B8F',
       pillBg: '#E3EDF7',
@@ -38,12 +41,14 @@ function typeColors(type) {
     };
   }
   if (t === 'interview') {
+    // slate / neutral
     return {
       strip: '#455A64',
       pillBg: '#ECEFF1',
       pillFg: '#263238',
     };
   }
+  // default neutral
   return {
     strip: '#90A4AE',
     pillBg: '#F5F7FB',
@@ -53,19 +58,11 @@ function typeColors(type) {
 
 /* ---------------- component ---------------- */
 export default function SeekerCalendarInterface({
-  title = 'Calendar',
-  // optional initial events: [{ id, date:"YYYY-MM-DD", time, title, type, notes }]
+  title = 'My Calendar',
+  // events: [{ id, date:"YYYY-MM-DD", time, title, type, status, notes }]
   events = [],
-  onEventsChange, // optional callback for when events change (for future API wiring)
+  onRefresh,
 }) {
-  /* ---------- local events state ---------- */
-  const [localEvents, setLocalEvents] = useState(events || []);
-
-  // if parent ever starts feeding DB-backed events, keep in sync
-  useEffect(() => {
-    setLocalEvents(events || []);
-  }, [events]);
-
   /* ---------- month nav ---------- */
   const [cursor, setCursor] = useState(() => startOfMonth(new Date()));
   const monthName = useMemo(
@@ -83,13 +80,13 @@ export default function SeekerCalendarInterface({
   /* ---------- group by date ---------- */
   const eventsByDate = useMemo(() => {
     const map = {};
-    for (const e of localEvents || []) {
+    for (const e of events || []) {
       if (!e || !e.date) continue;
       if (!map[e.date]) map[e.date] = [];
       map[e.date].push(e);
     }
     return map;
-  }, [localEvents]);
+  }, [events]);
 
   /* ---------- grid ---------- */
   const days = useMemo(() => {
@@ -111,19 +108,22 @@ export default function SeekerCalendarInterface({
 
   /* ---------- editor state ---------- */
   const [editorOpen, setEditorOpen] = useState(false);
-  const [editorMode, setEditorMode] = useState('add');
+  const [editorMode, setEditorMode] = useState('add'); // 'add' | 'edit'
   const [editorInitial, setEditorInitial] = useState(null);
   const [editingId, setEditingId] = useState(null);
   const [saving, setSaving] = useState(false);
 
-  const openAdd = (date) => {
+  const openAdd = (dateKey) => {
+    const baseDate = dateKey || todayStr;
+
     setEditorMode('add');
     setEditingId(null);
     setEditorInitial({
-      date: date || todayStr,
+      date: baseDate,
       time: '09:00',
       title: '',
       type: 'Interview',
+      status: 'Scheduled',
       notes: '',
     });
     setEditorOpen(true);
@@ -133,10 +133,11 @@ export default function SeekerCalendarInterface({
     setEditorMode('edit');
     setEditingId(e.id);
     setEditorInitial({
-      date: e.date,
+      date: e.date || todayStr,
       time: e.time || '09:00',
       title: e.title || '',
       type: e.type || 'Interview',
+      status: e.status || 'Scheduled',
       notes: e.notes || '',
     });
     setEditorOpen(true);
@@ -150,40 +151,85 @@ export default function SeekerCalendarInterface({
     setEditorMode('add');
   };
 
-  const applyEvents = (next) => {
-    setLocalEvents(next);
-    onEventsChange?.(next);
-  };
+  /* ---------- save / delete via API ---------- */
 
-  const saveEvent = async (form) => {
-    // Here it's local-only; later we can drop in API calls
-    setSaving(true);
+  const saveItem = async (form) => {
+    if (!form.date || !form.time || !form.title?.trim()) {
+      alert('Date, time, and title are required.');
+      return;
+    }
+
+    const payloadBase = {
+      date: form.date,
+      time: form.time,
+      title: form.title.trim(),
+      type: form.type,
+      status: form.status,
+      notes: form.notes || '',
+    };
+
     try {
-      if (editorMode === 'edit' && editingId) {
-        const next = localEvents.map((e) =>
-          e.id === editingId ? { ...e, ...form } : e
+      setSaving(true);
+      const method =
+        editorMode === 'edit' && editingId ? 'PUT' : 'POST';
+
+      const res = await fetch('/api/seeker/calendar', {
+        method,
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(
+          method === 'PUT'
+            ? { id: editingId, ...payloadBase }
+            : payloadBase
+        ),
+      });
+
+      if (!res.ok) {
+        console.error(
+          'Failed to save seeker calendar item',
+          res.status,
+          await res.text().catch(() => '')
         );
-        applyEvents(next);
-      } else {
-        const id = `local-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
-        const next = [...localEvents, { id, ...form }];
-        applyEvents(next);
+        alert('Could not save event. Please try again.');
+        return;
       }
-      closeEditor();
+    } catch (err) {
+      console.error('Error saving seeker calendar item:', err);
+      alert('Could not save event. Please try again.');
     } finally {
       setSaving(false);
+      closeEditor();
+      onRefresh?.();
     }
   };
 
-  const deleteEvent = async () => {
+  const deleteItem = async () => {
     if (!editingId) return;
-    setSaving(true);
+    if (!confirm('Delete this event?')) return;
+
     try {
-      const next = localEvents.filter((e) => e.id !== editingId);
-      applyEvents(next);
-      closeEditor();
+      setSaving(true);
+      const res = await fetch('/api/seeker/calendar', {
+        method: 'DELETE',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ id: editingId }),
+      });
+
+      if (!res.ok) {
+        console.error(
+          'Failed to delete seeker calendar item',
+          res.status,
+          await res.text().catch(() => '')
+        );
+        alert('Could not delete event. Please try again.');
+        return;
+      }
+    } catch (err) {
+      console.error('Error deleting seeker calendar item:', err);
+      alert('Could not delete event. Please try again.');
     } finally {
       setSaving(false);
+      closeEditor();
+      onRefresh?.();
     }
   };
 
@@ -214,7 +260,7 @@ export default function SeekerCalendarInterface({
   const titleStyle = {
     fontWeight: 800,
     fontSize: 18,
-    color: '#263238',
+    color: '#112033', // Steel Azure-ish
   };
 
   const subtitleStyle = {
@@ -329,7 +375,6 @@ export default function SeekerCalendarInterface({
     display: 'grid',
     gridTemplateColumns: '3px 1fr',
     gap: 6,
-    cursor: 'pointer',
   });
 
   const eventStrip = (stripColor) => ({
@@ -391,27 +436,19 @@ export default function SeekerCalendarInterface({
       <div style={header}>
         <div style={titleBlock}>
           <div style={titleStyle}>{title}</div>
-          <div style={subtitleStyle}>{monthName}</div>
+          <div style={subtitleStyle}>
+            {monthName} · Your personal schedule at a glance.
+          </div>
         </div>
 
         <div style={navGroup}>
-          <button
-            type="button"
-            style={navBtn}
-            onClick={toPrev}
-            aria-label="Previous month"
-          >
+          <button type="button" style={navBtn} onClick={toPrev} aria-label="Previous month">
             ◀
           </button>
           <button type="button" style={todayBtn} onClick={toToday}>
             Today
           </button>
-          <button
-            type="button"
-            style={navBtn}
-            onClick={toNext}
-            aria-label="Next month"
-          >
+          <button type="button" style={navBtn} onClick={toNext} aria-label="Next month">
             ▶
           </button>
           <button
@@ -457,8 +494,8 @@ export default function SeekerCalendarInterface({
                     <div
                       key={e.id || `${key}-${e.time || ''}-${e.title || ''}`}
                       style={eventCard(strip)}
-                      onClick={(event) => {
-                        event.stopPropagation();
+                      onClick={(ev) => {
+                        ev.stopPropagation();
                         openEdit(e);
                       }}
                     >
@@ -471,14 +508,20 @@ export default function SeekerCalendarInterface({
                           <div style={eventTime}>{e.time || ''}</div>
                         </div>
                         {e.type && (
-                          <span style={typePill(pillBg, pillFg)}>{e.type}</span>
+                          <span style={typePill(pillBg, pillFg)}>
+                            {e.type}
+                          </span>
                         )}
                       </div>
                     </div>
                   );
                 })}
 
-                {extra > 0 && <div style={moreRow}>+{extra} more</div>}
+                {extra > 0 && (
+                  <div style={moreRow}>
+                    +{extra} more
+                  </div>
+                )}
               </div>
             </div>
           );
@@ -490,8 +533,8 @@ export default function SeekerCalendarInterface({
           mode={editorMode}
           initial={editorInitial}
           onClose={closeEditor}
-          onSave={saveEvent}
-          onDelete={editorMode === 'edit' ? deleteEvent : undefined}
+          onSave={saveItem}
+          onDelete={editorMode === 'edit' ? deleteItem : undefined}
           saving={saving}
         />
       )}

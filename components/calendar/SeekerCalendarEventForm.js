@@ -2,14 +2,17 @@
 import React, { useEffect, useRef, useState } from 'react';
 
 export default function SeekerCalendarEventForm({
-  mode = 'add',           // 'add' | 'edit'
-  initial = null,         // { date, time, title, type, notes }
+  mode = 'add',         // 'add' | 'edit'
+  initial = null,       // { date, time, title, type, status, notes }
   onClose,
   onSave,
   onDelete,
+  typeChoices = ['Interview', 'Deadline', 'Reminder', 'Task'],
+  statusChoices = ['Scheduled', 'Completed', 'Cancelled'],
   saving = false,
 }) {
   const firstRef = useRef(null);
+
   const [confirmingDelete, setConfirmingDelete] = useState(false);
 
   const [form, setForm] = useState(() => {
@@ -18,7 +21,8 @@ export default function SeekerCalendarEventForm({
       date: initial?.date || today,
       time: initial?.time || '09:00',
       title: initial?.title || '',
-      type: initial?.type || 'Interview',
+      type: initial?.type || typeChoices[0] || 'Interview',
+      status: initial?.status || statusChoices[0] || 'Scheduled',
       notes: initial?.notes || '',
     };
   });
@@ -46,7 +50,6 @@ export default function SeekerCalendarEventForm({
     background: '#FFFFFF',
     color: '#263238',
     fontSize: 14,
-    boxSizing: 'border-box',
   };
 
   const update = (key, value) =>
@@ -58,20 +61,14 @@ export default function SeekerCalendarEventForm({
   const handleSubmit = (e) => {
     e.preventDefault();
 
-    if (!form.date || !form.time) {
-      alert('Date and time are required.');
-      return;
-    }
-
-    const title = (form.title || '').trim();
-    if (!title) {
-      alert('Give this event a title so you recognize it later.');
+    if (!form.date || !form.time || !form.title.trim()) {
+      alert('Date, time, and title are required.');
       return;
     }
 
     onSave?.({
       ...form,
-      title,
+      title: form.title.trim(),
     });
   };
 
@@ -123,6 +120,15 @@ export default function SeekerCalendarEventForm({
             >
               {mode === 'edit' ? 'Edit Event' : 'Add Event'}
             </h3>
+            <div
+              style={{
+                fontSize: 12,
+                color: '#607D8B',
+                marginTop: 2,
+              }}
+            >
+              This stays on your personal Forge calendar.
+            </div>
           </div>
           <div
             style={{
@@ -134,7 +140,7 @@ export default function SeekerCalendarEventForm({
               fontWeight: 600,
             }}
           >
-            Personal
+            Seeker
           </div>
         </div>
 
@@ -179,28 +185,58 @@ export default function SeekerCalendarEventForm({
             <label style={label}>Title</label>
             <input
               type="text"
+              name="title"
               value={form.title}
               onChange={(e) => update('title', e.target.value)}
               style={input}
-              placeholder="e.g. Acme interview, follow-up email, prep block…"
+              placeholder="e.g. Recruiter call, application deadline, follow-up"
             />
           </div>
 
-          {/* Type */}
-          <div>
-            <label style={label}>Type</label>
-            <select
-              name="type"
-              value={form.type}
-              onChange={(e) => update('type', e.target.value)}
-              style={input}
-            >
-              {['Interview', 'Application', 'Follow-up', 'Task'].map((t) => (
-                <option key={t} value={t}>
-                  {t}
-                </option>
-              ))}
-            </select>
+          {/* Type / Status */}
+          <div
+            style={{
+              display: 'grid',
+              gridTemplateColumns: '1fr 1fr',
+              gap: 12,
+            }}
+          >
+            <div>
+              <label style={label}>Type</label>
+              <select
+                name="type"
+                value={form.type}
+                onChange={(e) => update('type', e.target.value)}
+                style={input}
+              >
+                {(typeChoices.length
+                  ? typeChoices
+                  : ['Interview', 'Deadline', 'Reminder', 'Task']
+                ).map((t) => (
+                  <option key={t} value={t}>
+                    {t}
+                  </option>
+                ))}
+              </select>
+            </div>
+            <div>
+              <label style={label}>Status</label>
+              <select
+                name="status"
+                value={form.status}
+                onChange={(e) => update('status', e.target.value)}
+                style={input}
+              >
+                {(statusChoices.length
+                  ? statusChoices
+                  : ['Scheduled', 'Completed', 'Cancelled']
+                ).map((s) => (
+                  <option key={s} value={s}>
+                    {s}
+                  </option>
+                ))}
+              </select>
+            </div>
           </div>
 
           {/* Notes */}
@@ -212,7 +248,7 @@ export default function SeekerCalendarEventForm({
               onChange={(e) => update('notes', e.target.value)}
               rows={3}
               style={{ ...input, resize: 'vertical', minHeight: 90 }}
-              placeholder="Anything you want to remember for this slot."
+              placeholder="Add details, links, prep notes, or reminders for your future self."
             />
           </div>
 
