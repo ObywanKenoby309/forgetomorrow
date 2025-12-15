@@ -1,11 +1,5 @@
 // components/calendar/CoachingSessionsCalendarInterface.js
-import React, {
-  useEffect,
-  useMemo,
-  useState,
-  useCallback,
-} from 'react';
-import CalendarEventForm from './CalendarEventForm';
+import React, { useMemo, useState } from 'react';
 
 function startOfMonth(date) {
   return new Date(date.getFullYear(), date.getMonth(), 1);
@@ -19,71 +13,14 @@ function fmtYMD(d) {
   const day = String(d.getDate()).padStart(2, '0');
   return `${y}-${m}-${day}`;
 }
+
 const WEEKDAYS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
 
 export default function CoachingSessionsCalendarInterface({
-  title = 'Calendar',
-  storageKey = 'calendar_v1',
-  seed = [],
-  typeChoices = ['Interview', 'Application', 'Coaching', 'Task', 'Appointment'],
-  statusChoices = ['Scheduled', 'Completed', 'Cancelled', 'No-show'],
-  addLabel = '+ Add Session',
-  eventNudge = 0,
-  eventWidthDeduct = 10,
+  title = 'Sessions Calendar',
+  events = [], // [{ id, date, time, title, client, type, status, notes, participants }]
 }) {
-  // ---------- storage ----------
-  const [events, setEvents] = useState({});
-
-  useEffect(() => {
-    try {
-      // 1) Build from live seed (API sessions)
-      const fromSeed = seed.reduce((acc, e) => {
-        if (!e || !e.date) return acc;
-        const key = e.date;
-        acc[key] = acc[key] || [];
-        acc[key].push(e);
-        return acc;
-      }, {});
-
-      // 2) Merge any locally-saved manual items on top
-      let merged = { ...fromSeed };
-
-      if (typeof window !== 'undefined') {
-        const savedRaw = window.localStorage.getItem(storageKey);
-        if (savedRaw) {
-          const saved = JSON.parse(savedRaw);
-          Object.entries(saved).forEach(([date, list]) => {
-            if (!Array.isArray(list)) return;
-            merged[date] = merged[date] || [];
-            merged[date].push(...list);
-          });
-        }
-
-        window.localStorage.setItem(storageKey, JSON.stringify(merged));
-      }
-
-      setEvents(merged);
-    } catch (err) {
-      console.error('Coaching calendar: failed to hydrate events', err);
-      setEvents({});
-    }
-  }, [storageKey, seed]);
-
-  const persist = useCallback(
-    (next) => {
-      setEvents(next);
-      try {
-        if (typeof window !== 'undefined') {
-          window.localStorage.setItem(storageKey, JSON.stringify(next));
-        }
-      } catch {
-        // ignore
-      }
-    },
-    [storageKey]
-  );
-
-  // ---------- month nav ----------
+  // ---------- month nav (pure UI) ----------
   const [cursor, setCursor] = useState(() => startOfMonth(new Date()));
   const monthName = useMemo(
     () =>
@@ -96,6 +33,18 @@ export default function CoachingSessionsCalendarInterface({
   const toPrev = () => setCursor((c) => addMonths(c, -1));
   const toNext = () => setCursor((c) => addMonths(c, 1));
   const toToday = () => setCursor(startOfMonth(new Date()));
+
+  // ---------- group events by date ----------
+  const eventsByDate = useMemo(() => {
+    const map = {};
+    for (const e of events || []) {
+      if (!e || !e.date) continue;
+      const key = e.date;
+      if (!map[key]) map[key] = [];
+      map[key].push(e);
+    }
+    return map;
+  }, [events]);
 
   // ---------- grid (7x6) ----------
   const days = useMemo(() => {
@@ -113,73 +62,7 @@ export default function CoachingSessionsCalendarInterface({
     });
   }, [cursor]);
 
-  // ---------- modal add/edit/delete ----------
-  const [formOpen, setFormOpen] = useState(false);
-  const [formMode, setFormMode] = useState('add'); // 'add' | 'edit'
-  const [formInitial, setFormInitial] = useState(null); // { date, idx?, title, time, type, status }
-
-  const addItem = (dateStr) => {
-    setFormInitial({ date: dateStr });
-    setFormMode('add');
-    setFormOpen(true);
-  };
-
-  const editItem = (dateStr, item, idx) => {
-    setFormInitial({ ...item, date: dateStr, idx });
-    setFormMode('edit');
-    setFormOpen(true);
-  };
-
-  const handleSave = (payload) => {
-    const { date, origDate, idx } = payload;
-
-    const normalized = {
-      date,
-      time: payload.time || '',
-      title: (payload.title || payload.client || '').trim(),
-      client: (payload.title || payload.client || '').trim(),
-      type: payload.type,
-      status: payload.status,
-      notes: payload.notes || '',
-      participants: payload.participants || '',
-    };
-
-    const next = structuredClone(events);
-
-    if (formMode === 'edit' && typeof idx === 'number') {
-      if (origDate && origDate !== date) {
-        if (next[origDate]) {
-          next[origDate].splice(idx, 1);
-          if (next[origDate].length === 0) delete next[origDate];
-        }
-        next[date] = next[date] || [];
-        next[date].push(normalized);
-      } else {
-        next[date][idx] = normalized;
-      }
-    } else {
-      next[date] = next[date] || [];
-      next[date].push(normalized);
-    }
-
-    persist(next);
-    setFormOpen(false);
-    setFormInitial(null);
-  };
-
-  const handleDelete = ({ date, idx }) => {
-    const next = structuredClone(events);
-    if (!next[date]) return;
-    next[date].splice(idx, 1);
-    if (next[date].length === 0) delete next[date];
-    persist(next);
-    setFormOpen(false);
-    setFormInitial(null);
-  };
-
-  // header “Add Session” button uses today as default date
   const todayStr = fmtYMD(new Date());
-  const handleAddFromHeader = () => addItem(todayStr);
 
   // ---------- visual helpers ----------
   const typeColors = (type) => {
@@ -309,19 +192,6 @@ export default function CoachingSessionsCalendarInterface({
     fontSize: 11,
   };
 
-  const headerAddBtn = {
-    background: '#FF7043',
-    border: 'none',
-    color: 'white',
-    padding: '6px 14px',
-    borderRadius: 999,
-    cursor: 'pointer',
-    fontWeight: 700,
-    fontSize: 11,
-    boxShadow: '0 6px 16px rgba(255,112,67,0.55)',
-    whiteSpace: 'nowrap',
-  };
-
   const legendRow = {
     display: 'flex',
     gap: 12,
@@ -405,15 +275,14 @@ export default function CoachingSessionsCalendarInterface({
     borderRadius: 9,
     border: '1px solid #E0E4EE',
     position: 'relative',
-    left: eventNudge,
-    width: `calc(100% - ${eventWidthDeduct}px)`,
+    width: '100%',
     background: '#F9FBFF',
     color: '#263238',
     fontSize: 11,
     display: 'grid',
     gridTemplateColumns: '3px 1fr',
     gap: 6,
-    cursor: 'pointer',
+    cursor: 'default',
     boxShadow: '0 1px 2px rgba(15,23,42,0.15)',
   });
 
@@ -502,7 +371,8 @@ export default function CoachingSessionsCalendarInterface({
           <div style={headLeft}>
             <div style={headTitle}>{title}</div>
             <div style={headSubtitle}>
-              Tap a session to edit. Use “{addLabel}” to schedule new time.
+              {monthName} · Scroll through your month and scan every booked
+              session at a glance.
             </div>
           </div>
 
@@ -527,13 +397,6 @@ export default function CoachingSessionsCalendarInterface({
                 aria-label="Next Month"
               >
                 ▶
-              </button>
-              <button
-                type="button"
-                style={headerAddBtn}
-                onClick={handleAddFromHeader}
-              >
-                {addLabel}
               </button>
             </div>
           </div>
@@ -578,21 +441,20 @@ export default function CoachingSessionsCalendarInterface({
         <div style={grid}>
           {days.map(({ date, inMonth, key }) => {
             const isToday = key === todayStr;
-            const list = events[key] || [];
+            const list = eventsByDate[key] || [];
             return (
               <div key={key} style={cell(inMonth, isToday)}>
                 <div style={dateBadge(isToday)}>{date.getDate()}</div>
 
                 <div style={eventsWrap}>
-                  {list.map((e, i) => {
+                  {list.map((e) => {
                     const { strip, pillBg, pillFg } = typeColors(e.type);
                     const statusColor = statusDotColor(e.status);
 
                     return (
                       <div
-                        key={`${key}-${i}`}
+                        key={e.id || `${key}-${e.time}-${e.title}`}
                         style={eventCard(strip)}
-                        onClick={() => editItem(key, e, i)}
                       >
                         <div style={eventStrip(strip)} />
                         <div style={eventContent}>
@@ -630,22 +492,6 @@ export default function CoachingSessionsCalendarInterface({
           })}
         </div>
       </div>
-
-      {/* Modal form */}
-      {formOpen && (
-        <CalendarEventForm
-          mode={formMode}
-          initial={formInitial}
-          onClose={() => {
-            setFormOpen(false);
-            setFormInitial(null);
-          }}
-          onSave={handleSave}
-          onDelete={handleDelete}
-          typeChoices={typeChoices}
-          statusChoices={statusChoices}
-        />
-      )}
     </section>
   );
 }

@@ -3,11 +3,8 @@ import React, { useEffect, useState } from 'react';
 import CoachingLayout from '@/components/layouts/CoachingLayout';
 import CoachingSessionsCalendarInterface from '@/components/calendar/CoachingSessionsCalendarInterface';
 
-// 🔒 LIVE storage key (keeps any manual-only items the coach adds)
-const STORAGE_KEY = 'coachSessions_live_v1';
-
 export default function CoachingSessionsCalendarPage() {
-  const [seedEvents, setSeedEvents] = useState([]);
+  const [sessions, setSessions] = useState([]);
   const [loading, setLoading] = useState(true);
 
   // Pull live coaching sessions and project them into calendar events
@@ -24,33 +21,35 @@ export default function CoachingSessionsCalendarPage() {
             'Failed to load coaching sessions for calendar:',
             res.status
           );
-          if (!cancelled) setSeedEvents([]);
+          if (!cancelled) setSessions([]);
           return;
         }
 
         const data = await res.json().catch(() => ({}));
         const rows = Array.isArray(data) ? data : data.sessions || [];
 
-        // API payload shape from /api/coaching/sessions:
+        // Expected payload from /api/coaching/sessions:
         // { id, date, time, client, type, status, clientId, clientType }
         const mapped = rows.map((s) => ({
           id: s.id,
-          date: s.date,              // "YYYY-MM-DD"
-          time: s.time || '09:00',   // "HH:MM"
+          date: s.date, // "YYYY-MM-DD"
+          time: s.time || '09:00', // "HH:MM"
           title: s.client
             ? `${s.client} – ${s.type || 'Session'}`
             : s.type || 'Session',
+          client: s.client || '',
           type: s.type || 'Strategy',
           status: s.status || 'Scheduled',
-          notes: '',
+          notes: s.notes || '',
+          participants: s.participants || '', // optional – safe fallback
         }));
 
         if (!cancelled) {
-          setSeedEvents(mapped);
+          setSessions(mapped);
         }
       } catch (err) {
         console.error('Error loading sessions for calendar:', err);
-        if (!cancelled) setSeedEvents([]);
+        if (!cancelled) setSessions([]);
       } finally {
         if (!cancelled) setLoading(false);
       }
@@ -66,8 +65,8 @@ export default function CoachingSessionsCalendarPage() {
     <CoachingLayout
       title="Sessions Calendar | ForgeTomorrow"
       activeNav="calendar"
-      headerDescription="This is your command center for coaching time—tap a session to edit it, or add new time directly from the calendar."
-      right={null} // full-width calendar
+      headerDescription="This is your command center for coaching time—scan your week at a glance and stay fully booked (in a good way)."
+      right={null}
       sidebarInitialOpen={{ coaching: true, seeker: false }}
     >
       <div
@@ -80,11 +79,7 @@ export default function CoachingSessionsCalendarPage() {
       >
         <CoachingSessionsCalendarInterface
           title={loading ? 'Sessions Calendar (loading…)' : 'Sessions Calendar'}
-          storageKey={STORAGE_KEY}
-          seed={seedEvents}
-          typeChoices={['Strategy', 'Resume', 'Interview', 'Other']}
-          statusChoices={['Scheduled', 'Completed', 'No-show', 'Cancelled']}
-          addLabel="+ Add Session"
+          events={sessions}
         />
       </div>
     </CoachingLayout>
