@@ -9,6 +9,7 @@ export default function CoachingCalendarEventForm({
   onDelete,
   typeChoices = [],
   statusChoices = [],
+  saving = false, // <-- NEW: receive saving from parent, default false
 }) {
   const firstRef = useRef(null);
   const [confirmingDelete, setConfirmingDelete] = useState(false);
@@ -318,7 +319,7 @@ export default function CoachingCalendarEventForm({
                 </button>
                 <button
                   type="submit"
-                  disabled={saving}
+                  disabled={saving} // <-- now safe: saving always defined
                   style={{
                     background: '#FF7043',
                     color: 'white',
@@ -327,9 +328,16 @@ export default function CoachingCalendarEventForm({
                     borderRadius: 8,
                     cursor: 'pointer',
                     fontWeight: 700,
+                    opacity: saving ? 0.7 : 1,
                   }}
                 >
-                  {mode === 'edit' ? 'Save Changes' : 'Save'}
+                  {mode === 'edit'
+                    ? saving
+                      ? 'Saving…'
+                      : 'Save Changes'
+                    : saving
+                    ? 'Saving…'
+                    : 'Save'}
                 </button>
               </div>
             )}
