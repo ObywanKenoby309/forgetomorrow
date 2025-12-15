@@ -1,90 +1,33 @@
 // pages/api/recruiter/calendar.js
-import { prisma } from '@/lib/prisma'; // ⬅️ CHANGED: named import
+
 import { getServerSession } from 'next-auth/next';
-import { authOptions } from '@/lib/auth';
+import { authOptions } from '../auth/[...nextauth]';
+import { prisma } from '@/lib/prisma';
 
-// Helper – convert Date to "YYYY-MM-DD"
-function toYMD(date) {
-  if (!date) return null;
-  const d = typeof date === 'string' ? new Date(date) : date;
-  const y = d.getFullYear();
-  const m = String(d.getMonth() + 1).padStart(2, '0');
-  const day = String(d.getDate()).padStart(2, '0');
-  return `${y}-${m}-${day}`;
-}
+function mapDbToEvent(item) {
+  if (!item) return null;
 
-// Map DB row → API event shape used by RecruiterCalendar
-function mapItemToEvent(item) {
   return {
     id: item.id,
-    title: item.title,
-    date: toYMD(item.date),
+    ownerId: item.ownerId,
+    scope: item.scope, // 'team' | 'personal'
+
+    // frontend expects plain Y-M-D + time string
+    date: item.date.toISOString().slice(0, 10),
     time: item.time || '',
-    type: item.type || 'Interview',
-    status: item.status || 'Scheduled',
+
+    title: item.title,
+    type: item.type,
+    status: item.status,
     notes: item.notes || '',
-    candidateType: item.candidateType || 'external',
-    candidateUserId: item.candidateUserId || null,
-    candidateName: item.candidateName || '',
-    scope: item.scope || 'team',
+
+    candidateType: item.candidateType,       // 'internal' | 'external'
+    candidateUserId: item.candidateUserId,
+    candidateName: item.candidateName,
+
     company: item.company || '',
     jobTitle: item.jobTitle || '',
     req: item.req || '',
-  };
-}
-
-// Parse incoming body into safe values for Prisma
-function parseBody(body, ownerId) {
-  const {
-    id,
-    title,
-    date,
-    time,
-    type,
-    status,
-    notes,
-    candidateType,
-    candidateUserId,
-    candidateName,
-    scope,
-    company,
-    jobTitle,
-    req,
-  } = body || {};
-
-  const safeTitle = (title || '').trim();
-  if (!safeTitle) {
-    throw new Error('Title is required');
-  }
-
-  if (!date) {
-    throw new Error('Date is required');
-  }
-
-  const timeStr = time || '09:00';
-  // Store as full DateTime for sorting; assume UTC for now
-  const fullDate = new Date(`${date}T${timeStr || '09:00'}:00.000Z`);
-
-  const safeScope = scope === 'personal' ? 'personal' : 'team';
-  const safeCandidateType =
-    candidateType === 'internal' ? 'internal' : 'external';
-
-  return {
-    id: id || undefined,
-    ownerId,
-    title: safeTitle,
-    scope: safeScope,
-    date: fullDate,
-    time: timeStr,
-    type: type || 'Interview',
-    status: status || 'Scheduled',
-    notes: notes || '',
-    candidateType: safeCandidateType,
-    candidateUserId: candidateUserId || null,
-    candidateName: (candidateName || '').trim(),
-    company: company || null,
-    jobTitle: jobTitle || null,
-    req: req || null,
   };
 }
 
@@ -97,93 +40,121 @@ export default async function handler(req, res) {
       return res.status(401).json({ error: 'Unauthorized' });
     }
 
+    // ───────────────── GET: list items for this recruiter ────────────────
     if (req.method === 'GET') {
-      // Fetch all items for this recruiter (owner)
       const items = await prisma.recruiterCalendarItem.findMany({
         where: { ownerId: userId },
         orderBy: { date: 'asc' },
       });
 
-      const events = items.map(mapItemToEvent);
+      const events = items.map(mapDbToEvent).filter(Boolean);
       return res.status(200).json({ events });
     }
 
-    if (req.method === 'POST') {
-      const parsed = parseBody(req.body, userId);
+    // Extract shared payload fields
+    const {
+      id,
+      title,
+      date,
+      time,
+      type,
+      status,
+      notes,
+      candidateType,
+      candidateUserId,
+      candidateName,
+      scope,
+      company,
+      jobTitle,
+      req: reqCode, // avoid shadowing `req` object
+    } = req.body || {};
 
-      const created = await prisma.recruiterCalendarItem.create({
-        data: {
-          ownerId: parsed.ownerId,
-          scope: parsed.scope,
-          date: parsed.date,
-          time: parsed.time,
-          title: parsed.title,
-          type: parsed.type,
-          status: parsed.status,
-          notes: parsed.notes,
-          candidateType: parsed.candidateType,
-          candidateUserId: parsed.candidateUserId,
-          candidateName: parsed.candidateName,
-          company: parsed.company,
-          jobTitle: parsed.jobTitle,
-          req: parsed.req,
-        },
-      });
-
-      return res.status(201).json({ event: mapItemToEvent(created) });
-    }
-
-    if (req.method === 'PUT') {
-      const parsed = parseBody(req.body, userId);
-
-      if (!parsed.id) {
-        return res.status(400).json({ error: 'Missing event id' });
+    // ───────────────── POST / PUT: create or update item ────────────────
+    if (req.method === 'POST' || req.method === 'PUT') {
+      if (!title || !date) {
+        return res
+          .status(400)
+          .json({ error: 'Missing required fields: title, date' });
       }
 
-      const existing = await prisma.recruiterCalendarItem.findUnique({
-        where: { id: parsed.id },
-      });
+      const safeScope =
+        scope === 'personal' || scope === 'team' ? scope : 'team';
 
-      if (!existing || existing.ownerId !== userId) {
-        return res.status(404).json({ error: 'Event not found' });
+      const safeCandidateType =
+        candidateType === 'internal' || candidateType === 'external'
+          ? candidateType
+          : 'external';
+
+      const safeTime = time || '09:00';
+      const dateTime = new Date(`${date}T${safeTime}:00Z`);
+
+      let item;
+
+      if (req.method === 'POST' || !id) {
+        // Create new calendar item
+        item = await prisma.recruiterCalendarItem.create({
+          data: {
+            ownerId: userId,
+            scope: safeScope,
+            date: dateTime,
+            time: safeTime,
+            title,
+            type: type || 'Interview',
+            status: status || 'Scheduled',
+            notes: notes || null,
+
+            candidateType: safeCandidateType,
+            candidateUserId:
+              safeCandidateType === 'internal' && candidateUserId
+                ? candidateUserId
+                : null,
+            candidateName: candidateName || 'Candidate',
+
+            company: company || null,
+            jobTitle: jobTitle || null,
+            req: reqCode || null,
+          },
+        });
+      } else {
+        // Update existing calendar item — but only if it belongs to this recruiter
+        item = await prisma.recruiterCalendarItem.update({
+          where: {
+            id,
+          },
+          data: {
+            scope: safeScope,
+            date: dateTime,
+            time: safeTime,
+            title,
+            type: type || 'Interview',
+            status: status || 'Scheduled',
+            notes: notes || null,
+
+            candidateType: safeCandidateType,
+            candidateUserId:
+              safeCandidateType === 'internal' && candidateUserId
+                ? candidateUserId
+                : null,
+            candidateName: candidateName || 'Candidate',
+
+            company: company || null,
+            jobTitle: jobTitle || null,
+            req: reqCode || null,
+          },
+        });
       }
 
-      const updated = await prisma.recruiterCalendarItem.update({
-        where: { id: parsed.id },
-        data: {
-          scope: parsed.scope,
-          date: parsed.date,
-          time: parsed.time,
-          title: parsed.title,
-          type: parsed.type,
-          status: parsed.status,
-          notes: parsed.notes,
-          candidateType: parsed.candidateType,
-          candidateUserId: parsed.candidateUserId,
-          candidateName: parsed.candidateName,
-          company: parsed.company,
-          jobTitle: parsed.jobTitle,
-          req: parsed.req,
-        },
-      });
-
-      return res.status(200).json({ event: mapItemToEvent(updated) });
+      const event = mapDbToEvent(item);
+      return res.status(200).json({ event });
     }
 
+    // ───────────────── DELETE: remove item ────────────────
     if (req.method === 'DELETE') {
-      const { id } = req.body || {};
       if (!id) {
-        return res.status(400).json({ error: 'Missing event id' });
+        return res.status(400).json({ error: 'Missing id' });
       }
 
-      const existing = await prisma.recruiterCalendarItem.findUnique({
-        where: { id },
-      });
-
-      if (!existing || existing.ownerId !== userId) {
-        return res.status(404).json({ error: 'Event not found' });
-      }
-
+      // Ensure recruiter can only delete their own items
       await prisma.recruiterCalendarItem.delete({
         where: { id },
       });
@@ -191,9 +162,9 @@ export default async function handler(req, res) {
       return res.status(200).json({ ok: true });
     }
 
-    // Fallback for unsupported methods
+    // ───────────────── Method not allowed ────────────────
     res.setHeader('Allow', ['GET', 'POST', 'PUT', 'DELETE']);
-    return res.status(405).end(`Method ${req.method} Not Allowed`);
+    return res.status(405).json({ error: 'Method not allowed' });
   } catch (err) {
     console.error('Recruiter calendar API error:', err);
     return res.status(500).json({ error: 'Internal server error' });
