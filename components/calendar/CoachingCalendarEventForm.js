@@ -236,7 +236,7 @@ export default function CoachingCalendarEventForm({
                 <button
                   type="button"
                   onClick={() => setConfirmingDelete(true)}
-                  style({
+                  style={{
                     background: 'white',
                     color: '#B71C1C',
                     border: '1px solid #F5C6CB',
@@ -318,6 +318,7 @@ export default function CoachingCalendarEventForm({
                 </button>
                 <button
                   type="submit"
+                  disabled={saving}
                   style={{
                     background: '#FF7043',
                     color: 'white',
