@@ -4,7 +4,8 @@ import { PlanProvider } from '@/context/PlanContext';
 import RecruiterLayout from '@/components/layouts/RecruiterLayout';
 import RecruiterCalendar from '@/components/calendar/RecruiterCalendar';
 
-// 🔒 Live storage key (separate from any old mock keys)
+// Note: keeping STORAGE_KEY here for future use if needed,
+// but RecruiterCalendar now manages its own persistence (API-first).
 const STORAGE_KEY = 'recruiterCalendar_live_v1';
 
 export default function RecruiterCalendarPage() {
@@ -50,12 +51,11 @@ export default function RecruiterCalendarPage() {
         right={null}
         activeNav="calendar"
       >
-        {/* Full-width recruiter calendar, no mock data */}
         <div style={{ width: '100%' }}>
           <RecruiterCalendar
             title="Month View"
             storageKey={STORAGE_KEY}
-            seed={[]} // 🚫 no placeholders — live events only
+            seed={[]}
           />
         </div>
       </RecruiterLayout>

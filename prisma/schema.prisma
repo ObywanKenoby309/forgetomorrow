@@ -510,6 +510,10 @@ model User {
   ownedNewsletters        Newsletter[]
   newsletterSubscriptions NewsletterSubscription[]
 
+  // Recruiter calendar relations
+  recruiterCalendarOwnedItems     RecruiterCalendarItem[] @relation("UserRecruiterCalendarOwner")
+  recruiterCalendarAsCandidate    RecruiterCalendarItem[] @relation("UserRecruiterCalendarCandidate")
+
   // ── Corporate appearance overrides (ForgeTomorrow staff only) ─────────────
   corporateBannerKey    String? // e.g. "CEO", "CFO", "STAFF_GENERAL"
   corporateBannerLocked Boolean @default(false)
@@ -601,6 +605,50 @@ model RecruiterCandidateAutomation {
 
   @@index([userId])
   @@map("recruiter_candidate_automation")
+}
+
+// ============================================================================
+//  RECRUITER CALENDAR ITEMS
+// ============================================================================
+
+model RecruiterCalendarItem {
+  id      String   @id @default(cuid())
+
+  // Owner (recruiter)
+  ownerId String
+  owner   User     @relation("UserRecruiterCalendarOwner", fields: [ownerId], references: [id], onDelete: Cascade)
+
+  // Scope: "team" items should also surface in personal; "personal" never shows in team
+  scope   String   @default("team") // 'team' | 'personal'
+
+  // Time — stored as full DateTime for sort / querying; "time" kept for display convenience
+  date    DateTime
+  time    String?
+
+  // Core info
+  title   String
+  type    String   @default("Interview") // Interview / Screen / Offer / Task etc.
+  status  String   @default("Scheduled")
+  notes   String?
+
+  // Candidate wiring
+  candidateType   String   @default("external") // 'internal' | 'external'
+  candidateUserId String?
+  candidate       User?    @relation("UserRecruiterCalendarCandidate", fields: [candidateUserId], references: [id], onDelete: SetNull)
+  candidateName   String   // display name, always stored
+
+  // Optional job / company context
+  company   String?
+  jobTitle  String?
+  req       String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([ownerId])
+  @@index([date])
+  @@index([scope])
+  @@map("recruiter_calendar_items")
 }
 
 // ============================================================================
