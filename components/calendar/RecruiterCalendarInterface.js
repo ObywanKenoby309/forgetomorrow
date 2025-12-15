@@ -1,19 +1,19 @@
-// components/calendar/RecruiterCalendar.js
+// components/calendar/RecruiterCalendarInterface.js
 import React, { useMemo, useState } from 'react';
 
-// Calendar constants
 const WEEKDAYS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
 const MAX_PER_DAY = 3;
 
-// Utility helpers
+// recruiter-oriented defaults (for future wiring if you want to use them)
+const TYPE_CHOICES = ['Interview', 'Screen', 'Sourcing', 'Offer', 'Task', 'Appointment'];
+
+/* ---------------- utils ---------------- */
 function startOfMonth(date) {
   return new Date(date.getFullYear(), date.getMonth(), 1);
 }
-
 function addMonths(date, delta) {
   return new Date(date.getFullYear(), date.getMonth() + delta, 1);
 }
-
 function fmtYMD(d) {
   const y = d.getFullYear();
   const m = String(d.getMonth() + 1).padStart(2, '0');
@@ -21,27 +21,27 @@ function fmtYMD(d) {
   return `${y}-${m}-${day}`;
 }
 
-// Recruiter-oriented type palette (muted gray/blue + orange accents)
+/* ---------------- type colors (muted, recruiter-focused) ---------------- */
 function typeColors(type) {
   const t = (type || '').toLowerCase();
 
   if (t === 'interview') {
     return {
-      strip: '#1A4B8F', // strong blue
+      strip: '#1A4B8F',      // strong blue
       pillBg: '#E3EDF7',
       pillFg: '#102A43',
     };
   }
   if (t === 'screen' || t === 'phone screen') {
     return {
-      strip: '#546E7A', // slate
+      strip: '#546E7A',      // slate
       pillBg: '#ECEFF1',
       pillFg: '#263238',
     };
   }
   if (t === 'offer') {
     return {
-      strip: '#FF7043', // orange highlight
+      strip: '#FF7043',      // orange highlight
       pillBg: '#FFF3E0',
       pillFg: '#C75B33',
     };
@@ -69,29 +69,13 @@ function typeColors(type) {
   };
 }
 
-/**
- * RecruiterCalendar
- *
- * Props (for future wiring if needed):
- *   events: [
- *     {
- *       id,
- *       date: "YYYY-MM-DD",
- *       time,
- *       title,
- *       type,         // Interview / Screen / Offer / etc.
- *       candidate,
- *       company,
- *       jobTitle,
- *       req,
- *     }
- *   ]
- */
-export default function RecruiterCalendar({
+/* ---------------- component ---------------- */
+export default function RecruiterCalendarInterface({
   title = 'Recruiter Calendar',
+  // events: [{ id, date:"YYYY-MM-DD", time, title, type, candidate, company }]
   events = [],
 }) {
-  // Month navigation
+  /* ---------- month nav ---------- */
   const [cursor, setCursor] = useState(() => startOfMonth(new Date()));
   const monthName = useMemo(
     () =>
@@ -101,12 +85,11 @@ export default function RecruiterCalendar({
       }),
     [cursor]
   );
-
   const toPrev = () => setCursor((c) => addMonths(c, -1));
   const toNext = () => setCursor((c) => addMonths(c, 1));
   const toToday = () => setCursor(startOfMonth(new Date()));
 
-  // Group events by date
+  /* ---------- group by date ---------- */
   const eventsByDate = useMemo(() => {
     const map = {};
     for (const e of events || []) {
@@ -117,7 +100,7 @@ export default function RecruiterCalendar({
     return map;
   }, [events]);
 
-  // Build 6x7 grid
+  /* ---------- grid ---------- */
   const days = useMemo(() => {
     const first = startOfMonth(cursor);
     const gridStart = new Date(first);
@@ -135,7 +118,7 @@ export default function RecruiterCalendar({
 
   const todayStr = fmtYMD(new Date());
 
-  // ───────────────────────── Styles ─────────────────────────
+  /* ---------- styles ---------- */
   const shell = {
     background: '#F4F6F8',
     borderRadius: 16,
@@ -338,7 +321,7 @@ export default function RecruiterCalendar({
     color: '#90A4AE',
   };
 
-  // ───────────────────────── Render ─────────────────────────
+  /* ---------- render ---------- */
   return (
     <section style={shell}>
       {/* Header */}
@@ -351,26 +334,16 @@ export default function RecruiterCalendar({
         </div>
 
         <div style={navGroup}>
-          <button
-            type="button"
-            style={navBtn}
-            onClick={toPrev}
-            aria-label="Previous month"
-          >
+          <button type="button" style={navBtn} onClick={toPrev} aria-label="Previous month">
             ◀
           </button>
           <button type="button" style={todayBtn} onClick={toToday}>
             Today
           </button>
-          <button
-            type="button"
-            style={navBtn}
-            onClick={toNext}
-            aria-label="Next month"
-          >
+          <button type="button" style={navBtn} onClick={toNext} aria-label="Next month">
             ▶
           </button>
-          {/* Visual-only for now; can wire to a modal/editor later */}
+          {/* Visual-only for now; wiring can come later */}
           <button type="button" style={addBtn}>
             + Add Item
           </button>
@@ -402,7 +375,7 @@ export default function RecruiterCalendar({
                 {visible.map((e) => {
                   const { strip, pillBg, pillFg } = typeColors(e.type);
 
-                  const titleText =
+                  const title =
                     e.title ||
                     (e.candidate && e.type
                       ? `${e.candidate} – ${e.type}`
@@ -413,13 +386,13 @@ export default function RecruiterCalendar({
 
                   return (
                     <div
-                      key={e.id || `${key}-${e.time || ''}-${titleText}`}
+                      key={e.id || `${key}-${e.time || ''}-${title}`}
                       style={eventCard(strip)}
                     >
                       <div style={eventStrip(strip)} />
                       <div style={eventContent}>
                         <div style={eventTopRow}>
-                          <div style={eventTitle}>{titleText}</div>
+                          <div style={eventTitle}>{title}</div>
                           <div style={eventTime}>{e.time || ''}</div>
                         </div>
 
