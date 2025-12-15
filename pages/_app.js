@@ -56,7 +56,7 @@ export default function App({ Component, pageProps: { session, ...pageProps } })
     router.pathname.startsWith('/resume') ||
     router.pathname.startsWith('/cover') ||
     router.pathname.startsWith('/apply') ||
-    router.pathname.startsWith('/hearth') ||                 // 👈 NEW: /hearth/*
+    router.pathname.startsWith('/hearth') || // 👈 NEW: /hearth/*
     [
       '/the-hearth',
       '/jobs',
@@ -236,8 +236,8 @@ export default function App({ Component, pageProps: { session, ...pageProps } })
 
             {renderLandingHeader ? <LandingFooter /> : <Footer />}
 
-            {/* Global Support Floating Button */}
-            <SupportFloatingButton />
+            {/* Global Support Floating Button — INTERNAL PAGES ONLY */}
+            {!isPublicEffective && <SupportFloatingButton />}
           </SessionProvider>
         </div>
       </div>
