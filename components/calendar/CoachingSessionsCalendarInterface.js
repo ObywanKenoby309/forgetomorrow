@@ -97,14 +97,6 @@ export default function CoachingSessionsCalendarInterface({
     return { strip: '#90A4AE', pillBg: '#ECEFF1', pillFg: '#455A64' };
   };
 
-  const statusDotColor = (status) => {
-    const s = (status || '').toLowerCase();
-    if (s === 'completed') return '#2E7D32';
-    if (s === 'no-show') return '#C62828';
-    if (s === 'cancelled') return '#C62828';
-    return '#1565C0'; // Scheduled / default
-  };
-
   // ---------- styles ----------
   const wrap = {
     background:
@@ -358,21 +350,6 @@ export default function CoachingSessionsCalendarInterface({
     gap: 4,
   });
 
-  const statusRow = {
-    display: 'flex',
-    alignItems: 'center',
-    gap: 4,
-    fontSize: 10,
-    color: '#607D8B',
-  };
-
-  const statusDot = (color) => ({
-    width: 6,
-    height: 6,
-    borderRadius: '50%',
-    background: color,
-  });
-
   const participantsRow = {
     fontSize: 10,
     color: '#78909C',
@@ -483,7 +460,6 @@ export default function CoachingSessionsCalendarInterface({
                 <div style={eventsWrap}>
                   {visible.map((e) => {
                     const { strip, pillBg, pillFg } = typeColors(e.type);
-                    const statusColor = statusDotColor(e.status);
 
                     return (
                       <div
@@ -515,14 +491,7 @@ export default function CoachingSessionsCalendarInterface({
                             <div style={typePill(pillBg, pillFg)}>
                               <span>{e.type || 'Session'}</span>
                             </div>
-                            <div style={statusRow}>
-                              <span style={statusDot(statusColor)} />
-                              {/* Only show text if not Scheduled */}
-                              {e.status &&
-                                e.status.toLowerCase() !== 'scheduled' && (
-                                  <span>{e.status}</span>
-                                )}
-                            </div>
+                            {/* status intentionally hidden on mini cards */}
                           </div>
                         </div>
                       </div>
