@@ -27,6 +27,7 @@ export default function ATSInfo() {
           cursor: 'pointer',
           border: 'none',
           marginLeft: 6,
+          flexShrink: 0,
         }}
       >
         i
@@ -42,6 +43,7 @@ export default function ATSInfo() {
           <div
             onClick={(e) => e.stopPropagation()}
             className="w-full max-w-md rounded-xl border bg-white p-6 shadow-lg"
+            style={{ maxWidth: 'min(380px, 100%)' }}
           >
             <div className="flex items-center justify-between mb-3">
               <h3
@@ -58,19 +60,28 @@ export default function ATSInfo() {
               </button>
             </div>
 
-            <p className="text-sm text-slate-700 mb-3">
-              Resume-Role Alignment is a quick AI helper that shows how well
-              your resume lines up with this job.
+            {/* Short intro */}
+            <p
+              className="text-sm text-slate-700 mb-3"
+              style={{ lineHeight: 1.5 }}
+            >
+              Resume-Role Alignment is a quick AI helper that checks how your
+              resume fits this job.
             </p>
 
+            {/* Compact bullets */}
             <ul className="list-disc list-inside space-y-1 text-sm text-slate-700">
               <li>Highlights key skills and keywords from the job</li>
               <li>Shows where your resume is strong or light</li>
-              <li>Suggests simple edits you can make before applying</li>
+              <li>Suggests simple edits before you apply</li>
             </ul>
 
-            <p className="text-xs text-slate-500 mt-3">
-              This is a guidance tool. It does not guarantee results, but it can
+            {/* Short disclaimer */}
+            <p
+              className="text-xs text-slate-500 mt-3"
+              style={{ lineHeight: 1.4 }}
+            >
+              This is a guidance tool. Results are not guaranteed, but it can
               help you tune your resume for each role.
             </p>
           </div>

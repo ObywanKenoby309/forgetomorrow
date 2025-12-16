@@ -1465,118 +1465,124 @@ function Jobs() {
                     </div>
 
                     {/* ACTION ROW */}
-                    {selectedStatus === 'Open' && (
-                      <div
-                        style={{
-                          display: 'flex',
-                          flexWrap: 'wrap',
-                          alignItems: 'center',
-                          justifyContent: 'flex-start',
-                          gap: 8,
-                          marginTop: 4,
-                          padding: '4px 0 0',
-                          width: '100%',
-                          overflowX: 'hidden', // prevent tiny horizontal scrollbar
-                        }}
-                      >
-                        <button
-                          type="button"
-                          onClick={() => togglePin(selectedJob)}
-                          style={{
-                            background: 'white',
-                            color: isJobPinned(selectedJob) ? '#D32F2F' : '#FF7043',
-                            padding: '4px 10px',
-                            borderRadius: 999,
-                            border: `1px solid ${
-                              isJobPinned(selectedJob) ? '#D32F2F' : '#FF7043'
-                            }`,
-                            fontWeight: 600,
-                            fontSize: 12,
-                            cursor: 'pointer',
-                            minWidth: 70,
-                            whiteSpace: 'nowrap',
-                          }}
-                          aria-pressed={isJobPinned(selectedJob)}
-                        >
-                          {isJobPinned(selectedJob) ? 'Unpin job' : 'Pin job'}
-                        </button>
+{selectedStatus === 'Open' && (
+  <div
+    style={{
+      display: 'flex',
+      flexDirection: 'row',
+      justifyContent: 'flex-start',
+      alignItems: 'stretch',
+      gap: 6,
+      marginTop: 0,
+      padding: '4px 0 0',
+      width: '100%',
+      overflowX: 'hidden',   // no horizontal scrollbar
+      flexWrap: 'nowrap',    // keep everything on one row
+    }}
+  >
+    {/* 1. Pin job */}
+    <button
+      type="button"
+      onClick={() => togglePin(selectedJob)}
+      style={{
+        flex: '0 1 auto',
+        background: 'white',
+        color: isJobPinned(selectedJob) ? '#D32F2F' : '#FF7043',
+        padding: '4px 8px',
+        borderRadius: 999,
+        border: `1px solid ${
+          isJobPinned(selectedJob) ? '#D32F2F' : '#FF7043'
+        }`,
+        fontWeight: 600,
+        fontSize: 12,
+        cursor: 'pointer',
+        textAlign: 'center',
+      }}
+      aria-pressed={isJobPinned(selectedJob)}
+    >
+      {isJobPinned(selectedJob) ? 'Unpin job' : 'Pin job'}
+    </button>
 
-                        <button
-                          type="button"
-                          onClick={() => {
-                            if (canApplySelected) handleApplyClick(selectedJob);
-                          }}
-                          disabled={!canApplySelected}
-                          style={{
-                            background: canApplySelected ? '#FF7043' : '#CFD8DC',
-                            color: canApplySelected ? 'white' : '#607D8B',
-                            padding: '4px 14px',
-                            borderRadius: 999,
-                            border: 'none',
-                            fontWeight: 600,
-                            fontSize: 12,
-                            cursor: canApplySelected ? 'pointer' : 'default',
-                            minWidth: 70,
-                            whiteSpace: 'nowrap',
-                          }}
-                        >
-                          {selectedStatus === 'Reviewing'
-                            ? 'Applications paused'
-                            : selectedStatus === 'Closed'
-                            ? 'Closed'
-                            : 'Apply'}
-                        </button>
+    {/* 2. Apply */}
+    <button
+      type="button"
+      onClick={() => {
+        if (canApplySelected) handleApplyClick(selectedJob);
+      }}
+      disabled={!canApplySelected}
+      style={{
+        flex: '0 1 auto',
+        background: canApplySelected ? '#FF7043' : '#CFD8DC',
+        color: canApplySelected ? 'white' : '#607D8B',
+        padding: '4px 12px',
+        borderRadius: 999,
+        border: 'none',
+        fontWeight: 600,
+        fontSize: 12,
+        cursor: canApplySelected ? 'pointer' : 'default',
+        textAlign: 'center',
+      }}
+    >
+      {selectedStatus === 'Reviewing'
+        ? 'Applications paused'
+        : selectedStatus === 'Closed'
+        ? 'Closed'
+        : 'Apply'}
+    </button>
 
-                        {isPaidUser && (
-                          <div
-                            style={{
-                              display: 'inline-flex',
-                              alignItems: 'center',
-                              gap: 4,
-                              whiteSpace: 'nowrap',
-                            }}
-                          >
-                            <button
-                              type="button"
-                              onClick={() => handleATSAlign(selectedJob)}
-                              style={{
-                                background: 'white',
-                                color: '#FF7043',
-                                padding: '4px 10px',
-                                borderRadius: 999,
-                                border: '1px solid #FF7043',
-                                fontWeight: 600,
-                                fontSize: 12,
-                                cursor: 'pointer',
-                                whiteSpace: 'nowrap',
-                              }}
-                            >
-                              Resume-Role Align
-                            </button>
-                            <ATSInfo />
-                          </div>
-                        )}
+    {/* 3. Resume-Role Align + i */}
+    {isPaidUser && (
+      <div
+        style={{
+          display: 'flex',
+          alignItems: 'center',
+          gap: 4,
+          flex: '0 1 auto',
+        }}
+      >
+        <button
+          type="button"
+          onClick={() => handleATSAlign(selectedJob)}
+          style={{
+            background: 'white',
+            color: '#FF7043',
+            padding: '4px 8px',
+            borderRadius: 999,
+            border: '1px solid #FF7043',
+            fontWeight: 600,
+            fontSize: 12,
+            cursor: 'pointer',
+            textAlign: 'center',
+          }}
+        >
+          Resume-Role Align
+        </button>
+        <ATSInfo />
+      </div>
+    )}
 
-                        {selectedJobApplyLink && (
-                          <Link
-                            href={selectedJobApplyLink}
-                            target="_blank"
-                            style={{
-                              padding: '4px 10px',
-                              borderRadius: 8,
-                              border: '1px solid #ddd',
-                              color: '#263238',
-                              textDecoration: 'none',
-                              fontSize: 12,
-                              whiteSpace: 'nowrap',
-                              backgroundColor: 'white',
-                            }}
-                          >
-                            Open original posting
-                          </Link>
-                        )}
-                      </div>
-                    )}
+    {/* 4. Original posting link (kept on same row, shrinks as needed) */}
+    {selectedJobApplyLink && (
+      <Link
+        href={selectedJobApplyLink}
+        target="_blank"
+        style={{
+          flex: '0 1 auto',
+          padding: '4px 8px',
+          borderRadius: 8,
+          border: '1px solid #ddd',
+          color: '#263238',
+          textDecoration: 'none',
+          fontSize: 11,
+          backgroundColor: 'white',
+          textAlign: 'center',
+        }}
+      >
+        Open original posting
+      </Link>
+    )}
+  </div>
+)}
 
                     {/* Status-aware thank-you / info banner */}
                     {selectedStatus === 'Reviewing' && (
