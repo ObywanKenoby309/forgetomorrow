@@ -54,7 +54,7 @@ export default function ProfilePage() {
   const [status, setStatus] = useState('');
 
   // ✅ FIX: correct public path default
-  const [avatarUrl, setAvatarUrl] = useState('/profile-avatars/demo-avatar.jpg');
+  const [avatarUrl, setAvatarUrl] = useState('/profile-avatars/demo-avatar.png');
 
   const [coverUrl, setCoverUrl] = useState('');
 
@@ -91,7 +91,7 @@ export default function ProfilePage() {
       setStatus(readStr(STATUS_KEY, ''));
 
       // ✅ FIX: correct avatar default fallback
-      setAvatarUrl(readStr(AVATAR_KEY, '/profile-avatars/demo-avatar.jpg'));
+      setAvatarUrl(readStr(AVATAR_KEY, '/profile-avatars/demo-avatar.png'));
 
       setCoverUrl(readStr(COVER_KEY, ''));
 
