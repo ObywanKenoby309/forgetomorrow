@@ -29,7 +29,7 @@ const AVATAR_OPTIONS = [
 ];
 
 export default function ProfileAvatarSelector({ value, onChange }) {
-  const current = value || '/demo-avatar.png';
+  const current = value || '/profile-avatars/demo-avatar.png';
   const fileInputRef = useRef(null);
   const [uploading, setUploading] = useState(false);
   const [removing, setRemoving] = useState(false);
