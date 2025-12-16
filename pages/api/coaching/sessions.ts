@@ -45,6 +45,102 @@ function toSessionPayload(
   };
 }
 
+/**
+ * Mirror a coaching session into the client's personal calendar (SeekerCalendarItem).
+ * - Only for INTERNAL clients (clientId != null)
+ * - source = 'coach'
+ * - sourceItemId = session.id
+ */
+async function syncCoachSessionToSeekerCalendar(opts: {
+  sessionId: string;
+  coachId: string;
+  clientId: string | null;
+  startAt: Date;
+  type: string;
+  status: string;
+  previousClientId?: string | null;
+}) {
+  const {
+    sessionId,
+    coachId,
+    clientId,
+    startAt,
+    type,
+    status,
+    previousClientId,
+  } = opts;
+
+  // If the internal client changed, remove the old mirror
+  if (previousClientId && previousClientId !== clientId) {
+    await prisma.seekerCalendarItem.deleteMany({
+      where: {
+        source: 'coach',
+        sourceItemId: sessionId,
+        userId: previousClientId,
+      },
+    });
+  }
+
+  // If there's no current internal client, ensure mirrors are gone
+  if (!clientId) {
+    await prisma.seekerCalendarItem.deleteMany({
+      where: {
+        source: 'coach',
+        sourceItemId: sessionId,
+      },
+    });
+    return;
+  }
+
+  // Look up coach for display name
+  const coach = await prisma.user.findUnique({
+    where: { id: coachId },
+    select: { name: true, firstName: true, lastName: true, email: true },
+  });
+
+  const coachName =
+    coach?.name ||
+    `${coach?.firstName || ''} ${coach?.lastName || ''}`.trim() ||
+    coach?.email ||
+    'Coach';
+
+  const { time } = splitDateTime(startAt);
+  const title = `Coaching session with ${coachName}`;
+
+  // Find existing mirror (if any)
+  const existing = await prisma.seekerCalendarItem.findFirst({
+    where: {
+      source: 'coach',
+      sourceItemId: sessionId,
+      userId: clientId,
+    },
+  });
+
+  const baseData = {
+    userId: clientId,
+    date: startAt,
+    time,
+    title,
+    type: type || 'Strategy',
+    status: status || 'Scheduled',
+    // keep notes simple for now; we can expand later
+    notes: existing?.notes || '',
+    source: 'coach',
+    sourceItemId: sessionId,
+  };
+
+  if (existing) {
+    await prisma.seekerCalendarItem.update({
+      where: { id: existing.id },
+      data: baseData,
+    });
+  } else {
+    await prisma.seekerCalendarItem.create({
+      data: baseData,
+    });
+  }
+}
+
 export default async function handler(
   req: NextApiRequest,
   res: NextApiResponse
@@ -197,7 +293,9 @@ export default async function handler(
         if (!freeText) {
           return res
             .status(400)
-            .json({ error: 'Missing client/participant info for external client' });
+            .json({
+              error: 'Missing client/participant info for external client',
+            });
         }
         clientId = null;
         const label = `Client (free text): ${freeText}`;
@@ -214,6 +312,16 @@ export default async function handler(
           status: status || 'Scheduled',
           notes: storedNotes,
         },
+      });
+
+      // Mirror into client's personal calendar if internal
+      await syncCoachSessionToSeekerCalendar({
+        sessionId: created.id,
+        coachId,
+        clientId,
+        startAt,
+        type: created.type,
+        status: created.status,
       });
 
       const displayName = (clientName || '').trim() || null;
@@ -260,6 +368,22 @@ export default async function handler(
         return res.status(400).json({ error: 'Missing id for update' });
       }
 
+      // Fetch existing to know prior client for mirror cleanup
+      const existing = await prisma.coachingSession.findUnique({
+        where: { id: String(id) },
+        select: {
+          coachId: true,
+          clientId: true,
+          startAt: true,
+          type: true,
+          status: true,
+        },
+      });
+
+      if (!existing || existing.coachId !== coachId) {
+        return res.status(404).json({ error: 'Session not found' });
+      }
+
       const data: any = {};
 
       if (date && time) {
@@ -283,7 +407,9 @@ export default async function handler(
         if (!freeText) {
           return res
             .status(400)
-            .json({ error: 'Missing client/participant info for external client' });
+            .json({
+              error: 'Missing client/participant info for external client',
+            });
         }
         data.clientId = null;
         const label = `Client (free text): ${freeText}`;
@@ -301,16 +427,26 @@ export default async function handler(
         data,
       });
 
+      // Mirror into client's personal calendar (or clean up if no internal client)
+      await syncCoachSessionToSeekerCalendar({
+        sessionId: updated.id,
+        coachId,
+        clientId: updated.clientId ?? null,
+        startAt: updated.startAt,
+        type: updated.type,
+        status: updated.status,
+        previousClientId: existing.clientId ?? null,
+      });
+
       // Re-derive display & participants the same way as GET
       let displayName: string | null = null;
       let participantsOut: string | null = null;
 
-      if (data.clientId) {
-        // If we just pointed to an internal client, the GET will compute display from user anyway.
+      if (updated.clientId) {
         displayName = clientName ? clientName.trim() || null : null;
         participantsOut = displayName;
-      } else if (data.notes && typeof data.notes === 'string') {
-        const firstLine = data.notes.split('|')[0].trim();
+      } else if (updated.notes && typeof updated.notes === 'string') {
+        const firstLine = updated.notes.split('|')[0].trim();
         if (firstLine.startsWith('Client (free text):')) {
           const val = firstLine.replace(/^Client \(free text\):\s*/, '');
           displayName = val || null;
@@ -330,6 +466,14 @@ export default async function handler(
       if (!id) {
         return res.status(400).json({ error: 'Missing id' });
       }
+
+      // Clean up any mirrored seeker calendar entries
+      await prisma.seekerCalendarItem.deleteMany({
+        where: {
+          source: 'coach',
+          sourceItemId: String(id),
+        },
+      });
 
       await prisma.coachingSession.delete({
         where: { id: String(id) },

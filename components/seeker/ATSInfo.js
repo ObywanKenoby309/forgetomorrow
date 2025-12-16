@@ -44,7 +44,10 @@ export default function ATSInfo() {
             className="w-full max-w-md rounded-xl border bg-white p-6 shadow-lg"
           >
             <div className="flex items-center justify-between mb-3">
-              <h3 className="text-xl font-semibold" style={{ color: '#263238' }}>
+              <h3
+                className="text-xl font-semibold"
+                style={{ color: '#263238' }}
+              >
                 Resume-Role Alignment
               </h3>
               <button
@@ -56,8 +59,8 @@ export default function ATSInfo() {
             </div>
 
             <p className="text-sm text-slate-700 mb-3">
-              Resume-Role Alignment is a quick AI helper that shows how well your resume
-              lines up with this job.
+              Resume-Role Alignment is a quick AI helper that shows how well
+              your resume lines up with this job.
             </p>
 
             <ul className="list-disc list-inside space-y-1 text-sm text-slate-700">
@@ -67,8 +70,8 @@ export default function ATSInfo() {
             </ul>
 
             <p className="text-xs text-slate-500 mt-3">
-              This is a guidance tool - it cannot guarantee results, but it can help you
-              tune your resume for each role.
+              This is a guidance tool. It does not guarantee results, but it can
+              help you tune your resume for each role.
             </p>
           </div>
         </div>

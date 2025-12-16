@@ -321,11 +321,12 @@ function Jobs() {
         const data = await res.json();
         const list = (data && data.jobs) || [];
         setJobs(list);
+
+        // 🔹 Initial selection only. Do NOT mark as viewed here.
+        // Recently Viewed should reflect jobs the user actually clicks.
         if (list.length > 0) {
-          // ✅ Only set initial selection – do NOT record as "viewed" automatically
           setSelectedJob(list[0]);
         }
-        // ✅ Removed: list.forEach(addViewedJob);
       } catch (err) {
         console.error(err);
       } finally {
@@ -496,8 +497,7 @@ function Jobs() {
 
   const handleSelectJob = (job) => {
     setSelectedJob(job);
-    // ✅ Recently viewed now updates ONLY when user actively selects a job
-    addViewedJob(job);
+    addViewedJob(job); // 🔹 Only mark as viewed when user actively selects
     setAtsResult(null);
     setAtsError(null);
     setAtsPanelOpen(false);
@@ -1122,87 +1122,86 @@ function Jobs() {
                       </div>
 
                       <div
-  style={{
-    marginTop: 4,
-    display: 'flex',
-    flexWrap: 'wrap',
-    gap: 8,
-    fontSize: 13,
-    color: subtleColor,
-  }}
->
-  <span>{location || 'Location not provided'}</span>
+                        style={{
+                          marginTop: 4,
+                          display: 'flex',
+                          flexWrap: 'wrap',
+                          gap: 8,
+                          fontSize: 13,
+                          color: subtleColor,
+                        }}
+                      >
+                        <span>{location || 'Location not provided'}</span>
 
-  {locationType && (
-    <span
-      style={{
-        padding: '2px 8px',
-        borderRadius: 999,
-        border: '1px solid rgba(207,216,220,0.7)',
-        fontSize: 12,
-        backgroundColor: isDarkCard
-          ? 'rgba(38,50,56,0.8)'
-          : 'transparent',
-      }}
-    >
-      {locationType}
-    </span>
-  )}
+                        {locationType && (
+                          <span
+                            style={{
+                              padding: '2px 8px',
+                              borderRadius: 999,
+                              border: '1px solid rgba(207,216,220,0.7)',
+                              fontSize: 12,
+                              backgroundColor: isDarkCard
+                                ? 'rgba(38,50,56,0.8)'
+                                : 'transparent',
+                            }}
+                          >
+                            {locationType}
+                          </span>
+                        )}
 
-  {displaySource && (
-    <span
-      style={{
-        padding: '2px 8px',
-        borderRadius: 999,
-        border: '1px solid rgba(207,216,220,0.7)',
-        fontSize: 12,
-        backgroundColor: isDarkCard
-          ? 'rgba(38,50,56,0.8)'
-          : 'transparent',
-      }}
-    >
-      Source: {displaySource}
-    </span>
-  )}
+                        {displaySource && (
+                          <span
+                            style={{
+                              padding: '2px 8px',
+                              borderRadius: 999,
+                              border: '1px solid rgba(207,216,220,0.7)',
+                              fontSize: 12,
+                              backgroundColor: isDarkCard
+                                ? 'rgba(38,50,56,0.8)'
+                                : 'transparent',
+                            }}
+                          >
+                            Source: {displaySource}
+                          </span>
+                        )}
 
-  {status && status !== 'Open' && (
-    <span
-      style={{
-        padding: '2px 8px',
-        borderRadius: 999,
-        border: '1px solid #FFCC80',
-        fontSize: 12,
-        backgroundColor:
-          status === 'Reviewing' ? '#FFF3E0' : '#ECEFF1',
-        color:
-          status === 'Reviewing' ? '#E65100' : '#455A64',
-      }}
-    >
-      {status === 'Reviewing'
-        ? 'Reviewing applicants'
-        : status}
-    </span>
-  )}
-</div>
-</CardHeader>
+                        {status && status !== 'Open' && (
+                          <span
+                            style={{
+                              padding: '2px 8px',
+                              borderRadius: 999,
+                              border: '1px solid #FFCC80',
+                              fontSize: 12,
+                              backgroundColor:
+                                status === 'Reviewing' ? '#FFF3E0' : '#ECEFF1',
+                              color:
+                                status === 'Reviewing' ? '#E65100' : '#455A64',
+                            }}
+                          >
+                            {status === 'Reviewing'
+                              ? 'Reviewing applicants'
+                              : status}
+                          </span>
+                        )}
+                      </div>
+                    </CardHeader>
 
-<CardContent>
-  {/* Description snippet: internal only.
-      Scraped/external cards stay clean and compact. */}
-  {showSnippet && (
-    <p
-      style={{
-        margin: '0 0 10px',
-        color: textColor,
-        fontSize: 14,
-        lineHeight: 1.4,
-      }}
-    >
-      {snippet || 'No description provided.'}
-    </p>
-  )}
-</CardContent>
-
+                    <CardContent>
+                      {/* Description snippet: internal only.
+                          Scraped/external cards stay clean and compact. */}
+                      {showSnippet && (
+                        <p
+                          style={{
+                            margin: '0 0 10px',
+                            color: textColor,
+                            fontSize: 14,
+                            lineHeight: 1.4,
+                          }}
+                        >
+                          {snippet || 'No description provided.'}
+                        </p>
+                      )}
+                    </CardContent>
                   </Card>
                 );
               })}
@@ -1467,19 +1466,19 @@ function Jobs() {
 
                     {/* ACTION ROW */}
                     {selectedStatus === 'Open' && (
-  <div
-    style={{
-      display: 'flex',
-      flexDirection: 'row',
-      justifyContent: 'flex-start',
-      alignItems: 'center',
-      flexWrap: 'nowrap',      // ✅ keep everything in a single row
-      gap: 6,
-      marginTop: 0,
-      padding: '4px 0 0',
-      overflowX: 'auto',       // ✅ allow horizontal scroll on smaller widths instead of stacking
-    }}
-  >
+                      <div
+                        style={{
+                          display: 'flex',
+                          flexWrap: 'wrap',
+                          alignItems: 'center',
+                          justifyContent: 'flex-start',
+                          gap: 8,
+                          marginTop: 4,
+                          padding: '4px 0 0',
+                          width: '100%',
+                          overflowX: 'hidden', // prevent tiny horizontal scrollbar
+                        }}
+                      >
                         <button
                           type="button"
                           onClick={() => togglePin(selectedJob)}
