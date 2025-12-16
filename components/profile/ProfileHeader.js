@@ -74,11 +74,11 @@ export default function ProfileHeader() {
         const fy = user.bannerFocalY != null ? user.bannerFocalY : 50;
         setFocalY(clamp(fy, 0, 100));
 
-        // Source of truth is profileVisibility when present.
+        // NEW: Source of truth is profileVisibility when present.
         // Fallback to isProfilePublic for older rows.
         const pv = (user.profileVisibility || '').toString().toUpperCase();
         if (pv === 'PUBLIC') setVisibility('public');
-        else if (pv === 'RECRUITERS_ONLY') setVisibility('recruiters'); // ✅ FIX
+        else if (pv === 'RECRUITERS') setVisibility('recruiters');
         else if (user.isProfilePublic) setVisibility('public');
         else setVisibility('private');
       } catch (err) {
@@ -122,7 +122,7 @@ export default function ProfileHeader() {
       visibility === 'public'
         ? 'PUBLIC'
         : visibility === 'recruiters'
-        ? 'RECRUITERS_ONLY' // ✅ FIX
+        ? 'RECRUITERS'
         : 'PRIVATE';
 
     try {
