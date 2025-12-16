@@ -110,11 +110,24 @@ async function syncCandidateRow(userId: string, visibility: "PRIVATE" | "PUBLIC"
     pipelineStage: "new",
   };
 
-  await prisma.candidate.upsert({
-    where: { userId: u.id },
-    create: payload,
-    update: payload,
+  // Candidate snapshot sync (Recruiter discovery/search)
+// NOTE: userId is not unique in schema, so we cannot use upsert(where: { userId }).
+// Use findFirst -> update by id or create.
+const existing = await prisma.candidate.findFirst({
+  where: { userId: u.id },
+  select: { id: true },
+});
+
+if (existing?.id) {
+  await prisma.candidate.update({
+    where: { id: existing.id },
+    data: payload,
   });
+} else {
+  await prisma.candidate.create({
+    data: payload,
+  });
+}
 }
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
