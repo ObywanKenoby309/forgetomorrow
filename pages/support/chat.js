@@ -107,9 +107,26 @@ Type your question or concern in your own words. We'll automatically route it to
 
   const bottomRef = useRef(null);
 
+  // ✅ Prevent jumpy auto-scroll: only scroll when user is near bottom
+  const messagesRef = useRef(null);
+  const shouldAutoScrollRef = useRef(true);
+
+  const updateAutoScrollFlag = () => {
+    const el = messagesRef.current;
+    if (!el) return;
+
+    const threshold = 80; // px from bottom
+    const distanceFromBottom = el.scrollHeight - el.scrollTop - el.clientHeight;
+    shouldAutoScrollRef.current = distanceFromBottom <= threshold;
+  };
+
   useEffect(() => {
     if (!bottomRef.current) return;
-    bottomRef.current.scrollIntoView({ behavior: 'smooth' });
+
+    // Only autoscroll if user is already near the bottom
+    if (shouldAutoScrollRef.current) {
+      bottomRef.current.scrollIntoView({ behavior: 'auto' });
+    }
   }, [messages, loading]);
 
   const handleSend = async () => {
@@ -123,6 +140,9 @@ Type your question or concern in your own words. We'll automatically route it to
       from: 'user',
       text: trimmed,
     };
+
+    // User sent a message -> follow conversation
+    shouldAutoScrollRef.current = true;
 
     setMessages((prev) => [...prev, userMessage]);
     setInput('');
@@ -257,7 +277,11 @@ Type your question or concern in your own words. We'll automatically route it to
           {/* Chat container */}
           <div className="bg-white rounded-xl shadow-md border border-slate-200 flex flex-col overflow-hidden min-h-[70vh]">
             {/* Messages area */}
-            <div className="flex-1 overflow-y-auto px-4 py-4 md:px-6 md:py-5 space-y-3">
+            <div
+              ref={messagesRef}
+              onScroll={updateAutoScrollFlag}
+              className="flex-1 overflow-y-auto px-4 py-4 md:px-6 md:py-5 space-y-3"
+            >
               {messages.map((msg) => {
                 if (msg.from === 'system') {
                   return (

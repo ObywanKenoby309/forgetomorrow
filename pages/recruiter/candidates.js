@@ -101,6 +101,9 @@ function Body() {
   const [loadError, setLoadError] = useState(null);
   const [actionError, setActionError] = useState(null);
 
+  // Manual search button state
+  const [manualSearching, setManualSearching] = useState(false);
+
   // WHY flags
   const hasWhyFull = isEnterprise;
   const hasWhyLite = true;
@@ -136,6 +139,76 @@ function Body() {
       notes: "",
     },
   ];
+
+  // Build current query params (single source of truth for manual + auto runs)
+  const buildCandidateParams = () => {
+    const params = new URLSearchParams();
+
+    if (nameQuery) params.set("q", nameQuery);
+    if (locQuery) params.set("location", locQuery);
+    if (boolQuery) params.set("bool", boolQuery);
+
+    // Safe profile filters
+    if (summaryKeywords) params.set("summaryKeywords", summaryKeywords);
+    if (jobTitle) params.set("jobTitle", jobTitle);
+    if (workStatus) params.set("workStatus", workStatus);
+    if (preferredWorkType) params.set("preferredWorkType", preferredWorkType);
+    if (willingToRelocate) params.set("willingToRelocate", willingToRelocate);
+    if (skills) params.set("skills", skills);
+    if (languages) params.set("languages", languages);
+
+    return params;
+  };
+
+  // Manual trigger: run search now using all current fields
+  const runManualCandidateSearch = async () => {
+    setActionError(null);
+    setLoadError(null);
+
+    try {
+      setManualSearching(true);
+      setIsLoading(true);
+
+      const params = buildCandidateParams();
+
+      const res = await fetch(
+        `/api/recruiter/candidates${params.toString() ? `?${params.toString()}` : ""}`
+      );
+
+      if (!res.ok) {
+        if (process.env.NEXT_PUBLIC_FAKE_CANDIDATES === "1") {
+          setCandidates(buildDemoCandidates());
+          setLoadError(null);
+          return;
+        }
+        throw new Error(`Failed to load candidates: ${res.status}`);
+      }
+
+      const json = await res.json();
+      let list = Array.isArray(json.candidates) ? json.candidates : [];
+
+      if (!list.length && process.env.NEXT_PUBLIC_FAKE_CANDIDATES === "1") {
+        list = buildDemoCandidates();
+      }
+
+      setCandidates(list);
+      setLoadError(null);
+    } catch (err) {
+      console.error("[Candidates] manual search error:", err);
+
+      if (process.env.NEXT_PUBLIC_FAKE_CANDIDATES === "1") {
+        setCandidates(buildDemoCandidates());
+        setLoadError(null);
+      } else {
+        setLoadError(
+          "We had trouble loading candidates. Contact the Support Team if communication isn't provided in 30 minutes."
+        );
+      }
+    } finally {
+      setIsLoading(false);
+      setManualSearching(false);
+    }
+  };
 
   // Central function to create/open conversation, then route
   const startConversation = async (candidate, channel) => {
@@ -232,19 +305,7 @@ function Body() {
         setIsLoading(true);
         setLoadError(null);
 
-        const params = new URLSearchParams();
-        if (nameQuery) params.set("q", nameQuery);
-        if (locQuery) params.set("location", locQuery);
-        if (boolQuery) params.set("bool", boolQuery);
-
-        // Safe profile filters
-        if (summaryKeywords) params.set("summaryKeywords", summaryKeywords);
-        if (jobTitle) params.set("jobTitle", jobTitle);
-        if (workStatus) params.set("workStatus", workStatus);
-        if (preferredWorkType) params.set("preferredWorkType", preferredWorkType);
-        if (willingToRelocate) params.set("willingToRelocate", willingToRelocate);
-        if (skills) params.set("skills", skills);
-        if (languages) params.set("languages", languages);
+        const params = buildCandidateParams();
 
         const res = await fetch(
           `/api/recruiter/candidates${
@@ -764,6 +825,15 @@ function Body() {
               <div className="flex items-center gap-2 md:justify-end">
                 <button
                   type="button"
+                  onClick={runManualCandidateSearch}
+                  disabled={manualSearching || isLoading}
+                  className="rounded-md border border-[#FF7043] bg-white px-3 py-1.5 text-xs sm:text-sm font-medium text-[#FF7043] hover:bg-[#FFF3EF] disabled:opacity-60"
+                >
+                  {manualSearching ? "Finding…" : "Find Candidates"}
+                </button>
+
+                <button
+                  type="button"
                   onClick={() => {
                     setSummaryKeywords("");
                     setJobTitle("");
@@ -880,7 +950,7 @@ export default function CandidatesPage() {
         title="Candidates — ForgeTomorrow"
         header={<HeaderOnly />}
         right={<RightCard />}
-        activeNav="candidates"  // 🔸 highlight "Candidates" in Recruiter sidebar
+        activeNav="candidates" // 🔸 highlight "Candidates" in Recruiter sidebar
       >
         <Body />
       </RecruiterLayout>
