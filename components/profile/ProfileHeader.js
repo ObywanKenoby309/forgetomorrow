@@ -16,7 +16,7 @@ export default function ProfileHeader() {
   const [pronouns, setPronouns] = useState('');
   const [headline, setHeadline] = useState('');
 
-  const [avatarUrl, setAvatarUrl] = useState('/profile-avatars/demo-avatar.png');
+  const [avatarUrl, setAvatarUrl] = useState('profile-avatars/demo-avatar.png');
   const [coverUrl, setCoverUrl] = useState('');
   const [wallpaperUrl, setWallpaperUrl] = useState('');
 
@@ -59,7 +59,7 @@ export default function ProfileHeader() {
         setPronouns(user.pronouns || '');
         setHeadline(user.headline || '');
 
-        setAvatarUrl(user.avatarUrl || '/profile-avatars/demo-avatar.png');
+        setAvatarUrl(user.avatarUrl || 'profile-avatars/demo-avatar.png');
 
         // Prefer corporate banner from the API if present, otherwise use coverUrl
         const corporateBanner =
