@@ -37,6 +37,12 @@ enum ContactRequestStatus {
   CANCELED
 }
 
+enum ProfileVisibility {
+  PRIVATE
+  PUBLIC
+  RECRUITERS_ONLY
+}
+
 // ============================================================================
 //  JOBS, APPLICATIONS, INTERVIEWS & OFFERS
 // ============================================================================
@@ -432,11 +438,12 @@ model User {
   coverUrl  String?
 
   // Banner / Display
-  bannerMode      String? // "cover" | "fit"
-  bannerHeight    Int?    // 80–220
-  bannerFocalY    Int?    // 0–100
-  isProfilePublic Boolean @default(false)
-  wallpaperUrl    String?
+  bannerMode        String? // "cover" | "fit"
+  bannerHeight      Int?    // 80–220
+  bannerFocalY      Int?    // 0–100
+  isProfilePublic   Boolean @default(false)
+  profileVisibility ProfileVisibility @default(PRIVATE)
+  wallpaperUrl      String?
 
   // ── Public URL / Slug ─────────────────────────────────────────────────────
   slug              String?   @unique
@@ -518,7 +525,7 @@ model User {
   seekerCalendarItems SeekerCalendarItem[] @relation("UserSeekerCalendarItems")
 
   // ── Corporate appearance overrides (ForgeTomorrow staff only) ─────────────
-  corporateBannerKey    String? // e.g. "CEO", "CFO", "STAFF_GENERAL"
+  corporateBannerKey    String?
   corporateBannerLocked Boolean @default(false)
 
   // ── Deletion & Timestamps ─────────────────────────────────────────────────
@@ -544,27 +551,27 @@ model Candidate {
   headline     String?
   summary      String?
   location     String?
-  role         String? // primary role / label used in search
-  title        String? // card display title (may mirror role)
-  currentTitle String? // explicit current job title, if needed
+  role         String?
+  title        String?
+  currentTitle String?
 
   // Work preferences / status (powers filters)
-  workStatus        String? // employed, actively looking, student, etc.
-  preferredWorkType String? // full-time, contract, remote-only, etc.
-  willingToRelocate String? // "yes" | "no" | "maybe"
+  workStatus        String?
+  preferredWorkType String?
+  willingToRelocate String?
 
   // Searchable skills / languages (denormalized text)
-  skills    String? // comma- or pipe-delimited skills
-  languages String? // comma- or pipe-delimited languages
+  skills    String?
+  languages String?
 
   // Recruiter-only fields (private)
-  tags          String? // comma-separated recruiter tags
-  notes         String? // private recruiter notes
-  source        String? // e.g. "Forge", "Import", "Referral"
-  pipelineStage String? // e.g. "new", "reviewing", "contacted"
+  tags          String?
+  notes         String?
+  source        String?
+  pipelineStage String?
 
   // Match data (used by card + WHY)
-  match Int? // last known match score (0–100)
+  match Int?
 
   lastContacted DateTime?
   lastSeen      DateTime?
@@ -585,19 +592,7 @@ model RecruiterCandidateAutomation {
   userId String
   user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
 
-  // Optional label, e.g. "Senior CSM – US remote"
   name String?
-
-  // JSON object containing only allowed filters:
-  // {
-  //   summaryKeywords:   string | null,
-  //   jobTitle:          string | null,
-  //   workStatus:        string | null,
-  //   preferredWorkType: string | null,
-  //   relocate:          string | null,
-  //   skills:            string | null,
-  //   languages:         string | null
-  // }
   filters Json
 
   enabled   Boolean   @default(true)
@@ -617,30 +612,24 @@ model RecruiterCandidateAutomation {
 model RecruiterCalendarItem {
   id      String   @id @default(cuid())
 
-  // Owner (recruiter)
   ownerId String
   owner   User     @relation("UserRecruiterCalendarOwner", fields: [ownerId], references: [id], onDelete: Cascade)
 
-  // Scope: "team" items should also surface in personal; "personal" never shows in team
   scope   String   @default("team") // 'team' | 'personal'
 
-  // Time — stored as full DateTime for sort / querying; "time" kept for display convenience
   date    DateTime
   time    String?
 
-  // Core info
   title   String
   type    String   @default("Interview") // Interview / Screen / Offer / Task etc.
   status  String   @default("Scheduled")
   notes   String?
 
-  // Candidate wiring
   candidateType   String   @default("external") // 'internal' | 'external'
   candidateUserId String?
   candidate       User?    @relation("UserRecruiterCalendarCandidate", fields: [candidateUserId], references: [id], onDelete: SetNull)
   candidateName   String   // display name, always stored
 
-  // Optional job / company context
   company   String?
   jobTitle  String?
   req       String?
@@ -661,23 +650,19 @@ model RecruiterCalendarItem {
 model SeekerCalendarItem {
   id String @id @default(cuid())
 
-  // Owner (seeker)
   userId String
   user   User @relation("UserSeekerCalendarItems", fields: [userId], references: [id], onDelete: Cascade)
 
-  // Time
   date DateTime
   time String?
 
-  // Core info
   title  String
   type   String  @default("Interview") // Interview / Deadline / Reminder / Task etc.
   status String  @default("Scheduled")
   notes  String?
 
-  // Where this came from: 'personal' | 'coach' | 'recruiter' | 'system'
   source       String  @default("personal")
-  sourceItemId String? // optional foreign key token back to recruiter/coach item
+  sourceItemId String?
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -694,11 +679,9 @@ model SeekerCalendarItem {
 
 model Conversation {
   id      Int     @id @default(autoincrement())
-  isGroup Boolean @default(false) // false = 1:1, true = group chat
-  title   String? // for groups; null for 1:1
+  isGroup Boolean @default(false)
+  title   String?
 
-  // Which "inbox"/workspace this conversation belongs to:
-  // "seeker" | "recruiter" | "coach" | "shared" | null
   channel String?
 
   createdAt DateTime @default(now())
@@ -718,7 +701,7 @@ model ConversationParticipant {
   conversationId Int
   userId         String
   joinedAt       DateTime @default(now())
-  role           String? // e.g. "owner", "member"
+  role           String?
 
   conversation Conversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
   user         User         @relation("UserConversationParticipants", fields: [userId], references: [id], onDelete: Cascade)
@@ -764,7 +747,7 @@ model MessageReaction {
   id        Int      @id @default(autoincrement())
   messageId Int
   userId    String
-  emoji     String // raw emoji character
+  emoji     String
   createdAt DateTime @default(now())
 
   message Message @relation(fields: [messageId], references: [id], onDelete: Cascade)
@@ -781,9 +764,9 @@ model ConversationReport {
   reporterId     String
   reportedUserId String?
   messageId      Int?
-  reason         String // short code or label
-  details        String? // optional free-text
-  status         String   @default("OPEN") // OPEN, REVIEWING, RESOLVED, DISMISSED
+  reason         String
+  details        String?
+  status         String   @default("OPEN")
   createdAt      DateTime @default(now())
   updatedAt      DateTime @updatedAt
 
@@ -823,7 +806,7 @@ model GroupMembership {
   id       String   @id @default(cuid())
   groupId  String
   userId   String
-  role     String? // "owner" | "moderator" | "member"
+  role     String?
   joinedAt DateTime @default(now())
 
   group Group @relation(fields: [groupId], references: [id], onDelete: Cascade)
@@ -903,10 +886,10 @@ model FeedPost {
   authorId   String
   authorName String
   content    String
-  type       String   @default("business") // "business" | "personal"
+  type       String   @default("business")
   likes      Int      @default(0)
-  comments   Json     @default("[]") // [{ by, text, at }]
-  reactions  Json?    @default("[]") // [{ emoji, count, userIds[] }]
+  comments   Json     @default("[]")
+  reactions  Json?    @default("[]")
   createdAt  DateTime @default(now())
   updatedAt  DateTime @updatedAt
 
@@ -923,17 +906,17 @@ model SupportTicket {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  userId    String? // the logged-in user's ID (if available)
-  userEmail String? // fallback for anonymous / external support
+  userId    String?
+  userEmail String?
 
   subject        String
   initialMessage String
 
-  source    String // e.g. "support-chat", "email"
-  personaId String? // daniel, barbara, etc.
-  intent    String? // technical, billing, recruiter, emotional, general
+  source    String
+  personaId String?
+  intent    String?
 
-  status String // OPEN, IN_PROGRESS, AWAITING_USER, RESOLVED, CLOSED
+  status String
 }
 
 // ============================================================================
@@ -942,9 +925,9 @@ model SupportTicket {
 
 model ProfileView {
   id        String   @id @default(cuid())
-  viewerId  String? // null if anonymous or not logged in
-  targetId  String // the user whose profile was viewed
-  source    String? // e.g. "profile", "job-detail", etc.
+  viewerId  String?
+  targetId  String
+  source    String?
   createdAt DateTime @default(now())
 
   @@index([targetId])

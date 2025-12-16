@@ -7,10 +7,117 @@ import { getCorporateBannerByKey } from "@/lib/profileCorporateBanners";
 
 const prisma = new PrismaClient();
 
-export default async function handler(
-  req: NextApiRequest,
-  res: NextApiResponse
-) {
+function normalizeVisibility(v: any): "PRIVATE" | "PUBLIC" | "RECRUITERS_ONLY" | null {
+  if (typeof v !== "string") return null;
+  const s = v.trim().toUpperCase();
+  if (s === "PRIVATE") return "PRIVATE";
+  if (s === "PUBLIC") return "PUBLIC";
+  if (s === "RECRUITERS_ONLY") return "RECRUITERS_ONLY";
+  return null;
+}
+
+function computeDisplayName(u: {
+  name?: string | null;
+  firstName?: string | null;
+  lastName?: string | null;
+  email?: string | null;
+}) {
+  const byParts = [u.firstName, u.lastName].filter(Boolean).join(" ").trim();
+  return (u.name || byParts || u.email || "Unnamed").trim();
+}
+
+function joinSkills(skillsJson: any): string | null {
+  if (!Array.isArray(skillsJson)) return null;
+  const items = skillsJson
+    .map((x) => (typeof x === "string" ? x.trim() : ""))
+    .filter(Boolean);
+  return items.length ? items.join(", ") : null;
+}
+
+function joinLanguages(languagesJson: any): string | null {
+  if (!Array.isArray(languagesJson)) return null;
+
+  const items = languagesJson
+    .map((x) => {
+      if (typeof x === "string") return x.trim();
+      if (x && typeof x === "object" && typeof x.name === "string") return x.name.trim();
+      return "";
+    })
+    .filter(Boolean);
+
+  return items.length ? items.join(", ") : null;
+}
+
+function toRelocateString(wp: any): string | null {
+  const v = wp?.willingToRelocate;
+  if (v === true) return "yes";
+  if (v === false) return "no";
+  return null;
+}
+
+async function syncCandidateRow(userId: string, visibility: "PRIVATE" | "PUBLIC" | "RECRUITERS_ONLY") {
+  // PRIVATE => remove from recruiter discovery
+  if (visibility === "PRIVATE") {
+    await prisma.candidate.deleteMany({ where: { userId } });
+    return;
+  }
+
+  // PUBLIC or RECRUITERS_ONLY => ensure candidate snapshot exists
+  const u = await prisma.user.findUnique({
+    where: { id: userId },
+    select: {
+      id: true,
+      email: true,
+      name: true,
+      firstName: true,
+      lastName: true,
+      headline: true,
+      aboutMe: true,
+      location: true,
+      workPreferences: true,
+      skillsJson: true,
+      languagesJson: true,
+    },
+  });
+
+  if (!u) return;
+
+  const wp: any = u.workPreferences || {};
+  const workStatus = typeof wp.workStatus === "string" ? wp.workStatus : null;
+  const preferredWorkType = typeof wp.workType === "string" ? wp.workType : null;
+
+  const payload = {
+    userId: u.id,
+    name: computeDisplayName(u),
+    email: u.email || null,
+    headline: typeof u.headline === "string" ? u.headline : null,
+    summary: typeof u.aboutMe === "string" ? u.aboutMe : null,
+    location: typeof u.location === "string" ? u.location : null,
+
+    // Filters (safe)
+    workStatus,
+    preferredWorkType,
+    willingToRelocate: toRelocateString(wp),
+    skills: joinSkills(u.skillsJson),
+    languages: joinLanguages(u.languagesJson),
+
+    // Card/search helpers (optional)
+    role: typeof u.headline === "string" ? u.headline : null,
+    title: typeof u.headline === "string" ? u.headline : null,
+    currentTitle: null,
+
+    source: "Forge",
+    pipelineStage: "new",
+  };
+
+  await prisma.candidate.upsert({
+    where: { userId: u.id },
+    create: payload,
+    update: payload,
+  });
+}
+
+export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   const session = (await getServerSession(req, res, authOptions)) as
     | { user?: { email?: string | null } }
     | null;
@@ -48,6 +155,7 @@ export default async function handler(
             location: true,
             slug: true,
             isProfilePublic: true,
+            profileVisibility: true, // ✅ NEW
             avatarUrl: true,
             coverUrl: true,
             wallpaperUrl: true,
@@ -69,20 +177,22 @@ export default async function handler(
         }
 
         const effectiveCoverUrl =
-          (corporateBanner && corporateBanner.bannerSrc) ||
-          record.coverUrl ||
-          null;
+          (corporateBanner && corporateBanner.bannerSrc) || record.coverUrl || null;
+
+        // Back-compat: if profileVisibility is missing (older rows), derive it
+        const effectiveVisibility =
+          record.profileVisibility ||
+          (record.isProfilePublic ? "PUBLIC" : "PRIVATE");
 
         return res.status(200).json({
           ...record,
+          profileVisibility: effectiveVisibility,
           coverUrl: effectiveCoverUrl,
           corporateBanner,
         });
       } catch (err) {
         console.error("[profile/header] GET error", err);
-        return res
-          .status(500)
-          .json({ error: "Failed to load profile header data" });
+        return res.status(500).json({ error: "Failed to load profile header data" });
       }
     }
 
@@ -101,6 +211,7 @@ export default async function handler(
           location,
           slug,
           isProfilePublic,
+          profileVisibility, // ✅ NEW
           bannerHeight,
           bannerMode,
           bannerFocalY,
@@ -114,28 +225,33 @@ export default async function handler(
         if (avatarUrl !== undefined) data.avatarUrl = avatarUrl;
         if (coverUrl !== undefined) data.coverUrl = coverUrl;
         if (wallpaperUrl !== undefined) data.wallpaperUrl = wallpaperUrl;
-        if (corporateBannerKey !== undefined)
-          data.corporateBannerKey = corporateBannerKey;
-        if (corporateBannerLocked !== undefined)
-          data.corporateBannerLocked = corporateBannerLocked;
+        if (corporateBannerKey !== undefined) data.corporateBannerKey = corporateBannerKey;
+        if (corporateBannerLocked !== undefined) data.corporateBannerLocked = corporateBannerLocked;
         if (pronouns !== undefined) data.pronouns = pronouns;
         if (location !== undefined) data.location = location;
+
         if (slug !== undefined) {
-          // allow clearing slug with empty string
           data.slug =
-            typeof slug === "string" && slug.trim().length > 0
-              ? slug.trim()
-              : null;
+            typeof slug === "string" && slug.trim().length > 0 ? slug.trim() : null;
         }
-        if (isProfilePublic !== undefined)
+
+        // ✅ Visibility: prefer explicit profileVisibility when provided.
+        const normalizedVis = normalizeVisibility(profileVisibility);
+
+        if (normalizedVis) {
+          data.profileVisibility = normalizedVis;
+
+          // keep legacy boolean in sync (PUBLIC => true, otherwise false)
+          data.isProfilePublic = normalizedVis === "PUBLIC";
+        } else if (isProfilePublic !== undefined) {
+          // legacy callers
           data.isProfilePublic = !!isProfilePublic;
+          data.profileVisibility = !!isProfilePublic ? "PUBLIC" : "PRIVATE";
+        }
 
         // Banner mode – only accept known values
         if (bannerMode !== undefined) {
-          if (
-            typeof bannerMode === "string" &&
-            (bannerMode === "cover" || bannerMode === "fit")
-          ) {
+          if (typeof bannerMode === "string" && (bannerMode === "cover" || bannerMode === "fit")) {
             data.bannerMode = bannerMode;
           }
         }
@@ -168,6 +284,7 @@ export default async function handler(
             location: true,
             slug: true,
             isProfilePublic: true,
+            profileVisibility: true, // ✅ NEW
             avatarUrl: true,
             coverUrl: true,
             wallpaperUrl: true,
@@ -179,26 +296,34 @@ export default async function handler(
           },
         });
 
+        // ✅ Activate recruiter discovery by syncing Candidate snapshot
+        const effectiveVisibility =
+          updated.profileVisibility || (updated.isProfilePublic ? "PUBLIC" : "PRIVATE");
+
+        try {
+          await syncCandidateRow(userId, effectiveVisibility);
+        } catch (syncErr) {
+          // Don't fail the profile save if candidate sync fails — but log it
+          console.error("[profile/header] candidate sync error", syncErr);
+        }
+
         let corporateBanner = null;
         if (updated.corporateBannerKey) {
           corporateBanner = getCorporateBannerByKey(updated.corporateBannerKey);
         }
 
         const effectiveCoverUrl =
-          (corporateBanner && corporateBanner.bannerSrc) ||
-          updated.coverUrl ||
-          null;
+          (corporateBanner && corporateBanner.bannerSrc) || updated.coverUrl || null;
 
         return res.status(200).json({
           ...updated,
+          profileVisibility: effectiveVisibility,
           coverUrl: effectiveCoverUrl,
           corporateBanner,
         });
       } catch (err: any) {
         console.error("[profile/header] PATCH error", err);
-        return res
-          .status(500)
-          .json({ error: "Failed to update profile header" });
+        return res.status(500).json({ error: "Failed to update profile header" });
       }
     }
 
@@ -207,8 +332,6 @@ export default async function handler(
     return res.status(405).json({ error: "Method not allowed" });
   } catch (outerErr) {
     console.error("[profile/header] outer error", outerErr);
-    return res
-      .status(500)
-      .json({ error: "Unexpected error in profile header endpoint" });
+    return res.status(500).json({ error: "Unexpected error in profile header endpoint" });
   }
 }

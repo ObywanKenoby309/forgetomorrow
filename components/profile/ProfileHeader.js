@@ -14,8 +14,7 @@ export default function ProfileHeader() {
 
   const [pronouns, setPronouns] = useState('');
   const [headline, setHeadline] = useState('');
-  const [location, setLocation] = useState('');
-  const [status, setStatus] = useState('');
+
   const [avatarUrl, setAvatarUrl] = useState('/demo-avatar.png');
   const [coverUrl, setCoverUrl] = useState('');
   const [wallpaperUrl, setWallpaperUrl] = useState('');
@@ -58,8 +57,6 @@ export default function ProfileHeader() {
 
         setPronouns(user.pronouns || '');
         setHeadline(user.headline || '');
-        setLocation(user.location || '');
-        setStatus(user.status || '');
 
         setAvatarUrl(user.avatarUrl || '/demo-avatar.png');
 
@@ -133,8 +130,6 @@ export default function ProfileHeader() {
         body: JSON.stringify({
           headline,
           pronouns,
-          location,
-          status,
           avatarUrl,
           // normalize empty strings to null so the DB truly "clears" them
           coverUrl: coverUrl || null,
@@ -253,10 +248,6 @@ export default function ProfileHeader() {
             <p style={{ margin: 0, fontSize: 15, color: '#455A64' }}>{headline}</p>
           )}
 
-          <p style={{ margin: 0, fontSize: 14, color: '#455A64' }}>
-            {location && `Location: ${location}`} {status && `• ${status}`}
-          </p>
-
           {/* Visibility hint */}
           <p style={{ margin: 0, fontSize: 12, color: '#90A4AE' }}>
             Profile visibility: {visibilityLabel}
@@ -280,7 +271,7 @@ export default function ProfileHeader() {
 
       {/* Edit dialog */}
       {editOpen && (
-        <Dialog title="Edit Profile Header" onClose={() => setEditOpen(false)}>
+        <Dialog title="Edit Profile Appearance" onClose={() => setEditOpen(false)}>
           <div style={{ display: 'grid', gap: 12 }}>
             <div style={{ display: 'grid', gap: 4 }}>
               <span style={{ fontSize: 13, fontWeight: 600 }}>Name</span>
@@ -372,20 +363,6 @@ export default function ProfileHeader() {
               value={headline}
               onChange={setHeadline}
               placeholder="What you do / your focus"
-            />
-
-            <LabeledInput
-              label="Location"
-              value={location}
-              onChange={setLocation}
-              placeholder="City, Country"
-            />
-
-            <LabeledInput
-              label="Status"
-              value={status}
-              onChange={setStatus}
-              placeholder="Open to opportunities, building something new, etc."
             />
 
             {/* Avatar selector (no visible URL) */}
