@@ -7,127 +7,15 @@ import { getCorporateBannerByKey } from "@/lib/profileCorporateBanners";
 
 const prisma = new PrismaClient();
 
-function normalizeVisibility(v: any): "PRIVATE" | "PUBLIC" | "RECRUITERS_ONLY" | null {
+function normalizeVisibility(
+  v: any
+): "PRIVATE" | "PUBLIC" | "RECRUITERS_ONLY" | null {
   if (typeof v !== "string") return null;
   const s = v.trim().toUpperCase();
   if (s === "PRIVATE") return "PRIVATE";
   if (s === "PUBLIC") return "PUBLIC";
   if (s === "RECRUITERS_ONLY") return "RECRUITERS_ONLY";
   return null;
-}
-
-function computeDisplayName(u: {
-  name?: string | null;
-  firstName?: string | null;
-  lastName?: string | null;
-  email?: string | null;
-}) {
-  const byParts = [u.firstName, u.lastName].filter(Boolean).join(" ").trim();
-  return (u.name || byParts || u.email || "Unnamed").trim();
-}
-
-function joinSkills(skillsJson: any): string | null {
-  if (!Array.isArray(skillsJson)) return null;
-  const items = skillsJson
-    .map((x) => (typeof x === "string" ? x.trim() : ""))
-    .filter(Boolean);
-  return items.length ? items.join(", ") : null;
-}
-
-function joinLanguages(languagesJson: any): string | null {
-  if (!Array.isArray(languagesJson)) return null;
-
-  const items = languagesJson
-    .map((x) => {
-      if (typeof x === "string") return x.trim();
-      if (x && typeof x === "object" && typeof x.name === "string") return x.name.trim();
-      return "";
-    })
-    .filter(Boolean);
-
-  return items.length ? items.join(", ") : null;
-}
-
-function toRelocateString(wp: any): string | null {
-  const v = wp?.willingToRelocate;
-  if (v === true) return "yes";
-  if (v === false) return "no";
-  return null;
-}
-
-async function syncCandidateRow(userId: string, visibility: "PRIVATE" | "PUBLIC" | "RECRUITERS_ONLY") {
-  // PRIVATE => remove from recruiter discovery
-  if (visibility === "PRIVATE") {
-    await prisma.candidate.deleteMany({ where: { userId } });
-    return;
-  }
-
-  // PUBLIC or RECRUITERS_ONLY => ensure candidate snapshot exists
-  const u = await prisma.user.findUnique({
-    where: { id: userId },
-    select: {
-      id: true,
-      email: true,
-      name: true,
-      firstName: true,
-      lastName: true,
-      headline: true,
-      aboutMe: true,
-      location: true,
-      workPreferences: true,
-      skillsJson: true,
-      languagesJson: true,
-    },
-  });
-
-  if (!u) return;
-
-  const wp: any = u.workPreferences || {};
-  const workStatus = typeof wp.workStatus === "string" ? wp.workStatus : null;
-  const preferredWorkType = typeof wp.workType === "string" ? wp.workType : null;
-
-  const payload = {
-    userId: u.id,
-    name: computeDisplayName(u),
-    email: u.email || null,
-    headline: typeof u.headline === "string" ? u.headline : null,
-    summary: typeof u.aboutMe === "string" ? u.aboutMe : null,
-    location: typeof u.location === "string" ? u.location : null,
-
-    // Filters (safe)
-    workStatus,
-    preferredWorkType,
-    willingToRelocate: toRelocateString(wp),
-    skills: joinSkills(u.skillsJson),
-    languages: joinLanguages(u.languagesJson),
-
-    // Card/search helpers (optional)
-    role: typeof u.headline === "string" ? u.headline : null,
-    title: typeof u.headline === "string" ? u.headline : null,
-    currentTitle: null,
-
-    source: "Forge",
-    pipelineStage: "new",
-  };
-
-  // Candidate snapshot sync (Recruiter discovery/search)
-// NOTE: userId is not unique in schema, so we cannot use upsert(where: { userId }).
-// Use findFirst -> update by id or create.
-const existing = await prisma.candidate.findFirst({
-  where: { userId: u.id },
-  select: { id: true },
-});
-
-if (existing?.id) {
-  await prisma.candidate.update({
-    where: { id: existing.id },
-    data: payload,
-  });
-} else {
-  await prisma.candidate.create({
-    data: payload,
-  });
-}
 }
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
@@ -167,8 +55,11 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
             status: true,
             location: true,
             slug: true,
+
+            // Legacy + new visibility
             isProfilePublic: true,
-            profileVisibility: true, // ✅ NEW
+            profileVisibility: true,
+
             avatarUrl: true,
             coverUrl: true,
             wallpaperUrl: true,
@@ -190,9 +81,11 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         }
 
         const effectiveCoverUrl =
-          (corporateBanner && corporateBanner.bannerSrc) || record.coverUrl || null;
+          (corporateBanner && corporateBanner.bannerSrc) ||
+          record.coverUrl ||
+          null;
 
-        // Back-compat: if profileVisibility is missing (older rows), derive it
+        // Back-compat: if profileVisibility is missing, derive it from legacy boolean.
         const effectiveVisibility =
           record.profileVisibility ||
           (record.isProfilePublic ? "PUBLIC" : "PRIVATE");
@@ -205,7 +98,9 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         });
       } catch (err) {
         console.error("[profile/header] GET error", err);
-        return res.status(500).json({ error: "Failed to load profile header data" });
+        return res
+          .status(500)
+          .json({ error: "Failed to load profile header data" });
       }
     }
 
@@ -223,8 +118,11 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
           pronouns,
           location,
           slug,
+
+          // Legacy + new visibility
           isProfilePublic,
-          profileVisibility, // ✅ NEW
+          profileVisibility,
+
           bannerHeight,
           bannerMode,
           bannerFocalY,
@@ -238,46 +136,62 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         if (avatarUrl !== undefined) data.avatarUrl = avatarUrl;
         if (coverUrl !== undefined) data.coverUrl = coverUrl;
         if (wallpaperUrl !== undefined) data.wallpaperUrl = wallpaperUrl;
-        if (corporateBannerKey !== undefined) data.corporateBannerKey = corporateBannerKey;
-        if (corporateBannerLocked !== undefined) data.corporateBannerLocked = corporateBannerLocked;
+        if (corporateBannerKey !== undefined)
+          data.corporateBannerKey = corporateBannerKey;
+        if (corporateBannerLocked !== undefined)
+          data.corporateBannerLocked = corporateBannerLocked;
         if (pronouns !== undefined) data.pronouns = pronouns;
         if (location !== undefined) data.location = location;
 
         if (slug !== undefined) {
           data.slug =
-            typeof slug === "string" && slug.trim().length > 0 ? slug.trim() : null;
+            typeof slug === "string" && slug.trim().length > 0
+              ? slug.trim()
+              : null;
         }
 
-        // ✅ Visibility: prefer explicit profileVisibility when provided.
+        // ✅ Visibility (User table = single source of truth)
+        // Prefer explicit profileVisibility when provided.
         const normalizedVis = normalizeVisibility(profileVisibility);
 
         if (normalizedVis) {
           data.profileVisibility = normalizedVis;
 
-          // keep legacy boolean in sync (PUBLIC => true, otherwise false)
+          // Keep legacy boolean in sync for older callers
           data.isProfilePublic = normalizedVis === "PUBLIC";
         } else if (isProfilePublic !== undefined) {
-          // legacy callers
+          // Legacy callers
           data.isProfilePublic = !!isProfilePublic;
           data.profileVisibility = !!isProfilePublic ? "PUBLIC" : "PRIVATE";
         }
 
         // Banner mode – only accept known values
         if (bannerMode !== undefined) {
-          if (typeof bannerMode === "string" && (bannerMode === "cover" || bannerMode === "fit")) {
+          if (
+            typeof bannerMode === "string" &&
+            (bannerMode === "cover" || bannerMode === "fit")
+          ) {
             data.bannerMode = bannerMode;
           }
         }
 
         // Coerce bannerHeight & bannerFocalY to integers, or ignore
-        if (bannerHeight !== undefined && bannerHeight !== null && bannerHeight !== "") {
+        if (
+          bannerHeight !== undefined &&
+          bannerHeight !== null &&
+          bannerHeight !== ""
+        ) {
           const parsedHeight = Number.parseInt(String(bannerHeight), 10);
           if (Number.isFinite(parsedHeight)) {
             data.bannerHeight = parsedHeight;
           }
         }
 
-        if (bannerFocalY !== undefined && bannerFocalY !== null && bannerFocalY !== "") {
+        if (
+          bannerFocalY !== undefined &&
+          bannerFocalY !== null &&
+          bannerFocalY !== ""
+        ) {
           const parsedFocal = Number.parseInt(String(bannerFocalY), 10);
           if (Number.isFinite(parsedFocal)) {
             data.bannerFocalY = parsedFocal;
@@ -296,8 +210,11 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
             status: true,
             location: true,
             slug: true,
+
+            // Legacy + new visibility
             isProfilePublic: true,
-            profileVisibility: true, // ✅ NEW
+            profileVisibility: true,
+
             avatarUrl: true,
             coverUrl: true,
             wallpaperUrl: true,
@@ -309,16 +226,10 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
           },
         });
 
-        // ✅ Activate recruiter discovery by syncing Candidate snapshot
+        // Back-compat: ensure response always includes profileVisibility
         const effectiveVisibility =
-          updated.profileVisibility || (updated.isProfilePublic ? "PUBLIC" : "PRIVATE");
-
-        try {
-          await syncCandidateRow(userId, effectiveVisibility);
-        } catch (syncErr) {
-          // Don't fail the profile save if candidate sync fails — but log it
-          console.error("[profile/header] candidate sync error", syncErr);
-        }
+          updated.profileVisibility ||
+          (updated.isProfilePublic ? "PUBLIC" : "PRIVATE");
 
         let corporateBanner = null;
         if (updated.corporateBannerKey) {
@@ -326,7 +237,9 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         }
 
         const effectiveCoverUrl =
-          (corporateBanner && corporateBanner.bannerSrc) || updated.coverUrl || null;
+          (corporateBanner && corporateBanner.bannerSrc) ||
+          updated.coverUrl ||
+          null;
 
         return res.status(200).json({
           ...updated,
@@ -345,6 +258,8 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     return res.status(405).json({ error: "Method not allowed" });
   } catch (outerErr) {
     console.error("[profile/header] outer error", outerErr);
-    return res.status(500).json({ error: "Unexpected error in profile header endpoint" });
+    return res
+      .status(500)
+      .json({ error: "Unexpected error in profile header endpoint" });
   }
 }

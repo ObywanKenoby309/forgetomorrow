@@ -1,5 +1,5 @@
 // pages/api/recruiter/candidates/index.js
-// List recruiter candidates from Prisma (main DB)
+// List recruiter candidates from Prisma (main DB) — LIVE from User table (no stale Candidate snapshot)
 
 import { PrismaClient } from "@prisma/client";
 import { getServerSession } from "next-auth";
@@ -7,10 +7,16 @@ import { authOptions } from "../../auth/[...nextauth]";
 
 let prisma;
 function getPrisma() {
-  if (!prisma) {
-    prisma = new PrismaClient();
-  }
+  if (!prisma) prisma = new PrismaClient();
   return prisma;
+}
+
+function toCsv(arr) {
+  if (!Array.isArray(arr)) return "";
+  return arr
+    .map((s) => String(s || "").trim())
+    .filter(Boolean)
+    .join(", ");
 }
 
 export default async function handler(req, res) {
@@ -57,135 +63,167 @@ export default async function handler(req, res) {
   const skillsQuery = (skills || "").toString().trim();
   const languagesQuery = (languages || "").toString().trim();
 
-  const where = {};
-  const andClauses = [];
+  // IMPORTANT:
+  // Recruiter discovery is LIVE and only includes:
+  // - PUBLIC profiles
+  // - RECRUITERS_ONLY profiles
+  // Private profiles are excluded instantly.
+  //
+  // Back-compat:
+  // - If older rows only use isProfilePublic, keep those visible when true.
+  const andClauses = [
+    { deletedAt: null },
+    {
+      OR: [
+        { profileVisibility: { in: ["PUBLIC", "RECRUITERS_ONLY"] } },
+        { isProfilePublic: true }, // legacy safety net
+      ],
+    },
+  ];
 
-  // Manual search by name / role / summary (allowed)
+  // Manual search by name / headline / aboutMe (allowed)
   if (nameRoleQuery) {
-    where.OR = [
-      { name: { contains: nameRoleQuery, mode: "insensitive" } },
-      { role: { contains: nameRoleQuery, mode: "insensitive" } },
-      { summary: { contains: nameRoleQuery, mode: "insensitive" } },
-    ];
-  }
-
-  // Location filter
-  if (locationQuery) {
-    andClauses.push({
-      location: {
-        contains: locationQuery,
-        mode: "insensitive",
-      },
-    });
-  }
-
-  // Summary keywords → summary
-  if (summaryKeywordsQuery) {
-    andClauses.push({
-      summary: {
-        contains: summaryKeywordsQuery,
-        mode: "insensitive",
-      },
-    });
-  }
-
-  // Job title → role/title/currentTitle
-  if (jobTitleQuery) {
     andClauses.push({
       OR: [
-        { role: { contains: jobTitleQuery, mode: "insensitive" } },
-        { title: { contains: jobTitleQuery, mode: "insensitive" } },
-        { currentTitle: { contains: jobTitleQuery, mode: "insensitive" } },
+        { name: { contains: nameRoleQuery, mode: "insensitive" } },
+        { headline: { contains: nameRoleQuery, mode: "insensitive" } },
+        { aboutMe: { contains: nameRoleQuery, mode: "insensitive" } },
       ],
     });
   }
 
-  // Work status
+  // Location filter (uses user.location)
+  if (locationQuery) {
+    andClauses.push({
+      location: { contains: locationQuery, mode: "insensitive" },
+    });
+  }
+
+  // Summary keywords -> aboutMe
+  if (summaryKeywordsQuery) {
+    andClauses.push({
+      aboutMe: { contains: summaryKeywordsQuery, mode: "insensitive" },
+    });
+  }
+
+  // Job title -> headline (best live equivalent)
+  if (jobTitleQuery) {
+    andClauses.push({
+      headline: { contains: jobTitleQuery, mode: "insensitive" },
+    });
+  }
+
+  // Work status / preferred work type / relocate come from workPreferences Json
+  // NOTE: Prisma supports JSON path filters on PostgreSQL.
   if (workStatusQuery) {
     andClauses.push({
-      workStatus: {
-        contains: workStatusQuery,
-        mode: "insensitive",
+      workPreferences: {
+        path: ["workStatus"],
+        equals: workStatusQuery,
       },
     });
   }
 
-  // Preferred work type
   if (preferredWorkTypeQuery) {
     andClauses.push({
-      preferredWorkType: {
-        contains: preferredWorkTypeQuery,
-        mode: "insensitive",
+      workPreferences: {
+        path: ["workType"],
+        equals: preferredWorkTypeQuery,
       },
     });
   }
 
-  // Willing to relocate (values like "yes", "no", "maybe")
   if (relocateQuery) {
-    andClauses.push({
-      willingToRelocate: relocateQuery.toLowerCase(),
-    });
+    const v = relocateQuery.toLowerCase();
+    if (v === "yes") {
+      andClauses.push({
+        workPreferences: { path: ["willingToRelocate"], equals: true },
+      });
+    } else if (v === "no") {
+      andClauses.push({
+        workPreferences: { path: ["willingToRelocate"], equals: false },
+      });
+    }
+    // "maybe" => no filter
   }
 
-  // Skills (comma-separated; ALL terms must be present)
+  // Skills / Languages (comma-separated; ALL terms must be present)
+  // Using skillsJson / languagesJson arrays directly (LIVE).
+  // NOTE: This is exact-match on array values ("Leadership" must exist as a discrete item).
   if (skillsQuery) {
-    const skillTerms = skillsQuery
+    const terms = skillsQuery
       .split(",")
       .map((s) => s.trim())
       .filter(Boolean);
 
-    for (const term of skillTerms) {
+    for (const term of terms) {
       andClauses.push({
-        skills: {
-          contains: term,
-          mode: "insensitive",
-        },
+        skillsJson: { array_contains: [term] },
       });
     }
   }
 
-  // Languages (comma-separated; ALL terms must be present)
   if (languagesQuery) {
-    const languageTerms = languagesQuery
+    const terms = languagesQuery
       .split(",")
       .map((s) => s.trim())
       .filter(Boolean);
 
-    for (const term of languageTerms) {
+    for (const term of terms) {
       andClauses.push({
-        languages: {
-          contains: term,
-          mode: "insensitive",
-        },
+        languagesJson: { array_contains: [term] },
       });
     }
   }
 
-  // Boolean query placeholder — future: parse Boolean search.
-  // For now, if present, we simply search it in summary.
+  // Boolean query placeholder — for now search it in aboutMe
   if (booleanQuery) {
     andClauses.push({
-      summary: {
-        contains: booleanQuery,
-        mode: "insensitive",
-      },
+      aboutMe: { contains: booleanQuery, mode: "insensitive" },
     });
   }
 
-  if (andClauses.length) {
-    where.AND = andClauses;
-  }
+  const where = { AND: andClauses };
 
   try {
-    const candidates = await prisma.candidate.findMany({
+    const users = await prisma.user.findMany({
       where,
       orderBy: { createdAt: "desc" },
+      take: 100,
+      select: {
+        id: true,
+        name: true,
+        email: true,
+        headline: true,
+        aboutMe: true,
+        location: true,
+        skillsJson: true,
+        languagesJson: true,
+        createdAt: true,
+      },
     });
+
+    // Map Users -> candidate-shaped objects expected by UI
+    const candidates = users.map((u) => ({
+      id: u.id, // keep stable id for UI
+      userId: u.id,
+      name: u.name || "Unnamed",
+      email: u.email || null,
+      title: u.headline || "",
+      currentTitle: u.headline || "",
+      role: u.headline || "",
+      summary: u.aboutMe || "",
+      location: u.location || "",
+      skills: toCsv(u.skillsJson),
+      languages: toCsv(u.languagesJson),
+      match: null,
+      tags: [],
+      notes: "",
+    }));
 
     return res.status(200).json({ candidates });
   } catch (err) {
     console.error("[recruiter/candidates] query error:", err);
-    // Sev-1 style: front-end will surface a clear message.
     return res
       .status(500)
       .json({ error: "Failed to load candidates from the database." });

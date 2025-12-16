@@ -2,6 +2,10 @@
 import Head from 'next/head';
 import { prisma } from '@/lib/prisma';
 
+// ✅ NEW: session gating for PUBLIC vs RECRUITERS_ONLY vs PRIVATE
+import { getServerSession } from 'next-auth/next';
+import authOptions from '../api/auth/[...nextauth]';
+
 // Safe helpers for parsing skills / languages from JSON
 function parseArrayField(raw, fallback = []) {
   if (!raw) return fallback;
@@ -34,29 +38,39 @@ function parseArrayField(raw, fallback = []) {
 export async function getServerSideProps(context) {
   const { slug } = context.params;
 
+  // ✅ NEW: who is trying to view?
+  const session = await getServerSession(context.req, context.res, authOptions);
+  const viewerEmail = session?.user?.email ? String(session.user.email) : null;
+
   const user = await prisma.user.findUnique({
     where: { slug },
     select: {
-      id:           true,
-      slug:         true,
-      name:         true,
-      firstName:    true,
-      lastName:     true,
-      headline:     true,
-      pronouns:     true,
-      location:     true,
-      status:       true,
-      avatarUrl:    true,
-      coverUrl:     true,
-      aboutMe:      true,
-      skillsJson:   true,
-      languagesJson:true,
-      bannerMode:   true,
+      id: true,
+      slug: true,
+      name: true,
+      firstName: true,
+      lastName: true,
+      headline: true,
+      pronouns: true,
+      location: true,
+      status: true,
+      avatarUrl: true,
+      coverUrl: true,
+      aboutMe: true,
+      skillsJson: true,
+      languagesJson: true,
+      bannerMode: true,
       bannerHeight: true,
       bannerFocalY: true,
       wallpaperUrl: true,
-      corporateBannerKey:    true,
+      corporateBannerKey: true,
       corporateBannerLocked: true,
+
+      // ✅ NEW: visibility gating fields
+      isProfilePublic: true,
+      profileVisibility: true, // enum: PRIVATE | PUBLIC | RECRUITERS_ONLY
+      role: true,              // SEEKER | COACH | RECRUITER | ADMIN
+      email: true,             // to determine owner by email
 
       // Primary resume
       resumes: {
@@ -64,8 +78,8 @@ export async function getServerSideProps(context) {
         orderBy: { updatedAt: 'desc' },
         take: 1,
         select: {
-          id:        true,
-          name:      true,
+          id: true,
+          name: true,
           updatedAt: true,
         },
       },
@@ -76,19 +90,62 @@ export async function getServerSideProps(context) {
     return { notFound: true };
   }
 
+  // ✅ NEW: normalize legacy boolean into enum behavior (back-compat)
+  const effectiveVisibility =
+    user.profileVisibility || (user.isProfilePublic ? 'PUBLIC' : 'PRIVATE');
+
+  // ✅ NEW: viewer role lookup (only if logged in)
+  let viewerRole = null;
+  let viewerId = null;
+  if (viewerEmail) {
+    const viewer = await prisma.user.findUnique({
+      where: { email: viewerEmail },
+      select: { id: true, role: true, email: true },
+    });
+    viewerRole = viewer?.role || null;
+    viewerId = viewer?.id || null;
+  }
+
+  const isOwner =
+    Boolean(viewerEmail) &&
+    Boolean(user.email) &&
+    String(user.email).toLowerCase() === String(viewerEmail).toLowerCase();
+
+  const isAdmin = viewerRole === 'ADMIN';
+  const isRecruiter = viewerRole === 'RECRUITER';
+
+  // ✅ NEW: enforce visibility rules
+  const allowed =
+    effectiveVisibility === 'PUBLIC'
+      ? true
+      : effectiveVisibility === 'RECRUITERS_ONLY'
+      ? (isOwner || isAdmin || isRecruiter)
+      : (isOwner || isAdmin); // PRIVATE
+
+  if (!allowed) {
+    // stealth 404 so private profiles can't be enumerated
+    return { notFound: true };
+  }
+
   const { resumes, ...userSafe } = user;
-  const primaryResume =
-    resumes && resumes.length > 0 ? resumes[0] : null;
+  const primaryResume = resumes && resumes.length > 0 ? resumes[0] : null;
 
   return {
     props: {
       user: JSON.parse(JSON.stringify(userSafe)),
-      primaryResume: primaryResume ? JSON.parse(JSON.stringify(primaryResume)) : null,
+      primaryResume: primaryResume
+        ? JSON.parse(JSON.stringify(primaryResume))
+        : null,
+      effectiveVisibility,
+      viewer: {
+        id: viewerId,
+        role: viewerRole,
+      },
     },
   };
 }
 
-export default function PublicProfile({ user, primaryResume }) {
+export default function PublicProfile({ user, primaryResume, effectiveVisibility }) {
   const {
     name,
     headline,
@@ -130,12 +187,9 @@ export default function PublicProfile({ user, primaryResume }) {
   }
 
   const bannerBackgroundPosition =
-    typeof bannerFocalY === 'number'
-      ? `center ${bannerFocalY}%`
-      : 'center';
+    typeof bannerFocalY === 'number' ? `center ${bannerFocalY}%` : 'center';
 
-  const bannerBackgroundSize =
-    bannerMode === 'fit' ? 'contain' : 'cover';
+  const bannerBackgroundSize = bannerMode === 'fit' ? 'contain' : 'cover';
 
   return (
     <>
@@ -304,18 +358,20 @@ export default function PublicProfile({ user, primaryResume }) {
             </div>
           </section>
 
-          {/* Public ribbon */}
-          <div
-            style={{
-              marginTop: 16,
-              fontSize: 12,
-              color: '#ECEFF1',
-              textAlign: 'center',
-              textShadow: '0 1px 3px rgba(0,0,0,0.5)',
-            }}
-          >
-            This is a public ForgeTomorrow profile.
-          </div>
+          {/* ✅ Only show this ribbon if truly PUBLIC */}
+          {effectiveVisibility === 'PUBLIC' && (
+            <div
+              style={{
+                marginTop: 16,
+                fontSize: 12,
+                color: '#ECEFF1',
+                textAlign: 'center',
+                textShadow: '0 1px 3px rgba(0,0,0,0.5)',
+              }}
+            >
+              This is a public ForgeTomorrow profile.
+            </div>
+          )}
 
           {/* About */}
           {aboutMe && (
@@ -385,7 +441,6 @@ export default function PublicProfile({ user, primaryResume }) {
                 {new Date(primaryResume.updatedAt).toLocaleDateString()}
               </p>
 
-              {/* DOWNLOAD BUTTON → public PDF via slug, always primary */}
               <a
                 href={`/api/resume/public-download?slug=${encodeURIComponent(
                   slug
