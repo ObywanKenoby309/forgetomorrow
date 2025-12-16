@@ -42,9 +42,9 @@ export default function ProfileAbout({ about, setAbout }) {
 
   // Load About Me from /api/profile/details if needed
   useEffect(() => {
-    // parent typically provides about, but keep this safe if it doesn't
-    // ✅ FIX: allow fetch when parent passes '' initially (so card shows server truth after refresh)
-    if (about != null && about !== '') return;
+    // ✅ FIX: only skip fetch if about is a non-empty string.
+    // Empty string '' should still fetch server truth.
+    if (typeof about === 'string' && about.trim().length > 0) return;
 
     let cancelled = false;
 

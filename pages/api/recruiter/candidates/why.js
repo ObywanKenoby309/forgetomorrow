@@ -35,7 +35,7 @@ function clamp(n, min, max) {
   return Math.max(min, Math.min(max, n));
 }
 
-// Deterministic WHY builder (Phase 1: search/automation filters; Phase 2: jobId optional)
+// Deterministic WHY builder (works for: manual filters, automation filters, optional jobId)
 function buildExplain({ candidate, job, filters }) {
   const headline = normStr(candidate.headline);
   const aboutMe = normStr(candidate.aboutMe);
@@ -52,7 +52,6 @@ function buildExplain({ candidate, job, filters }) {
   const fSkills = splitCsv(f.skills);
   const fLanguages = splitCsv(f.languages);
 
-  // If job is provided, treat it as additional intent signals
   const jobTitle = job ? normStr(job.title) : "";
   const jobDesc = job ? normStr(job.description) : "";
 
@@ -66,49 +65,44 @@ function buildExplain({ candidate, job, filters }) {
   if (fLanguages.length) triggered.push(`Languages: ${fLanguages.join(", ")}`);
   if (job) triggered.push(`Job context: ${jobTitle || "Selected job"}`);
 
-  // Build reasons + evidence
   const reasons = [];
 
-  // Title alignment
+  // Role/title alignment
   const titleNeedle = fJobTitle || jobTitle || fQ;
   if (titleNeedle && (includesCI(headline, titleNeedle) || includesCI(aboutMe, titleNeedle))) {
     reasons.push({
       requirement: `Title/role alignment: ${titleNeedle}`,
       evidence: [
         headline ? { text: `Headline: ${headline}`, source: "Profile" } : null,
-        includesCI(aboutMe, titleNeedle) ? { text: `About: contains "${titleNeedle}"`, source: "Profile" } : null,
+        includesCI(aboutMe, titleNeedle)
+          ? { text: `About: contains "${titleNeedle}"`, source: "Profile" }
+          : null,
       ].filter(Boolean),
     });
   }
 
   // Location
-  if (fLoc) {
-    if (includesCI(location, fLoc)) {
-      reasons.push({
-        requirement: `Location match: ${fLoc}`,
-        evidence: [{ text: `Location: ${location}`, source: "Profile" }],
-      });
-    }
+  if (fLoc && includesCI(location, fLoc)) {
+    reasons.push({
+      requirement: `Location match: ${fLoc}`,
+      evidence: [{ text: `Location: ${location}`, source: "Profile" }],
+    });
   }
 
-  // Summary keywords
-  if (fSummaryKeywords) {
-    if (includesCI(aboutMe, fSummaryKeywords)) {
-      reasons.push({
-        requirement: `Keyword match: ${fSummaryKeywords}`,
-        evidence: [{ text: `About: contains "${fSummaryKeywords}"`, source: "Profile" }],
-      });
-    }
+  // Summary keywords (aboutMe)
+  if (fSummaryKeywords && includesCI(aboutMe, fSummaryKeywords)) {
+    reasons.push({
+      requirement: `Keyword match: ${fSummaryKeywords}`,
+      evidence: [{ text: `About: contains "${fSummaryKeywords}"`, source: "Profile" }],
+    });
   }
 
-  // Boolean (placeholder behavior matches index.js: searched in aboutMe)
-  if (fBool) {
-    if (includesCI(aboutMe, fBool)) {
-      reasons.push({
-        requirement: `Boolean intent found: ${fBool}`,
-        evidence: [{ text: `About: contains "${fBool}"`, source: "Profile" }],
-      });
-    }
+  // Boolean placeholder behavior matches index.js (searched in aboutMe)
+  if (fBool && includesCI(aboutMe, fBool)) {
+    reasons.push({
+      requirement: `Boolean intent found: ${fBool}`,
+      evidence: [{ text: `About: contains "${fBool}"`, source: "Profile" }],
+    });
   }
 
   // Skills
@@ -120,20 +114,15 @@ function buildExplain({ candidate, job, filters }) {
     matchedSkills = fSkills.filter((s) => candSkillsLC.includes(lc(s)));
     gapSkills = fSkills.filter((s) => !candSkillsLC.includes(lc(s)));
 
-    if (matchedSkills.length) {
-      reasons.push({
-        requirement: `Skills matched (${matchedSkills.length}/${fSkills.length})`,
-        evidence: [{ text: `Matched: ${matchedSkills.join(", ")}`, source: "Skills" }],
-      });
-    } else {
-      // keep honest: no skill matches if recruiter asked for them
-      reasons.push({
-        requirement: `Skills matched (0/${fSkills.length})`,
-        evidence: [{ text: `Requested: ${fSkills.join(", ")}`, source: "Skills" }],
-      });
-    }
+    reasons.push({
+      requirement: `Skills matched (${matchedSkills.length}/${fSkills.length})`,
+      evidence: [
+        matchedSkills.length
+          ? { text: `Matched: ${matchedSkills.join(", ")}`, source: "Skills" }
+          : { text: `Requested: ${fSkills.join(", ")}`, source: "Skills" },
+      ],
+    });
   } else if (job && jobDesc && candSkills.length) {
-    // Light job-based signal: show any candidate skills that appear in job description
     const hits = candSkills.filter((s) => includesCI(jobDesc, s));
     if (hits.length) {
       matchedSkills = uniq(hits).slice(0, 12);
@@ -142,15 +131,12 @@ function buildExplain({ candidate, job, filters }) {
         evidence: [{ text: `Job mentions: ${matchedSkills.join(", ")}`, source: "Job + Skills" }],
       });
     }
-  } else {
-    // fallback: show top skills as evidence if present (still non-generic)
-    if (candSkills.length) {
-      matchedSkills = candSkills.slice(0, 8);
-      reasons.push({
-        requirement: `Skills present in profile`,
-        evidence: [{ text: `Listed: ${matchedSkills.join(", ")}`, source: "Skills" }],
-      });
-    }
+  } else if (candSkills.length) {
+    matchedSkills = candSkills.slice(0, 8);
+    reasons.push({
+      requirement: `Skills present in profile`,
+      evidence: [{ text: `Listed: ${matchedSkills.join(", ")}`, source: "Skills" }],
+    });
   }
 
   // Languages
@@ -165,7 +151,7 @@ function buildExplain({ candidate, job, filters }) {
     }
   }
 
-  // Score = intent alignment score (filters + job context), not “absolute candidate quality”
+  // Score = alignment with recruiter intent (filters/job). No job = intent score.
   const checks = [];
   if (fLoc) checks.push(includesCI(location, fLoc) ? 1 : 0);
   if (fSummaryKeywords) checks.push(includesCI(aboutMe, fSummaryKeywords) ? 1 : 0);
@@ -173,14 +159,13 @@ function buildExplain({ candidate, job, filters }) {
   if (fJobTitle) checks.push(includesCI(headline, fJobTitle) || includesCI(aboutMe, fJobTitle) ? 1 : 0);
   if (fQ) checks.push(includesCI(candidate.name, fQ) || includesCI(headline, fQ) || includesCI(aboutMe, fQ) ? 1 : 0);
 
-  // Skills check is weighted heavier if recruiter specified skills
   let skillScore = null;
   if (fSkills.length) {
-    skillScore = fSkills.length ? matchedSkills.length / fSkills.length : 0;
+    skillScore = matchedSkills.length / fSkills.length;
   }
 
   const base = checks.length ? checks.reduce((a, b) => a + b, 0) / checks.length : 0;
-  const weighted = skillScore == null ? base : (base * 0.4 + skillScore * 0.6);
+  const weighted = skillScore == null ? base : base * 0.4 + skillScore * 0.6;
 
   const score = clamp(Math.round(weighted * 100), 0, 100);
 
@@ -189,9 +174,9 @@ function buildExplain({ candidate, job, filters }) {
   if (fSkills.length) summaryBits.push(`${matchedSkills.length}/${fSkills.length} requested skills`);
   if (fLoc) summaryBits.push(includesCI(location, fLoc) ? "location matches" : "location differs");
   if (fJobTitle || jobTitle) summaryBits.push("role/title signal present");
-  if (!summaryBits.length && candSkills.length) summaryBits.push("profile skills present");
+  if (!summaryBits.length && candSkills.length) summaryBits.push("profile signals present");
 
-  const summary = `${firstName} shows ${summaryBits.join(", ")} based on your criteria.`;
+  const summary = `${firstName} aligns based on ${summaryBits.join(", ")}.`;
 
   return {
     score,
@@ -219,10 +204,12 @@ export default async function handler(req, res) {
 
   try {
     const { candidateId, jobId = null, filters = null } = req.body || {};
+
     if (!candidateId) {
       return res.status(400).json({ error: "Missing candidateId" });
     }
 
+    // IMPORTANT: candidate list is sourced from User table
     const candidate = await prisma.user.findUnique({
       where: { id: candidateId },
       select: {
@@ -246,6 +233,7 @@ export default async function handler(req, res) {
         where: { id: jobId },
         select: { id: true, title: true, description: true },
       });
+
       if (!job) {
         return res.status(404).json({ error: "Job not found" });
       }

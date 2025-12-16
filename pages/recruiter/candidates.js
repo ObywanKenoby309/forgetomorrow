@@ -55,7 +55,9 @@ function RightToolsCard({ whyMode = "lite", creditsLeft = null }) {
         <p className="mt-2 flex items-center flex-wrap gap-1">
           <span>
             <span className="font-semibold">WHY</span>:{" "}
-            {isFull ? "Full rationale enabled" : "Lite rationale (top reasons only)"}
+            {isFull
+              ? "Full rationale enabled"
+              : "Lite rationale (top reasons only)"}
           </span>
           {/* Single POR for explainability */}
           <WhyInfo />
@@ -185,7 +187,9 @@ function Body() {
   const containsAnyKeyword = (haystack, keywords) => {
     const h = String(haystack || "").toLowerCase();
     if (!h) return false;
-    return (keywords || []).some((k) => h.includes(String(k || "").toLowerCase()));
+    return (keywords || []).some((k) =>
+      h.includes(String(k || "").toLowerCase())
+    );
   };
 
   // Pull whatever we can safely from candidate shape without assuming too much.
@@ -255,7 +259,8 @@ function Body() {
 
   const personalizeWhyExplain = (candidate, baseExplain) => {
     const c = candidate || {};
-    const ex = baseExplain && typeof baseExplain === "object" ? { ...baseExplain } : {};
+    const ex =
+      baseExplain && typeof baseExplain === "object" ? { ...baseExplain } : {};
 
     const firstName = pickFirstName(c?.name);
     const candidateTitle = c?.currentTitle || c?.title || c?.role || "";
@@ -276,18 +281,32 @@ function Body() {
     const candSkills = getCandidateSkills(c);
 
     const matched = filterSkills.length
-      ? uniq(filterSkills.filter((s) => candSkills.map((x) => x.toLowerCase()).includes(s.toLowerCase())))
+      ? uniq(
+          filterSkills.filter((s) =>
+            candSkills.map((x) => x.toLowerCase()).includes(s.toLowerCase())
+          )
+        )
       : candSkills.slice(0, 8);
 
     const gaps = filterSkills.length
-      ? uniq(filterSkills.filter((s) => !candSkills.map((x) => x.toLowerCase()).includes(s.toLowerCase()))).slice(0, 10)
+      ? uniq(
+          filterSkills.filter(
+            (s) =>
+              !candSkills.map((x) => x.toLowerCase()).includes(s.toLowerCase())
+          )
+        ).slice(0, 10)
       : [];
 
     ex.skills = ex.skills && typeof ex.skills === "object" ? { ...ex.skills } : {};
-    ex.skills.matched = (ex.skills.matched && ex.skills.matched.length ? ex.skills.matched : matched) || [];
-    ex.skills.gaps = (ex.skills.gaps && ex.skills.gaps.length ? ex.skills.gaps : gaps) || [];
+    ex.skills.matched =
+      (ex.skills.matched && ex.skills.matched.length ? ex.skills.matched : matched) ||
+      [];
+    ex.skills.gaps =
+      (ex.skills.gaps && ex.skills.gaps.length ? ex.skills.gaps : gaps) || [];
     ex.skills.transferable =
-      (ex.skills.transferable && ex.skills.transferable.length ? ex.skills.transferable : []) || [];
+      (ex.skills.transferable && ex.skills.transferable.length
+        ? ex.skills.transferable
+        : []) || [];
 
     // Trajectory (full mode uses it)
     const traj = getCandidateTrajectory(c);
@@ -327,7 +346,9 @@ function Body() {
     if (jobTitle || candidateTitle) {
       const req = jobTitle ? `Role alignment: ${jobTitle}` : `Role alignment`;
       const evidence = [];
-      if (candidateTitle) evidence.push({ text: `Current title: ${candidateTitle}`, source: "Profile" });
+      if (candidateTitle) {
+        evidence.push({ text: `Current title: ${candidateTitle}`, source: "Profile" });
+      }
       if (c?.title && c?.currentTitle && c?.title !== c?.currentTitle) {
         evidence.push({ text: `Listed role: ${c.title}`, source: "Profile" });
       }
@@ -342,13 +363,22 @@ function Body() {
       const evidence = [];
 
       if (matched?.length) {
-        evidence.push({ text: `Matched skills: ${matched.slice(0, 6).join(", ")}`, source: "Skills" });
+        evidence.push({
+          text: `Matched skills: ${matched.slice(0, 6).join(", ")}`,
+          source: "Skills",
+        });
       }
       if (gaps?.length) {
-        evidence.push({ text: `Gaps: ${gaps.slice(0, 4).join(", ")}`, source: "Skills" });
+        evidence.push({
+          text: `Gaps: ${gaps.slice(0, 4).join(", ")}`,
+          source: "Skills",
+        });
       }
       if (!matched?.length && candSkills.length) {
-        evidence.push({ text: `Top skills listed: ${candSkills.slice(0, 6).join(", ")}`, source: "Profile" });
+        evidence.push({
+          text: `Top skills listed: ${candSkills.slice(0, 6).join(", ")}`,
+          source: "Profile",
+        });
       }
 
       if (evidence.length) builtReasons.push({ requirement: req, evidence });
@@ -361,9 +391,15 @@ function Body() {
       if (preferredWorkType) reqParts.push(`Work type: ${preferredWorkType}`);
       const req = reqParts.length ? `Logistics fit: ${reqParts.join(" • ")}` : `Logistics fit`;
       const evidence = [];
-      if (candidateLocation) evidence.push({ text: `Candidate location: ${candidateLocation}`, source: "Profile" });
-      if (c?.remotePreference) evidence.push({ text: `Work preference: ${c.remotePreference}`, source: "Profile" });
-      if (c?.preferredWorkType) evidence.push({ text: `Work type: ${c.preferredWorkType}`, source: "Profile" });
+      if (candidateLocation) {
+        evidence.push({ text: `Candidate location: ${candidateLocation}`, source: "Profile" });
+      }
+      if (c?.remotePreference) {
+        evidence.push({ text: `Work preference: ${c.remotePreference}`, source: "Profile" });
+      }
+      if (c?.preferredWorkType) {
+        evidence.push({ text: `Work type: ${c.preferredWorkType}`, source: "Profile" });
+      }
       if (evidence.length) builtReasons.push({ requirement: req, evidence });
     }
 
@@ -388,7 +424,9 @@ function Body() {
         ? `Language alignment: ${filterLang.slice(0, 6).join(", ")}`
         : `Language alignment`;
       const evidence = [];
-      if (candLang.length) evidence.push({ text: `Languages listed: ${candLang.join(", ")}`, source: "Profile" });
+      if (candLang.length) {
+        evidence.push({ text: `Languages listed: ${candLang.join(", ")}`, source: "Profile" });
+      }
       if (evidence.length) builtReasons.push({ requirement: req, evidence });
     }
 
@@ -481,23 +519,15 @@ function Body() {
 
       if (!res.ok) {
         const payload = await res.json().catch(() => ({}));
-        console.error(
-          "[Candidates] startConversation error:",
-          res.status,
-          payload
-        );
-        alert(
-          "We couldn't open a conversation yet. Please try again in a moment."
-        );
+        console.error("[Candidates] startConversation error:", res.status, payload);
+        alert("We couldn't open a conversation yet. Please try again in a moment.");
         return;
       }
 
       const json = await res.json();
       const conv = json?.conversation;
       if (!conv || !conv.id) {
-        alert(
-          "We couldn't open a conversation yet. Please try again in a moment."
-        );
+        alert("We couldn't open a conversation yet. Please try again in a moment.");
         return;
       }
 
@@ -534,9 +564,7 @@ function Body() {
       }
     } catch (err) {
       console.error("[Candidates] startConversation error:", err);
-      alert(
-        "We couldn't open a conversation yet. Please try again in a moment."
-      );
+      alert("We couldn't open a conversation yet. Please try again in a moment.");
     }
   };
 
@@ -559,9 +587,7 @@ function Body() {
         const params = buildCandidateParams();
 
         const res = await fetch(
-          `/api/recruiter/candidates${
-            params.toString() ? `?${params.toString()}` : ""
-          }`
+          `/api/recruiter/candidates${params.toString() ? `?${params.toString()}` : ""}`
         );
 
         // If API fails but dev flag is on, fall back to demo candidate
@@ -680,9 +706,7 @@ function Body() {
   const saveNotes = async (id, text) => {
     setActionError(null);
     // Optimistic update
-    setCandidates((prev) =>
-      prev.map((c) => (c.id === id ? { ...c, notes: text } : c))
-    );
+    setCandidates((prev) => prev.map((c) => (c.id === id ? { ...c, notes: text } : c)));
 
     try {
       const res = await fetch("/api/recruiter/candidates/notes", {
@@ -693,16 +717,12 @@ function Body() {
 
       if (!res.ok) {
         const payload = await res.json().catch(() => ({}));
-        const msg =
-          payload?.error ||
-          `Failed to save candidate notes (status ${res.status}).`;
+        const msg = payload?.error || `Failed to save candidate notes (status ${res.status}).`;
         throw new Error(msg);
       }
     } catch (err) {
       console.error("[Candidates] saveNotes error:", err);
-      setActionError(
-        "We couldn't save candidate notes. Your changes may not be stored yet."
-      );
+      setActionError("We couldn't save candidate notes. Your changes may not be stored yet.");
     }
   };
 
@@ -717,17 +737,13 @@ function Body() {
         if (c.id !== id) return c;
         const currentTags = Array.isArray(c.tags) ? c.tags : [];
         const has = currentTags.includes(tag);
-        const next = has
-          ? currentTags.filter((t) => t !== tag)
-          : [...currentTags, tag];
+        const next = has ? currentTags.filter((t) => t !== tag) : [...currentTags, tag];
         updatedTags = next;
         return { ...c, tags: next };
       })
     );
 
-    if (!updatedTags) {
-      return;
-    }
+    if (!updatedTags) return;
 
     try {
       const res = await fetch("/api/recruiter/candidates/tags", {
@@ -738,16 +754,12 @@ function Body() {
 
       if (!res.ok) {
         const payload = await res.json().catch(() => ({}));
-        const msg =
-          payload?.error ||
-          `Failed to update candidate tags (status ${res.status}).`;
+        const msg = payload?.error || `Failed to update candidate tags (status ${res.status}).`;
         throw new Error(msg);
       }
     } catch (err) {
       console.error("[Candidates] toggleTag error:", err);
-      setActionError(
-        "We couldn't update candidate tags. Your changes may not be stored yet."
-      );
+      setActionError("We couldn't update candidate tags. Your changes may not be stored yet.");
     }
   };
 
@@ -768,21 +780,22 @@ function Body() {
         headers: { "Content-Type": "application/json" },
         // Phase 1: no specific job context yet → jobId: null
         body: JSON.stringify({
-  candidateId: c.id,
-  jobId: null,
-  filters: {
-    q: nameQuery || null,
-    location: locQuery || null,
-    bool: boolQuery || null,
-    summaryKeywords: summaryKeywords || null,
-    jobTitle: jobTitle || null,
-    workStatus: workStatus || null,
-    preferredWorkType: preferredWorkType || null,
-    relocate: willingToRelocate || null,
-    skills: skills || null,
-    languages: languages || null,
-  },
-});
+          candidateId: c.id,
+          jobId: null,
+          filters: {
+            q: nameQuery || null,
+            location: locQuery || null,
+            bool: boolQuery || null,
+            summaryKeywords: summaryKeywords || null,
+            jobTitle: jobTitle || null,
+            workStatus: workStatus || null,
+            preferredWorkType: preferredWorkType || null,
+            relocate: willingToRelocate || null,
+            skills: skills || null,
+            languages: languages || null,
+          },
+        }),
+      });
 
       if (!res.ok) {
         throw new Error(`WHY API failed (status ${res.status})`);
@@ -1058,10 +1071,7 @@ function Body() {
                     onChange={(e) => setAutomationEnabled(e.target.checked)}
                     className="h-3 w-3 rounded border-slate-400 text-[#FF7043] focus:ring-[#FF7043]"
                   />
-                  <label
-                    htmlFor="automationEnabled"
-                    className="text-xs text-slate-700"
-                  >
+                  <label htmlFor="automationEnabled" className="text-xs text-slate-700">
                     Enable daily candidate feed using these filters
                   </label>
                 </div>
@@ -1104,6 +1114,7 @@ function Body() {
                 >
                   Clear targeting
                 </button>
+
                 <button
                   type="button"
                   onClick={saveAutomationConfig}
@@ -1116,16 +1127,13 @@ function Body() {
             </div>
 
             {automationMessage && (
-              <p className="mt-2 text-[11px] text-slate-600">
-                {automationMessage}
-              </p>
+              <p className="mt-2 text-[11px] text-slate-600">{automationMessage}</p>
             )}
 
             <p className="mt-2 text-[11px] text-slate-500">
-              ForgeTomorrow never filters candidates by name, hobbies or
-              interests, previous employers, birthdays or age, or pronouns. Those
-              details may appear in a profile but are not used for search or
-              automation.
+              ForgeTomorrow never filters candidates by name, hobbies or interests,
+              previous employers, birthdays or age, or pronouns. Those details may
+              appear in a profile but are not used for search or automation.
             </p>
           </div>
         )}
