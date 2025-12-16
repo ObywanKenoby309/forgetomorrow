@@ -205,7 +205,7 @@ export default function ProfileHeader() {
         border: '1px solid #eee',
         borderTop: 'none',
         borderRadius: 12,
-        overflow: 'hidden',
+        overflow: 'visible',
         background: 'white',
       }}
     >
