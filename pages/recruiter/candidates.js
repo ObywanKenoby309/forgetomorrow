@@ -160,6 +160,257 @@ function Body() {
     return params;
   };
 
+  // ---------- WHY PERSONALIZATION (client-side, deterministic) ----------
+  const normalizeList = (val) => {
+    if (!val) return [];
+    if (Array.isArray(val)) return val.filter(Boolean).map(String);
+    if (typeof val === "string") {
+      // supports comma-separated or pipe-separated
+      return val
+        .split(/[,|]/g)
+        .map((s) => s.trim())
+        .filter(Boolean);
+    }
+    return [];
+  };
+
+  const uniq = (arr) => Array.from(new Set((arr || []).filter(Boolean)));
+
+  const pickFirstName = (fullName) => {
+    const n = String(fullName || "").trim();
+    if (!n) return "";
+    return n.split(" ")[0] || "";
+  };
+
+  const containsAnyKeyword = (haystack, keywords) => {
+    const h = String(haystack || "").toLowerCase();
+    if (!h) return false;
+    return (keywords || []).some((k) => h.includes(String(k || "").toLowerCase()));
+  };
+
+  // Pull whatever we can safely from candidate shape without assuming too much.
+  const getCandidateSkills = (c) => {
+    const pools = []
+      .concat(normalizeList(c?.skills))
+      .concat(normalizeList(c?.topSkills))
+      .concat(normalizeList(c?.skillTags))
+      .concat(normalizeList(c?.profile?.skills))
+      .concat(normalizeList(c?.resume?.skills));
+    return uniq(pools).slice(0, 24);
+  };
+
+  const getCandidateLanguages = (c) => {
+    const pools = []
+      .concat(normalizeList(c?.languages))
+      .concat(normalizeList(c?.profile?.languages));
+    return uniq(pools).slice(0, 12);
+  };
+
+  const getCandidateSummaryText = (c) => {
+    return (
+      c?.summary ||
+      c?.headline ||
+      c?.about ||
+      c?.profile?.summary ||
+      c?.profile?.headline ||
+      ""
+    );
+  };
+
+  const getCandidateTrajectory = (c) => {
+    // Prefer explicit trajectory if present
+    if (Array.isArray(c?.trajectory)) return c.trajectory;
+    if (Array.isArray(c?.careerPath)) return c.careerPath;
+
+    // Try to map common work history shapes
+    const wh = c?.workHistory || c?.experience || c?.profile?.workHistory || [];
+    if (!Array.isArray(wh)) return [];
+
+    return wh
+      .filter(Boolean)
+      .slice(0, 6)
+      .map((t) => ({
+        title: t.title || t.role || "",
+        company: t.company || t.employer || "",
+        from: t.from || t.start || t.startDate || "",
+        to: t.to || t.end || t.endDate || "",
+      }))
+      .filter((t) => t.title || t.company);
+  };
+
+  const buildFiltersTriggered = () => {
+    const filters = [];
+    if (nameQuery) filters.push(`Name/role: ${nameQuery}`);
+    if (locQuery) filters.push(`Location: ${locQuery}`);
+    if (boolQuery) filters.push(`Boolean: ${boolQuery}`);
+    if (summaryKeywords) filters.push(`Summary keywords: ${summaryKeywords}`);
+    if (jobTitle) filters.push(`Job title: ${jobTitle}`);
+    if (workStatus) filters.push(`Work status: ${workStatus}`);
+    if (preferredWorkType) filters.push(`Work type: ${preferredWorkType}`);
+    if (willingToRelocate) filters.push(`Relocate: ${willingToRelocate}`);
+    if (skills) filters.push(`Skills: ${skills}`);
+    if (languages) filters.push(`Languages: ${languages}`);
+    return filters;
+  };
+
+  const personalizeWhyExplain = (candidate, baseExplain) => {
+    const c = candidate || {};
+    const ex = baseExplain && typeof baseExplain === "object" ? { ...baseExplain } : {};
+
+    const firstName = pickFirstName(c?.name);
+    const candidateTitle = c?.currentTitle || c?.title || c?.role || "";
+    const candidateLocation = c?.location || c?.city || c?.region || "";
+
+    // Always set score from candidate match if present (keeps UI consistent)
+    if (typeof c?.match === "number") {
+      ex.score = c.match;
+    } else if (typeof ex?.score !== "number") {
+      ex.score = 0;
+    }
+
+    // Build filter snapshot for the drawer (this drives “Matched your filters” chips)
+    ex.filters_triggered = buildFiltersTriggered();
+
+    // Skills: use explicit explain.skills if present; otherwise build from candidate + recruiter filter input
+    const filterSkills = normalizeList(skills);
+    const candSkills = getCandidateSkills(c);
+
+    const matched = filterSkills.length
+      ? uniq(filterSkills.filter((s) => candSkills.map((x) => x.toLowerCase()).includes(s.toLowerCase())))
+      : candSkills.slice(0, 8);
+
+    const gaps = filterSkills.length
+      ? uniq(filterSkills.filter((s) => !candSkills.map((x) => x.toLowerCase()).includes(s.toLowerCase()))).slice(0, 10)
+      : [];
+
+    ex.skills = ex.skills && typeof ex.skills === "object" ? { ...ex.skills } : {};
+    ex.skills.matched = (ex.skills.matched && ex.skills.matched.length ? ex.skills.matched : matched) || [];
+    ex.skills.gaps = (ex.skills.gaps && ex.skills.gaps.length ? ex.skills.gaps : gaps) || [];
+    ex.skills.transferable =
+      (ex.skills.transferable && ex.skills.transferable.length ? ex.skills.transferable : []) || [];
+
+    // Trajectory (full mode uses it)
+    const traj = getCandidateTrajectory(c);
+    if (!Array.isArray(ex.trajectory) || ex.trajectory.length === 0) {
+      ex.trajectory = traj;
+    }
+
+    // Summary: if API gave us something generic, make it candidate + filter aware
+    const baseSummary = String(ex.summary || "").trim();
+    const needsBetterSummary =
+      !baseSummary ||
+      baseSummary.toLowerCase().includes("candidate") ||
+      baseSummary.toLowerCase().includes("strong match") ||
+      baseSummary.toLowerCase().includes("recommended");
+
+    if (needsBetterSummary) {
+      const parts = [];
+      if (candidateTitle) parts.push(`title alignment (${candidateTitle})`);
+      if (candidateLocation) parts.push(`location fit (${candidateLocation})`);
+      if (matched?.length) parts.push(`skills overlap (${matched.slice(0, 4).join(", ")})`);
+      if (jobTitle) parts.push(`target role signal (${jobTitle})`);
+
+      const join = parts.length ? parts.join(", ") : "available profile signals";
+      ex.summary = `${firstName || "Candidate"} recommended based on ${join}.`;
+    } else if (firstName && !baseSummary.startsWith(`${firstName}:`)) {
+      // Keep original if it’s good, just prefix consistently
+      ex.summary = `${firstName}: ${baseSummary}`;
+    }
+
+    // Reasons/evidence: if API returned nothing (or generic), construct explainable reasons
+    const baseReasons = Array.isArray(ex.reasons) ? ex.reasons : [];
+    const baseLooksEmpty = baseReasons.length === 0;
+
+    const builtReasons = [];
+
+    // Title alignment reason
+    if (jobTitle || candidateTitle) {
+      const req = jobTitle ? `Role alignment: ${jobTitle}` : `Role alignment`;
+      const evidence = [];
+      if (candidateTitle) evidence.push({ text: `Current title: ${candidateTitle}`, source: "Profile" });
+      if (c?.title && c?.currentTitle && c?.title !== c?.currentTitle) {
+        evidence.push({ text: `Listed role: ${c.title}`, source: "Profile" });
+      }
+      if (evidence.length) builtReasons.push({ requirement: req, evidence });
+    }
+
+    // Skills alignment reason (use filter skills if present)
+    if (filterSkills.length || candSkills.length) {
+      const req = filterSkills.length
+        ? `Skills match: ${filterSkills.slice(0, 6).join(", ")}`
+        : `Skills match`;
+      const evidence = [];
+
+      if (matched?.length) {
+        evidence.push({ text: `Matched skills: ${matched.slice(0, 6).join(", ")}`, source: "Skills" });
+      }
+      if (gaps?.length) {
+        evidence.push({ text: `Gaps: ${gaps.slice(0, 4).join(", ")}`, source: "Skills" });
+      }
+      if (!matched?.length && candSkills.length) {
+        evidence.push({ text: `Top skills listed: ${candSkills.slice(0, 6).join(", ")}`, source: "Profile" });
+      }
+
+      if (evidence.length) builtReasons.push({ requirement: req, evidence });
+    }
+
+    // Location / work type reason
+    if (locQuery || candidateLocation || preferredWorkType) {
+      const reqParts = [];
+      if (locQuery) reqParts.push(`Location: ${locQuery}`);
+      if (preferredWorkType) reqParts.push(`Work type: ${preferredWorkType}`);
+      const req = reqParts.length ? `Logistics fit: ${reqParts.join(" • ")}` : `Logistics fit`;
+      const evidence = [];
+      if (candidateLocation) evidence.push({ text: `Candidate location: ${candidateLocation}`, source: "Profile" });
+      if (c?.remotePreference) evidence.push({ text: `Work preference: ${c.remotePreference}`, source: "Profile" });
+      if (c?.preferredWorkType) evidence.push({ text: `Work type: ${c.preferredWorkType}`, source: "Profile" });
+      if (evidence.length) builtReasons.push({ requirement: req, evidence });
+    }
+
+    // Summary keywords reason (only if we can actually see the text)
+    const kw = normalizeList(summaryKeywords);
+    const summaryText = getCandidateSummaryText(c);
+    if (kw.length && summaryText) {
+      const hit = containsAnyKeyword(summaryText, kw);
+      if (hit) {
+        builtReasons.push({
+          requirement: `Keyword alignment: ${kw.slice(0, 6).join(", ")}`,
+          evidence: [{ text: "Keywords appear in candidate summary/headline.", source: "Profile" }],
+        });
+      }
+    }
+
+    // Languages reason
+    const filterLang = normalizeList(languages);
+    const candLang = getCandidateLanguages(c);
+    if (filterLang.length || candLang.length) {
+      const req = filterLang.length
+        ? `Language alignment: ${filterLang.slice(0, 6).join(", ")}`
+        : `Language alignment`;
+      const evidence = [];
+      if (candLang.length) evidence.push({ text: `Languages listed: ${candLang.join(", ")}`, source: "Profile" });
+      if (evidence.length) builtReasons.push({ requirement: req, evidence });
+    }
+
+    // If we got real reasons from API, keep them, but ensure they’re not empty shells
+    const looksGeneric =
+      baseReasons.length &&
+      baseReasons.every((r) => {
+        const req = String(r?.requirement || "").toLowerCase();
+        const ev = Array.isArray(r?.evidence) ? r.evidence : [];
+        return !req || req.includes("requirement") || ev.length === 0;
+      });
+
+    if (baseLooksEmpty || looksGeneric) {
+      ex.reasons = builtReasons.slice(0, 10);
+    } else {
+      ex.reasons = baseReasons;
+    }
+
+    return ex;
+  };
+  // ---------- END WHY PERSONALIZATION ----------
+
   // Manual trigger: run search now using all current fields
   const runManualCandidateSearch = async () => {
     setActionError(null);
@@ -533,13 +784,8 @@ function Body() {
       ex = getMockExplain();
     }
 
-    // Personalize explanation with candidate’s data
-    if (c?.name && ex.summary) {
-      ex.summary = `${c.name.split(" ")[0]}: ${ex.summary}`;
-    }
-    if (typeof c?.match === "number") {
-      ex.score = c.match;
-    }
+    // Ensure WHY is not generic: deterministically personalize with candidate + current filters
+    ex = personalizeWhyExplain(c, ex);
 
     setWhyCandidate(c);
     setWhyData(ex);
