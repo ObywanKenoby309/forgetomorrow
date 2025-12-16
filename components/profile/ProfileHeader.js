@@ -12,6 +12,7 @@ export default function ProfileHeader() {
   const [slug, setSlug] = useState(null);
   const [slugValue, setSlugValue] = useState('');
 
+  // Display-only here (editing moved out of Appearance UX)
   const [pronouns, setPronouns] = useState('');
   const [headline, setHeadline] = useState('');
 
@@ -136,10 +137,8 @@ export default function ProfileHeader() {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          headline,
-          pronouns,
+          // NOTE: Pronouns + Headline are NOT edited in Appearance UX
           avatarUrl,
-          // normalize empty strings to null so the DB truly "clears" them
           coverUrl: coverUrl || null,
           wallpaperUrl: wallpaperUrl || null,
           bannerMode,
@@ -350,20 +349,6 @@ export default function ProfileHeader() {
                 Public: anyone with your link can view. Recruiters only: hidden from public; visible only to approved recruiters.
               </small>
             </div>
-
-            <LabeledInput
-              label="Pronouns"
-              value={pronouns}
-              onChange={setPronouns}
-              placeholder="she/her, he/him, they/them"
-            />
-
-            <LabeledInput
-              label="Headline"
-              value={headline}
-              onChange={setHeadline}
-              placeholder="What you do / your focus"
-            />
 
             {/* Avatar selector */}
             <ProfileAvatarSelector value={avatarUrl} onChange={setAvatarUrl} />
@@ -720,7 +705,7 @@ export default function ProfileHeader() {
   );
 }
 
-/* ===== Banner, Toggle, Inputs, Dialog ===== */
+/* ===== Banner, Toggle, Dialog ===== */
 
 function BannerCover({ url, height, focalY }) {
   return (
@@ -809,20 +794,6 @@ function ModeToggle({ value, onChange }) {
       {btn('cover', 'Cover')}
       {btn('fit', 'Fit')}
     </div>
-  );
-}
-
-function LabeledInput({ label, value, onChange, placeholder }) {
-  return (
-    <label style={{ display: 'grid', gap: 4 }}>
-      <span style={{ fontSize: 13, fontWeight: 600 }}>{label}</span>
-      <input
-        value={value}
-        onChange={(e) => onChange(e.target.value)}
-        placeholder={placeholder}
-        style={{ border: '1px solid #ddd', borderRadius: 6, padding: 8 }}
-      />
-    </label>
   );
 }
 
