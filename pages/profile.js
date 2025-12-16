@@ -77,13 +77,18 @@ export default function ProfilePage() {
       const read = (k, fb) => JSON.parse(localStorage.getItem(k) ?? fb);
       const readStr = (k, fb) => localStorage.getItem(k) ?? fb;
 
-      setName(readStr(NAME_KEY, 'Eric James'));
-      setPronouns(readStr(PRONOUNS_KEY, 'He/Him'));
-      setHeadline(readStr(TITLE_KEY, 'Customer Success Leader & AI Advocate'));
-      setLocation(readStr(LOC_KEY, 'Nashville, TN'));
-      setStatus(readStr(STATUS_KEY, 'Open to Opportunities'));
+      // LIVE SAFE DEFAULTS:
+      // Use neutral/blank fallbacks so we never imply identity/location/etc.
+      setName(readStr(NAME_KEY, ''));
+      setPronouns(readStr(PRONOUNS_KEY, ''));
+      setHeadline(readStr(TITLE_KEY, ''));
+      setLocation(readStr(LOC_KEY, ''));
+      setStatus(readStr(STATUS_KEY, ''));
+
+      // Keep safe placeholders for images
       setAvatarUrl(readStr(AVATAR_KEY, '/demo-profile.jpg'));
       setCoverUrl(readStr(COVER_KEY, ''));
+
       setAbout(readStr(ABOUT_KEY, ''));
       setSkills(read(SKL_KEY, '[]'));
       setLanguages(read(LANG_KEY, '[]'));
@@ -283,7 +288,7 @@ export default function ProfilePage() {
           maxWidth: 720,
         }}
       >
-        Give the community a clear, human overview — your resume provides the deep detail.
+        Give the community a clear, human overview - your resume provides the deep detail.
       </p>
       <div style={{ marginTop: 10 }}>
         <Link
@@ -464,7 +469,7 @@ export default function ProfilePage() {
                 'Keep one primary resume linked to your profile.',
                 'Save up to 4 alternates for different roles.',
                 'Do the same with cover letters so recruiters instantly see your best fit.',
-                'Manage all your resumes and cover letters in the builder — you can change your primaries anytime from there.',
+                'Manage all your resumes and cover letters in the builder - you can change your primaries anytime from there.',
               ]}
             />
           </div>

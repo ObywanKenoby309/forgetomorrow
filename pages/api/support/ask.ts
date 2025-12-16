@@ -117,14 +117,15 @@ IMPORTANT RULES:
 - If a user mentions "login", it ALWAYS means they can't log into ForgeTomorrow.
 - If a user mentions "billing", "charges", or "subscriptions", they ALWAYS mean ForgeTomorrow billing.
 - If they reference "my account", "the site", or "the app", assume ForgeTomorrow.
-- Never ask "which service" or "which platform" — it's always ForgeTomorrow.
+- Never ask "which service" or "which platform" - it's always ForgeTomorrow.
 - Be clear, concise, helpful, and professional.
 
 TICKETS AND ESCALATION:
 - A support ticket may already exist for this chat session.
 - If a ticketId is provided to you, you MUST reference it accurately (do not invent ticket numbers).
 - When a ticket exists, you may tell the user: "Your reference number is <ticketId>. You can also see it at the top of this chat."
-- If the user asks to escalate, confirm that you are escalating to next-level support and include the ticketId when available.
+- ONLY say a ticket is being escalated if the user explicitly asks/authorizes escalation.
+- If the user declines escalation, do NOT mention escalation.
 `.trim();
 
 function formatTicketLine(ticketId?: string | null): string {
@@ -160,7 +161,7 @@ function isEscalationTrigger(message: string): boolean {
 }
 
 // ---------------------------------------------------------------------------
-// Escalation confirmation detection
+// Escalation confirmation detection (user explicitly wants escalation)
 // ---------------------------------------------------------------------------
 function isEscalationConfirmation(message: string): boolean {
   const text = message.toLowerCase().trim();
@@ -183,12 +184,38 @@ function isEscalationConfirmation(message: string): boolean {
 
   if (phrases.some((p) => text.includes(p))) return true;
 
-  // Simple "yes" handling to cover short replies after the escalation question
+  // Simple "yes" handling (ONLY safe if the prior bot message asked about escalation)
   if (text === 'yes' || text === 'yes please' || text === 'yeah' || text === 'yep') {
     return true;
   }
 
   return false;
+}
+
+// ---------------------------------------------------------------------------
+// Escalation decline detection (user explicitly says do NOT escalate)
+// ---------------------------------------------------------------------------
+function isEscalationDecline(message: string): boolean {
+  const text = message.toLowerCase().trim();
+
+  const phrases = [
+    'no',
+    'no thanks',
+    'no thank you',
+    "don't escalate",
+    'do not escalate',
+    'no escalation',
+    'not necessary',
+    'no need to escalate',
+    'please do not escalate',
+    'leave it',
+    'its fine',
+    "it's fine",
+  ];
+
+  // Exact "no" or contains decline phrases
+  if (text === 'no') return true;
+  return phrases.some((p) => text === p || text.includes(p));
 }
 
 // ---------------------------------------------------------------------------
@@ -229,11 +256,12 @@ export default async function handler(
     const message = candidateMessage?.trim() || null;
     if (!message) {
       return res.status(400).json({
-        error: 'Missing or invalid "message". Expected message, text, question, query, or input.',
+        error:
+          'Missing or invalid "message". Expected message, text, question, query, or input.',
       });
     }
 
-    // ✅ Option A: UI can pass the existing ticketId so the SD can reference it
+    // UI can pass the existing ticketId so the SD can reference it
     const incomingTicketId =
       typeof body.ticketId === 'string' && body.ticketId.trim()
         ? body.ticketId.trim()
@@ -250,18 +278,39 @@ export default async function handler(
       selectedPersona = incomingPersonaId;
       intent = body.intent || 'general';
     } else {
-      // FIRST message — auto-route based on intent
+      // FIRST message - auto-route based on intent
       intent = detectIntent(message);
       selectedPersona = INTENT_TO_PERSONA[intent];
     }
 
-    // Escalation flow
+    // ---------------------------------------------------------------------
+    // Escalation flow (human-feel rules)
+    // - We only SAY we escalated if user explicitly authorizes escalation.
+    // - If user declines, we acknowledge and keep helping; NO escalation wording.
+    // ---------------------------------------------------------------------
+    if (incomingPersonaId && isEscalationDecline(message)) {
+      const ticketLine = formatTicketLine(incomingTicketId);
+      const declineReply = [
+        'No problem - we will keep working on it here.',
+        ticketLine ? ticketLine : '',
+        'If you change your mind later, just say "please escalate" and I will send it up to next-level support.',
+      ]
+        .filter(Boolean)
+        .join(' ');
+
+      return res.status(200).json({
+        reply: declineReply,
+        personaId: selectedPersona,
+        intent,
+      });
+    }
+
     if (incomingPersonaId && isEscalationConfirmation(message)) {
       const ticketLine = formatTicketLine(incomingTicketId);
       const confirmationReply = [
         "Thank you for confirming. I'm escalating this to our next-level support team now.",
         ticketLine ? ticketLine : '',
-        "They will review your case in more detail and follow up as soon as possible.",
+        'They will review your case in more detail and follow up as soon as possible.',
       ]
         .filter(Boolean)
         .join(' ');
