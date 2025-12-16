@@ -18,13 +18,13 @@ import RecruiterSidebar from '@/components/recruiter/RecruiterSidebar';
 const ALLOWED_MODES = new Set(['seeker', 'coach', 'recruiter-smb', 'recruiter-ent']);
 
 export default function SeekerLayout({
-  title = 'ForgeTomorrow — Seeker',
+  title = 'ForgeTomorrow - Seeker',
   left,
   header,
   right,
   children,
   activeNav,
-  forceChrome,           // 'seeker' | 'coach' | 'recruiter-smb' | 'recruiter-ent'
+  forceChrome, // 'seeker' | 'coach' | 'recruiter-smb' | 'recruiter-ent'
   rightVariant = 'dark', // 'dark' | 'light'
   rightWidth = 260,
   gap = 12,
@@ -80,7 +80,7 @@ export default function SeekerLayout({
           sidebarProps: {
             variant: 'smb',
             active: activeNav,
-            counts: {}, // recruiter sidebar doesn’t need seeker counts
+            counts: {},
           },
         };
 
@@ -110,6 +110,7 @@ export default function SeekerLayout({
 
   // ---- WALLPAPER / BACKGROUND ----
   const { wallpaperUrl } = useUserWallpaper();
+  const hasWallpaper = Boolean(wallpaperUrl);
 
   const backgroundStyle = wallpaperUrl
     ? {
@@ -142,6 +143,34 @@ export default function SeekerLayout({
     window.addEventListener('resize', handleResize);
     return () => window.removeEventListener('resize', handleResize);
   }, []);
+
+  // ---- OVERLAY + FROSTED FRAME (applies to all SeekerLayout pages) ----
+  const wallpaperOverlayStyle = {
+    position: 'absolute',
+    inset: 0,
+    pointerEvents: 'none',
+    // Calms busy wallpapers without hiding them
+    background:
+      'radial-gradient(1200px 700px at 20% 0%, rgba(255,255,255,0.20), rgba(255,255,255,0.00) 55%), ' +
+      'linear-gradient(180deg, rgba(17,32,51,0.40) 0%, rgba(17,32,51,0.18) 40%, rgba(17,32,51,0.38) 100%)',
+  };
+
+  const frostedFrameStyle = hasWallpaper
+    ? {
+        borderRadius: 18,
+        background: 'rgba(255,255,255,0.74)',
+        border: '1px solid rgba(255,255,255,0.30)',
+        boxShadow: '0 12px 30px rgba(0,0,0,0.18)',
+        backdropFilter: isMobile ? 'blur(10px)' : 'blur(14px)',
+        WebkitBackdropFilter: isMobile ? 'blur(10px)' : 'blur(14px)',
+      }
+    : {
+        // If no wallpaper, keep the existing clean look (no blur frame needed)
+        borderRadius: 0,
+        background: 'transparent',
+        border: 'none',
+        boxShadow: 'none',
+      };
 
   // ---- RIGHT RAIL STYLES ----
   const rightBase = {
@@ -210,86 +239,97 @@ export default function SeekerLayout({
       </Head>
 
       {/* Wallpaper wrapper */}
-      <div style={backgroundStyle}>
-        {/* Top chrome header ALWAYS matches chromeMode */}
-        <HeaderComp />
+      <div style={{ ...backgroundStyle, position: 'relative' }}>
+        {/* Wallpaper overlay (only when wallpaper exists) */}
+        {hasWallpaper && <div aria-hidden="true" style={wallpaperOverlayStyle} />}
 
-        {/* Main layout shell */}
-        <div
-          style={{
-            ...gridStyles,
-            gap,
-            ...containerPadding,
-            alignItems: 'start',
-          }}
-        >
-          {/* LEFT — Sidebar (hidden on mobile, moved into overlay) */}
-          <aside
-            style={{
-              gridArea: 'left',
-              alignSelf: 'start',
-              minWidth: 0,
-              display: isMobile ? 'none' : 'block',
-            }}
-          >
-            {left ? left : <SidebarComp {...sidebarProps} />}
-          </aside>
+        {/* Content layer above overlay */}
+        <div style={{ position: 'relative', zIndex: 1 }}>
+          {/* Top chrome header ALWAYS matches chromeMode */}
+          <HeaderComp />
 
-          {/* PAGE HEADER (center) */}
-          <header
-            style={{
-              gridArea: 'header',
-              alignSelf: 'start',
-              minWidth: 0,
-            }}
-          >
-            {header}
-
-            {/* Mobile-only "Open Sidebar" button */}
-            {isMobile && (
-              <div style={{ marginTop: 12 }}>
-                <button
-                  type="button"
-                  onClick={() => setMobileSidebarOpen(true)}
+          {/* Frosted frame wraps the full layout shell */}
+          <div style={{ ...containerPadding }}>
+            <div style={frostedFrameStyle}>
+              {/* Main layout shell */}
+              <div
+                style={{
+                  ...gridStyles,
+                  gap,
+                  padding: pad,
+                  alignItems: 'start',
+                }}
+              >
+                {/* LEFT - Sidebar (hidden on mobile, moved into overlay) */}
+                <aside
                   style={{
-                    display: 'inline-flex',
-                    alignItems: 'center',
-                    gap: 8,
-                    borderRadius: 999,
-                    padding: '8px 14px',
-                    fontSize: 13,
-                    fontWeight: 600,
-                    border: '1px solid #CFD8DC',
-                    background: '#ECEFF1',
-                    color: '#263238',
-                    cursor: 'pointer',
+                    gridArea: 'left',
+                    alignSelf: 'start',
+                    minWidth: 0,
+                    display: isMobile ? 'none' : 'block',
                   }}
                 >
-                  <span style={{ fontSize: 16 }}>☰</span>
-                  <span>Open Sidebar</span>
-                </button>
+                  {left ? left : <SidebarComp {...sidebarProps} />}
+                </aside>
+
+                {/* PAGE HEADER (center) */}
+                <header
+                  style={{
+                    gridArea: 'header',
+                    alignSelf: 'start',
+                    minWidth: 0,
+                  }}
+                >
+                  {header}
+
+                  {/* Mobile-only "Open Sidebar" button */}
+                  {isMobile && (
+                    <div style={{ marginTop: 12 }}>
+                      <button
+                        type="button"
+                        onClick={() => setMobileSidebarOpen(true)}
+                        style={{
+                          display: 'inline-flex',
+                          alignItems: 'center',
+                          gap: 8,
+                          borderRadius: 999,
+                          padding: '8px 14px',
+                          fontSize: 13,
+                          fontWeight: 600,
+                          border: '1px solid #CFD8DC',
+                          background: '#ECEFF1',
+                          color: '#263238',
+                          cursor: 'pointer',
+                        }}
+                      >
+                        <span style={{ fontSize: 16 }}>☰</span>
+                        <span>Open Sidebar</span>
+                      </button>
+                    </div>
+                  )}
+                </header>
+
+                {/* RIGHT - Variant-controlled rail */}
+                {hasRight ? (
+                  <aside
+                    style={{
+                      ...rightBase,
+                      ...(rightVariant === 'light' ? rightLight : rightDark),
+                    }}
+                  >
+                    {right}
+                  </aside>
+                ) : null}
+
+                {/* CONTENT (center) */}
+                <main style={{ gridArea: 'content', minWidth: 0 }}>
+                  <div style={{ display: 'grid', gap, width: '100%', minWidth: 0 }}>
+                    {children}
+                  </div>
+                </main>
               </div>
-            )}
-          </header>
-
-          {/* RIGHT — Variant-controlled rail */}
-          {hasRight ? (
-            <aside
-              style={{
-                ...rightBase,
-                ...(rightVariant === 'light' ? rightLight : rightDark),
-              }}
-            >
-              {right}
-            </aside>
-          ) : null}
-
-          {/* CONTENT (center) */}
-          <main style={{ gridArea: 'content', minWidth: 0 }}>
-            <div style={{ display: 'grid', gap, width: '100%', minWidth: 0 }}>
-              {children}
             </div>
-          </main>
+          </div>
         </div>
       </div>
 
