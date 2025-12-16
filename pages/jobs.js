@@ -1473,7 +1473,7 @@ function Jobs() {
       justifyContent: 'flex-start',
       alignItems: 'stretch',
       gap: 6,
-      marginTop: -6,
+      marginTop: -8,
       padding: '0 0 0',
       width: '100%',
       overflowX: 'hidden',   // no horizontal scrollbar

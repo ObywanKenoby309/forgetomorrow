@@ -1,5 +1,4 @@
 // pages/api/recruiter/calendar.js
-
 import { getServerSession } from 'next-auth/next';
 import { authOptions } from '../auth/[...nextauth]';
 import { prisma } from '@/lib/prisma';
@@ -77,7 +76,13 @@ async function syncRecruiterItemToSeekerCalendar(item, opts = {}) {
   const ids = [item.ownerId, candidateId];
   const users = await prisma.user.findMany({
     where: { id: { in: ids } },
-    select: { id: true, name: true, firstName: true, lastName: true, email: true },
+    select: {
+      id: true,
+      name: true,
+      firstName: true,
+      lastName: true,
+      email: true,
+    },
   });
 
   const owner = users.find((u) => u.id === item.ownerId);
@@ -153,13 +158,46 @@ export default async function handler(req, res) {
 
     // ───────────────── GET: list items for this recruiter ────────────────
     if (req.method === 'GET') {
-      const items = await prisma.recruiterCalendarItem.findMany({
-        where: { ownerId: userId },
-        orderBy: { date: 'asc' },
-      });
+      const [items, inboundMirrors] = await Promise.all([
+        prisma.recruiterCalendarItem.findMany({
+          where: { ownerId: userId },
+          orderBy: { date: 'asc' },
+        }),
+        prisma.seekerCalendarItem.findMany({
+          where: {
+            userId,
+            source: 'coach',
+          },
+          orderBy: { date: 'asc' },
+        }),
+      ]);
 
       const events = items.map(mapDbToEvent).filter(Boolean);
-      return res.status(200).json({ events });
+
+      // Map inbound coach invites (mirrored in SeekerCalendarItem) into event shape
+      const inboundEvents = inboundMirrors.map((mirror) => {
+        // Treat these as personal scope items for display in recruiter calendar
+        const dbShape = {
+          id: mirror.id,
+          ownerId: userId,
+          scope: 'personal',
+          date: mirror.date,
+          time: mirror.time || '09:00',
+          title: mirror.title || 'Coaching session',
+          type: mirror.type || 'Interview',
+          status: mirror.status || 'Scheduled',
+          notes: mirror.notes || '',
+          candidateType: 'external',
+          candidateUserId: null,
+          candidateName: '',
+          company: '',
+          jobTitle: '',
+          req: '',
+        };
+        return mapDbToEvent(dbShape);
+      }).filter(Boolean);
+
+      return res.status(200).json({ events: [...events, ...inboundEvents] });
     }
 
     // Extract shared payload fields
@@ -220,7 +258,7 @@ export default async function handler(req, res) {
         previousCandidateUserId = existing.candidateUserId;
         previousCandidateType = existing.candidateType;
 
-        // Update existing calendar item — but only if it belongs to this recruiter
+        // Update existing calendar item - but only if it belongs to this recruiter
         item = await prisma.recruiterCalendarItem.update({
           where: {
             id,

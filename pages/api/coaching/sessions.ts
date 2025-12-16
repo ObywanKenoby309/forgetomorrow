@@ -5,7 +5,7 @@ import { authOptions } from '../auth/[...nextauth]';
 import { prisma } from '@/lib/prisma';
 
 function toStartAt(date: string, time: string): Date {
-  // Simple local → Date helper; backend stores as UTC
+  // Simple local -> Date helper; backend stores as UTC
   return new Date(`${date}T${time || '00:00'}:00`);
 }
 
@@ -21,7 +21,7 @@ function splitDateTime(d: Date) {
   };
 }
 
-// Normalize a CoachingSession row → UI payload
+// Normalize a CoachingSession row -> UI payload
 function toSessionPayload(
   row: any,
   clientDisplay?: string | null,
@@ -81,7 +81,7 @@ async function syncCoachSessionToSeekerCalendar(opts: {
     });
   }
 
-  // If there's no current internal client, ensure mirrors are gone
+  // If there is no current internal client, ensure mirrors are gone
   if (!clientId) {
     await prisma.seekerCalendarItem.deleteMany({
       where: {
@@ -123,7 +123,6 @@ async function syncCoachSessionToSeekerCalendar(opts: {
     title,
     type: type || 'Strategy',
     status: status || 'Scheduled',
-    // keep notes simple for now; we can expand later
     notes: existing?.notes || '',
     source: 'coach',
     sourceItemId: sessionId,
@@ -206,7 +205,7 @@ export default async function handler(
         clientMap.set(c.id, c);
       }
 
-      const sessions = rows.map((row) => {
+      const ownSessions = rows.map((row) => {
         let display: string | null = null;
         let participants: string | null = null;
 
@@ -238,7 +237,133 @@ export default async function handler(
         return toSessionPayload(row, display, participants);
       });
 
-      return res.status(200).json({ sessions });
+      // ───────────── Inbound recruiter invites (target is this coach) ─────────────
+      const inboundMirrors = await prisma.seekerCalendarItem.findMany({
+        where: {
+          userId: coachId,
+          source: 'recruiter',
+        },
+        orderBy: { date: 'asc' },
+      });
+
+      let inboundSessions: any[] = [];
+
+      if (inboundMirrors.length > 0) {
+        const sourceItemIds = Array.from(
+          new Set(
+            inboundMirrors
+              .map((m) => m.sourceItemId)
+              .filter((id): id is string => typeof id === 'string')
+          )
+        );
+
+        const recruiterItems =
+          sourceItemIds.length > 0
+            ? await prisma.recruiterCalendarItem.findMany({
+                where: { id: { in: sourceItemIds } },
+                select: {
+                  id: true,
+                  ownerId: true,
+                  type: true,
+                  status: true,
+                },
+              })
+            : [];
+
+        const recruiterOwnerIds = Array.from(
+          new Set(recruiterItems.map((ri) => ri.ownerId))
+        );
+
+        const recruiters =
+          recruiterOwnerIds.length > 0
+            ? await prisma.user.findMany({
+                where: { id: { in: recruiterOwnerIds } },
+                select: {
+                  id: true,
+                  name: true,
+                  firstName: true,
+                  lastName: true,
+                  email: true,
+                },
+              })
+            : [];
+
+        const recruiterMap = new Map<
+          string,
+          { name: string | null; firstName: string | null; lastName: string | null; email: string }
+        >();
+        for (const r of recruiters) {
+          recruiterMap.set(r.id, r);
+        }
+
+        const recruiterItemMap = new Map<
+          string,
+          { id: string; ownerId: string; type: string; status: string }
+        >();
+        for (const ri of recruiterItems) {
+          recruiterItemMap.set(ri.id, {
+            id: ri.id,
+            ownerId: ri.ownerId,
+            type: ri.type,
+            status: ri.status,
+          });
+        }
+
+        inboundSessions = inboundMirrors.map((mirror) => {
+          const linked = mirror.sourceItemId
+            ? recruiterItemMap.get(mirror.sourceItemId)
+            : undefined;
+
+          const recruiter =
+            linked && recruiterMap.get(linked.ownerId)
+              ? recruiterMap.get(linked.ownerId)
+              : null;
+
+          const recruiterName =
+            recruiter?.name ||
+            `${recruiter?.firstName || ''} ${recruiter?.lastName || ''}`.trim() ||
+            recruiter?.email ||
+            'Recruiter';
+
+          // Build a "fake" CoachingSession-like row so we can reuse toSessionPayload
+          const startAt = mirror.date;
+          const sessionRow = {
+            id: mirror.id,
+            coachId,
+            clientId: linked ? linked.ownerId : null,
+            startAt,
+            type: mirror.type || linked?.type || 'Strategy',
+            status: mirror.status || linked?.status || 'Scheduled',
+            notes: mirror.notes || '',
+          };
+
+          const { date, time } = splitDateTime(startAt);
+          const displayClient = recruiterName;
+          const participants = recruiterName;
+
+          return {
+            id: sessionRow.id as string,
+            date,
+            time,
+            client: displayClient,
+            type: sessionRow.type as string,
+            status: sessionRow.status as string,
+            clientId: sessionRow.clientId,
+            clientType: sessionRow.clientId ? 'internal' : 'external',
+            notes: sessionRow.notes || '',
+            participants,
+          };
+        });
+      }
+
+      // Merge own sessions + inbound recruiter invites
+      const allSessions = [...ownSessions, ...inboundSessions].sort((a, b) => {
+        const aKey = `${a.date}T${a.time || '00:00'}`;
+        const bKey = `${b.date}T${b.time || '00:00'}`;
+        return aKey.localeCompare(bKey);
+      });
+
+      return res.status(200).json({ sessions: allSessions });
     }
 
     // ───────────── POST: create session ─────────────
@@ -291,11 +416,9 @@ export default async function handler(
         // Default to external if not specified
         const freeText = (participants || clientName || '').trim();
         if (!freeText) {
-          return res
-            .status(400)
-            .json({
-              error: 'Missing client/participant info for external client',
-            });
+          return res.status(400).json({
+            error: 'Missing client/participant info for external client',
+          });
         }
         clientId = null;
         const label = `Client (free text): ${freeText}`;
@@ -405,17 +528,15 @@ export default async function handler(
       } else if (clientType === 'external') {
         const freeText = (participants || clientName || '').trim();
         if (!freeText) {
-          return res
-            .status(400)
-            .json({
-              error: 'Missing client/participant info for external client',
-            });
+          return res.status(400).json({
+            error: 'Missing client/participant info for external client',
+          });
         }
         data.clientId = null;
         const label = `Client (free text): ${freeText}`;
         data.notes = [label, notes].filter(Boolean).join(' | ');
       } else if (typeof notes === 'string') {
-        // If clientType isn't being changed but we got notes, allow direct notes update.
+        // If clientType is not being changed but we got notes, allow direct notes update.
         data.notes = notes;
       }
 
@@ -438,7 +559,7 @@ export default async function handler(
         previousClientId: existing.clientId ?? null,
       });
 
-      // Re-derive display & participants the same way as GET
+      // Re-derive display and participants the same way as GET
       let displayName: string | null = null;
       let participantsOut: string | null = null;
 
