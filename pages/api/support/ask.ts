@@ -10,10 +10,7 @@ import { PERSONA_PROMPTS, PersonaId } from '../../../lib/personas';
 const apiKey = process.env.OPENAI_API_KEY;
 
 // Log once on boot so we can see whether the key is present
-console.log(
-  'Support API boot - OPENAI_API_KEY present?',
-  apiKey ? 'YES' : 'NO'
-);
+console.log('Support API boot - OPENAI_API_KEY present?', apiKey ? 'YES' : 'NO');
 
 // Initialize OpenAI client only if key is present
 const openai = apiKey ? new OpenAI({ apiKey }) : null;
@@ -22,12 +19,7 @@ const openai = apiKey ? new OpenAI({ apiKey }) : null;
 const SUPPORT_MODEL = process.env.HELPDESK_MODEL || 'gpt-4.1-mini';
 
 // Supported categories
-type SupportIntent =
-  | 'technical'
-  | 'billing'
-  | 'recruiter'
-  | 'emotional'
-  | 'general';
+type SupportIntent = 'technical' | 'billing' | 'recruiter' | 'emotional' | 'general';
 
 type SupportResponseBody =
   | { reply: string; personaId: PersonaId; intent: SupportIntent }
@@ -105,7 +97,7 @@ function detectIntent(message: string): SupportIntent {
   return 'general';
 }
 
-// Map intent → persona
+// Map intent -> persona
 const INTENT_TO_PERSONA: Record<SupportIntent, PersonaId> = {
   general: 'daniel',
   technical: 'timothy',
@@ -127,7 +119,20 @@ IMPORTANT RULES:
 - If they reference "my account", "the site", or "the app", assume ForgeTomorrow.
 - Never ask "which service" or "which platform" — it's always ForgeTomorrow.
 - Be clear, concise, helpful, and professional.
+
+TICKETS AND ESCALATION:
+- A support ticket may already exist for this chat session.
+- If a ticketId is provided to you, you MUST reference it accurately (do not invent ticket numbers).
+- When a ticket exists, you may tell the user: "Your reference number is <ticketId>. You can also see it at the top of this chat."
+- If the user asks to escalate, confirm that you are escalating to next-level support and include the ticketId when available.
 `.trim();
+
+function formatTicketLine(ticketId?: string | null): string {
+  if (!ticketId) return '';
+  const clean = String(ticketId).trim();
+  if (!clean) return '';
+  return `Reference: ${clean}. The reference number is also visible at the top of this chat.`;
+}
 
 // ---------------------------------------------------------------------------
 // Escalation trigger detection
@@ -176,9 +181,7 @@ function isEscalationConfirmation(message: string): boolean {
     'escalate to next-level',
   ];
 
-  if (phrases.some((p) => text.includes(p))) {
-    return true;
-  }
+  if (phrases.some((p) => text.includes(p))) return true;
 
   // Simple "yes" handling to cover short replies after the escalation question
   if (text === 'yes' || text === 'yes please' || text === 'yeah' || text === 'yep') {
@@ -226,12 +229,17 @@ export default async function handler(
     const message = candidateMessage?.trim() || null;
     if (!message) {
       return res.status(400).json({
-        error:
-          'Missing or invalid "message". Expected message, text, question, query, or input.',
+        error: 'Missing or invalid "message". Expected message, text, question, query, or input.',
       });
     }
 
-    // 🔥 If personaId is supplied, stick with it (no auto routing)
+    // ✅ Option A: UI can pass the existing ticketId so the SD can reference it
+    const incomingTicketId =
+      typeof body.ticketId === 'string' && body.ticketId.trim()
+        ? body.ticketId.trim()
+        : null;
+
+    // If personaId is supplied, stick with it (no auto routing)
     const incomingPersonaId = body.personaId as PersonaId | undefined;
 
     let intent: SupportIntent;
@@ -247,10 +255,16 @@ export default async function handler(
       selectedPersona = INTENT_TO_PERSONA[intent];
     }
 
-    // 🆕 Escalation flow
+    // Escalation flow
     if (incomingPersonaId && isEscalationConfirmation(message)) {
-      const confirmationReply =
-        "Thank you for confirming. I'm escalating this to our next level support team now. They'll review your case in more detail and follow up with you as soon as possible.";
+      const ticketLine = formatTicketLine(incomingTicketId);
+      const confirmationReply = [
+        "Thank you for confirming. I'm escalating this to our next-level support team now.",
+        ticketLine ? ticketLine : '',
+        "They will review your case in more detail and follow up as soon as possible.",
+      ]
+        .filter(Boolean)
+        .join(' ');
 
       return res.status(200).json({
         reply: confirmationReply,
@@ -260,8 +274,13 @@ export default async function handler(
     }
 
     if (incomingPersonaId && isEscalationTrigger(message)) {
-      const escalationReply =
-        "I'm sorry that didn't fully resolve the issue yet. Would you like me to escalate this to our next level support so we can take a deeper look?";
+      const ticketLine = formatTicketLine(incomingTicketId);
+      const escalationReply = [
+        "I'm sorry that didn't fully resolve the issue yet. Would you like me to escalate this to our next-level support so we can take a deeper look?",
+        ticketLine ? ticketLine : '',
+      ]
+        .filter(Boolean)
+        .join(' ');
 
       return res.status(200).json({
         reply: escalationReply,
@@ -275,6 +294,14 @@ export default async function handler(
     const messagesToSend = [
       { role: 'system' as const, content: GLOBAL_CONTEXT },
       { role: 'system' as const, content: personaPrompt },
+      ...(incomingTicketId
+        ? [
+            {
+              role: 'system' as const,
+              content: `Ticket context: ticketId=${incomingTicketId}. If referencing a ticket, use this exact value. Do not invent ticket numbers.`,
+            },
+          ]
+        : []),
       { role: 'user' as const, content: message },
     ];
 

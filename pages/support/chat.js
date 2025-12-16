@@ -2,6 +2,9 @@
 import { useState, useRef, useEffect } from 'react';
 import Head from 'next/head';
 import Link from 'next/link';
+import { useRouter } from 'next/router';
+import SeekerLayout from '@/components/layouts/SeekerLayout';
+import SeekerRightColumn from '@/components/seeker/SeekerRightColumn';
 
 // Persona definitions for display only
 const PERSONA_DISPLAY = {
@@ -37,12 +40,58 @@ const PERSONA_DISPLAY = {
   },
 };
 
+function SupportChatHeaderBox({ chrome, ticketId }) {
+  const mode = String(chrome || '').toLowerCase();
+
+  const isRecruiter = mode.startsWith('recruiter');
+  const isCoach = mode === 'coach';
+
+  let title = 'Support Chat';
+  let subtitle =
+    'Ask your question in natural language. The right support persona will answer automatically and stay with you for this conversation.';
+
+  if (isRecruiter) {
+    title = 'Recruiter Support Chat';
+    subtitle =
+      'Get help with posting jobs, pipelines, candidates, and account questions. The right support persona will stay with you for this conversation.';
+  } else if (isCoach) {
+    title = 'Coach Support Chat';
+    subtitle =
+      'Get help with coaching tools, client workflows, and platform questions. The right support persona will stay with you for this conversation.';
+  }
+
+  return (
+    <section className="px-4 pt-4 md:pt-6">
+      <div className="max-w-5xl mx-auto rounded-2xl border border-slate-200 bg-white/95 backdrop-blur-sm shadow-md px-5 py-4 md:px-8 md:py-6 text-center">
+        <h1 className="m-0 text-2xl md:text-3xl font-extrabold tracking-tight text-[#FF7043]">
+          {title}
+        </h1>
+        <p className="mt-2 text-sm md:text-base text-slate-600 max-w-3xl mx-auto">
+          {subtitle}
+        </p>
+
+        {ticketId && (
+          <p className="mt-2 text-[11px] text-slate-500">
+            Ticket created for this chat:&nbsp;
+            <span className="font-mono">{ticketId}</span>
+          </p>
+        )}
+      </div>
+    </section>
+  );
+}
+
 export default function SupportChatPage() {
+  const router = useRouter();
+  const chrome = String(router.query.chrome || '').toLowerCase();
+  const withChrome = (path) =>
+    chrome ? `${path}${path.includes('?') ? '&' : '?'}chrome=${chrome}` : path;
+
   const [messages, setMessages] = useState([
     {
       id: 'welcome-1',
       from: 'system',
-      text: `Welcome to the ForgeTomorrow Support Desk. 
+      text: `Welcome to the ForgeTomorrow Support Desk.
 Type your question or concern in your own words. We'll automatically route it to the right support persona (technical, billing, recruiter, or emotional support) and keep you with that same person for this conversation.`,
     },
   ]);
@@ -50,10 +99,10 @@ Type your question or concern in your own words. We'll automatically route it to
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
 
-  // 🔴 Once set after the first reply, this persona stays for the entire chat
+  // Once set after the first reply, this persona stays for the entire chat
   const [activePersonaId, setActivePersonaId] = useState(null);
 
-  // 🆕 A single support ticket per chat session
+  // A single support ticket per chat session
   const [ticketId, setTicketId] = useState(null);
 
   const bottomRef = useRef(null);
@@ -85,23 +134,22 @@ Type your question or concern in your own words. We'll automatically route it to
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           message: trimmed,
-          // 🔥 If a persona has already been assigned, stick with it.
-          // Backend will only auto-route when personaId is not provided (first message).
+          // If a persona has already been assigned, stick with it.
           personaId: activePersonaId,
+
+          // ✅ Option A: pass ticketId so the Service Desk can reference it
+          ticketId: ticketId || null,
         }),
       });
 
       if (!res.ok) {
         const data = await res.json().catch(() => ({}));
-        throw new Error(
-          data.error || 'Support service is unavailable right now.'
-        );
+        throw new Error(data.error || 'Support service is unavailable right now.');
       }
 
       const data = await res.json();
 
-      // First reply: backend chooses persona → we lock it in activePersonaId
-      // Later replies: we keep using the already locked persona
+      // First reply: backend chooses persona -> we lock it in activePersonaId
       let resolvedPersonaId = activePersonaId;
 
       if (!resolvedPersonaId && data.personaId) {
@@ -109,9 +157,7 @@ Type your question or concern in your own words. We'll automatically route it to
         setActivePersonaId(data.personaId);
       }
 
-      const personaInfo = resolvedPersonaId
-        ? PERSONA_DISPLAY[resolvedPersonaId]
-        : null;
+      const personaInfo = resolvedPersonaId ? PERSONA_DISPLAY[resolvedPersonaId] : null;
 
       const botMessage = {
         id: `bot-${Date.now()}`,
@@ -123,12 +169,9 @@ Type your question or concern in your own words. We'll automatically route it to
         intent: data.intent || 'general',
       };
 
-      // 🆕 Automatic ticket creation on FIRST successful response
+      // Automatic ticket creation on FIRST successful response
       if (!ticketId) {
-        const subject =
-          trimmed.length > 80
-            ? `${trimmed.slice(0, 77)}...`
-            : trimmed;
+        const subject = trimmed.length > 80 ? `${trimmed.slice(0, 77)}...` : trimmed;
 
         try {
           const ticketRes = await fetch('/api/support/tickets', {
@@ -159,9 +202,7 @@ Type your question or concern in your own words. We'll automatically route it to
       setMessages((prev) => [...prev, botMessage]);
     } catch (err) {
       console.error(err);
-      setError(
-        err.message || 'Something went wrong. Please try again.'
-      );
+      setError(err.message || 'Something went wrong. Please try again.');
     } finally {
       setLoading(false);
     }
@@ -196,145 +237,127 @@ Type your question or concern in your own words. We'll automatically route it to
         <title>ForgeTomorrow - Support Chat</title>
       </Head>
 
-      <main className="max-w-5xl mx-auto px-4 py-6 md:py-10 min-h-[80vh] flex flex-col">
-        {/* Top bar */}
-        <div className="flex items-center justify-between mb-4 md:mb-6">
-          <div>
-            <h1 className="text-2xl md:text-3xl font-bold text-[#FF7043]">
-              Support Chat
-            </h1>
-            <p className="text-sm md:text-base text-slate-600">
-              Ask your question in natural language. The right support persona will answer automatically and stay with you for this conversation.
-            </p>
-            {ticketId && (
-              <p className="mt-1 text-[11px] text-slate-500">
-                Ticket created for this chat:&nbsp;
-                <span className="font-mono">{ticketId}</span>
-              </p>
-            )}
+      <SeekerLayout
+        title="ForgeTomorrow - Support Chat"
+        header={<SupportChatHeaderBox chrome={chrome} ticketId={ticketId} />}
+        right={<SeekerRightColumn variant="support" />}
+        activeNav="support"
+      >
+        <div className="max-w-5xl mx-auto p-6">
+          {/* Top back link */}
+          <div className="flex items-center justify-end mb-4">
+            <Link
+              href={withChrome('/support')}
+              className="text-xs md:text-sm text-slate-500 hover:text-slate-700 underline"
+            >
+              Back to Support Center
+            </Link>
           </div>
 
-          <Link
-            href="/support"
-            className="text-xs md:text-sm text-slate-500 hover:text-slate-700 underline"
-          >
-            ← Back to Support Center
-          </Link>
-        </div>
+          {/* Chat container */}
+          <div className="bg-white rounded-xl shadow-md border border-slate-200 flex flex-col overflow-hidden min-h-[70vh]">
+            {/* Messages area */}
+            <div className="flex-1 overflow-y-auto px-4 py-4 md:px-6 md:py-5 space-y-3">
+              {messages.map((msg) => {
+                if (msg.from === 'system') {
+                  return (
+                    <div key={msg.id} className="flex justify-center">
+                      <div className="max-w-xl text-xs md:text-sm text-slate-600 bg-slate-100 border border-slate-200 rounded-lg px-3 py-2 text-center whitespace-pre-wrap">
+                        {msg.text}
+                      </div>
+                    </div>
+                  );
+                }
 
-        {/* Chat container */}
-        <div className="flex-1 bg-white rounded-xl shadow-md border border-slate-200 flex flex-col overflow-hidden">
-          {/* Messages area */}
-          <div className="flex-1 overflow-y-auto px-4 py-4 md:px-6 md:py-5 space-y-3">
-            {messages.map((msg) => {
-              if (msg.from === 'system') {
+                const isUser = msg.from === 'user';
+                const alignment = isUser ? 'justify-end' : 'justify-start';
+                const bubbleColor = isUser
+                  ? 'bg-[#FF7043] text-white'
+                  : 'bg-slate-100 text-slate-900';
+                const bubbleAlign = isUser ? 'items-end' : 'items-start';
+
                 return (
-                  <div
-                    key={msg.id}
-                    className="flex justify-center"
-                  >
-                    <div className="max-w-xl text-xs md:text-sm text-slate-600 bg-slate-100 border border-slate-200 rounded-lg px-3 py-2 text-center whitespace-pre-wrap">
-                      {msg.text}
+                  <div key={msg.id} className={`flex ${alignment}`}>
+                    <div className={`flex flex-col max-w-[80%] ${bubbleAlign}`}>
+                      {!isUser && (
+                        <div className="flex items-center gap-2 mb-1">
+                          <div className="h-7 w-7 rounded-full bg-[#FF7043] text-white flex items-center justify-center text-xs font-semibold">
+                            {msg.personaName ? msg.personaName.charAt(0) : 'S'}
+                          </div>
+                          <div className="flex flex-col">
+                            <span className="text-xs font-semibold text-slate-800">
+                              {msg.personaName || 'Support'}
+                            </span>
+                            {msg.personaRole && (
+                              <span className="text-[10px] text-slate-500">
+                                {msg.personaRole}
+                              </span>
+                            )}
+                            {msg.intent && (
+                              <span className="text-[10px] uppercase tracking-wide text-slate-500">
+                                {intentLabel(msg.intent)}
+                              </span>
+                            )}
+                          </div>
+                        </div>
+                      )}
+
+                      <div
+                        className={`rounded-2xl px-3 py-2 text-xs md:text-sm whitespace-pre-wrap leading-relaxed ${bubbleColor}`}
+                      >
+                        {msg.text}
+                      </div>
                     </div>
                   </div>
                 );
-              }
+              })}
 
-              const isUser = msg.from === 'user';
-              const alignment = isUser ? 'justify-end' : 'justify-start';
-              const bubbleColor = isUser
-                ? 'bg-[#FF7043] text-white'
-                : 'bg-slate-100 text-slate-900';
-              const bubbleAlign = isUser ? 'items-end' : 'items-start';
-
-              return (
-                <div
-                  key={msg.id}
-                  className={`flex ${alignment}`}
-                >
-                  <div
-                    className={`flex flex-col max-w-[80%] ${bubbleAlign}`}
-                  >
-                    {!isUser && (
-                      <div className="flex items-center gap-2 mb-1">
-                        <div className="h-7 w-7 rounded-full bg-[#FF7043] text-white flex items-center justify-center text-xs font-semibold">
-                          {msg.personaName
-                            ? msg.personaName.charAt(0)
-                            : 'S'}
-                        </div>
-                        <div className="flex flex-col">
-                          <span className="text-xs font-semibold text-slate-800">
-                            {msg.personaName || 'Support'}
-                          </span>
-                          {msg.personaRole && (
-                            <span className="text-[10px] text-slate-500">
-                              {msg.personaRole}
-                            </span>
-                          )}
-                          {msg.intent && (
-                            <span className="text-[10px] uppercase tracking-wide text-slate-500">
-                              {intentLabel(msg.intent)}
-                            </span>
-                          )}
-                        </div>
-                      </div>
-                    )}
-
-                    <div
-                      className={`rounded-2xl px-3 py-2 text-xs md:text-sm whitespace-pre-wrap leading-relaxed ${bubbleColor}`}
-                    >
-                      {msg.text}
-                    </div>
+              {loading && (
+                <div className="flex justify-start">
+                  <div className="flex items-center gap-2 text-xs text-slate-500">
+                    <div className="h-2 w-2 rounded-full bg-slate-400 animate-bounce" />
+                    <span>Support is typing...</span>
                   </div>
                 </div>
-              );
-            })}
+              )}
 
-            {loading && (
-              <div className="flex justify-start">
-                <div className="flex items-center gap-2 text-xs text-slate-500">
-                  <div className="h-2 w-2 rounded-full bg-slate-400 animate-bounce" />
-                  <span>Support is typing…</span>
-                </div>
+              <div ref={bottomRef} />
+            </div>
+
+            {/* Error bar */}
+            {error && (
+              <div className="px-4 py-2 bg-red-50 text-xs md:text-sm text-red-700 border-t border-red-200">
+                {error}
               </div>
             )}
 
-            <div ref={bottomRef} />
-          </div>
-
-          {/* Error bar */}
-          {error && (
-            <div className="px-4 py-2 bg-red-50 text-xs md:text-sm text-red-700 border-t border-red-200">
-              {error}
+            {/* Input area */}
+            <div className="border-t border-slate-200 bg-slate-50 px-3 py-3 md:px-4 md:py-3">
+              <div className="flex items-end gap-2">
+                <textarea
+                  className="flex-1 rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm md:text-base text-slate-900 focus:outline-none focus:ring-2 focus:ring-[#FF7043] focus:border-transparent resize-none max-h-32"
+                  rows={2}
+                  placeholder="Type your message here. You can ask about technical problems, billing questions, recruiter tools, or how you're feeling about your job search."
+                  value={input}
+                  onChange={(e) => setInput(e.target.value)}
+                  onKeyDown={handleKeyDown}
+                />
+                <button
+                  type="button"
+                  onClick={handleSend}
+                  disabled={loading || !input.trim()}
+                  className="inline-flex items-center justify-center rounded-lg bg-[#FF7043] text-white text-sm md:text-base font-medium px-4 py-2 h-10 md:h-11 shadow hover:bg-[#ff8a65] disabled:opacity-60 disabled:cursor-not-allowed"
+                >
+                  {loading ? 'Sending...' : 'Send'}
+                </button>
+              </div>
+              <p className="mt-1 text-[11px] text-slate-500">
+                Please do not share passwords or sensitive financial details. Our support personas are here to help, but they cannot see private account numbers.
+              </p>
             </div>
-          )}
-
-          {/* Input area */}
-          <div className="border-t border-slate-200 bg-slate-50 px-3 py-3 md:px-4 md:py-3">
-            <div className="flex items-end gap-2">
-              <textarea
-                className="flex-1 rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm md:text-base text-slate-900 focus:outline-none focus:ring-2 focus:ring-[#FF7043] focus:border-transparent resize-none max-h-32"
-                rows={2}
-                placeholder="Type your message here. You can ask about technical problems, billing questions, recruiter tools, or how you're feeling about your job search."
-                value={input}
-                onChange={(e) => setInput(e.target.value)}
-                onKeyDown={handleKeyDown}
-              />
-              <button
-                type="button"
-                onClick={handleSend}
-                disabled={loading || !input.trim()}
-                className="inline-flex items-center justify-center rounded-lg bg-[#FF7043] text-white text-sm md:text-base font-medium px-4 py-2 h-10 md:h-11 shadow hover:bg-[#ff8a65] disabled:opacity-60 disabled:cursor-not-allowed"
-              >
-                {loading ? 'Sending…' : 'Send'}
-              </button>
-            </div>
-            <p className="mt-1 text-[11px] text-slate-500">
-              Please don’t share passwords or sensitive financial details. Our support personas are here to help, but they can’t see private account numbers.
-            </p>
           </div>
         </div>
-      </main>
+      </SeekerLayout>
     </>
   );
 }

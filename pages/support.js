@@ -222,10 +222,10 @@ export default function Support() {
                   <>
                     Need personalized support? Email us anytime at{' '}
                     <a
-                      href="mailto:forgetomorrowteam@gmail.com"
+                      href="mailto:support@forgetomorrow.com"
                       className="text-[#FF7043] underline"
                     >
-                      forgetomorrowteam@gmail.com
+                      support@forgetomorrow.com
                     </a>
                     .
                   </>
