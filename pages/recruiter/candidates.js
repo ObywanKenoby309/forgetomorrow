@@ -768,10 +768,21 @@ function Body() {
         headers: { "Content-Type": "application/json" },
         // Phase 1: no specific job context yet → jobId: null
         body: JSON.stringify({
-          candidateId: c.id,
-          jobId: null,
-        }),
-      });
+  candidateId: c.id,
+  jobId: null,
+  filters: {
+    q: nameQuery || null,
+    location: locQuery || null,
+    bool: boolQuery || null,
+    summaryKeywords: summaryKeywords || null,
+    jobTitle: jobTitle || null,
+    workStatus: workStatus || null,
+    preferredWorkType: preferredWorkType || null,
+    relocate: willingToRelocate || null,
+    skills: skills || null,
+    languages: languages || null,
+  },
+});
 
       if (!res.ok) {
         throw new Error(`WHY API failed (status ${res.status})`);
