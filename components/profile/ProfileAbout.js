@@ -2,64 +2,49 @@
 import React, { useEffect, useState } from 'react';
 
 export default function ProfileAbout({ about, setAbout }) {
-  const [headline, setHeadline] = useState('');
-  const [pronouns, setPronouns] = useState('');
-  const [summaryValue, setSummaryValue] = useState(about || '');
-
+  const [isEditing, setIsEditing] = useState(false);
+  const [editValue, setEditValue] = useState(about || '');
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState(null);
+  const [loadingFromServer, setLoadingFromServer] = useState(false);
 
-  // Keep summaryValue in sync if parent about changes
+  // Keep local editValue in sync if parent about changes
   useEffect(() => {
-    setSummaryValue(about || '');
+    setEditValue(about || '');
   }, [about]);
 
-  // Load headline + pronouns from /api/profile/header
+  // Initial load from /api/profile/details when we don't already have a real value
   useEffect(() => {
-    let cancelled = false;
-
-    (async () => {
-      try {
-        const res = await fetch('/api/profile/header');
-        if (!res.ok) throw new Error('Failed to load profile header');
-        const data = await res.json();
-        const user = data.user || data;
-        if (!user || cancelled) return;
-
-        setHeadline(user.headline || '');
-        setPronouns(user.pronouns || '');
-      } catch (err) {
-        if (!cancelled) {
-          console.error('Failed to load headline/pronouns', err);
-        }
-      }
-    })();
-
-    return () => {
-      cancelled = true;
-    };
-  }, []);
-
-  // Load About Me from /api/profile/details if needed
-  useEffect(() => {
-    // parent typically provides about, but keep this safe if it doesn't
-    if (about != null) return;
+    // ✅ FIX: only skip fetch if about is a non-empty string
+    if (typeof about === 'string' && about.trim().length > 0) return;
 
     let cancelled = false;
+    setLoadingFromServer(true);
 
     (async () => {
       try {
         const res = await fetch('/api/profile/details');
         if (!res.ok) throw new Error('Failed to load profile details');
+
         const data = await res.json();
-        const serverAbout = data?.user?.aboutMe || '';
+
+        // ✅ robust read (supports different payload shapes)
+        const serverAbout =
+          data?.user?.aboutMe ??
+          data?.user?.about ??
+          data?.aboutMe ??
+          '';
 
         if (!cancelled) {
-          setSummaryValue(serverAbout);
-          if (typeof setAbout === 'function') setAbout(serverAbout);
+          setEditValue(serverAbout || '');
+          if (typeof setAbout === 'function') {
+            setAbout(serverAbout || '');
+          }
         }
       } catch (err) {
-        if (!cancelled) console.error('Failed to load About Me', err);
+        console.error('Failed to load About Me', err);
+      } finally {
+        if (!cancelled) setLoadingFromServer(false);
       }
     })();
 
@@ -73,42 +58,27 @@ export default function ProfileAbout({ about, setAbout }) {
     setError(null);
 
     try {
-      // 1) Save headline + pronouns
-      const resHeader = await fetch('/api/profile/header', {
+      const res = await fetch('/api/profile/details', {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          headline,
-          pronouns,
+          aboutMe: editValue,
         }),
       });
 
-      let headerData = {};
-      if (!resHeader.ok) {
+      let data = {};
+      if (!res.ok) {
         try {
-          headerData = await resHeader.json();
+          data = await res.json();
         } catch (_) {}
-        throw new Error(headerData.error || 'Failed to save headline/pronouns');
+        throw new Error(data.error || 'Failed to save About Me');
       }
 
-      // 2) Save About Me summary
-      const resDetails = await fetch('/api/profile/details', {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          aboutMe: summaryValue,
-        }),
-      });
-
-      let detailsData = {};
-      if (!resDetails.ok) {
-        try {
-          detailsData = await resDetails.json();
-        } catch (_) {}
-        throw new Error(detailsData.error || 'Failed to save About Me');
+      if (typeof setAbout === 'function') {
+        setAbout(editValue);
       }
 
-      if (typeof setAbout === 'function') setAbout(summaryValue);
+      setIsEditing(false);
     } catch (err) {
       console.error('Failed to save About Me', err);
       setError(err.message || 'Failed to save About Me');
@@ -117,34 +87,18 @@ export default function ProfileAbout({ about, setAbout }) {
     }
   };
 
-  const handleCancel = async () => {
+  const handleCancel = () => {
+    setEditValue(about || '');
+    setIsEditing(false);
     setError(null);
-
-    try {
-      // Reload server truth for header + details
-      const [h, d] = await Promise.all([
-        fetch('/api/profile/header'),
-        fetch('/api/profile/details'),
-      ]);
-
-      if (h.ok) {
-        const hd = await h.json();
-        const user = hd.user || hd;
-        setHeadline(user?.headline || '');
-        setPronouns(user?.pronouns || '');
-      }
-
-      if (d.ok) {
-        const dd = await d.json();
-        const serverAbout = dd?.user?.aboutMe || '';
-        setSummaryValue(serverAbout);
-        if (typeof setAbout === 'function') setAbout(serverAbout);
-      }
-    } catch (err) {
-      console.error('Failed to reset About Me', err);
-      // keep silent; user can keep editing
-    }
   };
+
+  const displayText =
+    loadingFromServer && !(about && about.trim().length)
+      ? 'Loading your summary…'
+      : (about && about.trim().length)
+      ? about
+      : 'Add a short summary about yourself...';
 
   return (
     <section
@@ -154,43 +108,57 @@ export default function ProfileAbout({ about, setAbout }) {
         borderRadius: 12,
         padding: 16,
         boxShadow: '0 2px 6px rgba(0,0,0,0.06)',
+        position: 'relative',
       }}
-      aria-label="About Me editor"
     >
-      <h3
+      <div
         style={{
-          margin: 0,
-          color: '#FF7043',
-          fontWeight: 700,
-          fontSize: '1.1rem',
-          marginBottom: 10,
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+          marginBottom: 8,
         }}
       >
-        About Me
-      </h3>
+        <h3
+          style={{
+            margin: 0,
+            color: '#FF7043',
+            fontWeight: 700,
+            fontSize: '1.1rem',
+          }}
+        >
+          About Me
+        </h3>
+        {!isEditing && (
+          <button
+            onClick={() => setIsEditing(true)}
+            style={{
+              background: 'white',
+              color: '#FF7043',
+              border: '1px solid #FF7043',
+              padding: '6px 16px',
+              borderRadius: 999,
+              fontWeight: 600,
+              fontSize: '0.875rem',
+              cursor: 'pointer',
+              transition: 'all 0.2s',
+              minWidth: 72,
+            }}
+            onMouseOver={(e) => (e.currentTarget.style.background = '#FFF5F0')}
+            onMouseOut={(e) => (e.currentTarget.style.background = 'white')}
+          >
+            Edit
+          </button>
+        )}
+      </div>
 
-      <div style={{ display: 'grid', gap: 12 }}>
-        <LabeledInput
-          label="Headline"
-          value={headline}
-          onChange={setHeadline}
-          placeholder="What you do / your focus"
-        />
-
-        <LabeledInput
-          label="Pronouns"
-          value={pronouns}
-          onChange={setPronouns}
-          placeholder="she/her, he/him, they/them"
-        />
-
-        <label style={{ display: 'grid', gap: 4 }}>
-          <span style={{ fontSize: 13, fontWeight: 600, color: '#455A64' }}>Summary</span>
+      {isEditing ? (
+        <div style={{ display: 'grid', gap: 12 }}>
           <textarea
-            value={summaryValue}
-            onChange={(e) => setSummaryValue(e.target.value)}
+            value={editValue}
+            onChange={(e) => setEditValue(e.target.value)}
             placeholder="Add a short summary about yourself..."
-            rows={5}
+            rows={4}
             style={{
               width: '100%',
               padding: 12,
@@ -201,67 +169,57 @@ export default function ProfileAbout({ about, setAbout }) {
               outline: 'none',
             }}
           />
-        </label>
-
-        {error && <small style={{ color: '#d32f2f' }}>{error}</small>}
-
-        <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8 }}>
-          <button
-            type="button"
-            onClick={handleCancel}
-            style={{
-              padding: '8px 16px',
-              borderRadius: 6,
-              border: '1px solid #cbd5e0',
-              background: 'white',
-              color: '#4a5568',
-              fontWeight: 600,
-              cursor: 'pointer',
-              fontSize: '0.875rem',
-            }}
-          >
-            Cancel
-          </button>
-          <button
-            type="button"
-            onClick={handleSave}
-            disabled={saving}
-            style={{
-              padding: '8px 16px',
-              borderRadius: 6,
-              border: 'none',
-              background: '#FF7043',
-              color: 'white',
-              fontWeight: 600,
-              cursor: saving ? 'default' : 'pointer',
-              fontSize: '0.875rem',
-              opacity: saving ? 0.8 : 1,
-            }}
-          >
-            {saving ? 'Saving…' : 'Save'}
-          </button>
+          {error && <small style={{ color: '#d32f2f' }}>{error}</small>}
+          <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8 }}>
+            <button
+              onClick={handleCancel}
+              style={{
+                padding: '8px 16px',
+                borderRadius: 6,
+                border: '1px solid #cbd5e0',
+                background: 'white',
+                color: '#4a5568',
+                fontWeight: 600,
+                cursor: 'pointer',
+                fontSize: '0.875rem',
+              }}
+            >
+              Cancel
+            </button>
+            <button
+              onClick={handleSave}
+              disabled={saving}
+              style={{
+                padding: '8px 16px',
+                borderRadius: 6,
+                border: 'none',
+                background: '#FF7043',
+                color: 'white',
+                fontWeight: 600,
+                cursor: saving ? 'default' : 'pointer',
+                fontSize: '0.875rem',
+                opacity: saving ? 0.8 : 1,
+              }}
+            >
+              {saving ? 'Saving…' : 'Save'}
+            </button>
+          </div>
         </div>
-      </div>
+      ) : (
+        <p
+          style={{
+            margin: 0,
+            color: about && about.trim().length ? '#2d3748' : '#718096',
+            fontSize: '1rem',
+            lineHeight: 1.6,
+            minHeight: 48,
+            display: 'flex',
+            alignItems: 'center',
+          }}
+        >
+          {displayText}
+        </p>
+      )}
     </section>
-  );
-}
-
-function LabeledInput({ label, value, onChange, placeholder }) {
-  return (
-    <label style={{ display: 'grid', gap: 4 }}>
-      <span style={{ fontSize: 13, fontWeight: 600, color: '#455A64' }}>{label}</span>
-      <input
-        value={value}
-        onChange={(e) => onChange(e.target.value)}
-        placeholder={placeholder}
-        style={{
-          border: '1px solid #ddd',
-          borderRadius: 6,
-          padding: 10,
-          fontSize: 14,
-          outline: 'none',
-        }}
-      />
-    </label>
   );
 }
