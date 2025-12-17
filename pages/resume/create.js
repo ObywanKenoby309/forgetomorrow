@@ -175,29 +175,21 @@ export default function CreateResumePage() {
     ? new Date(saveEventAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
     : '';
 
-  // ✅ FIX: do not let experiences.every(...) count as "complete" when experiences is empty
-  const hasValidExperienceSet =
-    experiences?.length > 0 &&
-    experiences.every((e) => e.title && e.company && e.bullets?.length >= 2);
-
-  const isResumeValid =
-    summary?.trim().length > 20 &&
-    skills?.length >= 8 &&
-    hasValidExperienceSet;
-
+  // ✅ REQUIRED completion checks (now includes EDUCATION)
   const checks = [
     summary?.trim().length > 20,
     skills?.length >= 8,
-    hasValidExperienceSet, // ✅ FIXED (single combined rule)
-    educationList?.some((edu) => (edu.institution || edu.school || edu.degree || edu.field))
+    experiences?.length > 0 && experiences.every((e) => e.title && e.company && e.bullets?.length >= 2),
+    educationList?.length > 0 &&
+      educationList.some((edu) => (edu.school || edu.institution) && (edu.degree || edu.field)),
   ];
 
-  // Detect if the resume is effectively empty and clamp progress to 0 in that case
-  // ✅ FIX: do NOT count auto-filled name/profile URL as "resume content"
+  // Detect if the resume is effectively empty and clamp progress to 0 in that case.
+  // IMPORTANT: Ignore auto-populated fields (fullName + forgeUrl/ftProfile) so "Ready" stays 0% until user actually enters content.
   const hasAnyResumeContent =
     (formData &&
       (
-        // exclude fullName/name/forgeUrl/ftProfile so auto-fill doesn't bump "empty" state
+        // NOTE: intentionally NOT counting fullName/name/forgeUrl/ftProfile as "started"
         formData.email ||
         formData.phone ||
         formData.location ||
@@ -217,7 +209,13 @@ export default function CreateResumePage() {
       )) ||
     (educationList &&
       educationList.some(
-        (edu) => edu.school || edu.institution || edu.degree || edu.field
+        (edu) =>
+          edu.school ||
+          edu.institution ||
+          edu.degree ||
+          edu.field ||
+          edu.details ||
+          edu.description
       )) ||
     (projects &&
       projects.some(
@@ -258,18 +256,17 @@ export default function CreateResumePage() {
 
   // 🔹 Auto-load ForgeTomorrow profile URL + name for the authenticated user
   useEffect(() => {
-    async function loadForgeProfileUrl() {
+    async function loadProfileDefaults() {
       try {
-        // Only skip if we already have BOTH name and a profile URL set
-        const hasName = !!(formData.fullName || formData.name);
-        const hasUrl = !!(formData.forgeUrl || formData.ftProfile);
-        if (hasName && hasUrl) return;
+        // If user already filled it, don't override
+        if (formData.forgeUrl || formData.ftProfile || formData.fullName) return;
 
         const res = await fetch('/api/profile/header');
         if (!res.ok) return;
 
         const data = await res.json();
 
+        // Build name safely
         const derivedName =
           data?.name ||
           [data?.firstName, data?.lastName].filter(Boolean).join(' ') ||
@@ -280,7 +277,8 @@ export default function CreateResumePage() {
 
         setFormData((prev) => ({
           ...prev,
-          fullName: prev.fullName || prev.name || derivedName || '',
+          // ✅ put the auto-populated name into fullName (the field preview uses and user edits)
+          fullName: prev.fullName || derivedName || prev.name || '',
           forgeUrl: prev.forgeUrl || fullProfileUrl,
           ftProfile: prev.ftProfile || fullProfileUrl,
         }));
@@ -289,14 +287,8 @@ export default function CreateResumePage() {
       }
     }
 
-    loadForgeProfileUrl();
-  }, [
-    formData.fullName,
-    formData.name,
-    formData.forgeUrl,
-    formData.ftProfile,
-    setFormData,
-  ]);
+    loadProfileDefaults();
+  }, [formData.fullName, formData.forgeUrl, formData.ftProfile, setFormData]);
 
   // Handle manual JD file upload / drop
   const handleFile = async (file) => {
