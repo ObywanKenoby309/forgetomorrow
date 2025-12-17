@@ -18,6 +18,91 @@ function normalizeVisibility(
   return null;
 }
 
+// ------------------------------
+// Slug helpers (NEW)
+// ------------------------------
+function slugBaseFromUser(record: {
+  firstName?: string | null;
+  lastName?: string | null;
+  name?: string | null;
+}) {
+  const raw =
+    [record.firstName, record.lastName].filter(Boolean).join(" ") ||
+    record.name ||
+    "user";
+
+  // lower, replace non-alnum with hyphen, collapse hyphens, trim
+  const base = raw
+    .toString()
+    .trim()
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/-+/g, "-")
+    .replace(/^-|-$/g, "");
+
+  return base || "user";
+}
+
+function rand4() {
+  const letters = "abcdefghijklmnopqrstuvwxyz";
+  let out = "";
+  for (let i = 0; i < 4; i++) out += letters[Math.floor(Math.random() * letters.length)];
+  return out;
+}
+
+function cleanSlugInput(v: any) {
+  if (typeof v !== "string") return null;
+  const cleaned = v
+    .trim()
+    .toLowerCase()
+    .replace(/[^a-z0-9-]+/g, "-")
+    .replace(/-+/g, "-")
+    .replace(/^-|-$/g, "");
+  return cleaned.length ? cleaned : null;
+}
+
+async function ensureUserSlug(userId: string, base: string) {
+  // If already has one, return it
+  const existing = await prisma.user.findUnique({
+    where: { id: userId },
+    select: { slug: true },
+  });
+  if (existing?.slug) return existing.slug;
+
+  // Try a few candidates; handle uniqueness collisions
+  for (let i = 0; i < 10; i++) {
+    const candidate = `${base}-${rand4()}`;
+
+    try {
+      // Only set if still null (prevents overwriting if race)
+      await prisma.user.updateMany({
+        where: { id: userId, slug: null },
+        data: {
+          slug: candidate,
+          // Auto-generated slug should NOT count as the user's change.
+          // Leave slugLastChangedAt null so they can customize immediately.
+          slugLastChangedAt: null,
+          // Keep count aligned (optional safety)
+          slugChangeCount: 0,
+        },
+      });
+
+      const after = await prisma.user.findUnique({
+        where: { id: userId },
+        select: { slug: true },
+      });
+
+      if (after?.slug) return after.slug;
+    } catch (err: any) {
+      // Prisma unique constraint error = try another
+      if (err?.code === "P2002") continue;
+      throw err;
+    }
+  }
+
+  throw new Error("Failed to generate unique slug");
+}
+
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   const session = (await getServerSession(req, res, authOptions)) as
     | { user?: { email?: string | null } }
@@ -75,6 +160,13 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
           return res.status(404).json({ error: "Profile header not found" });
         }
 
+        // ✅ NEW: Ensure a real slug exists in DB
+        let ensuredSlug = record.slug;
+        if (!ensuredSlug) {
+          const base = slugBaseFromUser(record);
+          ensuredSlug = await ensureUserSlug(userId, base);
+        }
+
         let corporateBanner = null;
         if (record.corporateBannerKey) {
           corporateBanner = getCorporateBannerByKey(record.corporateBannerKey);
@@ -92,6 +184,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
         return res.status(200).json({
           ...record,
+          slug: ensuredSlug,
           profileVisibility: effectiveVisibility,
           coverUrl: effectiveCoverUrl,
           corporateBanner,
@@ -143,11 +236,36 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         if (pronouns !== undefined) data.pronouns = pronouns;
         if (location !== undefined) data.location = location;
 
+        // ✅ NEW: Slug change rules (once per 24h)
         if (slug !== undefined) {
-          data.slug =
-            typeof slug === "string" && slug.trim().length > 0
-              ? slug.trim()
-              : null;
+          const cleaned = cleanSlugInput(slug);
+
+          if (cleaned) {
+            const current = await prisma.user.findUnique({
+              where: { id: userId },
+              select: { slug: true, slugLastChangedAt: true },
+            });
+
+            const isChanging = cleaned !== (current?.slug || null);
+
+            if (isChanging) {
+              const last = current?.slugLastChangedAt;
+              if (last) {
+                const ms = Date.now() - new Date(last).getTime();
+                const day = 24 * 60 * 60 * 1000;
+                if (ms < day) {
+                  return res.status(429).json({
+                    error: "You can change your personal URL once per day.",
+                  });
+                }
+              }
+
+              data.slug = cleaned;
+              data.slugLastChangedAt = new Date();
+              data.slugChangeCount = { increment: 1 };
+            }
+          }
+          // If cleaned is null/empty, do nothing (do not allow clearing slug)
         }
 
         // ✅ Visibility (User table = single source of truth)
