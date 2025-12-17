@@ -804,10 +804,19 @@ function Dialog({ children, title, onClose }) {
         position: 'fixed',
         inset: 0,
         background: 'rgba(0,0,0,0.35)',
-        display: 'grid',
-        placeItems: 'center',
-        zIndex: 50,
-        padding: 16,
+
+        // ✅ FIX: ensure the editor sits ABOVE all page content
+        zIndex: 99999,
+
+        // ✅ FIX: start lower + allow full scroll inside overlay
+        display: 'flex',
+        justifyContent: 'center',
+        alignItems: 'flex-start',
+        overflowY: 'auto',
+        paddingTop: 80,
+        paddingLeft: 16,
+        paddingRight: 16,
+        paddingBottom: 24,
       }}
       onClick={onClose}
     >
@@ -819,8 +828,11 @@ function Dialog({ children, title, onClose }) {
           padding: 16,
           width: 720,
           maxWidth: '98vw',
-          maxHeight: '92vh',
+
+          // ✅ FIX: keep dialog within viewport so scrolling is clean
+          maxHeight: 'calc(100vh - 120px)',
           overflowY: 'auto',
+
           display: 'grid',
           gap: 10,
           boxShadow: '0 10px 30px rgba(0,0,0,0.15)',
