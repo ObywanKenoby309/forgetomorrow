@@ -1,6 +1,27 @@
 // components/profile/ProfileAbout.js
 import React, { useEffect, useState } from 'react';
 
+const PROFILE_ABOUT_BACKUP_KEY = 'ft_profile_about_backup_v1';
+
+function safeGetBackup() {
+  try {
+    if (typeof window === 'undefined') return '';
+    return window.localStorage.getItem(PROFILE_ABOUT_BACKUP_KEY) || '';
+  } catch {
+    return '';
+  }
+}
+
+function safeSetBackup(val) {
+  try {
+    if (typeof window === 'undefined') return;
+    const v = (val || '').trim();
+    if (v) window.localStorage.setItem(PROFILE_ABOUT_BACKUP_KEY, v);
+  } catch {
+    // ignore
+  }
+}
+
 export default function ProfileAbout({ about, setAbout }) {
   const [headline, setHeadline] = useState('');
   const [pronouns, setPronouns] = useState('');
@@ -9,9 +30,26 @@ export default function ProfileAbout({ about, setAbout }) {
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState(null);
 
-  // Keep summaryValue in sync if parent about changes
+  // On first mount, if parent about is empty, hydrate from local backup (prevents refresh wipe)
   useEffect(() => {
-    setSummaryValue(about || '');
+    if (typeof about === 'string' && about.trim().length > 0) return;
+    if (summaryValue && summaryValue.trim().length > 0) return;
+
+    const backup = safeGetBackup();
+    if (backup) setSummaryValue(backup);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  // Keep summaryValue in sync ONLY when parent about is a real (non-empty) value.
+  // This prevents "about === ''" from wiping out what we already have.
+  useEffect(() => {
+    if (typeof about !== 'string') return;
+
+    const incoming = about.trim();
+    if (!incoming) return;
+
+    setSummaryValue(incoming);
+    safeSetBackup(incoming);
   }, [about]);
 
   // Load headline + pronouns from /api/profile/header
@@ -42,8 +80,7 @@ export default function ProfileAbout({ about, setAbout }) {
 
   // Load About Me from /api/profile/details if needed
   useEffect(() => {
-    // ✅ FIX: only skip fetch if about is a non-empty string.
-    // Empty string '' should still fetch server truth.
+    // Only skip fetch if about is a non-empty string
     if (typeof about === 'string' && about.trim().length > 0) return;
 
     let cancelled = false;
@@ -53,11 +90,21 @@ export default function ProfileAbout({ about, setAbout }) {
         const res = await fetch('/api/profile/details');
         if (!res.ok) throw new Error('Failed to load profile details');
         const data = await res.json();
-        const serverAbout = data?.user?.aboutMe || '';
+        const serverAbout = (data?.user?.aboutMe || '').trim();
 
-        if (!cancelled) {
+        if (cancelled) return;
+
+        // Only apply serverAbout if it's real. Never overwrite with empty.
+        if (serverAbout) {
           setSummaryValue(serverAbout);
+          safeSetBackup(serverAbout);
           if (typeof setAbout === 'function') setAbout(serverAbout);
+        } else {
+          // If server returns empty, keep what we already have (including backup)
+          const backup = safeGetBackup();
+          if (!summaryValue?.trim() && backup) {
+            setSummaryValue(backup);
+          }
         }
       } catch (err) {
         if (!cancelled) console.error('Failed to load About Me', err);
@@ -67,7 +114,7 @@ export default function ProfileAbout({ about, setAbout }) {
     return () => {
       cancelled = true;
     };
-  }, [about, setAbout]);
+  }, [about, setAbout, summaryValue]);
 
   const handleSave = async () => {
     setSaving(true);
@@ -110,6 +157,7 @@ export default function ProfileAbout({ about, setAbout }) {
       }
 
       if (typeof setAbout === 'function') setAbout(summaryValue);
+      safeSetBackup(summaryValue);
     } catch (err) {
       console.error('Failed to save About Me', err);
       setError(err.message || 'Failed to save About Me');
@@ -137,9 +185,13 @@ export default function ProfileAbout({ about, setAbout }) {
 
       if (d.ok) {
         const dd = await d.json();
-        const serverAbout = dd?.user?.aboutMe || '';
-        setSummaryValue(serverAbout);
-        if (typeof setAbout === 'function') setAbout(serverAbout);
+        const serverAbout = (dd?.user?.aboutMe || '').trim();
+
+        if (serverAbout) {
+          setSummaryValue(serverAbout);
+          safeSetBackup(serverAbout);
+          if (typeof setAbout === 'function') setAbout(serverAbout);
+        }
       }
     } catch (err) {
       console.error('Failed to reset About Me', err);
@@ -186,10 +238,16 @@ export default function ProfileAbout({ about, setAbout }) {
         />
 
         <label style={{ display: 'grid', gap: 4 }}>
-          <span style={{ fontSize: 13, fontWeight: 600, color: '#455A64' }}>Summary</span>
+          <span style={{ fontSize: 13, fontWeight: 600, color: '#455A64' }}>
+            Summary
+          </span>
           <textarea
             value={summaryValue}
-            onChange={(e) => setSummaryValue(e.target.value)}
+            onChange={(e) => {
+              const v = e.target.value;
+              setSummaryValue(v);
+              safeSetBackup(v);
+            }}
             placeholder="Add a short summary about yourself..."
             rows={5}
             style={{
@@ -250,7 +308,9 @@ export default function ProfileAbout({ about, setAbout }) {
 function LabeledInput({ label, value, onChange, placeholder }) {
   return (
     <label style={{ display: 'grid', gap: 4 }}>
-      <span style={{ fontSize: 13, fontWeight: 600, color: '#455A64' }}>{label}</span>
+      <span style={{ fontSize: 13, fontWeight: 600, color: '#455A64' }}>
+        {label}
+      </span>
       <input
         value={value}
         onChange={(e) => onChange(e.target.value)}
