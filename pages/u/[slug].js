@@ -15,17 +15,13 @@ function parseArrayField(raw, fallback = []) {
 
     if (Array.isArray(parsed)) {
       return parsed
-        .map((item) =>
-          typeof item === 'string' ? item : item?.name || item?.label || ''
-        )
+        .map((item) => (typeof item === 'string' ? item : item?.name || item?.label || ''))
         .filter(Boolean);
     }
 
     if (parsed && typeof parsed === 'object' && Array.isArray(parsed.items)) {
       return parsed.items
-        .map((item) =>
-          typeof item === 'string' ? item : item?.name || item?.label || ''
-        )
+        .map((item) => (typeof item === 'string' ? item : item?.name || item?.label || ''))
         .filter(Boolean);
     }
 
@@ -69,8 +65,8 @@ export async function getServerSideProps(context) {
       // ✅ NEW: visibility gating fields
       isProfilePublic: true,
       profileVisibility: true, // enum: PRIVATE | PUBLIC | RECRUITERS_ONLY
-      role: true,              // SEEKER | COACH | RECRUITER | ADMIN
-      email: true,             // to determine owner by email
+      role: true, // SEEKER | COACH | RECRUITER | ADMIN
+      email: true, // to determine owner by email
 
       // Primary resume
       resumes: {
@@ -91,8 +87,7 @@ export async function getServerSideProps(context) {
   }
 
   // ✅ NEW: normalize legacy boolean into enum behavior (back-compat)
-  const effectiveVisibility =
-    user.profileVisibility || (user.isProfilePublic ? 'PUBLIC' : 'PRIVATE');
+  const effectiveVisibility = user.profileVisibility || (user.isProfilePublic ? 'PUBLIC' : 'PRIVATE');
 
   // ✅ NEW: viewer role lookup (only if logged in)
   let viewerRole = null;
@@ -119,8 +114,8 @@ export async function getServerSideProps(context) {
     effectiveVisibility === 'PUBLIC'
       ? true
       : effectiveVisibility === 'RECRUITERS_ONLY'
-      ? (isOwner || isAdmin || isRecruiter)
-      : (isOwner || isAdmin); // PRIVATE
+      ? isOwner || isAdmin || isRecruiter
+      : isOwner || isAdmin; // PRIVATE
 
   if (!allowed) {
     // stealth 404 so private profiles can't be enumerated
@@ -133,9 +128,7 @@ export async function getServerSideProps(context) {
   return {
     props: {
       user: JSON.parse(JSON.stringify(userSafe)),
-      primaryResume: primaryResume
-        ? JSON.parse(JSON.stringify(primaryResume))
-        : null,
+      primaryResume: primaryResume ? JSON.parse(JSON.stringify(primaryResume)) : null,
       effectiveVisibility,
       viewer: {
         id: viewerId,
@@ -191,14 +184,24 @@ export default function PublicProfile({ user, primaryResume, effectiveVisibility
 
   const bannerBackgroundSize = bannerMode === 'fit' ? 'contain' : 'cover';
 
+  // ✅ Layout-only style: glass cards + tighter rhythm (no element changes)
+  const CARD_STYLE = {
+    width: '100%',
+    borderRadius: 12,
+    padding: 20,
+    background: 'rgba(255,255,255,0.94)', // subtle “glass”
+    border: '1px solid rgba(0,0,0,0.06)',
+    boxShadow: '0 10px 25px rgba(0,0,0,0.10)',
+    backdropFilter: 'blur(6px)',
+  };
+
+  const SECTION_GAP = 18;
+
   return (
     <>
       <Head>
         <title>{fullName} – ForgeTomorrow Profile</title>
-        <meta
-          name="description"
-          content={`View the professional profile of ${fullName} on ForgeTomorrow.`}
-        />
+        <meta name="description" content={`View the professional profile of ${fullName} on ForgeTomorrow.`} />
       </Head>
 
       <style>{`
@@ -209,13 +212,6 @@ export default function PublicProfile({ user, primaryResume, effectiveVisibility
             background-repeat: no-repeat !important;
             width: 100% !important;
           }
-          .ft-grid {
-            grid-template-columns: 1fr !important;
-          }
-          .ft-headerRow {
-            flex-direction: column !important;
-            align-items: flex-start !important;
-          }
         }
       `}</style>
 
@@ -223,9 +219,7 @@ export default function PublicProfile({ user, primaryResume, effectiveVisibility
         style={{
           minHeight: '100vh',
           width: '100%',
-          backgroundImage: wallpaperUrl
-            ? `url(${wallpaperUrl})`
-            : 'linear-gradient(135deg, #112033, #1c2a3c)',
+          backgroundImage: wallpaperUrl ? `url(${wallpaperUrl})` : 'linear-gradient(135deg, #112033, #1c2a3c)',
           backgroundSize: 'cover',
           backgroundPosition: 'center',
           backgroundRepeat: 'no-repeat',
@@ -240,7 +234,7 @@ export default function PublicProfile({ user, primaryResume, effectiveVisibility
             minHeight: '80vh',
           }}
         >
-          {/* Banner (STRONG / unchanged content, layout only below) */}
+          {/* Banner (LEAVE ALONE) */}
           <div
             className="public-banner"
             style={{
@@ -251,382 +245,291 @@ export default function PublicProfile({ user, primaryResume, effectiveVisibility
               backgroundPosition: bannerBackgroundPosition,
               backgroundRepeat: 'no-repeat',
               borderRadius: 12,
-              marginBottom: 0, // layout: we will overlap glass cards
+              marginBottom: 12, // small gap only
               backgroundColor: '#112033',
-              position: 'relative',
-              overflow: 'hidden',
             }}
           />
 
-          {/* LAYOUT: Overlap zone + glass blocks */}
-          <div style={{ position: 'relative' }}>
-            {/* FLOATING RIBBON (moved up into banner-adjacent whitespace) */}
-            {effectiveVisibility === 'PUBLIC' && (
-              <div
+          {/* Header card (moved down via spacing only; same content) */}
+          <section
+            style={{
+              ...CARD_STYLE,
+              display: 'flex',
+              gap: 20,
+              marginTop: 10, // creates that “small gap” feeling under banner
+            }}
+          >
+            <img
+              src={avatarUrl || '/demo-profile.jpg'}
+              alt="Profile photo"
+              style={{
+                width: 120,
+                height: 120,
+                borderRadius: '50%',
+                objectFit: 'cover',
+                border: '4px solid #FF7043',
+              }}
+            />
+
+            <div style={{ flex: 1 }}>
+              <h1
                 style={{
-                  position: 'absolute',
-                  right: 16,
-                  top: -48,
-                  zIndex: 5,
-                  display: 'inline-flex',
-                  alignItems: 'center',
-                  gap: 8,
-                  padding: '8px 12px',
-                  borderRadius: 999,
-                  border: '1px solid rgba(255,255,255,0.18)',
-                  background: 'rgba(17, 32, 51, 0.35)',
-                  backdropFilter: 'blur(10px)',
-                  WebkitBackdropFilter: 'blur(10px)',
-                  boxShadow: '0 10px 30px rgba(0,0,0,0.25)',
-                  textShadow: '0 1px 3px rgba(0,0,0,0.45)',
-                  fontSize: 12,
-                  color: '#ECEFF1',
+                  margin: 0,
+                  fontSize: 26,
+                  fontWeight: 800,
+                  color: '#1F2937', // darker for readability
                 }}
               >
-                <span>This is a public</span>
+                {fullName}
+              </h1>
+
+              {pronouns && <p style={{ margin: '4px 0', color: '#546E7A' }}>{pronouns}</p>}
+
+              {headline && (
+                <p
+                  style={{
+                    margin: '6px 0',
+                    fontSize: 16,
+                    color: '#37474F', // darker
+                    fontWeight: 600,
+                  }}
+                >
+                  {headline}
+                </p>
+              )}
+
+              {(location || status) && (
+                <p
+                  style={{
+                    margin: '6px 0',
+                    fontSize: 14,
+                    color: '#37474F',
+                  }}
+                >
+                  {location && `Location: ${location}`} {status && `• ${status}`}
+                </p>
+              )}
+
+              <div
+                style={{
+                  marginTop: 10,
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: 8,
+                  flexWrap: 'wrap',
+                }}
+              >
                 <span
                   style={{
-                    color: '#FF7043',
-                    fontWeight: 900,
-                    letterSpacing: 0.2,
+                    fontSize: 13,
+                    color: '#37474F',
+                    background: 'rgba(236,239,241,0.9)',
+                    padding: '4px 8px',
+                    borderRadius: 6,
+                    wordBreak: 'break-all',
+                    border: '1px solid rgba(0,0,0,0.06)',
                   }}
                 >
-                  ForgeTomorrow
+                  {profileUrl}
                 </span>
-                <span>profile.</span>
-              </div>
-            )}
 
-            {/* HEADER CARD (glass) – same content, new layout */}
-            <section
-              style={{
-                marginTop: -54, // overlap banner
-                borderRadius: 14,
-                padding: 20,
-                display: 'flex',
-                gap: 20,
-                alignItems: 'center',
-                position: 'relative',
-                zIndex: 4,
-
-                // GLASS
-                background: 'rgba(255, 255, 255, 0.85)',
-                backdropFilter: 'blur(12px)',
-                WebkitBackdropFilter: 'blur(12px)',
-                border: '1px solid rgba(255,255,255,0.55)',
-                boxShadow: '0 22px 60px rgba(0,0,0,0.22)',
-              }}
-              className="ft-headerRow"
-            >
-              <img
-                src={avatarUrl || '/demo-profile.jpg'}
-                alt="Profile photo"
-                style={{
-                  width: 120,
-                  height: 120,
-                  borderRadius: '50%',
-                  objectFit: 'cover',
-                  border: '4px solid #FF7043',
-                  flexShrink: 0,
-                }}
-              />
-
-              <div style={{ flex: 1, minWidth: 0 }}>
-                <h1
+                <button
+                  onClick={() =>
+                    typeof navigator !== 'undefined' && navigator.clipboard?.writeText(profileUrl)
+                  }
                   style={{
-                    margin: 0,
-                    fontSize: 26,
-                    fontWeight: 800,
-                    color: '#263238',
+                    background: '#FF7043',
+                    color: 'white',
+                    border: 'none',
+                    padding: '5px 10px',
+                    borderRadius: 6,
+                    cursor: 'pointer',
+                    fontSize: 13,
+                    fontWeight: 700,
                   }}
+                  type="button"
                 >
-                  {fullName}
-                </h1>
+                  Copy
+                </button>
+              </div>
 
-                {pronouns && (
-                  <p style={{ margin: '4px 0', color: '#607D8B' }}>{pronouns}</p>
-                )}
-
-                {headline && (
-                  <p
-                    style={{
-                      margin: '6px 0',
-                      fontSize: 16,
-                      color: '#455A64',
-                    }}
-                  >
-                    {headline}
-                  </p>
-                )}
-
-                {(location || status) && (
-                  <p
-                    style={{
-                      margin: '6px 0',
-                      fontSize: 14,
-                      color: '#455A64',
-                    }}
-                  >
-                    {location && `Location: ${location}`}{' '}
-                    {status && `• ${status}`}
-                  </p>
-                )}
-
+              {/* ✅ Public label moved INTO the name card (not floating between sections) */}
+              {effectiveVisibility === 'PUBLIC' && (
                 <div
                   style={{
                     marginTop: 10,
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: 8,
-                    flexWrap: 'wrap',
+                    fontSize: 12,
+                    color: '#455A64',
+                    fontStyle: 'italic',
                   }}
                 >
-                  <span
-                    style={{
-                      fontSize: 13,
-                      color: '#455A64',
-                      background: 'rgba(236, 239, 241, 0.85)',
-                      padding: '4px 8px',
-                      borderRadius: 6,
-                      wordBreak: 'break-all',
-                      border: '1px solid rgba(0,0,0,0.06)',
-                    }}
-                  >
-                    {profileUrl}
-                  </span>
-
-                  <button
-                    onClick={() =>
-                      typeof navigator !== 'undefined' &&
-                      navigator.clipboard?.writeText(profileUrl)
-                    }
-                    style={{
-                      background: '#FF7043',
-                      color: 'white',
-                      border: 'none',
-                      padding: '5px 10px',
-                      borderRadius: 6,
-                      cursor: 'pointer',
-                      fontSize: 13,
-                      fontWeight: 700,
-                    }}
-                    type="button"
-                  >
-                    Copy
-                  </button>
-                </div>
-              </div>
-            </section>
-
-            {/* CONTENT GRID (same sections, just laid out + glass) */}
-            <div
-              className="ft-grid"
-              style={{
-                marginTop: 18,
-                display: 'grid',
-                gridTemplateColumns: '1.35fr 0.65fr',
-                gap: 16,
-                alignItems: 'start',
-              }}
-            >
-              {/* LEFT COLUMN: About + Primary Resume */}
-              <div style={{ display: 'grid', gap: 16 }}>
-                {/* About (same content, new container style) */}
-                {aboutMe && (
-                  <section
-                    style={{
-                      padding: 20,
-                      borderRadius: 14,
-
-                      // GLASS
-                      background: 'rgba(255, 255, 255, 0.86)',
-                      backdropFilter: 'blur(12px)',
-                      WebkitBackdropFilter: 'blur(12px)',
-                      border: '1px solid rgba(255,255,255,0.55)',
-                      boxShadow: '0 18px 48px rgba(0,0,0,0.18)',
-                    }}
-                  >
-                    <h2
-                      style={{
-                        margin: '0 0 8px',
-                        fontSize: 18,
-                        fontWeight: 700,
-                        color: '#263238',
-                      }}
-                    >
-                      About
-                    </h2>
-                    <p
-                      style={{
-                        margin: 0,
-                        fontSize: 14,
-                        lineHeight: 1.6,
-                        color: '#455A64',
-                        whiteSpace: 'pre-line',
-                      }}
-                    >
-                      {aboutMe}
-                    </p>
-                  </section>
-                )}
-
-                {/* Primary Resume (same content, new container style) */}
-                {primaryResume && (
-                  <section
-                    style={{
-                      padding: 20,
-                      borderRadius: 14,
-
-                      // GLASS
-                      background: 'rgba(255, 255, 255, 0.86)',
-                      backdropFilter: 'blur(12px)',
-                      WebkitBackdropFilter: 'blur(12px)',
-                      border: '1px solid rgba(255,255,255,0.55)',
-                      boxShadow: '0 18px 48px rgba(0,0,0,0.18)',
-                    }}
-                  >
-                    <h2
-                      style={{
-                        margin: '0 0 8px',
-                        fontSize: 18,
-                        fontWeight: 700,
-                        color: '#263238',
-                      }}
-                    >
-                      Primary Resume
-                    </h2>
-
-                    <p
-                      style={{
-                        margin: '0 0 6px',
-                        fontSize: 14,
-                        color: '#455A64',
-                      }}
-                    >
-                      {primaryResume.name || 'Primary resume'} · Last updated{' '}
-                      {new Date(primaryResume.updatedAt).toLocaleDateString()}
-                    </p>
-
-                    <a
-                      href={`/api/resume/public-download?slug=${encodeURIComponent(
-                        slug
-                      )}`}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      style={{
-                        display: 'inline-block',
-                        marginTop: 10,
-                        fontSize: 14,
-                        color: '#FF7043',
-                        textDecoration: 'underline',
-                        fontWeight: 700,
-                      }}
-                    >
-                      Download Resume (PDF)
-                    </a>
-                  </section>
-                )}
-              </div>
-
-              {/* RIGHT COLUMN: Skills / Languages (same content, stacked) */}
-              {(skills.length > 0 || languages.length > 0) && (
-                <div style={{ display: 'grid', gap: 16 }}>
-                  {skills.length > 0 && (
-                    <section
-                      style={{
-                        padding: 20,
-                        borderRadius: 14,
-
-                        // GLASS
-                        background: 'rgba(255, 255, 255, 0.86)',
-                        backdropFilter: 'blur(12px)',
-                        WebkitBackdropFilter: 'blur(12px)',
-                        border: '1px solid rgba(255,255,255,0.55)',
-                        boxShadow: '0 18px 48px rgba(0,0,0,0.18)',
-                      }}
-                    >
-                      <h2
-                        style={{
-                          margin: '0 0 8px',
-                          fontSize: 16,
-                          fontWeight: 700,
-                          color: '#263238',
-                        }}
-                      >
-                        Skills
-                      </h2>
-                      <div
-                        style={{
-                          display: 'flex',
-                          flexWrap: 'wrap',
-                          gap: 8,
-                          marginTop: 6,
-                        }}
-                      >
-                        {skills.map((skill) => (
-                          <span
-                            key={skill}
-                            style={{
-                              fontSize: 12,
-                              padding: '4px 8px',
-                              borderRadius: 999,
-                              background: 'rgba(236, 239, 241, 0.9)',
-                              color: '#37474F',
-                              border: '1px solid rgba(0,0,0,0.06)',
-                            }}
-                          >
-                            {skill}
-                          </span>
-                        ))}
-                      </div>
-                    </section>
-                  )}
-
-                  {languages.length > 0 && (
-                    <section
-                      style={{
-                        padding: 20,
-                        borderRadius: 14,
-
-                        // GLASS
-                        background: 'rgba(255, 255, 255, 0.86)',
-                        backdropFilter: 'blur(12px)',
-                        WebkitBackdropFilter: 'blur(12px)',
-                        border: '1px solid rgba(255,255,255,0.55)',
-                        boxShadow: '0 18px 48px rgba(0,0,0,0.18)',
-                      }}
-                    >
-                      <h2
-                        style={{
-                          margin: '0 0 8px',
-                          fontSize: 16,
-                          fontWeight: 700,
-                          color: '#263238',
-                        }}
-                      >
-                        Languages
-                      </h2>
-                      <ul
-                        style={{
-                          listStyle: 'none',
-                          padding: 0,
-                          margin: 0,
-                          fontSize: 13,
-                          color: '#455A64',
-                        }}
-                      >
-                        {languages.map((lang) => (
-                          <li key={lang} style={{ marginBottom: 4 }}>
-                            {lang}
-                          </li>
-                        ))}
-                      </ul>
-                    </section>
-                  )}
+                  This is a public{' '}
+                  <strong style={{ color: '#FF7043', fontStyle: 'normal' }}>ForgeTomorrow</strong> profile.
                 </div>
               )}
             </div>
-          </div>
+          </section>
+
+          {/* About (same width, softer background, darker text) */}
+          {aboutMe && (
+            <section
+              style={{
+                ...CARD_STYLE,
+                marginTop: SECTION_GAP,
+              }}
+            >
+              <h2
+                style={{
+                  margin: '0 0 8px',
+                  fontSize: 18,
+                  fontWeight: 800,
+                  color: '#1F2937',
+                }}
+              >
+                About
+              </h2>
+              <p
+                style={{
+                  margin: 0,
+                  fontSize: 14,
+                  lineHeight: 1.7,
+                  color: '#37474F',
+                  whiteSpace: 'pre-line',
+                }}
+              >
+                {aboutMe}
+              </p>
+            </section>
+          )}
+
+          {/* Primary Resume (same width, consistent rhythm) */}
+          {primaryResume && (
+            <section
+              style={{
+                ...CARD_STYLE,
+                marginTop: SECTION_GAP,
+              }}
+            >
+              <h2
+                style={{
+                  margin: '0 0 8px',
+                  fontSize: 18,
+                  fontWeight: 800,
+                  color: '#1F2937',
+                }}
+              >
+                Primary Resume
+              </h2>
+
+              <p
+                style={{
+                  margin: '0 0 6px',
+                  fontSize: 14,
+                  color: '#37474F',
+                }}
+              >
+                {primaryResume.name || 'Primary resume'} · Last updated{' '}
+                {new Date(primaryResume.updatedAt).toLocaleDateString()}
+              </p>
+
+              <a
+                href={`/api/resume/public-download?slug=${encodeURIComponent(slug)}`}
+                target="_blank"
+                rel="noopener noreferrer"
+                style={{
+                  display: 'inline-block',
+                  marginTop: 10,
+                  fontSize: 14,
+                  color: '#FF7043',
+                  textDecoration: 'underline',
+                  fontWeight: 700,
+                }}
+              >
+                Download Resume (PDF)
+              </a>
+            </section>
+          )}
+
+          {/* Skills / Languages (kept as-is, but glass-matched for readability & cohesion) */}
+          {(skills.length > 0 || languages.length > 0) && (
+            <section
+              style={{
+                marginTop: SECTION_GAP,
+                display: 'grid',
+                gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))',
+                gap: 16,
+              }}
+            >
+              {skills.length > 0 && (
+                <div style={{ ...CARD_STYLE, padding: 18 }}>
+                  <h2
+                    style={{
+                      margin: '0 0 8px',
+                      fontSize: 16,
+                      fontWeight: 800,
+                      color: '#1F2937',
+                    }}
+                  >
+                    Skills
+                  </h2>
+                  <div
+                    style={{
+                      display: 'flex',
+                      flexWrap: 'wrap',
+                      gap: 8,
+                      marginTop: 6,
+                    }}
+                  >
+                    {skills.map((skill) => (
+                      <span
+                        key={skill}
+                        style={{
+                          fontSize: 12,
+                          padding: '4px 10px',
+                          borderRadius: 999,
+                          background: 'rgba(236,239,241,0.92)',
+                          color: '#263238',
+                          border: '1px solid rgba(0,0,0,0.06)',
+                        }}
+                      >
+                        {skill}
+                      </span>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {languages.length > 0 && (
+                <div style={{ ...CARD_STYLE, padding: 18 }}>
+                  <h2
+                    style={{
+                      margin: '0 0 8px',
+                      fontSize: 16,
+                      fontWeight: 800,
+                      color: '#1F2937',
+                    }}
+                  >
+                    Languages
+                  </h2>
+                  <ul
+                    style={{
+                      listStyle: 'none',
+                      padding: 0,
+                      margin: 0,
+                      fontSize: 13,
+                      color: '#37474F',
+                    }}
+                  >
+                    {languages.map((lang) => (
+                      <li key={lang} style={{ marginBottom: 4 }}>
+                        {lang}
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              )}
+            </section>
+          )}
         </main>
       </div>
     </>
