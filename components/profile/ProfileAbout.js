@@ -219,7 +219,7 @@ export default function ProfileAbout({ about, setAbout }) {
           marginBottom: 10,
         }}
       >
-        About Me
+        Professional Summary
       </h3>
 
       <div style={{ display: 'grid', gap: 12 }}>
@@ -239,7 +239,7 @@ export default function ProfileAbout({ about, setAbout }) {
 
         <label style={{ display: 'grid', gap: 4 }}>
           <span style={{ fontSize: 13, fontWeight: 600, color: '#455A64' }}>
-            Summary
+            Professional Summary
           </span>
           <textarea
             value={summaryValue}
