@@ -184,18 +184,23 @@ export default function PublicProfile({ user, primaryResume, effectiveVisibility
 
   const bannerBackgroundSize = bannerMode === 'fit' ? 'contain' : 'cover';
 
-  // ✅ Layout-only style: glass cards + tighter rhythm (no element changes)
+  // ✅ More compact + more glass (still legible)
   const CARD_STYLE = {
     width: '100%',
     borderRadius: 12,
-    padding: 20,
-    background: 'rgba(255,255,255,0.94)', // subtle “glass”
-    border: '1px solid rgba(0,0,0,0.06)',
-    boxShadow: '0 10px 25px rgba(0,0,0,0.10)',
-    backdropFilter: 'blur(6px)',
+    padding: 16, // was 20
+    background: 'rgba(255,255,255,0.78)', // more transparent
+    border: '1px solid rgba(255,255,255,0.28)',
+    boxShadow: '0 10px 24px rgba(0,0,0,0.14)',
+    backdropFilter: 'blur(10px)',
+    WebkitBackdropFilter: 'blur(10px)',
   };
 
-  const SECTION_GAP = 18;
+  const SECTION_GAP = 14; // was ~18
+
+  const TEXT_DARK = '#0F172A';
+  const TEXT_MED = '#1F2937';
+  const TEXT_MUTED = '#334155';
 
   return (
     <>
@@ -223,14 +228,14 @@ export default function PublicProfile({ user, primaryResume, effectiveVisibility
           backgroundSize: 'cover',
           backgroundPosition: 'center',
           backgroundRepeat: 'no-repeat',
-          padding: '20px 0',
+          padding: '16px 0', // slightly tighter
         }}
       >
         <main
           style={{
-            maxWidth: 860,
+            maxWidth: 820, // slightly narrower so it feels less “giant”
             margin: '0 auto',
-            padding: '0 20px 40px',
+            padding: '0 18px 34px',
             minHeight: '80vh',
           }}
         >
@@ -245,26 +250,26 @@ export default function PublicProfile({ user, primaryResume, effectiveVisibility
               backgroundPosition: bannerBackgroundPosition,
               backgroundRepeat: 'no-repeat',
               borderRadius: 12,
-              marginBottom: 12, // small gap only
+              marginBottom: 10, // small gap under banner
               backgroundColor: '#112033',
             }}
           />
 
-          {/* Header card (moved down via spacing only; same content) */}
+          {/* Header card */}
           <section
             style={{
               ...CARD_STYLE,
               display: 'flex',
-              gap: 20,
-              marginTop: 10, // creates that “small gap” feeling under banner
+              gap: 16, // tighter
+              marginTop: 8,
             }}
           >
             <img
               src={avatarUrl || '/demo-profile.jpg'}
               alt="Profile photo"
               style={{
-                width: 120,
-                height: 120,
+                width: 96, // was 120
+                height: 96, // was 120
                 borderRadius: '50%',
                 objectFit: 'cover',
                 border: '4px solid #FF7043',
@@ -275,23 +280,25 @@ export default function PublicProfile({ user, primaryResume, effectiveVisibility
               <h1
                 style={{
                   margin: 0,
-                  fontSize: 26,
+                  fontSize: 22, // was 26
                   fontWeight: 800,
-                  color: '#1F2937', // darker for readability
+                  color: TEXT_DARK,
+                  lineHeight: 1.15,
                 }}
               >
                 {fullName}
               </h1>
 
-              {pronouns && <p style={{ margin: '4px 0', color: '#546E7A' }}>{pronouns}</p>}
+              {pronouns && <p style={{ margin: '4px 0', color: TEXT_MUTED, fontSize: 13 }}>{pronouns}</p>}
 
               {headline && (
                 <p
                   style={{
                     margin: '6px 0',
-                    fontSize: 16,
-                    color: '#37474F', // darker
-                    fontWeight: 600,
+                    fontSize: 14, // was 16
+                    color: TEXT_MED,
+                    fontWeight: 650,
+                    lineHeight: 1.35,
                   }}
                 >
                   {headline}
@@ -302,8 +309,8 @@ export default function PublicProfile({ user, primaryResume, effectiveVisibility
                 <p
                   style={{
                     margin: '6px 0',
-                    fontSize: 14,
-                    color: '#37474F',
+                    fontSize: 13, // was 14
+                    color: TEXT_MUTED,
                   }}
                 >
                   {location && `Location: ${location}`} {status && `• ${status}`}
@@ -312,7 +319,7 @@ export default function PublicProfile({ user, primaryResume, effectiveVisibility
 
               <div
                 style={{
-                  marginTop: 10,
+                  marginTop: 8,
                   display: 'flex',
                   alignItems: 'center',
                   gap: 8,
@@ -321,13 +328,13 @@ export default function PublicProfile({ user, primaryResume, effectiveVisibility
               >
                 <span
                   style={{
-                    fontSize: 13,
-                    color: '#37474F',
-                    background: 'rgba(236,239,241,0.9)',
+                    fontSize: 12,
+                    color: TEXT_MUTED,
+                    background: 'rgba(255,255,255,0.55)',
                     padding: '4px 8px',
                     borderRadius: 6,
                     wordBreak: 'break-all',
-                    border: '1px solid rgba(0,0,0,0.06)',
+                    border: '1px solid rgba(0,0,0,0.08)',
                   }}
                 >
                   {profileUrl}
@@ -341,11 +348,11 @@ export default function PublicProfile({ user, primaryResume, effectiveVisibility
                     background: '#FF7043',
                     color: 'white',
                     border: 'none',
-                    padding: '5px 10px',
+                    padding: '6px 10px',
                     borderRadius: 6,
                     cursor: 'pointer',
-                    fontSize: 13,
-                    fontWeight: 700,
+                    fontSize: 12,
+                    fontWeight: 800,
                   }}
                   type="button"
                 >
@@ -353,13 +360,13 @@ export default function PublicProfile({ user, primaryResume, effectiveVisibility
                 </button>
               </div>
 
-              {/* ✅ Public label moved INTO the name card (not floating between sections) */}
+              {/* Public label inside the header card */}
               {effectiveVisibility === 'PUBLIC' && (
                 <div
                   style={{
-                    marginTop: 10,
+                    marginTop: 8,
                     fontSize: 12,
-                    color: '#455A64',
+                    color: TEXT_MUTED,
                     fontStyle: 'italic',
                   }}
                 >
@@ -370,7 +377,7 @@ export default function PublicProfile({ user, primaryResume, effectiveVisibility
             </div>
           </section>
 
-          {/* About (same width, softer background, darker text) */}
+          {/* About */}
           {aboutMe && (
             <section
               style={{
@@ -381,9 +388,9 @@ export default function PublicProfile({ user, primaryResume, effectiveVisibility
               <h2
                 style={{
                   margin: '0 0 8px',
-                  fontSize: 18,
-                  fontWeight: 800,
-                  color: '#1F2937',
+                  fontSize: 16, // was 18
+                  fontWeight: 850,
+                  color: TEXT_DARK,
                 }}
               >
                 About
@@ -391,9 +398,9 @@ export default function PublicProfile({ user, primaryResume, effectiveVisibility
               <p
                 style={{
                   margin: 0,
-                  fontSize: 14,
-                  lineHeight: 1.7,
-                  color: '#37474F',
+                  fontSize: 13, // was 14
+                  lineHeight: 1.6,
+                  color: TEXT_MED,
                   whiteSpace: 'pre-line',
                 }}
               >
@@ -402,7 +409,7 @@ export default function PublicProfile({ user, primaryResume, effectiveVisibility
             </section>
           )}
 
-          {/* Primary Resume (same width, consistent rhythm) */}
+          {/* Primary Resume */}
           {primaryResume && (
             <section
               style={{
@@ -413,9 +420,9 @@ export default function PublicProfile({ user, primaryResume, effectiveVisibility
               <h2
                 style={{
                   margin: '0 0 8px',
-                  fontSize: 18,
-                  fontWeight: 800,
-                  color: '#1F2937',
+                  fontSize: 16,
+                  fontWeight: 850,
+                  color: TEXT_DARK,
                 }}
               >
                 Primary Resume
@@ -424,8 +431,8 @@ export default function PublicProfile({ user, primaryResume, effectiveVisibility
               <p
                 style={{
                   margin: '0 0 6px',
-                  fontSize: 14,
-                  color: '#37474F',
+                  fontSize: 13,
+                  color: TEXT_MED,
                 }}
               >
                 {primaryResume.name || 'Primary resume'} · Last updated{' '}
@@ -438,11 +445,11 @@ export default function PublicProfile({ user, primaryResume, effectiveVisibility
                 rel="noopener noreferrer"
                 style={{
                   display: 'inline-block',
-                  marginTop: 10,
-                  fontSize: 14,
+                  marginTop: 8,
+                  fontSize: 13,
                   color: '#FF7043',
                   textDecoration: 'underline',
-                  fontWeight: 700,
+                  fontWeight: 800,
                 }}
               >
                 Download Resume (PDF)
@@ -450,36 +457,29 @@ export default function PublicProfile({ user, primaryResume, effectiveVisibility
             </section>
           )}
 
-          {/* Skills / Languages (kept as-is, but glass-matched for readability & cohesion) */}
+          {/* Skills / Languages */}
           {(skills.length > 0 || languages.length > 0) && (
             <section
               style={{
                 marginTop: SECTION_GAP,
                 display: 'grid',
                 gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))',
-                gap: 16,
+                gap: 14,
               }}
             >
               {skills.length > 0 && (
-                <div style={{ ...CARD_STYLE, padding: 18 }}>
+                <div style={{ ...CARD_STYLE, padding: 14 }}>
                   <h2
                     style={{
                       margin: '0 0 8px',
-                      fontSize: 16,
-                      fontWeight: 800,
-                      color: '#1F2937',
+                      fontSize: 14,
+                      fontWeight: 850,
+                      color: TEXT_DARK,
                     }}
                   >
                     Skills
                   </h2>
-                  <div
-                    style={{
-                      display: 'flex',
-                      flexWrap: 'wrap',
-                      gap: 8,
-                      marginTop: 6,
-                    }}
-                  >
+                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, marginTop: 6 }}>
                     {skills.map((skill) => (
                       <span
                         key={skill}
@@ -487,9 +487,9 @@ export default function PublicProfile({ user, primaryResume, effectiveVisibility
                           fontSize: 12,
                           padding: '4px 10px',
                           borderRadius: 999,
-                          background: 'rgba(236,239,241,0.92)',
-                          color: '#263238',
-                          border: '1px solid rgba(0,0,0,0.06)',
+                          background: 'rgba(255,255,255,0.55)',
+                          color: TEXT_DARK,
+                          border: '1px solid rgba(0,0,0,0.08)',
                         }}
                       >
                         {skill}
@@ -500,13 +500,13 @@ export default function PublicProfile({ user, primaryResume, effectiveVisibility
               )}
 
               {languages.length > 0 && (
-                <div style={{ ...CARD_STYLE, padding: 18 }}>
+                <div style={{ ...CARD_STYLE, padding: 14 }}>
                   <h2
                     style={{
                       margin: '0 0 8px',
-                      fontSize: 16,
-                      fontWeight: 800,
-                      color: '#1F2937',
+                      fontSize: 14,
+                      fontWeight: 850,
+                      color: TEXT_DARK,
                     }}
                   >
                     Languages
@@ -517,7 +517,7 @@ export default function PublicProfile({ user, primaryResume, effectiveVisibility
                       padding: 0,
                       margin: 0,
                       fontSize: 13,
-                      color: '#37474F',
+                      color: TEXT_MED,
                     }}
                   >
                     {languages.map((lang) => (
