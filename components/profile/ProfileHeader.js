@@ -2,6 +2,7 @@
 'use client';
 
 import React, { useEffect, useState } from 'react';
+import { createPortal } from 'react-dom';
 import ProfileBannerSelector from './ProfileBannerSelector';
 import ProfileAvatarSelector from './ProfileAvatarSelector';
 import { profileBanners } from '@/lib/profileBanners';
@@ -280,7 +281,7 @@ export default function ProfileHeader() {
 
       {/* Edit dialog */}
       {editOpen && (
-        <Dialog title="Edit Profile Appearance" onClose={() => setEditOpen(false)}>
+        <Dialog title="Edit Profile Appearance" onClose={() => setEditOpen(false)} open={editOpen}>
           <div style={{ display: 'grid', gap: 12 }}>
             <div style={{ display: 'grid', gap: 4 }}>
               <span style={{ fontSize: 13, fontWeight: 600 }}>Name</span>
@@ -797,26 +798,39 @@ function ModeToggle({ value, onChange }) {
   );
 }
 
-function Dialog({ children, title, onClose }) {
-  return (
+function Dialog({ children, title, onClose, open }) {
+  const [mounted, setMounted] = useState(false);
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
+
+  // ✅ FIX: lock background scroll while modal is open
+  useEffect(() => {
+    if (!open) return;
+    if (typeof document === 'undefined') return;
+
+    const prevOverflow = document.body.style.overflow;
+    document.body.style.overflow = 'hidden';
+
+    return () => {
+      document.body.style.overflow = prevOverflow;
+    };
+  }, [open]);
+
+  if (!mounted) return null;
+  if (typeof document === 'undefined') return null;
+
+  const modal = (
     <div
       style={{
         position: 'fixed',
         inset: 0,
         background: 'rgba(0,0,0,0.35)',
-
-        // ✅ FIX: ensure the editor sits ABOVE all page content
-        zIndex: 99999,
-
-        // ✅ FIX: start lower + allow full scroll inside overlay
-        display: 'flex',
-        justifyContent: 'center',
-        alignItems: 'flex-start',
-        overflowY: 'auto',
-        paddingTop: 80,
-        paddingLeft: 16,
-        paddingRight: 16,
-        paddingBottom: 24,
+        display: 'grid',
+        placeItems: 'center',
+        zIndex: 9999, // ✅ FIX: ensure above chrome/header
+        padding: 16,
       }}
       onClick={onClose}
     >
@@ -828,11 +842,8 @@ function Dialog({ children, title, onClose }) {
           padding: 16,
           width: 720,
           maxWidth: '98vw',
-
-          // ✅ FIX: keep dialog within viewport so scrolling is clean
-          maxHeight: 'calc(100vh - 120px)',
+          maxHeight: '92vh',
           overflowY: 'auto',
-
           display: 'grid',
           gap: 10,
           boxShadow: '0 10px 30px rgba(0,0,0,0.15)',
@@ -843,6 +854,9 @@ function Dialog({ children, title, onClose }) {
       </div>
     </div>
   );
+
+  // ✅ FIX: portal to body so layout wrappers can't clip/contain the modal
+  return createPortal(modal, document.body);
 }
 
 function clamp(n, min, max) {
