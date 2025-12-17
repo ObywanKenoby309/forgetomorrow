@@ -329,9 +329,9 @@ export default function ProfilePage() {
         <div className="w-full max-w-6xl mx-auto px-3 md:px-5 grid gap-3 md:gap-4">
           {/* Profile Header (kept as-is) */}
           <section
-            className="overflow-hidden"
             aria-label="Profile header section"
             style={{
+              overflow: 'visible', // ✅ FIX: do NOT clip ProfileHeader content
               borderRadius: 14,
               border: '1px solid rgba(255,255,255,0.22)',
               background: 'rgba(255,255,255,0.58)',
