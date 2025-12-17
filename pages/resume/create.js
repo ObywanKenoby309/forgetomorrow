@@ -175,33 +175,37 @@ export default function CreateResumePage() {
     ? new Date(saveEventAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
     : '';
 
+  // ✅ FIX: do not let experiences.every(...) count as "complete" when experiences is empty
+  const hasValidExperienceSet =
+    experiences?.length > 0 &&
+    experiences.every((e) => e.title && e.company && e.bullets?.length >= 2);
+
   const isResumeValid =
     summary?.trim().length > 20 &&
     skills?.length >= 8 &&
-    experiences?.length > 0 &&
-    experiences.every((e) => e.title && e.company && e.bullets?.length >= 2);
+    hasValidExperienceSet;
 
   const checks = [
     summary?.trim().length > 20,
     skills?.length >= 8,
-    experiences?.length > 0,
-    experiences.every((e) => e.title && e.company && e.bullets?.length >= 2),
+    hasValidExperienceSet, // ✅ FIXED (single combined rule)
+    educationList?.some((edu) => (edu.institution || edu.school || edu.degree || edu.field))
   ];
 
   // Detect if the resume is effectively empty and clamp progress to 0 in that case
+  // ✅ FIX: do NOT count auto-filled name/profile URL as "resume content"
   const hasAnyResumeContent =
     (formData &&
-      (formData.fullName ||
-        formData.name ||
+      (
+        // exclude fullName/name/forgeUrl/ftProfile so auto-fill doesn't bump "empty" state
         formData.email ||
         formData.phone ||
         formData.location ||
         formData.linkedin ||
         formData.github ||
         formData.portfolio ||
-        formData.forgeUrl ||
-        formData.ftProfile ||
-        formData.targetedRole)) ||
+        formData.targetedRole
+      )) ||
     (summary && summary.trim().length > 0) ||
     (skills && skills.length > 0) ||
     (experiences &&
@@ -252,34 +256,47 @@ export default function CreateResumePage() {
     }
   }, [saveEventAt]);
 
-  // 🔹 Auto-load ForgeTomorrow profile URL for the authenticated user
+  // 🔹 Auto-load ForgeTomorrow profile URL + name for the authenticated user
   useEffect(() => {
     async function loadForgeProfileUrl() {
       try {
-        // If user already filled it, don't override
-        if (formData.forgeUrl || formData.ftProfile) return;
+        // Only skip if we already have BOTH name and a profile URL set
+        const hasName = !!(formData.fullName || formData.name);
+        const hasUrl = !!(formData.forgeUrl || formData.ftProfile);
+        if (hasName && hasUrl) return;
 
-        const res = await fetch('/api/auth/me');
+        const res = await fetch('/api/profile/header');
         if (!res.ok) return;
 
-        const json = await res.json();
-        const user = json.user;
-        if (!user || !user.slug) return;
+        const data = await res.json();
 
-        const fullProfileUrl = `https://forgetomorrow.com/u/${user.slug}`;
+        const derivedName =
+          data?.name ||
+          [data?.firstName, data?.lastName].filter(Boolean).join(' ') ||
+          '';
+
+        const slug = data?.slug;
+        const fullProfileUrl = slug ? `https://forgetomorrow.com/u/${slug}` : '';
 
         setFormData((prev) => ({
           ...prev,
+          fullName: prev.fullName || prev.name || derivedName || '',
           forgeUrl: prev.forgeUrl || fullProfileUrl,
           ftProfile: prev.ftProfile || fullProfileUrl,
         }));
       } catch (err) {
-        console.error('[resume/create] Failed to auto-load Forge profile URL', err);
+        console.error('[resume/create] Failed to auto-load profile data', err);
       }
     }
 
     loadForgeProfileUrl();
-  }, [formData.forgeUrl, formData.ftProfile, setFormData]);
+  }, [
+    formData.fullName,
+    formData.name,
+    formData.forgeUrl,
+    formData.ftProfile,
+    setFormData,
+  ]);
 
   // Handle manual JD file upload / drop
   const handleFile = async (file) => {
