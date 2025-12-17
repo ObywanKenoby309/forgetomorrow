@@ -78,12 +78,7 @@ function Section({ title, open, onToggle, children, required = false }) {
             xmlns="http://www.w3.org/2000/svg"
           >
             {open ? (
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth={2}
-                d="M20 12H4"
-              />
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20 12H4" />
             ) : (
               <path
                 strokeLinecap="round"
@@ -96,9 +91,7 @@ function Section({ title, open, onToggle, children, required = false }) {
         </span>
       </button>
       {open && (
-        <div style={{ padding: '24px 20px', borderTop: '1px solid #E5E7EB' }}>
-          {children}
-        </div>
+        <div style={{ padding: '24px 20px', borderTop: '1px solid #E5E7EB' }}>{children}</div>
       )}
     </div>
   );
@@ -107,7 +100,7 @@ function Section({ title, open, onToggle, children, required = false }) {
 export default function CoverLetterPage() {
   const router = useRouter();
 
-  // 🔸 Preserve chrome mode (seeker / coach / recruiter-smb / recruiter-ent)
+  // Preserve chrome mode (seeker / coach / recruiter-smb / recruiter-ent)
   const chrome = String(router.query.chrome || '').toLowerCase();
   const withChrome = (path) =>
     chrome ? `${path}${path.includes('?') ? '&' : '?'}chrome=${chrome}` : path;
@@ -115,15 +108,13 @@ export default function CoverLetterPage() {
   const fileInputRef = useRef(null);
   const dropRef = useRef(null);
 
-  // ✅ Pull experiences from context so AI Tailor can use them
+  // Pull from ResumeContext so cover uses the same identity as resume builder
   const {
     formData = {},
+    setFormData,
     saveEventAt,
     experiences = [],
   } = useContext(ResumeContext);
-
-  // 🔹 Safely read personal info from resume builder (name/email/etc.)
-  const personalInfo = formData.personalInfo || {};
 
   const [jd, setJd] = useState('');
   const [isLoading, setIsLoading] = useState(false);
@@ -137,13 +128,9 @@ export default function CoverLetterPage() {
   const [closing, setClosing] = useState('');
   const [signoff, setSignoff] = useState('Sincerely,');
 
-  // ✅ Portfolio now also falls back to Forge URL / FT profile
+  // Portfolio (falls back to Forge URL / FT profile)
   const [portfolio, setPortfolio] = useState(
-    formData?.portfolio ||
-      formData?.forgeUrl ||
-      formData?.ftProfile ||
-      personalInfo?.portfolio ||
-      ''
+    formData?.portfolio || formData?.forgeUrl || formData?.ftProfile || ''
   );
 
   const [openRequired, setOpenRequired] = useState(true);
@@ -159,17 +146,67 @@ export default function CoverLetterPage() {
       })
     : '';
 
-  // ✅ FullName and contact details now also check personalInfo from resume
+  // 1) If resume builder wrote `name` but cover expects `fullName`, sync it once.
+  useEffect(() => {
+    if (!setFormData) return;
+    if (formData?.fullName) return;
+    if (!formData?.name) return;
+
+    setFormData((prev) => ({
+      ...prev,
+      fullName: prev.fullName || prev.name || '',
+    }));
+  }, [formData?.fullName, formData?.name, setFormData]);
+
+  // 2) Auto-load profile name + URL for cover page too (only if missing).
+  useEffect(() => {
+    if (!setFormData) return;
+
+    async function loadProfileBasics() {
+      try {
+        const hasName = !!(formData?.fullName || formData?.name);
+        const hasUrl = !!(formData?.forgeUrl || formData?.ftProfile);
+
+        // If we already have the basics, don't override.
+        if (hasName && hasUrl) return;
+
+        const res = await fetch('/api/profile/header');
+        if (!res.ok) return;
+
+        const data = await res.json();
+
+        const derivedName =
+          data?.name || [data?.firstName, data?.lastName].filter(Boolean).join(' ') || '';
+
+        const slug = data?.slug || '';
+        const fullProfileUrl = slug ? `https://forgetomorrow.com/u/${slug}` : '';
+
+        setFormData((prev) => ({
+          ...prev,
+          fullName: prev.fullName || prev.name || derivedName || '',
+          forgeUrl: prev.forgeUrl || fullProfileUrl,
+          ftProfile: prev.ftProfile || fullProfileUrl,
+        }));
+      } catch (err) {
+        console.error('[cover/create] Failed to auto-load profile data', err);
+      }
+    }
+
+    loadProfileBasics();
+  }, [formData?.fullName, formData?.name, formData?.forgeUrl, formData?.ftProfile, setFormData]);
+
+  // 3) Keep portfolio state in sync if context loads after initial render.
+  useEffect(() => {
+    if (portfolio) return;
+    const next = formData?.portfolio || formData?.forgeUrl || formData?.ftProfile || '';
+    if (next) setPortfolio(next);
+  }, [portfolio, formData?.portfolio, formData?.forgeUrl, formData?.ftProfile]);
+
   const letterData = {
-    fullName:
-      personalInfo.fullName ||
-      personalInfo.name ||
-      formData.fullName ||
-      formData.name ||
-      'Your Name',
-    email: personalInfo.email || formData.email || '',
-    phone: personalInfo.phone || formData.phone || '',
-    location: personalInfo.location || formData.location || '',
+    fullName: formData.fullName || formData.name || 'Your Name',
+    email: formData.email || '',
+    phone: formData.phone || '',
+    location: formData.location || '',
     portfolio: portfolio || '',
     recipient: recipient || 'Hiring Manager',
     company: company || 'the company',
@@ -268,13 +305,12 @@ export default function CoverLetterPage() {
     setIsLoading(true);
 
     try {
-      // ✅ Use experiences from ResumeContext instead of formData.workExperiences
       const expText = (experiences || [])
         .map(
           (exp) =>
-            `${exp.jobTitle || exp.title || 'Role'} at ${
-              exp.company || 'Company'
-            }: ${exp.bullets?.join('. ') || ''}`
+            `${exp.jobTitle || exp.title || 'Role'} at ${exp.company || 'Company'}: ${
+              exp.bullets?.join('. ') || ''
+            }`
         )
         .filter(Boolean)
         .join('\n');
@@ -340,9 +376,8 @@ CLOSING: ...
     <section className="bg-white border border-gray-200 rounded-xl p-8 text-center shadow-sm">
       <h1 className="text-3xl font-bold text-orange-600">Cover Builder</h1>
       <p className="text-gray-600 mt-3 max-w-2xl mx-auto">
-        1 letter. 3 bullets. 100% tailored.{' '}
-        No generic paragraphs. Only your real wins.{' '}
-        Beats 3-paragraph letters every time.
+        1 letter. 3 bullets. 100% tailored. No generic paragraphs. Only your real wins. Beats
+        3-paragraph letters every time.
       </p>
       <div className="flex items-center justify-center gap-8 mt-6">
         <button
@@ -364,8 +399,8 @@ CLOSING: ...
 
   const Footer = (
     <div className="mt-16 text-center text-xs text-gray-500 max-w-2xl mx-auto px-4">
-      *87% of job seekers using ATS-optimized resumes receive at least one interview within 7
-      days of applying.
+      *87% of job seekers using ATS-optimized resumes receive at least one interview within 7 days
+      of applying.
       <em> Source: Jobscan 2024 Applicant Study (n=1,200). Results vary.</em>
     </div>
   );
@@ -400,10 +435,7 @@ CLOSING: ...
         >
           <Banner>
             Live preview updates instantly on the right •{' '}
-            <a
-              href={withChrome('/resume/create')}
-              style={{ textDecoration: 'underline' }}
-            >
+            <a href={withChrome('/resume/create')} style={{ textDecoration: 'underline' }}>
               Back to Resume
             </a>
           </Banner>
@@ -421,21 +453,15 @@ CLOSING: ...
               color: '#92400E',
             }}
           >
-            <strong
-              style={{
-                fontSize: 15,
-                display: 'block',
-                marginBottom: 8,
-              }}
-            >
+            <strong style={{ fontSize: 15, display: 'block', marginBottom: 8 }}>
               The Forge Cover Letter Philosophy
             </strong>
             <strong>Short = Strong.</strong> Recruiters spend <strong>6 seconds</strong> on your
             letter. We remove fluff, keep metrics, and make every word count.
             <br />
             <br />
-            <strong>Bullets = Scan-proof.</strong> Humans don’t read — they{' '}
-            <strong>scan</strong>. 3 bullets with numbers beat 3 paragraphs every time.
+            <strong>Bullets = Scan-proof.</strong> Humans don’t read - they <strong>scan</strong>. 3
+            bullets with numbers beat 3 paragraphs every time.
             <br />
             <br />
             <strong>No “excited.” Just impact.</strong> Your resume tells the story. This letter{' '}
@@ -465,13 +491,7 @@ CLOSING: ...
                 />
               </div>
 
-              <div
-                style={{
-                  display: 'grid',
-                  gridTemplateColumns: '1fr 1fr',
-                  gap: 12,
-                }}
-              >
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
                 <div>
                   <label style={{ fontWeight: 700 }}>Company</label>
                   <input
@@ -518,9 +538,7 @@ CLOSING: ...
               </div>
 
               <div>
-                <label style={{ fontWeight: 700 }}>
-                  Portfolio / Website (Optional)
-                </label>
+                <label style={{ fontWeight: 700 }}>Portfolio / Website (Optional)</label>
                 <input
                   type="url"
                   value={portfolio}
@@ -538,11 +556,7 @@ CLOSING: ...
           </Section>
 
           {/* Content section */}
-          <Section
-            title="Letter Content"
-            open={openContent}
-            onToggle={() => setOpenContent((v) => !v)}
-          >
+          <Section title="Letter Content" open={openContent} onToggle={() => setOpenContent((v) => !v)}>
             <div style={{ display: 'grid', gap: 20 }}>
               <div>
                 <label style={{ fontWeight: 700 }}>Opening Paragraph</label>
@@ -582,13 +596,7 @@ CLOSING: ...
                 />
               </div>
 
-              <div
-                style={{
-                  display: 'grid',
-                  gridTemplateColumns: '1fr 1fr',
-                  gap: 12,
-                }}
-              >
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
                 <div>
                   <label style={{ fontWeight: 700 }}>Closing</label>
                   <textarea
@@ -624,18 +632,10 @@ CLOSING: ...
           </Section>
 
           {/* Tailor to Job */}
-          <Section
-            title="Tailor to Job"
-            open={openTailor}
-            onToggle={() => setOpenTailor((v) => !v)}
-          >
+          <Section title="Tailor to Job" open={openTailor} onToggle={() => setOpenTailor((v) => !v)}>
             <div style={{ display: 'grid', gap: 16 }}>
               <div>
-                <label
-                  style={{ fontWeight: 700, fontSize: 14 }}
-                >
-                  Paste Job Description (Primary)
-                </label>
+                <label style={{ fontWeight: 700, fontSize: 14 }}>Paste Job Description (Primary)</label>
                 <textarea
                   value={jd}
                   onChange={(e) => setJd(e.target.value)}
@@ -653,13 +653,7 @@ CLOSING: ...
                 />
               </div>
 
-              <div
-                style={{
-                  textAlign: 'center',
-                  fontSize: 13,
-                  color: '#666',
-                }}
-              >
+              <div style={{ textAlign: 'center', fontSize: 13, color: '#666' }}>
                 or{' '}
                 <button
                   onClick={() => fileInputRef.current?.click()}
@@ -695,8 +689,7 @@ CLOSING: ...
                     fontWeight: 600,
                   }}
                 >
-                  JD loaded •{' '}
-                  {jd.split(/\s+/).filter(Boolean).length} words
+                  JD loaded • {jd.split(/\s+/).filter(Boolean).length} words
                 </div>
               )}
 
@@ -721,7 +714,6 @@ CLOSING: ...
                 </button>
               )}
 
-              {/* Invisible drop target to share the same box as page */}
               <div
                 ref={dropRef}
                 style={{
@@ -757,19 +749,13 @@ CLOSING: ...
           >
             LIVE COVER LETTER
           </div>
-          <div
-            style={{
-              padding: 60,
-              background: '#fff',
-              minHeight: '100vh',
-            }}
-          >
+          <div style={{ padding: 60, background: '#fff', minHeight: '100vh' }}>
             <CoverLetterTemplate data={letterData} />
           </div>
         </div>
       </div>
 
-      {/* EXPORT BUTTONS (match resume/create style & position) */}
+      {/* EXPORT BUTTONS */}
       <div className="fixed bottom-24 right-6 z-40 flex items-center gap-2 bg-white/90 backdrop-blur-sm p-2 rounded-full shadow-2xl border">
         <CoverPDFButton templateId="ats-cover" data={letterData}>
           <div className="bg-teal-600 text-white px-4 py-2 rounded-full font-bold text-xs hover:bg-teal-700 transition-all cursor-pointer">
