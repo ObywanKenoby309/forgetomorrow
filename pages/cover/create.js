@@ -91,7 +91,9 @@ function Section({ title, open, onToggle, children, required = false }) {
         </span>
       </button>
       {open && (
-        <div style={{ padding: '24px 20px', borderTop: '1px solid #E5E7EB' }}>{children}</div>
+        <div style={{ padding: '24px 20px', borderTop: '1px solid #E5E7EB' }}>
+          {children}
+        </div>
       )}
     </div>
   );
@@ -135,13 +137,25 @@ export default function CoverLetterPage() {
   const [showToast, setShowToast] = useState(false);
   const [lastSavedAt, setLastSavedAt] = useState(null);
 
-  // DB draft tracking
+  // DB saved cover tracking (permanent saved covers)
   const [coverId, setCoverId] = useState(null);
-  const autosaveBusyRef = useRef(false);
+
+  // Draft throttle
+  const draftBusyRef = useRef(false);
+  const didLoadDraftRef = useRef(false);
+
+  const nowIso = () => new Date().toISOString();
 
   const savedTime = lastSavedAt
     ? new Date(lastSavedAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
     : '';
+
+  const jobId =
+    router.query?.jobId && !Number.isNaN(Number(router.query.jobId))
+      ? Number(router.query.jobId)
+      : null;
+
+  const draftKey = jobId ? `cover:draft:${jobId}` : 'cover:draft';
 
   // 1) If resume builder wrote `name` but cover expects `fullName`, sync it once.
   useEffect(() => {
@@ -164,7 +178,6 @@ export default function CoverLetterPage() {
         const hasName = !!(formData?.fullName || formData?.name);
         const hasUrl = !!(formData?.forgeUrl || formData?.ftProfile);
 
-        // If we already have the basics, don't override.
         if (hasName && hasUrl) return;
 
         const res = await fetch('/api/profile/header');
@@ -219,31 +232,129 @@ export default function CoverLetterPage() {
   const buildCoverName = () => {
     const c = (company || '').trim();
     const r = (role || '').trim();
-    if (c && r) return `${c} — ${r}`;
-    if (c) return `${c} — Cover Letter`;
-    if (r) return `${r} — Cover Letter`;
+    if (c && r) return `${c} - ${r}`;
+    if (c) return `${c} - Cover Letter`;
+    if (r) return `${r} - Cover Letter`;
     return 'General Cover Letter';
   };
 
-  const saveCoverToDb = async (opts = { isAutosave: false }) => {
-    // Prevent autosave dogpiling
-    if (opts.isAutosave && autosaveBusyRef.current) return;
+  // -----------------------------
+  // DRAFTS (DB) via /api/drafts/*
+  // -----------------------------
+  const setCoverDraft = async (opts = { isAutosave: false }) => {
+    if (opts.isAutosave && draftBusyRef.current) return;
 
+    try {
+      if (opts.isAutosave) draftBusyRef.current = true;
+
+      const payload = {
+        // store raw editor fields for perfect restore
+        fields: { recipient, company, role, greeting, opening, body, closing, signoff, portfolio, jd },
+        coverId: coverId || null,
+        savedAt: nowIso(),
+        jobId: jobId || null,
+      };
+
+      const res = await fetch('/api/drafts/set', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ key: draftKey, content: payload }),
+      });
+
+      if (!res.ok) throw new Error('Draft set failed');
+
+      const ts = nowIso();
+      setLastSavedAt(ts);
+      setShowToast(true);
+      setTimeout(() => setShowToast(false), 2200);
+    } catch (err) {
+      console.error('[cover/create] draft save failed', err);
+    } finally {
+      draftBusyRef.current = false;
+    }
+  };
+
+  const loadCoverDraftOnce = async () => {
+    if (didLoadDraftRef.current) return;
+    didLoadDraftRef.current = true;
+
+    try {
+      const res = await fetch(`/api/drafts/get?key=${encodeURIComponent(draftKey)}`);
+      if (!res.ok) return;
+
+      const json = await res.json();
+      const content = json?.draft?.content;
+      if (!content?.fields) return;
+
+      const f = content.fields;
+
+      if (typeof f.recipient === 'string') setRecipient(f.recipient);
+      if (typeof f.company === 'string') setCompany(f.company);
+      if (typeof f.role === 'string') setRole(f.role);
+      if (typeof f.greeting === 'string') setGreeting(f.greeting);
+      if (typeof f.opening === 'string') setOpening(f.opening);
+      if (typeof f.body === 'string') setBody(f.body);
+      if (typeof f.closing === 'string') setClosing(f.closing);
+      if (typeof f.signoff === 'string') setSignoff(f.signoff);
+      if (typeof f.portfolio === 'string') setPortfolio(f.portfolio);
+      if (typeof f.jd === 'string') setJd(f.jd);
+
+      if (content.coverId) setCoverId(content.coverId);
+
+      setLastSavedAt(content.savedAt || nowIso());
+    } catch (err) {
+      console.error('[cover/create] load draft failed', err);
+    }
+  };
+
+  useEffect(() => {
+    loadCoverDraftOnce();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [draftKey]);
+
+  // autosave draft every 30s
+  useEffect(() => {
+    const timer = setInterval(() => {
+      setCoverDraft({ isAutosave: true });
+    }, 30000);
+
+    return () => clearInterval(timer);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [draftKey, recipient, company, role, greeting, opening, body, closing, signoff, portfolio, jd, coverId]);
+
+  // save draft on blur (capture)
+  useEffect(() => {
+    const onBlurCapture = (e) => {
+      const t = e?.target;
+      if (!t) return;
+
+      const tag = String(t.tagName || '').toLowerCase();
+      if (tag !== 'input' && tag !== 'textarea' && tag !== 'select') return;
+
+      setCoverDraft({ isAutosave: true });
+    };
+
+    document.addEventListener('blur', onBlurCapture, true);
+    return () => document.removeEventListener('blur', onBlurCapture, true);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [draftKey, recipient, company, role, greeting, opening, body, closing, signoff, portfolio, jd, coverId]);
+
+  // -----------------------------
+  // PERMANENT SAVE COVER -> /api/cover/save
+  // -----------------------------
+  const saveCoverToDb = async (opts = { isAutosave: false }) => {
     const payload = {
       id: coverId,
       name: buildCoverName(),
       content: JSON.stringify({
         ...letterData,
-        // Keep raw editor fields too (helps future edits)
         fields: { recipient, company, role, greeting, opening, body, closing, signoff, portfolio, jd },
       }),
-      // optional: if you later pass a jobId in query, we can attach it
-      jobId: router.query?.jobId ? Number(router.query.jobId) : undefined,
+      jobId: jobId || undefined,
+      setPrimary: true,
     };
 
     try {
-      if (opts.isAutosave) autosaveBusyRef.current = true;
-
       const res = await fetch('/api/cover/save', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -255,14 +366,13 @@ export default function CoverLetterPage() {
 
       if (data?.cover?.id) setCoverId(data.cover.id);
 
-      setLastSavedAt(new Date().toISOString());
+      const ts = nowIso();
+      setLastSavedAt(ts);
       setShowToast(true);
       setTimeout(() => setShowToast(false), 2200);
     } catch (err) {
       console.error('[cover/create] save failed', err);
-      if (!opts.isAutosave) alert('Save failed. Try again.');
-    } finally {
-      autosaveBusyRef.current = false;
+      alert('Save failed. Try again.');
     }
   };
 
@@ -297,16 +407,6 @@ export default function CoverLetterPage() {
       el.removeEventListener('drop', onDrop);
     };
   }, []);
-
-  // DB autosave draft (replaces localStorage autosave)
-  useEffect(() => {
-    const timer = setInterval(() => {
-      saveCoverToDb({ isAutosave: true });
-    }, 30000);
-
-    return () => clearInterval(timer);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [recipient, company, role, greeting, opening, body, closing, signoff, portfolio, jd, coverId]);
 
   // Keep existing toast behavior if ResumeContext emits saveEventAt
   useEffect(() => {
@@ -456,7 +556,6 @@ CLOSING: ...
             </a>
           </Banner>
 
-          {/* Philosophy box */}
           <div
             style={{
               background: '#FFF7E6',
@@ -484,9 +583,8 @@ CLOSING: ...
             <strong>lands the punch</strong>.
           </div>
 
-          {/* Required section */}
           <Section
-            title="Required – Start Here"
+            title="Required - Start Here"
             open={openRequired}
             onToggle={() => setOpenRequired((v) => !v)}
             required
@@ -571,8 +669,11 @@ CLOSING: ...
             </div>
           </Section>
 
-          {/* Content section */}
-          <Section title="Letter Content" open={openContent} onToggle={() => setOpenContent((v) => !v)}>
+          <Section
+            title="Letter Content"
+            open={openContent}
+            onToggle={() => setOpenContent((v) => !v)}
+          >
             <div style={{ display: 'grid', gap: 20 }}>
               <div>
                 <label style={{ fontWeight: 700 }}>Opening Paragraph</label>
@@ -647,11 +748,16 @@ CLOSING: ...
             </div>
           </Section>
 
-          {/* Tailor to Job */}
-          <Section title="Tailor to Job" open={openTailor} onToggle={() => setOpenTailor((v) => !v)}>
+          <Section
+            title="Tailor to Job"
+            open={openTailor}
+            onToggle={() => setOpenTailor((v) => !v)}
+          >
             <div style={{ display: 'grid', gap: 16 }}>
               <div>
-                <label style={{ fontWeight: 700, fontSize: 14 }}>Paste Job Description (Primary)</label>
+                <label style={{ fontWeight: 700, fontSize: 14 }}>
+                  Paste Job Description (Primary)
+                </label>
                 <textarea
                   value={jd}
                   onChange={(e) => setJd(e.target.value)}

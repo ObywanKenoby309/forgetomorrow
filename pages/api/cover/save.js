@@ -1,57 +1,111 @@
-// pages/api/cover/save.js
 import { getServerSession } from 'next-auth/next';
 import { authOptions } from '../auth/[...nextauth]';
 import { prisma } from '@/lib/prisma';
 
 export default async function handler(req, res) {
-  if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed' });
-
-  const session = await getServerSession(req, res, authOptions);
-  const userId = session?.user?.id;
-  if (!userId) return res.status(401).json({ error: 'Unauthorized' });
+  if (req.method !== 'POST') {
+    res.setHeader('Allow', ['POST']);
+    return res.status(405).json({ error: 'Method not allowed' });
+  }
 
   try {
-    const { id, name, content, jobId, isPrimary } = req.body || {};
+    const session = await getServerSession(req, res, authOptions);
 
-    if (!name || typeof name !== 'string') {
-      return res.status(400).json({ error: 'Missing name' });
-    }
-    if (typeof content !== 'string' || !content.trim()) {
-      return res.status(400).json({ error: 'Missing content' });
+    if (!session?.user?.email) {
+      return res.status(401).json({ error: 'Not authenticated' });
     }
 
-    // If making primary, clear existing primary first
-    if (isPrimary === true) {
+    const user = await prisma.user.findUnique({
+      where: { email: session.user.email },
+      select: { id: true },
+    });
+
+    if (!user?.id) {
+      return res.status(404).json({ error: 'User not found' });
+    }
+
+    const userId = user.id;
+
+    const { id, jobId, name, content, setPrimary } = req.body || {};
+
+    if (!name) {
+      return res.status(400).json({ error: 'Missing "name"' });
+    }
+
+    if (!content) {
+      return res.status(400).json({ error: 'Missing cover content' });
+    }
+
+    const serializedContent =
+      typeof content === 'string' ? content : JSON.stringify(content);
+
+    // Optional jobId
+    const parsedJobId =
+      jobId === null || jobId === undefined || jobId === ''
+        ? null
+        : Number(jobId);
+
+    if (parsedJobId !== null && Number.isNaN(parsedJobId)) {
+      return res.status(400).json({ error: 'Invalid "jobId"' });
+    }
+
+    // Limit (match resume pattern; adjust if you want different)
+    const existingCount = await prisma.cover.count({ where: { userId } });
+    if (!id && existingCount >= 5) {
+      return res
+        .status(400)
+        .json({ error: 'Cover limit reached (max 5).', limit: 5 });
+    }
+
+    // If updating, ensure ownership
+    let targetCover = null;
+    if (id) {
+      targetCover = await prisma.cover.findFirst({
+        where: { id: Number(id), userId },
+      });
+
+      if (!targetCover) {
+        return res.status(404).json({ error: 'Cover not found for this user' });
+      }
+    }
+
+    const shouldBePrimary =
+      Boolean(setPrimary) || (!id && existingCount === 0);
+
+    if (shouldBePrimary) {
       await prisma.cover.updateMany({
-        where: { userId, isPrimary: true },
+        where: { userId },
         data: { isPrimary: false },
       });
     }
 
-    // Update (if id provided) else create
-    const saved = id
-      ? await prisma.cover.update({
-          where: { id: Number(id) },
-          data: {
-            name,
-            content,
-            jobId: jobId ? Number(jobId) : null,
-            ...(typeof isPrimary === 'boolean' ? { isPrimary } : {}),
-          },
-        })
-      : await prisma.cover.create({
-          data: {
-            userId,
-            name,
-            content,
-            jobId: jobId ? Number(jobId) : null,
-            isPrimary: isPrimary === true,
-          },
-        });
+    let saved;
 
-    return res.status(200).json({ ok: true, cover: saved });
-  } catch (e) {
-    console.error('[api/cover/save] error', e);
-    return res.status(500).json({ error: 'Server error' });
+    if (id) {
+      saved = await prisma.cover.update({
+        where: { id: Number(id) },
+        data: {
+          name,
+          content: serializedContent,
+          jobId: parsedJobId,
+          isPrimary: shouldBePrimary ? true : targetCover.isPrimary,
+        },
+      });
+    } else {
+      saved = await prisma.cover.create({
+        data: {
+          userId,
+          name,
+          content: serializedContent,
+          jobId: parsedJobId,
+          isPrimary: shouldBePrimary,
+        },
+      });
+    }
+
+    return res.status(200).json({ cover: saved, limit: 5 });
+  } catch (err) {
+    console.error('[api/cover/save] error:', err);
+    return res.status(500).json({ error: 'Internal server error' });
   }
 }

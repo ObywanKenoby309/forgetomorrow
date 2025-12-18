@@ -1,5 +1,5 @@
 // context/ResumeContext.js
-import React, { createContext, useState, useEffect } from 'react';
+import React, { createContext, useEffect, useMemo, useRef, useState } from 'react';
 
 export const ResumeContext = createContext();
 
@@ -100,6 +100,186 @@ export function ResumeProvider({ children }) {
   });
 
   // -----------------------------
+  // DRAFTS (DB) - UserDraft via /api/drafts/*
+  // -----------------------------
+  const RESUME_DRAFT_KEY = 'resume:draft';
+
+  const draftBusyRef = useRef(false);
+  const didLoadDraftRef = useRef(false);
+
+  const getResumeDraft = async () => {
+    try {
+      const res = await fetch(`/api/drafts/get?key=${encodeURIComponent(RESUME_DRAFT_KEY)}`);
+      if (!res.ok) return null;
+      const json = await res.json();
+      return json?.draft?.content || null;
+    } catch (e) {
+      console.error('[ResumeContext] getResumeDraft failed', e);
+      return null;
+    }
+  };
+
+  const setResumeDraft = async (payload, opts = { isAutosave: false }) => {
+    if (opts.isAutosave && draftBusyRef.current) return;
+    try {
+      if (opts.isAutosave) draftBusyRef.current = true;
+
+      const res = await fetch('/api/drafts/set', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ key: RESUME_DRAFT_KEY, content: payload }),
+      });
+
+      if (!res.ok) throw new Error('Draft set failed');
+
+      const ts = nowIso();
+      setLastAutosaveAt(ts);
+      setSaveEventAt(ts);
+    } catch (e) {
+      console.error('[ResumeContext] setResumeDraft failed', e);
+    } finally {
+      draftBusyRef.current = false;
+    }
+  };
+
+  const deleteResumeDraft = async () => {
+    try {
+      await fetch('/api/drafts/delete', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ key: RESUME_DRAFT_KEY }),
+      });
+    } catch (e) {
+      console.error('[ResumeContext] deleteResumeDraft failed', e);
+    }
+  };
+
+  // Load draft ONCE (does not overwrite after user starts typing)
+  useEffect(() => {
+    let mounted = true;
+
+    async function loadDraftOnce() {
+      if (didLoadDraftRef.current) return;
+      didLoadDraftRef.current = true;
+
+      const draft = await getResumeDraft();
+      if (!mounted || !draft) return;
+
+      // draft format: { formData, summary, experiences, ... template }
+      try {
+        const d = draft;
+
+        if (d.formData) setFormData((prev) => ({ ...prev, ...d.formData }));
+        if (typeof d.summary === 'string') setSummary(d.summary);
+        if (Array.isArray(d.experiences)) setExperiences(d.experiences);
+        if (Array.isArray(d.projects)) setProjects(d.projects);
+        if (Array.isArray(d.volunteerExperiences)) setVolunteerExperiences(d.volunteerExperiences);
+        if (Array.isArray(d.educationList)) setEducationList(d.educationList);
+        if (Array.isArray(d.certifications)) setCertifications(d.certifications);
+        if (Array.isArray(d.languages)) setLanguages(d.languages);
+        if (Array.isArray(d.skills)) setSkills(d.skills);
+        if (Array.isArray(d.achievements)) setAchievements(d.achievements);
+        if (Array.isArray(d.customSections)) setCustomSections(d.customSections);
+        if (typeof d.template === 'string') setTemplate(d.template);
+      } catch (e) {
+        console.error('[ResumeContext] Failed to hydrate draft', e);
+      }
+    }
+
+    loadDraftOnce();
+    return () => {
+      mounted = false;
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  // Autosave draft every 30s (DB). This is the core requirement.
+  useEffect(() => {
+    const timer = setInterval(() => {
+      const payload = {
+        template,
+        formData,
+        summary,
+        experiences,
+        projects,
+        volunteerExperiences,
+        educationList,
+        certifications,
+        languages,
+        skills,
+        achievements,
+        customSections,
+        savedAt: nowIso(),
+      };
+
+      setResumeDraft(payload, { isAutosave: true });
+    }, 30000);
+
+    return () => clearInterval(timer);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [
+    template,
+    formData,
+    summary,
+    experiences,
+    projects,
+    volunteerExperiences,
+    educationList,
+    certifications,
+    languages,
+    skills,
+    achievements,
+    customSections,
+  ]);
+
+  // Save draft on blur (capture) - minimal, no page edits required.
+  // This triggers whenever any input/textarea/select inside the provider loses focus.
+  useEffect(() => {
+    const onBlurCapture = (e) => {
+      const t = e?.target;
+      if (!t) return;
+
+      const tag = String(t.tagName || '').toLowerCase();
+      if (tag !== 'input' && tag !== 'textarea' && tag !== 'select') return;
+
+      const payload = {
+        template,
+        formData,
+        summary,
+        experiences,
+        projects,
+        volunteerExperiences,
+        educationList,
+        certifications,
+        languages,
+        skills,
+        achievements,
+        customSections,
+        savedAt: nowIso(),
+      };
+
+      setResumeDraft(payload, { isAutosave: true });
+    };
+
+    document.addEventListener('blur', onBlurCapture, true);
+    return () => document.removeEventListener('blur', onBlurCapture, true);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [
+    template,
+    formData,
+    summary,
+    experiences,
+    projects,
+    volunteerExperiences,
+    educationList,
+    certifications,
+    languages,
+    skills,
+    achievements,
+    customSections,
+  ]);
+
+  // -----------------------------
   // MANUAL SAVE → DB
   // -----------------------------
   const saveResume = async () => {
@@ -107,7 +287,7 @@ export function ResumeProvider({ children }) {
     const title = buildResumeName();
     const resumeData = buildResumeData();
 
-    // Local snapshot
+    // Local snapshot (in-memory only; still ok)
     const snapshot = {
       id: `${Date.now()}`,
       name: title,
@@ -202,6 +382,11 @@ export function ResumeProvider({ children }) {
         saveEventAt,
         setSaveEventAt,
         saveResume,
+
+        // Draft helpers (DB)
+        getResumeDraft,
+        setResumeDraft,
+        deleteResumeDraft,
       }}
     >
       {children}
