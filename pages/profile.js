@@ -5,7 +5,6 @@ import { useRouter } from 'next/router';
 import Link from 'next/link';
 import SeekerLayout from '@/components/layouts/SeekerLayout';
 
-// Self-contained components
 import ProfileHeader from '@/components/profile/ProfileHeader';
 import ProfileAbout from '@/components/profile/ProfileAbout';
 import ProfileLanguages from '@/components/profile/ProfileLanguages';
@@ -14,13 +13,13 @@ import ProfileResumeAttach from '@/components/profile/ProfileResumeAttach';
 import ProfileSkills from '@/components/profile/ProfileSkills';
 import ProfileHobbies from '@/components/profile/ProfileHobbies';
 import ProfileCoverAttach from '@/components/profile/ProfileCoverAttach';
+import ProfileEducation from '@/components/profile/ProfileEducation';
 
-// NEW: collapsible section row
 import ProfileSectionRow from '@/components/profile/ProfileSectionRow';
 
 const UI = { CARD_PAD: 14 };
 
-// LocalStorage keys
+// LocalStorage keys (legacy cache)
 const NAME_KEY = 'profile_name_v1';
 const PRONOUNS_KEY = 'profile_pronouns_v1';
 const TITLE_KEY = 'profile_title_v1';
@@ -38,6 +37,7 @@ const PREF_RELOC_KEY = 'profile_pref_relocate_v1';
 const PREF_START_KEY = 'profile_pref_start_v1';
 const HOB_KEY = 'profile_hobbies_v1';
 const RESUME_KEY = 'profile_resume_v1';
+const EDU_KEY = 'profile_education_v1';
 const WELCOME_DISMISS_KEY = 'profile_welcome_dismissed_v1';
 
 export default function ProfilePage() {
@@ -46,19 +46,14 @@ export default function ProfilePage() {
   const withChrome = (path) =>
     chrome ? `${path}${path.includes('?') ? '&' : '?'}chrome=${chrome}` : path;
 
-  // ---------------- State ----------------
   const [name, setName] = useState('');
   const [pronouns, setPronouns] = useState('');
   const [headline, setHeadline] = useState('');
   const [location, setLocation] = useState('');
   const [status, setStatus] = useState('');
 
-  // ✅ FIX: correct public path default
   const [avatarUrl, setAvatarUrl] = useState('/profile-avatars/demo-avatar.png');
-
   const [coverUrl, setCoverUrl] = useState('');
-
-  // ✅ FIX: allow null so components can treat as "not loaded yet"
   const [about, setAbout] = useState(null);
 
   const [skills, setSkills] = useState([]);
@@ -71,31 +66,27 @@ export default function ProfilePage() {
   const [hobbies, setHobbies] = useState([]);
   const [resume, setResume] = useState(null);
 
-  // control for welcome banner visibility
-  const [showWelcomeBanner, setShowWelcomeBanner] = useState(false);
+  // NEW: education
+  const [education, setEducation] = useState([]);
 
-  // track server load so we don’t save before initial GET
+  const [showWelcomeBanner, setShowWelcomeBanner] = useState(false);
   const [serverLoaded, setServerLoaded] = useState(false);
 
-  // ---------------- Load from localStorage ----------------
+  // ---------------- Load from localStorage (legacy cache) ----------------
   useEffect(() => {
     try {
       const read = (k, fb) => JSON.parse(localStorage.getItem(k) ?? fb);
       const readStr = (k, fb) => localStorage.getItem(k) ?? fb;
 
-      // IMPORTANT: generic defaults only (LIVE site safe)
       setName(readStr(NAME_KEY, ''));
       setPronouns(readStr(PRONOUNS_KEY, ''));
       setHeadline(readStr(TITLE_KEY, ''));
       setLocation(readStr(LOC_KEY, ''));
       setStatus(readStr(STATUS_KEY, ''));
 
-      // ✅ FIX: correct avatar default fallback
       setAvatarUrl(readStr(AVATAR_KEY, '/profile-avatars/demo-avatar.png'));
-
       setCoverUrl(readStr(COVER_KEY, ''));
 
-      // ✅ FIX: if nothing in storage, keep null (so UI can load server truth)
       const storedAbout = localStorage.getItem(ABOUT_KEY);
       setAbout(storedAbout == null ? null : storedAbout);
 
@@ -108,6 +99,8 @@ export default function ProfilePage() {
       setPrefStart(readStr(PREF_START_KEY, ''));
       setHobbies(read(HOB_KEY, '[]'));
       setResume(read(RESUME_KEY, null));
+
+      setEducation(read(EDU_KEY, '[]'));
     } catch (err) {
       console.error('Failed to load from localStorage:', err);
     }
@@ -130,12 +123,8 @@ export default function ProfilePage() {
 
         const u = data.user || {};
 
-        // About
-        if (typeof u.aboutMe === 'string') {
-          setAbout(u.aboutMe);
-        }
+        if (typeof u.aboutMe === 'string') setAbout(u.aboutMe);
 
-        // Work preferences JSON blob
         const wp = u.workPreferences || {};
         if (wp.workStatus) setPrefStatus(wp.workStatus);
         if (wp.workType) setPrefWorkType(wp.workType);
@@ -145,10 +134,12 @@ export default function ProfilePage() {
           setPrefRelocate(wp.willingToRelocate ? 'Yes' : 'No');
         }
 
-        // Skills / languages / hobbies (JSON fields)
         if (Array.isArray(u.skillsJson)) setSkills(u.skillsJson);
         if (Array.isArray(u.languagesJson)) setLanguages(u.languagesJson);
         if (Array.isArray(u.hobbiesJson)) setHobbies(u.hobbiesJson);
+
+        // NEW: education (only if your API supports it)
+        if (Array.isArray(u.educationJson)) setEducation(u.educationJson);
 
         setServerLoaded(true);
       } catch (err) {
@@ -179,7 +170,7 @@ export default function ProfilePage() {
     setShowWelcomeBanner(false);
   };
 
-  // ---------------- Persist to localStorage ----------------
+  // ---------------- Persist to localStorage (legacy cache) ----------------
   useEffect(() => { try { localStorage.setItem(NAME_KEY, name); } catch {} }, [name]);
   useEffect(() => { try { localStorage.setItem(PRONOUNS_KEY, pronouns); } catch {} }, [pronouns]);
   useEffect(() => { try { localStorage.setItem(TITLE_KEY, headline); } catch {} }, [headline]);
@@ -188,7 +179,6 @@ export default function ProfilePage() {
   useEffect(() => { try { localStorage.setItem(AVATAR_KEY, avatarUrl); } catch {} }, [avatarUrl]);
   useEffect(() => { try { localStorage.setItem(COVER_KEY, coverUrl); } catch {} }, [coverUrl]);
 
-  // ✅ FIX: only write about when it's not null
   useEffect(() => {
     try {
       if (about == null) return;
@@ -205,6 +195,7 @@ export default function ProfilePage() {
   useEffect(() => { try { localStorage.setItem(PREF_START_KEY, prefStart); } catch {} }, [prefStart]);
   useEffect(() => { try { localStorage.setItem(HOB_KEY, JSON.stringify(hobbies)); } catch {} }, [hobbies]);
   useEffect(() => { try { localStorage.setItem(RESUME_KEY, JSON.stringify(resume)); } catch {} }, [resume]);
+  useEffect(() => { try { localStorage.setItem(EDU_KEY, JSON.stringify(education)); } catch {} }, [education]);
 
   // ---------------- Debounced save to server ----------------
   useEffect(() => {
@@ -222,15 +213,14 @@ export default function ProfilePage() {
             locations: prefLocations || [],
             startDate: prefStart || '',
             willingToRelocate:
-              prefRelocate === 'Yes'
-                ? true
-                : prefRelocate === 'No'
-                ? false
-                : null,
+              prefRelocate === 'Yes' ? true : prefRelocate === 'No' ? false : null,
           },
           skillsJson: skills || [],
           languagesJson: languages || [],
           hobbiesJson: hobbies || [],
+
+          // NEW: education (requires /api/profile/details to accept it)
+          educationJson: education || [],
         };
 
         const res = await fetch('/api/profile/details', {
@@ -251,9 +241,20 @@ export default function ProfilePage() {
       controller.abort();
       clearTimeout(timer);
     };
-  }, [serverLoaded, about, prefStatus, prefWorkType, prefRelocate, prefLocations, prefStart, skills, languages, hobbies]);
+  }, [
+    serverLoaded,
+    about,
+    prefStatus,
+    prefWorkType,
+    prefRelocate,
+    prefLocations,
+    prefStart,
+    skills,
+    languages,
+    hobbies,
+    education,
+  ]);
 
-  // ---------------- Header text ----------------
   const HeaderBox = (
     <section
       style={{
@@ -302,7 +303,6 @@ export default function ProfilePage() {
       </Head>
 
       <SeekerLayout title="Profile | ForgeTomorrow" header={HeaderBox} right={null} activeNav="profile">
-        {/* EMAIL VERIFIED WELCOME BANNER — DISMISSIBLE, ONLY SHOWS ONCE */}
         {showWelcomeBanner && (
           <section
             className="relative mb-6 p-6 bg-gradient-to-r from-orange-500 to-pink-600 text-white rounded-3xl shadow-2xl text-center max-w-4xl mx-auto"
@@ -325,129 +325,139 @@ export default function ProfilePage() {
           </section>
         )}
 
-        {/* tighter container */}
         <div className="w-full max-w-6xl mx-auto px-3 md:px-5 grid gap-3 md:gap-4">
-          {/* Profile Header (kept as-is) */}
+          {/* Profile Header (glass wrapper stays) */}
           <section
             aria-label="Profile header section"
             style={{
-              overflow: 'visible', // ✅ FIX: do NOT clip ProfileHeader content
+              overflow: 'visible',
               borderRadius: 14,
               border: '1px solid rgba(255,255,255,0.22)',
               background: 'rgba(255,255,255,0.58)',
               boxShadow: '0 10px 24px rgba(0,0,0,0.12)',
               backdropFilter: 'blur(10px)',
               WebkitBackdropFilter: 'blur(10px)',
+              padding: 10,
             }}
           >
-            <ProfileHeader />
-          </section>
+           <ProfileHeader />
+</section>
 
-          {/* About */}
-          <ProfileSectionRow
-            id="about"
-            title="About"
-            subtitle="Your story in 6-10 lines"
-            hintTitle="About yourself"
-            hintBullets={[
-              'Open with a concrete outcome (example: reduced churn 18% in 6 months).',
-              'Mention your domain and tools (industries, platforms, stacks).',
-              'Say what you want next so people know how to help.',
-            ]}
-          >
-            <ProfileAbout about={about || ''} setAbout={setAbout} />
-          </ProfileSectionRow>
+<ProfileSectionRow
+  id="about"
+  title="About"
+  subtitle="Your story in 6-10 lines"
+  hintTitle="About yourself"
+  hintBullets={[
+    'Open with a concrete outcome (example: reduced churn 18% in 6 months).',
+    'Mention your domain and tools (industries, platforms, stacks).',
+    'Say what you want next so people know how to help.',
+  ]}
+>
+  <ProfileAbout about={about || ''} setAbout={setAbout} />
+</ProfileSectionRow>
 
-          {/* Preferences */}
-          <ProfileSectionRow
-            id="preferences"
-            title="Work preferences"
-            subtitle="Discovery settings"
-            hintTitle="Preferences help discovery"
-            hintBullets={[
-              'Select work type (remote, onsite, hybrid).',
-              'Add preferred locations to appear in local searches.',
-              'Optional: earliest start date and relocation.',
-            ]}
-          >
-            <ProfilePreferences
-              prefStatus={prefStatus}
-              setPrefStatus={setPrefStatus}
-              prefWorkType={prefWorkType}
-              setPrefWorkType={setPrefWorkType}
-              prefRelocate={prefRelocate}
-              setPrefRelocate={setPrefRelocate}
-              prefLocations={prefLocations}
-              setPrefLocations={setPrefLocations}
-              prefStart={prefStart}
-              setPrefStart={setPrefStart}
-            />
-          </ProfileSectionRow>
+<ProfileSectionRow
+  id="preferences"
+  title="Work preferences"
+  subtitle="Discovery settings"
+  hintTitle="Preferences help discovery"
+  hintBullets={[
+    'Select work type (remote, onsite, hybrid).',
+    'Add preferred locations to appear in local searches.',
+    'Optional: earliest start date and relocation.',
+  ]}
+>
+  <ProfilePreferences
+    prefStatus={prefStatus}
+    setPrefStatus={setPrefStatus}
+    prefWorkType={prefWorkType}
+    setPrefWorkType={setPrefWorkType}
+    prefRelocate={prefRelocate}
+    setPrefRelocate={setPrefRelocate}
+    prefLocations={prefLocations}
+    setPrefLocations={setPrefLocations}
+    prefStart={prefStart}
+    setPrefStart={setPrefStart}
+  />
+</ProfileSectionRow>
 
-          {/* Skills */}
-          <ProfileSectionRow
-            id="skills"
-            title="Skills"
-            subtitle="8-12 is the sweet spot"
-            hintTitle="Strengthen your skills"
-            hintBullets={[
-              'Aim for 8-12 core skills.',
-              'Match target job descriptions.',
-              'Include tools and frameworks.',
-            ]}
-          >
-            <ProfileSkills skills={skills} setSkills={setSkills} defaultOpen={true} initialOpen={true} />
-          </ProfileSectionRow>
+<ProfileSectionRow
+  id="skills"
+  title="Skills"
+  subtitle="8-12 is the sweet spot"
+  hintTitle="Strengthen your skills"
+  hintBullets={[
+    'Aim for 8-12 core skills.',
+    'Match target job descriptions.',
+    'Include tools and frameworks.',
+  ]}
+>
+  <ProfileSkills skills={skills} setSkills={setSkills} />
+</ProfileSectionRow>
 
-          {/* Languages */}
-          <ProfileSectionRow
-            id="languages"
-            title="Languages"
-            subtitle="Spoken or programming"
-            hintTitle="Languages add context"
-            hintBullets={[
-              'Add spoken or programming languages.',
-              'Helps with multilingual or global roles.',
-            ]}
-          >
-            <ProfileLanguages languages={languages} setLanguages={setLanguages} defaultOpen={true} initialOpen={true} />
-          </ProfileSectionRow>
+<ProfileSectionRow
+  id="languages"
+  title="Languages"
+  subtitle="Spoken or programming"
+  hintTitle="Languages add context"
+  hintBullets={[
+    'Add spoken or programming languages.',
+    'Helps with multilingual or global roles.',
+  ]}
+>
+  <ProfileLanguages languages={languages} setLanguages={setLanguages} />
+</ProfileSectionRow>
 
-          {/* Resume + Cover */}
-          <ProfileSectionRow
-            id="docs"
-            title="Resume and cover letter"
-            subtitle="Make it easy to say yes"
-            hintTitle="Make it easy to say yes"
-            hintBullets={[
-              'Keep one primary resume linked to your profile.',
-              'Save alternates for different roles.',
-              'Do the same with cover letters so recruiters instantly see fit.',
-              'Manage everything in the builder - change primaries anytime.',
-            ]}
-          >
-            <div style={{ display: 'grid', gap: 12 }}>
-              <ProfileResumeAttach withChrome={withChrome} />
-              <ProfileCoverAttach withChrome={withChrome} />
-            </div>
-          </ProfileSectionRow>
+{/* Education (moved BELOW Skills + Languages) */}
+<ProfileSectionRow
+  id="education"
+  title="Education"
+  subtitle="Degrees, certificates, programs"
+  hintTitle="Education"
+  hintBullets={[
+    'List your school/program and degree (or certificate).',
+    'Add a field/major if it helps recruiters understand your path.',
+    'Keep it clean and factual.',
+  ]}
+>
+  <ProfileEducation education={education} setEducation={setEducation} />
+</ProfileSectionRow>
 
-          {/* Hobbies */}
-          <ProfileSectionRow
-            id="hobbies"
-            title="Hobbies"
-            subtitle="Optional, but human"
-            hintTitle="Hobbies (optional)"
-            hintBullets={[
-              'Keep it professional-friendly.',
-              'One or two is enough.',
-              'Adds personality without distracting from the resume.',
-            ]}
-          >
-            <ProfileHobbies hobbies={hobbies} setHobbies={setHobbies} />
-          </ProfileSectionRow>
-        </div>
-      </SeekerLayout>
-    </>
-  );
+<ProfileSectionRow
+  id="docs"
+  title="Resume and cover letter"
+  subtitle="Make it easy to say yes"
+  hintTitle="Make it easy to say yes"
+  hintBullets={[
+    'Keep one primary resume linked to your profile.',
+    'Save alternates for different roles.',
+    'Do the same with cover letters so recruiters instantly see fit.',
+    'Manage everything in the builder - change primaries anytime.',
+  ]}
+>
+  <div style={{ display: 'grid', gap: 12 }}>
+    <ProfileResumeAttach withChrome={withChrome} />
+    <ProfileCoverAttach withChrome={withChrome} />
+  </div>
+</ProfileSectionRow>
+
+<ProfileSectionRow
+  id="hobbies"
+  title="Hobbies"
+  subtitle="Optional, but human"
+  hintTitle="Hobbies (optional)"
+  hintBullets={[
+    'Keep it professional-friendly.',
+    'One or two is enough.',
+    'Adds personality without distracting from the resume.',
+  ]}
+>
+  <ProfileHobbies hobbies={hobbies} setHobbies={setHobbies} />
+</ProfileSectionRow>
+</div>
+</SeekerLayout>
+</>
+);
 }
+

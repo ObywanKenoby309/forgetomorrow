@@ -14,6 +14,9 @@ type ProfileDetails = {
   skillsJson: any | null;
   languagesJson: any | null;
   hobbiesJson: any | null;
+
+  // NEW
+  educationJson: any | null;
 };
 
 export default async function handler(
@@ -57,6 +60,9 @@ export default async function handler(
           skillsJson: true,
           languagesJson: true,
           hobbiesJson: true,
+
+          // NEW
+          educationJson: true,
         },
       });
 
@@ -71,6 +77,9 @@ export default async function handler(
             skillsJson: record.skillsJson,
             languagesJson: record.languagesJson,
             hobbiesJson: record.hobbiesJson,
+
+            // NEW
+            educationJson: (record as any).educationJson ?? null,
           }
         : null;
 
@@ -98,6 +107,9 @@ export default async function handler(
         skillsJson,
         languagesJson,
         hobbiesJson,
+
+        // NEW
+        educationJson,
       } = (req.body || {}) as Partial<ProfileDetails>;
 
       const data: any = {};
@@ -112,6 +124,9 @@ export default async function handler(
       if (languagesJson !== undefined) data.languagesJson = languagesJson;
       if (hobbiesJson !== undefined) data.hobbiesJson = hobbiesJson;
 
+      // NEW
+      if (educationJson !== undefined) data.educationJson = educationJson;
+
       const updated = await prisma.user.update({
         where: { id: userId },
         data,
@@ -125,6 +140,9 @@ export default async function handler(
           skillsJson: true,
           languagesJson: true,
           hobbiesJson: true,
+
+          // NEW
+          educationJson: true,
         },
       });
 
@@ -138,6 +156,9 @@ export default async function handler(
         skillsJson: updated.skillsJson,
         languagesJson: updated.languagesJson,
         hobbiesJson: updated.hobbiesJson,
+
+        // NEW
+        educationJson: (updated as any).educationJson ?? null,
       };
 
       // Same backward-compatible shape on update

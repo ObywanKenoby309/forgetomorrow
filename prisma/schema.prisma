@@ -474,6 +474,7 @@ model User {
   workPreferences Json? // { workType, locations[], startDate, relocate, workStatus }
   skillsJson      Json? // ["Leadership", "Azure", "React"]
   languagesJson   Json? // [{ name: "English", level: "Native" }]
+  educationJson   Json? // [{ school, degree, field, startYear, endYear, notes }]
   hobbiesJson     Json? // ["Hiking", "Mentorship"]
 
   // ── Account Role & Plan ───────────────────────────────────────────────────
