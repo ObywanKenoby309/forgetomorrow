@@ -69,8 +69,7 @@ export default function ProfilePage() {
   // NEW: education
   const [education, setEducation] = useState([]);
 
-  // NEW: docs focus UX (presentation-only)
-  // default = resume expanded
+  // Docs focus UX (presentation-only)
   const [docsFocus, setDocsFocus] = useState('resume'); // 'resume' | 'cover'
 
   const [showWelcomeBanner, setShowWelcomeBanner] = useState(false);
@@ -142,7 +141,6 @@ export default function ProfilePage() {
         if (Array.isArray(u.languagesJson)) setLanguages(u.languagesJson);
         if (Array.isArray(u.hobbiesJson)) setHobbies(u.hobbiesJson);
 
-        // NEW: education (only if your API supports it)
         if (Array.isArray(u.educationJson)) setEducation(u.educationJson);
 
         setServerLoaded(true);
@@ -222,8 +220,6 @@ export default function ProfilePage() {
           skillsJson: skills || [],
           languagesJson: languages || [],
           hobbiesJson: hobbies || [],
-
-          // NEW: education (requires /api/profile/details to accept it)
           educationJson: education || [],
         };
 
@@ -301,7 +297,6 @@ export default function ProfilePage() {
     </section>
   );
 
-  // ===== Docs UI helpers (presentation only) =====
   const docsHint = useMemo(
     () => ({
       title: 'Make it easy to say yes',
@@ -325,7 +320,6 @@ export default function ProfilePage() {
       </Head>
 
       <SeekerLayout title="Profile | ForgeTomorrow" header={HeaderBox} right={null} activeNav="profile">
-        {/* EMAIL VERIFIED WELCOME BANNER — DISMISSIBLE, ONLY SHOWS ONCE */}
         {showWelcomeBanner && (
           <section
             className="relative mb-6 p-6 bg-gradient-to-r from-orange-500 to-pink-600 text-white rounded-3xl shadow-2xl text-center max-w-4xl mx-auto"
@@ -348,9 +342,7 @@ export default function ProfilePage() {
           </section>
         )}
 
-        {/* tighter container */}
         <div className="w-full max-w-6xl mx-auto px-3 md:px-5 grid gap-3 md:gap-4">
-          {/* Profile Header (glass wrapper stays) */}
           <section
             aria-label="Profile header section"
             style={{
@@ -367,7 +359,6 @@ export default function ProfilePage() {
             <ProfileHeader />
           </section>
 
-          {/* About */}
           <ProfileSectionRow
             id="about"
             title="About"
@@ -382,7 +373,6 @@ export default function ProfilePage() {
             <ProfileAbout about={about || ''} setAbout={setAbout} />
           </ProfileSectionRow>
 
-          {/* Preferences */}
           <ProfileSectionRow
             id="preferences"
             title="Work preferences"
@@ -408,7 +398,6 @@ export default function ProfilePage() {
             />
           </ProfileSectionRow>
 
-          {/* Skills */}
           <ProfileSectionRow
             id="skills"
             title="Skills"
@@ -423,7 +412,6 @@ export default function ProfilePage() {
             <ProfileSkills skills={skills} setSkills={setSkills} />
           </ProfileSectionRow>
 
-          {/* Languages */}
           <ProfileSectionRow
             id="languages"
             title="Languages"
@@ -437,7 +425,6 @@ export default function ProfilePage() {
             <ProfileLanguages languages={languages} setLanguages={setLanguages} />
           </ProfileSectionRow>
 
-          {/* Education (below Skills + Languages) */}
           <ProfileSectionRow
             id="education"
             title="Education"
@@ -452,7 +439,6 @@ export default function ProfilePage() {
             <ProfileEducation education={education} setEducation={setEducation} />
           </ProfileSectionRow>
 
-          {/* Resume + Cover (NEW split, fluid focus UX) */}
           <ProfileSectionRow
             id="docs"
             title="Resume and cover letter"
@@ -465,6 +451,7 @@ export default function ProfilePage() {
                 display: 'grid',
                 gridTemplateColumns: '1fr',
                 gap: 12,
+                alignItems: 'start',
               }}
               className="md:grid md:grid-cols-2"
             >
@@ -472,7 +459,6 @@ export default function ProfilePage() {
                 title="Primary Resume"
                 active={docsFocus === 'resume'}
                 onActivate={openResume}
-                side="left"
               >
                 <ProfileResumeAttach withChrome={withChrome} />
               </DocFocusCard>
@@ -481,14 +467,12 @@ export default function ProfilePage() {
                 title="Primary Cover Letter"
                 active={docsFocus === 'cover'}
                 onActivate={openCover}
-                side="right"
               >
                 <ProfileCoverAttach withChrome={withChrome} />
               </DocFocusCard>
             </div>
           </ProfileSectionRow>
 
-          {/* Hobbies */}
           <ProfileSectionRow
             id="hobbies"
             title="Hobbies"
@@ -512,109 +496,169 @@ export default function ProfilePage() {
    Docs UX Wrapper (presentation only)
    - Side-by-side on desktop
    - One expanded at a time
-   - Click collapsed card to bring it forward
-   - No changes to Resume/Cover component logic
+   - NO overlay elements that can block child buttons
 ============================================================================ */
 
 function DocFocusCard({ title, active, onActivate, children }) {
   const ORANGE = '#FF7043';
 
   // Expanded vs collapsed sizing
-  const maxH = active ? 1400 : 140; // collapsed = “glance”, expanded = full card
-  const opacity = active ? 1 : 0.92;
+  const maxH = active ? 1600 : 210; // collapsed shows header + top of content + CTA bar
+  const headerPad = 14;
 
   return (
     <div
-      role="button"
-      tabIndex={0}
-      onClick={() => !active && onActivate()}
-      onKeyDown={(e) => {
-        if (!active && (e.key === 'Enter' || e.key === ' ')) {
-          e.preventDefault();
-          onActivate();
-        }
-      }}
-      aria-label={active ? `${title} (expanded)` : `${title} (collapsed)`}
       style={{
-        position: 'relative',
         borderRadius: 18,
-        border: active ? '1px solid rgba(255,112,67,0.55)' : '1px solid rgba(0,0,0,0.08)',
-        background: active ? 'rgba(255,255,255,0.86)' : 'rgba(255,255,255,0.70)',
+        border: active ? '1px solid rgba(255,112,67,0.55)' : '1px solid rgba(0,0,0,0.10)',
+        background: active ? 'rgba(255,255,255,0.88)' : 'rgba(255,255,255,0.72)',
         boxShadow: active
           ? '0 18px 38px rgba(0,0,0,0.16)'
           : '0 10px 22px rgba(0,0,0,0.10)',
         backdropFilter: 'blur(12px)',
         WebkitBackdropFilter: 'blur(12px)',
-        transform: active ? 'translateY(0px) scale(1)' : 'translateY(2px) scale(0.995)',
-        transition: 'transform 180ms ease, box-shadow 180ms ease, border-color 180ms ease, background 180ms ease',
-        cursor: active ? 'default' : 'pointer',
         overflow: 'hidden',
+        transition: 'box-shadow 180ms ease, border-color 180ms ease, background 180ms ease',
       }}
+      aria-label={active ? `${title} expanded` : `${title} collapsed`}
     >
-      {/* subtle top accent */}
-      <div
-        aria-hidden="true"
-        style={{
-          height: 3,
-          background: active ? `linear-gradient(90deg, ${ORANGE}, rgba(255,112,67,0.25))` : 'transparent',
-          transition: 'background 180ms ease',
-        }}
-      />
-
-      {/* “Click to expand” affordance when collapsed */}
-      {!active && (
-        <div
-          aria-hidden="true"
-          style={{
-            position: 'absolute',
-            top: 10,
-            right: 12,
-            zIndex: 5,
-            display: 'inline-flex',
-            alignItems: 'center',
-            gap: 8,
-            padding: '6px 10px',
-            borderRadius: 999,
-            background: 'rgba(255,255,255,0.80)',
-            border: '1px solid rgba(255,112,67,0.35)',
-            color: ORANGE,
-            fontSize: 12,
-            fontWeight: 800,
-            boxShadow: '0 8px 18px rgba(0,0,0,0.08)',
-          }}
-        >
-          Click to expand
-          <span style={{ fontWeight: 900 }}>→</span>
-        </div>
-      )}
-
-      {/* Animated content clamp */}
+      {/* Top accent + title row (NOT overlay) */}
       <div
         style={{
-          maxHeight: maxH,
-          opacity,
-          transition: 'max-height 260ms ease, opacity 220ms ease',
-          overflow: 'hidden',
+          padding: `${headerPad}px ${headerPad}px 10px`,
+          borderBottom: '1px solid rgba(0,0,0,0.06)',
+          background: active
+            ? 'linear-gradient(180deg, rgba(255,112,67,0.08), rgba(255,255,255,0))'
+            : 'linear-gradient(180deg, rgba(0,0,0,0.02), rgba(255,255,255,0))',
         }}
       >
-        {/* IMPORTANT: children are unchanged components */}
-        <div style={{ padding: 0 }}>{children}</div>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10 }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 10, minWidth: 0 }}>
+            <div
+              aria-hidden="true"
+              style={{
+                width: 10,
+                height: 10,
+                borderRadius: 999,
+                background: active ? ORANGE : 'rgba(0,0,0,0.20)',
+                boxShadow: active ? '0 0 0 4px rgba(255,112,67,0.16)' : 'none',
+                flexShrink: 0,
+              }}
+            />
+            <div style={{ minWidth: 0 }}>
+              <div style={{ fontSize: 15, fontWeight: 900, color: '#1F2937', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                {title}
+              </div>
+              <div style={{ fontSize: 12, color: '#475569', fontWeight: 600 }}>
+                {active ? 'Expanded' : 'Collapsed (click Expand)'}
+              </div>
+            </div>
+          </div>
+
+          {!active && (
+            <button
+              type="button"
+              onClick={(e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                onActivate();
+              }}
+              style={{
+                borderRadius: 999,
+                padding: '8px 12px',
+                background: 'rgba(255,255,255,0.9)',
+                border: '1px solid rgba(255,112,67,0.45)',
+                color: ORANGE,
+                fontWeight: 900,
+                fontSize: 12,
+                cursor: 'pointer',
+                boxShadow: '0 10px 20px rgba(0,0,0,0.08)',
+                flexShrink: 0,
+              }}
+              aria-label={`Expand ${title}`}
+            >
+              Expand →
+            </button>
+          )}
+        </div>
       </div>
 
-      {/* soft fade at the bottom when collapsed */}
+      {/* Content clamp */}
+      <div
+        onClick={() => {
+          if (!active) onActivate();
+        }}
+        role={!active ? 'button' : undefined}
+        tabIndex={!active ? 0 : undefined}
+        onKeyDown={(e) => {
+          if (!active && (e.key === 'Enter' || e.key === ' ')) {
+            e.preventDefault();
+            onActivate();
+          }
+        }}
+        style={{
+          maxHeight: maxH,
+          overflow: 'hidden',
+          transition: 'max-height 260ms ease',
+          cursor: active ? 'default' : 'pointer',
+        }}
+      >
+        <div style={{ padding: 0 }}>
+          {children}
+        </div>
+
+        {/* bottom fade ONLY when collapsed, but it does NOT block clicks because it's inside and pointerEvents none */}
+        {!active && (
+          <div
+            aria-hidden="true"
+            style={{
+              height: 72,
+              marginTop: -72,
+              background: 'linear-gradient(to bottom, rgba(255,255,255,0), rgba(255,255,255,0.95))',
+              pointerEvents: 'none',
+            }}
+          />
+        )}
+      </div>
+
+      {/* Footer CTA bar (NOT overlay) */}
       {!active && (
         <div
-          aria-hidden="true"
           style={{
-            position: 'absolute',
-            left: 0,
-            right: 0,
-            bottom: 0,
-            height: 60,
-            background: 'linear-gradient(to bottom, rgba(255,255,255,0), rgba(255,255,255,0.92))',
-            pointerEvents: 'none',
+            padding: '10px 14px',
+            borderTop: '1px solid rgba(0,0,0,0.06)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            gap: 10,
+            background: 'rgba(255,255,255,0.86)',
           }}
-        />
+        >
+          <div style={{ fontSize: 12, color: '#475569', fontWeight: 700 }}>
+            Click to expand and manage this document.
+          </div>
+          <button
+            type="button"
+            onClick={(e) => {
+              e.preventDefault();
+              e.stopPropagation();
+              onActivate();
+            }}
+            style={{
+              borderRadius: 10,
+              padding: '8px 12px',
+              background: ORANGE,
+              border: 'none',
+              color: 'white',
+              fontWeight: 900,
+              fontSize: 12,
+              cursor: 'pointer',
+            }}
+            aria-label={`Expand ${title}`}
+          >
+            Expand
+          </button>
+        </div>
       )}
     </div>
   );
