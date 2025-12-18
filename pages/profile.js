@@ -19,43 +19,22 @@ import ProfileSectionRow from '@/components/profile/ProfileSectionRow';
 
 const UI = { CARD_PAD: 14 };
 
-// LocalStorage keys (legacy cache)
-const NAME_KEY = 'profile_name_v1';
-const PRONOUNS_KEY = 'profile_pronouns_v1';
-const TITLE_KEY = 'profile_title_v1';
-const LOC_KEY = 'profile_location_v1';
-const STATUS_KEY = 'profile_status_v1';
-const AVATAR_KEY = 'profile_avatar_v1';
-const COVER_KEY = 'profile_cover_v1';
-const ABOUT_KEY = 'profile_about_v1';
-const SKL_KEY = 'profile_skills_v1';
-const LANG_KEY = 'profile_languages_v1';
-const PREF_LOC_KEY = 'profile_pref_locations_v1';
-const PREF_TYPE_KEY = 'profile_pref_worktype_v1';
-const PREF_STATUS_KEY = 'profile_pref_status_v1';
-const PREF_RELOC_KEY = 'profile_pref_relocate_v1';
-const PREF_START_KEY = 'profile_pref_start_v1';
-const HOB_KEY = 'profile_hobbies_v1';
-const RESUME_KEY = 'profile_resume_v1';
-const EDU_KEY = 'profile_education_v1';
-const WELCOME_DISMISS_KEY = 'profile_welcome_dismissed_v1';
-
 export default function ProfilePage() {
   const router = useRouter();
   const chrome = String(router.query.chrome || '').toLowerCase();
   const withChrome = (path) =>
     chrome ? `${path}${path.includes('?') ? '&' : '?'}chrome=${chrome}` : path;
 
+  // Header/identity (DB-backed via /api/profile/details)
   const [name, setName] = useState('');
   const [pronouns, setPronouns] = useState('');
   const [headline, setHeadline] = useState('');
   const [location, setLocation] = useState('');
   const [status, setStatus] = useState('');
-
-  const [avatarUrl, setAvatarUrl] = useState('/profile-avatars/demo-avatar.png');
+  const [avatarUrl, setAvatarUrl] = useState('');
   const [coverUrl, setCoverUrl] = useState('');
-  const [about, setAbout] = useState(null);
 
+  const [about, setAbout] = useState(null);
   const [skills, setSkills] = useState([]);
   const [languages, setLanguages] = useState([]);
   const [prefLocations, setPrefLocations] = useState([]);
@@ -64,50 +43,16 @@ export default function ProfilePage() {
   const [prefRelocate, setPrefRelocate] = useState('');
   const [prefStart, setPrefStart] = useState('');
   const [hobbies, setHobbies] = useState([]);
-  const [resume, setResume] = useState(null);
-
-  // NEW: education
   const [education, setEducation] = useState([]);
 
   // Docs focus UX (presentation-only)
   const [docsFocus, setDocsFocus] = useState('resume'); // 'resume' | 'cover'
 
+  // Welcome banner (DB-backed via UserDraft through /api/profile/details)
   const [showWelcomeBanner, setShowWelcomeBanner] = useState(false);
+  const [welcomeDismissed, setWelcomeDismissed] = useState(false);
+
   const [serverLoaded, setServerLoaded] = useState(false);
-
-  // ---------------- Load from localStorage (legacy cache) ----------------
-  useEffect(() => {
-    try {
-      const read = (k, fb) => JSON.parse(localStorage.getItem(k) ?? fb);
-      const readStr = (k, fb) => localStorage.getItem(k) ?? fb;
-
-      setName(readStr(NAME_KEY, ''));
-      setPronouns(readStr(PRONOUNS_KEY, ''));
-      setHeadline(readStr(TITLE_KEY, ''));
-      setLocation(readStr(LOC_KEY, ''));
-      setStatus(readStr(STATUS_KEY, ''));
-
-      setAvatarUrl(readStr(AVATAR_KEY, '/profile-avatars/demo-avatar.png'));
-      setCoverUrl(readStr(COVER_KEY, ''));
-
-      const storedAbout = localStorage.getItem(ABOUT_KEY);
-      setAbout(storedAbout == null ? null : storedAbout);
-
-      setSkills(read(SKL_KEY, '[]'));
-      setLanguages(read(LANG_KEY, '[]'));
-      setPrefLocations(read(PREF_LOC_KEY, '[]'));
-      setPrefWorkType(readStr(PREF_TYPE_KEY, ''));
-      setPrefStatus(readStr(PREF_STATUS_KEY, ''));
-      setPrefRelocate(readStr(PREF_RELOC_KEY, ''));
-      setPrefStart(readStr(PREF_START_KEY, ''));
-      setHobbies(read(HOB_KEY, '[]'));
-      setResume(read(RESUME_KEY, null));
-
-      setEducation(read(EDU_KEY, '[]'));
-    } catch (err) {
-      console.error('Failed to load from localStorage:', err);
-    }
-  }, []);
 
   // ---------------- Load from server (/api/profile/details) ----------------
   useEffect(() => {
@@ -124,7 +69,17 @@ export default function ProfilePage() {
         const data = await res.json();
         if (cancelled) return;
 
-        const u = data.user || {};
+        // Backward compatible response: data.user or flattened
+        const u = data.user || data.details || data || {};
+
+        if (typeof u.name === 'string') setName(u.name);
+        if (typeof u.pronouns === 'string') setPronouns(u.pronouns);
+        if (typeof u.headline === 'string') setHeadline(u.headline);
+        if (typeof u.location === 'string') setLocation(u.location);
+        if (typeof u.status === 'string') setStatus(u.status);
+
+        if (typeof u.avatarUrl === 'string') setAvatarUrl(u.avatarUrl);
+        if (typeof u.coverUrl === 'string') setCoverUrl(u.coverUrl);
 
         if (typeof u.aboutMe === 'string') setAbout(u.aboutMe);
 
@@ -140,8 +95,9 @@ export default function ProfilePage() {
         if (Array.isArray(u.skillsJson)) setSkills(u.skillsJson);
         if (Array.isArray(u.languagesJson)) setLanguages(u.languagesJson);
         if (Array.isArray(u.hobbiesJson)) setHobbies(u.hobbiesJson);
-
         if (Array.isArray(u.educationJson)) setEducation(u.educationJson);
+
+        setWelcomeDismissed(Boolean(u.welcomeDismissed) === true);
 
         setServerLoaded(true);
       } catch (err) {
@@ -155,51 +111,29 @@ export default function ProfilePage() {
     };
   }, []);
 
-  // ---------------- Welcome banner logic ----------------
+  // ---------------- Welcome banner logic (cross-device via DB flag) ----------------
   useEffect(() => {
-    if (typeof window === 'undefined') return;
-
     if (router.query.verified === '1') {
-      const dismissed = localStorage.getItem(WELCOME_DISMISS_KEY) === '1';
-      if (!dismissed) setShowWelcomeBanner(true);
+      if (!welcomeDismissed) setShowWelcomeBanner(true);
     }
-  }, [router.query.verified]);
+  }, [router.query.verified, welcomeDismissed]);
 
-  const dismissWelcome = () => {
+  const dismissWelcome = async () => {
     try {
-      localStorage.setItem(WELCOME_DISMISS_KEY, '1');
-    } catch {}
-    setShowWelcomeBanner(false);
+      setShowWelcomeBanner(false);
+      setWelcomeDismissed(true);
+
+      await fetch('/api/profile/details', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ welcomeDismissed: true }),
+      });
+    } catch (err) {
+      console.error('Failed to persist welcome dismissal:', err);
+    }
   };
 
-  // ---------------- Persist to localStorage (legacy cache) ----------------
-  useEffect(() => { try { localStorage.setItem(NAME_KEY, name); } catch {} }, [name]);
-  useEffect(() => { try { localStorage.setItem(PRONOUNS_KEY, pronouns); } catch {} }, [pronouns]);
-  useEffect(() => { try { localStorage.setItem(TITLE_KEY, headline); } catch {} }, [headline]);
-  useEffect(() => { try { localStorage.setItem(LOC_KEY, location); } catch {} }, [location]);
-  useEffect(() => { try { localStorage.setItem(STATUS_KEY, status); } catch {} }, [status]);
-  useEffect(() => { try { localStorage.setItem(AVATAR_KEY, avatarUrl); } catch {} }, [avatarUrl]);
-  useEffect(() => { try { localStorage.setItem(COVER_KEY, coverUrl); } catch {} }, [coverUrl]);
-
-  useEffect(() => {
-    try {
-      if (about == null) return;
-      localStorage.setItem(ABOUT_KEY, about);
-    } catch {}
-  }, [about]);
-
-  useEffect(() => { try { localStorage.setItem(SKL_KEY, JSON.stringify(skills)); } catch {} }, [skills]);
-  useEffect(() => { try { localStorage.setItem(LANG_KEY, JSON.stringify(languages)); } catch {} }, [languages]);
-  useEffect(() => { try { localStorage.setItem(PREF_LOC_KEY, JSON.stringify(prefLocations)); } catch {} }, [prefLocations]);
-  useEffect(() => { try { localStorage.setItem(PREF_TYPE_KEY, prefWorkType); } catch {} }, [prefWorkType]);
-  useEffect(() => { try { localStorage.setItem(PREF_STATUS_KEY, prefStatus); } catch {} }, [prefStatus]);
-  useEffect(() => { try { localStorage.setItem(PREF_RELOC_KEY, prefRelocate); } catch {} }, [prefRelocate]);
-  useEffect(() => { try { localStorage.setItem(PREF_START_KEY, prefStart); } catch {} }, [prefStart]);
-  useEffect(() => { try { localStorage.setItem(HOB_KEY, JSON.stringify(hobbies)); } catch {} }, [hobbies]);
-  useEffect(() => { try { localStorage.setItem(RESUME_KEY, JSON.stringify(resume)); } catch {} }, [resume]);
-  useEffect(() => { try { localStorage.setItem(EDU_KEY, JSON.stringify(education)); } catch {} }, [education]);
-
-  // ---------------- Debounced save to server ----------------
+  // ---------------- Debounced save to server (DB is source of truth) ----------------
   useEffect(() => {
     if (!serverLoaded) return;
 
@@ -208,6 +142,16 @@ export default function ProfilePage() {
     const timer = setTimeout(async () => {
       try {
         const body = {
+          // Header/identity
+          name: name || '',
+          pronouns: pronouns || '',
+          headline: headline || '',
+          location: location || '',
+          status: status || '',
+          avatarUrl: avatarUrl || null,
+          coverUrl: coverUrl || null,
+
+          // Sections
           aboutMe: about || '',
           workPreferences: {
             workStatus: prefStatus || '',
@@ -232,7 +176,7 @@ export default function ProfilePage() {
 
         if (!res.ok) console.error('Failed to save profile details');
       } catch (err) {
-        if (err.name === 'AbortError') return;
+        if (err?.name === 'AbortError') return;
         console.error('Error saving profile details:', err);
       }
     }, 900);
@@ -243,6 +187,15 @@ export default function ProfilePage() {
     };
   }, [
     serverLoaded,
+    // header/identity
+    name,
+    pronouns,
+    headline,
+    location,
+    status,
+    avatarUrl,
+    coverUrl,
+    // sections
     about,
     prefStatus,
     prefWorkType,
@@ -446,19 +399,21 @@ export default function ProfilePage() {
             hintTitle={docsHint.title}
             hintBullets={docsHint.bullets}
           >
+            {/* Horizontal accordion (70/30) — side-by-side on ALL breakpoints */}
             <div
               style={{
-                display: 'grid',
-                gridTemplateColumns: '1fr',
+                display: 'flex',
+                flexDirection: 'row',
                 gap: 12,
-                alignItems: 'start',
+                alignItems: 'stretch',
+                width: '100%',
               }}
-              className="md:grid md:grid-cols-2"
             >
               <DocFocusCard
                 title="Primary Resume"
                 active={docsFocus === 'resume'}
                 onActivate={openResume}
+                activePct={70}
               >
                 <ProfileResumeAttach withChrome={withChrome} />
               </DocFocusCard>
@@ -467,6 +422,7 @@ export default function ProfilePage() {
                 title="Primary Cover Letter"
                 active={docsFocus === 'cover'}
                 onActivate={openCover}
+                activePct={70}
               >
                 <ProfileCoverAttach withChrome={withChrome} />
               </DocFocusCard>
@@ -494,21 +450,41 @@ export default function ProfilePage() {
 
 /* ============================================================================
    Docs UX Wrapper (presentation only)
-   - Side-by-side on desktop
-   - One expanded at a time
-   - NO overlay elements that can block child buttons
+   - Side-by-side (always)
+   - Horizontal accordion by width (70/30)
+   - One expanded at a time (docsFocus)
 ============================================================================ */
 
-function DocFocusCard({ title, active, onActivate, children }) {
+function DocFocusCard({ title, active, onActivate, activePct = 70, children }) {
   const ORANGE = '#FF7043';
-
-  // Expanded vs collapsed sizing
-  const maxH = active ? 1600 : 210; // collapsed shows header + top of content + CTA bar
   const headerPad = 14;
+
+  // Width split
+  const activeBasis = `${activePct}%`;
+  const inactiveBasis = `${100 - activePct}%`;
+
+  // Height clamp stays as-is (your existing behavior)
+  const maxH = active ? 1600 : 210;
 
   return (
     <div
+      onClick={() => {
+        if (!active) onActivate();
+      }}
+      role={!active ? 'button' : undefined}
+      tabIndex={!active ? 0 : undefined}
+      onKeyDown={(e) => {
+        if (!active && (e.key === 'Enter' || e.key === ' ')) {
+          e.preventDefault();
+          onActivate();
+        }
+      }}
       style={{
+        flexBasis: active ? activeBasis : inactiveBasis,
+        flexGrow: 0,
+        flexShrink: 0,
+        minWidth: 0,
+
         borderRadius: 18,
         border: active ? '1px solid rgba(255,112,67,0.55)' : '1px solid rgba(0,0,0,0.10)',
         background: active ? 'rgba(255,255,255,0.88)' : 'rgba(255,255,255,0.72)',
@@ -518,11 +494,14 @@ function DocFocusCard({ title, active, onActivate, children }) {
         backdropFilter: 'blur(12px)',
         WebkitBackdropFilter: 'blur(12px)',
         overflow: 'hidden',
-        transition: 'box-shadow 180ms ease, border-color 180ms ease, background 180ms ease',
+        cursor: active ? 'default' : 'pointer',
+
+        transition:
+          'flex-basis 260ms ease, box-shadow 180ms ease, border-color 180ms ease, background 180ms ease',
       }}
       aria-label={active ? `${title} expanded` : `${title} collapsed`}
     >
-      {/* Top accent + title row (NOT overlay) */}
+      {/* Header */}
       <div
         style={{
           padding: `${headerPad}px ${headerPad}px 10px`,
@@ -546,11 +525,20 @@ function DocFocusCard({ title, active, onActivate, children }) {
               }}
             />
             <div style={{ minWidth: 0 }}>
-              <div style={{ fontSize: 15, fontWeight: 900, color: '#1F2937', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+              <div
+                style={{
+                  fontSize: 15,
+                  fontWeight: 900,
+                  color: '#1F2937',
+                  whiteSpace: 'nowrap',
+                  overflow: 'hidden',
+                  textOverflow: 'ellipsis',
+                }}
+              >
                 {title}
               </div>
               <div style={{ fontSize: 12, color: '#475569', fontWeight: 600 }}>
-                {active ? 'Expanded' : 'Collapsed (click Expand)'}
+                {active ? 'Expanded' : 'Collapsed (click)'}
               </div>
             </div>
           </div>
@@ -585,29 +573,16 @@ function DocFocusCard({ title, active, onActivate, children }) {
 
       {/* Content clamp */}
       <div
-        onClick={() => {
-          if (!active) onActivate();
-        }}
-        role={!active ? 'button' : undefined}
-        tabIndex={!active ? 0 : undefined}
-        onKeyDown={(e) => {
-          if (!active && (e.key === 'Enter' || e.key === ' ')) {
-            e.preventDefault();
-            onActivate();
-          }
-        }}
         style={{
           maxHeight: maxH,
           overflow: 'hidden',
           transition: 'max-height 260ms ease',
-          cursor: active ? 'default' : 'pointer',
         }}
       >
         <div style={{ padding: 0 }}>
           {children}
         </div>
 
-        {/* bottom fade ONLY when collapsed, but it does NOT block clicks because it's inside and pointerEvents none */}
         {!active && (
           <div
             aria-hidden="true"
@@ -621,7 +596,7 @@ function DocFocusCard({ title, active, onActivate, children }) {
         )}
       </div>
 
-      {/* Footer CTA bar (NOT overlay) */}
+      {/* Footer CTA bar */}
       {!active && (
         <div
           style={{
@@ -634,7 +609,7 @@ function DocFocusCard({ title, active, onActivate, children }) {
             background: 'rgba(255,255,255,0.86)',
           }}
         >
-          <div style={{ fontSize: 12, color: '#475569', fontWeight: 700 }}>
+          <div style={{ fontSize: 12, color: '#475569', fontWeight: 700, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
             Click to expand and manage this document.
           </div>
           <button
@@ -653,6 +628,7 @@ function DocFocusCard({ title, active, onActivate, children }) {
               fontWeight: 900,
               fontSize: 12,
               cursor: 'pointer',
+              flexShrink: 0,
             }}
             aria-label={`Expand ${title}`}
           >

@@ -4,25 +4,31 @@ import { getServerSession } from "next-auth";
 import authOptions from "../auth/[...nextauth]";
 import { prisma } from "@/lib/prisma";
 
+const WELCOME_DRAFT_KEY = "profile_welcome_dismissed_v1";
+
 type ProfileDetails = {
+  // Header / identity
+  name: string | null;
   headline: string | null;
-  aboutMe: string | null;
   location: string | null;
   status: string | null;
   pronouns: string | null;
+  avatarUrl: string | null;
+  coverUrl: string | null;
+
+  // Sections
+  aboutMe: string | null;
   workPreferences: any | null;
   skillsJson: any | null;
   languagesJson: any | null;
   hobbiesJson: any | null;
-
-  // NEW
   educationJson: any | null;
+
+  // UI flags (DB-backed via UserDraft)
+  welcomeDismissed: boolean;
 };
 
-export default async function handler(
-  req: NextApiRequest,
-  res: NextApiResponse
-) {
+export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   const session = (await getServerSession(req, res, authOptions)) as
     | { user?: { email?: string | null } }
     | null;
@@ -48,42 +54,61 @@ export default async function handler(
   // ──────────────── GET: load profile details ────────────────
   if (req.method === "GET") {
     try {
-      const record = await prisma.user.findUnique({
-        where: { id: userId },
-        select: {
-          headline: true,
-          aboutMe: true,
-          location: true,
-          status: true,
-          pronouns: true,
-          workPreferences: true,
-          skillsJson: true,
-          languagesJson: true,
-          hobbiesJson: true,
+      const [record, welcomeDraft] = await Promise.all([
+        prisma.user.findUnique({
+          where: { id: userId },
+          select: {
+            name: true,
+            headline: true,
+            location: true,
+            status: true,
+            pronouns: true,
+            avatarUrl: true,
+            coverUrl: true,
 
-          // NEW
-          educationJson: true,
-        },
-      });
+            aboutMe: true,
+            workPreferences: true,
+            skillsJson: true,
+            languagesJson: true,
+            hobbiesJson: true,
+            educationJson: true,
+          },
+        }),
+        prisma.userDraft.findUnique({
+          where: {
+            userId_key: {
+              userId,
+              key: WELCOME_DRAFT_KEY,
+            },
+          },
+          select: { content: true },
+        }),
+      ]);
+
+      const dismissed =
+        Boolean((welcomeDraft?.content as any)?.dismissed) === true;
 
       const details: ProfileDetails | null = record
         ? {
+            name: record.name,
             headline: record.headline,
-            aboutMe: record.aboutMe,
             location: record.location,
             status: record.status,
             pronouns: record.pronouns,
+            avatarUrl: record.avatarUrl ?? null,
+            coverUrl: record.coverUrl ?? null,
+
+            aboutMe: record.aboutMe,
             workPreferences: record.workPreferences,
             skillsJson: record.skillsJson,
             languagesJson: record.languagesJson,
             hobbiesJson: record.hobbiesJson,
-
-            // NEW
             educationJson: (record as any).educationJson ?? null,
+
+            welcomeDismissed: dismissed,
           }
         : null;
 
-      // Backward-compatible: return both `details` and flattened fields
       return res.status(200).json({
         details,
         ...(details || {}),
@@ -97,84 +122,132 @@ export default async function handler(
   // ──────────────── PATCH: update profile details ────────────────
   if (req.method === "PATCH") {
     try {
-      const {
-        headline,
-        aboutMe,
-        location,
-        status,
-        pronouns,
-        workPreferences,
-        skillsJson,
-        languagesJson,
-        hobbiesJson,
-
-        // NEW
-        educationJson,
-      } = (req.body || {}) as Partial<ProfileDetails>;
+      const body = (req.body || {}) as Partial<ProfileDetails>;
 
       const data: any = {};
 
-      if (headline !== undefined) data.headline = headline;
-      if (aboutMe !== undefined) data.aboutMe = aboutMe;
-      if (location !== undefined) data.location = location;
-      if (status !== undefined) data.status = status;
-      if (pronouns !== undefined) data.pronouns = pronouns;
-      if (workPreferences !== undefined) data.workPreferences = workPreferences;
-      if (skillsJson !== undefined) data.skillsJson = skillsJson;
-      if (languagesJson !== undefined) data.languagesJson = languagesJson;
-      if (hobbiesJson !== undefined) data.hobbiesJson = hobbiesJson;
+      // Header / identity
+      if (body.name !== undefined) data.name = body.name;
+      if (body.headline !== undefined) data.headline = body.headline;
+      if (body.location !== undefined) data.location = body.location;
+      if (body.status !== undefined) data.status = body.status;
+      if (body.pronouns !== undefined) data.pronouns = body.pronouns;
+      if (body.avatarUrl !== undefined) data.avatarUrl = body.avatarUrl;
+      if (body.coverUrl !== undefined) data.coverUrl = body.coverUrl;
 
-      // NEW
-      if (educationJson !== undefined) data.educationJson = educationJson;
+      // Sections
+      if (body.aboutMe !== undefined) data.aboutMe = body.aboutMe;
+      if (body.workPreferences !== undefined) data.workPreferences = body.workPreferences;
+      if (body.skillsJson !== undefined) data.skillsJson = body.skillsJson;
+      if (body.languagesJson !== undefined) data.languagesJson = body.languagesJson;
+      if (body.hobbiesJson !== undefined) data.hobbiesJson = body.hobbiesJson;
+      if (body.educationJson !== undefined) data.educationJson = body.educationJson;
 
-      const updated = await prisma.user.update({
-        where: { id: userId },
-        data,
-        select: {
-          headline: true,
-          aboutMe: true,
-          location: true,
-          status: true,
-          pronouns: true,
-          workPreferences: true,
-          skillsJson: true,
-          languagesJson: true,
-          hobbiesJson: true,
+      // Persist user fields first (only if something actually changed)
+      const updatedUser =
+        Object.keys(data).length > 0
+          ? await prisma.user.update({
+              where: { id: userId },
+              data,
+              select: {
+                name: true,
+                headline: true,
+                location: true,
+                status: true,
+                pronouns: true,
+                avatarUrl: true,
+                coverUrl: true,
 
-          // NEW
-          educationJson: true,
-        },
+                aboutMe: true,
+                workPreferences: true,
+                skillsJson: true,
+                languagesJson: true,
+                hobbiesJson: true,
+                educationJson: true,
+              },
+            })
+          : await prisma.user.findUnique({
+              where: { id: userId },
+              select: {
+                name: true,
+                headline: true,
+                location: true,
+                status: true,
+                pronouns: true,
+                avatarUrl: true,
+                coverUrl: true,
+
+                aboutMe: true,
+                workPreferences: true,
+                skillsJson: true,
+                languagesJson: true,
+                hobbiesJson: true,
+                educationJson: true,
+              },
+            });
+
+      if (!updatedUser) {
+        return res.status(404).json({ error: "User not found" });
+      }
+
+      // DB-backed welcome dismiss flag via UserDraft
+      if (body.welcomeDismissed !== undefined) {
+        if (body.welcomeDismissed) {
+          await prisma.userDraft.upsert({
+            where: {
+              userId_key: { userId, key: WELCOME_DRAFT_KEY },
+            },
+            create: {
+              userId,
+              key: WELCOME_DRAFT_KEY,
+              content: { dismissed: true },
+            },
+            update: {
+              content: { dismissed: true },
+            },
+          });
+        } else {
+          // if you ever want to re-show it cross-device
+          await prisma.userDraft.deleteMany({
+            where: { userId, key: WELCOME_DRAFT_KEY },
+          });
+        }
+      }
+
+      const draft = await prisma.userDraft.findUnique({
+        where: { userId_key: { userId, key: WELCOME_DRAFT_KEY } },
+        select: { content: true },
       });
 
       const details: ProfileDetails = {
-        headline: updated.headline,
-        aboutMe: updated.aboutMe,
-        location: updated.location,
-        status: updated.status,
-        pronouns: updated.pronouns,
-        workPreferences: updated.workPreferences,
-        skillsJson: updated.skillsJson,
-        languagesJson: updated.languagesJson,
-        hobbiesJson: updated.hobbiesJson,
+        name: updatedUser.name ?? null,
+        headline: updatedUser.headline ?? null,
+        location: updatedUser.location ?? null,
+        status: updatedUser.status ?? null,
+        pronouns: updatedUser.pronouns ?? null,
+        avatarUrl: (updatedUser as any).avatarUrl ?? null,
+        coverUrl: (updatedUser as any).coverUrl ?? null,
 
-        // NEW
-        educationJson: (updated as any).educationJson ?? null,
+        aboutMe: updatedUser.aboutMe ?? null,
+        workPreferences: updatedUser.workPreferences ?? null,
+        skillsJson: updatedUser.skillsJson ?? null,
+        languagesJson: updatedUser.languagesJson ?? null,
+        hobbiesJson: updatedUser.hobbiesJson ?? null,
+        educationJson: (updatedUser as any).educationJson ?? null,
+
+        welcomeDismissed: Boolean((draft?.content as any)?.dismissed) === true,
       };
 
-      // Same backward-compatible shape on update
       return res.status(200).json({
         details,
         ...details,
       });
     } catch (err) {
       console.error("[profile/details] PATCH error", err);
-      return res
-        .status(500)
-        .json({ error: "Failed to update profile details" });
+      return res.status(500).json({ error: "Failed to update profile details" });
     }
   }
 
-  // ──────────────── Unsupported methods ────────────────
   res.setHeader("Allow", ["GET", "PATCH"]);
   return res.status(405).json({ error: "Method not allowed" });
 }
