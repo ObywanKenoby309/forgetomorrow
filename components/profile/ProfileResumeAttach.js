@@ -3,7 +3,6 @@ import { useEffect, useState } from 'react';
 import { useRouter } from 'next/router';
 import Link from 'next/link';
 
-const ORANGE = '#FF7043';
 const RED = '#C62828';
 
 export default function ProfileResumeAttach({ withChrome }) {
@@ -25,8 +24,13 @@ export default function ProfileResumeAttach({ withChrome }) {
 
     async function loadResumes() {
       try {
+        setError('');
         const res = await fetch('/api/resume/list');
-        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+
+        if (!res.ok) {
+          if (res.status === 401) throw new Error('AUTH');
+          throw new Error(`HTTP ${res.status}`);
+        }
 
         const data = await res.json();
         if (!cancelled) {
@@ -34,19 +38,28 @@ export default function ProfileResumeAttach({ withChrome }) {
         }
       } catch (err) {
         console.error('[ProfileResumeAttach] load error', err);
-        if (!cancelled) setError('We could not load your saved resumes.');
+        if (!cancelled) {
+          setError(
+            err?.message === 'AUTH'
+              ? 'Please sign in to view your resumes.'
+              : 'We could not load your saved resumes.'
+          );
+        }
       } finally {
         if (!cancelled) setLoading(false);
       }
     }
 
     loadResumes();
-    return () => { cancelled = true };
+    return () => {
+      cancelled = true;
+    };
   }, []);
 
   // Set primary
   const handleSetPrimary = async (resumeId) => {
     if (!resumeId) return;
+    setError('');
     setSettingPrimaryId(resumeId);
 
     try {
@@ -58,11 +71,12 @@ export default function ProfileResumeAttach({ withChrome }) {
 
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
 
-      // Update local state
+      // Update local state (normalize ids for safe compare)
       setResumes((prev) =>
-        prev.map((r) =>
-          r.id === resumeId ? { ...r, isPrimary: true } : { ...r, isPrimary: false }
-        )
+        prev.map((r) => ({
+          ...r,
+          isPrimary: String(r.id) === String(resumeId),
+        }))
       );
     } catch (err) {
       console.error('set primary failed', err);
@@ -78,15 +92,25 @@ export default function ProfileResumeAttach({ withChrome }) {
     router.push(withChrome ? withChrome(base) : base);
   };
 
+  const formatDate = (d) => {
+    try {
+      if (!d) return '';
+      return new Date(d).toLocaleDateString();
+    } catch {
+      return '';
+    }
+  };
+
   // Delete resume
   const handleDelete = async (resumeId) => {
     if (!resumeId) return;
 
     const confirmDelete = window.confirm(
-      "Are you sure? This will permanently delete this resume."
+      'Are you sure? This will permanently delete this resume.'
     );
     if (!confirmDelete) return;
 
+    setError('');
     setDeletingId(resumeId);
 
     try {
@@ -99,7 +123,21 @@ export default function ProfileResumeAttach({ withChrome }) {
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
 
       // Remove from local state
-      setResumes((prev) => prev.filter((r) => r.id !== resumeId));
+      // ✅ If they deleted the primary, promote the first remaining locally to mirror backend behavior
+      setResumes((prev) => {
+        const wasPrimary = prev.some(
+          (r) => String(r.id) === String(resumeId) && r.isPrimary
+        );
+
+        const next = prev.filter((r) => String(r.id) !== String(resumeId));
+
+        if (wasPrimary && next.length) {
+          const promotedId = String(next[0].id);
+          return next.map((r) => ({ ...r, isPrimary: String(r.id) === promotedId }));
+        }
+
+        return next;
+      });
     } catch (err) {
       console.error('[delete] failed', err);
       setError('Could not delete resume.');
@@ -119,19 +157,16 @@ export default function ProfileResumeAttach({ withChrome }) {
       );
 
     if (!primaryResume)
-      return (
-        <p className="text-sm text-gray-600">You have resumes saved, but none selected.</p>
-      );
+      return <p className="text-sm text-gray-600">You have resumes saved, but none selected.</p>;
 
     const name = primaryResume.name?.trim() || 'Untitled resume';
+    const updated = formatDate(primaryResume.updatedAt);
 
     return (
       <div className="flex flex-col gap-1">
         <p className="text-sm text-gray-700">
           <span className="font-semibold">{name}</span>
-          {primaryResume.updatedAt && (
-            <> · Updated {new Date(primaryResume.updatedAt).toLocaleDateString()}</>
-          )}
+          {updated ? <> · Updated {updated}</> : null}
         </p>
         <button
           onClick={() => handleOpenInBuilder(primaryResume.id)}
@@ -166,14 +201,13 @@ export default function ProfileResumeAttach({ withChrome }) {
           <div className="border-t border-gray-200 my-2" />
 
           <div>
-            <p className="text-xs font-semibold text-gray-500 mb-2">
-              Your saved resumes
-            </p>
+            <p className="text-xs font-semibold text-gray-500 mb-2">Your saved resumes</p>
 
             <div className="space-y-2">
               {resumes.map((resume) => {
                 const name = resume.name?.trim() || 'Untitled resume';
                 const isPrimary = !!resume.isPrimary;
+                const updated = formatDate(resume.updatedAt);
 
                 return (
                   <div
@@ -181,25 +215,21 @@ export default function ProfileResumeAttach({ withChrome }) {
                     className="flex items-center justify-between gap-3 rounded-xl border border-gray-200 px-3 py-2"
                   >
                     <div className="min-w-0">
-                      <p className="text-sm font-semibold text-gray-800 truncate">
-                        {name}
-                      </p>
-                      <p className="text-xs text-gray-500">
-                        Updated {new Date(resume.updatedAt).toLocaleDateString()}
-                      </p>
+                      <p className="text-sm font-semibold text-gray-800 truncate">{name}</p>
+                      {updated ? (
+                        <p className="text-xs text-gray-500">Updated {updated}</p>
+                      ) : (
+                        <p className="text-xs text-gray-500"> </p>
+                      )}
                     </div>
 
-                    {/* Action Buttons */}
                     <div className="flex items-center gap-2 shrink-0">
-
-                      {/* Primary pill */}
                       {isPrimary && (
                         <span className="text-[10px] font-bold px-2 py-1 rounded-full bg-green-100 text-green-800">
                           PRIMARY
                         </span>
                       )}
 
-                      {/* Open button */}
                       <button
                         onClick={() => handleOpenInBuilder(resume.id)}
                         className="text-xs text-orange-600 underline"
@@ -207,7 +237,6 @@ export default function ProfileResumeAttach({ withChrome }) {
                         Open
                       </button>
 
-                      {/* Delete button */}
                       <button
                         onClick={() => handleDelete(resume.id)}
                         disabled={deletingId === resume.id}
@@ -221,7 +250,6 @@ export default function ProfileResumeAttach({ withChrome }) {
                         {deletingId === resume.id ? 'Deleting…' : 'Delete'}
                       </button>
 
-                      {/* Set primary */}
                       {!isPrimary && (
                         <button
                           onClick={() => handleSetPrimary(resume.id)}
