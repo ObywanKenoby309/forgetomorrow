@@ -294,9 +294,9 @@ export default function PublicProfile({ user, primaryResume, effectiveVisibility
       >
         <main
           style={{
-            maxWidth: 760, // smaller = less “overwhelming”
+            maxWidth: 980, // expanded so banner/content is not “cropped” on desktop
             margin: '0 auto',
-            padding: '0 18px 36px',
+            padding: '0 28px 36px', // a touch more side padding so banner feels framed
             minHeight: '80vh',
           }}
         >
