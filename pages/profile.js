@@ -1,5 +1,5 @@
 // pages/profile.js
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import Head from 'next/head';
 import { useRouter } from 'next/router';
 import Link from 'next/link';
@@ -68,6 +68,10 @@ export default function ProfilePage() {
 
   // NEW: education
   const [education, setEducation] = useState([]);
+
+  // NEW: docs focus UX (presentation-only)
+  // default = resume expanded
+  const [docsFocus, setDocsFocus] = useState('resume'); // 'resume' | 'cover'
 
   const [showWelcomeBanner, setShowWelcomeBanner] = useState(false);
   const [serverLoaded, setServerLoaded] = useState(false);
@@ -255,6 +259,7 @@ export default function ProfilePage() {
     education,
   ]);
 
+  // ---------------- Header text ----------------
   const HeaderBox = (
     <section
       style={{
@@ -296,6 +301,23 @@ export default function ProfilePage() {
     </section>
   );
 
+  // ===== Docs UI helpers (presentation only) =====
+  const docsHint = useMemo(
+    () => ({
+      title: 'Make it easy to say yes',
+      bullets: [
+        'Keep one primary resume linked to your profile.',
+        'Save alternates for different roles.',
+        'Do the same with cover letters so recruiters instantly see fit.',
+        'Manage everything in the builder - change primaries anytime.',
+      ],
+    }),
+    []
+  );
+
+  const openResume = () => setDocsFocus('resume');
+  const openCover = () => setDocsFocus('cover');
+
   return (
     <>
       <Head>
@@ -303,6 +325,7 @@ export default function ProfilePage() {
       </Head>
 
       <SeekerLayout title="Profile | ForgeTomorrow" header={HeaderBox} right={null} activeNav="profile">
+        {/* EMAIL VERIFIED WELCOME BANNER — DISMISSIBLE, ONLY SHOWS ONCE */}
         {showWelcomeBanner && (
           <section
             className="relative mb-6 p-6 bg-gradient-to-r from-orange-500 to-pink-600 text-white rounded-3xl shadow-2xl text-center max-w-4xl mx-auto"
@@ -325,6 +348,7 @@ export default function ProfilePage() {
           </section>
         )}
 
+        {/* tighter container */}
         <div className="w-full max-w-6xl mx-auto px-3 md:px-5 grid gap-3 md:gap-4">
           {/* Profile Header (glass wrapper stays) */}
           <section
@@ -340,124 +364,258 @@ export default function ProfilePage() {
               padding: 10,
             }}
           >
-           <ProfileHeader />
-</section>
+            <ProfileHeader />
+          </section>
 
-<ProfileSectionRow
-  id="about"
-  title="About"
-  subtitle="Your story in 6-10 lines"
-  hintTitle="About yourself"
-  hintBullets={[
-    'Open with a concrete outcome (example: reduced churn 18% in 6 months).',
-    'Mention your domain and tools (industries, platforms, stacks).',
-    'Say what you want next so people know how to help.',
-  ]}
->
-  <ProfileAbout about={about || ''} setAbout={setAbout} />
-</ProfileSectionRow>
+          {/* About */}
+          <ProfileSectionRow
+            id="about"
+            title="About"
+            subtitle="Your story in 6-10 lines"
+            hintTitle="About yourself"
+            hintBullets={[
+              'Open with a concrete outcome (example: reduced churn 18% in 6 months).',
+              'Mention your domain and tools (industries, platforms, stacks).',
+              'Say what you want next so people know how to help.',
+            ]}
+          >
+            <ProfileAbout about={about || ''} setAbout={setAbout} />
+          </ProfileSectionRow>
 
-<ProfileSectionRow
-  id="preferences"
-  title="Work preferences"
-  subtitle="Discovery settings"
-  hintTitle="Preferences help discovery"
-  hintBullets={[
-    'Select work type (remote, onsite, hybrid).',
-    'Add preferred locations to appear in local searches.',
-    'Optional: earliest start date and relocation.',
-  ]}
->
-  <ProfilePreferences
-    prefStatus={prefStatus}
-    setPrefStatus={setPrefStatus}
-    prefWorkType={prefWorkType}
-    setPrefWorkType={setPrefWorkType}
-    prefRelocate={prefRelocate}
-    setPrefRelocate={setPrefRelocate}
-    prefLocations={prefLocations}
-    setPrefLocations={setPrefLocations}
-    prefStart={prefStart}
-    setPrefStart={setPrefStart}
-  />
-</ProfileSectionRow>
+          {/* Preferences */}
+          <ProfileSectionRow
+            id="preferences"
+            title="Work preferences"
+            subtitle="Discovery settings"
+            hintTitle="Preferences help discovery"
+            hintBullets={[
+              'Select work type (remote, onsite, hybrid).',
+              'Add preferred locations to appear in local searches.',
+              'Optional: earliest start date and relocation.',
+            ]}
+          >
+            <ProfilePreferences
+              prefStatus={prefStatus}
+              setPrefStatus={setPrefStatus}
+              prefWorkType={prefWorkType}
+              setPrefWorkType={setPrefWorkType}
+              prefRelocate={prefRelocate}
+              setPrefRelocate={setPrefRelocate}
+              prefLocations={prefLocations}
+              setPrefLocations={setPrefLocations}
+              prefStart={prefStart}
+              setPrefStart={setPrefStart}
+            />
+          </ProfileSectionRow>
 
-<ProfileSectionRow
-  id="skills"
-  title="Skills"
-  subtitle="8-12 is the sweet spot"
-  hintTitle="Strengthen your skills"
-  hintBullets={[
-    'Aim for 8-12 core skills.',
-    'Match target job descriptions.',
-    'Include tools and frameworks.',
-  ]}
->
-  <ProfileSkills skills={skills} setSkills={setSkills} />
-</ProfileSectionRow>
+          {/* Skills */}
+          <ProfileSectionRow
+            id="skills"
+            title="Skills"
+            subtitle="8-12 is the sweet spot"
+            hintTitle="Strengthen your skills"
+            hintBullets={[
+              'Aim for 8-12 core skills.',
+              'Match target job descriptions.',
+              'Include tools and frameworks.',
+            ]}
+          >
+            <ProfileSkills skills={skills} setSkills={setSkills} />
+          </ProfileSectionRow>
 
-<ProfileSectionRow
-  id="languages"
-  title="Languages"
-  subtitle="Spoken or programming"
-  hintTitle="Languages add context"
-  hintBullets={[
-    'Add spoken or programming languages.',
-    'Helps with multilingual or global roles.',
-  ]}
->
-  <ProfileLanguages languages={languages} setLanguages={setLanguages} />
-</ProfileSectionRow>
+          {/* Languages */}
+          <ProfileSectionRow
+            id="languages"
+            title="Languages"
+            subtitle="Spoken or programming"
+            hintTitle="Languages add context"
+            hintBullets={[
+              'Add spoken or programming languages.',
+              'Helps with multilingual or global roles.',
+            ]}
+          >
+            <ProfileLanguages languages={languages} setLanguages={setLanguages} />
+          </ProfileSectionRow>
 
-{/* Education (moved BELOW Skills + Languages) */}
-<ProfileSectionRow
-  id="education"
-  title="Education"
-  subtitle="Degrees, certificates, programs"
-  hintTitle="Education"
-  hintBullets={[
-    'List your school/program and degree (or certificate).',
-    'Add a field/major if it helps recruiters understand your path.',
-    'Keep it clean and factual.',
-  ]}
->
-  <ProfileEducation education={education} setEducation={setEducation} />
-</ProfileSectionRow>
+          {/* Education (below Skills + Languages) */}
+          <ProfileSectionRow
+            id="education"
+            title="Education"
+            subtitle="Degrees, certificates, programs"
+            hintTitle="Education"
+            hintBullets={[
+              'List your school/program and degree (or certificate).',
+              'Add a field/major if it helps recruiters understand your path.',
+              'Keep it clean and factual.',
+            ]}
+          >
+            <ProfileEducation education={education} setEducation={setEducation} />
+          </ProfileSectionRow>
 
-<ProfileSectionRow
-  id="docs"
-  title="Resume and cover letter"
-  subtitle="Make it easy to say yes"
-  hintTitle="Make it easy to say yes"
-  hintBullets={[
-    'Keep one primary resume linked to your profile.',
-    'Save alternates for different roles.',
-    'Do the same with cover letters so recruiters instantly see fit.',
-    'Manage everything in the builder - change primaries anytime.',
-  ]}
->
-  <div style={{ display: 'grid', gap: 12 }}>
-    <ProfileResumeAttach withChrome={withChrome} />
-    <ProfileCoverAttach withChrome={withChrome} />
-  </div>
-</ProfileSectionRow>
+          {/* Resume + Cover (NEW split, fluid focus UX) */}
+          <ProfileSectionRow
+            id="docs"
+            title="Resume and cover letter"
+            subtitle="Make it easy to say yes"
+            hintTitle={docsHint.title}
+            hintBullets={docsHint.bullets}
+          >
+            <div
+              style={{
+                display: 'grid',
+                gridTemplateColumns: '1fr',
+                gap: 12,
+              }}
+              className="md:grid md:grid-cols-2"
+            >
+              <DocFocusCard
+                title="Primary Resume"
+                active={docsFocus === 'resume'}
+                onActivate={openResume}
+                side="left"
+              >
+                <ProfileResumeAttach withChrome={withChrome} />
+              </DocFocusCard>
 
-<ProfileSectionRow
-  id="hobbies"
-  title="Hobbies"
-  subtitle="Optional, but human"
-  hintTitle="Hobbies (optional)"
-  hintBullets={[
-    'Keep it professional-friendly.',
-    'One or two is enough.',
-    'Adds personality without distracting from the resume.',
-  ]}
->
-  <ProfileHobbies hobbies={hobbies} setHobbies={setHobbies} />
-</ProfileSectionRow>
-</div>
-</SeekerLayout>
-</>
-);
+              <DocFocusCard
+                title="Primary Cover Letter"
+                active={docsFocus === 'cover'}
+                onActivate={openCover}
+                side="right"
+              >
+                <ProfileCoverAttach withChrome={withChrome} />
+              </DocFocusCard>
+            </div>
+          </ProfileSectionRow>
+
+          {/* Hobbies */}
+          <ProfileSectionRow
+            id="hobbies"
+            title="Hobbies"
+            subtitle="Optional, but human"
+            hintTitle="Hobbies (optional)"
+            hintBullets={[
+              'Keep it professional-friendly.',
+              'One or two is enough.',
+              'Adds personality without distracting from the resume.',
+            ]}
+          >
+            <ProfileHobbies hobbies={hobbies} setHobbies={setHobbies} />
+          </ProfileSectionRow>
+        </div>
+      </SeekerLayout>
+    </>
+  );
 }
 
+/* ============================================================================
+   Docs UX Wrapper (presentation only)
+   - Side-by-side on desktop
+   - One expanded at a time
+   - Click collapsed card to bring it forward
+   - No changes to Resume/Cover component logic
+============================================================================ */
+
+function DocFocusCard({ title, active, onActivate, children }) {
+  const ORANGE = '#FF7043';
+
+  // Expanded vs collapsed sizing
+  const maxH = active ? 1400 : 140; // collapsed = “glance”, expanded = full card
+  const opacity = active ? 1 : 0.92;
+
+  return (
+    <div
+      role="button"
+      tabIndex={0}
+      onClick={() => !active && onActivate()}
+      onKeyDown={(e) => {
+        if (!active && (e.key === 'Enter' || e.key === ' ')) {
+          e.preventDefault();
+          onActivate();
+        }
+      }}
+      aria-label={active ? `${title} (expanded)` : `${title} (collapsed)`}
+      style={{
+        position: 'relative',
+        borderRadius: 18,
+        border: active ? '1px solid rgba(255,112,67,0.55)' : '1px solid rgba(0,0,0,0.08)',
+        background: active ? 'rgba(255,255,255,0.86)' : 'rgba(255,255,255,0.70)',
+        boxShadow: active
+          ? '0 18px 38px rgba(0,0,0,0.16)'
+          : '0 10px 22px rgba(0,0,0,0.10)',
+        backdropFilter: 'blur(12px)',
+        WebkitBackdropFilter: 'blur(12px)',
+        transform: active ? 'translateY(0px) scale(1)' : 'translateY(2px) scale(0.995)',
+        transition: 'transform 180ms ease, box-shadow 180ms ease, border-color 180ms ease, background 180ms ease',
+        cursor: active ? 'default' : 'pointer',
+        overflow: 'hidden',
+      }}
+    >
+      {/* subtle top accent */}
+      <div
+        aria-hidden="true"
+        style={{
+          height: 3,
+          background: active ? `linear-gradient(90deg, ${ORANGE}, rgba(255,112,67,0.25))` : 'transparent',
+          transition: 'background 180ms ease',
+        }}
+      />
+
+      {/* “Click to expand” affordance when collapsed */}
+      {!active && (
+        <div
+          aria-hidden="true"
+          style={{
+            position: 'absolute',
+            top: 10,
+            right: 12,
+            zIndex: 5,
+            display: 'inline-flex',
+            alignItems: 'center',
+            gap: 8,
+            padding: '6px 10px',
+            borderRadius: 999,
+            background: 'rgba(255,255,255,0.80)',
+            border: '1px solid rgba(255,112,67,0.35)',
+            color: ORANGE,
+            fontSize: 12,
+            fontWeight: 800,
+            boxShadow: '0 8px 18px rgba(0,0,0,0.08)',
+          }}
+        >
+          Click to expand
+          <span style={{ fontWeight: 900 }}>→</span>
+        </div>
+      )}
+
+      {/* Animated content clamp */}
+      <div
+        style={{
+          maxHeight: maxH,
+          opacity,
+          transition: 'max-height 260ms ease, opacity 220ms ease',
+          overflow: 'hidden',
+        }}
+      >
+        {/* IMPORTANT: children are unchanged components */}
+        <div style={{ padding: 0 }}>{children}</div>
+      </div>
+
+      {/* soft fade at the bottom when collapsed */}
+      {!active && (
+        <div
+          aria-hidden="true"
+          style={{
+            position: 'absolute',
+            left: 0,
+            right: 0,
+            bottom: 0,
+            height: 60,
+            background: 'linear-gradient(to bottom, rgba(255,255,255,0), rgba(255,255,255,0.92))',
+            pointerEvents: 'none',
+          }}
+        />
+      )}
+    </div>
+  );
+}

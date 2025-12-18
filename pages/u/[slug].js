@@ -6,7 +6,7 @@ import { prisma } from '@/lib/prisma';
 import { getServerSession } from 'next-auth/next';
 import authOptions from '../api/auth/[...nextauth]';
 
-// Safe helpers for parsing skills / languages from JSON
+// Safe helpers for parsing skills / languages / education from JSON
 function parseArrayField(raw, fallback = []) {
   if (!raw) return fallback;
 
@@ -27,6 +27,45 @@ function parseArrayField(raw, fallback = []) {
           typeof item === 'string' ? item : item?.name || item?.label || ''
         )
         .filter(Boolean);
+    }
+
+    return fallback;
+  } catch {
+    return fallback;
+  }
+}
+
+// NEW: Education-safe parsing (keeps objects so we can render school/degree/etc.)
+function parseEducationField(raw, fallback = []) {
+  if (!raw) return fallback;
+
+  try {
+    const parsed = typeof raw === 'string' ? JSON.parse(raw) : raw;
+
+    if (Array.isArray(parsed)) {
+      return parsed
+        .map((item) => {
+          if (!item) return null;
+
+          // allow array of strings too
+          if (typeof item === 'string') {
+            return { school: item };
+          }
+
+          if (typeof item === 'object') {
+            return {
+              school: item.school || item.institution || item.name || '',
+              degree: item.degree || item.program || '',
+              field: item.field || item.major || '',
+              startYear: item.startYear || item.start || '',
+              endYear: item.endYear || item.end || '',
+              notes: item.notes || item.details || '',
+            };
+          }
+
+          return null;
+        })
+        .filter((x) => x && (x.school || x.degree || x.field || x.notes));
     }
 
     return fallback;
@@ -59,6 +98,10 @@ export async function getServerSideProps(context) {
       aboutMe: true,
       skillsJson: true,
       languagesJson: true,
+
+      // ✅ NEW: education
+      educationJson: true,
+
       bannerMode: true,
       bannerHeight: true,
       bannerFocalY: true,
@@ -158,6 +201,10 @@ export default function PublicProfile({ user, primaryResume, effectiveVisibility
     aboutMe,
     skillsJson,
     languagesJson,
+
+    // ✅ NEW: education
+    educationJson,
+
     bannerMode,
     bannerHeight,
     bannerFocalY,
@@ -171,6 +218,7 @@ export default function PublicProfile({ user, primaryResume, effectiveVisibility
 
   const skills = parseArrayField(skillsJson, []);
   const languages = parseArrayField(languagesJson, []);
+  const education = parseEducationField(educationJson, []);
 
   const resolvedBannerHeight = bannerHeight || 260;
 
@@ -560,6 +608,92 @@ export default function PublicProfile({ user, primaryResume, effectiveVisibility
                   </ul>
                 </div>
               )}
+            </section>
+          )}
+
+          {/* Education (public) — below Skills/Languages */}
+          {education.length > 0 && (
+            <section
+              style={{
+                ...cardBase,
+                marginTop: 16,
+              }}
+            >
+              <h2
+                style={{
+                  margin: '0 0 8px',
+                  fontSize: 18,
+                  fontWeight: 800,
+                  color: TEXT_DARK,
+                }}
+              >
+                Education
+              </h2>
+
+              <div style={{ display: 'grid', gap: 10 }}>
+                {education.map((edu, idx) => {
+                  const school = edu?.school || '';
+                  const degree = edu?.degree || '';
+                  const field = edu?.field || '';
+                  const startYear = edu?.startYear || '';
+                  const endYear = edu?.endYear || '';
+                  const notes = edu?.notes || '';
+
+                  const line1 = [degree, field].filter(Boolean).join(' — ');
+                  const years = [startYear, endYear].filter(Boolean).join(' – ');
+
+                  return (
+                    <div
+                      key={`${school || line1 || 'edu'}-${idx}`}
+                      style={{
+                        padding: '10px 12px',
+                        borderRadius: 12,
+                        background: 'rgba(236,239,241,0.55)',
+                        border: '1px solid rgba(0,0,0,0.06)',
+                      }}
+                    >
+                      <div
+                        style={{
+                          fontSize: 14,
+                          fontWeight: 800,
+                          color: TEXT_DARK,
+                        }}
+                      >
+                        {school || 'Education'}
+                      </div>
+
+                      {(line1 || years) && (
+                        <div
+                          style={{
+                            marginTop: 4,
+                            fontSize: 13,
+                            color: TEXT_MID,
+                            fontWeight: 600,
+                          }}
+                        >
+                          {line1}
+                          {line1 && years ? ' • ' : ''}
+                          {years}
+                        </div>
+                      )}
+
+                      {notes && (
+                        <div
+                          style={{
+                            marginTop: 6,
+                            fontSize: 13,
+                            color: TEXT_DARK,
+                            lineHeight: 1.6,
+                            whiteSpace: 'pre-line',
+                          }}
+                        >
+                          {notes}
+                        </div>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
             </section>
           )}
         </main>
