@@ -25,6 +25,13 @@ import DesignedPDFButton from '@/components/resume-form/export/DesignedPDFButton
 
 const ORANGE = '#FF7043';
 
+// Draft keys (DB-backed)
+const DRAFT_KEYS = {
+  LAST_JOB_TEXT: 'ft_last_job_text',
+  ATS_PACK: 'forge-ats-pack',
+  LAST_UPLOADED_RESUME_TEXT: 'ft_last_uploaded_resume_text',
+};
+
 function Banner({ children, tone = 'orange' }) {
   const toneStyles =
     tone === 'blue'
@@ -162,6 +169,31 @@ export default function CreateResumePage() {
   const [atsJobMeta, setAtsJobMeta] = useState(null);
   const [atsAppliedFromContext, setAtsAppliedFromContext] = useState(false);
 
+  // Draft API helpers (DB-backed)
+  const getDraft = async (key) => {
+    try {
+      const res = await fetch(`/api/drafts/get?key=${encodeURIComponent(key)}`);
+      if (!res.ok) return null;
+      const data = await res.json();
+      return data?.draft?.content ?? null;
+    } catch (e) {
+      console.error('[resume/create] getDraft failed', key, e);
+      return null;
+    }
+  };
+
+  const saveDraft = async (key, content) => {
+    try {
+      await fetch('/api/drafts/save', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ key, content }),
+      });
+    } catch (e) {
+      console.error('[resume/create] saveDraft failed', key, e);
+    }
+  };
+
   // Helper: detect if atsPack is a real ATS result vs demo
   const hasRealAts =
     !!(
@@ -298,9 +330,9 @@ export default function CreateResumePage() {
         file.size > 1_500_000 ? await uploadJD(file) : await extractTextFromFile(file);
       const clean = normalizeJobText(raw);
       setJd(clean);
-      if (typeof window !== 'undefined') {
-        window.localStorage.setItem('ft_last_job_text', clean);
-      }
+
+      // ✅ DB-backed draft storage (no localStorage)
+      await saveDraft(DRAFT_KEYS.LAST_JOB_TEXT, clean);
     } catch (e) {
       console.error(e);
     }
@@ -356,7 +388,7 @@ export default function CreateResumePage() {
   };
 
   // ─────────────────────────────────────────────────────────────
-  // Autofill from uploaded resume text (from resume-cover → localStorage)
+  // Autofill from uploaded resume text (from resume-cover → DB drafts)
   // ─────────────────────────────────────────────────────────────
   useEffect(() => {
     if (!router.isReady) return;
@@ -366,50 +398,53 @@ export default function CreateResumePage() {
     const uploadedFlag = String(uploaded || '').toLowerCase();
 
     if (uploadedFlag !== '1' && uploadedFlag !== 'true') return;
-    if (typeof window === 'undefined') return;
 
-    try {
-      const raw = window.localStorage.getItem('ft_last_uploaded_resume_text');
-      if (!raw) return;
+    async function applyUploadedResume() {
+      try {
+        const raw = await getDraft(DRAFT_KEYS.LAST_UPLOADED_RESUME_TEXT);
+        const text = typeof raw === 'string' ? raw : '';
+        if (!text) return;
 
-      const text = raw;
-      const lines = text
-        .split(/\r?\n/)
-        .map((l) => l.trim())
-        .filter(Boolean);
+        const lines = text
+          .split(/\r?\n/)
+          .map((l) => l.trim())
+          .filter(Boolean);
 
-      // Naive name guess: first non-empty line if we don't already have a fullName/name
-      let guessedName = formData.fullName || formData.name || '';
-      if (!guessedName && lines.length > 0) {
-        guessedName = lines[0];
+        // Naive name guess: first non-empty line if we don't already have a fullName/name
+        let guessedName = formData.fullName || formData.name || '';
+        if (!guessedName && lines.length > 0) {
+          guessedName = lines[0];
+        }
+
+        // Email
+        const emailMatch = text.match(/[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}/i);
+        const guessedEmail = emailMatch ? emailMatch[0] : '';
+
+        // Phone (very loose pattern, but good enough for first pass)
+        const phoneMatch = text.match(/(\+?\d[\d\s\-().]{7,}\d)/);
+        const guessedPhone = phoneMatch ? phoneMatch[0].trim() : '';
+
+        // Only fill fields that are currently empty so we don't clobber existing formData
+        setFormData((prev) => ({
+          ...prev,
+          fullName: prev.fullName || guessedName || '',
+          email: prev.email || guessedEmail || '',
+          phone: prev.phone || guessedPhone || '',
+        }));
+
+        // If summary is empty, drop in the raw text as a starting point (capped length)
+        if (!summary || !summary.trim()) {
+          const capped = text.length > 4000 ? text.slice(0, 4000) : text;
+          setSummary(capped);
+        }
+
+        hasAppliedUploadRef.current = true;
+      } catch (err) {
+        console.error('[resume/create] Failed to auto-fill from uploaded resume', err);
       }
-
-      // Email
-      const emailMatch = text.match(/[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}/i);
-      const guessedEmail = emailMatch ? emailMatch[0] : '';
-
-      // Phone (very loose pattern, but good enough for first pass)
-      const phoneMatch = text.match(/(\+?\d[\d\s\-().]{7,}\d)/);
-      const guessedPhone = phoneMatch ? phoneMatch[0].trim() : '';
-
-      // Only fill fields that are currently empty so we don't clobber existing formData
-      setFormData((prev) => ({
-        ...prev,
-        fullName: prev.fullName || guessedName || '',
-        email: prev.email || guessedEmail || '',
-        phone: prev.phone || guessedPhone || '',
-      }));
-
-      // If summary is empty, drop in the raw text as a starting point (capped length)
-      if (!summary || !summary.trim()) {
-        const capped = text.length > 4000 ? text.slice(0, 4000) : text;
-        setSummary(capped);
-      }
-
-      hasAppliedUploadRef.current = true;
-    } catch (err) {
-      console.error('[resume/create] Failed to auto-fill from uploaded resume', err);
     }
+
+    applyUploadedResume();
   }, [
     router.isReady,
     router.query,
@@ -421,57 +456,60 @@ export default function CreateResumePage() {
   ]);
 
   // ─────────────────────────────────────────────────────────────
-  // Apply ATS pack + JD context from resume-cover
+  // Apply ATS pack + JD context from resume-cover (DB drafts)
   // ─────────────────────────────────────────────────────────────
   useEffect(() => {
     if (!router.isReady) return;
     if (atsAppliedFromContext) return;
 
-    const { from } = router.query || {};
-    const fromFlag = String(from || '').toLowerCase();
+    async function applyAtsContext() {
+      const { from } = router.query || {};
+      const fromFlag = String(from || '').toLowerCase();
 
-    let applied = false;
+      let applied = false;
 
-    if (fromFlag === 'ats' && typeof window !== 'undefined') {
-      try {
-        const raw = window.localStorage.getItem('forge-ats-pack');
-        if (raw) {
-          const pack = JSON.parse(raw);
-          setAtsPack(pack || null);
-          if (pack?.job) {
-            setAtsJobMeta({
-              title: pack.job.title || '',
-              company: pack.job.company || '',
-              location: pack.job.location || '',
-            });
+      if (fromFlag === 'ats') {
+        try {
+          const pack = await getDraft(DRAFT_KEYS.ATS_PACK);
+          if (pack) {
+            setAtsPack(pack || null);
+            if (pack?.job) {
+              setAtsJobMeta({
+                title: pack.job.title || '',
+                company: pack.job.company || '',
+                location: pack.job.location || '',
+              });
+            }
+
+            // If ATS pack carries a job description, auto-use it as JD text
+            if (pack?.job?.description && !jd) {
+              const clean = normalizeJobText(pack.job.description);
+              setJd(clean);
+              await saveDraft(DRAFT_KEYS.LAST_JOB_TEXT, clean);
+              applied = true;
+            }
           }
-
-          // If ATS pack carries a job description, auto-use it as JD text
-          if (pack?.job?.description && !jd) {
-            const clean = normalizeJobText(pack.job.description);
-            setJd(clean);
-            window.localStorage.setItem('ft_last_job_text', clean);
-            applied = true;
-          }
+        } catch (err) {
+          console.error('[resume/create] Failed to load ATS pack from DB drafts', err);
         }
-      } catch (err) {
-        console.error('[resume/create] Failed to load ATS pack from localStorage', err);
       }
+
+      // Fallback: if we don't have a JD yet, reuse last uploaded JD if available
+      if (!applied && !jd) {
+        try {
+          const last = await getDraft(DRAFT_KEYS.LAST_JOB_TEXT);
+          if (typeof last === 'string' && last) {
+            setJd(last);
+          }
+        } catch (err) {
+          console.error('[resume/create] Failed to load last JD from DB drafts', err);
+        }
+      }
+
+      setAtsAppliedFromContext(true);
     }
 
-    // Fallback: if we don't have a JD yet, reuse last uploaded JD if available
-    if (!applied && !jd && typeof window !== 'undefined') {
-      try {
-        const last = window.localStorage.getItem('ft_last_job_text');
-        if (last) {
-          setJd(last);
-        }
-      } catch (err) {
-        console.error('[resume/create] Failed to load ft_last_job_text', err);
-      }
-    }
-
-    setAtsAppliedFromContext(true);
+    applyAtsContext();
   }, [router.isReady, router.query, jd, atsAppliedFromContext]);
 
   // HEADER
@@ -620,7 +658,7 @@ export default function CreateResumePage() {
               <>
                 <span style={{ fontWeight: 800 }}>The Forge Hammer</span>
                 <span style={{ fontWeight: 400 }}>
-                  {" – where our AI hammer, your resume steel, and employers' job fire work together."}
+                  {' – where our AI hammer, your resume steel, and employers\' job fire work together.'}
                 </span>
               </>
             }

@@ -109,12 +109,7 @@ export default function CoverLetterPage() {
   const dropRef = useRef(null);
 
   // Pull from ResumeContext so cover uses the same identity as resume builder
-  const {
-    formData = {},
-    setFormData,
-    saveEventAt,
-    experiences = [],
-  } = useContext(ResumeContext);
+  const { formData = {}, setFormData, saveEventAt, experiences = [] } = useContext(ResumeContext);
 
   const [jd, setJd] = useState('');
   const [isLoading, setIsLoading] = useState(false);
@@ -138,12 +133,14 @@ export default function CoverLetterPage() {
   const [openTailor, setOpenTailor] = useState(false);
 
   const [showToast, setShowToast] = useState(false);
+  const [lastSavedAt, setLastSavedAt] = useState(null);
 
-  const savedTime = saveEventAt
-    ? new Date(saveEventAt).toLocaleTimeString([], {
-        hour: '2-digit',
-        minute: '2-digit',
-      })
+  // DB draft tracking
+  const [coverId, setCoverId] = useState(null);
+  const autosaveBusyRef = useRef(false);
+
+  const savedTime = lastSavedAt
+    ? new Date(lastSavedAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
     : '';
 
   // 1) If resume builder wrote `name` but cover expects `fullName`, sync it once.
@@ -219,26 +216,61 @@ export default function CoverLetterPage() {
     jd: jd || '',
   };
 
-  // Load last JD if present
-  useEffect(() => {
+  const buildCoverName = () => {
+    const c = (company || '').trim();
+    const r = (role || '').trim();
+    if (c && r) return `${c} — ${r}`;
+    if (c) return `${c} — Cover Letter`;
+    if (r) return `${r} — Cover Letter`;
+    return 'General Cover Letter';
+  };
+
+  const saveCoverToDb = async (opts = { isAutosave: false }) => {
+    // Prevent autosave dogpiling
+    if (opts.isAutosave && autosaveBusyRef.current) return;
+
+    const payload = {
+      id: coverId,
+      name: buildCoverName(),
+      content: JSON.stringify({
+        ...letterData,
+        // Keep raw editor fields too (helps future edits)
+        fields: { recipient, company, role, greeting, opening, body, closing, signoff, portfolio, jd },
+      }),
+      // optional: if you later pass a jobId in query, we can attach it
+      jobId: router.query?.jobId ? Number(router.query.jobId) : undefined,
+    };
+
     try {
-      const saved = localStorage.getItem('ft_last_job_text');
-      if (saved) setJd(saved);
-    } catch {
-      // ignore
+      if (opts.isAutosave) autosaveBusyRef.current = true;
+
+      const res = await fetch('/api/cover/save', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload),
+      });
+
+      if (!res.ok) throw new Error('Save failed');
+      const data = await res.json();
+
+      if (data?.cover?.id) setCoverId(data.cover.id);
+
+      setLastSavedAt(new Date().toISOString());
+      setShowToast(true);
+      setTimeout(() => setShowToast(false), 2200);
+    } catch (err) {
+      console.error('[cover/create] save failed', err);
+      if (!opts.isAutosave) alert('Save failed. Try again.');
+    } finally {
+      autosaveBusyRef.current = false;
     }
-  }, []);
+  };
 
   const handleFile = async (file) => {
     if (!file) return;
     try {
       const text = await extractTextFromFile(file);
       setJd(text);
-      try {
-        localStorage.setItem('ft_last_job_text', text);
-      } catch {
-        // ignore
-      }
     } catch (e) {
       console.error(e);
     }
@@ -266,33 +298,17 @@ export default function CoverLetterPage() {
     };
   }, []);
 
-  // Auto-save draft
+  // DB autosave draft (replaces localStorage autosave)
   useEffect(() => {
     const timer = setInterval(() => {
-      try {
-        localStorage.setItem(
-          'ft_cover_draft',
-          JSON.stringify({
-            recipient,
-            company,
-            role,
-            greeting,
-            opening,
-            body,
-            closing,
-            signoff,
-            portfolio,
-          })
-        );
-      } catch {
-        // ignore
-      }
+      saveCoverToDb({ isAutosave: true });
     }, 30000);
 
     return () => clearInterval(timer);
-  }, [recipient, company, role, greeting, opening, body, closing, signoff, portfolio]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [recipient, company, role, greeting, opening, body, closing, signoff, portfolio, jd, coverId]);
 
-  // Toast behavior (match resume/create)
+  // Keep existing toast behavior if ResumeContext emits saveEventAt
   useEffect(() => {
     if (!saveEventAt) return;
     setShowToast(true);
@@ -755,8 +771,15 @@ CLOSING: ...
         </div>
       </div>
 
-      {/* EXPORT BUTTONS */}
+      {/* EXPORT + SAVE BUTTONS */}
       <div className="fixed bottom-24 right-6 z-40 flex items-center gap-2 bg-white/90 backdrop-blur-sm p-2 rounded-full shadow-2xl border">
+        <button
+          onClick={() => saveCoverToDb({ isAutosave: false })}
+          className="bg-green-600 text-white px-4 py-2 rounded-full font-bold text-xs hover:bg-green-700 transition-all"
+        >
+          Save Cover
+        </button>
+
         <CoverPDFButton templateId="ats-cover" data={letterData}>
           <div className="bg-teal-600 text-white px-4 py-2 rounded-full font-bold text-xs hover:bg-teal-700 transition-all cursor-pointer">
             ATS PDF
@@ -774,7 +797,7 @@ CLOSING: ...
         <BulkExportCTA />
       </div>
 
-      {saveEventAt && showToast && (
+      {showToast && (
         <div
           style={{
             position: 'fixed',
@@ -794,7 +817,7 @@ CLOSING: ...
           }}
         >
           <span>Saved</span>
-          <span style={{ fontSize: 12, opacity: 0.8 }}>{savedTime}</span>
+          {savedTime && <span style={{ fontSize: 12, opacity: 0.8 }}>{savedTime}</span>}
         </div>
       )}
     </SeekerLayout>
