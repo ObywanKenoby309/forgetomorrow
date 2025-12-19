@@ -1,7 +1,9 @@
-// pages/dashboard/coaching/resources.js
 import React from 'react';
 import CoachingLayout from '@/components/layouts/CoachingLayout';
 import CoachingRightColumn from '@/components/coaching/CoachingRightColumn';
+
+// 🔹 NEW: dynamic spotlight card (logic lives here, not in this page)
+import SpotlightResourceCard from '@/components/spotlight/SpotlightResourceCard';
 
 export default function CoachingResourcesPage() {
   // --- No fake recent data at launch ---
@@ -38,7 +40,7 @@ export default function CoachingResourcesPage() {
     >
       {/* Center column content */}
       <div style={{ display: 'grid', gap: 16, width: '100%' }}>
-        {/* Top cards linking to anchors and newsletter */}
+        {/* Top cards */}
         <section
           style={{
             background: 'white',
@@ -58,6 +60,7 @@ export default function CoachingResourcesPage() {
           >
             Docs & Tools
           </h2>
+
           <div
             style={{
               display: 'flex',
@@ -85,11 +88,9 @@ export default function CoachingResourcesPage() {
               'Newsletter',
               'Compose and send a broadcast message to clients.'
             )}
-            {card(
-              '/resources/mentors/spotlight/new',
-              'Create a Spotlight Card',
-              'Highlight a mentor with a custom spotlight.'
-            )}
+
+            {/* 🔹 Spotlight card is now dynamic */}
+            <SpotlightResourceCard />
           </div>
         </section>
 
@@ -125,6 +126,7 @@ export default function CoachingResourcesPage() {
           >
             Recently Added
           </h2>
+
           <div style={{ overflowX: 'auto' }}>
             <table
               style={{
@@ -163,10 +165,7 @@ export default function CoachingResourcesPage() {
                   </tr>
                 ) : (
                   recent.map((r) => (
-                    <tr
-                      key={r.title}
-                      style={{ borderTop: '1px solid #eee' }}
-                    >
+                    <tr key={r.title} style={{ borderTop: '1px solid #eee' }}>
                       <Td strong>{r.title}</Td>
                       <Td>{r.type}</Td>
                       <Td>{r.owner}</Td>
@@ -191,7 +190,7 @@ export default function CoachingResourcesPage() {
           </div>
         </section>
 
-        {/* Simple note instead of vague coming soon box */}
+        {/* Simple note */}
         <section
           style={{
             background: 'white',
@@ -201,14 +200,7 @@ export default function CoachingResourcesPage() {
             border: '1px solid #eee',
           }}
         >
-          <h3
-            style={{
-              color: '#FF7043',
-              marginTop: 0,
-            }}
-          >
-            Coming Soon
-          </h3>
+          <h3 style={{ color: '#FF7043', marginTop: 0 }}>Coming Soon</h3>
           <p style={{ color: '#607D8B', marginTop: 0 }}>
             As we roll out more coaching materials, shared assets and key links will be
             listed here for quick access.

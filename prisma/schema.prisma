@@ -412,7 +412,7 @@ model CoachingCsatResponse {
 }
 
 // ============================================================================
-//  HEARTH SPOTLIGHTS (DB-backed replacement for localStorage hearthSpotlights_v1)
+//  HEARTH SPOTLIGHTS — COACH-MANAGED PUBLIC MENTOR CARD (DB-backed)
 // ============================================================================
 
 model HearthSpotlight {
@@ -427,13 +427,16 @@ model HearthSpotlight {
   specialties  Json     // string[]
   rate         String   @default("Free")
   availability String   @default("Open to discuss")
+
+  // Optional: keep for now (you said you may remove visible email later)
   contactEmail String?
-  contactLink  String?
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  @@index([userId])
+  // One spotlight per coach (this is the “lock it down” rule)
+  @@unique([userId])
+
   @@index([createdAt])
   @@map("hearth_spotlights")
 }
