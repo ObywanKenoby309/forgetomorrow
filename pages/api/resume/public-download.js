@@ -228,24 +228,33 @@ export default async function handler(req, res) {
     const safeName = baseName.replace(/[^a-z0-9_\-]+/gi, '_');
 
     // ✅ Render using the SAME document component as builder
-    const doc = pdf(
-      <StyledResumePDF
-        templateId={templateId}
-        formData={formData}
-        summary={summary}
-        experiences={experiences}
-        projects={projects}
-        volunteerExperiences={volunteerExperiences}
-        educationList={educationList}
-        certifications={certifications}
-        languages={languages}
-        skills={skills}
-        achievements={achievements}
-        customSections={customSections}
-      />
-    );
+    let pdfBuffer;
+    try {
+      const doc = pdf(
+        <StyledResumePDF
+          templateId={templateId}
+          formData={formData}
+          summary={summary}
+          experiences={experiences}
+          projects={projects}
+          volunteerExperiences={volunteerExperiences}
+          educationList={educationList}
+          certifications={certifications}
+          languages={languages}
+          skills={skills}
+          achievements={achievements}
+          customSections={customSections}
+        />
+      );
 
-    const pdfBuffer = await doc.toBuffer();
+      pdfBuffer = await doc.toBuffer();
+    } catch (e) {
+      console.error('[public-download] PDF render failed', e);
+      return res.status(500).json({
+        error: 'PDF render failed',
+        detail: e?.message || String(e),
+      });
+    }
 
     res.setHeader('Content-Type', 'application/pdf');
     res.setHeader(
