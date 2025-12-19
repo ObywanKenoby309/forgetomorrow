@@ -19,6 +19,17 @@ import {
 import SupportFloatingButton from '@/components/SupportFloatingButton';
 
 // ──────────────────────────────────────────────────────────────
+// Jobs-style shell (padding + width + vertical start)
+// ──────────────────────────────────────────────────────────────
+function PageShell({ children }) {
+  return (
+    <div className="px-4 md:px-8 pb-10" style={{ marginTop: -24 }}>
+      <div className="max-w-7xl mx-auto">{children}</div>
+    </div>
+  );
+}
+
+// ──────────────────────────────────────────────────────────────
 // Header card (Jobs-style)
 // ──────────────────────────────────────────────────────────────
 function PageHeader() {
@@ -201,189 +212,191 @@ export default function HearthSpotlightsPage() {
         <title>Hearth Spotlight | ForgeTomorrow</title>
       </Head>
 
-      {/* FILTER BAR — horizontal (SpotlightFilters handles collapse UX) */}
-      <SpotlightFilters onChange={setFilters} />
+      <PageShell>
+        {/* FILTER BAR — horizontal (SpotlightFilters handles collapse UX) */}
+        <SpotlightFilters onChange={setFilters} />
 
-      {/* Error banner */}
-      {error && (
-        <Card>
-          <CardContent style={{ color: '#6D4C41' }}>{error}</CardContent>
-        </Card>
-      )}
+        {/* Error banner */}
+        {error && (
+          <Card>
+            <CardContent style={{ color: '#6D4C41' }}>{error}</CardContent>
+          </Card>
+        )}
 
-      {/* Loading */}
-      {loading && (
-        <Card>
-          <CardContent style={{ color: '#90A4AE' }}>Loading spotlights…</CardContent>
-        </Card>
-      )}
+        {/* Loading */}
+        {loading && (
+          <Card>
+            <CardContent style={{ color: '#90A4AE' }}>Loading spotlights…</CardContent>
+          </Card>
+        )}
 
-      {/* Empty */}
-      {!loading && !error && !hasAnyReal && (
-        <Card>
-          <CardHeader style={{ textAlign: 'center' }}>
-            <CardTitle>No Hearth Spotlights yet</CardTitle>
-            <CardSubtle>
-              This is where community mentors and helpers will appear.
-            </CardSubtle>
-          </CardHeader>
-          <CardContent style={{ textAlign: 'center' }}>
-            As mentors join The Hearth and opt in, you’ll be able to browse and connect
-            with them here.
-          </CardContent>
-        </Card>
-      )}
+        {/* Empty */}
+        {!loading && !error && !hasAnyReal && (
+          <Card>
+            <CardHeader style={{ textAlign: 'center' }}>
+              <CardTitle>No Hearth Spotlights yet</CardTitle>
+              <CardSubtle>
+                This is where community mentors and helpers will appear.
+              </CardSubtle>
+            </CardHeader>
+            <CardContent style={{ textAlign: 'center' }}>
+              As mentors join The Hearth and opt in, you’ll be able to browse and connect
+              with them here.
+            </CardContent>
+          </Card>
+        )}
 
-      {!loading && !error && hasAnyReal && filtered.length === 0 && (
-        <Card>
-          <CardContent>No spotlights match your filters.</CardContent>
-        </Card>
-      )}
+        {!loading && !error && hasAnyReal && filtered.length === 0 && (
+          <Card>
+            <CardContent>No spotlights match your filters.</CardContent>
+          </Card>
+        )}
 
-      {/* LIST + DETAIL (Jobs-style two column inside content area) */}
-      {!loading && !error && filtered.length > 0 && (
-        <div
-          style={{
-            display: 'grid',
-            gridTemplateColumns: 'minmax(0, 1.25fr) minmax(0, 1.75fr)',
-            gap: 16,
-            alignItems: 'flex-start',
-          }}
-        >
-          {/* LEFT: list */}
-          <section
-            aria-label="Spotlight results"
+        {/* LIST + DETAIL (Jobs-style two column inside content area) */}
+        {!loading && !error && filtered.length > 0 && (
+          <div
             style={{
-              maxHeight: '78vh',
-              display: 'flex',
-              flexDirection: 'column',
-              gap: 12,
+              display: 'grid',
+              gridTemplateColumns: 'minmax(0, 1.25fr) minmax(0, 1.75fr)',
+              gap: 16,
+              alignItems: 'flex-start',
             }}
           >
-            <div
+            {/* LEFT: list */}
+            <section
+              aria-label="Spotlight results"
               style={{
-                flex: 1,
-                overflowY: 'auto',
-                paddingRight: 4,
+                maxHeight: '78vh',
                 display: 'flex',
                 flexDirection: 'column',
                 gap: 12,
               }}
             >
-              {filtered.map((a) => {
-                const isSelected = selectedSpotlight && selectedSpotlight.id === a.id;
+              <div
+                style={{
+                  flex: 1,
+                  overflowY: 'auto',
+                  paddingRight: 4,
+                  display: 'flex',
+                  flexDirection: 'column',
+                  gap: 12,
+                }}
+              >
+                {filtered.map((a) => {
+                  const isSelected = selectedSpotlight && selectedSpotlight.id === a.id;
 
-                return (
-                  <Card
-                    key={a.id}
-                    onClick={() => setSelectedSpotlight(a)}
-                    style={{
-                      cursor: 'pointer',
-                      border: isSelected ? '2px solid #FF7043' : '1px solid #E0E0E0',
-                    }}
-                  >
+                  return (
+                    <Card
+                      key={a.id}
+                      onClick={() => setSelectedSpotlight(a)}
+                      style={{
+                        cursor: 'pointer',
+                        border: isSelected ? '2px solid #FF7043' : '1px solid #E0E0E0',
+                      }}
+                    >
+                      <CardHeader>
+                        <CardSubtle>{a.name}</CardSubtle>
+                        <CardTitle>{a.headline || 'Mentor'}</CardTitle>
+                      </CardHeader>
+                      {a.summary && (
+                        <CardContent>
+                          {a.summary.length > 120 ? `${a.summary.slice(0, 120)}…` : a.summary}
+                        </CardContent>
+                      )}
+                    </Card>
+                  );
+                })}
+              </div>
+            </section>
+
+            {/* RIGHT: sticky detail */}
+            <section aria-label="Selected spotlight details">
+              <Card
+                style={{
+                  position: 'sticky',
+                  top: 0,
+                  maxHeight: '78vh',
+                  display: 'flex',
+                  flexDirection: 'column',
+                }}
+              >
+                {selectedSpotlight ? (
+                  <>
                     <CardHeader>
-                      <CardSubtle>{a.name}</CardSubtle>
-                      <CardTitle>{a.headline || 'Mentor'}</CardTitle>
+                      <CardTitle>{selectedSpotlight.headline || 'Mentor'}</CardTitle>
+                      <CardSubtle>{selectedSpotlight.name}</CardSubtle>
                     </CardHeader>
-                    {a.summary && (
-                      <CardContent>
-                        {a.summary.length > 120 ? `${a.summary.slice(0, 120)}…` : a.summary}
-                      </CardContent>
-                    )}
-                  </Card>
-                );
-              })}
-            </div>
-          </section>
 
-          {/* RIGHT: sticky detail */}
-          <section aria-label="Selected spotlight details">
-            <Card
-              style={{
-                position: 'sticky',
-                top: 0,
-                maxHeight: '78vh',
-                display: 'flex',
-                flexDirection: 'column',
-              }}
-            >
-              {selectedSpotlight ? (
-                <>
-                  <CardHeader>
-                    <CardTitle>{selectedSpotlight.headline || 'Mentor'}</CardTitle>
-                    <CardSubtle>{selectedSpotlight.name}</CardSubtle>
-                  </CardHeader>
+                    <CardContent style={{ display: 'grid', gap: 12 }}>
+                      {selectedSpotlight.summary && (
+                        <p style={{ margin: 0 }}>{selectedSpotlight.summary}</p>
+                      )}
 
-                  <CardContent style={{ display: 'grid', gap: 12 }}>
-                    {selectedSpotlight.summary && (
-                      <p style={{ margin: 0 }}>{selectedSpotlight.summary}</p>
-                    )}
+                      {selectedSpotlight.specialties?.length > 0 && (
+                        <div>
+                          <strong>Specialties</strong>
+                          <ul style={{ margin: '6px 0 0', paddingLeft: 18 }}>
+                            {selectedSpotlight.specialties.map((s) => (
+                              <li key={s}>{s}</li>
+                            ))}
+                          </ul>
+                        </div>
+                      )}
 
-                    {selectedSpotlight.specialties?.length > 0 && (
-                      <div>
-                        <strong>Specialties</strong>
-                        <ul style={{ margin: '6px 0 0', paddingLeft: 18 }}>
-                          {selectedSpotlight.specialties.map((s) => (
-                            <li key={s}>{s}</li>
-                          ))}
-                        </ul>
-                      </div>
-                    )}
+                      {selectedSpotlight.rate && (
+                        <div>
+                          <strong>Rate:</strong> {selectedSpotlight.rate}
+                        </div>
+                      )}
 
-                    {selectedSpotlight.rate && (
-                      <div>
-                        <strong>Rate:</strong> {selectedSpotlight.rate}
-                      </div>
-                    )}
+                      {selectedSpotlight.availability && (
+                        <div>
+                          <strong>Availability:</strong> {selectedSpotlight.availability}
+                        </div>
+                      )}
 
-                    {selectedSpotlight.availability && (
-                      <div>
-                        <strong>Availability:</strong> {selectedSpotlight.availability}
-                      </div>
-                    )}
-
-                    {(selectedSpotlight.contactEmail || selectedSpotlight.contactLink) && (
-                      <div style={{ display: 'grid', gap: 6 }}>
-                        <strong>Contact</strong>
-                        {selectedSpotlight.contactEmail && (
-                          <div style={{ fontSize: 13, color: '#455A64' }}>
-                            {selectedSpotlight.contactEmail}
-                          </div>
-                        )}
-                        {selectedSpotlight.contactLink && (
-                          <Link
-                            href={selectedSpotlight.contactLink}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            style={{
-                              display: 'inline-flex',
-                              alignItems: 'center',
-                              gap: 8,
-                              width: 'fit-content',
-                              padding: '8px 10px',
-                              borderRadius: 10,
-                              border: '1px solid #FF7043',
-                              color: '#FF7043',
-                              fontWeight: 700,
-                              textDecoration: 'none',
-                              background: 'white',
-                            }}
-                          >
-                            Open contact link
-                          </Link>
-                        )}
-                      </div>
-                    )}
-                  </CardContent>
-                </>
-              ) : (
-                <CardContent>Select a mentor to view details.</CardContent>
-              )}
-            </Card>
-          </section>
-        </div>
-      )}
+                      {(selectedSpotlight.contactEmail || selectedSpotlight.contactLink) && (
+                        <div style={{ display: 'grid', gap: 6 }}>
+                          <strong>Contact</strong>
+                          {selectedSpotlight.contactEmail && (
+                            <div style={{ fontSize: 13, color: '#455A64' }}>
+                              {selectedSpotlight.contactEmail}
+                            </div>
+                          )}
+                          {selectedSpotlight.contactLink && (
+                            <Link
+                              href={selectedSpotlight.contactLink}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              style={{
+                                display: 'inline-flex',
+                                alignItems: 'center',
+                                gap: 8,
+                                width: 'fit-content',
+                                padding: '8px 10px',
+                                borderRadius: 10,
+                                border: '1px solid #FF7043',
+                                color: '#FF7043',
+                                fontWeight: 700,
+                                textDecoration: 'none',
+                                background: 'white',
+                              }}
+                            >
+                              Open contact link
+                            </Link>
+                          )}
+                        </div>
+                      )}
+                    </CardContent>
+                  </>
+                ) : (
+                  <CardContent>Select a mentor to view details.</CardContent>
+                )}
+              </Card>
+            </section>
+          </div>
+        )}
+      </PageShell>
 
       <SupportFloatingButton />
     </InternalLayout>
