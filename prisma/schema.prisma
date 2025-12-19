@@ -412,6 +412,33 @@ model CoachingCsatResponse {
 }
 
 // ============================================================================
+//  HEARTH SPOTLIGHTS (DB-backed replacement for localStorage hearthSpotlights_v1)
+// ============================================================================
+
+model HearthSpotlight {
+  id           String   @id @default(cuid())
+
+  userId String
+  user   User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  name         String
+  headline     String
+  summary      String
+  specialties  Json     // string[]
+  rate         String   @default("Free")
+  availability String   @default("Open to discuss")
+  contactEmail String?
+  contactLink  String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([userId])
+  @@index([createdAt])
+  @@map("hearth_spotlights")
+}
+
+// ============================================================================
 //  CONTACTS / NETWORK
 // ============================================================================
 
@@ -534,6 +561,8 @@ model User {
 
   coachingCsatResponses CoachingCsatResponse[] @relation("UserCoachingCsatResponses")
 
+  hearthSpotlights HearthSpotlight[]
+
   contacts                Contact[]        @relation("UserContacts")
   contactsAsContact       Contact[]        @relation("UserContactsAsContact")
   contactRequestsSent     ContactRequest[] @relation("UserContactRequestsFrom")
@@ -653,7 +682,6 @@ model RecruiterCalendarItem {
   company  String?
   jobTitle String?
   req      String?
-
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 

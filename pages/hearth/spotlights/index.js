@@ -1,3 +1,4 @@
+// pages/hearth/spotlights/index.js
 import React, { useEffect, useMemo, useState } from 'react';
 import Head from 'next/head';
 import Link from 'next/link';
@@ -21,8 +22,6 @@ import RecruiterHeader from '@/components/recruiter/RecruiterHeader';
 
 // support
 import SupportFloatingButton from '@/components/SupportFloatingButton';
-
-const STORAGE_KEY = 'hearthSpotlights_v1';
 
 export default function HearthSpotlightsPage() {
   const router = useRouter();
@@ -54,18 +53,77 @@ export default function HearthSpotlightsPage() {
         backgroundColor: '#ECEFF1',
       };
 
+  // DB source of truth (no localStorage)
   const [ads, setAds] = useState([]);
   const [filters, setFilters] = useState(null);
 
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');
+
   useEffect(() => {
-    if (typeof window === 'undefined') return;
-    try {
-      const saved = JSON.parse(localStorage.getItem(STORAGE_KEY) || '[]');
-      setAds(Array.isArray(saved) ? saved : []);
-    } catch {
-      setAds([]);
+    let mounted = true;
+
+    async function load() {
+      setLoading(true);
+      setError('');
+
+      try {
+        const res = await fetch('/api/hearth/spotlights', {
+          method: 'GET',
+          headers: { 'Content-Type': 'application/json' },
+        });
+
+        if (res.status === 401) {
+          router.push('/login');
+          return;
+        }
+
+        if (!res.ok) {
+          throw new Error('Failed to load spotlights');
+        }
+
+        const data = await res.json();
+        const list =
+          (Array.isArray(data?.spotlights) && data.spotlights) ||
+          (Array.isArray(data?.items) && data.items) ||
+          (Array.isArray(data) && data) ||
+          [];
+
+        if (!mounted) return;
+
+        // Normalize minimal shape expected by UI
+        const normalized = list.map((a) => ({
+          id: a.id,
+          name: a.name || '',
+          headline: a.headline || '',
+          summary: a.summary || '',
+          specialties: Array.isArray(a.specialties) ? a.specialties : [],
+          rate: a.rate || '',
+          availability: a.availability || '',
+          contactEmail: a.contactEmail || '',
+          contactLink: a.contactLink || '',
+          createdAt: a.createdAt || null,
+        }));
+
+        setAds(normalized);
+      } catch (e) {
+        console.error(e);
+        if (!mounted) return;
+        setAds([]);
+        setError(
+          'Spotlights are unavailable right now. This page is DB-only, so the /api/hearth/spotlights GET route must be wired.'
+        );
+      } finally {
+        if (mounted) setLoading(false);
+      }
     }
-  }, []);
+
+    load();
+
+    return () => {
+      mounted = false;
+    };
+  }, [router]);
 
   const filtered = useMemo(() => {
     let arr = [...ads];
@@ -154,8 +212,24 @@ export default function HearthSpotlightsPage() {
                 </CardHeader>
               </Card>
 
+              {/* Error banner */}
+              {error && (
+                <Card>
+                  <CardContent style={{ color: '#6D4C41' }}>{error}</CardContent>
+                </Card>
+              )}
+
+              {/* Loading */}
+              {loading && (
+                <Card>
+                  <CardContent style={{ color: '#90A4AE' }}>
+                    Loading spotlights…
+                  </CardContent>
+                </Card>
+              )}
+
               {/* CONTENT */}
-              {!hasAnyReal && (
+              {!loading && !error && !hasAnyReal && (
                 <Card>
                   <CardHeader style={{ textAlign: 'center' }}>
                     <CardTitle>No Hearth Spotlights yet</CardTitle>
@@ -170,21 +244,23 @@ export default function HearthSpotlightsPage() {
                 </Card>
               )}
 
-              {hasAnyReal && filtered.length === 0 && (
+              {!loading && !error && hasAnyReal && filtered.length === 0 && (
                 <Card>
                   <CardContent>No spotlights match your filters.</CardContent>
                 </Card>
               )}
 
-              {filtered.map((a) => (
-                <Card key={a.id}>
-                  <CardHeader>
-                    <CardSubtle>{a.name}</CardSubtle>
-                    <CardTitle>{a.headline || 'Mentor'}</CardTitle>
-                  </CardHeader>
-                  {a.summary && <CardContent>{a.summary}</CardContent>}
-                </Card>
-              ))}
+              {!loading &&
+                !error &&
+                filtered.map((a) => (
+                  <Card key={a.id}>
+                    <CardHeader>
+                      <CardSubtle>{a.name}</CardSubtle>
+                      <CardTitle>{a.headline || 'Mentor'}</CardTitle>
+                    </CardHeader>
+                    {a.summary && <CardContent>{a.summary}</CardContent>}
+                  </Card>
+                ))}
             </div>
 
             {/* RIGHT COLUMN */}
@@ -194,6 +270,14 @@ export default function HearthSpotlightsPage() {
               </CardHeader>
               <CardContent>
                 Tools for posting and managing mentorship offers.
+                <div style={{ marginTop: 10 }}>
+                  <Link
+                    href={withChrome('/resources/mentors/spotlight/new')}
+                    style={{ color: '#FF7043', fontWeight: 700, textDecoration: 'none' }}
+                  >
+                    Post a Spotlight
+                  </Link>
+                </div>
               </CardContent>
             </Card>
           </div>

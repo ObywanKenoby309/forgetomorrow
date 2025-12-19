@@ -1,15 +1,12 @@
 // pages/resources/mentors/spotlight/new.js
-import React, { useState } from 'react';
+import React, { useMemo, useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/router';
 
-// Coaching shell (matches follow-ups pattern)
 import CoachingLayout from '@/components/layouts/CoachingLayout';
+import CoachingRightColumn from '@/components/coaching/CoachingRightColumn';
 
-// Sidebars
-import CoachingSidebar from '../../../../components/coaching/CoachingSidebar';
-
-const STORAGE_KEY = 'hearthSpotlights_v1';
+import { useUserWallpaper } from '@/hooks/useUserWallpaper';
 
 const SPECIALTY_OPTIONS = [
   'Resume Review',
@@ -23,6 +20,33 @@ const SPECIALTY_OPTIONS = [
 
 export default function NewSpotlightPage() {
   const router = useRouter();
+  const chrome = String(router.query.chrome || 'coach').toLowerCase();
+
+  const withChrome = (path) =>
+    chrome ? `${path}${path.includes('?') ? '&' : '?'}chrome=${chrome}` : path;
+
+  const { wallpaperUrl } = useUserWallpaper();
+
+  const backgroundStyle = useMemo(() => {
+    return wallpaperUrl
+      ? {
+          minHeight: '100%',
+          backgroundImage: `url(${wallpaperUrl})`,
+          backgroundSize: 'cover',
+          backgroundPosition: 'center top',
+          backgroundRepeat: 'no-repeat',
+          backgroundAttachment: 'fixed',
+          borderRadius: 12,
+          padding: 16,
+        }
+      : {
+          minHeight: '100%',
+          backgroundColor: '#ECEFF1',
+          borderRadius: 12,
+          padding: 16,
+        };
+  }, [wallpaperUrl]);
+
   const [form, setForm] = useState({
     name: '',
     headline: '',
@@ -33,9 +57,13 @@ export default function NewSpotlightPage() {
     contactEmail: '',
     contactLink: '',
   });
+
+  const [saving, setSaving] = useState(false);
   const [sent, setSent] = useState(false);
+  const [err, setErr] = useState('');
 
   const update = (k, v) => setForm((f) => ({ ...f, [k]: v }));
+
   const toggleSpecialty = (s) =>
     setForm((f) => ({
       ...f,
@@ -44,42 +72,57 @@ export default function NewSpotlightPage() {
         : [...f.specialties, s],
     }));
 
-  const submit = (e) => {
+  const submit = async (e) => {
     e.preventDefault();
+    setErr('');
+
     if (!form.name.trim() || !form.headline.trim() || !form.summary.trim()) {
-      alert('Name, headline, and summary are required.');
+      setErr('Name, headline, and summary are required.');
       return;
     }
     if (!form.contactEmail.trim() && !form.contactLink.trim()) {
-      alert('Please provide at least one contact method (email or link).');
+      setErr('Please provide at least one contact method (email or link).');
       return;
     }
 
-    const rec = {
-      id: Date.now(),
-      name: form.name.trim(),
-      headline: form.headline.trim(),
-      summary: form.summary.trim(),
-      specialties: [...form.specialties],
-      rate: form.rate,
-      availability: form.availability,
-      contactEmail: form.contactEmail.trim(),
-      contactLink: form.contactLink.trim(),
-      createdAt: new Date().toISOString(),
-    };
+    setSaving(true);
 
     try {
-      const arr = JSON.parse(localStorage.getItem(STORAGE_KEY) || '[]');
-      localStorage.setItem(STORAGE_KEY, JSON.stringify([rec, ...arr]));
+      const res = await fetch('/api/hearth/spotlights', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          name: form.name.trim(),
+          headline: form.headline.trim(),
+          summary: form.summary.trim(),
+          specialties: [...form.specialties],
+          rate: form.rate,
+          availability: form.availability,
+          contactEmail: form.contactEmail.trim(),
+          contactLink: form.contactLink.trim(),
+        }),
+      });
+
+      if (res.status === 401) {
+        router.push('/login');
+        return;
+      }
+
+      if (!res.ok) {
+        const data = await res.json().catch(() => null);
+        throw new Error(data?.error || 'Error saving spotlight.');
+      }
+
       setSent(true);
-      setTimeout(() => router.push('/hearth/spotlights'), 1200);
-    } catch (err) {
-      console.error(err);
-      alert('Error saving locally.');
+      setTimeout(() => router.push(withChrome('/hearth/spotlights')), 900);
+    } catch (error) {
+      console.error(error);
+      setErr(error?.message || 'Error saving spotlight.');
+    } finally {
+      setSaving(false);
     }
   };
 
-  // Coaching header (same pattern as follow-ups)
   const HeaderBox = (
     <section
       style={{
@@ -100,18 +143,60 @@ export default function NewSpotlightPage() {
     </section>
   );
 
-  const Body = (
-    <div style={layoutWrap}>
-      {/* Left sidebar (same width as right) */}
-      <CoachingSidebar active="resources" />
-
-      {/* Middle column */}
-      <main style={main}>
-        {/* Title strip is now supplied via CoachingLayout header prop. Keep a tidy spacer to align grid. */}
-        <div style={{ height: 8 }} aria-hidden="true" />
-
-        {/* Form */}
+  return (
+    <CoachingLayout
+      title="Post a Hearth Spotlight | ForgeTomorrow"
+      header={HeaderBox}
+      activeNav="resources"
+      right={<CoachingRightColumn />}
+      sidebarInitialOpen={{ coaching: true, seeker: false }}
+    >
+      <div style={backgroundStyle}>
         <section style={card}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', gap: 12, flexWrap: 'wrap' }}>
+            <Link href={withChrome('/hearth/spotlights')} style={btnGhost}>
+              ← Back to Spotlights
+            </Link>
+
+            <Link href={withChrome('/the-hearth')} style={btnGhost}>
+              Back to The Hearth
+            </Link>
+          </div>
+
+          <div style={{ height: 10 }} aria-hidden="true" />
+
+          {err ? (
+            <div
+              style={{
+                background: '#FFF3E0',
+                border: '1px solid #FFCC80',
+                borderRadius: 10,
+                padding: 10,
+                color: '#6D4C41',
+                fontSize: 13,
+                marginBottom: 12,
+              }}
+            >
+              {err}
+            </div>
+          ) : null}
+
+          {sent ? (
+            <div
+              style={{
+                background: '#E8F5E9',
+                border: '1px solid #C8E6C9',
+                borderRadius: 10,
+                padding: 10,
+                color: '#2E7D32',
+                fontSize: 13,
+                marginBottom: 12,
+              }}
+            >
+              Spotlight published. Redirecting…
+            </div>
+          ) : null}
+
           <form onSubmit={submit} style={{ display: 'grid', gap: 12 }}>
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
               <div>
@@ -215,50 +300,21 @@ export default function NewSpotlightPage() {
             </div>
 
             <div style={{ display: 'flex', gap: 8 }}>
-              <button type="submit" style={btnPrimary}>Publish Spotlight</button>
-              <Link href="/hearth/spotlights" style={btnGhost}>Cancel</Link>
+              <button type="submit" style={btnPrimary} disabled={saving}>
+                {saving ? 'Publishing…' : 'Publish Spotlight'}
+              </button>
+              <Link href={withChrome('/hearth/spotlights')} style={btnGhost}>
+                Cancel
+              </Link>
             </div>
           </form>
         </section>
-      </main>
-
-      {/* Right rail: keep your placeholder panel for symmetry */}
-      <aside style={rightBlank}>
-        <div style={{ fontWeight: 700, color: '#263238', marginBottom: 6 }}>Coming soon</div>
-        <div style={{ color: '#90A4AE', fontSize: 14 }}>
-          This space is reserved for future Spotlights features.
-        </div>
-      </aside>
-    </div>
-  );
-
-  // Keep “sent” flow simple, but still inside CoachingLayout so the shell is consistent
-  return (
-    <CoachingLayout
-      title="Post a Hearth Spotlight | ForgeTomorrow"
-      header={HeaderBox}
-      activeNav="resources"
-      // You can add right={<CoachingRightColumn />} later if you want the global coaching right rail
-    >
-      {Body}
+      </div>
     </CoachingLayout>
   );
 }
 
-/* Layout & styles */
-const layoutWrap = {
-  display: 'grid',
-  gridTemplateColumns: '300px 1fr 300px', // symmetrical rails
-  gap: 20,
-  padding: '120px 20px 20px',
-  minHeight: '100vh',
-  background: '#ECEFF1',
-};
-
-/* Grid gap off so spacer is the ONLY space between title and form */
-const main = { display: 'grid', gap: 0 };
-
-/* Card used for the form */
+/* Styles */
 const card = {
   background: 'white',
   border: '1px solid #eee',
@@ -266,15 +322,6 @@ const card = {
   boxShadow: '0 2px 6px rgba(0,0,0,0.06)',
   padding: 20,
   margin: 0,
-};
-
-const rightBlank = {
-  background: 'white',
-  border: '1px solid #eee',
-  borderRadius: 12,
-  boxShadow: '0 2px 6px rgba(0,0,0,0.06)',
-  padding: 16,
-  minHeight: 120,
 };
 
 const label = {
