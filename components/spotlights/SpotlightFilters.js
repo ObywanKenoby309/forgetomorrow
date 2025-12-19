@@ -46,17 +46,17 @@ export default function SpotlightFilters({ onChange, initial }) {
         background: 'white',
         border: '1px solid #eee',
         borderRadius: 12,
-        padding: 16,
+        padding: '20px 20px', // ✅ more breathing like Jobs
         boxShadow: '0 2px 6px rgba(0,0,0,0.06)',
         display: 'grid',
-        gap: 12,
+        gap: 16, // ✅ more breathing like Jobs
       }}
     >
       {/* TOP ROW (no collapse button) */}
       <div
         style={{
           display: 'grid',
-          gridTemplateColumns: '1fr auto',
+          gridTemplateColumns: 'minmax(0, 1fr) 160px', // ✅ keeps sort compact, gives search room
           gap: 12,
           alignItems: 'center',
         }}
@@ -84,7 +84,7 @@ export default function SpotlightFilters({ onChange, initial }) {
           display: 'grid',
           gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))',
           gap: 16,
-          paddingTop: 4,
+          paddingTop: 0, // ✅ match Jobs (no weird extra push-down)
         }}
       >
         {/* Specialties */}

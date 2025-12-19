@@ -19,17 +19,6 @@ import {
 import SupportFloatingButton from '@/components/SupportFloatingButton';
 
 // ──────────────────────────────────────────────────────────────
-// Jobs-style shell (padding + width + vertical start)
-// ──────────────────────────────────────────────────────────────
-function PageShell({ children }) {
-  return (
-    <div className="px-4 md:px-8 pb-10" style={{ marginTop: -24 }}>
-      <div className="max-w-7xl mx-auto">{children}</div>
-    </div>
-  );
-}
-
-// ──────────────────────────────────────────────────────────────
 // Header card (Jobs-style)
 // ──────────────────────────────────────────────────────────────
 function PageHeader() {
@@ -212,8 +201,16 @@ export default function HearthSpotlightsPage() {
         <title>Hearth Spotlight | ForgeTomorrow</title>
       </Head>
 
-      <PageShell>
-        {/* FILTER BAR — horizontal (SpotlightFilters handles collapse UX) */}
+      {/* ✅ Jobs-style spacing block: restores middle width + adds breathing */}
+      <div
+        style={{
+          display: 'flex',
+          flexDirection: 'column',
+          gap: 20, // ✅ matches Jobs rhythm
+          maxWidth: 1200, // ✅ matches Jobs inner width (prevents shrink)
+        }}
+      >
+        {/* FILTER BAR */}
         <SpotlightFilters onChange={setFilters} />
 
         {/* Error banner */}
@@ -257,7 +254,7 @@ export default function HearthSpotlightsPage() {
           <div
             style={{
               display: 'grid',
-              gridTemplateColumns: 'minmax(0, 1.25fr) minmax(0, 1.75fr)',
+              gridTemplateColumns: 'minmax(0, 1.8fr) minmax(0, 1.5fr)', // ✅ match Jobs proportions
               gap: 16,
               alignItems: 'flex-start',
             }}
@@ -396,7 +393,7 @@ export default function HearthSpotlightsPage() {
             </section>
           </div>
         )}
-      </PageShell>
+      </div>
 
       <SupportFloatingButton />
     </InternalLayout>
