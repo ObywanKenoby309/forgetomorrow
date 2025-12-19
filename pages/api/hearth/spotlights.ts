@@ -23,9 +23,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
   const userId =
     // next-auth variants (be tolerant)
-    (session.user as any)?.id ||
-    (session.user as any)?.userId ||
-    null;
+    (session.user as any)?.id || (session.user as any)?.userId || null;
 
   if (!userId) {
     return res.status(401).json({ error: 'Unauthorized (missing user id)' });
@@ -35,6 +33,18 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     if (req.method === 'GET') {
       const items = await prisma.hearthSpotlight.findMany({
         orderBy: { createdAt: 'desc' },
+        include: {
+          user: {
+            select: {
+              id: true,
+              slug: true,
+              name: true,
+              image: true,
+              avatarUrl: true,
+              headline: true,
+            },
+          },
+        },
       });
 
       return res.status(200).json({ spotlights: items });
