@@ -26,12 +26,16 @@ import SupportFloatingButton from '@/components/SupportFloatingButton';
 function PageShell({ header, children, wallpaperUrl }) {
   const containerStyle = wallpaperUrl
     ? {
+        minHeight: '100vh',
         backgroundImage: `url(${wallpaperUrl})`,
         backgroundSize: 'cover',
         backgroundPosition: 'center top',
         backgroundRepeat: 'no-repeat',
+        backgroundAttachment: 'fixed',
+        backgroundColor: 'transparent',
       }
     : {
+        minHeight: '100vh',
         backgroundColor: '#ECEFF1',
       };
 
@@ -39,7 +43,7 @@ function PageShell({ header, children, wallpaperUrl }) {
     <div style={containerStyle}>
       <div className="px-4 md:px-8 pb-10">
         <div className="max-w-7xl mx-auto">
-          <div className="space-y-4">
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
             {header}
             {children}
           </div>
@@ -50,50 +54,27 @@ function PageShell({ header, children, wallpaperUrl }) {
 }
 
 // ──────────────────────────────────────────────────────────────
-// Header card (Jobs-style) + Back button aligned like your mock
+// Header card (Jobs-style)
 // ──────────────────────────────────────────────────────────────
-function PageHeader({ backHref }) {
+function PageHeader() {
   return (
-    <div style={{ position: 'relative' }}>
-      <div style={{ position: 'absolute', right: 0, top: 0 }}>
-        <Link
-          href={backHref}
-          style={{
-            display: 'inline-flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            background: '#FF7043',
-            color: 'white',
-            fontWeight: 700,
-            padding: '12px 14px',
-            borderRadius: 10,
-            textDecoration: 'none',
-            boxShadow: '0 6px 16px rgba(0,0,0,0.18)',
-            border: '1px solid rgba(255,255,255,0.35)',
-          }}
-        >
-          ← Back to The Hearth
-        </Link>
-      </div>
-
-      <header
-        style={{
-          background: 'white',
-          border: '1px solid #eee',
-          borderRadius: 12,
-          padding: '20px 24px',
-          boxShadow: '0 2px 6px rgba(0,0,0,0.06)',
-          textAlign: 'center',
-        }}
-      >
-        <h1 style={{ color: '#FF7043', fontSize: 28, fontWeight: 800, margin: 0 }}>
-          Hearth Spotlight
-        </h1>
-        <p style={{ margin: '8px 0 0', color: '#546E7A', fontSize: 14 }}>
-          Find a mentor or guide who is actively offering help.
-        </p>
-      </header>
-    </div>
+    <header
+      style={{
+        background: 'white',
+        border: '1px solid #eee',
+        borderRadius: 12,
+        padding: '20px 24px',
+        boxShadow: '0 2px 6px rgba(0,0,0,0.06)',
+        textAlign: 'center',
+      }}
+    >
+      <h1 style={{ color: '#FF7043', fontSize: 28, fontWeight: 800, margin: 0 }}>
+        Hearth Spotlight
+      </h1>
+      <p style={{ margin: '8px 0 0', color: '#546E7A', fontSize: 14 }}>
+        Find a mentor or guide who is actively offering help.
+      </p>
+    </header>
   );
 }
 
@@ -196,7 +177,6 @@ export default function HearthSpotlightsPage() {
       );
     }
 
-    // optional: availability + rate + sort if your SpotlightFilters emits them
     if (filters.availability && filters.availability !== 'Any') {
       arr = arr.filter((a) => (a.availability || '') === filters.availability);
     }
@@ -253,11 +233,8 @@ export default function HearthSpotlightsPage() {
         <title>Hearth Spotlight | ForgeTomorrow</title>
       </Head>
 
-      <PageShell
-        wallpaperUrl={wallpaperUrl}
-        header={<PageHeader backHref={withChrome('/the-hearth')} />}
-      >
-        {/* FILTER BAR — horizontal (SpotlightFilters is responsible for the collapse UX) */}
+      <PageShell wallpaperUrl={wallpaperUrl} header={<PageHeader />}>
+        {/* FILTER BAR — horizontal (SpotlightFilters handles collapse UX) */}
         <SpotlightFilters onChange={setFilters} />
 
         {/* Error banner */}
@@ -370,7 +347,9 @@ export default function HearthSpotlightsPage() {
                     </CardHeader>
 
                     <CardContent style={{ display: 'grid', gap: 12 }}>
-                      {selectedSpotlight.summary && <p style={{ margin: 0 }}>{selectedSpotlight.summary}</p>}
+                      {selectedSpotlight.summary && (
+                        <p style={{ margin: 0 }}>{selectedSpotlight.summary}</p>
+                      )}
 
                       {selectedSpotlight.specialties?.length > 0 && (
                         <div>
