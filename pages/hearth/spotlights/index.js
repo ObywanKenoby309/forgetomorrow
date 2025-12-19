@@ -201,15 +201,6 @@ export default function HearthSpotlightsPage() {
         <title>Hearth Spotlight | ForgeTomorrow</title>
       </Head>
 
-      {/* ✅ Jobs-style spacing block: restores middle width + adds breathing */}
-      <div
-        style={{
-          display: 'flex',
-          flexDirection: 'column',
-          gap: 20, // ✅ matches Jobs rhythm
-          maxWidth: 1200, // ✅ matches Jobs inner width (prevents shrink)
-        }}
-      >
         {/* FILTER BAR */}
         <SpotlightFilters onChange={setFilters} />
 
