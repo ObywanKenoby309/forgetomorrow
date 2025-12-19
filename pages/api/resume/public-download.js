@@ -1,169 +1,31 @@
 // pages/api/resume/public-download.js
 import { prisma } from '@/lib/prisma';
-import {
-  pdf,
-  Document,
-  Page,
-  Text,
-  View,
-  StyleSheet,
-} from '@react-pdf/renderer';
+import { pdf } from '@react-pdf/renderer';
 
-// ✅ NEW: session gating for PUBLIC vs RECRUITERS_ONLY vs PRIVATE
+// ✅ Use the SAME renderer the builder uses (single source of truth)
+import StyledResumePDF from '@/components/resume-form/export/StyledResumePDF';
+
+// ✅ session gating for PUBLIC vs RECRUITERS_ONLY vs PRIVATE
 import { getServerSession } from 'next-auth/next';
 import { authOptions } from '../auth/[...nextauth]';
 
-const styles = StyleSheet.create({
-  page: {
-    padding: 40,
-    fontSize: 11,
-    fontFamily: 'Helvetica',
-  },
-  name: {
-    fontSize: 18,
-    fontWeight: 'bold',
-    marginBottom: 4,
-  },
-  contact: {
-    fontSize: 10,
-    marginBottom: 10,
-  },
-  sectionTitle: {
-    fontSize: 12,
-    fontWeight: 'bold',
-    marginTop: 10,
-    marginBottom: 4,
-  },
-  text: {
-    fontSize: 10,
-    marginBottom: 2,
-  },
-  bullet: {
-    fontSize: 10,
-    marginLeft: 10,
-    marginBottom: 2,
-  },
-});
-
-function PublicResumePdf({ data }) {
-  const {
-    personalInfo,
-    summary,
-    workExperiences = [],
-    educationList = [],
-    certifications = [],
-    skills = [],
-  } = data;
-
-  return (
-    <Document>
-      <Page size="LETTER" style={styles.page}>
-        {/* Header */}
-        <Text style={styles.name}>{personalInfo.name || 'Your Name'}</Text>
-        <Text style={styles.contact}>
-          {[
-            personalInfo.email,
-            personalInfo.phone,
-            personalInfo.location,
-            personalInfo.ftProfile,
-          ]
-            .filter(Boolean)
-            .join(' • ')}
-        </Text>
-
-        {/* Summary */}
-        {summary && summary.trim() && (
-          <View>
-            <Text style={styles.sectionTitle}>SUMMARY</Text>
-            <Text style={styles.text}>{summary}</Text>
-          </View>
-        )}
-
-        {/* Skills */}
-        {skills.length > 0 && (
-          <View>
-            <Text style={styles.sectionTitle}>SKILLS</Text>
-            <Text style={styles.text}>{skills.join(', ')}</Text>
-          </View>
-        )}
-
-        {/* Experience */}
-        {workExperiences.length > 0 && (
-          <View>
-            <Text style={styles.sectionTitle}>EXPERIENCE</Text>
-            {workExperiences.map((exp, idx) => (
-              <View key={idx} style={{ marginBottom: 4 }}>
-                <Text style={styles.text}>
-                  {(exp.title || exp.jobTitle || 'Role') +
-                    (exp.company ? ` – ${exp.company}` : '')}
-                </Text>
-                <Text style={styles.text}>
-                  {[
-                    exp.location,
-                    exp.startDate,
-                    exp.endDate || (exp.current ? 'Present' : ''),
-                  ]
-                    .filter(Boolean)
-                    .join(' • ')}
-                </Text>
-                {Array.isArray(exp.bullets) &&
-                  exp.bullets.map((b, i) => (
-                    <Text key={i} style={styles.bullet}>
-                      • {b}
-                    </Text>
-                  ))}
-              </View>
-            ))}
-          </View>
-        )}
-
-        {/* Education */}
-        {educationList.length > 0 && (
-          <View>
-            <Text style={styles.sectionTitle}>EDUCATION</Text>
-            {educationList.map((edu, idx) => (
-              <View key={idx} style={{ marginBottom: 4 }}>
-                <Text style={styles.text}>
-                  {(edu.degree || edu.field || 'Program') +
-                    (edu.school || edu.institution
-                      ? ` – ${edu.school || edu.institution}`
-                      : '')}
-                </Text>
-                <Text style={styles.text}>
-                  {[edu.location, edu.startDate, edu.endDate]
-                    .filter(Boolean)
-                    .join(' • ')}
-                </Text>
-              </View>
-            ))}
-          </View>
-        )}
-
-        {/* Certifications */}
-        {certifications.length > 0 && (
-          <View>
-            <Text style={styles.sectionTitle}>CERTIFICATIONS</Text>
-            {certifications.map((cert, idx) => (
-              <Text key={idx} style={styles.text}>
-                {cert.name}
-                {cert.issuer ? ` – ${cert.issuer}` : ''}
-              </Text>
-            ))}
-          </View>
-        )}
-      </Page>
-    </Document>
-  );
+function safeJsonParse(val) {
+  if (!val) return null;
+  if (typeof val === 'object') return val;
+  try {
+    return JSON.parse(val);
+  } catch {
+    return null;
+  }
 }
 
 function normalizeRoot(builderData) {
   if (!builderData || typeof builderData !== 'object') return {};
-  // Some saved payloads may nest under resumeData or data
+  // Support a few legacy shapes
   return builderData.resumeData || builderData.data || builderData;
 }
 
 function normalizeArray(val) {
-  if (!val) return [];
   return Array.isArray(val) ? val : [];
 }
 
@@ -185,14 +47,13 @@ export default async function handler(req, res) {
   try {
     const { slug, resumeId } = req.query || {};
 
-    // ✅ NEW: session gating
-    const session = await getServerSession(req, res, authOptions);
-    const viewerEmail = session?.user?.email ? String(session.user.email) : null;
-
-    // We still need the user to enforce visibility rules.
     if (!slug || typeof slug !== 'string') {
       return res.status(400).json({ error: 'Missing or invalid slug' });
     }
+
+    // ✅ session gating
+    const session = await getServerSession(req, res, authOptions);
+    const viewerEmail = session?.user?.email ? String(session.user.email) : null;
 
     // Find user by slug (visibility + owner checks)
     const user = await prisma.user.findUnique({
@@ -206,15 +67,12 @@ export default async function handler(req, res) {
         isProfilePublic: true,
         profileVisibility: true, // PRIVATE | PUBLIC | RECRUITERS_ONLY
 
+        // Primary resume fallback
         resumes: {
           where: { isPrimary: true },
           orderBy: { updatedAt: 'desc' },
           take: 1,
-          select: {
-            id: true,
-            name: true,
-            content: true,
-          },
+          select: { id: true, name: true, content: true },
         },
       },
     });
@@ -262,7 +120,6 @@ export default async function handler(req, res) {
 
     if (resumeId && typeof resumeId === 'string') {
       const resumeIdNum = Number(resumeId);
-
       if (!Number.isFinite(resumeIdNum)) {
         return res.status(400).json({ error: 'Invalid resumeId' });
       }
@@ -290,21 +147,41 @@ export default async function handler(req, res) {
       return res.status(400).json({ error: 'Resume has no saved content' });
     }
 
-    let builderData;
-    try {
-      builderData =
-        typeof resumeRecord.content === 'string'
-          ? JSON.parse(resumeRecord.content)
-          : resumeRecord.content;
-    } catch (err) {
-      console.error('[public-download] Failed to parse resume.content', err);
+    const stored = safeJsonParse(resumeRecord.content);
+    if (!stored) {
       return res
         .status(500)
         .json({ error: 'Failed to parse stored resume content' });
     }
 
-    const root = normalizeRoot(builderData);
-    const fd = root.formData || root.personalInfo || {};
+    // DB save format (from your save.js):
+    // { template: 'hybrid'|'reverse', data: { ...builderState } }
+    const templateIdRaw =
+      typeof stored?.template === 'string' ? stored.template : '';
+    const templateId =
+      templateIdRaw === 'hybrid' || templateIdRaw === 'reverse'
+        ? templateIdRaw
+        : 'reverse';
+
+    const root = normalizeRoot(stored?.data || stored);
+
+    // Map root -> StyledResumePDF props (match builder)
+    const formDataRaw = root.formData || root.personalInfo || {};
+    const formData = {
+      ...formDataRaw,
+
+      // ✅ Ensure the builder header matches (role + contact line)
+      fullName: formDataRaw.fullName || formDataRaw.name || user.name || '',
+      role: formDataRaw.role || formDataRaw.targetedRole || '',
+
+      // ✅ Make sure the slug PDF includes the FT Profile link like your builder export
+      // StyledResumePDF uses `portfolio` as the 4th contact slot.
+      portfolio:
+        formDataRaw.portfolio ||
+        formDataRaw.forgeUrl ||
+        formDataRaw.ftProfile ||
+        `https://forgetomorrow.com/u/${slug}`,
+    };
 
     const summary =
       root.summary ||
@@ -313,10 +190,17 @@ export default async function handler(req, res) {
       root.summaryText ||
       '';
 
-    const workExperiences = pickFirstNonEmptyArray(
+    const experiences = pickFirstNonEmptyArray(
       root.experiences,
       root.workExperiences,
       root.workExperience
+    );
+
+    const projects = normalizeArray(root.projects);
+    const volunteerExperiences = pickFirstNonEmptyArray(
+      root.volunteerExperiences,
+      root.volunteer,
+      root.volunteering
     );
 
     const educationList = pickFirstNonEmptyArray(
@@ -330,26 +214,11 @@ export default async function handler(req, res) {
       root.certificationList
     );
 
-    const skills = pickFirstNonEmptyArray(root.skills, root.skillList);
-
-    const resumeData = {
-      personalInfo: {
-        name: fd.fullName || fd.name || user.name || 'Your Name',
-        targetedRole: fd.targetedRole || '',
-        email: fd.email || '',
-        phone: fd.phone || '',
-        location: fd.location || '',
-        linkedin: fd.linkedin || '',
-        github: fd.github || '',
-        portfolio: fd.portfolio || '',
-        ftProfile: fd.forgeUrl || fd.ftProfile || '',
-      },
-      summary,
-      workExperiences,
-      educationList,
-      certifications,
-      skills,
-    };
+    // Languages/skills/achievements/customSections follow StyledResumePDF shape
+    const languages = normalizeArray(root.languages);
+    const skills = normalizeArray(root.skills);
+    const achievements = normalizeArray(root.achievements);
+    const customSections = normalizeArray(root.customSections);
 
     const baseName =
       (resumeRecord.name && resumeRecord.name.trim()) ||
@@ -358,7 +227,24 @@ export default async function handler(req, res) {
 
     const safeName = baseName.replace(/[^a-z0-9_\-]+/gi, '_');
 
-    const doc = pdf(<PublicResumePdf data={resumeData} />);
+    // ✅ Render using the SAME document component as builder
+    const doc = pdf(
+      <StyledResumePDF
+        templateId={templateId}
+        formData={formData}
+        summary={summary}
+        experiences={experiences}
+        projects={projects}
+        volunteerExperiences={volunteerExperiences}
+        educationList={educationList}
+        certifications={certifications}
+        languages={languages}
+        skills={skills}
+        achievements={achievements}
+        customSections={customSections}
+      />
+    );
+
     const pdfBuffer = await doc.toBuffer();
 
     res.setHeader('Content-Type', 'application/pdf');
