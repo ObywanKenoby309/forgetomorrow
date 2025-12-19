@@ -3,7 +3,7 @@ import CoachingLayout from '@/components/layouts/CoachingLayout';
 import CoachingRightColumn from '@/components/coaching/CoachingRightColumn';
 
 // 🔹 NEW: dynamic spotlight card (logic lives here, not in this page)
-import SpotlightResourceCard from '@/components/spotlight/SpotlightResourceCard';
+import SpotlightResourceCard from '@/components/spotlights/SpotlightResourceCard';
 
 export default function CoachingResourcesPage() {
   // --- No fake recent data at launch ---
