@@ -1,4 +1,3 @@
-// pages/resources/mentors/spotlight/new.js
 import React, { useMemo, useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/router';
@@ -34,6 +33,7 @@ export default function NewSpotlightPage() {
 
   const [sent, setSent] = useState(false);
   const [error, setError] = useState('');
+  const [saving, setSaving] = useState(false);
 
   const update = (k, v) => setForm((f) => ({ ...f, [k]: v }));
   const toggleSpecialty = (s) =>
@@ -55,20 +55,46 @@ export default function NewSpotlightPage() {
     e.preventDefault();
     setError('');
 
-    if (!canSubmit) {
-      setError('Name, headline, and summary are required.');
+    if (!canSubmit || saving) {
       return;
     }
 
-    // ✅ No localStorage. This is a format/layout pass only.
-    // DB wiring will attach this spotlight to the coach’s slug and route contact via:
-    // - ForgeTomorrow Messaging
-    // - ForgeTomorrow Calendar (sessions)
-    setSent(true);
+    setSaving(true);
 
-    setTimeout(() => {
-      router.push(withChrome('/hearth/spotlights'));
-    }, 900);
+    try {
+      const res = await fetch('/api/hearth/spotlights', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          name: form.name,
+          headline: form.headline,
+          summary: form.summary,
+          specialties: form.specialties,
+          rate: form.rate,
+          availability: form.availability,
+        }),
+      });
+
+      if (res.status === 401) {
+        router.push('/login');
+        return;
+      }
+
+      if (!res.ok) {
+        const data = await res.json();
+        throw new Error(data?.error || 'Failed to save spotlight');
+      }
+
+      setSent(true);
+
+      setTimeout(() => {
+        router.push(withChrome('/hearth/spotlights'));
+      }, 900);
+    } catch (err) {
+      console.error(err);
+      setError('Unable to publish spotlight. Please try again.');
+      setSaving(false);
+    }
   };
 
   const HeaderBox = (
@@ -130,19 +156,14 @@ export default function NewSpotlightPage() {
       sidebarInitialOpen={{ coaching: true, seeker: false }}
     >
       <section style={glassCard}>
-        {error && (
-          <div style={warnBox}>
-            {error}
-          </div>
-        )}
+        {error && <div style={warnBox}>{error}</div>}
 
         {sent && (
           <div style={okBox}>
-            Saved (format pass). Redirecting to Spotlights…
+            Saved. Redirecting to Spotlights…
           </div>
         )}
 
-        {/* Platform-native contact note (no email, no external links) */}
         <div style={infoBox}>
           <div style={{ fontWeight: 800, marginBottom: 4 }}>
             Contact is platform-native
@@ -237,8 +258,8 @@ export default function NewSpotlightPage() {
           </div>
 
           <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
-            <button type="submit" style={btnPrimary} disabled={!canSubmit}>
-              Publish Spotlight
+            <button type="submit" style={btnPrimary} disabled={!canSubmit || saving}>
+              {saving ? 'Publishing…' : 'Publish Spotlight'}
             </button>
             <Link href={withChrome('/hearth/spotlights')} style={btnGhost}>
               Cancel
@@ -250,7 +271,7 @@ export default function NewSpotlightPage() {
   );
 }
 
-/* ---------- Glass styles (matches profile/calendar feel) ---------- */
+/* ---------- Glass styles (UNCHANGED) ---------- */
 
 const glassBase = {
   background: 'rgba(255,255,255,0.78)',
@@ -320,8 +341,6 @@ const warnBox = {
   color: '#6D4C41',
   fontSize: 13,
   marginBottom: 12,
-  backdropFilter: 'blur(10px)',
-  WebkitBackdropFilter: 'blur(10px)',
 };
 
 const okBox = {
@@ -333,8 +352,6 @@ const okBox = {
   fontSize: 13,
   marginBottom: 12,
   fontWeight: 800,
-  backdropFilter: 'blur(10px)',
-  WebkitBackdropFilter: 'blur(10px)',
 };
 
 const infoBox = {
@@ -346,6 +363,4 @@ const infoBox = {
   fontSize: 13,
   marginBottom: 12,
   lineHeight: 1.4,
-  backdropFilter: 'blur(10px)',
-  WebkitBackdropFilter: 'blur(10px)',
 };
