@@ -74,7 +74,8 @@ export default function App({ Component, pageProps: { session, ...pageProps } })
   const isCoachingRoute =
     router.pathname === '/coaching-dashboard' ||
     router.pathname.startsWith('/dashboard/coaching') ||
-    router.pathname.startsWith('/coach');
+    router.pathname.startsWith('/coach') ||
+    router.pathname.startsWith('/resources/mentors'); // ✅ NEW: treat mentor spotlight routes as internal coaching pages
 
   const isSettingsRoute = router.pathname === '/settings';
 
@@ -141,7 +142,6 @@ export default function App({ Component, pageProps: { session, ...pageProps } })
     !isUniversalPage &&
     isPublicEffective &&
     ['/', '/about', '/features', '/press', '/status'].includes(router.pathname);
-  //                                                       ^ added /status
 
   const forgeBgPosition = router.pathname === '/' ? '35% center' : 'center';
   const renderLandingHeader = isPublicEffective && !isUniversalPage;
