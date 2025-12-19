@@ -2,8 +2,9 @@
 import { prisma } from '@/lib/prisma';
 import { pdf } from '@react-pdf/renderer';
 
-// ✅ Use the SAME renderer the builder uses (single source of truth)
-import StyledResumePDF from '@/components/resume-form/export/StyledResumePDF';
+// ✅ Designed templates (same ones used by DesignedPDFButton)
+import ReverseDesignedPDF from '@/components/resume-form/templates/ReverseDesignedPDF';
+import HybridDesignedPDF from '@/components/resume-form/templates/HybridDesignedPDF';
 
 // ✅ session gating for PUBLIC vs RECRUITERS_ONLY vs PRIVATE
 import { getServerSession } from 'next-auth/next';
@@ -165,22 +166,22 @@ export default async function handler(req, res) {
 
     const root = normalizeRoot(stored?.data || stored);
 
-    // Map root -> StyledResumePDF props (match builder)
+    // Build the same `data` shape the Designed templates receive in DesignedPDFButton
     const formDataRaw = root.formData || root.personalInfo || {};
-    const formData = {
-      ...formDataRaw,
 
-      // ✅ Ensure the builder header matches (role + contact line)
-      fullName: formDataRaw.fullName || formDataRaw.name || user.name || '',
-      role: formDataRaw.role || formDataRaw.targetedRole || '',
-
-      // ✅ Make sure the slug PDF includes the FT Profile link like your builder export
-      // StyledResumePDF uses `portfolio` as the 4th contact slot.
+    const personalInfo = {
+      name: formDataRaw.fullName || formDataRaw.name || user.name || '',
+      email: formDataRaw.email || '',
+      phone: formDataRaw.phone || '',
+      location: formDataRaw.location || '',
       portfolio:
         formDataRaw.portfolio ||
         formDataRaw.forgeUrl ||
         formDataRaw.ftProfile ||
         `https://forgetomorrow.com/u/${slug}`,
+      linkedin: formDataRaw.linkedin || '',
+      github: formDataRaw.github || '',
+      role: formDataRaw.role || formDataRaw.targetedRole || '',
     };
 
     const summary =
@@ -190,13 +191,14 @@ export default async function handler(req, res) {
       root.summaryText ||
       '';
 
-    const experiences = pickFirstNonEmptyArray(
+    const workExperiences = pickFirstNonEmptyArray(
       root.experiences,
       root.workExperiences,
       root.workExperience
     );
 
     const projects = normalizeArray(root.projects);
+
     const volunteerExperiences = pickFirstNonEmptyArray(
       root.volunteerExperiences,
       root.volunteer,
@@ -214,11 +216,24 @@ export default async function handler(req, res) {
       root.certificationList
     );
 
-    // Languages/skills/achievements/customSections follow StyledResumePDF shape
     const languages = normalizeArray(root.languages);
     const skills = normalizeArray(root.skills);
     const achievements = normalizeArray(root.achievements);
     const customSections = normalizeArray(root.customSections);
+
+    const data = {
+      personalInfo,
+      summary,
+      workExperiences,
+      projects,
+      volunteerExperiences,
+      educationList,
+      certifications,
+      languages,
+      skills,
+      achievements,
+      customSections,
+    };
 
     const baseName =
       (resumeRecord.name && resumeRecord.name.trim()) ||
@@ -227,26 +242,11 @@ export default async function handler(req, res) {
 
     const safeName = baseName.replace(/[^a-z0-9_\-]+/gi, '_');
 
-    // ✅ Render using the SAME document component as builder
+    // ✅ Render using the SAME component choice as DesignedPDFButton
     let pdfBuffer;
     try {
-      const doc = pdf(
-        <StyledResumePDF
-          templateId={templateId}
-          formData={formData}
-          summary={summary}
-          experiences={experiences}
-          projects={projects}
-          volunteerExperiences={volunteerExperiences}
-          educationList={educationList}
-          certifications={certifications}
-          languages={languages}
-          skills={skills}
-          achievements={achievements}
-          customSections={customSections}
-        />
-      );
-
+      const Component = templateId === 'hybrid' ? HybridDesignedPDF : ReverseDesignedPDF;
+      const doc = pdf(<Component data={data} />);
       pdfBuffer = await doc.toBuffer();
     } catch (e) {
       console.error('[public-download] PDF render failed', e);
