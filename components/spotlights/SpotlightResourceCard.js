@@ -1,3 +1,4 @@
+// components/spotlights/SpotlightResourceCard.js
 import React, { useEffect, useState } from 'react';
 import { useRouter } from 'next/router';
 
@@ -6,16 +7,6 @@ import { useRouter } from 'next/router';
  *
  * Decides whether the coach should CREATE or EDIT a Hearth Spotlight
  * based on whether one exists on the server.
- *
- * This component owns:
- * - server check
- * - label + description
- * - routing
- *
- * It does NOT own:
- * - form logic
- * - schema
- * - styling outside this card
  */
 export default function SpotlightResourceCard() {
   const router = useRouter();
@@ -35,14 +26,14 @@ export default function SpotlightResourceCard() {
         });
 
         if (!res.ok) {
-          // Endpoint may not exist yet — fail closed (assume none)
           throw new Error('Spotlight check failed');
         }
 
         const data = await res.json();
         if (!active) return;
 
-        setHasSpotlight(Boolean(data?.exists));
+        // ✅ API returns { spotlight }, not { exists }
+        setHasSpotlight(Boolean(data?.spotlight?.id));
       } catch (err) {
         console.warn('[SpotlightResourceCard] unable to verify spotlight', err);
         if (!active) return;
@@ -61,9 +52,7 @@ export default function SpotlightResourceCard() {
 
   const handleClick = () => {
     router.push(
-      hasSpotlight
-        ? '/resources/mentors/spotlight/edit'
-        : '/resources/mentors/spotlight/new'
+      hasSpotlight ? '/resources/mentors/spotlight/edit' : '/resources/mentors/spotlight/new'
     );
   };
 
@@ -96,9 +85,7 @@ export default function SpotlightResourceCard() {
         opacity: loading ? 0.7 : 1,
       }}
     >
-      <div style={{ fontWeight: 700, marginBottom: 6 }}>
-        {title}
-      </div>
+      <div style={{ fontWeight: 700, marginBottom: 6 }}>{title}</div>
       <div style={{ color: '#607D8B' }}>
         {description}
         {error && (

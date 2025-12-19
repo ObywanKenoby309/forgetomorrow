@@ -1,22 +1,27 @@
-import React, { useEffect, useState } from 'react';
+// pages/resources/mentors/spotlight/edit.js
+import React, { useEffect, useMemo, useState } from 'react';
+import Link from 'next/link';
 import { useRouter } from 'next/router';
+
+// Coaching shell
 import CoachingLayout from '@/components/layouts/CoachingLayout';
 
-/**
- * Hearth Spotlight Editor
- *
- * This page is explicitly an EDITOR:
- * - Update existing spotlight
- * - Delete spotlight
- *
- * It assumes exactly ONE spotlight per coach.
- */
-export default function EditHearthSpotlightPage() {
-  const router = useRouter();
+const SPECIALTY_OPTIONS = [
+  'Resume Review',
+  'Interview Prep',
+  'Career Strategy',
+  'Portfolio Review',
+  'Networking',
+  'Salary/Negotiation',
+  'Career Pivot',
+];
 
-  const [loading, setLoading] = useState(true);
-  const [saving, setSaving] = useState(false);
-  const [error, setError] = useState('');
+export default function EditSpotlightPage() {
+  const router = useRouter();
+  const chrome = String(router.query.chrome || 'coach').toLowerCase();
+
+  const withChrome = (path) =>
+    chrome ? `${path}${path.includes('?') ? '&' : '?'}chrome=${chrome}` : path;
 
   const [form, setForm] = useState({
     name: '',
@@ -27,179 +32,294 @@ export default function EditHearthSpotlightPage() {
     availability: 'Open to discuss',
   });
 
-  const update = (k, v) => setForm((f) => ({ ...f, [k]: v }));
+  const [loading, setLoading] = useState(true);
+  const [sent, setSent] = useState(false);
+  const [error, setError] = useState('');
+  const [saving, setSaving] = useState(false);
 
-  // ---- Load existing spotlight ----
+  const update = (k, v) => setForm((f) => ({ ...f, [k]: v }));
+  const toggleSpecialty = (s) =>
+    setForm((f) => ({
+      ...f,
+      specialties: f.specialties.includes(s)
+        ? f.specialties.filter((x) => x !== s)
+        : [...f.specialties, s],
+    }));
+
+  const canSubmit = useMemo(() => {
+    if (!form.name.trim()) return false;
+    if (!form.headline.trim()) return false;
+    if (!form.summary.trim()) return false;
+    return true;
+  }, [form]);
+
   useEffect(() => {
     let active = true;
 
-    async function loadSpotlight() {
+    async function load() {
+      setLoading(true);
+      setError('');
+
       try {
         const res = await fetch('/api/spotlight/me', {
           method: 'GET',
           headers: { 'Content-Type': 'application/json' },
         });
 
-        if (!res.ok) throw new Error('Failed to load spotlight');
+        if (res.status === 401) {
+          router.push('/login');
+          return;
+        }
+
+        if (!res.ok) {
+          throw new Error('Failed to load spotlight');
+        }
 
         const data = await res.json();
         if (!active) return;
 
-        if (!data?.spotlight) {
-          // No spotlight exists — redirect to NEW
-          router.replace('/resources/mentors/spotlight/new');
+        const s = data?.spotlight;
+        if (!s?.id) {
+          // No spotlight yet → bounce to create
+          router.push(withChrome('/resources/mentors/spotlight/new'));
           return;
         }
 
         setForm({
-          name: data.spotlight.name || '',
-          headline: data.spotlight.headline || '',
-          summary: data.spotlight.summary || '',
-          specialties: data.spotlight.specialties || [],
-          rate: data.spotlight.rate || 'Free',
-          availability: data.spotlight.availability || 'Open to discuss',
+          name: s.name || '',
+          headline: s.headline || '',
+          summary: s.summary || '',
+          specialties: Array.isArray(s.specialties) ? s.specialties : [],
+          rate: s.rate || 'Free',
+          availability: s.availability || 'Open to discuss',
         });
-      } catch (err) {
-        console.error(err);
+      } catch (e) {
+        console.error(e);
         if (!active) return;
-        setError('Unable to load your spotlight.');
+        setError('Unable to load your spotlight. Please try again.');
       } finally {
         if (active) setLoading(false);
       }
     }
 
-    loadSpotlight();
+    load();
     return () => {
       active = false;
     };
   }, [router]);
 
-  // ---- Update spotlight ----
-  const save = async (e) => {
+  const submit = async (e) => {
     e.preventDefault();
-    setSaving(true);
     setError('');
+    setSent(false);
+
+    if (!canSubmit || saving) return;
+
+    setSaving(true);
 
     try {
       const res = await fetch('/api/spotlight/me', {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(form),
+        body: JSON.stringify({
+          name: form.name,
+          headline: form.headline,
+          summary: form.summary,
+          specialties: form.specialties,
+          rate: form.rate,
+          availability: form.availability,
+        }),
       });
 
-      if (!res.ok) throw new Error('Update failed');
+      if (res.status === 401) {
+        router.push('/login');
+        return;
+      }
 
-      router.push('/hearth/spotlights');
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}));
+        throw new Error(data?.error || 'Failed to update spotlight');
+      }
+
+      setSent(true);
+
+      setTimeout(() => {
+        router.push(withChrome('/hearth/spotlights'));
+      }, 900);
     } catch (err) {
       console.error(err);
-      setError('Failed to update spotlight.');
-    } finally {
+      setError('Unable to update spotlight. Please try again.');
       setSaving(false);
     }
   };
 
-  // ---- Delete spotlight ----
-  const destroy = async () => {
-    const ok = confirm(
-      'Are you sure you want to delete your Hearth Spotlight?\n\nThis cannot be undone.'
-    );
-    if (!ok) return;
+  const HeaderBox = (
+    <section style={glassHero}>
+      <h1 style={{ margin: 0, color: '#FF7043', fontSize: 24, fontWeight: 800 }}>
+        Edit Your Hearth Spotlight
+      </h1>
+      <p style={{ margin: '6px auto 0', color: '#607D8B', maxWidth: 720 }}>
+        Update your offering. Your public Spotlight card updates immediately after save.
+      </p>
+    </section>
+  );
 
-    try {
-      const res = await fetch('/api/spotlight/me', {
-        method: 'DELETE',
-      });
+  const RightRail = (
+    <div style={{ display: 'grid', gap: 12 }}>
+      <div style={{ fontWeight: 800, fontSize: 14 }}>Spotlight publishing</div>
+      <div style={{ color: 'rgba(255,255,255,0.85)', fontSize: 13, lineHeight: 1.4 }}>
+        External links are removed. This will route through ForgeTomorrow:
+        <ul style={{ margin: '8px 0 0 18px', padding: 0 }}>
+          <li>Messaging (coach slug)</li>
+          <li>Calendar scheduling (coach slug)</li>
+        </ul>
+      </div>
 
-      if (!res.ok) throw new Error('Delete failed');
-
-      router.push('/dashboard/coaching/resources');
-    } catch (err) {
-      console.error(err);
-      alert('Unable to delete spotlight.');
-    }
-  };
+      <div
+        style={{
+          borderTop: '1px solid rgba(255,255,255,0.12)',
+          paddingTop: 12,
+          display: 'grid',
+          gap: 10,
+        }}
+      >
+        <Link
+          href={withChrome('/hearth/spotlights')}
+          style={{
+            display: 'block',
+            background: 'rgba(255,255,255,0.08)',
+            border: '1px solid rgba(255,255,255,0.12)',
+            color: 'white',
+            borderRadius: 10,
+            padding: '10px 12px',
+            fontWeight: 800,
+            textDecoration: 'none',
+            textAlign: 'center',
+          }}
+        >
+          View Spotlights
+        </Link>
+      </div>
+    </div>
+  );
 
   return (
     <CoachingLayout
       title="Edit Hearth Spotlight | ForgeTomorrow"
+      header={HeaderBox}
       activeNav="resources"
-      headerTitle="Edit Hearth Spotlight"
-      headerDescription="You are editing a live spotlight visible to the community."
+      right={RightRail}
       sidebarInitialOpen={{ coaching: true, seeker: false }}
     >
-      <section
-        style={{
-          background: 'rgba(255,255,255,0.85)',
-          backdropFilter: 'blur(10px)',
-          borderRadius: 12,
-          padding: 20,
-          border: '1px solid #eee',
-          boxShadow: '0 2px 6px rgba(0,0,0,0.06)',
-          maxWidth: 900,
-        }}
-      >
+      <section style={glassCard}>
+        {error && <div style={warnBox}>{error}</div>}
+        {sent && <div style={okBox}>Saved. Redirecting to Spotlights…</div>}
+
+        <div style={infoBox}>
+          <div style={{ fontWeight: 800, marginBottom: 4 }}>Contact is platform-native</div>
+          <div>
+            This spotlight routes through ForgeTomorrow messaging and calendar scheduling tied to your coach slug.
+          </div>
+        </div>
+
         {loading ? (
-          <div style={{ color: '#607D8B' }}>Loading spotlight…</div>
+          <div style={{ color: '#90A4AE' }}>Loading your spotlight…</div>
         ) : (
-          <form onSubmit={save} style={{ display: 'grid', gap: 14 }}>
-            {error && (
-              <div
-                style={{
-                  background: '#FDECEA',
-                  border: '1px solid #FFCDD2',
-                  borderRadius: 8,
-                  padding: 10,
-                  color: '#C62828',
-                }}
-              >
-                {error}
+          <form onSubmit={submit} style={{ display: 'grid', gap: 12 }}>
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
+              <div>
+                <label style={label}>Your name</label>
+                <input
+                  value={form.name}
+                  onChange={(e) => update('name', e.target.value)}
+                  style={input}
+                  required
+                />
               </div>
-            )}
+              <div>
+                <label style={label}>Headline</label>
+                <input
+                  value={form.headline}
+                  onChange={(e) => update('headline', e.target.value)}
+                  style={input}
+                  placeholder="e.g., Senior PM mentor for career pivots"
+                  required
+                />
+              </div>
+            </div>
 
-            <Field label="Your name">
-              <input
-                value={form.name}
-                onChange={(e) => update('name', e.target.value)}
-                required
-                style={input}
-              />
-            </Field>
-
-            <Field label="Headline">
-              <input
-                value={form.headline}
-                onChange={(e) => update('headline', e.target.value)}
-                required
-                style={input}
-              />
-            </Field>
-
-            <Field label="Summary">
+            <div>
+              <label style={label}>Short summary</label>
               <textarea
-                rows={5}
                 value={form.summary}
                 onChange={(e) => update('summary', e.target.value)}
-                required
+                rows={5}
+                placeholder="1–3 sentences on how you can help…"
                 style={{ ...input, resize: 'vertical' }}
+                required
               />
-            </Field>
+            </div>
 
-            <div style={{ display: 'flex', gap: 10 }}>
-              <button
-                type="submit"
-                disabled={saving}
-                style={btnPrimary}
-              >
-                {saving ? 'Saving…' : 'Update Spotlight'}
-              </button>
+            <div>
+              <label style={label}>Specialties</label>
+              <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
+                {SPECIALTY_OPTIONS.map((s) => (
+                  <label
+                    key={s}
+                    style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: 6,
+                      fontSize: 14,
+                      color: '#37474F',
+                      background: 'rgba(255,255,255,0.65)',
+                      border: '1px solid rgba(0,0,0,0.06)',
+                      borderRadius: 999,
+                      padding: '6px 10px',
+                    }}
+                  >
+                    <input
+                      type="checkbox"
+                      checked={form.specialties.includes(s)}
+                      onChange={() => toggleSpecialty(s)}
+                    />
+                    <span>{s}</span>
+                  </label>
+                ))}
+              </div>
+            </div>
 
-              <button
-                type="button"
-                onClick={destroy}
-                style={btnDanger}
-              >
-                Delete Spotlight
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 12 }}>
+              <div>
+                <label style={label}>Rate</label>
+                <select value={form.rate} onChange={(e) => update('rate', e.target.value)} style={input}>
+                  <option>Free</option>
+                  <option>Paid</option>
+                  <option>Sliding</option>
+                </select>
+              </div>
+              <div>
+                <label style={label}>Availability</label>
+                <select
+                  value={form.availability}
+                  onChange={(e) => update('availability', e.target.value)}
+                  style={input}
+                >
+                  <option>Open to discuss</option>
+                  <option>Limited slots</option>
+                  <option>Waitlist</option>
+                </select>
+              </div>
+              <div />
+            </div>
+
+            <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+              <button type="submit" style={btnPrimary} disabled={!canSubmit || saving}>
+                {saving ? 'Saving…' : 'Save Changes'}
               </button>
+              <Link href={withChrome('/dashboard/coaching/resources')} style={btnGhost}>
+                Back to Resources
+              </Link>
             </div>
           </form>
         )}
@@ -208,51 +328,102 @@ export default function EditHearthSpotlightPage() {
   );
 }
 
-/* ---------- helpers ---------- */
+/* ---------- Glass styles (matches your New page) ---------- */
 
-function Field({ label, children }) {
-  return (
-    <div>
-      <label
-        style={{
-          display: 'block',
-          fontSize: 12,
-          fontWeight: 700,
-          color: '#607D8B',
-          marginBottom: 6,
-        }}
-      >
-        {label}
-      </label>
-      {children}
-    </div>
-  );
-}
+const glassBase = {
+  background: 'rgba(255,255,255,0.78)',
+  border: '1px solid rgba(255,255,255,0.55)',
+  borderRadius: 14,
+  boxShadow: '0 10px 30px rgba(0,0,0,0.12)',
+  backdropFilter: 'blur(14px)',
+  WebkitBackdropFilter: 'blur(14px)',
+};
+
+const glassHero = {
+  ...glassBase,
+  padding: 16,
+  textAlign: 'center',
+};
+
+const glassCard = {
+  ...glassBase,
+  padding: 20,
+  margin: 0,
+};
+
+const label = {
+  display: 'block',
+  fontSize: 12,
+  color: '#607D8B',
+  marginBottom: 6,
+  fontWeight: 800,
+};
 
 const input = {
-  width: '100%',
-  border: '1px solid #ddd',
-  borderRadius: 10,
+  border: '1px solid rgba(0,0,0,0.12)',
+  borderRadius: 12,
   padding: '10px 12px',
-  background: 'white',
+  outline: 'none',
+  width: '100%',
+  background: 'rgba(255,255,255,0.85)',
 };
 
 const btnPrimary = {
   background: '#FF7043',
   color: 'white',
   border: 'none',
-  borderRadius: 10,
+  borderRadius: 12,
   padding: '10px 14px',
-  fontWeight: 700,
+  fontWeight: 800,
+  textDecoration: 'none',
   cursor: 'pointer',
 };
 
-const btnDanger = {
-  background: 'white',
-  color: '#C62828',
-  border: '1px solid #C62828',
-  borderRadius: 10,
+const btnGhost = {
+  background: 'rgba(255,255,255,0.85)',
+  color: '#FF7043',
+  border: '1px solid #FF7043',
+  borderRadius: 12,
   padding: '10px 14px',
-  fontWeight: 700,
+  fontWeight: 800,
+  textDecoration: 'none',
   cursor: 'pointer',
+};
+
+const warnBox = {
+  background: 'rgba(255,243,224,0.9)',
+  border: '1px solid #FFCC80',
+  borderRadius: 12,
+  padding: 10,
+  color: '#6D4C41',
+  fontSize: 13,
+  marginBottom: 12,
+  backdropFilter: 'blur(10px)',
+  WebkitBackdropFilter: 'blur(10px)',
+};
+
+const okBox = {
+  background: 'rgba(232,245,233,0.9)',
+  border: '1px solid #C8E6C9',
+  borderRadius: 12,
+  padding: 10,
+  color: '#2E7D32',
+  fontSize: 13,
+  marginBottom: 12,
+  fontWeight: 800,
+  backdropFilter: 'blur(10px)',
+  WebkitBackdropFilter: 'blur(10px)',
+};
+
+const infoBox = {
+  background: 'rgba(227,242,253,0.9)',
+  border: '1px solid #BBDEFB',
+  borderRadius: 12,
+  padding: 12,
+  color: '#0D47A1',
+  fontSize: 13,
+  marginBottom: 12,
+  lineHeight: 1.4,
+  backdropFilter: 'blur(10px)',
+  WebkitBackdropFilter: 'blur(10px)',
 };
