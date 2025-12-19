@@ -2,18 +2,19 @@
 import React, { useEffect, useState } from 'react';
 import { useRouter } from 'next/router';
 
-const STORAGE_KEY = 'coachCSAT_v1';
-
 export default function CoachCSATSurvey() {
   const router = useRouter();
-  const coachId = String(router.query.coachId || router.query.coachID || 'demo-coach');
+  const coachId = String(
+    router.query.coachId || router.query.coachID || 'demo-coach'
+  );
 
   // Resolve where to go after submit: ?next= -> sessionStorage 'lastRoute' -> same-origin referrer -> '/'
   const [nextDest, setNextDest] = useState('/');
 
   useEffect(() => {
     // 1) explicit ?next=
-    const qNext = typeof router.query.next === 'string' ? router.query.next.trim() : '';
+    const qNext =
+      typeof router.query.next === 'string' ? router.query.next.trim() : '';
     if (qNext) {
       setNextDest(qNext);
       return;
@@ -52,36 +53,59 @@ export default function CoachCSATSurvey() {
     // 4) fallback already '/'
   }, [router.query.next, router.asPath]);
 
-  const [scores, setScores] = useState({ satisfaction: 0, timeliness: 0, quality: 0 });
+  const [scores, setScores] = useState({
+    satisfaction: 0,
+    timeliness: 0,
+    quality: 0,
+  });
   const [comment, setComment] = useState('');
   const [anonymous, setAnonymous] = useState(true);
   const [sent, setSent] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
 
-  const setScore = (key, val) => setScores(prev => ({ ...prev, [key]: val }));
+  const setScore = (key, val) =>
+    setScores((prev) => ({ ...prev, [key]: val }));
 
-  const submit = () => {
+  const submit = async () => {
     const { satisfaction, timeliness, quality } = scores;
+
     if (!satisfaction || !timeliness || !quality) {
       alert('Please rate all three items (1–5).');
       return;
     }
-    const rec = {
-      id: Date.now(),
-      coachId,
-      satisfaction,
-      timeliness,
-      quality,
-      comment: comment.trim(),
-      anonymous,
-      createdAt: new Date().toISOString(),
-    };
+
+    setSubmitting(true);
+
     try {
-      const arr = JSON.parse(localStorage.getItem(STORAGE_KEY) || '[]');
-      localStorage.setItem(STORAGE_KEY, JSON.stringify([rec, ...arr]));
+      const res = await fetch('/api/coaching/csat', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          coachId,
+          satisfaction,
+          timeliness,
+          quality,
+          comment: comment.trim(),
+          anonymous,
+        }),
+      });
+
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}));
+        const msg =
+          data?.error ||
+          'Error saving your response. Please try again in a moment.';
+        alert(msg);
+        setSubmitting(false);
+        return;
+      }
+
       setSent(true);
+      setSubmitting(false);
     } catch (e) {
       console.error(e);
-      alert('Error saving your response locally.');
+      alert('Error saving your response. Please try again in a moment.');
+      setSubmitting(false);
     }
   };
 
@@ -116,7 +140,9 @@ export default function CoachCSATSurvey() {
               border: '1px solid #eee',
             }}
           >
-            <h2 style={{ color: '#FF7043', margin: 0 }}>Thanks for your feedback!</h2>
+            <h2 style={{ color: '#FF7043', margin: 0 }}>
+              Thanks for your feedback!
+            </h2>
             <p style={{ color: '#607D8B', marginTop: 6, marginBottom: 10 }}>
               Your input helps us improve service quality.
             </p>
@@ -136,7 +162,13 @@ export default function CoachCSATSurvey() {
               >
                 Return now
               </button>
-              <span style={{ alignSelf: 'center', color: '#90A4AE', fontSize: 12 }}>
+              <span
+                style={{
+                  alignSelf: 'center',
+                  color: '#90A4AE',
+                  fontSize: 12,
+                }}
+              >
                 You’ll be redirected automatically…
               </span>
             </div>
@@ -168,7 +200,9 @@ export default function CoachCSATSurvey() {
             border: '1px solid #eee',
           }}
         >
-          <h2 style={{ color: '#FF7043', margin: 0 }}>Client Satisfaction Survey</h2>
+          <h2 style={{ color: '#FF7043', margin: 0 }}>
+            Client Satisfaction Survey
+          </h2>
           <p style={{ color: '#607D8B', marginTop: 6, marginBottom: 0 }}>
             Coach ID: <strong>{coachId}</strong>
           </p>
@@ -228,7 +262,14 @@ export default function CoachCSATSurvey() {
             />
           </div>
 
-          <div style={{ marginTop: 12, display: 'flex', alignItems: 'center', gap: 8 }}>
+          <div
+            style={{
+              marginTop: 12,
+              display: 'flex',
+              alignItems: 'center',
+              gap: 8,
+            }}
+          >
             <input
               id="anon"
               type="checkbox"
@@ -244,6 +285,7 @@ export default function CoachCSATSurvey() {
             <button
               type="button"
               onClick={submit}
+              disabled={submitting}
               style={{
                 background: '#FF7043',
                 color: 'white',
@@ -251,14 +293,16 @@ export default function CoachCSATSurvey() {
                 borderRadius: 10,
                 padding: '10px 12px',
                 fontWeight: 700,
-                cursor: 'pointer',
+                cursor: submitting ? 'not-allowed' : 'pointer',
+                opacity: submitting ? 0.7 : 1,
               }}
             >
-              Submit
+              {submitting ? 'Submitting…' : 'Submit'}
             </button>
             <button
               type="button"
               onClick={() => router.back()}
+              disabled={submitting}
               style={{
                 background: 'white',
                 color: '#FF7043',
@@ -266,7 +310,8 @@ export default function CoachCSATSurvey() {
                 borderRadius: 10,
                 padding: '10px 12px',
                 fontWeight: 700,
-                cursor: 'pointer',
+                cursor: submitting ? 'not-allowed' : 'pointer',
+                opacity: submitting ? 0.7 : 1,
               }}
             >
               Cancel

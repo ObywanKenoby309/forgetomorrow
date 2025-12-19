@@ -185,10 +185,10 @@ model ExternalJob {
 model Resume {
   id        Int      @id @default(autoincrement())
   userId    String
-  name      String // e.g. "Primary CS Resume"
-  content   String // JSON/string from builder
-  isPublic  Boolean  @default(false) // future: shareable public link
-  isPrimary Boolean  @default(false) // only one per user should be true
+  name      String
+  content   String
+  isPublic  Boolean  @default(false)
+  isPrimary Boolean  @default(false)
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
@@ -202,10 +202,10 @@ model Cover {
   id        Int      @id @default(autoincrement())
   userId    String
   jobId     Int?
-  name      String // e.g. "General Cover", "CS Lead Cover"
+  name      String
   content   String
-  isPublic  Boolean  @default(false) // for future public sharing if needed
-  isPrimary Boolean  @default(false) // only one per user should be true
+  isPublic  Boolean  @default(false)
+  isPrimary Boolean  @default(false)
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
@@ -237,14 +237,13 @@ model ScanLog {
 model UserDraft {
   id        String   @id @default(cuid())
   userId    String
-  key       String   // e.g. "ft_last_job_text", "forge-ats-pack", "ft_last_uploaded_resume_text"
+  key       String
   content   Json
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
-  // ✅ Only change: explicitly name the compound unique so `userId_key` is stable
   @@unique([userId, key], name: "userId_key")
   @@index([userId])
   @@map("user_drafts")
@@ -321,8 +320,8 @@ model UserConsent {
   id          Int      @id @default(autoincrement())
   userId      String
   user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  consentType String // e.g. "cookies_analytics", "marketing_emails"
-  region      String? // e.g. "EU", "US-CA", "BR"
+  consentType String
+  region      String?
   given       Boolean  @default(true)
   timestamp   DateTime @default(now())
 
@@ -338,10 +337,10 @@ model UserConsent {
 model CoachingClient {
   id          String   @id @default(cuid())
   coachId     String
-  clientId    String?       // null = external client
-  name        String        // display name (stored for both internal + external)
-  email       String?       // optional email
-  status      String   @default("Active") // "Active" | "At Risk" | "New Intake"
+  clientId    String?
+  name        String
+  email       String?
+  status      String   @default("Active")
   nextSession DateTime?
   lastContact DateTime?
   createdAt   DateTime @default(now())
@@ -350,7 +349,6 @@ model CoachingClient {
   coach  User  @relation("CoachClientsCoach", fields: [coachId], references: [id], onDelete: Cascade)
   client User? @relation("CoachClientsClient", fields: [clientId], references: [id], onDelete: Cascade)
 
-  // Sessions tied to this specific coach–client relationship
   sessions CoachingSession[] @relation("ClientSessions")
 
   @@index([coachId])
@@ -361,23 +359,17 @@ model CoachingClient {
 model CoachingSession {
   id       String @id @default(cuid())
   coachId  String
-  clientId String?  // optional: anonymous or one-off sessions
+  clientId String?
 
-  // Optional link to a specific CoachingClient row
   coachingClientId String?
   coachingClient   CoachingClient? @relation("ClientSessions", fields: [coachingClientId], references: [id])
 
-  // Full start time in UTC; frontend can split into date/time
   startAt     DateTime
   durationMin Int      @default(60)
 
-  // e.g. "Strategy", "Resume", "Interview", "Other"
   type   String @default("Strategy")
-
-  // e.g. "Scheduled", "Completed", "No-show", "Cancelled"
   status String @default("Scheduled")
 
-  // Drives “Follow-ups Due”
   followUpDueAt DateTime?
   followUpDone  Boolean  @default(false)
 
@@ -393,6 +385,30 @@ model CoachingSession {
   @@index([startAt])
   @@index([coachingClientId])
   @@map("coaching_sessions")
+}
+
+// ============================================================================
+//  COACHING CSAT (DB-backed replacement for localStorage coachCSAT_v1)
+// ============================================================================
+
+model CoachingCsatResponse {
+  id           String   @id @default(cuid())
+
+  coachId String
+  coach   User @relation("UserCoachingCsatResponses", fields: [coachId], references: [id], onDelete: Cascade)
+
+  satisfaction Int
+  timeliness   Int
+  quality      Int
+
+  comment   String?
+  anonymous Boolean @default(true)
+
+  createdAt DateTime @default(now())
+
+  @@index([coachId])
+  @@index([createdAt])
+  @@map("coaching_csat_responses")
 }
 
 // ============================================================================
@@ -437,11 +453,10 @@ model ContactRequest {
 // ============================================================================
 
 model User {
-  // ── Identity & Auth ────────────────────────────────────────────────────────
-  id                         String    @id @default(cuid())
-  email                      String    @unique
-  emailVerified              Boolean   @default(false)
-  emailVerificationToken     String?   @unique
+  id                         String  @id @default(cuid())
+  email                      String  @unique
+  emailVerified              Boolean @default(false)
+  emailVerificationToken     String? @unique
   emailVerificationExpiresAt DateTime?
   passwordHash               String?
   firstName                  String?
@@ -449,7 +464,6 @@ model User {
   name                       String?
   image                      String?
 
-  // ── Public Profile Header ─────────────────────────────────────────────────
   headline  String?
   pronouns  String?
   location  String?
@@ -457,28 +471,24 @@ model User {
   avatarUrl String?
   coverUrl  String?
 
-  // Banner / Display
-  bannerMode        String? // "cover" | "fit"
-  bannerHeight      Int?    // 80–220
-  bannerFocalY      Int?    // 0–100
-  isProfilePublic   Boolean @default(false)
+  bannerMode        String?
+  bannerHeight      Int?
+  bannerFocalY      Int?
+  isProfilePublic   Boolean           @default(false)
   profileVisibility ProfileVisibility @default(PRIVATE)
   wallpaperUrl      String?
 
-  // ── Public URL / Slug ─────────────────────────────────────────────────────
   slug              String?   @unique
   slugChangeCount   Int       @default(0)
   slugLastChangedAt DateTime?
 
-  // ── Main Profile Sections ─────────────────────────────────────────────────
   aboutMe         String?
-  workPreferences Json? // { workType, locations[], startDate, relocate, workStatus }
-  skillsJson      Json? // ["Leadership", "Azure", "React"]
-  languagesJson   Json? // [{ name: "English", level: "Native" }]
-  educationJson   Json? // [{ school, degree, field, startYear, endYear, notes }]
-  hobbiesJson     Json? // ["Hiking", "Mentorship"]
+  workPreferences Json?
+  skillsJson      Json?
+  languagesJson   Json?
+  educationJson   Json?
+  hobbiesJson     Json?
 
-  // ── Account Role & Plan ───────────────────────────────────────────────────
   role                 UserRole @default(SEEKER)
   plan                 Tier     @default(FREE)
   newsletter           Boolean  @default(false)
@@ -487,10 +497,8 @@ model User {
   stripeCustomerId     String?  @unique
   stripeSubscriptionId String?  @unique
 
-  // which account / org this user belongs to (for recruiter tenants)
-  accountKey String? // e.g. "ACCT-12345"
+  accountKey String?
 
-  // ── Relations ─────────────────────────────────────────────────────────────
   applications Application[]
   views        JobView[]
   interviews   Interview[]
@@ -501,7 +509,6 @@ model User {
   jobs         Job[]
   scanLogs     ScanLog[]
 
-  // ✅ DB-backed draft storage (replacement for localStorage)
   drafts UserDraft[]
 
   careerRoadmaps   CareerRoadmap[]   @relation("UserCareerRoadmaps")
@@ -512,28 +519,26 @@ model User {
   candidates           Candidate[]
   candidateAutomations RecruiterCandidateAutomation[]
 
-  // Messaging relations
   messages                 Message[]                 @relation("UserMessages")
   conversationParticipants ConversationParticipant[] @relation("UserConversationParticipants")
   blocksInitiated          UserBlock[]               @relation("UserBlocksAsBlocker")
-  blocksReceived           UserBlock[]               @relation("UserBlocksAsBlocked")
+  blocksReceived          UserBlock[]               @relation("UserBlocksAsBlocked")
   messageReactions         MessageReaction[]         @relation("UserMessageReactions")
   reportsFiled             ConversationReport[]      @relation("UserReportsAsReporter")
   reportsReceived          ConversationReport[]      @relation("UserReportsAsReported")
 
-  // Coaching relations
   coachingClientsAsCoach   CoachingClient[]  @relation("CoachClientsCoach")
   coachingClientsAsClient  CoachingClient[]  @relation("CoachClientsClient")
   coachingSessionsAsCoach  CoachingSession[] @relation("CoachSessionsCoach")
   coachingSessionsAsClient CoachingSession[] @relation("CoachSessionsClient")
 
-  // Network / contacts
+  coachingCsatResponses CoachingCsatResponse[] @relation("UserCoachingCsatResponses")
+
   contacts                Contact[]        @relation("UserContacts")
   contactsAsContact       Contact[]        @relation("UserContactsAsContact")
   contactRequestsSent     ContactRequest[] @relation("UserContactRequestsFrom")
   contactRequestsReceived ContactRequest[] @relation("UserContactRequestsTo")
 
-  // Social / community relations
   groupMemberships        GroupMembership[]
   ownedGroups             Group[]
   ownedPages              Page[]
@@ -541,21 +546,17 @@ model User {
   ownedNewsletters        Newsletter[]
   newsletterSubscriptions NewsletterSubscription[]
 
-  // Recruiter calendar relations
   recruiterCalendarOwnedItems  RecruiterCalendarItem[] @relation("UserRecruiterCalendarOwner")
   recruiterCalendarAsCandidate RecruiterCalendarItem[] @relation("UserRecruiterCalendarCandidate")
 
-  // Seeker calendar relations
   seekerCalendarItems SeekerCalendarItem[] @relation("UserSeekerCalendarItems")
 
-  // ── Corporate appearance overrides (ForgeTomorrow staff only) ─────────────
   corporateBannerKey    String?
   corporateBannerLocked Boolean @default(false)
 
-  // ── Deletion & Timestamps ─────────────────────────────────────────────────
   deletedAt DateTime?
-  createdAt DateTime  @default(now())
-  updatedAt DateTime  @updatedAt
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
   @@map("users")
 }
@@ -569,7 +570,6 @@ model Candidate {
   userId String
   user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
 
-  // Basic identity & display (powers the card)
   name         String
   email        String?
   headline     String?
@@ -579,22 +579,18 @@ model Candidate {
   title        String?
   currentTitle String?
 
-  // Work preferences / status (powers filters)
   workStatus        String?
   preferredWorkType String?
   willingToRelocate String?
 
-  // Searchable skills / languages (denormalized text)
   skills    String?
   languages String?
 
-  // Recruiter-only fields (private)
   tags          String?
   notes         String?
   source        String?
   pipelineStage String?
 
-  // Match data (used by card + WHY)
   match Int?
 
   lastContacted DateTime?
@@ -616,7 +612,7 @@ model RecruiterCandidateAutomation {
   userId String
   user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
 
-  name String?
+  name    String?
   filters Json
 
   enabled   Boolean   @default(true)
@@ -634,29 +630,29 @@ model RecruiterCandidateAutomation {
 // ============================================================================
 
 model RecruiterCalendarItem {
-  id      String   @id @default(cuid())
+  id String @id @default(cuid())
 
   ownerId String
-  owner   User     @relation("UserRecruiterCalendarOwner", fields: [ownerId], references: [id], onDelete: Cascade)
+  owner   User @relation("UserRecruiterCalendarOwner", fields: [ownerId], references: [id], onDelete: Cascade)
 
-  scope   String   @default("team") // 'team' | 'personal'
+  scope String @default("team")
 
-  date    DateTime
-  time    String?
+  date DateTime
+  time String?
 
-  title   String
-  type    String   @default("Interview") // Interview / Screen / Offer / Task etc.
-  status  String   @default("Scheduled")
-  notes   String?
+  title  String
+  type   String @default("Interview")
+  status String @default("Scheduled")
+  notes  String?
 
-  candidateType   String   @default("external") // 'internal' | 'external'
+  candidateType   String  @default("external")
   candidateUserId String?
-  candidate       User?    @relation("UserRecruiterCalendarCandidate", fields: [candidateUserId], references: [id], onDelete: SetNull)
-  candidateName   String   // display name, always stored
+  candidate       User?   @relation("UserRecruiterCalendarCandidate", fields: [candidateUserId], references: [id], onDelete: SetNull)
+  candidateName   String
 
-  company   String?
-  jobTitle  String?
-  req       String?
+  company  String?
+  jobTitle String?
+  req      String?
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -681,11 +677,11 @@ model SeekerCalendarItem {
   time String?
 
   title  String
-  type   String  @default("Interview") // Interview / Deadline / Reminder / Task etc.
-  status String  @default("Scheduled")
+  type   String @default("Interview")
+  status String @default("Scheduled")
   notes  String?
 
-  source       String  @default("personal")
+  source       String @default("personal")
   sourceItemId String?
 
   createdAt DateTime @default(now())
@@ -705,7 +701,6 @@ model Conversation {
   id      Int     @id @default(autoincrement())
   isGroup Boolean @default(false)
   title   String?
-
   channel String?
 
   createdAt DateTime @default(now())
@@ -742,8 +737,8 @@ model Message {
   content        String
   createdAt      DateTime @default(now())
 
-  conversation Conversation         @relation(fields: [conversationId], references: [id], onDelete: Cascade)
-  sender       User                 @relation("UserMessages", fields: [senderId], references: [id])
+  conversation Conversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+  sender       User         @relation("UserMessages", fields: [senderId], references: [id])
   reactions    MessageReaction[]
   reports      ConversationReport[]
 
