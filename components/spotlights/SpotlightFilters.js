@@ -20,7 +20,6 @@ const SPECIALTY_OPTIONS = [
 
 export default function SpotlightFilters({ onChange, initial }) {
   const [filters, setFilters] = useState(initial || DEFAULT_FILTERS);
-  const [expanded, setExpanded] = useState(true); // ✅ always open
 
   useEffect(() => {
     onChange?.(filters);
@@ -53,7 +52,7 @@ export default function SpotlightFilters({ onChange, initial }) {
         gap: 12,
       }}
     >
-      {/* TOP ROW */}
+      {/* TOP ROW (no collapse button) */}
       <div
         style={{
           display: 'grid',
@@ -79,78 +78,73 @@ export default function SpotlightFilters({ onChange, initial }) {
         </select>
       </div>
 
-      {/* EXPANDED FILTERS */}
-      {expanded && (
-        <div
-          style={{
-            display: 'grid',
-            gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))',
-            gap: 16,
-            paddingTop: 4,
-          }}
-        >
-          {/* Specialties */}
-          <div>
-            <div style={label}>Specialties</div>
-            <div style={{ display: 'grid', gap: 6 }}>
-              {SPECIALTY_OPTIONS.map((s) => (
-                <label key={s} style={checkLabel}>
-                  <input
-                    type="checkbox"
-                    checked={filters.specialties.includes(s)}
-                    onChange={() =>
-                      setFilters((f) => ({
-                        ...f,
-                        specialties: toggleArr(f.specialties, s),
-                      }))
-                    }
-                  />
-                  <span>{s}</span>
-                </label>
-              ))}
-            </div>
-          </div>
-
-          {/* Availability */}
-          <div>
-            <div style={label}>Availability</div>
-            {['Any', 'Open to discuss', 'Limited slots', 'Waitlist'].map((a) => (
-              <label key={a} style={checkLabel}>
-                <input
-                  type="radio"
-                  name="availability"
-                  checked={filters.availability === a}
-                  onChange={() =>
-                    setFilters((f) => ({ ...f, availability: a }))
-                  }
-                />
-                <span>{a}</span>
-              </label>
-            ))}
-          </div>
-
-          {/* Rate */}
-          <div>
-            <div style={label}>Rate</div>
-            {['Free', 'Paid', 'Sliding'].map((r) => (
-              <label key={r} style={checkLabel}>
+      {/* ALWAYS-OPEN FILTERS */}
+      <div
+        style={{
+          display: 'grid',
+          gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))',
+          gap: 16,
+          paddingTop: 4,
+        }}
+      >
+        {/* Specialties */}
+        <div>
+          <div style={label}>Specialties</div>
+          <div style={{ display: 'grid', gap: 6 }}>
+            {SPECIALTY_OPTIONS.map((s) => (
+              <label key={s} style={checkLabel}>
                 <input
                   type="checkbox"
-                  checked={filters.rate.includes(r)}
+                  checked={filters.specialties.includes(s)}
                   onChange={() =>
                     setFilters((f) => ({
                       ...f,
-                      rate: toggleArr(f.rate, r),
+                      specialties: toggleArr(f.specialties, s),
                     }))
                   }
                 />
-                  <span>{r}</span>
-                </label>
-              ))}
-            </div>
+                <span>{s}</span>
+              </label>
+            ))}
           </div>
         </div>
-      )}
+
+        {/* Availability */}
+        <div>
+          <div style={label}>Availability</div>
+          {['Any', 'Open to discuss', 'Limited slots', 'Waitlist'].map((a) => (
+            <label key={a} style={checkLabel}>
+              <input
+                type="radio"
+                name="availability"
+                checked={filters.availability === a}
+                onChange={() => setFilters((f) => ({ ...f, availability: a }))}
+              />
+              <span>{a}</span>
+            </label>
+          ))}
+        </div>
+
+        {/* Rate */}
+        <div>
+          <div style={label}>Rate</div>
+          {['Free', 'Paid', 'Sliding'].map((r) => (
+            <label key={r} style={checkLabel}>
+              <input
+                type="checkbox"
+                checked={filters.rate.includes(r)}
+                onChange={() =>
+                  setFilters((f) => ({
+                    ...f,
+                    rate: toggleArr(f.rate, r),
+                  }))
+                }
+              />
+              <span>{r}</span>
+            </label>
+          ))}
+        </div>
+      </div>
 
       {/* FOOTER */}
       {selectedCount > 0 && (
