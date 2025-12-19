@@ -143,6 +143,7 @@ export default function HybridResumeTemplatePDF({ data }) {
     projects = [],
     educationList = [],
     skills = [],
+    languages = [],
     certifications = [],
     customSections = [],
   } = data || {};
@@ -185,6 +186,14 @@ export default function HybridResumeTemplatePDF({ data }) {
           <View>
             <Text style={styles.sectionTitle}>Professional Summary</Text>
             <Text style={styles.paragraph}>{summary}</Text>
+          </View>
+        )}
+
+        {/* LANGUAGES */}
+        {languages.length > 0 && (
+          <View>
+            <Text style={styles.sectionTitle}>Languages</Text>
+            <Text style={styles.paragraph}>{languages.join(' • ')}</Text>
           </View>
         )}
 

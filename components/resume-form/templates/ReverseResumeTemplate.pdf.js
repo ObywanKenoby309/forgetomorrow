@@ -42,6 +42,7 @@ export default function ReverseResumeTemplatePDF({ data }) {
     workExperiences = [],
     educationList = [],
     skills = [],
+    languages = [],
     certifications = [],
     customSections = [],
   } = data;
@@ -182,6 +183,14 @@ export default function ReverseResumeTemplatePDF({ data }) {
           <>
             <Text style={styles.sectionTitle}>Skills</Text>
             <Text style={styles.skills}>{skills.join(' • ')}</Text>
+          </>
+        )}
+
+        {/* LANGUAGES */}
+        {languages.length > 0 && (
+          <>
+            <Text style={styles.sectionTitle}>Languages</Text>
+            <Text style={styles.skills}>{languages.join(' • ')}</Text>
           </>
         )}
 

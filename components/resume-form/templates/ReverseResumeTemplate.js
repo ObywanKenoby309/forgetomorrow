@@ -7,6 +7,7 @@ export default function ReverseResumeTemplate({ data }) {
     projects = [],
     educationList = [],
     skills = [],
+    languages = [],
     certifications = [],
     customSections = [],
   } = data;
@@ -251,6 +252,25 @@ export default function ReverseResumeTemplate({ data }) {
               </div>
             </div>
           ))}
+        </div>
+      )}
+
+      {/* LANGUAGES */}
+      {languages.length > 0 && (
+        <div style={{ marginBottom: '16pt' }}>
+          <h2
+            style={{
+              fontSize: '13pt',
+              fontWeight: 'bold',
+              margin: '0 0 6pt 0',
+              borderBottom: '1pt solid #000',
+              textTransform: 'uppercase',
+            }}
+          >
+            Languages
+          </h2>
+
+          <p>{languages.join(" • ")}</p>
         </div>
       )}
 

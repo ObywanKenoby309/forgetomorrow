@@ -1,5 +1,4 @@
 // components/resume-form/templates/HybridResumeTemplate.js
-
 export default function HybridResumeTemplate({ data }) {
   const {
     personalInfo,
@@ -8,6 +7,7 @@ export default function HybridResumeTemplate({ data }) {
     projects = [],
     educationList = [],
     skills = [],
+    languages = [],
     certifications = [],
     customSections = [],
   } = data;
@@ -139,6 +139,25 @@ export default function HybridResumeTemplate({ data }) {
               </p>
             ))}
           </div>
+        </div>
+      )}
+
+      {/* LANGUAGES */}
+      {languages.length > 0 && (
+        <div style={{ marginBottom: '16pt' }}>
+          <h2
+            style={{
+              fontSize: '13pt',
+              fontWeight: 'bold',
+              margin: '0 0 6pt 0',
+              borderBottom: '1pt solid #000',
+              textTransform: 'uppercase',
+            }}
+          >
+            Languages
+          </h2>
+
+          <p style={{ margin: 0, fontSize: '11pt' }}>{languages.join(' • ')}</p>
         </div>
       )}
 
