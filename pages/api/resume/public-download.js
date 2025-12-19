@@ -164,7 +164,15 @@ function normalizeRoot(builderData) {
 
 function normalizeArray(val) {
   if (!val) return [];
-  if (Array.isArray(val)) return val;
+  return Array.isArray(val) ? val : [];
+}
+
+// ✅ picks the first array that is actually non-empty
+function pickFirstNonEmptyArray(...vals) {
+  for (const v of vals) {
+    const arr = normalizeArray(v);
+    if (arr.length > 0) return arr;
+  }
   return [];
 }
 
@@ -241,8 +249,8 @@ export default async function handler(req, res) {
       effectiveVisibility === 'PUBLIC'
         ? true
         : effectiveVisibility === 'RECRUITERS_ONLY'
-        ? (isOwner || isAdmin || isRecruiter)
-        : (isOwner || isAdmin); // PRIVATE
+        ? isOwner || isAdmin || isRecruiter
+        : isOwner || isAdmin; // PRIVATE
 
     if (!allowed) {
       // stealth 404 prevents slug enumeration
@@ -253,9 +261,14 @@ export default async function handler(req, res) {
     let resumeRecord = null;
 
     if (resumeId && typeof resumeId === 'string') {
-      // NOTE: assumes prisma model is `resume` with `userId`. If your model name differs, we’ll adjust.
+      const resumeIdNum = Number(resumeId);
+
+      if (!Number.isFinite(resumeIdNum)) {
+        return res.status(400).json({ error: 'Invalid resumeId' });
+      }
+
       const r = await prisma.resume.findUnique({
-        where: { id: resumeId },
+        where: { id: resumeIdNum },
         select: { id: true, name: true, content: true, userId: true },
       });
 
@@ -293,7 +306,6 @@ export default async function handler(req, res) {
     const root = normalizeRoot(builderData);
     const fd = root.formData || root.personalInfo || {};
 
-    // ✅ Normalize likely field-name variants so saved resumes render
     const summary =
       root.summary ||
       root.professionalSummary ||
@@ -301,29 +313,25 @@ export default async function handler(req, res) {
       root.summaryText ||
       '';
 
-    const workExperiences =
-      normalizeArray(root.experiences) ||
-      normalizeArray(root.workExperiences) ||
-      normalizeArray(root.workExperience) ||
-      [];
+    const workExperiences = pickFirstNonEmptyArray(
+      root.experiences,
+      root.workExperiences,
+      root.workExperience
+    );
 
-    const educationList =
-      normalizeArray(root.educationList) ||
-      normalizeArray(root.education) ||
-      normalizeArray(root.educations) ||
-      [];
+    const educationList = pickFirstNonEmptyArray(
+      root.educationList,
+      root.education,
+      root.educations
+    );
 
-    const certifications =
-      normalizeArray(root.certifications) ||
-      normalizeArray(root.certificationList) ||
-      [];
+    const certifications = pickFirstNonEmptyArray(
+      root.certifications,
+      root.certificationList
+    );
 
-    const skills =
-      normalizeArray(root.skills) ||
-      normalizeArray(root.skillList) ||
-      [];
+    const skills = pickFirstNonEmptyArray(root.skills, root.skillList);
 
-    // Map builder data -> PDF data shape
     const resumeData = {
       personalInfo: {
         name: fd.fullName || fd.name || user.name || 'Your Name',
