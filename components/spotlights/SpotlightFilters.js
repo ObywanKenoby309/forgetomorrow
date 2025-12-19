@@ -1,12 +1,11 @@
-// components/spotlights/SpotlightFilters.js
 import React, { useEffect, useMemo, useState } from 'react';
 
 const DEFAULT_FILTERS = {
   q: '',
   specialties: [],
   availability: 'Any',
-  rate: [], // Free, Paid, Sliding
-  sort: 'Newest', // Newest | Name A–Z
+  rate: [],
+  sort: 'Newest',
 };
 
 const SPECIALTY_OPTIONS = [
@@ -19,10 +18,9 @@ const SPECIALTY_OPTIONS = [
   'Career Pivot',
 ];
 
-const RATE_OPTIONS = ['Free', 'Paid', 'Sliding'];
-
 export default function SpotlightFilters({ onChange, initial }) {
   const [filters, setFilters] = useState(initial || DEFAULT_FILTERS);
+  const [expanded, setExpanded] = useState(false);
 
   useEffect(() => {
     onChange?.(filters);
@@ -44,115 +42,33 @@ export default function SpotlightFilters({ onChange, initial }) {
   }, [filters]);
 
   return (
-    <aside
+    <section
       style={{
-        position: 'sticky',
-        top: 100,
-        alignSelf: 'start',
-        width: '100%',
         background: 'white',
         border: '1px solid #eee',
         borderRadius: 12,
-        padding: 12,
+        padding: 16,
         boxShadow: '0 2px 6px rgba(0,0,0,0.06)',
         display: 'grid',
         gap: 12,
       }}
     >
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-        <div style={{ fontWeight: 800, color: '#263238' }}>Filters</div>
-        <button
-          type="button"
-          onClick={clearAll}
-          title="Clear all filters"
-          style={{
-            background: 'white',
-            color: '#FF7043',
-            border: '1px solid #FF7043',
-            borderRadius: 8,
-            padding: '6px 8px',
-            cursor: 'pointer',
-            fontWeight: 700,
-            fontSize: 12,
-          }}
-        >
-          Clear {selectedCount ? `(${selectedCount})` : ''}
-        </button>
-      </div>
-
-      {/* Search / Name */}
-      <div>
-        <div style={label}>Search (name, headline, summary)</div>
+      {/* TOP ROW */}
+      <div
+        style={{
+          display: 'grid',
+          gridTemplateColumns: '1fr auto auto',
+          gap: 12,
+          alignItems: 'center',
+        }}
+      >
         <input
           value={filters.q}
           onChange={(e) => setFilters((f) => ({ ...f, q: e.target.value }))}
-          placeholder="e.g., resume, interview, etc."
+          placeholder="Search mentors (name, headline, summary)…"
           style={input}
         />
-      </div>
 
-      {/* Specialties */}
-      <div>
-        <div style={label}>Specialties</div>
-        <div style={{ display: 'grid', gap: 6 }}>
-          {SPECIALTY_OPTIONS.map((s) => (
-            <label key={s} style={checkLabel}>
-              <input
-                type="checkbox"
-                checked={filters.specialties.includes(s)}
-                onChange={() =>
-                  setFilters((f) => ({
-                    ...f,
-                    specialties: toggleArr(f.specialties, s),
-                  }))
-                }
-              />
-              <span>{s}</span>
-            </label>
-          ))}
-        </div>
-      </div>
-
-      {/* Availability */}
-      <div>
-        <div style={label}>Availability</div>
-        <div style={{ display: 'grid', gap: 6 }}>
-          {['Any', 'Open to discuss', 'Limited slots', 'Waitlist'].map((a) => (
-            <label key={a} style={checkLabel}>
-              <input
-                type="radio"
-                name="avail"
-                checked={filters.availability === a}
-                onChange={() => setFilters((f) => ({ ...f, availability: a }))}
-              />
-              <span>{a}</span>
-            </label>
-          ))}
-        </div>
-      </div>
-
-      {/* Rate */}
-      <div>
-        <div style={label}>Rate</div>
-        <div style={{ display: 'grid', gap: 6 }}>
-          {['Free', 'Paid', 'Sliding'].map((r) => (
-            <label key={r} style={checkLabel}>
-              <input
-                type="checkbox"
-                checked={filters.rate.includes(r)}
-                onChange={() =>
-                  setFilters((f) => ({ ...f, rate: toggleArr(f.rate, r) }))
-                }
-              />
-              <span>{r}</span>
-            </label>
-          ))}
-        </div>
-      </div>
-
-      {/* Sort */}
-      <div>
-        <div style={label}>Sort</div>
         <select
           value={filters.sort}
           onChange={(e) => setFilters((f) => ({ ...f, sort: e.target.value }))}
@@ -161,11 +77,140 @@ export default function SpotlightFilters({ onChange, initial }) {
           <option>Newest</option>
           <option>Name A–Z</option>
         </select>
+
+        <button
+          type="button"
+          onClick={() => setExpanded((v) => !v)}
+          style={btnGhost}
+        >
+          {expanded ? 'Hide filters' : 'More filters'}
+        </button>
       </div>
-    </aside>
+
+      {/* EXPANDED FILTERS */}
+      {expanded && (
+        <div
+          style={{
+            display: 'grid',
+            gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))',
+            gap: 16,
+            paddingTop: 4,
+          }}
+        >
+          {/* Specialties */}
+          <div>
+            <div style={label}>Specialties</div>
+            <div style={{ display: 'grid', gap: 6 }}>
+              {SPECIALTY_OPTIONS.map((s) => (
+                <label key={s} style={checkLabel}>
+                  <input
+                    type="checkbox"
+                    checked={filters.specialties.includes(s)}
+                    onChange={() =>
+                      setFilters((f) => ({
+                        ...f,
+                        specialties: toggleArr(f.specialties, s),
+                      }))
+                    }
+                  />
+                  <span>{s}</span>
+                </label>
+              ))}
+            </div>
+          </div>
+
+          {/* Availability */}
+          <div>
+            <div style={label}>Availability</div>
+            {['Any', 'Open to discuss', 'Limited slots', 'Waitlist'].map((a) => (
+              <label key={a} style={checkLabel}>
+                <input
+                  type="radio"
+                  name="availability"
+                  checked={filters.availability === a}
+                  onChange={() =>
+                    setFilters((f) => ({ ...f, availability: a }))
+                  }
+                />
+                <span>{a}</span>
+              </label>
+            ))}
+          </div>
+
+          {/* Rate */}
+          <div>
+            <div style={label}>Rate</div>
+            {['Free', 'Paid', 'Sliding'].map((r) => (
+              <label key={r} style={checkLabel}>
+                <input
+                  type="checkbox"
+                  checked={filters.rate.includes(r)}
+                  onChange={() =>
+                    setFilters((f) => ({
+                      ...f,
+                      rate: toggleArr(f.rate, r),
+                    }))
+                  }
+                />
+                <span>{r}</span>
+              </label>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* FOOTER */}
+      {selectedCount > 0 && (
+        <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
+          <button type="button" onClick={clearAll} style={btnClear}>
+            Clear filters ({selectedCount})
+          </button>
+        </div>
+      )}
+    </section>
   );
 }
 
-const label = { fontSize: 12, color: '#607D8B', fontWeight: 700, marginBottom: 6 };
-const input = { border: '1px solid #ddd', borderRadius: 10, padding: '10px 12px', outline: 'none', width: '100%', background: 'white' };
-const checkLabel = { display: 'flex', alignItems: 'center', gap: 8, fontSize: 14, color: '#37474F' };
+/* ---------- styles ---------- */
+
+const label = {
+  fontSize: 12,
+  color: '#607D8B',
+  fontWeight: 700,
+  marginBottom: 6,
+};
+
+const input = {
+  border: '1px solid #ddd',
+  borderRadius: 10,
+  padding: '10px 12px',
+  outline: 'none',
+  width: '100%',
+  background: 'white',
+};
+
+const checkLabel = {
+  display: 'flex',
+  alignItems: 'center',
+  gap: 8,
+  fontSize: 14,
+  color: '#37474F',
+};
+
+const btnGhost = {
+  background: 'white',
+  border: '1px solid #FF7043',
+  color: '#FF7043',
+  borderRadius: 10,
+  padding: '10px 12px',
+  fontWeight: 700,
+  cursor: 'pointer',
+};
+
+const btnClear = {
+  background: 'transparent',
+  border: 'none',
+  color: '#FF7043',
+  fontWeight: 700,
+  cursor: 'pointer',
+};
