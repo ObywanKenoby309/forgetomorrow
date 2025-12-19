@@ -47,20 +47,13 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       const headline = asString(body.headline).trim();
       const summary = asString(body.summary).trim();
       const rate = asString(body.rate || 'Free').trim() || 'Free';
-      const availability = asString(body.availability || 'Open to discuss').trim() || 'Open to discuss';
-      const contactEmail = asString(body.contactEmail).trim();
-      const contactLink = asString(body.contactLink).trim();
+      const availability =
+        asString(body.availability || 'Open to discuss').trim() || 'Open to discuss';
 
       const specialties = asStringArray(body.specialties);
 
       if (!name || !headline || !summary) {
         return res.status(400).json({ error: 'Name, headline, and summary are required.' });
-      }
-
-      if (!contactEmail && !contactLink) {
-        return res
-          .status(400)
-          .json({ error: 'Please provide at least one contact method (email or link).' });
       }
 
       const created = await prisma.hearthSpotlight.create({
@@ -72,8 +65,6 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
           specialties, // Json in schema
           rate,
           availability,
-          contactEmail,
-          contactLink,
         },
       });
 
