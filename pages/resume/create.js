@@ -125,6 +125,118 @@ function Section({ title, open, onToggle, children, required = false }) {
   );
 }
 
+// ✅ Languages input block (uses context state now)
+function LanguagesInlineSection({ languages, setLanguages }) {
+  const [val, setVal] = useState('');
+
+  const add = () => {
+    const v = String(val || '').trim();
+    if (!v) return;
+    setLanguages((prev) => {
+      const next = Array.isArray(prev) ? [...prev] : [];
+      if (next.some((x) => String(x).toLowerCase() === v.toLowerCase())) return next;
+      next.push(v);
+      return next;
+    });
+    setVal('');
+  };
+
+  const remove = (idx) => {
+    setLanguages((prev) => {
+      const arr = Array.isArray(prev) ? [...prev] : [];
+      arr.splice(idx, 1);
+      return arr;
+    });
+  };
+
+  return (
+    <div style={{ display: 'grid', gap: 10 }}>
+      <div style={{ fontWeight: 800, fontSize: 14, color: '#111827' }}>Languages</div>
+
+      <div style={{ display: 'flex', gap: 10 }}>
+        <input
+          value={val}
+          onChange={(e) => setVal(e.target.value)}
+          placeholder="Add a language (e.g., English — Native)"
+          style={{
+            flex: 1,
+            border: '1px solid #E5E7EB',
+            borderRadius: 10,
+            padding: '10px 12px',
+            fontSize: 14,
+          }}
+          onKeyDown={(e) => {
+            if (e.key === 'Enter') {
+              e.preventDefault();
+              add();
+            }
+          }}
+        />
+        <button
+          type="button"
+          onClick={add}
+          style={{
+            background: ORANGE,
+            color: 'white',
+            border: 'none',
+            borderRadius: 10,
+            padding: '10px 14px',
+            fontWeight: 800,
+            cursor: 'pointer',
+            whiteSpace: 'nowrap',
+          }}
+        >
+          Add
+        </button>
+      </div>
+
+      {Array.isArray(languages) && languages.length > 0 && (
+        <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
+          {languages.map((l, idx) => (
+            <div
+              key={`${l}-${idx}`}
+              style={{
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: 8,
+                border: '1px solid #E5E7EB',
+                borderRadius: 999,
+                padding: '6px 10px',
+                background: '#FAFAFA',
+                fontSize: 13,
+                fontWeight: 700,
+                color: '#374151',
+              }}
+            >
+              <span>{l}</span>
+              <button
+                type="button"
+                onClick={() => remove(idx)}
+                style={{
+                  border: 'none',
+                  background: 'transparent',
+                  cursor: 'pointer',
+                  fontWeight: 900,
+                  color: '#6B7280',
+                  lineHeight: 1,
+                }}
+                aria-label={`Remove ${l}`}
+                title="Remove"
+              >
+                ×
+              </button>
+            </div>
+          ))}
+        </div>
+      )}
+
+      <div style={{ fontSize: 12, color: '#6B7280' }}>
+        Tip: use “Language — Proficiency” format (example: “Spanish — Professional”).
+      </div>
+    </div>
+  );
+}
+
 export default function CreateResumePage() {
   const router = useRouter();
   const chrome = String(router.query.chrome || '').toLowerCase();
@@ -152,6 +264,9 @@ export default function CreateResumePage() {
     setCertifications,
     customSections,
     setCustomSections,
+    // ✅ FIX: use ResumeContext languages (DB-persistent via drafts + saveResume)
+    languages,
+    setLanguages,
     saveEventAt,
     saveResume,
   } = useContext(ResumeContext);
@@ -232,6 +347,7 @@ export default function CreateResumePage() {
       )) ||
     (summary && summary.trim().length > 0) ||
     (skills && skills.length > 0) ||
+    (languages && languages.length > 0) ||
     (experiences &&
       experiences.some(
         (e) =>
@@ -384,6 +500,7 @@ export default function CreateResumePage() {
     educationList: educationList,
     certifications: certifications,
     skills: skills,
+    languages: languages,
     customSections: customSections,
   };
 
@@ -637,6 +754,8 @@ export default function CreateResumePage() {
             onToggle={() => setOpenOptional((v) => !v)}
           >
             <div style={{ display: 'grid', gap: 32 }}>
+              <LanguagesInlineSection languages={languages} setLanguages={setLanguages} />
+
               <SummarySection embedded summary={summary} setSummary={setSummary} />
               <ProjectsSection embedded projects={projects} setProjects={setProjects} />
               <CertificationsSection
@@ -665,7 +784,6 @@ export default function CreateResumePage() {
             open={openTailor}
             onToggle={() => setOpenTailor((v) => !v)}
           >
-            {/* If we have ATS context, show FIRE card instead of Pro Tip */}
             {atsPack ? (
               <div style={{ display: 'grid', gap: 10, marginBottom: 16 }}>
                 <Banner tone="blue">
@@ -684,7 +802,6 @@ export default function CreateResumePage() {
                     </div>
                   )}
 
-                  {/* Only show match/tips if this ATS data is real, not demo */}
                   {hasRealAts ? (
                     <>
                       <div style={{ fontSize: 13, marginBottom: 6 }}>
@@ -724,7 +841,6 @@ export default function CreateResumePage() {
                 </Banner>
               </div>
             ) : (
-              // No ATS pack yet → show FIRE PRO TIP
               <Banner>
                 <div style={{ fontWeight: 800, marginBottom: 4 }}>🔥 Add the fire.</div>
 
@@ -737,7 +853,6 @@ export default function CreateResumePage() {
               </Banner>
             )}
 
-            {/* JD upload / drag-and-drop */}
             <div
               ref={dropRef}
               style={{
@@ -851,7 +966,6 @@ export default function CreateResumePage() {
 
       {/* FLOATING TOOLS TOGGLE + BAR */}
       <div className="fixed bottom-24 right-6 z-20 flex flex-col items-end gap-2">
-        {/* Toggle pill */}
         <button
           type="button"
           onClick={() => setToolsOpen((v) => !v)}
@@ -878,10 +992,8 @@ export default function CreateResumePage() {
           </span>
         </button>
 
-        {/* Tools bar */}
         {toolsOpen && (
           <div className="flex items-center gap-2 bg-white/90 backdrop-blur-sm p-2 rounded-full shadow-2xl border">
-            {/* ATS PDF */}
             {router.query.template === 'hybrid' ? (
               <HybridATSButton data={resumeData}>
                 <div className="bg-teal-600 text-white px-4 py-2 rounded-full font-bold text-xs hover:bg-teal-700 transition-all">
@@ -896,7 +1008,6 @@ export default function CreateResumePage() {
               </ReverseATSButton>
             )}
 
-            {/* DESIGNED PDF */}
             <DesignedPDFButton
               data={resumeData}
               template={router.query.template === 'hybrid' ? 'hybrid' : 'reverse'}
@@ -906,7 +1017,6 @@ export default function CreateResumePage() {
               </div>
             </DesignedPDFButton>
 
-            {/* SAVE */}
             <button
               onClick={saveResume}
               className="bg-green-600 text-white px-4 py-2 rounded-full font-bold text-xs hover:bg-green-700 transition-all"
@@ -914,7 +1024,6 @@ export default function CreateResumePage() {
               Save Resume
             </button>
 
-            {/* PROGRESS */}
             <div className="bg-white px-3 py-1.5 rounded-full flex items-center gap-1.5 border text-xs ml-1">
               <div className="relative">
                 <svg className="w-6 h-6">
@@ -944,7 +1053,6 @@ export default function CreateResumePage() {
               <span className="font-semibold text-gray-600">Ready</span>
             </div>
 
-            {/* NEXT STEP → ONLY WHEN 100% */}
             {isResumeComplete && (
               <button
                 onClick={() => router.push(withChrome('/cover/create'))}
@@ -957,12 +1065,10 @@ export default function CreateResumePage() {
         )}
       </div>
 
-      {/* BULK EXPORT CTA */}
       <div className="mt-6 max-w-4xl mx-auto">
         <BulkExportCTA />
       </div>
 
-      {/* TOAST */}
       {showToast && (
         <div
           style={{
