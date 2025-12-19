@@ -20,7 +20,7 @@ const SPECIALTY_OPTIONS = [
 
 export default function SpotlightFilters({ onChange, initial }) {
   const [filters, setFilters] = useState(initial || DEFAULT_FILTERS);
-  const [expanded, setExpanded] = useState(false);
+  const [expanded, setExpanded] = useState(true); // ✅ always open
 
   useEffect(() => {
     onChange?.(filters);
@@ -57,7 +57,7 @@ export default function SpotlightFilters({ onChange, initial }) {
       <div
         style={{
           display: 'grid',
-          gridTemplateColumns: '1fr auto auto',
+          gridTemplateColumns: '1fr auto',
           gap: 12,
           alignItems: 'center',
         }}
@@ -77,14 +77,6 @@ export default function SpotlightFilters({ onChange, initial }) {
           <option>Newest</option>
           <option>Name A–Z</option>
         </select>
-
-        <button
-          type="button"
-          onClick={() => setExpanded((v) => !v)}
-          style={btnGhost}
-        >
-          {expanded ? 'Hide filters' : 'More filters'}
-        </button>
       </div>
 
       {/* EXPANDED FILTERS */}
@@ -152,9 +144,10 @@ export default function SpotlightFilters({ onChange, initial }) {
                     }))
                   }
                 />
-                <span>{r}</span>
-              </label>
-            ))}
+                  <span>{r}</span>
+                </label>
+              ))}
+            </div>
           </div>
         </div>
       )}
@@ -195,16 +188,6 @@ const checkLabel = {
   gap: 8,
   fontSize: 14,
   color: '#37474F',
-};
-
-const btnGhost = {
-  background: 'white',
-  border: '1px solid #FF7043',
-  color: '#FF7043',
-  borderRadius: 10,
-  padding: '10px 12px',
-  fontWeight: 700,
-  cursor: 'pointer',
 };
 
 const btnClear = {
