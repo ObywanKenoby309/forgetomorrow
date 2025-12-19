@@ -510,9 +510,9 @@ export default function PublicProfile({ user, primaryResume, effectiveVisibility
               </p>
 
               <a
-                href={`/api/resume/public-download?slug=${encodeURIComponent(
-                  slug
-                )}`}
+                href={`/api/resume/public-download?resumeId=${encodeURIComponent(
+                  primaryResume.id
+                )}&slug=${encodeURIComponent(slug)}`}
                 target="_blank"
                 rel="noopener noreferrer"
                 style={{

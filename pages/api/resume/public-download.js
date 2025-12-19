@@ -156,6 +156,18 @@ function PublicResumePdf({ data }) {
   );
 }
 
+function normalizeRoot(builderData) {
+  if (!builderData || typeof builderData !== 'object') return {};
+  // Some saved payloads may nest under resumeData or data
+  return builderData.resumeData || builderData.data || builderData;
+}
+
+function normalizeArray(val) {
+  if (!val) return [];
+  if (Array.isArray(val)) return val;
+  return [];
+}
+
 export default async function handler(req, res) {
   if (req.method !== 'GET') {
     res.setHeader('Allow', ['GET']);
@@ -163,24 +175,24 @@ export default async function handler(req, res) {
   }
 
   try {
-    const { slug } = req.query || {};
-
-    if (!slug || typeof slug !== 'string') {
-      return res.status(400).json({ error: 'Missing or invalid slug' });
-    }
+    const { slug, resumeId } = req.query || {};
 
     // ✅ NEW: session gating
     const session = await getServerSession(req, res, authOptions);
     const viewerEmail = session?.user?.email ? String(session.user.email) : null;
 
-    // Find user + primary resume by slug
+    // We still need the user to enforce visibility rules.
+    if (!slug || typeof slug !== 'string') {
+      return res.status(400).json({ error: 'Missing or invalid slug' });
+    }
+
+    // Find user by slug (visibility + owner checks)
     const user = await prisma.user.findUnique({
       where: { slug },
       select: {
         id: true,
         name: true,
         email: true,
-        role: true,
 
         // ✅ visibility fields
         isProfilePublic: true,
@@ -203,11 +215,11 @@ export default async function handler(req, res) {
       return res.status(404).json({ error: 'User not found' });
     }
 
-    // ✅ NEW: normalize legacy boolean into enum behavior (back-compat)
+    // ✅ normalize legacy boolean into enum behavior (back-compat)
     const effectiveVisibility =
       user.profileVisibility || (user.isProfilePublic ? 'PUBLIC' : 'PRIVATE');
 
-    // ✅ NEW: viewer role lookup (only if logged in)
+    // ✅ viewer role lookup (only if logged in)
     let viewerRole = null;
     if (viewerEmail) {
       const viewer = await prisma.user.findUnique({
@@ -237,23 +249,40 @@ export default async function handler(req, res) {
       return res.status(404).json({ error: 'Not found' });
     }
 
-    const primaryResume =
-      user.resumes && user.resumes.length > 0 ? user.resumes[0] : null;
+    // ✅ Prefer explicit resumeId (deterministic), fallback to current primary
+    let resumeRecord = null;
 
-    if (!primaryResume) {
-      return res.status(404).json({ error: 'No primary resume found' });
+    if (resumeId && typeof resumeId === 'string') {
+      // NOTE: assumes prisma model is `resume` with `userId`. If your model name differs, we’ll adjust.
+      const r = await prisma.resume.findUnique({
+        where: { id: resumeId },
+        select: { id: true, name: true, content: true, userId: true },
+      });
+
+      if (r && r.userId === user.id) {
+        resumeRecord = r;
+      }
     }
 
-    if (!primaryResume.content) {
+    if (!resumeRecord) {
+      resumeRecord =
+        user.resumes && user.resumes.length > 0 ? user.resumes[0] : null;
+    }
+
+    if (!resumeRecord) {
+      return res.status(404).json({ error: 'No resume found' });
+    }
+
+    if (!resumeRecord.content) {
       return res.status(400).json({ error: 'Resume has no saved content' });
     }
 
     let builderData;
     try {
       builderData =
-        typeof primaryResume.content === 'string'
-          ? JSON.parse(primaryResume.content)
-          : primaryResume.content;
+        typeof resumeRecord.content === 'string'
+          ? JSON.parse(resumeRecord.content)
+          : resumeRecord.content;
     } catch (err) {
       console.error('[public-download] Failed to parse resume.content', err);
       return res
@@ -261,7 +290,38 @@ export default async function handler(req, res) {
         .json({ error: 'Failed to parse stored resume content' });
     }
 
-    const fd = builderData.formData || {};
+    const root = normalizeRoot(builderData);
+    const fd = root.formData || root.personalInfo || {};
+
+    // ✅ Normalize likely field-name variants so saved resumes render
+    const summary =
+      root.summary ||
+      root.professionalSummary ||
+      root.about ||
+      root.summaryText ||
+      '';
+
+    const workExperiences =
+      normalizeArray(root.experiences) ||
+      normalizeArray(root.workExperiences) ||
+      normalizeArray(root.workExperience) ||
+      [];
+
+    const educationList =
+      normalizeArray(root.educationList) ||
+      normalizeArray(root.education) ||
+      normalizeArray(root.educations) ||
+      [];
+
+    const certifications =
+      normalizeArray(root.certifications) ||
+      normalizeArray(root.certificationList) ||
+      [];
+
+    const skills =
+      normalizeArray(root.skills) ||
+      normalizeArray(root.skillList) ||
+      [];
 
     // Map builder data -> PDF data shape
     const resumeData = {
@@ -276,17 +336,15 @@ export default async function handler(req, res) {
         portfolio: fd.portfolio || '',
         ftProfile: fd.forgeUrl || fd.ftProfile || '',
       },
-      summary: builderData.summary || '',
-      workExperiences: builderData.experiences || [],
-      projects: builderData.projects || [],
-      educationList: builderData.educationList || [],
-      certifications: builderData.certifications || [],
-      skills: builderData.skills || [],
-      customSections: builderData.customSections || [],
+      summary,
+      workExperiences,
+      educationList,
+      certifications,
+      skills,
     };
 
     const baseName =
-      (primaryResume.name && primaryResume.name.trim()) ||
+      (resumeRecord.name && resumeRecord.name.trim()) ||
       (user.name && `${user.name.replace(/\s+/g, '_')}_Resume`) ||
       'resume';
 
