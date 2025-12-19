@@ -1,12 +1,11 @@
 // components/profile/ProfilePreferences.js
 import React, { useState } from 'react';
-import Collapsible from '@/components/ui/Collapsible';
 
 export default function ProfilePreferences({
   // controlled values
-  prefStatus,        // "Actively Seeking" | "Open to Opportunities" | "Not Seeking" | null
-  prefWorkType,      // "Remote" | "Hybrid" | "On-site" | "Flexible" | null
-  prefRelocate,      // "Yes" | "No" | null
+  prefStatus, // "Actively Seeking" | "Open to Opportunities" | "Not Seeking" | null
+  prefWorkType, // "Remote" | "Hybrid" | "On-site" | "Flexible" | null
+  prefRelocate, // "Yes" | "No" | null
   prefLocations,
   prefStart,
 
@@ -22,8 +21,12 @@ export default function ProfilePreferences({
   onAddLocation,
   onRemoveLocation,
   onChangeStart,
+
+  // legacy/unused display props (kept for compatibility, not required)
+  defaultOpen,
+  initialOpen,
 }) {
-  // Local draft for add-location input
+  // Local draft for add-location input (UI only)
   const [locDraft, setLocDraft] = useState('');
 
   // Wire to either setters (preferred) or legacy handlers if provided
@@ -71,176 +74,26 @@ export default function ProfilePreferences({
   const locations = Array.isArray(prefLocations) ? prefLocations : [];
 
   return (
-    <Collapsible title="Work Preferences" defaultOpen={false}>
-      <section style={{ display: 'grid', gap: 16 }}>
-        {/* Top row: status + work type + relocate (3 columns) */}
-        <div
-          style={{
-            display: 'grid',
-            gridTemplateColumns: 'repeat(3, minmax(0, 1fr))',
-            gap: 16,
-          }}
-        >
-          {/* Current work status */}
-          <label
-            style={{
-              display: 'grid',
-              gap: 6,
-              color: '#455A64',
-              fontWeight: 600,
-              fontSize: 13,
-            }}
-          >
-            <span>Current work status</span>
-            <select
-              value={prefStatus ?? ''}
-              onChange={(e) => handleStatus(e.target.value || null)}
-              style={{
-                border: '1px solid #ddd',
-                borderRadius: 10,
-                padding: '10px 12px',
-                outline: 'none',
-                background: 'white',
-                width: '100%',
-              }}
-            >
-              <option value="">— Select —</option>
-              <option value="Actively Seeking">Actively Seeking</option>
-              <option value="Open to Opportunities">Open to Opportunities</option>
-              <option value="Not Seeking">Not Seeking</option>
-            </select>
-          </label>
-
-          {/* Preferred work type */}
-          <label
-            style={{
-              display: 'grid',
-              gap: 6,
-              color: '#455A64',
-              fontWeight: 600,
-              fontSize: 13,
-            }}
-          >
-            <span>Preferred work type</span>
-            <select
-              value={prefWorkType ?? ''}
-              onChange={(e) => handleWorkType(e.target.value || null)}
-              style={{
-                border: '1px solid #ddd',
-                borderRadius: 10,
-                padding: '10px 12px',
-                outline: 'none',
-                background: 'white',
-                width: '100%',
-              }}
-            >
-              <option value="">— Select —</option>
-              <option value="Remote">Remote</option>
-              <option value="Hybrid">Hybrid</option>
-              <option value="On-site">On-site</option>
-              <option value="Flexible">Flexible</option>
-            </select>
-          </label>
-
-          {/* Willing to relocate */}
-          <label
-            style={{
-              display: 'grid',
-              gap: 6,
-              color: '#455A64',
-              fontWeight: 600,
-              fontSize: 13,
-            }}
-          >
-            <span>Willing to relocate</span>
-            <select
-              value={prefRelocate ?? ''}
-              onChange={(e) => handleRelocate(e.target.value || null)}
-              style={{
-                border: '1px solid #ddd',
-                borderRadius: 10,
-                padding: '10px 12px',
-                outline: 'none',
-                background: 'white',
-                width: '100%',
-              }}
-            >
-              <option value="">— Select —</option>
-              <option value="Yes">Yes</option>
-              <option value="No">No</option>
-            </select>
-          </label>
-        </div>
-
-        {/* Locations (chips + inline add) */}
-        <div>
-          <div
-            style={{
-              display: 'flex',
-              justifyContent: 'space-between',
-              alignItems: 'center',
-              marginBottom: 6,
-            }}
-          >
-            <div style={{ color: '#455A64', fontWeight: 600, fontSize: 13 }}>
-              Preferred locations
-            </div>
-
-            {/* Inline add */}
-            <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
-              <input
-                value={locDraft}
-                onChange={(e) => setLocDraft(e.target.value)}
-                onKeyDown={(e) => {
-                  if (e.key === 'Enter') {
-                    e.preventDefault();
-                    handleAddLocation(locDraft);
-                    setLocDraft('');
-                  }
-                }}
-                placeholder="Add location (e.g., Nashville, TN)"
-                style={{
-                  border: '1px solid #ddd',
-                  borderRadius: 10,
-                  padding: '8px 10px',
-                  outline: 'none',
-                  background: 'white',
-                  minWidth: 220,
-                }}
-              />
-              <button
-                type="button"
-                onClick={() => {
-                  handleAddLocation(locDraft);
-                  setLocDraft('');
-                }}
-                style={{
-                  background: 'white',
-                  color: '#FF7043',
-                  border: '1px solid #FF7043',
-                  borderRadius: 10,
-                  padding: '8px 12px',
-                  fontWeight: 700,
-                  cursor: 'pointer',
-                }}
-              >
-                Add
-              </button>
-            </div>
-          </div>
-
-          {(locations.length ?? 0) === 0 ? (
-            <div style={{ color: '#607D8B' }}>No locations yet.</div>
-          ) : (
-            <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
-              {locations.map((t) => (
-                <Chip key={t} text={t} onRemove={() => handleRemoveLocation(t)} />
-              ))}
-            </div>
-          )}
-        </div>
-
-        {/* Availability date */}
+    <section
+      style={{
+        background: 'white',
+        borderRadius: 12,
+        padding: 16,
+        boxShadow: '0 1px 3px rgba(0,0,0,0.04)',
+        border: '1px solid #e6e9ef',
+        display: 'grid',
+        gap: 16,
+      }}
+    >
+      {/* Top row: status + work type + relocate (3 columns) */}
+      <div
+        style={{
+          display: 'grid',
+          gridTemplateColumns: 'repeat(3, minmax(0, 1fr))',
+          gap: 16,
+        }}
+      >
+        {/* Current work status */}
         <label
           style={{
             display: 'grid',
@@ -250,11 +103,10 @@ export default function ProfilePreferences({
             fontSize: 13,
           }}
         >
-          <span>Earliest start date (optional)</span>
-          <input
-            type="date"
-            value={prefStart ?? ''}
-            onChange={(e) => handleStart(e.target.value)}
+          <span>Current work status</span>
+          <select
+            value={prefStatus ?? ''}
+            onChange={(e) => handleStatus(e.target.value || null)}
             style={{
               border: '1px solid #ddd',
               borderRadius: 10,
@@ -263,10 +115,171 @@ export default function ProfilePreferences({
               background: 'white',
               width: '100%',
             }}
-          />
+          >
+            <option value="">— Select —</option>
+            <option value="Actively Seeking">Actively Seeking</option>
+            <option value="Open to Opportunities">Open to Opportunities</option>
+            <option value="Not Seeking">Not Seeking</option>
+          </select>
         </label>
-      </section>
-    </Collapsible>
+
+        {/* Preferred work type */}
+        <label
+          style={{
+            display: 'grid',
+            gap: 6,
+            color: '#455A64',
+            fontWeight: 600,
+            fontSize: 13,
+          }}
+        >
+          <span>Preferred work type</span>
+          <select
+            value={prefWorkType ?? ''}
+            onChange={(e) => handleWorkType(e.target.value || null)}
+            style={{
+              border: '1px solid #ddd',
+              borderRadius: 10,
+              padding: '10px 12px',
+              outline: 'none',
+              background: 'white',
+              width: '100%',
+            }}
+          >
+            <option value="">— Select —</option>
+            <option value="Remote">Remote</option>
+            <option value="Hybrid">Hybrid</option>
+            <option value="On-site">On-site</option>
+            <option value="Flexible">Flexible</option>
+          </select>
+        </label>
+
+        {/* Willing to relocate */}
+        <label
+          style={{
+            display: 'grid',
+            gap: 6,
+            color: '#455A64',
+            fontWeight: 600,
+            fontSize: 13,
+          }}
+        >
+          <span>Willing to relocate</span>
+          <select
+            value={prefRelocate ?? ''}
+            onChange={(e) => handleRelocate(e.target.value || null)}
+            style={{
+              border: '1px solid #ddd',
+              borderRadius: 10,
+              padding: '10px 12px',
+              outline: 'none',
+              background: 'white',
+              width: '100%',
+            }}
+          >
+            <option value="">— Select —</option>
+            <option value="Yes">Yes</option>
+            <option value="No">No</option>
+          </select>
+        </label>
+      </div>
+
+      {/* Locations (chips + inline add) */}
+      <div>
+        <div
+          style={{
+            display: 'flex',
+            justifyContent: 'space-between',
+            alignItems: 'center',
+            marginBottom: 6,
+            gap: 10,
+            flexWrap: 'wrap',
+          }}
+        >
+          <div style={{ color: '#455A64', fontWeight: 600, fontSize: 13 }}>
+            Preferred locations
+          </div>
+
+          {/* Inline add */}
+          <div style={{ display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap' }}>
+            <input
+              value={locDraft}
+              onChange={(e) => setLocDraft(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter') {
+                  e.preventDefault();
+                  handleAddLocation(locDraft);
+                  setLocDraft('');
+                }
+              }}
+              placeholder="Add location (e.g., Nashville, TN)"
+              style={{
+                border: '1px solid #ddd',
+                borderRadius: 10,
+                padding: '8px 10px',
+                outline: 'none',
+                background: 'white',
+                minWidth: 220,
+              }}
+            />
+            <button
+              type="button"
+              onClick={() => {
+                handleAddLocation(locDraft);
+                setLocDraft('');
+              }}
+              style={{
+                background: 'white',
+                color: '#FF7043',
+                border: '1px solid #FF7043',
+                borderRadius: 10,
+                padding: '8px 12px',
+                fontWeight: 700,
+                cursor: 'pointer',
+              }}
+            >
+              Add
+            </button>
+          </div>
+        </div>
+
+        {locations.length === 0 ? (
+          <div style={{ color: '#607D8B' }}>No locations yet.</div>
+        ) : (
+          <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+            {locations.map((t) => (
+              <Chip key={t} text={t} onRemove={() => handleRemoveLocation(t)} />
+            ))}
+          </div>
+        )}
+      </div>
+
+      {/* Availability date */}
+      <label
+        style={{
+          display: 'grid',
+          gap: 6,
+          color: '#455A64',
+          fontWeight: 600,
+          fontSize: 13,
+        }}
+      >
+        <span>Earliest start date (optional)</span>
+        <input
+          type="date"
+          value={prefStart ?? ''}
+          onChange={(e) => handleStart(e.target.value)}
+          style={{
+            border: '1px solid #ddd',
+            borderRadius: 10,
+            padding: '10px 12px',
+            outline: 'none',
+            background: 'white',
+            width: '100%',
+          }}
+        />
+      </label>
+    </section>
   );
 }
 

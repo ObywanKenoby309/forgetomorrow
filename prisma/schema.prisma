@@ -244,7 +244,8 @@ model UserDraft {
 
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
-  @@unique([userId, key])
+  // ✅ Only change: explicitly name the compound unique so `userId_key` is stable
+  @@unique([userId, key], name: "userId_key")
   @@index([userId])
   @@map("user_drafts")
 }
