@@ -16,18 +16,17 @@ export default function FeedPage() {
         right={<SeekerRightColumn variant="feed" />}
         activeNav="feed"
         header={
-          {/* Glass header – matches feed style */}
           <section
             aria-label="Your personalized ForgeTomorrow feed header"
             style={{
-              background: "rgba(255, 255, 255, 0.15)", // semi-transparent glass
+              background: "rgba(255, 255, 255, 0.15)",
               backdropFilter: "blur(12px)",
               borderRadius: 16,
               border: "1px solid rgba(255, 255, 255, 0.2)",
               boxShadow: "0 8px 32px rgba(0, 0, 0, 0.1)",
               padding: "24px 16px",
               margin: "0 auto",
-              maxWidth: "1200px", // wide enough to match full layout
+              maxWidth: "1200px",
               textAlign: "center",
             }}
           >
@@ -35,7 +34,7 @@ export default function FeedPage() {
               style={{
                 margin: 0,
                 color: "#FF7043",
-                fontSize: 32, // slightly bigger for emphasis
+                fontSize: 32,
                 fontWeight: 800,
               }}
             >
@@ -54,7 +53,6 @@ export default function FeedPage() {
           </section>
         }
       >
-        {/* Glass feed container – stretched wider to match header */}
         <div
           style={{
             background: "rgba(255, 255, 255, 0.15)",
@@ -64,23 +62,15 @@ export default function FeedPage() {
             boxShadow: "0 8px 32px rgba(0, 0, 0, 0.1)",
             padding: "24px 16px",
             margin: "24px auto 0",
-            maxWidth: "1200px", // wider to match header/title card width
+            maxWidth: "1200px",
             minHeight: "60vh",
           }}
         >
-          {/* Filter bar with white backing on "Showing" */}
-          <div
-            style={{
-              display: "flex",
-              alignItems: "center",
-              gap: 12,
-              marginBottom: 20,
-            }}
-          >
+          <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 20 }}>
             <span
               style={{
                 backgroundColor: "#ffffff",
-                padding: "6px 12px", // a bit more padding for polish
+                padding: "6px 12px",
                 borderRadius: 10,
                 fontSize: 14,
                 fontWeight: 600,
@@ -91,13 +81,7 @@ export default function FeedPage() {
             >
               Showing
             </span>
-            <span
-              style={{
-                fontSize: 14,
-                fontWeight: 500,
-                color: "#4B5563",
-              }}
-            >
+            <span style={{ fontSize: 14, fontWeight: 500, color: "#4B5563" }}>
               Community + Remote Jobs ▼
             </span>
           </div>
