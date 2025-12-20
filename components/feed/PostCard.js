@@ -1,4 +1,3 @@
-// components/feed/PostCard.js
 import { useState } from 'react';
 import QuickEmojiBar from './QuickEmojiBar';
 
@@ -9,22 +8,85 @@ export default function PostCard({
   onDelete,
   onReact,
   currentUserId,
-  currentUserName, // ✅ ADDED
+  currentUserName,
+  onBlockUser, // ✅ callback from Feed
 }) {
   const [showReplyInput, setShowReplyInput] = useState(false);
   const [replyText, setReplyText] = useState('');
   const [hoveredEmoji, setHoveredEmoji] = useState(null);
-  const [reactionUsers, setReactionUsers] = useState({}); // { emoji: "Name, Name" }
+  const [reactionUsers, setReactionUsers] = useState({});
+
+  const isOwner = post.authorId === currentUserId;
 
   const handleReplySubmit = () => {
-    if (replyText.trim()) {
-      onReply(post.id, replyText.trim());
-      setReplyText('');
-      setShowReplyInput(false);
+    if (!replyText.trim()) return;
+    onReply(post.id, replyText.trim());
+    setReplyText('');
+    setShowReplyInput(false);
+  };
+
+  // ─────────────────────────────────────────────────────────────
+  // REPORT POST (non-OP only)
+  // ─────────────────────────────────────────────────────────────
+  const handleReportPost = async () => {
+    const reason = window.prompt(
+      'Tell us briefly what happened. This will be sent to the ForgeTomorrow moderation team.'
+    );
+    if (reason === null) return;
+
+    try {
+      const res = await fetch('/api/feed/report', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          postId: post.id,
+          targetUserId: post.authorId,
+          reason: reason.trim(),
+        }),
+      });
+
+      if (!res.ok) {
+        alert('We could not submit your report. Please try again.');
+        return;
+      }
+
+      alert('Thank you. Your report has been submitted.');
+    } catch {
+      alert('We could not submit your report. Please try again.');
     }
   };
 
-  // Extract reaction data
+  // ─────────────────────────────────────────────────────────────
+  // BLOCK USER (non-OP only)
+  // ─────────────────────────────────────────────────────────────
+  const handleBlockUser = async () => {
+    const confirmed = window.confirm(
+      'Block this member? You will no longer see their posts or messages.'
+    );
+    if (!confirmed) return;
+
+    try {
+      const res = await fetch('/api/signal/block', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ targetUserId: post.authorId }),
+      });
+
+      if (!res.ok) {
+        alert('We could not block this member. Please try again.');
+        return;
+      }
+
+      alert('Member blocked.');
+      onBlockUser?.(post.authorId); // 🔥 immediate client-side removal
+    } catch {
+      alert('We could not block this member. Please try again.');
+    }
+  };
+
+  // ─────────────────────────────────────────────────────────────
+  // REACTIONS
+  // ─────────────────────────────────────────────────────────────
   const selectedEmojis =
     post.reactions
       ?.filter(
@@ -40,7 +102,6 @@ export default function PostCard({
       return acc;
     }, {}) || {};
 
-  // Fetch user names on hover (cached per emoji)
   const fetchUsersForEmoji = async (emoji) => {
     if (reactionUsers[emoji]) return;
 
@@ -56,26 +117,40 @@ export default function PostCard({
 
       if (res.ok) {
         const data = await res.json();
-        const names = data.names || [];
-        const formatted = names
-          .map((name) => (name === currentUserName ? 'You' : name))
+        const names = (data.names || [])
+          .map((n) => (n === currentUserName ? 'You' : n))
           .join(', ');
-        setReactionUsers((prev) => ({ ...prev, [emoji]: formatted }));
+        setReactionUsers((prev) => ({ ...prev, [emoji]: names }));
       }
-    } catch (err) {
-      console.error('Failed to fetch reaction users', err);
-    }
+    } catch {}
   };
 
-  const getTooltipText = (emoji) => {
-    const users = reactionUsers[emoji];
-    if (!users) return 'Loading...';
-    return `${users} reacted with ${emoji}`;
-  };
+  const getTooltipText = (emoji) =>
+    reactionUsers[emoji]
+      ? `${reactionUsers[emoji]} reacted with ${emoji}`
+      : 'Loading…';
 
   return (
-    <div className="bg-white rounded-lg shadow p-5 space-y-4 relative">
-      {/* Author */}
+    <div className="relative bg-white rounded-lg shadow p-5 space-y-4">
+      {/* TOP-RIGHT ACTIONS (non-OP) */}
+      {!isOwner && (
+        <div className="absolute top-3 right-3 flex gap-2">
+          <button
+            onClick={handleReportPost}
+            className="text-xs px-2 py-1 border border-gray-300 rounded-md text-gray-700 hover:bg-gray-50"
+          >
+            Report
+          </button>
+          <button
+            onClick={handleBlockUser}
+            className="text-xs px-2 py-1 border border-red-300 rounded-md text-red-700 hover:bg-red-50"
+          >
+            Block
+          </button>
+        </div>
+      )}
+
+      {/* AUTHOR */}
       <div className="flex items-start gap-3">
         {post.authorAvatar ? (
           <img
@@ -96,27 +171,10 @@ export default function PostCard({
         </div>
       </div>
 
-      {/* Body */}
+      {/* BODY */}
       <p className="whitespace-pre-wrap">{post.body}</p>
 
-      {/* Attachments */}
-      {post.attachments?.length > 0 && (
-        <div className="grid grid-cols-2 gap-3">
-          {post.attachments.map((a, i) => (
-            <div key={i}>
-              {a.type === 'image' && (
-                <img src={a.url} alt={a.name} className="rounded" />
-              )}
-              {a.type === 'video' && (
-                <video src={a.url} controls className="rounded" />
-              )}
-              {a.type === 'link' && <a href={a.url}>{a.name}</a>}
-            </div>
-          ))}
-        </div>
-      )}
-
-      {/* Reaction Bar with Tooltip */}
+      {/* REACTIONS */}
       <div className="relative">
         <QuickEmojiBar
           onPick={(emoji) => onReact(post.id, emoji)}
@@ -129,13 +187,13 @@ export default function PostCard({
           onMouseLeave={() => setHoveredEmoji(null)}
         />
         {hoveredEmoji && reactionCounts[hoveredEmoji] > 0 && (
-          <div className="absolute bottom-full left-0 mb-3 bg-gray-900 text-white text-sm rounded-lg p-3 shadow-xl z-20 whitespace-nowrap max-w-xs">
+          <div className="absolute bottom-full left-0 mb-3 bg-gray-900 text-white text-sm rounded-lg p-3 shadow-xl z-20 whitespace-nowrap">
             {getTooltipText(hoveredEmoji)}
           </div>
         )}
       </div>
 
-      {/* Summary */}
+      {/* SUMMARY */}
       <div className="flex items-center gap-4 text-sm text-gray-600">
         {post.likes > 0 && (
           <span className="bg-gray-100 px-2.5 py-1 rounded-full">
@@ -147,13 +205,13 @@ export default function PostCard({
         </button>
       </div>
 
-      {/* Reply */}
+      {/* REPLY */}
       {showReplyInput ? (
         <div className="flex gap-2">
           <textarea
             value={replyText}
             onChange={(e) => setReplyText(e.target.value)}
-            placeholder="Write a reply..."
+            placeholder="Write a reply…"
             className="flex-1 border rounded p-2"
             rows={2}
           />
@@ -174,14 +232,16 @@ export default function PostCard({
         </button>
       )}
 
-      {/* Delete */}
-      {post.authorId === currentUserId && (
-        <button
-          onClick={() => onDelete(post.id)}
-          className="text-red-600 text-sm hover:underline"
-        >
-          Delete
-        </button>
+      {/* BOTTOM-RIGHT DELETE (OP ONLY) */}
+      {isOwner && (
+        <div className="flex justify-end">
+          <button
+            onClick={() => onDelete(post.id)}
+            className="text-xs px-2 py-1 border border-red-300 rounded-md text-red-700 hover:bg-red-50"
+          >
+            Delete
+          </button>
+        </div>
       )}
     </div>
   );
