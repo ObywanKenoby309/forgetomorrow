@@ -46,7 +46,6 @@ export default function PostCommentsModal({ post, onClose, onReply }) {
           ✕
         </button>
 
-        {/* header with avatar */}
         <header className="mb-4 flex items-center gap-3">
           {post.authorAvatar ? (
             <img
@@ -69,7 +68,6 @@ export default function PostCommentsModal({ post, onClose, onReply }) {
 
         <p className="mb-4 whitespace-pre-wrap">{post.body}</p>
 
-        {/* existing comments */}
         <div className="border-t pt-4 space-y-3 max-h-[50vh] overflow-y-auto">
           {post.comments.length === 0 ? (
             <div className="text-sm text-gray-500">
@@ -104,8 +102,7 @@ export default function PostCommentsModal({ post, onClose, onReply }) {
           )}
         </div>
 
-        {/* composer + emoji bar */}
-        <div className="mt-4 space-y-2">
+        <div className="mt-4 space-y-3">
           <textarea
             value={text}
             onChange={(e) => setText(e.target.value)}

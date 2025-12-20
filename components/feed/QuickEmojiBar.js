@@ -1,30 +1,39 @@
 // components/feed/QuickEmojiBar.js
-export default function QuickEmojiBar({ onPick }) {
+export default function QuickEmojiBar({ onPick, selectedEmojis = [], reactionCounts = {} }) {
   const emojis = ['👍', '🔥', '🎉', '👏', '❤️'];
 
   const handleClick = (emoji) => {
-    console.log('[EMOJI BAR] emoji clicked', {
-      emoji,
-      hasOnPick: typeof onPick === 'function',
-    });
     if (typeof onPick === 'function') {
       onPick(emoji);
     }
   };
 
   return (
-    <div className="flex flex-wrap items-center gap-1 text-lg mt-1">
-      {emojis.map((emoji) => (
-        <button
-          key={emoji}
-          type="button"
-          onClick={() => handleClick(emoji)}
-          className="px-2 py-1 rounded-md hover:bg-gray-100 focus:outline-none focus:ring-1 focus:ring-gray-300"
-          aria-label={`Add ${emoji}`}
-        >
-          {emoji}
-        </button>
-      ))}
+    <div className="flex items-center gap-2 mt-2 flex-wrap">
+      {emojis.map((emoji) => {
+        const count = reactionCounts[emoji] || 0;
+        const isSelected = selectedEmojis.includes(emoji);
+
+        return (
+          <button
+            key={emoji}
+            type="button"
+            onClick={() => handleClick(emoji)}
+            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-base font-medium transition-all duration-200 border ${
+              isSelected
+                ? 'bg-blue-100 border-blue-300 text-blue-800 shadow-sm'
+                : 'bg-gray-100 border-transparent hover:bg-gray-200 text-gray-700 hover:shadow'
+            }`}
+            aria-label={isSelected ? `Remove ${emoji}` : `Add ${emoji}`}
+            title={isSelected ? `Remove ${emoji}` : `Add ${emoji}`}
+          >
+            <span className="text-xl">{emoji}</span>
+            {count > 0 && (
+              <span className="text-xs text-gray-600 font-semibold">{count}</span>
+            )}
+          </button>
+        );
+      })}
     </div>
   );
 }

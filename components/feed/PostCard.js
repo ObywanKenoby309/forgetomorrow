@@ -1,8 +1,6 @@
 // components/feed/PostCard.js
 import { useState } from 'react';
-import { useRouter } from 'next/router';
 import QuickEmojiBar from './QuickEmojiBar';
-import MemberAvatarActions from '../member/MemberAvatarActions';
 
 export default function PostCard({
   post,
@@ -12,314 +10,120 @@ export default function PostCard({
   onReact,
   currentUserId,
 }) {
-  const router = useRouter();
+  const [showReplyInput, setShowReplyInput] = useState(false);
+  const [replyText, setReplyText] = useState('');
 
-  const [reply, setReply] = useState('');
-  const [reported, setReported] = useState(false);
-  const [reportMessage, setReportMessage] = useState('');
-
-  const chrome = String(router.query.chrome || '').toLowerCase();
-  const withChrome = (path) =>
-    chrome ? `${path}${path.includes('?') ? '&' : '?'}chrome=${chrome}` : path;
-
-  const isOwner = currentUserId && post.authorId === currentUserId;
-
-  const totalComments = Array.isArray(post.comments)
-    ? post.comments.length
-    : 0;
-  const hasComments = totalComments > 0;
-  const previewCount = 2;
-
-  const sendReply = () => {
-    const t = reply.trim();
-    if (!t) return;
-    onReply?.(post.id, t);
-    setReply('');
-  };
-
-  const handleDeleteClick = () => {
-    if (!onDelete) return;
-    onDelete(post.id);
-  };
-
-  const handleReportClick = async () => {
-    if (reported) return;
-
-    try {
-      const res = await fetch('/api/feed/report', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ postId: post.id }),
-      });
-
-      if (!res.ok) {
-        console.error('Feed REPORT failed:', await res.text());
-        setReportMessage(
-          "We couldn't submit your report. Please try again or contact support."
-        );
-        return;
-      }
-
-      setReported(true);
-      setReportMessage(
-        'Your report has been submitted. Our team will review this post.'
-      );
-    } catch (err) {
-      console.error('Feed REPORT error:', err);
-      setReportMessage(
-        "We couldn't submit your report. Please try again or contact support."
-      );
+  const handleReplySubmit = () => {
+    if (replyText.trim()) {
+      onReply(post.id, replyText.trim());
+      setReplyText('');
+      setShowReplyInput(false);
     }
   };
 
-  const createdAtLabel = (() => {
-    try {
-      const d = new Date(post.createdAt);
-      return d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-    } catch {
-      return '';
-    }
-  })();
+  // Extract reaction data for QuickEmojiBar
+  const selectedEmojis = post.reactions
+    ?.filter(r => r.users?.includes(currentUserId) || r.userIds?.includes(currentUserId))
+    ?.map(r => r.emoji) || [];
 
-  // Aggregate reactions like 🔥 2, ❤️ 1
-  const reactionCounts = (() => {
-    const counts = {};
-    if (Array.isArray(post.reactions)) {
-      for (const r of post.reactions) {
-        if (!r || !r.emoji) continue;
-        counts[r.emoji] = (counts[r.emoji] || 0) + 1;
-      }
-    }
-    return counts;
-  })();
-
-  const hasReactions = Object.keys(reactionCounts).length > 0;
-
-  const authorId = post.authorId || '';
-  const authorName =
-    post.author ||
-    post.authorName ||
-    [post.authorFirstName, post.authorLastName].filter(Boolean).join(' ') ||
-    'Member';
+  const reactionCounts = post.reactions?.reduce((acc, r) => {
+    acc[r.emoji] = r.count || 0;
+    return acc;
+  }, {}) || {};
 
   return (
-    <article
-      id={`post-${post.id}`}
-      className="bg-white rounded-lg shadow p-4 relative"
-    >
-      {/* header with avatar + member actions wrapper */}
-      <header className="mb-2 flex items-center gap-3">
-        <MemberAvatarActions
-          targetUserId={authorId}
-          targetName={authorName}
-        >
-          <button
-            type="button"
-            className="flex items-center gap-3 text-left cursor-pointer"
-          >
-            {post.authorAvatar ? (
-              <img
-                src={post.authorAvatar}
-                alt={authorName}
-                className="w-9 h-9 rounded-full object-cover bg-gray-200 flex-shrink-0"
-              />
-            ) : (
-              <div className="w-9 h-9 rounded-full bg-gray-200 flex items-center justify-center text-xs text-gray-500 flex-shrink-0">
-                {authorName?.charAt(0)?.toUpperCase() || '?'}
-              </div>
-            )}
-            <div>
-              <div className="font-semibold">{authorName}</div>
-              <div className="text-xs text-gray-500">
-                {createdAtLabel}
-                {' • '}
-                {post.type === 'personal' ? 'Personal' : 'Business'}
-              </div>
-            </div>
-          </button>
-        </MemberAvatarActions>
-      </header>
+    <div className="bg-white rounded-lg shadow p-5 space-y-4">
+      {/* Author */}
+      <div className="flex items-start gap-3">
+        {post.authorAvatar ? (
+          <img src={post.authorAvatar} alt={post.author} className="w-10 h-10 rounded-full" />
+        ) : (
+          <div className="w-10 h-10 rounded-full bg-gray-200 flex items-center justify-center text-gray-500">
+            {post.author?.charAt(0)?.toUpperCase()}
+          </div>
+        )}
+        <div>
+          <div className="font-semibold">{post.author}</div>
+          <div className="text-xs text-gray-500">
+            {new Date(post.createdAt).toLocaleString()} • {post.type}
+          </div>
+        </div>
+      </div>
 
-      {/* body text */}
-      <p className="mb-3 whitespace-pre-wrap">{post.body}</p>
+      {/* Body */}
+      <p className="whitespace-pre-wrap">{post.body}</p>
 
-      {/* attachments */}
-      {Array.isArray(post.attachments) && post.attachments.length > 0 && (
-        <div className="mb-3 grid grid-cols-1 sm:grid-cols-2 gap-3">
-          {post.attachments.map((a, idx) => (
-            <div
-              key={idx}
-              className="relative border rounded-md p-2 bg-gray-50 flex flex-col gap-2"
-            >
-              {a.type === 'image' && (
-                <img
-                  src={a.url}
-                  alt={a.name || 'image'}
-                  className="w-full max-h-96 object-contain rounded"
-                />
-              )}
-              {a.type === 'video' && (
-                <video
-                  src={a.url}
-                  controls
-                  className="w-full max-h-96 object-contain rounded"
-                />
-              )}
-              {a.type === 'link' && (
-                <a
-                  href={a.url}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="text-sm text-blue-600 underline break-all"
-                >
-                  {a.url}
-                </a>
-              )}
-              <div className="flex items-center justify-between text-xs text-gray-600">
-                <span className="truncate">{a.name}</span>
-              </div>
+      {/* Attachments (if any) */}
+      {post.attachments?.length > 0 && (
+        <div className="grid grid-cols-2 gap-3">
+          {post.attachments.map((a, i) => (
+            <div key={i}>
+              {a.type === 'image' && <img src={a.url} alt={a.name} className="rounded" />}
+              {a.type === 'video' && <video src={a.url} controls className="rounded" />}
+              {a.type === 'link' && <a href={a.url}>{a.name}</a>}
             </div>
           ))}
         </div>
       )}
 
-      {/* meta row */}
-      <div className="text-sm text-gray-600 mb-2 flex items-center gap-4">
-        <span>👍 {post.likes ?? 0}</span>
+      {/* Reaction Bar */}
+      <QuickEmojiBar
+        onPick={(emoji) => onReact(post.id, emoji)}
+        selectedEmojis={selectedEmojis}
+        reactionCounts={reactionCounts}
+      />
+
+      {/* Summary */}
+      <div className="flex items-center gap-4 text-sm text-gray-600">
+        {post.likes > 0 && (
+          <span className="bg-gray-100 px-2.5 py-1 rounded-full">
+            {post.likes} reactions
+          </span>
+        )}
         <button
-          type="button"
-          onClick={() => onOpenComments?.(post)}
+          onClick={() => onOpenComments(post)}
           className="hover:underline"
-          title="View comments"
         >
-          💬 {totalComments} Comments
+          {post.comments.length} comments
         </button>
       </div>
 
-      {/* reactions row (emoji chips) */}
-      {hasReactions && (
-        <div className="text-sm text-gray-600 mb-3 flex flex-wrap gap-2">
-          {Object.entries(reactionCounts).map(([emoji, count]) => (
-            <span
-              key={emoji}
-              className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-gray-100"
-            >
-              <span>{emoji}</span>
-              <span className="text-xs text-gray-700">{count}</span>
-            </span>
-          ))}
-        </div>
-      )}
-
-      {/* comments preview */}
-      {hasComments && (
-        <div className="space-y-2 mb-2">
-          {(post.comments || []).slice(0, previewCount).map((c, i) => {
-            const commentUserId =
-              c.userId || c.byUserId || c.authorId || null;
-            const commentName = c.by || 'Member';
-
-            return (
-              <div key={i} className="text-sm flex items-start gap-2">
-                <MemberAvatarActions
-                  targetUserId={commentUserId}
-                  targetName={commentName}
-                >
-                  <button
-                    type="button"
-                    className="mt-0.5 flex-shrink-0 cursor-pointer flex items-center gap-2"
-                  >
-                    {c.avatarUrl ? (
-                      <img
-                        src={c.avatarUrl}
-                        alt={commentName}
-                        className="w-6 h-6 rounded-full object-cover bg-gray-200"
-                      />
-                    ) : (
-                      <div className="w-6 h-6 rounded-full bg-gray-200 flex items-center justify-center text-[10px] text-gray-500">
-                        {commentName?.charAt(0)?.toUpperCase() || '?'}
-                      </div>
-                    )}
-                    <span className="font-medium">{commentName}:</span>
-                  </button>
-                </MemberAvatarActions>
-                <div>{c.text}</div>
-              </div>
-            );
-          })}
-        </div>
-      )}
-
-      {/* "view all" link */}
-      {totalComments > previewCount && (
-        <button
-          type="button"
-          onClick={() => onOpenComments?.(post)}
-          className="text-xs text-gray-600 hover:underline mb-3"
-        >
-          View all {totalComments} comments
-        </button>
-      )}
-
-      {/* reply row + emoji bar + delete/report */}
-      <div className="space-y-2">
-        <div className="flex flex-wrap gap-2 items-center">
-          <input
-            value={reply}
-            onChange={(e) => setReply(e.target.value)}
-            placeholder="Write a reply…"
-            className="flex-1 border rounded-md px-3 py-2 min-w-[150px]"
+      {/* Reply input */}
+      {showReplyInput ? (
+        <div className="flex gap-2">
+          <textarea
+            value={replyText}
+            onChange={(e) => setReplyText(e.target.value)}
+            placeholder="Write a reply..."
+            className="flex-1 border rounded p-2"
+            rows={2}
           />
           <button
-            type="button"
-            onClick={sendReply}
-            className="px-3 py-2 rounded-md bg-[#ff8a65] text-white font-semibold disabled:opacity-50"
-            disabled={!reply.trim()}
+            onClick={handleReplySubmit}
+            disabled={!replyText.trim()}
+            className="px-4 py-2 bg-orange-500 text-white rounded disabled:opacity-50"
           >
-            Reply
+            Send
           </button>
-
-          {/* OWNER: Delete button */}
-          {isOwner && (
-            <button
-              type="button"
-              onClick={handleDeleteClick}
-              className="px-3 py-2 rounded-md bg-red-600 text-white text-sm font-semibold hover:bg-red-700"
-            >
-              Delete
-            </button>
-          )}
-
-          {/* NON-OWNER: red Report button */}
-          {!isOwner && (
-            <button
-              type="button"
-              onClick={handleReportClick}
-              className={`px-3 py-2 rounded-md text-sm font-semibold ${
-                reported
-                  ? 'bg-red-200 text-red-800 cursor-default'
-                  : 'bg-red-600 text-white hover:bg-red-700'
-              }`}
-              disabled={reported}
-            >
-              {reported ? 'Reported' : 'Report'}
-            </button>
-          )}
         </div>
+      ) : (
+        <button
+          onClick={() => setShowReplyInput(true)}
+          className="text-sm text-gray-600 hover:underline"
+        >
+          Reply
+        </button>
+      )}
 
-        {/* inline confirmation/error for report */}
-        {reportMessage && (
-          <div className="text-xs text-gray-600 mt-1">{reportMessage}</div>
-        )}
-
-        {/* Emoji bar */}
-        <QuickEmojiBar
-          onPick={(emoji) => {
-            if (!emoji) return;
-            onReact?.(post.id, emoji);
-          }}
-        />
-      </div>
-    </article>
+      {/* Delete (if owner) */}
+      {post.authorId === currentUserId && (
+        <button
+          onClick={() => onDelete(post.id)}
+          className="text-red-600 text-sm hover:underline"
+        >
+          Delete
+        </button>
+      )}
+    </div>
   );
 }
