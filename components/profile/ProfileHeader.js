@@ -317,19 +317,355 @@ export default function ProfileHeader() {
             <div style={{ display: 'grid', gap: 6 }}>
               <span style={{ fontSize: 13, fontWeight: 600 }}>Profile visibility</span>
               <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
-                <VisibilityPill label="Private" active={visibility === 'private'} onClick={() => setVisibility('private')} />
-                <VisibilityPill label="Public" active={visibility === 'public'} onClick={() => setVisibility('public')} />
-                <VisibilityPill label="Recruiters only" active={visibility === 'recruiters'} onClick={() => setVisibility('recruiters')} />
+                <VisibilityPill
+                  label="Private"
+                  active={visibility === 'private'}
+                  onClick={() => setVisibility('private')}
+                />
+                <VisibilityPill
+                  label="Public"
+                  active={visibility === 'public'}
+                  onClick={() => setVisibility('public')}
+                />
+                <VisibilityPill
+                  label="Recruiters only"
+                  active={visibility === 'recruiters'}
+                  onClick={() => setVisibility('recruiters')}
+                />
               </div>
               <small style={{ color: '#90A4AE' }}>
-                Public: anyone with your link can view. Recruiters only: hidden from public; visible only to approved recruiters.
+                Public: anyone with your link can view. Recruiters only: hidden from public; visible only
+                to approved recruiters.
               </small>
             </div>
 
             <ProfileAvatarSelector value={avatarUrl} onChange={setAvatarUrl} />
 
-            {/* Banner + wallpaper UI unchanged below */}
-            {/* ... your existing banner/wallpaper controls remain exactly as-is ... */}
+            {/* BANNER SELECTION (RESTORED) */}
+            <div style={{ display: 'grid', gap: 6 }}>
+              <span style={{ fontSize: 13, fontWeight: 600 }}>Profile banner</span>
+              <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, alignItems: 'center' }}>
+                <button
+                  type="button"
+                  onClick={() => setCoverUrl('')}
+                  style={{
+                    padding: '6px 10px',
+                    borderRadius: 999,
+                    border: coverUrl ? '1px solid #CFD8DC' : '2px solid #FF7043',
+                    background: coverUrl ? 'white' : '#FFF3E0',
+                    color: '#455A64',
+                    fontSize: 12,
+                    fontWeight: 600,
+                    cursor: 'pointer',
+                  }}
+                >
+                  No banner
+                </button>
+
+                {profileBanners.slice(0, 3).map((b) => {
+                  const active = coverUrl === b.src;
+                  return (
+                    <button
+                      key={b.key}
+                      type="button"
+                      onClick={() => setCoverUrl(b.src)}
+                      style={{
+                        borderRadius: 999,
+                        padding: 2,
+                        border: active ? '2px solid #FF7043' : '1px solid #CFD8DC',
+                        background: 'white',
+                        cursor: 'pointer',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                      }}
+                    >
+                      <img
+                        src={b.src}
+                        alt={b.name}
+                        style={{ width: 72, height: 36, borderRadius: 999, objectFit: 'cover' }}
+                      />
+                    </button>
+                  );
+                })}
+
+                <button
+                  type="button"
+                  onClick={() => setBannerMoreOpen((v) => !v)}
+                  style={{
+                    padding: '6px 10px',
+                    borderRadius: 999,
+                    border: '1px solid #CFD8DC',
+                    background: 'white',
+                    color: '#455A64',
+                    fontSize: 12,
+                    fontWeight: 600,
+                    cursor: 'pointer',
+                  }}
+                >
+                  {bannerMoreOpen ? 'Hide options' : 'More options…'}
+                </button>
+              </div>
+
+              {bannerMoreOpen && (
+                <div
+                  style={{
+                    marginTop: 8,
+                    padding: 8,
+                    borderRadius: 8,
+                    border: '1px solid #ECEFF1',
+                    background: '#FAFAFA',
+                    display: 'grid',
+                    gap: 10,
+                  }}
+                >
+                  <div style={{ fontSize: 12, color: '#607D8B' }}>All banner options</div>
+                  <div
+                    style={{
+                      display: 'grid',
+                      gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr))',
+                      gap: 10,
+                    }}
+                  >
+                    {profileBanners.map((b) => {
+                      const active = coverUrl === b.src;
+                      return (
+                        <button
+                          key={b.key}
+                          type="button"
+                          onClick={() => setCoverUrl(b.src)}
+                          style={{
+                            borderRadius: 10,
+                            padding: 6,
+                            border: active ? '2px solid #FF7043' : '1px solid #e0e0e0',
+                            background: active ? '#FFF3E0' : 'white',
+                            cursor: 'pointer',
+                            textAlign: 'left',
+                            display: 'grid',
+                            gap: 6,
+                          }}
+                        >
+                          <div
+                            style={{
+                              borderRadius: 8,
+                              overflow: 'hidden',
+                              border: '1px solid #ddd',
+                              height: 64,
+                              background: '#eceff1',
+                            }}
+                          >
+                            <img
+                              src={b.src}
+                              alt={b.name}
+                              style={{
+                                width: '100%',
+                                height: '100%',
+                                objectFit: 'cover',
+                                display: 'block',
+                              }}
+                            />
+                          </div>
+                          <div style={{ fontSize: 12, fontWeight: 700, color: '#263238' }}>
+                            {b.name}
+                          </div>
+                          <div style={{ fontSize: 11, color: '#78909C' }}>{b.desc}</div>
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+              )}
+            </div>
+
+            {/* WALLPAPER SELECTION (RESTORED) */}
+            <div style={{ display: 'grid', gap: 6 }}>
+              <span style={{ fontSize: 13, fontWeight: 600 }}>Page wallpaper (optional)</span>
+              <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, alignItems: 'center' }}>
+                <button
+                  type="button"
+                  onClick={() => setWallpaperUrl('')}
+                  style={{
+                    padding: '6px 10px',
+                    borderRadius: 999,
+                    border: wallpaperUrl ? '1px solid #CFD8DC' : '2px solid #FF7043',
+                    background: wallpaperUrl ? 'white' : '#FFF3E0',
+                    color: '#455A64',
+                    fontSize: 12,
+                    fontWeight: 600,
+                    cursor: 'pointer',
+                  }}
+                >
+                  No wallpaper
+                </button>
+
+                {profileWallpapers.slice(0, 3).map((w) => {
+                  const active = wallpaperUrl === w.src;
+                  return (
+                    <button
+                      key={w.key}
+                      type="button"
+                      onClick={() => setWallpaperUrl(w.src)}
+                      style={{
+                        borderRadius: 999,
+                        padding: 2,
+                        border: active ? '2px solid #FF7043' : '1px solid #CFD8DC',
+                        background: 'white',
+                        cursor: 'pointer',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                      }}
+                    >
+                      <img
+                        src={w.src}
+                        alt={w.name}
+                        style={{ width: 72, height: 36, borderRadius: 999, objectFit: 'cover' }}
+                      />
+                    </button>
+                  );
+                })}
+
+                <button
+                  type="button"
+                  onClick={() => setWallpaperMoreOpen((v) => !v)}
+                  style={{
+                    padding: '6px 10px',
+                    borderRadius: 999,
+                    border: '1px solid #CFD8DC',
+                    background: 'white',
+                    color: '#455A64',
+                    fontSize: 12,
+                    fontWeight: 600,
+                    cursor: 'pointer',
+                  }}
+                >
+                  {wallpaperMoreOpen ? 'Hide options' : 'More options…'}
+                </button>
+              </div>
+
+              {wallpaperMoreOpen && (
+                <div
+                  style={{
+                    marginTop: 8,
+                    padding: 8,
+                    borderRadius: 8,
+                    border: '1px solid #ECEFF1',
+                    background: '#FAFAFA',
+                    display: 'grid',
+                    gap: 10,
+                  }}
+                >
+                  <div style={{ fontSize: 12, color: '#607D8B' }}>All wallpaper options</div>
+                  <div
+                    style={{
+                      display: 'grid',
+                      gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr))',
+                      gap: 10,
+                    }}
+                  >
+                    {profileWallpapers.map((w) => {
+                      const active = wallpaperUrl === w.src;
+                      return (
+                        <button
+                          key={w.key}
+                          type="button"
+                          onClick={() => setWallpaperUrl(w.src)}
+                          style={{
+                            borderRadius: 10,
+                            padding: 6,
+                            border: active ? '2px solid #FF7043' : '1px solid #e0e0e0',
+                            background: active ? '#FFF3E0' : 'white',
+                            cursor: 'pointer',
+                            textAlign: 'left',
+                            display: 'grid',
+                            gap: 6,
+                          }}
+                        >
+                          <div
+                            style={{
+                              borderRadius: 8,
+                              overflow: 'hidden',
+                              border: '1px solid #ddd',
+                              height: 64,
+                              background: '#eceff1',
+                            }}
+                          >
+                            <img
+                              src={w.src}
+                              alt={w.name}
+                              style={{
+                                width: '100%',
+                                height: '100%',
+                                objectFit: 'cover',
+                                display: 'block',
+                              }}
+                            />
+                          </div>
+                          <div style={{ fontSize: 12, fontWeight: 700, color: '#263238' }}>
+                            {w.name}
+                          </div>
+                          <div style={{ fontSize: 11, color: '#78909C' }}>{w.desc}</div>
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+              )}
+            </div>
+
+            {/* Mode + height controls */}
+            <div style={{ display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap' }}>
+              <span style={{ fontSize: 13, fontWeight: 600 }}>Banner mode</span>
+              <ModeToggle value={bannerMode} onChange={setBannerMode} />
+            </div>
+
+            <div style={{ display: 'grid', gap: 6 }}>
+              <span style={{ fontSize: 13, fontWeight: 600 }}>Banner height</span>
+              <input
+                type="range"
+                min={80}
+                max={220}
+                value={bannerH}
+                onChange={(e) => setBannerH(Number(e.target.value))}
+              />
+              <small style={{ color: '#607D8B' }}>{bannerH}px</small>
+            </div>
+
+            {bannerMode === 'cover' && (
+              <div style={{ display: 'grid', gap: 6 }}>
+                <span style={{ fontSize: 13, fontWeight: 600 }}>Vertical focus (cover)</span>
+                <input
+                  type="range"
+                  min={0}
+                  max={100}
+                  value={focalY}
+                  onChange={(e) => setFocalY(Number(e.target.value))}
+                />
+                <small style={{ color: '#607D8B' }}>
+                  Position {focalY}% (0 = top, 100 = bottom)
+                </small>
+              </div>
+            )}
+
+            {coverUrl && (
+              <div style={{ display: 'grid', gap: 8 }}>
+                <small style={{ color: '#607D8B' }}>Banner preview</small>
+                <div
+                  style={{
+                    width: '100%',
+                    border: '1px solid #eee',
+                    borderRadius: 6,
+                    overflow: 'hidden',
+                  }}
+                >
+                  {bannerMode === 'cover' ? (
+                    <BannerCover url={coverUrl} height={120} focalY={focalY} />
+                  ) : (
+                    <BannerFit url={coverUrl} height={120} />
+                  )}
+                </div>
+              </div>
+            )}
 
             {saveError && <small style={{ color: '#d32f2f' }}>{saveError}</small>}
 
@@ -365,7 +701,8 @@ export default function ProfileHeader() {
             </div>
 
             <small style={{ color: '#90A4AE' }}>
-              Tip: Click your profile URL to copy it. Your avatar, banner, wallpaper, and profile text are now saved to your account and will load on any device.
+              Tip: Click your profile URL to copy it. Your avatar, banner, wallpaper, and profile text are
+              now saved to your account and will load on any device.
             </small>
           </div>
         </Dialog>
@@ -440,6 +777,31 @@ function VisibilityPill({ label, active, onClick }) {
     >
       {label}
     </button>
+  );
+}
+
+function ModeToggle({ value, onChange }) {
+  const btn = (val, label) => (
+    <button
+      type="button"
+      onClick={() => onChange(val)}
+      style={{
+        padding: '6px 10px',
+        border: '1px solid ' + (value === val ? '#FF7043' : '#cfd8dc'),
+        color: value === val ? '#FF7043' : '#455A64',
+        background: 'white',
+        borderRadius: 6,
+        fontWeight: 600,
+      }}
+    >
+      {label}
+    </button>
+  );
+  return (
+    <div style={{ display: 'flex', gap: 6 }}>
+      {btn('cover', 'Cover')}
+      {btn('fit', 'Fit')}
+    </div>
   );
 }
 
