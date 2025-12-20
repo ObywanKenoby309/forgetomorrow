@@ -11,7 +11,6 @@ export default function FeedPage() {
       <Head>
         <title>ForgeTomorrow — Feed</title>
       </Head>
-
       <SeekerLayout
         title="Your Feed | ForgeTomorrow"
         right={<SeekerRightColumn variant="feed" />}
@@ -50,7 +49,23 @@ export default function FeedPage() {
           </section>
         }
       >
-        <Feed />
+        {/* Glass container for the entire feed */}
+        <div
+          style={{
+            background: "rgba(255, 255, 255, 0.15)", // semi-transparent white
+            backdropFilter: "blur(12px)", // the magic glass effect
+            borderRadius: 16,
+            border: "1px solid rgba(255, 255, 255, 0.2)",
+            boxShadow: "0 8px 32px rgba(0, 0, 0, 0.1)",
+            padding: "24px 16px",
+            margin: "0 auto",
+            maxWidth: "800px", // or whatever your feed width is
+            minHeight: "60vh", // prevents it from collapsing when empty
+            overflow: "hidden", // keeps cards inside
+          }}
+        >
+          <Feed />
+        </div>
       </SeekerLayout>
     </>
   );
