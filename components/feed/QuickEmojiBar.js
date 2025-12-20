@@ -1,5 +1,11 @@
 // components/feed/QuickEmojiBar.js
-export default function QuickEmojiBar({ onPick, selectedEmojis = [], reactionCounts = {} }) {
+export default function QuickEmojiBar({
+  onPick,
+  selectedEmojis = [],
+  reactionCounts = {},
+  onMouseEnter,
+  onMouseLeave,
+}) {
   const emojis = ['👍', '🔥', '🎉', '👏', '❤️'];
 
   const handleClick = (emoji) => {
@@ -19,6 +25,8 @@ export default function QuickEmojiBar({ onPick, selectedEmojis = [], reactionCou
             key={emoji}
             type="button"
             onClick={() => handleClick(emoji)}
+            onMouseEnter={() => onMouseEnter?.(emoji)}
+            onMouseLeave={onMouseLeave}
             className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-base font-medium transition-all duration-200 border ${
               isSelected
                 ? 'bg-blue-100 border-blue-300 text-blue-800 shadow-sm'

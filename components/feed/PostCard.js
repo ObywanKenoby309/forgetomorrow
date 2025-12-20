@@ -12,6 +12,8 @@ export default function PostCard({
 }) {
   const [showReplyInput, setShowReplyInput] = useState(false);
   const [replyText, setReplyText] = useState('');
+  const [hoveredEmoji, setHoveredEmoji] = useState(null); // Track hovered emoji for tooltip
+  const [reactionUsers, setReactionUsers] = useState({}); // Cache { emoji: [names] }
 
   const handleReplySubmit = () => {
     if (replyText.trim()) {
@@ -21,7 +23,7 @@ export default function PostCard({
     }
   };
 
-  // Extract reaction data for QuickEmojiBar
+  // Extract reaction data
   const selectedEmojis = post.reactions
     ?.filter(r => r.users?.includes(currentUserId) || r.userIds?.includes(currentUserId))
     ?.map(r => r.emoji) || [];
@@ -31,8 +33,40 @@ export default function PostCard({
     return acc;
   }, {}) || {};
 
+  // Fetch user names on hover (only once per emoji)
+  const fetchUsersForEmoji = async (emoji) => {
+    if (reactionUsers[emoji]) return; // cached
+
+    const reaction = post.reactions?.find(r => r.emoji === emoji);
+    if (!reaction || !reaction.userIds?.length) return;
+
+    try {
+      const res = await fetch('/api/users/names', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ userIds: reaction.userIds }),
+      });
+      if (res.ok) {
+        const data = await res.json();
+        const names = data.names || [];
+        const formatted = names.map(name => 
+          name === session?.user?.name ? 'You' : name
+        ).join(', ');
+        setReactionUsers(prev => ({ ...prev, [emoji]: formatted }));
+      }
+    } catch (err) {
+      console.error('Failed to fetch reaction users', err);
+    }
+  };
+
+  const getTooltipText = (emoji) => {
+    const users = reactionUsers[emoji];
+    if (!users) return 'Loading...';
+    return `${users} reacted with ${emoji}`;
+  };
+
   return (
-    <div className="bg-white rounded-lg shadow p-5 space-y-4">
+    <div className="bg-white rounded-lg shadow p-5 space-y-4 relative">
       {/* Author */}
       <div className="flex items-start gap-3">
         {post.authorAvatar ? (
@@ -53,7 +87,7 @@ export default function PostCard({
       {/* Body */}
       <p className="whitespace-pre-wrap">{post.body}</p>
 
-      {/* Attachments (if any) */}
+      {/* Attachments */}
       {post.attachments?.length > 0 && (
         <div className="grid grid-cols-2 gap-3">
           {post.attachments.map((a, i) => (
@@ -66,12 +100,26 @@ export default function PostCard({
         </div>
       )}
 
-      {/* Reaction Bar */}
-      <QuickEmojiBar
-        onPick={(emoji) => onReact(post.id, emoji)}
-        selectedEmojis={selectedEmojis}
-        reactionCounts={reactionCounts}
-      />
+      {/* Reaction Bar with Tooltip */}
+      <div className="relative">
+        <QuickEmojiBar
+          onPick={(emoji) => onReact(post.id, emoji)}
+          selectedEmojis={selectedEmojis}
+          reactionCounts={reactionCounts}
+          onMouseEnter={(emoji) => {
+            setHoveredEmoji(emoji);
+            if (reactionCounts[emoji] > 0) fetchUsersForEmoji(emoji);
+          }}
+          onMouseLeave={() => setHoveredEmoji(null)}
+        />
+        {hoveredEmoji && reactionCounts[hoveredEmoji] > 0 && (
+          <div
+            className="absolute bottom-full left-0 mb-3 bg-gray-900 text-white text-sm rounded-lg p-3 shadow-xl z-20 whitespace-nowrap max-w-xs"
+          >
+            {getTooltipText(hoveredEmoji)}
+          </div>
+        )}
+      </div>
 
       {/* Summary */}
       <div className="flex items-center gap-4 text-sm text-gray-600">
@@ -80,15 +128,12 @@ export default function PostCard({
             {post.likes} reactions
           </span>
         )}
-        <button
-          onClick={() => onOpenComments(post)}
-          className="hover:underline"
-        >
+        <button onClick={() => onOpenComments(post)} className="hover:underline">
           {post.comments.length} comments
         </button>
       </div>
 
-      {/* Reply input */}
+      {/* Reply */}
       {showReplyInput ? (
         <div className="flex gap-2">
           <textarea
@@ -115,7 +160,7 @@ export default function PostCard({
         </button>
       )}
 
-      {/* Delete (if owner) */}
+      {/* Delete */}
       {post.authorId === currentUserId && (
         <button
           onClick={() => onDelete(post.id)}
