@@ -19,6 +19,26 @@ import {
 import SupportFloatingButton from '@/components/SupportFloatingButton';
 
 // ──────────────────────────────────────────────────────────────
+// Jobs-style PageShell (SOURCE OF TRUTH)
+// ──────────────────────────────────────────────────────────────
+function PageShell({ header, right, children }) {
+  return (
+    <div className="px-4 md:px-8 pb-10">
+      <div className="max-w-7xl mx-auto grid grid-cols-1 lg:grid-cols-[minmax(0,1.8fr)_minmax(260px,0.7fr)] gap-6">
+        <div className="space-y-4">
+          {header}
+          {children}
+        </div>
+
+        <aside className="hidden lg:block">
+          {right}
+        </aside>
+      </div>
+    </div>
+  );
+}
+
+// ──────────────────────────────────────────────────────────────
 // Header card (Jobs-style)
 // ──────────────────────────────────────────────────────────────
 function PageHeader() {
@@ -191,34 +211,28 @@ export default function HearthSpotlightsPage() {
   const hasAnyReal = ads.length > 0;
 
   return (
-    <InternalLayout
-      title="Hearth Spotlight | ForgeTomorrow"
-      activeNav="hearth"
-      right={RightRail}
-      header={<PageHeader />}
-    >
+    <InternalLayout activeNav="hearth">
       <Head>
         <title>Hearth Spotlight | ForgeTomorrow</title>
       </Head>
 
-        {/* FILTER BAR */}
+      <PageShell header={<PageHeader />} right={RightRail}>
         <SpotlightFilters onChange={setFilters} />
 
-        {/* Error banner */}
         {error && (
           <Card>
             <CardContent style={{ color: '#6D4C41' }}>{error}</CardContent>
           </Card>
         )}
 
-        {/* Loading */}
         {loading && (
           <Card>
-            <CardContent style={{ color: '#90A4AE' }}>Loading spotlights…</CardContent>
+            <CardContent style={{ color: '#90A4AE' }}>
+              Loading spotlights…
+            </CardContent>
           </Card>
         )}
 
-        {/* Empty */}
         {!loading && !error && !hasAnyReal && (
           <Card>
             <CardHeader style={{ textAlign: 'center' }}>
@@ -240,19 +254,16 @@ export default function HearthSpotlightsPage() {
           </Card>
         )}
 
-        {/* LIST + DETAIL (Jobs-style two column inside content area) */}
         {!loading && !error && filtered.length > 0 && (
           <div
             style={{
               display: 'grid',
-              gridTemplateColumns: 'minmax(0, 1.8fr) minmax(0, 1.5fr)', // ✅ match Jobs proportions
+              gridTemplateColumns: 'minmax(0, 1.8fr) minmax(0, 1.5fr)',
               gap: 16,
               alignItems: 'flex-start',
             }}
           >
-            {/* LEFT: list */}
             <section
-              aria-label="Spotlight results"
               style={{
                 maxHeight: '78vh',
                 display: 'flex',
@@ -271,7 +282,8 @@ export default function HearthSpotlightsPage() {
                 }}
               >
                 {filtered.map((a) => {
-                  const isSelected = selectedSpotlight && selectedSpotlight.id === a.id;
+                  const isSelected =
+                    selectedSpotlight && selectedSpotlight.id === a.id;
 
                   return (
                     <Card
@@ -279,7 +291,9 @@ export default function HearthSpotlightsPage() {
                       onClick={() => setSelectedSpotlight(a)}
                       style={{
                         cursor: 'pointer',
-                        border: isSelected ? '2px solid #FF7043' : '1px solid #E0E0E0',
+                        border: isSelected
+                          ? '2px solid #FF7043'
+                          : '1px solid #E0E0E0',
                       }}
                     >
                       <CardHeader>
@@ -288,7 +302,9 @@ export default function HearthSpotlightsPage() {
                       </CardHeader>
                       {a.summary && (
                         <CardContent>
-                          {a.summary.length > 120 ? `${a.summary.slice(0, 120)}…` : a.summary}
+                          {a.summary.length > 120
+                            ? `${a.summary.slice(0, 120)}…`
+                            : a.summary}
                         </CardContent>
                       )}
                     </Card>
@@ -297,8 +313,7 @@ export default function HearthSpotlightsPage() {
               </div>
             </section>
 
-            {/* RIGHT: sticky detail */}
-            <section aria-label="Selected spotlight details">
+            <section>
               <Card
                 style={{
                   position: 'sticky',
@@ -311,13 +326,17 @@ export default function HearthSpotlightsPage() {
                 {selectedSpotlight ? (
                   <>
                     <CardHeader>
-                      <CardTitle>{selectedSpotlight.headline || 'Mentor'}</CardTitle>
+                      <CardTitle>
+                        {selectedSpotlight.headline || 'Mentor'}
+                      </CardTitle>
                       <CardSubtle>{selectedSpotlight.name}</CardSubtle>
                     </CardHeader>
 
                     <CardContent style={{ display: 'grid', gap: 12 }}>
                       {selectedSpotlight.summary && (
-                        <p style={{ margin: 0 }}>{selectedSpotlight.summary}</p>
+                        <p style={{ margin: 0 }}>
+                          {selectedSpotlight.summary}
+                        </p>
                       )}
 
                       {selectedSpotlight.specialties?.length > 0 && (
@@ -339,11 +358,13 @@ export default function HearthSpotlightsPage() {
 
                       {selectedSpotlight.availability && (
                         <div>
-                          <strong>Availability:</strong> {selectedSpotlight.availability}
+                          <strong>Availability:</strong>{' '}
+                          {selectedSpotlight.availability}
                         </div>
                       )}
 
-                      {(selectedSpotlight.contactEmail || selectedSpotlight.contactLink) && (
+                      {(selectedSpotlight.contactEmail ||
+                        selectedSpotlight.contactLink) && (
                         <div style={{ display: 'grid', gap: 6 }}>
                           <strong>Contact</strong>
                           {selectedSpotlight.contactEmail && (
@@ -378,13 +399,15 @@ export default function HearthSpotlightsPage() {
                     </CardContent>
                   </>
                 ) : (
-                  <CardContent>Select a mentor to view details.</CardContent>
+                  <CardContent>
+                    Select a mentor to view details.
+                  </CardContent>
                 )}
               </Card>
             </section>
           </div>
         )}
-      </div>
+      </PageShell>
 
       <SupportFloatingButton />
     </InternalLayout>
