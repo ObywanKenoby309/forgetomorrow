@@ -20,16 +20,17 @@ export default function FeedPage() {
           <section
             aria-label="Your personalized ForgeTomorrow feed header"
             style={{
-              background: "rgba(255, 255, 255, 0.85)", // ✅ MATCH Hearth Spotlight
-              backdropFilter: "blur(12px)",
-              borderRadius: 16,
-              border: "1px solid rgba(0, 0, 0, 0.08)",
-              boxShadow: "0 8px 32px rgba(0, 0, 0, 0.12)",
-              padding: "24px 16px",
-              margin: "0 auto",
-              maxWidth: "1200px",
-              textAlign: "center",
-            }}
+  background: "rgba(255,255,255,0.78)",
+  backdropFilter: "blur(14px)",
+  WebkitBackdropFilter: "blur(14px)",
+  borderRadius: 14,
+  border: "1px solid rgba(255,255,255,0.55)",
+  boxShadow: "0 10px 30px rgba(0,0,0,0.12)",
+  padding: "24px 16px",
+  margin: "0 auto",
+  maxWidth: "1200px",
+  textAlign: "center",
+}}
           >
             <h1
               style={{
@@ -57,16 +58,17 @@ export default function FeedPage() {
       >
         <div
           style={{
-            background: "rgba(255, 255, 255, 0.15)",
-            backdropFilter: "blur(12px)",
-            borderRadius: 16,
-            border: "1px solid rgba(255, 255, 255, 0.2)",
-            boxShadow: "0 8px 32px rgba(0, 0, 0, 0.1)",
-            padding: "24px 16px",
-            margin: "24px auto 0",
-            maxWidth: "1200px",
-            minHeight: "60vh",
-          }}
+  background: "rgba(255,255,255,0.78)",
+  backdropFilter: "blur(14px)",
+  WebkitBackdropFilter: "blur(14px)",
+  borderRadius: 14,
+  border: "1px solid rgba(255,255,255,0.55)",
+  boxShadow: "0 10px 30px rgba(0,0,0,0.12)",
+  padding: "24px 16px",
+  margin: "24px auto 0",
+  maxWidth: "1200px",
+  minHeight: "60vh",
+}}
         >
           {/* ✅ Removed remote jobs filter label (do not remove the actual Feed filter dropdown) */}
           <Feed />
