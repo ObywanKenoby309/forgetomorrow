@@ -6,7 +6,7 @@ import PostList from './PostList';
 
 export default function Feed() {
   const { data: session } = useSession();
-  const [filter, setFilter] = useState('both'); // both | business | personal | remote
+  const [filter, setFilter] = useState('both'); // both | business | personal
   const [showComposer, setShowComposer] = useState(false);
   const [posts, setPosts] = useState([]);
   const currentUserId = session?.user?.id || 'me';
@@ -19,7 +19,7 @@ export default function Feed() {
   const currentUserAvatar =
     session?.user?.avatarUrl || session?.user?.image || null;
 
-  // Normalize community post shape (matches your DB feedPost rows)
+  // Normalize community post shape
   const normalizeCommunityPost = (row) => {
     if (!row) return null;
     let body = row.content || row.text || row.body || '';
@@ -29,10 +29,7 @@ export default function Feed() {
         typeof row.content === 'string' ? JSON.parse(row.content) : null;
       if (parsed?.body) body = parsed.body;
       if (Array.isArray(parsed?.attachments)) attachments = parsed.attachments;
-    } catch {
-      // not JSON – just fall back to raw body above
-    }
-    // Reactions from API (Json field)
+    } catch {}
     let reactions = [];
     const rawReactions = row.reactions;
     if (Array.isArray(rawReactions)) {
@@ -51,7 +48,6 @@ export default function Feed() {
           0
         )
       : 0;
-    // Comments
     const comments = Array.isArray(row.comments) ? row.comments : [];
     return {
       id: row.id,
@@ -69,47 +65,17 @@ export default function Feed() {
     };
   };
 
-  // Normalize remote job shape
-  const normalizeJob = (job) => ({
-    id: `job-${job.id}`,
-    author: job.company,
-    authorAvatar: null,
-    body: `${job.title}\n\n${job.location || 'Remote'}\n${job.url}`,
-    type: 'business',
-    createdAt: new Date(job.fetchedAt || job.postedAt).toISOString(),
-    likes: 0,
-    comments: [],
-    attachments: [],
-    isJob: true,
-    jobData: job,
-  });
-
-  // Main loader — pulls community posts OR remote jobs (or both)
+  // Main loader – only community posts
   const reloadFeed = async () => {
     try {
-      let community = [];
-      let remoteJobs = [];
-      // 1. Always get community posts
       const feedRes = await fetch('/api/feed');
       if (feedRes.ok) {
         const feedData = await feedRes.json();
-        community = (feedData.posts || [])
+        const community = (feedData.posts || [])
           .map(normalizeCommunityPost)
           .filter(Boolean);
+        setPosts(community);
       }
-      // 2. Get remote jobs if we want them
-      if (filter === 'both' || filter === 'remote') {
-        const jobsRes = await fetch('/api/jobs/remote');
-        if (jobsRes.ok) {
-          const jobsData = await jobsRes.json();
-          remoteJobs = (jobsData.jobs || []).map(normalizeJob);
-        }
-      }
-      // Combine & sort by date
-      const combined = [...community, ...remoteJobs].sort(
-        (a, b) => new Date(b.createdAt) - new Date(a.createdAt)
-      );
-      setPosts(combined);
     } catch (err) {
       console.error('Feed load error:', err);
     }
@@ -119,10 +85,8 @@ export default function Feed() {
     reloadFeed();
     const interval = setInterval(reloadFeed, 5 * 60 * 1000);
     return () => clearInterval(interval);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [filter]);
 
-  // New post from composer → saved via /api/feed
   const handleNewPost = async (postFromComposer) => {
     const body = postFromComposer.body ?? '';
     const payload = {
@@ -151,11 +115,9 @@ export default function Feed() {
     }
   };
 
-  // Replies (text) — hit /api/feed/comments AND update state
   const handleReply = async (postId, text) => {
     if (!postId || !text || !text.trim()) return;
     const trimmed = text.trim();
-    if (String(postId).startsWith('job-')) return;
     try {
       const res = await fetch('/api/feed/comments', {
         method: 'POST',
@@ -192,11 +154,9 @@ export default function Feed() {
     );
   };
 
-  // Emoji reactions — already fully DB-backed
   const handleReact = async (postId, emoji) => {
     if (!emoji) return;
     if (!postId && postId !== 0) return;
-    if (String(postId).startsWith('job-')) return;
     try {
       const res = await fetch('/api/feed/react', {
         method: 'POST',
@@ -231,7 +191,6 @@ export default function Feed() {
 
   const handleDelete = async (postId) => {
     if (!postId) return;
-    if (String(postId).startsWith('job-')) return;
     setPosts((prev) => prev.filter((p) => p.id !== postId));
     try {
       await fetch(`/api/feed/${postId}`, {
@@ -244,10 +203,9 @@ export default function Feed() {
 
   return (
     <div className="mx-auto w-full max-w-none px-2 sm:px-6 pt-6 pb-10">
-      {/* Filter bar with white pill behind "Showing" */}
+      {/* Filter */}
       <div className="mb-4 flex items-center justify-between">
         <div className="flex items-center gap-3">
-          {/* White pill only on "Showing" */}
           <span
             className="bg-white px-3 py-1 rounded-lg text-sm font-semibold text-gray-800 shadow-sm border border-gray-200"
           >
@@ -258,10 +216,9 @@ export default function Feed() {
             onChange={(e) => setFilter(e.target.value)}
             className="text-sm bg-white border border-gray-300 rounded-md px-3 py-1 focus:outline-none focus:ring-2 focus:ring-orange-500"
           >
-            <option value="both">Community + Remote Jobs</option>
-            <option value="business">Community (Professional)</option>
+            <option value="both">Community + Business & Personal</option>
+            <option value="business">Community (Business)</option>
             <option value="personal">Community (Personal)</option>
-            <option value="remote">Remote Jobs Only</option>
           </select>
         </div>
       </div>
