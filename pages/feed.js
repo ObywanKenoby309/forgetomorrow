@@ -49,21 +49,59 @@ export default function FeedPage() {
           </section>
         }
       >
-        {/* Glass container for the entire feed */}
+        {/* Glass container for the entire feed area */}
         <div
           style={{
-            background: "rgba(255, 255, 255, 0.15)", // semi-transparent white
-            backdropFilter: "blur(12px)", // the magic glass effect
+            background: "rgba(255, 255, 255, 0.15)",
+            backdropFilter: "blur(12px)",
             borderRadius: 16,
             border: "1px solid rgba(255, 255, 255, 0.2)",
             boxShadow: "0 8px 32px rgba(0, 0, 0, 0.1)",
             padding: "24px 16px",
             margin: "0 auto",
-            maxWidth: "800px", // or whatever your feed width is
-            minHeight: "60vh", // prevents it from collapsing when empty
-            overflow: "hidden", // keeps cards inside
+            maxWidth: "800px",
+            minHeight: "60vh",
+            overflow: "hidden",
           }}
         >
+          {/* Filter bar with white backing only behind "Showing" */}
+          <div
+            style={{
+              display: "flex",
+              alignItems: "center",
+              gap: 12,
+              marginBottom: 16,
+            }}
+          >
+            {/* White pill just for "Showing" */}
+            <span
+              style={{
+                backgroundColor: "#ffffff",
+                padding: "4px 10px",
+                borderRadius: 8,
+                fontSize: 14,
+                fontWeight: 600,
+                color: "#374151",
+                boxShadow: "0 1px 3px rgba(0,0,0,0.1)",
+                border: "1px solid rgba(0,0,0,0.08)",
+              }}
+            >
+              Showing
+            </span>
+
+            {/* Dropdown or filter label (replace with your actual component) */}
+            <span
+              style={{
+                fontSize: 14,
+                fontWeight: 500,
+                color: "#4B5563",
+              }}
+            >
+              Community + Remote Jobs ▼
+            </span>
+          </div>
+
+          {/* The actual feed component */}
           <Feed />
         </div>
       </SeekerLayout>
