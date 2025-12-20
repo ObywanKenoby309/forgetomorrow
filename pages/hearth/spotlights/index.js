@@ -3,10 +3,8 @@ import React, { useEffect, useMemo, useState } from 'react';
 import Head from 'next/head';
 import Link from 'next/link';
 import { useRouter } from 'next/router';
-
 import InternalLayout from '@/components/layouts/InternalLayout';
 import SpotlightFilters from '@/components/spotlights/SpotlightFilters';
-
 import {
   Card,
   CardHeader,
@@ -14,9 +12,20 @@ import {
   CardContent,
   CardSubtle,
 } from '@/components/ui/Card';
-
 // support
 import SupportFloatingButton from '@/components/SupportFloatingButton';
+
+// ──────────────────────────────────────────────────────────────
+// Glass base style (matches your edit page)
+// ──────────────────────────────────────────────────────────────
+const glassBase = {
+  background: 'rgba(255,255,255,0.78)',
+  border: '1px solid rgba(255,255,255,0.55)',
+  borderRadius: 14,
+  boxShadow: '0 10px 30px rgba(0,0,0,0.12)',
+  backdropFilter: 'blur(14px)',
+  WebkitBackdropFilter: 'blur(14px)',
+};
 
 // ──────────────────────────────────────────────────────────────
 // Jobs-style PageShell (SOURCE OF TRUTH)
@@ -29,7 +38,6 @@ function PageShell({ header, right, children }) {
           {header}
           {children}
         </div>
-
         <aside className="hidden lg:block">
           {right}
         </aside>
@@ -66,7 +74,6 @@ function PageHeader() {
 export default function HearthSpotlightsPage() {
   const router = useRouter();
   const chrome = String(router.query.chrome || 'seeker').toLowerCase();
-
   const withChrome = (path) =>
     chrome ? `${path}${path.includes('?') ? '&' : '?'}chrome=${chrome}` : path;
 
@@ -74,39 +81,31 @@ export default function HearthSpotlightsPage() {
   const [ads, setAds] = useState([]);
   const [filters, setFilters] = useState(null);
   const [selectedSpotlight, setSelectedSpotlight] = useState(null);
-
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
 
   useEffect(() => {
     let mounted = true;
-
     async function load() {
       setLoading(true);
       setError('');
-
       try {
         const res = await fetch('/api/hearth/spotlights', {
           method: 'GET',
           headers: { 'Content-Type': 'application/json' },
         });
-
         if (res.status === 401) {
           router.push('/login');
           return;
         }
-
         if (!res.ok) throw new Error('Failed to load spotlights');
-
         const data = await res.json();
         const list =
           (Array.isArray(data?.spotlights) && data.spotlights) ||
           (Array.isArray(data?.items) && data.items) ||
           (Array.isArray(data) && data) ||
           [];
-
         if (!mounted) return;
-
         const normalized = list.map((a) => ({
           id: a.id,
           name: a.name || '',
@@ -119,7 +118,6 @@ export default function HearthSpotlightsPage() {
           contactLink: a.contactLink || '',
           createdAt: a.createdAt || null,
         }));
-
         setAds(normalized);
         if (normalized.length > 0) setSelectedSpotlight(normalized[0]);
       } catch (e) {
@@ -133,7 +131,6 @@ export default function HearthSpotlightsPage() {
         if (mounted) setLoading(false);
       }
     }
-
     load();
     return () => {
       mounted = false;
@@ -143,7 +140,6 @@ export default function HearthSpotlightsPage() {
   const filtered = useMemo(() => {
     let arr = [...ads];
     if (!filters) return arr;
-
     const term = (filters.q || '').trim().toLowerCase();
     if (term) {
       arr = arr.filter((a) =>
@@ -153,21 +149,17 @@ export default function HearthSpotlightsPage() {
           .includes(term)
       );
     }
-
     if (filters.specialties?.length) {
       arr = arr.filter((a) =>
         (a.specialties || []).some((s) => filters.specialties.includes(s))
       );
     }
-
     if (filters.availability && filters.availability !== 'Any') {
       arr = arr.filter((a) => (a.availability || '') === filters.availability);
     }
-
     if (filters.rate?.length) {
       arr = arr.filter((a) => filters.rate.includes(a.rate));
     }
-
     if (filters.sort === 'Name A–Z') {
       arr.sort((x, y) => (x.name || '').localeCompare(y.name || ''));
     } else if (filters.sort === 'Newest') {
@@ -177,34 +169,19 @@ export default function HearthSpotlightsPage() {
         return by - ax;
       });
     }
-
     return arr;
   }, [ads, filters]);
 
   const RightRail = (
     <div style={{ display: 'grid', gap: 12 }}>
-      <Card>
+      <div style={glassBase}>
         <CardHeader>
           <CardTitle style={{ fontSize: 14 }}>Sponsored</CardTitle>
         </CardHeader>
         <CardContent style={{ fontSize: 13, color: '#546E7A' }}>
           Mentor promotions, featured coaches, and community tools will appear here.
         </CardContent>
-      </Card>
-
-      <Card>
-        <CardHeader>
-          <CardTitle style={{ fontSize: 14 }}>Become a Mentor</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <Link
-            href={withChrome('/resources/mentors/spotlight/new')}
-            style={{ color: '#FF7043', fontWeight: 700, textDecoration: 'none' }}
-          >
-            Post a Hearth Spotlight
-          </Link>
-        </CardContent>
-      </Card>
+      </div>
     </div>
   );
 
@@ -215,16 +192,13 @@ export default function HearthSpotlightsPage() {
       <Head>
         <title>Hearth Spotlight | ForgeTomorrow</title>
       </Head>
-
       <PageShell header={<PageHeader />} right={RightRail}>
         <SpotlightFilters onChange={setFilters} />
-
         {error && (
           <Card>
             <CardContent style={{ color: '#6D4C41' }}>{error}</CardContent>
           </Card>
         )}
-
         {loading && (
           <Card>
             <CardContent style={{ color: '#90A4AE' }}>
@@ -232,7 +206,6 @@ export default function HearthSpotlightsPage() {
             </CardContent>
           </Card>
         )}
-
         {!loading && !error && !hasAnyReal && (
           <Card>
             <CardHeader style={{ textAlign: 'center' }}>
@@ -247,13 +220,11 @@ export default function HearthSpotlightsPage() {
             </CardContent>
           </Card>
         )}
-
         {!loading && !error && hasAnyReal && filtered.length === 0 && (
           <Card>
             <CardContent>No spotlights match your filters.</CardContent>
           </Card>
         )}
-
         {!loading && !error && filtered.length > 0 && (
           <div
             style={{
@@ -284,16 +255,18 @@ export default function HearthSpotlightsPage() {
                 {filtered.map((a) => {
                   const isSelected =
                     selectedSpotlight && selectedSpotlight.id === a.id;
-
                   return (
                     <Card
                       key={a.id}
                       onClick={() => setSelectedSpotlight(a)}
                       style={{
+                        ...glassBase,
                         cursor: 'pointer',
                         border: isSelected
                           ? '2px solid #FF7043'
-                          : '1px solid #E0E0E0',
+                          : '1px solid rgba(255,255,255,0.55)',
+                        padding: '16px',
+                        marginBottom: '8px',
                       }}
                     >
                       <CardHeader>
@@ -312,15 +285,16 @@ export default function HearthSpotlightsPage() {
                 })}
               </div>
             </section>
-
             <section>
               <Card
                 style={{
+                  ...glassBase,
                   position: 'sticky',
                   top: 0,
                   maxHeight: '78vh',
                   display: 'flex',
                   flexDirection: 'column',
+                  padding: '16px',
                 }}
               >
                 {selectedSpotlight ? (
@@ -331,14 +305,12 @@ export default function HearthSpotlightsPage() {
                       </CardTitle>
                       <CardSubtle>{selectedSpotlight.name}</CardSubtle>
                     </CardHeader>
-
                     <CardContent style={{ display: 'grid', gap: 12 }}>
                       {selectedSpotlight.summary && (
                         <p style={{ margin: 0 }}>
                           {selectedSpotlight.summary}
                         </p>
                       )}
-
                       {selectedSpotlight.specialties?.length > 0 && (
                         <div>
                           <strong>Specialties</strong>
@@ -349,20 +321,17 @@ export default function HearthSpotlightsPage() {
                           </ul>
                         </div>
                       )}
-
                       {selectedSpotlight.rate && (
                         <div>
                           <strong>Rate:</strong> {selectedSpotlight.rate}
                         </div>
                       )}
-
                       {selectedSpotlight.availability && (
                         <div>
                           <strong>Availability:</strong>{' '}
                           {selectedSpotlight.availability}
                         </div>
                       )}
-
                       {(selectedSpotlight.contactEmail ||
                         selectedSpotlight.contactLink) && (
                         <div style={{ display: 'grid', gap: 6 }}>
@@ -408,7 +377,6 @@ export default function HearthSpotlightsPage() {
           </div>
         )}
       </PageShell>
-
       <SupportFloatingButton />
     </InternalLayout>
   );
