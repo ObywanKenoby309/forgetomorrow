@@ -231,14 +231,15 @@ export default function Feed() {
         </button>
       </div>
 
-      <PostList
-  posts={posts}
-  filter={filter}
-  onReply={handleReply}
-  onDelete={handleDelete}
-  onReact={handleReact}
+      <PostCard
+  key={post.id}
+  post={post}
+  onReply={handleReplyInternal}
+  onOpenComments={handleOpenComments}
   currentUserId={currentUserId}
-  currentUserName={currentUserName}
+  currentUserName={currentUserName} {/* ✅ PASSED THROUGH */}
+  onDelete={handleDeleteInternal}
+  onReact={handleReactInternal}
 />
 
       {showComposer && (
