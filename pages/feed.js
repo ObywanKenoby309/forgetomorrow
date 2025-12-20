@@ -16,14 +16,18 @@ export default function FeedPage() {
         right={<SeekerRightColumn variant="feed" />}
         activeNav="feed"
         header={
+          {/* Glass header – matches feed style */}
           <section
             aria-label="Your personalized ForgeTomorrow feed header"
             style={{
-              background: "white",
-              borderRadius: 12,
-              padding: 16,
-              boxShadow: "0 2px 6px rgba(0,0,0,0.06)",
-              border: "1px solid #eee",
+              background: "rgba(255, 255, 255, 0.15)", // semi-transparent glass
+              backdropFilter: "blur(12px)",
+              borderRadius: 16,
+              border: "1px solid rgba(255, 255, 255, 0.2)",
+              boxShadow: "0 8px 32px rgba(0, 0, 0, 0.1)",
+              padding: "24px 16px",
+              margin: "0 auto",
+              maxWidth: "1200px", // wide enough to match full layout
               textAlign: "center",
             }}
           >
@@ -31,7 +35,7 @@ export default function FeedPage() {
               style={{
                 margin: 0,
                 color: "#FF7043",
-                fontSize: 24,
+                fontSize: 32, // slightly bigger for emphasis
                 fontWeight: 800,
               }}
             >
@@ -39,9 +43,10 @@ export default function FeedPage() {
             </h1>
             <p
               style={{
-                margin: "6px auto 0",
+                margin: "8px auto 0",
                 color: "#607D8B",
                 maxWidth: 720,
+                fontSize: 16,
               }}
             >
               Share updates, get insights, and stay connected with your network.
@@ -49,7 +54,7 @@ export default function FeedPage() {
           </section>
         }
       >
-        {/* Glass container for the entire feed area */}
+        {/* Glass feed container – stretched wider to match header */}
         <div
           style={{
             background: "rgba(255, 255, 255, 0.15)",
@@ -58,27 +63,25 @@ export default function FeedPage() {
             border: "1px solid rgba(255, 255, 255, 0.2)",
             boxShadow: "0 8px 32px rgba(0, 0, 0, 0.1)",
             padding: "24px 16px",
-            margin: "0 auto",
-            maxWidth: "800px",
+            margin: "24px auto 0",
+            maxWidth: "1200px", // wider to match header/title card width
             minHeight: "60vh",
-            overflow: "hidden",
           }}
         >
-          {/* Filter bar with white backing only behind "Showing" */}
+          {/* Filter bar with white backing on "Showing" */}
           <div
             style={{
               display: "flex",
               alignItems: "center",
               gap: 12,
-              marginBottom: 16,
+              marginBottom: 20,
             }}
           >
-            {/* White pill just for "Showing" */}
             <span
               style={{
                 backgroundColor: "#ffffff",
-                padding: "4px 10px",
-                borderRadius: 8,
+                padding: "6px 12px", // a bit more padding for polish
+                borderRadius: 10,
                 fontSize: 14,
                 fontWeight: 600,
                 color: "#374151",
@@ -88,8 +91,6 @@ export default function FeedPage() {
             >
               Showing
             </span>
-
-            {/* Dropdown or filter label (replace with your actual component) */}
             <span
               style={{
                 fontSize: 14,
@@ -101,7 +102,6 @@ export default function FeedPage() {
             </span>
           </div>
 
-          {/* The actual feed component */}
           <Feed />
         </div>
       </SeekerLayout>

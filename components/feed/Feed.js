@@ -9,7 +9,6 @@ export default function Feed() {
   const [filter, setFilter] = useState('both'); // both | business | personal | remote
   const [showComposer, setShowComposer] = useState(false);
   const [posts, setPosts] = useState([]);
-
   const currentUserId = session?.user?.id || 'me';
   const currentUserName =
     session?.user?.name ||
@@ -23,10 +22,8 @@ export default function Feed() {
   // Normalize community post shape (matches your DB feedPost rows)
   const normalizeCommunityPost = (row) => {
     if (!row) return null;
-
     let body = row.content || row.text || row.body || '';
     let attachments = [];
-
     try {
       const parsed =
         typeof row.content === 'string' ? JSON.parse(row.content) : null;
@@ -35,34 +32,27 @@ export default function Feed() {
     } catch {
       // not JSON – just fall back to raw body above
     }
-
     // Reactions from API (Json field)
     let reactions = [];
     const rawReactions = row.reactions;
-
     if (Array.isArray(rawReactions)) {
       reactions = rawReactions;
     } else if (typeof rawReactions === 'string') {
       try {
         const parsed = JSON.parse(rawReactions);
         if (Array.isArray(parsed)) reactions = parsed;
-      } catch {
-        // ignore bad JSON
-      }
+      } catch {}
     } else if (rawReactions && typeof rawReactions === 'object') {
       reactions = Array.isArray(rawReactions) ? rawReactions : [];
     }
-
     const reactionCount = Array.isArray(reactions)
       ? reactions.reduce(
           (sum, r) => sum + (typeof r.count === 'number' ? r.count : 0),
           0
         )
       : 0;
-
     // Comments
     const comments = Array.isArray(row.comments) ? row.comments : [];
-
     return {
       id: row.id,
       authorId: row.authorId ?? null,
@@ -71,7 +61,7 @@ export default function Feed() {
       body,
       type: row.type ?? 'business',
       createdAt: new Date(row.createdAt).toISOString(),
-      likes: reactionCount, // 🔥 use reaction total as the visible count
+      likes: reactionCount,
       comments,
       attachments,
       reactions,
@@ -99,7 +89,6 @@ export default function Feed() {
     try {
       let community = [];
       let remoteJobs = [];
-
       // 1. Always get community posts
       const feedRes = await fetch('/api/feed');
       if (feedRes.ok) {
@@ -108,7 +97,6 @@ export default function Feed() {
           .map(normalizeCommunityPost)
           .filter(Boolean);
       }
-
       // 2. Get remote jobs if we want them
       if (filter === 'both' || filter === 'remote') {
         const jobsRes = await fetch('/api/jobs/remote');
@@ -117,12 +105,10 @@ export default function Feed() {
           remoteJobs = (jobsData.jobs || []).map(normalizeJob);
         }
       }
-
       // Combine & sort by date
       const combined = [...community, ...remoteJobs].sort(
         (a, b) => new Date(b.createdAt) - new Date(a.createdAt)
       );
-
       setPosts(combined);
     } catch (err) {
       console.error('Feed load error:', err);
@@ -139,7 +125,6 @@ export default function Feed() {
   // New post from composer → saved via /api/feed
   const handleNewPost = async (postFromComposer) => {
     const body = postFromComposer.body ?? '';
-
     const payload = {
       content: JSON.stringify({
         body,
@@ -149,7 +134,6 @@ export default function Feed() {
       type: postFromComposer.type,
       attachments: postFromComposer.attachments ?? [],
     };
-
     try {
       const res = await fetch('/api/feed', {
         method: 'POST',
@@ -171,18 +155,13 @@ export default function Feed() {
   const handleReply = async (postId, text) => {
     if (!postId || !text || !text.trim()) return;
     const trimmed = text.trim();
-
-    // Don’t try to comment on remote jobs
     if (String(postId).startsWith('job-')) return;
-
-    // Persist to DB
     try {
       const res = await fetch('/api/feed/comments', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ postId, text: trimmed }),
       });
-
       if (!res.ok) {
         console.error('Comment failed', await res.text());
         return;
@@ -191,17 +170,14 @@ export default function Feed() {
       console.error('Comment error:', err);
       return;
     }
-
-    // Update UI immediately
     const newComment = {
-      userId: currentUserId || null,     // 🔹 so MemberActions can target
-      byUserId: currentUserId || null,   // 🔹 in case older comments use this field
+      userId: currentUserId || null,
+      byUserId: currentUserId || null,
       by: currentUserName || 'You',
       text: trimmed,
       avatarUrl: currentUserAvatar || null,
       at: new Date().toISOString(),
     };
-
     setPosts((prev) =>
       prev.map((p) =>
         p.id === postId
@@ -216,34 +192,27 @@ export default function Feed() {
     );
   };
 
-  // Emoji reactions — hit /api/feed/react and update reactions + likes
+  // Emoji reactions — already fully DB-backed
   const handleReact = async (postId, emoji) => {
     if (!emoji) return;
     if (!postId && postId !== 0) return;
-
-    // Never react on remote jobs
     if (String(postId).startsWith('job-')) return;
-
     try {
       const res = await fetch('/api/feed/react', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ postId, emoji }),
       });
-
       if (!res.ok) {
         console.error('React failed', await res.text());
         return;
       }
-
       const data = await res.json();
       const reactions = Array.isArray(data.reactions) ? data.reactions : [];
-
       const reactionCount = reactions.reduce(
         (sum, r) => sum + (typeof r.count === 'number' ? r.count : 0),
         0
       );
-
       setPosts((prev) =>
         prev.map((p) =>
           p.id === postId
@@ -260,14 +229,10 @@ export default function Feed() {
     }
   };
 
-  // Delete — removes post from UI + hits /api/feed/[id]
   const handleDelete = async (postId) => {
     if (!postId) return;
-    if (String(postId).startsWith('job-')) return; // never delete remote jobs from here
-
-    // optimistic UI update
+    if (String(postId).startsWith('job-')) return;
     setPosts((prev) => prev.filter((p) => p.id !== postId));
-
     try {
       await fetch(`/api/feed/${postId}`, {
         method: 'DELETE',
@@ -279,14 +244,19 @@ export default function Feed() {
 
   return (
     <div className="mx-auto w-full max-w-none px-2 sm:px-6 pt-6 pb-10">
-      {/* Filter — added "remote" option */}
-      <div className="mb-3 flex items-center justify-between">
+      {/* Filter bar with white pill behind "Showing" */}
+      <div className="mb-4 flex items-center justify-between">
         <div className="flex items-center gap-3">
-          <span className="text-sm font-semibold text-gray-700">Showing</span>
+          {/* White pill only on "Showing" */}
+          <span
+            className="bg-white px-3 py-1 rounded-lg text-sm font-semibold text-gray-800 shadow-sm border border-gray-200"
+          >
+            Showing
+          </span>
           <select
             value={filter}
             onChange={(e) => setFilter(e.target.value)}
-            className="text-sm bg-white border rounded-md px-3 py-1"
+            className="text-sm bg-white border border-gray-300 rounded-md px-3 py-1 focus:outline-none focus:ring-2 focus:ring-orange-500"
           >
             <option value="both">Community + Remote Jobs</option>
             <option value="business">Community (Professional)</option>
@@ -297,10 +267,10 @@ export default function Feed() {
       </div>
 
       {/* Composer trigger */}
-      <div className="bg-white rounded-lg shadow p-4 mb-4">
+      <div className="bg-white rounded-lg shadow p-4 mb-6">
         <button
           onClick={() => setShowComposer(true)}
-          className="w-full text-left text-gray-600 px-3 py-2 border rounded-md hover:bg-gray-50"
+          className="w-full text-left text-gray-600 px-3 py-2 border border-gray-300 rounded-md hover:bg-gray-50 transition"
         >
           Start a post…
         </button>
