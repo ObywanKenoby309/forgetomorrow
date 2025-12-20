@@ -58,17 +58,16 @@ export default function PostList({
           </div>
         ) : (
           filteredPosts.map((post) => {
-            return (
-              <PostCard
-                key={post.id}
-                post={post}
-                onReply={handleReplyInternal}
-                onOpenComments={handleOpenComments}
-                currentUserId={currentUserId}
-                currentUserName={currentUserName} {/* ✅ PASSED THROUGH */}
-                onDelete={handleDeleteInternal}
-                onReact={handleReactInternal}
-              />
+            <PostCard
+  key={post.id}
+  post={post}
+  onReply={handleReplyInternal}
+  onOpenComments={handleOpenComments}
+  currentUserId={currentUserId}
+  currentUserName={currentUserName}
+  onDelete={handleDeleteInternal}
+  onReact={handleReactInternal}
+/>
             );
           })
         )}

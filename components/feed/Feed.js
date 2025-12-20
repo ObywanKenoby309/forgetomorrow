@@ -237,7 +237,7 @@ export default function Feed() {
   onReply={handleReplyInternal}
   onOpenComments={handleOpenComments}
   currentUserId={currentUserId}
-  currentUserName={currentUserName}
+  currentUserName={currentUserName} 
   onDelete={handleDeleteInternal}
   onReact={handleReactInternal}
 />
