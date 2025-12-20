@@ -53,11 +53,8 @@ function PageHeader() {
   return (
     <header
       style={{
-        background: 'white',
-        border: '1px solid #eee',
-        borderRadius: 12,
+        ...glassBase,
         padding: '20px 24px',
-        boxShadow: '0 2px 6px rgba(0,0,0,0.06)',
         textAlign: 'center',
       }}
     >

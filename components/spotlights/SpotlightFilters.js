@@ -1,5 +1,17 @@
 import React, { useEffect, useMemo, useState } from 'react';
 
+// ──────────────────────────────────────────────────────────────
+// Glass base style (matches index.js and edit page)
+// ──────────────────────────────────────────────────────────────
+const glassBase = {
+  background: 'rgba(255,255,255,0.78)',
+  border: '1px solid rgba(255,255,255,0.55)',
+  borderRadius: 14,
+  boxShadow: '0 10px 30px rgba(0,0,0,0.12)',
+  backdropFilter: 'blur(14px)',
+  WebkitBackdropFilter: 'blur(14px)',
+};
+
 const DEFAULT_FILTERS = {
   q: '',
   specialties: [],
@@ -43,20 +55,17 @@ export default function SpotlightFilters({ onChange, initial }) {
   return (
     <section
       style={{
-        background: 'white',
-        border: '1px solid #eee',
-        borderRadius: 12,
-        padding: '20px 20px', // ✅ more breathing like Jobs
-        boxShadow: '0 2px 6px rgba(0,0,0,0.06)',
+        ...glassBase,
+        padding: '20px 20px',
         display: 'grid',
-        gap: 16, // ✅ more breathing like Jobs
+        gap: 16,
       }}
     >
       {/* TOP ROW (no collapse button) */}
       <div
         style={{
           display: 'grid',
-          gridTemplateColumns: 'minmax(0, 1fr) 160px', // ✅ keeps sort compact, gives search room
+          gridTemplateColumns: 'minmax(0, 1fr) 160px',
           gap: 12,
           alignItems: 'center',
         }}
@@ -65,13 +74,18 @@ export default function SpotlightFilters({ onChange, initial }) {
           value={filters.q}
           onChange={(e) => setFilters((f) => ({ ...f, q: e.target.value }))}
           placeholder="Search mentors (name, headline, summary)…"
-          style={input}
+          style={{
+            ...input,
+            background: 'rgba(255,255,255,0.9)',
+          }}
         />
-
         <select
           value={filters.sort}
           onChange={(e) => setFilters((f) => ({ ...f, sort: e.target.value }))}
-          style={input}
+          style={{
+            ...input,
+            background: 'rgba(255,255,255,0.9)',
+          }}
         >
           <option>Newest</option>
           <option>Name A–Z</option>
@@ -84,7 +98,7 @@ export default function SpotlightFilters({ onChange, initial }) {
           display: 'grid',
           gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))',
           gap: 16,
-          paddingTop: 0, // ✅ match Jobs (no weird extra push-down)
+          paddingTop: 0,
         }}
       >
         {/* Specialties */}
@@ -159,7 +173,6 @@ export default function SpotlightFilters({ onChange, initial }) {
 }
 
 /* ---------- styles ---------- */
-
 const label = {
   fontSize: 12,
   color: '#607D8B',
@@ -168,12 +181,11 @@ const label = {
 };
 
 const input = {
-  border: '1px solid #ddd',
+  border: '1px solid rgba(0,0,0,0.12)',
   borderRadius: 10,
   padding: '10px 12px',
   outline: 'none',
   width: '100%',
-  background: 'white',
 };
 
 const checkLabel = {
