@@ -57,21 +57,18 @@ export default function PostList({
             No posts yet. Be the first to share something.
           </div>
         ) : (
-          filteredPosts.map((post) => {
-  return (
-    <PostCard
-      key={post.id}
-      post={post}
-      onReply={handleReplyInternal}
-      onOpenComments={handleOpenComments}
-      currentUserId={currentUserId}
-      currentUserName={currentUserName}
-      onDelete={handleDeleteInternal}
-      onReact={handleReactInternal}
-    />
-  );
-})
-          })
+          filteredPosts.map((post) => (
+            <PostCard
+              key={post.id}
+              post={post}
+              onReply={handleReplyInternal}
+              onOpenComments={handleOpenComments}
+              currentUserId={currentUserId}
+              currentUserName={currentUserName}
+              onDelete={handleDeleteInternal}
+              onReact={handleReactInternal}
+            />
+          ))
         )}
       </div>
 

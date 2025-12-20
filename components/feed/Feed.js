@@ -9,15 +9,13 @@ export default function Feed() {
   const [filter, setFilter] = useState('both'); // both | business | personal
   const [showComposer, setShowComposer] = useState(false);
   const [posts, setPosts] = useState([]);
+
   const currentUserId = session?.user?.id || 'me';
   const currentUserName =
     session?.user?.name ||
-    [session?.user?.firstName, session?.user?.lastName]
-      .filter(Boolean)
-      .join(' ') ||
+    [session?.user?.firstName, session?.user?.lastName].filter(Boolean).join(' ') ||
     (session?.user?.email?.split('@')[0] ?? '');
-  const currentUserAvatar =
-    session?.user?.avatarUrl || session?.user?.image || null;
+  const currentUserAvatar = session?.user?.avatarUrl || session?.user?.image || null;
 
   // Normalize community post shape
   const normalizeCommunityPost = (row) => {
@@ -25,11 +23,11 @@ export default function Feed() {
     let body = row.content || row.text || row.body || '';
     let attachments = [];
     try {
-      const parsed =
-        typeof row.content === 'string' ? JSON.parse(row.content) : null;
+      const parsed = typeof row.content === 'string' ? JSON.parse(row.content) : null;
       if (parsed?.body) body = parsed.body;
       if (Array.isArray(parsed?.attachments)) attachments = parsed.attachments;
     } catch {}
+
     let reactions = [];
     const rawReactions = row.reactions;
     if (Array.isArray(rawReactions)) {
@@ -42,13 +40,13 @@ export default function Feed() {
     } else if (rawReactions && typeof rawReactions === 'object') {
       reactions = Array.isArray(rawReactions) ? rawReactions : [];
     }
+
     const reactionCount = Array.isArray(reactions)
-      ? reactions.reduce(
-          (sum, r) => sum + (typeof r.count === 'number' ? r.count : 0),
-          0
-        )
+      ? reactions.reduce((sum, r) => sum + (typeof r.count === 'number' ? r.count : 0), 0)
       : 0;
+
     const comments = Array.isArray(row.comments) ? row.comments : [];
+
     return {
       id: row.id,
       authorId: row.authorId ?? null,
@@ -71,9 +69,7 @@ export default function Feed() {
       const feedRes = await fetch('/api/feed');
       if (feedRes.ok) {
         const feedData = await feedRes.json();
-        const community = (feedData.posts || [])
-          .map(normalizeCommunityPost)
-          .filter(Boolean);
+        const community = (feedData.posts || []).map(normalizeCommunityPost).filter(Boolean);
         setPosts(community);
       }
     } catch (err) {
@@ -98,12 +94,14 @@ export default function Feed() {
       type: postFromComposer.type,
       attachments: postFromComposer.attachments ?? [],
     };
+
     try {
       const res = await fetch('/api/feed', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(payload),
       });
+
       if (res.ok) {
         await reloadFeed();
         setShowComposer(false);
@@ -118,12 +116,14 @@ export default function Feed() {
   const handleReply = async (postId, text) => {
     if (!postId || !text || !text.trim()) return;
     const trimmed = text.trim();
+
     try {
       const res = await fetch('/api/feed/comments', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ postId, text: trimmed }),
       });
+
       if (!res.ok) {
         console.error('Comment failed', await res.text());
         return;
@@ -132,6 +132,7 @@ export default function Feed() {
       console.error('Comment error:', err);
       return;
     }
+
     const newComment = {
       userId: currentUserId || null,
       byUserId: currentUserId || null,
@@ -140,14 +141,13 @@ export default function Feed() {
       avatarUrl: currentUserAvatar || null,
       at: new Date().toISOString(),
     };
+
     setPosts((prev) =>
       prev.map((p) =>
         p.id === postId
           ? {
               ...p,
-              comments: Array.isArray(p.comments)
-                ? [...p.comments, newComment]
-                : [newComment],
+              comments: Array.isArray(p.comments) ? [...p.comments, newComment] : [newComment],
             }
           : p
       )
@@ -157,22 +157,26 @@ export default function Feed() {
   const handleReact = async (postId, emoji) => {
     if (!emoji) return;
     if (!postId && postId !== 0) return;
+
     try {
       const res = await fetch('/api/feed/react', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ postId, emoji }),
       });
+
       if (!res.ok) {
         console.error('React failed', await res.text());
         return;
       }
+
       const data = await res.json();
       const reactions = Array.isArray(data.reactions) ? data.reactions : [];
       const reactionCount = reactions.reduce(
         (sum, r) => sum + (typeof r.count === 'number' ? r.count : 0),
         0
       );
+
       setPosts((prev) =>
         prev.map((p) =>
           p.id === postId
@@ -231,16 +235,15 @@ export default function Feed() {
         </button>
       </div>
 
-      <PostCard
-  key={post.id}
-  post={post}
-  onReply={handleReplyInternal}
-  onOpenComments={handleOpenComments}
-  currentUserId={currentUserId}
-  currentUserName={currentUserName} 
-  onDelete={handleDeleteInternal}
-  onReact={handleReactInternal}
-/>
+      <PostList
+        posts={posts}
+        filter={filter}
+        onReply={handleReply}
+        onDelete={handleDelete}
+        onReact={handleReact}
+        currentUserId={currentUserId}
+        currentUserName={currentUserName}
+      />
 
       {showComposer && (
         <div
