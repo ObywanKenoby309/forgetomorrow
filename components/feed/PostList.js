@@ -10,6 +10,7 @@ export default function PostList({
   onDelete,
   onReact,
   currentUserId,
+  currentUserName, // ✅ ADDED
 }) {
   const [activePostId, setActivePostId] = useState(null);
 
@@ -57,11 +58,6 @@ export default function PostList({
           </div>
         ) : (
           filteredPosts.map((post) => {
-            console.log('[POSTLIST] rendering post', {
-              id: post.id,
-              comments: post.comments,
-            });
-
             return (
               <PostCard
                 key={post.id}
@@ -69,6 +65,7 @@ export default function PostList({
                 onReply={handleReplyInternal}
                 onOpenComments={handleOpenComments}
                 currentUserId={currentUserId}
+                currentUserName={currentUserName} {/* ✅ PASSED THROUGH */}
                 onDelete={handleDeleteInternal}
                 onReact={handleReactInternal}
               />

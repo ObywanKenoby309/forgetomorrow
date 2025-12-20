@@ -9,11 +9,12 @@ export default function PostCard({
   onDelete,
   onReact,
   currentUserId,
+  currentUserName, // ✅ ADDED
 }) {
   const [showReplyInput, setShowReplyInput] = useState(false);
   const [replyText, setReplyText] = useState('');
-  const [hoveredEmoji, setHoveredEmoji] = useState(null); // Track hovered emoji for tooltip
-  const [reactionUsers, setReactionUsers] = useState({}); // Cache { emoji: [names] }
+  const [hoveredEmoji, setHoveredEmoji] = useState(null);
+  const [reactionUsers, setReactionUsers] = useState({}); // { emoji: "Name, Name" }
 
   const handleReplySubmit = () => {
     if (replyText.trim()) {
@@ -24,20 +25,26 @@ export default function PostCard({
   };
 
   // Extract reaction data
-  const selectedEmojis = post.reactions
-    ?.filter(r => r.users?.includes(currentUserId) || r.userIds?.includes(currentUserId))
-    ?.map(r => r.emoji) || [];
+  const selectedEmojis =
+    post.reactions
+      ?.filter(
+        (r) =>
+          r.users?.includes(currentUserId) ||
+          r.userIds?.includes(currentUserId)
+      )
+      ?.map((r) => r.emoji) || [];
 
-  const reactionCounts = post.reactions?.reduce((acc, r) => {
-    acc[r.emoji] = r.count || 0;
-    return acc;
-  }, {}) || {};
+  const reactionCounts =
+    post.reactions?.reduce((acc, r) => {
+      acc[r.emoji] = r.count || 0;
+      return acc;
+    }, {}) || {};
 
-  // Fetch user names on hover (only once per emoji)
+  // Fetch user names on hover (cached per emoji)
   const fetchUsersForEmoji = async (emoji) => {
-    if (reactionUsers[emoji]) return; // cached
+    if (reactionUsers[emoji]) return;
 
-    const reaction = post.reactions?.find(r => r.emoji === emoji);
+    const reaction = post.reactions?.find((r) => r.emoji === emoji);
     if (!reaction || !reaction.userIds?.length) return;
 
     try {
@@ -46,13 +53,14 @@ export default function PostCard({
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ userIds: reaction.userIds }),
       });
+
       if (res.ok) {
         const data = await res.json();
         const names = data.names || [];
-        const formatted = names.map(name => 
-          name === session?.user?.name ? 'You' : name
-        ).join(', ');
-        setReactionUsers(prev => ({ ...prev, [emoji]: formatted }));
+        const formatted = names
+          .map((name) => (name === currentUserName ? 'You' : name))
+          .join(', ');
+        setReactionUsers((prev) => ({ ...prev, [emoji]: formatted }));
       }
     } catch (err) {
       console.error('Failed to fetch reaction users', err);
@@ -70,7 +78,11 @@ export default function PostCard({
       {/* Author */}
       <div className="flex items-start gap-3">
         {post.authorAvatar ? (
-          <img src={post.authorAvatar} alt={post.author} className="w-10 h-10 rounded-full" />
+          <img
+            src={post.authorAvatar}
+            alt={post.author}
+            className="w-10 h-10 rounded-full"
+          />
         ) : (
           <div className="w-10 h-10 rounded-full bg-gray-200 flex items-center justify-center text-gray-500">
             {post.author?.charAt(0)?.toUpperCase()}
@@ -92,8 +104,12 @@ export default function PostCard({
         <div className="grid grid-cols-2 gap-3">
           {post.attachments.map((a, i) => (
             <div key={i}>
-              {a.type === 'image' && <img src={a.url} alt={a.name} className="rounded" />}
-              {a.type === 'video' && <video src={a.url} controls className="rounded" />}
+              {a.type === 'image' && (
+                <img src={a.url} alt={a.name} className="rounded" />
+              )}
+              {a.type === 'video' && (
+                <video src={a.url} controls className="rounded" />
+              )}
               {a.type === 'link' && <a href={a.url}>{a.name}</a>}
             </div>
           ))}
@@ -113,9 +129,7 @@ export default function PostCard({
           onMouseLeave={() => setHoveredEmoji(null)}
         />
         {hoveredEmoji && reactionCounts[hoveredEmoji] > 0 && (
-          <div
-            className="absolute bottom-full left-0 mb-3 bg-gray-900 text-white text-sm rounded-lg p-3 shadow-xl z-20 whitespace-nowrap max-w-xs"
-          >
+          <div className="absolute bottom-full left-0 mb-3 bg-gray-900 text-white text-sm rounded-lg p-3 shadow-xl z-20 whitespace-nowrap max-w-xs">
             {getTooltipText(hoveredEmoji)}
           </div>
         )}

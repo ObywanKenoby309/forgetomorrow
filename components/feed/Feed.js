@@ -206,9 +206,7 @@ export default function Feed() {
       {/* Filter */}
       <div className="mb-4 flex items-center justify-between">
         <div className="flex items-center gap-3">
-          <span
-            className="bg-white px-3 py-1 rounded-lg text-sm font-semibold text-gray-800 shadow-sm border border-gray-200"
-          >
+          <span className="bg-white px-3 py-1 rounded-lg text-sm font-semibold text-gray-800 shadow-sm border border-gray-200">
             Showing
           </span>
           <select
@@ -216,9 +214,9 @@ export default function Feed() {
             onChange={(e) => setFilter(e.target.value)}
             className="text-sm bg-white border border-gray-300 rounded-md px-3 py-1 focus:outline-none focus:ring-2 focus:ring-orange-500"
           >
-            <option value="both">Community + Business & Personal</option>
-            <option value="business">Community (Business)</option>
-            <option value="personal">Community (Personal)</option>
+            <option value="both">Business & Personal</option>
+            <option value="business">Business</option>
+            <option value="personal">Personal</option>
           </select>
         </div>
       </div>
@@ -234,13 +232,14 @@ export default function Feed() {
       </div>
 
       <PostList
-        posts={posts}
-        filter={filter}
-        onReply={handleReply}
-        onDelete={handleDelete}
-        onReact={handleReact}
-        currentUserId={currentUserId}
-      />
+  posts={posts}
+  filter={filter}
+  onReply={handleReply}
+  onDelete={handleDelete}
+  onReact={handleReact}
+  currentUserId={currentUserId}
+  currentUserName={currentUserName}
+/>
 
       {showComposer && (
         <div
