@@ -57,17 +57,17 @@ export default function SeekerDashboard() {
             : '—',
         };
         setKpi(newKpi);
-        // Applications over time
+        // Applications over time - 5 weeks
         const today = new Date();
         const thisWeek = startOfISOWeek(today);
-        const labels = Array.from({ length: 8 }, (_, i) => `W${8 - i}`);
+        const labels = Array.from({ length: 5 }, (_, i) => `W${5 - i}`);
         const buckets = labels.map(() => ({ applied: 0, interviews: 0 }));
         (data.allApplications || []).forEach((app) => {
           const d = new Date(app.appliedAt);
           const wStart = startOfISOWeek(d);
           const diff = weekDiff(thisWeek, wStart);
-          if (diff >= 0 && diff < 8) {
-            const idx = 8 - diff - 1;
+          if (diff >= 0 && diff < 5) {
+            const idx = 5 - diff - 1;
             buckets[idx].applied += 1;
           }
         });
@@ -244,21 +244,6 @@ export default function SeekerDashboard() {
             </section>
             <ProfilePerformanceTeaser />
           </div>
-          {/* Coming Soon */}
-          <section className="grid md:grid-cols-2 gap-6">
-            <div className="bg-white border border-gray-200 rounded-xl p-5 shadow-sm">
-              <h3 className="text-base font-semibold text-gray-800 mb-2">
-                Response Speed
-              </h3>
-              <p className="text-sm text-gray-500">Benchmarks coming soon.</p>
-            </div>
-            <div className="bg-white border border-gray-200 rounded-xl p-5 shadow-sm">
-              <h3 className="text-base font-semibold text-gray-800 mb-2">
-                Top Categories
-              </h3>
-              <p className="text-sm text-gray-500">Distribution coming soon.</p>
-            </div>
-          </section>
         </div>
       </SeekerLayout>
     </>
