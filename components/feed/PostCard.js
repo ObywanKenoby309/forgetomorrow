@@ -13,15 +13,14 @@ export default function PostCard({
 }) {
   // ✅ CRITICAL FIX 1: Early return if post is missing/invalid (happens during static prerender)
   if (!post) return null;
-
   const [showReplyInput, setShowReplyInput] = useState(false);
   const [replyText, setReplyText] = useState('');
   const [hoveredEmoji, setHoveredEmoji] = useState(null);
   const [reactionUsers, setReactionUsers] = useState({});
-  
+ 
   // ✅ CRITICAL FIX 2: Safe isOwner check
   const isOwner = post.authorId && currentUserId ? post.authorId === currentUserId : false;
-  
+ 
   const handleReplySubmit = () => {
     if (!replyText.trim()) return;
     onReply(post.id, replyText.trim());
@@ -58,13 +57,16 @@ export default function PostCard({
     }
   };
   // ─────────────────────────────────────────────────────────────
-  // BLOCK AUTHOR (non-OP only) — immediate global hide via callback
+  // BLOCK AUTHOR (non-OP only) — prompt for reason, send to API, optimistic hide
   // ─────────────────────────────────────────────────────────────
   const handleBlockAuthor = async () => {
     if (!post?.authorId) {
       alert('We could not determine which member to block.');
       return;
     }
+    const reason = window.prompt(
+      'Optional: Why are you blocking this member? (This helps moderation)'
+    );
     const confirmed = window.confirm(
       'Block this member? You will no longer see their posts, and they will not be able to message you.'
     );
@@ -73,14 +75,17 @@ export default function PostCard({
       const res = await fetch('/api/signal/block', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ targetUserId: post.authorId }),
+        body: JSON.stringify({ 
+          targetUserId: post.authorId,
+          reason: reason?.trim() || null // ✅ Send reason if provided
+        }),
       });
       if (!res.ok) {
         console.error('block error:', res.status, await res.text());
         alert('We could not block this member. Please try again.');
         return;
       }
-      // ✅ Trigger global hide instead of local state
+      // ✅ Optimistic hide + trigger Feed reload
       onBlockAuthor?.(post.authorId);
       alert('Member blocked. You will no longer see their posts.');
     } catch (err) {
