@@ -3,21 +3,18 @@ import { useEffect, useState } from 'react';
 import { useSession } from 'next-auth/react';
 import PostComposer from './PostComposer';
 import PostList from './PostList';
-
 export default function Feed() {
   const { data: session } = useSession();
   const [filter, setFilter] = useState('both'); // both | business | personal
   const [showComposer, setShowComposer] = useState(false);
   const [posts, setPosts] = useState([]);
-  const [blockedAuthorIds, setBlockedAuthorIds] = useState([]); // ✅ NEW: track blocked authors client-side
-
+  const [blockedAuthorIds, setBlockedAuthorIds] = useState([]); // ✅ Load from DB API for persistence
   const currentUserId = session?.user?.id || 'me';
   const currentUserName =
     session?.user?.name ||
     [session?.user?.firstName, session?.user?.lastName].filter(Boolean).join(' ') ||
     (session?.user?.email?.split('@')[0] ?? '');
   const currentUserAvatar = session?.user?.avatarUrl || session?.user?.image || null;
-
   // Normalize community post shape
   const normalizeCommunityPost = (row) => {
     if (!row) return null;
@@ -59,7 +56,6 @@ export default function Feed() {
       isJob: false,
     };
   };
-
   // Main loader – only community posts
   const reloadFeed = async () => {
     try {
@@ -74,8 +70,23 @@ export default function Feed() {
     }
   };
 
+  // ✅ NEW: Load blocked authorIds from DB API for persistence
+  const loadBlockedAuthors = async () => {
+    try {
+      const res = await fetch('/api/signal/blocked');
+      if (res.ok) {
+        const data = await res.json();
+        const ids = data.blocked?.map(b => b.id) || [];
+        setBlockedAuthorIds(ids);
+      }
+    } catch (err) {
+      console.error('load blocked error', err);
+    }
+  };
+
   useEffect(() => {
     reloadFeed();
+    loadBlockedAuthors(); // ✅ Load on mount
     const interval = setInterval(reloadFeed, 5 * 60 * 1000);
     return () => clearInterval(interval);
   }, [filter]);
@@ -107,7 +118,6 @@ export default function Feed() {
       console.error('Post failed', err);
     }
   };
-
   const handleReply = async (postId, text) => {
     if (!postId || !text || !text.trim()) return;
     const trimmed = text.trim();
@@ -144,7 +154,6 @@ export default function Feed() {
       )
     );
   };
-
   const handleReact = async (postId, emoji) => {
     if (!emoji) return;
     if (!postId && postId !== 0) return;
@@ -179,7 +188,6 @@ export default function Feed() {
       console.error('React error:', err);
     }
   };
-
   const handleDelete = async (postId) => {
     if (!postId) return;
     setPosts((prev) => prev.filter((p) => p.id !== postId));
@@ -191,16 +199,14 @@ export default function Feed() {
       console.error('Delete failed:', err);
     }
   };
-
-  // ✅ NEW: Global block handler
+  // ✅ NEW: Global block handler — optimistic + reload blocked list
   const handleBlockAuthor = (authorId) => {
     if (!authorId) return;
     setBlockedAuthorIds((prev) => [...prev, authorId]);
+    loadBlockedAuthors(); // Refresh from DB to sync
   };
-
   // Filter out blocked authors
   const filteredPosts = posts.filter((p) => !blockedAuthorIds.includes(p.authorId));
-
   return (
     <div className="mx-auto w-full max-w-none px-2 sm:px-6 pt-6 pb-10">
       {/* Filter */}
@@ -220,7 +226,6 @@ export default function Feed() {
           </select>
         </div>
       </div>
-
       {/* Composer trigger */}
       <div className="bg-white rounded-lg shadow p-4 mb-6">
         <button
@@ -230,7 +235,6 @@ export default function Feed() {
           Start a post…
         </button>
       </div>
-
       <PostList
         posts={filteredPosts} // ✅ Use filtered posts
         filter={filter}
@@ -241,7 +245,6 @@ export default function Feed() {
         currentUserName={currentUserName}
         onBlockAuthor={handleBlockAuthor} // ✅ Pass down
       />
-
       {showComposer && (
         <div
           className="fixed inset-0 z-50 flex items-center justify-center bg-black/40"
