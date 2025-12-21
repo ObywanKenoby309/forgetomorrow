@@ -1,58 +1,71 @@
-// pages/api/signal/block.js
+// pages/api/signal/blocked.js
 import { getServerSession } from 'next-auth/next';
 import { authOptions } from '../auth/[...nextauth]';
-import { prisma } from '@/lib/prisma';
-
+import { prisma } from '@/lib/prisma'; // ✅ FIXED: named import to match your style
 export default async function handler(req, res) {
-  if (req.method !== 'POST') {
-    res.setHeader('Allow', 'POST');
-    return res.status(405).json({ error: 'Method not allowed' });
+  const session = await getServerSession(req, res, authOptions);
+  if (!session?.user?.id) {
+    return res.status(401).json({ error: 'Unauthorized' });
   }
-  try {
-    const session = await getServerSession(req, res, authOptions);
-    if (!session?.user?.id) {
-      return res.status(401).json({ error: 'Not authenticated' });
+  const userId = session.user.id;
+  if (req.method === 'GET') {
+    const countOnly = req.query.countOnly === 'true';
+    if (countOnly) {
+      const count = await prisma.userBlock.count({
+        where: { blockerId: userId },
+      });
+      return res.status(200).json({ count });
     }
-    const meId = session.user.id;
-    const { targetUserId, reason } = req.body || {}; // ✅ NEW: accept reason
-    if (!targetUserId || typeof targetUserId !== 'string') {
-      return res
-        .status(400)
-        .json({ error: 'Missing or invalid "targetUserId".' });
-    }
-    if (targetUserId === meId) {
-      return res
-        .status(400)
-        .json({ error: 'You cannot block yourself.' });
-    }
-    // Make sure target exists
-    const target = await prisma.user.findUnique({
-      where: { id: targetUserId },
-      select: { id: true },
-    });
-    if (!target) {
-      return res.status(404).json({ error: 'Target user not found.' });
-    }
-    // Create or update block record, save reason if provided
-    await prisma.userBlock.upsert({
-      where: {
-        blockerId_blockedId: {
-          blockerId: meId,
-          blockedId: targetUserId,
+    const blocked = await prisma.userBlock.findMany({
+      where: { blockerId: userId },
+      select: {
+        blockedId: true,
+        reason: true,
+        createdAt: true,
+        blocked: {
+          select: {
+            id: true,
+            name: true,
+            avatarUrl: true,
+          },
         },
       },
-      create: {
-        blockerId: meId,
-        blockedId: targetUserId,
-        reason: reason?.trim() || null, // ✅ Save reason
-      },
-      update: {
-        reason: reason?.trim() || null, // ✅ Update reason if changed
-      },
+      orderBy: { createdAt: 'desc' },
     });
-    return res.status(200).json({ blocked: true });
-  } catch (err) {
-    console.error('[signal/block] error', err);
-    return res.status(500).json({ error: 'Failed to block user.' });
+    const list = blocked.map((b) => ({
+      id: b.blockedId,
+      name: b.blocked.name || 'Member',
+      avatarUrl: b.blocked.avatarUrl,
+      reason: b.reason || null,
+      createdAt: b.createdAt.toISOString(),
+    }));
+    return res.status(200).json({ blocked: list });
   }
+  if (req.method === 'DELETE') {
+    // ✅ Parse body for DELETE (Next.js doesn't by default)
+    let body;
+    try {
+      body = JSON.parse(req.body);
+    } catch {}
+    const { blockedId } = body || {};
+    if (!blockedId) {
+      return res.status(400).json({ error: 'blockedId required' });
+    }
+    try {
+      await prisma.userBlock.delete({
+        where: {
+          blockerId_blockedId: {
+            blockerId: userId,
+            blockedId,
+          },
+        },
+      });
+      return res.status(200).json({ success: true });
+    } catch (err) {
+      console.error('[signal/blocked] unblock error', err);
+      return res.status(500).json({ error: 'Failed to unblock' });
+    }
+  }
+  res.setHeader('Allow', ['GET', 'DELETE']);
+  return res.status(405).json({ error: `Method ${req.method} not allowed` });
 }
