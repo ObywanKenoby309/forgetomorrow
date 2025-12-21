@@ -9,6 +9,7 @@ export default function PostCard({
   onReact,
   currentUserId,
   currentUserName,
+  onBlockAuthor, // ✅ NEW: callback to hide all posts from this author
 }) {
   // ✅ CRITICAL FIX 1: Early return if post is missing/invalid (happens during static prerender)
   if (!post) return null;
@@ -18,12 +19,8 @@ export default function PostCard({
   const [hoveredEmoji, setHoveredEmoji] = useState(null);
   const [reactionUsers, setReactionUsers] = useState({});
   
-  // ✅ CRITICAL FIX 2: Safe isOwner check – prevents crash even if authorId missing
+  // ✅ CRITICAL FIX 2: Safe isOwner check
   const isOwner = post.authorId && currentUserId ? post.authorId === currentUserId : false;
-  
-  // ✅ NEW: local hide so block is immediate without refresh
-  const [isHidden, setIsHidden] = useState(false);
-  if (isHidden) return null;
   
   const handleReplySubmit = () => {
     if (!replyText.trim()) return;
@@ -61,7 +58,7 @@ export default function PostCard({
     }
   };
   // ─────────────────────────────────────────────────────────────
-  // BLOCK AUTHOR (non-OP only) — no redirect, immediate hide
+  // BLOCK AUTHOR (non-OP only) — immediate global hide via callback
   // ─────────────────────────────────────────────────────────────
   const handleBlockAuthor = async () => {
     if (!post?.authorId) {
@@ -83,7 +80,8 @@ export default function PostCard({
         alert('We could not block this member. Please try again.');
         return;
       }
-      setIsHidden(true);
+      // ✅ Trigger global hide instead of local state
+      onBlockAuthor?.(post.authorId);
       alert('Member blocked. You will no longer see their posts.');
     } catch (err) {
       console.error('block error:', err);
@@ -133,23 +131,35 @@ export default function PostCard({
       : 'Loading…';
   return (
     <div className="relative bg-white rounded-lg shadow p-5 space-y-4">
-      {/* TOP-RIGHT ACTIONS (NON-OP ONLY) */}
-      {!isOwner && (
-        <div className="absolute top-3 right-3 flex items-center gap-2">
+      {/* TOP-RIGHT ACTIONS — unified style */}
+      <div className="absolute top-3 right-3 flex items-center gap-2">
+        {/* Non-OP: Report + Block */}
+        {!isOwner && (
+          <>
+            <button
+              onClick={handleReportPost}
+              className="text-xs px-2 py-1 border border-gray-300 rounded-md text-gray-700 hover:bg-gray-50"
+            >
+              Report
+            </button>
+            <button
+              onClick={handleBlockAuthor}
+              className="text-xs px-2 py-1 border border-red-300 rounded-md text-red-700 hover:bg-red-50"
+            >
+              Block
+            </button>
+          </>
+        )}
+        {/* OP: Delete only, same style as Block */}
+        {isOwner && (
           <button
-            onClick={handleReportPost}
-            className="text-xs px-2 py-1 border border-gray-300 rounded-md text-gray-700 hover:bg-gray-50"
-          >
-            Report
-          </button>
-          <button
-            onClick={handleBlockAuthor}
+            onClick={() => onDelete(post.id)}
             className="text-xs px-2 py-1 border border-red-300 rounded-md text-red-700 hover:bg-red-50"
           >
-            Block
+            Delete
           </button>
-        </div>
-      )}
+        )}
+      </div>
       {/* AUTHOR */}
       <div className="flex items-start gap-3">
         {post.authorAvatar ? (
@@ -226,17 +236,6 @@ export default function PostCard({
         >
           Reply
         </button>
-      )}
-      {/* BOTTOM-RIGHT DELETE (OP ONLY) */}
-      {isOwner && (
-        <div className="flex justify-end">
-          <button
-            onClick={() => onDelete(post.id)}
-            className="text-xs px-2 py-1 border border-red-300 rounded-md text-red-700 hover:bg-red-50"
-          >
-            Delete
-          </button>
-        </div>
       )}
     </div>
   );

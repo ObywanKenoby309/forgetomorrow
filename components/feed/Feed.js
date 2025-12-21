@@ -9,6 +9,7 @@ export default function Feed() {
   const [filter, setFilter] = useState('both'); // both | business | personal
   const [showComposer, setShowComposer] = useState(false);
   const [posts, setPosts] = useState([]);
+  const [blockedAuthorIds, setBlockedAuthorIds] = useState([]); // ✅ NEW: track blocked authors client-side
 
   const currentUserId = session?.user?.id || 'me';
   const currentUserName =
@@ -27,7 +28,6 @@ export default function Feed() {
       if (parsed?.body) body = parsed.body;
       if (Array.isArray(parsed?.attachments)) attachments = parsed.attachments;
     } catch {}
-
     let reactions = [];
     const rawReactions = row.reactions;
     if (Array.isArray(rawReactions)) {
@@ -40,13 +40,10 @@ export default function Feed() {
     } else if (rawReactions && typeof rawReactions === 'object') {
       reactions = Array.isArray(rawReactions) ? rawReactions : [];
     }
-
     const reactionCount = Array.isArray(reactions)
       ? reactions.reduce((sum, r) => sum + (typeof r.count === 'number' ? r.count : 0), 0)
       : 0;
-
     const comments = Array.isArray(row.comments) ? row.comments : [];
-
     return {
       id: row.id,
       authorId: row.authorId ?? null,
@@ -94,14 +91,12 @@ export default function Feed() {
       type: postFromComposer.type,
       attachments: postFromComposer.attachments ?? [],
     };
-
     try {
       const res = await fetch('/api/feed', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(payload),
       });
-
       if (res.ok) {
         await reloadFeed();
         setShowComposer(false);
@@ -116,14 +111,12 @@ export default function Feed() {
   const handleReply = async (postId, text) => {
     if (!postId || !text || !text.trim()) return;
     const trimmed = text.trim();
-
     try {
       const res = await fetch('/api/feed/comments', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ postId, text: trimmed }),
       });
-
       if (!res.ok) {
         console.error('Comment failed', await res.text());
         return;
@@ -132,7 +125,6 @@ export default function Feed() {
       console.error('Comment error:', err);
       return;
     }
-
     const newComment = {
       userId: currentUserId || null,
       byUserId: currentUserId || null,
@@ -141,7 +133,6 @@ export default function Feed() {
       avatarUrl: currentUserAvatar || null,
       at: new Date().toISOString(),
     };
-
     setPosts((prev) =>
       prev.map((p) =>
         p.id === postId
@@ -157,26 +148,22 @@ export default function Feed() {
   const handleReact = async (postId, emoji) => {
     if (!emoji) return;
     if (!postId && postId !== 0) return;
-
     try {
       const res = await fetch('/api/feed/react', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ postId, emoji }),
       });
-
       if (!res.ok) {
         console.error('React failed', await res.text());
         return;
       }
-
       const data = await res.json();
       const reactions = Array.isArray(data.reactions) ? data.reactions : [];
       const reactionCount = reactions.reduce(
         (sum, r) => sum + (typeof r.count === 'number' ? r.count : 0),
         0
       );
-
       setPosts((prev) =>
         prev.map((p) =>
           p.id === postId
@@ -204,6 +191,15 @@ export default function Feed() {
       console.error('Delete failed:', err);
     }
   };
+
+  // ✅ NEW: Global block handler
+  const handleBlockAuthor = (authorId) => {
+    if (!authorId) return;
+    setBlockedAuthorIds((prev) => [...prev, authorId]);
+  };
+
+  // Filter out blocked authors
+  const filteredPosts = posts.filter((p) => !blockedAuthorIds.includes(p.authorId));
 
   return (
     <div className="mx-auto w-full max-w-none px-2 sm:px-6 pt-6 pb-10">
@@ -236,13 +232,14 @@ export default function Feed() {
       </div>
 
       <PostList
-        posts={posts}
+        posts={filteredPosts} // ✅ Use filtered posts
         filter={filter}
         onReply={handleReply}
         onDelete={handleDelete}
         onReact={handleReact}
         currentUserId={currentUserId}
         currentUserName={currentUserName}
+        onBlockAuthor={handleBlockAuthor} // ✅ Pass down
       />
 
       {showComposer && (
