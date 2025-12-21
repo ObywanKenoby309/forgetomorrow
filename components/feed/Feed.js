@@ -8,7 +8,7 @@ export default function Feed() {
   const [filter, setFilter] = useState('both'); // both | business | personal
   const [showComposer, setShowComposer] = useState(false);
   const [posts, setPosts] = useState([]);
-  const [blockedAuthorIds, setBlockedAuthorIds] = useState([]); // ✅ Load from DB API for persistence
+  const [blockedAuthorIds, setBlockedAuthorIds] = useState([]); // ✅ NEW: track blocked authors client-side
   const currentUserId = session?.user?.id || 'me';
   const currentUserName =
     session?.user?.name ||
@@ -70,14 +70,17 @@ export default function Feed() {
     }
   };
 
-  // ✅ NEW: Load blocked authorIds from DB API for persistence
+  // ✅ Load blocked from DB, merge with optimistic
   const loadBlockedAuthors = async () => {
     try {
       const res = await fetch('/api/signal/blocked');
       if (res.ok) {
         const data = await res.json();
-        const ids = data.blocked?.map(b => b.id) || [];
-        setBlockedAuthorIds(ids);
+        const dbIds = data.blocked?.map(b => b.id) || [];
+        setBlockedAuthorIds(prev => {
+          const merged = new Set([...prev, ...dbIds]);
+          return Array.from(merged);
+        });
       }
     } catch (err) {
       console.error('load blocked error', err);
@@ -86,7 +89,7 @@ export default function Feed() {
 
   useEffect(() => {
     reloadFeed();
-    loadBlockedAuthors(); // ✅ Load on mount
+    loadBlockedAuthors();
     const interval = setInterval(reloadFeed, 5 * 60 * 1000);
     return () => clearInterval(interval);
   }, [filter]);
@@ -199,11 +202,14 @@ export default function Feed() {
       console.error('Delete failed:', err);
     }
   };
-  // ✅ NEW: Global block handler — optimistic + reload blocked list
+  // ✅ Global block handler — optimistic add, then merge DB
   const handleBlockAuthor = (authorId) => {
     if (!authorId) return;
-    setBlockedAuthorIds((prev) => [...prev, authorId]);
-    loadBlockedAuthors(); // Refresh from DB to sync
+    setBlockedAuthorIds((prev) => {
+      if (prev.includes(authorId)) return prev;
+      return [...prev, authorId];
+    });
+    loadBlockedAuthors(); // Merge with DB
   };
   // Filter out blocked authors
   const filteredPosts = posts.filter((p) => !blockedAuthorIds.includes(p.authorId));
