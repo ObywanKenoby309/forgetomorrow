@@ -779,14 +779,16 @@ model Message {
 }
 
 model UserBlock {
-  id        Int      @id @default(autoincrement())
+  id Int @id @default(autoincrement())
   blockerId String
   blockedId String
   createdAt DateTime @default(now())
+  
+  // ✅ NEW: Optional reason for block (from prompt in PostCard)
+  reason String?
 
   blocker User @relation("UserBlocksAsBlocker", fields: [blockerId], references: [id], onDelete: Cascade)
   blocked User @relation("UserBlocksAsBlocked", fields: [blockedId], references: [id], onDelete: Cascade)
-
   @@unique([blockerId, blockedId])
   @@index([blockerId])
   @@index([blockedId])

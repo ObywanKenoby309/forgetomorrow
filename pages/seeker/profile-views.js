@@ -4,6 +4,7 @@ import { useRouter } from 'next/router';
 import Link from 'next/link';
 import SeekerLayout from '@/components/layouts/SeekerLayout';
 import SeekerRightColumn from '@/components/seeker/SeekerRightColumn';
+import ContactCenterToolbar from '@/components/contact-center/ContactCenterToolbar'; // ✅ NEW import
 
 function HeaderBox() {
   return (
@@ -40,7 +41,6 @@ function HeaderBox() {
     </section>
   );
 }
-
 function RightRail() {
   return (
     <div style={{ display: 'grid', gap: 12 }}>
@@ -48,16 +48,13 @@ function RightRail() {
     </div>
   );
 }
-
 export default function ProfileViewsPage() {
   const router = useRouter();
   const chrome = String(router.query.chrome || '').toLowerCase();
   const withChrome = (path) =>
     chrome ? `${path}${path.includes('?') ? '&' : '?'}chrome=${chrome}` : path;
-
   const [views, setViews] = useState([]);
   const [loading, setLoading] = useState(true);
-
   const loadViews = async () => {
     try {
       setLoading(true);
@@ -76,11 +73,9 @@ export default function ProfileViewsPage() {
       setLoading(false);
     }
   };
-
   useEffect(() => {
     loadViews();
   }, []);
-
   const formatDateTime = (iso) => {
     try {
       const d = new Date(iso);
@@ -89,14 +84,12 @@ export default function ProfileViewsPage() {
       return '';
     }
   };
-
   const handleOpenViewerProfile = (view) => {
     if (!view.viewer?.id) return;
     const params = new URLSearchParams();
     params.set('userId', view.viewer.id);
     router.push(withChrome(`/member-profile?${params.toString()}`));
   };
-
   return (
     <SeekerLayout
       title="Profile Views | ForgeTomorrow"
@@ -104,6 +97,9 @@ export default function ProfileViewsPage() {
       right={<RightRail />}
       activeNav="contacts"
     >
+      {/* ✅ Toolbar component added */}
+      <ContactCenterToolbar currentTab="profileViews" />
+
       <section
         style={{
           background: 'white',
@@ -129,7 +125,6 @@ export default function ProfileViewsPage() {
             ← Back to Contact Center
           </Link>
         </div>
-
         {loading ? (
           <p style={{ color: '#607D8B', fontSize: 14 }}>Loading profile views…</p>
         ) : views.length === 0 ? (
@@ -178,7 +173,6 @@ export default function ProfileViewsPage() {
                     Viewed your profile • {formatDateTime(v.createdAt)}
                   </span>
                 </div>
-
                 {v.viewer?.id && (
                   <button
                     type="button"

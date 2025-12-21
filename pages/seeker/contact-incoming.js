@@ -2,23 +2,20 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/router';
-
 import SeekerLayout from '@/components/layouts/SeekerLayout';
 import SeekerRightColumn from '@/components/seeker/SeekerRightColumn';
-
 import IncomingRequestsList from '@/components/IncomingRequestsList';
+import ContactCenterToolbar from '@/components/contact-center/ContactCenterToolbar'; // ✅ NEW import
 
 export default function SeekerIncomingInvitesPage() {
   const router = useRouter();
   const chrome = String(router.query.chrome || '').toLowerCase();
   const withChrome = (path) =>
     chrome ? `${path}${path.includes('?') ? '&' : '?'}chrome=${chrome}` : path;
-
   const [contacts, setContacts] = useState([]);
   const [incomingRequests, setIncomingRequests] = useState([]);
   const [outgoingRequests, setOutgoingRequests] = useState([]);
   const [loading, setLoading] = useState(true);
-
   const reloadSummary = async () => {
     try {
       setLoading(true);
@@ -43,11 +40,9 @@ export default function SeekerIncomingInvitesPage() {
       setLoading(false);
     }
   };
-
   useEffect(() => {
     reloadSummary();
   }, []);
-
   const counts = useMemo(
     () => ({
       contacts: contacts.length,
@@ -56,28 +51,22 @@ export default function SeekerIncomingInvitesPage() {
     }),
     [contacts, incomingRequests, outgoingRequests]
   );
-
   const getPersonFromItem = (item) => {
     if (!item) return null;
     if (item.from) return item.from;
     if (item.to) return item.to;
     return item;
   };
-
   const handleViewProfile = (item) => {
     const person = getPersonFromItem(item);
     if (!person?.id) return;
-
     const params = new URLSearchParams();
     params.set('userId', person.id);
-
     router.push(withChrome(`/member-profile?${params.toString()}`));
   };
-
   const handleAccept = async (item) => {
     const requestId = item.requestId || item.id;
     if (!requestId) return;
-
     try {
       const res = await fetch('/api/contacts/respond', {
         method: 'POST',
@@ -95,11 +84,9 @@ export default function SeekerIncomingInvitesPage() {
       alert('We could not accept this invitation. Please try again.');
     }
   };
-
   const handleDecline = async (item) => {
     const requestId = item.requestId || item.id;
     if (!requestId) return;
-
     try {
       const res = await fetch('/api/contacts/respond', {
         method: 'POST',
@@ -117,7 +104,6 @@ export default function SeekerIncomingInvitesPage() {
       alert('We could not decline this invitation. Please try again.');
     }
   };
-
   const HeaderBox = (
     <section
       style={{
@@ -152,47 +138,11 @@ export default function SeekerIncomingInvitesPage() {
       </p>
     </section>
   );
-
   const RightRail = (
     <div style={{ display: 'grid', gap: 12 }}>
       <SeekerRightColumn variant="contacts" />
     </div>
   );
-
-  const TabButton = ({ href, label, badge, active = false }) => (
-    <Link
-      href={withChrome(href)}
-      style={{
-        display: 'inline-flex',
-        alignItems: 'center',
-        gap: 8,
-        padding: '8px 12px',
-        borderRadius: 10,
-        border: '1px solid #eee',
-        background: active ? '#FFF3E9' : 'white',
-        color: active ? '#D84315' : '#374151',
-        fontWeight: 700,
-        textDecoration: 'none',
-      }}
-    >
-      <span>{label}</span>
-      {typeof badge === 'number' && (
-        <span
-          style={{
-            background: '#ECEFF1',
-            color: '#374151',
-            borderRadius: 999,
-            padding: '2px 8px',
-            fontSize: 12,
-            fontWeight: 800,
-          }}
-        >
-          {badge}
-        </span>
-      )}
-    </Link>
-  );
-
   return (
     <SeekerLayout
       title="Pending Invites | ForgeTomorrow"
@@ -200,35 +150,8 @@ export default function SeekerIncomingInvitesPage() {
       right={RightRail}
       activeNav="contacts"
     >
-      {/* Tabs row */}
-      <section
-        style={{
-          background: 'white',
-          borderRadius: 12,
-          padding: 12,
-          border: '1px solid #eee',
-          boxShadow: '0 2px 6px rgba(0,0,0,0.06)',
-        }}
-      >
-        <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
-          <TabButton
-            href="/seeker/contact-center"
-            label="Contacts"
-            badge={counts.contacts}
-          />
-          <TabButton
-            href="/seeker/contact-incoming"
-            label="Invites (Incoming)"
-            badge={counts.invitesIn}
-            active
-          />
-          <TabButton
-            href="/seeker/contact-outgoing"
-            label="Requests (Outgoing)"
-            badge={counts.invitesOut}
-          />
-        </div>
-      </section>
+      {/* ✅ Toolbar component */}
+      <ContactCenterToolbar currentTab="invites" />
 
       {/* Incoming list full-page */}
       <section

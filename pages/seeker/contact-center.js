@@ -2,38 +2,33 @@
 import React, { useMemo, useState, useEffect } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/router';
-
 import SeekerLayout from '@/components/layouts/SeekerLayout';
 import SeekerRightColumn from '@/components/seeker/SeekerRightColumn';
-
 import ContactsList from '@/components/ContactsList';
 import IncomingRequestsList from '@/components/IncomingRequestsList';
 import OutgoingRequestsList from '@/components/OutgoingRequestsList';
 import GroupsList from '@/components/GroupsList';
 import PagesList from '@/components/PagesList';
 import NewslettersList from '@/components/NewslettersList';
+import ContactCenterToolbar from '@/components/contact-center/ContactCenterToolbar'; // ✅ NEW import
 
 export default function SeekerContactCenter() {
   const router = useRouter();
   const chrome = String(router.query.chrome || '').toLowerCase();
   const withChrome = (path) =>
     chrome ? `${path}${path.includes('?') ? '&' : '?'}chrome=${chrome}` : path;
-
   // --- Live data from /api/contacts/summary ---
   const [contacts, setContacts] = useState([]);
   const [incomingRequests, setIncomingRequests] = useState([]);
   const [outgoingRequests, setOutgoingRequests] = useState([]);
   const [loading, setLoading] = useState(true);
-
   // Future: groups/pages/newsletters; keep empty for launch
   const [groups] = useState([]);
   const [pages] = useState([]);
   const [newsletters] = useState([]);
-
   // --- Recent profile views ---
   const [profileViews, setProfileViews] = useState([]);
   const [pvLoading, setPvLoading] = useState(true);
-
   const reloadSummary = async () => {
     try {
       setLoading(true);
@@ -58,7 +53,6 @@ export default function SeekerContactCenter() {
       setLoading(false);
     }
   };
-
   const reloadProfileViews = async () => {
     try {
       setPvLoading(true);
@@ -77,13 +71,11 @@ export default function SeekerContactCenter() {
       setPvLoading(false);
     }
   };
-
   useEffect(() => {
     reloadSummary();
     reloadProfileViews();
   }, []);
-
-  // --- Counts for toolbar badges ---
+  // --- Counts for toolbar badges (toolbar handles its own now, but kept for compatibility) ---
   const counts = useMemo(
     () => ({
       contacts: contacts.length,
@@ -93,7 +85,6 @@ export default function SeekerContactCenter() {
     }),
     [contacts, incomingRequests, outgoingRequests, profileViews]
   );
-
   // --- Helpers to get the "user" from different shapes ---
   const getPersonFromItem = (item) => {
     if (!item) return null;
@@ -101,22 +92,17 @@ export default function SeekerContactCenter() {
     if (item.to) return item.to;
     return item;
   };
-
   // --- Handlers wired to real routes ---
   const handleViewProfile = (item) => {
     const person = getPersonFromItem(item);
     if (!person?.id) return;
-
     const params = new URLSearchParams();
     params.set('userId', person.id);
-
     router.push(withChrome(`/member-profile?${params.toString()}`));
   };
-
   const handleAccept = async (item) => {
     const requestId = item.requestId || item.id;
     if (!requestId) return;
-
     try {
       const res = await fetch('/api/contacts/respond', {
         method: 'POST',
@@ -134,11 +120,9 @@ export default function SeekerContactCenter() {
       alert('We could not accept this invitation. Please try again.');
     }
   };
-
   const handleDecline = async (item) => {
     const requestId = item.requestId || item.id;
     if (!requestId) return;
-
     try {
       const res = await fetch('/api/contacts/respond', {
         method: 'POST',
@@ -156,11 +140,9 @@ export default function SeekerContactCenter() {
       alert('We could not decline this invitation. Please try again.');
     }
   };
-
   const handleCancel = async (item) => {
     const requestId = item.requestId || item.id;
     if (!requestId) return;
-
     try {
       const res = await fetch('/api/contacts/respond', {
         method: 'POST',
@@ -178,37 +160,31 @@ export default function SeekerContactCenter() {
       alert('We could not cancel this request. Please try again.');
     }
   };
-
   // 🔹 Disconnect a contact entirely
   const handleDisconnect = async (item) => {
     const person = getPersonFromItem(item);
     if (!person?.id) return;
-
     const confirmed = window.confirm(
       `Are you sure you want to disconnect from ${person.name || 'this member'}?`
     );
     if (!confirmed) return;
-
     try {
       const res = await fetch('/api/contacts/remove', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ contactUserId: person.id }),
       });
-
       if (!res.ok) {
         console.error('contacts/remove failed', await res.text());
         alert('We could not disconnect this contact. Please try again.');
         return;
       }
-
       await reloadSummary();
     } catch (err) {
       console.error('contacts/remove error', err);
       alert('We could not disconnect this contact. Please try again.');
     }
   };
-
   const openGroup = (g) => {
     console.log('Open group (future)', g);
   };
@@ -218,7 +194,6 @@ export default function SeekerContactCenter() {
   const openNewsletter = (n) => {
     console.log('Open newsletter (future)', n);
   };
-
   // --- Header card ---
   const HeaderBox = (
     <section
@@ -261,61 +236,15 @@ export default function SeekerContactCenter() {
       </p>
     </section>
   );
-
   // --- Right rail ---
   const RightRail = (
     <div style={{ display: 'grid', gap: 12 }}>
       <SeekerRightColumn variant="contacts" />
     </div>
   );
-
-  // --- Toolbar row (priority-aware highlighting) ---
-  const TabButton = ({ href, label, badge, highlight = false }) => {
-    const hasBadge = typeof badge === 'number' && badge > 0;
-
-    const bg = highlight && hasBadge ? '#FFF3E9' : 'white';
-    const border = highlight && hasBadge ? '#FFCCBC' : '#eee';
-    const color = highlight && hasBadge ? '#D84315' : '#374151';
-
-    return (
-      <Link
-        href={withChrome(href)}
-        style={{
-          display: 'inline-flex',
-          alignItems: 'center',
-          gap: 8,
-          padding: '8px 12px',
-          borderRadius: 10,
-          border: `1px solid ${border}`,
-          background: bg,
-          color,
-          fontWeight: 700,
-          textDecoration: 'none',
-        }}
-      >
-        <span>{label}</span>
-        {typeof badge === 'number' && (
-          <span
-            style={{
-              background: hasBadge ? '#FFE0B2' : '#ECEFF1',
-              color: '#374151',
-              borderRadius: 999,
-              padding: '2px 8px',
-              fontSize: 12,
-              fontWeight: 800,
-            }}
-          >
-            {badge}
-          </span>
-        )}
-      </Link>
-    );
-  };
-
   // Contacts preview + toggler
   const [showContacts, setShowContacts] = useState(true);
   const topContacts = useMemo(() => contacts.slice(0, 5), [contacts]);
-
   const formatDateTime = (iso) => {
     try {
       const d = new Date(iso);
@@ -324,7 +253,6 @@ export default function SeekerContactCenter() {
       return '';
     }
   };
-
   const incomingPreview = useMemo(
     () => incomingRequests.slice(0, 3),
     [incomingRequests]
@@ -333,10 +261,8 @@ export default function SeekerContactCenter() {
     () => outgoingRequests.slice(0, 3),
     [outgoingRequests]
   );
-
   const nothingNeedingAttention =
     incomingRequests.length === 0 && outgoingRequests.length === 0;
-
   // subtle accent when something actually needs attention
   const attentionCardStyle = {
     background: 'white',
@@ -347,7 +273,6 @@ export default function SeekerContactCenter() {
       ? '0 2px 6px rgba(0,0,0,0.06)'
       : '0 0 0 1px #FFE0B2 inset, 0 2px 6px rgba(0,0,0,0.06)',
   };
-
   return (
     <SeekerLayout
       title="Contact Center | ForgeTomorrow"
@@ -355,45 +280,8 @@ export default function SeekerContactCenter() {
       right={RightRail}
       activeNav="contacts"
     >
-      {/* Toolbar */}
-      <section
-        style={{
-          background: 'white',
-          borderRadius: 12,
-          padding: 12,
-          border: '1px solid #eee',
-          boxShadow: '0 2px 6px rgba(0,0,0,0.06)',
-        }}
-      >
-        <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
-          {/* Contacts = neutral (reference), no urgency coloring */}
-          <TabButton
-            href="/seeker/contact-center"
-            label="Contacts"
-            badge={counts.contacts}
-            highlight={false}
-          />
-          {/* Invites / Requests / Profile Views highlight only when they have counts */}
-          <TabButton
-            href="/seeker/contact-incoming"
-            label="Invites"
-            badge={counts.invitesIn}
-            highlight={counts.invitesIn > 0}
-          />
-          <TabButton
-            href="/seeker/contact-outgoing"
-            label="Requests"
-            badge={counts.invitesOut}
-            highlight={counts.invitesOut > 0}
-          />
-          <TabButton
-            href="/seeker/profile-views"
-            label="Profile Views"
-            badge={counts.profileViews}
-            highlight={counts.profileViews > 0}
-          />
-        </div>
-      </section>
+      {/* ✅ Toolbar component */}
+      <ContactCenterToolbar currentTab="contacts" />
 
       {/* Needs Your Attention */}
       <section style={attentionCardStyle}>
@@ -406,7 +294,6 @@ export default function SeekerContactCenter() {
         >
           Needs your attention
         </h2>
-
         {nothingNeedingAttention ? (
           <p style={{ color: '#607D8B', fontSize: 14, marginBottom: 0 }}>
             You&apos;re all caught up. When new invites or requests come in,
@@ -442,7 +329,6 @@ export default function SeekerContactCenter() {
                 </div>
               </div>
             )}
-
             {outgoingRequests.length > 0 && (
               <div>
                 <h3
@@ -473,7 +359,6 @@ export default function SeekerContactCenter() {
           </div>
         )}
       </section>
-
       {/* Contacts + Profile Views side-by-side (but roomy) */}
       <section
         style={{
@@ -532,7 +417,6 @@ export default function SeekerContactCenter() {
               </button>
             </div>
           </div>
-
           {showContacts && (
             <div id="contacts-panel">
               <ContactsList
@@ -552,7 +436,6 @@ export default function SeekerContactCenter() {
             </div>
           )}
         </section>
-
         {/* Recent Profile Views */}
         <section
           style={{
@@ -613,7 +496,6 @@ export default function SeekerContactCenter() {
               ))}
             </ul>
           )}
-
           <div style={{ marginTop: 8 }}>
             <Link
               href={withChrome('/seeker/profile-views')}
@@ -624,7 +506,6 @@ export default function SeekerContactCenter() {
           </div>
         </section>
       </section>
-
       {/* Groups */}
       <section
         style={{
@@ -638,7 +519,6 @@ export default function SeekerContactCenter() {
         <h2 style={{ color: '#FF7043', marginTop: 0 }}>Groups</h2>
         <GroupsList groups={groups} onOpen={openGroup} />
       </section>
-
       {/* Pages */}
       <section
         style={{
@@ -652,7 +532,6 @@ export default function SeekerContactCenter() {
         <h2 style={{ color: '#FF7043', marginTop: 0 }}>Pages</h2>
         <PagesList pages={pages} onOpen={openPage} />
       </section>
-
       {/* Newsletters */}
       <section
         style={{
