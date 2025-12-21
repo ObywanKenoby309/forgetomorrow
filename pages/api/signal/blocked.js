@@ -1,11 +1,11 @@
 // pages/api/signal/blocked.js
-import { getServerSession } from "next-auth/next";
-import { authOptions } from "../auth/[...nextauth]";
-import prisma from '@/lib/prisma';
+import { getServerSession } from 'next-auth/next';
+import { authOptions } from '../auth/[...nextauth]';
+import { prisma } from '@/lib/prisma'; // ✅ FIXED: named import to match your style
 
 export default async function handler(req, res) {
   const session = await getServerSession(req, res, authOptions);
-  if (!session || !session.user?.id) {
+  if (!session?.user?.id) {
     return res.status(401).json({ error: 'Unauthorized' });
   }
 
@@ -38,7 +38,7 @@ export default async function handler(req, res) {
       orderBy: { createdAt: 'desc' },
     });
 
-    const list = blocked.map(b => ({
+    const list = blocked.map((b) => ({
       id: b.blockedId,
       name: b.blocked.name || 'Member',
       avatarUrl: b.blocked.avatarUrl,
@@ -50,7 +50,7 @@ export default async function handler(req, res) {
   }
 
   if (req.method === 'DELETE') {
-    const { blockedId } = req.body;
+    const { blockedId } = req.body || {};
     if (!blockedId) {
       return res.status(400).json({ error: 'blockedId required' });
     }
@@ -60,17 +60,17 @@ export default async function handler(req, res) {
         where: {
           blockerId_blockedId: {
             blockerId: userId,
-            blockedId: blockedId,
+            blockedId,
           },
         },
       });
       return res.status(200).json({ success: true });
     } catch (err) {
-      console.error('unblock error', err);
+      console.error('[signal/blocked] unblock error', err);
       return res.status(500).json({ error: 'Failed to unblock' });
     }
   }
 
   res.setHeader('Allow', ['GET', 'DELETE']);
-  return res.status(405).end(`Method ${req.method} Not Allowed`);
+  return res.status(405).json({ error: `Method ${req.method} not allowed` });
 }
