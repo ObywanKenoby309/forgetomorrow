@@ -158,7 +158,7 @@ export default function SignalMessages() {
       setSending(false);
     }
   };
-  // 🔹 Block this member — add optional reason prompt
+  // 🔹 Block this member — prompt for reason, send to API, hide conversation, remove from contacts if connected
   const handleBlock = async () => {
     if (!activeOtherUserId) {
       alert('We could not determine which member to block.');
@@ -178,7 +178,7 @@ export default function SignalMessages() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ 
           targetUserId: activeOtherUserId,
-          reason: reason?.trim() || null // ✅ Send reason
+          reason: reason?.trim() || null 
         }),
       });
       if (!res.ok) {
@@ -188,6 +188,14 @@ export default function SignalMessages() {
       }
       setIsBlocked(true);
       setComposer('');
+      // Hide conversation from list
+      setThreads(prev => prev.filter(t => t.otherUserId !== activeOtherUserId));
+      // Remove from contacts if connected
+      await fetch('/api/contacts/remove', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ contactUserId: activeOtherUserId }),
+      });
     } catch (err) {
       console.error('block error:', err);
       alert('We could not block this member. Please try again.');
@@ -382,8 +390,9 @@ export default function SignalMessages() {
                 type="button"
                 onClick={handleBlock}
                 className="text-[11px] px-2 py-1 border border-red-300 rounded-md text-red-700 hover:bg-red-50"
+                disabled={isBlocked}
               >
-                Block
+                {isBlocked ? 'Blocked' : 'Block'}
               </button>
             </div>
           )}
