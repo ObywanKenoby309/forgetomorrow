@@ -2,7 +2,6 @@
 import { useMemo, useState } from 'react';
 import PostCard from './PostCard';
 import PostCommentsModal from './PostCommentsModal';
-
 export default function PostList({
   posts,
   filter,
@@ -11,44 +10,36 @@ export default function PostList({
   onReact,
   currentUserId,
   currentUserName, // ✅ ADDED
+  onBlockAuthor, // ✅ NEW: passed from Feed for global block
 }) {
   const [activePostId, setActivePostId] = useState(null);
-
   const safePosts = Array.isArray(posts) ? posts : [];
-
   const filteredPosts = useMemo(() => {
     if (filter === 'both') return safePosts;
     return safePosts.filter((p) => (p.type || 'business') === filter);
   }, [safePosts, filter]);
-
   const activePost =
     activePostId != null
       ? safePosts.find((p) => p.id === activePostId) || null
       : null;
-
   const handleOpenComments = (post) => {
     setActivePostId(post?.id ?? null);
   };
-
   const handleCloseComments = () => {
     setActivePostId(null);
   };
-
   const handleReplyInternal = (postId, text) => {
     onReply?.(postId, text);
   };
-
   const handleDeleteInternal = (postId) => {
     onDelete?.(postId);
     if (postId === activePostId) {
       setActivePostId(null);
     }
   };
-
   const handleReactInternal = (postId, emoji) => {
     onReact?.(postId, emoji);
   };
-
   return (
     <>
       <div className="space-y-3">
@@ -67,11 +58,11 @@ export default function PostList({
               currentUserName={currentUserName}
               onDelete={handleDeleteInternal}
               onReact={handleReactInternal}
+              onBlockAuthor={onBlockAuthor} // ✅ NEW: forward to PostCard for global hide
             />
           ))
         )}
       </div>
-
       {activePost && (
         <PostCommentsModal
           post={activePost}
