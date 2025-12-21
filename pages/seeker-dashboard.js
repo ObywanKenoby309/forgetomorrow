@@ -5,10 +5,9 @@ import Link from 'next/link';
 import { useRouter } from 'next/router';
 import SeekerLayout from '@/components/layouts/SeekerLayout';
 import PinnedJobsPreview from '@/components/PinnedJobsPreview';
+import RecommendedJobsPreview from '@/components/seeker/dashboard/RecommendedJobsPreview';
 import KpiRow from '@/components/seeker/dashboard/KpiRow';
-import FunnelChart from '@/components/seeker/dashboard/FunnelChart';
 import ApplicationsOverTime from '@/components/seeker/dashboard/ApplicationsOverTime';
-
 // ISO WEEK HELPERS
 const startOfISOWeek = (d) => {
   const date = new Date(Date.UTC(d.getFullYear(), d.getMonth(), d.getDate()));
@@ -17,45 +16,35 @@ const startOfISOWeek = (d) => {
   date.setUTCHours(0, 0, 0, 0);
   return date;
 };
-
 const weekDiff = (a, b) => {
   const MSWEEK = 7 * 24 * 3600 * 1000;
   return Math.floor((a.getTime() - b.getTime()) / MSWEEK);
 };
-
 export default function SeekerDashboard() {
   const router = useRouter();
   const chrome = String(router.query.chrome || '').toLowerCase();
-
   const withChrome = (path) =>
     chrome ? `${path}${path.includes('?') ? '&' : '?'}chrome=${chrome}` : path;
-
   // Decide which sidebar item should be highlighted
   const chromeKey = chrome || 'seeker';
   const seekerActiveNav =
     chromeKey === 'coach' || chromeKey.startsWith('recruiter')
       ? 'seeker-dashboard' // Coach / Recruiter sidebars → Seeker Tools → Seeker Dashboard
       : 'dashboard'; // Native seeker sidebar
-
   const [kpi, setKpi] = useState(null);
   const [weeks, setWeeks] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
-
   useEffect(() => {
     let cancelled = false;
-
     async function loadData() {
       try {
         // Just try to load dashboard data; fall back gracefully if it fails.
         const res = await fetch('/api/seeker/dashboard-data');
-
         if (!res.ok) {
           throw new Error(`Failed to load data: ${res.status}`);
         }
-
         const data = await res.json();
         if (cancelled) return;
-
         const newKpi = {
           applied: data.applications || 0,
           viewed: data.views || 0,
@@ -67,13 +56,11 @@ export default function SeekerDashboard() {
             : '—',
         };
         setKpi(newKpi);
-
         // Applications over time
         const today = new Date();
         const thisWeek = startOfISOWeek(today);
         const labels = Array.from({ length: 8 }, (_, i) => `W${8 - i}`);
         const buckets = labels.map(() => ({ applied: 0, interviews: 0 }));
-
         (data.allApplications || []).forEach((app) => {
           const d = new Date(app.appliedAt);
           const wStart = startOfISOWeek(d);
@@ -83,7 +70,6 @@ export default function SeekerDashboard() {
             buckets[idx].applied += 1;
           }
         });
-
         setWeeks(
           labels.map((label, i) => ({
             label,
@@ -110,15 +96,12 @@ export default function SeekerDashboard() {
         }
       }
     }
-
     loadData();
-
     return () => {
       cancelled = true;
     };
     // run once on mount
   }, []);
-
   const HeaderBox = (
     <section
       aria-label="Job seeker dashboard overview"
@@ -132,7 +115,6 @@ export default function SeekerDashboard() {
       </p>
     </section>
   );
-
   const RightRail = (
     <div className="grid gap-4">
       {/* 1) Resume + Cover builder quick access */}
@@ -158,7 +140,6 @@ export default function SeekerDashboard() {
           </Link>
         </div>
       </section>
-
       {/* 2) Career roadmap teaser */}
       <section className="bg-white border border-gray-200 rounded-xl p-4 shadow-sm">
         <h2 className="text-sm font-semibold text-gray-900 mb-1">
@@ -169,7 +150,6 @@ export default function SeekerDashboard() {
           here. For now, use your dashboard and The Hearth to plan your next move.
         </p>
       </section>
-
       {/* 3) Advertisement / Partner Spotlight */}
       <section className="bg-white border border-gray-200 rounded-xl p-4 shadow-sm">
         <h2 className="text-sm font-semibold text-gray-900 mb-1">
@@ -188,7 +168,6 @@ export default function SeekerDashboard() {
       </section>
     </div>
   );
-
   if (isLoading) {
     return (
       <>
@@ -208,7 +187,6 @@ export default function SeekerDashboard() {
       </>
     );
   }
-
   return (
     <>
       <Head>
@@ -237,7 +215,6 @@ export default function SeekerDashboard() {
               />
             )}
           </section>
-
           {/* Pinned Jobs */}
           <section className="bg-white border border-gray-200 rounded-xl p-5 shadow-sm">
             <div className="flex items-center justify-between mb-4">
@@ -253,35 +230,15 @@ export default function SeekerDashboard() {
             </div>
             <PinnedJobsPreview />
           </section>
-
-          {/* Charts */}
-          <section className="grid md:grid-cols-2 gap-6">
-            <div className="bg-white border border-gray-200 rounded-xl p-5 shadow-sm">
-              <h3 className="text-base font-semibold text-gray-800 mb-3">
-                Application Funnel
-              </h3>
-              {kpi && (
-                <FunnelChart
-                  data={{
-                    applied: kpi.applied,
-                    viewed: kpi.viewed,
-                    interviewing: kpi.interviewing,
-                    offers: kpi.offers,
-                    hired: 0,
-                  }}
-                  showTrackerButton={true}
-                />
-              )}
-            </div>
-
-            <div className="bg-white border border-gray-200 rounded-xl p-5 shadow-sm">
-              <h3 className="text-base font-semibold text-gray-800 mb-3">
-                Applications Over Time
-              </h3>
-              <ApplicationsOverTime weeks={weeks} withChrome={withChrome} />
-            </div>
+          {/* New Matches for You */}
+          <RecommendedJobsPreview />
+          {/* Applications Over Time */}
+          <section className="bg-white border border-gray-200 rounded-xl p-5 shadow-sm">
+            <h3 className="text-base font-semibold text-gray-800 mb-3">
+              Applications Over Time
+            </h3>
+            <ApplicationsOverTime weeks={weeks} withChrome={withChrome} />
           </section>
-
           {/* Coming Soon */}
           <section className="grid md:grid-cols-2 gap-6">
             <div className="bg-white border border-gray-200 rounded-xl p-5 shadow-sm">
