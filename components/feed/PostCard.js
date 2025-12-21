@@ -9,15 +9,21 @@ export default function PostCard({
   onReact,
   currentUserId,
   currentUserName,
-  onBlockUser, // ✅ callback from Feed
 }) {
+  // ✅ CRITICAL FIX 1: Early return if post is missing/invalid (happens during static prerender)
+  if (!post) return null;
+
   const [showReplyInput, setShowReplyInput] = useState(false);
   const [replyText, setReplyText] = useState('');
   const [hoveredEmoji, setHoveredEmoji] = useState(null);
   const [reactionUsers, setReactionUsers] = useState({});
   
-  // ✅ FIXED: Defensive guard to prevent build-time "Cannot read properties of undefined (reading 'authorId')"
-  const isOwner = post && post.authorId && currentUserId ? post.authorId === currentUserId : false;
+  // ✅ CRITICAL FIX 2: Safe isOwner check – prevents crash even if authorId missing
+  const isOwner = post.authorId && currentUserId ? post.authorId === currentUserId : false;
+  
+  // ✅ NEW: local hide so block is immediate without refresh
+  const [isHidden, setIsHidden] = useState(false);
+  if (isHidden) return null;
   
   const handleReplySubmit = () => {
     if (!replyText.trim()) return;
@@ -26,7 +32,7 @@ export default function PostCard({
     setShowReplyInput(false);
   };
   // ─────────────────────────────────────────────────────────────
-  // REPORT POST (non-OP only)
+  // REPORT POST (non-OP only) — mirrors Signal behavior
   // ─────────────────────────────────────────────────────────────
   const handleReportPost = async () => {
     const reason = window.prompt(
@@ -39,42 +45,48 @@ export default function PostCard({
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           postId: post.id,
-          // ✅ Safe access: only send if authorId exists
-          targetUserId: post?.authorId,
+          targetUserId: post.authorId,
           reason: reason.trim(),
         }),
       });
       if (!res.ok) {
+        console.error('report error:', await res.text());
         alert('We could not submit your report. Please try again.');
         return;
       }
       alert('Thank you. Your report has been submitted.');
-    } catch {
+    } catch (err) {
+      console.error('report error:', err);
       alert('We could not submit your report. Please try again.');
     }
   };
   // ─────────────────────────────────────────────────────────────
-  // BLOCK USER (non-OP only)
+  // BLOCK AUTHOR (non-OP only) — no redirect, immediate hide
   // ─────────────────────────────────────────────────────────────
-  const handleBlockUser = async () => {
+  const handleBlockAuthor = async () => {
+    if (!post?.authorId) {
+      alert('We could not determine which member to block.');
+      return;
+    }
     const confirmed = window.confirm(
-      'Block this member? You will no longer see their posts or messages.'
+      'Block this member? You will no longer see their posts, and they will not be able to message you.'
     );
     if (!confirmed) return;
     try {
       const res = await fetch('/api/signal/block', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        // ✅ Safe access: only send if authorId exists
-        body: JSON.stringify({ targetUserId: post?.authorId }),
+        body: JSON.stringify({ targetUserId: post.authorId }),
       });
       if (!res.ok) {
+        console.error('block error:', res.status, await res.text());
         alert('We could not block this member. Please try again.');
         return;
       }
-      alert('Member blocked.');
-      onBlockUser?.(post.authorId); // 🔥 immediate client-side removal
-    } catch {
+      setIsHidden(true);
+      alert('Member blocked. You will no longer see their posts.');
+    } catch (err) {
+      console.error('block error:', err);
       alert('We could not block this member. Please try again.');
     }
   };
@@ -111,7 +123,9 @@ export default function PostCard({
           .join(', ');
         setReactionUsers((prev) => ({ ...prev, [emoji]: names }));
       }
-    } catch {}
+    } catch (err) {
+      console.error('reaction hover error:', err);
+    }
   };
   const getTooltipText = (emoji) =>
     reactionUsers[emoji]
@@ -119,9 +133,9 @@ export default function PostCard({
       : 'Loading…';
   return (
     <div className="relative bg-white rounded-lg shadow p-5 space-y-4">
-      {/* TOP-RIGHT ACTIONS (non-OP) */}
+      {/* TOP-RIGHT ACTIONS (NON-OP ONLY) */}
       {!isOwner && (
-        <div className="absolute top-3 right-3 flex gap-2">
+        <div className="absolute top-3 right-3 flex items-center gap-2">
           <button
             onClick={handleReportPost}
             className="text-xs px-2 py-1 border border-gray-300 rounded-md text-gray-700 hover:bg-gray-50"
@@ -129,7 +143,7 @@ export default function PostCard({
             Report
           </button>
           <button
-            onClick={handleBlockUser}
+            onClick={handleBlockAuthor}
             className="text-xs px-2 py-1 border border-red-300 rounded-md text-red-700 hover:bg-red-50"
           >
             Block

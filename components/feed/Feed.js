@@ -1,263 +1,266 @@
-// components/feed/PostCard.js
-import { useState } from 'react';
-import QuickEmojiBar from './QuickEmojiBar';
+// components/feed/Feed.js
+import { useEffect, useState } from 'react';
+import { useSession } from 'next-auth/react';
+import PostComposer from './PostComposer';
+import PostList from './PostList';
 
-export default function PostCard({
-  post,
-  onReply,
-  onOpenComments,
-  onDelete,
-  onReact,
-  currentUserId,
-  currentUserName,
-}) {
-  const [showReplyInput, setShowReplyInput] = useState(false);
-  const [replyText, setReplyText] = useState('');
-  const [hoveredEmoji, setHoveredEmoji] = useState(null);
-  const [reactionUsers, setReactionUsers] = useState({});
+export default function Feed() {
+  const { data: session } = useSession();
+  const [filter, setFilter] = useState('both'); // both | business | personal
+  const [showComposer, setShowComposer] = useState(false);
+  const [posts, setPosts] = useState([]);
 
-  const isOwner = post.authorId === currentUserId;
+  const currentUserId = session?.user?.id || 'me';
+  const currentUserName =
+    session?.user?.name ||
+    [session?.user?.firstName, session?.user?.lastName].filter(Boolean).join(' ') ||
+    (session?.user?.email?.split('@')[0] ?? '');
+  const currentUserAvatar = session?.user?.avatarUrl || session?.user?.image || null;
 
-  // ✅ NEW: local hide so block is immediate without refresh
-  const [isHidden, setIsHidden] = useState(false);
+  // Normalize community post shape
+  const normalizeCommunityPost = (row) => {
+    if (!row) return null;
+    let body = row.content || row.text || row.body || '';
+    let attachments = [];
+    try {
+      const parsed = typeof row.content === 'string' ? JSON.parse(row.content) : null;
+      if (parsed?.body) body = parsed.body;
+      if (Array.isArray(parsed?.attachments)) attachments = parsed.attachments;
+    } catch {}
 
-  if (isHidden) return null;
+    let reactions = [];
+    const rawReactions = row.reactions;
+    if (Array.isArray(rawReactions)) {
+      reactions = rawReactions;
+    } else if (typeof rawReactions === 'string') {
+      try {
+        const parsed = JSON.parse(rawReactions);
+        if (Array.isArray(parsed)) reactions = parsed;
+      } catch {}
+    } else if (rawReactions && typeof rawReactions === 'object') {
+      reactions = Array.isArray(rawReactions) ? rawReactions : [];
+    }
 
-  const handleReplySubmit = () => {
-    if (!replyText.trim()) return;
-    onReply(post.id, replyText.trim());
-    setReplyText('');
-    setShowReplyInput(false);
+    const reactionCount = Array.isArray(reactions)
+      ? reactions.reduce((sum, r) => sum + (typeof r.count === 'number' ? r.count : 0), 0)
+      : 0;
+
+    const comments = Array.isArray(row.comments) ? row.comments : [];
+
+    return {
+      id: row.id,
+      authorId: row.authorId ?? null,
+      author: row.authorName || row.author || 'Member',
+      authorAvatar: row.authorAvatar || null,
+      body,
+      type: row.type ?? 'business',
+      createdAt: new Date(row.createdAt).toISOString(),
+      likes: reactionCount,
+      comments,
+      attachments,
+      reactions,
+      isJob: false,
+    };
   };
 
-  // ─────────────────────────────────────────────────────────────
-  // REPORT POST (non-OP only) — mirrors Signal behavior
-  // ─────────────────────────────────────────────────────────────
-  const handleReportPost = async () => {
-    const reason = window.prompt(
-      'Tell us briefly what happened. This will be sent to the ForgeTomorrow moderation team.'
-    );
-    if (reason === null) return;
-
+  // Main loader – only community posts
+  const reloadFeed = async () => {
     try {
-      const res = await fetch('/api/feed/report', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          postId: post.id,
-          targetUserId: post.authorId,
-          reason: reason.trim(),
-        }),
-      });
-
-      if (!res.ok) {
-        console.error('report error:', await res.text());
-        alert('We could not submit your report. Please try again.');
-        return;
+      const feedRes = await fetch('/api/feed');
+      if (feedRes.ok) {
+        const feedData = await feedRes.json();
+        const community = (feedData.posts || []).map(normalizeCommunityPost).filter(Boolean);
+        setPosts(community);
       }
-
-      alert('Thank you. Your report has been submitted.');
     } catch (err) {
-      console.error('report error:', err);
-      alert('We could not submit your report. Please try again.');
+      console.error('Feed load error:', err);
     }
   };
 
-  // ─────────────────────────────────────────────────────────────
-  // BLOCK AUTHOR (non-OP only) — no redirect, immediate hide
-  // ─────────────────────────────────────────────────────────────
-  const handleBlockAuthor = async () => {
-    if (!post?.authorId) {
-      alert('We could not determine which member to block.');
-      return;
-    }
+  useEffect(() => {
+    reloadFeed();
+    const interval = setInterval(reloadFeed, 5 * 60 * 1000);
+    return () => clearInterval(interval);
+  }, [filter]);
 
-    const confirmed = window.confirm(
-      'Block this member? You will no longer see their posts, and they will not be able to message you.'
-    );
-    if (!confirmed) return;
-
-    try {
-      const res = await fetch('/api/signal/block', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ targetUserId: post.authorId }),
-      });
-
-      if (!res.ok) {
-        console.error('block error:', res.status, await res.text());
-        alert('We could not block this member. Please try again.');
-        return;
-      }
-
-      setIsHidden(true);
-      alert('Member blocked. You will no longer see their posts.');
-    } catch (err) {
-      console.error('block error:', err);
-      alert('We could not block this member. Please try again.');
-    }
-  };
-
-  // ─────────────────────────────────────────────────────────────
-  // REACTIONS
-  // ─────────────────────────────────────────────────────────────
-  const selectedEmojis =
-    post.reactions
-      ?.filter(
-        (r) =>
-          r.users?.includes(currentUserId) ||
-          r.userIds?.includes(currentUserId)
-      )
-      ?.map((r) => r.emoji) || [];
-
-  const reactionCounts =
-    post.reactions?.reduce((acc, r) => {
-      acc[r.emoji] = r.count || 0;
-      return acc;
-    }, {}) || {};
-
-  const fetchUsersForEmoji = async (emoji) => {
-    if (reactionUsers[emoji]) return;
-
-    const reaction = post.reactions?.find((r) => r.emoji === emoji);
-    if (!reaction || !reaction.userIds?.length) return;
+  const handleNewPost = async (postFromComposer) => {
+    const body = postFromComposer.body ?? '';
+    const payload = {
+      content: JSON.stringify({
+        body,
+        attachments: postFromComposer.attachments ?? [],
+      }),
+      text: body,
+      type: postFromComposer.type,
+      attachments: postFromComposer.attachments ?? [],
+    };
 
     try {
-      const res = await fetch('/api/users/names', {
+      const res = await fetch('/api/feed', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ userIds: reaction.userIds }),
+        body: JSON.stringify(payload),
       });
 
       if (res.ok) {
-        const data = await res.json();
-        const names = (data.names || [])
-          .map((n) => (n === currentUserName ? 'You' : n))
-          .join(', ');
-        setReactionUsers((prev) => ({ ...prev, [emoji]: names }));
+        await reloadFeed();
+        setShowComposer(false);
+      } else {
+        console.error('Post failed', await res.text());
       }
     } catch (err) {
-      console.error('reaction hover error:', err);
+      console.error('Post failed', err);
     }
   };
 
-  const getTooltipText = (emoji) =>
-    reactionUsers[emoji]
-      ? `${reactionUsers[emoji]} reacted with ${emoji}`
-      : 'Loading…';
+  const handleReply = async (postId, text) => {
+    if (!postId || !text || !text.trim()) return;
+    const trimmed = text.trim();
+
+    try {
+      const res = await fetch('/api/feed/comments', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ postId, text: trimmed }),
+      });
+
+      if (!res.ok) {
+        console.error('Comment failed', await res.text());
+        return;
+      }
+    } catch (err) {
+      console.error('Comment error:', err);
+      return;
+    }
+
+    const newComment = {
+      userId: currentUserId || null,
+      byUserId: currentUserId || null,
+      by: currentUserName || 'You',
+      text: trimmed,
+      avatarUrl: currentUserAvatar || null,
+      at: new Date().toISOString(),
+    };
+
+    setPosts((prev) =>
+      prev.map((p) =>
+        p.id === postId
+          ? {
+              ...p,
+              comments: Array.isArray(p.comments) ? [...p.comments, newComment] : [newComment],
+            }
+          : p
+      )
+    );
+  };
+
+  const handleReact = async (postId, emoji) => {
+    if (!emoji) return;
+    if (!postId && postId !== 0) return;
+
+    try {
+      const res = await fetch('/api/feed/react', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ postId, emoji }),
+      });
+
+      if (!res.ok) {
+        console.error('React failed', await res.text());
+        return;
+      }
+
+      const data = await res.json();
+      const reactions = Array.isArray(data.reactions) ? data.reactions : [];
+      const reactionCount = reactions.reduce(
+        (sum, r) => sum + (typeof r.count === 'number' ? r.count : 0),
+        0
+      );
+
+      setPosts((prev) =>
+        prev.map((p) =>
+          p.id === postId
+            ? {
+                ...p,
+                reactions,
+                likes: reactionCount,
+              }
+            : p
+        )
+      );
+    } catch (err) {
+      console.error('React error:', err);
+    }
+  };
+
+  const handleDelete = async (postId) => {
+    if (!postId) return;
+    setPosts((prev) => prev.filter((p) => p.id !== postId));
+    try {
+      await fetch(`/api/feed/${postId}`, {
+        method: 'DELETE',
+      });
+    } catch (err) {
+      console.error('Delete failed:', err);
+    }
+  };
 
   return (
-    <div className="relative bg-white rounded-lg shadow p-5 space-y-4">
-      {/* TOP-RIGHT ACTIONS (NON-OP ONLY) */}
-      {!isOwner && (
-        <div className="absolute top-3 right-3 flex items-center gap-2">
-          <button
-            onClick={handleReportPost}
-            className="text-xs px-2 py-1 border border-gray-300 rounded-md text-gray-700 hover:bg-gray-50"
-          >
-            Report
-          </button>
-
-          <button
-            onClick={handleBlockAuthor}
-            className="text-xs px-2 py-1 border border-red-300 rounded-md text-red-700 hover:bg-red-50"
-          >
-            Block
-          </button>
-        </div>
-      )}
-
-      {/* AUTHOR */}
-      <div className="flex items-start gap-3">
-        {post.authorAvatar ? (
-          <img
-            src={post.authorAvatar}
-            alt={post.author}
-            className="w-10 h-10 rounded-full"
-          />
-        ) : (
-          <div className="w-10 h-10 rounded-full bg-gray-200 flex items-center justify-center text-gray-500">
-            {post.author?.charAt(0)?.toUpperCase()}
-          </div>
-        )}
-        <div>
-          <div className="font-semibold">{post.author}</div>
-          <div className="text-xs text-gray-500">
-            {new Date(post.createdAt).toLocaleString()} • {post.type}
-          </div>
-        </div>
-      </div>
-
-      {/* BODY */}
-      <p className="whitespace-pre-wrap">{post.body}</p>
-
-      {/* REACTIONS */}
-      <div className="relative">
-        <QuickEmojiBar
-          onPick={(emoji) => onReact(post.id, emoji)}
-          selectedEmojis={selectedEmojis}
-          reactionCounts={reactionCounts}
-          onMouseEnter={(emoji) => {
-            setHoveredEmoji(emoji);
-            if (reactionCounts[emoji] > 0) fetchUsersForEmoji(emoji);
-          }}
-          onMouseLeave={() => setHoveredEmoji(null)}
-        />
-        {hoveredEmoji && reactionCounts[hoveredEmoji] > 0 && (
-          <div className="absolute bottom-full left-0 mb-3 bg-gray-900 text-white text-sm rounded-lg p-3 shadow-xl z-20 whitespace-nowrap">
-            {getTooltipText(hoveredEmoji)}
-          </div>
-        )}
-      </div>
-
-      {/* SUMMARY */}
-      <div className="flex items-center gap-4 text-sm text-gray-600">
-        {post.likes > 0 && (
-          <span className="bg-gray-100 px-2.5 py-1 rounded-full">
-            {post.likes} reactions
+    <div className="mx-auto w-full max-w-none px-2 sm:px-6 pt-6 pb-10">
+      {/* Filter */}
+      <div className="mb-4 flex items-center justify-between">
+        <div className="flex items-center gap-3">
+          <span className="bg-white px-3 py-1 rounded-lg text-sm font-semibold text-gray-800 shadow-sm border border-gray-200">
+            Showing
           </span>
-        )}
-        <button onClick={() => onOpenComments(post)} className="hover:underline">
-          {post.comments.length} comments
+          <select
+            value={filter}
+            onChange={(e) => setFilter(e.target.value)}
+            className="text-sm bg-white border border-gray-300 rounded-md px-3 py-1 focus:outline-none focus:ring-2 focus:ring-orange-500"
+          >
+            <option value="both">Business & Personal</option>
+            <option value="business">Business</option>
+            <option value="personal">Personal</option>
+          </select>
+        </div>
+      </div>
+
+      {/* Composer trigger */}
+      <div className="bg-white rounded-lg shadow p-4 mb-6">
+        <button
+          onClick={() => setShowComposer(true)}
+          className="w-full text-left text-gray-600 px-3 py-2 border border-gray-300 rounded-md hover:bg-gray-50 transition"
+        >
+          Start a post…
         </button>
       </div>
 
-      {/* REPLY */}
-      {showReplyInput ? (
-        <div className="flex gap-2">
-          <textarea
-            value={replyText}
-            onChange={(e) => setReplyText(e.target.value)}
-            placeholder="Write a reply…"
-            className="flex-1 border rounded p-2"
-            rows={2}
-          />
-          <button
-            onClick={handleReplySubmit}
-            disabled={!replyText.trim()}
-            className="px-4 py-2 bg-orange-500 text-white rounded disabled:opacity-50"
-          >
-            Send
-          </button>
-        </div>
-      ) : (
-        <button
-          onClick={() => setShowReplyInput(true)}
-          className="text-sm text-gray-600 hover:underline"
-        >
-          Reply
-        </button>
-      )}
+      <PostList
+        posts={posts}
+        filter={filter}
+        onReply={handleReply}
+        onDelete={handleDelete}
+        onReact={handleReact}
+        currentUserId={currentUserId}
+        currentUserName={currentUserName}
+      />
 
-      {/* BOTTOM-RIGHT DELETE (OP ONLY) */}
-      {isOwner && (
-        <div className="flex justify-end">
-          <button
-            onClick={() => onDelete(post.id)}
-            className="text-xs px-2 py-1 border border-red-300 rounded-md text-red-700 hover:bg-red-50"
+      {showComposer && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/40"
+          onClick={() => setShowComposer(false)}
+        >
+          <div
+            className="bg-white rounded-lg shadow-xl max-w-lg w-full p-4"
+            onClick={(e) => e.stopPropagation()}
           >
-            Delete
-          </button>
+            <PostComposer
+              onPost={handleNewPost}
+              onCancel={() => setShowComposer(false)}
+              currentUserName={currentUserName}
+              currentUserAvatar={currentUserAvatar}
+            />
+          </div>
         </div>
       )}
     </div>
