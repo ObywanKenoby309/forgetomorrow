@@ -2,27 +2,20 @@
 import { useEffect, useState, useCallback, useRef } from 'react';
 import { useRouter } from 'next/router';
 import MemberActions from '../member/MemberActions';
-
 export default function SignalMessages() {
   const router = useRouter();
   const { toId, toName, told, chrome } = router.query;
-
   const [threads, setThreads] = useState([]);
   const [threadsLoading, setThreadsLoading] = useState(true);
-
   const [activeConversationId, setActiveConversationId] = useState(null);
   const [activeTitle, setActiveTitle] = useState('');
   const [activeOtherUserId, setActiveOtherUserId] = useState(null);
-
   const [messages, setMessages] = useState([]);
   const [messagesLoading, setMessagesLoading] = useState(false);
-
   const [composer, setComposer] = useState('');
   const [sending, setSending] = useState(false);
-
   // 🔹 Local block state for the active conversation
   const [isBlocked, setIsBlocked] = useState(false);
-
   // 🔹 Inline member menu for conversation list avatars
   const [profileMenu, setProfileMenu] = useState({
     open: false,
@@ -30,7 +23,6 @@ export default function SignalMessages() {
     name: 'Member',
   });
   const menuRef = useRef(null);
-
   const fetchThreads = useCallback(async () => {
     setThreadsLoading(true);
     try {
@@ -45,7 +37,6 @@ export default function SignalMessages() {
       setThreadsLoading(false);
     }
   }, []);
-
   const fetchMessages = useCallback(async (conversationId) => {
     if (!conversationId) return;
     setMessagesLoading(true);
@@ -63,7 +54,6 @@ export default function SignalMessages() {
       setMessagesLoading(false);
     }
   }, []);
-
   const openConversation = async (thread) => {
     setActiveConversationId(thread.id);
     setActiveTitle(thread.title || 'Conversation');
@@ -71,7 +61,6 @@ export default function SignalMessages() {
     setIsBlocked(false);
     await fetchMessages(thread.id);
   };
-
   // ── Profile menu helpers (left column avatars) ─────────────────────────────
   const openProfileMenu = (userId, name) => {
     if (!userId) return;
@@ -84,64 +73,50 @@ export default function SignalMessages() {
       };
     });
   };
-
   const closeProfileMenu = () =>
     setProfileMenu({ open: false, userId: null, name: 'Member' });
-
   // Close on outside click
   useEffect(() => {
     if (!profileMenu.open) return;
-
     function handleClickOutside(e) {
       if (menuRef.current && !menuRef.current.contains(e.target)) {
         closeProfileMenu();
       }
     }
-
     document.addEventListener('mousedown', handleClickOutside);
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, [profileMenu.open]);
-
   // Initial load of threads
   useEffect(() => {
     fetchThreads();
   }, [fetchThreads]);
-
   // 🔹 Deep-link handler (select thread after threads load) ───────────────────
   useEffect(() => {
     if (!router.isReady) return;
-
     const deepLinkIdRaw = Array.isArray(toId || told)
       ? (toId || told)[0]
       : toId || told;
-
     if (!deepLinkIdRaw) return;
     if (threadsLoading) return;
-
     const match = threads.find(
       (t) =>
         t.otherUserId && String(t.otherUserId) === String(deepLinkIdRaw)
     );
-
     if (match) {
       openConversation(match);
     }
-
     const cleanQuery = {};
     if (chrome) cleanQuery.chrome = chrome;
-
     router.replace(
       { pathname: router.pathname, query: cleanQuery },
       undefined,
       { shallow: true }
     );
   }, [router.isReady, toId, told, chrome, threads, threadsLoading, fetchMessages]);
-
   const handleSend = async (e) => {
     e?.preventDefault?.();
     if (!activeConversationId || !composer.trim() || sending || isBlocked)
       return;
-
     setSending(true);
     try {
       const res = await fetch('/api/signal/send', {
@@ -152,22 +127,17 @@ export default function SignalMessages() {
           content: composer.trim(),
         }),
       });
-
       if (!res.ok) {
         const text = await res.text();
         console.error('send error payload:', text);
-
         if (res.status === 403) {
           setIsBlocked(true);
           alert('Messaging is blocked between you and this member.');
           return;
         }
-
         throw new Error(text);
       }
-
       const data = await res.json();
-
       const newMessage = {
         id: data.message.id,
         conversationId: data.message.conversationId,
@@ -178,7 +148,6 @@ export default function SignalMessages() {
         createdAt: data.message.createdAt,
         isMine: true,
       };
-
       setMessages((prev) => [...prev, newMessage]);
       setComposer('');
       await fetchThreads();
@@ -189,33 +158,34 @@ export default function SignalMessages() {
       setSending(false);
     }
   };
-
-  // 🔹 Block this member
+  // 🔹 Block this member — add optional reason prompt
   const handleBlock = async () => {
     if (!activeOtherUserId) {
       alert('We could not determine which member to block.');
       return;
     }
-
+    const reason = window.prompt(
+      'Optional: Why are you blocking this member? (This helps moderation)'
+    );
     const confirmed = window.confirm(
       'Are you sure you want to block this member? ' +
         'They will no longer be able to message you, and you will not see new messages from them.'
     );
     if (!confirmed) return;
-
     try {
       const res = await fetch('/api/signal/block', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ targetUserId: activeOtherUserId }),
+        body: JSON.stringify({ 
+          targetUserId: activeOtherUserId,
+          reason: reason?.trim() || null // ✅ Send reason
+        }),
       });
-
       if (!res.ok) {
         console.error('block error status:', res.status, await res.text());
         alert('We could not block this member. Please try again.');
         return;
       }
-
       setIsBlocked(true);
       setComposer('');
     } catch (err) {
@@ -223,19 +193,16 @@ export default function SignalMessages() {
       alert('We could not block this member. Please try again.');
     }
   };
-
   // 🔹 Report this conversation
   const handleReport = async () => {
     if (!activeConversationId || !activeOtherUserId) {
       alert('We could not determine which conversation to report.');
       return;
     }
-
     const reason = window.prompt(
       'Tell us briefly what happened. This will go to the ForgeTomorrow support team.'
     );
     if (reason === null) return;
-
     try {
       const res = await fetch('/api/signal/report', {
         method: 'POST',
@@ -246,58 +213,49 @@ export default function SignalMessages() {
           reason: reason.trim(),
         }),
       });
-
       if (!res.ok) {
         console.error('report error status:', res.status, await res.text());
         alert('We could not submit your report. Please try again.');
         return;
       }
-
       alert('Thank you. Your report has been submitted to our team.');
     } catch (err) {
       console.error('report error:', err);
       alert('We could not submit your report. Please try again.');
     }
   };
-
   // 🔹 Delete this conversation
   const handleDeleteConversation = async () => {
     if (!activeConversationId) {
       alert('No active conversation selected.');
       return;
     }
-
     const confirmed = window.confirm(
       'Delete this conversation for both participants? This cannot be undone.'
     );
     if (!confirmed) return;
-
     try {
       const res = await fetch('/api/signal/delete', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ conversationId: activeConversationId }),
       });
-
       if (!res.ok) {
         console.error('delete error status:', res.status, await res.text());
         alert('We could not delete this conversation. Please try again.');
         return;
       }
-
       setActiveConversationId(null);
       setActiveTitle('');
       setActiveOtherUserId(null);
       setMessages([]);
       setIsBlocked(false);
-
       await fetchThreads();
     } catch (err) {
       console.error('delete error:', err);
       alert('We could not delete this conversation. Please try again.');
     }
   };
-
   return (
     <div className="mt-4 grid grid-cols-1 md:grid-cols-[minmax(0,2fr)_minmax(0,3fr)] gap-4">
       {/* Left: Threads list */}
@@ -305,7 +263,6 @@ export default function SignalMessages() {
         <h2 className="text-sm font-semibold text-gray-800 mb-2">
           Conversations
         </h2>
-
         {threadsLoading ? (
           <p className="text-xs text-gray-500">Loading conversations…</p>
         ) : threads.length === 0 ? (
@@ -319,17 +276,14 @@ export default function SignalMessages() {
             {threads.map((t) => {
               const otherId = t.otherUserId || null;
               const otherName = t.title || 'Member';
-
               const openMenu = (e) => {
                 e.stopPropagation();
                 if (!otherId) return;
                 openProfileMenu(otherId, otherName);
               };
-
               const isActive = t.id === activeConversationId;
               const showMenu =
                 profileMenu.open && profileMenu.userId === otherId;
-
               return (
                 <li
                   key={t.id}
@@ -356,7 +310,6 @@ export default function SignalMessages() {
                       </div>
                     )}
                   </button>
-
                   {/* Inline member actions dropdown */}
                   {showMenu && otherId && (
                     <div
@@ -375,7 +328,6 @@ export default function SignalMessages() {
                       />
                     </div>
                   )}
-
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center justify-between gap-2">
                       <p className="text-sm font-semibold text-gray-800 truncate">
@@ -402,7 +354,6 @@ export default function SignalMessages() {
           </ul>
         )}
       </section>
-
       {/* Right: Active conversation */}
       <section className="bg-white rounded-lg shadow p-4 border border-gray-100 flex flex-col">
         <div className="flex items-center justify-between mb-2 gap-2">
@@ -411,7 +362,6 @@ export default function SignalMessages() {
               ? activeTitle || 'Conversation'
               : 'Your Signal inbox is ready'}
           </h2>
-
           {activeConversationId && (
             <div className="flex items-center gap-2">
               <button
@@ -438,21 +388,18 @@ export default function SignalMessages() {
             </div>
           )}
         </div>
-
         {!activeConversationId && (
           <p className="text-xs text-gray-600 mb-3">
             Start a conversation from a profile, candidate card, or coaching
             listing. Once you send a message, the thread will appear here.
           </p>
         )}
-
         {activeConversationId && isBlocked && (
           <div className="mb-3 text-[11px] text-red-700 bg-red-50 border border-red-200 rounded-md px-3 py-2">
             You have blocked this member. You will not be able to send new
             messages in this conversation.
           </div>
         )}
-
         {/* Messages list */}
         <div className="flex-1 min-h-[180px] max-h-[360px] overflow-y-auto border border-gray-100 rounded-md p-3 mb-3 space-y-2">
           {activeConversationId ? (
@@ -500,7 +447,6 @@ export default function SignalMessages() {
             </p>
           )}
         </div>
-
         {/* Composer */}
         <form onSubmit={handleSend} className="space-y-2">
           <textarea
