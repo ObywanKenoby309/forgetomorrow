@@ -1,6 +1,6 @@
+// components/feed/PostCard.js
 import { useState } from 'react';
 import QuickEmojiBar from './QuickEmojiBar';
-
 export default function PostCard({
   post,
   onReply,
@@ -15,16 +15,16 @@ export default function PostCard({
   const [replyText, setReplyText] = useState('');
   const [hoveredEmoji, setHoveredEmoji] = useState(null);
   const [reactionUsers, setReactionUsers] = useState({});
-
-  const isOwner = post.authorId === currentUserId;
-
+  
+  // ✅ FIXED: Defensive guard to prevent build-time "Cannot read properties of undefined (reading 'authorId')"
+  const isOwner = post && post.authorId && currentUserId ? post.authorId === currentUserId : false;
+  
   const handleReplySubmit = () => {
     if (!replyText.trim()) return;
     onReply(post.id, replyText.trim());
     setReplyText('');
     setShowReplyInput(false);
   };
-
   // ─────────────────────────────────────────────────────────────
   // REPORT POST (non-OP only)
   // ─────────────────────────────────────────────────────────────
@@ -33,29 +33,26 @@ export default function PostCard({
       'Tell us briefly what happened. This will be sent to the ForgeTomorrow moderation team.'
     );
     if (reason === null) return;
-
     try {
       const res = await fetch('/api/feed/report', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           postId: post.id,
-          targetUserId: post.authorId,
+          // ✅ Safe access: only send if authorId exists
+          targetUserId: post?.authorId,
           reason: reason.trim(),
         }),
       });
-
       if (!res.ok) {
         alert('We could not submit your report. Please try again.');
         return;
       }
-
       alert('Thank you. Your report has been submitted.');
     } catch {
       alert('We could not submit your report. Please try again.');
     }
   };
-
   // ─────────────────────────────────────────────────────────────
   // BLOCK USER (non-OP only)
   // ─────────────────────────────────────────────────────────────
@@ -64,26 +61,23 @@ export default function PostCard({
       'Block this member? You will no longer see their posts or messages.'
     );
     if (!confirmed) return;
-
     try {
       const res = await fetch('/api/signal/block', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ targetUserId: post.authorId }),
+        // ✅ Safe access: only send if authorId exists
+        body: JSON.stringify({ targetUserId: post?.authorId }),
       });
-
       if (!res.ok) {
         alert('We could not block this member. Please try again.');
         return;
       }
-
       alert('Member blocked.');
       onBlockUser?.(post.authorId); // 🔥 immediate client-side removal
     } catch {
       alert('We could not block this member. Please try again.');
     }
   };
-
   // ─────────────────────────────────────────────────────────────
   // REACTIONS
   // ─────────────────────────────────────────────────────────────
@@ -95,26 +89,21 @@ export default function PostCard({
           r.userIds?.includes(currentUserId)
       )
       ?.map((r) => r.emoji) || [];
-
   const reactionCounts =
     post.reactions?.reduce((acc, r) => {
       acc[r.emoji] = r.count || 0;
       return acc;
     }, {}) || {};
-
   const fetchUsersForEmoji = async (emoji) => {
     if (reactionUsers[emoji]) return;
-
     const reaction = post.reactions?.find((r) => r.emoji === emoji);
     if (!reaction || !reaction.userIds?.length) return;
-
     try {
       const res = await fetch('/api/users/names', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ userIds: reaction.userIds }),
       });
-
       if (res.ok) {
         const data = await res.json();
         const names = (data.names || [])
@@ -124,12 +113,10 @@ export default function PostCard({
       }
     } catch {}
   };
-
   const getTooltipText = (emoji) =>
     reactionUsers[emoji]
       ? `${reactionUsers[emoji]} reacted with ${emoji}`
       : 'Loading…';
-
   return (
     <div className="relative bg-white rounded-lg shadow p-5 space-y-4">
       {/* TOP-RIGHT ACTIONS (non-OP) */}
@@ -149,7 +136,6 @@ export default function PostCard({
           </button>
         </div>
       )}
-
       {/* AUTHOR */}
       <div className="flex items-start gap-3">
         {post.authorAvatar ? (
@@ -170,10 +156,8 @@ export default function PostCard({
           </div>
         </div>
       </div>
-
       {/* BODY */}
       <p className="whitespace-pre-wrap">{post.body}</p>
-
       {/* REACTIONS */}
       <div className="relative">
         <QuickEmojiBar
@@ -192,7 +176,6 @@ export default function PostCard({
           </div>
         )}
       </div>
-
       {/* SUMMARY */}
       <div className="flex items-center gap-4 text-sm text-gray-600">
         {post.likes > 0 && (
@@ -204,7 +187,6 @@ export default function PostCard({
           {post.comments.length} comments
         </button>
       </div>
-
       {/* REPLY */}
       {showReplyInput ? (
         <div className="flex gap-2">
@@ -231,7 +213,6 @@ export default function PostCard({
           Reply
         </button>
       )}
-
       {/* BOTTOM-RIGHT DELETE (OP ONLY) */}
       {isOwner && (
         <div className="flex justify-end">
