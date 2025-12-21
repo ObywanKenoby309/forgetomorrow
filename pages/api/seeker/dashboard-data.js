@@ -11,71 +11,57 @@ export default async function handler(req, res) {
 
   try {
     const session = await getServerSession(req, res, authOptions);
-
     if (!session?.user?.email) {
       return res.status(401).json({ error: "Not authenticated" });
     }
 
     const user = await prisma.user.findUnique({
       where: { email: session.user.email },
-      select: {
-        id: true,
-        firstName: true,
-        lastName: true,
-        role: true,
-        plan: true,
-      },
+      select: { id: true },
     });
 
     if (!user) {
       return res.status(404).json({ error: "User not found" });
     }
 
-    // 🔹 Lightweight counts so Kat sees *something* that makes sense
-    const [applicationsCount, pinnedJobsCount] = await Promise.all([
-      prisma.application.count({ where: { userId: user.id } }),
-      prisma.pinnedJob.count({ where: { userId: user.id } }),
+    const userId = user.id;
+
+    // Parallel fetch of everything we need
+    const [
+      applications,
+      profileViews,
+      interviews,
+      offers,
+      allApplications,
+    ] = await Promise.all([
+      prisma.application.count({ where: { userId } }),
+      prisma.profileView.count({ where: { targetId: userId } }),
+      prisma.interview.count({ where: { userId } }),
+      prisma.offer.count({ where: { userId } }),
+      prisma.application.findMany({
+        where: { userId },
+        select: { appliedAt: true },
+        orderBy: { appliedAt: "desc" },
+      }),
     ]);
 
-    // You can expand this later with real analytics, ATS score history, etc.
+    // Last application date (or null)
+    const lastApplication = allApplications.length > 0
+      ? allApplications[0].appliedAt.toISOString()
+      : null;
+
+    // Return exactly the shape seeker-dashboard.js expects
     return res.status(200).json({
-      user: {
-        id: user.id,
-        name: `${user.firstName || ""} ${user.lastName || ""}`.trim() || "Unnamed",
-        role: user.role,
-        plan: user.plan,
-      },
-      stats: {
-        applicationsCount,
-        pinnedJobsCount,
-        // placeholders for now so the UI doesn’t explode
-        interviewsUpcoming: 0,
-        offersCount: 0,
-      },
-      // safe default tiles so Seeker dashboard can render
-      tiles: [
-        {
-          key: "applications",
-          label: "Applications",
-          value: applicationsCount,
-        },
-        {
-          key: "saved",
-          label: "Saved jobs",
-          value: pinnedJobsCount,
-        },
-        {
-          key: "interviews",
-          label: "Upcoming interviews",
-          value: 0,
-        },
-        {
-          key: "offers",
-          label: "Offers",
-          value: 0,
-        },
-      ],
+      applications,
+      views: profileViews,
+      interviews,
+      offers,
+      lastApplication,
+      allApplications: allApplications.map(app => ({
+        appliedAt: app.appliedAt.toISOString(),
+      })),
     });
+
   } catch (err) {
     console.error("[api/seeker/dashboard-data] error:", err);
     return res
