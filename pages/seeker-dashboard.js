@@ -6,6 +6,7 @@ import { useRouter } from 'next/router';
 import SeekerLayout from '@/components/layouts/SeekerLayout';
 import PinnedJobsPreview from '@/components/PinnedJobsPreview';
 import RecommendedJobsPreview from '@/components/seeker/dashboard/RecommendedJobsPreview';
+import CommunityPulsePreview from '@/components/seeker/dashboard/CommunityPulsePreview';
 import KpiRow from '@/components/seeker/dashboard/KpiRow';
 import ApplicationsOverTime from '@/components/seeker/dashboard/ApplicationsOverTime';
 // ISO WEEK HELPERS
@@ -215,23 +216,24 @@ export default function SeekerDashboard() {
               />
             )}
           </section>
-          {/* Pinned Jobs */}
-          <section className="bg-white border border-gray-200 rounded-xl p-5 shadow-sm">
-            <div className="flex items-center justify-between mb-4">
-              <h2 className="text-lg font-semibold text-orange-600">
-                Your Next Yes
-              </h2>
-              <Link
-                href={withChrome('/seeker/pinned-jobs')}
-                className="text-orange-600 font-medium hover:underline"
-              >
-                View all
-              </Link>
-            </div>
-            <PinnedJobsPreview />
-          </section>
-          {/* New Matches for You */}
-          <RecommendedJobsPreview />
+          {/* New Matches + Your Next Yes - side by side */}
+          <div className="grid md:grid-cols-2 gap-6">
+            <RecommendedJobsPreview />
+            <section className="bg-white border border-gray-200 rounded-xl p-5 shadow-sm">
+              <div className="flex items-center justify-between mb-4">
+                <h2 className="text-lg font-semibold text-orange-600">
+                  Your Next Yes
+                </h2>
+                <Link
+                  href={withChrome('/seeker/pinned-jobs')}
+                  className="text-orange-600 font-medium hover:underline"
+                >
+                  View all
+                </Link>
+              </div>
+              <PinnedJobsPreview />
+            </section>
+          </div>
           {/* Applications Over Time */}
           <section className="bg-white border border-gray-200 rounded-xl p-5 shadow-sm">
             <h3 className="text-base font-semibold text-gray-800 mb-3">
@@ -239,6 +241,8 @@ export default function SeekerDashboard() {
             </h3>
             <ApplicationsOverTime weeks={weeks} withChrome={withChrome} />
           </section>
+          {/* Community Pulse */}
+          <CommunityPulsePreview />
           {/* Coming Soon */}
           <section className="grid md:grid-cols-2 gap-6">
             <div className="bg-white border border-gray-200 rounded-xl p-5 shadow-sm">
