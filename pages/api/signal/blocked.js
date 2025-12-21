@@ -42,12 +42,14 @@ export default async function handler(req, res) {
     return res.status(200).json({ blocked: list });
   }
   if (req.method === 'DELETE') {
-    // ✅ Parse body for DELETE (Next.js doesn't by default)
-    let body;
-    try {
-      body = JSON.parse(req.body);
-    } catch {}
-    const { blockedId } = body || {};
+    // ✅ NEW: Parse body for DELETE (Next.js doesn't by default)
+    let body = {};
+    if (req.body) {
+      try {
+        body = typeof req.body === 'string' ? JSON.parse(req.body) : req.body;
+      } catch {}
+    }
+    const { blockedId } = body;
     if (!blockedId) {
       return res.status(400).json({ error: 'blockedId required' });
     }
