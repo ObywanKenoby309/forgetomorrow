@@ -6,7 +6,7 @@ import { useRouter } from 'next/router';
 import SeekerLayout from '@/components/layouts/SeekerLayout';
 import PinnedJobsPreview from '@/components/PinnedJobsPreview';
 import RecommendedJobsPreview from '@/components/seeker/dashboard/RecommendedJobsPreview';
-import CommunityPulsePreview from '@/components/seeker/dashboard/CommunityPulsePreview';
+import ProfilePerformanceTeaser from '@/components/seeker/dashboard/ProfilePerformanceTeaser';
 import KpiRow from '@/components/seeker/dashboard/KpiRow';
 import ApplicationsOverTime from '@/components/seeker/dashboard/ApplicationsOverTime';
 // ISO WEEK HELPERS
@@ -234,15 +234,16 @@ export default function SeekerDashboard() {
               <PinnedJobsPreview />
             </section>
           </div>
-          {/* Applications Over Time */}
-          <section className="bg-white border border-gray-200 rounded-xl p-5 shadow-sm">
-            <h3 className="text-base font-semibold text-gray-800 mb-3">
-              Applications Over Time
-            </h3>
-            <ApplicationsOverTime weeks={weeks} withChrome={withChrome} />
-          </section>
-          {/* Community Pulse */}
-          <CommunityPulsePreview />
+          {/* Applications Over Time + Profile Performance Teaser - side by side */}
+          <div className="grid md:grid-cols-2 gap-6">
+            <section className="bg-white border border-gray-200 rounded-xl p-5 shadow-sm">
+              <h3 className="text-base font-semibold text-gray-800 mb-3">
+                Applications Over Time
+              </h3>
+              <ApplicationsOverTime weeks={weeks} withChrome={withChrome} />
+            </section>
+            <ProfilePerformanceTeaser />
+          </div>
           {/* Coming Soon */}
           <section className="grid md:grid-cols-2 gap-6">
             <div className="bg-white border border-gray-200 rounded-xl p-5 shadow-sm">
