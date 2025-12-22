@@ -375,28 +375,28 @@ export default function SeekerApplicationsPage() {
               : undefined
           }
           initial={
-            formMode === 'edit' && jobToEdit
-              ? {
-                  id: jobToEdit.job.id,
-                  title: jobToEdit.job.title,
-                  company: jobToEdit.job.company,
-                  location: jobToEdit.job.location || '',
-                  link: jobToEdit.job.link || '',
-                  notes: jobToEdit.job.notes || '',
-                  dateAdded: jobToEdit.job.dateAdded || new Date().toISOString().split('T')[0],
-                  status: jobToEdit.stage,
-                  originalStage: jobToEdit.stage,
-                }
-              : {
-                  title: '',
-                  company: '',
-                  location: '',
-                  link: '',
-                  notes: '',
-                  dateAdded: new Date().toISOString().split('T')[0],
-                  status: 'Applied',
-                }
-              }
+  formMode === 'edit' && jobToEdit
+    ? {
+        id: jobToEdit.job.id,
+        title: jobToEdit.job.title,
+        company: jobToEdit.job.company,
+        location: jobToEdit.job.location || '',
+        url: jobToEdit.job.link || '',
+        notes: jobToEdit.job.notes || '',
+        dateAdded: jobToEdit.job.dateAdded || new Date().toISOString().split('T')[0],
+        status: jobToEdit.stage,
+        originalStage: jobToEdit.stage,
+      }
+    : {
+        title: '',
+        company: '',
+        location: '',
+        url: '',
+        notes: '',
+        dateAdded: new Date().toISOString().split('T')[0],
+        status: 'Applied',
+      }
+}
           stages={STAGES} // include Pinned
         />
       )}

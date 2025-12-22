@@ -1,12 +1,11 @@
 // components/applications/ApplicationForm.js
 import React, { useEffect, useState, useRef } from 'react';
-
 export default function ApplicationForm({
   mode = 'add',
   initial,
   onClose,
   onSave,
-  onDelete,          // 🔹 optional delete handler (edit mode)
+  onDelete, // 🔹 optional delete handler (edit mode)
   stages = [],
 }) {
   const [form, setForm] = useState({
@@ -14,19 +13,16 @@ export default function ApplicationForm({
     title: initial?.title || '',
     company: initial?.company || '',
     location: initial?.location || '',
-    link: initial?.link || '',
+    url: initial?.url || '',
     notes: initial?.notes || '',
     dateAdded: initial?.dateAdded || new Date().toISOString().split('T')[0],
     status: initial?.status || 'Pinned',
     originalStage: initial?.originalStage || 'Pinned',
   });
-
   const [dirty, setDirty] = useState(false);
   const firstFieldRef = useRef(null);
-
   useEffect(() => {
     if (firstFieldRef.current) firstFieldRef.current.focus();
-
     const beforeUnload = (e) => {
       if (dirty) {
         e.preventDefault();
@@ -34,21 +30,17 @@ export default function ApplicationForm({
       }
     };
     window.addEventListener('beforeunload', beforeUnload);
-
     const onEsc = (e) => e.key === 'Escape' && onClose();
     document.addEventListener('keydown', onEsc);
-
     return () => {
       window.removeEventListener('beforeunload', beforeUnload);
       document.removeEventListener('keydown', onEsc);
     };
   }, [dirty, onClose]);
-
   const handleChange = (e) => {
     setDirty(true);
     setForm((f) => ({ ...f, [e.target.name]: e.target.value }));
   };
-
   const handleSubmit = (e) => {
     e.preventDefault();
     if (!form.title.trim() || !form.company.trim()) {
@@ -57,13 +49,11 @@ export default function ApplicationForm({
     }
     onSave(form);
   };
-
   const handleDeleteClick = () => {
     if (!onDelete || !form.id) return;
     if (!confirm('Delete this application?')) return;
     onDelete(form.id, form.originalStage || form.status);
   };
-
   // 🔻 slightly tighter inputs to reduce overall height
   const inputStyle = {
     border: '1px solid #DADCE0',
@@ -72,14 +62,12 @@ export default function ApplicationForm({
     width: '100%',
     outline: 'none',
   };
-
   const labelStyle = {
     fontSize: 12,
     color: '#607D8B',
     marginBottom: 4,
     display: 'block',
   };
-
   return (
     <div
       onClick={onClose}
@@ -143,7 +131,6 @@ export default function ApplicationForm({
             &times;
           </button>
         </div>
-
         {/* Form */}
         <form
           onSubmit={handleSubmit}
@@ -183,10 +170,10 @@ export default function ApplicationForm({
             />
           </div>
           <div>
-            <label style={labelStyle}>Job Link (optional)</label>
+            <label style={labelStyle}>Job URL (optional)</label>
             <input
-              name="link"
-              value={form.link}
+              name="url"
+              value={form.url}
               onChange={handleChange}
               style={inputStyle}
             />
@@ -201,7 +188,6 @@ export default function ApplicationForm({
               style={{ ...inputStyle, resize: 'vertical' }}
             />
           </div>
-
           <div
             style={{
               display: 'grid',
@@ -235,7 +221,6 @@ export default function ApplicationForm({
               </select>
             </div>
           </div>
-
           <div
             style={{
               display: 'flex',
@@ -261,7 +246,6 @@ export default function ApplicationForm({
                 Delete
               </button>
             )}
-
             <button
               type="button"
               onClick={onClose}

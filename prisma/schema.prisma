@@ -104,6 +104,7 @@ model Application {
   title String?
   company String?
   location String?
+  url String?
   status ApplicationStatus @default(Applied)
   appliedAt DateTime @default(now())
   updatedAt DateTime @updatedAt
