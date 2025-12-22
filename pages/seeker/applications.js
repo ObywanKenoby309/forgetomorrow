@@ -92,43 +92,60 @@ export default function SeekerApplicationsPage() {
   const [details, setDetails] = useState({ job: null, stage: null });
 
   useEffect(() => {
-    async function load() {
-      setLoading(true);
-      try {
-        // Fetch pinned
-        const pinnedRes = await fetch('/api/seeker/pinned-jobs');
-        const pinnedData = pinnedRes.ok ? await pinnedRes.json() : { jobs: [] };
+  async function load() {
+    setLoading(true);
+    try {
+      // Fetch pinned
+      const pinnedRes = await fetch('/api/seeker/pinned-jobs');
+      const pinnedData = pinnedRes.ok ? await pinnedRes.json() : { jobs: [] };
 
-        // Fetch applications
-        const appsRes = await fetch('/api/seeker/applications');
-        const appsData = appsRes.ok ? await appsRes.json() : { applications: {} };
+      // Map pinned to card shape (dateAdded = pinnedAt)
+      const pinnedCards = (pinnedData.jobs || []).map((j) => ({
+        id: j.id,
+        title: j.title,
+        company: j.company,
+        location: j.location,
+        worksite: j.worksite,
+        compensation: j.compensation,
+        type: j.type,
+        dateAdded: new Date(j.pinnedAt).toISOString().split('T')[0],
+        notes: '',
+        link: '',
+      }));
 
-        const grouped = {
-          Applied: [],
-          Interviewing: [],
-          Offers: [],
-          ClosedOut: [],
-        };
+      // Fetch applications
+      const appsRes = await fetch('/api/seeker/applications');
+      const appsData = appsRes.ok ? await appsRes.json() : { applications: {} };
 
-        // Map applications to stages
-        Object.keys(appsData.applications || {}).forEach((status) => {
-          if (grouped[status]) {
-            grouped[status] = appsData.applications[status];
-          }
-        });
+      const grouped = {
+        Applied: [],
+        Interviewing: [],
+        Offers: [],
+        ClosedOut: [],
+      };
 
-        setTracker({
-          Pinned: pinnedData.jobs || [],
-          ...grouped,
-        });
-      } catch (err) {
-        console.error('Load tracker error:', err);
-      } finally {
-        setLoading(false);
-      }
+      // Map applications to card shape
+      Object.keys(appsData.applications || {}).forEach((status) => {
+        if (grouped[status]) {
+          grouped[status] = appsData.applications[status].map((a) => ({
+            ...a,
+            dateAdded: a.dateAdded || new Date(a.appliedAt).toISOString().split('T')[0],
+          }));
+        }
+      });
+
+      setTracker({
+        Pinned: pinnedCards,
+        ...grouped,
+      });
+    } catch (err) {
+      console.error('Load tracker error:', err);
+    } finally {
+      setLoading(false);
     }
-    load();
-  }, []);
+  }
+  load();
+}, []);
 
   const addApplication = async (app) => {
     try {
