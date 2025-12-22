@@ -87,14 +87,6 @@ export default function ProfileAnalyticsPage() {
         sidebarInitialOpen={{ coaching: false, seeker: false }}
       >
         <div className="max-w-6xl mx-auto px-4 py-8">
-          {/* Title card */}
-          <section className="bg-white border border-gray-200 rounded-xl shadow-sm p-8 text-center mb-6">
-            <h1 className="text-3xl font-bold text-orange-600 mb-2">Profile Analytics</h1>
-            <p className="text-gray-600">
-              Track engagement on your profile and content. Detailed analytics are rolling out gradually, so some numbers may be limited for now.
-            </p>
-          </section>
-
           {/* Stats row */}
           <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4 mb-6">
             <KPI label="Profile Views" value={analytics.totalViews.toLocaleString()} />
@@ -188,20 +180,6 @@ export default function ProfileAnalyticsPage() {
               )}
             </section>
           </div>
-
-          {/* Back to Profile */}
-          <section className="mt-8 bg-white border border-gray-200 rounded-xl shadow-sm p-6 flex items-center justify-between">
-            <div className="text-[#607D8B] text-sm">
-              Review and refine your profile sections to improve engagement.
-              As analytics expand, this page will help you see what is working.
-            </div>
-            <a
-              href={'/profile' + (isCoachChrome ? '?chrome=coach' : '')}
-              className="bg-[#FF7043] text-white rounded-lg px-6 py-3 font-bold no-underline text-sm"
-            >
-              Back to Profile
-            </a>
-          </section>
         </div>
       </Layout>
     </>
