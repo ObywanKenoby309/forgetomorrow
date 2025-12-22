@@ -286,7 +286,7 @@ export default function SeekerApplicationsPage() {
         <ApplicationsBoard
           stagesData={tracker}
           compact={false}
-          columns: 5
+          columns={5}
           title="Applications"
           leftActions={
             <button
