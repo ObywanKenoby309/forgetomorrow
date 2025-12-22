@@ -3,6 +3,12 @@ import { getServerSession } from "next-auth/next";
 import { authOptions } from "../../auth/[...nextauth]";
 import { prisma } from "@/lib/prisma";
 
+function normalizeStatus(s) {
+  if (!s) return "Applied";
+  if (s === "Closed Out") return "ClosedOut";
+  return s;
+}
+
 export default async function handler(req, res) {
   if (req.method !== "POST") {
     res.setHeader("Allow", "POST");
@@ -32,15 +38,17 @@ export default async function handler(req, res) {
       return res.status(400).json({ error: "title and company required" });
     }
 
+    const normalizedStatus = normalizeStatus(status);
+
     const application = await prisma.application.create({
       data: {
         userId,
         title,
         company,
-        location: location || '',
-        url: url || '',
-        notes: notes || '',
-        status,
+        location: location || "",
+        url: url || "",
+        notes: notes || "",
+        status: normalizedStatus,
       },
     });
 
@@ -50,8 +58,9 @@ export default async function handler(req, res) {
       company: application.company,
       location: application.location,
       url: application.url,
+      link: application.url, // alias
       notes: application.notes,
-      dateAdded: application.appliedAt.toISOString().split('T')[0],
+      dateAdded: application.appliedAt.toISOString().split("T")[0],
     };
 
     return res.status(200).json({ success: true, card });

@@ -3,6 +3,12 @@ import { getServerSession } from "next-auth/next";
 import { authOptions } from "../../auth/[...nextauth]";
 import { prisma } from "@/lib/prisma";
 
+function normalizeStatus(s) {
+  if (!s) return null;
+  if (s === "Closed Out") return "ClosedOut";
+  return s;
+}
+
 export default async function handler(req, res) {
   const { id } = req.query;
 
@@ -25,13 +31,15 @@ export default async function handler(req, res) {
   if (req.method === "PATCH") {
     try {
       const { status } = req.body;
-      if (!status) {
+      const normalizedStatus = normalizeStatus(status);
+
+      if (!normalizedStatus) {
         return res.status(400).json({ error: "status required" });
       }
 
       const updated = await prisma.application.updateMany({
         where: { id: Number(id), userId },
-        data: { status },
+        data: { status: normalizedStatus },
       });
 
       if (updated.count === 0) {

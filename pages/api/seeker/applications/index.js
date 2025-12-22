@@ -3,6 +3,12 @@ import { getServerSession } from "next-auth/next";
 import { authOptions } from "../../auth/[...nextauth]";
 import { prisma } from "@/lib/prisma";
 
+function normalizeStatus(s) {
+  if (!s) return "Applied";
+  if (s === "Closed Out") return "ClosedOut";
+  return s;
+}
+
 export default async function handler(req, res) {
   if (req.method !== "GET") {
     res.setHeader("Allow", "GET");
@@ -53,19 +59,29 @@ export default async function handler(req, res) {
     };
 
     applications.forEach((app) => {
-      const status = app.status || "Applied";
+      const status = normalizeStatus(app.status) || "Applied";
+
+      // ✅ Critical fix: app.job can be null for manually created applications
+      const title = app.job?.title ?? app.title ?? "";
+      const company = app.job?.company ?? app.company ?? "";
+      const location = app.job?.location ?? app.location ?? "";
+      const worksite = app.job?.worksite ?? null;
+      const compensation = app.job?.compensation ?? null;
+      const type = app.job?.type ?? null;
+
       if (grouped[status]) {
         grouped[status].push({
           id: app.id,
-          title: app.job.title,
-          company: app.job.company,
-          location: app.job.location,
-          worksite: app.job.worksite,
-          compensation: app.job.compensation,
-          type: app.job.type,
-          dateAdded: app.appliedAt.toISOString().split('T')[0],
-          notes: app.notes || '',
-          link: app.link || '',
+          title,
+          company,
+          location,
+          worksite,
+          compensation,
+          type,
+          dateAdded: app.appliedAt.toISOString().split("T")[0],
+          notes: app.notes || "",
+          url: app.url || "",
+          link: app.url || "", // keep alias for any older UI usage
         });
       }
     });
