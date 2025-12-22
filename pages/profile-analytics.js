@@ -96,24 +96,23 @@ export default function ProfileAnalyticsPage() {
             <KPI label="Profile Completion" value={`${analytics.profileCompletionPct}%`} />
           </div>
 
-          {/* Charts row — side-by-side on md+, stack on mobile */}
-          <div className="grid md:grid-cols-2 gap-6 mb-6">
-            <ViewsChart
-              labels={analytics.daysLabels}
-              data={analytics.viewsLast7Days}
-            />
-            <SearchAppearancesChart
-              labels={analytics.daysLabels}
-              data={analytics.searchAppearancesLast7Days}
+          {/* Charts + Completion row */}
+          <div className="grid lg:grid-cols-3 gap-6 mb-6">
+            <div className="lg:col-span-2 grid md:grid-cols-2 gap-6">
+              <ViewsChart
+                labels={analytics.daysLabels}
+                data={analytics.viewsLast7Days}
+              />
+              <SearchAppearancesChart
+                labels={analytics.daysLabels}
+                data={analytics.searchAppearancesLast7Days}
+              />
+            </div>
+            <ProfileCompletionCard
+              completionPct={analytics.profileCompletionPct}
+              checklist={analytics.profileChecklist}
             />
           </div>
-
-          {/* Profile Completion card */}
-          <ProfileCompletionCard
-            completionPct={analytics.profileCompletionPct}
-            checklist={analytics.profileChecklist}
-            className="mb-6"
-          />
 
           {/* Bottom row — Connections, Recent Viewers, Top Content */}
           <div className="grid lg:grid-cols-3 gap-6">
