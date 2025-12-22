@@ -99,7 +99,7 @@ export default function SeekerApplicationsPage() {
       const pinnedRes = await fetch('/api/seeker/pinned-jobs');
       const pinnedData = pinnedRes.ok ? await pinnedRes.json() : { jobs: [] };
 
-      // Map pinned to card shape (dateAdded = pinnedAt)
+      // Map pinned to card shape
       const pinnedCards = (pinnedData.jobs || []).map((j) => ({
         id: j.id,
         title: j.title,
@@ -121,7 +121,7 @@ export default function SeekerApplicationsPage() {
         Applied: [],
         Interviewing: [],
         Offers: [],
-        ClosedOut: [],
+        ClosedOut: [], // ← fixed to match API
       };
 
       // Map applications to card shape
@@ -150,7 +150,7 @@ export default function SeekerApplicationsPage() {
   const addApplication = async (app) => {
   try {
     if (app.status === 'Pinned') {
-      // Manual pin (no jobId)
+      // Manual pin
       const res = await fetch('/api/seeker/pinned-jobs', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -158,12 +158,24 @@ export default function SeekerApplicationsPage() {
           title: app.title,
           company: app.company,
           location: app.location,
-          url: app.link,
+          url: app.url,
         }),
       });
       if (res.ok) {
-        // Reload to get fresh pinned list (simple, safe)
-        window.location.reload();
+        const { pinned } = await res.json();
+        const card = {
+          id: pinned.id || pinned.jobId,
+          title: pinned.title || '',
+          company: pinned.company || '',
+          location: pinned.location || '',
+          url: pinned.url || '',
+          notes: '',
+          dateAdded: new Date(pinned.pinnedAt).toISOString().split('T')[0],
+        };
+        setTracker((prev) => ({
+          ...prev,
+          Pinned: [card, ...prev.Pinned],
+        }));
       }
     } else {
       // Regular application
