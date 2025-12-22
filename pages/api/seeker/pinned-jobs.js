@@ -20,8 +20,34 @@ export default async function handler(req, res) {
 
   const userId = user.id;
 
-  // POST = unpin a job
+  // POST = pin a job (create PinnedJob)
   if (req.method === "POST") {
+    try {
+      const { jobId } = req.body;
+      if (!jobId) {
+        return res.status(400).json({ error: "jobId required" });
+      }
+
+      const pinned = await prisma.pinnedJob.create({
+        data: {
+          userId,
+          jobId: Number(jobId),
+        },
+      });
+
+      return res.status(200).json({ success: true, pinned });
+    } catch (err) {
+      console.error("[api/seeker/pinned-jobs] pin error:", err);
+      // Ignore duplicate pin (unique constraint on userId + jobId)
+      if (err.code === 'P2002') {
+        return res.status(200).json({ success: true, message: "Already pinned" });
+      }
+      return res.status(500).json({ error: "Failed to pin job" });
+    }
+  }
+
+  // DELETE = unpin a job
+  if (req.method === "DELETE") {
     try {
       const { jobId } = req.body;
       if (!jobId) {
@@ -86,6 +112,6 @@ export default async function handler(req, res) {
   }
 
   // Method not allowed
-  res.setHeader("Allow", ["GET", "POST"]);
+  res.setHeader("Allow", ["GET", "POST", "DELETE"]);
   return res.status(405).json({ error: "Method not allowed" });
 }

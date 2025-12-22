@@ -2,7 +2,6 @@
 import React, { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/router';
-
 import SeekerLayout from '@/components/layouts/SeekerLayout';
 import SeekerRightColumn from '@/components/seeker/SeekerRightColumn';
 import ApplicationForm from '@/components/applications/ApplicationForm';
@@ -10,28 +9,15 @@ import ApplicationDetailsModal from '@/components/applications/ApplicationDetail
 import ApplicationsBoard from '@/components/applications/ApplicationsBoard';
 import { colorFor } from '@/components/seeker/dashboard/seekerColors';
 
-const STORAGE_KEY = 'applicationsTracker';
-
-// Internal stage keys (and display labels) — single source of truth
 const STAGES = ['Pinned', 'Applied', 'Interviewing', 'Offers', 'Closed Out'];
 
-// empty tracker: no seeded/demo applications
-const EMPTY_TRACKER = {
-  Pinned: [],
-  Applied: [],
-  Interviewing: [],
-  Offers: [],
-  'Closed Out': [],
-};
-
-// map stage -> palette key
 const stageKey = (stage) =>
   ({
     Pinned: 'neutral',
     Applied: 'applied',
     Interviewing: 'interviewing',
     Offers: 'offers',
-    'Closed Out': 'info', // calm teal, not "failure"
+    'Closed Out': 'info',
   }[stage] || 'neutral');
 
 function StageStrip({ tracker }) {
@@ -57,14 +43,14 @@ function StageStrip({ tracker }) {
               padding: '10px 12px',
               display: 'grid',
               gap: 4,
-              textAlign: 'center',         // 🔹 center label + number
+              textAlign: 'center',
             }}
           >
             <div
               style={{
                 fontSize: 12,
                 opacity: 0.9,
-                whiteSpace: 'nowrap',       // 🔹 keep "Closed Out" on one line
+                whiteSpace: 'nowrap',
               }}
             >
               {stage}
@@ -91,109 +77,125 @@ export default function SeekerApplicationsPage() {
   const withChrome = (path) =>
     chrome ? `${path}${path.includes('?') ? '&' : '?'}chrome=${chrome}` : path;
 
-  // start empty; only user-created items will appear
-  const [tracker, setTracker] = useState(EMPTY_TRACKER);
-
+  const [tracker, setTracker] = useState({
+    Pinned: [],
+    Applied: [],
+    Interviewing: [],
+    Offers: [],
+    'Closed Out': [],
+  });
+  const [loading, setLoading] = useState(true);
   const [showForm, setShowForm] = useState(false);
-  const [formMode, setFormMode] = useState('add'); // 'add' | 'edit'
-  const [jobToEdit, setJobToEdit] = useState(null); // { job, stage }
+  const [formMode, setFormMode] = useState('add');
+  const [jobToEdit, setJobToEdit] = useState(null);
   const [detailsOpen, setDetailsOpen] = useState(false);
   const [details, setDetails] = useState({ job: null, stage: null });
 
-  // hydrate from localStorage if user has saved tracker
   useEffect(() => {
-    try {
-      const saved =
-        typeof window !== 'undefined'
-          ? window.localStorage.getItem(STORAGE_KEY)
-          : null;
+    async function load() {
+      setLoading(true);
+      try {
+        // Fetch pinned
+        const pinnedRes = await fetch('/api/seeker/pinned-jobs');
+        const pinnedData = pinnedRes.ok ? await pinnedRes.json() : { jobs: [] };
 
-      if (saved) {
-        const parsed = JSON.parse(saved);
-        if (parsed && typeof parsed === 'object') {
-          // migrate legacy "Rejected" bucket into "Closed Out"
-          const legacyRejected = parsed.Rejected || [];
-          setTracker({
-            Pinned: parsed.Pinned || [],
-            Applied: parsed.Applied || [],
-            Interviewing: parsed.Interviewing || [],
-            Offers: parsed.Offers || [],
-            'Closed Out': parsed['Closed Out'] || legacyRejected || [],
-          });
-        }
-      } else {
-        if (typeof window !== 'undefined') {
-          window.localStorage.setItem(STORAGE_KEY, JSON.stringify(EMPTY_TRACKER));
-        }
+        // Fetch applications
+        const appsRes = await fetch('/api/seeker/applications');
+        const appsData = appsRes.ok ? await appsRes.json() : { applications: {} };
+
+        const grouped = {
+          Applied: [],
+          Interviewing: [],
+          Offers: [],
+          ClosedOut: [],
+        };
+
+        // Map applications to stages
+        Object.keys(appsData.applications || {}).forEach((status) => {
+          if (grouped[status]) {
+            grouped[status] = appsData.applications[status];
+          }
+        });
+
+        setTracker({
+          Pinned: pinnedData.jobs || [],
+          ...grouped,
+        });
+      } catch (err) {
+        console.error('Load tracker error:', err);
+      } finally {
+        setLoading(false);
       }
-    } catch {
-      setTracker(EMPTY_TRACKER);
     }
+    load();
   }, []);
 
-  // persist tracker changes
-  useEffect(() => {
+  const addApplication = async (app) => {
     try {
-      if (typeof window !== 'undefined') {
-        window.localStorage.setItem(STORAGE_KEY, JSON.stringify(tracker));
+      const res = await fetch('/api/seeker/applications/create', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(app),
+      });
+      if (res.ok) {
+        const newApp = await res.json();
+        setTracker((prev) => ({
+          ...prev,
+          Applied: [newApp.application, ...prev.Applied],
+        }));
       }
-    } catch {
-      // ignore storage failures
+    } catch (err) {
+      console.error('Add application error:', err);
     }
-  }, [tracker]);
-
-  const STAGES_LIST = STAGES;
-
-  const addApplication = (app) => {
-    const id = Date.now().toString();
-    const dateAdded = app.dateAdded || new Date().toISOString().split('T')[0];
-    const targetStage = STAGES_LIST.includes(app.status) ? app.status : 'Pinned';
-
-    const newJob = {
-      id,
-      title: app.title,
-      company: app.company,
-      location: app.location || '',
-      link: app.link || '',
-      notes: app.notes || '',
-      dateAdded,
-    };
-
-    setTracker((prev) => ({
-      ...prev,
-      [targetStage]: [newJob, ...(prev[targetStage] || [])],
-    }));
     setShowForm(false);
   };
 
-  const moveApplication = (id, fromStage, direction) => {
-    const currentIndex = STAGES_LIST.indexOf(fromStage);
+  const moveApplication = async (id, fromStage, direction) => {
+    const currentIndex = STAGES.indexOf(fromStage);
     const targetIndex = currentIndex + direction;
-    if (targetIndex < 0 || targetIndex >= STAGES_LIST.length) return;
+    if (targetIndex < 1 || targetIndex >= STAGES.length) return; // Can't move from/to Pinned with arrows
 
-    setTracker((prev) => {
-      const item = prev[fromStage].find((j) => j.id === id);
-      if (!item) return prev;
+    const targetStage = STAGES[targetIndex];
 
-      const nextStage = STAGES_LIST[targetIndex];
-
-      return {
-        ...prev,
-        [fromStage]: prev[fromStage].filter((j) => j.id !== id),
-        [nextStage]: [item, ...(prev[nextStage] || [])],
-      };
-    });
+    try {
+      const res = await fetch(`/api/seeker/applications/${id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ status: targetStage }),
+      });
+      if (res.ok) {
+        setTracker((prev) => {
+          const item = prev[fromStage].find((j) => j.id === id);
+          if (!item) return prev;
+          return {
+            ...prev,
+            [fromStage]: prev[fromStage].filter((j) => j.id !== id),
+            [targetStage]: [item, ...(prev[targetStage] || [])],
+          };
+        });
+      }
+    } catch (err) {
+      console.error('Move application error:', err);
+    }
   };
 
-  const deleteApplication = (id, stage) => {
+  const deleteApplication = async (id, stage) => {
     if (!confirm('Delete this application?')) return;
-    setTracker((prev) => ({
-      ...prev,
-      [stage]: prev[stage].filter((j) => j.id !== id),
-    }));
-    if (detailsOpen && details.job?.id === id && details.stage === stage) {
+    try {
+      const res = await fetch(`/api/seeker/applications/${id}`, {
+        method: 'DELETE',
+      });
+      if (res.ok) {
+        setTracker((prev) => ({
+          ...prev,
+          [stage]: prev[stage].filter((j) => j.id !== id),
+        }));
+      }
+    } catch (err) {
+      console.error('Delete application error:', err);
+    }
+    if (detailsOpen && details.job?.id === id) {
       setDetailsOpen(false);
-      setDetails({ job: null, stage: null });
     }
   };
 
@@ -203,42 +205,11 @@ export default function SeekerApplicationsPage() {
     setShowForm(true);
   };
 
-  const saveEdits = (u) => {
-    const {
-      id,
-      title,
-      company,
-      location,
-      link,
-      notes,
-      dateAdded,
-      status,
-      originalStage,
-    } = u;
-
-    const targetStage = STAGES_LIST.includes(status) ? status : originalStage;
-
-    setTracker((prev) => {
-      const removed = {
-        ...prev,
-        [originalStage]: prev[originalStage].filter((j) => j.id !== id),
-      };
-      const updatedJob = { id, title, company, location, link, notes, dateAdded };
-      return {
-        ...removed,
-        [targetStage]: [updatedJob, ...(removed[targetStage] || [])],
-      };
-    });
-
+  const saveEdits = async (u) => {
+    // Edit not implemented in API yet — placeholder
+    alert('Edit coming soon');
     setShowForm(false);
     setJobToEdit(null);
-
-    if (detailsOpen && details.job?.id === id) {
-      setDetails({
-        job: { id, title, company, location, link, notes, dateAdded },
-        stage: targetStage,
-      });
-    }
   };
 
   const onView = (job, stage) => {
@@ -285,6 +256,14 @@ export default function SeekerApplicationsPage() {
     </div>
   );
 
+  if (loading) {
+    return (
+      <SeekerLayout header={HeaderBox} right={RightRail}>
+        <div className="text-center py-20">Loading your applications...</div>
+      </SeekerLayout>
+    );
+  }
+
   return (
     <SeekerLayout
       title="Applications | ForgeTomorrow"
@@ -293,7 +272,6 @@ export default function SeekerApplicationsPage() {
       activeNav="jobs"
     >
       <div style={{ display: 'grid', gap: 16 }}>
-        {/* Color-coded stage summary (palette-aligned) */}
         <section
           style={{
             background: 'white',
@@ -305,12 +283,10 @@ export default function SeekerApplicationsPage() {
         >
           <StageStrip tracker={tracker} />
         </section>
-
-        {/* Board — leftActions (button) + right actions (helper text) */}
         <ApplicationsBoard
           stagesData={tracker}
           compact={false}
-          columns={5}
+          columns: 5
           title="Applications"
           leftActions={
             <button
@@ -348,8 +324,6 @@ export default function SeekerApplicationsPage() {
           onView={onView}
         />
       </div>
-
-      {/* Add/Edit Form Modal */}
       {showForm && (
         <ApplicationForm
           mode={formMode}
@@ -372,9 +346,7 @@ export default function SeekerApplicationsPage() {
                   location: jobToEdit.job.location || '',
                   link: jobToEdit.job.link || '',
                   notes: jobToEdit.job.notes || '',
-                  dateAdded:
-                    jobToEdit.job.dateAdded ||
-                    new Date().toISOString().split('T')[0],
+                  dateAdded: jobToEdit.job.dateAdded || new Date().toISOString().split('T')[0],
                   status: jobToEdit.stage,
                   originalStage: jobToEdit.stage,
                 }
@@ -385,14 +357,12 @@ export default function SeekerApplicationsPage() {
                   link: '',
                   notes: '',
                   dateAdded: new Date().toISOString().split('T')[0],
-                  status: 'Pinned',
+                  status: 'Applied',
                 }
-          }
-          stages={STAGES}
+              }
+          stages={STAGES.slice(1)} // exclude Pinned from form
         />
       )}
-
-      {/* Details Modal */}
       {detailsOpen && details.job && (
         <ApplicationDetailsModal
           job={details.job}

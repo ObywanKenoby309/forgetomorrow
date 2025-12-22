@@ -1,6 +1,5 @@
 // components/jobs/PinnedJobToggleButton.js
 'use client';
-
 import React, { useState, useEffect } from 'react';
 
 export default function PinnedJobToggleButton({ jobId, initiallyPinned }) {
@@ -16,7 +15,6 @@ export default function PinnedJobToggleButton({ jobId, initiallyPinned }) {
     if (!jobId || busy) return;
     setBusy(true);
     setError('');
-
     try {
       if (!isPinned) {
         // PIN
@@ -31,9 +29,11 @@ export default function PinnedJobToggleButton({ jobId, initiallyPinned }) {
         }
         setIsPinned(true);
       } else {
-        // UNPIN by jobId
-        const res = await fetch(`/api/seeker/pinned-jobs?jobId=${jobId}`, {
+        // UNPIN — now sends body { jobId } (matches our API)
+        const res = await fetch('/api/seeker/pinned-jobs', {
           method: 'DELETE',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ jobId }),
         });
         if (!res.ok) {
           const err = await res.json().catch(() => ({}));
