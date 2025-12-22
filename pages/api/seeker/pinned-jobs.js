@@ -29,25 +29,61 @@ export default async function handler(req, res) {
         userId,
       };
 
+      // ─────────────────────────────────────────────────────────────
+      // MINIMAL FIX:
+      // - Do NOT use upsert with userId_jobId (schema doesn't support it)
+      // - Do NOT use dummy jobId = -1 for manual pins
+      // - Instead: check if already pinned, else create
+      // ─────────────────────────────────────────────────────────────
+
       if (jobId) {
-        data.jobId = Number(jobId);
+        const numericJobId = Number(jobId);
+
+        const existing = await prisma.pinnedJob.findFirst({
+          where: { userId, jobId: numericJobId },
+        });
+
+        if (existing) {
+          return res.status(200).json({ success: true, pinned: existing, message: "Already pinned" });
+        }
+
+        data.jobId = numericJobId;
+
+        const pinned = await prisma.pinnedJob.create({
+          data,
+        });
+
+        return res.status(200).json({ success: true, pinned });
       } else {
         if (!title || !company) {
           return res.status(400).json({ error: "title and company required for manual pin" });
         }
+
         data.title = title;
         data.company = company;
         data.location = location || '';
         data.url = url || '';
+
+        const existing = await prisma.pinnedJob.findFirst({
+          where: {
+            userId,
+            jobId: null,
+            title: data.title,
+            company: data.company,
+            url: data.url,
+          },
+        });
+
+        if (existing) {
+          return res.status(200).json({ success: true, pinned: existing, message: "Already pinned" });
+        }
+
+        const pinned = await prisma.pinnedJob.create({
+          data,
+        });
+
+        return res.status(200).json({ success: true, pinned });
       }
-
-      const pinned = await prisma.pinnedJob.upsert({
-        where: { userId_jobId: { userId, jobId: jobId ? Number(jobId) : -1 } }, // dummy for manual
-        update: {},
-        create: data,
-      });
-
-      return res.status(200).json({ success: true, pinned });
     } catch (err) {
       console.error("[api/seeker/pinned-jobs] pin error:", err);
       if (err.code === 'P2002') {
