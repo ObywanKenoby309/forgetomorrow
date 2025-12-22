@@ -98,14 +98,17 @@ enum ApplicationStatus {
 model Application {
   id Int @id @default(autoincrement())
   userId String
-  jobId Int
+  jobId Int?
   resumeId Int?
   coverId Int?
+  title String?
+  company String?
+  location String?
   status ApplicationStatus @default(Applied)
   appliedAt DateTime @default(now())
   updatedAt DateTime @updatedAt
   user User @relation(fields: [userId], references: [id])
-  job Job @relation(fields: [jobId], references: [id])
+  job Job? @relation(fields: [jobId], references: [id])
   @@map("applications")
 }
 
@@ -150,14 +153,16 @@ model Offer {
 }
 
 model PinnedJob {
-  id       Int      @id @default(autoincrement())
-  userId   String
-  jobId    Int
+  id Int @id @default(autoincrement())
+  userId String
+  jobId Int?
+  title String?
+  company String?
+  location String?
+  url String?
   pinnedAt DateTime @default(now())
-
   user User @relation(fields: [userId], references: [id])
-  job  Job  @relation(fields: [jobId], references: [id])
-
+  job Job? @relation(fields: [jobId], references: [id])
   @@map("pinned_jobs")
 }
 

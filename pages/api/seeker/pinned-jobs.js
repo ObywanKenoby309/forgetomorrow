@@ -20,25 +20,36 @@ export default async function handler(req, res) {
 
   const userId = user.id;
 
-  // POST = pin a job (create PinnedJob)
+  // POST = pin (with or without jobId)
   if (req.method === "POST") {
     try {
-      const { jobId } = req.body;
-      if (!jobId) {
-        return res.status(400).json({ error: "jobId required" });
+      const { jobId, title, company, location, url } = req.body;
+
+      const data = {
+        userId,
+      };
+
+      if (jobId) {
+        data.jobId = Number(jobId);
+      } else {
+        if (!title || !company) {
+          return res.status(400).json({ error: "title and company required for manual pin" });
+        }
+        data.title = title;
+        data.company = company;
+        data.location = location || '';
+        data.url = url || '';
       }
 
-      const pinned = await prisma.pinnedJob.create({
-        data: {
-          userId,
-          jobId: Number(jobId),
-        },
+      const pinned = await prisma.pinnedJob.upsert({
+        where: { userId_jobId: { userId, jobId: jobId ? Number(jobId) : -1 } }, // dummy for manual
+        update: {},
+        create: data,
       });
 
       return res.status(200).json({ success: true, pinned });
     } catch (err) {
       console.error("[api/seeker/pinned-jobs] pin error:", err);
-      // Ignore duplicate pin (unique constraint on userId + jobId)
       if (err.code === 'P2002') {
         return res.status(200).json({ success: true, message: "Already pinned" });
       }
@@ -46,7 +57,7 @@ export default async function handler(req, res) {
     }
   }
 
-  // DELETE = unpin a job
+  // DELETE = unpin
   if (req.method === "DELETE") {
     try {
       const { jobId } = req.body;
@@ -94,14 +105,16 @@ export default async function handler(req, res) {
       });
 
       const jobs = pinnedJobs.map((p) => ({
-        id: p.job.id,
-        title: p.job.title,
-        company: p.job.company,
-        location: p.job.location,
-        worksite: p.job.worksite,
-        compensation: p.job.compensation,
-        type: p.job.type,
-        createdAt: p.job.createdAt,
+        id: p.job?.id || p.id, // use Application id for manual
+        title: p.job?.title || p.title || 'Untitled role',
+        company: p.job?.company || p.company || 'Unknown company',
+        location: p.job?.location || p.location || '',
+        worksite: p.job?.worksite || '',
+        compensation: p.job?.compensation || '',
+        type: p.job?.type || '',
+        createdAt: p.job?.createdAt || p.pinnedAt,
+        pinnedAt: p.pinnedAt,
+        url: p.url || '',
       }));
 
       return res.status(200).json({ jobs });
@@ -111,7 +124,6 @@ export default async function handler(req, res) {
     }
   }
 
-  // Method not allowed
   res.setHeader("Allow", ["GET", "POST", "DELETE"]);
   return res.status(405).json({ error: "Method not allowed" });
 }

@@ -148,24 +148,44 @@ export default function SeekerApplicationsPage() {
 }, []);
 
   const addApplication = async (app) => {
-    try {
+  try {
+    if (app.status === 'Pinned') {
+      // Manual pin (no jobId)
+      const res = await fetch('/api/seeker/pinned-jobs', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          title: app.title,
+          company: app.company,
+          location: app.location,
+          url: app.link,
+        }),
+      });
+      if (res.ok) {
+        // Reload to get fresh pinned list (simple, safe)
+        window.location.reload();
+      }
+    } else {
+      // Regular application
       const res = await fetch('/api/seeker/applications/create', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(app),
       });
       if (res.ok) {
-        const newApp = await res.json();
+        const { card } = await res.json();
+        const targetStage = app.status || 'Applied';
         setTracker((prev) => ({
           ...prev,
-          Applied: [newApp.application, ...prev.Applied],
+          [targetStage]: [card, ...(prev[targetStage] || [])],
         }));
       }
-    } catch (err) {
-      console.error('Add application error:', err);
     }
-    setShowForm(false);
-  };
+  } catch (err) {
+    console.error('Add error:', err);
+  }
+  setShowForm(false);
+};
 
   const moveApplication = async (id, fromStage, direction) => {
     const currentIndex = STAGES.indexOf(fromStage);
@@ -377,7 +397,7 @@ export default function SeekerApplicationsPage() {
                   status: 'Applied',
                 }
               }
-          stages={STAGES.slice(1)} // exclude Pinned from form
+          stages={STAGES} // include Pinned
         />
       )}
       {detailsOpen && details.job && (

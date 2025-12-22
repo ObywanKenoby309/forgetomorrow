@@ -26,23 +26,36 @@ export default async function handler(req, res) {
   const userId = user.id;
 
   try {
-    const { jobId, title, company, location, link, notes } = req.body;
+    const { title, company, location, link, notes, status = "Applied" } = req.body;
 
-    if (!jobId || !title || !company) {
-      return res.status(400).json({ error: "jobId, title, company required" });
+    if (!title || !company) {
+      return res.status(400).json({ error: "title and company required" });
     }
 
     const application = await prisma.application.create({
       data: {
         userId,
-        jobId: Number(jobId),
-        status: "Applied",
-        notes: notes || '',
+        title,
+        company,
+        location: location || '',
         link: link || '',
+        notes: notes || '',
+        status,
       },
     });
 
-    return res.status(200).json({ success: true, application });
+    // Return formatted card for frontend
+    const card = {
+      id: application.id,
+      title: application.title,
+      company: application.company,
+      location: application.location,
+      link: application.link,
+      notes: application.notes,
+      dateAdded: application.appliedAt.toISOString().split('T')[0],
+    };
+
+    return res.status(200).json({ success: true, card });
   } catch (err) {
     console.error("[api/seeker/applications/create] error:", err);
     return res.status(500).json({ error: "Failed to create application" });
