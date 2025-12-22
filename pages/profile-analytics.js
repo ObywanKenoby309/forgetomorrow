@@ -86,9 +86,9 @@ export default function ProfileAnalyticsPage() {
         activeNav="profile"
         sidebarInitialOpen={{ coaching: false, seeker: false }}
       >
-        <div className="max-w-5xl mx-auto px-4 py-8">
+        <div className="max-w-6xl mx-auto px-4 py-8">
           {/* Title card */}
-          <section className="bg-white border border-gray-200 rounded-xl shadow-sm p-8 text-center mb-8">
+          <section className="bg-white border border-gray-200 rounded-xl shadow-sm p-8 text-center mb-6">
             <h1 className="text-3xl font-bold text-orange-600 mb-2">Profile Analytics</h1>
             <p className="text-gray-600">
               Track engagement on your profile and content. Detailed analytics are rolling out gradually, so some numbers may be limited for now.
@@ -96,7 +96,7 @@ export default function ProfileAnalyticsPage() {
           </section>
 
           {/* Stats row */}
-          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4 mb-8">
+          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4 mb-6">
             <KPI label="Profile Views" value={analytics.totalViews.toLocaleString()} />
             <KPI label="Posts" value={analytics.postsCount} />
             <KPI label="Comments" value={analytics.commentsCount} />
@@ -105,7 +105,7 @@ export default function ProfileAnalyticsPage() {
           </div>
 
           {/* Charts row — side-by-side on md+, stack on mobile */}
-          <div className="grid md:grid-cols-2 gap-6 mb-8">
+          <div className="grid md:grid-cols-2 gap-6 mb-6">
             <ViewsChart
               labels={analytics.daysLabels}
               data={analytics.viewsLast7Days}
@@ -120,7 +120,7 @@ export default function ProfileAnalyticsPage() {
           <ProfileCompletionCard
             completionPct={analytics.profileCompletionPct}
             checklist={analytics.profileChecklist}
-            className="mb-8"
+            className="mb-6"
           />
 
           {/* Bottom row — Connections, Recent Viewers, Top Content */}
