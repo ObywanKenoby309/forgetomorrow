@@ -113,7 +113,7 @@ export default function SeekerApplicationsPage() {
         url: '',
       }));
 
-      // Fetch applications
+      // Fetch applications — grouped endpoint
       const appsRes = await fetch('/api/seeker/applications');
       const appsData = appsRes.ok ? await appsRes.json() : { applications: {} };
 
@@ -121,21 +121,15 @@ export default function SeekerApplicationsPage() {
         Applied: [],
         Interviewing: [],
         Offers: [],
-        'Closed Out': [], // ← fixed with space to match STAGES
+        'Closed Out': [], // match STAGES
       };
 
-      // Map applications to card shape
+      // Map grouped response (already card shape)
       Object.keys(appsData.applications || {}).forEach((status) => {
         if (grouped[status]) {
-          grouped[status] = appsData.applications[status].map((a) => ({
-            ...a,
-            dateAdded: a.dateAdded || new Date(a.appliedAt).toISOString().split('T')[0],
-          }));
-        } else if (status === 'ClosedOut') { // fallback for old data
-          grouped['Closed Out'] = appsData.applications[status].map((a) => ({
-            ...a,
-            dateAdded: a.dateAdded || new Date(a.appliedAt).toISOString().split('T')[0],
-          }));
+          grouped[status] = appsData.applications[status];
+        } else if (status === 'ClosedOut') {
+          grouped['Closed Out'] = appsData.applications[status];
         }
       });
 
