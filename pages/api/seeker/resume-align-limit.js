@@ -1,6 +1,6 @@
 // pages/api/seeker/resume-align-limit.js
 import { getServerSession } from "next-auth/next";
-import { authOptions } from "../../../auth/[...nextauth]"; // ← correct path
+import authOptions from "../auth/[...nextauth]"
 import { prisma } from "@/lib/prisma";
 
 export default async function handler(req, res) {
