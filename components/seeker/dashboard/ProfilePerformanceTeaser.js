@@ -34,7 +34,7 @@ export default function ProfilePerformanceTeaser() {
           Your Profile Performance
         </h2>
         <Link
-          href="/profile/analytics" // Change to your actual full analytics route
+          href="/profile-analytics"
           className="text-orange-600 font-medium hover:underline text-sm"
         >
           View full analytics →

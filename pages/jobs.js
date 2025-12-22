@@ -1,5 +1,4 @@
 // pages/jobs.js — filters + list/detail + Apply + Resume-Role Align row
-
 import { useEffect, useState } from 'react';
 import { JobPipelineProvider, useJobPipeline } from '../context/JobPipelineContext';
 import { Card, CardHeader, CardTitle, CardContent, CardSubtle } from '../components/ui/Card';
@@ -7,7 +6,7 @@ import Link from 'next/link';
 import InternalLayout from '../components/layouts/InternalLayout';
 import ATSInfo from '../components/seeker/ATSInfo';
 import ATSResultPanel from '../components/seeker/ATSResultPanel';
-
+import JobActions from '../components/jobs/JobActions';
 // ──────────────────────────────────────────────────────────────
 // Lightweight layout shell
 // ──────────────────────────────────────────────────────────────
@@ -19,7 +18,6 @@ function PageShell({ header, right, children }) {
           {header}
           {children}
         </div>
-
         <aside className="hidden lg:block" aria-label="Job tools">
           {right}
         </aside>
@@ -27,23 +25,19 @@ function PageShell({ header, right, children }) {
     </div>
   );
 }
-
 // ──────────────────────────────────────────────────────────────
 // Apply Modal (internal jobs)
 // ──────────────────────────────────────────────────────────────
 function ApplyModal({ open, onClose, job, onApplied, isPaidUser, onResumeAlign }) {
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
-
   useEffect(() => {
     if (open) {
       setName('');
       setEmail('');
     }
   }, [open]);
-
   if (!open || !job) return null;
-
   const handleSubmit = (e) => {
     e.preventDefault();
     onApplied(job);
@@ -52,10 +46,8 @@ function ApplyModal({ open, onClose, job, onApplied, isPaidUser, onResumeAlign }
       `Saved to Applied Jobs: ${job.title}. You can track this role in your Applied Jobs list.`
     );
   };
-
   const titleId = 'apply-dialog-title';
   const descriptionId = 'apply-dialog-description';
-
   return (
     <div
       className="fixed inset-0 z-50 flex items-center justify-center p-4"
@@ -76,7 +68,6 @@ function ApplyModal({ open, onClose, job, onApplied, isPaidUser, onResumeAlign }
         >
           {job.company} — {job.location}
         </p>
-
         <form className="mt-6 space-y-4" onSubmit={handleSubmit}>
           <div className="flex flex-col gap-1 text-sm">
             <label htmlFor="apply-full-name" className="font-medium text-slate-800">
@@ -91,7 +82,6 @@ function ApplyModal({ open, onClose, job, onApplied, isPaidUser, onResumeAlign }
               className="w-full rounded-md border px-3 py-2 text-sm"
             />
           </div>
-
           <div className="flex flex-col gap-1 text-sm">
             <label htmlFor="apply-email" className="font-medium text-slate-800">
               Email address
@@ -106,7 +96,6 @@ function ApplyModal({ open, onClose, job, onApplied, isPaidUser, onResumeAlign }
               className="w-full rounded-md border px-3 py-2 text-sm"
             />
           </div>
-
           {isPaidUser && (
             <button
               type="button"
@@ -116,7 +105,6 @@ function ApplyModal({ open, onClose, job, onApplied, isPaidUser, onResumeAlign }
               Check Resume Alignment
             </button>
           )}
-
           <div className="flex justify-end gap-3 pt-4">
             <button
               type="button"
@@ -138,7 +126,6 @@ function ApplyModal({ open, onClose, job, onApplied, isPaidUser, onResumeAlign }
     </div>
   );
 }
-
 // ──────────────────────────────────────────────────────────────
 // Header + right rail
 // ──────────────────────────────────────────────────────────────
@@ -167,7 +154,6 @@ function PageHeader() {
     </header>
   );
 }
-
 function RightRail() {
   return (
     <nav
@@ -195,7 +181,6 @@ function RightRail() {
     </nav>
   );
 }
-
 // ──────────────────────────────────────────────────────────────
 // Helpers
 // ──────────────────────────────────────────────────────────────
@@ -206,50 +191,39 @@ function inferLocationType(location) {
   if (lower.includes('hybrid')) return 'Hybrid';
   return 'On-site';
 }
-
 function getApplyLink(job) {
   if (!job) return '';
   return job.url || job.externalUrl || job.link || job.applyUrl || '';
 }
-
 function buildFallbackSearch(job) {
   if (!job) return 'https://www.google.com/search?q=careers';
-
   const parts = [];
   if (job.title) parts.push(job.title);
   if (job.company) parts.push(job.company);
   parts.push('careers');
-
   const query = encodeURIComponent(parts.join(' '));
   return `https://www.google.com/search?q=${query}`;
 }
-
 // Normalize status strings coming from DB / API
 function getJobStatus(job) {
   const raw = (job?.status || '').toString().trim();
   if (!raw) return 'Open';
-
   const upper = raw.toUpperCase();
-
   if (upper === 'DRAFT') return 'Draft';
   if (upper === 'OPEN') return 'Open';
   if (upper === 'REVIEWING' || upper === 'REVIEWING APPLICANTS') return 'Reviewing';
   if (upper === 'CLOSED') return 'Closed';
-
   // Fallback: treat unknown as Open for seekers
   return raw;
 }
-
 function canApply(job) {
   return getJobStatus(job) === 'Open';
 }
-
 // Internal vs external job detector (used for styling + filters)
 function isInternalJob(job) {
   if (!job) return false;
   const origin = (job.origin || '').toLowerCase();
   const source = (job.source || '').toLowerCase();
-
   return (
     origin === 'internal' ||
     source === 'internal' ||
@@ -259,24 +233,19 @@ function isInternalJob(job) {
     source === 'forgetomorrow recruiter'
   );
 }
-
 // Tier helper: 'ft-official' | 'partner' | 'external'
 function getJobTier(job) {
   if (!job) return 'external';
-
   const rawTier = job.tier;
   if (rawTier === 'ft-official' || rawTier === 'partner' || rawTier === 'external') {
     return rawTier;
   }
-
   const internal = isInternalJob(job);
   if (!internal) return 'external';
-
   const company = (job.company || '').trim().toLowerCase();
   if (company === 'forgetomorrow') return 'ft-official';
   return 'partner';
 }
-
 // ──────────────────────────────────────────────────────────────
 // Main Jobs Component
 // ──────────────────────────────────────────────────────────────
@@ -284,19 +253,15 @@ function Jobs() {
   const { viewedJobs, appliedJobs, addViewedJob, addAppliedJob } = useJobPipeline();
   const [jobs, setJobs] = useState([]);
   const [loading, setLoading] = useState(true);
-
   const [applyOpen, setApplyOpen] = useState(false);
   const [applyJob, setApplyJob] = useState(null);
-
   const [selectedJob, setSelectedJob] = useState(null);
-
   // ATS result state
   const [atsLoading, setAtsLoading] = useState(false);
   const [atsError, setAtsError] = useState(null);
   const [atsResult, setAtsResult] = useState(null);
   const [atsPanelOpen, setAtsPanelOpen] = useState(false);
   const [atsJob, setAtsJob] = useState(null);
-
   // Filters
   const [keyword, setKeyword] = useState('');
   const [companyFilter, setCompanyFilter] = useState('');
@@ -304,16 +269,12 @@ function Jobs() {
   const [locationTypeFilter, setLocationTypeFilter] = useState('');
   const [daysFilter, setDaysFilter] = useState('');
   const [sourceFilter, setSourceFilter] = useState('');
-
   // Pagination
   const [pageSize, setPageSize] = useState(20);
   const [currentPage, setCurrentPage] = useState(1);
-
   const isPaidUser = true;
-
   // pinned job ids
   const [pinnedIds, setPinnedIds] = useState(new Set());
-
   useEffect(() => {
     async function fetchJobs() {
       try {
@@ -321,7 +282,6 @@ function Jobs() {
         const data = await res.json();
         const list = (data && data.jobs) || [];
         setJobs(list);
-
         // 🔹 Initial selection only. Do NOT mark as viewed here.
         // Recently Viewed should reflect jobs the user actually clicks.
         if (list.length > 0) {
@@ -335,10 +295,8 @@ function Jobs() {
     }
     fetchJobs();
   }, [addViewedJob]);
-
   useEffect(() => {
     let cancelled = false;
-
     async function loadPinned() {
       try {
         const res = await fetch('/api/seeker/pinned-jobs');
@@ -350,26 +308,21 @@ function Jobs() {
         console.error('[Jobs] failed to load pinned jobs', err);
       }
     }
-
     loadPinned();
     return () => {
       cancelled = true;
     };
   }, []);
-
   const isJobPinned = (job) => !!job && pinnedIds.has(job.id);
-
   const togglePin = async (job) => {
     if (!job) return;
     const currentlyPinned = isJobPinned(job);
-
     try {
       const res = await fetch('/api/seeker/pinned-jobs', {
         method: currentlyPinned ? 'DELETE' : 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ jobId: job.id }),
       });
-
       const text = await res.text();
       let data = {};
       try {
@@ -377,13 +330,10 @@ function Jobs() {
       } catch {
         // ignore
       }
-
       console.log('[togglePin] status', res.status, 'body:', data || text);
-
       if (!res.ok) {
         throw new Error(data.error || `Pin API failed (status ${res.status})`);
       }
-
       setPinnedIds((prev) => {
         const next = new Set(prev);
         if (currentlyPinned) next.delete(job.id);
@@ -400,15 +350,12 @@ function Jobs() {
       );
     }
   };
-
   // Apply click behaviour
   const handleApplyClick = (job) => {
     if (!job) return;
-
     const origin = (job.origin || '').toLowerCase();
     const applyLink = getApplyLink(job);
     const isExternal = origin === 'external';
-
     if (isExternal) {
       const finalUrl = applyLink || buildFallbackSearch(job);
       addAppliedJob(job);
@@ -417,36 +364,28 @@ function Jobs() {
       }
       return;
     }
-
     setApplyJob(job);
     setApplyOpen(true);
   };
-
   const handleResumeAlign = (job) => {
     if (!job) return;
     window.location.href = `/resume-cover?jobId=${job.id}&copyJD=true`;
   };
-
   const handleATSAlign = async (job) => {
     if (!job) return;
-
     setAtsJob(job);
     setAtsPanelOpen(true);
     setAtsLoading(true);
     setAtsError(null);
     setAtsResult(null);
-
     try {
       const res = await fetch('/api/seeker/ats-align', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ jobId: job.id }),
       });
-
       if (!res.ok) throw new Error(`ATS API failed (status ${res.status})`);
-
       const payload = await res.json();
-
       setAtsResult({
         score: typeof payload.score === 'number' ? payload.score : null,
         summary: payload.summary || '',
@@ -471,10 +410,8 @@ function Jobs() {
       setAtsLoading(false);
     }
   };
-
   const handleSendToResumeBuilder = () => {
     if (!atsJob || !atsResult) return;
-
     const pack = {
       job: {
         id: atsJob.id,
@@ -485,16 +422,13 @@ function Jobs() {
       },
       ats: atsResult,
     };
-
     try {
       localStorage.setItem('forge-ats-pack', JSON.stringify(pack));
     } catch (err) {
       console.error('[Jobs] failed to write ATS pack to localStorage', err);
     }
-
     window.location.href = '/resume-cover?from=ats';
   };
-
   const handleSelectJob = (job) => {
     setSelectedJob(job);
     addViewedJob(job); // 🔹 Only mark as viewed when user actively selects
@@ -502,28 +436,23 @@ function Jobs() {
     setAtsError(null);
     setAtsPanelOpen(false);
   };
-
   // Filtering
   const normalizedKeyword = keyword.trim().toLowerCase();
   const normalizedCompany = companyFilter.trim().toLowerCase();
   const normalizedLocation = locationFilter.trim().toLowerCase();
   const parsedDays = parseInt(daysFilter, 10);
   const hasDaysFilter = !Number.isNaN(parsedDays) && parsedDays > 0;
-
   const now = new Date();
   const cutoffTime = hasDaysFilter
     ? now.getTime() - parsedDays * 24 * 60 * 60 * 1000
     : null;
-
   const filteredJobs = jobs.filter((job) => {
     // 1) Status-based feed behavior
     const status = getJobStatus(job);
-
     // Hide drafts from seeker feed entirely
     if (status === 'Draft') {
       return false;
     }
-
     // Hide closed jobs after 3 days (based on updatedAt or publishedat)
     if (status === 'Closed') {
       const threeDaysAgo = now.getTime() - 3 * 24 * 60 * 60 * 1000;
@@ -533,7 +462,6 @@ function Jobs() {
         job.updated_at ||
         job.publishedat ||
         null;
-
       if (updated) {
         const closedDate = new Date(updated);
         if (!Number.isNaN(closedDate.getTime()) && closedDate.getTime() < threeDaysAgo) {
@@ -541,105 +469,84 @@ function Jobs() {
         }
       }
     }
-
     // Existing filters
     const title = (job.title || '').toLowerCase();
     const company = (job.company || '').toLowerCase();
     const location = (job.location || '').toLowerCase();
     const description = (job.description || '').toLowerCase();
     const tags = (job.tags || '').toString().toLowerCase();
-
     if (normalizedKeyword) {
       const haystack = `${title} ${company} ${location} ${description} ${tags}`;
       if (!haystack.includes(normalizedKeyword)) return false;
     }
-
     if (normalizedCompany && !company.includes(normalizedCompany)) {
       return false;
     }
-
     if (normalizedLocation && !location.includes(normalizedLocation)) {
       return false;
     }
-
     if (locationTypeFilter) {
       const inferred = inferLocationType(job.location || '');
       if (inferred !== locationTypeFilter) return false;
     }
-
     if (sourceFilter) {
       const internal = isInternalJob(job);
       if (sourceFilter === 'external' && internal) return false;
       if (sourceFilter === 'internal' && !internal) return false;
     }
-
     if (hasDaysFilter) {
       if (!job.publishedat) return false;
       const d = new Date(job.publishedat);
       if (Number.isNaN(d.getTime())) return false;
       if (d.getTime() < cutoffTime) return false;
     }
-
     return true;
   });
-
   useEffect(() => {
     const totalPagesLocal = Math.max(1, Math.ceil(filteredJobs.length / pageSize));
     if (currentPage > totalPagesLocal) setCurrentPage(1);
   }, [filteredJobs.length, pageSize, currentPage]);
-
   const totalPages = Math.max(1, Math.ceil(filteredJobs.length / pageSize));
   const startIndex = (currentPage - 1) * pageSize;
   const pagedJobs = filteredJobs.slice(startIndex, startIndex + pageSize);
-
   const pageNumbers = [];
   const windowSize = 3;
   const startPage = Math.max(1, currentPage - windowSize);
   const endPage = Math.min(totalPages, currentPage + windowSize);
-
   for (let p = startPage; p <= endPage; p += 1) pageNumbers.push(p);
-
   const recentViewed = viewedJobs.slice(-6).reverse();
   const selectedJobApplyLink = selectedJob ? getApplyLink(selectedJob) : '';
-
   const selectedStatus = selectedJob ? getJobStatus(selectedJob) : null;
   const canApplySelected = selectedJob ? canApply(selectedJob) : false;
   const hasAppliedToSelected =
     !!selectedJob &&
     appliedJobs.some((j) => j && j.id === selectedJob.id);
-
   const isSelectedInternal = isInternalJob(selectedJob);
   const selectedSourceLabel = isSelectedInternal
     ? 'Forge recruiter'
     : (selectedJob?.source || 'External');
-
   const selectedTier = getJobTier(selectedJob);
   const selectedIsFtOfficial = selectedTier === 'ft-official';
   const selectedIsPartner = selectedTier === 'partner';
   const selectedIsDark = selectedIsFtOfficial || selectedIsPartner;
-
   const selectedDetailBorder = selectedIsFtOfficial
     ? '2px solid #FF7043'
     : selectedIsPartner
     ? '1px solid rgba(17,32,51,0.35)'
     : '1px solid #E0E0E0';
-
   const selectedDetailBackground = selectedIsFtOfficial
     ? 'linear-gradient(135deg, #FF7043, #FF8A65)'
     : selectedIsPartner
     ? 'linear-gradient(135deg, #0B1724, #112033)'
     : '#FFFFFF';
-
   const detailTitleColor = selectedIsDark ? '#FFFFFF' : '#263238';
   const detailSubtleColor = selectedIsDark ? '#CFD8DC' : '#607D8B';
   const detailBodyColor = selectedIsDark ? '#ECEFF1' : '#37474F';
-
   const selectedChipLabel = selectedIsFtOfficial
     ? 'ForgeTomorrow official posting'
     : isSelectedInternal
     ? 'ForgeTomorrow recruiter posting'
     : null;
-
   if (loading) {
     return (
       <PageShell header={<PageHeader />} right={<RightRail />}>
@@ -649,7 +556,6 @@ function Jobs() {
       </PageShell>
     );
   }
-
   return (
     <PageShell header={<PageHeader />} right={<RightRail />}>
       <div
@@ -707,7 +613,6 @@ function Jobs() {
                   }}
                 />
               </div>
-
               {/* Company Name */}
               <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
                 <label
@@ -730,7 +635,6 @@ function Jobs() {
                   }}
                 />
               </div>
-
               {/* Location */}
               <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
                 <label
@@ -753,7 +657,6 @@ function Jobs() {
                   }}
                 />
               </div>
-
               {/* Location Type */}
               <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
                 <label
@@ -780,7 +683,6 @@ function Jobs() {
                   <option value="On-site">On-site</option>
                 </select>
               </div>
-
               {/* Source */}
               <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
                 <label
@@ -806,7 +708,6 @@ function Jobs() {
                   <option value="internal">Forge recruiters only</option>
                 </select>
               </div>
-
               {/* Posted in last N days */}
               <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
                 <label
@@ -831,7 +732,6 @@ function Jobs() {
                 />
               </div>
             </div>
-
             <div
               style={{
                 marginTop: 6,
@@ -874,7 +774,6 @@ function Jobs() {
             </div>
           </CardContent>
         </Card>
-
         {/* Two-column layout */}
         <div
           style={{
@@ -911,16 +810,13 @@ function Jobs() {
                   cleanDesc.length > 160
                     ? `${cleanDesc.slice(0, 160)}…`
                     : cleanDesc;
-
                 const location = job.location || '';
                 const locationType = inferLocationType(location);
                 const status = getJobStatus(job);
-
                 const internal = isInternalJob(job);
                 const displaySource = internal
                   ? 'Forge recruiter'
                   : (job.source || 'External');
-
                 let postedLabel = 'Date not provided';
                 if (job.publishedat) {
                   const d = new Date(job.publishedat);
@@ -932,23 +828,18 @@ function Jobs() {
                     });
                   }
                 }
-
                 const isSelected = selectedJob && selectedJob.id === job.id;
-
                 const tier = getJobTier(job);
                 const isFtOfficial = tier === 'ft-official';
                 const isPartner = tier === 'partner';
                 const isExternalTier = tier === 'external';
                 const isDarkCard = isFtOfficial || isPartner;
-
                 const logoUrl =
                   job.logoUrl ||
                   (isFtOfficial ? '/images/logo-color.png' : null);
-
                 let cardBackground;
                 let cardBorder;
                 let cardShadow;
-
                 if (isFtOfficial) {
                   cardBackground = 'linear-gradient(135deg, #FF7043, #FF8A65)';
                   cardBorder = isSelected
@@ -969,20 +860,16 @@ function Jobs() {
                     : '1px solid #e0e0e0';
                   cardShadow = '0 2px 6px rgba(0,0,0,0.04)';
                 }
-
                 const titleColor = isDarkCard ? '#FFFFFF' : '#263238';
                 const subtleColor = isDarkCard ? '#CFD8DC' : '#607D8B';
                 const textColor = isDarkCard ? '#ECEFF1' : '#455A64';
-
                 const chipLabel = isFtOfficial
                   ? 'ForgeTomorrow official posting'
                   : internal
                   ? 'ForgeTomorrow recruiter partner'
                   : null;
-
                 // internal jobs get snippet, externals stay compact
                 const showSnippet = internal;
-
                 return (
                   <Card
                     key={job.id}
@@ -1044,7 +931,6 @@ function Jobs() {
                               />
                             </div>
                           )}
-
                           <div>
                             {/* TITLE: clamp to 2 lines so it only wraps under itself */}
                             <CardTitle
@@ -1064,7 +950,6 @@ function Jobs() {
                             <CardSubtle style={{ color: subtleColor }}>
                               {job.company}
                             </CardSubtle>
-
                             {chipLabel && (
                               <div
                                 style={{
@@ -1097,7 +982,6 @@ function Jobs() {
                             )}
                           </div>
                         </div>
-
                         <div
                           style={{
                             textAlign: 'right',
@@ -1120,7 +1004,6 @@ function Jobs() {
                           </div>
                         </div>
                       </div>
-
                       <div
                         style={{
                           marginTop: 4,
@@ -1132,7 +1015,6 @@ function Jobs() {
                         }}
                       >
                         <span>{location || 'Location not provided'}</span>
-
                         {locationType && (
                           <span
                             style={{
@@ -1148,7 +1030,6 @@ function Jobs() {
                             {locationType}
                           </span>
                         )}
-
                         {displaySource && (
                           <span
                             style={{
@@ -1164,7 +1045,6 @@ function Jobs() {
                             Source: {displaySource}
                           </span>
                         )}
-
                         {status && status !== 'Open' && (
                           <span
                             style={{
@@ -1185,7 +1065,6 @@ function Jobs() {
                         )}
                       </div>
                     </CardHeader>
-
                     <CardContent>
                       {/* Description snippet: internal only.
                           Scraped/external cards stay clean and compact. */}
@@ -1206,7 +1085,6 @@ function Jobs() {
                 );
               })}
             </div>
-
             {/* Pagination controls */}
             {filteredJobs.length > pageSize && (
               <nav
@@ -1240,9 +1118,7 @@ function Jobs() {
                 >
                   First
                 </button>
-
                 {startPage > 1 && <span aria-hidden="true">…</span>}
-
                 {pageNumbers.map((p) => (
                   <button
                     key={p}
@@ -1265,11 +1141,9 @@ function Jobs() {
                     {p}
                   </button>
                 ))}
-
                 {endPage < totalPages && (
                   <span aria-hidden="true">…</span>
                 )}
-
                 <button
                   type="button"
                   disabled={currentPage === totalPages}
@@ -1294,7 +1168,6 @@ function Jobs() {
               </nav>
             )}
           </section>
-
           {/* RIGHT: sticky full job view */}
           <section aria-label="Selected job details">
             <Card
@@ -1349,7 +1222,6 @@ function Jobs() {
                           {selectedChipLabel}
                         </div>
                       )}
-
                       <div>
                         <CardTitle style={{ color: detailTitleColor }}>
                           {selectedJob.title}
@@ -1360,7 +1232,6 @@ function Jobs() {
                         </CardSubtle>
                       </div>
                     </div>
-
                     <div
                       style={{
                         marginTop: 6,
@@ -1405,7 +1276,6 @@ function Jobs() {
                       )}
                     </div>
                   </CardHeader>
-
                   <CardContent
                     style={{
                       display: 'flex',
@@ -1431,7 +1301,6 @@ function Jobs() {
                           .split(/\n\s*\n/)
                           .map((p) => p.trim())
                           .filter((p) => p.length > 0);
-
                         if (paragraphs.length === 0) {
                           return (
                             <p
@@ -1446,7 +1315,6 @@ function Jobs() {
                             </p>
                           );
                         }
-
                         return paragraphs.map((para, idx) => (
                           <p
                             key={idx}
@@ -1463,127 +1331,17 @@ function Jobs() {
                         ));
                       })()}
                     </div>
-
                     {/* ACTION ROW */}
-{selectedStatus === 'Open' && (
-  <div
-    style={{
-      display: 'flex',
-      flexDirection: 'row',
-      justifyContent: 'flex-start',
-      alignItems: 'stretch',
-      gap: 6,
-      marginTop: -8,
-      padding: '0 0 0',
-      width: '100%',
-      overflowX: 'hidden',   // no horizontal scrollbar
-      flexWrap: 'nowrap',    // keep everything on one row
-    }}
-  >
-    {/* 1. Pin job */}
-    <button
-      type="button"
-      onClick={() => togglePin(selectedJob)}
-      style={{
-        flex: '0 1 auto',
-        background: 'white',
-        color: isJobPinned(selectedJob) ? '#D32F2F' : '#FF7043',
-        padding: '4px 8px',
-        borderRadius: 999,
-        border: `1px solid ${
-          isJobPinned(selectedJob) ? '#D32F2F' : '#FF7043'
-        }`,
-        fontWeight: 600,
-        fontSize: 12,
-        cursor: 'pointer',
-        textAlign: 'center',
-      }}
-      aria-pressed={isJobPinned(selectedJob)}
-    >
-      {isJobPinned(selectedJob) ? 'Unpin job' : 'Pin job'}
-    </button>
-
-    {/* 2. Apply */}
-    <button
-      type="button"
-      onClick={() => {
-        if (canApplySelected) handleApplyClick(selectedJob);
-      }}
-      disabled={!canApplySelected}
-      style={{
-        flex: '0 1 auto',
-        background: canApplySelected ? '#FF7043' : '#CFD8DC',
-        color: canApplySelected ? 'white' : '#607D8B',
-        padding: '4px 12px',
-        borderRadius: 999,
-        border: 'none',
-        fontWeight: 600,
-        fontSize: 12,
-        cursor: canApplySelected ? 'pointer' : 'default',
-        textAlign: 'center',
-      }}
-    >
-      {selectedStatus === 'Reviewing'
-        ? 'Applications paused'
-        : selectedStatus === 'Closed'
-        ? 'Closed'
-        : 'Apply'}
-    </button>
-
-    {/* 3. Resume-Role Align + i */}
-    {isPaidUser && (
-      <div
-        style={{
-          display: 'flex',
-          alignItems: 'center',
-          gap: 4,
-          flex: '0 1 auto',
-        }}
-      >
-        <button
-          type="button"
-          onClick={() => handleATSAlign(selectedJob)}
-          style={{
-            background: 'white',
-            color: '#FF7043',
-            padding: '4px 8px',
-            borderRadius: 999,
-            border: '1px solid #FF7043',
-            fontWeight: 600,
-            fontSize: 12,
-            cursor: 'pointer',
-            textAlign: 'center',
-          }}
-        >
-          Resume-Role Align
-        </button>
-        <ATSInfo />
-      </div>
-    )}
-
-    {/* 4. Original posting link (kept on same row, shrinks as needed) */}
-    {selectedJobApplyLink && (
-      <Link
-        href={selectedJobApplyLink}
-        target="_blank"
-        style={{
-          flex: '0 1 auto',
-          padding: '4px 8px',
-          borderRadius: 8,
-          border: '1px solid #ddd',
-          color: '#263238',
-          textDecoration: 'none',
-          fontSize: 11,
-          backgroundColor: 'white',
-          textAlign: 'center',
-        }}
-      >
-        Open original posting
-      </Link>
-    )}
-  </div>
-)}
-
+                    {selectedStatus === 'Open' && (
+                      <JobActions
+                        job={selectedJob}
+                        isPinned={isJobPinned(selectedJob)}
+                        onApply={handleApplyClick}
+                        onResumeAlign={handleResumeAlign}
+                        isPaidUser={isPaidUser}
+                        showViewPost={false}
+                      />
+                    )}
                     {/* Status-aware thank-you / info banner */}
                     {selectedStatus === 'Reviewing' && (
                       <div
@@ -1609,7 +1367,6 @@ function Jobs() {
                         </p>
                       </div>
                     )}
-
                     {selectedStatus === 'Closed' && (
                       <div
                         style={{
@@ -1657,7 +1414,6 @@ function Jobs() {
             </Card>
           </section>
         </div>
-
         {/* Bottom row: Recently viewed + Applied Jobs */}
         <div
           style={{
@@ -1701,7 +1457,6 @@ function Jobs() {
               )}
             </CardContent>
           </Card>
-
           <Card as="section" aria-labelledby="jobs-applied-heading">
             <CardHeader>
               <CardTitle
@@ -1739,7 +1494,6 @@ function Jobs() {
           </Card>
         </div>
       </div>
-
       {/* Apply Modal */}
       <ApplyModal
         open={applyOpen}
@@ -1749,7 +1503,6 @@ function Jobs() {
         isPaidUser={isPaidUser}
         onResumeAlign={handleResumeAlign}
       />
-
       {/* ATS Result Panel */}
       <ATSResultPanel
         open={atsPanelOpen}
@@ -1762,7 +1515,6 @@ function Jobs() {
     </PageShell>
   );
 }
-
 // ──────────────────────────────────────────────────────────────
 // Page Wrapper
 // ──────────────────────────────────────────────────────────────

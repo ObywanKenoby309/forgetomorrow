@@ -588,13 +588,13 @@ model User {
 
   seekerCalendarItems SeekerCalendarItem[] @relation("UserSeekerCalendarItems")
 
-  corporateBannerKey    String?
+  corporateBannerKey String?
   corporateBannerLocked Boolean @default(false)
-
+  resumeAlignFreeUses Int @default(0)
+  resumeAlignLastResetMonth String? // format "2025-12"
   deletedAt DateTime?
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
-
   @@map("users")
 }
 
