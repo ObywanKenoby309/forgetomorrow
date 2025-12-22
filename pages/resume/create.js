@@ -728,10 +728,7 @@ export default function CreateResumePage() {
             onToggle={() => setOpenTailor((v) => !v)}
           >
             {/* Counter for Free users */}
-            <div style={{ marginBottom: 16, fontSize: 14, color: '#607D8B', textAlign: 'center' }}>
-              Forge Hammer uses this month: {usage.used}/{usage.limit === Infinity ? 'Unlimited' : usage.limit}
-            </div>
-            {atsPack ? (
+             {atsPack ? (
               <div style={{ display: 'grid', gap: 10, marginBottom: 16 }}>
                 <Banner tone="blue">
                   <div style={{ fontWeight: 800, marginBottom: 4 }}>🔥 Job Fire Loaded</div>
