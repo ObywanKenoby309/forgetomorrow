@@ -2,10 +2,8 @@
 import React, { useMemo } from 'react';
 import Head from 'next/head';
 import { useRouter } from 'next/router';
-
 import SeekerLayout from '@/components/layouts/SeekerLayout';
 import CoachingLayout from '@/components/layouts/CoachingLayout';
-
 // Componentized pieces
 import KPI from '@/components/analytics/KPI';
 import ViewsChart from '@/components/analytics/ViewsChart';
@@ -29,13 +27,11 @@ export default function ProfileAnalyticsPage() {
       commentsCount: 0,
       connectionsGained7d: 0,
       profileCompletionPct: 0,
-
       // Time series (flat until we have real signals)
       daysLabels,
       viewsLast7Days: [0, 0, 0, 0, 0, 0, 0],
       searchAppearancesLast7Days: [0, 0, 0, 0, 0, 0, 0],
       connectionsLast7Days: [0, 0, 0, 0, 0, 0, 0],
-
       // Details
       lastProfileViewer: {
         name: null,
@@ -50,7 +46,6 @@ export default function ProfileAnalyticsPage() {
         { label: 'Links / Portfolio', done: false },
         { label: 'Contact Preferences', done: false },
       ],
-
       // Top content: not yet available
       highestViewedPost: null,
       highestViewedComment: null,
@@ -84,7 +79,6 @@ export default function ProfileAnalyticsPage() {
       <Head>
         <title>Profile Analytics | ForgeTomorrow</title>
       </Head>
-
       <Layout
         title="Profile Analytics | ForgeTomorrow"
         header={HeaderBox}
@@ -92,136 +86,45 @@ export default function ProfileAnalyticsPage() {
         activeNav="profile"
         sidebarInitialOpen={{ coaching: false, seeker: false }}
       >
-        <div className="grid gap-4 md:gap-6 lg:grid-cols-12">
-          {/* ===== Main Column ===== */}
-          <div className="lg:col-span-8 grid gap-4 md:gap-6">
-            {/* KPI Strip — full row */}
-            <section className="bg-white border border-gray-200 rounded-xl shadow-sm p-4">
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3">
-                <KPI
-                  label="Profile Views"
-                  value={analytics.totalViews.toLocaleString()}
-                />
-                <KPI label="Posts" value={analytics.postsCount} />
-                <KPI label="Comments" value={analytics.commentsCount} />
-                <KPI
-                  label="Connections (7d)"
-                  value={analytics.connectionsGained7d}
-                />
-                <KPI
-                  label="Profile Completion"
-                  value={`${analytics.profileCompletionPct}%`}
-                />
-              </div>
-              <p className="mt-2 mb-0 text-[11px] text-[#90A4AE]">
-                Analytics are in early access – as you use ForgeTomorrow, these
-                numbers will grow and unlock richer insights.
-              </p>
-            </section>
+        <div className="max-w-5xl mx-auto px-4 py-8">
+          {/* Title card */}
+          <section className="bg-white border border-gray-200 rounded-xl shadow-sm p-8 text-center mb-8">
+            <h1 className="text-3xl font-bold text-orange-600 mb-2">Profile Analytics</h1>
+            <p className="text-gray-600">
+              Track engagement on your profile and content. Detailed analytics are rolling out gradually, so some numbers may be limited for now.
+            </p>
+          </section>
 
-            {/* Charts row — two columns on md+, stacked on mobile */}
-            <div className="grid gap-4 md:gap-6 md:grid-cols-2">
-              <ViewsChart
-                labels={analytics.daysLabels}
-                data={analytics.viewsLast7Days}
-              />
-              <SearchAppearancesChart
-                labels={analytics.daysLabels}
-                data={analytics.searchAppearancesLast7Days}
-              />
-            </div>
-
-            {/* Top content — full row */}
-            <section className="bg-white border border-gray-200 rounded-xl shadow-sm p-4 grid gap-3">
-              <h2 className="text-[#FF7043] m-0 font-semibold">Top Content</h2>
-
-              {hasTopPost ? (
-                <div className="grid gap-1.5">
-                  <strong className="text-[#263238]">
-                    Highest Viewed Post
-                  </strong>
-                  <a
-                    href={
-                      analytics.highestViewedPost.url +
-                      (isCoachChrome ? '?chrome=coach' : '')
-                    }
-                    className="text-[#FF7043] font-bold no-underline"
-                  >
-                    {analytics.highestViewedPost.title}
-                  </a>
-                  <small className="text-[#607D8B]">
-                    {analytics.highestViewedPost.views.toLocaleString()} views
-                  </small>
-                </div>
-              ) : (
-                <div className="grid gap-1.5">
-                  <strong className="text-[#263238]">
-                    Highest Viewed Post
-                  </strong>
-                  <p className="text-[#607D8B] text-sm m-0">
-                    As you start posting on the feed, your top-performing post
-                    will appear here.
-                  </p>
-                </div>
-              )}
-
-              {hasTopComment ? (
-                <div className="grid gap-1.5">
-                  <strong className="text-[#263238]">
-                    Highest Liked Comment
-                  </strong>
-                  <p className="text-[#455A64] m-0 italic">
-                    “{analytics.highestViewedComment.snippet}”
-                  </p>
-                  <a
-                    href={
-                      analytics.highestViewedComment.url +
-                      (isCoachChrome ? '?chrome=coach' : '')
-                    }
-                    className="text-[#FF7043] font-bold no-underline"
-                  >
-                    View comment
-                  </a>
-                  <small className="text-[#607D8B]">
-                    {analytics.highestViewedComment.likes.toLocaleString()}{' '}
-                    likes
-                  </small>
-                </div>
-              ) : (
-                <div className="grid gap-1.5">
-                  <strong className="text-[#263238]">
-                    Highest Liked Comment
-                  </strong>
-                  <p className="text-[#607D8B] text-sm m-0">
-                    As you join conversations, we’ll highlight your most
-                    engaging comments here.
-                  </p>
-                </div>
-              )}
-            </section>
-
-            {/* Back to Profile */}
-            <section className="bg-white border border-gray-200 rounded-xl shadow-sm p-4 flex items-center justify-between">
-              <div className="text-[#607D8B] text-sm">
-                Review and refine your profile sections to improve engagement.
-                As analytics expand, this page will help you see what is
-                working.
-              </div>
-              <a
-                href={'/profile' + (isCoachChrome ? '?chrome=coach' : '')}
-                className="bg-[#FF7043] text-white rounded-lg px-3 py-2 font-bold no-underline text-sm"
-              >
-                Back to Profile
-              </a>
-            </section>
+          {/* Stats row */}
+          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4 mb-8">
+            <KPI label="Profile Views" value={analytics.totalViews.toLocaleString()} />
+            <KPI label="Posts" value={analytics.postsCount} />
+            <KPI label="Comments" value={analytics.commentsCount} />
+            <KPI label="Connections (7d)" value={analytics.connectionsGained7d} />
+            <KPI label="Profile Completion" value={`${analytics.profileCompletionPct}%`} />
           </div>
 
-          {/* ===== Sidebar ===== */}
-          <aside className="lg:col-span-4 grid gap-4 md:gap-6">
-            <ProfileCompletionCard
-              completionPct={analytics.profileCompletionPct}
-              checklist={analytics.profileChecklist}
+          {/* Charts row — side-by-side on md+, stack on mobile */}
+          <div className="grid md:grid-cols-2 gap-6 mb-8">
+            <ViewsChart
+              labels={analytics.daysLabels}
+              data={analytics.viewsLast7Days}
             />
+            <SearchAppearancesChart
+              labels={analytics.daysLabels}
+              data={analytics.searchAppearancesLast7Days}
+            />
+          </div>
+
+          {/* Profile Completion card */}
+          <ProfileCompletionCard
+            completionPct={analytics.profileCompletionPct}
+            checklist={analytics.profileChecklist}
+            className="mb-8"
+          />
+
+          {/* Bottom row — Connections, Recent Viewers, Top Content */}
+          <div className="grid lg:grid-cols-3 gap-6">
             <ConnectionsMiniChart
               labels={analytics.daysLabels}
               data={analytics.connectionsLast7Days}
@@ -230,7 +133,75 @@ export default function ProfileAnalyticsPage() {
               viewers={analytics.recentViewers}
               allViewsHref={allViewsHref}
             />
-          </aside>
+            <section className="bg-white border border-gray-200 rounded-xl shadow-sm p-6">
+              <h2 className="text-[#FF7043] font-semibold mb-4">Top Content</h2>
+              {hasTopPost ? (
+                <div className="mb-6">
+                  <strong className="text-[#263238]">Highest Viewed Post</strong>
+                  <a
+                    href={
+                      analytics.highestViewedPost.url +
+                      (isCoachChrome ? '?chrome=coach' : '')
+                    }
+                    className="block text-[#FF7043] font-bold mt-1"
+                  >
+                    {analytics.highestViewedPost.title}
+                  </a>
+                  <small className="text-[#607D8B]">
+                    {analytics.highestViewedPost.views.toLocaleString()} views
+                  </small>
+                </div>
+              ) : (
+                <div className="mb-6">
+                  <strong className="text-[#263238]">Highest Viewed Post</strong>
+                  <p className="text-[#607D8B] text-sm mt-1">
+                    As you start posting on the feed, your top-performing post will appear here.
+                  </p>
+                </div>
+              )}
+              {hasTopComment ? (
+                <div>
+                  <strong className="text-[#263238]">Highest Liked Comment</strong>
+                  <p className="text-[#455A64] italic mt-1">
+                    “{analytics.highestViewedComment.snippet}”
+                  </p>
+                  <a
+                    href={
+                      analytics.highestViewedComment.url +
+                      (isCoachChrome ? '?chrome=coach' : '')
+                    }
+                    className="text-[#FF7043] font-bold"
+                  >
+                    View comment
+                  </a>
+                  <small className="text-[#607D8B] block">
+                    {analytics.highestViewedComment.likes.toLocaleString()} likes
+                  </small>
+                </div>
+              ) : (
+                <div>
+                  <strong className="text-[#263238]">Highest Liked Comment</strong>
+                  <p className="text-[#607D8B] text-sm mt-1">
+                    As you join conversations, we’ll highlight your most engaging comments here.
+                  </p>
+                </div>
+              )}
+            </section>
+          </div>
+
+          {/* Back to Profile */}
+          <section className="mt-8 bg-white border border-gray-200 rounded-xl shadow-sm p-6 flex items-center justify-between">
+            <div className="text-[#607D8B] text-sm">
+              Review and refine your profile sections to improve engagement.
+              As analytics expand, this page will help you see what is working.
+            </div>
+            <a
+              href={'/profile' + (isCoachChrome ? '?chrome=coach' : '')}
+              className="bg-[#FF7043] text-white rounded-lg px-6 py-3 font-bold no-underline text-sm"
+            >
+              Back to Profile
+            </a>
+          </section>
         </div>
       </Layout>
     </>
