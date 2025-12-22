@@ -1,15 +1,25 @@
 // components/seeker/dashboard/KpiRow.js
 import React, { useState, useEffect } from 'react';
-import { kpiColors } from '@/components/seeker/dashboard/seekerColors';
+import { colorFor } from '@/components/seeker/dashboard/seekerColors';
 import { useRouter } from 'next/router';
 
+const STAGES = ['Pinned', 'Applied', 'Interviewing', 'Offers', 'Closed Out'];
+
+const stageKey = (stage) =>
+  ({
+    Pinned: 'neutral',
+    Applied: 'applied',
+    Interviewing: 'interviewing',
+    Offers: 'offers',
+    'Closed Out': 'info',
+  }[stage] || 'neutral');
+
 export default function KpiRow({
+  pinned = 0,
   applied = 0,
-  viewed = 0,
   interviewing = 0,
   offers = 0,
-  rejected = 0,          // we’re reusing this as “Total Applied” for now
-  lastApplicationSent,
+  closedOut = 0,
 }) {
   const router = useRouter();
 
@@ -35,153 +45,49 @@ export default function KpiRow({
   };
 
   // === KPI TILE ===
-  const Tile = ({ title, value, stage, pulse = false }) => {
-    const { bg, text, border } = kpiColors(stage);
+  const Tile = ({ title, value, stage }) => {
+    const c = colorFor(stageKey(stage));
     return (
       <div
         style={{
-          background: bg,
-          color: text,
+          background: c.bg,
+          color: c.text,
           borderRadius: 12,
           padding: '12px 16px',
-          border: `1px solid ${border || 'rgba(0,0,0,0.08)'}`,
+          border: `1px solid ${c.solid}`,
           display: 'grid',
           gap: 4,
           minWidth: 0,
-          boxShadow: pulse
-            ? '0 0 20px rgba(255, 112, 67, 0.6)'
-            : '0 1px 3px rgba(0,0,0,0.1)',
+          boxShadow: '0 1px 3px rgba(0,0,0,0.1)',
           transition: 'all 0.3s ease',
-          cursor: pulse ? 'pointer' : 'default',
-          position: 'relative',
-          overflow: 'hidden',
         }}
-        onClick={pulse ? () => router.push('/resume/select-template') : undefined}
       >
-        {pulse && (
-          <div
-            style={{
-              position: 'absolute',
-              inset: 0,
-              background:
-                'radial-gradient(circle, rgba(255,112,67,0.3) 0%, transparent 70%)',
-              animation: 'pulse 2s infinite',
-            }}
-          />
-        )}
         <div style={{ fontSize: 13, opacity: 0.9, fontWeight: 500 }}>{title}</div>
         <div style={{ fontSize: 24, fontWeight: 800, lineHeight: 1 }}>
-          {stage === 'info' ? value : <AnimatedNumber end={value} />}
+          <AnimatedNumber end={value} />
         </div>
       </div>
     );
   };
 
-  // === CTA BANNER — ONLY ONE! ===
-  const CtaBanner = () => {
-    const [visible, setVisible] = useState(false);
-    useEffect(() => {
-      const timer = setTimeout(() => setVisible(true), 800);
-      return () => clearTimeout(timer);
-    }, []);
-
-    if (!visible) return null;
-
-    return (
-      <div
-        style={{
-          gridColumn: '1 / -1',
-          background: 'linear-gradient(135deg, #FF7043 0%, #F4511E 100%)',
-          color: 'white',
-          padding: '16px 20px',
-          borderRadius: 16,
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'space-between',
-          boxShadow: '0 8px 25px rgba(255, 112, 67, 0.3)',
-          animation: 'slideUp 0.6s ease-out',
-          cursor: 'pointer',
-          marginTop: 8,
-          fontFamily: 'inherit',
-        }}
-        onClick={() => router.push('/resume-cover')}
-      >
-        <div>
-          <div style={{ fontSize: 18, fontWeight: 700 }}>
-            87% get interviews in 7 days
-          </div>
-          <div style={{ fontSize: 14, opacity: 0.95, marginTop: 2 }}>
-            <em>with a role-aligned resume</em>
-          </div>
-        </div>
-        <div
-          style={{
-            background: 'rgba(255, 255, 255, 0.25)',
-            color: 'white',
-            padding: '10px 20px',
-            borderRadius: 999,
-            fontWeight: 600,
-            fontSize: 15,
-            animation: 'pulseBtn 1.8s infinite',
-            backdropFilter: 'blur(4px)',
-            border: '1px solid rgba(255, 255, 255, 0.3)',
-          }}
-        >
-          Build Resume
-        </div>
-      </div>
-    );
-  };
-
-  // === MAIN RETURN ===
+  // === MAIN RETURN — clickable row
   return (
     <div
       style={{
         display: 'grid',
         gap: 12,
-        gridTemplateColumns: 'repeat(6, minmax(0, 1fr))',
+        gridTemplateColumns: 'repeat(5, minmax(0, 1fr))',
+        cursor: 'pointer',
       }}
+      onClick={() => router.push('/seeker/applications')}
+      onMouseEnter={(e) => (e.currentTarget.style.boxShadow = '0 4px 12px rgba(0,0,0,0.15)')}
+      onMouseLeave={(e) => (e.currentTarget.style.boxShadow = 'none')}
     >
-      <Tile title="Submitted" value={applied} stage="applied" />
-      <Tile title="Viewed by Employers" value={viewed} stage="viewed" />
-      <Tile
-        title="Interviews Scheduled"
-        value={interviewing}
-        stage="interviewing"
-        pulse={true}
-      />
-      <Tile title="Offers Received" value={offers} stage="offers" />
-      {/* Now a neutral gray stat tile */}
-      <Tile title="Total Applied" value={rejected} stage="neutral" />
-      {/* Meta / date tile in teal */}
-      <Tile
-        title="Last Sent"
-        value={lastApplicationSent || '—'}
-        stage="info"
-      />
-
-      <CtaBanner />
+      <Tile title="Pinned" value={pinned} stage="Pinned" />
+      <Tile title="Applied" value={applied} stage="Applied" />
+      <Tile title="Interviewing" value={interviewing} stage="Interviewing" />
+      <Tile title="Offers" value={offers} stage="Offers" />
+      <Tile title="Closed Out" value={closedOut} stage="Closed Out" />
     </div>
   );
-}
-
-// CSS animations injected once
-const styles = `
-  @keyframes pulse {
-    0%, 100% { opacity: 0.6; }
-    50% { opacity: 1; }
-  }
-  @keyframes pulseBtn {
-    0%, 100% { transform: scale(1); }
-    50% { transform: scale(1.05); }
-  }
-  @keyframes slideUp {
-    from { transform: translateY(20px); opacity: 0; }
-    to { transform: translateY(0); opacity: 1; }
-  }
-`;
-if (typeof document !== 'undefined') {
-  const styleSheet = document.createElement('style');
-  styleSheet.textContent = styles;
-  document.head.appendChild(styleSheet);
 }

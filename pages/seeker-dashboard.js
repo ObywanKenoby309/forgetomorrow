@@ -207,12 +207,11 @@ export default function SeekerDashboard() {
             </h2>
             {kpi && (
               <KpiRow
-                applied={kpi.applied}
-                viewed={kpi.viewed}
-                interviewing={kpi.interviewing}
-                offers={kpi.offers}
-                rejected={kpi.rejected}
-                lastApplicationSent={kpi.lastSent}
+                pinned={kpi.pinned || 0}
+  applied={kpi.applied || 0}
+  interviewing={kpi.interviewing || 0}
+  offers={kpi.offers || 0}
+  closedOut={kpi.closedOut || 0}
               />
             )}
           </section>
