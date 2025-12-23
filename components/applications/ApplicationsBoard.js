@@ -1,20 +1,68 @@
-// components/applications/ApplicationsBoard.js
 import React from 'react';
 import ApplicationCard from './ApplicationCard';
 import { colorFor } from '@/components/seeker/dashboard/seekerColors';
+import {
+  DndContext,
+  closestCorners,
+  KeyboardSensor,
+  PointerSensor,
+  TouchSensor,
+  useSensor,
+  useSensors,
+  DragOverlay,
+  defaultCoordinates,
+} from '@dnd-kit/core';
+import {
+  SortableContext,
+  arrayMove,
+  sortableKeyboardCoordinates,
+  verticalListSortingStrategy,
+} from '@dnd-kit/sortable';
+import { useSortable } from '@dnd-kit/sortable';
+import { CSS } from '@dnd-kit/utilities';
 
 // 🔸 Use the same stages as the tracker
 const STAGES = ['Pinned', 'Applied', 'Interviewing', 'Offers', 'Closed Out'];
 
 const stageKey = (stage) =>
   ({
-    Pinned: 'pinned',          // or 'brand'
+    Pinned: 'pinned',
     Applied: 'applied',
     Interviewing: 'interviewing',
     Offers: 'offers',
-    // ✅ calm / neutral palette for final stage
     'Closed Out': 'info',
   }[stage] || 'info');
+
+function SortableCard({ job, stage, onView, onEdit, onDelete }) {
+  const {
+    attributes,
+    listeners,
+    setNodeRef,
+    transform,
+    transition,
+    isDragging,
+  } = useSortable({ id: job.id });
+
+  const style = {
+    transform: CSS.Transform.toString(transform),
+    transition,
+    opacity: isDragging ? 0.5 : 1,
+  };
+
+  return (
+    <div ref={setNodeRef} style={style}>
+      <ApplicationCard
+        job={job}
+        stage={stage}
+        onView={onView}
+        onEdit={onEdit}
+        onDelete={onDelete}
+        dragListeners={listeners}
+        dragAttributes={attributes}
+      />
+    </div>
+  );
+}
 
 export default function ApplicationsBoard({
   stagesData = {
@@ -30,11 +78,19 @@ export default function ApplicationsBoard({
   onDelete,
   onView,
   compact = false,
-  columns = 5,              // number OR "auto"
+  columns = 5,
   title = 'Job Application Tracker',
-  actions = null,           // right side
-  leftActions = null,       // left side (next to title)
+  actions = null,
+  leftActions = null,
 }) {
+  const sensors = useSensors(
+    useSensor(PointerSensor),
+    useSensor(TouchSensor),
+    useSensor(KeyboardSensor, {
+      coordinateGetter: sortableKeyboardCoordinates,
+    })
+  );
+
   const wrapStyle = {
     background: 'white',
     border: '1px solid #eee',
@@ -56,6 +112,35 @@ export default function ApplicationsBoard({
     columns === 'auto'
       ? 'repeat(auto-fit, minmax(220px, 1fr))'
       : `repeat(${columns}, minmax(0, 1fr))`;
+
+  const handleDragEnd = (event) => {
+    const { active, over } = event;
+
+    if (!over) return;
+
+    const activeStage = STAGES.find((s) =>
+      stagesData[s].some((j) => j.id === active.id)
+    );
+    const overStage = STAGES.find((s) => over.id.startsWith(`${s}-column`)) || over.id;
+
+    if (activeStage === overStage) {
+      // Reorder within same column
+      const items = stagesData[activeStage];
+      const oldIndex = items.findIndex((j) => j.id === active.id);
+      const newIndex = items.findIndex((j) => j.id === over.id);
+      if (oldIndex !== newIndex) {
+        // No API call needed for reorder — just local
+        // But we'll skip for now since order isn't persisted
+      }
+      return;
+    }
+
+    // Move to different column
+    const job = stagesData[activeStage].find((j) => j.id === active.id);
+    if (job && onMove) {
+      onMove(job.id, activeStage, overStage, job.pinnedId);
+    }
+  };
 
   return (
     <section style={wrapStyle}>
@@ -96,70 +181,74 @@ export default function ApplicationsBoard({
       </div>
 
       {/* Board */}
-      <div
-        style={{
-          display: 'grid',
-          gridTemplateColumns,
-          gap: compact ? 12 : 20,
-          width: '100%',
-        }}
+      <DndContext
+        sensors={sensors}
+        collisionDetection={closestCorners}
+        onDragEnd={handleDragEnd}
       >
-        {STAGES.map((stage) => {
-          const c = colorFor(stageKey(stage));
-          const items = stagesData[stage] || [];
+        <div
+          style={{
+            display: 'grid',
+            gridTemplateColumns,
+            gap: compact ? 12 : 20,
+            width: '100%',
+          }}
+        >
+          {STAGES.map((stage) => {
+            const c = colorFor(stageKey(stage));
+            const items = stagesData[stage] || [];
+            const columnId = `${stage}-column`;
 
-          return (
-            <div key={stage} style={columnStyle}>
-              {/* Color-coded header pill with live count */}
-              <div
-                style={{
-                  display: 'inline-flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  gap: 8,
-                  padding: '6px 10px',
-                  borderRadius: 999,
-                  background: c.bg,
-                  color: c.text,
-                  border: `1px solid ${c.solid}`,
-                  marginBottom: compact ? 6 : 8,
-                  fontWeight: 700,
-                  width: '100%',
-                }}
-              >
-                <span
+            return (
+              <div key={stage} style={columnStyle} id={columnId}>
+                {/* Color-coded header pill with live count */}
+                <div
                   style={{
-                    whiteSpace: 'nowrap', // 🔸 keeps "Closed Out" on one line
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    gap: 8,
+                    padding: '6px 10px',
+                    borderRadius: 999,
+                    background: c.bg,
+                    color: c.text,
+                    border: `1px solid ${c.solid}`,
+                    marginBottom: compact ? 6 : 8,
+                    fontWeight: 700,
+                    width: '100%',
                   }}
                 >
-                  {stage}
-                </span>
-                <span style={{ fontWeight: 900 }}>{items.length}</span>
-              </div>
-
-              {items.length > 0 ? (
-                items.map((job) => (
-                  <ApplicationCard
-                    key={job.id}
-                    job={job}
-                    stage={stage}
-                    stages={STAGES}
-                    onMove={onMove}
-                    onDelete={onDelete}
-                    onEdit={onEdit}
-                    onView={onView}
-                    compact={compact}
-                  />
-                ))
-              ) : (
-                <div style={{ color: '#90A4AE', fontSize: compact ? 12 : 14 }}>
-                  No items.
+                  <span style={{ whiteSpace: 'nowrap' }}>{stage}</span>
+                  <span style={{ fontWeight: 900 }}>{items.length}</span>
                 </div>
-              )}
-            </div>
-          );
-        })}
-      </div>
+
+                {items.length > 0 ? (
+                  <SortableContext
+                    items={items.map((j) => j.id)}
+                    strategy={verticalListSortingStrategy}
+                  >
+                    {items.map((job) => (
+                      <SortableCard
+                        key={job.id}
+                        job={job}
+                        stage={stage}
+                        onView={onView}
+                        onEdit={onEdit}
+                        onDelete={onDelete}
+                      />
+                    ))}
+                  </SortableContext>
+                ) : (
+                  <div style={{ color: '#90A4AE', fontSize: compact ? 12 : 14 }}>
+                    No items.
+                  </div>
+                )}
+              </div>
+            );
+          })}
+        </div>
+        <DragOverlay />
+      </DndContext>
     </section>
   );
 }

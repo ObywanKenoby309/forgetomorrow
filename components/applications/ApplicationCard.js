@@ -1,20 +1,18 @@
 // components/applications/ApplicationCard.js
 import React from 'react';
-import { FaArrowLeft, FaArrowRight, FaEdit, FaEye } from 'react-icons/fa';
+import { FaEye, FaEdit, FaTrash } from 'react-icons/fa';
 
 const DEFAULT_STAGES = ['Pinned', 'Applied', 'Interviewing', 'Offers', 'Rejected'];
 
 export default function ApplicationCard({
   job,
   stage,
-  onMove,
-  onEdit,
   onView,
-  stages,
+  onEdit,
+  onDelete,
+  dragListeners,
+  dragAttributes,
 }) {
-  const STAGES = Array.isArray(stages) && stages.length ? stages : DEFAULT_STAGES;
-  const currentIndex = STAGES.indexOf(stage);
-
   return (
     <div
       style={{
@@ -26,6 +24,7 @@ export default function ApplicationCard({
         display: 'flex',
         flexDirection: 'column',
         gap: '8px',
+        position: 'relative',
       }}
     >
       <div style={{ fontWeight: 600 }}>{job.title}</div>
@@ -45,54 +44,22 @@ export default function ApplicationCard({
           flexWrap: 'wrap',
           gap: 6,
           marginTop: 4,
+          alignItems: 'center',
         }}
       >
-        <button
-          onClick={() => onMove(job.id, stage, -1)}
-          disabled={currentIndex <= 0}
-          title="Move left"
+        {/* Drag handle */}
+        <div
+          {...dragAttributes}
+          {...dragListeners}
           style={{
-            width: 32,
-            height: 32,
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            border: '1px solid #eee',
-            borderRadius: 6,
-            background: 'white',
-            cursor: currentIndex <= 0 ? 'not-allowed' : 'pointer',
+            cursor: 'grab',
+            padding: '0 8px',
+            fontSize: 18,
+            color: '#90A4AE',
           }}
         >
-          <FaArrowLeft color={currentIndex <= 0 ? '#ccc' : '#FF7043'} />
-        </button>
-
-        <button
-          onClick={() => onMove(job.id, stage, 1)}
-          disabled={currentIndex === STAGES.length - 1 || currentIndex === -1}
-          title="Move right"
-          style={{
-            width: 32,
-            height: 32,
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            border: '1px solid #eee',
-            borderRadius: 6,
-            background: 'white',
-            cursor:
-              currentIndex === STAGES.length - 1 || currentIndex === -1
-                ? 'not-allowed'
-                : 'pointer',
-          }}
-        >
-          <FaArrowRight
-            color={
-              currentIndex === STAGES.length - 1 || currentIndex === -1
-                ? '#ccc'
-                : '#FF7043'
-            }
-          />
-        </button>
+          ⋮⋮
+        </div>
 
         {onView && (
           <button
@@ -130,6 +97,24 @@ export default function ApplicationCard({
           }}
         >
           <FaEdit color="#546E7A" />
+        </button>
+
+        <button
+          onClick={() => onDelete(job, stage)}
+          title="Delete"
+          style={{
+            width: 32,
+            height: 32,
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            border: '1px solid #eee',
+            borderRadius: 6,
+            background: 'white',
+            cursor: 'pointer',
+          }}
+        >
+          <FaTrash color="#FF7043" />
         </button>
       </div>
     </div>
