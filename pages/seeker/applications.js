@@ -170,27 +170,20 @@ export default function SeekerApplicationsPage() {
   };
 
   const moveApplication = async (id, fromStage, toStage, pinnedId) => {
-    console.log('moveApplication started', { id, fromStage, toStage, pinnedId });
-    if (fromStage === toStage) {
-      console.log('Same stage, exiting');
-      return;
-    }
+    if (fromStage === toStage) return;
 
     const item = tracker[fromStage].find((j) => j.id === id);
-    console.log('Item found?', !!item);
     if (!item) return;
 
-    console.log('Optimistic move start');
+    // Optimistic move first
     setTracker((prev) => ({
       ...prev,
       [fromStage]: prev[fromStage].filter((j) => j.id !== id),
       [toStage]: [item, ...prev[toStage]],
     }));
-    console.log('Optimistic move complete');
 
     try {
       if (fromStage === 'Pinned') {
-        console.log('Pinned out - creating application');
         const createRes = await fetch('/api/seeker/applications/create', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
@@ -203,28 +196,20 @@ export default function SeekerApplicationsPage() {
             status: toStage,
           }),
         });
-        console.log('Create response status:', createRes.status);
-
         if (!createRes.ok) throw new Error('Create failed');
         const { card: newCard } = await createRes.json();
-        console.log('New card from create:', newCard);
 
-        console.log('Unpinning');
-        const unpinRes = await fetch('/api/seeker/pinned-jobs', {
+        await fetch('/api/seeker/pinned-jobs', {
           method: 'DELETE',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ pinnedId: item.pinnedId || item.id }),
         });
-        console.log('Unpin response status:', unpinRes.status);
 
-        console.log('Updating tracker with new card');
         setTracker((prev) => ({
           ...prev,
           [toStage]: prev[toStage].map((j) => (j.id === id ? newCard : j)),
         }));
-        console.log('Pinned out complete');
       } else if (toStage === 'Pinned') {
-        console.log('Moving into Pinned - pinning');
         const pinRes = await fetch('/api/seeker/pinned-jobs', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
@@ -235,11 +220,8 @@ export default function SeekerApplicationsPage() {
             url: item.url || '',
           }),
         });
-        console.log('Pin response status:', pinRes.status);
-
         if (!pinRes.ok) throw new Error('Pin failed');
         const { pinned: newPinned } = await pinRes.json();
-        console.log('New pinned:', newPinned);
 
         const newPinnedCard = {
           pinnedId: newPinned.id,
@@ -252,37 +234,27 @@ export default function SeekerApplicationsPage() {
           dateAdded: new Date(newPinned.pinnedAt).toISOString().split('T')[0],
         };
 
-        console.log('Deleting application');
-        const deleteRes = await fetch(`/api/seeker/applications/${id}`, { method: 'DELETE' });
-        console.log('Delete response status:', deleteRes.status);
+        await fetch(`/api/seeker/applications/${id}`, { method: 'DELETE' });
 
-        console.log('Updating tracker with new pinned card');
         setTracker((prev) => ({
           ...prev,
           Pinned: [newPinnedCard, ...prev.Pinned],
         }));
-        console.log('Into Pinned complete');
       } else {
-        console.log('Normal move - patching status');
         const res = await fetch(`/api/seeker/applications/${id}`, {
           method: 'PATCH',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ status: toStage }),
         });
-        console.log('Patch response status:', res.status);
-
         if (!res.ok) throw new Error('Patch failed');
-        console.log('Normal move complete');
       }
     } catch (err) {
       console.error('Move error:', err);
-      console.log('Reverting optimistic');
       setTracker((prev) => ({
         ...prev,
         [toStage]: prev[toStage].filter((j) => j.id !== id),
         [fromStage]: [item, ...prev[fromStage]],
       }));
-      console.log('Revert complete');
     }
   };
 
@@ -310,14 +282,112 @@ export default function SeekerApplicationsPage() {
 
   const startEdit = (job, stage) => {
     setJobToEdit({ job, stage });
-    setFormMode='edit';
+    setFormMode('edit');
     setShowForm(true);
   };
 
-  const saveEdits = async () => {
-    alert('Edit coming soon');
-    setShowForm(false);
-    setJobToEdit(null);
+  const saveEdits = async (updatedApp) => {
+    console.log('saveEdits called with', updatedApp);
+
+    const { id, title, company, location, url, notes, status, originalStage } = updatedApp;
+
+    const originalItem = tracker[originalStage].find((j) => j.id === id);
+    if (!originalItem) return;
+
+    // Optimistic update (including status change = column move)
+    setTracker((prev) => ({
+      ...prev,
+      [originalStage]: prev[originalStage].filter((j) => j.id !== id),
+      [status]: [{ ...originalItem, title, company, location, url, notes }, ...prev[status]],
+    }));
+
+    try {
+      if (originalStage === 'Pinned') {
+        // Update pinned job
+        const res = await fetch('/api/seeker/pinned-jobs', {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            pinnedId: originalItem.pinnedId || id,
+            title,
+            company,
+            location,
+            url,
+          }),
+        });
+        if (!res.ok) throw new Error('Update pinned failed');
+        const { pinned } = await res.json();
+
+        setTracker((prev) => ({
+          ...prev,
+          [status]: prev[status].map((j) => (j.id === id ? { ...j, ...pinned } : j)),
+        }));
+      } else if (status === 'Pinned') {
+        // Convert application to pinned
+        const pinRes = await fetch('/api/seeker/pinned-jobs', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            title,
+            company,
+            location,
+            url,
+          }),
+        });
+        if (!pinRes.ok) throw new Error('Pin failed');
+        const { pinned } = await pinRes.json();
+
+        const newPinnedCard = {
+          pinnedId: pinned.id,
+          id: pinned.id,
+          title: pinned.title || title,
+          company: pinned.company || company,
+          location: pinned.location || location,
+          url: pinned.url || url,
+          notes,
+          dateAdded: new Date(pinned.pinnedAt).toISOString().split('T')[0],
+        };
+
+        await fetch(`/api/seeker/applications/${id}`, { method: 'DELETE' });
+
+        setTracker((prev) => ({
+          ...prev,
+          Pinned: [newPinnedCard, ...prev.Pinned],
+        }));
+      } else {
+        // Normal application update + status change
+        const res = await fetch(`/api/seeker/applications/${id}`, {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            title,
+            company,
+            location,
+            url,
+            notes,
+            status,
+          }),
+        });
+        if (!res.ok) throw new Error('Update application failed');
+        const { card } = await res.json();
+
+        setTracker((prev) => ({
+          ...prev,
+          [status]: prev[status].map((j) => (j.id === id ? card : j)),
+        }));
+      }
+    } catch (err) {
+      console.error('Save edits error:', err);
+      // Revert optimistic
+      setTracker((prev) => ({
+        ...prev,
+        [status]: prev[status].filter((j) => j.id !== id),
+        [originalStage]: [originalItem, ...prev[originalStage]],
+      }));
+    } finally {
+      setShowForm(false);
+      setJobToEdit(null);
+    }
   };
 
   const onView = (job, stage) => {
@@ -431,7 +501,7 @@ export default function SeekerApplicationsPage() {
           onSave={formMode === 'add' ? addApplication : saveEdits}
           onDelete={
             formMode === 'edit' && jobToEdit
-              ? (id, stage) => deleteApplication(id, stage)
+              ? () => deleteApplication(jobToEdit.job, jobToEdit.stage)
               : undefined
           }
           initial={
@@ -441,10 +511,9 @@ export default function SeekerApplicationsPage() {
                   title: jobToEdit.job.title,
                   company: jobToEdit.job.company,
                   location: jobToEdit.job.location || '',
-                  url: jobToEdit.job.link || '',
+                  url: jobToEdit.job.url || '',
                   notes: jobToEdit.job.notes || '',
-                  dateAdded:
-                    jobToEdit.job.dateAdded || new Date().toISOString().split('T')[0],
+                  dateAdded: jobToEdit.job.dateAdded || '',
                   status: jobToEdit.stage,
                   originalStage: jobToEdit.stage,
                 }
