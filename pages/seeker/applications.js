@@ -317,7 +317,7 @@ export default function SeekerApplicationsPage() {
 
         setTracker((prev) => ({
           ...prev,
-          [status]: prev[status].map((j) => (j.id === id ? { ...j, ...pinned } : j)),
+          [status]: prev[status].map((j) => (j.id === id ? { ...j, ...pinned, notes } : j)),
         }));
       } else if (status === 'Pinned') {
         const pinRes = await fetch('/api/seeker/pinned-jobs', {
@@ -368,7 +368,7 @@ export default function SeekerApplicationsPage() {
 
         setTracker((prev) => ({
           ...prev,
-          [status]: prev[status].map((j) => (j.id === id ? card : j)),
+          [status]: prev[status].map((j) => (j.id === id ? { ...j, ...card } : j)),
         }));
       }
     } catch (err) {
