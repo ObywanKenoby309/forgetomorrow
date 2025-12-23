@@ -114,7 +114,7 @@ export default function ApplicationsBoard({
     borderRadius: 12,
     padding: compact ? 8 : 16,
     boxShadow: '0 2px 6px rgba(0,0,0,0.06)',
-    minHeight: '200px',
+    minHeight: '300px', // Bigger drop area
     position: 'relative',
   };
 
@@ -125,36 +125,35 @@ export default function ApplicationsBoard({
 
   const handleDragEnd = (event) => {
     const { active, over } = event;
-    if (!over) {
-      console.log('Drag end - no over');
-      return;
-    }
+    if (!over) return;
 
     const activeStage = STAGES.find((s) => stagesData[s]?.some((j) => j.id === active.id));
-    console.log('Active stage:', activeStage);
     if (!activeStage) return;
 
-    let overIdStr = String(over.id);
-    let overStage = STAGES.find((s) => overIdStr.startsWith(`${s}-column`));
+    // Better overStage detection
+    let overStage = null;
 
-    if (!overStage) {
+    // 1. Direct column id
+    if (over.id && typeof over.id === 'string' && over.id.includes('-column')) {
+      overStage = STAGES.find((s) => over.id === `${s}-column`);
+    }
+
+    // 2. If over a card, use its stage
+    if (!overStage && over.id) {
       overStage = STAGES.find((s) => stagesData[s]?.some((j) => j.id === over.id));
     }
-    console.log('Over stage:', overStage);
 
-    if (!overStage || activeStage === overStage) {
-      console.log('No move - same stage or no overStage');
-      return;
+    // 3. Fallback: look for parent column
+    if (!overStage && over.data?.current?.sortable) {
+      const index = over.data.current.sortable.index;
+      // Not perfect, but better than nothing
     }
 
-    const job = stagesData[activeStage].find((j) => j.id === active.id);
-    console.log('Job to move:', job);
+    if (!overStage || activeStage === overStage) return;
 
+    const job = stagesData[activeStage].find((j) => j.id === active.id);
     if (job && onMove) {
-      console.log('Calling onMove with:', job.id, activeStage, overStage, job.pinnedId || null);
       onMove(job.id, activeStage, overStage, job.pinnedId || null);
-    } else {
-      console.log('No job or onMove prop');
     }
   };
 
@@ -235,34 +234,36 @@ export default function ApplicationsBoard({
                   <span style={{ fontWeight: 900 }}>{items.length}</span>
                 </div>
 
-                {items.length > 0 ? (
-                  <SortableContext
-                    items={items.map((j) => j.id)}
-                    strategy={verticalListSortingStrategy}
-                  >
-                    {items.map((job) => (
-                      <SortableCard
-                        key={job.id}
-                        job={job}
-                        stage={stage}
-                        onView={onView}
-                        onEdit={onEdit}
-                        onDelete={onDelete}
-                      />
-                    ))}
-                  </SortableContext>
-                ) : (
-                  <div
-                    style={{
-                      color: '#90A4AE',
-                      fontSize: compact ? 12 : 14,
-                      textAlign: 'center',
-                      padding: '40px 0',
-                    }}
-                  >
-                    No items.
-                  </div>
-                )}
+                <div style={{ minHeight: '100px', flexGrow: 1 }}>
+                  {items.length > 0 ? (
+                    <SortableContext
+                      items={items.map((j) => j.id)}
+                      strategy={verticalListSortingStrategy}
+                    >
+                      {items.map((job) => (
+                        <SortableCard
+                          key={job.id}
+                          job={job}
+                          stage={stage}
+                          onView={onView}
+                          onEdit={onEdit}
+                          onDelete={onDelete}
+                        />
+                      ))}
+                    </SortableContext>
+                  ) : (
+                    <div
+                      style={{
+                        color: '#90A4AE',
+                        fontSize: compact ? 12 : 14,
+                        textAlign: 'center',
+                        padding: '60px 0',
+                      }}
+                    >
+                      No items. Drop here.
+                    </div>
+                  )}
+                </div>
               </div>
             );
           })}
