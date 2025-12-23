@@ -97,7 +97,7 @@ export default function ApplicationCard({
         </button>
 
         <button
-          onClick={() => onDelete(job, stage)}
+          onClick={() => onDelete(job.id, stage)}   // ✅ FIX: pass id, not object
           title="Delete"
           style={{
             width: 32,

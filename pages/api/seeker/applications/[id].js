@@ -5,28 +5,46 @@ import { prisma } from "@/lib/prisma";
 
 function normalizeStatus(s) {
   if (!s) return null;
+
+  // UI label -> enum value
   if (s === "Closed Out") return "ClosedOut";
-  return s;
+
+  // If UI accidentally sends "ClosedOut", allow it
+  if (s === "ClosedOut") return "ClosedOut";
+
+  // Allow only known enum values; otherwise ignore
+  if (s === "Applied" || s === "Interviewing" || s === "Offers") return s;
+
+  return null;
 }
 
 export default async function handler(req, res) {
   const { id } = req.query;
+
   const session = await getServerSession(req, res, authOptions);
   if (!session?.user?.email) {
     return res.status(401).json({ error: "Not authenticated" });
   }
+
   const user = await prisma.user.findUnique({
     where: { email: session.user.email },
     select: { id: true },
   });
+
   if (!user) {
     return res.status(404).json({ error: "User not found" });
   }
+
   const userId = user.id;
+  const appId = Number(id);
+
+  if (!Number.isFinite(appId)) {
+    return res.status(400).json({ error: "Invalid id" });
+  }
 
   if (req.method === "PATCH") {
     try {
-      const { title, company, location, url, notes, status } = req.body;
+      const { title, company, location, url, notes, status } = req.body || {};
       const normalizedStatus = normalizeStatus(status);
 
       const data = {};
@@ -41,8 +59,18 @@ export default async function handler(req, res) {
         return res.status(400).json({ error: "No fields to update" });
       }
 
+      // ✅ ownership check (because Prisma update where can't include userId here)
+      const existing = await prisma.application.findFirst({
+        where: { id: appId, userId },
+        select: { id: true },
+      });
+
+      if (!existing) {
+        return res.status(404).json({ error: "Application not found" });
+      }
+
       const updated = await prisma.application.update({
-        where: { id: Number(id), userId },
+        where: { id: appId },
         data,
         select: {
           id: true,
@@ -52,29 +80,41 @@ export default async function handler(req, res) {
           url: true,
           notes: true,
           status: true,
-          dateAdded: true,
-          // Add any other fields you need in tracker
+          appliedAt: true,
         },
       });
 
-      return res.status(200).json({ card: updated });
+      // Return card shape your UI expects
+      return res.status(200).json({
+        card: {
+          id: updated.id,
+          title: updated.title || "",
+          company: updated.company || "",
+          location: updated.location || "",
+          url: updated.url || "",
+          link: updated.url || "",
+          notes: updated.notes || "",
+          status: updated.status, // enum string
+          dateAdded: updated.appliedAt.toISOString().split("T")[0],
+        },
+      });
     } catch (err) {
       console.error("[api/seeker/applications/[id]] patch error:", err);
-      if (err.code === "P2025") {
-        return res.status(404).json({ error: "Application not found" });
-      }
       return res.status(500).json({ error: "Failed to update application" });
     }
   }
 
   if (req.method === "DELETE") {
     try {
+      // ✅ ownership-safe delete
       const deleted = await prisma.application.deleteMany({
-        where: { id: Number(id), userId },
+        where: { id: appId, userId },
       });
+
       if (deleted.count === 0) {
         return res.status(404).json({ error: "Application not found" });
       }
+
       return res.status(200).json({ success: true });
     } catch (err) {
       console.error("[api/seeker/applications/[id]] delete error:", err);
