@@ -2,8 +2,6 @@
 import React from 'react';
 import { FaEye, FaEdit, FaTrash } from 'react-icons/fa';
 
-const DEFAULT_STAGES = ['Pinned', 'Applied', 'Interviewing', 'Offers', 'Rejected'];
-
 export default function ApplicationCard({
   job,
   stage,
@@ -36,29 +34,28 @@ export default function ApplicationCard({
         Added: {job.dateAdded}
       </div>
 
-      {/* Buttons row */}
       <div
         style={{
           display: 'flex',
           justifyContent: 'center',
-          flexWrap: 'wrap',
-          gap: 6,
-          marginTop: 4,
           alignItems: 'center',
+          gap: 10,
+          marginTop: 4,
         }}
       >
-        {/* Drag handle */}
+        {/* Clear drag grip */}
         <div
           {...dragAttributes}
           {...dragListeners}
           style={{
             cursor: 'grab',
-            padding: '0 8px',
-            fontSize: 18,
-            color: '#90A4AE',
+            fontSize: 20,
+            color: '#FF7043',
+            padding: '0 4px',
           }}
+          title="Drag to move"
         >
-          ⋮⋮
+          ↔
         </div>
 
         {onView && (

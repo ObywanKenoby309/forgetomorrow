@@ -1,3 +1,4 @@
+// components/applications/ApplicationsBoard.js
 import React from 'react';
 import ApplicationCard from './ApplicationCard';
 import { colorFor } from '@/components/seeker/dashboard/seekerColors';
@@ -9,8 +10,6 @@ import {
   TouchSensor,
   useSensor,
   useSensors,
-  DragOverlay,
-  defaultCoordinates,
 } from '@dnd-kit/core';
 import {
   SortableContext,
@@ -18,10 +17,7 @@ import {
   sortableKeyboardCoordinates,
   verticalListSortingStrategy,
 } from '@dnd-kit/sortable';
-import { useSortable } from '@dnd-kit/sortable';
-import { CSS } from '@dnd-kit/utilities';
 
-// 🔸 Use the same stages as the tracker
 const STAGES = ['Pinned', 'Applied', 'Interviewing', 'Offers', 'Closed Out'];
 
 const stageKey = (stage) =>
@@ -44,9 +40,9 @@ function SortableCard({ job, stage, onView, onEdit, onDelete }) {
   } = useSortable({ id: job.id });
 
   const style = {
-    transform: CSS.Transform.toString(transform),
+    transform: transform ? `translate3d(${transform.x}px, ${transform.y}px, 0)` : undefined,
     transition,
-    opacity: isDragging ? 0.5 : 1,
+    opacity: isDragging ? 0.6 : 1,
   };
 
   return (
@@ -72,7 +68,6 @@ export default function ApplicationsBoard({
     Offers: [],
     'Closed Out': [],
   },
-  onAdd,
   onMove,
   onEdit,
   onDelete,
@@ -115,27 +110,13 @@ export default function ApplicationsBoard({
 
   const handleDragEnd = (event) => {
     const { active, over } = event;
-
     if (!over) return;
 
-    const activeStage = STAGES.find((s) =>
-      stagesData[s].some((j) => j.id === active.id)
-    );
-    const overStage = STAGES.find((s) => over.id.startsWith(`${s}-column`)) || over.id;
+    const activeStage = STAGES.find((s) => stagesData[s].some((j) => j.id === active.id));
+    const overStage = STAGES.find((s) => over.id.startsWith(`${s}-column`));
 
-    if (activeStage === overStage) {
-      // Reorder within same column
-      const items = stagesData[activeStage];
-      const oldIndex = items.findIndex((j) => j.id === active.id);
-      const newIndex = items.findIndex((j) => j.id === over.id);
-      if (oldIndex !== newIndex) {
-        // No API call needed for reorder — just local
-        // But we'll skip for now since order isn't persisted
-      }
-      return;
-    }
+    if (!activeStage || !overStage || activeStage === overStage) return;
 
-    // Move to different column
     const job = stagesData[activeStage].find((j) => j.id === active.id);
     if (job && onMove) {
       onMove(job.id, activeStage, overStage, job.pinnedId);
@@ -144,7 +125,6 @@ export default function ApplicationsBoard({
 
   return (
     <section style={wrapStyle}>
-      {/* Header */}
       <div
         style={{
           display: 'flex',
@@ -180,7 +160,6 @@ export default function ApplicationsBoard({
         </div>
       </div>
 
-      {/* Board */}
       <DndContext
         sensors={sensors}
         collisionDetection={closestCorners}
@@ -201,7 +180,6 @@ export default function ApplicationsBoard({
 
             return (
               <div key={stage} style={columnStyle} id={columnId}>
-                {/* Color-coded header pill with live count */}
                 <div
                   style={{
                     display: 'inline-flex',
@@ -247,7 +225,6 @@ export default function ApplicationsBoard({
             );
           })}
         </div>
-        <DragOverlay />
       </DndContext>
     </section>
   );

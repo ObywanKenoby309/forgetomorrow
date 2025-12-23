@@ -172,71 +172,94 @@ export default function SeekerApplicationsPage() {
   const moveApplication = async (id, fromStage, toStage, pinnedId) => {
     if (fromStage === toStage) return;
 
-    // Special: Pinned -> Applied only
-    if (fromStage === 'Pinned' && toStage === 'Applied') {
-      const pinnedItem = tracker[fromStage].find((j) => j.id === id);
-      if (!pinnedItem) return;
+    const item = tracker[fromStage].find((j) => j.id === id);
+    if (!item) return;
 
-      try {
+    try {
+      if (fromStage === 'Pinned') {
+        // Moving OUT of Pinned → create application in target stage + unpin
         const createRes = await fetch('/api/seeker/applications/create', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
-            title: pinnedItem.title,
-            company: pinnedItem.company,
-            location: pinnedItem.location || '',
-            url: pinnedItem.url || '',
-            notes: pinnedItem.notes || '',
-            status: 'Applied',
+            title: item.title,
+            company: item.company,
+            location: item.location || '',
+            url: item.url || '',
+            notes: item.notes || '',
+            status: toStage,
           }),
         });
-
         if (!createRes.ok) throw new Error('Create failed');
+        const { card: newCard } = await createRes.json();
 
-        const createData = await createRes.json();
-        const createdCard = createData.card;
-
+        // Unpin
         await fetch('/api/seeker/pinned-jobs', {
           method: 'DELETE',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ pinnedId: pinnedItem.pinnedId || pinnedItem.id }),
+          body: JSON.stringify({ pinnedId: item.pinnedId || item.id }),
         });
 
         setTracker((prev) => ({
           ...prev,
           Pinned: prev.Pinned.filter((j) => j.id !== id),
-          Applied: [createdCard, ...prev.Applied],
+          [toStage]: [newCard, ...prev[toStage]],
         }));
-      } catch (err) {
-        console.error('Pinned -> Applied error:', err);
-      }
-      return;
-    }
+      } else if (toStage === 'Pinned') {
+        // Moving INTO Pinned → pin the job + delete application
+        const pinRes = await fetch('/api/seeker/pinned-jobs', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            title: item.title,
+            company: item.company,
+            location: item.location || '',
+            url: item.url || '',
+          }),
+        });
+        if (!pinRes.ok) throw new Error('Pin failed');
+        const { pinned: newPinned } = await pinRes.json();
 
-    // Block moving into Pinned
-    if (toStage === 'Pinned') return;
+        const newPinnedCard = {
+          pinnedId: newPinned.id,
+          id: newPinned.id,
+          title: newPinned.title || item.title,
+          company: newPinned.company || item.company,
+          location: newPinned.location || item.location,
+          url: newPinned.url || item.url,
+          notes: '',
+          dateAdded: new Date(newPinned.pinnedAt).toISOString().split('T')[0],
+        };
 
-    // Normal application move
-    try {
-      const res = await fetch(`/api/seeker/applications/${id}`, {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ status: toStage }),
-      });
+        // Delete the application
+        await fetch(`/api/seeker/applications/${id}`, { method: 'DELETE' });
 
-      if (!res.ok) throw new Error('Patch failed');
-
-      setTracker((prev) => {
-        const item = prev[fromStage].find((j) => j.id === id);
-        if (!item) return prev;
-        return {
+        setTracker((prev) => ({
           ...prev,
           [fromStage]: prev[fromStage].filter((j) => j.id !== id),
-          [toStage]: [item, ...prev[toStage]],
-        };
-      });
+          Pinned: [newPinnedCard, ...prev.Pinned],
+        }));
+      } else {
+        // Normal application stage change
+        const res = await fetch(`/api/seeker/applications/${id}`, {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ status: toStage }),
+        });
+        if (!res.ok) throw new Error('Patch failed');
+
+        setTracker((prev) => {
+          const movedItem = prev[fromStage].find((j) => j.id === id);
+          if (!movedItem) return prev;
+          return {
+            ...prev,
+            [fromStage]: prev[fromStage].filter((j) => j.id !== id),
+            [toStage]: [movedItem, ...prev[toStage]],
+          };
+        });
+      }
     } catch (err) {
-      console.error('Move application error:', err);
+      console.error('Move error:', err);
     }
   };
 
