@@ -175,9 +175,16 @@ export default function SeekerApplicationsPage() {
     const item = tracker[fromStage].find((j) => j.id === id);
     if (!item) return;
 
+    // Optimistic move first — instant "stick" on drop
+    setTracker((prev) => ({
+      ...prev,
+      [fromStage]: prev[fromStage].filter((j) => j.id !== id),
+      [toStage]: [item, ...prev[toStage]],
+    }));
+
     try {
       if (fromStage === 'Pinned') {
-        // Moving OUT of Pinned → create application in target stage + unpin
+        // Free move OUT of Pinned to ANY stage
         const createRes = await fetch('/api/seeker/applications/create', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
@@ -200,13 +207,13 @@ export default function SeekerApplicationsPage() {
           body: JSON.stringify({ pinnedId: item.pinnedId || item.id }),
         });
 
+        // Replace optimistic item with real one (has application id)
         setTracker((prev) => ({
           ...prev,
-          Pinned: prev.Pinned.filter((j) => j.id !== id),
-          [toStage]: [newCard, ...prev[toStage]],
+          [toStage]: prev[toStage].map((j) => (j.id === id ? newCard : j)),
         }));
       } else if (toStage === 'Pinned') {
-        // Moving INTO Pinned → pin the job + delete application
+        // Move INTO Pinned
         const pinRes = await fetch('/api/seeker/pinned-jobs', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
@@ -231,35 +238,30 @@ export default function SeekerApplicationsPage() {
           dateAdded: new Date(newPinned.pinnedAt).toISOString().split('T')[0],
         };
 
-        // Delete the application
         await fetch(`/api/seeker/applications/${id}`, { method: 'DELETE' });
 
         setTracker((prev) => ({
           ...prev,
-          [fromStage]: prev[fromStage].filter((j) => j.id !== id),
           Pinned: [newPinnedCard, ...prev.Pinned],
         }));
       } else {
-        // Normal application stage change
+        // Normal stage change
         const res = await fetch(`/api/seeker/applications/${id}`, {
           method: 'PATCH',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ status: toStage }),
         });
         if (!res.ok) throw new Error('Patch failed');
-
-        setTracker((prev) => {
-          const movedItem = prev[fromStage].find((j) => j.id === id);
-          if (!movedItem) return prev;
-          return {
-            ...prev,
-            [fromStage]: prev[fromStage].filter((j) => j.id !== id),
-            [toStage]: [movedItem, ...prev[toStage]],
-          };
-        });
+        // Optimistic already done, no need to update again
       }
     } catch (err) {
       console.error('Move error:', err);
+      // On error, revert optimistic
+      setTracker((prev) => ({
+        ...prev,
+        [toStage]: prev[toStage].filter((j) => j.id !== id),
+        [fromStage]: [item, ...prev[fromStage]],
+      }));
     }
   };
 
