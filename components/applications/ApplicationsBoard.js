@@ -44,8 +44,8 @@ function SortableCard({ job, stage, onView, onEdit, onDelete }) {
     transform: transform ? `translate3d(${transform.x}px, ${transform.y}px, 0)` : undefined,
     transition,
     opacity: isDragging ? 0.8 : 1,
-    zIndex: isDragging ? 1000 : 1,  // <-- Force on top when dragging
-    boxShadow: isDragging ? '0 10px 20px rgba(0,0,0,0.2)' : 'none',  // <-- Depth when dragging
+    zIndex: isDragging ? 1000 : 1,
+    boxShadow: isDragging ? '0 10px 20px rgba(0,0,0,0.2)' : 'none',
     position: 'relative',
   };
 
@@ -125,9 +125,13 @@ export default function ApplicationsBoard({
 
   const handleDragEnd = (event) => {
     const { active, over } = event;
-    if (!over) return;
+    if (!over) {
+      console.log('Drag end - no over');
+      return;
+    }
 
     const activeStage = STAGES.find((s) => stagesData[s]?.some((j) => j.id === active.id));
+    console.log('Active stage:', activeStage);
     if (!activeStage) return;
 
     let overIdStr = String(over.id);
@@ -136,12 +140,21 @@ export default function ApplicationsBoard({
     if (!overStage) {
       overStage = STAGES.find((s) => stagesData[s]?.some((j) => j.id === over.id));
     }
+    console.log('Over stage:', overStage);
 
-    if (!overStage || activeStage === overStage) return;
+    if (!overStage || activeStage === overStage) {
+      console.log('No move - same stage or no overStage');
+      return;
+    }
 
     const job = stagesData[activeStage].find((j) => j.id === active.id);
+    console.log('Job to move:', job);
+
     if (job && onMove) {
+      console.log('Calling onMove with:', job.id, activeStage, overStage, job.pinnedId || null);
       onMove(job.id, activeStage, overStage, job.pinnedId || null);
+    } else {
+      console.log('No job or onMove prop');
     }
   };
 
