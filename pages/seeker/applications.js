@@ -170,21 +170,27 @@ export default function SeekerApplicationsPage() {
   };
 
   const moveApplication = async (id, fromStage, toStage, pinnedId) => {
-    if (fromStage === toStage) return;
+    console.log('moveApplication started', { id, fromStage, toStage, pinnedId });
+    if (fromStage === toStage) {
+      console.log('Same stage, exiting');
+      return;
+    }
 
     const item = tracker[fromStage].find((j) => j.id === id);
+    console.log('Item found?', !!item);
     if (!item) return;
 
-    // Optimistic move first — instant "stick" on drop
+    console.log('Optimistic move start');
     setTracker((prev) => ({
       ...prev,
       [fromStage]: prev[fromStage].filter((j) => j.id !== id),
       [toStage]: [item, ...prev[toStage]],
     }));
+    console.log('Optimistic move complete');
 
     try {
       if (fromStage === 'Pinned') {
-        // Free move OUT of Pinned to ANY stage
+        console.log('Pinned out - creating application');
         const createRes = await fetch('/api/seeker/applications/create', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
@@ -197,23 +203,28 @@ export default function SeekerApplicationsPage() {
             status: toStage,
           }),
         });
+        console.log('Create response status:', createRes.status);
+
         if (!createRes.ok) throw new Error('Create failed');
         const { card: newCard } = await createRes.json();
+        console.log('New card from create:', newCard);
 
-        // Unpin
-        await fetch('/api/seeker/pinned-jobs', {
+        console.log('Unpinning');
+        const unpinRes = await fetch('/api/seeker/pinned-jobs', {
           method: 'DELETE',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ pinnedId: item.pinnedId || item.id }),
         });
+        console.log('Unpin response status:', unpinRes.status);
 
-        // Replace optimistic item with real one (has application id)
+        console.log('Updating tracker with new card');
         setTracker((prev) => ({
           ...prev,
           [toStage]: prev[toStage].map((j) => (j.id === id ? newCard : j)),
         }));
+        console.log('Pinned out complete');
       } else if (toStage === 'Pinned') {
-        // Move INTO Pinned
+        console.log('Moving into Pinned - pinning');
         const pinRes = await fetch('/api/seeker/pinned-jobs', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
@@ -224,8 +235,11 @@ export default function SeekerApplicationsPage() {
             url: item.url || '',
           }),
         });
+        console.log('Pin response status:', pinRes.status);
+
         if (!pinRes.ok) throw new Error('Pin failed');
         const { pinned: newPinned } = await pinRes.json();
+        console.log('New pinned:', newPinned);
 
         const newPinnedCard = {
           pinnedId: newPinned.id,
@@ -238,30 +252,37 @@ export default function SeekerApplicationsPage() {
           dateAdded: new Date(newPinned.pinnedAt).toISOString().split('T')[0],
         };
 
-        await fetch(`/api/seeker/applications/${id}`, { method: 'DELETE' });
+        console.log('Deleting application');
+        const deleteRes = await fetch(`/api/seeker/applications/${id}`, { method: 'DELETE' });
+        console.log('Delete response status:', deleteRes.status);
 
+        console.log('Updating tracker with new pinned card');
         setTracker((prev) => ({
           ...prev,
           Pinned: [newPinnedCard, ...prev.Pinned],
         }));
+        console.log('Into Pinned complete');
       } else {
-        // Normal stage change
+        console.log('Normal move - patching status');
         const res = await fetch(`/api/seeker/applications/${id}`, {
           method: 'PATCH',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ status: toStage }),
         });
+        console.log('Patch response status:', res.status);
+
         if (!res.ok) throw new Error('Patch failed');
-        // Optimistic already done, no need to update again
+        console.log('Normal move complete');
       }
     } catch (err) {
       console.error('Move error:', err);
-      // On error, revert optimistic
+      console.log('Reverting optimistic');
       setTracker((prev) => ({
         ...prev,
         [toStage]: prev[toStage].filter((j) => j.id !== id),
         [fromStage]: [item, ...prev[fromStage]],
       }));
+      console.log('Revert complete');
     }
   };
 
@@ -289,7 +310,7 @@ export default function SeekerApplicationsPage() {
 
   const startEdit = (job, stage) => {
     setJobToEdit({ job, stage });
-    setFormMode('edit');
+    setFormMode='edit';
     setShowForm(true);
   };
 
