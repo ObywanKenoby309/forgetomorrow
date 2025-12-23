@@ -16,7 +16,7 @@ import {
   arrayMove,
   sortableKeyboardCoordinates,
   verticalListSortingStrategy,
-  useSortable,  // <-- THIS WAS MISSING
+  useSortable,
 } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
 
@@ -114,14 +114,24 @@ export default function ApplicationsBoard({
     const { active, over } = event;
     if (!over) return;
 
-    const activeStage = STAGES.find((s) => stagesData[s].some((j) => j.id === active.id));
-    const overStage = STAGES.find((s) => over.id.startsWith(`${s}-column`));
+    // Active stage
+    const activeStage = STAGES.find((s) => stagesData[s]?.some((j) => j.id === active.id));
+    if (!activeStage) return;
 
-    if (!activeStage || !overStage || activeStage === overStage) return;
+    // Over stage — safe string check
+    let overIdStr = String(over.id);
+    let overStage = STAGES.find((s) => overIdStr.startsWith(`${s}-column`));
+
+    // Fallback: if hovering over a card, use its stage
+    if (!overStage) {
+      overStage = STAGES.find((s) => stagesData[s]?.some((j) => j.id === over.id));
+    }
+
+    if (!overStage || activeStage === overStage) return;
 
     const job = stagesData[activeStage].find((j) => j.id === active.id);
     if (job && onMove) {
-      onMove(job.id, activeStage, overStage, job.pinnedId);
+      onMove(job.id, activeStage, overStage, job.pinnedId || null);
     }
   };
 
