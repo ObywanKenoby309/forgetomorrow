@@ -1,4 +1,3 @@
-// components/applications/ApplicationsBoard.js
 import React from 'react';
 import ApplicationCard from './ApplicationCard';
 import { colorFor } from '@/components/seeker/dashboard/seekerColors';
@@ -81,8 +80,17 @@ export default function ApplicationsBoard({
   leftActions = null,
 }) {
   const sensors = useSensors(
-    useSensor(PointerSensor),
-    useSensor(TouchSensor),
+    useSensor(PointerSensor, {
+      activationConstraint: {
+        distance: 8, // Allow grab with small movement
+      },
+    }),
+    useSensor(TouchSensor, {
+      activationConstraint: {
+        delay: 200,
+        tolerance: 8,
+      },
+    }),
     useSensor(KeyboardSensor, {
       coordinateGetter: sortableKeyboardCoordinates,
     })
@@ -101,8 +109,10 @@ export default function ApplicationsBoard({
   const columnStyle = {
     background: 'white',
     borderRadius: 12,
-    padding: compact ? 8 : 10,
+    padding: compact ? 8 : 16, // Increased padding for better drop target
     boxShadow: '0 2px 6px rgba(0,0,0,0.06)',
+    minHeight: '200px', // Ensure empty columns have height
+    position: 'relative',
   };
 
   const gridTemplateColumns =
@@ -114,15 +124,12 @@ export default function ApplicationsBoard({
     const { active, over } = event;
     if (!over) return;
 
-    // Active stage
     const activeStage = STAGES.find((s) => stagesData[s]?.some((j) => j.id === active.id));
     if (!activeStage) return;
 
-    // Over stage — safe string check
     let overIdStr = String(over.id);
     let overStage = STAGES.find((s) => overIdStr.startsWith(`${s}-column`));
 
-    // Fallback: if hovering over a card, use its stage
     if (!overStage) {
       overStage = STAGES.find((s) => stagesData[s]?.some((j) => j.id === over.id));
     }
@@ -229,7 +236,14 @@ export default function ApplicationsBoard({
                     ))}
                   </SortableContext>
                 ) : (
-                  <div style={{ color: '#90A4AE', fontSize: compact ? 12 : 14 }}>
+                  <div
+                    style={{
+                      color: '#90A4AE',
+                      fontSize: compact ? 12 : 14,
+                      textAlign: 'center',
+                      padding: '40px 0',
+                    }}
+                  >
                     No items.
                   </div>
                 )}
