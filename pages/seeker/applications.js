@@ -175,7 +175,7 @@ export default function SeekerApplicationsPage() {
     const item = tracker[fromStage].find((j) => j.id === id);
     if (!item) return;
 
-    // Optimistic move first
+    // Optimistic first
     setTracker((prev) => ({
       ...prev,
       [fromStage]: prev[fromStage].filter((j) => j.id !== id),
@@ -287,14 +287,12 @@ export default function SeekerApplicationsPage() {
   };
 
   const saveEdits = async (updatedApp) => {
-    console.log('saveEdits called with', updatedApp);
-
     const { id, title, company, location, url, notes, status, originalStage } = updatedApp;
 
     const originalItem = tracker[originalStage].find((j) => j.id === id);
     if (!originalItem) return;
 
-    // Optimistic update (including status change = column move)
+    // Optimistic update (including status move)
     setTracker((prev) => ({
       ...prev,
       [originalStage]: prev[originalStage].filter((j) => j.id !== id),
@@ -323,7 +321,7 @@ export default function SeekerApplicationsPage() {
           [status]: prev[status].map((j) => (j.id === id ? { ...j, ...pinned } : j)),
         }));
       } else if (status === 'Pinned') {
-        // Convert application to pinned
+        // Convert to pinned
         const pinRes = await fetch('/api/seeker/pinned-jobs', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
@@ -355,7 +353,7 @@ export default function SeekerApplicationsPage() {
           Pinned: [newPinnedCard, ...prev.Pinned],
         }));
       } else {
-        // Normal application update + status change
+        // Normal application update
         const res = await fetch(`/api/seeker/applications/${id}`, {
           method: 'PATCH',
           headers: { 'Content-Type': 'application/json' },
