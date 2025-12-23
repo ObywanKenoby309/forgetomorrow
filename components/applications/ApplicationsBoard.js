@@ -43,7 +43,10 @@ function SortableCard({ job, stage, onView, onEdit, onDelete }) {
   const style = {
     transform: transform ? `translate3d(${transform.x}px, ${transform.y}px, 0)` : undefined,
     transition,
-    opacity: isDragging ? 0.6 : 1,
+    opacity: isDragging ? 0.8 : 1,
+    zIndex: isDragging ? 1000 : 1,  // <-- Force on top when dragging
+    boxShadow: isDragging ? '0 10px 20px rgba(0,0,0,0.2)' : 'none',  // <-- Depth when dragging
+    position: 'relative',
   };
 
   return (
@@ -82,7 +85,7 @@ export default function ApplicationsBoard({
   const sensors = useSensors(
     useSensor(PointerSensor, {
       activationConstraint: {
-        distance: 8, // Allow grab with small movement
+        distance: 8,
       },
     }),
     useSensor(TouchSensor, {
@@ -109,9 +112,9 @@ export default function ApplicationsBoard({
   const columnStyle = {
     background: 'white',
     borderRadius: 12,
-    padding: compact ? 8 : 16, // Increased padding for better drop target
+    padding: compact ? 8 : 16,
     boxShadow: '0 2px 6px rgba(0,0,0,0.06)',
-    minHeight: '200px', // Ensure empty columns have height
+    minHeight: '200px',
     position: 'relative',
   };
 
