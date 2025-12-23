@@ -11,44 +11,58 @@ function normalizeStatus(s) {
 
 export default async function handler(req, res) {
   const { id } = req.query;
-
   const session = await getServerSession(req, res, authOptions);
   if (!session?.user?.email) {
     return res.status(401).json({ error: "Not authenticated" });
   }
-
   const user = await prisma.user.findUnique({
     where: { email: session.user.email },
     select: { id: true },
   });
-
   if (!user) {
     return res.status(404).json({ error: "User not found" });
   }
-
   const userId = user.id;
 
   if (req.method === "PATCH") {
     try {
-      const { status } = req.body;
+      const { title, company, location, url, notes, status } = req.body;
       const normalizedStatus = normalizeStatus(status);
 
-      if (!normalizedStatus) {
-        return res.status(400).json({ error: "status required" });
+      const data = {};
+      if (title !== undefined) data.title = title;
+      if (company !== undefined) data.company = company;
+      if (location !== undefined) data.location = location;
+      if (url !== undefined) data.url = url;
+      if (notes !== undefined) data.notes = notes;
+      if (normalizedStatus) data.status = normalizedStatus;
+
+      if (Object.keys(data).length === 0) {
+        return res.status(400).json({ error: "No fields to update" });
       }
 
-      const updated = await prisma.application.updateMany({
+      const updated = await prisma.application.update({
         where: { id: Number(id), userId },
-        data: { status: normalizedStatus },
+        data,
+        select: {
+          id: true,
+          title: true,
+          company: true,
+          location: true,
+          url: true,
+          notes: true,
+          status: true,
+          dateAdded: true,
+          // Add any other fields you need in tracker
+        },
       });
 
-      if (updated.count === 0) {
-        return res.status(404).json({ error: "Application not found" });
-      }
-
-      return res.status(200).json({ success: true });
+      return res.status(200).json({ card: updated });
     } catch (err) {
       console.error("[api/seeker/applications/[id]] patch error:", err);
+      if (err.code === "P2025") {
+        return res.status(404).json({ error: "Application not found" });
+      }
       return res.status(500).json({ error: "Failed to update application" });
     }
   }
@@ -58,11 +72,9 @@ export default async function handler(req, res) {
       const deleted = await prisma.application.deleteMany({
         where: { id: Number(id), userId },
       });
-
       if (deleted.count === 0) {
         return res.status(404).json({ error: "Application not found" });
       }
-
       return res.status(200).json({ success: true });
     } catch (err) {
       console.error("[api/seeker/applications/[id]] delete error:", err);
