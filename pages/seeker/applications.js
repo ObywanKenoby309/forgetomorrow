@@ -22,13 +22,7 @@ const stageKey = (stage) =>
 
 function StageStrip({ tracker }) {
   return (
-    <div
-      style={{
-        display: 'grid',
-        gap: 12,
-        gridTemplateColumns: 'repeat(5, minmax(0,1fr))',
-      }}
-    >
+    <div style={{ display: 'grid', gap: 12, gridTemplateColumns: 'repeat(5, minmax(0,1fr))' }}>
       {STAGES.map((stage) => {
         const count = tracker?.[stage]?.length || 0;
         const c = colorFor(stageKey(stage));
@@ -46,24 +40,8 @@ function StageStrip({ tracker }) {
               textAlign: 'center',
             }}
           >
-            <div
-              style={{
-                fontSize: 12,
-                opacity: 0.9,
-                whiteSpace: 'nowrap',
-              }}
-            >
-              {stage}
-            </div>
-            <div
-              style={{
-                fontSize: 20,
-                fontWeight: 800,
-                lineHeight: 1,
-              }}
-            >
-              {count}
-            </div>
+            <div style={{ fontSize: 12, opacity: 0.9, whiteSpace: 'nowrap' }}>{stage}</div>
+            <div style={{ fontSize: 20, fontWeight: 800, lineHeight: 1 }}>{count}</div>
           </div>
         );
       })}
@@ -92,117 +70,162 @@ export default function SeekerApplicationsPage() {
   const [details, setDetails] = useState({ job: null, stage: null });
 
   useEffect(() => {
-  async function load() {
-    setLoading(true);
-    try {
-      // Fetch pinned
-      const pinnedRes = await fetch('/api/seeker/pinned-jobs');
-      const pinnedData = pinnedRes.ok ? await pinnedRes.json() : { jobs: [] };
+    async function load() {
+      setLoading(true);
+      try {
+        const pinnedRes = await fetch('/api/seeker/pinned-jobs');
+        const pinnedData = pinnedRes.ok ? await pinnedRes.json() : { jobs: [] };
 
-      // Map pinned to card shape
-      const pinnedCards = (pinnedData.jobs || []).map((j) => ({
-        id: j.id,
-        title: j.title,
-        company: j.company,
-        location: j.location,
-        worksite: j.worksite,
-        compensation: j.compensation,
-        type: j.type,
-        dateAdded: new Date(j.pinnedAt).toISOString().split('T')[0],
-        notes: '',
-        url: '',
-      }));
+        // IMPORTANT: keep pinnedId so we can unpin reliably later
+        const pinnedCards = (pinnedData.jobs || []).map((j) => ({
+          pinnedId: j.pinnedId,     // <- NEW
+          jobId: j.jobId || null,   // <- optional
+          id: j.pinnedId,           // <- keep UI id stable (pinned row id)
+          title: j.title,
+          company: j.company,
+          location: j.location,
+          worksite: j.worksite,
+          compensation: j.compensation,
+          type: j.type,
+          dateAdded: new Date(j.pinnedAt).toISOString().split('T')[0],
+          notes: '',
+          url: j.url || '',
+        }));
 
-      // Fetch applications — grouped endpoint
-      const appsRes = await fetch('/api/seeker/applications');
-      const appsData = appsRes.ok ? await appsRes.json() : { applications: {} };
+        const appsRes = await fetch('/api/seeker/applications');
+        const appsData = appsRes.ok ? await appsRes.json() : { applications: {} };
 
-      const grouped = {
-        Applied: [],
-        Interviewing: [],
-        Offers: [],
-        'Closed Out': [], // match STAGES
-      };
+        const grouped = {
+          Applied: [],
+          Interviewing: [],
+          Offers: [],
+          'Closed Out': [],
+        };
 
-      // Map grouped response (already card shape)
-      Object.keys(appsData.applications || {}).forEach((status) => {
-        if (grouped[status]) {
-          grouped[status] = appsData.applications[status];
-        } else if (status === 'ClosedOut') {
-          grouped['Closed Out'] = appsData.applications[status];
-        }
-      });
+        Object.keys(appsData.applications || {}).forEach((status) => {
+          if (grouped[status]) grouped[status] = appsData.applications[status];
+          else if (status === 'ClosedOut') grouped['Closed Out'] = appsData.applications[status];
+        });
 
-      setTracker({
-        Pinned: pinnedCards,
-        ...grouped,
-      });
-    } catch (err) {
-      console.error('Load tracker error:', err);
-    } finally {
-      setLoading(false);
+        setTracker({
+          Pinned: pinnedCards,
+          ...grouped,
+        });
+      } catch (err) {
+        console.error('Load tracker error:', err);
+      } finally {
+        setLoading(false);
+      }
     }
-  }
-  load();
-}, []);
+    load();
+  }, []);
 
   const addApplication = async (app) => {
-  try {
-    if (app.status === 'Pinned') {
-      // Manual pin
-      const res = await fetch('/api/seeker/pinned-jobs', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          title: app.title,
-          company: app.company,
-          location: app.location,
-          url: app.url,
-        }),
-      });
-      if (res.ok) {
-        const { pinned } = await res.json();
-        const card = {
-          id: pinned.id || pinned.jobId,
-          title: pinned.title || '',
-          company: pinned.company || '',
-          location: pinned.location || '',
-          url: pinned.url || '',
-          notes: '',
-          dateAdded: new Date(pinned.pinnedAt).toISOString().split('T')[0],
-        };
-        setTracker((prev) => ({
-          ...prev,
-          Pinned: [card, ...prev.Pinned],
-        }));
+    try {
+      if (app.status === 'Pinned') {
+        const res = await fetch('/api/seeker/pinned-jobs', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            title: app.title,
+            company: app.company,
+            location: app.location,
+            url: app.url,
+          }),
+        });
+
+        if (res.ok) {
+          const { pinned } = await res.json();
+          // pinned is a PinnedJob row: use its id as pinnedId
+          const card = {
+            pinnedId: pinned.id,
+            jobId: pinned.jobId || null,
+            id: pinned.id,
+            title: pinned.title || app.title || '',
+            company: pinned.company || app.company || '',
+            location: pinned.location || app.location || '',
+            url: pinned.url || app.url || '',
+            notes: '',
+            dateAdded: new Date(pinned.pinnedAt).toISOString().split('T')[0],
+          };
+
+          setTracker((prev) => ({
+            ...prev,
+            Pinned: [card, ...prev.Pinned],
+          }));
+        }
+      } else {
+        const res = await fetch('/api/seeker/applications/create', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(app),
+        });
+
+        if (res.ok) {
+          const { card } = await res.json();
+          const targetStage = app.status || 'Applied';
+          setTracker((prev) => ({
+            ...prev,
+            [targetStage]: [card, ...(prev[targetStage] || [])],
+          }));
+        }
       }
-    } else {
-      // Regular application
-      const res = await fetch('/api/seeker/applications/create', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(app),
-      });
-      if (res.ok) {
-        const { card } = await res.json();
-        const targetStage = app.status || 'Applied';
-        setTracker((prev) => ({
-          ...prev,
-          [targetStage]: [card, ...(prev[targetStage] || [])],
-        }));
-      }
+    } catch (err) {
+      console.error('Add error:', err);
     }
-  } catch (err) {
-    console.error('Add error:', err);
-  }
-  setShowForm(false);
-};
+    setShowForm(false);
+  };
 
   const moveApplication = async (id, fromStage, direction) => {
     const currentIndex = STAGES.indexOf(fromStage);
     const targetIndex = currentIndex + direction;
-    if (targetIndex < 1 || targetIndex >= STAGES.length) return; // Can't move from/to Pinned with arrows
 
+    // ONLY allow Pinned -> Applied
+    if (fromStage === 'Pinned') {
+      if (targetIndex !== 1) return;
+
+      try {
+        const pinnedItem = (tracker.Pinned || []).find((j) => j.id === id);
+        if (!pinnedItem) return;
+
+        const createRes = await fetch('/api/seeker/applications/create', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            title: pinnedItem.title,
+            company: pinnedItem.company,
+            location: pinnedItem.location || '',
+            url: pinnedItem.url || '',
+            notes: pinnedItem.notes || '',
+            status: 'Applied',
+          }),
+        });
+
+        if (!createRes.ok) return;
+
+        const createData = await createRes.json();
+        const createdCard = createData.card;
+
+        // Unpin by pinnedId (reliable for job pins + manual pins)
+        await fetch('/api/seeker/pinned-jobs', {
+          method: 'DELETE',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ pinnedId: pinnedItem.pinnedId || pinnedItem.id }),
+        });
+
+        setTracker((prev) => ({
+          ...prev,
+          Pinned: (prev.Pinned || []).filter((j) => j.id !== id),
+          Applied: [createdCard, ...(prev.Applied || [])],
+        }));
+      } catch (err) {
+        console.error('Pinned -> Applied move error:', err);
+      }
+      return;
+    }
+
+    // Normal application moves (cannot move into Pinned)
+    if (targetIndex < 1 || targetIndex >= STAGES.length) return;
     const targetStage = STAGES[targetIndex];
 
     try {
@@ -211,6 +234,7 @@ export default function SeekerApplicationsPage() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ status: targetStage }),
       });
+
       if (res.ok) {
         setTracker((prev) => {
           const item = prev[fromStage].find((j) => j.id === id);
@@ -230,9 +254,7 @@ export default function SeekerApplicationsPage() {
   const deleteApplication = async (id, stage) => {
     if (!confirm('Delete this application?')) return;
     try {
-      const res = await fetch(`/api/seeker/applications/${id}`, {
-        method: 'DELETE',
-      });
+      const res = await fetch(`/api/seeker/applications/${id}`, { method: 'DELETE' });
       if (res.ok) {
         setTracker((prev) => ({
           ...prev,
@@ -242,9 +264,7 @@ export default function SeekerApplicationsPage() {
     } catch (err) {
       console.error('Delete application error:', err);
     }
-    if (detailsOpen && details.job?.id === id) {
-      setDetailsOpen(false);
-    }
+    if (detailsOpen && details.job?.id === id) setDetailsOpen(false);
   };
 
   const startEdit = (job, stage) => {
@@ -253,8 +273,7 @@ export default function SeekerApplicationsPage() {
     setShowForm(true);
   };
 
-  const saveEdits = async (u) => {
-    // Edit not implemented in API yet — placeholder
+  const saveEdits = async () => {
     alert('Edit coming soon');
     setShowForm(false);
     setJobToEdit(null);
@@ -276,23 +295,10 @@ export default function SeekerApplicationsPage() {
         textAlign: 'center',
       }}
     >
-      <h1
-        style={{
-          margin: 0,
-          color: '#FF7043',
-          fontSize: 24,
-          fontWeight: 800,
-        }}
-      >
+      <h1 style={{ margin: 0, color: '#FF7043', fontSize: 24, fontWeight: 800 }}>
         Applications
       </h1>
-      <p
-        style={{
-          margin: '6px auto 0',
-          color: '#607D8B',
-          maxWidth: 720,
-        }}
-      >
+      <p style={{ margin: '6px auto 0', color: '#607D8B', maxWidth: 720 }}>
         Track your job search across stages, keep notes, and move roles forward.
       </p>
     </section>
@@ -331,6 +337,7 @@ export default function SeekerApplicationsPage() {
         >
           <StageStrip tracker={tracker} />
         </section>
+
         <ApplicationsBoard
           stagesData={tracker}
           compact={false}
@@ -372,6 +379,7 @@ export default function SeekerApplicationsPage() {
           onView={onView}
         />
       </div>
+
       {showForm && (
         <ApplicationForm
           mode={formMode}
@@ -386,31 +394,33 @@ export default function SeekerApplicationsPage() {
               : undefined
           }
           initial={
-  formMode === 'edit' && jobToEdit
-    ? {
-        id: jobToEdit.job.id,
-        title: jobToEdit.job.title,
-        company: jobToEdit.job.company,
-        location: jobToEdit.job.location || '',
-        url: jobToEdit.job.link || '',
-        notes: jobToEdit.job.notes || '',
-        dateAdded: jobToEdit.job.dateAdded || new Date().toISOString().split('T')[0],
-        status: jobToEdit.stage,
-        originalStage: jobToEdit.stage,
-      }
-    : {
-        title: '',
-        company: '',
-        location: '',
-        url: '',
-        notes: '',
-        dateAdded: new Date().toISOString().split('T')[0],
-        status: 'Applied',
-      }
-}
-          stages={STAGES} // include Pinned
+            formMode === 'edit' && jobToEdit
+              ? {
+                  id: jobToEdit.job.id,
+                  title: jobToEdit.job.title,
+                  company: jobToEdit.job.company,
+                  location: jobToEdit.job.location || '',
+                  url: jobToEdit.job.link || '',
+                  notes: jobToEdit.job.notes || '',
+                  dateAdded:
+                    jobToEdit.job.dateAdded || new Date().toISOString().split('T')[0],
+                  status: jobToEdit.stage,
+                  originalStage: jobToEdit.stage,
+                }
+              : {
+                  title: '',
+                  company: '',
+                  location: '',
+                  url: '',
+                  notes: '',
+                  dateAdded: new Date().toISOString().split('T')[0],
+                  status: 'Applied',
+                }
+          }
+          stages={STAGES}
         />
       )}
+
       {detailsOpen && details.job && (
         <ApplicationDetailsModal
           job={details.job}

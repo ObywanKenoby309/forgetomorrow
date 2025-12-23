@@ -25,16 +25,7 @@ export default async function handler(req, res) {
     try {
       const { jobId, title, company, location, url } = req.body;
 
-      const data = {
-        userId,
-      };
-
-      // ─────────────────────────────────────────────────────────────
-      // MINIMAL FIX:
-      // - Do NOT use upsert with userId_jobId (schema doesn't support it)
-      // - Do NOT use dummy jobId = -1 for manual pins
-      // - Instead: check if already pinned, else create
-      // ─────────────────────────────────────────────────────────────
+      const data = { userId };
 
       if (jobId) {
         const numericJobId = Number(jobId);
@@ -44,69 +35,84 @@ export default async function handler(req, res) {
         });
 
         if (existing) {
-          return res.status(200).json({ success: true, pinned: existing, message: "Already pinned" });
+          return res
+            .status(200)
+            .json({ success: true, pinned: existing, message: "Already pinned" });
         }
 
         data.jobId = numericJobId;
 
-        const pinned = await prisma.pinnedJob.create({
-          data,
-        });
-
-        return res.status(200).json({ success: true, pinned });
-      } else {
-        if (!title || !company) {
-          return res.status(400).json({ error: "title and company required for manual pin" });
-        }
-
-        data.title = title;
-        data.company = company;
-        data.location = location || '';
-        data.url = url || '';
-
-        const existing = await prisma.pinnedJob.findFirst({
-          where: {
-            userId,
-            jobId: null,
-            title: data.title,
-            company: data.company,
-            url: data.url,
-          },
-        });
-
-        if (existing) {
-          return res.status(200).json({ success: true, pinned: existing, message: "Already pinned" });
-        }
-
-        const pinned = await prisma.pinnedJob.create({
-          data,
-        });
-
+        const pinned = await prisma.pinnedJob.create({ data });
         return res.status(200).json({ success: true, pinned });
       }
+
+      // Manual pin
+      if (!title || !company) {
+        return res
+          .status(400)
+          .json({ error: "title and company required for manual pin" });
+      }
+
+      data.title = title;
+      data.company = company;
+      data.location = location || "";
+      data.url = url || "";
+
+      const existing = await prisma.pinnedJob.findFirst({
+        where: {
+          userId,
+          jobId: null,
+          title: data.title,
+          company: data.company,
+          url: data.url,
+        },
+      });
+
+      if (existing) {
+        return res
+          .status(200)
+          .json({ success: true, pinned: existing, message: "Already pinned" });
+      }
+
+      const pinned = await prisma.pinnedJob.create({ data });
+      return res.status(200).json({ success: true, pinned });
     } catch (err) {
       console.error("[api/seeker/pinned-jobs] pin error:", err);
-      if (err.code === 'P2002') {
+      if (err?.code === "P2002") {
         return res.status(200).json({ success: true, message: "Already pinned" });
       }
       return res.status(500).json({ error: "Failed to pin job" });
     }
   }
 
-  // DELETE = unpin
+  // DELETE = unpin (supports job pins and manual pins)
   if (req.method === "DELETE") {
     try {
-      const { jobId } = req.body;
-      if (!jobId) {
-        return res.status(400).json({ error: "jobId required" });
+      const { jobId, pinnedId } = req.body || {};
+
+      if (!jobId && !pinnedId) {
+        return res.status(400).json({ error: "jobId or pinnedId required" });
       }
 
-      await prisma.pinnedJob.deleteMany({
-        where: {
-          userId,
-          jobId: Number(jobId),
-        },
+      if (pinnedId) {
+        const result = await prisma.pinnedJob.deleteMany({
+          where: { userId, id: Number(pinnedId) },
+        });
+
+        if (!result.count) {
+          return res.status(404).json({ error: "Pinned job not found" });
+        }
+
+        return res.status(200).json({ success: true });
+      }
+
+      const result = await prisma.pinnedJob.deleteMany({
+        where: { userId, jobId: Number(jobId) },
       });
+
+      if (!result.count) {
+        return res.status(404).json({ error: "Pinned job not found" });
+      }
 
       return res.status(200).json({ success: true });
     } catch (err) {
@@ -141,16 +147,20 @@ export default async function handler(req, res) {
       });
 
       const jobs = pinnedJobs.map((p) => ({
-        id: p.job?.id || p.id, // use Application id for manual
-        title: p.job?.title || p.title || 'Untitled role',
-        company: p.job?.company || p.company || 'Unknown company',
-        location: p.job?.location || p.location || '',
-        worksite: p.job?.worksite || '',
-        compensation: p.job?.compensation || '',
-        type: p.job?.type || '',
+        // IMPORTANT: stable pinned row id
+        pinnedId: p.id,
+        // If this is a real Job pin, jobId will exist
+        jobId: p.jobId || null,
+
+        title: p.job?.title || p.title || "Untitled role",
+        company: p.job?.company || p.company || "Unknown company",
+        location: p.job?.location || p.location || "",
+        worksite: p.job?.worksite || "",
+        compensation: p.job?.compensation || "",
+        type: p.job?.type || "",
         createdAt: p.job?.createdAt || p.pinnedAt,
         pinnedAt: p.pinnedAt,
-        url: p.url || '',
+        url: p.url || "",
       }));
 
       return res.status(200).json({ jobs });
