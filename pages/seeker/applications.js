@@ -230,7 +230,7 @@ export default function SeekerApplicationsPage() {
           company: newPinned.company || item.company,
           location: newPinned.location || item.location,
           url: newPinned.url || item.url,
-          notes: '',
+          notes: item.notes || '',
           dateAdded: new Date(newPinned.pinnedAt).toISOString().split('T')[0],
         };
 
@@ -366,7 +366,6 @@ export default function SeekerApplicationsPage() {
         if (!res.ok) throw new Error('Update application failed');
         const { card } = await res.json();
 
-        // Replace by id with returned card (truth from DB)
         setTracker((prev) => ({
           ...prev,
           [status]: prev[status].map((j) => (j.id === id ? card : j)),
