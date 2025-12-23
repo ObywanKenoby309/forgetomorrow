@@ -175,7 +175,7 @@ export default function SeekerApplicationsPage() {
     const item = tracker[fromStage].find((j) => j.id === id);
     if (!item) return;
 
-    // Optimistic first
+    // Optimistic move first
     setTracker((prev) => ({
       ...prev,
       [fromStage]: prev[fromStage].filter((j) => j.id !== id),
@@ -292,7 +292,7 @@ export default function SeekerApplicationsPage() {
     const originalItem = tracker[originalStage].find((j) => j.id === id);
     if (!originalItem) return;
 
-    // Optimistic update (including status move)
+    // Optimistic update
     setTracker((prev) => ({
       ...prev,
       [originalStage]: prev[originalStage].filter((j) => j.id !== id),
@@ -301,7 +301,6 @@ export default function SeekerApplicationsPage() {
 
     try {
       if (originalStage === 'Pinned') {
-        // Update pinned job
         const res = await fetch('/api/seeker/pinned-jobs', {
           method: 'PATCH',
           headers: { 'Content-Type': 'application/json' },
@@ -321,7 +320,6 @@ export default function SeekerApplicationsPage() {
           [status]: prev[status].map((j) => (j.id === id ? { ...j, ...pinned } : j)),
         }));
       } else if (status === 'Pinned') {
-        // Convert to pinned
         const pinRes = await fetch('/api/seeker/pinned-jobs', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
@@ -353,7 +351,6 @@ export default function SeekerApplicationsPage() {
           Pinned: [newPinnedCard, ...prev.Pinned],
         }));
       } else {
-        // Normal application update
         const res = await fetch(`/api/seeker/applications/${id}`, {
           method: 'PATCH',
           headers: { 'Content-Type': 'application/json' },
@@ -371,12 +368,11 @@ export default function SeekerApplicationsPage() {
 
         setTracker((prev) => ({
           ...prev,
-          [status]: prev[status].map((j) => (j.id === id ? card : j)),
+          [status]: prev[status].map((j) => (j.id === id ? { ...j, ...card } : j)),
         }));
       }
     } catch (err) {
       console.error('Save edits error:', err);
-      // Revert optimistic
       setTracker((prev) => ({
         ...prev,
         [status]: prev[status].filter((j) => j.id !== id),
@@ -447,6 +443,7 @@ export default function SeekerApplicationsPage() {
           <StageStrip tracker={tracker} />
         </section>
         <ApplicationsBoard
+          key={JSON.stringify(tracker)}
           stagesData={tracker}
           compact={false}
           columns={5}
@@ -524,7 +521,7 @@ export default function SeekerApplicationsPage() {
                   dateAdded: new Date().toISOString().split('T')[0],
                   status: 'Applied',
                 }
-          }
+              }
           stages={STAGES}
         />
       )}
