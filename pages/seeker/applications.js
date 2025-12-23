@@ -366,9 +366,10 @@ export default function SeekerApplicationsPage() {
         if (!res.ok) throw new Error('Update application failed');
         const { card } = await res.json();
 
+        // Replace by id with returned card (truth from DB)
         setTracker((prev) => ({
           ...prev,
-          [status]: prev[status].map((j) => (j.id === id ? { ...j, ...card } : j)),
+          [status]: prev[status].map((j) => (j.id === id ? card : j)),
         }));
       }
     } catch (err) {
@@ -521,7 +522,7 @@ export default function SeekerApplicationsPage() {
                   dateAdded: new Date().toISOString().split('T')[0],
                   status: 'Applied',
                 }
-              }
+          }
           stages={STAGES}
         />
       )}
