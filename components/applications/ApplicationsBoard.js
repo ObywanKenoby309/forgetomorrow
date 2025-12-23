@@ -16,7 +16,9 @@ import {
   arrayMove,
   sortableKeyboardCoordinates,
   verticalListSortingStrategy,
+  useSortable,  // <-- THIS WAS MISSING
 } from '@dnd-kit/sortable';
+import { CSS } from '@dnd-kit/utilities';
 
 const STAGES = ['Pinned', 'Applied', 'Interviewing', 'Offers', 'Closed Out'];
 
