@@ -12,7 +12,6 @@ import {
 } from '@dnd-kit/core';
 import {
   SortableContext,
-  arrayMove,
   sortableKeyboardCoordinates,
   verticalListSortingStrategy,
   useSortable,
@@ -31,6 +30,8 @@ const stageKey = (stage) =>
   }[stage] || 'info');
 
 function SortableCard({ job, stage, onView, onEdit, onDelete }) {
+  if (!job || !job.id) return null;  // Guard against undefined
+
   const {
     attributes,
     listeners,
@@ -50,7 +51,7 @@ function SortableCard({ job, stage, onView, onEdit, onDelete }) {
   };
 
   return (
-    <div ref={setNodeRef} style={style}>
+    <div ref={setNodeRef} style={style} key={job.id}>
       <ApplicationCard
         job={job}
         stage={stage}
@@ -114,7 +115,7 @@ export default function ApplicationsBoard({
     borderRadius: 12,
     padding: compact ? 8 : 16,
     boxShadow: '0 2px 6px rgba(0,0,0,0.06)',
-    minHeight: '300px', // Bigger drop area
+    minHeight: '300px',
     position: 'relative',
   };
 
@@ -127,31 +128,19 @@ export default function ApplicationsBoard({
     const { active, over } = event;
     if (!over) return;
 
-    const activeStage = STAGES.find((s) => stagesData[s]?.some((j) => j.id === active.id));
+    const activeStage = STAGES.find((s) => stagesData[s]?.some((j) => j?.id === active.id));
     if (!activeStage) return;
 
-    // Better overStage detection
-    let overStage = null;
+    let overIdStr = String(over.id);
+    let overStage = STAGES.find((s) => overIdStr.startsWith(`${s}-column`));
 
-    // 1. Direct column id
-    if (over.id && typeof over.id === 'string' && over.id.includes('-column')) {
-      overStage = STAGES.find((s) => over.id === `${s}-column`);
-    }
-
-    // 2. If over a card, use its stage
-    if (!overStage && over.id) {
-      overStage = STAGES.find((s) => stagesData[s]?.some((j) => j.id === over.id));
-    }
-
-    // 3. Fallback: look for parent column
-    if (!overStage && over.data?.current?.sortable) {
-      const index = over.data.current.sortable.index;
-      // Not perfect, but better than nothing
+    if (!overStage) {
+      overStage = STAGES.find((s) => stagesData[s]?.some((j) => j?.id === over.id));
     }
 
     if (!overStage || activeStage === overStage) return;
 
-    const job = stagesData[activeStage].find((j) => j.id === active.id);
+    const job = stagesData[activeStage].find((j) => j?.id === active.id);
     if (job && onMove) {
       onMove(job.id, activeStage, overStage, job.pinnedId || null);
     }
@@ -209,7 +198,7 @@ export default function ApplicationsBoard({
         >
           {STAGES.map((stage) => {
             const c = colorFor(stageKey(stage));
-            const items = stagesData[stage] || [];
+            const items = (stagesData[stage] || []).filter(Boolean); // Remove undefined
             const columnId = `${stage}-column`;
 
             return (
@@ -234,36 +223,34 @@ export default function ApplicationsBoard({
                   <span style={{ fontWeight: 900 }}>{items.length}</span>
                 </div>
 
-                <div style={{ minHeight: '100px', flexGrow: 1 }}>
-                  {items.length > 0 ? (
-                    <SortableContext
-                      items={items.map((j) => j.id)}
-                      strategy={verticalListSortingStrategy}
-                    >
-                      {items.map((job) => (
-                        <SortableCard
-                          key={job.id}
-                          job={job}
-                          stage={stage}
-                          onView={onView}
-                          onEdit={onEdit}
-                          onDelete={onDelete}
-                        />
-                      ))}
-                    </SortableContext>
-                  ) : (
-                    <div
-                      style={{
-                        color: '#90A4AE',
-                        fontSize: compact ? 12 : 14,
-                        textAlign: 'center',
-                        padding: '60px 0',
-                      }}
-                    >
-                      No items. Drop here.
-                    </div>
-                  )}
-                </div>
+                {items.length > 0 ? (
+                  <SortableContext
+                    items={items.map((j) => j.id)}
+                    strategy={verticalListSortingStrategy}
+                  >
+                    {items.map((job) => (
+                      <SortableCard
+                        key={job.id}
+                        job={job}
+                        stage={stage}
+                        onView={onView}
+                        onEdit={onEdit}
+                        onDelete={onDelete}
+                      />
+                    ))}
+                  </SortableContext>
+                ) : (
+                  <div
+                    style={{
+                      color: '#90A4AE',
+                      fontSize: compact ? 12 : 14,
+                      textAlign: 'center',
+                      padding: '80px 0',
+                    }}
+                  >
+                    No items. Drop here.
+                  </div>
+                )}
               </div>
             );
           })}
