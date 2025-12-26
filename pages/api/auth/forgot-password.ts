@@ -12,6 +12,17 @@ function sha256Hex(input: string) {
   return crypto.createHash('sha256').update(input).digest('hex');
 }
 
+function safeEmailDebug() {
+  const host = process.env.SMTP_HOST || process.env.EMAIL_SERVER || 'unset';
+  const port = process.env.SMTP_PORT || process.env.EMAIL_PORT || 'unset';
+  const secure = process.env.SMTP_SECURE ?? '(inferred)';
+
+  const hasUser = !!(process.env.SMTP_USER || process.env.EMAIL_USER);
+  const hasPass = !!(process.env.SMTP_PASS || process.env.EMAIL_PASSWORD);
+
+  return { host, port, secure, hasUser, hasPass, nodeEnv: process.env.NODE_ENV };
+}
+
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   if (req.method !== 'POST') return res.status(405).json({ ok: false });
 
@@ -50,15 +61,11 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   }
 
   // Optional cleanup: remove expired/used tokens for this user (keeps table clean)
-  // (Minimal + safe; doesn't change behavior)
   try {
     await prisma.passwordResetToken.deleteMany({
       where: {
         userId: user.id,
-        OR: [
-          { expiresAt: { lt: new Date() } },
-          { usedAt: { not: null } },
-        ],
+        OR: [{ expiresAt: { lt: new Date() } }, { usedAt: { not: null } }],
       },
     });
   } catch {
@@ -82,8 +89,12 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   // Send email (best effort). Even if email fails, still return neutral response.
   try {
     await sendPasswordResetEmail(user.email, token);
-  } catch (e) {
-    console.error('Password reset email send failed:', e);
+  } catch (e: any) {
+    // ✅ SAFE: shows env presence + host/port without secrets
+    console.error('Password reset email send failed:', {
+      debug: safeEmailDebug(),
+      error: String(e?.message || e),
+    });
   }
 
   return okResponse();
