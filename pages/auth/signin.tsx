@@ -1,4 +1,5 @@
 // pages/auth/signin.tsx — FINAL FIXED VERSION (NO MORE LOOP)
+import Link from 'next/link';
 import { getSession, getCsrfToken } from 'next-auth/react';
 
 type SignInProps = {
@@ -73,11 +74,7 @@ export default function SignIn({ csrfToken, error }: SignInProps) {
         <input name="csrfToken" type="hidden" defaultValue={csrfToken ?? ''} />
 
         {/* 🔁 After successful login, come back here so getServerSideProps can route by plan */}
-        <input
-          name="callbackUrl"
-          type="hidden"
-          value="/auth/signin"
-        />
+        <input name="callbackUrl" type="hidden" value="/auth/signin" />
 
         <div style={{ marginBottom: 16 }}>
           <label
@@ -103,7 +100,7 @@ export default function SignIn({ csrfToken, error }: SignInProps) {
           />
         </div>
 
-        <div style={{ marginBottom: 24 }}>
+        <div style={{ marginBottom: 10 }}>
           <label
             htmlFor="password"
             style={{ display: 'block', marginBottom: 6, fontWeight: 600 }}
@@ -125,6 +122,16 @@ export default function SignIn({ csrfToken, error }: SignInProps) {
               fontSize: 14,
             }}
           />
+        </div>
+
+        {/* ✅ NEW: Forgot Password link (minimal UI addition) */}
+        <div style={{ textAlign: 'right', marginBottom: 18 }}>
+          <Link
+            href="/forgot-password"
+            style={{ color: '#FF7043', fontSize: 13, fontWeight: 700 }}
+          >
+            Forgot password?
+          </Link>
         </div>
 
         <button

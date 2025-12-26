@@ -48,20 +48,20 @@ enum ProfileVisibility {
 // ============================================================================
 
 model Job {
-  id                Int      @id @default(autoincrement())
-  company           String
-  title             String
-  worksite          String
-  location          String
-  type              String?
-  compensation      String?
-  description       String
+  id           Int     @id @default(autoincrement())
+  company      String
+  title        String
+  worksite     String
+  location     String
+  type         String?
+  compensation String?
+  description  String
 
   // These exist in the DB already — keep them to avoid data loss
-  salary            String?
-  source            String?
-  tags              String?
-  url               String?
+  salary String?
+  source String?
+  tags   String?
+  url    String?
 
   status            String   @default("Draft")
   urgent            Boolean  @default(false)
@@ -96,21 +96,22 @@ enum ApplicationStatus {
 }
 
 model Application {
-  id Int @id @default(autoincrement())
-  userId String
-  jobId Int?
-  resumeId Int?
-  coverId Int?
-  title String?
-  company String?
-  location String?
-  url String?
-  notes String?
-  status ApplicationStatus @default(Applied)
-  appliedAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-  user User @relation(fields: [userId], references: [id])
-  job Job? @relation(fields: [jobId], references: [id])
+  id        Int               @id @default(autoincrement())
+  userId    String
+  jobId     Int?
+  resumeId  Int?
+  coverId   Int?
+  title     String?
+  company   String?
+  location  String?
+  url       String?
+  notes     String?
+  status    ApplicationStatus @default(Applied)
+  appliedAt DateTime          @default(now())
+  updatedAt DateTime          @updatedAt
+  user      User              @relation(fields: [userId], references: [id])
+  job       Job?              @relation(fields: [jobId], references: [id])
+
   @@map("applications")
 }
 
@@ -155,16 +156,17 @@ model Offer {
 }
 
 model PinnedJob {
-  id Int @id @default(autoincrement())
-  userId String
-  jobId Int?
-  title String?
-  company String?
+  id       Int      @id @default(autoincrement())
+  userId   String
+  jobId    Int?
+  title    String?
+  company  String?
   location String?
-  url String?
+  url      String?
   pinnedAt DateTime @default(now())
-  user User @relation(fields: [userId], references: [id])
-  job Job? @relation(fields: [jobId], references: [id])
+  user     User     @relation(fields: [userId], references: [id])
+  job      Job?     @relation(fields: [jobId], references: [id])
+
   @@map("pinned_jobs")
 }
 
@@ -280,6 +282,23 @@ model VerificationToken {
   @@map("verification_tokens")
 }
 
+// ✅ NEW: Password Reset Tokens (DB-backed, hashed-at-rest, single-use)
+model PasswordResetToken {
+  id        String    @id @default(cuid())
+  userId    String
+  tokenHash String    @unique
+  expiresAt DateTime
+  usedAt    DateTime?
+  createdAt DateTime  @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([expiresAt])
+  @@index([createdAt])
+  @@map("password_reset_tokens")
+}
+
 // ============================================================================
 //  CAREER TOOLS & HISTORY
 // ============================================================================
@@ -347,16 +366,16 @@ model UserConsent {
 // ============================================================================
 
 model CoachingClient {
-  id          String   @id @default(cuid())
+  id          String    @id @default(cuid())
   coachId     String
   clientId    String?
   name        String
   email       String?
-  status      String   @default("Active")
+  status      String    @default("Active")
   nextSession DateTime?
   lastContact DateTime?
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
 
   coach  User  @relation("CoachClientsCoach", fields: [coachId], references: [id], onDelete: Cascade)
   client User? @relation("CoachClientsClient", fields: [clientId], references: [id], onDelete: Cascade)
@@ -369,7 +388,7 @@ model CoachingClient {
 }
 
 model CoachingSession {
-  id       String @id @default(cuid())
+  id       String  @id @default(cuid())
   coachId  String
   clientId String?
 
@@ -383,7 +402,7 @@ model CoachingSession {
   status String @default("Scheduled")
 
   followUpDueAt DateTime?
-  followUpDone  Boolean  @default(false)
+  followUpDone  Boolean   @default(false)
 
   notes     String?
   createdAt DateTime @default(now())
@@ -404,10 +423,10 @@ model CoachingSession {
 // ============================================================================
 
 model CoachingCsatResponse {
-  id           String   @id @default(cuid())
+  id String @id @default(cuid())
 
   coachId String
-  coach   User @relation("UserCoachingCsatResponses", fields: [coachId], references: [id], onDelete: Cascade)
+  coach   User   @relation("UserCoachingCsatResponses", fields: [coachId], references: [id], onDelete: Cascade)
 
   satisfaction Int
   timeliness   Int
@@ -428,17 +447,17 @@ model CoachingCsatResponse {
 // ============================================================================
 
 model HearthSpotlight {
-  id           String   @id @default(cuid())
+  id String @id @default(cuid())
 
   userId String
-  user   User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   name         String
   headline     String
   summary      String
-  specialties  Json     // string[]
-  rate         String   @default("Free")
-  availability String   @default("Open to discuss")
+  specialties  Json // string[]
+  rate         String @default("Free")
+  availability String @default("Open to discuss")
 
   // Optional: keep for now (you said you may remove visible email later)
   contactEmail String?
@@ -448,7 +467,6 @@ model HearthSpotlight {
 
   // One spotlight per coach (this is the “lock it down” rule)
   @@unique([userId])
-
   @@index([createdAt])
   @@map("hearth_spotlights")
 }
@@ -495,10 +513,10 @@ model ContactRequest {
 // ============================================================================
 
 model User {
-  id                         String  @id @default(cuid())
-  email                      String  @unique
-  emailVerified              Boolean @default(false)
-  emailVerificationToken     String? @unique
+  id                         String    @id @default(cuid())
+  email                      String    @unique
+  emailVerified              Boolean   @default(false)
+  emailVerificationToken     String?   @unique
   emailVerificationExpiresAt DateTime?
   passwordHash               String?
   firstName                  String?
@@ -564,7 +582,7 @@ model User {
   messages                 Message[]                 @relation("UserMessages")
   conversationParticipants ConversationParticipant[] @relation("UserConversationParticipants")
   blocksInitiated          UserBlock[]               @relation("UserBlocksAsBlocker")
-  blocksReceived          UserBlock[]               @relation("UserBlocksAsBlocked")
+  blocksReceived           UserBlock[]               @relation("UserBlocksAsBlocked")
   messageReactions         MessageReaction[]         @relation("UserMessageReactions")
   reportsFiled             ConversationReport[]      @relation("UserReportsAsReporter")
   reportsReceived          ConversationReport[]      @relation("UserReportsAsReported")
@@ -595,13 +613,17 @@ model User {
 
   seekerCalendarItems SeekerCalendarItem[] @relation("UserSeekerCalendarItems")
 
-  corporateBannerKey String?
-  corporateBannerLocked Boolean @default(false)
-  resumeAlignFreeUses Int @default(0)
+  // ✅ NEW: inverse relation for PasswordResetToken.user
+  passwordResetTokens PasswordResetToken[]
+
+  corporateBannerKey        String?
+  corporateBannerLocked     Boolean   @default(false)
+  resumeAlignFreeUses       Int       @default(0)
   resumeAlignLastResetMonth String? // format "2025-12"
-  deletedAt DateTime?
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  deletedAt                 DateTime?
+  createdAt                 DateTime  @default(now())
+  updatedAt                 DateTime  @updatedAt
+
   @@map("users")
 }
 
@@ -677,7 +699,7 @@ model RecruiterCalendarItem {
   id String @id @default(cuid())
 
   ownerId String
-  owner   User @relation("UserRecruiterCalendarOwner", fields: [ownerId], references: [id], onDelete: Cascade)
+  owner   User   @relation("UserRecruiterCalendarOwner", fields: [ownerId], references: [id], onDelete: Cascade)
 
   scope String @default("team")
 
@@ -685,8 +707,8 @@ model RecruiterCalendarItem {
   time String?
 
   title  String
-  type   String @default("Interview")
-  status String @default("Scheduled")
+  type   String  @default("Interview")
+  status String  @default("Scheduled")
   notes  String?
 
   candidateType   String  @default("external")
@@ -694,9 +716,9 @@ model RecruiterCalendarItem {
   candidate       User?   @relation("UserRecruiterCalendarCandidate", fields: [candidateUserId], references: [id], onDelete: SetNull)
   candidateName   String
 
-  company  String?
-  jobTitle String?
-  req      String?
+  company   String?
+  jobTitle  String?
+  req       String?
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
@@ -714,17 +736,17 @@ model SeekerCalendarItem {
   id String @id @default(cuid())
 
   userId String
-  user   User @relation("UserSeekerCalendarItems", fields: [userId], references: [id], onDelete: Cascade)
+  user   User   @relation("UserSeekerCalendarItems", fields: [userId], references: [id], onDelete: Cascade)
 
   date DateTime
   time String?
 
   title  String
-  type   String @default("Interview")
-  status String @default("Scheduled")
+  type   String  @default("Interview")
+  status String  @default("Scheduled")
   notes  String?
 
-  source       String @default("personal")
+  source       String  @default("personal")
   sourceItemId String?
 
   createdAt DateTime @default(now())
@@ -781,9 +803,12 @@ model Message {
   createdAt      DateTime @default(now())
 
   conversation Conversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
-  sender       User         @relation("UserMessages", fields: [senderId], references: [id])
-  reactions    MessageReaction[]
-  reports      ConversationReport[]
+
+  // ✅ FIX: named relation must match User.messages @relation("UserMessages")
+  sender User @relation("UserMessages", fields: [senderId], references: [id])
+
+  reactions MessageReaction[]
+  reports   ConversationReport[]
 
   @@index([conversationId, createdAt])
   @@index([senderId])
@@ -791,16 +816,17 @@ model Message {
 }
 
 model UserBlock {
-  id Int @id @default(autoincrement())
+  id        Int      @id @default(autoincrement())
   blockerId String
   blockedId String
   createdAt DateTime @default(now())
-  
+
   // ✅ NEW: Optional reason for block (from prompt in PostCard)
   reason String?
 
   blocker User @relation("UserBlocksAsBlocker", fields: [blockerId], references: [id], onDelete: Cascade)
   blocked User @relation("UserBlocksAsBlocked", fields: [blockedId], references: [id], onDelete: Cascade)
+
   @@unique([blockerId, blockedId])
   @@index([blockerId])
   @@index([blockedId])
@@ -815,7 +841,9 @@ model MessageReaction {
   createdAt DateTime @default(now())
 
   message Message @relation(fields: [messageId], references: [id], onDelete: Cascade)
-  user    User    @relation("UserMessageReactions", fields: [userId], references: [id], onDelete: Cascade)
+
+  // ✅ FIX: named relation must match User.messageReactions @relation("UserMessageReactions")
+  user User @relation("UserMessageReactions", fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([messageId])
   @@index([userId])
