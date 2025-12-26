@@ -266,7 +266,7 @@ function Jobs() {
   const [applyJob, setApplyJob] = useState(null);
   const [selectedJob, setSelectedJob] = useState(null);
 
-  // ATS result state
+  // Match / alignment result state (kept variable names for compatibility)
   const [atsLoading, setAtsLoading] = useState(false);
   const [atsError, setAtsError] = useState(null);
   const [atsResult, setAtsResult] = useState(null);
@@ -290,7 +290,7 @@ function Jobs() {
   // pinned job ids
   const [pinnedIds, setPinnedIds] = useState(new Set());
 
-  // ✅ NEW: draft write helper (DB-backed)
+  // ✅ Draft write helper (DB-backed)
   const saveDraft = async (key, content) => {
     try {
       const res = await fetch('/api/drafts/set', {
@@ -403,7 +403,10 @@ function Jobs() {
     setApplyOpen(true);
   };
 
-  // ✅ FIX: Resume-Role Align writes JD into drafts before redirect
+  // ✅ FIX: Resume-Role Align now writes BOTH:
+  // 1) ft_last_job_text (JD)
+  // 2) forge-ats-pack (job meta pack) so resume/create shows "Job Fire Loaded"
+  // Then redirects with from=match (no "ATS" in URL)
   const handleResumeAlign = async (job) => {
     if (!job) return;
 
@@ -411,17 +414,35 @@ function Jobs() {
       const raw = job.description || '';
       const clean = normalizeJobText(raw);
 
-      // Only write if we actually have usable JD text
+      // Write JD text for AtsDepthPanel fallback
       if (clean && clean.trim()) {
         await saveDraft('ft_last_job_text', clean);
       }
+
+      // Write a "job pack" for the resume builder banner
+      const pack = {
+        job: {
+          id: job.id,
+          title: job.title,
+          company: job.company,
+          location: job.location,
+          description: raw, // keep raw; create.js normalizes if needed
+        },
+        // Keep structure expected by resume/create, but do NOT claim a scored result here
+        ats: {
+          score: null,
+          summary: '',
+          recommendations: [],
+        },
+      };
+
+      await saveDraft('forge-ats-pack', pack);
     } catch (err) {
-      console.error('[Jobs] Failed to store JD for Resume-Role Align', err);
+      console.error('[Jobs] Failed to store job context for Resume Alignment', err);
       // continue anyway — user can still upload JD manually
     }
 
-    // Resume-Role Align is NOT the ATS flow. Do not use from=ats here.
-    window.location.href = `/resume/create?jobId=${job.id}&copyJD=true`;
+    window.location.href = `/resume/create?from=match&jobId=${job.id}&copyJD=true`;
   };
 
   const handleATSAlign = async (job) => {
@@ -437,7 +458,7 @@ function Jobs() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ jobId: job.id }),
       });
-      if (!res.ok) throw new Error(`ATS API failed (status ${res.status})`);
+      if (!res.ok) throw new Error(`Alignment API failed (status ${res.status})`);
       const payload = await res.json();
       setAtsResult({
         score: typeof payload.score === 'number' ? payload.score : null,
@@ -445,7 +466,7 @@ function Jobs() {
         recommendations: Array.isArray(payload.recommendations) ? payload.recommendations : [],
       });
     } catch (err) {
-      console.error('[Jobs] ATS align error', err);
+      console.error('[Jobs] Alignment error', err);
       setAtsError(null);
       setAtsResult({
         score: 78,
@@ -484,14 +505,14 @@ function Jobs() {
       });
 
       if (!res.ok) {
-        console.warn('[Jobs] failed to write ATS pack to DB drafts', res.status);
+        console.warn('[Jobs] failed to write match pack to DB drafts', res.status);
       }
     } catch (err) {
-      console.error('[Jobs] failed to write ATS pack to DB drafts', err);
+      console.error('[Jobs] failed to write match pack to DB drafts', err);
     }
 
-    // ✅ Go straight to the resume builder with job context
-    window.location.href = `/resume/create?from=ats&jobId=${atsJob.id}&copyJD=true`;
+    // ✅ Go straight to the resume builder with job context (no "ATS" in URL)
+    window.location.href = `/resume/create?from=match&jobId=${atsJob.id}&copyJD=true`;
   };
 
   const handleSelectJob = (job) => {
@@ -1477,7 +1498,7 @@ function Jobs() {
         onResumeAlign={handleResumeAlign}
       />
 
-      {/* ATS Result Panel */}
+      {/* Result Panel */}
       <ATSResultPanel
         open={atsPanelOpen}
         onClose={() => setAtsPanelOpen(false)}
