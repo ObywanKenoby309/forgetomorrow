@@ -368,9 +368,10 @@ function Jobs() {
     setApplyOpen(true);
   };
   const handleResumeAlign = (job) => {
-    if (!job) return;
-    window.location.href = `/resume-cover?jobId=${job.id}&copyJD=true`;
-  };
+  if (!job) return;
+  // Resume-Role Align is NOT the ATS flow. Do not use from=ats here.
+  window.location.href = `/resume/create?jobId=${job.id}&copyJD=true`;
+};
   const handleATSAlign = async (job) => {
     if (!job) return;
     setAtsJob(job);
@@ -410,25 +411,38 @@ function Jobs() {
       setAtsLoading(false);
     }
   };
-  const handleSendToResumeBuilder = () => {
-    if (!atsJob || !atsResult) return;
-    const pack = {
-      job: {
-        id: atsJob.id,
-        title: atsJob.title,
-        company: atsJob.company,
-        location: atsJob.location,
-        description: atsJob.description,
-      },
-      ats: atsResult,
-    };
-    try {
-      localStorage.setItem('forge-ats-pack', JSON.stringify(pack));
-    } catch (err) {
-      console.error('[Jobs] failed to write ATS pack to localStorage', err);
-    }
-    window.location.href = '/resume-cover?from=ats';
+  const handleSendToResumeBuilder = async () => {
+  if (!atsJob || !atsResult) return;
+
+  const pack = {
+    job: {
+      id: atsJob.id,
+      title: atsJob.title,
+      company: atsJob.company,
+      location: atsJob.location,
+      description: atsJob.description,
+    },
+    ats: atsResult,
   };
+
+  // ✅ Store in DB drafts (no localStorage)
+  try {
+    const res = await fetch('/api/drafts/set', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ key: 'forge-ats-pack', content: pack }),
+    });
+
+    if (!res.ok) {
+      console.warn('[Jobs] failed to write ATS pack to DB drafts', res.status);
+    }
+  } catch (err) {
+    console.error('[Jobs] failed to write ATS pack to DB drafts', err);
+  }
+
+  // ✅ Go straight to the resume builder with job context
+  window.location.href = `/resume/create?from=ats&jobId=${atsJob.id}&copyJD=true`;
+};
   const handleSelectJob = (job) => {
     setSelectedJob(job);
     addViewedJob(job); // 🔹 Only mark as viewed when user actively selects
