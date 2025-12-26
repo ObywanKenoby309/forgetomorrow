@@ -54,8 +54,7 @@ export default function CoachSuggestionsPanel({
     education: 'education section',
   };
 
-  const humanSection =
-    sectionLabelMap[context.section] || 'this part of your resume';
+  const humanSection = sectionLabelMap[context.section] || 'this part of your resume';
 
   const keywordHint = context.keyword
     ? `Focus especially on how to include the keyword "${context.keyword}" in a natural way.`
@@ -184,20 +183,13 @@ export default function CoachSuggestionsPanel({
         }}
       >
         <p style={{ marginBottom: 8 }}>
-          You&apos;re editing your <strong>{humanSection}</strong>. I&apos;ll
-          suggest wording you can paste directly into your resume. {keywordHint}
+          You&apos;re editing your <strong>{humanSection}</strong>. I&apos;ll suggest wording you
+          can paste directly into your resume. {keywordHint}
         </p>
 
         {!jdText?.trim() && (
-          <p
-            style={{
-              marginBottom: 8,
-              fontStyle: 'italic',
-              color: '#8D6E63',
-            }}
-          >
-            Tip: You&apos;ll get the best results once a job description is
-            loaded above.
+          <p style={{ marginBottom: 8, fontStyle: 'italic', color: '#8D6E63' }}>
+            Tip: You&apos;ll get the best results once a job description is loaded above.
           </p>
         )}
 
@@ -220,13 +212,7 @@ export default function CoachSuggestionsPanel({
         </button>
 
         {error && (
-          <p
-            style={{
-              marginTop: 4,
-              color: '#C62828',
-              fontSize: 12,
-            }}
-          >
+          <p style={{ marginTop: 4, color: '#C62828', fontSize: 12 }}>
             {error}
           </p>
         )}
@@ -246,33 +232,14 @@ export default function CoachSuggestionsPanel({
               {text}
             </div>
 
-            <div
-              style={{
-                marginTop: 10,
-                display: 'flex',
-                flexWrap: 'wrap',
-                gap: 6,
-              }}
-            >
-              <button
-                type="button"
-                onClick={() => handleQuickInsert('summary')}
-                style={chipStyle}
-              >
+            <div style={{ marginTop: 10, display: 'flex', flexWrap: 'wrap', gap: 6 }}>
+              <button type="button" onClick={() => handleQuickInsert('summary')} style={chipStyle}>
                 Apply to summary
               </button>
-              <button
-                type="button"
-                onClick={() => handleQuickInsert('skill')}
-                style={chipStyle}
-              >
+              <button type="button" onClick={() => handleQuickInsert('skill')} style={chipStyle}>
                 Add as skills
               </button>
-              <button
-                type="button"
-                onClick={() => handleQuickInsert('bullet')}
-                style={chipStyle}
-              >
+              <button type="button" onClick={() => handleQuickInsert('bullet')} style={chipStyle}>
                 Insert as bullets
               </button>
             </div>

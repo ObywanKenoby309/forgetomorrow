@@ -277,10 +277,13 @@ export default function CreateResumePage() {
   const [openTailor, setOpenTailor] = useState(false);
   const [toolsOpen, setToolsOpen] = useState(true); // collapsible tools bar
 
-  // Context passed from jobs page (via resume-cover)
+  // ATS context passed from jobs page (via resume-cover)
   const [atsPack, setAtsPack] = useState(null);
   const [atsJobMeta, setAtsJobMeta] = useState(null);
   const [atsAppliedFromContext, setAtsAppliedFromContext] = useState(false);
+
+  // ✅ NEW: job meta lookup for Resume-Role Align flow (jobId without pack)
+  const [jobMeta, setJobMeta] = useState(null);
 
   // Draft API helpers (DB-backed)
   const getDraft = async (key) => {
@@ -426,6 +429,43 @@ export default function CreateResumePage() {
     loadProfileDefaults();
   }, [formData.fullName, formData.forgeUrl, formData.ftProfile, setFormData]);
 
+  // ✅ NEW: If jobId is present, fetch job meta so we can show title/company/location even without a pack
+  useEffect(() => {
+    if (!router.isReady) return;
+
+    const jobId = String(router.query.jobId || '').trim();
+    if (!jobId) {
+      setJobMeta(null);
+      return;
+    }
+
+    let cancelled = false;
+
+    async function loadJobMeta() {
+      try {
+        const res = await fetch(`/api/jobs?jobId=${encodeURIComponent(jobId)}`);
+        if (!res.ok) return;
+        const data = await res.json();
+        const job = data?.job;
+        if (!job || cancelled) return;
+
+        setJobMeta({
+          title: job.title || '',
+          company: job.company || '',
+          location: job.location || '',
+        });
+      } catch (err) {
+        console.error('[resume/create] Failed to load job meta', err);
+      }
+    }
+
+    loadJobMeta();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [router.isReady, router.query.jobId]);
+
   // Handle manual JD file upload / drop — WITH LIMIT CHECK
   const handleFile = async (file) => {
     if (!file) return;
@@ -443,7 +483,6 @@ export default function CreateResumePage() {
       const raw = file.size > 1_500_000 ? await uploadJD(file) : await extractTextFromFile(file);
       const clean = normalizeJobText(raw);
       setJd(clean);
-
       // ✅ DB-backed draft storage (no localStorage)
       await saveDraft(DRAFT_KEYS.LAST_JOB_TEXT, clean);
     } catch (e) {
@@ -558,7 +597,7 @@ export default function CreateResumePage() {
   }, [router.isReady, router.query, formData.fullName, formData.name, summary, setFormData, setSummary]);
 
   // ─────────────────────────────────────────────────────────────
-  // Apply pack + JD context from resume-cover (DB drafts)
+  // Apply ATS pack + JD context from resume-cover (DB drafts)
   // ─────────────────────────────────────────────────────────────
   useEffect(() => {
     if (!router.isReady) return;
@@ -571,20 +610,9 @@ export default function CreateResumePage() {
 
       if (fromFlag === 'ats') {
         try {
-          let pack = await getDraft(DRAFT_KEYS.ATS_PACK);
-
-          // Defensive: drafts may return JSON as a string
-          if (typeof pack === 'string') {
-            try {
-              pack = JSON.parse(pack);
-            } catch {
-              // ignore
-            }
-          }
-
-          if (pack && typeof pack === 'object') {
+          const pack = await getDraft(DRAFT_KEYS.ATS_PACK);
+          if (pack) {
             setAtsPack(pack || null);
-
             if (pack?.job) {
               setAtsJobMeta({
                 title: pack.job.title || '',
@@ -592,8 +620,7 @@ export default function CreateResumePage() {
                 location: pack.job.location || '',
               });
             }
-
-            // If pack carries a job description, auto-use it as JD text
+            // If ATS pack carries a job description, auto-use it as JD text
             if (pack?.job?.description && !jd) {
               const clean = normalizeJobText(pack.job.description);
               setJd(clean);
@@ -624,17 +651,7 @@ export default function CreateResumePage() {
     applyAtsContext();
   }, [router.isReady, router.query, jd, atsAppliedFromContext]);
 
-  const jdCompact = jd ? String(jd).replace(/\s+/g, ' ').trim() : '';
-  const jdPreview = jdCompact ? (jdCompact.length > 240 ? `${jdCompact.slice(0, 240)}…` : jdCompact) : '';
-  const jdWordCount = jdCompact ? jdCompact.split(/\s+/).filter(Boolean).length : 0;
-
-  const clearJobFire = async () => {
-    setJd('');
-    setAtsPack(null);
-    setAtsJobMeta(null);
-    await saveDraft(DRAFT_KEYS.LAST_JOB_TEXT, '');
-    await saveDraft(DRAFT_KEYS.ATS_PACK, null);
-  };
+  const fireMeta = atsJobMeta || jobMeta;
 
   // HEADER
   const Header = (
@@ -662,11 +679,10 @@ export default function CreateResumePage() {
     </section>
   );
 
-  // FOOTER
+  // FOOTER (removed ATS wording + removed the risky stat claim)
   const Footer = (
     <div className="mt-16 text-center text-xs text-gray-500 max-w-2xl mx-auto px-4">
-      *87% of job seekers using system-optimized resumes receive at least one interview within 7 days of applying.{' '}
-      <em>Source: Jobscan 2024 Applicant Study (n=1,200). Results vary.</em>
+      Tip: System-optimized formatting improves compatibility with automated screeners. <em>Results vary by role and market.</em>
     </div>
   );
 
@@ -759,29 +775,21 @@ export default function CreateResumePage() {
             open={openTailor}
             onToggle={() => setOpenTailor((v) => !v)}
           >
-            {/* ✅ FIX: Show "Job Fire Loaded" when EITHER a pack is present OR a JD is present */}
-            {atsPack || jd ? (
+            {/* Job fire banner */}
+            {atsPack ? (
               <div style={{ display: 'grid', gap: 10, marginBottom: 16 }}>
                 <Banner tone="blue">
-                  <div style={{ fontWeight: 800, marginBottom: 4 }}>🔥 Job Fire Loaded</div>
-
+                  <div style={{ fontWeight: 800, marginBottom: 4 }}>🔥 Job fire loaded</div>
                   <div style={{ fontSize: 14, marginBottom: 6 }}>
-                    This job description is now the <strong>fire</strong> heating your resume steel. Your AI hammer and
-                    match tools will shape everything against this posting.
+                    This job is now the <strong>fire</strong> heating your resume steel.
                   </div>
-
-                  {atsJobMeta && (atsJobMeta.title || atsJobMeta.company || atsJobMeta.location) ? (
-                    <div style={{ fontSize: 14, marginBottom: 6 }}>
+                  {atsJobMeta && (
+                    <div style={{ fontSize: 14, marginBottom: 4 }}>
                       <strong>{atsJobMeta.title}</strong>
                       {atsJobMeta.company ? ` at ${atsJobMeta.company}` : ''}
                       {atsJobMeta.location ? ` — ${atsJobMeta.location}` : ''}
                     </div>
-                  ) : (
-                    <div style={{ fontSize: 13, marginBottom: 6 }}>
-                      Loaded from your saved job description ({jdWordCount.toLocaleString()} words).
-                    </div>
                   )}
-
                   {hasRealAts ? (
                     <>
                       <div style={{ fontSize: 13, marginBottom: 6 }}>
@@ -805,62 +813,23 @@ export default function CreateResumePage() {
                     </>
                   ) : (
                     <div style={{ fontSize: 13, marginTop: 4 }}>
-                      Your fire is loaded. Run a scan below to see your live match % and tailored tips.
+                      This job is loaded as your fire, but it hasn’t been fully scored yet.
                     </div>
                   )}
-
-                  {jdPreview && (
-                    <div style={{ marginTop: 10 }}>
-                      <div style={{ fontSize: 12, fontWeight: 800, marginBottom: 4, color: '#0D47A1' }}>
-                        Loaded JD preview
-                      </div>
-                      <div
-                        style={{
-                          fontSize: 12,
-                          lineHeight: 1.5,
-                          background: 'rgba(255,255,255,0.55)',
-                          border: '1px solid rgba(144,202,249,0.8)',
-                          padding: '8px 10px',
-                          borderRadius: 10,
-                          color: '#0B1724',
-                        }}
-                      >
-                        {jdPreview}
-                      </div>
-                      <div style={{ marginTop: 10, display: 'flex', gap: 10, flexWrap: 'wrap' }}>
-                        <button
-                          type="button"
-                          onClick={clearJobFire}
-                          style={{
-                            background: 'white',
-                            color: '#0D47A1',
-                            border: '1px solid #90CAF9',
-                            borderRadius: 10,
-                            padding: '8px 12px',
-                            fontWeight: 800,
-                            cursor: 'pointer',
-                          }}
-                        >
-                          Clear job fire
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => fileInputRef.current?.click()}
-                          style={{
-                            background: ORANGE,
-                            color: 'white',
-                            border: 'none',
-                            borderRadius: 10,
-                            padding: '8px 12px',
-                            fontWeight: 800,
-                            cursor: 'pointer',
-                          }}
-                        >
-                          Replace with new file
-                        </button>
-                      </div>
-                    </div>
-                  )}
+                </Banner>
+              </div>
+            ) : fireMeta && jd ? (
+              <div style={{ display: 'grid', gap: 10, marginBottom: 16 }}>
+                <Banner tone="blue">
+                  <div style={{ fontWeight: 800, marginBottom: 4 }}>🔥 Job fire loaded</div>
+                  <div style={{ fontSize: 14 }}>
+                    <strong>{fireMeta.title || 'Job'}</strong>
+                    {fireMeta.company ? ` at ${fireMeta.company}` : ''}
+                    {fireMeta.location ? ` — ${fireMeta.location}` : ''}
+                  </div>
+                  <div style={{ fontSize: 13, marginTop: 6 }}>
+                    Your keyword coverage and match insights are now based on this posting.
+                  </div>
                 </Banner>
               </div>
             ) : (
@@ -869,7 +838,7 @@ export default function CreateResumePage() {
                 <div style={{ fontSize: 14 }}>
                   Your resume is the <strong>steel</strong>. This page is the <strong>anvil</strong>. The AI tools are
                   your <strong>hammer</strong>. Add a job description to supply the <strong>fire</strong> — and unlock
-                  keyword suggestions, match insights, and tailored guidance for this specific role.
+                  match insights, keyword coverage, and tailored guidance for this specific role.
                 </div>
               </Banner>
             )}
@@ -921,6 +890,7 @@ export default function CreateResumePage() {
                 skills={skills}
                 experiences={experiences}
                 education={educationList}
+                jobMeta={fireMeta || null} // ✅ NEW (safe) prop for panel to display title/company/location
                 onAddSkill={(k) => setSkills((s) => [...s, k])}
                 onAddSummary={(k) => setSummary((s) => (s ? `${s}\n\n${k}` : k))}
                 onAddBullet={(k) => {
