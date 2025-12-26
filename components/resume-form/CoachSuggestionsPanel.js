@@ -1,35 +1,61 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 
-/**
- * Props:
- * - open: boolean
- * - onClose: () => void
- * - context: { section: 'overview'|'summary'|'skills'|'experience'|'education', keyword?: string }
- * - jdText, resumeData
- * - missing: { high: string[], tools: string[], edu: string[], soft: string[] }
- * - onAddSkill, onAddSummary, onAddBullet
- */
+type CoachContext = {
+  section: 'overview' | 'summary' | 'skills' | 'experience' | 'education';
+  keyword?: string | null;
+};
+
+type MissingBuckets = {
+  high: string[];
+  tools: string[];
+  edu: string[];
+  soft: string[];
+};
+
+type Props = {
+  open: boolean;
+  onClose: () => void;
+  context?: CoachContext;
+  jdText: string;
+  resumeData: any;
+  missing: MissingBuckets;
+  onAddSkill?: (keyword: string) => void;
+  onAddSummary?: (snippet: string) => void;
+  onAddBullet?: (snippet: string) => void;
+};
+
+function safePreview(raw: string, max = 180) {
+  const t = (raw || '').replace(/\s+/g, ' ').trim();
+  if (!t) return '';
+  return t.length > max ? `${t.slice(0, max)}…` : t;
+}
+
 export default function CoachSuggestionsPanel({
   open,
   onClose,
-  context = { section: 'overview' },
+  context = { section: 'overview', keyword: null },
   jdText,
   resumeData,
   missing,
   onAddSkill,
   onAddSummary,
   onAddBullet,
-}) {
-  // 🔹 ALL hooks at the top, always in the same order
-  const [portalEl, setPortalEl] = useState(null);
+}: Props) {
+  const [portalEl, setPortalEl] = useState<HTMLElement | null>(null);
   const [loading, setLoading] = useState(false);
   const [text, setText] = useState('');
-  const [error, setError] = useState(null);
+  const [error, setError] = useState<string | null>(null);
 
-  // Create a portal container under <body> once on mount (client-only)
+  // used to auto-run once per "open session" (and once per context change)
+  const askedKeyRef = useRef<string>('');
+  const abortRef = useRef<AbortController | null>(null);
+
+  const hasJD = !!jdText?.trim();
+
+  // Create portal container once on mount
   useEffect(() => {
     if (typeof document === 'undefined') return;
 
@@ -39,28 +65,54 @@ export default function CoachSuggestionsPanel({
     setPortalEl(el);
 
     return () => {
-      document.body.removeChild(el);
+      try {
+        document.body.removeChild(el);
+      } catch {
+        // ignore
+      }
     };
   }, []);
 
-  // After hooks are defined, we can early-return safely
-  if (!open || !portalEl) return null;
+  // When closing, abort any in-flight request
+  useEffect(() => {
+    if (!open) {
+      abortRef.current?.abort();
+      abortRef.current = null;
+      askedKeyRef.current = '';
+      setLoading(false);
+      setError(null);
+      setText('');
+    }
+  }, [open]);
 
-  const sectionLabelMap = {
-    overview: 'overall alignment',
-    summary: 'summary section',
-    skills: 'skills section',
-    experience: 'experience bullets',
-    education: 'education section',
-  };
+  const sectionLabelMap: Record<string, string> = useMemo(
+    () => ({
+      overview: 'overall alignment',
+      summary: 'summary section',
+      skills: 'skills section',
+      experience: 'experience bullets',
+      education: 'education section',
+    }),
+    [],
+  );
 
   const humanSection = sectionLabelMap[context.section] || 'this part of your resume';
 
   const keywordHint = context.keyword
-    ? `Focus especially on how to include the keyword "${context.keyword}" in a natural way.`
+    ? `Focus especially on including the keyword "${context.keyword}" in a natural way.`
     : '';
 
-  const handleAsk = async () => {
+  const handleAsk = useCallback(async () => {
+    if (!hasJD) {
+      setError('Load a job description first.');
+      return;
+    }
+
+    // Abort previous request if user clicks multiple times
+    abortRef.current?.abort();
+    const ac = new AbortController();
+    abortRef.current = ac;
+
     setLoading(true);
     setError(null);
 
@@ -68,6 +120,7 @@ export default function CoachSuggestionsPanel({
       const resp = await fetch('/api/ats-coach', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
+        signal: ac.signal,
         body: JSON.stringify({
           jdText,
           resumeData,
@@ -76,21 +129,62 @@ export default function CoachSuggestionsPanel({
         }),
       });
 
-      const data = await resp.json();
-      if (!resp.ok) {
-        throw new Error(data?.error || 'Coach request failed');
+      const raw = await resp.text();
+
+      let data: any = null;
+      try {
+        data = raw ? JSON.parse(raw) : null;
+      } catch {
+        data = null;
       }
 
-      setText(data.text || '');
-    } catch (e) {
-      console.error('CoachSuggestionsPanel error', e);
-      setError('Coach could not load suggestions. Try again.');
-    } finally {
-      setLoading(false);
-    }
-  };
+      if (!resp.ok) {
+        const msg =
+          data?.error ||
+          `Coach request failed (${resp.status}). ${
+            resp.status === 404 ? 'Route /api/ats-coach not found.' : ''
+          }${raw ? ` Response: "${safePreview(raw)}"` : ''}`;
+        throw new Error(msg);
+      }
 
-  const handleQuickInsert = (type) => {
+      const out = (data?.text || '').toString().trim();
+      if (!out) {
+        setText('');
+        setError(
+          `Coach returned an empty response. ${
+            raw ? `Raw response: "${safePreview(raw)}"` : 'Check /api/ats-coach output.'
+          }`,
+        );
+        return;
+      }
+
+      setText(out);
+    } catch (e: any) {
+      if (e?.name === 'AbortError') return; // user closed or retried
+      console.error('CoachSuggestionsPanel error', e);
+      setError(e?.message || 'Coach could not load suggestions. Try again.');
+    } finally {
+      // if a new request started, don't flip loading off for the old one
+      if (abortRef.current === ac) {
+        setLoading(false);
+      }
+    }
+  }, [hasJD, jdText, resumeData, context, missing]);
+
+  // Auto-ask ONCE per open + per context change while open
+  useEffect(() => {
+    if (!open) return;
+    if (!hasJD) return;
+    if (!portalEl) return;
+
+    const key = `${context.section}|${context.keyword || ''}`;
+    if (askedKeyRef.current === key) return;
+
+    askedKeyRef.current = key;
+    handleAsk();
+  }, [open, hasJD, portalEl, context.section, context.keyword, handleAsk]);
+
+  const handleQuickInsert = (type: 'summary' | 'skill' | 'bullet') => {
     if (!text) return;
 
     if (type === 'summary' && onAddSummary) {
@@ -118,6 +212,8 @@ export default function CoachSuggestionsPanel({
     }
   };
 
+  if (!open || !portalEl) return null;
+
   const panel = (
     <div
       style={{
@@ -132,7 +228,7 @@ export default function CoachSuggestionsPanel({
         boxShadow: '0 10px 30px rgba(0,0,0,0.25)',
         display: 'flex',
         flexDirection: 'column',
-        zIndex: 11000, // top of the stack
+        zIndex: 11000,
         pointerEvents: 'auto',
       }}
     >
@@ -147,15 +243,7 @@ export default function CoachSuggestionsPanel({
           gap: 8,
         }}
       >
-        <div
-          style={{
-            fontWeight: 700,
-            fontSize: 15,
-            color: '#E65100',
-          }}
-        >
-          Writing Coach
-        </div>
+        <div style={{ fontWeight: 800, fontSize: 15, color: '#E65100' }}>Writing Coach</div>
         <button
           type="button"
           onClick={onClose}
@@ -163,10 +251,13 @@ export default function CoachSuggestionsPanel({
             border: 'none',
             background: 'transparent',
             cursor: 'pointer',
-            fontWeight: 700,
+            fontWeight: 900,
             color: '#BF360C',
+            fontSize: 18,
+            lineHeight: 1,
           }}
           aria-label="Close coach"
+          title="Close"
         >
           ×
         </button>
@@ -183,38 +274,37 @@ export default function CoachSuggestionsPanel({
         }}
       >
         <p style={{ marginBottom: 8 }}>
-          You&apos;re editing your <strong>{humanSection}</strong>. I&apos;ll suggest wording you
-          can paste directly into your resume. {keywordHint}
+          You&apos;re editing your <strong>{humanSection}</strong>. I&apos;ll suggest wording you can paste directly
+          into your resume. {keywordHint}
         </p>
 
-        {!jdText?.trim() && (
+        {!hasJD && (
           <p style={{ marginBottom: 8, fontStyle: 'italic', color: '#8D6E63' }}>
-            Tip: You&apos;ll get the best results once a job description is loaded above.
+            Tip: You&apos;ll get the best results once a job description is loaded.
           </p>
         )}
 
         <button
           type="button"
           onClick={handleAsk}
-          disabled={loading}
+          disabled={loading || !hasJD}
           style={{
             padding: '8px 14px',
             borderRadius: 10,
             border: 'none',
             background: '#FF7043',
             color: 'white',
-            fontWeight: 600,
-            cursor: loading ? 'not-allowed' : 'pointer',
+            fontWeight: 800,
+            cursor: loading || !hasJD ? 'not-allowed' : 'pointer',
             marginBottom: 10,
+            opacity: loading || !hasJD ? 0.7 : 1,
           }}
         >
           {loading ? 'Thinking…' : 'Ask the Coach'}
         </button>
 
         {error && (
-          <p style={{ marginTop: 4, color: '#C62828', fontSize: 12 }}>
-            {error}
-          </p>
+          <div style={{ marginTop: 4, color: '#C62828', fontSize: 12, fontWeight: 700 }}>{error}</div>
         )}
 
         {text && (
@@ -252,12 +342,12 @@ export default function CoachSuggestionsPanel({
   return createPortal(panel, portalEl);
 }
 
-const chipStyle = {
+const chipStyle: React.CSSProperties = {
   borderRadius: 999,
   border: '1px solid #FFCC80',
   background: 'white',
   padding: '4px 10px',
   fontSize: 12,
-  fontWeight: 600,
+  fontWeight: 800,
   cursor: 'pointer',
 };
