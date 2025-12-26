@@ -1,37 +1,45 @@
 'use client';
 
-import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 
-type CoachContext = {
-  section: 'overview' | 'summary' | 'skills' | 'experience' | 'education';
-  keyword?: string | null;
-};
+/**
+ * @typedef {Object} CoachContext
+ * @property {'overview'|'summary'|'skills'|'experience'|'education'} section
+ * @property {string|null} [keyword]
+ */
 
-type MissingBuckets = {
-  high: string[];
-  tools: string[];
-  edu: string[];
-  soft: string[];
-};
+/**
+ * @typedef {Object} MissingBuckets
+ * @property {string[]} high
+ * @property {string[]} tools
+ * @property {string[]} edu
+ * @property {string[]} soft
+ */
 
-type Props = {
-  open: boolean;
-  onClose: () => void;
-  context?: CoachContext;
-  jdText: string;
-  resumeData: any;
-  missing: MissingBuckets;
-  onAddSkill?: (keyword: string) => void;
-  onAddSummary?: (snippet: string) => void;
-  onAddBullet?: (snippet: string) => void;
-};
+/**
+ * @typedef {Object} Props
+ * @property {boolean} open
+ * @property {() => void} onClose
+ * @property {CoachContext} [context]
+ * @property {string} jdText
+ * @property {*} resumeData
+ * @property {MissingBuckets} missing
+ * @property {(keyword: string) => void} [onAddSkill]
+ * @property {(snippet: string) => void} [onAddSummary]
+ * @property {(snippet: string) => void} [onAddBullet]
+ */
 
-function safePreview(raw: string, max = 180) {
-  const t = (raw || '').replace(/\s+/g, ' ').trim();
-  if (!t) return '';
-  return t.length > max ? `${t.slice(0, max)}…` : t;
-}
+/** @type {React.CSSProperties} */
+const chipStyle = {
+  borderRadius: 999,
+  border: '1px solid #FFCC80',
+  background: 'white',
+  padding: '4px 10px',
+  fontSize: 12,
+  fontWeight: 800,
+  cursor: 'pointer',
+};
 
 export default function CoachSuggestionsPanel({
   open,
@@ -43,19 +51,14 @@ export default function CoachSuggestionsPanel({
   onAddSkill,
   onAddSummary,
   onAddBullet,
-}: Props) {
-  const [portalEl, setPortalEl] = useState<HTMLElement | null>(null);
+}) {
+  const [portalEl, setPortalEl] = useState(null);
   const [loading, setLoading] = useState(false);
   const [text, setText] = useState('');
-  const [error, setError] = useState<string | null>(null);
+  const [error, setError] = useState(null);
 
-  // used to auto-run once per "open session" (and once per context change)
-  const askedKeyRef = useRef<string>('');
-  const abortRef = useRef<AbortController | null>(null);
+  const askedOnceRef = useRef(false);
 
-  const hasJD = !!jdText?.trim();
-
-  // Create portal container once on mount
   useEffect(() => {
     if (typeof document === 'undefined') return;
 
@@ -73,46 +76,21 @@ export default function CoachSuggestionsPanel({
     };
   }, []);
 
-  // When closing, abort any in-flight request
-  useEffect(() => {
-    if (!open) {
-      abortRef.current?.abort();
-      abortRef.current = null;
-      askedKeyRef.current = '';
-      setLoading(false);
-      setError(null);
-      setText('');
-    }
-  }, [open]);
+  const sectionLabelMap = {
+    overview: 'overall alignment',
+    summary: 'summary section',
+    skills: 'skills section',
+    experience: 'experience bullets',
+    education: 'education section',
+  };
 
-  const sectionLabelMap: Record<string, string> = useMemo(
-    () => ({
-      overview: 'overall alignment',
-      summary: 'summary section',
-      skills: 'skills section',
-      experience: 'experience bullets',
-      education: 'education section',
-    }),
-    [],
-  );
+  const humanSection = sectionLabelMap[context?.section] || 'this part of your resume';
 
-  const humanSection = sectionLabelMap[context.section] || 'this part of your resume';
-
-  const keywordHint = context.keyword
+  const keywordHint = context?.keyword
     ? `Focus especially on including the keyword "${context.keyword}" in a natural way.`
     : '';
 
-  const handleAsk = useCallback(async () => {
-    if (!hasJD) {
-      setError('Load a job description first.');
-      return;
-    }
-
-    // Abort previous request if user clicks multiple times
-    abortRef.current?.abort();
-    const ac = new AbortController();
-    abortRef.current = ac;
-
+  const handleAsk = async () => {
     setLoading(true);
     setError(null);
 
@@ -120,7 +98,6 @@ export default function CoachSuggestionsPanel({
       const resp = await fetch('/api/ats-coach', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        signal: ac.signal,
         body: JSON.stringify({
           jdText,
           resumeData,
@@ -130,8 +107,8 @@ export default function CoachSuggestionsPanel({
       });
 
       const raw = await resp.text();
+      let data = null;
 
-      let data: any = null;
       try {
         data = raw ? JSON.parse(raw) : null;
       } catch {
@@ -141,50 +118,45 @@ export default function CoachSuggestionsPanel({
       if (!resp.ok) {
         const msg =
           data?.error ||
-          `Coach request failed (${resp.status}). ${
-            resp.status === 404 ? 'Route /api/ats-coach not found.' : ''
-          }${raw ? ` Response: "${safePreview(raw)}"` : ''}`;
+          `Coach request failed (${resp.status}). ${resp.status === 404 ? 'Route /api/ats-coach not found.' : ''}`;
         throw new Error(msg);
       }
 
       const out = (data?.text || '').toString().trim();
       if (!out) {
         setText('');
-        setError(
-          `Coach returned an empty response. ${
-            raw ? `Raw response: "${safePreview(raw)}"` : 'Check /api/ats-coach output.'
-          }`,
-        );
+        setError('Coach returned an empty response. Check /api/ats-coach.');
         return;
       }
 
       setText(out);
-    } catch (e: any) {
-      if (e?.name === 'AbortError') return; // user closed or retried
+    } catch (e) {
+      // eslint-disable-next-line no-console
       console.error('CoachSuggestionsPanel error', e);
       setError(e?.message || 'Coach could not load suggestions. Try again.');
     } finally {
-      // if a new request started, don't flip loading off for the old one
-      if (abortRef.current === ac) {
-        setLoading(false);
-      }
+      setLoading(false);
     }
-  }, [hasJD, jdText, resumeData, context, missing]);
+  };
 
-  // Auto-ask ONCE per open + per context change while open
+  // Auto-ask ONCE whenever the panel is opened
   useEffect(() => {
-    if (!open) return;
-    if (!hasJD) return;
-    if (!portalEl) return;
+    if (!open) {
+      askedOnceRef.current = false;
+      setText('');
+      setError(null);
+      setLoading(false);
+      return;
+    }
 
-    const key = `${context.section}|${context.keyword || ''}`;
-    if (askedKeyRef.current === key) return;
+    if (open && jdText?.trim() && !askedOnceRef.current) {
+      askedOnceRef.current = true;
+      handleAsk();
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [open]);
 
-    askedKeyRef.current = key;
-    handleAsk();
-  }, [open, hasJD, portalEl, context.section, context.keyword, handleAsk]);
-
-  const handleQuickInsert = (type: 'summary' | 'skill' | 'bullet') => {
+  const handleQuickInsert = (type) => {
     if (!text) return;
 
     if (type === 'summary' && onAddSummary) {
@@ -232,7 +204,6 @@ export default function CoachSuggestionsPanel({
         pointerEvents: 'auto',
       }}
     >
-      {/* Header */}
       <div
         style={{
           padding: '10px 14px',
@@ -263,7 +234,6 @@ export default function CoachSuggestionsPanel({
         </button>
       </div>
 
-      {/* Body */}
       <div
         style={{
           padding: '10px 14px',
@@ -278,7 +248,7 @@ export default function CoachSuggestionsPanel({
           into your resume. {keywordHint}
         </p>
 
-        {!hasJD && (
+        {!jdText?.trim() && (
           <p style={{ marginBottom: 8, fontStyle: 'italic', color: '#8D6E63' }}>
             Tip: You&apos;ll get the best results once a job description is loaded.
           </p>
@@ -287,7 +257,7 @@ export default function CoachSuggestionsPanel({
         <button
           type="button"
           onClick={handleAsk}
-          disabled={loading || !hasJD}
+          disabled={loading || !jdText?.trim()}
           style={{
             padding: '8px 14px',
             borderRadius: 10,
@@ -295,17 +265,15 @@ export default function CoachSuggestionsPanel({
             background: '#FF7043',
             color: 'white',
             fontWeight: 800,
-            cursor: loading || !hasJD ? 'not-allowed' : 'pointer',
+            cursor: loading || !jdText?.trim() ? 'not-allowed' : 'pointer',
             marginBottom: 10,
-            opacity: loading || !hasJD ? 0.7 : 1,
+            opacity: loading || !jdText?.trim() ? 0.7 : 1,
           }}
         >
           {loading ? 'Thinking…' : 'Ask the Coach'}
         </button>
 
-        {error && (
-          <div style={{ marginTop: 4, color: '#C62828', fontSize: 12, fontWeight: 700 }}>{error}</div>
-        )}
+        {error && <div style={{ marginTop: 4, color: '#C62828', fontSize: 12, fontWeight: 700 }}>{error}</div>}
 
         {text && (
           <>
@@ -341,13 +309,3 @@ export default function CoachSuggestionsPanel({
 
   return createPortal(panel, portalEl);
 }
-
-const chipStyle: React.CSSProperties = {
-  borderRadius: 999,
-  border: '1px solid #FFCC80',
-  background: 'white',
-  padding: '4px 10px',
-  fontSize: 12,
-  fontWeight: 800,
-  cursor: 'pointer',
-};
