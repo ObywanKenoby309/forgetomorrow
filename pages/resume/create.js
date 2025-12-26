@@ -1,4 +1,4 @@
-// pages/resume/create.js — FINAL LOCKED + MATCH CONTEXT
+// pages/resume/create.js — FINAL LOCKED + ATS CONTEXT
 import { useContext, useEffect, useRef, useState } from 'react';
 import dynamic from 'next/dynamic';
 import { useRouter } from 'next/router';
@@ -277,7 +277,7 @@ export default function CreateResumePage() {
   const [openTailor, setOpenTailor] = useState(false);
   const [toolsOpen, setToolsOpen] = useState(true); // collapsible tools bar
 
-  // Match context passed from jobs page
+  // Context passed from jobs page (via resume-cover)
   const [atsPack, setAtsPack] = useState(null);
   const [atsJobMeta, setAtsJobMeta] = useState(null);
   const [atsAppliedFromContext, setAtsAppliedFromContext] = useState(false);
@@ -308,7 +308,7 @@ export default function CreateResumePage() {
     }
   };
 
-  // Helper: detect if pack is a real scored result vs demo
+  // Helper: detect if atsPack is a real result vs demo
   const hasRealAts =
     !!(
       atsPack &&
@@ -443,6 +443,7 @@ export default function CreateResumePage() {
       const raw = file.size > 1_500_000 ? await uploadJD(file) : await extractTextFromFile(file);
       const clean = normalizeJobText(raw);
       setJd(clean);
+
       // ✅ DB-backed draft storage (no localStorage)
       await saveDraft(DRAFT_KEYS.LAST_JOB_TEXT, clean);
     } catch (e) {
@@ -557,7 +558,7 @@ export default function CreateResumePage() {
   }, [router.isReady, router.query, formData.fullName, formData.name, summary, setFormData, setSummary]);
 
   // ─────────────────────────────────────────────────────────────
-  // Apply match pack + JD context from jobs (DB drafts)
+  // Apply pack + JD context from resume-cover (DB drafts)
   // ─────────────────────────────────────────────────────────────
   useEffect(() => {
     if (!router.isReady) return;
@@ -568,14 +569,22 @@ export default function CreateResumePage() {
       const fromFlag = String(from || '').toLowerCase();
       let applied = false;
 
-      // Accept legacy "ats" plus new "match" (no ATS wording in URL)
-      const isMatchFlow = fromFlag === 'match' || fromFlag === 'align' || fromFlag === 'ats';
-
-      if (isMatchFlow) {
+      if (fromFlag === 'ats') {
         try {
-          const pack = await getDraft(DRAFT_KEYS.ATS_PACK);
-          if (pack) {
+          let pack = await getDraft(DRAFT_KEYS.ATS_PACK);
+
+          // Defensive: drafts may return JSON as a string
+          if (typeof pack === 'string') {
+            try {
+              pack = JSON.parse(pack);
+            } catch {
+              // ignore
+            }
+          }
+
+          if (pack && typeof pack === 'object') {
             setAtsPack(pack || null);
+
             if (pack?.job) {
               setAtsJobMeta({
                 title: pack.job.title || '',
@@ -583,6 +592,7 @@ export default function CreateResumePage() {
                 location: pack.job.location || '',
               });
             }
+
             // If pack carries a job description, auto-use it as JD text
             if (pack?.job?.description && !jd) {
               const clean = normalizeJobText(pack.job.description);
@@ -592,7 +602,7 @@ export default function CreateResumePage() {
             }
           }
         } catch (err) {
-          console.error('[resume/create] Failed to load match pack from DB drafts', err);
+          console.error('[resume/create] Failed to load pack from DB drafts', err);
         }
       }
 
@@ -613,6 +623,18 @@ export default function CreateResumePage() {
 
     applyAtsContext();
   }, [router.isReady, router.query, jd, atsAppliedFromContext]);
+
+  const jdCompact = jd ? String(jd).replace(/\s+/g, ' ').trim() : '';
+  const jdPreview = jdCompact ? (jdCompact.length > 240 ? `${jdCompact.slice(0, 240)}…` : jdCompact) : '';
+  const jdWordCount = jdCompact ? jdCompact.split(/\s+/).filter(Boolean).length : 0;
+
+  const clearJobFire = async () => {
+    setJd('');
+    setAtsPack(null);
+    setAtsJobMeta(null);
+    await saveDraft(DRAFT_KEYS.LAST_JOB_TEXT, '');
+    await saveDraft(DRAFT_KEYS.ATS_PACK, null);
+  };
 
   // HEADER
   const Header = (
@@ -737,21 +759,29 @@ export default function CreateResumePage() {
             open={openTailor}
             onToggle={() => setOpenTailor((v) => !v)}
           >
-            {atsPack ? (
+            {/* ✅ FIX: Show "Job Fire Loaded" when EITHER a pack is present OR a JD is present */}
+            {atsPack || jd ? (
               <div style={{ display: 'grid', gap: 10, marginBottom: 16 }}>
                 <Banner tone="blue">
                   <div style={{ fontWeight: 800, marginBottom: 4 }}>🔥 Job Fire Loaded</div>
+
                   <div style={{ fontSize: 14, marginBottom: 6 }}>
-                    This job is now the <strong>fire</strong> heating your resume steel. Your hammer and match tools are
-                    shaping everything against this posting:
+                    This job description is now the <strong>fire</strong> heating your resume steel. Your AI hammer and
+                    match tools will shape everything against this posting.
                   </div>
-                  {atsJobMeta && (
-                    <div style={{ fontSize: 14, marginBottom: 4 }}>
+
+                  {atsJobMeta && (atsJobMeta.title || atsJobMeta.company || atsJobMeta.location) ? (
+                    <div style={{ fontSize: 14, marginBottom: 6 }}>
                       <strong>{atsJobMeta.title}</strong>
                       {atsJobMeta.company ? ` at ${atsJobMeta.company}` : ''}
                       {atsJobMeta.location ? ` — ${atsJobMeta.location}` : ''}
                     </div>
+                  ) : (
+                    <div style={{ fontSize: 13, marginBottom: 6 }}>
+                      Loaded from your saved job description ({jdWordCount.toLocaleString()} words).
+                    </div>
                   )}
+
                   {hasRealAts ? (
                     <>
                       <div style={{ fontSize: 13, marginBottom: 6 }}>
@@ -775,8 +805,60 @@ export default function CreateResumePage() {
                     </>
                   ) : (
                     <div style={{ fontSize: 13, marginTop: 4 }}>
-                      This job is loaded as your fire, but it hasn’t been fully scored yet. Run a match scan below to see
-                      your current fit and tailored tips.
+                      Your fire is loaded. Run a scan below to see your live match % and tailored tips.
+                    </div>
+                  )}
+
+                  {jdPreview && (
+                    <div style={{ marginTop: 10 }}>
+                      <div style={{ fontSize: 12, fontWeight: 800, marginBottom: 4, color: '#0D47A1' }}>
+                        Loaded JD preview
+                      </div>
+                      <div
+                        style={{
+                          fontSize: 12,
+                          lineHeight: 1.5,
+                          background: 'rgba(255,255,255,0.55)',
+                          border: '1px solid rgba(144,202,249,0.8)',
+                          padding: '8px 10px',
+                          borderRadius: 10,
+                          color: '#0B1724',
+                        }}
+                      >
+                        {jdPreview}
+                      </div>
+                      <div style={{ marginTop: 10, display: 'flex', gap: 10, flexWrap: 'wrap' }}>
+                        <button
+                          type="button"
+                          onClick={clearJobFire}
+                          style={{
+                            background: 'white',
+                            color: '#0D47A1',
+                            border: '1px solid #90CAF9',
+                            borderRadius: 10,
+                            padding: '8px 12px',
+                            fontWeight: 800,
+                            cursor: 'pointer',
+                          }}
+                        >
+                          Clear job fire
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => fileInputRef.current?.click()}
+                          style={{
+                            background: ORANGE,
+                            color: 'white',
+                            border: 'none',
+                            borderRadius: 10,
+                            padding: '8px 12px',
+                            fontWeight: 800,
+                            cursor: 'pointer',
+                          }}
+                        >
+                          Replace with new file
+                        </button>
+                      </div>
                     </div>
                   )}
                 </Banner>
@@ -922,13 +1004,13 @@ export default function CreateResumePage() {
             {router.query.template === 'hybrid' ? (
               <HybridATSButton data={resumeData}>
                 <div className="bg-teal-600 text-white px-4 py-2 rounded-full font-bold text-xs hover:bg-teal-700 transition-all">
-                  Clean PDF
+                  System PDF
                 </div>
               </HybridATSButton>
             ) : (
               <ReverseATSButton data={resumeData}>
                 <div className="bg-teal-600 text-white px-4 py-2 rounded-full font-bold text-xs hover:bg-teal-700 transition-all">
-                  Clean PDF
+                  System PDF
                 </div>
               </ReverseATSButton>
             )}
