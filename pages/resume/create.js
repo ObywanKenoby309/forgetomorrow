@@ -1,4 +1,4 @@
-// pages/resume/create.js — FINAL LOCKED + ATS CONTEXT
+// pages/resume/create.js — FINAL LOCKED + MATCH CONTEXT (no "ATS" user-facing copy)
 import { useContext, useEffect, useRef, useState } from 'react';
 import dynamic from 'next/dynamic';
 import { useRouter } from 'next/router';
@@ -277,7 +277,7 @@ export default function CreateResumePage() {
   const [openTailor, setOpenTailor] = useState(false);
   const [toolsOpen, setToolsOpen] = useState(true); // collapsible tools bar
 
-  // ATS context passed from jobs page (via resume-cover)
+  // Match context passed from jobs page (via resume-cover)
   const [atsPack, setAtsPack] = useState(null);
   const [atsJobMeta, setAtsJobMeta] = useState(null);
   const [atsAppliedFromContext, setAtsAppliedFromContext] = useState(false);
@@ -308,7 +308,7 @@ export default function CreateResumePage() {
     }
   };
 
-  // Helper: detect if atsPack is a real ATS result vs demo
+  // Helper: detect if atsPack is a real match result vs demo
   const hasRealAts =
     !!(
       atsPack &&
@@ -557,7 +557,7 @@ export default function CreateResumePage() {
   }, [router.isReady, router.query, formData.fullName, formData.name, summary, setFormData, setSummary]);
 
   // ─────────────────────────────────────────────────────────────
-  // Apply ATS pack + JD context from resume-cover (DB drafts)
+  // Apply match pack + JD context from resume-cover (DB drafts)
   // ─────────────────────────────────────────────────────────────
   useEffect(() => {
     if (!router.isReady) return;
@@ -580,7 +580,7 @@ export default function CreateResumePage() {
                 location: pack.job.location || '',
               });
             }
-            // If ATS pack carries a job description, auto-use it as JD text
+            // If pack carries a job description, auto-use it as JD text
             if (pack?.job?.description && !jd) {
               const clean = normalizeJobText(pack.job.description);
               setJd(clean);
@@ -589,7 +589,7 @@ export default function CreateResumePage() {
             }
           }
         } catch (err) {
-          console.error('[resume/create] Failed to load ATS pack from DB drafts', err);
+          console.error('[resume/create] Failed to load match pack from DB drafts', err);
         }
       }
 
@@ -617,7 +617,7 @@ export default function CreateResumePage() {
       <h1 className="text-3xl font-bold text-orange-600">Resume Builder</h1>
       <p className="text-gray-600 mt-3 max-w-2xl mx-auto">
         2 templates. 1 goal: Get you the interview. <strong>Reverse Chronological</strong> for recruiters.{' '}
-        <strong>ATS-Optimized</strong> for systems. No fluff. Only what works.
+        <strong>Scanner-Friendly</strong> for systems. No fluff. Only what works.
       </p>
       <div className="flex items-center justify-center gap-8 mt-6">
         <button
@@ -640,7 +640,7 @@ export default function CreateResumePage() {
   // FOOTER
   const Footer = (
     <div className="mt-16 text-center text-xs text-gray-500 max-w-2xl mx-auto px-4">
-      *87% of job seekers using ATS-optimized resumes receive at least one interview within 7 days of applying.{' '}
+      *87% of job seekers using scanner-friendly resumes receive at least one interview within 7 days of applying.{' '}
       <em>Source: Jobscan 2024 Applicant Study (n=1,200). Results vary.</em>
     </div>
   );
@@ -740,7 +740,7 @@ export default function CreateResumePage() {
                 <Banner tone="blue">
                   <div style={{ fontWeight: 800, marginBottom: 4 }}>🔥 Job Fire Loaded</div>
                   <div style={{ fontSize: 14, marginBottom: 6 }}>
-                    This job is now the <strong>fire</strong> heating your resume steel. Your AI hammer and ATS tools are
+                    This job is now the <strong>fire</strong> heating your resume steel. Your AI hammer and match tools are
                     shaping everything against this posting:
                   </div>
                   {atsJobMeta && (
@@ -773,7 +773,7 @@ export default function CreateResumePage() {
                     </>
                   ) : (
                     <div style={{ fontSize: 13, marginTop: 4 }}>
-                      This job is loaded as your fire, but it hasn’t been fully scored yet. Run an AI ATS scan below to
+                      This job is loaded as your fire, but it hasn’t been fully scanned yet. Run a Match Scan below to
                       see your live match % and tailored tips.
                     </div>
                   )}
@@ -785,7 +785,7 @@ export default function CreateResumePage() {
                 <div style={{ fontSize: 14 }}>
                   Your resume is the <strong>steel</strong>. This page is the <strong>anvil</strong>. The AI tools are
                   your <strong>hammer</strong>. Add a job description to supply the <strong>fire</strong> — and unlock
-                  AI-powered ATS scoring, keyword suggestions, and tailored guidance for this specific role.
+                  AI-powered match scoring, keyword suggestions, and tailored guidance for this specific role.
                 </div>
               </Banner>
             )}
@@ -920,13 +920,13 @@ export default function CreateResumePage() {
             {router.query.template === 'hybrid' ? (
               <HybridATSButton data={resumeData}>
                 <div className="bg-teal-600 text-white px-4 py-2 rounded-full font-bold text-xs hover:bg-teal-700 transition-all">
-                  ATS PDF
+                  Simple PDF
                 </div>
               </HybridATSButton>
             ) : (
               <ReverseATSButton data={resumeData}>
                 <div className="bg-teal-600 text-white px-4 py-2 rounded-full font-bold text-xs hover:bg-teal-700 transition-all">
-                  ATS PDF
+                  Simple PDF
                 </div>
               </ReverseATSButton>
             )}
