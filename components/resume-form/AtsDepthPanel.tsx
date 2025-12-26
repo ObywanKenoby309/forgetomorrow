@@ -2,9 +2,9 @@
 
 // components/resume-form/AtsDepthPanel.tsx
 // Unified Match panel – AI score first, keyword coverage as fallback.
+// FIX: Remove duplicate legacy UI by owning scan+coach here (no AIATSScorerClient rendering).
 
-import React, { useMemo, useRef, useState } from 'react';
-import AIATSScorerClient from './AIATSScorerClient';
+import React, { useMemo, useState } from 'react';
 import CoachSuggestionsPanel from './CoachSuggestionsPanel';
 
 type Experience = {
@@ -20,71 +20,36 @@ type Education = {
   notes?: string;
 };
 
+type JobMeta = {
+  title?: string;
+  company?: string;
+  location?: string;
+} | null;
+
 type Props = {
   jdText: string;
   summary: string;
   skills: string[];
   experiences: Experience[];
   education: Education[];
+  jobMeta?: JobMeta; // ✅ optional meta passed from resume/create.js
   onAddSkill?: (keyword: string) => void;
   onAddSummary?: (snippet: string) => void;
   onAddBullet?: (snippet: string) => void;
 };
 
 const STOP_WORDS = new Set([
-  'the',
-  'and',
-  'for',
-  'with',
-  'that',
-  'this',
-  'from',
-  'your',
-  'you',
-  'our',
-  'are',
-  'was',
-  'were',
-  'will',
-  'shall',
-  'would',
-  'could',
-  'should',
-  'into',
-  'about',
-  'over',
-  'under',
-  'in',
-  'on',
-  'of',
-  'to',
-  'a',
-  'an',
-  'as',
-  'by',
-  'or',
-  'at',
-  'be',
-  'is',
-  'it',
-  'we',
-  'they',
-  'them',
-  'their',
-  'there',
+  'the','and','for','with','that','this','from','your','you','our','are','was','were','will','shall','would','could',
+  'should','into','about','over','under','in','on','of','to','a','an','as','by','or','at','be','is','it','we','they',
+  'them','their','there',
 ]);
 
 function extractKeyTerms(text: string, max = 8): string[] {
   if (!text) return [];
   const cleaned = text.toLowerCase().replace(/[^a-z0-9+\s]/g, ' ');
-  const tokens = cleaned
-    .split(/\s+/)
-    .filter((w) => w.length > 2 && !STOP_WORDS.has(w));
+  const tokens = cleaned.split(/\s+/).filter((w) => w.length > 2 && !STOP_WORDS.has(w));
   const counts = new Map<string, number>();
-
-  for (const t of tokens) {
-    counts.set(t, (counts.get(t) || 0) + 1);
-  }
+  for (const t of tokens) counts.set(t, (counts.get(t) || 0) + 1);
 
   return Array.from(counts.entries())
     .sort((a, b) => b[1] - a[1])
@@ -105,24 +70,19 @@ function jdPreview(text: string, maxChars = 170) {
 }
 
 /**
- * Best-effort role/title guess from JD text.
- * We DO NOT rely on this being present, but it restores the “job title” feel you had.
+ * Best-effort role/title guess from JD text (fallback when no jobMeta)
  */
 function guessJobTitle(jdText: string) {
   const jd = (jdText || '').trim();
   if (!jd) return '';
 
-  // Look for explicit markers
   const m1 = jd.match(/(?:^|\n)\s*(?:job\s*title|title|position)\s*[:\-]\s*([^\n]{3,120})/i);
   if (m1 && m1[1]) return m1[1].trim();
 
-  // Many JDs start with the title on the first line
   const firstLine = jd.split('\n').map((s) => s.trim()).filter(Boolean)[0] || '';
   if (firstLine && firstLine.length <= 90) {
-    // Avoid “Company overview” type first lines
     if (!/overview|about\s+us|introduction|who\s+we\s+are/i.test(firstLine)) return firstLine;
   }
-
   return '';
 }
 
@@ -132,12 +92,19 @@ export default function AtsDepthPanel({
   skills,
   experiences,
   education,
+  jobMeta = null,
   onAddSkill,
   onAddSummary,
   onAddBullet,
 }: Props) {
   const [expanded, setExpanded] = useState(true);
+
+  // unified scoring
   const [aiScore, setAiScore] = useState<number | null>(null);
+  const [aiTips, setAiTips] = useState<string[]>([]);
+  const [aiLoading, setAiLoading] = useState(false);
+  const [aiError, setAiError] = useState<string | null>(null);
+  const [aiUpgrade, setAiUpgrade] = useState(false);
 
   // Coach overlay
   const [coachOpen, setCoachOpen] = useState(false);
@@ -145,8 +112,6 @@ export default function AtsDepthPanel({
     section: 'overview',
     keyword: null,
   });
-
-  const aiScorerRef = useRef<HTMLDivElement | null>(null);
 
   if (!jdText?.trim()) return null;
 
@@ -212,7 +177,7 @@ export default function AtsDepthPanel({
 
   const missingTitleKeywords = titleKeywords.filter((k) => !matchedTitleKeywords.includes(k));
 
-  // Data passed down to AI component + coach
+  // Data passed down to coach
   const resumeData = useMemo(
     () => ({
       summary,
@@ -227,18 +192,70 @@ export default function AtsDepthPanel({
   const words = useMemo(() => countWords(jdText), [jdText]);
   const preview = useMemo(() => jdPreview(jdText), [jdText]);
 
+  const loadedTitle = (jobMeta?.title || '').trim() || guessedTitle || 'Job description';
+  const loadedCompany = (jobMeta?.company || '').trim();
+  const loadedLocation = (jobMeta?.location || '').trim();
+
   function openCoachOverview() {
     setCoachContext({ section: 'overview', keyword: null });
     setCoachOpen(true);
   }
 
-  function scrollToAiScorer() {
-    if (!expanded) setExpanded(true);
-    setTimeout(() => {
-      const el = aiScorerRef.current;
-      if (el?.scrollIntoView) el.scrollIntoView({ behavior: 'smooth', block: 'start' });
-    }, 50);
+  async function runAiScan() {
+    if (!jdText?.trim()) return;
+
+    setAiLoading(true);
+    setAiError(null);
+    setAiUpgrade(false);
+
+    try {
+      const resp = await fetch('/api/ats-score', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ jd: jdText, resume: resumeData }),
+      });
+
+      const data = await resp.json();
+
+      if (data?.upgrade) {
+        setAiUpgrade(true);
+        setAiScore(null);
+
+        const nextTips: string[] = Array.isArray(data?.tips)
+          ? data.tips
+          : typeof data?.tips === 'string' && data.tips.trim()
+          ? [data.tips.trim()]
+          : [];
+
+        setAiTips(nextTips);
+        return;
+      }
+
+      const s =
+        typeof data?.score === 'number'
+          ? Math.max(0, Math.min(100, Math.round(data.score)))
+          : null;
+
+      const nextTips: string[] = Array.isArray(data?.tips)
+        ? data.tips
+        : typeof data?.tips === 'string' && data.tips.trim()
+        ? [data.tips.trim()]
+        : [];
+
+      setAiScore(s);
+      setAiTips(nextTips);
+    } catch (e) {
+      console.error('[AtsDepthPanel] AI scan failed', e);
+      setAiError('AI scan failed — try again.');
+      setAiScore(null);
+    } finally {
+      setAiLoading(false);
+    }
   }
+
+  const normalizedTips: string[] = Array.isArray(aiTips)
+    ? aiTips.filter((t) => typeof t === 'string' && t.trim().length > 0)
+    : [];
 
   return (
     <div style={{ marginTop: 20 }}>
@@ -268,6 +285,7 @@ export default function AtsDepthPanel({
               One score that blends AI analysis with keyword coverage for this job.
             </div>
           </div>
+
           <button
             type="button"
             onClick={() => setExpanded((v) => !v)}
@@ -283,7 +301,7 @@ export default function AtsDepthPanel({
           </button>
         </div>
 
-        {/* JD acknowledgement (restores the “what JD is loaded?” UX) */}
+        {/* JD acknowledgement */}
         <div
           style={{
             marginTop: 14,
@@ -296,10 +314,14 @@ export default function AtsDepthPanel({
           <div style={{ fontWeight: 800, color: '#0D47A1', fontSize: 13 }}>
             Loaded job
           </div>
+
           <div style={{ marginTop: 4, color: '#0B2A4A', fontSize: 13, lineHeight: 1.35 }}>
-            <strong>{guessedTitle || 'Job description'}</strong>
+            <strong>{loadedTitle}</strong>
+            {loadedCompany ? ` at ${loadedCompany}` : ''}
+            {loadedLocation ? ` — ${loadedLocation}` : ''}
             <span style={{ color: '#607D8B' }}> · {words} words</span>
           </div>
+
           {preview ? (
             <div style={{ marginTop: 6, fontSize: 12, color: '#1E3A5F' }}>
               <span style={{ fontWeight: 700, color: '#1565C0' }}>Preview: </span>
@@ -349,7 +371,7 @@ export default function AtsDepthPanel({
           </div>
         </div>
 
-        {/* The two action cards (restores the UX from your screenshot) */}
+        {/* Two action cards */}
         <div
           style={{
             marginTop: 16,
@@ -377,6 +399,7 @@ export default function AtsDepthPanel({
               <div style={{ fontSize: 14, color: '#4B5563', lineHeight: 1.4 }}>
                 Run an AI scan to generate a stronger, job-aware score and guidance.
               </div>
+
               <div
                 style={{
                   marginTop: 14,
@@ -398,10 +421,18 @@ export default function AtsDepthPanel({
                 />
                 <span>Uses AI + keyword coverage.</span>
               </div>
+
+              {aiError && (
+                <div style={{ marginTop: 10, fontSize: 12, color: '#C62828' }}>
+                  {aiError}
+                </div>
+              )}
             </div>
+
             <button
               type="button"
-              onClick={scrollToAiScorer}
+              onClick={runAiScan}
+              disabled={aiLoading}
               style={{
                 marginTop: 14,
                 width: '100%',
@@ -412,11 +443,12 @@ export default function AtsDepthPanel({
                 color: 'white',
                 fontWeight: 900,
                 fontSize: 15,
-                cursor: 'pointer',
+                cursor: aiLoading ? 'not-allowed' : 'pointer',
+                opacity: aiLoading ? 0.75 : 1,
                 boxShadow: '0 6px 16px rgba(0,0,0,0.18)',
               }}
             >
-              Run AI Scan
+              {aiLoading ? 'Thinking…' : 'Run AI Scan'}
             </button>
           </div>
 
@@ -465,10 +497,59 @@ export default function AtsDepthPanel({
 
         {!expanded ? null : (
           <>
-            {/* AI scoring card */}
-            <div ref={aiScorerRef} style={{ marginTop: 18 }}>
-              <AIATSScorerClient jdText={jdText} resumeData={resumeData} onScoreChange={setAiScore} />
-            </div>
+            {/* AI scan results (no duplicate cards) */}
+            {(aiUpgrade || (aiScore !== null && !aiLoading) || normalizedTips.length > 0) && (
+              <div
+                style={{
+                  marginTop: 16,
+                  padding: 14,
+                  borderRadius: 12,
+                  border: '1px solid #FFE0B2',
+                  background: '#FFF3E0',
+                }}
+              >
+                {aiUpgrade ? (
+                  <>
+                    <div style={{ fontWeight: 800, color: '#E65100', marginBottom: 6 }}>
+                      You&apos;ve used your free AI scans for today.
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => (window.location.href = '/pricing')}
+                      style={{
+                        padding: '10px 16px',
+                        borderRadius: 10,
+                        border: 'none',
+                        background: '#FF7043',
+                        color: 'white',
+                        fontWeight: 800,
+                        cursor: 'pointer',
+                      }}
+                    >
+                      Upgrade to Pro
+                    </button>
+                  </>
+                ) : (
+                  <>
+                    {aiScore !== null && (
+                      <div style={{ fontWeight: 900, fontSize: 18, color: '#263238' }}>
+                        AI Score: {aiScore}/100
+                      </div>
+                    )}
+
+                    {normalizedTips.length > 0 && (
+                      <ul style={{ margin: '10px 0 0', paddingLeft: 18, fontSize: 13, color: '#37474F' }}>
+                        {normalizedTips.map((tip, i) => (
+                          <li key={i} style={{ marginBottom: 6 }}>
+                            {tip}
+                          </li>
+                        ))}
+                      </ul>
+                    )}
+                  </>
+                )}
+              </div>
+            )}
 
             {/* Bucket mini-cards */}
             <div
@@ -525,7 +606,6 @@ export default function AtsDepthPanel({
                 </summary>
 
                 <div style={{ marginTop: 12, display: 'grid', gap: 10 }}>
-                  {/* Title / Role details */}
                   <div
                     style={{
                       padding: 12,
@@ -537,6 +617,7 @@ export default function AtsDepthPanel({
                     <div style={{ fontWeight: 700, marginBottom: 4, color: '#263238' }}>
                       High-impact title / role terms
                     </div>
+
                     {titleKeywords.length === 0 ? (
                       <p style={{ margin: 0, fontSize: 13, color: '#388E3C' }}>
                         No missing keywords here — nice!
@@ -566,7 +647,6 @@ export default function AtsDepthPanel({
                     )}
                   </div>
 
-                  {/* Placeholder “all good” buckets for MVP */}
                   {['High-impact hard skills', 'Tools / Platforms', 'Education', 'Soft skills'].map((label) => (
                     <div
                       key={label}
@@ -592,7 +672,7 @@ export default function AtsDepthPanel({
         )}
       </div>
 
-      {/* Coach overlay (this is what makes the button work) */}
+      {/* Coach overlay */}
       <CoachSuggestionsPanel
         open={coachOpen}
         onClose={() => setCoachOpen(false)}
@@ -600,10 +680,10 @@ export default function AtsDepthPanel({
         jdText={jdText}
         resumeData={resumeData}
         missing={{
-          high: [],
+          high: missingTitleKeywords, // ✅ treat these as high-impact missing for now
           tools: [],
           edu: [],
-          soft: missingTitleKeywords,
+          soft: [],
         }}
         onAddSkill={onAddSkill}
         onAddSummary={onAddSummary}
