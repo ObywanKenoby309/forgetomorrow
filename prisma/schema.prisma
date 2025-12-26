@@ -240,7 +240,7 @@ model ScanLog {
 
   user User @relation(fields: [userId], references: [id])
 
-  @@unique([userId, date])
+  @@index([userId, createdAt])
   @@map("scan_logs")
 }
 

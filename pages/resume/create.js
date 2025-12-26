@@ -22,13 +22,16 @@ import BulkExportCTA from '@/components/BulkExportCTA';
 import ReverseATSButton from '@/components/resume-form/export/ReverseATSButton';
 import HybridATSButton from '@/components/resume-form/export/HybridATSButton';
 import DesignedPDFButton from '@/components/resume-form/export/DesignedPDFButton'; // ← NEW
+
 const ORANGE = '#FF7043';
+
 // Draft keys (DB-backed)
 const DRAFT_KEYS = {
   LAST_JOB_TEXT: 'ft_last_job_text',
   ATS_PACK: 'forge-ats-pack',
   LAST_UPLOADED_RESUME_TEXT: 'ft_last_uploaded_resume_text',
 };
+
 function Banner({ children, tone = 'orange' }) {
   const toneStyles =
     tone === 'blue'
@@ -42,6 +45,7 @@ function Banner({ children, tone = 'orange' }) {
           border: '1px solid #FFCC80',
           color: '#E65100',
         };
+
   return (
     <div
       style={{
@@ -56,6 +60,7 @@ function Banner({ children, tone = 'orange' }) {
     </div>
   );
 }
+
 function Section({ title, open, onToggle, children, required = false }) {
   return (
     <div
@@ -119,9 +124,11 @@ function Section({ title, open, onToggle, children, required = false }) {
     </div>
   );
 }
+
 // ✅ Languages input block (uses context state now)
 function LanguagesInlineSection({ languages, setLanguages }) {
   const [val, setVal] = useState('');
+
   const add = () => {
     const v = String(val || '').trim();
     if (!v) return;
@@ -133,6 +140,7 @@ function LanguagesInlineSection({ languages, setLanguages }) {
     });
     setVal('');
   };
+
   const remove = (idx) => {
     setLanguages((prev) => {
       const arr = Array.isArray(prev) ? [...prev] : [];
@@ -140,6 +148,7 @@ function LanguagesInlineSection({ languages, setLanguages }) {
       return arr;
     });
   };
+
   return (
     <div style={{ display: 'grid', gap: 10 }}>
       <div style={{ fontWeight: 800, fontSize: 14, color: '#111827' }}>Languages</div>
@@ -224,14 +233,17 @@ function LanguagesInlineSection({ languages, setLanguages }) {
     </div>
   );
 }
+
 export default function CreateResumePage() {
   const router = useRouter();
   const chrome = String(router.query.chrome || '').toLowerCase();
   const withChrome = (path) =>
     chrome ? `${path}${path.includes('?') ? '&' : '?'}chrome=${chrome}` : path;
+
   const fileInputRef = useRef(null);
   const dropRef = useRef(null);
   const hasAppliedUploadRef = useRef(false); // ensure we only parse once per uploaded flow
+
   const {
     formData,
     setFormData,
@@ -255,17 +267,21 @@ export default function CreateResumePage() {
     saveEventAt,
     saveResume,
   } = useContext(ResumeContext);
+
   const [TemplateComp, setTemplateComp] = useState(null);
   const [jd, setJd] = useState('');
   const [showToast, setShowToast] = useState(false);
+
   const [openRequired, setOpenRequired] = useState(true);
   const [openOptional, setOpenOptional] = useState(false);
   const [openTailor, setOpenTailor] = useState(false);
   const [toolsOpen, setToolsOpen] = useState(true); // collapsible tools bar
+
   // ATS context passed from jobs page (via resume-cover)
   const [atsPack, setAtsPack] = useState(null);
   const [atsJobMeta, setAtsJobMeta] = useState(null);
   const [atsAppliedFromContext, setAtsAppliedFromContext] = useState(false);
+
   // Draft API helpers (DB-backed)
   const getDraft = async (key) => {
     try {
@@ -278,9 +294,11 @@ export default function CreateResumePage() {
       return null;
     }
   };
+
+  // ✅ FIX: use /api/drafts/set (you do not have /api/drafts/save)
   const saveDraft = async (key, content) => {
     try {
-      await fetch('/api/drafts/save', {
+      await fetch('/api/drafts/set', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ key, content }),
@@ -289,6 +307,7 @@ export default function CreateResumePage() {
       console.error('[resume/create] saveDraft failed', key, e);
     }
   };
+
   // Helper: detect if atsPack is a real ATS result vs demo
   const hasRealAts =
     !!(
@@ -297,9 +316,11 @@ export default function CreateResumePage() {
       typeof atsPack.ats.score === 'number' &&
       !/demo|sample/i.test(atsPack.ats.summary || '')
     );
+
   const savedTime = saveEventAt
     ? new Date(saveEventAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
     : '';
+
   // ✅ REQUIRED completion checks (now includes EDUCATION)
   const checks = [
     summary?.trim().length > 20,
@@ -308,6 +329,7 @@ export default function CreateResumePage() {
     educationList?.length > 0 &&
       educationList.some((edu) => (edu.school || edu.institution) && (edu.degree || edu.field)),
   ];
+
   // Detect if the resume is effectively empty and clamp progress to 0 in that case.
   // IMPORTANT: Ignore auto-populated fields (fullName + forgeUrl/ftProfile) so "Ready" stays 0% until user actually enters content.
   const hasAnyResumeContent =
@@ -351,21 +373,23 @@ export default function CreateResumePage() {
       )) ||
     (certifications && certifications.length > 0) ||
     (customSections && customSections.length > 0);
+
   let progress = Math.round((checks.filter(Boolean).length / 4) * 100);
   if (!hasAnyResumeContent) {
     progress = 0;
   }
+
   // treat "complete" as exactly 100% progress
   const isResumeComplete = progress === 100;
+
   // Load resume template
   useEffect(() => {
     if (!router.isReady) return;
     const id = router.query.template === 'hybrid' ? 'hybrid' : 'reverse';
     const comp = getResumeTemplateComponent(id);
-    setTemplateComp(() =>
-      typeof comp === 'function' ? comp : ReverseResumeTemplate
-    );
+    setTemplateComp(() => (typeof comp === 'function' ? comp : ReverseResumeTemplate));
   }, [router.isReady, router.query.template]);
+
   // Toast on save
   useEffect(() => {
     if (saveEventAt) {
@@ -374,6 +398,7 @@ export default function CreateResumePage() {
       return () => clearTimeout(t);
     }
   }, [saveEventAt]);
+
   // 🔹 Auto-load ForgeTomorrow profile URL + name for the authenticated user
   useEffect(() => {
     async function loadProfileDefaults() {
@@ -384,10 +409,7 @@ export default function CreateResumePage() {
         if (!res.ok) return;
         const data = await res.json();
         // Build name safely
-        const derivedName =
-          data?.name ||
-          [data?.firstName, data?.lastName].filter(Boolean).join(' ') ||
-          '';
+        const derivedName = data?.name || [data?.firstName, data?.lastName].filter(Boolean).join(' ') || '';
         const slug = data?.slug;
         const fullProfileUrl = slug ? `https://forgetomorrow.com/u/${slug}` : '';
         setFormData((prev) => ({
@@ -403,6 +425,7 @@ export default function CreateResumePage() {
     }
     loadProfileDefaults();
   }, [formData.fullName, formData.forgeUrl, formData.ftProfile, setFormData]);
+
   // Handle manual JD file upload / drop — WITH LIMIT CHECK
   const handleFile = async (file) => {
     if (!file) return;
@@ -417,8 +440,7 @@ export default function CreateResumePage() {
         return;
       }
 
-      const raw =
-        file.size > 1_500_000 ? await uploadJD(file) : await extractTextFromFile(file);
+      const raw = file.size > 1_500_000 ? await uploadJD(file) : await extractTextFromFile(file);
       const clean = normalizeJobText(raw);
       setJd(clean);
       // ✅ DB-backed draft storage (no localStorage)
@@ -428,6 +450,7 @@ export default function CreateResumePage() {
       alert('Failed to process job description. Try again.');
     }
   };
+
   // Drag-and-drop listeners
   useEffect(() => {
     const el = dropRef.current;
@@ -446,10 +469,10 @@ export default function CreateResumePage() {
       el.removeEventListener('drop', onDrop);
     };
   }, []);
+
   const templateName =
-    router.query.template === 'hybrid'
-      ? 'Hybrid (Combination)'
-      : 'Reverse Chronological (Default)';
+    router.query.template === 'hybrid' ? 'Hybrid (Combination)' : 'Reverse Chronological (Default)';
+
   const resumeData = {
     personalInfo: {
       // Use fullName if available, fall back to name
@@ -473,35 +496,43 @@ export default function CreateResumePage() {
     languages: languages,
     customSections: customSections,
   };
+
   // ─────────────────────────────────────────────────────────────
   // Autofill from uploaded resume text (from resume-cover → DB drafts)
   // ─────────────────────────────────────────────────────────────
   useEffect(() => {
     if (!router.isReady) return;
     if (hasAppliedUploadRef.current) return;
+
     const { uploaded } = router.query || {};
     const uploadedFlag = String(uploaded || '').toLowerCase();
     if (uploadedFlag !== '1' && uploadedFlag !== 'true') return;
+
     async function applyUploadedResume() {
       try {
         const raw = await getDraft(DRAFT_KEYS.LAST_UPLOADED_RESUME_TEXT);
         const text = typeof raw === 'string' ? raw : '';
         if (!text) return;
+
         const lines = text
           .split(/\r?\n/)
           .map((l) => l.trim())
           .filter(Boolean);
+
         // Naive name guess: first non-empty line if we don't already have a fullName/name
         let guessedName = formData.fullName || formData.name || '';
         if (!guessedName && lines.length > 0) {
           guessedName = lines[0];
         }
+
         // Email
         const emailMatch = text.match(/[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}/i);
         const guessedEmail = emailMatch ? emailMatch[0] : '';
+
         // Phone (very loose pattern, but good enough for first pass)
         const phoneMatch = text.match(/(\+?\d[\d\s\-().]{7,}\d)/);
         const guessedPhone = phoneMatch ? phoneMatch[0].trim() : '';
+
         // Only fill fields that are currently empty so we don't clobber existing formData
         setFormData((prev) => ({
           ...prev,
@@ -509,36 +540,34 @@ export default function CreateResumePage() {
           email: prev.email || guessedEmail || '',
           phone: prev.phone || guessedPhone || '',
         }));
+
         // If summary is empty, drop in the raw text as a starting point (capped length)
         if (!summary || !summary.trim()) {
           const capped = text.length > 4000 ? text.slice(0, 4000) : text;
           setSummary(capped);
         }
+
         hasAppliedUploadRef.current = true;
       } catch (err) {
         console.error('[resume/create] Failed to auto-fill from uploaded resume', err);
       }
     }
+
     applyUploadedResume();
-  }, [
-    router.isReady,
-    router.query,
-    formData.fullName,
-    formData.name,
-    summary,
-    setFormData,
-    setSummary,
-  ]);
+  }, [router.isReady, router.query, formData.fullName, formData.name, summary, setFormData, setSummary]);
+
   // ─────────────────────────────────────────────────────────────
   // Apply ATS pack + JD context from resume-cover (DB drafts)
   // ─────────────────────────────────────────────────────────────
   useEffect(() => {
     if (!router.isReady) return;
     if (atsAppliedFromContext) return;
+
     async function applyAtsContext() {
       const { from } = router.query || {};
       const fromFlag = String(from || '').toLowerCase();
       let applied = false;
+
       if (fromFlag === 'ats') {
         try {
           const pack = await getDraft(DRAFT_KEYS.ATS_PACK);
@@ -563,6 +592,7 @@ export default function CreateResumePage() {
           console.error('[resume/create] Failed to load ATS pack from DB drafts', err);
         }
       }
+
       // Fallback: if we don't have a JD yet, reuse last uploaded JD if available
       if (!applied && !jd) {
         try {
@@ -574,17 +604,19 @@ export default function CreateResumePage() {
           console.error('[resume/create] Failed to load last JD from DB drafts', err);
         }
       }
+
       setAtsAppliedFromContext(true);
     }
+
     applyAtsContext();
   }, [router.isReady, router.query, jd, atsAppliedFromContext]);
+
   // HEADER
   const Header = (
     <section className="bg-white border border-gray-200 rounded-xl p-8 text-center shadow-sm">
       <h1 className="text-3xl font-bold text-orange-600">Resume Builder</h1>
       <p className="text-gray-600 mt-3 max-w-2xl mx-auto">
-        2 templates. 1 goal: Get you the interview.{' '}
-        <strong>Reverse Chronological</strong> for recruiters.{' '}
+        2 templates. 1 goal: Get you the interview. <strong>Reverse Chronological</strong> for recruiters.{' '}
         <strong>ATS-Optimized</strong> for systems. No fluff. Only what works.
       </p>
       <div className="flex items-center justify-center gap-8 mt-6">
@@ -604,21 +636,17 @@ export default function CreateResumePage() {
       </div>
     </section>
   );
+
   // FOOTER
   const Footer = (
     <div className="mt-16 text-center text-xs text-gray-500 max-w-2xl mx-auto px-4">
-      *87% of job seekers using ATS-optimized resumes receive at least one interview within 7 days of
-      applying. <em>Source: Jobscan 2024 Applicant Study (n=1,200). Results vary.</em>
+      *87% of job seekers using ATS-optimized resumes receive at least one interview within 7 days of applying.{' '}
+      <em>Source: Jobscan 2024 Applicant Study (n=1,200). Results vary.</em>
     </div>
   );
+
   return (
-    <SeekerLayout
-      title="Resume Builder"
-      header={Header}
-      right={null}
-      footer={Footer}
-      activeNav="resume-cover"
-    >
+    <SeekerLayout title="Resume Builder" header={Header} right={null} footer={Footer} activeNav="resume-cover">
       <div
         style={{
           maxWidth: 1600,
@@ -634,8 +662,7 @@ export default function CreateResumePage() {
         <div style={{ display: 'grid', gap: 20, position: 'sticky', top: 20 }}>
           {/* TEMPLATE SWITCHER */}
           <Banner>
-            Template: <strong>{templateName}</strong> • Live preview updates instantly on the right
-            {' • '}
+            Template: <strong>{templateName}</strong> • Live preview updates instantly on the right {' • '}
             <span style={{ display: 'inline-flex', alignItems: 'center', gap: 8 }}>
               <button
                 onClick={() => router.push(withChrome('/resume/create?template=reverse'))}
@@ -644,8 +671,7 @@ export default function CreateResumePage() {
                   color: router.query.template !== 'hybrid' ? ORANGE : '#666',
                   background: 'none',
                   border: 'none',
-                  textDecoration:
-                    router.query.template !== 'hybrid' ? 'underline' : 'none',
+                  textDecoration: router.query.template !== 'hybrid' ? 'underline' : 'none',
                   cursor: 'pointer',
                 }}
               >
@@ -659,8 +685,7 @@ export default function CreateResumePage() {
                   color: router.query.template === 'hybrid' ? ORANGE : '#666',
                   background: 'none',
                   border: 'none',
-                  textDecoration:
-                    router.query.template === 'hybrid' ? 'underline' : 'none',
+                  textDecoration: router.query.template === 'hybrid' ? 'underline' : 'none',
                   cursor: 'pointer',
                 }}
               >
@@ -668,30 +693,19 @@ export default function CreateResumePage() {
               </button>
             </span>
           </Banner>
+
           {/* REQUIRED */}
-          <Section
-            title="Required – Start Here"
-            open={openRequired}
-            onToggle={() => setOpenRequired((v) => !v)}
-            required
-          >
+          <Section title="Required – Start Here" open={openRequired} onToggle={() => setOpenRequired((v) => !v)} required>
             <div style={{ display: 'grid', gap: 32 }}>
               <ContactInfoSection embedded formData={formData} setFormData={setFormData} />
-              <WorkExperienceSection
-                embedded
-                experiences={experiences}
-                setExperiences={setExperiences}
-              />
+              <WorkExperienceSection embedded experiences={experiences} setExperiences={setExperiences} />
               <div id="education-section">
-                <EducationSection
-                  embedded
-                  educationList={educationList}
-                  setEducationList={setEducationList}
-                />
+                <EducationSection embedded educationList={educationList} setEducationList={setEducationList} />
               </div>
               <SkillsSection embedded skills={skills} setSkills={setSkills} />
             </div>
           </Section>
+
           {/* OPTIONAL */}
           <Section
             title="Optional – Summary, Projects, Certifications, and Custom Sections"
@@ -702,18 +716,11 @@ export default function CreateResumePage() {
               <LanguagesInlineSection languages={languages} setLanguages={setLanguages} />
               <SummarySection embedded summary={summary} setSummary={setSummary} />
               <ProjectsSection embedded projects={projects} setProjects={setProjects} />
-              <CertificationsSection
-                embedded
-                certifications={certifications}
-                setCertifications={setCertifications}
-              />
-              <CustomSection
-                embedded
-                customSections={customSections}
-                setCustomSections={setCustomSections}
-              />
+              <CertificationsSection embedded certifications={certifications} setCertifications={setCertifications} />
+              <CustomSection embedded customSections={customSections} setCustomSections={setCustomSections} />
             </div>
           </Section>
+
           {/* The Forge Hammer — WITH LIMIT CHECK */}
           <Section
             title={
@@ -728,13 +735,13 @@ export default function CreateResumePage() {
             onToggle={() => setOpenTailor((v) => !v)}
           >
             {/* Counter for Free users */}
-             {atsPack ? (
+            {atsPack ? (
               <div style={{ display: 'grid', gap: 10, marginBottom: 16 }}>
                 <Banner tone="blue">
                   <div style={{ fontWeight: 800, marginBottom: 4 }}>🔥 Job Fire Loaded</div>
                   <div style={{ fontSize: 14, marginBottom: 6 }}>
-                    This job is now the <strong>fire</strong> heating your resume steel.
-                    Your AI hammer and ATS tools are shaping everything against this posting:
+                    This job is now the <strong>fire</strong> heating your resume steel. Your AI hammer and ATS tools are
+                    shaping everything against this posting:
                   </div>
                   {atsJobMeta && (
                     <div style={{ fontSize: 14, marginBottom: 4 }}>
@@ -753,28 +760,21 @@ export default function CreateResumePage() {
                           <strong>AI read of this role:</strong> {atsPack.ats.summary}
                         </div>
                       )}
-                      {Array.isArray(atsPack.ats.recommendations) &&
-                        atsPack.ats.recommendations.length > 0 && (
-                          <div style={{ fontSize: 13 }}>
-                            <strong>Key improvements to consider:</strong>
-                            <ul
-                              style={{
-                                margin: '4px 0 0',
-                                paddingLeft: 18,
-                                fontSize: 13,
-                              }}
-                            >
-                              {atsPack.ats.recommendations.map((rec, idx) => (
-                                <li key={idx}>{rec}</li>
-                              ))}
-                            </ul>
-                          </div>
-                        )}
+                      {Array.isArray(atsPack.ats.recommendations) && atsPack.ats.recommendations.length > 0 && (
+                        <div style={{ fontSize: 13 }}>
+                          <strong>Key improvements to consider:</strong>
+                          <ul style={{ margin: '4px 0 0', paddingLeft: 18, fontSize: 13 }}>
+                            {atsPack.ats.recommendations.map((rec, idx) => (
+                              <li key={idx}>{rec}</li>
+                            ))}
+                          </ul>
+                        </div>
+                      )}
                     </>
                   ) : (
                     <div style={{ fontSize: 13, marginTop: 4 }}>
-                      This job is loaded as your fire, but it hasn’t been fully scored yet.
-                      Run an AI ATS scan below to see your live match % and tailored tips.
+                      This job is loaded as your fire, but it hasn’t been fully scored yet. Run an AI ATS scan below to
+                      see your live match % and tailored tips.
                     </div>
                   )}
                 </Banner>
@@ -783,13 +783,13 @@ export default function CreateResumePage() {
               <Banner>
                 <div style={{ fontWeight: 800, marginBottom: 4 }}>🔥 Add the fire.</div>
                 <div style={{ fontSize: 14 }}>
-                  Your resume is the <strong>steel</strong>. This page is the <strong>anvil</strong>.
-                  The AI tools are your <strong>hammer</strong>. Add a job description to supply the{' '}
-                  <strong>fire</strong> — and unlock AI-powered ATS scoring, keyword suggestions, and
-                  tailored guidance for this specific role.
+                  Your resume is the <strong>steel</strong>. This page is the <strong>anvil</strong>. The AI tools are
+                  your <strong>hammer</strong>. Add a job description to supply the <strong>fire</strong> — and unlock
+                  AI-powered ATS scoring, keyword suggestions, and tailored guidance for this specific role.
                 </div>
               </Banner>
             )}
+
             <div
               ref={dropRef}
               style={{
@@ -828,6 +828,7 @@ export default function CreateResumePage() {
                 style={{ display: 'none' }}
               />
             </div>
+
             {jd && (
               <AtsDepthPanel
                 jdText={jd}
@@ -843,9 +844,7 @@ export default function CreateResumePage() {
                   if (lastExp) {
                     setExperiences((exp) =>
                       exp.map((e, i) =>
-                        i === exp.length - 1
-                          ? { ...e, bullets: [...(e.bullets || []), k] }
-                          : e
+                        i === exp.length - 1 ? { ...e, bullets: [...(e.bullets || []), k] } : e
                       )
                     );
                   }
@@ -854,6 +853,7 @@ export default function CreateResumePage() {
             )}
           </Section>
         </div>
+
         {/* RIGHT: LIVE RESUME PREVIEW */}
         <div
           style={{
@@ -877,27 +877,18 @@ export default function CreateResumePage() {
           >
             LIVE RESUME PREVIEW
           </div>
-          <div
-            id="resume-preview"
-            style={{ padding: 60, background: '#fff', minHeight: '100vh' }}
-          >
+          <div id="resume-preview" style={{ padding: 60, background: '#fff', minHeight: '100vh' }}>
             {TemplateComp && typeof TemplateComp === 'function' ? (
               <TemplateComp data={resumeData} />
             ) : (
-              <div
-                style={{
-                  textAlign: 'center',
-                  marginTop: 120,
-                  color: '#999',
-                  fontSize: 20,
-                }}
-              >
+              <div style={{ textAlign: 'center', marginTop: 120, color: '#999', fontSize: 20 }}>
                 Loading your resume template...
               </div>
             )}
           </div>
         </div>
       </div>
+
       {/* FLOATING TOOLS TOGGLE + BAR */}
       <div className="fixed bottom-24 right-6 z-20 flex flex-col items-end gap-2">
         <button
@@ -908,9 +899,7 @@ export default function CreateResumePage() {
           <span>{toolsOpen ? 'Hide tools' : 'Resume tools'}</span>
           <span className="inline-flex w-5 h-5 items-center justify-center rounded-full bg-gray-100">
             <svg
-              className={`w-3 h-3 text-gray-600 transition-transform ${
-                toolsOpen ? 'rotate-90' : '-rotate-90'
-              }`}
+              className={`w-3 h-3 text-gray-600 transition-transform ${toolsOpen ? 'rotate-90' : '-rotate-90'}`}
               viewBox="0 0 20 20"
               fill="none"
               xmlns="http://www.w3.org/2000/svg"
@@ -925,6 +914,7 @@ export default function CreateResumePage() {
             </svg>
           </span>
         </button>
+
         {toolsOpen && (
           <div className="flex items-center gap-2 bg-white/90 backdrop-blur-sm p-2 rounded-full shadow-2xl border">
             {router.query.template === 'hybrid' ? (
@@ -940,31 +930,24 @@ export default function CreateResumePage() {
                 </div>
               </ReverseATSButton>
             )}
-            <DesignedPDFButton
-              data={resumeData}
-              template={router.query.template === 'hybrid' ? 'hybrid' : 'reverse'}
-            >
+
+            <DesignedPDFButton data={resumeData} template={router.query.template === 'hybrid' ? 'hybrid' : 'reverse'}>
               <div className="bg-orange-500 text-white px-4 py-2 rounded-full font-bold text-xs hover:bg-orange-600 transition-all">
                 Designed PDF
               </div>
             </DesignedPDFButton>
+
             <button
               onClick={saveResume}
               className="bg-green-600 text-white px-4 py-2 rounded-full font-bold text-xs hover:bg-green-700 transition-all"
             >
               Save Resume
             </button>
+
             <div className="bg-white px-3 py-1.5 rounded-full flex items-center gap-1.5 border text-xs ml-1">
               <div className="relative">
                 <svg className="w-6 h-6">
-                  <circle
-                    cx="12"
-                    cy="12"
-                    r="10"
-                    fill="none"
-                    stroke="#E5E7EB"
-                    strokeWidth="2.5"
-                  />
+                  <circle cx="12" cy="12" r="10" fill="none" stroke="#E5E7EB" strokeWidth="2.5" />
                   <circle
                     cx="12"
                     cy="12"
@@ -982,6 +965,7 @@ export default function CreateResumePage() {
               </div>
               <span className="font-semibold text-gray-600">Ready</span>
             </div>
+
             {isResumeComplete && (
               <button
                 onClick={() => router.push(withChrome('/cover/create'))}
@@ -993,9 +977,11 @@ export default function CreateResumePage() {
           </div>
         )}
       </div>
+
       <div className="mt-6 max-w-4xl mx-auto">
         <BulkExportCTA />
       </div>
+
       {showToast && (
         <div
           style={{

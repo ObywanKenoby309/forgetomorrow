@@ -7,6 +7,10 @@ import InternalLayout from '../components/layouts/InternalLayout';
 import ATSInfo from '../components/seeker/ATSInfo';
 import ATSResultPanel from '../components/seeker/ATSResultPanel';
 import JobActions from '../components/jobs/JobActions';
+
+// ✅ NEW: for cleaning job description before saving to drafts
+import { normalizeJobText } from '../lib/jd/ingest';
+
 // ──────────────────────────────────────────────────────────────
 // Lightweight layout shell
 // ──────────────────────────────────────────────────────────────
@@ -25,29 +29,33 @@ function PageShell({ header, right, children }) {
     </div>
   );
 }
+
 // ──────────────────────────────────────────────────────────────
 // Apply Modal (internal jobs)
 // ──────────────────────────────────────────────────────────────
 function ApplyModal({ open, onClose, job, onApplied, isPaidUser, onResumeAlign }) {
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
+
   useEffect(() => {
     if (open) {
       setName('');
       setEmail('');
     }
   }, [open]);
+
   if (!open || !job) return null;
+
   const handleSubmit = (e) => {
     e.preventDefault();
     onApplied(job);
     onClose();
-    alert(
-      `Saved to Applied Jobs: ${job.title}. You can track this role in your Applied Jobs list.`
-    );
+    alert(`Saved to Applied Jobs: ${job.title}. You can track this role in your Applied Jobs list.`);
   };
+
   const titleId = 'apply-dialog-title';
   const descriptionId = 'apply-dialog-description';
+
   return (
     <div
       className="fixed inset-0 z-50 flex items-center justify-center p-4"
@@ -61,13 +69,10 @@ function ApplyModal({ open, onClose, job, onApplied, isPaidUser, onResumeAlign }
         <h3 id={titleId} className="text-xl font-bold" style={{ color: '#263238' }}>
           Apply to {job.title}
         </h3>
-        <p
-          id={descriptionId}
-          className="text-sm mt-1"
-          style={{ color: '#607D8B' }}
-        >
+        <p id={descriptionId} className="text-sm mt-1" style={{ color: '#607D8B' }}>
           {job.company} — {job.location}
         </p>
+
         <form className="mt-6 space-y-4" onSubmit={handleSubmit}>
           <div className="flex flex-col gap-1 text-sm">
             <label htmlFor="apply-full-name" className="font-medium text-slate-800">
@@ -82,6 +87,7 @@ function ApplyModal({ open, onClose, job, onApplied, isPaidUser, onResumeAlign }
               className="w-full rounded-md border px-3 py-2 text-sm"
             />
           </div>
+
           <div className="flex flex-col gap-1 text-sm">
             <label htmlFor="apply-email" className="font-medium text-slate-800">
               Email address
@@ -96,6 +102,7 @@ function ApplyModal({ open, onClose, job, onApplied, isPaidUser, onResumeAlign }
               className="w-full rounded-md border px-3 py-2 text-sm"
             />
           </div>
+
           {isPaidUser && (
             <button
               type="button"
@@ -105,6 +112,7 @@ function ApplyModal({ open, onClose, job, onApplied, isPaidUser, onResumeAlign }
               Check Resume Alignment
             </button>
           )}
+
           <div className="flex justify-end gap-3 pt-4">
             <button
               type="button"
@@ -126,6 +134,7 @@ function ApplyModal({ open, onClose, job, onApplied, isPaidUser, onResumeAlign }
     </div>
   );
 }
+
 // ──────────────────────────────────────────────────────────────
 // Header + right rail
 // ──────────────────────────────────────────────────────────────
@@ -141,25 +150,17 @@ function PageHeader() {
         textAlign: 'center',
       }}
     >
-      <h1
-        style={{ color: '#FF7043', fontSize: 28, fontWeight: 800, margin: 0 }}
-      >
-        Job Listings
-      </h1>
-      <p
-        style={{ margin: '8px 0 0', color: '#546E7A', fontSize: 14 }}
-      >
+      <h1 style={{ color: '#FF7043', fontSize: 28, fontWeight: 800, margin: 0 }}>Job Listings</h1>
+      <p style={{ margin: '8px 0 0', color: '#546E7A', fontSize: 14 }}>
         Explore openings, review full details, and apply with confidence.
       </p>
     </header>
   );
 }
+
 function RightRail() {
   return (
-    <nav
-      aria-label="Job page advertisements"
-      style={{ display: 'grid', gap: 12 }}
-    >
+    <nav aria-label="Job page advertisements" style={{ display: 'grid', gap: 12 }}>
       <div
         style={{
           background: '#1f1f1f',
@@ -169,9 +170,7 @@ function RightRail() {
           color: 'white',
         }}
       >
-        <div style={{ fontWeight: 700, marginBottom: 6, fontSize: 14 }}>
-          Hiring for your team?
-        </div>
+        <div style={{ fontWeight: 700, marginBottom: 6, fontSize: 14 }}>Hiring for your team?</div>
         <p style={{ fontSize: 13, margin: 0, lineHeight: 1.5 }}>
           Your advertisement could be here.
           <br />
@@ -181,6 +180,7 @@ function RightRail() {
     </nav>
   );
 }
+
 // ──────────────────────────────────────────────────────────────
 // Helpers
 // ──────────────────────────────────────────────────────────────
@@ -191,10 +191,12 @@ function inferLocationType(location) {
   if (lower.includes('hybrid')) return 'Hybrid';
   return 'On-site';
 }
+
 function getApplyLink(job) {
   if (!job) return '';
   return job.url || job.externalUrl || job.link || job.applyUrl || '';
 }
+
 function buildFallbackSearch(job) {
   if (!job) return 'https://www.google.com/search?q=careers';
   const parts = [];
@@ -204,6 +206,7 @@ function buildFallbackSearch(job) {
   const query = encodeURIComponent(parts.join(' '));
   return `https://www.google.com/search?q=${query}`;
 }
+
 // Normalize status strings coming from DB / API
 function getJobStatus(job) {
   const raw = (job?.status || '').toString().trim();
@@ -216,9 +219,11 @@ function getJobStatus(job) {
   // Fallback: treat unknown as Open for seekers
   return raw;
 }
+
 function canApply(job) {
   return getJobStatus(job) === 'Open';
 }
+
 // Internal vs external job detector (used for styling + filters)
 function isInternalJob(job) {
   if (!job) return false;
@@ -233,6 +238,7 @@ function isInternalJob(job) {
     source === 'forgetomorrow recruiter'
   );
 }
+
 // Tier helper: 'ft-official' | 'partner' | 'external'
 function getJobTier(job) {
   if (!job) return 'external';
@@ -246,22 +252,27 @@ function getJobTier(job) {
   if (company === 'forgetomorrow') return 'ft-official';
   return 'partner';
 }
+
 // ──────────────────────────────────────────────────────────────
 // Main Jobs Component
 // ──────────────────────────────────────────────────────────────
 function Jobs() {
   const { viewedJobs, appliedJobs, addViewedJob, addAppliedJob } = useJobPipeline();
+
   const [jobs, setJobs] = useState([]);
   const [loading, setLoading] = useState(true);
+
   const [applyOpen, setApplyOpen] = useState(false);
   const [applyJob, setApplyJob] = useState(null);
   const [selectedJob, setSelectedJob] = useState(null);
+
   // ATS result state
   const [atsLoading, setAtsLoading] = useState(false);
   const [atsError, setAtsError] = useState(null);
   const [atsResult, setAtsResult] = useState(null);
   const [atsPanelOpen, setAtsPanelOpen] = useState(false);
   const [atsJob, setAtsJob] = useState(null);
+
   // Filters
   const [keyword, setKeyword] = useState('');
   const [companyFilter, setCompanyFilter] = useState('');
@@ -269,12 +280,31 @@ function Jobs() {
   const [locationTypeFilter, setLocationTypeFilter] = useState('');
   const [daysFilter, setDaysFilter] = useState('');
   const [sourceFilter, setSourceFilter] = useState('');
+
   // Pagination
   const [pageSize, setPageSize] = useState(20);
   const [currentPage, setCurrentPage] = useState(1);
+
   const isPaidUser = true;
+
   // pinned job ids
   const [pinnedIds, setPinnedIds] = useState(new Set());
+
+  // ✅ NEW: draft write helper (DB-backed)
+  const saveDraft = async (key, content) => {
+    try {
+      const res = await fetch('/api/drafts/set', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ key, content }),
+      });
+      return res.ok;
+    } catch (err) {
+      console.error('[Jobs] saveDraft failed', key, err);
+      return false;
+    }
+  };
+
   useEffect(() => {
     async function fetchJobs() {
       try {
@@ -282,6 +312,7 @@ function Jobs() {
         const data = await res.json();
         const list = (data && data.jobs) || [];
         setJobs(list);
+
         // 🔹 Initial selection only. Do NOT mark as viewed here.
         // Recently Viewed should reflect jobs the user actually clicks.
         if (list.length > 0) {
@@ -295,6 +326,7 @@ function Jobs() {
     }
     fetchJobs();
   }, [addViewedJob]);
+
   useEffect(() => {
     let cancelled = false;
     async function loadPinned() {
@@ -313,7 +345,9 @@ function Jobs() {
       cancelled = true;
     };
   }, []);
+
   const isJobPinned = (job) => !!job && pinnedIds.has(job.id);
+
   const togglePin = async (job) => {
     if (!job) return;
     const currentlyPinned = isJobPinned(job);
@@ -350,6 +384,7 @@ function Jobs() {
       );
     }
   };
+
   // Apply click behaviour
   const handleApplyClick = (job) => {
     if (!job) return;
@@ -367,11 +402,28 @@ function Jobs() {
     setApplyJob(job);
     setApplyOpen(true);
   };
-  const handleResumeAlign = (job) => {
-  if (!job) return;
-  // Resume-Role Align is NOT the ATS flow. Do not use from=ats here.
-  window.location.href = `/resume/create?jobId=${job.id}&copyJD=true`;
-};
+
+  // ✅ FIX: Resume-Role Align writes JD into drafts before redirect
+  const handleResumeAlign = async (job) => {
+    if (!job) return;
+
+    try {
+      const raw = job.description || '';
+      const clean = normalizeJobText(raw);
+
+      // Only write if we actually have usable JD text
+      if (clean && clean.trim()) {
+        await saveDraft('ft_last_job_text', clean);
+      }
+    } catch (err) {
+      console.error('[Jobs] Failed to store JD for Resume-Role Align', err);
+      // continue anyway — user can still upload JD manually
+    }
+
+    // Resume-Role Align is NOT the ATS flow. Do not use from=ats here.
+    window.location.href = `/resume/create?jobId=${job.id}&copyJD=true`;
+  };
+
   const handleATSAlign = async (job) => {
     if (!job) return;
     setAtsJob(job);
@@ -390,17 +442,14 @@ function Jobs() {
       setAtsResult({
         score: typeof payload.score === 'number' ? payload.score : null,
         summary: payload.summary || '',
-        recommendations: Array.isArray(payload.recommendations)
-          ? payload.recommendations
-          : [],
+        recommendations: Array.isArray(payload.recommendations) ? payload.recommendations : [],
       });
     } catch (err) {
       console.error('[Jobs] ATS align error', err);
       setAtsError(null);
       setAtsResult({
         score: 78,
-        summary:
-          'Demo result: You appear to be a strong match on core skills and background for this role.',
+        summary: 'Demo result: You appear to be a strong match on core skills and background for this role.',
         recommendations: [
           'Add one or two bullets with clear metrics (%, $, time saved) for your most recent role.',
           'Mirror 2–3 of the job’s exact keywords in your resume summary.',
@@ -411,38 +460,40 @@ function Jobs() {
       setAtsLoading(false);
     }
   };
-  const handleSendToResumeBuilder = async () => {
-  if (!atsJob || !atsResult) return;
 
-  const pack = {
-    job: {
-      id: atsJob.id,
-      title: atsJob.title,
-      company: atsJob.company,
-      location: atsJob.location,
-      description: atsJob.description,
-    },
-    ats: atsResult,
+  const handleSendToResumeBuilder = async () => {
+    if (!atsJob || !atsResult) return;
+
+    const pack = {
+      job: {
+        id: atsJob.id,
+        title: atsJob.title,
+        company: atsJob.company,
+        location: atsJob.location,
+        description: atsJob.description,
+      },
+      ats: atsResult,
+    };
+
+    // ✅ Store in DB drafts (no localStorage)
+    try {
+      const res = await fetch('/api/drafts/set', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ key: 'forge-ats-pack', content: pack }),
+      });
+
+      if (!res.ok) {
+        console.warn('[Jobs] failed to write ATS pack to DB drafts', res.status);
+      }
+    } catch (err) {
+      console.error('[Jobs] failed to write ATS pack to DB drafts', err);
+    }
+
+    // ✅ Go straight to the resume builder with job context
+    window.location.href = `/resume/create?from=ats&jobId=${atsJob.id}&copyJD=true`;
   };
 
-  // ✅ Store in DB drafts (no localStorage)
-  try {
-    const res = await fetch('/api/drafts/set', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ key: 'forge-ats-pack', content: pack }),
-    });
-
-    if (!res.ok) {
-      console.warn('[Jobs] failed to write ATS pack to DB drafts', res.status);
-    }
-  } catch (err) {
-    console.error('[Jobs] failed to write ATS pack to DB drafts', err);
-  }
-
-  // ✅ Go straight to the resume builder with job context
-  window.location.href = `/resume/create?from=ats&jobId=${atsJob.id}&copyJD=true`;
-};
   const handleSelectJob = (job) => {
     setSelectedJob(job);
     addViewedJob(job); // 🔹 Only mark as viewed when user actively selects
@@ -450,32 +501,31 @@ function Jobs() {
     setAtsError(null);
     setAtsPanelOpen(false);
   };
+
   // Filtering
   const normalizedKeyword = keyword.trim().toLowerCase();
   const normalizedCompany = companyFilter.trim().toLowerCase();
   const normalizedLocation = locationFilter.trim().toLowerCase();
+
   const parsedDays = parseInt(daysFilter, 10);
   const hasDaysFilter = !Number.isNaN(parsedDays) && parsedDays > 0;
+
   const now = new Date();
-  const cutoffTime = hasDaysFilter
-    ? now.getTime() - parsedDays * 24 * 60 * 60 * 1000
-    : null;
+  const cutoffTime = hasDaysFilter ? now.getTime() - parsedDays * 24 * 60 * 60 * 1000 : null;
+
   const filteredJobs = jobs.filter((job) => {
     // 1) Status-based feed behavior
     const status = getJobStatus(job);
+
     // Hide drafts from seeker feed entirely
     if (status === 'Draft') {
       return false;
     }
+
     // Hide closed jobs after 3 days (based on updatedAt or publishedat)
     if (status === 'Closed') {
       const threeDaysAgo = now.getTime() - 3 * 24 * 60 * 60 * 1000;
-      const updated =
-        job.updatedAt ||
-        job.updatedat ||
-        job.updated_at ||
-        job.publishedat ||
-        null;
+      const updated = job.updatedAt || job.updatedat || job.updated_at || job.publishedat || null;
       if (updated) {
         const closedDate = new Date(updated);
         if (!Number.isNaN(closedDate.getTime()) && closedDate.getTime() < threeDaysAgo) {
@@ -483,84 +533,101 @@ function Jobs() {
         }
       }
     }
+
     // Existing filters
     const title = (job.title || '').toLowerCase();
     const company = (job.company || '').toLowerCase();
     const location = (job.location || '').toLowerCase();
     const description = (job.description || '').toLowerCase();
     const tags = (job.tags || '').toString().toLowerCase();
+
     if (normalizedKeyword) {
       const haystack = `${title} ${company} ${location} ${description} ${tags}`;
       if (!haystack.includes(normalizedKeyword)) return false;
     }
+
     if (normalizedCompany && !company.includes(normalizedCompany)) {
       return false;
     }
+
     if (normalizedLocation && !location.includes(normalizedLocation)) {
       return false;
     }
+
     if (locationTypeFilter) {
       const inferred = inferLocationType(job.location || '');
       if (inferred !== locationTypeFilter) return false;
     }
+
     if (sourceFilter) {
       const internal = isInternalJob(job);
       if (sourceFilter === 'external' && internal) return false;
       if (sourceFilter === 'internal' && !internal) return false;
     }
+
     if (hasDaysFilter) {
       if (!job.publishedat) return false;
       const d = new Date(job.publishedat);
       if (Number.isNaN(d.getTime())) return false;
       if (d.getTime() < cutoffTime) return false;
     }
+
     return true;
   });
+
   useEffect(() => {
     const totalPagesLocal = Math.max(1, Math.ceil(filteredJobs.length / pageSize));
     if (currentPage > totalPagesLocal) setCurrentPage(1);
   }, [filteredJobs.length, pageSize, currentPage]);
+
   const totalPages = Math.max(1, Math.ceil(filteredJobs.length / pageSize));
   const startIndex = (currentPage - 1) * pageSize;
   const pagedJobs = filteredJobs.slice(startIndex, startIndex + pageSize);
+
   const pageNumbers = [];
   const windowSize = 3;
   const startPage = Math.max(1, currentPage - windowSize);
   const endPage = Math.min(totalPages, currentPage + windowSize);
   for (let p = startPage; p <= endPage; p += 1) pageNumbers.push(p);
+
   const recentViewed = viewedJobs.slice(-6).reverse();
+
   const selectedJobApplyLink = selectedJob ? getApplyLink(selectedJob) : '';
   const selectedStatus = selectedJob ? getJobStatus(selectedJob) : null;
   const canApplySelected = selectedJob ? canApply(selectedJob) : false;
-  const hasAppliedToSelected =
-    !!selectedJob &&
-    appliedJobs.some((j) => j && j.id === selectedJob.id);
+
+  const hasAppliedToSelected = !!selectedJob && appliedJobs.some((j) => j && j.id === selectedJob.id);
+
   const isSelectedInternal = isInternalJob(selectedJob);
-  const selectedSourceLabel = isSelectedInternal
-    ? 'Forge recruiter'
-    : (selectedJob?.source || 'External');
+  const selectedSourceLabel = isSelectedInternal ? 'Forge recruiter' : selectedJob?.source || 'External';
+
   const selectedTier = getJobTier(selectedJob);
   const selectedIsFtOfficial = selectedTier === 'ft-official';
   const selectedIsPartner = selectedTier === 'partner';
   const selectedIsDark = selectedIsFtOfficial || selectedIsPartner;
+
   const selectedDetailBorder = selectedIsFtOfficial
     ? '2px solid #FF7043'
     : selectedIsPartner
     ? '1px solid rgba(17,32,51,0.35)'
     : '1px solid #E0E0E0';
+
   const selectedDetailBackground = selectedIsFtOfficial
     ? 'linear-gradient(135deg, #FF7043, #FF8A65)'
     : selectedIsPartner
     ? 'linear-gradient(135deg, #0B1724, #112033)'
     : '#FFFFFF';
+
   const detailTitleColor = selectedIsDark ? '#FFFFFF' : '#263238';
   const detailSubtleColor = selectedIsDark ? '#CFD8DC' : '#607D8B';
   const detailBodyColor = selectedIsDark ? '#ECEFF1' : '#37474F';
+
   const selectedChipLabel = selectedIsFtOfficial
     ? 'ForgeTomorrow official posting'
     : isSelectedInternal
     ? 'ForgeTomorrow recruiter posting'
     : null;
+
   if (loading) {
     return (
       <PageShell header={<PageHeader />} right={<RightRail />}>
@@ -570,6 +637,7 @@ function Jobs() {
       </PageShell>
     );
   }
+
   return (
     <PageShell header={<PageHeader />} right={<RightRail />}>
       <div
@@ -595,6 +663,7 @@ function Jobs() {
               Filter jobs
             </h2>
           </CardHeader>
+
           <CardContent>
             <div
               style={{
@@ -607,10 +676,7 @@ function Jobs() {
             >
               {/* Keywords */}
               <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
-                <label
-                  htmlFor="jobs-filter-keywords"
-                  style={{ fontSize: 12, color: '#78909C' }}
-                >
+                <label htmlFor="jobs-filter-keywords" style={{ fontSize: 12, color: '#78909C' }}>
                   Keywords
                 </label>
                 <input
@@ -627,12 +693,10 @@ function Jobs() {
                   }}
                 />
               </div>
+
               {/* Company Name */}
               <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
-                <label
-                  htmlFor="jobs-filter-company"
-                  style={{ fontSize: 12, color: '#78909C' }}
-                >
+                <label htmlFor="jobs-filter-company" style={{ fontSize: 12, color: '#78909C' }}>
                   Company Name
                 </label>
                 <input
@@ -649,12 +713,10 @@ function Jobs() {
                   }}
                 />
               </div>
+
               {/* Location */}
               <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
-                <label
-                  htmlFor="jobs-filter-location"
-                  style={{ fontSize: 12, color: '#78909C' }}
-                >
+                <label htmlFor="jobs-filter-location" style={{ fontSize: 12, color: '#78909C' }}>
                   Location
                 </label>
                 <input
@@ -671,12 +733,10 @@ function Jobs() {
                   }}
                 />
               </div>
+
               {/* Location Type */}
               <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
-                <label
-                  htmlFor="jobs-filter-location-type"
-                  style={{ fontSize: 12, color: '#78909C' }}
-                >
+                <label htmlFor="jobs-filter-location-type" style={{ fontSize: 12, color: '#78909C' }}>
                   Location Type
                 </label>
                 <select
@@ -697,12 +757,10 @@ function Jobs() {
                   <option value="On-site">On-site</option>
                 </select>
               </div>
+
               {/* Source */}
               <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
-                <label
-                  htmlFor="jobs-filter-source"
-                  style={{ fontSize: 12, color: '#78909C' }}
-                >
+                <label htmlFor="jobs-filter-source" style={{ fontSize: 12, color: '#78909C' }}>
                   Source
                 </label>
                 <select
@@ -722,12 +780,10 @@ function Jobs() {
                   <option value="internal">Forge recruiters only</option>
                 </select>
               </div>
+
               {/* Posted in last N days */}
               <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
-                <label
-                  htmlFor="jobs-filter-days"
-                  style={{ fontSize: 12, color: '#78909C' }}
-                >
+                <label htmlFor="jobs-filter-days" style={{ fontSize: 12, color: '#78909C' }}>
                   Posted in last (days)
                 </label>
                 <input
@@ -746,6 +802,7 @@ function Jobs() {
                 />
               </div>
             </div>
+
             <div
               style={{
                 marginTop: 6,
@@ -760,9 +817,9 @@ function Jobs() {
             >
               <span>
                 Showing {filteredJobs.length === 0 ? 0 : startIndex + 1}–
-                {Math.min(startIndex + pageSize, filteredJobs.length)} of{' '}
-                {filteredJobs.length} jobs
+                {Math.min(startIndex + pageSize, filteredJobs.length)} of {filteredJobs.length} jobs
               </span>
+
               <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
                 <span>Jobs per page:</span>
                 <select
@@ -788,6 +845,7 @@ function Jobs() {
             </div>
           </CardContent>
         </Card>
+
         {/* Two-column layout */}
         <div
           style={{
@@ -820,17 +878,15 @@ function Jobs() {
               {pagedJobs.map((job) => {
                 const rawDesc = job.description || '';
                 const cleanDesc = rawDesc.replace(/<[^>]*>/g, '');
-                const snippet =
-                  cleanDesc.length > 160
-                    ? `${cleanDesc.slice(0, 160)}…`
-                    : cleanDesc;
+                const snippet = cleanDesc.length > 160 ? `${cleanDesc.slice(0, 160)}…` : cleanDesc;
+
                 const location = job.location || '';
                 const locationType = inferLocationType(location);
+
                 const status = getJobStatus(job);
                 const internal = isInternalJob(job);
-                const displaySource = internal
-                  ? 'Forge recruiter'
-                  : (job.source || 'External');
+                const displaySource = internal ? 'Forge recruiter' : job.source || 'External';
+
                 let postedLabel = 'Date not provided';
                 if (job.publishedat) {
                   const d = new Date(job.publishedat);
@@ -842,48 +898,46 @@ function Jobs() {
                     });
                   }
                 }
+
                 const isSelected = selectedJob && selectedJob.id === job.id;
                 const tier = getJobTier(job);
                 const isFtOfficial = tier === 'ft-official';
                 const isPartner = tier === 'partner';
-                const isExternalTier = tier === 'external';
                 const isDarkCard = isFtOfficial || isPartner;
-                const logoUrl =
-                  job.logoUrl ||
-                  (isFtOfficial ? '/images/logo-color.png' : null);
+
+                const logoUrl = job.logoUrl || (isFtOfficial ? '/images/logo-color.png' : null);
+
                 let cardBackground;
                 let cardBorder;
                 let cardShadow;
+
                 if (isFtOfficial) {
                   cardBackground = 'linear-gradient(135deg, #FF7043, #FF8A65)';
-                  cardBorder = isSelected
-                    ? '2px solid #FFFFFF'
-                    : '1px solid #FFCC80';
+                  cardBorder = isSelected ? '2px solid #FFFFFF' : '1px solid #FFCC80';
                   cardShadow = '0 0 20px rgba(0,0,0,0.45)';
                 } else if (isPartner) {
                   cardBackground = 'linear-gradient(135deg, #0B1724, #112033)';
-                  cardBorder = isSelected
-                    ? '2px solid #FF7043'
-                    : '1px solid rgba(255,112,67,0.7)';
+                  cardBorder = isSelected ? '2px solid #FF7043' : '1px solid rgba(255,112,67,0.7)';
                   cardShadow = '0 0 18px rgba(0,0,0,0.5)';
                 } else {
-                  // external
                   cardBackground = '#FFFFFF';
-                  cardBorder = isSelected
-                    ? '2px solid #FF7043'
-                    : '1px solid #e0e0e0';
+                  cardBorder = isSelected ? '2px solid #FF7043' : '1px solid #e0e0e0';
                   cardShadow = '0 2px 6px rgba(0,0,0,0.04)';
                 }
+
                 const titleColor = isDarkCard ? '#FFFFFF' : '#263238';
                 const subtleColor = isDarkCard ? '#CFD8DC' : '#607D8B';
                 const textColor = isDarkCard ? '#ECEFF1' : '#455A64';
+
                 const chipLabel = isFtOfficial
                   ? 'ForgeTomorrow official posting'
                   : internal
                   ? 'ForgeTomorrow recruiter partner'
                   : null;
+
                 // internal jobs get snippet, externals stay compact
                 const showSnippet = internal;
+
                 return (
                   <Card
                     key={job.id}
@@ -925,9 +979,7 @@ function Jobs() {
                                 height: 40,
                                 borderRadius: 12,
                                 overflow: 'hidden',
-                                backgroundColor: isFtOfficial
-                                  ? 'rgba(0,0,0,0.25)'
-                                  : 'rgba(0,0,0,0.4)',
+                                backgroundColor: isFtOfficial ? 'rgba(0,0,0,0.25)' : 'rgba(0,0,0,0.4)',
                                 display: 'flex',
                                 alignItems: 'center',
                                 justifyContent: 'center',
@@ -945,6 +997,7 @@ function Jobs() {
                               />
                             </div>
                           )}
+
                           <div>
                             {/* TITLE: clamp to 2 lines so it only wraps under itself */}
                             <CardTitle
@@ -961,9 +1014,9 @@ function Jobs() {
                             >
                               {job.title}
                             </CardTitle>
-                            <CardSubtle style={{ color: subtleColor }}>
-                              {job.company}
-                            </CardSubtle>
+
+                            <CardSubtle style={{ color: subtleColor }}>{job.company}</CardSubtle>
+
                             {chipLabel && (
                               <div
                                 style={{
@@ -973,12 +1026,8 @@ function Jobs() {
                                   gap: 6,
                                   padding: '2px 8px',
                                   borderRadius: 999,
-                                  border: isFtOfficial
-                                    ? '1px solid rgba(255,255,255,0.4)'
-                                    : '1px solid rgba(255,255,255,0.2)',
-                                  background: isFtOfficial
-                                    ? 'rgba(0,0,0,0.25)'
-                                    : 'rgba(17,32,51,0.9)',
+                                  border: isFtOfficial ? '1px solid rgba(255,255,255,0.4)' : '1px solid rgba(255,255,255,0.2)',
+                                  background: isFtOfficial ? 'rgba(0,0,0,0.25)' : 'rgba(17,32,51,0.9)',
                                   fontSize: 11,
                                   color: '#FFCC80',
                                 }}
@@ -996,17 +1045,9 @@ function Jobs() {
                             )}
                           </div>
                         </div>
-                        <div
-                          style={{
-                            textAlign: 'right',
-                            minWidth: 120,
-                            flexShrink: 0,
-                          }}
-                          aria-label={`Posted ${postedLabel}`}
-                        >
-                          <div style={{ fontSize: 12, color: subtleColor }}>
-                            Posted
-                          </div>
+
+                        <div style={{ textAlign: 'right', minWidth: 120, flexShrink: 0 }} aria-label={`Posted ${postedLabel}`}>
+                          <div style={{ fontSize: 12, color: subtleColor }}>Posted</div>
                           <div
                             style={{
                               fontSize: 13,
@@ -1018,6 +1059,7 @@ function Jobs() {
                           </div>
                         </div>
                       </div>
+
                       <div
                         style={{
                           marginTop: 4,
@@ -1029,6 +1071,7 @@ function Jobs() {
                         }}
                       >
                         <span>{location || 'Location not provided'}</span>
+
                         {locationType && (
                           <span
                             style={{
@@ -1036,14 +1079,13 @@ function Jobs() {
                               borderRadius: 999,
                               border: '1px solid rgba(207,216,220,0.7)',
                               fontSize: 12,
-                              backgroundColor: isDarkCard
-                                ? 'rgba(38,50,56,0.8)'
-                                : 'transparent',
+                              backgroundColor: isDarkCard ? 'rgba(38,50,56,0.8)' : 'transparent',
                             }}
                           >
                             {locationType}
                           </span>
                         )}
+
                         {displaySource && (
                           <span
                             style={{
@@ -1051,14 +1093,13 @@ function Jobs() {
                               borderRadius: 999,
                               border: '1px solid rgba(207,216,220,0.7)',
                               fontSize: 12,
-                              backgroundColor: isDarkCard
-                                ? 'rgba(38,50,56,0.8)'
-                                : 'transparent',
+                              backgroundColor: isDarkCard ? 'rgba(38,50,56,0.8)' : 'transparent',
                             }}
                           >
                             Source: {displaySource}
                           </span>
                         )}
+
                         {status && status !== 'Open' && (
                           <span
                             style={{
@@ -1066,19 +1107,16 @@ function Jobs() {
                               borderRadius: 999,
                               border: '1px solid #FFCC80',
                               fontSize: 12,
-                              backgroundColor:
-                                status === 'Reviewing' ? '#FFF3E0' : '#ECEFF1',
-                              color:
-                                status === 'Reviewing' ? '#E65100' : '#455A64',
+                              backgroundColor: status === 'Reviewing' ? '#FFF3E0' : '#ECEFF1',
+                              color: status === 'Reviewing' ? '#E65100' : '#455A64',
                             }}
                           >
-                            {status === 'Reviewing'
-                              ? 'Reviewing applicants'
-                              : status}
+                            {status === 'Reviewing' ? 'Reviewing applicants' : status}
                           </span>
                         )}
                       </div>
                     </CardHeader>
+
                     <CardContent>
                       {/* Description snippet: internal only.
                           Scraped/external cards stay clean and compact. */}
@@ -1099,6 +1137,7 @@ function Jobs() {
                 );
               })}
             </div>
+
             {/* Pagination controls */}
             {filteredJobs.length > pageSize && (
               <nav
@@ -1122,17 +1161,17 @@ function Jobs() {
                     padding: '4px 8px',
                     borderRadius: 6,
                     border: '1px solid #CFD8DC',
-                    background:
-                      currentPage === 1 ? '#ECEFF1' : 'white',
-                    cursor:
-                      currentPage === 1 ? 'default' : 'pointer',
+                    background: currentPage === 1 ? '#ECEFF1' : 'white',
+                    cursor: currentPage === 1 ? 'default' : 'pointer',
                     fontWeight: 500,
                   }}
                   aria-label="Go to first page"
                 >
                   First
                 </button>
+
                 {startPage > 1 && <span aria-hidden="true">…</span>}
+
                 {pageNumbers.map((p) => (
                   <button
                     key={p}
@@ -1142,10 +1181,8 @@ function Jobs() {
                       padding: '4px 8px',
                       borderRadius: 6,
                       border: '1px solid #CFD8DC',
-                      background:
-                        p === currentPage ? '#FF7043' : 'white',
-                      color:
-                        p === currentPage ? 'white' : '#263238',
+                      background: p === currentPage ? '#FF7043' : 'white',
+                      color: p === currentPage ? 'white' : '#263238',
                       cursor: p === currentPage ? 'default' : 'pointer',
                       fontWeight: p === currentPage ? 700 : 500,
                     }}
@@ -1155,9 +1192,9 @@ function Jobs() {
                     {p}
                   </button>
                 ))}
-                {endPage < totalPages && (
-                  <span aria-hidden="true">…</span>
-                )}
+
+                {endPage < totalPages && <span aria-hidden="true">…</span>}
+
                 <button
                   type="button"
                   disabled={currentPage === totalPages}
@@ -1166,13 +1203,8 @@ function Jobs() {
                     padding: '4px 8px',
                     borderRadius: 6,
                     border: '1px solid #CFD8DC',
-                    background:
-                      currentPage === totalPages
-                        ? '#ECEFF1'
-                        : 'white',
-                    cursor:
-                      currentPage === totalPages
-                        ? 'default' : 'pointer',
+                    background: currentPage === totalPages ? '#ECEFF1' : 'white',
+                    cursor: currentPage === totalPages ? 'default' : 'pointer',
                     fontWeight: 500,
                   }}
                   aria-label="Go to last page"
@@ -1182,6 +1214,7 @@ function Jobs() {
               </nav>
             )}
           </section>
+
           {/* RIGHT: sticky full job view */}
           <section aria-label="Selected job details">
             <Card
@@ -1193,22 +1226,14 @@ function Jobs() {
                 display: 'flex',
                 flexDirection: 'column',
                 border: selectedDetailBorder,
-                boxShadow: selectedIsDark
-                  ? '0 0 14px rgba(0,0,0,0.25)'
-                  : '0 2px 8px rgba(0,0,0,0.06)',
+                boxShadow: selectedIsDark ? '0 0 14px rgba(0,0,0,0.25)' : '0 2px 8px rgba(0,0,0,0.06)',
                 background: selectedDetailBackground,
               }}
             >
               {selectedJob ? (
                 <>
                   <CardHeader>
-                    <div
-                      style={{
-                        display: 'flex',
-                        flexDirection: 'column',
-                        gap: 6,
-                      }}
-                    >
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
                       {selectedChipLabel && (
                         <div
                           style={{
@@ -1216,8 +1241,7 @@ function Jobs() {
                             padding: '3px 10px',
                             borderRadius: 999,
                             border: '1px solid rgba(17,32,51,0.16)',
-                            background:
-                              'linear-gradient(135deg, #0B1724, #112033)',
+                            background: 'linear-gradient(135deg, #0B1724, #112033)',
                             fontSize: 11,
                             color: '#FFCC80',
                             display: 'inline-flex',
@@ -1236,16 +1260,15 @@ function Jobs() {
                           {selectedChipLabel}
                         </div>
                       )}
+
                       <div>
-                        <CardTitle style={{ color: detailTitleColor }}>
-                          {selectedJob.title}
-                        </CardTitle>
+                        <CardTitle style={{ color: detailTitleColor }}>{selectedJob.title}</CardTitle>
                         <CardSubtle style={{ color: detailSubtleColor }}>
-                          {selectedJob.company} —{' '}
-                          {selectedJob.location || 'Location not provided'}
+                          {selectedJob.company} — {selectedJob.location || 'Location not provided'}
                         </CardSubtle>
                       </div>
                     </div>
+
                     <div
                       style={{
                         marginTop: 6,
@@ -1263,15 +1286,14 @@ function Jobs() {
                             borderRadius: 999,
                             border: '1px solid #CFD8DC',
                             fontSize: 12,
-                            backgroundColor: selectedIsDark
-                              ? 'rgba(38,50,56,0.8)'
-                              : 'transparent',
+                            backgroundColor: selectedIsDark ? 'rgba(38,50,56,0.8)' : 'transparent',
                             color: selectedIsDark ? '#ECEFF1' : '#455A64',
                           }}
                         >
                           {inferLocationType(selectedJob.location || '')}
                         </span>
                       )}
+
                       {selectedSourceLabel && (
                         <span
                           style={{
@@ -1279,9 +1301,7 @@ function Jobs() {
                             borderRadius: 999,
                             border: '1px solid #CFD8DC',
                             fontSize: 12,
-                            backgroundColor: selectedIsDark
-                              ? 'rgba(38,50,56,0.8)'
-                              : 'transparent',
+                            backgroundColor: selectedIsDark ? 'rgba(38,50,56,0.8)' : 'transparent',
                             color: selectedIsDark ? '#ECEFF1' : '#455A64',
                           }}
                         >
@@ -1290,51 +1310,30 @@ function Jobs() {
                       )}
                     </div>
                   </CardHeader>
-                  <CardContent
-                    style={{
-                      display: 'flex',
-                      flexDirection: 'column',
-                      gap: 12,
-                    }}
-                  >
+
+                  <CardContent style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
                     {/* Description */}
-                    <div
-                      style={{
-                        flex: 1,
-                        overflowY: 'auto',
-                        paddingRight: 4,
-                        maxHeight: '58vh',
-                      }}
-                    >
+                    <div style={{ flex: 1, overflowY: 'auto', paddingRight: 4, maxHeight: '58vh' }}>
                       {(() => {
-                        const raw = (selectedJob.description || '').replace(
-                          /<[^>]*>/g,
-                          ''
-                        );
+                        const raw = (selectedJob.description || '').replace(/<[^>]*>/g, '');
                         const paragraphs = raw
                           .split(/\n\s*\n/)
                           .map((p) => p.trim())
                           .filter((p) => p.length > 0);
+
                         if (paragraphs.length === 0) {
                           return (
-                            <p
-                              style={{
-                                margin: 0,
-                                color: detailBodyColor,
-                                fontSize: 14,
-                                lineHeight: 1.6,
-                              }}
-                            >
+                            <p style={{ margin: 0, color: detailBodyColor, fontSize: 14, lineHeight: 1.6 }}>
                               No description provided.
                             </p>
                           );
                         }
+
                         return paragraphs.map((para, idx) => (
                           <p
                             key={idx}
                             style={{
-                              margin:
-                                idx === 0 ? '0 0 10px' : '10px 0 0',
+                              margin: idx === 0 ? '0 0 10px' : '10px 0 0',
                               color: detailBodyColor,
                               fontSize: 14,
                               lineHeight: 1.6,
@@ -1345,6 +1344,7 @@ function Jobs() {
                         ));
                       })()}
                     </div>
+
                     {/* ACTION ROW */}
                     {selectedStatus === 'Open' && (
                       <JobActions
@@ -1356,6 +1356,7 @@ function Jobs() {
                         showViewPost={false}
                       />
                     )}
+
                     {/* Status-aware thank-you / info banner */}
                     {selectedStatus === 'Reviewing' && (
                       <div
@@ -1370,9 +1371,7 @@ function Jobs() {
                         }}
                       >
                         <p style={{ margin: 0, fontWeight: 600 }}>
-                          {hasAppliedToSelected
-                            ? 'Thank you for applying.'
-                            : 'This employer is now reviewing applicants.'}
+                          {hasAppliedToSelected ? 'Thank you for applying.' : 'This employer is now reviewing applicants.'}
                         </p>
                         <p style={{ margin: '4px 0 0' }}>
                           {hasAppliedToSelected
@@ -1381,6 +1380,7 @@ function Jobs() {
                         </p>
                       </div>
                     )}
+
                     {selectedStatus === 'Closed' && (
                       <div
                         style={{
@@ -1394,9 +1394,7 @@ function Jobs() {
                         }}
                       >
                         <p style={{ margin: 0, fontWeight: 600 }}>
-                          {hasAppliedToSelected
-                            ? 'Thank you for applying.'
-                            : 'This posting is now closed.'}
+                          {hasAppliedToSelected ? 'Thank you for applying.' : 'This posting is now closed.'}
                         </p>
                         <p style={{ margin: '4px 0 0' }}>
                           {hasAppliedToSelected
@@ -1409,25 +1407,18 @@ function Jobs() {
                 </>
               ) : (
                 <CardContent>
-                  <h3
-                    style={{
-                      margin: '0 0 8px',
-                      fontSize: 18,
-                      fontWeight: 600,
-                      color: '#263238',
-                    }}
-                  >
+                  <h3 style={{ margin: '0 0 8px', fontSize: 18, fontWeight: 600, color: '#263238' }}>
                     Select a job
                   </h3>
                   <p style={{ color: '#78909C', fontSize: 14 }}>
-                    Choose a job from the list on the left to view full details
-                    here.
+                    Choose a job from the list on the left to view full details here.
                   </p>
                 </CardContent>
               )}
             </Card>
           </section>
         </div>
+
         {/* Bottom row: Recently viewed + Applied Jobs */}
         <div
           style={{
@@ -1438,32 +1429,15 @@ function Jobs() {
         >
           <Card as="section" aria-labelledby="jobs-recent-heading">
             <CardHeader>
-              <CardTitle
-                id="jobs-recent-heading"
-                style={{ color: '#FF7043', fontSize: 20 }}
-              >
+              <CardTitle id="jobs-recent-heading" style={{ color: '#FF7043', fontSize: 20 }}>
                 Recently Viewed
               </CardTitle>
             </CardHeader>
             <CardContent>
               {recentViewed.length === 0 ? (
-                <p
-                  style={{
-                    color: '#999',
-                    fontStyle: 'italic',
-                    margin: 0,
-                  }}
-                >
-                  No jobs viewed yet.
-                </p>
+                <p style={{ color: '#999', fontStyle: 'italic', margin: 0 }}>No jobs viewed yet.</p>
               ) : (
-                <ul
-                  style={{
-                    margin: 0,
-                    paddingLeft: 18,
-                    fontSize: 14,
-                  }}
-                >
+                <ul style={{ margin: 0, paddingLeft: 18, fontSize: 14 }}>
                   {recentViewed.map((job) => (
                     <li key={`${job.id}-${job.title}`}>{job.title}</li>
                   ))}
@@ -1471,34 +1445,18 @@ function Jobs() {
               )}
             </CardContent>
           </Card>
+
           <Card as="section" aria-labelledby="jobs-applied-heading">
             <CardHeader>
-              <CardTitle
-                id="jobs-applied-heading"
-                style={{ color: '#FF7043', fontSize: 20 }}
-              >
+              <CardTitle id="jobs-applied-heading" style={{ color: '#FF7043', fontSize: 20 }}>
                 Applied Jobs
               </CardTitle>
             </CardHeader>
             <CardContent>
               {appliedJobs.length === 0 ? (
-                <p
-                  style={{
-                    color: '#999',
-                    fontStyle: 'italic',
-                    margin: 0,
-                  }}
-                >
-                  No applications yet.
-                </p>
+                <p style={{ color: '#999', fontStyle: 'italic', margin: 0 }}>No applications yet.</p>
               ) : (
-                <ul
-                  style={{
-                    margin: 0,
-                    paddingLeft: 18,
-                    fontSize: 14,
-                  }}
-                >
+                <ul style={{ margin: 0, paddingLeft: 18, fontSize: 14 }}>
                   {appliedJobs.map((job) => (
                     <li key={`${job.id}-${job.title}`}>{job.title}</li>
                   ))}
@@ -1508,6 +1466,7 @@ function Jobs() {
           </Card>
         </div>
       </div>
+
       {/* Apply Modal */}
       <ApplyModal
         open={applyOpen}
@@ -1517,6 +1476,7 @@ function Jobs() {
         isPaidUser={isPaidUser}
         onResumeAlign={handleResumeAlign}
       />
+
       {/* ATS Result Panel */}
       <ATSResultPanel
         open={atsPanelOpen}
@@ -1529,6 +1489,7 @@ function Jobs() {
     </PageShell>
   );
 }
+
 // ──────────────────────────────────────────────────────────────
 // Page Wrapper
 // ──────────────────────────────────────────────────────────────

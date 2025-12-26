@@ -1,8 +1,8 @@
 // pages/api/ats-score.ts
+import type { NextApiRequest, NextApiResponse } from 'next';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
-import type { NextApiRequest, NextApiResponse } from 'next';
 
 // === TYPES ===
 type ATSResponse = {
@@ -10,36 +10,46 @@ type ATSResponse = {
   tips: string[];
   role?: string;
   upgrade?: boolean;
-  aiSummary?: string;              // ← NEW: AI read of this role
-  aiRecommendations?: string[];    // ← NEW: concrete next steps
+  aiSummary?: string;
+  aiRecommendations?: string[];
 };
 
 type ApiResponse = {
   ok: boolean;
-  data?: ATSResponse | null;
+  // IMPORTANT: return a FLAT payload so the client doesn't break
+  score?: number;
+  tips?: string[];
+  role?: string;
+  upgrade?: boolean;
+  aiSummary?: string;
+  aiRecommendations?: string[];
   error?: string;
 };
 
-// === MAIN HANDLER ===
-export default async function handler(
-  req: NextApiRequest,
-  res: NextApiResponse<ApiResponse>
-) {
+function monthWindowUTC(d = new Date()) {
+  const y = d.getUTCFullYear();
+  const m = d.getUTCMonth();
+  const start = new Date(Date.UTC(y, m, 1, 0, 0, 0));
+  const end = new Date(Date.UTC(y, m + 1, 1, 0, 0, 0));
+  return { start, end, key: `${y}-${String(m + 1).padStart(2, '0')}` };
+}
+
+export default async function handler(req: NextApiRequest, res: NextApiResponse<ApiResponse>) {
   if (req.method !== 'POST') {
     return res.status(405).json({ ok: false, error: 'Method not allowed' });
   }
 
-  const { jd, resume } = req.body;
+  const { jd, resume } = req.body || {};
   if (!jd || !resume) {
     return res.status(400).json({ ok: false, error: 'Missing JD or resume data' });
   }
 
   let userId: string | undefined;
-  let role: string = 'SEEKER';
-  let tier: string = 'FREE';
+  let role = 'SEEKER';
+  let tier = 'FREE';
 
   try {
-    // === 1. AUTH + TIER CHECK ===
+    // === 1) AUTH ===
     const session = await getServerSession(req, res, authOptions);
     if (!session?.user?.id) {
       return res.status(401).json({ ok: false, error: 'Unauthorized' });
@@ -47,37 +57,48 @@ export default async function handler(
 
     userId = session.user.id;
     role = (session.user.role as string) || 'SEEKER';
-    tier = (session.user.plan as string) || 'FREE';
 
-    // === 2. FREE TIER LIMIT: 3 scans/day ===
-    if (tier === 'FREE') {
-      const today = new Date().toISOString().split('T')[0];
-      const scansToday = await prisma.scanLog.count({
-        where: { userId, date: today },
+    // === 2) TIER (do NOT trust session alone) ===
+    // Adjust select fields to match your User model
+    const dbUser = await prisma.user.findUnique({
+      where: { id: userId },
+      select: { plan: true }, // if your field is "tier" or "subscription", change here
+    });
+
+    tier = (dbUser?.plan as string) || (session.user.plan as string) || 'FREE';
+
+    // === 3) FREE LIMIT: 3 per MONTH (server-side only, cannot be bypassed) ===
+    if (String(tier).toUpperCase() === 'FREE') {
+      const { start, end } = monthWindowUTC(new Date());
+
+      const scansThisMonth = await prisma.scanLog.count({
+        where: {
+          userId,
+          createdAt: { gte: start, lt: end },
+        },
       });
 
-      if (scansToday >= 3) {
+      if (scansThisMonth >= 3) {
         return res.status(200).json({
           ok: true,
-          data: {
-            score: 0,
-            tips: [
-              'Free tier: 3 AI scans/day used.',
-              'Upgrade to Pro for unlimited AI scans and bullet rewrites.',
-            ],
-            upgrade: true,
-            aiSummary:
-              'Free tier limit reached for today. Upgrade to unlock unlimited scans and deeper guidance.',
-            aiRecommendations: [
-              'Review your last scan’s suggestions and update your resume.',
-              'Come back tomorrow for another free scan, or upgrade to Pro.',
-            ],
-          },
+          score: 0,
+          tips: [
+            'Free tier: 3 AI scans/month used.',
+            'Upgrade to Pro for unlimited AI scans and deeper rewrites.',
+          ],
+          upgrade: true,
+          role,
+          aiSummary:
+            'Free tier limit reached for this month. Upgrade to unlock unlimited scans and deeper guidance.',
+          aiRecommendations: [
+            'Apply the last scan’s recommendations (keywords + quantified bullets).',
+            'Come back next month for more free scans, or upgrade to Pro.',
+          ],
         });
       }
     }
 
-    // === 3. CALL GROK API ===
+    // === 4) CALL GROK ===
     const apiKey = process.env.XAI_API_KEY;
     if (!apiKey) {
       console.error(`[/api/ats-score] XAI_API_KEY missing for user ${userId}`);
@@ -145,10 +166,7 @@ RESUME:
       body: JSON.stringify({
         model: 'grok-3-mini',
         messages: [
-          {
-            role: 'system',
-            content: 'You are an expert ATS analyst. Respond with JSON only.',
-          },
+          { role: 'system', content: 'You are an expert ATS analyst. Respond with JSON only.' },
           { role: 'user', content: prompt },
         ],
         temperature: 0.1,
@@ -173,7 +191,7 @@ RESUME:
       throw new Error('Invalid JSON from AI');
     }
 
-    const score = typeof result.score === 'number' ? result.score : 0;
+    const score = typeof result.score === 'number' ? Math.max(0, Math.min(100, result.score)) : 0;
     const aiSummary =
       result.summary ||
       'AI read unavailable for this scan, but you can still use the ATS score and missing keywords.';
@@ -185,27 +203,25 @@ RESUME:
             'Add at least one bullet with clear metrics (%, $, time saved) to your most recent role.',
           ];
 
-    // === 4. LOG SCAN ===
+    // === 5) LOG SCAN (use month key in date string if you want visibility) ===
+    const { key: monthKey } = monthWindowUTC(new Date());
     await prisma.scanLog.create({
       data: {
         userId,
-        date: new Date().toISOString().split('T')[0],
-        score,
+        date: monthKey, // informational; gating uses createdAt
+        score: Math.round(score),
       },
     });
 
-    // === 5. FORMAT TIPS (short, for the small tips list) ===
     const tips = aiRecommendations.slice(0, 4);
 
     return res.status(200).json({
       ok: true,
-      data: {
-        score,
-        tips,
-        role,
-        aiSummary,
-        aiRecommendations,
-      },
+      score: Math.round(score),
+      tips,
+      role,
+      aiSummary,
+      aiRecommendations,
     });
   } catch (error: any) {
     console.error(`[/api/ats-score] AI failed for user ${userId || 'unknown'}:`, error);
@@ -235,7 +251,6 @@ function fallbackResponse(
 
     let score = 50;
 
-    // Role match
     if (
       resume.personalInfo?.targetedRole &&
       jdLower.includes(resume.personalInfo.targetedRole.toLowerCase())
@@ -243,15 +258,11 @@ function fallbackResponse(
       score += 25;
     }
 
-    // Skill keywords
     const jdSkills =
-      jdLower.match(
-        /\b(sql|python|react|aws|tableau|excel|jira|figma|notion|a\/b testing|leadership)\b/gi
-      ) || [];
+      jdLower.match(/\b(sql|python|react|aws|tableau|excel|jira|figma|notion|a\/b testing|leadership)\b/gi) || [];
     const matches = jdSkills.filter((s) => resumeText.includes(s));
     score += Math.min(matches.length * 8, 30);
 
-    // Quantified impact
     if (/\d+%|increased|reduced|grew|launched|built/i.test(resumeText)) {
       score += 15;
     }
@@ -268,13 +279,11 @@ function fallbackResponse(
 
     res.status(200).json({
       ok: true,
-      data: {
-        score,
-        tips: aiRecommendations.slice(0, 3),
-        role,
-        aiSummary,
-        aiRecommendations,
-      },
+      score,
+      tips: aiRecommendations.slice(0, 3),
+      role,
+      aiSummary,
+      aiRecommendations,
     });
   } catch (error) {
     console.error(`[/api/ats-score] Fallback failed for user ${userId || 'unknown'}:`, error);
