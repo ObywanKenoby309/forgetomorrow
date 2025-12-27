@@ -1,5 +1,3 @@
-// pages/offer-negotiation/form.js
-
 import React from 'react';
 import Head from 'next/head';
 import { useRouter } from 'next/router';
@@ -28,9 +26,11 @@ export default function OfferNegotiationFormPage() {
     getChromeFromAsPath(router.asPath);
 
   const handleFormSubmit = (formData) => {
-    const data = encodeURIComponent(JSON.stringify(formData));
-    const chromeParam = chrome ? `&chrome=${encodeURIComponent(chrome)}` : '';
-    router.push(`/offer-negotiation/results?data=${data}${chromeParam}`);
+    const params = new URLSearchParams();
+    params.set('data', JSON.stringify(formData));
+    if (chrome) params.set('chrome', chrome);
+
+    router.push(`/offer-negotiation/results?${params.toString()}`);
   };
 
   const Header = (
@@ -77,7 +77,7 @@ export default function OfferNegotiationFormPage() {
         title="Offer Details | ForgeTomorrow"
         header={Header}
         right={null}
-        activeNav="roadmap"
+        activeNav={null}
       >
         <div className="w-full max-w-3xl mx-auto">
           <div className="bg-white border border-gray-200 rounded-xl p-6 shadow-sm">

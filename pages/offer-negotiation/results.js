@@ -1,5 +1,3 @@
-// pages/offer-negotiation/results.js
-
 import React, { useEffect, useState } from 'react';
 import Head from 'next/head';
 import { useRouter } from 'next/router';
@@ -36,7 +34,7 @@ export default function OfferNegotiationResults() {
   useEffect(() => {
     if (data) {
       try {
-        setFormData(JSON.parse(data));
+        setFormData(JSON.parse(String(data)));
       } catch {
         setFormData(null);
       }
@@ -86,7 +84,7 @@ export default function OfferNegotiationResults() {
         title="Negotiation Strategy | ForgeTomorrow"
         header={Header}
         right={null}
-        activeNav="roadmap"
+        activeNav={null}
       >
         <div className="w-full max-w-3xl mx-auto">
           <div className="bg-white border border-gray-200 rounded-xl p-6 shadow-sm">

@@ -1,4 +1,3 @@
-// components/offer-negotiation/OfferNegotiationLanding.js
 import React from 'react';
 import { useRouter } from 'next/router';
 
@@ -19,8 +18,6 @@ function getChromeFromAsPath(asPath) {
 export default function OfferNegotiationLanding({ remainingUses, isPaidUser }) {
   const router = useRouter();
 
-  // IMPORTANT: router.query can be empty on first render.
-  // Use asPath fallback so we never lose chrome context.
   const chrome =
     String(router.query.chrome || '').toLowerCase() ||
     getChromeFromAsPath(router.asPath);
