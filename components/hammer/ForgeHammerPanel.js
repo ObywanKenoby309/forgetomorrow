@@ -11,7 +11,6 @@
  */
 
 import React from 'react';
-import AtsDepthPanel from '@/components/resume-form/AtsDepthPanel';
 
 export default function ForgeHammerPanel({
   jdText,
@@ -25,7 +24,14 @@ export default function ForgeHammerPanel({
   onAddSummary,
   onAddBullet,
 }) {
+  // ✅ HARD SSR KILL SWITCH — Turbopack was still pulling AtsDepthPanel into SSR graph
+  if (typeof window === 'undefined') return null;
+
   if (!jdText || !String(jdText).trim()) return null;
+
+  // ✅ LAZY LOAD — prevents server build graph from importing AtsDepthPanel at module load time
+  // eslint-disable-next-line global-require
+  const AtsDepthPanel = require('@/components/resume-form/AtsDepthPanel').default;
 
   return (
     <AtsDepthPanel
