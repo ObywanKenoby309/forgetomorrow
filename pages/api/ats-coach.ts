@@ -3,8 +3,8 @@
 // RESTORED: Grok = Coach. OpenAI = Score (Teacher).
 
 import type { NextApiRequest, NextApiResponse } from 'next';
-import { getServerSession } from 'next-auth';
-import { authOptions } from '@/lib/auth';
+import { getServerSession } from 'next-auth/next';
+import { authOptions } from './auth/[...nextauth]';
 import { prisma } from '@/lib/prisma';
 
 type CoachRequestBody = {
@@ -39,6 +39,15 @@ function monthKeyUTC(d = new Date()) {
   const y = d.getUTCFullYear();
   const m = d.getUTCMonth();
   return `${y}-${String(m + 1).padStart(2, '0')}`;
+}
+
+function normalizeRole(v: any) {
+  return String(v || '').toUpperCase().trim();
+}
+
+function roleIsUnlimited(role: string) {
+  const r = normalizeRole(role);
+  return r === 'RECRUITER' || r === 'COACH' || r === 'ADMIN';
 }
 
 /**
@@ -95,6 +104,21 @@ async function enforceHammerGate(userId: string) {
   });
 }
 
+async function resolveUserId(session: any): Promise<string | null> {
+  const directId = session?.user?.id;
+  if (directId) return String(directId);
+
+  const email = session?.user?.email ? String(session.user.email).toLowerCase().trim() : '';
+  if (!email) return null;
+
+  const u = await prisma.user.findUnique({
+    where: { email },
+    select: { id: true },
+  });
+
+  return u?.id ? String(u.id) : null;
+}
+
 export default async function handler(req: NextApiRequest, res: NextApiResponse<CoachResponse>) {
   if (req.method !== 'POST') {
     res.setHeader('Allow', 'POST');
@@ -103,33 +127,38 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse<
 
   // === AUTH (Hammer is not anonymous) ===
   const session = await getServerSession(req, res, authOptions);
-  const userId = session?.user?.id;
+  const userId = await resolveUserId(session);
   if (!userId) {
     return res.status(401).json({ ok: false, error: 'Unauthorized' });
   }
 
-  // === GATE (FREE = 3/month across Hammer) ===
-  try {
-    const gate = await enforceHammerGate(userId);
+  const role = normalizeRole((session?.user as any)?.role);
 
-    if (!gate.allowed) {
-      return res.status(200).json({
-        ok: true,
-        upgrade: true,
-        text: 'Free tier limit reached (3 Forge Hammer uses/month). Upgrade to Seeker Pro for unlimited Hammer usage.',
-        tips: [
-          'Free tier: 3 Forge Hammer uses/month used.',
-          'Upgrade to Seeker Pro for unlimited Coach + Score and deeper rewrites.',
-        ],
-        raw: 'Free tier limit reached (3 Forge Hammer uses/month). Upgrade to Seeker Pro for unlimited Hammer usage.',
+  // === GATE (FREE = 3/month across Hammer) ===
+  // Recruiter/Coach/Admin are NEVER gatekept.
+  if (!roleIsUnlimited(role)) {
+    try {
+      const gate = await enforceHammerGate(userId);
+
+      if (!gate.allowed) {
+        return res.status(200).json({
+          ok: true,
+          upgrade: true,
+          text: 'Free tier limit reached (3 Forge Hammer uses/month). Upgrade to Seeker Pro for unlimited Hammer usage.',
+          tips: [
+            'Free tier: 3 Forge Hammer uses/month used.',
+            'Upgrade to Seeker Pro for unlimited Coach + Score and deeper rewrites.',
+          ],
+          raw: 'Free tier limit reached (3 Forge Hammer uses/month). Upgrade to Seeker Pro for unlimited Hammer usage.',
+        });
+      }
+    } catch (e) {
+      console.error('[ats-coach] gate error', e);
+      return res.status(500).json({
+        ok: false,
+        error: 'Unable to validate plan usage. Please try again.',
       });
     }
-  } catch (e) {
-    console.error('[ats-coach] gate error', e);
-    return res.status(500).json({
-      ok: false,
-      error: 'Unable to validate plan usage. Please try again.',
-    });
   }
 
   // === GROK KEY ===
@@ -159,8 +188,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse<
         const title = exp.title || exp.jobTitle || exp.role || '';
         const company = exp.company || '';
         const bullets = Array.isArray(exp.bullets) ? exp.bullets : [];
-        const firstBullet =
-          bullets.find((b: string) => typeof b === 'string' && b.trim().length > 0) || '';
+        const firstBullet = bullets.find((b: string) => typeof b === 'string' && b.trim().length > 0) || '';
         return `${idx + 1}. ${title} at ${company}${firstBullet ? ` — ${firstBullet}` : ''}`;
       })
       .join('\n');

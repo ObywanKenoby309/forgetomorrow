@@ -1,7 +1,7 @@
 // pages/api/ats-score.ts
 import type { NextApiRequest, NextApiResponse } from 'next';
-import { getServerSession } from 'next-auth';
-import { authOptions } from '@/lib/auth';
+import { getServerSession } from 'next-auth/next';
+import { authOptions } from './auth/[...nextauth]';
 import { prisma } from '@/lib/prisma';
 import OpenAI from 'openai';
 
@@ -29,6 +29,15 @@ function monthWindowUTC(d = new Date()) {
   const start = new Date(Date.UTC(y, m, 1, 0, 0, 0));
   const end = new Date(Date.UTC(y, m + 1, 1, 0, 0, 0));
   return { start, end, key: `${y}-${String(m + 1).padStart(2, '0')}` };
+}
+
+function normalizeRole(v: any) {
+  return String(v || '').toUpperCase().trim();
+}
+
+function roleIsUnlimited(role: string) {
+  const r = normalizeRole(role);
+  return r === 'RECRUITER' || r === 'COACH' || r === 'ADMIN';
 }
 
 /**
@@ -93,6 +102,21 @@ function safeParseJson(raw: string) {
   }
 }
 
+async function resolveUserId(session: any): Promise<string | null> {
+  const directId = session?.user?.id;
+  if (directId) return String(directId);
+
+  const email = session?.user?.email ? String(session.user.email).toLowerCase().trim() : '';
+  if (!email) return null;
+
+  const u = await prisma.user.findUnique({
+    where: { email },
+    select: { id: true },
+  });
+
+  return u?.id ? String(u.id) : null;
+}
+
 export default async function handler(req: NextApiRequest, res: NextApiResponse<ApiResponse>) {
   if (req.method !== 'POST') {
     return res.status(405).json({ ok: false, error: 'Method not allowed' });
@@ -109,31 +133,35 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse<
   try {
     // === 1) AUTH ===
     const session = await getServerSession(req, res, authOptions);
-    if (!session?.user?.id) {
+    const resolvedUserId = await resolveUserId(session);
+    if (!resolvedUserId) {
       return res.status(401).json({ ok: false, error: 'Unauthorized' });
     }
 
-    userId = session.user.id;
-    role = (session.user.role as string) || 'SEEKER';
+    userId = resolvedUserId;
+    role = normalizeRole((session?.user as any)?.role) || 'SEEKER';
 
-    // === 2) GATE (FREE = 3/month across Hammer) ===
-    const gate = await enforceHammerGate(userId);
-    if (!gate.allowed) {
-      return res.status(200).json({
-        ok: true,
-        score: 0,
-        tips: [
-          'Free tier: 3 Forge Hammer uses/month used.',
-          'Upgrade to Seeker Pro for unlimited AI scoring + coaching and deeper rewrites.',
-        ],
-        upgrade: true,
-        role,
-        aiSummary: 'Free tier limit reached for this month. Upgrade to unlock unlimited Hammer usage.',
-        aiRecommendations: [
-          'Apply the last guidance (keywords + quantified bullets).',
-          'Come back next month for more free uses, or upgrade to Pro.',
-        ],
-      });
+    // === 2) GATE (FREE = 3/month across Hammer)
+    // Recruiter/Coach/Admin are NEVER gatekept.
+    if (!roleIsUnlimited(role)) {
+      const gate = await enforceHammerGate(userId);
+      if (!gate.allowed) {
+        return res.status(200).json({
+          ok: true,
+          score: 0,
+          tips: [
+            'Free tier: 3 Forge Hammer uses/month used.',
+            'Upgrade to Seeker Pro for unlimited AI scoring + coaching and deeper rewrites.',
+          ],
+          upgrade: true,
+          role,
+          aiSummary: 'Free tier limit reached for this month. Upgrade to unlock unlimited Hammer usage.',
+          aiRecommendations: [
+            'Apply the last guidance (keywords + quantified bullets).',
+            'Come back next month for more free uses, or upgrade to Pro.',
+          ],
+        });
+      }
     }
 
     // === 3) Normalize resume shape (accept BOTH formats) ===
@@ -142,16 +170,11 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse<
     const summary = (resume.summary || '').toString();
     const skills = Array.isArray(resume.skills) ? resume.skills : [];
 
-    const targetedRole =
-      resume.personalInfo?.targetedRole ||
-      resume.targetedRole ||
-      resume.jobTitle ||
-      '';
+    const targetedRole = resume.personalInfo?.targetedRole || resume.targetedRole || resume.jobTitle || '';
 
     // === 4) CALL OPENAI (Teacher/Grader) ===
     const apiKey = process.env.OPENAI_API_KEY;
     if (!apiKey) {
-      console.error(`[/api/ats-score] OPENAI_API_KEY missing for user ${userId}`);
       return fallbackResponse(jd, resume, role, userId, res);
     }
 
@@ -188,7 +211,9 @@ RESUME:
       experiences
         ?.map(
           (e: any) =>
-            `${e.jobTitle || e.title || e.role || 'Role'} at ${e.company || 'Unknown'}: ${(e.bullets || []).join('; ')}`
+            `${e.jobTitle || e.title || e.role || 'Role'} at ${e.company || 'Unknown'}: ${(e.bullets || []).join(
+              '; '
+            )}`
         )
         .join(' | ') || 'None'
     }
@@ -213,16 +238,12 @@ RESUME:
     const parsed = raw ? safeParseJson(raw) : null;
 
     if (!parsed || typeof parsed !== 'object') {
-      console.error('[/api/ats-score] Invalid JSON from OpenAI:', raw);
       throw new Error('Invalid JSON from AI');
     }
 
-    const score =
-      typeof parsed.score === 'number' ? Math.max(0, Math.min(100, parsed.score)) : 0;
+    const score = typeof parsed.score === 'number' ? Math.max(0, Math.min(100, parsed.score)) : 0;
 
-    const aiSummary =
-      (parsed.summary && String(parsed.summary).trim()) ||
-      'AI summary unavailable for this scan.';
+    const aiSummary = (parsed.summary && String(parsed.summary).trim()) || 'AI summary unavailable for this scan.';
 
     const aiRecommendations =
       Array.isArray(parsed.recommendations) && parsed.recommendations.length > 0
@@ -287,8 +308,7 @@ function fallbackResponse(
 
     let score = 50;
 
-    const targetedRole =
-      resume?.personalInfo?.targetedRole || resume?.targetedRole || '';
+    const targetedRole = resume?.personalInfo?.targetedRole || resume?.targetedRole || '';
 
     if (targetedRole && jdLower.includes(String(targetedRole).toLowerCase())) {
       score += 25;
