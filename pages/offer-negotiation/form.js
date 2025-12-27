@@ -6,12 +6,31 @@ import { useRouter } from 'next/router';
 import SeekerLayout from '@/components/layouts/SeekerLayout';
 import NegotiationInputForm from '@/components/offer-negotiation/NegotiationInputForm';
 
+function getChromeFromAsPath(asPath) {
+  try {
+    const s = String(asPath || '');
+    if (!s.includes('chrome=')) return '';
+    const qIndex = s.indexOf('?');
+    if (qIndex === -1) return '';
+    const query = s.slice(qIndex + 1);
+    const params = new URLSearchParams(query);
+    return String(params.get('chrome') || '').toLowerCase();
+  } catch {
+    return '';
+  }
+}
+
 export default function OfferNegotiationFormPage() {
   const router = useRouter();
 
+  const chrome =
+    String(router.query.chrome || '').toLowerCase() ||
+    getChromeFromAsPath(router.asPath);
+
   const handleFormSubmit = (formData) => {
-    const query = encodeURIComponent(JSON.stringify(formData));
-    router.push(`/offer-negotiation/results?data=${query}`);
+    const data = encodeURIComponent(JSON.stringify(formData));
+    const chromeParam = chrome ? `&chrome=${encodeURIComponent(chrome)}` : '';
+    router.push(`/offer-negotiation/results?data=${data}${chromeParam}`);
   };
 
   const Header = (
@@ -58,7 +77,7 @@ export default function OfferNegotiationFormPage() {
         title="Offer Details | ForgeTomorrow"
         header={Header}
         right={null}
-        activeNav={null}
+        activeNav="roadmap"
       >
         <div className="w-full max-w-3xl mx-auto">
           <div className="bg-white border border-gray-200 rounded-xl p-6 shadow-sm">

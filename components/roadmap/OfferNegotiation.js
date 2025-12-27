@@ -3,8 +3,29 @@
 import React, { useState } from 'react';
 import { useRouter } from 'next/router';
 
+function getChromeFromAsPath(asPath) {
+  try {
+    const s = String(asPath || '');
+    if (!s.includes('chrome=')) return '';
+    const qIndex = s.indexOf('?');
+    if (qIndex === -1) return '';
+    const query = s.slice(qIndex + 1);
+    const params = new URLSearchParams(query);
+    return String(params.get('chrome') || '').toLowerCase();
+  } catch {
+    return '';
+  }
+}
+
 export default function OfferNegotiation() {
   const router = useRouter();
+
+  const chrome =
+    String(router.query.chrome || '').toLowerCase() ||
+    getChromeFromAsPath(router.asPath);
+
+  const withChrome = (path) =>
+    chrome ? `${path}${path.includes('?') ? '&' : '?'}chrome=${chrome}` : path;
 
   const [tips] = useState([
     'Understand your market value before negotiating.',
@@ -29,7 +50,7 @@ export default function OfferNegotiation() {
 
       <div className="text-right">
         <button
-          onClick={() => router.push('/offer-negotiation/form')}
+          onClick={() => router.push(withChrome('/offer-negotiation/form'))}
           className="bg-[#FF7043] text-white px-6 py-3 rounded hover:bg-[#F4511E] transition"
         >
           Next

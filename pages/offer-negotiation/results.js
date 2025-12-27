@@ -6,9 +6,30 @@ import { useRouter } from 'next/router';
 import SeekerLayout from '@/components/layouts/SeekerLayout';
 import OfferNegotiationResultsComponent from '@/components/offer-negotiation/OfferNegotiationResultsComponent';
 
+function getChromeFromAsPath(asPath) {
+  try {
+    const s = String(asPath || '');
+    if (!s.includes('chrome=')) return '';
+    const qIndex = s.indexOf('?');
+    if (qIndex === -1) return '';
+    const query = s.slice(qIndex + 1);
+    const params = new URLSearchParams(query);
+    return String(params.get('chrome') || '').toLowerCase();
+  } catch {
+    return '';
+  }
+}
+
 export default function OfferNegotiationResults() {
   const router = useRouter();
   const { data } = router.query;
+
+  const chrome =
+    String(router.query.chrome || '').toLowerCase() ||
+    getChromeFromAsPath(router.asPath);
+
+  const withChrome = (path) =>
+    chrome ? `${path}${path.includes('?') ? '&' : '?'}chrome=${chrome}` : path;
 
   const [formData, setFormData] = useState(null);
 
@@ -65,20 +86,18 @@ export default function OfferNegotiationResults() {
         title="Negotiation Strategy | ForgeTomorrow"
         header={Header}
         right={null}
-        activeNav={null}
+        activeNav="roadmap"
       >
         <div className="w-full max-w-3xl mx-auto">
           <div className="bg-white border border-gray-200 rounded-xl p-6 shadow-sm">
             {!formData ? (
-              <p className="text-center text-gray-600">
-                Loading your data…
-              </p>
+              <p className="text-center text-gray-600">Loading your data…</p>
             ) : (
               <>
                 <OfferNegotiationResultsComponent formData={formData} />
                 <div className="text-right mt-6">
                   <button
-                    onClick={() => router.push('/offer-negotiation/form')}
+                    onClick={() => router.push(withChrome('/offer-negotiation/form'))}
                     className="bg-[#FF7043] text-white px-6 py-3 rounded hover:bg-[#F4511E] transition"
                   >
                     Back to Form
