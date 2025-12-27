@@ -2,7 +2,7 @@
 
 // components/resume-form/AtsDepthPanel.tsx
 // Unified Match panel – AI score first, keyword coverage as fallback.
-// FIX: Remove duplicate legacy UI by owning scan+coach here (no AIATSScorerClient rendering).
+// FIX: Strongly type coachContext to match CoachSuggestionsPanel's CoachContext union.
 
 import React, { useMemo, useState } from 'react';
 import CoachSuggestionsPanel from './CoachSuggestionsPanel';
@@ -38,6 +38,12 @@ type Props = {
   onAddSkill?: (keyword: string) => void;
   onAddSummary?: (snippet: string) => void;
   onAddBullet?: (snippet: string) => void;
+};
+
+// ✅ matches CoachSuggestionsPanel.js JSDoc union
+type CoachContext = {
+  section: 'overview' | 'summary' | 'skills' | 'experience' | 'education';
+  keyword?: string | null;
 };
 
 const STOP_WORDS = new Set([
@@ -156,10 +162,7 @@ export default function AtsDepthPanel({
 
   // Coach overlay
   const [coachOpen, setCoachOpen] = useState(false);
-  const [coachContext, setCoachContext] = useState<{
-    section: string;
-    keyword?: string | null;
-  }>({
+  const [coachContext, setCoachContext] = useState<CoachContext>({
     section: 'overview',
     keyword: null,
   });
@@ -228,7 +231,7 @@ export default function AtsDepthPanel({
 
   const missingTitleKeywords = titleKeywords.filter((k) => !matchedTitleKeywords.includes(k));
 
-  // ✅ FIX: send resume data in the API shape the backend expects
+  // ✅ send resume data in the API shape the backend expects
   const resumeData = useMemo(
     () => ({
       summary,
@@ -548,7 +551,7 @@ export default function AtsDepthPanel({
 
         {!expanded ? null : (
           <>
-            {/* AI scan results (no duplicate cards) */}
+            {/* AI scan results */}
             {(aiUpgrade || (aiScore !== null && !aiLoading) || normalizedTips.length > 0) && (
               <div
                 style={{
@@ -626,13 +629,7 @@ export default function AtsDepthPanel({
                     {b.label}
                   </div>
                   <div style={{ color: '#607D8B' }}>
-                    {b.total > 0 ? (
-                      <>
-                        {b.matched}/{b.total} matched
-                      </>
-                    ) : (
-                      '0/0 matched'
-                    )}
+                    {b.total > 0 ? `${b.matched}/${b.total} matched` : '0/0 matched'}
                   </div>
                   <div style={{ marginTop: 2, fontWeight: 600, color: '#455A64' }}>
                     {b.points} pts
@@ -682,14 +679,7 @@ export default function AtsDepthPanel({
                         <p style={{ margin: 0, fontSize: 13, color: '#546E7A' }}>
                           Consider weaving in these terms somewhere in your summary, skills, or experience section:
                         </p>
-                        <ul
-                          style={{
-                            margin: '8px 0 0',
-                            paddingLeft: 18,
-                            fontSize: 13,
-                            color: '#37474F',
-                          }}
-                        >
+                        <ul style={{ margin: '8px 0 0', paddingLeft: 18, fontSize: 13, color: '#37474F' }}>
                           {missingTitleKeywords.map((kw) => (
                             <li key={kw}>{kw}</li>
                           ))}
@@ -731,7 +721,7 @@ export default function AtsDepthPanel({
         jdText={jdText}
         resumeData={resumeData}
         missing={{
-          high: missingTitleKeywords, // ✅ treat these as high-impact missing for now
+          high: missingTitleKeywords,
           tools: [],
           edu: [],
           soft: [],
