@@ -21,7 +21,11 @@ import BulkExportCTA from '@/components/BulkExportCTA';
 import ReverseATSButton from '@/components/resume-form/export/ReverseATSButton';
 import HybridATSButton from '@/components/resume-form/export/HybridATSButton';
 import DesignedPDFButton from '@/components/resume-form/export/DesignedPDFButton'; // ← NEW
-import ForgeHammerPanel from '@/components/hammer/ForgeHammerPanel';
+
+const ForgeHammerPanel = dynamic(
+  () => import('@/components/hammer/ForgeHammerPanel'),
+  { ssr: false }
+);
 
 const ORANGE = '#FF7043';
 
