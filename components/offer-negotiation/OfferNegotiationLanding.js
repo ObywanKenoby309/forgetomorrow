@@ -1,11 +1,35 @@
+// components/offer-negotiation/OfferNegotiationLanding.js
 import React from 'react';
 import { useRouter } from 'next/router';
+
+function getChromeFromAsPath(asPath) {
+  try {
+    const s = String(asPath || '');
+    if (!s.includes('chrome=')) return '';
+    const qIndex = s.indexOf('?');
+    if (qIndex === -1) return '';
+    const query = s.slice(qIndex + 1);
+    const params = new URLSearchParams(query);
+    return String(params.get('chrome') || '').toLowerCase();
+  } catch {
+    return '';
+  }
+}
 
 export default function OfferNegotiationLanding({ remainingUses, isPaidUser }) {
   const router = useRouter();
 
+  // IMPORTANT: router.query can be empty on first render.
+  // Use asPath fallback so we never lose chrome context.
+  const chrome =
+    String(router.query.chrome || '').toLowerCase() ||
+    getChromeFromAsPath(router.asPath);
+
+  const withChrome = (path) =>
+    chrome ? `${path}${path.includes('?') ? '&' : '?'}chrome=${chrome}` : path;
+
   const handleStart = () => {
-    router.push('/offer-negotiation/form');
+    router.push(withChrome('/offer-negotiation/form'));
   };
 
   return (
@@ -15,7 +39,7 @@ export default function OfferNegotiationLanding({ remainingUses, isPaidUser }) {
       </h1>
 
       <p className="text-gray-700 text-center">
-        Get AI-powered advice tailored to your job offer or raise negotiation.  
+        Get AI-powered advice tailored to your job offer or raise negotiation.
         Understand your offer, identify negotiation opportunities, and gain confidence.
       </p>
 
