@@ -41,17 +41,24 @@ const chipStyle = {
   cursor: 'pointer',
 };
 
-export default function CoachSuggestionsPanel({
-  open,
-  onClose,
-  context = { section: 'overview', keyword: null },
-  jdText,
-  resumeData,
-  missing,
-  onAddSkill,
-  onAddSummary,
-  onAddBullet,
-}) {
+/**
+ * Writing coach suggestions panel.
+ * IMPORTANT: JSDoc typing here prevents TS from inferring `context.keyword` as only `null`.
+ * @param {Props} props
+ */
+export default function CoachSuggestionsPanel(props) {
+  const {
+    open,
+    onClose,
+    context = { section: 'overview', keyword: null },
+    jdText,
+    resumeData,
+    missing,
+    onAddSkill,
+    onAddSummary,
+    onAddBullet,
+  } = props;
+
   const [portalEl, setPortalEl] = useState(null);
   const [loading, setLoading] = useState(false);
   const [text, setText] = useState('');
