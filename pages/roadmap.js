@@ -37,14 +37,28 @@ export default function CareerRoadmap() {
   const withChrome = (path) =>
     chrome ? `${path}${path.includes('?') ? '&' : '?'}chrome=${chrome}` : path;
 
-  // Match seeker-dashboard behavior:
-  // Keep SeekerLayout, but highlight the correct nav item when viewed inside
-  // Coach/Recruiter chrome.
+  // Match seeker-dashboard behavior: SeekerLayout stays, chrome only influences wrappers/nav.
   const chromeKey = chrome || 'seeker';
   const activeNav =
     chromeKey === 'coach' || chromeKey.startsWith('recruiter')
-      ? 'roadmap' // Coach/Recruiter sidebars → Seeker Tools → Career Roadmap
-      : 'roadmap'; // Native seeker sidebar (same key here)
+      ? 'roadmap'
+      : 'roadmap';
+
+  // Title card (SeekerLayout expects `header` content like seeker-dashboard)
+  const HeaderBox = (
+    <section
+      aria-label="Career roadmap overview"
+      className="bg-white border border-gray-200 rounded-xl p-6 text-center shadow-sm"
+    >
+      <h1 className="text-2xl md:text-3xl font-bold text-orange-600">
+        Your Personalized Career Roadmap
+      </h1>
+      <p className="text-sm md:text-base text-gray-600 mt-2 max-w-3xl mx-auto">
+        A guided, AI-supported path through profile building, offer negotiation, and
+        your first year of growth.
+      </p>
+    </section>
+  );
 
   const RightColumn = (
     <div style={{ display: 'grid', gap: 12 }}>
@@ -79,8 +93,7 @@ export default function CareerRoadmap() {
   return (
     <SeekerLayout
       title="Career Development Toolkit | ForgeTomorrow"
-      headerTitle="Your Personalized Career Roadmap"
-      headerDescription="A guided, AI-supported path through profile building, offer negotiation, and your first year of growth."
+      header={HeaderBox}
       right={RightColumn}
       activeNav={activeNav}
     >
