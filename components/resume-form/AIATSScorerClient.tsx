@@ -1,5 +1,7 @@
 'use client';
 
+// components/resume-form/AIATSScorerClient.tsx
+
 import { useSession } from 'next-auth/react';
 import { useEffect, useMemo, useState } from 'react';
 

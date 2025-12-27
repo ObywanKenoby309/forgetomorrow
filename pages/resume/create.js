@@ -12,7 +12,6 @@ import SummarySection from '@/components/resume-form/SummarySection';
 import ProjectsSection from '@/components/resume-form/ProjectsSection';
 import CertificationsSection from '@/components/resume-form/CertificationsSection';
 import CustomSection from '@/components/resume-form/CustomSection';
-import AtsDepthPanel from '@/components/resume-form/AtsDepthPanel';
 import { getResumeTemplateComponent } from '@/lib/templates';
 import { extractTextFromFile, normalizeJobText } from '@/lib/jd/ingest';
 import { uploadJD } from '@/lib/jd/uploadToApi';
@@ -22,6 +21,7 @@ import BulkExportCTA from '@/components/BulkExportCTA';
 import ReverseATSButton from '@/components/resume-form/export/ReverseATSButton';
 import HybridATSButton from '@/components/resume-form/export/HybridATSButton';
 import DesignedPDFButton from '@/components/resume-form/export/DesignedPDFButton'; // ← NEW
+import ForgeHammerPanel from '@/components/hammer/ForgeHammerPanel';
 
 const ORANGE = '#FF7043';
 
@@ -883,7 +883,7 @@ export default function CreateResumePage() {
             </div>
 
             {jd && (
-              <AtsDepthPanel
+              <ForgeHammerPanel
                 jdText={jd}
                 resumeData={resumeData}
                 summary={summary}
