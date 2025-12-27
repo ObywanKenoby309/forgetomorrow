@@ -57,6 +57,7 @@ export default function App({ Component, pageProps: { session, ...pageProps } })
     router.pathname.startsWith('/cover') ||
     router.pathname.startsWith('/apply') ||
     router.pathname.startsWith('/hearth') ||
+    router.pathname.startsWith('/offer-negotiation') || // ✅ FIX: treat Offer & Negotiation as internal seeker pages
     [
       '/the-hearth',
       '/jobs',
