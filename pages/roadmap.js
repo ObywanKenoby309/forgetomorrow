@@ -3,8 +3,6 @@ import { useState } from 'react';
 import { useRouter } from 'next/router';
 
 import SeekerLayout from '@/components/layouts/SeekerLayout';
-import CoachingLayout from '@/components/layouts/CoachingLayout';
-import RecruiterLayout from '@/components/layouts/RecruiterLayout';
 
 import ToolkitLanding from '../components/roadmap/ToolkitLanding';
 import ProfileDevelopment from '../components/roadmap/ProfileDevelopment';
@@ -31,7 +29,7 @@ export default function CareerRoadmap() {
   const router = useRouter();
 
   // IMPORTANT: router.query can be empty on first render.
-  // Use asPath fallback so we never mount the wrong chrome layout first.
+  // Use asPath fallback so we never lose chrome context.
   const chrome =
     String(router.query.chrome || '').toLowerCase() ||
     getChromeFromAsPath(router.asPath);
@@ -39,16 +37,14 @@ export default function CareerRoadmap() {
   const withChrome = (path) =>
     chrome ? `${path}${path.includes('?') ? '&' : '?'}chrome=${chrome}` : path;
 
-  // ─────────────────────────────────────────────
-  // Choose layout by chrome + set activeNav
-  // ─────────────────────────────────────────────
-  let Layout = SeekerLayout;
-
-  if (chrome === 'coach') {
-    Layout = CoachingLayout;
-  } else if (chrome === 'recruiter-smb' || chrome === 'recruiter-ent') {
-    Layout = RecruiterLayout;
-  }
+  // Match seeker-dashboard behavior:
+  // Keep SeekerLayout, but highlight the correct nav item when viewed inside
+  // Coach/Recruiter chrome.
+  const chromeKey = chrome || 'seeker';
+  const activeNav =
+    chromeKey === 'coach' || chromeKey.startsWith('recruiter')
+      ? 'roadmap' // Coach/Recruiter sidebars → Seeker Tools → Career Roadmap
+      : 'roadmap'; // Native seeker sidebar (same key here)
 
   const RightColumn = (
     <div style={{ display: 'grid', gap: 12 }}>
@@ -81,12 +77,12 @@ export default function CareerRoadmap() {
   );
 
   return (
-    <Layout
+    <SeekerLayout
       title="Career Development Toolkit | ForgeTomorrow"
       headerTitle="Your Personalized Career Roadmap"
       headerDescription="A guided, AI-supported path through profile building, offer negotiation, and your first year of growth."
       right={RightColumn}
-      activeNav="roadmap"
+      activeNav={activeNav}
     >
       {/* Center column content */}
       <div
@@ -162,10 +158,10 @@ export default function CareerRoadmap() {
               <strong>Choose a module below to get started:</strong>
             </p>
 
-            {/* Module chooser (buttons: Sharpen Your Profile / Refine Incentive Negotiations / Plan Growth & Pivots) */}
+            {/* Module chooser */}
             <ToolkitLanding onSelectModule={setActiveModule} />
 
-            {/* Usage note as a footnote under the buttons */}
+            {/* Usage note */}
             <p
               style={{
                 color: '#718096',
@@ -240,7 +236,7 @@ export default function CareerRoadmap() {
           </>
         )}
 
-        {/* PLAN GROWTH & PIVOTS (OnboardingGrowth component, renamed in UI) */}
+        {/* PLAN GROWTH & PIVOTS */}
         {activeModule === 'onboarding' && (
           <>
             <button
@@ -265,6 +261,6 @@ export default function CareerRoadmap() {
           </>
         )}
       </div>
-    </Layout>
+    </SeekerLayout>
   );
 }
