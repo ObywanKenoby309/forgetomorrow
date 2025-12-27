@@ -11,11 +11,31 @@ import ProfileDevelopment from '../components/roadmap/ProfileDevelopment';
 import OfferNegotiation from '../components/roadmap/OfferNegotiation';
 import OnboardingGrowth from '../components/roadmap/OnboardingGrowth';
 
+function getChromeFromAsPath(asPath) {
+  try {
+    const s = String(asPath || '');
+    if (!s.includes('chrome=')) return '';
+    const qIndex = s.indexOf('?');
+    if (qIndex === -1) return '';
+    const query = s.slice(qIndex + 1);
+    const params = new URLSearchParams(query);
+    return String(params.get('chrome') || '').toLowerCase();
+  } catch {
+    return '';
+  }
+}
+
 export default function CareerRoadmap() {
   const [activeModule, setActiveModule] = useState(null);
 
   const router = useRouter();
-  const chrome = String(router.query.chrome || '').toLowerCase();
+
+  // IMPORTANT: router.query can be empty on first render.
+  // Use asPath fallback so we never mount the wrong chrome layout first.
+  const chrome =
+    String(router.query.chrome || '').toLowerCase() ||
+    getChromeFromAsPath(router.asPath);
+
   const withChrome = (path) =>
     chrome ? `${path}${path.includes('?') ? '&' : '?'}chrome=${chrome}` : path;
 
