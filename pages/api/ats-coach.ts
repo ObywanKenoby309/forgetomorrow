@@ -1,6 +1,6 @@
 // pages/api/ats-coach.ts
 // AI Writing Coach for ATS alignment — used by The Forge Hammer
-// RESTORED: Grok = Coach. OpenAI = Score (Teacher).
+// RESTORED: Groq = Coach. OpenAI = Score (Teacher).
 
 import type { NextApiRequest, NextApiResponse } from 'next';
 import { getServerSession } from 'next-auth/next';
@@ -161,11 +161,14 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse<
     }
   }
 
-  // === GROK KEY ===
-  const apiKey = process.env.XAI_API_KEY;
+  // === GROQ KEY ===
+  const apiKey = process.env.GROQ_API_KEY;
   if (!apiKey) {
-    return res.status(500).json({ ok: false, error: 'XAI_API_KEY is not configured' });
+    return res.status(500).json({ ok: false, error: 'GROQ_API_KEY is not configured' });
   }
+
+  // Optional model override (keeps behavior stable + configurable)
+  const model = process.env.GROQ_COACH_MODEL || 'llama-3.1-8b-instant';
 
   try {
     const body = (req.body || {}) as CoachRequestBody;
@@ -177,7 +180,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse<
     const skills = (rd.skills || []) as string[];
 
     // Support both workExperiences and experiences shapes
-    const experiences = (rd.workExperiences || rd.experiences || rd.experiences || []) as any[];
+    const experiences = (rd.workExperiences || rd.experiences || []) as any[];
     const education = (rd.educationList || rd.education || []) as any[];
 
     const safeSkills = (skills || []).filter((s) => typeof s === 'string' && s.trim().length > 0);
@@ -237,14 +240,15 @@ INSTRUCTIONS
 4) Return plain text, structured so it can be split into bullet points.
 `.trim();
 
-    const response = await fetch('https://api.x.ai/v1/chat/completions', {
+    // Groq OpenAI-compatible chat completions endpoint
+    const response = await fetch('https://api.groq.com/openai/v1/chat/completions', {
       method: 'POST',
       headers: {
         Authorization: `Bearer ${apiKey}`,
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
-        model: 'grok-3-mini',
+        model,
         messages: [
           { role: 'system', content: 'You are a supportive, practical resume coach. Return plain text.' },
           { role: 'user', content: userPrompt },
@@ -256,7 +260,7 @@ INSTRUCTIONS
 
     if (!response.ok) {
       const err = await response.text();
-      throw new Error(`Grok API error: ${response.status} - ${err}`);
+      throw new Error(`Groq API error: ${response.status} - ${err}`);
     }
 
     const data = await response.json();
