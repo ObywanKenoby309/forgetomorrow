@@ -1,3 +1,5 @@
+// pages/api/offer-negotiation/generate.js
+
 import { getServerSession } from 'next-auth/next';
 import { authOptions } from '../auth/[...nextauth]';
 import OpenAI from 'openai';

@@ -1,3 +1,5 @@
+// components/offer-negotiation/NegotiationInputForm.js
+
 import React, { useState } from 'react';
 
 const jobTypes = ['Full-time', 'Part-time', 'Contract', 'Temporary', 'Internship', 'Other'];
