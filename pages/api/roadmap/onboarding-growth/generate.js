@@ -43,7 +43,12 @@ export default async function handler(req, res) {
     }
 
     const session = await getServerSession(req, res, authOptions);
-    if (!session?.user?.email) {
+
+    // ✅ Auth by user.id (email may not exist depending on JWT/session shape)
+    const sessionUserId = String(session?.user?.id || '').trim();
+    const sessionEmail = String(session?.user?.email || '').trim();
+
+    if (!sessionUserId && !sessionEmail) {
       return res.status(401).json({ error: 'Not authenticated' });
     }
 
@@ -54,9 +59,21 @@ export default async function handler(req, res) {
       return res.status(400).json({ error: 'Missing or invalid resumeId' });
     }
 
-    const user = await prisma.user.findUnique({
-      where: { email: session.user.email },
-      select: { id: true, name: true, firstName: true, lastName: true, headline: true, location: true, plan: true },
+    // ✅ Prefer lookup by id; fall back to email if needed
+    const user = await prisma.user.findFirst({
+      where: sessionUserId
+        ? { id: sessionUserId }
+        : { email: sessionEmail.toLowerCase() },
+      select: {
+        id: true,
+        email: true,
+        name: true,
+        firstName: true,
+        lastName: true,
+        headline: true,
+        location: true,
+        plan: true,
+      },
     });
 
     if (!user) return res.status(404).json({ error: 'User not found' });
@@ -71,7 +88,9 @@ export default async function handler(req, res) {
     const candidateName =
       user.name ||
       [user.firstName, user.lastName].filter(Boolean).join(' ') ||
-      session.user.email;
+      user.email ||
+      sessionEmail ||
+      'Candidate';
 
     const systemPrompt = `
 You are a practical career operator and hiring manager advisor.
@@ -200,12 +219,11 @@ Notes:
           userId: user.id,
           data: parsed,
           isPro: String(user.plan || 'FREE') !== 'FREE',
-          // generatedAt default handled by schema
         },
       });
     } catch (e) {
       console.error('[roadmap/onboarding-growth/generate] Failed to save CareerRoadmap:', e?.message || e);
-      // Do not fail the user if save fails, still return the plan.
+      // Still return plan even if saving fails
     }
 
     return res.status(200).json({ plan: parsed });
