@@ -17,6 +17,7 @@ export default function NegotiationInputForm({ onSubmit }) {
     desiredBenefits: '',
     jobType: '',
     industry: '',
+    skillsOrCertifications: '', // ✅ NEW
   });
 
   const [errors, setErrors] = useState({});
@@ -142,6 +143,22 @@ export default function NegotiationInputForm({ onSubmit }) {
           className={`w-full border rounded px-3 py-2 ${errors.location ? 'border-red-600' : 'border-gray-300'}`}
         />
         {errors.location && <p className="text-red-600 text-sm mt-1">{errors.location}</p>}
+      </div>
+
+      {/* ✅ NEW FIELD */}
+      <div>
+        <label htmlFor="skillsOrCertifications" className="block font-semibold mb-1">
+          Skills, certifications, or experience relevant to the role (optional)
+        </label>
+        <textarea
+          id="skillsOrCertifications"
+          name="skillsOrCertifications"
+          rows="3"
+          value={form.skillsOrCertifications}
+          onChange={handleChange}
+          className="w-full border rounded px-3 py-2 border-gray-300"
+          placeholder="Examples: React/Node projects, GitHub portfolio, AWS cert, bootcamp, degree, internships, freelance work, etc."
+        />
       </div>
 
       <div>
