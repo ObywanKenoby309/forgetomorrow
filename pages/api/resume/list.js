@@ -12,14 +12,27 @@ export default async function handler(req, res) {
   try {
     const session = await getServerSession(req, res, authOptions);
 
-    if (!session || !session.user || !session.user.email) {
-      return res.status(401).json({ error: 'Not authenticated' });
+    // ✅ Prefer id (matches the rest of your app), fall back to email
+    const userId = session?.user?.id ? String(session.user.id) : '';
+    const email = session?.user?.email ? String(session.user.email) : '';
+
+    if (!userId && !email) {
+      return res.status(401).json({ error: 'Unauthorized' });
     }
 
-    const user = await prisma.user.findUnique({
-      where: { email: session.user.email },
-      select: { id: true },
-    });
+    let user = null;
+
+    if (userId) {
+      user = await prisma.user.findUnique({
+        where: { id: userId },
+        select: { id: true },
+      });
+    } else if (email) {
+      user = await prisma.user.findUnique({
+        where: { email },
+        select: { id: true },
+      });
+    }
 
     if (!user) {
       return res.status(404).json({ error: 'User not found' });
@@ -27,10 +40,7 @@ export default async function handler(req, res) {
 
     const resumes = await prisma.resume.findMany({
       where: { userId: user.id },
-      orderBy: [
-        { isPrimary: 'desc' }, // primary first
-        { createdAt: 'desc' }, // newest next
-      ],
+      orderBy: [{ isPrimary: 'desc' }, { createdAt: 'desc' }],
     });
 
     return res.status(200).json({
