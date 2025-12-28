@@ -8,6 +8,9 @@ interface Resume {
   id: string;
   content: string;
   createdAt: string;
+  name?: string;
+  title?: string;
+  isPrimary?: boolean;
 }
 
 export default function OnboardingGrowth() {
@@ -17,6 +20,7 @@ export default function OnboardingGrowth() {
   const [roadmap, setRoadmap] = useState<string>('');
   const [pdfUrl, setPdfUrl] = useState<string>('');
   const [loading, setLoading] = useState(false);
+  const [loadingResumes, setLoadingResumes] = useState(false);
   const [error, setError] = useState('');
   const [hasGenerated, setHasGenerated] = useState(false);
 
@@ -26,17 +30,54 @@ export default function OnboardingGrowth() {
 
   // Load user's resumes on mount
   useEffect(() => {
+    let active = true;
+
     const loadResumes = async () => {
+      setLoadingResumes(true);
+      setError('');
+
       try {
-        const res = await fetch('/api/resumes');
+        // ✅ Correct endpoint in your project
+        const res = await fetch('/api/resume/list', { method: 'GET' });
+
+        // If auth/session fails, tell user instead of silently showing "No resumes"
+        if (!res.ok) {
+          let msg = `Failed to load resumes (${res.status})`;
+          try {
+            const maybeJson = await res.json();
+            if (maybeJson?.error) msg = maybeJson.error;
+          } catch {
+            // ignore JSON parse failures
+          }
+          throw new Error(msg);
+        }
+
         const data = await res.json();
-        setResumes(data.resumes || []);
-      } catch (err) {
-        console.error('Failed to load resumes', err);
+        const list = Array.isArray(data?.resumes) ? data.resumes : [];
+
+        if (!active) return;
+
+        setResumes(list);
+
+        // Optional UX: auto-select primary if present, else first
+        const primary = list.find((r: any) => r?.isPrimary);
+        if (primary?.id) setSelectedResume(String(primary.id));
+        else if (list?.[0]?.id) setSelectedResume(String(list[0].id));
+      } catch (err: any) {
+        if (!active) return;
+        setResumes([]);
+        setSelectedResume('');
+        setError(err?.message || 'Failed to load resumes');
+      } finally {
+        if (active) setLoadingResumes(false);
       }
     };
 
     loadResumes();
+
+    return () => {
+      active = false;
+    };
   }, []);
 
   const generateRoadmap = async () => {
@@ -72,6 +113,8 @@ export default function OnboardingGrowth() {
 
   // BEFORE GENERATION
   if (!hasGenerated) {
+    const noResumes = !loadingResumes && resumes.length === 0;
+
     return (
       <div>
         <h2 className="text-4xl font-bold text-[#FF7043] mb-6 mt-0">
@@ -83,10 +126,17 @@ export default function OnboardingGrowth() {
           role.
         </p>
 
-        {resumes.length === 0 ? (
+        {loadingResumes ? (
+          <div className="bg-white border border-gray-200 rounded-lg p-6 text-center">
+            <p className="text-gray-700 font-medium">Loading your resumes…</p>
+          </div>
+        ) : noResumes ? (
           <div className="bg-orange-50 border border-orange-200 rounded-lg p-6 text-center">
             <p className="text-orange-800 font-medium">
-              No resumes found. Please create one first.
+              No resumes found on your account.
+            </p>
+            <p className="text-sm text-orange-800 mt-2">
+              If you believe this is wrong, make sure you’re logged in with the same account that created them.
             </p>
             <button
               onClick={() => router.push(withChrome('/resume/create'))}
@@ -111,11 +161,18 @@ export default function OnboardingGrowth() {
                 className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#FF7043] focus:border-transparent"
               >
                 <option value="">Choose a resume...</option>
-                {resumes.map((r) => (
-                  <option key={r.id} value={r.id}>
-                    Resume from {new Date(r.createdAt).toLocaleDateString()}
-                  </option>
-                ))}
+                {resumes.map((r) => {
+                  const label =
+                    r?.name ||
+                    r?.title ||
+                    `Resume from ${new Date(r.createdAt).toLocaleDateString()}`;
+                  return (
+                    <option key={r.id} value={r.id}>
+                      {label}
+                      {r?.isPrimary ? ' (Primary)' : ''}
+                    </option>
+                  );
+                })}
               </select>
             </div>
 
