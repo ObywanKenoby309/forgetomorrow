@@ -91,7 +91,7 @@ export default function OnboardingGrowth() {
     setRoadmap('');
 
     try {
-      const res = await fetch('/api/roadmap/generate', {
+      const res = await fetch('/api/roadmap/onboarding-growth/generate', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ resumeId: selectedResume }),
