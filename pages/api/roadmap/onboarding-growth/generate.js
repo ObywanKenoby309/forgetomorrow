@@ -1,13 +1,10 @@
+// pages/api/roadmap/onboarding-growth/generate.js
 import { getServerSession } from 'next-auth/next';
 import { authOptions } from '../../auth/[...nextauth]';
 import { prisma } from '@/lib/prisma';
 import OpenAI from 'openai';
 
 const client = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
-
-function safeString(v) {
-  return typeof v === 'string' ? v.trim() : '';
-}
 
 function safeJsonParse(text) {
   try {
@@ -46,48 +43,70 @@ export default async function handler(req, res) {
     }
 
     const session = await getServerSession(req, res, authOptions);
-    const userId = session?.user?.id;
-    if (!userId) return res.status(401).json({ error: 'Not authenticated' });
-
-    const resumeId = safeString(req.body?.resumeId);
-    if (!resumeId) return res.status(400).json({ error: 'Missing resumeId' });
-
-    // Fetch resume from DB (source of truth)
-    const resume = await prisma.resume.findFirst({
-      where: { id: Number(resumeId), userId },
-      select: { id: true, name: true, content: true, createdAt: true },
-    });
-
-    if (!resume?.content) {
-      return res.status(404).json({ error: 'Resume not found or has no content' });
+    if (!session?.user?.email) {
+      return res.status(401).json({ error: 'Not authenticated' });
     }
 
-    // System rules: grounded, no fake claims
+    const { resumeId } = req.body || {};
+    const resumeIdNum = Number(String(resumeId || '').trim());
+
+    if (!resumeId || Number.isNaN(resumeIdNum)) {
+      return res.status(400).json({ error: 'Missing or invalid resumeId' });
+    }
+
+    const user = await prisma.user.findUnique({
+      where: { email: session.user.email },
+      select: { id: true, name: true, firstName: true, lastName: true, headline: true, location: true, plan: true },
+    });
+
+    if (!user) return res.status(404).json({ error: 'User not found' });
+
+    const resume = await prisma.resume.findFirst({
+      where: { id: resumeIdNum, userId: user.id },
+      select: { id: true, name: true, content: true, createdAt: true, isPrimary: true },
+    });
+
+    if (!resume) return res.status(404).json({ error: 'Resume not found' });
+
+    const candidateName =
+      user.name ||
+      [user.firstName, user.lastName].filter(Boolean).join(' ') ||
+      session.user.email;
+
     const systemPrompt = `
-You are ForgeTomorrow's Onboarding & Growth roadmap advisor.
+You are a practical career operator and hiring manager advisor.
 
 Goal:
-Create a practical 30/60/90 plan and a 12-month trajectory that helps the candidate:
-1) ramp quickly in a new role, OR
-2) level up in their current role, OR
-3) pivot into a new target role (if implied by their resume).
+Generate a 30/60/90 day onboarding and growth plan based on the resume content.
+This tool is meant to push the candidate to the next level OR support a pivot plan.
+ForgeTomorrow already has separate tools for: Resume Builder, Profile Builder, and Offer Negotiation.
+So do not duplicate those tools. Instead, reference them as action steps when useful.
 
 Hard rules:
-- Do NOT invent degrees, employers, certifications, projects, or metrics not present in the resume.
-- If information is missing, explicitly say what's missing as "MissingInfo".
-- Avoid exact salary numbers. If mentioning market, keep it directional.
-- Write in a clear, human, practical tone (no fluff).
-- Output MUST be valid JSON matching the schema exactly.
-- No extra keys. No commentary outside JSON.
+- Do NOT fabricate specific salary numbers, compensation statistics, or fake metrics.
+- Keep recommendations concrete and testable.
+- If the resume suggests gaps, call them out calmly and propose a plan to close them.
+- Output MUST be valid JSON. No extra keys. No commentary outside JSON.
 
-Schema (return exactly):
+Tone:
+Direct, supportive, professional. No fluff.
+`.trim();
+
+    const userPrompt = `
+Candidate: ${candidateName}
+Candidate headline: ${user.headline || 'N/A'}
+Candidate location: ${user.location || 'N/A'}
+Resume name: ${resume.name}
+Resume content:
+${resume.content}
+
+Return JSON in this exact structure:
+
 {
   "meta": {
     "generatedAt": "",
     "candidate": "",
-    "headline": "",
-    "scenario": "",
-    "missingInfo": []
+    "headline": ""
   },
   "day30": {
     "objectives": [],
@@ -113,42 +132,22 @@ Schema (return exactly):
     "risks": [],
     "presentation": ""
   },
-  "month12": {
-    "growthPath": [],
-    "promotionSignals": [],
-    "portfolioProof": [],
-    "pivotOptions": []
-  },
-  "recommendations": {
-    "skillsFocus": [],
-    "credibilityBuilders": [],
-    "networkingMoves": [],
-    "toolsToUseOnForgeTomorrow": []
-  }
+  "growthRecommendations": [],
+  "skillsFocus": []
 }
-`.trim();
 
-    const userPrompt = `
-Resume name: ${resume?.name || 'Resume'}
-Resume created: ${resume?.createdAt ? new Date(resume.createdAt).toISOString() : 'N/A'}
-
-Resume content:
-${resume.content}
-
-Instructions:
-- Infer candidate name/headline ONLY if clearly present in the resume; otherwise use "Candidate" and a generic headline.
-- Determine scenario: "new_role_ramp", "current_role_growth", or "pivot_plan" based on resume signals.
-- Include missingInfo list for any inputs that would materially improve accuracy (e.g., target role, industry, current role, location, constraints, portfolio links).
-- Keep actions measurable and realistic.
-- Make day30/day60/day90 actionable.
-- Provide month12 trajectory and pivot options if relevant.
-- Include recommended ForgeTomorrow tools (Profile Builder, Resume Builder, Incentive Negotiator, Spotlights).
+Notes:
+- "presentation" should be a short script on how the candidate should present themselves for that phase.
+- Include a few actions that explicitly say to use ForgeTomorrow tools when appropriate:
+  - Resume Builder
+  - Profile Builder
+  - Offer Negotiation
 `.trim();
 
     let rawText = '';
     let parsed = null;
 
-    // Prefer Responses API when available
+    // Prefer Responses API
     try {
       if (client?.responses?.create) {
         const resp = await client.responses.create({
@@ -168,7 +167,7 @@ Instructions:
       console.error('[roadmap/onboarding-growth/generate] Responses API failed:', e?.message || e);
     }
 
-    // Fallback to Chat Completions
+    // Fallback: Chat Completions
     if (!parsed) {
       try {
         const resp = await client.chat.completions.create({
@@ -194,17 +193,22 @@ Instructions:
       return res.status(500).json({ error: 'Failed to generate roadmap' });
     }
 
-    // Save to DB
-    const created = await prisma.careerRoadmap.create({
-      data: {
-        userId,
-        data: parsed,
-        isPro: false, // you can flip this later based on plan checks
-      },
-      select: { id: true, createdAt: true },
-    });
+    // Save to DB (CareerRoadmap model)
+    try {
+      await prisma.careerRoadmap.create({
+        data: {
+          userId: user.id,
+          data: parsed,
+          isPro: String(user.plan || 'FREE') !== 'FREE',
+          // generatedAt default handled by schema
+        },
+      });
+    } catch (e) {
+      console.error('[roadmap/onboarding-growth/generate] Failed to save CareerRoadmap:', e?.message || e);
+      // Do not fail the user if save fails, still return the plan.
+    }
 
-    return res.status(200).json({ roadmapId: created.id });
+    return res.status(200).json({ plan: parsed });
   } catch (err) {
     console.error('[roadmap/onboarding-growth/generate] Unhandled error', err);
     return res.status(500).json({ error: 'Failed to generate roadmap' });

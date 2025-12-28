@@ -1,3 +1,4 @@
+// pages/roadmap/onboarding-growth/results.js
 import Head from 'next/head';
 import { useEffect, useMemo, useState } from 'react';
 import { useRouter } from 'next/router';
@@ -17,77 +18,16 @@ function getChromeFromAsPath(asPath) {
   }
 }
 
-function Card({ title, children }) {
-  return (
-    <section style={{ border: '1px solid #eee', borderRadius: 12, padding: 16, background: 'white' }}>
-      <h2 style={{ fontWeight: 800, marginBottom: 10 }}>{title}</h2>
-      {children}
-    </section>
-  );
-}
-
-function List({ items }) {
-  if (!items || items.length === 0) return <div style={{ color: '#64748B' }}>—</div>;
-  return (
-    <ul style={{ display: 'grid', gap: 6, paddingLeft: 18, listStyleType: 'disc' }}>
-      {items.map((it, i) => (
-        <li key={i} style={{ color: '#475569' }}>{it}</li>
-      ))}
-    </ul>
-  );
-}
-
 export default function OnboardingGrowthResultsPage() {
   const router = useRouter();
-
+  const resumeId = String(router.query.resumeId || '');
   const chrome =
     String(router.query.chrome || '').toLowerCase() ||
     getChromeFromAsPath(router.asPath);
 
-  const roadmapId = String(router.query.roadmapId || '');
-
   const [loading, setLoading] = useState(true);
-  const [roadmap, setRoadmap] = useState(null);
+  const [plan, setPlan] = useState(null);
   const [error, setError] = useState('');
-
-  const withChrome = (path) =>
-    chrome ? `${path}${path.includes('?') ? '&' : '?'}chrome=${chrome}` : path;
-
-  useEffect(() => {
-    let active = true;
-
-    (async () => {
-      if (!roadmapId) {
-        setLoading(false);
-        setError('Missing roadmapId.');
-        return;
-      }
-
-      try {
-        setLoading(true);
-        setError('');
-
-        const res = await fetch(`/api/roadmap/onboarding-growth/get?roadmapId=${encodeURIComponent(roadmapId)}`);
-        const data = await res.json();
-
-        if (!res.ok) throw new Error(data?.error || 'Failed to load roadmap');
-
-        if (!active) return;
-        setRoadmap(data?.roadmap || null);
-      } catch (e) {
-        if (!active) return;
-        setError(e?.message || 'Failed to load roadmap.');
-      } finally {
-        if (active) setLoading(false);
-      }
-    })();
-
-    return () => {
-      active = false;
-    };
-  }, [roadmapId]);
-
-  const plan = useMemo(() => roadmap?.data || null, [roadmap]);
 
   const Header = (
     <section
@@ -98,212 +38,243 @@ export default function OnboardingGrowthResultsPage() {
         padding: 16,
         boxShadow: '0 2px 6px rgba(0,0,0,0.06)',
         border: '1px solid #eee',
+        textAlign: 'center',
       }}
     >
-      <div style={{ display: 'flex', justifyContent: 'space-between', gap: 12, flexWrap: 'wrap' }}>
-        <div>
-          <h1 style={{ margin: 0, color: '#FF7043', fontSize: 24, fontWeight: 800 }}>
-            Your 30/60/90 Roadmap
-          </h1>
-          <div style={{ color: '#607D8B', marginTop: 4 }}>
-            {roadmap?.createdAt ? `Generated: ${new Date(roadmap.createdAt).toLocaleString()}` : ''}
-          </div>
-        </div>
-
-        <div style={{ display: 'flex', gap: 10 }}>
-          <button
-            onClick={() => router.push(withChrome('/roadmap/onboarding-growth'))}
-            style={{
-              background: 'white',
-              border: '1px solid #ddd',
-              padding: '10px 14px',
-              borderRadius: 10,
-              cursor: 'pointer',
-              fontWeight: 700,
-            }}
-          >
-            Analyze another resume
-          </button>
-        </div>
-      </div>
+      <h1 style={{ margin: 0, color: '#FF7043', fontSize: 24, fontWeight: 800 }}>
+        Your 30/60/90 Plan
+      </h1>
+      <p style={{ margin: '6px auto 0', color: '#607D8B', maxWidth: 720 }}>
+        A practical roadmap to ramp fast, prove value, and grow or pivot intentionally.
+      </p>
     </section>
   );
+
+  const backToSelectionHref = useMemo(() => {
+    const params = new URLSearchParams();
+    if (chrome) params.set('chrome', chrome);
+    return `/roadmap/onboarding-growth/select${params.toString() ? `?${params.toString()}` : ''}`;
+  }, [chrome]);
+
+  useEffect(() => {
+    let active = true;
+
+    (async () => {
+      if (!resumeId) return;
+
+      try {
+        setLoading(true);
+        setError('');
+        setPlan(null);
+
+        const res = await fetch('/api/roadmap/onboarding-growth/generate', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ resumeId }),
+        });
+
+        const data = await res.json();
+        if (!res.ok) throw new Error(data?.error || 'Failed to generate plan');
+
+        if (!active) return;
+        setPlan(data?.plan || null);
+      } catch (e) {
+        if (!active) return;
+        setError(e?.message || 'Failed to generate plan. Please try again.');
+      } finally {
+        if (active) setLoading(false);
+      }
+    })();
+
+    return () => {
+      active = false;
+    };
+  }, [resumeId]);
+
+  const goBack = () => router.push(backToSelectionHref);
 
   return (
     <>
       <Head>
-        <title>30/60/90 Roadmap | ForgeTomorrow</title>
+        <title>Onboarding and Growth Results | ForgeTomorrow</title>
       </Head>
 
-      <SeekerLayout title="30/60/90 Roadmap | ForgeTomorrow" header={Header} right={null} activeNav={null}>
-        <div className="w-full max-w-4xl mx-auto">
-          {loading && (
-            <div className="bg-white border border-gray-200 rounded-xl p-6 shadow-sm text-center" style={{ color: '#475569' }}>
-              Loading your roadmap…
-            </div>
-          )}
+      <SeekerLayout
+        title="Onboarding and Growth Results | ForgeTomorrow"
+        header={Header}
+        right={null}
+        activeNav={null}
+      >
+        <div className="w-full max-w-5xl mx-auto">
+          <div className="mb-4 flex justify-between items-center">
+            <button
+              onClick={goBack}
+              className="bg-white border border-gray-300 px-4 py-2 rounded-lg hover:bg-gray-50 transition"
+            >
+              ← Back to selection
+            </button>
+          </div>
 
-          {!loading && error && (
-            <div style={{ color: '#B91C1C', background: '#FEF2F2', border: '1px solid #FECACA', padding: 14, borderRadius: 12 }}>
-              {error}
-            </div>
-          )}
-
-          {!loading && !error && plan && (
-            <div style={{ display: 'grid', gap: 16 }}>
-              <Card title="Summary">
-                <div style={{ fontWeight: 800 }}>{plan?.meta?.candidate || 'Candidate'}</div>
-                <div style={{ color: '#607D8B', marginTop: 4 }}>{plan?.meta?.headline || ''}</div>
-                <div style={{ marginTop: 8, color: '#475569' }}>
-                  <span style={{ fontWeight: 800 }}>Scenario:</span> {plan?.meta?.scenario || '—'}
-                </div>
-
-                {Array.isArray(plan?.meta?.missingInfo) && plan.meta.missingInfo.length > 0 && (
-                  <div style={{ marginTop: 10 }}>
-                    <div style={{ fontWeight: 800, marginBottom: 6 }}>Missing info that would improve accuracy</div>
-                    <List items={plan.meta.missingInfo} />
+          <div className="bg-white border border-gray-200 rounded-xl p-6 shadow-sm">
+            {!resumeId ? (
+              <div className="text-center py-10">
+                <div className="text-gray-800 font-semibold">Missing resumeId.</div>
+                <button
+                  onClick={goBack}
+                  className="mt-4 bg-[#FF7043] text-white px-6 py-3 rounded hover:bg-[#F4511E] transition"
+                >
+                  Go back
+                </button>
+              </div>
+            ) : loading ? (
+              <div className="text-center py-10 text-gray-700">
+                Generating your personalized roadmap...
+              </div>
+            ) : error ? (
+              <div className="text-red-700 bg-red-50 border border-red-200 rounded-lg p-4">
+                {error}
+              </div>
+            ) : !plan ? (
+              <div className="text-center py-10 text-gray-700">
+                No plan returned. Please try again.
+              </div>
+            ) : (
+              <div style={{ display: 'grid', gap: 18 }}>
+                <header style={{ borderBottom: '1px solid #eee', paddingBottom: 12 }}>
+                  <div style={{ color: '#4A5568' }}>
+                    Generated: {plan?.meta?.generatedAt ? new Date(plan.meta.generatedAt).toLocaleString() : 'Now'}
                   </div>
-                )}
-              </Card>
-
-              <Card title="First 30 Days">
-                <div style={{ display: 'grid', gap: 12 }}>
-                  <div>
-                    <div style={{ fontWeight: 800, marginBottom: 6 }}>Objectives</div>
-                    <List items={plan?.day30?.objectives} />
-                  </div>
-                  <div>
-                    <div style={{ fontWeight: 800, marginBottom: 6 }}>Actions</div>
-                    <List items={plan?.day30?.actions} />
-                  </div>
-                  <div>
-                    <div style={{ fontWeight: 800, marginBottom: 6 }}>Metrics</div>
-                    <List items={plan?.day30?.metrics} />
-                  </div>
-                  <div>
-                    <div style={{ fontWeight: 800, marginBottom: 6 }}>Quick Wins</div>
-                    <List items={plan?.day30?.quickWins} />
-                  </div>
-                  <div>
-                    <div style={{ fontWeight: 800, marginBottom: 6 }}>Risks</div>
-                    <List items={plan?.day30?.risks} />
-                  </div>
-                  {plan?.day30?.presentation ? (
-                    <div style={{ color: '#475569' }}>
-                      <div style={{ fontWeight: 800, marginBottom: 6 }}>Presentation</div>
-                      {plan.day30.presentation}
-                    </div>
+                  {plan?.meta?.candidate ? (
+                    <div style={{ fontWeight: 700, marginTop: 4 }}>{plan.meta.candidate}</div>
                   ) : null}
-                </div>
-              </Card>
-
-              <Card title="Days 31–60">
-                <div style={{ display: 'grid', gap: 12 }}>
-                  <div>
-                    <div style={{ fontWeight: 800, marginBottom: 6 }}>Objectives</div>
-                    <List items={plan?.day60?.objectives} />
-                  </div>
-                  <div>
-                    <div style={{ fontWeight: 800, marginBottom: 6 }}>Actions</div>
-                    <List items={plan?.day60?.actions} />
-                  </div>
-                  <div>
-                    <div style={{ fontWeight: 800, marginBottom: 6 }}>Metrics</div>
-                    <List items={plan?.day60?.metrics} />
-                  </div>
-                  <div>
-                    <div style={{ fontWeight: 800, marginBottom: 6 }}>Quick Wins</div>
-                    <List items={plan?.day60?.quickWins} />
-                  </div>
-                  <div>
-                    <div style={{ fontWeight: 800, marginBottom: 6 }}>Risks</div>
-                    <List items={plan?.day60?.risks} />
-                  </div>
-                  {plan?.day60?.presentation ? (
-                    <div style={{ color: '#475569' }}>
-                      <div style={{ fontWeight: 800, marginBottom: 6 }}>Presentation</div>
-                      {plan.day60.presentation}
-                    </div>
+                  {plan?.meta?.headline ? (
+                    <div style={{ color: '#4A5568', marginTop: 2 }}>{plan.meta.headline}</div>
                   ) : null}
-                </div>
-              </Card>
+                </header>
 
-              <Card title="Days 61–90">
-                <div style={{ display: 'grid', gap: 12 }}>
-                  <div>
-                    <div style={{ fontWeight: 800, marginBottom: 6 }}>Objectives</div>
-                    <List items={plan?.day90?.objectives} />
-                  </div>
-                  <div>
-                    <div style={{ fontWeight: 800, marginBottom: 6 }}>Actions</div>
-                    <List items={plan?.day90?.actions} />
-                  </div>
-                  <div>
-                    <div style={{ fontWeight: 800, marginBottom: 6 }}>Metrics</div>
-                    <List items={plan?.day90?.metrics} />
-                  </div>
-                  <div>
-                    <div style={{ fontWeight: 800, marginBottom: 6 }}>Quick Wins</div>
-                    <List items={plan?.day90?.quickWins} />
-                  </div>
-                  <div>
-                    <div style={{ fontWeight: 800, marginBottom: 6 }}>Risks</div>
-                    <List items={plan?.day90?.risks} />
-                  </div>
-                  {plan?.day90?.presentation ? (
-                    <div style={{ color: '#475569' }}>
-                      <div style={{ fontWeight: 800, marginBottom: 6 }}>Presentation</div>
-                      {plan.day90.presentation}
-                    </div>
-                  ) : null}
-                </div>
-              </Card>
+                <Section title="First 30 Days" data={plan.day30} />
+                <Section title="Days 31 to 60" data={plan.day60} />
+                <Section title="Days 61 to 90" data={plan.day90} />
 
-              <Card title="12-Month Trajectory">
-                <div style={{ display: 'grid', gap: 12 }}>
-                  <div>
-                    <div style={{ fontWeight: 800, marginBottom: 6 }}>Growth Path</div>
-                    <List items={plan?.month12?.growthPath} />
-                  </div>
-                  <div>
-                    <div style={{ fontWeight: 800, marginBottom: 6 }}>Promotion Signals</div>
-                    <List items={plan?.month12?.promotionSignals} />
-                  </div>
-                  <div>
-                    <div style={{ fontWeight: 800, marginBottom: 6 }}>Portfolio Proof</div>
-                    <List items={plan?.month12?.portfolioProof} />
-                  </div>
-                  <div>
-                    <div style={{ fontWeight: 800, marginBottom: 6 }}>Pivot Options</div>
-                    <List items={plan?.month12?.pivotOptions} />
-                  </div>
-                </div>
-              </Card>
+                <Card title="Growth Recommendations">
+                  <List items={plan.growthRecommendations} />
+                </Card>
 
-              <Card title="Recommendations">
-                <div style={{ display: 'grid', gap: 12 }}>
-                  <div>
-                    <div style={{ fontWeight: 800, marginBottom: 6 }}>Skills Focus</div>
-                    <List items={plan?.recommendations?.skillsFocus} />
-                  </div>
-                  <div>
-                    <div style={{ fontWeight: 800, marginBottom: 6 }}>Credibility Builders</div>
-                    <List items={plan?.recommendations?.credibilityBuilders} />
-                  </div>
-                  <div>
-                    <div style={{ fontWeight: 800, marginBottom: 6 }}>Networking Moves</div>
-                    <List items={plan?.recommendations?.networkingMoves} />
-                  </div>
-                  <div>
-                    <div style={{ fontWeight: 800, marginBottom: 6 }}>ForgeTomorrow Tools</div>
-                    <List items={plan?.recommendations?.toolsToUseOnForgeTomorrow} />
-                  </div>
+                <Card title="Skills Focus">
+                  <List items={plan.skillsFocus} />
+                </Card>
+
+                <div className="flex gap-3 pt-2">
+                  <button
+                    onClick={() => alert('Download coming soon')}
+                    className="bg-[#FF7043] text-white px-5 py-3 rounded-lg hover:bg-[#F4511E] transition font-semibold"
+                  >
+                    Download
+                  </button>
+
+                  <button
+                    onClick={goBack}
+                    className="bg-white border border-gray-300 px-5 py-3 rounded-lg hover:bg-gray-50 transition font-semibold"
+                  >
+                    Analyze another resume
+                  </button>
                 </div>
-              </Card>
-            </div>
-          )}
+              </div>
+            )}
+          </div>
         </div>
       </SeekerLayout>
     </>
+  );
+}
+
+function Section({ title, data }) {
+  if (!data) return null;
+  return (
+    <Card title={title}>
+      <TwoCol>
+        <Block subtitle="Objectives">
+          <List items={data.objectives} />
+        </Block>
+        <Block subtitle="Actions">
+          <List items={data.actions} />
+        </Block>
+      </TwoCol>
+
+      <TwoCol>
+        <Block subtitle="Metrics">
+          <List items={data.metrics} />
+        </Block>
+        {data.quickWins ? (
+          <Block subtitle="Quick Wins">
+            <List items={data.quickWins} />
+          </Block>
+        ) : null}
+      </TwoCol>
+
+      {data.risks ? (
+        <Block subtitle="Risks">
+          <List items={data.risks} />
+        </Block>
+      ) : null}
+
+      {data.presentation ? (
+        <Block subtitle="Presentation">
+          <p style={{ color: '#4A5568' }}>{data.presentation}</p>
+        </Block>
+      ) : null}
+    </Card>
+  );
+}
+
+function Card({ title, children }) {
+  return (
+    <section
+      style={{
+        border: '1px solid #eee',
+        borderRadius: 10,
+        padding: 16,
+        background: 'white',
+      }}
+    >
+      <h2 style={{ fontWeight: 800, marginBottom: 8 }}>{title}</h2>
+      {children}
+    </section>
+  );
+}
+
+function TwoCol({ children }) {
+  return (
+    <div
+      style={{
+        display: 'grid',
+        gridTemplateColumns: '1fr 1fr',
+        gap: 16,
+      }}
+    >
+      {children}
+    </div>
+  );
+}
+
+function Block({ subtitle, children }) {
+  return (
+    <div>
+      <div style={{ fontWeight: 700, marginBottom: 6 }}>{subtitle}</div>
+      {children}
+    </div>
+  );
+}
+
+function List({ items }) {
+  if (!items || items.length === 0) return <p style={{ color: '#4A5568' }}>-</p>;
+  return (
+    <ul style={{ display: 'grid', gap: 6, paddingLeft: 18, listStyleType: 'disc' }}>
+      {items.map((it, i) => (
+        <li key={i} style={{ color: '#4A5568' }}>
+          {it}
+        </li>
+      ))}
+    </ul>
   );
 }
