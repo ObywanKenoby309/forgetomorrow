@@ -26,10 +26,8 @@ function safeJsonParse(text) {
 }
 
 function extractTextFromResponsesApi(resp) {
-  // Newer SDKs may provide output_text directly
   if (resp?.output_text && typeof resp.output_text === 'string') return resp.output_text;
 
-  // Or provide a nested structure
   const t =
     resp?.output?.[0]?.content?.find((c) => c?.type === 'output_text')?.text ||
     resp?.output?.[0]?.content?.[0]?.text ||
@@ -64,7 +62,7 @@ export default async function handler(req, res) {
       return res.status(400).json({ error: 'Missing formData' });
     }
 
-    // Map to your actual form fields
+    // Map form fields
     const jobDescription = safeString(formData.jobDescription);
     const currentJobTitle = safeString(formData.currentJobTitle);
     const currentSalary = safeNumberString(formData.currentSalary);
@@ -75,6 +73,9 @@ export default async function handler(req, res) {
     const desiredBenefits = safeString(formData.desiredBenefits);
     const jobType = safeString(formData.jobType);
     const industry = safeString(formData.industry);
+
+    // ✅ NEW: skills/certs field (optional)
+    const skillsOrCertifications = safeString(formData.skillsOrCertifications);
 
     const systemPrompt = `
 You are an experienced compensation and negotiation advisor.
@@ -89,6 +90,9 @@ Hard rules:
 - Acknowledge uncertainty and what info is missing.
 - Always include disclaimers: guidance only (not legal/financial/tax advice; outcomes not guaranteed).
 - Always encourage consulting a human coach/mentor via ForgeTomorrow Spotlight for incentive negotiations.
+- Use the user's "Skills/certifications/experience relevant to the role" if provided.
+  If it is provided, do NOT list "specific technical skills/certs/portfolio" as an unknown.
+  Instead, reference what they provided and state what proof would strengthen it (links, scope, outcomes).
 - Output MUST be valid JSON matching the schema exactly. No extra keys. No commentary outside JSON.
 
 Tone:
@@ -106,6 +110,7 @@ User inputs:
 - Desired benefits/perks: ${desiredBenefits || 'N/A'}
 - Job type: ${jobType || 'N/A'}
 - Industry: ${industry || 'N/A'}
+- Skills/certifications/experience relevant to the role: ${skillsOrCertifications || 'N/A'}
 
 Return JSON in this exact structure:
 
@@ -202,7 +207,6 @@ Return JSON in this exact structure:
             { role: 'system', content: systemPrompt },
             { role: 'user', content: userPrompt },
           ],
-          // Some accounts/models support this; if not, it’s ignored or throws.
           response_format: { type: 'json_object' },
           temperature: 0.6,
         });
