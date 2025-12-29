@@ -34,13 +34,20 @@ type CareerRoadmapPlan = {
   skillsFocus: string[];
 };
 
+async function safeReadJson(res: Response) {
+  try {
+    return await res.json();
+  } catch {
+    return null;
+  }
+}
+
 export default function OnboardingGrowth() {
   const router = useRouter();
 
   const [resumes, setResumes] = useState<Resume[]>([]);
   const [selectedResume, setSelectedResume] = useState<string>('');
 
-  // UPDATED: store the JSON plan, not markdown
   const [plan, setPlan] = useState<CareerRoadmapPlan | null>(null);
 
   const [pdfUrl, setPdfUrl] = useState<string>('');
@@ -66,16 +73,12 @@ export default function OnboardingGrowth() {
 
         if (!res.ok) {
           let msg = `Failed to load resumes (${res.status})`;
-          try {
-            const maybeJson = await res.json();
-            if (maybeJson?.error) msg = maybeJson.error;
-          } catch {
-            // ignore
-          }
+          const maybeJson = await safeReadJson(res);
+          if (maybeJson?.error) msg = maybeJson.error;
           throw new Error(msg);
         }
 
-        const data = await res.json();
+        const data = await safeReadJson(res);
         const list = Array.isArray(data?.resumes) ? data.resumes : [];
 
         if (!active) return;
@@ -113,27 +116,40 @@ export default function OnboardingGrowth() {
     setPlan(null);
     setPdfUrl('');
 
+    // ✅ prevents “spin forever”
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), 45000); // 45s
+
     try {
-      // IMPORTANT: this MUST match your real file: /pages/api/roadmap/onboarding-growth/generate.js
+      // IMPORTANT: matches /pages/api/roadmap/onboarding-growth/generate.js
       const res = await fetch('/api/roadmap/onboarding-growth/generate', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ resumeId: selectedResume }),
+        signal: controller.signal,
       });
 
-      const data = await res.json();
+      const data = await safeReadJson(res);
 
-      if (!res.ok) throw new Error(data?.error || 'Failed to generate roadmap');
+      if (!res.ok) {
+        const msg = data?.error || `Failed to generate roadmap (${res.status})`;
+        throw new Error(msg);
+      }
 
-      // Your API returns: { plan: parsed }
+      // API returns: { plan: parsed }
       if (!data?.plan) throw new Error('Roadmap response missing plan');
 
       setPlan(data.plan as CareerRoadmapPlan);
       setPdfUrl(String(data?.pdfUrl || ''));
       setHasGenerated(true);
     } catch (err: any) {
-      setError(err?.message || 'Something went wrong');
+      if (err?.name === 'AbortError') {
+        setError('Roadmap generation timed out. Please try again.');
+      } else {
+        setError(err?.message || 'Something went wrong');
+      }
     } finally {
+      clearTimeout(timeout);
       setLoading(false);
     }
   };
@@ -197,6 +213,12 @@ export default function OnboardingGrowth() {
 
             {error && <p className="text-red-600 font-medium">{error}</p>}
 
+            {loading ? (
+              <p className="text-sm text-gray-600 text-center">
+                Working… this can take up to ~45 seconds for longer resumes.
+              </p>
+            ) : null}
+
             <button
               onClick={generateRoadmap}
               disabled={loading || !selectedResume}
@@ -227,9 +249,7 @@ export default function OnboardingGrowth() {
       <div className="flex flex-col md:flex-row md:justify-between md:items-center gap-4 mb-8">
         <div>
           <h2 className="text-4xl font-bold text-[#FF7043] mt-0">Your 12-Month Growth Plan</h2>
-          {plan?.meta?.headline ? (
-            <p className="text-gray-600 mt-2">{plan.meta.headline}</p>
-          ) : null}
+          {plan?.meta?.headline ? <p className="text-gray-600 mt-2">{plan.meta.headline}</p> : null}
         </div>
 
         <div className="flex flex-wrap gap-3">
@@ -244,7 +264,6 @@ export default function OnboardingGrowth() {
             </a>
           ) : null}
 
-          {/* ✅ Replaces Calendly: Coach discovery via Spotlight */}
           <button
             onClick={() => router.push(withChrome('/hearth/spotlights'))}
             className="bg-[#FF7043] text-white px-5 py-3 rounded-lg hover:bg-[#F4511E] transition flex items-center gap-2"
@@ -253,7 +272,6 @@ export default function OnboardingGrowth() {
             Find a Coach in Spotlight
           </button>
 
-          {/* ✅ Replaces Calendly: your internal calendar */}
           <button
             onClick={() => router.push(withChrome('/calendar'))}
             className="bg-white border border-gray-300 text-gray-800 px-5 py-3 rounded-lg hover:bg-gray-50 transition flex items-center gap-2"
@@ -278,9 +296,7 @@ export default function OnboardingGrowth() {
             <SimpleListCard title="Skills Focus" items={plan.skillsFocus} />
           </div>
         ) : (
-          <div className="text-center py-6 text-gray-700">
-            No plan data found.
-          </div>
+          <div className="text-center py-6 text-gray-700">No plan data found.</div>
         )}
       </div>
 
