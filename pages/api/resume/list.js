@@ -12,50 +12,26 @@ export default async function handler(req, res) {
   try {
     const session = await getServerSession(req, res, authOptions);
 
-    // ✅ FIX: support id OR sub, then email
-    const userIdRaw =
-      session?.user?.id ||
-      session?.user?.sub ||
-      '';
-
-    const userId = String(userIdRaw).trim();
-
-    const emailRaw = session?.user?.email
-      ? String(session.user.email).trim()
-      : '';
-
+    // ✅ Keep this strict + stable: email-based session gating
+    const emailRaw = session?.user?.email ? String(session.user.email).trim() : '';
     const email = emailRaw ? emailRaw.toLowerCase() : '';
 
-    if (!userId && !email) {
-      return res.status(401).json({ error: 'Unauthorized' });
+    if (!email) {
+      return res.status(401).json({ error: 'Not authenticated' });
     }
 
-    let user = null;
-
-    if (userId) {
-      user = await prisma.user.findUnique({
-        where: { id: userId },
-        select: { id: true },
-      });
-    }
-
-    if (!user && email) {
-      user = await prisma.user.findUnique({
-        where: { email },
-        select: { id: true },
-      });
-    }
+    const user = await prisma.user.findUnique({
+      where: { email },
+      select: { id: true },
+    });
 
     if (!user) {
       return res.status(404).json({ error: 'User not found' });
     }
 
-    const LIMIT = 5;
-
     const resumes = await prisma.resume.findMany({
       where: { userId: user.id },
       orderBy: [{ isPrimary: 'desc' }, { createdAt: 'desc' }],
-      take: LIMIT,
       select: {
         id: true,
         name: true,
@@ -67,7 +43,7 @@ export default async function handler(req, res) {
 
     return res.status(200).json({
       resumes,
-      limit: LIMIT,
+      limit: 5,
       count: resumes.length,
     });
   } catch (err) {
