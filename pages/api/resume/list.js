@@ -11,56 +11,27 @@ export default async function handler(req, res) {
 
   try {
     const session = await getServerSession(req, res, authOptions);
-
-    // ✅ Prefer id (matches the rest of your app), fall back to email
-    const userId = session?.user?.id ? String(session.user.id).trim() : '';
-    const emailRaw = session?.user?.email ? String(session.user.email).trim() : '';
-    const email = emailRaw ? emailRaw.toLowerCase() : '';
-
-    if (!userId && !email) {
-      return res.status(401).json({ error: 'Unauthorized' });
+    if (!session || !session.user || !session.user.email) {
+      return res.status(401).json({ error: 'Not authenticated' });
     }
 
-    let user = null;
-
-    if (userId) {
-      user = await prisma.user.findUnique({
-        where: { id: userId },
-        select: { id: true },
-      });
-    } else if (email) {
-      user = await prisma.user.findUnique({
-        where: { email },
-        select: { id: true },
-      });
-    }
+    const user = await prisma.user.findUnique({
+      where: { email: session.user.email },
+      select: { id: true },
+    });
 
     if (!user) {
       return res.status(404).json({ error: 'User not found' });
     }
 
-    const LIMIT = 5;
-
     const resumes = await prisma.resume.findMany({
       where: { userId: user.id },
-      orderBy: [{ isPrimary: 'desc' }, { createdAt: 'desc' }],
-      take: LIMIT,
-      select: {
-        id: true,
-        name: true,
-        title: true,
-        createdAt: true,
-        isPrimary: true,
-      },
+      orderBy: { updatedAt: 'desc' },
     });
 
-    return res.status(200).json({
-      resumes,
-      limit: LIMIT,
-      count: resumes.length,
-    });
+    return res.status(200).json({ resumes });
   } catch (err) {
-    console.error('[resume/list] Error', err);
-    return res.status(500).json({ error: 'Internal server error' });
+    console.error('[api/resume/list] Error:', err);
+    return res.status(500).json({ error: 'Failed to load resumes.' });
   }
 }
