@@ -1,8 +1,7 @@
 // components/roadmap/OnboardingGrowth.tsx
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/router';
-import ReactMarkdown from 'react-markdown';
-import { Loader2, Download, Calendar } from 'lucide-react';
+import { Loader2, Download, Calendar, UserRound } from 'lucide-react';
 
 interface Resume {
   id: string;
@@ -13,11 +12,37 @@ interface Resume {
   isPrimary?: boolean;
 }
 
+type PlanBlock = {
+  objectives: string[];
+  actions: string[];
+  metrics: string[];
+  quickWins?: string[];
+  risks?: string[];
+  presentation?: string;
+};
+
+type CareerRoadmapPlan = {
+  meta: {
+    generatedAt: string;
+    candidate: string;
+    headline: string;
+  };
+  day30: PlanBlock;
+  day60: PlanBlock;
+  day90: PlanBlock;
+  growthRecommendations: string[];
+  skillsFocus: string[];
+};
+
 export default function OnboardingGrowth() {
   const router = useRouter();
+
   const [resumes, setResumes] = useState<Resume[]>([]);
   const [selectedResume, setSelectedResume] = useState<string>('');
-  const [roadmap, setRoadmap] = useState<string>('');
+
+  // UPDATED: store the JSON plan, not markdown
+  const [plan, setPlan] = useState<CareerRoadmapPlan | null>(null);
+
   const [pdfUrl, setPdfUrl] = useState<string>('');
   const [loading, setLoading] = useState(false);
   const [loadingResumes, setLoadingResumes] = useState(false);
@@ -37,17 +62,15 @@ export default function OnboardingGrowth() {
       setError('');
 
       try {
-        // ✅ Correct endpoint in your project
         const res = await fetch('/api/resume/list', { method: 'GET' });
 
-        // If auth/session fails, tell user instead of silently showing "No resumes"
         if (!res.ok) {
           let msg = `Failed to load resumes (${res.status})`;
           try {
             const maybeJson = await res.json();
             if (maybeJson?.error) msg = maybeJson.error;
           } catch {
-            // ignore JSON parse failures
+            // ignore
           }
           throw new Error(msg);
         }
@@ -59,7 +82,6 @@ export default function OnboardingGrowth() {
 
         setResumes(list);
 
-        // Optional UX: auto-select primary if present, else first
         const primary = list.find((r: any) => r?.isPrimary);
         if (primary?.id) setSelectedResume(String(primary.id));
         else if (list?.[0]?.id) setSelectedResume(String(list[0].id));
@@ -88,9 +110,11 @@ export default function OnboardingGrowth() {
 
     setLoading(true);
     setError('');
-    setRoadmap('');
+    setPlan(null);
+    setPdfUrl('');
 
     try {
+      // IMPORTANT: this MUST match your real file: /pages/api/roadmap/onboarding-growth/generate.js
       const res = await fetch('/api/roadmap/onboarding-growth/generate', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -99,13 +123,16 @@ export default function OnboardingGrowth() {
 
       const data = await res.json();
 
-      if (!res.ok) throw new Error(data.error || 'Failed to generate roadmap');
+      if (!res.ok) throw new Error(data?.error || 'Failed to generate roadmap');
 
-      setRoadmap(data.roadmap);
-      setPdfUrl(data.pdfUrl);
+      // Your API returns: { plan: parsed }
+      if (!data?.plan) throw new Error('Roadmap response missing plan');
+
+      setPlan(data.plan as CareerRoadmapPlan);
+      setPdfUrl(String(data?.pdfUrl || ''));
       setHasGenerated(true);
     } catch (err: any) {
-      setError(err.message || 'Something went wrong');
+      setError(err?.message || 'Something went wrong');
     } finally {
       setLoading(false);
     }
@@ -121,9 +148,8 @@ export default function OnboardingGrowth() {
           Plan Growth &amp; Pivots
         </h2>
         <p className="text-lg text-gray-700 mb-8">
-          Turn your resume into a 12-month growth map — including 30/60/90 day goals,
-          skills to sharpen, promotion paths, and options for pivoting into your next
-          role.
+          Turn your resume into a 12-month growth map, including 30/60/90 day goals,
+          skills to sharpen, promotion paths, and options for pivoting into your next role.
         </p>
 
         {loadingResumes ? (
@@ -132,9 +158,7 @@ export default function OnboardingGrowth() {
           </div>
         ) : noResumes ? (
           <div className="bg-orange-50 border border-orange-200 rounded-lg p-6 text-center">
-            <p className="text-orange-800 font-medium">
-              No resumes found on your account.
-            </p>
+            <p className="text-orange-800 font-medium">No resumes found on your account.</p>
             <p className="text-sm text-orange-800 mt-2">
               If you believe this is wrong, make sure you’re logged in with the same account that created them.
             </p>
@@ -148,10 +172,7 @@ export default function OnboardingGrowth() {
         ) : (
           <div className="space-y-6">
             <div>
-              <label
-                htmlFor="resume"
-                className="block text-lg font-medium text-gray-800 mb-3"
-              >
+              <label htmlFor="resume" className="block text-lg font-medium text-gray-800 mb-3">
                 Select Your Resume
               </label>
               <select
@@ -163,9 +184,7 @@ export default function OnboardingGrowth() {
                 <option value="">Choose a resume...</option>
                 {resumes.map((r) => {
                   const label =
-                    r?.name ||
-                    r?.title ||
-                    `Resume from ${new Date(r.createdAt).toLocaleDateString()}`;
+                    r?.name || r?.title || `Resume from ${new Date(r.createdAt).toLocaleDateString()}`;
                   return (
                     <option key={r.id} value={r.id}>
                       {label}
@@ -205,45 +224,161 @@ export default function OnboardingGrowth() {
   // AFTER GENERATION
   return (
     <div>
-      <div className="flex justify-between items-center mb-8">
-        <h2 className="text-4xl font-bold text-[#FF7043] mt-0">
-          Your 12-Month Growth Plan
-        </h2>
-        <div className="flex gap-4">
-          {pdfUrl && (
+      <div className="flex flex-col md:flex-row md:justify-between md:items-center gap-4 mb-8">
+        <div>
+          <h2 className="text-4xl font-bold text-[#FF7043] mt-0">Your 12-Month Growth Plan</h2>
+          {plan?.meta?.headline ? (
+            <p className="text-gray-600 mt-2">{plan.meta.headline}</p>
+          ) : null}
+        </div>
+
+        <div className="flex flex-wrap gap-3">
+          {pdfUrl ? (
             <a
               href={pdfUrl}
               download
-              className="bg-green-600 text-white px-6 py-3 rounded-lg hover:bg-green-700 transition flex items-center gap-2"
+              className="bg-green-600 text-white px-5 py-3 rounded-lg hover:bg-green-700 transition flex items-center gap-2"
             >
               <Download size={20} />
               Download PDF
             </a>
-          )}
-          <a
-            href="https://calendly.com/your-coach-link"
-            target="_blank"
-            rel="noopener noreferrer"
-            className="bg-[#FF7043] text-white px-6 py-3 rounded-lg hover:bg-[#F4511E] transition flex items-center gap-2"
+          ) : null}
+
+          {/* ✅ Replaces Calendly: Coach discovery via Spotlight */}
+          <button
+            onClick={() => router.push(withChrome('/hearth/spotlights'))}
+            className="bg-[#FF7043] text-white px-5 py-3 rounded-lg hover:bg-[#F4511E] transition flex items-center gap-2"
+          >
+            <UserRound size={20} />
+            Find a Coach in Spotlight
+          </button>
+
+          {/* ✅ Replaces Calendly: your internal calendar */}
+          <button
+            onClick={() => router.push(withChrome('/calendar'))}
+            className="bg-white border border-gray-300 text-gray-800 px-5 py-3 rounded-lg hover:bg-gray-50 transition flex items-center gap-2"
           >
             <Calendar size={20} />
-            Book Coach Review
-          </a>
+            Open Calendar
+          </button>
         </div>
       </div>
 
-      <div className="bg-white border border-gray-200 rounded-xl p-10 prose prose-lg max-w-none">
-        <ReactMarkdown>{roadmap}</ReactMarkdown>
+      {error ? <p className="text-red-600 font-medium mb-4">{error}</p> : null}
+
+      <div className="bg-white border border-gray-200 rounded-xl p-8 md:p-10">
+        {plan ? (
+          <div className="space-y-8">
+            <MetaBlock plan={plan} />
+            <PlanSection title="First 30 Days" data={plan.day30} />
+            <PlanSection title="Days 31–60" data={plan.day60} />
+            <PlanSection title="Days 61–90" data={plan.day90} />
+
+            <SimpleListCard title="Growth Recommendations" items={plan.growthRecommendations} />
+            <SimpleListCard title="Skills Focus" items={plan.skillsFocus} />
+          </div>
+        ) : (
+          <div className="text-center py-6 text-gray-700">
+            No plan data found.
+          </div>
+        )}
       </div>
 
       <div className="mt-10 text-center">
         <button
-          onClick={() => router.push('/roadmap')}
+          onClick={() => router.push(withChrome('/roadmap'))}
           className="text-[#FF7043] font-medium underline hover:no-underline"
         >
           Back to Toolkit
         </button>
       </div>
     </div>
+  );
+}
+
+function MetaBlock({ plan }: { plan: CareerRoadmapPlan }) {
+  const dt = plan?.meta?.generatedAt ? new Date(plan.meta.generatedAt) : null;
+  return (
+    <div className="border-b border-gray-100 pb-5">
+      <div className="text-gray-600">
+        Generated: {dt && !Number.isNaN(dt.getTime()) ? dt.toLocaleString() : '—'}
+      </div>
+      <div className="font-semibold mt-2">{plan?.meta?.candidate || '—'}</div>
+    </div>
+  );
+}
+
+function PlanSection({ title, data }: { title: string; data: PlanBlock }) {
+  if (!data) return null;
+
+  return (
+    <section className="border border-gray-100 rounded-xl p-5">
+      <h3 className="text-xl font-bold mb-4">{title}</h3>
+
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+        <Block label="Objectives" items={data.objectives} />
+        <Block label="Actions" items={data.actions} />
+      </div>
+
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-5 mt-5">
+        <Block label="Metrics" items={data.metrics} />
+        <Block label="Quick Wins" items={data.quickWins || []} emptyDash />
+      </div>
+
+      <div className="mt-5">
+        <Block label="Risks" items={data.risks || []} emptyDash />
+      </div>
+
+      {data.presentation ? (
+        <div className="mt-5">
+          <div className="font-semibold mb-2">Presentation</div>
+          <p className="text-gray-700">{data.presentation}</p>
+        </div>
+      ) : null}
+    </section>
+  );
+}
+
+function Block({
+  label,
+  items,
+  emptyDash,
+}: {
+  label: string;
+  items: string[];
+  emptyDash?: boolean;
+}) {
+  const list = Array.isArray(items) ? items.filter(Boolean) : [];
+  return (
+    <div>
+      <div className="font-semibold mb-2">{label}</div>
+      {list.length === 0 ? (
+        <p className="text-gray-600">{emptyDash ? '—' : 'None yet'}</p>
+      ) : (
+        <ul className="list-disc pl-5 space-y-1 text-gray-700">
+          {list.map((it, i) => (
+            <li key={`${label}-${i}`}>{it}</li>
+          ))}
+        </ul>
+      )}
+    </div>
+  );
+}
+
+function SimpleListCard({ title, items }: { title: string; items: string[] }) {
+  const list = Array.isArray(items) ? items.filter(Boolean) : [];
+  return (
+    <section className="border border-gray-100 rounded-xl p-5">
+      <h3 className="text-xl font-bold mb-3">{title}</h3>
+      {list.length === 0 ? (
+        <p className="text-gray-600">—</p>
+      ) : (
+        <ul className="list-disc pl-5 space-y-1 text-gray-700">
+          {list.map((it, i) => (
+            <li key={`${title}-${i}`}>{it}</li>
+          ))}
+        </ul>
+      )}
+    </section>
   );
 }
