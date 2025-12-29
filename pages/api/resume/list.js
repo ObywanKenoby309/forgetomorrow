@@ -1,13 +1,7 @@
 // pages/api/resume/list.js
 import { getServerSession } from 'next-auth/next';
+import { authOptions } from '../auth/[...nextauth]';
 import { prisma } from '@/lib/prisma';
-import * as NextAuthModule from '../auth/[...nextauth]';
-
-function resolveAuthOptions(mod) {
-  if (mod && mod.authOptions) return mod.authOptions;
-  if (mod && mod.default) return mod.default;
-  return null;
-}
 
 export default async function handler(req, res) {
   if (req.method !== 'GET') {
@@ -15,72 +9,58 @@ export default async function handler(req, res) {
     return res.status(405).json({ error: 'Method not allowed' });
   }
 
-  const dbg = {
-    step: 'init',
-    hasAuthOptions: false,
-    sessionHasUser: false,
-    sessionHasEmail: false,
-    email: null,
-    userFound: false,
-    resumeCount: null,
-  };
-
   try {
-    const authOptions = resolveAuthOptions(NextAuthModule);
-    dbg.step = 'authOptions';
-    dbg.hasAuthOptions = !!authOptions;
+    const session = await getServerSession(req, res, authOptions);
 
-    if (!authOptions) {
-      return res.status(200).json({ ok: false, dbg, error: 'authOptions missing export' });
-    }
-
-    let session = null;
-    try {
-      session = await getServerSession(req, res, authOptions);
-    } catch (e) {
-      dbg.step = 'getServerSession_throw';
-      return res.status(200).json({ ok: false, dbg, error: 'getServerSession threw', detail: String(e?.message || e) });
-    }
-
-    dbg.step = 'session';
-    dbg.sessionHasUser = !!session?.user;
-    dbg.sessionHasEmail = !!session?.user?.email;
-
+    // ✅ Prefer id (matches the rest of your app), fall back to email
+    const userId = session?.user?.id ? String(session.user.id).trim() : '';
     const emailRaw = session?.user?.email ? String(session.user.email).trim() : '';
     const email = emailRaw ? emailRaw.toLowerCase() : '';
-    dbg.email = email || null;
 
-    if (!email) {
-      return res.status(200).json({ ok: false, dbg, error: 'no email in session' });
+    if (!userId && !email) {
+      return res.status(401).json({ error: 'Unauthorized' });
     }
 
-    dbg.step = 'userLookup';
-    const user = await prisma.user.findUnique({
-      where: { email },
-      select: { id: true },
-    });
-    dbg.userFound = !!user;
+    let user = null;
+
+    if (userId) {
+      user = await prisma.user.findUnique({
+        where: { id: userId },
+        select: { id: true },
+      });
+    } else if (email) {
+      user = await prisma.user.findUnique({
+        where: { email },
+        select: { id: true },
+      });
+    }
 
     if (!user) {
-      return res.status(200).json({ ok: false, dbg, error: 'user not found for email' });
+      return res.status(404).json({ error: 'User not found' });
     }
 
-    dbg.step = 'resumeLookup';
+    const LIMIT = 5;
+
     const resumes = await prisma.resume.findMany({
       where: { userId: user.id },
       orderBy: [{ isPrimary: 'desc' }, { createdAt: 'desc' }],
-      select: { id: true },
+      take: LIMIT,
+      select: {
+        id: true,
+        name: true,
+        title: true,
+        createdAt: true,
+        isPrimary: true,
+      },
     });
-    dbg.resumeCount = resumes.length;
 
-    return res.status(200).json({ ok: true, dbg });
-  } catch (err) {
-    dbg.step = 'catch';
     return res.status(200).json({
-      ok: false,
-      dbg,
-      error: 'caught exception',
-      detail: String(err?.message || err),
+      resumes,
+      limit: LIMIT,
+      count: resumes.length,
     });
+  } catch (err) {
+    console.error('[resume/list] Error', err);
+    return res.status(500).json({ error: 'Internal server error' });
   }
 }
