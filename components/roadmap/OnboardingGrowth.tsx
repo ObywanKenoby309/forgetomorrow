@@ -50,8 +50,11 @@ export default function OnboardingGrowth() {
   const [resumes, setResumes] = useState<Resume[]>([]);
   const [selectedResume, setSelectedResume] = useState<string>('');
 
-  // ✅ NEW: growth direction selector
+  // ✅ Direction selector
   const [direction, setDirection] = useState<RoadmapDirection>('compare');
+
+  // ✅ NEW: Pivot target (only required if direction === 'pivot')
+  const [pivotTarget, setPivotTarget] = useState<string>('');
 
   const [plan, setPlan] = useState<CareerRoadmapPlan | null>(null);
 
@@ -110,10 +113,26 @@ export default function OnboardingGrowth() {
     };
   }, []);
 
+  // ✅ If user changes direction away from pivot, don’t keep forcing pivotTarget
+  useEffect(() => {
+    if (direction !== 'pivot') {
+      setPivotTarget('');
+    }
+  }, [direction]);
+
   const generateRoadmap = async () => {
     if (!selectedResume) {
       setError('Please select a resume');
       return;
+    }
+
+    // ✅ Pivot Sure: ask what they want to pivot into
+    if (direction === 'pivot') {
+      const t = String(pivotTarget || '').trim();
+      if (!t) {
+        setError('What do you want to pivot into? Add a target role or direction.');
+        return;
+      }
     }
 
     setLoading(true);
@@ -126,11 +145,17 @@ export default function OnboardingGrowth() {
     const timeout = setTimeout(() => controller.abort(), 45000); // 45s
 
     try {
-      // IMPORTANT: matches /pages/api/roadmap/onboarding-growth/generate.js
+      const body: any = { resumeId: selectedResume, direction };
+
+      // ✅ Only send pivotTarget when relevant (keeps API backward-compatible)
+      if (direction === 'pivot') {
+        body.pivotTarget = String(pivotTarget || '').trim();
+      }
+
       const res = await fetch('/api/roadmap/onboarding-growth/generate', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ resumeId: selectedResume, direction }),
+        body: JSON.stringify(body),
         signal: controller.signal,
       });
 
@@ -141,7 +166,6 @@ export default function OnboardingGrowth() {
         throw new Error(msg);
       }
 
-      // API returns: { plan: parsed }
       if (!data?.plan) throw new Error('Roadmap response missing plan');
 
       setPlan(data.plan as CareerRoadmapPlan);
@@ -159,26 +183,46 @@ export default function OnboardingGrowth() {
     }
   };
 
+  const directionTitle =
+    direction === 'compare'
+      ? 'Compare: Stay vs Pivot'
+      : direction === 'pivot'
+      ? 'Pivot Plan'
+      : 'Stay the Course Plan';
+
+  const directionSubtitle =
+    direction === 'compare'
+      ? 'See how staying the course compares to pivot options, including gaps and next steps.'
+      : direction === 'pivot'
+      ? 'Tell us what you want to pivot into. We’ll compare it to your current resume and show what’s missing.'
+      : 'You like your current direction. Let’s increase your market value and map the next level.';
+
   // BEFORE GENERATION
   if (!hasGenerated) {
     const noResumes = !loadingResumes && resumes.length === 0;
 
     const buttonLabel =
-      direction === 'compare' ? 'Generate My Compare Plan' : 'Generate My Growth Plan';
+      direction === 'compare'
+        ? 'Generate My Compare Plan'
+        : direction === 'pivot'
+        ? 'Generate My Pivot Plan'
+        : 'Generate My Stay-the-Course Plan';
 
     const loadingLabel =
       direction === 'compare'
         ? 'Generating your compare plan...'
-        : 'Generating your 12-month growth plan...';
+        : direction === 'pivot'
+        ? 'Generating your pivot plan...'
+        : 'Generating your stay-the-course plan...';
 
     return (
       <div>
         <h2 className="text-4xl font-bold text-[#FF7043] mb-6 mt-0">
-          Plan Growth &amp; Pivots
+          {directionTitle}
         </h2>
-        <p className="text-lg text-gray-700 mb-8">
-          Turn your resume into a 12-month growth map, including 30/60/90 day goals,
-          skills to sharpen, promotion paths, and options for pivoting into your next role.
+        <p className="text-lg text-gray-700 mb-2">{directionSubtitle}</p>
+        <p className="text-sm text-gray-600 mb-8">
+          Includes 30/60/90 priorities, skills to strengthen, and clear next steps based on your selected mode.
         </p>
 
         {loadingResumes ? (
@@ -224,15 +268,13 @@ export default function OnboardingGrowth() {
               </select>
             </div>
 
-            {/* ✅ NEW: Direction selector */}
+            {/* Direction selector */}
             <div className="bg-white border border-gray-200 rounded-lg p-5">
               <div className="flex items-start justify-between gap-4">
                 <div>
-                  <div className="text-lg font-medium text-gray-800">
-                    What direction are you considering?
-                  </div>
+                  <div className="text-lg font-medium text-gray-800">Which path are you considering?</div>
                   <div className="text-sm text-gray-600 mt-1">
-                    Choose one. Compare both gives side-by-side guidance.
+                    Not sure compares both. Pivot asks where you want to go. Stay focuses on increasing market value.
                   </div>
                 </div>
               </div>
@@ -248,9 +290,9 @@ export default function OnboardingGrowth() {
                     className="mt-1"
                   />
                   <div>
-                    <div className="font-semibold text-gray-800">Compare both</div>
+                    <div className="font-semibold text-gray-800">Not sure yet</div>
                     <div className="text-sm text-gray-600">
-                      Stay the course vs pivot opportunities
+                      Compare staying the course vs pivot options, and show what you’re missing for each.
                     </div>
                   </div>
                 </label>
@@ -267,7 +309,7 @@ export default function OnboardingGrowth() {
                   <div>
                     <div className="font-semibold text-gray-800">Stay the course</div>
                     <div className="text-sm text-gray-600">
-                      Grow in your current field and level up
+                      You like where you are. Increase market value and map where to go from here.
                     </div>
                   </div>
                 </label>
@@ -284,11 +326,30 @@ export default function OnboardingGrowth() {
                   <div>
                     <div className="font-semibold text-gray-800">Pivot</div>
                     <div className="text-sm text-gray-600">
-                      Shift into a different field or role type
+                      You want to change direction. Tell us where, and we’ll compare it to your current resume.
                     </div>
                   </div>
                 </label>
               </div>
+
+              {/* ✅ Pivot Sure prompt */}
+              {direction === 'pivot' ? (
+                <div className="mt-5">
+                  <label htmlFor="pivotTarget" className="block text-sm font-semibold text-gray-800 mb-2">
+                    What do you want to pivot into?
+                  </label>
+                  <input
+                    id="pivotTarget"
+                    value={pivotTarget}
+                    onChange={(e) => setPivotTarget(e.target.value)}
+                    placeholder="Example: Product Manager, Customer Success Director, Recruiter Ops, etc."
+                    className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#FF7043] focus:border-transparent"
+                  />
+                  <div className="text-xs text-gray-600 mt-2">
+                    This helps the plan compare your current resume to the target role and highlight gaps.
+                  </div>
+                </div>
+              ) : null}
             </div>
 
             {error && <p className="text-red-600 font-medium">{error}</p>}
@@ -323,12 +384,19 @@ export default function OnboardingGrowth() {
     );
   }
 
+  const afterTitle =
+    direction === 'compare'
+      ? 'Your Compare Plan'
+      : direction === 'pivot'
+      ? 'Your Pivot Plan'
+      : 'Your Stay-the-Course Plan';
+
   // AFTER GENERATION
   return (
     <div>
       <div className="flex flex-col md:flex-row md:justify-between md:items-center gap-4 mb-8">
         <div>
-          <h2 className="text-4xl font-bold text-[#FF7043] mt-0">Your 12-Month Growth Plan</h2>
+          <h2 className="text-4xl font-bold text-[#FF7043] mt-0">{afterTitle}</h2>
           {plan?.meta?.headline ? <p className="text-gray-600 mt-2">{plan.meta.headline}</p> : null}
         </div>
 
@@ -375,7 +443,6 @@ export default function OnboardingGrowth() {
             <SimpleListCard title="Growth Recommendations" items={plan.growthRecommendations} />
             <SimpleListCard title="Skills Focus" items={plan.skillsFocus} />
 
-            {/* Guidance disclaimer */}
             <div className="mt-6 text-sm text-gray-600 bg-gray-50 border border-gray-200 rounded-lg p-4">
               <strong>Guidance note:</strong> This tool provides structured, AI-assisted guidance based on your
               profile and resume. It is designed to support your thinking and preparation, not to replace live
