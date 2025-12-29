@@ -12,13 +12,12 @@ export default async function handler(req, res) {
   try {
     const session = await getServerSession(req, res, authOptions);
 
-    // ✅ Keep this strict + stable: email-based session gating
-    const emailRaw = session?.user?.email ? String(session.user.email).trim() : '';
-    const email = emailRaw ? emailRaw.toLowerCase() : '';
-
-    if (!email) {
+    // 🔒 HARD STOP — this is what prevents the 500
+    if (!session || !session.user || !session.user.email) {
       return res.status(401).json({ error: 'Not authenticated' });
     }
+
+    const email = String(session.user.email).toLowerCase();
 
     const user = await prisma.user.findUnique({
       where: { email },
@@ -43,7 +42,6 @@ export default async function handler(req, res) {
 
     return res.status(200).json({
       resumes,
-      limit: 5,
       count: resumes.length,
     });
   } catch (err) {
