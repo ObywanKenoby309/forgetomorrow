@@ -1,7 +1,17 @@
 // pages/api/resume/list.js
-import { getServerSession } from 'next-auth/next';
-import authOptions from '../auth/[...nextauth]'; // ✅ FIX: default import
 import { prisma } from '@/lib/prisma';
+
+// NOTE: your codebase has BOTH patterns in different files.
+// We support either export shape safely to stop 500s.
+import * as NextAuthMod from '../auth/[...nextauth]';
+import { getServerSession } from 'next-auth/next';
+
+function pickAuthOptions(mod) {
+  // supports: export default authOptions  OR  export const authOptions = ...
+  if (mod && mod.authOptions) return mod.authOptions;
+  if (mod && mod.default) return mod.default;
+  return null;
+}
 
 export default async function handler(req, res) {
   if (req.method !== 'GET') {
@@ -10,13 +20,29 @@ export default async function handler(req, res) {
   }
 
   try {
-    const session = await getServerSession(req, res, authOptions);
+    const authOptions = pickAuthOptions(NextAuthMod);
 
-    if (!session || !session.user || !session.user.email) {
+    // ✅ If authOptions is wrong, DO NOT THROW → return 401 instead of 500.
+    if (!authOptions) {
+      console.error('[resume/list] Missing authOptions export from [...nextauth]');
       return res.status(401).json({ error: 'Not authenticated' });
     }
 
-    const email = String(session.user.email).toLowerCase();
+    let session = null;
+    try {
+      session = await getServerSession(req, res, authOptions);
+    } catch (e) {
+      console.error('[resume/list] getServerSession threw', e);
+      return res.status(401).json({ error: 'Not authenticated' });
+    }
+
+    const emailRaw = session?.user?.email ? String(session.user.email).trim() : '';
+    const email = emailRaw ? emailRaw.toLowerCase() : '';
+
+    // ✅ email-only, same as the working version
+    if (!email) {
+      return res.status(401).json({ error: 'Not authenticated' });
+    }
 
     const user = await prisma.user.findUnique({
       where: { email },
