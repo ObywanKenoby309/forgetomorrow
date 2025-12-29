@@ -45,7 +45,6 @@ function directionLabel(direction) {
   return 'Compare both paths: stay the course vs pivot opportunities';
 }
 
-// Soft validators (do not hard fail user, but reduce drift)
 function isNonEmptyString(v) {
   return typeof v === 'string' && v.trim().length > 0;
 }
@@ -54,51 +53,139 @@ function ensureArray(v) {
   return Array.isArray(v) ? v : [];
 }
 
-// Enforce compare-mode placement rules to stop drift.
-// If the model outputs loosely, we "nudge" structure without changing schema.
+function normalizeWhitespace(s) {
+  return String(s || '').replace(/\s+/g, ' ').trim();
+}
+
+/**
+ * Turn this (bad):
+ * "Possible pivot 1: IT Support Specialist Why it fits: ... Missing signals: ... Fast proof artifact: ... Cost/tradeoff: ..."
+ *
+ * Into this (good):
+ * "Possible pivot 1: IT Support Specialist
+ *  Why it fits: ...
+ *  Missing signals: ...
+ *  Fast proof artifact: ...
+ *  Cost/tradeoff: ..."
+ */
+function coercePivotToMultiline(pivotLine) {
+  const raw = String(pivotLine || '').trim();
+  if (!raw.startsWith('Possible pivot ')) return raw;
+
+  // If it already has line breaks and the 4 labels appear on their own lines, keep it.
+  const alreadyMultiline =
+    raw.includes('\nWhy it fits:') &&
+    raw.includes('\nMissing signals:') &&
+    raw.includes('\nFast proof artifact:') &&
+    raw.includes('\nCost/tradeoff:');
+  if (alreadyMultiline) return raw;
+
+  // Extract title part
+  // Example: "Possible pivot 1: IT Support Specialist Why it fits: ..."
+  const match = raw.match(/^(Possible pivot\s+\d+:\s*[^W]+?)(\s+Why it fits:\s.*)$/i);
+  if (match && match[1] && match[2]) {
+    const title = normalizeWhitespace(match[1]);
+    let rest = match[2];
+
+    // Insert line breaks before each label
+    rest = rest.replace(/\s+Why it fits:\s*/i, '\nWhy it fits: ');
+    rest = rest.replace(/\s+Missing signals:\s*/i, '\nMissing signals: ');
+    rest = rest.replace(/\s+Fast proof artifact:\s*/i, '\nFast proof artifact: ');
+    rest = rest.replace(/\s+Cost\/tradeoff:\s*/i, '\nCost/tradeoff: ');
+
+    return `${title}${rest}`.trim();
+  }
+
+  // Fallback: brute-force label breaks
+  let s = raw;
+  s = s.replace(/\s+Why it fits:\s*/i, '\nWhy it fits: ');
+  s = s.replace(/\s+Missing signals:\s*/i, '\nMissing signals: ');
+  s = s.replace(/\s+Fast proof artifact:\s*/i, '\nFast proof artifact: ');
+  s = s.replace(/\s+Cost\/tradeoff:\s*/i, '\nCost/tradeoff: ');
+  return s.trim();
+}
+
+function removeStayTheCourseLeaks(block) {
+  if (!block || typeof block !== 'object') return block;
+  const fields = ['objectives', 'actions', 'metrics', 'quickWins', 'risks'];
+  for (const f of fields) {
+    const arr = ensureArray(block[f]).filter(Boolean);
+    block[f] = arr.filter((x) => !(isNonEmptyString(x) && x.startsWith('Stay-the-course requirements:')));
+  }
+  if (typeof block.presentation === 'string') {
+    // leave presentation alone; sometimes it may reference staying vs pivoting
+  }
+  return block;
+}
+
 function enforceComparePlacement(plan) {
   try {
     if (!plan || typeof plan !== 'object') return plan;
-    if (!plan.day30 || typeof plan.day30 !== 'object') return plan;
 
+    // Ensure blocks exist
+    if (!plan.day30 || typeof plan.day30 !== 'object') plan.day30 = {};
+    if (!plan.day60 || typeof plan.day60 !== 'object') plan.day60 = {};
+    if (!plan.day90 || typeof plan.day90 !== 'object') plan.day90 = {};
+
+    // Remove "Stay-the-course requirements:" from day60/day90 (must only live in day30)
+    plan.day60 = removeStayTheCourseLeaks(plan.day60);
+    plan.day90 = removeStayTheCourseLeaks(plan.day90);
+
+    // Day 30 arrays
     const obj = ensureArray(plan.day30.objectives).filter(Boolean);
     const act = ensureArray(plan.day30.actions).filter(Boolean);
 
-    // Ensure Current alignment exists exactly once and first
-    const currentIdx = obj.findIndex((x) => isNonEmptyString(x) && x.startsWith('Current alignment:'));
-    if (currentIdx > -1) {
-      const currentLine = obj[currentIdx];
-      const filtered = obj.filter((x, i) => i === currentIdx || !(isNonEmptyString(x) && x.startsWith('Current alignment:')));
-      // move to front
-      plan.day30.objectives = [currentLine, ...filtered.filter((x) => x !== currentLine)];
-    } else {
-      // If missing entirely, do not fabricate roles — add a safe placeholder to satisfy UI/format.
-      plan.day30.objectives = ['Current alignment: (not provided)', ...obj];
+    // 1) Current alignment: must exist exactly once and be FIRST objective
+    const alignmentLines = obj.filter((x) => isNonEmptyString(x) && x.startsWith('Current alignment:'));
+    const alignmentLine = alignmentLines.length ? alignmentLines[0] : 'Current alignment: (not provided)';
+    const withoutAlignment = obj.filter((x) => !(isNonEmptyString(x) && x.startsWith('Current alignment:')));
+
+    // 2) Stay-the-course requirements: must be LAST 3–5 items in day30.objectives
+    const stayLines = withoutAlignment.filter((x) => isNonEmptyString(x) && x.startsWith('Stay-the-course requirements:'));
+    const otherObjectives = withoutAlignment.filter(
+      (x) => !(isNonEmptyString(x) && x.startsWith('Stay-the-course requirements:'))
+    );
+
+    // Keep only 3–5 stay lines; if none exist, add safe placeholders (no fabrication)
+    let finalStay = stayLines.slice(0, 5);
+    if (finalStay.length === 0) {
+      finalStay = [
+        'Stay-the-course requirements: Show one measurable outcome you can repeat (time saved, satisfaction improvement, fewer repeat issues).',
+        'Stay-the-course requirements: Demonstrate tool use beyond basics (ticketing, documentation, reporting, or workflow ownership).',
+        'Stay-the-course requirements: Take ownership end-to-end on at least one recurring problem and document the before/after.',
+      ];
+    } else if (finalStay.length < 3) {
+      // pad to 3 with generic-but-safe requirements
+      const pads = [
+        'Stay-the-course requirements: Show measurable outcomes (before/after) from support or process improvements.',
+        'Stay-the-course requirements: Demonstrate ownership (end-to-end) on at least one recurring issue or workflow.',
+        'Stay-the-course requirements: Show scope growth (mentoring, leading a small initiative, or standardizing a process).',
+      ];
+      while (finalStay.length < 3 && pads.length) finalStay.push(pads.shift());
     }
 
-    // Ensure Possible pivots are first items in actions (keep any existing ordering after)
-    const pivotLines = act.filter((x) => isNonEmptyString(x) && x.startsWith('Possible pivot '));
+    plan.day30.objectives = [alignmentLine, ...otherObjectives, ...finalStay];
+
+    // 3) Possible pivots: must be first actions, each pivot must be ONE string with line breaks
+    const pivotLinesRaw = act.filter((x) => isNonEmptyString(x) && x.startsWith('Possible pivot '));
+    const pivotLines = pivotLinesRaw.map((x) => coercePivotToMultiline(x));
     const nonPivotLines = act.filter((x) => !(isNonEmptyString(x) && x.startsWith('Possible pivot ')));
+
     plan.day30.actions = [...pivotLines, ...nonPivotLines];
 
-    // Ensure Decision Seal in day90.presentation (compare only)
-    if (plan.day90 && typeof plan.day90 === 'object') {
-      const pres = String(plan.day90.presentation || '').trim();
-      const hasSeal =
-        pres.includes('If you stay:') &&
-        pres.includes('If you pivot:') &&
-        pres.includes('Next step:');
+    // 4) Decision Seal: must appear in day90.presentation with three labeled paragraphs
+    const pres = String(plan.day90.presentation || '').trim();
+    const hasSeal =
+      pres.includes('If you stay:') && pres.includes('If you pivot:') && pres.includes('Next step:');
 
-      if (!hasSeal) {
-        const seal =
-          [
-            'If you stay: Choose one aligned role from the Current alignment list and define success as measurable impact + stronger tools + a documented outcome in 30–60 days. You are choosing stability and compounding credibility over starting a new track.',
-            'If you pivot: Do not pivot yet until you complete ONE fast proof artifact from your chosen pivot option and can show it as a concrete deliverable (case study, report, documented improvement, or portfolio item).',
-            'Next step: Take this plan to a coach or mentor and validate (1) which path has the strongest evidence on your resume today, (2) whether the proof artifact is realistic in your schedule, and (3) what job titles you should pursue first.',
-          ].join('\n\n');
-
-        plan.day90.presentation = pres ? `${pres}\n\n${seal}` : seal;
-      }
+    if (!hasSeal) {
+      const seal =
+        [
+          'If you stay: Choose one role from Current alignment and define success as measurable impact + stronger tools + a documented outcome in 30–60 days.',
+          'If you pivot: Do not pivot until you complete ONE fast proof artifact from the pivot you’re considering and can show it as a deliverable.',
+          'Next step: Take this plan to a coach or mentor to validate the best path, tighten the proof artifact, and confirm which job titles to pursue first.',
+        ].join('\n\n');
+      plan.day90.presentation = pres ? `${pres}\n\n${seal}` : seal;
     }
 
     return plan;
@@ -127,7 +214,6 @@ export default async function handler(req, res) {
       return res.status(401).json({ error: 'Not authenticated' });
     }
 
-    // pivotTarget accepted (required for direction=pivot)
     const { resumeId, direction: directionRaw, pivotTarget: pivotTargetRaw } = req.body || {};
     const resumeIdNum = Number(String(resumeId || '').trim());
     const direction = normalizeDirection(directionRaw);
@@ -137,7 +223,6 @@ export default async function handler(req, res) {
       return res.status(400).json({ error: 'Missing or invalid resumeId' });
     }
 
-    // Pivot must stop and ask where the user is pivoting to
     if (direction === 'pivot' && !pivotTarget) {
       return res
         .status(400)
@@ -182,7 +267,7 @@ Generate a 30/60/90 day onboarding and growth plan based on the resume content.
 This tool supports three modes:
 - grow: staying the course (increase market value)
 - pivot: pivoting into a specific target role (user provides the target)
-- compare: user is unsure; provide a structured contrast that leads to a decision
+- compare: user is unsure; provide a structured contrast (alignment → staying vs pivoting → gaps/costs → implications)
 
 Hard rules:
 - Do NOT fabricate salary numbers, compensation statistics, or fake benchmarks.
@@ -210,7 +295,7 @@ Mode behavior requirements:
 - Actions should compound results (ship work, document impact, lead small initiatives).
 
 2) pivot (user is sure):
-- The user provides pivotTarget.
+- The user will provide a pivotTarget role/direction.
 - Compare current resume vs pivotTarget:
   - Direct matches (transferable strengths)
   - Partial matches
@@ -227,6 +312,7 @@ Placement rules (compare mode):
   - Format exactly:
     "Current alignment: Role 1, Role 2, Role 3, Role 4"
   - Do NOT repeat or restate current alignment anywhere else.
+
 - "Possible pivots" MUST appear as the FIRST items in day30.actions.
   - Provide 2–4 pivot directions inferred from the resume (not random, keep adjacent if resume is narrow).
   - Each pivot MUST be ONE string with line breaks, formatted exactly like this:
@@ -238,9 +324,8 @@ Fast proof artifact: ...
 Cost/tradeoff: ...
 
   - Each of the four labeled lines MUST be on its own line.
+
 - "Stay-the-course requirements" MUST be the LAST items inside day30.objectives (3–5 total).
-  - These are the specific signals the resume must show to level up in the current track:
-    scope, tools, outcomes, leadership, measurable impact.
   - Keep each requirement short and concrete.
 
 Decision Seal (compare mode):
@@ -248,7 +333,6 @@ Decision Seal (compare mode):
   "If you stay:" ...,
   "If you pivot:" ...,
   "Next step:" ...
-- This is a decision gate, not motivation.
 
 UX guardrail (compare mode):
 - Do NOT recommend UX skill-building or UX tools unless UX is explicitly listed as one of the Possible pivots.
@@ -320,7 +404,6 @@ ${modeRequirements}
     let rawText = '';
     let parsed = null;
 
-    // Prefer Responses API, fallback to Chat Completions (keeps reliability)
     try {
       if (client?.responses?.create) {
         const resp = await client.responses.create({
@@ -368,12 +451,12 @@ ${modeRequirements}
       return res.status(500).json({ error: 'Failed to generate roadmap' });
     }
 
-    // Post-processing: enforce compare placement + decision seal if direction === 'compare'
+    // Enforce compare mode structure (last-5% polish)
     if (direction === 'compare') {
       parsed = enforceComparePlacement(parsed);
     }
 
-    // Stamp meta fields (kept from your working version)
+    // Stamp meta fields
     try {
       const nowIso = new Date().toISOString();
       if (!parsed.meta || typeof parsed.meta !== 'object') parsed.meta = {};
