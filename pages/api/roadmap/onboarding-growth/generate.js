@@ -65,12 +65,21 @@ export default async function handler(req, res) {
       return res.status(401).json({ error: 'Not authenticated' });
     }
 
-    const { resumeId, direction: directionRaw } = req.body || {};
+    // ✅ pivotTarget accepted (required for direction=pivot)
+    const { resumeId, direction: directionRaw, pivotTarget: pivotTargetRaw } = req.body || {};
     const resumeIdNum = Number(String(resumeId || '').trim());
     const direction = normalizeDirection(directionRaw);
+    const pivotTarget = String(pivotTargetRaw || '').trim();
 
     if (!resumeId || Number.isNaN(resumeIdNum)) {
       return res.status(400).json({ error: 'Missing or invalid resumeId' });
+    }
+
+    // ✅ Pivot must stop and ask where the user is pivoting to
+    if (direction === 'pivot' && !pivotTarget) {
+      return res
+        .status(400)
+        .json({ error: 'Missing pivotTarget. Please specify what you want to pivot into.' });
     }
 
     const user = await prisma.user.findFirst({
@@ -108,18 +117,50 @@ You are a practical career operator and hiring manager advisor.
 
 Goal:
 Generate a 30/60/90 day onboarding and growth plan based on the resume content.
-This tool can help the candidate level up in their current path, pivot into a new path, or compare both.
-ForgeTomorrow already has separate tools for: Resume Builder, Profile Builder, and Offer Negotiation.
-Do not duplicate those tools. Reference them as action steps when useful.
+This tool supports three modes:
+- grow: staying the course (increase market value)
+- pivot: pivoting into a specific target role (user provides the target)
+- compare: user is unsure; provide a structured contrast (alignment → staying vs pivoting → gaps/costs → implications)
 
 Hard rules:
-- Do NOT fabricate specific salary numbers, compensation statistics, or fake metrics.
+- Do NOT fabricate salary numbers, compensation statistics, or fake benchmarks.
 - Keep recommendations concrete and testable.
 - If the resume suggests gaps, call them out calmly and propose a plan to close them.
+- Do NOT assume the user wants UX or any specific pivot unless explicitly provided or clearly supported by resume signals.
 - Output MUST be valid JSON. No extra keys. No commentary outside JSON.
 
 Tone:
 Direct, supportive, professional. No fluff.
+`.trim();
+
+    const modeRequirements = `
+Mode behavior requirements:
+
+1) grow (stay the course):
+- Treat staying as an active decision.
+- Focus on increasing market value: scope, impact, credibility.
+- Recommend next-level roles or responsibility expansions based on the resume.
+- Actions should be about compounding results, not "start over".
+
+2) pivot (user is sure):
+- The user will provide a pivotTarget role/direction.
+- Compare current resume vs pivotTarget:
+  - Direct matches (transferable strengths)
+  - Partial matches
+  - Missing signals (what is not present on the resume yet)
+- Provide a realistic bridge plan with near-term proof-building steps.
+- Do not hype; be mechanical and honest.
+
+3) compare (user is not sure):
+- Do NOT choose a single pivot target. Do NOT default to UX, Product, or any specific field.
+- You MUST place "Current alignment" and "Possible pivots" into the existing schema like this:
+  - Put "Current alignment" as the FIRST items inside day30.objectives.
+  - Put "Possible pivots" as the FIRST items inside day30.actions.
+  - Each pivot option MUST include: Why it fits, Missing signals, Fast proof artifact, Cost/tradeoff.
+- Current alignment: list 3–6 job titles the candidate already fits TODAY based only on the resume.
+- Possible pivots: list 2–4 pivot directions inferred from the resume (NOT random).
+- If the resume does NOT strongly support a pivot category, explicitly say so and keep pivots adjacent.
+- Only mention “UX / Figma / wireframing” if (a) the resume contains UX signals, OR (b) the user explicitly says UX, OR (c) it’s listed as one of multiple pivot options with clear justification.
 `.trim();
 
     const userPrompt = `
@@ -128,8 +169,8 @@ Candidate headline: ${user.headline || 'N/A'}
 Candidate location: ${user.location || 'N/A'}
 Resume name: ${resume.name}
 
-Direction selected:
-${directionLabel(direction)}
+Direction selected: ${directionLabel(direction)}
+${direction === 'pivot' ? `Pivot target (user-selected): ${pivotTarget}` : ''}
 
 Resume content:
 ${resume.content}
@@ -170,19 +211,19 @@ Return JSON in this exact structure:
   "skillsFocus": []
 }
 
-Requirements based on direction:
-- If direction is "grow": focus on leveling up in the candidate's current track, promotions, deeper scope, stronger outcomes.
-- If direction is "pivot": include a realistic bridge plan, transferable skills, and a 60-90 day skill-building sequence.
-- If direction is "compare": structure the plan so actions and recommendations explicitly address both paths. Do not invent a new JSON schema. Instead:
-  - In each phase (day30/day60/day90), include some actions labeled "Stay the course:" and some labeled "Pivot:".
-  - In growthRecommendations, include a mix for both paths.
-
-Notes:
-- "presentation" should be a short script on how the candidate should present themselves for that phase.
+Global notes:
+- "presentation" should be a short script describing how the candidate should present themselves for that phase.
 - Include a few actions that explicitly say to use ForgeTomorrow tools when appropriate:
   - Resume Builder
   - Profile Builder
   - Offer Negotiation
+
+${modeRequirements}
+
+Additional constraints:
+- Keep lists concise and specific (avoid generic “take a course” unless you name what outcome it creates).
+- If you recommend learning, tie it to a proof artifact (portfolio item, documented improvement, measurable outcome, etc.).
+- For compare mode, do NOT recommend enrolling in any specific pivot training unless it is tied to one of the listed pivot options and includes a proof artifact.
 `.trim();
 
     let rawText = '';
@@ -222,7 +263,10 @@ Notes:
         rawText = extractTextFromChatCompletions(resp);
         parsed = safeJsonParse(rawText);
       } catch (e) {
-        console.error('[roadmap/onboarding-growth/generate] Chat Completions failed:', e?.message || e);
+        console.error(
+          '[roadmap/onboarding-growth/generate] Chat Completions failed:',
+          e?.message || e
+        );
         return res.status(500).json({ error: 'Failed to generate roadmap' });
       }
     }
@@ -238,16 +282,18 @@ Notes:
       if (!parsed.meta || typeof parsed.meta !== 'object') parsed.meta = {};
       parsed.meta.generatedAt = parsed.meta.generatedAt || nowIso;
       parsed.meta.candidate = parsed.meta.candidate || candidateName;
-      parsed.meta.headline = parsed.meta.headline || (user.headline || 'N/A');
 
-      if (typeof parsed.meta.headline === 'string' && !parsed.meta.headline.includes('•')) {
-        parsed.meta.headline = `${parsed.meta.headline} • ${directionLabel(direction)}`;
+      const baseHeadline = user.headline || 'N/A';
+      if (direction === 'pivot') {
+        parsed.meta.headline = parsed.meta.headline || `${baseHeadline} • Pivot target: ${pivotTarget}`;
+      } else {
+        parsed.meta.headline = parsed.meta.headline || `${baseHeadline} • ${directionLabel(direction)}`;
       }
     } catch {
       // ignore
     }
 
-    // ✅ Save + return roadmapId (THIS is what your results.js expects)
+    // ✅ Save + return roadmapId
     let created = null;
     try {
       created = await prisma.careerRoadmap.create({
@@ -259,11 +305,13 @@ Notes:
         select: { id: true },
       });
     } catch (e) {
-      console.error('[roadmap/onboarding-growth/generate] Failed to save CareerRoadmap:', e?.message || e);
+      console.error(
+        '[roadmap/onboarding-growth/generate] Failed to save CareerRoadmap:',
+        e?.message || e
+      );
     }
 
     if (!created?.id) {
-      // If save failed, you can still return plan (but results page won't work without roadmapId)
       return res.status(200).json({ plan: parsed, roadmapId: null });
     }
 
