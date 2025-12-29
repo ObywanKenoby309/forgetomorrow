@@ -142,7 +142,6 @@ Mode behavior requirements:
 - Recommend next-level roles or responsibility expansions based on the resume.
 - Actions should be about compounding results, not "start over".
 
-
 2) pivot (user is sure):
 - The user will provide a pivotTarget role/direction.
 - Compare current resume vs pivotTarget:
@@ -163,6 +162,15 @@ Mode behavior requirements:
 - Also include "Stay-the-course requirements" as the LAST items inside day30.objectives: 3–5 specific signals the resume must show to level up in the current track (scope, tools, outcomes, leadership, measurable impact).
 - If the resume does NOT strongly support a pivot category, explicitly say so and keep pivots adjacent.
 - Only mention “UX / Figma / wireframing” if (a) the resume contains UX signals, OR (b) the user explicitly says UX, OR (c) it’s listed as one of multiple pivot options with clear justification.
+
+CRITICAL formatting (compare mode):
+- In day30.actions, each pivot option MUST be a single string with this exact 4-line format (use line breaks):
+  "Possible pivot X: <Pivot Title>
+   Why it fits: ...
+   Missing signals: ...
+   Fast proof artifact: ...
+   Cost/tradeoff: ..."
+- Do not compress these into one sentence. Keep the 4 labeled lines.
 `.trim();
 
     const userPrompt = `
