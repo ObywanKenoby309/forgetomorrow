@@ -1,6 +1,6 @@
 // pages/api/resume/list.js
 import { getServerSession } from 'next-auth/next';
-import { authOptions } from '../auth/[...nextauth]';
+import authOptions from '../auth/[...nextauth]'; // ✅ FIX: default import
 import { prisma } from '@/lib/prisma';
 
 export default async function handler(req, res) {
@@ -12,7 +12,6 @@ export default async function handler(req, res) {
   try {
     const session = await getServerSession(req, res, authOptions);
 
-    // 🔒 HARD STOP — this is what prevents the 500
     if (!session || !session.user || !session.user.email) {
       return res.status(401).json({ error: 'Not authenticated' });
     }
