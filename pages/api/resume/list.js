@@ -12,9 +12,18 @@ export default async function handler(req, res) {
   try {
     const session = await getServerSession(req, res, authOptions);
 
-    // ✅ Prefer id (matches the rest of your app), fall back to email
-    const userId = session?.user?.id ? String(session.user.id).trim() : '';
-    const emailRaw = session?.user?.email ? String(session.user.email).trim() : '';
+    // ✅ FIX: support id OR sub, then email
+    const userIdRaw =
+      session?.user?.id ||
+      session?.user?.sub ||
+      '';
+
+    const userId = String(userIdRaw).trim();
+
+    const emailRaw = session?.user?.email
+      ? String(session.user.email).trim()
+      : '';
+
     const email = emailRaw ? emailRaw.toLowerCase() : '';
 
     if (!userId && !email) {
@@ -28,7 +37,9 @@ export default async function handler(req, res) {
         where: { id: userId },
         select: { id: true },
       });
-    } else if (email) {
+    }
+
+    if (!user && email) {
       user = await prisma.user.findUnique({
         where: { email },
         select: { id: true },
