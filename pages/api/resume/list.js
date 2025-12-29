@@ -1,13 +1,9 @@
 // pages/api/resume/list.js
-import { prisma } from '@/lib/prisma';
-
-// NOTE: your codebase has BOTH patterns in different files.
-// We support either export shape safely to stop 500s.
-import * as NextAuthMod from '../auth/[...nextauth]';
 import { getServerSession } from 'next-auth/next';
+import { prisma } from '@/lib/prisma';
+import * as NextAuthModule from '../auth/[...nextauth]';
 
-function pickAuthOptions(mod) {
-  // supports: export default authOptions  OR  export const authOptions = ...
+function resolveAuthOptions(mod) {
   if (mod && mod.authOptions) return mod.authOptions;
   if (mod && mod.default) return mod.default;
   return null;
@@ -19,58 +15,72 @@ export default async function handler(req, res) {
     return res.status(405).json({ error: 'Method not allowed' });
   }
 
-  try {
-    const authOptions = pickAuthOptions(NextAuthMod);
+  const dbg = {
+    step: 'init',
+    hasAuthOptions: false,
+    sessionHasUser: false,
+    sessionHasEmail: false,
+    email: null,
+    userFound: false,
+    resumeCount: null,
+  };
 
-    // ✅ If authOptions is wrong, DO NOT THROW → return 401 instead of 500.
+  try {
+    const authOptions = resolveAuthOptions(NextAuthModule);
+    dbg.step = 'authOptions';
+    dbg.hasAuthOptions = !!authOptions;
+
     if (!authOptions) {
-      console.error('[resume/list] Missing authOptions export from [...nextauth]');
-      return res.status(401).json({ error: 'Not authenticated' });
+      return res.status(200).json({ ok: false, dbg, error: 'authOptions missing export' });
     }
 
     let session = null;
     try {
       session = await getServerSession(req, res, authOptions);
     } catch (e) {
-      console.error('[resume/list] getServerSession threw', e);
-      return res.status(401).json({ error: 'Not authenticated' });
+      dbg.step = 'getServerSession_throw';
+      return res.status(200).json({ ok: false, dbg, error: 'getServerSession threw', detail: String(e?.message || e) });
     }
+
+    dbg.step = 'session';
+    dbg.sessionHasUser = !!session?.user;
+    dbg.sessionHasEmail = !!session?.user?.email;
 
     const emailRaw = session?.user?.email ? String(session.user.email).trim() : '';
     const email = emailRaw ? emailRaw.toLowerCase() : '';
+    dbg.email = email || null;
 
-    // ✅ email-only, same as the working version
     if (!email) {
-      return res.status(401).json({ error: 'Not authenticated' });
+      return res.status(200).json({ ok: false, dbg, error: 'no email in session' });
     }
 
+    dbg.step = 'userLookup';
     const user = await prisma.user.findUnique({
       where: { email },
       select: { id: true },
     });
+    dbg.userFound = !!user;
 
     if (!user) {
-      return res.status(404).json({ error: 'User not found' });
+      return res.status(200).json({ ok: false, dbg, error: 'user not found for email' });
     }
 
+    dbg.step = 'resumeLookup';
     const resumes = await prisma.resume.findMany({
       where: { userId: user.id },
       orderBy: [{ isPrimary: 'desc' }, { createdAt: 'desc' }],
-      select: {
-        id: true,
-        name: true,
-        title: true,
-        createdAt: true,
-        isPrimary: true,
-      },
+      select: { id: true },
     });
+    dbg.resumeCount = resumes.length;
 
-    return res.status(200).json({
-      resumes,
-      count: resumes.length,
-    });
+    return res.status(200).json({ ok: true, dbg });
   } catch (err) {
-    console.error('[resume/list] Error', err);
-    return res.status(500).json({ error: 'Internal server error' });
+    dbg.step = 'catch';
+    return res.status(200).json({
+      ok: false,
+      dbg,
+      error: 'caught exception',
+      detail: String(err?.message || err),
+    });
   }
 }
