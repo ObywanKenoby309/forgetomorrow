@@ -20,13 +20,16 @@ function getChromeFromAsPath(asPath) {
 
 export default function OnboardingGrowthResultsPage() {
   const router = useRouter();
-  const resumeId = String(router.query.resumeId || '');
+
   const chrome =
     String(router.query.chrome || '').toLowerCase() ||
     getChromeFromAsPath(router.asPath);
 
+  const roadmapId = String(router.query.roadmapId || '').trim();
+
   const [loading, setLoading] = useState(true);
   const [plan, setPlan] = useState(null);
+  const [roadmapMeta, setRoadmapMeta] = useState(null); // createdAt, id, etc.
   const [error, setError] = useState('');
 
   const Header = (
@@ -53,34 +56,44 @@ export default function OnboardingGrowthResultsPage() {
   const backToSelectionHref = useMemo(() => {
     const params = new URLSearchParams();
     if (chrome) params.set('chrome', chrome);
-    return `/roadmap/onboarding-growth/select${params.toString() ? `?${params.toString()}` : ''}`;
+    return `/roadmap/onboarding-growth${params.toString() ? `?${params.toString()}` : ''}`;
   }, [chrome]);
 
   useEffect(() => {
     let active = true;
 
     (async () => {
-      if (!resumeId) return;
+      if (!roadmapId) {
+        setLoading(false);
+        return;
+      }
 
       try {
         setLoading(true);
         setError('');
         setPlan(null);
+        setRoadmapMeta(null);
 
-        const res = await fetch('/api/roadmap/onboarding-growth/generate', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ resumeId }),
+        const qs = new URLSearchParams();
+        qs.set('roadmapId', roadmapId);
+
+        const res = await fetch(`/api/roadmap/onboarding-growth/get?${qs.toString()}`, {
+          method: 'GET',
         });
 
         const data = await res.json();
-        if (!res.ok) throw new Error(data?.error || 'Failed to generate plan');
+        if (!res.ok) throw new Error(data?.error || 'Failed to load plan');
 
         if (!active) return;
-        setPlan(data?.plan || null);
+
+        const roadmap = data?.roadmap || null;
+        const loadedPlan = roadmap?.data || null;
+
+        setRoadmapMeta(roadmap ? { id: roadmap.id, createdAt: roadmap.createdAt } : null);
+        setPlan(loadedPlan);
       } catch (e) {
         if (!active) return;
-        setError(e?.message || 'Failed to generate plan. Please try again.');
+        setError(e?.message || 'Failed to load plan. Please try again.');
       } finally {
         if (active) setLoading(false);
       }
@@ -89,7 +102,7 @@ export default function OnboardingGrowthResultsPage() {
     return () => {
       active = false;
     };
-  }, [resumeId]);
+  }, [roadmapId]);
 
   const goBack = () => router.push(backToSelectionHref);
 
@@ -116,9 +129,9 @@ export default function OnboardingGrowthResultsPage() {
           </div>
 
           <div className="bg-white border border-gray-200 rounded-xl p-6 shadow-sm">
-            {!resumeId ? (
+            {!roadmapId ? (
               <div className="text-center py-10">
-                <div className="text-gray-800 font-semibold">Missing resumeId.</div>
+                <div className="text-gray-800 font-semibold">Missing roadmapId.</div>
                 <button
                   onClick={goBack}
                   className="mt-4 bg-[#FF7043] text-white px-6 py-3 rounded hover:bg-[#F4511E] transition"
@@ -127,22 +140,25 @@ export default function OnboardingGrowthResultsPage() {
                 </button>
               </div>
             ) : loading ? (
-              <div className="text-center py-10 text-gray-700">
-                Generating your personalized roadmap...
-              </div>
+              <div className="text-center py-10 text-gray-700">Loading your saved roadmap...</div>
             ) : error ? (
               <div className="text-red-700 bg-red-50 border border-red-200 rounded-lg p-4">
                 {error}
               </div>
             ) : !plan ? (
               <div className="text-center py-10 text-gray-700">
-                No plan returned. Please try again.
+                No plan found for this roadmap. Please generate a new one.
               </div>
             ) : (
               <div style={{ display: 'grid', gap: 18 }}>
                 <header style={{ borderBottom: '1px solid #eee', paddingBottom: 12 }}>
                   <div style={{ color: '#4A5568' }}>
-                    Generated: {plan?.meta?.generatedAt ? new Date(plan.meta.generatedAt).toLocaleString() : 'Now'}
+                    Generated:{' '}
+                    {plan?.meta?.generatedAt
+                      ? new Date(plan.meta.generatedAt).toLocaleString()
+                      : roadmapMeta?.createdAt
+                      ? new Date(roadmapMeta.createdAt).toLocaleString()
+                      : 'Now'}
                   </div>
                   {plan?.meta?.candidate ? (
                     <div style={{ fontWeight: 700, marginTop: 4 }}>{plan.meta.candidate}</div>
@@ -163,6 +179,25 @@ export default function OnboardingGrowthResultsPage() {
                 <Card title="Skills Focus">
                   <List items={plan.skillsFocus} />
                 </Card>
+
+                {/* Guidance disclaimer (consistent, no em dash) */}
+                <div
+                  style={{
+                    marginTop: 12,
+                    padding: 12,
+                    borderRadius: 10,
+                    background: '#F8FAFC',
+                    border: '1px solid #E5E7EB',
+                    fontSize: 13,
+                    color: '#475569',
+                    lineHeight: 1.45,
+                  }}
+                >
+                  <strong>Guidance note:</strong> This tool provides structured, AI-assisted guidance
+                  based on the resume you selected. It is designed to support your thinking and preparation,
+                  not to replace live coaching or mentorship. You can work with a coach or mentor through
+                  Spotlight to refine your strategy, positioning, and next steps.
+                </div>
 
                 <div className="flex gap-3 pt-2">
                   <button

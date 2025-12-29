@@ -34,6 +34,8 @@ type CareerRoadmapPlan = {
   skillsFocus: string[];
 };
 
+type RoadmapDirection = 'compare' | 'grow' | 'pivot';
+
 async function safeReadJson(res: Response) {
   try {
     return await res.json();
@@ -47,6 +49,9 @@ export default function OnboardingGrowth() {
 
   const [resumes, setResumes] = useState<Resume[]>([]);
   const [selectedResume, setSelectedResume] = useState<string>('');
+
+  // ✅ NEW: growth direction selector
+  const [direction, setDirection] = useState<RoadmapDirection>('compare');
 
   const [plan, setPlan] = useState<CareerRoadmapPlan | null>(null);
 
@@ -125,7 +130,7 @@ export default function OnboardingGrowth() {
       const res = await fetch('/api/roadmap/onboarding-growth/generate', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ resumeId: selectedResume }),
+        body: JSON.stringify({ resumeId: selectedResume, direction }),
         signal: controller.signal,
       });
 
@@ -157,6 +162,14 @@ export default function OnboardingGrowth() {
   // BEFORE GENERATION
   if (!hasGenerated) {
     const noResumes = !loadingResumes && resumes.length === 0;
+
+    const buttonLabel =
+      direction === 'compare' ? 'Generate My Compare Plan' : 'Generate My Growth Plan';
+
+    const loadingLabel =
+      direction === 'compare'
+        ? 'Generating your compare plan...'
+        : 'Generating your 12-month growth plan...';
 
     return (
       <div>
@@ -211,6 +224,73 @@ export default function OnboardingGrowth() {
               </select>
             </div>
 
+            {/* ✅ NEW: Direction selector */}
+            <div className="bg-white border border-gray-200 rounded-lg p-5">
+              <div className="flex items-start justify-between gap-4">
+                <div>
+                  <div className="text-lg font-medium text-gray-800">
+                    What direction are you considering?
+                  </div>
+                  <div className="text-sm text-gray-600 mt-1">
+                    Choose one. Compare both gives side-by-side guidance.
+                  </div>
+                </div>
+              </div>
+
+              <div className="mt-4 space-y-3">
+                <label className="flex items-start gap-3 cursor-pointer">
+                  <input
+                    type="radio"
+                    name="direction"
+                    value="compare"
+                    checked={direction === 'compare'}
+                    onChange={() => setDirection('compare')}
+                    className="mt-1"
+                  />
+                  <div>
+                    <div className="font-semibold text-gray-800">Compare both</div>
+                    <div className="text-sm text-gray-600">
+                      Stay the course vs pivot opportunities
+                    </div>
+                  </div>
+                </label>
+
+                <label className="flex items-start gap-3 cursor-pointer">
+                  <input
+                    type="radio"
+                    name="direction"
+                    value="grow"
+                    checked={direction === 'grow'}
+                    onChange={() => setDirection('grow')}
+                    className="mt-1"
+                  />
+                  <div>
+                    <div className="font-semibold text-gray-800">Stay the course</div>
+                    <div className="text-sm text-gray-600">
+                      Grow in your current field and level up
+                    </div>
+                  </div>
+                </label>
+
+                <label className="flex items-start gap-3 cursor-pointer">
+                  <input
+                    type="radio"
+                    name="direction"
+                    value="pivot"
+                    checked={direction === 'pivot'}
+                    onChange={() => setDirection('pivot')}
+                    className="mt-1"
+                  />
+                  <div>
+                    <div className="font-semibold text-gray-800">Pivot</div>
+                    <div className="text-sm text-gray-600">
+                      Shift into a different field or role type
+                    </div>
+                  </div>
+                </label>
+              </div>
+            </div>
+
             {error && <p className="text-red-600 font-medium">{error}</p>}
 
             {loading ? (
@@ -227,10 +307,10 @@ export default function OnboardingGrowth() {
               {loading ? (
                 <>
                   <Loader2 className="animate-spin" size={28} />
-                  Generating your 12-month growth plan...
+                  {loadingLabel}
                 </>
               ) : (
-                'Generate My Growth Plan'
+                buttonLabel
               )}
             </button>
 
@@ -285,37 +365,37 @@ export default function OnboardingGrowth() {
       {error ? <p className="text-red-600 font-medium mb-4">{error}</p> : null}
 
       <div className="bg-white border border-gray-200 rounded-xl p-8 md:p-10">
-  {plan ? (
-    <div className="space-y-8">
-      <MetaBlock plan={plan} />
-      <PlanSection title="First 30 Days" data={plan.day30} />
-      <PlanSection title="Days 31–60" data={plan.day60} />
-      <PlanSection title="Days 61–90" data={plan.day90} />
+        {plan ? (
+          <div className="space-y-8">
+            <MetaBlock plan={plan} />
+            <PlanSection title="First 30 Days" data={plan.day30} />
+            <PlanSection title="Days 31–60" data={plan.day60} />
+            <PlanSection title="Days 61–90" data={plan.day90} />
 
-      <SimpleListCard title="Growth Recommendations" items={plan.growthRecommendations} />
-      <SimpleListCard title="Skills Focus" items={plan.skillsFocus} />
+            <SimpleListCard title="Growth Recommendations" items={plan.growthRecommendations} />
+            <SimpleListCard title="Skills Focus" items={plan.skillsFocus} />
 
-      {/* Guidance disclaimer */}
-      <div className="mt-6 text-sm text-gray-600 bg-gray-50 border border-gray-200 rounded-lg p-4">
-  <strong>Guidance note:</strong> This tool provides structured, AI-assisted guidance based on your
-  profile and resume. It is designed to support your thinking and preparation, not to replace live
-  coaching or mentorship. We encourage you to work with a coach or mentor through Spotlight to
-  refine your strategy, positioning, and next steps.
-</div>
-    </div>
-  ) : (
-    <div className="text-center py-6 text-gray-700">No plan data found.</div>
-  )}
-</div>
+            {/* Guidance disclaimer */}
+            <div className="mt-6 text-sm text-gray-600 bg-gray-50 border border-gray-200 rounded-lg p-4">
+              <strong>Guidance note:</strong> This tool provides structured, AI-assisted guidance based on your
+              profile and resume. It is designed to support your thinking and preparation, not to replace live
+              coaching or mentorship. We encourage you to work with a coach or mentor through Spotlight to
+              refine your strategy, positioning, and next steps.
+            </div>
+          </div>
+        ) : (
+          <div className="text-center py-6 text-gray-700">No plan data found.</div>
+        )}
+      </div>
 
-<div className="mt-10 text-center">
-  <button
-    onClick={() => router.push(withChrome('/roadmap'))}
-    className="text-[#FF7043] font-medium underline hover:no-underline"
-  >
-    Back to Toolkit
-  </button>
-</div>
+      <div className="mt-10 text-center">
+        <button
+          onClick={() => router.push(withChrome('/roadmap'))}
+          className="text-[#FF7043] font-medium underline hover:no-underline"
+        >
+          Back to Toolkit
+        </button>
+      </div>
     </div>
   );
 }

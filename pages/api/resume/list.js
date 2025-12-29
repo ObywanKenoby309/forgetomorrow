@@ -13,8 +13,9 @@ export default async function handler(req, res) {
     const session = await getServerSession(req, res, authOptions);
 
     // ✅ Prefer id (matches the rest of your app), fall back to email
-    const userId = session?.user?.id ? String(session.user.id) : '';
-    const email = session?.user?.email ? String(session.user.email) : '';
+    const userId = session?.user?.id ? String(session.user.id).trim() : '';
+    const emailRaw = session?.user?.email ? String(session.user.email).trim() : '';
+    const email = emailRaw ? emailRaw.toLowerCase() : '';
 
     if (!userId && !email) {
       return res.status(401).json({ error: 'Unauthorized' });
@@ -38,14 +39,24 @@ export default async function handler(req, res) {
       return res.status(404).json({ error: 'User not found' });
     }
 
+    const LIMIT = 5;
+
     const resumes = await prisma.resume.findMany({
       where: { userId: user.id },
       orderBy: [{ isPrimary: 'desc' }, { createdAt: 'desc' }],
+      take: LIMIT,
+      select: {
+        id: true,
+        name: true,
+        title: true,
+        createdAt: true,
+        isPrimary: true,
+      },
     });
 
     return res.status(200).json({
       resumes,
-      limit: 5,
+      limit: LIMIT,
       count: resumes.length,
     });
   } catch (err) {

@@ -37,16 +37,30 @@ export default function OnboardingGrowthStartPage() {
 
   useEffect(() => {
     let active = true;
+
     (async () => {
       try {
         setLoadingResumes(true);
-        const res = await fetch('/api/resumes');
-        const data = await res.json();
+        setError('');
+
+        // ✅ FIX: correct endpoint
+        const res = await fetch('/api/resume/list', { method: 'GET' });
+        const data = await res.json().catch(() => ({}));
+
         if (!active) return;
-        setResumes(data?.resumes || []);
+
+        if (!res.ok) throw new Error(data?.error || 'Failed to load resumes.');
+
+        const list = Array.isArray(data?.resumes) ? data.resumes : [];
+        setResumes(list);
+
+        const primary = list.find((r) => r?.isPrimary);
+        if (primary?.id) setSelectedResumeId(String(primary.id));
       } catch (e) {
         if (!active) return;
-        setError('Failed to load resumes.');
+        setResumes([]);
+        setSelectedResumeId('');
+        setError(e?.message || 'Failed to load resumes.');
       } finally {
         if (active) setLoadingResumes(false);
       }
@@ -57,7 +71,10 @@ export default function OnboardingGrowthStartPage() {
     };
   }, []);
 
-  const canGenerate = useMemo(() => !!selectedResumeId && !generating, [selectedResumeId, generating]);
+  const canGenerate = useMemo(
+    () => !!selectedResumeId && !generating,
+    [selectedResumeId, generating]
+  );
 
   const Header = (
     <section
@@ -97,11 +114,14 @@ export default function OnboardingGrowthStartPage() {
         body: JSON.stringify({ resumeId: selectedResumeId }),
       });
 
-      const data = await res.json();
+      const data = await res.json().catch(() => ({}));
       if (!res.ok) throw new Error(data?.error || 'Failed to generate roadmap');
 
+      const roadmapId = String(data?.roadmapId || '').trim();
+      if (!roadmapId) throw new Error('Roadmap generated, but missing roadmapId.');
+
       const params = new URLSearchParams();
-      params.set('roadmapId', data.roadmapId);
+      params.set('roadmapId', roadmapId);
       if (chrome) params.set('chrome', chrome);
 
       router.push(`/roadmap/onboarding-growth/results?${params.toString()}`);
@@ -122,12 +142,12 @@ export default function OnboardingGrowthStartPage() {
         <div className="w-full max-w-3xl mx-auto">
           <div className="bg-white border border-gray-200 rounded-xl p-6 shadow-sm">
             {loadingResumes ? (
-              <div style={{ padding: 18, textAlign: 'center', color: '#4A5568' }}>Loading resumes…</div>
+              <div style={{ padding: 18, textAlign: 'center', color: '#4A5568' }}>
+                Loading resumes…
+              </div>
             ) : resumes.length === 0 ? (
               <div className="bg-orange-50 border border-orange-200 rounded-lg p-6 text-center">
-                <p className="text-orange-800 font-medium">
-                  No resumes found. Please create one first.
-                </p>
+                <p className="text-orange-800 font-medium">No resumes found. Please create one first.</p>
                 <button
                   onClick={() => router.push(withChrome('/resume/create'))}
                   className="mt-4 bg-[#FF7043] text-white px-6 py-3 rounded hover:bg-[#F4511E] transition"
@@ -150,14 +170,23 @@ export default function OnboardingGrowthStartPage() {
                     <option value="">Choose a resume…</option>
                     {resumes.map((r) => (
                       <option key={String(r.id)} value={String(r.id)}>
-                        {r.name || `Resume ${r.id}`}
+                        {r.name || r.title || `Resume ${r.id}`}
+                        {r?.isPrimary ? ' (Primary)' : ''}
                       </option>
                     ))}
                   </select>
                 </div>
 
                 {error && (
-                  <div style={{ color: '#B91C1C', background: '#FEF2F2', border: '1px solid #FECACA', padding: 12, borderRadius: 10 }}>
+                  <div
+                    style={{
+                      color: '#B91C1C',
+                      background: '#FEF2F2',
+                      border: '1px solid #FECACA',
+                      padding: 12,
+                      borderRadius: 10,
+                    }}
+                  >
                     {error}
                   </div>
                 )}

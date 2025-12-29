@@ -31,6 +31,20 @@ function extractTextFromChatCompletions(resp) {
   return typeof t === 'string' ? t : '';
 }
 
+function normalizeDirection(raw) {
+  const v = String(raw || '').toLowerCase().trim();
+  if (v === 'grow' || v === 'stay' || v === 'stay_the_course') return 'grow';
+  if (v === 'pivot') return 'pivot';
+  if (v === 'compare' || v === 'both') return 'compare';
+  return 'compare';
+}
+
+function directionLabel(direction) {
+  if (direction === 'grow') return 'Stay the course and grow in the current field';
+  if (direction === 'pivot') return 'Pivot into a different field or role type';
+  return 'Compare both paths: stay the course vs pivot opportunities';
+}
+
 export default async function handler(req, res) {
   if (req.method !== 'POST') {
     res.setHeader('Allow', ['POST']);
@@ -44,7 +58,6 @@ export default async function handler(req, res) {
 
     const session = await getServerSession(req, res, authOptions);
 
-    // ✅ Auth by user.id (email may not exist depending on JWT/session shape)
     const sessionUserId = String(session?.user?.id || '').trim();
     const sessionEmail = String(session?.user?.email || '').trim();
 
@@ -52,18 +65,16 @@ export default async function handler(req, res) {
       return res.status(401).json({ error: 'Not authenticated' });
     }
 
-    const { resumeId } = req.body || {};
+    const { resumeId, direction: directionRaw } = req.body || {};
     const resumeIdNum = Number(String(resumeId || '').trim());
+    const direction = normalizeDirection(directionRaw);
 
     if (!resumeId || Number.isNaN(resumeIdNum)) {
       return res.status(400).json({ error: 'Missing or invalid resumeId' });
     }
 
-    // ✅ Prefer lookup by id; fall back to email if needed
     const user = await prisma.user.findFirst({
-      where: sessionUserId
-        ? { id: sessionUserId }
-        : { email: sessionEmail.toLowerCase() },
+      where: sessionUserId ? { id: sessionUserId } : { email: sessionEmail.toLowerCase() },
       select: {
         id: true,
         email: true,
@@ -97,9 +108,9 @@ You are a practical career operator and hiring manager advisor.
 
 Goal:
 Generate a 30/60/90 day onboarding and growth plan based on the resume content.
-This tool is meant to push the candidate to the next level OR support a pivot plan.
+This tool can help the candidate level up in their current path, pivot into a new path, or compare both.
 ForgeTomorrow already has separate tools for: Resume Builder, Profile Builder, and Offer Negotiation.
-So do not duplicate those tools. Instead, reference them as action steps when useful.
+Do not duplicate those tools. Reference them as action steps when useful.
 
 Hard rules:
 - Do NOT fabricate specific salary numbers, compensation statistics, or fake metrics.
@@ -116,6 +127,10 @@ Candidate: ${candidateName}
 Candidate headline: ${user.headline || 'N/A'}
 Candidate location: ${user.location || 'N/A'}
 Resume name: ${resume.name}
+
+Direction selected:
+${directionLabel(direction)}
+
 Resume content:
 ${resume.content}
 
@@ -155,6 +170,13 @@ Return JSON in this exact structure:
   "skillsFocus": []
 }
 
+Requirements based on direction:
+- If direction is "grow": focus on leveling up in the candidate's current track, promotions, deeper scope, stronger outcomes.
+- If direction is "pivot": include a realistic bridge plan, transferable skills, and a 60-90 day skill-building sequence.
+- If direction is "compare": structure the plan so actions and recommendations explicitly address both paths. Do not invent a new JSON schema. Instead:
+  - In each phase (day30/day60/day90), include some actions labeled "Stay the course:" and some labeled "Pivot:".
+  - In growthRecommendations, include a mix for both paths.
+
 Notes:
 - "presentation" should be a short script on how the candidate should present themselves for that phase.
 - Include a few actions that explicitly say to use ForgeTomorrow tools when appropriate:
@@ -166,7 +188,6 @@ Notes:
     let rawText = '';
     let parsed = null;
 
-    // Prefer Responses API
     try {
       if (client?.responses?.create) {
         const resp = await client.responses.create({
@@ -186,7 +207,6 @@ Notes:
       console.error('[roadmap/onboarding-growth/generate] Responses API failed:', e?.message || e);
     }
 
-    // Fallback: Chat Completions
     if (!parsed) {
       try {
         const resp = await client.chat.completions.create({
@@ -212,21 +232,42 @@ Notes:
       return res.status(500).json({ error: 'Failed to generate roadmap' });
     }
 
-    // Save to DB (CareerRoadmap model)
+    // Stamp meta fields
     try {
-      await prisma.careerRoadmap.create({
+      const nowIso = new Date().toISOString();
+      if (!parsed.meta || typeof parsed.meta !== 'object') parsed.meta = {};
+      parsed.meta.generatedAt = parsed.meta.generatedAt || nowIso;
+      parsed.meta.candidate = parsed.meta.candidate || candidateName;
+      parsed.meta.headline = parsed.meta.headline || (user.headline || 'N/A');
+
+      if (typeof parsed.meta.headline === 'string' && !parsed.meta.headline.includes('•')) {
+        parsed.meta.headline = `${parsed.meta.headline} • ${directionLabel(direction)}`;
+      }
+    } catch {
+      // ignore
+    }
+
+    // ✅ Save + return roadmapId (THIS is what your results.js expects)
+    let created = null;
+    try {
+      created = await prisma.careerRoadmap.create({
         data: {
           userId: user.id,
           data: parsed,
           isPro: String(user.plan || 'FREE') !== 'FREE',
         },
+        select: { id: true },
       });
     } catch (e) {
       console.error('[roadmap/onboarding-growth/generate] Failed to save CareerRoadmap:', e?.message || e);
-      // Still return plan even if saving fails
     }
 
-    return res.status(200).json({ plan: parsed });
+    if (!created?.id) {
+      // If save failed, you can still return plan (but results page won't work without roadmapId)
+      return res.status(200).json({ plan: parsed, roadmapId: null });
+    }
+
+    return res.status(200).json({ roadmapId: created.id, plan: parsed });
   } catch (err) {
     console.error('[roadmap/onboarding-growth/generate] Unhandled error', err);
     return res.status(500).json({ error: 'Failed to generate roadmap' });
