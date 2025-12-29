@@ -156,7 +156,11 @@ Mode behavior requirements:
 - You MUST place "Current alignment" and "Possible pivots" into the existing schema like this:
   - Put "Current alignment" as the FIRST items inside day30.objectives.
   - Put "Possible pivots" as the FIRST items inside day30.actions.
-  - Each pivot option MUST include: Why it fits, Missing signals, Fast proof artifact, Cost/tradeoff.
+  - Each pivot option MUST be formatted in exactly 4 labeled lines (use these exact labels and line breaks):
+  Why it fits: ...
+  Missing signals: ...
+  Fast proof artifact: ...
+  Cost/tradeoff: ...
 - Current alignment: list 3–6 job titles the candidate already fits TODAY based only on the resume.
 - Possible pivots: list 2–4 pivot directions inferred from the resume (NOT random).
 - Also include "Stay-the-course requirements" as the LAST items inside day30.objectives: 3–5 specific signals the resume must show to level up in the current track (scope, tools, outcomes, leadership, measurable impact).
@@ -234,6 +238,7 @@ Additional constraints:
 - Keep lists concise and specific (avoid generic “take a course” unless you name what outcome it creates).
 - If you recommend learning, tie it to a proof artifact (portfolio item, documented improvement, measurable outcome, etc.).
 - For compare mode, do NOT recommend enrolling in any specific pivot training unless it is tied to one of the listed pivot options and includes a proof artifact.
+- In compare mode, each "Possible pivot" must be a single bullet where the 4 labeled lines appear on separate lines (not one sentence).
 `.trim();
 
     let rawText = '';
