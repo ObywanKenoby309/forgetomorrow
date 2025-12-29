@@ -50,22 +50,23 @@ export default function OfferNegotiation() {
 
       {/* ✅ Guidance note (matches Profile Development pattern) */}
       <div
-        style={{
-          marginTop: 12,
-          marginBottom: 12,
-          padding: 12,
-          borderRadius: 10,
-          background: '#F8FAFC',
-          border: '1px solid #E5E7EB',
-          fontSize: 13,
-          color: '#475569',
-          lineHeight: 1.45,
-        }}
-      >
-        <strong>Guidance note:</strong> This tool provides structured, AI-assisted guidance.
-        It is not a substitute for a live coach or mentor. If you want human support,
-        use Spotlight to find a coach or mentor who fits your goals and situation.
-      </div>
+  style={{
+    marginTop: 12,
+    marginBottom: 12,
+    padding: 12,
+    borderRadius: 10,
+    background: '#F8FAFC',
+    border: '1px solid #E5E7EB',
+    fontSize: 13,
+    color: '#475569',
+    lineHeight: 1.45,
+  }}
+>
+  <strong>Guidance note:</strong> This tool provides structured, AI-assisted guidance based on your
+  profile and resume. It is designed to support your thinking and preparation, not to replace live
+  coaching or mentorship. We encourage you to work with a coach or mentor through Spotlight to
+  refine your strategy, positioning, and next steps.
+</div>
 
       <div className="text-right">
         <button

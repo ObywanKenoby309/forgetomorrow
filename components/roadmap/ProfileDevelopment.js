@@ -564,10 +564,10 @@ export default function ProfileDevelopment({ onNext }) {
     lineHeight: 1.45,
   }}
 >
-  <strong>Guidance note:</strong> This tool provides structured, AI-assisted guidance
-  based on your profile and resume. It is not a substitute for live coaching or
-  mentorship. You can work with a coach or mentor at any time through Spotlight to
-  refine strategy, positioning, and next steps.
+  <strong>Guidance note:</strong> This tool provides structured, AI-assisted guidance based on your
+  profile and resume. It is designed to support your thinking and preparation, not to replace live
+  coaching or mentorship. We encourage you to work with a coach or mentor through Spotlight to
+  refine your strategy, positioning, and next steps.
 </div>
 
       <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 10, alignItems: 'center' }}>

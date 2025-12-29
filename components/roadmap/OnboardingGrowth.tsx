@@ -296,14 +296,12 @@ export default function OnboardingGrowth() {
       <SimpleListCard title="Skills Focus" items={plan.skillsFocus} />
 
       {/* Guidance disclaimer */}
-      <div
-        className="mt-6 text-sm text-gray-600 bg-gray-50 border border-gray-200 rounded-lg p-4"
-      >
-        <strong>Guidance note:</strong> This roadmap provides structured, AI-assisted
-        guidance based on the resume you selected. It is not a substitute for a live
-        coach or mentor. For personalized, human guidance, visit Spotlight to find a
-        coach or mentor and review this plan together.
-      </div>
+      <div className="mt-6 text-sm text-gray-600 bg-gray-50 border border-gray-200 rounded-lg p-4">
+  <strong>Guidance note:</strong> This tool provides structured, AI-assisted guidance based on your
+  profile and resume. It is designed to support your thinking and preparation, not to replace live
+  coaching or mentorship. We encourage you to work with a coach or mentor through Spotlight to
+  refine your strategy, positioning, and next steps.
+</div>
     </div>
   ) : (
     <div className="text-center py-6 text-gray-700">No plan data found.</div>
