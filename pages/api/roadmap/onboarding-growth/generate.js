@@ -53,16 +53,17 @@ function ensureArray(v) {
   return Array.isArray(v) ? v : [];
 }
 
-function normalizeWhitespace(s) {
+function normalizeSpaces(s) {
   return String(s || '').replace(/\s+/g, ' ').trim();
 }
 
 /**
- * Turn this (bad):
- * "Possible pivot 1: IT Support Specialist Why it fits: ... Missing signals: ... Fast proof artifact: ... Cost/tradeoff: ..."
+ * Hard-lock pivot formatting to multi-line blocks.
+ * Input (bad):
+ * "Possible pivot 1: X Why it fits: ... Missing signals: ... Fast proof artifact: ... Cost/tradeoff: ..."
  *
- * Into this (good):
- * "Possible pivot 1: IT Support Specialist
+ * Output (good):
+ * "Possible pivot 1: X
  *  Why it fits: ...
  *  Missing signals: ...
  *  Fast proof artifact: ...
@@ -72,7 +73,7 @@ function coercePivotToMultiline(pivotLine) {
   const raw = String(pivotLine || '').trim();
   if (!raw.startsWith('Possible pivot ')) return raw;
 
-  // If it already has line breaks and the 4 labels appear on their own lines, keep it.
+  // If it's already correct, keep it.
   const alreadyMultiline =
     raw.includes('\nWhy it fits:') &&
     raw.includes('\nMissing signals:') &&
@@ -80,40 +81,71 @@ function coercePivotToMultiline(pivotLine) {
     raw.includes('\nCost/tradeoff:');
   if (alreadyMultiline) return raw;
 
-  // Extract title part
-  // Example: "Possible pivot 1: IT Support Specialist Why it fits: ..."
-  const match = raw.match(/^(Possible pivot\s+\d+:\s*[^W]+?)(\s+Why it fits:\s.*)$/i);
-  if (match && match[1] && match[2]) {
-    const title = normalizeWhitespace(match[1]);
-    let rest = match[2];
+  // Token-based split: find label positions reliably.
+  // We accept either "Cost/tradeoff:" or "Cost/tradeoff :" etc.
+  const tokens = [
+    { key: 'Why it fits:', label: 'Why it fits:' },
+    { key: 'Missing signals:', label: 'Missing signals:' },
+    { key: 'Fast proof artifact:', label: 'Fast proof artifact:' },
+    { key: 'Cost/tradeoff:', label: 'Cost/tradeoff:' },
+  ];
 
-    // Insert line breaks before each label
-    rest = rest.replace(/\s+Why it fits:\s*/i, '\nWhy it fits: ');
-    rest = rest.replace(/\s+Missing signals:\s*/i, '\nMissing signals: ');
-    rest = rest.replace(/\s+Fast proof artifact:\s*/i, '\nFast proof artifact: ');
-    rest = rest.replace(/\s+Cost\/tradeoff:\s*/i, '\nCost/tradeoff: ');
+  // Normalize spacing so we can find tokens even in messy text.
+  const s = normalizeSpaces(raw);
 
-    return `${title}${rest}`.trim();
+  const idxWhy = s.toLowerCase().indexOf(' why it fits:');
+  if (idxWhy === -1) {
+    // Nothing to split on; return original.
+    return raw;
   }
 
-  // Fallback: brute-force label breaks
-  let s = raw;
-  s = s.replace(/\s+Why it fits:\s*/i, '\nWhy it fits: ');
-  s = s.replace(/\s+Missing signals:\s*/i, '\nMissing signals: ');
-  s = s.replace(/\s+Fast proof artifact:\s*/i, '\nFast proof artifact: ');
-  s = s.replace(/\s+Cost\/tradeoff:\s*/i, '\nCost/tradeoff: ');
-  return s.trim();
+  const title = s.slice(0, idxWhy).trim(); // "Possible pivot X: <title>"
+  const rest = s.slice(idxWhy + 1).trim(); // starts with "Why it fits: ..."
+
+  // Split rest by tokens
+  const lower = rest.toLowerCase();
+  const positions = tokens
+    .map((t) => ({ ...t, idx: lower.indexOf(t.key.toLowerCase()) }))
+    .filter((t) => t.idx !== -1)
+    .sort((a, b) => a.idx - b.idx);
+
+  // Build segments
+  const outLines = [];
+  for (let i = 0; i < positions.length; i++) {
+    const cur = positions[i];
+    const next = positions[i + 1];
+    const start = cur.idx;
+    const end = next ? next.idx : rest.length;
+    const segment = rest.slice(start, end).trim(); // includes label
+    // Ensure label is on its own line in final output
+    outLines.push(segment);
+  }
+
+  // Ensure each segment begins exactly with the expected label
+  const cleanedLines = outLines.map((line) => {
+    let x = line.trim();
+
+    // Force exact label casing for consistency
+    x = x.replace(/^why it fits:\s*/i, 'Why it fits: ');
+    x = x.replace(/^missing signals:\s*/i, 'Missing signals: ');
+    x = x.replace(/^fast proof artifact:\s*/i, 'Fast proof artifact: ');
+    x = x.replace(/^cost\/tradeoff:\s*/i, 'Cost/tradeoff: ');
+
+    return x;
+  });
+
+  return `${title}\n${cleanedLines.join('\n')}`.trim();
 }
 
 function removeStayTheCourseLeaks(block) {
   if (!block || typeof block !== 'object') return block;
+
   const fields = ['objectives', 'actions', 'metrics', 'quickWins', 'risks'];
   for (const f of fields) {
     const arr = ensureArray(block[f]).filter(Boolean);
-    block[f] = arr.filter((x) => !(isNonEmptyString(x) && x.startsWith('Stay-the-course requirements:')));
-  }
-  if (typeof block.presentation === 'string') {
-    // leave presentation alone; sometimes it may reference staying vs pivoting
+    block[f] = arr.filter(
+      (x) => !(isNonEmptyString(x) && x.trim().startsWith('Stay-the-course requirements:'))
+    );
   }
   return block;
 }
@@ -122,7 +154,6 @@ function enforceComparePlacement(plan) {
   try {
     if (!plan || typeof plan !== 'object') return plan;
 
-    // Ensure blocks exist
     if (!plan.day30 || typeof plan.day30 !== 'object') plan.day30 = {};
     if (!plan.day60 || typeof plan.day60 !== 'object') plan.day60 = {};
     if (!plan.day90 || typeof plan.day90 !== 'object') plan.day90 = {};
@@ -131,22 +162,25 @@ function enforceComparePlacement(plan) {
     plan.day60 = removeStayTheCourseLeaks(plan.day60);
     plan.day90 = removeStayTheCourseLeaks(plan.day90);
 
-    // Day 30 arrays
     const obj = ensureArray(plan.day30.objectives).filter(Boolean);
     const act = ensureArray(plan.day30.actions).filter(Boolean);
 
-    // 1) Current alignment: must exist exactly once and be FIRST objective
-    const alignmentLines = obj.filter((x) => isNonEmptyString(x) && x.startsWith('Current alignment:'));
-    const alignmentLine = alignmentLines.length ? alignmentLines[0] : 'Current alignment: (not provided)';
-    const withoutAlignment = obj.filter((x) => !(isNonEmptyString(x) && x.startsWith('Current alignment:')));
+    // Current alignment: EXACTLY ONE, FIRST
+    const alignmentLines = obj.filter((x) => isNonEmptyString(x) && x.trim().startsWith('Current alignment:'));
+    const alignmentLine = alignmentLines.length ? String(alignmentLines[0]).trim() : 'Current alignment: (not provided)';
 
-    // 2) Stay-the-course requirements: must be LAST 3–5 items in day30.objectives
-    const stayLines = withoutAlignment.filter((x) => isNonEmptyString(x) && x.startsWith('Stay-the-course requirements:'));
-    const otherObjectives = withoutAlignment.filter(
-      (x) => !(isNonEmptyString(x) && x.startsWith('Stay-the-course requirements:'))
+    const withoutAlignment = obj.filter(
+      (x) => !(isNonEmptyString(x) && x.trim().startsWith('Current alignment:'))
     );
 
-    // Keep only 3–5 stay lines; if none exist, add safe placeholders (no fabrication)
+    // Stay-the-course requirements: LAST 3–5 items
+    const stayLines = withoutAlignment.filter(
+      (x) => isNonEmptyString(x) && x.trim().startsWith('Stay-the-course requirements:')
+    );
+    const otherObjectives = withoutAlignment.filter(
+      (x) => !(isNonEmptyString(x) && x.trim().startsWith('Stay-the-course requirements:'))
+    );
+
     let finalStay = stayLines.slice(0, 5);
     if (finalStay.length === 0) {
       finalStay = [
@@ -155,7 +189,6 @@ function enforceComparePlacement(plan) {
         'Stay-the-course requirements: Take ownership end-to-end on at least one recurring problem and document the before/after.',
       ];
     } else if (finalStay.length < 3) {
-      // pad to 3 with generic-but-safe requirements
       const pads = [
         'Stay-the-course requirements: Show measurable outcomes (before/after) from support or process improvements.',
         'Stay-the-course requirements: Demonstrate ownership (end-to-end) on at least one recurring issue or workflow.',
@@ -166,25 +199,25 @@ function enforceComparePlacement(plan) {
 
     plan.day30.objectives = [alignmentLine, ...otherObjectives, ...finalStay];
 
-    // 3) Possible pivots: must be first actions, each pivot must be ONE string with line breaks
-    const pivotLinesRaw = act.filter((x) => isNonEmptyString(x) && x.startsWith('Possible pivot '));
+    // Possible pivots: FIRST items in day30.actions, and force multiline blocks
+    const pivotLinesRaw = act.filter((x) => isNonEmptyString(x) && x.trim().startsWith('Possible pivot '));
     const pivotLines = pivotLinesRaw.map((x) => coercePivotToMultiline(x));
-    const nonPivotLines = act.filter((x) => !(isNonEmptyString(x) && x.startsWith('Possible pivot ')));
+
+    const nonPivotLines = act.filter((x) => !(isNonEmptyString(x) && x.trim().startsWith('Possible pivot ')));
 
     plan.day30.actions = [...pivotLines, ...nonPivotLines];
 
-    // 4) Decision Seal: must appear in day90.presentation with three labeled paragraphs
+    // Decision Seal: ensure day90.presentation includes the three labels
     const pres = String(plan.day90.presentation || '').trim();
-    const hasSeal =
-      pres.includes('If you stay:') && pres.includes('If you pivot:') && pres.includes('Next step:');
+    const hasSeal = pres.includes('If you stay:') && pres.includes('If you pivot:') && pres.includes('Next step:');
 
     if (!hasSeal) {
-      const seal =
-        [
-          'If you stay: Choose one role from Current alignment and define success as measurable impact + stronger tools + a documented outcome in 30–60 days.',
-          'If you pivot: Do not pivot until you complete ONE fast proof artifact from the pivot you’re considering and can show it as a deliverable.',
-          'Next step: Take this plan to a coach or mentor to validate the best path, tighten the proof artifact, and confirm which job titles to pursue first.',
-        ].join('\n\n');
+      const seal = [
+        'If you stay: Pick one “Current alignment” role and define success as a measurable outcome + stronger tool usage + one documented end-to-end win in the next 30–60 days.',
+        'If you pivot: Do not pivot until you complete ONE “Fast proof artifact” from your chosen pivot and can show it as a deliverable (case study, report, or portfolio item).',
+        'Next step: Take this plan to a coach or mentor to validate the best path, tighten your proof artifact, and confirm which job titles to pursue first.',
+      ].join('\n\n');
+
       plan.day90.presentation = pres ? `${pres}\n\n${seal}` : seal;
     }
 
@@ -323,13 +356,13 @@ Missing signals: ...
 Fast proof artifact: ...
 Cost/tradeoff: ...
 
-  - Each of the four labeled lines MUST be on its own line.
+  - Each labeled line MUST be on its own line.
 
 - "Stay-the-course requirements" MUST be the LAST items inside day30.objectives (3–5 total).
   - Keep each requirement short and concrete.
 
 Decision Seal (compare mode):
-- day90.presentation MUST include three short paragraphs with these labels:
+- day90.presentation MUST include:
   "If you stay:" ...,
   "If you pivot:" ...,
   "Next step:" ...
@@ -451,7 +484,7 @@ ${modeRequirements}
       return res.status(500).json({ error: 'Failed to generate roadmap' });
     }
 
-    // Enforce compare mode structure (last-5% polish)
+    // Enforce compare-mode structure and formatting (last-5% polish)
     if (direction === 'compare') {
       parsed = enforceComparePlacement(parsed);
     }
