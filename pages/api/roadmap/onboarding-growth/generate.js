@@ -57,6 +57,28 @@ function normalizeSpaces(s) {
   return String(s || '').replace(/\s+/g, ' ').trim();
 }
 
+function startsWithStayRequirement(s) {
+  if (!isNonEmptyString(s)) return false;
+  return /^Stay-the-course requirement(s)?:/i.test(s.trim());
+}
+
+/**
+ * Find first match index using a case-insensitive regex.
+ * Returns -1 when not found.
+ */
+function indexOfRegexCI(haystack, re) {
+  try {
+    const m = haystack.match(re);
+    if (!m || !m.index) {
+      // if match exists at index 0, m.index will be 0 (falsy)
+      return m && typeof m.index === 'number' ? m.index : -1;
+    }
+    return m.index;
+  } catch {
+    return -1;
+  }
+}
+
 /**
  * Hard-lock pivot formatting to multi-line blocks.
  * Input (bad):
@@ -81,60 +103,54 @@ function coercePivotToMultiline(pivotLine) {
     raw.includes('\nCost/tradeoff:');
   if (alreadyMultiline) return raw;
 
-  // Token-based split: find label positions reliably.
-  // We accept either "Cost/tradeoff:" or "Cost/tradeoff :" etc.
-  const tokens = [
-    { key: 'Why it fits:', label: 'Why it fits:' },
-    { key: 'Missing signals:', label: 'Missing signals:' },
-    { key: 'Fast proof artifact:', label: 'Fast proof artifact:' },
-    { key: 'Cost/tradeoff:', label: 'Cost/tradeoff:' },
-  ];
-
   // Normalize spacing so we can find tokens even in messy text.
   const s = normalizeSpaces(raw);
 
-  const idxWhy = s.toLowerCase().indexOf(' why it fits:');
-  if (idxWhy === -1) {
-    // Nothing to split on; return original.
-    return raw;
-  }
+  // Locate "Why it fits:" (allow optional space before colon)
+  const idxWhy = indexOfRegexCI(s, /\bwhy it fits\s*:/i);
+  if (idxWhy === -1) return raw;
 
   const title = s.slice(0, idxWhy).trim(); // "Possible pivot X: <title>"
-  const rest = s.slice(idxWhy + 1).trim(); // starts with "Why it fits: ..."
+  const rest = s.slice(idxWhy).trim(); // starts with "Why it fits: ..."
 
-  // Split rest by tokens
-  const lower = rest.toLowerCase();
-  const positions = tokens
-    .map((t) => ({ ...t, idx: lower.indexOf(t.key.toLowerCase()) }))
+  // Token positions (allow optional spaces before colon)
+  const tokenDefs = [
+    { label: 'Why it fits:', re: /\bwhy it fits\s*:/i },
+    { label: 'Missing signals:', re: /\bmissing signals\s*:/i },
+    { label: 'Fast proof artifact:', re: /\bfast proof artifact\s*:/i },
+    { label: 'Cost/tradeoff:', re: /\bcost\/tradeoff\s*:/i },
+  ];
+
+  const positions = tokenDefs
+    .map((t) => {
+      const idx = indexOfRegexCI(rest, t.re);
+      return { ...t, idx };
+    })
     .filter((t) => t.idx !== -1)
     .sort((a, b) => a.idx - b.idx);
 
-  // Build segments
+  if (positions.length === 0) return raw;
+
   const outLines = [];
   for (let i = 0; i < positions.length; i++) {
     const cur = positions[i];
     const next = positions[i + 1];
     const start = cur.idx;
     const end = next ? next.idx : rest.length;
-    const segment = rest.slice(start, end).trim(); // includes label
-    // Ensure label is on its own line in final output
-    outLines.push(segment);
+    const segment = rest.slice(start, end).trim();
+
+    // Normalize label casing and spacing
+    let x = segment;
+    x = x.replace(/^\s*why it fits\s*:\s*/i, 'Why it fits: ');
+    x = x.replace(/^\s*missing signals\s*:\s*/i, 'Missing signals: ');
+    x = x.replace(/^\s*fast proof artifact\s*:\s*/i, 'Fast proof artifact: ');
+    x = x.replace(/^\s*cost\/tradeoff\s*:\s*/i, 'Cost/tradeoff: ');
+
+    outLines.push(x.trim());
   }
 
-  // Ensure each segment begins exactly with the expected label
-  const cleanedLines = outLines.map((line) => {
-    let x = line.trim();
-
-    // Force exact label casing for consistency
-    x = x.replace(/^why it fits:\s*/i, 'Why it fits: ');
-    x = x.replace(/^missing signals:\s*/i, 'Missing signals: ');
-    x = x.replace(/^fast proof artifact:\s*/i, 'Fast proof artifact: ');
-    x = x.replace(/^cost\/tradeoff:\s*/i, 'Cost/tradeoff: ');
-
-    return x;
-  });
-
-  return `${title}\n${cleanedLines.join('\n')}`.trim();
+  // Ensure all 4 labeled lines exist; if model omitted one, keep what we have.
+  return `${title}\n${outLines.join('\n')}`.trim();
 }
 
 function removeStayTheCourseLeaks(block) {
@@ -143,9 +159,7 @@ function removeStayTheCourseLeaks(block) {
   const fields = ['objectives', 'actions', 'metrics', 'quickWins', 'risks'];
   for (const f of fields) {
     const arr = ensureArray(block[f]).filter(Boolean);
-    block[f] = arr.filter(
-      (x) => !(isNonEmptyString(x) && x.trim().startsWith('Stay-the-course requirements:'))
-    );
+    block[f] = arr.filter((x) => !(isNonEmptyString(x) && startsWithStayRequirement(x)));
   }
   return block;
 }
@@ -158,7 +172,7 @@ function enforceComparePlacement(plan) {
     if (!plan.day60 || typeof plan.day60 !== 'object') plan.day60 = {};
     if (!plan.day90 || typeof plan.day90 !== 'object') plan.day90 = {};
 
-    // Remove "Stay-the-course requirements:" from day60/day90 (must only live in day30)
+    // Remove "Stay-the-course requirement(s):" from day60/day90 (must only live in day30)
     plan.day60 = removeStayTheCourseLeaks(plan.day60);
     plan.day90 = removeStayTheCourseLeaks(plan.day90);
 
@@ -166,22 +180,26 @@ function enforceComparePlacement(plan) {
     const act = ensureArray(plan.day30.actions).filter(Boolean);
 
     // Current alignment: EXACTLY ONE, FIRST
-    const alignmentLines = obj.filter((x) => isNonEmptyString(x) && x.trim().startsWith('Current alignment:'));
-    const alignmentLine = alignmentLines.length ? String(alignmentLines[0]).trim() : 'Current alignment: (not provided)';
+    const alignmentLines = obj.filter(
+      (x) => isNonEmptyString(x) && x.trim().startsWith('Current alignment:')
+    );
+    const alignmentLine = alignmentLines.length
+      ? String(alignmentLines[0]).trim()
+      : 'Current alignment: (not provided)';
 
     const withoutAlignment = obj.filter(
       (x) => !(isNonEmptyString(x) && x.trim().startsWith('Current alignment:'))
     );
 
     // Stay-the-course requirements: LAST 3–5 items
-    const stayLines = withoutAlignment.filter(
-      (x) => isNonEmptyString(x) && x.trim().startsWith('Stay-the-course requirements:')
-    );
-    const otherObjectives = withoutAlignment.filter(
-      (x) => !(isNonEmptyString(x) && x.trim().startsWith('Stay-the-course requirements:'))
-    );
+    const stayLines = withoutAlignment.filter((x) => isNonEmptyString(x) && startsWithStayRequirement(x));
+    const otherObjectives = withoutAlignment.filter((x) => !(isNonEmptyString(x) && startsWithStayRequirement(x)));
 
-    let finalStay = stayLines.slice(0, 5);
+    let finalStay = stayLines.slice(0, 5).map((x) => {
+      // Normalize singular -> plural for consistency
+      return String(x).replace(/^Stay-the-course requirement:\s*/i, 'Stay-the-course requirements: ').trim();
+    });
+
     if (finalStay.length === 0) {
       finalStay = [
         'Stay-the-course requirements: Show one measurable outcome you can repeat (time saved, satisfaction improvement, fewer repeat issues).',
@@ -199,11 +217,14 @@ function enforceComparePlacement(plan) {
 
     plan.day30.objectives = [alignmentLine, ...otherObjectives, ...finalStay];
 
-    // Possible pivots: FIRST items in day30.actions, and force multiline blocks
-    const pivotLinesRaw = act.filter((x) => isNonEmptyString(x) && x.trim().startsWith('Possible pivot '));
+    // Possible pivots: FIRST items in day30.actions, cap to 4, and force multiline blocks
+    const pivotLinesRawAll = act.filter((x) => isNonEmptyString(x) && x.trim().startsWith('Possible pivot '));
+    const pivotLinesRaw = pivotLinesRawAll.slice(0, 4);
     const pivotLines = pivotLinesRaw.map((x) => coercePivotToMultiline(x));
 
-    const nonPivotLines = act.filter((x) => !(isNonEmptyString(x) && x.trim().startsWith('Possible pivot ')));
+    const nonPivotLines = act.filter(
+      (x) => !(isNonEmptyString(x) && x.trim().startsWith('Possible pivot '))
+    );
 
     plan.day30.actions = [...pivotLines, ...nonPivotLines];
 
@@ -471,10 +492,7 @@ ${modeRequirements}
         rawText = extractTextFromChatCompletions(resp);
         parsed = safeJsonParse(rawText);
       } catch (e) {
-        console.error(
-          '[roadmap/onboarding-growth/generate] Chat Completions failed:',
-          e?.message || e
-        );
+        console.error('[roadmap/onboarding-growth/generate] Chat Completions failed:', e?.message || e);
         return res.status(500).json({ error: 'Failed to generate roadmap' });
       }
     }
@@ -489,6 +507,20 @@ ${modeRequirements}
       parsed = enforceComparePlacement(parsed);
     }
 
+    // Optional debug (set DEBUG_ROADMAP=1 to verify newline behavior)
+    if (process.env.DEBUG_ROADMAP === '1') {
+      try {
+        const firstAction = String(parsed?.day30?.actions?.[0] || '');
+        console.log('ROADMAP_DEBUG', {
+          direction,
+          firstActionPreview: firstAction.slice(0, 220),
+          hasNewline: firstAction.includes('\n'),
+        });
+      } catch {
+        // ignore
+      }
+    }
+
     // Stamp meta fields
     try {
       const nowIso = new Date().toISOString();
@@ -498,11 +530,9 @@ ${modeRequirements}
 
       const baseHeadline = user.headline || 'N/A';
       if (direction === 'pivot') {
-        parsed.meta.headline =
-          parsed.meta.headline || `${baseHeadline} • Pivot target: ${pivotTarget}`;
+        parsed.meta.headline = parsed.meta.headline || `${baseHeadline} • Pivot target: ${pivotTarget}`;
       } else {
-        parsed.meta.headline =
-          parsed.meta.headline || `${baseHeadline} • ${directionLabel(direction)}`;
+        parsed.meta.headline = parsed.meta.headline || `${baseHeadline} • ${directionLabel(direction)}`;
       }
     } catch {
       // ignore
@@ -520,10 +550,7 @@ ${modeRequirements}
         select: { id: true },
       });
     } catch (e) {
-      console.error(
-        '[roadmap/onboarding-growth/generate] Failed to save CareerRoadmap:',
-        e?.message || e
-      );
+      console.error('[roadmap/onboarding-growth/generate] Failed to save CareerRoadmap:', e?.message || e);
     }
 
     if (!created?.id) {

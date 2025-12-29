@@ -44,6 +44,15 @@ async function safeReadJson(res: Response) {
   }
 }
 
+function shouldPreserveLineBreaks(text: string) {
+  const s = String(text || '');
+  if (!s) return false;
+  if (s.includes('\n')) return true;
+  if (s.startsWith('Possible pivot ')) return true;
+  if (s.startsWith('If you stay:') || s.includes('\n\nIf you stay:')) return true;
+  return false;
+}
+
 export default function OnboardingGrowth() {
   const router = useRouter();
 
@@ -503,7 +512,9 @@ function PlanSection({ title, data }: { title: string; data: PlanBlock }) {
       {data.presentation ? (
         <div className="mt-5">
           <div className="font-semibold mb-2">Presentation</div>
-          <p className="text-gray-700">{data.presentation}</p>
+          <p className="text-gray-700" style={{ whiteSpace: shouldPreserveLineBreaks(data.presentation) ? 'pre-line' : 'normal' }}>
+            {data.presentation}
+          </p>
         </div>
       ) : null}
     </section>
@@ -527,9 +538,17 @@ function Block({
         <p className="text-gray-600">{emptyDash ? '—' : 'None yet'}</p>
       ) : (
         <ul className="list-disc pl-5 space-y-1 text-gray-700">
-          {list.map((it, i) => (
-            <li key={`${label}-${i}`}>{it}</li>
-          ))}
+          {list.map((it, i) => {
+            const preserve = shouldPreserveLineBreaks(it);
+            return (
+              <li
+                key={`${label}-${i}`}
+                style={{ whiteSpace: preserve ? 'pre-line' : 'normal' }}
+              >
+                {it}
+              </li>
+            );
+          })}
         </ul>
       )}
     </div>
@@ -545,9 +564,17 @@ function SimpleListCard({ title, items }: { title: string; items: string[] }) {
         <p className="text-gray-600">—</p>
       ) : (
         <ul className="list-disc pl-5 space-y-1 text-gray-700">
-          {list.map((it, i) => (
-            <li key={`${title}-${i}`}>{it}</li>
-          ))}
+          {list.map((it, i) => {
+            const preserve = shouldPreserveLineBreaks(it);
+            return (
+              <li
+                key={`${title}-${i}`}
+                style={{ whiteSpace: preserve ? 'pre-line' : 'normal' }}
+              >
+                {it}
+              </li>
+            );
+          })}
         </ul>
       )}
     </section>
