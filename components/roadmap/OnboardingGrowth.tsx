@@ -285,29 +285,39 @@ export default function OnboardingGrowth() {
       {error ? <p className="text-red-600 font-medium mb-4">{error}</p> : null}
 
       <div className="bg-white border border-gray-200 rounded-xl p-8 md:p-10">
-        {plan ? (
-          <div className="space-y-8">
-            <MetaBlock plan={plan} />
-            <PlanSection title="First 30 Days" data={plan.day30} />
-            <PlanSection title="Days 31–60" data={plan.day60} />
-            <PlanSection title="Days 61–90" data={plan.day90} />
+  {plan ? (
+    <div className="space-y-8">
+      <MetaBlock plan={plan} />
+      <PlanSection title="First 30 Days" data={plan.day30} />
+      <PlanSection title="Days 31–60" data={plan.day60} />
+      <PlanSection title="Days 61–90" data={plan.day90} />
 
-            <SimpleListCard title="Growth Recommendations" items={plan.growthRecommendations} />
-            <SimpleListCard title="Skills Focus" items={plan.skillsFocus} />
-          </div>
-        ) : (
-          <div className="text-center py-6 text-gray-700">No plan data found.</div>
-        )}
-      </div>
+      <SimpleListCard title="Growth Recommendations" items={plan.growthRecommendations} />
+      <SimpleListCard title="Skills Focus" items={plan.skillsFocus} />
 
-      <div className="mt-10 text-center">
-        <button
-          onClick={() => router.push(withChrome('/roadmap'))}
-          className="text-[#FF7043] font-medium underline hover:no-underline"
-        >
-          Back to Toolkit
-        </button>
+      {/* Guidance disclaimer */}
+      <div
+        className="mt-6 text-sm text-gray-600 bg-gray-50 border border-gray-200 rounded-lg p-4"
+      >
+        <strong>Guidance note:</strong> This roadmap provides structured, AI-assisted
+        guidance based on the resume you selected. It is not a substitute for a live
+        coach or mentor. For personalized, human guidance, visit Spotlight to find a
+        coach or mentor and review this plan together.
       </div>
+    </div>
+  ) : (
+    <div className="text-center py-6 text-gray-700">No plan data found.</div>
+  )}
+</div>
+
+<div className="mt-10 text-center">
+  <button
+    onClick={() => router.push(withChrome('/roadmap'))}
+    className="text-[#FF7043] font-medium underline hover:no-underline"
+  >
+    Back to Toolkit
+  </button>
+</div>
     </div>
   );
 }

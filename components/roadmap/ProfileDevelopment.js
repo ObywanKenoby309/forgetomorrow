@@ -427,11 +427,12 @@ export default function ProfileDevelopment({ onNext }) {
       }}
     >
       <h1 style={{ margin: 0, color: ORANGE, fontSize: 24, fontWeight: 900 }}>
-        Profile Development
-      </h1>
-      <p style={{ margin: '6px auto 0', color: '#607D8B', maxWidth: 760, lineHeight: 1.5 }}>
-        Not everyone is a professional profile writer. This tool spots recruiter-facing gaps and helps you fix them fast.
-      </p>
+  Profile Development
+</h1>
+<p style={{ margin: '6px auto 0', color: '#607D8B', maxWidth: 760, lineHeight: 1.5 }}>
+  Not everyone is a professional profile writer. This tool identifies recruiter-facing
+  gaps and helps you strengthen them quickly and strategically.
+</p>
     </section>
   );
 
@@ -550,6 +551,24 @@ export default function ProfileDevelopment({ onNext }) {
           );
         })}
       </ul>
+
+<div
+  style={{
+    marginTop: 12,
+    padding: 12,
+    borderRadius: 10,
+    background: '#F8FAFC',
+    border: '1px solid #E5E7EB',
+    fontSize: 13,
+    color: '#475569',
+    lineHeight: 1.45,
+  }}
+>
+  <strong>Guidance note:</strong> This tool provides structured, AI-assisted guidance
+  based on your profile and resume. It is not a substitute for live coaching or
+  mentorship. You can work with a coach or mentor at any time through Spotlight to
+  refine strategy, positioning, and next steps.
+</div>
 
       <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 10, alignItems: 'center' }}>
         <button

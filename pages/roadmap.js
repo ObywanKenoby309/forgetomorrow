@@ -54,8 +54,7 @@ export default function CareerRoadmap() {
         Your Personalized Career Roadmap
       </h1>
       <p className="text-sm md:text-base text-gray-600 mt-2 max-w-3xl mx-auto">
-        A guided, AI-supported path through profile building, offer negotiation, and
-        your first year of growth.
+        A guided toolkit for career growth, negotiation, and planning your next move.
       </p>
     </section>
   );
@@ -116,59 +115,17 @@ export default function CareerRoadmap() {
             <p
               style={{
                 color: '#4A5568',
-                fontSize: '1.1rem',
-                maxWidth: 680,
+                fontSize: '1.05rem',
+                maxWidth: 720,
                 margin: '0 auto',
-                lineHeight: 1.5,
+                lineHeight: 1.55,
                 fontWeight: 600,
                 textAlign: 'center',
               }}
             >
-              Your Career Development Toolkit is a guided, AI-supported workspace that
-              helps you grow at every stage of your career — from sharpening your
-              ForgeTomorrow profile to navigating offers and planning your next move.
-            </p>
-
-            <ul
-              style={{
-                color: '#4A5568',
-                maxWidth: 680,
-                margin: '0 auto',
-                lineHeight: 1.5,
-                listStyleType: 'disc',
-                paddingLeft: 20,
-                fontSize: '0.98rem',
-                display: 'grid',
-                gap: 8,
-              }}
-            >
-              <li>Personalized guidance based on your goals, skills, and experience.</li>
-              <li>
-                Clear, step-by-step support for job search, negotiations, and career
-                transitions.
-              </li>
-              <li>
-                Insights to help you position yourself, strengthen your profile, and move
-                into the roles you want.
-              </li>
-              <li>
-                Tools for compensation conversations, internal mobility, and long-term
-                growth.
-              </li>
-            </ul>
-
-            <p
-              style={{
-                color: '#4A5568',
-                fontSize: '1rem',
-                maxWidth: 680,
-                margin: '0 auto',
-                lineHeight: 1.6,
-                textAlign: 'center',
-                marginTop: 8,
-              }}
-            >
-              <strong>Choose a module below to get started:</strong>
+              Use this toolkit to strengthen your professional presence, prepare for
+              compensation conversations, and plan realistic growth or career pivots,
+              based on your experience, goals, and current market conditions.
             </p>
 
             {/* Module chooser */}

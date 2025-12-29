@@ -1,5 +1,4 @@
 // components/roadmap/OfferNegotiation.js
-
 import React, { useState } from 'react';
 import { useRouter } from 'next/router';
 
@@ -36,10 +35,11 @@ export default function OfferNegotiation() {
 
   return (
     <div>
-      <h2 className="text-2xl font-semibold text-[#FF7043] mb-4">Offer & Negotiation</h2>
+      <h2 className="text-2xl font-semibold text-[#FF7043] mb-4">Offer &amp; Negotiation</h2>
 
-      <p className="mb-6">
-        Whether you’re embarking on a new job opportunity or negotiating a raise at your current role, ForgeTomorrow is here to cheer you on every step of the way. Congratulations on reaching this exciting milestone! Here are some key tips to help you negotiate confidently and secure the best possible outcome.
+      <p className="mb-6 text-gray-700">
+        Compensation conversations can feel high-pressure. This module helps you prepare
+        with clear, practical guidance so you can negotiate confidently and reasonably.
       </p>
 
       <ul className="list-disc list-inside space-y-3 mb-6 text-gray-700">
@@ -47,6 +47,25 @@ export default function OfferNegotiation() {
           <li key={i}>{tip}</li>
         ))}
       </ul>
+
+      {/* ✅ Guidance note (matches Profile Development pattern) */}
+      <div
+        style={{
+          marginTop: 12,
+          marginBottom: 12,
+          padding: 12,
+          borderRadius: 10,
+          background: '#F8FAFC',
+          border: '1px solid #E5E7EB',
+          fontSize: 13,
+          color: '#475569',
+          lineHeight: 1.45,
+        }}
+      >
+        <strong>Guidance note:</strong> This tool provides structured, AI-assisted guidance.
+        It is not a substitute for a live coach or mentor. If you want human support,
+        use Spotlight to find a coach or mentor who fits your goals and situation.
+      </div>
 
       <div className="text-right">
         <button
