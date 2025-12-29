@@ -129,6 +129,11 @@ Hard rules:
 - Do NOT assume the user wants UX or any specific pivot unless explicitly provided or clearly supported by resume signals.
 - Output MUST be valid JSON. No extra keys. No commentary outside JSON.
 
+Style requirements:
+- Write for a real person, not a demo. Clean, digestible, and human.
+- Prefer short bullets. Avoid repetition.
+- Every action should produce an observable outcome (a proof artifact, measurable change, or decision).
+
 Tone:
 Direct, supportive, professional. No fluff.
 `.trim();
@@ -140,7 +145,7 @@ Mode behavior requirements:
 - Treat staying as an active decision.
 - Focus on increasing market value: scope, impact, credibility.
 - Recommend next-level roles or responsibility expansions based on the resume.
-- Actions should be about compounding results, not "start over".
+- Actions should compound results (ship work, document impact, lead small initiatives).
 
 2) pivot (user is sure):
 - The user will provide a pivotTarget role/direction.
@@ -153,28 +158,37 @@ Mode behavior requirements:
 
 3) compare (user is not sure):
 - Do NOT choose a single pivot target. Do NOT default to UX, Product, or any specific field.
-- You MUST place "Current alignment" and "Possible pivots" into the existing schema like this:
-  - Put "Current alignment" as the FIRST items inside day30.objectives.
-  - Put "Possible pivots" as the FIRST items inside day30.actions.
-  - Each pivot option MUST be formatted in exactly 4 labeled lines (use these exact labels and line breaks):
-  Why it fits: ...
-  Missing signals: ...
-  Fast proof artifact: ...
-  Cost/tradeoff: ...
-- Current alignment: list 3–6 job titles the candidate already fits TODAY based only on the resume.
-- Possible pivots: list 2–4 pivot directions inferred from the resume (NOT random).
-- Also include "Stay-the-course requirements" as the LAST items inside day30.objectives: 3–5 specific signals the resume must show to level up in the current track (scope, tools, outcomes, leadership, measurable impact).
-- If the resume does NOT strongly support a pivot category, explicitly say so and keep pivots adjacent.
-- Only mention “UX / Figma / wireframing” if (a) the resume contains UX signals, OR (b) the user explicitly says UX, OR (c) it’s listed as one of multiple pivot options with clear justification.
+- Compare mode must help the user decide, not drift.
 
-CRITICAL formatting (compare mode):
-- In day30.actions, each pivot option MUST be a single string with this exact 4-line format (use line breaks):
-  "Possible pivot X: <Pivot Title>
-   Why it fits: ...
-   Missing signals: ...
-   Fast proof artifact: ...
-   Cost/tradeoff: ..."
-- Do not compress these into one sentence. Keep the 4 labeled lines.
+Placement rules (compare mode):
+- "Current alignment" MUST appear as exactly ONE item in day30.objectives and be the FIRST item.
+  - Format exactly:
+    "Current alignment: Role 1, Role 2, Role 3, Role 4"
+  - Do NOT repeat or restate current alignment anywhere else.
+
+- "Possible pivots" MUST appear as the FIRST items in day30.actions.
+  - Provide 2–4 pivot directions inferred from the resume (not random, keep adjacent if resume is narrow).
+  - Each pivot MUST be ONE string with line breaks, formatted exactly like this:
+
+Possible pivot X: <Pivot title>
+Why it fits: ...
+Missing signals: ...
+Fast proof artifact: ...
+Cost/tradeoff: ...
+
+  - Each of the four labeled lines MUST be on its own line.
+  - Do NOT compress labels into one sentence.
+
+- "Stay-the-course requirements" MUST be the LAST items inside day30.objectives (3–5 total).
+  - These are the specific signals the resume must show to level up in the current track:
+    scope, tools, outcomes, leadership, measurable impact.
+  - Keep each requirement short and concrete.
+
+UX guardrail (compare mode):
+- Do NOT recommend UX skill-building or UX tools unless UX is explicitly listed as one of the Possible pivots.
+
+Training guardrail (compare mode):
+- Do NOT recommend enrolling in training unless it is tied to a listed pivot option and names the proof artifact it enables.
 `.trim();
 
     const userPrompt = `
@@ -231,14 +245,10 @@ Global notes:
   - Resume Builder
   - Profile Builder
   - Offer Negotiation
+- Keep lists concise, specific, and non-repetitive.
+- If you recommend learning, tie it to a proof artifact (case study, documented improvement, measurable outcome, portfolio item).
 
 ${modeRequirements}
-
-Additional constraints:
-- Keep lists concise and specific (avoid generic “take a course” unless you name what outcome it creates).
-- If you recommend learning, tie it to a proof artifact (portfolio item, documented improvement, measurable outcome, etc.).
-- For compare mode, do NOT recommend enrolling in any specific pivot training unless it is tied to one of the listed pivot options and includes a proof artifact.
-- In compare mode, each "Possible pivot" must be a single bullet where the 4 labeled lines appear on separate lines (not one sentence).
 `.trim();
 
     let rawText = '';
@@ -253,7 +263,7 @@ Additional constraints:
             { role: 'user', content: userPrompt },
           ],
           response_format: { type: 'json_object' },
-          temperature: 0.5,
+          temperature: 0.4,
         });
 
         rawText = extractTextFromResponsesApi(resp);
@@ -272,7 +282,7 @@ Additional constraints:
             { role: 'user', content: userPrompt },
           ],
           response_format: { type: 'json_object' },
-          temperature: 0.5,
+          temperature: 0.4,
         });
 
         rawText = extractTextFromChatCompletions(resp);
