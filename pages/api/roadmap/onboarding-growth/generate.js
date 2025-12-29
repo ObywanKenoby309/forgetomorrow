@@ -142,6 +142,7 @@ Mode behavior requirements:
 - Recommend next-level roles or responsibility expansions based on the resume.
 - Actions should be about compounding results, not "start over".
 
+
 2) pivot (user is sure):
 - The user will provide a pivotTarget role/direction.
 - Compare current resume vs pivotTarget:
@@ -159,6 +160,7 @@ Mode behavior requirements:
   - Each pivot option MUST include: Why it fits, Missing signals, Fast proof artifact, Cost/tradeoff.
 - Current alignment: list 3–6 job titles the candidate already fits TODAY based only on the resume.
 - Possible pivots: list 2–4 pivot directions inferred from the resume (NOT random).
+- Also include "Stay-the-course requirements" as the LAST items inside day30.objectives: 3–5 specific signals the resume must show to level up in the current track (scope, tools, outcomes, leadership, measurable impact).
 - If the resume does NOT strongly support a pivot category, explicitly say so and keep pivots adjacent.
 - Only mention “UX / Figma / wireframing” if (a) the resume contains UX signals, OR (b) the user explicitly says UX, OR (c) it’s listed as one of multiple pivot options with clear justification.
 `.trim();
@@ -285,9 +287,11 @@ Additional constraints:
 
       const baseHeadline = user.headline || 'N/A';
       if (direction === 'pivot') {
-        parsed.meta.headline = parsed.meta.headline || `${baseHeadline} • Pivot target: ${pivotTarget}`;
+        parsed.meta.headline =
+          parsed.meta.headline || `${baseHeadline} • Pivot target: ${pivotTarget}`;
       } else {
-        parsed.meta.headline = parsed.meta.headline || `${baseHeadline} • ${directionLabel(direction)}`;
+        parsed.meta.headline =
+          parsed.meta.headline || `${baseHeadline} • ${directionLabel(direction)}`;
       }
     } catch {
       // ignore
