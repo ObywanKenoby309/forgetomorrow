@@ -1,7 +1,7 @@
 // components/roadmap/OnboardingGrowth.tsx
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { useRouter } from 'next/router';
-import { Loader2, Download, Calendar, UserRound } from 'lucide-react';
+import { Loader2, Download, Calendar, UserRound, Printer } from 'lucide-react';
 
 interface Resume {
   id: string;
@@ -44,13 +44,225 @@ async function safeReadJson(res: Response) {
   }
 }
 
-function shouldPreserveLineBreaks(text: string) {
-  const s = String(text || '');
-  if (!s) return false;
-  if (s.includes('\n')) return true;
-  if (s.startsWith('Possible pivot ')) return true;
-  if (s.startsWith('If you stay:') || s.includes('\n\nIf you stay:')) return true;
-  return false;
+function escapeHtml(input: any) {
+  const s = String(input ?? '');
+  return s
+    .replaceAll('&', '&amp;')
+    .replaceAll('<', '&lt;')
+    .replaceAll('>', '&gt;')
+    .replaceAll('"', '&quot;')
+    .replaceAll("'", '&#039;');
+}
+
+function normalizeList(items: any): string[] {
+  if (!Array.isArray(items)) return [];
+  return items.map((x) => String(x ?? '').trim()).filter(Boolean);
+}
+
+function blockToHtml(label: string, items: string[]) {
+  const list = normalizeList(items);
+  if (!list.length) {
+    return `<div class="block"><div class="block-title">${escapeHtml(label)}</div><div class="muted">—</div></div>`;
+  }
+  return `
+    <div class="block">
+      <div class="block-title">${escapeHtml(label)}</div>
+      <ul>
+        ${list.map((it) => `<li>${escapeHtml(it)}</li>`).join('')}
+      </ul>
+    </div>
+  `;
+}
+
+function sectionToHtml(title: string, data: PlanBlock) {
+  if (!data) return '';
+  const objectives = normalizeList(data.objectives);
+  const actions = normalizeList(data.actions);
+  const metrics = normalizeList(data.metrics);
+  const quickWins = normalizeList(data.quickWins);
+  const risks = normalizeList(data.risks);
+  const presentation = String(data.presentation ?? '').trim();
+
+  return `
+    <section class="section">
+      <h2 class="section-title">${escapeHtml(title)}</h2>
+
+      <div class="grid">
+        ${blockToHtml('Objectives', objectives)}
+        ${blockToHtml('Actions', actions)}
+      </div>
+
+      <div class="grid">
+        ${blockToHtml('Metrics', metrics)}
+        ${blockToHtml('Quick Wins', quickWins)}
+      </div>
+
+      <div class="single">
+        ${blockToHtml('Risks', risks)}
+      </div>
+
+      ${
+        presentation
+          ? `<div class="presentation"><div class="block-title">Presentation</div><div>${escapeHtml(
+              presentation
+            )}</div></div>`
+          : ''
+      }
+    </section>
+  `;
+}
+
+function simpleListToHtml(title: string, items: string[]) {
+  const list = normalizeList(items);
+  return `
+    <section class="section">
+      <h2 class="section-title">${escapeHtml(title)}</h2>
+      ${
+        list.length
+          ? `<ul>${list.map((it) => `<li>${escapeHtml(it)}</li>`).join('')}</ul>`
+          : `<div class="muted">—</div>`
+      }
+    </section>
+  `;
+}
+
+function buildPrintHtml(opts: {
+  title: string;
+  candidate: string;
+  headline: string;
+  generatedAt: string;
+  plan: CareerRoadmapPlan;
+}) {
+  const { title, candidate, headline, generatedAt, plan } = opts;
+
+  const dt = generatedAt ? new Date(generatedAt) : null;
+  const generated = dt && !Number.isNaN(dt.getTime()) ? dt.toLocaleString() : '—';
+
+  return `<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8" />
+  <title>${escapeHtml(title)} — ${escapeHtml(candidate)}</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <style>
+    :root {
+      --text: #111827;
+      --muted: #6b7280;
+      --border: #e5e7eb;
+      --bg: #ffffff;
+      --accent: #FF7043;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      padding: 24px;
+      background: var(--bg);
+      color: var(--text);
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Arial, "Noto Sans", "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol";
+      line-height: 1.45;
+    }
+    .wrap { max-width: 900px; margin: 0 auto; }
+    .top {
+      border-bottom: 1px solid var(--border);
+      padding-bottom: 14px;
+      margin-bottom: 18px;
+    }
+    .h1 {
+      font-size: 28px;
+      font-weight: 800;
+      margin: 0 0 6px 0;
+      color: var(--accent);
+    }
+    .meta {
+      color: var(--muted);
+      font-size: 13px;
+    }
+    .candidate {
+      margin-top: 10px;
+      font-weight: 700;
+      font-size: 14px;
+    }
+    .headline {
+      margin-top: 2px;
+      color: var(--muted);
+      font-size: 13px;
+    }
+    .section {
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      padding: 16px;
+      margin: 14px 0;
+      page-break-inside: avoid;
+    }
+    .section-title {
+      margin: 0 0 10px 0;
+      font-size: 18px;
+      font-weight: 800;
+    }
+    .grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 14px;
+      margin-top: 10px;
+    }
+    .single { margin-top: 10px; }
+    .block-title {
+      font-weight: 800;
+      font-size: 13px;
+      margin-bottom: 6px;
+    }
+    ul {
+      margin: 0;
+      padding-left: 18px;
+    }
+    li { margin: 4px 0; }
+    .muted { color: var(--muted); }
+    .presentation {
+      margin-top: 12px;
+      padding-top: 10px;
+      border-top: 1px solid var(--border);
+      color: var(--text);
+    }
+    .note {
+      margin-top: 14px;
+      padding: 12px;
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      background: #f9fafb;
+      color: #374151;
+      font-size: 12.5px;
+    }
+    @media print {
+      body { padding: 0; }
+      .section { border-color: #d1d5db; }
+    }
+    @page { margin: 12mm; }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <div class="top">
+      <div class="h1">${escapeHtml(title)}</div>
+      <div class="meta">Generated: ${escapeHtml(generated)}</div>
+      <div class="candidate">${escapeHtml(candidate)}</div>
+      ${headline ? `<div class="headline">${escapeHtml(headline)}</div>` : ''}
+    </div>
+
+    ${sectionToHtml('First 30 Days', plan.day30)}
+    ${sectionToHtml('Days 31–60', plan.day60)}
+    ${sectionToHtml('Days 61–90', plan.day90)}
+
+    ${simpleListToHtml('Growth Recommendations', plan.growthRecommendations)}
+    ${simpleListToHtml('Skills Focus', plan.skillsFocus)}
+
+    <div class="note">
+      <strong>Guidance note:</strong> This tool provides structured, AI-assisted guidance based on your profile and resume.
+      It is designed to support your thinking and preparation, not to replace live coaching or mentorship.
+      We encourage you to work with a coach or mentor through Spotlight to refine your strategy, positioning, and next steps.
+    </div>
+  </div>
+</body>
+</html>`;
 }
 
 export default function OnboardingGrowth() {
@@ -62,12 +274,12 @@ export default function OnboardingGrowth() {
   // ✅ Direction selector
   const [direction, setDirection] = useState<RoadmapDirection>('compare');
 
-  // ✅ NEW: Pivot target (only required if direction === 'pivot')
+  // ✅ Pivot target (only required if direction === 'pivot')
   const [pivotTarget, setPivotTarget] = useState<string>('');
 
   const [plan, setPlan] = useState<CareerRoadmapPlan | null>(null);
 
-  const [pdfUrl, setPdfUrl] = useState<string>('');
+  const [pdfUrl, setPdfUrl] = useState<string>(''); // optional server PDF link if you add later
   const [loading, setLoading] = useState(false);
   const [loadingResumes, setLoadingResumes] = useState(false);
   const [error, setError] = useState('');
@@ -135,7 +347,7 @@ export default function OnboardingGrowth() {
       return;
     }
 
-    // ✅ Pivot Sure: ask what they want to pivot into
+    // ✅ Pivot: ask what they want to pivot into
     if (direction === 'pivot') {
       const t = String(pivotTarget || '').trim();
       if (!t) {
@@ -205,6 +417,49 @@ export default function OnboardingGrowth() {
       : direction === 'pivot'
       ? 'Tell us what you want to pivot into. We’ll compare it to your current resume and show what’s missing.'
       : 'You like your current direction. Let’s increase your market value and map the next level.';
+
+  const handlePrintToPdf = () => {
+    if (!plan) return;
+
+    try {
+      const title =
+        direction === 'compare'
+          ? 'Your Compare Plan'
+          : direction === 'pivot'
+          ? 'Your Pivot Plan'
+          : 'Your Stay-the-Course Plan';
+
+      const html = buildPrintHtml({
+        title,
+        candidate: plan?.meta?.candidate || 'Candidate',
+        headline: plan?.meta?.headline || '',
+        generatedAt: plan?.meta?.generatedAt || '',
+        plan,
+      });
+
+      const w = window.open('', '_blank', 'noopener,noreferrer');
+      if (!w) {
+        setError('Popup blocked. Please allow popups for this site, then try Print / Save as PDF again.');
+        return;
+      }
+
+      w.document.open();
+      w.document.write(html);
+      w.document.close();
+
+      // Give the browser a beat to layout before print
+      setTimeout(() => {
+        try {
+          w.focus();
+          w.print();
+        } catch {
+          // ignore
+        }
+      }, 250);
+    } catch {
+      setError('Unable to open print view. Please try again.');
+    }
+  };
 
   // BEFORE GENERATION
   if (!hasGenerated) {
@@ -341,7 +596,7 @@ export default function OnboardingGrowth() {
                 </label>
               </div>
 
-              {/* ✅ Pivot Sure prompt */}
+              {/* Pivot prompt */}
               {direction === 'pivot' ? (
                 <div className="mt-5">
                   <label htmlFor="pivotTarget" className="block text-sm font-semibold text-gray-800 mb-2">
@@ -409,7 +664,9 @@ export default function OnboardingGrowth() {
           {plan?.meta?.headline ? <p className="text-gray-600 mt-2">{plan.meta.headline}</p> : null}
         </div>
 
+        {/* no-print: actions row */}
         <div className="flex flex-wrap gap-3">
+          {/* Optional server-side PDF (if you add later) */}
           {pdfUrl ? (
             <a
               href={pdfUrl}
@@ -420,6 +677,15 @@ export default function OnboardingGrowth() {
               Download PDF
             </a>
           ) : null}
+
+          {/* ✅ NEW: Print / Save as PDF (browser) */}
+          <button
+            onClick={handlePrintToPdf}
+            className="bg-white border border-gray-300 text-gray-800 px-5 py-3 rounded-lg hover:bg-gray-50 transition flex items-center gap-2"
+          >
+            <Printer size={20} />
+            Print / Save as PDF
+          </button>
 
           <button
             onClick={() => router.push(withChrome('/hearth/spotlights'))}
@@ -512,9 +778,7 @@ function PlanSection({ title, data }: { title: string; data: PlanBlock }) {
       {data.presentation ? (
         <div className="mt-5">
           <div className="font-semibold mb-2">Presentation</div>
-          <p className="text-gray-700" style={{ whiteSpace: shouldPreserveLineBreaks(data.presentation) ? 'pre-line' : 'normal' }}>
-            {data.presentation}
-          </p>
+          <p className="text-gray-700">{data.presentation}</p>
         </div>
       ) : null}
     </section>
@@ -538,17 +802,9 @@ function Block({
         <p className="text-gray-600">{emptyDash ? '—' : 'None yet'}</p>
       ) : (
         <ul className="list-disc pl-5 space-y-1 text-gray-700">
-          {list.map((it, i) => {
-            const preserve = shouldPreserveLineBreaks(it);
-            return (
-              <li
-                key={`${label}-${i}`}
-                style={{ whiteSpace: preserve ? 'pre-line' : 'normal' }}
-              >
-                {it}
-              </li>
-            );
-          })}
+          {list.map((it, i) => (
+            <li key={`${label}-${i}`}>{it}</li>
+          ))}
         </ul>
       )}
     </div>
@@ -564,17 +820,9 @@ function SimpleListCard({ title, items }: { title: string; items: string[] }) {
         <p className="text-gray-600">—</p>
       ) : (
         <ul className="list-disc pl-5 space-y-1 text-gray-700">
-          {list.map((it, i) => {
-            const preserve = shouldPreserveLineBreaks(it);
-            return (
-              <li
-                key={`${title}-${i}`}
-                style={{ whiteSpace: preserve ? 'pre-line' : 'normal' }}
-              >
-                {it}
-              </li>
-            );
-          })}
+          {list.map((it, i) => (
+            <li key={`${title}-${i}`}>{it}</li>
+          ))}
         </ul>
       )}
     </section>
