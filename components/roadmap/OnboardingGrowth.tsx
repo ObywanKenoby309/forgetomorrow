@@ -1,5 +1,5 @@
 // components/roadmap/OnboardingGrowth.tsx
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect } from 'react';
 import { useRouter } from 'next/router';
 import { Loader2, Download, Calendar, UserRound, Printer } from 'lucide-react';
 
@@ -44,14 +44,18 @@ async function safeReadJson(res: Response) {
   }
 }
 
+function replaceAllSafe(s: string, find: string, repl: string) {
+  return s.split(find).join(repl);
+}
+
 function escapeHtml(input: any) {
-  const s = String(input ?? '');
-  return s
-    .replaceAll('&', '&amp;')
-    .replaceAll('<', '&lt;')
-    .replaceAll('>', '&gt;')
-    .replaceAll('"', '&quot;')
-    .replaceAll("'", '&#039;');
+  let s = String(input ?? '');
+  s = replaceAllSafe(s, '&', '&amp;');
+  s = replaceAllSafe(s, '<', '&lt;');
+  s = replaceAllSafe(s, '>', '&gt;');
+  s = replaceAllSafe(s, '"', '&quot;');
+  s = replaceAllSafe(s, "'", '&#039;');
+  return s;
 }
 
 function normalizeList(items: any): string[] {
@@ -271,10 +275,7 @@ export default function OnboardingGrowth() {
   const [resumes, setResumes] = useState<Resume[]>([]);
   const [selectedResume, setSelectedResume] = useState<string>('');
 
-  // ✅ Direction selector
   const [direction, setDirection] = useState<RoadmapDirection>('compare');
-
-  // ✅ Pivot target (only required if direction === 'pivot')
   const [pivotTarget, setPivotTarget] = useState<string>('');
 
   const [plan, setPlan] = useState<CareerRoadmapPlan | null>(null);
@@ -289,7 +290,6 @@ export default function OnboardingGrowth() {
   const withChrome = (path: string) =>
     chrome ? `${path}${path.includes('?') ? '&' : '?'}chrome=${chrome}` : path;
 
-  // Load user's resumes on mount
   useEffect(() => {
     let active = true;
 
@@ -334,7 +334,6 @@ export default function OnboardingGrowth() {
     };
   }, []);
 
-  // ✅ If user changes direction away from pivot, don’t keep forcing pivotTarget
   useEffect(() => {
     if (direction !== 'pivot') {
       setPivotTarget('');
@@ -347,7 +346,6 @@ export default function OnboardingGrowth() {
       return;
     }
 
-    // ✅ Pivot: ask what they want to pivot into
     if (direction === 'pivot') {
       const t = String(pivotTarget || '').trim();
       if (!t) {
@@ -361,14 +359,11 @@ export default function OnboardingGrowth() {
     setPlan(null);
     setPdfUrl('');
 
-    // ✅ prevents “spin forever”
     const controller = new AbortController();
-    const timeout = setTimeout(() => controller.abort(), 45000); // 45s
+    const timeout = setTimeout(() => controller.abort(), 45000);
 
     try {
       const body: any = { resumeId: selectedResume, direction };
-
-      // ✅ Only send pivotTarget when relevant (keeps API backward-compatible)
       if (direction === 'pivot') {
         body.pivotTarget = String(pivotTarget || '').trim();
       }
@@ -404,20 +399,6 @@ export default function OnboardingGrowth() {
     }
   };
 
-  const directionTitle =
-    direction === 'compare'
-      ? 'Compare: Stay vs Pivot'
-      : direction === 'pivot'
-      ? 'Pivot Plan'
-      : 'Stay the Course Plan';
-
-  const directionSubtitle =
-    direction === 'compare'
-      ? 'See how staying the course compares to pivot options, including gaps and next steps.'
-      : direction === 'pivot'
-      ? 'Tell us what you want to pivot into. We’ll compare it to your current resume and show what’s missing.'
-      : 'You like your current direction. Let’s increase your market value and map the next level.';
-
   const handlePrintToPdf = () => {
     if (!plan) return;
 
@@ -447,7 +428,6 @@ export default function OnboardingGrowth() {
       w.document.write(html);
       w.document.close();
 
-      // Give the browser a beat to layout before print
       setTimeout(() => {
         try {
           w.focus();
@@ -461,7 +441,6 @@ export default function OnboardingGrowth() {
     }
   };
 
-  // BEFORE GENERATION
   if (!hasGenerated) {
     const noResumes = !loadingResumes && resumes.length === 0;
 
@@ -482,9 +461,21 @@ export default function OnboardingGrowth() {
     return (
       <div>
         <h2 className="text-4xl font-bold text-[#FF7043] mb-6 mt-0">
-          {directionTitle}
+          {direction === 'compare'
+            ? 'Compare: Stay vs Pivot'
+            : direction === 'pivot'
+            ? 'Pivot Plan'
+            : 'Stay the Course Plan'}
         </h2>
-        <p className="text-lg text-gray-700 mb-2">{directionSubtitle}</p>
+
+        <p className="text-lg text-gray-700 mb-2">
+          {direction === 'compare'
+            ? 'See how staying the course compares to pivot options, including gaps and next steps.'
+            : direction === 'pivot'
+            ? 'Tell us what you want to pivot into. We’ll compare it to your current resume and show what’s missing.'
+            : 'You like your current direction. Let’s increase your market value and map the next level.'}
+        </p>
+
         <p className="text-sm text-gray-600 mb-8">
           Includes 30/60/90 priorities, skills to strengthen, and clear next steps based on your selected mode.
         </p>
@@ -532,14 +523,11 @@ export default function OnboardingGrowth() {
               </select>
             </div>
 
-            {/* Direction selector */}
             <div className="bg-white border border-gray-200 rounded-lg p-5">
-              <div className="flex items-start justify-between gap-4">
-                <div>
-                  <div className="text-lg font-medium text-gray-800">Which path are you considering?</div>
-                  <div className="text-sm text-gray-600 mt-1">
-                    Not sure compares both. Pivot asks where you want to go. Stay focuses on increasing market value.
-                  </div>
+              <div>
+                <div className="text-lg font-medium text-gray-800">Which path are you considering?</div>
+                <div className="text-sm text-gray-600 mt-1">
+                  Not sure compares both. Pivot asks where you want to go. Stay focuses on increasing market value.
                 </div>
               </div>
 
@@ -596,7 +584,6 @@ export default function OnboardingGrowth() {
                 </label>
               </div>
 
-              {/* Pivot prompt */}
               {direction === 'pivot' ? (
                 <div className="mt-5">
                   <label htmlFor="pivotTarget" className="block text-sm font-semibold text-gray-800 mb-2">
@@ -619,9 +606,7 @@ export default function OnboardingGrowth() {
             {error && <p className="text-red-600 font-medium">{error}</p>}
 
             {loading ? (
-              <p className="text-sm text-gray-600 text-center">
-                Working… this can take up to ~45 seconds for longer resumes.
-              </p>
+              <p className="text-sm text-gray-600 text-center">Working… this can take up to ~45 seconds.</p>
             ) : null}
 
             <button
@@ -655,7 +640,6 @@ export default function OnboardingGrowth() {
       ? 'Your Pivot Plan'
       : 'Your Stay-the-Course Plan';
 
-  // AFTER GENERATION
   return (
     <div>
       <div className="flex flex-col md:flex-row md:justify-between md:items-center gap-4 mb-8">
@@ -664,9 +648,7 @@ export default function OnboardingGrowth() {
           {plan?.meta?.headline ? <p className="text-gray-600 mt-2">{plan.meta.headline}</p> : null}
         </div>
 
-        {/* no-print: actions row */}
         <div className="flex flex-wrap gap-3">
-          {/* Optional server-side PDF (if you add later) */}
           {pdfUrl ? (
             <a
               href={pdfUrl}
@@ -678,7 +660,6 @@ export default function OnboardingGrowth() {
             </a>
           ) : null}
 
-          {/* ✅ NEW: Print / Save as PDF (browser) */}
           <button
             onClick={handlePrintToPdf}
             className="bg-white border border-gray-300 text-gray-800 px-5 py-3 rounded-lg hover:bg-gray-50 transition flex items-center gap-2"
@@ -714,7 +695,6 @@ export default function OnboardingGrowth() {
             <PlanSection title="First 30 Days" data={plan.day30} />
             <PlanSection title="Days 31–60" data={plan.day60} />
             <PlanSection title="Days 61–90" data={plan.day90} />
-
             <SimpleListCard title="Growth Recommendations" items={plan.growthRecommendations} />
             <SimpleListCard title="Skills Focus" items={plan.skillsFocus} />
 
