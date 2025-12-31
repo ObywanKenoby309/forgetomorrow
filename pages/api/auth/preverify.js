@@ -107,11 +107,28 @@ async function verifyRecaptcha(token) {
   }
 }
 
-function parseBoolEnv(v) {
-  const s = String(v ?? '').trim().toLowerCase();
-  if (s === 'true' || s === '1' || s === 'yes') return true;
-  if (s === 'false' || s === '0' || s === 'no') return false;
-  return null;
+function cleanFromValue(v) {
+  // Gmail can show "Unnamed" if the FROM header contains weird quotes or is malformed.
+  // Keep it simple: Name <email>
+  const s = String(v || '').trim();
+  if (!s) return '';
+  return s.replace(/^"+|"+$/g, '').trim();
+}
+
+function buildFrom() {
+  const raw =
+    cleanFromValue(process.env.EMAIL_FROM) ||
+    cleanFromValue(process.env.SMTP_FROM_SUPPORT) ||
+    '';
+
+  if (raw) return raw;
+
+  const fallbackEmail =
+    process.env.SMTP_USER ||
+    process.env.EMAIL_USER ||
+    'forgetomorrow.noreply@gmail.com';
+
+  return `ForgeTomorrow <${fallbackEmail}>`;
 }
 
 export default async function handler(req, res) {
@@ -240,29 +257,30 @@ export default async function handler(req, res) {
 
   const verifyUrl = `${baseUrl}/api/auth/verify?token=${token}`;
 
-  // ✅ Use your existing env naming (SMTP_* and EMAIL_*)
-  const smtpHost = process.env.SMTP_HOST || process.env.EMAIL_SERVER;
-  const smtpPort = Number(process.env.SMTP_PORT || process.env.EMAIL_PORT) || 587;
-
-  const smtpSecureEnv = parseBoolEnv(process.env.SMTP_SECURE);
-  const secure = smtpSecureEnv !== null ? smtpSecureEnv : smtpPort === 465; // 587 => false (STARTTLS)
-
-  const smtpUser = process.env.SMTP_USER || process.env.EMAIL_USER;
-  const smtpPass = process.env.SMTP_PASS || process.env.EMAIL_PASSWORD;
-
-  const fromHeader =
-    process.env.EMAIL_FROM ||
-    process.env.SMTP_FROM_SUPPORT ||
-    'ForgeTomorrow <no-reply@forgetomorrow.com>';
-
   // Choose transporter based on environment
   let transporter;
+
   if (isProd) {
+    const host = process.env.SMTP_HOST || process.env.EMAIL_SERVER;
+    const port = Number(process.env.SMTP_PORT || process.env.EMAIL_PORT || 587);
+    const secureRaw = process.env.SMTP_SECURE;
+    const secure =
+      typeof secureRaw === 'string'
+        ? secureRaw.toLowerCase() === 'true'
+        : port === 465;
+
     transporter = nodemailer.createTransport({
-      host: smtpHost,
-      port: smtpPort,
+      host,
+      port,
       secure,
-      auth: smtpUser && smtpPass ? { user: smtpUser, pass: smtpPass } : undefined,
+      auth:
+        (process.env.SMTP_USER || process.env.EMAIL_USER) &&
+        (process.env.SMTP_PASS || process.env.EMAIL_PASSWORD)
+          ? {
+              user: process.env.SMTP_USER || process.env.EMAIL_USER,
+              pass: process.env.SMTP_PASS || process.env.EMAIL_PASSWORD,
+            }
+          : undefined,
       logger: true,
       debug: true,
     });
@@ -279,12 +297,11 @@ export default async function handler(req, res) {
     });
   }
 
-  try {
-    await transporter.sendMail({
-      from: fromHeader,
-      to: normalizedEmail,
-      subject: 'Welcome to ForgeTomorrow — Confirm your account',
-      html: `
+  await transporter.sendMail({
+    from: buildFrom(),
+    to: normalizedEmail,
+    subject: 'Welcome to ForgeTomorrow — Confirm your account',
+    html: `
     <div style="margin:0;padding:0;background:#020817;">
       <table width="100%" cellPadding="0" cellSpacing="0" role="presentation" style="background:#020817;padding:32px 0;">
         <tr>
@@ -480,24 +497,18 @@ export default async function handler(req, res) {
       </table>
     </div>
   `,
-      text: [
-        `Welcome, ${firstName}.`,
-        ``,
-        `You’re one click away from confirming your ForgeTomorrow account.`,
-        ``,
-        `This link is active for 60 minutes:`,
-        `${verifyUrl}`,
-        ``,
-        `If you didn’t try to create an account, you can safely ignore this email.`,
-        `ForgeTomorrow — professional networking without the noise, with all the tools.`,
-      ].join('\n'),
-    });
-  } catch (err) {
-    console.error('[preverify] sendMail failed:', err);
-    return res
-      .status(500)
-      .json({ error: 'Failed to send verification email', details: err.message });
-  }
+    text: [
+      `Welcome, ${firstName}.`,
+      ``,
+      `You’re one click away from confirming your ForgeTomorrow account.`,
+      ``,
+      `This link is active for 60 minutes:`,
+      `${verifyUrl}`,
+      ``,
+      `If you didn’t try to create an account, you can safely ignore this email.`,
+      `ForgeTomorrow — professional networking without the noise, with all the tools.`,
+    ].join('\n'),
+  });
 
   return res.status(200).json({ success: true });
 }
