@@ -3,7 +3,7 @@ import React, { useMemo, useState, useEffect } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/router';
 import SeekerLayout from '@/components/layouts/SeekerLayout';
-import SeekerRightColumn from '@/components/seeker/SeekerRightColumn';
+import RightRailPlacementManager from '@/components/ads/RightRailPlacementManager';
 import ContactsList from '@/components/ContactsList';
 import IncomingRequestsList from '@/components/IncomingRequestsList';
 import OutgoingRequestsList from '@/components/OutgoingRequestsList';
@@ -236,12 +236,7 @@ export default function SeekerContactCenter() {
       </p>
     </section>
   );
-  // --- Right rail ---
-  const RightRail = (
-    <div style={{ display: 'grid', gap: 12 }}>
-      <SeekerRightColumn variant="contacts" />
-    </div>
-  );
+
   // Contacts preview + toggler
   const [showContacts, setShowContacts] = useState(true);
   const topContacts = useMemo(() => contacts.slice(0, 5), [contacts]);
@@ -277,7 +272,7 @@ export default function SeekerContactCenter() {
     <SeekerLayout
       title="Contact Center | ForgeTomorrow"
       header={HeaderBox}
-      right={RightRail}
+      right={<RightRailPlacementManager surfaceId="contact_center" />}
       activeNav="contacts"
     >
       {/* ✅ Toolbar component */}
@@ -359,6 +354,7 @@ export default function SeekerContactCenter() {
           </div>
         )}
       </section>
+
       {/* Contacts + Profile Views side-by-side (but roomy) */}
       <section
         style={{
@@ -436,6 +432,7 @@ export default function SeekerContactCenter() {
             </div>
           )}
         </section>
+
         {/* Recent Profile Views */}
         <section
           style={{
@@ -506,6 +503,7 @@ export default function SeekerContactCenter() {
           </div>
         </section>
       </section>
+
       {/* Groups */}
       <section
         style={{
@@ -519,6 +517,7 @@ export default function SeekerContactCenter() {
         <h2 style={{ color: '#FF7043', marginTop: 0 }}>Groups</h2>
         <GroupsList groups={groups} onOpen={openGroup} />
       </section>
+
       {/* Pages */}
       <section
         style={{
@@ -532,6 +531,7 @@ export default function SeekerContactCenter() {
         <h2 style={{ color: '#FF7043', marginTop: 0 }}>Pages</h2>
         <PagesList pages={pages} onOpen={openPage} />
       </section>
+
       {/* Newsletters */}
       <section
         style={{

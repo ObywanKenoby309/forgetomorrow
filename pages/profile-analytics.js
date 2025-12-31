@@ -4,6 +4,9 @@ import Head from 'next/head';
 import { useRouter } from 'next/router';
 import SeekerLayout from '@/components/layouts/SeekerLayout';
 import CoachingLayout from '@/components/layouts/CoachingLayout';
+
+import RightRailPlacementManager from '@/components/ads/RightRailPlacementManager';
+
 // Componentized pieces
 import KPI from '@/components/analytics/KPI';
 import ViewsChart from '@/components/analytics/ViewsChart';
@@ -82,7 +85,7 @@ export default function ProfileAnalyticsPage() {
       <Layout
         title="Profile Analytics | ForgeTomorrow"
         header={HeaderBox}
-        right={null}
+        right={<RightRailPlacementManager surfaceId="profile" />}
         activeNav="profile"
         sidebarInitialOpen={{ coaching: false, seeker: false }}
       >

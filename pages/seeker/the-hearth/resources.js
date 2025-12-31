@@ -1,4 +1,4 @@
-// pages/hearth/resources.js
+// pages/seeker/the-hearth/resources.js
 import { useState, useEffect, useRef } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/router';
@@ -6,6 +6,7 @@ import SeekerLayout from '@/components/layouts/SeekerLayout';
 import CoachingLayout from '@/components/layouts/CoachingLayout';
 import RecruiterLayout from '@/components/layouts/RecruiterLayout';
 import { SECTION_DETAILS } from '@/lib/resourceSections';
+import RightRailPlacementManager from '@/components/ads/RightRailPlacementManager';
 
 function makeLayout(chromeRaw) {
   let Layout = SeekerLayout;
@@ -20,32 +21,6 @@ function makeLayout(chromeRaw) {
   }
 
   return { Layout, activeNav };
-}
-
-function RightRail({ withChrome }) {
-  return (
-    <div style={{ display: 'grid', gap: 12 }}>
-      <div
-        style={{
-          background: 'white',
-          border: '1px solid #eee',
-          borderRadius: 12,
-          padding: 12,
-          boxShadow: '0 2px 6px rgba(0,0,0,0.06)',
-        }}
-      >
-        <div style={{ fontWeight: 800, color: 'black', marginBottom: 8 }}>
-          Shortcuts
-        </div>
-        <div style={{ display: 'grid', gap: 8 }}>
-          <Link href={withChrome('/the-hearth')}>Back to Hearth</Link>
-          <Link href={withChrome('/hearth/spotlights')}>Mentorship Programs</Link>
-          <Link href={withChrome('/hearth/events')}>Community Events</Link>
-          <Link href={withChrome('/hearth/forums')}>Discussion Forums</Link>
-        </div>
-      </div>
-    </div>
-  );
 }
 
 const Header = (
@@ -246,21 +221,10 @@ function SectionViewer({ selectedSection }) {
                     gap: 8,
                   }}
                 >
-                  <div
-                    style={{
-                      fontWeight: 700,
-                      color: '#263238',
-                    }}
-                  >
+                  <div style={{ fontWeight: 700, color: '#263238' }}>
                     {article.title}
                   </div>
-                  <span
-                    style={{
-                      fontSize: 12,
-                      color: '#90A4AE',
-                      flexShrink: 0,
-                    }}
-                  >
+                  <span style={{ fontSize: 12, color: '#90A4AE', flexShrink: 0 }}>
                     {isOpen ? 'Hide' : 'Show'}
                   </span>
                 </button>
@@ -272,10 +236,7 @@ function SectionViewer({ selectedSection }) {
                     ) : (
                       article.paragraphs &&
                       article.paragraphs.map((para, pIdx) => (
-                        <p
-                          key={pIdx}
-                          style={{ color: '#455A64', marginTop: 6 }}
-                        >
+                        <p key={pIdx} style={{ color: '#455A64', marginTop: 6 }}>
                           {para}
                         </p>
                       ))
@@ -302,6 +263,12 @@ export default function HearthResourcesPage() {
     chrome ? `${path}${path.includes('?') ? '&' : '?'}chrome=${chrome}` : path;
 
   const { Layout, activeNav } = makeLayout(chrome);
+
+  const RightRail = (
+    <div style={{ display: 'grid', gap: 12 }}>
+      <RightRailPlacementManager surfaceId="seeker/the-hearth/resources" slot="right_rail_1" />
+    </div>
+  );
 
   const [selectedSection, setSelectedSection] = useState(null);
   const [searchTerm, setSearchTerm] = useState('');
@@ -331,14 +298,7 @@ export default function HearthResourcesPage() {
     >
       <div style={{ fontWeight: 800, color: '#263238' }}>{title}</div>
       <p style={{ color: '#455A64', marginTop: 6 }}>{blurb}</p>
-      <div
-        style={{
-          marginTop: 8,
-          fontSize: 12,
-          fontWeight: 700,
-          color: '#FF7043',
-        }}
-      >
+      <div style={{ marginTop: 8, fontSize: 12, fontWeight: 700, color: '#FF7043' }}>
         View details →
       </div>
     </button>
@@ -348,7 +308,7 @@ export default function HearthResourcesPage() {
     <Layout
       title="Resources | ForgeTomorrow"
       header={Header}
-      right={<RightRail withChrome={withChrome} />}
+      right={RightRail}
       activeNav={activeNav}
     >
       <section
@@ -372,15 +332,10 @@ export default function HearthResourcesPage() {
               gap: 8,
             }}
           >
-            <div
-              style={{
-                fontWeight: 700,
-                fontSize: 13,
-                color: '#263238',
-              }}
-            >
+            <div style={{ fontWeight: 700, fontSize: 13, color: '#263238' }}>
               Filter resources
             </div>
+
             <input
               type="text"
               value={searchTerm}
@@ -394,13 +349,23 @@ export default function HearthResourcesPage() {
                 fontSize: 13,
               }}
             />
-            <div
-              style={{
-                fontSize: 11,
-                color: '#90A4AE',
-              }}
-            >
+
+            <div style={{ fontSize: 11, color: '#90A4AE' }}>
               Showing {filteredCards.length} of {SECTION_CARDS.length} sections
+            </div>
+
+            <div style={{ marginTop: 2, display: 'flex', gap: 10, flexWrap: 'wrap' }}>
+              <Link href={withChrome('/seeker/the-hearth/events')} style={{ color: '#FF7043', fontWeight: 800, fontSize: 12 }}>
+                Events
+              </Link>
+              <span style={{ color: '#B0BEC5' }}>•</span>
+              <Link href={withChrome('/seeker/the-hearth/forums')} style={{ color: '#FF7043', fontWeight: 800, fontSize: 12 }}>
+                Forums
+              </Link>
+              <span style={{ color: '#B0BEC5' }}>•</span>
+              <Link href={withChrome('/hearth/spotlights')} style={{ color: '#FF7043', fontWeight: 800, fontSize: 12 }}>
+                Spotlights
+              </Link>
             </div>
           </div>
 

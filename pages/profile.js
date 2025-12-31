@@ -5,6 +5,8 @@ import { useRouter } from 'next/router';
 import Link from 'next/link';
 import SeekerLayout from '@/components/layouts/SeekerLayout';
 
+import RightRailPlacementManager from '@/components/ads/RightRailPlacementManager';
+
 import ProfileHeader from '@/components/profile/ProfileHeader';
 import ProfileAbout from '@/components/profile/ProfileAbout';
 import ProfileLanguages from '@/components/profile/ProfileLanguages';
@@ -272,7 +274,12 @@ export default function ProfilePage() {
         <title>Profile | ForgeTomorrow</title>
       </Head>
 
-      <SeekerLayout title="Profile | ForgeTomorrow" header={HeaderBox} right={null} activeNav="profile">
+      <SeekerLayout
+        title="Profile | ForgeTomorrow"
+        header={HeaderBox}
+        right={<RightRailPlacementManager surfaceId="profile" />}
+        activeNav="profile"
+      >
         {showWelcomeBanner && (
           <section
             className="relative mb-6 p-6 bg-gradient-to-r from-orange-500 to-pink-600 text-white rounded-3xl shadow-2xl text-center max-w-4xl mx-auto"
@@ -423,7 +430,7 @@ export default function ProfilePage() {
                 active={docsFocus === 'cover'}
                 onActivate={openCover}
                 activePct={70}
-              >
+                >
                 <ProfileCoverAttach withChrome={withChrome} />
               </DocFocusCard>
             </div>
@@ -579,9 +586,7 @@ function DocFocusCard({ title, active, onActivate, activePct = 70, children }) {
           transition: 'max-height 260ms ease',
         }}
       >
-        <div style={{ padding: 0 }}>
-          {children}
-        </div>
+        <div style={{ padding: 0 }}>{children}</div>
 
         {!active && (
           <div
@@ -609,7 +614,16 @@ function DocFocusCard({ title, active, onActivate, activePct = 70, children }) {
             background: 'rgba(255,255,255,0.86)',
           }}
         >
-          <div style={{ fontSize: 12, color: '#475569', fontWeight: 700, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+          <div
+            style={{
+              fontSize: 12,
+              color: '#475569',
+              fontWeight: 700,
+              whiteSpace: 'nowrap',
+              overflow: 'hidden',
+              textOverflow: 'ellipsis',
+            }}
+          >
             Click to expand and manage this document.
           </div>
           <button

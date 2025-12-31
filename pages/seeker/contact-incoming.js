@@ -3,7 +3,7 @@ import React, { useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/router';
 import SeekerLayout from '@/components/layouts/SeekerLayout';
-import SeekerRightColumn from '@/components/seeker/SeekerRightColumn';
+import RightRailPlacementManager from '@/components/ads/RightRailPlacementManager';
 import IncomingRequestsList from '@/components/IncomingRequestsList';
 import ContactCenterToolbar from '@/components/contact-center/ContactCenterToolbar'; // ✅ NEW import
 
@@ -138,16 +138,12 @@ export default function SeekerIncomingInvitesPage() {
       </p>
     </section>
   );
-  const RightRail = (
-    <div style={{ display: 'grid', gap: 12 }}>
-      <SeekerRightColumn variant="contacts" />
-    </div>
-  );
+
   return (
     <SeekerLayout
       title="Pending Invites | ForgeTomorrow"
       header={HeaderBox}
-      right={RightRail}
+      right={<RightRailPlacementManager surfaceId="contact_incoming" />}
       activeNav="contacts"
     >
       {/* ✅ Toolbar component */}

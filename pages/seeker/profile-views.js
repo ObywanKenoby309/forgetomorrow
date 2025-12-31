@@ -3,7 +3,7 @@ import { useEffect, useState } from 'react';
 import { useRouter } from 'next/router';
 import Link from 'next/link';
 import SeekerLayout from '@/components/layouts/SeekerLayout';
-import SeekerRightColumn from '@/components/seeker/SeekerRightColumn';
+import RightRailPlacementManager from '@/components/ads/RightRailPlacementManager';
 import ContactCenterToolbar from '@/components/contact-center/ContactCenterToolbar'; // ✅ NEW import
 
 function HeaderBox() {
@@ -41,13 +41,7 @@ function HeaderBox() {
     </section>
   );
 }
-function RightRail() {
-  return (
-    <div style={{ display: 'grid', gap: 12 }}>
-      <SeekerRightColumn variant="contacts" />
-    </div>
-  );
-}
+
 export default function ProfileViewsPage() {
   const router = useRouter();
   const chrome = String(router.query.chrome || '').toLowerCase();
@@ -94,7 +88,7 @@ export default function ProfileViewsPage() {
     <SeekerLayout
       title="Profile Views | ForgeTomorrow"
       header={<HeaderBox />}
-      right={<RightRail />}
+      right={<RightRailPlacementManager surfaceId="profile_views" />}
       activeNav="contacts"
     >
       {/* ✅ Toolbar component added */}

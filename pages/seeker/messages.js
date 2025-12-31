@@ -1,7 +1,7 @@
 // pages/seeker/messages.js
 import dynamic from 'next/dynamic';
 import SeekerLayout from '@/components/layouts/SeekerLayout';
-import SeekerRightColumn from '@/components/seeker/SeekerRightColumn';
+import RightRailPlacementManager from '@/components/ads/RightRailPlacementManager';
 
 // Load SignalMessages only on the client to avoid SSR/prerender issues
 const SignalMessages = dynamic(
@@ -51,17 +51,11 @@ export default function Messages() {
     </section>
   );
 
-  const RightRail = (
-    <div style={{ display: 'grid', gap: 12 }}>
-      <SeekerRightColumn variant="messages" />
-    </div>
-  );
-
   return (
     <SeekerLayout
       title="ForgeTomorrow — The Signal"
       header={HeaderBox}
-      right={RightRail}
+      right={<RightRailPlacementManager surfaceId="the_signal" />}
       activeNav="messages"
     >
       {/* Client-only chat inbox */}

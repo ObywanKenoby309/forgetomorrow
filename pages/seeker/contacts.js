@@ -7,7 +7,7 @@ import { useRouter } from 'next/router';
 import SeekerLayout from '@/components/layouts/SeekerLayout';
 import CoachingLayout from '@/components/layouts/CoachingLayout';
 import RecruiterLayout from '@/components/layouts/RecruiterLayout';
-import SeekerRightColumn from '@/components/seeker/SeekerRightColumn';
+import RightRailPlacementManager from '@/components/ads/RightRailPlacementManager';
 import ContactsOrganizer from '@/components/ContactsOrganizer';
 
 export default function SeekerContactsGatePage() {
@@ -63,13 +63,6 @@ export default function SeekerContactsGatePage() {
     loadContacts();
   }, []);
 
-  // 🔸 Right rail – gives us space for shortcuts / ads
-  const rightRail = (
-    <div style={{ display: 'grid', gap: 12 }}>
-      <SeekerRightColumn variant="contacts" />
-    </div>
-  );
-
   const HeaderBox = (
     <section
       style={{
@@ -112,7 +105,7 @@ export default function SeekerContactsGatePage() {
       title="Contacts | ForgeTomorrow"
       header={HeaderBox}
       activeNav="contacts"
-      right={rightRail}
+      right={<RightRailPlacementManager surfaceId="contacts" />}
     >
       <Head>
         <title>ForgeTomorrow - Contacts</title>

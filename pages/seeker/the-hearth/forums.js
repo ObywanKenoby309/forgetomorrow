@@ -1,9 +1,10 @@
-// pages/hearth/forums.js
+// pages/seeker/the-hearth/forums.js
 import Link from 'next/link';
 import { useRouter } from 'next/router';
 import SeekerLayout from '@/components/layouts/SeekerLayout';
 import CoachingLayout from '@/components/layouts/CoachingLayout';
 import RecruiterLayout from '@/components/layouts/RecruiterLayout';
+import RightRailPlacementManager from '@/components/ads/RightRailPlacementManager';
 
 function makeLayout(chromeRaw) {
   let Layout = SeekerLayout;
@@ -31,25 +32,7 @@ export default function HearthForumsPage() {
 
   const RightRail = (
     <div style={{ display: 'grid', gap: 12 }}>
-      <div
-        style={{
-          background: 'white',
-          border: '1px solid #eee',
-          borderRadius: 12,
-          padding: 12,
-          boxShadow: '0 2px 6px rgba(0,0,0,0.06)',
-        }}
-      >
-        <div style={{ fontWeight: 800, color: 'black', marginBottom: 8 }}>
-          Shortcuts
-        </div>
-        <div style={{ display: 'grid', gap: 8 }}>
-          <Link href={withChrome('/the-hearth')}>Back to Hearth</Link>
-          <Link href={withChrome('/hearth/spotlights')}>Mentorship Programs</Link>
-          <Link href={withChrome('/hearth/events')}>Community Events</Link>
-          <Link href={withChrome('/hearth/resources')}>Resource Library</Link>
-        </div>
-      </div>
+      <RightRailPlacementManager surfaceId="seeker/the-hearth/forums" slot="right_rail_1" />
     </div>
   );
 
@@ -64,9 +47,7 @@ export default function HearthForumsPage() {
         textAlign: 'center',
       }}
     >
-      <h1
-        style={{ margin: 0, color: '#FF7043', fontSize: 24, fontWeight: 800 }}
-      >
+      <h1 style={{ margin: 0, color: '#FF7043', fontSize: 24, fontWeight: 800 }}>
         Discussion Forums
       </h1>
       <p
@@ -99,24 +80,34 @@ export default function HearthForumsPage() {
           textAlign: 'center',
         }}
       >
-        <div
-          style={{
-            fontSize: 18,
-            fontWeight: 800,
-            color: '#37474F',
-          }}
-        >
+        <div style={{ fontSize: 18, fontWeight: 800, color: '#37474F' }}>
           Forums not enabled yet
         </div>
+
         <p style={{ color: '#607D8B', marginTop: 6 }}>
           We’re finishing moderation tools, spam protection, and reporting workflows so
           that conversations here stay healthy and constructive.
         </p>
+
         <p style={{ color: '#607D8B', marginTop: 8 }}>
           Once everything is ready, this space will open for topic-based threads,
           replies, and community reputation. For now, you can navigate here to see that
           the Forums area is in place and under review.
         </p>
+
+        <div style={{ marginTop: 14, display: 'flex', justifyContent: 'center', gap: 10, flexWrap: 'wrap' }}>
+          <Link href={withChrome('/seeker/the-hearth/events')} style={{ color: '#FF7043', fontWeight: 800 }}>
+            Events
+          </Link>
+          <span style={{ color: '#B0BEC5' }}>•</span>
+          <Link href={withChrome('/seeker/the-hearth/resources')} style={{ color: '#FF7043', fontWeight: 800 }}>
+            Resources
+          </Link>
+          <span style={{ color: '#B0BEC5' }}>•</span>
+          <Link href={withChrome('/hearth/spotlights')} style={{ color: '#FF7043', fontWeight: 800 }}>
+            Spotlights
+          </Link>
+        </div>
       </section>
     </Layout>
   );

@@ -1,9 +1,10 @@
-// pages/hearth/events.js
-import Link from 'next/link';
+// pages/seeker/the-hearth/events.js
 import { useRouter } from 'next/router';
 import SeekerLayout from '@/components/layouts/SeekerLayout';
 import CoachingLayout from '@/components/layouts/CoachingLayout';
 import RecruiterLayout from '@/components/layouts/RecruiterLayout';
+
+import RightRailPlacementManager from '@/components/ads/RightRailPlacementManager';
 
 function makeLayout(chromeRaw) {
   let Layout = SeekerLayout;
@@ -18,32 +19,6 @@ function makeLayout(chromeRaw) {
   }
 
   return { Layout, activeNav };
-}
-
-function RightRail({ withChrome }) {
-  return (
-    <div style={{ display: 'grid', gap: 12 }}>
-      <div
-        style={{
-          background: 'white',
-          border: '1px solid #eee',
-          borderRadius: 12,
-          padding: 12,
-          boxShadow: '0 2px 6px rgba(0,0,0,0.06)',
-        }}
-      >
-        <div style={{ fontWeight: 800, color: 'black', marginBottom: 8 }}>
-          Shortcuts
-        </div>
-        <div style={{ display: 'grid', gap: 8 }}>
-          <Link href={withChrome('/the-hearth')}>Back to Hearth</Link>
-          <Link href={withChrome('/hearth/spotlights')}>Mentorship Programs</Link>
-          <Link href={withChrome('/hearth/resources')}>Resource Library</Link>
-          <Link href={withChrome('/hearth/forums')}>Discussion Forums</Link>
-        </div>
-      </div>
-    </div>
-  );
 }
 
 const Header = (
@@ -84,16 +59,13 @@ export default function HearthEventsPage() {
   const router = useRouter();
   const chrome = String(router.query.chrome || 'seeker').toLowerCase();
 
-  const withChrome = (path) =>
-    chrome ? `${path}${path.includes('?') ? '&' : '?'}chrome=${chrome}` : path;
-
   const { Layout, activeNav } = makeLayout(chrome);
 
   return (
     <Layout
       title="Events | ForgeTomorrow"
       header={Header}
-      right={<RightRail withChrome={withChrome} />}
+      right={<RightRailPlacementManager surfaceId="seeker/the-hearth/events" />}
       activeNav={activeNav}
     >
       <section
@@ -126,9 +98,7 @@ export default function HearthEventsPage() {
             once we finish setting up scheduling and moderation.
           </p>
           <p style={{ color: '#607D8B', marginTop: 8 }}>
-            For now, you can keep an eye on this space to see that the Events area is
-            wired and ready—content will begin rolling out once we’re confident in the
-            safety and experience.
+            For now, you can keep an eye on this space to see when events are live for the community.
           </p>
         </div>
       </section>

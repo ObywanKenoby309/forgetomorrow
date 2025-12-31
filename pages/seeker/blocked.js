@@ -3,7 +3,7 @@ import React, { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/router';
 import SeekerLayout from '@/components/layouts/SeekerLayout';
-import SeekerRightColumn from '@/components/seeker/SeekerRightColumn';
+import RightRailPlacementManager from '@/components/ads/RightRailPlacementManager';
 import ContactCenterToolbar from '@/components/contact-center/ContactCenterToolbar';
 
 export default function BlockedUsersPage() {
@@ -109,17 +109,11 @@ export default function BlockedUsersPage() {
     </section>
   );
 
-  const RightRail = (
-    <div style={{ display: 'grid', gap: 12 }}>
-      <SeekerRightColumn variant="contacts" />
-    </div>
-  );
-
   return (
     <SeekerLayout
       title="Blocked Users | ForgeTomorrow"
       header={HeaderBox}
-      right={RightRail}
+      right={<RightRailPlacementManager surfaceId="blocked" />}
       activeNav="contacts"
     >
       <ContactCenterToolbar currentTab="blocked" />
