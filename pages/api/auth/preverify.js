@@ -107,6 +107,13 @@ async function verifyRecaptcha(token) {
   }
 }
 
+function parseBoolEnv(v) {
+  const s = String(v ?? '').trim().toLowerCase();
+  if (s === 'true' || s === '1' || s === 'yes') return true;
+  if (s === 'false' || s === '0' || s === 'no') return false;
+  return null;
+}
+
 export default async function handler(req, res) {
   setCors(req, res);
 
@@ -233,20 +240,29 @@ export default async function handler(req, res) {
 
   const verifyUrl = `${baseUrl}/api/auth/verify?token=${token}`;
 
+  // ✅ Use your existing env naming (SMTP_* and EMAIL_*)
+  const smtpHost = process.env.SMTP_HOST || process.env.EMAIL_SERVER;
+  const smtpPort = Number(process.env.SMTP_PORT || process.env.EMAIL_PORT) || 587;
+
+  const smtpSecureEnv = parseBoolEnv(process.env.SMTP_SECURE);
+  const secure = smtpSecureEnv !== null ? smtpSecureEnv : smtpPort === 465; // 587 => false (STARTTLS)
+
+  const smtpUser = process.env.SMTP_USER || process.env.EMAIL_USER;
+  const smtpPass = process.env.SMTP_PASS || process.env.EMAIL_PASSWORD;
+
+  const fromHeader =
+    process.env.EMAIL_FROM ||
+    process.env.SMTP_FROM_SUPPORT ||
+    'ForgeTomorrow <no-reply@forgetomorrow.com>';
+
   // Choose transporter based on environment
   let transporter;
   if (isProd) {
     transporter = nodemailer.createTransport({
-      host: process.env.SMTP_HOST,
-      port: Number(process.env.SMTP_PORT) || 465,
-      secure: true,
-      auth:
-        process.env.SMTP_USER && process.env.SMTP_PASS
-          ? {
-              user: process.env.SMTP_USER,
-              pass: process.env.SMTP_PASS,
-            }
-          : undefined,
+      host: smtpHost,
+      port: smtpPort,
+      secure,
+      auth: smtpUser && smtpPass ? { user: smtpUser, pass: smtpPass } : undefined,
       logger: true,
       debug: true,
     });
@@ -263,11 +279,12 @@ export default async function handler(req, res) {
     });
   }
 
-  await transporter.sendMail({
-    from: 'ForgeTomorrow <no-reply@forgetomorrow.com>',
-    to: normalizedEmail,
-    subject: 'Welcome to ForgeTomorrow — Confirm your account',
-    html: `
+  try {
+    await transporter.sendMail({
+      from: fromHeader,
+      to: normalizedEmail,
+      subject: 'Welcome to ForgeTomorrow — Confirm your account',
+      html: `
     <div style="margin:0;padding:0;background:#020817;">
       <table width="100%" cellPadding="0" cellSpacing="0" role="presentation" style="background:#020817;padding:32px 0;">
         <tr>
@@ -463,18 +480,24 @@ export default async function handler(req, res) {
       </table>
     </div>
   `,
-    text: [
-      `Welcome, ${firstName}.`,
-      ``,
-      `You’re one click away from confirming your ForgeTomorrow account.`,
-      ``,
-      `This link is active for 60 minutes:`,
-      `${verifyUrl}`,
-      ``,
-      `If you didn’t try to create an account, you can safely ignore this email.`,
-      `ForgeTomorrow — professional networking without the noise, with all the tools.`,
-    ].join('\n'),
-  });
+      text: [
+        `Welcome, ${firstName}.`,
+        ``,
+        `You’re one click away from confirming your ForgeTomorrow account.`,
+        ``,
+        `This link is active for 60 minutes:`,
+        `${verifyUrl}`,
+        ``,
+        `If you didn’t try to create an account, you can safely ignore this email.`,
+        `ForgeTomorrow — professional networking without the noise, with all the tools.`,
+      ].join('\n'),
+    });
+  } catch (err) {
+    console.error('[preverify] sendMail failed:', err);
+    return res
+      .status(500)
+      .json({ error: 'Failed to send verification email', details: err.message });
+  }
 
   return res.status(200).json({ success: true });
 }
