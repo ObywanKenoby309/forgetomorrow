@@ -5,8 +5,6 @@ import SeekerLayout from "@/components/layouts/SeekerLayout";
 import Feed from "@/components/feed/Feed";
 import RightRailPlacementManager from "@/components/ads/RightRailPlacementManager";
 
-const CONTENT_MAX_WIDTH = "1320px"; // ⬅ widened to match layout rhythm
-
 export default function FeedPage() {
   return (
     <>
@@ -22,16 +20,19 @@ export default function FeedPage() {
           <section
             aria-label="Your personalized ForgeTomorrow feed header"
             style={{
-              background: "rgba(255,255,255,0.78)",
-              backdropFilter: "blur(14px)",
-              WebkitBackdropFilter: "blur(14px)",
+              // ✅ MATCH PROFILE NUMBERS
               borderRadius: 14,
-              border: "1px solid rgba(255,255,255,0.55)",
-              boxShadow: "0 10px 30px rgba(0,0,0,0.12)",
               padding: "24px 16px",
-              margin: "0 auto",
-              maxWidth: CONTENT_MAX_WIDTH, // ✅ widened
               textAlign: "center",
+              border: "1px solid rgba(255,255,255,0.22)",
+              background: "rgba(255,255,255,0.58)",
+              boxShadow: "0 10px 24px rgba(0,0,0,0.12)",
+              backdropFilter: "blur(10px)",
+              WebkitBackdropFilter: "blur(10px)",
+
+              // keep centered header like other pages
+              margin: "0 auto",
+              maxWidth: 1320,
             }}
           >
             <h1
@@ -59,25 +60,26 @@ export default function FeedPage() {
         }
       >
         <div
-  style={{
-    background: "rgba(255,255,255,0.78)",
-    backdropFilter: "blur(14px)",
-    WebkitBackdropFilter: "blur(14px)",
-    borderRadius: 14,
-    border: "1px solid rgba(255,255,255,0.55)",
-    boxShadow: "0 10px 30px rgba(0,0,0,0.12)",
-    padding: "24px 16px",
+          style={{
+            // ✅ MATCH PROFILE NUMBERS
+            borderRadius: 14,
+            border: "1px solid rgba(255,255,255,0.22)",
+            background: "rgba(255,255,255,0.58)",
+            boxShadow: "0 10px 24px rgba(0,0,0,0.12)",
+            backdropFilter: "blur(10px)",
+            WebkitBackdropFilter: "blur(10px)",
+            padding: "24px 16px",
 
-    // 🔽 THIS IS THE FIX
-    margin: "24px 0 0",   // remove auto-centering
-    width: "100%",        // fill the center column
-    maxWidth: "none",     // remove 1320px clamp
+            // ✅ WIDTH FIX (fill center column, no clamp)
+            margin: "24px 0 0",
+            width: "100%",
+            maxWidth: "none",
 
-    minHeight: "60vh",
-  }}
->
-  <Feed />
-</div>
+            minHeight: "60vh",
+          }}
+        >
+          <Feed />
+        </div>
       </SeekerLayout>
     </>
   );
