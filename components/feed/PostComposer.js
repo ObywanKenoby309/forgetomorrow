@@ -118,7 +118,7 @@ export default function PostComposer({ onPost, onCancel }) {
   };
 
   return (
-    <section className="bg-white rounded-lg shadow p-4">
+    <section className="bg-white rounded-lg shadow p-4 w-full">
       <textarea
         value={text}
         onChange={(e) => setText(e.target.value)}

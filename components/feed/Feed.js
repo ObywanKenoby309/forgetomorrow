@@ -3,30 +3,37 @@ import { useEffect, useState } from 'react';
 import { useSession } from 'next-auth/react';
 import PostComposer from './PostComposer';
 import PostList from './PostList';
+
 export default function Feed() {
   const { data: session } = useSession();
   const [filter, setFilter] = useState('both'); // both | business | personal
   const [showComposer, setShowComposer] = useState(false);
   const [posts, setPosts] = useState([]);
   const [blockedAuthorIds, setBlockedAuthorIds] = useState([]); // ✅ NEW: track blocked authors client-side
+
   const currentUserId = session?.user?.id || 'me';
   const currentUserName =
     session?.user?.name ||
     [session?.user?.firstName, session?.user?.lastName].filter(Boolean).join(' ') ||
     (session?.user?.email?.split('@')[0] ?? '');
   const currentUserAvatar = session?.user?.avatarUrl || session?.user?.image || null;
+
   // Normalize community post shape
   const normalizeCommunityPost = (row) => {
     if (!row) return null;
+
     let body = row.content || row.text || row.body || '';
     let attachments = [];
+
     try {
       const parsed = typeof row.content === 'string' ? JSON.parse(row.content) : null;
       if (parsed?.body) body = parsed.body;
       if (Array.isArray(parsed?.attachments)) attachments = parsed.attachments;
     } catch {}
+
     let reactions = [];
     const rawReactions = row.reactions;
+
     if (Array.isArray(rawReactions)) {
       reactions = rawReactions;
     } else if (typeof rawReactions === 'string') {
@@ -37,10 +44,13 @@ export default function Feed() {
     } else if (rawReactions && typeof rawReactions === 'object') {
       reactions = Array.isArray(rawReactions) ? rawReactions : [];
     }
+
     const reactionCount = Array.isArray(reactions)
       ? reactions.reduce((sum, r) => sum + (typeof r.count === 'number' ? r.count : 0), 0)
       : 0;
+
     const comments = Array.isArray(row.comments) ? row.comments : [];
+
     return {
       id: row.id,
       authorId: row.authorId ?? null,
@@ -56,6 +66,7 @@ export default function Feed() {
       isJob: false,
     };
   };
+
   // Main loader – only community posts
   const reloadFeed = async () => {
     try {
@@ -76,8 +87,8 @@ export default function Feed() {
       const res = await fetch('/api/signal/blocked');
       if (res.ok) {
         const data = await res.json();
-        const dbIds = data.blocked?.map(b => b.id) || [];
-        setBlockedAuthorIds(prev => {
+        const dbIds = data.blocked?.map((b) => b.id) || [];
+        setBlockedAuthorIds((prev) => {
           const merged = new Set([...prev, ...dbIds]);
           return Array.from(merged);
         });
@@ -105,12 +116,14 @@ export default function Feed() {
       type: postFromComposer.type,
       attachments: postFromComposer.attachments ?? [],
     };
+
     try {
       const res = await fetch('/api/feed', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(payload),
       });
+
       if (res.ok) {
         await reloadFeed();
         setShowComposer(false);
@@ -121,15 +134,18 @@ export default function Feed() {
       console.error('Post failed', err);
     }
   };
+
   const handleReply = async (postId, text) => {
     if (!postId || !text || !text.trim()) return;
     const trimmed = text.trim();
+
     try {
       const res = await fetch('/api/feed/comments', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ postId, text: trimmed }),
       });
+
       if (!res.ok) {
         console.error('Comment failed', await res.text());
         return;
@@ -138,6 +154,7 @@ export default function Feed() {
       console.error('Comment error:', err);
       return;
     }
+
     const newComment = {
       userId: currentUserId || null,
       byUserId: currentUserId || null,
@@ -146,6 +163,7 @@ export default function Feed() {
       avatarUrl: currentUserAvatar || null,
       at: new Date().toISOString(),
     };
+
     setPosts((prev) =>
       prev.map((p) =>
         p.id === postId
@@ -157,25 +175,30 @@ export default function Feed() {
       )
     );
   };
+
   const handleReact = async (postId, emoji) => {
     if (!emoji) return;
     if (!postId && postId !== 0) return;
+
     try {
       const res = await fetch('/api/feed/react', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ postId, emoji }),
       });
+
       if (!res.ok) {
         console.error('React failed', await res.text());
         return;
       }
+
       const data = await res.json();
       const reactions = Array.isArray(data.reactions) ? data.reactions : [];
       const reactionCount = reactions.reduce(
         (sum, r) => sum + (typeof r.count === 'number' ? r.count : 0),
         0
       );
+
       setPosts((prev) =>
         prev.map((p) =>
           p.id === postId
@@ -191,9 +214,11 @@ export default function Feed() {
       console.error('React error:', err);
     }
   };
+
   const handleDelete = async (postId) => {
     if (!postId) return;
     setPosts((prev) => prev.filter((p) => p.id !== postId));
+
     try {
       await fetch(`/api/feed/${postId}`, {
         method: 'DELETE',
@@ -202,21 +227,27 @@ export default function Feed() {
       console.error('Delete failed:', err);
     }
   };
+
   // ✅ Global block handler — optimistic add, then merge DB
   const handleBlockAuthor = (authorId) => {
     if (!authorId) return;
+
     setBlockedAuthorIds((prev) => {
       if (prev.includes(authorId)) return prev;
       return [...prev, authorId];
     });
+
     loadBlockedAuthors(); // Merge with DB
   };
+
   // Filter out blocked authors
   const filteredPosts = posts.filter((p) => !blockedAuthorIds.includes(p.authorId));
+
   return (
-    <div className="mx-auto w-full max-w-none px-2 sm:px-6 pt-6 pb-10">
+    // ✅ CHANGED: remove mx-auto so content does not “self-center” as a narrower column
+    <div className="w-full max-w-none px-2 sm:px-6 pt-6 pb-10">
       {/* Filter */}
-      <div className="mb-4 flex items-center justify-between">
+      <div className="mb-4 flex items-center justify-between w-full">
         <div className="flex items-center gap-3">
           <span className="bg-white px-3 py-1 rounded-lg text-sm font-semibold text-gray-800 shadow-sm border border-gray-200">
             Showing
@@ -232,8 +263,9 @@ export default function Feed() {
           </select>
         </div>
       </div>
+
       {/* Composer trigger */}
-      <div className="bg-white rounded-lg shadow p-4 mb-6">
+      <div className="bg-white rounded-lg shadow p-4 mb-6 w-full">
         <button
           onClick={() => setShowComposer(true)}
           className="w-full text-left text-gray-600 px-3 py-2 border border-gray-300 rounded-md hover:bg-gray-50 transition"
@@ -241,6 +273,7 @@ export default function Feed() {
           Start a post…
         </button>
       </div>
+
       <PostList
         posts={filteredPosts} // ✅ Use filtered posts
         filter={filter}
@@ -251,6 +284,7 @@ export default function Feed() {
         currentUserName={currentUserName}
         onBlockAuthor={handleBlockAuthor} // ✅ Pass down
       />
+
       {showComposer && (
         <div
           className="fixed inset-0 z-50 flex items-center justify-center bg-black/40"
