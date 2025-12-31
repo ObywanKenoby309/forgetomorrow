@@ -15,6 +15,7 @@ const stripe = new Stripe(process.env.STRIPE_SECRET_KEY, {
 const BILLING_ENABLED = process.env.NEXT_PUBLIC_BILLING_ENABLED === 'true';
 
 const JWT_SECRET = process.env.NEXTAUTH_SECRET || 'dev-secret-change-in-production';
+const isProd = process.env.NODE_ENV === 'production';
 
 // Password must be 12+ chars with uppercase, lowercase, number, and symbol
 const isStrongPassword = (password) => {
@@ -23,12 +24,23 @@ const isStrongPassword = (password) => {
   return strongRegex.test(password);
 };
 
+function safeStr(v) {
+  return typeof v === 'string' ? v.trim() : '';
+}
+
+function buildFullName(firstName, lastName) {
+  const f = safeStr(firstName);
+  const l = safeStr(lastName);
+  const full = [f, l].filter(Boolean).join(' ').trim();
+  return full;
+}
+
 // Generate a clean unique slug for the new user
 async function generateUniqueSlug(firstName, lastName) {
-  const base = normalizeSlug(`${firstName}-${lastName}`);
+  const base = normalizeSlug(`${safeStr(firstName)}-${safeStr(lastName)}`);
 
   // If name reduces to empty or garbage, fallback
-  const safeBase = base || "user";
+  const safeBase = base || 'user';
 
   let attempt = 0;
   while (attempt < 10) {
@@ -93,12 +105,15 @@ export default async function handler(req, res) {
         .json({ error: 'Link expired. Please sign up again.' });
     }
 
-    const email = record.email.toLowerCase();
-    const firstName = record.firstName;
-    const lastName = record.lastName;
+    const email = safeStr(record.email).toLowerCase();
+
+    // ✅ Fix "Unnamed": always produce safe first/last/name values
+    const firstName = safeStr(record.firstName) || 'User';
+    const lastName = safeStr(record.lastName);
+    const fullName = buildFullName(firstName, lastName) || 'User';
 
     // Normalize plan
-    const planFromToken = (record.plan || 'FREE').toUpperCase();
+    const planFromToken = safeStr(record.plan || 'FREE').toUpperCase();
     const validPlans = ['FREE', 'PRO', 'COACH', 'SMALL_BIZ', 'ENTERPRISE'];
     const planForUser = validPlans.includes(planFromToken)
       ? planFromToken
@@ -116,7 +131,7 @@ export default async function handler(req, res) {
     // Hash password
     const passwordHash = await bcrypt.hash(password, 12);
 
-    // NEW — Create the user's slug
+    // Create the user's slug
     const slug = await generateUniqueSlug(firstName, lastName);
 
     // Create the user
@@ -127,10 +142,10 @@ export default async function handler(req, res) {
         emailVerified: true,
         firstName,
         lastName,
-        name: `${firstName} ${lastName}`,
+        name: fullName,
         plan: planForUser,
         newsletter: record.newsletter ?? false,
-        slug,  // ←←← NEW FIELD
+        slug,
       },
     });
 
@@ -139,25 +154,25 @@ export default async function handler(req, res) {
 
     const plan = user.plan;
 
+    // Helper: set auth cookie consistently (so login sticks in prod)
+    const cookieParts = [
+      `auth=${sign(
+        { userId: user.id, email: user.email, plan, role: user.role },
+        JWT_SECRET,
+        { expiresIn: '30d' }
+      )}`,
+      'Path=/',
+      'HttpOnly',
+      'SameSite=Lax',
+      'Max-Age=2592000',
+    ];
+    if (isProd) cookieParts.push('Secure');
+
     // ─────────────────────────────────────────
     // BILLING DISABLED → instant login
     // ─────────────────────────────────────────
     if (!BILLING_ENABLED) {
-      const jwt = sign(
-        {
-          userId: user.id,
-          email: user.email,
-          plan,
-          role: user.role,
-        },
-        JWT_SECRET,
-        { expiresIn: '30d' }
-      );
-
-      res.setHeader(
-        'Set-Cookie',
-        `auth=${jwt}; Path=/; HttpOnly; SameSite=Lax; Max-Age=2592000`
-      );
+      res.setHeader('Set-Cookie', cookieParts.join('; '));
 
       const isPaidPlan = ['PRO', 'COACH', 'SMALL_BIZ'].includes(plan);
       return res.json({ success: true, billingDeferred: isPaidPlan, slug: user.slug });
@@ -204,22 +219,7 @@ export default async function handler(req, res) {
     }
 
     // FREE + ENTERPRISE → instant login
-    const jwt = sign(
-      {
-        userId: user.id,
-        email: user.email,
-        plan,
-        role: user.role,
-      },
-      JWT_SECRET,
-      { expiresIn: '30d' }
-    );
-
-    res.setHeader(
-      'Set-Cookie',
-      `auth=${jwt}; Path=/; HttpOnly; SameSite=Lax; Max-Age=2592000`
-    );
-
+    res.setHeader('Set-Cookie', cookieParts.join('; '));
     return res.json({ success: true, slug: user.slug });
   } catch (err) {
     console.error('Verify-email POST error:', err);
