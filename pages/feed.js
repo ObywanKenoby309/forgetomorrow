@@ -5,6 +5,8 @@ import SeekerLayout from "@/components/layouts/SeekerLayout";
 import Feed from "@/components/feed/Feed";
 import RightRailPlacementManager from "@/components/ads/RightRailPlacementManager";
 
+const CONTENT_MAX_WIDTH = "1320px"; // ⬅ widened to match layout rhythm
+
 export default function FeedPage() {
   return (
     <>
@@ -14,7 +16,6 @@ export default function FeedPage() {
 
       <SeekerLayout
         title="Your Feed | ForgeTomorrow"
-        // ✅ Replace SeekerRightColumn with the new ad-ready right-rail system
         right={<RightRailPlacementManager />}
         activeNav="feed"
         header={
@@ -29,7 +30,7 @@ export default function FeedPage() {
               boxShadow: "0 10px 30px rgba(0,0,0,0.12)",
               padding: "24px 16px",
               margin: "0 auto",
-              maxWidth: "1200px",
+              maxWidth: CONTENT_MAX_WIDTH, // ✅ widened
               textAlign: "center",
             }}
           >
@@ -47,7 +48,7 @@ export default function FeedPage() {
             <p
               style={{
                 margin: "8px auto 0",
-                color: "#546E7A", // readable, matches Hearth tone
+                color: "#546E7A",
                 maxWidth: 720,
                 fontSize: 16,
               }}
@@ -67,11 +68,10 @@ export default function FeedPage() {
             boxShadow: "0 10px 30px rgba(0,0,0,0.12)",
             padding: "24px 16px",
             margin: "24px auto 0",
-            maxWidth: "1200px",
+            maxWidth: CONTENT_MAX_WIDTH, // ✅ widened
             minHeight: "60vh",
           }}
         >
-          {/* ✅ Removed remote jobs filter label (do not remove the actual Feed filter dropdown) */}
           <Feed />
         </div>
       </SeekerLayout>
