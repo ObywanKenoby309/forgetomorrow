@@ -14,6 +14,44 @@ const REGISTRATION_LOCK = process.env.REGISTRATION_LOCK === '1';
 // Use this ONLY for controlled internal testing.
 const RECAPTCHA_DISABLED = process.env.RECAPTCHA_DISABLED === '1';
 
+// ─────────────────────────────────────────────────────────────
+// CORS (minimal) — fixes OPTIONS preflight "Method Not Allowed"
+// ─────────────────────────────────────────────────────────────
+function getOrigin(hostOrUrl) {
+  try {
+    if (!hostOrUrl) return '';
+    const s = String(hostOrUrl);
+    if (s.startsWith('http://') || s.startsWith('https://')) return new URL(s).origin;
+    // If only host provided, treat as https origin
+    return `https://${s.replace(/\/+$/, '')}`;
+  } catch {
+    return '';
+  }
+}
+
+function setCors(req, res) {
+  const reqOrigin = String(req.headers.origin || '');
+  const allowFromEnv = [
+    getOrigin(process.env.NEXT_PUBLIC_OPEN_SITE),
+    getOrigin(process.env.NEXT_PUBLIC_SITE_URL),
+  ].filter(Boolean);
+
+  // If request origin matches one of our known site origins, allow it
+  const allowOrigin =
+    reqOrigin && allowFromEnv.includes(reqOrigin)
+      ? reqOrigin
+      : !isProd
+      ? reqOrigin || '*'
+      : allowFromEnv[0] || '';
+
+  if (allowOrigin) {
+    res.setHeader('Access-Control-Allow-Origin', allowOrigin);
+  }
+  res.setHeader('Vary', 'Origin');
+  res.setHeader('Access-Control-Allow-Methods', 'POST,OPTIONS');
+  res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization');
+}
+
 // BREVO NEWSLETTER AUTO-ADD
 async function addToBrevo(email, firstName, lastName) {
   if (!process.env.BREVO_API_KEY || !process.env.BREVO_LIST_ID) {
@@ -70,6 +108,13 @@ async function verifyRecaptcha(token) {
 }
 
 export default async function handler(req, res) {
+  setCors(req, res);
+
+  // ✅ Handle preflight cleanly
+  if (req.method === 'OPTIONS') {
+    return res.status(200).end();
+  }
+
   if (req.method !== 'POST') {
     return res.status(405).json({ error: 'Method not allowed' });
   }
@@ -150,9 +195,7 @@ export default async function handler(req, res) {
 
   // Create verification token row
   const token = uuidv4();
-  const expiresAt = new Date(
-    Date.now() + VERIFICATION_EXPIRY_MINUTES * 60 * 1000
-  );
+  const expiresAt = new Date(Date.now() + VERIFICATION_EXPIRY_MINUTES * 60 * 1000);
 
   try {
     await prisma.verificationToken.create({
@@ -176,8 +219,7 @@ export default async function handler(req, res) {
   }
 
   // Newsletter → Brevo
-  const wantsNewsletter =
-    newsletter === 'on' || newsletter === true || newsletter === 'true';
+  const wantsNewsletter = newsletter === 'on' || newsletter === true || newsletter === 'true';
   if (wantsNewsletter) {
     console.log('[preverify] User opted into newsletter; sending to Brevo');
     await addToBrevo(normalizedEmail, firstName, lastName);
@@ -222,10 +264,10 @@ export default async function handler(req, res) {
   }
 
   await transporter.sendMail({
-  from: 'ForgeTomorrow <no-reply@forgetomorrow.com>',
-  to: normalizedEmail,
-  subject: 'Welcome to ForgeTomorrow — Confirm your account',
-  html: `
+    from: 'ForgeTomorrow <no-reply@forgetomorrow.com>',
+    to: normalizedEmail,
+    subject: 'Welcome to ForgeTomorrow — Confirm your account',
+    html: `
     <div style="margin:0;padding:0;background:#020817;">
       <table width="100%" cellPadding="0" cellSpacing="0" role="presentation" style="background:#020817;padding:32px 0;">
         <tr>
@@ -421,19 +463,18 @@ export default async function handler(req, res) {
       </table>
     </div>
   `,
-  text: [
-    `Welcome, ${firstName}.`,
-    ``,
-    `You’re one click away from confirming your ForgeTomorrow account.`,
-    ``,
-    `This link is active for 60 minutes:`,
-    `${verifyUrl}`,
-    ``,
-    `If you didn’t try to create an account, you can safely ignore this email.`,
-    `ForgeTomorrow — professional networking without the noise, with all the tools.`,
-  ].join('\n'),
-});
-
+    text: [
+      `Welcome, ${firstName}.`,
+      ``,
+      `You’re one click away from confirming your ForgeTomorrow account.`,
+      ``,
+      `This link is active for 60 minutes:`,
+      `${verifyUrl}`,
+      ``,
+      `If you didn’t try to create an account, you can safely ignore this email.`,
+      `ForgeTomorrow — professional networking without the noise, with all the tools.`,
+    ].join('\n'),
+  });
 
   return res.status(200).json({ success: true });
 }
