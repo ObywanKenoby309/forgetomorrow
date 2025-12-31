@@ -59,21 +59,25 @@ export default function FeedPage() {
         }
       >
         <div
-          style={{
-            background: "rgba(255,255,255,0.78)",
-            backdropFilter: "blur(14px)",
-            WebkitBackdropFilter: "blur(14px)",
-            borderRadius: 14,
-            border: "1px solid rgba(255,255,255,0.55)",
-            boxShadow: "0 10px 30px rgba(0,0,0,0.12)",
-            padding: "24px 16px",
-            margin: "24px auto 0",
-            maxWidth: CONTENT_MAX_WIDTH, // ✅ widened
-            minHeight: "60vh",
-          }}
-        >
-          <Feed />
-        </div>
+  style={{
+    background: "rgba(255,255,255,0.78)",
+    backdropFilter: "blur(14px)",
+    WebkitBackdropFilter: "blur(14px)",
+    borderRadius: 14,
+    border: "1px solid rgba(255,255,255,0.55)",
+    boxShadow: "0 10px 30px rgba(0,0,0,0.12)",
+    padding: "24px 16px",
+
+    // 🔽 THIS IS THE FIX
+    margin: "24px 0 0",   // remove auto-centering
+    width: "100%",        // fill the center column
+    maxWidth: "none",     // remove 1320px clamp
+
+    minHeight: "60vh",
+  }}
+>
+  <Feed />
+</div>
       </SeekerLayout>
     </>
   );
