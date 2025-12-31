@@ -24,20 +24,9 @@ const isStrongPassword = (password) => {
   return strongRegex.test(password);
 };
 
-function safeStr(v) {
-  return typeof v === 'string' ? v.trim() : '';
-}
-
-function buildFullName(firstName, lastName) {
-  const f = safeStr(firstName);
-  const l = safeStr(lastName);
-  const full = [f, l].filter(Boolean).join(' ').trim();
-  return full;
-}
-
 // Generate a clean unique slug for the new user
 async function generateUniqueSlug(firstName, lastName) {
-  const base = normalizeSlug(`${safeStr(firstName)}-${safeStr(lastName)}`);
+  const base = normalizeSlug(`${firstName}-${lastName}`);
 
   // If name reduces to empty or garbage, fallback
   const safeBase = base || 'user';
@@ -65,6 +54,18 @@ async function generateUniqueSlug(firstName, lastName) {
 
   // If all attempts fail — generate a fully random slug
   return `user-${randomSuffix(8)}`;
+}
+
+function buildAuthCookie(jwt) {
+  const parts = [
+    `auth=${jwt}`,
+    'Path=/',
+    'HttpOnly',
+    'SameSite=Lax',
+    'Max-Age=2592000', // 30d
+  ];
+  if (isProd) parts.push('Secure');
+  return parts.join('; ');
 }
 
 export default async function handler(req, res) {
@@ -105,19 +106,14 @@ export default async function handler(req, res) {
         .json({ error: 'Link expired. Please sign up again.' });
     }
 
-    const email = safeStr(record.email).toLowerCase();
-
-    // ✅ Fix "Unnamed": always produce safe first/last/name values
-    const firstName = safeStr(record.firstName) || 'User';
-    const lastName = safeStr(record.lastName);
-    const fullName = buildFullName(firstName, lastName) || 'User';
+    const email = record.email.toLowerCase();
+    const firstName = record.firstName;
+    const lastName = record.lastName;
 
     // Normalize plan
-    const planFromToken = safeStr(record.plan || 'FREE').toUpperCase();
+    const planFromToken = (record.plan || 'FREE').toUpperCase();
     const validPlans = ['FREE', 'PRO', 'COACH', 'SMALL_BIZ', 'ENTERPRISE'];
-    const planForUser = validPlans.includes(planFromToken)
-      ? planFromToken
-      : 'FREE';
+    const planForUser = validPlans.includes(planFromToken) ? planFromToken : 'FREE';
 
     // Safety: if user already exists, abort
     const existing = await prisma.user.findUnique({ where: { email } });
@@ -142,7 +138,7 @@ export default async function handler(req, res) {
         emailVerified: true,
         firstName,
         lastName,
-        name: fullName,
+        name: `${firstName} ${lastName}`,
         plan: planForUser,
         newsletter: record.newsletter ?? false,
         slug,
@@ -154,25 +150,26 @@ export default async function handler(req, res) {
 
     const plan = user.plan;
 
-    // Helper: set auth cookie consistently (so login sticks in prod)
-    const cookieParts = [
-      `auth=${sign(
-        { userId: user.id, email: user.email, plan, role: user.role },
-        JWT_SECRET,
-        { expiresIn: '30d' }
-      )}`,
-      'Path=/',
-      'HttpOnly',
-      'SameSite=Lax',
-      'Max-Age=2592000',
-    ];
-    if (isProd) cookieParts.push('Secure');
-
     // ─────────────────────────────────────────
     // BILLING DISABLED → instant login
     // ─────────────────────────────────────────
     if (!BILLING_ENABLED) {
-      res.setHeader('Set-Cookie', cookieParts.join('; '));
+      const jwt = sign(
+        {
+          userId: user.id,
+          email: user.email,
+          name: user.name,          // ✅ NEW: include name so UI doesn’t show “Unnamed”
+          firstName: user.firstName,
+          lastName: user.lastName,
+          plan,
+          role: user.role,
+          slug: user.slug,
+        },
+        JWT_SECRET,
+        { expiresIn: '30d' }
+      );
+
+      res.setHeader('Set-Cookie', buildAuthCookie(jwt));
 
       const isPaidPlan = ['PRO', 'COACH', 'SMALL_BIZ'].includes(plan);
       return res.json({ success: true, billingDeferred: isPaidPlan, slug: user.slug });
@@ -219,7 +216,23 @@ export default async function handler(req, res) {
     }
 
     // FREE + ENTERPRISE → instant login
-    res.setHeader('Set-Cookie', cookieParts.join('; '));
+    const jwt = sign(
+      {
+        userId: user.id,
+        email: user.email,
+        name: user.name,          // ✅ NEW: include name so UI doesn’t show “Unnamed”
+        firstName: user.firstName,
+        lastName: user.lastName,
+        plan,
+        role: user.role,
+        slug: user.slug,
+      },
+      JWT_SECRET,
+      { expiresIn: '30d' }
+    );
+
+    res.setHeader('Set-Cookie', buildAuthCookie(jwt));
+
     return res.json({ success: true, slug: user.slug });
   } catch (err) {
     console.error('Verify-email POST error:', err);
