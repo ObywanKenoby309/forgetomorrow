@@ -27,6 +27,7 @@ export default function SeekerLayout({
   forceChrome, // 'seeker' | 'coach' | 'recruiter-smb' | 'recruiter-ent'
   rightVariant = 'dark', // 'dark' | 'light'
   rightWidth = 260,
+  leftWidth = 240, // ✅ NEW: allows per-page override without changing defaults
   gap = 12,
   pad = 16,
 }) {
@@ -179,7 +180,9 @@ export default function SeekerLayout({
   // ---- DESKTOP VS MOBILE GRID ----
   const desktopGrid = {
     display: 'grid',
-    gridTemplateColumns: `240px minmax(0, 1fr) ${hasRight ? `${rightWidth}px` : '0px'}`,
+    gridTemplateColumns: `${leftWidth}px minmax(0, 1fr) ${
+      hasRight ? `${rightWidth}px` : '0px'
+    }`,
     gridTemplateRows: 'auto 1fr',
     gridTemplateAreas: hasRight
       ? `"left header right"

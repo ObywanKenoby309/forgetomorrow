@@ -291,7 +291,7 @@ export default function Feed() {
           onClick={() => setShowComposer(false)}
         >
           <div
-            className="bg-white rounded-lg shadow-xl max-w-lg w-full p-4"
+            className="bg-white rounded-lg shadow-xl max-w-2x1 w-full p-4"
             onClick={(e) => e.stopPropagation()}
           >
             <PostComposer
