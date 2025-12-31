@@ -199,15 +199,9 @@ export default function SeekerContactCenter() {
     }
   };
 
-  const openGroup = (g) => {
-    console.log('Open group (future)', g);
-  };
-  const openPage = (p) => {
-    console.log('Open page (future)', p);
-  };
-  const openNewsletter = (n) => {
-    console.log('Open newsletter (future)', n);
-  };
+  const openGroup = (g) => console.log('Open group (future)', g);
+  const openPage = (p) => console.log('Open page (future)', p);
+  const openNewsletter = (n) => console.log('Open newsletter (future)', n);
 
   // ✅ Profile-glass numbers (canonical)
   const GLASS = {
@@ -217,6 +211,14 @@ export default function SeekerContactCenter() {
     boxShadow: '0 10px 24px rgba(0,0,0,0.12)',
     backdropFilter: 'blur(10px)',
     WebkitBackdropFilter: 'blur(10px)',
+  };
+
+  // ✅ White readable inner card (accessibility layer on top of glass)
+  const WHITE_CARD = {
+    background: 'rgba(255,255,255,0.92)',
+    border: '1px solid rgba(0,0,0,0.08)',
+    borderRadius: 12,
+    boxShadow: '0 2px 10px rgba(0,0,0,0.08)',
   };
 
   // --- Header card (glass) ---
@@ -245,12 +247,9 @@ export default function SeekerContactCenter() {
           maxWidth: 720,
         }}
       >
-        See who you&apos;re connected with, who&apos;s trying to reach you, and who&apos;s
-        been looking at your profile. When you&apos;re ready to talk, jump into{' '}
-        <Link
-          href={withChrome('/seeker/messages')}
-          style={{ color: '#FF7043', fontWeight: 700 }}
-        >
+        See who you&apos;re connected with, who&apos;s trying to reach you, and who&apos;s been
+        looking at your profile. When you&apos;re ready to talk, jump into{' '}
+        <Link href={withChrome('/seeker/messages')} style={{ color: '#FF7043', fontWeight: 700 }}>
           The Signal
         </Link>
         .
@@ -277,11 +276,12 @@ export default function SeekerContactCenter() {
   const nothingNeedingAttention =
     incomingRequests.length === 0 && outgoingRequests.length === 0;
 
-  // ✅ Needs attention card (glass + subtle accent border)
-  const attentionCardStyle = {
+  // ✅ Page-level glass container (lets wallpaper breathe, keeps page cohesive)
+  const PAGE_GLASS_WRAP = {
     ...GLASS,
     padding: 16,
-    border: `1px solid ${nothingNeedingAttention ? 'rgba(255,255,255,0.22)' : '#FFCCBC'}`,
+    margin: '24px 0 0',
+    width: '100%',
   };
 
   return (
@@ -291,257 +291,232 @@ export default function SeekerContactCenter() {
       right={<RightRailPlacementManager surfaceId="contact_center" />}
       activeNav="contacts"
     >
-      {/* ✅ Toolbar component */}
-      <ContactCenterToolbar currentTab="contacts" />
+      <div style={PAGE_GLASS_WRAP}>
+        {/* Toolbar on readable white card (matches mock) */}
+        <section style={{ ...WHITE_CARD, padding: 12 }}>
+          <ContactCenterToolbar currentTab="contacts" />
+        </section>
 
-      {/* Needs Your Attention */}
-      <section style={attentionCardStyle}>
-        <h2
-          style={{
-            color: '#FF7043',
-            marginTop: 0,
-            marginBottom: 8,
-          }}
-        >
-          Needs your attention
-        </h2>
-        {nothingNeedingAttention ? (
-          <p style={{ color: '#607D8B', fontSize: 14, marginBottom: 0 }}>
-            You&apos;re all caught up. When new invites or requests come in, they&apos;ll
-            appear here first.
-          </p>
-        ) : (
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
-            {incomingRequests.length > 0 && (
-              <div>
-                <h3
-                  style={{
-                    margin: 0,
-                    fontSize: 14,
-                    color: '#374151',
-                    fontWeight: 700,
-                  }}
-                >
-                  Invites waiting on you
-                </h3>
-                <IncomingRequestsList
-                  items={incomingPreview}
-                  onAccept={handleAccept}
-                  onDecline={handleDecline}
-                  onViewProfile={handleViewProfile}
-                />
-                <div style={{ marginTop: 6 }}>
-                  <Link
-                    href={withChrome('/seeker/contact-incoming')}
-                    style={{ color: '#FF7043', fontWeight: 700, fontSize: 13 }}
-                  >
-                    Review all invites →
-                  </Link>
+        {/* Needs Your Attention (white card inside glass) */}
+        <section style={{ ...WHITE_CARD, padding: 16, marginTop: 12 }}>
+          <h2 style={{ color: '#FF7043', marginTop: 0, marginBottom: 8 }}>
+            Needs your attention
+          </h2>
+
+          {nothingNeedingAttention ? (
+            <p style={{ color: '#607D8B', fontSize: 14, marginBottom: 0 }}>
+              You&apos;re all caught up. When new invites or requests come in, they&apos;ll appear
+              here first.
+            </p>
+          ) : (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+              {incomingRequests.length > 0 && (
+                <div>
+                  <h3 style={{ margin: 0, fontSize: 14, color: '#374151', fontWeight: 700 }}>
+                    Invites waiting on you
+                  </h3>
+                  <IncomingRequestsList
+                    items={incomingPreview}
+                    onAccept={handleAccept}
+                    onDecline={handleDecline}
+                    onViewProfile={handleViewProfile}
+                  />
+                  <div style={{ marginTop: 6 }}>
+                    <Link
+                      href={withChrome('/seeker/contact-incoming')}
+                      style={{ color: '#FF7043', fontWeight: 700, fontSize: 13 }}
+                    >
+                      Review all invites →
+                    </Link>
+                  </div>
                 </div>
-              </div>
-            )}
+              )}
 
-            {outgoingRequests.length > 0 && (
-              <div>
-                <h3
-                  style={{
-                    margin: 0,
-                    fontSize: 14,
-                    color: '#374151',
-                    fontWeight: 700,
-                  }}
-                >
-                  Requests you&apos;ve sent
-                </h3>
-                <OutgoingRequestsList
-                  items={outgoingPreview}
-                  onCancel={handleCancel}
-                  onViewProfile={handleViewProfile}
-                />
-                <div style={{ marginTop: 6 }}>
-                  <Link
-                    href={withChrome('/seeker/contact-outgoing')}
-                    style={{ color: '#FF7043', fontWeight: 700, fontSize: 13 }}
-                  >
-                    Review all requests →
-                  </Link>
+              {outgoingRequests.length > 0 && (
+                <div>
+                  <h3 style={{ margin: 0, fontSize: 14, color: '#374151', fontWeight: 700 }}>
+                    Requests you&apos;ve sent
+                  </h3>
+                  <OutgoingRequestsList
+                    items={outgoingPreview}
+                    onCancel={handleCancel}
+                    onViewProfile={handleViewProfile}
+                  />
+                  <div style={{ marginTop: 6 }}>
+                    <Link
+                      href={withChrome('/seeker/contact-outgoing')}
+                      style={{ color: '#FF7043', fontWeight: 700, fontSize: 13 }}
+                    >
+                      Review all requests →
+                    </Link>
+                  </div>
                 </div>
-              </div>
-            )}
-          </div>
-        )}
-      </section>
-
-      {/* Contacts + Profile Views side-by-side (but roomy) */}
-      <section
-        style={{
-          display: 'grid',
-          gap: 12,
-          gridTemplateColumns: 'minmax(0, 1.4fr) minmax(0, 1fr)',
-        }}
-      >
-        {/* Contacts */}
-        <section
-          style={{
-            ...GLASS,
-            padding: 16,
-          }}
-        >
-          <div
-            style={{
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'space-between',
-              marginBottom: 8,
-            }}
-          >
-            <h2 style={{ color: '#FF7043', margin: 0 }}>Contacts</h2>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-              <span
-                style={{
-                  fontSize: 12,
-                  fontWeight: 800,
-                  padding: '2px 8px',
-                  borderRadius: 999,
-                  background: 'rgba(255,255,255,0.75)',
-                  color: '#334155',
-                  border: '1px solid rgba(0,0,0,0.06)',
-                }}
-              >
-                {contacts.length}
-              </span>
-              <button
-                type="button"
-                onClick={() => setShowContacts((v) => !v)}
-                style={{
-                  fontSize: 13,
-                  padding: '6px 10px',
-                  border: '1px solid rgba(0,0,0,0.12)',
-                  borderRadius: 8,
-                  background: 'rgba(255,255,255,0.75)',
-                  cursor: 'pointer',
-                }}
-                aria-expanded={showContacts}
-                aria-controls="contacts-panel"
-              >
-                {showContacts ? 'Hide' : 'Show'}
-              </button>
-            </div>
-          </div>
-
-          {showContacts && (
-            <div id="contacts-panel">
-              <ContactsList
-                contacts={topContacts}
-                onViewProfile={handleViewProfile}
-                onDisconnect={handleDisconnect}
-                loading={loading}
-              />
-              <div style={{ marginTop: 8 }}>
-                <Link href={withChrome('/seeker/contacts')} style={{ color: '#FF7043', fontWeight: 700 }}>
-                  View all contacts →
-                </Link>
-              </div>
+              )}
             </div>
           )}
         </section>
 
-        {/* Recent Profile Views */}
+        {/* Contacts + Profile Views (white cards inside glass) */}
         <section
           style={{
-            ...GLASS,
-            padding: 16,
+            display: 'grid',
+            gap: 12,
+            gridTemplateColumns: 'minmax(0, 1.4fr) minmax(0, 1fr)',
+            marginTop: 12,
           }}
         >
-          <h2 style={{ color: '#FF7043', marginTop: 0 }}>Recent Profile Views</h2>
-          {pvLoading ? (
-            <p style={{ color: '#607D8B', fontSize: 14 }}>Loading views…</p>
-          ) : profileViews.length === 0 ? (
-            <p style={{ color: '#607D8B', fontSize: 14 }}>
-              No one has viewed your profile yet. Once recruiters, coaches, or peers visit your profile,
-              you&apos;ll see them here.
-            </p>
-          ) : (
-            <ul
+          {/* Contacts */}
+          <section style={{ ...WHITE_CARD, padding: 16 }}>
+            <div
               style={{
-                listStyle: 'none',
-                margin: 0,
-                padding: 0,
-                display: 'grid',
-                gap: 8,
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+                marginBottom: 8,
               }}
             >
-              {profileViews.map((v) => (
-                <li
-                  key={v.id}
+              <h2 style={{ color: '#FF7043', margin: 0 }}>Contacts</h2>
+
+              <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                <span
                   style={{
-                    display: 'flex',
-                    flexDirection: 'column',
-                    padding: '6px 8px',
-                    borderRadius: 8,
-                    background: 'rgba(255,255,255,0.72)',
+                    fontSize: 12,
+                    fontWeight: 800,
+                    padding: '2px 8px',
+                    borderRadius: 999,
+                    background: 'rgba(0,0,0,0.04)',
+                    color: '#334155',
                     border: '1px solid rgba(0,0,0,0.06)',
                   }}
                 >
-                  <span
+                  {contacts.length}
+                </span>
+
+                <button
+                  type="button"
+                  onClick={() => setShowContacts((v) => !v)}
+                  style={{
+                    fontSize: 13,
+                    padding: '6px 10px',
+                    border: '1px solid rgba(0,0,0,0.12)',
+                    borderRadius: 8,
+                    background: 'rgba(255,255,255,0.92)',
+                    cursor: 'pointer',
+                  }}
+                  aria-expanded={showContacts}
+                  aria-controls="contacts-panel"
+                >
+                  {showContacts ? 'Hide' : 'Show'}
+                </button>
+              </div>
+            </div>
+
+            {showContacts && (
+              <div id="contacts-panel">
+                <ContactsList
+                  contacts={topContacts}
+                  onViewProfile={handleViewProfile}
+                  onDisconnect={handleDisconnect}
+                  loading={loading}
+                />
+                <div style={{ marginTop: 8 }}>
+                  <Link
+                    href={withChrome('/seeker/contacts')}
+                    style={{ color: '#FF7043', fontWeight: 700 }}
+                  >
+                    View all contacts →
+                  </Link>
+                </div>
+              </div>
+            )}
+          </section>
+
+          {/* Recent Profile Views */}
+          <section style={{ ...WHITE_CARD, padding: 16 }}>
+            <h2 style={{ color: '#FF7043', marginTop: 0 }}>Recent Profile Views</h2>
+
+            {pvLoading ? (
+              <p style={{ color: '#607D8B', fontSize: 14 }}>Loading views…</p>
+            ) : profileViews.length === 0 ? (
+              <p style={{ color: '#607D8B', fontSize: 14 }}>
+                No one has viewed your profile yet. Once recruiters, coaches, or peers visit your
+                profile, you&apos;ll see them here.
+              </p>
+            ) : (
+              <ul
+                style={{
+                  listStyle: 'none',
+                  margin: 0,
+                  padding: 0,
+                  display: 'grid',
+                  gap: 8,
+                }}
+              >
+                {profileViews.map((v) => (
+                  <li
+                    key={v.id}
                     style={{
-                      fontWeight: 600,
-                      color: v.viewer?.name ? '#111827' : '#6B7280',
-                      fontSize: 14,
+                      display: 'flex',
+                      flexDirection: 'column',
+                      padding: '8px 10px',
+                      borderRadius: 10,
+                      background: 'rgba(0,0,0,0.03)',
+                      border: '1px solid rgba(0,0,0,0.06)',
                     }}
                   >
-                    {v.viewer?.name || 'Anonymous ForgeTomorrow member'}
-                  </span>
-                  <span style={{ fontSize: 12, color: '#6B7280' }}>
-                    Viewed your profile • {formatDateTime(v.createdAt)}
-                  </span>
-                </li>
-              ))}
-            </ul>
-          )}
-          <div style={{ marginTop: 8 }}>
-            <Link
-              href={withChrome('/seeker/profile-views')}
-              style={{ color: '#FF7043', fontWeight: 700 }}
-            >
-              View all profile views →
-            </Link>
-          </div>
+                    <span
+                      style={{
+                        fontWeight: 700,
+                        color: v.viewer?.name ? '#111827' : '#6B7280',
+                        fontSize: 14,
+                      }}
+                    >
+                      {v.viewer?.name || 'Anonymous ForgeTomorrow member'}
+                    </span>
+                    <span style={{ fontSize: 12, color: '#6B7280' }}>
+                      Viewed your profile • {formatDateTime(v.createdAt)}
+                    </span>
+                  </li>
+                ))}
+              </ul>
+            )}
+
+            <div style={{ marginTop: 8 }}>
+              <Link
+                href={withChrome('/seeker/profile-views')}
+                style={{ color: '#FF7043', fontWeight: 700 }}
+              >
+                View all profile views →
+              </Link>
+            </div>
+          </section>
         </section>
-      </section>
 
-      {/* Groups */}
-      <section
-        style={{
-          ...GLASS,
-          padding: 16,
-        }}
-      >
-        <h2 style={{ color: '#FF7043', marginTop: 0 }}>Groups</h2>
-        <GroupsList groups={groups} onOpen={openGroup} />
-      </section>
+        {/* Groups / Pages / Newsletters — 3 columns on desktop (your preference + my recommendation) */}
+        <section
+          style={{
+            display: 'grid',
+            gap: 12,
+            gridTemplateColumns: 'repeat(3, minmax(0, 1fr))',
+            marginTop: 12,
+          }}
+        >
+          <section style={{ ...WHITE_CARD, padding: 16 }}>
+            <h2 style={{ color: '#FF7043', marginTop: 0 }}>Groups</h2>
+            <GroupsList groups={groups} onOpen={openGroup} />
+          </section>
 
-      {/* Pages */}
-      <section
-        style={{
-          ...GLASS,
-          padding: 16,
-        }}
-      >
-        <h2 style={{ color: '#FF7043', marginTop: 0 }}>Pages</h2>
-        <PagesList pages={pages} onOpen={openPage} />
-      </section>
+          <section style={{ ...WHITE_CARD, padding: 16 }}>
+            <h2 style={{ color: '#FF7043', marginTop: 0 }}>Pages</h2>
+            <PagesList pages={pages} onOpen={openPage} />
+          </section>
 
-      {/* Newsletters */}
-      <section
-        style={{
-          ...GLASS,
-          padding: 16,
-        }}
-      >
-        <h2 style={{ color: '#FF7043', marginTop: 0 }}>Newsletters</h2>
-        <NewslettersList items={newsletters} onOpen={openNewsletter} />
-      </section>
+          <section style={{ ...WHITE_CARD, padding: 16 }}>
+            <h2 style={{ color: '#FF7043', marginTop: 0 }}>Newsletters</h2>
+            <NewslettersList items={newsletters} onOpen={openNewsletter} />
+          </section>
+        </section>
+      </div>
     </SeekerLayout>
   );
 }
