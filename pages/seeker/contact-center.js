@@ -17,18 +17,22 @@ export default function SeekerContactCenter() {
   const chrome = String(router.query.chrome || '').toLowerCase();
   const withChrome = (path) =>
     chrome ? `${path}${path.includes('?') ? '&' : '?'}chrome=${chrome}` : path;
+
   // --- Live data from /api/contacts/summary ---
   const [contacts, setContacts] = useState([]);
   const [incomingRequests, setIncomingRequests] = useState([]);
   const [outgoingRequests, setOutgoingRequests] = useState([]);
   const [loading, setLoading] = useState(true);
+
   // Future: groups/pages/newsletters; keep empty for launch
   const [groups] = useState([]);
   const [pages] = useState([]);
   const [newsletters] = useState([]);
+
   // --- Recent profile views ---
   const [profileViews, setProfileViews] = useState([]);
   const [pvLoading, setPvLoading] = useState(true);
+
   const reloadSummary = async () => {
     try {
       setLoading(true);
@@ -53,6 +57,7 @@ export default function SeekerContactCenter() {
       setLoading(false);
     }
   };
+
   const reloadProfileViews = async () => {
     try {
       setPvLoading(true);
@@ -71,10 +76,12 @@ export default function SeekerContactCenter() {
       setPvLoading(false);
     }
   };
+
   useEffect(() => {
     reloadSummary();
     reloadProfileViews();
   }, []);
+
   // --- Counts for toolbar badges (toolbar handles its own now, but kept for compatibility) ---
   const counts = useMemo(
     () => ({
@@ -85,6 +92,7 @@ export default function SeekerContactCenter() {
     }),
     [contacts, incomingRequests, outgoingRequests, profileViews]
   );
+
   // --- Helpers to get the "user" from different shapes ---
   const getPersonFromItem = (item) => {
     if (!item) return null;
@@ -92,6 +100,7 @@ export default function SeekerContactCenter() {
     if (item.to) return item.to;
     return item;
   };
+
   // --- Handlers wired to real routes ---
   const handleViewProfile = (item) => {
     const person = getPersonFromItem(item);
@@ -100,6 +109,7 @@ export default function SeekerContactCenter() {
     params.set('userId', person.id);
     router.push(withChrome(`/member-profile?${params.toString()}`));
   };
+
   const handleAccept = async (item) => {
     const requestId = item.requestId || item.id;
     if (!requestId) return;
@@ -120,6 +130,7 @@ export default function SeekerContactCenter() {
       alert('We could not accept this invitation. Please try again.');
     }
   };
+
   const handleDecline = async (item) => {
     const requestId = item.requestId || item.id;
     if (!requestId) return;
@@ -140,6 +151,7 @@ export default function SeekerContactCenter() {
       alert('We could not decline this invitation. Please try again.');
     }
   };
+
   const handleCancel = async (item) => {
     const requestId = item.requestId || item.id;
     if (!requestId) return;
@@ -160,6 +172,7 @@ export default function SeekerContactCenter() {
       alert('We could not cancel this request. Please try again.');
     }
   };
+
   // 🔹 Disconnect a contact entirely
   const handleDisconnect = async (item) => {
     const person = getPersonFromItem(item);
@@ -185,6 +198,7 @@ export default function SeekerContactCenter() {
       alert('We could not disconnect this contact. Please try again.');
     }
   };
+
   const openGroup = (g) => {
     console.log('Open group (future)', g);
   };
@@ -194,15 +208,23 @@ export default function SeekerContactCenter() {
   const openNewsletter = (n) => {
     console.log('Open newsletter (future)', n);
   };
-  // --- Header card ---
+
+  // ✅ Profile-glass numbers (canonical)
+  const GLASS = {
+    borderRadius: 14,
+    border: '1px solid rgba(255,255,255,0.22)',
+    background: 'rgba(255,255,255,0.58)',
+    boxShadow: '0 10px 24px rgba(0,0,0,0.12)',
+    backdropFilter: 'blur(10px)',
+    WebkitBackdropFilter: 'blur(10px)',
+  };
+
+  // --- Header card (glass) ---
   const HeaderBox = (
     <section
       style={{
-        background: 'white',
-        borderRadius: 12,
+        ...GLASS,
         padding: 16,
-        boxShadow: '0 2px 6px rgba(0,0,0,0.06)',
-        border: '1px solid #eee',
         textAlign: 'center',
       }}
     >
@@ -223,9 +245,8 @@ export default function SeekerContactCenter() {
           maxWidth: 720,
         }}
       >
-        See who you&apos;re connected with, who&apos;s trying to reach you, and
-        who&apos;s been looking at your profile. When you&apos;re ready to talk,
-        jump into{' '}
+        See who you&apos;re connected with, who&apos;s trying to reach you, and who&apos;s
+        been looking at your profile. When you&apos;re ready to talk, jump into{' '}
         <Link
           href={withChrome('/seeker/messages')}
           style={{ color: '#FF7043', fontWeight: 700 }}
@@ -240,6 +261,7 @@ export default function SeekerContactCenter() {
   // Contacts preview + toggler
   const [showContacts, setShowContacts] = useState(true);
   const topContacts = useMemo(() => contacts.slice(0, 5), [contacts]);
+
   const formatDateTime = (iso) => {
     try {
       const d = new Date(iso);
@@ -248,26 +270,20 @@ export default function SeekerContactCenter() {
       return '';
     }
   };
-  const incomingPreview = useMemo(
-    () => incomingRequests.slice(0, 3),
-    [incomingRequests]
-  );
-  const outgoingPreview = useMemo(
-    () => outgoingRequests.slice(0, 3),
-    [outgoingRequests]
-  );
+
+  const incomingPreview = useMemo(() => incomingRequests.slice(0, 3), [incomingRequests]);
+  const outgoingPreview = useMemo(() => outgoingRequests.slice(0, 3), [outgoingRequests]);
+
   const nothingNeedingAttention =
     incomingRequests.length === 0 && outgoingRequests.length === 0;
-  // subtle accent when something actually needs attention
+
+  // ✅ Needs attention card (glass + subtle accent border)
   const attentionCardStyle = {
-    background: 'white',
-    borderRadius: 12,
+    ...GLASS,
     padding: 16,
-    border: `1px solid ${nothingNeedingAttention ? '#eee' : '#FFCCBC'}`,
-    boxShadow: nothingNeedingAttention
-      ? '0 2px 6px rgba(0,0,0,0.06)'
-      : '0 0 0 1px #FFE0B2 inset, 0 2px 6px rgba(0,0,0,0.06)',
+    border: `1px solid ${nothingNeedingAttention ? 'rgba(255,255,255,0.22)' : '#FFCCBC'}`,
   };
+
   return (
     <SeekerLayout
       title="Contact Center | ForgeTomorrow"
@@ -291,8 +307,8 @@ export default function SeekerContactCenter() {
         </h2>
         {nothingNeedingAttention ? (
           <p style={{ color: '#607D8B', fontSize: 14, marginBottom: 0 }}>
-            You&apos;re all caught up. When new invites or requests come in,
-            they&apos;ll appear here first.
+            You&apos;re all caught up. When new invites or requests come in, they&apos;ll
+            appear here first.
           </p>
         ) : (
           <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
@@ -324,6 +340,7 @@ export default function SeekerContactCenter() {
                 </div>
               </div>
             )}
+
             {outgoingRequests.length > 0 && (
               <div>
                 <h3
@@ -366,11 +383,8 @@ export default function SeekerContactCenter() {
         {/* Contacts */}
         <section
           style={{
-            background: 'white',
-            borderRadius: 12,
+            ...GLASS,
             padding: 16,
-            border: '1px solid #eee',
-            boxShadow: '0 2px 6px rgba(0,0,0,0.06)',
           }}
         >
           <div
@@ -389,8 +403,9 @@ export default function SeekerContactCenter() {
                   fontWeight: 800,
                   padding: '2px 8px',
                   borderRadius: 999,
-                  background: '#F1F5F9',
+                  background: 'rgba(255,255,255,0.75)',
                   color: '#334155',
+                  border: '1px solid rgba(0,0,0,0.06)',
                 }}
               >
                 {contacts.length}
@@ -401,9 +416,9 @@ export default function SeekerContactCenter() {
                 style={{
                   fontSize: 13,
                   padding: '6px 10px',
-                  border: '1px solid #e5e7eb',
+                  border: '1px solid rgba(0,0,0,0.12)',
                   borderRadius: 8,
-                  background: 'white',
+                  background: 'rgba(255,255,255,0.75)',
                   cursor: 'pointer',
                 }}
                 aria-expanded={showContacts}
@@ -413,6 +428,7 @@ export default function SeekerContactCenter() {
               </button>
             </div>
           </div>
+
           {showContacts && (
             <div id="contacts-panel">
               <ContactsList
@@ -422,10 +438,7 @@ export default function SeekerContactCenter() {
                 loading={loading}
               />
               <div style={{ marginTop: 8 }}>
-                <Link
-                  href={withChrome('/seeker/contacts')}
-                  style={{ color: '#FF7043', fontWeight: 700 }}
-                >
+                <Link href={withChrome('/seeker/contacts')} style={{ color: '#FF7043', fontWeight: 700 }}>
                   View all contacts →
                 </Link>
               </div>
@@ -436,11 +449,8 @@ export default function SeekerContactCenter() {
         {/* Recent Profile Views */}
         <section
           style={{
-            background: 'white',
-            borderRadius: 12,
+            ...GLASS,
             padding: 16,
-            border: '1px solid #eee',
-            boxShadow: '0 2px 6px rgba(0,0,0,0.06)',
           }}
         >
           <h2 style={{ color: '#FF7043', marginTop: 0 }}>Recent Profile Views</h2>
@@ -448,8 +458,8 @@ export default function SeekerContactCenter() {
             <p style={{ color: '#607D8B', fontSize: 14 }}>Loading views…</p>
           ) : profileViews.length === 0 ? (
             <p style={{ color: '#607D8B', fontSize: 14 }}>
-              No one has viewed your profile yet. Once recruiters, coaches, or
-              peers visit your profile, you&apos;ll see them here.
+              No one has viewed your profile yet. Once recruiters, coaches, or peers visit your profile,
+              you&apos;ll see them here.
             </p>
           ) : (
             <ul
@@ -469,7 +479,8 @@ export default function SeekerContactCenter() {
                     flexDirection: 'column',
                     padding: '6px 8px',
                     borderRadius: 8,
-                    background: '#F9FAFB',
+                    background: 'rgba(255,255,255,0.72)',
+                    border: '1px solid rgba(0,0,0,0.06)',
                   }}
                 >
                   <span
@@ -481,12 +492,7 @@ export default function SeekerContactCenter() {
                   >
                     {v.viewer?.name || 'Anonymous ForgeTomorrow member'}
                   </span>
-                  <span
-                    style={{
-                      fontSize: 12,
-                      color: '#6B7280',
-                    }}
-                  >
+                  <span style={{ fontSize: 12, color: '#6B7280' }}>
                     Viewed your profile • {formatDateTime(v.createdAt)}
                   </span>
                 </li>
@@ -507,11 +513,8 @@ export default function SeekerContactCenter() {
       {/* Groups */}
       <section
         style={{
-          background: 'white',
-          borderRadius: 12,
+          ...GLASS,
           padding: 16,
-          border: '1px solid #eee',
-          boxShadow: '0 2px 6px rgba(0,0,0,0.06)',
         }}
       >
         <h2 style={{ color: '#FF7043', marginTop: 0 }}>Groups</h2>
@@ -521,11 +524,8 @@ export default function SeekerContactCenter() {
       {/* Pages */}
       <section
         style={{
-          background: 'white',
-          borderRadius: 12,
+          ...GLASS,
           padding: 16,
-          border: '1px solid #eee',
-          boxShadow: '0 2px 6px rgba(0,0,0,0.06)',
         }}
       >
         <h2 style={{ color: '#FF7043', marginTop: 0 }}>Pages</h2>
@@ -535,11 +535,8 @@ export default function SeekerContactCenter() {
       {/* Newsletters */}
       <section
         style={{
-          background: 'white',
-          borderRadius: 12,
+          ...GLASS,
           padding: 16,
-          border: '1px solid #eee',
-          boxShadow: '0 2px 6px rgba(0,0,0,0.06)',
         }}
       >
         <h2 style={{ color: '#FF7043', marginTop: 0 }}>Newsletters</h2>
