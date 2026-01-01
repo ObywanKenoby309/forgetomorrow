@@ -4,6 +4,7 @@ import { getServerSession } from "next-auth";
 import authOptions from "../auth/[...nextauth]";
 import { PrismaClient } from "@prisma/client";
 import { getCorporateBannerByKey } from "@/lib/profileCorporateBanners";
+import jwt from "jsonwebtoken";
 
 const prisma = new PrismaClient();
 
@@ -19,7 +20,7 @@ function normalizeVisibility(
 }
 
 // ------------------------------
-// Slug helpers (NEW)
+// Slug helpers
 // ------------------------------
 function slugBaseFromUser(record: {
   firstName?: string | null;
@@ -31,7 +32,6 @@ function slugBaseFromUser(record: {
     record.name ||
     "user";
 
-  // lower, replace non-alnum with hyphen, collapse hyphens, trim
   const base = raw
     .toString()
     .trim()
@@ -46,7 +46,9 @@ function slugBaseFromUser(record: {
 function rand4() {
   const letters = "abcdefghijklmnopqrstuvwxyz";
   let out = "";
-  for (let i = 0; i < 4; i++) out += letters[Math.floor(Math.random() * letters.length)];
+  for (let i = 0; i < 4; i++) {
+    out += letters[Math.floor(Math.random() * letters.length)];
+  }
   return out;
 }
 
@@ -62,27 +64,20 @@ function cleanSlugInput(v: any) {
 }
 
 async function ensureUserSlug(userId: string, base: string) {
-  // If already has one, return it
   const existing = await prisma.user.findUnique({
     where: { id: userId },
     select: { slug: true },
   });
   if (existing?.slug) return existing.slug;
 
-  // Try a few candidates; handle uniqueness collisions
   for (let i = 0; i < 10; i++) {
     const candidate = `${base}-${rand4()}`;
-
     try {
-      // Only set if still null (prevents overwriting if race)
       await prisma.user.updateMany({
         where: { id: userId, slug: null },
         data: {
           slug: candidate,
-          // Auto-generated slug should NOT count as the user's change.
-          // Leave slugLastChangedAt null so they can customize immediately.
           slugLastChangedAt: null,
-          // Keep count aligned (optional safety)
           slugChangeCount: 0,
         },
       });
@@ -94,7 +89,6 @@ async function ensureUserSlug(userId: string, base: string) {
 
       if (after?.slug) return after.slug;
     } catch (err: any) {
-      // Prisma unique constraint error = try another
       if (err?.code === "P2002") continue;
       throw err;
     }
@@ -103,16 +97,60 @@ async function ensureUserSlug(userId: string, base: string) {
   throw new Error("Failed to generate unique slug");
 }
 
-export default async function handler(req: NextApiRequest, res: NextApiResponse) {
-  const session = (await getServerSession(req, res, authOptions)) as
-    | { user?: { email?: string | null } }
-    | null;
+// ─────────────────────────────────────────────────────────────
+// ✅ MIN CHANGE: allow auth via NextAuth session OR HttpOnly `auth` cookie
+// ─────────────────────────────────────────────────────────────
+function getCookie(req: NextApiRequest, name: string) {
+  const raw = req.headers.cookie || "";
+  const parts = raw.split(";").map((p) => p.trim());
+  for (const p of parts) {
+    if (p.startsWith(name + "=")) {
+      return decodeURIComponent(p.slice(name.length + 1));
+    }
+  }
+  return null;
+}
 
-  if (!session?.user?.email) {
-    return res.status(401).json({ error: "Not authenticated" });
+function getJwtSecret() {
+  // Must match /api/auth/verify-email
+  return process.env.NEXTAUTH_SECRET || "dev-secret-change-in-production";
+}
+
+async function getAuthedEmail(
+  req: NextApiRequest,
+  res: NextApiResponse
+): Promise<string | null> {
+  // 1) NextAuth session
+  try {
+    const session = (await getServerSession(req, res, authOptions)) as
+      | { user?: { email?: string | null } }
+      | null;
+
+    const sessionEmail = session?.user?.email ? String(session.user.email) : null;
+    if (sessionEmail) return sessionEmail.toLowerCase().trim();
+  } catch {
+    // fall through
   }
 
-  const email = session.user.email as string;
+  // 2) Custom auth cookie
+  const token = getCookie(req, "auth");
+  if (!token) return null;
+
+  try {
+    const decoded = jwt.verify(token, getJwtSecret()) as any;
+    const email = decoded?.email ? String(decoded.email) : null;
+    return email ? email.toLowerCase().trim() : null;
+  } catch {
+    return null;
+  }
+}
+
+export default async function handler(req: NextApiRequest, res: NextApiResponse) {
+  const email = await getAuthedEmail(req, res);
+
+  if (!email) {
+    return res.status(401).json({ error: "Not authenticated" });
+  }
 
   try {
     const user = await prisma.user.findUnique({
@@ -141,7 +179,6 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
             location: true,
             slug: true,
 
-            // Legacy + new visibility
             isProfilePublic: true,
             profileVisibility: true,
 
@@ -160,7 +197,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
           return res.status(404).json({ error: "Profile header not found" });
         }
 
-        // ✅ NEW: Ensure a real slug exists in DB
+        // ✅ Ensure slug exists
         let ensuredSlug = record.slug;
         if (!ensuredSlug) {
           const base = slugBaseFromUser(record);
@@ -177,7 +214,6 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
           record.coverUrl ||
           null;
 
-        // Back-compat: if profileVisibility is missing, derive it from legacy boolean.
         const effectiveVisibility =
           record.profileVisibility ||
           (record.isProfilePublic ? "PUBLIC" : "PRIVATE");
@@ -191,9 +227,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         });
       } catch (err) {
         console.error("[profile/header] GET error", err);
-        return res
-          .status(500)
-          .json({ error: "Failed to load profile header data" });
+        return res.status(500).json({ error: "Failed to load profile header data" });
       }
     }
 
@@ -212,7 +246,6 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
           location,
           slug,
 
-          // Legacy + new visibility
           isProfilePublic,
           profileVisibility,
 
@@ -223,20 +256,16 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
         const data: any = {};
 
-        // Simple scalar fields
         if (headline !== undefined) data.headline = headline;
         if (status !== undefined) data.status = status;
         if (avatarUrl !== undefined) data.avatarUrl = avatarUrl;
         if (coverUrl !== undefined) data.coverUrl = coverUrl;
         if (wallpaperUrl !== undefined) data.wallpaperUrl = wallpaperUrl;
-        if (corporateBannerKey !== undefined)
-          data.corporateBannerKey = corporateBannerKey;
-        if (corporateBannerLocked !== undefined)
-          data.corporateBannerLocked = corporateBannerLocked;
+        if (corporateBannerKey !== undefined) data.corporateBannerKey = corporateBannerKey;
+        if (corporateBannerLocked !== undefined) data.corporateBannerLocked = corporateBannerLocked;
         if (pronouns !== undefined) data.pronouns = pronouns;
         if (location !== undefined) data.location = location;
 
-        // ✅ NEW: Slug change rules (once per 24h)
         if (slug !== undefined) {
           const cleaned = cleanSlugInput(slug);
 
@@ -265,25 +294,17 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
               data.slugChangeCount = { increment: 1 };
             }
           }
-          // If cleaned is null/empty, do nothing (do not allow clearing slug)
         }
 
-        // ✅ Visibility (User table = single source of truth)
-        // Prefer explicit profileVisibility when provided.
         const normalizedVis = normalizeVisibility(profileVisibility);
-
         if (normalizedVis) {
           data.profileVisibility = normalizedVis;
-
-          // Keep legacy boolean in sync for older callers
           data.isProfilePublic = normalizedVis === "PUBLIC";
         } else if (isProfilePublic !== undefined) {
-          // Legacy callers
           data.isProfilePublic = !!isProfilePublic;
           data.profileVisibility = !!isProfilePublic ? "PUBLIC" : "PRIVATE";
         }
 
-        // Banner mode – only accept known values
         if (bannerMode !== undefined) {
           if (
             typeof bannerMode === "string" &&
@@ -293,27 +314,14 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
           }
         }
 
-        // Coerce bannerHeight & bannerFocalY to integers, or ignore
-        if (
-          bannerHeight !== undefined &&
-          bannerHeight !== null &&
-          bannerHeight !== ""
-        ) {
+        if (bannerHeight !== undefined && bannerHeight !== null && bannerHeight !== "") {
           const parsedHeight = Number.parseInt(String(bannerHeight), 10);
-          if (Number.isFinite(parsedHeight)) {
-            data.bannerHeight = parsedHeight;
-          }
+          if (Number.isFinite(parsedHeight)) data.bannerHeight = parsedHeight;
         }
 
-        if (
-          bannerFocalY !== undefined &&
-          bannerFocalY !== null &&
-          bannerFocalY !== ""
-        ) {
+        if (bannerFocalY !== undefined && bannerFocalY !== null && bannerFocalY !== "") {
           const parsedFocal = Number.parseInt(String(bannerFocalY), 10);
-          if (Number.isFinite(parsedFocal)) {
-            data.bannerFocalY = parsedFocal;
-          }
+          if (Number.isFinite(parsedFocal)) data.bannerFocalY = parsedFocal;
         }
 
         const updated = await prisma.user.update({
@@ -329,7 +337,6 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
             location: true,
             slug: true,
 
-            // Legacy + new visibility
             isProfilePublic: true,
             profileVisibility: true,
 
@@ -344,7 +351,6 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
           },
         });
 
-        // Back-compat: ensure response always includes profileVisibility
         const effectiveVisibility =
           updated.profileVisibility ||
           (updated.isProfilePublic ? "PUBLIC" : "PRIVATE");
@@ -371,13 +377,10 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       }
     }
 
-    // ──────────────── Unsupported Methods ────────────────
     res.setHeader("Allow", ["GET", "PATCH"]);
     return res.status(405).json({ error: "Method not allowed" });
   } catch (outerErr) {
     console.error("[profile/header] outer error", outerErr);
-    return res
-      .status(500)
-      .json({ error: "Unexpected error in profile header endpoint" });
+    return res.status(500).json({ error: "Unexpected error in profile header endpoint" });
   }
 }

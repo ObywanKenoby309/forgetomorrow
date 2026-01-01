@@ -3,6 +3,7 @@ import type { NextApiRequest, NextApiResponse } from "next";
 import { getServerSession } from "next-auth";
 import authOptions from "../auth/[...nextauth]";
 import { prisma } from "@/lib/prisma";
+import jwt from "jsonwebtoken";
 
 const WELCOME_DRAFT_KEY = "profile_welcome_dismissed_v1";
 
@@ -28,16 +29,52 @@ type ProfileDetails = {
   welcomeDismissed: boolean;
 };
 
-export default async function handler(req: NextApiRequest, res: NextApiResponse) {
+// ─────────────────────────────────────────────────────────────
+// ✅ MIN CHANGE: allow auth via NextAuth session OR HttpOnly `auth` cookie
+// ─────────────────────────────────────────────────────────────
+function getCookie(req: NextApiRequest, name: string) {
+  const raw = req.headers.cookie || "";
+  const parts = raw.split(";").map((p) => p.trim());
+  for (const p of parts) {
+    if (p.startsWith(name + "=")) return decodeURIComponent(p.slice(name.length + 1));
+  }
+  return null;
+}
+
+function getJwtSecret() {
+  // Must match what /api/auth/verify-email uses
+  return process.env.NEXTAUTH_SECRET || "dev-secret-change-in-production";
+}
+
+async function getAuthedEmail(
+  req: NextApiRequest,
+  res: NextApiResponse
+): Promise<string | null> {
   const session = (await getServerSession(req, res, authOptions)) as
     | { user?: { email?: string | null } }
     | null;
 
-  if (!session?.user?.email) {
+  const sessionEmail = session?.user?.email ? String(session.user.email) : null;
+  if (sessionEmail) return sessionEmail;
+
+  const token = getCookie(req, "auth");
+  if (!token) return null;
+
+  try {
+    const decoded = jwt.verify(token, getJwtSecret()) as any;
+    const email = decoded?.email ? String(decoded.email) : null;
+    return email ? email.toLowerCase().trim() : null;
+  } catch {
+    return null;
+  }
+}
+
+export default async function handler(req: NextApiRequest, res: NextApiResponse) {
+  const email = await getAuthedEmail(req, res);
+
+  if (!email) {
     return res.status(401).json({ error: "Not authenticated" });
   }
-
-  const email = session.user.email as string;
 
   // Resolve user once
   const user = await prisma.user.findUnique({
@@ -85,8 +122,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         }),
       ]);
 
-      const dismissed =
-        Boolean((welcomeDraft?.content as any)?.dismissed) === true;
+      const dismissed = Boolean((welcomeDraft?.content as any)?.dismissed) === true;
 
       const details: ProfileDetails | null = record
         ? {

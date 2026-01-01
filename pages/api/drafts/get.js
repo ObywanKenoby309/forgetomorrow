@@ -2,6 +2,30 @@
 import { getServerSession } from 'next-auth/next';
 import { authOptions } from '../auth/[...nextauth]';
 import { prisma } from '@/lib/prisma';
+import { verify as verifyJwt } from 'jsonwebtoken';
+
+const JWT_SECRET = process.env.NEXTAUTH_SECRET || 'dev-secret-change-in-production';
+
+function getAuthCookie(req) {
+  try {
+    return String(req?.cookies?.auth || '').trim();
+  } catch {
+    return '';
+  }
+}
+
+function getEmailFromAuthCookie(req) {
+  const token = getAuthCookie(req);
+  if (!token) return null;
+
+  try {
+    const payload = verifyJwt(token, JWT_SECRET);
+    const email = payload?.email ? String(payload.email) : '';
+    return email || null;
+  } catch {
+    return null;
+  }
+}
 
 /**
  * Gets a per-user draft payload by key.
@@ -14,14 +38,16 @@ export default async function handler(req, res) {
   }
 
   try {
+    // Accept either NextAuth session OR our `auth` JWT cookie
     const session = await getServerSession(req, res, authOptions);
+    const email = session?.user?.email || getEmailFromAuthCookie(req);
 
-    if (!session?.user?.email) {
+    if (!email) {
       return res.status(401).json({ error: 'Not authenticated' });
     }
 
     const user = await prisma.user.findUnique({
-      where: { email: session.user.email },
+      where: { email: String(email).toLowerCase() },
       select: { id: true },
     });
 
@@ -30,7 +56,6 @@ export default async function handler(req, res) {
     }
 
     const key = typeof req.query.key === 'string' ? req.query.key.trim() : '';
-
     if (!key) {
       return res.status(400).json({ error: 'Missing "key" query param' });
     }
