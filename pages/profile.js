@@ -27,6 +27,18 @@ export default function ProfilePage() {
   const withChrome = (path) =>
     chrome ? `${path}${path.includes('?') ? '&' : '?'}chrome=${chrome}` : path;
 
+  // ✅ Mobile detection (used to prevent crushed 70/30 docs layout on phones)
+  const [isMobile, setIsMobile] = useState(true);
+  useEffect(() => {
+    const handleResize = () => {
+      if (typeof window === 'undefined') return;
+      setIsMobile(window.innerWidth < 768);
+    };
+    handleResize();
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
+
   // Header/identity (DB-backed via /api/profile/details)
   const [name, setName] = useState('');
   const [pronouns, setPronouns] = useState('');
@@ -274,6 +286,27 @@ export default function ProfilePage() {
         <title>Profile | ForgeTomorrow</title>
       </Head>
 
+      {/* ✅ Guardrails for mobile overflow + banner/image scaling */}
+      <style jsx global>{`
+        /* Prevent horizontal swipe caused by any oversized child elements */
+        html,
+        body {
+          overflow-x: hidden;
+        }
+
+        /* Keep any header images constrained to container width */
+        section[aria-label='Profile header section'] img {
+          max-width: 100% !important;
+          height: auto !important;
+        }
+
+        /* If ProfileHeader uses video */
+        section[aria-label='Profile header section'] video {
+          max-width: 100% !important;
+          height: auto !important;
+        }
+      `}</style>
+
       <SeekerLayout
         title="Profile | ForgeTomorrow"
         header={HeaderBox}
@@ -302,11 +335,15 @@ export default function ProfilePage() {
           </section>
         )}
 
-        <div className="w-full max-w-6xl mx-auto px-3 md:px-5 grid gap-3 md:gap-4">
+        {/* ✅ overflow-x-hidden stops the swipe-to-find-edit-button issue */}
+        <div className="w-full max-w-6xl mx-auto px-3 md:px-5 grid gap-3 md:gap-4 overflow-x-hidden">
           <section
             aria-label="Profile header section"
             style={{
-              overflow: 'visible',
+              // ✅ key fix: do NOT allow children to render outside the card on mobile
+              overflow: 'hidden',
+              position: 'relative',
+
               borderRadius: 14,
               border: '1px solid rgba(255,255,255,0.22)',
               background: 'rgba(255,255,255,0.58)',
@@ -314,6 +351,7 @@ export default function ProfilePage() {
               backdropFilter: 'blur(10px)',
               WebkitBackdropFilter: 'blur(10px)',
               padding: 10,
+              maxWidth: '100%',
             }}
           >
             <ProfileHeader />
@@ -406,11 +444,11 @@ export default function ProfilePage() {
             hintTitle={docsHint.title}
             hintBullets={docsHint.bullets}
           >
-            {/* Horizontal accordion (70/30) — side-by-side on ALL breakpoints */}
+            {/* ✅ FIX: stack on mobile so nothing is crushed; keep side-by-side on desktop */}
             <div
               style={{
                 display: 'flex',
-                flexDirection: 'row',
+                flexDirection: isMobile ? 'column' : 'row',
                 gap: 12,
                 alignItems: 'stretch',
                 width: '100%',
@@ -421,6 +459,7 @@ export default function ProfilePage() {
                 active={docsFocus === 'resume'}
                 onActivate={openResume}
                 activePct={70}
+                stacked={isMobile}
               >
                 <ProfileResumeAttach withChrome={withChrome} />
               </DocFocusCard>
@@ -430,7 +469,8 @@ export default function ProfilePage() {
                 active={docsFocus === 'cover'}
                 onActivate={openCover}
                 activePct={70}
-                >
+                stacked={isMobile}
+              >
                 <ProfileCoverAttach withChrome={withChrome} />
               </DocFocusCard>
             </div>
@@ -457,16 +497,15 @@ export default function ProfilePage() {
 
 /* ============================================================================
    Docs UX Wrapper (presentation only)
-   - Side-by-side (always)
-   - Horizontal accordion by width (70/30)
-   - One expanded at a time (docsFocus)
+   - Desktop: side-by-side (70/30)
+   - Mobile: stacked full width (prevents crushed components)
 ============================================================================ */
 
-function DocFocusCard({ title, active, onActivate, activePct = 70, children }) {
+function DocFocusCard({ title, active, onActivate, activePct = 70, stacked = false, children }) {
   const ORANGE = '#FF7043';
   const headerPad = 14;
 
-  // Width split
+  // Width split (desktop only)
   const activeBasis = `${activePct}%`;
   const inactiveBasis = `${100 - activePct}%`;
 
@@ -487,10 +526,12 @@ function DocFocusCard({ title, active, onActivate, activePct = 70, children }) {
         }
       }}
       style={{
-        flexBasis: active ? activeBasis : inactiveBasis,
-        flexGrow: 0,
+        // ✅ Mobile stack: full width; Desktop: 70/30 accordion widths
+        flexBasis: stacked ? '100%' : active ? activeBasis : inactiveBasis,
+        flexGrow: stacked ? 1 : 0,
         flexShrink: 0,
         minWidth: 0,
+        width: '100%',
 
         borderRadius: 18,
         border: active ? '1px solid rgba(255,112,67,0.55)' : '1px solid rgba(0,0,0,0.10)',
