@@ -4,7 +4,8 @@ import { authOptions } from '../auth/[...nextauth]';
 import { prisma } from '@/lib/prisma';
 import jwt from 'jsonwebtoken';
 
-const JWT_SECRET = process.env.NEXTAUTH_SECRET || 'dev-secret-change-in-production';
+const JWT_SECRET =
+  process.env.NEXTAUTH_SECRET || 'dev-secret-change-in-production';
 
 // ─────────────────────────────────────────────────────────────
 // ✅ MIN CHANGE: allow auth via NextAuth session OR HttpOnly `auth` cookie
@@ -14,30 +15,36 @@ function getCookie(req, name) {
     const raw = req.headers?.cookie || '';
     const parts = raw.split(';').map((p) => p.trim());
     for (const p of parts) {
-      if (p.startsWith(name + '=')) return decodeURIComponent(p.slice(name.length + 1));
+      if (p.startsWith(name + '=')) {
+        return decodeURIComponent(p.slice(name.length + 1));
+      }
     }
-    return '';
+    return null;
   } catch {
-    return '';
+    return null;
   }
+}
+
+function normalizeEmail(v) {
+  const s = String(v || '').toLowerCase().trim();
+  return s || null;
 }
 
 async function getAuthedEmail(req, res) {
   // 1) Prefer NextAuth session
   const session = await getServerSession(req, res, authOptions);
-  const sessionEmail = session?.user?.email ? String(session.user.email).toLowerCase() : '';
+  const sessionEmail = normalizeEmail(session?.user?.email);
   if (sessionEmail) return sessionEmail;
 
   // 2) Fallback: custom auth cookie set by /api/auth/verify-email
   const token = getCookie(req, 'auth');
-  if (!token) return '';
+  if (!token) return null;
 
   try {
     const decoded = jwt.verify(token, JWT_SECRET);
-    const email = decoded?.email ? String(decoded.email).toLowerCase() : '';
-    return email;
+    return normalizeEmail(decoded?.email);
   } catch {
-    return '';
+    return null;
   }
 }
 
@@ -58,7 +65,7 @@ export default async function handler(req, res) {
       select: { id: true },
     });
 
-    if (!user) {
+    if (!user?.id) {
       return res.status(404).json({ error: 'User not found' });
     }
 
@@ -67,6 +74,7 @@ export default async function handler(req, res) {
       orderBy: { updatedAt: 'desc' },
     });
 
+    // ✅ New account = 200 + empty array
     return res.status(200).json({ resumes });
   } catch (err) {
     console.error('[api/resume/list] Error:', err);
