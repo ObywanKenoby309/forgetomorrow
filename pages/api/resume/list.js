@@ -2,6 +2,44 @@
 import { getServerSession } from 'next-auth/next';
 import { authOptions } from '../auth/[...nextauth]';
 import { prisma } from '@/lib/prisma';
+import jwt from 'jsonwebtoken';
+
+const JWT_SECRET = process.env.NEXTAUTH_SECRET || 'dev-secret-change-in-production';
+
+// ─────────────────────────────────────────────────────────────
+// ✅ MIN CHANGE: allow auth via NextAuth session OR HttpOnly `auth` cookie
+// ─────────────────────────────────────────────────────────────
+function getCookie(req, name) {
+  try {
+    const raw = req.headers?.cookie || '';
+    const parts = raw.split(';').map((p) => p.trim());
+    for (const p of parts) {
+      if (p.startsWith(name + '=')) return decodeURIComponent(p.slice(name.length + 1));
+    }
+    return '';
+  } catch {
+    return '';
+  }
+}
+
+async function getAuthedEmail(req, res) {
+  // 1) Prefer NextAuth session
+  const session = await getServerSession(req, res, authOptions);
+  const sessionEmail = session?.user?.email ? String(session.user.email).toLowerCase() : '';
+  if (sessionEmail) return sessionEmail;
+
+  // 2) Fallback: custom auth cookie set by /api/auth/verify-email
+  const token = getCookie(req, 'auth');
+  if (!token) return '';
+
+  try {
+    const decoded = jwt.verify(token, JWT_SECRET);
+    const email = decoded?.email ? String(decoded.email).toLowerCase() : '';
+    return email;
+  } catch {
+    return '';
+  }
+}
 
 export default async function handler(req, res) {
   if (req.method !== 'GET') {
@@ -10,13 +48,13 @@ export default async function handler(req, res) {
   }
 
   try {
-    const session = await getServerSession(req, res, authOptions);
-    if (!session || !session.user || !session.user.email) {
+    const email = await getAuthedEmail(req, res);
+    if (!email) {
       return res.status(401).json({ error: 'Not authenticated' });
     }
 
     const user = await prisma.user.findUnique({
-      where: { email: session.user.email },
+      where: { email },
       select: { id: true },
     });
 
