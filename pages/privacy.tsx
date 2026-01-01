@@ -517,7 +517,7 @@ export default function Privacy() {
               <p className="mt-3">
                 Legal entity: Forge Tomorrow, Inc.
                 <br />
-                Registered address: PO Box, Cottontown, TN, USA
+                Registered address: PO Box 1034, White House, TN, 37188, USA
               </p>
               <p className="mt-3">
                 <span className="font-semibold">Effective Date:</span> December 2025
