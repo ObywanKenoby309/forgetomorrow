@@ -254,6 +254,12 @@ export default function PricingPage() {
                       textAlign: "center",
                       color: "#111",
                       textDecoration: "underline",
+
+                      // ✅ FIX: prevent long email string from overflowing on some Android/Chrome widths
+                      maxWidth: "100%",
+                      overflowWrap: "anywhere",
+                      wordBreak: "break-word",
+                      lineHeight: 1.35,
                     }}
                   >
                     Or email sales@forgetomorrow.com
