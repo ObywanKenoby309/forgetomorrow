@@ -36,6 +36,18 @@ export default function ProfileHeader() {
   const [bannerMoreOpen, setBannerMoreOpen] = useState(false);
   const [wallpaperMoreOpen, setWallpaperMoreOpen] = useState(false);
 
+  // ✅ Mobile detection to prevent header overflow + keep Edit visible
+  const [isMobile, setIsMobile] = useState(true);
+  useEffect(() => {
+    const handleResize = () => {
+      if (typeof window === 'undefined') return;
+      setIsMobile(window.innerWidth < 768);
+    };
+    handleResize();
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
+
   // Load everything from the server (single source of truth)
   useEffect(() => {
     let cancel = false;
@@ -52,7 +64,31 @@ export default function ProfileHeader() {
         const fullName =
           user.name || [user.firstName, user.lastName].filter(Boolean).join(' ');
 
-        setName(fullName || 'Unnamed');
+        // ✅ Fallback: if header endpoint doesn't include name fields, pull from /api/profile/details
+        if (!fullName) {
+          try {
+            const dres = await fetch('/api/profile/details');
+            if (dres.ok) {
+              const d = await dres.json();
+              const details = d.details || d;
+              const dn = details?.name ? String(details.name) : '';
+              const dp = details?.pronouns ? String(details.pronouns) : '';
+              const dh = details?.headline ? String(details.headline) : '';
+              if (!cancel) {
+                setName(dn || 'Unnamed');
+                if (!pronouns) setPronouns(dp || '');
+                if (!headline) setHeadline(dh || '');
+              }
+            } else {
+              if (!cancel) setName('Unnamed');
+            }
+          } catch {
+            if (!cancel) setName('Unnamed');
+          }
+        } else {
+          setName(fullName);
+        }
+
         setSlug(user.slug || null);
         setSlugValue(user.slug || '');
 
@@ -93,6 +129,7 @@ export default function ProfileHeader() {
     return () => {
       cancel = true;
     };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const fullUrl = slug ? `https://forgetomorrow.com/u/${slug}` : null;
@@ -193,6 +230,7 @@ export default function ProfileHeader() {
         borderRadius: 12,
         overflow: 'visible',
         background: 'transparent',
+        maxWidth: '100%',
       }}
     >
       {coverUrl &&
@@ -207,66 +245,87 @@ export default function ProfileHeader() {
         style={{
           padding: 16,
           display: 'flex',
-          gap: 16,
-          alignItems: 'center',
+          flexDirection: isMobile ? 'column' : 'row',
+          gap: 12,
+          alignItems: isMobile ? 'stretch' : 'center',
           borderRadius: 12,
           border: '1px solid rgba(255,255,255,0.22)',
           background: 'rgba(255,255,255,0.58)',
           boxShadow: '0 10px 24px rgba(0,0,0,0.12)',
           backdropFilter: 'blur(10px)',
           WebkitBackdropFilter: 'blur(10px)',
+          maxWidth: '100%',
         }}
       >
-        <img
-          src={avatarUrl}
-          alt="Profile avatar"
-          style={{
-            width: 96,
-            height: 96,
-            borderRadius: '50%',
-            border: '3px solid #FF7043',
-            objectFit: 'cover',
-          }}
-        />
+        <div style={{ display: 'flex', gap: 12, alignItems: 'center', minWidth: 0 }}>
+          <img
+            src={avatarUrl}
+            alt="Profile avatar"
+            style={{
+              width: isMobile ? 76 : 96,
+              height: isMobile ? 76 : 96,
+              borderRadius: '50%',
+              border: '3px solid #FF7043',
+              objectFit: 'cover',
+              flexShrink: 0,
+            }}
+          />
 
-        <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: 4 }}>
-          <h2 style={{ margin: 0, fontSize: 22, color: '#263238' }}>{name}</h2>
-
-          {slug && (
-            <div
-              onClick={copySlug}
+          <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: 4, minWidth: 0 }}>
+            <h2
               style={{
-                fontSize: 13,
-                color: '#FF7043',
-                cursor: 'pointer',
-                textDecoration: 'underline',
-                width: 'fit-content',
+                margin: 0,
+                fontSize: 22,
+                color: '#263238',
+                wordBreak: 'break-word',
               }}
             >
-              {fullUrl}
-            </div>
-          )}
+              {name}
+            </h2>
 
-          {pronouns && <p style={{ margin: 0, fontSize: 14, color: '#607D8B' }}>{pronouns}</p>}
-          {headline && <p style={{ margin: 0, fontSize: 15, color: '#455A64' }}>{headline}</p>}
+            {slug && (
+              <div
+                onClick={copySlug}
+                style={{
+                  fontSize: 13,
+                  color: '#FF7043',
+                  cursor: 'pointer',
+                  textDecoration: 'underline',
+                  width: '100%',
+                  overflowWrap: 'anywhere',
+                }}
+              >
+                {fullUrl}
+              </div>
+            )}
 
-          <p style={{ margin: 0, fontSize: 12, color: '#90A4AE' }}>
-            Profile visibility: {visibilityLabel}
-          </p>
+            {pronouns ? (
+              <p style={{ margin: 0, fontSize: 14, color: '#607D8B' }}>{pronouns}</p>
+            ) : null}
+            {headline ? (
+              <p style={{ margin: 0, fontSize: 15, color: '#455A64' }}>{headline}</p>
+            ) : null}
+
+            <p style={{ margin: 0, fontSize: 12, color: '#90A4AE' }}>
+              Profile visibility: {visibilityLabel}
+            </p>
+          </div>
         </div>
 
         <button
           onClick={() => setEditOpen(true)}
           style={{
             border: '1px solid #FF7043',
-            padding: '6px 12px',
-            borderRadius: 8,
+            padding: '10px 12px',
+            borderRadius: 10,
             color: '#FF7043',
             background: 'rgba(255,255,255,0.75)',
             cursor: 'pointer',
             fontWeight: 800,
             backdropFilter: 'blur(10px)',
             WebkitBackdropFilter: 'blur(10px)',
+            width: isMobile ? '100%' : 'auto',
+            flexShrink: 0,
           }}
         >
           Edit
@@ -305,6 +364,7 @@ export default function ProfileHeader() {
                     borderRadius: 6,
                     padding: 6,
                     minWidth: 160,
+                    maxWidth: '100%',
                   }}
                 />
               </div>
@@ -753,6 +813,7 @@ function BannerFit({ url, height }) {
           height: '100%',
           width: '100%',
           objectFit: 'contain',
+          display: 'block',
         }}
       />
     </div>
