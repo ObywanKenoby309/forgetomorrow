@@ -719,10 +719,6 @@ export default function PublicProfile({ user, primaryResume, effectiveVisibility
                     </span>
                   ))}
                 </div>
-
-                <div style={{ marginTop: 10, fontSize: 12, color: TEXT_MID, fontWeight: 700 }}>
-                  Optional, but human.
-                </div>
               </section>
             )}
           </main>
