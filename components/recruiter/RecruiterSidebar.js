@@ -4,9 +4,17 @@ import Link from 'next/link';
 import { usePlan } from '@/context/PlanContext';
 
 const ORANGE = '#FF7043';
-const ORANGE_SOFT = '#FFEDE6';
-const CARD_BG = '#FFFFFF';
 const TEXT_MAIN = '#263238';
+
+// ✅ Glass standard (align with Profile page canonical frosted glass)
+const GLASS_BG = 'rgba(255,255,255,0.68)';
+const GLASS_BORDER = 'rgba(255,255,255,0.22)';
+const GLASS_SHADOW = '0 10px 26px rgba(0,0,0,0.12)';
+const GLASS_BLUR = 'blur(12px)';
+
+// Hover / subtle fills on glass
+const HOVER_BG = 'rgba(255,112,67,0.10)'; // orange tint but still “breathes”
+const ACTIVE_SHADOW = '0 12px 24px rgba(0,0,0,0.12)';
 
 function Badge({ value }) {
   if (!value) return null;
@@ -26,6 +34,7 @@ function Badge({ value }) {
         fontWeight: 800,
         color: '#fff',
         background: ORANGE,
+        boxShadow: '0 10px 18px rgba(0,0,0,0.10)',
       }}
     >
       {value > 99 ? '99+' : value}
@@ -41,13 +50,14 @@ function NavItem({ href, label, active, badge }) {
     gap: 10,
     padding: '8px 12px',
     textDecoration: 'none',
-    fontWeight: 600,
+    fontWeight: 700,
     fontSize: 14,
     color: active ? '#FFFFFF' : TEXT_MAIN,
     background: active ? ORANGE : 'transparent',
-    borderRadius: 10,
+    borderRadius: 12,
     transition:
       'background 120ms ease, color 120ms ease, box-shadow 120ms ease, transform 80ms ease',
+    boxShadow: active ? ACTIVE_SHADOW : 'none',
   };
 
   return (
@@ -56,7 +66,7 @@ function NavItem({ href, label, active, badge }) {
       aria-current={active ? 'page' : undefined}
       style={base}
       onMouseEnter={(e) => {
-        if (!active) e.currentTarget.style.background = ORANGE_SOFT;
+        if (!active) e.currentTarget.style.background = HOVER_BG;
       }}
       onMouseLeave={(e) => {
         if (!active) e.currentTarget.style.background = 'transparent';
@@ -68,12 +78,12 @@ function NavItem({ href, label, active, badge }) {
           style={{
             position: 'absolute',
             left: 0,
-            top: 6,
-            bottom: 6,
+            top: 7,
+            bottom: 7,
             width: 3,
             borderRadius: 999,
             background: '#FFFFFF',
-            opacity: 0.8,
+            opacity: 0.85,
           }}
         />
       )}
@@ -88,11 +98,11 @@ function SectionLabel({ children }) {
     <div
       style={{
         fontSize: 10,
-        fontWeight: 700,
+        fontWeight: 800,
         letterSpacing: '0.08em',
         textTransform: 'uppercase',
-        color: '#90A4AE',
-        padding: '4px 2px 0',
+        color: 'rgba(38,50,56,0.55)',
+        padding: '6px 4px 2px',
       }}
     >
       {children}
@@ -110,9 +120,7 @@ export default function RecruiterSidebar({
 
   const role = roleProp || ctxRole;
   const isEnterprise =
-    typeof variant === 'string'
-      ? variant === 'enterprise'
-      : planIsEnterprise;
+    typeof variant === 'string' ? variant === 'enterprise' : planIsEnterprise;
 
   const chromeRecruiter = isEnterprise ? 'recruiter-ent' : 'recruiter-smb';
   const canSeeSettings = can('recruiter.settings.view');
@@ -127,11 +135,15 @@ export default function RecruiterSidebar({
         top: 24,
         alignSelf: 'start',
         height: 'fit-content',
-        background: CARD_BG,
-        borderRadius: 16,
-        border: '1px solid #E5E7EB',
-        boxShadow: '0 2px 8px rgba(15, 23, 42, 0.05)',
+
+        // ✅ Glass container
+        background: GLASS_BG,
+        borderRadius: 18,
+        border: `1px solid ${GLASS_BORDER}`,
+        boxShadow: GLASS_SHADOW,
         padding: 12,
+        backdropFilter: GLASS_BLUR,
+        WebkitBackdropFilter: GLASS_BLUR,
       }}
     >
       {/* Profile + Overview */}
