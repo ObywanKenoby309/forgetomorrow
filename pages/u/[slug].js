@@ -320,7 +320,7 @@ export default function PublicProfile({ user, primaryResume, effectiveVisibility
             style={{
               maxWidth: 980,
               margin: '0 auto',
-              padding: '0 28px 36px',
+              padding: '28px 28px 36px',
               minHeight: '80vh',
             }}
           >
