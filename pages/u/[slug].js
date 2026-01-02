@@ -6,7 +6,7 @@ import { prisma } from '@/lib/prisma';
 import { getServerSession } from 'next-auth/next';
 import authOptions from '../api/auth/[...nextauth]';
 
-// Safe helpers for parsing skills / languages / education from JSON
+// Safe helpers for parsing skills / languages / hobbies from JSON
 function parseArrayField(raw, fallback = []) {
   if (!raw) return fallback;
 
@@ -92,6 +92,9 @@ export async function getServerSideProps(context) {
       skillsJson: true,
       languagesJson: true,
       educationJson: true,
+
+      // ✅ NEW: hobbies for public portfolio view
+      hobbiesJson: true,
 
       bannerMode: true,
       bannerHeight: true,
@@ -181,6 +184,9 @@ export default function PublicProfile({ user, primaryResume, effectiveVisibility
     languagesJson,
     educationJson,
 
+    // ✅ NEW: hobbies
+    hobbiesJson,
+
     bannerMode,
     bannerHeight,
     bannerFocalY,
@@ -193,12 +199,16 @@ export default function PublicProfile({ user, primaryResume, effectiveVisibility
   const computedName = String(name || '').trim();
   const computedFirst = String(firstName || '').trim();
   const computedLast = String(lastName || '').trim();
-  const fullName = computedName || [computedFirst, computedLast].filter(Boolean).join(' ').trim() || 'ForgeTomorrow Member';
+  const fullName =
+    computedName ||
+    [computedFirst, computedLast].filter(Boolean).join(' ').trim() ||
+    'ForgeTomorrow Member';
 
   const profileUrl = `https://forgetomorrow.com/u/${slug}`;
 
   const skills = parseArrayField(skillsJson, []);
   const languages = parseArrayField(languagesJson, []);
+  const hobbies = parseArrayField(hobbiesJson, []);
   const education = parseEducationField(educationJson, []);
 
   const resolvedBannerHeight = typeof bannerHeight === 'number' ? bannerHeight : 260;
@@ -222,10 +232,10 @@ export default function PublicProfile({ user, primaryResume, effectiveVisibility
   // ─────────────────────────────────────────────────────────────
   // ✅ Glass standard (match internal Profile canonical style)
   // ─────────────────────────────────────────────────────────────
-  const GLASS_BG = 'rgba(255,255,255,0.72)';      // more “glass” + readability
-  const GLASS_BORDER = 'rgba(255,255,255,0.26)';  // slightly clearer edge
-  const GLASS_SHADOW = '0 14px 34px rgba(0,0,0,0.14)'; // more premium lift
-  const GLASS_BLUR = 'blur(12px)';                // stronger frosted effect
+  const GLASS_BG = 'rgba(255,255,255,0.72)';
+  const GLASS_BORDER = 'rgba(255,255,255,0.26)';
+  const GLASS_SHADOW = '0 14px 34px rgba(0,0,0,0.14)';
+  const GLASS_BLUR = 'blur(12px)';
 
   const TEXT_DARK = '#1F2937';
   const TEXT_MID = '#455A64';
@@ -324,12 +334,7 @@ export default function PublicProfile({ user, primaryResume, effectiveVisibility
               minHeight: '80vh',
             }}
           >
-            {/* ─────────────────────────────────────────────────────────────
-               ✅ Banner "Top Shelf" Treatment
-               - Glass frame
-               - Blurred cover background (removes ugly letterbox gaps)
-               - Foreground contain (full image always visible)
-               ───────────────────────────────────────────────────────────── */}
+            {/* Banner */}
             <div
               className="public-banner-frame"
               style={{
@@ -378,7 +383,7 @@ export default function PublicProfile({ user, primaryResume, effectiveVisibility
               />
             </div>
 
-            {/* Header card (slight overlap onto banner = cohesive “portfolio” stack) */}
+            {/* Header card */}
             <section
               className="public-header"
               style={{
@@ -685,6 +690,38 @@ export default function PublicProfile({ user, primaryResume, effectiveVisibility
                       </div>
                     );
                   })}
+                </div>
+              </section>
+            )}
+
+            {/* ✅ Hobbies (optional, human, portfolio-style) */}
+            {hobbies.length > 0 && (
+              <section style={{ ...cardBase, marginTop: 16 }} aria-label="Hobbies">
+                <h2 style={{ margin: '0 0 10px', fontSize: 16, fontWeight: 900, color: TEXT_DARK }}>
+                  Hobbies
+                </h2>
+
+                <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
+                  {hobbies.map((hobby) => (
+                    <span
+                      key={hobby}
+                      style={{
+                        fontSize: 12,
+                        padding: '6px 10px',
+                        borderRadius: 999,
+                        background: 'rgba(255,255,255,0.62)',
+                        color: TEXT_DARK,
+                        border: '1px solid rgba(0,0,0,0.06)',
+                        fontWeight: 800,
+                      }}
+                    >
+                      {hobby}
+                    </span>
+                  ))}
+                </div>
+
+                <div style={{ marginTop: 10, fontSize: 12, color: TEXT_MID, fontWeight: 700 }}>
+                  Optional, but human.
                 </div>
               </section>
             )}
