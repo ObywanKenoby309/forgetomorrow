@@ -99,10 +99,10 @@ function SectionLabel({ children }) {
       style={{
         fontSize: 10,
         fontWeight: 800,
-        letterSpacing: '0.08em',
+        letterSpacing: '0.12em',
         textTransform: 'uppercase',
-        color: 'rgba(38,50,56,0.55)',
-        padding: '6px 4px 2px',
+        color: 'rgba(31, 41, 55, 0.55)',
+        padding: '8px 4px 2px',
       }}
     >
       {children}

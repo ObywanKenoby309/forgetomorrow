@@ -95,11 +95,11 @@ function SectionLabel({ children }) {
     <div
       style={{
         fontSize: 10,
-        fontWeight: 700,
-        letterSpacing: '0.08em',
+        fontWeight: 800,
+        letterSpacing: '0.12em',
         textTransform: 'uppercase',
-        color: TEXT_MUTED,
-        padding: '6px 2px 0',
+        color: 'rgba(31, 41, 55, 0.55)',
+        padding: '8px 4px 2px',
       }}
     >
       {children}
