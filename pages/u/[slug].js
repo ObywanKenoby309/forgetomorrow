@@ -269,15 +269,21 @@ export default function PublicProfile({ user, primaryResume, effectiveVisibility
       </Head>
 
       <style>{`
-        @media (max-width: 640px) {
-          .public-banner {
-            background-size: contain !important;
-            background-position: center !important;
-            background-repeat: no-repeat !important;
-            width: 100% !important;
-          }
-        }
-      `}</style>
+  .public-banner {
+    position: relative;
+  }
+
+  @media (max-width: 640px) {
+    .public-banner {
+      height: auto !important;
+      aspect-ratio: 16 / 9;
+      background-size: contain !important;
+      background-position: center !important;
+      background-repeat: no-repeat !important;
+      background-color: transparent !important;
+    }
+  }
+`}</style>
 
       <div
         style={{
