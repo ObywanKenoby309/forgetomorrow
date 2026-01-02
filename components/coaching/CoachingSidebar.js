@@ -3,9 +3,15 @@ import React from 'react';
 import Link from 'next/link';
 
 const ORANGE = '#FF7043';
-const ORANGE_SOFT = '#FFEDE6';
-const CARD_BG = '#FFFFFF';
+
+// ✅ Glass standard (match Profile canonical style)
+const GLASS_BG = 'rgba(255,255,255,0.58)';
+const GLASS_BORDER = 'rgba(255,255,255,0.22)';
+const GLASS_SHADOW = '0 10px 24px rgba(0,0,0,0.12)';
+const GLASS_BLUR = 'blur(10px)';
+
 const TEXT_MAIN = '#263238';
+const TEXT_MUTED = '#90A4AE';
 
 function Badge({ value }) {
   if (!value) return null;
@@ -46,8 +52,10 @@ function NavItem({ href, label, active, badge }) {
     background: active ? ORANGE : 'transparent',
     borderRadius: 10,
     transition:
-      'background 120ms ease, color 120ms ease, box-shadow 120ms ease, transform 80ms ease',
+      'background 140ms ease, color 140ms ease, box-shadow 140ms ease, transform 80ms ease',
   };
+
+  const hoverBg = 'rgba(255,112,67,0.14)'; // glass-friendly orange tint
 
   return (
     <Link
@@ -55,7 +63,7 @@ function NavItem({ href, label, active, badge }) {
       aria-current={active ? 'page' : undefined}
       style={base}
       onMouseEnter={(e) => {
-        if (!active) e.currentTarget.style.background = ORANGE_SOFT;
+        if (!active) e.currentTarget.style.background = hoverBg;
       }}
       onMouseLeave={(e) => {
         if (!active) e.currentTarget.style.background = 'transparent';
@@ -72,7 +80,7 @@ function NavItem({ href, label, active, badge }) {
             width: 3,
             borderRadius: 999,
             background: '#FFFFFF',
-            opacity: 0.8,
+            opacity: 0.85,
           }}
         />
       )}
@@ -90,8 +98,8 @@ function SectionLabel({ children }) {
         fontWeight: 700,
         letterSpacing: '0.08em',
         textTransform: 'uppercase',
-        color: '#90A4AE',
-        padding: '4px 2px 0',
+        color: TEXT_MUTED,
+        padding: '6px 2px 0',
       }}
     >
       {children}
@@ -120,24 +128,20 @@ export default function CoachingSidebar({
         top: 24,
         alignSelf: 'start',
         height: 'fit-content',
-        background: CARD_BG,
+
+        // ✅ Glass container
+        background: GLASS_BG,
         borderRadius: 16,
-        border: '1px solid #E5E7EB',
-        boxShadow: '0 2px 8px rgba(15, 23, 42, 0.05)',
+        border: `1px solid ${GLASS_BORDER}`,
+        boxShadow: GLASS_SHADOW,
+        backdropFilter: GLASS_BLUR,
+        WebkitBackdropFilter: GLASS_BLUR,
         padding: 12,
       }}
     >
       {/* Profile + Overview */}
-      <NavItem
-        href="/profile?chrome=coach"
-        label="Profile"
-        active={active === 'profile'}
-      />
-      <NavItem
-        href="/coaching-dashboard"
-        label="Overview"
-        active={active === 'overview'}
-      />
+      <NavItem href="/profile?chrome=coach" label="Profile" active={active === 'profile'} />
+      <NavItem href="/coaching-dashboard" label="Overview" active={active === 'overview'} />
 
       {/* Connections */}
       <SectionLabel>Connections</SectionLabel>
@@ -198,11 +202,7 @@ export default function CoachingSidebar({
 
       {/* Jobs */}
       <SectionLabel>Jobs</SectionLabel>
-      <NavItem
-        href="/jobs?chrome=coach"
-        label="Apply to Jobs"
-        active={active === 'jobs'}
-      />
+      <NavItem href="/jobs?chrome=coach" label="Apply to Jobs" active={active === 'jobs'} />
 
       {/* Seeker Tools (coach chrome) */}
       <SectionLabel>Seeker Tools</SectionLabel>
@@ -224,11 +224,7 @@ export default function CoachingSidebar({
 
       {/* Hearth */}
       <SectionLabel>Resources</SectionLabel>
-      <NavItem
-        href="/the-hearth?chrome=coach"
-        label="The Hearth"
-        active={active === 'hearth'}
-      />
+      <NavItem href="/the-hearth?chrome=coach" label="The Hearth" active={active === 'hearth'} />
     </nav>
   );
 }
