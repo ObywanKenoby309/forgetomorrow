@@ -1,4 +1,5 @@
 // components/profile/ProfileSkills.js
+
 import React, { useState } from 'react';
 
 export default function ProfileSkills({
@@ -14,7 +15,7 @@ export default function ProfileSkills({
     if (!v) return;
 
     // Case-insensitive dedupe
-    const exists = skills.some((s) => s.toLowerCase() === v.toLowerCase());
+    const exists = skills.some((s) => String(s).toLowerCase() === v.toLowerCase());
     if (!exists) {
       setSkills([...skills, v]);
     }
@@ -35,7 +36,16 @@ export default function ProfileSkills({
         border: '1px solid #e6e9ef',
       }}
     >
-      <div style={{ marginBottom: 8, display: 'flex', gap: 8 }}>
+      <div
+        style={{
+          marginBottom: 8,
+          display: 'flex',
+          gap: 8,
+          flexWrap: 'wrap', // ✅ key: allows button to drop below on small screens
+          alignItems: 'stretch',
+          width: '100%',
+        }}
+      >
         <input
           value={newSkill}
           onChange={(e) => setNewSkill(e.target.value)}
@@ -51,7 +61,8 @@ export default function ProfileSkills({
             border: '1px solid #ddd',
             borderRadius: 10,
             padding: '8px 10px',
-            flex: 1,
+            flex: '1 1 220px', // ✅ can shrink + wrap
+            minWidth: 0,       // ✅ prevents overflow on mobile
             outline: 'none',
             background: 'white',
           }}
@@ -67,6 +78,8 @@ export default function ProfileSkills({
             padding: '8px 12px',
             fontWeight: 700,
             cursor: 'pointer',
+            flex: '0 0 auto',
+            whiteSpace: 'nowrap', // ✅ keeps "+ Add" from wrapping weird
           }}
         >
           + Add
@@ -99,9 +112,10 @@ function Chip({ text, onRemove }) {
         padding: '6px 10px',
         borderRadius: 999,
         border: '1px solid #e6e9ef',
+        maxWidth: '100%',
       }}
     >
-      {text}
+      <span style={{ minWidth: 0, overflowWrap: 'anywhere' }}>{text}</span>
       <button
         type="button"
         onClick={onRemove}
@@ -112,6 +126,7 @@ function Chip({ text, onRemove }) {
           cursor: 'pointer',
           color: '#90A4AE',
           fontWeight: 700,
+          flexShrink: 0,
         }}
         title="Remove"
       >

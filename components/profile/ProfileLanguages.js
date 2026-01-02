@@ -1,3 +1,5 @@
+// components/profile/ProfileLanguages.js
+
 import React, { useState } from 'react';
 
 export default function ProfileLanguages({
@@ -12,7 +14,7 @@ export default function ProfileLanguages({
     const v = newLang.trim();
     if (!v) return;
 
-    const exists = languages.some((l) => l.toLowerCase() === v.toLowerCase());
+    const exists = languages.some((l) => String(l).toLowerCase() === v.toLowerCase());
     if (!exists) {
       setLanguages([...languages, v]);
     }
@@ -33,7 +35,16 @@ export default function ProfileLanguages({
         border: '1px solid #e6e9ef',
       }}
     >
-      <div style={{ marginBottom: 8, display: 'flex', gap: 8 }}>
+      <div
+        style={{
+          marginBottom: 8,
+          display: 'flex',
+          gap: 8,
+          flexWrap: 'wrap', // ✅ wrap on mobile
+          alignItems: 'stretch',
+          width: '100%',
+        }}
+      >
         <input
           value={newLang}
           onChange={(e) => setNewLang(e.target.value)}
@@ -49,7 +60,8 @@ export default function ProfileLanguages({
             border: '1px solid #ddd',
             borderRadius: 10,
             padding: '8px 10px',
-            flex: 1,
+            flex: '1 1 220px',
+            minWidth: 0,
             outline: 'none',
             background: 'white',
           }}
@@ -65,6 +77,8 @@ export default function ProfileLanguages({
             padding: '8px 12px',
             fontWeight: 700,
             cursor: 'pointer',
+            flex: '0 0 auto',
+            whiteSpace: 'nowrap',
           }}
         >
           + Add
@@ -97,9 +111,10 @@ function Chip({ text, onRemove }) {
         padding: '6px 10px',
         borderRadius: 999,
         border: '1px solid #e6e9ef',
+        maxWidth: '100%',
       }}
     >
-      {text}
+      <span style={{ minWidth: 0, overflowWrap: 'anywhere' }}>{text}</span>
       <button
         type="button"
         onClick={onRemove}
@@ -110,6 +125,7 @@ function Chip({ text, onRemove }) {
           cursor: 'pointer',
           color: '#90A4AE',
           fontWeight: 700,
+          flexShrink: 0,
         }}
         title="Remove"
       >
