@@ -35,7 +35,15 @@ export default function ProfileSectionRow({
         </div>
 
         {hintBullets?.length > 0 && (
-          <ul style={{ margin: '10px 0 0', paddingLeft: 18, color: '#263238', fontSize: 13, lineHeight: 1.45 }}>
+          <ul
+            style={{
+              margin: '10px 0 0',
+              paddingLeft: 18,
+              color: '#263238',
+              fontSize: 13,
+              lineHeight: 1.45,
+            }}
+          >
             {hintBullets.map((b, i) => (
               <li key={i} style={{ marginBottom: 6 }}>
                 {b}
@@ -47,8 +55,22 @@ export default function ProfileSectionRow({
     );
   }, [hintTitle, hintBullets, title]);
 
+  const panelId = `${id || title}-panel`;
+
   return (
     <section id={id} aria-label={title} style={{ width: '100%' }}>
+      {/* Mobile stacking rules (minimum change) */}
+      <style jsx>{`
+        @media (max-width: 767px) {
+          [data-psr-grid='true'] {
+            grid-template-columns: 1fr !important;
+          }
+          [data-psr-hint='true'] {
+            transform: none !important;
+          }
+        }
+      `}</style>
+
       {/* Compact header bar */}
       <div
         style={{
@@ -66,8 +88,17 @@ export default function ProfileSectionRow({
         }}
       >
         <div style={{ minWidth: 0 }}>
-          <div style={{ display: 'flex', alignItems: 'baseline', gap: 10, flexWrap: 'wrap' }}>
-            <h2 style={{ margin: 0, fontSize: 16, fontWeight: 900, color: '#112033' }}>{title}</h2>
+          <div
+            style={{
+              display: 'flex',
+              alignItems: 'baseline',
+              gap: 10,
+              flexWrap: 'wrap',
+            }}
+          >
+            <h2 style={{ margin: 0, fontSize: 16, fontWeight: 900, color: '#112033' }}>
+              {title}
+            </h2>
             {subtitle ? (
               <span style={{ fontSize: 13, color: '#455A64', fontWeight: 600 }}>
                 {subtitle}
@@ -80,7 +111,7 @@ export default function ProfileSectionRow({
           type="button"
           onClick={() => setOpen((v) => !v)}
           aria-expanded={open}
-          aria-controls={`${id || title}-panel`}
+          aria-controls={panelId}
           style={{
             borderRadius: 999,
             border: '1px solid rgba(255,112,67,0.55)',
@@ -99,7 +130,7 @@ export default function ProfileSectionRow({
 
       {/* Expand area: editor + hint (hint slides in) */}
       <div
-        id={`${id || title}-panel`}
+        id={panelId}
         style={{
           overflow: 'hidden',
           transition: 'max-height 220ms ease, opacity 220ms ease, margin-top 220ms ease',
@@ -109,6 +140,7 @@ export default function ProfileSectionRow({
         }}
       >
         <div
+          data-psr-grid="true"
           style={{
             display: 'grid',
             gap: 12,
@@ -134,6 +166,7 @@ export default function ProfileSectionRow({
 
           {/* Hint “curtain” */}
           <div
+            data-psr-hint="true"
             style={{
               transform: open ? 'translateX(0)' : 'translateX(18px)',
               opacity: open ? 1 : 0,
