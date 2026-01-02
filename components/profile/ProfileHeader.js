@@ -222,6 +222,10 @@ export default function ProfileHeader() {
     }
   };
 
+  // ✅ Mobile rule: SHOW FULL WIDTH (no side crop)
+  // Height is derived from width using an aspect ratio box.
+  const MOBILE_BANNER_ASPECT = '3 / 1'; // width-driven; tweak later if you want (e.g. '16 / 9')
+
   return (
     <section
       style={{
@@ -234,7 +238,9 @@ export default function ProfileHeader() {
       }}
     >
       {coverUrl &&
-        (bannerMode === 'cover' ? (
+        (isMobile ? (
+          <BannerFitAspect url={coverUrl} aspectRatio={MOBILE_BANNER_ASPECT} />
+        ) : bannerMode === 'cover' ? (
           <BannerCover url={coverUrl} height={bannerH} focalY={focalY} />
         ) : (
           <BannerFit url={coverUrl} height={bannerH} />
@@ -689,6 +695,9 @@ export default function ProfileHeader() {
                 onChange={(e) => setBannerH(Number(e.target.value))}
               />
               <small style={{ color: '#607D8B' }}>{bannerH}px</small>
+              <small style={{ color: '#90A4AE' }}>
+                Note: Desktop uses this height. Mobile derives height from width to show full banner.
+              </small>
             </div>
 
             {bannerMode === 'cover' && (
@@ -792,7 +801,7 @@ function BannerCover({ url, height, focalY }) {
 
 function BannerFit({ url, height }) {
   return (
-    <div style={{ position: 'relative', height, width: '100%' }}>
+    <div style={{ position: 'relative', height, width: '100%', overflow: 'hidden' }}>
       <div
         aria-hidden="true"
         style={{
@@ -812,6 +821,48 @@ function BannerFit({ url, height }) {
           position: 'relative',
           height: '100%',
           width: '100%',
+          objectFit: 'contain',
+          display: 'block',
+        }}
+      />
+    </div>
+  );
+}
+
+// ✅ Mobile: width-driven box (height derives from width), full banner always visible.
+function BannerFitAspect({ url, aspectRatio }) {
+  return (
+    <div
+      style={{
+        position: 'relative',
+        width: '100%',
+        aspectRatio,
+        overflow: 'hidden',
+        borderTopLeftRadius: 12,
+        borderTopRightRadius: 12,
+        background: 'rgba(255,255,255,0.12)',
+      }}
+    >
+      <div
+        aria-hidden="true"
+        style={{
+          position: 'absolute',
+          inset: 0,
+          backgroundImage: `url(${url})`,
+          backgroundSize: 'cover',
+          backgroundPosition: 'center',
+          filter: 'blur(10px) brightness(0.9)',
+          transform: 'scale(1.05)',
+        }}
+      />
+      <img
+        src={url}
+        alt=""
+        style={{
+          position: 'absolute',
+          inset: 0,
+          width: '100%',
+          height: '100%',
           objectFit: 'contain',
           display: 'block',
         }}
