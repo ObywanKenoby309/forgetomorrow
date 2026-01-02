@@ -46,7 +46,7 @@ function NavItem({ href, label, active, badge }) {
     gap: 10,
     padding: '8px 12px',
     textDecoration: 'none',
-    fontWeight: 600,
+    fontWeight: 700,
     fontSize: 14,
     color: active ? '#FFFFFF' : TEXT_MAIN,
     background: active ? ORANGE : 'transparent',
