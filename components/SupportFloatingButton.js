@@ -1,4 +1,3 @@
-// components/SupportFloatingButton.js
 import Link from 'next/link';
 import { useRouter } from 'next/router';
 import { useSession } from 'next-auth/react';
@@ -42,24 +41,28 @@ export default function SupportFloatingButton() {
   const supportHref = chrome ? `/support?chrome=${chrome}` : '/support';
 
   return (
-    <div className="fixed bottom-6 right-6 z-50">
+    <div className="fixed bottom-6 left-6 z-50">
       <Link href={supportHref} legacyBehavior>
         <a
+          title="Need help? Chat with Support"
+          aria-label="Need help? Chat with Support"
           className="
             flex items-center justify-center gap-2
-            px-4 py-3 md:px-4 md:py-3
+            w-12 h-12 md:w-auto md:h-auto
+            md:px-4 md:py-3
             rounded-full shadow-lg
             bg-[#FF7043] text-white text-sm font-medium
-            hover:brightness-110 focus:outline-none focus:ring-2
+            hover:brightness-110
+            focus:outline-none focus:ring-2
             focus:ring-offset-2 focus:ring-[#FF7043]
           "
         >
           {/* Status dot – desktop only */}
           <span className="hidden md:inline-block w-2 h-2 rounded-full bg-lime-300" />
 
-          {/* Chat icon – mobile only */}
+          {/* Chat icon – always visible */}
           <svg
-            className="w-6 h-6 md:hidden"
+            className="w-6 h-6"
             fill="none"
             stroke="currentColor"
             strokeWidth="2"
