@@ -27,17 +27,14 @@ export default async function handler(req, res) {
     const userId = user.id;
 
     // Parallel fetch of everything we need
-    const [
-      applications,
-      profileViews,
-      interviews,
-      offers,
-      allApplications,
-    ] = await Promise.all([
-      prisma.application.count({ where: { userId } }),
+    const [profileViews, pinned, statusCounts, allApplications] = await Promise.all([
       prisma.profileView.count({ where: { targetId: userId } }),
-      prisma.interview.count({ where: { userId } }),
-      prisma.offer.count({ where: { userId } }),
+      prisma.pinnedJob.count({ where: { userId } }),
+      prisma.application.groupBy({
+        by: ["status"],
+        where: { userId },
+        _count: { _all: true },
+      }),
       prisma.application.findMany({
         where: { userId },
         select: { appliedAt: true },
@@ -45,23 +42,46 @@ export default async function handler(req, res) {
       }),
     ]);
 
-    // Last application date (or null)
-    const lastApplication = allApplications.length > 0
-      ? allApplications[0].appliedAt.toISOString()
-      : null;
+    // Normalize application status counts
+    const counts = {
+      Applied: 0,
+      Interviewing: 0,
+      Offers: 0,
+      ClosedOut: 0,
+    };
 
-    // Return exactly the shape seeker-dashboard.js expects
+    for (const row of statusCounts || []) {
+      const key = String(row.status || "");
+      const n = Number(row?._count?._all || 0);
+      if (Object.prototype.hasOwnProperty.call(counts, key)) {
+        counts[key] = n;
+      }
+    }
+
+    const applicationsTotal =
+      counts.Applied + counts.Interviewing + counts.Offers + counts.ClosedOut;
+
+    // Last application date (or null)
+    const lastApplication =
+      allApplications.length > 0 ? allApplications[0].appliedAt.toISOString() : null;
+
+    // Return exactly what the dashboard needs (DB is source of truth)
     return res.status(200).json({
-      applications,
+      // Pipeline KPI tiles
+      pinned,
+      applied: counts.Applied,
+      interviewing: counts.Interviewing,
+      offers: counts.Offers,
+      closedOut: counts.ClosedOut,
+
+      // Back-compat + extra dashboard data
+      applications: applicationsTotal,
       views: profileViews,
-      interviews,
-      offers,
       lastApplication,
-      allApplications: allApplications.map(app => ({
+      allApplications: allApplications.map((app) => ({
         appliedAt: app.appliedAt.toISOString(),
       })),
     });
-
   } catch (err) {
     console.error("[api/seeker/dashboard-data] error:", err);
     return res

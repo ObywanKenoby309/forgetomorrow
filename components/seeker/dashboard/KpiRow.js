@@ -3,8 +3,6 @@ import React, { useState, useEffect } from 'react';
 import { colorFor } from '@/components/seeker/dashboard/seekerColors';
 import { useRouter } from 'next/router';
 
-const STAGES = ['Pinned', 'Applied', 'Interviewing', 'Offers', 'Closed Out'];
-
 const stageKey = (stage) =>
   ({
     Pinned: 'neutral',
@@ -48,22 +46,9 @@ export default function KpiRow({
   const Tile = ({ title, value, stage }) => {
     const c = colorFor(stageKey(stage));
     return (
-      <div
-        style={{
-          background: c.bg,
-          color: c.text,
-          borderRadius: 12,
-          padding: '12px 16px',
-          border: `1px solid ${c.solid}`,
-          display: 'grid',
-          gap: 4,
-          minWidth: 0,
-          boxShadow: '0 1px 3px rgba(0,0,0,0.1)',
-          transition: 'all 0.3s ease',
-        }}
-      >
-        <div style={{ fontSize: 13, opacity: 0.9, fontWeight: 500 }}>{title}</div>
-        <div style={{ fontSize: 24, fontWeight: 800, lineHeight: 1 }}>
+      <div className="kpiTile" style={{ background: c.bg, color: c.text, border: `1px solid ${c.solid}` }}>
+        <div className="kpiTitle">{title}</div>
+        <div className="kpiValue">
           <AnimatedNumber end={value} />
         </div>
       </div>
@@ -72,22 +57,89 @@ export default function KpiRow({
 
   // === MAIN RETURN — clickable row
   return (
-    <div
-      style={{
-        display: 'grid',
-        gap: 12,
-        gridTemplateColumns: 'repeat(5, minmax(0, 1fr))',
-        cursor: 'pointer',
-      }}
-      onClick={() => router.push('/seeker/applications')}
-      onMouseEnter={(e) => (e.currentTarget.style.boxShadow = '0 4px 12px rgba(0,0,0,0.15)')}
-      onMouseLeave={(e) => (e.currentTarget.style.boxShadow = 'none')}
-    >
-      <Tile title="Pinned" value={pinned} stage="Pinned" />
-      <Tile title="Applied" value={applied} stage="Applied" />
-      <Tile title="Interviewing" value={interviewing} stage="Interviewing" />
-      <Tile title="Offers" value={offers} stage="Offers" />
-      <Tile title="Closed Out" value={closedOut} stage="Closed Out" />
-    </div>
+    <>
+      <style jsx>{`
+        .kpiRow {
+          display: grid;
+          gap: 12px;
+          grid-template-columns: repeat(5, minmax(0, 1fr));
+          cursor: pointer;
+        }
+
+        .kpiTile {
+          border-radius: 12px;
+          padding: 12px 16px;
+          display: grid;
+          gap: 6px;
+          min-width: 0;
+          box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+          transition: all 0.3s ease;
+        }
+
+        .kpiTitle {
+          font-size: 13px;
+          opacity: 0.9;
+          font-weight: 600;
+          line-height: 1.15;
+          text-align: center;
+          white-space: normal;
+          overflow-wrap: anywhere;
+        }
+
+        .kpiValue {
+          font-size: 24px;
+          font-weight: 800;
+          line-height: 1;
+          text-align: center;
+        }
+
+        /* Mobile tightening so labels never collide */
+        @media (max-width: 520px) {
+          .kpiRow {
+            gap: 8px;
+          }
+          .kpiTile {
+            padding: 10px 10px;
+          }
+          .kpiTitle {
+            font-size: 12px;
+          }
+          .kpiValue {
+            font-size: 22px;
+          }
+        }
+
+        @media (max-width: 420px) {
+          .kpiTile {
+            padding: 10px 8px;
+          }
+          .kpiTitle {
+            font-size: 11px;
+          }
+          .kpiValue {
+            font-size: 20px;
+          }
+        }
+      `}</style>
+
+      <div
+        className="kpiRow"
+        onClick={() => router.push('/seeker/applications')}
+        onMouseEnter={(e) => (e.currentTarget.style.boxShadow = '0 4px 12px rgba(0,0,0,0.15)')}
+        onMouseLeave={(e) => (e.currentTarget.style.boxShadow = 'none')}
+        role="button"
+        tabIndex={0}
+        onKeyDown={(e) => {
+          if (e.key === 'Enter' || e.key === ' ') router.push('/seeker/applications');
+        }}
+        aria-label="Open applications"
+      >
+        <Tile title="Pinned" value={pinned} stage="Pinned" />
+        <Tile title="Applied" value={applied} stage="Applied" />
+        <Tile title="Interviewing" value={interviewing} stage="Interviewing" />
+        <Tile title="Offers" value={offers} stage="Offers" />
+        <Tile title="Closed Out" value={closedOut} stage="Closed Out" />
+      </div>
+    </>
   );
 }

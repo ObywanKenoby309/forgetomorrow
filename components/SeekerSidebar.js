@@ -3,15 +3,17 @@ import React from 'react';
 import Link from 'next/link';
 
 const ORANGE = '#FF7043';
-
-// ✅ Glass standard (match Profile canonical style)
-const GLASS_BG = 'rgba(255,255,255,0.58)';
-const GLASS_BORDER = 'rgba(255,255,255,0.22)';
-const GLASS_SHADOW = '0 10px 24px rgba(0,0,0,0.12)';
-const GLASS_BLUR = 'blur(10px)';
-
 const TEXT_MAIN = '#263238';
-const TEXT_MUTED = '#90A4AE';
+
+// ✅ Glass standard (align with RecruiterSidebar canonical frosted glass)
+const GLASS_BG = 'rgba(255,255,255,0.68)';
+const GLASS_BORDER = 'rgba(255,255,255,0.22)';
+const GLASS_SHADOW = '0 10px 26px rgba(0,0,0,0.12)';
+const GLASS_BLUR = 'blur(12px)';
+
+// Hover / subtle fills on glass
+const HOVER_BG = 'rgba(255,112,67,0.10)'; // orange tint but still “breathes”
+const ACTIVE_SHADOW = '0 12px 24px rgba(0,0,0,0.12)';
 
 function Badge({ value }) {
   if (!value) return null;
@@ -31,6 +33,7 @@ function Badge({ value }) {
         fontWeight: 800,
         color: '#fff',
         background: ORANGE,
+        boxShadow: '0 10px 18px rgba(0,0,0,0.10)',
       }}
     >
       {value > 99 ? '99+' : value}
@@ -50,12 +53,11 @@ function NavItem({ href, label, active, badge }) {
     fontSize: 14,
     color: active ? '#FFFFFF' : TEXT_MAIN,
     background: active ? ORANGE : 'transparent',
-    borderRadius: 10,
+    borderRadius: 12,
     transition:
-      'background 140ms ease, color 140ms ease, box-shadow 140ms ease, transform 80ms ease',
+      'background 120ms ease, color 120ms ease, box-shadow 120ms ease, transform 80ms ease',
+    boxShadow: active ? ACTIVE_SHADOW : 'none',
   };
-
-  const hoverBg = 'rgba(255,112,67,0.14)'; // glass-friendly orange tint
 
   return (
     <Link
@@ -63,7 +65,7 @@ function NavItem({ href, label, active, badge }) {
       aria-current={active ? 'page' : undefined}
       style={base}
       onMouseEnter={(e) => {
-        if (!active) e.currentTarget.style.background = hoverBg;
+        if (!active) e.currentTarget.style.background = HOVER_BG;
       }}
       onMouseLeave={(e) => {
         if (!active) e.currentTarget.style.background = 'transparent';
@@ -75,8 +77,8 @@ function NavItem({ href, label, active, badge }) {
           style={{
             position: 'absolute',
             left: 0,
-            top: 6,
-            bottom: 6,
+            top: 7,
+            bottom: 7,
             width: 3,
             borderRadius: 999,
             background: '#FFFFFF',
@@ -84,7 +86,6 @@ function NavItem({ href, label, active, badge }) {
           }}
         />
       )}
-
       <span style={{ marginLeft: active ? 6 : 0 }}>{label}</span>
       <Badge value={badge} />
     </Link>
@@ -118,21 +119,19 @@ export default function SeekerSidebar({
       style={{
         display: 'grid',
         gap: 6,
-
-        // ✅ Sticky + align with other sidebars
         position: 'sticky',
         top: 24,
         alignSelf: 'start',
         height: 'fit-content',
 
-        // ✅ Glass container
+        // ✅ Glass container (match Recruiter)
         background: GLASS_BG,
-        borderRadius: 16,
+        borderRadius: 18,
         border: `1px solid ${GLASS_BORDER}`,
         boxShadow: GLASS_SHADOW,
+        padding: 12,
         backdropFilter: GLASS_BLUR,
         WebkitBackdropFilter: GLASS_BLUR,
-        padding: 12,
       }}
     >
       {/* Profile */}

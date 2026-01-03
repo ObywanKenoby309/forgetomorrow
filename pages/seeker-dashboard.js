@@ -9,6 +9,7 @@ import RecommendedJobsPreview from '@/components/seeker/dashboard/RecommendedJob
 import ProfilePerformanceTeaser from '@/components/seeker/dashboard/ProfilePerformanceTeaser';
 import KpiRow from '@/components/seeker/dashboard/KpiRow';
 import ApplicationsOverTime from '@/components/seeker/dashboard/ApplicationsOverTime';
+
 // ISO WEEK HELPERS
 const startOfISOWeek = (d) => {
   const date = new Date(Date.UTC(d.getFullYear(), d.getMonth(), d.getDate()));
@@ -17,51 +18,59 @@ const startOfISOWeek = (d) => {
   date.setUTCHours(0, 0, 0, 0);
   return date;
 };
+
 const weekDiff = (a, b) => {
   const MSWEEK = 7 * 24 * 3600 * 1000;
   return Math.floor((a.getTime() - b.getTime()) / MSWEEK);
 };
+
 export default function SeekerDashboard() {
   const router = useRouter();
   const chrome = String(router.query.chrome || '').toLowerCase();
   const withChrome = (path) =>
     chrome ? `${path}${path.includes('?') ? '&' : '?'}chrome=${chrome}` : path;
+
   // Decide which sidebar item should be highlighted
   const chromeKey = chrome || 'seeker';
   const seekerActiveNav =
     chromeKey === 'coach' || chromeKey.startsWith('recruiter')
       ? 'seeker-dashboard' // Coach / Recruiter sidebars → Seeker Tools → Seeker Dashboard
       : 'dashboard'; // Native seeker sidebar
+
   const [kpi, setKpi] = useState(null);
   const [weeks, setWeeks] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
+
   useEffect(() => {
     let cancelled = false;
+
     async function loadData() {
       try {
-        // Just try to load dashboard data; fall back gracefully if it fails.
         const res = await fetch('/api/seeker/dashboard-data');
-        if (!res.ok) {
-          throw new Error(`Failed to load data: ${res.status}`);
-        }
+        if (!res.ok) throw new Error(`Failed to load data: ${res.status}`);
+
         const data = await res.json();
         if (cancelled) return;
+
+        // ✅ Map the DB-backed KPI shape (no "rejected" field)
         const newKpi = {
-          applied: data.applications || 0,
+          pinned: data.pinned || 0,
+          applied: data.applied ?? data.applications ?? 0,
           viewed: data.views || 0,
-          interviewing: data.interviews || 0,
+          interviewing: data.interviewing ?? 0,
           offers: data.offers || 0,
-          rejected: 0,
-          lastSent: data.lastApplication
-            ? new Date(data.lastApplication).toLocaleDateString()
-            : '—',
+          closedOut: data.closedOut || 0,
+          lastSent: data.lastApplication ? new Date(data.lastApplication).toLocaleDateString() : '—',
         };
+
         setKpi(newKpi);
+
         // Applications over time - 5 weeks
         const today = new Date();
         const thisWeek = startOfISOWeek(today);
         const labels = Array.from({ length: 5 }, (_, i) => `W${5 - i}`);
         const buckets = labels.map(() => ({ applied: 0, interviews: 0 }));
+
         (data.allApplications || []).forEach((app) => {
           const d = new Date(app.appliedAt);
           const wStart = startOfISOWeek(d);
@@ -71,6 +80,7 @@ export default function SeekerDashboard() {
             buckets[idx].applied += 1;
           }
         });
+
         setWeeks(
           labels.map((label, i) => ({
             label,
@@ -81,28 +91,27 @@ export default function SeekerDashboard() {
       } catch (err) {
         console.error('Dashboard load error:', err);
         if (!cancelled) {
-          // Fallback: show empty stats but KEEP the user on the page
           setKpi({
+            pinned: 0,
             applied: 0,
             viewed: 0,
             interviewing: 0,
             offers: 0,
-            rejected: 0,
+            closedOut: 0,
             lastSent: '—',
           });
         }
       } finally {
-        if (!cancelled) {
-          setIsLoading(false);
-        }
+        if (!cancelled) setIsLoading(false);
       }
     }
+
     loadData();
     return () => {
       cancelled = true;
     };
-    // run once on mount
   }, []);
+
   const HeaderBox = (
     <section
       aria-label="Job seeker dashboard overview"
@@ -116,6 +125,7 @@ export default function SeekerDashboard() {
       </p>
     </section>
   );
+
   const RightRail = (
     <div className="grid gap-4">
       {/* 1) Resume + Cover builder quick access */}
@@ -141,6 +151,7 @@ export default function SeekerDashboard() {
           </Link>
         </div>
       </section>
+
       {/* 2) Career roadmap teaser */}
       <section className="bg-white border border-gray-200 rounded-xl p-4 shadow-sm">
         <h2 className="text-sm font-semibold text-gray-900 mb-1">
@@ -151,6 +162,7 @@ export default function SeekerDashboard() {
           here. For now, use your dashboard and The Hearth to plan your next move.
         </p>
       </section>
+
       {/* 3) Advertisement / Partner Spotlight */}
       <section className="bg-white border border-gray-200 rounded-xl p-4 shadow-sm">
         <h2 className="text-sm font-semibold text-gray-900 mb-1">
@@ -169,6 +181,7 @@ export default function SeekerDashboard() {
       </section>
     </div>
   );
+
   if (isLoading) {
     return (
       <>
@@ -188,11 +201,13 @@ export default function SeekerDashboard() {
       </>
     );
   }
+
   return (
     <>
       <Head>
         <title>Seeker Dashboard | ForgeTomorrow</title>
       </Head>
+
       <SeekerLayout
         title="Seeker Dashboard | ForgeTomorrow"
         header={HeaderBox}
@@ -205,16 +220,18 @@ export default function SeekerDashboard() {
             <h2 className="text-lg font-semibold text-orange-600 mb-3">
               Job Search Snapshot
             </h2>
+
             {kpi && (
               <KpiRow
                 pinned={kpi.pinned || 0}
-  applied={kpi.applied || 0}
-  interviewing={kpi.interviewing || 0}
-  offers={kpi.offers || 0}
-  closedOut={kpi.closedOut || 0}
+                applied={kpi.applied || 0}
+                interviewing={kpi.interviewing || 0}
+                offers={kpi.offers || 0}
+                closedOut={kpi.closedOut || 0}
               />
             )}
           </section>
+
           {/* New Matches + Your Next Yes - side by side */}
           <div className="grid md:grid-cols-2 gap-6">
             <RecommendedJobsPreview />
@@ -233,6 +250,7 @@ export default function SeekerDashboard() {
               <PinnedJobsPreview />
             </section>
           </div>
+
           {/* Applications Over Time + Profile Performance Teaser - side by side */}
           <div className="grid md:grid-cols-2 gap-6">
             <section className="bg-white border border-gray-200 rounded-xl p-5 shadow-sm">
