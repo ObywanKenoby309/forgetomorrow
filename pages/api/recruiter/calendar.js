@@ -2,6 +2,20 @@
 import { getServerSession } from 'next-auth/next';
 import { authOptions } from '../auth/[...nextauth]';
 import { prisma } from '@/lib/prisma';
+import jwt from 'jsonwebtoken';
+
+function readCookie(req, name) {
+  try {
+    const raw = req.headers?.cookie || '';
+    const parts = raw.split(';').map((p) => p.trim());
+    for (const p of parts) {
+      if (p.startsWith(name + '=')) return decodeURIComponent(p.slice(name.length + 1));
+    }
+    return '';
+  } catch {
+    return '';
+  }
+}
 
 function mapDbToEvent(item) {
   if (!item) return null;
@@ -150,22 +164,43 @@ async function syncRecruiterItemToSeekerCalendar(item, opts = {}) {
 export default async function handler(req, res) {
   try {
     const session = await getServerSession(req, res, authOptions);
-    const userId = session?.user?.id;
+    const realUserId = session?.user?.id;
 
-    if (!userId) {
+    if (!realUserId) {
       return res.status(401).json({ error: 'Unauthorized' });
+    }
+
+    // ✅ Impersonation-aware effective user (Platform Admin only)
+    let effectiveUserId = realUserId;
+    const isPlatformAdmin = !!session?.user?.isPlatformAdmin;
+
+    if (isPlatformAdmin) {
+      const imp = readCookie(req, 'ft_imp');
+      if (imp) {
+        try {
+          const decoded = jwt.verify(
+            imp,
+            process.env.NEXTAUTH_SECRET || 'dev-secret-change-in-production'
+          );
+          if (decoded && typeof decoded === 'object' && decoded.targetUserId) {
+            effectiveUserId = String(decoded.targetUserId);
+          }
+        } catch {
+          // ignore invalid/expired cookie
+        }
+      }
     }
 
     // ───────────────── GET: list items for this recruiter ────────────────
     if (req.method === 'GET') {
       const [items, inboundMirrors] = await Promise.all([
         prisma.recruiterCalendarItem.findMany({
-          where: { ownerId: userId },
+          where: { ownerId: effectiveUserId },
           orderBy: { date: 'asc' },
         }),
         prisma.seekerCalendarItem.findMany({
           where: {
-            userId,
+            userId: effectiveUserId,
             source: 'coach',
           },
           orderBy: { date: 'asc' },
@@ -175,27 +210,29 @@ export default async function handler(req, res) {
       const events = items.map(mapDbToEvent).filter(Boolean);
 
       // Map inbound coach invites (mirrored in SeekerCalendarItem) into event shape
-      const inboundEvents = inboundMirrors.map((mirror) => {
-        // Treat these as personal scope items for display in recruiter calendar
-        const dbShape = {
-          id: mirror.id,
-          ownerId: userId,
-          scope: 'personal',
-          date: mirror.date,
-          time: mirror.time || '09:00',
-          title: mirror.title || 'Coaching session',
-          type: mirror.type || 'Interview',
-          status: mirror.status || 'Scheduled',
-          notes: mirror.notes || '',
-          candidateType: 'external',
-          candidateUserId: null,
-          candidateName: '',
-          company: '',
-          jobTitle: '',
-          req: '',
-        };
-        return mapDbToEvent(dbShape);
-      }).filter(Boolean);
+      const inboundEvents = inboundMirrors
+        .map((mirror) => {
+          // Treat these as personal scope items for display in recruiter calendar
+          const dbShape = {
+            id: mirror.id,
+            ownerId: effectiveUserId,
+            scope: 'personal',
+            date: mirror.date,
+            time: mirror.time || '09:00',
+            title: mirror.title || 'Coaching session',
+            type: mirror.type || 'Interview',
+            status: mirror.status || 'Scheduled',
+            notes: mirror.notes || '',
+            candidateType: 'external',
+            candidateUserId: null,
+            candidateName: '',
+            company: '',
+            jobTitle: '',
+            req: '',
+          };
+          return mapDbToEvent(dbShape);
+        })
+        .filter(Boolean);
 
       return res.status(200).json({ events: [...events, ...inboundEvents] });
     }
@@ -251,7 +288,7 @@ export default async function handler(req, res) {
           },
         });
 
-        if (!existing || existing.ownerId !== userId) {
+        if (!existing || existing.ownerId !== effectiveUserId) {
           return res.status(404).json({ error: 'Item not found' });
         }
 
@@ -288,7 +325,7 @@ export default async function handler(req, res) {
         // Create new calendar item
         item = await prisma.recruiterCalendarItem.create({
           data: {
-            ownerId: userId,
+            ownerId: effectiveUserId,
             scope: safeScope,
             date: dateTime,
             time: safeTime,
@@ -327,6 +364,16 @@ export default async function handler(req, res) {
         return res.status(400).json({ error: 'Missing id' });
       }
 
+      // ✅ Ensure recruiter can only delete their own items (effective user)
+      const existing = await prisma.recruiterCalendarItem.findUnique({
+        where: { id },
+        select: { ownerId: true },
+      });
+
+      if (!existing || existing.ownerId !== effectiveUserId) {
+        return res.status(404).json({ error: 'Item not found' });
+      }
+
       // Clean up mirrored candidate calendar entries
       await prisma.seekerCalendarItem.deleteMany({
         where: {
@@ -335,7 +382,6 @@ export default async function handler(req, res) {
         },
       });
 
-      // Ensure recruiter can only delete their own items
       await prisma.recruiterCalendarItem.delete({
         where: { id },
       });
