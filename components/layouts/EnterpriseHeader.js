@@ -1,4 +1,4 @@
-// components/layouts/EnterpriseHeader.js ← with real plan from session + chrome/returnTo for Settings & Support
+// components/layouts/EnterpriseHeader.js
 import Link from "next/link";
 import { useRouter } from "next/router";
 import { useEffect, useRef, useState } from "react";
@@ -7,6 +7,19 @@ import Avatar from "@/components/common/Avatar";
 import { useCurrentUserAvatar } from "@/hooks/useCurrentUserAvatar";
 import { useSession } from "next-auth/react";
 
+function readCookie(name) {
+  try {
+    const raw = document.cookie || "";
+    const parts = raw.split(";").map((p) => p.trim());
+    for (const p of parts) {
+      if (p.startsWith(name + "=")) return decodeURIComponent(p.slice(name.length + 1));
+    }
+    return "";
+  } catch {
+    return "";
+  }
+}
+
 export default function EnterpriseHeader({
   brandHref = "/",
   brandLabel = "ForgeTomorrow",
@@ -14,7 +27,6 @@ export default function EnterpriseHeader({
   navItems = [],
   showUpgrade = true,
   supportHref = "/support",
-  // default settings route (can be overridden by caller)
   optionsHref = "/settings",
   alignWithGrid = true,
   planLabel,
@@ -31,29 +43,29 @@ export default function EnterpriseHeader({
 }) {
   const router = useRouter();
 
-  // 🔸 Plan context (dev toggle etc.)
   const { isEnterprise: planIsEnterprise, togglePlan } = usePlan();
 
-  // 🔸 Real plan from NextAuth session
   const { data: session } = useSession();
   const rawPlan = (session?.user && session.user.plan) || null;
   const normalizedPlan =
     typeof rawPlan === "string" ? rawPlan.toUpperCase() : null;
 
-  // Recruiter Enterprise = true when DB says ENTERPRISE
   const isRecruiterEnterprise =
     normalizedPlan === "ENTERPRISE" ||
     normalizedPlan === "RECRUITER_ENTERPRISE";
 
-  // Final flag used everywhere in this header
   const isEnterprise = planIsEnterprise || isRecruiterEnterprise;
+
+  const isPlatformAdmin = !!session?.user?.isPlatformAdmin;
+
+  // ✅ NEW: client-only flag so we can show "Stop impersonating" in the menu
+  const [isImpersonating, setIsImpersonating] = useState(false);
 
   const [openMobile, setOpenMobile] = useState(false);
   const [openProfile, setOpenProfile] = useState(false);
   const profileRef = useRef(null);
   const isActive = (href) => router.pathname === href;
 
-  // 🔗 Pull avatar image + initials from current user
   const { avatarUrl, initials } = useCurrentUserAvatar();
 
   useEffect(() => {
@@ -75,6 +87,12 @@ export default function EnterpriseHeader({
     document.addEventListener("keydown", handleEsc);
     return () => document.removeEventListener("keydown", handleEsc);
   }, [openMobile]);
+
+  // ✅ NEW: read impersonation UI flag cookie
+  useEffect(() => {
+    if (!isPlatformAdmin) return;
+    setIsImpersonating(readCookie("ft_imp_active") === "1");
+  }, [isPlatformAdmin]);
 
   const defaultHeight = "h-14";
   const resolvedHeight = heightClass || defaultHeight;
@@ -114,10 +132,6 @@ export default function EnterpriseHeader({
 
   const navInRight = publicVariant && !showUserMenu;
 
-  // ──────────────────────────────────────────────────────────────
-  // 🔁 Chrome + returnTo wiring for Settings & Support
-  // ──────────────────────────────────────────────────────────────
-
   const currentPath = router.asPath || "/";
 
   const queryChrome = (router.query?.chrome || "").toString().toLowerCase();
@@ -147,6 +161,9 @@ export default function EnterpriseHeader({
   const resolvedOptionsHref = buildUrlWithContext(optionsHref);
   const resolvedSupportHref = buildUrlWithContext(supportHref);
 
+  // ✅ NEW: impersonation page link
+  const resolvedImpersonateHref = buildUrlWithContext("/admin/impersonate");
+
   return (
     <>
       <header className="bg-[#2a2a2a] text-gray-300 shadow-md sticky top-0 z-50 w-full">
@@ -157,7 +174,6 @@ export default function EnterpriseHeader({
             ...(publicVariant ? { gap: "3rem" } : null),
           }}
         >
-          {/* LEFT — Brand */}
           <div className={resolvedLeft}>
             <Link href={brandHref} className="flex items-center gap-2">
               <img
@@ -170,14 +186,12 @@ export default function EnterpriseHeader({
               </span>
             </Link>
 
-            {/* Section label — hide on small screens */}
             {sectionLabel && (
               <span className="hidden sm:inline text-sm text-gray-400 ml-3">
                 {sectionLabel}
               </span>
             )}
 
-            {/* Plan badge — hide on small screens */}
             {!suppressBadge && (
               <span
                 className={`hidden sm:inline-flex ml-3 text-[10px] uppercase tracking-widest px-2 py-1 rounded border ${
@@ -191,7 +205,6 @@ export default function EnterpriseHeader({
             )}
           </div>
 
-          {/* MIDDLE — Desktop Nav */}
           {navInRight ? (
             <div className="hidden md:flex" />
           ) : (
@@ -214,7 +227,6 @@ export default function EnterpriseHeader({
             </div>
           )}
 
-          {/* RIGHT — Actions or Nav */}
           <div className={resolvedRight}>
             {navInRight ? (
               <div
@@ -244,6 +256,7 @@ export default function EnterpriseHeader({
                     Upgrade
                   </Link>
                 )}
+
                 {showUserMenu && (
                   <div className="relative" ref={profileRef}>
                     <button
@@ -269,7 +282,7 @@ export default function EnterpriseHeader({
                     {openProfile && (
                       <div
                         role="menu"
-                        className="absolute right-0 mt-2 w-48 bg-[#2f2f2f] border border-[#3a3a3a] rounded-md shadow-xl"
+                        className="absolute right-0 mt-2 w-56 bg-[#2f2f2f] border border-[#3a3a3a] rounded-md shadow-xl"
                       >
                         <Link
                           href={resolvedOptionsHref}
@@ -278,6 +291,7 @@ export default function EnterpriseHeader({
                         >
                           Settings
                         </Link>
+
                         <Link
                           href={resolvedSupportHref}
                           className="block px-4 py-3 text-sm hover:bg-[#333]"
@@ -285,6 +299,45 @@ export default function EnterpriseHeader({
                         >
                           Support
                         </Link>
+
+                        {/* ✅ NEW: Impersonation links (Forge staff only) */}
+                        {isPlatformAdmin && (
+                          <>
+                            <div className="h-px bg-[#3a3a3a]" />
+                            <Link
+                              href={resolvedImpersonateHref}
+                              className="block px-4 py-3 text-sm hover:bg-[#333]"
+                              role="menuitem"
+                              onClick={() => setOpenProfile(false)}
+                            >
+                              Impersonate…
+                            </Link>
+
+                            {isImpersonating && (
+                              <button
+                                className="w-full text-left px-4 py-3 text-sm hover:bg-[#333]"
+                                role="menuitem"
+                                onClick={async () => {
+                                  try {
+                                    setOpenProfile(false);
+                                    await fetch("/api/admin/impersonation/stop", {
+                                      method: "POST",
+                                    });
+                                    // refresh state + return to current page
+                                    router.replace(router.asPath);
+                                  } catch {
+                                    // no-throw
+                                  }
+                                }}
+                              >
+                                Stop impersonating
+                              </button>
+                            )}
+                          </>
+                        )}
+
+                        <div className="h-px bg-[#3a3a3a]" />
+
                         <button
                           className="w-full text-left px-4 py-3 text-sm hover:bg-[#333]"
                           role="menuitem"
@@ -295,6 +348,7 @@ export default function EnterpriseHeader({
                         >
                           Log Out
                         </button>
+
                         {process.env.NODE_ENV !== "production" && (
                           <button
                             onClick={togglePlan}
@@ -311,7 +365,6 @@ export default function EnterpriseHeader({
             )}
           </div>
 
-          {/* Mobile Hamburger */}
           <div className="md:hidden flex justify-end">
             <button
               onClick={() => setOpenMobile((v) => !v)}
@@ -350,14 +403,13 @@ export default function EnterpriseHeader({
       {openMobile && (
         <div className="fixed inset-0 z-[99999] bg-black/60 flex items-start justify-center overflow-y-auto">
           <div className="mt-10 mb-10 w-full max-w-md bg-[#2a2a2a] rounded-3xl px-6 py-8 flex flex-col shadow-2xl">
-            {/* Close button */}
             <div className="flex justify-end mb-4">
               <button
                 onClick={() => setOpenMobile(false)}
                 className="p-2 focus-visible:ring-4 focus-visible:ring-orange-500 rounded-full"
                 aria-label="Close menu"
               >
-              <svg
+                <svg
                   className="h-8 w-8 text-gray-400 hover:text-white"
                   fill="none"
                   stroke="currentColor"
@@ -373,7 +425,6 @@ export default function EnterpriseHeader({
               </button>
             </div>
 
-            {/* Brand + optional avatar */}
             <div className="flex items-center gap-4 mb-8">
               <img
                 src="/favicon-32x32.png"
@@ -393,7 +444,6 @@ export default function EnterpriseHeader({
               </div>
             </div>
 
-            {/* Nav + account actions / CTA */}
             <nav className="flex flex-col gap-6 flex-1">
               {navItems.map((item) => (
                 <Link
@@ -405,6 +455,38 @@ export default function EnterpriseHeader({
                   {item.label}
                 </Link>
               ))}
+
+              {/* ✅ NEW: staff-only tools in mobile menu */}
+              {showUserMenu && isPlatformAdmin && (
+                <div className="mt-4 space-y-3">
+                  <Link
+                    href={resolvedImpersonateHref}
+                    onClick={() => setOpenMobile(false)}
+                    className="text-lg font-medium text-gray-200 hover:text-[#FF7043] focus:outline-none focus:ring-4 focus:ring-orange-500 rounded-xl py-3"
+                  >
+                    Impersonate…
+                  </Link>
+
+                  {isImpersonating && (
+                    <button
+                      onClick={async () => {
+                        try {
+                          await fetch("/api/admin/impersonation/stop", {
+                            method: "POST",
+                          });
+                          setOpenMobile(false);
+                          router.replace(router.asPath);
+                        } catch {
+                          setOpenMobile(false);
+                        }
+                      }}
+                      className="w-full text-left text-lg font-medium text-gray-200 hover:text-[#FF7043] focus:outline-none focus:ring-4 focus:ring-orange-500 rounded-xl py-3"
+                    >
+                      Stop impersonating
+                    </button>
+                  )}
+                </div>
+              )}
 
               {publicVariant || !showUserMenu ? (
                 <Link

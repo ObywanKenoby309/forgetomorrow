@@ -1,5 +1,6 @@
 // pages/api/recruiter/candidates/index.js
-// List recruiter candidates from Prisma (main DB) — LIVE from User table (no stale Candidate snapshot)
+// List recruiter candidates from Prisma (main DB) — LIVE from User table
+// + join recruiter-specific metadata (notes/tags/pipelineStage) from RecruiterCandidate (Option A)
 
 import { PrismaClient } from "@prisma/client";
 import { getServerSession } from "next-auth";
@@ -17,6 +18,11 @@ function toCsv(arr) {
     .map((s) => String(s || "").trim())
     .filter(Boolean)
     .join(", ");
+}
+
+function toStringArray(v) {
+  if (Array.isArray(v)) return v.map((x) => String(x || "").trim()).filter(Boolean);
+  return [];
 }
 
 export default async function handler(req, res) {
@@ -38,6 +44,18 @@ export default async function handler(req, res) {
   if (!session?.user?.email) {
     return res.status(401).json({ error: "Not authenticated" });
   }
+
+  // Resolve current userId (recruiter)
+  const recruiter = await prisma.user.findUnique({
+    where: { email: session.user.email },
+    select: { id: true, accountKey: true },
+  });
+
+  if (!recruiter?.id) {
+    return res.status(404).json({ error: "User not found" });
+  }
+
+  const recruiterUserId = recruiter.id;
 
   const {
     q = "",
@@ -203,23 +221,60 @@ export default async function handler(req, res) {
       },
     });
 
+    const candidateUserIds = users.map((u) => u.id);
+
+    // ✅ Option A: join recruiter-specific metadata (notes/tags/stage) scoped to this recruiter
+    const metas = candidateUserIds.length
+      ? await prisma.recruiterCandidate.findMany({
+          where: {
+            recruiterUserId,
+            candidateUserId: { in: candidateUserIds },
+          },
+          select: {
+            candidateUserId: true,
+            tags: true,
+            notes: true,
+            pipelineStage: true,
+            lastContacted: true,
+            lastSeen: true,
+          },
+        })
+      : [];
+
+    const metaByCandidateId = new Map();
+    for (const m of metas) {
+      metaByCandidateId.set(m.candidateUserId, m);
+    }
+
     // Map Users -> candidate-shaped objects expected by UI
-    const candidates = users.map((u) => ({
-      id: u.id, // keep stable id for UI
-      userId: u.id,
-      name: u.name || "Unnamed",
-      email: u.email || null,
-      title: u.headline || "",
-      currentTitle: u.headline || "",
-      role: u.headline || "",
-      summary: u.aboutMe || "",
-      location: u.location || "",
-      skills: toCsv(u.skillsJson),
-      languages: toCsv(u.languagesJson),
-      match: null,
-      tags: [],
-      notes: "",
-    }));
+    const candidates = users.map((u) => {
+      const meta = metaByCandidateId.get(u.id) || null;
+
+      const tagsArr = meta?.tags ? toStringArray(meta.tags) : [];
+      const notesText = typeof meta?.notes === "string" ? meta.notes : "";
+
+      return {
+        id: u.id, // keep stable id for UI (User.id)
+        userId: u.id,
+        name: u.name || "Unnamed",
+        email: u.email || null,
+        title: u.headline || "",
+        currentTitle: u.headline || "",
+        role: u.headline || "",
+        summary: u.aboutMe || "",
+        location: u.location || "",
+        skills: toCsv(u.skillsJson),
+        languages: toCsv(u.languagesJson),
+        match: null,
+
+        // recruiter-only metadata
+        tags: tagsArr,
+        notes: notesText,
+        pipelineStage: meta?.pipelineStage || null,
+        lastContacted: meta?.lastContacted || null,
+        lastSeen: meta?.lastSeen || null,
+      };
+    });
 
     return res.status(200).json({ candidates });
   } catch (err) {

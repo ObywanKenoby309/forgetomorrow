@@ -43,6 +43,23 @@ enum ProfileVisibility {
   RECRUITERS_ONLY
 }
 
+// ✅ NEW: internal ForgeTomorrow staff roles (separate axis from customer UserRole)
+enum StaffRole {
+  PLATFORM_ADMIN
+  CSM
+  SALES
+  DEV
+  CS
+  UX
+}
+
+// ✅ NEW: org lifecycle (optional but useful immediately)
+enum OrganizationStatus {
+  PILOT
+  ACTIVE
+  SUSPENDED
+}
+
 // ============================================================================
 //  JOBS, APPLICATIONS, INTERVIEWS & OFFERS
 // ============================================================================
@@ -76,6 +93,9 @@ model Job {
 
   // 🔸 which account / org owns this job (for tracing & reporting)
   accountKey String? // e.g. "ACCT-12345" or internal org code
+
+  // ✅ NEW: link jobs to Organization via existing accountKey (no new columns needed)
+  organization Organization? @relation("OrganizationJobs", fields: [accountKey], references: [accountKey])
 
   applications Application[]
   views        JobView[]
@@ -162,7 +182,7 @@ model PinnedJob {
   title    String?
   company  String?
   location String?
-  url      String?
+  url       String?
   pinnedAt DateTime @default(now())
   user     User     @relation(fields: [userId], references: [id])
   job      Job?     @relation(fields: [jobId], references: [id])
@@ -509,6 +529,107 @@ model ContactRequest {
 }
 
 // ============================================================================
+//  ORGANIZATIONS (Recruiter org ownership + future seats)
+//  NOTE: links via existing accountKey on User/Job to avoid breaking existing data.
+// ============================================================================
+
+model Organization {
+  id        String             @id @default(cuid())
+  name      String
+  status    OrganizationStatus @default(PILOT)
+
+  // ✅ The stable "join key" already used in User.accountKey / Job.accountKey
+  accountKey String @unique
+
+  // Customer org owner/superuser (optional now, but needed soon)
+  ownerUserId String?
+  owner       User? @relation("OrganizationOwner", fields: [ownerUserId], references: [id], onDelete: SetNull)
+
+  // ✅ Back-relations via accountKey (no extra columns required on User/Job)
+  users User[] @relation("OrganizationUsers")
+  jobs  Job[]  @relation("OrganizationJobs")
+
+  // ✅ NEW: multi-org access
+  members OrganizationMember[] @relation("OrganizationMembers")
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([ownerUserId])
+  @@map("organizations")
+}
+
+// ============================================================================
+//  ORGANIZATION MEMBERS (Multi-client recruiter access / seats)
+//  - Allows a recruiter (or staff) to have access to MANY orgs.
+//  - Keeps User.accountKey as "home/default org" (optional).
+// ============================================================================
+
+model OrganizationMember {
+  id String @id @default(cuid())
+
+  // Org scoping via existing accountKey convention
+  accountKey String
+  organization Organization @relation("OrganizationMembers", fields: [accountKey], references: [accountKey], onDelete: Cascade)
+
+  // The user who has access to the org (recruiter, admin, staff, etc.)
+  userId String
+  user   User @relation("UserOrganizationMembers", fields: [userId], references: [id], onDelete: Cascade)
+
+  // Optional: role within THIS org (use later, doesn't break now)
+  role String?
+
+  createdAt DateTime @default(now())
+
+  @@unique([accountKey, userId])
+  @@index([accountKey])
+  @@index([userId])
+  @@map("organization_members")
+}
+
+// ============================================================================
+//  INTERNAL STAFF ROLES (Option B) — many-to-many User ↔ StaffRole
+// ============================================================================
+
+model UserStaffRole {
+  id     String    @id @default(cuid())
+  userId String
+  role   StaffRole
+  createdAt DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, role])
+  @@index([role])
+  @@index([userId])
+  @@map("user_staff_roles")
+}
+
+// ============================================================================
+//  AUDIT LOG (supports impersonation + admin actions)
+// ============================================================================
+
+model AuditLog {
+  id String @id @default(cuid())
+
+  actorUserId String
+  actor       User @relation("AuditActor", fields: [actorUserId], references: [id], onDelete: Cascade)
+
+  // If action occurred while impersonating a user
+  impersonatedUserId String?
+  impersonatedUser   User? @relation("AuditImpersonated", fields: [impersonatedUserId], references: [id], onDelete: SetNull)
+
+  action   String
+  metadata Json?
+  createdAt DateTime @default(now())
+
+  @@index([actorUserId])
+  @@index([impersonatedUserId])
+  @@index([createdAt])
+  @@map("audit_logs")
+}
+
+// ============================================================================
 //  USER — FULL ACCOUNT + PROFILE
 // ============================================================================
 
@@ -559,6 +680,26 @@ model User {
 
   accountKey String?
 
+  // ✅ NEW: org link via accountKey (no new User columns)
+  organization Organization? @relation("OrganizationUsers", fields: [accountKey], references: [accountKey])
+  
+  // ✅ NEW: multi-org access (fractional / agency recruiters)
+  organizationMemberships OrganizationMember[] @relation("UserOrganizationMembers")
+
+  // ✅ NEW: internal staff roles (Option B)
+  staffRoles UserStaffRole[]
+
+  // ✅ NEW: audit log relations
+  auditAsActor        AuditLog[] @relation("AuditActor")
+  auditAsImpersonated AuditLog[] @relation("AuditImpersonated")
+
+  // ✅ NEW: org owner inverse relation (optional)
+  ownedOrganizations Organization[] @relation("OrganizationOwner")
+  
+  // ✅ Profile views (who viewed you / who you viewed)
+  profileViewsReceived ProfileView[] @relation("ProfileViewTarget")
+  profileViewsMade     ProfileView[] @relation("ProfileViewViewer")
+
   applications Application[]
   views        JobView[]
   interviews   Interview[]
@@ -578,6 +719,10 @@ model User {
 
   candidates           Candidate[]
   candidateAutomations RecruiterCandidateAutomation[]
+  
+  // RecruiterCandidate (Option A) relations
+  recruiterCandidatesOwned  RecruiterCandidate[] @relation("RecruiterCandidateRecruiter")
+  recruiterCandidatesAsUser RecruiterCandidate[] @relation("RecruiterCandidateCandidate")
 
   messages                 Message[]                 @relation("UserMessages")
   conversationParticipants ConversationParticipant[] @relation("UserConversationParticipants")
@@ -667,6 +812,39 @@ model Candidate {
 
   @@index([userId])
   @@map("candidates")
+}
+
+// ============================================================================
+//  RECRUITER CANDIDATE (Option A) — recruiter-specific metadata for a User
+//  Stores notes/tags/pipeline without copying user profile data.
+// ============================================================================
+
+model RecruiterCandidate {
+  id String @id @default(cuid())
+
+  recruiterUserId String
+  recruiter       User @relation("RecruiterCandidateRecruiter", fields: [recruiterUserId], references: [id], onDelete: Cascade)
+
+  candidateUserId String
+  candidate       User @relation("RecruiterCandidateCandidate", fields: [candidateUserId], references: [id], onDelete: Cascade)
+
+  // REQUIRED: this record is always scoped to a specific client org / account
+  accountKey String
+
+  tags          Json?
+  notes         String?
+  pipelineStage String?
+  lastContacted DateTime?
+  lastSeen      DateTime?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([recruiterUserId, candidateUserId, accountKey])
+  @@index([recruiterUserId])
+  @@index([candidateUserId])
+  @@index([accountKey])
+  @@map("recruiter_candidates")
 }
 
 // ============================================================================
@@ -1009,6 +1187,7 @@ model SupportTicket {
   intent    String?
 
   status String
+  @@map("support_tickets")
 }
 
 // ============================================================================
@@ -1021,6 +1200,9 @@ model ProfileView {
   targetId  String
   source    String?
   createdAt DateTime @default(now())
+
+  viewer User? @relation("ProfileViewViewer", fields: [viewerId], references: [id], onDelete: SetNull)
+  target User  @relation("ProfileViewTarget", fields: [targetId], references: [id], onDelete: Cascade)
 
   @@index([targetId])
   @@index([viewerId])
