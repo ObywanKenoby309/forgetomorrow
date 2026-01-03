@@ -17,7 +17,7 @@ export default function SupportFloatingButton() {
     return null;
   }
 
-  // Hide ONLY on the support page itself (already there)
+  // Hide ONLY on the support page itself
   if (router.pathname === '/support') {
     return null;
   }
@@ -31,36 +31,52 @@ export default function SupportFloatingButton() {
     const role = String(session.user.role || '').toLowerCase();
 
     if (role.startsWith('recruiter')) {
-      // recruiter_smb, recruiter_ent, recruiter_admin, etc.
       chrome = role.includes('ent') ? 'recruiter-ent' : 'recruiter-smb';
     } else if (role.includes('coach')) {
       chrome = 'coach';
     } else {
-      // default to seeker experience
       chrome = 'seeker';
     }
   }
 
   const supportHref = chrome ? `/support?chrome=${chrome}` : '/support';
 
-  const handleClick = () => {
-    // hook for future logic if needed
-  };
-
   return (
     <div className="fixed bottom-6 right-6 z-50">
       <Link href={supportHref} legacyBehavior>
         <a
-          onClick={handleClick}
           className="
-            flex items-center gap-2 px-4 py-3 rounded-full shadow-lg
+            flex items-center justify-center gap-2
+            px-4 py-3 md:px-4 md:py-3
+            rounded-full shadow-lg
             bg-[#FF7043] text-white text-sm font-medium
             hover:brightness-110 focus:outline-none focus:ring-2
             focus:ring-offset-2 focus:ring-[#FF7043]
           "
         >
-          <span className="inline-block w-2 h-2 rounded-full bg-lime-300" />
-          <span>Need help? Chat with Support</span>
+          {/* Status dot – desktop only */}
+          <span className="hidden md:inline-block w-2 h-2 rounded-full bg-lime-300" />
+
+          {/* Chat icon – mobile only */}
+          <svg
+            className="w-6 h-6 md:hidden"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="2"
+            viewBox="0 0 24 24"
+            aria-hidden="true"
+          >
+            <path
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              d="M8 10h8m-8 4h5m9-2a9 9 0 11-18 0 9 9 0 0118 0z"
+            />
+          </svg>
+
+          {/* Text – desktop only */}
+          <span className="hidden md:inline">
+            Need help? Chat with Support
+          </span>
         </a>
       </Link>
     </div>
