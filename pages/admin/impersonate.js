@@ -17,6 +17,17 @@ function readCookie(name) {
   }
 }
 
+// ✅ NEW: safe JSON reader so we never throw "Unexpected end of JSON input"
+async function safeReadJson(res) {
+  try {
+    const text = await res.text();
+    if (!text) return null;
+    return JSON.parse(text);
+  } catch {
+    return null;
+  }
+}
+
 export default function AdminImpersonatePage() {
   const router = useRouter();
   const { data: session, status } = useSession();
@@ -39,27 +50,15 @@ export default function AdminImpersonatePage() {
   }, [router.query.returnTo]);
 
   if (status === "loading") {
-    return (
-      <main style={{ padding: 24, fontFamily: "system-ui" }}>
-        Loading…
-      </main>
-    );
+    return <main style={{ padding: 24, fontFamily: "system-ui" }}>Loading…</main>;
   }
 
   if (!session?.user) {
-    return (
-      <main style={{ padding: 24, fontFamily: "system-ui" }}>
-        You must be signed in.
-      </main>
-    );
+    return <main style={{ padding: 24, fontFamily: "system-ui" }}>You must be signed in.</main>;
   }
 
   if (!isPlatformAdmin) {
-    return (
-      <main style={{ padding: 24, fontFamily: "system-ui" }}>
-        Forbidden.
-      </main>
-    );
+    return <main style={{ padding: 24, fontFamily: "system-ui" }}>Forbidden.</main>;
   }
 
   async function start() {
@@ -71,12 +70,20 @@ export default function AdminImpersonatePage() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ email }),
       });
-      const data = await res.json();
-      if (!res.ok) throw new Error(data?.error || "Failed");
+
+      const data = await safeReadJson(res);
+
+      // ✅ NEW: clean, explicit error if the route doesn’t exist or returns non-JSON
+      if (!res.ok) {
+        const apiErr = data?.error || data?.message;
+        if (res.status === 404) {
+          throw new Error("Missing API route: /api/admin/impersonation/start");
+        }
+        throw new Error(apiErr || `Failed to start impersonation (HTTP ${res.status})`);
+      }
 
       setActive(true);
       setMsg(`Impersonation started for ${data?.target?.email || email}`);
-      // go back to where support came from
       setTimeout(() => router.push(returnTo), 400);
     } catch (e) {
       setMsg(e?.message || "Failed to start impersonation");
@@ -92,8 +99,16 @@ export default function AdminImpersonatePage() {
       const res = await fetch("/api/admin/impersonation/stop", {
         method: "POST",
       });
-      const data = await res.json();
-      if (!res.ok) throw new Error(data?.error || "Failed");
+
+      const data = await safeReadJson(res);
+
+      if (!res.ok) {
+        const apiErr = data?.error || data?.message;
+        if (res.status === 404) {
+          throw new Error("Missing API route: /api/admin/impersonation/stop");
+        }
+        throw new Error(apiErr || `Failed to stop impersonation (HTTP ${res.status})`);
+      }
 
       setActive(false);
       setMsg("Impersonation stopped.");
@@ -174,6 +189,11 @@ export default function AdminImpersonatePage() {
 
           <div style={{ marginTop: 10, color: "#6b7280", fontSize: 13 }}>
             Return target: <code>{returnTo}</code>
+          </div>
+
+          {/* ✅ NEW: visible hint so you don’t forget the real blocker */}
+          <div style={{ marginTop: 10, color: "#6b7280", fontSize: 13 }}>
+            API required: <code>/api/admin/impersonation/start</code> and <code>/api/admin/impersonation/stop</code>
           </div>
         </div>
       </main>
