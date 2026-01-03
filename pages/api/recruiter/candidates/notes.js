@@ -1,10 +1,12 @@
 // pages/api/recruiter/candidates/notes.js
 // Update recruiter-only notes for a candidate (Option A)
 // Stores notes in RecruiterCandidate using (recruiterUserId, candidateUserId, accountKey)
+// ✅ Impersonation-aware: resolves effective recruiter via ft_imp cookie (Platform Admin only)
 
 import { PrismaClient } from "@prisma/client";
 import { getServerSession } from "next-auth";
 import { authOptions } from "../../auth/[...nextauth]";
+import jwt from "jsonwebtoken";
 
 let prisma;
 function getPrisma() {
@@ -15,6 +17,55 @@ function getPrisma() {
 function asString(v) {
   const s = typeof v === "string" ? v : String(v || "");
   return s.trim();
+}
+
+function readCookie(req, name) {
+  try {
+    const raw = req.headers?.cookie || "";
+    const parts = raw.split(";").map((p) => p.trim());
+    for (const p of parts) {
+      if (p.startsWith(name + "=")) return decodeURIComponent(p.slice(name.length + 1));
+    }
+    return "";
+  } catch {
+    return "";
+  }
+}
+
+async function resolveEffectiveRecruiter(prisma, req, session) {
+  const sessionEmail = String(session?.user?.email || "").trim().toLowerCase();
+  if (!sessionEmail) return null;
+
+  const isPlatformAdmin = !!session?.user?.isPlatformAdmin;
+  let effectiveUserId = null;
+
+  if (isPlatformAdmin) {
+    const imp = readCookie(req, "ft_imp");
+    if (imp) {
+      try {
+        const decoded = jwt.verify(imp, process.env.NEXTAUTH_SECRET || "dev-secret-change-in-production");
+        if (decoded && typeof decoded === "object" && decoded.targetUserId) {
+          effectiveUserId = String(decoded.targetUserId);
+        }
+      } catch {
+        // ignore
+      }
+    }
+  }
+
+  if (effectiveUserId) {
+    const u = await prisma.user.findUnique({
+      where: { id: effectiveUserId },
+      select: { id: true, email: true, accountKey: true },
+    });
+    return u?.id ? u : null;
+  }
+
+  const u = await prisma.user.findUnique({
+    where: { email: sessionEmail },
+    select: { id: true, email: true, accountKey: true },
+  });
+  return u?.id ? u : null;
 }
 
 export default async function handler(req, res) {
@@ -36,10 +87,8 @@ export default async function handler(req, res) {
     return res.status(401).json({ error: "Not authenticated" });
   }
 
-  const recruiter = await prisma.user.findUnique({
-    where: { email: session.user.email },
-    select: { id: true, accountKey: true },
-  });
+  // ✅ Impersonation-aware recruiter identity
+  const recruiter = await resolveEffectiveRecruiter(prisma, req, session);
 
   if (!recruiter?.id || !recruiter.accountKey) {
     return res.status(404).json({ error: "Recruiter or accountKey not found" });

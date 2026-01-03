@@ -1,10 +1,12 @@
 // pages/api/recruiter/candidates/index.js
 // List recruiter candidates from Prisma (main DB) — LIVE from User table
 // + join recruiter-specific metadata (notes/tags/pipelineStage) from RecruiterCandidate (Option A)
+// ✅ Impersonation-aware: resolves effective recruiter via ft_imp cookie (Platform Admin only)
 
 import { PrismaClient } from "@prisma/client";
 import { getServerSession } from "next-auth";
 import { authOptions } from "../../auth/[...nextauth]";
+import jwt from "jsonwebtoken";
 
 let prisma;
 function getPrisma() {
@@ -23,6 +25,58 @@ function toCsv(arr) {
 function toStringArray(v) {
   if (Array.isArray(v)) return v.map((x) => String(x || "").trim()).filter(Boolean);
   return [];
+}
+
+function readCookie(req, name) {
+  try {
+    const raw = req.headers?.cookie || "";
+    const parts = raw.split(";").map((p) => p.trim());
+    for (const p of parts) {
+      if (p.startsWith(name + "=")) return decodeURIComponent(p.slice(name.length + 1));
+    }
+    return "";
+  } catch {
+    return "";
+  }
+}
+
+async function resolveEffectiveRecruiter(prisma, req, session) {
+  const sessionEmail = String(session?.user?.email || "").trim().toLowerCase();
+  if (!sessionEmail) return null;
+
+  const isPlatformAdmin = !!session?.user?.isPlatformAdmin;
+
+  // Default: real logged-in user
+  let effectiveUserId = null;
+
+  // If platform admin + impersonation cookie exists, use targetUserId
+  if (isPlatformAdmin) {
+    const imp = readCookie(req, "ft_imp");
+    if (imp) {
+      try {
+        const decoded = jwt.verify(imp, process.env.NEXTAUTH_SECRET || "dev-secret-change-in-production");
+        if (decoded && typeof decoded === "object" && decoded.targetUserId) {
+          effectiveUserId = String(decoded.targetUserId);
+        }
+      } catch {
+        // ignore invalid/expired cookie
+      }
+    }
+  }
+
+  if (effectiveUserId) {
+    const u = await prisma.user.findUnique({
+      where: { id: effectiveUserId },
+      select: { id: true, email: true, accountKey: true },
+    });
+    return u?.id ? u : null;
+  }
+
+  const u = await prisma.user.findUnique({
+    where: { email: sessionEmail },
+    select: { id: true, email: true, accountKey: true },
+  });
+  return u?.id ? u : null;
 }
 
 export default async function handler(req, res) {
@@ -45,17 +99,18 @@ export default async function handler(req, res) {
     return res.status(401).json({ error: "Not authenticated" });
   }
 
-  // Resolve current userId (recruiter)
-  const recruiter = await prisma.user.findUnique({
-    where: { email: session.user.email },
-    select: { id: true, accountKey: true },
-  });
+  // ✅ Impersonation-aware recruiter identity
+  const recruiter = await resolveEffectiveRecruiter(prisma, req, session);
 
   if (!recruiter?.id) {
     return res.status(404).json({ error: "User not found" });
   }
+  if (!recruiter.accountKey) {
+    return res.status(404).json({ error: "accountKey not found" });
+  }
 
   const recruiterUserId = recruiter.id;
+  const recruiterAccountKey = recruiter.accountKey;
 
   const {
     q = "",
@@ -81,14 +136,10 @@ export default async function handler(req, res) {
   const skillsQuery = (skills || "").toString().trim();
   const languagesQuery = (languages || "").toString().trim();
 
-  // IMPORTANT:
   // Recruiter discovery is LIVE and only includes:
   // - PUBLIC profiles
   // - RECRUITERS_ONLY profiles
   // Private profiles are excluded instantly.
-  //
-  // Back-compat:
-  // - If older rows only use isProfilePublic, keep those visible when true.
   const andClauses = [
     { deletedAt: null },
     {
@@ -132,7 +183,6 @@ export default async function handler(req, res) {
   }
 
   // Work status / preferred work type / relocate come from workPreferences Json
-  // NOTE: Prisma supports JSON path filters on PostgreSQL.
   if (workStatusQuery) {
     andClauses.push({
       workPreferences: {
@@ -166,8 +216,6 @@ export default async function handler(req, res) {
   }
 
   // Skills / Languages (comma-separated; ALL terms must be present)
-  // Using skillsJson / languagesJson arrays directly (LIVE).
-  // NOTE: This is exact-match on array values ("Leadership" must exist as a discrete item).
   if (skillsQuery) {
     const terms = skillsQuery
       .split(",")
@@ -223,11 +271,12 @@ export default async function handler(req, res) {
 
     const candidateUserIds = users.map((u) => u.id);
 
-    // ✅ Option A: join recruiter-specific metadata (notes/tags/stage) scoped to this recruiter
+    // ✅ Join recruiter-specific metadata scoped to recruiterUserId + accountKey
     const metas = candidateUserIds.length
       ? await prisma.recruiterCandidate.findMany({
           where: {
             recruiterUserId,
+            accountKey: recruiterAccountKey,
             candidateUserId: { in: candidateUserIds },
           },
           select: {
@@ -246,7 +295,6 @@ export default async function handler(req, res) {
       metaByCandidateId.set(m.candidateUserId, m);
     }
 
-    // Map Users -> candidate-shaped objects expected by UI
     const candidates = users.map((u) => {
       const meta = metaByCandidateId.get(u.id) || null;
 
@@ -254,7 +302,7 @@ export default async function handler(req, res) {
       const notesText = typeof meta?.notes === "string" ? meta.notes : "";
 
       return {
-        id: u.id, // keep stable id for UI (User.id)
+        id: u.id,
         userId: u.id,
         name: u.name || "Unnamed",
         email: u.email || null,
@@ -279,8 +327,6 @@ export default async function handler(req, res) {
     return res.status(200).json({ candidates });
   } catch (err) {
     console.error("[recruiter/candidates] query error:", err);
-    return res
-      .status(500)
-      .json({ error: "Failed to load candidates from the database." });
+    return res.status(500).json({ error: "Failed to load candidates from the database." });
   }
 }

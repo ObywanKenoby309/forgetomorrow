@@ -1,9 +1,44 @@
 // pages/api/recruiter/candidates/why.js
+// ✅ Impersonation-aware: resolves effective recruiter via ft_imp cookie (Platform Admin only)
+// NOTE: This endpoint only reads candidate/job; impersonation matters for consistent "who is asking" logging/behavior.
+
 import { getServerSession } from "next-auth";
 import { authOptions } from "../../auth/[...nextauth]";
 import { PrismaClient } from "@prisma/client";
+import jwt from "jsonwebtoken";
 
 const prisma = new PrismaClient();
+
+function readCookie(req, name) {
+  try {
+    const raw = req.headers?.cookie || "";
+    const parts = raw.split(";").map((p) => p.trim());
+    for (const p of parts) {
+      if (p.startsWith(name + "=")) return decodeURIComponent(p.slice(name.length + 1));
+    }
+    return "";
+  } catch {
+    return "";
+  }
+}
+
+async function resolveEffectiveRecruiterId(req, session) {
+  const isPlatformAdmin = !!session?.user?.isPlatformAdmin;
+  if (!isPlatformAdmin) return null;
+
+  const imp = readCookie(req, "ft_imp");
+  if (!imp) return null;
+
+  try {
+    const decoded = jwt.verify(imp, process.env.NEXTAUTH_SECRET || "dev-secret-change-in-production");
+    if (decoded && typeof decoded === "object" && decoded.targetUserId) {
+      return String(decoded.targetUserId);
+    }
+  } catch {
+    // ignore
+  }
+  return null;
+}
 
 function normStr(v) {
   return String(v || "").trim();
@@ -35,7 +70,6 @@ function clamp(n, min, max) {
   return Math.max(min, Math.min(max, n));
 }
 
-// Deterministic WHY builder (works for: manual filters, automation filters, optional jobId)
 function buildExplain({ candidate, job, filters }) {
   const headline = normStr(candidate.headline);
   const aboutMe = normStr(candidate.aboutMe);
@@ -67,7 +101,6 @@ function buildExplain({ candidate, job, filters }) {
 
   const reasons = [];
 
-  // Role/title alignment
   const titleNeedle = fJobTitle || jobTitle || fQ;
   if (titleNeedle && (includesCI(headline, titleNeedle) || includesCI(aboutMe, titleNeedle))) {
     reasons.push({
@@ -81,7 +114,6 @@ function buildExplain({ candidate, job, filters }) {
     });
   }
 
-  // Location
   if (fLoc && includesCI(location, fLoc)) {
     reasons.push({
       requirement: `Location match: ${fLoc}`,
@@ -89,7 +121,6 @@ function buildExplain({ candidate, job, filters }) {
     });
   }
 
-  // Summary keywords (aboutMe)
   if (fSummaryKeywords && includesCI(aboutMe, fSummaryKeywords)) {
     reasons.push({
       requirement: `Keyword match: ${fSummaryKeywords}`,
@@ -97,7 +128,6 @@ function buildExplain({ candidate, job, filters }) {
     });
   }
 
-  // Boolean placeholder behavior matches index.js (searched in aboutMe)
   if (fBool && includesCI(aboutMe, fBool)) {
     reasons.push({
       requirement: `Boolean intent found: ${fBool}`,
@@ -105,7 +135,6 @@ function buildExplain({ candidate, job, filters }) {
     });
   }
 
-  // Skills
   let matchedSkills = [];
   let gapSkills = [];
 
@@ -139,7 +168,6 @@ function buildExplain({ candidate, job, filters }) {
     });
   }
 
-  // Languages
   if (fLanguages.length) {
     const candLangLC = candLang.map(lc);
     const matchedLang = fLanguages.filter((s) => candLangLC.includes(lc(s)));
@@ -151,7 +179,6 @@ function buildExplain({ candidate, job, filters }) {
     }
   }
 
-  // Score = alignment with recruiter intent (filters/job). No job = intent score.
   const checks = [];
   if (fLoc) checks.push(includesCI(location, fLoc) ? 1 : 0);
   if (fSummaryKeywords) checks.push(includesCI(aboutMe, fSummaryKeywords) ? 1 : 0);
@@ -202,6 +229,11 @@ export default async function handler(req, res) {
     return res.status(401).json({ error: "Not authenticated" });
   }
 
+  // Resolve impersonated recruiter id if applicable (not strictly required for output,
+  // but keeps this endpoint aligned with the rest of recruiter tooling)
+  const impersonatedRecruiterId = await resolveEffectiveRecruiterId(req, session);
+  void impersonatedRecruiterId; // intentionally unused (alignment only)
+
   try {
     const { candidateId, jobId = null, filters = null } = req.body || {};
 
@@ -209,7 +241,6 @@ export default async function handler(req, res) {
       return res.status(400).json({ error: "Missing candidateId" });
     }
 
-    // IMPORTANT: candidate list is sourced from User table
     const candidate = await prisma.user.findUnique({
       where: { id: candidateId },
       select: {
