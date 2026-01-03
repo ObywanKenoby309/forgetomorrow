@@ -35,13 +35,13 @@ export default function SupportFloatingButton() {
   const supportHref = chrome ? `/support?chrome=${chrome}` : '/support';
 
   return (
-    <div className="fixed bottom-4 right-6 z-50">
+    <div className="fixed bottom-4 right-4 z-50">
       <Link href={supportHref} aria-label="Open Support Center">
         <a
           className="
             relative
             flex items-center justify-center
-            w-[46px] h-[46px]
+            w-[42px] h-[42px]
             rounded-full
             bg-[#FF7043]
             text-white
