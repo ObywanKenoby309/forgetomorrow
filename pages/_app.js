@@ -50,6 +50,9 @@ export default function App({ Component, pageProps: { session, ...pageProps } })
 
   const isRecruiterRoute = router.pathname.startsWith('/recruiter');
 
+  // ✅ NEW: Admin routes are INTERNAL (no external header/footer)
+  const isAdminRoute = router.pathname.startsWith('/admin');
+
   // Treat all Hearth routes as internal seeker-style pages
   const isSeekerRoute =
     router.pathname.startsWith('/seeker') ||
@@ -57,7 +60,7 @@ export default function App({ Component, pageProps: { session, ...pageProps } })
     router.pathname.startsWith('/cover') ||
     router.pathname.startsWith('/apply') ||
     router.pathname.startsWith('/hearth') ||
-    router.pathname.startsWith('/offer-negotiation') || // ✅ FIX: treat Offer & Negotiation as internal seeker pages
+    router.pathname.startsWith('/offer-negotiation') ||
     [
       '/the-hearth',
       '/jobs',
@@ -76,7 +79,7 @@ export default function App({ Component, pageProps: { session, ...pageProps } })
     router.pathname === '/coaching-dashboard' ||
     router.pathname.startsWith('/dashboard/coaching') ||
     router.pathname.startsWith('/coach') ||
-    router.pathname.startsWith('/resources/mentors'); // ✅ NEW: treat mentor spotlight routes as internal coaching pages
+    router.pathname.startsWith('/resources/mentors');
 
   const isSettingsRoute = router.pathname === '/settings';
 
@@ -86,8 +89,10 @@ export default function App({ Component, pageProps: { session, ...pageProps } })
     router.pathname === '/support/chat' ||
     router.pathname.startsWith('/support/');
 
+  // ✅ UPDATED: admin routes are NOT public
   const isPublicByPath =
     !isRecruiterRoute &&
+    !isAdminRoute &&
     !isSeekerRoute &&
     !isCoachingRoute &&
     !isSettingsRoute &&
@@ -126,6 +131,7 @@ export default function App({ Component, pageProps: { session, ...pageProps } })
       !!lastRoute &&
       (lastRoute.startsWith('/seeker') ||
         lastRoute.startsWith('/recruiter') ||
+        lastRoute.startsWith('/admin') || // ✅ NEW
         lastRoute.startsWith('/dashboard/coaching') ||
         lastRoute === '/coaching-dashboard' ||
         lastRoute === '/feed' ||
@@ -172,7 +178,6 @@ export default function App({ Component, pageProps: { session, ...pageProps } })
       <Head>
         <title>ForgeTomorrow</title>
         <meta name="viewport" content="width=device-width, initial-scale=1" />
-        {/* Cookie Script (prod only) */}
       </Head>
 
       {shouldLoadCookieScript && (

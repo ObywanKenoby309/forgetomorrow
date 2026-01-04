@@ -4,9 +4,7 @@ import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/router";
 import { useSession } from "next-auth/react";
 
-// ✅ Use internal layout so we get the correct internal header/footer + wallpaper behavior
 import InternalLayout from "@/components/layouts/InternalLayout";
-import { useUserWallpaper } from "@/hooks/useUserWallpaper";
 
 function readCookie(name) {
   try {
@@ -21,7 +19,7 @@ function readCookie(name) {
   }
 }
 
-// ✅ safe JSON reader so we never throw "Unexpected end of JSON input"
+// safe JSON reader so we never throw "Unexpected end of JSON input"
 async function safeReadJson(res) {
   try {
     const text = await res.text();
@@ -32,8 +30,8 @@ async function safeReadJson(res) {
   }
 }
 
-// ✅ Ticket number format (example: cmjyyujjl002mkz04gn9gvufq)
-// Keep it simple: must look like a CUID-style id (starts with "c", long, lowercase/nums).
+// Ticket number format (example: cmjyyujjl002mkz04gn9gvufq)
+// must look like a CUID-style id (starts with "c", long, lowercase/nums).
 function isValidTicketNumber(v) {
   const s = String(v || "").trim();
   if (!s) return false;
@@ -62,9 +60,6 @@ export default function AdminImpersonatePage() {
   const router = useRouter();
   const { data: session, status } = useSession();
 
-  // ✅ wallpaper (frosted glass standard is handled by your layouts/styles; this helps ensure bg respects wallpaper)
-  const { wallpaperStyle } = useUserWallpaper ? useUserWallpaper() : { wallpaperStyle: undefined };
-
   const [email, setEmail] = useState("");
   const [ticketNumber, setTicketNumber] = useState("");
   const [noTicket, setNoTicket] = useState(false);
@@ -76,7 +71,6 @@ export default function AdminImpersonatePage() {
   const isPlatformAdmin = !!session?.user?.isPlatformAdmin;
 
   useEffect(() => {
-    // UI flag cookie
     setActive(readCookie("ft_imp_active") === "1");
   }, []);
 
@@ -124,7 +118,6 @@ export default function AdminImpersonatePage() {
   async function start() {
     setMsg("");
 
-    // ✅ UI validation (server will also validate)
     if (!email.trim()) {
       setMsg("Email is required.");
       return;
@@ -139,7 +132,6 @@ export default function AdminImpersonatePage() {
       const res = await fetch("/api/admin/impersonation/start", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        // ✅ include reason (ticket id OR NO-TICKET)
         body: JSON.stringify({ email, reason: reasonValue }),
       });
 
@@ -197,13 +189,7 @@ export default function AdminImpersonatePage() {
         <title>Impersonate – ForgeTomorrow</title>
       </Head>
 
-      <main
-        style={{
-          padding: 24,
-          fontFamily: "system-ui",
-          ...((wallpaperStyle && typeof wallpaperStyle === "object") ? wallpaperStyle : {}),
-        }}
-      >
+      <main style={{ padding: 24, fontFamily: "system-ui" }}>
         <div style={{ maxWidth: 760, margin: "0 auto" }}>
           <div
             style={{
@@ -303,14 +289,12 @@ export default function AdminImpersonatePage() {
                   </label>
                 </div>
 
-                {/* inline validation hint */}
                 {!active && !noTicket && ticketNumber.trim() && !isValidTicketNumber(ticketNumber) ? (
                   <div style={{ marginTop: 6, fontSize: 12, color: "#b91c1c" }}>
                     Ticket number format looks invalid. Paste the ticket ID exactly.
                   </div>
                 ) : null}
 
-                {/* procedure shown only when No-Ticket */}
                 {noTicket ? (
                   <div
                     style={{
@@ -328,16 +312,12 @@ export default function AdminImpersonatePage() {
                       No-Ticket procedure (do this immediately after the action)
                     </div>
                     <ol style={{ margin: 0, paddingLeft: 18 }}>
+                      <li>Complete the emergency action for the customer (minimum necessary).</li>
                       <li>
-                        Complete the emergency action for the customer (minimum necessary).
+                        Open a Support Desk ticket right away and include: who requested it, what action was taken,
+                        what account it impacted, and who performed it.
                       </li>
-                      <li>
-                        Open a Support Desk ticket right away and include:
-                        who requested it, what action was taken, what account it impacted, and who performed it.
-                      </li>
-                      <li>
-                        Add any supporting email/message details into the ticket.
-                      </li>
+                      <li>Add any supporting email/message details into the ticket.</li>
                     </ol>
                   </div>
                 ) : null}
