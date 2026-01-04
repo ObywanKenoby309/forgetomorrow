@@ -76,9 +76,9 @@ function inferChromeFromSession(session) {
 }
 
 function ImpersonateHeaderBox() {
-  // EXACT same wrapper spacing pattern as Support (raised vs your previous)
+  // ✅ minimal raise so it aligns tighter with side rails
   return (
-    <section className="px-4 pt-2 md:pt-4">
+    <section className="px-4 pt-0 md:pt-1">
       <div
         className="max-w-4xl mx-auto"
         style={{
@@ -102,8 +102,9 @@ function ImpersonateHeaderBox() {
 }
 
 function ImpersonationPolicyRightCard() {
+  // ✅ remove double padding; SeekerLayout already pads the rail
   return (
-    <aside className="p-4 md:p-6 space-y-4">
+    <aside className="p-0 space-y-4">
       <div
         style={{
           borderRadius: 14,
@@ -312,6 +313,7 @@ export default function AdminImpersonatePage() {
         title={pageTitle}
         header={<ImpersonateHeaderBox />}
         right={<ImpersonationPolicyRightCard />}
+        rightVariant="light"
         activeNav="support"
       >
         <div className="max-w-4xl mx-auto p-6">
@@ -328,6 +330,7 @@ export default function AdminImpersonatePage() {
         title={pageTitle}
         header={<ImpersonateHeaderBox />}
         right={<ImpersonationPolicyRightCard />}
+        rightVariant="light"
         activeNav="support"
       >
         <div className="max-w-4xl mx-auto p-6">
@@ -346,6 +349,7 @@ export default function AdminImpersonatePage() {
         title={pageTitle}
         header={<ImpersonateHeaderBox />}
         right={<ImpersonationPolicyRightCard />}
+        rightVariant="light"
         activeNav="support"
       >
         <div className="max-w-4xl mx-auto p-6">
@@ -363,6 +367,7 @@ export default function AdminImpersonatePage() {
       title={pageTitle}
       header={<ImpersonateHeaderBox />}
       right={<ImpersonationPolicyRightCard />}
+      rightVariant="light"
       activeNav="support"
     >
       <Head>
