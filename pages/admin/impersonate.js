@@ -19,7 +19,6 @@ function readCookie(name) {
   }
 }
 
-// safe JSON reader so we never throw "Unexpected end of JSON input"
 async function safeReadJson(res) {
   try {
     const text = await res.text();
@@ -30,30 +29,38 @@ async function safeReadJson(res) {
   }
 }
 
-// Ticket number format (example: cmjyyujjl002mkz04gn9gvufq)
-// must look like a CUID-style id (starts with "c", long, lowercase/nums).
+// Example: cmjyyujjl002mkz04gn9gvufq
 function isValidTicketNumber(v) {
   const s = String(v || "").trim();
   if (!s) return false;
   return /^c[a-z0-9]{20,}$/.test(s);
 }
 
-// Robust chrome extraction (handles cases where router.query is not ready yet)
-function getChrome(router) {
+function extractChromeFromAsPath(asPath) {
   try {
-    const direct = String(router?.query?.chrome || "").toLowerCase().trim();
-    if (direct) return direct;
-
-    const asPath = String(router?.asPath || "");
-    if (!asPath.includes("chrome=")) return "";
-    const qIndex = asPath.indexOf("?");
+    const s = String(asPath || "");
+    if (!s.includes("chrome=")) return "";
+    const qIndex = s.indexOf("?");
     if (qIndex === -1) return "";
-    const query = asPath.slice(qIndex + 1);
+    const query = s.slice(qIndex + 1);
     const params = new URLSearchParams(query);
     return String(params.get("chrome") || "").toLowerCase().trim();
   } catch {
     return "";
   }
+}
+
+function inferChromeFromSession(session) {
+  // Your saved chrome gates: seeker | coach | recruiter-smb | recruiter-ent
+  const role = String(session?.user?.role || "").toUpperCase();
+  const plan = String(session?.user?.plan || "").toUpperCase();
+
+  if (role === "COACH") return "coach";
+  if (role === "RECRUITER" || role === "ADMIN") {
+    if (plan.includes("ENTERPRISE")) return "recruiter-ent";
+    return "recruiter-smb";
+  }
+  return "seeker";
 }
 
 export default function AdminImpersonatePage() {
@@ -68,13 +75,58 @@ export default function AdminImpersonatePage() {
   const [msg, setMsg] = useState("");
   const [active, setActive] = useState(false);
 
+  // ✅ chrome must be resolved BEFORE layout renders, otherwise InternalLayout defaults to seeker
+  const [chrome, setChrome] = useState("");
+  const [chromeReady, setChromeReady] = useState(false);
+
   const isPlatformAdmin = !!session?.user?.isPlatformAdmin;
 
   useEffect(() => {
     setActive(readCookie("ft_imp_active") === "1");
   }, []);
 
-  const chrome = useMemo(() => getChrome(router), [router]);
+  useEffect(() => {
+    // Resolve chrome deterministically (prevents seeker shell flash)
+    if (typeof window === "undefined") return;
+
+    let next = "";
+
+    // 1) router.query (when ready)
+    const q = String(router?.query?.chrome || "").toLowerCase().trim();
+    if (q) next = q;
+
+    // 2) router.asPath
+    if (!next) next = extractChromeFromAsPath(router?.asPath);
+
+    // 3) window.location.search (most reliable on first client paint)
+    if (!next) {
+      try {
+        const params = new URLSearchParams(window.location.search || "");
+        next = String(params.get("chrome") || "").toLowerCase().trim();
+      } catch {}
+    }
+
+    // 4) lastRoute inference (if someone navigated without chrome)
+    if (!next) {
+      try {
+        const lastRoute = sessionStorage.getItem("lastRoute") || "";
+        if (lastRoute.startsWith("/recruiter")) {
+          // infer ent vs smb from session if we can
+          next = inferChromeFromSession(session);
+        } else if (lastRoute.startsWith("/coach") || lastRoute.startsWith("/dashboard/coaching")) {
+          next = "coach";
+        } else if (lastRoute.startsWith("/seeker") || lastRoute.startsWith("/hearth")) {
+          next = "seeker";
+        }
+      } catch {}
+    }
+
+    // 5) final fallback: infer from session
+    if (!next) next = inferChromeFromSession(session);
+
+    setChrome(next);
+    setChromeReady(true);
+  }, [router?.asPath, router?.query?.chrome, session]);
 
   const returnTo = useMemo(() => {
     const r = String(router.query.returnTo || "");
@@ -90,30 +142,6 @@ export default function AdminImpersonatePage() {
     if (noTicket) return true;
     return isValidTicketNumber(ticketNumber);
   }, [noTicket, ticketNumber]);
-
-  if (status === "loading") {
-    return (
-      <InternalLayout chrome={chrome}>
-        <main style={{ padding: 24, fontFamily: "system-ui" }}>Loading…</main>
-      </InternalLayout>
-    );
-  }
-
-  if (!session?.user) {
-    return (
-      <InternalLayout chrome={chrome}>
-        <main style={{ padding: 24, fontFamily: "system-ui" }}>You must be signed in.</main>
-      </InternalLayout>
-    );
-  }
-
-  if (!isPlatformAdmin) {
-    return (
-      <InternalLayout chrome={chrome}>
-        <main style={{ padding: 24, fontFamily: "system-ui" }}>Forbidden.</main>
-      </InternalLayout>
-    );
-  }
 
   async function start() {
     setMsg("");
@@ -139,9 +167,7 @@ export default function AdminImpersonatePage() {
 
       if (!res.ok) {
         const apiErr = data?.error || data?.message;
-        if (res.status === 404) {
-          throw new Error("Missing API route: /api/admin/impersonation/start");
-        }
+        if (res.status === 404) throw new Error("Missing API route: /api/admin/impersonation/start");
         throw new Error(apiErr || `Failed to start impersonation (HTTP ${res.status})`);
       }
 
@@ -159,17 +185,12 @@ export default function AdminImpersonatePage() {
     setMsg("");
     setBusy(true);
     try {
-      const res = await fetch("/api/admin/impersonation/stop", {
-        method: "POST",
-      });
-
+      const res = await fetch("/api/admin/impersonation/stop", { method: "POST" });
       const data = await safeReadJson(res);
 
       if (!res.ok) {
         const apiErr = data?.error || data?.message;
-        if (res.status === 404) {
-          throw new Error("Missing API route: /api/admin/impersonation/stop");
-        }
+        if (res.status === 404) throw new Error("Missing API route: /api/admin/impersonation/stop");
         throw new Error(apiErr || `Failed to stop impersonation (HTTP ${res.status})`);
       }
 
@@ -181,6 +202,31 @@ export default function AdminImpersonatePage() {
     } finally {
       setBusy(false);
     }
+  }
+
+  // ✅ Don’t render shell until chrome is resolved (prevents seeker header/sidebar flash)
+  if (!chromeReady || status === "loading") {
+    return (
+      <InternalLayout chrome={chrome || "recruiter-smb"}>
+        <main style={{ padding: 24, fontFamily: "system-ui" }}>Loading…</main>
+      </InternalLayout>
+    );
+  }
+
+  if (!session?.user) {
+    return (
+      <InternalLayout chrome={chrome}>
+        <main style={{ padding: 24, fontFamily: "system-ui" }}>You must be signed in.</main>
+      </InternalLayout>
+    );
+  }
+
+  if (!isPlatformAdmin) {
+    return (
+      <InternalLayout chrome={chrome}>
+        <main style={{ padding: 24, fontFamily: "system-ui" }}>Forbidden.</main>
+      </InternalLayout>
+    );
   }
 
   return (
