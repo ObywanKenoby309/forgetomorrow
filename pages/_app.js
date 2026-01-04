@@ -99,8 +99,7 @@ export default function App({ Component, pageProps: { session, ...pageProps } })
     !isSupportRoute;
 
   const universalHeaderRoutes = new Set([]);
-  const isUniversalPage =
-    universalHeaderRoutes.has(router.pathname) && !router.query?.chrome;
+  const isUniversalPage = universalHeaderRoutes.has(router.pathname) && !router.query?.chrome;
 
   const sharedRoutes = new Set([
     '/help',
@@ -157,21 +156,13 @@ export default function App({ Component, pageProps: { session, ...pageProps } })
   const isBrowser = typeof window !== 'undefined';
   const hostname = isBrowser ? window.location.hostname : '';
   const shouldLoadCookieScript =
-    isBrowser &&
-    (hostname === 'forgetomorrow.com' ||
-      hostname.endsWith('.forgetomorrow.com'));
+    isBrowser && (hostname === 'forgetomorrow.com' || hostname.endsWith('.forgetomorrow.com'));
 
   // Decide if we should show user wallpaper (internal only)
-  const shouldUseWallpaper =
-    !isUniversalPage &&
-    !isPublicEffective &&
-    !!wallpaperUrl;
+  const shouldUseWallpaper = !isUniversalPage && !isPublicEffective && !!wallpaperUrl;
 
   // Decide if internal shell should be gray (when no wallpaper)
-  const shouldUseGrayInternalBg =
-    !useForgeBackground &&
-    !isPublicEffective &&
-    !wallpaperUrl;
+  const shouldUseGrayInternalBg = !useForgeBackground && !isPublicEffective && !wallpaperUrl;
 
   return (
     <>
@@ -243,8 +234,12 @@ export default function App({ Component, pageProps: { session, ...pageProps } })
 
             {renderLandingHeader ? <LandingFooter /> : <Footer />}
 
-            {/* Support Floating Button - internal pages only */}
-            {!isPublicEffective && <SupportFloatingButton />}
+            {/* Support Floating Button - internal pages only (hidden on mobile via globals.css) */}
+            {!isPublicEffective && (
+              <div className="ft-support-fab">
+                <SupportFloatingButton />
+              </div>
+            )}
           </SessionProvider>
         </div>
       </div>

@@ -13,3 +13,34 @@ body,
   padding: 0;
   background: transparent;
 }
+
+/* ------------------------------------------------------------
+   Mobile bottom bar + Cookie-Script badge positioning
+   ------------------------------------------------------------ */
+
+/* Approx height of the bottom bar area (bar + padding). Adjust if needed. */
+:root {
+  --ft-mobile-bottom-bar-rise: 92px;
+}
+
+/* ✅ Keep Cookie-Script badge always visible above the mobile bottom bar */
+@media (max-width: 1023px) {
+  /* Cookie-Script commonly uses one of these IDs/classes depending on config */
+  #cookiescript_badge,
+  .cookiescript_badge,
+  #cookiescript-badge,
+  .cookiescript-badge,
+  #cs-badge,
+  .cs-badge {
+    bottom: calc(var(--ft-mobile-bottom-bar-rise) + env(safe-area-inset-bottom)) !important;
+    left: 10px !important;
+    right: auto !important;
+    z-index: 100000 !important;
+  }
+
+  /* ✅ If your support FAB is still mounted globally, hide it on mobile
+     (Support is now a toolbar icon on mobile) */
+  .ft-support-fab {
+    display: none !important;
+  }
+}

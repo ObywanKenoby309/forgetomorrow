@@ -18,8 +18,7 @@ function buildHref(basePath, chromeMode) {
 
   if (isAbsolute) {
     if (!isSeeker && (isCoach || isRecruiter)) {
-      const chrome =
-        isCoach ? 'coach' : isRecruiter ? recruiterChromeParam : String(chromeMode || '');
+      const chrome = isCoach ? 'coach' : isRecruiter ? recruiterChromeParam : String(chromeMode || '');
       if (chrome) url.searchParams.set('chrome', chrome);
     }
     return url.toString();
@@ -114,21 +113,40 @@ export default function MobileBottomBar({ chromeMode = 'seeker', onOpenTools, is
 
   const barStyle = {
     position: 'fixed',
-    left: '50%',
-    transform: 'translateX(-50%)',
-    bottom: 10,
+
+    // ✅ full-width (no side cut)
+    left: 0,
+    right: 0,
+    transform: 'none',
+    width: '100%',
+
+    // ✅ flush to phone nav (no gap)
+    bottom: 0,
+
     zIndex: 99998,
-    width: 'min(760px, calc(100% - 20px))',
-    borderRadius: 18,
+
+    // ✅ rounded top corners, flat bottom edge
+    borderRadius: '18px 18px 0 0',
+
     border: '1px solid rgba(255,255,255,0.22)',
     background: 'rgba(255,255,255,0.78)',
     backdropFilter: 'blur(12px)',
     WebkitBackdropFilter: 'blur(12px)',
-    boxShadow: '0 10px 26px rgba(0,0,0,0.18)',
-    padding: '10px 10px',
+
+    // ✅ shadow goes upward now that it's flush
+    boxShadow: '0 -10px 26px rgba(0,0,0,0.18)',
+
+    // ✅ safe-area aware padding
+    paddingTop: 10,
+    paddingLeft: 10,
+    paddingRight: 10,
+    paddingBottom: 'calc(10px + env(safe-area-inset-bottom))',
+
     display: 'grid',
-    gridTemplateColumns: 'repeat(6, 1fr)', // ✅ now 6 icons
+    gridTemplateColumns: 'repeat(6, 1fr)', // 6 icons
     gap: 6,
+
+    boxSizing: 'border-box',
   };
 
   const itemStyle = (active) => ({
