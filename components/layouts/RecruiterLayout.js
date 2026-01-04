@@ -6,6 +6,10 @@ import { useRouter } from 'next/router';
 import RecruiterHeader from '@/components/recruiter/RecruiterHeader';
 import RecruiterSidebar from '@/components/recruiter/RecruiterSidebar';
 
+// ✅ NEW: mobile bottom bar + support floating button
+import MobileBottomBar from '@/components/mobile/MobileBottomBar';
+import SupportFloatingButton from '@/components/SupportFloatingButton';
+
 const LAST_CHROME_KEY = 'ft_last_chrome';
 
 // Profile-standard glass
@@ -22,7 +26,12 @@ function normalizeChrome(input) {
   if (!raw) return '';
 
   // canonical
-  if (raw === 'recruiter-smb' || raw === 'recruiter_ent' || raw === 'recruiter-ent' || raw === 'recruiter-ent')
+  if (
+    raw === 'recruiter-smb' ||
+    raw === 'recruiter_ent' ||
+    raw === 'recruiter-ent' ||
+    raw === 'recruiter-ent'
+  )
     return raw === 'recruiter_ent' ? 'recruiter-ent' : raw;
 
   // aliases
@@ -98,7 +107,7 @@ export default function RecruiterLayout({
 
   // --- Mobile detection ---
   const [isMobile, setIsMobile] = useState(true);
-  const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false);
+  const [mobileToolsOpen, setMobileToolsOpen] = useState(false);
 
   useEffect(() => {
     const handleResize = () => {
@@ -146,7 +155,7 @@ export default function RecruiterLayout({
   const GAP = 12;
   const PAD = 16;
   const LEFT_W = 240;
-  const RIGHT_W = 240; // your recruiter layout uses 240; keep it stable
+  const RIGHT_W = 240; // keep it stable
 
   const desktopGrid = {
     display: 'grid',
@@ -204,14 +213,14 @@ export default function RecruiterLayout({
           ...gridStyles,
           gap: GAP,
           paddingTop: PAD,
-          paddingBottom: PAD,
+          paddingBottom: isMobile ? PAD + 84 : PAD, // ✅ prevent bottom bar overlap
           paddingLeft: PAD,
           paddingRight: hasRight ? Math.max(8, PAD - 4) : PAD,
           alignItems: 'start',
           boxSizing: 'border-box',
         }}
       >
-        {/* LEFT — Sidebar (hidden on mobile, moved into overlay) */}
+        {/* LEFT — Sidebar (hidden on mobile, moved into Tools sheet) */}
         <aside
           style={{
             gridArea: 'left',
@@ -242,32 +251,6 @@ export default function RecruiterLayout({
             }}
           >
             {header}
-
-            {/* Mobile-only "Open Sidebar" button under header content */}
-            {isMobile && (
-              <div style={{ marginTop: 12 }}>
-                <button
-                  type="button"
-                  onClick={() => setMobileSidebarOpen(true)}
-                  style={{
-                    display: 'inline-flex',
-                    alignItems: 'center',
-                    gap: 8,
-                    borderRadius: 999,
-                    padding: '8px 14px',
-                    fontSize: 13,
-                    fontWeight: 600,
-                    border: '1px solid #CFD8DC',
-                    background: '#ECEFF1',
-                    color: '#263238',
-                    cursor: 'pointer',
-                  }}
-                >
-                  <span style={{ fontSize: 16 }}>☰</span>
-                  <span>Open Sidebar</span>
-                </button>
-              </div>
-            )}
           </section>
         ) : (
           <header
@@ -280,32 +263,6 @@ export default function RecruiterLayout({
             }}
           >
             {header}
-
-            {/* Mobile-only "Open Sidebar" button (non-card header mode) */}
-            {isMobile && (
-              <div style={{ marginTop: 12 }}>
-                <button
-                  type="button"
-                  onClick={() => setMobileSidebarOpen(true)}
-                  style={{
-                    display: 'inline-flex',
-                    alignItems: 'center',
-                    gap: 8,
-                    borderRadius: 999,
-                    padding: '8px 14px',
-                    fontSize: 13,
-                    fontWeight: 600,
-                    border: '1px solid #CFD8DC',
-                    background: '#ECEFF1',
-                    color: '#263238',
-                    cursor: 'pointer',
-                  }}
-                >
-                  <span style={{ fontSize: 16 }}>☰</span>
-                  <span>Open Sidebar</span>
-                </button>
-              </div>
-            )}
           </header>
         )}
 
@@ -320,31 +277,62 @@ export default function RecruiterLayout({
         </main>
       </div>
 
-      {/* MOBILE SIDEBAR OVERLAY */}
-      {isMobile && mobileSidebarOpen && (
+      {/* ✅ Support stays as the existing floating button (no new build) */}
+      <SupportFloatingButton />
+
+      {/* ✅ Mobile bottom bar */}
+      <MobileBottomBar
+        isMobile={isMobile}
+        chromeMode={chromeMode}
+        onOpenTools={() => setMobileToolsOpen(true)}
+      />
+
+      {/* ✅ MOBILE TOOLS BOTTOM SHEET (reuses sidebar; chrome-aware) */}
+      {isMobile && mobileToolsOpen && (
         <div
           style={{
             position: 'fixed',
             inset: 0,
             zIndex: 99999,
-            backgroundColor: 'rgba(0,0,0,0.6)',
             display: 'flex',
-            justifyContent: 'flex-start',
-            alignItems: 'stretch',
+            justifyContent: 'center',
+            alignItems: 'flex-end',
           }}
         >
+          {/* Backdrop (click to dismiss) */}
+          <button
+            type="button"
+            onClick={() => setMobileToolsOpen(false)}
+            aria-label="Dismiss Tools"
+            style={{
+              position: 'absolute',
+              inset: 0,
+              border: 'none',
+              background: 'rgba(0,0,0,0.55)',
+              cursor: 'pointer',
+            }}
+          />
+
+          {/* Sheet */}
           <div
             style={{
-              width: '80%',
-              maxWidth: 320,
-              background: '#FFFFFF',
+              position: 'relative',
+              zIndex: 1,
+              width: 'min(760px, 100%)',
+              maxHeight: '82vh',
+              borderTopLeftRadius: 18,
+              borderTopRightRadius: 18,
+              border: '1px solid rgba(255,255,255,0.22)',
+              background: 'rgba(255,255,255,0.92)',
+              backdropFilter: 'blur(12px)',
+              WebkitBackdropFilter: 'blur(12px)',
               padding: 16,
               boxSizing: 'border-box',
               overflowY: 'auto',
-              boxShadow: '4px 0 20px rgba(0,0,0,0.3)',
+              boxShadow: '0 -10px 26px rgba(0,0,0,0.22)',
             }}
           >
-            {/* Header row inside sidebar overlay */}
+            {/* Header row inside Tools sheet */}
             <div
               style={{
                 display: 'flex',
@@ -353,18 +341,16 @@ export default function RecruiterLayout({
                 marginBottom: 12,
               }}
             >
-              <div style={{ fontSize: 14, fontWeight: 700, color: '#263238' }}>
-                Navigation
-              </div>
+              <div style={{ fontSize: 14, fontWeight: 800, color: '#112033' }}>Tools</div>
               <button
                 type="button"
-                onClick={() => setMobileSidebarOpen(false)}
-                aria-label="Close sidebar"
+                onClick={() => setMobileToolsOpen(false)}
+                aria-label="Close Tools"
                 style={{
                   border: 'none',
                   background: 'transparent',
                   cursor: 'pointer',
-                  fontSize: 20,
+                  fontSize: 22,
                   lineHeight: 1,
                   color: '#546E7A',
                 }}
@@ -381,18 +367,6 @@ export default function RecruiterLayout({
               initialOpen={initialOpen}
             />
           </div>
-
-          <button
-            type="button"
-            onClick={() => setMobileSidebarOpen(false)}
-            aria-label="Dismiss sidebar"
-            style={{
-              flex: 1,
-              border: 'none',
-              background: 'transparent',
-              cursor: 'pointer',
-            }}
-          />
         </div>
       )}
     </>

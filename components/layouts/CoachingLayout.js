@@ -4,6 +4,10 @@ import Head from 'next/head';
 import CoachingHeader from '@/components/coaching/CoachingHeader';
 import CoachingSidebar from '@/components/coaching/CoachingSidebar';
 
+// ✅ NEW: mobile bottom bar + support floating button
+import MobileBottomBar from '@/components/mobile/MobileBottomBar';
+import SupportFloatingButton from '@/components/SupportFloatingButton';
+
 const UI = {
   GAP: 12,
   PAD: 16,
@@ -48,7 +52,7 @@ export default function CoachingLayout({
 
   // --- Mobile detection (match Seeker/Recruiter behavior) ---
   const [isMobile, setIsMobile] = useState(true);
-  const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false);
+  const [mobileToolsOpen, setMobileToolsOpen] = useState(false);
 
   useEffect(() => {
     const handleResize = () => {
@@ -90,12 +94,16 @@ export default function CoachingLayout({
   const gridStyles = isMobile ? mobileGrid : desktopGrid;
 
   // Asymmetric padding (match SeekerLayout: keep right edge tighter when rail exists)
+  // ✅ Add extra bottom padding on mobile to prevent bottom bar overlap
   const containerPadding = {
     paddingTop: UI.PAD,
-    paddingBottom: UI.PAD,
+    paddingBottom: isMobile ? UI.PAD + 84 : UI.PAD,
     paddingLeft: UI.PAD,
     paddingRight: hasRight ? Math.max(8, UI.PAD - 4) : UI.PAD,
   };
+
+  // Coach chrome is deterministic
+  const chromeMode = 'coach';
 
   return (
     <>
@@ -114,7 +122,7 @@ export default function CoachingLayout({
           boxSizing: 'border-box',
         }}
       >
-        {/* LEFT — Sidebar (hidden on mobile, moved into overlay) */}
+        {/* LEFT — Sidebar (hidden on mobile, moved into Tools sheet) */}
         <aside
           style={{
             gridArea: 'left',
@@ -124,10 +132,7 @@ export default function CoachingLayout({
           }}
         >
           {left || (
-            <CoachingSidebar
-              initialOpen={sidebarInitialOpen}
-              active={activeNav}
-            />
+            <CoachingSidebar initialOpen={sidebarInitialOpen} active={activeNav} />
           )}
         </aside>
 
@@ -163,32 +168,6 @@ export default function CoachingLayout({
               )}
             </section>
           )}
-
-          {/* Mobile-only "Open Sidebar" button */}
-          {isMobile && (
-            <div style={{ marginTop: 12 }}>
-              <button
-                type="button"
-                onClick={() => setMobileSidebarOpen(true)}
-                style={{
-                  display: 'inline-flex',
-                  alignItems: 'center',
-                  gap: 8,
-                  borderRadius: 999,
-                  padding: '8px 14px',
-                  fontSize: 13,
-                  fontWeight: 600,
-                  border: '1px solid #CFD8DC',
-                  background: '#ECEFF1',
-                  color: '#263238',
-                  cursor: 'pointer',
-                }}
-              >
-                <span style={{ fontSize: 16 }}>☰</span>
-                <span>Open Sidebar</span>
-              </button>
-            </div>
-          )}
         </header>
 
         {/* RIGHT — dark rail (unchanged styling, just kept uniform sizing) */}
@@ -223,31 +202,62 @@ export default function CoachingLayout({
         </main>
       </div>
 
-      {/* MOBILE SIDEBAR OVERLAY */}
-      {isMobile && mobileSidebarOpen && (
+      {/* ✅ Support stays as the existing floating button */}
+      <SupportFloatingButton />
+
+      {/* ✅ Mobile bottom bar */}
+      <MobileBottomBar
+        isMobile={isMobile}
+        chromeMode={chromeMode}
+        onOpenTools={() => setMobileToolsOpen(true)}
+      />
+
+      {/* ✅ MOBILE TOOLS BOTTOM SHEET */}
+      {isMobile && mobileToolsOpen && (
         <div
           style={{
             position: 'fixed',
             inset: 0,
             zIndex: 99999,
-            backgroundColor: 'rgba(0,0,0,0.6)',
             display: 'flex',
-            justifyContent: 'flex-start',
-            alignItems: 'stretch',
+            justifyContent: 'center',
+            alignItems: 'flex-end',
           }}
         >
+          {/* Backdrop (click to dismiss) */}
+          <button
+            type="button"
+            onClick={() => setMobileToolsOpen(false)}
+            aria-label="Dismiss Tools"
+            style={{
+              position: 'absolute',
+              inset: 0,
+              border: 'none',
+              background: 'rgba(0,0,0,0.55)',
+              cursor: 'pointer',
+            }}
+          />
+
+          {/* Sheet */}
           <div
             style={{
-              width: '80%',
-              maxWidth: 320,
-              background: '#FFFFFF',
+              position: 'relative',
+              zIndex: 1,
+              width: 'min(760px, 100%)',
+              maxHeight: '82vh',
+              borderTopLeftRadius: 18,
+              borderTopRightRadius: 18,
+              border: '1px solid rgba(255,255,255,0.22)',
+              background: 'rgba(255,255,255,0.92)',
+              backdropFilter: 'blur(12px)',
+              WebkitBackdropFilter: 'blur(12px)',
               padding: 16,
               boxSizing: 'border-box',
               overflowY: 'auto',
-              boxShadow: '4px 0 20px rgba(0,0,0,0.3)',
+              boxShadow: '0 -10px 26px rgba(0,0,0,0.22)',
             }}
           >
-            {/* Header row inside sidebar overlay */}
+            {/* Header row inside Tools sheet */}
             <div
               style={{
                 display: 'flex',
@@ -256,16 +266,16 @@ export default function CoachingLayout({
                 marginBottom: 12,
               }}
             >
-              <div style={{ fontSize: 14, fontWeight: 700, color: '#263238' }}>Navigation</div>
+              <div style={{ fontSize: 14, fontWeight: 800, color: '#112033' }}>Tools</div>
               <button
                 type="button"
-                onClick={() => setMobileSidebarOpen(false)}
-                aria-label="Close sidebar"
+                onClick={() => setMobileToolsOpen(false)}
+                aria-label="Close Tools"
                 style={{
                   border: 'none',
                   background: 'transparent',
                   cursor: 'pointer',
-                  fontSize: 20,
+                  fontSize: 22,
                   lineHeight: 1,
                   color: '#546E7A',
                 }}
@@ -275,24 +285,9 @@ export default function CoachingLayout({
             </div>
 
             {left || (
-              <CoachingSidebar
-                initialOpen={sidebarInitialOpen}
-                active={activeNav}
-              />
+              <CoachingSidebar initialOpen={sidebarInitialOpen} active={activeNav} />
             )}
           </div>
-
-          <button
-            type="button"
-            onClick={() => setMobileSidebarOpen(false)}
-            aria-label="Dismiss sidebar"
-            style={{
-              flex: 1,
-              border: 'none',
-              background: 'transparent',
-              cursor: 'pointer',
-            }}
-          />
         </div>
       )}
     </>
