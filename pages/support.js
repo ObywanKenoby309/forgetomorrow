@@ -5,6 +5,17 @@ import { useRouter } from 'next/router';
 import SeekerLayout from '@/components/layouts/SeekerLayout';
 import SeekerRightColumn from '@/components/seeker/SeekerRightColumn';
 
+const UI = { CARD_PAD: 14 };
+
+// ✅ Profile-standard glass (canonical)
+const GLASS = {
+  border: '1px solid rgba(255,255,255,0.22)',
+  background: 'rgba(255,255,255,0.58)',
+  boxShadow: '0 10px 24px rgba(0,0,0,0.12)',
+  backdropFilter: 'blur(10px)',
+  WebkitBackdropFilter: 'blur(10px)',
+};
+
 function SupportHeaderBox({ chrome }) {
   const mode = String(chrome || '').toLowerCase();
 
@@ -25,14 +36,30 @@ function SupportHeaderBox({ chrome }) {
       'Whether you’re supporting clients, building programs, or using coaching tools, this is your home base for questions, feedback, and help staying focused on your clients.';
   }
 
-  // New: proper title card formatting, always readable on wallpapers
+  // ✅ Same glass treatment as Profile header card
   return (
     <section className="px-4 pt-2 md:pt-4">
-      <div className="max-w-4xl mx-auto rounded-2xl border border-white/30 bg-white/80 backdrop-blur-md shadow-lg px-5 py-4 md:px-8 md:py-6 text-center">
-        <h1 className="m-0 text-2xl md:text-3xl font-extrabold tracking-tight text-[#FF7043]">
+      <div
+        style={{
+          borderRadius: 14,
+          padding: UI.CARD_PAD,
+          textAlign: 'center',
+          ...GLASS,
+          maxWidth: 896, // ~ max-w-4xl
+          margin: '0 auto',
+        }}
+      >
+        <h1 style={{ margin: 0, color: '#FF7043', fontSize: 22, fontWeight: 900 }}>
           {title}
         </h1>
-        <p className="mt-2 text-sm md:text-base text-slate-600 max-w-2xl mx-auto">
+        <p
+          style={{
+            margin: '6px auto 0',
+            color: '#455A64',
+            maxWidth: 760,
+            fontWeight: 600,
+          }}
+        >
           {subtitle}
         </p>
       </div>
@@ -40,13 +67,7 @@ function SupportHeaderBox({ chrome }) {
   );
 }
 
-const STATUS_OPTIONS = [
-  'OPEN',
-  'IN_PROGRESS',
-  'AWAITING_USER',
-  'RESOLVED',
-  'CLOSED',
-];
+const STATUS_OPTIONS = ['OPEN', 'IN_PROGRESS', 'AWAITING_USER', 'RESOLVED', 'CLOSED'];
 
 export default function Support() {
   const router = useRouter();
@@ -202,8 +223,15 @@ export default function Support() {
       activeNav="support"
     >
       <div className="max-w-4xl mx-auto p-6 space-y-10">
-        {/* MAIN CONTENT CARD */}
-        <section className="bg-white rounded-lg shadow p-8 space-y-6">
+        {/* MAIN CONTENT CARD (glass) */}
+        <section
+          style={{
+            borderRadius: 14,
+            padding: 18,
+            ...GLASS,
+          }}
+          className="space-y-6"
+        >
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
             {[
               {
@@ -221,10 +249,7 @@ export default function Support() {
                 desc: (
                   <>
                     Need personalized support? Email us anytime at{' '}
-                    <a
-                      href="mailto:support@forgetomorrow.com"
-                      className="text-[#FF7043] underline"
-                    >
+                    <a href="mailto:support@forgetomorrow.com" className="text-[#FF7043] underline">
                       support@forgetomorrow.com
                     </a>
                     .
@@ -243,21 +268,32 @@ export default function Support() {
                 alertMsg: 'Community Forum coming soon!',
               },
             ].map(({ title, desc, alertMsg, href }) => {
-              const commonClasses =
-                'bg-gray-100 p-6 rounded-lg shadow-sm hover:shadow-md transition-shadow cursor-pointer focus:outline-none focus:ring-2 focus:ring-[#FF7043] focus:ring-offset-2 focus:ring-offset-white';
+              // ✅ Tile glass (slightly stronger than base so text pops, but still wallpaper-breathing)
+              const tileStyle = {
+                borderRadius: 14,
+                padding: 16,
+                border: '1px solid rgba(255,255,255,0.22)',
+                background: 'rgba(255,255,255,0.72)',
+                boxShadow: '0 10px 22px rgba(0,0,0,0.10)',
+                backdropFilter: 'blur(10px)',
+                WebkitBackdropFilter: 'blur(10px)',
+                transition: 'box-shadow 150ms ease, transform 150ms ease',
+              };
+
+              const tileClass =
+                'hover:shadow-lg hover:-translate-y-[1px] cursor-pointer focus:outline-none focus:ring-2 focus:ring-[#FF7043] focus:ring-offset-2 focus:ring-offset-white';
 
               if (href) {
                 return (
                   <Link
                     key={title}
                     href={withChrome(href)}
-                    className={commonClasses}
+                    className={tileClass}
+                    style={tileStyle}
                     aria-label={title}
                   >
-                    <h2 className="text-2xl font-semibold text-[#FF7043] mb-3">
-                      {title}
-                    </h2>
-                    <p>{desc}</p>
+                    <h2 className="text-2xl font-semibold text-[#FF7043] mb-3">{title}</h2>
+                    <p className="text-slate-700">{desc}</p>
                   </Link>
                 );
               }
@@ -265,52 +301,48 @@ export default function Support() {
               return (
                 <div
                   key={title}
-                  className={commonClasses}
+                  style={tileStyle}
+                  className={tileClass}
                   role="button"
                   tabIndex={0}
                   onClick={() => alert(alertMsg)}
                   onKeyPress={(e) => e.key === 'Enter' && alert(alertMsg)}
                   aria-label={title}
                 >
-                  <h2 className="text-2xl font-semibold text-[#FF7043] mb-3">
-                    {title}
-                  </h2>
-                  <p>{desc}</p>
+                  <h2 className="text-2xl font-semibold text-[#FF7043] mb-3">{title}</h2>
+                  <p className="text-slate-700">{desc}</p>
                 </div>
               );
             })}
           </div>
         </section>
 
-        {/* RECENT TICKETS */}
-        <section className="bg-white rounded-lg shadow p-6 space-y-4">
+        {/* RECENT TICKETS (glass) */}
+        <section
+          style={{
+            borderRadius: 14,
+            padding: 14,
+            ...GLASS,
+          }}
+          className="space-y-4"
+        >
           <div className="flex items-center justify-between">
             <div>
-              <h2 className="text-xl font-semibold text-[#FF7043]">
-                Recent Support Tickets
-              </h2>
-              <p className="text-sm text-slate-600">
-                Tickets created from your Support Chat and other channels. Agents can
-                update status as they work cases.
+              <h2 className="text-xl font-semibold text-[#FF7043]">Recent Support Tickets</h2>
+              <p className="text-sm text-slate-700">
+                Tickets created from your Support Chat and other channels. Agents can update status as they work cases.
               </p>
             </div>
           </div>
 
-          {loadingTickets && (
-            <p className="text-sm text-slate-500">Loading tickets…</p>
-          )}
+          {loadingTickets && <p className="text-sm text-slate-600">Loading tickets…</p>}
 
-          {ticketError && !loadingTickets && (
-            <p className="text-sm text-red-600">{ticketError}</p>
-          )}
+          {ticketError && !loadingTickets && <p className="text-sm text-red-600">{ticketError}</p>}
 
           {!loadingTickets && !ticketError && tickets.length === 0 && (
-            <p className="text-sm text-slate-500">
+            <p className="text-sm text-slate-700">
               No tickets yet. Start a conversation in{' '}
-              <Link
-                href={withChrome('/support/chat')}
-                className="text-[#FF7043] underline"
-              >
+              <Link href={withChrome('/support/chat')} className="text-[#FF7043] underline">
                 Support Chat
               </Link>{' '}
               and we’ll track it here.
@@ -321,7 +353,7 @@ export default function Support() {
             <div className="overflow-x-auto">
               <table className="min-w-full text-sm border-t border-slate-200">
                 <thead>
-                  <tr className="text-left text-xs uppercase tracking-wide text-slate-500">
+                  <tr className="text-left text-xs uppercase tracking-wide text-slate-600">
                     <th className="py-2 pr-3">Subject</th>
                     <th className="py-2 px-3">Status</th>
                     <th className="py-2 px-3">Intent</th>
@@ -333,7 +365,7 @@ export default function Support() {
                 </thead>
                 <tbody>
                   {tickets.map((t) => (
-                    <tr key={t.id} className="border-t border-slate-100">
+                    <tr key={t.id} className="border-t border-slate-200">
                       <td className="py-2 pr-3 max-w-xs">
                         <Link
                           href={withChrome(`/support/ticket/${t.id}`)}
@@ -354,9 +386,7 @@ export default function Support() {
                           <select
                             className="mt-1 text-xs border border-slate-300 rounded px-2 py-1 bg-white"
                             value={t.status || 'OPEN'}
-                            onChange={(e) =>
-                              handleStatusUpdate(t.id, e.target.value)
-                            }
+                            onChange={(e) => handleStatusUpdate(t.id, e.target.value)}
                             disabled={updatingTicketId === t.id}
                           >
                             {STATUS_OPTIONS.map((status) => (
@@ -367,16 +397,10 @@ export default function Support() {
                           </select>
                         </div>
                       </td>
-                      <td className="py-2 px-3 text-xs text-slate-700 align-top">
-                        {intentLabel(t.intent)}
-                      </td>
-                      <td className="py-2 px-3 text-xs text-slate-700 align-top">
-                        {t.personaId || '—'}
-                      </td>
-                      <td className="py-2 px-3 text-xs text-slate-700 align-top">
-                        {t.source || 'support-chat'}
-                      </td>
-                      <td className="py-2 px-3 text-xs text-slate-500 whitespace-nowrap align-top">
+                      <td className="py-2 px-3 text-xs text-slate-700 align-top">{intentLabel(t.intent)}</td>
+                      <td className="py-2 px-3 text-xs text-slate-700 align-top">{t.personaId || '—'}</td>
+                      <td className="py-2 px-3 text-xs text-slate-700 align-top">{t.source || 'support-chat'}</td>
+                      <td className="py-2 px-3 text-xs text-slate-600 whitespace-nowrap align-top">
                         {formatDate(t.createdAt)}
                       </td>
                       <td className="py-2 pl-3 text-xs text-slate-700 whitespace-nowrap align-top">
