@@ -38,7 +38,7 @@ function SupportHeaderBox({ chrome }) {
 
   // ✅ Same glass treatment as Profile header card
   return (
-    <section className="px-4 pt-2 md:pt-4">
+    <section className="px-4 pt-1 md:pt-2">
       <div
         style={{
           borderRadius: 14,

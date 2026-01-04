@@ -8,11 +8,9 @@ import SeekerLayout from "@/components/layouts/SeekerLayout";
 
 const UI = {
   CARD_PAD: 14,
-  // If header still sits too low/high vs sidebars, adjust ONLY this:
-  // Examples: 0, -6, -10
-  HEADER_OFFSET: -8,
 };
 
+// ✅ Profile-standard GLASS (do not improvise)
 const GLASS = {
   border: "1px solid rgba(255,255,255,0.22)",
   background: "rgba(255,255,255,0.58)",
@@ -78,13 +76,14 @@ function inferChromeFromSession(session) {
   return "seeker";
 }
 
+// ✅ SAME HEADER LAYOUT AS SUPPORT (spacing + max width)
+// ✅ SAME GLASS AS PROFILE (visual standard)
 function ImpersonateHeaderBox() {
   return (
-    <section className="px-4">
+    <section className="px-4 pt-2 md:pt-4">
       <div
         className="max-w-4xl mx-auto"
         style={{
-          marginTop: UI.HEADER_OFFSET,
           borderRadius: 14,
           padding: UI.CARD_PAD,
           textAlign: "center",
@@ -104,6 +103,7 @@ function ImpersonateHeaderBox() {
   );
 }
 
+// ✅ Right rail: keep your staff policy, but glass-standard + same padding rhythm
 function ImpersonationPolicyRightCard() {
   return (
     <aside className="p-4 md:p-6 space-y-4">
@@ -111,17 +111,11 @@ function ImpersonationPolicyRightCard() {
         style={{
           borderRadius: 14,
           padding: UI.CARD_PAD,
-          border: GLASS.border,
-          background: GLASS.background,
-          boxShadow: GLASS.boxShadow,
-          backdropFilter: GLASS.backdropFilter,
-          WebkitBackdropFilter: GLASS.WebkitBackdropFilter,
+          ...GLASS,
         }}
         aria-label="Impersonation policy"
       >
-        <div style={{ fontSize: 14, fontWeight: 900, color: "#1F2937" }}>
-          Staff Policy Reminder
-        </div>
+        <div style={{ fontSize: 14, fontWeight: 900, color: "#1F2937" }}>Staff Policy Reminder</div>
 
         <p style={{ marginTop: 8, fontSize: 12, color: "#455A64", fontWeight: 600, lineHeight: 1.45 }}>
           This tool grants the ability to act as a customer. Use only for customer support scenarios.
@@ -139,9 +133,7 @@ function ImpersonationPolicyRightCard() {
             WebkitBackdropFilter: "blur(10px)",
           }}
         >
-          <div style={{ fontSize: 12, fontWeight: 900, color: "#1F2937" }}>
-            Required before Start
-          </div>
+          <div style={{ fontSize: 12, fontWeight: 900, color: "#1F2937" }}>Required before Start</div>
           <ul style={{ marginTop: 8, paddingLeft: 18, fontSize: 12, color: "#334155", fontWeight: 600 }}>
             <li>Provide a valid Support Ticket ID (preferred)</li>
             <li>
@@ -163,9 +155,7 @@ function ImpersonationPolicyRightCard() {
             WebkitBackdropFilter: "blur(10px)",
           }}
         >
-          <div style={{ fontSize: 12, fontWeight: 900, color: "#7C2D12" }}>
-            No-Ticket rule
-          </div>
+          <div style={{ fontSize: 12, fontWeight: 900, color: "#7C2D12" }}>No-Ticket rule</div>
           <p style={{ marginTop: 8, fontSize: 12, color: "#7C2D12", fontWeight: 700, lineHeight: 1.45 }}>
             If you start with <strong>No-Ticket</strong>, you must open a Support Desk ticket right after completing
             the emergency action and include the details.
@@ -315,66 +305,75 @@ export default function AdminImpersonatePage() {
 
   const pageTitle = "ForgeTomorrow – Impersonate";
 
+  // ✅ Always keep the exact Support page rhythm: max-w-4xl + p-6 + space-y
+  const Shell = ({ children }) => (
+    <div className="max-w-4xl mx-auto p-6 space-y-10">{children}</div>
+  );
+
   if (!chromeReady || status === "loading") {
     return (
-      <SeekerLayout title={pageTitle} header={<ImpersonateHeaderBox />} right={<ImpersonationPolicyRightCard />} activeNav="support">
-        <div className="max-w-4xl mx-auto p-6">
-          <p className="text-sm text-slate-500">Loading…</p>
-        </div>
+      <SeekerLayout
+        title={pageTitle}
+        header={<ImpersonateHeaderBox />}
+        right={<ImpersonationPolicyRightCard />}
+        activeNav="support"
+      >
+        <Shell>
+          <section style={{ borderRadius: 14, padding: UI.CARD_PAD, ...GLASS }}>
+            <p className="text-sm text-slate-600 font-semibold">Loading…</p>
+          </section>
+        </Shell>
       </SeekerLayout>
     );
   }
 
   if (!session?.user) {
     return (
-      <SeekerLayout title={pageTitle} header={<ImpersonateHeaderBox />} right={<ImpersonationPolicyRightCard />} activeNav="support">
-        <div className="max-w-4xl mx-auto p-6">
-          <div
-            style={{
-              borderRadius: 14,
-              padding: UI.CARD_PAD,
-              ...GLASS,
-            }}
-          >
-            <p className="text-sm text-slate-700">You must be signed in.</p>
-          </div>
-        </div>
+      <SeekerLayout
+        title={pageTitle}
+        header={<ImpersonateHeaderBox />}
+        right={<ImpersonationPolicyRightCard />}
+        activeNav="support"
+      >
+        <Shell>
+          <section style={{ borderRadius: 14, padding: UI.CARD_PAD, ...GLASS }}>
+            <p className="text-sm text-slate-700 font-semibold">You must be signed in.</p>
+          </section>
+        </Shell>
       </SeekerLayout>
     );
   }
 
   if (!isPlatformAdmin) {
     return (
-      <SeekerLayout title={pageTitle} header={<ImpersonateHeaderBox />} right={<ImpersonationPolicyRightCard />} activeNav="support">
-        <div className="max-w-4xl mx-auto p-6">
-          <div
-            style={{
-              borderRadius: 14,
-              padding: UI.CARD_PAD,
-              ...GLASS,
-            }}
-          >
-            <p className="text-sm text-slate-700">Forbidden.</p>
-          </div>
-        </div>
+      <SeekerLayout
+        title={pageTitle}
+        header={<ImpersonateHeaderBox />}
+        right={<ImpersonationPolicyRightCard />}
+        activeNav="support"
+      >
+        <Shell>
+          <section style={{ borderRadius: 14, padding: UI.CARD_PAD, ...GLASS }}>
+            <p className="text-sm text-slate-700 font-semibold">Forbidden.</p>
+          </section>
+        </Shell>
       </SeekerLayout>
     );
   }
 
   return (
-    <SeekerLayout title={pageTitle} header={<ImpersonateHeaderBox />} right={<ImpersonationPolicyRightCard />} activeNav="support">
+    <SeekerLayout
+      title={pageTitle}
+      header={<ImpersonateHeaderBox />}
+      right={<ImpersonationPolicyRightCard />}
+      activeNav="support"
+    >
       <Head>
         <title>Impersonate – ForgeTomorrow</title>
       </Head>
 
-      <div className="max-w-4xl mx-auto p-6 space-y-10">
-        <section
-          style={{
-            borderRadius: 14,
-            padding: UI.CARD_PAD,
-            ...GLASS,
-          }}
-        >
+      <Shell>
+        <section style={{ borderRadius: 14, padding: UI.CARD_PAD, ...GLASS }}>
           {msg ? (
             <div
               style={{
@@ -545,7 +544,7 @@ export default function AdminImpersonatePage() {
             ) : null}
           </div>
         </section>
-      </div>
+      </Shell>
     </SeekerLayout>
   );
 }
