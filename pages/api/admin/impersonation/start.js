@@ -10,6 +10,10 @@ function cleanEmail(v) {
   return String(v || "").trim().toLowerCase();
 }
 
+function cleanText(v) {
+  return String(v || "").trim();
+}
+
 function setCookie(res, cookie) {
   const prev = res.getHeader("Set-Cookie");
   if (!prev) {
@@ -39,6 +43,16 @@ function buildCookie(name, value, opts = {}) {
   return parts.join("; ");
 }
 
+// ✅ Ticket validation helpers
+function isNoTicket(reason) {
+  return reason === "NO-TICKET";
+}
+
+function isLikelyTicketId(reason) {
+  // Prisma CUIDs are lowercase alphanumeric and long
+  return /^[a-z0-9]{20,}$/i.test(reason);
+}
+
 export default async function handler(req, res) {
   if (req.method !== "POST") {
     res.setHeader("Allow", ["POST"]);
@@ -51,7 +65,7 @@ export default async function handler(req, res) {
     return res.status(401).json({ error: "Not authenticated" });
   }
 
-  // Must be platform admin (your session sets this)
+  // Must be platform admin
   const isPlatformAdmin = !!session?.user?.isPlatformAdmin;
   if (!isPlatformAdmin) {
     return res.status(403).json({ error: "Forbidden" });
@@ -60,6 +74,14 @@ export default async function handler(req, res) {
   const targetEmail = cleanEmail(req.body?.email);
   if (!targetEmail) {
     return res.status(400).json({ error: "Missing email" });
+  }
+
+  // ✅ UPDATED: reason validation (ticket id OR NO-TICKET)
+  const reason = cleanText(req.body?.reason);
+  if (!reason || (!isNoTicket(reason) && !isLikelyTicketId(reason))) {
+    return res.status(400).json({
+      error: "Reason must be a valid ticket ID or NO-TICKET",
+    });
   }
 
   // Resolve actor + target
@@ -88,6 +110,7 @@ export default async function handler(req, res) {
       actorUserId: actor.id,
       targetUserId: target.id,
       targetEmail: target.email,
+      reason,
     },
     JWT_SECRET,
     { expiresIn: "1h" }
@@ -105,7 +128,7 @@ export default async function handler(req, res) {
     })
   );
 
-  // UI flag cookie (NOT HttpOnly so your page can read it)
+  // UI flag cookie (NOT HttpOnly)
   setCookie(
     res,
     buildCookie("ft_imp_active", "1", {
@@ -125,6 +148,10 @@ export default async function handler(req, res) {
       action: "IMPERSONATION_START",
       metadata: {
         targetEmail: target.email,
+        targetRole: target.role,
+        targetPlan: target.plan,
+        targetAccountKey: target.accountKey || null,
+        reason,
       },
     },
   });
