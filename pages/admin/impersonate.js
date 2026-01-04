@@ -4,6 +4,10 @@ import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/router";
 import { useSession } from "next-auth/react";
 
+// ✅ Use internal layout so we get the correct internal header/footer + wallpaper behavior
+import InternalLayout from "@/components/layouts/InternalLayout";
+import { useUserWallpaper } from "@/hooks/useUserWallpaper";
+
 function readCookie(name) {
   try {
     const raw = document.cookie || "";
@@ -17,7 +21,7 @@ function readCookie(name) {
   }
 }
 
-// ✅ NEW: safe JSON reader so we never throw "Unexpected end of JSON input"
+// ✅ safe JSON reader so we never throw "Unexpected end of JSON input"
 async function safeReadJson(res) {
   try {
     const text = await res.text();
@@ -28,11 +32,43 @@ async function safeReadJson(res) {
   }
 }
 
+// ✅ Ticket number format (example: cmjyyujjl002mkz04gn9gvufq)
+// Keep it simple: must look like a CUID-style id (starts with "c", long, lowercase/nums).
+function isValidTicketNumber(v) {
+  const s = String(v || "").trim();
+  if (!s) return false;
+  return /^c[a-z0-9]{20,}$/.test(s);
+}
+
+// Robust chrome extraction (handles cases where router.query is not ready yet)
+function getChrome(router) {
+  try {
+    const direct = String(router?.query?.chrome || "").toLowerCase().trim();
+    if (direct) return direct;
+
+    const asPath = String(router?.asPath || "");
+    if (!asPath.includes("chrome=")) return "";
+    const qIndex = asPath.indexOf("?");
+    if (qIndex === -1) return "";
+    const query = asPath.slice(qIndex + 1);
+    const params = new URLSearchParams(query);
+    return String(params.get("chrome") || "").toLowerCase().trim();
+  } catch {
+    return "";
+  }
+}
+
 export default function AdminImpersonatePage() {
   const router = useRouter();
   const { data: session, status } = useSession();
 
+  // ✅ wallpaper (frosted glass standard is handled by your layouts/styles; this helps ensure bg respects wallpaper)
+  const { wallpaperStyle } = useUserWallpaper ? useUserWallpaper() : { wallpaperStyle: undefined };
+
   const [email, setEmail] = useState("");
+  const [ticketNumber, setTicketNumber] = useState("");
+  const [noTicket, setNoTicket] = useState(false);
+
   const [busy, setBusy] = useState(false);
   const [msg, setMsg] = useState("");
   const [active, setActive] = useState(false);
@@ -44,36 +80,71 @@ export default function AdminImpersonatePage() {
     setActive(readCookie("ft_imp_active") === "1");
   }, []);
 
+  const chrome = useMemo(() => getChrome(router), [router]);
+
   const returnTo = useMemo(() => {
     const r = String(router.query.returnTo || "");
     return r || "/recruiter/dashboard";
   }, [router.query.returnTo]);
 
+  const reasonValue = useMemo(() => {
+    if (noTicket) return "NO-TICKET";
+    return String(ticketNumber || "").trim();
+  }, [noTicket, ticketNumber]);
+
+  const reasonOk = useMemo(() => {
+    if (noTicket) return true;
+    return isValidTicketNumber(ticketNumber);
+  }, [noTicket, ticketNumber]);
+
   if (status === "loading") {
-    return <main style={{ padding: 24, fontFamily: "system-ui" }}>Loading…</main>;
+    return (
+      <InternalLayout chrome={chrome}>
+        <main style={{ padding: 24, fontFamily: "system-ui" }}>Loading…</main>
+      </InternalLayout>
+    );
   }
 
   if (!session?.user) {
-    return <main style={{ padding: 24, fontFamily: "system-ui" }}>You must be signed in.</main>;
+    return (
+      <InternalLayout chrome={chrome}>
+        <main style={{ padding: 24, fontFamily: "system-ui" }}>You must be signed in.</main>
+      </InternalLayout>
+    );
   }
 
   if (!isPlatformAdmin) {
-    return <main style={{ padding: 24, fontFamily: "system-ui" }}>Forbidden.</main>;
+    return (
+      <InternalLayout chrome={chrome}>
+        <main style={{ padding: 24, fontFamily: "system-ui" }}>Forbidden.</main>
+      </InternalLayout>
+    );
   }
 
   async function start() {
     setMsg("");
+
+    // ✅ UI validation (server will also validate)
+    if (!email.trim()) {
+      setMsg("Email is required.");
+      return;
+    }
+    if (!reasonOk) {
+      setMsg("Ticket Number is required (valid) OR select No-Ticket.");
+      return;
+    }
+
     setBusy(true);
     try {
       const res = await fetch("/api/admin/impersonation/start", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email }),
+        // ✅ include reason (ticket id OR NO-TICKET)
+        body: JSON.stringify({ email, reason: reasonValue }),
       });
 
       const data = await safeReadJson(res);
 
-      // ✅ NEW: clean, explicit error if the route doesn’t exist or returns non-JSON
       if (!res.ok) {
         const apiErr = data?.error || data?.message;
         if (res.status === 404) {
@@ -121,82 +192,207 @@ export default function AdminImpersonatePage() {
   }
 
   return (
-    <>
+    <InternalLayout chrome={chrome}>
       <Head>
         <title>Impersonate – ForgeTomorrow</title>
       </Head>
 
-      <main style={{ padding: 24, fontFamily: "system-ui", maxWidth: 720, margin: "0 auto" }}>
-        <h1 style={{ marginTop: 0 }}>Impersonation</h1>
+      <main
+        style={{
+          padding: 24,
+          fontFamily: "system-ui",
+          ...((wallpaperStyle && typeof wallpaperStyle === "object") ? wallpaperStyle : {}),
+        }}
+      >
+        <div style={{ maxWidth: 760, margin: "0 auto" }}>
+          <div
+            style={{
+              borderRadius: 18,
+              border: "1px solid rgba(148, 163, 184, 0.35)",
+              background: "rgba(255,255,255,0.78)",
+              backdropFilter: "blur(12px)",
+              WebkitBackdropFilter: "blur(12px)",
+              boxShadow: "0 10px 30px rgba(0,0,0,0.10)",
+              padding: 18,
+            }}
+          >
+            <h1 style={{ marginTop: 0, marginBottom: 6 }}>Impersonation</h1>
 
-        <p style={{ color: "#555", lineHeight: 1.5 }}>
-          Platform Admin only. Use this to support a customer account after a formal request exists.
-          Actions are written to AuditLog.
-        </p>
+            <p style={{ color: "#475569", lineHeight: 1.5, marginTop: 0 }}>
+              Platform Admin only. Use this to support a customer account after a formal request exists.
+              Actions are written to AuditLog.
+            </p>
 
-        {msg ? (
-          <div style={{ marginTop: 12, padding: 12, borderRadius: 8, background: "#f3f4f6" }}>
-            {msg}
-          </div>
-        ) : null}
-
-        <div style={{ marginTop: 16, padding: 16, borderRadius: 12, border: "1px solid #e5e7eb" }}>
-          <div style={{ display: "flex", gap: 12, flexWrap: "wrap", alignItems: "center" }}>
-            <input
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              placeholder="customer@email.com"
-              style={{
-                flex: "1 1 320px",
-                padding: "10px 12px",
-                borderRadius: 10,
-                border: "1px solid #d1d5db",
-              }}
-              disabled={busy || active}
-            />
-            {!active ? (
-              <button
-                onClick={start}
-                disabled={busy || !email.trim()}
+            {msg ? (
+              <div
                 style={{
-                  padding: "10px 14px",
-                  borderRadius: 10,
-                  border: "1px solid #111827",
-                  background: "#111827",
-                  color: "white",
-                  cursor: "pointer",
+                  marginTop: 12,
+                  padding: 12,
+                  borderRadius: 12,
+                  background: "rgba(15, 23, 42, 0.06)",
+                  color: "#0f172a",
                 }}
               >
-                {busy ? "Working…" : "Start"}
-              </button>
-            ) : (
-              <button
-                onClick={stop}
-                disabled={busy}
-                style={{
-                  padding: "10px 14px",
-                  borderRadius: 10,
-                  border: "1px solid #b91c1c",
-                  background: "#b91c1c",
-                  color: "white",
-                  cursor: "pointer",
-                }}
-              >
-                {busy ? "Working…" : "Stop"}
-              </button>
-            )}
-          </div>
+                {msg}
+              </div>
+            ) : null}
 
-          <div style={{ marginTop: 10, color: "#6b7280", fontSize: 13 }}>
-            Return target: <code>{returnTo}</code>
-          </div>
+            <div style={{ marginTop: 14, display: "grid", gap: 12 }}>
+              {/* Email */}
+              <div>
+                <div style={{ fontSize: 13, color: "#334155", marginBottom: 6, fontWeight: 600 }}>
+                  Customer email
+                </div>
+                <input
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  placeholder="customer@email.com"
+                  style={{
+                    width: "100%",
+                    padding: "10px 12px",
+                    borderRadius: 12,
+                    border: "1px solid rgba(148, 163, 184, 0.55)",
+                    background: "rgba(255,255,255,0.9)",
+                  }}
+                  disabled={busy || active}
+                />
+              </div>
 
-          {/* ✅ NEW: visible hint so you don’t forget the real blocker */}
-          <div style={{ marginTop: 10, color: "#6b7280", fontSize: 13 }}>
-            API required: <code>/api/admin/impersonation/start</code> and <code>/api/admin/impersonation/stop</code>
+              {/* Ticket / No Ticket */}
+              <div>
+                <div style={{ fontSize: 13, color: "#334155", marginBottom: 6, fontWeight: 600 }}>
+                  Ticket number (required) or No-Ticket
+                </div>
+
+                <div style={{ display: "flex", gap: 10, flexWrap: "wrap", alignItems: "center" }}>
+                  <input
+                    value={ticketNumber}
+                    onChange={(e) => setTicketNumber(e.target.value)}
+                    placeholder="e.g. cmjyyujjl002mkz04gn9gvufq"
+                    style={{
+                      flex: "1 1 360px",
+                      padding: "10px 12px",
+                      borderRadius: 12,
+                      border: "1px solid rgba(148, 163, 184, 0.55)",
+                      background: noTicket ? "rgba(241,245,249,0.9)" : "rgba(255,255,255,0.9)",
+                    }}
+                    disabled={busy || active || noTicket}
+                  />
+
+                  <label
+                    style={{
+                      display: "flex",
+                      alignItems: "center",
+                      gap: 8,
+                      fontSize: 13,
+                      color: "#334155",
+                      userSelect: "none",
+                    }}
+                  >
+                    <input
+                      type="checkbox"
+                      checked={noTicket}
+                      onChange={(e) => {
+                        const checked = !!e.target.checked;
+                        setNoTicket(checked);
+                        if (checked) setTicketNumber("");
+                      }}
+                      disabled={busy || active}
+                    />
+                    No ticket (emergency)
+                  </label>
+                </div>
+
+                {/* inline validation hint */}
+                {!active && !noTicket && ticketNumber.trim() && !isValidTicketNumber(ticketNumber) ? (
+                  <div style={{ marginTop: 6, fontSize: 12, color: "#b91c1c" }}>
+                    Ticket number format looks invalid. Paste the ticket ID exactly.
+                  </div>
+                ) : null}
+
+                {/* procedure shown only when No-Ticket */}
+                {noTicket ? (
+                  <div
+                    style={{
+                      marginTop: 10,
+                      padding: 12,
+                      borderRadius: 14,
+                      background: "rgba(255, 247, 237, 0.85)",
+                      border: "1px solid rgba(251, 146, 60, 0.35)",
+                      color: "#7c2d12",
+                      fontSize: 13,
+                      lineHeight: 1.45,
+                    }}
+                  >
+                    <div style={{ fontWeight: 800, marginBottom: 6 }}>
+                      No-Ticket procedure (do this immediately after the action)
+                    </div>
+                    <ol style={{ margin: 0, paddingLeft: 18 }}>
+                      <li>
+                        Complete the emergency action for the customer (minimum necessary).
+                      </li>
+                      <li>
+                        Open a Support Desk ticket right away and include:
+                        who requested it, what action was taken, what account it impacted, and who performed it.
+                      </li>
+                      <li>
+                        Add any supporting email/message details into the ticket.
+                      </li>
+                    </ol>
+                  </div>
+                ) : null}
+              </div>
+
+              {/* Actions */}
+              <div style={{ display: "flex", gap: 12, flexWrap: "wrap", alignItems: "center" }}>
+                {!active ? (
+                  <button
+                    onClick={start}
+                    disabled={busy || !email.trim() || !reasonOk}
+                    style={{
+                      padding: "10px 14px",
+                      borderRadius: 12,
+                      border: "1px solid #111827",
+                      background: "#111827",
+                      color: "white",
+                      cursor: busy || !email.trim() || !reasonOk ? "not-allowed" : "pointer",
+                      opacity: busy || !email.trim() || !reasonOk ? 0.6 : 1,
+                      minWidth: 120,
+                    }}
+                  >
+                    {busy ? "Working…" : "Start"}
+                  </button>
+                ) : (
+                  <button
+                    onClick={stop}
+                    disabled={busy}
+                    style={{
+                      padding: "10px 14px",
+                      borderRadius: 12,
+                      border: "1px solid #b91c1c",
+                      background: "#b91c1c",
+                      color: "white",
+                      cursor: busy ? "not-allowed" : "pointer",
+                      opacity: busy ? 0.6 : 1,
+                      minWidth: 120,
+                    }}
+                  >
+                    {busy ? "Working…" : "Stop"}
+                  </button>
+                )}
+
+                <div style={{ fontSize: 13, color: "#64748b" }}>
+                  Return target: <code>{returnTo}</code>
+                </div>
+              </div>
+
+              <div style={{ marginTop: 2, color: "#64748b", fontSize: 13 }}>
+                API required: <code>/api/admin/impersonation/start</code> and <code>/api/admin/impersonation/stop</code>
+              </div>
+            </div>
           </div>
         </div>
       </main>
-    </>
+    </InternalLayout>
   );
 }
