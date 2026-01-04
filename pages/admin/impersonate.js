@@ -10,7 +10,6 @@ const UI = {
   CARD_PAD: 14,
 };
 
-// ✅ Profile-standard GLASS (do not improvise)
 const GLASS = {
   border: "1px solid rgba(255,255,255,0.22)",
   background: "rgba(255,255,255,0.58)",
@@ -64,7 +63,7 @@ function extractChromeFromAsPath(asPath) {
 }
 
 function inferChromeFromSession(session) {
-  // Your saved chrome gates: seeker | coach | recruiter-smb | recruiter-ent
+  // Saved chrome gates: seeker | coach | recruiter-smb | recruiter-ent
   const role = String(session?.user?.role || "").toUpperCase();
   const plan = String(session?.user?.plan || "").toUpperCase();
 
@@ -76,9 +75,8 @@ function inferChromeFromSession(session) {
   return "seeker";
 }
 
-// ✅ SAME HEADER LAYOUT AS SUPPORT (spacing + max width)
-// ✅ SAME GLASS AS PROFILE (visual standard)
 function ImpersonateHeaderBox() {
+  // EXACT same wrapper spacing pattern as Support (raised vs your previous)
   return (
     <section className="px-4 pt-2 md:pt-4">
       <div
@@ -95,15 +93,14 @@ function ImpersonateHeaderBox() {
           Impersonation
         </h1>
         <p style={{ margin: "6px auto 0", color: "#455A64", maxWidth: 760, fontWeight: 600 }}>
-          Platform Admin only. Use this to support a customer account after a formal request exists.
-          Actions are written to AuditLog.
+          Platform Admin only. Use this to support a customer account after a formal request exists. Actions are
+          written to AuditLog.
         </p>
       </div>
     </section>
   );
 }
 
-// ✅ Right rail: keep your staff policy, but glass-standard + same padding rhythm
 function ImpersonationPolicyRightCard() {
   return (
     <aside className="p-4 md:p-6 space-y-4">
@@ -118,8 +115,8 @@ function ImpersonationPolicyRightCard() {
         <div style={{ fontSize: 14, fontWeight: 900, color: "#1F2937" }}>Staff Policy Reminder</div>
 
         <p style={{ marginTop: 8, fontSize: 12, color: "#455A64", fontWeight: 600, lineHeight: 1.45 }}>
-          This tool grants the ability to act as a customer. Use only for customer support scenarios.
-          Every start/stop is audited.
+          This tool grants the ability to act as a customer. Use only for customer support scenarios. Every
+          start/stop is audited.
         </p>
 
         <div
@@ -137,8 +134,8 @@ function ImpersonationPolicyRightCard() {
           <ul style={{ marginTop: 8, paddingLeft: 18, fontSize: 12, color: "#334155", fontWeight: 600 }}>
             <li>Provide a valid Support Ticket ID (preferred)</li>
             <li>
-              If no ticket exists: select <strong>No ticket (emergency)</strong> and create a ticket immediately after
-              the action
+              If no ticket exists: select <strong>No ticket (emergency)</strong> and create a ticket immediately
+              after the action
             </li>
             <li>Perform the minimum necessary action only</li>
           </ul>
@@ -191,16 +188,20 @@ export default function AdminImpersonatePage() {
     setActive(readCookie("ft_imp_active") === "1");
   }, []);
 
+  // ✅ Make chrome behave like Support by resolving it from URL and only then rendering the layout.
   useEffect(() => {
     if (typeof window === "undefined") return;
 
     let next = "";
 
+    // query param (client-side)
     const q = String(router?.query?.chrome || "").toLowerCase().trim();
     if (q) next = q;
 
+    // asPath parse fallback
     if (!next) next = extractChromeFromAsPath(router?.asPath);
 
+    // direct window.search fallback
     if (!next) {
       try {
         const params = new URLSearchParams(window.location.search || "");
@@ -208,19 +209,17 @@ export default function AdminImpersonatePage() {
       } catch {}
     }
 
+    // last-route heuristic fallback
     if (!next) {
       try {
         const lastRoute = sessionStorage.getItem("lastRoute") || "";
-        if (lastRoute.startsWith("/recruiter")) {
-          next = inferChromeFromSession(session);
-        } else if (lastRoute.startsWith("/coach") || lastRoute.startsWith("/dashboard/coaching")) {
-          next = "coach";
-        } else if (lastRoute.startsWith("/seeker") || lastRoute.startsWith("/hearth")) {
-          next = "seeker";
-        }
+        if (lastRoute.startsWith("/recruiter")) next = inferChromeFromSession(session);
+        else if (lastRoute.startsWith("/coach") || lastRoute.startsWith("/dashboard/coaching")) next = "coach";
+        else if (lastRoute.startsWith("/seeker") || lastRoute.startsWith("/hearth")) next = "seeker";
       } catch {}
     }
 
+    // final fallback
     if (!next) next = inferChromeFromSession(session);
 
     setChrome(next);
@@ -305,24 +304,19 @@ export default function AdminImpersonatePage() {
 
   const pageTitle = "ForgeTomorrow – Impersonate";
 
-  // ✅ Always keep the exact Support page rhythm: max-w-4xl + p-6 + space-y
-  const Shell = ({ children }) => (
-    <div className="max-w-4xl mx-auto p-6 space-y-10">{children}</div>
-  );
-
+  // ✅ IMPORTANT: don’t mount SeekerLayout until chrome is resolved.
   if (!chromeReady || status === "loading") {
     return (
       <SeekerLayout
+        key={`imp-${chrome || "seeker"}`} // ✅ force remount when chrome changes
         title={pageTitle}
         header={<ImpersonateHeaderBox />}
         right={<ImpersonationPolicyRightCard />}
         activeNav="support"
       >
-        <Shell>
-          <section style={{ borderRadius: 14, padding: UI.CARD_PAD, ...GLASS }}>
-            <p className="text-sm text-slate-600 font-semibold">Loading…</p>
-          </section>
-        </Shell>
+        <div className="max-w-4xl mx-auto p-6">
+          <p className="text-sm text-slate-500">Loading…</p>
+        </div>
       </SeekerLayout>
     );
   }
@@ -330,16 +324,17 @@ export default function AdminImpersonatePage() {
   if (!session?.user) {
     return (
       <SeekerLayout
+        key={`imp-${chrome || "seeker"}`}
         title={pageTitle}
         header={<ImpersonateHeaderBox />}
         right={<ImpersonationPolicyRightCard />}
         activeNav="support"
       >
-        <Shell>
-          <section style={{ borderRadius: 14, padding: UI.CARD_PAD, ...GLASS }}>
-            <p className="text-sm text-slate-700 font-semibold">You must be signed in.</p>
-          </section>
-        </Shell>
+        <div className="max-w-4xl mx-auto p-6">
+          <div style={{ borderRadius: 14, padding: UI.CARD_PAD, ...GLASS }}>
+            <p className="text-sm text-slate-700">You must be signed in.</p>
+          </div>
+        </div>
       </SeekerLayout>
     );
   }
@@ -347,22 +342,24 @@ export default function AdminImpersonatePage() {
   if (!isPlatformAdmin) {
     return (
       <SeekerLayout
+        key={`imp-${chrome || "seeker"}`}
         title={pageTitle}
         header={<ImpersonateHeaderBox />}
         right={<ImpersonationPolicyRightCard />}
         activeNav="support"
       >
-        <Shell>
-          <section style={{ borderRadius: 14, padding: UI.CARD_PAD, ...GLASS }}>
-            <p className="text-sm text-slate-700 font-semibold">Forbidden.</p>
-          </section>
-        </Shell>
+        <div className="max-w-4xl mx-auto p-6">
+          <div style={{ borderRadius: 14, padding: UI.CARD_PAD, ...GLASS }}>
+            <p className="text-sm text-slate-700">Forbidden.</p>
+          </div>
+        </div>
       </SeekerLayout>
     );
   }
 
   return (
     <SeekerLayout
+      key={`imp-${chrome || "seeker"}`}
       title={pageTitle}
       header={<ImpersonateHeaderBox />}
       right={<ImpersonationPolicyRightCard />}
@@ -372,7 +369,7 @@ export default function AdminImpersonatePage() {
         <title>Impersonate – ForgeTomorrow</title>
       </Head>
 
-      <Shell>
+      <div className="max-w-4xl mx-auto p-6 space-y-10">
         <section style={{ borderRadius: 14, padding: UI.CARD_PAD, ...GLASS }}>
           {msg ? (
             <div
@@ -395,9 +392,7 @@ export default function AdminImpersonatePage() {
 
           <div style={{ display: "grid", gap: 14 }}>
             <div>
-              <div style={{ fontSize: 12, fontWeight: 900, color: "#334155", marginBottom: 8 }}>
-                Customer email
-              </div>
+              <div style={{ fontSize: 12, fontWeight: 900, color: "#334155", marginBottom: 8 }}>Customer email</div>
               <input
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
@@ -441,7 +436,16 @@ export default function AdminImpersonatePage() {
                   }}
                 />
 
-                <label style={{ display: "flex", alignItems: "center", gap: 8, fontSize: 12, fontWeight: 800, color: "#334155" }}>
+                <label
+                  style={{
+                    display: "flex",
+                    alignItems: "center",
+                    gap: 8,
+                    fontSize: 12,
+                    fontWeight: 800,
+                    color: "#334155",
+                  }}
+                >
                   <input
                     type="checkbox"
                     checked={noTicket}
@@ -481,8 +485,8 @@ export default function AdminImpersonatePage() {
                   <ol style={{ margin: 0, paddingLeft: 18, fontSize: 12, fontWeight: 700, lineHeight: 1.5 }}>
                     <li>Complete the emergency action for the customer (minimum necessary).</li>
                     <li>
-                      Open a Support Desk ticket right away and include: who requested it, what action was taken,
-                      what account it impacted, and who performed it.
+                      Open a Support Desk ticket right away and include: who requested it, what action was taken, what
+                      account it impacted, and who performed it.
                     </li>
                     <li>Add any supporting email/message details into the ticket.</li>
                   </ol>
@@ -499,7 +503,8 @@ export default function AdminImpersonatePage() {
                     borderRadius: 12,
                     padding: "10px 14px",
                     border: "1px solid rgba(15,23,42,0.85)",
-                    background: busy || !email.trim() || !reasonOk ? "rgba(15,23,42,0.35)" : "rgba(15,23,42,0.92)",
+                    background:
+                      busy || !email.trim() || !reasonOk ? "rgba(15,23,42,0.35)" : "rgba(15,23,42,0.92)",
                     color: "white",
                     fontWeight: 900,
                     cursor: busy || !email.trim() || !reasonOk ? "not-allowed" : "pointer",
@@ -544,7 +549,7 @@ export default function AdminImpersonatePage() {
             ) : null}
           </div>
         </section>
-      </Shell>
+      </div>
     </SeekerLayout>
   );
 }
