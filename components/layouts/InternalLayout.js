@@ -3,6 +3,7 @@ import React, { useEffect, useMemo, useState } from 'react';
 import Head from 'next/head';
 import { useRouter } from 'next/router';
 import useSidebarCounts from '@/components/hooks/useSidebarCounts';
+import { useUserWallpaper } from '@/hooks/useUserWallpaper';
 
 // Chrome-specific headers + sidebars
 import SeekerSidebar from '@/components/SeekerSidebar';
@@ -13,12 +14,7 @@ import SeekerHeader from '@/components/seeker/SeekerHeader';
 import CoachingHeader from '@/components/coaching/CoachingHeader';
 import RecruiterHeader from '@/components/recruiter/RecruiterHeader';
 
-const ALLOWED_MODES = new Set([
-  'seeker',
-  'coach',
-  'recruiter-smb',
-  'recruiter-ent',
-]);
+const ALLOWED_MODES = new Set(['seeker', 'coach', 'recruiter-smb', 'recruiter-ent']);
 
 function normalizeChrome(input) {
   const raw = String(input || '').toLowerCase().trim();
@@ -61,6 +57,7 @@ export default function InternalLayout({
 
   rightVariant = 'dark', // 'dark' | 'light'
   rightWidth = 260,
+  leftWidth = 240, // ✅ match SeekerLayout flexibility
   gap = 12,
   pad = 16,
 }) {
@@ -126,35 +123,101 @@ export default function InternalLayout({
     }
   }, [chromeMode, activeNav, counts]);
 
-  const showRight = right != null;
+  // ---- WALLPAPER / BACKGROUND (match SeekerLayout) ----
+  const { wallpaperUrl } = useUserWallpaper();
 
-  const containerPadding = {
-    padding: pad,
-    paddingTop: pad + 8,
-  };
+  const backgroundStyle = wallpaperUrl
+    ? {
+        minHeight: '100vh',
+        backgroundImage: `url(${wallpaperUrl})`,
+        backgroundSize: 'cover',
+        backgroundPosition: 'center top',
+        backgroundRepeat: 'no-repeat',
+        backgroundAttachment: 'fixed',
+      }
+    : {
+        minHeight: '100vh',
+        backgroundColor: '#ECEFF1',
+      };
 
+  // ---- MOBILE DETECTION + SIDEBAR OVERLAY (match SeekerLayout behavior) ----
+  const hasRight = Boolean(right);
+  const [isMobile, setIsMobile] = useState(true);
+  const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false);
+
+  useEffect(() => {
+    const handleResize = () => {
+      if (typeof window !== 'undefined') {
+        const width = window.innerWidth;
+        setIsMobile(width < 1024);
+      }
+    };
+
+    handleResize();
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
+
+  // ---- RIGHT RAIL STYLES (match SeekerLayout) ----
   const rightBase = {
     gridArea: 'right',
     alignSelf: 'start',
-    borderRadius: 16,
-    padding: 12,
+    borderRadius: 12,
     boxSizing: 'border-box',
-    maxWidth: rightWidth,
+    width: hasRight && !isMobile ? rightWidth : '100%',
+    minWidth: hasRight && !isMobile ? rightWidth : 0,
+    maxWidth: hasRight && !isMobile ? rightWidth : '100%',
+    minInlineSize: 0,
   };
 
   const rightDark = {
-    background: 'linear-gradient(135deg, #0B1724, #112033)',
-    border: '1px solid rgba(148, 163, 184, 0.5)',
-    boxShadow: '0 10px 30px rgba(15, 23, 42, 0.45)',
-    color: '#E2E8F0',
+    background: '#2a2a2a',
+    border: '1px solid #3a3a3a',
+    padding: 16,
+    boxShadow: '0 2px 6px rgba(0,0,0,0.06)',
+    color: 'white',
   };
 
   const rightLight = {
-    background: '#FFFFFF',
-    border: '1px solid #E5E7EB',
-    boxShadow: '0 4px 16px rgba(15,23,42,0.06)',
-    color: '#111827',
+    background: 'transparent',
+    border: 'none',
+    padding: 0,
+    boxShadow: 'none',
   };
+
+  // Asymmetric padding to keep right edge tight when a rail exists (match SeekerLayout)
+  const containerPadding = {
+    paddingTop: pad,
+    paddingBottom: pad,
+    paddingLeft: pad,
+    paddingRight: hasRight ? Math.max(8, pad - 4) : pad,
+  };
+
+  // ---- DESKTOP VS MOBILE GRID (match SeekerLayout structure) ----
+  const desktopGrid = {
+    display: 'grid',
+    gridTemplateColumns: `${leftWidth}px minmax(0, 1fr) ${hasRight ? `${rightWidth}px` : '0px'}`,
+    gridTemplateRows: 'auto 1fr',
+    gridTemplateAreas: hasRight
+      ? `"left header right"
+         "left content right"`
+      : `"left header header"
+         "left content content"`,
+  };
+
+  const mobileGrid = {
+    display: 'grid',
+    gridTemplateColumns: '1fr',
+    gridTemplateRows: hasRight ? 'auto auto auto' : 'auto auto',
+    gridTemplateAreas: hasRight
+      ? `"header"
+         "content"
+         "right"`
+      : `"header"
+         "content"`,
+  };
+
+  const gridStyles = isMobile ? mobileGrid : desktopGrid;
 
   return (
     <>
@@ -162,46 +225,161 @@ export default function InternalLayout({
         <title>{title}</title>
       </Head>
 
-      <HeaderComp />
+      {/* Wallpaper wrapper (NO frosting/overlay) */}
+      <div style={backgroundStyle}>
+        {/* Top chrome header ALWAYS matches chromeMode */}
+        <HeaderComp />
 
-      <div
-        style={{
-          display: 'grid',
-          gridTemplateColumns: showRight
-            ? `240px minmax(0, 1fr) ${rightWidth}px`
-            : '240px minmax(0, 1fr)',
-          gridTemplateAreas: showRight
-            ? `"left header right" "left content right"`
-            : `"left header header" "left content content"`,
-          columnGap: gap,
-          rowGap: gap,
-          alignItems: 'start',
-          maxWidth: 1440,
-          margin: '0 auto',
-          ...containerPadding,
-        }}
-      >
-        <aside style={{ gridArea: 'left', alignSelf: 'start' }}>
-          {left ?? <SidebarComp {...sidebarProps} />}
-        </aside>
-
-        <header style={{ gridArea: 'header' }}>{header}</header>
-
-        {showRight && (
+        {/* Main layout shell */}
+        <div
+          style={{
+            ...gridStyles,
+            gap,
+            ...containerPadding,
+            alignItems: 'start',
+          }}
+        >
+          {/* LEFT — Sidebar (hidden on mobile, moved into overlay) */}
           <aside
             style={{
-              ...rightBase,
-              ...(rightVariant === 'light' ? rightLight : rightDark),
+              gridArea: 'left',
+              alignSelf: 'start',
+              minWidth: 0,
+              display: isMobile ? 'none' : 'block',
             }}
           >
-            {right}
+            {left ?? <SidebarComp {...sidebarProps} />}
           </aside>
-        )}
 
-        <main style={{ gridArea: 'content' }}>
-          <div style={{ display: 'grid', gap }}>{children}</div>
-        </main>
+          {/* PAGE HEADER (center) */}
+          <header
+            style={{
+              gridArea: 'header',
+              alignSelf: 'start',
+              minWidth: 0,
+            }}
+          >
+            {header}
+
+            {/* Mobile-only "Open Sidebar" button */}
+            {isMobile && (
+              <div style={{ marginTop: 12 }}>
+                <button
+                  type="button"
+                  onClick={() => setMobileSidebarOpen(true)}
+                  style={{
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: 8,
+                    borderRadius: 999,
+                    padding: '8px 14px',
+                    fontSize: 13,
+                    fontWeight: 600,
+                    border: '1px solid #CFD8DC',
+                    background: '#ECEFF1',
+                    color: '#263238',
+                    cursor: 'pointer',
+                  }}
+                >
+                  <span style={{ fontSize: 16 }}>☰</span>
+                  <span>Open Sidebar</span>
+                </button>
+              </div>
+            )}
+          </header>
+
+          {/* RIGHT — Variant-controlled rail */}
+          {hasRight ? (
+            <aside
+              style={{
+                ...rightBase,
+                ...(rightVariant === 'light' ? rightLight : rightDark),
+              }}
+            >
+              {right}
+            </aside>
+          ) : null}
+
+          {/* CONTENT (center) */}
+          <main style={{ gridArea: 'content', minWidth: 0 }}>
+            <div style={{ display: 'grid', gap, width: '100%', minWidth: 0 }}>
+              {children}
+            </div>
+          </main>
+        </div>
       </div>
+
+      {/* MOBILE SIDEBAR OVERLAY */}
+      {isMobile && mobileSidebarOpen && (
+        <div
+          style={{
+            position: 'fixed',
+            inset: 0,
+            zIndex: 99999,
+            backgroundColor: 'rgba(0,0,0,0.6)',
+            display: 'flex',
+            justifyContent: 'flex-start',
+            alignItems: 'stretch',
+          }}
+        >
+          <div
+            style={{
+              width: '80%',
+              maxWidth: 320,
+              background: '#FFFFFF',
+              padding: 16,
+              boxSizing: 'border-box',
+              overflowY: 'auto',
+              boxShadow: '4px 0 20px rgba(0,0,0,0.3)',
+            }}
+          >
+            {/* Header row inside sidebar overlay */}
+            <div
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+                marginBottom: 12,
+              }}
+            >
+              <div style={{ fontSize: 14, fontWeight: 700, color: '#263238' }}>
+                Navigation
+              </div>
+              <button
+                type="button"
+                onClick={() => setMobileSidebarOpen(false)}
+                aria-label="Close sidebar"
+                style={{
+                  border: 'none',
+                  background: 'transparent',
+                  cursor: 'pointer',
+                  fontSize: 20,
+                  lineHeight: 1,
+                  color: '#546E7A',
+                }}
+              >
+                ×
+              </button>
+            </div>
+
+            {/* Reuse whichever sidebar chromeMode selected */}
+            {left ?? <SidebarComp {...sidebarProps} />}
+          </div>
+
+          {/* Clickable area to close overlay when tapping outside panel */}
+          <button
+            type="button"
+            onClick={() => setMobileSidebarOpen(false)}
+            aria-label="Dismiss sidebar"
+            style={{
+              flex: 1,
+              border: 'none',
+              background: 'transparent',
+              cursor: 'pointer',
+            }}
+          />
+        </div>
+      )}
     </>
   );
 }

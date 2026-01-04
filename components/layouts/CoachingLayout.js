@@ -4,6 +4,23 @@ import Head from 'next/head';
 import CoachingHeader from '@/components/coaching/CoachingHeader';
 import CoachingSidebar from '@/components/coaching/CoachingSidebar';
 
+const UI = {
+  GAP: 12,
+  PAD: 16,
+  LEFT_W: 240,
+  RIGHT_W: 240,
+  CARD_PAD: 14,
+};
+
+// Profile-standard glass (definitive)
+const GLASS = {
+  border: '1px solid rgba(255,255,255,0.22)',
+  background: 'rgba(255,255,255,0.58)',
+  boxShadow: '0 10px 24px rgba(0,0,0,0.12)',
+  backdropFilter: 'blur(10px)',
+  WebkitBackdropFilter: 'blur(10px)',
+};
+
 export default function CoachingLayout({
   title = 'ForgeTomorrow — Coaching',
   header,
@@ -12,18 +29,19 @@ export default function CoachingLayout({
   left,
   right,
   children,
-  activeNav = 'overview',     // ← keep receiving this
-  sidebarInitialOpen,         // ← and this
+  activeNav = 'overview', // ← keep receiving this
+  sidebarInitialOpen, // ← and this
 }) {
-  const defaultFromNav = {
-    overview: 'Your Coaching Dashboard',
-    clients: 'Clients',
-    sessions: 'Sessions',
-    resources: 'Resources',
-    feedback: 'Feedback',
-    jobs: 'To The Pipeline',
-    calendar: 'Calendar',
-  }[activeNav] || 'Coaching';
+  const defaultFromNav =
+    {
+      overview: 'Your Coaching Dashboard',
+      clients: 'Clients',
+      sessions: 'Sessions',
+      resources: 'Resources',
+      feedback: 'Feedback',
+      jobs: 'To The Pipeline',
+      calendar: 'Calendar',
+    }[activeNav] || 'Coaching';
 
   const pageTitle = headerTitle || defaultFromNav;
   const hasRight = Boolean(right);
@@ -45,14 +63,16 @@ export default function CoachingLayout({
     return () => window.removeEventListener('resize', handleResize);
   }, []);
 
+  // --- Desktop vs mobile grid configs (match SeekerLayout structure) ---
   const desktopGrid = {
     display: 'grid',
-    gridTemplateColumns: '240px minmax(640px, 1fr) 240px',
-    gridTemplateRows: 'min-content 1fr',
-    gridTemplateAreas: `
-      "left header right"
-      "left content right"
-    `,
+    gridTemplateColumns: `${UI.LEFT_W}px minmax(0, 1fr) ${hasRight ? `${UI.RIGHT_W}px` : '0px'}`,
+    gridTemplateRows: 'auto 1fr',
+    gridTemplateAreas: hasRight
+      ? `"left header right"
+         "left content right"`
+      : `"left header header"
+         "left content content"`,
   };
 
   const mobileGrid = {
@@ -60,29 +80,36 @@ export default function CoachingLayout({
     gridTemplateColumns: '1fr',
     gridTemplateRows: hasRight ? 'auto auto auto' : 'auto auto',
     gridTemplateAreas: hasRight
-      ? `
-        "header"
-        "content"
-        "right"
-      `
-      : `
-        "header"
-        "content"
-      `,
+      ? `"header"
+         "content"
+         "right"`
+      : `"header"
+         "content"`,
   };
 
   const gridStyles = isMobile ? mobileGrid : desktopGrid;
 
+  // Asymmetric padding (match SeekerLayout: keep right edge tighter when rail exists)
+  const containerPadding = {
+    paddingTop: UI.PAD,
+    paddingBottom: UI.PAD,
+    paddingLeft: UI.PAD,
+    paddingRight: hasRight ? Math.max(8, UI.PAD - 4) : UI.PAD,
+  };
+
   return (
     <>
-      <Head><title>{title}</title></Head>
+      <Head>
+        <title>{title}</title>
+      </Head>
+
       <CoachingHeader />
 
       <div
         style={{
           ...gridStyles,
-          gap: 20,
-          padding: isMobile ? '16px' : '30px',
+          gap: UI.GAP,
+          ...containerPadding,
           alignItems: 'start',
           boxSizing: 'border-box',
         }}
@@ -93,12 +120,13 @@ export default function CoachingLayout({
             gridArea: 'left',
             alignSelf: 'start',
             display: isMobile ? 'none' : 'block',
+            minWidth: 0,
           }}
         >
           {left || (
             <CoachingSidebar
-              initialOpen={sidebarInitialOpen}  // ← force sections open/closed
-              active={activeNav}                // ← ensures correct highlight on all routes
+              initialOpen={sidebarInitialOpen}
+              active={activeNav}
             />
           )}
         </aside>
@@ -116,19 +144,20 @@ export default function CoachingLayout({
           {header ?? (
             <section
               style={{
-                background: 'white',
-                border: '1px solid #eee',
-                borderRadius: 12,
-                padding: 16,
-                boxShadow: '0 2px 6px rgba(0,0,0,0.06)',
+                borderRadius: 14,
+                padding: UI.CARD_PAD,
                 textAlign: 'center',
+                minWidth: 0,
+                boxSizing: 'border-box',
+                ...GLASS,
               }}
+              aria-label="Coaching overview"
             >
-              <h1 style={{ color: '#FF7043', fontSize: 24, fontWeight: 800, margin: 0 }}>
+              <h1 style={{ margin: 0, color: '#FF7043', fontSize: 22, fontWeight: 900 }}>
                 {pageTitle}
               </h1>
               {headerDescription && (
-                <p style={{ margin: '6px auto 0', color: '#607D8B', maxWidth: 720 }}>
+                <p style={{ margin: '6px auto 0', color: '#455A64', maxWidth: 760, fontWeight: 600 }}>
                   {headerDescription}
                 </p>
               )}
@@ -162,7 +191,7 @@ export default function CoachingLayout({
           )}
         </header>
 
-        {/* RIGHT — dark rail */}
+        {/* RIGHT — dark rail (unchanged styling, just kept uniform sizing) */}
         {hasRight && (
           <aside
             style={{
@@ -175,9 +204,9 @@ export default function CoachingLayout({
               boxShadow: '0 2px 6px rgba(0,0,0,0.06)',
               minHeight: 120,
               boxSizing: 'border-box',
-              width: isMobile ? '100%' : 240,
-              minWidth: isMobile ? 0 : 240,
-              maxWidth: isMobile ? '100%' : 240,
+              width: isMobile ? '100%' : UI.RIGHT_W,
+              minWidth: isMobile ? 0 : UI.RIGHT_W,
+              maxWidth: isMobile ? '100%' : UI.RIGHT_W,
               minInlineSize: 0,
               color: 'white',
             }}
@@ -188,7 +217,7 @@ export default function CoachingLayout({
 
         {/* CONTENT */}
         <main style={{ gridArea: 'content', minWidth: 0 }}>
-          <div style={{ display: 'grid', gap: 20, width: '100%', minWidth: 0 }}>
+          <div style={{ display: 'grid', gap: UI.GAP, width: '100%', minWidth: 0 }}>
             {children}
           </div>
         </main>
@@ -227,15 +256,7 @@ export default function CoachingLayout({
                 marginBottom: 12,
               }}
             >
-              <div
-                style={{
-                  fontSize: 14,
-                  fontWeight: 700,
-                  color: '#263238',
-                }}
-              >
-                Navigation
-              </div>
+              <div style={{ fontSize: 14, fontWeight: 700, color: '#263238' }}>Navigation</div>
               <button
                 type="button"
                 onClick={() => setMobileSidebarOpen(false)}
@@ -253,7 +274,6 @@ export default function CoachingLayout({
               </button>
             </div>
 
-            {/* Coaching sidebar in overlay */}
             {left || (
               <CoachingSidebar
                 initialOpen={sidebarInitialOpen}
@@ -262,7 +282,6 @@ export default function CoachingLayout({
             )}
           </div>
 
-          {/* Clickable area to close overlay when tapping outside panel */}
           <button
             type="button"
             onClick={() => setMobileSidebarOpen(false)}

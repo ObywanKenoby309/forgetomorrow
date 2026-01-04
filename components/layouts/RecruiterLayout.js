@@ -1,13 +1,83 @@
 // components/layouts/RecruiterLayout.js
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import Head from 'next/head';
+import { useRouter } from 'next/router';
+
 import RecruiterHeader from '@/components/recruiter/RecruiterHeader';
 import RecruiterSidebar from '@/components/recruiter/RecruiterSidebar';
+
+const LAST_CHROME_KEY = 'ft_last_chrome';
+
+// Profile-standard glass
+const GLASS = {
+  border: '1px solid rgba(255,255,255,0.22)',
+  background: 'rgba(255,255,255,0.58)',
+  boxShadow: '0 10px 24px rgba(0,0,0,0.12)',
+  backdropFilter: 'blur(10px)',
+  WebkitBackdropFilter: 'blur(10px)',
+};
+
+function normalizeChrome(input) {
+  const raw = String(input || '').toLowerCase().trim();
+  if (!raw) return '';
+
+  // canonical
+  if (raw === 'recruiter-smb' || raw === 'recruiter_ent' || raw === 'recruiter-ent' || raw === 'recruiter-ent')
+    return raw === 'recruiter_ent' ? 'recruiter-ent' : raw;
+
+  // aliases
+  if (raw === 'recruiter') return 'recruiter-smb';
+  if (raw === 'smb' || raw === 'recruiter_smb' || raw === 'recruiter-smb') return 'recruiter-smb';
+
+  if (
+    raw === 'enterprise' ||
+    raw === 'ent' ||
+    raw === 'recruiter-enterprise' ||
+    raw === 'recruiter_enterprise' ||
+    raw === 'recruiter-ent'
+  ) {
+    return 'recruiter-ent';
+  }
+
+  if (raw.startsWith('recruiter')) {
+    if (raw.includes('ent') || raw.includes('enterprise')) return 'recruiter-ent';
+    return 'recruiter-smb';
+  }
+
+  return '';
+}
+
+function readLastChrome() {
+  try {
+    if (typeof window === 'undefined') return '';
+    return normalizeChrome(window.sessionStorage.getItem(LAST_CHROME_KEY) || '');
+  } catch {
+    return '';
+  }
+}
+
+function persistLastChrome(mode) {
+  try {
+    if (typeof window === 'undefined') return;
+    const m = normalizeChrome(mode);
+    if (!m) return;
+    window.sessionStorage.setItem(LAST_CHROME_KEY, m);
+  } catch {
+    // ignore
+  }
+}
+
+function chromeToVariant(chromeMode) {
+  const c = normalizeChrome(chromeMode);
+  if (c === 'recruiter-ent') return 'enterprise';
+  if (c === 'recruiter-smb') return 'smb';
+  return null;
+}
 
 /**
  * Recruiter-only layout.
  * - Grid/padding/right-rail match SeekerLayout for uniformity.
- * - `headerCard` (default true) wraps the header slot in a white card.
+ * - `headerCard` wraps the header slot (now profile-standard glass).
  * - `role` (org-level permission) and `variant` (smb|enterprise) pass to sidebar.
  * - `activeNav` tells the sidebar which item should be highlighted.
  */
@@ -17,62 +87,109 @@ export default function RecruiterLayout({
   right,
   children,
   headerCard = true,
-  role = 'recruiter',        // 'owner' | 'admin' | 'billing' | 'recruiter' | 'hiringManager'
-  variant = 'smb',           // 'smb' | 'enterprise'
-  counts,                    // optional badges
-  initialOpen,               // optional section defaults
-  activeNav = 'dashboard',   // default active nav item
+  role = 'recruiter', // 'owner' | 'admin' | 'billing' | 'recruiter' | 'hiringManager'
+  variant = 'smb', // 'smb' | 'enterprise'
+  counts, // optional badges
+  initialOpen, // optional section defaults
+  activeNav = 'dashboard', // default active nav item
 }) {
+  const router = useRouter();
   const hasRight = Boolean(right);
 
   // --- Mobile detection ---
-  // Default to "mobile" to be safe; desktop will correct itself after effect runs.
   const [isMobile, setIsMobile] = useState(true);
   const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false);
 
   useEffect(() => {
     const handleResize = () => {
       if (typeof window !== 'undefined') {
-        // Treat screens narrower than 1024px as "mobile" layout.
         const width = window.innerWidth;
         setIsMobile(width < 1024);
       }
     };
 
-    handleResize(); // run once at mount
+    handleResize();
     window.addEventListener('resize', handleResize);
     return () => window.removeEventListener('resize', handleResize);
   }, []);
 
-  // --- Desktop vs mobile grid configs ---
+  // --- Chrome-aware recruiter tier (URL wins, else last saved) ---
+  const chromeMode = useMemo(() => {
+    const fromUrl = normalizeChrome(router?.query?.chrome);
+    if (fromUrl) return fromUrl;
+
+    const last = readLastChrome();
+    if (last) return last;
+
+    return 'recruiter-smb';
+  }, [router?.query?.chrome]);
+
+  useEffect(() => {
+    persistLastChrome(chromeMode);
+  }, [chromeMode]);
+
+  // If caller didn’t intentionally override variant, we can auto-derive from chrome.
+  // (We treat the default 'smb' as "not an intentional override".)
+  const resolvedVariant = useMemo(() => {
+    const inferred = chromeToVariant(chromeMode);
+    if (!inferred) return variant;
+
+    // If the page explicitly passed variant (common on enterprise pages), respect it.
+    // If it's just the default 'smb', let chrome upgrade it to enterprise when appropriate.
+    if (variant === 'enterprise') return 'enterprise';
+    if (variant === 'smb') return inferred;
+
+    return variant;
+  }, [chromeMode, variant]);
+
+  // --- Desktop vs mobile grid configs (aligned to SeekerLayout defaults) ---
+  const GAP = 12;
+  const PAD = 16;
+  const LEFT_W = 240;
+  const RIGHT_W = 240; // your recruiter layout uses 240; keep it stable
+
   const desktopGrid = {
     display: 'grid',
-    gridTemplateColumns: '240px minmax(640px, 1fr) 240px',
+    gridTemplateColumns: `${LEFT_W}px minmax(0, 1fr) ${hasRight ? `${RIGHT_W}px` : '0px'}`,
     gridTemplateRows: 'auto 1fr',
-    gridTemplateAreas: `
-      "left header right"
-      "left content right"
-    `,
+    gridTemplateAreas: hasRight
+      ? `"left header right"
+         "left content right"`
+      : `"left header header"
+         "left content content"`,
   };
 
-  // On mobile, stack: header → content → right; sidebar goes into overlay
   const mobileGrid = {
     display: 'grid',
     gridTemplateColumns: '1fr',
     gridTemplateRows: hasRight ? 'auto auto auto' : 'auto auto',
     gridTemplateAreas: hasRight
-      ? `
-        "header"
-        "content"
-        "right"
-      `
-      : `
-        "header"
-        "content"
-      `,
+      ? `"header"
+         "content"
+         "right"`
+      : `"header"
+         "content"`,
   };
 
   const gridStyles = isMobile ? mobileGrid : desktopGrid;
+
+  // Right rail styles (kept as your dark rail)
+  const rightRailStyle = {
+    gridArea: 'right',
+    alignSelf: 'start',
+    background: '#2a2a2a',
+    border: '1px solid #3a3a3a',
+    borderRadius: 12,
+    padding: 16,
+    boxShadow: '0 2px 6px rgba(0,0,0,0.06)',
+    minHeight: 120,
+    boxSizing: 'border-box',
+    width: isMobile ? '100%' : RIGHT_W,
+    minWidth: isMobile ? 0 : RIGHT_W,
+    maxWidth: isMobile ? '100%' : RIGHT_W,
+    minInlineSize: 0,
+    color: 'white',
+  };
 
   return (
     <>
@@ -85,8 +202,11 @@ export default function RecruiterLayout({
       <div
         style={{
           ...gridStyles,
-          gap: 20,
-          padding: isMobile ? '16px' : '30px',
+          gap: GAP,
+          paddingTop: PAD,
+          paddingBottom: PAD,
+          paddingLeft: PAD,
+          paddingRight: hasRight ? Math.max(8, PAD - 4) : PAD,
           alignItems: 'start',
           boxSizing: 'border-box',
         }}
@@ -103,24 +223,22 @@ export default function RecruiterLayout({
           <RecruiterSidebar
             active={activeNav}
             role={role}
-            variant={variant}
+            variant={resolvedVariant}
             counts={counts}
             initialOpen={initialOpen}
           />
         </aside>
 
-        {/* PAGE-LEVEL HEADER SLOT (boxed by default) */}
+        {/* PAGE-LEVEL HEADER SLOT (glass by default) */}
         {headerCard ? (
           <section
             style={{
               gridArea: 'header',
-              background: 'white',
-              borderRadius: 12,
-              padding: '8px 16px',
-              border: '1px solid #eee',
-              boxShadow: '0 2px 6px rgba(0,0,0,0.06)',
+              borderRadius: 14,
+              padding: '8px 12px',
               minWidth: 0,
               boxSizing: 'border-box',
+              ...GLASS,
             }}
           >
             {header}
@@ -192,39 +310,11 @@ export default function RecruiterLayout({
         )}
 
         {/* RIGHT — Dark Rail */}
-        {hasRight && (
-          <aside
-            style={{
-              gridArea: 'right',
-              alignSelf: 'start',
-              background: '#2a2a2a',
-              border: '1px solid #3a3a3a',
-              borderRadius: 12,
-              padding: 16,
-              boxShadow: '0 2px 6px rgba(0,0,0,0.06)',
-              minHeight: 120,
-              boxSizing: 'border-box',
-              width: isMobile ? '100%' : 240,
-              minWidth: isMobile ? 0 : 240,
-              maxWidth: isMobile ? '100%' : 240,
-              minInlineSize: 0,
-              color: 'white',
-            }}
-          >
-            {right}
-          </aside>
-        )}
+        {hasRight && <aside style={rightRailStyle}>{right}</aside>}
 
         {/* CONTENT */}
         <main style={{ gridArea: 'content', minWidth: 0 }}>
-          <div
-            style={{
-              display: 'grid',
-              gap: 20,
-              width: '100%',
-              minWidth: 0,
-            }}
-          >
+          <div style={{ display: 'grid', gap: GAP, width: '100%', minWidth: 0 }}>
             {children}
           </div>
         </main>
@@ -263,13 +353,7 @@ export default function RecruiterLayout({
                 marginBottom: 12,
               }}
             >
-              <div
-                style={{
-                  fontSize: 14,
-                  fontWeight: 700,
-                  color: '#263238',
-                }}
-              >
+              <div style={{ fontSize: 14, fontWeight: 700, color: '#263238' }}>
                 Navigation
               </div>
               <button
@@ -289,17 +373,15 @@ export default function RecruiterLayout({
               </button>
             </div>
 
-            {/* Existing RecruiterSidebar reused inside overlay */}
             <RecruiterSidebar
               active={activeNav}
               role={role}
-              variant={variant}
+              variant={resolvedVariant}
               counts={counts}
               initialOpen={initialOpen}
             />
           </div>
 
-          {/* Clickable area to close overlay when tapping outside panel */}
           <button
             type="button"
             onClick={() => setMobileSidebarOpen(false)}
