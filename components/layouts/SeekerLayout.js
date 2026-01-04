@@ -16,6 +16,61 @@ import RecruiterHeader from '@/components/recruiter/RecruiterHeader';
 import RecruiterSidebar from '@/components/recruiter/RecruiterSidebar';
 
 const ALLOWED_MODES = new Set(['seeker', 'coach', 'recruiter-smb', 'recruiter-ent']);
+const LAST_CHROME_KEY = 'ft_last_chrome';
+
+function normalizeChrome(input) {
+  const raw = String(input || '').toLowerCase().trim();
+  if (!raw) return '';
+
+  // ✅ canonical values pass through
+  if (ALLOWED_MODES.has(raw)) return raw;
+
+  // ✅ accept common aliases
+  if (raw === 'recruiter') return 'recruiter-smb';
+  if (raw === 'recruiter_smb' || raw === 'recruiter-smb' || raw === 'smb') return 'recruiter-smb';
+
+  if (
+    raw === 'recruiter-ent' ||
+    raw === 'recruiter_enterprise' ||
+    raw === 'recruiter-enterprise' ||
+    raw === 'enterprise' ||
+    raw === 'ent'
+  ) {
+    return 'recruiter-ent';
+  }
+
+  // ✅ tolerate broader recruiter strings
+  if (raw.startsWith('recruiter')) {
+    if (raw.includes('ent') || raw.includes('enterprise')) return 'recruiter-ent';
+    return 'recruiter-smb';
+  }
+
+  if (raw === 'coach') return 'coach';
+  if (raw === 'seeker') return 'seeker';
+
+  return '';
+}
+
+function readLastChrome() {
+  try {
+    if (typeof window === 'undefined') return '';
+    const saved = window.sessionStorage.getItem(LAST_CHROME_KEY) || '';
+    return normalizeChrome(saved);
+  } catch {
+    return '';
+  }
+}
+
+function persistLastChrome(mode) {
+  try {
+    if (typeof window === 'undefined') return;
+    const m = normalizeChrome(mode);
+    if (!m) return;
+    window.sessionStorage.setItem(LAST_CHROME_KEY, m);
+  } catch {
+    // ignore
+  }
+}
 
 export default function SeekerLayout({
   title = 'ForgeTomorrow - Seeker',
@@ -27,7 +82,7 @@ export default function SeekerLayout({
   forceChrome, // 'seeker' | 'coach' | 'recruiter-smb' | 'recruiter-ent'
   rightVariant = 'dark', // 'dark' | 'light'
   rightWidth = 260,
-  leftWidth = 240, // ✅ NEW: allows per-page override without changing defaults
+  leftWidth = 240, // ✅ allows per-page override without changing defaults
   gap = 12,
   pad = 16,
 }) {
@@ -35,29 +90,52 @@ export default function SeekerLayout({
 
   // ---- CHROME MODE (determine once, then keep in state) ----
   const initialChrome = (() => {
-    if (forceChrome && ALLOWED_MODES.has(forceChrome)) return forceChrome;
+    // 1) forceChrome (only if valid)
+    const forced = normalizeChrome(forceChrome);
+    if (forced) return forced;
 
-    const raw = String(router?.query?.chrome || '').toLowerCase();
-    if (ALLOWED_MODES.has(raw)) return raw;
+    // 2) URL chrome (normalize aliases)
+    const urlChrome = normalizeChrome(router?.query?.chrome);
+    if (urlChrome) return urlChrome;
 
+    // 3) last known chrome (sessionStorage)
+    const last = readLastChrome();
+    if (last) return last;
+
+    // 4) default
     return 'seeker';
   })();
 
   const [chromeMode, setChromeMode] = useState(initialChrome);
 
+  // Keep chromeMode in sync with forceChrome / URL chrome (URL wins unless forceChrome explicitly provided)
   useEffect(() => {
-    const raw = String(router?.query?.chrome || '').toLowerCase();
-
-    if (forceChrome && ALLOWED_MODES.has(forceChrome)) {
-      setChromeMode(forceChrome);
+    const forced = normalizeChrome(forceChrome);
+    if (forced) {
+      setChromeMode(forced);
+      persistLastChrome(forced);
       return;
     }
 
-    if (ALLOWED_MODES.has(raw)) {
-      setChromeMode(raw);
-    } else {
-      setChromeMode('seeker');
+    const urlChrome = normalizeChrome(router?.query?.chrome);
+
+    // If URL explicitly has a recognized chrome (including aliases), honor it.
+    if (urlChrome) {
+      setChromeMode(urlChrome);
+      persistLastChrome(urlChrome);
+      return;
     }
+
+    // If URL chrome missing/invalid, do NOT reset to seeker.
+    // Keep current, but ensure we have a persisted fallback.
+    const last = readLastChrome();
+    if (last && last !== chromeMode) {
+      setChromeMode(last);
+      persistLastChrome(last);
+    } else {
+      persistLastChrome(chromeMode);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [router?.query?.chrome, forceChrome]);
 
   // Always call hook; only Seeker uses the counts
@@ -180,9 +258,7 @@ export default function SeekerLayout({
   // ---- DESKTOP VS MOBILE GRID ----
   const desktopGrid = {
     display: 'grid',
-    gridTemplateColumns: `${leftWidth}px minmax(0, 1fr) ${
-      hasRight ? `${rightWidth}px` : '0px'
-    }`,
+    gridTemplateColumns: `${leftWidth}px minmax(0, 1fr) ${hasRight ? `${rightWidth}px` : '0px'}`,
     gridTemplateRows: 'auto 1fr',
     gridTemplateAreas: hasRight
       ? `"left header right"
