@@ -4,7 +4,8 @@ import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/router";
 import { useSession } from "next-auth/react";
 
-import InternalLayout from "@/components/layouts/InternalLayout";
+import SeekerLayout from "@/components/layouts/SeekerLayout";
+import SeekerRightColumn from "@/components/seeker/SeekerRightColumn";
 
 function readCookie(name) {
   try {
@@ -61,6 +62,22 @@ function inferChromeFromSession(session) {
     return "recruiter-smb";
   }
   return "seeker";
+}
+
+function ImpersonateHeaderBox() {
+  return (
+    <section className="px-4 pt-4 md:pt-6">
+      <div className="max-w-4xl mx-auto rounded-2xl border border-slate-200 bg-white/95 backdrop-blur-sm shadow-md px-5 py-4 md:px-8 md:py-6 text-center">
+        <h1 className="m-0 text-2xl md:text-3xl font-extrabold tracking-tight text-[#FF7043]">
+          Impersonation
+        </h1>
+        <p className="mt-2 text-sm md:text-base text-slate-600 max-w-2xl mx-auto">
+          Platform Admin only. Use this to support a customer account after a formal request exists.
+          Actions are written to AuditLog.
+        </p>
+      </div>
+    </section>
+  );
 }
 
 export default function AdminImpersonatePage() {
@@ -196,217 +213,184 @@ export default function AdminImpersonatePage() {
     }
   }
 
+  const pageTitle = "ForgeTomorrow – Impersonate";
+
   if (!chromeReady || status === "loading") {
     return (
-      <InternalLayout forceChrome={chrome || "recruiter-smb"}>
-        <main style={{ padding: 24, fontFamily: "system-ui" }}>Loading…</main>
-      </InternalLayout>
+      <SeekerLayout
+        title={pageTitle}
+        header={<ImpersonateHeaderBox />}
+        right={<SeekerRightColumn variant="support" />}
+        activeNav="support"
+      >
+        <div className="max-w-4xl mx-auto p-6">
+          <p className="text-sm text-slate-500">Loading…</p>
+        </div>
+      </SeekerLayout>
     );
   }
 
   if (!session?.user) {
     return (
-      <InternalLayout forceChrome={chrome}>
-        <main style={{ padding: 24, fontFamily: "system-ui" }}>You must be signed in.</main>
-      </InternalLayout>
+      <SeekerLayout
+        title={pageTitle}
+        header={<ImpersonateHeaderBox />}
+        right={<SeekerRightColumn variant="support" />}
+        activeNav="support"
+      >
+        <div className="max-w-4xl mx-auto p-6">
+          <div className="bg-white rounded-lg shadow p-6 md:p-8">
+            <p className="text-sm text-slate-700">You must be signed in.</p>
+          </div>
+        </div>
+      </SeekerLayout>
     );
   }
 
   if (!isPlatformAdmin) {
     return (
-      <InternalLayout forceChrome={chrome}>
-        <main style={{ padding: 24, fontFamily: "system-ui" }}>Forbidden.</main>
-      </InternalLayout>
+      <SeekerLayout
+        title={pageTitle}
+        header={<ImpersonateHeaderBox />}
+        right={<SeekerRightColumn variant="support" />}
+        activeNav="support"
+      >
+        <div className="max-w-4xl mx-auto p-6">
+          <div className="bg-white rounded-lg shadow p-6 md:p-8">
+            <p className="text-sm text-slate-700">Forbidden.</p>
+          </div>
+        </div>
+      </SeekerLayout>
     );
   }
 
   return (
-    <InternalLayout forceChrome={chrome}>
+    <SeekerLayout
+      title={pageTitle}
+      header={<ImpersonateHeaderBox />}
+      right={<SeekerRightColumn variant="support" />}
+      activeNav="support"
+    >
       <Head>
         <title>Impersonate – ForgeTomorrow</title>
       </Head>
 
-      <main style={{ padding: 24, fontFamily: "system-ui" }}>
-        <div style={{ maxWidth: 760, margin: "0 auto" }}>
-          <div
-            style={{
-              borderRadius: 18,
-              border: "1px solid rgba(148, 163, 184, 0.35)",
-              background: "rgba(255,255,255,0.78)",
-              backdropFilter: "blur(12px)",
-              WebkitBackdropFilter: "blur(12px)",
-              boxShadow: "0 10px 30px rgba(0,0,0,0.10)",
-              padding: 18,
-            }}
-          >
-            <h1 style={{ marginTop: 0, marginBottom: 6 }}>Impersonation</h1>
+      <div className="max-w-4xl mx-auto p-6 space-y-10">
+        <section className="bg-white rounded-lg shadow p-6 md:p-8 space-y-6">
+          {msg ? (
+            <div className="rounded-lg bg-slate-50 border border-slate-200 px-4 py-3 text-sm text-slate-800">
+              {msg}
+            </div>
+          ) : null}
 
-            <p style={{ color: "#475569", lineHeight: 1.5, marginTop: 0 }}>
-              Platform Admin only. Use this to support a customer account after a formal request exists.
-              Actions are written to AuditLog.
-            </p>
+          <div className="space-y-5">
+            <div>
+              <div className="text-xs font-semibold text-slate-700 mb-2">Customer email</div>
+              <input
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                placeholder="customer@email.com"
+                className="w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-[#FF7043] focus:ring-offset-2"
+                disabled={busy || active}
+              />
+            </div>
 
-            {msg ? (
-              <div
-                style={{
-                  marginTop: 12,
-                  padding: 12,
-                  borderRadius: 12,
-                  background: "rgba(15, 23, 42, 0.06)",
-                  color: "#0f172a",
-                }}
-              >
-                {msg}
+            <div>
+              <div className="text-xs font-semibold text-slate-700 mb-2">
+                Ticket number (required) or No-Ticket
               </div>
-            ) : null}
 
-            <div style={{ marginTop: 14, display: "grid", gap: 12 }}>
-              <div>
-                <div style={{ fontSize: 13, color: "#334155", marginBottom: 6, fontWeight: 600 }}>
-                  Customer email
-                </div>
+              <div className="flex flex-wrap items-center gap-3">
                 <input
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  placeholder="customer@email.com"
-                  style={{
-                    width: "100%",
-                    padding: "10px 12px",
-                    borderRadius: 12,
-                    border: "1px solid rgba(148, 163, 184, 0.55)",
-                    background: "rgba(255,255,255,0.9)",
-                  }}
-                  disabled={busy || active}
+                  value={ticketNumber}
+                  onChange={(e) => setTicketNumber(e.target.value)}
+                  placeholder="e.g. cmjyyujjl002mkz04gn9gvufq"
+                  className={`flex-1 min-w-[280px] rounded-lg border px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-[#FF7043] focus:ring-offset-2 ${
+                    noTicket ? "border-slate-200 bg-slate-50 text-slate-400" : "border-slate-300 bg-white"
+                  }`}
+                  disabled={busy || active || noTicket}
                 />
-              </div>
 
-              <div>
-                <div style={{ fontSize: 13, color: "#334155", marginBottom: 6, fontWeight: 600 }}>
-                  Ticket number (required) or No-Ticket
-                </div>
-
-                <div style={{ display: "flex", gap: 10, flexWrap: "wrap", alignItems: "center" }}>
+                <label className="flex items-center gap-2 text-xs text-slate-700 select-none">
                   <input
-                    value={ticketNumber}
-                    onChange={(e) => setTicketNumber(e.target.value)}
-                    placeholder="e.g. cmjyyujjl002mkz04gn9gvufq"
-                    style={{
-                      flex: "1 1 360px",
-                      padding: "10px 12px",
-                      borderRadius: 12,
-                      border: "1px solid rgba(148, 163, 184, 0.55)",
-                      background: noTicket ? "rgba(241,245,249,0.9)" : "rgba(255,255,255,0.9)",
+                    type="checkbox"
+                    checked={noTicket}
+                    onChange={(e) => {
+                      const checked = !!e.target.checked;
+                      setNoTicket(checked);
+                      if (checked) setTicketNumber("");
                     }}
-                    disabled={busy || active || noTicket}
+                    disabled={busy || active}
                   />
-
-                  <label
-                    style={{
-                      display: "flex",
-                      alignItems: "center",
-                      gap: 8,
-                      fontSize: 13,
-                      color: "#334155",
-                      userSelect: "none",
-                    }}
-                  >
-                    <input
-                      type="checkbox"
-                      checked={noTicket}
-                      onChange={(e) => {
-                        const checked = !!e.target.checked;
-                        setNoTicket(checked);
-                        if (checked) setTicketNumber("");
-                      }}
-                      disabled={busy || active}
-                    />
-                    No ticket (emergency)
-                  </label>
-                </div>
-
-                {!active && !noTicket && ticketNumber.trim() && !isValidTicketNumber(ticketNumber) ? (
-                  <div style={{ marginTop: 6, fontSize: 12, color: "#b91c1c" }}>
-                    Ticket number format looks invalid. Paste the ticket ID exactly.
-                  </div>
-                ) : null}
-
-                {noTicket ? (
-                  <div
-                    style={{
-                      marginTop: 10,
-                      padding: 12,
-                      borderRadius: 14,
-                      background: "rgba(255, 247, 237, 0.85)",
-                      border: "1px solid rgba(251, 146, 60, 0.35)",
-                      color: "#7c2d12",
-                      fontSize: 13,
-                      lineHeight: 1.45,
-                    }}
-                  >
-                    <div style={{ fontWeight: 800, marginBottom: 6 }}>
-                      No-Ticket procedure (do this immediately after the action)
-                    </div>
-                    <ol style={{ margin: 0, paddingLeft: 18 }}>
-                      <li>Complete the emergency action for the customer (minimum necessary).</li>
-                      <li>
-                        Open a Support Desk ticket right away and include: who requested it, what action was taken,
-                        what account it impacted, and who performed it.
-                      </li>
-                      <li>Add any supporting email/message details into the ticket.</li>
-                    </ol>
-                  </div>
-                ) : null}
+                  No ticket (emergency)
+                </label>
               </div>
 
-              <div style={{ display: "flex", gap: 12, flexWrap: "wrap", alignItems: "center" }}>
-                {!active ? (
-                  <button
-                    onClick={start}
-                    disabled={busy || !email.trim() || !reasonOk}
-                    style={{
-                      padding: "10px 14px",
-                      borderRadius: 12,
-                      border: "1px solid #111827",
-                      background: "#111827",
-                      color: "white",
-                      cursor: busy || !email.trim() || !reasonOk ? "not-allowed" : "pointer",
-                      opacity: busy || !email.trim() || !reasonOk ? 0.6 : 1,
-                      minWidth: 120,
-                    }}
-                  >
-                    {busy ? "Working…" : "Start"}
-                  </button>
-                ) : (
-                  <button
-                    onClick={stop}
-                    disabled={busy}
-                    style={{
-                      padding: "10px 14px",
-                      borderRadius: 12,
-                      border: "1px solid #b91c1c",
-                      background: "#b91c1c",
-                      color: "white",
-                      cursor: busy ? "not-allowed" : "pointer",
-                      opacity: busy ? 0.6 : 1,
-                      minWidth: 120,
-                    }}
-                  >
-                    {busy ? "Working…" : "Stop"}
-                  </button>
-                )}
-
-                <div style={{ fontSize: 13, color: "#64748b" }}>
-                  Return target: <code>{returnTo}</code>
+              {!active && !noTicket && ticketNumber.trim() && !isValidTicketNumber(ticketNumber) ? (
+                <div className="mt-2 text-xs text-red-600">
+                  Ticket number format looks invalid. Paste the ticket ID exactly.
                 </div>
-              </div>
+              ) : null}
 
-              <div style={{ marginTop: 2, color: "#64748b", fontSize: 13 }}>
-                API required: <code>/api/admin/impersonation/start</code> and <code>/api/admin/impersonation/stop</code>
+              {noTicket ? (
+                <div className="mt-4 rounded-lg border border-orange-200 bg-orange-50 px-4 py-3 text-sm text-orange-900">
+                  <div className="font-bold mb-2">No-Ticket procedure (do this immediately after the action)</div>
+                  <ol className="list-decimal pl-5 space-y-1">
+                    <li>Complete the emergency action for the customer (minimum necessary).</li>
+                    <li>
+                      Open a Support Desk ticket right away and include: who requested it, what action was taken,
+                      what account it impacted, and who performed it.
+                    </li>
+                    <li>Add any supporting email/message details into the ticket.</li>
+                  </ol>
+                </div>
+              ) : null}
+            </div>
+
+            <div className="flex flex-wrap items-center gap-4">
+              {!active ? (
+                <button
+                  onClick={start}
+                  disabled={busy || !email.trim() || !reasonOk}
+                  className={`rounded-lg px-4 py-2 text-sm font-semibold text-white ${
+                    busy || !email.trim() || !reasonOk
+                      ? "bg-slate-400 cursor-not-allowed"
+                      : "bg-slate-900 hover:bg-slate-800"
+                  }`}
+                >
+                  {busy ? "Working…" : "Start"}
+                </button>
+              ) : (
+                <button
+                  onClick={stop}
+                  disabled={busy}
+                  className={`rounded-lg px-4 py-2 text-sm font-semibold text-white ${
+                    busy ? "bg-red-300 cursor-not-allowed" : "bg-red-700 hover:bg-red-600"
+                  }`}
+                >
+                  {busy ? "Working…" : "Stop"}
+                </button>
+              )}
+
+              <div className="text-xs text-slate-500">
+                Return target: <code className="text-slate-700">{returnTo}</code>
               </div>
             </div>
+
+            <div className="text-xs text-slate-500">
+              API required: <code className="text-slate-700">/api/admin/impersonation/start</code> and{" "}
+              <code className="text-slate-700">/api/admin/impersonation/stop</code>
+            </div>
+
+            {/* chrome is inferred but not required by SeekerLayout; kept for continuity */}
+            {chrome ? (
+              <div className="text-[11px] text-slate-400">
+                Chrome: <code>{chrome}</code>
+              </div>
+            ) : null}
           </div>
-        </div>
-      </main>
-    </InternalLayout>
+        </section>
+      </div>
+    </SeekerLayout>
   );
 }
