@@ -5,7 +5,6 @@ import { useRouter } from "next/router";
 import { useSession } from "next-auth/react";
 
 import SeekerLayout from "@/components/layouts/SeekerLayout";
-import SeekerRightColumn from "@/components/seeker/SeekerRightColumn";
 
 function readCookie(name) {
   try {
@@ -65,9 +64,11 @@ function inferChromeFromSession(session) {
 }
 
 function ImpersonateHeaderBox() {
+  // Match Support header layout + your updated padding (raised slightly)
+  // Support change was line 30: section padding
   return (
-    <section className="px-4 pt-4 md:pt-6">
-      <div className="max-w-4xl mx-auto rounded-2xl border border-slate-200 bg-white/95 backdrop-blur-sm shadow-md px-5 py-4 md:px-8 md:py-6 text-center">
+    <section className="px-4 pt-2 md:pt-4">
+      <div className="max-w-4xl mx-auto rounded-2xl border border-slate-200 bg-white/98 backdrop-blur-md shadow-lg px-5 py-4 md:px-8 md:py-6 text-center">
         <h1 className="m-0 text-2xl md:text-3xl font-extrabold tracking-tight text-[#FF7043]">
           Impersonation
         </h1>
@@ -77,6 +78,50 @@ function ImpersonateHeaderBox() {
         </p>
       </div>
     </section>
+  );
+}
+
+function ImpersonationPolicyRightCard() {
+  return (
+    <aside className="p-4 md:p-6 space-y-4">
+      <div className="rounded-2xl border border-slate-200 bg-white/95 backdrop-blur-md shadow-md p-5">
+        <div className="text-sm font-extrabold tracking-tight text-slate-900">
+          Staff Policy Reminder
+        </div>
+        <p className="mt-2 text-xs text-slate-600 leading-relaxed">
+          This tool grants the ability to act as a customer. Use only for customer support
+          scenarios (e.g., outage, emergency access, recovery, customer unable to operate).
+          Every start/stop is audited.
+        </p>
+
+        <div className="mt-4 rounded-xl border border-slate-200 bg-slate-50 p-4">
+          <div className="text-xs font-bold text-slate-800">Required before Start</div>
+          <ul className="mt-2 list-disc pl-5 space-y-1 text-xs text-slate-700">
+            <li>
+              Provide a valid Support Ticket ID <span className="text-slate-500">(preferred)</span>
+            </li>
+            <li>
+              If no ticket exists: select <span className="font-semibold">No ticket (emergency)</span> and create a
+              ticket immediately after the action
+            </li>
+            <li>Perform the minimum necessary action only</li>
+          </ul>
+        </div>
+
+        <div className="mt-4 rounded-xl border border-orange-200 bg-orange-50 p-4">
+          <div className="text-xs font-bold text-orange-900">No-Ticket rule</div>
+          <p className="mt-2 text-xs text-orange-900 leading-relaxed">
+            If you start with <span className="font-semibold">No-Ticket</span>, you must open a Support Desk ticket
+            right after completing the emergency action and include the details (requestor, action, account impacted,
+            and staff actor).
+          </p>
+        </div>
+
+        <div className="mt-4 text-[11px] text-slate-500">
+          Ticket format example: <code className="text-slate-700">cmjyyujjl002mkz04gn9gvufq</code>
+        </div>
+      </div>
+    </aside>
   );
 }
 
@@ -220,7 +265,7 @@ export default function AdminImpersonatePage() {
       <SeekerLayout
         title={pageTitle}
         header={<ImpersonateHeaderBox />}
-        right={<SeekerRightColumn variant="support" />}
+        right={<ImpersonationPolicyRightCard />}
         activeNav="support"
       >
         <div className="max-w-4xl mx-auto p-6">
@@ -235,7 +280,7 @@ export default function AdminImpersonatePage() {
       <SeekerLayout
         title={pageTitle}
         header={<ImpersonateHeaderBox />}
-        right={<SeekerRightColumn variant="support" />}
+        right={<ImpersonationPolicyRightCard />}
         activeNav="support"
       >
         <div className="max-w-4xl mx-auto p-6">
@@ -252,7 +297,7 @@ export default function AdminImpersonatePage() {
       <SeekerLayout
         title={pageTitle}
         header={<ImpersonateHeaderBox />}
-        right={<SeekerRightColumn variant="support" />}
+        right={<ImpersonationPolicyRightCard />}
         activeNav="support"
       >
         <div className="max-w-4xl mx-auto p-6">
@@ -268,7 +313,7 @@ export default function AdminImpersonatePage() {
     <SeekerLayout
       title={pageTitle}
       header={<ImpersonateHeaderBox />}
-      right={<SeekerRightColumn variant="support" />}
+      right={<ImpersonationPolicyRightCard />}
       activeNav="support"
     >
       <Head>
@@ -296,9 +341,7 @@ export default function AdminImpersonatePage() {
             </div>
 
             <div>
-              <div className="text-xs font-semibold text-slate-700 mb-2">
-                Ticket number (required) or No-Ticket
-              </div>
+              <div className="text-xs font-semibold text-slate-700 mb-2">Ticket number (required) or No-Ticket</div>
 
               <div className="flex flex-wrap items-center gap-3">
                 <input
@@ -338,8 +381,8 @@ export default function AdminImpersonatePage() {
                   <ol className="list-decimal pl-5 space-y-1">
                     <li>Complete the emergency action for the customer (minimum necessary).</li>
                     <li>
-                      Open a Support Desk ticket right away and include: who requested it, what action was taken,
-                      what account it impacted, and who performed it.
+                      Open a Support Desk ticket right away and include: who requested it, what action was taken, what
+                      account it impacted, and who performed it.
                     </li>
                     <li>Add any supporting email/message details into the ticket.</li>
                   </ol>

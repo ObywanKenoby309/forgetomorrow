@@ -27,8 +27,8 @@ function SupportHeaderBox({ chrome }) {
 
   // New: proper title card formatting, always readable on wallpapers
   return (
-    <section className="px-4 pt-4 md:pt-6">
-      <div className="max-w-4xl mx-auto rounded-2xl border border-slate-200 bg-white/95 backdrop-blur-sm shadow-md px-5 py-4 md:px-8 md:py-6 text-center">
+    <section className="px-4 pt-2 md:pt-4">
+      <div className="max-w-4xl mx-auto rounded-2xl border border-white/30 bg-white/80 backdrop-blur-md shadow-lg px-5 py-4 md:px-8 md:py-6 text-center">
         <h1 className="m-0 text-2xl md:text-3xl font-extrabold tracking-tight text-[#FF7043]">
           {title}
         </h1>
