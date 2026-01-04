@@ -3,18 +3,75 @@
 import { getServerSession } from "next-auth/next";
 import { authOptions } from "../auth/[...nextauth]";
 import { prisma } from "@/lib/prisma";
+import jwt from "jsonwebtoken";
+
+const JWT_SECRET = process.env.NEXTAUTH_SECRET || "dev-secret-change-in-production";
+
+function readCookie(req, name) {
+  try {
+    const raw = req.headers?.cookie || "";
+    const parts = raw.split(";").map((p) => p.trim());
+    for (const p of parts) {
+      if (p.startsWith(name + "=")) return decodeURIComponent(p.slice(name.length + 1));
+    }
+    return "";
+  } catch {
+    return "";
+  }
+}
+
+async function resolveEffectiveRecruiter(req, session) {
+  const sessionEmail = String(session?.user?.email || "").trim().toLowerCase();
+  if (!sessionEmail) return null;
+
+  const isPlatformAdmin = !!session?.user?.isPlatformAdmin;
+
+  // Default: real logged-in user
+  let effectiveUserId = null;
+
+  // If platform admin + impersonation cookie exists, use targetUserId
+  if (isPlatformAdmin) {
+    const imp = readCookie(req, "ft_imp");
+    if (imp) {
+      try {
+        const decoded = jwt.verify(imp, JWT_SECRET);
+        if (decoded && typeof decoded === "object" && decoded.targetUserId) {
+          effectiveUserId = String(decoded.targetUserId);
+        }
+      } catch {
+        // ignore invalid/expired cookie
+      }
+    }
+  }
+
+  if (effectiveUserId) {
+    const u = await prisma.user.findUnique({
+      where: { id: effectiveUserId },
+      select: { id: true, email: true, role: true, accountKey: true },
+    });
+    return u?.id ? u : null;
+  }
+
+  const u = await prisma.user.findUnique({
+    where: { email: sessionEmail },
+    select: { id: true, email: true, role: true, accountKey: true },
+  });
+  return u?.id ? u : null;
+}
 
 async function requireRecruiterSession(req, res) {
   const session = await getServerSession(req, res, authOptions);
 
-  if (!session?.user?.email || !session.user.id) {
+  if (!session?.user?.email) {
     res.status(401).json({ error: "Not authenticated" });
     return null;
   }
 
-  // Optional: basic role gate — only recruiters & admins can use this endpoint
-  const role = (session.user /** as any */)?.role || "SEEKER";
-  if (!["RECRUITER", "ADMIN"].includes(String(role))) {
+  // Optional basic role gate — allow Recruiter/Admin/Platform Admin
+  const role = String(session.user?.role || "SEEKER");
+  const isPlatformAdmin = !!session.user?.isPlatformAdmin;
+
+  if (!isPlatformAdmin && !["RECRUITER", "ADMIN"].includes(role)) {
     res.status(403).json({ error: "Insufficient permissions" });
     return null;
   }
@@ -41,7 +98,6 @@ function buildSeekerMeta(job) {
     seekerBanner =
       "This employer is now reviewing applicants. Thank you to those who applied.";
   } else if (status === "Closed") {
-    // still visible to recruiter, hidden from seeker feed (jobs page handles timing)
     seekerVisible = false;
     allowNewApplications = false;
     seekerBanner =
@@ -68,12 +124,14 @@ function shapeJob(job) {
     compensation: job.compensation,
     description: job.description,
     accountKey: job.accountKey,
+    userId: job.userId,
     createdAt: job.createdAt,
+
     // These may be undefined on this model; that’s fine.
     origin: job.origin,
     source: job.source,
     publishedat: job.publishedat,
-    // 🔸 Seeker-facing meta (derived only, no DB fields required)
+
     seekerVisible: seekerMeta.seekerVisible,
     allowNewApplications: seekerMeta.allowNewApplications,
     seekerBanner: seekerMeta.seekerBanner,
@@ -90,19 +148,28 @@ export default async function handler(req, res) {
   const session = await requireRecruiterSession(req, res);
   if (!session) return;
 
-  const userId = session.user.id;
-  const accountKey = (session.user /** as any */).accountKey || null;
+  // ✅ Impersonation-aware effective user + org key (NO FALLBACK)
+  const effective = await resolveEffectiveRecruiter(req, session);
+
+  if (!effective?.id) {
+    return res.status(404).json({ error: "User not found" });
+  }
+  if (!effective.accountKey) {
+    return res.status(404).json({ error: "accountKey not found" });
+  }
+
+  const effectiveUserId = effective.id;
+  const recruiterAccountKey = effective.accountKey;
 
   try {
     if (req.method === "GET") {
-      // Fetch all jobs owned by this user (later we can expand to account-level)
+      // ✅ Org scope: ALL jobs for this org (not just creator)
       const jobs = await prisma.job.findMany({
-        where: { userId },
+        where: { accountKey: recruiterAccountKey },
         orderBy: { createdAt: "desc" },
       });
 
       const rows = jobs.map(shapeJob);
-
       return res.status(200).json({ jobs: rows });
     }
 
@@ -132,20 +199,21 @@ export default async function handler(req, res) {
           company: safeText(company),
           worksite: safeText(worksite),
           location: safeText(location),
-          type: safeText(type, ""),                 // no null
-          compensation: safeText(compensation, ""), // no null
+          type: safeText(type, ""),
+          compensation: safeText(compensation, ""),
           description: safeText(description),
           status,
           urgent: Boolean(urgent),
-          userId,
-          accountKey, // 🔸 tie posting to the account/org
-          // createdAt / updatedAt handled by Prisma / DB
+
+          // ✅ creator is the effective user (impersonated target if active)
+          userId: effectiveUserId,
+
+          // ✅ ALWAYS enforce org scope from DB user (ignore session/body)
+          accountKey: recruiterAccountKey,
         },
       });
 
-      return res.status(201).json({
-        job: shapeJob(job),
-      });
+      return res.status(201).json({ job: shapeJob(job) });
     }
 
     if (req.method === "PATCH") {
@@ -166,15 +234,15 @@ export default async function handler(req, res) {
         return res.status(400).json({ error: "Job id is required." });
       }
 
-      // Ensure the job belongs to the current user (basic multitenant guard)
+      // ✅ Ensure job is in THIS org (not just owned by user)
       const existing = await prisma.job.findFirst({
-        where: { id: Number(id), userId },
+        where: { id: Number(id), accountKey: recruiterAccountKey },
       });
 
       if (!existing) {
-        return res
-          .status(404)
-          .json({ error: "Job not found or not owned by this recruiter." });
+        return res.status(404).json({
+          error: "Job not found or not in this recruiter account.",
+        });
       }
 
       const nextStatus = status ?? existing.status;
@@ -182,16 +250,13 @@ export default async function handler(req, res) {
       const updated = await prisma.job.update({
         where: { id: existing.id },
         data: {
-          title:
-            title !== undefined ? safeText(title) : existing.title,
-          company:
-            company !== undefined ? safeText(company) : existing.company,
+          title: title !== undefined ? safeText(title) : existing.title,
+          company: company !== undefined ? safeText(company) : existing.company,
           worksite:
             worksite !== undefined ? safeText(worksite) : existing.worksite,
           location:
             location !== undefined ? safeText(location) : existing.location,
-          type:
-            type !== undefined ? safeText(type, "") : existing.type,
+          type: type !== undefined ? safeText(type, "") : existing.type,
           compensation:
             compensation !== undefined
               ? safeText(compensation, "")
@@ -201,16 +266,11 @@ export default async function handler(req, res) {
               ? safeText(description)
               : existing.description,
           status: nextStatus,
-          urgent:
-            typeof urgent === "boolean" ? urgent : existing.urgent,
-          // origin/source/publishedat NOT written here – those fields
-          // don’t exist on this model and are handled elsewhere.
+          urgent: typeof urgent === "boolean" ? urgent : existing.urgent,
         },
       });
 
-      return res.status(200).json({
-        job: shapeJob(updated),
-      });
+      return res.status(200).json({ job: shapeJob(updated) });
     }
 
     res.setHeader("Allow", "GET,POST,PATCH");
