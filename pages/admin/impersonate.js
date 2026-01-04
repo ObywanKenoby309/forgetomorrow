@@ -111,7 +111,8 @@ function ImpersonateHeaderBox() {
 
 function ImpersonationPolicyRightCard() {
   return (
-    <aside className="p-4 md:p-6 space-y-4">
+    // ✅ MIN CHANGE: remove top padding that was pushing the rail down vs left sidebar
+    <aside className="space-y-4">
       <div
         style={{
           borderRadius: 14,
