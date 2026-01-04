@@ -4,10 +4,6 @@ import Link from 'next/link';
 import { useRouter } from 'next/router';
 
 function buildHref(basePath, chromeMode) {
-  // Keep URLs consistent with your mapping
-  // - seeker: no chrome param
-  // - coach: chrome=coach for Feed/Jobs (Dashboard/Calendar already have their own paths)
-  // - recruiter: use chrome=recruiter-smb for Feed/Jobs for now (matches current behavior)
   if (!basePath) return '/';
 
   const isAbsolute = /^https?:\/\//i.test(basePath);
@@ -17,10 +13,10 @@ function buildHref(basePath, chromeMode) {
   const isCoach = chromeMode === 'coach';
   const isRecruiter = chromeMode === 'recruiter-smb' || chromeMode === 'recruiter-ent';
 
-  const recruiterChromeParam = 'recruiter-smb'; // ✅ matches your current live behavior
+  // ✅ matches your current live behavior (until we fix recruiter-ent resolution globally)
+  const recruiterChromeParam = 'recruiter-smb';
 
   if (isAbsolute) {
-    // Only add chrome param where needed (Feed/Jobs)
     if (!isSeeker && (isCoach || isRecruiter)) {
       const chrome =
         isCoach ? 'coach' : isRecruiter ? recruiterChromeParam : String(chromeMode || '');
@@ -29,7 +25,6 @@ function buildHref(basePath, chromeMode) {
     return url.toString();
   }
 
-  // Relative path
   if (isSeeker) return basePath;
 
   if (isCoach || isRecruiter) {
@@ -42,15 +37,25 @@ function buildHref(basePath, chromeMode) {
   return basePath;
 }
 
-export default function MobileBottomBar({
-  chromeMode = 'seeker',
-  onOpenTools,
-  isMobile = false,
-}) {
+function buildSupportHref(chromeMode, router) {
+  // Mirror SupportFloatingButton’s intent without touching that component.
+  const queryChrome = String(router?.query?.chrome || '').toLowerCase();
+  let chrome = queryChrome;
+
+  if (!chrome) {
+    if (chromeMode === 'recruiter-ent') chrome = 'recruiter-ent';
+    else if (chromeMode === 'recruiter-smb') chrome = 'recruiter-smb';
+    else if (chromeMode === 'coach') chrome = 'coach';
+    else chrome = 'seeker';
+  }
+
+  return chrome ? `/support?chrome=${encodeURIComponent(chrome)}` : '/support';
+}
+
+export default function MobileBottomBar({ chromeMode = 'seeker', onOpenTools, isMobile = false }) {
   const router = useRouter();
 
   const routes = useMemo(() => {
-    // ✅ Uses exactly the URLs you provided
     const map = {
       seeker: {
         dashboard: 'https://www.forgetomorrow.com/seeker-dashboard',
@@ -60,16 +65,15 @@ export default function MobileBottomBar({
       },
       coach: {
         dashboard: 'https://www.forgetomorrow.com/coaching-dashboard',
-        feed: 'https://www.forgetomorrow.com/feed', // chrome param added by buildHref
-        jobs: 'https://www.forgetomorrow.com/jobs', // chrome param added by buildHref
+        feed: 'https://www.forgetomorrow.com/feed', // chrome added by buildHref
+        jobs: 'https://www.forgetomorrow.com/jobs', // chrome added by buildHref
         calendar: 'https://www.forgetomorrow.com/dashboard/coaching/sessions/calendar',
       },
       recruiter: {
         dashboard: 'https://www.forgetomorrow.com/recruiter/dashboard',
-        feed: 'https://www.forgetomorrow.com/feed', // chrome param added by buildHref (recruiter-smb for now)
-        jobs: 'https://www.forgetomorrow.com/jobs', // chrome param added by buildHref (recruiter-smb for now)
-        // ⚠️ You didn’t provide recruiter calendar yet — safest guess:
-        calendar: 'https://www.forgetomorrow.com/recruiter/calendar',
+        feed: 'https://www.forgetomorrow.com/feed', // chrome added by buildHref (recruiter-smb for now)
+        jobs: 'https://www.forgetomorrow.com/jobs', // chrome added by buildHref (recruiter-smb for now)
+        calendar: 'https://www.forgetomorrow.com/recruiter/calendar', // ✅ confirmed
       },
     };
 
@@ -86,17 +90,16 @@ export default function MobileBottomBar({
       feed: buildHref(r.feed, chromeMode),
       jobs: buildHref(r.jobs, chromeMode),
       calendar: buildHref(r.calendar, chromeMode),
+      support: buildSupportHref(chromeMode, router),
     };
-  }, [chromeMode]);
+  }, [chromeMode, router]);
 
   const pathname = String(router.pathname || '');
 
-  // Minimal active hint (best-effort)
   const isActive = (href) => {
     try {
       const h = String(href || '');
       if (!h) return false;
-      // If absolute, compare path
       if (h.startsWith('http')) {
         const u = new URL(h);
         return pathname === u.pathname;
@@ -124,7 +127,7 @@ export default function MobileBottomBar({
     boxShadow: '0 10px 26px rgba(0,0,0,0.18)',
     padding: '10px 10px',
     display: 'grid',
-    gridTemplateColumns: 'repeat(5, 1fr)',
+    gridTemplateColumns: 'repeat(6, 1fr)', // ✅ now 6 icons
     gap: 6,
   };
 
@@ -135,20 +138,22 @@ export default function MobileBottomBar({
     alignItems: 'center',
     justifyContent: 'center',
     gap: 4,
-    padding: '8px 6px',
+    padding: '8px 4px',
     borderRadius: 14,
     border: active ? '1px solid rgba(17,32,51,0.18)' : '1px solid transparent',
     background: active ? 'rgba(255,255,255,0.65)' : 'transparent',
     color: '#112033',
     cursor: 'pointer',
     userSelect: 'none',
+    minWidth: 0,
   });
 
   const labelStyle = {
-    fontSize: 11,
-    fontWeight: 700,
+    fontSize: 10.5,
+    fontWeight: 800,
     lineHeight: 1,
     opacity: 0.92,
+    whiteSpace: 'nowrap',
   };
 
   const iconStyle = {
@@ -161,10 +166,7 @@ export default function MobileBottomBar({
       <button
         type="button"
         onClick={onOpenTools}
-        style={{
-          ...itemStyle(false),
-          border: '1px solid rgba(255,255,255,0.18)',
-        }}
+        style={{ ...itemStyle(false), border: '1px solid rgba(255,255,255,0.18)' }}
         aria-label="Open Tools"
       >
         <span style={iconStyle}>🧰</span>
@@ -174,7 +176,7 @@ export default function MobileBottomBar({
       <Link href={routes.dashboard} passHref>
         <a style={itemStyle(isActive(routes.dashboard))} aria-label="Go to Dashboard">
           <span style={iconStyle}>🏠</span>
-          <span style={labelStyle}>Dashboard</span>
+          <span style={labelStyle}>Dash</span>
         </a>
       </Link>
 
@@ -195,7 +197,14 @@ export default function MobileBottomBar({
       <Link href={routes.calendar} passHref>
         <a style={itemStyle(isActive(routes.calendar))} aria-label="Go to Calendar">
           <span style={iconStyle}>📅</span>
-          <span style={labelStyle}>Calendar</span>
+          <span style={labelStyle}>Cal</span>
+        </a>
+      </Link>
+
+      <Link href={routes.support} passHref>
+        <a style={itemStyle(isActive(routes.support))} aria-label="Open Support Center">
+          <span style={iconStyle}>💬</span>
+          <span style={labelStyle}>Support</span>
         </a>
       </Link>
     </nav>
