@@ -75,7 +75,6 @@ export default function AdminImpersonatePage() {
   const [msg, setMsg] = useState("");
   const [active, setActive] = useState(false);
 
-  // ✅ chrome must be resolved BEFORE layout renders, otherwise InternalLayout defaults to seeker
   const [chrome, setChrome] = useState("");
   const [chromeReady, setChromeReady] = useState(false);
 
@@ -86,19 +85,15 @@ export default function AdminImpersonatePage() {
   }, []);
 
   useEffect(() => {
-    // Resolve chrome deterministically (prevents seeker shell flash)
     if (typeof window === "undefined") return;
 
     let next = "";
 
-    // 1) router.query (when ready)
     const q = String(router?.query?.chrome || "").toLowerCase().trim();
     if (q) next = q;
 
-    // 2) router.asPath
     if (!next) next = extractChromeFromAsPath(router?.asPath);
 
-    // 3) window.location.search (most reliable on first client paint)
     if (!next) {
       try {
         const params = new URLSearchParams(window.location.search || "");
@@ -106,12 +101,10 @@ export default function AdminImpersonatePage() {
       } catch {}
     }
 
-    // 4) lastRoute inference (if someone navigated without chrome)
     if (!next) {
       try {
         const lastRoute = sessionStorage.getItem("lastRoute") || "";
         if (lastRoute.startsWith("/recruiter")) {
-          // infer ent vs smb from session if we can
           next = inferChromeFromSession(session);
         } else if (lastRoute.startsWith("/coach") || lastRoute.startsWith("/dashboard/coaching")) {
           next = "coach";
@@ -121,7 +114,6 @@ export default function AdminImpersonatePage() {
       } catch {}
     }
 
-    // 5) final fallback: infer from session
     if (!next) next = inferChromeFromSession(session);
 
     setChrome(next);
@@ -204,10 +196,9 @@ export default function AdminImpersonatePage() {
     }
   }
 
-  // ✅ Don’t render shell until chrome is resolved (prevents seeker header/sidebar flash)
   if (!chromeReady || status === "loading") {
     return (
-      <InternalLayout chrome={chrome || "recruiter-smb"}>
+      <InternalLayout forceChrome={chrome || "recruiter-smb"}>
         <main style={{ padding: 24, fontFamily: "system-ui" }}>Loading…</main>
       </InternalLayout>
     );
@@ -215,7 +206,7 @@ export default function AdminImpersonatePage() {
 
   if (!session?.user) {
     return (
-      <InternalLayout chrome={chrome}>
+      <InternalLayout forceChrome={chrome}>
         <main style={{ padding: 24, fontFamily: "system-ui" }}>You must be signed in.</main>
       </InternalLayout>
     );
@@ -223,14 +214,14 @@ export default function AdminImpersonatePage() {
 
   if (!isPlatformAdmin) {
     return (
-      <InternalLayout chrome={chrome}>
+      <InternalLayout forceChrome={chrome}>
         <main style={{ padding: 24, fontFamily: "system-ui" }}>Forbidden.</main>
       </InternalLayout>
     );
   }
 
   return (
-    <InternalLayout chrome={chrome}>
+    <InternalLayout forceChrome={chrome}>
       <Head>
         <title>Impersonate – ForgeTomorrow</title>
       </Head>
@@ -270,7 +261,6 @@ export default function AdminImpersonatePage() {
             ) : null}
 
             <div style={{ marginTop: 14, display: "grid", gap: 12 }}>
-              {/* Email */}
               <div>
                 <div style={{ fontSize: 13, color: "#334155", marginBottom: 6, fontWeight: 600 }}>
                   Customer email
@@ -290,7 +280,6 @@ export default function AdminImpersonatePage() {
                 />
               </div>
 
-              {/* Ticket / No Ticket */}
               <div>
                 <div style={{ fontSize: 13, color: "#334155", marginBottom: 6, fontWeight: 600 }}>
                   Ticket number (required) or No-Ticket
@@ -369,7 +358,6 @@ export default function AdminImpersonatePage() {
                 ) : null}
               </div>
 
-              {/* Actions */}
               <div style={{ display: "flex", gap: 12, flexWrap: "wrap", alignItems: "center" }}>
                 {!active ? (
                   <button

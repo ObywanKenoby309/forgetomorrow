@@ -20,6 +20,31 @@ const ALLOWED_MODES = new Set([
   'recruiter-ent',
 ]);
 
+function normalizeChrome(input) {
+  const raw = String(input || '').toLowerCase().trim();
+  if (!raw) return '';
+
+  // Backward-compatible aliases
+  if (raw === 'recruiter') return 'recruiter-smb';
+  if (raw === 'enterprise') return 'recruiter-ent';
+
+  return raw;
+}
+
+function extractChromeFromAsPath(asPath) {
+  try {
+    const s = String(asPath || '');
+    if (!s.includes('chrome=')) return '';
+    const qIndex = s.indexOf('?');
+    if (qIndex === -1) return '';
+    const query = s.slice(qIndex + 1);
+    const params = new URLSearchParams(query);
+    return normalizeChrome(params.get('chrome'));
+  } catch {
+    return '';
+  }
+}
+
 export default function InternalLayout({
   title = 'ForgeTomorrow',
   left,
@@ -27,7 +52,13 @@ export default function InternalLayout({
   right,
   children,
   activeNav,
-  forceChrome, // optional chrome override: 'seeker' | 'coach' | 'recruiter-smb' | 'recruiter-ent'
+
+  // ✅ canonical override
+  forceChrome,
+
+  // ✅ backwards compat (some pages pass `chrome=...`)
+  chrome,
+
   rightVariant = 'dark', // 'dark' | 'light'
   rightWidth = 260,
   gap = 12,
@@ -36,40 +67,41 @@ export default function InternalLayout({
   const router = useRouter();
   const counts = useSidebarCounts();
 
-  // ──────────────────────────────────────────────────────────────
-  // Chrome detection (same semantics as SeekerLayout)
-  // ──────────────────────────────────────────────────────────────
   const [chromeMode, setChromeMode] = useState('seeker');
 
   useEffect(() => {
-    // 1) Explicit override wins
-    if (forceChrome && ALLOWED_MODES.has(forceChrome)) {
-      setChromeMode(forceChrome);
+    // 1) Explicit override wins (forceChrome OR chrome prop)
+    const override = normalizeChrome(forceChrome || chrome);
+    if (override && ALLOWED_MODES.has(override)) {
+      setChromeMode(override);
       return;
     }
 
-    // 2) Otherwise derive from ?chrome=
-    const q = String(router?.query?.chrome || '').toLowerCase();
-    if (ALLOWED_MODES.has(q)) {
+    // 2) router.query.chrome
+    const q = normalizeChrome(router?.query?.chrome);
+    if (q && ALLOWED_MODES.has(q)) {
       setChromeMode(q);
-    } else {
-      setChromeMode('seeker');
+      return;
     }
-  }, [forceChrome, router?.query?.chrome]);
 
-  // ──────────────────────────────────────────────────────────────
-  // Pick header + sidebar based on chrome
-  // ──────────────────────────────────────────────────────────────
+    // 3) router.asPath (covers first load / query not ready)
+    const fromPath = extractChromeFromAsPath(router?.asPath);
+    if (fromPath && ALLOWED_MODES.has(fromPath)) {
+      setChromeMode(fromPath);
+      return;
+    }
+
+    // 4) default
+    setChromeMode('seeker');
+  }, [forceChrome, chrome, router?.query?.chrome, router?.asPath]);
+
   const { HeaderComp, SidebarComp, sidebarProps } = useMemo(() => {
     switch (chromeMode) {
       case 'coach':
         return {
           HeaderComp: CoachingHeader,
           SidebarComp: CoachingSidebar,
-          sidebarProps: {
-            active: activeNav,
-            counts,
-          },
+          sidebarProps: { active: activeNav, counts },
         };
 
       case 'recruiter-smb':
@@ -89,19 +121,13 @@ export default function InternalLayout({
         return {
           HeaderComp: SeekerHeader,
           SidebarComp: SeekerSidebar,
-          sidebarProps: {
-            active: activeNav,
-            counts,
-          },
+          sidebarProps: { active: activeNav, counts },
         };
     }
   }, [chromeMode, activeNav, counts]);
 
   const showRight = right != null;
 
-  // ──────────────────────────────────────────────────────────────
-  // Layout styles
-  // ──────────────────────────────────────────────────────────────
   const containerPadding = {
     padding: pad,
     paddingTop: pad + 8,
@@ -155,15 +181,12 @@ export default function InternalLayout({
           ...containerPadding,
         }}
       >
-        {/* LEFT: sidebar */}
         <aside style={{ gridArea: 'left', alignSelf: 'start' }}>
           {left ?? <SidebarComp {...sidebarProps} />}
         </aside>
 
-        {/* HEADER BAR (page-level header passed from page) */}
         <header style={{ gridArea: 'header' }}>{header}</header>
 
-        {/* RIGHT: tools / ads / extras (optional) */}
         {showRight && (
           <aside
             style={{
@@ -175,7 +198,6 @@ export default function InternalLayout({
           </aside>
         )}
 
-        {/* MAIN CONTENT */}
         <main style={{ gridArea: 'content' }}>
           <div style={{ display: 'grid', gap }}>{children}</div>
         </main>
