@@ -18,6 +18,14 @@ const GLASS = {
   WebkitBackdropFilter: "blur(10px)",
 };
 
+const GLASS_INNER = {
+  border: "1px solid rgba(0,0,0,0.08)",
+  background: "rgba(255,255,255,0.70)",
+  boxShadow: "0 8px 18px rgba(0,0,0,0.08)",
+  backdropFilter: "blur(10px)",
+  WebkitBackdropFilter: "blur(10px)",
+};
+
 function readCookie(name) {
   try {
     const raw = document.cookie || "";
@@ -76,9 +84,9 @@ function inferChromeFromSession(session) {
 }
 
 function ImpersonateHeaderBox() {
-  // ✅ minimal raise so it aligns tighter with side rails
+  // ✅ Minimal: raise slightly vs Support by reducing top padding one step
   return (
-    <section className="px-4 pt-0 md:pt-1">
+    <section className="px-4 pt-0 md:pt-2">
       <div
         className="max-w-4xl mx-auto"
         style={{
@@ -102,9 +110,8 @@ function ImpersonateHeaderBox() {
 }
 
 function ImpersonationPolicyRightCard() {
-  // ✅ remove double padding; SeekerLayout already pads the rail
   return (
-    <aside className="p-0 space-y-4">
+    <aside className="p-4 md:p-6 space-y-4">
       <div
         style={{
           borderRadius: 14,
@@ -125,10 +132,7 @@ function ImpersonationPolicyRightCard() {
             marginTop: 12,
             borderRadius: 12,
             padding: 12,
-            border: "1px solid rgba(0,0,0,0.08)",
-            background: "rgba(255,255,255,0.60)",
-            backdropFilter: "blur(10px)",
-            WebkitBackdropFilter: "blur(10px)",
+            ...GLASS_INNER,
           }}
         >
           <div style={{ fontSize: 12, fontWeight: 900, color: "#1F2937" }}>Required before Start</div>
@@ -147,8 +151,9 @@ function ImpersonationPolicyRightCard() {
             marginTop: 12,
             borderRadius: 12,
             padding: 12,
-            border: "1px solid rgba(255,112,67,0.35)",
-            background: "rgba(255,255,255,0.62)",
+            border: "1px solid rgba(255,112,67,0.28)",
+            background: "rgba(255,255,255,0.70)",
+            boxShadow: "0 8px 18px rgba(0,0,0,0.06)",
             backdropFilter: "blur(10px)",
             WebkitBackdropFilter: "blur(10px)",
           }}
@@ -309,7 +314,7 @@ export default function AdminImpersonatePage() {
   if (!chromeReady || status === "loading") {
     return (
       <SeekerLayout
-        key={`imp-${chrome || "seeker"}`} // ✅ force remount when chrome changes
+        key={`imp-${chrome || "seeker"}`}
         title={pageTitle}
         header={<ImpersonateHeaderBox />}
         right={<ImpersonationPolicyRightCard />}
@@ -382,10 +387,7 @@ export default function AdminImpersonatePage() {
                 marginBottom: 12,
                 borderRadius: 12,
                 padding: 12,
-                border: "1px solid rgba(0,0,0,0.08)",
-                background: "rgba(255,255,255,0.60)",
-                backdropFilter: "blur(10px)",
-                WebkitBackdropFilter: "blur(10px)",
+                ...GLASS_INNER,
                 color: "#0f172a",
                 fontWeight: 700,
                 fontSize: 13,
@@ -477,8 +479,9 @@ export default function AdminImpersonatePage() {
                     marginTop: 12,
                     borderRadius: 12,
                     padding: 12,
-                    border: "1px solid rgba(255,112,67,0.35)",
-                    background: "rgba(255,255,255,0.62)",
+                    border: "1px solid rgba(255,112,67,0.28)",
+                    background: "rgba(255,255,255,0.70)",
+                    boxShadow: "0 8px 18px rgba(0,0,0,0.06)",
                     backdropFilter: "blur(10px)",
                     WebkitBackdropFilter: "blur(10px)",
                     color: "#7C2D12",
