@@ -322,32 +322,8 @@ export default function SeekerLayout({
             }}
           >
             {header}
-
-            {/* Mobile-only "Open Sidebar" button */}
-            {isMobile && (
-              <div style={{ marginTop: 12 }}>
-                <button
-                  type="button"
-                  onClick={() => setMobileSidebarOpen(true)}
-                  style={{
-                    display: 'inline-flex',
-                    alignItems: 'center',
-                    gap: 8,
-                    borderRadius: 999,
-                    padding: '8px 14px',
-                    fontSize: 13,
-                    fontWeight: 600,
-                    border: '1px solid #CFD8DC',
-                    background: '#ECEFF1',
-                    color: '#263238',
-                    cursor: 'pointer',
-                  }}
-                >
-                  <span style={{ fontSize: 16 }}>☰</span>
-                  <span>Open Sidebar</span>
-                </button>
-              </div>
-            )}
+            {/* ✅ Removed mobile "Open Sidebar" hamburger button.
+                Mobile navigation now lives in the bottom toolbar. */}
           </header>
 
           {/* RIGHT — Variant-controlled rail */}
