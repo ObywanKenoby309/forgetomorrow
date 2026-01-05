@@ -1,270 +1,124 @@
 // context/PlanContext.js
-import React, {
-  createContext,
-  useContext,
-  useEffect,
-  useMemo,
-  useState,
-} from "react";
-import { useRouter } from "next/router";
+import React, { createContext, useContext, useEffect, useMemo, useState } from "react";
 
 /**
- * Access/Plan context:
- * - plan: "small" | "enterprise"           ← recruiter-facing packaging
- * - tier: "FREE" | "PRO" | "COACH" | "SMALL_BIZ" | "ENTERPRISE" (Prisma enum)
- * - role: "recruiter" | "admin" | "owner" | "billing" | "hiringManager" | "site_admin"
- * - features: string[]
+ * LIVE DB SOURCE OF TRUTH (no localStorage).
  *
- * Dev overrides (persist):
- *   ?plan=enterprise|small
- *   ?role=admin|owner|billing|recruiter|hiringManager|site_admin
- *   ?features=why_plus,ats_greenhouse
+ * Identity from /api/auth/me (Prisma User):
+ *  - user.plan: FREE | PRO | COACH | SMALL_BIZ | ENTERPRISE
+ *  - user.role: SEEKER | COACH | RECRUITER | ADMIN
  *
- * LocalStorage keys:
- *   ft_recruiter_plan, ft_role, ft_features (JSON array), ft_tier
+ * Exposed:
+ *  - plan: "small" | "enterprise"              (recruiter packaging)
+ *  - tier: raw enum from DB                    (FREE/PRO/COACH/SMALL_BIZ/ENTERPRISE)
+ *  - role: "recruiter" | "site_admin" | "seeker" | "coach"
+ *  - chromeMode: "seeker" | "coach" | "recruiter-smb" | "recruiter-ent"
+ *
+ * NOTE:
+ * - No query-param overrides persisted.
+ * - No localStorage. DB is source of truth.
  */
 
 const PlanContext = createContext(null);
 
+function mapDbTierToPlan(tier) {
+  return tier === "ENTERPRISE" ? "enterprise" : "small";
+}
+
+function mapDbRoleToRoleString(dbRole) {
+  switch (dbRole) {
+    case "ADMIN":
+      return "site_admin";
+    case "RECRUITER":
+      return "recruiter";
+    case "COACH":
+      return "coach";
+    case "SEEKER":
+    default:
+      return "seeker";
+  }
+}
+
+function deriveChromeMode({ role, plan }) {
+  // If you're a recruiter (or site admin acting in recruiter surfaces), use recruiter chrome
+  if (role === "recruiter" || role === "site_admin") {
+    return plan === "enterprise" ? "recruiter-ent" : "recruiter-smb";
+  }
+  if (role === "coach") return "coach";
+  return "seeker";
+}
+
 export function PlanProvider({ children }) {
-  const router = useRouter();
-
-  // State
-  const [plan, setPlan] = useState("small"); // recruiter packaging: "small" | "enterprise"
-  const [role, setRole] = useState("recruiter");
-  const [features, setFeatures] = useState([]);
-
-  // Raw Tier enum from user (FREE | PRO | COACH | SMALL_BIZ | ENTERPRISE)
+  // recruiter packaging: "small" | "enterprise"
+  const [plan, setPlan] = useState("small");
+  // app role: "seeker" | "coach" | "recruiter" | "site_admin"
+  const [role, setRole] = useState("seeker");
+  // raw Tier enum (FREE | PRO | COACH | SMALL_BIZ | ENTERPRISE)
   const [tier, setTier] = useState(null);
 
-  // Track if query params have explicitly overridden plan/role
-  const [hasQueryPlanOverride, setHasQueryPlanOverride] = useState(false);
-  const [hasQueryRoleOverride, setHasQueryRoleOverride] = useState(false);
+  // features (non-persisted; keep if you still need a runtime toggle)
+  const [features, setFeatures] = useState([]);
 
-  // ─────────────────────────────────────────────
-  // 1) Initial hydrate from localStorage
-  // ─────────────────────────────────────────────
+  // sync from server user (/api/auth/me) — DB truth
   useEffect(() => {
-    try {
-      if (typeof window === "undefined") return;
-
-      const savedPlan = localStorage.getItem("ft_recruiter_plan");
-      const savedRole = localStorage.getItem("ft_role");
-      const savedFeatures = JSON.parse(
-        localStorage.getItem("ft_features") || "[]"
-      );
-      const savedTier = localStorage.getItem("ft_tier");
-
-      if (savedPlan === "enterprise" || savedPlan === "small") {
-        setPlan(savedPlan);
-      }
-      if (savedRole) setRole(savedRole);
-      if (Array.isArray(savedFeatures)) setFeatures(savedFeatures);
-
-      if (typeof savedTier === "string" && savedTier.length > 0) {
-        setTier(savedTier);
-      }
-    } catch {
-      /* noop */
-    }
-  }, []);
-
-  // ─────────────────────────────────────────────
-  // 2) Query param overrides (persist)
-  // ─────────────────────────────────────────────
-  useEffect(() => {
-    if (!router?.isReady) return;
-
-    // plan
-    const qpPlan = router.query?.plan;
-    if (qpPlan === "enterprise" || qpPlan === "small") {
-      setPlan(qpPlan);
-      setHasQueryPlanOverride(true);
-      try {
-        localStorage.setItem("ft_recruiter_plan", qpPlan);
-      } catch {}
-    }
-
-    // role
-    const qpRoleRaw = router.query?.role;
-    const qpRole =
-      typeof qpRoleRaw === "string" ? qpRoleRaw.toLowerCase() : "";
-    const allowedRoles = new Set([
-      "recruiter",
-      "admin",
-      "owner",
-      "billing",
-      "hiringmanager",
-      "site_admin",
-    ]);
-    if (allowedRoles.has(qpRole)) {
-      const normalized = qpRole === "hiringmanager" ? "hiringManager" : qpRole;
-      setRole(normalized);
-      setHasQueryRoleOverride(true);
-      try {
-        localStorage.setItem("ft_role", normalized);
-      } catch {}
-    }
-
-    // features
-    const qpFeaturesRaw = router.query?.features;
-    if (typeof qpFeaturesRaw === "string") {
-      const list = qpFeaturesRaw
-        .split(",")
-        .map((s) => s.trim().toLowerCase())
-        .filter(Boolean);
-      setFeatures(list);
-      try {
-        localStorage.setItem("ft_features", JSON.stringify(list));
-      } catch {}
-    }
-  }, [
-    router?.isReady,
-    router?.query?.plan,
-    router?.query?.role,
-    router?.query?.features,
-  ]);
-
-  // ─────────────────────────────────────────────
-  // 3) Sync from server user (/api/auth/me)
-  //
-  //    - Only runs if there is NO ?plan override.
-  //    - Maps Prisma enums → local "small"/"enterprise" + role.
-  //    - Also preserves raw Tier enum for seeker headers, etc.
-  // ─────────────────────────────────────────────
-  useEffect(() => {
-    // Don’t fight explicit ?plan / ?role overrides
-    if (hasQueryPlanOverride && hasQueryRoleOverride) return;
-
     let cancelled = false;
 
-    async function syncFromServer() {
+    async function sync() {
       try {
-        const res = await fetch("/api/auth/me");
+        const res = await fetch("/api/auth/me", { method: "GET" });
         if (!res.ok) return;
 
         const json = await res.json();
         const user = json?.user;
         if (!user || cancelled) return;
 
-        // Persist raw Tier for seekers, etc.
         const serverTier = user.plan || null;
-        if (!cancelled) {
-          setTier(serverTier);
-          try {
-            if (serverTier) {
-              localStorage.setItem("ft_tier", serverTier);
-            }
-          } catch {}
-        }
+        const serverPlan = mapDbTierToPlan(serverTier);
+        const serverRole = mapDbRoleToRoleString(user.role);
 
-        // Map Tier enum → "small" | "enterprise"
-        // Tier: FREE | PRO | COACH | SMALL_BIZ | ENTERPRISE
-        let serverPlan = "small";
-        switch (user.plan) {
-          case "ENTERPRISE":
-            serverPlan = "enterprise";
-            break;
-          case "SMALL_BIZ":
-          case "PRO":
-          case "COACH":
-          case "FREE":
-          default:
-            serverPlan = "small";
-            break;
-        }
+        if (cancelled) return;
 
-        // Map UserRole enum → recruiter-role-ish string
-        // UserRole: SEEKER | COACH | RECRUITER | ADMIN
-        let serverRole = "recruiter";
-        switch (user.role) {
-          case "ADMIN":
-            serverRole = "site_admin";
-            break;
-          case "RECRUITER":
-            serverRole = "recruiter";
-            break;
-          case "COACH":
-            // For now treat as recruiter seat in this context;
-            // coaching-specific context can specialize later.
-            serverRole = "recruiter";
-            break;
-          case "SEEKER":
-          default:
-            serverRole = "recruiter";
-            break;
-        }
+        setTier(serverTier);
+        setPlan(serverPlan);
+        setRole(serverRole);
 
-        if (!cancelled) {
-          // Only override plan if no ?plan= override is present
-          if (!hasQueryPlanOverride) {
-            setPlan(serverPlan);
-            try {
-              localStorage.setItem("ft_recruiter_plan", serverPlan);
-            } catch {}
-          }
-
-          // Only override role if no ?role= override is present
-          if (!hasQueryRoleOverride) {
-            setRole(serverRole);
-            try {
-              localStorage.setItem("ft_role", serverRole);
-            } catch {}
-          }
-        }
+        // If you later add DB-backed feature flags, wire them here.
+        // For now: keep existing runtime features as-is.
       } catch (err) {
         console.error("[PlanContext] failed to sync from /api/auth/me", err);
       }
     }
 
-    syncFromServer();
+    sync();
 
     return () => {
       cancelled = true;
     };
-  }, [hasQueryPlanOverride, hasQueryRoleOverride]);
+  }, []);
 
-  // ─────────────────────────────────────────────
-  // 4) Persist on change (plan only; role/features
-  //    are set above when changed via UI or query)
-  // ─────────────────────────────────────────────
-  useEffect(() => {
-    try {
-      localStorage.setItem("ft_recruiter_plan", plan);
-    } catch {
-      /* noop */
-    }
-  }, [plan]);
-
-  // ─────────────────────────────────────────────
-  // 5) Derived helpers / capabilities
-  // ─────────────────────────────────────────────
   const value = useMemo(() => {
     const isEnterprise = plan === "enterprise";
     const isSmall = plan === "small";
 
-    // convenience role flags
     const isSiteAdmin = role === "site_admin";
-    const isRecruiterAdmin =
-      role === "owner" || role === "admin" || role === "billing" || isSiteAdmin;
     const isRecruiterSeat = role === "recruiter";
-    const isHiringManager = role === "hiringManager";
+    const isCoach = role === "coach";
+    const isSeeker = role === "seeker";
 
     const featureSet = new Set(features || []);
-    const has = (f) => featureSet.has(f);
+    const has = (f) => featureSet.has(String(f || "").toLowerCase());
 
-    // central capability check
     const can = (cap) => {
       switch (cap) {
         case "recruiter.settings.view":
         case "recruiter.settings.manageSeats":
-          return isRecruiterAdmin || isSiteAdmin;
+          return isSiteAdmin;
 
         case "analytics.org.view":
-          return isRecruiterAdmin || isSiteAdmin;
+          return isSiteAdmin || isEnterprise;
 
         case "analytics.personal.view":
-          return isRecruiterSeat || isRecruiterAdmin || isSiteAdmin;
+          return isRecruiterSeat || isSiteAdmin;
 
         case "why.full":
           return isSiteAdmin || isEnterprise || has("why_plus");
@@ -283,34 +137,35 @@ export function PlanProvider({ children }) {
       }
     };
 
-    // Dev toggler kept for non-prod use
-    const togglePlan = () =>
-      setPlan((p) => (p === "enterprise" ? "small" : "enterprise"));
+    const chromeMode = deriveChromeMode({ role, plan });
 
     return {
       // identity-ish
       role,
-      setRole,
+      setRole, // keep if you still need local UI switching in dev; otherwise remove later
 
       // recruiter-facing plan
       plan,
       isEnterprise,
       isSmall,
-      setPlan,
-      togglePlan,
+      setPlan, // keep if needed for dev; otherwise remove later
 
-      // raw Tier from user (FREE / PRO / COACH / SMALL_BIZ / ENTERPRISE)
+      // raw tier
       tier,
       isProTier: tier === "PRO",
 
+      // chrome
+      chromeMode,
+
       // features
       features,
+      setFeatures,
       has,
 
-      // roles
-      isRecruiterAdmin,
+      // role flags
+      isSeeker,
+      isCoach,
       isRecruiterSeat,
-      isHiringManager,
       isSiteAdmin,
 
       // capabilities
@@ -318,9 +173,7 @@ export function PlanProvider({ children }) {
     };
   }, [plan, role, features, tier]);
 
-  return (
-    <PlanContext.Provider value={value}>{children}</PlanContext.Provider>
-  );
+  return <PlanContext.Provider value={value}>{children}</PlanContext.Provider>;
 }
 
 export function usePlan() {
