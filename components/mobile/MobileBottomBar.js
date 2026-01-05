@@ -56,9 +56,19 @@ export default function MobileBottomBar({ chromeMode = 'seeker', onOpenTools, is
 
   // ✅ Prevent broken-image UI: if SVG fails, fall back to emoji
   const [toolsIconOk, setToolsIconOk] = useState(true);
+  const [dashIconOk, setDashIconOk] = useState(true);
+  const [feedIconOk, setFeedIconOk] = useState(true);
+  const [jobsIconOk, setJobsIconOk] = useState(true);
+  const [calIconOk, setCalIconOk] = useState(true);
 
-  // ✅ Default to Tools1 (spark). Swap to Tools2 later if you prefer.
-  const TOOLS_ICON_SRC = '/icons/Tools1.svg';
+  // ✅ Final icon paths (public/icons/*.svg)
+  const ICONS = {
+    tools: '/icons/Tools.svg',
+    dashboard: '/icons/Dashboard.svg',
+    feed: '/icons/Feed.svg',
+    jobs: '/icons/Jobs.svg',
+    calendar: '/icons/Calendar.svg',
+  };
 
   const routes = useMemo(() => {
     const map = {
@@ -202,7 +212,7 @@ export default function MobileBottomBar({ chromeMode = 'seeker', onOpenTools, is
       >
         {toolsIconOk ? (
           <img
-            src={TOOLS_ICON_SRC}
+            src={ICONS.tools}
             alt=""
             aria-hidden="true"
             style={imgIconStyle}
@@ -218,35 +228,85 @@ export default function MobileBottomBar({ chromeMode = 'seeker', onOpenTools, is
 
       <Link href={routes.dashboard} passHref>
         <a style={itemStyle(isActive(routes.dashboard))} aria-label="Go to Dashboard">
-          <span style={iconStyle}>🏠</span>
+          {dashIconOk ? (
+            <img
+              src={ICONS.dashboard}
+              alt=""
+              aria-hidden="true"
+              style={imgIconStyle}
+              onError={() => setDashIconOk(false)}
+            />
+          ) : (
+            <span style={iconStyle} aria-hidden="true">
+              🏠
+            </span>
+          )}
           <span style={labelStyle}>Dash</span>
         </a>
       </Link>
 
       <Link href={routes.feed} passHref>
         <a style={itemStyle(isActive(routes.feed))} aria-label="Go to Feed">
-          <span style={iconStyle}>🔥</span>
+          {feedIconOk ? (
+            <img
+              src={ICONS.feed}
+              alt=""
+              aria-hidden="true"
+              style={imgIconStyle}
+              onError={() => setFeedIconOk(false)}
+            />
+          ) : (
+            <span style={iconStyle} aria-hidden="true">
+              🔥
+            </span>
+          )}
           <span style={labelStyle}>Feed</span>
         </a>
       </Link>
 
       <Link href={routes.jobs} passHref>
         <a style={itemStyle(isActive(routes.jobs))} aria-label="Go to Jobs">
-          <span style={iconStyle}>💼</span>
+          {jobsIconOk ? (
+            <img
+              src={ICONS.jobs}
+              alt=""
+              aria-hidden="true"
+              style={imgIconStyle}
+              onError={() => setJobsIconOk(false)}
+            />
+          ) : (
+            <span style={iconStyle} aria-hidden="true">
+              💼
+            </span>
+          )}
           <span style={labelStyle}>Jobs</span>
         </a>
       </Link>
 
       <Link href={routes.calendar} passHref>
         <a style={itemStyle(isActive(routes.calendar))} aria-label="Go to Calendar">
-          <span style={iconStyle}>📅</span>
+          {calIconOk ? (
+            <img
+              src={ICONS.calendar}
+              alt=""
+              aria-hidden="true"
+              style={imgIconStyle}
+              onError={() => setCalIconOk(false)}
+            />
+          ) : (
+            <span style={iconStyle} aria-hidden="true">
+              📅
+            </span>
+          )}
           <span style={labelStyle}>Cal</span>
         </a>
       </Link>
 
       <Link href={routes.support} passHref>
         <a style={itemStyle(isActive(routes.support))} aria-label="Open Support Center">
-          <span style={iconStyle}>💬</span>
+          <span style={iconStyle} aria-hidden="true">
+            💬
+          </span>
           <span style={labelStyle}>Support</span>
         </a>
       </Link>
