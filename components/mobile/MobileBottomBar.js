@@ -14,7 +14,7 @@ function buildHref(basePath, chromeMode) {
   const isRecruiter = chromeMode === 'recruiter-smb' || chromeMode === 'recruiter-ent';
 
   // ✅ matches your current live behavior (until we fix recruiter-ent resolution globally)
-  const recruiterChromeParam = 'recruiter-smb';
+  const recruiterChromeParam = chromeMode === 'recruiter-ent' ? 'recruiter-ent' : 'recruiter-smb';
 
   if (isAbsolute) {
     if (!isSeeker && (isCoach || isRecruiter)) {
