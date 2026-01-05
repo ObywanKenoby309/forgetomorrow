@@ -1,5 +1,5 @@
 // components/mobile/MobileBottomBar.js
-import React, { useMemo } from 'react';
+import React, { useMemo, useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/router';
 
@@ -53,6 +53,12 @@ function buildSupportHref(chromeMode, router) {
 
 export default function MobileBottomBar({ chromeMode = 'seeker', onOpenTools, isMobile = false }) {
   const router = useRouter();
+
+  // ✅ Prevent broken-image UI: if SVG fails, fall back to emoji
+  const [toolsIconOk, setToolsIconOk] = useState(true);
+
+  // ✅ Default to Tools1 (spark). Swap to Tools2 later if you prefer.
+  const TOOLS_ICON_SRC = '/icons/Tools1.svg';
 
   const routes = useMemo(() => {
     const map = {
@@ -179,6 +185,13 @@ export default function MobileBottomBar({ chromeMode = 'seeker', onOpenTools, is
     lineHeight: 1,
   };
 
+  const imgIconStyle = {
+    width: 22,
+    height: 22,
+    display: 'block',
+    objectFit: 'contain',
+  };
+
   return (
     <nav aria-label="Mobile bottom navigation" style={barStyle}>
       <button
@@ -187,7 +200,19 @@ export default function MobileBottomBar({ chromeMode = 'seeker', onOpenTools, is
         style={{ ...itemStyle(false), border: '1px solid rgba(255,255,255,0.18)' }}
         aria-label="Open Tools"
       >
-        <span style={iconStyle}>🧰</span>
+        {toolsIconOk ? (
+          <img
+            src={TOOLS_ICON_SRC}
+            alt=""
+            aria-hidden="true"
+            style={imgIconStyle}
+            onError={() => setToolsIconOk(false)}
+          />
+        ) : (
+          <span style={iconStyle} aria-hidden="true">
+            🧰
+          </span>
+        )}
         <span style={labelStyle}>Tools</span>
       </button>
 
