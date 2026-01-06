@@ -56,7 +56,7 @@ function RightToolsCard() {
 function Panel({ title, children }) {
   return (
     <section
-      className="rounded-lg border bg-white p-4 relative h-full flex flex-col"
+      className="rounded-lg border bg-white p-4 relative h-full min-h-[220px] flex flex-col"
       aria-label={title}
     >
       <div className="font-medium mb-2">{title}</div>
