@@ -1,124 +1,166 @@
 // context/PlanContext.js
 import React, { createContext, useContext, useEffect, useMemo, useState } from "react";
+import { useRouter } from "next/router";
 
 /**
- * LIVE DB SOURCE OF TRUTH (no localStorage).
+ * DB-first Plan Context (LIVE)
+ * Source of truth: /api/auth/me (Prisma User.plan + User.role)
  *
- * Identity from /api/auth/me (Prisma User):
- *  - user.plan: FREE | PRO | COACH | SMALL_BIZ | ENTERPRISE
- *  - user.role: SEEKER | COACH | RECRUITER | ADMIN
+ * - plan: "small" | "enterprise"
+ * - tier: raw Prisma enum string from DB (FREE | PRO | COACH | SMALL_BIZ | ENTERPRISE)
+ * - role: "recruiter" | "admin" | "owner" | "billing" | "hiringManager" | "site_admin"
+ * - features: string[] (kept, but not persisted client-side)
  *
- * Exposed:
- *  - plan: "small" | "enterprise"              (recruiter packaging)
- *  - tier: raw enum from DB                    (FREE/PRO/COACH/SMALL_BIZ/ENTERPRISE)
- *  - role: "recruiter" | "site_admin" | "seeker" | "coach"
- *  - chromeMode: "seeker" | "coach" | "recruiter-smb" | "recruiter-ent"
- *
- * NOTE:
- * - No query-param overrides persisted.
- * - No localStorage. DB is source of truth.
+ * Query overrides (non-persistent, for debugging only):
+ *   ?plan=enterprise|small
+ *   ?role=admin|owner|billing|recruiter|hiringManager|site_admin
+ *   ?features=why_plus,ats_greenhouse
  */
 
 const PlanContext = createContext(null);
 
-function mapDbTierToPlan(tier) {
-  return tier === "ENTERPRISE" ? "enterprise" : "small";
+function mapTierToPlan(tier) {
+  switch (tier) {
+    case "ENTERPRISE":
+      return "enterprise";
+    case "SMALL_BIZ":
+    case "PRO":
+    case "COACH":
+    case "FREE":
+    default:
+      return "small";
+  }
 }
 
-function mapDbRoleToRoleString(dbRole) {
-  switch (dbRole) {
+function mapUserRoleToContextRole(userRole) {
+  // UserRole enum in DB: SEEKER | COACH | RECRUITER | ADMIN (per your comments)
+  switch (userRole) {
     case "ADMIN":
       return "site_admin";
     case "RECRUITER":
       return "recruiter";
     case "COACH":
-      return "coach";
+      return "recruiter";
     case "SEEKER":
     default:
-      return "seeker";
+      return "recruiter";
   }
-}
-
-function deriveChromeMode({ role, plan }) {
-  // If you're a recruiter (or site admin acting in recruiter surfaces), use recruiter chrome
-  if (role === "recruiter" || role === "site_admin") {
-    return plan === "enterprise" ? "recruiter-ent" : "recruiter-smb";
-  }
-  if (role === "coach") return "coach";
-  return "seeker";
 }
 
 export function PlanProvider({ children }) {
-  // recruiter packaging: "small" | "enterprise"
-  const [plan, setPlan] = useState("small");
-  // app role: "seeker" | "coach" | "recruiter" | "site_admin"
-  const [role, setRole] = useState("seeker");
-  // raw Tier enum (FREE | PRO | COACH | SMALL_BIZ | ENTERPRISE)
+  const router = useRouter();
+
+  // Start null to avoid “flash wrong plan” during SSR/hydration
+  const [isLoaded, setIsLoaded] = useState(false);
+
+  const [plan, setPlan] = useState(null); // "small" | "enterprise"
+  const [role, setRole] = useState(null);
+  const [features, setFeatures] = useState([]);
   const [tier, setTier] = useState(null);
 
-  // features (non-persisted; keep if you still need a runtime toggle)
-  const [features, setFeatures] = useState([]);
-
-  // sync from server user (/api/auth/me) — DB truth
+  // ─────────────────────────────────────────────
+  // 1) Sync from server (/api/auth/me) — DB truth
+  // ─────────────────────────────────────────────
   useEffect(() => {
     let cancelled = false;
 
-    async function sync() {
+    async function syncFromServer() {
       try {
-        const res = await fetch("/api/auth/me", { method: "GET" });
-        if (!res.ok) return;
+        const res = await fetch("/api/auth/me");
+        if (!res.ok) {
+          if (!cancelled) setIsLoaded(true);
+          return;
+        }
 
         const json = await res.json();
         const user = json?.user;
-        if (!user || cancelled) return;
+
+        if (!user || cancelled) {
+          if (!cancelled) setIsLoaded(true);
+          return;
+        }
 
         const serverTier = user.plan || null;
-        const serverPlan = mapDbTierToPlan(serverTier);
-        const serverRole = mapDbRoleToRoleString(user.role);
+        const serverPlan = mapTierToPlan(serverTier);
+        const serverRole = mapUserRoleToContextRole(user.role);
 
-        if (cancelled) return;
-
-        setTier(serverTier);
-        setPlan(serverPlan);
-        setRole(serverRole);
-
-        // If you later add DB-backed feature flags, wire them here.
-        // For now: keep existing runtime features as-is.
+        if (!cancelled) {
+          setTier(serverTier);
+          setPlan(serverPlan);
+          setRole(serverRole);
+          setIsLoaded(true);
+        }
       } catch (err) {
         console.error("[PlanContext] failed to sync from /api/auth/me", err);
+        if (!cancelled) setIsLoaded(true);
       }
     }
 
-    sync();
+    syncFromServer();
 
     return () => {
       cancelled = true;
     };
   }, []);
 
-  const value = useMemo(() => {
-    const isEnterprise = plan === "enterprise";
-    const isSmall = plan === "small";
+  // ─────────────────────────────────────────────
+  // 2) Optional query overrides (NO persistence)
+  // ─────────────────────────────────────────────
+  useEffect(() => {
+    if (!router?.isReady) return;
 
-    const isSiteAdmin = role === "site_admin";
-    const isRecruiterSeat = role === "recruiter";
-    const isCoach = role === "coach";
-    const isSeeker = role === "seeker";
+    const qpPlan = router.query?.plan;
+    if (qpPlan === "enterprise" || qpPlan === "small") {
+      setPlan(qpPlan);
+    }
+
+    const qpRoleRaw = router.query?.role;
+    const qpRole = typeof qpRoleRaw === "string" ? qpRoleRaw.toLowerCase() : "";
+    const allowedRoles = new Set(["recruiter", "admin", "owner", "billing", "hiringmanager", "site_admin"]);
+    if (allowedRoles.has(qpRole)) {
+      const normalized = qpRole === "hiringmanager" ? "hiringManager" : qpRole;
+      setRole(normalized);
+    }
+
+    const qpFeaturesRaw = router.query?.features;
+    if (typeof qpFeaturesRaw === "string") {
+      const list = qpFeaturesRaw
+        .split(",")
+        .map((s) => s.trim().toLowerCase())
+        .filter(Boolean);
+      setFeatures(list);
+    }
+  }, [router?.isReady, router?.query?.plan, router?.query?.role, router?.query?.features]);
+
+  // ─────────────────────────────────────────────
+  // 3) Derived helpers / capabilities
+  // ─────────────────────────────────────────────
+  const value = useMemo(() => {
+    const effectivePlan = plan || "small";
+    const effectiveRole = role || "recruiter";
+
+    const isEnterprise = effectivePlan === "enterprise";
+    const isSmall = effectivePlan === "small";
+
+    const isSiteAdmin = effectiveRole === "site_admin";
+    const isRecruiterAdmin = effectiveRole === "owner" || effectiveRole === "admin" || effectiveRole === "billing" || isSiteAdmin;
+    const isRecruiterSeat = effectiveRole === "recruiter";
+    const isHiringManager = effectiveRole === "hiringManager";
 
     const featureSet = new Set(features || []);
-    const has = (f) => featureSet.has(String(f || "").toLowerCase());
+    const has = (f) => featureSet.has(f);
 
     const can = (cap) => {
       switch (cap) {
         case "recruiter.settings.view":
         case "recruiter.settings.manageSeats":
-          return isSiteAdmin;
+          return isRecruiterAdmin || isSiteAdmin;
 
         case "analytics.org.view":
-          return isSiteAdmin || isEnterprise;
+          return isRecruiterAdmin || isSiteAdmin;
 
         case "analytics.personal.view":
-          return isRecruiterSeat || isSiteAdmin;
+          return isRecruiterSeat || isRecruiterAdmin || isSiteAdmin;
 
         case "why.full":
           return isSiteAdmin || isEnterprise || has("why_plus");
@@ -137,41 +179,31 @@ export function PlanProvider({ children }) {
       }
     };
 
-    const chromeMode = deriveChromeMode({ role, plan });
-
     return {
-      // identity-ish
-      role,
-      setRole, // keep if you still need local UI switching in dev; otherwise remove later
+      isLoaded,
 
-      // recruiter-facing plan
-      plan,
+      role: effectiveRole,
+      setRole,
+
+      plan: effectivePlan,
       isEnterprise,
       isSmall,
-      setPlan, // keep if needed for dev; otherwise remove later
+      setPlan,
 
-      // raw tier
       tier,
       isProTier: tier === "PRO",
 
-      // chrome
-      chromeMode,
-
-      // features
       features,
-      setFeatures,
       has,
 
-      // role flags
-      isSeeker,
-      isCoach,
+      isRecruiterAdmin,
       isRecruiterSeat,
+      isHiringManager,
       isSiteAdmin,
 
-      // capabilities
       can,
     };
-  }, [plan, role, features, tier]);
+  }, [isLoaded, plan, role, features, tier]);
 
   return <PlanContext.Provider value={value}>{children}</PlanContext.Provider>;
 }
