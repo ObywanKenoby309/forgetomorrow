@@ -10,7 +10,8 @@ import UpgradeModal from "./UpgradeModal";
 export default function FeatureLock({
   children,
   label = "This feature",
-  blurPx = 6,                  // tweak blur strength if needed
+  blurPx = 6, // tweak blur strength if needed
+  minHeight = 160, // NEW: baseline height so locked panels don't look "tiny"
 }) {
   const { isEnterprise } = usePlan();
   const [open, setOpen] = useState(false);
@@ -19,14 +20,17 @@ export default function FeatureLock({
 
   return (
     <div
-      className="relative border rounded-xl overflow-hidden bg-white"
-      style={{ boxShadow: "0 2px 6px rgba(0,0,0,0.06)" }}
+      className="relative border rounded-xl overflow-hidden bg-white h-full w-full"
+      style={{
+        boxShadow: "0 2px 6px rgba(0,0,0,0.06)",
+        minHeight,
+      }}
       aria-label={`${label} (locked)`}
     >
       {/* Blurred/disabled content (not interactive, not selectable) */}
       <div
         aria-hidden="true"
-        className="pointer-events-none select-none"
+        className="pointer-events-none select-none h-full"
         style={{
           filter: `blur(${blurPx}px)`,
           userSelect: "none",
