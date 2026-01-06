@@ -368,7 +368,8 @@ export default function OnboardingGrowth() {
         body.pivotTarget = String(pivotTarget || '').trim();
       }
 
-      const res = await fetch('/api/roadmap/onboarding-growth/generate', {
+      // ✅ Rename: roadmap → anvil (we’ll match this in the API next)
+      const res = await fetch('/api/anvil/onboarding-growth/generate', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(body),
@@ -378,18 +379,18 @@ export default function OnboardingGrowth() {
       const data = await safeReadJson(res);
 
       if (!res.ok) {
-        const msg = data?.error || `Failed to generate roadmap (${res.status})`;
+        const msg = data?.error || `Failed to generate plan (${res.status})`;
         throw new Error(msg);
       }
 
-      if (!data?.plan) throw new Error('Roadmap response missing plan');
+      if (!data?.plan) throw new Error('Plan response missing data');
 
       setPlan(data.plan as CareerRoadmapPlan);
       setPdfUrl(String(data?.pdfUrl || ''));
       setHasGenerated(true);
     } catch (err: any) {
       if (err?.name === 'AbortError') {
-        setError('Roadmap generation timed out. Please try again.');
+        setError('Plan generation timed out. Please try again.');
       } else {
         setError(err?.message || 'Something went wrong');
       }
@@ -460,13 +461,18 @@ export default function OnboardingGrowth() {
 
     return (
       <div>
-        <h2 className="text-4xl font-bold text-[#FF7043] mb-6 mt-0">
+        <h2 className="text-4xl font-bold text-[#FF7043] mb-2 mt-0">
           {direction === 'compare'
             ? 'Compare: Stay vs Pivot'
             : direction === 'pivot'
             ? 'Pivot Plan'
             : 'Stay the Course Plan'}
         </h2>
+
+        {/* ✅ Minimal branding so users always see the new name */}
+        <div className="text-xs text-gray-500 mb-6">
+          Part of <span className="font-semibold">The Anvil</span> (30/60/90 Day Plan)
+        </div>
 
         <p className="text-lg text-gray-700 mb-2">
           {direction === 'compare'
@@ -625,7 +631,7 @@ export default function OnboardingGrowth() {
             </button>
 
             <p className="text-sm text-gray-600 text-center">
-              Free users: 1 lifetime roadmap • Pro users: 1 per month
+              Free users: 1 lifetime plan • Pro users: 1 per month
             </p>
           </div>
         )}
@@ -712,10 +718,10 @@ export default function OnboardingGrowth() {
 
       <div className="mt-10 text-center">
         <button
-          onClick={() => router.push(withChrome('/roadmap'))}
+          onClick={() => router.push(withChrome('/anvil'))}
           className="text-[#FF7043] font-medium underline hover:no-underline"
         >
-          Back to Toolkit
+          Back to The Anvil
         </button>
       </div>
     </div>
@@ -804,7 +810,7 @@ function SimpleListCard({ title, items }: { title: string; items: string[] }) {
             <li key={`${title}-${i}`}>{it}</li>
           ))}
         </ul>
-      )}
+      ) : null}
     </section>
   );
 }

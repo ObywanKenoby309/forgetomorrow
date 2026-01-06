@@ -171,9 +171,9 @@ export default function SeekerSidebar({
         active={active === 'calendar'}
       />
       <NavItem
-        href="/roadmap"
-        label="Career Roadmap"
-        active={active === 'roadmap'}
+        href="/anvil"
+        label="The Anvil"
+        active={active === 'anvil' || active === 'roadmap'}
       />
       <NavItem
         href="/resume-cover"

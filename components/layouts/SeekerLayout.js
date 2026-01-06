@@ -88,6 +88,9 @@ export default function SeekerLayout({
   const router = useRouter();
   const { isLoaded: planLoaded, plan, role } = usePlan();
 
+  // ✅ Normalize legacy nav key: roadmap -> anvil
+  const normalizedActiveNav = activeNav === 'roadmap' ? 'anvil' : activeNav;
+
   // ---- CHROME MODE (DB-first; URL may request chrome but DB can canonicalize recruiter ent/smb) ----
   const [chromeMode, setChromeMode] = useState(() => {
     // IMPORTANT: deterministic initial value avoids hydration mismatch.
@@ -110,7 +113,12 @@ export default function SeekerLayout({
     // DB truth (what the account *is*)
     const dbRole = String(role || '').toLowerCase(); // seeker|coach|recruiter|site_admin|...
     const dbPlan = String(plan || '').toLowerCase(); // small|enterprise|null
-    const isRecruiterAccount = dbRole === 'recruiter' || dbRole === 'site_admin' || dbRole === 'owner' || dbRole === 'admin' || dbRole === 'billing';
+    const isRecruiterAccount =
+      dbRole === 'recruiter' ||
+      dbRole === 'site_admin' ||
+      dbRole === 'owner' ||
+      dbRole === 'admin' ||
+      dbRole === 'billing';
     const isCoachAccount = dbRole === 'coach';
     const isEnterpriseAccount = dbPlan === 'enterprise';
 
@@ -164,21 +172,21 @@ export default function SeekerLayout({
         return {
           HeaderComp: CoachingHeader,
           SidebarComp: CoachingSidebar,
-          sidebarProps: { active: activeNav },
+          sidebarProps: { active: normalizedActiveNav },
         };
 
       case 'recruiter-smb':
         return {
           HeaderComp: RecruiterHeader,
           SidebarComp: RecruiterSidebar,
-          sidebarProps: { variant: 'smb', active: activeNav, counts: {} },
+          sidebarProps: { variant: 'smb', active: normalizedActiveNav, counts: {} },
         };
 
       case 'recruiter-ent':
         return {
           HeaderComp: RecruiterHeader,
           SidebarComp: RecruiterSidebar,
-          sidebarProps: { variant: 'enterprise', active: activeNav, counts: {} },
+          sidebarProps: { variant: 'enterprise', active: normalizedActiveNav, counts: {} },
         };
 
       case 'seeker':
@@ -186,10 +194,10 @@ export default function SeekerLayout({
         return {
           HeaderComp: SeekerHeader,
           SidebarComp: SeekerSidebar,
-          sidebarProps: { active: activeNav, counts: seekerCounts },
+          sidebarProps: { active: normalizedActiveNav, counts: seekerCounts },
         };
     }
-  }, [chromeMode, activeNav, seekerCounts]);
+  }, [chromeMode, normalizedActiveNav, seekerCounts]);
 
   // ---- WALLPAPER / BACKGROUND ----
   const { wallpaperUrl } = useUserWallpaper();

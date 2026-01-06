@@ -67,7 +67,8 @@ export default function App({ Component, pageProps: { session, ...pageProps } })
       '/applications',
       '/pinned-jobs',
       '/resume-cover',
-      '/roadmap',
+      '/roadmap', // legacy (redirects to /anvil)
+      '/anvil',   // ✅ NEW canonical
       '/profile',
       '/profile-analytics',
       '/feed',
@@ -134,7 +135,9 @@ export default function App({ Component, pageProps: { session, ...pageProps } })
         lastRoute.startsWith('/dashboard/coaching') ||
         lastRoute === '/coaching-dashboard' ||
         lastRoute === '/feed' ||
-        lastRoute === '/settings');
+        lastRoute === '/settings' ||
+        lastRoute.startsWith('/anvil') ||   // ✅ NEW (handles querystring too)
+        lastRoute.startsWith('/roadmap'));  // legacy (handles querystring too)
 
     setSharedAsInternal(cameFromInternal);
   }, [router.pathname]);

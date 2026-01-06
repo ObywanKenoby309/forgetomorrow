@@ -78,6 +78,13 @@ function isPublicPath(pathname) {
 export async function middleware(req) {
   const { pathname } = req.nextUrl;
 
+  // ✅ Full-rename redirect: /roadmap -> /anvil (preserve querystring)
+  if (pathname === "/roadmap") {
+    const url = req.nextUrl.clone();
+    url.pathname = "/anvil";
+    return NextResponse.redirect(url, 301);
+  }
+
   // 1. Always allow NextAuth API
   if (pathname.startsWith("/api/auth/")) {
     return NextResponse.next();
