@@ -3,6 +3,7 @@ import React, { useEffect, useMemo, useState } from 'react';
 import Head from 'next/head';
 import { useRouter } from 'next/router';
 import { useUserWallpaper } from '@/hooks/useUserWallpaper';
+import { usePlan } from '@/context/PlanContext';
 
 // Seeker / Coach chrome
 import SeekerSidebar from '@/components/SeekerSidebar';
@@ -19,18 +20,16 @@ import RecruiterSidebar from '@/components/recruiter/RecruiterSidebar';
 import MobileBottomBar from '@/components/mobile/MobileBottomBar';
 
 const ALLOWED_MODES = new Set(['seeker', 'coach', 'recruiter-smb', 'recruiter-ent']);
-const LAST_CHROME_KEY = 'ft_last_chrome';
 
 function normalizeChrome(input) {
   const raw = String(input || '').toLowerCase().trim();
   if (!raw) return '';
 
-  // ✅ canonical values pass through
   if (ALLOWED_MODES.has(raw)) return raw;
 
-  // ✅ accept common aliases
+  // aliases
   if (raw === 'recruiter') return 'recruiter-smb';
-  if (raw === 'recruiter_smb' || raw === 'recruiter-smb' || raw === 'smb') return 'recruiter-smb';
+  if (raw === 'recruiter_smb' || raw === 'smb') return 'recruiter-smb';
 
   if (
     raw === 'recruiter-ent' ||
@@ -42,7 +41,6 @@ function normalizeChrome(input) {
     return 'recruiter-ent';
   }
 
-  // ✅ tolerate broader recruiter strings
   if (raw.startsWith('recruiter')) {
     if (raw.includes('ent') || raw.includes('enterprise')) return 'recruiter-ent';
     return 'recruiter-smb';
@@ -54,24 +52,22 @@ function normalizeChrome(input) {
   return '';
 }
 
-function readLastChrome() {
+function setQueryChrome(router, chrome) {
   try {
-    if (typeof window === 'undefined') return '';
-    const saved = window.sessionStorage.getItem(LAST_CHROME_KEY) || '';
-    return normalizeChrome(saved);
-  } catch {
-    return '';
-  }
-}
+    if (!router?.isReady) return;
+    const nextChrome = normalizeChrome(chrome);
+    if (!nextChrome) return;
 
-function persistLastChrome(mode) {
-  try {
-    if (typeof window === 'undefined') return;
-    const m = normalizeChrome(mode);
-    if (!m) return;
-    window.sessionStorage.setItem(LAST_CHROME_KEY, m);
+    const current = normalizeChrome(router.query?.chrome);
+    if (current === nextChrome) return;
+
+    const nextQuery = { ...router.query, chrome: nextChrome };
+    router.replace({ pathname: router.pathname, query: nextQuery }, undefined, {
+      shallow: true,
+      scroll: false,
+    });
   } catch {
-    // ignore
+    // no-throw
   }
 }
 
@@ -85,61 +81,78 @@ export default function SeekerLayout({
   forceChrome, // 'seeker' | 'coach' | 'recruiter-smb' | 'recruiter-ent'
   rightVariant = 'dark', // 'dark' | 'light'
   rightWidth = 260,
-  leftWidth = 240, // ✅ allows per-page override without changing defaults
+  leftWidth = 240,
   gap = 12,
   pad = 16,
 }) {
   const router = useRouter();
+  const { isLoaded: planLoaded, plan, role } = usePlan();
 
-  // ---- CHROME MODE (determine once, then keep in state) ----
-  const initialChrome = (() => {
-    // 1) forceChrome (only if valid)
-    const forced = normalizeChrome(forceChrome);
-    if (forced) return forced;
+  // ---- CHROME MODE (DB-first; URL may request chrome but DB can canonicalize recruiter ent/smb) ----
+  const [chromeMode, setChromeMode] = useState(() => {
+    // IMPORTANT: deterministic initial value avoids hydration mismatch.
+    // We’ll resolve properly in effects once router + plan are ready.
+    return normalizeChrome(forceChrome) || 'seeker';
+  });
 
-    // 2) URL chrome (normalize aliases)
-    const urlChrome = normalizeChrome(router?.query?.chrome);
-    if (urlChrome) return urlChrome;
-
-    // 3) last known chrome (sessionStorage)
-    const last = readLastChrome();
-    if (last) return last;
-
-    // 4) default
-    return 'seeker';
-  })();
-
-  const [chromeMode, setChromeMode] = useState(initialChrome);
-
-  // Keep chromeMode in sync with forceChrome / URL chrome (URL wins unless forceChrome explicitly provided)
   useEffect(() => {
+    if (!router?.isReady) return;
+
     const forced = normalizeChrome(forceChrome);
     if (forced) {
       setChromeMode(forced);
-      persistLastChrome(forced);
       return;
     }
 
-    const urlChrome = normalizeChrome(router?.query?.chrome);
+    // URL request (what user is “trying” to view)
+    const urlChrome = normalizeChrome(router.query?.chrome);
 
-    // If URL explicitly has a recognized chrome (including aliases), honor it.
-    if (urlChrome) {
+    // DB truth (what the account *is*)
+    const dbRole = String(role || '').toLowerCase(); // seeker|coach|recruiter|site_admin|...
+    const dbPlan = String(plan || '').toLowerCase(); // small|enterprise|null
+    const isRecruiterAccount = dbRole === 'recruiter' || dbRole === 'site_admin' || dbRole === 'owner' || dbRole === 'admin' || dbRole === 'billing';
+    const isCoachAccount = dbRole === 'coach';
+    const isEnterpriseAccount = dbPlan === 'enterprise';
+
+    // Determine DB-preferred chrome when loaded
+    const dbPreferred =
+      planLoaded && isRecruiterAccount
+        ? isEnterpriseAccount
+          ? 'recruiter-ent'
+          : 'recruiter-smb'
+        : planLoaded && isCoachAccount
+        ? 'coach'
+        : 'seeker';
+
+    // If URL specifies recruiter chrome, canonicalize based on DB when loaded.
+    if (urlChrome === 'recruiter-smb' || urlChrome === 'recruiter-ent') {
+      if (planLoaded && isRecruiterAccount) {
+        const canonical = isEnterpriseAccount ? 'recruiter-ent' : 'recruiter-smb';
+        setChromeMode(canonical);
+        setQueryChrome(router, canonical);
+        return;
+      }
+      // If not loaded yet, honor URL for now (prevents flicker loops)
       setChromeMode(urlChrome);
-      persistLastChrome(urlChrome);
       return;
     }
 
-    // If URL chrome missing/invalid, do NOT reset to seeker.
-    // Keep current, but ensure we have a persisted fallback.
-    const last = readLastChrome();
-    if (last && last !== chromeMode) {
-      setChromeMode(last);
-      persistLastChrome(last);
-    } else {
-      persistLastChrome(chromeMode);
+    // If URL specifies coach/seeker explicitly, honor it.
+    if (urlChrome === 'coach' || urlChrome === 'seeker') {
+      setChromeMode(urlChrome);
+      return;
+    }
+
+    // No chrome requested: use DB preference once loaded, else keep current.
+    if (planLoaded) {
+      setChromeMode(dbPreferred);
+      if (dbPreferred === 'recruiter-ent' || dbPreferred === 'recruiter-smb') {
+        // Optional: stamp chrome into URL for consistency on shared pages
+        setQueryChrome(router, dbPreferred);
+      }
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [router?.query?.chrome, forceChrome]);
+  }, [router?.isReady, router?.query?.chrome, forceChrome, planLoaded, plan, role]);
 
   // Always call hook; only Seeker uses the counts
   const seekerCounts = useSidebarCounts();
@@ -158,22 +171,14 @@ export default function SeekerLayout({
         return {
           HeaderComp: RecruiterHeader,
           SidebarComp: RecruiterSidebar,
-          sidebarProps: {
-            variant: 'smb',
-            active: activeNav,
-            counts: {},
-          },
+          sidebarProps: { variant: 'smb', active: activeNav, counts: {} },
         };
 
       case 'recruiter-ent':
         return {
           HeaderComp: RecruiterHeader,
           SidebarComp: RecruiterSidebar,
-          sidebarProps: {
-            variant: 'enterprise',
-            active: activeNav,
-            counts: {},
-          },
+          sidebarProps: { variant: 'enterprise', active: activeNav, counts: {} },
         };
 
       case 'seeker':
@@ -181,10 +186,7 @@ export default function SeekerLayout({
         return {
           HeaderComp: SeekerHeader,
           SidebarComp: SeekerSidebar,
-          sidebarProps: {
-            active: activeNav,
-            counts: seekerCounts,
-          },
+          sidebarProps: { active: activeNav, counts: seekerCounts },
         };
     }
   }, [chromeMode, activeNav, seekerCounts]);
@@ -206,7 +208,7 @@ export default function SeekerLayout({
         backgroundColor: '#ECEFF1',
       };
 
-  // ---- MOBILE DETECTION + TOOLS SHEET (sidebar lives here on mobile) ----
+  // ---- MOBILE DETECTION + TOOLS SHEET ----
   const hasRight = Boolean(right);
   const [isMobile, setIsMobile] = useState(true);
   const [mobileToolsOpen, setMobileToolsOpen] = useState(false);
@@ -250,10 +252,9 @@ export default function SeekerLayout({
     boxShadow: 'none',
   };
 
-  // Asymmetric padding to keep right edge tight when a rail exists
   const containerPadding = {
     paddingTop: pad,
-    paddingBottom: isMobile ? pad + 84 : pad, // ✅ prevent bottom bar overlap
+    paddingBottom: isMobile ? pad + 84 : pad,
     paddingLeft: pad,
     paddingRight: hasRight ? Math.max(8, pad - 4) : pad,
   };
@@ -290,21 +291,10 @@ export default function SeekerLayout({
         <title>{title}</title>
       </Head>
 
-      {/* Wallpaper wrapper (NO frosting/overlay) */}
       <div style={backgroundStyle}>
-        {/* Top chrome header ALWAYS matches chromeMode */}
         <HeaderComp />
 
-        {/* Main layout shell */}
-        <div
-          style={{
-            ...gridStyles,
-            gap,
-            ...containerPadding,
-            alignItems: 'start',
-          }}
-        >
-          {/* LEFT — Sidebar (hidden on mobile; lives in Tools sheet) */}
+        <div style={{ ...gridStyles, gap, ...containerPadding, alignItems: 'start' }}>
           <aside
             style={{
               gridArea: 'left',
@@ -316,47 +306,28 @@ export default function SeekerLayout({
             {left ? left : <SidebarComp {...sidebarProps} />}
           </aside>
 
-          {/* PAGE HEADER (center) */}
-          <header
-            style={{
-              gridArea: 'header',
-              alignSelf: 'start',
-              minWidth: 0,
-            }}
-          >
+          <header style={{ gridArea: 'header', alignSelf: 'start', minWidth: 0 }}>
             {header}
-            {/* ✅ No hamburger here on mobile (bottom bar owns nav/tools) */}
           </header>
 
-          {/* RIGHT — Variant-controlled rail */}
           {hasRight ? (
-            <aside
-              style={{
-                ...rightBase,
-                ...(rightVariant === 'light' ? rightLight : rightDark),
-              }}
-            >
+            <aside style={{ ...rightBase, ...(rightVariant === 'light' ? rightLight : rightDark) }}>
               {right}
             </aside>
           ) : null}
 
-          {/* CONTENT (center) */}
           <main style={{ gridArea: 'content', minWidth: 0 }}>
-            <div style={{ display: 'grid', gap, width: '100%', minWidth: 0 }}>
-              {children}
-            </div>
+            <div style={{ display: 'grid', gap, width: '100%', minWidth: 0 }}>{children}</div>
           </main>
         </div>
       </div>
 
-      {/* ✅ Mobile bottom bar (first button opens Tools sheet) */}
       <MobileBottomBar
         isMobile={isMobile}
         chromeMode={chromeMode}
         onOpenTools={() => setMobileToolsOpen(true)}
       />
 
-      {/* ✅ MOBILE TOOLS BOTTOM SHEET (reuses sidebar chrome) */}
       {isMobile && mobileToolsOpen && (
         <div
           style={{
@@ -368,7 +339,6 @@ export default function SeekerLayout({
             alignItems: 'flex-end',
           }}
         >
-          {/* Backdrop (click to dismiss) */}
           <button
             type="button"
             onClick={() => setMobileToolsOpen(false)}
@@ -382,7 +352,6 @@ export default function SeekerLayout({
             }}
           />
 
-          {/* Sheet */}
           <div
             style={{
               position: 'relative',
@@ -401,7 +370,6 @@ export default function SeekerLayout({
               boxShadow: '0 -10px 26px rgba(0,0,0,0.22)',
             }}
           >
-            {/* Header row inside Tools sheet */}
             <div
               style={{
                 display: 'flex',

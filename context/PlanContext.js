@@ -6,21 +6,21 @@ import { useRouter } from "next/router";
  * DB-first Plan Context (LIVE)
  * Source of truth: /api/auth/me (Prisma User.plan + User.role)
  *
- * - plan: "small" | "enterprise"
+ * - plan: "small" | "enterprise" | null (null until loaded)
  * - tier: raw Prisma enum string from DB (FREE | PRO | COACH | SMALL_BIZ | ENTERPRISE)
- * - role: "recruiter" | "admin" | "owner" | "billing" | "hiringManager" | "site_admin"
- * - features: string[] (kept, but not persisted client-side)
+ * - role: "seeker" | "coach" | "recruiter" | "site_admin" | null (null until loaded)
+ * - features: string[] (debug overrides only; not persisted client-side)
  *
  * Query overrides (non-persistent, for debugging only):
  *   ?plan=enterprise|small
- *   ?role=admin|owner|billing|recruiter|hiringManager|site_admin
+ *   ?role=seeker|coach|recruiter|site_admin|owner|admin|billing|hiringManager
  *   ?features=why_plus,ats_greenhouse
  */
 
 const PlanContext = createContext(null);
 
 function mapTierToPlan(tier) {
-  switch (tier) {
+  switch (String(tier || "").toUpperCase()) {
     case "ENTERPRISE":
       return "enterprise";
     case "SMALL_BIZ":
@@ -33,17 +33,20 @@ function mapTierToPlan(tier) {
 }
 
 function mapUserRoleToContextRole(userRole) {
-  // UserRole enum in DB: SEEKER | COACH | RECRUITER | ADMIN (per your comments)
-  switch (userRole) {
+  // DB enum: SEEKER | COACH | RECRUITER | ADMIN
+  const r = String(userRole || "").toUpperCase();
+  switch (r) {
     case "ADMIN":
       return "site_admin";
     case "RECRUITER":
       return "recruiter";
     case "COACH":
-      return "recruiter";
+      return "coach";
     case "SEEKER":
+      return "seeker";
     default:
-      return "recruiter";
+      // Unknown should not force recruiter
+      return "seeker";
   }
 }
 
@@ -53,8 +56,9 @@ export function PlanProvider({ children }) {
   // Start null to avoid “flash wrong plan” during SSR/hydration
   const [isLoaded, setIsLoaded] = useState(false);
 
-  const [plan, setPlan] = useState(null); // "small" | "enterprise"
-  const [role, setRole] = useState(null);
+  // IMPORTANT: keep these null until server resolves.
+  const [plan, setPlan] = useState(null); // "small" | "enterprise" | null
+  const [role, setRole] = useState(null); // "seeker" | "coach" | "recruiter" | "site_admin" | null
   const [features, setFeatures] = useState([]);
   const [tier, setTier] = useState(null);
 
@@ -66,7 +70,7 @@ export function PlanProvider({ children }) {
 
     async function syncFromServer() {
       try {
-        const res = await fetch("/api/auth/me");
+        const res = await fetch("/api/auth/me", { cache: "no-store" });
         if (!res.ok) {
           if (!cancelled) setIsLoaded(true);
           return;
@@ -80,9 +84,9 @@ export function PlanProvider({ children }) {
           return;
         }
 
-        const serverTier = user.plan || null;
-        const serverPlan = mapTierToPlan(serverTier);
-        const serverRole = mapUserRoleToContextRole(user.role);
+        const serverTier = user.plan || null; // DB enum (ENTERPRISE, PRO, etc)
+        const serverPlan = mapTierToPlan(serverTier); // small|enterprise
+        const serverRole = mapUserRoleToContextRole(user.role); // seeker|coach|recruiter|site_admin
 
         if (!cancelled) {
           setTier(serverTier);
@@ -105,6 +109,7 @@ export function PlanProvider({ children }) {
 
   // ─────────────────────────────────────────────
   // 2) Optional query overrides (NO persistence)
+  //    Applies AFTER router ready; does not force defaults pre-load.
   // ─────────────────────────────────────────────
   useEffect(() => {
     if (!router?.isReady) return;
@@ -115,10 +120,24 @@ export function PlanProvider({ children }) {
     }
 
     const qpRoleRaw = router.query?.role;
-    const qpRole = typeof qpRoleRaw === "string" ? qpRoleRaw.toLowerCase() : "";
-    const allowedRoles = new Set(["recruiter", "admin", "owner", "billing", "hiringmanager", "site_admin"]);
-    if (allowedRoles.has(qpRole)) {
-      const normalized = qpRole === "hiringmanager" ? "hiringManager" : qpRole;
+    const qpRole = typeof qpRoleRaw === "string" ? qpRoleRaw.trim() : "";
+    const qpRoleLower = qpRole.toLowerCase();
+
+    // Allow both “DB context roles” and “org-style roles” for testing
+    const allowedRoles = new Set([
+      "seeker",
+      "coach",
+      "recruiter",
+      "site_admin",
+      "owner",
+      "admin",
+      "billing",
+      "hiringmanager",
+    ]);
+
+    if (allowedRoles.has(qpRoleLower)) {
+      const normalized =
+        qpRoleLower === "hiringmanager" ? "hiringManager" : qpRoleLower;
       setRole(normalized);
     }
 
@@ -136,14 +155,24 @@ export function PlanProvider({ children }) {
   // 3) Derived helpers / capabilities
   // ─────────────────────────────────────────────
   const value = useMemo(() => {
-    const effectivePlan = plan || "small";
-    const effectiveRole = role || "recruiter";
+    // KEY CHANGE:
+    // Do NOT default to "small"/"recruiter" before isLoaded.
+    // That was causing the SMB flash.
+    const effectivePlan = isLoaded ? (plan || "small") : null;
+    const effectiveRole = isLoaded ? (role || "seeker") : null;
 
     const isEnterprise = effectivePlan === "enterprise";
     const isSmall = effectivePlan === "small";
 
+    // Support both context roles and org-style roles (your sidebar uses owner/admin/billing)
     const isSiteAdmin = effectiveRole === "site_admin";
-    const isRecruiterAdmin = effectiveRole === "owner" || effectiveRole === "admin" || effectiveRole === "billing" || isSiteAdmin;
+
+    const isRecruiterAdmin =
+      effectiveRole === "owner" ||
+      effectiveRole === "admin" ||
+      effectiveRole === "billing" ||
+      isSiteAdmin;
+
     const isRecruiterSeat = effectiveRole === "recruiter";
     const isHiringManager = effectiveRole === "hiringManager";
 
@@ -182,20 +211,25 @@ export function PlanProvider({ children }) {
     return {
       isLoaded,
 
-      role: effectiveRole,
-      setRole,
+      // expose raw resolved values
+      plan: effectivePlan, // null until loaded
+      role: effectiveRole, // null until loaded
+      tier,
 
-      plan: effectivePlan,
+      // booleans
       isEnterprise,
       isSmall,
-      setPlan,
-
-      tier,
       isProTier: tier === "PRO",
 
+      // debug controls (ok to keep)
+      setPlan,
+      setRole,
+
+      // features (debug only)
       features,
       has,
 
+      // role helpers
       isRecruiterAdmin,
       isRecruiterSeat,
       isHiringManager,

@@ -4,6 +4,7 @@ import Head from 'next/head';
 import { useRouter } from 'next/router';
 import useSidebarCounts from '@/components/hooks/useSidebarCounts';
 import { useUserWallpaper } from '@/hooks/useUserWallpaper';
+import { usePlan } from '@/context/PlanContext';
 
 // Chrome-specific headers + sidebars
 import SeekerSidebar from '@/components/SeekerSidebar';
@@ -14,7 +15,7 @@ import SeekerHeader from '@/components/seeker/SeekerHeader';
 import CoachingHeader from '@/components/coaching/CoachingHeader';
 import RecruiterHeader from '@/components/recruiter/RecruiterHeader';
 
-// ✅ NEW: mobile bottom bar + support floating button
+// ✅ mobile bottom bar + support floating button
 import MobileBottomBar from '@/components/mobile/MobileBottomBar';
 import SupportFloatingButton from '@/components/SupportFloatingButton';
 
@@ -24,11 +25,17 @@ function normalizeChrome(input) {
   const raw = String(input || '').toLowerCase().trim();
   if (!raw) return '';
 
-  // Backward-compatible aliases
   if (raw === 'recruiter') return 'recruiter-smb';
   if (raw === 'enterprise') return 'recruiter-ent';
 
-  return raw;
+  if (ALLOWED_MODES.has(raw)) return raw;
+
+  if (raw.startsWith('recruiter')) {
+    if (raw.includes('ent') || raw.includes('enterprise')) return 'recruiter-ent';
+    return 'recruiter-smb';
+  }
+
+  return '';
 }
 
 function extractChromeFromAsPath(asPath) {
@@ -45,6 +52,25 @@ function extractChromeFromAsPath(asPath) {
   }
 }
 
+function setQueryChrome(router, chrome) {
+  try {
+    if (!router?.isReady) return;
+    const nextChrome = normalizeChrome(chrome);
+    if (!nextChrome) return;
+
+    const current = normalizeChrome(router.query?.chrome);
+    if (current === nextChrome) return;
+
+    const nextQuery = { ...router.query, chrome: nextChrome };
+    router.replace({ pathname: router.pathname, query: nextQuery }, undefined, {
+      shallow: true,
+      scroll: false,
+    });
+  } catch {
+    // no-throw
+  }
+}
+
 export default function InternalLayout({
   title = 'ForgeTomorrow',
   left,
@@ -53,48 +79,81 @@ export default function InternalLayout({
   children,
   activeNav,
 
-  // ✅ canonical override
   forceChrome,
-
-  // ✅ backwards compat (some pages pass `chrome=...`)
   chrome,
 
-  rightVariant = 'dark', // 'dark' | 'light'
+  rightVariant = 'dark',
   rightWidth = 260,
-  leftWidth = 240, // ✅ match SeekerLayout flexibility
+  leftWidth = 240,
   gap = 12,
   pad = 16,
 }) {
   const router = useRouter();
   const counts = useSidebarCounts();
+  const { isLoaded: planLoaded, plan, role } = usePlan();
 
-  const [chromeMode, setChromeMode] = useState('seeker');
+  const [chromeMode, setChromeMode] = useState(() => normalizeChrome(forceChrome || chrome) || 'seeker');
 
   useEffect(() => {
-    // 1) Explicit override wins (forceChrome OR chrome prop)
+    if (!router?.isReady) return;
+
+    // 1) Explicit override wins
     const override = normalizeChrome(forceChrome || chrome);
     if (override && ALLOWED_MODES.has(override)) {
       setChromeMode(override);
       return;
     }
 
-    // 2) router.query.chrome
+    // 2) URL query
     const q = normalizeChrome(router?.query?.chrome);
     if (q && ALLOWED_MODES.has(q)) {
+      // If recruiter chrome requested, canonicalize once DB is loaded
+      if ((q === 'recruiter-smb' || q === 'recruiter-ent') && planLoaded) {
+        const isEnterprise = String(plan || '').toLowerCase() === 'enterprise';
+        const canonical = isEnterprise ? 'recruiter-ent' : 'recruiter-smb';
+        setChromeMode(canonical);
+        setQueryChrome(router, canonical);
+        return;
+      }
+
       setChromeMode(q);
       return;
     }
 
-    // 3) router.asPath (covers first load / query not ready)
+    // 3) router.asPath fallback
     const fromPath = extractChromeFromAsPath(router?.asPath);
     if (fromPath && ALLOWED_MODES.has(fromPath)) {
+      if ((fromPath === 'recruiter-smb' || fromPath === 'recruiter-ent') && planLoaded) {
+        const isEnterprise = String(plan || '').toLowerCase() === 'enterprise';
+        const canonical = isEnterprise ? 'recruiter-ent' : 'recruiter-smb';
+        setChromeMode(canonical);
+        setQueryChrome(router, canonical);
+        return;
+      }
+
       setChromeMode(fromPath);
       return;
     }
 
-    // 4) default
+    // 4) DB default when loaded (prevents “random SMB”)
+    if (planLoaded) {
+      const dbRole = String(role || '').toLowerCase();
+      const isRecruiterAccount =
+        dbRole === 'recruiter' || dbRole === 'site_admin' || dbRole === 'owner' || dbRole === 'admin' || dbRole === 'billing';
+      const isCoachAccount = dbRole === 'coach';
+      const isEnterprise = String(plan || '').toLowerCase() === 'enterprise';
+
+      const dbPreferred = isRecruiterAccount ? (isEnterprise ? 'recruiter-ent' : 'recruiter-smb') : isCoachAccount ? 'coach' : 'seeker';
+      setChromeMode(dbPreferred);
+
+      if (dbPreferred === 'recruiter-ent' || dbPreferred === 'recruiter-smb') {
+        setQueryChrome(router, dbPreferred);
+      }
+      return;
+    }
+
     setChromeMode('seeker');
-  }, [forceChrome, chrome, router?.query?.chrome, router?.asPath]);
+  }, [forceChrome, chrome, router?.isReady, router?.query?.chrome, router?.asPath, planLoaded, plan, role]);
 
   const { HeaderComp, SidebarComp, sidebarProps } = useMemo(() => {
     switch (chromeMode) {
@@ -127,7 +186,6 @@ export default function InternalLayout({
     }
   }, [chromeMode, activeNav, counts]);
 
-  // ---- WALLPAPER / BACKGROUND (match SeekerLayout) ----
   const { wallpaperUrl } = useUserWallpaper();
 
   const backgroundStyle = wallpaperUrl
@@ -144,17 +202,13 @@ export default function InternalLayout({
         backgroundColor: '#ECEFF1',
       };
 
-  // ---- MOBILE DETECTION + TOOLS SHEET ----
   const hasRight = Boolean(right);
   const [isMobile, setIsMobile] = useState(true);
   const [mobileToolsOpen, setMobileToolsOpen] = useState(false);
 
   useEffect(() => {
     const handleResize = () => {
-      if (typeof window !== 'undefined') {
-        const width = window.innerWidth;
-        setIsMobile(width < 1024);
-      }
+      if (typeof window !== 'undefined') setIsMobile(window.innerWidth < 1024);
     };
 
     handleResize();
@@ -162,7 +216,6 @@ export default function InternalLayout({
     return () => window.removeEventListener('resize', handleResize);
   }, []);
 
-  // ---- RIGHT RAIL STYLES (match SeekerLayout) ----
   const rightBase = {
     gridArea: 'right',
     alignSelf: 'start',
@@ -189,8 +242,6 @@ export default function InternalLayout({
     boxShadow: 'none',
   };
 
-  // Asymmetric padding to keep right edge tight when a rail exists (match SeekerLayout)
-  // ✅ Add extra bottom padding on mobile to prevent bottom bar overlap
   const containerPadding = {
     paddingTop: pad,
     paddingBottom: isMobile ? pad + 84 : pad,
@@ -198,7 +249,6 @@ export default function InternalLayout({
     paddingRight: hasRight ? Math.max(8, pad - 4) : pad,
   };
 
-  // ---- DESKTOP VS MOBILE GRID (match SeekerLayout structure) ----
   const desktopGrid = {
     display: 'grid',
     gridTemplateColumns: `${leftWidth}px minmax(0, 1fr) ${hasRight ? `${rightWidth}px` : '0px'}`,
@@ -230,21 +280,10 @@ export default function InternalLayout({
         <title>{title}</title>
       </Head>
 
-      {/* Wallpaper wrapper (NO frosting/overlay) */}
       <div style={backgroundStyle}>
-        {/* Top chrome header ALWAYS matches chromeMode */}
         <HeaderComp />
 
-        {/* Main layout shell */}
-        <div
-          style={{
-            ...gridStyles,
-            gap,
-            ...containerPadding,
-            alignItems: 'start',
-          }}
-        >
-          {/* LEFT — Sidebar (hidden on mobile, moved into Tools sheet) */}
+        <div style={{ ...gridStyles, gap, ...containerPadding, alignItems: 'start' }}>
           <aside
             style={{
               gridArea: 'left',
@@ -256,41 +295,23 @@ export default function InternalLayout({
             {left ?? <SidebarComp {...sidebarProps} />}
           </aside>
 
-          {/* PAGE HEADER (center) */}
-          <header
-            style={{
-              gridArea: 'header',
-              alignSelf: 'start',
-              minWidth: 0,
-            }}
-          >
+          <header style={{ gridArea: 'header', alignSelf: 'start', minWidth: 0 }}>
             {header}
           </header>
 
-          {/* RIGHT — Variant-controlled rail */}
           {hasRight ? (
-            <aside
-              style={{
-                ...rightBase,
-                ...(rightVariant === 'light' ? rightLight : rightDark),
-              }}
-            >
+            <aside style={{ ...rightBase, ...(rightVariant === 'light' ? rightLight : rightDark) }}>
               {right}
             </aside>
           ) : null}
 
-          {/* CONTENT (center) */}
           <main style={{ gridArea: 'content', minWidth: 0 }}>
-            <div style={{ display: 'grid', gap, width: '100%', minWidth: 0 }}>
-              {children}
-            </div>
+            <div style={{ display: 'grid', gap, width: '100%', minWidth: 0 }}>{children}</div>
           </main>
         </div>
 
-        {/* ✅ Support stays as the existing floating button */}
         <SupportFloatingButton />
 
-        {/* ✅ Mobile bottom bar */}
         <MobileBottomBar
           isMobile={isMobile}
           chromeMode={chromeMode}
@@ -298,7 +319,6 @@ export default function InternalLayout({
         />
       </div>
 
-      {/* ✅ MOBILE TOOLS BOTTOM SHEET */}
       {isMobile && mobileToolsOpen && (
         <div
           style={{
@@ -310,7 +330,6 @@ export default function InternalLayout({
             alignItems: 'flex-end',
           }}
         >
-          {/* Backdrop (click to dismiss) */}
           <button
             type="button"
             onClick={() => setMobileToolsOpen(false)}
@@ -324,7 +343,6 @@ export default function InternalLayout({
             }}
           />
 
-          {/* Sheet */}
           <div
             style={{
               position: 'relative',
@@ -343,7 +361,6 @@ export default function InternalLayout({
               boxShadow: '0 -10px 26px rgba(0,0,0,0.22)',
             }}
           >
-            {/* Header row inside Tools sheet */}
             <div
               style={{
                 display: 'flex',
@@ -370,7 +387,6 @@ export default function InternalLayout({
               </button>
             </div>
 
-            {/* Reuse whichever sidebar chromeMode selected */}
             {left ?? <SidebarComp {...sidebarProps} />}
           </div>
         </div>
