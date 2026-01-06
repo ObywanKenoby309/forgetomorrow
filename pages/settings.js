@@ -1,7 +1,60 @@
 // pages/settings.js
 import Head from 'next/head';
+import { useEffect, useMemo, useState } from 'react';
 
 export default function SettingsPage() {
+  const [meLoading, setMeLoading] = useState(true);
+  const [me, setMe] = useState(null);
+
+  useEffect(() => {
+    let cancelled = false;
+
+    async function loadMe() {
+      try {
+        const res = await fetch('/api/auth/me', { method: 'GET' });
+        if (!res.ok) {
+          if (!cancelled) {
+            setMe(null);
+            setMeLoading(false);
+          }
+          return;
+        }
+        const json = await res.json();
+        if (!cancelled) {
+          setMe(json?.user || null);
+          setMeLoading(false);
+        }
+      } catch (e) {
+        if (!cancelled) {
+          setMe(null);
+          setMeLoading(false);
+        }
+      }
+    }
+
+    loadMe();
+
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  const email = useMemo(() => {
+    if (meLoading) return 'Loading...';
+    return me?.email || 'Unknown';
+  }, [meLoading, me]);
+
+  const name = useMemo(() => {
+    if (meLoading) return 'Loading...';
+    // Try common fields safely
+    return (
+      me?.name ||
+      me?.fullName ||
+      me?.displayName ||
+      'Unnamed (set during signup)'
+    );
+  }, [meLoading, me]);
+
   // simple click handler for the billing button
   async function handleManageBillingClick() {
     try {
@@ -32,6 +85,11 @@ export default function SettingsPage() {
         'Something went wrong opening billing. Please contact support@forgetomorrow.com.'
       );
     }
+  }
+
+  function handleLogoutClick() {
+    // Your headers already route here
+    window.location.href = '/logout';
   }
 
   return (
@@ -69,8 +127,7 @@ export default function SettingsPage() {
                   Email
                 </label>
                 <p className="text-sm text-[#37474F] bg-[#ECEFF1] rounded-lg px-3 py-2">
-                  {/* TODO: Replace with real user email from API */}
-                  your.email@example.com
+                  {email}
                 </p>
               </div>
 
@@ -79,8 +136,7 @@ export default function SettingsPage() {
                   Name
                 </label>
                 <p className="text-sm text-[#37474F] bg-[#ECEFF1] rounded-lg px-3 py-2">
-                  {/* TODO: Replace with name from DB (read-only) */}
-                  Unnamed (set during signup)
+                  {name}
                 </p>
               </div>
             </div>
@@ -94,9 +150,9 @@ export default function SettingsPage() {
                 Change password
               </button>
 
-              {/* TODO: Wire to /api/auth/logout and redirect to /login */}
               <button
                 type="button"
+                onClick={handleLogoutClick}
                 className="inline-flex items-center justify-center px-4 py-2 rounded-full text-sm font-semibold bg-[#FF7043] text-white hover:bg-[#F4511E] transition"
               >
                 Log out
@@ -116,7 +172,6 @@ export default function SettingsPage() {
             </div>
 
             <div className="space-y-4">
-              {/* Newsletter / marketing toggle placeholder */}
               <div className="flex items-start justify-between gap-4">
                 <div>
                   <p className="text-sm font-medium text-[#37474F]">
@@ -127,7 +182,6 @@ export default function SettingsPage() {
                     and important account notices.
                   </p>
                 </div>
-                {/* TODO: Replace with real toggle wired to newsletter flag */}
                 <button
                   type="button"
                   className="text-xs font-medium px-3 py-1 rounded-full border border-[#CFD8DC] text-[#455A64] hover:bg-[#ECEFF1] transition"
@@ -148,7 +202,6 @@ export default function SettingsPage() {
                     ForgeTomorrow account.
                   </p>
                 </div>
-                {/* TODO: Wire to export-data endpoint later */}
                 <button
                   type="button"
                   className="text-xs font-medium px-3 py-1 rounded-full border border-[#CFD8DC] text-[#455A64] hover:bg-[#ECEFF1] transition"
@@ -167,7 +220,6 @@ export default function SettingsPage() {
                     to legal retention requirements.
                   </p>
                 </div>
-                {/* TODO: Wire to /api/privacy/delete with confirm modal */}
                 <button
                   type="button"
                   className="text-xs font-semibold px-3 py-1 rounded-full border border-[#FFAB91] text-[#D84315] hover:bg-[#FFEBEE] transition"
@@ -190,15 +242,17 @@ export default function SettingsPage() {
             </div>
 
             <div className="space-y-4">
-              {/* Current plan summary – static for now */}
               <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-3">
                 <div>
                   <p className="text-sm font-medium text-[#37474F]">
                     Current plan
                   </p>
                   <p className="text-xs text-[#78909C]">
-                    {/* TODO: Replace with real plan name from session / DB */}
-                    You&apos;re on the <span className="font-semibold">Seeker Free</span> plan.
+                    You&apos;re on the{' '}
+                    <span className="font-semibold">
+                      {meLoading ? 'Loading...' : (me?.plan || 'Unknown')}
+                    </span>{' '}
+                    plan.
                   </p>
                 </div>
                 <div className="flex flex-wrap gap-2">
@@ -221,7 +275,6 @@ export default function SettingsPage() {
 
               <hr className="border-[#ECEFF1]" />
 
-              {/* Invoices / receipts placeholder */}
               <div className="space-y-2">
                 <p className="text-sm font-medium text-[#37474F]">
                   Invoices &amp; receipts
