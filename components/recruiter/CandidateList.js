@@ -158,7 +158,7 @@ function CandidateCard({ candidate, isEnterprise, onView, onMessage, onWhy }) {
           )}
         </div>
 
-        <p className="mt-1 text-[10px] text-slate-500 text-left sm:text-right w-full break-words">
+        <p className="mt-1 text-[10px] text-slate-500 text-left sm:text-right w-full whitespace-normal break-words overflow-hidden">
           New threads start here. Your choice of Recruiter inbox or Signal
           (personal) inbox happens on the next step.
         </p>
