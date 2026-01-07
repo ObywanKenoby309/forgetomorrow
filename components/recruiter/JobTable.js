@@ -24,17 +24,9 @@ export default function JobTable({ jobs = [], onEdit, onView, onClose }) {
   const filteredAndSorted = useMemo(() => {
     let arr = [...jobs];
 
-    // FILTER: Status
-    if (filter.status) {
-      arr = arr.filter((j) => j.status === filter.status);
-    }
+    if (filter.status) arr = arr.filter((j) => j.status === filter.status);
+    if (filter.urgent) arr = arr.filter((j) => j.urgent);
 
-    // FILTER: Urgent
-    if (filter.urgent) {
-      arr = arr.filter((j) => j.urgent);
-    }
-
-    // SORT
     arr.sort((a, b) => {
       const va = a[sort.key] ?? "";
       const vb = b[sort.key] ?? "";
@@ -55,11 +47,10 @@ export default function JobTable({ jobs = [], onEdit, onView, onClose }) {
     <th
       className="px-4 py-3 cursor-pointer select-none hover:bg-slate-100"
       onClick={() => setSortKey(keyName)}
-      title={`Sort by ${label}`}
     >
       <span className="inline-flex items-center gap-1 font-medium">
         {label}
-        {sort.key === keyName && (sort.dir === "asc" ? "Up" : "Down")}
+        {sort.key === keyName && (sort.dir === "asc" ? "↑" : "↓")}
       </span>
     </th>
   );
@@ -82,6 +73,7 @@ export default function JobTable({ jobs = [], onEdit, onView, onClose }) {
             <option>Closed</option>
           </select>
         </div>
+
         <label className="flex items-center gap-1 cursor-pointer">
           <input
             type="checkbox"
@@ -91,6 +83,7 @@ export default function JobTable({ jobs = [], onEdit, onView, onClose }) {
           />
           <span className="text-red-700 font-medium">URGENT only</span>
         </label>
+
         <button
           onClick={() => setFilter({ status: "", urgent: false })}
           className="ml-auto text-xs text-slate-500 hover:text-slate-700 underline"
@@ -99,8 +92,70 @@ export default function JobTable({ jobs = [], onEdit, onView, onClose }) {
         </button>
       </div>
 
-      {/* TABLE */}
-      <div className="overflow-x-auto">
+      {/* ───────────────── MOBILE CARDS ───────────────── */}
+      <div className="sm:hidden divide-y">
+        {filteredAndSorted.map((j) => {
+          const status = j.status || "Unknown";
+          return (
+            <div key={j.id} className="p-4 space-y-2">
+              <div className="flex flex-col gap-1 min-w-0">
+                <div className="font-semibold break-words">{j.title}</div>
+                <div className="text-xs text-slate-600 break-words">
+                  {j.company || "—"} • {j.location || "—"}
+                </div>
+              </div>
+
+              <div className="flex flex-wrap items-center gap-2">
+                <span
+                  className={`px-2 py-[2px] rounded border text-xs ${statusClass(
+                    status
+                  )}`}
+                >
+                  {status}
+                </span>
+                {urgencyBadge(Boolean(j.urgent))}
+              </div>
+
+              <div className="text-xs text-slate-600 flex gap-4">
+                <span>{j.views ?? 0} views</span>
+                <span>{j.applications ?? 0} apps</span>
+              </div>
+
+              <div className="flex flex-wrap gap-3 pt-1">
+                <button
+                  onClick={() => onEdit?.(j)}
+                  className="text-xs underline text-blue-700"
+                >
+                  Edit
+                </button>
+                <button
+                  onClick={() => onView?.(j)}
+                  className="text-xs underline text-blue-700"
+                >
+                  View
+                </button>
+                {status !== "Closed" && (
+                  <button
+                    onClick={() => onClose?.(j)}
+                    className="text-xs underline text-red-700"
+                  >
+                    Close
+                  </button>
+                )}
+              </div>
+            </div>
+          );
+        })}
+
+        {filteredAndSorted.length === 0 && (
+          <div className="p-6 text-center text-sm text-slate-500">
+            No jobs match your filters.
+          </div>
+        )}
+      </div>
+
+      {/* ───────────────── DESKTOP TABLE ───────────────── */}
+      <div className="hidden sm:block overflow-x-auto">
         <table className="min-w-full text-sm">
           <thead>
             <tr className="border-b bg-slate-50 text-left">
@@ -118,50 +173,32 @@ export default function JobTable({ jobs = [], onEdit, onView, onClose }) {
           <tbody>
             {filteredAndSorted.map((j) => {
               const status = j.status || "Unknown";
-              const views = j.views ?? "—";
-              const applications = j.applications ?? "—";
-
               return (
-                <tr
-                  key={j.id}
-                  className="border-b last:border-0 hover:bg-slate-50"
-                >
-                  <td className="px-4 py-3 font-medium">
-                    {j.company || "—"}
-                  </td>
+                <tr key={j.id} className="border-b hover:bg-slate-50">
+                  <td className="px-4 py-3 font-medium">{j.company || "—"}</td>
                   <td className="px-4 py-3">{j.title || "—"}</td>
-                  <td className="px-4 py-3 text-slate-600">
-                    {j.worksite || "—"}
-                  </td>
-                  <td className="px-4 py-3 text-slate-600">
-                    {j.location || "—"}
-                  </td>
+                  <td className="px-4 py-3">{j.worksite || "—"}</td>
+                  <td className="px-4 py-3">{j.location || "—"}</td>
                   <td className="px-4 py-3">
                     <span
-                      className={`inline-block px-2 py-[2px] rounded border text-xs ${statusClass(
+                      className={`px-2 py-[2px] rounded border text-xs ${statusClass(
                         status
                       )}`}
                     >
-                      {status === "Reviewing" ? "Reviewing applicants" : status}
+                      {status}
                     </span>
                   </td>
                   <td className="px-4 py-3 text-center">
                     {urgencyBadge(Boolean(j.urgent))}
                   </td>
-                  <td className="px-4 py-3 text-center">{views}</td>
-                  <td className="px-4 py-3 text-center">{applications}</td>
+                  <td className="px-4 py-3 text-center">{j.views ?? "—"}</td>
+                  <td className="px-4 py-3 text-center">{j.applications ?? "—"}</td>
                   <td className="px-4 py-3 text-xs">
-                    <button
-                      onClick={() => onEdit?.(j)}
-                      className="underline hover:text-blue-700"
-                    >
+                    <button onClick={() => onEdit?.(j)} className="underline">
                       Edit
                     </button>
                     <span className="mx-1 text-slate-300">|</span>
-                    <button
-                      onClick={() => onView?.(j)}
-                      className="underline hover:text-blue-700"
-                    >
+                    <button onClick={() => onView?.(j)} className="underline">
                       View
                     </button>
                     {status !== "Closed" && (
@@ -169,7 +206,7 @@ export default function JobTable({ jobs = [], onEdit, onView, onClose }) {
                         <span className="mx-1 text-slate-300">|</span>
                         <button
                           onClick={() => onClose?.(j)}
-                          className="underline hover:text-red-700"
+                          className="underline text-red-700"
                         >
                           Close
                         </button>
@@ -179,18 +216,6 @@ export default function JobTable({ jobs = [], onEdit, onView, onClose }) {
                 </tr>
               );
             })}
-            {filteredAndSorted.length === 0 && (
-              <tr>
-                <td
-                  colSpan={9}
-                  className="px-4 py-8 text-center text-slate-500"
-                >
-                  {filter.status || filter.urgent
-                    ? "No jobs match your filters."
-                    : 'No jobs yet. Click “Post a Job” to create your first listing.'}
-                </td>
-              </tr>
-            )}
           </tbody>
         </table>
       </div>
