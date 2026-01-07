@@ -162,12 +162,6 @@ function CandidateCard({ candidate, isEnterprise, onView, onMessage, onWhy }) {
             </button>
           )}
         </div>
-
-        {/* IMPORTANT: force wrapping even if something upstream is applying nowrap */}
-        <p className="mt-1 text-[10px] text-slate-500 text-left sm:text-right w-full max-w-full min-w-0 !whitespace-normal !break-words">
-          New threads start here. Your choice of Recruiter inbox or Signal
-          (personal) inbox happens on the next step.
-        </p>
       </div>
     </div>
   );
