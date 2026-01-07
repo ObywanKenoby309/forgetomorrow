@@ -23,8 +23,10 @@ const GLASS = {
 function normalizeChrome(input) {
   const raw = String(input || '').toLowerCase().trim();
   if (!raw) return '';
-  if (raw === 'recruiter-ent' || raw === 'recruiter_enterprise' || raw === 'enterprise' || raw === 'ent') return 'recruiter-ent';
-  if (raw === 'recruiter-smb' || raw === 'recruiter_smb' || raw === 'smb' || raw === 'recruiter') return 'recruiter-smb';
+  if (raw === 'recruiter-ent' || raw === 'recruiter_enterprise' || raw === 'enterprise' || raw === 'ent')
+    return 'recruiter-ent';
+  if (raw === 'recruiter-smb' || raw === 'recruiter_smb' || raw === 'smb' || raw === 'recruiter')
+    return 'recruiter-smb';
   if (raw.startsWith('recruiter')) {
     if (raw.includes('ent') || raw.includes('enterprise')) return 'recruiter-ent';
     return 'recruiter-smb';
@@ -203,6 +205,12 @@ export default function RecruiterLayout({
           paddingRight: hasRight ? Math.max(8, PAD - 4) : PAD,
           alignItems: 'start',
           boxSizing: 'border-box',
+
+          // ✅ FIX (mobile overflow): hard clamp layout to viewport
+          width: '100%',
+          maxWidth: '100vw',
+          overflowX: 'hidden',
+          minWidth: 0,
         }}
       >
         <aside
@@ -243,8 +251,18 @@ export default function RecruiterLayout({
 
         {hasRight && <aside style={rightRailStyle}>{right}</aside>}
 
-        <main style={{ gridArea: 'content', minWidth: 0 }}>
-          <div style={{ display: 'grid', gap: GAP, width: '100%', minWidth: 0 }}>
+        <main
+          style={{
+            gridArea: 'content',
+            minWidth: 0,
+
+            // ✅ Safety net: prevent child rows from forcing horizontal scroll
+            width: '100%',
+            maxWidth: '100%',
+            overflowX: 'hidden',
+          }}
+        >
+          <div style={{ display: 'grid', gap: GAP, width: '100%', minWidth: 0, maxWidth: '100%' }}>
             {children}
           </div>
         </main>
@@ -252,11 +270,7 @@ export default function RecruiterLayout({
 
       <SupportFloatingButton />
 
-      <MobileBottomBar
-        isMobile={isMobile}
-        chromeMode={chromeMode}
-        onOpenTools={() => setMobileToolsOpen(true)}
-      />
+      <MobileBottomBar isMobile={isMobile} chromeMode={chromeMode} onOpenTools={() => setMobileToolsOpen(true)} />
 
       {isMobile && mobileToolsOpen && (
         <div
