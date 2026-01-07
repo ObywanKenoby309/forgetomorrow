@@ -550,7 +550,6 @@ function Body() {
           },
         });
       } else {
-        // Personal / Signal inbox
         router.push({
           pathname: "/seeker/messages",
           query: {
@@ -922,6 +921,19 @@ function Body() {
     }
   };
 
+  // ---------- NEW: desktop 2-column layout split (layout-only) ----------
+  const splitForColumns = (list) => {
+    const src = Array.isArray(list) ? list : [];
+    const left = [];
+    const right = [];
+    for (let i = 0; i < src.length; i += 1) {
+      (i % 2 === 0 ? left : right).push(src[i]);
+    }
+    return { left, right };
+  };
+
+  const { left: leftCandidates, right: rightCandidates } = splitForColumns(candidates);
+  // ---------- END: desktop 2-column layout split ----------
   return (
     <>
       {/* Sev-1 style feed incident banner */}
@@ -1142,19 +1154,54 @@ function Body() {
       {isLoading ? (
         <div className="text-sm text-slate-600">Loading candidates...</div>
       ) : (
-        <CandidateList
-          candidates={candidates}
-          isEnterprise={isEnterprise}
-          onView={onView}
-          onMessage={onMessage}
-          onWhy={onWhy}
-          showFilters={false}
-          showFilterBar={false}
-          filtersVisible={false}
-          query={nameQuery}
-          locationFilter={locQuery}
-          booleanQuery={boolQuery}
-        />
+        <>
+          {/* Mobile/tablet: single list (unchanged) */}
+          <div className="block lg:hidden">
+            <CandidateList
+              candidates={candidates}
+              isEnterprise={isEnterprise}
+              onView={onView}
+              onMessage={onMessage}
+              onWhy={onWhy}
+              showFilters={false}
+              showFilterBar={false}
+              filtersVisible={false}
+              query={nameQuery}
+              locationFilter={locQuery}
+              booleanQuery={boolQuery}
+            />
+          </div>
+
+          {/* Desktop: 2-column list (layout-only) */}
+          <div className="hidden lg:grid lg:grid-cols-2 gap-4">
+            <CandidateList
+              candidates={leftCandidates}
+              isEnterprise={isEnterprise}
+              onView={onView}
+              onMessage={onMessage}
+              onWhy={onWhy}
+              showFilters={false}
+              showFilterBar={false}
+              filtersVisible={false}
+              query={nameQuery}
+              locationFilter={locQuery}
+              booleanQuery={boolQuery}
+            />
+            <CandidateList
+              candidates={rightCandidates}
+              isEnterprise={isEnterprise}
+              onView={onView}
+              onMessage={onMessage}
+              onWhy={onWhy}
+              showFilters={false}
+              showFilterBar={false}
+              filtersVisible={false}
+              query={nameQuery}
+              locationFilter={locQuery}
+              booleanQuery={boolQuery}
+            />
+          </div>
+        </>
       )}
 
       <CandidateProfileModal
