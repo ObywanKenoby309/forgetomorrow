@@ -14,6 +14,14 @@ function getPrisma() {
   return prisma;
 }
 
+function toCsv(arr) {
+  if (!Array.isArray(arr)) return "";
+  return arr
+    .map((s) => String(s || "").trim())
+    .filter(Boolean)
+    .join(", ");
+}
+
 function toStringArray(v) {
   if (Array.isArray(v)) return v.map((x) => String(x || "").trim()).filter(Boolean);
   return [];
@@ -74,94 +82,76 @@ async function resolveEffectiveRecruiter(prisma, req, session) {
   return u?.id ? u : null;
 }
 
-// ─────────────────────────────────────────────────────────────
-// SAFE helpers for “experience from primary resume” (optional)
-// ─────────────────────────────────────────────────────────────
-function extractExperienceFromResumeRow(r) {
-  // We don’t know your schema yet, so we probe a few common shapes.
-  // Returned format matches CandidateProfileModal expectation:
-  // [{ title, company, range, highlights: [] }]
+// ------------------------------
+// Resume.content parsing helpers
+// ------------------------------
+function safeJsonParse(maybeJsonString) {
   try {
-    if (!r || typeof r !== "object") return [];
-
-    const candidates = [
-      r.experience,
-      r.experiences,
-      r.experiencesJson,
-      r.workHistory,
-      r.workHistoryJson,
-      r.resumeJson?.experience,
-      r.resumeJson?.experiences,
-      r.data?.experience,
-      r.data?.experiences,
-    ].filter(Boolean);
-
-    const raw = candidates.find((x) => Array.isArray(x)) || null;
-    if (!raw) return [];
-
-    return raw
-      .filter(Boolean)
-      .slice(0, 20)
-      .map((e) => ({
-        title: e.title || e.role || "",
-        company: e.company || e.employer || "",
-        range:
-          e.range ||
-          [e.from || e.startDate || e.start || "", e.to || e.endDate || e.end || ""]
-            .filter(Boolean)
-            .join(" – "),
-        highlights: Array.isArray(e.highlights)
-          ? e.highlights.map((h) => String(h || "")).filter(Boolean)
-          : [],
-      }))
-      .filter((x) => x.title || x.company || x.range || (x.highlights || []).length);
+    if (maybeJsonString == null) return null;
+    const s = String(maybeJsonString);
+    if (!s.trim()) return null;
+    const obj = JSON.parse(s);
+    return obj && typeof obj === "object" ? obj : null;
   } catch {
-    return [];
+    return null;
   }
 }
 
-async function fetchPrimaryResumeExperience(prisma, candidateUserIds) {
-  // If prisma.resume model doesn’t exist, do nothing safely.
-  if (!prisma?.resume || typeof prisma.resume.findMany !== "function") {
-    return new Map(); // candidateUserId -> experience[]
-  }
+function normalizeDate(v) {
+  const s = String(v || "").trim();
+  return s || "";
+}
 
-  try {
-    // We also don’t know your exact field names, so we select a few likely ones.
-    const rows = await prisma.resume.findMany({
-      where: {
-        userId: { in: candidateUserIds },
-        OR: [{ isPrimary: true }, { isDefault: true }],
-      },
-      select: {
-        id: true,
-        userId: true,
-        isPrimary: true,
-        isDefault: true,
-        experience: true,
-        experiences: true,
-        experiencesJson: true,
-        workHistory: true,
-        workHistoryJson: true,
-        resumeJson: true,
-        data: true,
-        updatedAt: true,
-      },
-      orderBy: { updatedAt: "desc" },
-    });
+function normalizeExperienceItem(x) {
+  if (!x || typeof x !== "object") return null;
 
-    const map = new Map();
-    for (const r of rows || []) {
-      const uid = String(r.userId || "");
-      if (!uid) continue;
-      if (map.has(uid)) continue; // keep first (newest due to orderBy)
-      map.set(uid, extractExperienceFromResumeRow(r));
-    }
-    return map;
-  } catch (err) {
-    console.error("[recruiter/candidates] primary resume lookup failed (soft):", err);
-    return new Map();
-  }
+  const title = String(x.title || x.role || x.position || "").trim();
+  const company = String(x.company || x.employer || x.organization || "").trim();
+
+  const startDate =
+    normalizeDate(x.startDate || x.start || x.from || x.start_at || x.startAt);
+  const endDate =
+    normalizeDate(x.endDate || x.end || x.to || x.end_at || x.endAt);
+
+  const description = String(
+    x.description || x.summary || x.details || x.notes || ""
+  ).trim();
+
+  // Keep only meaningful rows
+  if (!title && !company && !description) return null;
+
+  return {
+    title,
+    company,
+    startDate,
+    endDate,
+    description,
+  };
+}
+
+// Try multiple likely shapes since Resume.content is a freeform string in DB
+function extractExperiencesFromResumeContent(resumeContentString) {
+  const parsed = safeJsonParse(resumeContentString);
+  if (!parsed) return [];
+
+  // Common shapes we’ve used in ForgeTomorrow:
+// 1) { experiences: [...] }
+// 2) { payload: { experiences: [...] } }
+// 3) { workHistory: [...] } / { experience: [...] }
+  const candidates = []
+    .concat(Array.isArray(parsed.experiences) ? [parsed.experiences] : [])
+    .concat(parsed.payload && Array.isArray(parsed.payload.experiences) ? [parsed.payload.experiences] : [])
+    .concat(Array.isArray(parsed.workHistory) ? [parsed.workHistory] : [])
+    .concat(Array.isArray(parsed.experience) ? [parsed.experience] : [])
+    .concat(parsed.profile && Array.isArray(parsed.profile.workHistory) ? [parsed.profile.workHistory] : []);
+
+  const first = candidates.find((arr) => Array.isArray(arr) && arr.length) || [];
+  const normalized = first
+    .map(normalizeExperienceItem)
+    .filter(Boolean)
+    .slice(0, 8);
+
+  return normalized;
 }
 
 export default async function handler(req, res) {
@@ -380,8 +370,30 @@ export default async function handler(req, res) {
       metaByCandidateId.set(m.candidateUserId, m);
     }
 
-    // ✅ OPTIONAL: pull experience from primary resume (if Resume model exists)
-    const experienceByUserId = await fetchPrimaryResumeExperience(prisma, candidateUserIds);
+    // ✅ Pull each candidate's PRIMARY resume so we can show Experience (profile stays clean)
+    const resumes = candidateUserIds.length
+      ? await prisma.resume.findMany({
+          where: {
+            userId: { in: candidateUserIds },
+            isPrimary: true,
+          },
+          orderBy: { updatedAt: "desc" },
+          select: {
+            id: true,
+            userId: true,
+            content: true,
+            updatedAt: true,
+          },
+        })
+      : [];
+
+    // Map: userId -> latest primary resume row
+    const primaryResumeByUserId = new Map();
+    for (const r of resumes) {
+      if (!primaryResumeByUserId.has(r.userId)) {
+        primaryResumeByUserId.set(r.userId, r);
+      }
+    }
 
     const candidates = users.map((u) => {
       const meta = metaByCandidateId.get(u.id) || null;
@@ -389,9 +401,9 @@ export default async function handler(req, res) {
       const tagsArr = meta?.tags ? toStringArray(meta.tags) : [];
       const notesText = typeof meta?.notes === "string" ? meta.notes : "";
 
-      const skillsArr = Array.isArray(u.skillsJson) ? u.skillsJson.map(String).filter(Boolean) : [];
-      const languagesArr = Array.isArray(u.languagesJson)
-        ? u.languagesJson.map(String).filter(Boolean)
+      const primaryResume = primaryResumeByUserId.get(u.id) || null;
+      const experience = primaryResume?.content
+        ? extractExperiencesFromResumeContent(primaryResume.content)
         : [];
 
       return {
@@ -399,26 +411,19 @@ export default async function handler(req, res) {
         userId: u.id,
         name: u.name || "Unnamed",
         email: u.email || null,
-
         title: u.headline || "",
         currentTitle: u.headline || "",
         role: u.headline || "",
         summary: u.aboutMe || "",
         location: u.location || "",
-
-        // ✅ arrays for UI (modal expects arrays)
-        skills: skillsArr,
-        languages: languagesArr,
-
-        // match is handled elsewhere (WHY drawer uses deterministic logic)
+        skills: toCsv(u.skillsJson),
+        languages: toCsv(u.languagesJson),
         match: null,
 
-        // ✅ Experience should come from PRIMARY RESUME, not profile
-        experience: experienceByUserId.get(u.id) || [],
-
-        // ✅ Placeholder fields so UI never breaks; wiring can attach real sources
-        activity: [],
-        journey: [],
+        // ✅ Experience pulled from primary resume (if available)
+        experience, // array of { title, company, startDate, endDate, description }
+        primaryResumeId: primaryResume?.id || null,
+        primaryResumeUpdatedAt: primaryResume?.updatedAt || null,
 
         // recruiter-only metadata
         tags: tagsArr,

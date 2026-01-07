@@ -832,6 +832,7 @@ model RecruiterCandidate {
   accountKey String
 
   tags          Json?
+  skills        Json?
   notes         String?
   pipelineStage String?
   lastContacted DateTime?

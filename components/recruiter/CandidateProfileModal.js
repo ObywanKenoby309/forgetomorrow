@@ -3,10 +3,8 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 
 function toSafeArray(value) {
-  // Accept arrays as-is
   if (Array.isArray(value)) return value;
 
-  // Accept comma-separated strings → array
   if (typeof value === "string") {
     const s = value.trim();
     if (!s) return [];
@@ -16,10 +14,7 @@ function toSafeArray(value) {
       .filter(Boolean);
   }
 
-  // Accept single primitive → [primitive]
   if (typeof value === "number" || typeof value === "boolean") return [value];
-
-  // Anything else (null/object/undefined) → []
   return [];
 }
 
@@ -36,6 +31,7 @@ export default function CandidateProfileModal({
   const [skillInput, setSkillInput] = useState("");
   const [skillsLocal, setSkillsLocal] = useState([]);
   const [tagsLocal, setTagsLocal] = useState([]);
+  const [savingSkills, setSavingSkills] = useState(false);
 
   useEffect(() => {
     if (!open) return;
@@ -44,14 +40,15 @@ export default function CandidateProfileModal({
     setExpandedExp({});
     setJourneyFilter("All");
 
-    // ✅ Normalize skills (supports skills, skillsJson, string, null)
-    const incomingSkills =
-      candidate?.skills ?? candidate?.skillsJson ?? candidate?.skillsJSON;
-    setSkillsLocal(toSafeArray(incomingSkills));
+    // ✅ Recruiter team skills first (do NOT touch candidate's permanent profile)
+    const incomingRecruiterSkills =
+      candidate?.recruiterSkills ?? candidate?.recruiterSkillsJson ?? candidate?.recruiterSkillsJSON;
+
+    setSkillsLocal(toSafeArray(incomingRecruiterSkills));
 
     setSkillInput("");
 
-    // ✅ Normalize tags (supports tags, tagsJson, string, null)
+    // ✅ Normalize tags
     const incomingTags = candidate?.tags ?? candidate?.tagsJson ?? candidate?.tagsJSON;
     setTagsLocal(toSafeArray(incomingTags));
   }, [open, candidate]);
@@ -87,6 +84,32 @@ export default function CandidateProfileModal({
 
     onToggleTag?.(candidate.id, tag);
   };
+
+  async function saveRecruiterSkills(nextSkills) {
+    setSavingSkills(true);
+    try {
+      const res = await fetch("/api/recruiter/candidates/skills", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          candidateId: candidate.id,
+          skills: toSafeArray(nextSkills),
+        }),
+      });
+
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}));
+        console.error("[skills] save failed:", data);
+        alert(data?.error || "Failed to save recruiter skills.");
+        return;
+      }
+    } catch (e) {
+      console.error("[skills] save error:", e);
+      alert("Failed to save recruiter skills.");
+    } finally {
+      setSavingSkills(false);
+    }
+  }
 
   const Tag = ({ t }) => (
     <button
@@ -204,7 +227,7 @@ export default function CandidateProfileModal({
                 <div className="text-sm text-slate-500">
                   No experience listed.
                   <span className="block text-xs text-slate-400 mt-1">
-                    As candidates update their profiles and resumes, their work history will appear here.
+                    Experience is pulled from the candidate’s primary resume.
                   </span>
                 </div>
               )}
@@ -262,7 +285,7 @@ export default function CandidateProfileModal({
                 <div className="text-sm text-slate-500">
                   No recent activity.
                   <span className="block text-xs text-slate-400 mt-1">
-                    As candidates view, apply, and message, their timeline will appear here.
+                    This will populate from job views + applications (team scoped).
                   </span>
                 </div>
               )}
@@ -305,7 +328,7 @@ export default function CandidateProfileModal({
                   <div className="text-slate-500 text-sm">
                     No journey replay data available.
                     <span className="block text-xs text-slate-400 mt-1">
-                      This will populate as candidates interact with your roles.
+                      This will populate from job views + applications (team scoped).
                     </span>
                   </div>
                 )}
@@ -314,9 +337,13 @@ export default function CandidateProfileModal({
           </div>
 
           <div className="space-y-5">
-            {/* Skills still mock-only for now (separate wiring) */}
             <section className={sectionClasses(!hasSkills)}>
               <div className="font-medium mb-2">Skills</div>
+
+              <div className="text-[11px] text-slate-400 mb-2">
+                Visible to your team only. Does not modify the candidate’s profile.
+              </div>
+
               <div className="flex flex-wrap gap-2 mb-3">
                 {hasSkills ? (
                   toSafeArray(skillsLocal).map((s, i) => (
@@ -327,13 +354,14 @@ export default function CandidateProfileModal({
                       {s}
                       <button
                         type="button"
-                        onClick={() =>
-                          setSkillsLocal((prev) =>
-                            toSafeArray(prev).filter((x) => x !== s)
-                          )
-                        }
+                        onClick={async () => {
+                          const next = toSafeArray(skillsLocal).filter((x) => x !== s);
+                          setSkillsLocal(next);
+                          await saveRecruiterSkills(next);
+                        }}
                         className="ml-1 text-slate-500 hover:text-slate-700"
                         title="Remove"
+                        disabled={savingSkills}
                       >
                         ×
                       </button>
@@ -341,10 +369,7 @@ export default function CandidateProfileModal({
                   ))
                 ) : (
                   <div className="text-sm text-slate-500">
-                    No skills listed.
-                    <span className="block text-xs text-slate-400 mt-1">
-                      Add skills to enrich this candidate snapshot for your team. (Local only for now.)
-                    </span>
+                    No recruiter-added skills yet.
                   </div>
                 )}
               </div>
@@ -355,34 +380,35 @@ export default function CandidateProfileModal({
                   placeholder="Add a skill…"
                   value={skillInput}
                   onChange={(e) => setSkillInput(e.target.value)}
-                  onKeyDown={(e) => {
+                  onKeyDown={async (e) => {
                     if (e.key === "Enter") {
                       const val = skillInput.trim();
                       if (val && !toSafeArray(skillsLocal).includes(val)) {
-                        setSkillsLocal((prev) => [...toSafeArray(prev), val]);
+                        const next = [...toSafeArray(skillsLocal), val];
+                        setSkillsLocal(next);
                         setSkillInput("");
+                        await saveRecruiterSkills(next);
                       }
                     }
                   }}
                 />
                 <button
                   type="button"
-                  onClick={() => {
+                  disabled={savingSkills}
+                  onClick={async () => {
                     const val = skillInput.trim();
                     if (val && !toSafeArray(skillsLocal).includes(val)) {
-                      setSkillsLocal((prev) => [...toSafeArray(prev), val]);
+                      const next = [...toSafeArray(skillsLocal), val];
+                      setSkillsLocal(next);
                       setSkillInput("");
+                      await saveRecruiterSkills(next);
                     }
                   }}
-                  className="px-3 py-2 rounded text-sm text-white bg-[#FF7043] hover:bg-[#F4511E]"
+                  className="px-3 py-2 rounded text-sm text-white bg-[#FF7043] hover:bg-[#F4511E] disabled:opacity-50"
                 >
-                  Add
+                  {savingSkills ? "Saving…" : "Add"}
                 </button>
               </div>
-
-              <p className="mt-2 text-xs text-slate-500">
-                Mock only — skill edits aren&apos;t saved yet.
-              </p>
             </section>
 
             <section className={sectionClasses(false)}>
