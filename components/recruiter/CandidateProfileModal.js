@@ -14,6 +14,7 @@ export default function CandidateProfileModal({
   const [journeyFilter, setJourneyFilter] = useState("All");
   const [skillInput, setSkillInput] = useState("");
   const [skillsLocal, setSkillsLocal] = useState([]);
+  const [tagsLocal, setTagsLocal] = useState([]);
 
   useEffect(() => {
     if (open) {
@@ -22,10 +23,10 @@ export default function CandidateProfileModal({
       setJourneyFilter("All");
       setSkillsLocal(candidate?.skills || []);
       setSkillInput("");
+      setTagsLocal(Array.isArray(candidate?.tags) ? candidate.tags : []);
     }
   }, [open, candidate]);
 
-  // Helpers (no hooks) — avoids hook-order issues entirely
   const inferType = (action = "") => {
     const a = action.toLowerCase();
     if (a.includes("view")) return "Views";
@@ -44,11 +45,21 @@ export default function CandidateProfileModal({
 
   const saveNotes = () => onSaveNotes?.(candidate.id, notes);
 
+  const toggleTagLocal = (t) => {
+    setTagsLocal((prev) => {
+      const has = prev.includes(t);
+      if (has) return prev.filter((x) => x !== t);
+      return [...prev, t];
+    });
+    onToggleTag?.(candidate.id, t);
+  };
+
   const Tag = ({ t }) => (
     <button
-      onClick={() => onToggleTag?.(candidate.id, t)}
+      type="button"
+      onClick={() => toggleTagLocal(t)}
       className={`text-xs px-2 py-[6px] rounded border ${
-        (candidate.tags || []).includes(t)
+        (tagsLocal || []).includes(t)
           ? "bg-emerald-50 text-emerald-700 border-emerald-200"
           : "bg-slate-100 text-slate-700 border-slate-300"
       }`}
@@ -57,19 +68,12 @@ export default function CandidateProfileModal({
     </button>
   );
 
-  const toggleExp = (idx) =>
-    setExpandedExp((p) => ({ ...p, [idx]: !p[idx] }));
+  const toggleExp = (idx) => setExpandedExp((p) => ({ ...p, [idx]: !p[idx] }));
 
-  // ─────────────────────────────────────────
-  // Subtle UX helpers
-  // ─────────────────────────────────────────
   const sectionClasses = (isEmpty = false) =>
-    `rounded border p-4 ${
-      isEmpty ? "bg-slate-50 border-slate-200" : "bg-white"
-    }`;
+    `rounded border p-4 ${isEmpty ? "bg-slate-50 border-slate-200" : "bg-white"}`;
 
-  const isSummaryEmpty =
-    !candidate.summary || !candidate.summary.toString().trim();
+  const isSummaryEmpty = !candidate.summary || !candidate.summary.toString().trim();
   const hasExperience = (candidate.experience || []).length > 0;
   const hasActivity = (candidate.activity || []).length > 0;
   const hasJourney = getFilteredJourney().length > 0;
@@ -78,12 +82,9 @@ export default function CandidateProfileModal({
 
   return (
     <div className="fixed inset-0 z-[100] flex items-center justify-center">
-      {/* Backdrop */}
       <div className="absolute inset-0 bg-black/50" onClick={onClose} />
 
-      {/* Modal shell */}
       <div className="relative w-full max-w-6xl rounded-lg bg-white shadow-xl border max-h-[90vh] flex flex-col">
-        {/* Header */}
         <div className="p-5 border-b flex items-center justify-between flex-shrink-0">
           <div>
             <div className="text-lg font-semibold">{candidate.name}</div>
@@ -92,6 +93,7 @@ export default function CandidateProfileModal({
             </div>
           </div>
           <button
+            type="button"
             onClick={onClose}
             className="rounded border px-3 py-2 text-sm hover:bg-slate-50"
           >
@@ -99,11 +101,8 @@ export default function CandidateProfileModal({
           </button>
         </div>
 
-        {/* Body */}
         <div className="p-5 grid grid-cols-1 lg:grid-cols-3 gap-5 overflow-y-auto bg-slate-50/40">
-          {/* LEFT: Summary, Experience, Activity, Journey */}
           <div className="lg:col-span-2 space-y-5">
-            {/* Summary */}
             <section className={sectionClasses(isSummaryEmpty)}>
               <div className="font-medium mb-1">Summary</div>
               {isSummaryEmpty ? (
@@ -120,7 +119,6 @@ export default function CandidateProfileModal({
               )}
             </section>
 
-            {/* Experience (expandable) */}
             <section className={sectionClasses(!hasExperience)}>
               <div className="font-medium mb-2">Experience</div>
               {hasExperience ? (
@@ -138,6 +136,7 @@ export default function CandidateProfileModal({
                           </div>
                           {exp.highlights?.length ? (
                             <button
+                              type="button"
                               onClick={() => toggleExp(idx)}
                               className="text-xs px-2 py-1 border rounded hover:bg-slate-50"
                             >
@@ -161,14 +160,12 @@ export default function CandidateProfileModal({
                 <div className="text-sm text-slate-500">
                   No experience listed.
                   <span className="block text-xs text-slate-400 mt-1">
-                    As candidates update their profiles and resumes, their work
-                    history will appear here.
+                    As candidates update their profiles and resumes, their work history will appear here.
                   </span>
                 </div>
               )}
             </section>
 
-            {/* Activity (Next.js-safe links) */}
             <section className={sectionClasses(!hasActivity)}>
               <div className="font-medium mb-2">Recent Activity</div>
               {hasActivity ? (
@@ -186,10 +183,7 @@ export default function CandidateProfileModal({
                       return (
                         <li key={idx}>
                           {isInternal ? (
-                            <Link
-                              href={a.url}
-                              className="block hover:bg-slate-50 rounded px-2 py-1"
-                            >
+                            <Link href={a.url} className="block hover:bg-slate-50 rounded px-2 py-1">
                               {content}
                             </Link>
                           ) : (
@@ -217,20 +211,19 @@ export default function CandidateProfileModal({
                 <div className="text-sm text-slate-500">
                   No recent activity.
                   <span className="block text-xs text-slate-400 mt-1">
-                    As candidates view, apply, and message, their timeline will
-                    appear here.
+                    As candidates view, apply, and message, their timeline will appear here.
                   </span>
                 </div>
               )}
             </section>
 
-            {/* Candidate Journey Replay (with filter) */}
             <section className={sectionClasses(!hasJourney)}>
               <div className="flex items-center justify-between mb-2">
                 <div className="font-medium">Candidate Journey Replay</div>
                 <div className="flex gap-2">
                   {["All", "Views", "Applies", "Messages"].map((f) => (
                     <button
+                      type="button"
                       key={f}
                       onClick={() => setJourneyFilter(f)}
                       className={`text-xs px-2 py-1 rounded border ${
@@ -265,9 +258,8 @@ export default function CandidateProfileModal({
             </section>
           </div>
 
-          {/* RIGHT: Skills, Tags, Notes */}
           <div className="space-y-5">
-            {/* Skills (add/remove; local only) */}
+            {/* Skills still mock-only for now (separate wiring) */}
             <section className={sectionClasses(!hasSkills)}>
               <div className="font-medium mb-2">Skills</div>
               <div className="flex flex-wrap gap-2 mb-3">
@@ -279,9 +271,8 @@ export default function CandidateProfileModal({
                     >
                       {s}
                       <button
-                        onClick={() => {
-                          setSkillsLocal((prev) => prev.filter((x) => x !== s));
-                        }}
+                        type="button"
+                        onClick={() => setSkillsLocal((prev) => prev.filter((x) => x !== s))}
                         className="ml-1 text-slate-500 hover:text-slate-700"
                         title="Remove"
                       >
@@ -293,8 +284,7 @@ export default function CandidateProfileModal({
                   <div className="text-sm text-slate-500">
                     No skills listed.
                     <span className="block text-xs text-slate-400 mt-1">
-                      Add skills to enrich this candidate snapshot for your
-                      team. (Local only for now.)
+                      Add skills to enrich this candidate snapshot for your team. (Local only for now.)
                     </span>
                   </div>
                 )}
@@ -316,6 +306,7 @@ export default function CandidateProfileModal({
                   }}
                 />
                 <button
+                  type="button"
                   onClick={() => {
                     const val = skillInput.trim();
                     if (val && !skillsLocal.includes(val)) {
@@ -328,24 +319,18 @@ export default function CandidateProfileModal({
                   Add
                 </button>
               </div>
-              <p className="mt-2 text-xs text-slate-500">
-                Mock only — skill edits aren&apos;t saved yet.
-              </p>
+              <p className="mt-2 text-xs text-slate-500">Mock only — skill edits aren&apos;t saved yet.</p>
             </section>
 
-            {/* Tags */}
             <section className={sectionClasses(false)}>
               <div className="font-medium mb-2">Tags</div>
               <div className="flex flex-wrap gap-2">
-                {["Top Prospect", "Phone Screen", "Keep Warm", "Do Not Contact"].map(
-                  (t) => (
-                    <Tag key={t} t={t} />
-                  )
-                )}
+                {["Top Prospect", "Phone Screen", "Keep Warm", "Do Not Contact"].map((t) => (
+                  <Tag key={t} t={t} />
+                ))}
               </div>
             </section>
 
-            {/* Notes */}
             <section className={sectionClasses(!hasNotes)}>
               <div className="font-medium mb-2">Notes</div>
               <textarea
@@ -355,11 +340,11 @@ export default function CandidateProfileModal({
                 onChange={(e) => setNotes(e.target.value)}
               />
               <div className="mt-1 text-[11px] text-slate-400">
-                Notes are private to your organization and are not shared with
-                candidates.
+                Notes are private to your organization and are not shared with candidates.
               </div>
               <div className="mt-3 flex items-center justify-end">
                 <button
+                  type="button"
                   onClick={saveNotes}
                   className="px-3 py-2 rounded text-sm text-white bg-[#FF7043] hover:bg-[#F4511E]"
                 >

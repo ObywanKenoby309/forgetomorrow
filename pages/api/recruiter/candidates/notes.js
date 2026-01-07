@@ -4,7 +4,7 @@
 // ✅ Impersonation-aware: resolves effective recruiter via ft_imp cookie (Platform Admin only)
 
 import { PrismaClient } from "@prisma/client";
-import { getServerSession } from "next-auth";
+import { getServerSession } from "next-auth/next";
 import { authOptions } from "../../auth/[...nextauth]";
 import jwt from "jsonwebtoken";
 
@@ -17,6 +17,11 @@ function getPrisma() {
 function asString(v) {
   const s = typeof v === "string" ? v : String(v || "");
   return s.trim();
+}
+
+function cleanNotes(v) {
+  const s = typeof v === "string" ? v : String(v || "");
+  return s.trim().slice(0, 6000);
 }
 
 function readCookie(req, name) {
@@ -43,12 +48,15 @@ async function resolveEffectiveRecruiter(prisma, req, session) {
     const imp = readCookie(req, "ft_imp");
     if (imp) {
       try {
-        const decoded = jwt.verify(imp, process.env.NEXTAUTH_SECRET || "dev-secret-change-in-production");
+        const decoded = jwt.verify(
+          imp,
+          process.env.NEXTAUTH_SECRET || "dev-secret-change-in-production"
+        );
         if (decoded && typeof decoded === "object" && decoded.targetUserId) {
           effectiveUserId = String(decoded.targetUserId);
         }
       } catch {
-        // ignore
+        // ignore invalid/expired cookie
       }
     }
   }
@@ -87,23 +95,21 @@ export default async function handler(req, res) {
     return res.status(401).json({ error: "Not authenticated" });
   }
 
-  // ✅ Impersonation-aware recruiter identity
   const recruiter = await resolveEffectiveRecruiter(prisma, req, session);
-
   if (!recruiter?.id || !recruiter.accountKey) {
     return res.status(404).json({ error: "Recruiter or accountKey not found" });
   }
 
-  const { candidateId, notes } = req.body || {};
-  const candidateUserId = asString(candidateId);
+  const candidateUserId = asString(req.body?.candidateId);
+  const notes = cleanNotes(req.body?.notes);
 
   if (!candidateUserId) {
     return res.status(400).json({ error: "Invalid candidateId." });
   }
 
-  // Ensure candidate exists
-  const candidateUser = await prisma.user.findUnique({
-    where: { id: candidateUserId },
+  // Ensure candidate exists + not deleted
+  const candidateUser = await prisma.user.findFirst({
+    where: { id: candidateUserId, deletedAt: null },
     select: { id: true },
   });
 
@@ -124,11 +130,18 @@ export default async function handler(req, res) {
         recruiterUserId: recruiter.id,
         candidateUserId,
         accountKey: recruiter.accountKey,
-        notes: typeof notes === "string" ? notes : String(notes || ""),
-        tags: [],
+        notes,
+        // leave tags null unless tags endpoint sets them
       },
       update: {
-        notes: typeof notes === "string" ? notes : String(notes || ""),
+        notes,
+      },
+      select: {
+        candidateUserId: true,
+        notes: true,
+        tags: true,
+        pipelineStage: true,
+        updatedAt: true,
       },
     });
 

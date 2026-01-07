@@ -4,7 +4,7 @@
 // ✅ Impersonation-aware: resolves effective recruiter via ft_imp cookie (Platform Admin only)
 
 import { PrismaClient } from "@prisma/client";
-import { getServerSession } from "next-auth";
+import { getServerSession } from "next-auth/next";
 import { authOptions } from "../../auth/[...nextauth]";
 import jwt from "jsonwebtoken";
 
@@ -14,14 +14,34 @@ function getPrisma() {
   return prisma;
 }
 
-function toStringArray(v) {
-  if (!Array.isArray(v)) return null;
-  return v.map((x) => String(x || "").trim()).filter(Boolean);
-}
-
 function asString(v) {
   const s = typeof v === "string" ? v : String(v || "");
   return s.trim();
+}
+
+function normalizeTags(v) {
+  if (!Array.isArray(v)) return null;
+
+  // Trim, drop empties, dedupe (case-insensitive), cap sizes
+  const cleaned = [];
+  const seen = new Set();
+
+  for (const raw of v) {
+    const t = String(raw || "").trim();
+    if (!t) continue;
+
+    const key = t.toLowerCase();
+    if (seen.has(key)) continue;
+
+    // prevent absurd single-tag payloads
+    cleaned.push(t.slice(0, 40));
+    seen.add(key);
+
+    // prevent unlimited tag spam
+    if (cleaned.length >= 25) break;
+  }
+
+  return cleaned;
 }
 
 function readCookie(req, name) {
@@ -48,7 +68,10 @@ async function resolveEffectiveRecruiter(prisma, req, session) {
     const imp = readCookie(req, "ft_imp");
     if (imp) {
       try {
-        const decoded = jwt.verify(imp, process.env.NEXTAUTH_SECRET || "dev-secret-change-in-production");
+        const decoded = jwt.verify(
+          imp,
+          process.env.NEXTAUTH_SECRET || "dev-secret-change-in-production"
+        );
         if (decoded && typeof decoded === "object" && decoded.targetUserId) {
           effectiveUserId = String(decoded.targetUserId);
         }
@@ -92,28 +115,24 @@ export default async function handler(req, res) {
     return res.status(401).json({ error: "Not authenticated" });
   }
 
-  // ✅ Impersonation-aware recruiter identity
   const recruiter = await resolveEffectiveRecruiter(prisma, req, session);
-
   if (!recruiter?.id || !recruiter.accountKey) {
     return res.status(404).json({ error: "Recruiter or accountKey not found" });
   }
 
-  const { candidateId, tags } = req.body || {};
-  const candidateUserId = asString(candidateId);
-
+  const candidateUserId = asString(req.body?.candidateId);
   if (!candidateUserId) {
     return res.status(400).json({ error: "Invalid candidateId." });
   }
 
-  const tagsArr = toStringArray(tags);
+  const tagsArr = normalizeTags(req.body?.tags);
   if (!tagsArr) {
     return res.status(400).json({ error: "tags must be an array of strings." });
   }
 
-  // Ensure candidate exists
-  const candidateUser = await prisma.user.findUnique({
-    where: { id: candidateUserId },
+  // Ensure candidate exists + not deleted
+  const candidateUser = await prisma.user.findFirst({
+    where: { id: candidateUserId, deletedAt: null },
     select: { id: true },
   });
 
@@ -135,10 +154,17 @@ export default async function handler(req, res) {
         candidateUserId,
         accountKey: recruiter.accountKey,
         tags: tagsArr,
-        notes: "",
+        // do NOT set notes here
       },
       update: {
         tags: tagsArr,
+      },
+      select: {
+        candidateUserId: true,
+        tags: true,
+        notes: true,
+        pipelineStage: true,
+        updatedAt: true,
       },
     });
 

@@ -7,9 +7,9 @@ export default function CandidateList({
   onView,
   onMessage,
   onWhy,
-  showFilters,      // currently unused but kept for compatibility
-  showFilterBar,    // currently unused but kept for compatibility
-  filtersVisible,   // currently unused but kept for compatibility
+  showFilters,
+  showFilterBar,
+  filtersVisible,
   query,
   locationFilter,
   booleanQuery,
@@ -49,7 +49,6 @@ export default function CandidateList({
 
 function CandidateCard({ candidate, isEnterprise, onView, onMessage, onWhy }) {
   const {
-    id,
     name,
     title,
     role,
@@ -73,7 +72,7 @@ function CandidateCard({ candidate, isEnterprise, onView, onMessage, onWhy }) {
 
   return (
     <div className="flex flex-col gap-3 rounded-lg border border-slate-200 bg-white px-4 py-3 shadow-sm sm:flex-row sm:items-start sm:justify-between">
-      {/* Left: main info */}
+      {/* Left */}
       <div className="flex-1 min-w-0">
         <div className="flex items-start gap-2">
           <div className="flex-1 min-w-0">
@@ -83,7 +82,7 @@ function CandidateCard({ candidate, isEnterprise, onView, onMessage, onWhy }) {
             <p className="mt-0.5 text-xs text-slate-600 truncate">
               {displayTitle}
             </p>
-            <p className="mt-0.5 text-[11px] text-slate-500">
+            <p className="mt-0.5 text-[11px] text-slate-500 break-words">
               {location && <span>{location}</span>}
               {location && (workStatus || preferredWorkType) && (
                 <span className="mx-1 text-slate-400">•</span>
@@ -116,7 +115,7 @@ function CandidateCard({ candidate, isEnterprise, onView, onMessage, onWhy }) {
             {tagList.map((tag) => (
               <span
                 key={tag}
-                className="inline-flex items-center rounded-full bg-slate-100 px-2 py-0.5 text-[10px] font-medium text-slate-700"
+                className="inline-flex items-center rounded-full bg-slate-100 px-2 py-0.5 text-[10px] font-medium text-slate-700 break-words"
               >
                 {tag}
               </span>
@@ -125,44 +124,41 @@ function CandidateCard({ candidate, isEnterprise, onView, onMessage, onWhy }) {
         )}
       </div>
 
-      {/* Right: actions */}
-      <div className="flex flex-col items-stretch gap-2 sm:items-end sm:justify-between">
+      {/* Right */}
+      <div className="flex w-full flex-col items-stretch gap-2 sm:w-auto sm:items-end sm:justify-between min-w-0">
         <div className="flex flex-wrap items-center justify-start gap-2 sm:justify-end">
-          {/* Primary CTA: Message */}
           {typeof onMessage === "function" && (
             <button
               type="button"
               onClick={() => onMessage(candidate)}
-              className="inline-flex items-center justify-center rounded-full bg-[#FF7043] px-3 py-1.5 text-xs font-semibold text-white shadow-sm hover:bg-[#F4511E] focus:outline-none focus:ring-2 focus:ring-offset-1 focus:ring-[#FF7043]"
+              className="inline-flex items-center justify-center rounded-full bg-[#FF7043] px-3 py-1.5 text-xs font-semibold text-white shadow-sm hover:bg-[#F4511E]"
             >
               Message
             </button>
           )}
 
-          {/* Secondary: View profile */}
           {typeof onView === "function" && (
             <button
               type="button"
               onClick={() => onView(candidate)}
-              className="inline-flex items-center justify-center rounded-full border border-slate-300 px-3 py-1.5 text-xs font-medium text-slate-700 hover:bg-slate-50 focus:outline-none focus:ring-2 focus:ring-offset-1 focus:ring-slate-300"
+              className="inline-flex items-center justify-center rounded-full border border-slate-300 px-3 py-1.5 text-xs font-medium text-slate-700 hover:bg-slate-50"
             >
               View profile
             </button>
           )}
 
-          {/* WHY button (if provided) */}
           {typeof onWhy === "function" && (
             <button
               type="button"
               onClick={() => onWhy(candidate)}
-              className="inline-flex items-center justify-center rounded-full border border-slate-200 px-3 py-1.5 text-[11px] font-semibold text-slate-700 hover:bg-slate-50 focus:outline-none focus:ring-2 focus:ring-offset-1 focus:ring-slate-200"
+              className="inline-flex items-center justify-center rounded-full border border-slate-200 px-3 py-1.5 text-[11px] font-semibold text-slate-700 hover:bg-slate-50"
             >
               WHY this candidate
             </button>
           )}
         </div>
 
-        <p className="mt-1 text-[10px] text-slate-500 text-right max-w-[220px]">
+        <p className="mt-1 text-[10px] text-slate-500 text-left sm:text-right w-full break-words">
           New threads start here. Your choice of Recruiter inbox or Signal
           (personal) inbox happens on the next step.
         </p>
