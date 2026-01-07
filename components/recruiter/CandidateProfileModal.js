@@ -2,6 +2,27 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 
+function toSafeArray(value) {
+  // Accept arrays as-is
+  if (Array.isArray(value)) return value;
+
+  // Accept comma-separated strings → array
+  if (typeof value === "string") {
+    const s = value.trim();
+    if (!s) return [];
+    return s
+      .split(",")
+      .map((x) => String(x || "").trim())
+      .filter(Boolean);
+  }
+
+  // Accept single primitive → [primitive]
+  if (typeof value === "number" || typeof value === "boolean") return [value];
+
+  // Anything else (null/object/undefined) → []
+  return [];
+}
+
 export default function CandidateProfileModal({
   open,
   onClose,
@@ -17,18 +38,26 @@ export default function CandidateProfileModal({
   const [tagsLocal, setTagsLocal] = useState([]);
 
   useEffect(() => {
-    if (open) {
-      setNotes(candidate?.notes || "");
-      setExpandedExp({});
-      setJourneyFilter("All");
-      setSkillsLocal(candidate?.skills || []);
-      setSkillInput("");
-      setTagsLocal(Array.isArray(candidate?.tags) ? candidate.tags : []);
-    }
+    if (!open) return;
+
+    setNotes(candidate?.notes || "");
+    setExpandedExp({});
+    setJourneyFilter("All");
+
+    // ✅ Normalize skills (supports skills, skillsJson, string, null)
+    const incomingSkills =
+      candidate?.skills ?? candidate?.skillsJson ?? candidate?.skillsJSON;
+    setSkillsLocal(toSafeArray(incomingSkills));
+
+    setSkillInput("");
+
+    // ✅ Normalize tags (supports tags, tagsJson, string, null)
+    const incomingTags = candidate?.tags ?? candidate?.tagsJson ?? candidate?.tagsJSON;
+    setTagsLocal(toSafeArray(incomingTags));
   }, [open, candidate]);
 
   const inferType = (action = "") => {
-    const a = action.toLowerCase();
+    const a = String(action || "").toLowerCase();
     if (a.includes("view")) return "Views";
     if (a.includes("apply")) return "Applies";
     if (a.includes("message") || a.includes("email")) return "Messages";
@@ -36,9 +65,9 @@ export default function CandidateProfileModal({
   };
 
   const getFilteredJourney = () => {
-    const list = candidate?.journey || [];
+    const list = toSafeArray(candidate?.journey);
     if (journeyFilter === "All") return list;
-    return list.filter((s) => inferType(s.action) === journeyFilter);
+    return list.filter((s) => inferType(s?.action) === journeyFilter);
   };
 
   if (!open || !candidate) return null;
@@ -46,12 +75,17 @@ export default function CandidateProfileModal({
   const saveNotes = () => onSaveNotes?.(candidate.id, notes);
 
   const toggleTagLocal = (t) => {
+    const tag = String(t || "").trim();
+    if (!tag) return;
+
     setTagsLocal((prev) => {
-      const has = prev.includes(t);
-      if (has) return prev.filter((x) => x !== t);
-      return [...prev, t];
+      const arr = toSafeArray(prev);
+      const has = arr.includes(tag);
+      if (has) return arr.filter((x) => x !== tag);
+      return [...arr, tag];
     });
-    onToggleTag?.(candidate.id, t);
+
+    onToggleTag?.(candidate.id, tag);
   };
 
   const Tag = ({ t }) => (
@@ -59,7 +93,7 @@ export default function CandidateProfileModal({
       type="button"
       onClick={() => toggleTagLocal(t)}
       className={`text-xs px-2 py-[6px] rounded border ${
-        (tagsLocal || []).includes(t)
+        toSafeArray(tagsLocal).includes(t)
           ? "bg-emerald-50 text-emerald-700 border-emerald-200"
           : "bg-slate-100 text-slate-700 border-slate-300"
       }`}
@@ -74,10 +108,15 @@ export default function CandidateProfileModal({
     `rounded border p-4 ${isEmpty ? "bg-slate-50 border-slate-200" : "bg-white"}`;
 
   const isSummaryEmpty = !candidate.summary || !candidate.summary.toString().trim();
-  const hasExperience = (candidate.experience || []).length > 0;
-  const hasActivity = (candidate.activity || []).length > 0;
-  const hasJourney = getFilteredJourney().length > 0;
-  const hasSkills = skillsLocal.length > 0;
+
+  const experienceList = toSafeArray(candidate.experience);
+  const activityList = toSafeArray(candidate.activity);
+  const journeyList = getFilteredJourney();
+
+  const hasExperience = experienceList.length > 0;
+  const hasActivity = activityList.length > 0;
+  const hasJourney = journeyList.length > 0;
+  const hasSkills = toSafeArray(skillsLocal).length > 0;
   const hasNotes = notes.trim().length > 0;
 
   return (
@@ -86,9 +125,11 @@ export default function CandidateProfileModal({
 
       <div className="relative w-full max-w-6xl rounded-lg bg-white shadow-xl border max-h-[90vh] flex flex-col">
         <div className="p-5 border-b flex items-center justify-between flex-shrink-0">
-          <div>
-            <div className="text-lg font-semibold">{candidate.name}</div>
-            <div className="text-sm text-slate-500">
+          <div className="min-w-0">
+            <div className="text-lg font-semibold truncate">
+              {candidate.name || "Candidate"}
+            </div>
+            <div className="text-sm text-slate-500 truncate">
               {candidate.role || "Candidate"} • {candidate.location || "—"}
             </div>
           </div>
@@ -123,31 +164,34 @@ export default function CandidateProfileModal({
               <div className="font-medium mb-2">Experience</div>
               {hasExperience ? (
                 <ul className="space-y-3 text-sm">
-                  {(candidate.experience || []).map((exp, idx) => {
+                  {experienceList.map((exp, idx) => {
                     const openItem = !!expandedExp[idx];
+                    const highlights = toSafeArray(exp?.highlights);
                     return (
                       <li key={idx} className="border-b last:border-0 pb-3">
                         <div className="flex items-start justify-between gap-3">
-                          <div>
-                            <div className="font-medium">
-                              {exp.title} — {exp.company}
+                          <div className="min-w-0">
+                            <div className="font-medium break-words">
+                              {exp?.title || "Role"} — {exp?.company || "Company"}
                             </div>
-                            <div className="text-slate-500">{exp.range}</div>
+                            <div className="text-slate-500 break-words">
+                              {exp?.range || "—"}
+                            </div>
                           </div>
-                          {exp.highlights?.length ? (
+                          {highlights.length ? (
                             <button
                               type="button"
                               onClick={() => toggleExp(idx)}
-                              className="text-xs px-2 py-1 border rounded hover:bg-slate-50"
+                              className="text-xs px-2 py-1 border rounded hover:bg-slate-50 shrink-0"
                             >
                               {openItem ? "Hide" : "Show"} details
                             </button>
                           ) : null}
                         </div>
 
-                        {openItem && exp.highlights?.length ? (
+                        {openItem && highlights.length ? (
                           <ul className="list-disc pl-5 mt-2 space-y-1">
-                            {exp.highlights.map((h, i) => (
+                            {highlights.map((h, i) => (
                               <li key={i}>{h}</li>
                             ))}
                           </ul>
@@ -170,20 +214,27 @@ export default function CandidateProfileModal({
               <div className="font-medium mb-2">Recent Activity</div>
               {hasActivity ? (
                 <ul className="space-y-2 text-sm">
-                  {(candidate.activity || []).map((a, idx) => {
+                  {activityList.map((a, idx) => {
                     const content = (
-                      <div className="flex items-center justify-between w-full">
-                        <span className="text-slate-700">{a.event}</span>
-                        <span className="text-slate-500">{a.when}</span>
+                      <div className="flex items-center justify-between w-full gap-3">
+                        <span className="text-slate-700 break-words min-w-0">
+                          {a?.event || "Activity"}
+                        </span>
+                        <span className="text-slate-500 shrink-0">
+                          {a?.when || ""}
+                        </span>
                       </div>
                     );
 
-                    if (a.url) {
-                      const isInternal = a.url.startsWith("/");
+                    if (a?.url) {
+                      const isInternal = String(a.url).startsWith("/");
                       return (
                         <li key={idx}>
                           {isInternal ? (
-                            <Link href={a.url} className="block hover:bg-slate-50 rounded px-2 py-1">
+                            <Link
+                              href={a.url}
+                              className="block hover:bg-slate-50 rounded px-2 py-1"
+                            >
                               {content}
                             </Link>
                           ) : (
@@ -218,9 +269,9 @@ export default function CandidateProfileModal({
             </section>
 
             <section className={sectionClasses(!hasJourney)}>
-              <div className="flex items-center justify-between mb-2">
+              <div className="flex items-center justify-between mb-2 gap-3">
                 <div className="font-medium">Candidate Journey Replay</div>
-                <div className="flex gap-2">
+                <div className="flex gap-2 flex-wrap justify-end">
                   {["All", "Views", "Applies", "Messages"].map((f) => (
                     <button
                       type="button"
@@ -240,10 +291,14 @@ export default function CandidateProfileModal({
 
               <div className="space-y-3 overflow-y-auto max-h-[300px] pr-2">
                 {hasJourney ? (
-                  getFilteredJourney().map((step, idx) => (
+                  journeyList.map((step, idx) => (
                     <div key={idx} className="text-sm">
-                      <div className="font-medium">{step.action}</div>
-                      <div className="text-slate-500">{step.timestamp}</div>
+                      <div className="font-medium break-words">
+                        {step?.action || "Event"}
+                      </div>
+                      <div className="text-slate-500 break-words">
+                        {step?.timestamp || ""}
+                      </div>
                     </div>
                   ))
                 ) : (
@@ -264,15 +319,19 @@ export default function CandidateProfileModal({
               <div className="font-medium mb-2">Skills</div>
               <div className="flex flex-wrap gap-2 mb-3">
                 {hasSkills ? (
-                  skillsLocal.map((s, i) => (
+                  toSafeArray(skillsLocal).map((s, i) => (
                     <span
-                      key={i}
-                      className="text-xs px-2 py-[6px] rounded border bg-slate-100 text-slate-700 border-slate-300 flex items-center gap-1"
+                      key={`${s}-${i}`}
+                      className="text-xs px-2 py-[6px] rounded border bg-slate-100 text-slate-700 border-slate-300 flex items-center gap-1 break-words"
                     >
                       {s}
                       <button
                         type="button"
-                        onClick={() => setSkillsLocal((prev) => prev.filter((x) => x !== s))}
+                        onClick={() =>
+                          setSkillsLocal((prev) =>
+                            toSafeArray(prev).filter((x) => x !== s)
+                          )
+                        }
                         className="ml-1 text-slate-500 hover:text-slate-700"
                         title="Remove"
                       >
@@ -289,6 +348,7 @@ export default function CandidateProfileModal({
                   </div>
                 )}
               </div>
+
               <div className="flex items-center gap-2">
                 <input
                   className="border rounded px-3 py-2 text-sm w-full"
@@ -298,8 +358,8 @@ export default function CandidateProfileModal({
                   onKeyDown={(e) => {
                     if (e.key === "Enter") {
                       const val = skillInput.trim();
-                      if (val && !skillsLocal.includes(val)) {
-                        setSkillsLocal((prev) => [...prev, val]);
+                      if (val && !toSafeArray(skillsLocal).includes(val)) {
+                        setSkillsLocal((prev) => [...toSafeArray(prev), val]);
                         setSkillInput("");
                       }
                     }
@@ -309,8 +369,8 @@ export default function CandidateProfileModal({
                   type="button"
                   onClick={() => {
                     const val = skillInput.trim();
-                    if (val && !skillsLocal.includes(val)) {
-                      setSkillsLocal((prev) => [...prev, val]);
+                    if (val && !toSafeArray(skillsLocal).includes(val)) {
+                      setSkillsLocal((prev) => [...toSafeArray(prev), val]);
                       setSkillInput("");
                     }
                   }}
@@ -319,7 +379,10 @@ export default function CandidateProfileModal({
                   Add
                 </button>
               </div>
-              <p className="mt-2 text-xs text-slate-500">Mock only — skill edits aren&apos;t saved yet.</p>
+
+              <p className="mt-2 text-xs text-slate-500">
+                Mock only — skill edits aren&apos;t saved yet.
+              </p>
             </section>
 
             <section className={sectionClasses(false)}>
