@@ -14,14 +14,6 @@ function getPrisma() {
   return prisma;
 }
 
-function toCsv(arr) {
-  if (!Array.isArray(arr)) return "";
-  return arr
-    .map((s) => String(s || "").trim())
-    .filter(Boolean)
-    .join(", ");
-}
-
 function toStringArray(v) {
   if (Array.isArray(v)) return v.map((x) => String(x || "").trim()).filter(Boolean);
   return [];
@@ -54,7 +46,10 @@ async function resolveEffectiveRecruiter(prisma, req, session) {
     const imp = readCookie(req, "ft_imp");
     if (imp) {
       try {
-        const decoded = jwt.verify(imp, process.env.NEXTAUTH_SECRET || "dev-secret-change-in-production");
+        const decoded = jwt.verify(
+          imp,
+          process.env.NEXTAUTH_SECRET || "dev-secret-change-in-production"
+        );
         if (decoded && typeof decoded === "object" && decoded.targetUserId) {
           effectiveUserId = String(decoded.targetUserId);
         }
@@ -77,6 +72,96 @@ async function resolveEffectiveRecruiter(prisma, req, session) {
     select: { id: true, email: true, accountKey: true },
   });
   return u?.id ? u : null;
+}
+
+// ─────────────────────────────────────────────────────────────
+// SAFE helpers for “experience from primary resume” (optional)
+// ─────────────────────────────────────────────────────────────
+function extractExperienceFromResumeRow(r) {
+  // We don’t know your schema yet, so we probe a few common shapes.
+  // Returned format matches CandidateProfileModal expectation:
+  // [{ title, company, range, highlights: [] }]
+  try {
+    if (!r || typeof r !== "object") return [];
+
+    const candidates = [
+      r.experience,
+      r.experiences,
+      r.experiencesJson,
+      r.workHistory,
+      r.workHistoryJson,
+      r.resumeJson?.experience,
+      r.resumeJson?.experiences,
+      r.data?.experience,
+      r.data?.experiences,
+    ].filter(Boolean);
+
+    const raw = candidates.find((x) => Array.isArray(x)) || null;
+    if (!raw) return [];
+
+    return raw
+      .filter(Boolean)
+      .slice(0, 20)
+      .map((e) => ({
+        title: e.title || e.role || "",
+        company: e.company || e.employer || "",
+        range:
+          e.range ||
+          [e.from || e.startDate || e.start || "", e.to || e.endDate || e.end || ""]
+            .filter(Boolean)
+            .join(" – "),
+        highlights: Array.isArray(e.highlights)
+          ? e.highlights.map((h) => String(h || "")).filter(Boolean)
+          : [],
+      }))
+      .filter((x) => x.title || x.company || x.range || (x.highlights || []).length);
+  } catch {
+    return [];
+  }
+}
+
+async function fetchPrimaryResumeExperience(prisma, candidateUserIds) {
+  // If prisma.resume model doesn’t exist, do nothing safely.
+  if (!prisma?.resume || typeof prisma.resume.findMany !== "function") {
+    return new Map(); // candidateUserId -> experience[]
+  }
+
+  try {
+    // We also don’t know your exact field names, so we select a few likely ones.
+    const rows = await prisma.resume.findMany({
+      where: {
+        userId: { in: candidateUserIds },
+        OR: [{ isPrimary: true }, { isDefault: true }],
+      },
+      select: {
+        id: true,
+        userId: true,
+        isPrimary: true,
+        isDefault: true,
+        experience: true,
+        experiences: true,
+        experiencesJson: true,
+        workHistory: true,
+        workHistoryJson: true,
+        resumeJson: true,
+        data: true,
+        updatedAt: true,
+      },
+      orderBy: { updatedAt: "desc" },
+    });
+
+    const map = new Map();
+    for (const r of rows || []) {
+      const uid = String(r.userId || "");
+      if (!uid) continue;
+      if (map.has(uid)) continue; // keep first (newest due to orderBy)
+      map.set(uid, extractExperienceFromResumeRow(r));
+    }
+    return map;
+  } catch (err) {
+    console.error("[recruiter/candidates] primary resume lookup failed (soft):", err);
+    return new Map();
+  }
 }
 
 export default async function handler(req, res) {
@@ -295,25 +380,45 @@ export default async function handler(req, res) {
       metaByCandidateId.set(m.candidateUserId, m);
     }
 
+    // ✅ OPTIONAL: pull experience from primary resume (if Resume model exists)
+    const experienceByUserId = await fetchPrimaryResumeExperience(prisma, candidateUserIds);
+
     const candidates = users.map((u) => {
       const meta = metaByCandidateId.get(u.id) || null;
 
       const tagsArr = meta?.tags ? toStringArray(meta.tags) : [];
       const notesText = typeof meta?.notes === "string" ? meta.notes : "";
 
+      const skillsArr = Array.isArray(u.skillsJson) ? u.skillsJson.map(String).filter(Boolean) : [];
+      const languagesArr = Array.isArray(u.languagesJson)
+        ? u.languagesJson.map(String).filter(Boolean)
+        : [];
+
       return {
         id: u.id,
         userId: u.id,
         name: u.name || "Unnamed",
         email: u.email || null,
+
         title: u.headline || "",
         currentTitle: u.headline || "",
         role: u.headline || "",
         summary: u.aboutMe || "",
         location: u.location || "",
-        skills: toCsv(u.skillsJson),
-        languages: toCsv(u.languagesJson),
+
+        // ✅ arrays for UI (modal expects arrays)
+        skills: skillsArr,
+        languages: languagesArr,
+
+        // match is handled elsewhere (WHY drawer uses deterministic logic)
         match: null,
+
+        // ✅ Experience should come from PRIMARY RESUME, not profile
+        experience: experienceByUserId.get(u.id) || [],
+
+        // ✅ Placeholder fields so UI never breaks; wiring can attach real sources
+        activity: [],
+        journey: [],
 
         // recruiter-only metadata
         tags: tagsArr,
