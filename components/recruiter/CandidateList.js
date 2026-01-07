@@ -125,7 +125,7 @@ function CandidateCard({ candidate, isEnterprise, onView, onMessage, onWhy }) {
       </div>
 
       {/* Right */}
-      <div className="flex w-full flex-col items-stretch gap-2 sm:w-auto sm:items-end sm:justify-between min-w-0">
+      <div className="flex w-full flex-col items-stretch gap-2 min-w-0 sm:w-[280px] sm:flex-none sm:items-end sm:justify-between">
         <div className="flex flex-wrap items-center justify-start gap-2 sm:justify-end">
           {typeof onMessage === "function" && (
             <button
@@ -158,7 +158,7 @@ function CandidateCard({ candidate, isEnterprise, onView, onMessage, onWhy }) {
           )}
         </div>
 
-        <p className="mt-1 text-[10px] text-slate-500 text-left sm:text-right w-full whitespace-normal break-words overflow-hidden">
+        <p className="mt-1 text-[10px] text-slate-500 text-left sm:text-right w-full whitespace-normal break-words">
           New threads start here. Your choice of Recruiter inbox or Signal
           (personal) inbox happens on the next step.
         </p>
