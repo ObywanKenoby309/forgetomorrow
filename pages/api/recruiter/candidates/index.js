@@ -14,6 +14,14 @@ function getPrisma() {
   return prisma;
 }
 
+function toCsv(arr) {
+  if (!Array.isArray(arr)) return "";
+  return arr
+    .map((s) => String(s || "").trim())
+    .filter(Boolean)
+    .join(", ");
+}
+
 function toStringArray(v) {
   if (Array.isArray(v)) return v.map((x) => String(x || "").trim()).filter(Boolean);
   return [];
@@ -92,15 +100,15 @@ function extractExperienceFromResumeContent(contentStr) {
   const parsed = typeof contentStr === "string" ? safeJsonParse(contentStr) : null;
   if (!parsed || typeof parsed !== "object") return [];
 
-  // ✅ Support BOTH:
-  // 1) legacy: { experiences: [...] }
-  // 2) wrapped: { template, data: { experiences: [...] } }
-  const root = parsed && typeof parsed === "object" ? parsed : {};
-  const data = root?.data && typeof root.data === "object" ? root.data : root;
+  // ✅ Your resume content is saved as: { template: "...", data: { ... } }
+  const root = parsed?.data && typeof parsed.data === "object" ? parsed.data : parsed;
 
+  // ✅ Support your builder shapes:
+  // - data.workExperiences (your actual data)
+  // - data.experiences (legacy)
+  // - data.experience (legacy)
   const list =
-    (Array.isArray(data.experiences) && data.experiences) ||
-    (Array.isArray(data.experience) && data.experience) ||
+    (Array.isArray(root.workExperiences) && root.workExperiences) ||
     (Array.isArray(root.experiences) && root.experiences) ||
     (Array.isArray(root.experience) && root.experience) ||
     [];
@@ -109,7 +117,7 @@ function extractExperienceFromResumeContent(contentStr) {
 
   return list
     .map((exp) => {
-      const title = exp?.title || exp?.role || "";
+      const title = exp?.title || exp?.jobTitle || exp?.role || "";
       const company = exp?.company || "";
       const start = exp?.startDate || exp?.start || "";
       const end = exp?.endDate || exp?.end || "";
@@ -208,8 +216,7 @@ export default async function handler(req, res) {
     {
       OR: [
         { profileVisibility: { in: ["PUBLIC", "RECRUITERS_ONLY"] } },
-        // ✅ keep legacy safety net but never allow explicit PRIVATE to leak
-        { AND: [{ isProfilePublic: true }, { profileVisibility: { not: "PRIVATE" } }] },
+        { isProfilePublic: true }, // legacy safety net
       ],
     },
   ];
@@ -353,18 +360,11 @@ export default async function handler(req, res) {
     }
 
     // ✅ Pull resumes for these users:
-    // Prefer isPrimary=true, otherwise fall back to latest updatedAt.
+    // Prefer isPrimary, but if none exists, use the most recently updated resume.
     const resumes = candidateUserIds.length
       ? await prisma.resume.findMany({
-          where: {
-            userId: { in: candidateUserIds },
-          },
-          select: {
-            userId: true,
-            content: true,
-            isPrimary: true,
-            updatedAt: true,
-          },
+          where: { userId: { in: candidateUserIds } },
+          select: { userId: true, content: true, updatedAt: true, isPrimary: true },
           orderBy: { updatedAt: "desc" },
         })
       : [];
@@ -373,17 +373,23 @@ export default async function handler(req, res) {
     for (const r of resumes) {
       const existing = bestResumeByUserId.get(r.userId);
 
-      // First resume encountered (because ordered by updatedAt desc)
+      // If we don't have one yet, take it.
       if (!existing) {
         bestResumeByUserId.set(r.userId, r);
         continue;
       }
 
-      // If existing isn't primary but this one is, replace
+      // If existing isn't primary but this one is, prefer this one.
       if (!existing.isPrimary && r.isPrimary) {
         bestResumeByUserId.set(r.userId, r);
+        continue;
       }
-      // Otherwise keep existing (latest already)
+
+      // If both are same "primary-ness", keep the latest (resumes already ordered desc,
+      // so existing will usually be newer; but keep a safe compare anyway)
+      const a = existing?.updatedAt ? new Date(existing.updatedAt).getTime() : 0;
+      const b = r?.updatedAt ? new Date(r.updatedAt).getTime() : 0;
+      if (b > a) bestResumeByUserId.set(r.userId, r);
     }
 
     const candidates = users.map((u) => {
@@ -398,9 +404,9 @@ export default async function handler(req, res) {
       const effectiveSkillsArr =
         recruiterSkillsArr.length > 0 ? recruiterSkillsArr : profileSkillsArr;
 
-      const chosenResume = bestResumeByUserId.get(u.id) || null;
-      const experience = chosenResume?.content
-        ? extractExperienceFromResumeContent(chosenResume.content)
+      const bestResume = bestResumeByUserId.get(u.id) || null;
+      const experience = bestResume?.content
+        ? extractExperienceFromResumeContent(bestResume.content)
         : [];
 
       return {
@@ -416,13 +422,14 @@ export default async function handler(req, res) {
 
         // ✅ what the modal should display/edit
         skills: effectiveSkillsArr,
+        // optional: transparency/debug
         skillsProfile: profileSkillsArr,
         skillsSource: recruiterSkillsArr.length > 0 ? "recruiter" : "profile",
 
         // keep languages as array for the modal
         languages: toArrayJson(u.languagesJson),
 
-        // ✅ Experience from best resume (primary preferred, else latest)
+        // ✅ Experience from resume (primary if set, otherwise latest)
         experience,
 
         // recruiter-only metadata
