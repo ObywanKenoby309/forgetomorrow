@@ -14,14 +14,6 @@ function getPrisma() {
   return prisma;
 }
 
-function toCsv(arr) {
-  if (!Array.isArray(arr)) return "";
-  return arr
-    .map((s) => String(s || "").trim())
-    .filter(Boolean)
-    .join(", ");
-}
-
 function toStringArray(v) {
   if (Array.isArray(v)) return v.map((x) => String(x || "").trim()).filter(Boolean);
   return [];
@@ -100,10 +92,17 @@ function extractExperienceFromResumeContent(contentStr) {
   const parsed = typeof contentStr === "string" ? safeJsonParse(contentStr) : null;
   if (!parsed || typeof parsed !== "object") return [];
 
-  // common shapes in your app
+  // ✅ Support BOTH:
+  // 1) legacy: { experiences: [...] }
+  // 2) wrapped: { template, data: { experiences: [...] } }
+  const root = parsed && typeof parsed === "object" ? parsed : {};
+  const data = root?.data && typeof root.data === "object" ? root.data : root;
+
   const list =
-    (Array.isArray(parsed.experiences) && parsed.experiences) ||
-    (Array.isArray(parsed.experience) && parsed.experience) ||
+    (Array.isArray(data.experiences) && data.experiences) ||
+    (Array.isArray(data.experience) && data.experience) ||
+    (Array.isArray(root.experiences) && root.experiences) ||
+    (Array.isArray(root.experience) && root.experience) ||
     [];
 
   if (!Array.isArray(list)) return [];
@@ -116,7 +115,6 @@ function extractExperienceFromResumeContent(contentStr) {
       const end = exp?.endDate || exp?.end || "";
       const range = [start, end].filter(Boolean).join(" - ") || exp?.range || "";
 
-      // description/bullets normalization
       const highlightsRaw =
         exp?.highlights ||
         exp?.bullets ||
@@ -128,7 +126,6 @@ function extractExperienceFromResumeContent(contentStr) {
       if (Array.isArray(highlightsRaw)) {
         highlights = highlightsRaw.map((x) => String(x || "").trim()).filter(Boolean);
       } else if (typeof highlightsRaw === "string") {
-        // split on newlines if it looks like multiline text
         const s = highlightsRaw.trim();
         highlights = s
           ? s.split("\n").map((x) => String(x || "").trim()).filter(Boolean)
@@ -211,7 +208,8 @@ export default async function handler(req, res) {
     {
       OR: [
         { profileVisibility: { in: ["PUBLIC", "RECRUITERS_ONLY"] } },
-        { isProfilePublic: true }, // legacy safety net
+        // ✅ keep legacy safety net but never allow explicit PRIVATE to leak
+        { AND: [{ isProfilePublic: true }, { profileVisibility: { not: "PRIVATE" } }] },
       ],
     },
   ];
@@ -354,32 +352,38 @@ export default async function handler(req, res) {
       metaByCandidateId.set(m.candidateUserId, m);
     }
 
-    // ✅ Pull primary resumes for these users (for Experience section)
+    // ✅ Pull resumes for these users:
+    // Prefer isPrimary=true, otherwise fall back to latest updatedAt.
     const resumes = candidateUserIds.length
       ? await prisma.resume.findMany({
           where: {
             userId: { in: candidateUserIds },
-            isPrimary: true,
           },
           select: {
             userId: true,
             content: true,
+            isPrimary: true,
             updatedAt: true,
           },
+          orderBy: { updatedAt: "desc" },
         })
       : [];
 
-    const primaryResumeByUserId = new Map();
+    const bestResumeByUserId = new Map();
     for (const r of resumes) {
-      // if multiple primaries exist due to bad data, keep the latest updatedAt
-      const existing = primaryResumeByUserId.get(r.userId);
+      const existing = bestResumeByUserId.get(r.userId);
+
+      // First resume encountered (because ordered by updatedAt desc)
       if (!existing) {
-        primaryResumeByUserId.set(r.userId, r);
-      } else {
-        const a = existing?.updatedAt ? new Date(existing.updatedAt).getTime() : 0;
-        const b = r?.updatedAt ? new Date(r.updatedAt).getTime() : 0;
-        if (b >= a) primaryResumeByUserId.set(r.userId, r);
+        bestResumeByUserId.set(r.userId, r);
+        continue;
       }
+
+      // If existing isn't primary but this one is, replace
+      if (!existing.isPrimary && r.isPrimary) {
+        bestResumeByUserId.set(r.userId, r);
+      }
+      // Otherwise keep existing (latest already)
     }
 
     const candidates = users.map((u) => {
@@ -394,9 +398,9 @@ export default async function handler(req, res) {
       const effectiveSkillsArr =
         recruiterSkillsArr.length > 0 ? recruiterSkillsArr : profileSkillsArr;
 
-      const primaryResume = primaryResumeByUserId.get(u.id) || null;
-      const experience = primaryResume?.content
-        ? extractExperienceFromResumeContent(primaryResume.content)
+      const chosenResume = bestResumeByUserId.get(u.id) || null;
+      const experience = chosenResume?.content
+        ? extractExperienceFromResumeContent(chosenResume.content)
         : [];
 
       return {
@@ -412,14 +416,13 @@ export default async function handler(req, res) {
 
         // ✅ what the modal should display/edit
         skills: effectiveSkillsArr,
-        // optional: transparency/debug
         skillsProfile: profileSkillsArr,
         skillsSource: recruiterSkillsArr.length > 0 ? "recruiter" : "profile",
 
         // keep languages as array for the modal
         languages: toArrayJson(u.languagesJson),
 
-        // ✅ Experience from primary resume
+        // ✅ Experience from best resume (primary preferred, else latest)
         experience,
 
         // recruiter-only metadata
