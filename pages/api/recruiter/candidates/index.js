@@ -1,6 +1,6 @@
 // pages/api/recruiter/candidates/index.js
 // List recruiter candidates from Prisma (main DB) — LIVE from User table
-// + join recruiter-specific metadata (notes/tags/pipelineStage) from RecruiterCandidate (Option A)
+// + join recruiter-specific metadata (notes/tags/pipelineStage/skills) from RecruiterCandidate (Option A)
 // ✅ Impersonation-aware: resolves effective recruiter via ft_imp cookie (Platform Admin only)
 
 import { PrismaClient } from "@prisma/client";
@@ -38,6 +38,11 @@ function readCookie(req, name) {
   } catch {
     return "";
   }
+}
+
+function toArrayJson(v) {
+  if (Array.isArray(v)) return v.map((x) => String(x || "").trim()).filter(Boolean);
+  return [];
 }
 
 async function resolveEffectiveRecruiter(prisma, req, session) {
@@ -82,76 +87,62 @@ async function resolveEffectiveRecruiter(prisma, req, session) {
   return u?.id ? u : null;
 }
 
-// ------------------------------
-// Resume.content parsing helpers
-// ------------------------------
-function safeJsonParse(maybeJsonString) {
+function safeJsonParse(str) {
   try {
-    if (maybeJsonString == null) return null;
-    const s = String(maybeJsonString);
-    if (!s.trim()) return null;
-    const obj = JSON.parse(s);
-    return obj && typeof obj === "object" ? obj : null;
+    return JSON.parse(str);
   } catch {
     return null;
   }
 }
 
-function normalizeDate(v) {
-  const s = String(v || "").trim();
-  return s || "";
-}
+// Attempts to map your Resume.content payload into modal-friendly experience items.
+function extractExperienceFromResumeContent(contentStr) {
+  const parsed = typeof contentStr === "string" ? safeJsonParse(contentStr) : null;
+  if (!parsed || typeof parsed !== "object") return [];
 
-function normalizeExperienceItem(x) {
-  if (!x || typeof x !== "object") return null;
+  // common shapes in your app
+  const list =
+    (Array.isArray(parsed.experiences) && parsed.experiences) ||
+    (Array.isArray(parsed.experience) && parsed.experience) ||
+    [];
 
-  const title = String(x.title || x.role || x.position || "").trim();
-  const company = String(x.company || x.employer || x.organization || "").trim();
+  if (!Array.isArray(list)) return [];
 
-  const startDate =
-    normalizeDate(x.startDate || x.start || x.from || x.start_at || x.startAt);
-  const endDate =
-    normalizeDate(x.endDate || x.end || x.to || x.end_at || x.endAt);
+  return list
+    .map((exp) => {
+      const title = exp?.title || exp?.role || "";
+      const company = exp?.company || "";
+      const start = exp?.startDate || exp?.start || "";
+      const end = exp?.endDate || exp?.end || "";
+      const range = [start, end].filter(Boolean).join(" - ") || exp?.range || "";
 
-  const description = String(
-    x.description || x.summary || x.details || x.notes || ""
-  ).trim();
+      // description/bullets normalization
+      const highlightsRaw =
+        exp?.highlights ||
+        exp?.bullets ||
+        exp?.description ||
+        exp?.details ||
+        [];
 
-  // Keep only meaningful rows
-  if (!title && !company && !description) return null;
+      let highlights = [];
+      if (Array.isArray(highlightsRaw)) {
+        highlights = highlightsRaw.map((x) => String(x || "").trim()).filter(Boolean);
+      } else if (typeof highlightsRaw === "string") {
+        // split on newlines if it looks like multiline text
+        const s = highlightsRaw.trim();
+        highlights = s
+          ? s.split("\n").map((x) => String(x || "").trim()).filter(Boolean)
+          : [];
+      }
 
-  return {
-    title,
-    company,
-    startDate,
-    endDate,
-    description,
-  };
-}
-
-// Try multiple likely shapes since Resume.content is a freeform string in DB
-function extractExperiencesFromResumeContent(resumeContentString) {
-  const parsed = safeJsonParse(resumeContentString);
-  if (!parsed) return [];
-
-  // Common shapes we’ve used in ForgeTomorrow:
-// 1) { experiences: [...] }
-// 2) { payload: { experiences: [...] } }
-// 3) { workHistory: [...] } / { experience: [...] }
-  const candidates = []
-    .concat(Array.isArray(parsed.experiences) ? [parsed.experiences] : [])
-    .concat(parsed.payload && Array.isArray(parsed.payload.experiences) ? [parsed.payload.experiences] : [])
-    .concat(Array.isArray(parsed.workHistory) ? [parsed.workHistory] : [])
-    .concat(Array.isArray(parsed.experience) ? [parsed.experience] : [])
-    .concat(parsed.profile && Array.isArray(parsed.profile.workHistory) ? [parsed.profile.workHistory] : []);
-
-  const first = candidates.find((arr) => Array.isArray(arr) && arr.length) || [];
-  const normalized = first
-    .map(normalizeExperienceItem)
-    .filter(Boolean)
-    .slice(0, 8);
-
-  return normalized;
+      return {
+        title: String(title || "").trim(),
+        company: String(company || "").trim(),
+        range: String(range || "").trim(),
+        highlights,
+      };
+    })
+    .filter((e) => e.title || e.company || e.range || (e.highlights && e.highlights.length));
 }
 
 export default async function handler(req, res) {
@@ -225,7 +216,6 @@ export default async function handler(req, res) {
     },
   ];
 
-  // Manual search by name / headline / aboutMe (allowed)
   if (nameRoleQuery) {
     andClauses.push({
       OR: [
@@ -236,28 +226,24 @@ export default async function handler(req, res) {
     });
   }
 
-  // Location filter (uses user.location)
   if (locationQuery) {
     andClauses.push({
       location: { contains: locationQuery, mode: "insensitive" },
     });
   }
 
-  // Summary keywords -> aboutMe
   if (summaryKeywordsQuery) {
     andClauses.push({
       aboutMe: { contains: summaryKeywordsQuery, mode: "insensitive" },
     });
   }
 
-  // Job title -> headline (best live equivalent)
   if (jobTitleQuery) {
     andClauses.push({
       headline: { contains: jobTitleQuery, mode: "insensitive" },
     });
   }
 
-  // Work status / preferred work type / relocate come from workPreferences Json
   if (workStatusQuery) {
     andClauses.push({
       workPreferences: {
@@ -287,10 +273,8 @@ export default async function handler(req, res) {
         workPreferences: { path: ["willingToRelocate"], equals: false },
       });
     }
-    // "maybe" => no filter
   }
 
-  // Skills / Languages (comma-separated; ALL terms must be present)
   if (skillsQuery) {
     const terms = skillsQuery
       .split(",")
@@ -317,7 +301,6 @@ export default async function handler(req, res) {
     }
   }
 
-  // Boolean query placeholder — for now search it in aboutMe
   if (booleanQuery) {
     andClauses.push({
       aboutMe: { contains: booleanQuery, mode: "insensitive" },
@@ -357,6 +340,7 @@ export default async function handler(req, res) {
           select: {
             candidateUserId: true,
             tags: true,
+            skills: true,
             notes: true,
             pipelineStage: true,
             lastContacted: true,
@@ -370,16 +354,14 @@ export default async function handler(req, res) {
       metaByCandidateId.set(m.candidateUserId, m);
     }
 
-    // ✅ Pull each candidate's PRIMARY resume so we can show Experience (profile stays clean)
+    // ✅ Pull primary resumes for these users (for Experience section)
     const resumes = candidateUserIds.length
       ? await prisma.resume.findMany({
           where: {
             userId: { in: candidateUserIds },
             isPrimary: true,
           },
-          orderBy: { updatedAt: "desc" },
           select: {
-            id: true,
             userId: true,
             content: true,
             updatedAt: true,
@@ -387,11 +369,16 @@ export default async function handler(req, res) {
         })
       : [];
 
-    // Map: userId -> latest primary resume row
     const primaryResumeByUserId = new Map();
     for (const r of resumes) {
-      if (!primaryResumeByUserId.has(r.userId)) {
+      // if multiple primaries exist due to bad data, keep the latest updatedAt
+      const existing = primaryResumeByUserId.get(r.userId);
+      if (!existing) {
         primaryResumeByUserId.set(r.userId, r);
+      } else {
+        const a = existing?.updatedAt ? new Date(existing.updatedAt).getTime() : 0;
+        const b = r?.updatedAt ? new Date(r.updatedAt).getTime() : 0;
+        if (b >= a) primaryResumeByUserId.set(r.userId, r);
       }
     }
 
@@ -401,9 +388,15 @@ export default async function handler(req, res) {
       const tagsArr = meta?.tags ? toStringArray(meta.tags) : [];
       const notesText = typeof meta?.notes === "string" ? meta.notes : "";
 
+      // ✅ Skills: profile skills injected, recruiter skills override if saved
+      const profileSkillsArr = toArrayJson(u.skillsJson);
+      const recruiterSkillsArr = meta?.skills ? toStringArray(meta.skills) : [];
+      const effectiveSkillsArr =
+        recruiterSkillsArr.length > 0 ? recruiterSkillsArr : profileSkillsArr;
+
       const primaryResume = primaryResumeByUserId.get(u.id) || null;
       const experience = primaryResume?.content
-        ? extractExperiencesFromResumeContent(primaryResume.content)
+        ? extractExperienceFromResumeContent(primaryResume.content)
         : [];
 
       return {
@@ -416,14 +409,18 @@ export default async function handler(req, res) {
         role: u.headline || "",
         summary: u.aboutMe || "",
         location: u.location || "",
-        skills: toCsv(u.skillsJson),
-        languages: toCsv(u.languagesJson),
-        match: null,
 
-        // ✅ Experience pulled from primary resume (if available)
-        experience, // array of { title, company, startDate, endDate, description }
-        primaryResumeId: primaryResume?.id || null,
-        primaryResumeUpdatedAt: primaryResume?.updatedAt || null,
+        // ✅ what the modal should display/edit
+        skills: effectiveSkillsArr,
+        // optional: transparency/debug
+        skillsProfile: profileSkillsArr,
+        skillsSource: recruiterSkillsArr.length > 0 ? "recruiter" : "profile",
+
+        // keep languages as array for the modal
+        languages: toArrayJson(u.languagesJson),
+
+        // ✅ Experience from primary resume
+        experience,
 
         // recruiter-only metadata
         tags: tagsArr,
@@ -431,6 +428,8 @@ export default async function handler(req, res) {
         pipelineStage: meta?.pipelineStage || null,
         lastContacted: meta?.lastContacted || null,
         lastSeen: meta?.lastSeen || null,
+
+        match: null,
       };
     });
 
