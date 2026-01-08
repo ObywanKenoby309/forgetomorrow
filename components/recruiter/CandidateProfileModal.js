@@ -40,12 +40,21 @@ export default function CandidateProfileModal({
     setExpandedExp({});
     setJourneyFilter("All");
 
-    // ✅ Recruiter team skills first (do NOT touch candidate's permanent profile)
+    // ✅ Skills: show candidate skills first (profile/resume baseline via API),
+    // then allow recruiter to edit/save team-only skills without touching candidate profile.
     const incomingRecruiterSkills =
-      candidate?.recruiterSkills ?? candidate?.recruiterSkillsJson ?? candidate?.recruiterSkillsJSON;
+      candidate?.recruiterSkills ??
+      candidate?.recruiterSkillsJson ??
+      candidate?.recruiterSkillsJSON;
 
-    setSkillsLocal(toSafeArray(incomingRecruiterSkills));
+    const incomingSkills =
+      candidate?.skills ??
+      incomingRecruiterSkills ??
+      candidate?.skillsProfile ??
+      candidate?.skillsJson ??
+      candidate?.skillsJSON;
 
+    setSkillsLocal(toSafeArray(incomingSkills));
     setSkillInput("");
 
     // ✅ Normalize tags
@@ -368,9 +377,7 @@ export default function CandidateProfileModal({
                     </span>
                   ))
                 ) : (
-                  <div className="text-sm text-slate-500">
-                    No recruiter-added skills yet.
-                  </div>
+                  <div className="text-sm text-slate-500">No skills listed yet.</div>
                 )}
               </div>
 
