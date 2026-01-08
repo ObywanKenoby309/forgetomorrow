@@ -45,6 +45,20 @@ function toArrayJson(v) {
   return [];
 }
 
+function dedupeCaseInsensitive(arr) {
+  const out = [];
+  const seen = new Set();
+  for (const raw of Array.isArray(arr) ? arr : []) {
+    const t = String(raw || "").trim();
+    if (!t) continue;
+    const key = t.toLowerCase();
+    if (seen.has(key)) continue;
+    seen.add(key);
+    out.push(t);
+  }
+  return out;
+}
+
 async function resolveEffectiveRecruiter(prisma, req, session) {
   const sessionEmail = String(session?.user?.email || "").trim().toLowerCase();
   if (!sessionEmail) return null;
@@ -104,9 +118,6 @@ function extractExperienceFromResumeContent(contentStr) {
   const root = parsed?.data && typeof parsed.data === "object" ? parsed.data : parsed;
 
   // ✅ Support your builder shapes:
-  // - data.workExperiences (your actual data)
-  // - data.experiences (legacy)
-  // - data.experience (legacy)
   const list =
     (Array.isArray(root.workExperiences) && root.workExperiences) ||
     (Array.isArray(root.experiences) && root.experiences) ||
@@ -148,6 +159,18 @@ function extractExperienceFromResumeContent(contentStr) {
       };
     })
     .filter((e) => e.title || e.company || e.range || (e.highlights && e.highlights.length));
+}
+
+// ✅ Extract skills from resume content (profile first; resume fallback only when profile is empty)
+function extractSkillsFromResumeContent(contentStr) {
+  const parsed = typeof contentStr === "string" ? safeJsonParse(contentStr) : null;
+  if (!parsed || typeof parsed !== "object") return [];
+
+  const root = parsed?.data && typeof parsed.data === "object" ? parsed.data : parsed;
+
+  // Your builder saves skills at data.skills (array of strings)
+  const skills = Array.isArray(root.skills) ? root.skills : [];
+  return dedupeCaseInsensitive(skills.map((s) => String(s || "").trim()).filter(Boolean));
 }
 
 export default async function handler(req, res) {
@@ -373,20 +396,16 @@ export default async function handler(req, res) {
     for (const r of resumes) {
       const existing = bestResumeByUserId.get(r.userId);
 
-      // If we don't have one yet, take it.
       if (!existing) {
         bestResumeByUserId.set(r.userId, r);
         continue;
       }
 
-      // If existing isn't primary but this one is, prefer this one.
       if (!existing.isPrimary && r.isPrimary) {
         bestResumeByUserId.set(r.userId, r);
         continue;
       }
 
-      // If both are same "primary-ness", keep the latest (resumes already ordered desc,
-      // so existing will usually be newer; but keep a safe compare anyway)
       const a = existing?.updatedAt ? new Date(existing.updatedAt).getTime() : 0;
       const b = r?.updatedAt ? new Date(r.updatedAt).getTime() : 0;
       if (b > a) bestResumeByUserId.set(r.userId, r);
@@ -398,16 +417,29 @@ export default async function handler(req, res) {
       const tagsArr = meta?.tags ? toStringArray(meta.tags) : [];
       const notesText = typeof meta?.notes === "string" ? meta.notes : "";
 
-      // ✅ Skills: profile skills injected, recruiter skills override if saved
-      const profileSkillsArr = toArrayJson(u.skillsJson);
-      const recruiterSkillsArr = meta?.skills ? toStringArray(meta.skills) : [];
-      const effectiveSkillsArr =
-        recruiterSkillsArr.length > 0 ? recruiterSkillsArr : profileSkillsArr;
-
       const bestResume = bestResumeByUserId.get(u.id) || null;
+
+      // ✅ Experience (leave as-is — already working)
       const experience = bestResume?.content
         ? extractExperienceFromResumeContent(bestResume.content)
         : [];
+
+      // ✅ Skills baseline:
+      // 1) profile skills first
+      // 2) if profile empty, fallback to resume skills (primary else latest)
+      const profileSkillsArr = dedupeCaseInsensitive(toArrayJson(u.skillsJson));
+      const resumeSkillsArr = bestResume?.content
+        ? extractSkillsFromResumeContent(bestResume.content)
+        : [];
+
+      const baselineSkillsArr =
+        profileSkillsArr.length > 0 ? profileSkillsArr : resumeSkillsArr;
+
+      // ✅ Recruiter curated skills for team view (add/remove via interview)
+      // If recruiter has saved skills, that becomes the effective list.
+      const recruiterSkillsArr = meta?.skills ? toStringArray(meta.skills) : [];
+      const effectiveSkillsArr =
+        recruiterSkillsArr.length > 0 ? recruiterSkillsArr : baselineSkillsArr;
 
       return {
         id: u.id,
@@ -422,9 +454,19 @@ export default async function handler(req, res) {
 
         // ✅ what the modal should display/edit
         skills: effectiveSkillsArr,
+
         // optional: transparency/debug
+        skillsBaseline: baselineSkillsArr,
         skillsProfile: profileSkillsArr,
-        skillsSource: recruiterSkillsArr.length > 0 ? "recruiter" : "profile",
+        skillsResume: resumeSkillsArr,
+        skillsSource:
+          recruiterSkillsArr.length > 0
+            ? "recruiter"
+            : profileSkillsArr.length > 0
+            ? "profile"
+            : resumeSkillsArr.length > 0
+            ? "resume"
+            : "none",
 
         // keep languages as array for the modal
         languages: toArrayJson(u.languagesJson),
