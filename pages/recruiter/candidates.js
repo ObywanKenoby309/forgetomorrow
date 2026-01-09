@@ -6,7 +6,9 @@ import RecruiterLayout from "../../components/layouts/RecruiterLayout";
 import CandidateList from "../../components/recruiter/CandidateList";
 import CandidateProfileModal from "../../components/recruiter/CandidateProfileModal";
 import FeatureLock from "../../components/recruiter/FeatureLock";
-import WhyCandidateDrawer from "../../components/recruiter/WhyCandidateDrawer";
+import WhyCandidateDrawer, {
+  WhyCandidateCompareDrawer,
+} from "../../components/recruiter/WhyCandidateDrawer";
 import { getMockExplain } from "../../lib/recruiter/mockExplain";
 import * as Analytics from "../../lib/analytics/instrumentation";
 import WhyInfo from "../../components/recruiter/WhyInfo";
@@ -297,10 +299,12 @@ function Body() {
         ).slice(0, 10)
       : [];
 
-    ex.skills = ex.skills && typeof ex.skills === "object" ? { ...ex.skills } : {};
+    ex.skills =
+      ex.skills && typeof ex.skills === "object" ? { ...ex.skills } : {};
     ex.skills.matched =
-      (ex.skills.matched && ex.skills.matched.length ? ex.skills.matched : matched) ||
-      [];
+      (ex.skills.matched && ex.skills.matched.length
+        ? ex.skills.matched
+        : matched) || [];
     ex.skills.gaps =
       (ex.skills.gaps && ex.skills.gaps.length ? ex.skills.gaps : gaps) || [];
     ex.skills.transferable =
@@ -326,7 +330,8 @@ function Body() {
       const parts = [];
       if (candidateTitle) parts.push(`title alignment (${candidateTitle})`);
       if (candidateLocation) parts.push(`location fit (${candidateLocation})`);
-      if (matched?.length) parts.push(`skills overlap (${matched.slice(0, 4).join(", ")})`);
+      if (matched?.length)
+        parts.push(`skills overlap (${matched.slice(0, 4).join(", ")})`);
       if (jobTitle) parts.push(`target role signal (${jobTitle})`);
 
       const join = parts.length ? parts.join(", ") : "available profile signals";
@@ -347,7 +352,10 @@ function Body() {
       const req = jobTitle ? `Role alignment: ${jobTitle}` : `Role alignment`;
       const evidence = [];
       if (candidateTitle) {
-        evidence.push({ text: `Current title: ${candidateTitle}`, source: "Profile" });
+        evidence.push({
+          text: `Current title: ${candidateTitle}`,
+          source: "Profile",
+        });
       }
       if (c?.title && c?.currentTitle && c?.title !== c?.currentTitle) {
         evidence.push({ text: `Listed role: ${c.title}`, source: "Profile" });
@@ -389,16 +397,27 @@ function Body() {
       const reqParts = [];
       if (locQuery) reqParts.push(`Location: ${locQuery}`);
       if (preferredWorkType) reqParts.push(`Work type: ${preferredWorkType}`);
-      const req = reqParts.length ? `Logistics fit: ${reqParts.join(" • ")}` : `Logistics fit`;
+      const req = reqParts.length
+        ? `Logistics fit: ${reqParts.join(" • ")}`
+        : `Logistics fit`;
       const evidence = [];
       if (candidateLocation) {
-        evidence.push({ text: `Candidate location: ${candidateLocation}`, source: "Profile" });
+        evidence.push({
+          text: `Candidate location: ${candidateLocation}`,
+          source: "Profile",
+        });
       }
       if (c?.remotePreference) {
-        evidence.push({ text: `Work preference: ${c.remotePreference}`, source: "Profile" });
+        evidence.push({
+          text: `Work preference: ${c.remotePreference}`,
+          source: "Profile",
+        });
       }
       if (c?.preferredWorkType) {
-        evidence.push({ text: `Work type: ${c.preferredWorkType}`, source: "Profile" });
+        evidence.push({
+          text: `Work type: ${c.preferredWorkType}`,
+          source: "Profile",
+        });
       }
       if (evidence.length) builtReasons.push({ requirement: req, evidence });
     }
@@ -411,7 +430,12 @@ function Body() {
       if (hit) {
         builtReasons.push({
           requirement: `Keyword alignment: ${kw.slice(0, 6).join(", ")}`,
-          evidence: [{ text: "Keywords appear in candidate summary/headline.", source: "Profile" }],
+          evidence: [
+            {
+              text: "Keywords appear in candidate summary/headline.",
+              source: "Profile",
+            },
+          ],
         });
       }
     }
@@ -425,7 +449,10 @@ function Body() {
         : `Language alignment`;
       const evidence = [];
       if (candLang.length) {
-        evidence.push({ text: `Languages listed: ${candLang.join(", ")}`, source: "Profile" });
+        evidence.push({
+          text: `Languages listed: ${candLang.join(", ")}`,
+          source: "Profile",
+        });
       }
       if (evidence.length) builtReasons.push({ requirement: req, evidence });
     }
@@ -461,7 +488,9 @@ function Body() {
       const params = buildCandidateParams();
 
       const res = await fetch(
-        `/api/recruiter/candidates${params.toString() ? `?${params.toString()}` : ""}`
+        `/api/recruiter/candidates${
+          params.toString() ? `?${params.toString()}` : ""
+        }`
       );
 
       if (!res.ok) {
@@ -519,7 +548,11 @@ function Body() {
 
       if (!res.ok) {
         const payload = await res.json().catch(() => ({}));
-        console.error("[Candidates] startConversation error:", res.status, payload);
+        console.error(
+          "[Candidates] startConversation error:",
+          res.status,
+          payload
+        );
         alert("We couldn't open a conversation yet. Please try again in a moment.");
         return;
       }
@@ -586,7 +619,9 @@ function Body() {
         const params = buildCandidateParams();
 
         const res = await fetch(
-          `/api/recruiter/candidates${params.toString() ? `?${params.toString()}` : ""}`
+          `/api/recruiter/candidates${
+            params.toString() ? `?${params.toString()}` : ""
+          }`
         );
 
         // If API fails but dev flag is on, fall back to demo candidate
@@ -705,7 +740,9 @@ function Body() {
   const saveNotes = async (id, text) => {
     setActionError(null);
     // Optimistic update
-    setCandidates((prev) => prev.map((c) => (c.id === id ? { ...c, notes: text } : c)));
+    setCandidates((prev) =>
+      prev.map((c) => (c.id === id ? { ...c, notes: text } : c))
+    );
 
     try {
       const res = await fetch("/api/recruiter/candidates/notes", {
@@ -716,12 +753,16 @@ function Body() {
 
       if (!res.ok) {
         const payload = await res.json().catch(() => ({}));
-        const msg = payload?.error || `Failed to save candidate notes (status ${res.status}).`;
+        const msg =
+          payload?.error ||
+          `Failed to save candidate notes (status ${res.status}).`;
         throw new Error(msg);
       }
     } catch (err) {
       console.error("[Candidates] saveNotes error:", err);
-      setActionError("We couldn't save candidate notes. Your changes may not be stored yet.");
+      setActionError(
+        "We couldn't save candidate notes. Your changes may not be stored yet."
+      );
     }
   };
 
@@ -736,7 +777,9 @@ function Body() {
         if (c.id !== id) return c;
         const currentTags = Array.isArray(c.tags) ? c.tags : [];
         const has = currentTags.includes(tag);
-        const next = has ? currentTags.filter((t) => t !== tag) : [...currentTags, tag];
+        const next = has
+          ? currentTags.filter((t) => t !== tag)
+          : [...currentTags, tag];
         updatedTags = next;
         return { ...c, tags: next };
       })
@@ -753,12 +796,16 @@ function Body() {
 
       if (!res.ok) {
         const payload = await res.json().catch(() => ({}));
-        const msg = payload?.error || `Failed to update candidate tags (status ${res.status}).`;
+        const msg =
+          payload?.error ||
+          `Failed to update candidate tags (status ${res.status}).`;
         throw new Error(msg);
       }
     } catch (err) {
       console.error("[Candidates] toggleTag error:", err);
-      setActionError("We couldn't update candidate tags. Your changes may not be stored yet.");
+      setActionError(
+        "We couldn't update candidate tags. Your changes may not be stored yet."
+      );
     }
   };
 
@@ -767,9 +814,8 @@ function Body() {
   const [whyData, setWhyData] = useState(null);
   const [whyCandidate, setWhyCandidate] = useState(null);
 
-  const onWhy = async (c) => {
-    if (whyMode === "off") return;
-    if (!hasWhyFull && whyCreditsLeft === 0) return;
+  const fetchWhyExplainForCandidate = async (c) => {
+    if (!c) return getMockExplain();
 
     let ex;
 
@@ -803,12 +849,19 @@ function Body() {
       ex = await res.json();
     } catch (err) {
       console.error("[Candidates] WHY API error:", err);
-      // Fallback to mock explanation so feature never feels broken
       ex = getMockExplain();
     }
 
     // Ensure WHY is not generic: deterministically personalize with candidate + current filters
     ex = personalizeWhyExplain(c, ex);
+    return ex;
+  };
+
+  const onWhy = async (c) => {
+    if (whyMode === "off") return;
+    if (!hasWhyFull && whyCreditsLeft === 0) return;
+
+    const ex = await fetchWhyExplainForCandidate(c);
 
     setWhyCandidate(c);
     setWhyData(ex);
@@ -836,6 +889,106 @@ function Body() {
       setWhyCreditsLeft((n) => Math.max(0, (n || 0) - 1));
     }
   };
+
+  // ---------- COMPARE (NEW) ----------
+  const [compareSelectedIds, setCompareSelectedIds] = useState([]);
+  const [compareOpen, setCompareOpen] = useState(false);
+  const [compareCandidates, setCompareCandidates] = useState({
+    a: null,
+    b: null,
+  });
+  const [compareExplains, setCompareExplains] = useState({
+    a: null,
+    b: null,
+  });
+
+  const resetCompare = () => {
+    setCompareOpen(false);
+    setCompareSelectedIds([]);
+    setCompareCandidates({ a: null, b: null });
+    setCompareExplains({ a: null, b: null });
+  };
+
+  const openCompareForTwo = async (aCandidate, bCandidate) => {
+    if (!aCandidate || !bCandidate) return;
+
+    // If WHY is off, don't allow compare to open (compare is literally 2 WHY panels)
+    if (whyMode === "off") return;
+
+    // Credit gate (SMB): needs at least 2 credits to compare 2 candidates
+    if (!hasWhyFull && (whyCreditsLeft || 0) < 2) return;
+
+    const [aExplain, bExplain] = await Promise.all([
+      fetchWhyExplainForCandidate(aCandidate),
+      fetchWhyExplainForCandidate(bCandidate),
+    ]);
+
+    setCompareCandidates({ a: aCandidate, b: bCandidate });
+    setCompareExplains({ a: aExplain, b: bExplain });
+    setCompareOpen(true);
+
+    // Credits: decrement by 2 for compare (one per candidate)
+    if (!hasWhyFull) {
+      setWhyCreditsLeft((n) => Math.max(0, (n || 0) - 2));
+    }
+  };
+
+  const onToggleCompare = async (candidate) => {
+    if (!candidate?.id) return;
+
+    setActionError(null);
+
+    setCompareSelectedIds((prev) => {
+      const id = candidate.id;
+      const has = prev.includes(id);
+
+      // If toggling OFF the candidate: remove it and close compare if it was open
+      if (has) {
+        const next = prev.filter((x) => x !== id);
+        // If compare is open, closing resets per your spec
+        if (compareOpen) {
+          // we reset after state update tick
+          setTimeout(() => resetCompare(), 0);
+        }
+        return next;
+      }
+
+      // Toggling ON
+      if (prev.length === 0) {
+        return [id];
+      }
+
+      // When 2nd candidate selected → trigger compare immediately
+      if (prev.length === 1) {
+        const firstId = prev[0];
+        const firstCandidate = candidates.find((c) => c.id === firstId) || null;
+        const secondCandidate = candidate;
+
+        // Open compare after state updates
+        setTimeout(() => {
+          openCompareForTwo(firstCandidate, secondCandidate);
+        }, 0);
+
+        return [firstId, id];
+      }
+
+      // If already 2 selected, replace the 2nd with the newly clicked one (keeps it simple & predictable)
+      if (prev.length >= 2) {
+        const firstId = prev[0];
+        const firstCandidate = candidates.find((c) => c.id === firstId) || null;
+        const secondCandidate = candidate;
+
+        setTimeout(() => {
+          openCompareForTwo(firstCandidate, secondCandidate);
+        }, 0);
+
+        return [firstId, id];
+      }
+
+      return prev;
+    });
+  };
+  // ---------- END COMPARE ----------
 
   const FiltersRow = (
     <div className="mb-4 grid grid-cols-1 sm:grid-cols-3 gap-3">
@@ -934,6 +1087,7 @@ function Body() {
 
   const { left: leftCandidates, right: rightCandidates } = splitForColumns(candidates);
   // ---------- END: desktop 2-column layout split ----------
+
   return (
     <>
       {/* Sev-1 style feed incident banner */}
@@ -1083,7 +1237,10 @@ function Body() {
                     onChange={(e) => setAutomationEnabled(e.target.checked)}
                     className="h-3 w-3 rounded border-slate-400 text-[#FF7043] focus:ring-[#FF7043]"
                   />
-                  <label htmlFor="automationEnabled" className="text-xs text-slate-700">
+                  <label
+                    htmlFor="automationEnabled"
+                    className="text-xs text-slate-700"
+                  >
                     Enable daily candidate feed using these filters
                   </label>
                 </div>
@@ -1155,7 +1312,7 @@ function Body() {
         <div className="text-sm text-slate-600">Loading candidates...</div>
       ) : (
         <>
-          {/* Mobile/tablet: single list (unchanged) */}
+          {/* Mobile/tablet: single list */}
           <div className="block lg:hidden">
             <CandidateList
               candidates={candidates}
@@ -1163,6 +1320,8 @@ function Body() {
               onView={onView}
               onMessage={onMessage}
               onWhy={onWhy}
+              onToggleCompare={onToggleCompare}
+              compareSelectedIds={compareSelectedIds}
               showFilters={false}
               showFilterBar={false}
               filtersVisible={false}
@@ -1172,7 +1331,7 @@ function Body() {
             />
           </div>
 
-          {/* Desktop: 2-column list (layout-only) */}
+          {/* Desktop: 2-column list */}
           <div className="hidden lg:grid lg:grid-cols-2 gap-4">
             <CandidateList
               candidates={leftCandidates}
@@ -1180,6 +1339,8 @@ function Body() {
               onView={onView}
               onMessage={onMessage}
               onWhy={onWhy}
+              onToggleCompare={onToggleCompare}
+              compareSelectedIds={compareSelectedIds}
               showFilters={false}
               showFilterBar={false}
               filtersVisible={false}
@@ -1193,6 +1354,8 @@ function Body() {
               onView={onView}
               onMessage={onMessage}
               onWhy={onWhy}
+              onToggleCompare={onToggleCompare}
+              compareSelectedIds={compareSelectedIds}
               showFilters={false}
               showFilterBar={false}
               filtersVisible={false}
@@ -1212,6 +1375,7 @@ function Body() {
         onToggleTag={toggleTag}
       />
 
+      {/* Single WHY drawer */}
       <WhyCandidateDrawer
         open={whyOpen}
         onClose={() => setWhyOpen(false)}
@@ -1223,6 +1387,33 @@ function Body() {
             setOpen(true);
           }
           setWhyOpen(false);
+        }}
+      />
+
+      {/* Compare WHY drawer (RIGHT-side, 2 panels) */}
+      <WhyCandidateCompareDrawer
+        open={compareOpen}
+        onClose={resetCompare}
+        mode={whyMode}
+        left={{
+          candidate: compareCandidates?.a,
+          explain: compareExplains?.a,
+        }}
+        right={{
+          candidate: compareCandidates?.b,
+          explain: compareExplains?.b,
+        }}
+        onViewLeft={() => {
+          if (compareCandidates?.a) {
+            setSelected(compareCandidates.a);
+            setOpen(true);
+          }
+        }}
+        onViewRight={() => {
+          if (compareCandidates?.b) {
+            setSelected(compareCandidates.b);
+            setOpen(true);
+          }
         }}
       />
 
@@ -1261,7 +1452,7 @@ export default function CandidatesPage() {
       <RecruiterLayout
         title="Candidates — ForgeTomorrow"
         header={<HeaderOnly />}
-        right={<RightCard />}
+        right={<RightCard whyMode={undefined} creditsLeft={undefined} />}
         activeNav="candidates" // 🔸 highlight "Candidates" in Recruiter sidebar
       >
         <Body />
