@@ -138,35 +138,91 @@ export default function ProfileAnalyticsPage() {
   }, [profileDetails, primaryResume]);
 
   // ---------------------------
-  // NOTE: Live analytics signals are not wired here yet.
-  // We do NOT show fake zeroes. We show "—" / hide charts until real signals exist.
+  // LIVE: fetch analytics (ProfileView / Contact / FeedPost)
+  // ---------------------------
+  const [analyticsState, setAnalyticsState] = useState(null);
+  const [analyticsLoading, setAnalyticsLoading] = useState(true);
+
+  useEffect(() => {
+    let alive = true;
+
+    async function fetchAnalytics() {
+      setAnalyticsLoading(true);
+      try {
+        const res = await fetch('/api/profile/analytics');
+        const json = await res.json().catch(() => ({}));
+
+        if (!alive) return;
+
+        if (!res.ok) {
+          console.error('[ProfileAnalytics] analytics fetch failed', json);
+          setAnalyticsState(null);
+          return;
+        }
+
+        setAnalyticsState(json || null);
+      } catch (e) {
+        console.error('[ProfileAnalytics] analytics fetch error', e);
+        if (!alive) return;
+        setAnalyticsState(null);
+      } finally {
+        if (!alive) return;
+        setAnalyticsLoading(false);
+      }
+    }
+
+    fetchAnalytics();
+    return () => {
+      alive = false;
+    };
+  }, []);
+
+  // ---------------------------
+  // Analytics object for UI (no placeholders, no "wired" language)
   // ---------------------------
   const analytics = useMemo(() => {
-    const daysLabels = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
-    return {
-      totalViews: null,
-      postsCount: null,
-      commentsCount: null,
-      connectionsGained7d: null,
+    const a = analyticsState || {};
 
-      profileCompletionPct: completion.progress,
+    // prefer live completion from your computed logic (matches Anvil UI)
+    const profileCompletionPct =
+      Number(completion.progress) ||
+      (typeof a.profileCompletionPct === 'number' ? a.profileCompletionPct : 0);
+
+    const daysLabels = Array.isArray(a.daysLabels) && a.daysLabels.length === 7
+      ? a.daysLabels
+      : ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
+
+    const viewsLast7Days = Array.isArray(a.viewsLast7Days) ? a.viewsLast7Days : null;
+    const searchAppearancesLast7Days = Array.isArray(a.searchAppearancesLast7Days)
+      ? a.searchAppearancesLast7Days
+      : null;
+    const connectionsLast7Days = Array.isArray(a.connectionsLast7Days) ? a.connectionsLast7Days : null;
+
+    return {
+      totalViews: typeof a.totalViews === 'number' ? a.totalViews : 0,
+      postsCount: typeof a.postsCount === 'number' ? a.postsCount : 0,
+      commentsCount: typeof a.commentsCount === 'number' ? a.commentsCount : 0,
+      connectionsGained7d: typeof a.connectionsGained7d === 'number' ? a.connectionsGained7d : 0,
+
+      profileCompletionPct,
 
       daysLabels,
-      viewsLast7Days: null,
-      searchAppearancesLast7Days: null,
-      connectionsLast7Days: null,
+      viewsLast7Days,
+      searchAppearancesLast7Days,
+      connectionsLast7Days,
 
-      lastProfileViewer: {
+      lastProfileViewer: a.lastProfileViewer || {
         name: null,
         profileUrl: '/profile?tab=views',
       },
-      recentViewers: [],
-      profileChecklist: completion.checklist,
 
-      highestViewedPost: null,
-      highestViewedComment: null,
+      recentViewers: Array.isArray(a.recentViewers) ? a.recentViewers : [],
+      profileChecklist: Array.isArray(completion.checklist) ? completion.checklist : [],
+
+      highestViewedPost: a.highestViewedPost || null,
+      highestViewedComment: a.highestViewedComment || null,
     };
-  }, [completion.progress, completion.checklist]);
+  }, [analyticsState, completion.progress, completion.checklist]);
 
   const allViewsHref =
     (analytics.lastProfileViewer?.profileUrl || '/profile?tab=views') +
@@ -249,18 +305,18 @@ export default function ProfileAnalyticsPage() {
     >
       <h1 className="m-0 text-[#FF7043] text-2xl font-extrabold">Profile Analytics</h1>
       <p className="mt-1 mb-0 text-[#607D8B] max-w-3xl mx-auto text-sm">
-        Track engagement on your profile and content. This page shows your live profile completion now.
-        Additional analytics roll out as signals are wired.
+        Track engagement on your profile and content.
       </p>
     </section>
   );
 
   const kpiValue = (v) => (v === null || typeof v === 'undefined' ? '—' : String(v));
 
+  // show charts when arrays exist (even if all zeros)
   const detailedAnalyticsAvailable =
-    analytics.viewsLast7Days &&
-    analytics.searchAppearancesLast7Days &&
-    analytics.connectionsLast7Days;
+    Array.isArray(analytics.viewsLast7Days) &&
+    Array.isArray(analytics.searchAppearancesLast7Days) &&
+    Array.isArray(analytics.connectionsLast7Days);
 
   return (
     <>
@@ -417,10 +473,10 @@ export default function ProfileAnalyticsPage() {
                 {mobilePanelIndex === 1 ? (
                   <div>
                     <p className="m-0 text-sm text-[#455A64]">
-                      Engagement signals will appear here once wired.
+                      Reach across the last 7 days.
                     </p>
                     <div className="mt-3 bg-[#FAFAFA] border border-gray-200 rounded-xl p-3 text-sm text-[#455A64]">
-                      Views, search appearances, and trends are not available yet on this live build.
+                      {analyticsLoading ? 'Loading…' : `Profile views: ${analytics.totalViews.toLocaleString()}`}
                     </div>
                   </div>
                 ) : null}
@@ -429,10 +485,10 @@ export default function ProfileAnalyticsPage() {
                 {mobilePanelIndex === 2 ? (
                   <div>
                     <p className="m-0 text-sm text-[#455A64]">
-                      Viewer and activity signals will appear here once wired.
+                      Recent viewers and activity.
                     </p>
                     <div className="mt-3 bg-[#FAFAFA] border border-gray-200 rounded-xl p-3 text-sm text-[#455A64]">
-                      Recent viewers is not available yet on this live build.
+                      {analyticsLoading ? 'Loading…' : `Recent viewers: ${analytics.recentViewers.length}`}
                     </div>
                   </div>
                 ) : null}
@@ -468,7 +524,7 @@ export default function ProfileAnalyticsPage() {
                       <KPI label="Comments" value={kpiValue(analytics.commentsCount)} />
                     </div>
 
-                    {/* Charts are only shown when real signals exist */}
+                    {/* Charts */}
                     {detailedAnalyticsAvailable ? (
                       <>
                         <ViewsChart labels={analytics.daysLabels} data={analytics.viewsLast7Days} />
@@ -477,7 +533,7 @@ export default function ProfileAnalyticsPage() {
                       </>
                     ) : (
                       <section className="bg-white border border-gray-200 rounded-xl shadow-sm p-4 text-sm text-[#455A64]">
-                        Detailed charts will appear here once engagement signals are wired to live data.
+                        {analyticsLoading ? 'Loading…' : 'No 7-day chart data available yet.'}
                       </section>
                     )}
 
@@ -499,7 +555,7 @@ export default function ProfileAnalyticsPage() {
                         <div className="mb-5">
                           <strong className="text-[#263238]">Highest Viewed Post</strong>
                           <p className="text-[#607D8B] text-sm mt-1 mb-0">
-                            As you start posting on the feed, your top-performing post will appear here.
+                            Your top-performing post will appear here once view tracking is added for feed content.
                           </p>
                         </div>
                       )}
@@ -517,7 +573,7 @@ export default function ProfileAnalyticsPage() {
                         <div>
                           <strong className="text-[#263238]">Highest Liked Comment</strong>
                           <p className="text-[#607D8B] text-sm mt-1 mb-0">
-                            As you join conversations, we’ll highlight your most engaging comments here.
+                            Your most engaging comment will appear here once comment-level engagement tracking is added.
                           </p>
                         </div>
                       )}
@@ -529,7 +585,7 @@ export default function ProfileAnalyticsPage() {
           </div>
 
           {/* ---------------------------
-              DESKTOP/TABLET: keep existing layout, but no fake numbers/charts
+              DESKTOP/TABLET
              --------------------------- */}
           <div className="hidden md:block">
             <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4 mb-6">
@@ -542,14 +598,14 @@ export default function ProfileAnalyticsPage() {
 
             <div className="grid lg:grid-cols-3 gap-6 mb-6">
               <div className="lg:col-span-2">
-                {detailedAnalyticsAvailable ? (
+                {Array.isArray(analytics.viewsLast7Days) && Array.isArray(analytics.searchAppearancesLast7Days) ? (
                   <div className="grid md:grid-cols-2 gap-6">
                     <ViewsChart labels={analytics.daysLabels} data={analytics.viewsLast7Days} />
                     <SearchAppearancesChart labels={analytics.daysLabels} data={analytics.searchAppearancesLast7Days} />
                   </div>
                 ) : (
                   <section className="bg-white border border-gray-200 rounded-xl shadow-sm p-6 text-sm text-[#455A64]">
-                    Charts will appear here once live engagement signals are wired.
+                    {analyticsLoading ? 'Loading charts…' : 'No view/search chart data available yet.'}
                   </section>
                 )}
               </div>
@@ -558,11 +614,11 @@ export default function ProfileAnalyticsPage() {
             </div>
 
             <div className="grid lg:grid-cols-3 gap-6">
-              {analytics.connectionsLast7Days ? (
+              {Array.isArray(analytics.connectionsLast7Days) ? (
                 <ConnectionsMiniChart labels={analytics.daysLabels} data={analytics.connectionsLast7Days} />
               ) : (
                 <section className="bg-white border border-gray-200 rounded-xl shadow-sm p-6 text-sm text-[#455A64]">
-                  Connection trends will appear here once wired.
+                  {analyticsLoading ? 'Loading…' : 'No connection trend data available yet.'}
                 </section>
               )}
 
@@ -591,7 +647,7 @@ export default function ProfileAnalyticsPage() {
                   <div className="mb-6">
                     <strong className="text-[#263238]">Highest Viewed Post</strong>
                     <p className="text-[#607D8B] text-sm mt-1">
-                      As you start posting on the feed, your top-performing post will appear here.
+                      Your top-performing post will appear here once view tracking is added for feed content.
                     </p>
                   </div>
                 )}
@@ -619,7 +675,7 @@ export default function ProfileAnalyticsPage() {
                   <div>
                     <strong className="text-[#263238]">Highest Liked Comment</strong>
                     <p className="text-[#607D8B] text-sm mt-1">
-                      As you join conversations, we’ll highlight your most engaging comments here.
+                      Your most engaging comment will appear here once comment-level engagement tracking is added.
                     </p>
                   </div>
                 )}

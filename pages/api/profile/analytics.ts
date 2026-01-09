@@ -1,0 +1,360 @@
+// pages/api/profile/analytics.ts
+import type { NextApiRequest, NextApiResponse } from "next";
+import { getServerSession } from "next-auth";
+import authOptions from "../auth/[...nextauth]";
+import { prisma } from "@/lib/prisma";
+import jwt from "jsonwebtoken";
+
+// ─────────────────────────────────────────────────────────────
+// Auth helpers (match /api/profile/details.ts behavior)
+// ─────────────────────────────────────────────────────────────
+function getCookie(req: NextApiRequest, name: string) {
+  const raw = req.headers.cookie || "";
+  const parts = raw.split(";").map((p) => p.trim());
+  for (const p of parts) {
+    if (p.startsWith(name + "=")) return decodeURIComponent(p.slice(name.length + 1));
+  }
+  return null;
+}
+
+function getJwtSecret() {
+  return process.env.NEXTAUTH_SECRET || "dev-secret-change-in-production";
+}
+
+async function getAuthedUserId(req: NextApiRequest, res: NextApiResponse): Promise<string | null> {
+  // 1) NextAuth session (prefer id if present)
+  const session = (await getServerSession(req, res, authOptions)) as
+    | { user?: { id?: string | null; email?: string | null } }
+    | null;
+
+  const sessionUserId = session?.user?.id ? String(session.user.id) : null;
+  if (sessionUserId) return sessionUserId;
+
+  const sessionEmail = session?.user?.email ? String(session.user.email) : null;
+  if (sessionEmail) {
+    const u = await prisma.user.findUnique({
+      where: { email: sessionEmail.toLowerCase().trim() },
+      select: { id: true },
+    });
+    return u?.id || null;
+  }
+
+  // 2) HttpOnly `auth` cookie JWT (email-based in your system)
+  const token = getCookie(req, "auth");
+  if (!token) return null;
+
+  try {
+    const decoded = jwt.verify(token, getJwtSecret()) as any;
+    const email = decoded?.email ? String(decoded.email).toLowerCase().trim() : null;
+    if (!email) return null;
+
+    const u = await prisma.user.findUnique({
+      where: { email },
+      select: { id: true },
+    });
+
+    return u?.id || null;
+  } catch {
+    return null;
+  }
+}
+
+// ─────────────────────────────────────────────────────────────
+// Analytics helpers
+// ─────────────────────────────────────────────────────────────
+function startOfDay(d: Date) {
+  const x = new Date(d);
+  x.setHours(0, 0, 0, 0);
+  return x;
+}
+
+function addDays(d: Date, days: number) {
+  const x = new Date(d);
+  x.setDate(x.getDate() + days);
+  return x;
+}
+
+function dayLabel(d: Date) {
+  // Mon/Tue/... stable enough for UI
+  return d.toLocaleDateString("en-US", { weekday: "short" });
+}
+
+function isSearchSource(source: any) {
+  const s = String(source || "").toLowerCase();
+  if (!s) return false;
+  return s.includes("search") || s.includes("discover") || s.includes("browse");
+}
+
+function safeJsonArrayLen(v: any) {
+  if (!v) return 0;
+  if (Array.isArray(v)) return v.length;
+  // sometimes stored as stringified JSON
+  if (typeof v === "string") {
+    try {
+      const parsed = JSON.parse(v);
+      return Array.isArray(parsed) ? parsed.length : 0;
+    } catch {
+      return 0;
+    }
+  }
+  return 0;
+}
+
+// ─────────────────────────────────────────────────────────────
+// Same completion logic as Anvil (ProfileDevelopment.js)
+// ─────────────────────────────────────────────────────────────
+function safeArray(v: any) {
+  if (!v) return [];
+  if (Array.isArray(v)) return v.filter(Boolean);
+  if (typeof v === "object" && Array.isArray((v as any).items)) return (v as any).items.filter(Boolean);
+  if (typeof v === "string") {
+    try {
+      const parsed = JSON.parse(v);
+      return Array.isArray(parsed) ? parsed.filter(Boolean) : [];
+    } catch {
+      return [];
+    }
+  }
+  return [];
+}
+
+function skillNamesFromAny(skillsJson: any) {
+  const arr = safeArray(skillsJson);
+  return arr
+    .map((x) => (typeof x === "string" ? x : x?.name || x?.label || ""))
+    .map((s) => String(s || "").trim())
+    .filter(Boolean);
+}
+
+export default async function handler(req: NextApiRequest, res: NextApiResponse) {
+  if (req.method !== "GET") {
+    res.setHeader("Allow", ["GET"]);
+    return res.status(405).json({ error: "Method not allowed" });
+  }
+
+  try {
+    const userId = await getAuthedUserId(req, res);
+    if (!userId) return res.status(401).json({ error: "Not authenticated" });
+
+    const today = startOfDay(new Date());
+    const start = addDays(today, -6); // 7-day window inclusive
+    const end = addDays(today, 1); // tomorrow start (exclusive upper bound)
+    const labels: string[] = [];
+    const dayStarts: Date[] = [];
+
+    for (let i = 0; i < 7; i++) {
+      const d = addDays(start, i);
+      dayStarts.push(d);
+      labels.push(dayLabel(d));
+    }
+
+    // Pull user profile bits needed for completion + display
+    const user = await prisma.user.findUnique({
+      where: { id: userId },
+      select: {
+        name: true,
+        headline: true,
+        aboutMe: true,
+        skillsJson: true,
+        languagesJson: true,
+      },
+    });
+
+    if (!user) return res.status(404).json({ error: "User not found" });
+
+    // Primary resume exists?
+    const primaryResume = await prisma.resume.findFirst({
+      where: { userId, isPrimary: true },
+      select: { id: true },
+      orderBy: { updatedAt: "desc" },
+    });
+
+    // Views (ProfileView)
+    const [totalViews, viewsRows, searchRows, recentViews] = await Promise.all([
+      prisma.profileView.count({ where: { targetId: userId } }),
+      prisma.profileView.findMany({
+        where: { targetId: userId, createdAt: { gte: start, lt: end } },
+        select: { createdAt: true },
+      }),
+      prisma.profileView.findMany({
+        where: {
+          targetId: userId,
+          createdAt: { gte: start, lt: end },
+        },
+        select: { createdAt: true, source: true },
+      }),
+      prisma.profileView.findMany({
+        where: { targetId: userId },
+        orderBy: { createdAt: "desc" },
+        take: 10,
+        select: {
+          createdAt: true,
+          viewer: {
+            select: { id: true, name: true, slug: true },
+          },
+        },
+      }),
+    ]);
+
+    // Bucket helper
+    const bucketize = (rows: { createdAt: Date }[]) => {
+      const buckets = Array(7).fill(0) as number[];
+      for (const r of rows) {
+        const d = startOfDay(new Date(r.createdAt));
+        const diffDays = Math.floor((d.getTime() - start.getTime()) / (24 * 60 * 60 * 1000));
+        if (diffDays >= 0 && diffDays < 7) buckets[diffDays] += 1;
+      }
+      return buckets;
+    };
+
+    const viewsLast7Days = bucketize(viewsRows);
+
+    // Search appearances approximation: ProfileView.source indicates search/browse/discover
+    const searchFiltered = searchRows.filter((r) => isSearchSource((r as any).source));
+    const searchAppearancesLast7Days = bucketize(searchFiltered as any);
+
+    // Connections (Contact)
+    // NOTE: depending on your acceptance implementation, you might store one row or two.
+    // We count both directions for "total", and for 7d gained we count new links involving this user.
+    const [contactsOut, contactsIn, contactsOut7d, contactsIn7d] = await Promise.all([
+      prisma.contact.findMany({
+        where: { userId },
+        select: { contactUserId: true, createdAt: true },
+      }),
+      prisma.contact.findMany({
+        where: { contactUserId: userId },
+        select: { userId: true, createdAt: true },
+      }),
+      prisma.contact.findMany({
+        where: { userId, createdAt: { gte: start, lt: end } },
+        select: { contactUserId: true, createdAt: true },
+      }),
+      prisma.contact.findMany({
+        where: { contactUserId: userId, createdAt: { gte: start, lt: end } },
+        select: { userId: true, createdAt: true },
+      }),
+    ]);
+
+    // Unique total connections (best-effort)
+    const uniqueConn = new Set<string>();
+    for (const c of contactsOut) uniqueConn.add(String(c.contactUserId));
+    for (const c of contactsIn) uniqueConn.add(String(c.userId));
+    const totalConnections = uniqueConn.size;
+
+    // Connections gained in last 7 days (unique)
+    const gainedSet = new Set<string>();
+    for (const c of contactsOut7d) gainedSet.add(String(c.contactUserId));
+    for (const c of contactsIn7d) gainedSet.add(String(c.userId));
+    const connectionsGained7d = gainedSet.size;
+
+    // Connections trend: bucketize by createdAt across both directions
+    const connectionsRowsCombined = [
+      ...contactsOut7d.map((x) => ({ createdAt: x.createdAt })),
+      ...contactsIn7d.map((x) => ({ createdAt: x.createdAt })),
+    ];
+    const connectionsLast7Days = bucketize(connectionsRowsCombined);
+
+    // Posts/comments
+    const [postsCount, postsForComments] = await Promise.all([
+      prisma.feedPost.count({ where: { authorId: userId } }),
+      prisma.feedPost.findMany({
+        where: { authorId: userId },
+        select: { comments: true },
+        take: 250, // MVP guardrail; increase later if needed
+        orderBy: { createdAt: "desc" },
+      }),
+    ]);
+
+    let commentsCount = 0;
+    for (const p of postsForComments) commentsCount += safeJsonArrayLen((p as any).comments);
+
+    // Completion (same rules as Anvil)
+    const headline = String(user.headline || "").trim();
+    const aboutMe = String(user.aboutMe || "").trim();
+    const skills = skillNamesFromAny(user.skillsJson);
+    const languages = safeArray(user.languagesJson);
+
+    const hasHeadline = headline.length >= 8;
+    const hasSummary = aboutMe.length >= 120;
+    const hasSkills = skills.length >= 8;
+    const hasLanguages = safeArray(languages).length >= 1;
+    const hasPrimaryResume = Boolean(primaryResume?.id);
+
+    const total = 5;
+    const completed =
+      (hasHeadline ? 1 : 0) +
+      (hasSummary ? 1 : 0) +
+      (hasSkills ? 1 : 0) +
+      (hasLanguages ? 1 : 0) +
+      (hasPrimaryResume ? 1 : 0);
+
+    const profileCompletionPct = Math.round((completed / total) * 100);
+
+    const profileChecklist = [
+      { label: "Headline", done: hasHeadline },
+      { label: "Summary", done: hasSummary },
+      { label: "Experience", done: hasPrimaryResume }, // MVP proxy: resume presence
+      { label: "Skills", done: hasSkills },
+      { label: "Links / Portfolio", done: false }, // no field in schema yet
+      { label: "Contact Preferences", done: false }, // no field in schema yet
+    ];
+
+    // Recent viewers payload (best-effort, safe URLs)
+    const recentViewers = recentViews
+      .map((v) => {
+        const viewer = (v as any).viewer;
+        if (!viewer?.id) return null;
+        const name = viewer?.name || "Member";
+        // safest: link to /profile (never 404) until your public user route is confirmed
+        const profileUrl = "/profile";
+        return {
+          name,
+          profileUrl,
+          viewedAt: (v as any).createdAt,
+        };
+      })
+      .filter(Boolean)
+      .slice(0, 8);
+
+    // lastProfileViewer
+    const lastProfileViewer = recentViewers.length
+      ? {
+          name: (recentViewers[0] as any).name || null,
+          profileUrl: "/profile?tab=views",
+        }
+      : {
+          name: null,
+          profileUrl: "/profile?tab=views",
+        };
+
+    return res.status(200).json({
+      // KPIs
+      totalViews,
+      postsCount,
+      commentsCount,
+      totalConnections,
+      connectionsGained7d,
+      profileCompletionPct,
+
+      // charts
+      daysLabels: labels,
+      viewsLast7Days,
+      searchAppearancesLast7Days,
+      connectionsLast7Days,
+
+      // viewers
+      lastProfileViewer,
+      recentViewers,
+
+      // completion checklist
+      profileChecklist,
+
+      // top content (not supported by schema yet)
+      highestViewedPost: null,
+      highestViewedComment: null,
+    });
+  } catch (err) {
+    console.error("[api/profile/analytics] error:", err);
+    return res.status(500).json({ error: "Failed to load profile analytics" });
+  }
+}
