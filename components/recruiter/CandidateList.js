@@ -8,6 +8,7 @@ export default function CandidateList({
   onMessage,
   onWhy,
   // NEW
+  onViewResume,
   onToggleCompare,
   compareSelectedIds = [],
   showFilters,
@@ -41,10 +42,11 @@ export default function CandidateList({
           onView={onView}
           onMessage={onMessage}
           onWhy={onWhy}
+          onViewResume={onViewResume}
           onToggleCompare={onToggleCompare}
-          compareSelected={Array.isArray(compareSelectedIds)
-            ? compareSelectedIds.includes(c.id)
-            : false}
+          compareSelected={
+            Array.isArray(compareSelectedIds) ? compareSelectedIds.includes(c.id) : false
+          }
         />
       ))}
     </div>
@@ -57,14 +59,15 @@ function CandidateCard({
   onView,
   onMessage,
   onWhy,
+  onViewResume,
   onToggleCompare,
   compareSelected = false,
 }) {
-  const { name, title, role, currentTitle, match } = candidate || {};
+  const { name, title, role, currentTitle, match, resumeId } = candidate || {};
   const displayTitle = role || title || currentTitle || "Candidate";
 
-  const matchLabel =
-    typeof match === "number" ? `${Math.round(match)}%` : null;
+  const matchLabel = typeof match === "number" ? `${Math.round(match)}%` : null;
+  const hasResume = Boolean(resumeId);
 
   return (
     <div className="w-full max-w-full min-w-0 rounded-xl border border-slate-200 bg-white px-4 py-3 shadow-md">
@@ -101,6 +104,21 @@ function CandidateCard({
           </button>
         )}
 
+        {/* ✅ View resume (NEW) */}
+        {typeof onViewResume === "function" && (
+          <button
+            type="button"
+            onClick={() => onViewResume(candidate)}
+            disabled={!hasResume}
+            className={`inline-flex items-center justify-center rounded-full border border-slate-200 bg-white px-3 py-1.5 text-[11px] font-semibold hover:bg-slate-50 ${
+              hasResume ? "text-slate-700" : "text-slate-400 cursor-not-allowed opacity-70"
+            }`}
+            title={hasResume ? "View resume" : "No resume on file"}
+          >
+            View resume
+          </button>
+        )}
+
         {typeof onWhy === "function" && (
           <button
             type="button"
@@ -111,7 +129,7 @@ function CandidateCard({
           </button>
         )}
 
-        {/* Compare (NEW) */}
+        {/* Compare */}
         {typeof onToggleCompare === "function" && (
           <label className="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-white px-3 py-1.5 text-[11px] font-semibold text-slate-700 hover:bg-slate-50 cursor-pointer select-none">
             <span>Compare</span>
@@ -124,7 +142,7 @@ function CandidateCard({
           </label>
         )}
 
-        {/* Match % (right-side vibe like the mock) */}
+        {/* Match % */}
         {matchLabel && (
           <span className="ml-auto inline-flex items-center gap-1 text-sm font-bold text-[#FF7043]">
             {matchLabel}

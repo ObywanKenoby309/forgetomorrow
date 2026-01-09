@@ -24,6 +24,8 @@ export default function CandidateProfileModal({
   candidate,
   onSaveNotes,
   onToggleTag,
+  // ✅ NEW
+  onViewResume,
 }) {
   const [notes, setNotes] = useState("");
   const [expandedExp, setExpandedExp] = useState({});
@@ -40,8 +42,6 @@ export default function CandidateProfileModal({
     setExpandedExp({});
     setJourneyFilter("All");
 
-    // ✅ Skills: show candidate skills first (profile/resume baseline via API),
-    // then allow recruiter to edit/save team-only skills without touching candidate profile.
     const incomingRecruiterSkills =
       candidate?.recruiterSkills ??
       candidate?.recruiterSkillsJson ??
@@ -57,7 +57,6 @@ export default function CandidateProfileModal({
     setSkillsLocal(toSafeArray(incomingSkills));
     setSkillInput("");
 
-    // ✅ Normalize tags
     const incomingTags = candidate?.tags ?? candidate?.tagsJson ?? candidate?.tagsJSON;
     setTagsLocal(toSafeArray(incomingTags));
   }, [open, candidate]);
@@ -151,6 +150,8 @@ export default function CandidateProfileModal({
   const hasSkills = toSafeArray(skillsLocal).length > 0;
   const hasNotes = notes.trim().length > 0;
 
+  const hasResume = Boolean(candidate?.resumeId);
+
   return (
     <div className="fixed inset-0 z-[100] flex items-center justify-center">
       <div className="absolute inset-0 bg-black/50" onClick={onClose} />
@@ -165,13 +166,31 @@ export default function CandidateProfileModal({
               {candidate.role || "Candidate"} • {candidate.location || "—"}
             </div>
           </div>
-          <button
-            type="button"
-            onClick={onClose}
-            className="rounded border px-3 py-2 text-sm hover:bg-slate-50"
-          >
-            Close
-          </button>
+
+          {/* ✅ Header CTAs */}
+          <div className="flex items-center gap-2">
+            {typeof onViewResume === "function" && (
+              <button
+                type="button"
+                onClick={() => onViewResume(candidate)}
+                disabled={!hasResume}
+                className={`rounded border px-3 py-2 text-sm hover:bg-slate-50 ${
+                  hasResume ? "text-slate-700" : "text-slate-400 cursor-not-allowed opacity-70"
+                }`}
+                title={hasResume ? "View resume" : "No resume on file"}
+              >
+                View resume
+              </button>
+            )}
+
+            <button
+              type="button"
+              onClick={onClose}
+              className="rounded border px-3 py-2 text-sm hover:bg-slate-50"
+            >
+              Close
+            </button>
+          </div>
         </div>
 
         <div className="p-5 grid grid-cols-1 lg:grid-cols-3 gap-5 overflow-y-auto bg-slate-50/40">
@@ -451,6 +470,4 @@ export default function CandidateProfileModal({
           </div>
         </div>
       </div>
-    </div>
-  );
-}
+    </div
