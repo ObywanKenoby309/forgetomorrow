@@ -30,20 +30,53 @@ export default function CandidateList({
   }
 
   return (
-    <div className="mt-4 space-y-3 w-full max-w-full">
-      {candidates.map((c) => (
-        <CandidateCard
-          key={c.id}
-          candidate={c}
-          isEnterprise={isEnterprise}
-          onView={onView}
-          onMessage={onMessage}
-          onWhy={onWhy}
-        />
-      ))}
+    <div className="w-full max-w-full min-w-0 rounded-xl border border-slate-200 bg-white px-4 py-3 shadow-md">
+      {/* Top row: name (left) + title (right) */}
+      <div className="flex items-start justify-between gap-3 min-w-0">
+        <h2 className="min-w-0 flex-1 truncate text-sm font-semibold text-slate-900">
+          {name || "Unnamed candidate"}
+        </h2>
+
+        <p className="min-w-0 max-w-[60%] truncate text-right text-xs text-slate-500">
+          {displayTitle}
+        </p>
+      </div>
+
+      {/* Buttons row */}
+      <div className="mt-2 flex flex-wrap items-center gap-2">
+        {typeof onMessage === "function" && (
+          <button
+            type="button"
+            onClick={() => onMessage(candidate)}
+            className="inline-flex items-center justify-center rounded-full bg-[#FF7043] px-3 py-1.5 text-xs font-semibold text-white shadow-sm hover:bg-[#F4511E] max-w-full"
+          >
+            Message
+          </button>
+        )}
+
+        {typeof onView === "function" && (
+          <button
+            type="button"
+            onClick={() => onView(candidate)}
+            className="inline-flex items-center justify-center rounded-full border border-slate-200 px-3 py-1.5 text-xs font-semibold text-slate-700 hover:bg-slate-50 max-w-full"
+          >
+            View profile
+          </button>
+        )}
+
+        {typeof onWhy === "function" && (
+          <button
+            type="button"
+            onClick={() => onWhy(candidate)}
+            className="inline-flex items-center justify-center rounded-full border border-slate-200 px-3 py-1.5 text-[11px] font-semibold text-slate-700 hover:bg-slate-50 max-w-full"
+          >
+            WHY this candidate
+          </button>
+        )}
+      </div>
     </div>
   );
-}
+
 
 function CandidateCard({ candidate, isEnterprise, onView, onMessage, onWhy }) {
   const {
