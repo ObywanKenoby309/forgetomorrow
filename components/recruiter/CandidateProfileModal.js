@@ -42,6 +42,8 @@ export default function CandidateProfileModal({
     setExpandedExp({});
     setJourneyFilter("All");
 
+    // ✅ Skills: show candidate skills first (profile/resume baseline via API),
+    // then allow recruiter to edit/save team-only skills without touching candidate profile.
     const incomingRecruiterSkills =
       candidate?.recruiterSkills ??
       candidate?.recruiterSkillsJson ??
@@ -57,6 +59,7 @@ export default function CandidateProfileModal({
     setSkillsLocal(toSafeArray(incomingSkills));
     setSkillInput("");
 
+    // ✅ Normalize tags
     const incomingTags = candidate?.tags ?? candidate?.tagsJson ?? candidate?.tagsJSON;
     setTagsLocal(toSafeArray(incomingTags));
   }, [open, candidate]);
@@ -175,7 +178,9 @@ export default function CandidateProfileModal({
                 onClick={() => onViewResume(candidate)}
                 disabled={!hasResume}
                 className={`rounded border px-3 py-2 text-sm hover:bg-slate-50 ${
-                  hasResume ? "text-slate-700" : "text-slate-400 cursor-not-allowed opacity-70"
+                  hasResume
+                    ? "text-slate-700"
+                    : "text-slate-400 cursor-not-allowed opacity-70"
                 }`}
                 title={hasResume ? "View resume" : "No resume on file"}
               >
@@ -470,4 +475,6 @@ export default function CandidateProfileModal({
           </div>
         </div>
       </div>
-    </div
+    </div>
+  );
+}
