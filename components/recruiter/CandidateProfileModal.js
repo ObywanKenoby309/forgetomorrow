@@ -153,7 +153,7 @@ export default function CandidateProfileModal({
   const hasSkills = toSafeArray(skillsLocal).length > 0;
   const hasNotes = notes.trim().length > 0;
 
-  const hasResume = Boolean(candidate?.resumeId);
+  const hasResume = Boolean(candidate?.resumeId) && Boolean(candidate?.slug);
 
   return (
     <div className="fixed inset-0 z-[100] flex items-center justify-center">
