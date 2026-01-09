@@ -1,5 +1,5 @@
 // components/recruiter/WhyCandidateDrawer.js
-import React from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import { PrimaryButton, SecondaryButton } from "@/components/ui/Buttons";
 import WhyInfo from "@/components/recruiter/WhyInfo";
 
@@ -15,9 +15,42 @@ import WhyInfo from "@/components/recruiter/WhyInfo";
  *   reasons: [{ requirement, evidence: [{ text, source }] }],
  *   skills: { matched: [], gaps: [], transferable: [] },
  *   trajectory: [{ title, company, from, to }],
- *   filters_triggered: []
+ *   filters_triggered = []
  * }
  */
+
+function CollapsibleSection({
+  title,
+  isOpen,
+  onToggle,
+  children,
+  right,
+  dense = false,
+}) {
+  return (
+    <div className="rounded-lg border bg-white">
+      <button
+        type="button"
+        onClick={onToggle}
+        className={`w-full flex items-center justify-between gap-3 text-left ${
+          dense ? "px-4 py-3" : "px-4 py-4"
+        }`}
+      >
+        <div className="min-w-0 flex-1">
+          <div className="font-medium">{title}</div>
+        </div>
+        <div className="flex items-center gap-2 shrink-0">
+          {right ? right : null}
+          <span className="text-xs font-semibold text-slate-500">
+            {isOpen ? "Collapse" : "Expand"}
+          </span>
+        </div>
+      </button>
+
+      {isOpen ? <div className="px-4 pb-4">{children}</div> : null}
+    </div>
+  );
+}
 
 function WhyPanel({
   title = "Why this candidate",
@@ -41,47 +74,119 @@ function WhyPanel({
   const reasonsToShow = isFull ? reasons : reasons.slice(0, 2);
   const evidencePerReason = (r) =>
     isFull ? (r.evidence || []) : (r.evidence || []).slice(0, 1);
+
   const matchedSkills = isFull
     ? skills.matched || []
     : (skills.matched || []).slice(0, 3);
 
+  // Section keys
+  const SECTION_KEYS = useMemo(
+    () => ({
+      summary: "summary",
+      requirements: "requirements",
+      skills: "skills",
+      career: "career",
+      filters: "filters",
+    }),
+    []
+  );
+
+  // Default: summary open, everything else closed
+  const defaultOpen = useMemo(
+    () => ({
+      [SECTION_KEYS.summary]: true,
+      [SECTION_KEYS.requirements]: false,
+      [SECTION_KEYS.skills]: false,
+      [SECTION_KEYS.career]: false,
+      [SECTION_KEYS.filters]: false,
+    }),
+    [SECTION_KEYS]
+  );
+
+  const [openMap, setOpenMap] = useState(defaultOpen);
+
+  // Reset collapses when the panel content changes (candidate/explain changed)
+  useEffect(() => {
+    setOpenMap(defaultOpen);
+  }, [defaultOpen, explain, mode, title]);
+
+  const setAll = (open) => {
+    setOpenMap({
+      [SECTION_KEYS.summary]: open,
+      [SECTION_KEYS.requirements]: open,
+      [SECTION_KEYS.skills]: open,
+      [SECTION_KEYS.career]: open,
+      [SECTION_KEYS.filters]: open,
+    });
+  };
+
+  const toggle = (key) => {
+    setOpenMap((prev) => ({ ...prev, [key]: !prev[key] }));
+  };
+
+  const controls = (
+    <div className="flex items-center gap-2">
+      <button
+        type="button"
+        onClick={() => setAll(true)}
+        className="text-[11px] font-semibold text-slate-600 hover:text-slate-900"
+      >
+        Expand all
+      </button>
+      <span className="text-slate-300">•</span>
+      <button
+        type="button"
+        onClick={() => setAll(false)}
+        className="text-[11px] font-semibold text-slate-600 hover:text-slate-900"
+      >
+        Collapse all
+      </button>
+    </div>
+  );
+
   return (
     <div className="h-full flex flex-col">
       {/* Header */}
-      <div className="p-4 border-b flex items-center justify-between">
-        <div className="font-semibold">{title}</div>
-        {showClose && (
-          <SecondaryButton onClick={onClose}>
-            Close
-          </SecondaryButton>
-        )}
+      <div
+        className={`border-b flex items-center justify-between ${
+          compactHeader ? "p-3" : "p-4"
+        }`}
+      >
+        <div className="min-w-0">
+          <div className="font-semibold truncate">{title}</div>
+          <div className="mt-1">{controls}</div>
+        </div>
+        {showClose && <SecondaryButton onClick={onClose}>Close</SecondaryButton>}
       </div>
 
       {/* Body */}
       <div className="p-4 overflow-y-auto grid gap-4">
         {/* Match Summary */}
-        <div className="rounded-lg border bg-white p-4">
-          <div className="flex items-center justify-between gap-3">
-            <div className="font-medium">Match Summary</div>
+        <CollapsibleSection
+          title="Match Summary"
+          isOpen={Boolean(openMap[SECTION_KEYS.summary])}
+          onToggle={() => toggle(SECTION_KEYS.summary)}
+          right={
             <div className="flex items-center gap-2">
               <div className="text-2xl font-bold text-[#FF7043]">
                 {typeof score === "number" ? `${score}%` : "—"}
               </div>
               <WhyInfo />
             </div>
-          </div>
-
+          }
+        >
           {!!summary && <p className="text-sm text-slate-600 mt-1">{summary}</p>}
           <p className="mt-2 text-xs text-slate-500">
             AI-assisted rationale; recruiters review and override all decisions.
           </p>
-        </div>
+        </CollapsibleSection>
 
         {/* Requirements → Evidence */}
-        <div className="rounded-lg border bg-white p-4">
-          <div className="font-medium mb-2">
-            Requirements matched — {isFull ? "with evidence" : "top reasons"}
-          </div>
+        <CollapsibleSection
+          title={`Requirements matched — ${isFull ? "with evidence" : "top reasons"}`}
+          isOpen={Boolean(openMap[SECTION_KEYS.requirements])}
+          onToggle={() => toggle(SECTION_KEYS.requirements)}
+        >
           <div className="grid gap-3">
             {reasonsToShow.length === 0 ? (
               <div className="text-sm text-slate-500">
@@ -108,16 +213,19 @@ function WhyPanel({
             )}
           </div>
           {!isFull && (
-            <p className="text-xs text-slate-500 mt-2">
+            <p className="text-xs text-slate-500 mt-3">
               You’re viewing WHY Lite. Add WHY Plus or upgrade to Enterprise for
               full evidence.
             </p>
           )}
-        </div>
+        </CollapsibleSection>
 
         {/* Skills */}
-        <div className="rounded-lg border bg-white p-4">
-          <div className="font-medium mb-2">Skills alignment</div>
+        <CollapsibleSection
+          title="Skills alignment"
+          isOpen={Boolean(openMap[SECTION_KEYS.skills])}
+          onToggle={() => toggle(SECTION_KEYS.skills)}
+        >
           <div
             className={`grid ${
               isFull ? "grid-cols-1 md:grid-cols-3" : "grid-cols-1"
@@ -131,6 +239,7 @@ function WhyPanel({
                 ))}
               </ul>
             </div>
+
             {isFull && (
               <>
                 <div>
@@ -152,18 +261,24 @@ function WhyPanel({
               </>
             )}
           </div>
-        </div>
+        </CollapsibleSection>
 
         {/* Career path (Full only) */}
         {isFull && (
-          <div className="rounded-lg border bg-white p-4">
-            <div className="font-medium mb-2">Career path</div>
+          <CollapsibleSection
+            title="Career path"
+            isOpen={Boolean(openMap[SECTION_KEYS.career])}
+            onToggle={() => toggle(SECTION_KEYS.career)}
+          >
             <ol className="text-sm grid gap-2">
               {trajectory.length === 0 ? (
                 <li className="text-slate-500">No work history found.</li>
               ) : (
                 trajectory.map((t, i) => (
-                  <li key={`${t.title}-${t.company}-${i}`} className="grid gap-0.5">
+                  <li
+                    key={`${t.title}-${t.company}-${i}`}
+                    className="grid gap-0.5"
+                  >
                     <div className="font-semibold">
                       {t.title} — {t.company}
                     </div>
@@ -174,12 +289,15 @@ function WhyPanel({
                 ))
               )}
             </ol>
-          </div>
+          </CollapsibleSection>
         )}
 
         {/* Filters that triggered */}
-        <div className="rounded-lg border bg-white p-4">
-          <div className="font-medium mb-2">Matched your filters</div>
+        <CollapsibleSection
+          title="Matched your filters"
+          isOpen={Boolean(openMap[SECTION_KEYS.filters])}
+          onToggle={() => toggle(SECTION_KEYS.filters)}
+        >
           <div className="flex flex-wrap gap-2">
             {(filters_triggered || []).length ? (
               (filters_triggered || []).map((f) => (
@@ -196,12 +314,14 @@ function WhyPanel({
               </span>
             )}
           </div>
-        </div>
+        </CollapsibleSection>
       </div>
 
       {/* Footer */}
       <div className="p-4 border-t flex items-center justify-end gap-2">
-        {!isFull && <SecondaryButton href="#upgrade">Upgrade WHY</SecondaryButton>}
+        {!isFull && (
+          <SecondaryButton href="#upgrade">Upgrade WHY</SecondaryButton>
+        )}
         <SecondaryButton onClick={onClose}>Close</SecondaryButton>
         {onViewCandidate ? (
           <PrimaryButton onClick={onViewCandidate}>View full candidate</PrimaryButton>
@@ -287,11 +407,6 @@ export function WhyCandidateCompareDrawer({
   const leftName = left?.candidate?.name || "Candidate A";
   const rightName = right?.candidate?.name || "Candidate B";
 
-  // Layout:
-  // - On XL screens: two 560px panels, from the RIGHT
-  // - On smaller screens: stack (still from right, full width)
-  const panelWidth = 560;
-
   return (
     <div aria-live="polite">
       {/* Overlay */}
@@ -305,7 +420,7 @@ export function WhyCandidateCompareDrawer({
         }}
       />
 
-      {/* Two right-anchored panels */}
+      {/* Two panels: responsive */}
       <aside
         role="dialog"
         aria-modal="true"
@@ -316,16 +431,15 @@ export function WhyCandidateCompareDrawer({
           height: "100vh",
           width: "min(1120px, 100%)",
           zIndex: 71,
-          display: "flex",
-          flexDirection: "row",
-          alignItems: "stretch",
-          gap: 0,
+          display: "grid",
+          gridTemplateColumns: "repeat(2, minmax(0, 1fr))",
         }}
+        className="max-lg:grid-cols-1"
       >
-        {/* Left compare panel (sits just left of the right panel) */}
+        {/* Left */}
         <div
+          className="hidden lg:flex"
           style={{
-            width: "min(560px, 100%)",
             height: "100%",
             background: "#fff",
             borderLeft: "1px solid #e5e7eb",
@@ -333,7 +447,6 @@ export function WhyCandidateCompareDrawer({
             display: "flex",
             flexDirection: "column",
           }}
-          className="hidden lg:flex"
         >
           <WhyPanel
             title={leftName}
@@ -341,13 +454,14 @@ export function WhyCandidateCompareDrawer({
             mode={mode}
             onClose={onClose}
             onViewCandidate={onViewLeft}
+            showClose={false}
+            compactHeader
           />
         </div>
 
-        {/* Right compare panel */}
+        {/* Right (always visible) */}
         <div
           style={{
-            width: "min(560px, 100%)",
             height: "100%",
             background: "#fff",
             borderLeft: "1px solid #e5e7eb",
@@ -355,7 +469,6 @@ export function WhyCandidateCompareDrawer({
             display: "flex",
             flexDirection: "column",
           }}
-          className="flex"
         >
           <WhyPanel
             title={rightName}
@@ -363,35 +476,12 @@ export function WhyCandidateCompareDrawer({
             mode={mode}
             onClose={onClose}
             onViewCandidate={onViewRight}
+            compactHeader
           />
         </div>
-      </aside>
 
-      {/* Mobile fallback: when lg is hidden, show single stacked overlay (right only) */}
-      <aside
-        role="dialog"
-        aria-modal="true"
-        style={{
-          position: "fixed",
-          top: 0,
-          right: 0,
-          height: "100vh",
-          width: "min(560px, 100%)",
-          background: "#fff",
-          borderLeft: "1px solid #e5e7eb",
-          boxShadow: "-8px 0 24px rgba(0,0,0,0.12)",
-          zIndex: 72,
-          display: "none",
-        }}
-        className="lg:hidden"
-      >
-        <WhyPanel
-          title={`${leftName} vs ${rightName}`}
-          explain={right?.explain || left?.explain}
-          mode={mode}
-          onClose={onClose}
-          onViewCandidate={onViewRight || onViewLeft}
-        />
+        {/* Mobile: show a single combined title using right panel already */}
+        <div className="lg:hidden hidden" />
       </aside>
     </div>
   );
