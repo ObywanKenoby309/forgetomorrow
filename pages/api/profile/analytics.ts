@@ -44,7 +44,7 @@ async function getAuthedUserId(req: NextApiRequest, res: NextApiResponse): Promi
   if (!token) return null;
 
   try {
-    const decoded = jwt.verify(token, getJwtSecret()) as any;
+    const decoded = jwt.verify(token, getJwtSecret()) as { email?: string | null };
     const email = decoded?.email ? String(decoded.email).toLowerCase().trim() : null;
     if (!email) return null;
 
@@ -75,20 +75,18 @@ function addDays(d: Date, days: number) {
 }
 
 function dayLabel(d: Date) {
-  // Mon/Tue/... stable enough for UI
   return d.toLocaleDateString("en-US", { weekday: "short" });
 }
 
-function isSearchSource(source: any) {
+function isSearchSource(source: unknown) {
   const s = String(source || "").toLowerCase();
   if (!s) return false;
   return s.includes("search") || s.includes("discover") || s.includes("browse");
 }
 
-function safeJsonArrayLen(v: any) {
+function safeJsonArrayLen(v: unknown) {
   if (!v) return 0;
   if (Array.isArray(v)) return v.length;
-  // sometimes stored as stringified JSON
   if (typeof v === "string") {
     try {
       const parsed = JSON.parse(v);
@@ -103,10 +101,12 @@ function safeJsonArrayLen(v: any) {
 // ─────────────────────────────────────────────────────────────
 // Same completion logic as Anvil (ProfileDevelopment.js)
 // ─────────────────────────────────────────────────────────────
-function safeArray(v: any) {
+function safeArray(v: unknown): unknown[] {
   if (!v) return [];
   if (Array.isArray(v)) return v.filter(Boolean);
-  if (typeof v === "object" && Array.isArray((v as any).items)) return (v as any).items.filter(Boolean);
+  if (typeof v === "object" && v !== null && Array.isArray((v as { items?: unknown[] }).items)) {
+    return ((v as { items?: unknown[] }).items || []).filter(Boolean);
+  }
   if (typeof v === "string") {
     try {
       const parsed = JSON.parse(v);
@@ -118,13 +118,24 @@ function safeArray(v: any) {
   return [];
 }
 
-function skillNamesFromAny(skillsJson: any) {
+function skillNamesFromAny(skillsJson: unknown): string[] {
   const arr = safeArray(skillsJson);
   return arr
-    .map((x) => (typeof x === "string" ? x : x?.name || x?.label || ""))
-    .map((s) => String(s || "").trim())
+    .map((x: unknown) => {
+      if (typeof x === "string") return x;
+      if (typeof x === "object" && x !== null) {
+        const o = x as { name?: unknown; label?: unknown };
+        return String(o.name || o.label || "");
+      }
+      return "";
+    })
+    .map((s: string) => String(s || "").trim())
     .filter(Boolean);
 }
+
+type DayRow = { createdAt: Date };
+type SearchRow = { createdAt: Date; source: string | null };
+type ContactRow = { createdAt: Date; userId?: string; contactUserId?: string };
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   if (req.method !== "GET") {
@@ -139,13 +150,10 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     const today = startOfDay(new Date());
     const start = addDays(today, -6); // 7-day window inclusive
     const end = addDays(today, 1); // tomorrow start (exclusive upper bound)
-    const labels: string[] = [];
-    const dayStarts: Date[] = [];
 
+    const labels: string[] = [];
     for (let i = 0; i < 7; i++) {
-      const d = addDays(start, i);
-      dayStarts.push(d);
-      labels.push(dayLabel(d));
+      labels.push(dayLabel(addDays(start, i)));
     }
 
     // Pull user profile bits needed for completion + display
@@ -175,29 +183,24 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       prisma.profileView.findMany({
         where: { targetId: userId, createdAt: { gte: start, lt: end } },
         select: { createdAt: true },
-      }),
+      }) as Promise<DayRow[]>,
       prisma.profileView.findMany({
-        where: {
-          targetId: userId,
-          createdAt: { gte: start, lt: end },
-        },
+        where: { targetId: userId, createdAt: { gte: start, lt: end } },
         select: { createdAt: true, source: true },
-      }),
+      }) as Promise<SearchRow[]>,
       prisma.profileView.findMany({
         where: { targetId: userId },
         orderBy: { createdAt: "desc" },
         take: 10,
         select: {
           createdAt: true,
-          viewer: {
-            select: { id: true, name: true, slug: true },
-          },
+          viewer: { select: { id: true, name: true, slug: true } },
         },
       }),
     ]);
 
     // Bucket helper
-    const bucketize = (rows: { createdAt: Date }[]) => {
+    const bucketize = (rows: DayRow[]) => {
       const buckets = Array(7).fill(0) as number[];
       for (const r of rows) {
         const d = startOfDay(new Date(r.createdAt));
@@ -210,45 +213,45 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     const viewsLast7Days = bucketize(viewsRows);
 
     // Search appearances approximation: ProfileView.source indicates search/browse/discover
-    const searchFiltered = searchRows.filter((r) => isSearchSource((r as any).source));
-    const searchAppearancesLast7Days = bucketize(searchFiltered as any);
+    const searchFiltered: DayRow[] = searchRows
+      .filter((r) => isSearchSource(r.source))
+      .map((r) => ({ createdAt: r.createdAt }));
+    const searchAppearancesLast7Days = bucketize(searchFiltered);
 
     // Connections (Contact)
-    // NOTE: depending on your acceptance implementation, you might store one row or two.
-    // We count both directions for "total", and for 7d gained we count new links involving this user.
     const [contactsOut, contactsIn, contactsOut7d, contactsIn7d] = await Promise.all([
       prisma.contact.findMany({
         where: { userId },
         select: { contactUserId: true, createdAt: true },
-      }),
+      }) as Promise<ContactRow[]>,
       prisma.contact.findMany({
         where: { contactUserId: userId },
         select: { userId: true, createdAt: true },
-      }),
+      }) as Promise<ContactRow[]>,
       prisma.contact.findMany({
         where: { userId, createdAt: { gte: start, lt: end } },
         select: { contactUserId: true, createdAt: true },
-      }),
+      }) as Promise<ContactRow[]>,
       prisma.contact.findMany({
         where: { contactUserId: userId, createdAt: { gte: start, lt: end } },
         select: { userId: true, createdAt: true },
-      }),
+      }) as Promise<ContactRow[]>,
     ]);
 
     // Unique total connections (best-effort)
     const uniqueConn = new Set<string>();
-    for (const c of contactsOut) uniqueConn.add(String(c.contactUserId));
-    for (const c of contactsIn) uniqueConn.add(String(c.userId));
+    for (const c of contactsOut) if (c.contactUserId) uniqueConn.add(String(c.contactUserId));
+    for (const c of contactsIn) if (c.userId) uniqueConn.add(String(c.userId));
     const totalConnections = uniqueConn.size;
 
     // Connections gained in last 7 days (unique)
     const gainedSet = new Set<string>();
-    for (const c of contactsOut7d) gainedSet.add(String(c.contactUserId));
-    for (const c of contactsIn7d) gainedSet.add(String(c.userId));
+    for (const c of contactsOut7d) if (c.contactUserId) gainedSet.add(String(c.contactUserId));
+    for (const c of contactsIn7d) if (c.userId) gainedSet.add(String(c.userId));
     const connectionsGained7d = gainedSet.size;
 
     // Connections trend: bucketize by createdAt across both directions
-    const connectionsRowsCombined = [
+    const connectionsRowsCombined: DayRow[] = [
       ...contactsOut7d.map((x) => ({ createdAt: x.createdAt })),
       ...contactsIn7d.map((x) => ({ createdAt: x.createdAt })),
     ];
@@ -260,17 +263,17 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       prisma.feedPost.findMany({
         where: { authorId: userId },
         select: { comments: true },
-        take: 250, // MVP guardrail; increase later if needed
+        take: 250,
         orderBy: { createdAt: "desc" },
       }),
     ]);
 
     let commentsCount = 0;
-    for (const p of postsForComments) commentsCount += safeJsonArrayLen((p as any).comments);
+    for (const p of postsForComments) commentsCount += safeJsonArrayLen((p as { comments?: unknown }).comments);
 
     // Completion (same rules as Anvil)
     const headline = String(user.headline || "").trim();
-    const aboutMe = String(user.aboutMe || "").trim();
+    const aboutMe = String((user as { aboutMe?: string | null }).aboutMe || "").trim();
     const skills = skillNamesFromAny(user.skillsJson);
     const languages = safeArray(user.languagesJson);
 
@@ -293,39 +296,27 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     const profileChecklist = [
       { label: "Headline", done: hasHeadline },
       { label: "Summary", done: hasSummary },
-      { label: "Experience", done: hasPrimaryResume }, // MVP proxy: resume presence
+      { label: "Experience", done: hasPrimaryResume },
       { label: "Skills", done: hasSkills },
-      { label: "Links / Portfolio", done: false }, // no field in schema yet
-      { label: "Contact Preferences", done: false }, // no field in schema yet
+      { label: "Links / Portfolio", done: false },
+      { label: "Contact Preferences", done: false },
     ];
 
     // Recent viewers payload (best-effort, safe URLs)
     const recentViewers = recentViews
       .map((v) => {
-        const viewer = (v as any).viewer;
+        const viewer = (v as { viewer?: { id?: string; name?: string | null } }).viewer;
         if (!viewer?.id) return null;
         const name = viewer?.name || "Member";
-        // safest: link to /profile (never 404) until your public user route is confirmed
         const profileUrl = "/profile";
-        return {
-          name,
-          profileUrl,
-          viewedAt: (v as any).createdAt,
-        };
+        return { name, profileUrl, viewedAt: (v as { createdAt: Date }).createdAt };
       })
       .filter(Boolean)
-      .slice(0, 8);
+      .slice(0, 8) as { name: string; profileUrl: string; viewedAt: Date }[];
 
-    // lastProfileViewer
     const lastProfileViewer = recentViewers.length
-      ? {
-          name: (recentViewers[0] as any).name || null,
-          profileUrl: "/profile?tab=views",
-        }
-      : {
-          name: null,
-          profileUrl: "/profile?tab=views",
-        };
+      ? { name: recentViewers[0].name || null, profileUrl: "/profile?tab=views" }
+      : { name: null, profileUrl: "/profile?tab=views" };
 
     return res.status(200).json({
       // KPIs
