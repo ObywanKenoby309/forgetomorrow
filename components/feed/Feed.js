@@ -287,11 +287,11 @@ export default function Feed() {
 
       {showComposer && (
         <div
-          className="fixed inset-0 z-50 flex items-center justify-center bg-black/55"
-          onClick={() => setShowComposer(false)}
-          role="dialog"
-          aria-modal="true"
-        >
+		className="fixed inset-0 z-50 flex items-start justify-center bg-black/55 pt-16 sm:pt-24"
+		onClick={() => setShowComposer(false)}
+		role="dialog"
+		aria-modal="true"
+	   >
           <div
             className="relative bg-white rounded-2xl shadow-2xl w-[92vw] max-w-2xl p-0 border border-gray-200"
             onClick={(e) => e.stopPropagation()}
