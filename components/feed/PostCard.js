@@ -12,8 +12,9 @@ export default function PostCard({
   onReact,
   currentUserId,
   currentUserName,
-  onBlockAuthor,
+  onBlockAuthor, // ✅ NEW: callback to hide all posts from this author
 }) {
+  // ✅ CRITICAL FIX 1: Early return if post is missing/invalid (happens during static prerender)
   if (!post) return null;
 
   const router = useRouter();
@@ -23,19 +24,28 @@ export default function PostCard({
   const [replyText, setReplyText] = useState('');
   const [hoveredEmoji, setHoveredEmoji] = useState(null);
   const [reactionUsers, setReactionUsers] = useState({});
+
+  // ✅ avatar action popover
   const [avatarMenuOpen, setAvatarMenuOpen] = useState(false);
 
-  // ✅ NEW: local connection request state
-  const [connectionState, setConnectionState] = useState(null);
-  // null | 'requested' | 'connected'
+  // ✅ NEW: connect state (optimistic UI)
+  const [connectStatus, setConnectStatus] = useState('idle'); // idle | requested | connected
 
+  // ✅ CRITICAL FIX 2: Safe isOwner check
   const isOwner =
-    post.authorId && currentUserId
-      ? post.authorId === currentUserId
-      : false;
-
+    post.authorId && currentUserId ? post.authorId === currentUserId : false;
   const canTargetAuthor = Boolean(post?.authorId) && !isOwner;
 
+  const handleReplySubmit = () => {
+    if (!replyText.trim()) return;
+    onReply(post.id, replyText.trim());
+    setReplyText('');
+    setShowReplyInput(false);
+  };
+
+  // ─────────────────────────────────────────────────────────────
+  // Avatar menu actions (View / Connect / Message) + log view
+  // ─────────────────────────────────────────────────────────────
   const chrome = String(router.query?.chrome || '').toLowerCase();
   const withChrome = (path) =>
     chrome ? `${path}${path.includes('?') ? '&' : '?'}chrome=${chrome}` : path;
@@ -50,12 +60,15 @@ export default function PostCard({
           source: source || 'feed',
         }),
       });
-    } catch {}
+    } catch {
+      // ignore (best-effort)
+    }
   };
 
   const handleViewProfile = async () => {
     if (!post?.authorId) return;
     setAvatarMenuOpen(false);
+
     logProfileView('feed');
 
     const params = new URLSearchParams();
@@ -63,31 +76,34 @@ export default function PostCard({
     router.push(withChrome(`/member-profile?${params.toString()}`));
   };
 
-  // ✅ FIXED: Connect uses useConnect (no navigation)
+  // ✅ FIX: Connect should SEND REQUEST (no navigation) + optimistic "Requested"
+  // ✅ Uses centralized hook: /api/contacts/request
   const handleConnect = async () => {
     if (!post?.authorId) return;
+    if (connectStatus !== 'idle') return;
+
     setAvatarMenuOpen(false);
+    setConnectStatus('requested'); // optimistic
 
     const result = await connectWith(post.authorId);
 
-    if (!result.ok) {
-      alert(result.errorMessage || 'Could not send request.');
+    if (!result?.ok) {
+      setConnectStatus('idle');
+      alert(result?.errorMessage || 'We could not send your connection request. Please try again.');
       return;
     }
 
-    if (result.alreadyConnected) {
-      setConnectionState('connected');
+    // Normalize returned states
+    if (result.alreadyConnected || result.status === 'connected') {
+      setConnectStatus('connected');
       return;
     }
 
-    if (result.alreadyRequested || result.status === 'pending') {
-      setConnectionState('requested');
-      return;
-    }
-
-    setConnectionState('requested');
+    // If alreadyRequested or status indicates pending, keep requested
+    setConnectStatus('requested');
   };
 
+  // ✅ Message → The Signal, pre-loaded to message
   const handleMessage = () => {
     if (!post?.authorId) return;
     setAvatarMenuOpen(false);
@@ -98,13 +114,9 @@ export default function PostCard({
     router.push(withChrome(`/seeker/messages?${params.toString()}`));
   };
 
-  const handleReplySubmit = () => {
-    if (!replyText.trim()) return;
-    onReply(post.id, replyText.trim());
-    setReplyText('');
-    setShowReplyInput(false);
-  };
-
+  // ─────────────────────────────────────────────────────────────
+  // REPORT POST (non-OP only) — mirrors Signal behavior
+  // ─────────────────────────────────────────────────────────────
   const handleReportPost = async () => {
     const reason = window.prompt(
       'Tell us briefly what happened. This will be sent to the ForgeTomorrow moderation team.'
@@ -123,21 +135,32 @@ export default function PostCard({
       });
 
       if (!res.ok) {
-        alert('We could not submit your report.');
+        console.error('report error:', await res.text());
+        alert('We could not submit your report. Please try again.');
         return;
       }
 
       alert('Thank you. Your report has been submitted.');
-    } catch {
-      alert('We could not submit your report.');
+    } catch (err) {
+      console.error('report error:', err);
+      alert('We could not submit your report. Please try again.');
     }
   };
 
+  // ─────────────────────────────────────────────────────────────
+  // BLOCK AUTHOR (non-OP only) — prompt for reason, send to API, optimistic hide
+  // ─────────────────────────────────────────────────────────────
   const handleBlockAuthor = async () => {
-    if (!post?.authorId) return;
+    if (!post?.authorId) {
+      alert('We could not determine which member to block.');
+      return;
+    }
 
+    const reason = window.prompt(
+      'Optional: Why are you blocking this member? (This helps moderation)'
+    );
     const confirmed = window.confirm(
-      'Block this member? You will no longer see their posts.'
+      'Block this member? You will no longer see their posts, and they will not be able to message you.'
     );
     if (!confirmed) return;
 
@@ -145,24 +168,37 @@ export default function PostCard({
       const res = await fetch('/api/signal/block', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ targetUserId: post.authorId }),
+        body: JSON.stringify({
+          targetUserId: post.authorId,
+          reason: reason?.trim() || null, // ✅ Send reason if provided
+        }),
       });
 
       if (!res.ok) {
-        alert('We could not block this member.');
+        console.error('block error:', res.status, await res.text());
+        alert('We could not block this member. Please try again.');
         return;
       }
 
+      // ✅ Optimistic hide + trigger Feed reload
       onBlockAuthor?.(post.authorId);
-      alert('Member blocked.');
-    } catch {
-      alert('We could not block this member.');
+      alert('Member blocked. You will no longer see their posts.');
+    } catch (err) {
+      console.error('block error:', err);
+      alert('We could not block this member. Please try again.');
     }
   };
 
+  // ─────────────────────────────────────────────────────────────
+  // REACTIONS
+  // ─────────────────────────────────────────────────────────────
   const selectedEmojis =
     post.reactions
-      ?.filter((r) => r.userIds?.includes(currentUserId))
+      ?.filter(
+        (r) =>
+          r.users?.includes(currentUserId) ||
+          r.userIds?.includes(currentUserId)
+      )
       ?.map((r) => r.emoji) || [];
 
   const reactionCounts =
@@ -171,43 +207,80 @@ export default function PostCard({
       return acc;
     }, {}) || {};
 
+  const fetchUsersForEmoji = async (emoji) => {
+    if (reactionUsers[emoji]) return;
+
+    const reaction = post.reactions?.find((r) => r.emoji === emoji);
+    if (!reaction || !reaction.userIds?.length) return;
+
+    try {
+      const res = await fetch('/api/users/names', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ userIds: reaction.userIds }),
+      });
+
+      if (res.ok) {
+        const data = await res.json();
+        const names = (data.names || [])
+          .map((n) => (n === currentUserName ? 'You' : n))
+          .join(', ');
+        setReactionUsers((prev) => ({ ...prev, [emoji]: names }));
+      }
+    } catch (err) {
+      console.error('reaction hover error:', err);
+    }
+  };
+
+  const getTooltipText = (emoji) =>
+    reactionUsers[emoji]
+      ? `${reactionUsers[emoji]} reacted with ${emoji}`
+      : 'Loading…';
+
   return (
     <div className="relative bg-white rounded-lg shadow p-5 space-y-4 w-full">
-      {/* Top actions */}
+      {/* TOP-RIGHT ACTIONS — unified style */}
       <div className="absolute top-3 right-3 flex items-center gap-2">
         {!isOwner && (
           <>
             <button
               onClick={handleReportPost}
-              className="text-xs px-2 py-1 border rounded-md"
+              className="text-xs px-2 py-1 border border-gray-300 rounded-md text-gray-700 hover:bg-gray-50"
             >
               Report
             </button>
             <button
               onClick={handleBlockAuthor}
-              className="text-xs px-2 py-1 border border-red-300 text-red-700 rounded-md"
+              className="text-xs px-2 py-1 border border-red-300 rounded-md text-red-700 hover:bg-red-50"
             >
               Block
             </button>
           </>
         )}
+
         {isOwner && (
           <button
             onClick={() => onDelete(post.id)}
-            className="text-xs px-2 py-1 border border-red-300 text-red-700 rounded-md"
+            className="text-xs px-2 py-1 border border-red-300 rounded-md text-red-700 hover:bg-red-50"
           >
             Delete
           </button>
         )}
       </div>
 
-      {/* Author */}
+      {/* AUTHOR */}
       <div className="flex items-start gap-3">
         <div className="relative">
           <button
             type="button"
-            onClick={() => canTargetAuthor && setAvatarMenuOpen((v) => !v)}
+            onClick={() => {
+              if (!canTargetAuthor) return;
+              setAvatarMenuOpen((v) => !v);
+            }}
             onBlur={() => setAvatarMenuOpen(false)}
+            className="shrink-0"
+            style={{ cursor: canTargetAuthor ? 'pointer' : 'default' }}
+            aria-label={canTargetAuthor ? 'Open member actions' : 'Author avatar'}
           >
             {post.authorAvatar ? (
               <img
@@ -216,44 +289,53 @@ export default function PostCard({
                 className="w-10 h-10 rounded-full"
               />
             ) : (
-              <div className="w-10 h-10 rounded-full bg-gray-200 flex items-center justify-center">
+              <div className="w-10 h-10 rounded-full bg-gray-200 flex items-center justify-center text-gray-500">
                 {post.author?.charAt(0)?.toUpperCase()}
               </div>
             )}
           </button>
 
-          {avatarMenuOpen && canTargetAuthor && (
-            <div className="absolute left-0 mt-2 w-44 bg-white border rounded-lg shadow-lg z-30">
+          {avatarMenuOpen && canTargetAuthor ? (
+            <div
+              className="absolute left-0 mt-2 w-44 bg-white border border-gray-200 rounded-lg shadow-lg z-30 overflow-hidden"
+              role="menu"
+            >
               <button
+                type="button"
                 onMouseDown={(e) => e.preventDefault()}
                 onClick={handleViewProfile}
                 className="w-full text-left px-3 py-2 text-sm hover:bg-gray-50"
+                role="menuitem"
               >
                 View profile
               </button>
 
               <button
+                type="button"
                 onMouseDown={(e) => e.preventDefault()}
                 onClick={handleConnect}
-                disabled={connectionState === 'requested'}
-                className="w-full text-left px-3 py-2 text-sm hover:bg-gray-50 disabled:opacity-60"
+                disabled={connectStatus !== 'idle'}
+                className="w-full text-left px-3 py-2 text-sm hover:bg-gray-50 disabled:text-gray-400 disabled:bg-white"
+                role="menuitem"
               >
-                {connectionState === 'connected'
+                {connectStatus === 'connected'
                   ? 'Connected'
-                  : connectionState === 'requested'
-                  ? 'Connection Requested'
+                  : connectStatus === 'requested'
+                  ? 'Connection requested'
                   : 'Connect'}
               </button>
 
               <button
+                type="button"
                 onMouseDown={(e) => e.preventDefault()}
                 onClick={handleMessage}
                 className="w-full text-left px-3 py-2 text-sm hover:bg-gray-50"
+                role="menuitem"
               >
                 Message
               </button>
             </div>
-          )}
+          ) : null}
         </div>
 
         <div>
@@ -264,31 +346,55 @@ export default function PostCard({
         </div>
       </div>
 
+      {/* BODY */}
       <p className="whitespace-pre-wrap">{post.body}</p>
 
-      <QuickEmojiBar
-        onPick={(emoji) => onReact(post.id, emoji)}
-        selectedEmojis={selectedEmojis}
-        reactionCounts={reactionCounts}
-      />
+      {/* REACTIONS */}
+      <div className="relative">
+        <QuickEmojiBar
+          onPick={(emoji) => onReact(post.id, emoji)}
+          selectedEmojis={selectedEmojis}
+          reactionCounts={reactionCounts}
+          onMouseEnter={(emoji) => {
+            setHoveredEmoji(emoji);
+            if (reactionCounts[emoji] > 0) fetchUsersForEmoji(emoji);
+          }}
+          onMouseLeave={() => setHoveredEmoji(null)}
+        />
 
-      <div className="text-sm text-gray-600 flex gap-4">
+        {hoveredEmoji && reactionCounts[hoveredEmoji] > 0 && (
+          <div className="absolute bottom-full left-0 mb-3 bg-gray-900 text-white text-sm rounded-lg p-3 shadow-xl z-20 whitespace-nowrap">
+            {getTooltipText(hoveredEmoji)}
+          </div>
+        )}
+      </div>
+
+      {/* SUMMARY */}
+      <div className="flex items-center gap-4 text-sm text-gray-600">
+        {post.likes > 0 && (
+          <span className="bg-gray-100 px-2.5 py-1 rounded-full">
+            {post.likes} reactions
+          </span>
+        )}
         <button onClick={() => onOpenComments(post)} className="hover:underline">
           {post.comments.length} comments
         </button>
       </div>
 
+      {/* REPLY */}
       {showReplyInput ? (
         <div className="flex gap-2">
           <textarea
             value={replyText}
             onChange={(e) => setReplyText(e.target.value)}
-            rows={2}
+            placeholder="Write a reply…"
             className="flex-1 border rounded p-2"
+            rows={2}
           />
           <button
             onClick={handleReplySubmit}
-            className="px-4 py-2 bg-orange-500 text-white rounded"
+            disabled={!replyText.trim()}
+            className="px-4 py-2 bg-orange-500 text-white rounded disabled:opacity-50"
           >
             Send
           </button>
