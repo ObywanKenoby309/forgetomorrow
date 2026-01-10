@@ -118,7 +118,8 @@ export default function PostComposer({ onPost, onCancel }) {
   };
 
   return (
-    <section className="bg-white rounded-lg shadow p-4 w-full">
+    // ✅ EMBEDDED: remove standalone "card" look so it sits cleanly in the glass panel
+    <section className="w-full rounded-lg border border-gray-200 bg-white/70 backdrop-blur p-4">
       <textarea
         value={text}
         onChange={(e) => setText(e.target.value)}
