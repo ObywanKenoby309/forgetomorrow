@@ -1,5 +1,6 @@
 // components/feed/PostCard.js
 import { useState } from 'react';
+import { useRouter } from 'next/router';
 import QuickEmojiBar from './QuickEmojiBar';
 
 export default function PostCard({
@@ -15,6 +16,8 @@ export default function PostCard({
   // ✅ CRITICAL FIX 1: Early return if post is missing/invalid (happens during static prerender)
   if (!post) return null;
 
+  const router = useRouter();
+
   const [showReplyInput, setShowReplyInput] = useState(false);
   const [replyText, setReplyText] = useState('');
   const [hoveredEmoji, setHoveredEmoji] = useState(null);
@@ -28,6 +31,58 @@ export default function PostCard({
     onReply(post.id, replyText.trim());
     setReplyText('');
     setShowReplyInput(false);
+  };
+
+  // ─────────────────────────────────────────────────────────────
+  // AVATAR ACTIONS (restore: View / Connect / Message) + log view
+  // Minimal: route to existing pages, do not invent new APIs.
+  // ─────────────────────────────────────────────────────────────
+  const chrome = String(router.query?.chrome || '').toLowerCase();
+  const withChrome = (path) =>
+    chrome ? `${path}${path.includes('?') ? '&' : '?'}chrome=${chrome}` : path;
+
+  const canTargetAuthor = Boolean(post?.authorId) && !isOwner;
+
+  const logProfileView = async (source) => {
+    try {
+      // best-effort only; never block navigation
+      await fetch('/api/profile/views', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          targetUserId: post.authorId,
+          source: source || 'feed',
+        }),
+      });
+    } catch {
+      // ignore
+    }
+  };
+
+  const handleViewProfile = async () => {
+    if (!post?.authorId) return;
+
+    // Log view first (best-effort, no await needed, but keeping it awaited is fine)
+    logProfileView('feed');
+
+    const params = new URLSearchParams();
+    params.set('userId', post.authorId);
+    router.push(withChrome(`/member-profile?${params.toString()}`));
+  };
+
+  const handleConnect = () => {
+    if (!post?.authorId) return;
+    const params = new URLSearchParams();
+    params.set('userId', post.authorId);
+    router.push(withChrome(`/seeker/contact-center?${params.toString()}`));
+  };
+
+  const handleMessage = () => {
+    if (!post?.authorId) return;
+    const params = new URLSearchParams();
+    params.set('tab', 'messages');
+    params.set('userId', post.authorId);
+    router.push(withChrome(`/seeker/contact-center?${params.toString()}`));
   };
 
   // ─────────────────────────────────────────────────────────────
@@ -179,16 +234,55 @@ export default function PostCard({
 
       {/* AUTHOR */}
       <div className="flex items-start gap-3">
-        {post.authorAvatar ? (
-          <img src={post.authorAvatar} alt={post.author} className="w-10 h-10 rounded-full" />
-        ) : (
-          <div className="w-10 h-10 rounded-full bg-gray-200 flex items-center justify-center text-gray-500">
-            {post.author?.charAt(0)?.toUpperCase()}
-          </div>
-        )}
+        {/* Avatar becomes clickable + actions */}
+        <button
+          type="button"
+          onClick={canTargetAuthor ? handleViewProfile : undefined}
+          className="shrink-0"
+          style={{ cursor: canTargetAuthor ? 'pointer' : 'default' }}
+          aria-label={canTargetAuthor ? 'View profile' : 'Author avatar'}
+        >
+          {post.authorAvatar ? (
+            <img src={post.authorAvatar} alt={post.author} className="w-10 h-10 rounded-full" />
+          ) : (
+            <div className="w-10 h-10 rounded-full bg-gray-200 flex items-center justify-center text-gray-500">
+              {post.author?.charAt(0)?.toUpperCase()}
+            </div>
+          )}
+        </button>
 
-        <div>
-          <div className="font-semibold">{post.author}</div>
+        <div className="min-w-0">
+          <div className="flex items-center gap-2">
+            <div className="font-semibold">{post.author}</div>
+
+            {/* ✅ Restore actions only for non-self posts */}
+            {canTargetAuthor && (
+              <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  onClick={handleViewProfile}
+                  className="text-xs px-2 py-1 border border-gray-300 rounded-md text-gray-700 hover:bg-gray-50"
+                >
+                  View
+                </button>
+                <button
+                  type="button"
+                  onClick={handleConnect}
+                  className="text-xs px-2 py-1 border border-gray-300 rounded-md text-gray-700 hover:bg-gray-50"
+                >
+                  Connect
+                </button>
+                <button
+                  type="button"
+                  onClick={handleMessage}
+                  className="text-xs px-2 py-1 border border-gray-300 rounded-md text-gray-700 hover:bg-gray-50"
+                >
+                  Message
+                </button>
+              </div>
+            )}
+          </div>
+
           <div className="text-xs text-gray-500">
             {new Date(post.createdAt).toLocaleString()} • {post.type}
           </div>
