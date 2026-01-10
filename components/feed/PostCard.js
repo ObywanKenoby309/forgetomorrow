@@ -26,6 +26,9 @@ export default function PostCard({
   // ✅ avatar action popover
   const [avatarMenuOpen, setAvatarMenuOpen] = useState(false);
 
+  // ✅ NEW: connect state (optimistic UI)
+  const [connectStatus, setConnectStatus] = useState('idle'); // idle | requested | connected
+
   // ✅ CRITICAL FIX 2: Safe isOwner check
   const isOwner = post.authorId && currentUserId ? post.authorId === currentUserId : false;
   const canTargetAuthor = Boolean(post?.authorId) && !isOwner;
@@ -70,15 +73,32 @@ export default function PostCard({
     router.push(withChrome(`/member-profile?${params.toString()}`));
   };
 
-  // ✅ FIX: Connect → Contact Center, pre-loaded to connect
-  const handleConnect = () => {
+  // ✅ FIX: Connect should SEND REQUEST (no navigation) + optimistic "Requested"
+  const handleConnect = async () => {
     if (!post?.authorId) return;
-    setAvatarMenuOpen(false);
+    if (connectStatus !== 'idle') return;
 
-    const params = new URLSearchParams();
-    params.set('userId', post.authorId);
-    params.set('action', 'connect');
-    router.push(withChrome(`/seeker/contact-center?${params.toString()}`));
+    setAvatarMenuOpen(false);
+    setConnectStatus('requested'); // optimistic
+
+    try {
+      // NOTE: uses the existing connections request endpoint (DB-backed)
+      // If your endpoint differs, swap ONLY this URL.
+      const res = await fetch('/api/connections/request', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ targetUserId: post.authorId }),
+      });
+
+      if (!res.ok) {
+        const msg = await res.text().catch(() => '');
+        throw new Error(msg || `HTTP ${res.status}`);
+      }
+    } catch (err) {
+      console.error('Connect failed:', err);
+      setConnectStatus('idle');
+      alert('We could not send your connection request. Please try again.');
+    }
   };
 
   // ✅ FIX: Message → The Signal, pre-loaded to message
@@ -273,15 +293,18 @@ export default function PostCard({
               >
                 View profile
               </button>
+
               <button
                 type="button"
                 onMouseDown={(e) => e.preventDefault()}
                 onClick={handleConnect}
-                className="w-full text-left px-3 py-2 text-sm hover:bg-gray-50"
+                disabled={connectStatus !== 'idle'}
+                className="w-full text-left px-3 py-2 text-sm hover:bg-gray-50 disabled:text-gray-400 disabled:bg-white"
                 role="menuitem"
               >
-                Connect
+                {connectStatus === 'requested' ? 'Connection requested' : 'Connect'}
               </button>
+
               <button
                 type="button"
                 onMouseDown={(e) => e.preventDefault()}
