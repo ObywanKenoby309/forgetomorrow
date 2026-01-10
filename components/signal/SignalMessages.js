@@ -37,6 +37,11 @@ export default function SignalMessages() {
   // ✅ Search (UI polish only)
   const [query, setQuery] = useState('');
 
+  // ✅ “Room” refs + scroll behavior
+  const messagesRef = useRef(null);
+  const lastMsgIdRef = useRef(null);
+  const stickToBottomRef = useRef(true);
+
   const GLASS = {
     border: '1px solid rgba(255,255,255,0.22)',
     background: 'rgba(255,255,255,0.72)',
@@ -47,6 +52,33 @@ export default function SignalMessages() {
   };
 
   const softCard = 'border border-gray-100 shadow-sm bg-white/70 backdrop-blur';
+
+  // ✅ Room emphasis (subtle, readable, premium)
+  const ROOM = {
+    border: '1px solid rgba(255,255,255,0.22)',
+    background: 'rgba(255,255,255,0.80)',
+    boxShadow: '0 18px 40px rgba(0,0,0,0.16)',
+    borderRadius: 16,
+  };
+
+  const ROOM_INNER = {
+    background: 'rgba(255,255,255,0.62)',
+    border: '1px solid rgba(255,255,255,0.22)',
+  };
+
+  const scrollToBottom = (behavior = 'smooth') => {
+    const el = messagesRef.current;
+    if (!el) return;
+    el.scrollTo({ top: el.scrollHeight, behavior });
+  };
+
+  const isNearBottom = () => {
+    const el = messagesRef.current;
+    if (!el) return true;
+    const threshold = 80; // px
+    const distanceFromBottom = el.scrollHeight - el.scrollTop - el.clientHeight;
+    return distanceFromBottom <= threshold;
+  };
 
   const fetchThreads = useCallback(async () => {
     setThreadsLoading(true);
@@ -63,33 +95,63 @@ export default function SignalMessages() {
     }
   }, []);
 
-  const fetchMessages = useCallback(async (conversationId) => {
-    if (!conversationId) return;
-    setMessagesLoading(true);
-    try {
-      const params = new URLSearchParams();
-      params.set('conversationId', String(conversationId));
-      const res = await fetch(`/api/signal/messages?${params.toString()}`);
-      if (!res.ok) throw new Error(await res.text());
-      const data = await res.json();
-      setMessages(data.messages || []);
-    } catch (err) {
-      console.error('fetchMessages error:', err);
-      setMessages([]);
-    } finally {
-      setMessagesLoading(false);
-    }
-  }, []);
+  const fetchMessages = useCallback(
+    async (conversationId, opts = { appendOnly: false }) => {
+      if (!conversationId) return;
+      setMessagesLoading(true);
+      try {
+        const params = new URLSearchParams();
+        params.set('conversationId', String(conversationId));
+        const res = await fetch(`/api/signal/messages?${params.toString()}`);
+        if (!res.ok) throw new Error(await res.text());
+        const data = await res.json();
+        const incoming = Array.isArray(data.messages) ? data.messages : [];
+
+        if (!opts.appendOnly) {
+          setMessages(incoming);
+          // track last id for polling
+          const last = incoming[incoming.length - 1];
+          lastMsgIdRef.current = last?.id || null;
+          return;
+        }
+
+        // append-only: dedupe by id
+        setMessages((prev) => {
+          const seen = new Set(prev.map((m) => m?.id));
+          const next = [...prev];
+          for (const m of incoming) {
+            if (m?.id && !seen.has(m.id)) next.push(m);
+          }
+          const last = next[next.length - 1];
+          lastMsgIdRef.current = last?.id || null;
+          return next;
+        });
+      } catch (err) {
+        console.error('fetchMessages error:', err);
+        if (!opts.appendOnly) setMessages([]);
+      } finally {
+        setMessagesLoading(false);
+      }
+    },
+    []
+  );
 
   const openConversation = async (thread) => {
     setActiveConversationId(thread.id);
     setActiveTitle(thread.title || 'Conversation');
     setActiveOtherUserId(thread.otherUserId || null);
     setIsBlocked(false);
-    await fetchMessages(thread.id);
+
+    // entering room: default to stick-to-bottom
+    stickToBottomRef.current = true;
+
+    await fetchMessages(thread.id, { appendOnly: false });
 
     // ✅ mobile: jump into chat view
     setMobileView('chat');
+
+    // after initial load, snap to bottom (instant feels better on open)
+    setTimeout(() => scrollToBottom('auto'), 0);
   };
 
   // ── Profile menu helpers (left column avatars) ─────────────────────────────
@@ -149,7 +211,47 @@ export default function SignalMessages() {
     router.replace({ pathname: router.pathname, query: cleanQuery }, undefined, {
       shallow: true,
     });
-  }, [router.isReady, toId, told, chrome, threads, threadsLoading, fetchMessages]);
+  }, [router.isReady, toId, told, chrome, threads, threadsLoading]);
+
+  // ✅ Quiet live refresh (polling) while a conversation is active
+  useEffect(() => {
+    if (!activeConversationId) return;
+
+    let cancelled = false;
+
+    const tick = async () => {
+      try {
+        // if user is near bottom, keep them pinned after update
+        const shouldStick = stickToBottomRef.current && isNearBottom();
+
+        await fetchMessages(activeConversationId, { appendOnly: true });
+
+        if (cancelled) return;
+
+        if (shouldStick) {
+          // scroll after DOM update
+          setTimeout(() => scrollToBottom('smooth'), 0);
+        }
+      } catch (e) {
+        // swallow; fetchMessages already logs
+      }
+    };
+
+    // prime shortly after open
+    const initial = setTimeout(() => {
+      if (!cancelled) tick();
+    }, 800);
+
+    const interval = setInterval(() => {
+      if (!cancelled) tick();
+    }, 4000);
+
+    return () => {
+      cancelled = true;
+      clearTimeout(initial);
+      clearInterval(interval);
+    };
+  }, [activeConversationId, fetchMessages]);
 
   const handleSend = async (e) => {
     e?.preventDefault?.();
@@ -190,9 +292,16 @@ export default function SignalMessages() {
         isMine: true,
       };
 
+      // user expects message to land at bottom immediately
+      stickToBottomRef.current = true;
+
       setMessages((prev) => [...prev, newMessage]);
+      lastMsgIdRef.current = newMessage?.id || lastMsgIdRef.current;
+
       setComposer('');
       await fetchThreads();
+
+      setTimeout(() => scrollToBottom('smooth'), 0);
     } catch (err) {
       console.error('send error:', err);
       alert('We could not send your message. Please try again.');
@@ -488,12 +597,24 @@ export default function SignalMessages() {
           )}
         </section>
 
-        {/* Right: Active conversation */}
+        {/* Right: Active conversation (the “room”) */}
         <section
           className={`${softCard} rounded-xl p-4 flex flex-col ${
             isMobileChat ? 'block' : 'hidden'
           } md:flex`}
+          style={ROOM}
         >
+          {/* subtle top accent (still readable, not flashy) */}
+          <div
+            aria-hidden="true"
+            style={{
+              height: 3,
+              borderRadius: 999,
+              background: 'linear-gradient(90deg, rgba(255,112,67,0.65), rgba(255,112,67,0))',
+              marginBottom: 10,
+            }}
+          />
+
           {/* Header */}
           <div className="flex items-center justify-between mb-3 gap-2">
             <div className="min-w-0">
@@ -545,14 +666,21 @@ export default function SignalMessages() {
 
           {/* Messages list */}
           <div
-            className="flex-1 overflow-y-auto border border-gray-100 rounded-lg p-3 space-y-2 bg-white/60"
+            ref={messagesRef}
+            onScroll={() => {
+              // if user scrolls up, stop auto-sticking; if they come back down, re-enable
+              stickToBottomRef.current = isNearBottom();
+            }}
+            className="flex-1 overflow-y-auto rounded-xl p-3 space-y-2"
             style={{
-              minHeight: 220,
-              maxHeight: 420,
+              ...ROOM_INNER,
+              minHeight: 260,
+              maxHeight: 460,
+              boxShadow: 'inset 0 1px 0 rgba(255,255,255,0.6)',
             }}
           >
             {activeConversationId ? (
-              messagesLoading ? (
+              messagesLoading && messages.length === 0 ? (
                 <p className="text-xs text-gray-500">Loading messages…</p>
               ) : messages.length === 0 ? (
                 <p className="text-xs text-gray-500">
@@ -570,6 +698,11 @@ export default function SignalMessages() {
                           ? 'bg-[#FF7043] text-white'
                           : 'bg-white text-gray-900 border border-gray-100'
                       }`}
+                      style={{
+                        boxShadow: m.isMine
+                          ? '0 10px 20px rgba(255,112,67,0.18)'
+                          : '0 10px 18px rgba(0,0,0,0.06)',
+                      }}
                     >
                       {!m.isMine && (
                         <div className="font-bold text-[11px] mb-0.5 opacity-90">
@@ -606,15 +739,16 @@ export default function SignalMessages() {
                   ? 'You have blocked this member.'
                   : `Write a message…`
               }
-              className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm min-h-[90px] disabled:bg-gray-50 bg-white"
+              className="w-full border border-gray-200 rounded-xl px-3 py-2 text-sm min-h-[90px] disabled:bg-gray-50 bg-white"
+              style={{
+                boxShadow: '0 10px 18px rgba(0,0,0,0.06)',
+              }}
             />
             <div className="flex items-center justify-end gap-2">
               {activeConversationId && (
                 <button
                   type="button"
-                  onClick={() => {
-                    setComposer('');
-                  }}
+                  onClick={() => setComposer('')}
                   className="px-3 py-2 rounded-md border border-gray-200 text-sm hover:bg-white"
                 >
                   Clear
