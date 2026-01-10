@@ -42,9 +42,11 @@ export default function SignalMessages() {
   const lastMsgIdRef = useRef(null);
   const stickToBottomRef = useRef(true);
 
-  // ✅ Composer refs + emoji tray (hidden until user clicks)
+  // ✅ Composer refs + emoji tray (now floating popover, not pushing layout)
   const composerRef = useRef(null);
   const [showEmojiTray, setShowEmojiTray] = useState(false);
+  const emojiBtnRef = useRef(null);
+  const emojiTrayRef = useRef(null);
 
   const GLASS = {
     border: '1px solid rgba(255,255,255,0.22)',
@@ -129,7 +131,8 @@ export default function SignalMessages() {
     }
 
     const value = String(composer || '');
-    const start = typeof el.selectionStart === 'number' ? el.selectionStart : value.length;
+    const start =
+      typeof el.selectionStart === 'number' ? el.selectionStart : value.length;
     const end = typeof el.selectionEnd === 'number' ? el.selectionEnd : value.length;
 
     const next = value.slice(0, start) + emoji + value.slice(end);
@@ -160,6 +163,22 @@ export default function SignalMessages() {
 
     document.addEventListener('keydown', onKeyDown);
     return () => document.removeEventListener('keydown', onKeyDown);
+  }, [showEmojiTray]);
+
+  // ✅ Close emoji tray on outside click (popover behavior)
+  useEffect(() => {
+    if (!showEmojiTray) return;
+
+    function onDown(e) {
+      const tray = emojiTrayRef.current;
+      const btn = emojiBtnRef.current;
+      if (tray && tray.contains(e.target)) return;
+      if (btn && btn.contains(e.target)) return;
+      setShowEmojiTray(false);
+    }
+
+    document.addEventListener('mousedown', onDown);
+    return () => document.removeEventListener('mousedown', onDown);
   }, [showEmojiTray]);
 
   const fetchThreads = useCallback(async () => {
@@ -535,7 +554,10 @@ export default function SignalMessages() {
 
   const formatTime = (dt) => {
     try {
-      return new Date(dt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+      return new Date(dt).toLocaleTimeString([], {
+        hour: '2-digit',
+        minute: '2-digit',
+      });
     } catch {
       return '';
     }
@@ -567,7 +589,9 @@ export default function SignalMessages() {
       <div className="grid grid-cols-1 md:grid-cols-[minmax(0,2fr)_minmax(0,3fr)] gap-4">
         {/* Left: Threads list */}
         <section
-          className={`${softCard} rounded-xl p-4 ${isMobileChat ? 'hidden md:block' : 'block'}`}
+          className={`${softCard} rounded-xl p-4 ${
+            isMobileChat ? 'hidden md:block' : 'block'
+          }`}
         >
           <div className="flex items-center justify-between gap-2 mb-3">
             <h2 className="text-sm font-extrabold text-gray-900">Conversations</h2>
@@ -698,7 +722,8 @@ export default function SignalMessages() {
             style={{
               height: 3,
               borderRadius: 999,
-              background: 'linear-gradient(90deg, rgba(255,112,67,0.65), rgba(255,112,67,0))',
+              background:
+                'linear-gradient(90deg, rgba(255,112,67,0.65), rgba(255,112,67,0))',
               marginBottom: 10,
             }}
           />
@@ -713,7 +738,8 @@ export default function SignalMessages() {
               </h2>
               {!activeConversationId && (
                 <p className="text-xs text-gray-600 mt-1">
-                  Start a conversation from a profile, candidate card, or coaching listing.
+                  Start a conversation from a profile, candidate card, or coaching
+                  listing.
                 </p>
               )}
             </div>
@@ -762,8 +788,12 @@ export default function SignalMessages() {
             className="flex-1 overflow-y-auto rounded-xl p-3 space-y-2"
             style={{
               ...ROOM_INNER,
-              minHeight: 260,
-              maxHeight: 460,
+
+              // ✅ Earlier “lock” on desktop: scroll sooner so user never has to page-scroll to chat.
+              // Mobile keeps a bit taller.
+              minHeight: 220,
+              maxHeight: 340,
+
               boxShadow: 'inset 0 1px 0 rgba(255,255,255,0.6)',
             }}
           >
@@ -809,66 +839,86 @@ export default function SignalMessages() {
               )
             ) : (
               <p className="text-xs text-gray-500">
-                Select a conversation on the left or start a new one from a member profile.
+                Select a conversation on the left or start a new one from a member
+                profile.
               </p>
             )}
           </div>
 
           {/* Composer */}
           <form onSubmit={handleSend} className="mt-3 space-y-2">
-            <textarea
-              ref={composerRef}
-              value={composer}
-              onChange={(e) => setComposer(e.target.value)}
-              disabled={!activeConversationId || isBlocked}
-              placeholder={
-                !activeConversationId
-                  ? 'Select a conversation to start messaging…'
-                  : isBlocked
-                  ? 'You have blocked this member.'
-                  : `Write a message…`
-              }
-              className="w-full border border-gray-200 rounded-xl px-3 py-2 text-sm min-h-[90px] disabled:bg-gray-50 bg-white"
-              style={{
-                boxShadow: '0 10px 18px rgba(0,0,0,0.06)',
-              }}
-            />
-
-            {/* ✅ Emoji tray (hidden by default; toggled by button) */}
-            {activeConversationId && showEmojiTray && !isBlocked && (
-              <div
-                className="w-full border border-gray-200 rounded-xl px-2 py-2 bg-white"
+            <div className="relative">
+              <textarea
+                ref={composerRef}
+                value={composer}
+                onChange={(e) => setComposer(e.target.value)}
+                disabled={!activeConversationId || isBlocked}
+                placeholder={
+                  !activeConversationId
+                    ? 'Select a conversation to start messaging…'
+                    : isBlocked
+                    ? 'You have blocked this member.'
+                    : `Write a message…`
+                }
+                className="w-full border border-gray-200 rounded-xl px-3 py-2 text-sm min-h-[84px] disabled:bg-gray-50 bg-white"
                 style={{
                   boxShadow: '0 10px 18px rgba(0,0,0,0.06)',
                 }}
-              >
-                <div className="flex items-center justify-between mb-1">
-                  <div className="text-[11px] font-semibold text-gray-700">Emojis</div>
-                  <button
-                    type="button"
-                    onClick={() => setShowEmojiTray(false)}
-                    className="text-[11px] px-2 py-1 rounded-md border border-gray-200 hover:bg-white"
-                  >
-                    Close
-                  </button>
-                </div>
+              />
 
-                <div className="flex flex-wrap gap-1">
-                  {EMOJIS.map((e) => (
+              {/* ✅ Floating Emoji Popover (does NOT push page down) */}
+              {activeConversationId && showEmojiTray && !isBlocked && (
+                <div
+                  ref={emojiTrayRef}
+                  className="absolute z-30 left-0 right-0 bottom-[calc(100%+10px)] border border-gray-200 rounded-xl bg-white"
+                  style={{
+                    boxShadow: '0 18px 40px rgba(0,0,0,0.14)',
+                    padding: 10,
+                  }}
+                >
+                  <div className="flex items-center justify-between mb-2">
+                    <div className="text-[11px] font-semibold text-gray-700">
+                      Emojis
+                    </div>
                     <button
-                      key={e}
                       type="button"
-                      onClick={() => insertEmoji(e)}
-                      className="w-9 h-9 rounded-lg border border-gray-200 bg-white hover:bg-gray-50 text-lg flex items-center justify-center"
-                      aria-label={`Insert ${e}`}
-                      title={`Insert ${e}`}
+                      onClick={() => setShowEmojiTray(false)}
+                      className="text-[11px] px-2 py-1 rounded-md border border-gray-200 hover:bg-white"
                     >
-                      {e}
+                      Close
                     </button>
-                  ))}
+                  </div>
+
+                  {/* ✅ More polished tray: tighter grid, capped height with internal scroll if needed */}
+                  <div
+                    className="grid gap-1"
+                    style={{
+                      gridTemplateColumns: 'repeat(10, minmax(0, 1fr))',
+                      maxHeight: 160,
+                      overflowY: 'auto',
+                      paddingRight: 4,
+                    }}
+                  >
+                    {EMOJIS.map((e) => (
+                      <button
+                        key={e}
+                        type="button"
+                        onClick={() => insertEmoji(e)}
+                        className="w-9 h-9 rounded-lg border border-gray-200 bg-white hover:bg-gray-50 text-lg flex items-center justify-center"
+                        aria-label={`Insert ${e}`}
+                        title={`Insert ${e}`}
+                      >
+                        {e}
+                      </button>
+                    ))}
+                  </div>
+
+                  <div className="mt-2 text-[10px] text-gray-500">
+                    Tip: Press <span className="font-semibold">Esc</span> to close.
+                  </div>
                 </div>
-              </div>
-            )}
+              )}
+            </div>
 
             <div className="flex items-center justify-end gap-2">
               {activeConversationId && (
@@ -884,9 +934,10 @@ export default function SignalMessages() {
                 </button>
               )}
 
-              {/* ✅ Emoji toggle button (tray hidden until clicked) */}
+              {/* ✅ Emoji toggle button (popover; no layout push) */}
               {activeConversationId && !isBlocked && (
                 <button
+                  ref={emojiBtnRef}
                   type="button"
                   onClick={() => {
                     setShowEmojiTray((v) => !v);
@@ -914,6 +965,16 @@ export default function SignalMessages() {
               </button>
             </div>
           </form>
+
+          {/* ✅ Desktop override: even earlier lock + prevent page scrolling when emoji popover opens */}
+          <style jsx>{`
+            @media (min-width: 768px) {
+              /* keep the room compact so the user isn't page-scrolling to use chat tools */
+              .roomMessagesDesktop {
+                max-height: 320px !important;
+              }
+            }
+          `}</style>
         </section>
       </div>
 
