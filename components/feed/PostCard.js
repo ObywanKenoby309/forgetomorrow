@@ -28,7 +28,7 @@ export default function PostCard({
   // ✅ avatar action popover
   const [avatarMenuOpen, setAvatarMenuOpen] = useState(false);
 
-  // ✅ NEW: connect state (optimistic UI)
+  // ✅ connect state (optimistic UI)
   const [connectStatus, setConnectStatus] = useState('idle'); // idle | requested | connected
 
   // ✅ CRITICAL FIX 2: Safe isOwner check
@@ -76,8 +76,7 @@ export default function PostCard({
     router.push(withChrome(`/member-profile?${params.toString()}`));
   };
 
-  // ✅ FIX: Connect should SEND REQUEST (no navigation) + optimistic "Requested"
-  // ✅ Uses centralized hook: /api/contacts/request
+  // ✅ Connect sends request (no navigation) + UI feedback
   const handleConnect = async () => {
     if (!post?.authorId) return;
     if (connectStatus !== 'idle') return;
@@ -89,18 +88,27 @@ export default function PostCard({
 
     if (!result?.ok) {
       setConnectStatus('idle');
-      alert(result?.errorMessage || 'We could not send your connection request. Please try again.');
+      alert(
+        result?.errorMessage ||
+          'We could not send your connection request. Please try again.'
+      );
       return;
     }
 
-    // Normalize returned states
+    // If already connected
     if (result.alreadyConnected || result.status === 'connected') {
       setConnectStatus('connected');
+      alert('You are already connected.');
       return;
     }
 
-    // If alreadyRequested or status indicates pending, keep requested
+    // If already requested OR newly requested
     setConnectStatus('requested');
+    alert(
+      result.alreadyRequested
+        ? 'Connection request already sent.'
+        : 'Connection request sent.'
+    );
   };
 
   // ✅ Message → The Signal, pre-loaded to message
@@ -148,7 +156,7 @@ export default function PostCard({
   };
 
   // ─────────────────────────────────────────────────────────────
-  // BLOCK AUTHOR (non-OP only) — prompt for reason, send to API, optimistic hide
+  // BLOCK AUTHOR (non-OP only)
   // ─────────────────────────────────────────────────────────────
   const handleBlockAuthor = async () => {
     if (!post?.authorId) {
@@ -170,7 +178,7 @@ export default function PostCard({
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           targetUserId: post.authorId,
-          reason: reason?.trim() || null, // ✅ Send reason if provided
+          reason: reason?.trim() || null,
         }),
       });
 
@@ -180,7 +188,6 @@ export default function PostCard({
         return;
       }
 
-      // ✅ Optimistic hide + trigger Feed reload
       onBlockAuthor?.(post.authorId);
       alert('Member blocked. You will no longer see their posts.');
     } catch (err) {
@@ -239,7 +246,7 @@ export default function PostCard({
 
   return (
     <div className="relative bg-white rounded-lg shadow p-5 space-y-4 w-full">
-      {/* TOP-RIGHT ACTIONS — unified style */}
+      {/* TOP-RIGHT ACTIONS */}
       <div className="absolute top-3 right-3 flex items-center gap-2">
         {!isOwner && (
           <>
