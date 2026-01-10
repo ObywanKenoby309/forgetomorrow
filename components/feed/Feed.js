@@ -287,17 +287,28 @@ export default function Feed() {
 
       {showComposer && (
         <div
-          className="fixed inset-0 z-50 bg-black/40 overflow-y-auto"
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/55"
           onClick={() => setShowComposer(false)}
+          role="dialog"
+          aria-modal="true"
         >
           <div
-            className="min-h-full w-full flex items-start justify-center px-3 py-6 sm:py-10"
+            className="relative bg-white rounded-2xl shadow-2xl w-[92vw] max-w-2xl p-0 border border-gray-200"
             onClick={(e) => e.stopPropagation()}
           >
-            {/* ✅ Removed extra white wrapper (PostComposer is already a card)
-                ✅ Fixed max width typo (was max-w-2x1)
-                ✅ Top-aligned + scroll-safe so there’s no giant dead space */}
-            <div className="w-full max-w-2xl">
+            {/* Solid header so it doesn't feel like glass + explicit close */}
+            <div className="flex items-center justify-between px-4 py-3 border-b border-gray-200 bg-white rounded-t-2xl">
+              <div className="font-extrabold text-gray-900">Create post</div>
+              <button
+                type="button"
+                onClick={() => setShowComposer(false)}
+                className="text-sm font-bold text-[#FF7043] hover:opacity-80"
+              >
+                Close
+              </button>
+            </div>
+
+            <div className="p-4 bg-white rounded-b-2xl">
               <PostComposer
                 onPost={handleNewPost}
                 onCancel={() => setShowComposer(false)}
