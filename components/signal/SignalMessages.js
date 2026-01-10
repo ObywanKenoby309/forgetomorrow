@@ -1,13 +1,11 @@
 // components/signal/SignalMessages.js
-import { useEffect, useState, useCallback, useRef } from 'react';
+import { useEffect, useState, useCallback, useRef, useMemo } from 'react';
 import { useRouter } from 'next/router';
 import MemberActions from '../member/MemberActions';
 
 export default function SignalMessages() {
   const router = useRouter();
-
-  // ✅ expand supported deep-link params (keep existing ones)
-  const { toId, toName, told, chrome, userId, action, conversationId } = router.query;
+  const { toId, toName, told, chrome } = router.query;
 
   const [threads, setThreads] = useState([]);
   const [threadsLoading, setThreadsLoading] = useState(true);
@@ -31,8 +29,24 @@ export default function SignalMessages() {
     userId: null,
     name: 'Member',
   });
-
   const menuRef = useRef(null);
+
+  // ✅ Mobile UX: list vs chat view
+  const [mobileView, setMobileView] = useState('list'); // 'list' | 'chat'
+
+  // ✅ Search (UI polish only)
+  const [query, setQuery] = useState('');
+
+  const GLASS = {
+    border: '1px solid rgba(255,255,255,0.22)',
+    background: 'rgba(255,255,255,0.72)',
+    boxShadow: '0 10px 24px rgba(0,0,0,0.12)',
+    backdropFilter: 'blur(12px)',
+    WebkitBackdropFilter: 'blur(12px)',
+    borderRadius: 14,
+  };
+
+  const softCard = 'border border-gray-100 shadow-sm bg-white/70 backdrop-blur';
 
   const fetchThreads = useCallback(async () => {
     setThreadsLoading(true);
@@ -73,6 +87,9 @@ export default function SignalMessages() {
     setActiveOtherUserId(thread.otherUserId || null);
     setIsBlocked(false);
     await fetchMessages(thread.id);
+
+    // ✅ mobile: jump into chat view
+    setMobileView('chat');
   };
 
   // ── Profile menu helpers (left column avatars) ─────────────────────────────
@@ -108,67 +125,36 @@ export default function SignalMessages() {
     fetchThreads();
   }, [fetchThreads]);
 
-  // ✅ Deep-link handler (supports conversationId OR otherUserId)
+  // 🔹 Deep-link handler (select thread after threads load) ───────────────────
   useEffect(() => {
     if (!router.isReady) return;
+
+    const deepLinkIdRaw = Array.isArray(toId || told)
+      ? (toId || told)[0]
+      : toId || told;
+
+    if (!deepLinkIdRaw) return;
     if (threadsLoading) return;
 
-    // helper: clean query so URL doesn’t stay polluted
-    const cleanupUrl = () => {
-      const cleanQuery = {};
-      if (chrome) cleanQuery.chrome = chrome;
-      router.replace(
-        { pathname: router.pathname, query: cleanQuery },
-        undefined,
-        { shallow: true }
-      );
-    };
-
-    // 1) ✅ Preferred: open by exact conversationId
-    const convRaw = Array.isArray(conversationId) ? conversationId[0] : conversationId;
-    if (convRaw) {
-      const matchByConversation = threads.find((t) => String(t.id) === String(convRaw));
-      if (matchByConversation) {
-        openConversation(matchByConversation);
-        cleanupUrl();
-        return;
-      }
-      // if conversationId is provided but thread not in list yet, just clean URL and stop
-      cleanupUrl();
-      return;
-    }
-
-    // 2) Fallback: open by other user id (support userId + your legacy toId/told)
-    const deepLinkUserRaw = Array.isArray(userId || toId || told)
-      ? (userId || toId || told)[0]
-      : (userId || toId || told);
-
-    if (!deepLinkUserRaw) return;
-
-    const matchByUser = threads.find(
-      (t) => t.otherUserId && String(t.otherUserId) === String(deepLinkUserRaw)
+    const match = threads.find(
+      (t) => t.otherUserId && String(t.otherUserId) === String(deepLinkIdRaw)
     );
 
-    if (matchByUser) {
-      openConversation(matchByUser);
+    if (match) {
+      openConversation(match);
     }
 
-    cleanupUrl();
-  }, [
-    router.isReady,
-    chrome,
-    threads,
-    threadsLoading,
-    conversationId,
-    userId,
-    toId,
-    told,
-    fetchMessages
-  ]);
+    const cleanQuery = {};
+    if (chrome) cleanQuery.chrome = chrome;
+    router.replace({ pathname: router.pathname, query: cleanQuery }, undefined, {
+      shallow: true,
+    });
+  }, [router.isReady, toId, told, chrome, threads, threadsLoading, fetchMessages]);
 
   const handleSend = async (e) => {
     e?.preventDefault?.();
     if (!activeConversationId || !composer.trim() || sending || isBlocked) return;
+
     setSending(true);
     try {
       const res = await fetch('/api/signal/send', {
@@ -192,6 +178,7 @@ export default function SignalMessages() {
       }
 
       const data = await res.json();
+
       const newMessage = {
         id: data.message.id,
         conversationId: data.message.conversationId,
@@ -226,8 +213,7 @@ export default function SignalMessages() {
     );
 
     const confirmed = window.confirm(
-      'Are you sure you want to block this member? ' +
-        'They will no longer be able to message you, and you will not see new messages from them.'
+      'Are you sure you want to block this member? They will no longer be able to message you, and you will not see new messages from them.'
     );
     if (!confirmed) return;
 
@@ -331,6 +317,8 @@ export default function SignalMessages() {
       setActiveOtherUserId(null);
       setMessages([]);
       setIsBlocked(false);
+      setMobileView('list');
+
       await fetchThreads();
     } catch (err) {
       console.error('delete error:', err);
@@ -338,229 +326,325 @@ export default function SignalMessages() {
     }
   };
 
+  const filteredThreads = useMemo(() => {
+    const q = String(query || '').trim().toLowerCase();
+    if (!q) return threads;
+    return threads.filter((t) => {
+      const title = String(t.title || '').toLowerCase();
+      const last = String(t.lastMessage || '').toLowerCase();
+      return title.includes(q) || last.includes(q);
+    });
+  }, [threads, query]);
+
+  const formatTime = (dt) => {
+    try {
+      return new Date(dt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+    } catch {
+      return '';
+    }
+  };
+
+  const isMobileChat = mobileView === 'chat';
+
   return (
-    <div className="mt-4 grid grid-cols-1 md:grid-cols-[minmax(0,2fr)_minmax(0,3fr)] gap-4">
-      {/* Left: Threads list */}
-      <section className="bg-white rounded-lg shadow p-4 border border-gray-100">
-        <h2 className="text-sm font-semibold text-gray-800 mb-2">
-          Conversations
-        </h2>
-
-        {threadsLoading ? (
-          <p className="text-xs text-gray-500">Loading conversations…</p>
-        ) : threads.length === 0 ? (
-          <p className="text-xs text-gray-600">
-            No conversations in The Signal yet.
-            <br />
-            Start a conversation from a member profile or candidate card.
-          </p>
+    <div style={{ ...GLASS, padding: 14, marginTop: 14 }}>
+      {/* Mobile top bar (only shows in mobile chat view) */}
+      <div className="md:hidden flex items-center justify-between mb-3">
+        {isMobileChat ? (
+          <button
+            type="button"
+            onClick={() => setMobileView('list')}
+            className="text-sm font-semibold text-gray-800 hover:opacity-80"
+          >
+            ← Back
+          </button>
         ) : (
-          <ul className="divide-y divide-gray-100">
-            {threads.map((t) => {
-              const otherId = t.otherUserId || null;
-              const otherName = t.title || 'Member';
-
-              const openMenu = (e) => {
-                e.stopPropagation();
-                if (!otherId) return;
-                openProfileMenu(otherId, otherName);
-              };
-
-              const isActive = t.id === activeConversationId;
-              const showMenu = profileMenu.open && profileMenu.userId === otherId;
-
-              return (
-                <li
-                  key={t.id}
-                  className={`relative py-2 px-1 flex items-start gap-3 cursor-pointer rounded-md ${
-                    isActive ? 'bg-[#FFF3E9]' : 'hover:bg-gray-50'
-                  }`}
-                  onClick={() => openConversation(t)}
-                >
-                  {/* Avatar → Member actions menu trigger */}
-                  <button
-                    type="button"
-                    onClick={openMenu}
-                    className="flex-shrink-0"
-                  >
-                    {t.otherAvatarUrl ? (
-                      <img
-                        src={t.otherAvatarUrl}
-                        alt={otherName}
-                        className="w-8 h-8 rounded-full object-cover"
-                      />
-                    ) : (
-                      <div className="w-8 h-8 rounded-full bg-gray-200 flex items-center justify-center text-xs text-gray-600">
-                        {otherName?.charAt(0)?.toUpperCase() || '?'}
-                      </div>
-                    )}
-                  </button>
-
-                  {/* Inline member actions dropdown */}
-                  {showMenu && otherId && (
-                    <div
-                      ref={menuRef}
-                      onClick={(e) => e.stopPropagation()}
-                      className="absolute z-20 left-10 top-8 bg-white border rounded-lg shadow-lg text-sm w-52"
-                    >
-                      <div className="px-3 py-2 border-b font-semibold">
-                        {profileMenu.name}
-                      </div>
-                      <MemberActions
-                        targetUserId={profileMenu.userId}
-                        targetName={profileMenu.name}
-                        layout="menu"
-                        onClose={closeProfileMenu}
-                      />
-                    </div>
-                  )}
-
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-center justify-between gap-2">
-                      <p className="text-sm font-semibold text-gray-800 truncate">
-                        {t.title}
-                      </p>
-                      {t.lastMessageAt && (
-                        <span className="text-[10px] text-gray-500 whitespace-nowrap">
-                          {new Date(t.lastMessageAt).toLocaleTimeString([], {
-                            hour: '2-digit',
-                            minute: '2-digit',
-                          })}
-                        </span>
-                      )}
-                    </div>
-                    {t.lastMessage && (
-                      <p className="text-xs text-gray-600 truncate">
-                        {t.lastMessage}
-                      </p>
-                    )}
-                  </div>
-                </li>
-              );
-            })}
-          </ul>
+          <div className="text-sm font-semibold text-gray-900">Conversations</div>
         )}
-      </section>
 
-      {/* Right: Active conversation */}
-      <section className="bg-white rounded-lg shadow p-4 border border-gray-100 flex flex-col">
-        <div className="flex items-center justify-between mb-2 gap-2">
-          <h2 className="text-sm font-semibold text-gray-800">
-            {activeConversationId
-              ? activeTitle || 'Conversation'
-              : 'Your Signal inbox is ready'}
-          </h2>
-
-          {activeConversationId && (
-            <div className="flex items-center gap-2">
-              <button
-                type="button"
-                onClick={handleDeleteConversation}
-                className="text-[11px] px-2 py-1 border border-gray-300 rounded-md text-gray-700 hover:bg-gray-50"
-              >
-                Delete chat
-              </button>
-              <button
-                type="button"
-                onClick={handleReport}
-                className="text-[11px] px-2 py-1 border border-gray-300 rounded-md text-gray-700 hover:bg-gray-50"
-              >
-                Report
-              </button>
-              <button
-                type="button"
-                onClick={handleBlock}
-                className="text-[11px] px-2 py-1 border border-red-300 rounded-md text-red-700 hover:bg-red-50"
-                disabled={isBlocked}
-              >
-                {isBlocked ? 'Blocked' : 'Block'}
-              </button>
-            </div>
-          )}
+        <div className="text-xs text-gray-500">
+          {threadsLoading ? 'Loading…' : `${threads.length} total`}
         </div>
+      </div>
 
-        {!activeConversationId && (
-          <p className="text-xs text-gray-600 mb-3">
-            Start a conversation from a profile, candidate card, or coaching
-            listing. Once you send a message, the thread will appear here.
-          </p>
-        )}
-
-        {activeConversationId && isBlocked && (
-          <div className="mb-3 text-[11px] text-red-700 bg-red-50 border border-red-200 rounded-md px-3 py-2">
-            You have blocked this member. You will not be able to send new
-            messages in this conversation.
-          </div>
-        )}
-
-        {/* Messages list */}
-        <div className="flex-1 min-h-[180px] max-h-[360px] overflow-y-auto border border-gray-100 rounded-md p-3 mb-3 space-y-2">
-          {activeConversationId ? (
-            messagesLoading ? (
-              <p className="text-xs text-gray-500">Loading messages…</p>
-            ) : messages.length === 0 ? (
-              <p className="text-xs text-gray-500">
-                No messages yet. Say hello to start the conversation.
-              </p>
-            ) : (
-              messages.map((m) => (
-                <div
-                  key={m.id}
-                  className={`flex ${m.isMine ? 'justify-end' : 'justify-start'}`}
-                >
-                  <div
-                    className={`max-w-[80%] rounded-lg px-3 py-2 text-xs ${
-                      m.isMine ? 'bg-[#FF7043] text-white' : 'bg-gray-100 text-gray-800'
-                    }`}
-                  >
-                    {!m.isMine && (
-                      <div className="font-semibold mb-0.5">{m.senderName}</div>
-                    )}
-                    <div className="whitespace-pre-wrap">{m.content}</div>
-                    <div className="text-[9px] opacity-80 mt-1 text-right">
-                      {new Date(m.createdAt).toLocaleTimeString([], {
-                        hour: '2-digit',
-                        minute: '2-digit',
-                      })}
-                    </div>
-                  </div>
-                </div>
-              ))
-            )
-          ) : (
-            <p className="text-xs text-gray-500">
-              Select a conversation on the left or start a new one from a
-              member&apos;s profile.
-            </p>
-          )}
-        </div>
-
-        {/* Composer */}
-        <form onSubmit={handleSend} className="space-y-2">
-          <textarea
-            value={composer}
-            onChange={(e) => setComposer(e.target.value)}
-            disabled={!activeConversationId || isBlocked}
-            placeholder={
-              !activeConversationId
-                ? 'Select a conversation to start messaging…'
-                : isBlocked
-                ? 'You have blocked this member.'
-                : `Write a message to ${activeTitle || 'this member'}…`
-            }
-            className="w-full border rounded-md px-3 py-2 text-sm min-h-[80px] disabled:bg-gray-50"
-          />
-          <div className="flex justify-end">
+      <div className="grid grid-cols-1 md:grid-cols-[minmax(0,2fr)_minmax(0,3fr)] gap-4">
+        {/* Left: Threads list */}
+        <section
+          className={`${softCard} rounded-xl p-4`}
+          style={{
+            display: isMobileChat ? 'none' : 'block',
+          }}
+        >
+          <div className="flex items-center justify-between gap-2 mb-3">
+            <h2 className="text-sm font-extrabold text-gray-900">Conversations</h2>
             <button
-              type="submit"
-              disabled={!activeConversationId || !composer.trim() || sending || isBlocked}
-              className="px-4 py-2 rounded-md bg-[#ff8a65] text-white text-sm font-semibold disabled:opacity-50"
+              type="button"
+              onClick={fetchThreads}
+              className="text-[11px] px-2 py-1 rounded-md border border-gray-200 hover:bg-white"
+              title="Refresh"
             >
-              Send
+              Refresh
             </button>
           </div>
-        </form>
-      </section>
+
+          {/* Search */}
+          <div className="mb-3">
+            <input
+              value={query}
+              onChange={(e) => setQuery(e.target.value)}
+              placeholder="Search messages…"
+              className="w-full border border-gray-200 rounded-md px-3 py-2 text-sm bg-white"
+            />
+          </div>
+
+          {threadsLoading ? (
+            <p className="text-xs text-gray-500">Loading conversations…</p>
+          ) : filteredThreads.length === 0 ? (
+            <div className="text-xs text-gray-600">
+              <div className="font-semibold text-gray-800">No conversations yet.</div>
+              <div className="mt-1">
+                Start one from a member profile or candidate card.
+              </div>
+            </div>
+          ) : (
+            <ul className="divide-y divide-gray-100">
+              {filteredThreads.map((t) => {
+                const otherId = t.otherUserId || null;
+                const otherName = t.title || 'Member';
+
+                const openMenu = (e) => {
+                  e.stopPropagation();
+                  if (!otherId) return;
+                  openProfileMenu(otherId, otherName);
+                };
+
+                const isActive = t.id === activeConversationId;
+                const showMenu = profileMenu.open && profileMenu.userId === otherId;
+
+                return (
+                  <li
+                    key={t.id}
+                    className={`relative py-2 px-2 flex items-start gap-3 cursor-pointer rounded-lg ${
+                      isActive ? 'bg-[#FFF3E9]' : 'hover:bg-white'
+                    }`}
+                    onClick={() => openConversation(t)}
+                  >
+                    {/* Avatar → Member actions menu trigger */}
+                    <button
+                      type="button"
+                      onClick={openMenu}
+                      className="flex-shrink-0"
+                      aria-label="Open member actions"
+                    >
+                      {t.otherAvatarUrl ? (
+                        <img
+                          src={t.otherAvatarUrl}
+                          alt={otherName}
+                          className="w-9 h-9 rounded-full object-cover border border-gray-200"
+                        />
+                      ) : (
+                        <div className="w-9 h-9 rounded-full bg-gray-200 flex items-center justify-center text-xs text-gray-700 border border-gray-200">
+                          {otherName?.charAt(0)?.toUpperCase() || '?'}
+                        </div>
+                      )}
+                    </button>
+
+                    {/* Inline member actions dropdown */}
+                    {showMenu && otherId && (
+                      <div
+                        ref={menuRef}
+                        onClick={(e) => e.stopPropagation()}
+                        className="absolute z-20 left-12 top-10 bg-white border border-gray-200 rounded-lg shadow-lg text-sm w-56 overflow-hidden"
+                      >
+                        <div className="px-3 py-2 border-b font-extrabold text-gray-900">
+                          {profileMenu.name}
+                        </div>
+                        <MemberActions
+                          targetUserId={profileMenu.userId}
+                          targetName={profileMenu.name}
+                          layout="menu"
+                          onClose={closeProfileMenu}
+                        />
+                      </div>
+                    )}
+
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-start justify-between gap-2">
+                        <div className="min-w-0">
+                          <p className="text-sm font-extrabold text-gray-900 truncate">
+                            {t.title}
+                          </p>
+                          <p className="text-xs text-gray-600 truncate">
+                            {t.lastMessage || '—'}
+                          </p>
+                        </div>
+
+                        <div className="text-[10px] text-gray-500 whitespace-nowrap pt-1">
+                          {t.lastMessageAt ? formatTime(t.lastMessageAt) : ''}
+                        </div>
+                      </div>
+                    </div>
+                  </li>
+                );
+              })}
+            </ul>
+          )}
+        </section>
+
+        {/* Right: Active conversation */}
+        <section
+          className={`${softCard} rounded-xl p-4 flex flex-col`}
+          style={{
+            display: !isMobileChat && window?.innerWidth < 768 && activeConversationId ? 'block' : undefined,
+          }}
+        >
+          {/* Header */}
+          <div className="flex items-center justify-between mb-3 gap-2">
+            <div className="min-w-0">
+              <h2 className="text-sm font-extrabold text-gray-900 truncate">
+                {activeConversationId
+                  ? activeTitle || 'Conversation'
+                  : 'Your Signal inbox is ready'}
+              </h2>
+              {!activeConversationId && (
+                <p className="text-xs text-gray-600 mt-1">
+                  Start a conversation from a profile, candidate card, or coaching listing.
+                </p>
+              )}
+            </div>
+
+            {activeConversationId && (
+              <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  onClick={handleDeleteConversation}
+                  className="text-[11px] px-2 py-1 border border-gray-200 rounded-md text-gray-800 hover:bg-white"
+                >
+                  Delete
+                </button>
+                <button
+                  type="button"
+                  onClick={handleReport}
+                  className="text-[11px] px-2 py-1 border border-gray-200 rounded-md text-gray-800 hover:bg-white"
+                >
+                  Report
+                </button>
+                <button
+                  type="button"
+                  onClick={handleBlock}
+                  className="text-[11px] px-2 py-1 border border-red-200 rounded-md text-red-700 hover:bg-red-50"
+                  disabled={isBlocked}
+                >
+                  {isBlocked ? 'Blocked' : 'Block'}
+                </button>
+              </div>
+            )}
+          </div>
+
+          {activeConversationId && isBlocked && (
+            <div className="mb-3 text-[11px] text-red-700 bg-red-50 border border-red-200 rounded-md px-3 py-2">
+              You have blocked this member. You will not be able to send new messages.
+            </div>
+          )}
+
+          {/* Messages list */}
+          <div
+            className="flex-1 overflow-y-auto border border-gray-100 rounded-lg p-3 space-y-2 bg-white/60"
+            style={{
+              minHeight: 220,
+              maxHeight: 420,
+            }}
+          >
+            {activeConversationId ? (
+              messagesLoading ? (
+                <p className="text-xs text-gray-500">Loading messages…</p>
+              ) : messages.length === 0 ? (
+                <p className="text-xs text-gray-500">
+                  No messages yet. Say hello to start the conversation.
+                </p>
+              ) : (
+                messages.map((m) => (
+                  <div
+                    key={m.id}
+                    className={`flex ${m.isMine ? 'justify-end' : 'justify-start'}`}
+                  >
+                    <div
+                      className={`max-w-[86%] rounded-2xl px-3 py-2 text-xs ${
+                        m.isMine
+                          ? 'bg-[#FF7043] text-white'
+                          : 'bg-white text-gray-900 border border-gray-100'
+                      }`}
+                    >
+                      {!m.isMine && (
+                        <div className="font-bold text-[11px] mb-0.5 opacity-90">
+                          {m.senderName}
+                        </div>
+                      )}
+                      <div className="whitespace-pre-wrap leading-relaxed">
+                        {m.content}
+                      </div>
+                      <div className="text-[9px] opacity-75 mt-1 text-right">
+                        {formatTime(m.createdAt)}
+                      </div>
+                    </div>
+                  </div>
+                ))
+              )
+            ) : (
+              <p className="text-xs text-gray-500">
+                Select a conversation on the left or start a new one from a member profile.
+              </p>
+            )}
+          </div>
+
+          {/* Composer */}
+          <form onSubmit={handleSend} className="mt-3 space-y-2">
+            <textarea
+              value={composer}
+              onChange={(e) => setComposer(e.target.value)}
+              disabled={!activeConversationId || isBlocked}
+              placeholder={
+                !activeConversationId
+                  ? 'Select a conversation to start messaging…'
+                  : isBlocked
+                  ? 'You have blocked this member.'
+                  : `Write a message…`
+              }
+              className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm min-h-[90px] disabled:bg-gray-50 bg-white"
+            />
+            <div className="flex items-center justify-end gap-2">
+              {activeConversationId && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    setComposer('');
+                  }}
+                  className="px-3 py-2 rounded-md border border-gray-200 text-sm hover:bg-white"
+                >
+                  Clear
+                </button>
+              )}
+
+              <button
+                type="submit"
+                disabled={!activeConversationId || !composer.trim() || sending || isBlocked}
+                className="px-4 py-2 rounded-md bg-[#ff8a65] text-white text-sm font-extrabold disabled:opacity-50"
+              >
+                Send
+              </button>
+            </div>
+          </form>
+        </section>
+      </div>
+
+      {/* ✅ Desktop-only: keep both columns always visible */}
+      <style jsx>{`
+        @media (min-width: 768px) {
+          .md\\:hidden {
+            display: none !important;
+          }
+        }
+      `}</style>
     </div>
   );
 }
