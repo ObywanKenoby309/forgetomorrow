@@ -48,6 +48,32 @@ export default function SignalMessages() {
   const emojiBtnRef = useRef(null);
   const emojiTrayRef = useRef(null);
 
+  // ✅ Detect mobile viewport (hide custom emoji UI on mobile)
+  const [isMobileDevice, setIsMobileDevice] = useState(false);
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+
+    const mq = window.matchMedia('(max-width: 767px)');
+    const apply = () => setIsMobileDevice(!!mq.matches);
+
+    apply();
+
+    // Safari / older browsers
+    if (mq.addEventListener) {
+      mq.addEventListener('change', apply);
+      return () => mq.removeEventListener('change', apply);
+    } else {
+      mq.addListener(apply);
+      return () => mq.removeListener(apply);
+    }
+  }, []);
+
+  // ✅ If it becomes mobile, force-close tray (mobile uses native emoji keyboard)
+  useEffect(() => {
+    if (isMobileDevice && showEmojiTray) setShowEmojiTray(false);
+  }, [isMobileDevice, showEmojiTray]);
+
   const GLASS = {
     border: '1px solid rgba(255,255,255,0.22)',
     background: 'rgba(255,255,255,0.72)',
@@ -537,6 +563,7 @@ export default function SignalMessages() {
   };
 
   const isMobileChat = mobileView === 'chat';
+  const showDesktopEmojiUI = activeConversationId && !isBlocked && !isMobileDevice;
 
   return (
     <div style={{ ...GLASS, padding: 14, marginTop: 14 }}>
@@ -809,7 +836,8 @@ export default function SignalMessages() {
                 style={{ boxShadow: '0 10px 18px rgba(0,0,0,0.06)' }}
               />
 
-              {activeConversationId && showEmojiTray && !isBlocked && (
+              {/* ✅ Desktop-only emoji tray (mobile uses native keyboard emojis) */}
+              {showDesktopEmojiUI && showEmojiTray && (
                 <div
                   ref={emojiTrayRef}
                   className="absolute z-30 left-0 right-0 bottom-[calc(100%+10px)] border border-gray-200 rounded-xl bg-white"
@@ -873,7 +901,8 @@ export default function SignalMessages() {
                 </button>
               )}
 
-              {activeConversationId && !isBlocked && (
+              {/* ✅ Desktop-only Emojis button */}
+              {showDesktopEmojiUI && (
                 <button
                   ref={emojiBtnRef}
                   type="button"
