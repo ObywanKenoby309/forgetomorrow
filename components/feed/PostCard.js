@@ -23,7 +23,7 @@ export default function PostCard({
   const [hoveredEmoji, setHoveredEmoji] = useState(null);
   const [reactionUsers, setReactionUsers] = useState({});
 
-  // ✅ NEW (minimal): avatar action popover
+  // ✅ avatar action popover
   const [avatarMenuOpen, setAvatarMenuOpen] = useState(false);
 
   // ✅ CRITICAL FIX 2: Safe isOwner check
@@ -70,23 +70,26 @@ export default function PostCard({
     router.push(withChrome(`/member-profile?${params.toString()}`));
   };
 
+  // ✅ FIX: Connect → Contact Center, pre-loaded to connect
   const handleConnect = () => {
     if (!post?.authorId) return;
     setAvatarMenuOpen(false);
 
     const params = new URLSearchParams();
     params.set('userId', post.authorId);
+    params.set('action', 'connect');
     router.push(withChrome(`/seeker/contact-center?${params.toString()}`));
   };
 
+  // ✅ FIX: Message → The Signal, pre-loaded to message
   const handleMessage = () => {
     if (!post?.authorId) return;
     setAvatarMenuOpen(false);
 
     const params = new URLSearchParams();
-    params.set('tab', 'messages');
     params.set('userId', post.authorId);
-    router.push(withChrome(`/seeker/contact-center?${params.toString()}`));
+    params.set('action', 'message');
+    router.push(withChrome(`/seeker/messages?${params.toString()}`));
   };
 
   // ─────────────────────────────────────────────────────────────
@@ -203,11 +206,9 @@ export default function PostCard({
     reactionUsers[emoji] ? `${reactionUsers[emoji]} reacted with ${emoji}` : 'Loading…';
 
   return (
-    // ✅ CHANGED: w-full so card always fills list width
     <div className="relative bg-white rounded-lg shadow p-5 space-y-4 w-full">
       {/* TOP-RIGHT ACTIONS — unified style */}
       <div className="absolute top-3 right-3 flex items-center gap-2">
-        {/* Non-OP: Report + Block */}
         {!isOwner && (
           <>
             <button
@@ -225,7 +226,6 @@ export default function PostCard({
           </>
         )}
 
-        {/* OP: Delete only, same style as Block */}
         {isOwner && (
           <button
             onClick={() => onDelete(post.id)}
@@ -238,7 +238,6 @@ export default function PostCard({
 
       {/* AUTHOR */}
       <div className="flex items-start gap-3">
-        {/* Avatar trigger (popover menu) */}
         <div className="relative">
           <button
             type="button"
@@ -356,7 +355,10 @@ export default function PostCard({
           </button>
         </div>
       ) : (
-        <button onClick={() => setShowReplyInput(true)} className="text-sm text-gray-600 hover:underline">
+        <button
+          onClick={() => setShowReplyInput(true)}
+          className="text-sm text-gray-600 hover:underline"
+        >
           Reply
         </button>
       )}
