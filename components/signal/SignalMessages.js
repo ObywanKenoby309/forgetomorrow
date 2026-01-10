@@ -42,7 +42,7 @@ export default function SignalMessages() {
   const lastMsgIdRef = useRef(null);
   const stickToBottomRef = useRef(true);
 
-  // ✅ Composer refs + emoji tray (now floating popover, not pushing layout)
+  // ✅ Composer refs + emoji tray (floating popover, does not push layout)
   const composerRef = useRef(null);
   const [showEmojiTray, setShowEmojiTray] = useState(false);
   const emojiBtnRef = useRef(null);
@@ -156,9 +156,7 @@ export default function SignalMessages() {
     if (!showEmojiTray) return;
 
     function onKeyDown(e) {
-      if (e.key === 'Escape') {
-        setShowEmojiTray(false);
-      }
+      if (e.key === 'Escape') setShowEmojiTray(false);
     }
 
     document.addEventListener('keydown', onKeyDown);
@@ -210,13 +208,11 @@ export default function SignalMessages() {
 
         if (!opts.appendOnly) {
           setMessages(incoming);
-          // track last id for polling
           const last = incoming[incoming.length - 1];
           lastMsgIdRef.current = last?.id || null;
           return;
         }
 
-        // append-only: dedupe by id
         setMessages((prev) => {
           const seen = new Set(prev.map((m) => m?.id));
           const next = [...prev];
@@ -243,18 +239,12 @@ export default function SignalMessages() {
     setActiveOtherUserId(thread.otherUserId || null);
     setIsBlocked(false);
 
-    // ✅ close emoji tray when switching rooms
     setShowEmojiTray(false);
-
-    // entering room: default to stick-to-bottom
     stickToBottomRef.current = true;
 
     await fetchMessages(thread.id, { appendOnly: false });
 
-    // ✅ mobile: jump into chat view
     setMobileView('chat');
-
-    // after initial load, snap to bottom (instant feels better on open)
     setTimeout(() => scrollToBottom('auto'), 0);
   };
 
@@ -325,23 +315,15 @@ export default function SignalMessages() {
 
     const tick = async () => {
       try {
-        // if user is near bottom, keep them pinned after update
         const shouldStick = stickToBottomRef.current && isNearBottom();
-
         await fetchMessages(activeConversationId, { appendOnly: true });
-
         if (cancelled) return;
-
-        if (shouldStick) {
-          // scroll after DOM update
-          setTimeout(() => scrollToBottom('smooth'), 0);
-        }
-      } catch (e) {
-        // swallow; fetchMessages already logs
+        if (shouldStick) setTimeout(() => scrollToBottom('smooth'), 0);
+      } catch {
+        // ignore
       }
     };
 
-    // prime shortly after open
     const initial = setTimeout(() => {
       if (!cancelled) tick();
     }, 800);
@@ -396,7 +378,6 @@ export default function SignalMessages() {
         isMine: true,
       };
 
-      // user expects message to land at bottom immediately
       stickToBottomRef.current = true;
 
       setMessages((prev) => [...prev, newMessage]);
@@ -415,7 +396,6 @@ export default function SignalMessages() {
     }
   };
 
-  // 🔹 Block this member — prompt for reason, send to API, hide conversation, remove from contacts if connected
   const handleBlock = async () => {
     if (!activeOtherUserId) {
       alert('We could not determine which member to block.');
@@ -451,10 +431,8 @@ export default function SignalMessages() {
       setComposer('');
       setShowEmojiTray(false);
 
-      // Hide conversation from list
       setThreads((prev) => prev.filter((t) => t.otherUserId !== activeOtherUserId));
 
-      // Remove from contacts if connected
       await fetch('/api/contacts/remove', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -466,7 +444,6 @@ export default function SignalMessages() {
     }
   };
 
-  // 🔹 Report this conversation
   const handleReport = async () => {
     if (!activeConversationId || !activeOtherUserId) {
       alert('We could not determine which conversation to report.');
@@ -502,7 +479,6 @@ export default function SignalMessages() {
     }
   };
 
-  // 🔹 Delete this conversation
   const handleDeleteConversation = async () => {
     if (!activeConversationId) {
       alert('No active conversation selected.');
@@ -554,10 +530,7 @@ export default function SignalMessages() {
 
   const formatTime = (dt) => {
     try {
-      return new Date(dt).toLocaleTimeString([], {
-        hour: '2-digit',
-        minute: '2-digit',
-      });
+      return new Date(dt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
     } catch {
       return '';
     }
@@ -589,9 +562,7 @@ export default function SignalMessages() {
       <div className="grid grid-cols-1 md:grid-cols-[minmax(0,2fr)_minmax(0,3fr)] gap-4">
         {/* Left: Threads list */}
         <section
-          className={`${softCard} rounded-xl p-4 ${
-            isMobileChat ? 'hidden md:block' : 'block'
-          }`}
+          className={`${softCard} rounded-xl p-4 ${isMobileChat ? 'hidden md:block' : 'block'}`}
         >
           <div className="flex items-center justify-between gap-2 mb-3">
             <h2 className="text-sm font-extrabold text-gray-900">Conversations</h2>
@@ -605,7 +576,6 @@ export default function SignalMessages() {
             </button>
           </div>
 
-          {/* Search */}
           <div className="mb-3">
             <input
               value={query}
@@ -620,9 +590,7 @@ export default function SignalMessages() {
           ) : filteredThreads.length === 0 ? (
             <div className="text-xs text-gray-600">
               <div className="font-semibold text-gray-800">No conversations yet.</div>
-              <div className="mt-1">
-                Start one from a member profile or candidate card.
-              </div>
+              <div className="mt-1">Start one from a member profile or candidate card.</div>
             </div>
           ) : (
             <ul className="divide-y divide-gray-100">
@@ -647,7 +615,6 @@ export default function SignalMessages() {
                     }`}
                     onClick={() => openConversation(t)}
                   >
-                    {/* Avatar → Member actions menu trigger */}
                     <button
                       type="button"
                       onClick={openMenu}
@@ -667,7 +634,6 @@ export default function SignalMessages() {
                       )}
                     </button>
 
-                    {/* Inline member actions dropdown */}
                     {showMenu && otherId && (
                       <div
                         ref={menuRef}
@@ -716,30 +682,24 @@ export default function SignalMessages() {
           } md:flex`}
           style={ROOM}
         >
-          {/* subtle top accent (still readable, not flashy) */}
           <div
             aria-hidden="true"
             style={{
               height: 3,
               borderRadius: 999,
-              background:
-                'linear-gradient(90deg, rgba(255,112,67,0.65), rgba(255,112,67,0))',
+              background: 'linear-gradient(90deg, rgba(255,112,67,0.65), rgba(255,112,67,0))',
               marginBottom: 10,
             }}
           />
 
-          {/* Header */}
           <div className="flex items-center justify-between mb-3 gap-2">
             <div className="min-w-0">
               <h2 className="text-sm font-extrabold text-gray-900 truncate">
-                {activeConversationId
-                  ? activeTitle || 'Conversation'
-                  : 'Your Signal inbox is ready'}
+                {activeConversationId ? activeTitle || 'Conversation' : 'Your Signal inbox is ready'}
               </h2>
               {!activeConversationId && (
                 <p className="text-xs text-gray-600 mt-1">
-                  Start a conversation from a profile, candidate card, or coaching
-                  listing.
+                  Start a conversation from a profile, candidate card, or coaching listing.
                 </p>
               )}
             </div>
@@ -778,22 +738,14 @@ export default function SignalMessages() {
             </div>
           )}
 
-          {/* Messages list */}
           <div
             ref={messagesRef}
             onScroll={() => {
-              // if user scrolls up, stop auto-sticking; if they come back down, re-enable
               stickToBottomRef.current = isNearBottom();
             }}
-            className="flex-1 overflow-y-auto rounded-xl p-3 space-y-2"
+            className="signal-room-messages flex-1 overflow-y-auto rounded-xl p-3 space-y-2"
             style={{
               ...ROOM_INNER,
-
-              // ✅ Earlier “lock” on desktop: scroll sooner so user never has to page-scroll to chat.
-              // Mobile keeps a bit taller.
-              minHeight: 220,
-              maxHeight: 340,
-
               boxShadow: 'inset 0 1px 0 rgba(255,255,255,0.6)',
             }}
           >
@@ -806,10 +758,7 @@ export default function SignalMessages() {
                 </p>
               ) : (
                 messages.map((m) => (
-                  <div
-                    key={m.id}
-                    className={`flex ${m.isMine ? 'justify-end' : 'justify-start'}`}
-                  >
+                  <div key={m.id} className={`flex ${m.isMine ? 'justify-end' : 'justify-start'}`}>
                     <div
                       className={`max-w-[86%] rounded-2xl px-3 py-2 text-xs ${
                         m.isMine
@@ -827,9 +776,7 @@ export default function SignalMessages() {
                           {m.senderName}
                         </div>
                       )}
-                      <div className="whitespace-pre-wrap leading-relaxed">
-                        {m.content}
-                      </div>
+                      <div className="whitespace-pre-wrap leading-relaxed">{m.content}</div>
                       <div className="text-[9px] opacity-75 mt-1 text-right">
                         {formatTime(m.createdAt)}
                       </div>
@@ -839,13 +786,11 @@ export default function SignalMessages() {
               )
             ) : (
               <p className="text-xs text-gray-500">
-                Select a conversation on the left or start a new one from a member
-                profile.
+                Select a conversation on the left or start a new one from a member profile.
               </p>
             )}
           </div>
 
-          {/* Composer */}
           <form onSubmit={handleSend} className="mt-3 space-y-2">
             <div className="relative">
               <textarea
@@ -861,12 +806,9 @@ export default function SignalMessages() {
                     : `Write a message…`
                 }
                 className="w-full border border-gray-200 rounded-xl px-3 py-2 text-sm min-h-[84px] disabled:bg-gray-50 bg-white"
-                style={{
-                  boxShadow: '0 10px 18px rgba(0,0,0,0.06)',
-                }}
+                style={{ boxShadow: '0 10px 18px rgba(0,0,0,0.06)' }}
               />
 
-              {/* ✅ Floating Emoji Popover (does NOT push page down) */}
               {activeConversationId && showEmojiTray && !isBlocked && (
                 <div
                   ref={emojiTrayRef}
@@ -877,9 +819,7 @@ export default function SignalMessages() {
                   }}
                 >
                   <div className="flex items-center justify-between mb-2">
-                    <div className="text-[11px] font-semibold text-gray-700">
-                      Emojis
-                    </div>
+                    <div className="text-[11px] font-semibold text-gray-700">Emojis</div>
                     <button
                       type="button"
                       onClick={() => setShowEmojiTray(false)}
@@ -889,7 +829,6 @@ export default function SignalMessages() {
                     </button>
                   </div>
 
-                  {/* ✅ More polished tray: tighter grid, capped height with internal scroll if needed */}
                   <div
                     className="grid gap-1"
                     style={{
@@ -934,7 +873,6 @@ export default function SignalMessages() {
                 </button>
               )}
 
-              {/* ✅ Emoji toggle button (popover; no layout push) */}
               {activeConversationId && !isBlocked && (
                 <button
                   ref={emojiBtnRef}
@@ -965,24 +903,29 @@ export default function SignalMessages() {
               </button>
             </div>
           </form>
-
-          {/* ✅ Desktop override: even earlier lock + prevent page scrolling when emoji popover opens */}
-          <style jsx>{`
-            @media (min-width: 768px) {
-              /* keep the room compact so the user isn't page-scrolling to use chat tools */
-              .roomMessagesDesktop {
-                max-height: 320px !important;
-              }
-            }
-          `}</style>
         </section>
       </div>
 
-      {/* ✅ Desktop-only: keep both columns always visible */}
-      <style jsx>{`
+      {/* ✅ One safe global style block (no duplicates, no nesting) */}
+      <style jsx global>{`
+        /* Desktop-only: keep both columns visible */
         @media (min-width: 768px) {
           .md\\:hidden {
             display: none !important;
+          }
+        }
+
+        /* Lock the room earlier on desktop so the PAGE doesn't need to scroll */
+        .signal-room-messages {
+          min-height: 220px;
+          max-height: 340px;
+        }
+
+        @media (max-width: 767px) {
+          /* Mobile can be a bit taller */
+          .signal-room-messages {
+            min-height: 260px;
+            max-height: 460px;
           }
         }
       `}</style>
