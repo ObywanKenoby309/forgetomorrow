@@ -304,7 +304,7 @@ export default function Feed() {
                 onClick={() => setShowComposer(false)}
                 className="text-sm font-bold text-[#FF7043] hover:opacity-80"
               >
-                Close
+                Cancel
               </button>
             </div>
 

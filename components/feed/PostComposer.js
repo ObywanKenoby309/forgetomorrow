@@ -338,16 +338,6 @@ export default function PostComposer({ onPost, onCancel }) {
           >
             Post
           </button>
-
-          {onCancel && (
-            <button
-              type="button"
-              onClick={onCancel}
-              className="px-3 py-2 rounded-md border text-sm"
-            >
-              Cancel
-            </button>
-          )}
         </div>
       </div>
 
