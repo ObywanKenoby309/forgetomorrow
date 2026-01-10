@@ -42,6 +42,10 @@ export default function SignalMessages() {
   const lastMsgIdRef = useRef(null);
   const stickToBottomRef = useRef(true);
 
+  // ✅ Composer refs + emoji tray (hidden until user clicks)
+  const composerRef = useRef(null);
+  const [showEmojiTray, setShowEmojiTray] = useState(false);
+
   const GLASS = {
     border: '1px solid rgba(255,255,255,0.22)',
     background: 'rgba(255,255,255,0.72)',
@@ -79,6 +83,84 @@ export default function SignalMessages() {
     const distanceFromBottom = el.scrollHeight - el.scrollTop - el.clientHeight;
     return distanceFromBottom <= threshold;
   };
+
+  // ✅ Emoji set (small, safe default)
+  const EMOJIS = useMemo(
+    () => [
+      '😀',
+      '😁',
+      '😂',
+      '🤣',
+      '😊',
+      '😍',
+      '😎',
+      '🤝',
+      '👍',
+      '🙏',
+      '🔥',
+      '✨',
+      '💡',
+      '🎯',
+      '✅',
+      '💬',
+      '📌',
+      '📎',
+      '🧠',
+      '💪',
+      '👏',
+      '🙌',
+      '🎉',
+      '❤️',
+    ],
+    []
+  );
+
+  // ✅ Insert emoji into textarea at cursor (or replace selection)
+  const insertEmoji = (emoji) => {
+    if (!emoji) return;
+    if (!activeConversationId || isBlocked) return;
+
+    const el = composerRef.current;
+
+    // Fallback: append if ref not ready
+    if (!el) {
+      setComposer((prev) => `${String(prev || '')}${emoji}`);
+      return;
+    }
+
+    const value = String(composer || '');
+    const start = typeof el.selectionStart === 'number' ? el.selectionStart : value.length;
+    const end = typeof el.selectionEnd === 'number' ? el.selectionEnd : value.length;
+
+    const next = value.slice(0, start) + emoji + value.slice(end);
+    const nextCursor = start + emoji.length;
+
+    setComposer(next);
+
+    // restore focus + cursor after React updates
+    setTimeout(() => {
+      try {
+        el.focus();
+        el.setSelectionRange(nextCursor, nextCursor);
+      } catch {
+        // ignore
+      }
+    }, 0);
+  };
+
+  // ✅ Close emoji tray on Esc (only when tray is open)
+  useEffect(() => {
+    if (!showEmojiTray) return;
+
+    function onKeyDown(e) {
+      if (e.key === 'Escape') {
+        setShowEmojiTray(false);
+      }
+    }
+
+    document.addEventListener('keydown', onKeyDown);
+    return () => document.removeEventListener('keydown', onKeyDown);
+  }, [showEmojiTray]);
 
   const fetchThreads = useCallback(async () => {
     setThreadsLoading(true);
@@ -141,6 +223,9 @@ export default function SignalMessages() {
     setActiveTitle(thread.title || 'Conversation');
     setActiveOtherUserId(thread.otherUserId || null);
     setIsBlocked(false);
+
+    // ✅ close emoji tray when switching rooms
+    setShowEmojiTray(false);
 
     // entering room: default to stick-to-bottom
     stickToBottomRef.current = true;
@@ -299,6 +384,7 @@ export default function SignalMessages() {
       lastMsgIdRef.current = newMessage?.id || lastMsgIdRef.current;
 
       setComposer('');
+      setShowEmojiTray(false);
       await fetchThreads();
 
       setTimeout(() => scrollToBottom('smooth'), 0);
@@ -344,6 +430,7 @@ export default function SignalMessages() {
 
       setIsBlocked(true);
       setComposer('');
+      setShowEmojiTray(false);
 
       // Hide conversation from list
       setThreads((prev) => prev.filter((t) => t.otherUserId !== activeOtherUserId));
@@ -426,6 +513,7 @@ export default function SignalMessages() {
       setActiveOtherUserId(null);
       setMessages([]);
       setIsBlocked(false);
+      setShowEmojiTray(false);
       setMobileView('list');
 
       await fetchThreads();
@@ -729,6 +817,7 @@ export default function SignalMessages() {
           {/* Composer */}
           <form onSubmit={handleSend} className="mt-3 space-y-2">
             <textarea
+              ref={composerRef}
               value={composer}
               onChange={(e) => setComposer(e.target.value)}
               disabled={!activeConversationId || isBlocked}
@@ -744,14 +833,75 @@ export default function SignalMessages() {
                 boxShadow: '0 10px 18px rgba(0,0,0,0.06)',
               }}
             />
+
+            {/* ✅ Emoji tray (hidden by default; toggled by button) */}
+            {activeConversationId && showEmojiTray && !isBlocked && (
+              <div
+                className="w-full border border-gray-200 rounded-xl px-2 py-2 bg-white"
+                style={{
+                  boxShadow: '0 10px 18px rgba(0,0,0,0.06)',
+                }}
+              >
+                <div className="flex items-center justify-between mb-1">
+                  <div className="text-[11px] font-semibold text-gray-700">Emojis</div>
+                  <button
+                    type="button"
+                    onClick={() => setShowEmojiTray(false)}
+                    className="text-[11px] px-2 py-1 rounded-md border border-gray-200 hover:bg-white"
+                  >
+                    Close
+                  </button>
+                </div>
+
+                <div className="flex flex-wrap gap-1">
+                  {EMOJIS.map((e) => (
+                    <button
+                      key={e}
+                      type="button"
+                      onClick={() => insertEmoji(e)}
+                      className="w-9 h-9 rounded-lg border border-gray-200 bg-white hover:bg-gray-50 text-lg flex items-center justify-center"
+                      aria-label={`Insert ${e}`}
+                      title={`Insert ${e}`}
+                    >
+                      {e}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
+
             <div className="flex items-center justify-end gap-2">
               {activeConversationId && (
                 <button
                   type="button"
-                  onClick={() => setComposer('')}
+                  onClick={() => {
+                    setComposer('');
+                    setShowEmojiTray(false);
+                  }}
                   className="px-3 py-2 rounded-md border border-gray-200 text-sm hover:bg-white"
                 >
                   Clear
+                </button>
+              )}
+
+              {/* ✅ Emoji toggle button (tray hidden until clicked) */}
+              {activeConversationId && !isBlocked && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    setShowEmojiTray((v) => !v);
+                    setTimeout(() => {
+                      try {
+                        composerRef.current?.focus?.();
+                      } catch {
+                        // ignore
+                      }
+                    }, 0);
+                  }}
+                  className="px-3 py-2 rounded-md border border-gray-200 text-sm hover:bg-white"
+                  aria-label="Toggle emojis"
+                >
+                  Emojis
                 </button>
               )}
 
