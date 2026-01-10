@@ -23,8 +23,12 @@ export default function PostCard({
   const [hoveredEmoji, setHoveredEmoji] = useState(null);
   const [reactionUsers, setReactionUsers] = useState({});
 
+  // ✅ NEW (minimal): avatar action popover
+  const [avatarMenuOpen, setAvatarMenuOpen] = useState(false);
+
   // ✅ CRITICAL FIX 2: Safe isOwner check
   const isOwner = post.authorId && currentUserId ? post.authorId === currentUserId : false;
+  const canTargetAuthor = Boolean(post?.authorId) && !isOwner;
 
   const handleReplySubmit = () => {
     if (!replyText.trim()) return;
@@ -34,18 +38,14 @@ export default function PostCard({
   };
 
   // ─────────────────────────────────────────────────────────────
-  // AVATAR ACTIONS (restore: View / Connect / Message) + log view
-  // Minimal: route to existing pages, do not invent new APIs.
+  // Avatar menu actions (View / Connect / Message) + log view
   // ─────────────────────────────────────────────────────────────
   const chrome = String(router.query?.chrome || '').toLowerCase();
   const withChrome = (path) =>
     chrome ? `${path}${path.includes('?') ? '&' : '?'}chrome=${chrome}` : path;
 
-  const canTargetAuthor = Boolean(post?.authorId) && !isOwner;
-
   const logProfileView = async (source) => {
     try {
-      // best-effort only; never block navigation
       await fetch('/api/profile/views', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -55,14 +55,14 @@ export default function PostCard({
         }),
       });
     } catch {
-      // ignore
+      // ignore (best-effort)
     }
   };
 
   const handleViewProfile = async () => {
     if (!post?.authorId) return;
+    setAvatarMenuOpen(false);
 
-    // Log view first (best-effort, no await needed, but keeping it awaited is fine)
     logProfileView('feed');
 
     const params = new URLSearchParams();
@@ -72,6 +72,8 @@ export default function PostCard({
 
   const handleConnect = () => {
     if (!post?.authorId) return;
+    setAvatarMenuOpen(false);
+
     const params = new URLSearchParams();
     params.set('userId', post.authorId);
     router.push(withChrome(`/seeker/contact-center?${params.toString()}`));
@@ -79,6 +81,8 @@ export default function PostCard({
 
   const handleMessage = () => {
     if (!post?.authorId) return;
+    setAvatarMenuOpen(false);
+
     const params = new URLSearchParams();
     params.set('tab', 'messages');
     params.set('userId', post.authorId);
@@ -234,55 +238,66 @@ export default function PostCard({
 
       {/* AUTHOR */}
       <div className="flex items-start gap-3">
-        {/* Avatar becomes clickable + actions */}
-        <button
-          type="button"
-          onClick={canTargetAuthor ? handleViewProfile : undefined}
-          className="shrink-0"
-          style={{ cursor: canTargetAuthor ? 'pointer' : 'default' }}
-          aria-label={canTargetAuthor ? 'View profile' : 'Author avatar'}
-        >
-          {post.authorAvatar ? (
-            <img src={post.authorAvatar} alt={post.author} className="w-10 h-10 rounded-full" />
-          ) : (
-            <div className="w-10 h-10 rounded-full bg-gray-200 flex items-center justify-center text-gray-500">
-              {post.author?.charAt(0)?.toUpperCase()}
-            </div>
-          )}
-        </button>
-
-        <div className="min-w-0">
-          <div className="flex items-center gap-2">
-            <div className="font-semibold">{post.author}</div>
-
-            {/* ✅ Restore actions only for non-self posts */}
-            {canTargetAuthor && (
-              <div className="flex items-center gap-2">
-                <button
-                  type="button"
-                  onClick={handleViewProfile}
-                  className="text-xs px-2 py-1 border border-gray-300 rounded-md text-gray-700 hover:bg-gray-50"
-                >
-                  View
-                </button>
-                <button
-                  type="button"
-                  onClick={handleConnect}
-                  className="text-xs px-2 py-1 border border-gray-300 rounded-md text-gray-700 hover:bg-gray-50"
-                >
-                  Connect
-                </button>
-                <button
-                  type="button"
-                  onClick={handleMessage}
-                  className="text-xs px-2 py-1 border border-gray-300 rounded-md text-gray-700 hover:bg-gray-50"
-                >
-                  Message
-                </button>
+        {/* Avatar trigger (popover menu) */}
+        <div className="relative">
+          <button
+            type="button"
+            onClick={() => {
+              if (!canTargetAuthor) return;
+              setAvatarMenuOpen((v) => !v);
+            }}
+            onBlur={() => setAvatarMenuOpen(false)}
+            className="shrink-0"
+            style={{ cursor: canTargetAuthor ? 'pointer' : 'default' }}
+            aria-label={canTargetAuthor ? 'Open member actions' : 'Author avatar'}
+          >
+            {post.authorAvatar ? (
+              <img src={post.authorAvatar} alt={post.author} className="w-10 h-10 rounded-full" />
+            ) : (
+              <div className="w-10 h-10 rounded-full bg-gray-200 flex items-center justify-center text-gray-500">
+                {post.author?.charAt(0)?.toUpperCase()}
               </div>
             )}
-          </div>
+          </button>
 
+          {avatarMenuOpen && canTargetAuthor ? (
+            <div
+              className="absolute left-0 mt-2 w-40 bg-white border border-gray-200 rounded-lg shadow-lg z-30 overflow-hidden"
+              role="menu"
+            >
+              <button
+                type="button"
+                onMouseDown={(e) => e.preventDefault()}
+                onClick={handleViewProfile}
+                className="w-full text-left px-3 py-2 text-sm hover:bg-gray-50"
+                role="menuitem"
+              >
+                View profile
+              </button>
+              <button
+                type="button"
+                onMouseDown={(e) => e.preventDefault()}
+                onClick={handleConnect}
+                className="w-full text-left px-3 py-2 text-sm hover:bg-gray-50"
+                role="menuitem"
+              >
+                Connect
+              </button>
+              <button
+                type="button"
+                onMouseDown={(e) => e.preventDefault()}
+                onClick={handleMessage}
+                className="w-full text-left px-3 py-2 text-sm hover:bg-gray-50"
+                role="menuitem"
+              >
+                Message
+              </button>
+            </div>
+          ) : null}
+        </div>
+
+        <div>
+          <div className="font-semibold">{post.author}</div>
           <div className="text-xs text-gray-500">
             {new Date(post.createdAt).toLocaleString()} • {post.type}
           </div>
