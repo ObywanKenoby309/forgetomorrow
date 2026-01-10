@@ -287,19 +287,24 @@ export default function Feed() {
 
       {showComposer && (
         <div
-          className="fixed inset-0 z-50 flex items-center justify-center bg-black/40"
+          className="fixed inset-0 z-50 bg-black/40 overflow-y-auto"
           onClick={() => setShowComposer(false)}
         >
           <div
-            className="bg-white rounded-lg shadow-xl max-w-2x1 w-full p-4"
+            className="min-h-full w-full flex items-start justify-center px-3 py-6 sm:py-10"
             onClick={(e) => e.stopPropagation()}
           >
-            <PostComposer
-              onPost={handleNewPost}
-              onCancel={() => setShowComposer(false)}
-              currentUserName={currentUserName}
-              currentUserAvatar={currentUserAvatar}
-            />
+            {/* ✅ Removed extra white wrapper (PostComposer is already a card)
+                ✅ Fixed max width typo (was max-w-2x1)
+                ✅ Top-aligned + scroll-safe so there’s no giant dead space */}
+            <div className="w-full max-w-2xl">
+              <PostComposer
+                onPost={handleNewPost}
+                onCancel={() => setShowComposer(false)}
+                currentUserName={currentUserName}
+                currentUserAvatar={currentUserAvatar}
+              />
+            </div>
           </div>
         </div>
       )}
