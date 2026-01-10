@@ -370,10 +370,7 @@ export default function SignalMessages() {
       <div className="grid grid-cols-1 md:grid-cols-[minmax(0,2fr)_minmax(0,3fr)] gap-4">
         {/* Left: Threads list */}
         <section
-          className={`${softCard} rounded-xl p-4`}
-          style={{
-            display: isMobileChat ? 'none' : 'block',
-          }}
+          className={`${softCard} rounded-xl p-4 ${isMobileChat ? 'hidden md:block' : 'block'}`}
         >
           <div className="flex items-center justify-between gap-2 mb-3">
             <h2 className="text-sm font-extrabold text-gray-900">Conversations</h2>
@@ -493,10 +490,9 @@ export default function SignalMessages() {
 
         {/* Right: Active conversation */}
         <section
-          className={`${softCard} rounded-xl p-4 flex flex-col`}
-          style={{
-            display: !isMobileChat && window?.innerWidth < 768 && activeConversationId ? 'block' : undefined,
-          }}
+          className={`${softCard} rounded-xl p-4 flex flex-col ${
+            isMobileChat ? 'block' : 'hidden'
+          } md:flex`}
         >
           {/* Header */}
           <div className="flex items-center justify-between mb-3 gap-2">
