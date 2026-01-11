@@ -162,10 +162,18 @@ type FeedComment = {
   authorId?: string;
   authorName?: string;
   name?: string;
+
   content?: string;
   text?: string;
   body?: string;
+
+  // likes can be stored under different keys depending on UI wiring
   likes?: number;
+  likeCount?: number;
+  likesCount?: number;
+  like_count?: number;
+
+  // reactions may exist, but we only treat 👍 / "like" as "likes"
   reactions?: unknown;
 };
 
@@ -173,13 +181,53 @@ function commentTextOf(c: FeedComment) {
   return String(c?.content || c?.text || c?.body || "").trim();
 }
 
-function commentLikesOf(c: FeedComment) {
-  const n = Number((c as { likes?: unknown })?.likes);
-  return Number.isFinite(n) ? n : 0;
-}
-
 function commentAuthorIdOf(c: FeedComment) {
   return String(c?.authorId || c?.userId || "").trim();
+}
+
+// ✅ MIN CHANGE: robustly read likes from multiple common shapes
+function commentLikesOf(c: FeedComment) {
+  // 1) direct numeric fields
+  const directCandidates = [
+    (c as any)?.likes,
+    (c as any)?.likeCount,
+    (c as any)?.likesCount,
+    (c as any)?.like_count,
+  ];
+
+  for (const v of directCandidates) {
+    const n = Number(v);
+    if (Number.isFinite(n)) return n;
+  }
+
+  // 2) reactions object/array (ONLY count 👍 or "like")
+  const r = (c as any)?.reactions;
+  if (!r) return 0;
+
+  // map form: { "👍": 3, "🔥": 1 } or { like: 3 }
+  if (typeof r === "object" && !Array.isArray(r)) {
+    const likeish =
+      (r as any)["👍"] ??
+      (r as any)["like"] ??
+      (r as any)["LIKE"] ??
+      (r as any)["thumbsup"] ??
+      (r as any)["thumbs_up"];
+
+    const n = Number(likeish);
+    return Number.isFinite(n) ? n : 0;
+  }
+
+  // array form: [{ emoji:"👍", count: 3 }, ...]
+  if (Array.isArray(r)) {
+    const entry =
+      r.find((x: any) => x?.emoji === "👍") ||
+      r.find((x: any) => String(x?.emoji || "").toLowerCase() === "like");
+
+    const n = Number((entry as any)?.count);
+    return Number.isFinite(n) ? n : 0;
+  }
+
+  return 0;
 }
 
 function titleFromPostContent(content: unknown) {
@@ -187,20 +235,6 @@ function titleFromPostContent(content: unknown) {
   if (!s) return "View post";
   if (s.length <= 60) return s;
   return s.slice(0, 57) + "...";
-}
-
-function parseComments(raw: unknown): unknown[] {
-  if (!raw) return [];
-  if (Array.isArray(raw)) return raw;
-  if (typeof raw === "string") {
-    try {
-      const parsed = JSON.parse(raw);
-      return Array.isArray(parsed) ? parsed : [];
-    } catch {
-      return [];
-    }
-  }
-  return [];
 }
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
@@ -388,11 +422,9 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     // ✅ TOP CONTENT (NOW SUPPORTED)
     // 1) Highest viewed post via FeedPostView aggregation
     // 2) Highest liked comment via best-effort parse of comments JSON
-    //    ✅ FIX: scan recent feed posts to find comments authored by this user
-    //           (not just comments on the user's own posts)
     // ─────────────────────────────────────────────────────────────
 
-    // 1) Highest viewed post (only among user's own posts)
+    // 1) Highest viewed post
     const postIds = postsForComments.map((p) => p.id).filter((x) => typeof x === "number") as number[];
 
     let highestViewedPost: null | { id: number; title: string; url: string; views: number } = null;
@@ -421,20 +453,24 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     }
 
     // 2) Highest liked comment (best-effort)
-    // ✅ Scan recent posts so we can find the user's comments even on other people’s posts.
-    let highestViewedComment: null | { snippet: string; url: string; likes: number } = null;
+    let highestViewedComment:
+      | null
+      | { snippet: string; url: string; likes: number } = null;
 
     try {
-      const recentPostsForUserComments = await prisma.feedPost.findMany({
-        select: { id: true, comments: true },
-        take: 600,
-        orderBy: { createdAt: "desc" },
-      });
-
       let best: { likes: number; snippet: string; url: string } | null = null;
 
-      for (const p of recentPostsForUserComments) {
-        const arr = parseComments((p as { comments?: unknown }).comments);
+      for (const p of postsForComments) {
+        const raw = (p as { comments?: unknown }).comments;
+        const arr: unknown[] =
+          Array.isArray(raw) ? raw : typeof raw === "string" ? (() => {
+            try {
+              const parsed = JSON.parse(raw);
+              return Array.isArray(parsed) ? parsed : [];
+            } catch {
+              return [];
+            }
+          })() : [];
 
         for (const item of arr) {
           if (!item || typeof item !== "object") continue;
@@ -493,7 +529,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       // completion checklist
       profileChecklist,
 
-      // ✅ top content (NOW RETURNED)
+      // ✅ top content
       highestViewedPost,
       highestViewedComment,
     });
