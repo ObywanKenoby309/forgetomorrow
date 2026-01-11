@@ -182,7 +182,7 @@ model PinnedJob {
   title    String?
   company  String?
   location String?
-  url       String?
+  url      String?
   pinnedAt DateTime @default(now())
   user     User     @relation(fields: [userId], references: [id])
   job      Job?     @relation(fields: [jobId], references: [id])
@@ -534,16 +534,16 @@ model ContactRequest {
 // ============================================================================
 
 model Organization {
-  id        String             @id @default(cuid())
-  name      String
-  status    OrganizationStatus @default(PILOT)
+  id     String             @id @default(cuid())
+  name   String
+  status OrganizationStatus @default(PILOT)
 
   // ✅ The stable "join key" already used in User.accountKey / Job.accountKey
   accountKey String @unique
 
   // Customer org owner/superuser (optional now, but needed soon)
   ownerUserId String?
-  owner       User? @relation("OrganizationOwner", fields: [ownerUserId], references: [id], onDelete: SetNull)
+  owner       User?   @relation("OrganizationOwner", fields: [ownerUserId], references: [id], onDelete: SetNull)
 
   // ✅ Back-relations via accountKey (no extra columns required on User/Job)
   users User[] @relation("OrganizationUsers")
@@ -569,12 +569,12 @@ model OrganizationMember {
   id String @id @default(cuid())
 
   // Org scoping via existing accountKey convention
-  accountKey String
+  accountKey   String
   organization Organization @relation("OrganizationMembers", fields: [accountKey], references: [accountKey], onDelete: Cascade)
 
   // The user who has access to the org (recruiter, admin, staff, etc.)
   userId String
-  user   User @relation("UserOrganizationMembers", fields: [userId], references: [id], onDelete: Cascade)
+  user   User   @relation("UserOrganizationMembers", fields: [userId], references: [id], onDelete: Cascade)
 
   // Optional: role within THIS org (use later, doesn't break now)
   role String?
@@ -592,10 +592,10 @@ model OrganizationMember {
 // ============================================================================
 
 model UserStaffRole {
-  id     String    @id @default(cuid())
-  userId String
-  role   StaffRole
-  createdAt DateTime @default(now())
+  id        String    @id @default(cuid())
+  userId    String
+  role      StaffRole
+  createdAt DateTime  @default(now())
 
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
@@ -613,14 +613,14 @@ model AuditLog {
   id String @id @default(cuid())
 
   actorUserId String
-  actor       User @relation("AuditActor", fields: [actorUserId], references: [id], onDelete: Cascade)
+  actor       User   @relation("AuditActor", fields: [actorUserId], references: [id], onDelete: Cascade)
 
   // If action occurred while impersonating a user
   impersonatedUserId String?
-  impersonatedUser   User? @relation("AuditImpersonated", fields: [impersonatedUserId], references: [id], onDelete: SetNull)
+  impersonatedUser   User?   @relation("AuditImpersonated", fields: [impersonatedUserId], references: [id], onDelete: SetNull)
 
-  action   String
-  metadata Json?
+  action    String
+  metadata  Json?
   createdAt DateTime @default(now())
 
   @@index([actorUserId])
@@ -645,13 +645,12 @@ model User {
   name                       String?
   image                      String?
 
-  headline  String?
-  pronouns  String?
-  location  String?
-  status    String?
-  avatarUrl String?
-  coverUrl  String?
-
+  headline          String?
+  pronouns          String?
+  location          String?
+  status            String?
+  avatarUrl         String?
+  coverUrl          String?
   bannerMode        String?
   bannerHeight      Int?
   bannerFocalY      Int?
@@ -682,7 +681,7 @@ model User {
 
   // ✅ NEW: org link via accountKey (no new User columns)
   organization Organization? @relation("OrganizationUsers", fields: [accountKey], references: [accountKey])
-  
+
   // ✅ NEW: multi-org access (fractional / agency recruiters)
   organizationMemberships OrganizationMember[] @relation("UserOrganizationMembers")
 
@@ -695,10 +694,13 @@ model User {
 
   // ✅ NEW: org owner inverse relation (optional)
   ownedOrganizations Organization[] @relation("OrganizationOwner")
-  
+
   // ✅ Profile views (who viewed you / who you viewed)
   profileViewsReceived ProfileView[] @relation("ProfileViewTarget")
   profileViewsMade     ProfileView[] @relation("ProfileViewViewer")
+
+  // ✅ NEW: feed post view events (inverse relation for FeedPostView.viewer)
+  feedPostViews FeedPostView[] @relation("UserFeedPostViews")
 
   applications Application[]
   views        JobView[]
@@ -719,7 +721,7 @@ model User {
 
   candidates           Candidate[]
   candidateAutomations RecruiterCandidateAutomation[]
-  
+
   // RecruiterCandidate (Option A) relations
   recruiterCandidatesOwned  RecruiterCandidate[] @relation("RecruiterCandidateRecruiter")
   recruiterCandidatesAsUser RecruiterCandidate[] @relation("RecruiterCandidateCandidate")
@@ -823,10 +825,10 @@ model RecruiterCandidate {
   id String @id @default(cuid())
 
   recruiterUserId String
-  recruiter       User @relation("RecruiterCandidateRecruiter", fields: [recruiterUserId], references: [id], onDelete: Cascade)
+  recruiter       User   @relation("RecruiterCandidateRecruiter", fields: [recruiterUserId], references: [id], onDelete: Cascade)
 
   candidateUserId String
-  candidate       User @relation("RecruiterCandidateCandidate", fields: [candidateUserId], references: [id], onDelete: Cascade)
+  candidate       User   @relation("RecruiterCandidateCandidate", fields: [candidateUserId], references: [id], onDelete: Cascade)
 
   // REQUIRED: this record is always scoped to a specific client org / account
   accountKey String
@@ -1164,8 +1166,26 @@ model FeedPost {
   createdAt  DateTime @default(now())
   updatedAt  DateTime @updatedAt
 
+  // ✅ NEW: view events
+  views FeedPostView[]
+
   @@index([authorId])
   @@map("feed_posts")
+}
+
+model FeedPostView {
+  id        Int      @id @default(autoincrement())
+  postId    Int
+  viewerId  String? // allow anonymous (no session) but still log the view event
+  source    String?  @default("feed")
+  createdAt DateTime @default(now())
+
+  post   FeedPost @relation(fields: [postId], references: [id], onDelete: Cascade)
+  viewer User?    @relation("UserFeedPostViews", fields: [viewerId], references: [id], onDelete: SetNull)
+
+  @@index([postId, createdAt])
+  @@index([viewerId, createdAt])
+  @@map("feed_post_views")
 }
 
 // ============================================================================
@@ -1188,6 +1208,7 @@ model SupportTicket {
   intent    String?
 
   status String
+
   @@map("support_tickets")
 }
 

@@ -78,10 +78,28 @@ function dayLabel(d: Date) {
   return d.toLocaleDateString("en-US", { weekday: "short" });
 }
 
+// ✅ Slightly smarter search-source detector (still best-effort)
 function isSearchSource(source: unknown) {
-  const s = String(source || "").toLowerCase();
+  const s = String(source || "").toLowerCase().trim();
   if (!s) return false;
-  return s.includes("search") || s.includes("discover") || s.includes("browse");
+
+  // treat these as "search-like impressions"
+  const needles = [
+    "search",
+    "discover",
+    "browse",
+    "results",
+    "directory",
+    "people",
+    "members",
+    "candidates",
+    "talent",
+    "pool",
+    "recruiter",
+    "query",
+  ];
+
+  return needles.some((n) => s.includes(n));
 }
 
 function safeJsonArrayLen(v: unknown) {
@@ -136,6 +154,40 @@ function skillNamesFromAny(skillsJson: unknown): string[] {
 type DayRow = { createdAt: Date };
 type SearchRow = { createdAt: Date; source: string | null };
 type ContactRow = { createdAt: Date; userId?: string; contactUserId?: string };
+
+// ✅ Feed comment shape (best-effort; comments are JSON today)
+type FeedComment = {
+  id?: string | number;
+  userId?: string;
+  authorId?: string;
+  authorName?: string;
+  name?: string;
+  content?: string;
+  text?: string;
+  body?: string;
+  likes?: number;
+  reactions?: unknown;
+};
+
+function commentTextOf(c: FeedComment) {
+  return String(c?.content || c?.text || c?.body || "").trim();
+}
+
+function commentLikesOf(c: FeedComment) {
+  const n = Number((c as { likes?: unknown })?.likes);
+  return Number.isFinite(n) ? n : 0;
+}
+
+function commentAuthorIdOf(c: FeedComment) {
+  return String(c?.authorId || c?.userId || "").trim();
+}
+
+function titleFromPostContent(content: unknown) {
+  const s = String(content || "").replace(/\s+/g, " ").trim();
+  if (!s) return "View post";
+  if (s.length <= 60) return s;
+  return s.slice(0, 57) + "...";
+}
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   if (req.method !== "GET") {
@@ -212,7 +264,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
     const viewsLast7Days = bucketize(viewsRows);
 
-    // Search appearances approximation: ProfileView.source indicates search/browse/discover
+    // Search appearances: ProfileView.source indicates search/browse/discover
     const searchFiltered: DayRow[] = searchRows
       .filter((r) => isSearchSource(r.source))
       .map((r) => ({ createdAt: r.createdAt }));
@@ -257,12 +309,12 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     ];
     const connectionsLast7Days = bucketize(connectionsRowsCombined);
 
-    // Posts/comments
+    // Posts + comments (comments are JSON on posts today)
     const [postsCount, postsForComments] = await Promise.all([
       prisma.feedPost.count({ where: { authorId: userId } }),
       prisma.feedPost.findMany({
         where: { authorId: userId },
-        select: { comments: true },
+        select: { id: true, content: true, comments: true },
         take: 250,
         orderBy: { createdAt: "desc" },
       }),
@@ -318,6 +370,98 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       ? { name: recentViewers[0].name || null, profileUrl: "/profile?tab=views" }
       : { name: null, profileUrl: "/profile?tab=views" };
 
+    // ─────────────────────────────────────────────────────────────
+    // ✅ TOP CONTENT (NOW SUPPORTED)
+    // 1) Highest viewed post via FeedPostView aggregation
+    // 2) Highest liked comment via best-effort parse of comments JSON
+    // ─────────────────────────────────────────────────────────────
+
+    // 1) Highest viewed post
+    const postIds = postsForComments.map((p) => p.id).filter((x) => typeof x === "number") as number[];
+
+    let highestViewedPost: null | { id: number; title: string; url: string; views: number } = null;
+
+    if (postIds.length) {
+      const viewCounts = await prisma.feedPostView.groupBy({
+        by: ["postId"],
+        where: { postId: { in: postIds } },
+        _count: { _all: true },
+        orderBy: { _count: { _all: "desc" } },
+        take: 1,
+      });
+
+      const top = viewCounts?.[0];
+      if (top?.postId) {
+        const post = postsForComments.find((p) => p.id === top.postId);
+        const title = titleFromPostContent(post?.content);
+        // Best-effort URL (matches your open tabs: post-view.js exists)
+        const url = `/post-view?id=${top.postId}`;
+        highestViewedPost = {
+          id: top.postId,
+          title,
+          url,
+          views: Number(top._count?._all || 0),
+        };
+      }
+    }
+
+    // 2) Highest liked comment (best-effort)
+    // We can only do this if comments JSON includes author/user id + likes + text.
+    let highestViewedComment:
+      | null
+      | { snippet: string; url: string; likes: number } = null;
+
+    try {
+      let best: { likes: number; snippet: string; url: string } | null = null;
+
+      for (const p of postsForComments) {
+        const raw = (p as { comments?: unknown }).comments;
+        const arr: unknown[] =
+          Array.isArray(raw) ? raw : typeof raw === "string" ? (() => {
+            try {
+              const parsed = JSON.parse(raw);
+              return Array.isArray(parsed) ? parsed : [];
+            } catch {
+              return [];
+            }
+          })() : [];
+
+        for (const item of arr) {
+          if (!item || typeof item !== "object") continue;
+          const c = item as FeedComment;
+
+          const authorId = commentAuthorIdOf(c);
+          if (!authorId || authorId !== String(userId)) continue;
+
+          const likes = commentLikesOf(c);
+          const text = commentTextOf(c);
+          if (!text) continue;
+
+          const snippet = text.length <= 90 ? text : text.slice(0, 87) + "...";
+          const commentId = (c.id ?? "") as string | number;
+
+          // Best-effort deep link (safe even if hash doesn't exist)
+          const url = commentId
+            ? `/post-view?id=${p.id}#comment-${String(commentId)}`
+            : `/post-view?id=${p.id}`;
+
+          if (!best || likes > best.likes) {
+            best = { likes, snippet, url };
+          }
+        }
+      }
+
+      if (best) {
+        highestViewedComment = {
+          snippet: best.snippet,
+          url: best.url,
+          likes: best.likes,
+        };
+      }
+    } catch {
+      highestViewedComment = null;
+    }
+
     return res.status(200).json({
       // KPIs
       totalViews,
@@ -340,9 +484,9 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       // completion checklist
       profileChecklist,
 
-      // top content (not supported by schema yet)
-      highestViewedPost: null,
-      highestViewedComment: null,
+      // ✅ top content (NOW RETURNED)
+      highestViewedPost,
+      highestViewedComment,
     });
   } catch (err) {
     console.error("[api/profile/analytics] error:", err);
