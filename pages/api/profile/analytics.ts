@@ -189,6 +189,20 @@ function titleFromPostContent(content: unknown) {
   return s.slice(0, 57) + "...";
 }
 
+function parseComments(raw: unknown): unknown[] {
+  if (!raw) return [];
+  if (Array.isArray(raw)) return raw;
+  if (typeof raw === "string") {
+    try {
+      const parsed = JSON.parse(raw);
+      return Array.isArray(parsed) ? parsed : [];
+    } catch {
+      return [];
+    }
+  }
+  return [];
+}
+
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   if (req.method !== "GET") {
     res.setHeader("Allow", ["GET"]);
@@ -374,9 +388,11 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     // ✅ TOP CONTENT (NOW SUPPORTED)
     // 1) Highest viewed post via FeedPostView aggregation
     // 2) Highest liked comment via best-effort parse of comments JSON
+    //    ✅ FIX: scan recent feed posts to find comments authored by this user
+    //           (not just comments on the user's own posts)
     // ─────────────────────────────────────────────────────────────
 
-    // 1) Highest viewed post
+    // 1) Highest viewed post (only among user's own posts)
     const postIds = postsForComments.map((p) => p.id).filter((x) => typeof x === "number") as number[];
 
     let highestViewedPost: null | { id: number; title: string; url: string; views: number } = null;
@@ -385,8 +401,8 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       const viewCounts = await prisma.feedPostView.groupBy({
         by: ["postId"],
         where: { postId: { in: postIds } },
-        _count: { postId: true },                // ✅ FIX: Prisma typing supports this
-        orderBy: { _count: { postId: "desc" } }, // ✅ FIX: order by count(postId)
+        _count: { postId: true },
+        orderBy: { _count: { postId: "desc" } },
         take: 1,
       });
 
@@ -394,37 +410,31 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       if (top?.postId) {
         const post = postsForComments.find((p) => p.id === top.postId);
         const title = titleFromPostContent(post?.content);
-        // Best-effort URL (matches your open tabs: post-view.js exists)
         const url = `/post-view?id=${top.postId}`;
         highestViewedPost = {
           id: top.postId,
           title,
           url,
-          views: Number((top as any)?._count?.postId || 0), // ✅ FIX: count is on postId now
+          views: Number((top as any)?._count?.postId || 0),
         };
       }
     }
 
     // 2) Highest liked comment (best-effort)
-    // We can only do this if comments JSON includes author/user id + likes + text.
-    let highestViewedComment:
-      | null
-      | { snippet: string; url: string; likes: number } = null;
+    // ✅ Scan recent posts so we can find the user's comments even on other people’s posts.
+    let highestViewedComment: null | { snippet: string; url: string; likes: number } = null;
 
     try {
+      const recentPostsForUserComments = await prisma.feedPost.findMany({
+        select: { id: true, comments: true },
+        take: 600,
+        orderBy: { createdAt: "desc" },
+      });
+
       let best: { likes: number; snippet: string; url: string } | null = null;
 
-      for (const p of postsForComments) {
-        const raw = (p as { comments?: unknown }).comments;
-        const arr: unknown[] =
-          Array.isArray(raw) ? raw : typeof raw === "string" ? (() => {
-            try {
-              const parsed = JSON.parse(raw);
-              return Array.isArray(parsed) ? parsed : [];
-            } catch {
-              return [];
-            }
-          })() : [];
+      for (const p of recentPostsForUserComments) {
+        const arr = parseComments((p as { comments?: unknown }).comments);
 
         for (const item of arr) {
           if (!item || typeof item !== "object") continue;
@@ -440,7 +450,6 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
           const snippet = text.length <= 90 ? text : text.slice(0, 87) + "...";
           const commentId = (c.id ?? "") as string | number;
 
-          // Best-effort deep link (safe even if hash doesn't exist)
           const url = commentId
             ? `/post-view?id=${p.id}#comment-${String(commentId)}`
             : `/post-view?id=${p.id}`;
