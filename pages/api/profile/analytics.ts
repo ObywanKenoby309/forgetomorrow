@@ -385,8 +385,8 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       const viewCounts = await prisma.feedPostView.groupBy({
         by: ["postId"],
         where: { postId: { in: postIds } },
-        _count: { _all: true },
-        orderBy: { _count: { _all: "desc" } },
+        _count: { postId: true },                // ✅ FIX: Prisma typing supports this
+        orderBy: { _count: { postId: "desc" } }, // ✅ FIX: order by count(postId)
         take: 1,
       });
 
@@ -400,7 +400,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
           id: top.postId,
           title,
           url,
-          views: Number(top._count?._all || 0),
+          views: Number((top as any)?._count?.postId || 0), // ✅ FIX: count is on postId now
         };
       }
     }
