@@ -4,6 +4,7 @@ import QuickEmojiBar from './QuickEmojiBar';
 
 export default function PostCommentsModal({ post, onClose, onReply }) {
   const [text, setText] = useState('');
+  const [likingKey, setLikingKey] = useState(null); // `${postId}:${commentId||index}`
 
   if (!post) return null;
 
@@ -45,6 +46,84 @@ export default function PostCommentsModal({ post, onClose, onReply }) {
       return '';
     }
   })();
+
+  // ─────────────────────────────────────────────────────────────
+  // ✅ COMMENT LIKE (thumbs up) — separate from emojis
+  // - toggles likes on a comment object inside post.comments (JSON)
+  // - best-effort optimistic UI (no schema changes here)
+  // ─────────────────────────────────────────────────────────────
+  const toggleCommentLike = async (comment, index) => {
+    if (!post?.id) return;
+
+    const commentId = comment?.id ?? null;
+    const key = `${post.id}:${commentId ?? index}`;
+    if (likingKey === key) return;
+
+    setLikingKey(key);
+
+    // optimistic update (local only)
+    try {
+      const currentLikes = Number(comment?.likes) || 0;
+      const hasLiked = Boolean(comment?.hasLiked); // client-only flag (optional)
+
+      const nextLikes = hasLiked ? Math.max(0, currentLikes - 1) : currentLikes + 1;
+
+      // Mutate the post object in-place safely (this component receives post by prop;
+      // minimal/no refactor: we patch for immediate UX only)
+      if (Array.isArray(post.comments)) {
+        const nextComments = post.comments.map((c, i) => {
+          if (i !== index) return c;
+          return {
+            ...c,
+            likes: nextLikes,
+            hasLiked: !hasLiked,
+          };
+        });
+        post.comments = nextComments;
+      }
+    } catch {
+      // ignore optimistic failure
+    }
+
+    try {
+      const res = await fetch('/api/feed/comment-like', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          postId: post.id,
+          commentId: commentId, // may be null; API can fallback to index later if needed
+          commentIndex: index,  // fallback identifier (temporary until we ensure stable IDs)
+        }),
+      });
+
+      if (!res.ok) {
+        // fail-soft: do nothing (UI will be corrected next open/reload)
+        setLikingKey(null);
+        return;
+      }
+
+      const data = await res.json().catch(() => ({}));
+      const updated = data?.comment || null;
+
+      // reconcile with server response if provided
+      if (updated && Array.isArray(post.comments)) {
+        const nextComments = post.comments.map((c, i) => {
+          if (i !== index) return c;
+          return {
+            ...c,
+            likes: typeof updated.likes === 'number' ? updated.likes : (Number(c?.likes) || 0),
+            hasLiked: typeof updated.hasLiked === 'boolean' ? updated.hasLiked : Boolean(c?.hasLiked),
+            id: updated.id ?? c.id,
+          };
+        });
+        post.comments = nextComments;
+      }
+    } catch {
+      // ignore (best-effort)
+    } finally {
+      setLikingKey(null);
+    }
+  };
 
   return (
     <div
@@ -93,31 +172,57 @@ export default function PostCommentsModal({ post, onClose, onReply }) {
               No comments yet—be the first!
             </div>
           ) : (
-            post.comments.map((c, i) => (
-              <div key={i} className="flex items-start gap-2">
-                {c.avatarUrl ? (
-                  <img
-                    src={c.avatarUrl}
-                    alt={c.by || 'User'}
-                    className="w-7 h-7 rounded-full object-cover bg-gray-200 mt-0.5 flex-shrink-0"
-                  />
-                ) : (
-                  <div className="w-7 h-7 rounded-full bg-gray-200 flex items-center justify-center text-[10px] text-gray-500 mt-0.5 flex-shrink-0">
-                    {c.by?.charAt(0)?.toUpperCase() || '?'}
-                  </div>
-                )}
-                <div>
-                  <div className="text-sm">
-                    <span className="font-medium">{c.by}:</span> {c.text}
-                  </div>
-                  {c.at && (
-                    <div className="text-xs text-gray-400">
-                      {new Date(c.at).toLocaleString()}
+            post.comments.map((c, i) => {
+              const likes = Number(c?.likes) || 0;
+              const hasLiked = Boolean(c?.hasLiked);
+              const key = c?.id ?? i;
+              const busy = likingKey === `${post.id}:${c?.id ?? i}`;
+
+              return (
+                <div key={key} className="flex items-start gap-2">
+                  {c.avatarUrl ? (
+                    <img
+                      src={c.avatarUrl}
+                      alt={c.by || 'User'}
+                      className="w-7 h-7 rounded-full object-cover bg-gray-200 mt-0.5 flex-shrink-0"
+                    />
+                  ) : (
+                    <div className="w-7 h-7 rounded-full bg-gray-200 flex items-center justify-center text-[10px] text-gray-500 mt-0.5 flex-shrink-0">
+                      {c.by?.charAt(0)?.toUpperCase() || '?'}
                     </div>
                   )}
+
+                  <div className="min-w-0 flex-1">
+                    <div className="text-sm">
+                      <span className="font-medium">{c.by}:</span> {c.text}
+                    </div>
+
+                    <div className="mt-1 flex items-center gap-3">
+                      {c.at && (
+                        <div className="text-xs text-gray-400">
+                          {new Date(c.at).toLocaleString()}
+                        </div>
+                      )}
+
+                      <button
+                        type="button"
+                        onClick={() => toggleCommentLike(c, i)}
+                        disabled={busy}
+                        className={`text-xs font-semibold px-2 py-1 rounded-full border transition ${
+                          hasLiked
+                            ? 'bg-[#FF7043]/10 border-[#FF7043]/30 text-[#FF7043]'
+                            : 'bg-gray-50 border-gray-200 text-gray-600 hover:bg-gray-100'
+                        } ${busy ? 'opacity-60' : ''}`}
+                        aria-label={hasLiked ? 'Unlike comment' : 'Like comment'}
+                        title={hasLiked ? 'Unlike' : 'Like'}
+                      >
+                        👍 Like{likes > 0 ? ` · ${likes}` : ''}
+                      </button>
+                    </div>
+                  </div>
                 </div>
-              </div>
-            ))
+              );
+            })
           )}
         </div>
 

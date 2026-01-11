@@ -16,6 +16,11 @@ function normalizeFeedPost(row) {
   };
 }
 
+function makeCommentId() {
+  // stable enough for now without schema changes
+  return `c_${Date.now()}_${Math.random().toString(36).slice(2, 10)}`;
+}
+
 export default async function handler(req, res) {
   if (req.method !== 'POST') {
     res.setHeader('Allow', ['POST']);
@@ -67,12 +72,19 @@ export default async function handler(req, res) {
       : [];
 
     const newComment = {
+      // ✅ NEW: stable comment id for deep links + like targeting
+      id: makeCommentId(),
+
       // 🔹 This is what the UI will use to open MemberActions for the commenter
       authorId: viewerId,
       by: displayName,
       text: trimmed,
       at: new Date().toISOString(),
       avatarUrl, // used in UI for commenter avatar
+
+      // ✅ NEW: comment-like tracking (separate from emojis)
+      likes: 0,
+      likedBy: [],
     };
 
     const updated = await prisma.feedPost.update({
