@@ -7,9 +7,28 @@ export default function PostCommentsModal({ post, onClose, onReply }) {
 
   if (!post) return null;
 
-  const send = () => {
+  const logPostView = async (source) => {
+    try {
+      await fetch('/api/feed/post-view', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          postId: post?.id,
+          source: source || 'reply_submit',
+        }),
+      });
+    } catch {
+      // ignore (best-effort)
+    }
+  };
+
+  const send = async () => {
     const t = text.trim();
     if (!t) return;
+
+    // ✅ Comment submission counts as a view
+    logPostView('reply_submit');
+
     onReply?.(post.id, t);
     setText('');
   };

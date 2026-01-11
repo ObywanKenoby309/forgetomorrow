@@ -36,20 +36,51 @@ export default function PostCard({
     post.authorId && currentUserId ? post.authorId === currentUserId : false;
   const canTargetAuthor = Boolean(post?.authorId) && !isOwner;
 
-  const handleReplySubmit = () => {
+  const chrome = String(router.query?.chrome || '').toLowerCase();
+  const withChrome = (path) =>
+    chrome ? `${path}${path.includes('?') ? '&' : '?'}chrome=${chrome}` : path;
+
+  // ─────────────────────────────────────────────────────────────
+  // ✅ FeedPostView tracking (best-effort; never blocks UI)
+  // - "open_post" when user opens full post reader
+  // - "reply_submit" when user submits a reply/comment
+  // ─────────────────────────────────────────────────────────────
+  const logPostView = async (source) => {
+    try {
+      await fetch('/api/feed/post-view', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          postId: post?.id,
+          source: source || 'open_post',
+        }),
+      });
+    } catch {
+      // ignore (best-effort)
+    }
+  };
+
+  // ✅ Open full post reader (this is the "view")
+  const handleOpenPost = async () => {
+    if (!post?.id) return;
+    logPostView('open_post');
+    router.push(withChrome(`/post-view?id=${post.id}`));
+  };
+
+  const handleReplySubmit = async () => {
     if (!replyText.trim()) return;
+
+    // ✅ Reply submit counts as a view
+    logPostView('reply_submit');
+
     onReply(post.id, replyText.trim());
     setReplyText('');
     setShowReplyInput(false);
   };
 
   // ─────────────────────────────────────────────────────────────
-  // Avatar menu actions (View / Connect / Message) + log view
+  // Avatar menu actions (View / Connect / Message) + log profile view
   // ─────────────────────────────────────────────────────────────
-  const chrome = String(router.query?.chrome || '').toLowerCase();
-  const withChrome = (path) =>
-    chrome ? `${path}${path.includes('?') ? '&' : '?'}chrome=${chrome}` : path;
-
   const logProfileView = async (source) => {
     try {
       await fetch('/api/profile/views', {
@@ -353,8 +384,15 @@ export default function PostCard({
         </div>
       </div>
 
-      {/* BODY */}
-      <p className="whitespace-pre-wrap">{post.body}</p>
+      {/* BODY (click to open full post = view) */}
+      <button
+        type="button"
+        onClick={handleOpenPost}
+        className="w-full text-left"
+        aria-label="Open post"
+      >
+        <p className="whitespace-pre-wrap">{post.body}</p>
+      </button>
 
       {/* REACTIONS */}
       <div className="relative">
