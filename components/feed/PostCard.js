@@ -31,6 +31,9 @@ export default function PostCard({
   // ✅ connect state (optimistic UI)
   const [connectStatus, setConnectStatus] = useState('idle'); // idle | requested | connected
 
+  // ✅ NEW: Desktop-only optional emoji bar
+  const [showEmojiBar, setShowEmojiBar] = useState(false);
+
   // ✅ CRITICAL FIX 2: Safe isOwner check
   const isOwner =
     post.authorId && currentUserId ? post.authorId === currentUserId : false;
@@ -245,6 +248,15 @@ export default function PostCard({
       return acc;
     }, {}) || {};
 
+  // ✅ Dedicated Like (thumbs up)
+  const likeEmoji = '👍';
+  const likeCount = reactionCounts[likeEmoji] || 0;
+  const likeSelected = selectedEmojis.includes(likeEmoji);
+
+  const handleLike = () => {
+    onReact?.(post.id, likeEmoji);
+  };
+
   const fetchUsersForEmoji = async (emoji) => {
     if (reactionUsers[emoji]) return;
 
@@ -394,33 +406,62 @@ export default function PostCard({
         <p className="whitespace-pre-wrap">{post.body}</p>
       </button>
 
-      {/* REACTIONS */}
-      <div className="relative">
-        <QuickEmojiBar
-          onPick={(emoji) => onReact(post.id, emoji)}
-          selectedEmojis={selectedEmojis}
-          reactionCounts={reactionCounts}
-          onMouseEnter={(emoji) => {
-            setHoveredEmoji(emoji);
-            if (reactionCounts[emoji] > 0) fetchUsersForEmoji(emoji);
-          }}
-          onMouseLeave={() => setHoveredEmoji(null)}
-        />
+      {/* REACTIONS (Desktop only, optional via Emoji button; 👍 removed here because Like is dedicated) */}
+      <div className="relative hidden md:block">
+        <div className="flex items-center justify-between">
+          <div />
+          <button
+            type="button"
+            onClick={() => setShowEmojiBar((v) => !v)}
+            className="text-xs px-2 py-1 border border-gray-300 rounded-md text-gray-700 hover:bg-gray-50"
+            aria-label="Toggle emoji reactions"
+          >
+            Emoji
+          </button>
+        </div>
 
-        {hoveredEmoji && reactionCounts[hoveredEmoji] > 0 && (
-          <div className="absolute bottom-full left-0 mb-3 bg-gray-900 text-white text-sm rounded-lg p-3 shadow-xl z-20 whitespace-nowrap">
-            {getTooltipText(hoveredEmoji)}
+        {showEmojiBar ? (
+          <div className="mt-2">
+            <QuickEmojiBar
+              emojis={['🔥', '🎉', '👏', '❤️']}
+              onPick={(emoji) => onReact(post.id, emoji)}
+              selectedEmojis={selectedEmojis}
+              reactionCounts={reactionCounts}
+              onMouseEnter={(emoji) => {
+                setHoveredEmoji(emoji);
+                if (reactionCounts[emoji] > 0) fetchUsersForEmoji(emoji);
+              }}
+              onMouseLeave={() => setHoveredEmoji(null)}
+            />
+
+            {hoveredEmoji && reactionCounts[hoveredEmoji] > 0 && (
+              <div className="absolute bottom-full left-0 mb-3 bg-gray-900 text-white text-sm rounded-lg p-3 shadow-xl z-20 whitespace-nowrap">
+                {getTooltipText(hoveredEmoji)}
+              </div>
+            )}
           </div>
-        )}
+        ) : null}
       </div>
 
       {/* SUMMARY */}
       <div className="flex items-center gap-4 text-sm text-gray-600">
-        {post.likes > 0 && (
-          <span className="bg-gray-100 px-2.5 py-1 rounded-full">
-            {post.likes} reactions
-          </span>
-        )}
+        {/* ✅ Dedicated Like (all devices) */}
+        <button
+          type="button"
+          onClick={handleLike}
+          className={`flex items-center gap-2 px-2.5 py-1 rounded-full border transition ${
+            likeSelected
+              ? 'bg-blue-100 border-blue-300 text-blue-800'
+              : 'bg-gray-100 border-gray-200 text-gray-700 hover:bg-gray-200'
+          }`}
+          aria-label={likeSelected ? 'Unlike' : 'Like'}
+          title={likeSelected ? 'Unlike' : 'Like'}
+        >
+          <span className="text-base">👍</span>
+          <span className="text-xs font-semibold">{likeCount}</span>
+          <span className="text-xs font-semibold">Like</span>
+        </button>
+
         <button onClick={() => onOpenComments(post)} className="hover:underline">
           {post.comments.length} comments
         </button>

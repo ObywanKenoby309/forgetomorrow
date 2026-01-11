@@ -5,8 +5,10 @@ export default function QuickEmojiBar({
   reactionCounts = {},
   onMouseEnter,
   onMouseLeave,
+  emojis, // ✅ NEW: allow caller to control which emojis render
 }) {
-  const emojis = ['👍', '🔥', '🎉', '👏', '❤️'];
+  const defaultEmojis = ['👍', '🔥', '🎉', '👏', '❤️'];
+  const list = Array.isArray(emojis) && emojis.length ? emojis : defaultEmojis;
 
   const handleClick = (emoji) => {
     if (typeof onPick === 'function') {
@@ -16,7 +18,7 @@ export default function QuickEmojiBar({
 
   return (
     <div className="flex items-center gap-2 mt-2 flex-wrap">
-      {emojis.map((emoji) => {
+      {list.map((emoji) => {
         const count = reactionCounts[emoji] || 0;
         const isSelected = selectedEmojis.includes(emoji);
 
