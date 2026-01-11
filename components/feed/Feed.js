@@ -18,6 +18,23 @@ export default function Feed() {
     (session?.user?.email?.split('@')[0] ?? '');
   const currentUserAvatar = session?.user?.avatarUrl || session?.user?.image || null;
 
+  // ✅ NEW: best-effort interaction logger (server dedupes + ignores self)
+  const logPostInteraction = async (postId, source) => {
+    try {
+      if (!postId && postId !== 0) return;
+      await fetch('/api/feed/post-view', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          postId,
+          source: source || 'interaction',
+        }),
+      });
+    } catch {
+      // best-effort only
+    }
+  };
+
   // Normalize community post shape
   const normalizeCommunityPost = (row) => {
     if (!row) return null;
@@ -125,8 +142,22 @@ export default function Feed() {
       });
 
       if (res.ok) {
+        // ✅ best-effort: log "create" against the newest post after refresh
         await reloadFeed();
         setShowComposer(false);
+
+        // Try to log interaction for the newest post authored by me (best-effort, safe if not found)
+        try {
+          const feedRes = await fetch('/api/feed');
+          if (feedRes.ok) {
+            const feedData = await feedRes.json();
+            const community = (feedData.posts || []).map(normalizeCommunityPost).filter(Boolean);
+            const mine = community.find((p) => String(p?.authorId || '') === String(currentUserId));
+            if (mine?.id) {
+              await logPostInteraction(mine.id, 'post_create');
+            }
+          }
+        } catch {}
       } else {
         console.error('Post failed', await res.text());
       }
@@ -150,6 +181,9 @@ export default function Feed() {
         console.error('Comment failed', await res.text());
         return;
       }
+
+      // ✅ log interaction only AFTER comment succeeds
+      await logPostInteraction(postId, 'comment');
     } catch (err) {
       console.error('Comment error:', err);
       return;
@@ -210,6 +244,9 @@ export default function Feed() {
             : p
         )
       );
+
+      // ✅ log interaction only AFTER react succeeds
+      await logPostInteraction(postId, 'react');
     } catch (err) {
       console.error('React error:', err);
     }
@@ -287,11 +324,11 @@ export default function Feed() {
 
       {showComposer && (
         <div
-		className="fixed inset-0 z-50 flex items-start justify-center bg-black/55 pt-16 sm:pt-24"
-		onClick={() => setShowComposer(false)}
-		role="dialog"
-		aria-modal="true"
-	   >
+          className="fixed inset-0 z-50 flex items-start justify-center bg-black/55 pt-16 sm:pt-24"
+          onClick={() => setShowComposer(false)}
+          role="dialog"
+          aria-modal="true"
+        >
           <div
             className="relative bg-white rounded-2xl shadow-2xl w-[92vw] max-w-2xl p-0 border border-gray-200"
             onClick={(e) => e.stopPropagation()}

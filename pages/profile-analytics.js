@@ -476,7 +476,7 @@ export default function ProfileAnalyticsPage() {
                       Reach across the last 7 days.
                     </p>
                     <div className="mt-3 bg-[#FAFAFA] border border-gray-200 rounded-xl p-3 text-sm text-[#455A64]">
-                      {analyticsLoading ? 'Loading…' : `Profile views: ${analytics.totalViews.toLocaleString()}`}
+                      {analyticsLoading ? 'Loading…' : `Profile interactions: ${analytics.totalViews.toLocaleString()}`}
                     </div>
                   </div>
                 ) : null}
@@ -518,7 +518,7 @@ export default function ProfileAnalyticsPage() {
 
                   <div className="p-4 space-y-4 max-h-[78vh] overflow-auto">
                     <div className="grid grid-cols-2 gap-3">
-                      <KPI label="Profile Views" value={kpiValue(analytics.totalViews)} />
+                      <KPI label="Profile Interactions" value={kpiValue(analytics.totalViews)} />
                       <KPI label="Profile Completion" value={`${analytics.profileCompletionPct}%`} />
                       <KPI label="Posts" value={kpiValue(analytics.postsCount)} />
                       <KPI label="Comments" value={kpiValue(analytics.commentsCount)} />
@@ -545,17 +545,17 @@ export default function ProfileAnalyticsPage() {
                       <h2 className="text-[#FF7043] font-semibold mb-3">Top Content</h2>
                       {hasTopPost ? (
                         <div className="mb-5">
-                          <strong className="text-[#263238]">Highest Viewed Post</strong>
+                          <strong className="text-[#263238]">Top Post (Interactions)</strong>
                           <a href={withChrome(analytics.highestViewedPost.url)} className="block text-[#FF7043] font-bold mt-1">
                             {analytics.highestViewedPost.title}
                           </a>
-                          <small className="text-[#607D8B]">{analytics.highestViewedPost.views.toLocaleString()} views</small>
+                          <small className="text-[#607D8B]">{analytics.highestViewedPost.views.toLocaleString()} interactions</small>
                         </div>
                       ) : (
                         <div className="mb-5">
-                          <strong className="text-[#263238]">Highest Viewed Post</strong>
+                          <strong className="text-[#263238]">Top Post (Interactions)</strong>
                           <p className="text-[#607D8B] text-sm mt-1 mb-0">
-                            Your top-performing post will appear here once view tracking is added for feed content.
+                            Your top-performing post will appear here once interaction tracking is added for feed content.
                           </p>
                         </div>
                       )}
@@ -589,7 +589,7 @@ export default function ProfileAnalyticsPage() {
              --------------------------- */}
           <div className="hidden md:block">
             <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4 mb-6">
-              <KPI label="Profile Views" value={kpiValue(analytics.totalViews)} />
+              <KPI label="Profile Interactions" value={kpiValue(analytics.totalViews)} />
               <KPI label="Posts" value={kpiValue(analytics.postsCount)} />
               <KPI label="Comments" value={kpiValue(analytics.commentsCount)} />
               <KPI label="Connections (7d)" value={kpiValue(analytics.connectionsGained7d)} />
@@ -629,7 +629,7 @@ export default function ProfileAnalyticsPage() {
 
                 {hasTopPost ? (
                   <div className="mb-6">
-                    <strong className="text-[#263238]">Highest Viewed Post</strong>
+                    <strong className="text-[#263238]">Top Post (Interactions)</strong>
                     <a
                       href={
                         analytics.highestViewedPost.url +
@@ -640,14 +640,14 @@ export default function ProfileAnalyticsPage() {
                       {analytics.highestViewedPost.title}
                     </a>
                     <small className="text-[#607D8B]">
-                      {analytics.highestViewedPost.views.toLocaleString()} views
+                      {analytics.highestViewedPost.views.toLocaleString()} interactions
                     </small>
                   </div>
                 ) : (
                   <div className="mb-6">
-                    <strong className="text-[#263238]">Highest Viewed Post</strong>
+                    <strong className="text-[#263238]">Top Post (Interactions)</strong>
                     <p className="text-[#607D8B] text-sm mt-1">
-                      Your top-performing post will appear here once view tracking is added for feed content.
+                      Your top-performing post will appear here once interaction tracking is added for feed content.
                     </p>
                   </div>
                 )}
