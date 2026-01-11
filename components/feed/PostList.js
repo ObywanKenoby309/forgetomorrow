@@ -1,5 +1,5 @@
 // components/feed/PostList.js
-import { useMemo, useState } from 'react';
+import { useMemo, useState, useEffect, useRef } from 'react';
 import PostCard from './PostCard';
 import PostCommentsModal from './PostCommentsModal';
 
@@ -14,6 +14,9 @@ export default function PostList({
   onBlockAuthor, // ✅ NEW: passed from Feed for global block
 }) {
   const [activePostId, setActivePostId] = useState(null);
+
+  // ✅ ensure we only log a view once per "open" cycle
+  const lastTrackedPostIdRef = useRef(null);
 
   const safePosts = Array.isArray(posts) ? posts : [];
 
@@ -48,6 +51,35 @@ export default function PostList({
     onReact?.(postId, emoji);
   };
 
+  // ✅ View tracking: count a "view" when the comments modal opens (your current "open post" behavior)
+  useEffect(() => {
+    // reset when closed
+    if (activePostId == null) {
+      lastTrackedPostIdRef.current = null;
+      return;
+    }
+
+    // only fire once per open
+    if (lastTrackedPostIdRef.current === activePostId) return;
+    lastTrackedPostIdRef.current = activePostId;
+
+    (async () => {
+      try {
+        await fetch('/api/feed/post-view', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            postId: activePostId,
+            source: 'comments_modal',
+          }),
+        });
+      } catch (e) {
+        // best-effort logging; never block UI
+        console.warn('[Feed] post-view tracking failed', e);
+      }
+    })();
+  }, [activePostId]);
+
   return (
     <>
       {/* ✅ CHANGED: force list wrapper full width */}
@@ -74,7 +106,11 @@ export default function PostList({
       </div>
 
       {activePost && (
-        <PostCommentsModal post={activePost} onClose={handleCloseComments} onReply={handleReplyInternal} />
+        <PostCommentsModal
+          post={activePost}
+          onClose={handleCloseComments}
+          onReply={handleReplyInternal}
+        />
       )}
     </>
   );
