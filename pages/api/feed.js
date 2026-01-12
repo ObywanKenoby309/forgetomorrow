@@ -4,7 +4,7 @@ import { authOptions } from './auth/[...nextauth]';
 import { prisma } from '@/lib/prisma';
 
 // Helper: parse FeedPost.content into { body, attachments[] }
-function mapFeedPostRow(row, userMap) {
+function mapFeedPostRow(row, userMap, viewerId) {
   let body = row.content || '';
   let attachments = [];
 
@@ -32,6 +32,35 @@ function mapFeedPostRow(row, userMap) {
     } catch {
       // ignore bad JSON, keep empty
     }
+  }
+
+  // ✅ MIN CHANGE: normalize comment fields for UI + likes/unlikes
+  // - ensure likes is a number
+  // - ensure likedBy is an array
+  // - derive hasLiked for the CURRENT viewer from likedBy
+  // - keep avatarUrl if present
+  try {
+    const vid = viewerId ? String(viewerId) : null;
+
+    comments = (Array.isArray(comments) ? comments : []).map((c) => {
+      if (!c || typeof c !== 'object') return c;
+
+      const likes = Number(c.likes);
+      const safeLikes = Number.isFinite(likes) ? likes : 0;
+
+      const likedBy = Array.isArray(c.likedBy) ? c.likedBy.map((x) => String(x)) : [];
+      const hasLiked = vid ? likedBy.includes(vid) : false;
+
+      return {
+        ...c,
+        likes: safeLikes,
+        likedBy,
+        hasLiked, // ✅ critical for consistent like/unlike behavior on refresh
+        avatarUrl: c.avatarUrl || null,
+      };
+    });
+  } catch {
+    // ignore (best-effort)
   }
 
   // 🔹 Safely parse reactions coming back from Prisma
@@ -104,7 +133,10 @@ export default async function handler(req, res) {
         userMap = new Map(users.map((u) => [u.id, u]));
       }
 
-      const posts = rows.map((row) => mapFeedPostRow(row, userMap));
+      // ✅ MIN CHANGE: pass viewerId so we can compute hasLiked on comments
+      const viewerId = String(session.user.id);
+      const posts = rows.map((row) => mapFeedPostRow(row, userMap, viewerId));
+
       return res.status(200).json({ posts });
     } catch (err) {
       console.error('[FEED GET ERROR]', err);
@@ -145,7 +177,9 @@ export default async function handler(req, res) {
 
       // 🔹 Build a tiny userMap for this single author so avatar works on echo
       const authorAvatar = u.avatarUrl || u.image || null;
-      const basePost = mapFeedPostRow(created, null);
+
+      // ✅ MIN CHANGE: pass viewerId so comment hasLiked is correct if any
+      const basePost = mapFeedPostRow(created, null, String(session.user.id));
       const post = {
         ...basePost,
         authorAvatar,
