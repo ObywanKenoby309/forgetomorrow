@@ -72,6 +72,7 @@ export default function App({ Component, pageProps: { session, ...pageProps } })
       '/profile',
       '/profile-analytics',
       '/feed',
+      '/post-view', // ✅ NEW: Post full view is INTERNAL (prevents public header/footer)
       '/member-profile',
       '/messages',
     ].includes(router.pathname);
