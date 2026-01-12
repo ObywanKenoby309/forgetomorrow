@@ -38,7 +38,7 @@ function mapFeedPostRow(row, userMap, viewerId) {
   // - ensure likes is a number
   // - ensure likedBy is an array
   // - derive hasLiked for the CURRENT viewer from likedBy
-  // - keep avatarUrl if present
+  // - hydrate avatarUrl from userMap if missing
   try {
     const vid = viewerId ? String(viewerId) : null;
 
@@ -51,12 +51,24 @@ function mapFeedPostRow(row, userMap, viewerId) {
       const likedBy = Array.isArray(c.likedBy) ? c.likedBy.map((x) => String(x)) : [];
       const hasLiked = vid ? likedBy.includes(vid) : false;
 
+      // ✅ NEW: hydrate commenter avatar if missing (fallback)
+      let avatarUrl = c.avatarUrl || null;
+      try {
+        const authorId = c.authorId ? String(c.authorId) : '';
+        if (!avatarUrl && userMap && authorId) {
+          const u = userMap.get(authorId);
+          if (u) avatarUrl = u.avatarUrl || u.image || null;
+        }
+      } catch {
+        // ignore
+      }
+
       return {
         ...c,
         likes: safeLikes,
         likedBy,
         hasLiked, // ✅ critical for consistent like/unlike behavior on refresh
-        avatarUrl: c.avatarUrl || null,
+        avatarUrl,
       };
     });
   } catch {
@@ -119,21 +131,46 @@ export default async function handler(req, res) {
         take: 50,
       });
 
-      // 🔹 Fetch user avatars for all unique authors
-      const authorIds = Array.from(
-        new Set(rows.map((r) => r.authorId).filter(Boolean))
-      );
+      // ✅ MIN CHANGE: also hydrate commenter avatars, not just post authors
+      const authorIds = new Set();
+      const commenterIds = new Set();
 
-      let userMap = null;
-      if (authorIds.length > 0) {
-        const users = await prisma.user.findMany({
-          where: { id: { in: authorIds } },
-          select: { id: true, avatarUrl: true, image: true },
-        });
-        userMap = new Map(users.map((u) => [u.id, u]));
+      for (const r of rows) {
+        if (r?.authorId) authorIds.add(String(r.authorId));
+
+        // pull commenter ids out of JSON (best-effort)
+        const raw = r?.comments;
+        let arr = [];
+        if (Array.isArray(raw)) {
+          arr = raw;
+        } else if (typeof raw === 'string') {
+          try {
+            const parsed = JSON.parse(raw);
+            if (Array.isArray(parsed)) arr = parsed;
+          } catch {
+            // ignore
+          }
+        }
+
+        for (const c of arr) {
+          if (c && typeof c === 'object' && c.authorId) {
+            commenterIds.add(String(c.authorId));
+          }
+        }
       }
 
-      // ✅ MIN CHANGE: pass viewerId so we can compute hasLiked on comments
+      const allUserIds = Array.from(new Set([...authorIds, ...commenterIds])).filter(Boolean);
+
+      let userMap = null;
+      if (allUserIds.length > 0) {
+        const users = await prisma.user.findMany({
+          where: { id: { in: allUserIds } },
+          select: { id: true, avatarUrl: true, image: true },
+        });
+        userMap = new Map(users.map((u) => [String(u.id), u]));
+      }
+
+      // ✅ pass viewerId so we can compute hasLiked on comments
       const viewerId = String(session.user.id);
       const posts = rows.map((row) => mapFeedPostRow(row, userMap, viewerId));
 
@@ -178,7 +215,7 @@ export default async function handler(req, res) {
       // 🔹 Build a tiny userMap for this single author so avatar works on echo
       const authorAvatar = u.avatarUrl || u.image || null;
 
-      // ✅ MIN CHANGE: pass viewerId so comment hasLiked is correct if any
+      // ✅ pass viewerId so comment hasLiked is correct if any
       const basePost = mapFeedPostRow(created, null, String(session.user.id));
       const post = {
         ...basePost,
@@ -188,9 +225,7 @@ export default async function handler(req, res) {
       return res.status(201).json({ post });
     } catch (err) {
       console.error('[FEED POST ERROR]', err);
-      return res
-        .status(500)
-        .json({ error: 'Internal server error', detail: err.message });
+      return res.status(500).json({ error: 'Internal server error', detail: err.message });
     }
   }
 

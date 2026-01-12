@@ -58,6 +58,9 @@ export default function PostCommentsModal({ post, onClose, onReply }) {
   const toggleCommentLike = async (comment, index) => {
     if (!post?.id) return;
 
+    // ✅ Don’t allow likes on deleted comments
+    if (comment?.deleted) return;
+
     const commentId = comment?.id ?? null;
     const key = `${post.id}:${commentId ?? index}`;
     if (likingKey === key) return;
@@ -95,7 +98,7 @@ export default function PostCommentsModal({ post, onClose, onReply }) {
         body: JSON.stringify({
           postId: post.id,
           commentId: commentId, // may be null; API can fallback to index later if needed
-          commentIndex: index,  // fallback identifier (temporary until we ensure stable IDs)
+          commentIndex: index, // fallback identifier (temporary until we ensure stable IDs)
         }),
       });
 
@@ -114,7 +117,7 @@ export default function PostCommentsModal({ post, onClose, onReply }) {
           if (i !== index) return c;
           return {
             ...c,
-            likes: typeof updated.likes === 'number' ? updated.likes : (Number(c?.likes) || 0),
+            likes: typeof updated.likes === 'number' ? updated.likes : Number(c?.likes) || 0,
             hasLiked: typeof updated.hasLiked === 'boolean' ? updated.hasLiked : Boolean(c?.hasLiked),
             id: updated.id ?? c.id,
           };
@@ -131,11 +134,14 @@ export default function PostCommentsModal({ post, onClose, onReply }) {
   // ─────────────────────────────────────────────────────────────
   // ✅ COMMENT DELETE — ONLY for comment author
   // - Confirm prompt (per your UX spec)
-  // - optimistic UI: remove immediately after confirm
+  // - Soft delete behavior (keeps evidence in DB)
   // - server: /api/feed/comment-delete
   // ─────────────────────────────────────────────────────────────
   const deleteComment = async (comment, index) => {
     if (!post?.id) return;
+
+    // ✅ Don’t allow deleting an already-deleted comment
+    if (comment?.deleted) return;
 
     const myId = session?.user?.id ? String(session.user.id) : '';
     const authorId = comment?.authorId ? String(comment.authorId) : '';
@@ -151,12 +157,22 @@ export default function PostCommentsModal({ post, onClose, onReply }) {
 
     setDeletingKey(key);
 
-    // optimistic remove (after confirm)
-    let removed = null;
+    // optimistic soft-delete (mark hidden, keep record in JSON)
+    let prev = null;
     try {
       if (Array.isArray(post.comments)) {
-        removed = post.comments[index] || null;
-        post.comments = post.comments.filter((_, i) => i !== index);
+        prev = post.comments[index] || null;
+        const nowIso = new Date().toISOString();
+        post.comments = post.comments.map((c, i) => {
+          if (i !== index) return c;
+          return {
+            ...c,
+            deleted: true,
+            deletedAt: nowIso,
+            deletedBy: myId,
+            deleteReason: 'user',
+          };
+        });
       }
     } catch {
       // ignore optimistic failure
@@ -169,33 +185,28 @@ export default function PostCommentsModal({ post, onClose, onReply }) {
         body: JSON.stringify({
           postId: post.id,
           commentId: commentId, // prefer id
-          commentIndex: index,  // fallback
+          commentIndex: index, // fallback
         }),
       });
 
       if (!res.ok) {
-        // rollback if we optimistically removed
+        // rollback if we optimistically changed
         try {
-          if (removed && Array.isArray(post.comments)) {
-            const next = [...post.comments];
-            next.splice(index, 0, removed);
-            post.comments = next;
+          if (prev && Array.isArray(post.comments)) {
+            post.comments = post.comments.map((c, i) => (i === index ? prev : c));
           }
         } catch {
           // ignore rollback failure
         }
 
-        // small, direct feedback so you can catch wiring issues quickly
         const msg = await res.json().catch(() => ({}));
         alert(msg?.error || 'Delete failed. The comment was restored.');
       }
     } catch {
-      // rollback if we optimistically removed
+      // rollback if we optimistically changed
       try {
-        if (removed && Array.isArray(post.comments)) {
-          const next = [...post.comments];
-          next.splice(index, 0, removed);
-          post.comments = next;
+        if (prev && Array.isArray(post.comments)) {
+          post.comments = post.comments.map((c, i) => (i === index ? prev : c));
         }
       } catch {
         // ignore rollback failure
@@ -250,11 +261,10 @@ export default function PostCommentsModal({ post, onClose, onReply }) {
 
         <div className="border-t pt-4 space-y-3 max-h-[50vh] overflow-y-auto">
           {post.comments.length === 0 ? (
-            <div className="text-sm text-gray-500">
-              No comments yet—be the first!
-            </div>
+            <div className="text-sm text-gray-500">No comments yet—be the first!</div>
           ) : (
             post.comments.map((c, i) => {
+              const isDeleted = Boolean(c?.deleted);
               const likes = Number(c?.likes) || 0;
               const hasLiked = Boolean(c?.hasLiked);
               const key = c?.id ?? i;
@@ -282,7 +292,12 @@ export default function PostCommentsModal({ post, onClose, onReply }) {
 
                   <div className="min-w-0 flex-1">
                     <div className="text-sm">
-                      <span className="font-medium">{c.by}:</span> {c.text}
+                      <span className="font-medium">{c.by}:</span>{' '}
+                      {isDeleted ? (
+                        <span className="text-gray-400 italic">Comment deleted</span>
+                      ) : (
+                        c.text
+                      )}
                     </div>
 
                     <div className="mt-1 flex items-center gap-3">
@@ -292,22 +307,24 @@ export default function PostCommentsModal({ post, onClose, onReply }) {
                         </div>
                       )}
 
-                      <button
-                        type="button"
-                        onClick={() => toggleCommentLike(c, i)}
-                        disabled={busyLike}
-                        className={`text-xs font-semibold px-2 py-1 rounded-full border transition ${
-                          hasLiked
-                            ? 'bg-[#FF7043]/10 border-[#FF7043]/30 text-[#FF7043]'
-                            : 'bg-gray-50 border-gray-200 text-gray-600 hover:bg-gray-100'
-                        } ${busyLike ? 'opacity-60' : ''}`}
-                        aria-label={hasLiked ? 'Unlike comment' : 'Like comment'}
-                        title={hasLiked ? 'Unlike' : 'Like'}
-                      >
-                        👍 Like{likes > 0 ? ` · ${likes}` : ''}
-                      </button>
+                      {!isDeleted && (
+                        <button
+                          type="button"
+                          onClick={() => toggleCommentLike(c, i)}
+                          disabled={busyLike}
+                          className={`text-xs font-semibold px-2 py-1 rounded-full border transition ${
+                            hasLiked
+                              ? 'bg-[#FF7043]/10 border-[#FF7043]/30 text-[#FF7043]'
+                              : 'bg-gray-50 border-gray-200 text-gray-600 hover:bg-gray-100'
+                          } ${busyLike ? 'opacity-60' : ''}`}
+                          aria-label={hasLiked ? 'Unlike comment' : 'Like comment'}
+                          title={hasLiked ? 'Unlike' : 'Like'}
+                        >
+                          👍 Like{likes > 0 ? ` · ${likes}` : ''}
+                        </button>
+                      )}
 
-                      {canDelete && (
+                      {canDelete && !isDeleted && (
                         <button
                           type="button"
                           onClick={() => deleteComment(c, i)}
