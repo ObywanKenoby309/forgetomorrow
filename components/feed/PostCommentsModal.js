@@ -130,9 +130,9 @@ export default function PostCommentsModal({ post, onClose, onReply }) {
 
   // ─────────────────────────────────────────────────────────────
   // ✅ COMMENT DELETE — ONLY for comment author
-  // - removes comment from post.comments (JSON)
-  // - optimistic UI: immediately removes from modal list
-  // - server: /api/feed/comment-delete (we'll add next)
+  // - Confirm prompt (per your UX spec)
+  // - optimistic UI: remove immediately after confirm
+  // - server: /api/feed/comment-delete
   // ─────────────────────────────────────────────────────────────
   const deleteComment = async (comment, index) => {
     if (!post?.id) return;
@@ -141,13 +141,17 @@ export default function PostCommentsModal({ post, onClose, onReply }) {
     const authorId = comment?.authorId ? String(comment.authorId) : '';
     if (!myId || !authorId || myId !== authorId) return;
 
+    // ✅ Confirm prompt (required behavior)
+    const ok = window.confirm('Are you sure you want to delete this comment?');
+    if (!ok) return;
+
     const commentId = comment?.id ?? null;
     const key = `${post.id}:${commentId ?? index}`;
     if (deletingKey === key) return;
 
     setDeletingKey(key);
 
-    // optimistic remove
+    // optimistic remove (after confirm)
     let removed = null;
     try {
       if (Array.isArray(post.comments)) {
@@ -180,6 +184,10 @@ export default function PostCommentsModal({ post, onClose, onReply }) {
         } catch {
           // ignore rollback failure
         }
+
+        // small, direct feedback so you can catch wiring issues quickly
+        const msg = await res.json().catch(() => ({}));
+        alert(msg?.error || 'Delete failed. The comment was restored.');
       }
     } catch {
       // rollback if we optimistically removed
@@ -192,6 +200,8 @@ export default function PostCommentsModal({ post, onClose, onReply }) {
       } catch {
         // ignore rollback failure
       }
+
+      alert('Delete failed (network/server). The comment was restored.');
     } finally {
       setDeletingKey(null);
     }
