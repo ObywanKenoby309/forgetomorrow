@@ -43,6 +43,11 @@ export default function PostCard({
   const withChrome = (path) =>
     chrome ? `${path}${path.includes('?') ? '&' : '?'}chrome=${chrome}` : path;
 
+  // ✅ MIN CHANGE: visible comment count excludes soft-deleted comments
+  const visibleCommentsCount = Array.isArray(post.comments)
+    ? post.comments.filter((c) => !(c && c.deleted === true)).length
+    : 0;
+
   // ─────────────────────────────────────────────────────────────
   // ✅ FeedPostView tracking (best-effort; never blocks UI)
   // - "open_post" when user opens full post reader
@@ -463,7 +468,7 @@ export default function PostCard({
         </button>
 
         <button onClick={() => onOpenComments(post)} className="hover:underline">
-          {post.comments.length} comments
+          {visibleCommentsCount} comments
         </button>
       </div>
 

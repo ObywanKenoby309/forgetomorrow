@@ -1,15 +1,28 @@
 // components/feed/PostCommentsModal.js
 import { useState } from 'react';
 import { useSession } from 'next-auth/react';
+import { useRouter } from 'next/router';
 import QuickEmojiBar from './QuickEmojiBar';
+import { useConnect } from '@/components/actions/useConnect';
 
 export default function PostCommentsModal({ post, onClose, onReply }) {
   const [text, setText] = useState('');
   const [likingKey, setLikingKey] = useState(null); // `${postId}:${commentId||index}`
   const [deletingKey, setDeletingKey] = useState(null); // `${postId}:${commentId||index}`
+
+  // ✅ comment avatar popover state (anchored per comment row)
+  const [commentMenuKey, setCommentMenuKey] = useState(null); // `${postId}:${commentId||visibleIndex}`
+  const [connectingKey, setConnectingKey] = useState(null);
+
   const { data: session } = useSession();
+  const router = useRouter();
+  const { connectWith } = useConnect();
 
   if (!post) return null;
+
+  const chrome = String(router.query?.chrome || '').toLowerCase();
+  const withChrome = (path) =>
+    chrome ? `${path}${path.includes('?') ? '&' : '?'}chrome=${chrome}` : path;
 
   const logPostView = async (source) => {
     try {
@@ -54,10 +67,89 @@ export default function PostCommentsModal({ post, onClose, onReply }) {
   const allComments = Array.isArray(post.comments) ? post.comments : [];
   const visibleComments = allComments.filter((c) => !(c && c.deleted === true));
 
+  const myId = session?.user?.id ? String(session.user.id) : '';
+
+  // ─────────────────────────────────────────────────────────────
+  // Comment member actions (View / Connect / Message) + profile view log
+  // ─────────────────────────────────────────────────────────────
+  const getCommentAuthorId = (c) => {
+    try {
+      return String(c?.authorId || c?.userId || '').trim();
+    } catch {
+      return '';
+    }
+  };
+
+  const logProfileView = async (targetUserId, source) => {
+    try {
+      await fetch('/api/profile/views', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          targetUserId,
+          source: source || 'feed_comment',
+        }),
+      });
+    } catch {
+      // ignore
+    }
+  };
+
+  const handleViewProfile = async (targetUserId) => {
+    if (!targetUserId) return;
+    setCommentMenuKey(null);
+
+    logProfileView(targetUserId, 'feed_comment');
+
+    const params = new URLSearchParams();
+    params.set('userId', targetUserId);
+    router.push(withChrome(`/member-profile?${params.toString()}`));
+  };
+
+  const handleConnect = async (targetUserId, key) => {
+    if (!targetUserId) return;
+    if (connectingKey === key) return;
+
+    setCommentMenuKey(null);
+    setConnectingKey(key);
+
+    const result = await connectWith(targetUserId);
+
+    if (!result?.ok) {
+      setConnectingKey(null);
+      alert(
+        result?.errorMessage ||
+          'We could not send your connection request. Please try again.'
+      );
+      return;
+    }
+
+    if (result.alreadyConnected || result.status === 'connected') {
+      setConnectingKey(null);
+      alert('You are already connected.');
+      return;
+    }
+
+    setConnectingKey(null);
+    alert(
+      result.alreadyRequested
+        ? 'Connection request already sent.'
+        : 'Connection request sent.'
+    );
+  };
+
+  const handleMessage = (targetUserId) => {
+    if (!targetUserId) return;
+    setCommentMenuKey(null);
+
+    const params = new URLSearchParams();
+    params.set('userId', targetUserId);
+    params.set('action', 'message');
+    router.push(withChrome(`/seeker/messages?${params.toString()}`));
+  };
+
   // ─────────────────────────────────────────────────────────────
   // ✅ COMMENT LIKE (thumbs up) — separate from emojis
-  // - toggles likes on a comment object inside post.comments (JSON)
-  // - best-effort optimistic UI (no schema changes here)
   // ─────────────────────────────────────────────────────────────
   const toggleCommentLike = async (comment, visibleIndex) => {
     if (!post?.id) return;
@@ -164,15 +256,11 @@ export default function PostCommentsModal({ post, onClose, onReply }) {
   };
 
   // ─────────────────────────────────────────────────────────────
-  // ✅ COMMENT DELETE — ONLY for comment author
-  // - Confirm prompt (per your UX spec)
-  // - optimistic UI: remove immediately after confirm
-  // - server: /api/feed/comment-delete (soft delete)
+  // ✅ COMMENT DELETE — ONLY for comment author (soft delete)
   // ─────────────────────────────────────────────────────────────
   const deleteComment = async (comment, visibleIndex) => {
     if (!post?.id) return;
 
-    const myId = session?.user?.id ? String(session.user.id) : '';
     const authorId = comment?.authorId ? String(comment.authorId) : '';
     if (!myId || !authorId || myId !== authorId) return;
 
@@ -185,7 +273,7 @@ export default function PostCommentsModal({ post, onClose, onReply }) {
 
     setDeletingKey(key);
 
-    // optimistic: mark deleted in the real post.comments (so it disappears immediately via visibleComments filter)
+    // optimistic: mark deleted in the real post.comments (so it disappears immediately)
     let prior = null;
 
     try {
@@ -331,23 +419,80 @@ export default function PostCommentsModal({ post, onClose, onReply }) {
               const busyLike = likingKey === `${post.id}:${c?.id ?? i}`;
               const busyDelete = deletingKey === `${post.id}:${c?.id ?? i}`;
 
-              const myId = session?.user?.id ? String(session.user.id) : '';
               const authorId = c?.authorId ? String(c.authorId) : '';
               const canDelete = Boolean(myId && authorId && myId === authorId);
 
+              const targetUserId = getCommentAuthorId(c);
+              const canTarget = Boolean(targetUserId) && Boolean(myId) && targetUserId !== myId;
+
+              const menuKey = `${post.id}:${c?.id ?? i}`;
+              const menuOpen = commentMenuKey === menuKey;
+
               return (
                 <div key={key} className="flex items-start gap-2">
-                  {c.avatarUrl ? (
-                    <img
-                      src={c.avatarUrl}
-                      alt={c.by || 'User'}
-                      className="w-7 h-7 rounded-full object-cover bg-gray-200 mt-0.5 flex-shrink-0"
-                    />
-                  ) : (
-                    <div className="w-7 h-7 rounded-full bg-gray-200 flex items-center justify-center text-[10px] text-gray-500 mt-0.5 flex-shrink-0">
-                      {c.by?.charAt(0)?.toUpperCase() || '?'}
-                    </div>
-                  )}
+                  <div className="relative">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        if (!canTarget) return;
+                        setCommentMenuKey((v) => (v === menuKey ? null : menuKey));
+                      }}
+                      onBlur={() => setCommentMenuKey(null)}
+                      className="shrink-0"
+                      style={{ cursor: canTarget ? 'pointer' : 'default' }}
+                      aria-label={canTarget ? 'Open member actions' : 'Comment author avatar'}
+                    >
+                      {c.avatarUrl ? (
+                        <img
+                          src={c.avatarUrl}
+                          alt={c.by || 'User'}
+                          className="w-7 h-7 rounded-full object-cover bg-gray-200 mt-0.5 flex-shrink-0"
+                        />
+                      ) : (
+                        <div className="w-7 h-7 rounded-full bg-gray-200 flex items-center justify-center text-[10px] text-gray-500 mt-0.5 flex-shrink-0">
+                          {c.by?.charAt(0)?.toUpperCase() || '?'}
+                        </div>
+                      )}
+                    </button>
+
+                    {menuOpen && canTarget ? (
+                      <div
+                        className="absolute left-0 mt-2 w-44 bg-white border border-gray-200 rounded-lg shadow-lg z-30 overflow-hidden"
+                        role="menu"
+                      >
+                        <button
+                          type="button"
+                          onMouseDown={(e) => e.preventDefault()}
+                          onClick={() => handleViewProfile(targetUserId)}
+                          className="w-full text-left px-3 py-2 text-sm hover:bg-gray-50"
+                          role="menuitem"
+                        >
+                          View profile
+                        </button>
+
+                        <button
+                          type="button"
+                          onMouseDown={(e) => e.preventDefault()}
+                          onClick={() => handleConnect(targetUserId, menuKey)}
+                          disabled={connectingKey === menuKey}
+                          className="w-full text-left px-3 py-2 text-sm hover:bg-gray-50 disabled:text-gray-400 disabled:bg-white"
+                          role="menuitem"
+                        >
+                          {connectingKey === menuKey ? 'Sending…' : 'Connect'}
+                        </button>
+
+                        <button
+                          type="button"
+                          onMouseDown={(e) => e.preventDefault()}
+                          onClick={() => handleMessage(targetUserId)}
+                          className="w-full text-left px-3 py-2 text-sm hover:bg-gray-50"
+                          role="menuitem"
+                        >
+                          Message
+                        </button>
+                      </div>
+                    ) : null}
+                  </div>
 
                   <div className="min-w-0 flex-1">
                     <div className="text-sm">
