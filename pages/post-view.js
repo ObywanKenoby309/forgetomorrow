@@ -278,40 +278,20 @@ export default function PostViewPage({ initialPost, notFound }) {
               maxWidth: 1320,
             }}
           >
-            <div
-              style={{
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'space-between',
-                gap: 12,
-                flexWrap: 'wrap',
-              }}
-            >
-              <div style={{ minWidth: 240 }}>
-                <div style={{ color: '#FF7043', fontSize: 26, fontWeight: 900, margin: 0 }}>
-                  Post detail
-                </div>
-                <div style={{ marginTop: 4, color: '#546E7A', fontSize: 14 }}>
-                  A focused view for analytics and deep engagement.
-                </div>
+            <div style={{ textAlign: 'center' }}>
+              <div style={{ color: '#FF7043', fontSize: 26, fontWeight: 900, margin: 0 }}>
+                Post detail
+              </div>
+              <div style={{ marginTop: 4, color: '#546E7A', fontSize: 14 }}>
+                A focused view for analytics and deep engagement.
               </div>
 
-              <div style={{ display: 'flex', gap: 10, alignItems: 'center', flexWrap: 'wrap' }}>
-                <PillStat label="Likes" value={formatCompactNumber(likesCount)} />
-                <PillStat label="Comments" value={formatCompactNumber(commentsCount)} />
-
+              <div style={{ marginTop: 10 }}>
                 <button
                   className="px-3 py-2 rounded-md border border-gray-200 bg-white/70 text-sm font-semibold text-gray-700 hover:bg-white"
                   onClick={handleBack}
                 >
                   ← Back to Feed
-                </button>
-
-                <button
-                  className="px-3 py-2 rounded-md bg-[#FF7043] text-sm font-semibold text-white hover:opacity-95"
-                  onClick={openCommentsModal}
-                >
-                  View comments ({commentsCount})
                 </button>
               </div>
             </div>
@@ -388,7 +368,7 @@ export default function PostViewPage({ initialPost, notFound }) {
                 </div>
               </div>
 
-              {/* Compact stats (reinforces “analytics view”) */}
+              {/* Visual-only stats (no actions) */}
               <div style={{ display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap' }}>
                 <PillStat label="Likes" value={formatCompactNumber(likesCount)} />
                 <PillStat label="Comments" value={formatCompactNumber(commentsCount)} />
@@ -485,38 +465,23 @@ export default function PostViewPage({ initialPost, notFound }) {
               </div>
             ) : null}
 
-            {/* Engagement bar */}
+            {/* Single engagement CTA */}
             <div
               style={{
                 marginTop: 16,
                 paddingTop: 14,
                 borderTop: '1px solid rgba(15,23,42,0.08)',
                 display: 'flex',
-                justifyContent: 'space-between',
+                justifyContent: 'flex-end',
                 alignItems: 'center',
-                gap: 12,
-                flexWrap: 'wrap',
               }}
             >
-              <div style={{ fontSize: 13, color: '#546E7A' }}>
-                {commentsCount} comment{commentsCount === 1 ? '' : 's'}
-              </div>
-
-              <div style={{ display: 'flex', gap: 10, alignItems: 'center', flexWrap: 'wrap' }}>
-                <button
-                  className="px-3 py-2 rounded-md border border-gray-200 bg-white/70 text-sm font-semibold text-gray-700 hover:bg-white"
-                  onClick={handleBack}
-                >
-                  ← Back
-                </button>
-
-                <button
-                  className="px-3 py-2 rounded-md bg-[#FF7043] text-sm font-semibold text-white hover:opacity-95"
-                  onClick={openCommentsModal}
-                >
-                  Comments ({commentsCount})
-                </button>
-              </div>
+              <button
+                className="px-3 py-2 rounded-md bg-[#FF7043] text-sm font-semibold text-white hover:opacity-95"
+                onClick={openCommentsModal}
+              >
+                View all comments
+              </button>
             </div>
           </div>
 
