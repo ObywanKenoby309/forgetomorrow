@@ -2,6 +2,7 @@
 import { useMemo, useState } from 'react';
 import Head from 'next/head';
 import { useRouter } from 'next/router';
+import { useSession } from 'next-auth/react';
 import { getServerSession } from 'next-auth/next';
 import { authOptions } from './api/auth/[...nextauth]';
 import { prisma } from '@/lib/prisma';
@@ -9,6 +10,7 @@ import { prisma } from '@/lib/prisma';
 import SeekerLayout from '@/components/layouts/SeekerLayout';
 import RightRailPlacementManager from '@/components/ads/RightRailPlacementManager';
 import PostCommentsModal from '@/components/feed/PostCommentsModal';
+import { useConnect } from '@/components/actions/useConnect';
 
 // Helper: parse FeedPost.content into { body, attachments[] }
 function parseContent(content) {
@@ -45,28 +47,58 @@ function safeJsonArray(v) {
   return [];
 }
 
-// Normalize comments for UI
-function normalizeComments(rawComments, viewerId) {
-  const vid = viewerId ? String(viewerId) : null;
+function normalizeName(u) {
+  try {
+    if (!u) return '';
+    const full =
+      u.name ||
+      [u.firstName, u.lastName].filter(Boolean).join(' ') ||
+      (u.email ? String(u.email).split('@')[0] : '');
+    return String(full || '').trim();
+  } catch {
+    return '';
+  }
+}
 
+// Normalize comments for UI (aligns to PostCommentsModal expectations)
+function normalizeComments(rawComments, viewerId, userById) {
+  const vid = viewerId ? String(viewerId) : null;
   const comments = safeJsonArray(rawComments);
 
   return comments
     .map((c) => {
-      if (!c || typeof c !== 'object') return c;
+      if (!c || typeof c !== 'object') return null;
+
+      const authorId = String(c?.authorId || c?.userId || '').trim();
+      const u = authorId && userById ? userById[authorId] : null;
 
       const likesNum = Number(c.likes);
       const likes = Number.isFinite(likesNum) ? likesNum : 0;
 
       const likedBy = Array.isArray(c.likedBy) ? c.likedBy.map((x) => String(x)) : [];
-      const hasLiked = vid ? likedBy.includes(vid) : false;
+      const hasLiked = vid ? likedBy.includes(vid) : Boolean(c?.hasLiked);
+
+      // ✅ PostCommentsModal renders: c.by, c.text, c.at, c.avatarUrl
+      const by = String(c?.by || c?.authorName || c?.author || normalizeName(u) || 'Member').trim();
+      const text = String(c?.text || c?.body || '').trim();
+      const at = c?.at || c?.createdAt || null;
+
+      const avatarUrl =
+        c?.avatarUrl ||
+        (u ? u.avatarUrl || u.image || null : null) ||
+        null;
 
       return {
         ...c,
+        authorId: authorId || c?.authorId || null,
+        userId: c?.userId || null,
+        by,
+        text,
+        at,
         likes,
         likedBy,
         hasLiked,
-        avatarUrl: c.avatarUrl || null,
+        avatarUrl,
       };
     })
     .filter(Boolean);
@@ -159,8 +191,18 @@ function PillStat({ label, value }) {
 
 export default function PostViewPage({ initialPost, notFound }) {
   const router = useRouter();
+  const { data: session } = useSession();
+  const { connectWith } = useConnect();
+
   const [post, setPost] = useState(initialPost || null);
   const [openComments, setOpenComments] = useState(false);
+
+  // Avatar popovers (post author + comment preview)
+  const [authorMenuOpen, setAuthorMenuOpen] = useState(false);
+  const [commentMenuKey, setCommentMenuKey] = useState(null);
+  const [connectingKey, setConnectingKey] = useState(null);
+
+  const myId = session?.user?.id ? String(session.user.id) : '';
 
   // keep chrome param on navigation
   const chrome = String(router.query?.chrome || '').toLowerCase();
@@ -174,11 +216,13 @@ export default function PostViewPage({ initialPost, notFound }) {
   }, [post]);
 
   const previewComments = useMemo(() => {
-    // lightweight preview for the page (still opens modal for full interaction)
     return (visibleComments || []).slice(0, 2);
   }, [visibleComments]);
 
   const createdAtLabel = post?.createdAt ? formatDateTime(post.createdAt) : '';
+
+  const likesCount = Number.isFinite(Number(post?.likes)) ? Number(post.likes) : 0;
+  const commentsCount = Array.isArray(visibleComments) ? visibleComments.length : 0;
 
   // Minimal: reply handler (uses your existing comment API)
   const handleReply = async (postId, text) => {
@@ -206,6 +250,87 @@ export default function PostViewPage({ initialPost, notFound }) {
 
   const handleBack = () => router.push(withChrome('/feed'));
   const openCommentsModal = () => setOpenComments(true);
+
+  // ─────────────────────────────────────────────────────────────
+  // Member actions (match PostCard / PostCommentsModal patterns)
+  // ─────────────────────────────────────────────────────────────
+  const logProfileView = async (targetUserId, source) => {
+    try {
+      await fetch('/api/profile/views', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ targetUserId, source: source || 'post_view' }),
+      });
+    } catch {
+      // ignore
+    }
+  };
+
+  const handleViewProfile = async (targetUserId) => {
+    if (!targetUserId) return;
+
+    setAuthorMenuOpen(false);
+    setCommentMenuKey(null);
+
+    logProfileView(targetUserId, 'post_view');
+
+    const params = new URLSearchParams();
+    params.set('userId', targetUserId);
+    router.push(withChrome(`/member-profile?${params.toString()}`));
+  };
+
+  const handleConnect = async (targetUserId, key) => {
+    if (!targetUserId) return;
+    if (connectingKey === key) return;
+
+    setAuthorMenuOpen(false);
+    setCommentMenuKey(null);
+    setConnectingKey(key);
+
+    const result = await connectWith(targetUserId);
+
+    if (!result?.ok) {
+      setConnectingKey(null);
+      alert(
+        result?.errorMessage ||
+          'We could not send your connection request. Please try again.'
+      );
+      return;
+    }
+
+    setConnectingKey(null);
+
+    if (result.alreadyConnected || result.status === 'connected') {
+      alert('You are already connected.');
+      return;
+    }
+
+    alert(
+      result.alreadyRequested
+        ? 'Connection request already sent.'
+        : 'Connection request sent.'
+    );
+  };
+
+  const handleMessage = (targetUserId) => {
+    if (!targetUserId) return;
+
+    setAuthorMenuOpen(false);
+    setCommentMenuKey(null);
+
+    const params = new URLSearchParams();
+    params.set('userId', targetUserId);
+    params.set('action', 'message');
+    router.push(withChrome(`/seeker/messages?${params.toString()}`));
+  };
+
+  const getCommentAuthorId = (c) => {
+    try {
+      return String(c?.authorId || c?.userId || '').trim();
+    } catch {
+      return '';
+    }
+  };
 
   // If the post was deleted / missing
   if (notFound) {
@@ -257,8 +382,8 @@ export default function PostViewPage({ initialPost, notFound }) {
 
   if (!post) return null;
 
-  const likesCount = Number.isFinite(Number(post.likes)) ? Number(post.likes) : 0;
-  const commentsCount = Array.isArray(visibleComments) ? visibleComments.length : 0;
+  const postAuthorId = post?.authorId ? String(post.authorId) : '';
+  const canTargetPostAuthor = Boolean(postAuthorId) && Boolean(myId) && postAuthorId !== myId;
 
   return (
     <>
@@ -286,7 +411,7 @@ export default function PostViewPage({ initialPost, notFound }) {
                 A focused view for analytics and deep engagement.
               </div>
 
-              <div style={{ marginTop: 10 }}>
+              <div style={{ marginTop: 12, display: 'flex', justifyContent: 'center' }}>
                 <button
                   className="px-3 py-2 rounded-md border border-gray-200 bg-white/70 text-sm font-semibold text-gray-700 hover:bg-white"
                   onClick={handleBack}
@@ -307,7 +432,7 @@ export default function PostViewPage({ initialPost, notFound }) {
             minHeight: '60vh',
           }}
         >
-          {/* Main card */}
+          {/* Main post card */}
           <div
             style={{
               background: 'rgba(255,255,255,0.92)',
@@ -328,35 +453,87 @@ export default function PostViewPage({ initialPost, notFound }) {
               }}
             >
               <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-                {post.authorAvatar ? (
-                  <img
-                    src={post.authorAvatar}
-                    alt={post.author || 'Author'}
-                    style={{
-                      width: 46,
-                      height: 46,
-                      borderRadius: 999,
-                      objectFit: 'cover',
-                      background: '#E5E7EB',
+                <div className="relative">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      if (!canTargetPostAuthor) return;
+                      setAuthorMenuOpen((v) => !v);
                     }}
-                  />
-                ) : (
-                  <div
-                    style={{
-                      width: 46,
-                      height: 46,
-                      borderRadius: 999,
-                      background: '#E5E7EB',
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      color: '#546E7A',
-                      fontWeight: 900,
-                    }}
+                    onBlur={() => setAuthorMenuOpen(false)}
+                    className="shrink-0"
+                    style={{ cursor: canTargetPostAuthor ? 'pointer' : 'default' }}
+                    aria-label={canTargetPostAuthor ? 'Open member actions' : 'Author avatar'}
                   >
-                    {post.author?.charAt(0)?.toUpperCase() || '?'}
-                  </div>
-                )}
+                    {post.authorAvatar ? (
+                      <img
+                        src={post.authorAvatar}
+                        alt={post.author || 'Author'}
+                        style={{
+                          width: 46,
+                          height: 46,
+                          borderRadius: 999,
+                          objectFit: 'cover',
+                          background: '#E5E7EB',
+                        }}
+                      />
+                    ) : (
+                      <div
+                        style={{
+                          width: 46,
+                          height: 46,
+                          borderRadius: 999,
+                          background: '#E5E7EB',
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          color: '#546E7A',
+                          fontWeight: 900,
+                        }}
+                      >
+                        {post.author?.charAt(0)?.toUpperCase() || '?'}
+                      </div>
+                    )}
+                  </button>
+
+                  {authorMenuOpen && canTargetPostAuthor ? (
+                    <div
+                      className="absolute left-0 mt-2 w-44 bg-white border border-gray-200 rounded-lg shadow-lg z-30 overflow-hidden"
+                      role="menu"
+                    >
+                      <button
+                        type="button"
+                        onMouseDown={(e) => e.preventDefault()}
+                        onClick={() => handleViewProfile(postAuthorId)}
+                        className="w-full text-left px-3 py-2 text-sm hover:bg-gray-50"
+                        role="menuitem"
+                      >
+                        View profile
+                      </button>
+
+                      <button
+                        type="button"
+                        onMouseDown={(e) => e.preventDefault()}
+                        onClick={() => handleConnect(postAuthorId, 'post_author')}
+                        disabled={connectingKey === 'post_author'}
+                        className="w-full text-left px-3 py-2 text-sm hover:bg-gray-50 disabled:text-gray-400 disabled:bg-white"
+                        role="menuitem"
+                      >
+                        {connectingKey === 'post_author' ? 'Sending…' : 'Connect'}
+                      </button>
+
+                      <button
+                        type="button"
+                        onMouseDown={(e) => e.preventDefault()}
+                        onClick={() => handleMessage(postAuthorId)}
+                        className="w-full text-left px-3 py-2 text-sm hover:bg-gray-50"
+                        role="menuitem"
+                      >
+                        Message
+                      </button>
+                    </div>
+                  ) : null}
+                </div>
 
                 <div>
                   <div style={{ fontWeight: 900, color: '#102027', fontSize: 15 }}>
@@ -368,7 +545,7 @@ export default function PostViewPage({ initialPost, notFound }) {
                 </div>
               </div>
 
-              {/* Visual-only stats (no actions) */}
+              {/* Visual-only stats */}
               <div style={{ display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap' }}>
                 <PillStat label="Likes" value={formatCompactNumber(likesCount)} />
                 <PillStat label="Comments" value={formatCompactNumber(commentsCount)} />
@@ -464,28 +641,9 @@ export default function PostViewPage({ initialPost, notFound }) {
                 </div>
               </div>
             ) : null}
-
-            {/* Single engagement CTA */}
-            <div
-              style={{
-                marginTop: 16,
-                paddingTop: 14,
-                borderTop: '1px solid rgba(15,23,42,0.08)',
-                display: 'flex',
-                justifyContent: 'flex-end',
-                alignItems: 'center',
-              }}
-            >
-              <button
-                className="px-3 py-2 rounded-md bg-[#FF7043] text-sm font-semibold text-white hover:opacity-95"
-                onClick={openCommentsModal}
-              >
-                View all comments
-              </button>
-            </div>
           </div>
 
-          {/* Comment preview (lightweight, encourages engagement without duplicating the modal) */}
+          {/* Comment preview */}
           <div style={{ marginTop: 16 }}>
             <div
               style={{
@@ -512,10 +670,16 @@ export default function PostViewPage({ initialPost, notFound }) {
             ) : (
               <div style={{ marginTop: 10, display: 'grid', gap: 10 }}>
                 {previewComments.map((c, idx) => {
-                  const name = c?.authorName || c?.author || 'Member';
-                  const text = c?.text || c?.body || '';
-                  const when = c?.createdAt ? formatDateTime(c.createdAt) : '';
+                  const name = c?.by || 'Member';
+                  const text = c?.text || '';
+                  const when = c?.at ? formatDateTime(c.at) : '';
                   const likes = Number.isFinite(Number(c?.likes)) ? Number(c.likes) : 0;
+
+                  const targetUserId = getCommentAuthorId(c);
+                  const canTarget = Boolean(targetUserId) && Boolean(myId) && targetUserId !== myId;
+
+                  const menuKey = `${post.id}:preview:${c?.id || idx}`;
+                  const menuOpen = commentMenuKey === menuKey;
 
                   return (
                     <div
@@ -528,47 +692,96 @@ export default function PostViewPage({ initialPost, notFound }) {
                       }}
                     >
                       <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-                        {c?.avatarUrl ? (
-                          <img
-                            src={c.avatarUrl}
-                            alt={name}
-                            style={{
-                              width: 34,
-                              height: 34,
-                              borderRadius: 999,
-                              objectFit: 'cover',
-                              background: '#E5E7EB',
+                        <div className="relative">
+                          <button
+                            type="button"
+                            onClick={() => {
+                              if (!canTarget) return;
+                              setCommentMenuKey((v) => (v === menuKey ? null : menuKey));
                             }}
-                          />
-                        ) : (
-                          <div
-                            style={{
-                              width: 34,
-                              height: 34,
-                              borderRadius: 999,
-                              background: '#E5E7EB',
-                              display: 'flex',
-                              alignItems: 'center',
-                              justifyContent: 'center',
-                              color: '#546E7A',
-                              fontWeight: 900,
-                              fontSize: 13,
-                            }}
+                            onBlur={() => setCommentMenuKey(null)}
+                            style={{ cursor: canTarget ? 'pointer' : 'default' }}
+                            aria-label={canTarget ? 'Open member actions' : 'Comment author avatar'}
                           >
-                            {String(name || '?')
-                              .trim()
-                              .charAt(0)
-                              .toUpperCase()}
-                          </div>
-                        )}
+                            {c?.avatarUrl ? (
+                              <img
+                                src={c.avatarUrl}
+                                alt={name}
+                                style={{
+                                  width: 34,
+                                  height: 34,
+                                  borderRadius: 999,
+                                  objectFit: 'cover',
+                                  background: '#E5E7EB',
+                                }}
+                              />
+                            ) : (
+                              <div
+                                style={{
+                                  width: 34,
+                                  height: 34,
+                                  borderRadius: 999,
+                                  background: '#E5E7EB',
+                                  display: 'flex',
+                                  alignItems: 'center',
+                                  justifyContent: 'center',
+                                  color: '#546E7A',
+                                  fontWeight: 900,
+                                  fontSize: 13,
+                                }}
+                              >
+                                {String(name || '?')
+                                  .trim()
+                                  .charAt(0)
+                                  .toUpperCase()}
+                              </div>
+                            )}
+                          </button>
+
+                          {menuOpen && canTarget ? (
+                            <div
+                              className="absolute left-0 mt-2 w-44 bg-white border border-gray-200 rounded-lg shadow-lg z-30 overflow-hidden"
+                              role="menu"
+                            >
+                              <button
+                                type="button"
+                                onMouseDown={(e) => e.preventDefault()}
+                                onClick={() => handleViewProfile(targetUserId)}
+                                className="w-full text-left px-3 py-2 text-sm hover:bg-gray-50"
+                                role="menuitem"
+                              >
+                                View profile
+                              </button>
+
+                              <button
+                                type="button"
+                                onMouseDown={(e) => e.preventDefault()}
+                                onClick={() => handleConnect(targetUserId, menuKey)}
+                                disabled={connectingKey === menuKey}
+                                className="w-full text-left px-3 py-2 text-sm hover:bg-gray-50 disabled:text-gray-400 disabled:bg-white"
+                                role="menuitem"
+                              >
+                                {connectingKey === menuKey ? 'Sending…' : 'Connect'}
+                              </button>
+
+                              <button
+                                type="button"
+                                onMouseDown={(e) => e.preventDefault()}
+                                onClick={() => handleMessage(targetUserId)}
+                                className="w-full text-left px-3 py-2 text-sm hover:bg-gray-50"
+                                role="menuitem"
+                              >
+                                Message
+                              </button>
+                            </div>
+                          ) : null}
+                        </div>
 
                         <div style={{ flex: 1 }}>
                           <div style={{ fontWeight: 900, color: '#102027', fontSize: 13 }}>
                             {name}
                           </div>
-                          <div style={{ fontSize: 12, color: '#78909C' }}>
-                            {when ? when : ' '}
-                          </div>
+                          <div style={{ fontSize: 12, color: '#78909C' }}>{when ? when : ' '}</div>
                         </div>
 
                         <PillStat label="Likes" value={formatCompactNumber(likes)} />
@@ -666,6 +879,37 @@ export async function getServerSideProps(ctx) {
     authorAvatar = u?.avatarUrl || u?.image || null;
   }
 
+  // ✅ Enrich commenters (so avatars + names appear everywhere)
+  const rawComments = safeJsonArray(row.comments);
+  const commenterIds = Array.from(
+    new Set(
+      rawComments
+        .map((c) => (c ? String(c.authorId || c.userId || '').trim() : ''))
+        .filter(Boolean)
+    )
+  );
+
+  let userById = {};
+  if (commenterIds.length > 0) {
+    const users = await prisma.user.findMany({
+      where: { id: { in: commenterIds } },
+      select: {
+        id: true,
+        name: true,
+        firstName: true,
+        lastName: true,
+        email: true,
+        avatarUrl: true,
+        image: true,
+      },
+    });
+
+    userById = (users || []).reduce((acc, u) => {
+      acc[String(u.id)] = u;
+      return acc;
+    }, {});
+  }
+
   const { body, attachments } = parseContent(row.content);
 
   const initialPost = {
@@ -677,7 +921,7 @@ export async function getServerSideProps(ctx) {
     type: row.type || 'business',
     createdAt: row.createdAt,
     likes: row.likes ?? 0,
-    comments: normalizeComments(row.comments, String(session.user.id)),
+    comments: normalizeComments(row.comments, String(session.user.id), userById),
     attachments,
     reactions: safeJsonArray(row.reactions),
   };
