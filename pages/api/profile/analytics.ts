@@ -165,7 +165,12 @@ type FeedComment = {
   content?: string;
   text?: string;
   body?: string;
+
+  // comment-like system
   likes?: number;
+  likedBy?: unknown;
+
+  // emoji reactions (NOT counted as likes)
   reactions?: unknown;
 };
 
@@ -173,9 +178,25 @@ function commentTextOf(c: FeedComment) {
   return String(c?.content || c?.text || c?.body || "").trim();
 }
 
+// ✅ FIX: likes can be stored as number OR derived from likedBy[]
 function commentLikesOf(c: FeedComment) {
   const n = Number((c as { likes?: unknown })?.likes);
-  return Number.isFinite(n) ? n : 0;
+  if (Number.isFinite(n) && n > 0) return n;
+
+  const likedBy = (c as { likedBy?: unknown })?.likedBy;
+  if (Array.isArray(likedBy)) return likedBy.length;
+
+  // sometimes likedBy is JSON-stringified
+  if (typeof likedBy === "string") {
+    try {
+      const parsed = JSON.parse(likedBy);
+      return Array.isArray(parsed) ? parsed.length : 0;
+    } catch {
+      return 0;
+    }
+  }
+
+  return 0;
 }
 
 function commentAuthorIdOf(c: FeedComment) {
@@ -310,10 +331,17 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     const connectionsLast7Days = bucketize(connectionsRowsCombined);
 
     // Posts + comments (comments are JSON on posts today)
-    const [postsCount, postsForComments] = await Promise.all([
+    const [postsCount, postsForComments, postsForTopComment] = await Promise.all([
       prisma.feedPost.count({ where: { authorId: userId } }),
       prisma.feedPost.findMany({
         where: { authorId: userId },
+        select: { id: true, content: true, comments: true },
+        take: 250,
+        orderBy: { createdAt: "desc" },
+      }),
+
+      // ✅ NEW (minimal): pull recent posts across ALL authors so we can find your comments anywhere
+      prisma.feedPost.findMany({
         select: { id: true, content: true, comments: true },
         take: 250,
         orderBy: { createdAt: "desc" },
@@ -373,10 +401,10 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     // ─────────────────────────────────────────────────────────────
     // ✅ TOP CONTENT (NOW SUPPORTED)
     // 1) Highest viewed post via FeedPostView aggregation
-    // 2) Highest liked comment via best-effort parse of comments JSON
+    // 2) Highest liked comment (your comment on ANY post)
     // ─────────────────────────────────────────────────────────────
 
-    // 1) Highest viewed post
+    // 1) Highest viewed post (your posts only)
     const postIds = postsForComments.map((p) => p.id).filter((x) => typeof x === "number") as number[];
 
     let highestViewedPost: null | { id: number; title: string; url: string; views: number } = null;
@@ -393,7 +421,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       const top = viewCounts?.[0];
       if (top?.postId) {
         const post = postsForComments.find((p) => p.id === top.postId);
-        const title = titleFromPostContent(post?.content);
+        const title = titleFromPostContent((post as any)?.content);
         const url = `/post-view?id=${top.postId}`;
         highestViewedPost = {
           id: top.postId,
@@ -404,8 +432,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       }
     }
 
-    // 2) Highest liked comment (best-effort)
-    // ✅ MIN CHANGE: scan comments across ALL posts (not just posts authored by user)
+    // 2) Highest liked comment (your comment anywhere)
     let highestViewedComment:
       | null
       | { snippet: string; url: string; likes: number } = null;
@@ -413,24 +440,21 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     try {
       let best: { likes: number; snippet: string; url: string } | null = null;
 
-      // ✅ NEW: pull a reasonable window of recent posts with comments
-      const allPostsForComments = await prisma.feedPost.findMany({
-        select: { id: true, comments: true },
-        take: 500,
-        orderBy: { createdAt: "desc" },
-      });
-
-      for (const p of allPostsForComments) {
+      for (const p of postsForTopComment) {
         const raw = (p as { comments?: unknown }).comments;
         const arr: unknown[] =
-          Array.isArray(raw) ? raw : typeof raw === "string" ? (() => {
-            try {
-              const parsed = JSON.parse(raw);
-              return Array.isArray(parsed) ? parsed : [];
-            } catch {
-              return [];
-            }
-          })() : [];
+          Array.isArray(raw)
+            ? raw
+            : typeof raw === "string"
+              ? (() => {
+                  try {
+                    const parsed = JSON.parse(raw);
+                    return Array.isArray(parsed) ? parsed : [];
+                  } catch {
+                    return [];
+                  }
+                })()
+              : [];
 
         for (const item of arr) {
           if (!item || typeof item !== "object") continue;
@@ -447,8 +471,8 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
           const commentId = (c.id ?? "") as string | number;
 
           const url = commentId
-            ? `/post-view?id=${p.id}#comment-${String(commentId)}`
-            : `/post-view?id=${p.id}`;
+            ? `/post-view?id=${(p as any).id}#comment-${String(commentId)}`
+            : `/post-view?id=${(p as any).id}`;
 
           if (!best || likes > best.likes) {
             best = { likes, snippet, url };
@@ -489,7 +513,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       // completion checklist
       profileChecklist,
 
-      // ✅ top content (NOW RETURNED)
+      // ✅ top content
       highestViewedPost,
       highestViewedComment,
     });
