@@ -50,19 +50,20 @@ export default function PostCommentsModal({ post, onClose, onReply }) {
     }
   })();
 
+  // ✅ MIN CHANGE: hide soft-deleted comments from public view
+  const allComments = Array.isArray(post.comments) ? post.comments : [];
+  const visibleComments = allComments.filter((c) => !(c && c.deleted === true));
+
   // ─────────────────────────────────────────────────────────────
   // ✅ COMMENT LIKE (thumbs up) — separate from emojis
   // - toggles likes on a comment object inside post.comments (JSON)
   // - best-effort optimistic UI (no schema changes here)
   // ─────────────────────────────────────────────────────────────
-  const toggleCommentLike = async (comment, index) => {
+  const toggleCommentLike = async (comment, visibleIndex) => {
     if (!post?.id) return;
 
-    // ✅ Don’t allow likes on deleted comments
-    if (comment?.deleted) return;
-
     const commentId = comment?.id ?? null;
-    const key = `${post.id}:${commentId ?? index}`;
+    const key = `${post.id}:${commentId ?? visibleIndex}`;
     if (likingKey === key) return;
 
     setLikingKey(key);
@@ -71,20 +72,42 @@ export default function PostCommentsModal({ post, onClose, onReply }) {
     try {
       const currentLikes = Number(comment?.likes) || 0;
       const hasLiked = Boolean(comment?.hasLiked); // client-only flag (optional)
+      const nextLikes = hasLiked
+        ? Math.max(0, currentLikes - 1)
+        : currentLikes + 1;
 
-      const nextLikes = hasLiked ? Math.max(0, currentLikes - 1) : currentLikes + 1;
-
-      // Mutate the post object in-place safely (this component receives post by prop;
-      // minimal/no refactor: we patch for immediate UX only)
+      // apply to the *real* post.comments array by id (preferred) else by visible-index mapping
       if (Array.isArray(post.comments)) {
-        const nextComments = post.comments.map((c, i) => {
-          if (i !== index) return c;
-          return {
-            ...c,
-            likes: nextLikes,
-            hasLiked: !hasLiked,
-          };
+        const nextComments = post.comments.map((c) => {
+          if (!c) return c;
+          if (commentId && String(c.id || '') === String(commentId)) {
+            return { ...c, likes: nextLikes, hasLiked: !hasLiked };
+          }
+          return c;
         });
+
+        // fallback if no id match (older comments): map visibleIndex -> actual index
+        if (!commentId) {
+          const actualIndex = (() => {
+            let seen = -1;
+            for (let i = 0; i < post.comments.length; i++) {
+              const x = post.comments[i];
+              if (x && x.deleted === true) continue;
+              seen += 1;
+              if (seen === visibleIndex) return i;
+            }
+            return -1;
+          })();
+
+          if (actualIndex >= 0) {
+            nextComments[actualIndex] = {
+              ...(nextComments[actualIndex] || {}),
+              likes: nextLikes,
+              hasLiked: !hasLiked,
+            };
+          }
+        }
+
         post.comments = nextComments;
       }
     } catch {
@@ -98,12 +121,11 @@ export default function PostCommentsModal({ post, onClose, onReply }) {
         body: JSON.stringify({
           postId: post.id,
           commentId: commentId, // may be null; API can fallback to index later if needed
-          commentIndex: index, // fallback identifier (temporary until we ensure stable IDs)
+          commentIndex: visibleIndex, // visible index (non-deleted list)
         }),
       });
 
       if (!res.ok) {
-        // fail-soft: do nothing (UI will be corrected next open/reload)
         setLikingKey(null);
         return;
       }
@@ -113,15 +135,25 @@ export default function PostCommentsModal({ post, onClose, onReply }) {
 
       // reconcile with server response if provided
       if (updated && Array.isArray(post.comments)) {
-        const nextComments = post.comments.map((c, i) => {
-          if (i !== index) return c;
-          return {
-            ...c,
-            likes: typeof updated.likes === 'number' ? updated.likes : Number(c?.likes) || 0,
-            hasLiked: typeof updated.hasLiked === 'boolean' ? updated.hasLiked : Boolean(c?.hasLiked),
-            id: updated.id ?? c.id,
-          };
+        const nextComments = post.comments.map((c) => {
+          if (!c) return c;
+          if (commentId && String(c.id || '') === String(commentId)) {
+            return {
+              ...c,
+              likes:
+                typeof updated.likes === 'number'
+                  ? updated.likes
+                  : Number(c?.likes) || 0,
+              hasLiked:
+                typeof updated.hasLiked === 'boolean'
+                  ? updated.hasLiked
+                  : Boolean(c?.hasLiked),
+              id: updated.id ?? c.id,
+            };
+          }
+          return c;
         });
+
         post.comments = nextComments;
       }
     } catch {
@@ -134,45 +166,59 @@ export default function PostCommentsModal({ post, onClose, onReply }) {
   // ─────────────────────────────────────────────────────────────
   // ✅ COMMENT DELETE — ONLY for comment author
   // - Confirm prompt (per your UX spec)
-  // - Soft delete behavior (keeps evidence in DB)
-  // - server: /api/feed/comment-delete
+  // - optimistic UI: remove immediately after confirm
+  // - server: /api/feed/comment-delete (soft delete)
   // ─────────────────────────────────────────────────────────────
-  const deleteComment = async (comment, index) => {
+  const deleteComment = async (comment, visibleIndex) => {
     if (!post?.id) return;
-
-    // ✅ Don’t allow deleting an already-deleted comment
-    if (comment?.deleted) return;
 
     const myId = session?.user?.id ? String(session.user.id) : '';
     const authorId = comment?.authorId ? String(comment.authorId) : '';
     if (!myId || !authorId || myId !== authorId) return;
 
-    // ✅ Confirm prompt (required behavior)
     const ok = window.confirm('Are you sure you want to delete this comment?');
     if (!ok) return;
 
     const commentId = comment?.id ?? null;
-    const key = `${post.id}:${commentId ?? index}`;
+    const key = `${post.id}:${commentId ?? visibleIndex}`;
     if (deletingKey === key) return;
 
     setDeletingKey(key);
 
-    // optimistic soft-delete (mark hidden, keep record in JSON)
-    let prev = null;
+    // optimistic: mark deleted in the real post.comments (so it disappears immediately via visibleComments filter)
+    let prior = null;
+
     try {
       if (Array.isArray(post.comments)) {
-        prev = post.comments[index] || null;
-        const nowIso = new Date().toISOString();
-        post.comments = post.comments.map((c, i) => {
-          if (i !== index) return c;
-          return {
-            ...c,
-            deleted: true,
-            deletedAt: nowIso,
-            deletedBy: myId,
-            deleteReason: 'user',
-          };
+        const next = post.comments.map((c) => {
+          if (!c) return c;
+          if (commentId && String(c.id || '') === String(commentId)) {
+            prior = c;
+            return { ...c, deleted: true };
+          }
+          return c;
         });
+
+        // fallback if no id
+        if (!commentId) {
+          const actualIndex = (() => {
+            let seen = -1;
+            for (let i = 0; i < post.comments.length; i++) {
+              const x = post.comments[i];
+              if (x && x.deleted === true) continue;
+              seen += 1;
+              if (seen === visibleIndex) return i;
+            }
+            return -1;
+          })();
+
+          if (actualIndex >= 0) {
+            prior = post.comments[actualIndex] || null;
+            next[actualIndex] = { ...(next[actualIndex] || {}), deleted: true };
+          }
+        }
+
+        post.comments = next;
       }
     } catch {
       // ignore optimistic failure
@@ -184,16 +230,22 @@ export default function PostCommentsModal({ post, onClose, onReply }) {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           postId: post.id,
-          commentId: commentId, // prefer id
-          commentIndex: index, // fallback
+          commentId: commentId,
+          commentIndex: visibleIndex,
         }),
       });
 
       if (!res.ok) {
-        // rollback if we optimistically changed
+        // rollback (show it again)
         try {
-          if (prev && Array.isArray(post.comments)) {
-            post.comments = post.comments.map((c, i) => (i === index ? prev : c));
+          if (prior && Array.isArray(post.comments)) {
+            post.comments = post.comments.map((c) => {
+              if (!c) return c;
+              if (commentId && String(c.id || '') === String(commentId)) {
+                return prior;
+              }
+              return c;
+            });
           }
         } catch {
           // ignore rollback failure
@@ -203,10 +255,16 @@ export default function PostCommentsModal({ post, onClose, onReply }) {
         alert(msg?.error || 'Delete failed. The comment was restored.');
       }
     } catch {
-      // rollback if we optimistically changed
+      // rollback (show it again)
       try {
-        if (prev && Array.isArray(post.comments)) {
-          post.comments = post.comments.map((c, i) => (i === index ? prev : c));
+        if (prior && Array.isArray(post.comments)) {
+          post.comments = post.comments.map((c) => {
+            if (!c) return c;
+            if (commentId && String(c.id || '') === String(commentId)) {
+              return prior;
+            }
+            return c;
+          });
         }
       } catch {
         // ignore rollback failure
@@ -260,11 +318,12 @@ export default function PostCommentsModal({ post, onClose, onReply }) {
         <p className="mb-4 whitespace-pre-wrap">{post.body}</p>
 
         <div className="border-t pt-4 space-y-3 max-h-[50vh] overflow-y-auto">
-          {post.comments.length === 0 ? (
-            <div className="text-sm text-gray-500">No comments yet—be the first!</div>
+          {visibleComments.length === 0 ? (
+            <div className="text-sm text-gray-500">
+              No comments yet—be the first!
+            </div>
           ) : (
-            post.comments.map((c, i) => {
-              const isDeleted = Boolean(c?.deleted);
+            visibleComments.map((c, i) => {
               const likes = Number(c?.likes) || 0;
               const hasLiked = Boolean(c?.hasLiked);
               const key = c?.id ?? i;
@@ -292,12 +351,7 @@ export default function PostCommentsModal({ post, onClose, onReply }) {
 
                   <div className="min-w-0 flex-1">
                     <div className="text-sm">
-                      <span className="font-medium">{c.by}:</span>{' '}
-                      {isDeleted ? (
-                        <span className="text-gray-400 italic">Comment deleted</span>
-                      ) : (
-                        c.text
-                      )}
+                      <span className="font-medium">{c.by}:</span> {c.text}
                     </div>
 
                     <div className="mt-1 flex items-center gap-3">
@@ -307,24 +361,22 @@ export default function PostCommentsModal({ post, onClose, onReply }) {
                         </div>
                       )}
 
-                      {!isDeleted && (
-                        <button
-                          type="button"
-                          onClick={() => toggleCommentLike(c, i)}
-                          disabled={busyLike}
-                          className={`text-xs font-semibold px-2 py-1 rounded-full border transition ${
-                            hasLiked
-                              ? 'bg-[#FF7043]/10 border-[#FF7043]/30 text-[#FF7043]'
-                              : 'bg-gray-50 border-gray-200 text-gray-600 hover:bg-gray-100'
-                          } ${busyLike ? 'opacity-60' : ''}`}
-                          aria-label={hasLiked ? 'Unlike comment' : 'Like comment'}
-                          title={hasLiked ? 'Unlike' : 'Like'}
-                        >
-                          👍 Like{likes > 0 ? ` · ${likes}` : ''}
-                        </button>
-                      )}
+                      <button
+                        type="button"
+                        onClick={() => toggleCommentLike(c, i)}
+                        disabled={busyLike}
+                        className={`text-xs font-semibold px-2 py-1 rounded-full border transition ${
+                          hasLiked
+                            ? 'bg-[#FF7043]/10 border-[#FF7043]/30 text-[#FF7043]'
+                            : 'bg-gray-50 border-gray-200 text-gray-600 hover:bg-gray-100'
+                        } ${busyLike ? 'opacity-60' : ''}`}
+                        aria-label={hasLiked ? 'Unlike comment' : 'Like comment'}
+                        title={hasLiked ? 'Unlike' : 'Like'}
+                      >
+                        👍 Like{likes > 0 ? ` · ${likes}` : ''}
+                      </button>
 
-                      {canDelete && !isDeleted && (
+                      {canDelete && (
                         <button
                           type="button"
                           onClick={() => deleteComment(c, i)}
