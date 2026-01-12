@@ -1,10 +1,13 @@
 // components/feed/PostCommentsModal.js
 import { useState } from 'react';
+import { useSession } from 'next-auth/react';
 import QuickEmojiBar from './QuickEmojiBar';
 
 export default function PostCommentsModal({ post, onClose, onReply }) {
   const [text, setText] = useState('');
   const [likingKey, setLikingKey] = useState(null); // `${postId}:${commentId||index}`
+  const [deletingKey, setDeletingKey] = useState(null); // `${postId}:${commentId||index}`
+  const { data: session } = useSession();
 
   if (!post) return null;
 
@@ -125,6 +128,75 @@ export default function PostCommentsModal({ post, onClose, onReply }) {
     }
   };
 
+  // ─────────────────────────────────────────────────────────────
+  // ✅ COMMENT DELETE — ONLY for comment author
+  // - removes comment from post.comments (JSON)
+  // - optimistic UI: immediately removes from modal list
+  // - server: /api/feed/comment-delete (we'll add next)
+  // ─────────────────────────────────────────────────────────────
+  const deleteComment = async (comment, index) => {
+    if (!post?.id) return;
+
+    const myId = session?.user?.id ? String(session.user.id) : '';
+    const authorId = comment?.authorId ? String(comment.authorId) : '';
+    if (!myId || !authorId || myId !== authorId) return;
+
+    const commentId = comment?.id ?? null;
+    const key = `${post.id}:${commentId ?? index}`;
+    if (deletingKey === key) return;
+
+    setDeletingKey(key);
+
+    // optimistic remove
+    let removed = null;
+    try {
+      if (Array.isArray(post.comments)) {
+        removed = post.comments[index] || null;
+        post.comments = post.comments.filter((_, i) => i !== index);
+      }
+    } catch {
+      // ignore optimistic failure
+    }
+
+    try {
+      const res = await fetch('/api/feed/comment-delete', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          postId: post.id,
+          commentId: commentId, // prefer id
+          commentIndex: index,  // fallback
+        }),
+      });
+
+      if (!res.ok) {
+        // rollback if we optimistically removed
+        try {
+          if (removed && Array.isArray(post.comments)) {
+            const next = [...post.comments];
+            next.splice(index, 0, removed);
+            post.comments = next;
+          }
+        } catch {
+          // ignore rollback failure
+        }
+      }
+    } catch {
+      // rollback if we optimistically removed
+      try {
+        if (removed && Array.isArray(post.comments)) {
+          const next = [...post.comments];
+          next.splice(index, 0, removed);
+          post.comments = next;
+        }
+      } catch {
+        // ignore rollback failure
+      }
+    } finally {
+      setDeletingKey(null);
+    }
+  };
+
   return (
     <div
       role="dialog"
@@ -176,7 +248,13 @@ export default function PostCommentsModal({ post, onClose, onReply }) {
               const likes = Number(c?.likes) || 0;
               const hasLiked = Boolean(c?.hasLiked);
               const key = c?.id ?? i;
-              const busy = likingKey === `${post.id}:${c?.id ?? i}`;
+
+              const busyLike = likingKey === `${post.id}:${c?.id ?? i}`;
+              const busyDelete = deletingKey === `${post.id}:${c?.id ?? i}`;
+
+              const myId = session?.user?.id ? String(session.user.id) : '';
+              const authorId = c?.authorId ? String(c.authorId) : '';
+              const canDelete = Boolean(myId && authorId && myId === authorId);
 
               return (
                 <div key={key} className="flex items-start gap-2">
@@ -207,17 +285,34 @@ export default function PostCommentsModal({ post, onClose, onReply }) {
                       <button
                         type="button"
                         onClick={() => toggleCommentLike(c, i)}
-                        disabled={busy}
+                        disabled={busyLike}
                         className={`text-xs font-semibold px-2 py-1 rounded-full border transition ${
                           hasLiked
                             ? 'bg-[#FF7043]/10 border-[#FF7043]/30 text-[#FF7043]'
                             : 'bg-gray-50 border-gray-200 text-gray-600 hover:bg-gray-100'
-                        } ${busy ? 'opacity-60' : ''}`}
+                        } ${busyLike ? 'opacity-60' : ''}`}
                         aria-label={hasLiked ? 'Unlike comment' : 'Like comment'}
                         title={hasLiked ? 'Unlike' : 'Like'}
                       >
                         👍 Like{likes > 0 ? ` · ${likes}` : ''}
                       </button>
+
+                      {canDelete && (
+                        <button
+                          type="button"
+                          onClick={() => deleteComment(c, i)}
+                          disabled={busyDelete}
+                          className={`text-xs font-semibold px-2 py-1 rounded-full border transition ${
+                            busyDelete
+                              ? 'opacity-60'
+                              : 'bg-white border-red-200 text-red-600 hover:bg-red-50'
+                          }`}
+                          aria-label="Delete comment"
+                          title="Delete"
+                        >
+                          Delete
+                        </button>
+                      )}
                     </div>
                   </div>
                 </div>
