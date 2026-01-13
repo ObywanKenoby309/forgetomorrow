@@ -1,5 +1,5 @@
 // pages/post-view.js
-import { useMemo, useState } from 'react';
+import { useMemo, useRef, useState } from 'react';
 import Head from 'next/head';
 import { useRouter } from 'next/router';
 import { useSession } from 'next-auth/react';
@@ -9,7 +9,6 @@ import { prisma } from '@/lib/prisma';
 
 import SeekerLayout from '@/components/layouts/SeekerLayout';
 import RightRailPlacementManager from '@/components/ads/RightRailPlacementManager';
-import PostCommentsModal from '@/components/feed/PostCommentsModal';
 import { useConnect } from '@/components/actions/useConnect';
 
 // Helper: parse FeedPost.content into { body, attachments[] }
@@ -78,15 +77,12 @@ function normalizeComments(rawComments, viewerId, userById) {
       const likedBy = Array.isArray(c.likedBy) ? c.likedBy.map((x) => String(x)) : [];
       const hasLiked = vid ? likedBy.includes(vid) : Boolean(c?.hasLiked);
 
-      // ✅ PostCommentsModal renders: c.by, c.text, c.at, c.avatarUrl
+      // renders: c.by, c.text, c.at, c.avatarUrl
       const by = String(c?.by || c?.authorName || c?.author || normalizeName(u) || 'Member').trim();
       const text = String(c?.text || c?.body || '').trim();
       const at = c?.at || c?.createdAt || null;
 
-      const avatarUrl =
-        c?.avatarUrl ||
-        (u ? u.avatarUrl || u.image || null : null) ||
-        null;
+      const avatarUrl = c?.avatarUrl || (u ? u.avatarUrl || u.image || null : null) || null;
 
       return {
         ...c,
@@ -195,14 +191,36 @@ export default function PostViewPage({ initialPost, notFound }) {
   const { connectWith } = useConnect();
 
   const [post, setPost] = useState(initialPost || null);
-  const [openComments, setOpenComments] = useState(false);
 
-  // Avatar popovers (post author + comment preview)
+  // Avatar popovers (post author + comment rows)
   const [authorMenuOpen, setAuthorMenuOpen] = useState(false);
   const [commentMenuKey, setCommentMenuKey] = useState(null);
   const [connectingKey, setConnectingKey] = useState(null);
 
+  // Inline comments UX
+  const [commentsExpanded, setCommentsExpanded] = useState(false);
+  const [replyText, setReplyText] = useState('');
+  const [replyBusy, setReplyBusy] = useState(false);
+
+  const commentsSectionRef = useRef(null);
+  const replyBoxRef = useRef(null);
+
   const myId = session?.user?.id ? String(session.user.id) : '';
+  const myName = useMemo(() => {
+    try {
+      const u = session?.user || {};
+      return (
+        u.name ||
+        [u.firstName, u.lastName].filter(Boolean).join(' ') ||
+        (u.email ? String(u.email).split('@')[0] : '') ||
+        'Me'
+      );
+    } catch {
+      return 'Me';
+    }
+  }, [session]);
+
+  const myAvatar = session?.user?.avatarUrl || session?.user?.image || null;
 
   // keep chrome param on navigation
   const chrome = String(router.query?.chrome || '').toLowerCase();
@@ -224,6 +242,52 @@ export default function PostViewPage({ initialPost, notFound }) {
   const likesCount = Number.isFinite(Number(post?.likes)) ? Number(post.likes) : 0;
   const commentsCount = Array.isArray(visibleComments) ? visibleComments.length : 0;
 
+  const handleBack = () => router.push(withChrome('/feed'));
+
+  const scrollToComments = () => {
+    try {
+      commentsSectionRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    } catch {
+      // ignore
+    }
+  };
+
+  const focusReplyBox = () => {
+    try {
+      setTimeout(() => {
+        replyBoxRef.current?.focus?.();
+      }, 50);
+    } catch {
+      // ignore
+    }
+  };
+
+  const handleViewAllComments = () => {
+    setCommentsExpanded(true);
+    scrollToComments();
+  };
+
+  const handleReplyInComments = (prefillName) => {
+    setCommentsExpanded(true);
+    scrollToComments();
+
+    // Optional convenience: prefill @Name when replying from a specific comment
+    try {
+      const n = String(prefillName || '').trim();
+      if (n) {
+        setReplyText((prev) => {
+          const p = String(prev || '');
+          if (p.trim().length === 0) return `@${n} `;
+          return p;
+        });
+      }
+    } catch {
+      // ignore
+    }
+
+    focusReplyBox();
+  };
+
   // Minimal: reply handler (uses your existing comment API)
   const handleReply = async (postId, text) => {
     try {
@@ -236,20 +300,99 @@ export default function PostViewPage({ initialPost, notFound }) {
       if (!res.ok) {
         const msg = await res.json().catch(() => ({}));
         alert(msg?.error || 'Could not add comment. Please try again.');
-        return;
+        return null;
       }
 
       const data = await res.json().catch(() => ({}));
-      if (data?.post) {
-        setPost(data.post);
-      }
+      if (data?.post) return data.post;
+      return null;
     } catch {
       alert('Could not add comment (network/server).');
+      return null;
     }
   };
 
-  const handleBack = () => router.push(withChrome('/feed'));
-  const openCommentsModal = () => setOpenComments(true);
+  const submitInlineReply = async () => {
+    const t = String(replyText || '').trim();
+    if (!t) return;
+    if (!post?.id) return;
+    if (replyBusy) return;
+
+    setReplyBusy(true);
+
+    // Optimistic append (keeps names/avatars consistent even if API returns raw)
+    try {
+      const optimistic = {
+        id: `tmp_${Date.now()}`,
+        authorId: myId || null,
+        userId: myId || null,
+        by: myName || 'Member',
+        text: t,
+        at: new Date().toISOString(),
+        likes: 0,
+        likedBy: [],
+        hasLiked: false,
+        avatarUrl: myAvatar,
+      };
+
+      setPost((prev) => {
+        if (!prev) return prev;
+        const current = Array.isArray(prev.comments) ? prev.comments : [];
+        return { ...prev, comments: [...current, optimistic] };
+      });
+    } catch {
+      // ignore optimistic
+    }
+
+    const updated = await handleReply(post.id, t);
+
+    // Reconcile: if server returns a post, use it but keep comments normalized-ish
+    if (updated) {
+      try {
+        const nextComments = Array.isArray(updated.comments) ? updated.comments : [];
+        const normalized = nextComments
+          .map((c) => {
+            if (!c || typeof c !== 'object') return null;
+            const authorId = String(c?.authorId || c?.userId || '').trim();
+            const by = String(c?.by || c?.authorName || c?.author || (authorId === myId ? myName : '') || 'Member').trim();
+            const text = String(c?.text || c?.body || '').trim();
+            const at = c?.at || c?.createdAt || null;
+
+            const avatarUrl =
+              c?.avatarUrl ||
+              (authorId === myId ? myAvatar : null) ||
+              null;
+
+            return {
+              ...c,
+              authorId: authorId || c?.authorId || null,
+              userId: c?.userId || null,
+              by,
+              text,
+              at,
+              likes: Number.isFinite(Number(c?.likes)) ? Number(c.likes) : 0,
+              hasLiked: Boolean(c?.hasLiked),
+              avatarUrl,
+            };
+          })
+          .filter(Boolean);
+
+        setPost((prev) => {
+          if (!prev) return prev;
+          return {
+            ...prev,
+            ...updated,
+            comments: normalized,
+          };
+        });
+      } catch {
+        setPost((prev) => (prev ? { ...prev, ...updated } : updated));
+      }
+    }
+
+    setReplyText('');
+    setReplyBusy(false);
+  };
 
   // ─────────────────────────────────────────────────────────────
   // Member actions (match PostCard / PostCommentsModal patterns)
@@ -289,27 +432,19 @@ export default function PostViewPage({ initialPost, notFound }) {
 
     const result = await connectWith(targetUserId);
 
+    setConnectingKey(null);
+
     if (!result?.ok) {
-      setConnectingKey(null);
-      alert(
-        result?.errorMessage ||
-          'We could not send your connection request. Please try again.'
-      );
+      alert(result?.errorMessage || 'We could not send your connection request. Please try again.');
       return;
     }
-
-    setConnectingKey(null);
 
     if (result.alreadyConnected || result.status === 'connected') {
       alert('You are already connected.');
       return;
     }
 
-    alert(
-      result.alreadyRequested
-        ? 'Connection request already sent.'
-        : 'Connection request sent.'
-    );
+    alert(result.alreadyRequested ? 'Connection request already sent.' : 'Connection request sent.');
   };
 
   const handleMessage = (targetUserId) => {
@@ -569,9 +704,7 @@ export default function PostViewPage({ initialPost, notFound }) {
             {/* Attachments */}
             {Array.isArray(post.attachments) && post.attachments.length > 0 ? (
               <div style={{ marginTop: 16 }}>
-                <div style={{ fontSize: 12, fontWeight: 900, color: '#37474F' }}>
-                  Attachments
-                </div>
+                <div style={{ fontSize: 12, fontWeight: 900, color: '#37474F' }}>Attachments</div>
 
                 <div style={{ marginTop: 10, display: 'grid', gap: 10 }}>
                   {post.attachments.map((a, idx) => {
@@ -643,8 +776,8 @@ export default function PostViewPage({ initialPost, notFound }) {
             ) : null}
           </div>
 
-          {/* Comment preview */}
-          <div style={{ marginTop: 16 }}>
+          {/* Comments section */}
+          <div style={{ marginTop: 16 }} ref={commentsSectionRef}>
             <div
               style={{
                 display: 'flex',
@@ -655,21 +788,32 @@ export default function PostViewPage({ initialPost, notFound }) {
               }}
             >
               <div style={{ fontWeight: 900, color: '#263238' }}>Top comments</div>
-              <button
-                className="px-3 py-2 rounded-md border border-gray-200 bg-white/70 text-sm font-semibold text-gray-700 hover:bg-white"
-                onClick={openCommentsModal}
-              >
-                View all comments
-              </button>
+
+              {!commentsExpanded ? (
+                <button
+                  className="px-3 py-2 rounded-md border border-gray-200 bg-white/70 text-sm font-semibold text-gray-700 hover:bg-white"
+                  onClick={handleViewAllComments}
+                >
+                  View all comments
+                </button>
+              ) : (
+                <button
+                  className="px-3 py-2 rounded-md border border-gray-200 bg-white/70 text-sm font-semibold text-gray-700 hover:bg-white"
+                  onClick={() => setCommentsExpanded(false)}
+                >
+                  Collapse
+                </button>
+              )}
             </div>
 
-            {previewComments.length === 0 ? (
+            {/* Inline list: preview or expanded */}
+            {(commentsExpanded ? visibleComments : previewComments).length === 0 ? (
               <div style={{ marginTop: 10, fontSize: 13, color: '#607D8B' }}>
                 No comments yet. Be the first to respond.
               </div>
             ) : (
               <div style={{ marginTop: 10, display: 'grid', gap: 10 }}>
-                {previewComments.map((c, idx) => {
+                {(commentsExpanded ? visibleComments : previewComments).map((c, idx) => {
                   const name = c?.by || 'Member';
                   const text = c?.text || '';
                   const when = c?.at ? formatDateTime(c.at) : '';
@@ -678,7 +822,7 @@ export default function PostViewPage({ initialPost, notFound }) {
                   const targetUserId = getCommentAuthorId(c);
                   const canTarget = Boolean(targetUserId) && Boolean(myId) && targetUserId !== myId;
 
-                  const menuKey = `${post.id}:preview:${c?.id || idx}`;
+                  const menuKey = `${post.id}:c:${c?.id || idx}`;
                   const menuOpen = commentMenuKey === menuKey;
 
                   return (
@@ -803,7 +947,7 @@ export default function PostViewPage({ initialPost, notFound }) {
                         <button
                           className="text-sm font-semibold"
                           style={{ color: '#FF7043' }}
-                          onClick={openCommentsModal}
+                          onClick={() => handleReplyInComments(name)}
                         >
                           Reply in comments →
                         </button>
@@ -813,16 +957,50 @@ export default function PostViewPage({ initialPost, notFound }) {
                 })}
               </div>
             )}
+
+            {/* Inline composer (always on this page; feels like “reply in comments”) */}
+            <div
+              style={{
+                marginTop: 12,
+                borderRadius: 14,
+                border: '1px solid rgba(15,23,42,0.10)',
+                background: 'rgba(255,255,255,0.75)',
+                padding: 14,
+              }}
+            >
+              <div style={{ fontWeight: 900, color: '#263238', marginBottom: 8 }}>
+                Add a comment
+              </div>
+
+              <textarea
+                ref={replyBoxRef}
+                value={replyText}
+                onChange={(e) => setReplyText(e.target.value)}
+                rows={3}
+                className="w-full border rounded-md p-3"
+                placeholder="Write your comment…"
+              />
+
+              <div style={{ marginTop: 10, display: 'flex', justifyContent: 'flex-end', gap: 10 }}>
+                <button
+                  className="px-3 py-2 rounded-md border border-gray-200 bg-white/70 text-sm font-semibold text-gray-700 hover:bg-white"
+                  onClick={() => setReplyText('')}
+                  disabled={!replyText.trim() || replyBusy}
+                >
+                  Clear
+                </button>
+
+                <button
+                  className="px-4 py-2 rounded-md bg-[#ff8a65] text-white font-semibold disabled:opacity-50"
+                  onClick={submitInlineReply}
+                  disabled={!replyText.trim() || replyBusy}
+                >
+                  {replyBusy ? 'Posting…' : 'Comment'}
+                </button>
+              </div>
+            </div>
           </div>
         </GlassPanel>
-
-        {openComments ? (
-          <PostCommentsModal
-            post={post}
-            onClose={() => setOpenComments(false)}
-            onReply={handleReply}
-          />
-        ) : null}
       </SeekerLayout>
     </>
   );
