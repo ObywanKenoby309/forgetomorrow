@@ -186,15 +186,6 @@ function PillStat({ label, value }) {
   );
 }
 
-function parseDateValue(d) {
-  try {
-    const x = new Date(d).getTime();
-    return Number.isFinite(x) ? x : 0;
-  } catch {
-    return 0;
-  }
-}
-
 export default function PostViewPage({ initialPost, notFound }) {
   const router = useRouter();
   const { data: session } = useSession();
@@ -210,16 +201,13 @@ export default function PostViewPage({ initialPost, notFound }) {
   // Inline comments UX
   const [commentsExpanded, setCommentsExpanded] = useState(false);
 
-  // Inline reply composer (hidden until Reply/Add Comment)
-  const [composerOpen, setComposerOpen] = useState(false);
-  const [replyText, setReplyText] = useState('');
-  const [replyBusy, setReplyBusy] = useState(false);
-
-  // Optional: highlight a comment when “Reply” was clicked
-  const [highlightKey, setHighlightKey] = useState(null);
+  // ✅ Per-comment reply composers (including root "Add a comment")
+  const [activeReplyKey, setActiveReplyKey] = useState(null); // 'root' | commentKey
+  const [replyTextByKey, setReplyTextByKey] = useState({});
+  const [replyBusyKey, setReplyBusyKey] = useState(null);
 
   const commentsSectionRef = useRef(null);
-  const replyBoxRef = useRef(null);
+  const replyBoxRefs = useRef({}); // key -> textarea element
 
   const myId = session?.user?.id ? String(session.user.id) : '';
   const myName = useMemo(() => {
@@ -249,26 +237,9 @@ export default function PostViewPage({ initialPost, notFound }) {
     return all.filter((c) => !(c && c.deleted === true));
   }, [post]);
 
-  // Rank “Top comments” by likes (desc), tie-break by newest
-  const rankedComments = useMemo(() => {
-    const arr = Array.isArray(visibleComments) ? [...visibleComments] : [];
-    arr.sort((a, b) => {
-      const la = Number.isFinite(Number(a?.likes)) ? Number(a.likes) : 0;
-      const lb = Number.isFinite(Number(b?.likes)) ? Number(b.likes) : 0;
-      if (lb !== la) return lb - la;
-
-      const ta = parseDateValue(a?.at || a?.createdAt);
-      const tb = parseDateValue(b?.at || b?.createdAt);
-      return tb - ta;
-    });
-    return arr;
-  }, [visibleComments]);
-
   const previewComments = useMemo(() => {
-    return (rankedComments || []).slice(0, 2);
-  }, [rankedComments]);
-
-  const commentsToRender = commentsExpanded ? rankedComments : previewComments;
+    return (visibleComments || []).slice(0, 2);
+  }, [visibleComments]);
 
   const createdAtLabel = post?.createdAt ? formatDateTime(post.createdAt) : '';
 
@@ -285,25 +256,15 @@ export default function PostViewPage({ initialPost, notFound }) {
     }
   };
 
-  const focusReplyBox = () => {
+  const focusReplyBox = (key) => {
     try {
-      setTimeout(() => replyBoxRef.current?.focus?.(), 50);
+      setTimeout(() => {
+        const el = replyBoxRefs.current?.[key];
+        el?.focus?.();
+      }, 60);
     } catch {
       // ignore
     }
-  };
-
-  const openComposer = (prefill) => {
-    setComposerOpen(true);
-    if (typeof prefill === 'string' && prefill.trim()) {
-      const n = prefill.trim();
-      setReplyText((prev) => {
-        const p = String(prev || '');
-        if (p.trim().length === 0) return `@${n} `;
-        return p;
-      });
-    }
-    focusReplyBox();
   };
 
   const handleViewAllComments = () => {
@@ -311,43 +272,43 @@ export default function PostViewPage({ initialPost, notFound }) {
     scrollToComments();
   };
 
-  const handleCollapseComments = () => {
-    setCommentsExpanded(false);
-    setComposerOpen(false);
-    setReplyText('');
-    setHighlightKey(null);
+  const openRootComposer = () => {
+    setActiveReplyKey('root');
+    setCommentsExpanded(true);
+    scrollToComments();
+    focusReplyBox('root');
   };
 
-  const handleReplyFromComment = (comment, idx) => {
+  const openCommentComposer = (commentKey, prefillName) => {
     setCommentsExpanded(true);
-    setComposerOpen(true);
-
-    const name = String(comment?.by || 'Member').trim();
-    const hk = `${post?.id || 'p'}:${comment?.id || idx}`;
-    setHighlightKey(hk);
-
     scrollToComments();
 
+    setActiveReplyKey(commentKey);
+
     try {
-      if (name) {
-        setReplyText((prev) => {
-          const p = String(prev || '');
-          if (p.trim().length === 0) return `@${name} `;
-          return p;
+      const n = String(prefillName || '').trim();
+      if (n) {
+        setReplyTextByKey((prev) => {
+          const cur = String(prev?.[commentKey] || '');
+          if (cur.trim().length === 0) return { ...prev, [commentKey]: `@${n} ` };
+          return prev;
         });
       }
     } catch {
       // ignore
     }
 
-    // auto-clear highlight after a moment
-    try {
-      setTimeout(() => setHighlightKey((cur) => (cur === hk ? null : cur)), 1800);
-    } catch {
-      // ignore
-    }
+    focusReplyBox(commentKey);
+  };
 
-    focusReplyBox();
+  const closeComposer = () => {
+    setActiveReplyKey(null);
+  };
+
+  const getReplyText = (key) => String(replyTextByKey?.[key] || '');
+
+  const setReplyText = (key, val) => {
+    setReplyTextByKey((prev) => ({ ...(prev || {}), [key]: val }));
   };
 
   // Minimal: reply handler (uses your existing comment API)
@@ -374,15 +335,15 @@ export default function PostViewPage({ initialPost, notFound }) {
     }
   };
 
-  const submitInlineReply = async () => {
-    const t = String(replyText || '').trim();
+  const submitReplyForKey = async (key) => {
+    const t = getReplyText(key).trim();
     if (!t) return;
     if (!post?.id) return;
-    if (replyBusy) return;
+    if (replyBusyKey === key) return;
 
-    setReplyBusy(true);
+    setReplyBusyKey(key);
 
-    // Optimistic append (keeps it snappy)
+    // Optimistic append (flat comment model)
     try {
       const optimistic = {
         id: `tmp_${Date.now()}`,
@@ -408,7 +369,6 @@ export default function PostViewPage({ initialPost, notFound }) {
 
     const updated = await handleReply(post.id, t);
 
-    // Reconcile: if server returns a post, use it
     if (updated) {
       try {
         const nextComments = Array.isArray(updated.comments) ? updated.comments : [];
@@ -444,19 +404,16 @@ export default function PostViewPage({ initialPost, notFound }) {
 
         setPost((prev) => {
           if (!prev) return prev;
-          return {
-            ...prev,
-            ...updated,
-            comments: normalized,
-          };
+          return { ...prev, ...updated, comments: normalized };
         });
       } catch {
         setPost((prev) => (prev ? { ...prev, ...updated } : updated));
       }
     }
 
-    setReplyText('');
-    setReplyBusy(false);
+    setReplyTextByKey((prev) => ({ ...(prev || {}), [key]: '' }));
+    setReplyBusyKey(null);
+    setActiveReplyKey(null);
   };
 
   // ─────────────────────────────────────────────────────────────
@@ -745,10 +702,17 @@ export default function PostViewPage({ initialPost, notFound }) {
                 </div>
               </div>
 
-              {/* Visual-only stats */}
+              {/* Stats + ✅ Add a comment button lives up here now */}
               <div style={{ display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap' }}>
                 <PillStat label="Likes" value={formatCompactNumber(likesCount)} />
                 <PillStat label="Comments" value={formatCompactNumber(commentsCount)} />
+
+                <button
+                  className="px-3 py-2 rounded-md border border-gray-200 bg-white/70 text-sm font-semibold text-gray-700 hover:bg-white"
+                  onClick={openRootComposer}
+                >
+                  Add a comment
+                </button>
               </div>
             </div>
 
@@ -839,6 +803,53 @@ export default function PostViewPage({ initialPost, notFound }) {
                 </div>
               </div>
             ) : null}
+
+            {/* ✅ Root composer opens under the post card */}
+            {activeReplyKey === 'root' ? (
+              <div
+                style={{
+                  marginTop: 14,
+                  borderRadius: 14,
+                  border: '1px solid rgba(15,23,42,0.10)',
+                  background: 'rgba(255,255,255,0.75)',
+                  padding: 14,
+                }}
+              >
+                <div style={{ fontWeight: 900, color: '#263238', marginBottom: 8 }}>Reply</div>
+
+                <textarea
+                  ref={(el) => {
+                    replyBoxRefs.current['root'] = el;
+                  }}
+                  value={getReplyText('root')}
+                  onChange={(e) => setReplyText('root', e.target.value)}
+                  rows={3}
+                  className="w-full border rounded-md p-3"
+                  placeholder="Write your comment…"
+                />
+
+                <div style={{ marginTop: 10, display: 'flex', justifyContent: 'flex-end', gap: 10 }}>
+                  <button
+                    className="px-3 py-2 rounded-md border border-gray-200 bg-white/70 text-sm font-semibold text-gray-700 hover:bg-white"
+                    onClick={() => {
+                      setReplyTextByKey((prev) => ({ ...(prev || {}), root: '' }));
+                      closeComposer();
+                    }}
+                    disabled={replyBusyKey === 'root'}
+                  >
+                    Cancel
+                  </button>
+
+                  <button
+                    className="px-4 py-2 rounded-md bg-[#ff8a65] text-white font-semibold disabled:opacity-50"
+                    onClick={() => submitReplyForKey('root')}
+                    disabled={!getReplyText('root').trim() || replyBusyKey === 'root'}
+                  >
+                    {replyBusyKey === 'root' ? 'Posting…' : 'Post reply'}
+                  </button>
+                </div>
+              </div>
+            ) : null}
           </div>
 
           {/* Comments section */}
@@ -864,7 +875,7 @@ export default function PostViewPage({ initialPost, notFound }) {
               ) : (
                 <button
                   className="px-3 py-2 rounded-md border border-gray-200 bg-white/70 text-sm font-semibold text-gray-700 hover:bg-white"
-                  onClick={handleCollapseComments}
+                  onClick={() => setCommentsExpanded(false)}
                 >
                   Collapse
                 </button>
@@ -872,13 +883,13 @@ export default function PostViewPage({ initialPost, notFound }) {
             </div>
 
             {/* Inline list: preview or expanded */}
-            {commentsToRender.length === 0 ? (
+            {(commentsExpanded ? visibleComments : previewComments).length === 0 ? (
               <div style={{ marginTop: 10, fontSize: 13, color: '#607D8B' }}>
                 No comments yet. Be the first to respond.
               </div>
             ) : (
               <div style={{ marginTop: 10, display: 'grid', gap: 10 }}>
-                {commentsToRender.map((c, idx) => {
+                {(commentsExpanded ? visibleComments : previewComments).map((c, idx) => {
                   const name = c?.by || 'Member';
                   const text = c?.text || '';
                   const when = c?.at ? formatDateTime(c.at) : '';
@@ -890,21 +901,17 @@ export default function PostViewPage({ initialPost, notFound }) {
                   const menuKey = `${post.id}:c:${c?.id || idx}`;
                   const menuOpen = commentMenuKey === menuKey;
 
-                  const hk = `${post?.id || 'p'}:${c?.id || idx}`;
-                  const isHighlighted = highlightKey === hk;
+                  const commentKey = String(c?.id || `idx_${idx}`);
+                  const composerOpen = activeReplyKey === commentKey;
 
                   return (
                     <div
                       key={c?.id || `${idx}`}
                       style={{
                         borderRadius: 14,
-                        border: isHighlighted
-                          ? '1px solid rgba(255,112,67,0.55)'
-                          : '1px solid rgba(15,23,42,0.10)',
-                        background: isHighlighted ? 'rgba(255,112,67,0.08)' : 'rgba(255,255,255,0.70)',
+                        border: '1px solid rgba(15,23,42,0.10)',
+                        background: 'rgba(255,255,255,0.70)',
                         padding: 14,
-                        boxShadow: isHighlighted ? '0 10px 22px rgba(255,112,67,0.10)' : 'none',
-                        transition: 'background 160ms ease, border 160ms ease',
                       }}
                     >
                       <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
@@ -946,10 +953,7 @@ export default function PostViewPage({ initialPost, notFound }) {
                                   fontSize: 13,
                                 }}
                               >
-                                {String(name || '?')
-                                  .trim()
-                                  .charAt(0)
-                                  .toUpperCase()}
+                                {String(name || '?').trim().charAt(0).toUpperCase()}
                               </div>
                             )}
                           </button>
@@ -1013,90 +1017,77 @@ export default function PostViewPage({ initialPost, notFound }) {
                         {text}
                       </div>
 
+                      {/* ✅ Reply button opens composer under *this* comment */}
                       <div style={{ marginTop: 10, display: 'flex', justifyContent: 'flex-end' }}>
                         <button
                           className="text-sm font-semibold"
                           style={{ color: '#FF7043' }}
-                          onClick={() => handleReplyFromComment(c, idx)}
+                          onClick={() => openCommentComposer(commentKey, name)}
                         >
                           Reply →
                         </button>
                       </div>
+
+                      {/* ✅ Per-comment composer */}
+                      {composerOpen ? (
+                        <div
+                          style={{
+                            marginTop: 10,
+                            borderRadius: 14,
+                            border: '1px solid rgba(15,23,42,0.10)',
+                            background: 'rgba(255,255,255,0.80)',
+                            padding: 12,
+                          }}
+                        >
+                          <div style={{ fontWeight: 900, color: '#263238', marginBottom: 8 }}>
+                            Reply
+                          </div>
+
+                          <textarea
+                            ref={(el) => {
+                              replyBoxRefs.current[commentKey] = el;
+                            }}
+                            value={getReplyText(commentKey)}
+                            onChange={(e) => setReplyText(commentKey, e.target.value)}
+                            rows={3}
+                            className="w-full border rounded-md p-3"
+                            placeholder={`Reply to ${name}…`}
+                          />
+
+                          <div
+                            style={{
+                              marginTop: 10,
+                              display: 'flex',
+                              justifyContent: 'flex-end',
+                              gap: 10,
+                            }}
+                          >
+                            <button
+                              className="px-3 py-2 rounded-md border border-gray-200 bg-white/70 text-sm font-semibold text-gray-700 hover:bg-white"
+                              onClick={() => {
+                                setReplyTextByKey((prev) => ({ ...(prev || {}), [commentKey]: '' }));
+                                closeComposer();
+                              }}
+                              disabled={replyBusyKey === commentKey}
+                            >
+                              Cancel
+                            </button>
+
+                            <button
+                              className="px-4 py-2 rounded-md bg-[#ff8a65] text-white font-semibold disabled:opacity-50"
+                              onClick={() => submitReplyForKey(commentKey)}
+                              disabled={!getReplyText(commentKey).trim() || replyBusyKey === commentKey}
+                            >
+                              {replyBusyKey === commentKey ? 'Posting…' : 'Post reply'}
+                            </button>
+                          </div>
+                        </div>
+                      ) : null}
                     </div>
                   );
                 })}
               </div>
             )}
-
-            {/* Composer entry (hidden until expanded + user chooses Reply/Add Comment) */}
-            <div style={{ marginTop: 12 }}>
-              {!commentsExpanded ? (
-                <button
-                  className="px-4 py-2 rounded-md bg-[#ff8a65] text-white font-semibold disabled:opacity-50"
-                  onClick={() => {
-                    setCommentsExpanded(true);
-                    setComposerOpen(true);
-                    scrollToComments();
-                    focusReplyBox();
-                  }}
-                  disabled={replyBusy}
-                >
-                  Add a comment
-                </button>
-              ) : !composerOpen ? (
-                <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
-                  <button
-                    className="px-4 py-2 rounded-md border border-gray-200 bg-white/70 text-sm font-semibold text-gray-700 hover:bg-white"
-                    onClick={() => openComposer('')}
-                    disabled={replyBusy}
-                  >
-                    Add a comment
-                  </button>
-                </div>
-              ) : (
-                <div
-                  style={{
-                    borderRadius: 14,
-                    border: '1px solid rgba(15,23,42,0.10)',
-                    background: 'rgba(255,255,255,0.75)',
-                    padding: 14,
-                  }}
-                >
-                  <div style={{ fontWeight: 900, color: '#263238', marginBottom: 8 }}>Reply</div>
-
-                  <textarea
-                    ref={replyBoxRef}
-                    value={replyText}
-                    onChange={(e) => setReplyText(e.target.value)}
-                    rows={3}
-                    className="w-full border rounded-md p-3"
-                    placeholder="Write your reply…"
-                  />
-
-                  <div style={{ marginTop: 10, display: 'flex', justifyContent: 'flex-end', gap: 10 }}>
-                    <button
-                      className="px-3 py-2 rounded-md border border-gray-200 bg-white/70 text-sm font-semibold text-gray-700 hover:bg-white"
-                      onClick={() => {
-                        setComposerOpen(false);
-                        setReplyText('');
-                        setHighlightKey(null);
-                      }}
-                      disabled={replyBusy}
-                    >
-                      Cancel
-                    </button>
-
-                    <button
-                      className="px-4 py-2 rounded-md bg-[#ff8a65] text-white font-semibold disabled:opacity-50"
-                      onClick={submitInlineReply}
-                      disabled={!replyText.trim() || replyBusy}
-                    >
-                      {replyBusy ? 'Posting…' : 'Post reply'}
-                    </button>
-                  </div>
-                </div>
-              )}
-            </div>
           </div>
         </GlassPanel>
       </SeekerLayout>
