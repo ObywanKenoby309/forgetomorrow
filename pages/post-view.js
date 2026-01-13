@@ -59,7 +59,7 @@ function normalizeName(u) {
   }
 }
 
-// Normalize comments for UI (aligns to PostCommentsModal expectations)
+// Normalize comments for UI
 function normalizeComments(rawComments, viewerId, userById) {
   const vid = viewerId ? String(viewerId) : null;
   const comments = safeJsonArray(rawComments);
@@ -77,8 +77,9 @@ function normalizeComments(rawComments, viewerId, userById) {
       const likedBy = Array.isArray(c.likedBy) ? c.likedBy.map((x) => String(x)) : [];
       const hasLiked = vid ? likedBy.includes(vid) : Boolean(c?.hasLiked);
 
-      // renders: c.by, c.text, c.at, c.avatarUrl
-      const by = String(c?.by || c?.authorName || c?.author || normalizeName(u) || 'Member').trim();
+      const by = String(
+        c?.by || c?.authorName || c?.author || normalizeName(u) || 'Member'
+      ).trim();
       const text = String(c?.text || c?.body || '').trim();
       const at = c?.at || c?.createdAt || null;
 
@@ -185,6 +186,15 @@ function PillStat({ label, value }) {
   );
 }
 
+function parseDateValue(d) {
+  try {
+    const x = new Date(d).getTime();
+    return Number.isFinite(x) ? x : 0;
+  } catch {
+    return 0;
+  }
+}
+
 export default function PostViewPage({ initialPost, notFound }) {
   const router = useRouter();
   const { data: session } = useSession();
@@ -199,8 +209,14 @@ export default function PostViewPage({ initialPost, notFound }) {
 
   // Inline comments UX
   const [commentsExpanded, setCommentsExpanded] = useState(false);
+
+  // Inline reply composer (hidden until Reply/Add Comment)
+  const [composerOpen, setComposerOpen] = useState(false);
   const [replyText, setReplyText] = useState('');
   const [replyBusy, setReplyBusy] = useState(false);
+
+  // Optional: highlight a comment when “Reply” was clicked
+  const [highlightKey, setHighlightKey] = useState(null);
 
   const commentsSectionRef = useRef(null);
   const replyBoxRef = useRef(null);
@@ -233,9 +249,26 @@ export default function PostViewPage({ initialPost, notFound }) {
     return all.filter((c) => !(c && c.deleted === true));
   }, [post]);
 
-  const previewComments = useMemo(() => {
-    return (visibleComments || []).slice(0, 2);
+  // Rank “Top comments” by likes (desc), tie-break by newest
+  const rankedComments = useMemo(() => {
+    const arr = Array.isArray(visibleComments) ? [...visibleComments] : [];
+    arr.sort((a, b) => {
+      const la = Number.isFinite(Number(a?.likes)) ? Number(a.likes) : 0;
+      const lb = Number.isFinite(Number(b?.likes)) ? Number(b.likes) : 0;
+      if (lb !== la) return lb - la;
+
+      const ta = parseDateValue(a?.at || a?.createdAt);
+      const tb = parseDateValue(b?.at || b?.createdAt);
+      return tb - ta;
+    });
+    return arr;
   }, [visibleComments]);
+
+  const previewComments = useMemo(() => {
+    return (rankedComments || []).slice(0, 2);
+  }, [rankedComments]);
+
+  const commentsToRender = commentsExpanded ? rankedComments : previewComments;
 
   const createdAtLabel = post?.createdAt ? formatDateTime(post.createdAt) : '';
 
@@ -254,12 +287,23 @@ export default function PostViewPage({ initialPost, notFound }) {
 
   const focusReplyBox = () => {
     try {
-      setTimeout(() => {
-        replyBoxRef.current?.focus?.();
-      }, 50);
+      setTimeout(() => replyBoxRef.current?.focus?.(), 50);
     } catch {
       // ignore
     }
+  };
+
+  const openComposer = (prefill) => {
+    setComposerOpen(true);
+    if (typeof prefill === 'string' && prefill.trim()) {
+      const n = prefill.trim();
+      setReplyText((prev) => {
+        const p = String(prev || '');
+        if (p.trim().length === 0) return `@${n} `;
+        return p;
+      });
+    }
+    focusReplyBox();
   };
 
   const handleViewAllComments = () => {
@@ -267,20 +311,38 @@ export default function PostViewPage({ initialPost, notFound }) {
     scrollToComments();
   };
 
-  const handleReplyInComments = (prefillName) => {
+  const handleCollapseComments = () => {
+    setCommentsExpanded(false);
+    setComposerOpen(false);
+    setReplyText('');
+    setHighlightKey(null);
+  };
+
+  const handleReplyFromComment = (comment, idx) => {
     setCommentsExpanded(true);
+    setComposerOpen(true);
+
+    const name = String(comment?.by || 'Member').trim();
+    const hk = `${post?.id || 'p'}:${comment?.id || idx}`;
+    setHighlightKey(hk);
+
     scrollToComments();
 
-    // Optional convenience: prefill @Name when replying from a specific comment
     try {
-      const n = String(prefillName || '').trim();
-      if (n) {
+      if (name) {
         setReplyText((prev) => {
           const p = String(prev || '');
-          if (p.trim().length === 0) return `@${n} `;
+          if (p.trim().length === 0) return `@${name} `;
           return p;
         });
       }
+    } catch {
+      // ignore
+    }
+
+    // auto-clear highlight after a moment
+    try {
+      setTimeout(() => setHighlightKey((cur) => (cur === hk ? null : cur)), 1800);
     } catch {
       // ignore
     }
@@ -320,7 +382,7 @@ export default function PostViewPage({ initialPost, notFound }) {
 
     setReplyBusy(true);
 
-    // Optimistic append (keeps names/avatars consistent even if API returns raw)
+    // Optimistic append (keeps it snappy)
     try {
       const optimistic = {
         id: `tmp_${Date.now()}`,
@@ -346,7 +408,7 @@ export default function PostViewPage({ initialPost, notFound }) {
 
     const updated = await handleReply(post.id, t);
 
-    // Reconcile: if server returns a post, use it but keep comments normalized-ish
+    // Reconcile: if server returns a post, use it
     if (updated) {
       try {
         const nextComments = Array.isArray(updated.comments) ? updated.comments : [];
@@ -354,14 +416,17 @@ export default function PostViewPage({ initialPost, notFound }) {
           .map((c) => {
             if (!c || typeof c !== 'object') return null;
             const authorId = String(c?.authorId || c?.userId || '').trim();
-            const by = String(c?.by || c?.authorName || c?.author || (authorId === myId ? myName : '') || 'Member').trim();
+            const by = String(
+              c?.by ||
+                c?.authorName ||
+                c?.author ||
+                (authorId === myId ? myName : '') ||
+                'Member'
+            ).trim();
             const text = String(c?.text || c?.body || '').trim();
             const at = c?.at || c?.createdAt || null;
 
-            const avatarUrl =
-              c?.avatarUrl ||
-              (authorId === myId ? myAvatar : null) ||
-              null;
+            const avatarUrl = c?.avatarUrl || (authorId === myId ? myAvatar : null) || null;
 
             return {
               ...c,
@@ -395,7 +460,7 @@ export default function PostViewPage({ initialPost, notFound }) {
   };
 
   // ─────────────────────────────────────────────────────────────
-  // Member actions (match PostCard / PostCommentsModal patterns)
+  // Member actions
   // ─────────────────────────────────────────────────────────────
   const logProfileView = async (targetUserId, source) => {
     try {
@@ -799,7 +864,7 @@ export default function PostViewPage({ initialPost, notFound }) {
               ) : (
                 <button
                   className="px-3 py-2 rounded-md border border-gray-200 bg-white/70 text-sm font-semibold text-gray-700 hover:bg-white"
-                  onClick={() => setCommentsExpanded(false)}
+                  onClick={handleCollapseComments}
                 >
                   Collapse
                 </button>
@@ -807,13 +872,13 @@ export default function PostViewPage({ initialPost, notFound }) {
             </div>
 
             {/* Inline list: preview or expanded */}
-            {(commentsExpanded ? visibleComments : previewComments).length === 0 ? (
+            {commentsToRender.length === 0 ? (
               <div style={{ marginTop: 10, fontSize: 13, color: '#607D8B' }}>
                 No comments yet. Be the first to respond.
               </div>
             ) : (
               <div style={{ marginTop: 10, display: 'grid', gap: 10 }}>
-                {(commentsExpanded ? visibleComments : previewComments).map((c, idx) => {
+                {commentsToRender.map((c, idx) => {
                   const name = c?.by || 'Member';
                   const text = c?.text || '';
                   const when = c?.at ? formatDateTime(c.at) : '';
@@ -825,14 +890,21 @@ export default function PostViewPage({ initialPost, notFound }) {
                   const menuKey = `${post.id}:c:${c?.id || idx}`;
                   const menuOpen = commentMenuKey === menuKey;
 
+                  const hk = `${post?.id || 'p'}:${c?.id || idx}`;
+                  const isHighlighted = highlightKey === hk;
+
                   return (
                     <div
                       key={c?.id || `${idx}`}
                       style={{
                         borderRadius: 14,
-                        border: '1px solid rgba(15,23,42,0.10)',
-                        background: 'rgba(255,255,255,0.70)',
+                        border: isHighlighted
+                          ? '1px solid rgba(255,112,67,0.55)'
+                          : '1px solid rgba(15,23,42,0.10)',
+                        background: isHighlighted ? 'rgba(255,112,67,0.08)' : 'rgba(255,255,255,0.70)',
                         padding: 14,
+                        boxShadow: isHighlighted ? '0 10px 22px rgba(255,112,67,0.10)' : 'none',
+                        transition: 'background 160ms ease, border 160ms ease',
                       }}
                     >
                       <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
@@ -922,9 +994,7 @@ export default function PostViewPage({ initialPost, notFound }) {
                         </div>
 
                         <div style={{ flex: 1 }}>
-                          <div style={{ fontWeight: 900, color: '#102027', fontSize: 13 }}>
-                            {name}
-                          </div>
+                          <div style={{ fontWeight: 900, color: '#102027', fontSize: 13 }}>{name}</div>
                           <div style={{ fontSize: 12, color: '#78909C' }}>{when ? when : ' '}</div>
                         </div>
 
@@ -943,13 +1013,13 @@ export default function PostViewPage({ initialPost, notFound }) {
                         {text}
                       </div>
 
-                      <div style={{ marginTop: 10 }}>
+                      <div style={{ marginTop: 10, display: 'flex', justifyContent: 'flex-end' }}>
                         <button
                           className="text-sm font-semibold"
                           style={{ color: '#FF7043' }}
-                          onClick={() => handleReplyInComments(name)}
+                          onClick={() => handleReplyFromComment(c, idx)}
                         >
-                          Reply in comments →
+                          Reply →
                         </button>
                       </div>
                     </div>
@@ -958,46 +1028,74 @@ export default function PostViewPage({ initialPost, notFound }) {
               </div>
             )}
 
-            {/* Inline composer (always on this page; feels like “reply in comments”) */}
-            <div
-              style={{
-                marginTop: 12,
-                borderRadius: 14,
-                border: '1px solid rgba(15,23,42,0.10)',
-                background: 'rgba(255,255,255,0.75)',
-                padding: 14,
-              }}
-            >
-              <div style={{ fontWeight: 900, color: '#263238', marginBottom: 8 }}>
-                Add a comment
-              </div>
-
-              <textarea
-                ref={replyBoxRef}
-                value={replyText}
-                onChange={(e) => setReplyText(e.target.value)}
-                rows={3}
-                className="w-full border rounded-md p-3"
-                placeholder="Write your comment…"
-              />
-
-              <div style={{ marginTop: 10, display: 'flex', justifyContent: 'flex-end', gap: 10 }}>
-                <button
-                  className="px-3 py-2 rounded-md border border-gray-200 bg-white/70 text-sm font-semibold text-gray-700 hover:bg-white"
-                  onClick={() => setReplyText('')}
-                  disabled={!replyText.trim() || replyBusy}
-                >
-                  Clear
-                </button>
-
+            {/* Composer entry (hidden until expanded + user chooses Reply/Add Comment) */}
+            <div style={{ marginTop: 12 }}>
+              {!commentsExpanded ? (
                 <button
                   className="px-4 py-2 rounded-md bg-[#ff8a65] text-white font-semibold disabled:opacity-50"
-                  onClick={submitInlineReply}
-                  disabled={!replyText.trim() || replyBusy}
+                  onClick={() => {
+                    setCommentsExpanded(true);
+                    setComposerOpen(true);
+                    scrollToComments();
+                    focusReplyBox();
+                  }}
+                  disabled={replyBusy}
                 >
-                  {replyBusy ? 'Posting…' : 'Comment'}
+                  Add a comment
                 </button>
-              </div>
+              ) : !composerOpen ? (
+                <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
+                  <button
+                    className="px-4 py-2 rounded-md border border-gray-200 bg-white/70 text-sm font-semibold text-gray-700 hover:bg-white"
+                    onClick={() => openComposer('')}
+                    disabled={replyBusy}
+                  >
+                    Add a comment
+                  </button>
+                </div>
+              ) : (
+                <div
+                  style={{
+                    borderRadius: 14,
+                    border: '1px solid rgba(15,23,42,0.10)',
+                    background: 'rgba(255,255,255,0.75)',
+                    padding: 14,
+                  }}
+                >
+                  <div style={{ fontWeight: 900, color: '#263238', marginBottom: 8 }}>Reply</div>
+
+                  <textarea
+                    ref={replyBoxRef}
+                    value={replyText}
+                    onChange={(e) => setReplyText(e.target.value)}
+                    rows={3}
+                    className="w-full border rounded-md p-3"
+                    placeholder="Write your reply…"
+                  />
+
+                  <div style={{ marginTop: 10, display: 'flex', justifyContent: 'flex-end', gap: 10 }}>
+                    <button
+                      className="px-3 py-2 rounded-md border border-gray-200 bg-white/70 text-sm font-semibold text-gray-700 hover:bg-white"
+                      onClick={() => {
+                        setComposerOpen(false);
+                        setReplyText('');
+                        setHighlightKey(null);
+                      }}
+                      disabled={replyBusy}
+                    >
+                      Cancel
+                    </button>
+
+                    <button
+                      className="px-4 py-2 rounded-md bg-[#ff8a65] text-white font-semibold disabled:opacity-50"
+                      onClick={submitInlineReply}
+                      disabled={!replyText.trim() || replyBusy}
+                    >
+                      {replyBusy ? 'Posting…' : 'Post reply'}
+                    </button>
+                  </div>
+                </div>
+              )}
             </div>
           </div>
         </GlassPanel>
@@ -1057,7 +1155,7 @@ export async function getServerSideProps(ctx) {
     authorAvatar = u?.avatarUrl || u?.image || null;
   }
 
-  // ✅ Enrich commenters (so avatars + names appear everywhere)
+  // Enrich commenters (avatars + names)
   const rawComments = safeJsonArray(row.comments);
   const commenterIds = Array.from(
     new Set(
