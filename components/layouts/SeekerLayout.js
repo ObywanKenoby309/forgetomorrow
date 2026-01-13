@@ -116,7 +116,7 @@ export default function SeekerLayout({
     const urlChrome = normalizeChrome(router.query?.chrome);
 
     // DB truth (what the account *is*)
-    const dbRole = = String(role || '').toLowerCase(); // seeker|coach|recruiter|site_admin|...
+    const dbRole = String(role || '').toLowerCase(); // seeker|coach|recruiter|site_admin|...
     const dbPlan = String(plan || '').toLowerCase(); // small|enterprise|null
     const isRecruiterAccount =
       dbRole === 'recruiter' ||
