@@ -53,6 +53,10 @@ export default function App({ Component, pageProps: { session, ...pageProps } })
   // ✅ NEW: Admin routes are INTERNAL (no external header/footer)
   const isAdminRoute = router.pathname.startsWith('/admin');
 
+  // ✅ NEW: Internal / Workspace routes are INTERNAL (no external header/footer)
+  const isInternalRoute = router.pathname.startsWith('/internal');
+  const isWorkspaceRoute = router.pathname.startsWith('/workspace');
+
   // Treat all Hearth routes as internal seeker-style pages
   const isSeekerRoute =
     router.pathname.startsWith('/seeker') ||
@@ -91,10 +95,12 @@ export default function App({ Component, pageProps: { session, ...pageProps } })
     router.pathname === '/support/chat' ||
     router.pathname.startsWith('/support/');
 
-  // ✅ UPDATED: admin routes are NOT public
+  // ✅ UPDATED: admin/internal/workspace routes are NOT public
   const isPublicByPath =
     !isRecruiterRoute &&
     !isAdminRoute &&
+    !isInternalRoute &&
+    !isWorkspaceRoute &&
     !isSeekerRoute &&
     !isCoachingRoute &&
     !isSettingsRoute &&
@@ -133,6 +139,8 @@ export default function App({ Component, pageProps: { session, ...pageProps } })
       (lastRoute.startsWith('/seeker') ||
         lastRoute.startsWith('/recruiter') ||
         lastRoute.startsWith('/admin') || // ✅ NEW
+        lastRoute.startsWith('/internal') || // ✅ NEW
+        lastRoute.startsWith('/workspace') || // ✅ NEW
         lastRoute.startsWith('/dashboard/coaching') ||
         lastRoute === '/coaching-dashboard' ||
         lastRoute === '/feed' ||
@@ -162,11 +170,16 @@ export default function App({ Component, pageProps: { session, ...pageProps } })
   const shouldLoadCookieScript =
     isBrowser && (hostname === 'forgetomorrow.com' || hostname.endsWith('.forgetomorrow.com'));
 
-  // Decide if we should show user wallpaper (internal only)
-  const shouldUseWallpaper = !isUniversalPage && !isPublicEffective && !!wallpaperUrl;
+  // ✅ Internal/workspace should NOT use wallpaper (presentation-safe, plain background)
+  const forcePlainInternalBg = isInternalRoute || isWorkspaceRoute;
 
-  // Decide if internal shell should be gray (when no wallpaper)
-  const shouldUseGrayInternalBg = !useForgeBackground && !isPublicEffective && !wallpaperUrl;
+  // Decide if we should show user wallpaper (internal only)
+  const shouldUseWallpaper =
+    !forcePlainInternalBg && !isUniversalPage && !isPublicEffective && !!wallpaperUrl;
+
+  // Decide if internal shell should be gray (when no wallpaper OR forced plain bg)
+  const shouldUseGrayInternalBg =
+    !useForgeBackground && !isPublicEffective && (forcePlainInternalBg || !wallpaperUrl);
 
   return (
     <>
@@ -202,7 +215,7 @@ export default function App({ Component, pageProps: { session, ...pageProps } })
           </>
         )}
 
-        {/* 2) User wallpaper for internal pages */}
+        {/* 2) User wallpaper for internal pages (disabled for internal/workspace) */}
         {shouldUseWallpaper && (
           <>
             <div

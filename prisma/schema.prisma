@@ -53,6 +53,22 @@ enum StaffRole {
   UX
 }
 
+// ✅ NEW: internal ForgeTomorrow departments (for Employee/Department gate)
+enum Department {
+  EXEC
+  ENGINEERING
+  PRODUCT
+  UX
+  CX
+  CS
+  SALES
+  MARKETING
+  FINANCE
+  LEGAL
+  OPERATIONS
+  SECURITY
+}
+
 // ✅ NEW: org lifecycle (optional but useful immediately)
 enum OrganizationStatus {
   PILOT
@@ -678,6 +694,10 @@ model User {
   stripeSubscriptionId String?  @unique
 
   accountKey String?
+
+  // ✅ NEW: internal staff gate (simple + DB-backed)
+  employee   Boolean     @default(false)
+  department Department?
 
   // ✅ NEW: org link via accountKey (no new User columns)
   organization Organization? @relation("OrganizationUsers", fields: [accountKey], references: [accountKey])

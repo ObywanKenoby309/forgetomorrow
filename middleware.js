@@ -48,6 +48,9 @@ const PUBLIC_PATHS = new Set([
   "/subprocessors",        // Subprocessor list
 ]);
 
+// ✅ Internal / Workspace routes (staff-only by login)
+const INTERNAL_PREFIXES = ["/internal", "/workspace"];
+
 function isPublicPath(pathname) {
   // Direct matches
   if (PUBLIC_PATHS.has(pathname)) return true;
@@ -73,6 +76,17 @@ function isPublicPath(pathname) {
   if (SIGNUPS_OPEN && pathname.startsWith("/signup")) return true;
 
   return false;
+}
+
+function isInternalPath(pathname) {
+  return INTERNAL_PREFIXES.some((p) => pathname === p || pathname.startsWith(p + "/"));
+}
+
+function hasNextAuthSession(req) {
+  // Covers both next-auth.session-token and __Secure-next-auth.session-token
+  return req.cookies
+    .getAll()
+    .some((cookie) => cookie.name.includes("next-auth.session-token"));
 }
 
 export async function middleware(req) {
@@ -116,11 +130,25 @@ export async function middleware(req) {
     return NextResponse.next();
   }
 
+  // ✅ 3b. Internal/workspace routes are always protected (independent of SITE_LOCK)
+  if (isInternalPath(pathname)) {
+    const hasSession = hasNextAuthSession(req);
+
+    if (!hasSession) {
+      const url = req.nextUrl.clone();
+      url.pathname = "/auth/signin";
+      url.searchParams.set("from", pathname);
+      return NextResponse.redirect(url, 302);
+    }
+
+    // Authenticated: allow for now.
+    // (We will tighten this to employee/department after Prisma + NextAuth session wiring.)
+    return NextResponse.next();
+  }
+
   // 4. SITE_LOCK protected mode
   if (SITE_LOCK) {
-    const hasSession = req.cookies
-      .getAll()
-      .some((cookie) => cookie.name.includes("next-auth.session-token"));
+    const hasSession = hasNextAuthSession(req);
 
     if (!hasSession) {
       const url = req.nextUrl.clone();
