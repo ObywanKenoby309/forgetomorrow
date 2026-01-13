@@ -10,6 +10,7 @@ import { prisma } from '@/lib/prisma';
 import SeekerLayout from '@/components/layouts/SeekerLayout';
 import RightRailPlacementManager from '@/components/ads/RightRailPlacementManager';
 import { useConnect } from '@/components/actions/useConnect';
+import QuickEmojiBar from '@/components/feed/QuickEmojiBar';
 
 // Helper: parse FeedPost.content into { body, attachments[] }
 function parseContent(content) {
@@ -267,15 +268,37 @@ export default function PostViewPage({ initialPost, notFound }) {
     }
   };
 
+  // ✅ helper: append emoji into the right composer
+  const appendEmojiToKey = (key, emoji) => {
+    try {
+      const e = String(emoji || '').trim();
+      if (!e) return;
+
+      setReplyTextByKey((prev) => {
+        const cur = String(prev?.[key] || '');
+        if (!cur) return { ...(prev || {}), [key]: e };
+
+        const endSpace = /\s$/.test(cur);
+        const next = endSpace ? `${cur}${e}` : `${cur} ${e}`;
+        return { ...(prev || {}), [key]: next };
+      });
+
+      focusReplyBox(key);
+    } catch {
+      // ignore
+    }
+  };
+
   const handleViewAllComments = () => {
     setCommentsExpanded(true);
     scrollToComments();
   };
 
+  // ✅ Root composer should NOT scroll the page down (this fixes the “drops too far” feeling)
   const openRootComposer = () => {
     setActiveReplyKey('root');
-    setCommentsExpanded(true);
-    scrollToComments();
+    // do NOT expand comments
+    // do NOT scroll to comments section
     focusReplyBox('root');
   };
 
@@ -828,6 +851,12 @@ export default function PostViewPage({ initialPost, notFound }) {
                   placeholder="Write your comment…"
                 />
 
+                {/* ✅ Emoji bar for root composer */}
+                <QuickEmojiBar
+                  onPick={(emoji) => appendEmojiToKey('root', emoji)}
+                  emojis={['👍', '🔥', '🎉', '👏', '❤️']}
+                />
+
                 <div style={{ marginTop: 10, display: 'flex', justifyContent: 'flex-end', gap: 10 }}>
                   <button
                     className="px-3 py-2 rounded-md border border-gray-200 bg-white/70 text-sm font-semibold text-gray-700 hover:bg-white"
@@ -1054,6 +1083,12 @@ export default function PostViewPage({ initialPost, notFound }) {
                             placeholder={`Reply to ${name}…`}
                           />
 
+                          {/* ✅ Emoji bar for this comment composer */}
+                          <QuickEmojiBar
+                            onPick={(emoji) => appendEmojiToKey(commentKey, emoji)}
+                            emojis={['👍', '🔥', '🎉', '👏', '❤️']}
+                          />
+
                           <div
                             style={{
                               marginTop: 10,
@@ -1065,7 +1100,10 @@ export default function PostViewPage({ initialPost, notFound }) {
                             <button
                               className="px-3 py-2 rounded-md border border-gray-200 bg-white/70 text-sm font-semibold text-gray-700 hover:bg-white"
                               onClick={() => {
-                                setReplyTextByKey((prev) => ({ ...(prev || {}), [commentKey]: '' }));
+                                setReplyTextByKey((prev) => ({
+                                  ...(prev || {}),
+                                  [commentKey]: '',
+                                }));
                                 closeComposer();
                               }}
                               disabled={replyBusyKey === commentKey}
