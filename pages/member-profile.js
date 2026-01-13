@@ -140,10 +140,9 @@ export default function MemberProfile({ user, primaryResume }) {
 
   let bannerBackgroundImage;
 
-  // Prefer user's wallpaper for a cinematic header, then fall back
-  if (wallpaperUrl) {
-    bannerBackgroundImage = `url(${wallpaperUrl})`;
-  } else if (corporateBannerLocked && corporateBannerKey) {
+  // ✅ FIX: Banner should reflect the user's BANNER (coverUrl or corporate),
+  // not their wallpaper. Wallpaper stays for page background elsewhere.
+  if (corporateBannerLocked && corporateBannerKey) {
     bannerBackgroundImage = `url(/corporate-banners/${corporateBannerKey}.png)`;
   } else if (coverUrl) {
     bannerBackgroundImage = `url(${coverUrl})`;
