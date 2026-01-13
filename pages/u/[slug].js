@@ -218,9 +218,8 @@ export default function PublicProfile({ user, primaryResume, effectiveVisibility
     bannerImage = `url(/corporate-banners/${corporateBannerKey}.png)`;
   } else if (coverUrl) {
     bannerImage = `url(${coverUrl})`;
-  } else if (wallpaperUrl) {
-    bannerImage = `url(${wallpaperUrl})`;
   } else {
+    // ✅ IMPORTANT: banner should NOT fall back to wallpaper
     bannerImage = 'linear-gradient(135deg, #112033, #455A64)';
   }
 
