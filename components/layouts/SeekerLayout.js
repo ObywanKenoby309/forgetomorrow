@@ -84,6 +84,11 @@ export default function SeekerLayout({
   leftWidth = 240,
   gap = 12,
   pad = 16,
+
+  // ✅ NEW (optional): DB-backed staff fields to pass through to sidebars
+  // If not provided yet, safe defaults keep Staff Tools hidden.
+  employee = false,
+  department = '',
 }) {
   const router = useRouter();
   const { isLoaded: planLoaded, plan, role } = usePlan();
@@ -111,7 +116,7 @@ export default function SeekerLayout({
     const urlChrome = normalizeChrome(router.query?.chrome);
 
     // DB truth (what the account *is*)
-    const dbRole = String(role || '').toLowerCase(); // seeker|coach|recruiter|site_admin|...
+    const dbRole = = String(role || '').toLowerCase(); // seeker|coach|recruiter|site_admin|...
     const dbPlan = String(plan || '').toLowerCase(); // small|enterprise|null
     const isRecruiterAccount =
       dbRole === 'recruiter' ||
@@ -172,21 +177,37 @@ export default function SeekerLayout({
         return {
           HeaderComp: CoachingHeader,
           SidebarComp: CoachingSidebar,
-          sidebarProps: { active: normalizedActiveNav },
+          sidebarProps: {
+            active: normalizedActiveNav,
+            employee,
+            department,
+          },
         };
 
       case 'recruiter-smb':
         return {
           HeaderComp: RecruiterHeader,
           SidebarComp: RecruiterSidebar,
-          sidebarProps: { variant: 'smb', active: normalizedActiveNav, counts: {} },
+          sidebarProps: {
+            variant: 'smb',
+            active: normalizedActiveNav,
+            counts: {},
+            employee,
+            department,
+          },
         };
 
       case 'recruiter-ent':
         return {
           HeaderComp: RecruiterHeader,
           SidebarComp: RecruiterSidebar,
-          sidebarProps: { variant: 'enterprise', active: normalizedActiveNav, counts: {} },
+          sidebarProps: {
+            variant: 'enterprise',
+            active: normalizedActiveNav,
+            counts: {},
+            employee,
+            department,
+          },
         };
 
       case 'seeker':
@@ -194,10 +215,15 @@ export default function SeekerLayout({
         return {
           HeaderComp: SeekerHeader,
           SidebarComp: SeekerSidebar,
-          sidebarProps: { active: normalizedActiveNav, counts: seekerCounts },
+          sidebarProps: {
+            active: normalizedActiveNav,
+            counts: seekerCounts,
+            employee,
+            department,
+          },
         };
     }
-  }, [chromeMode, normalizedActiveNav, seekerCounts]);
+  }, [chromeMode, normalizedActiveNav, seekerCounts, employee, department]);
 
   // ---- WALLPAPER / BACKGROUND ----
   const { wallpaperUrl } = useUserWallpaper();

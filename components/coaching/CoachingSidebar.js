@@ -119,7 +119,14 @@ export default function CoachingSidebar({
     signal: 0,
     feed: 0,
   },
+
+  // ✅ NEW: DB-backed staff fields (from session/user)
+  employee = false,
+  department = '',
 }) {
+  const dept = String(department || '').trim().toLowerCase();
+  const staffAccess = employee === true && dept.length > 0;
+
   return (
     <nav
       aria-label="Coach navigation"
@@ -243,6 +250,18 @@ export default function CoachingSidebar({
         label="The Hearth"
         active={active === 'hearth'}
       />
+
+      {/* ✅ NEW: Staff tools (DB-backed via employee + department) */}
+      {staffAccess ? (
+        <>
+          <SectionLabel>Staff Tools</SectionLabel>
+          <NavItem
+            href="/internal/dashboard"
+            label="Forge Workspace"
+            active={active === 'forge-workspace'}
+          />
+        </>
+      ) : null}
     </nav>
   );
 }

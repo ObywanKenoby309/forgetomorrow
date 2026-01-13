@@ -35,6 +35,10 @@ export default function CoachingLayout({
   children,
   activeNav = 'overview', // ← keep receiving this
   sidebarInitialOpen, // ← and this
+
+  // ✅ NEW (optional): DB-backed staff fields to pass through to sidebar
+  employee = false,
+  department = '',
 }) {
   const defaultFromNav =
     {
@@ -132,7 +136,12 @@ export default function CoachingLayout({
           }}
         >
           {left || (
-            <CoachingSidebar initialOpen={sidebarInitialOpen} active={activeNav} />
+            <CoachingSidebar
+              initialOpen={sidebarInitialOpen}
+              active={activeNav}
+              employee={employee}
+              department={department}
+            />
           )}
         </aside>
 
@@ -285,7 +294,12 @@ export default function CoachingLayout({
             </div>
 
             {left || (
-              <CoachingSidebar initialOpen={sidebarInitialOpen} active={activeNav} />
+              <CoachingSidebar
+                initialOpen={sidebarInitialOpen}
+                active={activeNav}
+                employee={employee}
+                department={department}
+              />
             )}
           </div>
         </div>

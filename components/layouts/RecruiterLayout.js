@@ -71,6 +71,10 @@ export default function RecruiterLayout({
   counts,
   initialOpen,
   activeNav = 'dashboard',
+
+  // ✅ NEW (optional): DB-backed staff fields to pass through to sidebar
+  employee = false,
+  department = '',
 }) {
   const router = useRouter();
   const hasRight = Boolean(right);
@@ -227,6 +231,8 @@ export default function RecruiterLayout({
             variant={resolvedVariant}
             counts={counts}
             initialOpen={initialOpen}
+            employee={employee}
+            department={department}
           />
         </aside>
 
@@ -270,7 +276,11 @@ export default function RecruiterLayout({
 
       <SupportFloatingButton />
 
-      <MobileBottomBar isMobile={isMobile} chromeMode={chromeMode} onOpenTools={() => setMobileToolsOpen(true)} />
+      <MobileBottomBar
+        isMobile={isMobile}
+        chromeMode={chromeMode}
+        onOpenTools={() => setMobileToolsOpen(true)}
+      />
 
       {isMobile && mobileToolsOpen && (
         <div
@@ -346,6 +356,8 @@ export default function RecruiterLayout({
               variant={resolvedVariant}
               counts={counts}
               initialOpen={initialOpen}
+              employee={employee}
+              department={department}
             />
           </div>
         </div>

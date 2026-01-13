@@ -112,7 +112,17 @@ function SectionLabel({ children }) {
 export default function SeekerSidebar({
   active = '',
   counts = { connections: 0, signal: 0, feed: 0 },
+
+  // ✅ NEW: DB-backed staff fields (from session/user)
+  employee = false,
+  department = '',
 }) {
+  const dept = String(department || '').trim().toLowerCase();
+
+  // ✅ v1 rule: must be an employee AND have a department value
+  // (You can tighten to an allowlist later; keeping it minimal + safe.)
+  const staffAccess = employee === true && dept.length > 0;
+
   return (
     <nav
       aria-label="Seeker navigation"
@@ -160,35 +170,31 @@ export default function SeekerSidebar({
 
       {/* Tools */}
       <SectionLabel>Tools</SectionLabel>
-      <NavItem
-        href="/seeker-dashboard"
-        label="Dashboard"
-        active={active === 'dashboard'}
-      />
-      <NavItem
-        href="/seeker/calendar"
-        label="Calendar"
-        active={active === 'calendar'}
-      />
+      <NavItem href="/seeker-dashboard" label="Dashboard" active={active === 'dashboard'} />
+      <NavItem href="/seeker/calendar" label="Calendar" active={active === 'calendar'} />
       <NavItem
         href="/anvil"
         label="The Anvil"
         active={active === 'anvil' || active === 'roadmap'}
       />
-      <NavItem
-        href="/resume-cover"
-        label="Creator"
-        active={active === 'resume-cover'}
-      />
+      <NavItem href="/resume-cover" label="Creator" active={active === 'resume-cover'} />
       <NavItem href="/jobs" label="Pipeline" active={active === 'jobs'} />
 
       {/* Resources */}
       <SectionLabel>Resources</SectionLabel>
-      <NavItem
-        href="/the-hearth"
-        label="The Hearth"
-        active={active === 'the-hearth'}
-      />
+      <NavItem href="/the-hearth" label="The Hearth" active={active === 'the-hearth'} />
+
+      {/* ✅ NEW: Staff tools (DB-backed via employee + department) */}
+      {staffAccess ? (
+        <>
+          <SectionLabel>Staff Tools</SectionLabel>
+          <NavItem
+            href="/internal/dashboard"
+            label="Forge Workspace"
+            active={active === 'forge-workspace'}
+          />
+        </>
+      ) : null}
     </nav>
   );
 }

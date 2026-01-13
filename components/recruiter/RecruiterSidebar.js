@@ -115,6 +115,10 @@ export default function RecruiterSidebar({
   role: roleProp,
   variant,
   counts = { connections: 0, signal: 0, feed: 0 },
+
+  // ✅ NEW: DB-backed staff fields (from session/user)
+  employee = false,
+  department = '',
 }) {
   const { isEnterprise: planIsEnterprise, can, role: ctxRole } = usePlan();
 
@@ -124,6 +128,9 @@ export default function RecruiterSidebar({
 
   const chromeRecruiter = isEnterprise ? 'recruiter-ent' : 'recruiter-smb';
   const canSeeSettings = can('recruiter.settings.view');
+
+  const dept = String(department || '').trim().toLowerCase();
+  const staffAccess = employee === true && dept.length > 0;
 
   return (
     <nav
@@ -255,6 +262,18 @@ export default function RecruiterSidebar({
         label="The Hearth"
         active={active === 'hearth'}
       />
+
+      {/* ✅ NEW: Staff tools (DB-backed via employee + department) */}
+      {staffAccess ? (
+        <>
+          <SectionLabel>Staff Tools</SectionLabel>
+          <NavItem
+            href="/internal/dashboard"
+            label="Forge Workspace"
+            active={active === 'forge-workspace'}
+          />
+        </>
+      ) : null}
     </nav>
   );
 }
