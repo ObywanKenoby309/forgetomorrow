@@ -140,6 +140,20 @@ function stateLabelForDisplay(state, viewKind) {
   return String(state || '').replaceAll('_', ' ');
 }
 
+function isInCurrentMonth(dateValue) {
+  const d = new Date(dateValue);
+  if (!d || Number.isNaN(d.getTime())) return false;
+  const now = new Date();
+  return d.getFullYear() === now.getFullYear() && d.getMonth() === now.getMonth();
+}
+
+function avgCompletedThisMonthMins(list) {
+  const doneThisMonth = (list || []).filter((t) => t?.completedAt && isInCurrentMonth(t.completedAt));
+  if (!doneThisMonth.length) return 0;
+  const total = doneThisMonth.map((t) => calcMetrics(t).createdToCompletedMins).reduce((a, b) => a + b, 0);
+  return Math.round(total / doneThisMonth.length);
+}
+
 export default function InternalDashboard({ employee, department, currentUserKey, currentUserName }) {
   const tickets = useMemo(() => getMockTickets(), []);
 
@@ -174,15 +188,9 @@ export default function InternalDashboard({ employee, department, currentUserKey
   const queueTicketsOpen = useMemo(() => queueTicketsAll.filter((t) => isActiveState(t.state)), [queueTicketsAll]);
 
   // Split: incidents vs sctasks (mock-safe)
-  const incidentsAll = useMemo(
-    () => queueTicketsAll.filter((t) => getTicketType(t) === 'incident'),
-    [queueTicketsAll]
-  );
+  const incidentsAll = useMemo(() => queueTicketsAll.filter((t) => getTicketType(t) === 'incident'), [queueTicketsAll]);
 
-  const incidentsOpen = useMemo(
-    () => incidentsAll.filter((t) => isActiveState(t.state)),
-    [incidentsAll]
-  );
+  const incidentsOpen = useMemo(() => incidentsAll.filter((t) => isActiveState(t.state)), [incidentsAll]);
 
   const sctasksAll = useMemo(() => {
     const list = queueTicketsAll.filter((t) => {
@@ -210,17 +218,14 @@ export default function InternalDashboard({ employee, department, currentUserKey
   }
 
   // INCIDENT KPIs
-  const incAssignedToMe = useMemo(() => buildAssignedToMe(incidentsOpen), [incidentsOpen, currentUserKey, currentUserName]);
-
-  const incUnassigned = useMemo(
-    () => incidentsOpen.filter((t) => !String(getAssigneeKey(t) || '').trim()),
-    [incidentsOpen]
+  const incAssignedToMe = useMemo(
+    () => buildAssignedToMe(incidentsOpen),
+    [incidentsOpen, currentUserKey, currentUserName]
   );
 
-  const incOnHold = useMemo(
-    () => incidentsOpen.filter((t) => t.state === TICKET_STATES.ON_HOLD),
-    [incidentsOpen]
-  );
+  const incUnassigned = useMemo(() => incidentsOpen.filter((t) => !String(getAssigneeKey(t) || '').trim()), [incidentsOpen]);
+
+  const incOnHold = useMemo(() => incidentsOpen.filter((t) => t.state === TICKET_STATES.ON_HOLD), [incidentsOpen]);
 
   const incAging = useMemo(() => {
     const now = Date.now();
@@ -247,18 +252,20 @@ export default function InternalDashboard({ employee, department, currentUserKey
     return Math.round((reopenedCount / closedIncidents.length) * 100);
   }, [incidentsAll]);
 
+  // ✅ NEW: Avg Resolution Time (Incidents) — completed THIS MONTH (queue-scoped)
+  const avgResolutionThisMonthIncidents = useMemo(() => {
+    return avgCompletedThisMonthMins(incidentsAll);
+  }, [incidentsAll]);
+
   // SCTASK KPIs (pending instead of on hold, no reopen metric)
-  const scAssignedToMe = useMemo(() => buildAssignedToMe(sctasksOpen), [sctasksOpen, currentUserKey, currentUserName]);
-
-  const scUnassigned = useMemo(
-    () => sctasksOpen.filter((t) => !String(getAssigneeKey(t) || '').trim()),
-    [sctasksOpen]
+  const scAssignedToMe = useMemo(
+    () => buildAssignedToMe(sctasksOpen),
+    [sctasksOpen, currentUserKey, currentUserName]
   );
 
-  const scPending = useMemo(
-    () => sctasksOpen.filter((t) => t.state === TICKET_STATES.ON_HOLD),
-    [sctasksOpen]
-  );
+  const scUnassigned = useMemo(() => sctasksOpen.filter((t) => !String(getAssigneeKey(t) || '').trim()), [sctasksOpen]);
+
+  const scPending = useMemo(() => sctasksOpen.filter((t) => t.state === TICKET_STATES.ON_HOLD), [sctasksOpen]);
 
   const scAging = useMemo(() => {
     const now = Date.now();
@@ -270,7 +277,12 @@ export default function InternalDashboard({ employee, department, currentUserKey
     });
   }, [sctasksOpen]);
 
-  // Avg Time to Resolve (queue-scoped) from completed tickets in this queue (incidents only)
+  // ✅ NEW: Avg Fulfillment Time (SCTASKs) — completed THIS MONTH (queue-scoped)
+  const avgFulfillmentThisMonthSctasks = useMemo(() => {
+    return avgCompletedThisMonthMins(sctasksAll);
+  }, [sctasksAll]);
+
+  // Avg Time to Resolve (queue-scoped) from completed tickets in this queue (incidents only) — legacy footer metric
   const avgToResolveIncidents = useMemo(() => {
     const done = incidentsAll.filter((t) => t.completedAt);
     if (!done.length) return 0;
@@ -306,9 +318,7 @@ export default function InternalDashboard({ employee, department, currentUserKey
     const requestCount = open.filter((t) => getTicketType(t) === 'request').length;
 
     // If mock has no true sctasks, show requests as sctasks for this UI draft
-    const sctaskCount = hasRealSctasks
-      ? open.filter((t) => getTicketType(t) === 'sctask').length
-      : requestCount;
+    const sctaskCount = hasRealSctasks ? open.filter((t) => getTicketType(t) === 'sctask').length : requestCount;
 
     return { incidents: incidentCount, requests: requestCount, sctasks: sctaskCount };
   }, [tickets, hasRealSctasks]);
@@ -390,7 +400,7 @@ export default function InternalDashboard({ employee, department, currentUserKey
           style={{
             display: 'grid',
             gap: 12,
-            gridTemplateColumns: 'repeat(6, minmax(0, 1fr))',
+            gridTemplateColumns: 'repeat(7, minmax(0, 1fr))',
           }}
         >
           <KPI label="Assigned" value={incAssignedToMe.length} sub={getQueueLabel(selectedQueue)} />
@@ -399,6 +409,8 @@ export default function InternalDashboard({ employee, department, currentUserKey
           <KPI label="On hold" value={incOnHold.length} sub="Open" />
           <KPI label="Aging" value={incAging.length} sub="> 7 days" />
           <KPI label="Reopen" value={incReopenRate === null ? '—' : `${incReopenRate}%`} sub={incReopenRate === null ? 'Later' : 'Rate'} />
+          {/* ✅ NEW */}
+          <KPI label="Avg resolution time" value={humanDurationMinutes(avgResolutionThisMonthIncidents)} sub="(This month)" />
         </div>
       </section>
 
@@ -410,7 +422,7 @@ export default function InternalDashboard({ employee, department, currentUserKey
           style={{
             display: 'grid',
             gap: 12,
-            gridTemplateColumns: 'repeat(5, minmax(0, 1fr))',
+            gridTemplateColumns: 'repeat(6, minmax(0, 1fr))',
           }}
         >
           <KPI label="Assigned" value={scAssignedToMe.length} sub={getQueueLabel(selectedQueue)} />
@@ -418,6 +430,8 @@ export default function InternalDashboard({ employee, department, currentUserKey
           <KPI label="Unassigned" value={scUnassigned.length} sub="Open" />
           <KPI label="Pending" value={scPending.length} sub="Open" />
           <KPI label="Aging" value={scAging.length} sub="> 7 days" />
+          {/* ✅ NEW */}
+          <KPI label="Avg fulfillment time" value={humanDurationMinutes(avgFulfillmentThisMonthSctasks)} sub="(This month)" />
         </div>
       </section>
 
