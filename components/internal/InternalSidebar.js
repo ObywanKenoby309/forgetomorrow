@@ -42,7 +42,7 @@ function NavItem({ href, label, active, subtle }) {
     color: active ? '#fff' : subtle ? 'rgba(17,24,39,0.72)' : '#111827',
     background: active ? ORANGE : 'transparent',
     border: active ? '1px solid rgba(0,0,0,0.06)' : '1px solid transparent',
-    transition: 'background 120ms ease, color 120ms ease, transform 80ms ease',
+    transition: 'background 120ms ease, color 120ms ease',
   };
 
   return (
@@ -51,7 +51,7 @@ function NavItem({ href, label, active, subtle }) {
       style={base}
       aria-current={active ? 'page' : undefined}
       onMouseEnter={(e) => {
-        if (!active) e.currentTarget.style.background = 'rgba(255,112,67,0.08)';
+        if (!active) e.currentTarget.style.background = subtle ? 'rgba(17,24,39,0.04)' : 'rgba(255,112,67,0.08)';
       }}
       onMouseLeave={(e) => {
         if (!active) e.currentTarget.style.background = 'transparent';
@@ -65,7 +65,10 @@ function NavItem({ href, label, active, subtle }) {
 
 export default function InternalSidebar({ active = 'dashboard', hat = 'seeker' }) {
   return (
-    <nav aria-label="Employee Suite navigation" style={{ ...CARD, padding: 12, display: 'grid', gap: 6 }}>
+    <nav
+      aria-label="Employee Suite navigation"
+      style={{ ...CARD, padding: 12, display: 'grid', gap: 6 }}
+    >
       <SectionLabel>Employee Suite</SectionLabel>
 
       {/* ✅ IMPORTANT: always allow return to Dashboard */}
@@ -77,7 +80,12 @@ export default function InternalSidebar({ active = 'dashboard', hat = 'seeker' }
       <NavItem href="/internal/reports" label="Reports" active={active === 'reports'} />
 
       <SectionLabel>Forge Site</SectionLabel>
-      <NavItem href={`/seeker-dashboard?chrome=${encodeURIComponent(hat)}`} label="Open Site" active={false} subtle />
+      <NavItem
+        href={`/seeker-dashboard?chrome=${encodeURIComponent(hat)}`}
+        label="Open Site"
+        active={false}
+        subtle
+      />
     </nav>
   );
 }

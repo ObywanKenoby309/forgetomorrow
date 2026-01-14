@@ -24,23 +24,55 @@ const ORANGE = '#FF7043';
 
 function KPI({ label, value, sub }) {
   return (
-    <div style={{ ...CARD, padding: 12, minWidth: 0 }}>
+    <div
+      style={{
+        ...CARD,
+        padding: '10px 10px',
+        minWidth: 0,
+        textAlign: 'center',
+      }}
+    >
       <div
         style={{
-          fontSize: 11,
-          fontWeight: 900,
+          fontSize: 10,
+          fontWeight: 950,
           color: 'rgba(17,24,39,0.55)',
-          letterSpacing: '0.10em',
+          letterSpacing: '0.12em',
           textTransform: 'uppercase',
+          whiteSpace: 'nowrap',
+          overflow: 'hidden',
+          textOverflow: 'ellipsis',
         }}
+        title={label}
       >
         {label}
       </div>
-      <div style={{ marginTop: 6, fontSize: 22, fontWeight: 950, color: '#111827', lineHeight: 1.1 }}>
+      <div
+        style={{
+          marginTop: 4,
+          fontSize: 20,
+          fontWeight: 950,
+          color: '#111827',
+          lineHeight: 1.05,
+          whiteSpace: 'nowrap',
+        }}
+      >
         {value}
       </div>
       {sub ? (
-        <div style={{ marginTop: 6, fontSize: 12, fontWeight: 800, color: 'rgba(17,24,39,0.60)' }}>
+        <div
+          style={{
+            marginTop: 4,
+            fontSize: 11,
+            fontWeight: 850,
+            color: 'rgba(17,24,39,0.55)',
+            lineHeight: 1.2,
+            whiteSpace: 'nowrap',
+            overflow: 'hidden',
+            textOverflow: 'ellipsis',
+          }}
+          title={sub}
+        >
           {sub}
         </div>
       ) : null}
@@ -238,124 +270,99 @@ export default function InternalDashboard({ employee, department, currentUserKey
     return { incidents: incidents.length, requests: requests.length };
   }, [tickets]);
 
+  const queueLabel = getQueueLabel(selectedQueue);
+
   return (
     <InternalLayoutPlain
       activeNav="dashboard"
       headerTitle="Employee Suite"
-      headerSubtitle="Queue Management (UI preview — mock data)"
+      headerSubtitle=""
       employee={employee}
       department={department}
       initialHat="seeker"
     >
-      {/* TOP STRIP: Queue selector + quick context */}
-      <section style={{ ...CARD, padding: 14, minWidth: 0 }}>
+      {/* TOP STRIP: Queue selector (tight, centered, less noise) */}
+      <section style={{ ...CARD, padding: 12, minWidth: 0 }}>
         <div
           style={{
             display: 'flex',
             alignItems: 'center',
-            justifyContent: 'space-between',
-            gap: 12,
+            justifyContent: 'center',
+            gap: 10,
             flexWrap: 'wrap',
           }}
         >
-          <div style={{ minWidth: 0 }}>
-            <div style={{ fontSize: 16, fontWeight: 950, color: '#111827' }}>Dashboard</div>
-            <div style={{ marginTop: 4, fontSize: 12, fontWeight: 800, color: 'rgba(17,24,39,0.60)' }}>
-              All KPI cards below are based on the selected queue.
-            </div>
-          </div>
+          <div style={{ fontSize: 12, fontWeight: 950, color: 'rgba(17,24,39,0.70)' }}>Queue</div>
 
-          <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap', justifyContent: 'flex-end' }}>
-            <div style={{ fontSize: 12, fontWeight: 900, color: 'rgba(17,24,39,0.70)' }}>In queue</div>
-            <select
-              value={selectedQueue}
-              onChange={(e) => setSelectedQueue(e.target.value)}
-              aria-label="Select queue"
-              style={{
-                border: '1px solid rgba(17,24,39,0.18)',
-                borderRadius: 12,
-                padding: '8px 10px',
-                fontSize: 13,
-                fontWeight: 900,
-                background: '#fff',
-                cursor: 'pointer',
-                minWidth: 220,
-              }}
-            >
-              {queues.map((q) => (
-                <option key={q} value={q}>
-                  {getQueueLabel(q)}
-                </option>
-              ))}
-            </select>
+          <select
+            value={selectedQueue}
+            onChange={(e) => setSelectedQueue(e.target.value)}
+            aria-label="Select queue"
+            style={{
+              border: '1px solid rgba(17,24,39,0.18)',
+              borderRadius: 12,
+              padding: '8px 10px',
+              fontSize: 13,
+              fontWeight: 900,
+              background: '#fff',
+              cursor: 'pointer',
+              minWidth: 240,
+              height: 40,
+            }}
+          >
+            {queues.map((q) => (
+              <option key={q} value={q}>
+                {getQueueLabel(q)}
+              </option>
+            ))}
+          </select>
 
-            <a
-              href="/internal/tickets/new"
-              style={{
-                textDecoration: 'none',
-                background: ORANGE,
-                color: '#fff',
-                fontWeight: 950,
-                padding: '9px 12px',
-                borderRadius: 12,
-                border: '1px solid rgba(0,0,0,0.06)',
-                boxShadow: '0 10px 18px rgba(0,0,0,0.08)',
-                whiteSpace: 'nowrap',
-              }}
-            >
-              Create Ticket
-            </a>
-          </div>
+          <a
+            href="/internal/tickets/new"
+            style={{
+              textDecoration: 'none',
+              background: ORANGE,
+              color: '#fff',
+              fontWeight: 950,
+              padding: '0 12px',
+              height: 40,
+              display: 'inline-flex',
+              alignItems: 'center',
+              borderRadius: 12,
+              border: '1px solid rgba(0,0,0,0.06)',
+              boxShadow: '0 10px 18px rgba(0,0,0,0.08)',
+              whiteSpace: 'nowrap',
+            }}
+          >
+            Create Ticket
+          </a>
         </div>
       </section>
 
-      {/* KPI GRID (queue-scoped) */}
+      {/* KPI GRID — FORCE SINGLE ROW ON DESKTOP */}
       <div
         style={{
           display: 'grid',
-          gap: 12,
-          gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))',
+          gap: 10,
+          alignItems: 'stretch',
+          gridTemplateColumns: 'repeat(6, minmax(120px, 1fr))',
         }}
       >
-        <KPI
-          label="Assigned to me"
-          value={assignedToMe.length}
-          sub={`Within ${getQueueLabel(selectedQueue)}`}
-        />
-        <KPI
-          label="In queue"
-          value={queueTicketsOpen.length}
-          sub="Open tickets in selected queue"
-        />
-        <KPI
-          label="Unassigned"
-          value={unassigned.length}
-          sub="Open + no assignee"
-        />
-        <KPI
-          label="On hold"
-          value={onHold.length}
-          sub="Open + On Hold state"
-        />
-        <KPI
-          label="Older than 7 days"
-          value={olderThan7Days.length}
-          sub="Open + created > 7d"
-        />
-        <KPI
-          label="Reopen rate"
-          value={reopenRate === null ? '—' : `${reopenRate}%`}
-          sub={reopenRate === null ? 'Will compute from DB later' : 'Queue-scoped (closed tickets)'}
-        />
+        <KPI label="Assigned" value={assignedToMe.length} sub={queueLabel} />
+        <KPI label="Open" value={queueTicketsOpen.length} sub={queueLabel} />
+        <KPI label="Unassigned" value={unassigned.length} sub="Open" />
+        <KPI label="On hold" value={onHold.length} sub="Open" />
+        <KPI label="Aging" value={olderThan7Days.length} sub="> 7 days" />
+        <KPI label="Reopen" value={reopenRate === null ? '—' : `${reopenRate}%`} sub={reopenRate === null ? 'Later' : 'Closed'} />
       </div>
 
       {/* MAIN GRID: Recent (queue) + Org-wide CTAs */}
       <div style={{ display: 'grid', gridTemplateColumns: 'minmax(0, 1fr) 360px', gap: 12 }}>
         {/* Recent tickets in selected queue */}
         <section style={{ ...CARD, padding: 14, minWidth: 0 }}>
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10 }}>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10, flexWrap: 'wrap' }}>
             <div style={{ fontSize: 16, fontWeight: 950, color: '#111827' }}>
-              Recent activity • {getQueueLabel(selectedQueue)}
+              Recent • {queueLabel}
             </div>
 
             <a
@@ -373,7 +380,7 @@ export default function InternalDashboard({ employee, department, currentUserKey
               }}
               aria-label="View tickets for selected queue"
             >
-              View queue tickets
+              View queue
             </a>
           </div>
 
@@ -384,9 +391,9 @@ export default function InternalDashboard({ employee, department, currentUserKey
                   key={t.id}
                   href={`/internal/tickets/${encodeURIComponent(t.id)}`}
                   title={`${t.id} • ${t.title}`}
-                  meta={`${String(t.type || '').toUpperCase()} • ${t.priority} • ${getQueueLabel(t.queueKey)} • ${
-                    t.state
-                  } • Updated ${new Date(t.updatedAt || t.createdAt).toLocaleString()}`}
+                  meta={`${String(t.type || '').toUpperCase()} • ${t.priority} • ${getQueueLabel(t.queueKey)} • ${t.state} • ${new Date(
+                    t.updatedAt || t.createdAt
+                  ).toLocaleString()}`}
                 />
               ))
             ) : (
@@ -397,46 +404,77 @@ export default function InternalDashboard({ employee, department, currentUserKey
                   border: '1px dashed rgba(17,24,39,0.18)',
                   color: 'rgba(17,24,39,0.65)',
                   fontWeight: 800,
+                  textAlign: 'center',
                 }}
               >
-                No tickets found in this queue (mock).
+                No tickets in this queue (mock).
               </div>
             )}
           </div>
 
-          <div style={{ marginTop: 12, fontSize: 12, fontWeight: 800, color: 'rgba(17,24,39,0.60)' }}>
-            Active in queue:{' '}
-            <span style={{ color: '#111827', fontWeight: 950 }}>{assignedActive.length}</span> • Avg resolve:{' '}
-            <span style={{ color: '#111827', fontWeight: 950 }}>{humanDurationMinutes(avgToResolve)}</span>
+          <div
+            style={{
+              marginTop: 12,
+              fontSize: 12,
+              fontWeight: 850,
+              color: 'rgba(17,24,39,0.60)',
+              display: 'flex',
+              justifyContent: 'center',
+              gap: 12,
+              flexWrap: 'wrap',
+              textAlign: 'center',
+            }}
+          >
+            <span>
+              Active: <span style={{ color: '#111827', fontWeight: 950 }}>{assignedActive.length}</span>
+            </span>
+            <span style={{ color: 'rgba(17,24,39,0.35)' }}>•</span>
+            <span>
+              Avg resolve: <span style={{ color: '#111827', fontWeight: 950 }}>{humanDurationMinutes(avgToResolve)}</span>
+            </span>
           </div>
         </section>
 
         {/* Org-wide view cards */}
         <section style={{ ...CARD, padding: 14, minWidth: 0 }}>
-          <div style={{ fontSize: 16, fontWeight: 950, color: '#111827' }}>Org-wide views</div>
-          <div style={{ marginTop: 6, fontSize: 12, fontWeight: 800, color: 'rgba(17,24,39,0.60)' }}>
-            These links show the full lists across the organization (not tied to the selected queue).
+          <div style={{ fontSize: 16, fontWeight: 950, color: '#111827' }}>Org-wide</div>
+          <div style={{ marginTop: 6, fontSize: 12, fontWeight: 850, color: 'rgba(17,24,39,0.60)' }}>
+            Full lists (not queue-scoped)
           </div>
 
           <div style={{ marginTop: 12, display: 'grid', gap: 10 }}>
             <RowLink
               href={incidentsAllHref}
-              title="View All Incidents"
-              meta={`${orgCounts.incidents} open incidents (mock) • full org list`}
+              title="All Incidents"
+              meta={`${orgCounts.incidents} open • mock`}
             />
             <RowLink
               href={requestsAllHref}
-              title="View All Requests"
-              meta={`${orgCounts.requests} open requests (mock) • full org list`}
+              title="All Requests"
+              meta={`${orgCounts.requests} open • mock`}
             />
             <RowLink
               href="/internal/reports"
               title="Reports"
-              meta="Export-friendly metrics (phase build)"
+              meta="Metrics (phase build)"
             />
           </div>
         </section>
       </div>
+
+      {/* Responsive tweak: KPI row wraps on smaller screens */}
+      <style jsx>{`
+        @media (max-width: 1100px) {
+          div[style*='grid-template-columns: repeat(6'] {
+            grid-template-columns: repeat(3, minmax(140px, 1fr)) !important;
+          }
+        }
+        @media (max-width: 720px) {
+          div[style*='grid-template-columns: repeat(6'] {
+            grid-template-columns: repeat(2, minmax(140px, 1fr)) !important;
+          }
+        }
+      `}</style>
     </InternalLayoutPlain>
   );
 }

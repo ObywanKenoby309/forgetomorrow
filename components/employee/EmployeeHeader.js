@@ -15,38 +15,6 @@ function normalizeHat(input) {
   return 'seeker';
 }
 
-function NavLink({ href, label, active = false }) {
-  return (
-    <a
-      href={href}
-      style={{
-        textDecoration: 'none',
-        display: 'inline-flex',
-        alignItems: 'center',
-        height: 40,
-        padding: '0 12px',
-        borderRadius: 12,
-        fontSize: 13,
-        fontWeight: 900,
-        color: active ? ORANGE : '#111827',
-        background: active ? ORANGE_SOFT_BG : 'transparent',
-        border: active ? '1px solid rgba(255,112,67,0.18)' : '1px solid transparent',
-        whiteSpace: 'nowrap',
-        cursor: 'pointer',
-        transition: 'background 120ms ease, color 120ms ease, transform 80ms ease',
-      }}
-      onMouseEnter={(e) => {
-        e.currentTarget.style.background = active ? ORANGE_SOFT_BG : 'rgba(17,24,39,0.04)';
-      }}
-      onMouseLeave={(e) => {
-        e.currentTarget.style.background = active ? ORANGE_SOFT_BG : 'transparent';
-      }}
-    >
-      {label}
-    </a>
-  );
-}
-
 export default function EmployeeHeader({
   // Keep these props for later, but we won't render noisy subtitle blocks in the header bar
   headerTitle = 'Employee Suite',
@@ -54,8 +22,8 @@ export default function EmployeeHeader({
   employee = false,
   department = '',
 
-  // Routing state
-  active = 'dashboard', // 'dashboard' (for now)
+  // Routing state (kept for later; not used in the bar now)
+  active = 'dashboard',
 
   // Hat + actions
   hat = 'seeker',
@@ -78,9 +46,12 @@ export default function EmployeeHeader({
           borderBottom: BORDER,
         }}
       >
+        {/* ✅ Centered inner container so header content doesn't sprawl */}
         <div
           style={{
             width: '100%',
+            maxWidth: 1240,
+            margin: '0 auto',
             padding: '10px 14px',
             boxSizing: 'border-box',
           }}
@@ -184,21 +155,8 @@ export default function EmployeeHeader({
               </div>
             </div>
 
-            {/* MIDDLE: Minimal nav (don’t flood) */}
-            <nav
-              aria-label="Employee navigation"
-              style={{
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                gap: 6,
-                minWidth: 0,
-                overflow: 'hidden',
-              }}
-            >
-              <NavLink href="/internal/dashboard" label="Dashboard" active={active === 'dashboard'} />
-              {/* Intentionally NO extra links yet */}
-            </nav>
+            {/* ✅ MIDDLE: intentionally empty (no redundant dashboard link) */}
+            <div />
 
             {/* RIGHT: Hat + CTA + Tools (mobile) */}
             <div

@@ -85,30 +85,39 @@ export default function InternalLayoutPlain({
           active={activeNav === 'dashboard' ? 'dashboard' : undefined}
         />
 
-        {/* ✅ MAIN AREA (sidebar + content), padded like the site */}
+        {/* ✅ MAIN AREA wrapper: matches header max-width + centers (desktop), full-width (mobile) */}
         <div
           style={{
-            ...gridStyles,
-            gap: GRID_GAP,
-            padding: PAD,
-            alignItems: 'start',
-            boxSizing: 'border-box',
             width: '100%',
-            maxWidth: '100vw',
-            overflowX: 'hidden',
+            maxWidth: isMobile ? '100%' : 1240,
+            margin: isMobile ? 0 : '0 auto',
+            boxSizing: 'border-box',
           }}
         >
-          {/* LEFT */}
-          {!isMobile ? (
-            <aside style={{ gridArea: 'left', alignSelf: 'start', minWidth: 0 }}>
-              <InternalSidebar active={activeNav} hat={hat} />
-            </aside>
-          ) : null}
+          {/* ✅ MAIN AREA (sidebar + content), padded like the site */}
+          <div
+            style={{
+              ...gridStyles,
+              gap: GRID_GAP,
+              padding: PAD,
+              alignItems: 'start',
+              boxSizing: 'border-box',
+              width: '100%',
+              overflowX: 'hidden',
+            }}
+          >
+            {/* LEFT */}
+            {!isMobile ? (
+              <aside style={{ gridArea: 'left', alignSelf: 'start', minWidth: 0 }}>
+                <InternalSidebar active={activeNav} hat={hat} />
+              </aside>
+            ) : null}
 
-          {/* CONTENT */}
-          <main style={{ gridArea: 'content', minWidth: 0 }}>
-            <div style={{ display: 'grid', gap: GRID_GAP, minWidth: 0 }}>{children}</div>
-          </main>
+            {/* CONTENT */}
+            <main style={{ gridArea: 'content', minWidth: 0 }}>
+              <div style={{ display: 'grid', gap: GRID_GAP, minWidth: 0 }}>{children}</div>
+            </main>
+          </div>
         </div>
 
         {/* MOBILE TOOLS SHEET */}
