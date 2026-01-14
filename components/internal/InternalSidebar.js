@@ -65,21 +65,15 @@ function NavItem({ href, label, active, subtle }) {
 
 export default function InternalSidebar({ active = 'dashboard', hat = 'seeker' }) {
   return (
-    <nav aria-label="Internal navigation" style={{ ...CARD, padding: 12, display: 'grid', gap: 6 }}>
-      <SectionLabel>Workspace</SectionLabel>
-      <NavItem href="/internal/dashboard" label="Dashboard" active={active === 'dashboard'} />
+    <nav aria-label="Employee Suite navigation" style={{ ...CARD, padding: 12, display: 'grid', gap: 6 }}>
+      <SectionLabel>Employee Suite</SectionLabel>
       <NavItem href="/internal/tickets/new" label="Create Ticket" active={active === 'new'} />
-      <NavItem href="/internal/tickets" label="Tickets" active={active === 'tickets'} />
-      <NavItem href="/internal/queues" label="Queues" active={active === 'queues'} />
+      <NavItem href="/internal/tickets/mine" label="My Opened Tickets" active={active === 'mine'} />
+      <NavItem href="/internal/queues" label="Queue Management" active={active === 'queues'} />
       <NavItem href="/internal/reports" label="Reports" active={active === 'reports'} />
 
       <SectionLabel>Forge Site</SectionLabel>
       <NavItem href={`/seeker-dashboard?chrome=${encodeURIComponent(hat)}`} label="Open Site" active={false} subtle />
-      <NavItem href={`/feed?chrome=${encodeURIComponent(hat)}`} label="Community Feed" active={false} subtle />
-      <NavItem href={`/profile?chrome=${encodeURIComponent(hat)}`} label="Profile" active={false} subtle />
-      <NavItem href={`/jobs?chrome=${encodeURIComponent(hat)}`} label="Jobs Pipeline" active={false} subtle />
-      <NavItem href={`/resume-cover?chrome=${encodeURIComponent(hat)}`} label="Creator" active={false} subtle />
-      <NavItem href={`/anvil?chrome=${encodeURIComponent(hat)}`} label="The Anvil" active={false} subtle />
     </nav>
   );
 }
