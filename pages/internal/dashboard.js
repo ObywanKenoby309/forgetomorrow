@@ -37,8 +37,9 @@ function KPI({ label, value, sub }) {
           fontSize: 10,
           fontWeight: 950,
           color: 'rgba(17,24,39,0.55)',
-          letterSpacing: '0.12em',
+          letterSpacing: '0.14em',
           textTransform: 'uppercase',
+          lineHeight: 1.2,
           whiteSpace: 'nowrap',
           overflow: 'hidden',
           textOverflow: 'ellipsis',
@@ -47,26 +48,19 @@ function KPI({ label, value, sub }) {
       >
         {label}
       </div>
-      <div
-        style={{
-          marginTop: 4,
-          fontSize: 20,
-          fontWeight: 950,
-          color: '#111827',
-          lineHeight: 1.05,
-          whiteSpace: 'nowrap',
-        }}
-      >
+
+      <div style={{ marginTop: 6, fontSize: 22, fontWeight: 950, color: '#111827', lineHeight: 1 }}>
         {value}
       </div>
+
       {sub ? (
         <div
           style={{
-            marginTop: 4,
-            fontSize: 11,
-            fontWeight: 850,
-            color: 'rgba(17,24,39,0.55)',
-            lineHeight: 1.2,
+            marginTop: 6,
+            fontSize: 12,
+            fontWeight: 900,
+            color: 'rgba(17,24,39,0.60)',
+            lineHeight: 1.15,
             whiteSpace: 'nowrap',
             overflow: 'hidden',
             textOverflow: 'ellipsis',
@@ -87,7 +81,7 @@ function RowLink({ href, title, meta }) {
       style={{
         textDecoration: 'none',
         display: 'grid',
-        gap: 4,
+        gap: 6,
         padding: 12,
         borderRadius: 12,
         border: '1px solid rgba(17,24,39,0.10)',
@@ -95,8 +89,8 @@ function RowLink({ href, title, meta }) {
         color: '#111827',
       }}
     >
-      <div style={{ fontSize: 14, fontWeight: 950 }}>{title}</div>
-      <div style={{ fontSize: 12, fontWeight: 800, color: 'rgba(17,24,39,0.60)' }}>{meta}</div>
+      <div style={{ fontSize: 14, fontWeight: 950, lineHeight: 1.2 }}>{title}</div>
+      <div style={{ fontSize: 12, fontWeight: 850, color: 'rgba(17,24,39,0.60)', lineHeight: 1.2 }}>{meta}</div>
     </a>
   );
 }
@@ -118,20 +112,20 @@ function getAssigneeKey(t) {
   if (typeof t?.assignee === 'string') return t.assignee;
   if (t?.assignee && typeof t.assignee === 'object') return t.assignee?.name || '';
 
-  return (
-    t?.assigneeId ||
-    t?.assignedToId ||
-    t?.ownerId ||
-    t?.ownerEmail ||
-    ''
-  );
+  return t?.assigneeId || t?.assignedToId || t?.ownerId || t?.ownerEmail || '';
+}
+
+function rawType(t) {
+  return String(t?.type || '').toLowerCase().trim();
 }
 
 function getTicketType(t) {
-  const raw = String(t?.type || '').toLowerCase().trim();
-  if (raw === TICKET_TYPES.INCIDENT) return TICKET_TYPES.INCIDENT;
-  if (raw === TICKET_TYPES.REQUEST) return TICKET_TYPES.REQUEST;
-  return raw;
+  const raw = rawType(t);
+  if (raw === String(TICKET_TYPES?.INCIDENT || 'incident')) return 'incident';
+  if (raw === String(TICKET_TYPES?.REQUEST || 'request')) return 'request';
+  // support future types without breaking
+  if (raw === 'sctask' || raw === 'sc_task' || raw === 'sc-task') return 'sctask';
+  return raw || 'unknown';
 }
 
 function getQueueLabel(queueKey) {
@@ -140,14 +134,21 @@ function getQueueLabel(queueKey) {
   return hit?.name || String(queueKey || '').toUpperCase();
 }
 
+function stateLabelForDisplay(state, viewKind) {
+  // viewKind: 'incident' | 'sctask'
+  if (viewKind === 'sctask' && state === TICKET_STATES.ON_HOLD) return 'pending';
+  return String(state || '').replaceAll('_', ' ');
+}
+
 export default function InternalDashboard({ employee, department, currentUserKey, currentUserName }) {
   const tickets = useMemo(() => getMockTickets(), []);
 
+  // detect whether mock includes real sctasks; if not, treat requests as sctasks for this UI draft
+  const hasRealSctasks = useMemo(() => tickets.some((t) => getTicketType(t) === 'sctask'), [tickets]);
+
   // Build queue list from mock data (prefer QUEUES, fallback to discovered)
   const queues = useMemo(() => {
-    const fromConst = (QUEUES || [])
-      .map((q) => String(q?.key || '').trim())
-      .filter(Boolean);
+    const fromConst = (QUEUES || []).map((q) => String(q?.key || '').trim()).filter(Boolean);
 
     const discovered = new Set();
     tickets.forEach((t) => {
@@ -170,270 +171,376 @@ export default function InternalDashboard({ employee, department, currentUserKey
     [tickets, selectedQueue]
   );
 
-  const queueTicketsOpen = useMemo(
-    () => queueTicketsAll.filter((t) => isActiveState(t.state)),
+  const queueTicketsOpen = useMemo(() => queueTicketsAll.filter((t) => isActiveState(t.state)), [queueTicketsAll]);
+
+  // Split: incidents vs sctasks (mock-safe)
+  const incidentsAll = useMemo(
+    () => queueTicketsAll.filter((t) => getTicketType(t) === 'incident'),
     [queueTicketsAll]
   );
 
+  const incidentsOpen = useMemo(
+    () => incidentsAll.filter((t) => isActiveState(t.state)),
+    [incidentsAll]
+  );
+
+  const sctasksAll = useMemo(() => {
+    const list = queueTicketsAll.filter((t) => {
+      const tt = getTicketType(t);
+      if (tt === 'sctask') return true;
+      if (!hasRealSctasks && tt === 'request') return true; // draft mapping until mock adds real sctasks
+      return false;
+    });
+    return list;
+  }, [queueTicketsAll, hasRealSctasks]);
+
+  const sctasksOpen = useMemo(() => sctasksAll.filter((t) => isActiveState(t.state)), [sctasksAll]);
+
   // “Assigned to me” queue-scoped (match mock’s assignedTo.name)
-  const assignedToMe = useMemo(() => {
+  function buildAssignedToMe(openList) {
     const meKey = String(currentUserKey || '').trim().toLowerCase();
     const meName = String(currentUserName || '').trim().toLowerCase();
 
-    return queueTicketsOpen.filter((t) => {
+    return openList.filter((t) => {
       const assignee = String(getAssigneeKey(t) || '').trim().toLowerCase();
       if (!assignee) return false;
-
-      // If we have a name, match on name (mock realistic)
       if (meName) return assignee === meName;
-
-      // Otherwise fall back to key
       return !!meKey && assignee === meKey;
     });
-  }, [queueTicketsOpen, currentUserKey, currentUserName]);
+  }
 
-  const unassigned = useMemo(() => {
-    return queueTicketsOpen.filter((t) => {
-      const assignee = String(getAssigneeKey(t) || '').trim();
-      return !assignee;
-    });
-  }, [queueTicketsOpen]);
+  // INCIDENT KPIs
+  const incAssignedToMe = useMemo(() => buildAssignedToMe(incidentsOpen), [incidentsOpen, currentUserKey, currentUserName]);
 
-  const onHold = useMemo(() => {
-    return queueTicketsOpen.filter((t) => t.state === TICKET_STATES.ON_HOLD);
-  }, [queueTicketsOpen]);
+  const incUnassigned = useMemo(
+    () => incidentsOpen.filter((t) => !String(getAssigneeKey(t) || '').trim()),
+    [incidentsOpen]
+  );
 
-  const olderThan7Days = useMemo(() => {
+  const incOnHold = useMemo(
+    () => incidentsOpen.filter((t) => t.state === TICKET_STATES.ON_HOLD),
+    [incidentsOpen]
+  );
+
+  const incAging = useMemo(() => {
     const now = Date.now();
     const sevenDaysMs = 7 * 24 * 60 * 60 * 1000;
-    return queueTicketsOpen.filter((t) => {
+    return incidentsOpen.filter((t) => {
       const created = new Date(t.createdAt).getTime();
       if (!created || Number.isNaN(created)) return false;
       return now - created > sevenDaysMs;
     });
-  }, [queueTicketsOpen]);
+  }, [incidentsOpen]);
 
-  // Reopen rate (queue-scoped): your mock doesn't include reopen fields yet => keep placeholder
-  const reopenRate = useMemo(() => {
-    const hasSignal = queueTicketsAll.some((t) => typeof t?.reopenCount === 'number' || typeof t?.reopened === 'boolean');
+  const incReopenRate = useMemo(() => {
+    const closedIncidents = incidentsAll.filter((t) => isClosedState(t.state));
+    const hasSignal = closedIncidents.some((t) => typeof t?.reopenCount === 'number' || typeof t?.reopened === 'boolean');
     if (!hasSignal) return null;
+    if (!closedIncidents.length) return 0;
 
-    const closed = queueTicketsAll.filter((t) => isClosedState(t.state));
-    if (!closed.length) return 0;
-
-    const reopenedCount = closed.filter((t) => {
+    const reopenedCount = closedIncidents.filter((t) => {
       if (typeof t?.reopenCount === 'number') return t.reopenCount > 0;
       if (typeof t?.reopened === 'boolean') return t.reopened === true;
       return false;
     }).length;
 
-    return Math.round((reopenedCount / closed.length) * 100);
-  }, [queueTicketsAll]);
+    return Math.round((reopenedCount / closedIncidents.length) * 100);
+  }, [incidentsAll]);
 
-  // “Assigned/Active” queue-scoped (classic state buckets)
-  const assignedActive = useMemo(() => {
-    return queueTicketsOpen.filter(
-      (t) =>
-        t.state === TICKET_STATES.ASSIGNED ||
-        t.state === TICKET_STATES.IN_PROGRESS ||
-        t.state === TICKET_STATES.ON_HOLD
-    );
-  }, [queueTicketsOpen]);
+  // SCTASK KPIs (pending instead of on hold, no reopen metric)
+  const scAssignedToMe = useMemo(() => buildAssignedToMe(sctasksOpen), [sctasksOpen, currentUserKey, currentUserName]);
 
-  // Avg Time to Resolve (queue-scoped) from completed tickets in this queue
-  const avgToResolve = useMemo(() => {
-    const done = queueTicketsAll.filter((t) => t.completedAt);
+  const scUnassigned = useMemo(
+    () => sctasksOpen.filter((t) => !String(getAssigneeKey(t) || '').trim()),
+    [sctasksOpen]
+  );
+
+  const scPending = useMemo(
+    () => sctasksOpen.filter((t) => t.state === TICKET_STATES.ON_HOLD),
+    [sctasksOpen]
+  );
+
+  const scAging = useMemo(() => {
+    const now = Date.now();
+    const sevenDaysMs = 7 * 24 * 60 * 60 * 1000;
+    return sctasksOpen.filter((t) => {
+      const created = new Date(t.createdAt).getTime();
+      if (!created || Number.isNaN(created)) return false;
+      return now - created > sevenDaysMs;
+    });
+  }, [sctasksOpen]);
+
+  // Avg Time to Resolve (queue-scoped) from completed tickets in this queue (incidents only)
+  const avgToResolveIncidents = useMemo(() => {
+    const done = incidentsAll.filter((t) => t.completedAt);
     if (!done.length) return 0;
-    const mins = done
-      .map((t) => calcMetrics(t).createdToCompletedMins)
-      .reduce((a, b) => a + b, 0);
+    const mins = done.map((t) => calcMetrics(t).createdToCompletedMins).reduce((a, b) => a + b, 0);
     return Math.round(mins / done.length);
-  }, [queueTicketsAll]);
+  }, [incidentsAll]);
 
-  // Recent tickets inside selected queue
-  const recentInQueue = useMemo(() => {
-    return queueTicketsAll
+  // Recent lists (queue scoped)
+  const recentIncidents = useMemo(() => {
+    return incidentsAll
       .slice()
       .sort((a, b) => new Date(b.updatedAt || b.createdAt).getTime() - new Date(a.updatedAt || a.createdAt).getTime())
-      .slice(0, 6);
-  }, [queueTicketsAll]);
+      .slice(0, 4);
+  }, [incidentsAll]);
+
+  const recentSctasks = useMemo(() => {
+    return sctasksAll
+      .slice()
+      .sort((a, b) => new Date(b.updatedAt || b.createdAt).getTime() - new Date(a.updatedAt || a.createdAt).getTime())
+      .slice(0, 4);
+  }, [sctasksAll]);
 
   // Org-wide CTAs (full lists)
   const incidentsAllHref = '/internal/tickets?type=incident';
   const requestsAllHref = '/internal/tickets?type=request';
+  const sctasksAllHref = '/internal/tickets?type=sctask';
 
-  // Optional org-wide open counts (NOT tied to queue)
+  // Org-wide open counts (NOT tied to queue)
   const orgCounts = useMemo(() => {
     const open = tickets.filter((t) => isActiveState(t.state));
-    const incidents = open.filter((t) => getTicketType(t) === TICKET_TYPES.INCIDENT);
-    const requests = open.filter((t) => getTicketType(t) === TICKET_TYPES.REQUEST);
-    return { incidents: incidents.length, requests: requests.length };
-  }, [tickets]);
+    const incidentCount = open.filter((t) => getTicketType(t) === 'incident').length;
 
-  const queueLabel = getQueueLabel(selectedQueue);
+    const requestCount = open.filter((t) => getTicketType(t) === 'request').length;
+
+    // If mock has no true sctasks, show requests as sctasks for this UI draft
+    const sctaskCount = hasRealSctasks
+      ? open.filter((t) => getTicketType(t) === 'sctask').length
+      : requestCount;
+
+    return { incidents: incidentCount, requests: requestCount, sctasks: sctaskCount };
+  }, [tickets, hasRealSctasks]);
 
   return (
     <InternalLayoutPlain
       activeNav="dashboard"
       headerTitle="Employee Suite"
-      headerSubtitle=""
+      headerSubtitle="Queue Management (UI preview — mock data)"
       employee={employee}
       department={department}
       initialHat="seeker"
     >
-      {/* TOP STRIP: Queue selector (tight, centered, less noise) */}
-      <section style={{ ...CARD, padding: 12, minWidth: 0 }}>
+      {/* TOP STRIP: Queue selector + Create Ticket (compact) */}
+      <section style={{ ...CARD, padding: 14, minWidth: 0 }}>
         <div
           style={{
             display: 'flex',
             alignItems: 'center',
-            justifyContent: 'center',
-            gap: 10,
+            justifyContent: 'flex-end',
+            gap: 12,
             flexWrap: 'wrap',
           }}
         >
-          <div style={{ fontSize: 12, fontWeight: 950, color: 'rgba(17,24,39,0.70)' }}>Queue</div>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
+            <div style={{ fontSize: 12, fontWeight: 950, color: 'rgba(17,24,39,0.65)' }}>Queue</div>
 
-          <select
-            value={selectedQueue}
-            onChange={(e) => setSelectedQueue(e.target.value)}
-            aria-label="Select queue"
-            style={{
-              border: '1px solid rgba(17,24,39,0.18)',
-              borderRadius: 12,
-              padding: '8px 10px',
-              fontSize: 13,
-              fontWeight: 900,
-              background: '#fff',
-              cursor: 'pointer',
-              minWidth: 240,
-              height: 40,
-            }}
-          >
-            {queues.map((q) => (
-              <option key={q} value={q}>
-                {getQueueLabel(q)}
-              </option>
-            ))}
-          </select>
+            <select
+              value={selectedQueue}
+              onChange={(e) => setSelectedQueue(e.target.value)}
+              aria-label="Select queue"
+              style={{
+                border: '1px solid rgba(17,24,39,0.18)',
+                borderRadius: 12,
+                padding: '8px 10px',
+                fontSize: 13,
+                fontWeight: 950,
+                background: '#fff',
+                cursor: 'pointer',
+                minWidth: 240,
+                height: 40,
+              }}
+            >
+              {queues.map((q) => (
+                <option key={q} value={q}>
+                  {getQueueLabel(q)}
+                </option>
+              ))}
+            </select>
 
-          <a
-            href="/internal/tickets/new"
-            style={{
-              textDecoration: 'none',
-              background: ORANGE,
-              color: '#fff',
-              fontWeight: 950,
-              padding: '0 12px',
-              height: 40,
-              display: 'inline-flex',
-              alignItems: 'center',
-              borderRadius: 12,
-              border: '1px solid rgba(0,0,0,0.06)',
-              boxShadow: '0 10px 18px rgba(0,0,0,0.08)',
-              whiteSpace: 'nowrap',
-            }}
-          >
-            Create Ticket
-          </a>
+            <a
+              href="/internal/tickets/new"
+              style={{
+                textDecoration: 'none',
+                background: ORANGE,
+                color: '#fff',
+                fontWeight: 950,
+                padding: '0 14px',
+                height: 40,
+                display: 'inline-flex',
+                alignItems: 'center',
+                borderRadius: 12,
+                border: '1px solid rgba(0,0,0,0.06)',
+                boxShadow: '0 10px 18px rgba(0,0,0,0.08)',
+                whiteSpace: 'nowrap',
+              }}
+            >
+              Create Ticket
+            </a>
+          </div>
         </div>
       </section>
 
-      {/* KPI GRID — FORCE SINGLE ROW ON DESKTOP */}
-      <div
-        style={{
-          display: 'grid',
-          gap: 10,
-          alignItems: 'stretch',
-          gridTemplateColumns: 'repeat(6, minmax(120px, 1fr))',
-        }}
-      >
-        <KPI label="Assigned" value={assignedToMe.length} sub={queueLabel} />
-        <KPI label="Open" value={queueTicketsOpen.length} sub={queueLabel} />
-        <KPI label="Unassigned" value={unassigned.length} sub="Open" />
-        <KPI label="On hold" value={onHold.length} sub="Open" />
-        <KPI label="Aging" value={olderThan7Days.length} sub="> 7 days" />
-        <KPI label="Reopen" value={reopenRate === null ? '—' : `${reopenRate}%`} sub={reopenRate === null ? 'Later' : 'Closed'} />
-      </div>
+      {/* INCIDENTS KPI ROW (single line) */}
+      <section style={{ ...CARD, padding: 14, minWidth: 0 }}>
+        <div style={{ fontSize: 14, fontWeight: 950, color: '#111827', marginBottom: 10 }}>Incidents</div>
 
-      {/* MAIN GRID: Recent (queue) + Org-wide CTAs */}
+        <div
+          style={{
+            display: 'grid',
+            gap: 12,
+            gridTemplateColumns: 'repeat(6, minmax(0, 1fr))',
+          }}
+        >
+          <KPI label="Assigned" value={incAssignedToMe.length} sub={getQueueLabel(selectedQueue)} />
+          <KPI label="Open" value={incidentsOpen.length} sub={getQueueLabel(selectedQueue)} />
+          <KPI label="Unassigned" value={incUnassigned.length} sub="Open" />
+          <KPI label="On hold" value={incOnHold.length} sub="Open" />
+          <KPI label="Aging" value={incAging.length} sub="> 7 days" />
+          <KPI label="Reopen" value={incReopenRate === null ? '—' : `${incReopenRate}%`} sub={incReopenRate === null ? 'Later' : 'Rate'} />
+        </div>
+      </section>
+
+      {/* SCTASK KPI ROW (single line, no reopen; Pending instead of On hold) */}
+      <section style={{ ...CARD, padding: 14, minWidth: 0 }}>
+        <div style={{ fontSize: 14, fontWeight: 950, color: '#111827', marginBottom: 10 }}>SCTASKs</div>
+
+        <div
+          style={{
+            display: 'grid',
+            gap: 12,
+            gridTemplateColumns: 'repeat(5, minmax(0, 1fr))',
+          }}
+        >
+          <KPI label="Assigned" value={scAssignedToMe.length} sub={getQueueLabel(selectedQueue)} />
+          <KPI label="Open" value={sctasksOpen.length} sub={getQueueLabel(selectedQueue)} />
+          <KPI label="Unassigned" value={scUnassigned.length} sub="Open" />
+          <KPI label="Pending" value={scPending.length} sub="Open" />
+          <KPI label="Aging" value={scAging.length} sub="> 7 days" />
+        </div>
+      </section>
+
+      {/* MAIN GRID: Recent Incidents + Recent SCTASKs + Org-wide */}
       <div style={{ display: 'grid', gridTemplateColumns: 'minmax(0, 1fr) 360px', gap: 12 }}>
-        {/* Recent tickets in selected queue */}
-        <section style={{ ...CARD, padding: 14, minWidth: 0 }}>
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10, flexWrap: 'wrap' }}>
-            <div style={{ fontSize: 16, fontWeight: 950, color: '#111827' }}>
-              Recent • {queueLabel}
+        <div style={{ display: 'grid', gap: 12, minWidth: 0 }}>
+          {/* Recent Incidents */}
+          <section style={{ ...CARD, padding: 14, minWidth: 0 }}>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10 }}>
+              <div style={{ fontSize: 16, fontWeight: 950, color: '#111827' }}>
+                Recent Incidents • {getQueueLabel(selectedQueue)}
+              </div>
+
+              <a
+                href={`/internal/tickets?queue=${encodeURIComponent(selectedQueue)}&type=incident`}
+                style={{
+                  textDecoration: 'none',
+                  color: '#111827',
+                  fontWeight: 950,
+                  fontSize: 13,
+                  padding: '8px 10px',
+                  borderRadius: 12,
+                  border: '1px solid rgba(17,24,39,0.12)',
+                  background: 'rgba(17,24,39,0.04)',
+                  whiteSpace: 'nowrap',
+                }}
+                aria-label="View incident tickets for selected queue"
+              >
+                View queue
+              </a>
             </div>
 
-            <a
-              href={`/internal/tickets?queue=${encodeURIComponent(selectedQueue)}`}
-              style={{
-                textDecoration: 'none',
-                color: '#111827',
-                fontWeight: 950,
-                fontSize: 13,
-                padding: '8px 10px',
-                borderRadius: 12,
-                border: '1px solid rgba(17,24,39,0.12)',
-                background: 'rgba(17,24,39,0.04)',
-                whiteSpace: 'nowrap',
-              }}
-              aria-label="View tickets for selected queue"
-            >
-              View queue
-            </a>
-          </div>
+            <div style={{ marginTop: 12, display: 'grid', gap: 10 }}>
+              {recentIncidents.length ? (
+                recentIncidents.map((t) => (
+                  <RowLink
+                    key={t.id}
+                    href={`/internal/tickets/${encodeURIComponent(t.id)}`}
+                    title={`${t.id} • ${t.title}`}
+                    meta={`INCIDENT • ${t.priority} • ${getQueueLabel(t.queueKey)} • ${stateLabelForDisplay(t.state, 'incident')} • Updated ${new Date(
+                      t.updatedAt || t.createdAt
+                    ).toLocaleString()}`}
+                  />
+                ))
+              ) : (
+                <div
+                  style={{
+                    padding: 12,
+                    borderRadius: 12,
+                    border: '1px dashed rgba(17,24,39,0.18)',
+                    color: 'rgba(17,24,39,0.65)',
+                    fontWeight: 800,
+                  }}
+                >
+                  No incidents found in this queue (mock).
+                </div>
+              )}
+            </div>
 
-          <div style={{ marginTop: 12, display: 'grid', gap: 10 }}>
-            {recentInQueue.length ? (
-              recentInQueue.map((t) => (
-                <RowLink
-                  key={t.id}
-                  href={`/internal/tickets/${encodeURIComponent(t.id)}`}
-                  title={`${t.id} • ${t.title}`}
-                  meta={`${String(t.type || '').toUpperCase()} • ${t.priority} • ${getQueueLabel(t.queueKey)} • ${t.state} • ${new Date(
-                    t.updatedAt || t.createdAt
-                  ).toLocaleString()}`}
-                />
-              ))
-            ) : (
-              <div
-                style={{
-                  padding: 12,
-                  borderRadius: 12,
-                  border: '1px dashed rgba(17,24,39,0.18)',
-                  color: 'rgba(17,24,39,0.65)',
-                  fontWeight: 800,
-                  textAlign: 'center',
-                }}
-              >
-                No tickets in this queue (mock).
+            <div style={{ marginTop: 12, fontSize: 12, fontWeight: 850, color: 'rgba(17,24,39,0.60)', textAlign: 'center' }}>
+              Active: <span style={{ color: '#111827', fontWeight: 950 }}>{incidentsOpen.length}</span> • Avg resolve:{' '}
+              <span style={{ color: '#111827', fontWeight: 950 }}>{humanDurationMinutes(avgToResolveIncidents)}</span>
+            </div>
+          </section>
+
+          {/* Recent SCTASKs */}
+          <section style={{ ...CARD, padding: 14, minWidth: 0 }}>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10 }}>
+              <div style={{ fontSize: 16, fontWeight: 950, color: '#111827' }}>
+                Recent SCTASKs • {getQueueLabel(selectedQueue)}
               </div>
-            )}
-          </div>
 
-          <div
-            style={{
-              marginTop: 12,
-              fontSize: 12,
-              fontWeight: 850,
-              color: 'rgba(17,24,39,0.60)',
-              display: 'flex',
-              justifyContent: 'center',
-              gap: 12,
-              flexWrap: 'wrap',
-              textAlign: 'center',
-            }}
-          >
-            <span>
-              Active: <span style={{ color: '#111827', fontWeight: 950 }}>{assignedActive.length}</span>
-            </span>
-            <span style={{ color: 'rgba(17,24,39,0.35)' }}>•</span>
-            <span>
-              Avg resolve: <span style={{ color: '#111827', fontWeight: 950 }}>{humanDurationMinutes(avgToResolve)}</span>
-            </span>
-          </div>
-        </section>
+              <a
+                href={`/internal/tickets?queue=${encodeURIComponent(selectedQueue)}&type=sctask`}
+                style={{
+                  textDecoration: 'none',
+                  color: '#111827',
+                  fontWeight: 950,
+                  fontSize: 13,
+                  padding: '8px 10px',
+                  borderRadius: 12,
+                  border: '1px solid rgba(17,24,39,0.12)',
+                  background: 'rgba(17,24,39,0.04)',
+                  whiteSpace: 'nowrap',
+                }}
+                aria-label="View sctask tickets for selected queue"
+              >
+                View queue
+              </a>
+            </div>
+
+            <div style={{ marginTop: 12, display: 'grid', gap: 10 }}>
+              {recentSctasks.length ? (
+                recentSctasks.map((t) => (
+                  <RowLink
+                    key={t.id}
+                    href={`/internal/tickets/${encodeURIComponent(t.id)}`}
+                    title={`${t.id} • ${t.title}`}
+                    meta={`SCTASK • ${t.priority} • ${getQueueLabel(t.queueKey)} • ${stateLabelForDisplay(t.state, 'sctask')} • Updated ${new Date(
+                      t.updatedAt || t.createdAt
+                    ).toLocaleString()}`}
+                  />
+                ))
+              ) : (
+                <div
+                  style={{
+                    padding: 12,
+                    borderRadius: 12,
+                    border: '1px dashed rgba(17,24,39,0.18)',
+                    color: 'rgba(17,24,39,0.65)',
+                    fontWeight: 800,
+                  }}
+                >
+                  No SCTASKs found in this queue (mock).
+                </div>
+              )}
+            </div>
+
+            <div style={{ marginTop: 12, fontSize: 12, fontWeight: 850, color: 'rgba(17,24,39,0.60)', textAlign: 'center' }}>
+              Active: <span style={{ color: '#111827', fontWeight: 950 }}>{sctasksOpen.length}</span>
+            </div>
+          </section>
+        </div>
 
         {/* Org-wide view cards */}
         <section style={{ ...CARD, padding: 14, minWidth: 0 }}>
@@ -443,38 +550,13 @@ export default function InternalDashboard({ employee, department, currentUserKey
           </div>
 
           <div style={{ marginTop: 12, display: 'grid', gap: 10 }}>
-            <RowLink
-              href={incidentsAllHref}
-              title="All Incidents"
-              meta={`${orgCounts.incidents} open • mock`}
-            />
-            <RowLink
-              href={requestsAllHref}
-              title="All Requests"
-              meta={`${orgCounts.requests} open • mock`}
-            />
-            <RowLink
-              href="/internal/reports"
-              title="Reports"
-              meta="Metrics (phase build)"
-            />
+            <RowLink href={incidentsAllHref} title="All Incidents" meta={`${orgCounts.incidents} open • mock`} />
+            <RowLink href={requestsAllHref} title="All Requests" meta={`${orgCounts.requests} open • mock`} />
+            <RowLink href={sctasksAllHref} title="All SCTASKs" meta={`${orgCounts.sctasks} open • mock`} />
+            <RowLink href="/internal/reports" title="Reports" meta="Metrics (phase build)" />
           </div>
         </section>
       </div>
-
-      {/* Responsive tweak: KPI row wraps on smaller screens */}
-      <style jsx>{`
-        @media (max-width: 1100px) {
-          div[style*='grid-template-columns: repeat(6'] {
-            grid-template-columns: repeat(3, minmax(140px, 1fr)) !important;
-          }
-        }
-        @media (max-width: 720px) {
-          div[style*='grid-template-columns: repeat(6'] {
-            grid-template-columns: repeat(2, minmax(140px, 1fr)) !important;
-          }
-        }
-      `}</style>
     </InternalLayoutPlain>
   );
 }
@@ -491,10 +573,7 @@ export async function getServerSideProps(context) {
   const department = session?.user?.department || '';
 
   // Best-effort “me” key + name
-  const currentUserKey =
-    session?.user?.id ||
-    session?.user?.email ||
-    '';
+  const currentUserKey = session?.user?.id || session?.user?.email || '';
 
   const currentUserName =
     session?.user?.name ||

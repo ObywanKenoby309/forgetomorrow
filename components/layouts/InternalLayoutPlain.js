@@ -82,42 +82,33 @@ export default function InternalLayoutPlain({
           onHatChange={setHat}
           isMobile={isMobile}
           onOpenTools={() => setMobileToolsOpen(true)}
-          active={activeNav === 'dashboard' ? 'dashboard' : undefined}
+          active={activeNav}
         />
 
-        {/* ✅ MAIN AREA wrapper: matches header max-width + centers (desktop), full-width (mobile) */}
+        {/* ✅ MAIN AREA (sidebar + content), padded like the site */}
         <div
           style={{
-            width: '100%',
-            maxWidth: isMobile ? '100%' : 1240,
-            margin: isMobile ? 0 : '0 auto',
+            ...gridStyles,
+            gap: GRID_GAP,
+            padding: PAD,
+            alignItems: 'start',
             boxSizing: 'border-box',
+            width: '100%',
+            maxWidth: '100vw',
+            overflowX: 'hidden',
           }}
         >
-          {/* ✅ MAIN AREA (sidebar + content), padded like the site */}
-          <div
-            style={{
-              ...gridStyles,
-              gap: GRID_GAP,
-              padding: PAD,
-              alignItems: 'start',
-              boxSizing: 'border-box',
-              width: '100%',
-              overflowX: 'hidden',
-            }}
-          >
-            {/* LEFT */}
-            {!isMobile ? (
-              <aside style={{ gridArea: 'left', alignSelf: 'start', minWidth: 0 }}>
-                <InternalSidebar active={activeNav} hat={hat} />
-              </aside>
-            ) : null}
+          {/* LEFT */}
+          {!isMobile ? (
+            <aside style={{ gridArea: 'left', alignSelf: 'start', minWidth: 0 }}>
+              <InternalSidebar active={activeNav} hat={hat} />
+            </aside>
+          ) : null}
 
-            {/* CONTENT */}
-            <main style={{ gridArea: 'content', minWidth: 0 }}>
-              <div style={{ display: 'grid', gap: GRID_GAP, minWidth: 0 }}>{children}</div>
-            </main>
-          </div>
+          {/* CONTENT */}
+          <main style={{ gridArea: 'content', minWidth: 0 }}>
+            <div style={{ display: 'grid', gap: GRID_GAP, minWidth: 0 }}>{children}</div>
+          </main>
         </div>
 
         {/* MOBILE TOOLS SHEET */}

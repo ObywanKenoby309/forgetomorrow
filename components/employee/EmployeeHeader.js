@@ -16,13 +16,12 @@ function normalizeHat(input) {
 }
 
 export default function EmployeeHeader({
-  // Keep these props for later, but we won't render noisy subtitle blocks in the header bar
   headerTitle = 'Employee Suite',
   headerSubtitle = '',
   employee = false,
   department = '',
 
-  // Routing state (kept for later; not used in the bar now)
+  // Routing state (kept for later)
   active = 'dashboard',
 
   // Hat + actions
@@ -46,12 +45,9 @@ export default function EmployeeHeader({
           borderBottom: BORDER,
         }}
       >
-        {/* ✅ Centered inner container so header content doesn't sprawl */}
         <div
           style={{
             width: '100%',
-            maxWidth: 1240,
-            margin: '0 auto',
             padding: '10px 14px',
             boxSizing: 'border-box',
           }}
@@ -65,7 +61,7 @@ export default function EmployeeHeader({
               minWidth: 0,
             }}
           >
-            {/* LEFT: Brand + Suite badge */}
+            {/* LEFT: Brand + Suite badge + Access tag */}
             <div style={{ display: 'flex', alignItems: 'center', gap: 10, minWidth: 0 }}>
               <a
                 href="/internal/dashboard"
@@ -79,23 +75,40 @@ export default function EmployeeHeader({
                 }}
                 aria-label="Go to Employee Suite dashboard"
               >
+                {/* Full-color watermark icon (safe fallback if missing) */}
                 <div
                   style={{
                     width: 28,
                     height: 28,
                     borderRadius: 9,
                     border: '1px solid rgba(255,112,67,0.30)',
-                    background: 'rgba(255,112,67,0.12)',
+                    background: 'rgba(255,112,67,0.08)',
                     display: 'flex',
                     alignItems: 'center',
                     justifyContent: 'center',
-                    fontWeight: 950,
-                    color: ORANGE,
-                    fontSize: 14,
+                    overflow: 'hidden',
                     flex: '0 0 auto',
                   }}
+                  title="ForgeTomorrow"
                 >
-                  ⌁
+                  <img
+                    src="/brand/forge-watermark-fullcolor.png"
+                    alt="ForgeTomorrow"
+                    style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                    onError={(e) => {
+                      // fallback to a simple mark without breaking layout
+                      e.currentTarget.style.display = 'none';
+                      const parent = e.currentTarget.parentElement;
+                      if (parent && !parent.dataset.fallbackApplied) {
+                        parent.dataset.fallbackApplied = '1';
+                        parent.style.background = 'rgba(255,112,67,0.12)';
+                        parent.style.color = ORANGE;
+                        parent.style.fontWeight = 950;
+                        parent.style.fontSize = '14px';
+                        parent.textContent = '⌁';
+                      }
+                    }}
+                  />
                 </div>
 
                 <div style={{ display: 'flex', alignItems: 'baseline', gap: 8, minWidth: 0 }}>
@@ -130,35 +143,36 @@ export default function EmployeeHeader({
                   >
                     Employee Suite
                   </div>
+
+                  <div
+                    style={{
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      height: 22,
+                      padding: '0 10px',
+                      borderRadius: 999,
+                      border: employee ? '1px solid rgba(16,185,129,0.22)' : '1px solid rgba(245,158,11,0.22)',
+                      background: employee ? 'rgba(16,185,129,0.10)' : 'rgba(245,158,11,0.10)',
+                      fontSize: 11,
+                      fontWeight: 950,
+                      color: employee ? 'rgba(16,185,129,0.95)' : 'rgba(245,158,11,0.95)',
+                      whiteSpace: 'nowrap',
+                    }}
+                    title={department ? `Dept: ${department}` : ''}
+                  >
+                    {employee ? 'EMPLOYEE' : 'LIMITED'}
+                    {department ? ` • ${department}` : ''}
+                  </div>
                 </div>
               </a>
 
-              {/* Small, non-noisy access tag (optional) */}
-              <div
-                style={{
-                  display: isMobile ? 'none' : 'inline-flex',
-                  alignItems: 'center',
-                  height: 22,
-                  padding: '0 10px',
-                  borderRadius: 999,
-                  border: employee ? '1px solid rgba(16,185,129,0.22)' : '1px solid rgba(245,158,11,0.22)',
-                  background: employee ? 'rgba(16,185,129,0.10)' : 'rgba(245,158,11,0.10)',
-                  fontSize: 11,
-                  fontWeight: 950,
-                  color: employee ? 'rgba(16,185,129,0.95)' : 'rgba(245,158,11,0.95)',
-                  whiteSpace: 'nowrap',
-                }}
-                title={department ? `Dept: ${department}` : ''}
-              >
-                {employee ? 'EMPLOYEE' : 'LIMITED'}
-                {department ? ` • ${department}` : ''}
-              </div>
+              {/* Quiet subtitle row removed from the bar (kept available via headerSubtitle below if needed) */}
             </div>
 
-            {/* ✅ MIDDLE: intentionally empty (no redundant dashboard link) */}
-            <div />
+            {/* MIDDLE: intentionally empty (no redundant nav; sidebar is the nav) */}
+            <div style={{ minWidth: 0 }} />
 
-            {/* RIGHT: Hat + CTA + Tools (mobile) */}
+            {/* RIGHT: Hat + Open Forge Site + Tools + Avatar */}
             <div
               style={{
                 display: 'flex',
@@ -169,7 +183,6 @@ export default function EmployeeHeader({
                 flexWrap: 'wrap',
               }}
             >
-              {/* Hat switcher */}
               <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
                 {!isMobile ? (
                   <div style={{ fontSize: 12, fontWeight: 900, color: 'rgba(17,24,39,0.65)' }}>View as</div>
@@ -196,7 +209,6 @@ export default function EmployeeHeader({
                 </select>
               </div>
 
-              {/* Open Forge Site */}
               <a
                 href={`/seeker-dashboard?chrome=${encodeURIComponent(normalizedHat)}`}
                 style={{
@@ -221,7 +233,6 @@ export default function EmployeeHeader({
                 Open Forge Site
               </a>
 
-              {/* Mobile tools */}
               {isMobile ? (
                 <button
                   type="button"
@@ -243,10 +254,32 @@ export default function EmployeeHeader({
                   Tools
                 </button>
               ) : null}
+
+              {/* Avatar placeholder */}
+              <div
+                aria-label="Employee profile"
+                title="Profile (placeholder)"
+                style={{
+                  width: 34,
+                  height: 34,
+                  borderRadius: 999,
+                  border: '1px solid rgba(17,24,39,0.14)',
+                  background: 'rgba(17,24,39,0.06)',
+                  boxShadow: '0 8px 16px rgba(0,0,0,0.06)',
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  fontWeight: 950,
+                  color: 'rgba(17,24,39,0.55)',
+                  userSelect: 'none',
+                }}
+              >
+                {/* empty on purpose */}
+              </div>
             </div>
           </div>
 
-          {/* Optional thin subtitle row (kept quiet) — only if you actually pass headerSubtitle */}
+          {/* Optional thin subtitle row (kept quiet) */}
           {headerSubtitle ? (
             <div
               style={{
@@ -268,17 +301,7 @@ export default function EmployeeHeader({
         </div>
       </header>
     );
-  }, [
-    headerTitle,
-    headerSubtitle,
-    employee,
-    department,
-    active,
-    normalizedHat,
-    onHatChange,
-    isMobile,
-    onOpenTools,
-  ]);
+  }, [headerTitle, headerSubtitle, employee, department, active, normalizedHat, onHatChange, isMobile, onOpenTools]);
 
   return bar;
 }
