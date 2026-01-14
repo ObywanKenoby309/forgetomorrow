@@ -48,18 +48,19 @@ export default function InternalLayoutPlain({
   const PAD = 16;
   const LEFT_W = 260;
 
+  // ✅ Grid is ONLY for sidebar + page content (header is now edge-to-edge above)
   const desktopGrid = {
     display: 'grid',
     gridTemplateColumns: `${LEFT_W}px minmax(0, 1fr)`,
-    gridTemplateRows: 'auto 1fr',
-    gridTemplateAreas: `"left header" "left content"`,
+    gridTemplateRows: '1fr',
+    gridTemplateAreas: `"left content"`,
   };
 
   const mobileGrid = {
     display: 'grid',
     gridTemplateColumns: '1fr',
-    gridTemplateRows: 'auto 1fr',
-    gridTemplateAreas: `"header" "content"`,
+    gridTemplateRows: '1fr',
+    gridTemplateAreas: `"content"`,
   };
 
   const gridStyles = isMobile ? mobileGrid : desktopGrid;
@@ -71,6 +72,20 @@ export default function InternalLayoutPlain({
       </Head>
 
       <div style={{ minHeight: '100vh', background: BG }}>
+        {/* ✅ EDGE-TO-EDGE HEADER (outside the padded grid) */}
+        <EmployeeHeader
+          headerTitle={headerTitle}
+          headerSubtitle={headerSubtitle}
+          employee={employee}
+          department={department}
+          hat={hat}
+          onHatChange={setHat}
+          isMobile={isMobile}
+          onOpenTools={() => setMobileToolsOpen(true)}
+          active={activeNav === 'dashboard' ? 'dashboard' : undefined}
+        />
+
+        {/* ✅ MAIN AREA (sidebar + content), padded like the site */}
         <div
           style={{
             ...gridStyles,
@@ -89,20 +104,6 @@ export default function InternalLayoutPlain({
               <InternalSidebar active={activeNav} hat={hat} />
             </aside>
           ) : null}
-
-          {/* HEADER */}
-          <header style={{ gridArea: 'header', alignSelf: 'start', minWidth: 0 }}>
-            <EmployeeHeader
-              headerTitle={headerTitle}
-              headerSubtitle={headerSubtitle}
-              employee={employee}
-              department={department}
-              hat={hat}
-              onHatChange={setHat}
-              isMobile={isMobile}
-              onOpenTools={() => setMobileToolsOpen(true)}
-            />
-          </header>
 
           {/* CONTENT */}
           <main style={{ gridArea: 'content', minWidth: 0 }}>

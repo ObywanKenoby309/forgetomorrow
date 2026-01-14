@@ -67,6 +67,10 @@ export default function InternalSidebar({ active = 'dashboard', hat = 'seeker' }
   return (
     <nav aria-label="Employee Suite navigation" style={{ ...CARD, padding: 12, display: 'grid', gap: 6 }}>
       <SectionLabel>Employee Suite</SectionLabel>
+
+      {/* ✅ IMPORTANT: always allow return to Dashboard */}
+      <NavItem href="/internal/dashboard" label="Dashboard" active={active === 'dashboard'} />
+
       <NavItem href="/internal/tickets/new" label="Create Ticket" active={active === 'new'} />
       <NavItem href="/internal/tickets/mine" label="My Opened Tickets" active={active === 'mine'} />
       <NavItem href="/internal/queues" label="Queue Management" active={active === 'queues'} />
