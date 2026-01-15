@@ -208,7 +208,11 @@ export default function RecruiterSidebar({
         label="Calendar"
         active={active === 'calendar'}
       />
-
+	  <NavItem
+        href="/recruiter/explain"
+        label="Applicant Explain"
+        active={active === 'explain'}
+      />
       {isEnterprise && (
         <>
           <NavItem
