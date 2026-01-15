@@ -71,6 +71,92 @@ function WhyPanel({
     filters_triggered = [],
   } = explain || {};
 
+  // ---------------------------------------------------------------------------
+  // ✅ NEW: Prefer the new clean schema if present (falls back to legacy)
+  // ---------------------------------------------------------------------------
+  const matchedSignals = useMemo(() => {
+    const arr =
+      explain?.signals?.matched ||
+      explain?.matched ||
+      [];
+    return Array.isArray(arr) ? arr : [];
+  }, [explain]);
+
+  // Tier totals: if API provides them, use them. Otherwise infer from matched signals.
+  const inferredTotals = useMemo(() => {
+    // If the API includes full config totals, use them. Otherwise infer from matched.
+    // (Inference is best-effort; table still works even without totals.)
+    const tierA = matchedSignals.filter((m) => (m?.tier || "") === "A").length;
+    const tierB = matchedSignals.filter((m) => (m?.tier || "") === "B").length;
+    return {
+      tierAHit: tierA,
+      tierBHit: tierB,
+      tierATotal: null,
+      tierBTotal: null,
+    };
+  }, [matchedSignals]);
+
+  // Build the scan-table rows from matched signals + (optional) gaps
+  const scanRows = useMemo(() => {
+    // If your API returns gaps as { signal_id, label, tier }, we can include them as unchecked rows.
+    const gapsArr = Array.isArray(explain?.signals?.gaps) ? explain.signals.gaps : [];
+
+    const matchedMap = new Map();
+    for (const m of matchedSignals) {
+      const label = m?.label || m?.requirement || m?.signal_id || "Requirement";
+      const tier = m?.tier || "B";
+      const key = `${tier}::${label}`.toLowerCase();
+      matchedMap.set(key, { label, tier, matched: true });
+    }
+
+    const gapRows = [];
+    for (const g of gapsArr) {
+      const tier = g?.tier || "B";
+      if (tier !== "A" && tier !== "B") continue;
+      const label = g?.label || g?.signal_id || "Requirement";
+      const key = `${tier}::${label}`.toLowerCase();
+      // Only add if not already matched
+      if (!matchedMap.has(key)) {
+        gapRows.push({ label, tier, matched: false });
+      }
+    }
+
+    // Combine: show matched first, then gaps, Tier A above Tier B
+    const combined = [
+      ...Array.from(matchedMap.values()),
+      ...gapRows,
+    ];
+
+    combined.sort((a, b) => {
+      const ta = a.tier === "A" ? 0 : 1;
+      const tb = b.tier === "A" ? 0 : 1;
+      if (ta !== tb) return ta - tb;
+      // Matched first
+      if (a.matched !== b.matched) return a.matched ? -1 : 1;
+      return String(a.label).localeCompare(String(b.label));
+    });
+
+    // Keep it scannable: cap rows in lite mode (full mode can show all)
+    if (!isFull) return combined.slice(0, 10);
+    return combined;
+  }, [matchedSignals, explain, isFull]);
+
+  const tierATotalFromSummary = useMemo(() => {
+    // Optional: parse "Matched X/Y core signals (Tier A) and A/B supporting signals (Tier B)" if present.
+    // Safe + best-effort. If parse fails, returns nulls.
+    const text = String(summary || "");
+    const m = text.match(/Matched\s+(\d+)\s*\/\s*(\d+)\s+core\s+signals\s+\(Tier\s+A\)\s+and\s+(\d+)\s*\/\s*(\d+)\s+supporting\s+signals\s+\(Tier\s+B\)/i);
+    if (!m) return null;
+    return {
+      tierAHit: Number(m[1]),
+      tierATotal: Number(m[2]),
+      tierBHit: Number(m[3]),
+      tierBTotal: Number(m[4]),
+    };
+  }, [summary]);
+
+  const tableStats = tierATotalFromSummary || inferredTotals;
+
   const reasonsToShow = isFull ? reasons : reasons.slice(0, 2);
   const evidencePerReason = (r) =>
     isFull ? (r.evidence || []) : (r.evidence || []).slice(0, 1);
@@ -144,6 +230,19 @@ function WhyPanel({
     </div>
   );
 
+  // Tiny check icon (no extra deps)
+  const Check = ({ on }) => (
+    <span
+      aria-hidden="true"
+      className={`inline-flex h-4 w-4 items-center justify-center rounded ${
+        on ? "bg-emerald-500" : "bg-slate-200"
+      }`}
+      title={on ? "Matched" : "Not matched"}
+    >
+      {on ? <span className="text-white text-[12px] leading-none">✓</span> : null}
+    </span>
+  );
+
   return (
     <div className="h-full flex flex-col">
       {/* Header */}
@@ -187,7 +286,86 @@ function WhyPanel({
           isOpen={Boolean(openMap[SECTION_KEYS.requirements])}
           onToggle={() => toggle(SECTION_KEYS.requirements)}
         >
-          <div className="grid gap-3">
+          {/* ✅ NEW: Scan table first (fast recruiter scan) */}
+          <div className="rounded border overflow-hidden bg-white">
+            <div className="px-3 py-2 border-b bg-slate-50 flex items-center justify-between gap-3">
+              <div className="text-xs font-semibold text-slate-700">
+                Requirement
+              </div>
+              <div className="flex items-center gap-6">
+                <div className="text-xs font-semibold text-slate-700 w-[78px] text-center">
+                  Matched A
+                </div>
+                <div className="text-xs font-semibold text-slate-700 w-[78px] text-center">
+                  Matched B
+                </div>
+              </div>
+            </div>
+
+            <div className="divide-y">
+              {scanRows.length === 0 ? (
+                <div className="px-3 py-3 text-sm text-slate-500">
+                  No requirement mappings available.
+                </div>
+              ) : (
+                scanRows.map((row, idx) => {
+                  const isA = row.tier === "A";
+                  const isB = row.tier === "B";
+                  return (
+                    <div
+                      key={`${row.tier}-${row.label}-${idx}`}
+                      className="px-3 py-2 flex items-center justify-between gap-3"
+                    >
+                      <div className="min-w-0 flex-1">
+                        <div className="text-sm font-medium text-slate-900 truncate">
+                          {row.label}
+                        </div>
+                      </div>
+
+                      <div className="flex items-center gap-6 shrink-0">
+                        <div className="w-[78px] flex items-center justify-center">
+                          <Check on={isA && row.matched} />
+                        </div>
+                        <div className="w-[78px] flex items-center justify-center">
+                          <Check on={isB && row.matched} />
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })
+              )}
+            </div>
+
+            {/* Footer stats row */}
+            <div className="px-3 py-2 border-t bg-slate-50 text-xs text-slate-600 flex flex-wrap gap-x-4 gap-y-1">
+              <span>
+                Tier A:{" "}
+                <span className="font-semibold">
+                  {typeof tableStats.tierAHit === "number" ? tableStats.tierAHit : 0}
+                  {typeof tableStats.tierATotal === "number"
+                    ? `/${tableStats.tierATotal}`
+                    : ""}
+                </span>
+              </span>
+              <span>
+                Tier B:{" "}
+                <span className="font-semibold">
+                  {typeof tableStats.tierBHit === "number" ? tableStats.tierBHit : 0}
+                  {typeof tableStats.tierBTotal === "number"
+                    ? `/${tableStats.tierBTotal}`
+                    : ""}
+                </span>
+              </span>
+              {!isFull ? (
+                <span className="text-slate-500">
+                  Showing top items. Expand for full view.
+                </span>
+              ) : null}
+            </div>
+          </div>
+
+          {/* Existing evidence cards (keep for trust + auditability) */}
+          <div className="grid gap-3 mt-4">
             {reasonsToShow.length === 0 ? (
               <div className="text-sm text-slate-500">
                 No requirement mappings available.
@@ -212,6 +390,7 @@ function WhyPanel({
               ))
             )}
           </div>
+
           {!isFull && (
             <p className="text-xs text-slate-500 mt-3">
               You’re viewing WHY Lite. Add WHY Plus or upgrade to Enterprise for
