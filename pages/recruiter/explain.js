@@ -4,8 +4,8 @@ import { useSession } from "next-auth/react";
 import Head from "next/head";
 
 import RecruiterLayout from "@/components/layouts/RecruiterLayout";
-import WHYScoreInfo from "@/components/ai/WHYScoreInfo";
 import RightRailPlacementManager from "@/components/ads/RightRailPlacementManager";
+import WHYScoreInfo from "@/components/ai/WHYScoreInfo";
 
 const GLASS_WORKSPACE = {
   border: "1px solid rgba(255,255,255,0.22)",
@@ -29,10 +29,10 @@ function HeaderOnly() {
       <h1 className="text-2xl font-bold text-[#FF7043]">
         Resume &amp; Job Match Explainability
       </h1>
-      <p className="mt-1 text-sm text-slate-600 max-w-xl mx-auto leading-relaxed">
+      <p className="mt-1 text-sm text-slate-600 max-w-2xl mx-auto leading-relaxed">
         Paste a job description and a resume to generate explainable alignment insights.
         <br />
-        <span style={{ fontSize: 13 }}>
+        <span className="text-[13px]">
           This tool supports recruiter judgment by mapping evidence and highlighting
           strengths, gaps, and interview guidance. It does not make hiring decisions.
         </span>
@@ -72,10 +72,7 @@ export default function RecruiterExplainPage() {
       const res = await fetch("/api/recruiter/explain", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          resumeText,
-          jobDescription,
-        }),
+        body: JSON.stringify({ resumeText, jobDescription }),
       });
 
       if (!res.ok) {
@@ -117,19 +114,10 @@ export default function RecruiterExplainPage() {
         <title>Resume &amp; JD Explainability | ForgeTomorrow</title>
       </Head>
 
-      {/* Match Candidates spacing: let RecruiterLayout control the gutters/columns */}
-      <section style={{ width: "100%", padding: "0 0 18px" }}>
-        {/* Workspace hugging left (not centered); right rail handled by layout */}
-        <div
-          style={{
-            ...GLASS_WORKSPACE,
-            padding: 16,
-            width: "100%",
-            maxWidth: 1120, // keeps room before the right rail without manual margin hacks
-            margin: 0, // hug left like Candidates
-            boxSizing: "border-box",
-          }}
-        >
+      {/* Align like Candidates: let layout control the left gap; no centering container */}
+      <section style={{ width: "100%", padding: "0 14px 18px" }}>
+        {/* Workspace fills the main column (ads live in layout right rail) */}
+        <div style={{ ...GLASS_WORKSPACE, padding: 16, width: "100%" }}>
           <div
             style={{
               display: "grid",
@@ -147,15 +135,7 @@ export default function RecruiterExplainPage() {
               }}
             >
               {/* Job Description Card (left) */}
-              <div
-                style={{
-                  ...CARD,
-                  padding: 14,
-                  minHeight: 460,
-                  position: "relative",
-                  boxSizing: "border-box",
-                }}
-              >
+              <div style={{ ...CARD, padding: 14, minHeight: 460, position: "relative" }}>
                 <div style={{ fontWeight: 900, fontSize: 14, marginBottom: 10 }}>
                   Job Description
                 </div>
@@ -175,7 +155,7 @@ export default function RecruiterExplainPage() {
                     lineHeight: 1.45,
                     background: "rgba(255,255,255,0.88)",
                     minHeight: 360,
-                    marginBottom: 64, // keeps buttons visually clear of textarea edge/lines
+                    marginBottom: 64, // keeps bottom buttons clearly unobstructed
                     boxSizing: "border-box",
                   }}
                 />
@@ -202,18 +182,8 @@ export default function RecruiterExplainPage() {
               </div>
 
               {/* Resume Card (right) */}
-              <div
-                style={{
-                  ...CARD,
-                  padding: 14,
-                  minHeight: 460,
-                  position: "relative",
-                  boxSizing: "border-box",
-                }}
-              >
-                <div style={{ fontWeight: 900, fontSize: 14, marginBottom: 10 }}>
-                  Resume
-                </div>
+              <div style={{ ...CARD, padding: 14, minHeight: 460, position: "relative" }}>
+                <div style={{ fontWeight: 900, fontSize: 14, marginBottom: 10 }}>Resume</div>
 
                 <textarea
                   rows={16}
@@ -230,7 +200,7 @@ export default function RecruiterExplainPage() {
                     lineHeight: 1.45,
                     background: "rgba(255,255,255,0.88)",
                     minHeight: 360,
-                    marginBottom: 64,
+                    marginBottom: 64, // keeps bottom buttons clearly unobstructed
                     boxSizing: "border-box",
                   }}
                 />
