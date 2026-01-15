@@ -4,8 +4,9 @@ import { authOptions } from "../auth/[...nextauth]";
 import { prisma } from "@/lib/prisma";
 
 /**
- * Deterministic (non-LLM) explainability v1.1:
+ * Deterministic (non-LLM) explainability v1.2:
  * - JSON-driven Tier A/B scoring (signals + synonyms) to avoid false negatives
+ * - Skills alignment extracted from JD (deterministic) and contributes to score
  * - Evidence ranking to avoid quoting contact/header
  * - Returns a WHY-friendly shape (score/summary/reasons/skills) plus a clean signals object
  * - Best-effort persist to RecruiterExplainRun (only if model exists + migration applied)
@@ -104,6 +105,16 @@ const SPEC = {
       single_token_only: 0.4,
     },
     cap_generic_token_contribution: 6,
+
+    // ✅ NEW: score blending (signals dominate; skills supports)
+    blend: {
+      signals_weight: 0.75,
+      skills_weight: 0.25,
+    },
+
+    // ✅ NEW: avoid tiny JD skill lists dominating the score
+    skills_min_list_for_full_weight: 8, // if JD has < 8 skills, we dampen the skillsScore impact
+    skills_floor_for_summary: 5, // minimum JD skills needed before we show a "Matched X/Y skills" line
   },
   evidence_ranking: {
     max_snippets_per_signal: 2,
@@ -252,11 +263,6 @@ function splitIntoRankableSentences(resumeText) {
   return items;
 }
 
-function isExcludedSection(section) {
-  const s = String(section || "").toLowerCase();
-  return SPEC.hard_excludes_sections.includes(s);
-}
-
 function classifyMatchType(signalId, pattern) {
   const p = String(pattern || "").trim();
   const isSingleToken = !p.includes(" ");
@@ -403,7 +409,7 @@ function pickEvidenceForSignal(signalMatch, sentenceItems) {
   return snippets;
 }
 
-function computeScore(matchedSignals) {
+function computeSignalsScore(matchedSignals) {
   const weights = SPEC.scoring.tier_weights;
 
   const denom = SPEC.signals
@@ -433,11 +439,119 @@ function gradeFrom(score, tierAMatchCount) {
   return "Weak";
 }
 
-function buildSummary(tierAHit, tierATotal, tierBHit, tierBTotal, score, grade) {
+function buildSummary(tierAHit, tierATotal, tierBHit, tierBTotal, score, grade, skillsLine) {
   const parts = [];
   parts.push(`${grade} match (${score}%).`);
   parts.push(`Matched ${tierAHit}/${tierATotal} core signals (Tier A) and ${tierBHit}/${tierBTotal} supporting signals (Tier B).`);
+  if (skillsLine) parts.push(skillsLine);
   return parts.join(" ");
+}
+
+/**
+ * ✅ NEW: deterministic JD skill extraction
+ * - extracts common tool/tech tokens and multiword skills
+ * - returns unique list, filtered
+ */
+function extractJDSkills(jobDescriptionText) {
+  const jd = safeLower(jobDescriptionText);
+
+  // Pull candidates: tokens like "salesforce", "servicenow", "sql", "python", "c#", "react", "aws", "azure", etc.
+  // and common 2-3 word skills like "project management", "customer success", "account management"
+  const raw = jd.match(/[a-z0-9+#./-]{2,}/g) || [];
+
+  const stop = new Set([
+    "and","or","the","a","an","to","for","of","in","on","with","as","at","by","from","into",
+    "experience","preferred","requirements","responsible","responsibilities","ability","skills","skill",
+    "years","year","role","team","teams","work","working","knowledge","strong","excellent",
+    "including","within","across","will","must","should","may","plus"
+  ]);
+
+  // Seed tool/tech whitelist-ish: if it appears, keep it (reduces noise)
+  const allow = new Set([
+    "salesforce","gainsight","hubspot","zendesk","freshdesk","dynamics","pipedrive","crm",
+    "servicenow","jira","confluence","sql","python","javascript","typescript","react","node","aws","azure","gcp",
+    "excel","powerbi","tableau","snowflake","postgres","postgresql","mongodb","redis",
+    "intune","jamf","okta","sso","scim","api","apis","rest","graphql"
+  ]);
+
+  const singles = [];
+  for (const t of raw) {
+    const tok = t.toLowerCase().replace(/^[^\w+#]+|[^\w+#]+$/g, "");
+    if (!tok) continue;
+    if (stop.has(tok)) continue;
+
+    // Keep allowed tools, or words that look like tech tokens
+    if (allow.has(tok)) singles.push(tok);
+    else if (tok.length >= 3 && /[a-z]/.test(tok) && (tok.includes("#") || tok.includes("+") || tok.includes(".") || tok.includes("-"))) {
+      singles.push(tok);
+    }
+  }
+
+  // Multiword skills (simple phrase pulls)
+  const phrases = [];
+  const phrasePatterns = [
+    "customer success",
+    "account management",
+    "project management",
+    "stakeholder management",
+    "data analysis",
+    "business analysis",
+    "change management",
+    "client success",
+    "customer onboarding",
+    "health score",
+    "quarterly business review",
+    "qbr"
+  ];
+
+  for (const p of phrasePatterns) {
+    if (jd.includes(p)) phrases.push(p);
+  }
+
+  const combined = Array.from(new Set([...singles, ...phrases]))
+    .filter(Boolean)
+    .slice(0, 24);
+
+  return combined;
+}
+
+/**
+ * ✅ NEW: skills alignment scoring
+ * - skill match = exact/phrase presence in resume
+ * - skillsScore = % of JD skills found (0-100)
+ * - dampen if JD skill list is very small (prevents 3/3 from overpowering)
+ */
+function computeSkillsAlignment(jdSkills, resumeLower) {
+  const list = Array.isArray(jdSkills) ? jdSkills : [];
+  if (!list.length) {
+    return { matched: [], gaps: [], skillsScore: null, skillsHit: 0, skillsTotal: 0 };
+  }
+
+  const matched = [];
+  const gaps = [];
+
+  for (const s of list) {
+    const skill = String(s || "").trim().toLowerCase();
+    if (!skill) continue;
+
+    const re = new RegExp(`\\b${escapeRegex(skill)}\\b`, "i");
+    if (re.test(resumeLower)) matched.push(skill);
+    else gaps.push(skill);
+  }
+
+  const skillsTotal = matched.length + gaps.length;
+  const skillsHit = matched.length;
+
+  let pct = skillsTotal > 0 ? Math.round((skillsHit / skillsTotal) * 100) : 0;
+
+  // Dampening for tiny lists: if < skills_min_list_for_full_weight, reduce confidence of skillsScore.
+  const minN = SPEC.scoring.skills_min_list_for_full_weight;
+  if (skillsTotal > 0 && skillsTotal < minN) {
+    const factor = skillsTotal / minN; // e.g., 4 skills => 0.5
+    pct = Math.round(pct * factor);
+  }
+
+  return { matched, gaps, skillsScore: pct, skillsHit, skillsTotal };
 }
 
 function buildExplain(resumeText, jobDescription) {
@@ -447,12 +561,15 @@ function buildExplain(resumeText, jobDescription) {
   const resumeLower = resume.toLowerCase();
   const jdLower = jd.toLowerCase();
 
-  // Combine JD + resume for detection (so "requirements" in JD still count as signals)
+  // ✅ IMPORTANT: signals detection should NOT use combined JD+resume for "candidate match".
+  // We match signals primarily against resume; JD should define what signals exist, not auto-count itself.
+  // To avoid false negatives, we still allow a small assist by including JD for phrase context, but
+  // we compute evidence from resume only.
   const combinedLower = `${jdLower}\n${resumeLower}`;
 
   const sentenceItems = splitIntoRankableSentences(resume);
 
-  // Match signals (using combined text so JD phrasing is not missed)
+  // Match signals (combinedLower helps synonym detection; evidence comes from resume sentences)
   const matchedSignals = findSignalMatches(combinedLower, SPEC.signals);
 
   // Build gaps (Tier A/B only)
@@ -466,15 +583,37 @@ function buildExplain(resumeText, jobDescription) {
       why_missing: "No strong evidence detected in the provided resume text.",
     }));
 
-  // Score and grade
-  const score = computeScore(matchedSignals);
+  // ✅ NEW: JD skills + resume alignment
+  const jdSkills = extractJDSkills(jd);
+  const skillsAlign = computeSkillsAlignment(jdSkills, resumeLower);
+
+  // Score and grade (blend signals + skills)
+  const signalsScore = computeSignalsScore(matchedSignals);
+  const skillsScore = typeof skillsAlign.skillsScore === "number" ? skillsAlign.skillsScore : null;
+
+  const wSignals = SPEC.scoring.blend.signals_weight;
+  const wSkills = SPEC.scoring.blend.skills_weight;
+
+  const blended =
+    skillsScore === null
+      ? signalsScore
+      : Math.round((signalsScore * wSignals) + (skillsScore * wSkills));
+
+  const score = Math.max(0, Math.min(100, blended));
+
   const tierAHit = matchedSignals.filter((m) => m.tier === "A").length;
   const tierBHit = matchedSignals.filter((m) => m.tier === "B").length;
   const tierATotal = SPEC.signals.filter((s) => s.tier === "A").length;
   const tierBTotal = SPEC.signals.filter((s) => s.tier === "B").length;
+
   const grade = gradeFrom(score, tierAHit);
 
-  const summary = buildSummary(tierAHit, tierATotal, tierBHit, tierBTotal, score, grade);
+  const skillsLine =
+    skillsAlign.skillsTotal >= SPEC.scoring.skills_floor_for_summary
+      ? `Skill alignment: matched ${skillsAlign.skillsHit}/${skillsAlign.skillsTotal} JD skills.`
+      : null;
+
+  const summary = buildSummary(tierAHit, tierATotal, tierBHit, tierBTotal, score, grade, skillsLine);
 
   // Reasons: one card per matched signal with ranked evidence
   const reasons = matchedSignals
@@ -507,6 +646,13 @@ function buildExplain(resumeText, jobDescription) {
   const disclaimer =
     "WHY highlights evidence to support recruiter judgment. It does not make hiring decisions, and it may miss context if the resume text is incomplete.";
 
+  // ✅ SKILLS for UI (matched/gaps derived from JD skill list)
+  const skills = {
+    matched: (skillsAlign.matched || []).slice(0, 14),
+    gaps: (skillsAlign.gaps || []).slice(0, 14),
+    transferable: [],
+  };
+
   // Maintain your prior surface area while also returning the cleaner schema.
   return {
     score,
@@ -516,9 +662,20 @@ function buildExplain(resumeText, jobDescription) {
 
     // Backward-compatible fields used in some drawers
     reasons,
+    skills, // ✅ this is what many UIs expect
     strengths: matchedSignals.filter((m) => m.tier !== "C").map((m) => m.label).slice(0, 12),
     gaps: gaps.map((g) => g.label).slice(0, 12),
     interviewQuestions: { behavioral, occupational },
+
+    // Debug-friendly sub-scores (safe to keep; UI can ignore)
+    _debug: {
+      signalsScore,
+      skillsScore,
+      tierAHit,
+      tierBHit,
+      skillsHit: skillsAlign.skillsHit,
+      skillsTotal: skillsAlign.skillsTotal,
+    },
 
     // Clean output schema for future reuse
     match: { score, grade, summary, disclaimer },
