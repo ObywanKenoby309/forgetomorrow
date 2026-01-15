@@ -35,6 +35,47 @@ export default function RecruiterExplainPage() {
     boxShadow: "0 10px 26px rgba(0,0,0,0.10)",
   };
 
+  // HeaderBox (match pages/seeker/messages.js visual style)
+  const HeaderBox = (
+    <section
+      style={{
+        background: "white",
+        borderRadius: 12,
+        padding: 16,
+        boxShadow: "0 2px 6px rgba(0,0,0,0.06)",
+        border: "1px solid #eee",
+        textAlign: "center",
+      }}
+    >
+      <h1
+        style={{
+          margin: 0,
+          color: "#ff8a65",
+          fontSize: 24,
+          fontWeight: 800,
+        }}
+      >
+        Resume & Job Match Explainability
+      </h1>
+      <p
+        style={{
+          margin: "6px auto 0",
+          color: "#607D8B",
+          maxWidth: 720,
+          fontSize: 14,
+          lineHeight: 1.5,
+        }}
+      >
+        Paste a job description and a resume to generate explainable alignment insights.
+        <br />
+        <span style={{ fontSize: 13 }}>
+          This tool supports recruiter judgment by mapping evidence and highlighting strengths,
+          gaps, and interview guidance. It does not make hiring decisions.
+        </span>
+      </p>
+    </section>
+  );
+
   // Minimal auth gate (consistent with other recruiter pages)
   if (status === "loading") return null;
   if (!session) return null;
@@ -79,6 +120,14 @@ export default function RecruiterExplainPage() {
     setShowWhyPanel(false);
   }
 
+  function handleClearJD() {
+    setJobDescription("");
+  }
+
+  function handleClearResume() {
+    setResumeText("");
+  }
+
   return (
     <RecruiterLayout>
       <Head>
@@ -88,25 +137,8 @@ export default function RecruiterExplainPage() {
       <section style={{ maxWidth: 1240, margin: "0 auto", padding: "22px 18px" }}>
         {/* Workspace (centered glass container) */}
         <div style={{ ...GLASS_WORKSPACE, padding: 16 }}>
-          {/* Header card */}
-          <div style={{ ...CARD, padding: "18px 18px", marginBottom: 14 }}>
-            <h1 style={{ margin: 0, fontSize: 22, fontWeight: 800, textAlign: "center" }}>
-              Resume & Job Match Explainability
-            </h1>
-            <p
-              style={{
-                margin: "10px auto 0",
-                maxWidth: 860,
-                fontSize: 13,
-                lineHeight: 1.45,
-                color: "rgba(15,23,42,0.72)",
-                textAlign: "center",
-              }}
-            >
-              Paste or upload a resume and a job description to receive transparent, explainable
-              alignment insights and interview guidance.
-            </p>
-          </div>
+          {/* Title card (matches Seeker Messages header idea) */}
+          <div style={{ marginBottom: 14 }}>{HeaderBox}</div>
 
           {/* Main row: inputs + (optional) right panel */}
           <div
@@ -126,31 +158,9 @@ export default function RecruiterExplainPage() {
               }}
             >
               {/* Job Description Card (left) */}
-              <div style={{ ...CARD, padding: 14, minHeight: 440 }}>
-                <div
-                  style={{
-                    display: "flex",
-                    alignItems: "center",
-                    justifyContent: "space-between",
-                    marginBottom: 10,
-                  }}
-                >
-                  <div style={{ fontWeight: 800, fontSize: 14 }}>Job Description</div>
-                  <button
-                    type="button"
-                    onClick={() => setJobDescription("")}
-                    style={{
-                      border: "1px solid rgba(15,23,42,0.18)",
-                      background: "rgba(255,255,255,0.65)",
-                      padding: "6px 10px",
-                      borderRadius: 10,
-                      fontSize: 12,
-                      cursor: "pointer",
-                    }}
-                    title="Clear job description"
-                  >
-                    Refresh
-                  </button>
+              <div style={{ ...CARD, padding: 14, minHeight: 460, position: "relative" }}>
+                <div style={{ fontWeight: 800, fontSize: 14, marginBottom: 10 }}>
+                  Job Description
                 </div>
 
                 <textarea
@@ -170,10 +180,30 @@ export default function RecruiterExplainPage() {
                     minHeight: 360,
                   }}
                 />
+
+                {/* Clear bottom-right (per your instruction) */}
+                <div style={{ position: "absolute", right: 14, bottom: 14 }}>
+                  <button
+                    type="button"
+                    onClick={handleClearJD}
+                    style={{
+                      border: "1px solid rgba(15,23,42,0.18)",
+                      background: "rgba(255,255,255,0.70)",
+                      padding: "10px 12px",
+                      borderRadius: 10,
+                      fontSize: 13,
+                      fontWeight: 800,
+                      cursor: "pointer",
+                    }}
+                    title="Clear job description"
+                  >
+                    Clear
+                  </button>
+                </div>
               </div>
 
               {/* Resume Card (right) */}
-              <div style={{ ...CARD, padding: 14, minHeight: 440, position: "relative" }}>
+              <div style={{ ...CARD, padding: 14, minHeight: 460, position: "relative" }}>
                 <div style={{ fontWeight: 800, fontSize: 14, marginBottom: 10 }}>Resume</div>
 
                 <textarea
@@ -194,8 +224,34 @@ export default function RecruiterExplainPage() {
                   }}
                 />
 
-                {/* CTA bottom-right */}
-                <div style={{ position: "absolute", right: 14, bottom: 14 }}>
+                {/* Bottom-right actions: Clear + Result (per your instruction) */}
+                <div
+                  style={{
+                    position: "absolute",
+                    right: 14,
+                    bottom: 14,
+                    display: "flex",
+                    gap: 10,
+                    alignItems: "center",
+                  }}
+                >
+                  <button
+                    type="button"
+                    onClick={handleClearResume}
+                    style={{
+                      border: "1px solid rgba(15,23,42,0.18)",
+                      background: "rgba(255,255,255,0.70)",
+                      padding: "10px 12px",
+                      borderRadius: 10,
+                      fontSize: 13,
+                      fontWeight: 800,
+                      cursor: "pointer",
+                    }}
+                    title="Clear resume"
+                  >
+                    Clear
+                  </button>
+
                   <button
                     onClick={handleAnalyze}
                     disabled={loading}
@@ -205,7 +261,8 @@ export default function RecruiterExplainPage() {
                       border: "1px solid rgba(255,112,67,0.45)",
                       background: "rgba(255,112,67,0.20)",
                       color: "rgba(15,23,42,0.85)",
-                      fontWeight: 800,
+                      fontWeight: 900,
+                      fontSize: 13,
                       cursor: loading ? "not-allowed" : "pointer",
                     }}
                   >
