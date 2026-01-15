@@ -1,5 +1,5 @@
 // pages/recruiter/explain.js
-import { useMemo, useState } from "react";
+import { useState } from "react";
 import { useSession } from "next-auth/react";
 import Head from "next/head";
 
@@ -16,34 +16,28 @@ export default function RecruiterExplainPage() {
   const [error, setError] = useState(null);
   const [showWhyPanel, setShowWhyPanel] = useState(false);
 
-  // Minimal auth gate (consistent with other recruiter pages)
-  if (status === "loading") return null;
-  if (!session) return null;
-
   const hasResult = !!result;
   const showPanel = showWhyPanel && hasResult;
 
-  const GLASS_WORKSPACE = useMemo(
-    () => ({
-      border: "1px solid rgba(255,255,255,0.22)",
-      background: "rgba(255,255,255,0.72)",
-      backdropFilter: "blur(12px)",
-      WebkitBackdropFilter: "blur(12px)",
-      borderRadius: 18,
-      boxShadow: "0 14px 44px rgba(0,0,0,0.22)",
-    }),
-    []
-  );
+  const GLASS_WORKSPACE = {
+    border: "1px solid rgba(255,255,255,0.22)",
+    background: "rgba(255,255,255,0.72)",
+    backdropFilter: "blur(12px)",
+    WebkitBackdropFilter: "blur(12px)",
+    borderRadius: 18,
+    boxShadow: "0 14px 44px rgba(0,0,0,0.22)",
+  };
 
-  const CARD = useMemo(
-    () => ({
-      border: "1px solid rgba(15,23,42,0.10)",
-      background: "rgba(255,255,255,0.78)",
-      borderRadius: 16,
-      boxShadow: "0 10px 26px rgba(0,0,0,0.10)",
-    }),
-    []
-  );
+  const CARD = {
+    border: "1px solid rgba(15,23,42,0.10)",
+    background: "rgba(255,255,255,0.78)",
+    borderRadius: 16,
+    boxShadow: "0 10px 26px rgba(0,0,0,0.10)",
+  };
+
+  // Minimal auth gate (consistent with other recruiter pages)
+  if (status === "loading") return null;
+  if (!session) return null;
 
   async function handleAnalyze() {
     if (!resumeText || !jobDescription) {
@@ -92,7 +86,7 @@ export default function RecruiterExplainPage() {
       </Head>
 
       <section style={{ maxWidth: 1240, margin: "0 auto", padding: "22px 18px" }}>
-        {/* Workspace (matches mock: centered glass container) */}
+        {/* Workspace (centered glass container) */}
         <div style={{ ...GLASS_WORKSPACE, padding: 16 }}>
           {/* Header card */}
           <div style={{ ...CARD, padding: "18px 18px", marginBottom: 14 }}>
@@ -200,7 +194,7 @@ export default function RecruiterExplainPage() {
                   }}
                 />
 
-                {/* CTA bottom-right (matches mock) */}
+                {/* CTA bottom-right */}
                 <div style={{ position: "absolute", right: 14, bottom: 14 }}>
                   <button
                     onClick={handleAnalyze}
@@ -296,11 +290,11 @@ export default function RecruiterExplainPage() {
                     </div>
 
                     <div style={{ marginTop: 8, fontSize: 12, color: "rgba(15,23,42,0.70)" }}>
-                      {result?.summary || "AI-assisted candidate–job alignment summary will appear here."}
+                      {result?.summary ||
+                        "AI-assisted candidate–job alignment summary will appear here."}
                     </div>
                   </div>
 
-                  {/* Requirements matched (placeholder panels to match mock layout) */}
                   <CollapsibleRow title="Requirements matched — with evidence" />
                   <CollapsibleRow title="Skills alignment" />
                   <CollapsibleRow title="Career path" />
