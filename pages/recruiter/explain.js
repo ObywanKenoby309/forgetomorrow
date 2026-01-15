@@ -10,7 +10,7 @@ const GLASS_WORKSPACE = {
   border: "1px solid rgba(255,255,255,0.22)",
   background: "rgba(255,255,255,0.72)",
   backdropFilter: "blur(12px)",
-  WebU?DF?DS: "blur(12px)",
+  WebkitBackdropFilter: "blur(12px)",
   borderRadius: 18,
   boxShadow: "0 14px 44px rgba(0,0,0,0.22)",
 };
