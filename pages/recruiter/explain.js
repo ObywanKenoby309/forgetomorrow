@@ -7,6 +7,9 @@ import RecruiterLayout from "@/components/layouts/RecruiterLayout";
 import RightRailPlacementManager from "@/components/ads/RightRailPlacementManager";
 import WHYScoreInfo from "@/components/ai/WHYScoreInfo";
 
+// ✅ NEW: use the same drawer UX as Candidates
+import WhyCandidateDrawer from "../../components/recruiter/WhyCandidateDrawer";
+
 const GLASS_WORKSPACE = {
   border: "1px solid rgba(255,255,255,0.22)",
   background: "rgba(255,255,255,0.72)",
@@ -51,8 +54,12 @@ export default function RecruiterExplainPage() {
   const [error, setError] = useState(null);
   const [showWhyPanel, setShowWhyPanel] = useState(false);
 
+  // ✅ NEW: drawer state (like Candidates)
+  const [whyOpen, setWhyOpen] = useState(false);
+  const [whyData, setWhyData] = useState(null);
+
   const hasResult = !!result;
-  const showPanel = showWhyPanel && hasResult;
+  const showPanel = showWhyPanel && hasResult; // kept (no behavior change required elsewhere)
 
   // Minimal auth gate (consistent with other recruiter pages)
   if (status === "loading") return null;
@@ -81,7 +88,15 @@ export default function RecruiterExplainPage() {
       }
 
       const data = await res.json();
+
+      // keep storing result for later wiring
       setResult(data);
+
+      // ✅ CHANGE: open the RIGHT-SIDE overlay drawer (like Candidates)
+      setWhyData(data);
+      setWhyOpen(true);
+
+      // keep existing flag behavior (even though we no longer render the inline panel)
       setShowWhyPanel(true);
     } catch (err) {
       console.error("[RecruiterExplain] error", err);
@@ -93,6 +108,7 @@ export default function RecruiterExplainPage() {
 
   function handleClosePanel() {
     setShowWhyPanel(false);
+    setWhyOpen(false); // ✅ ensure Close behavior still closes the overlay
   }
 
   function handleClearJD() {
@@ -121,7 +137,8 @@ export default function RecruiterExplainPage() {
           <div
             style={{
               display: "grid",
-              gridTemplateColumns: showPanel ? "1fr 420px" : "1fr",
+              // ✅ CHANGE: never allocate a right column; drawer overlays instead
+              gridTemplateColumns: "1fr",
               gap: 14,
               alignItems: "start",
             }}
@@ -261,135 +278,26 @@ export default function RecruiterExplainPage() {
               )}
             </div>
 
-            {/* Right panel (after result) */}
-            {showPanel && (
-              <aside
-                style={{
-                  ...CARD,
-                  padding: 0,
-                  overflow: "hidden",
-                  height: "calc(100vh - 220px)",
-                  minHeight: 560,
-                  position: "sticky",
-                  top: 96,
-                }}
-              >
-                {/* Panel header */}
-                <div
-                  style={{
-                    display: "flex",
-                    alignItems: "center",
-                    justifyContent: "space-between",
-                    padding: "14px 14px",
-                    borderBottom: "1px solid rgba(15,23,42,0.10)",
-                    background: "rgba(255,255,255,0.82)",
-                  }}
-                >
-                  <div>
-                    <div style={{ fontSize: 16, fontWeight: 900 }}>Why this candidate</div>
-                    <div style={{ fontSize: 12, color: "rgba(15,23,42,0.62)" }}>
-                      Expand all &nbsp;·&nbsp; Collapse all
-                    </div>
-                  </div>
-
-                  <button
-                    type="button"
-                    onClick={handleClosePanel}
-                    style={{
-                      border: "1px solid rgba(15,23,42,0.16)",
-                      background: "rgba(255,255,255,0.70)",
-                      padding: "8px 10px",
-                      borderRadius: 10,
-                      fontSize: 12,
-                      cursor: "pointer",
-                    }}
-                  >
-                    Close
-                  </button>
-                </div>
-
-                {/* Panel body */}
-                <div
-                  style={{
-                    padding: 14,
-                    overflowY: "auto",
-                    maxHeight: "calc(100% - 124px)",
-                  }}
-                >
-                  {/* Match Summary */}
-                  <div style={{ ...CARD, padding: 12, marginBottom: 12 }}>
-                    <div style={{ display: "flex", justifyContent: "space-between", gap: 10 }}>
-                      <div style={{ fontWeight: 900 }}>Match Summary</div>
-                      <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-                        <div style={{ fontWeight: 900, color: "rgba(255,112,67,1)" }}>
-                          {typeof result?.score === "number" ? `${result.score}%` : "—"}
-                        </div>
-                        <WHYScoreInfo />
-                      </div>
-                    </div>
-
-                    <div style={{ marginTop: 8, fontSize: 12, color: "rgba(15,23,42,0.70)" }}>
-                      {result?.summary ||
-                        "AI-assisted candidate–job alignment summary will appear here."}
-                    </div>
-                  </div>
-
-                  <CollapsibleRow title="Requirements matched — with evidence" />
-                  <CollapsibleRow title="Skills alignment" />
-                  <CollapsibleRow title="Career path" />
-                  <CollapsibleRow title="Matched your filters" />
-                </div>
-
-                {/* Panel footer */}
-                <div
-                  style={{
-                    borderTop: "1px solid rgba(15,23,42,0.10)",
-                    padding: 14,
-                    display: "flex",
-                    justifyContent: "space-between",
-                    gap: 10,
-                    background: "rgba(255,255,255,0.82)",
-                  }}
-                >
-                  <button
-                    type="button"
-                    onClick={handleClosePanel}
-                    style={{
-                      border: "1px solid rgba(15,23,42,0.18)",
-                      background: "rgba(255,255,255,0.70)",
-                      padding: "10px 12px",
-                      borderRadius: 10,
-                      fontSize: 13,
-                      fontWeight: 700,
-                      cursor: "pointer",
-                    }}
-                  >
-                    Close
-                  </button>
-
-                  <button
-                    type="button"
-                    onClick={() => {}}
-                    style={{
-                      border: "1px solid rgba(255,112,67,0.55)",
-                      background: "rgba(255,112,67,0.85)",
-                      color: "white",
-                      padding: "10px 12px",
-                      borderRadius: 10,
-                      fontSize: 13,
-                      fontWeight: 900,
-                      cursor: "pointer",
-                    }}
-                    title="Optional: wire to candidate view later"
-                  >
-                    View full candidate
-                  </button>
-                </div>
-              </aside>
-            )}
+            {/* ✅ REMOVED: inline right panel; overlay drawer handles it */}
           </div>
         </div>
       </section>
+
+      {/* ✅ NEW: Right-side overlay drawer (same UX as Candidates) */}
+      <WhyCandidateDrawer
+        open={whyOpen}
+        onClose={() => {
+          setWhyOpen(false);
+          setShowWhyPanel(false);
+        }}
+        explain={whyData}
+        mode="full"
+        onViewCandidate={() => {
+          // no-op for now (Explain page doesn't have a candidate entity yet)
+          setWhyOpen(false);
+          setShowWhyPanel(false);
+        }}
+      />
     </RecruiterLayout>
   );
 }
