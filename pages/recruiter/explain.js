@@ -6,11 +6,6 @@ import Head from "next/head";
 import RecruiterLayout from "@/components/layouts/RecruiterLayout";
 import WHYScoreInfo from "@/components/ai/WHYScoreInfo";
 
-// IMPORTANT:
-// This MUST reuse the SAME explainability logic used in recruiter candidate view.
-// Adjust the import path ONLY if the function lives elsewhere.
-import { explainCandidateAlignment } from "@/lib/ai/explainCandidate";
-
 export default function RecruiterExplainPage() {
   const { data: session, status } = useSession();
 
@@ -20,6 +15,7 @@ export default function RecruiterExplainPage() {
   const [result, setResult] = useState(null);
   const [error, setError] = useState(null);
 
+  // Minimal auth gate (consistent with other recruiter pages)
   if (status === "loading") return null;
   if (!session) return null;
 
@@ -34,14 +30,24 @@ export default function RecruiterExplainPage() {
     setResult(null);
 
     try {
-      const analysis = await explainCandidateAlignment({
-        resumeText,
-        jobDescription,
+      const res = await fetch("/api/recruiter/explain", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          resumeText,
+          jobDescription,
+        }),
       });
 
-      setResult(analysis);
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}));
+        throw new Error(data?.error || "Explainability request failed");
+      }
+
+      const data = await res.json();
+      setResult(data);
     } catch (err) {
-      console.error("[RecruiterExplain] analysis error", err);
+      console.error("[RecruiterExplain] error", err);
       setError("We were unable to run the analysis. Please try again.");
     } finally {
       setLoading(false);
@@ -55,24 +61,16 @@ export default function RecruiterExplainPage() {
       </Head>
 
       <section style={{ maxWidth: 960, margin: "0 auto", padding: "24px" }}>
-        <h1 style={{ marginBottom: 12 }}>
-          Resume & Job Match Explainability
-        </h1>
+        <h1 style={{ marginBottom: 12 }}>Resume & Job Match Explainability</h1>
 
         <p style={{ marginBottom: 24 }}>
           Paste or upload a resume and a job description to receive transparent,
           explainable alignment insights and interview guidance.
         </p>
 
-        {/* Resume Input */}
+        {/* Resume Input (paste for v1; PDF upload wiring can be added next) */}
         <div style={{ marginBottom: 20 }}>
-          <label
-            style={{
-              display: "block",
-              fontWeight: 600,
-              marginBottom: 6,
-            }}
-          >
+          <label style={{ display: "block", fontWeight: 600, marginBottom: 6 }}>
             Resume (paste text)
           </label>
           <textarea
@@ -86,13 +84,7 @@ export default function RecruiterExplainPage() {
 
         {/* Job Description Input */}
         <div style={{ marginBottom: 20 }}>
-          <label
-            style={{
-              display: "block",
-              fontWeight: 600,
-              marginBottom: 6,
-            }}
-          >
+          <label style={{ display: "block", fontWeight: 600, marginBottom: 6 }}>
             Job Description
           </label>
           <textarea
@@ -116,66 +108,46 @@ export default function RecruiterExplainPage() {
           {loading ? "Analyzing…" : "Run WHY Explainability"}
         </button>
 
-        {error && (
-          <p style={{ color: "red", marginTop: 16 }}>{error}</p>
-        )}
+        {error && <p style={{ color: "red", marginTop: 16 }}>{error}</p>}
 
         {/* Results */}
         {result && (
           <div style={{ marginTop: 32 }}>
-            {/* Alignment Summary Header */}
-            <h2
-              style={{
-                display: "flex",
-                alignItems: "center",
-                gap: 6,
-              }}
-            >
+            <h2 style={{ display: "flex", alignItems: "center", gap: 6 }}>
               Alignment Summary
               <WHYScoreInfo />
             </h2>
 
             <p style={{ marginTop: 8 }}>{result.summary}</p>
 
-            {/* Strengths */}
             <h3 style={{ marginTop: 24 }}>Strengths</h3>
             <ul>
-              {result.strengths?.map((item, idx) => (
+              {(result.strengths || []).map((item, idx) => (
                 <li key={idx}>{item}</li>
               ))}
             </ul>
 
-            {/* Gaps */}
             <h3 style={{ marginTop: 24 }}>Gaps</h3>
             <ul>
-              {result.gaps?.map((item, idx) => (
+              {(result.gaps || []).map((item, idx) => (
                 <li key={idx}>{item}</li>
               ))}
             </ul>
 
-            {/* Interview Questions */}
             <h3 style={{ marginTop: 24 }}>Interview Questions</h3>
 
-            <h4 style={{ marginTop: 12 }}>
-              Behavioral / Personality
-            </h4>
+            <h4 style={{ marginTop: 12 }}>Behavioral / Personality</h4>
             <ul>
-              {result.interviewQuestions?.behavioral?.map(
-                (q, idx) => (
-                  <li key={idx}>{q}</li>
-                )
-              )}
+              {(result.interviewQuestions?.behavioral || []).map((q, idx) => (
+                <li key={idx}>{q}</li>
+              ))}
             </ul>
 
-            <h4 style={{ marginTop: 12 }}>
-              Occupational / Role-Specific
-            </h4>
+            <h4 style={{ marginTop: 12 }}>Occupational / Role-Specific</h4>
             <ul>
-              {result.interviewQuestions?.occupational?.map(
-                (q, idx) => (
-                  <li key={idx}>{q}</li>
-                )
-              )}
+              {(result.interviewQuestions?.occupational || []).map((q, idx) => (
+                <li key={idx}>{q}</li>
+              ))}
             </ul>
           </div>
         )}
