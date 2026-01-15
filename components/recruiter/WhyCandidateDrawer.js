@@ -102,20 +102,59 @@ function WhyPanel({
   const inferredCounts = useMemo(() => {
     const tierAHit = matchedSignals.filter((m) => (m?.tier || "") === "A").length;
     const tierBHit = matchedSignals.filter((m) => (m?.tier || "") === "B").length;
-    // totals may be missing; we’ll display totals only if the API includes them in summary
     return { tierAHit, tierBHit, tierATotal: null, tierBTotal: null };
   }, [matchedSignals]);
 
   const tableStats = tierCountsFromSummary || inferredCounts;
 
+  // ✅ NEW: Evidence lookups (row click)
+  const reasonsByKey = useMemo(() => {
+    const map = new Map();
+    for (const r of Array.isArray(reasons) ? reasons : []) {
+      const label = String(r?.requirement || "").trim().toLowerCase();
+      if (!label) continue;
+      map.set(label, Array.isArray(r?.evidence) ? r.evidence : []);
+    }
+    return map;
+  }, [reasons]);
+
+  const signalEvidenceByKey = useMemo(() => {
+    const map = new Map();
+    for (const m of matchedSignals) {
+      const label = String(m?.label || m?.requirement || m?.signal_id || "")
+        .trim()
+        .toLowerCase();
+      if (!label) continue;
+      const ev = Array.isArray(m?.evidence) ? m.evidence : [];
+      map.set(label, ev);
+    }
+    return map;
+  }, [matchedSignals]);
+
+  function normalizeKey(s) {
+    return String(s || "").trim().toLowerCase();
+  }
+
+  function getEvidenceForRowLabel(label) {
+    const key = normalizeKey(label);
+    // Prefer clean-schema evidence first
+    const ev1 = signalEvidenceByKey.get(key);
+    if (Array.isArray(ev1) && ev1.length) return ev1;
+    // Fall back to legacy reasons evidence
+    const ev2 = reasonsByKey.get(key);
+    if (Array.isArray(ev2) && ev2.length) return ev2;
+    return [];
+  }
+
   // Build scan-table rows from matched + gaps (Tier A/B only)
   const scanRows = useMemo(() => {
     const rows = [];
-
     const seen = new Set();
 
     function keyFor(tier, label) {
-      return `${String(tier || "").toUpperCase()}::${String(label || "").trim().toLowerCase()}`;
+      return `${String(tier || "").toUpperCase()}::${String(label || "")
+        .trim()
+        .toLowerCase()}`;
     }
 
     // Matched first
@@ -148,18 +187,33 @@ function WhyPanel({
       return String(a.label).localeCompare(String(b.label));
     });
 
-    // Keep lite scannable
     return isFull ? rows : rows.slice(0, 10);
   }, [matchedSignals, gapsSignals, isFull]);
 
-  // Evidence list only matters in Full mode (no redundancy in Lite)
-  const reasonsToShow = isFull ? reasons : [];
+  // ✅ NEW: row drill-down state (evidence opens per row)
+  const [openRowKey, setOpenRowKey] = useState(null);
 
-  const evidencePerReason = (r) => (r?.evidence || []);
+  useEffect(() => {
+    // Reset open row when candidate/explain changes
+    setOpenRowKey(null);
+  }, [explain, mode, title]);
 
-  const matchedSkills = isFull
-    ? skills.matched || []
-    : (skills.matched || []).slice(0, 6);
+  // Skills: chips (scan)
+  const matchedSkills = useMemo(() => {
+    const list = Array.isArray(skills?.matched) ? skills.matched : [];
+    return isFull ? list.slice(0, 20) : list.slice(0, 10);
+  }, [skills, isFull]);
+
+  const gapSkills = useMemo(() => {
+    const list = Array.isArray(skills?.gaps) ? skills.gaps : [];
+    // In Lite, keep gaps minimal (or hide if empty)
+    return isFull ? list.slice(0, 20) : list.slice(0, 8);
+  }, [skills, isFull]);
+
+  const transferableSkills = useMemo(() => {
+    const list = Array.isArray(skills?.transferable) ? skills.transferable : [];
+    return isFull ? list.slice(0, 20) : list.slice(0, 8);
+  }, [skills, isFull]);
 
   // Section keys
   const SECTION_KEYS = useMemo(
@@ -173,12 +227,12 @@ function WhyPanel({
     []
   );
 
-  // Default: summary open, everything else closed
+  // Default: summary + requirements open (scan-first)
   const defaultOpen = useMemo(
     () => ({
       [SECTION_KEYS.summary]: true,
-      [SECTION_KEYS.requirements]: true, // ✅ open by default now (scannable table)
-      [SECTION_KEYS.skills]: false,
+      [SECTION_KEYS.requirements]: true,
+      [SECTION_KEYS.skills]: true, // ✅ chips are scan-friendly; open by default
       [SECTION_KEYS.career]: false,
       [SECTION_KEYS.filters]: false,
     }),
@@ -187,7 +241,6 @@ function WhyPanel({
 
   const [openMap, setOpenMap] = useState(defaultOpen);
 
-  // Reset collapses when the panel content changes (candidate/explain changed)
   useEffect(() => {
     setOpenMap(defaultOpen);
   }, [defaultOpen, explain, mode, title]);
@@ -226,7 +279,6 @@ function WhyPanel({
     </div>
   );
 
-  // Tiny check icon (no extra deps)
   const Check = ({ on }) => (
     <span
       aria-hidden="true"
@@ -238,6 +290,32 @@ function WhyPanel({
       {on ? <span className="text-white text-[12px] leading-none">✓</span> : null}
     </span>
   );
+
+  const Chip = ({ children, tone = "neutral" }) => {
+    const toneClass =
+      tone === "good"
+        ? "border-emerald-200 bg-emerald-50 text-emerald-800"
+        : tone === "bad"
+        ? "border-rose-200 bg-rose-50 text-rose-800"
+        : tone === "warn"
+        ? "border-amber-200 bg-amber-50 text-amber-800"
+        : "border-slate-200 bg-slate-50 text-slate-700";
+
+    return (
+      <span
+        className={`inline-flex items-center px-2 py-1 rounded-full border text-xs font-medium ${toneClass}`}
+      >
+        {children}
+      </span>
+    );
+  };
+
+  function rowKey(row) {
+    return `${String(row?.tier || "")}::${String(row?.label || "").trim().toLowerCase()}`;
+  }
+
+  const maxEvidenceLite = 1;
+  const maxEvidenceFull = 3;
 
   return (
     <div className="h-full flex flex-col">
@@ -276,7 +354,7 @@ function WhyPanel({
           </p>
         </CollapsibleSection>
 
-        {/* Requirements (Scan-first) */}
+        {/* Requirements (Scan-first + click row for evidence) */}
         <CollapsibleSection
           title="Key requirements (scan)"
           isOpen={Boolean(openMap[SECTION_KEYS.requirements])}
@@ -301,7 +379,6 @@ function WhyPanel({
             </div>
           }
         >
-          {/* Scan table */}
           <div className="rounded border overflow-hidden bg-white">
             <div className="px-3 py-2 border-b bg-slate-50 flex items-center justify-between gap-3">
               <div className="text-xs font-semibold text-slate-700">Requirement</div>
@@ -324,25 +401,91 @@ function WhyPanel({
                 scanRows.map((row, idx) => {
                   const isA = row.tier === "A";
                   const isB = row.tier === "B";
-                  return (
-                    <div
-                      key={`${row.tier}-${row.label}-${idx}`}
-                      className="px-3 py-2 flex items-center justify-between gap-3"
-                    >
-                      <div className="min-w-0 flex-1">
-                        <div className="text-sm font-medium text-slate-900 truncate">
-                          {row.label}
-                        </div>
-                      </div>
+                  const rk = rowKey(row);
+                  const isOpen = openRowKey === rk;
 
-                      <div className="flex items-center gap-6 shrink-0">
-                        <div className="w-[78px] flex items-center justify-center">
-                          <Check on={isA && row.matched} />
+                  const ev = row.matched ? getEvidenceForRowLabel(row.label) : [];
+                  const cap = isFull ? maxEvidenceFull : maxEvidenceLite;
+                  const evToShow = (Array.isArray(ev) ? ev : []).slice(0, cap);
+
+                  return (
+                    <div key={`${row.tier}-${row.label}-${idx}`} className="px-3 py-0">
+                      {/* Row */}
+                      <button
+                        type="button"
+                        onClick={() => {
+                          // Only open evidence if matched and we actually have evidence
+                          if (!row.matched) return;
+                          if (!ev || !ev.length) return;
+                          setOpenRowKey((prev) => (prev === rk ? null : rk));
+                        }}
+                        className={`w-full py-2 flex items-center justify-between gap-3 text-left ${
+                          row.matched && ev && ev.length
+                            ? "hover:bg-slate-50"
+                            : ""
+                        }`}
+                        title={
+                          row.matched && ev && ev.length
+                            ? "Click to view evidence"
+                            : row.matched
+                            ? "No evidence available"
+                            : "Not matched"
+                        }
+                      >
+                        <div className="min-w-0 flex-1">
+                          <div className="text-sm font-medium text-slate-900 truncate">
+                            {row.label}
+                          </div>
+                          {row.matched && ev && ev.length ? (
+                            <div className="text-[11px] text-slate-500 mt-0.5">
+                              Click to {isOpen ? "hide" : "view"} evidence
+                            </div>
+                          ) : null}
                         </div>
-                        <div className="w-[78px] flex items-center justify-center">
-                          <Check on={isB && row.matched} />
+
+                        <div className="flex items-center gap-6 shrink-0">
+                          <div className="w-[78px] flex items-center justify-center">
+                            <Check on={isA && row.matched} />
+                          </div>
+                          <div className="w-[78px] flex items-center justify-center">
+                            <Check on={isB && row.matched} />
+                          </div>
                         </div>
-                      </div>
+                      </button>
+
+                      {/* Evidence (inline drill-down) */}
+                      {isOpen ? (
+                        <div className="pb-3">
+                          <div className="rounded-md border bg-white p-3">
+                            <div className="text-xs font-semibold text-slate-700 mb-2">
+                              Evidence
+                            </div>
+
+                            {evToShow.length ? (
+                              <ul className="grid gap-2">
+                                {evToShow.map((e, i) => (
+                                  <li key={i} className="text-sm text-slate-700">
+                                    — <span className="italic">{e?.text}</span>
+                                    {e?.source ? (
+                                      <span className="text-slate-400"> ({e.source})</span>
+                                    ) : null}
+                                  </li>
+                                ))}
+                              </ul>
+                            ) : (
+                              <div className="text-sm text-slate-500">
+                                No evidence available.
+                              </div>
+                            )}
+
+                            {!isFull && ev.length > maxEvidenceLite ? (
+                              <div className="text-xs text-slate-500 mt-2">
+                                WHY Lite shows a preview. Upgrade for full evidence.
+                              </div>
+                            ) : null}
+                          </div>
+                        </div>
+                      ) : null}
                     </div>
                   );
                 })
@@ -355,82 +498,64 @@ function WhyPanel({
               </div>
             ) : null}
           </div>
-
-          {/* Full-only evidence (no redundancy in Lite) */}
-          {isFull && (
-            <div className="mt-4 grid gap-3">
-              <div className="text-xs font-semibold text-slate-700">
-                Evidence (Full)
-              </div>
-
-              {reasonsToShow.length === 0 ? (
-                <div className="text-sm text-slate-500">
-                  No evidence mappings available.
-                </div>
-              ) : (
-                reasonsToShow.map((r, idx) => (
-                  <div key={idx} className="rounded border p-3">
-                    <div className="text-sm font-semibold">
-                      Requirement: {r.requirement}
-                    </div>
-                    <ul className="text-sm mt-1 grid gap-1">
-                      {evidencePerReason(r).map((ev, i) => (
-                        <li key={i} className="text-slate-700">
-                          — <span className="italic">{ev.text}</span>
-                          {ev.source ? (
-                            <span className="text-slate-400"> ({ev.source})</span>
-                          ) : null}
-                        </li>
-                      ))}
-                    </ul>
-                  </div>
-                ))
-              )}
-            </div>
-          )}
         </CollapsibleSection>
 
-        {/* Skills */}
+        {/* Skills (chips) */}
         <CollapsibleSection
-          title="Skills alignment"
+          title="Skills alignment (scan)"
           isOpen={Boolean(openMap[SECTION_KEYS.skills])}
           onToggle={() => toggle(SECTION_KEYS.skills)}
         >
-          <div
-            className={`grid ${
-              isFull ? "grid-cols-1 md:grid-cols-3" : "grid-cols-1"
-            } gap-3 text-sm`}
-          >
+          <div className="grid gap-4">
+            {/* Matched */}
             <div>
-              <div className="font-semibold mb-1">Matched</div>
-              <ul className="grid gap-1">
-                {(matchedSkills || []).length ? (
-                  (matchedSkills || []).map((s) => <li key={s}>• {s}</li>)
+              <div className="text-xs font-semibold text-slate-700 mb-2">Matched</div>
+              <div className="flex flex-wrap gap-2">
+                {matchedSkills.length ? (
+                  matchedSkills.map((s) => <Chip key={s} tone="good">{s}</Chip>)
                 ) : (
-                  <li className="text-slate-500">No skills matched detected.</li>
+                  <span className="text-sm text-slate-500">No matched skills detected.</span>
                 )}
-              </ul>
+              </div>
             </div>
 
-            {isFull && (
-              <>
+            {/* Gaps + Transferable (Full; Lite shows small preview only) */}
+            {isFull ? (
+              <div className="grid gap-4 md:grid-cols-2">
                 <div>
-                  <div className="font-semibold mb-1">Gaps</div>
-                  <ul className="grid gap-1">
-                    {(skills.gaps || []).map((s) => (
-                      <li key={s}>• {s}</li>
-                    ))}
-                  </ul>
+                  <div className="text-xs font-semibold text-slate-700 mb-2">Gaps</div>
+                  <div className="flex flex-wrap gap-2">
+                    {gapSkills.length ? (
+                      gapSkills.map((s) => <Chip key={s} tone="bad">{s}</Chip>)
+                    ) : (
+                      <span className="text-sm text-slate-500">No gaps detected.</span>
+                    )}
+                  </div>
                 </div>
+
                 <div>
-                  <div className="font-semibold mb-1">Transferable</div>
-                  <ul className="grid gap-1">
-                    {(skills.transferable || []).map((s) => (
-                      <li key={s}>• {s}</li>
-                    ))}
-                  </ul>
+                  <div className="text-xs font-semibold text-slate-700 mb-2">Transferable</div>
+                  <div className="flex flex-wrap gap-2">
+                    {transferableSkills.length ? (
+                      transferableSkills.map((s) => <Chip key={s} tone="warn">{s}</Chip>)
+                    ) : (
+                      <span className="text-sm text-slate-500">None listed.</span>
+                    )}
+                  </div>
                 </div>
-              </>
+              </div>
+            ) : (
+              gapSkills.length ? (
+                <div>
+                  <div className="text-xs font-semibold text-slate-700 mb-2">Potential gaps (preview)</div>
+                  <div className="flex flex-wrap gap-2">
+                    {gapSkills.map((s) => <Chip key={s} tone="bad">{s}</Chip>)}
+                  </div>
+                  <div className="text-xs text-slate-500 mt-2">
+                    Upgrade to see full gaps and transferable skills.
+                  </div>
+                </div>
+              ) : null
             )}
           </div>
         </CollapsibleSection>
@@ -447,10 +572,7 @@ function WhyPanel({
                 <li className="text-slate-500">No work history found.</li>
               ) : (
                 trajectory.map((t, i) => (
-                  <li
-                    key={`${t.title}-${t.company}-${i}`}
-                    className="grid gap-0.5"
-                  >
+                  <li key={`${t.title}-${t.company}-${i}`} className="grid gap-0.5">
                     <div className="font-semibold">
                       {t.title} — {t.company}
                     </div>
