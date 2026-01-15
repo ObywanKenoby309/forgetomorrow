@@ -140,287 +140,313 @@ export default function RecruiterExplainPage() {
         <title>Resume &amp; JD Explainability | ForgeTomorrow</title>
       </Head>
 
-      {/* ✅ Align left like Candidates: no centered container */}
+      {/* ✅ Align left like Candidates + reserve right rail */}
       <section style={{ width: "100%", padding: "0 14px 18px" }}>
         <div
-		  style={{
-		  ...GLASS_WORKSPACE,
-		  padding: 16,
-		  width: "100%",
-		  maxWidth: 1120,      // ✅ narrower so right side has room
-		  margin: 0,           // ✅ keep it hugging left
-		  marginRight: 420,    // ✅ reserves space on the right for ads
-			}}
-		  >
+          style={{
+            display: "grid",
+            gridTemplateColumns: "minmax(0, 1fr) 360px", // ✅ content + reserved ad rail
+            gap: 14,
+            alignItems: "start",
+          }}
+        >
+          {/* LEFT: main workspace */}
           <div
             style={{
-              display: "grid",
-              gridTemplateColumns: showPanel ? "1fr 420px" : "1fr",
-              gap: 14,
-              alignItems: "start",
+              ...GLASS_WORKSPACE,
+              padding: 16,
+              width: "100%",
+              maxWidth: 1120, // ✅ optional cap
+              justifySelf: "start",
             }}
           >
-            {/* Inputs column */}
             <div
               style={{
                 display: "grid",
-                gridTemplateColumns: "1fr 1fr",
+                gridTemplateColumns: showPanel ? "1fr 420px" : "1fr",
                 gap: 14,
+                alignItems: "start",
               }}
             >
-              {/* Job Description Card (left) */}
-              <div style={{ ...CARD, padding: 14, minHeight: 460, position: "relative" }}>
-                <div style={{ fontWeight: 900, fontSize: 14, marginBottom: 10 }}>
-                  Job Description
-                </div>
-
-                <textarea
-                  rows={16}
-                  value={jobDescription}
-                  onChange={(e) => setJobDescription(e.target.value)}
-                  placeholder="Paste job description here…"
-                  style={{
-                    width: "100%",
-                    resize: "vertical",
-                    borderRadius: 12,
-                    border: "1px solid rgba(15,23,42,0.12)",
-                    padding: 12,
-                    fontSize: 13,
-                    lineHeight: 1.45,
-                    background: "rgba(255,255,255,0.88)",
-                    minHeight: 360,
-                    marginBottom: 64, // ✅ ensures bottom buttons never sit on textarea edge/border
-                    boxSizing: "border-box",
-                  }}
-                />
-
-                {/* Clear bottom-right */}
-                <div style={{ position: "absolute", right: 14, bottom: 14 }}>
-                  <button
-                    type="button"
-                    onClick={handleClearJD}
-                    style={{
-                      border: "1px solid rgba(15,23,42,0.18)",
-                      background: "rgba(255,255,255,0.70)",
-                      padding: "10px 12px",
-                      borderRadius: 10,
-                      fontSize: 13,
-                      fontWeight: 900,
-                      cursor: "pointer",
-                    }}
-                    title="Clear job description"
-                  >
-                    Clear
-                  </button>
-                </div>
-              </div>
-
-              {/* Resume Card (right) */}
-              <div style={{ ...CARD, padding: 14, minHeight: 460, position: "relative" }}>
-                <div style={{ fontWeight: 900, fontSize: 14, marginBottom: 10 }}>Resume</div>
-
-                <textarea
-                  rows={16}
-                  value={resumeText}
-                  onChange={(e) => setResumeText(e.target.value)}
-                  placeholder="Paste resume text here…"
-                  style={{
-                    width: "100%",
-                    resize: "vertical",
-                    borderRadius: 12,
-                    border: "1px solid rgba(15,23,42,0.12)",
-                    padding: 12,
-                    fontSize: 13,
-                    lineHeight: 1.45,
-                    background: "rgba(255,255,255,0.88)",
-                    minHeight: 360,
-                    marginBottom: 64, // ✅ prevents obstruction from borders/lines
-                    boxSizing: "border-box",
-                  }}
-                />
-
-                {/* Bottom-right actions: Clear + Result */}
-                <div
-                  style={{
-                    position: "absolute",
-                    right: 14,
-                    bottom: 14,
-                    display: "flex",
-                    gap: 10,
-                    alignItems: "center",
-                  }}
-                >
-                  <button
-                    type="button"
-                    onClick={handleClearResume}
-                    style={{
-                      border: "1px solid rgba(15,23,42,0.18)",
-                      background: "rgba(255,255,255,0.70)",
-                      padding: "10px 12px",
-                      borderRadius: 10,
-                      fontSize: 13,
-                      fontWeight: 900,
-                      cursor: "pointer",
-                    }}
-                    title="Clear resume"
-                  >
-                    Clear
-                  </button>
-
-                  <button
-                    onClick={handleAnalyze}
-                    disabled={loading}
-                    style={{
-                      padding: "10px 14px",
-                      borderRadius: 10,
-                      border: "1px solid rgba(255,112,67,0.45)",
-                      background: "rgba(255,112,67,0.20)",
-                      color: "rgba(15,23,42,0.85)",
-                      fontWeight: 900,
-                      fontSize: 13,
-                      cursor: loading ? "not-allowed" : "pointer",
-                    }}
-                  >
-                    {loading ? "Analyzing…" : "Result"}
-                  </button>
-                </div>
-              </div>
-
-              {/* Error message (spans two cards) */}
-              {error && (
-                <div style={{ gridColumn: "1 / -1" }}>
-                  <p style={{ color: "red", margin: "6px 0 0" }}>{error}</p>
-                </div>
-              )}
-            </div>
-
-            {/* Right panel (after result) */}
-            {showPanel && (
-              <aside
+              {/* Inputs column */}
+              <div
                 style={{
-                  ...CARD,
-                  padding: 0,
-                  overflow: "hidden",
-                  height: "calc(100vh - 220px)",
-                  minHeight: 560,
-                  position: "sticky",
-                  top: 96,
+                  display: "grid",
+                  gridTemplateColumns: "1fr 1fr",
+                  gap: 14,
                 }}
               >
-                {/* Panel header */}
-                <div
-                  style={{
-                    display: "flex",
-                    alignItems: "center",
-                    justifyContent: "space-between",
-                    padding: "14px 14px",
-                    borderBottom: "1px solid rgba(15,23,42,0.10)",
-                    background: "rgba(255,255,255,0.82)",
-                  }}
-                >
-                  <div>
-                    <div style={{ fontSize: 16, fontWeight: 900 }}>Why this candidate</div>
-                    <div style={{ fontSize: 12, color: "rgba(15,23,42,0.62)" }}>
-                      Expand all &nbsp;·&nbsp; Collapse all
-                    </div>
+                {/* Job Description Card (left) */}
+                <div style={{ ...CARD, padding: 14, minHeight: 460, position: "relative" }}>
+                  <div style={{ fontWeight: 900, fontSize: 14, marginBottom: 10 }}>
+                    Job Description
                   </div>
 
-                  <button
-                    type="button"
-                    onClick={handleClosePanel}
+                  <textarea
+                    rows={16}
+                    value={jobDescription}
+                    onChange={(e) => setJobDescription(e.target.value)}
+                    placeholder="Paste job description here…"
                     style={{
-                      border: "1px solid rgba(15,23,42,0.16)",
-                      background: "rgba(255,255,255,0.70)",
-                      padding: "8px 10px",
-                      borderRadius: 10,
-                      fontSize: 12,
-                      cursor: "pointer",
+                      width: "100%",
+                      resize: "vertical",
+                      borderRadius: 12,
+                      border: "1px solid rgba(15,23,42,0.12)",
+                      padding: 12,
+                      fontSize: 13,
+                      lineHeight: 1.45,
+                      background: "rgba(255,255,255,0.88)",
+                      minHeight: 360,
+                      marginBottom: 64, // ✅ ensures bottom buttons never sit on textarea edge/border
+                      boxSizing: "border-box",
                     }}
-                  >
-                    Close
-                  </button>
+                  />
+
+                  {/* Clear bottom-right */}
+                  <div style={{ position: "absolute", right: 14, bottom: 14 }}>
+                    <button
+                      type="button"
+                      onClick={handleClearJD}
+                      style={{
+                        border: "1px solid rgba(15,23,42,0.18)",
+                        background: "rgba(255,255,255,0.70)",
+                        padding: "10px 12px",
+                        borderRadius: 10,
+                        fontSize: 13,
+                        fontWeight: 900,
+                        cursor: "pointer",
+                      }}
+                      title="Clear job description"
+                    >
+                      Clear
+                    </button>
+                  </div>
                 </div>
 
-                {/* Panel body */}
-                <div
+                {/* Resume Card (right) */}
+                <div style={{ ...CARD, padding: 14, minHeight: 460, position: "relative" }}>
+                  <div style={{ fontWeight: 900, fontSize: 14, marginBottom: 10 }}>Resume</div>
+
+                  <textarea
+                    rows={16}
+                    value={resumeText}
+                    onChange={(e) => setResumeText(e.target.value)}
+                    placeholder="Paste resume text here…"
+                    style={{
+                      width: "100%",
+                      resize: "vertical",
+                      borderRadius: 12,
+                      border: "1px solid rgba(15,23,42,0.12)",
+                      padding: 12,
+                      fontSize: 13,
+                      lineHeight: 1.45,
+                      background: "rgba(255,255,255,0.88)",
+                      minHeight: 360,
+                      marginBottom: 64, // ✅ prevents obstruction from borders/lines
+                      boxSizing: "border-box",
+                    }}
+                  />
+
+                  {/* Bottom-right actions: Clear + Result */}
+                  <div
+                    style={{
+                      position: "absolute",
+                      right: 14,
+                      bottom: 14,
+                      display: "flex",
+                      gap: 10,
+                      alignItems: "center",
+                    }}
+                  >
+                    <button
+                      type="button"
+                      onClick={handleClearResume}
+                      style={{
+                        border: "1px solid rgba(15,23,42,0.18)",
+                        background: "rgba(255,255,255,0.70)",
+                        padding: "10px 12px",
+                        borderRadius: 10,
+                        fontSize: 13,
+                        fontWeight: 900,
+                        cursor: "pointer",
+                      }}
+                      title="Clear resume"
+                    >
+                      Clear
+                    </button>
+
+                    <button
+                      onClick={handleAnalyze}
+                      disabled={loading}
+                      style={{
+                        padding: "10px 14px",
+                        borderRadius: 10,
+                        border: "1px solid rgba(255,112,67,0.45)",
+                        background: "rgba(255,112,67,0.20)",
+                        color: "rgba(15,23,42,0.85)",
+                        fontWeight: 900,
+                        fontSize: 13,
+                        cursor: loading ? "not-allowed" : "pointer",
+                      }}
+                    >
+                      {loading ? "Analyzing…" : "Result"}
+                    </button>
+                  </div>
+                </div>
+
+                {/* Error message (spans two cards) */}
+                {error && (
+                  <div style={{ gridColumn: "1 / -1" }}>
+                    <p style={{ color: "red", margin: "6px 0 0" }}>{error}</p>
+                  </div>
+                )}
+              </div>
+
+              {/* Right panel (after result) */}
+              {showPanel && (
+                <aside
                   style={{
-                    padding: 14,
-                    overflowY: "auto",
-                    maxHeight: "calc(100% - 124px)",
+                    ...CARD,
+                    padding: 0,
+                    overflow: "hidden",
+                    height: "calc(100vh - 220px)",
+                    minHeight: 560,
+                    position: "sticky",
+                    top: 96,
                   }}
                 >
-                  {/* Match Summary */}
-                  <div style={{ ...CARD, padding: 12, marginBottom: 12 }}>
-                    <div style={{ display: "flex", justifyContent: "space-between", gap: 10 }}>
-                      <div style={{ fontWeight: 900 }}>Match Summary</div>
-                      <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-                        <div style={{ fontWeight: 900, color: "rgba(255,112,67,1)" }}>
-                          {typeof result?.score === "number" ? `${result.score}%` : "—"}
-                        </div>
-                        <WHYScoreInfo />
+                  {/* Panel header */}
+                  <div
+                    style={{
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "space-between",
+                      padding: "14px 14px",
+                      borderBottom: "1px solid rgba(15,23,42,0.10)",
+                      background: "rgba(255,255,255,0.82)",
+                    }}
+                  >
+                    <div>
+                      <div style={{ fontSize: 16, fontWeight: 900 }}>Why this candidate</div>
+                      <div style={{ fontSize: 12, color: "rgba(15,23,42,0.62)" }}>
+                        Expand all &nbsp;·&nbsp; Collapse all
                       </div>
                     </div>
 
-                    <div style={{ marginTop: 8, fontSize: 12, color: "rgba(15,23,42,0.70)" }}>
-                      {result?.summary ||
-                        "AI-assisted candidate–job alignment summary will appear here."}
-                    </div>
+                    <button
+                      type="button"
+                      onClick={handleClosePanel}
+                      style={{
+                        border: "1px solid rgba(15,23,42,0.16)",
+                        background: "rgba(255,255,255,0.70)",
+                        padding: "8px 10px",
+                        borderRadius: 10,
+                        fontSize: 12,
+                        cursor: "pointer",
+                      }}
+                    >
+                      Close
+                    </button>
                   </div>
 
-                  <CollapsibleRow title="Requirements matched — with evidence" />
-                  <CollapsibleRow title="Skills alignment" />
-                  <CollapsibleRow title="Career path" />
-                  <CollapsibleRow title="Matched your filters" />
-                </div>
-
-                {/* Panel footer */}
-                <div
-                  style={{
-                    borderTop: "1px solid rgba(15,23,42,0.10)",
-                    padding: 14,
-                    display: "flex",
-                    justifyContent: "space-between",
-                    gap: 10,
-                    background: "rgba(255,255,255,0.82)",
-                  }}
-                >
-                  <button
-                    type="button"
-                    onClick={handleClosePanel}
+                  {/* Panel body */}
+                  <div
                     style={{
-                      border: "1px solid rgba(15,23,42,0.18)",
-                      background: "rgba(255,255,255,0.70)",
-                      padding: "10px 12px",
-                      borderRadius: 10,
-                      fontSize: 13,
-                      fontWeight: 700,
-                      cursor: "pointer",
+                      padding: 14,
+                      overflowY: "auto",
+                      maxHeight: "calc(100% - 124px)",
                     }}
                   >
-                    Close
-                  </button>
+                    {/* Match Summary */}
+                    <div style={{ ...CARD, padding: 12, marginBottom: 12 }}>
+                      <div style={{ display: "flex", justifyContent: "space-between", gap: 10 }}>
+                        <div style={{ fontWeight: 900 }}>Match Summary</div>
+                        <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                          <div style={{ fontWeight: 900, color: "rgba(255,112,67,1)" }}>
+                            {typeof result?.score === "number" ? `${result.score}%` : "—"}
+                          </div>
+                          <WHYScoreInfo />
+                        </div>
+                      </div>
 
-                  <button
-                    type="button"
-                    onClick={() => {}}
+                      <div style={{ marginTop: 8, fontSize: 12, color: "rgba(15,23,42,0.70)" }}>
+                        {result?.summary ||
+                          "AI-assisted candidate–job alignment summary will appear here."}
+                      </div>
+                    </div>
+
+                    <CollapsibleRow title="Requirements matched — with evidence" />
+                    <CollapsibleRow title="Skills alignment" />
+                    <CollapsibleRow title="Career path" />
+                    <CollapsibleRow title="Matched your filters" />
+                  </div>
+
+                  {/* Panel footer */}
+                  <div
                     style={{
-                      border: "1px solid rgba(255,112,67,0.55)",
-                      background: "rgba(255,112,67,0.85)",
-                      color: "white",
-                      padding: "10px 12px",
-                      borderRadius: 10,
-                      fontSize: 13,
-                      fontWeight: 900,
-                      cursor: "pointer",
+                      borderTop: "1px solid rgba(15,23,42,0.10)",
+                      padding: 14,
+                      display: "flex",
+                      justifyContent: "space-between",
+                      gap: 10,
+                      background: "rgba(255,255,255,0.82)",
                     }}
-                    title="Optional: wire to candidate view later"
                   >
-                    View full candidate
-                  </button>
-                </div>
-              </aside>
-            )}
+                    <button
+                      type="button"
+                      onClick={handleClosePanel}
+                      style={{
+                        border: "1px solid rgba(15,23,42,0.18)",
+                        background: "rgba(255,255,255,0.70)",
+                        padding: "10px 12px",
+                        borderRadius: 10,
+                        fontSize: 13,
+                        fontWeight: 700,
+                        cursor: "pointer",
+                      }}
+                    >
+                      Close
+                    </button>
+
+                    <button
+                      type="button"
+                      onClick={() => {}}
+                      style={{
+                        border: "1px solid rgba(255,112,67,0.55)",
+                        background: "rgba(255,112,67,0.85)",
+                        color: "white",
+                        padding: "10px 12px",
+                        borderRadius: 10,
+                        fontSize: 13,
+                        fontWeight: 900,
+                        cursor: "pointer",
+                      }}
+                      title="Optional: wire to candidate view later"
+                    >
+                      View full candidate
+                    </button>
+                  </div>
+                </aside>
+              )}
+            </div>
           </div>
+
+          {/* RIGHT: reserved ad rail (placeholder for now) */}
+          <aside
+            style={{
+              ...CARD,
+              padding: 14,
+              minHeight: 240,
+              position: "sticky",
+              top: 96,
+              alignSelf: "start",
+            }}
+          >
+            <div style={{ fontWeight: 900, marginBottom: 8 }}>Sponsored</div>
+            <div style={{ fontSize: 12, color: "rgba(15,23,42,0.65)", lineHeight: 1.5 }}>
+              Ad rail reserved. We’ll wire RightRailPlacementManager here.
+            </div>
+          </aside>
         </div>
       </section>
     </RecruiterLayout>
