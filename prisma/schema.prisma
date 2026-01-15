@@ -575,12 +575,6 @@ model Organization {
   @@map("organizations")
 }
 
-// ============================================================================
-//  ORGANIZATION MEMBERS (Multi-client recruiter access / seats)
-//  - Allows a recruiter (or staff) to have access to MANY orgs.
-//  - Keeps User.accountKey as "home/default org" (optional).
-// ============================================================================
-
 model OrganizationMember {
   id String @id @default(cuid())
 
@@ -631,7 +625,6 @@ model AuditLog {
   actorUserId String
   actor       User   @relation("AuditActor", fields: [actorUserId], references: [id], onDelete: Cascade)
 
-  // If action occurred while impersonating a user
   impersonatedUserId String?
   impersonatedUser   User?   @relation("AuditImpersonated", fields: [impersonatedUserId], references: [id], onDelete: SetNull)
 
@@ -695,31 +688,21 @@ model User {
 
   accountKey String?
 
-  // ✅ NEW: internal staff gate (simple + DB-backed)
   employee   Boolean     @default(false)
   department Department?
 
-  // ✅ NEW: org link via accountKey (no new User columns)
   organization Organization? @relation("OrganizationUsers", fields: [accountKey], references: [accountKey])
-
-  // ✅ NEW: multi-org access (fractional / agency recruiters)
   organizationMemberships OrganizationMember[] @relation("UserOrganizationMembers")
-
-  // ✅ NEW: internal staff roles (Option B)
   staffRoles UserStaffRole[]
 
-  // ✅ NEW: audit log relations
   auditAsActor        AuditLog[] @relation("AuditActor")
   auditAsImpersonated AuditLog[] @relation("AuditImpersonated")
 
-  // ✅ NEW: org owner inverse relation (optional)
   ownedOrganizations Organization[] @relation("OrganizationOwner")
 
-  // ✅ Profile views (who viewed you / who you viewed)
   profileViewsReceived ProfileView[] @relation("ProfileViewTarget")
   profileViewsMade     ProfileView[] @relation("ProfileViewViewer")
 
-  // ✅ NEW: feed post view events (inverse relation for FeedPostView.viewer)
   feedPostViews FeedPostView[] @relation("UserFeedPostViews")
 
   applications Application[]
@@ -742,7 +725,10 @@ model User {
   candidates           Candidate[]
   candidateAutomations RecruiterCandidateAutomation[]
 
-  // RecruiterCandidate (Option A) relations
+  // ✅ NEW: inverse relations for named explain run relations
+  recruiterExplainRuns RecruiterExplainRun[] @relation("RecruiterExplainRunsAsRecruiter")
+  candidateExplainRuns RecruiterExplainRun[] @relation("RecruiterExplainRunsAsCandidate")
+
   recruiterCandidatesOwned  RecruiterCandidate[] @relation("RecruiterCandidateRecruiter")
   recruiterCandidatesAsUser RecruiterCandidate[] @relation("RecruiterCandidateCandidate")
 
@@ -760,7 +746,6 @@ model User {
   coachingSessionsAsClient CoachingSession[] @relation("CoachSessionsClient")
 
   coachingCsatResponses CoachingCsatResponse[] @relation("UserCoachingCsatResponses")
-
   hearthSpotlights HearthSpotlight[]
 
   contacts                Contact[]        @relation("UserContacts")
@@ -780,13 +765,12 @@ model User {
 
   seekerCalendarItems SeekerCalendarItem[] @relation("UserSeekerCalendarItems")
 
-  // ✅ NEW: inverse relation for PasswordResetToken.user
   passwordResetTokens PasswordResetToken[]
 
   corporateBannerKey        String?
   corporateBannerLocked     Boolean   @default(false)
   resumeAlignFreeUses       Int       @default(0)
-  resumeAlignLastResetMonth String? // format "2025-12"
+  resumeAlignLastResetMonth String?
   deletedAt                 DateTime?
   createdAt                 DateTime  @default(now())
   updatedAt                 DateTime  @updatedAt
@@ -838,7 +822,6 @@ model Candidate {
 
 // ============================================================================
 //  RECRUITER CANDIDATE (Option A) — recruiter-specific metadata for a User
-//  Stores notes/tags/pipeline without copying user profile data.
 // ============================================================================
 
 model RecruiterCandidate {
@@ -850,7 +833,6 @@ model RecruiterCandidate {
   candidateUserId String
   candidate       User   @relation("RecruiterCandidateCandidate", fields: [candidateUserId], references: [id], onDelete: Cascade)
 
-  // REQUIRED: this record is always scoped to a specific client org / account
   accountKey String
 
   tags          Json?
@@ -871,7 +853,7 @@ model RecruiterCandidate {
 }
 
 // ============================================================================
-//  RECRUITER CANDIDATE AUTOMATION
+//  RECRUITER CANDIDATE AUTOMATION (KEEP ONLY THIS ONE)
 // ============================================================================
 
 model RecruiterCandidateAutomation {
@@ -890,6 +872,32 @@ model RecruiterCandidateAutomation {
 
   @@index([userId])
   @@map("recruiter_candidate_automation")
+}
+
+model RecruiterExplainRun {
+  id String @id @default(cuid())
+
+  recruiterUserId String
+  recruiter       User @relation("RecruiterExplainRunsAsRecruiter", fields: [recruiterUserId], references: [id], onDelete: Cascade)
+
+  candidateUserId String?
+  candidate       User? @relation("RecruiterExplainRunsAsCandidate", fields: [candidateUserId], references: [id], onDelete: SetNull)
+
+  jobId Int?
+
+  resumeText     String
+  jobDescription String
+
+  result Json
+  accountKey String?
+
+  createdAt DateTime @default(now())
+
+  @@index([recruiterUserId])
+  @@index([candidateUserId])
+  @@index([jobId])
+  @@index([accountKey])
+  @@map("recruiter_explain_runs")
 }
 
 // ============================================================================
@@ -1005,7 +1013,6 @@ model Message {
 
   conversation Conversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
 
-  // ✅ FIX: named relation must match User.messages @relation("UserMessages")
   sender User @relation("UserMessages", fields: [senderId], references: [id])
 
   reactions MessageReaction[]
@@ -1022,7 +1029,6 @@ model UserBlock {
   blockedId String
   createdAt DateTime @default(now())
 
-  // ✅ NEW: Optional reason for block (from prompt in PostCard)
   reason String?
 
   blocker User @relation("UserBlocksAsBlocker", fields: [blockerId], references: [id], onDelete: Cascade)
@@ -1042,8 +1048,6 @@ model MessageReaction {
   createdAt DateTime @default(now())
 
   message Message @relation(fields: [messageId], references: [id], onDelete: Cascade)
-
-  // ✅ FIX: named relation must match User.messageReactions @relation("UserMessageReactions")
   user User @relation("UserMessageReactions", fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([messageId])
@@ -1186,7 +1190,6 @@ model FeedPost {
   createdAt  DateTime @default(now())
   updatedAt  DateTime @updatedAt
 
-  // ✅ NEW: view events
   views FeedPostView[]
 
   @@index([authorId])
@@ -1196,7 +1199,7 @@ model FeedPost {
 model FeedPostView {
   id        Int      @id @default(autoincrement())
   postId    Int
-  viewerId  String? // allow anonymous (no session) but still log the view event
+  viewerId  String?
   source    String?  @default("feed")
   createdAt DateTime @default(now())
 
