@@ -72,80 +72,24 @@ function WhyPanel({
   } = explain || {};
 
   // ---------------------------------------------------------------------------
-  // ✅ NEW: Prefer the new clean schema if present (falls back to legacy)
+  // ✅ Prefer clean schema if present (falls back to legacy)
   // ---------------------------------------------------------------------------
   const matchedSignals = useMemo(() => {
-    const arr =
-      explain?.signals?.matched ||
-      explain?.matched ||
-      [];
+    const arr = explain?.signals?.matched || explain?.matched || [];
     return Array.isArray(arr) ? arr : [];
   }, [explain]);
 
-  // Tier totals: if API provides them, use them. Otherwise infer from matched signals.
-  const inferredTotals = useMemo(() => {
-    // If the API includes full config totals, use them. Otherwise infer from matched.
-    // (Inference is best-effort; table still works even without totals.)
-    const tierA = matchedSignals.filter((m) => (m?.tier || "") === "A").length;
-    const tierB = matchedSignals.filter((m) => (m?.tier || "") === "B").length;
-    return {
-      tierAHit: tierA,
-      tierBHit: tierB,
-      tierATotal: null,
-      tierBTotal: null,
-    };
-  }, [matchedSignals]);
+  const gapsSignals = useMemo(() => {
+    const arr = explain?.signals?.gaps || [];
+    return Array.isArray(arr) ? arr : [];
+  }, [explain]);
 
-  // Build the scan-table rows from matched signals + (optional) gaps
-  const scanRows = useMemo(() => {
-    // If your API returns gaps as { signal_id, label, tier }, we can include them as unchecked rows.
-    const gapsArr = Array.isArray(explain?.signals?.gaps) ? explain.signals.gaps : [];
-
-    const matchedMap = new Map();
-    for (const m of matchedSignals) {
-      const label = m?.label || m?.requirement || m?.signal_id || "Requirement";
-      const tier = m?.tier || "B";
-      const key = `${tier}::${label}`.toLowerCase();
-      matchedMap.set(key, { label, tier, matched: true });
-    }
-
-    const gapRows = [];
-    for (const g of gapsArr) {
-      const tier = g?.tier || "B";
-      if (tier !== "A" && tier !== "B") continue;
-      const label = g?.label || g?.signal_id || "Requirement";
-      const key = `${tier}::${label}`.toLowerCase();
-      // Only add if not already matched
-      if (!matchedMap.has(key)) {
-        gapRows.push({ label, tier, matched: false });
-      }
-    }
-
-    // Combine: show matched first, then gaps, Tier A above Tier B
-    const combined = [
-      ...Array.from(matchedMap.values()),
-      ...gapRows,
-    ];
-
-    combined.sort((a, b) => {
-      const ta = a.tier === "A" ? 0 : 1;
-      const tb = b.tier === "A" ? 0 : 1;
-      if (ta !== tb) return ta - tb;
-      // Matched first
-      if (a.matched !== b.matched) return a.matched ? -1 : 1;
-      return String(a.label).localeCompare(String(b.label));
-    });
-
-    // Keep it scannable: cap rows in lite mode (full mode can show all)
-    if (!isFull) return combined.slice(0, 10);
-    return combined;
-  }, [matchedSignals, explain, isFull]);
-
-  const tierATotalFromSummary = useMemo(() => {
-    // Optional: parse "Matched X/Y core signals (Tier A) and A/B supporting signals (Tier B)" if present.
-    // Safe + best-effort. If parse fails, returns nulls.
+  // Best-effort parse summary counts if present, otherwise infer hit counts
+  const tierCountsFromSummary = useMemo(() => {
     const text = String(summary || "");
-    const m = text.match(/Matched\s+(\d+)\s*\/\s*(\d+)\s+core\s+signals\s+\(Tier\s+A\)\s+and\s+(\d+)\s*\/\s*(\d+)\s+supporting\s+signals\s+\(Tier\s+B\)/i);
+    const m = text.match(
+      /Matched\s+(\d+)\s*\/\s*(\d+)\s+core\s+signals\s+\(Tier\s+A\)\s+and\s+(\d+)\s*\/\s*(\d+)\s+supporting\s+signals\s+\(Tier\s+B\)/i
+    );
     if (!m) return null;
     return {
       tierAHit: Number(m[1]),
@@ -155,15 +99,67 @@ function WhyPanel({
     };
   }, [summary]);
 
-  const tableStats = tierATotalFromSummary || inferredTotals;
+  const inferredCounts = useMemo(() => {
+    const tierAHit = matchedSignals.filter((m) => (m?.tier || "") === "A").length;
+    const tierBHit = matchedSignals.filter((m) => (m?.tier || "") === "B").length;
+    // totals may be missing; we’ll display totals only if the API includes them in summary
+    return { tierAHit, tierBHit, tierATotal: null, tierBTotal: null };
+  }, [matchedSignals]);
 
-  const reasonsToShow = isFull ? reasons : reasons.slice(0, 2);
-  const evidencePerReason = (r) =>
-    isFull ? (r.evidence || []) : (r.evidence || []).slice(0, 1);
+  const tableStats = tierCountsFromSummary || inferredCounts;
+
+  // Build scan-table rows from matched + gaps (Tier A/B only)
+  const scanRows = useMemo(() => {
+    const rows = [];
+
+    const seen = new Set();
+
+    function keyFor(tier, label) {
+      return `${String(tier || "").toUpperCase()}::${String(label || "").trim().toLowerCase()}`;
+    }
+
+    // Matched first
+    for (const m of matchedSignals) {
+      const tier = m?.tier || "B";
+      if (tier !== "A" && tier !== "B") continue;
+      const label = m?.label || m?.requirement || m?.signal_id || "Requirement";
+      const k = keyFor(tier, label);
+      if (seen.has(k)) continue;
+      seen.add(k);
+      rows.push({ label, tier, matched: true });
+    }
+
+    // Then gaps (unchecked)
+    for (const g of gapsSignals) {
+      const tier = g?.tier || "B";
+      if (tier !== "A" && tier !== "B") continue;
+      const label = g?.label || g?.signal_id || "Requirement";
+      const k = keyFor(tier, label);
+      if (seen.has(k)) continue;
+      seen.add(k);
+      rows.push({ label, tier, matched: false });
+    }
+
+    rows.sort((a, b) => {
+      const ta = a.tier === "A" ? 0 : 1;
+      const tb = b.tier === "A" ? 0 : 1;
+      if (ta !== tb) return ta - tb;
+      if (a.matched !== b.matched) return a.matched ? -1 : 1;
+      return String(a.label).localeCompare(String(b.label));
+    });
+
+    // Keep lite scannable
+    return isFull ? rows : rows.slice(0, 10);
+  }, [matchedSignals, gapsSignals, isFull]);
+
+  // Evidence list only matters in Full mode (no redundancy in Lite)
+  const reasonsToShow = isFull ? reasons : [];
+
+  const evidencePerReason = (r) => (r?.evidence || []);
 
   const matchedSkills = isFull
     ? skills.matched || []
-    : (skills.matched || []).slice(0, 3);
+    : (skills.matched || []).slice(0, 6);
 
   // Section keys
   const SECTION_KEYS = useMemo(
@@ -181,7 +177,7 @@ function WhyPanel({
   const defaultOpen = useMemo(
     () => ({
       [SECTION_KEYS.summary]: true,
-      [SECTION_KEYS.requirements]: false,
+      [SECTION_KEYS.requirements]: true, // ✅ open by default now (scannable table)
       [SECTION_KEYS.skills]: false,
       [SECTION_KEYS.career]: false,
       [SECTION_KEYS.filters]: false,
@@ -280,24 +276,41 @@ function WhyPanel({
           </p>
         </CollapsibleSection>
 
-        {/* Requirements → Evidence */}
+        {/* Requirements (Scan-first) */}
         <CollapsibleSection
-          title={`Requirements matched — ${isFull ? "with evidence" : "top reasons"}`}
+          title="Key requirements (scan)"
           isOpen={Boolean(openMap[SECTION_KEYS.requirements])}
           onToggle={() => toggle(SECTION_KEYS.requirements)}
+          right={
+            <div className="text-xs text-slate-600 flex items-center gap-3">
+              <span>
+                Tier A{" "}
+                <span className="font-semibold">
+                  {typeof tableStats.tierAHit === "number" ? tableStats.tierAHit : 0}
+                  {typeof tableStats.tierATotal === "number" ? `/${tableStats.tierATotal}` : ""}
+                </span>
+              </span>
+              <span className="text-slate-300">•</span>
+              <span>
+                Tier B{" "}
+                <span className="font-semibold">
+                  {typeof tableStats.tierBHit === "number" ? tableStats.tierBHit : 0}
+                  {typeof tableStats.tierBTotal === "number" ? `/${tableStats.tierBTotal}` : ""}
+                </span>
+              </span>
+            </div>
+          }
         >
-          {/* ✅ NEW: Scan table first (fast recruiter scan) */}
+          {/* Scan table */}
           <div className="rounded border overflow-hidden bg-white">
             <div className="px-3 py-2 border-b bg-slate-50 flex items-center justify-between gap-3">
-              <div className="text-xs font-semibold text-slate-700">
-                Requirement
-              </div>
+              <div className="text-xs font-semibold text-slate-700">Requirement</div>
               <div className="flex items-center gap-6">
                 <div className="text-xs font-semibold text-slate-700 w-[78px] text-center">
-                  Matched A
+                  Tier A
                 </div>
                 <div className="text-xs font-semibold text-slate-700 w-[78px] text-center">
-                  Matched B
+                  Tier B
                 </div>
               </div>
             </div>
@@ -336,66 +349,44 @@ function WhyPanel({
               )}
             </div>
 
-            {/* Footer stats row */}
-            <div className="px-3 py-2 border-t bg-slate-50 text-xs text-slate-600 flex flex-wrap gap-x-4 gap-y-1">
-              <span>
-                Tier A:{" "}
-                <span className="font-semibold">
-                  {typeof tableStats.tierAHit === "number" ? tableStats.tierAHit : 0}
-                  {typeof tableStats.tierATotal === "number"
-                    ? `/${tableStats.tierATotal}`
-                    : ""}
-                </span>
-              </span>
-              <span>
-                Tier B:{" "}
-                <span className="font-semibold">
-                  {typeof tableStats.tierBHit === "number" ? tableStats.tierBHit : 0}
-                  {typeof tableStats.tierBTotal === "number"
-                    ? `/${tableStats.tierBTotal}`
-                    : ""}
-                </span>
-              </span>
-              {!isFull ? (
-                <span className="text-slate-500">
-                  Showing top items. Expand for full view.
-                </span>
-              ) : null}
-            </div>
-          </div>
-
-          {/* Existing evidence cards (keep for trust + auditability) */}
-          <div className="grid gap-3 mt-4">
-            {reasonsToShow.length === 0 ? (
-              <div className="text-sm text-slate-500">
-                No requirement mappings available.
+            {!isFull ? (
+              <div className="px-3 py-2 border-t bg-slate-50 text-xs text-slate-500">
+                WHY Lite shows the top items for fast scan. Upgrade for full evidence.
               </div>
-            ) : (
-              reasonsToShow.map((r, idx) => (
-                <div key={idx} className="rounded border p-3">
-                  <div className="text-sm font-semibold">
-                    Requirement: {r.requirement}
-                  </div>
-                  <ul className="text-sm mt-1 grid gap-1">
-                    {evidencePerReason(r).map((ev, i) => (
-                      <li key={i} className="text-slate-700">
-                        — <span className="italic">{ev.text}</span>
-                        {ev.source ? (
-                          <span className="text-slate-400"> ({ev.source})</span>
-                        ) : null}
-                      </li>
-                    ))}
-                  </ul>
-                </div>
-              ))
-            )}
+            ) : null}
           </div>
 
-          {!isFull && (
-            <p className="text-xs text-slate-500 mt-3">
-              You’re viewing WHY Lite. Add WHY Plus or upgrade to Enterprise for
-              full evidence.
-            </p>
+          {/* Full-only evidence (no redundancy in Lite) */}
+          {isFull && (
+            <div className="mt-4 grid gap-3">
+              <div className="text-xs font-semibold text-slate-700">
+                Evidence (Full)
+              </div>
+
+              {reasonsToShow.length === 0 ? (
+                <div className="text-sm text-slate-500">
+                  No evidence mappings available.
+                </div>
+              ) : (
+                reasonsToShow.map((r, idx) => (
+                  <div key={idx} className="rounded border p-3">
+                    <div className="text-sm font-semibold">
+                      Requirement: {r.requirement}
+                    </div>
+                    <ul className="text-sm mt-1 grid gap-1">
+                      {evidencePerReason(r).map((ev, i) => (
+                        <li key={i} className="text-slate-700">
+                          — <span className="italic">{ev.text}</span>
+                          {ev.source ? (
+                            <span className="text-slate-400"> ({ev.source})</span>
+                          ) : null}
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                ))
+              )}
+            </div>
           )}
         </CollapsibleSection>
 
@@ -413,9 +404,11 @@ function WhyPanel({
             <div>
               <div className="font-semibold mb-1">Matched</div>
               <ul className="grid gap-1">
-                {(matchedSkills || []).map((s) => (
-                  <li key={s}>• {s}</li>
-                ))}
+                {(matchedSkills || []).length ? (
+                  (matchedSkills || []).map((s) => <li key={s}>• {s}</li>)
+                ) : (
+                  <li className="text-slate-500">No skills matched detected.</li>
+                )}
               </ul>
             </div>
 
@@ -498,9 +491,7 @@ function WhyPanel({
 
       {/* Footer */}
       <div className="p-4 border-t flex items-center justify-end gap-2">
-        {!isFull && (
-          <SecondaryButton href="#upgrade">Upgrade WHY</SecondaryButton>
-        )}
+        {!isFull && <SecondaryButton href="#upgrade">Upgrade WHY</SecondaryButton>}
         <SecondaryButton onClick={onClose}>Close</SecondaryButton>
         {onViewCandidate ? (
           <PrimaryButton onClick={onViewCandidate}>View full candidate</PrimaryButton>
