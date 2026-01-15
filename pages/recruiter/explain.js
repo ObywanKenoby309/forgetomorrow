@@ -143,14 +143,15 @@ export default function RecruiterExplainPage() {
       {/* ✅ Align left like Candidates: no centered container */}
       <section style={{ width: "100%", padding: "0 14px 18px" }}>
         <div
-          style={{
-            ...GLASS_WORKSPACE,
-            padding: 16,
-            width: "100%",
-            maxWidth: 1240,
-            margin: 0, // ✅ not centered
-          }}
-        >
+		  style={{
+		  ...GLASS_WORKSPACE,
+		  padding: 16,
+		  width: "100%",
+		  maxWidth: 1120,      // ✅ narrower so right side has room
+		  margin: 0,           // ✅ keep it hugging left
+		  marginRight: 420,    // ✅ reserves space on the right for ads
+			}}
+		  >
           <div
             style={{
               display: "grid",
