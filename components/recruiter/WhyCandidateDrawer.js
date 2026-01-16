@@ -529,7 +529,7 @@ function WhyPanel({
               </div>
             </div>
 
-            {/* Full: show adjacent strengths + not yet demonstrated */}
+            {/* Full: show adjacent strengths + not evidenced in submitted materials */}
             {isFull ? (
               <div className="grid gap-4 md:grid-cols-2">
                 <div>
@@ -551,7 +551,7 @@ function WhyPanel({
 
                 <div>
                   <div className="text-xs font-semibold text-slate-700 mb-2">
-                    Not yet demonstrated
+                    Not evidenced in submitted materials
                   </div>
 
                   {noCriticalGaps ? (
@@ -568,7 +568,7 @@ function WhyPanel({
                         ))
                       ) : (
                         <span className="text-sm text-slate-500">
-                          No additional “not yet demonstrated” items detected.
+                          No additional “not evidenced in submitted materials” items detected.
                         </span>
                       )}
                     </div>
@@ -584,7 +584,7 @@ function WhyPanel({
               gapSkills.length || noCriticalGaps ? (
                 <div>
                   <div className="text-xs font-semibold text-slate-700 mb-2">
-                    Not yet demonstrated (preview)
+                    Not evidenced in submitted materials (preview)
                   </div>
 
                   {noCriticalGaps ? (
