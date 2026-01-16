@@ -80,7 +80,7 @@ function WhyPanel({
   }, [explain]);
 
   const gapsSignals = useMemo(() => {
-    const arr = explain?.signals?.gaps || [];
+    const arr = explain?.signals?.gaps || explain?.signals?.not_yet_demonstrated || [];
     return Array.isArray(arr) ? arr : [];
   }, [explain]);
 
@@ -190,6 +190,12 @@ function WhyPanel({
     return isFull ? rows : rows.slice(0, 10);
   }, [matchedSignals, gapsSignals, isFull]);
 
+  // ✅ NEW: “No critical gaps detected” only when true (Tier A only)
+  const noCriticalGaps = useMemo(() => {
+    const tierAUnmatched = scanRows.filter((r) => r?.tier === "A" && !r?.matched);
+    return tierAUnmatched.length === 0;
+  }, [scanRows]);
+
   // ✅ NEW: row drill-down state (evidence opens per row)
   const [openRowKey, setOpenRowKey] = useState(null);
 
@@ -198,7 +204,7 @@ function WhyPanel({
     setOpenRowKey(null);
   }, [explain, mode, title]);
 
-  // Skills: chips (scan)
+  // Signals-as-chips (scan)
   const matchedSkills = useMemo(() => {
     const list = Array.isArray(skills?.matched) ? skills.matched : [];
     return isFull ? list.slice(0, 20) : list.slice(0, 10);
@@ -206,7 +212,6 @@ function WhyPanel({
 
   const gapSkills = useMemo(() => {
     const list = Array.isArray(skills?.gaps) ? skills.gaps : [];
-    // In Lite, keep gaps minimal (or hide if empty)
     return isFull ? list.slice(0, 20) : list.slice(0, 8);
   }, [skills, isFull]);
 
@@ -232,9 +237,9 @@ function WhyPanel({
     () => ({
       [SECTION_KEYS.summary]: true,
       [SECTION_KEYS.requirements]: true,
-      [SECTION_KEYS.skills]: true, // ✅ chips are scan-friendly; open by default
-      [SECTION_KEYS.career]: false,
-      [SECTION_KEYS.filters]: false,
+      [SECTION_KEYS.skills]: true, // ✅ scan-friendly; open by default
+      [SECTION_KEYS.career]: true, // ✅ keep visible
+      [SECTION_KEYS.filters]: true, // ✅ keep visible
     }),
     [SECTION_KEYS]
   );
@@ -350,13 +355,13 @@ function WhyPanel({
         >
           {!!summary && <p className="text-sm text-slate-600 mt-1">{summary}</p>}
           <p className="mt-2 text-xs text-slate-500">
-            AI-assisted rationale; recruiters review and override all decisions.
+            Evidence-first guidance for recruiter judgment. Recruiters review and override all decisions.
           </p>
         </CollapsibleSection>
 
         {/* Requirements (Scan-first + click row for evidence) */}
         <CollapsibleSection
-          title="Key requirements (scan)"
+          title="Required capabilities (scan)"
           isOpen={Boolean(openMap[SECTION_KEYS.requirements])}
           onToggle={() => toggle(SECTION_KEYS.requirements)}
           right={
@@ -414,15 +419,12 @@ function WhyPanel({
                       <button
                         type="button"
                         onClick={() => {
-                          // Only open evidence if matched and we actually have evidence
                           if (!row.matched) return;
                           if (!ev || !ev.length) return;
                           setOpenRowKey((prev) => (prev === rk ? null : rk));
                         }}
                         className={`w-full py-2 flex items-center justify-between gap-3 text-left ${
-                          row.matched && ev && ev.length
-                            ? "hover:bg-slate-50"
-                            : ""
+                          row.matched && ev && ev.length ? "hover:bg-slate-50" : ""
                         }`}
                         title={
                           row.matched && ev && ev.length
@@ -500,59 +502,107 @@ function WhyPanel({
           </div>
         </CollapsibleSection>
 
-        {/* Skills (chips) */}
+        {/* Signals (chips) — re-framed to avoid ATS language */}
         <CollapsibleSection
-          title="Skills alignment (scan)"
+          title="Capability signals detected"
           isOpen={Boolean(openMap[SECTION_KEYS.skills])}
           onToggle={() => toggle(SECTION_KEYS.skills)}
         >
           <div className="grid gap-4">
-            {/* Matched */}
+            {/* Observed capabilities */}
             <div>
-              <div className="text-xs font-semibold text-slate-700 mb-2">Matched</div>
+              <div className="text-xs font-semibold text-slate-700 mb-2">
+                Observed capabilities
+              </div>
               <div className="flex flex-wrap gap-2">
                 {matchedSkills.length ? (
-                  matchedSkills.map((s) => <Chip key={s} tone="good">{s}</Chip>)
+                  matchedSkills.map((s) => (
+                    <Chip key={s} tone="good">
+                      {s}
+                    </Chip>
+                  ))
                 ) : (
-                  <span className="text-sm text-slate-500">No matched skills detected.</span>
+                  <span className="text-sm text-slate-500">
+                    No capability signals detected in the provided resume text.
+                  </span>
                 )}
               </div>
             </div>
 
-            {/* Gaps + Transferable (Full; Lite shows small preview only) */}
+            {/* Full: show adjacent strengths + not yet demonstrated */}
             {isFull ? (
               <div className="grid gap-4 md:grid-cols-2">
                 <div>
-                  <div className="text-xs font-semibold text-slate-700 mb-2">Gaps</div>
-                  <div className="flex flex-wrap gap-2">
-                    {gapSkills.length ? (
-                      gapSkills.map((s) => <Chip key={s} tone="bad">{s}</Chip>)
-                    ) : (
-                      <span className="text-sm text-slate-500">No gaps detected.</span>
-                    )}
+                  <div className="text-xs font-semibold text-slate-700 mb-2">
+                    Adjacent strengths (validated)
                   </div>
-                </div>
-
-                <div>
-                  <div className="text-xs font-semibold text-slate-700 mb-2">Transferable</div>
                   <div className="flex flex-wrap gap-2">
                     {transferableSkills.length ? (
-                      transferableSkills.map((s) => <Chip key={s} tone="warn">{s}</Chip>)
+                      transferableSkills.map((s, i) => (
+                        <Chip key={`${s}-${i}`} tone="warn">
+                          {s}
+                        </Chip>
+                      ))
                     ) : (
                       <span className="text-sm text-slate-500">None listed.</span>
                     )}
                   </div>
                 </div>
+
+                <div>
+                  <div className="text-xs font-semibold text-slate-700 mb-2">
+                    Not yet demonstrated
+                  </div>
+
+                  {noCriticalGaps ? (
+                    <div className="text-sm text-emerald-700">
+                      No critical gaps detected.
+                    </div>
+                  ) : (
+                    <div className="flex flex-wrap gap-2">
+                      {gapSkills.length ? (
+                        gapSkills.map((s) => (
+                          <Chip key={s} tone="bad">
+                            {s}
+                          </Chip>
+                        ))
+                      ) : (
+                        <span className="text-sm text-slate-500">
+                          No additional “not yet demonstrated” items detected.
+                        </span>
+                      )}
+                    </div>
+                  )}
+
+                  <div className="text-xs text-slate-500 mt-2">
+                    This reflects what is (or is not) evidenced in the resume text provided.
+                  </div>
+                </div>
               </div>
             ) : (
-              gapSkills.length ? (
+              // Lite: show small preview only
+              gapSkills.length || noCriticalGaps ? (
                 <div>
-                  <div className="text-xs font-semibold text-slate-700 mb-2">Potential gaps (preview)</div>
-                  <div className="flex flex-wrap gap-2">
-                    {gapSkills.map((s) => <Chip key={s} tone="bad">{s}</Chip>)}
+                  <div className="text-xs font-semibold text-slate-700 mb-2">
+                    Not yet demonstrated (preview)
                   </div>
+
+                  {noCriticalGaps ? (
+                    <div className="text-sm text-emerald-700">
+                      No critical gaps detected.
+                    </div>
+                  ) : (
+                    <div className="flex flex-wrap gap-2">
+                      {gapSkills.map((s) => (
+                        <Chip key={s} tone="bad">
+                          {s}
+                        </Chip>
+                      ))}
+                    </div>
+                  )}
+
                   <div className="text-xs text-slate-500 mt-2">
-                    Upgrade to see full gaps and transferable skills.
+                    Upgrade to see adjacent strengths and full context.
                   </div>
                 </div>
               ) : null
@@ -560,31 +610,34 @@ function WhyPanel({
           </div>
         </CollapsibleSection>
 
-        {/* Career path (Full only) */}
-        {isFull && (
-          <CollapsibleSection
-            title="Career path"
-            isOpen={Boolean(openMap[SECTION_KEYS.career])}
-            onToggle={() => toggle(SECTION_KEYS.career)}
-          >
-            <ol className="text-sm grid gap-2">
-              {trajectory.length === 0 ? (
-                <li className="text-slate-500">No work history found.</li>
-              ) : (
-                trajectory.map((t, i) => (
-                  <li key={`${t.title}-${t.company}-${i}`} className="grid gap-0.5">
-                    <div className="font-semibold">
-                      {t.title} — {t.company}
-                    </div>
-                    <div className="text-slate-600">
-                      {t.from} → {t.to || "Present"}
-                    </div>
-                  </li>
-                ))
-              )}
-            </ol>
-          </CollapsibleSection>
-        )}
+        {/* Internal Candidate Signals label */}
+        <div className="text-[11px] text-slate-500 px-0.5">
+          Internal Candidate Signals — shown only when evaluating internal candidates against internal roles or saved recruiter searches.
+        </div>
+
+        {/* Career path */}
+        <CollapsibleSection
+          title="Career path"
+          isOpen={Boolean(openMap[SECTION_KEYS.career])}
+          onToggle={() => toggle(SECTION_KEYS.career)}
+        >
+          <ol className="text-sm grid gap-2">
+            {trajectory.length === 0 ? (
+              <li className="text-slate-500">No work history found.</li>
+            ) : (
+              trajectory.map((t, i) => (
+                <li key={`${t.title}-${t.company}-${i}`} className="grid gap-0.5">
+                  <div className="font-semibold">
+                    {t.title} — {t.company}
+                  </div>
+                  <div className="text-slate-600">
+                    {t.from} → {t.to || "Present"}
+                  </div>
+                </li>
+              ))
+            )}
+          </ol>
+        </CollapsibleSection>
 
         {/* Filters that triggered */}
         <CollapsibleSection
