@@ -4,13 +4,14 @@ import { authOptions } from "../auth/[...nextauth]";
 import { prisma } from "@/lib/prisma";
 
 /**
- * Deterministic (non-LLM) explainability v1.4 (capability-first):
+ * Deterministic (non-LLM) explainability v1.5 (capability-first, human-readable):
  * - Capabilities (signals) are the primary unit of truth; skills are supporting only
  * - Required capabilities are inferred from the JD (without self-scoring the candidate)
  * - Candidate capability matching is against RESUME only
  * - Variant-aware matching (SOP/SOPs, QBR/QBRs, pluralization, light inflection)
- * - Suppresses tool-inventory + double-penalty behavior
+ * - Suppresses tool-inventory plus double-penalty behavior
  * - Fixes language: "gaps" => "Not yet demonstrated" (backward-compatible arrays retained)
+ * - Style/context traits are never penalized and never shown as gaps
  * - Always surfaces transferable strengths when Tier A coverage is strong enough
  * - Evidence ranking avoids contact/header and prefers action/metrics; 1–2 best sentences per capability
  * - Best-effort persist to RecruiterExplainRun (only if model exists + migration applied)
@@ -28,16 +29,7 @@ const SPEC = {
       id: "crm_tools",
       tier: "A",
       label: "CRM / CS tools",
-      patterns: [
-        "crm",
-        "salesforce",
-        "hubspot",
-        "gainsight",
-        "zendesk",
-        "freshdesk",
-        "dynamics",
-        "pipedrive",
-      ],
+      patterns: ["crm", "salesforce", "hubspot", "gainsight", "zendesk", "freshdesk", "dynamics", "pipedrive"],
     },
     {
       id: "onboarding_training",
@@ -49,15 +41,7 @@ const SPEC = {
       id: "retention_churn",
       tier: "A",
       label: "Retention / churn reduction",
-      patterns: [
-        "retention",
-        "renewal*",
-        "churn",
-        "reduce* churn",
-        "renewal discussions",
-        "save at risk",
-        "winback",
-      ],
+      patterns: ["retention", "renewal*", "churn", "reduce* churn", "renewal discussions", "save at risk", "winback"],
     },
     {
       id: "qbrs",
@@ -126,7 +110,7 @@ const SPEC = {
       tool_implies_category: 0.85,
       single_token_only: 0.4,
     },
-    cap_generic_token_contribution: 3, // keep very low (generic should not drive outcomes)
+    cap_generic_token_contribution: 3,
 
     // Grade thresholds (directional guidance)
     score_bands: {
@@ -135,11 +119,10 @@ const SPEC = {
     },
 
     // Tier A coverage rule (prevents “Strong” with shallow coverage)
-    tierA_coverage_for_strong: 0.6, // 60% of required Tier A capabilities
-    tierA_min_hits_for_strong_floor: 2, // never less than 2, even if JD has few Tier A items
+    tierA_coverage_for_strong: 0.6,
+    tierA_min_hits_for_strong_floor: 2,
 
-    // Skills are supporting only — never used to create punitive gaps.
-    // (We still show “Matched skills” chips for quick scanning.)
+    // Skills are supporting only
     skills_floor_for_summary: 6,
     skills_cap_for_ui: 14,
   },
@@ -156,10 +139,58 @@ const SPEC = {
       is_in_summary_section: 1,
       is_in_contact_section: -10,
     },
-    action_verbs: ["managed", "led", "reduced", "increased", "owned", "partnered", "conducted", "built", "improved", "trained", "monitored"],
+    action_verbs: [
+      "managed",
+      "led",
+      "reduced",
+      "increased",
+      "owned",
+      "partnered",
+      "conducted",
+      "built",
+      "improved",
+      "trained",
+      "monitored",
+      "launched",
+      "delivered",
+      "implemented",
+      "coordinated",
+      "resolved",
+      "drove",
+    ],
   },
 
   hard_excludes_sections: ["name", "email", "phone", "address", "linkedin", "contact", "header"],
+
+  // Style/context traits are preferences, not capabilities. Never penalize.
+  style_context_terms: [
+    "fast-paced",
+    "fast paced",
+    "high volume",
+    "high-growth",
+    "high growth",
+    "startup",
+    "start-up",
+    "culture",
+    "cultural",
+    "collaborative",
+    "self-starter",
+    "self starter",
+    "thrives",
+    "dynamic",
+    "ambiguity",
+    "ambiguous",
+    "wears many hats",
+    "work hard play hard",
+    "time zone",
+    "timezone",
+    "remote",
+    "hybrid",
+    "on-site",
+    "onsite",
+    "in office",
+    "office",
+  ],
 };
 
 function normalizeText(s) {
@@ -189,10 +220,6 @@ function looksAcronymLike(term) {
 }
 
 function buildVariantRegex(term) {
-  // Handles:
-  // - acronyms: qbr -> \bqbrs?\b
-  // - simple singular/plural: review -> reviews, policy -> policies (light)
-  // - phrases: allow whitespace/hyphen variations, pluralize last token lightly
   const raw = normalizeTerm(term);
   if (!raw) return null;
 
@@ -234,8 +261,6 @@ function buildVariantRegex(term) {
 }
 
 function patternToRegex(pattern) {
-  // Supports "*" wildcard: implement* -> implement\w*
-  // Also supports simple spaced wildcards in the middle: managed * customers
   const p = String(pattern || "").trim();
   if (!p) return null;
 
@@ -334,7 +359,7 @@ function splitIntoRankableSentences(resumeText) {
 }
 
 // -----------------------------
-// Matching + evidence
+// Matching plus evidence
 // -----------------------------
 function classifyMatchType(signalId, pattern) {
   const p = String(pattern || "").trim();
@@ -430,6 +455,22 @@ function scoreSentence(item, signal, allToolNames) {
   return score;
 }
 
+function isBoilerplateEvidence(text) {
+  const t = normalizeTerm(text);
+  if (!t) return true;
+
+  // Avoid quoting generic fluff that looks like a header or non-action summary
+  const tooShort = t.length < 25;
+  const looksHeaderish =
+    /^[a-z0-9\s]+:$/.test(t) ||
+    t.startsWith("professional summary") ||
+    t.startsWith("skills") ||
+    t.startsWith("education") ||
+    t.startsWith("certifications");
+
+  return tooShort || looksHeaderish;
+}
+
 function pickEvidenceForSignal(signalMatch, sentenceItems) {
   const maxSnips = SPEC.evidence_ranking.max_snippets_per_signal;
   const maxChars = SPEC.evidence_ranking.max_chars_per_snippet;
@@ -445,10 +486,26 @@ function pickEvidenceForSignal(signalMatch, sentenceItems) {
     .sort((a, b) => b.score - a.score);
 
   const snippets = [];
+  const seen = new Set();
+
   for (const r of ranked) {
-    const text =
-      r.it.text.length > maxChars ? `${r.it.text.slice(0, Math.max(0, maxChars - 1))}…` : r.it.text;
+    const raw = r.it.text || "";
+    const text = raw.length > maxChars ? `${raw.slice(0, Math.max(0, maxChars - 1))}…` : raw;
+    const key = normalizeTerm(text);
+
     if (!text) continue;
+    if (seen.has(key)) continue;
+    if (isBoilerplateEvidence(text)) continue;
+
+    // Evidence quality: prefer action plus context, metric or ownership when present
+    // If it has no verb and no number and not in experience, skip
+    const hasNumber = /\b\d+(\.\d+)?%?\b/.test(text);
+    const hasVerb = SPEC.evidence_ranking.action_verbs.some((v) => normalizeTerm(text).includes(v));
+    const inExperience = r.it.section === "experience";
+
+    if (!hasVerb && !hasNumber && !inExperience) continue;
+
+    seen.add(key);
 
     snippets.push({
       text,
@@ -478,19 +535,14 @@ function pickEvidenceForSignal(signalMatch, sentenceItems) {
 // Capability-first evaluation (JD defines what matters)
 // -----------------------------
 function requiredSignalsFromJD(jdLower) {
-  // Determine what the JD actually asks for (Tier A/B only).
-  // This is NOT used to score the candidate directly; it only defines the denominator.
   const jdSignals = findSignalMatches(jdLower, SPEC.signals).filter((m) => m.tier === "A" || m.tier === "B");
   const ids = new Set(jdSignals.map((m) => m.signal_id));
 
-  // If JD is too short / doesn’t match any patterns, fall back to all Tier A/B signals
-  // so output remains stable.
   const required =
     ids.size > 0
       ? SPEC.signals.filter((s) => (s.tier === "A" || s.tier === "B") && ids.has(s.id))
       : SPEC.signals.filter((s) => s.tier === "A" || s.tier === "B");
 
-  // Keep Tier A first (for UX ordering) but retain stable deterministic order
   required.sort((a, b) => {
     const ta = a.tier === "A" ? 0 : 1;
     const tb = b.tier === "A" ? 0 : 1;
@@ -516,7 +568,6 @@ function computeCapabilityCoverageScore(requiredSignals, matchedSignals) {
   let numerAB = 0;
   let numerC = 0;
 
-  // Only count matches that are in the required set
   for (const m of matched) {
     if (!requiredIds.has(m.signal_id)) continue;
 
@@ -539,7 +590,6 @@ function computeCapabilityCoverageScore(requiredSignals, matchedSignals) {
   const tierATotal = requiredTierA.length;
   const tierBTotal = requiredTierB.length;
 
-  // Tier A coverage rule (prevents inflated grades)
   const tierARequiredForStrong = Math.max(
     SPEC.scoring.tierA_min_hits_for_strong_floor,
     Math.ceil((tierATotal || 0) * SPEC.scoring.tierA_coverage_for_strong)
@@ -561,45 +611,132 @@ function gradeFrom(score, tierAHit, tierARequiredForStrong) {
   return "Emerging";
 }
 
-function buildSummary({
-  grade,
-  score,
-  tierAHit,
-  tierATotal,
-  tierBHit,
-  tierBTotal,
-  skillsLine,
-}) {
+function buildSummary({ grade, score, tierAHit, tierATotal, tierBHit, tierBTotal, skillsLine }) {
   const parts = [];
   parts.push(`${grade} alignment (${score}%).`);
-  parts.push(`Capability coverage: matched ${tierAHit}/${tierATotal} core (Tier A) and ${tierBHit}/${tierBTotal} supporting (Tier B).`);
+  parts.push(
+    `Capability coverage: matched ${tierAHit}/${tierATotal} core (Tier A) and ${tierBHit}/${tierBTotal} supporting (Tier B).`
+  );
   if (skillsLine) parts.push(skillsLine);
   return parts.join(" ");
 }
 
 // -----------------------------
-// Skills (supporting only) with suppression (no double-penalty)
+// Skills (supporting only) with suppression and clustering
 // -----------------------------
+function isStyleContextTerm(term) {
+  const t = normalizeTerm(term);
+  if (!t) return false;
+
+  // Exact or contains check, but keep it conservative
+  for (const s of SPEC.style_context_terms) {
+    const st = normalizeTerm(s);
+    if (!st) continue;
+    if (t === st) return true;
+    if (t.includes(st)) return true;
+  }
+  return false;
+}
+
 function extractJDSkills(jobDescriptionText) {
   // Deterministic extraction for chips only (supporting scan; not used for punitive gaps)
+  // Style/context terms are separated and never become gaps.
   const jdRaw = String(jobDescriptionText || "");
   const jd = safeLower(jdRaw);
 
   const rawTokens = jd.match(/[a-z0-9+#./-]{2,}/g) || [];
 
   const stop = new Set([
-    "and","or","the","a","an","to","for","of","in","on","with","as","at","by","from","into",
-    "experience","preferred","requirements","responsible","responsibilities","ability","skills","skill",
-    "years","year","role","team","teams","work","working","knowledge","strong","excellent",
-    "including","within","across","will","must","should","may","plus"
+    "and",
+    "or",
+    "the",
+    "a",
+    "an",
+    "to",
+    "for",
+    "of",
+    "in",
+    "on",
+    "with",
+    "as",
+    "at",
+    "by",
+    "from",
+    "into",
+    "experience",
+    "preferred",
+    "requirements",
+    "responsible",
+    "responsibilities",
+    "ability",
+    "skills",
+    "skill",
+    "years",
+    "year",
+    "role",
+    "team",
+    "teams",
+    "work",
+    "working",
+    "knowledge",
+    "strong",
+    "excellent",
+    "including",
+    "within",
+    "across",
+    "will",
+    "must",
+    "should",
+    "may",
+    "plus",
   ]);
 
   const allow = new Set([
-    "salesforce","gainsight","hubspot","zendesk","freshdesk","dynamics","pipedrive","crm",
-    "servicenow","jira","confluence","sql","python","javascript","typescript","react","node","aws","azure","gcp",
-    "excel","powerbi","tableau","snowflake","postgres","postgresql","mongodb","redis",
-    "intune","jamf","okta","sso","scim","api","apis","rest","graphql",
-    "kpi","kpis","qbr","qbrs","sop","sops","mrr","arr"
+    "salesforce",
+    "gainsight",
+    "hubspot",
+    "zendesk",
+    "freshdesk",
+    "dynamics",
+    "pipedrive",
+    "crm",
+    "servicenow",
+    "jira",
+    "confluence",
+    "sql",
+    "python",
+    "javascript",
+    "typescript",
+    "react",
+    "node",
+    "aws",
+    "azure",
+    "gcp",
+    "excel",
+    "powerbi",
+    "tableau",
+    "snowflake",
+    "postgres",
+    "postgresql",
+    "mongodb",
+    "redis",
+    "intune",
+    "jamf",
+    "okta",
+    "sso",
+    "scim",
+    "api",
+    "apis",
+    "rest",
+    "graphql",
+    "kpi",
+    "kpis",
+    "qbr",
+    "qbrs",
+    "sop",
+    "sops",
+    "mrr",
+    "arr",
   ]);
 
   const acronyms = [];
@@ -649,31 +786,35 @@ function extractJDSkills(jobDescriptionText) {
     if (jd.includes(p)) phrases.push(p);
   }
 
-  // Keep it short for chips
-  return Array.from(new Set([...singles, ...phrases, ...acronyms]))
-    .filter(Boolean)
-    .slice(0, 28);
+  const combined = Array.from(new Set([...singles, ...phrases, ...acronyms])).filter(Boolean).slice(0, 28);
+
+  const skills = [];
+  const context = [];
+
+  for (const item of combined) {
+    if (isStyleContextTerm(item)) context.push(normalizeTerm(item));
+    else skills.push(normalizeTerm(item));
+  }
+
+  return {
+    skills: Array.from(new Set(skills)).filter(Boolean),
+    context: Array.from(new Set(context)).filter(Boolean),
+  };
 }
 
 function mapSkillToCapabilityId(skillTerm) {
-  // If a “skill” is actually evidence of an existing capability, map it so we can suppress gaps.
-  // This prevents double-penalizing and tool-inventory behavior.
   const t = normalizeTerm(skillTerm);
   if (!t) return null;
 
-  // Try to map by checking if the term matches any signal pattern set.
-  // (Not perfect NLP — but deterministic and prevents most false negatives.)
   for (const s of SPEC.signals) {
     if (s.tier !== "A" && s.tier !== "B") continue;
     for (const p of s.patterns || []) {
       const patClean = normalizeTerm(String(p || "").replace(/\*/g, ""));
       if (!patClean) continue;
 
-      // If the skill contains the pattern (or vice versa) it’s likely same concept
       if (t === patClean) return s.id;
       if (t.includes(patClean) || patClean.includes(t)) return s.id;
 
-      // Variant regex equivalence check (light)
       const re = buildVariantRegex(patClean);
       if (re && re.test(t)) return s.id;
     }
@@ -682,26 +823,71 @@ function mapSkillToCapabilityId(skillTerm) {
   return null;
 }
 
+function clusterKeyForSkill(skillTerm) {
+  // Collapse synonyms, acronyms, tools, and categories into clusters for counting
+  // Chips still show original terms, but summary counts are based on clusters.
+  const t = normalizeTerm(skillTerm);
+  if (!t) return null;
+
+  // Capabilities
+  const cap = mapSkillToCapabilityId(t);
+  if (cap) return `cap:${cap}`;
+
+  // Explicit clusters
+  if (/\bqbrs?\b/.test(t) || t.includes("quarterly business review") || t.includes("business review") || t.includes("executive review")) {
+    return "cluster:qbrs";
+  }
+  if (t.includes("health score") || t.includes("usage metrics") || t.includes("product usage") || t.includes("adoption") || t.includes("engagement")) {
+    return "cluster:adoption_health";
+  }
+  if (t.includes("onboarding") || t.includes("enablement") || t.includes("rollout") || t.includes("go-live") || t.includes("implementation") || t.includes("implement")) {
+    return "cluster:onboarding_training";
+  }
+  if (t.includes("renewal") || t.includes("retention") || t.includes("churn") || t.includes("winback") || t.includes("save at risk")) {
+    return "cluster:retention_churn";
+  }
+  if (t.includes("upsell") || t.includes("cross-sell") || t.includes("expansion") || t.includes("increase arr") || t.includes("add seats")) {
+    return "cluster:expansion_upsell";
+  }
+  if (t.includes("portfolio") || t.includes("book of business") || t.includes("owned accounts") || t.includes("caseload") || t.includes("managed")) {
+    return "cluster:portfolio_management";
+  }
+
+  // CRM tools collapse to one cluster
+  const crmTools = SPEC.signals.find((x) => x.id === "crm_tools")?.patterns || [];
+  for (const tool of crmTools) {
+    const re = buildVariantRegex(tool);
+    if (re && re.test(t)) return "cluster:crm_tools";
+  }
+
+  // KPIs and data reporting cluster
+  if (/\bkpis?\b/.test(t) || t.includes("dashboard") || t.includes("metrics") || t.includes("report") || t.includes("data analysis") || t.includes("analytics")) {
+    return "cluster:data_reporting";
+  }
+
+  // Default cluster is the normalized term itself
+  return `term:${t}`;
+}
+
 function computeSkillsChips(jdSkills, resumeLower, matchedSignalIds) {
   const list = Array.isArray(jdSkills) ? jdSkills : [];
   const matched = [];
   const notYet = [];
 
-  // Special: CRM tools inventory suppression
   const crmMatched = matchedSignalIds.has("crm_tools");
 
   for (const s of list) {
     const skill = normalizeTerm(s);
     if (!skill) continue;
 
-    // If skill maps to a matched capability, don’t show it as “not yet”
+    // If the skill maps to a matched capability, never treat it as "not yet"
     const cap = mapSkillToCapabilityId(skill);
     if (cap && matchedSignalIds.has(cap)) {
       matched.push(skill);
       continue;
     }
 
-    // If CRM category is satisfied, suppress tool-inventory “missing tools”
+    // CRM category satisfied, suppress tool inventory "missing tools"
     if (crmMatched) {
       const toolNames = SPEC.signals.find((x) => x.id === "crm_tools")?.patterns || [];
       const isCRMLike = toolNames.some((tn) => {
@@ -709,34 +895,61 @@ function computeSkillsChips(jdSkills, resumeLower, matchedSignalIds) {
         return re ? re.test(skill) : false;
       });
       if (isCRMLike) {
-        // Category satisfied; don’t penalize / list as “not yet”
         matched.push(skill);
         continue;
       }
     }
 
-    // Otherwise: check resume for a match
     const re = buildVariantRegex(skill);
     if (re && re.test(resumeLower)) matched.push(skill);
     else notYet.push(skill);
   }
 
+  // Final suppression pass: if a Tier A or B capability is matched, suppress related skill gaps by cluster
+  const matchedClusters = new Set(matched.map((x) => clusterKeyForSkill(x)).filter(Boolean));
+  const suppressedNotYet = [];
+
+  for (const g of notYet) {
+    const ck = clusterKeyForSkill(g);
+    if (!ck) continue;
+
+    // If cluster is already covered, do not list as not yet
+    if (matchedClusters.has(ck)) continue;
+
+    // If cluster maps to a matched capability, suppress
+    const cap = mapSkillToCapabilityId(g);
+    if (cap && matchedSignalIds.has(cap)) continue;
+
+    // If CRM category is matched, suppress any CRM cluster gap
+    if (crmMatched && ck === "cluster:crm_tools") continue;
+
+    suppressedNotYet.push(g);
+  }
+
+  // Keep chips stable and readable
+  const matchedUnique = Array.from(new Set(matched)).slice(0, SPEC.scoring.skills_cap_for_ui);
+  const notYetUnique = Array.from(new Set(suppressedNotYet)).slice(0, SPEC.scoring.skills_cap_for_ui);
+
+  // Cluster counts for summary, not for punitive behavior
+  const matchedClusterCount = new Set(matchedUnique.map((x) => clusterKeyForSkill(x)).filter(Boolean)).size;
+  const totalClusterCount = new Set(list.map((x) => clusterKeyForSkill(x)).filter(Boolean)).size;
+
   return {
-    matched: Array.from(new Set(matched)).slice(0, SPEC.scoring.skills_cap_for_ui),
-    notYet: Array.from(new Set(notYet)).slice(0, SPEC.scoring.skills_cap_for_ui),
+    matched: matchedUnique,
+    notYet: notYetUnique,
+    clusterMatched: matchedClusterCount,
+    clusterTotal: totalClusterCount,
     total: Math.min(list.length, 999),
   };
 }
 
 // -----------------------------
-// Transferable strengths (always if Tier A coverage is strong enough)
+// Transferable strengths
 // -----------------------------
 function buildTransferableStrengths(matchedSignals, tierAHit, tierATotal) {
   const ids = new Set((matchedSignals || []).map((m) => m.signal_id));
-
   const transferables = [];
 
-  // Map “neighbor strengths” that read human (not ATS-y)
   if (ids.has("portfolio_management")) transferables.push("Account ownership discipline translates well to CS lifecycle management.");
   if (ids.has("data_reporting")) transferables.push("Data fluency supports adoption, health scoring, and executive storytelling.");
   if (ids.has("stakeholder_management")) transferables.push("Cross-functional partnership supports durable renewals and expansion.");
@@ -744,10 +957,9 @@ function buildTransferableStrengths(matchedSignals, tierAHit, tierATotal) {
   if (ids.has("onboarding_training")) transferables.push("Enablement experience accelerates time-to-value for new customers.");
   if (ids.has("crm_tools")) transferables.push("Customer systems fluency supports scalable process and consistent execution.");
 
-  // If still empty but Tier A is strong, infer from Tier A matches
   const tierACoverage = tierATotal > 0 ? tierAHit / tierATotal : 0;
   if (transferables.length === 0 && tierACoverage >= SPEC.scoring.tierA_coverage_for_strong) {
-    transferables.push("Demonstrated core lifecycle ownership; likely to ramp quickly even when tools/processes differ.");
+    transferables.push("Demonstrated core lifecycle ownership and likely to ramp quickly even when tools or process differ.");
   }
 
   return transferables.slice(0, 3);
@@ -765,24 +977,19 @@ function buildExplain(resumeText, jobDescription) {
 
   const sentenceItems = splitIntoRankableSentences(resume);
 
-  // 1) Determine what matters (required capabilities) from JD
+  // 1) Determine what matters from JD
   const requiredSignals = requiredSignalsFromJD(jdLower);
 
-  // 2) Match candidate capabilities against RESUME only
+  // 2) Match candidate capabilities against resume only
   const matchedSignalsAll = findSignalMatches(resumeLower, SPEC.signals);
-
-  // Keep only Tier A/B for the main experience signal
   const matchedSignals = matchedSignalsAll.filter((m) => m.tier === "A" || m.tier === "B");
-
   const matchedSignalIds = new Set(matchedSignals.map((m) => m.signal_id));
 
-  // 3) Compute capability coverage score (required-only denominator)
+  // 3) Score on required-only denominator
   const cov = computeCapabilityCoverageScore(requiredSignals, matchedSignals);
-
   const grade = gradeFrom(cov.score, cov.tierAHit, cov.tierARequiredForStrong);
 
-  // 4) “Not yet demonstrated” (capability gaps) only where there is truly no evidence
-  const requiredIds = new Set(requiredSignals.map((r) => r.id));
+  // 4) Not yet demonstrated capabilities, only for required capabilities with no evidence
   const notYetDemonstratedSignals = requiredSignals
     .filter((s) => !matchedSignalIds.has(s.id))
     .map((s) => ({
@@ -792,13 +999,17 @@ function buildExplain(resumeText, jobDescription) {
       why_missing: "Not yet demonstrated in the provided resume text.",
     }));
 
-  // 5) Skills chips (supporting only) with suppression (no double-penalty)
-  const jdSkills = extractJDSkills(jd);
+  // 5) Skills chips for scan, with style/context separated and suppression enabled
+  const jdExtracted = extractJDSkills(jd);
+  const jdSkills = Array.isArray(jdExtracted?.skills) ? jdExtracted.skills : [];
+  const contextNotYet = Array.isArray(jdExtracted?.context) ? jdExtracted.context : [];
+
   const skillsChips = computeSkillsChips(jdSkills, resumeLower, matchedSignalIds);
 
+  // 6) Skill summary line uses cluster normalization and stays non-punitive
   const skillsLine =
-    skillsChips.total >= SPEC.scoring.skills_floor_for_summary
-      ? `Supporting signals: matched ${skillsChips.matched.length}/${Math.min(skillsChips.total, 28)} JD skill terms.`
+    (skillsChips.total >= SPEC.scoring.skills_floor_for_summary || skillsChips.clusterTotal >= SPEC.scoring.skills_floor_for_summary)
+      ? `Supporting coverage: ${skillsChips.clusterMatched}/${Math.max(1, skillsChips.clusterTotal)} skill clusters present.`
       : null;
 
   const summary = buildSummary({
@@ -812,9 +1023,9 @@ function buildExplain(resumeText, jobDescription) {
   });
 
   const disclaimer =
-    "WHY surfaces evidence to support recruiter judgment. It does not make hiring decisions, and it may miss context if the resume text is incomplete.";
+    "WHY provides directional guidance to support recruiter judgment. It does not make hiring decisions, and it may miss context if the resume text is incomplete.";
 
-  // 6) Reasons: top matched capabilities with best evidence
+  // 7) Reasons with best evidence
   const reasons = matchedSignals
     .slice()
     .sort((a, b) => {
@@ -829,7 +1040,7 @@ function buildExplain(resumeText, jobDescription) {
       evidence: pickEvidenceForSignal(m, sentenceItems),
     }));
 
-  // 7) Interview questions (deterministic, respectful)
+  // 8) Interview questions
   const behavioral = [
     "Tell me about a time you handled competing priorities under a tight deadline. What did you prioritize and why?",
     "Describe a process you improved. What changed and what was the impact?",
@@ -839,24 +1050,23 @@ function buildExplain(resumeText, jobDescription) {
   const occupational = []
     .concat(
       matchedSignals.slice(0, 3).map((m) => `Walk me through a real example where you delivered outcomes in ${m.label}.`),
-      notYetDemonstratedSignals.slice(0, 2).map((g) => `If this role needs ${g.label}, how would you ramp quickly and prove competence in the first 30–60 days?`)
+      notYetDemonstratedSignals
+        .slice(0, 2)
+        .map((g) => `If this role needs ${g.label}, how would you ramp quickly and demonstrate results in the first 30–60 days?`)
     )
     .slice(0, 6);
 
-  // 8) Transferable strengths (always if Tier A coverage is strong)
+  // 9) Transferable strengths
   const transferable = buildTransferableStrengths(matchedSignals, cov.tierAHit, cov.tierATotal);
 
-  // Backward-compatible fields:
-  // - keep `gaps` arrays (UI might read them) but language is now “Not yet demonstrated”
+  // Backward-compatible fields
   const strengths = matchedSignals.map((m) => m.label).slice(0, 12);
-
   const gapsLabels = notYetDemonstratedSignals.map((g) => g.label).slice(0, 12);
 
-  // Skills object for UI: matched chips + (optional) not-yet chips (non-punitive)
   const skills = {
     matched: skillsChips.matched,
-    gaps: skillsChips.notYet, // backward-compatible key (UI might call it gaps)
-    transferable, // required by your doctrine
+    gaps: skillsChips.notYet, // backward-compatible key; treated as non-punitive "not yet demonstrated"
+    transferable,
   };
 
   return {
@@ -865,14 +1075,13 @@ function buildExplain(resumeText, jobDescription) {
     summary,
     disclaimer,
 
-    // Backward-compatible fields used by existing UI
     reasons,
     skills,
     strengths,
-    gaps: gapsLabels, // legacy key, but now represents “Not yet demonstrated” labels
+    gaps: gapsLabels,
     interviewQuestions: { behavioral, occupational },
 
-    // Debug-friendly (safe to ignore)
+    // Debug-friendly
     _debug: {
       requiredSignals: requiredSignals.map((s) => ({ id: s.id, tier: s.tier, label: s.label })),
       tierARequiredForStrong: cov.tierARequiredForStrong,
@@ -882,9 +1091,12 @@ function buildExplain(resumeText, jobDescription) {
       tierBTotal: cov.tierBTotal,
       skillsMatched: skillsChips.matched.length,
       skillsNotYet: skillsChips.notYet.length,
+      skillsClusterMatched: skillsChips.clusterMatched,
+      skillsClusterTotal: skillsChips.clusterTotal,
+      context_not_yet_demonstrated: contextNotYet,
     },
 
-    // Clean schema for future reuse (capability-first)
+    // Clean schema
     match: { score: cov.score, grade, summary, disclaimer },
     signals: {
       required: requiredSignals.map((s) => ({ signal_id: s.id, label: s.label, tier: s.tier })),
@@ -897,6 +1109,10 @@ function buildExplain(resumeText, jobDescription) {
         evidence: pickEvidenceForSignal(m, sentenceItems),
       })),
       not_yet_demonstrated: notYetDemonstratedSignals,
+
+      // New neutral bucket. Never punitive.
+      context_not_yet_demonstrated: contextNotYet,
+
       transferable,
     },
   };
@@ -914,7 +1130,6 @@ async function bestEffortPersistRun({
   externalName = null,
   externalEmail = null,
 }) {
-  // If Prisma client doesn't yet have the model (migration not applied), skip silently.
   if (!prisma || !prisma.recruiterExplainRun) return;
 
   try {
@@ -935,7 +1150,6 @@ async function bestEffortPersistRun({
       },
     });
   } catch (e) {
-    // Don’t break the endpoint if persistence fails.
     console.error("[RecruiterExplain] persist failed (safe to ignore pre-migration):", e);
   }
 }
@@ -950,15 +1164,8 @@ export default async function handler(req, res) {
     return res.status(401).json({ error: "Unauthorized" });
   }
 
-  const {
-    resumeText,
-    jobDescription,
-    jobId,
-    applicationId,
-    candidateUserId,
-    externalName,
-    externalEmail,
-  } = req.body || {};
+  const { resumeText, jobDescription, jobId, applicationId, candidateUserId, externalName, externalEmail } =
+    req.body || {};
 
   if (!resumeText || !jobDescription) {
     return res.status(400).json({ error: "Missing resumeText or jobDescription" });
@@ -969,7 +1176,6 @@ export default async function handler(req, res) {
     return res.status(401).json({ error: "Unauthorized" });
   }
 
-  // Pull accountKey from session first; fall back to DB lookup
   let accountKey = session?.user?.accountKey || null;
 
   if (!accountKey) {
@@ -984,10 +1190,8 @@ export default async function handler(req, res) {
     }
   }
 
-  // Build deterministic explainability output (no LLM)
   const result = buildExplain(resumeText, jobDescription);
 
-  // Best-effort persist (won’t break if model/migration not ready)
   await bestEffortPersistRun({
     recruiterUserId,
     accountKey,
