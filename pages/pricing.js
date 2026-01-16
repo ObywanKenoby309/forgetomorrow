@@ -155,17 +155,16 @@ export default function PricingPage() {
             return (
               <section key={idx} style={{ marginBottom: 28 }}>
                 <div
-                  style={{
-                    fontSize: "0.95rem",
-                    fontWeight: 700,
-                    color: "#222",
-                    marginBottom: 12,
-                    paddingLeft: isTwoCol ? 0 : 2,
-                    textAlign: isTwoCol ? "center" : "left",
-                  }}
-                >
-                  {group.title}
-                </div>
+  style={{
+    fontSize: "0.95rem",
+    fontWeight: 700,
+    color: "#222",
+    marginBottom: 12,
+    textAlign: "center", // ✅ always centered
+  }}
+>
+  {group.title}
+</div>
 
                 <div
                   style={{
