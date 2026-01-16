@@ -39,12 +39,20 @@ const plans = {
     button: "Contact Sales",
   },
 
-  // ✅ NEW: One-time paid diagnostic (direct Stripe payment link)
+  // ✅ One-time paid diagnostic
   "hiring-diagnostic": {
     key: "hiring-diagnostic",
     name: "Hiring Diagnostic (48 Hours)",
-    price: "€99 (one-time)",
+    price: "$99 (one-time)",
     button: "Buy Diagnostic",
+  },
+
+  // ✅ NEW: One-time internal review
+  "internal-hiring-review": {
+    key: "internal-hiring-review",
+    name: "Internal Hiring Process Review",
+    price: "$249 (one-time)",
+    button: "Buy Internal Review",
   },
 };
 
@@ -75,9 +83,16 @@ export default function PricingPage() {
       return;
     }
 
-    // ✅ NEW: Hiring Diagnostic → direct Stripe checkout
+    // ✅ Hiring Diagnostic → Stripe checkout
     if (planKey === "hiring-diagnostic") {
       window.location.href = "https://buy.stripe.com/3cI00bgJZ1gqbRBbC73Nm00";
+      setLoading(null);
+      return;
+    }
+
+    // ✅ Internal Hiring Review → Stripe checkout (NEW LINK)
+    if (planKey === "internal-hiring-review") {
+      window.location.href = "https://buy.stripe.com/9B6cMXeBR3oycVF7lR3Nm01";
       setLoading(null);
       return;
     }
@@ -106,6 +121,22 @@ export default function PricingPage() {
     marginTop: isMobile ? 24 : 0,
   };
 
+  // ✅ Group definitions (3 / 2 / 2)
+  const groups = [
+    {
+      title: "Individuals",
+      keys: ["job-seeker-free", "job-seeker-pro", "coach-mentor"],
+    },
+    {
+      title: "Recruiters",
+      keys: ["recruiter-smb", "enterprise-recruiter"],
+    },
+    {
+      title: "One-time packages",
+      keys: ["hiring-diagnostic", "internal-hiring-review"],
+    },
+  ];
+
   return (
     <>
       <Head>
@@ -115,209 +146,258 @@ export default function PricingPage() {
       <div style={containerStyle}>
         <main
           style={{
-            display: "grid",
-            // 🔹 MOBILE: 1 column list (scrolls)
-            // 🔹 DESKTOP: fixed 3 columns → 3 cards on top row, 2 on second
-            gridTemplateColumns: isMobile
-              ? "1fr"
-              : "repeat(3, minmax(0, 1fr))",
-            gap: 24,
+            display: "block",
           }}
         >
-          {Object.entries(plans).map(([key, plan]) => (
-            <div
-              key={key}
-              tabIndex={0}
-              role="region"
-              aria-label={`${plan.name} plan`}
-              style={{
-                border: "2px solid #111",
-                borderRadius: 12,
-                padding: 24,
-                textAlign: "left",
-                background: "#ffffff",
-                color: "#111",
-                boxShadow: "0 6px 20px rgba(0,0,0,0.04)",
-                display: "flex",
-                flexDirection: "column",
-                justifyContent: "space-between",
-                minHeight: 260,
-              }}
-            >
-              <div>
-                <h2
-                  style={{
-                    fontSize: "1.25rem",
-                    marginBottom: 6,
-                    color: "#111",
-                    fontWeight: 700,
-                  }}
-                >
-                  {plan.name}
-                </h2>
-                <p
-                  style={{
-                    fontSize: "1.6rem",
-                    fontWeight: 700,
-                    margin: "8px 0 18px",
-                    color: "#111",
-                  }}
-                >
-                  {plan.price}
-                </p>
+          {groups.map((group, idx) => {
+            const isTwoCol = !isMobile && group.keys.length === 2;
 
+            return (
+              <section key={idx} style={{ marginBottom: 28 }}>
                 <div
                   style={{
                     fontSize: "0.95rem",
-                    lineHeight: "1.5",
-                    color: "#222",
-                    marginBottom: 18,
-                  }}
-                >
-                  {key === "job-seeker-free" && (
-                    <>
-                      <p style={{ margin: "6px 0" }}>
-                        • 1x1 Unlimited messaging (Direct Contacts)
-                      </p>
-                      <p style={{ margin: "6px 0" }}>
-                        • View verified job listings
-                      </p>
-                      <p style={{ margin: "6px 0" }}>
-                        • Resume & cover letter builder (limited)
-                      </p>
-                    </>
-                  )}
-                  {key === "job-seeker-pro" && (
-                    <>
-                      <p style={{ margin: "6px 0" }}>
-                        • Profile analytics & insights
-                      </p>
-                      <p style={{ margin: "6px 0" }}>
-                        • Unlimited AI resume & cover letters
-                      </p>
-                      <p style={{ margin: "6px 0" }}>
-                        • Priority listings & search filters
-                      </p>
-                    </>
-                  )}
-                  {key === "coach-mentor" && (
-                    <>
-                      <p style={{ margin: "6px 0" }}>
-                        • Mentee tracking & analytics
-                      </p>
-                      <p style={{ margin: "6px 0" }}>
-                        • Client organizer and templates
-                      </p>
-                      <p style={{ margin: "6px 0" }}>
-                        • Daily agenda & newsletter tools
-                      </p>
-                    </>
-                  )}
-                  {key === "recruiter-smb" && (
-                    <>
-                      <p style={{ margin: "6px 0" }}>
-                        • Limited seats for recruiters
-                      </p>
-                      <p style={{ margin: "6px 0" }}>
-                        • Job posting board & candidate tracker
-                      </p>
-                      <p style={{ margin: "6px 0" }}>
-                        • Group messaging & team calendar
-                      </p>
-                    </>
-                  )}
-                  {key === "enterprise-recruiter" && (
-                    <>
-                      <p style={{ margin: "6px 0" }}>
-                        • Tailored seats for your business
-                      </p>
-                      <p style={{ margin: "6px 0" }}>
-                        • Advanced candidate filtering & ATS match
-                      </p>
-                      <p style={{ margin: "6px 0" }}>
-                        • Job posting analytics & account management
-                      </p>
-                    </>
-                  )}
-
-                  {/* ✅ NEW: Hiring Diagnostic card details */}
-                  {key === "hiring-diagnostic" && (
-                    <>
-                      <p style={{ margin: "6px 0" }}>
-                        • 48-hour hiring workflow diagnostic
-                      </p>
-                      <p style={{ margin: "6px 0" }}>
-                        • Written report + Loom walkthrough
-                      </p>
-                      <p style={{ margin: "6px 0" }}>
-                        • One-time purchase (no subscription)
-                      </p>
-                    </>
-                  )}
-                </div>
-              </div>
-
-              <div>
-                <button
-                  onClick={() => handleClick(key)}
-                  disabled={loading === key}
-                  style={{
-                    width: "100%",
-                    padding: "12px 14px",
-                    background: "#FF7043",
-                    color: "white",
-                    border: "none",
-                    borderRadius: 8,
                     fontWeight: 700,
-                    cursor: "pointer",
+                    color: "#222",
+                    marginBottom: 12,
+                    paddingLeft: isTwoCol ? 0 : 2,
+                    textAlign: isTwoCol ? "center" : "left",
                   }}
                 >
-                  {loading === key ? "Loading…" : plan.button}
-                </button>
+                  {group.title}
+                </div>
 
-                {key === "enterprise-recruiter" && (
-                  <a
-                    href="mailto:sales@forgetomorrow.com"
-                    style={{
-                      display: "block",
-                      marginTop: 12,
-                      textAlign: "center",
-                      color: "#111",
-                      textDecoration: "underline",
+                <div
+                  style={{
+                    display: "grid",
+                    gridTemplateColumns: isMobile
+                      ? "1fr"
+                      : `repeat(${group.keys.length}, minmax(0, 1fr))`,
+                    gap: 24,
 
-                      // ✅ FIX: prevent long email string from overflowing on some Android/Chrome widths
-                      maxWidth: "100%",
-                      overflowWrap: "anywhere",
-                      wordBreak: "break-word",
-                      lineHeight: 1.35,
-                    }}
-                  >
-                    Or email sales@forgetomorrow.com
-                  </a>
-                )}
+                    // ✅ Center 2-card rows on desktop
+                    ...(isTwoCol
+                      ? {
+                          maxWidth: 820,
+                          marginLeft: "auto",
+                          marginRight: "auto",
+                        }
+                      : {}),
+                  }}
+                >
+                  {group.keys.map((key) => {
+                    const plan = plans[key];
 
-                {/* ✅ NEW: Optional secondary link under the diagnostic button */}
-                {key === "hiring-diagnostic" && (
-                  <a
-                    href="https://buy.stripe.com/3cI00bgJZ1gqbRBbC73Nm00"
-                    style={{
-                      display: "block",
-                      marginTop: 12,
-                      textAlign: "center",
-                      color: "#111",
-                      textDecoration: "underline",
-                      maxWidth: "100%",
-                      overflowWrap: "anywhere",
-                      wordBreak: "break-word",
-                      lineHeight: 1.35,
-                    }}
-                  >
-                    Or open Stripe checkout
-                  </a>
-                )}
-              </div>
-            </div>
-          ))}
+                    return (
+                      <div
+                        key={key}
+                        tabIndex={0}
+                        role="region"
+                        aria-label={`${plan.name} plan`}
+                        style={{
+                          border: "2px solid #111",
+                          borderRadius: 12,
+                          padding: 24,
+                          textAlign: "left",
+                          background: "#ffffff",
+                          color: "#111",
+                          boxShadow: "0 6px 20px rgba(0,0,0,0.04)",
+                          display: "flex",
+                          flexDirection: "column",
+                          justifyContent: "space-between",
+                          minHeight: 260,
+                        }}
+                      >
+                        <div>
+                          <h2
+                            style={{
+                              fontSize: "1.25rem",
+                              marginBottom: 6,
+                              color: "#111",
+                              fontWeight: 700,
+                            }}
+                          >
+                            {plan.name}
+                          </h2>
+                          <p
+                            style={{
+                              fontSize: "1.6rem",
+                              fontWeight: 700,
+                              margin: "8px 0 18px",
+                              color: "#111",
+                            }}
+                          >
+                            {plan.price}
+                          </p>
+
+                          <div
+                            style={{
+                              fontSize: "0.95rem",
+                              lineHeight: "1.5",
+                              color: "#222",
+                              marginBottom: 18,
+                            }}
+                          >
+                            {key === "job-seeker-free" && (
+                              <>
+                                <p style={{ margin: "6px 0" }}>
+                                  • 1x1 Unlimited messaging (Direct Contacts)
+                                </p>
+                                <p style={{ margin: "6px 0" }}>
+                                  • View verified job listings
+                                </p>
+                                <p style={{ margin: "6px 0" }}>
+                                  • Resume & cover letter builder (limited)
+                                </p>
+                              </>
+                            )}
+                            {key === "job-seeker-pro" && (
+                              <>
+                                <p style={{ margin: "6px 0" }}>
+                                  • Profile analytics & insights
+                                </p>
+                                <p style={{ margin: "6px 0" }}>
+                                  • Unlimited AI resume & cover letters
+                                </p>
+                                <p style={{ margin: "6px 0" }}>
+                                  • Priority listings & search filters
+                                </p>
+                              </>
+                            )}
+                            {key === "coach-mentor" && (
+                              <>
+                                <p style={{ margin: "6px 0" }}>
+                                  • Mentee tracking & analytics
+                                </p>
+                                <p style={{ margin: "6px 0" }}>
+                                  • Client organizer and templates
+                                </p>
+                                <p style={{ margin: "6px 0" }}>
+                                  • Daily agenda & newsletter tools
+                                </p>
+                              </>
+                            )}
+                            {key === "recruiter-smb" && (
+                              <>
+                                <p style={{ margin: "6px 0" }}>
+                                  • Limited seats for recruiters
+                                </p>
+                                <p style={{ margin: "6px 0" }}>
+                                  • Job posting board & candidate tracker
+                                </p>
+                                <p style={{ margin: "6px 0" }}>
+                                  • Group messaging & team calendar
+                                </p>
+                              </>
+                            )}
+                            {key === "enterprise-recruiter" && (
+                              <>
+                                <p style={{ margin: "6px 0" }}>
+                                  • Tailored seats for your business
+                                </p>
+                                <p style={{ margin: "6px 0" }}>
+                                  • Advanced candidate filtering & ATS match
+                                </p>
+                                <p style={{ margin: "6px 0" }}>
+                                  • Job posting analytics & account management
+                                </p>
+                              </>
+                            )}
+
+                            {key === "hiring-diagnostic" && (
+                              <>
+                                <p style={{ margin: "6px 0" }}>
+                                  • 48-hour hiring workflow diagnostic
+                                </p>
+                                <p style={{ margin: "6px 0" }}>
+                                  • Written report + Loom walkthrough
+                                </p>
+                                <p style={{ margin: "6px 0" }}>
+                                  • One-time purchase (no subscription)
+                                </p>
+                              </>
+                            )}
+
+                            {key === "internal-hiring-review" && (
+                              <>
+                                <p style={{ margin: "6px 0" }}>
+                                  • Leadership-focused internal review
+                                </p>
+                                <p style={{ margin: "6px 0" }}>
+                                  • Consistency & risk assessment
+                                </p>
+                                <p style={{ margin: "6px 0" }}>
+                                  • Report + Loom walkthrough (48 hours)
+                                </p>
+                              </>
+                            )}
+                          </div>
+                        </div>
+
+                        <div>
+                          <button
+                            onClick={() => handleClick(key)}
+                            disabled={loading === key}
+                            style={{
+                              width: "100%",
+                              padding: "12px 14px",
+                              background: "#FF7043",
+                              color: "white",
+                              border: "none",
+                              borderRadius: 8,
+                              fontWeight: 700,
+                              cursor: "pointer",
+                            }}
+                          >
+                            {loading === key ? "Loading…" : plan.button}
+                          </button>
+
+                          {key === "enterprise-recruiter" && (
+                            <a
+                              href="mailto:sales@forgetomorrow.com"
+                              style={{
+                                display: "block",
+                                marginTop: 12,
+                                textAlign: "center",
+                                color: "#111",
+                                textDecoration: "underline",
+
+                                maxWidth: "100%",
+                                overflowWrap: "anywhere",
+                                wordBreak: "break-word",
+                                lineHeight: 1.35,
+                              }}
+                            >
+                              Or email sales@forgetomorrow.com
+                            </a>
+                          )}
+
+                          {key === "hiring-diagnostic" && (
+                            <a
+                              href="https://buy.stripe.com/3cI00bgJZ1gqbRBbC73Nm00"
+                              style={{
+                                display: "block",
+                                marginTop: 12,
+                                textAlign: "center",
+                                color: "#111",
+                                textDecoration: "underline",
+                                maxWidth: "100%",
+                                overflowWrap: "anywhere",
+                                wordBreak: "break-word",
+                                lineHeight: 1.35,
+                              }}
+                            >
+                              Or open Stripe checkout
+                            </a>
+                          )}
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              </section>
+            );
+          })}
         </main>
 
         <aside style={asideStyle}>
