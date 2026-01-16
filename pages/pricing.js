@@ -38,6 +38,14 @@ const plans = {
     price: "Contact Sales",
     button: "Contact Sales",
   },
+
+  // ✅ NEW: One-time paid diagnostic (direct Stripe payment link)
+  "hiring-diagnostic": {
+    key: "hiring-diagnostic",
+    name: "Hiring Diagnostic (48 Hours)",
+    price: "€99 (one-time)",
+    button: "Buy Diagnostic",
+  },
 };
 
 export default function PricingPage() {
@@ -63,6 +71,13 @@ export default function PricingPage() {
 
     if (planKey === "enterprise-recruiter") {
       window.location.href = "mailto:sales@forgetomorrow.com";
+      setLoading(null);
+      return;
+    }
+
+    // ✅ NEW: Hiring Diagnostic → direct Stripe checkout
+    if (planKey === "hiring-diagnostic") {
+      window.location.href = "https://buy.stripe.com/3cI00bgJZ1gqbRBbC73Nm00";
       setLoading(null);
       return;
     }
@@ -224,6 +239,21 @@ export default function PricingPage() {
                       </p>
                     </>
                   )}
+
+                  {/* ✅ NEW: Hiring Diagnostic card details */}
+                  {key === "hiring-diagnostic" && (
+                    <>
+                      <p style={{ margin: "6px 0" }}>
+                        • 48-hour hiring workflow diagnostic
+                      </p>
+                      <p style={{ margin: "6px 0" }}>
+                        • Written report + Loom walkthrough
+                      </p>
+                      <p style={{ margin: "6px 0" }}>
+                        • One-time purchase (no subscription)
+                      </p>
+                    </>
+                  )}
                 </div>
               </div>
 
@@ -263,6 +293,26 @@ export default function PricingPage() {
                     }}
                   >
                     Or email sales@forgetomorrow.com
+                  </a>
+                )}
+
+                {/* ✅ NEW: Optional secondary link under the diagnostic button */}
+                {key === "hiring-diagnostic" && (
+                  <a
+                    href="https://buy.stripe.com/3cI00bgJZ1gqbRBbC73Nm00"
+                    style={{
+                      display: "block",
+                      marginTop: 12,
+                      textAlign: "center",
+                      color: "#111",
+                      textDecoration: "underline",
+                      maxWidth: "100%",
+                      overflowWrap: "anywhere",
+                      wordBreak: "break-word",
+                      lineHeight: 1.35,
+                    }}
+                  >
+                    Or open Stripe checkout
                   </a>
                 )}
               </div>
