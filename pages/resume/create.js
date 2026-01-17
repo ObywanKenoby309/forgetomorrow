@@ -909,6 +909,7 @@ const clearJobFire = async () => {
                 <br />
                 or{' '}
                 <button
+				type="button"
                   onClick={() => fileInputRef.current?.click()}
                   style={{
                     color: ORANGE,
