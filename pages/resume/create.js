@@ -500,14 +500,14 @@ const clearJobFire = async () => {
     if (!file) return;
     try {
       // Check limit first
-      const res = await fetch('/api/seeker/resume-align-limit', {
-        method: 'POST',
-      });
-      const data = await res.json();
-      if (!data.allowed) {
-        alert(data.message);
-        return;
-      }
+// const res = await fetch('/api/seeker/resume-align-limit', {
+//   method: 'POST',
+// });
+// const data = await res.json();
+// if (!data.allowed) {
+//   alert(data.message);
+//   return;
+// }
 
       const raw = file.size > 1_500_000 ? await uploadJD(file) : await extractTextFromFile(file);
       const clean = normalizeJobText(raw);
