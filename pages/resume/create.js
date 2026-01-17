@@ -512,39 +512,40 @@ useEffect(() => {
   }, [router.isReady, router.query.jobId]);
 
   // Handle manual JD file upload / drop — WITH LIMIT CHECK
-  const handleFile = async (file) => {
-    if (!file) return;
-    try {
-      // Check limit first
-// const res = await fetch('/api/seeker/resume-align-limit', {
-//   method: 'POST',
-// });
-// const data = await res.json();
-// if (!data.allowed) {
-//   alert(data.message);
-//   return;
-// }
+const handleFile = async (file) => {
+  if (!file) return;
 
-      const raw = await extractTextFromFile(file);
+  console.log('[Hammer] file selected:', file.name, file.type, file.size);
 
-console.log('[JD RAW]', raw?.slice?.(0, 300), 'length:', raw?.length);
+  try {
+    // Check limit first (currently disabled)
+    // const res = await fetch('/api/seeker/resume-align-limit', { method: 'POST' });
+    // const data = await res.json();
+    // if (!data.allowed) { alert(data.message); return; }
 
-const clean = normalizeJobText(raw);
+    const raw = await extractTextFromFile(file);
+    console.log('[Hammer] raw length:', raw?.length);
 
-console.log('[JD CLEAN]', clean?.slice?.(0, 300), 'length:', clean?.length);
+    const clean = normalizeJobText(raw);
+    console.log('[Hammer] clean length:', clean?.length);
 
-setJd(clean);
-      // ✅ DB-backed draft storage (no localStorage)
-      await saveDraft(DRAFT_KEYS.LAST_JOB_TEXT, clean);
-	  if (fileInputRef.current) fileInputRef.current.value = '';  
-    } catch (e) {
-      console.error(e);
-      alert('Failed to process job description. Try again.');
-    }
-  };
+    setJd(clean);
+
+    // ✅ DB-backed draft storage (no localStorage)
+    await saveDraft(DRAFT_KEYS.LAST_JOB_TEXT, clean);
+  } catch (e) {
+    console.error(e);
+    alert('Failed to process job description. Try again.');
+  } finally {
+    // ✅ allow re-selecting the same file
+    if (fileInputRef.current) fileInputRef.current.value = '';
+  }
+};
 
   // Drag-and-drop listeners
   useEffect(() => {
+  if (!openTailor) return;
+
   const el = dropRef.current;
   if (!el) return;
 
@@ -570,7 +571,7 @@ setJd(clean);
     el.removeEventListener('dragleave', prevent);
     el.removeEventListener('drop', onDrop);
   };
-}, []);
+}, [openTailor]);
 
   const templateName =
     router.query.template === 'hybrid' ? 'Hybrid (Combination)' : 'Reverse Chronological (Default)';
