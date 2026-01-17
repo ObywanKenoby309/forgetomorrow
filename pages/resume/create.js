@@ -468,7 +468,8 @@ export default function CreateResumePage() {
   const handleFile = async (file) => {
   if (!file) return;
 
-  console.log('[Hammer] file selected:', file.name, file.type, file.size);
+  setJdLoading(true);
+  setJdStatus('Processing…');
 
   const isPdf =
     file.type === 'application/pdf' || String(file.name || '').toLowerCase().endsWith('.pdf');
@@ -476,35 +477,37 @@ export default function CreateResumePage() {
   try {
     let raw = '';
 
-    // 1) Prefer local extract for non-PDF (fast, reliable)
+    // Non-PDF: client extract only (fast)
     if (!isPdf) {
       raw = await extractTextFromFile(file);
     } else {
-      // 2) For PDF: try local extract, but if it yields nothing, fallback to server
+      // PDF: attempt client extract, then fallback to server if empty
+      setJdStatus('Processing… (PDF parse)');
       raw = await extractTextFromFile(file);
 
       if (!raw || !String(raw).trim()) {
-        console.warn('[Hammer] local PDF extract empty; falling back to uploadJD');
+        setJdStatus('Processing… (server extract)');
         raw = await uploadJD(file);
       }
     }
 
-    console.log('[Hammer] raw length:', raw?.length);
-
     const clean = normalizeJobText(raw);
-    console.log('[Hammer] clean length:', clean?.length);
 
     if (!clean || !String(clean).trim()) {
+      setJdStatus('Failed: PDF appears scanned/unreadable');
       alert('This PDF appears to be scanned (image-only) or unreadable. Try a text-based PDF or upload a .txt/.docx JD.');
       return;
     }
 
     setJd(clean);
     await saveDraft(DRAFT_KEYS.LAST_JOB_TEXT, clean);
+    setJdStatus('Loaded: Job fire from file');
   } catch (e) {
     console.error(e);
+    setJdStatus('Failed: Could not read file');
     alert('Failed to process job description. Try a .txt JD or a text-based PDF.');
   } finally {
+    setJdLoading(false);
     if (fileInputRef.current) fileInputRef.current.value = '';
   }
 };
@@ -851,74 +854,73 @@ export default function CreateResumePage() {
 
             {/* ✅ PERMANENT: dropzone owns its handlers (no addEventListener timing issues) */}
             <div
-              ref={dropRef}
-              onClick={() => fileInputRef.current?.click()}
-              onDragEnter={(e) => {
-                e.preventDefault();
-                e.stopPropagation();
-              }}
-              onDragOver={(e) => {
-                e.preventDefault();
-                e.stopPropagation();
-              }}
-              onDrop={(e) => {
-                e.preventDefault();
-                e.stopPropagation();
-                const file = e.dataTransfer?.files?.[0];
-                if (file) handleFile(file);
-              }}
-              style={{
-                padding: 40,
-                border: '4px dashed #90CAF9',
-                borderRadius: 16,
-                textAlign: 'center',
-                background: '#E3F2FD',
-                cursor: 'pointer',
-                marginTop: 16,
-              }}
-            >
-              <p style={{ margin: 0, fontSize: 18, fontWeight: 700 }}>
-                Drop a job description here
-                <br />
-                or{' '}
-                <button
-                  type="button"
-                  onClick={(e) => {
-                    e.preventDefault();
-                    e.stopPropagation();
-                    fileInputRef.current?.click();
-                  }}
-                  style={{
-                    color: ORANGE,
-                    background: 'none',
-                    border: 0,
-                    fontWeight: 800,
-                    textDecoration: 'underline',
-                    cursor: 'pointer',
-                  }}
-                >
-                  upload file
-                </button>
-              </p>
+  ref={dropRef}
+  onClick={() => {
+    // reset first so selecting the same file still triggers onChange
+    if (fileInputRef.current) fileInputRef.current.value = '';
+    fileInputRef.current?.click();
+  }}
+  style={{
+    padding: 40,
+    border: '4px dashed #90CAF9',
+    borderRadius: 16,
+    textAlign: 'center',
+    background: '#E3F2FD',
+    cursor: 'pointer',
+    marginTop: 16,
+  }}
+>
+  <p style={{ margin: 0, fontSize: 18, fontWeight: 700 }}>
+    Drop a job description here
+    <br />
+    or{' '}
+    <button
+      type="button"
+      onClick={(e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        if (fileInputRef.current) fileInputRef.current.value = '';
+        fileInputRef.current?.click();
+      }}
+      style={{
+        color: ORANGE,
+        background: 'none',
+        border: 0,
+        fontWeight: 800,
+        textDecoration: 'underline',
+        cursor: 'pointer',
+      }}
+    >
+      upload file
+    </button>
+  </p>
 
-              <input
-                ref={fileInputRef}
-                type="file"
-                accept=".pdf,.docx,.txt"
-                onChange={(e) => {
-                  const f = e.target.files?.[0];
-                  if (f) handleFile(f);
-                  e.target.value = ''; // ✅ allows re-selecting same file
-                }}
-                style={{ display: 'none' }}
-              />
+  <input
+    ref={fileInputRef}
+    type="file"
+    accept=".pdf,.PDF,.docx,.DOCX,.txt,.TXT"
+    onChange={(e) => {
+      const f = e.target.files?.[0];
+      console.log('[Hammer] input change fired:', f?.name, f?.type, f?.size);
+      if (f) handleFile(f);
+      e.target.value = ''; // ✅ allows re-selecting same file
+    }}
+    style={{ display: 'none' }}
+  />
 
-              {(jdLoading || jdStatus) && (
-                <div style={{ marginTop: 12, fontSize: 13, fontWeight: 700, color: jdStatus.startsWith('Failed') ? '#B91C1C' : '#0D47A1' }}>
-                  {jdLoading ? 'Processing…' : jdStatus}
-                </div>
-              )}
-            </div>
+  {(jdLoading || jdStatus) && (
+    <div
+      style={{
+        marginTop: 12,
+        fontSize: 13,
+        fontWeight: 700,
+        color: jdStatus?.startsWith?.('Failed') ? '#B91C1C' : '#0D47A1',
+      }}
+    >
+      {jdLoading ? 'Processing…' : jdStatus}
+    </div>
+  )}
+</div>
 
             {jd && (
               <ForgeHammerPanel
