@@ -652,7 +652,7 @@ export default function CreateResumePage() {
   // HEADER
   const Header = (
     <section className="bg-white border border-gray-200 rounded-xl p-8 text-center shadow-sm">
-      <h1 className="text-3xl font-bold text-orange-600">Resume Builder (DEPLOY TEST)</h1>
+      <h1 className="text-3xl font-bold text-orange-600">Resume Builder</h1>
       <p className="text-gray-600 mt-3 max-w-2xl mx-auto">
         2 templates. 1 goal: Get you the interview. <strong>Reverse Chronological</strong> for recruiters.{' '}
         <strong>System-Optimized</strong> for automated screeners. No fluff. Only what works.
