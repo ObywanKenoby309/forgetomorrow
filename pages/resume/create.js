@@ -525,9 +525,17 @@ useEffect(() => {
 //   return;
 // }
 
-      const raw = file.size > 1_500_000 ? await uploadJD(file) : await extractTextFromFile(file);
-      const clean = normalizeJobText(raw);
-      setJd(clean);
+      const raw = file.size > 1_500_000
+  ? await uploadJD(file)
+  : await extractTextFromFile(file);
+
+console.log('[JD RAW]', raw?.slice?.(0, 300), 'length:', raw?.length);
+
+const clean = normalizeJobText(raw);
+
+console.log('[JD CLEAN]', clean?.slice?.(0, 300), 'length:', clean?.length);
+
+setJd(clean);
       // ✅ DB-backed draft storage (no localStorage)
       await saveDraft(DRAFT_KEYS.LAST_JOB_TEXT, clean);
 	  if (fileInputRef.current) fileInputRef.current.value = '';  
