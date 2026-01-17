@@ -847,7 +847,7 @@ const clearJobFire = async () => {
                   )}
                 </Banner>
               </div>
-            ) : fireMeta && jd ? (
+            ) : jd ? (
               <div style={{ display: 'grid', gap: 10, marginBottom: 16 }}>
                 <Banner tone="blue">
                   <div style={{ fontWeight: 800, marginBottom: 4 }}>🔥 Job fire loaded</div>
