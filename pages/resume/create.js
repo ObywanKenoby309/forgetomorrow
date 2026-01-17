@@ -22,10 +22,7 @@ import ReverseATSButton from '@/components/resume-form/export/ReverseATSButton';
 import HybridATSButton from '@/components/resume-form/export/HybridATSButton';
 import DesignedPDFButton from '@/components/resume-form/export/DesignedPDFButton'; // ← NEW
 
-const ForgeHammerPanel = dynamic(
-  () => import('@/components/hammer/ForgeHammerPanel'),
-  { ssr: false }
-);
+const ForgeHammerPanel = dynamic(() => import('@/components/hammer/ForgeHammerPanel'), { ssr: false });
 
 const ORANGE = '#FF7043';
 
@@ -112,19 +109,12 @@ function Section({ title, open, onToggle, children, required = false }) {
             {open ? (
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20 12H4" />
             ) : (
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth={2}
-                d="M12 4v16m8-8H4"
-              />
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
             )}
           </svg>
         </span>
       </button>
-      {open && (
-        <div style={{ padding: '24px 20px', borderTop: '1px solid #E5E7EB' }}>{children}</div>
-      )}
+      {open && <div style={{ padding: '24px 20px', borderTop: '1px solid #E5E7EB' }}>{children}</div>}
     </div>
   );
 }
@@ -241,8 +231,7 @@ function LanguagesInlineSection({ languages, setLanguages }) {
 export default function CreateResumePage() {
   const router = useRouter();
   const chrome = String(router.query.chrome || '').toLowerCase();
-  const withChrome = (path) =>
-    chrome ? `${path}${path.includes('?') ? '&' : '?'}chrome=${chrome}` : path;
+  const withChrome = (path) => (chrome ? `${path}${path.includes('?') ? '&' : '?'}chrome=${chrome}` : path);
 
   const fileInputRef = useRef(null);
   const dropRef = useRef(null);
@@ -289,46 +278,45 @@ export default function CreateResumePage() {
   // ✅ NEW: job meta lookup for Resume-Role Align flow (jobId without pack)
   const [jobMeta, setJobMeta] = useState(null);
 
-// ✅ Clear loaded job / ATS fire
-const clearJobFire = async () => {
-  setJd('');
-  setAtsPack(null);
-  setAtsJobMeta(null);
-  setJobMeta(null);
-  setAtsAppliedFromContext(true);
-  hasAppliedUploadRef.current = false; // prevent re-hydration this session
+  // ✅ Clear loaded job / ATS fire
+  const clearJobFire = async () => {
+    setJd('');
+    setAtsPack(null);
+    setAtsJobMeta(null);
+    setJobMeta(null);
+    setAtsAppliedFromContext(true); // prevent re-hydration this session
 
-  try {
-    await fetch('/api/drafts/set', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ key: DRAFT_KEYS.LAST_JOB_TEXT, content: '' }),
-    });
-    await fetch('/api/drafts/set', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ key: DRAFT_KEYS.ATS_PACK, content: null }),
-    });
-  } catch (e) {
-    console.error('[resume/create] failed to clear job drafts', e);
-  }
-};
-
-// ✅ GLOBAL drag/drop kill switch (prevents browser opening PDFs)
-useEffect(() => {
-  const prevent = (e) => {
-    e.preventDefault();
-    e.stopPropagation();
+    try {
+      await fetch('/api/drafts/set', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ key: DRAFT_KEYS.LAST_JOB_TEXT, content: '' }),
+      });
+      await fetch('/api/drafts/set', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ key: DRAFT_KEYS.ATS_PACK, content: null }),
+      });
+    } catch (e) {
+      console.error('[resume/create] failed to clear job drafts', e);
+    }
   };
 
-  window.addEventListener('dragover', prevent);
-  window.addEventListener('drop', prevent);
+  // ✅ GLOBAL drag/drop kill switch (prevents browser opening PDFs)
+  useEffect(() => {
+    const prevent = (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+    };
 
-  return () => {
-    window.removeEventListener('dragover', prevent);
-    window.removeEventListener('drop', prevent);
-  };
-}, []);
+    window.addEventListener('dragover', prevent);
+    window.addEventListener('drop', prevent);
+
+    return () => {
+      window.removeEventListener('dragover', prevent);
+      window.removeEventListener('drop', prevent);
+    };
+  }, []);
 
   // Draft API helpers (DB-backed)
   const getDraft = async (key) => {
@@ -382,43 +370,24 @@ useEffect(() => {
   // IMPORTANT: Ignore auto-populated fields (fullName + forgeUrl/ftProfile) so "Ready" stays 0% until user actually enters content.
   const hasAnyResumeContent =
     (formData &&
-      (
-        // NOTE: intentionally NOT counting fullName/name/forgeUrl/ftProfile as "started"
-        formData.email ||
+      (formData.email ||
         formData.phone ||
         formData.location ||
         formData.linkedin ||
         formData.github ||
         formData.portfolio ||
-        formData.targetedRole
-      )) ||
+        formData.targetedRole)) ||
     (summary && summary.trim().length > 0) ||
     (skills && skills.length > 0) ||
     (languages && languages.length > 0) ||
     (experiences &&
-      experiences.some(
-        (e) =>
-          e.title ||
-          e.company ||
-          (Array.isArray(e.bullets) && e.bullets.length > 0)
-      )) ||
+      experiences.some((e) => e.title || e.company || (Array.isArray(e.bullets) && e.bullets.length > 0))) ||
     (educationList &&
       educationList.some(
-        (edu) =>
-          edu.school ||
-          edu.institution ||
-          edu.degree ||
-          edu.field ||
-          edu.details ||
-          edu.description
+        (edu) => edu.school || edu.institution || edu.degree || edu.field || edu.details || edu.description
       )) ||
     (projects &&
-      projects.some(
-        (p) =>
-          p.title ||
-          p.company ||
-          (Array.isArray(p.bullets) && p.bullets.length > 0)
-      )) ||
+      projects.some((p) => p.title || p.company || (Array.isArray(p.bullets) && p.bullets.length > 0))) ||
     (certifications && certifications.length > 0) ||
     (customSections && customSections.length > 0);
 
@@ -512,69 +481,33 @@ useEffect(() => {
   }, [router.isReady, router.query.jobId]);
 
   // Handle manual JD file upload / drop — WITH LIMIT CHECK
-const handleFile = async (file) => {
-  if (!file) return;
+  const handleFile = async (file) => {
+    if (!file) return;
 
-  console.log('[Hammer] file selected:', file.name, file.type, file.size);
+    try {
+      // (limit check currently disabled)
+      // const res = await fetch('/api/seeker/resume-align-limit', { method: 'POST' });
+      // const data = await res.json();
+      // if (!data.allowed) { alert(data.message); return; }
 
-  try {
-    // Check limit first (currently disabled)
-    // const res = await fetch('/api/seeker/resume-align-limit', { method: 'POST' });
-    // const data = await res.json();
-    // if (!data.allowed) { alert(data.message); return; }
+      // ✅ Permanent: use local extraction to ensure JD actually hydrates
+      const raw = await extractTextFromFile(file);
+      const clean = normalizeJobText(raw);
 
-    const raw = await extractTextFromFile(file);
-    console.log('[Hammer] raw length:', raw?.length);
+      setJd(clean);
 
-    const clean = normalizeJobText(raw);
-    console.log('[Hammer] clean length:', clean?.length);
-
-    setJd(clean);
-
-    // ✅ DB-backed draft storage (no localStorage)
-    await saveDraft(DRAFT_KEYS.LAST_JOB_TEXT, clean);
-  } catch (e) {
-    console.error(e);
-    alert('Failed to process job description. Try again.');
-  } finally {
-    // ✅ allow re-selecting the same file
-    if (fileInputRef.current) fileInputRef.current.value = '';
-  }
-};
-
-  // Drag-and-drop listeners
-  useEffect(() => {
-  if (!openTailor) return;
-
-  const el = dropRef.current;
-  if (!el) return;
-
-  const prevent = (e) => {
-    e.preventDefault();
-    e.stopPropagation();
+      // ✅ DB-backed draft storage (no localStorage)
+      await saveDraft(DRAFT_KEYS.LAST_JOB_TEXT, clean);
+    } catch (e) {
+      console.error(e);
+      alert('Failed to process job description. Try again.');
+    } finally {
+      // ✅ allow re-selecting same file
+      if (fileInputRef.current) fileInputRef.current.value = '';
+    }
   };
 
-  const onDrop = (e) => {
-    prevent(e);
-    const file = e.dataTransfer?.files?.[0];
-    if (file) handleFile(file);
-  };
-
-  el.addEventListener('dragenter', prevent);
-  el.addEventListener('dragover', prevent);
-  el.addEventListener('dragleave', prevent);
-  el.addEventListener('drop', onDrop);
-
-  return () => {
-    el.removeEventListener('dragenter', prevent);
-    el.removeEventListener('dragover', prevent);
-    el.removeEventListener('dragleave', prevent);
-    el.removeEventListener('drop', onDrop);
-  };
-}, [openTailor]);
-
-  const templateName =
-    router.query.template === 'hybrid' ? 'Hybrid (Combination)' : 'Reverse Chronological (Default)';
+  const templateName = router.query.template === 'hybrid' ? 'Hybrid (Combination)' : 'Reverse Chronological (Default)';
 
   const resumeData = {
     personalInfo: {
@@ -799,7 +732,12 @@ const handleFile = async (file) => {
           </Banner>
 
           {/* REQUIRED */}
-          <Section title="Required – Start Here" open={openRequired} onToggle={() => setOpenRequired((v) => !v)} required>
+          <Section
+            title="Required – Start Here"
+            open={openRequired}
+            onToggle={() => setOpenRequired((v) => !v)}
+            required
+          >
             <div style={{ display: 'grid', gap: 32 }}>
               <ContactInfoSection embedded formData={formData} setFormData={setFormData} />
               <WorkExperienceSection embedded experiences={experiences} setExperiences={setExperiences} />
@@ -863,16 +801,17 @@ const handleFile = async (file) => {
                           <strong>AI read of this role:</strong> {atsPack.ats.summary}
                         </div>
                       )}
-                      {Array.isArray(atsPack.ats.recommendations) && atsPack.ats.recommendations.length > 0 && (
-                        <div style={{ fontSize: 13 }}>
-                          <strong>Key improvements to consider:</strong>
-                          <ul style={{ margin: '4px 0 0', paddingLeft: 18, fontSize: 13 }}>
-                            {atsPack.ats.recommendations.map((rec, idx) => (
-                              <li key={idx}>{rec}</li>
-                            ))}
-                          </ul>
-                        </div>
-                      )}
+                      {Array.isArray(atsPack.ats.recommendations) &&
+                        atsPack.ats.recommendations.length > 0 && (
+                          <div style={{ fontSize: 13 }}>
+                            <strong>Key improvements to consider:</strong>
+                            <ul style={{ margin: '4px 0 0', paddingLeft: 18, fontSize: 13 }}>
+                              {atsPack.ats.recommendations.map((rec, idx) => (
+                                <li key={idx}>{rec}</li>
+                              ))}
+                            </ul>
+                          </div>
+                        )}
                     </>
                   ) : (
                     <div style={{ fontSize: 13, marginTop: 4 }}>
@@ -886,9 +825,9 @@ const handleFile = async (file) => {
                 <Banner tone="blue">
                   <div style={{ fontWeight: 800, marginBottom: 4 }}>🔥 Job fire loaded</div>
                   <div style={{ fontSize: 14 }}>
-                    <strong>{fireMeta.title || 'Job'}</strong>
-                    {fireMeta.company ? ` at ${fireMeta.company}` : ''}
-                    {fireMeta.location ? ` — ${fireMeta.location}` : ''}
+                    <strong>{fireMeta?.title || 'Job'}</strong>
+                    {fireMeta?.company ? ` at ${fireMeta.company}` : ''}
+                    {fireMeta?.location ? ` — ${fireMeta.location}` : ''}
                   </div>
                   <div style={{ fontSize: 13, marginTop: 6 }}>
                     Your keyword coverage and match insights are now based on this posting.
@@ -906,29 +845,44 @@ const handleFile = async (file) => {
               </Banner>
             )}
 
-{(jd || atsPack) && (
-  <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: 12 }}>
-    <button
-      type="button"
-      onClick={clearJobFire}
-      style={{
-        background: 'transparent',
-        border: 'none',
-        color: '#B91C1C',
-        fontWeight: 800,
-        fontSize: 13,
-        cursor: 'pointer',
-        textDecoration: 'underline',
-      }}
-    >
-      Clear loaded job
-    </button>
-  </div>
-)}
+            {(jd || atsPack) && (
+              <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: 12 }}>
+                <button
+                  type="button"
+                  onClick={clearJobFire}
+                  style={{
+                    background: 'transparent',
+                    border: 'none',
+                    color: '#B91C1C',
+                    fontWeight: 800,
+                    fontSize: 13,
+                    cursor: 'pointer',
+                    textDecoration: 'underline',
+                  }}
+                >
+                  Clear loaded job
+                </button>
+              </div>
+            )}
 
+            {/* ✅ PERMANENT DROPZONE: no ref listeners, no timing issues */}
             <div
               ref={dropRef}
-			  onClick={() => fileInputRef.current?.click()}
+              onClick={() => fileInputRef.current?.click()}
+              onDragEnter={(e) => {
+                e.preventDefault();
+                e.stopPropagation();
+              }}
+              onDragOver={(e) => {
+                e.preventDefault();
+                e.stopPropagation();
+              }}
+              onDrop={(e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                const file = e.dataTransfer?.files?.[0];
+                if (file) handleFile(file);
+              }}
               style={{
                 padding: 40,
                 border: '4px dashed #90CAF9',
@@ -944,8 +898,12 @@ const handleFile = async (file) => {
                 <br />
                 or{' '}
                 <button
-				type="button"
-                  onClick={() => fileInputRef.current?.click()}
+                  type="button"
+                  onClick={(e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    fileInputRef.current?.click();
+                  }}
                   style={{
                     color: ORANGE,
                     background: 'none',
@@ -958,11 +916,16 @@ const handleFile = async (file) => {
                   upload file
                 </button>
               </p>
+
               <input
                 ref={fileInputRef}
                 type="file"
                 accept=".pdf,.docx,.txt"
-                onChange={(e) => handleFile(e.target.files?.[0])}
+                onChange={(e) => {
+                  const f = e.target.files?.[0];
+                  if (f) handleFile(f);
+                  e.target.value = ''; // ✅ allows selecting same file again
+                }}
                 style={{ display: 'none' }}
               />
             </div>
@@ -982,9 +945,7 @@ const handleFile = async (file) => {
                   const lastExp = experiences[experiences.length - 1];
                   if (lastExp) {
                     setExperiences((exp) =>
-                      exp.map((e, i) =>
-                        i === exp.length - 1 ? { ...e, bullets: [...(e.bullets || []), k] } : e
-                      )
+                      exp.map((e, i) => (i === exp.length - 1 ? { ...e, bullets: [...(e.bullets || []), k] } : e))
                     );
                   }
                 }}
