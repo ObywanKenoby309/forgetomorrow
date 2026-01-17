@@ -514,6 +514,7 @@ const clearJobFire = async () => {
       setJd(clean);
       // ✅ DB-backed draft storage (no localStorage)
       await saveDraft(DRAFT_KEYS.LAST_JOB_TEXT, clean);
+	  if (fileInputRef.current) fileInputRef.current.value = '';  
     } catch (e) {
       console.error(e);
       alert('Failed to process job description. Try again.');
@@ -522,22 +523,32 @@ const clearJobFire = async () => {
 
   // Drag-and-drop listeners
   useEffect(() => {
-    const el = dropRef.current;
-    if (!el) return;
-    const prevent = (e) => e.preventDefault();
-    const onDrop = (e) => {
-      prevent(e);
-      if (e.dataTransfer?.files?.[0]) {
-        handleFile(e.dataTransfer.files[0]);
-      }
-    };
-    el.addEventListener('dragover', prevent);
-    el.addEventListener('drop', onDrop);
-    return () => {
-      el.removeEventListener('dragover', prevent);
-      el.removeEventListener('drop', onDrop);
-    };
-  }, []);
+  const el = dropRef.current;
+  if (!el) return;
+
+  const prevent = (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+  };
+
+  const onDrop = (e) => {
+    prevent(e);
+    const file = e.dataTransfer?.files?.[0];
+    if (file) handleFile(file);
+  };
+
+  el.addEventListener('dragenter', prevent);
+  el.addEventListener('dragover', prevent);
+  el.addEventListener('dragleave', prevent);
+  el.addEventListener('drop', onDrop);
+
+  return () => {
+    el.removeEventListener('dragenter', prevent);
+    el.removeEventListener('dragover', prevent);
+    el.removeEventListener('dragleave', prevent);
+    el.removeEventListener('drop', onDrop);
+  };
+}, []);
 
   const templateName =
     router.query.template === 'hybrid' ? 'Hybrid (Combination)' : 'Reverse Chronological (Default)';
@@ -894,6 +905,7 @@ const clearJobFire = async () => {
 
             <div
               ref={dropRef}
+			  onClick={() => fileInputRef.current?.click()}
               style={{
                 padding: 40,
                 border: '4px dashed #90CAF9',
