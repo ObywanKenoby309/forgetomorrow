@@ -36,16 +36,8 @@ const DRAFT_KEYS = {
 function Banner({ children, tone = 'orange' }) {
   const toneStyles =
     tone === 'blue'
-      ? {
-          background: '#E3F2FD',
-          border: '1px solid #90CAF9',
-          color: '#0D47A1',
-        }
-      : {
-          background: '#FFF3E0',
-          border: '1px solid #FFCC80',
-          color: '#E65100',
-        };
+      ? { background: '#E3F2FD', border: '1px solid #90CAF9', color: '#0D47A1' }
+      : { background: '#FFF3E0', border: '1px solid #FFCC80', color: '#E65100' };
 
   return (
     <div
@@ -270,6 +262,10 @@ export default function CreateResumePage() {
   const [openTailor, setOpenTailor] = useState(false);
   const [toolsOpen, setToolsOpen] = useState(true); // collapsible tools bar
 
+  // ✅ NEW: visible JD processing status (permanent)
+  const [jdLoading, setJdLoading] = useState(false);
+  const [jdStatus, setJdStatus] = useState('');
+
   // ATS context passed from jobs page (via resume-cover)
   const [atsPack, setAtsPack] = useState(null);
   const [atsJobMeta, setAtsJobMeta] = useState(null);
@@ -281,10 +277,12 @@ export default function CreateResumePage() {
   // ✅ Clear loaded job / ATS fire
   const clearJobFire = async () => {
     setJd('');
+    setJdStatus('');
     setAtsPack(null);
     setAtsJobMeta(null);
     setJobMeta(null);
-    setAtsAppliedFromContext(true); // prevent re-hydration this session
+    setAtsAppliedFromContext(true);
+    hasAppliedUploadRef.current = false; // keep your intent
 
     try {
       await fetch('/api/drafts/set', {
@@ -346,12 +344,7 @@ export default function CreateResumePage() {
 
   // Helper: detect if atsPack is a real result vs demo
   const hasRealAts =
-    !!(
-      atsPack &&
-      atsPack.ats &&
-      typeof atsPack.ats.score === 'number' &&
-      !/demo|sample/i.test(atsPack.ats.summary || '')
-    );
+    !!(atsPack && atsPack.ats && typeof atsPack.ats.score === 'number' && !/demo|sample/i.test(atsPack.ats.summary || ''));
 
   const savedTime = saveEventAt
     ? new Date(saveEventAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
@@ -362,8 +355,7 @@ export default function CreateResumePage() {
     summary?.trim().length > 20,
     skills?.length >= 8,
     experiences?.length > 0 && experiences.every((e) => e.title && e.company && e.bullets?.length >= 2),
-    educationList?.length > 0 &&
-      educationList.some((edu) => (edu.school || edu.institution) && (edu.degree || edu.field)),
+    educationList?.length > 0 && educationList.some((edu) => (edu.school || edu.institution) && (edu.degree || edu.field)),
   ];
 
   // Detect if the resume is effectively empty and clamp progress to 0 in that case.
@@ -380,23 +372,18 @@ export default function CreateResumePage() {
     (summary && summary.trim().length > 0) ||
     (skills && skills.length > 0) ||
     (languages && languages.length > 0) ||
-    (experiences &&
-      experiences.some((e) => e.title || e.company || (Array.isArray(e.bullets) && e.bullets.length > 0))) ||
+    (experiences && experiences.some((e) => e.title || e.company || (Array.isArray(e.bullets) && e.bullets.length > 0))) ||
     (educationList &&
       educationList.some(
         (edu) => edu.school || edu.institution || edu.degree || edu.field || edu.details || edu.description
       )) ||
-    (projects &&
-      projects.some((p) => p.title || p.company || (Array.isArray(p.bullets) && p.bullets.length > 0))) ||
+    (projects && projects.some((p) => p.title || p.company || (Array.isArray(p.bullets) && p.bullets.length > 0))) ||
     (certifications && certifications.length > 0) ||
     (customSections && customSections.length > 0);
 
   let progress = Math.round((checks.filter(Boolean).length / 4) * 100);
-  if (!hasAnyResumeContent) {
-    progress = 0;
-  }
+  if (!hasAnyResumeContent) progress = 0;
 
-  // treat "complete" as exactly 100% progress
   const isResumeComplete = progress === 100;
 
   // Load resume template
@@ -420,18 +407,15 @@ export default function CreateResumePage() {
   useEffect(() => {
     async function loadProfileDefaults() {
       try {
-        // If user already filled it, don't override
         if (formData.forgeUrl || formData.ftProfile || formData.fullName) return;
         const res = await fetch('/api/profile/header');
         if (!res.ok) return;
         const data = await res.json();
-        // Build name safely
         const derivedName = data?.name || [data?.firstName, data?.lastName].filter(Boolean).join(' ') || '';
         const slug = data?.slug;
         const fullProfileUrl = slug ? `https://forgetomorrow.com/u/${slug}` : '';
         setFormData((prev) => ({
           ...prev,
-          // ✅ put the auto-populated name into fullName (the field preview uses and user edits)
           fullName: prev.fullName || derivedName || prev.name || '',
           forgeUrl: prev.forgeUrl || fullProfileUrl,
           ftProfile: prev.ftProfile || fullProfileUrl,
@@ -480,29 +464,34 @@ export default function CreateResumePage() {
     };
   }, [router.isReady, router.query.jobId]);
 
-  // Handle manual JD file upload / drop — WITH LIMIT CHECK
+  // Handle manual JD file upload / drop
   const handleFile = async (file) => {
     if (!file) return;
 
-    try {
-      // (limit check currently disabled)
-      // const res = await fetch('/api/seeker/resume-align-limit', { method: 'POST' });
-      // const data = await res.json();
-      // if (!data.allowed) { alert(data.message); return; }
+    setJdLoading(true);
+    setJdStatus(`Processing: ${file.name}`);
 
-      // ✅ Permanent: use local extraction to ensure JD actually hydrates
+    try {
+      // ✅ Force local extraction (uploadJD path was returning empty)
       const raw = await extractTextFromFile(file);
       const clean = normalizeJobText(raw);
 
-      setJd(clean);
+      if (!clean || !String(clean).trim()) {
+        setJd('');
+        setJdStatus('Failed: Could not extract text from this file. Try a different PDF or paste text.');
+        return;
+      }
 
-      // ✅ DB-backed draft storage (no localStorage)
+      setJd(clean);
       await saveDraft(DRAFT_KEYS.LAST_JOB_TEXT, clean);
+
+      setJdStatus(`Loaded: ${file.name}`);
     } catch (e) {
       console.error(e);
+      setJdStatus('Failed: Could not process job description. Try again.');
       alert('Failed to process job description. Try again.');
     } finally {
-      // ✅ allow re-selecting same file
+      setJdLoading(false);
       if (fileInputRef.current) fileInputRef.current.value = '';
     }
   };
@@ -511,7 +500,6 @@ export default function CreateResumePage() {
 
   const resumeData = {
     personalInfo: {
-      // Use fullName if available, fall back to name
       name: formData.fullName || formData.name || 'Your Name',
       targetedRole: formData.targetedRole || '',
       email: formData.email || '',
@@ -520,7 +508,6 @@ export default function CreateResumePage() {
       linkedin: formData.linkedin || '',
       github: formData.github || '',
       portfolio: formData.portfolio || '',
-      // Pass the ForgeTomorrow profile URL into the templates
       ftProfile: formData.forgeUrl || formData.ftProfile || '',
     },
     summary: summary || '',
@@ -555,21 +542,15 @@ export default function CreateResumePage() {
           .map((l) => l.trim())
           .filter(Boolean);
 
-        // Naive name guess: first non-empty line if we don't already have a fullName/name
         let guessedName = formData.fullName || formData.name || '';
-        if (!guessedName && lines.length > 0) {
-          guessedName = lines[0];
-        }
+        if (!guessedName && lines.length > 0) guessedName = lines[0];
 
-        // Email
         const emailMatch = text.match(/[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}/i);
         const guessedEmail = emailMatch ? emailMatch[0] : '';
 
-        // Phone (very loose pattern, but good enough for first pass)
         const phoneMatch = text.match(/(\+?\d[\d\s\-().]{7,}\d)/);
         const guessedPhone = phoneMatch ? phoneMatch[0].trim() : '';
 
-        // Only fill fields that are currently empty so we don't clobber existing formData
         setFormData((prev) => ({
           ...prev,
           fullName: prev.fullName || guessedName || '',
@@ -577,7 +558,6 @@ export default function CreateResumePage() {
           phone: prev.phone || guessedPhone || '',
         }));
 
-        // If summary is empty, drop in the raw text as a starting point (capped length)
         if (!summary || !summary.trim()) {
           const capped = text.length > 4000 ? text.slice(0, 4000) : text;
           setSummary(capped);
@@ -616,11 +596,11 @@ export default function CreateResumePage() {
                 location: pack.job.location || '',
               });
             }
-            // If ATS pack carries a job description, auto-use it as JD text
             if (pack?.job?.description && !jd) {
               const clean = normalizeJobText(pack.job.description);
               setJd(clean);
               await saveDraft(DRAFT_KEYS.LAST_JOB_TEXT, clean);
+              setJdStatus('Loaded: Job fire from ATS context');
               applied = true;
             }
           }
@@ -629,12 +609,12 @@ export default function CreateResumePage() {
         }
       }
 
-      // Fallback: if we don't have a JD yet, reuse last uploaded JD if available
       if (!applied && !jd) {
         try {
           const last = await getDraft(DRAFT_KEYS.LAST_JOB_TEXT);
           if (typeof last === 'string' && last) {
             setJd(last);
+            setJdStatus('Loaded: Last saved job fire');
           }
         } catch (err) {
           console.error('[resume/create] Failed to load last JD from DB drafts', err);
@@ -649,7 +629,6 @@ export default function CreateResumePage() {
 
   const fireMeta = atsJobMeta || jobMeta;
 
-  // HEADER
   const Header = (
     <section className="bg-white border border-gray-200 rounded-xl p-8 text-center shadow-sm">
       <h1 className="text-3xl font-bold text-orange-600">Resume Builder</h1>
@@ -675,7 +654,6 @@ export default function CreateResumePage() {
     </section>
   );
 
-  // FOOTER (removed ATS wording + removed the risky stat claim)
   const Footer = (
     <div className="mt-16 text-center text-xs text-gray-500 max-w-2xl mx-auto px-4">
       Tip: System-optimized formatting improves compatibility with automated screeners. <em>Results vary by role and market.</em>
@@ -732,12 +710,7 @@ export default function CreateResumePage() {
           </Banner>
 
           {/* REQUIRED */}
-          <Section
-            title="Required – Start Here"
-            open={openRequired}
-            onToggle={() => setOpenRequired((v) => !v)}
-            required
-          >
+          <Section title="Required – Start Here" open={openRequired} onToggle={() => setOpenRequired((v) => !v)} required>
             <div style={{ display: 'grid', gap: 32 }}>
               <ContactInfoSection embedded formData={formData} setFormData={setFormData} />
               <WorkExperienceSection embedded experiences={experiences} setExperiences={setExperiences} />
@@ -763,7 +736,7 @@ export default function CreateResumePage() {
             </div>
           </Section>
 
-          {/* The Forge Hammer — WITH LIMIT CHECK */}
+          {/* The Forge Hammer */}
           <Section
             title={
               <>
@@ -801,22 +774,19 @@ export default function CreateResumePage() {
                           <strong>AI read of this role:</strong> {atsPack.ats.summary}
                         </div>
                       )}
-                      {Array.isArray(atsPack.ats.recommendations) &&
-                        atsPack.ats.recommendations.length > 0 && (
-                          <div style={{ fontSize: 13 }}>
-                            <strong>Key improvements to consider:</strong>
-                            <ul style={{ margin: '4px 0 0', paddingLeft: 18, fontSize: 13 }}>
-                              {atsPack.ats.recommendations.map((rec, idx) => (
-                                <li key={idx}>{rec}</li>
-                              ))}
-                            </ul>
-                          </div>
-                        )}
+                      {Array.isArray(atsPack.ats.recommendations) && atsPack.ats.recommendations.length > 0 && (
+                        <div style={{ fontSize: 13 }}>
+                          <strong>Key improvements to consider:</strong>
+                          <ul style={{ margin: '4px 0 0', paddingLeft: 18, fontSize: 13 }}>
+                            {atsPack.ats.recommendations.map((rec, idx) => (
+                              <li key={idx}>{rec}</li>
+                            ))}
+                          </ul>
+                        </div>
+                      )}
                     </>
                   ) : (
-                    <div style={{ fontSize: 13, marginTop: 4 }}>
-                      This job is loaded as your fire, but it hasn’t been fully scored yet.
-                    </div>
+                    <div style={{ fontSize: 13, marginTop: 4 }}>This job is loaded as your fire, but it hasn’t been fully scored yet.</div>
                   )}
                 </Banner>
               </div>
@@ -838,9 +808,9 @@ export default function CreateResumePage() {
               <Banner>
                 <div style={{ fontWeight: 800, marginBottom: 4 }}>🔥 Add the fire.</div>
                 <div style={{ fontSize: 14 }}>
-                  Your resume is the <strong>steel</strong>. This page is the <strong>anvil</strong>. The AI tools are
-                  your <strong>hammer</strong>. Add a job description to supply the <strong>fire</strong> — and unlock
-                  match insights, keyword coverage, and tailored guidance for this specific role.
+                  Your resume is the <strong>steel</strong>. This page is the <strong>anvil</strong>. The AI tools are your{' '}
+                  <strong>hammer</strong>. Add a job description to supply the <strong>fire</strong> — and unlock match insights,
+                  keyword coverage, and tailored guidance for this specific role.
                 </div>
               </Banner>
             )}
@@ -865,7 +835,7 @@ export default function CreateResumePage() {
               </div>
             )}
 
-            {/* ✅ PERMANENT DROPZONE: no ref listeners, no timing issues */}
+            {/* ✅ PERMANENT: dropzone owns its handlers (no addEventListener timing issues) */}
             <div
               ref={dropRef}
               onClick={() => fileInputRef.current?.click()}
@@ -924,10 +894,16 @@ export default function CreateResumePage() {
                 onChange={(e) => {
                   const f = e.target.files?.[0];
                   if (f) handleFile(f);
-                  e.target.value = ''; // ✅ allows selecting same file again
+                  e.target.value = ''; // ✅ allows re-selecting same file
                 }}
                 style={{ display: 'none' }}
               />
+
+              {(jdLoading || jdStatus) && (
+                <div style={{ marginTop: 12, fontSize: 13, fontWeight: 700, color: jdStatus.startsWith('Failed') ? '#B91C1C' : '#0D47A1' }}>
+                  {jdLoading ? 'Processing…' : jdStatus}
+                </div>
+              )}
             </div>
 
             {jd && (
@@ -938,7 +914,7 @@ export default function CreateResumePage() {
                 skills={skills}
                 experiences={experiences}
                 education={educationList}
-                jobMeta={fireMeta || null} // ✅ NEW (safe) prop for panel to display title/company/location
+                jobMeta={fireMeta || null}
                 onAddSkill={(k) => setSkills((s) => [...s, k])}
                 onAddSummary={(k) => setSummary((s) => (s ? `${s}\n\n${k}` : k))}
                 onAddBullet={(k) => {
@@ -1004,13 +980,7 @@ export default function CreateResumePage() {
               fill="none"
               xmlns="http://www.w3.org/2000/svg"
             >
-              <path
-                d="M7 5l6 5-6 5"
-                stroke="currentColor"
-                strokeWidth="2"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-              />
+              <path d="M7 5l6 5-6 5" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
             </svg>
           </span>
         </button>
