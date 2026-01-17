@@ -295,7 +295,8 @@ const clearJobFire = async () => {
   setAtsPack(null);
   setAtsJobMeta(null);
   setJobMeta(null);
-  setAtsAppliedFromContext(true); // prevent re-hydration this session
+  setAtsAppliedFromContext(false);
+  hasAppliedUploadRef.current = false; // prevent re-hydration this session
 
   try {
     await fetch('/api/drafts/set', {
