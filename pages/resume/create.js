@@ -466,35 +466,49 @@ export default function CreateResumePage() {
 
   // Handle manual JD file upload / drop
   const handleFile = async (file) => {
-    if (!file) return;
+  if (!file) return;
 
-    setJdLoading(true);
-    setJdStatus(`Processing: ${file.name}`);
+  console.log('[Hammer] file selected:', file.name, file.type, file.size);
 
-    try {
-      // ✅ Force local extraction (uploadJD path was returning empty)
-      const raw = await extractTextFromFile(file);
-      const clean = normalizeJobText(raw);
+  const isPdf =
+    file.type === 'application/pdf' || String(file.name || '').toLowerCase().endsWith('.pdf');
 
-      if (!clean || !String(clean).trim()) {
-        setJd('');
-        setJdStatus('Failed: Could not extract text from this file. Try a different PDF or paste text.');
-        return;
+  try {
+    let raw = '';
+
+    // 1) Prefer local extract for non-PDF (fast, reliable)
+    if (!isPdf) {
+      raw = await extractTextFromFile(file);
+    } else {
+      // 2) For PDF: try local extract, but if it yields nothing, fallback to server
+      raw = await extractTextFromFile(file);
+
+      if (!raw || !String(raw).trim()) {
+        console.warn('[Hammer] local PDF extract empty; falling back to uploadJD');
+        raw = await uploadJD(file);
       }
-
-      setJd(clean);
-      await saveDraft(DRAFT_KEYS.LAST_JOB_TEXT, clean);
-
-      setJdStatus(`Loaded: ${file.name}`);
-    } catch (e) {
-      console.error(e);
-      setJdStatus('Failed: Could not process job description. Try again.');
-      alert('Failed to process job description. Try again.');
-    } finally {
-      setJdLoading(false);
-      if (fileInputRef.current) fileInputRef.current.value = '';
     }
-  };
+
+    console.log('[Hammer] raw length:', raw?.length);
+
+    const clean = normalizeJobText(raw);
+    console.log('[Hammer] clean length:', clean?.length);
+
+    if (!clean || !String(clean).trim()) {
+      alert('This PDF appears to be scanned (image-only) or unreadable. Try a text-based PDF or upload a .txt/.docx JD.');
+      return;
+    }
+
+    setJd(clean);
+    await saveDraft(DRAFT_KEYS.LAST_JOB_TEXT, clean);
+  } catch (e) {
+    console.error(e);
+    alert('Failed to process job description. Try a .txt JD or a text-based PDF.');
+  } finally {
+    if (fileInputRef.current) fileInputRef.current.value = '';
+  }
+};
+
 
   const templateName = router.query.template === 'hybrid' ? 'Hybrid (Combination)' : 'Reverse Chronological (Default)';
 
