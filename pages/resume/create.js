@@ -295,7 +295,7 @@ const clearJobFire = async () => {
   setAtsPack(null);
   setAtsJobMeta(null);
   setJobMeta(null);
-  setAtsAppliedFromContext(false);
+  setAtsAppliedFromContext(true);
   hasAppliedUploadRef.current = false; // prevent re-hydration this session
 
   try {
@@ -313,6 +313,22 @@ const clearJobFire = async () => {
     console.error('[resume/create] failed to clear job drafts', e);
   }
 };
+
+// ✅ GLOBAL drag/drop kill switch (prevents browser opening PDFs)
+useEffect(() => {
+  const prevent = (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+  };
+
+  window.addEventListener('dragover', prevent);
+  window.addEventListener('drop', prevent);
+
+  return () => {
+    window.removeEventListener('dragover', prevent);
+    window.removeEventListener('drop', prevent);
+  };
+}, []);
 
   // Draft API helpers (DB-backed)
   const getDraft = async (key) => {
