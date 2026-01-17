@@ -1061,3 +1061,131 @@ export default function CreateResumePage() {
     </SeekerLayout>
   );
 }
+// pages/resume/create.js — FINAL LOCKED + ATS CONTEXT
+import { useContext, useEffect, useRef, useState } from 'react';
+import dynamic from 'next/dynamic';
+import { useRouter } from 'next/router';
+import SeekerLayout from '@/components/layouts/SeekerLayout';
+import { ResumeContext } from '@/context/ResumeContext';
+import ContactInfoSection from '@/components/resume-form/ContactInfoSection';
+import WorkExperienceSection from '@/components/resume-form/WorkExperienceSection';
+import EducationSection from '@/components/resume-form/EducationSection';
+import SkillsSection from '@/components/resume-form/SkillsSection';
+import SummarySection from '@/components/resume-form/SummarySection';
+import ProjectsSection from '@/components/resume-form/ProjectsSection';
+import CertificationsSection from '@/components/resume-form/CertificationsSection';
+import CustomSection from '@/components/resume-form/CustomSection';
+import { getResumeTemplateComponent } from '@/lib/templates';
+import { extractTextFromFile, normalizeJobText } from '@/lib/jd/ingest';
+import { uploadJD } from '@/lib/jd/uploadToApi';
+import ReverseResumeTemplate from '@/components/resume-form/templates/ReverseResumeTemplate';
+import BulkExportCTA from '@/components/BulkExportCTA';
+import ReverseATSButton from '@/components/resume-form/export/ReverseATSButton';
+import HybridATSButton from '@/components/resume-form/export/HybridATSButton';
+import DesignedPDFButton from '@/components/resume-form/export/DesignedPDFButton';
+
+const ForgeHammerPanel = dynamic(
+  () => import('@/components/hammer/ForgeHammerPanel'),
+  { ssr: false }
+);
+
+const ORANGE = '#FF7043';
+
+const DRAFT_KEYS = {
+  LAST_JOB_TEXT: 'ft_last_job_text',
+  ATS_PACK: 'forge-ats-pack',
+  LAST_UPLOADED_RESUME_TEXT: 'ft_last_uploaded_resume_text',
+};
+
+export default function CreateResumePage() {
+  const router = useRouter();
+  const fileInputRef = useRef(null);
+  const dropRef = useRef(null);
+  const hasAppliedUploadRef = useRef(false);
+
+  const {
+    formData,
+    setFormData,
+    summary,
+    setSummary,
+    experiences,
+    setExperiences,
+    educationList,
+    setEducationList,
+    skills,
+    setSkills,
+    projects,
+    setProjects,
+    certifications,
+    setCertifications,
+    customSections,
+    setCustomSections,
+    languages,
+    setLanguages,
+    saveEventAt,
+    saveResume,
+  } = useContext(ResumeContext);
+
+  const [TemplateComp, setTemplateComp] = useState(null);
+  const [jd, setJd] = useState('');
+  const [atsPack, setAtsPack] = useState(null);
+  const [atsJobMeta, setAtsJobMeta] = useState(null);
+  const [jobMeta, setJobMeta] = useState(null);
+  const [atsAppliedFromContext, setAtsAppliedFromContext] = useState(false);
+
+  // ─────────────────────────────────────────────
+  // ✅ CLEAR JOB FIX — single authoritative reset
+  // ─────────────────────────────────────────────
+  const clearJobFire = async () => {
+    setJd('');
+    setAtsPack(null);
+    setAtsJobMeta(null);
+    setJobMeta(null);
+    setAtsAppliedFromContext(true); // prevent re-hydration this session
+
+    try {
+      await fetch('/api/drafts/set', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ key: DRAFT_KEYS.LAST_JOB_TEXT, content: '' }),
+      });
+      await fetch('/api/drafts/set', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ key: DRAFT_KEYS.ATS_PACK, content: null }),
+      });
+    } catch (e) {
+      console.error('[resume/create] failed to clear job drafts', e);
+    }
+  };
+
+  // (rest of file unchanged until Forge Hammer section)
+
+  // ─────────────────────────────────────────────
+  // FORGE HAMMER SECTION (only addition inside)
+  // ─────────────────────────────────────────────
+
+  {/* inside the Forge Hammer <Section> render, directly under the blue "Job fire loaded" Banner */}
+
+  {(jd || atsPack) && (
+    <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: 8 }}>
+      <button
+        type="button"
+        onClick={clearJobFire}
+        style={{
+          background: 'transparent',
+          border: 'none',
+          color: '#B91C1C',
+          fontWeight: 800,
+          fontSize: 13,
+          cursor: 'pointer',
+          textDecoration: 'underline',
+        }}
+      >
+        Clear job fire
+      </button>
+    </div>
+  )}
+
+  // (rest of file remains exactly as you sent it)
+}
