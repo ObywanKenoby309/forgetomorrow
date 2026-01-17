@@ -525,9 +525,7 @@ useEffect(() => {
 //   return;
 // }
 
-      const raw = file.size > 1_500_000
-  ? await uploadJD(file)
-  : await extractTextFromFile(file);
+      const raw = await extractTextFromFile(file);
 
 console.log('[JD RAW]', raw?.slice?.(0, 300), 'length:', raw?.length);
 
