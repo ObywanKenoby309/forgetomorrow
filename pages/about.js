@@ -1,4 +1,5 @@
-// pages/about.tsx ← TOP-SHELF, VALUES-LED, NO CTA PRESSURE
+// pages/about.tsx ← TOP-SHELF, VALUES-LED, NO CTA PRESSURE (calmer hero typography)
+// Keep cinematic forge image, but stop the hero from shouting.
 import Image from "next/image";
 
 export default function About() {
@@ -12,13 +13,18 @@ export default function About() {
         <div className="absolute inset-0 bg-black/70" aria-hidden="true" />
 
         <div className="relative z-10 max-w-5xl mx-auto px-6 text-center">
-          <h1 className="text-5xl md:text-7xl lg:text-8xl font-extrabold text-white leading-tight">
+          {/* Primary line: calm authority */}
+          <h1 className="text-4xl md:text-5xl lg:text-6xl font-extrabold text-white leading-tight">
             This isn’t about us.
-            <br />
-            <span className="text-[#FF7043]">It’s about how you’re treated.</span>
           </h1>
 
-          <p className="mt-10 text-xl md:text-2xl text-gray-200 max-w-4xl mx-auto leading-relaxed">
+          {/* Secondary line: smaller, lighter, with selective emphasis */}
+          <p className="mt-6 text-2xl md:text-3xl lg:text-4xl font-medium text-gray-200">
+            It’s about how you’re{" "}
+            <span className="text-[#FF7043] font-semibold">treated</span>.
+          </p>
+
+          <p className="mt-10 text-lg md:text-xl text-gray-300 max-w-4xl mx-auto leading-relaxed">
             ForgeTomorrow was built by people who know what it feels like to be shut out of
             systems that claim to help. We have been unemployed, underpaid, ignored, and told
             to wait while real life kept moving.
@@ -29,7 +35,7 @@ export default function About() {
       {/* PROMISE BODY */}
       <section className="py-28 bg-white">
         <div className="max-w-3xl mx-auto px-6 space-y-16 text-lg md:text-xl leading-relaxed text-gray-800">
-          <h2 className="text-4xl md:text-5xl font-extrabold text-[#FF7043]">
+          <h2 className="text-3xl md:text-4xl font-extrabold text-[#FF7043]">
             Our promise
           </h2>
 
@@ -60,19 +66,12 @@ export default function About() {
       {/* SUBTLE VALUES STRIP */}
       <section className="py-24 bg-gray-50">
         <div className="max-w-3xl mx-auto px-6 space-y-10 text-lg md:text-xl text-gray-800">
+          <p>We do not sell user data.</p>
+          <p>We do not trade people for ad revenue.</p>
+          <p>We do not hide how decisions are made behind opaque scores or rankings.</p>
           <p>
-            We do not sell user data.
-          </p>
-          <p>
-            We do not trade people for ad revenue.
-          </p>
-          <p>
-            We do not hide how decisions are made behind opaque scores or rankings.
-          </p>
-          <p>
-            We use technology to bring clarity, not confusion.
-            We design systems that explain themselves so people can move forward with
-            confidence.
+            We use technology to bring clarity, not confusion. We design systems that explain
+            themselves so people can move forward with confidence.
           </p>
         </div>
       </section>
@@ -110,19 +109,14 @@ export default function About() {
           </div>
 
           <p className="text-2xl font-bold text-gray-900">Eric James</p>
-          <p className="text-lg text-gray-600 mt-1">
-            Founder & CEO, ForgeTomorrow
-          </p>
+          <p className="text-lg text-gray-600 mt-1">Founder & CEO, ForgeTomorrow</p>
 
           <p className="mt-10 text-lg md:text-xl text-gray-700 leading-relaxed">
-            I have read the same stories you have. I will never let this place become
-            another wall someone cannot climb. If it does, it will have lost its reason
-            to exist.
+            I have read the same stories you have. I will never let this place become another
+            wall someone cannot climb. If it does, it will have lost its reason to exist.
           </p>
 
-          <p className="mt-6 font-semibold text-gray-900">
-            That is my word.
-          </p>
+          <p className="mt-6 font-semibold text-gray-900">That is my word.</p>
         </div>
       </section>
     </>
