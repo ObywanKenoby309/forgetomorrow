@@ -1,5 +1,5 @@
-// pages/index.js ← UPDATED per main-page lock (hero + 3 CTAs + calmer paths + remove orange bar)
-// Keep forge image. Remove plan-language. No bottom orange section.
+// pages/index.js ← UPDATED hero typography only (calmer hierarchy, intentional emphasis)
+// Keep forge image. No layout refactor. No new sections.
 import Head from 'next/head';
 import Link from 'next/link';
 
@@ -22,13 +22,17 @@ export default function Home() {
             aria-hidden="true"
           />
           <div className="relative z-10 max-w-5xl">
-            <h1 className="text-5xl md:text-7xl lg:text-8xl font-black mb-8 leading-tight">
-              The career system after algorithms.
-              <br />
-              <span className="text-[#FF7043]">This is where futures are forged.</span>
+            <h1 className="text-4xl md:text-5xl lg:text-6xl font-extrabold leading-tight">
+              The career system <span className="text-[#FF7043]">after</span> algorithms.
             </h1>
 
-            <p className="text-xl md:text-2xl lg:text-3xl text-gray-200 max-w-4xl mx-auto leading-relaxed">
+            <div className="mt-6">
+              <p className="text-2xl md:text-3xl lg:text-4xl font-medium text-gray-200">
+                This is where futures are <span className="text-[#FF7043] font-semibold">forged</span>.
+              </p>
+            </div>
+
+            <p className="mt-8 text-lg md:text-xl lg:text-2xl text-gray-300 max-w-4xl mx-auto leading-relaxed">
               Proof over keywords. Clarity over guesswork. Designed to treat people like people.
             </p>
 
@@ -142,7 +146,7 @@ export default function Home() {
           </div>
         </section>
 
-        {/* Bottom orange bar removed intentionally. No replacement. */}
+        {/* Bottom orange bar intentionally removed */}
       </main>
     </>
   );
