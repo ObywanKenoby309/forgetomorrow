@@ -5,9 +5,6 @@ import { useRouter } from 'next/router';
 import SeekerLayout from '@/components/layouts/SeekerLayout';
 import ResumeRightRail from '@/components/resume/ResumeRightRail';
 import { getClientSession } from '@/lib/auth-client';
-import ProfileResumeAttach from '@/components/profile/ProfileResumeAttach';
-import ProfileCoverAttach from '@/components/profile/ProfileCoverAttach';
-import SectionHint from '@/components/SectionHint';
 import { extractTextFromFile, normalizeJobText } from '@/lib/jd/ingest';
 
 const ORANGE = '#FF7043';
@@ -701,18 +698,6 @@ export default function ResumeCoverLanding() {
         {SavedSelectorCard}
         {ATSWhyBanner}
         {TemplatesRow}
-      </div>
-
-          <SectionHint
-            title="Make it easy to say yes"
-            bullets={[
-              'Keep one primary resume linked to your profile.',
-              'Save up to 4 alternates for different roles.',
-              'Do the same with cover letters so recruiters instantly see your best fit.',
-              'Manage all your resumes and cover letters in the builder — you can change your primaries anytime from there.',
-            ]}
-          />
-        </div>
       </div>
 
       <TemplatePreviewModal
