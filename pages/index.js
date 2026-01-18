@@ -1,4 +1,5 @@
-// pages/index.js ← FINAL, BUSINESS-SMART, ACCESSIBLE, WORKING
+// pages/index.js ← UPDATED per main-page lock (hero + 3 CTAs + calmer paths + remove orange bar)
+// Keep forge image. Remove plan-language. No bottom orange section.
 import Head from 'next/head';
 import Link from 'next/link';
 
@@ -6,15 +7,14 @@ export default function Home() {
   return (
     <>
       <Head>
-        <title>ForgeTomorrow — Real Tools. Real Help. Right Now.</title>
+        <title>ForgeTomorrow — The career system after algorithms.</title>
         <meta
           name="description"
-          content="Free resume builder (3/mo), job tracking, salary data, coaching directory, and community. Upgrade any time for unlimited use + pro features."
+          content="ForgeTomorrow is a career platform built for clarity, alignment, and human dignity. Proof over keywords. Clarity over guesswork."
         />
       </Head>
 
       <main className="min-h-screen bg-gradient-to-b from-[#1a1a1a] to-[#0f0f0f] text-gray-100">
-
         {/* HERO */}
         <section className="relative min-h-screen flex items-center justify-center px-6 text-center">
           <div
@@ -23,14 +23,13 @@ export default function Home() {
           />
           <div className="relative z-10 max-w-5xl">
             <h1 className="text-5xl md:text-7xl lg:text-8xl font-black mb-8 leading-tight">
-              The forge is open.
+              The career system after algorithms.
               <br />
-              <span className="text-[#FF7043]">Walk in.</span>
+              <span className="text-[#FF7043]">This is where futures are forged.</span>
             </h1>
 
             <p className="text-xl md:text-2xl lg:text-3xl text-gray-200 max-w-4xl mx-auto leading-relaxed">
-              Whether you’re hunting your next job, hiring great people, or coaching others through the fire — 
-              this place was built for <strong>you</strong>.
+              Proof over keywords. Clarity over guesswork. Designed to treat people like people.
             </p>
 
             <div className="mt-12 flex flex-col sm:flex-row gap-6 justify-center items-center">
@@ -38,22 +37,64 @@ export default function Home() {
                 href="/pricing"
                 className="inline-block bg-[#FF7043] hover:bg-[#f46036] text-white font-bold text-xl px-12 py-5 rounded-full shadow-2xl transition transform hover:scale-105 focus:outline-none focus:ring-4 focus:ring-[#FF7043] focus:ring-offset-2"
               >
-                See Plans & Get Started
+                Enter the Forge
               </Link>
+
               <Link
                 href="/about"
                 className="inline-block border-2 border-[#FF7043] text-[#FF7043] hover:bg-[#FF7043] hover:text-white font-bold text-xl px-12 py-5 rounded-full transition focus:outline-none focus:ring-4 focus:ring-[#FF7043] focus:ring-offset-2"
               >
-                Read the Promise
+                Our Promise
+              </Link>
+
+              <Link
+                href="/features"
+                className="inline-block text-gray-200 hover:text-white font-semibold text-lg underline underline-offset-4 decoration-white/30 hover:decoration-white transition focus:outline-none focus:ring-4 focus:ring-white focus:ring-offset-2"
+              >
+                Explore the Forge
               </Link>
             </div>
           </div>
         </section>
 
-        {/* THREE PATHS — ALL POINT TO PRICING */}
+        {/* ORIENTATION STRIP */}
+        <section className="py-16 bg-[#0f0f0f] text-gray-100">
+          <div className="max-w-6xl mx-auto px-6 text-center">
+            <h2 className="text-2xl md:text-3xl font-extrabold mb-6">
+              Built for how careers and hiring actually work
+            </h2>
+            <div className="grid md:grid-cols-4 gap-6 text-left max-w-6xl mx-auto">
+              <div className="rounded-xl border border-white/10 bg-white/5 p-6">
+                <div className="font-bold mb-2">Prepare with intent</div>
+                <div className="text-gray-200">
+                  Strengthen your signal before pressure hits. Build with purpose, not panic.
+                </div>
+              </div>
+              <div className="rounded-xl border border-white/10 bg-white/5 p-6">
+                <div className="font-bold mb-2">Understand alignment</div>
+                <div className="text-gray-200">
+                  Reduce guesswork. See what matters and why, without keyword theater.
+                </div>
+              </div>
+              <div className="rounded-xl border border-white/10 bg-white/5 p-6">
+                <div className="font-bold mb-2">Get real support</div>
+                <div className="text-gray-200">
+                  Coaching and guidance live inside the platform, built for outcomes.
+                </div>
+              </div>
+              <div className="rounded-xl border border-white/10 bg-white/5 p-6">
+                <div className="font-bold mb-2">Move with clarity</div>
+                <div className="text-gray-200">
+                  Tools and systems that explain themselves so people can act confidently.
+                </div>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        {/* THREE PATHS — DESCRIPTIVE, NOT SALESY */}
         <section className="py-24 bg-white text-gray-900">
           <div className="max-w-6xl mx-auto px-6 grid md:grid-cols-3 gap-12 text-center">
-
             {/* Job Seekers */}
             <div className="space-y-6">
               <div className="w-20 h-20 mx-auto bg-[#FF7043] rounded-full flex items-center justify-center text-4xl font-black text-white">
@@ -61,12 +102,11 @@ export default function Home() {
               </div>
               <h3 className="text-3xl font-bold text-[#FF7043]">Job Seekers</h3>
               <p className="text-lg text-gray-700 leading-relaxed">
-                Free forever: job postings, coaching directory, community, see who viewed your profile.
-                <br /><br />
-                Start with <strong>3 résumés/mo</strong>, 1 incentive plan, 1 roadmap — upgrade any time for unlimited + analytics.
+                Build and refine your career signal, understand fit before you apply, and move forward
+                without guessing what hidden systems want.
               </p>
-              <Link href="/pricing" className="text-[#FF7043] font-bold hover:underline text-lg">
-                See free vs. Seeker Pro →
+              <Link href="/features" className="text-[#FF7043] font-bold hover:underline text-lg">
+                Explore Seeker Tools →
               </Link>
             </div>
 
@@ -77,12 +117,11 @@ export default function Home() {
               </div>
               <h3 className="text-3xl font-bold text-emerald-600">Recruiters & Employers</h3>
               <p className="text-lg text-gray-700 leading-relaxed">
-                Post jobs free. Reach motivated talent.
-                <br /><br />
-                Upgrade for unlimited searches, direct messaging, profile analytics, and priority visibility.
+                Hire with clarity and accountability. Review candidates with visible reasoning,
+                compare side by side, and communicate without opaque filters.
               </p>
-              <Link href="/pricing" className="text-emerald-600 font-bold hover:underline text-lg">
-                View Recruiter Plans →
+              <Link href="/features" className="text-emerald-600 font-bold hover:underline text-lg">
+                Explore Recruiter Tools →
               </Link>
             </div>
 
@@ -93,39 +132,17 @@ export default function Home() {
               </div>
               <h3 className="text-3xl font-bold text-purple-600">Coaches & Mentors</h3>
               <p className="text-lg text-gray-700 leading-relaxed">
-                List your services free. Be found by people who need you.
-                <br /><br />
-                Upgrade for booking tools, group sessions, premium placement, and future resource library access.
+                Support professionals inside a system built for outcomes. Offer services transparently,
+                organize clients, schedule sessions, and gather feedback with accountability.
               </p>
-              <Link href="/pricing" className="text-purple-600 font-bold hover:underline text-lg">
-                Explore Coach Plans →
-              </Link>
-            </div>
-
-          </div>
-        </section>
-
-        {/* FINAL INVITATION — PROFESSIONAL & ACCESSIBLE */}
-        <section className="py-24 bg-[#FF7043] text-white">
-          <div className="max-w-4xl mx-auto px-6 text-center">
-            <h2 className="text-4xl md:text-5xl font-black mb-8">
-              More than jobs. More than networking.
-            </h2>
-            <p className="text-xl md:text-2xl leading-relaxed max-w-3xl mx-auto">
-              ForgeTomorrow isn’t just a platform with some tools — we provide everything you need at every stage of your career journey. 
-              Join us today and start forging your tomorrow.
-            </p>
-            <div className="mt-10">
-              <Link
-                href="/pricing"
-                className="inline-block bg-white text-[#FF7043] font-bold text-xl px-12 py-5 rounded-full hover:bg-gray-100 transition shadow-2xl focus:outline-none focus:ring-4 focus:ring-white focus:ring-offset-2"
-              >
-                Choose Your Plan
+              <Link href="/features" className="text-purple-600 font-bold hover:underline text-lg">
+                Explore Coaching Tools →
               </Link>
             </div>
           </div>
         </section>
 
+        {/* Bottom orange bar removed intentionally. No replacement. */}
       </main>
     </>
   );
