@@ -5,6 +5,9 @@ import { useRouter } from 'next/router';
 import SeekerLayout from '@/components/layouts/SeekerLayout';
 import ResumeRightRail from '@/components/resume/ResumeRightRail';
 import { getClientSession } from '@/lib/auth-client';
+import ProfileResumeAttach from '@/components/profile/ProfileResumeAttach';
+import ProfileCoverAttach from '@/components/profile/ProfileCoverAttach';
+import SectionHint from '@/components/SectionHint';
 import { extractTextFromFile, normalizeJobText } from '@/lib/jd/ingest';
 
 const ORANGE = '#FF7043';
@@ -585,56 +588,6 @@ export default function ResumeCoverLanding() {
     </Card>
   );
 
-  // ✅ NEW: saved resume selector + “New cover letter” CTA
-  const SavedSelectorCard = (
-    <Card>
-      <div style={{ fontWeight: 800, fontSize: 18, marginBottom: 8 }}>Your saved resumes</div>
-
-      {savedResumes.length === 0 ? (
-        <p style={{ margin: 0, color: '#607D8B', fontSize: 14 }}>
-          No saved resumes yet. Build one to unlock one-click cover letters.
-        </p>
-      ) : (
-        <div style={{ display: 'grid', gap: 10 }}>
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr auto', gap: 10, alignItems: 'center' }}>
-            <select
-              value={selectedResumeId}
-              onChange={(e) => setSelectedResumeId(e.target.value)}
-              style={{
-                width: '100%',
-                padding: 12,
-                border: '1px solid #E5E7EB',
-                borderRadius: 10,
-                fontWeight: 700,
-                color: '#1F2937',
-                background: '#fff',
-              }}
-            >
-              {savedResumes.map((r) => (
-                <option key={r.id} value={String(r.id)}>
-                  {r.isPrimary ? '⭐ ' : ''}{r.name}
-                </option>
-              ))}
-            </select>
-
-            <PrimaryButton
-              href={buildCoverCreateHref({ resumeId: selectedResumeId })}
-              disabled={!selectedResumeId}
-            >
-              New cover letter
-            </PrimaryButton>
-          </div>
-
-          {selectedResume ? (
-            <div style={{ fontSize: 12, color: '#607D8B' }}>
-              Selected: <strong>{selectedResume.name}</strong>
-            </div>
-          ) : null}
-        </div>
-      )}
-    </Card>
-  );
-
   // 🔸 Page-specific right-rail ad for resume/cover
   const RightRail = (
     <div className="grid gap-3">
@@ -698,6 +651,26 @@ export default function ResumeCoverLanding() {
         {SavedSelectorCard}
         {ATSWhyBanner}
         {TemplatesRow}
+      </div>
+
+      {/* Primary resume + cover attach section */}
+      <div style={{ maxWidth: 1080, margin: '32px auto', padding: '0 16px' }}>
+        <div className="grid md:grid-cols-3 items-start gap-4">
+          <div className="md:col-span-2 space-y-4">
+            <ProfileResumeAttach withChrome={withChrome} />
+            <ProfileCoverAttach withChrome={withChrome} />
+          </div>
+
+          <SectionHint
+            title="Make it easy to say yes"
+            bullets={[
+              'Keep one primary resume linked to your profile.',
+              'Save up to 4 alternates for different roles.',
+              'Do the same with cover letters so recruiters instantly see your best fit.',
+              'Manage all your resumes and cover letters in the builder — you can change your primaries anytime from there.',
+            ]}
+          />
+        </div>
       </div>
 
       <TemplatePreviewModal
