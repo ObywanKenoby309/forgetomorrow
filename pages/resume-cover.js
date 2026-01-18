@@ -1,5 +1,5 @@
 // pages/resume-cover.js — Resume + cover landing with ATS context
-import React, { useRef, useState, useEffect, useMemo } from 'react';
+import React, { useRef, useState, useEffect } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/router';
 import SeekerLayout from '@/components/layouts/SeekerLayout';
@@ -117,10 +117,7 @@ function TemplatePreviewModal({ open, onClose, tpl, buildCreateHref }) {
         placeItems: 'center',
       }}
     >
-      <div
-        onClick={onClose}
-        style={{ position: 'absolute', inset: 0, background: 'rgba(0,0,0,0.5)' }}
-      />
+      <div onClick={onClose} style={{ position: 'absolute', inset: 0, background: 'rgba(0,0,0,0.5)' }} />
       <div
         role="dialog"
         aria-modal="true"
@@ -174,9 +171,6 @@ export default function ResumeCoverLanding() {
   const [savedResumes, setSavedResumes] = useState([]);
   const [savedCovers, setSavedCovers] = useState([]);
 
-  // ✅ NEW: selection state (in-memory only)
-  const [selectedResumeId, setSelectedResumeId] = useState('');
-
   // Upload status for user confirmation
   const [uploadState, setUploadState] = useState({
     status: 'idle', // 'idle' | 'uploading' | 'uploaded' | 'error'
@@ -204,11 +198,6 @@ export default function ResumeCoverLanding() {
               const json = await res.json();
               const resumes = json.resumes || [];
               setSavedResumes(resumes);
-
-              // ✅ default selection to primary, else first
-              const primary = resumes.find((r) => r.isPrimary);
-              const fallback = primary?.id || resumes?.[0]?.id || '';
-              setSelectedResumeId(String(fallback || ''));
             }
           } catch (err) {
             console.error('[resume-cover] Failed to load resumes', err);
@@ -290,8 +279,8 @@ export default function ResumeCoverLanding() {
   const buildCoverCreateHref = (opts = {}) => {
     const params = new URLSearchParams();
 
-    const rid = opts.resumeId || selectedResumeId;
-    if (rid) params.set('resumeId', String(rid));
+    // NOTE: resumeId is optional; cover builder can still run without it
+    if (opts.resumeId) params.set('resumeId', String(opts.resumeId));
 
     if (jobContext?.jobId) {
       params.set('jobId', jobContext.jobId);
@@ -404,11 +393,6 @@ export default function ResumeCoverLanding() {
 
   const canUseHybrid = tier === 'pro' || usage.used < usage.limit;
 
-  const selectedResume = useMemo(() => {
-    const id = String(selectedResumeId || '');
-    return savedResumes.find((r) => String(r.id) === id) || null;
-  }, [savedResumes, selectedResumeId]);
-
   // ─────────────────────────────────────────────────────────────
   // Header hero
   // ─────────────────────────────────────────────────────────────
@@ -425,9 +409,7 @@ export default function ResumeCoverLanding() {
         <div style={{ display: 'flex', alignItems: 'center', gap: 20 }}>
           <SoftLink onClick={onUploadClick}>Upload a resume</SoftLink>
           <span style={{ width: 1, height: 24, background: '#E0E0E0' }} />
-          <SoftLink href={buildCoverCreateHref()}>
-            Create a cover letter
-          </SoftLink>
+          <SoftLink href={buildCoverCreateHref()}>Create a cover letter</SoftLink>
         </div>
       </div>
 
@@ -648,7 +630,6 @@ export default function ResumeCoverLanding() {
     >
       <div style={{ maxWidth: 1080, margin: '0 auto', padding: '0 16px' }}>
         {ATSContextBanner}
-        {SavedSelectorCard}
         {ATSWhyBanner}
         {TemplatesRow}
       </div>
