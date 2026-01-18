@@ -1,4 +1,4 @@
-// pages/resume-cover.js — Resume + cover landing with ATS context
+// pages/resume-cover.js — Resume + cover landing with job insights context
 import React, { useRef, useState, useEffect } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/router';
@@ -84,12 +84,14 @@ const TEMPLATES = [
   {
     key: 'reverse',
     name: 'Reverse (Default)',
-    tagline: 'Safest for ATS: clear roles, companies, dates, and results.',
+    tagline: 'Clean roles, companies, dates, and impact — easy to scan.',
+    helper: 'Best for online parsers and quick recruiter review.',
   },
   {
     key: 'hybrid',
     name: 'Hybrid (Combination)',
-    tagline: 'Skills & highlights up top, then full reverse-chronological history.',
+    tagline: 'Highlights up top, then full reverse-chronological history.',
+    helper: 'Best when you want a strong “top story” for human scanning.',
     pro: true,
   },
 ];
@@ -177,7 +179,7 @@ export default function ResumeCoverLanding() {
     message: '',
   });
 
-  // Context: ATS pack + job params from jobs page
+  // Context: job insights pack + job params from jobs page
   const [atsPack, setAtsPack] = useState(null);
   const [atsSource, setAtsSource] = useState(null); // e.g., 'ats'
   const [jobContext, setJobContext] = useState(null); // { jobId, copyJD }
@@ -227,7 +229,7 @@ export default function ResumeCoverLanding() {
     init();
   }, [router]);
 
-  // ✅ NO LOCAL STORAGE: Read ATS pack + jobId/copyJD from query + DB drafts
+  // ✅ NO LOCAL STORAGE: Read insights pack + jobId/copyJD from query + DB drafts
   useEffect(() => {
     if (!router.isReady) return;
 
@@ -251,13 +253,13 @@ export default function ResumeCoverLanding() {
           const content = json?.draft?.content || null;
           if (content) setAtsPack(content);
         } catch (err) {
-          console.error('[resume-cover] Failed to load ATS pack from DB drafts', err);
+          console.error('[resume-cover] Failed to load insights pack from DB drafts', err);
         }
       })();
     }
   }, [router.isReady, router.query]);
 
-  // Helper: builder route that carries ATS + job context (AND chrome)
+  // Helper: builder route that carries job context (AND chrome)
   const buildCreateHref = (options = {}) => {
     const params = new URLSearchParams();
 
@@ -386,7 +388,7 @@ export default function ResumeCoverLanding() {
       console.error('[resume-cover] Failed to extract resume text for auto-fill', err);
     }
 
-    // 3) Navigate to builder with uploaded flag + ATS/job context
+    // 3) Navigate to builder with uploaded flag + job context
     setUploadState({ status: 'uploaded', message: 'Resume uploaded. Opening the builder…' });
     router.push(buildCreateHref({ uploaded: true }));
   };
@@ -446,7 +448,7 @@ export default function ResumeCoverLanding() {
     atsPack && atsPack.job ? (
       <Card style={{ marginTop: 16, borderColor: '#1A4B8F', borderWidth: 1 }}>
         <div style={{ fontWeight: 800, fontSize: 16, color: '#1A4B8F', marginBottom: 4 }}>
-          We’ve loaded ATS insights for this job
+          We’ve loaded screening insights for this job
         </div>
         <p style={{ margin: '4px 0', fontSize: 14, color: '#37474F' }}>
           <strong>{atsPack.job.title}</strong> at <strong>{atsPack.job.company}</strong>
@@ -459,27 +461,25 @@ export default function ResumeCoverLanding() {
       </Card>
     ) : null;
 
-  const ATSWhyBanner = (
-    <Card>
-      <div style={{ fontWeight: 800, fontSize: 18 }}>Why only two resume formats?</div>
-      <p style={{ color: '#607D8B', lineHeight: 1.5 }}>
-        Because <strong>Reverse-Chronological</strong> and <strong>Hybrid</strong> are the only
-        layouts that consistently pass ATS scans and recruiter eyes. Everything else is noise. We
-        removed 9,998 templates so you don’t fail silently.
-      </p>
-    </Card>
-  );
-
   const TemplatesRow = (
     <Card>
       <div style={{ fontWeight: 800, fontSize: 18 }}>Quick-start templates</div>
       <p style={{ color: '#90A4AE', fontSize: 14, marginTop: 4 }}>
-        ATS-friendly by default. Switch any time.
+        Clean formats designed to survive online parsing and still read great to humans.
       </p>
+
+      <div style={{ marginTop: 12, borderTop: '1px solid #eee', paddingTop: 12 }}>
+        <div style={{ fontWeight: 800, fontSize: 16, color: '#263238' }}>Why only two formats?</div>
+        <p style={{ color: '#607D8B', lineHeight: 1.5, margin: '6px 0 0' }}>
+          Because <strong>Reverse-Chronological</strong> and <strong>Hybrid</strong> are the only layouts that
+          consistently hold up through automated screening and recruiter eyes. Everything else is noise — and
+          noise causes silent drop-offs.
+        </p>
+      </div>
 
       <div
         style={{
-          marginTop: 20,
+          marginTop: 18,
           display: 'grid',
           gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))',
           gap: 20,
@@ -518,7 +518,12 @@ export default function ResumeCoverLanding() {
                 </div>
               )}
               <div style={{ fontWeight: 800, fontSize: 18 }}>{tpl.name}</div>
-              <p style={{ color: '#607D8B', fontSize: 13, margin: '8px 0 16px' }}>{tpl.tagline}</p>
+              <p style={{ color: '#607D8B', fontSize: 13, margin: '8px 0 8px' }}>{tpl.tagline}</p>
+              {tpl.helper ? (
+                <p style={{ color: '#90A4AE', fontSize: 12, margin: '0 0 14px' }}>{tpl.helper}</p>
+              ) : (
+                <div style={{ height: 14 }} />
+              )}
 
               <div
                 style={{
@@ -630,7 +635,6 @@ export default function ResumeCoverLanding() {
     >
       <div style={{ maxWidth: 1080, margin: '0 auto', padding: '0 16px' }}>
         {ATSContextBanner}
-        {ATSWhyBanner}
         {TemplatesRow}
       </div>
 
