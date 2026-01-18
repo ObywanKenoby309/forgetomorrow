@@ -54,41 +54,69 @@ function Banner({ children, tone = 'orange' }) {
   );
 }
 
-function Section({ title, open, onToggle, children, required = false }) {
+const GLASS_CARD = {
+  borderRadius: 14,
+  border: '1px solid rgba(255,255,255,0.22)',
+  background: 'rgba(255,255,255,0.58)',
+  boxShadow: '0 10px 24px rgba(0,0,0,0.12)',
+  backdropFilter: 'blur(10px)',
+  WebkitBackdropFilter: 'blur(10px)',
+};
+
+function Section({ title, open, onToggle, children, required = false, dense = false, subtitle = '' }) {
+  const headerPad = dense ? '12px 14px' : '14px 16px';
+  const bodyPad = dense ? '14px 14px' : '18px 16px';
+
   return (
     <div
       style={{
-        background: 'white',
-        border: '1px solid #E5E7EB',
-        borderRadius: 12,
+        ...GLASS_CARD,
         overflow: 'hidden',
-        boxShadow: '0 4px 12px rgba(0,0,0,0.08)',
+        background: dense ? 'rgba(255,255,255,0.72)' : 'rgba(255,255,255,0.58)',
+        border: required ? '1px solid rgba(255,112,67,0.30)' : GLASS_CARD.border,
       }}
     >
       <button
         onClick={onToggle}
+        type="button"
         style={{
           width: '100%',
-          padding: '16px 20px',
-          background: required ? '#FFF7E6' : '#FAFAFA',
+          padding: headerPad,
+          background: required
+            ? 'linear-gradient(180deg, rgba(255,112,67,0.10), rgba(255,255,255,0))'
+            : 'linear-gradient(180deg, rgba(0,0,0,0.03), rgba(255,255,255,0))',
           textAlign: 'left',
-          fontWeight: 800,
-          fontSize: 16,
+          fontWeight: dense ? 900 : 900,
+          fontSize: dense ? 14 : 16,
           display: 'flex',
           justifyContent: 'space-between',
           alignItems: 'center',
           border: 'none',
           cursor: 'pointer',
+          gap: 12,
         }}
+        aria-expanded={open ? 'true' : 'false'}
       >
-        <span style={{ color: required ? ORANGE : '#1F2937' }}>{title}</span>
+        <span style={{ minWidth: 0 }}>
+          <span style={{ color: required ? ORANGE : '#1F2937' }}>{title}</span>
+          {!!subtitle && (
+            <div style={{ marginTop: 4, color: '#475569', fontSize: 12, fontWeight: 700 }}>
+              {subtitle}
+            </div>
+          )}
+        </span>
+
         <span
           style={{
-            width: 24,
-            height: 24,
+            width: 26,
+            height: 26,
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
+            borderRadius: 999,
+            background: 'rgba(255,255,255,0.75)',
+            border: '1px solid rgba(0,0,0,0.08)',
+            flexShrink: 0,
           }}
         >
           <svg
@@ -106,7 +134,17 @@ function Section({ title, open, onToggle, children, required = false }) {
           </svg>
         </span>
       </button>
-      {open && <div style={{ padding: '24px 20px', borderTop: '1px solid #E5E7EB' }}>{children}</div>}
+
+      {open && (
+        <div
+          style={{
+            padding: bodyPad,
+            borderTop: '1px solid rgba(0,0,0,0.06)',
+          }}
+        >
+          {children}
+        </div>
+      )}
     </div>
   );
 }
@@ -145,10 +183,11 @@ function LanguagesInlineSection({ languages, setLanguages }) {
           placeholder="Add a language (e.g., English — Native)"
           style={{
             flex: 1,
-            border: '1px solid #E5E7EB',
+            border: '1px solid rgba(0,0,0,0.12)',
             borderRadius: 10,
             padding: '10px 12px',
             fontSize: 14,
+            background: 'rgba(255,255,255,0.85)',
           }}
           onKeyDown={(e) => {
             if (e.key === 'Enter') {
@@ -183,10 +222,10 @@ function LanguagesInlineSection({ languages, setLanguages }) {
                 display: 'inline-flex',
                 alignItems: 'center',
                 gap: 8,
-                border: '1px solid #E5E7EB',
+                border: '1px solid rgba(0,0,0,0.10)',
                 borderRadius: 999,
                 padding: '6px 10px',
-                background: '#FAFAFA',
+                background: 'rgba(255,255,255,0.75)',
                 fontSize: 13,
                 fontWeight: 700,
                 color: '#374151',
@@ -257,7 +296,8 @@ export default function CreateResumePage() {
   const [jd, setJd] = useState('');
   const [showToast, setShowToast] = useState(false);
 
-  const [openRequired, setOpenRequired] = useState(true);
+  // ✅ UX: default collapsed (user chooses what they see)
+  const [openRequired, setOpenRequired] = useState(false);
   const [openOptional, setOpenOptional] = useState(false);
   const [openTailor, setOpenTailor] = useState(false);
   const [toolsOpen, setToolsOpen] = useState(true); // collapsible tools bar
@@ -273,6 +313,18 @@ export default function CreateResumePage() {
 
   // ✅ NEW: job meta lookup for Resume-Role Align flow (jobId without pack)
   const [jobMeta, setJobMeta] = useState(null);
+
+  // ✅ Section-level collapse (user controls visibility)
+  const [openContact, setOpenContact] = useState(false);
+  const [openWork, setOpenWork] = useState(false);
+  const [openEducation, setOpenEducation] = useState(false);
+  const [openSkills, setOpenSkills] = useState(false);
+
+  const [openLanguages, setOpenLanguages] = useState(false);
+  const [openSummary, setOpenSummary] = useState(false);
+  const [openProjects, setOpenProjects] = useState(false);
+  const [openCerts, setOpenCerts] = useState(false);
+  const [openCustom, setOpenCustom] = useState(false);
 
   // ✅ Clear loaded job / ATS fire
   const clearJobFire = async () => {
@@ -466,52 +518,51 @@ export default function CreateResumePage() {
 
   // Handle manual JD file upload / drop
   const handleFile = async (file) => {
-  if (!file) return;
+    if (!file) return;
 
-  setJdLoading(true);
-  setJdStatus('Processing…');
+    setJdLoading(true);
+    setJdStatus('Processing…');
 
-  const isPdf =
-    file.type === 'application/pdf' || String(file.name || '').toLowerCase().endsWith('.pdf');
+    const isPdf =
+      file.type === 'application/pdf' || String(file.name || '').toLowerCase().endsWith('.pdf');
 
-  try {
-    let raw = '';
+    try {
+      let raw = '';
 
-    // Non-PDF: client extract only (fast)
-    if (!isPdf) {
-      raw = await extractTextFromFile(file);
-    } else {
-      // PDF: attempt client extract, then fallback to server if empty
-      setJdStatus('Processing… (PDF parse)');
-      raw = await extractTextFromFile(file);
+      // Non-PDF: client extract only (fast)
+      if (!isPdf) {
+        raw = await extractTextFromFile(file);
+      } else {
+        // PDF: attempt client extract, then fallback to server if empty
+        setJdStatus('Processing… (PDF parse)');
+        raw = await extractTextFromFile(file);
 
-      if (!raw || !String(raw).trim()) {
-        setJdStatus('Processing… (server extract)');
-        raw = await uploadJD(file);
+        if (!raw || !String(raw).trim()) {
+          setJdStatus('Processing… (server extract)');
+          raw = await uploadJD(file);
+        }
       }
+
+      const clean = normalizeJobText(raw);
+
+      if (!clean || !String(clean).trim()) {
+        setJdStatus('Failed: PDF appears scanned/unreadable');
+        alert('This PDF appears to be scanned (image-only) or unreadable. Try a text-based PDF or upload a .txt/.docx JD.');
+        return;
+      }
+
+      setJd(clean);
+      await saveDraft(DRAFT_KEYS.LAST_JOB_TEXT, clean);
+      setJdStatus('Loaded: Job fire from file');
+    } catch (e) {
+      console.error('[Hammer] JD file failed:', e);
+      const msg = e?.message || 'Unknown error';
+      setJdStatus(`Failed: ${msg}`);
+      alert(`Failed to process job description. ${msg}`);
+    } finally {
+      if (fileInputRef.current) fileInputRef.current.value = '';
     }
-
-    const clean = normalizeJobText(raw);
-
-    if (!clean || !String(clean).trim()) {
-      setJdStatus('Failed: PDF appears scanned/unreadable');
-      alert('This PDF appears to be scanned (image-only) or unreadable. Try a text-based PDF or upload a .txt/.docx JD.');
-      return;
-    }
-
-    setJd(clean);
-    await saveDraft(DRAFT_KEYS.LAST_JOB_TEXT, clean);
-    setJdStatus('Loaded: Job fire from file');
-  } catch (e) {
-    console.error(e);
-    setJdStatus('Failed: Could not read file');
-    alert('Failed to process job description. Try a .txt JD or a text-based PDF.');
-  } finally {
-    setJdLoading(false);
-    if (fileInputRef.current) fileInputRef.current.value = '';
-  }
-};
-
+  };
 
   const templateName = router.query.template === 'hybrid' ? 'Hybrid (Combination)' : 'Reverse Chronological (Default)';
 
@@ -647,23 +698,47 @@ export default function CreateResumePage() {
   const fireMeta = atsJobMeta || jobMeta;
 
   const Header = (
-    <section className="bg-white border border-gray-200 rounded-xl p-8 text-center shadow-sm">
-      <h1 className="text-3xl font-bold text-orange-600">Resume Builder</h1>
-      <p className="text-gray-600 mt-3 max-w-2xl mx-auto">
+    <section
+      style={{
+        ...GLASS_CARD,
+        padding: 18,
+        textAlign: 'center',
+      }}
+      aria-label="Resume Builder header"
+    >
+      <h1 style={{ margin: 0, color: ORANGE, fontSize: 22, fontWeight: 900 }}>Resume Builder</h1>
+      <p style={{ margin: '8px auto 0', color: '#455A64', maxWidth: 860, fontWeight: 700, lineHeight: 1.35 }}>
         2 templates. 1 goal: Get you the interview. <strong>Reverse Chronological</strong> for recruiters.{' '}
         <strong>System-Optimized</strong> for automated screeners. No fluff. Only what works.
       </p>
-      <div className="flex items-center justify-center gap-8 mt-6">
+
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 10, flexWrap: 'wrap', marginTop: 12 }}>
         <button
           onClick={() => router.push(withChrome('/resume/create'))}
-          className="min-w-[160px] px-6 py-3 rounded-full font-bold text-sm bg-orange-500 text-white shadow-md"
+          style={{
+            borderRadius: 999,
+            padding: '10px 14px',
+            background: ORANGE,
+            color: 'white',
+            border: '1px solid rgba(255,112,67,0.55)',
+            fontWeight: 900,
+            cursor: 'pointer',
+          }}
         >
           1. Resume
         </button>
-        <div className="w-16 h-px bg-gray-300" />
+        <span style={{ width: 46, height: 1, background: 'rgba(0,0,0,0.12)' }} />
         <button
           onClick={() => router.push(withChrome('/cover/create'))}
-          className="min-w-[160px] px-6 py-3 rounded-full font-bold text-sm bg-gray-100 text-gray-700 hover:bg-gray-200"
+          style={{
+            borderRadius: 999,
+            padding: '10px 14px',
+            background: 'rgba(255,255,255,0.75)',
+            color: '#334155',
+            border: '1px solid rgba(0,0,0,0.10)',
+            fontWeight: 900,
+            cursor: 'pointer',
+          }}
         >
           2. Cover Letter
         </button>
@@ -679,304 +754,418 @@ export default function CreateResumePage() {
 
   return (
     <SeekerLayout title="Resume Builder" header={Header} right={null} footer={Footer} activeNav="resume-cover">
+      {/* ✅ Guardrails (profile-style) */}
+      <style jsx global>{`
+        html,
+        body {
+          overflow-x: hidden;
+        }
+
+        /* Responsive: stack columns on smaller widths */
+        .ft-resume-create-grid {
+          display: grid;
+          grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+          gap: 16px;
+          align-items: start;
+        }
+
+        @media (max-width: 1024px) {
+          .ft-resume-create-grid {
+            grid-template-columns: minmax(0, 1fr);
+          }
+        }
+      `}</style>
+
       <div
         style={{
           maxWidth: 1600,
           margin: '0 auto',
-          padding: '20px 16px',
-          display: 'grid',
-          gridTemplateColumns: '1fr 1fr',
-          gap: 40,
-          alignItems: 'start',
+          padding: '14px 12px',
         }}
+        className="overflow-x-hidden"
       >
-        {/* LEFT: INPUT */}
-        <div style={{ display: 'grid', gap: 20, position: 'sticky', top: 20 }}>
-          {/* TEMPLATE SWITCHER */}
-          <Banner>
-            Template: <strong>{templateName}</strong> • Live preview updates instantly on the right {' • '}
-            <span style={{ display: 'inline-flex', alignItems: 'center', gap: 8 }}>
-              <button
-                onClick={() => router.push(withChrome('/resume/create?template=reverse'))}
-                style={{
-                  fontWeight: router.query.template !== 'hybrid' ? 800 : 500,
-                  color: router.query.template !== 'hybrid' ? ORANGE : '#666',
-                  background: 'none',
-                  border: 'none',
-                  textDecoration: router.query.template !== 'hybrid' ? 'underline' : 'none',
-                  cursor: 'pointer',
-                }}
-              >
-                Reverse
-              </button>
-              <span style={{ color: '#999' }}>|</span>
-              <button
-                onClick={() => router.push(withChrome('/resume/create?template=hybrid'))}
-                style={{
-                  fontWeight: router.query.template === 'hybrid' ? 800 : 500,
-                  color: router.query.template === 'hybrid' ? ORANGE : '#666',
-                  background: 'none',
-                  border: 'none',
-                  textDecoration: router.query.template === 'hybrid' ? 'underline' : 'none',
-                  cursor: 'pointer',
-                }}
-              >
-                Hybrid
-              </button>
-            </span>
-          </Banner>
-
-          {/* REQUIRED */}
-          <Section title="Required – Start Here" open={openRequired} onToggle={() => setOpenRequired((v) => !v)} required>
-            <div style={{ display: 'grid', gap: 32 }}>
-              <ContactInfoSection embedded formData={formData} setFormData={setFormData} />
-              <WorkExperienceSection embedded experiences={experiences} setExperiences={setExperiences} />
-              <div id="education-section">
-                <EducationSection embedded educationList={educationList} setEducationList={setEducationList} />
-              </div>
-              <SkillsSection embedded skills={skills} setSkills={setSkills} />
-            </div>
-          </Section>
-
-          {/* OPTIONAL */}
-          <Section
-            title="Optional – Summary, Projects, Certifications, and Custom Sections"
-            open={openOptional}
-            onToggle={() => setOpenOptional((v) => !v)}
-          >
-            <div style={{ display: 'grid', gap: 32 }}>
-              <LanguagesInlineSection languages={languages} setLanguages={setLanguages} />
-              <SummarySection embedded summary={summary} setSummary={setSummary} />
-              <ProjectsSection embedded projects={projects} setProjects={setProjects} />
-              <CertificationsSection embedded certifications={certifications} setCertifications={setCertifications} />
-              <CustomSection embedded customSections={customSections} setCustomSections={setCustomSections} />
-            </div>
-          </Section>
-
-          {/* The Forge Hammer */}
-          <Section
-            title={
-              <>
-                <span style={{ fontWeight: 800 }}>The Forge Hammer</span>
-                <span style={{ fontWeight: 400 }}>
-                  {' – where our AI hammer, your resume steel, and employers\' job fire work together.'}
-                </span>
-              </>
-            }
-            open={openTailor}
-            onToggle={() => setOpenTailor((v) => !v)}
-          >
-            {/* Job fire banner */}
-            {atsPack ? (
-              <div style={{ display: 'grid', gap: 10, marginBottom: 16 }}>
-                <Banner tone="blue">
-                  <div style={{ fontWeight: 800, marginBottom: 4 }}>🔥 Job fire loaded</div>
-                  <div style={{ fontSize: 14, marginBottom: 6 }}>
-                    This job is now the <strong>fire</strong> heating your resume steel.
-                  </div>
-                  {atsJobMeta && (
-                    <div style={{ fontSize: 14, marginBottom: 4 }}>
-                      <strong>{atsJobMeta.title}</strong>
-                      {atsJobMeta.company ? ` at ${atsJobMeta.company}` : ''}
-                      {atsJobMeta.location ? ` — ${atsJobMeta.location}` : ''}
-                    </div>
-                  )}
-                  {hasRealAts ? (
-                    <>
-                      <div style={{ fontSize: 13, marginBottom: 6 }}>
-                        Current estimated match: <strong>{atsPack.ats.score}%</strong>
-                      </div>
-                      {atsPack.ats.summary && (
-                        <div style={{ fontSize: 13, marginBottom: 6 }}>
-                          <strong>AI read of this role:</strong> {atsPack.ats.summary}
-                        </div>
-                      )}
-                      {Array.isArray(atsPack.ats.recommendations) && atsPack.ats.recommendations.length > 0 && (
-                        <div style={{ fontSize: 13 }}>
-                          <strong>Key improvements to consider:</strong>
-                          <ul style={{ margin: '4px 0 0', paddingLeft: 18, fontSize: 13 }}>
-                            {atsPack.ats.recommendations.map((rec, idx) => (
-                              <li key={idx}>{rec}</li>
-                            ))}
-                          </ul>
-                        </div>
-                      )}
-                    </>
-                  ) : (
-                    <div style={{ fontSize: 13, marginTop: 4 }}>This job is loaded as your fire, but it hasn’t been fully scored yet.</div>
-                  )}
-                </Banner>
-              </div>
-            ) : jd ? (
-              <div style={{ display: 'grid', gap: 10, marginBottom: 16 }}>
-                <Banner tone="blue">
-                  <div style={{ fontWeight: 800, marginBottom: 4 }}>🔥 Job fire loaded</div>
-                  <div style={{ fontSize: 14 }}>
-                    <strong>{fireMeta?.title || 'Job'}</strong>
-                    {fireMeta?.company ? ` at ${fireMeta.company}` : ''}
-                    {fireMeta?.location ? ` — ${fireMeta.location}` : ''}
-                  </div>
-                  <div style={{ fontSize: 13, marginTop: 6 }}>
-                    Your keyword coverage and match insights are now based on this posting.
-                  </div>
-                </Banner>
-              </div>
-            ) : (
+        <div className="ft-resume-create-grid">
+          {/* LEFT: INPUT */}
+          <div style={{ display: 'grid', gap: 12, position: 'sticky', top: 20 }}>
+            {/* TEMPLATE SWITCHER */}
+            <div style={{ ...GLASS_CARD, padding: 12 }}>
               <Banner>
-                <div style={{ fontWeight: 800, marginBottom: 4 }}>🔥 Add the fire.</div>
-                <div style={{ fontSize: 14 }}>
-                  Your resume is the <strong>steel</strong>. This page is the <strong>anvil</strong>. The AI tools are your{' '}
-                  <strong>hammer</strong>. Add a job description to supply the <strong>fire</strong> — and unlock match insights,
-                  keyword coverage, and tailored guidance for this specific role.
-                </div>
+                Template: <strong>{templateName}</strong> • Live preview updates instantly on the right {' • '}
+                <span style={{ display: 'inline-flex', alignItems: 'center', gap: 8 }}>
+                  <button
+                    onClick={() => router.push(withChrome('/resume/create?template=reverse'))}
+                    style={{
+                      fontWeight: router.query.template !== 'hybrid' ? 900 : 700,
+                      color: router.query.template !== 'hybrid' ? ORANGE : '#64748B',
+                      background: 'none',
+                      border: 'none',
+                      textDecoration: router.query.template !== 'hybrid' ? 'underline' : 'none',
+                      cursor: 'pointer',
+                    }}
+                  >
+                    Reverse
+                  </button>
+                  <span style={{ color: '#94A3B8' }}>|</span>
+                  <button
+                    onClick={() => router.push(withChrome('/resume/create?template=hybrid'))}
+                    style={{
+                      fontWeight: router.query.template === 'hybrid' ? 900 : 700,
+                      color: router.query.template === 'hybrid' ? ORANGE : '#64748B',
+                      background: 'none',
+                      border: 'none',
+                      textDecoration: router.query.template === 'hybrid' ? 'underline' : 'none',
+                      cursor: 'pointer',
+                    }}
+                  >
+                    Hybrid
+                  </button>
+                </span>
               </Banner>
-            )}
+            </div>
 
-            {(jd || atsPack) && (
-              <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: 12 }}>
-                <button
-                  type="button"
-                  onClick={clearJobFire}
-                  style={{
-                    background: 'transparent',
-                    border: 'none',
-                    color: '#B91C1C',
-                    fontWeight: 800,
-                    fontSize: 13,
-                    cursor: 'pointer',
-                    textDecoration: 'underline',
-                  }}
+            {/* REQUIRED (group) */}
+            <Section
+              title="Required"
+              subtitle="Start here — these drive the core score"
+              open={openRequired}
+              onToggle={() => setOpenRequired((v) => !v)}
+              required
+            >
+              <div style={{ display: 'grid', gap: 10 }}>
+                <Section
+                  title="Contact information"
+                  subtitle="How recruiters reach you"
+                  open={openContact}
+                  onToggle={() => setOpenContact((v) => !v)}
+                  dense
+                  required
                 >
-                  Clear loaded job
-                </button>
+                  <ContactInfoSection embedded formData={formData} setFormData={setFormData} />
+                </Section>
+
+                <Section
+                  title="Work experience"
+                  subtitle="Your proof of impact"
+                  open={openWork}
+                  onToggle={() => setOpenWork((v) => !v)}
+                  dense
+                  required
+                >
+                  <WorkExperienceSection embedded experiences={experiences} setExperiences={setExperiences} />
+                </Section>
+
+                <div id="education-section">
+                  <Section
+                    title="Education"
+                    subtitle="Degrees, programs, certifications"
+                    open={openEducation}
+                    onToggle={() => setOpenEducation((v) => !v)}
+                    dense
+                    required
+                  >
+                    <EducationSection embedded educationList={educationList} setEducationList={setEducationList} />
+                  </Section>
+                </div>
+
+                <Section
+                  title="Skills"
+                  subtitle="8–12 is the sweet spot"
+                  open={openSkills}
+                  onToggle={() => setOpenSkills((v) => !v)}
+                  dense
+                  required
+                >
+                  <SkillsSection embedded skills={skills} setSkills={setSkills} />
+                </Section>
               </div>
-            )}
+            </Section>
 
-            {/* ✅ PERMANENT: dropzone owns its handlers (no addEventListener timing issues) */}
-            <div
-  ref={dropRef}
-  onClick={() => {
-    // reset first so selecting the same file still triggers onChange
-    if (fileInputRef.current) fileInputRef.current.value = '';
-    fileInputRef.current?.click();
-  }}
-  style={{
-    padding: 40,
-    border: '4px dashed #90CAF9',
-    borderRadius: 16,
-    textAlign: 'center',
-    background: '#E3F2FD',
-    cursor: 'pointer',
-    marginTop: 16,
-  }}
->
-  <p style={{ margin: 0, fontSize: 18, fontWeight: 700 }}>
-    Drop a job description here
-    <br />
-    or{' '}
-    <button
-      type="button"
-      onClick={(e) => {
-        e.preventDefault();
-        e.stopPropagation();
-        if (fileInputRef.current) fileInputRef.current.value = '';
-        fileInputRef.current?.click();
-      }}
-      style={{
-        color: ORANGE,
-        background: 'none',
-        border: 0,
-        fontWeight: 800,
-        textDecoration: 'underline',
-        cursor: 'pointer',
-      }}
-    >
-      upload file
-    </button>
-  </p>
+            {/* OPTIONAL (group) */}
+            <Section
+              title="Optional"
+              subtitle="Add depth without clutter"
+              open={openOptional}
+              onToggle={() => setOpenOptional((v) => !v)}
+            >
+              <div style={{ display: 'grid', gap: 10 }}>
+                <Section
+                  title="Languages"
+                  subtitle="Spoken or programming"
+                  open={openLanguages}
+                  onToggle={() => setOpenLanguages((v) => !v)}
+                  dense
+                >
+                  <LanguagesInlineSection languages={languages} setLanguages={setLanguages} />
+                </Section>
 
-  <input
-    ref={fileInputRef}
-    type="file"
-    accept=".pdf,.PDF,.docx,.DOCX,.txt,.TXT"
-    onChange={(e) => {
-      const f = e.target.files?.[0];
-      console.log('[Hammer] input change fired:', f?.name, f?.type, f?.size);
-      if (f) handleFile(f);
-      e.target.value = ''; // ✅ allows re-selecting same file
-    }}
-    style={{ display: 'none' }}
-  />
+                <Section
+                  title="Summary"
+                  subtitle="6–10 lines, high signal"
+                  open={openSummary}
+                  onToggle={() => setOpenSummary((v) => !v)}
+                  dense
+                >
+                  <SummarySection embedded summary={summary} setSummary={setSummary} />
+                </Section>
 
-  {(jdLoading || jdStatus) && (
-    <div
-      style={{
-        marginTop: 12,
-        fontSize: 13,
-        fontWeight: 700,
-        color: jdStatus?.startsWith?.('Failed') ? '#B91C1C' : '#0D47A1',
-      }}
-    >
-      {jdLoading ? 'Processing…' : jdStatus}
-    </div>
-  )}
-</div>
+                <Section
+                  title="Projects"
+                  subtitle="When projects prove fit"
+                  open={openProjects}
+                  onToggle={() => setOpenProjects((v) => !v)}
+                  dense
+                >
+                  <ProjectsSection embedded projects={projects} setProjects={setProjects} />
+                </Section>
 
-            {jd && (
-              <ForgeHammerPanel
-                jdText={jd}
-                resumeData={resumeData}
-                summary={summary}
-                skills={skills}
-                experiences={experiences}
-                education={educationList}
-                jobMeta={fireMeta || null}
-                onAddSkill={(k) => setSkills((s) => [...s, k])}
-                onAddSummary={(k) => setSummary((s) => (s ? `${s}\n\n${k}` : k))}
-                onAddBullet={(k) => {
-                  const lastExp = experiences[experiences.length - 1];
-                  if (lastExp) {
-                    setExperiences((exp) =>
-                      exp.map((e, i) => (i === exp.length - 1 ? { ...e, bullets: [...(e.bullets || []), k] } : e))
-                    );
-                  }
+                <Section
+                  title="Certifications"
+                  subtitle="Badges that matter"
+                  open={openCerts}
+                  onToggle={() => setOpenCerts((v) => !v)}
+                  dense
+                >
+                  <CertificationsSection embedded certifications={certifications} setCertifications={setCertifications} />
+                </Section>
+
+                <Section
+                  title="Custom sections"
+                  subtitle="Tailor to the role"
+                  open={openCustom}
+                  onToggle={() => setOpenCustom((v) => !v)}
+                  dense
+                >
+                  <CustomSection embedded customSections={customSections} setCustomSections={setCustomSections} />
+                </Section>
+              </div>
+            </Section>
+
+            {/* The Forge Hammer (own section, not Optional) */}
+            <Section
+              title="The Forge Hammer"
+              subtitle="AI hammer + resume steel + job fire"
+              open={openTailor}
+              onToggle={() => setOpenTailor((v) => !v)}
+              required={false}
+            >
+              {/* Job fire banner */}
+              {atsPack ? (
+                <div style={{ display: 'grid', gap: 10, marginBottom: 16 }}>
+                  <Banner tone="blue">
+                    <div style={{ fontWeight: 800, marginBottom: 4 }}>🔥 Job fire loaded</div>
+                    <div style={{ fontSize: 14, marginBottom: 6 }}>
+                      This job is now the <strong>fire</strong> heating your resume steel.
+                    </div>
+                    {atsJobMeta && (
+                      <div style={{ fontSize: 14, marginBottom: 4 }}>
+                        <strong>{atsJobMeta.title}</strong>
+                        {atsJobMeta.company ? ` at ${atsJobMeta.company}` : ''}
+                        {atsJobMeta.location ? ` — ${atsJobMeta.location}` : ''}
+                      </div>
+                    )}
+                    {hasRealAts ? (
+                      <>
+                        <div style={{ fontSize: 13, marginBottom: 6 }}>
+                          Current estimated match: <strong>{atsPack.ats.score}%</strong>
+                        </div>
+                        {atsPack.ats.summary && (
+                          <div style={{ fontSize: 13, marginBottom: 6 }}>
+                            <strong>AI read of this role:</strong> {atsPack.ats.summary}
+                          </div>
+                        )}
+                        {Array.isArray(atsPack.ats.recommendations) && atsPack.ats.recommendations.length > 0 && (
+                          <div style={{ fontSize: 13 }}>
+                            <strong>Key improvements to consider:</strong>
+                            <ul style={{ margin: '4px 0 0', paddingLeft: 18, fontSize: 13 }}>
+                              {atsPack.ats.recommendations.map((rec, idx) => (
+                                <li key={idx}>{rec}</li>
+                              ))}
+                            </ul>
+                          </div>
+                        )}
+                      </>
+                    ) : (
+                      <div style={{ fontSize: 13, marginTop: 4 }}>
+                        This job is loaded as your fire, but it hasn’t been fully scored yet.
+                      </div>
+                    )}
+                  </Banner>
+                </div>
+              ) : jd ? (
+                <div style={{ display: 'grid', gap: 10, marginBottom: 16 }}>
+                  <Banner tone="blue">
+                    <div style={{ fontWeight: 800, marginBottom: 4 }}>🔥 Job fire loaded</div>
+                    <div style={{ fontSize: 14 }}>
+                      <strong>{fireMeta?.title || 'Job'}</strong>
+                      {fireMeta?.company ? ` at ${fireMeta.company}` : ''}
+                      {fireMeta?.location ? ` — ${fireMeta.location}` : ''}
+                    </div>
+                    <div style={{ fontSize: 13, marginTop: 6 }}>
+                      Your keyword coverage and match insights are now based on this posting.
+                    </div>
+                  </Banner>
+                </div>
+              ) : (
+                <Banner>
+                  <div style={{ fontWeight: 800, marginBottom: 4 }}>🔥 Add the fire.</div>
+                  <div style={{ fontSize: 14 }}>
+                    Your resume is the <strong>steel</strong>. This page is the <strong>anvil</strong>. The AI tools are your{' '}
+                    <strong>hammer</strong>. Add a job description to supply the <strong>fire</strong> — and unlock match insights,
+                    keyword coverage, and tailored guidance for this specific role.
+                  </div>
+                </Banner>
+              )}
+
+              {(jd || atsPack) && (
+                <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: 12 }}>
+                  <button
+                    type="button"
+                    onClick={clearJobFire}
+                    style={{
+                      background: 'transparent',
+                      border: 'none',
+                      color: '#B91C1C',
+                      fontWeight: 800,
+                      fontSize: 13,
+                      cursor: 'pointer',
+                      textDecoration: 'underline',
+                    }}
+                  >
+                    Clear loaded job
+                  </button>
+                </div>
+              )}
+
+              {/* ✅ PERMANENT: dropzone owns its handlers (no addEventListener timing issues) */}
+              <div
+                ref={dropRef}
+                onClick={() => {
+                  // reset first so selecting the same file still triggers onChange
+                  if (fileInputRef.current) fileInputRef.current.value = '';
+                  fileInputRef.current?.click();
                 }}
-              />
-            )}
-          </Section>
-        </div>
+                style={{
+                  padding: 22,
+                  border: '3px dashed rgba(144,202,249,0.95)',
+                  borderRadius: 16,
+                  textAlign: 'center',
+                  background: 'rgba(227,242,253,0.85)',
+                  cursor: 'pointer',
+                  marginTop: 12,
+                }}
+              >
+                <p style={{ margin: 0, fontSize: 16, fontWeight: 800 }}>
+                  Drop a job description here
+                  <br />
+                  or{' '}
+                  <button
+                    type="button"
+                    onClick={(e) => {
+                      e.preventDefault();
+                      e.stopPropagation();
+                      if (fileInputRef.current) fileInputRef.current.value = '';
+                      fileInputRef.current?.click();
+                    }}
+                    style={{
+                      color: ORANGE,
+                      background: 'none',
+                      border: 0,
+                      fontWeight: 900,
+                      textDecoration: 'underline',
+                      cursor: 'pointer',
+                    }}
+                  >
+                    upload file
+                  </button>
+                </p>
 
-        {/* RIGHT: LIVE RESUME PREVIEW */}
-        <div
-          style={{
-            position: 'sticky',
-            top: 20,
-            background: 'white',
-            borderRadius: 16,
-            boxShadow: '0 20px 50px rgba(0,0,0,0.15)',
-            overflow: 'hidden',
-          }}
-        >
+                <input
+                  ref={fileInputRef}
+                  type="file"
+                  accept=".pdf,.PDF,.docx,.DOCX,.txt,.TXT"
+                  onChange={(e) => {
+                    const f = e.target.files?.[0];
+                    console.log('[Hammer] input change fired:', f?.name, f?.type, f?.size);
+                    if (f) handleFile(f);
+                    e.target.value = ''; // ✅ allows re-selecting same file
+                  }}
+                  style={{ display: 'none' }}
+                />
+
+                {(jdLoading || jdStatus) && (
+                  <div
+                    style={{
+                      marginTop: 12,
+                      fontSize: 13,
+                      fontWeight: 800,
+                      color: jdStatus?.startsWith?.('Failed') ? '#B91C1C' : '#0D47A1',
+                    }}
+                  >
+                    {jdLoading ? 'Processing…' : jdStatus}
+                  </div>
+                )}
+              </div>
+
+              {jd && (
+                <ForgeHammerPanel
+                  jdText={jd}
+                  resumeData={resumeData}
+                  summary={summary}
+                  skills={skills}
+                  experiences={experiences}
+                  education={educationList}
+                  jobMeta={fireMeta || null}
+                  onAddSkill={(k) => setSkills((s) => [...s, k])}
+                  onAddSummary={(k) => setSummary((s) => (s ? `${s}\n\n${k}` : k))}
+                  onAddBullet={(k) => {
+                    const lastExp = experiences[experiences.length - 1];
+                    if (lastExp) {
+                      setExperiences((exp) =>
+                        exp.map((e, i) => (i === exp.length - 1 ? { ...e, bullets: [...(e.bullets || []), k] } : e))
+                      );
+                    }
+                  }}
+                />
+              )}
+            </Section>
+          </div>
+
+          {/* RIGHT: LIVE RESUME PREVIEW */}
           <div
             style={{
-              padding: '20px 32px',
-              background: '#263238',
-              color: 'white',
-              fontWeight: 800,
-              fontSize: 18,
-              textAlign: 'center',
+              position: 'sticky',
+              top: 20,
+              overflow: 'hidden',
+              ...GLASS_CARD,
+              background: 'rgba(255,255,255,0.58)',
             }}
           >
-            LIVE RESUME PREVIEW
-          </div>
-          <div id="resume-preview" style={{ padding: 60, background: '#fff', minHeight: '100vh' }}>
-            {TemplateComp && typeof TemplateComp === 'function' ? (
-              <TemplateComp data={resumeData} />
-            ) : (
-              <div style={{ textAlign: 'center', marginTop: 120, color: '#999', fontSize: 20 }}>
-                Loading your resume template...
+            <div
+              style={{
+                padding: '14px 16px',
+                background: 'linear-gradient(180deg, rgba(38,50,56,0.92), rgba(38,50,56,0.70))',
+                color: 'white',
+                fontWeight: 900,
+                fontSize: 14,
+                letterSpacing: 0.6,
+                textAlign: 'center',
+              }}
+            >
+              LIVE RESUME PREVIEW
+            </div>
+            <div id="resume-preview" style={{ padding: 18, background: 'rgba(255,255,255,0.88)', minHeight: '60vh' }}>
+              <div style={{ borderRadius: 14, overflow: 'hidden', background: '#fff', boxShadow: '0 20px 50px rgba(0,0,0,0.10)' }}>
+                <div style={{ padding: 24, background: '#fff' }}>
+                  {TemplateComp && typeof TemplateComp === 'function' ? (
+                    <TemplateComp data={resumeData} />
+                  ) : (
+                    <div style={{ textAlign: 'center', marginTop: 80, color: '#999', fontSize: 18 }}>
+                      Loading your resume template...
+                    </div>
+                  )}
+                </div>
               </div>
-            )}
+            </div>
           </div>
         </div>
       </div>
