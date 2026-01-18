@@ -33,65 +33,101 @@ function Banner({ children }) {
   );
 }
 
-function Section({ title, open, onToggle, children, required = false }) {
+// Profile-like collapsible row (layout-only wrapper)
+function Section({
+  title,
+  subtitle,
+  open,
+  onToggle,
+  children,
+  required = false,
+  tone = 'default', // default | muted
+}) {
+  const bg =
+    tone === 'muted'
+      ? 'rgba(255,255,255,0.72)'
+      : required
+      ? 'rgba(255,247,230,0.85)'
+      : 'rgba(255,255,255,0.78)';
+
+  const border = required ? '1px solid rgba(255,112,67,0.35)' : '1px solid rgba(255,255,255,0.22)';
+
   return (
     <div
       style={{
-        background: 'white',
-        border: '1px solid #E5E7EB',
-        borderRadius: 12,
+        borderRadius: 16,
         overflow: 'hidden',
-        boxShadow: '0 4px 12px rgba(0,0,0,0.08)',
+        background: bg,
+        border,
+        boxShadow: '0 18px 45px rgba(0,0,0,0.16)',
+        backdropFilter: 'blur(10px)',
+        WebkitBackdropFilter: 'blur(10px)',
       }}
     >
       <button
         onClick={onToggle}
         style={{
           width: '100%',
-          padding: '16px 20px',
-          background: required ? '#FFF7E6' : '#FAFAFA',
+          padding: '18px 18px',
+          background: 'transparent',
           textAlign: 'left',
-          fontWeight: 800,
-          fontSize: 16,
-          display: 'flex',
-          justifyContent: 'space-between',
+          display: 'grid',
+          gridTemplateColumns: '1fr auto',
           alignItems: 'center',
+          gap: 12,
           border: 'none',
           cursor: 'pointer',
         }}
+        aria-expanded={open ? 'true' : 'false'}
       >
-        <span style={{ color: required ? ORANGE : '#1F2937' }}>{title}</span>
+        <div style={{ display: 'grid', gap: 4 }}>
+          <div style={{ fontWeight: 900, fontSize: 16, color: '#111827' }}>
+            <span style={{ color: required ? ORANGE : '#111827' }}>{title}</span>
+          </div>
+          {subtitle ? (
+            <div style={{ fontSize: 12.5, fontWeight: 700, color: '#6B7280' }}>{subtitle}</div>
+          ) : null}
+        </div>
+
         <span
           style={{
-            width: 24,
-            height: 24,
-            display: 'flex',
+            width: 34,
+            height: 34,
+            borderRadius: 999,
+            display: 'inline-flex',
             alignItems: 'center',
             justifyContent: 'center',
+            background: 'rgba(255,255,255,0.65)',
+            border: '1px solid rgba(255,255,255,0.22)',
+            boxShadow: '0 8px 18px rgba(0,0,0,0.12)',
           }}
+          aria-hidden="true"
         >
           <svg
-            className="w-5 h-5 text-gray-500"
+            width="18"
+            height="18"
             fill="none"
             stroke="currentColor"
             viewBox="0 0 24 24"
+            style={{ color: '#6B7280' }}
             xmlns="http://www.w3.org/2000/svg"
           >
             {open ? (
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20 12H4" />
             ) : (
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth={2}
-                d="M12 4v16m8-8H4"
-              />
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
             )}
           </svg>
         </span>
       </button>
+
       {open && (
-        <div style={{ padding: '24px 20px', borderTop: '1px solid #E5E7EB' }}>
+        <div
+          style={{
+            padding: '18px 18px 20px',
+            borderTop: '1px solid rgba(255,255,255,0.22)',
+          }}
+        >
           {children}
         </div>
       )}
@@ -130,8 +166,9 @@ export default function CoverLetterPage() {
     formData?.portfolio || formData?.forgeUrl || formData?.ftProfile || ''
   );
 
-  const [openRequired, setOpenRequired] = useState(true);
-  const [openContent, setOpenContent] = useState(true);
+  // Profile-like: user chooses what to open (all collapsed by default)
+  const [openRequired, setOpenRequired] = useState(false);
+  const [openContent, setOpenContent] = useState(false);
   const [openTailor, setOpenTailor] = useState(false);
 
   const [showToast, setShowToast] = useState(false);
@@ -544,7 +581,7 @@ CLOSING: ...
         <div
           style={{
             display: 'grid',
-            gap: 20,
+            gap: 16,
             position: 'sticky',
             top: 20,
           }}
@@ -558,14 +595,16 @@ CLOSING: ...
 
           <div
             style={{
-              background: '#FFF7E6',
-              border: '1px solid #FED7AA',
-              borderRadius: 12,
+              background: 'rgba(255,255,255,0.72)',
+              border: '1px solid rgba(255,255,255,0.22)',
+              borderRadius: 16,
               padding: 18,
-              marginBottom: 20,
               fontSize: 14,
               lineHeight: 1.6,
               color: '#92400E',
+              boxShadow: '0 18px 45px rgba(0,0,0,0.16)',
+              backdropFilter: 'blur(10px)',
+              WebkitBackdropFilter: 'blur(10px)',
             }}
           >
             <strong style={{ fontSize: 15, display: 'block', marginBottom: 8 }}>
@@ -584,14 +623,15 @@ CLOSING: ...
           </div>
 
           <Section
-            title="Required - Start Here"
+            title="Required"
+            subtitle="Start here — identity + job targets"
             open={openRequired}
             onToggle={() => setOpenRequired((v) => !v)}
             required
           >
             <div style={{ display: 'grid', gap: 20 }}>
               <div>
-                <label style={{ fontWeight: 700 }}>Recipient</label>
+                <label style={{ fontWeight: 800, fontSize: 12.5, color: '#111827' }}>Recipient</label>
                 <input
                   value={recipient}
                   onChange={(e) => setRecipient(e.target.value)}
@@ -600,14 +640,15 @@ CLOSING: ...
                     width: '100%',
                     padding: 12,
                     border: '1px solid #E5E7EB',
-                    borderRadius: 8,
+                    borderRadius: 10,
+                    background: 'rgba(255,255,255,0.9)',
                   }}
                 />
               </div>
 
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
                 <div>
-                  <label style={{ fontWeight: 700 }}>Company</label>
+                  <label style={{ fontWeight: 800, fontSize: 12.5, color: '#111827' }}>Company</label>
                   <input
                     value={company}
                     onChange={(e) => setCompany(e.target.value)}
@@ -616,28 +657,30 @@ CLOSING: ...
                       width: '100%',
                       padding: 12,
                       border: '1px solid #E5E7EB',
-                      borderRadius: 8,
+                      borderRadius: 10,
+                      background: 'rgba(255,255,255,0.9)',
                     }}
                   />
                 </div>
                 <div>
-                  <label style={{ fontWeight: 700 }}>Role (Optional)</label>
+                  <label style={{ fontWeight: 800, fontSize: 12.5, color: '#111827' }}>Role (Optional)</label>
                   <input
                     value={role}
                     onChange={(e) => setRole(e.target.value)}
-                    placeholder="Senior Designer"
+                    placeholder="Customer Support Tech Ops Manager"
                     style={{
                       width: '100%',
                       padding: 12,
                       border: '1px solid #E5E7EB',
-                      borderRadius: 8,
+                      borderRadius: 10,
+                      background: 'rgba(255,255,255,0.9)',
                     }}
                   />
                 </div>
               </div>
 
               <div>
-                <label style={{ fontWeight: 700 }}>Greeting</label>
+                <label style={{ fontWeight: 800, fontSize: 12.5, color: '#111827' }}>Greeting</label>
                 <input
                   value={greeting}
                   onChange={(e) => setGreeting(e.target.value)}
@@ -646,13 +689,16 @@ CLOSING: ...
                     width: '100%',
                     padding: 12,
                     border: '1px solid #E5E7EB',
-                    borderRadius: 8,
+                    borderRadius: 10,
+                    background: 'rgba(255,255,255,0.9)',
                   }}
                 />
               </div>
 
               <div>
-                <label style={{ fontWeight: 700 }}>Portfolio / Website (Optional)</label>
+                <label style={{ fontWeight: 800, fontSize: 12.5, color: '#111827' }}>
+                  Portfolio / Website (Optional)
+                </label>
                 <input
                   type="url"
                   value={portfolio}
@@ -662,7 +708,8 @@ CLOSING: ...
                     width: '100%',
                     padding: 12,
                     border: '1px solid #E5E7EB',
-                    borderRadius: 8,
+                    borderRadius: 10,
+                    background: 'rgba(255,255,255,0.9)',
                   }}
                 />
               </div>
@@ -671,51 +718,53 @@ CLOSING: ...
 
           <Section
             title="Letter Content"
+            subtitle="Write the punch: opening + 3 bullets + close"
             open={openContent}
             onToggle={() => setOpenContent((v) => !v)}
+            tone="muted"
           >
             <div style={{ display: 'grid', gap: 20 }}>
               <div>
-                <label style={{ fontWeight: 700 }}>Opening Paragraph</label>
+                <label style={{ fontWeight: 800, fontSize: 12.5, color: '#111827' }}>Opening</label>
                 <textarea
                   value={opening}
                   onChange={(e) => setOpening(e.target.value)}
-                  placeholder="I’m applying because I built the future of job apps."
+                  placeholder="One strong sentence. No fluff."
                   style={{
                     width: '100%',
                     height: 100,
                     padding: 12,
                     border: '1px solid #E5E7EB',
-                    borderRadius: 8,
+                    borderRadius: 10,
                     fontFamily: 'inherit',
+                    background: 'rgba(255,255,255,0.9)',
                   }}
                 />
               </div>
 
               <div>
-                <label style={{ fontWeight: 700 }}>Body (Key Points)</label>
+                <label style={{ fontWeight: 800, fontSize: 12.5, color: '#111827' }}>Body (3 bullets)</label>
                 <textarea
                   value={body}
                   onChange={(e) => setBody(e.target.value)}
                   placeholder={
-                    'Key point 1 with an increase of success of 45%\n' +
-                    'Key point 2 with a decrease of loss by 23%\n' +
-                    'Retained customer base of 73%'
+                    'Bullet 1 with a number\nBullet 2 with a number\nBullet 3 with a number'
                   }
                   style={{
                     width: '100%',
                     height: 150,
                     padding: 12,
                     border: '1px solid #E5E7EB',
-                    borderRadius: 8,
+                    borderRadius: 10,
                     fontFamily: 'inherit',
+                    background: 'rgba(255,255,255,0.9)',
                   }}
                 />
               </div>
 
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
                 <div>
-                  <label style={{ fontWeight: 700 }}>Closing</label>
+                  <label style={{ fontWeight: 800, fontSize: 12.5, color: '#111827' }}>Closing</label>
                   <textarea
                     value={closing}
                     onChange={(e) => setClosing(e.target.value)}
@@ -725,13 +774,14 @@ CLOSING: ...
                       height: 80,
                       padding: 12,
                       border: '1px solid #E5E7EB',
-                      borderRadius: 8,
+                      borderRadius: 10,
                       fontFamily: 'inherit',
+                      background: 'rgba(255,255,255,0.9)',
                     }}
                   />
                 </div>
                 <div>
-                  <label style={{ fontWeight: 700 }}>Sign-off</label>
+                  <label style={{ fontWeight: 800, fontSize: 12.5, color: '#111827' }}>Sign-off</label>
                   <input
                     value={signoff}
                     onChange={(e) => setSignoff(e.target.value)}
@@ -740,7 +790,8 @@ CLOSING: ...
                       width: '100%',
                       padding: 12,
                       border: '1px solid #E5E7EB',
-                      borderRadius: 8,
+                      borderRadius: 10,
+                      background: 'rgba(255,255,255,0.9)',
                     }}
                   />
                 </div>
@@ -750,12 +801,14 @@ CLOSING: ...
 
           <Section
             title="Tailor to Job"
+            subtitle="Add job fire — paste or upload, then run AI tailor"
             open={openTailor}
             onToggle={() => setOpenTailor((v) => !v)}
+            tone="muted"
           >
             <div style={{ display: 'grid', gap: 16 }}>
               <div>
-                <label style={{ fontWeight: 700, fontSize: 14 }}>
+                <label style={{ fontWeight: 800, fontSize: 12.5, color: '#111827' }}>
                   Paste Job Description (Primary)
                 </label>
                 <textarea
@@ -767,10 +820,11 @@ CLOSING: ...
                     height: 160,
                     padding: 12,
                     border: '1px solid #E5E7EB',
-                    borderRadius: 8,
+                    borderRadius: 10,
                     fontFamily: 'inherit',
                     fontSize: 14,
                     resize: 'vertical',
+                    background: 'rgba(255,255,255,0.9)',
                   }}
                 />
               </div>
@@ -805,10 +859,10 @@ CLOSING: ...
                     padding: '8px 12px',
                     background: '#F0FDF4',
                     border: '1px solid #BBF7D0',
-                    borderRadius: 8,
+                    borderRadius: 10,
                     fontSize: 12,
                     color: '#166534',
-                    fontWeight: 600,
+                    fontWeight: 700,
                   }}
                 >
                   JD loaded • {jd.split(/\s+/).filter(Boolean).length} words
@@ -824,12 +878,13 @@ CLOSING: ...
                     background: isLoading ? '#9CA3AF' : ORANGE,
                     color: 'white',
                     padding: 16,
-                    borderRadius: 12,
-                    fontWeight: 800,
+                    borderRadius: 14,
+                    fontWeight: 900,
                     fontSize: 16,
                     border: 'none',
                     cursor: isLoading ? 'not-allowed' : 'pointer',
-                    opacity: isLoading ? 0.7 : 1,
+                    opacity: isLoading ? 0.75 : 1,
+                    boxShadow: '0 14px 30px rgba(0,0,0,0.18)',
                   }}
                 >
                   {isLoading ? 'AI Tailoring...' : 'AI TAILOR to 3s'}
