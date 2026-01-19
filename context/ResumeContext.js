@@ -46,10 +46,11 @@ export function ResumeProvider({ children }) {
   // -----------------------------
   const [summaryBackup, setSummaryBackup] = useState({ text: '', savedAt: '' });
 
+  // ✅ IMPORTANT: Do NOT trigger global "Saved" toast for backup/autosave events.
+  // saveEventAt should be reserved for explicit user-initiated saves (Save Resume).
   const persistSummaryBackup = (text) => {
     const payload = { text: text || '', savedAt: nowIso() };
     setSummaryBackup(payload);
-    setSaveEventAt(payload.savedAt);
   };
 
   const setSummaryWithBackup = (next) => {
@@ -58,7 +59,7 @@ export function ResumeProvider({ children }) {
       persistSummaryBackup(current);
     }
     setSummary(next);
-    setSaveEventAt(nowIso());
+    // ✅ Do not setSaveEventAt here (would cause toast while typing)
   };
 
   // -----------------------------
@@ -107,56 +108,6 @@ export function ResumeProvider({ children }) {
   const draftBusyRef = useRef(false);
   const didLoadDraftRef = useRef(false);
 
-  // ✅ NEW: track "user is actively typing" to prevent autosave UI side-effects
-  const lastInputAtRef = useRef(0);
-
-  // ✅ NEW: refs for latest state (so autosave interval does not reset constantly)
-  const latestRef = useRef({
-    template: 'reverse',
-    formData: {},
-    summary: '',
-    experiences: [],
-    projects: [],
-    volunteerExperiences: [],
-    educationList: [],
-    certifications: [],
-    languages: [],
-    skills: [],
-    achievements: [],
-    customSections: [],
-  });
-
-  // keep latestRef updated
-  useEffect(() => {
-    latestRef.current = {
-      template,
-      formData,
-      summary,
-      experiences,
-      projects,
-      volunteerExperiences,
-      educationList,
-      certifications,
-      languages,
-      skills,
-      achievements,
-      customSections,
-    };
-  }, [
-    template,
-    formData,
-    summary,
-    experiences,
-    projects,
-    volunteerExperiences,
-    educationList,
-    certifications,
-    languages,
-    skills,
-    achievements,
-    customSections,
-  ]);
-
   const getResumeDraft = async () => {
     try {
       const res = await fetch(`/api/drafts/get?key=${encodeURIComponent(RESUME_DRAFT_KEY)}`);
@@ -169,10 +120,8 @@ export function ResumeProvider({ children }) {
     }
   };
 
-  // ✅ UPDATED: opts.emitSaveEvent lets us avoid triggering UI re-renders/toasts during autosave
-  const setResumeDraft = async (payload, opts = { isAutosave: false, emitSaveEvent: true }) => {
+  const setResumeDraft = async (payload, opts = { isAutosave: false }) => {
     if (opts.isAutosave && draftBusyRef.current) return;
-
     try {
       if (opts.isAutosave) draftBusyRef.current = true;
 
@@ -187,8 +136,11 @@ export function ResumeProvider({ children }) {
       const ts = nowIso();
       setLastAutosaveAt(ts);
 
-      // ✅ Only trigger saveEventAt when we WANT UI feedback
-      if (opts.emitSaveEvent) setSaveEventAt(ts);
+      // ✅ IMPORTANT: only fire "saveEventAt" for non-autosave actions.
+      // Right now we only call setResumeDraft via autosave + blur autosave, so this stays silent.
+      if (!opts.isAutosave) {
+        setSaveEventAt(ts);
+      }
     } catch (e) {
       console.error('[ResumeContext] setResumeDraft failed', e);
     } finally {
@@ -247,54 +199,44 @@ export function ResumeProvider({ children }) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  // ✅ NEW: capture typing to avoid autosave tick while user is mid-entry
-  useEffect(() => {
-    const mark = () => {
-      lastInputAtRef.current = Date.now();
-    };
-
-    // These catch essentially all typing/editing
-    document.addEventListener('input', mark, true);
-    document.addEventListener('keydown', mark, true);
-
-    return () => {
-      document.removeEventListener('input', mark, true);
-      document.removeEventListener('keydown', mark, true);
-    };
-  }, []);
-
-  // Autosave draft every 30s (DB). Interval is created ONCE; reads latest state from refs.
+  // Autosave draft every 30s (DB). This is the core requirement.
   useEffect(() => {
     const timer = setInterval(() => {
-      // ✅ If user is actively typing, skip this tick (prevents mid-input UI weirdness)
-      const msSinceInput = Date.now() - (lastInputAtRef.current || 0);
-      if (msSinceInput < 1200) return;
-
-      const s = latestRef.current || {};
-
       const payload = {
-        template: s.template,
-        formData: s.formData,
-        summary: s.summary,
-        experiences: s.experiences,
-        projects: s.projects,
-        volunteerExperiences: s.volunteerExperiences,
-        educationList: s.educationList,
-        certifications: s.certifications,
-        languages: s.languages,
-        skills: s.skills,
-        achievements: s.achievements,
-        customSections: s.customSections,
+        template,
+        formData,
+        summary,
+        experiences,
+        projects,
+        volunteerExperiences,
+        educationList,
+        certifications,
+        languages,
+        skills,
+        achievements,
+        customSections,
         savedAt: nowIso(),
       };
 
-      // ✅ Autosave should NOT trigger saveEventAt toasts/re-render loops
-      setResumeDraft(payload, { isAutosave: true, emitSaveEvent: false });
+      setResumeDraft(payload, { isAutosave: true });
     }, 30000);
 
     return () => clearInterval(timer);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [
+    template,
+    formData,
+    summary,
+    experiences,
+    projects,
+    volunteerExperiences,
+    educationList,
+    certifications,
+    languages,
+    skills,
+    achievements,
+    customSections,
+  ]);
 
   // Save draft on blur (capture) - minimal, no page edits required.
   // This triggers whenever any input/textarea/select inside the provider loses focus.
@@ -306,32 +248,42 @@ export function ResumeProvider({ children }) {
       const tag = String(t.tagName || '').toLowerCase();
       if (tag !== 'input' && tag !== 'textarea' && tag !== 'select') return;
 
-      const s = latestRef.current || {};
-
       const payload = {
-        template: s.template,
-        formData: s.formData,
-        summary: s.summary,
-        experiences: s.experiences,
-        projects: s.projects,
-        volunteerExperiences: s.volunteerExperiences,
-        educationList: s.educationList,
-        certifications: s.certifications,
-        languages: s.languages,
-        skills: s.skills,
-        achievements: s.achievements,
-        customSections: s.customSections,
+        template,
+        formData,
+        summary,
+        experiences,
+        projects,
+        volunteerExperiences,
+        educationList,
+        certifications,
+        languages,
+        skills,
+        achievements,
+        customSections,
         savedAt: nowIso(),
       };
 
-      // ✅ Blur-save CAN trigger saveEventAt (user is not typing anymore)
-      setResumeDraft(payload, { isAutosave: true, emitSaveEvent: true });
+      setResumeDraft(payload, { isAutosave: true });
     };
 
     document.addEventListener('blur', onBlurCapture, true);
     return () => document.removeEventListener('blur', onBlurCapture, true);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [
+    template,
+    formData,
+    summary,
+    experiences,
+    projects,
+    volunteerExperiences,
+    educationList,
+    certifications,
+    languages,
+    skills,
+    achievements,
+    customSections,
+  ]);
 
   // -----------------------------
   // MANUAL SAVE → DB
@@ -352,7 +304,11 @@ export function ResumeProvider({ children }) {
     };
 
     setResumes((prev) => [...prev, snapshot]);
+
+    // ✅ Manual save = this should drive the toast.
     setSaveEventAt(now);
+
+    // keep lastAutosaveAt updated too (optional indicator use)
     setLastAutosaveAt(now);
 
     try {
