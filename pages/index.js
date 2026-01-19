@@ -22,13 +22,14 @@ export default function Home() {
             aria-hidden="true"
           />
           <div className="relative z-10 max-w-5xl">
-            <h1 className="text-5xl md:text-7xl lg:text-8xl font-black mb-8 leading-tight">
-              The career system after algorithms.
-              <br />
-              <span className="text-[#FF7043]">This is where futures are forged.</span>
+            <h1 className="text-4xl md:text-6xl lg:text-7xl font-extrabold mb-7 leading-[1.05] tracking-tight">
+              <span className="block">The career system after algorithms.</span>
+              <span className="block mt-4 text-3xl md:text-5xl lg:text-6xl font-bold text-[#FF7043]">
+                This is where futures are forged.
+              </span>
             </h1>
 
-            <p className="text-xl md:text-2xl lg:text-3xl text-gray-200 max-w-4xl mx-auto leading-relaxed">
+            <p className="text-lg md:text-xl lg:text-2xl font-medium text-gray-200/90 max-w-4xl mx-auto leading-relaxed">
               Proof over keywords. Clarity over guesswork. Designed to treat people like people.
             </p>
 
