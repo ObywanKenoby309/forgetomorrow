@@ -107,6 +107,56 @@ export function ResumeProvider({ children }) {
   const draftBusyRef = useRef(false);
   const didLoadDraftRef = useRef(false);
 
+  // ✅ NEW: track "user is actively typing" to prevent autosave UI side-effects
+  const lastInputAtRef = useRef(0);
+
+  // ✅ NEW: refs for latest state (so autosave interval does not reset constantly)
+  const latestRef = useRef({
+    template: 'reverse',
+    formData: {},
+    summary: '',
+    experiences: [],
+    projects: [],
+    volunteerExperiences: [],
+    educationList: [],
+    certifications: [],
+    languages: [],
+    skills: [],
+    achievements: [],
+    customSections: [],
+  });
+
+  // keep latestRef updated
+  useEffect(() => {
+    latestRef.current = {
+      template,
+      formData,
+      summary,
+      experiences,
+      projects,
+      volunteerExperiences,
+      educationList,
+      certifications,
+      languages,
+      skills,
+      achievements,
+      customSections,
+    };
+  }, [
+    template,
+    formData,
+    summary,
+    experiences,
+    projects,
+    volunteerExperiences,
+    educationList,
+    certifications,
+    languages,
+    skills,
+    achievements,
+    customSections,
+  ]);
+
   const getResumeDraft = async () => {
     try {
       const res = await fetch(`/api/drafts/get?key=${encodeURIComponent(RESUME_DRAFT_KEY)}`);
@@ -119,8 +169,10 @@ export function ResumeProvider({ children }) {
     }
   };
 
-  const setResumeDraft = async (payload, opts = { isAutosave: false }) => {
+  // ✅ UPDATED: opts.emitSaveEvent lets us avoid triggering UI re-renders/toasts during autosave
+  const setResumeDraft = async (payload, opts = { isAutosave: false, emitSaveEvent: true }) => {
     if (opts.isAutosave && draftBusyRef.current) return;
+
     try {
       if (opts.isAutosave) draftBusyRef.current = true;
 
@@ -134,7 +186,9 @@ export function ResumeProvider({ children }) {
 
       const ts = nowIso();
       setLastAutosaveAt(ts);
-      setSaveEventAt(ts);
+
+      // ✅ Only trigger saveEventAt when we WANT UI feedback
+      if (opts.emitSaveEvent) setSaveEventAt(ts);
     } catch (e) {
       console.error('[ResumeContext] setResumeDraft failed', e);
     } finally {
@@ -193,44 +247,54 @@ export function ResumeProvider({ children }) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  // Autosave draft every 30s (DB). This is the core requirement.
+  // ✅ NEW: capture typing to avoid autosave tick while user is mid-entry
+  useEffect(() => {
+    const mark = () => {
+      lastInputAtRef.current = Date.now();
+    };
+
+    // These catch essentially all typing/editing
+    document.addEventListener('input', mark, true);
+    document.addEventListener('keydown', mark, true);
+
+    return () => {
+      document.removeEventListener('input', mark, true);
+      document.removeEventListener('keydown', mark, true);
+    };
+  }, []);
+
+  // Autosave draft every 30s (DB). Interval is created ONCE; reads latest state from refs.
   useEffect(() => {
     const timer = setInterval(() => {
+      // ✅ If user is actively typing, skip this tick (prevents mid-input UI weirdness)
+      const msSinceInput = Date.now() - (lastInputAtRef.current || 0);
+      if (msSinceInput < 1200) return;
+
+      const s = latestRef.current || {};
+
       const payload = {
-        template,
-        formData,
-        summary,
-        experiences,
-        projects,
-        volunteerExperiences,
-        educationList,
-        certifications,
-        languages,
-        skills,
-        achievements,
-        customSections,
+        template: s.template,
+        formData: s.formData,
+        summary: s.summary,
+        experiences: s.experiences,
+        projects: s.projects,
+        volunteerExperiences: s.volunteerExperiences,
+        educationList: s.educationList,
+        certifications: s.certifications,
+        languages: s.languages,
+        skills: s.skills,
+        achievements: s.achievements,
+        customSections: s.customSections,
         savedAt: nowIso(),
       };
 
-      setResumeDraft(payload, { isAutosave: true });
+      // ✅ Autosave should NOT trigger saveEventAt toasts/re-render loops
+      setResumeDraft(payload, { isAutosave: true, emitSaveEvent: false });
     }, 30000);
 
     return () => clearInterval(timer);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [
-    template,
-    formData,
-    summary,
-    experiences,
-    projects,
-    volunteerExperiences,
-    educationList,
-    certifications,
-    languages,
-    skills,
-    achievements,
-    customSections,
-  ]);
+  }, []);
 
   // Save draft on blur (capture) - minimal, no page edits required.
   // This triggers whenever any input/textarea/select inside the provider loses focus.
@@ -242,42 +306,32 @@ export function ResumeProvider({ children }) {
       const tag = String(t.tagName || '').toLowerCase();
       if (tag !== 'input' && tag !== 'textarea' && tag !== 'select') return;
 
+      const s = latestRef.current || {};
+
       const payload = {
-        template,
-        formData,
-        summary,
-        experiences,
-        projects,
-        volunteerExperiences,
-        educationList,
-        certifications,
-        languages,
-        skills,
-        achievements,
-        customSections,
+        template: s.template,
+        formData: s.formData,
+        summary: s.summary,
+        experiences: s.experiences,
+        projects: s.projects,
+        volunteerExperiences: s.volunteerExperiences,
+        educationList: s.educationList,
+        certifications: s.certifications,
+        languages: s.languages,
+        skills: s.skills,
+        achievements: s.achievements,
+        customSections: s.customSections,
         savedAt: nowIso(),
       };
 
-      setResumeDraft(payload, { isAutosave: true });
+      // ✅ Blur-save CAN trigger saveEventAt (user is not typing anymore)
+      setResumeDraft(payload, { isAutosave: true, emitSaveEvent: true });
     };
 
     document.addEventListener('blur', onBlurCapture, true);
     return () => document.removeEventListener('blur', onBlurCapture, true);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [
-    template,
-    formData,
-    summary,
-    experiences,
-    projects,
-    volunteerExperiences,
-    educationList,
-    certifications,
-    languages,
-    skills,
-    achievements,
-    customSections,
-  ]);
+  }, []);
 
   // -----------------------------
   // MANUAL SAVE → DB
@@ -335,9 +389,7 @@ export function ResumeProvider({ children }) {
           setResumes((prev) => {
             const withoutTemp = prev.filter((r) => r.id !== snapshot.id);
             return [
-              ...withoutTemp.map((r) =>
-                dbResume.isPrimary ? { ...r, isPrimary: false } : r
-              ),
+              ...withoutTemp.map((r) => (dbResume.isPrimary ? { ...r, isPrimary: false } : r)),
               cleaned,
             ];
           });
