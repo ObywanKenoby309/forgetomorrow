@@ -1,5 +1,5 @@
-// pages/index.js ← UPDATED hero typography only (calmer hierarchy, intentional emphasis)
-// Keep forge image. No layout refactor. No new sections.
+// pages/index.js ← UPDATED per main-page lock (hero + 3 CTAs + calmer paths + remove orange bar)
+// Keep forge image. Remove plan-language. No bottom orange section.
 import Head from 'next/head';
 import Link from 'next/link';
 
@@ -22,17 +22,13 @@ export default function Home() {
             aria-hidden="true"
           />
           <div className="relative z-10 max-w-5xl">
-            <h1 className="text-4xl md:text-5xl lg:text-6xl font-extrabold leading-tight">
-              The career system <span className="text-[#FF7043]">after</span> algorithms.
+            <h1 className="text-5xl md:text-7xl lg:text-8xl font-black mb-8 leading-tight">
+              The career system after algorithms.
+              <br />
+              <span className="text-[#FF7043]">This is where futures are forged.</span>
             </h1>
 
-            <div className="mt-6">
-              <p className="text-2xl md:text-3xl lg:text-4xl font-medium text-gray-200">
-                This is where futures are <span className="text-[#FF7043] font-semibold">forged</span>.
-              </p>
-            </div>
-
-            <p className="mt-8 text-lg md:text-xl lg:text-2xl text-gray-300 max-w-4xl mx-auto leading-relaxed">
+            <p className="text-xl md:text-2xl lg:text-3xl text-gray-200 max-w-4xl mx-auto leading-relaxed">
               Proof over keywords. Clarity over guesswork. Designed to treat people like people.
             </p>
 
@@ -57,6 +53,95 @@ export default function Home() {
               >
                 Explore the Forge
               </Link>
+            </div>
+          </div>
+        </section>
+
+        {/* THE PROBLEM / THE FIX — DIRECT */}
+        <section className="py-24 bg-gradient-to-b from-[#0f0f0f] to-[#141414] text-gray-100">
+          <div className="max-w-6xl mx-auto px-6">
+            <div className="text-center mb-16">
+              <h2 className="text-3xl md:text-4xl font-extrabold mb-4">
+                The current career system is misaligned with human outcomes
+              </h2>
+              <p className="text-xl text-gray-300 max-w-4xl mx-auto leading-relaxed">
+                Most platforms optimize for volume, engagement, and opacity. That creates noise, delays,
+                and career damage for real people, and it wastes time and money for employers.
+                ForgeTomorrow exists to replace that system end-to-end with clarity, proof, and accountability.
+              </p>
+            </div>
+
+            <div className="grid md:grid-cols-2 gap-12 items-start">
+              {/* WHAT'S HAPPENING */}
+              <div className="space-y-6">
+                <h3 className="text-2xl font-bold text-[#F4511E]">What’s happening right now</h3>
+                <div className="space-y-4 text-gray-300">
+                  <p className="flex items-start gap-3">
+                    <span className="text-[#F4511E] mt-1 font-black">×</span>
+                    <span>
+                      Keyword parsing and resume filters that discard real capability and real potential
+                    </span>
+                  </p>
+                  <p className="flex items-start gap-3">
+                    <span className="text-[#F4511E] mt-1 font-black">×</span>
+                    <span>
+                      Opaque decisioning, where people are rejected with zero explanation and no path forward
+                    </span>
+                  </p>
+                  <p className="flex items-start gap-3">
+                    <span className="text-[#F4511E] mt-1 font-black">×</span>
+                    <span>
+                      Platforms engineered to keep you scrolling, not to get you hired, promoted, or stable
+                    </span>
+                  </p>
+                  <p className="flex items-start gap-3">
+                    <span className="text-[#F4511E] mt-1 font-black">×</span>
+                    <span>
+                      Guesswork around fit, expectations, culture, compensation, and what the role truly needs
+                    </span>
+                  </p>
+                </div>
+              </div>
+
+              {/* WHAT WE BUILT */}
+              <div className="space-y-6">
+                <h3 className="text-2xl font-bold text-[#FF7043]">What ForgeTomorrow replaces it with</h3>
+                <div className="space-y-4 text-gray-300">
+                  <p className="flex items-start gap-3">
+                    <span className="text-[#FF7043] mt-1 font-black">✓</span>
+                    <span>
+                      Proof-based signals that show what people have actually built, done, and delivered
+                    </span>
+                  </p>
+                  <p className="flex items-start gap-3">
+                    <span className="text-[#FF7043] mt-1 font-black">✓</span>
+                    <span>
+                      Transparent alignment that explains why something fits (or doesn’t) and what to do next
+                    </span>
+                  </p>
+                  <p className="flex items-start gap-3">
+                    <span className="text-[#FF7043] mt-1 font-black">✓</span>
+                    <span>
+                      Tools designed for outcomes, not engagement: prepare, align, act, and move forward
+                    </span>
+                  </p>
+                  <p className="flex items-start gap-3">
+                    <span className="text-[#FF7043] mt-1 font-black">✓</span>
+                    <span>
+                      A complete system for seekers, recruiters, and coaches to operate with clarity and accountability
+                    </span>
+                  </p>
+                </div>
+
+                <div className="pt-4">
+                  <Link
+                    href="/features"
+                    className="inline-block border border-white/15 bg-white/5 hover:bg-white/10 text-gray-100 font-semibold px-6 py-3 rounded-xl transition focus:outline-none focus:ring-4 focus:ring-white/30 focus:ring-offset-2"
+                  >
+                    See the system in action →
+                  </Link>
+                </div>
+              </div>
             </div>
           </div>
         </section>
@@ -146,7 +231,36 @@ export default function Home() {
           </div>
         </section>
 
-        {/* Bottom orange bar intentionally removed */}
+        {/* FINAL CTA — CINEMATIC CLOSE */}
+        <section className="py-24 bg-gradient-to-b from-[#141414] to-[#0f0f0f] text-gray-100">
+          <div className="max-w-5xl mx-auto px-6 text-center">
+            <h2 className="text-4xl md:text-5xl font-black mb-6">
+              If the system is failing people, we rebuild the system.
+            </h2>
+            <p className="text-xl text-gray-300 mb-10 max-w-3xl mx-auto leading-relaxed">
+              ForgeTomorrow is built to move careers and hiring forward with proof, clarity, and accountability.
+              Not a patch. Not a feature. A complete system designed around human outcomes.
+            </p>
+
+            <div className="flex flex-col sm:flex-row gap-4 justify-center items-center">
+              <Link
+                href="/pricing"
+                className="inline-block bg-[#FF7043] hover:bg-[#f46036] text-white font-bold text-xl px-12 py-5 rounded-full shadow-2xl transition transform hover:scale-105 focus:outline-none focus:ring-4 focus:ring-[#FF7043] focus:ring-offset-2"
+              >
+                Enter the Forge
+              </Link>
+
+              <Link
+                href="/features"
+                className="inline-block border-2 border-white/20 text-gray-100 hover:bg-white/10 font-bold text-xl px-12 py-5 rounded-full transition focus:outline-none focus:ring-4 focus:ring-white/30 focus:ring-offset-2"
+              >
+                Explore the Forge
+              </Link>
+            </div>
+          </div>
+        </section>
+
+        {/* Bottom orange bar removed intentionally. No replacement. */}
       </main>
     </>
   );
