@@ -1,4 +1,4 @@
-// components/LandingFooter.tsx
+// components/LandingFooter.js
 import Link from 'next/link';
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { Twitter, Facebook, Youtube, ChevronLeft, ChevronRight } from 'lucide-react';
@@ -50,7 +50,7 @@ export default function LandingFooter() {
   );
 
   const [activeIdx, setActiveIdx] = useState(0);
-  const mobileRailRef = useRef<HTMLDivElement | null>(null);
+  const mobileRailRef = useRef(null);
 
   const goPrev = () => setActiveIdx((i) => (i - 1 + sections.length) % sections.length);
   const goNext = () => setActiveIdx((i) => (i + 1) % sections.length);
@@ -61,7 +61,7 @@ export default function LandingFooter() {
     el.focus();
   }, []);
 
-  const onMobileKeyDown = (e: React.KeyboardEvent<HTMLDivElement>) => {
+  const onMobileKeyDown = (e) => {
     if (e.key === 'ArrowLeft') {
       e.preventDefault();
       goPrev();
@@ -159,12 +159,18 @@ export default function LandingFooter() {
                 </Link>
               </li>
               <li>
-                <Link href="/accessibility" className="hover:text-[#FF7043] focus:text-[#FF7043] transition">
+                <Link
+                  href="/accessibility"
+                  className="hover:text-[#FF7043] focus:text-[#FF7043] transition"
+                >
                   Accessibility
                 </Link>
               </li>
               <li>
-                <Link href="/tracking-policy" className="hover:text-[#FF7043] focus:text-[#FF7043] transition">
+                <Link
+                  href="/tracking-policy"
+                  className="hover:text-[#FF7043] focus:text-[#FF7043] transition"
+                >
                   Tracking & Cookies Policy
                 </Link>
               </li>
