@@ -1253,10 +1253,6 @@ export default function CreateResumePage() {
         )}
       </div>
 
-      <div className="mt-6 max-w-4xl mx-auto">
-        <BulkExportCTA />
-      </div>
-
       {showToast && (
         <div
           style={{
