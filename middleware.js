@@ -42,6 +42,9 @@ const PUBLIC_PATHS = new Set([
   "/security",             // Security
   "/accessibility",        // Accessibility
   "/tracking-policy",      // Cookies / Tracking
+  "/company",              // ✅ NEW: Company Hub
+  "/product",              // ✅ NEW: Product Hub
+  "/legal",                // ✅ NEW: Legal Hub
   "/login",                // Login page
   "/auth/signin",          // NextAuth Signin
   "/feedback",             // Feedback landing

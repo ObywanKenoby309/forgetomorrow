@@ -159,7 +159,7 @@ export default function App({ Component, pageProps: { session, ...pageProps } })
   const useForgeBackground =
     !isUniversalPage &&
     isPublicEffective &&
-    ['/', '/about', '/features', '/press', '/status'].includes(router.pathname);
+    ['/', '/about', '/features', '/press', '/status', '/company', '/product', '/legal'].includes(router.pathname);
 
   const forgeBgPosition = router.pathname === '/' ? '35% center' : 'center';
   const renderLandingHeader = isPublicEffective && !isUniversalPage;
