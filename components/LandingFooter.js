@@ -85,6 +85,7 @@ export default function LandingFooter() {
           <div>
             <Link
               href="/company"
+              aria-label="Company - view all company links"
               className="inline-flex items-center gap-2 text-white font-semibold text-[15px] mb-2 hover:text-[#FF7043] focus:text-[#FF7043] transition"
             >
               Company <span className="text-[#FF7043]">→</span>
@@ -100,14 +101,6 @@ export default function LandingFooter() {
                   Careers
                 </Link>
               </li>
-              <li className="pt-2">
-                <Link
-                  href="/company"
-                  className="text-[12px] text-gray-500 hover:text-[#FF7043] focus:text-[#FF7043] transition"
-                >
-                  View all company links →
-                </Link>
-              </li>
             </ul>
           </div>
 
@@ -115,6 +108,7 @@ export default function LandingFooter() {
           <div>
             <Link
               href="/product"
+              aria-label="Product - view all product links"
               className="inline-flex items-center gap-2 text-white font-semibold text-[15px] mb-2 hover:text-[#FF7043] focus:text-[#FF7043] transition"
             >
               Product <span className="text-[#FF7043]">→</span>
@@ -140,15 +134,6 @@ export default function LandingFooter() {
                   Status <span className="text-[#FF7043]">→</span>
                 </Link>
               </li>
-
-              <li className="pt-2">
-                <Link
-                  href="/product"
-                  className="text-[12px] text-gray-500 hover:text-[#FF7043] focus:text-[#FF7043] transition"
-                >
-                  View all product links →
-                </Link>
-              </li>
             </ul>
           </div>
 
@@ -156,6 +141,7 @@ export default function LandingFooter() {
           <div>
             <Link
               href="/legal"
+              aria-label="Legal - view all legal links"
               className="inline-flex items-center gap-2 text-white font-semibold text-[15px] mb-2 hover:text-[#FF7043] focus:text-[#FF7043] transition"
             >
               Legal <span className="text-[#FF7043]">→</span>
@@ -169,14 +155,6 @@ export default function LandingFooter() {
               <li>
                 <Link href="/terms" className="hover:text-[#FF7043] focus:text-[#FF7043] transition">
                   Terms of Service
-                </Link>
-              </li>
-              <li className="pt-2">
-                <Link
-                  href="/legal"
-                  className="text-[12px] text-gray-500 hover:text-[#FF7043] focus:text-[#FF7043] transition"
-                >
-                  View all legal links →
                 </Link>
               </li>
             </ul>
