@@ -124,16 +124,6 @@ export default function LandingFooter() {
                   Pricing
                 </Link>
               </li>
-
-              {/* ✅ Persistent trust signal (always visible) */}
-              <li className="pt-2">
-                <Link
-                  href="/status"
-                  className="inline-flex items-center gap-2 text-[12px] text-gray-500 hover:text-[#FF7043] focus:text-[#FF7043] transition"
-                >
-                  Status <span className="text-[#FF7043]">→</span>
-                </Link>
-              </li>
             </ul>
           </div>
 
@@ -204,6 +194,17 @@ export default function LandingFooter() {
           </div>
         </div>
 
+        {/* ✅ Desktop trust signal: centered Status pill (separate from categories) */}
+        <div className="hidden md:flex justify-center pb-6">
+          <Link
+            href="/status"
+            aria-label="Status - check current system status"
+            className="inline-flex items-center justify-center rounded-full border border-[#FF7043]/40 bg-black/20 px-5 py-2 text-[12px] font-semibold text-[#FF7043] hover:bg-[#FF7043]/10 hover:border-[#FF7043]/60 transition focus:outline-none focus:ring-4 focus:ring-[#FF7043]/20 focus:ring-offset-2 focus:ring-offset-black"
+          >
+            Status
+          </Link>
+        </div>
+
         {/* Mobile: compact + left/right sections (Contact + Status + Copyright never disappear) */}
         <div className="md:hidden pt-8 pb-6">
           <div
@@ -230,9 +231,7 @@ export default function LandingFooter() {
               </button>
 
               <div className="min-w-0 text-center">
-                <div className="text-white font-semibold text-base leading-tight">
-                  {sections[activeIdx]?.title}
-                </div>
+                <div className="text-white font-semibold text-base leading-tight">{sections[activeIdx]?.title}</div>
                 <div className="text-xs text-gray-500">
                   {activeIdx + 1} / {sections.length}
                 </div>
@@ -314,10 +313,10 @@ export default function LandingFooter() {
         {/* Bottom (shared): tighter + less vertical air */}
         <div className="border-t border-gray-900 py-4 text-center text-sm text-gray-500">
           <p className="text-[10.5px] text-gray-500 max-w-4xl mx-auto mb-1 leading-snug">
-            ForgeTomorrow’s technologies - including its AI explainability engine, recruiter analytics systems,
-            human-AI workflow orchestration models, and adaptive career-matching platform - are protected under
-            multiple U.S. and international patent filings (pending). Unauthorized reproduction, reverse engineering,
-            or replication of these systems is prohibited.
+            ForgeTomorrow’s technologies - including its AI explainability engine, recruiter analytics systems, human-AI
+            workflow orchestration models, and adaptive career-matching platform - are protected under multiple U.S. and
+            international patent filings (pending). Unauthorized reproduction, reverse engineering, or replication of
+            these systems is prohibited.
           </p>
           <p className="text-[12px]">© {year} Forge Tomorrow, Inc. All rights reserved.</p>
         </div>
