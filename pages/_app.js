@@ -115,7 +115,7 @@ export default function App({ Component, pageProps: { session, ...pageProps } })
     '/terms',
     '/security',
     '/accessibility',
-    '/cookies',
+    '/tracking-policy', // ✅ canonical (replaces /cookies)
   ]);
 
   const [sharedAsInternal, setSharedAsInternal] = useState(false);

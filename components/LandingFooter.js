@@ -6,12 +6,14 @@ import { Twitter, Facebook, Youtube, ChevronLeft, ChevronRight } from 'lucide-re
 export default function LandingFooter() {
   const year = new Date().getFullYear();
 
+  // Mobile keeps richer navigation (it already feels premium + compact)
   const sections = useMemo(
     () => [
       {
         id: 'company',
         title: 'Company',
         links: [
+          { href: '/company', label: 'Company Hub' },
           { href: '/about', label: 'About Us' },
           { href: '/careers', label: 'Careers' },
           { href: '/press', label: 'Press Kit' },
@@ -22,6 +24,7 @@ export default function LandingFooter() {
         id: 'product',
         title: 'Product',
         links: [
+          { href: '/product', label: 'Product Hub' },
           { href: '/features', label: 'Features' },
           { href: '/pricing', label: 'Pricing' },
           { href: '/help', label: 'Help Center' },
@@ -32,6 +35,7 @@ export default function LandingFooter() {
         id: 'legal',
         title: 'Legal',
         links: [
+          { href: '/legal', label: 'Legal Hub' },
           { href: '/privacy', label: 'Privacy Policy' },
           { href: '/terms', label: 'Terms of Service' },
           { href: '/community-guidelines', label: 'Community Guidelines' },
@@ -75,11 +79,16 @@ export default function LandingFooter() {
   return (
     <footer className="bg-[#0a0a0a] text-gray-400 border-t border-gray-900">
       <div className="max-w-7xl mx-auto px-6 lg:px-8">
-        {/* Desktop / Tablet: denser grid */}
-        <div className="hidden md:grid grid-cols-4 gap-8 py-10">
+        {/* Desktop / Tablet: hub-first, shorter, less "link dump" */}
+        <div className="hidden md:grid grid-cols-4 gap-8 py-8">
           {/* Company */}
           <div>
-            <h3 className="text-white font-semibold text-base mb-3">Company</h3>
+            <Link
+              href="/company"
+              className="inline-flex items-center gap-2 text-white font-semibold text-base mb-3 hover:text-[#FF7043] focus:text-[#FF7043] transition"
+            >
+              Company <span className="text-[#FF7043]">→</span>
+            </Link>
             <ul className="space-y-2 text-sm">
               <li>
                 <Link href="/about" className="hover:text-[#FF7043] focus:text-[#FF7043] transition">
@@ -91,14 +100,12 @@ export default function LandingFooter() {
                   Careers
                 </Link>
               </li>
-              <li>
-                <Link href="/press" className="hover:text-[#FF7043] focus:text-[#FF7043] transition">
-                  Press Kit
-                </Link>
-              </li>
-              <li>
-                <Link href="/blog" className="hover:text-[#FF7043] focus:text-[#FF7043] transition">
-                  Blog
+              <li className="pt-1">
+                <Link
+                  href="/company"
+                  className="text-xs text-gray-500 hover:text-[#FF7043] focus:text-[#FF7043] transition"
+                >
+                  View all company links →
                 </Link>
               </li>
             </ul>
@@ -106,7 +113,12 @@ export default function LandingFooter() {
 
           {/* Product */}
           <div>
-            <h3 className="text-white font-semibold text-base mb-3">Product</h3>
+            <Link
+              href="/product"
+              className="inline-flex items-center gap-2 text-white font-semibold text-base mb-3 hover:text-[#FF7043] focus:text-[#FF7043] transition"
+            >
+              Product <span className="text-[#FF7043]">→</span>
+            </Link>
             <ul className="space-y-2 text-sm">
               <li>
                 <Link href="/features" className="hover:text-[#FF7043] focus:text-[#FF7043] transition">
@@ -118,14 +130,12 @@ export default function LandingFooter() {
                   Pricing
                 </Link>
               </li>
-              <li>
-                <Link href="/help" className="hover:text-[#FF7043] focus:text-[#FF7043] transition">
-                  Help Center
-                </Link>
-              </li>
-              <li>
-                <Link href="/status" className="hover:text-[#FF7043] focus:text-[#FF7043] transition">
-                  Status
+              <li className="pt-1">
+                <Link
+                  href="/product"
+                  className="text-xs text-gray-500 hover:text-[#FF7043] focus:text-[#FF7043] transition"
+                >
+                  View all product links →
                 </Link>
               </li>
             </ul>
@@ -133,7 +143,12 @@ export default function LandingFooter() {
 
           {/* Legal */}
           <div>
-            <h3 className="text-white font-semibold text-base mb-3">Legal</h3>
+            <Link
+              href="/legal"
+              className="inline-flex items-center gap-2 text-white font-semibold text-base mb-3 hover:text-[#FF7043] focus:text-[#FF7043] transition"
+            >
+              Legal <span className="text-[#FF7043]">→</span>
+            </Link>
             <ul className="space-y-2 text-sm">
               <li>
                 <Link href="/privacy" className="hover:text-[#FF7043] focus:text-[#FF7043] transition">
@@ -145,33 +160,12 @@ export default function LandingFooter() {
                   Terms of Service
                 </Link>
               </li>
-              <li>
+              <li className="pt-1">
                 <Link
-                  href="/community-guidelines"
-                  className="hover:text-[#FF7043] focus:text-[#FF7043] transition"
+                  href="/legal"
+                  className="text-xs text-gray-500 hover:text-[#FF7043] focus:text-[#FF7043] transition"
                 >
-                  Community Guidelines
-                </Link>
-              </li>
-              <li>
-                <Link href="/security" className="hover:text-[#FF7043] focus:text-[#FF7043] transition">
-                  Security
-                </Link>
-              </li>
-              <li>
-                <Link
-                  href="/accessibility"
-                  className="hover:text-[#FF7043] focus:text-[#FF7043] transition"
-                >
-                  Accessibility
-                </Link>
-              </li>
-              <li>
-                <Link
-                  href="/tracking-policy"
-                  className="hover:text-[#FF7043] focus:text-[#FF7043] transition"
-                >
-                  Tracking & Cookies Policy
+                  View all legal links →
                 </Link>
               </li>
             </ul>
@@ -326,8 +320,8 @@ export default function LandingFooter() {
         {/* Bottom (shared): tightened */}
         <div className="border-t border-gray-800 py-6 text-center text-sm text-gray-500">
           <p className="text-[11px] text-gray-500 max-w-3xl mx-auto mb-2 leading-relaxed">
-            ForgeTomorrow’s technologies — including its AI explainability engine, recruiter analytics systems,
-            human–AI workflow orchestration models, and adaptive career-matching platform — are protected under
+            ForgeTomorrow’s technologies - including its AI explainability engine, recruiter analytics systems,
+            human-AI workflow orchestration models, and adaptive career-matching platform - are protected under
             multiple U.S. and international patent filings (pending). Unauthorized reproduction, reverse engineering,
             or replication of these systems is prohibited.
           </p>
