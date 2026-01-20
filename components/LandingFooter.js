@@ -6,7 +6,7 @@ import { Twitter, Facebook, Youtube, ChevronLeft, ChevronRight } from 'lucide-re
 export default function LandingFooter() {
   const year = new Date().getFullYear();
 
-  // Mobile keeps richer navigation (it already feels premium + compact)
+  // Mobile keeps richer navigation
   const sections = useMemo(
     () => [
       {
@@ -80,16 +80,16 @@ export default function LandingFooter() {
     <footer className="bg-[#0a0a0a] text-gray-400 border-t border-gray-900">
       <div className="max-w-7xl mx-auto px-6 lg:px-8">
         {/* Desktop / Tablet: hub-first, shorter, less "link dump" */}
-        <div className="hidden md:grid grid-cols-4 gap-8 py-8">
+        <div className="hidden md:grid grid-cols-4 gap-7 py-6 items-start">
           {/* Company */}
           <div>
             <Link
               href="/company"
-              className="inline-flex items-center gap-2 text-white font-semibold text-base mb-3 hover:text-[#FF7043] focus:text-[#FF7043] transition"
+              className="inline-flex items-center gap-2 text-white font-semibold text-[15px] mb-2 hover:text-[#FF7043] focus:text-[#FF7043] transition"
             >
               Company <span className="text-[#FF7043]">→</span>
             </Link>
-            <ul className="space-y-2 text-sm">
+            <ul className="space-y-1 text-sm">
               <li>
                 <Link href="/about" className="hover:text-[#FF7043] focus:text-[#FF7043] transition">
                   About Us
@@ -100,10 +100,10 @@ export default function LandingFooter() {
                   Careers
                 </Link>
               </li>
-              <li className="pt-1">
+              <li className="pt-2">
                 <Link
                   href="/company"
-                  className="text-xs text-gray-500 hover:text-[#FF7043] focus:text-[#FF7043] transition"
+                  className="text-[12px] text-gray-500 hover:text-[#FF7043] focus:text-[#FF7043] transition"
                 >
                   View all company links →
                 </Link>
@@ -115,11 +115,11 @@ export default function LandingFooter() {
           <div>
             <Link
               href="/product"
-              className="inline-flex items-center gap-2 text-white font-semibold text-base mb-3 hover:text-[#FF7043] focus:text-[#FF7043] transition"
+              className="inline-flex items-center gap-2 text-white font-semibold text-[15px] mb-2 hover:text-[#FF7043] focus:text-[#FF7043] transition"
             >
               Product <span className="text-[#FF7043]">→</span>
             </Link>
-            <ul className="space-y-2 text-sm">
+            <ul className="space-y-1 text-sm">
               <li>
                 <Link href="/features" className="hover:text-[#FF7043] focus:text-[#FF7043] transition">
                   Features
@@ -130,10 +130,21 @@ export default function LandingFooter() {
                   Pricing
                 </Link>
               </li>
-              <li className="pt-1">
+
+              {/* ✅ Persistent trust signal (always visible) */}
+              <li className="pt-2">
+                <Link
+                  href="/status"
+                  className="inline-flex items-center gap-2 text-[12px] text-gray-500 hover:text-[#FF7043] focus:text-[#FF7043] transition"
+                >
+                  Status <span className="text-[#FF7043]">→</span>
+                </Link>
+              </li>
+
+              <li className="pt-2">
                 <Link
                   href="/product"
-                  className="text-xs text-gray-500 hover:text-[#FF7043] focus:text-[#FF7043] transition"
+                  className="text-[12px] text-gray-500 hover:text-[#FF7043] focus:text-[#FF7043] transition"
                 >
                   View all product links →
                 </Link>
@@ -145,11 +156,11 @@ export default function LandingFooter() {
           <div>
             <Link
               href="/legal"
-              className="inline-flex items-center gap-2 text-white font-semibold text-base mb-3 hover:text-[#FF7043] focus:text-[#FF7043] transition"
+              className="inline-flex items-center gap-2 text-white font-semibold text-[15px] mb-2 hover:text-[#FF7043] focus:text-[#FF7043] transition"
             >
               Legal <span className="text-[#FF7043]">→</span>
             </Link>
-            <ul className="space-y-2 text-sm">
+            <ul className="space-y-1 text-sm">
               <li>
                 <Link href="/privacy" className="hover:text-[#FF7043] focus:text-[#FF7043] transition">
                   Privacy Policy
@@ -160,10 +171,10 @@ export default function LandingFooter() {
                   Terms of Service
                 </Link>
               </li>
-              <li className="pt-1">
+              <li className="pt-2">
                 <Link
                   href="/legal"
-                  className="text-xs text-gray-500 hover:text-[#FF7043] focus:text-[#FF7043] transition"
+                  className="text-[12px] text-gray-500 hover:text-[#FF7043] focus:text-[#FF7043] transition"
                 >
                   View all legal links →
                 </Link>
@@ -173,8 +184,8 @@ export default function LandingFooter() {
 
           {/* Connect */}
           <div>
-            <h3 className="text-white font-semibold text-base mb-3">Connect</h3>
-            <ul className="space-y-2 text-sm">
+            <h3 className="text-white font-semibold text-[15px] mb-2">Connect</h3>
+            <ul className="space-y-1 text-sm">
               <li>
                 <Link href="/contact" className="hover:text-[#FF7043] focus:text-[#FF7043] transition">
                   Contact
@@ -183,7 +194,7 @@ export default function LandingFooter() {
             </ul>
 
             {/* Social Icons */}
-            <div className="flex gap-4 mt-5">
+            <div className="flex gap-4 mt-4">
               <a
                 href="https://x.com/ForgeTomorrowHQ"
                 target="_blank"
@@ -215,7 +226,7 @@ export default function LandingFooter() {
           </div>
         </div>
 
-        {/* Mobile: compact + left/right sections (Contact + Copyright never disappear) */}
+        {/* Mobile: compact + left/right sections (Contact + Status + Copyright never disappear) */}
         <div className="md:hidden pt-8 pb-6">
           <div
             ref={mobileRailRef}
@@ -271,7 +282,7 @@ export default function LandingFooter() {
                 ))}
               </ul>
 
-              {/* Social icons: show when Connect is active (but Contact link is always visible below) */}
+              {/* Social icons: show when Connect is active */}
               {sections[activeIdx]?.id === 'connect' && (
                 <div className="flex gap-5 mt-5">
                   <a
@@ -306,26 +317,31 @@ export default function LandingFooter() {
             </div>
           </div>
 
-          {/* Persistent Contact + Copyright (never disappear) */}
+          {/* Persistent Contact + Status + Copyright (never disappear) */}
           <div className="mt-6 border-t border-gray-900 pt-4">
             <div className="flex items-center justify-between gap-4">
-              <Link href="/contact" className="text-sm hover:text-[#FF7043] focus:text-[#FF7043] transition">
-                Contact
-              </Link>
+              <div className="flex items-center gap-4">
+                <Link href="/contact" className="text-sm hover:text-[#FF7043] focus:text-[#FF7043] transition">
+                  Contact
+                </Link>
+                <Link href="/status" className="text-sm hover:text-[#FF7043] focus:text-[#FF7043] transition">
+                  Status
+                </Link>
+              </div>
               <span className="text-xs text-gray-500">© {year} Forge Tomorrow, Inc.</span>
             </div>
           </div>
         </div>
 
-        {/* Bottom (shared): tightened */}
-        <div className="border-t border-gray-800 py-6 text-center text-sm text-gray-500">
-          <p className="text-[11px] text-gray-500 max-w-3xl mx-auto mb-2 leading-relaxed">
+        {/* Bottom (shared): tighter + less vertical air */}
+        <div className="border-t border-gray-900 py-4 text-center text-sm text-gray-500">
+          <p className="text-[10.5px] text-gray-500 max-w-4xl mx-auto mb-1 leading-snug">
             ForgeTomorrow’s technologies - including its AI explainability engine, recruiter analytics systems,
             human-AI workflow orchestration models, and adaptive career-matching platform - are protected under
             multiple U.S. and international patent filings (pending). Unauthorized reproduction, reverse engineering,
             or replication of these systems is prohibited.
           </p>
-          <p>© {year} Forge Tomorrow, Inc. All rights reserved.</p>
+          <p className="text-[12px]">© {year} Forge Tomorrow, Inc. All rights reserved.</p>
         </div>
       </div>
     </footer>
