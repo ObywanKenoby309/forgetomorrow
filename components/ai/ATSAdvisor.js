@@ -2,7 +2,6 @@
 "use client";
 
 import { useState } from "react";
-import ATSScoreInfo from "@/components/ai/ATSScoreInfo";
 
 export default function ATSAdvisor({ draft, title, company }) {
   const [loading, setLoading] = useState(false);
@@ -37,22 +36,31 @@ export default function ATSAdvisor({ draft, title, company }) {
       setResult({
         error:
           err.message ||
-          "We could not analyze this job description. Please try again in a moment.",
+          "We could not review this description. Please try again in a moment.",
       });
     } finally {
       setLoading(false);
     }
   };
 
+  const getQualityLabel = (score) => {
+    if (typeof score !== "number") return null;
+    if (score >= 80) return { label: "Strong foundation", cls: "bg-emerald-600 text-white" };
+    if (score >= 60) return { label: "Solid start", cls: "bg-slate-800 text-white" };
+    return { label: "Needs clarity", cls: "bg-amber-600 text-white" };
+  };
+
+  const quality = getQualityLabel(result?.score);
+
   return (
     <div className="mt-3 p-4 border border-slate-200 rounded-lg bg-slate-50">
       <div className="flex items-center justify-between gap-2 mb-2">
         <div>
           <p className="text-xs font-semibold text-slate-900 uppercase tracking-wide">
-            Step 2 — Sora ATS Insights
+            Clarity Review
           </p>
           <p className="text-[11px] text-slate-700">
-            Score, strengths, risk areas, and quick edits based on an ATS-style checklist.
+            Highlights what reads clearly, what may confuse candidates, and the fastest improvements to make.
           </p>
         </div>
 
@@ -66,28 +74,24 @@ export default function ATSAdvisor({ draft, title, company }) {
               : "bg-slate-900 text-white hover:bg-slate-800"
           }`}
         >
-          {loading ? "Analyzing…" : "Analyze ATS fit"}
+          {loading ? "Reviewing…" : "Run review"}
         </button>
       </div>
 
       {!hasDescription && (
         <p className="mt-1 text-[11px] text-slate-600">
-          Paste a job description above, then run ATS analysis.
+          Add a description above, then run the review.
         </p>
       )}
 
       {result && !result.error && (
         <div className="mt-3 space-y-3 text-xs text-slate-800">
-          {/* Score + summary + info "i" */}
+          {/* Summary line */}
           <div className="flex items-center gap-3 flex-wrap">
-            {typeof result.score === "number" && (
-              <div className="inline-flex items-center gap-1.5">
-                <span className="inline-flex items-center justify-center rounded-full bg-slate-900 text-white text-[11px] px-3 py-1 font-semibold">
-                  ATS strength: {result.score}/100
-                </span>
-                {/* Explainability: how we estimate this score */}
-                <ATSScoreInfo />
-              </div>
+            {quality && (
+              <span className={`inline-flex items-center justify-center rounded-full text-[11px] px-3 py-1 font-semibold ${quality.cls}`}>
+                {quality.label}
+              </span>
             )}
             {result.summary && (
               <p className="text-[11px] text-slate-700 max-w-xl">
@@ -100,7 +104,7 @@ export default function ATSAdvisor({ draft, title, company }) {
           {Array.isArray(result.strengths) && result.strengths.length > 0 && (
             <div>
               <p className="font-semibold text-slate-900 mb-1">
-                What you&apos;re already doing well
+                What is working well
               </p>
               <ul className="list-disc pl-4 space-y-1">
                 {result.strengths.map((s, idx) => (
@@ -114,7 +118,7 @@ export default function ATSAdvisor({ draft, title, company }) {
           {Array.isArray(result.issues) && result.issues.length > 0 && (
             <div>
               <p className="font-semibold text-slate-900 mb-1">
-                Risk areas for ATS + candidate clarity
+                What may cause confusion
               </p>
               <ul className="list-disc pl-4 space-y-1">
                 {result.issues.map((s, idx) => (
@@ -128,7 +132,7 @@ export default function ATSAdvisor({ draft, title, company }) {
           {Array.isArray(result.suggestions) && result.suggestions.length > 0 && (
             <div>
               <p className="font-semibold text-slate-900 mb-1">
-                Quick edits to make right now
+                Suggested improvements
               </p>
               <ul className="list-disc pl-4 space-y-1">
                 {result.suggestions.map((s, idx) => (
@@ -138,24 +142,7 @@ export default function ATSAdvisor({ draft, title, company }) {
             </div>
           )}
 
-          {/* Keywords */}
-          {Array.isArray(result.keywords) && result.keywords.length > 0 && (
-            <div>
-              <p className="font-semibold text-slate-900 mb-1">
-                Detected keywords to keep / strengthen
-              </p>
-              <div className="flex flex-wrap gap-1.5">
-                {result.keywords.map((k, idx) => (
-                  <span
-                    key={idx}
-                    className="inline-flex items-center px-2 py-0.5 rounded-full bg-white border border-slate-300 text-[11px]"
-                  >
-                    {k}
-                  </span>
-                ))}
-              </div>
-            </div>
-          )}
+          {/* Intentionally hiding extracted terms to avoid "keyword theater" */}
         </div>
       )}
 

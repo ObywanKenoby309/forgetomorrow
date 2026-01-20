@@ -34,7 +34,7 @@ export default function JDOptimizer({ draft, title, onOptimize }) {
       }
 
       if (!res.ok) {
-        const msg = json.error || `JD optimize API failed (status ${res.status})`;
+        const msg = json.error || `Description refinement failed (status ${res.status})`;
         console.error('[JDOptimizer] API error', { status: res.status, body: json || text });
         onOptimize(`ERROR: ${msg}`);
         return;
@@ -42,37 +42,42 @@ export default function JDOptimizer({ draft, title, onOptimize }) {
 
       if (!json || typeof json.response !== 'string') {
         console.error('[JDOptimizer] Missing "response" field in API result', json);
-        onOptimize('ERROR: JD builder did not return text. Check /api/ai/generate implementation.');
+        onOptimize('ERROR: The refinement tool did not return text. Check /api/ai/generate.');
         return;
       }
 
       onOptimize(json.response);
     } catch (err) {
       console.error('[JDOptimizer] Network or unexpected error', err);
-      onOptimize('ERROR: Could not reach Grok JD Builder. Check console/network logs.');
+      onOptimize('ERROR: Could not reach the refinement service. Check console/network logs.');
     } finally {
       setLoading(false);
     }
   };
 
   return (
-    <div className="mt-4 p-4 bg-gradient-to-r from-purple-50 to-blue-50 border border-purple-200 rounded-lg">
+    <div className="mt-4 p-4 border border-slate-200 rounded-lg bg-slate-50">
       <div className="flex items-center justify-between">
-        <p className="text-xs font-bold text-purple-900 uppercase tracking-wide">
-          Step 1 — Grok JD Builder
+        <p className="text-xs font-semibold text-slate-900 uppercase tracking-wide">
+          Description Refinement
         </p>
         <button
           type="button"
           onClick={optimize}
           disabled={!hasDraft || loading}
-          className="px-4 py-1.5 text-xs font-medium text-white bg-gradient-to-r from-purple-600 to-blue-600 rounded hover:from-purple-700 hover:to-blue-700 disabled:opacity-50"
+          className={`px-4 py-1.5 text-xs font-semibold rounded ${
+            !hasDraft || loading
+              ? 'bg-slate-300 text-slate-600 cursor-not-allowed'
+              : 'bg-[#FF7043] text-white hover:bg-[#F4511E]'
+          }`}
         >
-          {loading ? 'Optimizing…' : 'Run Grok JD Builder'}
+          {loading ? 'Refining…' : 'Refine description'}
         </button>
       </div>
-      <p className="mt-1 text-[11px] text-purple-700">
-        Rewrites your draft to be clearer, more compelling, and ATS-aware. Then run{' '}
-        <span className="font-semibold">Sora ATS Insights</span> to get a score and concrete fixes.
+
+      <p className="mt-1 text-[11px] text-slate-700">
+        Improves structure and clarity while preserving the intent of your draft. After refining, run the review below to spot
+        confusion points and quick edits.
       </p>
     </div>
   );
