@@ -1,238 +1,149 @@
-// pages/features.js
+// pages/features.js — SYSTEM-LED FEATURES PAGE (FINAL WITH IMAGE WIRING)
 import Head from "next/head";
-
-function Badge({ children, variant = "live" }) {
-  const styles =
-    variant === "live"
-      ? "bg-emerald-500/15 text-emerald-200 border-emerald-400/20"
-      : variant === "future"
-      ? "bg-amber-500/15 text-amber-200 border-amber-400/20"
-      : "bg-slate-500/15 text-slate-200 border-slate-400/20";
-
-  return (
-    <span
-      className={`inline-flex items-center gap-1 rounded-full border px-3 py-1 text-xs font-semibold tracking-wide ${styles}`}
-    >
-      {children}
-    </span>
-  );
-}
-
-function FeatureList({ items }) {
-  return (
-    <ul className="mt-4 grid grid-cols-1 gap-3 sm:grid-cols-2">
-      {items.map((t) => (
-        <li
-          key={t}
-          className="rounded-xl border border-white/15 bg-white/10 px-4 py-3 text-sm text-gray-100 backdrop-blur-[10px]"
-        >
-          {t}
-        </li>
-      ))}
-    </ul>
-  );
-}
-
-function SectionCard({ title, subtitle, badge, children }) {
-  return (
-    <section className="w-full rounded-2xl border border-white/20 bg-white/10 p-6 shadow-[0_10px_30px_rgba(0,0,0,0.25)] backdrop-blur-[12px]">
-      <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
-        <div>
-          <h2 className="text-2xl font-extrabold text-gray-100">{title}</h2>
-          {subtitle ? (
-            <p className="mt-2 text-sm leading-relaxed text-gray-200/90">
-              {subtitle}
-            </p>
-          ) : null}
-        </div>
-        <div className="shrink-0">{badge}</div>
-      </div>
-      {children}
-    </section>
-  );
-}
+import Image from "next/image";
+import Link from "next/link";
 
 export default function Features() {
-  const seekerFeatures = [
-    "AI resume generator + versioning for different roles",
-    "AI cover letter generator (tailored per job)",
-    "ATS alignment, keyword matching, and ATS preview",
-    "Resume exports: PDF, Word, and plain text",
-    "Job tracking: pinned jobs / saved jobs",
-    "Application tracking states (track progress end-to-end)",
-    "Profile as a resume landing page (public slug page)",
-    "Portfolio showcase on profile",
-    "Custom profile themes",
-  ];
-
-  const messagingFeatures = [
-    "Public post feed (community updates and visibility)",
-    "Private 1:1 messaging",
-    "Coach message center (separate workspace)",
-    "Recruiter message center (separate workspace)",
-    "Messaging prioritization for coaches and businesses",
-    "Bulk messaging / broadcasts for coaches and recruiters",
-  ];
-
-  const coachFeatures = [
-    "Dedicated coaching advertising feed page",
-    "Private coach message center + broadcast tools",
-    "Closed scheduling flow (appointment booking)",
-    "Posts, profile, and CSAT analytics surfaces",
-    "Event hosting and newsletters",
-  ];
-
-  const recruiterFeatures = [
-    "Job posting board (recruiter-loaded listings)",
-    "Applications board (in-platform apply flow)",
-    "Verified jobs on-platform (loaded by recruiters)",
-    "AI job description builder",
-    "Recruiting analytics surfaces",
-    "Explainability on candidate recommendations (why they matched)",
-    "Private recruiter message center + broadcast tools",
-    "Closed scheduling flow (appointments with candidates/contacts)",
-  ];
-
-  const platformFeatures = [
-    "Role-based workspaces and chrome gating (Seeker / Coach / Recruiter)",
-    "Support center and support workflow (human support)",
-    "Verified profiles (current: email verification)",
-    "Transparency-first experience (no algorithmic gatekeeping as the core value)",
-    "Mobile-friendly design across core pages",
-  ];
-
-  const roadmapFuture = [
-    "Team seats, roles, and org administration (Recruiter Settings org page)",
-    "Company profile + branding controls",
-    "Compliance & privacy surfaces (expanded policy + controls)",
-    "Talent pools / candidate collections",
-    "Stronger identity verification (VerifyMe / VerifyID-style as you scale)",
-    "Interview simulator",
-    "Accomplishment-to-project recommender (turn wins into future project ideas)",
-  ];
-
   return (
     <>
       <Head>
-        <title>ForgeTomorrow - Features</title>
-        <link rel="icon" href="/favicon.ico" />
+        <title>ForgeTomorrow — How the Forge Works</title>
+        <meta
+          name="description"
+          content="ForgeTomorrow is a connected system of capabilities designed to help people build clarity, understand alignment, and move forward with intent."
+        />
       </Head>
 
-      <main
-        role="main"
-        className="
-          mx-auto flex min-h-[calc(100vh-100px)] w-full max-w-6xl flex-col
-          items-center justify-start px-5 py-14 text-gray-200
-          sm:px-6 sm:py-16
-        "
-      >
-        {/* HERO */}
-        <div className="w-full text-center">
-          <h1 className="text-5xl sm:text-6xl mb-5 tracking-wide text-[#FF7043] drop-shadow-[0_0_10px_rgba(255,112,67,0.9)]">
-            Platform Features
+      <main className="mx-auto max-w-6xl px-6 py-20 text-gray-100">
+        {/* INTRO */}
+        <section className="max-w-3xl mb-24">
+          <h1 className="text-4xl md:text-5xl font-extrabold mb-6">
+            How the Forge works as a system
           </h1>
-          <p className="mx-auto max-w-3xl text-base sm:text-lg leading-relaxed text-gray-200/90">
-            ForgeTomorrow is built as a full ecosystem for job seekers, coaches,
-            and recruiters. This page lists what’s live today, plus what’s next
-            as we scale.
+          <p className="text-lg text-gray-300 leading-relaxed">
+            ForgeTomorrow is not a collection of disconnected tools. It is a
+            system designed to help people build clarity, understand alignment,
+            and move forward with intent.
+          </p>
+        </section>
+
+        {/* ANVIL */}
+        <section className="mb-32">
+          <h2 className="text-3xl font-bold mb-4">Building and refining your career signal</h2>
+          <p className="text-gray-300 max-w-3xl mb-10">
+            <strong>The Anvil</strong> is where professionals prepare before pressure is applied.
+            Profile development, negotiation readiness, and growth planning all live here.
           </p>
 
-          <div className="mt-6 flex flex-wrap items-center justify-center gap-3">
-            <Badge variant="live">LIVE NOW</Badge>
-            <Badge variant="future">COMING NEXT</Badge>
-            <Badge variant="neutral">NO FLUFF, REAL FEATURES</Badge>
+          <div className="grid md:grid-cols-3 gap-6">
+            <Image src="/images/Profile_Development.png" alt="Profile Development" width={600} height={400} className="rounded-xl" />
+            <Image src="/images/Negotiation_Input.png" alt="Negotiation Input" width={600} height={400} className="rounded-xl" />
+            <Image src="/images/Pivot_&_Growth.png" alt="Pivot and Growth" width={600} height={400} className="rounded-xl" />
           </div>
-        </div>
+        </section>
 
-        {/* GRID */}
-        <div className="mt-10 w-full space-y-6">
-          <SectionCard
-            title="Seeker Tools"
-            subtitle="Everything you need to execute a modern job hunt inside one platform."
-            badge={<Badge variant="live">LIVE NOW</Badge>}
-          >
-            <FeatureList items={seekerFeatures} />
-          </SectionCard>
+        {/* HAMMER */}
+        <section className="mb-32">
+          <h2 className="text-3xl font-bold mb-4">Understanding fit and alignment</h2>
+          <p className="text-gray-300 max-w-3xl mb-10">
+            <strong>The Forge Hammer</strong> helps users understand alignment with opportunities
+            without keyword theater or guessing what systems want to see.
+          </p>
 
-          <SectionCard
-            title="Messaging and Communication"
-            subtitle="Public visibility when you want it. Private, focused communication when it matters."
-            badge={<Badge variant="live">LIVE NOW</Badge>}
-          >
-            <FeatureList items={messagingFeatures} />
-          </SectionCard>
+          <Image
+            src="/images/Forge_Hammer.png"
+            alt="Forge Hammer alignment view"
+            width={1000}
+            height={500}
+            className="rounded-xl"
+          />
+        </section>
 
-          <SectionCard
-            title="Coach and Mentor Workspace"
-            subtitle="Built to support client work, outreach, scheduling, and growth."
-            badge={<Badge variant="live">LIVE NOW</Badge>}
-          >
-            <FeatureList items={coachFeatures} />
-          </SectionCard>
+        {/* COACHING */}
+        <section className="mb-32">
+          <h2 className="text-3xl font-bold mb-4">Human support and guidance</h2>
+          <p className="text-gray-300 max-w-3xl mb-10">
+            Coaches operate inside ForgeTomorrow with transparency, accountability,
+            and real tooling for outcomes.
+          </p>
 
-          <SectionCard
-            title="Recruiter Workspace"
-            subtitle="Job posting, applications, candidate engagement, and explainable matching."
-            badge={<Badge variant="live">LIVE NOW</Badge>}
-          >
-            <FeatureList items={recruiterFeatures} />
-          </SectionCard>
-
-          <SectionCard
-            title="Platform Foundations"
-            subtitle="The trust layer: real support, role-based experiences, and verification."
-            badge={<Badge variant="live">LIVE NOW</Badge>}
-          >
-            <FeatureList items={platformFeatures} />
-
-            <div className="mt-5 rounded-xl border border-white/15 bg-black/20 p-4">
-              <p className="text-sm text-gray-200/90 leading-relaxed">
-                <span className="font-semibold text-gray-100">
-                  Verified profiles (today):
-                </span>{" "}
-                Verified currently means the user confirmed their email address.
-                <span className="ml-1 text-gray-200/80">
-                  (Future: stronger identity verification as we scale.)
-                </span>
-              </p>
-            </div>
-          </SectionCard>
-
-          <SectionCard
-            title="What’s Next"
-            subtitle="These are the next platform upgrades to support teams, enterprise orgs, and scaling trust."
-            badge={<Badge variant="future">COMING NEXT</Badge>}
-          >
-            <FeatureList items={roadmapFuture} />
-          </SectionCard>
-
-          {/* CTA STRIP */}
-          <div className="w-full rounded-2xl border border-white/20 bg-white/10 p-6 text-center shadow-[0_10px_30px_rgba(0,0,0,0.25)] backdrop-blur-[12px]">
-            <h3 className="text-xl sm:text-2xl font-extrabold text-gray-100">
-              Ready to use it?
-            </h3>
-            <p className="mx-auto mt-2 max-w-2xl text-sm sm:text-base text-gray-200/90">
-              Start as a seeker, explore coaching tools, or reach out for
-              enterprise recruiting.
-            </p>
-
-            <div className="mt-5 flex flex-col gap-3 sm:flex-row sm:justify-center">
-              <a
-                href="/pricing"
-                className="inline-flex items-center justify-center rounded-xl bg-[#FF7043] px-6 py-3 font-bold text-white shadow-[0_12px_30px_rgba(255,112,67,0.25)]"
-              >
-                View Plans
-              </a>
-
-              <a
-                href="mailto:sales@forgetomorrow.com"
-                className="inline-flex items-center justify-center rounded-xl border border-white/25 bg-black/20 px-6 py-3 font-bold text-gray-100 backdrop-blur-[10px]"
-              >
-                Email Sales
-              </a>
-            </div>
+          <div className="grid md:grid-cols-3 gap-6">
+            <Image src="/images/Agenda.png" alt="Coaching Agenda" width={600} height={400} className="rounded-xl" />
+            <Image src="/images/Clients.png" alt="Client Management" width={600} height={400} className="rounded-xl" />
+            <Image src="/images/Feedback.png" alt="Coach Feedback" width={600} height={400} className="rounded-xl" />
           </div>
-        </div>
+        </section>
+
+        {/* RECRUITERS */}
+        <section className="mb-32">
+          <h2 className="text-3xl font-bold mb-4">Recruiter interaction and transparency</h2>
+          <p className="text-gray-300 max-w-3xl mb-10">
+            Recruiters work with explainable tools — not opaque scores or hidden filters.
+          </p>
+
+          <div className="grid md:grid-cols-2 gap-6">
+            <Image src="/images/Job_Posting_Builder.png" alt="Job Posting Builder" width={700} height={450} className="rounded-xl" />
+            <Image src="/images/Why_This_Candidate.png" alt="Why This Candidate" width={700} height={450} className="rounded-xl" />
+          </div>
+        </section>
+
+        {/* COMMUNITY */}
+        <section className="mb-32">
+          <h2 className="text-3xl font-bold mb-4">Community and shared knowledge</h2>
+          <p className="text-gray-300 max-w-3xl mb-10">
+            <strong>The Hearth</strong> is where discussion, resources, and collaboration live
+            without algorithmic distortion.
+          </p>
+
+          <Image
+            src="/images/Hearth.png"
+            alt="The Hearth community"
+            width={1000}
+            height={500}
+            className="rounded-xl"
+          />
+        </section>
+
+        {/* SIGNAL */}
+        <section className="mb-32">
+          <h2 className="text-3xl font-bold mb-4">Direct communication</h2>
+          <p className="text-gray-300 max-w-3xl mb-10">
+            <strong>The Signal</strong> supports intentional, professional one-to-one communication,
+            separate from feeds or engagement metrics.
+          </p>
+
+          <div className="grid md:grid-cols-2 gap-6">
+            <Image src="/images/Signal.png" alt="Signal Messaging" width={700} height={450} className="rounded-xl" />
+            <Image src="/images/Recruiter_Messaging.png" alt="Recruiter Messaging" width={700} height={450} className="rounded-xl" />
+          </div>
+        </section>
+
+        {/* WHAT THIS IS NOT */}
+        <section className="max-w-3xl mb-24">
+          <h2 className="text-3xl font-bold mb-6">What this is not</h2>
+          <ul className="space-y-3 text-gray-300 text-lg">
+            <li>• Not a feed</li>
+            <li>• Not an ATS clone</li>
+            <li>• Not a data marketplace</li>
+            <li>• Not engagement-driven software</li>
+          </ul>
+        </section>
+
+        {/* EXIT PATHS */}
+        <section className="flex gap-6">
+          <Link
+            href="/pricing"
+            className="rounded-full bg-[#FF7043] px-8 py-4 font-bold text-white"
+          >
+            Enter the Forge
+          </Link>
+          <Link
+            href="/about"
+            className="rounded-full border border-white/30 px-8 py-4 font-bold text-gray-100"
+          >
+            Our Promise
+          </Link>
+        </section>
       </main>
     </>
   );
