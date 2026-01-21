@@ -81,10 +81,7 @@ export default function JobFormModal({
   return (
     <div className="fixed inset-0 z-[100] flex items-center justify-center">
       {/* Backdrop */}
-      <div
-        className="absolute inset-0 bg-black/50"
-        onClick={onClose}
-      />
+      <div className="absolute inset-0 bg-black/50" onClick={onClose} />
 
       {/* Modal */}
       <div className="relative w-full max-w-3xl max-h-[90vh] overflow-y-auto rounded-lg bg-white shadow-xl border">
@@ -250,8 +247,8 @@ export default function JobFormModal({
         </div>
 
         {/* Footer */}
-        <div className="p-5 border-t flex items-center justify-between gap-3 sticky bottom-[64px] md:bottom-0 bg-white">
-          <div className="text-xs text-slate-500">
+        <div className="p-5 border-t flex items-center justify-between gap-3 sticky bottom-[56px] md:bottom-0 bg-white">
+          <div className="text-xs text-slate-500 pl-4">
             {isView ? "Viewing job details." : "Fields marked * are required."}
           </div>
           <div className="flex items-center gap-2">
@@ -278,7 +275,7 @@ export default function JobFormModal({
         </div>
 
         {/* Spacer so the very bottom content is not trapped behind the raised sticky footer on mobile */}
-        <div className="h-[64px] md:h-0" />
+        <div className="h-[56px] md:h-0" />
       </div>
     </div>
   );
