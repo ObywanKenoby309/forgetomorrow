@@ -250,7 +250,7 @@ export default function JobFormModal({
         </div>
 
         {/* Footer */}
-        <div className="p-5 border-t flex items-center justify-between gap-3 sticky bottom-[84px] md:bottom-0 bg-white">
+        <div className="p-5 border-t flex items-center justify-between gap-3 sticky bottom-[64px] md:bottom-0 bg-white">
           <div className="text-xs text-slate-500">
             {isView ? "Viewing job details." : "Fields marked * are required."}
           </div>
@@ -278,7 +278,7 @@ export default function JobFormModal({
         </div>
 
         {/* Spacer so the very bottom content is not trapped behind the raised sticky footer on mobile */}
-        <div className="h-[84px] md:h-0" />
+        <div className="h-[64px] md:h-0" />
       </div>
     </div>
   );
