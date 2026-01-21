@@ -1,4 +1,4 @@
-// pages/features.js - SYSTEM-LED FEATURES PAGE (AUTO-ROTATING CAROUSELS, NO LIBS) — UPDATED (HAMMER + HEARTH SHRUNK)
+// pages/features.js - SYSTEM-LED FEATURES PAGE (AUTO-ROTATING CAROUSELS, NO LIBS, SLOW TIMING)
 import Head from "next/head";
 import Image from "next/image";
 import Link from "next/link";
@@ -6,38 +6,54 @@ import { useEffect, useMemo, useRef, useState } from "react";
 
 function AutoCarousel({
   images = [],
-  intervalMs = 3500,
+  intervalMs = 8000,
   aspectClass = "aspect-[16/9]",
-  maxWidthClass = "max-w-4xl",
+  maxWidthClass = "max-w-5xl",
 }) {
   const safeImages = useMemo(
     () => (Array.isArray(images) ? images.filter(Boolean) : []),
     [images]
   );
+
   const [idx, setIdx] = useState(0);
   const timerRef = useRef(null);
+  const pausedRef = useRef(false);
 
   const count = safeImages.length;
 
-  const go = (next) => {
+  const clearTimer = () => {
+    if (timerRef.current) clearInterval(timerRef.current);
+    timerRef.current = null;
+  };
+
+  const startTimer = () => {
+    if (count <= 1) return;
+    clearTimer();
+
+    timerRef.current = setInterval(() => {
+      if (pausedRef.current) return;
+      setIdx((prev) => (prev + 1) % count);
+    }, intervalMs);
+  };
+
+  const go = (delta) => {
     if (!count) return;
     setIdx((prev) => {
-      const n = typeof next === "number" ? next : prev + next;
+      const n = prev + delta;
       return (n + count) % count;
     });
   };
 
+  // Keep idx valid if image list changes
   useEffect(() => {
-    if (count <= 1) return;
-    if (timerRef.current) clearInterval(timerRef.current);
+    if (!count) return;
+    setIdx((prev) => Math.min(prev, count - 1));
+  }, [count]);
 
-    timerRef.current = setInterval(() => {
-      setIdx((prev) => (prev + 1) % count);
-    }, intervalMs);
-
-    return () => {
-      if (timerRef.current) clearInterval(timerRef.current);
-    };
+  useEffect(() => {
+    startTimer();
+    return () => clearTimer();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [count, intervalMs]);
 
   if (!count) return null;
@@ -45,13 +61,28 @@ function AutoCarousel({
   return (
     <div className={`mx-auto w-full ${maxWidthClass}`}>
       <div
-        className={`relative w-full overflow-hidden rounded-xl border border-white/10 bg-black/20 ${aspectClass}`}
+        className={`relative w-full overflow-hidden rounded-xl border border-white/10 bg-black/25 ${aspectClass}`}
+        onMouseEnter={() => {
+          pausedRef.current = true;
+        }}
+        onMouseLeave={() => {
+          pausedRef.current = false;
+        }}
+        onPointerDown={() => {
+          pausedRef.current = true;
+        }}
+        onPointerUp={() => {
+          pausedRef.current = false;
+        }}
+        onPointerCancel={() => {
+          pausedRef.current = false;
+        }}
       >
         {/* Slides */}
         {safeImages.map((img, i) => (
           <div
             key={img.src}
-            className={`absolute inset-0 transition-opacity duration-500 ${
+            className={`absolute inset-0 transition-opacity duration-700 ${
               i === idx ? "opacity-100" : "opacity-0"
             }`}
             aria-hidden={i !== idx}
@@ -67,14 +98,14 @@ function AutoCarousel({
           </div>
         ))}
 
-        {/* Controls (only if multiple) */}
+        {/* Controls */}
         {count > 1 && (
           <>
             <button
               type="button"
               onClick={() => go(-1)}
               aria-label="Previous"
-              className="absolute left-3 top-1/2 -translate-y-1/2 rounded-full border border-white/20 bg-black/40 px-3 py-2 text-white hover:bg-black/55"
+              className="absolute left-3 top-1/2 -translate-y-1/2 rounded-full border border-white/20 bg-black/45 px-3 py-2 text-white hover:bg-black/60"
             >
               ‹
             </button>
@@ -82,7 +113,7 @@ function AutoCarousel({
               type="button"
               onClick={() => go(1)}
               aria-label="Next"
-              className="absolute right-3 top-1/2 -translate-y-1/2 rounded-full border border-white/20 bg-black/40 px-3 py-2 text-white hover:bg-black/55"
+              className="absolute right-3 top-1/2 -translate-y-1/2 rounded-full border border-white/20 bg-black/45 px-3 py-2 text-white hover:bg-black/60"
             >
               ›
             </button>
@@ -114,7 +145,7 @@ export default function Features() {
   return (
     <>
       <Head>
-        <title>ForgeTomorrow — How the Forge Works</title>
+        <title>ForgeTomorrow - How the Forge Works</title>
         <meta
           name="description"
           content="ForgeTomorrow is a connected system of capabilities designed to help people build clarity, understand alignment, and move forward with intent."
@@ -153,7 +184,7 @@ export default function Features() {
               { src: "/images/Negotiation_Input.png", alt: "Negotiation Input" },
               { src: "/images/Pivot_&_Growth.png", alt: "Pivot and Growth" },
             ]}
-            intervalMs={3600}
+            intervalMs={9000}
             aspectClass="aspect-[16/9]"
             maxWidthClass="max-w-5xl"
           />
@@ -162,8 +193,7 @@ export default function Features() {
         {/* HAMMER */}
         <section className="mb-32 text-center">
           <h2 className="text-3xl font-bold mb-4">
-            Understanding fit and{" "}
-            <span className="text-[#FF7043]">alignment</span>
+            Understanding fit and <span className="text-[#FF7043]">alignment</span>
           </h2>
           <p className="text-gray-300 max-w-3xl mx-auto mb-10">
             <strong className="text-[#FF7043]">The Forge Hammer</strong> helps
@@ -171,20 +201,19 @@ export default function Features() {
             or guessing what systems want to see.
           </p>
 
-          {/* Shrunk to match cinematic consistency */}
+          {/* Slightly smaller for consistency */}
           <AutoCarousel
             images={[{ src: "/images/Forge_Hammer.png", alt: "Forge Hammer alignment view" }]}
-            intervalMs={4000}
+            intervalMs={9000}
             aspectClass="aspect-[16/9]"
-            maxWidthClass="max-w-3xl"
+            maxWidthClass="max-w-4xl"
           />
         </section>
 
         {/* COACHING */}
         <section className="mb-32 text-center">
           <h2 className="text-3xl font-bold mb-4">
-            Human support and{" "}
-            <span className="text-[#FF7043]">guidance</span>
+            Human support and <span className="text-[#FF7043]">guidance</span>
           </h2>
           <p className="text-gray-300 max-w-3xl mx-auto mb-10">
             Coaches operate inside ForgeTomorrow with transparency,
@@ -197,7 +226,7 @@ export default function Features() {
               { src: "/images/Clients.png", alt: "Client Management" },
               { src: "/images/Feedback.png", alt: "Coach Feedback" },
             ]}
-            intervalMs={3600}
+            intervalMs={9500}
             aspectClass="aspect-[16/9]"
             maxWidthClass="max-w-5xl"
           />
@@ -219,7 +248,7 @@ export default function Features() {
               { src: "/images/Job_Posting_Builder.png", alt: "Job Posting Builder" },
               { src: "/images/Why_This_Candidate.png", alt: "Why This Candidate" },
             ]}
-            intervalMs={4200}
+            intervalMs={9500}
             aspectClass="aspect-[16/9]"
             maxWidthClass="max-w-5xl"
           />
@@ -237,11 +266,12 @@ export default function Features() {
             distortion.
           </p>
 
-          {/* Shrunk to match Forge Hammer */}
+          {/* Smaller to match Hammer */}
           <AutoCarousel
             images={[{ src: "/images/Hearth.png", alt: "The Hearth community" }]}
+            intervalMs={9000}
             aspectClass="aspect-[16/9]"
-            maxWidthClass="max-w-3xl"
+            maxWidthClass="max-w-4xl"
           />
         </section>
 
@@ -261,13 +291,13 @@ export default function Features() {
               { src: "/images/Signal.png", alt: "Signal Messaging" },
               { src: "/images/Recruiter_Messaging.png", alt: "Recruiter Messaging" },
             ]}
-            intervalMs={4200}
+            intervalMs={9500}
             aspectClass="aspect-[16/9]"
             maxWidthClass="max-w-5xl"
           />
         </section>
 
-        {/* WHAT THIS IS NOT (CENTERED) */}
+        {/* WHAT THIS IS NOT */}
         <section className="max-w-3xl mx-auto mb-24 text-center">
           <h2 className="text-3xl font-bold mb-6">What this is not</h2>
           <ul className="space-y-3 text-gray-300 text-lg flex flex-col items-center">
@@ -278,7 +308,7 @@ export default function Features() {
           </ul>
         </section>
 
-        {/* EXIT PATHS (CENTERED) */}
+        {/* EXIT PATHS */}
         <section className="flex flex-col sm:flex-row gap-6 justify-center items-center">
           <Link
             href="/pricing"
