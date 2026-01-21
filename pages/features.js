@@ -1,4 +1,4 @@
-// pages/features.js - SYSTEM-LED FEATURES PAGE (FINAL WITH IMAGE WIRING)
+// pages/features.js - SYSTEM-LED FEATURES PAGE (FINAL WITH IMAGE WIRING + SCROLLING ROWS)
 import Head from "next/head";
 import Image from "next/image";
 import Link from "next/link";
@@ -16,7 +16,7 @@ export default function Features() {
 
       <main className="mx-auto max-w-6xl px-6 py-20 text-gray-100">
         {/* INTRO */}
-        <section className="max-w-3xl mb-24">
+        <section className="max-w-3xl mx-auto mb-24 text-center">
           <h1 className="text-4xl md:text-5xl font-extrabold mb-6">
             How the Forge works as a system
           </h1>
@@ -28,166 +28,202 @@ export default function Features() {
         </section>
 
         {/* ANVIL */}
-        <section className="mb-32">
+        <section className="mb-32 text-center">
           <h2 className="text-3xl font-bold mb-4">
-            Building and refining your career signal
+            Building and refining your career{" "}
+            <span className="text-[#FF7043]">signal</span>
           </h2>
-          <p className="text-gray-300 max-w-3xl mb-10">
-            <strong>The Anvil</strong> is where professionals prepare before
-            pressure is applied. Profile development, negotiation readiness, and
-            growth planning all live here.
+          <p className="text-gray-300 max-w-3xl mx-auto mb-10">
+            <strong className="text-[#FF7043]">The Anvil</strong> is where
+            professionals prepare before pressure is applied. Profile
+            development, negotiation readiness, and growth planning all live
+            here.
           </p>
 
-          <div className="grid md:grid-cols-3 gap-6">
-            <Image
-              src="/images/Profile_Development.png"
-              alt="Profile Development"
-              width={600}
-              height={400}
-              className="rounded-xl"
-            />
-            <Image
-              src="/images/Negotiation_Input.png"
-              alt="Negotiation Input"
-              width={600}
-              height={400}
-              className="rounded-xl"
-            />
-            <Image
-              src="/images/Pivot_&_Growth.png"
-              alt="Pivot and Growth"
-              width={600}
-              height={400}
-              className="rounded-xl"
-            />
+          {/* Desktop grid + Mobile horizontal scroll */}
+          <div className="md:grid md:grid-cols-3 md:gap-6 flex gap-4 overflow-x-auto md:overflow-visible snap-x snap-mandatory pb-3 -mx-6 px-6 md:mx-0 md:px-0 justify-start md:justify-center">
+            {[
+              {
+                src: "/images/Profile_Development.png",
+                alt: "Profile Development",
+              },
+              { src: "/images/Negotiation_Input.png", alt: "Negotiation Input" },
+              { src: "/images/Pivot_&_Growth.png", alt: "Pivot and Growth" },
+            ].map((img) => (
+              <div
+                key={img.src}
+                className="snap-center shrink-0 w-[88%] sm:w-[70%] md:w-auto"
+              >
+                <Image
+                  src={img.src}
+                  alt={img.alt}
+                  width={600}
+                  height={400}
+                  className="rounded-xl w-full h-auto"
+                />
+              </div>
+            ))}
           </div>
         </section>
 
         {/* HAMMER */}
-        <section className="mb-32">
+        <section className="mb-32 text-center">
           <h2 className="text-3xl font-bold mb-4">
-            Understanding fit and alignment
+            Understanding fit and{" "}
+            <span className="text-[#FF7043]">alignment</span>
           </h2>
-          <p className="text-gray-300 max-w-3xl mb-10">
-            <strong>The Forge Hammer</strong> helps users understand alignment
-            with opportunities without keyword theater or guessing what systems
-            want to see.
+          <p className="text-gray-300 max-w-3xl mx-auto mb-10">
+            <strong className="text-[#FF7043]">The Forge Hammer</strong> helps
+            users understand alignment with opportunities without keyword theater
+            or guessing what systems want to see.
           </p>
 
-          <Image
-            src="/images/Forge_Hammer.png"
-            alt="Forge Hammer alignment view"
-            width={1000}
-            height={500}
-            className="rounded-xl"
-          />
+          <div className="flex justify-center">
+            <Image
+              src="/images/Forge_Hammer.png"
+              alt="Forge Hammer alignment view"
+              width={1000}
+              height={500}
+              className="rounded-xl w-full h-auto max-w-4xl"
+            />
+          </div>
         </section>
 
         {/* COACHING */}
-        <section className="mb-32">
+        <section className="mb-32 text-center">
           <h2 className="text-3xl font-bold mb-4">
-            Human support and guidance
+            Human support and{" "}
+            <span className="text-[#FF7043]">guidance</span>
           </h2>
-          <p className="text-gray-300 max-w-3xl mb-10">
+          <p className="text-gray-300 max-w-3xl mx-auto mb-10">
             Coaches operate inside ForgeTomorrow with transparency,
             accountability, and real tooling for outcomes.
           </p>
 
-          <div className="grid md:grid-cols-3 gap-6">
-            <Image
-              src="/images/Agenda.png"
-              alt="Coaching Agenda"
-              width={600}
-              height={400}
-              className="rounded-xl"
-            />
-            <Image
-              src="/images/Clients.png"
-              alt="Client Management"
-              width={600}
-              height={400}
-              className="rounded-xl"
-            />
-            <Image
-              src="/images/Feedback.png"
-              alt="Coach Feedback"
-              width={600}
-              height={400}
-              className="rounded-xl"
-            />
+          {/* Desktop grid + Mobile horizontal scroll */}
+          <div className="md:grid md:grid-cols-3 md:gap-6 flex gap-4 overflow-x-auto md:overflow-visible snap-x snap-mandatory pb-3 -mx-6 px-6 md:mx-0 md:px-0 justify-start md:justify-center">
+            {[
+              { src: "/images/Agenda.png", alt: "Coaching Agenda" },
+              { src: "/images/Clients.png", alt: "Client Management" },
+              { src: "/images/Feedback.png", alt: "Coach Feedback" },
+            ].map((img) => (
+              <div
+                key={img.src}
+                className="snap-center shrink-0 w-[88%] sm:w-[70%] md:w-auto"
+              >
+                <Image
+                  src={img.src}
+                  alt={img.alt}
+                  width={600}
+                  height={400}
+                  className="rounded-xl w-full h-auto"
+                />
+              </div>
+            ))}
           </div>
         </section>
 
         {/* RECRUITERS */}
-        <section className="mb-32">
+        <section className="mb-32 text-center">
           <h2 className="text-3xl font-bold mb-4">
-            Recruiter interaction and transparency
+            Recruiter interaction and{" "}
+            <span className="text-[#FF7043]">transparency</span>
           </h2>
-          <p className="text-gray-300 max-w-3xl mb-10">
+          <p className="text-gray-300 max-w-3xl mx-auto mb-10">
             Recruiters work with explainable tools - not opaque scores or hidden
             filters.
           </p>
 
-          <div className="grid md:grid-cols-2 gap-6">
-            <Image
-              src="/images/Job_Posting_Builder.png"
-              alt="Job Posting Builder"
-              width={700}
-              height={450}
-              className="rounded-xl"
-            />
-            <Image
-              src="/images/Why_This_Candidate.png"
-              alt="Why This Candidate"
-              width={700}
-              height={450}
-              className="rounded-xl"
-            />
+          {/* Desktop grid + Mobile horizontal scroll */}
+          <div className="md:grid md:grid-cols-2 md:gap-6 flex gap-4 overflow-x-auto md:overflow-visible snap-x snap-mandatory pb-3 -mx-6 px-6 md:mx-0 md:px-0 justify-start md:justify-center">
+            {[
+              {
+                src: "/images/Job_Posting_Builder.png",
+                alt: "Job Posting Builder",
+                w: 700,
+                h: 450,
+              },
+              {
+                src: "/images/Why_This_Candidate.png",
+                alt: "Why This Candidate",
+                w: 700,
+                h: 450,
+              },
+            ].map((img) => (
+              <div
+                key={img.src}
+                className="snap-center shrink-0 w-[92%] sm:w-[75%] md:w-auto"
+              >
+                <Image
+                  src={img.src}
+                  alt={img.alt}
+                  width={img.w}
+                  height={img.h}
+                  className="rounded-xl w-full h-auto"
+                />
+              </div>
+            ))}
           </div>
         </section>
 
         {/* COMMUNITY */}
-        <section className="mb-32">
+        <section className="mb-32 text-center">
           <h2 className="text-3xl font-bold mb-4">
-            Community and shared knowledge
+            Community and shared{" "}
+            <span className="text-[#FF7043]">knowledge</span>
           </h2>
-          <p className="text-gray-300 max-w-3xl mb-10">
-            <strong>The Hearth</strong> is where discussion, resources, and
-            collaboration live without algorithmic distortion.
+          <p className="text-gray-300 max-w-3xl mx-auto mb-10">
+            <strong className="text-[#FF7043]">The Hearth</strong> is where
+            discussion, resources, and collaboration live without algorithmic
+            distortion.
           </p>
 
-          <Image
-            src="/images/Hearth.png"
-            alt="The Hearth community"
-            width={1000}
-            height={500}
-            className="rounded-xl"
-          />
+          <div className="flex justify-center">
+            <Image
+              src="/images/Hearth.png"
+              alt="The Hearth community"
+              width={1000}
+              height={500}
+              className="rounded-xl w-full h-auto max-w-4xl"
+            />
+          </div>
         </section>
 
         {/* SIGNAL */}
-        <section className="mb-32">
-          <h2 className="text-3xl font-bold mb-4">Direct communication</h2>
-          <p className="text-gray-300 max-w-3xl mb-10">
-            <strong>The Signal</strong> supports intentional, professional
-            one-to-one communication, separate from feeds or engagement metrics.
+        <section className="mb-32 text-center">
+          <h2 className="text-3xl font-bold mb-4">
+            Direct <span className="text-[#FF7043]">communication</span>
+          </h2>
+          <p className="text-gray-300 max-w-3xl mx-auto mb-10">
+            <strong className="text-[#FF7043]">The Signal</strong> supports
+            intentional, professional one-to-one communication, separate from
+            feeds or engagement metrics.
           </p>
 
-          <div className="grid md:grid-cols-2 gap-6">
-            <Image
-              src="/images/Signal.png"
-              alt="Signal Messaging"
-              width={700}
-              height={450}
-              className="rounded-xl"
-            />
-            <Image
-              src="/images/Recruiter_Messaging.png"
-              alt="Recruiter Messaging"
-              width={700}
-              height={450}
-              className="rounded-xl"
-            />
+          {/* Desktop grid + Mobile horizontal scroll */}
+          <div className="md:grid md:grid-cols-2 md:gap-6 flex gap-4 overflow-x-auto md:overflow-visible snap-x snap-mandatory pb-3 -mx-6 px-6 md:mx-0 md:px-0 justify-start md:justify-center">
+            {[
+              { src: "/images/Signal.png", alt: "Signal Messaging", w: 700, h: 450 },
+              {
+                src: "/images/Recruiter_Messaging.png",
+                alt: "Recruiter Messaging",
+                w: 700,
+                h: 450,
+              },
+            ].map((img) => (
+              <div
+                key={img.src}
+                className="snap-center shrink-0 w-[92%] sm:w-[75%] md:w-auto"
+              >
+                <Image
+                  src={img.src}
+                  alt={img.alt}
+                  width={img.w}
+                  height={img.h}
+                  className="rounded-xl w-full h-auto"
+                />
+              </div>
+            ))}
           </div>
         </section>
 
