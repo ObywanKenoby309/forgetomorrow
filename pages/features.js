@@ -16,6 +16,9 @@ function AutoCarousel({
   );
 
   const [idx, setIdx] = useState(0);
+  const [paused, setPaused] = useState(false);
+  const [progressKey, setProgressKey] = useState(0);
+
   const timerRef = useRef(null);
   const pausedRef = useRef(false);
 
@@ -33,7 +36,18 @@ function AutoCarousel({
     timerRef.current = setInterval(() => {
       if (pausedRef.current) return;
       setIdx((prev) => (prev + 1) % count);
+      setProgressKey((k) => k + 1);
     }, intervalMs);
+  };
+
+  const pauseOn = () => {
+    pausedRef.current = true;
+    setPaused(true);
+  };
+
+  const pauseOff = () => {
+    pausedRef.current = false;
+    setPaused(false);
   };
 
   const go = (delta) => {
@@ -42,6 +56,7 @@ function AutoCarousel({
       const n = prev + delta;
       return (n + count) % count;
     });
+    setProgressKey((k) => k + 1);
   };
 
   // Keep idx valid if image list changes
@@ -58,45 +73,91 @@ function AutoCarousel({
 
   if (!count) return null;
 
+  const active = safeImages[idx];
+
   return (
     <div className={`mx-auto w-full ${maxWidthClass}`}>
       <div
+        aria-live="polite"
         className={`relative w-full overflow-hidden rounded-xl border border-white/10 bg-black/25 ${aspectClass}`}
-        onMouseEnter={() => {
-          pausedRef.current = true;
-        }}
-        onMouseLeave={() => {
-          pausedRef.current = false;
-        }}
-        onPointerDown={() => {
-          pausedRef.current = true;
-        }}
-        onPointerUp={() => {
-          pausedRef.current = false;
-        }}
-        onPointerCancel={() => {
-          pausedRef.current = false;
-        }}
+        onMouseEnter={pauseOn}
+        onMouseLeave={pauseOff}
+        onPointerDown={pauseOn}
+        onPointerUp={pauseOff}
+        onPointerCancel={pauseOff}
       >
+        {/* Ambient glow (subtle, cinematic) */}
+        <div
+          className="pointer-events-none absolute inset-0"
+          style={{
+            background:
+              "radial-gradient(1200px 500px at 50% 70%, rgba(255,112,67,0.18), rgba(0,0,0,0) 60%)",
+            opacity: 0.9,
+            filter: "blur(10px)",
+          }}
+        />
+        <div
+          className={`pointer-events-none absolute inset-0 ft-glow ${paused ? "ft-paused" : ""}`}
+          style={{
+            mixBlendMode: "screen",
+          }}
+          aria-hidden="true"
+        />
+
         {/* Slides */}
-        {safeImages.map((img, i) => (
-          <div
-            key={img.src}
-            className={`absolute inset-0 transition-opacity duration-700 ${
-              i === idx ? "opacity-100" : "opacity-0"
-            }`}
-            aria-hidden={i !== idx}
-          >
-            <Image
-              src={img.src}
-              alt={img.alt}
-              fill
-              sizes="(max-width: 768px) 100vw, 900px"
-              className="object-contain"
-              priority={i === 0}
-            />
-          </div>
-        ))}
+        {safeImages.map((img, i) => {
+          const isActive = i === idx;
+
+          return (
+            <div
+              key={`${img.src}-${i}`}
+              className={`absolute inset-0 transition-opacity duration-700 ${
+                isActive ? "opacity-100" : "opacity-0"
+              }`}
+              aria-hidden={!isActive}
+            >
+              {/* Motion wrapper (Ken Burns + float) */}
+              <div
+                className={`absolute inset-0 ft-motion ${paused ? "ft-paused" : ""} ${
+                  isActive ? "ft-motion-active" : ""
+                }`}
+                style={
+                  isActive
+                    ? {
+                        animationDuration: `${intervalMs}ms`,
+                      }
+                    : undefined
+                }
+              >
+                <Image
+                  src={img.src}
+                  alt={img.alt}
+                  fill
+                  sizes="(max-width: 768px) 100vw, 900px"
+                  className="object-contain"
+                  priority={i === 0}
+                />
+              </div>
+
+              {/* Caption */}
+              <div
+                className={`pointer-events-none absolute left-0 right-0 bottom-0 px-4 pb-4 pt-10 ft-caption ${
+                  isActive ? "ft-caption-active" : ""
+                } ${paused ? "ft-paused" : ""}`}
+              >
+                <div
+                  className="mx-auto max-w-3xl rounded-lg border border-white/10 bg-black/45 px-4 py-3 text-sm text-gray-100"
+                  style={{
+                    backdropFilter: "blur(10px)",
+                    WebkitBackdropFilter: "blur(10px)",
+                  }}
+                >
+                  {img.alt}
+                </div>
+              </div>
+            </div>
+          );
+        })}
 
         {/* Controls */}
         {count > 1 && (
@@ -119,6 +180,20 @@ function AutoCarousel({
             </button>
           </>
         )}
+
+        {/* Progress bar (pauses on hover/press) */}
+        {count > 1 && (
+          <div className="pointer-events-none absolute bottom-0 left-0 right-0 h-1 bg-white/10">
+            <div
+              key={`${progressKey}-${idx}`}
+              className={`h-full ft-progress ${paused ? "ft-paused" : ""}`}
+              style={{
+                animationDuration: `${intervalMs}ms`,
+              }}
+              aria-hidden="true"
+            />
+          </div>
+        )}
       </div>
 
       {/* Dots */}
@@ -126,9 +201,12 @@ function AutoCarousel({
         <div className="mt-4 flex items-center justify-center gap-2">
           {safeImages.map((img, i) => (
             <button
-              key={img.src + i}
+              key={`${img.src}-${i}-dot`}
               type="button"
-              onClick={() => setIdx(i)}
+              onClick={() => {
+                setIdx(i);
+                setProgressKey((k) => k + 1);
+              }}
               aria-label={`Go to slide ${i + 1}`}
               className={`h-2.5 w-2.5 rounded-full transition ${
                 i === idx ? "bg-[#FF7043]" : "bg-white/25 hover:bg-white/40"
@@ -137,6 +215,86 @@ function AutoCarousel({
           ))}
         </div>
       )}
+
+      {/* Local styles for cinematic motion (no libs) */}
+      <style jsx>{`
+        .ft-paused {
+          animation-play-state: paused !important;
+        }
+
+        .ft-glow {
+          opacity: 0.9;
+          background: radial-gradient(
+            700px 360px at 50% 65%,
+            rgba(255, 112, 67, 0.22),
+            rgba(255, 112, 67, 0) 65%
+          );
+          animation: ftGlowPulse 6.5s ease-in-out infinite;
+        }
+
+        .ft-motion {
+          will-change: transform;
+          transform: translate3d(0, 0, 0) scale(1);
+        }
+
+        .ft-motion-active {
+          animation-name: ftKenBurns;
+          animation-timing-function: ease-in-out;
+          animation-fill-mode: both;
+        }
+
+        .ft-caption {
+          opacity: 0;
+          transform: translate3d(0, 10px, 0);
+          transition: opacity 550ms ease, transform 550ms ease;
+        }
+
+        .ft-caption-active {
+          opacity: 1;
+          transform: translate3d(0, 0, 0);
+        }
+
+        .ft-progress {
+          width: 100%;
+          transform-origin: left center;
+          background: rgba(255, 112, 67, 0.9);
+          transform: scaleX(0);
+          animation-name: ftProgress;
+          animation-timing-function: linear;
+          animation-fill-mode: both;
+        }
+
+        @keyframes ftProgress {
+          0% {
+            transform: scaleX(0);
+          }
+          100% {
+            transform: scaleX(1);
+          }
+        }
+
+        @keyframes ftKenBurns {
+          0% {
+            transform: translate3d(0, 0, 0) scale(1);
+          }
+          45% {
+            transform: translate3d(0, -6px, 0) scale(1.03);
+          }
+          100% {
+            transform: translate3d(0, 0, 0) scale(1.02);
+          }
+        }
+
+        @keyframes ftGlowPulse {
+          0%,
+          100% {
+            opacity: 0.55;
+          }
+          50% {
+            opacity: 0.95;
+          }
+        }
+      `}</style>
     </div>
   );
 }
@@ -159,9 +317,9 @@ export default function Features() {
             How the Forge works as a system
           </h1>
           <p className="text-lg text-gray-300 leading-relaxed">
-            ForgeTomorrow is not a collection of disconnected tools. It is a
-            system designed to help people build clarity, understand alignment,
-            and move forward with intent.
+            ForgeTomorrow is not a collection of disconnected tools. It is a system
+            built to help people create clarity, understand alignment, and move
+            forward with intent.
           </p>
         </section>
 
@@ -173,9 +331,8 @@ export default function Features() {
           </h2>
           <p className="text-gray-300 max-w-3xl mx-auto mb-10">
             <strong className="text-[#FF7043]">The Anvil</strong> is where
-            professionals prepare before pressure is applied. Profile
-            development, negotiation readiness, and growth planning all live
-            here.
+            professionals prepare before pressure is applied—through profile
+            development, negotiation readiness, and growth planning.
           </p>
 
           <AutoCarousel
@@ -197,7 +354,7 @@ export default function Features() {
           </h2>
           <p className="text-gray-300 max-w-3xl mx-auto mb-10">
             <strong className="text-[#FF7043]">The Forge Hammer</strong> helps
-            users understand alignment with opportunities without keyword theater
+            users understand alignment with opportunities—without keyword theater
             or guessing what systems want to see.
           </p>
 
@@ -216,8 +373,8 @@ export default function Features() {
             Human support and <span className="text-[#FF7043]">guidance</span>
           </h2>
           <p className="text-gray-300 max-w-3xl mx-auto mb-10">
-            Coaches operate inside ForgeTomorrow with transparency,
-            accountability, and real tooling for outcomes.
+            Coaches operate inside ForgeTomorrow with transparency, accountability,
+            and real tooling focused on outcomes.
           </p>
 
           <AutoCarousel
@@ -239,7 +396,7 @@ export default function Features() {
             <span className="text-[#FF7043]">transparency</span>
           </h2>
           <p className="text-gray-300 max-w-3xl mx-auto mb-10">
-            Recruiters work with explainable tools - not opaque scores or hidden
+            Recruiters work with explainable tools—not opaque scores or hidden
             filters.
           </p>
 
