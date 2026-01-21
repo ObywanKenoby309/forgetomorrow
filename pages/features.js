@@ -1,7 +1,41 @@
-// pages/features.js - SYSTEM-LED FEATURES PAGE (FINAL WITH IMAGE WIRING + SCROLLING ROWS)
+// pages/features.js - SYSTEM-LED FEATURES PAGE (AUTO-SCROLLING IMAGE MARQUEES)
 import Head from "next/head";
 import Image from "next/image";
 import Link from "next/link";
+
+function Marquee({ items, heightClass = "h-[260px]", speedSeconds = 28 }) {
+  // Duplicate items so the loop is seamless
+  const loop = [...items, ...items];
+
+  return (
+    <div className="relative w-full overflow-hidden rounded-2xl border border-white/10 bg-white/5 backdrop-blur-[10px]">
+      {/* subtle edge fade */}
+      <div className="pointer-events-none absolute inset-y-0 left-0 w-16 bg-gradient-to-r from-[#0f0f0f] to-transparent z-10" />
+      <div className="pointer-events-none absolute inset-y-0 right-0 w-16 bg-gradient-to-l from-[#0f0f0f] to-transparent z-10" />
+
+      <div
+        className="flex w-max gap-6 px-6 py-6 ft-marquee"
+        style={{ ["--ft-speed"]: `${speedSeconds}s` }}
+      >
+        {loop.map((src, idx) => (
+          <div
+            key={`${src}-${idx}`}
+            className={`shrink-0 ${heightClass} flex items-center`}
+          >
+            <Image
+              src={src}
+              alt=""
+              width={1200}
+              height={800}
+              className={`rounded-xl ${heightClass} w-auto object-contain shadow-[0_10px_30px_rgba(0,0,0,0.35)]`}
+              priority={idx < items.length}
+            />
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
 
 export default function Features() {
   return (
@@ -15,221 +49,163 @@ export default function Features() {
       </Head>
 
       <main className="mx-auto max-w-6xl px-6 py-20 text-gray-100">
-        {/* INTRO */}
+        {/* INTRO (CENTERED + ORANGE KEYWORDS) */}
         <section className="max-w-3xl mx-auto mb-24 text-center">
           <h1 className="text-4xl md:text-5xl font-extrabold mb-6">
-            How the Forge works as a system
+            How the <span className="text-[#FF7043]">Forge</span> works as a{" "}
+            <span className="text-[#FF7043]">system</span>
           </h1>
           <p className="text-lg text-gray-300 leading-relaxed">
-            ForgeTomorrow is not a collection of disconnected tools. It is a
-            system designed to help people build clarity, understand alignment,
-            and move forward with intent.
+            ForgeTomorrow is not a collection of disconnected tools. It is a{" "}
+            <span className="text-[#FF7043] font-semibold">connected system</span>{" "}
+            designed to help people build{" "}
+            <span className="text-[#FF7043] font-semibold">clarity</span>,
+            understand{" "}
+            <span className="text-[#FF7043] font-semibold">alignment</span>, and
+            move forward with{" "}
+            <span className="text-[#FF7043] font-semibold">intent</span>.
           </p>
         </section>
 
-        {/* ANVIL */}
-        <section className="mb-32 text-center">
-          <h2 className="text-3xl font-bold mb-4">
-            Building and refining your career{" "}
-            <span className="text-[#FF7043]">signal</span>
+        {/* ANVIL (AUTO-SCROLL) */}
+        <section className="mb-32">
+          <h2 className="text-3xl font-bold mb-4 text-center md:text-left">
+            Building and refining your{" "}
+            <span className="text-[#FF7043]">career signal</span>
           </h2>
-          <p className="text-gray-300 max-w-3xl mx-auto mb-10">
+          <p className="text-gray-300 max-w-3xl mb-10 mx-auto md:mx-0 text-center md:text-left">
             <strong className="text-[#FF7043]">The Anvil</strong> is where
             professionals prepare before pressure is applied. Profile
             development, negotiation readiness, and growth planning all live
             here.
           </p>
 
-          {/* Desktop grid + Mobile horizontal scroll */}
-          <div className="md:grid md:grid-cols-3 md:gap-6 flex gap-4 overflow-x-auto md:overflow-visible snap-x snap-mandatory pb-3 -mx-6 px-6 md:mx-0 md:px-0 justify-start md:justify-center">
-            {[
-              {
-                src: "/images/Profile_Development.png",
-                alt: "Profile Development",
-              },
-              { src: "/images/Negotiation_Input.png", alt: "Negotiation Input" },
-              { src: "/images/Pivot_&_Growth.png", alt: "Pivot and Growth" },
-            ].map((img) => (
-              <div
-                key={img.src}
-                className="snap-center shrink-0 w-[88%] sm:w-[70%] md:w-auto"
-              >
-                <Image
-                  src={img.src}
-                  alt={img.alt}
-                  width={600}
-                  height={400}
-                  className="rounded-xl w-full h-auto"
-                />
-              </div>
-            ))}
-          </div>
+          <Marquee
+            items={[
+              "/images/Profile_Development.png",
+              "/images/Negotiation_Input.png",
+              "/images/Pivot_&_Growth.png",
+            ]}
+            heightClass="h-[240px] md:h-[260px]"
+            speedSeconds={26}
+          />
         </section>
 
-        {/* HAMMER */}
-        <section className="mb-32 text-center">
-          <h2 className="text-3xl font-bold mb-4">
-            Understanding fit and{" "}
+        {/* HAMMER (SINGLE IMAGE, CENTERED) */}
+        <section className="mb-32">
+          <h2 className="text-3xl font-bold mb-4 text-center md:text-left">
+            Understanding{" "}
+            <span className="text-[#FF7043]">fit</span> and{" "}
             <span className="text-[#FF7043]">alignment</span>
           </h2>
-          <p className="text-gray-300 max-w-3xl mx-auto mb-10">
+          <p className="text-gray-300 max-w-3xl mb-10 mx-auto md:mx-0 text-center md:text-left">
             <strong className="text-[#FF7043]">The Forge Hammer</strong> helps
-            users understand alignment with opportunities without keyword theater
-            or guessing what systems want to see.
+            users understand alignment with opportunities without keyword
+            theater or guessing what systems want to see.
           </p>
 
-          <div className="flex justify-center">
+          <div className="rounded-2xl border border-white/10 bg-white/5 p-4 md:p-6 backdrop-blur-[10px]">
             <Image
               src="/images/Forge_Hammer.png"
               alt="Forge Hammer alignment view"
-              width={1000}
-              height={500}
-              className="rounded-xl w-full h-auto max-w-4xl"
+              width={1200}
+              height={650}
+              className="rounded-xl w-full h-auto object-contain shadow-[0_10px_30px_rgba(0,0,0,0.35)]"
             />
           </div>
         </section>
 
-        {/* COACHING */}
-        <section className="mb-32 text-center">
-          <h2 className="text-3xl font-bold mb-4">
-            Human support and{" "}
-            <span className="text-[#FF7043]">guidance</span>
+        {/* COACHING (AUTO-SCROLL) */}
+        <section className="mb-32">
+          <h2 className="text-3xl font-bold mb-4 text-center md:text-left">
+            <span className="text-[#FF7043]">Human</span> support and guidance
           </h2>
-          <p className="text-gray-300 max-w-3xl mx-auto mb-10">
-            Coaches operate inside ForgeTomorrow with transparency,
-            accountability, and real tooling for outcomes.
+          <p className="text-gray-300 max-w-3xl mb-10 mx-auto md:mx-0 text-center md:text-left">
+            Coaches operate inside ForgeTomorrow with{" "}
+            <span className="text-[#FF7043] font-semibold">transparency</span>,{" "}
+            <span className="text-[#FF7043] font-semibold">accountability</span>,
+            and real tooling for outcomes.
           </p>
 
-          {/* Desktop grid + Mobile horizontal scroll */}
-          <div className="md:grid md:grid-cols-3 md:gap-6 flex gap-4 overflow-x-auto md:overflow-visible snap-x snap-mandatory pb-3 -mx-6 px-6 md:mx-0 md:px-0 justify-start md:justify-center">
-            {[
-              { src: "/images/Agenda.png", alt: "Coaching Agenda" },
-              { src: "/images/Clients.png", alt: "Client Management" },
-              { src: "/images/Feedback.png", alt: "Coach Feedback" },
-            ].map((img) => (
-              <div
-                key={img.src}
-                className="snap-center shrink-0 w-[88%] sm:w-[70%] md:w-auto"
-              >
-                <Image
-                  src={img.src}
-                  alt={img.alt}
-                  width={600}
-                  height={400}
-                  className="rounded-xl w-full h-auto"
-                />
-              </div>
-            ))}
-          </div>
+          <Marquee
+            items={[
+              "/images/Agenda.png",
+              "/images/Clients.png",
+              "/images/Feedback.png",
+            ]}
+            heightClass="h-[240px] md:h-[260px]"
+            speedSeconds={28}
+          />
         </section>
 
-        {/* RECRUITERS */}
-        <section className="mb-32 text-center">
-          <h2 className="text-3xl font-bold mb-4">
+        {/* RECRUITERS (AUTO-SCROLL) */}
+        <section className="mb-32">
+          <h2 className="text-3xl font-bold mb-4 text-center md:text-left">
             Recruiter interaction and{" "}
             <span className="text-[#FF7043]">transparency</span>
           </h2>
-          <p className="text-gray-300 max-w-3xl mx-auto mb-10">
-            Recruiters work with explainable tools - not opaque scores or hidden
-            filters.
+          <p className="text-gray-300 max-w-3xl mb-10 mx-auto md:mx-0 text-center md:text-left">
+            Recruiters work with{" "}
+            <span className="text-[#FF7043] font-semibold">explainable</span>{" "}
+            tools - not opaque scores or hidden filters.
           </p>
 
-          {/* Desktop grid + Mobile horizontal scroll */}
-          <div className="md:grid md:grid-cols-2 md:gap-6 flex gap-4 overflow-x-auto md:overflow-visible snap-x snap-mandatory pb-3 -mx-6 px-6 md:mx-0 md:px-0 justify-start md:justify-center">
-            {[
-              {
-                src: "/images/Job_Posting_Builder.png",
-                alt: "Job Posting Builder",
-                w: 700,
-                h: 450,
-              },
-              {
-                src: "/images/Why_This_Candidate.png",
-                alt: "Why This Candidate",
-                w: 700,
-                h: 450,
-              },
-            ].map((img) => (
-              <div
-                key={img.src}
-                className="snap-center shrink-0 w-[92%] sm:w-[75%] md:w-auto"
-              >
-                <Image
-                  src={img.src}
-                  alt={img.alt}
-                  width={img.w}
-                  height={img.h}
-                  className="rounded-xl w-full h-auto"
-                />
-              </div>
-            ))}
-          </div>
+          <Marquee
+            items={[
+              "/images/Job_Posting_Builder.png",
+              "/images/Why_This_Candidate.png",
+            ]}
+            heightClass="h-[260px] md:h-[280px]"
+            speedSeconds={30}
+          />
         </section>
 
-        {/* COMMUNITY */}
-        <section className="mb-32 text-center">
-          <h2 className="text-3xl font-bold mb-4">
-            Community and shared{" "}
-            <span className="text-[#FF7043]">knowledge</span>
+        {/* COMMUNITY (SINGLE IMAGE) */}
+        <section className="mb-32">
+          <h2 className="text-3xl font-bold mb-4 text-center md:text-left">
+            Community and{" "}
+            <span className="text-[#FF7043]">shared knowledge</span>
           </h2>
-          <p className="text-gray-300 max-w-3xl mx-auto mb-10">
+          <p className="text-gray-300 max-w-3xl mb-10 mx-auto md:mx-0 text-center md:text-left">
             <strong className="text-[#FF7043]">The Hearth</strong> is where
             discussion, resources, and collaboration live without algorithmic
             distortion.
           </p>
 
-          <div className="flex justify-center">
+          <div className="rounded-2xl border border-white/10 bg-white/5 p-4 md:p-6 backdrop-blur-[10px]">
             <Image
               src="/images/Hearth.png"
               alt="The Hearth community"
-              width={1000}
-              height={500}
-              className="rounded-xl w-full h-auto max-w-4xl"
+              width={1200}
+              height={650}
+              className="rounded-xl w-full h-auto object-contain shadow-[0_10px_30px_rgba(0,0,0,0.35)]"
             />
           </div>
         </section>
 
-        {/* SIGNAL */}
-        <section className="mb-32 text-center">
-          <h2 className="text-3xl font-bold mb-4">
+        {/* SIGNAL (AUTO-SCROLL) */}
+        <section className="mb-32">
+          <h2 className="text-3xl font-bold mb-4 text-center md:text-left">
             Direct <span className="text-[#FF7043]">communication</span>
           </h2>
-          <p className="text-gray-300 max-w-3xl mx-auto mb-10">
+          <p className="text-gray-300 max-w-3xl mb-10 mx-auto md:mx-0 text-center md:text-left">
             <strong className="text-[#FF7043]">The Signal</strong> supports
             intentional, professional one-to-one communication, separate from
             feeds or engagement metrics.
           </p>
 
-          {/* Desktop grid + Mobile horizontal scroll */}
-          <div className="md:grid md:grid-cols-2 md:gap-6 flex gap-4 overflow-x-auto md:overflow-visible snap-x snap-mandatory pb-3 -mx-6 px-6 md:mx-0 md:px-0 justify-start md:justify-center">
-            {[
-              { src: "/images/Signal.png", alt: "Signal Messaging", w: 700, h: 450 },
-              {
-                src: "/images/Recruiter_Messaging.png",
-                alt: "Recruiter Messaging",
-                w: 700,
-                h: 450,
-              },
-            ].map((img) => (
-              <div
-                key={img.src}
-                className="snap-center shrink-0 w-[92%] sm:w-[75%] md:w-auto"
-              >
-                <Image
-                  src={img.src}
-                  alt={img.alt}
-                  width={img.w}
-                  height={img.h}
-                  className="rounded-xl w-full h-auto"
-                />
-              </div>
-            ))}
-          </div>
+          <Marquee
+            items={["/images/Signal.png", "/images/Recruiter_Messaging.png"]}
+            heightClass="h-[260px] md:h-[280px]"
+            speedSeconds={32}
+          />
         </section>
 
         {/* WHAT THIS IS NOT (CENTERED) */}
         <section className="max-w-3xl mx-auto mb-24 text-center">
-          <h2 className="text-3xl font-bold mb-6">What this is not</h2>
+          <h2 className="text-3xl font-bold mb-6">
+            What this is <span className="text-[#FF7043]">not</span>
+          </h2>
           <ul className="space-y-3 text-gray-300 text-lg flex flex-col items-center">
             <li>• Not a feed</li>
             <li>• Not an ATS clone</li>
@@ -242,18 +218,40 @@ export default function Features() {
         <section className="flex flex-col sm:flex-row gap-6 justify-center items-center">
           <Link
             href="/pricing"
-            className="rounded-full bg-[#FF7043] px-8 py-4 font-bold text-white"
+            className="rounded-full bg-[#FF7043] px-8 py-4 font-bold text-white hover:bg-[#f46036] transition"
           >
             Enter the Forge
           </Link>
           <Link
             href="/about"
-            className="rounded-full border border-white/30 px-8 py-4 font-bold text-gray-100"
+            className="rounded-full border border-white/30 px-8 py-4 font-bold text-gray-100 hover:bg-white/10 transition"
           >
             Our Promise
           </Link>
         </section>
       </main>
+
+      {/* Minimal page-scoped CSS for marquee */}
+      <style jsx global>{`
+        .ft-marquee {
+          animation: ftMarqueeScroll var(--ft-speed, 28s) linear infinite;
+          will-change: transform;
+        }
+        @keyframes ftMarqueeScroll {
+          0% {
+            transform: translateX(0);
+          }
+          100% {
+            transform: translateX(-50%);
+          }
+        }
+        @media (prefers-reduced-motion: reduce) {
+          .ft-marquee {
+            animation: none !important;
+            transform: none !important;
+          }
+        }
+      `}</style>
     </>
   );
 }
