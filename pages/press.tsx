@@ -18,13 +18,28 @@ export default function PressKit() {
         <div className="max-w-4xl mx-auto text-center">
           <h1
             id="press-kit-heading"
-            className="text-6xl font-black text-orange-600 mb-8"
+            className="text-6xl font-black text-orange-600 mb-6"
           >
             Press Kit
           </h1>
-          <p className="text-2xl text-gray-700 mb-16">
+
+          <p className="text-2xl text-gray-700 mb-8">
             Logos, brand colors, and contact info for media &amp; partners.
           </p>
+
+          {/* Full Press Kit ZIP */}
+          <div className="mb-16 flex flex-col items-center gap-3">
+            <Link
+              href="/press/ForgeTomorrow-Press-Kit.zip"
+              download
+              className="inline-flex items-center justify-center rounded-full bg-orange-600 px-10 py-4 text-lg font-black text-white shadow hover:bg-orange-700 focus:outline-none focus:ring-4 focus:ring-orange-200"
+            >
+              Download Full Press Kit (ZIP)
+            </Link>
+            <p className="text-sm text-gray-500">
+              Includes logos, brand assets, founder + company info, and product screenshots.
+            </p>
+          </div>
 
           <div className="grid md:grid-cols-3 gap-12">
             {/* Color logo */}
@@ -88,6 +103,17 @@ export default function PressKit() {
             >
               eric.james@forgetomorrow.com
             </a>
+
+            {/* Secondary ZIP link (optional but useful) */}
+            <div className="mt-8">
+              <Link
+                href="/press/ForgeTomorrow-Press-Kit.zip"
+                download
+                className="inline-flex items-center justify-center rounded-full border border-orange-300 px-8 py-3 text-base font-bold text-orange-700 hover:bg-orange-50"
+              >
+                Download Full Press Kit (ZIP)
+              </Link>
+            </div>
           </div>
         </div>
       </main>
