@@ -1,5 +1,6 @@
 // components/recruiter/JobTable.js
-import { useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
+import { createPortal } from "react-dom";
 
 const statusClass = (s) =>
   ({
@@ -69,31 +70,99 @@ export default function JobTable({
 
   const isTemplates = mode === "templates";
 
-  const ActionMenu = ({ job }) => {
-    const detailsRef = useRef(null);
+  function ActionMenu({ job }) {
+    const buttonRef = useRef(null);
+    const menuRef = useRef(null);
+
+    const [open, setOpen] = useState(false);
+    const [pos, setPos] = useState({ top: 0, left: 0, width: 176 });
+    const [mounted, setMounted] = useState(false);
+
     const status = job.status || "Unknown";
     const canClose = !isTemplates && status !== "Closed";
     const canDeleteTemplate = isTemplates;
 
-    const closeMenu = () => {
-      if (detailsRef.current) detailsRef.current.open = false;
+    useEffect(() => setMounted(true), []);
+
+    const computePosition = () => {
+      const el = buttonRef.current;
+      if (!el) return;
+
+      const rect = el.getBoundingClientRect();
+      const menuWidth = 176; // matches w-44
+      const gap = 8;
+
+      // Default: open downward, right-aligned to button
+      let top = rect.bottom + gap;
+      let left = rect.right - menuWidth;
+
+      // Keep on-screen (horizontal)
+      const pad = 8;
+      if (left < pad) left = pad;
+      if (left + menuWidth > window.innerWidth - pad) {
+        left = window.innerWidth - pad - menuWidth;
+      }
+
+      // Vertical: if it would overflow bottom, open upward
+      const estimatedMenuHeight = canDeleteTemplate ? 5 * 36 : 4 * 36; // rough
+      if (top + estimatedMenuHeight > window.innerHeight - pad) {
+        top = rect.top - gap - estimatedMenuHeight;
+      }
+      if (top < pad) top = pad;
+
+      setPos({ top, left, width: menuWidth });
     };
+
+    useEffect(() => {
+      if (!open) return;
+
+      computePosition();
+
+      const onResize = () => computePosition();
+      window.addEventListener("resize", onResize);
+      window.addEventListener("scroll", onResize, true);
+
+      const onKey = (e) => {
+        if (e.key === "Escape") setOpen(false);
+      };
+      window.addEventListener("keydown", onKey);
+
+      const onDown = (e) => {
+        const btn = buttonRef.current;
+        const menu = menuRef.current;
+        if (!btn || !menu) return;
+
+        if (btn.contains(e.target)) return;
+        if (menu.contains(e.target)) return;
+
+        setOpen(false);
+      };
+      document.addEventListener("mousedown", onDown);
+
+      return () => {
+        window.removeEventListener("resize", onResize);
+        window.removeEventListener("scroll", onResize, true);
+        window.removeEventListener("keydown", onKey);
+        document.removeEventListener("mousedown", onDown);
+      };
+      // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [open]);
 
     const run = (fn) => {
       try {
         fn?.();
       } finally {
-        closeMenu();
+        setOpen(false);
       }
     };
 
-    return (
-      <details ref={detailsRef} className="relative inline-block">
-        <summary className="list-none cursor-pointer select-none inline-flex items-center gap-1 px-2.5 py-1 rounded border hover:bg-slate-50 text-xs">
-          Actions <span className="text-slate-500">▾</span>
-        </summary>
-
-        <div className="absolute right-0 mt-2 w-44 rounded-md border bg-white shadow-lg z-20 overflow-hidden">
+    const menu = (
+      <div
+        ref={menuRef}
+        className="fixed z-[9999]"
+        style={{ top: pos.top, left: pos.left, width: pos.width }}
+      >
+        <div className="rounded-md border bg-white shadow-lg overflow-hidden">
           {isTemplates && (
             <button
               type="button"
@@ -143,9 +212,28 @@ export default function JobTable({
             </>
           )}
         </div>
-      </details>
+      </div>
     );
-  };
+
+    return (
+      <>
+        <button
+          ref={buttonRef}
+          type="button"
+          onClick={() => {
+            setOpen((v) => !v);
+            // if opening, compute immediately for a snappy feel
+            if (!open) setTimeout(() => computePosition(), 0);
+          }}
+          className="inline-flex items-center gap-1 px-2.5 py-1 rounded border hover:bg-slate-50 text-xs"
+        >
+          Actions <span className="text-slate-500">▾</span>
+        </button>
+
+        {mounted && open ? createPortal(menu, document.body) : null}
+      </>
+    );
+  }
 
   return (
     <div className="rounded-lg border bg-white">
