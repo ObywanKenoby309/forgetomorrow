@@ -227,7 +227,7 @@ export default async function handler(req, res) {
         isTemplate = false,
         templateName = null,
 
-        // ✅ NEW: allow overwrite when saving template by same name
+        // allow overwrite when saving template by same name
         overwrite = false,
       } = req.body || {};
 
@@ -251,7 +251,7 @@ export default async function handler(req, res) {
         });
       }
 
-      // ✅ NEW: if templateName already exists in this org, require overwrite=true
+      // if templateName already exists in this org, require overwrite=true
       if (templateFlag) {
         const existingTpl = await prisma.job.findFirst({
           where: {
@@ -292,7 +292,7 @@ export default async function handler(req, res) {
               // keep org scope enforced
               accountKey: recruiterAccountKey,
 
-              // treat saver as last editor (optional; matches your "file save" expectation)
+              // treat saver as last editor
               userId: effectiveUserId,
             },
           });
@@ -402,7 +402,42 @@ export default async function handler(req, res) {
       return res.status(200).json({ job: shapeJob(updated) });
     }
 
-    res.setHeader("Allow", "GET,POST,PATCH");
+    // ✅ NEW: DELETE for templates (org-scoped; templates only)
+    if (req.method === "DELETE") {
+      const { id } = req.body || {};
+
+      if (!id) {
+        return res.status(400).json({ error: "Job id is required." });
+      }
+
+      const existing = await prisma.job.findFirst({
+        where: { id: Number(id), accountKey: recruiterAccountKey },
+        select: { id: true, isTemplate: true, templateName: true, title: true },
+      });
+
+      if (!existing) {
+        return res.status(404).json({
+          error: "Job not found or not in this recruiter account.",
+        });
+      }
+
+      if (!existing.isTemplate) {
+        return res.status(400).json({
+          error: "Only templates can be deleted from this view.",
+        });
+      }
+
+      await prisma.job.delete({
+        where: { id: existing.id },
+      });
+
+      return res.status(200).json({
+        ok: true,
+        deletedId: existing.id,
+      });
+    }
+
+    res.setHeader("Allow", "GET,POST,PATCH,DELETE");
     return res.status(405).json({ error: "Method not allowed" });
   } catch (err) {
     console.error("[api/recruiter/job-postings] error:", err);

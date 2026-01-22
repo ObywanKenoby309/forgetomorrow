@@ -42,6 +42,7 @@ function Body({
   onEdit,
   onView,
   onClose,
+  onDeleteTemplate,
   viewMode,
   onChangeViewMode,
   onUseTemplate,
@@ -103,7 +104,9 @@ function Body({
           </button>
 
           <div className="ml-auto text-xs text-slate-500">
-            {isTemplates ? "Reusable role templates" : "Active and draft job postings"}
+            {isTemplates
+              ? "Reusable role templates"
+              : "Active and draft job postings"}
           </div>
         </div>
 
@@ -114,6 +117,8 @@ function Body({
           onView={onView}
           onClose={onClose}
           onUseTemplate={onUseTemplate}
+          // ✅ NEW: templates-only delete action (button shows only in templates mode)
+          onDelete={onDeleteTemplate}
         />
 
         {loading && (
@@ -128,8 +133,8 @@ function Body({
         <div className="rounded-lg border bg-white p-4 text-sm">
           <div className="font-medium mb-2">Job Performance (Preview)</div>
           <div className="text-slate-500">
-            This area will pull per-job funnel metrics from Recruiter Analytics in
-            a later pass.
+            This area will pull per-job funnel metrics from Recruiter Analytics
+            in a later pass.
           </div>
         </div>
       )}
@@ -158,7 +163,9 @@ export default function JobPostingsPage() {
       setLoading(true);
       setLoadError(null);
 
-      const res = await fetch(`/api/recruiter/job-postings?kind=${encodeURIComponent(kind)}`);
+      const res = await fetch(
+        `/api/recruiter/job-postings?kind=${encodeURIComponent(kind)}`
+      );
       let json = null;
 
       try {
@@ -308,6 +315,42 @@ export default function JobPostingsPage() {
     }
   };
 
+  // ✅ NEW: Delete action for templates (UI now supports it; API needs DELETE handler)
+  const handleDeleteTemplate = async (job) => {
+    if (!job?.id) return;
+
+    // defense: only allow delete for templates (UI already scopes it)
+    if (!job?.isTemplate) return;
+
+    const name = job.templateName || job.title || "this template";
+
+    const ok = window.confirm(
+      `Delete "${name}"? This cannot be undone.`
+    );
+    if (!ok) return;
+
+    try {
+      const res = await fetch("/api/recruiter/job-postings", {
+        method: "DELETE",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ id: job.id }),
+      });
+
+      if (!res.ok) {
+        const errJson = await res.json().catch(() => ({}));
+        throw new Error(errJson.error || `HTTP ${res.status}`);
+      }
+
+      // remove from current list immediately
+      setRows((prev) => prev.filter((j) => j.id !== job.id));
+    } catch (err) {
+      console.error("[JobPostings] delete template error", err);
+      alert(
+        "We couldn't delete this template. Please refresh and try again, and contact Support if the issue continues."
+      );
+    }
+  };
+
   const handleModalClose = () => {
     setOpen(false);
     setEditingJob(null);
@@ -336,6 +379,7 @@ export default function JobPostingsPage() {
           onEdit={handleEdit}
           onView={handleView}
           onClose={handleCloseJob}
+          onDeleteTemplate={handleDeleteTemplate}
           viewMode={viewMode}
           onChangeViewMode={handleChangeViewMode}
           onUseTemplate={handleUseTemplate}

@@ -1,5 +1,5 @@
 // components/recruiter/JobTable.js
-import { useMemo, useState } from "react";
+import { useMemo, useRef, useState } from "react";
 
 const statusClass = (s) =>
   ({
@@ -24,6 +24,9 @@ export default function JobTable({
   onView,
   onClose,
   onUseTemplate,
+
+  // used only for templates (delete action)
+  onDelete,
 }) {
   const [sort, setSort] = useState({ key: "title", dir: "asc" });
   const [filter, setFilter] = useState({ status: "", urgent: false });
@@ -65,6 +68,84 @@ export default function JobTable({
   );
 
   const isTemplates = mode === "templates";
+
+  const ActionMenu = ({ job }) => {
+    const detailsRef = useRef(null);
+    const status = job.status || "Unknown";
+    const canClose = !isTemplates && status !== "Closed";
+    const canDeleteTemplate = isTemplates;
+
+    const closeMenu = () => {
+      if (detailsRef.current) detailsRef.current.open = false;
+    };
+
+    const run = (fn) => {
+      try {
+        fn?.();
+      } finally {
+        closeMenu();
+      }
+    };
+
+    return (
+      <details ref={detailsRef} className="relative inline-block">
+        <summary className="list-none cursor-pointer select-none inline-flex items-center gap-1 px-2.5 py-1 rounded border hover:bg-slate-50 text-xs">
+          Actions <span className="text-slate-500">▾</span>
+        </summary>
+
+        <div className="absolute right-0 mt-2 w-44 rounded-md border bg-white shadow-lg z-20 overflow-hidden">
+          {isTemplates && (
+            <button
+              type="button"
+              onClick={() => run(() => onUseTemplate?.(job))}
+              className="w-full text-left px-3 py-2 text-xs hover:bg-slate-50 text-[#FF7043]"
+            >
+              Use template
+            </button>
+          )}
+
+          <button
+            type="button"
+            onClick={() => run(() => onEdit?.(job))}
+            className="w-full text-left px-3 py-2 text-xs hover:bg-slate-50"
+          >
+            Edit
+          </button>
+
+          <button
+            type="button"
+            onClick={() => run(() => onView?.(job))}
+            className="w-full text-left px-3 py-2 text-xs hover:bg-slate-50"
+          >
+            View
+          </button>
+
+          {canClose && (
+            <button
+              type="button"
+              onClick={() => run(() => onClose?.(job))}
+              className="w-full text-left px-3 py-2 text-xs hover:bg-slate-50 text-red-700"
+            >
+              Close posting
+            </button>
+          )}
+
+          {canDeleteTemplate && (
+            <>
+              <div className="h-px bg-slate-100" />
+              <button
+                type="button"
+                onClick={() => run(() => onDelete?.(job))}
+                className="w-full text-left px-3 py-2 text-xs hover:bg-slate-50 text-red-700"
+              >
+                Delete template
+              </button>
+            </>
+          )}
+        </div>
+      </details>
+    );
+  };
 
   return (
     <div className="rounded-lg border bg-white">
@@ -115,7 +196,7 @@ export default function JobTable({
             <div key={j.id} className="p-4 space-y-2">
               <div className="flex flex-col gap-1 min-w-0">
                 <div className="font-semibold break-words">
-                  {isTemplates ? (j.templateName || j.title) : j.title}
+                  {isTemplates ? j.templateName || j.title : j.title}
                 </div>
                 <div className="text-xs text-slate-600 break-words">
                   {j.company || "—"} • {j.location || "—"}
@@ -140,35 +221,8 @@ export default function JobTable({
                 </div>
               )}
 
-              <div className="flex flex-wrap gap-3 pt-1">
-                {isTemplates && (
-                  <button
-                    onClick={() => onUseTemplate?.(j)}
-                    className="text-xs underline text-[#FF7043]"
-                  >
-                    Use
-                  </button>
-                )}
-                <button
-                  onClick={() => onEdit?.(j)}
-                  className="text-xs underline text-blue-700"
-                >
-                  Edit
-                </button>
-                <button
-                  onClick={() => onView?.(j)}
-                  className="text-xs underline text-blue-700"
-                >
-                  View
-                </button>
-                {!isTemplates && status !== "Closed" && (
-                  <button
-                    onClick={() => onClose?.(j)}
-                    className="text-xs underline text-red-700"
-                  >
-                    Close
-                  </button>
-                )}
+              <div className="pt-1">
+                <ActionMenu job={j} />
               </div>
             </div>
           );
@@ -187,7 +241,10 @@ export default function JobTable({
           <thead>
             <tr className="border-b bg-slate-50 text-left">
               <HeaderCell label="Company" keyName="company" />
-              <HeaderCell label={isTemplates ? "Template" : "Title"} keyName={isTemplates ? "templateName" : "title"} />
+              <HeaderCell
+                label={isTemplates ? "Template" : "Title"}
+                keyName={isTemplates ? "templateName" : "title"}
+              />
               <th className="px-4 py-3">Worksite</th>
               <th className="px-4 py-3">Location</th>
               <HeaderCell label="Status" keyName="status" />
@@ -204,7 +261,9 @@ export default function JobTable({
                 <tr key={j.id} className="border-b hover:bg-slate-50">
                   <td className="px-4 py-3 font-medium">{j.company || "—"}</td>
                   <td className="px-4 py-3">
-                    {isTemplates ? (j.templateName || j.title || "—") : (j.title || "—")}
+                    {isTemplates
+                      ? j.templateName || j.title || "—"
+                      : j.title || "—"}
                   </td>
                   <td className="px-4 py-3">{j.worksite || "—"}</td>
                   <td className="px-4 py-3">{j.location || "—"}</td>
@@ -221,45 +280,28 @@ export default function JobTable({
                     {!isTemplates ? urgencyBadge(Boolean(j.urgent)) : "—"}
                   </td>
                   <td className="px-4 py-3 text-center">
-                    {!isTemplates ? (j.views ?? "—") : "—"}
+                    {!isTemplates ? j.views ?? "—" : "—"}
                   </td>
                   <td className="px-4 py-3 text-center">
-                    {!isTemplates ? (j.applications ?? "—") : "—"}
+                    {!isTemplates ? j.applications ?? "—" : "—"}
                   </td>
                   <td className="px-4 py-3 text-xs">
-                    {isTemplates && (
-                      <>
-                        <button
-                          onClick={() => onUseTemplate?.(j)}
-                          className="underline text-[#FF7043]"
-                        >
-                          Use
-                        </button>
-                        <span className="mx-1 text-slate-300">|</span>
-                      </>
-                    )}
-                    <button onClick={() => onEdit?.(j)} className="underline">
-                      Edit
-                    </button>
-                    <span className="mx-1 text-slate-300">|</span>
-                    <button onClick={() => onView?.(j)} className="underline">
-                      View
-                    </button>
-                    {!isTemplates && status !== "Closed" && (
-                      <>
-                        <span className="mx-1 text-slate-300">|</span>
-                        <button
-                          onClick={() => onClose?.(j)}
-                          className="underline text-red-700"
-                        >
-                          Close
-                        </button>
-                      </>
-                    )}
+                    <ActionMenu job={j} />
                   </td>
                 </tr>
               );
             })}
+
+            {filteredAndSorted.length === 0 && (
+              <tr>
+                <td
+                  colSpan={9}
+                  className="px-4 py-10 text-center text-sm text-slate-500"
+                >
+                  No items match your filters.
+                </td>
+              </tr>
+            )}
           </tbody>
         </table>
       </div>
