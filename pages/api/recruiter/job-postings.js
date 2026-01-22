@@ -1,18 +1,19 @@
 // pages/api/recruiter/job-postings.js
-
 import { getServerSession } from "next-auth/next";
 import { authOptions } from "../auth/[...nextauth]";
 import { prisma } from "@/lib/prisma";
 import jwt from "jsonwebtoken";
 
-const JWT_SECRET = process.env.NEXTAUTH_SECRET || "dev-secret-change-in-production";
+const JWT_SECRET =
+  process.env.NEXTAUTH_SECRET || "dev-secret-change-in-production";
 
 function readCookie(req, name) {
   try {
     const raw = req.headers?.cookie || "";
     const parts = raw.split(";").map((p) => p.trim());
     for (const p of parts) {
-      if (p.startsWith(name + "=")) return decodeURIComponent(p.slice(name.length + 1));
+      if (p.startsWith(name + "="))
+        return decodeURIComponent(p.slice(name.length + 1));
     }
     return "";
   } catch {
@@ -21,7 +22,9 @@ function readCookie(req, name) {
 }
 
 async function resolveEffectiveRecruiter(req, session) {
-  const sessionEmail = String(session?.user?.email || "").trim().toLowerCase();
+  const sessionEmail = String(session?.user?.email || "")
+    .trim()
+    .toLowerCase();
   if (!sessionEmail) return null;
 
   const isPlatformAdmin = !!session?.user?.isPlatformAdmin;
@@ -107,10 +110,10 @@ function buildSeekerMeta(job) {
   return { seekerVisible, allowNewApplications, seekerBanner };
 }
 
-function shapeJob(job) {
+function shapeJob(job, { lite = false } = {}) {
   const seekerMeta = buildSeekerMeta(job);
 
-  return {
+  const base = {
     id: job.id,
     title: job.title,
     company: job.company,
@@ -127,11 +130,36 @@ function shapeJob(job) {
     userId: job.userId,
     createdAt: job.createdAt,
 
+    // template support
+    isTemplate: Boolean(job.isTemplate),
+    templateName: job.templateName || null,
+
     // These may be undefined on this model; that’s fine.
     origin: job.origin,
     source: job.source,
     publishedat: job.publishedat,
+  };
 
+  if (lite) {
+    // keep it small for dropdowns
+    return {
+      id: base.id,
+      title: base.title,
+      company: base.company,
+      worksite: base.worksite,
+      location: base.location,
+      type: base.type,
+      compensation: base.compensation,
+      description: base.description,
+      status: base.status,
+      isTemplate: base.isTemplate,
+      templateName: base.templateName,
+      createdAt: base.createdAt,
+    };
+  }
+
+  return {
+    ...base,
     seekerVisible: seekerMeta.seekerVisible,
     allowNewApplications: seekerMeta.allowNewApplications,
     seekerBanner: seekerMeta.seekerBanner,
@@ -148,7 +176,7 @@ export default async function handler(req, res) {
   const session = await requireRecruiterSession(req, res);
   if (!session) return;
 
-  // ✅ Impersonation-aware effective user + org key (NO FALLBACK)
+  // Impersonation-aware effective user + org key (NO FALLBACK)
   const effective = await resolveEffectiveRecruiter(req, session);
 
   if (!effective?.id) {
@@ -163,13 +191,23 @@ export default async function handler(req, res) {
 
   try {
     if (req.method === "GET") {
-      // ✅ Org scope: ALL jobs for this org (not just creator)
+      const kind = String(req.query?.kind || "jobs"); // "jobs" | "templates" | "all"
+      const lite = String(req.query?.lite || "") === "1";
+
+      const where = { accountKey: recruiterAccountKey };
+
+      if (kind === "templates") {
+        where.isTemplate = true;
+      } else if (kind === "jobs") {
+        where.isTemplate = false;
+      } // "all" returns everything
+
       const jobs = await prisma.job.findMany({
-        where: { accountKey: recruiterAccountKey },
+        where,
         orderBy: { createdAt: "desc" },
       });
 
-      const rows = jobs.map(shapeJob);
+      const rows = jobs.map((j) => shapeJob(j, { lite }));
       return res.status(200).json({ jobs: rows });
     }
 
@@ -184,13 +222,83 @@ export default async function handler(req, res) {
         description,
         status = "Draft",
         urgent = false,
+
+        // template support
+        isTemplate = false,
+        templateName = null,
+
+        // ✅ NEW: allow overwrite when saving template by same name
+        overwrite = false,
       } = req.body || {};
+
+      const templateFlag = Boolean(isTemplate);
+      const templateNameClean = safeText(templateName, "").trim();
+      const overwriteFlag =
+        overwrite === true ||
+        String(overwrite || "").toLowerCase() === "true" ||
+        String(overwrite || "") === "1";
 
       if (!title || !company || !worksite || !location || !description) {
         return res.status(400).json({
           error:
             "Missing required fields (title, company, worksite, location, description).",
         });
+      }
+
+      if (templateFlag && !templateNameClean) {
+        return res.status(400).json({
+          error: "Template name is required when saving a template.",
+        });
+      }
+
+      // ✅ NEW: if templateName already exists in this org, require overwrite=true
+      if (templateFlag) {
+        const existingTpl = await prisma.job.findFirst({
+          where: {
+            accountKey: recruiterAccountKey,
+            isTemplate: true,
+            templateName: templateNameClean,
+          },
+          select: { id: true },
+        });
+
+        if (existingTpl?.id) {
+          if (!overwriteFlag) {
+            return res.status(409).json({
+              error:
+                "A template with this name already exists. Confirm overwrite to replace it.",
+              existingTemplateId: existingTpl.id,
+            });
+          }
+
+          const updatedTpl = await prisma.job.update({
+            where: { id: existingTpl.id },
+            data: {
+              title: safeText(title),
+              company: safeText(company),
+              worksite: safeText(worksite),
+              location: safeText(location),
+              type: safeText(type, ""),
+              compensation: safeText(compensation, ""),
+              description: safeText(description),
+
+              // templates are always Draft for safety
+              status: "Draft",
+              urgent: false,
+
+              isTemplate: true,
+              templateName: templateNameClean,
+
+              // keep org scope enforced
+              accountKey: recruiterAccountKey,
+
+              // treat saver as last editor (optional; matches your "file save" expectation)
+              userId: effectiveUserId,
+            },
+          });
+
+          return res.status(200).json({ job: shapeJob(updatedTpl) });
+        }
       }
 
       const job = await prisma.job.create({
@@ -202,14 +310,20 @@ export default async function handler(req, res) {
           type: safeText(type, ""),
           compensation: safeText(compensation, ""),
           description: safeText(description),
-          status,
-          urgent: Boolean(urgent),
 
-          // ✅ creator is the effective user (impersonated target if active)
+          // templates are always Draft for safety
+          status: templateFlag ? "Draft" : status,
+          urgent: templateFlag ? false : Boolean(urgent),
+
+          // creator is the effective user (impersonated target if active)
           userId: effectiveUserId,
 
-          // ✅ ALWAYS enforce org scope from DB user (ignore session/body)
+          // ALWAYS enforce org scope from DB user (ignore session/body)
           accountKey: recruiterAccountKey,
+
+          // template columns
+          isTemplate: templateFlag,
+          templateName: templateFlag ? templateNameClean : null,
         },
       });
 
@@ -228,13 +342,16 @@ export default async function handler(req, res) {
         type,
         compensation,
         description,
+
+        // template support
+        templateName,
       } = req.body || {};
 
       if (!id) {
         return res.status(400).json({ error: "Job id is required." });
       }
 
-      // ✅ Ensure job is in THIS org (not just owned by user)
+      // Ensure job is in THIS org (not just owned by user)
       const existing = await prisma.job.findFirst({
         where: { id: Number(id), accountKey: recruiterAccountKey },
       });
@@ -265,8 +382,20 @@ export default async function handler(req, res) {
             description !== undefined
               ? safeText(description)
               : existing.description,
-          status: nextStatus,
-          urgent: typeof urgent === "boolean" ? urgent : existing.urgent,
+
+          status: existing.isTemplate ? "Draft" : nextStatus,
+          urgent:
+            existing.isTemplate
+              ? false
+              : typeof urgent === "boolean"
+              ? urgent
+              : existing.urgent,
+
+          // allow renaming template (safe)
+          templateName:
+            templateName !== undefined
+              ? safeText(templateName, "").trim() || null
+              : existing.templateName,
         },
       });
 

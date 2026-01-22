@@ -17,7 +17,14 @@ const urgencyBadge = (urgent) =>
     </span>
   ) : null;
 
-export default function JobTable({ jobs = [], onEdit, onView, onClose }) {
+export default function JobTable({
+  jobs = [],
+  mode = "jobs", // "jobs" | "templates"
+  onEdit,
+  onView,
+  onClose,
+  onUseTemplate,
+}) {
   const [sort, setSort] = useState({ key: "title", dir: "asc" });
   const [filter, setFilter] = useState({ status: "", urgent: false });
 
@@ -40,7 +47,9 @@ export default function JobTable({ jobs = [], onEdit, onView, onClose }) {
 
   const setSortKey = (key) =>
     setSort((s) =>
-      s.key === key ? { key, dir: s.dir === "asc" ? "desc" : "asc" } : { key, dir: "asc" }
+      s.key === key
+        ? { key, dir: s.dir === "asc" ? "desc" : "asc" }
+        : { key, dir: "asc" }
     );
 
   const HeaderCell = ({ label, keyName }) => (
@@ -54,6 +63,8 @@ export default function JobTable({ jobs = [], onEdit, onView, onClose }) {
       </span>
     </th>
   );
+
+  const isTemplates = mode === "templates";
 
   return (
     <div className="rounded-lg border bg-white">
@@ -74,15 +85,19 @@ export default function JobTable({ jobs = [], onEdit, onView, onClose }) {
           </select>
         </div>
 
-        <label className="flex items-center gap-1 cursor-pointer">
-          <input
-            type="checkbox"
-            checked={filter.urgent}
-            onChange={(e) => setFilter({ ...filter, urgent: e.target.checked })}
-            className="rounded"
-          />
-          <span className="text-red-700 font-medium">URGENT only</span>
-        </label>
+        {!isTemplates && (
+          <label className="flex items-center gap-1 cursor-pointer">
+            <input
+              type="checkbox"
+              checked={filter.urgent}
+              onChange={(e) =>
+                setFilter({ ...filter, urgent: e.target.checked })
+              }
+              className="rounded"
+            />
+            <span className="text-red-700 font-medium">URGENT only</span>
+          </label>
+        )}
 
         <button
           onClick={() => setFilter({ status: "", urgent: false })}
@@ -92,14 +107,16 @@ export default function JobTable({ jobs = [], onEdit, onView, onClose }) {
         </button>
       </div>
 
-      {/* ───────────────── MOBILE CARDS ───────────────── */}
+      {/* MOBILE CARDS */}
       <div className="sm:hidden divide-y">
         {filteredAndSorted.map((j) => {
           const status = j.status || "Unknown";
           return (
             <div key={j.id} className="p-4 space-y-2">
               <div className="flex flex-col gap-1 min-w-0">
-                <div className="font-semibold break-words">{j.title}</div>
+                <div className="font-semibold break-words">
+                  {isTemplates ? (j.templateName || j.title) : j.title}
+                </div>
                 <div className="text-xs text-slate-600 break-words">
                   {j.company || "—"} • {j.location || "—"}
                 </div>
@@ -113,15 +130,25 @@ export default function JobTable({ jobs = [], onEdit, onView, onClose }) {
                 >
                   {status}
                 </span>
-                {urgencyBadge(Boolean(j.urgent))}
+                {!isTemplates && urgencyBadge(Boolean(j.urgent))}
               </div>
 
-              <div className="text-xs text-slate-600 flex gap-4">
-                <span>{j.views ?? 0} views</span>
-                <span>{j.applications ?? 0} apps</span>
-              </div>
+              {!isTemplates && (
+                <div className="text-xs text-slate-600 flex gap-4">
+                  <span>{j.views ?? 0} views</span>
+                  <span>{j.applications ?? 0} apps</span>
+                </div>
+              )}
 
               <div className="flex flex-wrap gap-3 pt-1">
+                {isTemplates && (
+                  <button
+                    onClick={() => onUseTemplate?.(j)}
+                    className="text-xs underline text-[#FF7043]"
+                  >
+                    Use
+                  </button>
+                )}
                 <button
                   onClick={() => onEdit?.(j)}
                   className="text-xs underline text-blue-700"
@@ -134,7 +161,7 @@ export default function JobTable({ jobs = [], onEdit, onView, onClose }) {
                 >
                   View
                 </button>
-                {status !== "Closed" && (
+                {!isTemplates && status !== "Closed" && (
                   <button
                     onClick={() => onClose?.(j)}
                     className="text-xs underline text-red-700"
@@ -149,18 +176,18 @@ export default function JobTable({ jobs = [], onEdit, onView, onClose }) {
 
         {filteredAndSorted.length === 0 && (
           <div className="p-6 text-center text-sm text-slate-500">
-            No jobs match your filters.
+            No items match your filters.
           </div>
         )}
       </div>
 
-      {/* ───────────────── DESKTOP TABLE ───────────────── */}
+      {/* DESKTOP TABLE */}
       <div className="hidden sm:block overflow-x-auto">
         <table className="min-w-full text-sm">
           <thead>
             <tr className="border-b bg-slate-50 text-left">
               <HeaderCell label="Company" keyName="company" />
-              <HeaderCell label="Title" keyName="title" />
+              <HeaderCell label={isTemplates ? "Template" : "Title"} keyName={isTemplates ? "templateName" : "title"} />
               <th className="px-4 py-3">Worksite</th>
               <th className="px-4 py-3">Location</th>
               <HeaderCell label="Status" keyName="status" />
@@ -176,7 +203,9 @@ export default function JobTable({ jobs = [], onEdit, onView, onClose }) {
               return (
                 <tr key={j.id} className="border-b hover:bg-slate-50">
                   <td className="px-4 py-3 font-medium">{j.company || "—"}</td>
-                  <td className="px-4 py-3">{j.title || "—"}</td>
+                  <td className="px-4 py-3">
+                    {isTemplates ? (j.templateName || j.title || "—") : (j.title || "—")}
+                  </td>
                   <td className="px-4 py-3">{j.worksite || "—"}</td>
                   <td className="px-4 py-3">{j.location || "—"}</td>
                   <td className="px-4 py-3">
@@ -189,11 +218,26 @@ export default function JobTable({ jobs = [], onEdit, onView, onClose }) {
                     </span>
                   </td>
                   <td className="px-4 py-3 text-center">
-                    {urgencyBadge(Boolean(j.urgent))}
+                    {!isTemplates ? urgencyBadge(Boolean(j.urgent)) : "—"}
                   </td>
-                  <td className="px-4 py-3 text-center">{j.views ?? "—"}</td>
-                  <td className="px-4 py-3 text-center">{j.applications ?? "—"}</td>
+                  <td className="px-4 py-3 text-center">
+                    {!isTemplates ? (j.views ?? "—") : "—"}
+                  </td>
+                  <td className="px-4 py-3 text-center">
+                    {!isTemplates ? (j.applications ?? "—") : "—"}
+                  </td>
                   <td className="px-4 py-3 text-xs">
+                    {isTemplates && (
+                      <>
+                        <button
+                          onClick={() => onUseTemplate?.(j)}
+                          className="underline text-[#FF7043]"
+                        >
+                          Use
+                        </button>
+                        <span className="mx-1 text-slate-300">|</span>
+                      </>
+                    )}
                     <button onClick={() => onEdit?.(j)} className="underline">
                       Edit
                     </button>
@@ -201,7 +245,7 @@ export default function JobTable({ jobs = [], onEdit, onView, onClose }) {
                     <button onClick={() => onView?.(j)} className="underline">
                       View
                     </button>
-                    {status !== "Closed" && (
+                    {!isTemplates && status !== "Closed" && (
                       <>
                         <span className="mx-1 text-slate-300">|</span>
                         <button

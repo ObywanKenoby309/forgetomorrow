@@ -103,14 +103,19 @@ model Job {
   createdAt         DateTime @default(now())
   updatedAt         DateTime @updatedAt
 
+  // ✅ NEW — distinguishes jobs vs templates
+  isTemplate Boolean @default(false)
+
+  // ✅ NEW — required when isTemplate = true
+  templateName String?
+
   // Owner
   userId String
   user   User   @relation(fields: [userId], references: [id])
 
-  // 🔸 which account / org owns this job (for tracing & reporting)
-  accountKey String? // e.g. "ACCT-12345" or internal org code
+  // which account / org owns this job or template
+  accountKey String?
 
-  // ✅ NEW: link jobs to Organization via existing accountKey (no new columns needed)
   organization Organization? @relation("OrganizationJobs", fields: [accountKey], references: [accountKey])
 
   applications Application[]
@@ -121,6 +126,7 @@ model Job {
   covers       Cover[]
 
   @@index([accountKey])
+  @@index([isTemplate])
   @@map("jobs")
 }
 

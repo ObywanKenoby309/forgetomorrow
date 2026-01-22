@@ -35,7 +35,17 @@ function RightToolsCard() {
   );
 }
 
-function Body({ rows, loading, error, onEdit, onView, onClose }) {
+function Body({
+  rows,
+  loading,
+  error,
+  onEdit,
+  onView,
+  onClose,
+  viewMode,
+  onChangeViewMode,
+  onUseTemplate,
+}) {
   const tableRows = useMemo(
     () =>
       (rows || []).map((j) => ({
@@ -46,6 +56,8 @@ function Body({ rows, loading, error, onEdit, onView, onClose }) {
       })),
     [rows]
   );
+
+  const isTemplates = viewMode === "templates";
 
   return (
     <main className="space-y-6">
@@ -65,22 +77,62 @@ function Body({ rows, loading, error, onEdit, onView, onClose }) {
 
       {/* Table */}
       <div className="rounded-lg border bg-white p-2 sm:p-4">
-        <JobTable jobs={tableRows} onEdit={onEdit} onView={onView} onClose={onClose} />
+        {/* Jobs | Templates toggle */}
+        <div className="px-2 sm:px-0 pb-3 flex items-center gap-2">
+          <button
+            type="button"
+            onClick={() => onChangeViewMode?.("jobs")}
+            className={`px-3 py-1.5 rounded border text-sm ${
+              viewMode === "jobs"
+                ? "bg-[#FF7043] text-white border-[#FF7043]"
+                : "bg-white text-slate-700 hover:bg-slate-50"
+            }`}
+          >
+            Jobs
+          </button>
+          <button
+            type="button"
+            onClick={() => onChangeViewMode?.("templates")}
+            className={`px-3 py-1.5 rounded border text-sm ${
+              viewMode === "templates"
+                ? "bg-[#FF7043] text-white border-[#FF7043]"
+                : "bg-white text-slate-700 hover:bg-slate-50"
+            }`}
+          >
+            Templates
+          </button>
+
+          <div className="ml-auto text-xs text-slate-500">
+            {isTemplates ? "Reusable role templates" : "Active and draft job postings"}
+          </div>
+        </div>
+
+        <JobTable
+          jobs={tableRows}
+          mode={isTemplates ? "templates" : "jobs"}
+          onEdit={onEdit}
+          onView={onView}
+          onClose={onClose}
+          onUseTemplate={onUseTemplate}
+        />
+
         {loading && (
           <div className="px-4 py-3 text-xs text-slate-500 text-right">
-            Refreshing job postings…
+            Refreshing…
           </div>
         )}
       </div>
 
       {/* Performance preview – wired later to analytics */}
-      <div className="rounded-lg border bg-white p-4 text-sm">
-        <div className="font-medium mb-2">Job Performance (Preview)</div>
-        <div className="text-slate-500">
-          This area will pull per-job funnel metrics from Recruiter Analytics in
-          a later pass.
+      {!isTemplates && (
+        <div className="rounded-lg border bg-white p-4 text-sm">
+          <div className="font-medium mb-2">Job Performance (Preview)</div>
+          <div className="text-slate-500">
+            This area will pull per-job funnel metrics from Recruiter Analytics in
+            a later pass.
+          </div>
         </div>
-      </div>
+      )}
     </main>
   );
 }
@@ -95,15 +147,18 @@ export default function JobPostingsPage() {
   const [editingJob, setEditingJob] = useState(null);
   const [modalMode, setModalMode] = useState("create"); // "create" | "edit" | "view"
 
+  // NEW: jobs vs templates view
+  const [viewMode, setViewMode] = useState("jobs"); // "jobs" | "templates"
+
   // ──────────────────────────────────────────────────────────────
   // Load job postings for the current recruiter
   // ──────────────────────────────────────────────────────────────
-  const loadJobs = useCallback(async () => {
+  const loadJobs = useCallback(async (kind = "jobs") => {
     try {
       setLoading(true);
       setLoadError(null);
 
-      const res = await fetch("/api/recruiter/job-postings");
+      const res = await fetch(`/api/recruiter/job-postings?kind=${encodeURIComponent(kind)}`);
       let json = null;
 
       try {
@@ -133,8 +188,8 @@ export default function JobPostingsPage() {
   }, []);
 
   useEffect(() => {
-    loadJobs();
-  }, [loadJobs]);
+    loadJobs(viewMode);
+  }, [loadJobs, viewMode]);
 
   // ──────────────────────────────────────────────────────────────
   // Handlers
@@ -151,7 +206,7 @@ export default function JobPostingsPage() {
       let res;
 
       if (editingJob?.id && modalMode === "edit") {
-        // UPDATE existing job
+        // UPDATE existing job/template
         res = await fetch("/api/recruiter/job-postings", {
           method: "PATCH",
           headers: { "Content-Type": "application/json" },
@@ -161,7 +216,7 @@ export default function JobPostingsPage() {
           }),
         });
       } else {
-        // CREATE new job
+        // CREATE new job (templates are created inside modal to avoid closing)
         res = await fetch("/api/recruiter/job-postings", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
@@ -210,8 +265,19 @@ export default function JobPostingsPage() {
     setOpen(true);
   };
 
+  const handleUseTemplate = (templateJob) => {
+    // Use Template -> open modal in create mode with fields prefilled
+    setEditingJob(templateJob);
+    setModalMode("create");
+    setOpen(true);
+  };
+
   const handleCloseJob = async (job) => {
     if (!job?.id) return;
+
+    // Do not allow "Close" for templates (defense-in-depth)
+    if (job?.isTemplate) return;
+
     const confirmClose = window.confirm(
       `Mark "${job.title}" as Closed? Candidates will no longer see it as open.`
     );
@@ -248,13 +314,20 @@ export default function JobPostingsPage() {
     setModalMode("create");
   };
 
+  const handleChangeViewMode = (next) => {
+    setViewMode(next);
+    // reset modal state (safe)
+    setEditingJob(null);
+    setModalMode("create");
+  };
+
   return (
     <PlanProvider>
       <RecruiterLayout
         title="Job Postings — ForgeTomorrow"
         header={<HeaderBar onOpenModal={openCreateModal} />}
         right={<RightToolsCard />}
-        activeNav="job-postings"   // 🔸 highlight "Job Posting" in recruiter sidebar
+        activeNav="job-postings" // highlight "Job Posting" in recruiter sidebar
       >
         <Body
           rows={rows}
@@ -263,6 +336,9 @@ export default function JobPostingsPage() {
           onEdit={handleEdit}
           onView={handleView}
           onClose={handleCloseJob}
+          viewMode={viewMode}
+          onChangeViewMode={handleChangeViewMode}
+          onUseTemplate={handleUseTemplate}
         />
 
         <JobFormModal
