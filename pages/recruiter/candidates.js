@@ -58,9 +58,9 @@ function HeaderOnly() {
             </span>
           </div>
 
-          <p className="mt-2 text-sm text-slate-600 max-w-2xl leading-relaxed">
+          <p className="mt-2 text-sm text-slate-500 max-w-lg leading-snug">
             Review and manage your active pipeline. Search by name or role,
-            filter by location, and on Enterprise use Boolean search to dial in
+            filter by location, and on Enterprise use advanced queries to dial in
             exactly who you need.
           </p>
         </div>
@@ -104,8 +104,8 @@ function RightToolsCard({ whyMode, creditsLeft = null }) {
 
       <div className="mt-3 text-sm text-slate-700 space-y-2">
         <p>
-          Start with a short query, then refine. Enterprise teams can use Boolean
-          when the pool is large.
+          Start with a short query, then refine. Enterprise teams can use advanced
+          queries when the pool is large.
         </p>
         <p>
           Tag top candidates to build quick outreach lists and keep your pipeline
@@ -241,7 +241,7 @@ function Body() {
 
     if (nameQuery) chips.push({ key: "q", label: `Query: ${nameQuery}` });
     if (locQuery) chips.push({ key: "loc", label: `Location: ${locQuery}` });
-    if (boolQuery) chips.push({ key: "bool", label: `Boolean: ${boolQuery}` });
+    if (boolQuery) chips.push({ key: "bool", label: `Advanced query: ${boolQuery}` });
 
     if (summaryKeywords)
       chips.push({ key: "summary", label: `Summary: ${summaryKeywords}` });
@@ -381,7 +381,7 @@ function Body() {
     const filters = [];
     if (nameQuery) filters.push(`Name/role: ${nameQuery}`);
     if (locQuery) filters.push(`Location: ${locQuery}`);
-    if (boolQuery) filters.push(`Boolean: ${boolQuery}`);
+    if (boolQuery) filters.push(`Advanced query: ${boolQuery}`);
     if (summaryKeywords) filters.push(`Summary keywords: ${summaryKeywords}`);
     if (jobTitle) filters.push(`Job title: ${jobTitle}`);
     if (workStatus) filters.push(`Work status: ${workStatus}`);
@@ -1102,11 +1102,14 @@ function Body() {
   };
 
   const FiltersRow = (
-    <GlassPanel className="mb-4 px-4 py-3">
+    <GlassPanel className="mb-3 px-5 py-4 sm:px-6">
       <div className="flex flex-col gap-3">
         <div className="flex items-center justify-between gap-3">
           <div>
-            <div className="text-sm font-semibold text-slate-900">
+            <div className="text-xs tracking-wide uppercase text-slate-500">
+              Quick filters
+            </div>
+            <div className="mt-1 text-sm font-semibold text-slate-900">
               Search and Filters
             </div>
             <div className="text-xs text-slate-600">
@@ -1121,31 +1124,37 @@ function Body() {
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
           <input
             type="text"
-            placeholder="Search by name or role…"
+            placeholder="Search by name or role..."
             className="border border-white/40 bg-white/70 rounded-xl px-3 py-2 text-sm w-full shadow-sm focus:outline-none focus:ring-2 focus:ring-[#FF7043]"
             value={nameQuery}
             onChange={(e) => setNameQuery(e.target.value)}
           />
           <input
             type="text"
-            placeholder="Filter by location…"
+            placeholder="Filter by location..."
             className="border border-white/40 bg-white/70 rounded-xl px-3 py-2 text-sm w-full shadow-sm focus:outline-none focus:ring-2 focus:ring-[#FF7043]"
             value={locQuery}
             onChange={(e) => setLocQuery(e.target.value)}
           />
+
           {isEnterprise ? (
-            <input
-              type="text"
-              placeholder="Boolean Search…"
-              className="border border-white/40 bg-white/70 rounded-xl px-3 py-2 text-sm w-full shadow-sm focus:outline-none focus:ring-2 focus:ring-[#FF7043]"
-              value={boolQuery}
-              onChange={(e) => setBoolQuery(e.target.value)}
-            />
-          ) : (
-            <FeatureLock label="Boolean Search">
+            <div className="flex flex-col">
               <input
                 type="text"
-                placeholder="Boolean Search (Upgrade required)"
+                placeholder="Advanced query (Enterprise)..."
+                className="border border-white/40 bg-white/70 rounded-xl px-3 py-2 text-sm w-full shadow-sm focus:outline-none focus:ring-2 focus:ring-[#FF7043]"
+                value={boolQuery}
+                onChange={(e) => setBoolQuery(e.target.value)}
+              />
+              <div className="mt-1 text-xs text-slate-500">
+                Example: ("customer success" OR CSM) AND SaaS AND -intern
+              </div>
+            </div>
+          ) : (
+            <FeatureLock label="Advanced query">
+              <input
+                type="text"
+                placeholder="Advanced query (Enterprise-only)"
                 className="border border-white/40 rounded-xl px-3 py-2 text-sm w-full bg-gray-100 cursor-not-allowed"
                 disabled
               />
@@ -1218,7 +1227,7 @@ function Body() {
     splitForColumns(candidates);
 
   const ResultsBar = (
-    <GlassPanel className="mb-4 px-4 py-3">
+    <GlassPanel className="mb-4 px-5 py-3 sm:px-6">
       <div className="flex flex-col gap-3">
         <div className="flex items-center justify-between gap-3">
           <div>
@@ -1280,18 +1289,24 @@ function Body() {
   return (
     <>
       {loadError && (
-        <GlassPanel className="mb-4 px-4 py-3 border-red-200/60 bg-red-50/70">
+        <GlassPanel className="mb-3 px-5 py-3 sm:px-6 border-red-200/50 bg-red-50/60">
           <div className="text-xs text-red-700">{loadError}</div>
         </GlassPanel>
       )}
 
       {actionError && (
-        <GlassPanel className="mb-4 px-4 py-3 border-amber-200/60 bg-amber-50/70">
+        <GlassPanel className="mb-3 px-5 py-3 sm:px-6 border-amber-200/50 bg-amber-50/60">
           <div className="text-xs text-amber-800">{actionError}</div>
         </GlassPanel>
       )}
 
       {FiltersRow}
+
+      <div className="mb-2 -mt-1 px-1">
+        <div className="text-xs text-slate-500">
+          Results update as you type. Use Find Candidates to run your saved targeting settings on demand.
+        </div>
+      </div>
 
       <CandidateTargetingPanel
         filters={{
@@ -1330,7 +1345,7 @@ function Body() {
       />
 
       {isLoading ? (
-        <GlassPanel className="px-4 py-8">
+        <GlassPanel className="px-5 py-8 sm:px-6">
           <div className="text-sm text-slate-700 font-medium">
             Loading candidates...
           </div>
@@ -1343,7 +1358,7 @@ function Body() {
           {ResultsBar}
 
           {candidates.length === 0 ? (
-            <GlassPanel className="px-4 py-10">
+            <GlassPanel className="px-5 py-10 sm:px-6">
               <div className="text-sm font-semibold text-slate-900">
                 No candidates found
               </div>
@@ -1374,7 +1389,7 @@ function Body() {
               </div>
             </GlassPanel>
           ) : (
-            <>
+            <div className="pt-2">
               <div className="block lg:hidden">
                 <CandidateList
                   candidates={candidates}
@@ -1425,7 +1440,7 @@ function Body() {
                   booleanQuery={boolQuery}
                 />
               </div>
-            </>
+            </div>
           )}
         </>
       )}
