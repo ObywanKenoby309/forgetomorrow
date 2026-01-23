@@ -21,7 +21,8 @@ export default function ProfileEducation({ education = [], setEducation }) {
       endYear: endYear.trim(),
     };
 
-    setEducation([entry, ...education]);
+    // ✅ functional update (prevents stale prop issues)
+    setEducation((prev) => [entry, ...(Array.isArray(prev) ? prev : [])]);
 
     setSchool('');
     setDegree('');
@@ -31,7 +32,10 @@ export default function ProfileEducation({ education = [], setEducation }) {
   };
 
   const removeEducation = (id) => {
-    setEducation(education.filter((e) => e.id !== id));
+    // ✅ functional update (prevents stale prop issues)
+    setEducation((prev) =>
+      Array.isArray(prev) ? prev.filter((e) => e.id !== id) : []
+    );
   };
 
   return (
@@ -46,7 +50,9 @@ export default function ProfileEducation({ education = [], setEducation }) {
     >
       <div style={{ display: 'grid', gap: 10 }}>
         <div style={{ display: 'grid', gap: 6 }}>
-          <label style={{ fontSize: 12, fontWeight: 800, color: '#455A64' }}>School</label>
+          <label style={{ fontSize: 12, fontWeight: 800, color: '#455A64' }}>
+            School
+          </label>
           <input
             value={school}
             onChange={(e) => setSchool(e.target.value)}
@@ -64,7 +70,9 @@ export default function ProfileEducation({ education = [], setEducation }) {
 
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
           <div style={{ display: 'grid', gap: 6 }}>
-            <label style={{ fontSize: 12, fontWeight: 800, color: '#455A64' }}>Degree</label>
+            <label style={{ fontSize: 12, fontWeight: 800, color: '#455A64' }}>
+              Degree
+            </label>
             <input
               value={degree}
               onChange={(e) => setDegree(e.target.value)}
@@ -80,7 +88,9 @@ export default function ProfileEducation({ education = [], setEducation }) {
             />
           </div>
           <div style={{ display: 'grid', gap: 6 }}>
-            <label style={{ fontSize: 12, fontWeight: 800, color: '#455A64' }}>Field</label>
+            <label style={{ fontSize: 12, fontWeight: 800, color: '#455A64' }}>
+              Field
+            </label>
             <input
               value={field}
               onChange={(e) => setField(e.target.value)}
@@ -99,7 +109,9 @@ export default function ProfileEducation({ education = [], setEducation }) {
 
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
           <div style={{ display: 'grid', gap: 6 }}>
-            <label style={{ fontSize: 12, fontWeight: 800, color: '#455A64' }}>Start year</label>
+            <label style={{ fontSize: 12, fontWeight: 800, color: '#455A64' }}>
+              Start year
+            </label>
             <input
               value={startYear}
               onChange={(e) => setStartYear(e.target.value)}
@@ -115,7 +127,9 @@ export default function ProfileEducation({ education = [], setEducation }) {
             />
           </div>
           <div style={{ display: 'grid', gap: 6 }}>
-            <label style={{ fontSize: 12, fontWeight: 800, color: '#455A64' }}>End year</label>
+            <label style={{ fontSize: 12, fontWeight: 800, color: '#455A64' }}>
+              End year
+            </label>
             <input
               value={endYear}
               onChange={(e) => setEndYear(e.target.value)}

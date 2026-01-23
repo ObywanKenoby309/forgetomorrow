@@ -3,7 +3,7 @@
 // + join recruiter-specific metadata (notes/tags/pipelineStage/skills) from RecruiterCandidate (Option A)
 // ✅ Impersonation-aware: resolves effective recruiter via ft_imp cookie (Platform Admin only)
 
-import { PrismaClient } from "@prisma/client";
+import { PrismaClient, Prisma } from "@prisma/client";
 import { getServerSession } from "next-auth";
 import { authOptions } from "../../auth/[...nextauth]";
 import jwt from "jsonwebtoken";
@@ -173,6 +173,77 @@ function extractSkillsFromResumeContent(contentStr) {
   return dedupeCaseInsensitive(skills.map((s) => String(s || "").trim()).filter(Boolean));
 }
 
+// ✅ Education normalization: we store educationJson as array of objects.
+// This returns sanitized objects (never "[object Object]" strings).
+function toEducationObjects(v) {
+  // already an array of objects
+  if (Array.isArray(v)) {
+    return v
+      .map((x) => {
+        if (!x || typeof x !== "object") return null;
+        return {
+          id: x.id ? String(x.id) : null,
+          school: x.school ? String(x.school) : "",
+          degree: x.degree ? String(x.degree) : "",
+          field: x.field ? String(x.field) : "",
+          startYear: x.startYear ? String(x.startYear) : "",
+          endYear: x.endYear ? String(x.endYear) : "",
+        };
+      })
+      .filter(Boolean);
+  }
+
+  // JSON string support (defensive)
+  if (typeof v === "string") {
+    const parsed = safeJsonParse(v);
+    if (Array.isArray(parsed)) return toEducationObjects(parsed);
+  }
+
+  return [];
+}
+
+// ✅ Education search helper (Postgres JSONB array-of-objects)
+// AND across terms; within each term, OR across school/degree/field/startYear/endYear
+async function findUserIdsByEducationTerms(prisma, terms) {
+  const cleaned = (terms || [])
+    .map((t) => String(t || "").trim())
+    .filter(Boolean)
+    .slice(0, 10);
+
+  if (!cleaned.length) return [];
+
+  const perTermExists = cleaned.map((term) => {
+    const like = `%${term}%`;
+    return Prisma.sql`
+      EXISTS (
+        SELECT 1
+        FROM jsonb_array_elements("User"."educationJson") AS e
+        WHERE
+          (e->>'school') ILIKE ${like}
+          OR (e->>'degree') ILIKE ${like}
+          OR (e->>'field') ILIKE ${like}
+          OR (e->>'startYear') ILIKE ${like}
+          OR (e->>'endYear') ILIKE ${like}
+      )
+    `;
+  });
+
+  const rows = await prisma.$queryRaw(
+    Prisma.sql`
+      SELECT "id"
+      FROM "User"
+      WHERE
+        "deletedAt" IS NULL
+        AND "educationJson" IS NOT NULL
+        AND jsonb_typeof("educationJson") = 'array'
+        AND ${Prisma.join(perTermExists, Prisma.sql` AND `)}
+    `
+  );
+
+  // rows is array of { id: '...' }
+  return Array.isArray(rows) ? rows.map((r) => String(r.id)).filter(Boolean) : [];
+}
+
 export default async function handler(req, res) {
   if (req.method !== "GET") {
     res.setHeader("Allow", ["GET"]);
@@ -217,7 +288,6 @@ export default async function handler(req, res) {
     willingToRelocate = "",
     skills = "",
     languages = "",
-    // ✅ NEW
     education = "",
   } = req.query || {};
 
@@ -231,7 +301,6 @@ export default async function handler(req, res) {
   const relocateQuery = (willingToRelocate || "").toString().trim();
   const skillsQuery = (skills || "").toString().trim();
   const languagesQuery = (languages || "").toString().trim();
-  // ✅ NEW
   const educationQuery = (education || "").toString().trim();
 
   // Recruiter discovery is LIVE and only includes:
@@ -243,22 +312,19 @@ export default async function handler(req, res) {
   // Legacy `isProfilePublic` must never override explicit `profileVisibility: PRIVATE`.
   // We only honor `isProfilePublic` when `profileVisibility` is NULL (legacy accounts).
   const andClauses = [
-  { deletedAt: null },
-  {
-    OR: [
-      // ✅ Allowed visibility modes
-      { profileVisibility: { in: ["PUBLIC", "RECRUITERS_ONLY"] } },
-
-      // ✅ Legacy safety net, but NEVER allow explicit PRIVATE
-      {
-        AND: [
-          { isProfilePublic: true },
-          { profileVisibility: { not: "PRIVATE" } },
-        ],
-      },
-    ],
-  },
-];
+    { deletedAt: null },
+    {
+      OR: [
+        { profileVisibility: { in: ["PUBLIC", "RECRUITERS_ONLY"] } },
+        {
+          AND: [
+            { isProfilePublic: true },
+            { profileVisibility: { not: "PRIVATE" } },
+          ],
+        },
+      ],
+    },
+  ];
 
   if (nameRoleQuery) {
     andClauses.push({
@@ -345,17 +411,29 @@ export default async function handler(req, res) {
     }
   }
 
-  // ✅ NEW: education keyword filter (array_contains, multi-term)
+  // ✅ FIXED: education keyword filter for array-of-objects JSONB
+  // AND across comma-separated terms
   if (educationQuery) {
     const terms = educationQuery
       .split(",")
       .map((s) => s.trim())
       .filter(Boolean);
 
-    for (const term of terms) {
+    try {
+      const matchedUserIds = await findUserIdsByEducationTerms(prisma, terms);
+
+      // No matches -> return empty quickly (avoids full scan + useless joins)
+      if (!matchedUserIds.length) {
+        return res.status(200).json({ candidates: [] });
+      }
+
       andClauses.push({
-        educationJson: { array_contains: [term] },
+        id: { in: matchedUserIds },
       });
+    } catch (e) {
+      console.error("[recruiter/candidates] education search error:", e);
+      // If education search fails, do not silently return wrong data
+      return res.status(500).json({ error: "Failed to search candidates by education." });
     }
   }
 
@@ -381,7 +459,6 @@ export default async function handler(req, res) {
         location: true,
         skillsJson: true,
         languagesJson: true,
-        // ✅ NEW
         educationJson: true,
         createdAt: true,
       },
@@ -487,8 +564,8 @@ export default async function handler(req, res) {
         // ✅ what the modal should display/edit
         skills: effectiveSkillsArr,
 
-        // ✅ NEW (optional): education array for future UI/WHY usage
-        education: toArrayJson(u.educationJson),
+        // ✅ FIXED: education returns objects (consistent with profile storage)
+        education: toEducationObjects(u.educationJson),
 
         // optional: transparency/debug
         skillsBaseline: baselineSkillsArr,
