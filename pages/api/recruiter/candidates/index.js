@@ -238,12 +238,21 @@ export default async function handler(req, res) {
   // - PUBLIC profiles
   // - RECRUITERS_ONLY profiles
   // Private profiles are excluded instantly.
+  //
+  // ✅ IMPORTANT FIX:
+  // Legacy `isProfilePublic` must never override explicit `profileVisibility: PRIVATE`.
+  // We only honor `isProfilePublic` when `profileVisibility` is NULL (legacy accounts).
   const andClauses = [
     { deletedAt: null },
     {
       OR: [
         { profileVisibility: { in: ["PUBLIC", "RECRUITERS_ONLY"] } },
-        { isProfilePublic: true }, // legacy safety net
+        {
+          AND: [
+            { profileVisibility: null }, // legacy-only safety net
+            { isProfilePublic: true },
+          ],
+        },
       ],
     },
   ];
