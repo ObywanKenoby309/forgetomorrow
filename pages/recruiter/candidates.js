@@ -13,6 +13,7 @@ import { getMockExplain } from "../../lib/recruiter/mockExplain";
 import * as Analytics from "../../lib/analytics/instrumentation";
 import WhyInfo from "../../components/recruiter/WhyInfo";
 import PersonaChoiceModal from "../../components/common/PersonaChoiceModal";
+import CandidateTargetingPanel from "../../components/recruiter/CandidateTargetingPanel";
 
 // DEV-ONLY: your recruiter user id to hit /api/conversations
 const RECRUITER_DEV_USER_ID = "cmic534oy0000bv2gsjrl83al";
@@ -92,11 +93,10 @@ function Body() {
   const [skills, setSkills] = useState("");
   const [languages, setLanguages] = useState("");
 
-  // ✅ NEW: Education keywords (comma-separated)
+  // Education keywords (comma-separated)
   const [education, setEducation] = useState("");
 
   // Targeting/automation panel state
-  const [targetingOpen, setTargetingOpen] = useState(false);
   const [automationEnabled, setAutomationEnabled] = useState(false);
   const [automationName, setAutomationName] = useState("");
   const [automationSaving, setAutomationSaving] = useState(false);
@@ -164,7 +164,7 @@ function Body() {
     if (skills) params.set("skills", skills);
     if (languages) params.set("languages", languages);
 
-    // ✅ NEW: education
+    // Education
     if (education) params.set("education", education);
 
     return params;
@@ -175,7 +175,6 @@ function Body() {
     if (!val) return [];
     if (Array.isArray(val)) return val.filter(Boolean).map(String);
     if (typeof val === "string") {
-      // supports comma-separated or pipe-separated
       return val
         .split(/[,|]/g)
         .map((s) => s.trim())
@@ -200,7 +199,6 @@ function Body() {
     );
   };
 
-  // Pull whatever we can safely from candidate shape without assuming too much.
   const getCandidateSkills = (c) => {
     const pools = []
       .concat(normalizeList(c?.skills))
@@ -218,7 +216,6 @@ function Body() {
     return uniq(pools).slice(0, 12);
   };
 
-  // ✅ NEW: candidate education pool (future-proof)
   const getCandidateEducation = (c) => {
     const pools = []
       .concat(normalizeList(c?.education))
@@ -243,11 +240,9 @@ function Body() {
   };
 
   const getCandidateTrajectory = (c) => {
-    // Prefer explicit trajectory if present
     if (Array.isArray(c?.trajectory)) return c.trajectory;
     if (Array.isArray(c?.careerPath)) return c.careerPath;
 
-    // Try to map common work history shapes
     const wh = c?.workHistory || c?.experience || c?.profile?.workHistory || [];
     if (!Array.isArray(wh)) return [];
 
@@ -275,7 +270,6 @@ function Body() {
     if (willingToRelocate) filters.push(`Relocate: ${willingToRelocate}`);
     if (skills) filters.push(`Skills: ${skills}`);
     if (languages) filters.push(`Languages: ${languages}`);
-    // ✅ NEW
     if (education) filters.push(`Education: ${education}`);
     return filters;
   };
@@ -289,17 +283,14 @@ function Body() {
     const candidateTitle = c?.currentTitle || c?.title || c?.role || "";
     const candidateLocation = c?.location || c?.city || c?.region || "";
 
-    // Always set score from candidate match if present (keeps UI consistent)
     if (typeof c?.match === "number") {
       ex.score = c.match;
     } else if (typeof ex?.score !== "number") {
       ex.score = 0;
     }
 
-    // Build filter snapshot for the drawer (this drives “Matched your filters” chips)
     ex.filters_triggered = buildFiltersTriggered();
 
-    // Skills: use explicit explain.skills if present; otherwise build from candidate + recruiter filter input
     const filterSkills = normalizeList(skills);
     const candSkills = getCandidateSkills(c);
 
@@ -333,13 +324,11 @@ function Body() {
         ? ex.skills.transferable
         : []) || [];
 
-    // Trajectory (full mode uses it)
     const traj = getCandidateTrajectory(c);
     if (!Array.isArray(ex.trajectory) || ex.trajectory.length === 0) {
       ex.trajectory = traj;
     }
 
-    // Summary: if API gave us something generic, make it candidate + filter aware
     const baseSummary = String(ex.summary || "").trim();
     const needsBetterSummary =
       !baseSummary ||
@@ -358,17 +347,14 @@ function Body() {
       const join = parts.length ? parts.join(", ") : "available profile signals";
       ex.summary = `${firstName || "Candidate"} recommended based on ${join}.`;
     } else if (firstName && !baseSummary.startsWith(`${firstName}:`)) {
-      // Keep original if it’s good, just prefix consistently
       ex.summary = `${firstName}: ${baseSummary}`;
     }
 
-    // Reasons/evidence: if API returned nothing (or generic), construct explainable reasons
     const baseReasons = Array.isArray(ex.reasons) ? ex.reasons : [];
     const baseLooksEmpty = baseReasons.length === 0;
 
     const builtReasons = [];
 
-    // Title alignment reason
     if (jobTitle || candidateTitle) {
       const req = jobTitle ? `Role alignment: ${jobTitle}` : `Role alignment`;
       const evidence = [];
@@ -384,7 +370,6 @@ function Body() {
       if (evidence.length) builtReasons.push({ requirement: req, evidence });
     }
 
-    // Skills alignment reason (use filter skills if present)
     if (filterSkills.length || candSkills.length) {
       const req = filterSkills.length
         ? `Skills match: ${filterSkills.slice(0, 6).join(", ")}`
@@ -413,7 +398,6 @@ function Body() {
       if (evidence.length) builtReasons.push({ requirement: req, evidence });
     }
 
-    // ✅ NEW: Education alignment reason
     const filterEdu = normalizeList(education);
     const candEdu = getCandidateEducation(c);
     if (filterEdu.length || candEdu.length) {
@@ -430,7 +414,6 @@ function Body() {
       if (evidence.length) builtReasons.push({ requirement: req, evidence });
     }
 
-    // Location / work type reason
     if (locQuery || candidateLocation || preferredWorkType) {
       const reqParts = [];
       if (locQuery) reqParts.push(`Location: ${locQuery}`);
@@ -460,7 +443,6 @@ function Body() {
       if (evidence.length) builtReasons.push({ requirement: req, evidence });
     }
 
-    // Summary keywords reason (only if we can actually see the text)
     const kw = normalizeList(summaryKeywords);
     const summaryText = getCandidateSummaryText(c);
     if (kw.length && summaryText) {
@@ -478,7 +460,6 @@ function Body() {
       }
     }
 
-    // Languages reason
     const filterLang = normalizeList(languages);
     const candLang = getCandidateLanguages(c);
     if (filterLang.length || candLang.length) {
@@ -495,7 +476,6 @@ function Body() {
       if (evidence.length) builtReasons.push({ requirement: req, evidence });
     }
 
-    // If we got real reasons from API, keep them, but ensure they’re not empty shells
     const looksGeneric =
       baseReasons.length &&
       baseReasons.every((r) => {
@@ -514,7 +494,6 @@ function Body() {
   };
   // ---------- END WHY PERSONALIZATION ----------
 
-  // Manual trigger: run search now using all current fields
   const runManualCandidateSearch = async () => {
     setActionError(null);
     setLoadError(null);
@@ -566,7 +545,6 @@ function Body() {
     }
   };
 
-  // Central function to create/open conversation, then route
   const startConversation = async (candidate, channel) => {
     if (!candidate) return;
 
@@ -575,7 +553,6 @@ function Body() {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
-          // DEV-ONLY auth stub; replaced by real auth later
           "x-user-id": RECRUITER_DEV_USER_ID,
         },
         body: JSON.stringify({
@@ -638,14 +615,12 @@ function Body() {
     }
   };
 
-  // Message → open Persona choice modal
   const onMessage = (c) => {
     if (!c) return;
     setPersonaCandidate(c);
     setPersonaOpen(true);
   };
 
-  // Load candidates from Prisma-backed API (with filters)
   useEffect(() => {
     let isMounted = true;
 
@@ -662,7 +637,6 @@ function Body() {
           }`
         );
 
-        // If API fails but dev flag is on, fall back to demo candidate
         if (!res.ok) {
           if (process.env.NEXT_PUBLIC_FAKE_CANDIDATES === "1") {
             if (!isMounted) return;
@@ -678,7 +652,6 @@ function Body() {
 
         let list = Array.isArray(json.candidates) ? json.candidates : [];
 
-        // If API succeeds but returns no rows, optionally seed demo
         if (!list.length && process.env.NEXT_PUBLIC_FAKE_CANDIDATES === "1") {
           list = buildDemoCandidates();
         }
@@ -689,7 +662,6 @@ function Body() {
         console.error("[Candidates] load error:", err);
         if (!isMounted) return;
 
-        // Final catch: if anything blows up, still show demo in dev
         if (process.env.NEXT_PUBLIC_FAKE_CANDIDATES === "1") {
           setCandidates(buildDemoCandidates());
           setLoadError(null);
@@ -720,18 +692,16 @@ function Body() {
     willingToRelocate,
     skills,
     languages,
-    // ✅ NEW
     education,
   ]);
 
-  // NEW: load saved automation config on mount
   useEffect(() => {
     let isMounted = true;
 
     async function loadAutomation() {
       try {
         const res = await fetch("/api/recruiter/candidates/automation");
-        if (!res.ok) return; // soft-fail if not wired yet
+        if (!res.ok) return;
 
         const json = await res.json();
         if (!isMounted) return;
@@ -756,7 +726,6 @@ function Body() {
           setPreferredWorkType(filters.preferredWorkType);
         }
         if (typeof filters.relocate === "string") {
-          // backend uses `relocate`; UI state is `willingToRelocate`
           setWillingToRelocate(filters.relocate);
         }
         if (typeof filters.skills === "string") {
@@ -765,7 +734,6 @@ function Body() {
         if (typeof filters.languages === "string") {
           setLanguages(filters.languages);
         }
-        // ✅ NEW
         if (typeof filters.education === "string") {
           setEducation(filters.education);
         }
@@ -780,10 +748,8 @@ function Body() {
     };
   }, []);
 
-  // Notes persistence — optimistic update + Sev-1-transparent errors
   const saveNotes = async (id, text) => {
     setActionError(null);
-    // Optimistic update
     setCandidates((prev) =>
       prev.map((c) => (c.id === id ? { ...c, notes: text } : c))
     );
@@ -810,7 +776,6 @@ function Body() {
     }
   };
 
-  // Tag toggle persistence — optimistic update + honest errors
   const toggleTag = async (id, tag) => {
     setActionError(null);
 
@@ -853,7 +818,6 @@ function Body() {
     }
   };
 
-  // WHY drawer + instrumentation (API + mock fallback)
   const [whyOpen, setWhyOpen] = useState(false);
   const [whyData, setWhyData] = useState(null);
   const [whyCandidate, setWhyCandidate] = useState(null);
@@ -867,7 +831,6 @@ function Body() {
       const res = await fetch("/api/recruiter/candidates/why", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        // Phase 1: no specific job context yet → jobId: null
         body: JSON.stringify({
           candidateId: c.id,
           jobId: null,
@@ -882,7 +845,6 @@ function Body() {
             relocate: willingToRelocate || null,
             skills: skills || null,
             languages: languages || null,
-            // ✅ NEW
             education: education || null,
           },
         }),
@@ -898,7 +860,6 @@ function Body() {
       ex = getMockExplain();
     }
 
-    // Ensure WHY is not generic: deterministically personalize with candidate + current filters
     ex = personalizeWhyExplain(c, ex);
     return ex;
   };
@@ -941,7 +902,6 @@ function Body() {
     }
   };
 
-  // ---------- COMPARE (NEW) ----------
   const [compareSelectedIds, setCompareSelectedIds] = useState([]);
   const [compareOpen, setCompareOpen] = useState(false);
   const [compareCandidates, setCompareCandidates] = useState({
@@ -962,11 +922,7 @@ function Body() {
 
   const openCompareForTwo = async (aCandidate, bCandidate) => {
     if (!aCandidate || !bCandidate) return;
-
-    // If WHY is off, don't allow compare to open (compare is literally 2 WHY panels)
     if (whyMode === "off") return;
-
-    // Credit gate (SMB): needs at least 2 credits to compare 2 candidates
     if (!hasWhyFull && (whyCreditsLeft || 0) < 2) return;
 
     const [aExplain, bExplain] = await Promise.all([
@@ -978,7 +934,6 @@ function Body() {
     setCompareExplains({ a: aExplain, b: bExplain });
     setCompareOpen(true);
 
-    // Credits: decrement by 2 for compare (one per candidate)
     if (!hasWhyFull) {
       setWhyCreditsLeft((n) => Math.max(0, (n || 0) - 2));
     }
@@ -993,29 +948,23 @@ function Body() {
       const id = candidate.id;
       const has = prev.includes(id);
 
-      // If toggling OFF the candidate: remove it and close compare if it was open
       if (has) {
         const next = prev.filter((x) => x !== id);
-        // If compare is open, closing resets per your spec
         if (compareOpen) {
-          // we reset after state update tick
           setTimeout(() => resetCompare(), 0);
         }
         return next;
       }
 
-      // Toggling ON
       if (prev.length === 0) {
         return [id];
       }
 
-      // When 2nd candidate selected → trigger compare immediately
       if (prev.length === 1) {
         const firstId = prev[0];
         const firstCandidate = candidates.find((c) => c.id === firstId) || null;
         const secondCandidate = candidate;
 
-        // Open compare after state updates
         setTimeout(() => {
           openCompareForTwo(firstCandidate, secondCandidate);
         }, 0);
@@ -1023,7 +972,6 @@ function Body() {
         return [firstId, id];
       }
 
-      // If already 2 selected, replace the 2nd with the newly clicked one (keeps it simple & predictable)
       if (prev.length >= 2) {
         const firstId = prev[0];
         const firstCandidate = candidates.find((c) => c.id === firstId) || null;
@@ -1039,7 +987,6 @@ function Body() {
       return prev;
     });
   };
-  // ---------- END COMPARE ----------
 
   const FiltersRow = (
     <div className="mb-4 grid grid-cols-1 sm:grid-cols-3 gap-3">
@@ -1078,7 +1025,6 @@ function Body() {
     </div>
   );
 
-  // Save automation config (soft-fails if API not present)
   const saveAutomationConfig = async () => {
     setAutomationMessage(null);
     setActionError(null);
@@ -1089,7 +1035,6 @@ function Body() {
       const payload = {
         name: automationName || null,
         enabled: automationEnabled,
-        // Filters used for the daily feed (safe fields only)
         filters: {
           q: nameQuery || null,
           location: locQuery || null,
@@ -1098,10 +1043,9 @@ function Body() {
           jobTitle: jobTitle || null,
           workStatus: workStatus || null,
           preferredWorkType: preferredWorkType || null,
-          relocate: willingToRelocate || null, // backend key is `relocate`
+          relocate: willingToRelocate || null,
           skills: skills || null,
           languages: languages || null,
-          // ✅ NEW
           education: education || null,
         },
       };
@@ -1127,7 +1071,6 @@ function Body() {
     }
   };
 
-  // ---------- NEW: desktop 2-column layout split (layout-only) ----------
   const splitForColumns = (list) => {
     const src = Array.isArray(list) ? list : [];
     const left = [];
@@ -1140,18 +1083,15 @@ function Body() {
 
   const { left: leftCandidates, right: rightCandidates } =
     splitForColumns(candidates);
-  // ---------- END: desktop 2-column layout split ----------
 
   return (
     <>
-      {/* Sev-1 style feed incident banner */}
       {loadError && (
         <div className="mb-4 rounded-md border border-red-200 bg-red-50 px-3 py-2 text-xs text-red-700">
           {loadError}
         </div>
       )}
 
-      {/* Action-level error (notes/tags) */}
       {actionError && (
         <div className="mb-4 rounded-md border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-800">
           {actionError}
@@ -1160,229 +1100,55 @@ function Body() {
 
       {FiltersRow}
 
-      {/* Candidate targeting + automation panel */}
-      <div className="mb-4">
-        <button
-          type="button"
-          onClick={() => setTargetingOpen((open) => !open)}
-          className="flex w-full items-center justify-between rounded-md border border-slate-300 bg-white/90 px-3 py-2 text-xs sm:text-sm font-medium text-slate-700 shadow-sm hover:bg-white focus:outline-none focus:ring-2 focus:ring-[#FF7043]"
-        >
-          <span>Candidate targeting &amp; automation (profile-based filters)</span>
-          <span className="ml-2 text-[11px] text-slate-500">
-            {targetingOpen ? "Hide" : "Show options"}
-          </span>
-        </button>
-
-        {targetingOpen && (
-          <div className="mt-3 rounded-lg border border-slate-200 bg-white/95 p-4 shadow-lg">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-              <div>
-                <label className="block text-xs font-medium text-slate-600 mb-1">
-                  Summary keywords
-                </label>
-                <input
-                  type="text"
-                  value={summaryKeywords}
-                  onChange={(e) => setSummaryKeywords(e.target.value)}
-                  placeholder="e.g., customer success, onboarding, renewals"
-                  className="w-full rounded border px-2 py-1.5 text-xs sm:text-sm focus:outline-none focus:ring-2 focus:ring-[#FF7043]"
-                />
-              </div>
-
-              <div>
-                <label className="block text-xs font-medium text-slate-600 mb-1">
-                  Job title
-                </label>
-                <input
-                  type="text"
-                  value={jobTitle}
-                  onChange={(e) => setJobTitle(e.target.value)}
-                  placeholder="e.g., Customer Success Manager"
-                  className="w-full rounded border px-2 py-1.5 text-xs sm:text-sm focus:outline-none focus:ring-2 focus:ring-[#FF7043]"
-                />
-              </div>
-
-              <div>
-                <label className="block text-xs font-medium text-slate-600 mb-1">
-                  Current work status
-                </label>
-                <select
-                  value={workStatus}
-                  onChange={(e) => setWorkStatus(e.target.value)}
-                  className="w-full rounded border px-2 py-1.5 text-xs sm:text-sm focus:outline-none focus:ring-2 focus:ring-[#FF7043]"
-                >
-                  <option value="">Any status</option>
-                  <option value="employed">Employed</option>
-                  <option value="unemployed">Actively looking</option>
-                  <option value="student">Student</option>
-                  <option value="contractor">Contractor / Freelance</option>
-                </select>
-              </div>
-
-              <div>
-                <label className="block text-xs font-medium text-slate-600 mb-1">
-                  Preferred work type
-                </label>
-                <select
-                  value={preferredWorkType}
-                  onChange={(e) => setPreferredWorkType(e.target.value)}
-                  className="w-full rounded border px-2 py-1.5 text-xs sm:text-sm focus:outline-none focus:ring-2 focus:ring-[#FF7043]"
-                >
-                  <option value="">Any type</option>
-                  <option value="full-time">Full-time</option>
-                  <option value="part-time">Part-time</option>
-                  <option value="contract">Contract</option>
-                  <option value="internship">Internship</option>
-                  <option value="temporary">Temporary</option>
-                  <option value="remote-only">Remote only</option>
-                </select>
-              </div>
-
-              <div>
-                <label className="block text-xs font-medium text-slate-600 mb-1">
-                  Willing to relocate
-                </label>
-                <select
-                  value={willingToRelocate}
-                  onChange={(e) => setWillingToRelocate(e.target.value)}
-                  className="w-full rounded border px-2 py-1.5 text-xs sm:text-sm focus:outline-none focus:ring-2 focus:ring-[#FF7043]"
-                >
-                  <option value="">Any</option>
-                  <option value="yes">Yes</option>
-                  <option value="no">No</option>
-                  <option value="maybe">Maybe</option>
-                </select>
-              </div>
-
-              <div>
-                <label className="block text-xs font-medium text-slate-600 mb-1">
-                  Skills (comma-separated)
-                </label>
-                <input
-                  type="text"
-                  value={skills}
-                  onChange={(e) => setSkills(e.target.value)}
-                  placeholder="e.g., Salesforce, SQL, Zendesk"
-                  className="w-full rounded border px-2 py-1.5 text-xs sm:text-sm focus:outline-none focus:ring-2 focus:ring-[#FF7043]"
-                />
-              </div>
-
-              {/* ✅ NEW: Education field (red box target) */}
-              <div>
-                <label className="block text-xs font-medium text-slate-600 mb-1">
-                  Education (comma-separated)
-                </label>
-                <input
-                  type="text"
-                  value={education}
-                  onChange={(e) => setEducation(e.target.value)}
-                  placeholder="e.g., Bachelor, Computer Science, MBA, BSN"
-                  className="w-full rounded border px-2 py-1.5 text-xs sm:text-sm focus:outline-none focus:ring-2 focus:ring-[#FF7043]"
-                />
-              </div>
-
-              <div>
-                <label className="block text-xs font-medium text-slate-600 mb-1">
-                  Languages (comma-separated)
-                </label>
-                <input
-                  type="text"
-                  value={languages}
-                  onChange={(e) => setLanguages(e.target.value)}
-                  placeholder="e.g., English, Spanish, French"
-                  className="w-full rounded border px-2 py-1.5 text-xs sm:text-sm focus:outline-none focus:ring-2 focus:ring-[#FF7043]"
-                />
-              </div>
-            </div>
-
-            <div className="mt-4 border-t border-slate-200 pt-3 flex flex-col md:flex-row md:items-center md:justify-between gap-3">
-              <div className="flex flex-col gap-2">
-                <div className="flex items-center gap-2">
-                  <input
-                    id="automationEnabled"
-                    type="checkbox"
-                    checked={automationEnabled}
-                    onChange={(e) => setAutomationEnabled(e.target.checked)}
-                    className="h-3 w-3 rounded border-slate-400 text-[#FF7043] focus:ring-[#FF7043]"
-                  />
-                  <label
-                    htmlFor="automationEnabled"
-                    className="text-xs text-slate-700"
-                  >
-                    Enable daily candidate feed using these filters
-                  </label>
-                </div>
-                <div>
-                  <label className="block text-[11px] font-medium text-slate-600 mb-1">
-                    Automation name (optional)
-                  </label>
-                  <input
-                    type="text"
-                    value={automationName}
-                    onChange={(e) => setAutomationName(e.target.value)}
-                    placeholder="e.g., Senior CSM – US remote"
-                    className="w-full rounded border px-2 py-1.5 text-xs sm:text-sm focus:outline-none focus:ring-2 focus:ring-[#FF7043]"
-                  />
-                </div>
-              </div>
-
-              <div className="flex items-center gap-2 md:justify-end">
-                <button
-                  type="button"
-                  onClick={runManualCandidateSearch}
-                  disabled={manualSearching || isLoading}
-                  className="rounded-md border border-[#FF7043] bg-white px-3 py-1.5 text-xs sm:text-sm font-medium text-[#FF7043] hover:bg-[#FFF3EF] disabled:opacity-60"
-                >
-                  {manualSearching ? "Finding…" : "Find Candidates"}
-                </button>
-
-                <button
-                  type="button"
-                  onClick={() => {
-                    setSummaryKeywords("");
-                    setJobTitle("");
-                    setWorkStatus("");
-                    setPreferredWorkType("");
-                    setWillingToRelocate("");
-                    setSkills("");
-                    setLanguages("");
-                    // ✅ NEW
-                    setEducation("");
-                  }}
-                  className="rounded-md border border-slate-300 px-3 py-1.5 text-xs sm:text-sm text-slate-700 hover:bg-slate-50"
-                >
-                  Clear targeting
-                </button>
-
-                <button
-                  type="button"
-                  onClick={saveAutomationConfig}
-                  disabled={automationSaving}
-                  className="rounded-md bg-[#FF7043] px-3 py-1.5 text-xs sm:text-sm font-medium text-white shadow-sm hover:bg-[#f45c28] disabled:opacity-60"
-                >
-                  {automationSaving ? "Saving…" : "Save automation"}
-                </button>
-              </div>
-            </div>
-
-            {automationMessage && (
-              <p className="mt-2 text-[11px] text-slate-600">{automationMessage}</p>
-            )}
-
-            <p className="mt-2 text-[11px] text-slate-500">
-              ForgeTomorrow never filters candidates by name, hobbies or interests,
-              previous employers, birthdays or age, or pronouns. Those details may
-              appear in a profile but are not used for search or automation.
-            </p>
-          </div>
-        )}
-      </div>
+      <CandidateTargetingPanel
+        filters={{
+          summaryKeywords,
+          jobTitle,
+          workStatus,
+          preferredWorkType,
+          willingToRelocate,
+          skills,
+          languages,
+          education,
+        }}
+        setFilters={{
+          setSummaryKeywords,
+          setJobTitle,
+          setWorkStatus,
+          setPreferredWorkType,
+          setWillingToRelocate,
+          setSkills,
+          setLanguages,
+          setEducation,
+        }}
+        automation={{
+          enabled: automationEnabled,
+          setEnabled: setAutomationEnabled,
+          name: automationName,
+          setName: setAutomationName,
+          saving: automationSaving,
+          message: automationMessage,
+          onSave: saveAutomationConfig,
+        }}
+        onFindCandidates={runManualCandidateSearch}
+        onClearTargeting={() => {
+          setSummaryKeywords("");
+          setJobTitle("");
+          setWorkStatus("");
+          setPreferredWorkType("");
+          setWillingToRelocate("");
+          setSkills("");
+          setLanguages("");
+          setEducation("");
+        }}
+        manualSearching={manualSearching}
+        isLoading={isLoading}
+      />
 
       {isLoading ? (
         <div className="text-sm text-slate-600">Loading candidates...</div>
       ) : (
         <>
-          {/* Mobile/tablet: single list */}
           <div className="block lg:hidden">
             <CandidateList
               candidates={candidates}
@@ -1401,7 +1167,6 @@ function Body() {
             />
           </div>
 
-          {/* Desktop: 2-column list */}
           <div className="hidden lg:grid lg:grid-cols-2 gap-4">
             <CandidateList
               candidates={leftCandidates}
@@ -1445,7 +1210,6 @@ function Body() {
         onToggleTag={toggleTag}
       />
 
-      {/* Single WHY drawer */}
       <WhyCandidateDrawer
         open={whyOpen}
         onClose={() => setWhyOpen(false)}
@@ -1460,7 +1224,6 @@ function Body() {
         }}
       />
 
-      {/* Compare WHY drawer (RIGHT-side, 2 panels) */}
       <WhyCandidateCompareDrawer
         open={compareOpen}
         onClose={resetCompare}
@@ -1523,7 +1286,7 @@ export default function CandidatesPage() {
         title="Candidates — ForgeTomorrow"
         header={<HeaderOnly />}
         right={<RightCard whyMode={undefined} creditsLeft={undefined} />}
-        activeNav="candidates" // 🔸 highlight "Candidates" in Recruiter sidebar
+        activeNav="candidates"
       >
         <Body />
       </RecruiterLayout>
