@@ -243,19 +243,22 @@ export default async function handler(req, res) {
   // Legacy `isProfilePublic` must never override explicit `profileVisibility: PRIVATE`.
   // We only honor `isProfilePublic` when `profileVisibility` is NULL (legacy accounts).
   const andClauses = [
-    { deletedAt: null },
-    {
-      OR: [
-        { profileVisibility: { in: ["PUBLIC", "RECRUITERS_ONLY"] } },
-        {
-          AND: [
-            { profileVisibility: null }, // legacy-only safety net
-            { isProfilePublic: true },
-          ],
-        },
-      ],
-    },
-  ];
+  { deletedAt: null },
+  {
+    OR: [
+      // ✅ Allowed visibility modes
+      { profileVisibility: { in: ["PUBLIC", "RECRUITERS_ONLY"] } },
+
+      // ✅ Legacy safety net, but NEVER allow explicit PRIVATE
+      {
+        AND: [
+          { isProfilePublic: true },
+          { profileVisibility: { not: "PRIVATE" } },
+        ],
+      },
+    ],
+  },
+];
 
   if (nameRoleQuery) {
     andClauses.push({
