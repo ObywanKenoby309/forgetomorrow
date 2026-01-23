@@ -1313,12 +1313,6 @@ function Body() {
 
       {FiltersRow}
 
-      <div className="mb-2 -mt-1 px-1">
-        <div className="text-xs text-slate-500">
-          Results update as you type. Use Find Candidates to run your saved targeting settings on demand.
-        </div>
-      </div>
-
       <CandidateTargetingPanel
         filters={{
           summaryKeywords,
