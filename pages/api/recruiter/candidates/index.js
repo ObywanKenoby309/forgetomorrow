@@ -217,6 +217,8 @@ export default async function handler(req, res) {
     willingToRelocate = "",
     skills = "",
     languages = "",
+    // ✅ NEW
+    education = "",
   } = req.query || {};
 
   const nameRoleQuery = (q || "").toString().trim();
@@ -229,6 +231,8 @@ export default async function handler(req, res) {
   const relocateQuery = (willingToRelocate || "").toString().trim();
   const skillsQuery = (skills || "").toString().trim();
   const languagesQuery = (languages || "").toString().trim();
+  // ✅ NEW
+  const educationQuery = (education || "").toString().trim();
 
   // Recruiter discovery is LIVE and only includes:
   // - PUBLIC profiles
@@ -329,6 +333,20 @@ export default async function handler(req, res) {
     }
   }
 
+  // ✅ NEW: education keyword filter (array_contains, multi-term)
+  if (educationQuery) {
+    const terms = educationQuery
+      .split(",")
+      .map((s) => s.trim())
+      .filter(Boolean);
+
+    for (const term of terms) {
+      andClauses.push({
+        educationJson: { array_contains: [term] },
+      });
+    }
+  }
+
   if (booleanQuery) {
     andClauses.push({
       aboutMe: { contains: booleanQuery, mode: "insensitive" },
@@ -351,6 +369,8 @@ export default async function handler(req, res) {
         location: true,
         skillsJson: true,
         languagesJson: true,
+        // ✅ NEW
+        educationJson: true,
         createdAt: true,
       },
     });
@@ -454,6 +474,9 @@ export default async function handler(req, res) {
 
         // ✅ what the modal should display/edit
         skills: effectiveSkillsArr,
+
+        // ✅ NEW (optional): education array for future UI/WHY usage
+        education: toArrayJson(u.educationJson),
 
         // optional: transparency/debug
         skillsBaseline: baselineSkillsArr,

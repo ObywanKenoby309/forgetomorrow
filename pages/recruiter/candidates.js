@@ -92,6 +92,9 @@ function Body() {
   const [skills, setSkills] = useState("");
   const [languages, setLanguages] = useState("");
 
+  // ✅ NEW: Education keywords (comma-separated)
+  const [education, setEducation] = useState("");
+
   // Targeting/automation panel state
   const [targetingOpen, setTargetingOpen] = useState(false);
   const [automationEnabled, setAutomationEnabled] = useState(false);
@@ -161,6 +164,9 @@ function Body() {
     if (skills) params.set("skills", skills);
     if (languages) params.set("languages", languages);
 
+    // ✅ NEW: education
+    if (education) params.set("education", education);
+
     return params;
   };
 
@@ -212,6 +218,19 @@ function Body() {
     return uniq(pools).slice(0, 12);
   };
 
+  // ✅ NEW: candidate education pool (future-proof)
+  const getCandidateEducation = (c) => {
+    const pools = []
+      .concat(normalizeList(c?.education))
+      .concat(normalizeList(c?.educationList))
+      .concat(normalizeList(c?.degrees))
+      .concat(normalizeList(c?.profile?.education))
+      .concat(normalizeList(c?.profile?.educationList))
+      .concat(normalizeList(c?.resume?.education))
+      .concat(normalizeList(c?.resume?.educationList));
+    return uniq(pools).slice(0, 24);
+  };
+
   const getCandidateSummaryText = (c) => {
     return (
       c?.summary ||
@@ -256,6 +275,8 @@ function Body() {
     if (willingToRelocate) filters.push(`Relocate: ${willingToRelocate}`);
     if (skills) filters.push(`Skills: ${skills}`);
     if (languages) filters.push(`Languages: ${languages}`);
+    // ✅ NEW
+    if (education) filters.push(`Education: ${education}`);
     return filters;
   };
 
@@ -389,6 +410,23 @@ function Body() {
         });
       }
 
+      if (evidence.length) builtReasons.push({ requirement: req, evidence });
+    }
+
+    // ✅ NEW: Education alignment reason
+    const filterEdu = normalizeList(education);
+    const candEdu = getCandidateEducation(c);
+    if (filterEdu.length || candEdu.length) {
+      const req = filterEdu.length
+        ? `Education alignment: ${filterEdu.slice(0, 6).join(", ")}`
+        : `Education alignment`;
+      const evidence = [];
+      if (candEdu.length) {
+        evidence.push({
+          text: `Education listed: ${candEdu.slice(0, 8).join(", ")}`,
+          source: "Profile",
+        });
+      }
       if (evidence.length) builtReasons.push({ requirement: req, evidence });
     }
 
@@ -682,6 +720,8 @@ function Body() {
     willingToRelocate,
     skills,
     languages,
+    // ✅ NEW
+    education,
   ]);
 
   // NEW: load saved automation config on mount
@@ -724,6 +764,10 @@ function Body() {
         }
         if (typeof filters.languages === "string") {
           setLanguages(filters.languages);
+        }
+        // ✅ NEW
+        if (typeof filters.education === "string") {
+          setEducation(filters.education);
         }
       } catch (err) {
         console.error("[Candidates] automation load error:", err);
@@ -838,6 +882,8 @@ function Body() {
             relocate: willingToRelocate || null,
             skills: skills || null,
             languages: languages || null,
+            // ✅ NEW
+            education: education || null,
           },
         }),
       });
@@ -880,7 +926,12 @@ function Body() {
     };
 
     if (typeof Analytics.logWhyOpened === "function") {
-      Analytics.logWhyOpened({ ...evt, score: ex.score, mode: whyMode, explain: ex });
+      Analytics.logWhyOpened({
+        ...evt,
+        score: ex.score,
+        mode: whyMode,
+        explain: ex,
+      });
     } else if (typeof Analytics.logEvent === "function") {
       Analytics.logEvent(evt);
     }
@@ -1050,6 +1101,8 @@ function Body() {
           relocate: willingToRelocate || null, // backend key is `relocate`
           skills: skills || null,
           languages: languages || null,
+          // ✅ NEW
+          education: education || null,
         },
       };
 
@@ -1085,7 +1138,8 @@ function Body() {
     return { left, right };
   };
 
-  const { left: leftCandidates, right: rightCandidates } = splitForColumns(candidates);
+  const { left: leftCandidates, right: rightCandidates } =
+    splitForColumns(candidates);
   // ---------- END: desktop 2-column layout split ----------
 
   return (
@@ -1213,6 +1267,20 @@ function Body() {
                 />
               </div>
 
+              {/* ✅ NEW: Education field (red box target) */}
+              <div>
+                <label className="block text-xs font-medium text-slate-600 mb-1">
+                  Education (comma-separated)
+                </label>
+                <input
+                  type="text"
+                  value={education}
+                  onChange={(e) => setEducation(e.target.value)}
+                  placeholder="e.g., Bachelor, Computer Science, MBA, BSN"
+                  className="w-full rounded border px-2 py-1.5 text-xs sm:text-sm focus:outline-none focus:ring-2 focus:ring-[#FF7043]"
+                />
+              </div>
+
               <div>
                 <label className="block text-xs font-medium text-slate-600 mb-1">
                   Languages (comma-separated)
@@ -1278,6 +1346,8 @@ function Body() {
                     setWillingToRelocate("");
                     setSkills("");
                     setLanguages("");
+                    // ✅ NEW
+                    setEducation("");
                   }}
                   className="rounded-md border border-slate-300 px-3 py-1.5 text-xs sm:text-sm text-slate-700 hover:bg-slate-50"
                 >
