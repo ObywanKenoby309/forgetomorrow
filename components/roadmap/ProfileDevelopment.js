@@ -26,17 +26,19 @@ function safeArray(v) {
 function skillNamesFromAny(skillsJson) {
   const arr = safeArray(skillsJson);
   return arr
-    .map((x) => (typeof x === 'string' ? x : (x?.name || x?.label || '')))
+    .map((x) => (typeof x === 'string' ? x : (x?.name || x?.label || x?.value || '')))
     .map((s) => String(s || '').trim())
     .filter(Boolean);
 }
 
+// IMPORTANT:
+// We store skillsJson as an array of strings, not [{ name }] objects.
+// This prevents UI from rendering JSON blobs and keeps the data shape consistent.
 function listToSkillObjects(names) {
   return (names || [])
     .map((s) => String(s || '').trim())
     .filter(Boolean)
-    .slice(0, 50)
-    .map((name) => ({ name }));
+    .slice(0, 50);
 }
 
 function normalizeHeadlineSuggestion(text) {
@@ -321,7 +323,9 @@ export default function ProfileDevelopment({ onNext }) {
           headline: computed.headline || null,
           aboutMe: computed.aboutMe || null,
           skills: computed.skills || [],
-          languages: safeArray(details?.languagesJson).map((x) => (typeof x === 'string' ? x : (x?.name || x?.label || ''))).filter(Boolean),
+          languages: safeArray(details?.languagesJson)
+            .map((x) => (typeof x === 'string' ? x : (x?.name || x?.label || '')))
+            .filter(Boolean),
           location: details?.location || null,
         },
         resume: resumeContent ? { name: primary?.name || 'Primary Resume', content: resumeContent } : null,
@@ -383,6 +387,7 @@ export default function ProfileDevelopment({ onNext }) {
       if (modalField === 'skills') {
         const names = splitSkills(draftValue);
         if (names.length < 6) throw new Error('Add at least 6 skills.');
+        // Store as string[] so profile UI never renders object JSON blobs
         data.skillsJson = listToSkillObjects(names);
       }
 
@@ -427,12 +432,12 @@ export default function ProfileDevelopment({ onNext }) {
       }}
     >
       <h1 style={{ margin: 0, color: ORANGE, fontSize: 24, fontWeight: 900 }}>
-  Profile Development
-</h1>
-<p style={{ margin: '6px auto 0', color: '#607D8B', maxWidth: 760, lineHeight: 1.5 }}>
-  Not everyone is a professional profile writer. This tool identifies recruiter-facing
-  gaps and helps you strengthen them quickly and strategically.
-</p>
+        Profile Development
+      </h1>
+      <p style={{ margin: '6px auto 0', color: '#607D8B', maxWidth: 760, lineHeight: 1.5 }}>
+        Not everyone is a professional profile writer. This tool identifies recruiter-facing
+        gaps and helps you strengthen them quickly and strategically.
+      </p>
     </section>
   );
 
@@ -552,23 +557,23 @@ export default function ProfileDevelopment({ onNext }) {
         })}
       </ul>
 
-<div
-  style={{
-    marginTop: 12,
-    padding: 12,
-    borderRadius: 10,
-    background: '#F8FAFC',
-    border: '1px solid #E5E7EB',
-    fontSize: 13,
-    color: '#475569',
-    lineHeight: 1.45,
-  }}
->
-  <strong>Guidance note:</strong> This tool provides structured, AI-assisted guidance based on your
-  profile and resume. It is designed to support your thinking and preparation, not to replace live
-  coaching or mentorship. We encourage you to work with a coach or mentor through Spotlight to
-  refine your strategy, positioning, and next steps.
-</div>
+      <div
+        style={{
+          marginTop: 12,
+          padding: 12,
+          borderRadius: 10,
+          background: '#F8FAFC',
+          border: '1px solid #E5E7EB',
+          fontSize: 13,
+          color: '#475569',
+          lineHeight: 1.45,
+        }}
+      >
+        <strong>Guidance note:</strong> This tool provides structured, AI-assisted guidance based on your
+        profile and resume. It is designed to support your thinking and preparation, not to replace live
+        coaching or mentorship. We encourage you to work with a coach or mentor through Spotlight to
+        refine your strategy, positioning, and next steps.
+      </div>
 
       <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 10, alignItems: 'center' }}>
         <button
