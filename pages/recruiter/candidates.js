@@ -1,5 +1,5 @@
 // pages/recruiter/candidates.js
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { useRouter } from "next/router";
 import { PlanProvider, usePlan } from "../../context/PlanContext";
 import RecruiterLayout from "../../components/layouts/RecruiterLayout";
@@ -59,8 +59,9 @@ function HeaderOnly() {
           </div>
 
           <p className="mt-2 text-sm text-slate-600 max-w-2xl leading-relaxed">
-            Review and manage your active pipeline. Search by name or role, filter by
-            location, and on Enterprise use Boolean search to dial in exactly who you need.
+            Review and manage your active pipeline. Search by name or role,
+            filter by location, and on Enterprise use Boolean search to dial in
+            exactly who you need.
           </p>
         </div>
       </GlassPanel>
@@ -103,11 +104,12 @@ function RightToolsCard({ whyMode, creditsLeft = null }) {
 
       <div className="mt-3 text-sm text-slate-700 space-y-2">
         <p>
-          Start with a short query, then refine. Enterprise teams can use Boolean when
-          the pool is large.
+          Start with a short query, then refine. Enterprise teams can use Boolean
+          when the pool is large.
         </p>
         <p>
-          Tag top candidates to build quick outreach lists and keep your pipeline clean.
+          Tag top candidates to build quick outreach lists and keep your pipeline
+          clean.
         </p>
 
         <div className="pt-2">
@@ -222,6 +224,69 @@ function Body() {
     if (education) params.set("education", education);
 
     return params;
+  };
+
+  const hasAnyTargeting =
+    Boolean(summaryKeywords) ||
+    Boolean(jobTitle) ||
+    Boolean(workStatus) ||
+    Boolean(preferredWorkType) ||
+    Boolean(willingToRelocate) ||
+    Boolean(skills) ||
+    Boolean(languages) ||
+    Boolean(education);
+
+  const activeChips = useMemo(() => {
+    const chips = [];
+
+    if (nameQuery) chips.push({ key: "q", label: `Query: ${nameQuery}` });
+    if (locQuery) chips.push({ key: "loc", label: `Location: ${locQuery}` });
+    if (boolQuery) chips.push({ key: "bool", label: `Boolean: ${boolQuery}` });
+
+    if (summaryKeywords)
+      chips.push({ key: "summary", label: `Summary: ${summaryKeywords}` });
+    if (jobTitle) chips.push({ key: "title", label: `Target role: ${jobTitle}` });
+    if (workStatus) chips.push({ key: "status", label: `Status: ${workStatus}` });
+    if (preferredWorkType)
+      chips.push({ key: "worktype", label: `Work type: ${preferredWorkType}` });
+    if (willingToRelocate)
+      chips.push({ key: "relocate", label: `Relocate: ${willingToRelocate}` });
+    if (skills) chips.push({ key: "skills", label: `Skills: ${skills}` });
+    if (languages)
+      chips.push({ key: "langs", label: `Languages: ${languages}` });
+    if (education)
+      chips.push({ key: "edu", label: `Education: ${education}` });
+
+    return chips;
+  }, [
+    nameQuery,
+    locQuery,
+    boolQuery,
+    summaryKeywords,
+    jobTitle,
+    workStatus,
+    preferredWorkType,
+    willingToRelocate,
+    skills,
+    languages,
+    education,
+  ]);
+
+  const clearSearchFilters = () => {
+    setNameQuery("");
+    setLocQuery("");
+    setBoolQuery("");
+  };
+
+  const clearTargeting = () => {
+    setSummaryKeywords("");
+    setJobTitle("");
+    setWorkStatus("");
+    setPreferredWorkType("");
+    setWillingToRelocate("");
+    setSkills("");
+    setLanguages("");
+    setEducation("");
   };
 
   // ---------- WHY PERSONALIZATION (client-side, deterministic) ----------
@@ -617,11 +682,7 @@ function Body() {
 
       if (!res.ok) {
         const payload = await res.json().catch(() => ({}));
-        console.error(
-          "[Candidates] startConversation error:",
-          res.status,
-          payload
-        );
+        console.error("[Candidates] startConversation error:", res.status, payload);
         alert("We couldn't open a conversation yet. Please try again in a moment.");
         return;
       }
@@ -840,9 +901,7 @@ function Body() {
         if (c.id !== id) return c;
         const currentTags = Array.isArray(c.tags) ? c.tags : [];
         const has = currentTags.includes(tag);
-        const next = has
-          ? currentTags.filter((t) => t !== tag)
-          : [...currentTags, tag];
+        const next = has ? currentTags.filter((t) => t !== tag) : [...currentTags, tag];
         updatedTags = next;
         return { ...c, tags: next };
       })
@@ -1047,7 +1106,9 @@ function Body() {
       <div className="flex flex-col gap-3">
         <div className="flex items-center justify-between gap-3">
           <div>
-            <div className="text-sm font-semibold text-slate-900">Search and Filters</div>
+            <div className="text-sm font-semibold text-slate-900">
+              Search and Filters
+            </div>
             <div className="text-xs text-slate-600">
               Use quick filters for breadth. Use targeting for precision.
             </div>
@@ -1130,7 +1191,9 @@ function Body() {
         throw new Error(`Automation API failed (status ${res.status})`);
       }
 
-      setAutomationMessage("Automation settings saved for your daily candidate feed.");
+      setAutomationMessage(
+        "Automation settings saved for your daily candidate feed."
+      );
     } catch (err) {
       console.error("[Candidates] automation save error:", err);
       setAutomationMessage(
@@ -1153,6 +1216,66 @@ function Body() {
 
   const { left: leftCandidates, right: rightCandidates } =
     splitForColumns(candidates);
+
+  const ResultsBar = (
+    <GlassPanel className="mb-4 px-4 py-3">
+      <div className="flex flex-col gap-3">
+        <div className="flex items-center justify-between gap-3">
+          <div>
+            <div className="text-sm font-semibold text-slate-900">Results</div>
+            <div className="text-xs text-slate-600">
+              {candidates.length} candidate{candidates.length === 1 ? "" : "s"} in
+              view
+              {compareSelectedIds.length
+                ? ` - ${compareSelectedIds.length} selected for compare`
+                : ""}
+              .
+            </div>
+          </div>
+
+          <div className="flex items-center gap-2">
+            {(nameQuery || locQuery || boolQuery) && (
+              <button
+                type="button"
+                onClick={clearSearchFilters}
+                className="text-xs px-2.5 py-1 rounded-full border border-white/40 bg-white/60 text-slate-700 hover:bg-white/80"
+              >
+                Clear search
+              </button>
+            )}
+            {hasAnyTargeting && (
+              <button
+                type="button"
+                onClick={clearTargeting}
+                className="text-xs px-2.5 py-1 rounded-full border border-white/40 bg-white/60 text-slate-700 hover:bg-white/80"
+              >
+                Clear targeting
+              </button>
+            )}
+          </div>
+        </div>
+
+        {activeChips.length > 0 && (
+          <div className="flex flex-wrap gap-2">
+            {activeChips.slice(0, 10).map((chip) => (
+              <span
+                key={chip.key}
+                className="text-[11px] px-2 py-0.5 rounded-full border border-white/35 bg-white/55 text-slate-700"
+                title={chip.label}
+              >
+                {chip.label}
+              </span>
+            ))}
+            {activeChips.length > 10 && (
+              <span className="text-[11px] px-2 py-0.5 rounded-full border border-white/35 bg-white/55 text-slate-500">
+                +{activeChips.length - 10} more
+              </span>
+            )}
+          </div>
+        )}
+      </div>
+    </GlassPanel>
+  );
 
   return (
     <>
@@ -1201,79 +1324,109 @@ function Body() {
           onSave: saveAutomationConfig,
         }}
         onFindCandidates={runManualCandidateSearch}
-        onClearTargeting={() => {
-          setSummaryKeywords("");
-          setJobTitle("");
-          setWorkStatus("");
-          setPreferredWorkType("");
-          setWillingToRelocate("");
-          setSkills("");
-          setLanguages("");
-          setEducation("");
-        }}
+        onClearTargeting={clearTargeting}
         manualSearching={manualSearching}
         isLoading={isLoading}
       />
 
       {isLoading ? (
         <GlassPanel className="px-4 py-8">
-          <div className="text-sm text-slate-700 font-medium">Loading candidates...</div>
+          <div className="text-sm text-slate-700 font-medium">
+            Loading candidates...
+          </div>
           <div className="mt-2 text-xs text-slate-600">
             Pulling your latest pipeline and signals.
           </div>
         </GlassPanel>
       ) : (
         <>
-          <div className="block lg:hidden">
-            <CandidateList
-              candidates={candidates}
-              isEnterprise={isEnterprise}
-              onView={onView}
-              onMessage={onMessage}
-              onWhy={onWhy}
-              onToggleCompare={onToggleCompare}
-              compareSelectedIds={compareSelectedIds}
-              showFilters={false}
-              showFilterBar={false}
-              filtersVisible={false}
-              query={nameQuery}
-              locationFilter={locQuery}
-              booleanQuery={boolQuery}
-            />
-          </div>
+          {ResultsBar}
 
-          <div className="hidden lg:grid lg:grid-cols-2 gap-4">
-            <CandidateList
-              candidates={leftCandidates}
-              isEnterprise={isEnterprise}
-              onView={onView}
-              onMessage={onMessage}
-              onWhy={onWhy}
-              onToggleCompare={onToggleCompare}
-              compareSelectedIds={compareSelectedIds}
-              showFilters={false}
-              showFilterBar={false}
-              filtersVisible={false}
-              query={nameQuery}
-              locationFilter={locQuery}
-              booleanQuery={boolQuery}
-            />
-            <CandidateList
-              candidates={rightCandidates}
-              isEnterprise={isEnterprise}
-              onView={onView}
-              onMessage={onMessage}
-              onWhy={onWhy}
-              onToggleCompare={onToggleCompare}
-              compareSelectedIds={compareSelectedIds}
-              showFilters={false}
-              showFilterBar={false}
-              filtersVisible={false}
-              query={nameQuery}
-              locationFilter={locQuery}
-              booleanQuery={boolQuery}
-            />
-          </div>
+          {candidates.length === 0 ? (
+            <GlassPanel className="px-4 py-10">
+              <div className="text-sm font-semibold text-slate-900">
+                No candidates found
+              </div>
+              <div className="mt-1 text-xs text-slate-600 max-w-2xl">
+                Try a broader query, remove a filter, or clear targeting and run
+                the search again.
+              </div>
+
+              <div className="mt-4 flex flex-wrap gap-2">
+                <button
+                  type="button"
+                  onClick={() => {
+                    clearSearchFilters();
+                    clearTargeting();
+                  }}
+                  className="text-xs px-3 py-1.5 rounded-full border border-white/40 bg-white/60 text-slate-700 hover:bg-white/80"
+                >
+                  Clear all filters
+                </button>
+
+                <button
+                  type="button"
+                  onClick={runManualCandidateSearch}
+                  className="text-xs px-3 py-1.5 rounded-full border border-[#FF7043]/25 bg-[#FFEDE6]/70 text-[#FF7043] hover:bg-[#FFEDE6]/90"
+                >
+                  Run search
+                </button>
+              </div>
+            </GlassPanel>
+          ) : (
+            <>
+              <div className="block lg:hidden">
+                <CandidateList
+                  candidates={candidates}
+                  isEnterprise={isEnterprise}
+                  onView={onView}
+                  onMessage={onMessage}
+                  onWhy={onWhy}
+                  onToggleCompare={onToggleCompare}
+                  compareSelectedIds={compareSelectedIds}
+                  showFilters={false}
+                  showFilterBar={false}
+                  filtersVisible={false}
+                  query={nameQuery}
+                  locationFilter={locQuery}
+                  booleanQuery={boolQuery}
+                />
+              </div>
+
+              <div className="hidden lg:grid lg:grid-cols-2 gap-4">
+                <CandidateList
+                  candidates={leftCandidates}
+                  isEnterprise={isEnterprise}
+                  onView={onView}
+                  onMessage={onMessage}
+                  onWhy={onWhy}
+                  onToggleCompare={onToggleCompare}
+                  compareSelectedIds={compareSelectedIds}
+                  showFilters={false}
+                  showFilterBar={false}
+                  filtersVisible={false}
+                  query={nameQuery}
+                  locationFilter={locQuery}
+                  booleanQuery={boolQuery}
+                />
+                <CandidateList
+                  candidates={rightCandidates}
+                  isEnterprise={isEnterprise}
+                  onView={onView}
+                  onMessage={onMessage}
+                  onWhy={onWhy}
+                  onToggleCompare={onToggleCompare}
+                  compareSelectedIds={compareSelectedIds}
+                  showFilters={false}
+                  showFilterBar={false}
+                  filtersVisible={false}
+                  query={nameQuery}
+                  locationFilter={locQuery}
+                  booleanQuery={boolQuery}
+                />
+              </div>
+            </>
+          )}
         </>
       )}
 
@@ -1358,7 +1511,7 @@ export default function CandidatesPage() {
   return (
     <PlanProvider>
       <RecruiterLayout
-        title="Candidates — ForgeTomorrow"
+        title="Candidates - ForgeTomorrow"
         header={<HeaderOnly />}
         right={<RightCard />}
         activeNav="candidates"
