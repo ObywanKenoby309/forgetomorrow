@@ -33,45 +33,99 @@ const mkWhySnapshot = (explain, mode) => ({
   filters: explain?.filters_triggered || [],
 });
 
+const GlassPanel = ({ className = "", children }) => {
+  return (
+    <section
+      className={
+        "rounded-2xl border border-white/30 bg-white/70 backdrop-blur-md shadow-[0_10px_30px_rgba(0,0,0,0.10)] " +
+        className
+      }
+    >
+      {children}
+    </section>
+  );
+};
+
 function HeaderOnly() {
   return (
-    <div className="w-full text-center">
-      <h1 className="text-2xl font-bold text-[#FF7043]">Candidates</h1>
-      <p className="mt-1 text-sm text-slate-600 max-w-xl mx-auto leading-relaxed">
-        Review and manage your active pipeline. Search by name/role, filter by
-        location, and—on Enterprise—use Boolean search to dial in exactly who you
-        need.
-      </p>
+    <div className="w-full">
+      <GlassPanel className="px-5 py-4 sm:px-6">
+        <div className="flex flex-col items-center text-center">
+          <div className="inline-flex items-center gap-2">
+            <h1 className="text-2xl font-bold text-[#FF7043]">Candidates</h1>
+            <span className="text-[11px] px-2 py-0.5 rounded-full border border-white/40 bg-white/60 text-slate-700">
+              Pipeline
+            </span>
+          </div>
+
+          <p className="mt-2 text-sm text-slate-600 max-w-2xl leading-relaxed">
+            Review and manage your active pipeline. Search by name or role, filter by
+            location, and on Enterprise use Boolean search to dial in exactly who you need.
+          </p>
+        </div>
+      </GlassPanel>
     </div>
   );
 }
 
-// Sidebar card now reads the real plan via usePlan()
-function RightToolsCard({ whyMode = "lite", creditsLeft = null }) {
-  const isFull = whyMode === "full";
+// Sidebar card reads plan via usePlan(). Keeps props optional.
+function RightToolsCard({ whyMode, creditsLeft = null }) {
+  const { isEnterprise } = usePlan();
+  const resolvedMode = whyMode || (isEnterprise ? "full" : "lite");
+  const isFull = resolvedMode === "full";
+
   return (
-    <div className="rounded-lg border bg-white p-4">
-      <div className="font-medium mb-2">Tips</div>
-      <div className="text-sm text-slate-600 space-y-2">
-        <p>Use short queries, then refine with Boolean on Enterprise.</p>
-        <p>Tag top candidates to build quick outreach lists.</p>
-        <p className="mt-2 flex items-center flex-wrap gap-1">
-          <span>
-            <span className="font-semibold">WHY</span>:{" "}
-            {isFull
-              ? "Full rationale enabled"
-              : "Lite rationale (top reasons only)"}
+    <GlassPanel className="p-4">
+      <div className="flex items-start justify-between gap-3">
+        <div>
+          <div className="font-semibold text-slate-900">Tips</div>
+          <div className="mt-1 text-xs text-slate-600">
+            Fast workflows, clean signal.
+          </div>
+        </div>
+
+        <div className="flex items-center gap-2">
+          <span
+            className={
+              "text-[11px] px-2 py-0.5 rounded-full border bg-white/60 " +
+              (isFull
+                ? "border-emerald-200 text-emerald-700"
+                : "border-amber-200 text-amber-700")
+            }
+          >
+            {isFull ? "WHY: Full" : "WHY: Lite"}
           </span>
+
           {/* Single POR for explainability */}
           <WhyInfo />
-          {creditsLeft != null && !isFull && (
-            <span className="ml-2 text-xs px-2 py-0.5 rounded-full border bg-[#FFEDE6] text-[#FF7043]">
-              {creditsLeft} left
-            </span>
-          )}
-        </p>
+        </div>
       </div>
-    </div>
+
+      <div className="mt-3 text-sm text-slate-700 space-y-2">
+        <p>
+          Start with a short query, then refine. Enterprise teams can use Boolean when
+          the pool is large.
+        </p>
+        <p>
+          Tag top candidates to build quick outreach lists and keep your pipeline clean.
+        </p>
+
+        <div className="pt-2">
+          <div className="flex flex-wrap items-center gap-2 text-xs text-slate-600">
+            <span className="inline-flex items-center gap-1">
+              <span className="font-semibold text-slate-800">Explainability</span>
+              <span className="text-slate-500">shows evidence, not buzzwords.</span>
+            </span>
+
+            {creditsLeft != null && !isFull && (
+              <span className="ml-auto text-xs px-2 py-0.5 rounded-full border border-[#FF7043]/25 bg-[#FFEDE6]/70 text-[#FF7043]">
+                {creditsLeft} left
+              </span>
+            )}
+          </div>
+        </div>
+      </div>
+    </GlassPanel>
   );
 }
 
@@ -582,8 +636,8 @@ function Body() {
       const destName = candidate.name || "";
       const firstName = destName.split(" ")[0] || "";
       const prefill = firstName
-        ? `Hi ${firstName}, thanks for connecting — I’d love to chat about a role that looks like a strong match for your background.`
-        : `Hi there, thanks for connecting — I’d love to chat about a role that looks like a strong match for your background.`;
+        ? `Hi ${firstName}, thanks for connecting - I’d love to chat about a role that looks like a strong match for your background.`
+        : `Hi there, thanks for connecting - I’d love to chat about a role that looks like a strong match for your background.`;
 
       if (channel === "recruiter") {
         router.push({
@@ -989,40 +1043,56 @@ function Body() {
   };
 
   const FiltersRow = (
-    <div className="mb-4 grid grid-cols-1 sm:grid-cols-3 gap-3">
-      <input
-        type="text"
-        placeholder="Search by name or role…"
-        className="border rounded px-3 py-2 text-sm w-full focus:outline-none focus:ring-2 focus:ring-[#FF7043]"
-        value={nameQuery}
-        onChange={(e) => setNameQuery(e.target.value)}
-      />
-      <input
-        type="text"
-        placeholder="Filter by location…"
-        className="border rounded px-3 py-2 text-sm w-full focus:outline-none focus:ring-2 focus:ring-[#FF7043]"
-        value={locQuery}
-        onChange={(e) => setLocQuery(e.target.value)}
-      />
-      {isEnterprise ? (
-        <input
-          type="text"
-          placeholder="Boolean Search…"
-          className="border rounded px-3 py-2 text-sm w-full focus:outline-none focus:ring-2 focus:ring-[#FF7043]"
-          value={boolQuery}
-          onChange={(e) => setBoolQuery(e.target.value)}
-        />
-      ) : (
-        <FeatureLock label="Boolean Search">
+    <GlassPanel className="mb-4 px-4 py-3">
+      <div className="flex flex-col gap-3">
+        <div className="flex items-center justify-between gap-3">
+          <div>
+            <div className="text-sm font-semibold text-slate-900">Search and Filters</div>
+            <div className="text-xs text-slate-600">
+              Use quick filters for breadth. Use targeting for precision.
+            </div>
+          </div>
+          <div className="text-[11px] px-2 py-0.5 rounded-full border border-white/40 bg-white/60 text-slate-700">
+            {isEnterprise ? "Enterprise" : "SMB"}
+          </div>
+        </div>
+
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
           <input
             type="text"
-            placeholder="Boolean Search (Upgrade required)"
-            className="border rounded px-3 py-2 text-sm w-full bg-gray-100 cursor-not-allowed"
-            disabled
+            placeholder="Search by name or role…"
+            className="border border-white/40 bg-white/70 rounded-xl px-3 py-2 text-sm w-full shadow-sm focus:outline-none focus:ring-2 focus:ring-[#FF7043]"
+            value={nameQuery}
+            onChange={(e) => setNameQuery(e.target.value)}
           />
-        </FeatureLock>
-      )}
-    </div>
+          <input
+            type="text"
+            placeholder="Filter by location…"
+            className="border border-white/40 bg-white/70 rounded-xl px-3 py-2 text-sm w-full shadow-sm focus:outline-none focus:ring-2 focus:ring-[#FF7043]"
+            value={locQuery}
+            onChange={(e) => setLocQuery(e.target.value)}
+          />
+          {isEnterprise ? (
+            <input
+              type="text"
+              placeholder="Boolean Search…"
+              className="border border-white/40 bg-white/70 rounded-xl px-3 py-2 text-sm w-full shadow-sm focus:outline-none focus:ring-2 focus:ring-[#FF7043]"
+              value={boolQuery}
+              onChange={(e) => setBoolQuery(e.target.value)}
+            />
+          ) : (
+            <FeatureLock label="Boolean Search">
+              <input
+                type="text"
+                placeholder="Boolean Search (Upgrade required)"
+                className="border border-white/40 rounded-xl px-3 py-2 text-sm w-full bg-gray-100 cursor-not-allowed"
+                disabled
+              />
+            </FeatureLock>
+          )}
+        </div>
+      </div>
+    </GlassPanel>
   );
 
   const saveAutomationConfig = async () => {
@@ -1087,15 +1157,15 @@ function Body() {
   return (
     <>
       {loadError && (
-        <div className="mb-4 rounded-md border border-red-200 bg-red-50 px-3 py-2 text-xs text-red-700">
-          {loadError}
-        </div>
+        <GlassPanel className="mb-4 px-4 py-3 border-red-200/60 bg-red-50/70">
+          <div className="text-xs text-red-700">{loadError}</div>
+        </GlassPanel>
       )}
 
       {actionError && (
-        <div className="mb-4 rounded-md border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-800">
-          {actionError}
-        </div>
+        <GlassPanel className="mb-4 px-4 py-3 border-amber-200/60 bg-amber-50/70">
+          <div className="text-xs text-amber-800">{actionError}</div>
+        </GlassPanel>
       )}
 
       {FiltersRow}
@@ -1146,7 +1216,12 @@ function Body() {
       />
 
       {isLoading ? (
-        <div className="text-sm text-slate-600">Loading candidates...</div>
+        <GlassPanel className="px-4 py-8">
+          <div className="text-sm text-slate-700 font-medium">Loading candidates...</div>
+          <div className="mt-2 text-xs text-slate-600">
+            Pulling your latest pipeline and signals.
+          </div>
+        </GlassPanel>
       ) : (
         <>
           <div className="block lg:hidden">
@@ -1285,7 +1360,7 @@ export default function CandidatesPage() {
       <RecruiterLayout
         title="Candidates — ForgeTomorrow"
         header={<HeaderOnly />}
-        right={<RightCard whyMode={undefined} creditsLeft={undefined} />}
+        right={<RightCard />}
         activeNav="candidates"
       >
         <Body />
