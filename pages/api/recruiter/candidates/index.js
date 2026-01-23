@@ -202,6 +202,60 @@ function toEducationObjects(v) {
   return [];
 }
 
+// ✅ Education query parsing
+// - UI sometimes sends "AS in Microsoft Engineering" as ONE string
+// - We normalize that into multiple terms so education search only matches inside educationJson.
+// - We also normalize degree shorthand: "AS" should match "Associate" and "Associate's".
+function parseEducationTerms(input) {
+  const raw = String(input || "").trim();
+  if (!raw) return [];
+
+  // Normalize common "X in Y" single-string pattern into multi-term search
+  // Example: "AS in Microsoft Support Engineering" -> ["AS", "Microsoft Support Engineering"]
+  let normalized = raw;
+
+  // If no commas were used, but " in " exists, split on " in "
+  // Keep it conservative: only split on the first occurrence.
+  if (!normalized.includes(",") && /\s+in\s+/i.test(normalized)) {
+    const parts = normalized.split(/\s+in\s+/i).map((s) => s.trim()).filter(Boolean);
+    if (parts.length >= 2) {
+      normalized = parts.join(", ");
+    }
+  }
+
+  // Primary split remains comma-based
+  const terms = normalized
+    .split(",")
+    .map((s) => s.trim())
+    .filter(Boolean);
+
+  // Expand shorthand degree synonyms (kept tight and specific to avoid over-broad matches)
+  const expanded = [];
+  for (const t of terms) {
+    const tl = t.toLowerCase();
+
+    // AS / A.S. -> Associate / Associate's
+    if (tl === "as" || tl === "a.s." || tl === "a.s" || tl === "assoc" || tl === "associates") {
+      expanded.push(t);
+      expanded.push("Associate");
+      expanded.push("Associate's");
+      continue;
+    }
+
+    // AA / A.A. -> Associate / Associate's
+    if (tl === "aa" || tl === "a.a." || tl === "a.a") {
+      expanded.push(t);
+      expanded.push("Associate");
+      expanded.push("Associate's");
+      continue;
+    }
+
+    expanded.push(t);
+  }
+
+  return dedupeCaseInsensitive(expanded).slice(0, 10);
+}
+
 // ✅ Education search helper (Postgres JSONB array-of-objects)
 // AND across terms; within each term, OR across school/degree/field/startYear/endYear
 async function findUserIdsByEducationTerms(prisma, terms) {
@@ -412,12 +466,9 @@ export default async function handler(req, res) {
   }
 
   // ✅ FIXED: education keyword filter for array-of-objects JSONB
-  // AND across comma-separated terms
+  // AND across parsed terms (comma-separated; also supports "X in Y" -> ["X","Y"])
   if (educationQuery) {
-    const terms = educationQuery
-      .split(",")
-      .map((s) => s.trim())
-      .filter(Boolean);
+    const terms = parseEducationTerms(educationQuery);
 
     try {
       const matchedUserIds = await findUserIdsByEducationTerms(prisma, terms);
