@@ -21,10 +21,6 @@ export default function About() {
             <span className="text-[#FF7043]">treated</span>.
           </p>
 
-          <p className="mt-12 text-2xl md:text-3xl font-semibold text-gray-100 max-w-4xl mx-auto leading-relaxed">
-            We have been to the mountaintop and seen the injustice being fed to good people every day trying to survive.
-          </p>
-
           <p className="mt-10 text-lg md:text-xl text-gray-300 max-w-4xl mx-auto leading-relaxed">
             ForgeTomorrow was built by people who know what it feels like to be shut out of
             systems that claim to help. We have been unemployed, underpaid, ignored, and told
@@ -49,7 +45,9 @@ export default function About() {
           </p>
 
           <p>
-            A man had taken his own life after two years of trying to find his next position so he could provide for his family. Two years of using all the tools and resources currently on the market. Two years of nothing working.
+            A man had taken his own life after two years of trying to find his next position so he could provide for his family.
+            Two years of using all the tools and resources currently on the market.
+            Two years of nothing working.
           </p>
 
           <p>
@@ -66,7 +64,8 @@ export default function About() {
 
           <div className="border-l-4 border-[#FF7043] pl-8 my-12">
             <p>
-              I had already spent three weeks applying to hundreds of jobs myself. I was ghosted or rejected in minutes by the same automated systems I'd been told were designed to help us all.
+              I had already spent three weeks applying to hundreds of jobs myself.
+              I was ghosted or rejected in minutes by the same automated systems I'd been told were designed to help us all.
             </p>
 
             <p className="mt-6">
@@ -87,7 +86,9 @@ export default function About() {
           </p>
 
           <p className="mt-8">
-            I built ForgeTomorrow alone. Front stack to API. Seven months. Because I couldn't bring a child into a world where people are discarded like this. Where good people trying to survive get broken by systems that claim to help them.
+            I built ForgeTomorrow alone. Front stack to API. Seven months.
+            Because I couldn't bring a child into a world where people are discarded like this.
+            Where good people trying to survive get broken by systems that claim to help them.
           </p>
 
           <p className="text-xl md:text-2xl font-semibold text-gray-300">
@@ -114,7 +115,9 @@ export default function About() {
             <div className="space-y-6">
               <p className="font-bold text-2xl text-[#FF7043]">On the other side:</p>
               <p>A system built by someone who lived what you're living.</p>
-              <p>Who cried for the man who gave up and for the rest of us looking for support when we need it most.</p>
+              <p>
+                Who cried for the man who gave up and for the rest of us looking for support when we need it most.
+              </p>
               <p>Who knows what it feels like to be invisible.</p>
             </div>
           </div>
@@ -138,7 +141,8 @@ export default function About() {
           </h2>
 
           <p>
-            You will always be able to use ForgeTomorrow without being trapped behind a credit card wall. Core tools will remain accessible without trials, countdowns, or bait and switch tactics.
+            You will always be able to use ForgeTomorrow without being trapped behind a credit card wall.
+            Core tools will remain accessible without trials, countdowns, or bait and switch tactics.
           </p>
 
           <p>
@@ -146,7 +150,8 @@ export default function About() {
           </p>
 
           <p>
-            Paid subscriptions expand what is possible. They are how this platform stays alive, responsive, and available for those for whom a subscription is not an option.
+            Paid subscriptions expand what is possible.
+            They are how this platform stays alive, responsive, and available for those for whom a subscription is not an option.
           </p>
 
           <p>
@@ -160,9 +165,13 @@ export default function About() {
         <div className="max-w-3xl mx-auto px-6 space-y-10 text-lg md:text-xl text-gray-800">
           <p className="font-semibold text-2xl text-gray-900">We do not sell user data.</p>
           <p className="font-semibold text-2xl text-gray-900">We do not trade people for ad revenue.</p>
-          <p className="font-semibold text-2xl text-gray-900">We do not hide how decisions are made behind opaque scores or rankings.</p>
+          <p className="font-semibold text-2xl text-gray-900">
+            We do not hide how decisions are made behind opaque scores or rankings.
+          </p>
+
           <p className="mt-8">
-            We use technology to bring clarity, not confusion. We design systems that explain themselves so people can move forward with confidence.
+            We use technology to bring clarity, not confusion.
+            We design systems that explain themselves so people can move forward with confidence.
           </p>
         </div>
       </section>
@@ -175,7 +184,10 @@ export default function About() {
           </blockquote>
 
           <p>
-            This is a shared effort. Seekers, coaches, recruiters, and builders working inside the same system with aligned incentives. The old platforms optimized for extraction and opacity. We are correcting that course.
+            This is a shared effort.
+            Seekers, coaches, recruiters, and builders working inside the same system with aligned incentives.
+            The old platforms optimized for extraction and opacity.
+            We are correcting that course.
           </p>
 
           <p className="text-3xl md:text-4xl font-bold text-[#FF7043] text-center mt-16">
@@ -205,7 +217,9 @@ export default function About() {
           <p className="text-lg text-gray-600 mt-1">Founder & CEO, ForgeTomorrow</p>
 
           <p className="mt-10 text-lg md:text-xl text-gray-700 leading-relaxed">
-            I have lived the same story you have. I will never let this place become another wall someone cannot climb. If it does, it will have lost its reason to exist.
+            I have lived the same story you have.
+            I will never let this place become another wall someone cannot climb.
+            If it does, it will have lost its reason to exist.
           </p>
 
           <p className="mt-6 font-semibold text-gray-900">That is my word.</p>
