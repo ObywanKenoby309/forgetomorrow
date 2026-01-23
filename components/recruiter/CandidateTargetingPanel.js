@@ -89,8 +89,8 @@ export default function CandidateTargetingPanel({
                   </label>
                   <input
                     type="text"
-                    value={summaryKeywords}
-                    onChange={(e) => setSummaryKeywords(e.target.value)}
+                    value={summaryKeywords || ""}
+                    onChange={(e) => setSummaryKeywords?.(e.target.value)}
                     placeholder="e.g., customer success, onboarding, renewals"
                     className="w-full rounded-xl border border-white/40 bg-white/70 px-3 py-2 text-xs sm:text-sm shadow-sm focus:outline-none focus:ring-2 focus:ring-[#FF7043]"
                   />
@@ -102,8 +102,8 @@ export default function CandidateTargetingPanel({
                   </label>
                   <input
                     type="text"
-                    value={jobTitle}
-                    onChange={(e) => setJobTitle(e.target.value)}
+                    value={jobTitle || ""}
+                    onChange={(e) => setJobTitle?.(e.target.value)}
                     placeholder="e.g., Customer Success Manager"
                     className="w-full rounded-xl border border-white/40 bg-white/70 px-3 py-2 text-xs sm:text-sm shadow-sm focus:outline-none focus:ring-2 focus:ring-[#FF7043]"
                   />
@@ -114,8 +114,8 @@ export default function CandidateTargetingPanel({
                     Current work status
                   </label>
                   <select
-                    value={workStatus}
-                    onChange={(e) => setWorkStatus(e.target.value)}
+                    value={workStatus || ""}
+                    onChange={(e) => setWorkStatus?.(e.target.value)}
                     className="w-full rounded-xl border border-white/40 bg-white/70 px-3 py-2 text-xs sm:text-sm shadow-sm focus:outline-none focus:ring-2 focus:ring-[#FF7043]"
                   >
                     <option value="">Any status</option>
@@ -131,8 +131,8 @@ export default function CandidateTargetingPanel({
                     Preferred work type
                   </label>
                   <select
-                    value={preferredWorkType}
-                    onChange={(e) => setPreferredWorkType(e.target.value)}
+                    value={preferredWorkType || ""}
+                    onChange={(e) => setPreferredWorkType?.(e.target.value)}
                     className="w-full rounded-xl border border-white/40 bg-white/70 px-3 py-2 text-xs sm:text-sm shadow-sm focus:outline-none focus:ring-2 focus:ring-[#FF7043]"
                   >
                     <option value="">Any type</option>
@@ -150,8 +150,8 @@ export default function CandidateTargetingPanel({
                     Willing to relocate
                   </label>
                   <select
-                    value={willingToRelocate}
-                    onChange={(e) => setWillingToRelocate(e.target.value)}
+                    value={willingToRelocate || ""}
+                    onChange={(e) => setWillingToRelocate?.(e.target.value)}
                     className="w-full rounded-xl border border-white/40 bg-white/70 px-3 py-2 text-xs sm:text-sm shadow-sm focus:outline-none focus:ring-2 focus:ring-[#FF7043]"
                   >
                     <option value="">Any</option>
@@ -167,8 +167,8 @@ export default function CandidateTargetingPanel({
                   </label>
                   <input
                     type="text"
-                    value={skills}
-                    onChange={(e) => setSkills(e.target.value)}
+                    value={skills || ""}
+                    onChange={(e) => setSkills?.(e.target.value)}
                     placeholder="e.g., Salesforce, SQL, Zendesk"
                     className="w-full rounded-xl border border-white/40 bg-white/70 px-3 py-2 text-xs sm:text-sm shadow-sm focus:outline-none focus:ring-2 focus:ring-[#FF7043]"
                   />
@@ -180,8 +180,8 @@ export default function CandidateTargetingPanel({
                   </label>
                   <input
                     type="text"
-                    value={education}
-                    onChange={(e) => setEducation(e.target.value)}
+                    value={education || ""}
+                    onChange={(e) => setEducation?.(e.target.value)}
                     placeholder="e.g., Bachelor, Computer Science, MBA, BSN"
                     className="w-full rounded-xl border border-white/40 bg-white/70 px-3 py-2 text-xs sm:text-sm shadow-sm focus:outline-none focus:ring-2 focus:ring-[#FF7043]"
                   />
@@ -193,8 +193,8 @@ export default function CandidateTargetingPanel({
                   </label>
                   <input
                     type="text"
-                    value={languages}
-                    onChange={(e) => setLanguages(e.target.value)}
+                    value={languages || ""}
+                    onChange={(e) => setLanguages?.(e.target.value)}
                     placeholder="e.g., English, Spanish, French"
                     className="w-full rounded-xl border border-white/40 bg-white/70 px-3 py-2 text-xs sm:text-sm shadow-sm focus:outline-none focus:ring-2 focus:ring-[#FF7043]"
                   />
@@ -208,7 +208,7 @@ export default function CandidateTargetingPanel({
                       id="automationEnabled"
                       type="checkbox"
                       checked={Boolean(automationEnabled)}
-                      onChange={(e) => setAutomationEnabled(e.target.checked)}
+                      onChange={(e) => setAutomationEnabled?.(e.target.checked)}
                       className="mt-0.5 h-3 w-3 rounded border-slate-400 text-[#FF7043] focus:ring-[#FF7043]"
                     />
                     <label
@@ -225,8 +225,8 @@ export default function CandidateTargetingPanel({
                     </label>
                     <input
                       type="text"
-                      value={automationName}
-                      onChange={(e) => setAutomationName(e.target.value)}
+                      value={automationName || ""}
+                      onChange={(e) => setAutomationName?.(e.target.value)}
                       placeholder="e.g., Senior CSM - US remote"
                       className="w-full rounded-xl border border-white/40 bg-white/70 px-3 py-2 text-xs sm:text-sm shadow-sm focus:outline-none focus:ring-2 focus:ring-[#FF7043]"
                     />
@@ -267,13 +267,16 @@ export default function CandidateTargetingPanel({
               </div>
 
               {automationMessage && (
-                <p className="mt-2 text-[11px] text-slate-600">{automationMessage}</p>
+                <p className="mt-2 text-[11px] text-slate-600">
+                  {automationMessage}
+                </p>
               )}
 
               <p className="mt-3 text-[11px] text-slate-500">
-                ForgeTomorrow never filters candidates by name, hobbies or interests,
-                previous employers, birthdays or age, or pronouns. Those details may
-                appear in a profile but are not used for search or automation.
+                ForgeTomorrow never filters candidates by name, hobbies or
+                interests, previous employers, birthdays or age, or pronouns.
+                Those details may appear in a profile but are not used for search
+                or automation.
               </p>
             </GlassPanel>
           </div>
