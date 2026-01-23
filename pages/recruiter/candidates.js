@@ -1101,6 +1101,7 @@ function Body() {
     });
   };
 
+  // Search tools panel now includes Results (count, chips, clear actions)
   const FiltersRow = (
     <GlassPanel className="mb-3 px-5 py-4 sm:px-6">
       <div className="flex flex-col gap-3">
@@ -1159,6 +1160,76 @@ function Body() {
                 disabled
               />
             </FeatureLock>
+          )}
+        </div>
+
+        {/* Results live inside Search tools */}
+        <div className="pt-1">
+          <div className="flex items-start justify-between gap-3">
+            <div>
+              <div className="text-xs tracking-wide uppercase text-slate-500">
+                Results
+              </div>
+              <div className="mt-1 text-xs text-slate-600">
+                {isLoading ? (
+                  "Updating..."
+                ) : (
+                  <>
+                    {candidates.length} candidate{candidates.length === 1 ? "" : "s"} in view
+                    {compareSelectedIds.length
+                      ? ` - ${compareSelectedIds.length} selected for compare`
+                      : ""}
+                    .
+                  </>
+                )}
+              </div>
+            </div>
+
+            <div className="flex items-center gap-2">
+              {manualSearching ? (
+                <span className="text-[11px] px-2 py-0.5 rounded-full border border-white/40 bg-white/60 text-slate-700">
+                  Searching...
+                </span>
+              ) : null}
+
+              {(nameQuery || locQuery || boolQuery) && (
+                <button
+                  type="button"
+                  onClick={clearSearchFilters}
+                  className="text-xs px-2.5 py-1 rounded-full border border-white/40 bg-white/60 text-slate-700 hover:bg-white/80"
+                >
+                  Clear search
+                </button>
+              )}
+              {hasAnyTargeting && (
+                <button
+                  type="button"
+                  onClick={clearTargeting}
+                  className="text-xs px-2.5 py-1 rounded-full border border-white/40 bg-white/60 text-slate-700 hover:bg-white/80"
+                >
+                  Clear targeting
+                </button>
+              )}
+            </div>
+          </div>
+
+          {activeChips.length > 0 && (
+            <div className="mt-2 flex flex-wrap gap-2">
+              {activeChips.slice(0, 10).map((chip) => (
+                <span
+                  key={chip.key}
+                  className="text-[11px] px-2 py-0.5 rounded-full border border-white/35 bg-white/55 text-slate-700"
+                  title={chip.label}
+                >
+                  {chip.label}
+                </span>
+              ))}
+              {activeChips.length > 10 && (
+                <span className="text-[11px] px-2 py-0.5 rounded-full border border-white/35 bg-white/55 text-slate-500">
+                  +{activeChips.length - 10} more
+                </span>
+              )}
+            </div>
           )}
         </div>
       </div>
@@ -1225,66 +1296,6 @@ function Body() {
 
   const { left: leftCandidates, right: rightCandidates } =
     splitForColumns(candidates);
-
-  const ResultsBar = (
-    <GlassPanel className="mb-4 px-5 py-3 sm:px-6">
-      <div className="flex flex-col gap-3">
-        <div className="flex items-center justify-between gap-3">
-          <div>
-            <div className="text-sm font-semibold text-slate-900">Results</div>
-            <div className="text-xs text-slate-600">
-              {candidates.length} candidate{candidates.length === 1 ? "" : "s"} in
-              view
-              {compareSelectedIds.length
-                ? ` - ${compareSelectedIds.length} selected for compare`
-                : ""}
-              .
-            </div>
-          </div>
-
-          <div className="flex items-center gap-2">
-            {(nameQuery || locQuery || boolQuery) && (
-              <button
-                type="button"
-                onClick={clearSearchFilters}
-                className="text-xs px-2.5 py-1 rounded-full border border-white/40 bg-white/60 text-slate-700 hover:bg-white/80"
-              >
-                Clear search
-              </button>
-            )}
-            {hasAnyTargeting && (
-              <button
-                type="button"
-                onClick={clearTargeting}
-                className="text-xs px-2.5 py-1 rounded-full border border-white/40 bg-white/60 text-slate-700 hover:bg-white/80"
-              >
-                Clear targeting
-              </button>
-            )}
-          </div>
-        </div>
-
-        {activeChips.length > 0 && (
-          <div className="flex flex-wrap gap-2">
-            {activeChips.slice(0, 10).map((chip) => (
-              <span
-                key={chip.key}
-                className="text-[11px] px-2 py-0.5 rounded-full border border-white/35 bg-white/55 text-slate-700"
-                title={chip.label}
-              >
-                {chip.label}
-              </span>
-            ))}
-            {activeChips.length > 10 && (
-              <span className="text-[11px] px-2 py-0.5 rounded-full border border-white/35 bg-white/55 text-slate-500">
-                +{activeChips.length - 10} more
-              </span>
-            )}
-          </div>
-        )}
-      </div>
-    </GlassPanel>
-  );
 
   return (
     <>
@@ -1355,8 +1366,6 @@ function Body() {
         </GlassPanel>
       ) : (
         <>
-          {ResultsBar}
-
           {candidates.length === 0 ? (
             <GlassPanel className="px-5 py-10 sm:px-6">
               <div className="text-sm font-semibold text-slate-900">
@@ -1389,7 +1398,7 @@ function Body() {
               </div>
             </GlassPanel>
           ) : (
-            <div className="pt-2">
+            <div className="pt-0">
               <div className="block lg:hidden">
                 <CandidateList
                   candidates={candidates}
