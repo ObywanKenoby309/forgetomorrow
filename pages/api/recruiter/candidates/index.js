@@ -256,7 +256,7 @@ function parseEducationTerms(input) {
   return dedupeCaseInsensitive(expanded).slice(0, 10);
 }
 
-// ✅ Education search helper (Postgres JSONB array-of-objects)
+// ✅ Education search helper (Postgres JSON/JSONB array-of-objects)
 // AND across terms; within each term, OR across school/degree/field/startYear/endYear
 async function findUserIdsByEducationTerms(prisma, terms) {
   const cleaned = (terms || [])
@@ -266,12 +266,13 @@ async function findUserIdsByEducationTerms(prisma, terms) {
 
   if (!cleaned.length) return [];
 
+  // ✅ CRITICAL: cast to jsonb so this works whether the column is JSON or JSONB
   const perTermExists = cleaned.map((term) => {
     const like = `%${term}%`;
     return Prisma.sql`
       EXISTS (
         SELECT 1
-        FROM jsonb_array_elements("User"."educationJson") AS e
+        FROM jsonb_array_elements("User"."educationJson"::jsonb) AS e
         WHERE
           (e->>'school') ILIKE ${like}
           OR (e->>'degree') ILIKE ${like}
@@ -289,7 +290,7 @@ async function findUserIdsByEducationTerms(prisma, terms) {
       WHERE
         "deletedAt" IS NULL
         AND "educationJson" IS NOT NULL
-        AND jsonb_typeof("educationJson") = 'array'
+        AND jsonb_typeof("educationJson"::jsonb) = 'array'
         AND ${Prisma.join(perTermExists, Prisma.sql` AND `)}
     `
   );
@@ -465,7 +466,7 @@ export default async function handler(req, res) {
     }
   }
 
-  // ✅ FIXED: education keyword filter for array-of-objects JSONB
+  // ✅ FIXED: education keyword filter for array-of-objects JSON/JSONB
   // AND across parsed terms (comma-separated; also supports "X in Y" -> ["X","Y"])
   if (educationQuery) {
     const terms = parseEducationTerms(educationQuery);
@@ -615,7 +616,7 @@ export default async function handler(req, res) {
         // ✅ what the modal should display/edit
         skills: effectiveSkillsArr,
 
-        // ✅ FIXED: education returns objects (consistent with profile storage)
+        // ✅ education returns objects (consistent with profile storage)
         education: toEducationObjects(u.educationJson),
 
         // optional: transparency/debug
