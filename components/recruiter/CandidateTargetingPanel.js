@@ -1,6 +1,19 @@
 // components/recruiter/CandidateTargetingPanel.js
 import { useState } from "react";
 
+const GlassPanel = ({ className = "", children }) => {
+  return (
+    <section
+      className={
+        "rounded-2xl border border-white/30 bg-white/70 backdrop-blur-md shadow-[0_10px_30px_rgba(0,0,0,0.10)] " +
+        className
+      }
+    >
+      {children}
+    </section>
+  );
+};
+
 export default function CandidateTargetingPanel({
   filters,
   setFilters,
@@ -43,19 +56,6 @@ export default function CandidateTargetingPanel({
   } = automation || {};
 
   const [targetingOpen, setTargetingOpen] = useState(false);
-
-  const GlassPanel = ({ className = "", children }) => {
-    return (
-      <section
-        className={
-          "rounded-2xl border border-white/30 bg-white/70 backdrop-blur-md shadow-[0_10px_30px_rgba(0,0,0,0.10)] " +
-          className
-        }
-      >
-        {children}
-      </section>
-    );
-  };
 
   return (
     <div className="mb-3">
