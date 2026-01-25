@@ -21,6 +21,30 @@ function getChromeFromAsPath(asPath) {
   }
 }
 
+// ✅ NEW: safe ID coercion (supports both numeric IDs and string IDs like cuid/uuid)
+function coerceId(val) {
+  if (val === undefined || val === null) return null;
+  const s = String(val).trim();
+  if (!s) return null;
+  if (/^\d+$/.test(s)) return Number(s);
+  return s; // keep string ids
+}
+
+// ✅ NEW: accept multiple possible response shapes from /api/resume/list and /api/cover/list
+function extractList(json, keys = []) {
+  if (!json) return [];
+  if (Array.isArray(json)) return json;
+  for (const k of keys) {
+    const v = json?.[k];
+    if (Array.isArray(v)) return v;
+  }
+  // common alternates
+  if (Array.isArray(json.items)) return json.items;
+  if (Array.isArray(json.data)) return json.data;
+  if (Array.isArray(json.results)) return json.results;
+  return [];
+}
+
 export default function JobApplyPage() {
   const router = useRouter();
   const { id: jobId } = router.query;
@@ -83,7 +107,10 @@ export default function JobApplyPage() {
         if (!jobRes.ok) throw new Error('Failed to load job');
         const jobJson = await jobRes.json();
         if (!active) return;
-        setJob(jobJson);
+
+        // Some APIs return { job: {...} } — accept both
+        const normalizedJob = jobJson?.job ? jobJson.job : jobJson;
+        setJob(normalizedJob);
 
         // Template: optional (if it 500s, we proceed with no additional questions).
         let tplJson = { steps: [] };
@@ -105,8 +132,8 @@ export default function JobApplyPage() {
           fetch('/api/cover/list'),
         ]);
 
-        let resumesJson = { resumes: [] };
-        let coversJson = { covers: [] };
+        let resumesJson = null;
+        let coversJson = null;
 
         if (resumesRes.status === 'fulfilled') {
           try {
@@ -130,18 +157,27 @@ export default function JobApplyPage() {
 
         if (!active) return;
 
-        const resumeList = resumesJson.resumes || [];
-        const coverList = coversJson.covers || [];
+        // ✅ Robust list extraction (supports multiple shapes)
+        const resumeList = extractList(resumesJson, ['resumes', 'resume', 'list']);
+        const coverList = extractList(coversJson, ['covers', 'cover', 'list']);
 
         setResumes(resumeList);
         setCovers(coverList);
 
         // auto-pick primary if present
-        const primaryResume = resumeList.find((r) => r.isPrimary) || resumeList[0];
-        const primaryCover = coverList.find((c) => c.isPrimary) || null;
+        const primaryResume = resumeList.find((r) => r && r.isPrimary) || resumeList[0];
+        const primaryCover = coverList.find((c) => c && c.isPrimary) || null;
 
         setSelectedResumeId(primaryResume ? primaryResume.id : null);
         setSelectedCoverId(primaryCover ? primaryCover.id : null);
+
+        // Helpful debug for “why nothing is loading”
+        if (typeof window !== 'undefined') {
+          // eslint-disable-next-line no-console
+          console.log('[Apply] resumes loaded:', resumeList?.length || 0, resumesJson);
+          // eslint-disable-next-line no-console
+          console.log('[Apply] covers loaded:', coverList?.length || 0, coversJson);
+        }
       } catch (e) {
         if (!active) return;
         setError(e?.message || 'Something went wrong loading the application.');
@@ -275,8 +311,9 @@ export default function JobApplyPage() {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
         jobId: Number(jobId),
-        resumeId: selectedResumeId ? Number(selectedResumeId) : null,
-        coverId: selectedCoverId ? Number(selectedCoverId) : null,
+        // ✅ do NOT force Number() — resume/cover ids may be string
+        resumeId: selectedResumeId != null ? coerceId(selectedResumeId) : null,
+        coverId: selectedCoverId != null ? coerceId(selectedCoverId) : null,
       }),
     });
 
@@ -304,8 +341,9 @@ export default function JobApplyPage() {
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
             id: appId,
-            resumeId: selectedResumeId ? Number(selectedResumeId) : null,
-            coverId: selectedCoverId ? Number(selectedCoverId) : null,
+            // ✅ do NOT force Number() — resume/cover ids may be string
+            resumeId: selectedResumeId != null ? coerceId(selectedResumeId) : null,
+            coverId: selectedCoverId != null ? coerceId(selectedCoverId) : null,
           }),
         });
 
@@ -675,14 +713,14 @@ function DocumentsStep({
         >
           <div className="text-sm font-semibold text-slate-900 mb-2">Resume (required)</div>
           <select
-            value={selectedResumeId || ''}
-            onChange={(e) => setSelectedResumeId(e.target.value ? Number(e.target.value) : null)}
+            value={selectedResumeId ?? ''}
+            onChange={(e) => setSelectedResumeId(coerceId(e.target.value))}
             className="w-full rounded-lg px-3 py-2 text-sm"
             style={{ background: 'rgba(255,255,255,0.95)', border: '1px solid rgba(0,0,0,0.12)' }}
           >
             <option value="">Select a resume…</option>
             {(resumes || []).map((r) => (
-              <option key={r.id} value={r.id}>
+              <option key={String(r.id)} value={String(r.id)}>
                 {r.name}
                 {r.isPrimary ? ' (Primary)' : ''}
               </option>
@@ -699,14 +737,14 @@ function DocumentsStep({
         >
           <div className="text-sm font-semibold text-slate-900 mb-2">Cover letter (optional)</div>
           <select
-            value={selectedCoverId || ''}
-            onChange={(e) => setSelectedCoverId(e.target.value ? Number(e.target.value) : null)}
+            value={selectedCoverId ?? ''}
+            onChange={(e) => setSelectedCoverId(coerceId(e.target.value))}
             className="w-full rounded-lg px-3 py-2 text-sm"
             style={{ background: 'rgba(255,255,255,0.95)', border: '1px solid rgba(0,0,0,0.12)' }}
           >
             <option value="">No cover letter</option>
             {(covers || []).map((c) => (
-              <option key={c.id} value={c.id}>
+              <option key={String(c.id)} value={String(c.id)}>
                 {c.name}
                 {c.isPrimary ? ' (Primary)' : ''}
               </option>
@@ -1038,8 +1076,8 @@ function ReviewStep({
   answers,
   additionalQuestions,
 }) {
-  const resume = (resumes || []).find((r) => r.id === selectedResumeId);
-  const cover = (covers || []).find((c) => c.id === selectedCoverId);
+  const resume = (resumes || []).find((r) => String(r.id) === String(selectedResumeId));
+  const cover = (covers || []).find((c) => String(c.id) === String(selectedCoverId));
 
   return (
     <div className="space-y-4">
