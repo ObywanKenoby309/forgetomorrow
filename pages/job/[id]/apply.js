@@ -123,16 +123,37 @@ export default function JobApplyPage() {
     };
   }, [jobId]);
 
-  const steps = useMemo(() => {
+  // Flatten ALL template questions into ONE "Additional questions" step (single page).
+  const additionalQuestions = useMemo(() => {
     const tplSteps = template?.steps || [];
+    return tplSteps.flatMap((s) => s?.questions || []);
+  }, [template]);
+
+  const steps = useMemo(() => {
+    const hasAdditional = (additionalQuestions || []).length > 0;
+
+    // Standard flow:
+    // Your documents
+    // Voluntary self-identification (optional)
+    // Consent & acknowledgement
+    // Additional questions (conditional, single page)
+    // Review & submit
     return [
       { key: 'documents', title: 'Your documents' },
-      ...tplSteps.map((s) => ({ key: `tpl:${s.key}`, title: s.title, step: s })),
-      { key: 'consent', title: 'Consent & acknowledgement' },
       { key: 'selfid', title: 'Voluntary self-identification (optional)' },
+      { key: 'consent', title: 'Consent & acknowledgement' },
+      ...(hasAdditional
+        ? [
+            {
+              key: 'additional',
+              title: 'Additional questions',
+              questions: additionalQuestions,
+            },
+          ]
+        : []),
       { key: 'review', title: 'Review & submit' },
     ];
-  }, [template]);
+  }, [additionalQuestions]);
 
   const currentStep = steps[stepIndex] || steps[0];
 
@@ -151,9 +172,19 @@ export default function JobApplyPage() {
       return !!selectedResumeId; // cover optional
     }
 
-    if (currentStep.key.startsWith('tpl:')) {
-      const step = currentStep.step;
-      const questions = step?.questions || [];
+    if (currentStep.key === 'selfid') {
+      return true;
+    }
+
+    if (currentStep.key === 'consent') {
+      if (!consent.termsAccepted) return false;
+      if (!consent.signatureName || consent.signatureName.trim().length < 2)
+        return false;
+      return true;
+    }
+
+    if (currentStep.key === 'additional') {
+      const questions = currentStep.questions || [];
       for (const q of questions) {
         if (!q.required) continue;
         const v = answers[q.key];
@@ -167,36 +198,25 @@ export default function JobApplyPage() {
       return true;
     }
 
-    if (currentStep.key === 'consent') {
-      if (!consent.termsAccepted) return false;
-      if (!consent.signatureName || consent.signatureName.trim().length < 2)
-        return false;
-      return true;
-    }
-
-    if (currentStep.key === 'selfid') {
-      return true;
-    }
-
     if (currentStep.key === 'review') {
       if (!selectedResumeId) return false;
       if (!consent.termsAccepted) return false;
       if (!consent.signatureName || consent.signatureName.trim().length < 2)
         return false;
 
-      const tplSteps = template?.steps || [];
-      for (const s of tplSteps) {
-        for (const q of s.questions || []) {
-          if (!q.required) continue;
-          const v = answers[q.key];
-          const ok =
-            v !== undefined &&
-            v !== null &&
-            !(typeof v === 'string' && v.trim() === '') &&
-            !(Array.isArray(v) && v.length === 0);
-          if (!ok) return false;
-        }
+      // If additional questions exist, required ones must be answered before submit.
+      const allQs = additionalQuestions || [];
+      for (const q of allQs) {
+        if (!q.required) continue;
+        const v = answers[q.key];
+        const ok =
+          v !== undefined &&
+          v !== null &&
+          !(typeof v === 'string' && v.trim() === '') &&
+          !(Array.isArray(v) && v.length === 0);
+        if (!ok) return false;
       }
+
       return true;
     }
 
@@ -210,7 +230,7 @@ export default function JobApplyPage() {
     selectedResumeId,
     answers,
     consent,
-    template,
+    additionalQuestions,
   ]);
 
   // Create or update the Application record (draft)
@@ -263,30 +283,6 @@ export default function JobApplyPage() {
         return;
       }
 
-      if (currentStep.key.startsWith('tpl:')) {
-        const step = currentStep.step;
-        const questions = step?.questions || [];
-        const payloadAnswers = questions.map((q) => ({
-          questionKey: q.key,
-          value: answers[q.key] ?? null,
-        }));
-
-        const res = await fetch(`/api/apply/answers`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            applicationId: appId,
-            answers: payloadAnswers,
-          }),
-        });
-
-        if (!res.ok) {
-          const j = await safeJson(res);
-          throw new Error(j?.error || 'Failed to save answers.');
-        }
-        return;
-      }
-
       if (currentStep.key === 'consent') {
         const res = await fetch(`/api/apply/consent`, {
           method: 'POST',
@@ -319,6 +315,29 @@ export default function JobApplyPage() {
         if (!res.ok) {
           const j = await safeJson(res);
           throw new Error(j?.error || 'Failed to save self-identification.');
+        }
+        return;
+      }
+
+      if (currentStep.key === 'additional') {
+        const questions = currentStep.questions || [];
+        const payloadAnswers = questions.map((q) => ({
+          questionKey: q.key,
+          value: answers[q.key] ?? null,
+        }));
+
+        const res = await fetch(`/api/apply/answers`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            applicationId: appId,
+            answers: payloadAnswers,
+          }),
+        });
+
+        if (!res.ok) {
+          const j = await safeJson(res);
+          throw new Error(j?.error || 'Failed to save answers.');
         }
         return;
       }
@@ -486,11 +505,8 @@ export default function JobApplyPage() {
           <div className="text-slate-700 text-sm">Loading application…</div>
         ) : (
           <>
-            <WizardStepList
-              steps={steps}
-              stepIndex={stepIndex}
-              onJump={(idx) => setStepIndex(idx)}
-            />
+            {/* Pills are a progress indicator (not a step navigator). */}
+            <WizardStepList steps={steps} stepIndex={stepIndex} />
 
             <div className="mt-2">
               {currentStep.key === 'documents' && (
@@ -504,16 +520,20 @@ export default function JobApplyPage() {
                 />
               )}
 
-              {currentStep.key.startsWith('tpl:') && (
-                <TemplateStep step={currentStep.step} answers={answers} setAnswers={setAnswers} />
+              {currentStep.key === 'selfid' && (
+                <SelfIdStep selfId={selfId} setSelfId={setSelfId} />
               )}
 
               {currentStep.key === 'consent' && (
                 <ConsentStep consent={consent} setConsent={setConsent} />
               )}
 
-              {currentStep.key === 'selfid' && (
-                <SelfIdStep selfId={selfId} setSelfId={setSelfId} />
+              {currentStep.key === 'additional' && (
+                <AdditionalQuestionsStep
+                  questions={currentStep.questions || []}
+                  answers={answers}
+                  setAnswers={setAnswers}
+                />
               )}
 
               {currentStep.key === 'review' && (
@@ -525,7 +545,7 @@ export default function JobApplyPage() {
                   selectedCoverId={selectedCoverId}
                   consent={consent}
                   answers={answers}
-                  template={template}
+                  additionalQuestions={additionalQuestions}
                 />
               )}
             </div>
@@ -571,7 +591,7 @@ export default function JobApplyPage() {
   );
 }
 
-function WizardStepList({ steps, stepIndex, onJump }) {
+function WizardStepList({ steps, stepIndex }) {
   return (
     <div className="flex flex-wrap gap-2">
       {steps.map((s, idx) => {
@@ -581,12 +601,14 @@ function WizardStepList({ steps, stepIndex, onJump }) {
           <button
             key={`${s.key}:${idx}`}
             type="button"
-            onClick={() => onJump(idx)}
+            disabled
             className="text-xs px-3 py-1 rounded-full border"
             style={{
               borderColor: active ? 'rgba(255,112,67,0.75)' : 'rgba(0,0,0,0.10)',
               background: active ? 'rgba(255,112,67,0.12)' : 'rgba(255,255,255,0.60)',
               color: active ? '#9A3412' : done ? '#334155' : '#475569',
+              cursor: 'default',
+              opacity: 1,
             }}
             title={s.title}
           >
@@ -666,19 +688,21 @@ function DocumentsStep({
   );
 }
 
-function TemplateStep({ step, answers, setAnswers }) {
-  const questions = step?.questions || [];
-
+function AdditionalQuestionsStep({ questions, answers, setAnswers }) {
   function setValue(key, value) {
     setAnswers((prev) => ({ ...prev, [key]: value }));
   }
 
   return (
     <div className="space-y-4">
-      <div className="text-slate-900 font-semibold">{step?.title || 'Questions'}</div>
+      <div className="text-slate-900 font-semibold">Additional questions</div>
+      <div className="text-sm text-slate-600">
+        In addition to the standard application, this position includes a small number of questions from the employer.
+        These must be completed before submitting your application.
+      </div>
 
       {questions.length === 0 ? (
-        <div className="text-sm text-slate-600">No questions in this section.</div>
+        <div className="text-sm text-slate-600">No additional questions for this position.</div>
       ) : (
         <div className="space-y-4">
           {questions.map((q) => (
@@ -971,7 +995,16 @@ function Field({ label, value, onChange }) {
   );
 }
 
-function ReviewStep({ job, resumes, covers, selectedResumeId, selectedCoverId, consent, answers, template }) {
+function ReviewStep({
+  job,
+  resumes,
+  covers,
+  selectedResumeId,
+  selectedCoverId,
+  consent,
+  answers,
+  additionalQuestions,
+}) {
   const resume = (resumes || []).find((r) => r.id === selectedResumeId);
   const cover = (covers || []).find((c) => c.id === selectedCoverId);
 
@@ -1011,15 +1044,14 @@ function ReviewStep({ job, resumes, covers, selectedResumeId, selectedCoverId, c
         </div>
       </div>
 
-      <div
-        className="rounded-xl border p-4"
-        style={{ borderColor: 'rgba(0,0,0,0.10)', background: 'rgba(255,255,255,0.75)' }}
-      >
-        <div className="text-sm text-slate-900 font-semibold">Your responses</div>
-        <div className="mt-2 space-y-2">
-          {(template?.steps || [])
-            .flatMap((s) => (s.questions || []).map((q) => ({ q })))
-            .map(({ q }) => {
+      {(additionalQuestions || []).length > 0 && (
+        <div
+          className="rounded-xl border p-4"
+          style={{ borderColor: 'rgba(0,0,0,0.10)', background: 'rgba(255,255,255,0.75)' }}
+        >
+          <div className="text-sm text-slate-900 font-semibold">Your responses</div>
+          <div className="mt-2 space-y-2">
+            {(additionalQuestions || []).map((q) => {
               const v = answers[q.key];
               const shown = Array.isArray(v) ? v.join(', ') : v ?? '';
               return (
@@ -1028,8 +1060,9 @@ function ReviewStep({ job, resumes, covers, selectedResumeId, selectedCoverId, c
                 </div>
               );
             })}
+          </div>
         </div>
-      </div>
+      )}
 
       <div className="text-xs text-slate-500">
         Job: {job?.title} at {job?.company}
