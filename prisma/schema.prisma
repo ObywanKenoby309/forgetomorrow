@@ -125,8 +125,12 @@ model Job {
 
   // which account / org owns this job or template
   accountKey String?
-
   organization Organization? @relation("OrganizationJobs", fields: [accountKey], references: [accountKey])
+
+  // ✅ NEW — recruiter-defined addl questions (job-scoped, single-page, max ~6 by UI gate)
+  // Stored as Json to avoid schema churn; UI controls cap count.
+  // Each item: { key, label, type, required, helpText?, options? }
+  additionalQuestions Json?
 
   applications Application[]
   views        JobView[]
@@ -162,14 +166,18 @@ model Application {
   appliedAt DateTime          @default(now())
   updatedAt DateTime          @updatedAt
 
-  // NEW: org routing for recruiter views
+  // org routing for recruiter views
   accountKey String?
 
-  // NEW: template + submit state
+  // template + submit state
   templateId  String?
   submittedAt DateTime?
 
-  // NEW: relations (step forms / consent / optional self-id)
+  // ✅ NEW — baseline "Role expectations" answers (standard on every internal app)
+  // Availability, relocation, salary expectation, work authorization, sponsorship, etc.
+  expectations ApplicationExpectations?
+
+  // relations (template steps / consent / optional self-id / additional questions answers)
   template ApplicationTemplate? @relation(fields: [templateId], references: [id], onDelete: SetNull)
   answers  ApplicationAnswer[]
   consent  ApplicationConsent?
@@ -178,14 +186,37 @@ model Application {
   user User @relation(fields: [userId], references: [id])
   job  Job? @relation(fields: [jobId], references: [id])
 
-  // NEW: real relations so you can include resume/cover cleanly
+  // real relations so you can include resume/cover cleanly
   resume Resume? @relation(fields: [resumeId], references: [id])
   cover  Cover?  @relation(fields: [coverId], references: [id])
 
   @@unique([userId, jobId], name: "user_job_unique")
-  // NEW: performance + dedupe
   @@index([accountKey])
   @@map("applications")
+}
+
+model ApplicationExpectations {
+  id            String      @id @default(cuid())
+  applicationId Int         @unique
+  application   Application @relation(fields: [applicationId], references: [id], onDelete: Cascade)
+
+  // Standard recruiter triage fields (baseline for all internal apps)
+  availability     String? // e.g., "Immediately", "2 weeks", "After 3/15"
+  startDate        DateTime?
+  willingToRelocate String? // "Yes" | "No" | "Depends"
+  expectedSalary   String? // keep string for flexibility ("$85k", "$70-90k", "Open")
+  workAuthorization String? // e.g., "US Citizen", "Authorized", etc.
+  needsSponsorship Boolean? @default(false)
+
+  // Optional: shift/travel if you want to capture now without forcing it
+  willingToTravel  String? // "0-10%", "25%", etc.
+  notes            String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([applicationId])
+  @@map("application_expectations")
 }
 
 model ApplicationTemplate {
@@ -232,7 +263,7 @@ model ApplicationTemplateQuestion {
   label    String
   helpText String?
   type     ApplicationQuestionType
-  required Boolean                 @default(false)
+  required Boolean @default(false)
 
   options Json?
 
@@ -262,9 +293,9 @@ model ApplicationConsent {
   applicationId Int         @unique
   application   Application @relation(fields: [applicationId], references: [id], onDelete: Cascade)
 
-  termsAccepted      Boolean @default(false)
+  termsAccepted        Boolean @default(false)
   emailUpdatesAccepted Boolean @default(false)
-  consentTextVersion String?
+  consentTextVersion   String?
 
   signatureName String?
   signedAt      DateTime?
@@ -346,6 +377,7 @@ model PinnedJob {
 
   @@map("pinned_jobs")
 }
+
 
 // ============================================================================
 //  EXTERNAL / INGESTED JOB FEED (for cron imports)

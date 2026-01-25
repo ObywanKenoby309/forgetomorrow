@@ -6,7 +6,10 @@ export default async function handler(req, res) {
   try {
     const session = await getClientSession(req);
     const userId = session?.user?.id;
-    if (!userId) return res.status(401).json({ error: 'Unauthorized' });
+
+    if (!userId) {
+      return res.status(401).json({ error: 'Unauthorized' });
+    }
 
     const [resumes, covers] = await Promise.all([
       prisma.resume.findMany({
@@ -23,6 +26,7 @@ export default async function handler(req, res) {
 
     return res.status(200).json({ resumes, covers });
   } catch (e) {
-    return res.status(500).json({ error: e?.message || 'Server error' });
+    console.error('[apply/documents] error', e);
+    return res.status(500).json({ error: 'Server error' });
   }
 }

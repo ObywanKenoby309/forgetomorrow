@@ -78,34 +78,67 @@ export default function JobApplyPage() {
       setError('');
 
       try {
-        const [jobRes, tplRes, docsRes] = await Promise.all([
-          fetch(`/api/jobs/${jobId}`),
-          fetch(`/api/apply/template?jobId=${encodeURIComponent(jobId)}`),
-          fetch(`/api/apply/documents`),
+        // Job is required for the page. Template/docs should NOT hard-fail the UI.
+        const jobRes = await fetch(`/api/jobs/${jobId}`);
+        if (!jobRes.ok) throw new Error('Failed to load job');
+        const jobJson = await jobRes.json();
+        if (!active) return;
+        setJob(jobJson);
+
+        // Template: optional (if it 500s, we proceed with no additional questions).
+        let tplJson = { steps: [] };
+        try {
+          const tplRes = await fetch(
+            `/api/apply/template?jobId=${encodeURIComponent(jobId)}`
+          );
+          if (tplRes.ok) tplJson = await tplRes.json();
+        } catch {
+          // ignore; keep tplJson = { steps: [] }
+        }
+        if (!active) return;
+        setTemplate(tplJson);
+
+        // Documents: reuse the same sources as resume-cover page
+        // resumes: /api/resume/list, covers: /api/cover/list
+        const [resumesRes, coversRes] = await Promise.allSettled([
+          fetch('/api/resume/list'),
+          fetch('/api/cover/list'),
         ]);
 
-        if (!jobRes.ok) throw new Error('Failed to load job');
-        if (!tplRes.ok) throw new Error('Failed to load application template');
-        if (!docsRes.ok) throw new Error('Failed to load resumes/covers');
+        let resumesJson = { resumes: [] };
+        let coversJson = { covers: [] };
 
-        const jobJson = await jobRes.json();
-        const tplJson = await tplRes.json();
-        const docsJson = await docsRes.json();
+        if (resumesRes.status === 'fulfilled') {
+          try {
+            if (resumesRes.value.ok) resumesJson = await resumesRes.value.json();
+            else setError((prev) => prev || 'Failed to load resumes.');
+          } catch {
+            setError((prev) => prev || 'Failed to load resumes.');
+          }
+        } else {
+          setError((prev) => prev || 'Failed to load resumes.');
+        }
+
+        if (coversRes.status === 'fulfilled') {
+          try {
+            if (coversRes.value.ok) coversJson = await coversRes.value.json();
+            // covers are optional; no hard error needed
+          } catch {
+            // ignore
+          }
+        }
 
         if (!active) return;
 
-        setJob(jobJson);
-        setTemplate(tplJson);
+        const resumeList = resumesJson.resumes || [];
+        const coverList = coversJson.covers || [];
 
-        setResumes(docsJson.resumes || []);
-        setCovers(docsJson.covers || []);
+        setResumes(resumeList);
+        setCovers(coverList);
 
         // auto-pick primary if present
-        const primaryResume =
-          (docsJson.resumes || []).find((r) => r.isPrimary) ||
-          (docsJson.resumes || [])[0];
-        const primaryCover =
-          (docsJson.covers || []).find((c) => c.isPrimary) || null;
+        const primaryResume = resumeList.find((r) => r.isPrimary) || resumeList[0];
+        const primaryCover = coverList.find((c) => c.isPrimary) || null;
 
         setSelectedResumeId(primaryResume ? primaryResume.id : null);
         setSelectedCoverId(primaryCover ? primaryCover.id : null);
