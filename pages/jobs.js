@@ -31,7 +31,7 @@ function PageShell({ header, right, children }) {
 }
 
 // ──────────────────────────────────────────────────────────────
-// Apply Modal (internal jobs)
+// Apply Modal (internal jobs)  ← kept for safety, but no longer used for internal apply
 // ──────────────────────────────────────────────────────────────
 function ApplyModal({ open, onClose, job, onApplied, isPaidUser, onResumeAlign }) {
   const [name, setName] = useState('');
@@ -388,10 +388,12 @@ function Jobs() {
   // Apply click behaviour
   const handleApplyClick = (job) => {
     if (!job) return;
-    const origin = (job.origin || '').toLowerCase();
+
+    const internal = isInternalJob(job);
     const applyLink = getApplyLink(job);
-    const isExternal = origin === 'external';
-    if (isExternal) {
+
+    // External flow (unchanged)
+    if (!internal) {
       const finalUrl = applyLink || buildFallbackSearch(job);
       addAppliedJob(job);
       if (typeof window !== 'undefined') {
@@ -399,8 +401,12 @@ function Jobs() {
       }
       return;
     }
-    setApplyJob(job);
-    setApplyOpen(true);
+
+    // ✅ Internal flow: go to the real Apply page (no modal)
+    // Change this route only if your apply page path is different.
+    if (typeof window !== 'undefined') {
+      window.location.href = `/apply?jobId=${encodeURIComponent(job.id)}`;
+    }
   };
 
   // ✅ FIX: Resume-Role Align now writes BOTH:
@@ -1020,7 +1026,6 @@ function Jobs() {
                           )}
 
                           <div>
-                            {/* TITLE: clamp to 2 lines so it only wraps under itself */}
                             <CardTitle
                               style={{
                                 color: titleColor,
@@ -1139,8 +1144,6 @@ function Jobs() {
                     </CardHeader>
 
                     <CardContent>
-                      {/* Description snippet: internal only.
-                          Scraped/external cards stay clean and compact. */}
                       {showSnippet && (
                         <p
                           style={{
@@ -1488,7 +1491,7 @@ function Jobs() {
         </div>
       </div>
 
-      {/* Apply Modal */}
+      {/* Apply Modal (kept, but internal apply now routes to /apply) */}
       <ApplyModal
         open={applyOpen}
         onClose={() => setApplyOpen(false)}
