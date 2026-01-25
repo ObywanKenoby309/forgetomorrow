@@ -76,6 +76,16 @@ enum OrganizationStatus {
   SUSPENDED
 }
 
+enum ApplicationQuestionType {
+  TEXT
+  TEXTAREA
+  NUMBER
+  BOOLEAN
+  DATE
+  SELECT
+  MULTISELECT
+}
+
 // ============================================================================
 //  JOBS, APPLICATIONS, INTERVIEWS & OFFERS
 // ============================================================================
@@ -151,10 +161,134 @@ model Application {
   status    ApplicationStatus @default(Applied)
   appliedAt DateTime          @default(now())
   updatedAt DateTime          @updatedAt
-  user      User              @relation(fields: [userId], references: [id])
-  job       Job?              @relation(fields: [jobId], references: [id])
 
+  // NEW: org routing for recruiter views
+  accountKey String?
+
+  // NEW: template + submit state
+  templateId  String?
+  submittedAt DateTime?
+
+  // NEW: relations (step forms / consent / optional self-id)
+  template ApplicationTemplate? @relation(fields: [templateId], references: [id], onDelete: SetNull)
+  answers  ApplicationAnswer[]
+  consent  ApplicationConsent?
+  selfId   ApplicationSelfId?
+
+  user User @relation(fields: [userId], references: [id])
+  job  Job? @relation(fields: [jobId], references: [id])
+
+  // NEW: real relations so you can include resume/cover cleanly
+  resume Resume? @relation(fields: [resumeId], references: [id])
+  cover  Cover?  @relation(fields: [coverId], references: [id])
+
+  @@unique([userId, jobId], name: "user_job_unique")
+  // NEW: performance + dedupe
+  @@index([accountKey])
   @@map("applications")
+}
+
+model ApplicationTemplate {
+  id         String @id @default(cuid())
+  accountKey String
+
+  name     String  @default("Default Application")
+  version  Int     @default(1)
+  isActive Boolean @default(true)
+
+  steps        ApplicationTemplateStep[]
+  applications Application[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([accountKey])
+  @@index([isActive])
+  @@map("application_templates")
+}
+
+model ApplicationTemplateStep {
+  id         String              @id @default(cuid())
+  templateId String
+  template   ApplicationTemplate @relation(fields: [templateId], references: [id], onDelete: Cascade)
+
+  key   String
+  title String
+  order Int
+
+  questions ApplicationTemplateQuestion[]
+
+  @@unique([templateId, key])
+  @@index([templateId, order])
+  @@map("application_template_steps")
+}
+
+model ApplicationTemplateQuestion {
+  id     String                  @id @default(cuid())
+  stepId String
+  step   ApplicationTemplateStep @relation(fields: [stepId], references: [id], onDelete: Cascade)
+
+  key      String
+  label    String
+  helpText String?
+  type     ApplicationQuestionType
+  required Boolean                 @default(false)
+
+  options Json?
+
+  @@unique([stepId, key])
+  @@index([stepId])
+  @@map("application_template_questions")
+}
+
+model ApplicationAnswer {
+  id            String      @id @default(cuid())
+  applicationId Int
+  application   Application @relation(fields: [applicationId], references: [id], onDelete: Cascade)
+
+  questionKey String
+  value       Json
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([applicationId, questionKey])
+  @@index([applicationId])
+  @@map("application_answers")
+}
+
+model ApplicationConsent {
+  id            String      @id @default(cuid())
+  applicationId Int         @unique
+  application   Application @relation(fields: [applicationId], references: [id], onDelete: Cascade)
+
+  termsAccepted      Boolean @default(false)
+  consentTextVersion String?
+
+  signatureName String?
+  signedAt      DateTime?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([applicationId])
+  @@map("application_consents")
+}
+
+model ApplicationSelfId {
+  id            String      @id @default(cuid())
+  applicationId Int         @unique
+  application   Application @relation(fields: [applicationId], references: [id], onDelete: Cascade)
+
+  genderIdentity   String?
+  raceEthnicity    String?
+  veteranStatus    String?
+  disabilityStatus String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("application_self_id")
 }
 
 model JobView {
@@ -250,6 +384,8 @@ model Resume {
 
   user User @relation(fields: [userId], references: [id])
 
+  applications Application[]
+
   @@index([userId])
   @@map("resumes")
 }
@@ -267,6 +403,8 @@ model Cover {
 
   user User @relation(fields: [userId], references: [id])
   job  Job? @relation(fields: [jobId], references: [id])
+
+  applications Application[]
 
   @@index([userId])
   @@index([jobId])
@@ -697,9 +835,9 @@ model User {
   employee   Boolean     @default(false)
   department Department?
 
-  organization Organization? @relation("OrganizationUsers", fields: [accountKey], references: [accountKey])
+  organization            Organization?        @relation("OrganizationUsers", fields: [accountKey], references: [accountKey])
   organizationMemberships OrganizationMember[] @relation("UserOrganizationMembers")
-  staffRoles UserStaffRole[]
+  staffRoles              UserStaffRole[]
 
   auditAsActor        AuditLog[] @relation("AuditActor")
   auditAsImpersonated AuditLog[] @relation("AuditImpersonated")
@@ -752,7 +890,7 @@ model User {
   coachingSessionsAsClient CoachingSession[] @relation("CoachSessionsClient")
 
   coachingCsatResponses CoachingCsatResponse[] @relation("UserCoachingCsatResponses")
-  hearthSpotlights HearthSpotlight[]
+  hearthSpotlights      HearthSpotlight[]
 
   contacts                Contact[]        @relation("UserContacts")
   contactsAsContact       Contact[]        @relation("UserContactsAsContact")
@@ -884,17 +1022,17 @@ model RecruiterExplainRun {
   id String @id @default(cuid())
 
   recruiterUserId String
-  recruiter       User @relation("RecruiterExplainRunsAsRecruiter", fields: [recruiterUserId], references: [id], onDelete: Cascade)
+  recruiter       User   @relation("RecruiterExplainRunsAsRecruiter", fields: [recruiterUserId], references: [id], onDelete: Cascade)
 
   candidateUserId String?
-  candidate       User? @relation("RecruiterExplainRunsAsCandidate", fields: [candidateUserId], references: [id], onDelete: SetNull)
+  candidate       User?   @relation("RecruiterExplainRunsAsCandidate", fields: [candidateUserId], references: [id], onDelete: SetNull)
 
   jobId Int?
 
   resumeText     String
   jobDescription String
 
-  result Json
+  result     Json
   accountKey String?
 
   createdAt DateTime @default(now())
@@ -1054,7 +1192,7 @@ model MessageReaction {
   createdAt DateTime @default(now())
 
   message Message @relation(fields: [messageId], references: [id], onDelete: Cascade)
-  user User @relation("UserMessageReactions", fields: [userId], references: [id], onDelete: Cascade)
+  user    User    @relation("UserMessageReactions", fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([messageId])
   @@index([userId])
