@@ -51,11 +51,8 @@ function HeaderOnly() {
     <div className="w-full">
       <GlassPanel className="px-5 py-4 sm:px-6">
         <div className="flex flex-col items-center text-center">
-          <div className="inline-flex items-center gap-2">
+          <div className="inline-flex items-center gap-0">
             <h1 className="text-2xl font-bold text-[#FF7043]">Candidates</h1>
-            <span className="text-[11px] px-2 py-0.5 rounded-full border border-white/40 bg-white/60 text-slate-700">
-              Pipeline
-            </span>
           </div>
 
           <p className="mt-2 text-sm text-slate-500 max-w-lg leading-snug">
@@ -1414,6 +1411,21 @@ function Body() {
               <div className="hidden lg:grid lg:grid-cols-2 gap-4">
                 <CandidateList
                   candidates={leftCandidates}
+                  isEnterprise={isEnterprise}
+                  onView={onView}
+                  onMessage={onMessage}
+                  onWhy={onWhy}
+                  onToggleCompare={onToggleCompare}
+                  compareSelectedIds={compareSelectedIds}
+                  showFilters={false}
+                  showFilterBar={false}
+                  filtersVisible={false}
+                  query={nameQuery}
+                  locationFilter={locQuery}
+                  booleanQuery={boolQuery}
+                />
+                <CandidateList
+                  candidates={rightCandidates}
                   isEnterprise={isEnterprise}
                   onView={onView}
                   onMessage={onMessage}
