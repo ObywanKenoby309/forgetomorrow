@@ -3,12 +3,40 @@ import { useRouter } from 'next/router';
 import { useEffect, useMemo, useState } from 'react';
 import Head from 'next/head';
 import Link from 'next/link';
+import SeekerLayout from '@/components/layouts/SeekerLayout';
 
 const ORANGE = '#FF7043';
+
+function getChromeFromAsPath(asPath) {
+  try {
+    const s = String(asPath || '');
+    if (!s.includes('chrome=')) return '';
+    const qIndex = s.indexOf('?');
+    if (qIndex === -1) return '';
+    const query = s.slice(qIndex + 1);
+    const params = new URLSearchParams(query);
+    return String(params.get('chrome') || '').toLowerCase();
+  } catch {
+    return '';
+  }
+}
 
 export default function JobApplyPage() {
   const router = useRouter();
   const { id: jobId } = router.query;
+
+  // IMPORTANT: router.query can be empty on first render.
+  // Use asPath fallback so we never lose chrome context.
+  const chrome =
+    String(router.query.chrome || '').toLowerCase() ||
+    getChromeFromAsPath(router.asPath);
+
+  const withChrome = (path) =>
+    chrome ? `${path}${path.includes('?') ? '&' : '?'}chrome=${chrome}` : path;
+
+  // Match seeker-dashboard behavior
+  const chromeKey = chrome || 'seeker';
+  const activeNav = 'jobs';
 
   const [job, setJob] = useState(null);
   const [template, setTemplate] = useState(null);
@@ -74,9 +102,10 @@ export default function JobApplyPage() {
 
         // auto-pick primary if present
         const primaryResume =
-          (docsJson.resumes || []).find(r => r.isPrimary) || (docsJson.resumes || [])[0];
+          (docsJson.resumes || []).find((r) => r.isPrimary) ||
+          (docsJson.resumes || [])[0];
         const primaryCover =
-          (docsJson.covers || []).find(c => c.isPrimary) || null;
+          (docsJson.covers || []).find((c) => c.isPrimary) || null;
 
         setSelectedResumeId(primaryResume ? primaryResume.id : null);
         setSelectedCoverId(primaryCover ? primaryCover.id : null);
@@ -98,7 +127,7 @@ export default function JobApplyPage() {
     const tplSteps = template?.steps || [];
     return [
       { key: 'documents', title: 'Your documents' },
-      ...tplSteps.map(s => ({ key: `tpl:${s.key}`, title: s.title, step: s })),
+      ...tplSteps.map((s) => ({ key: `tpl:${s.key}`, title: s.title, step: s })),
       { key: 'consent', title: 'Consent & acknowledgement' },
       { key: 'selfid', title: 'Voluntary self-identification (optional)' },
       { key: 'review', title: 'Review & submit' },
@@ -109,7 +138,7 @@ export default function JobApplyPage() {
 
   const companyName = job?.company || 'Employer';
   const jobTitle = job?.title || 'Role';
-  const pageTitle = job ? `Apply — ${jobTitle} at ${companyName}` : 'Apply';
+  const pageTitle = job ? `Apply - ${jobTitle} at ${companyName}` : 'Apply';
 
   const isInternal = String(job?.origin || '').toLowerCase() === 'internal';
 
@@ -140,7 +169,8 @@ export default function JobApplyPage() {
 
     if (currentStep.key === 'consent') {
       if (!consent.termsAccepted) return false;
-      if (!consent.signatureName || consent.signatureName.trim().length < 2) return false;
+      if (!consent.signatureName || consent.signatureName.trim().length < 2)
+        return false;
       return true;
     }
 
@@ -151,7 +181,8 @@ export default function JobApplyPage() {
     if (currentStep.key === 'review') {
       if (!selectedResumeId) return false;
       if (!consent.termsAccepted) return false;
-      if (!consent.signatureName || consent.signatureName.trim().length < 2) return false;
+      if (!consent.signatureName || consent.signatureName.trim().length < 2)
+        return false;
 
       const tplSteps = template?.steps || [];
       for (const s of tplSteps) {
@@ -170,7 +201,17 @@ export default function JobApplyPage() {
     }
 
     return false;
-  }, [loading, saving, job, isInternal, currentStep, selectedResumeId, answers, consent, template]);
+  }, [
+    loading,
+    saving,
+    job,
+    isInternal,
+    currentStep,
+    selectedResumeId,
+    answers,
+    consent,
+    template,
+  ]);
 
   // Create or update the Application record (draft)
   async function ensureApplicationDraft() {
@@ -225,7 +266,7 @@ export default function JobApplyPage() {
       if (currentStep.key.startsWith('tpl:')) {
         const step = currentStep.step;
         const questions = step?.questions || [];
-        const payloadAnswers = questions.map(q => ({
+        const payloadAnswers = questions.map((q) => ({
           questionKey: q.key,
           value: answers[q.key] ?? null,
         }));
@@ -294,7 +335,7 @@ export default function JobApplyPage() {
           throw new Error(j?.error || 'Failed to submit application.');
         }
 
-        router.push(`/job/${jobId}?applied=1`);
+        router.push(withChrome(`/job/${jobId}?applied=1`));
         return;
       }
     } finally {
@@ -306,7 +347,7 @@ export default function JobApplyPage() {
     if (!canContinue) return;
     try {
       await saveCurrentStep();
-      setStepIndex(i => Math.min(i + 1, steps.length - 1));
+      setStepIndex((i) => Math.min(i + 1, steps.length - 1));
     } catch (e) {
       setError(e?.message || 'Failed to continue.');
     }
@@ -314,7 +355,7 @@ export default function JobApplyPage() {
 
   async function handleBack() {
     setError('');
-    setStepIndex(i => Math.max(i - 1, 0));
+    setStepIndex((i) => Math.max(i - 1, 0));
   }
 
   // External/scraped job guard
@@ -324,10 +365,10 @@ export default function JobApplyPage() {
         <div className="max-w-2xl mx-auto bg-white rounded-2xl border p-6">
           <h1 className="text-xl font-bold mb-2">Apply on the employer site</h1>
           <p className="text-sm text-slate-600">
-            This posting is not an internal ForgeTomorrow application. You’ll apply on the employer’s site.
+            This posting is not an internal ForgeTomorrow application. You'll apply on the employer's site.
           </p>
           <div className="mt-4">
-            <Link href={`/job/${jobId}`} style={{ color: ORANGE }} className="underline">
+            <Link href={withChrome(`/job/${jobId}`)} style={{ color: ORANGE }} className="underline">
               Back to posting
             </Link>
           </div>
@@ -336,208 +377,197 @@ export default function JobApplyPage() {
     );
   }
 
+  // Title card (SeekerLayout header)
+  const HeaderBox = (
+    <section
+      aria-label="Application header"
+      className="bg-white border border-gray-200 rounded-xl p-6 text-center shadow-sm"
+    >
+      <div className="text-xs uppercase tracking-wide text-gray-500">Application</div>
+      <h1 className="text-2xl md:text-3xl font-bold text-orange-600 mt-1">
+        {loading ? 'Loading…' : `Apply to ${jobTitle}`}
+      </h1>
+      <p className="text-sm md:text-base text-gray-600 mt-2 max-w-3xl mx-auto">
+        {companyName}
+      </p>
+      <div className="mt-3">
+        <Link
+          href={withChrome(`/job/${jobId}`)}
+          className="text-sm inline-flex items-center gap-2"
+          style={{ color: ORANGE, textDecoration: 'underline' }}
+        >
+          <span aria-hidden="true">←</span>
+          <span>Back to posting</span>
+        </Link>
+      </div>
+      {error && (
+        <div
+          className="mt-4 text-sm rounded-xl border px-3 py-2"
+          style={{
+            borderColor: 'rgba(255,112,67,0.6)',
+            color: '#B91C1C',
+            background: 'rgba(255,112,67,0.10)',
+          }}
+        >
+          {error}
+        </div>
+      )}
+    </section>
+  );
+
+  // Right rail (SeekerLayout right)
+  const RightColumn = (
+    <div style={{ display: 'grid', gap: 12 }}>
+      <div
+        className="rounded-2xl border shadow-lg p-4"
+        style={{
+          borderColor: 'rgba(0,0,0,0.08)',
+          background: 'rgba(255,255,255,0.86)',
+          backdropFilter: 'blur(12px)',
+        }}
+      >
+        <div className="text-xs uppercase tracking-wide text-slate-500">Job posting</div>
+        <div className="text-slate-900 font-bold mt-1">{jobTitle}</div>
+        <div className="text-sm text-slate-600">{companyName}</div>
+
+        {job?.location && (
+          <div className="mt-3 text-xs text-slate-600">📍 {job.location}</div>
+        )}
+
+        <div className="mt-4 text-sm text-slate-800 leading-relaxed max-h-[60vh] overflow-auto pr-1">
+          {job?.description ? (
+            <div dangerouslySetInnerHTML={{ __html: job.description }} />
+          ) : (
+            <div className="text-slate-500">Job description not available.</div>
+          )}
+        </div>
+      </div>
+
+      <div
+        className="rounded-xl border p-3"
+        style={{
+          borderColor: 'rgba(0,0,0,0.08)',
+          background: 'rgba(255,255,255,0.72)',
+          backdropFilter: 'blur(10px)',
+        }}
+      >
+        <div className="text-xs text-slate-600">
+          Step {Math.min(stepIndex + 1, steps.length)} of {steps.length}
+        </div>
+      </div>
+    </div>
+  );
+
   return (
-    <>
+    <SeekerLayout
+      title={pageTitle}
+      header={HeaderBox}
+      right={RightColumn}
+      activeNav={activeNav}
+    >
       <Head>
         <title>{pageTitle}</title>
       </Head>
 
-      <main
-        className="min-h-screen"
+      <div
+        className="w-full"
         style={{
-          padding: '28px 16px 40px',
-          background: 'radial-gradient(circle at top, #112033 0, #050910 55%, #020308 100%)',
+          background: 'rgba(255,255,255,0.72)',
+          backdropFilter: 'blur(12px)',
+          border: '1px solid rgba(0,0,0,0.08)',
+          borderRadius: 12,
+          boxShadow: '0 2px 10px rgba(0,0,0,0.06)',
+          padding: 20,
+          display: 'grid',
+          gap: 16,
         }}
       >
-        <div className="max-w-6xl mx-auto">
-          {/* Top bar */}
-          <div className="flex items-center justify-between gap-3 mb-5">
-            <Link
-              href={`/job/${jobId}`}
-              className="text-sm inline-flex items-center gap-2"
-              style={{ color: ORANGE }}
-            >
-              <span aria-hidden="true">←</span>
-              <span>Back to posting</span>
-            </Link>
+        {loading ? (
+          <div className="text-slate-700 text-sm">Loading application…</div>
+        ) : (
+          <>
+            <WizardStepList
+              steps={steps}
+              stepIndex={stepIndex}
+              onJump={(idx) => setStepIndex(idx)}
+            />
 
-            <div className="text-xs text-slate-300">
-              {companyName} • {jobTitle}
+            <div className="mt-2">
+              {currentStep.key === 'documents' && (
+                <DocumentsStep
+                  resumes={resumes}
+                  covers={covers}
+                  selectedResumeId={selectedResumeId}
+                  setSelectedResumeId={setSelectedResumeId}
+                  selectedCoverId={selectedCoverId}
+                  setSelectedCoverId={setSelectedCoverId}
+                />
+              )}
+
+              {currentStep.key.startsWith('tpl:') && (
+                <TemplateStep step={currentStep.step} answers={answers} setAnswers={setAnswers} />
+              )}
+
+              {currentStep.key === 'consent' && (
+                <ConsentStep consent={consent} setConsent={setConsent} />
+              )}
+
+              {currentStep.key === 'selfid' && (
+                <SelfIdStep selfId={selfId} setSelfId={setSelfId} />
+              )}
+
+              {currentStep.key === 'review' && (
+                <ReviewStep
+                  job={job}
+                  resumes={resumes}
+                  covers={covers}
+                  selectedResumeId={selectedResumeId}
+                  selectedCoverId={selectedCoverId}
+                  consent={consent}
+                  answers={answers}
+                  template={template}
+                />
+              )}
             </div>
-          </div>
 
-          {/* Content grid */}
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-5">
-            {/* Left - wizard */}
-            <section className="lg:col-span-2">
-              <div
-                className="rounded-2xl border shadow-lg overflow-hidden"
+            <div
+              className="pt-4 mt-2 border-t flex items-center justify-between gap-3"
+              style={{ borderColor: 'rgba(0,0,0,0.08)' }}
+            >
+              <button
+                type="button"
+                onClick={handleBack}
+                disabled={stepIndex === 0 || saving}
+                className="px-4 py-2 rounded-full text-sm font-semibold"
                 style={{
-                  borderColor: 'rgba(255,255,255,0.14)',
-                  background: 'rgba(255,255,255,0.08)',
-                  backdropFilter: 'blur(12px)',
+                  background: 'rgba(255,255,255,0.85)',
+                  border: '1px solid rgba(0,0,0,0.10)',
+                  color: '#334155',
+                  opacity: stepIndex === 0 || saving ? 0.5 : 1,
+                  cursor: stepIndex === 0 || saving ? 'default' : 'pointer',
                 }}
               >
-                {/* Header */}
-                <div className="p-5 border-b" style={{ borderColor: 'rgba(255,255,255,0.12)' }}>
-                  <div className="flex items-start justify-between gap-3">
-                    <div>
-                      <div className="text-xs uppercase tracking-wide text-slate-300">Application</div>
-                      <h1 className="text-xl font-extrabold text-white mt-1">
-                        {loading ? 'Loading…' : `Apply to ${jobTitle}`}
-                      </h1>
-                      <div className="text-sm text-slate-300 mt-1">{companyName}</div>
-                    </div>
+                Back
+              </button>
 
-                    <div className="text-xs text-slate-300">
-                      Step {Math.min(stepIndex + 1, steps.length)} of {steps.length}
-                    </div>
-                  </div>
-
-                  {/* Instructions */}
-                  <div className="mt-4 text-sm text-slate-200">
-                    Please complete all mandatory sections of each form to continue. You can go back at any time.
-                    Optional fields are appreciated, but never required.
-                  </div>
-
-                  {error && (
-                    <div
-                      className="mt-3 text-sm rounded-xl border px-3 py-2"
-                      style={{
-                        borderColor: 'rgba(255,112,67,0.6)',
-                        color: '#FFCCBC',
-                        background: 'rgba(0,0,0,0.18)',
-                      }}
-                    >
-                      {error}
-                    </div>
-                  )}
-                </div>
-
-                {/* Body */}
-                <div className="p-5">
-                  {loading ? (
-                    <div className="text-slate-200 text-sm">Loading application…</div>
-                  ) : (
-                    <>
-                      <WizardStepList
-                        steps={steps}
-                        stepIndex={stepIndex}
-                        onJump={(idx) => setStepIndex(idx)}
-                      />
-
-                      <div className="mt-5">
-                        {currentStep.key === 'documents' && (
-                          <DocumentsStep
-                            resumes={resumes}
-                            covers={covers}
-                            selectedResumeId={selectedResumeId}
-                            setSelectedResumeId={setSelectedResumeId}
-                            selectedCoverId={selectedCoverId}
-                            setSelectedCoverId={setSelectedCoverId}
-                          />
-                        )}
-
-                        {currentStep.key.startsWith('tpl:') && (
-                          <TemplateStep
-                            step={currentStep.step}
-                            answers={answers}
-                            setAnswers={setAnswers}
-                          />
-                        )}
-
-                        {currentStep.key === 'consent' && (
-                          <ConsentStep consent={consent} setConsent={setConsent} />
-                        )}
-
-                        {currentStep.key === 'selfid' && (
-                          <SelfIdStep selfId={selfId} setSelfId={setSelfId} />
-                        )}
-
-                        {currentStep.key === 'review' && (
-                          <ReviewStep
-                            job={job}
-                            resumes={resumes}
-                            covers={covers}
-                            selectedResumeId={selectedResumeId}
-                            selectedCoverId={selectedCoverId}
-                            consent={consent}
-                            answers={answers}
-                            template={template}
-                          />
-                        )}
-                      </div>
-                    </>
-                  )}
-                </div>
-
-                {/* Footer */}
-                <div
-                  className="p-5 border-t flex items-center justify-between gap-3"
-                  style={{ borderColor: 'rgba(255,255,255,0.12)' }}
-                >
-                  <button
-                    type="button"
-                    onClick={handleBack}
-                    disabled={stepIndex === 0 || saving}
-                    className="px-4 py-2 rounded-full text-sm font-semibold"
-                    style={{
-                      background: 'rgba(255,255,255,0.10)',
-                      border: '1px solid rgba(255,255,255,0.14)',
-                      color: '#E2E8F0',
-                      opacity: stepIndex === 0 || saving ? 0.5 : 1,
-                      cursor: stepIndex === 0 || saving ? 'default' : 'pointer',
-                    }}
-                  >
-                    Back
-                  </button>
-
-                  <button
-                    type="button"
-                    onClick={handleNext}
-                    disabled={!canContinue}
-                    className="px-5 py-2 rounded-full text-sm font-semibold shadow-md"
-                    style={{
-                      backgroundColor: canContinue ? ORANGE : 'rgba(148,163,184,0.35)',
-                      color: canContinue ? '#FFFFFF' : '#CBD5E1',
-                      cursor: canContinue ? 'pointer' : 'default',
-                    }}
-                  >
-                    {saving ? 'Saving…' : currentStep.key === 'review' ? 'Submit application' : 'Continue'}
-                  </button>
-                </div>
-              </div>
-            </section>
-
-            {/* Right rail - job description */}
-            <aside className="lg:col-span-1">
-              <div
-                className="rounded-2xl border shadow-lg p-4 sticky top-6"
+              <button
+                type="button"
+                onClick={handleNext}
+                disabled={!canContinue}
+                className="px-5 py-2 rounded-full text-sm font-semibold shadow-md"
                 style={{
-                  borderColor: 'rgba(255,255,255,0.14)',
-                  background: 'rgba(255,255,255,0.08)',
-                  backdropFilter: 'blur(12px)',
+                  backgroundColor: canContinue ? ORANGE : 'rgba(148,163,184,0.35)',
+                  color: canContinue ? '#FFFFFF' : '#475569',
+                  cursor: canContinue ? 'pointer' : 'default',
                 }}
               >
-                <div className="text-xs uppercase tracking-wide text-slate-300">Job posting</div>
-                <div className="text-white font-bold mt-1">{jobTitle}</div>
-                <div className="text-sm text-slate-300">{companyName}</div>
-
-                <div className="mt-3 text-xs text-slate-300">{job?.location ? `📍 ${job.location}` : ''}</div>
-
-                <div className="mt-4 text-sm text-slate-100 leading-relaxed max-h-[60vh] overflow-auto pr-1">
-                  {job?.description ? (
-                    <div dangerouslySetInnerHTML={{ __html: job.description }} />
-                  ) : (
-                    <div className="text-slate-300">Job description not available.</div>
-                  )}
-                </div>
-              </div>
-            </aside>
-          </div>
-        </div>
-      </main>
-    </>
+                {saving ? 'Saving…' : currentStep.key === 'review' ? 'Submit application' : 'Continue'}
+              </button>
+            </div>
+          </>
+        )}
+      </div>
+    </SeekerLayout>
   );
 }
 
@@ -554,9 +584,9 @@ function WizardStepList({ steps, stepIndex, onJump }) {
             onClick={() => onJump(idx)}
             className="text-xs px-3 py-1 rounded-full border"
             style={{
-              borderColor: active ? 'rgba(255,112,67,0.75)' : 'rgba(255,255,255,0.14)',
-              background: active ? 'rgba(255,112,67,0.12)' : 'rgba(0,0,0,0.10)',
-              color: active ? '#FFCCBC' : done ? '#E2E8F0' : '#CBD5E1',
+              borderColor: active ? 'rgba(255,112,67,0.75)' : 'rgba(0,0,0,0.10)',
+              background: active ? 'rgba(255,112,67,0.12)' : 'rgba(255,255,255,0.60)',
+              color: active ? '#9A3412' : done ? '#334155' : '#475569',
             }}
             title={s.title}
           >
@@ -578,56 +608,56 @@ function DocumentsStep({
 }) {
   return (
     <div className="space-y-4">
-      <div className="text-white font-semibold">Choose what you’re applying with</div>
-      <div className="text-sm text-slate-200">
-        We won’t make you retype your resume. Pick an existing resume and (optionally) a cover letter.
+      <div className="text-slate-900 font-semibold">Choose what you're applying with</div>
+      <div className="text-sm text-slate-600">
+        We won't make you retype your resume. Pick an existing resume and (optionally) a cover letter.
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         <div
           className="rounded-xl border p-4"
-          style={{ borderColor: 'rgba(255,255,255,0.14)', background: 'rgba(0,0,0,0.12)' }}
+          style={{ borderColor: 'rgba(0,0,0,0.10)', background: 'rgba(255,255,255,0.75)' }}
         >
-          <div className="text-sm font-semibold text-white mb-2">Resume (required)</div>
+          <div className="text-sm font-semibold text-slate-900 mb-2">Resume (required)</div>
           <select
             value={selectedResumeId || ''}
             onChange={(e) => setSelectedResumeId(e.target.value ? Number(e.target.value) : null)}
             className="w-full rounded-lg px-3 py-2 text-sm"
-            style={{ background: 'rgba(255,255,255,0.90)' }}
+            style={{ background: 'rgba(255,255,255,0.95)', border: '1px solid rgba(0,0,0,0.12)' }}
           >
             <option value="">Select a resume…</option>
-            {(resumes || []).map(r => (
+            {(resumes || []).map((r) => (
               <option key={r.id} value={r.id}>
                 {r.name}
                 {r.isPrimary ? ' (Primary)' : ''}
               </option>
             ))}
           </select>
-          <div className="text-xs text-slate-300 mt-2">
-            Tip: keep a “Primary” resume set on your profile for faster applications.
+          <div className="text-xs text-slate-500 mt-2">
+            Tip: keep a "Primary" resume set on your profile for faster applications.
           </div>
         </div>
 
         <div
           className="rounded-xl border p-4"
-          style={{ borderColor: 'rgba(255,255,255,0.14)', background: 'rgba(0,0,0,0.12)' }}
+          style={{ borderColor: 'rgba(0,0,0,0.10)', background: 'rgba(255,255,255,0.75)' }}
         >
-          <div className="text-sm font-semibold text-white mb-2">Cover letter (optional)</div>
+          <div className="text-sm font-semibold text-slate-900 mb-2">Cover letter (optional)</div>
           <select
             value={selectedCoverId || ''}
             onChange={(e) => setSelectedCoverId(e.target.value ? Number(e.target.value) : null)}
             className="w-full rounded-lg px-3 py-2 text-sm"
-            style={{ background: 'rgba(255,255,255,0.90)' }}
+            style={{ background: 'rgba(255,255,255,0.95)', border: '1px solid rgba(0,0,0,0.12)' }}
           >
             <option value="">No cover letter</option>
-            {(covers || []).map(c => (
+            {(covers || []).map((c) => (
               <option key={c.id} value={c.id}>
                 {c.name}
                 {c.isPrimary ? ' (Primary)' : ''}
               </option>
             ))}
           </select>
-          <div className="text-xs text-slate-300 mt-2">
+          <div className="text-xs text-slate-500 mt-2">
             Cover letters are kept separate from your resume so recruiters can use them as a quick introduction.
           </div>
         </div>
@@ -640,15 +670,15 @@ function TemplateStep({ step, answers, setAnswers }) {
   const questions = step?.questions || [];
 
   function setValue(key, value) {
-    setAnswers(prev => ({ ...prev, [key]: value }));
+    setAnswers((prev) => ({ ...prev, [key]: value }));
   }
 
   return (
     <div className="space-y-4">
-      <div className="text-white font-semibold">{step?.title || 'Questions'}</div>
+      <div className="text-slate-900 font-semibold">{step?.title || 'Questions'}</div>
 
       {questions.length === 0 ? (
-        <div className="text-sm text-slate-200">No questions in this section.</div>
+        <div className="text-sm text-slate-600">No questions in this section.</div>
       ) : (
         <div className="space-y-4">
           {questions.map((q) => (
@@ -670,10 +700,10 @@ function QuestionField({ q, value, onChange }) {
 
   const commonLabel = (
     <div className="mb-1">
-      <div className="text-sm font-semibold text-white">
-        {q.label} {required && <span style={{ color: '#FFCCBC' }}>*</span>}
+      <div className="text-sm font-semibold text-slate-900">
+        {q.label} {required && <span style={{ color: ORANGE }}>*</span>}
       </div>
-      {q.helpText && <div className="text-xs text-slate-300 mt-1">{q.helpText}</div>}
+      {q.helpText && <div className="text-xs text-slate-500 mt-1">{q.helpText}</div>}
     </div>
   );
 
@@ -682,18 +712,21 @@ function QuestionField({ q, value, onChange }) {
     borderRadius: 10,
     padding: '10px 12px',
     fontSize: 14,
-    background: 'rgba(255,255,255,0.90)',
+    background: 'rgba(255,255,255,0.95)',
+    border: '1px solid rgba(0,0,0,0.12)',
+  };
+
+  const cardStyle = {
+    borderColor: 'rgba(0,0,0,0.10)',
+    background: 'rgba(255,255,255,0.75)',
   };
 
   if (q.type === 'TEXT') {
     return (
-      <div
-        className="rounded-xl border p-4"
-        style={{ borderColor: 'rgba(255,255,255,0.14)', background: 'rgba(0,0,0,0.12)' }}
-      >
+      <div className="rounded-xl border p-4" style={cardStyle}>
         {commonLabel}
         <input
-          value={typeof value === 'string' ? value : (value ?? '')}
+          value={typeof value === 'string' ? value : value ?? ''}
           onChange={(e) => onChange(e.target.value)}
           style={inputStyle}
         />
@@ -703,13 +736,10 @@ function QuestionField({ q, value, onChange }) {
 
   if (q.type === 'TEXTAREA') {
     return (
-      <div
-        className="rounded-xl border p-4"
-        style={{ borderColor: 'rgba(255,255,255,0.14)', background: 'rgba(0,0,0,0.12)' }}
-      >
+      <div className="rounded-xl border p-4" style={cardStyle}>
         {commonLabel}
         <textarea
-          value={typeof value === 'string' ? value : (value ?? '')}
+          value={typeof value === 'string' ? value : value ?? ''}
           onChange={(e) => onChange(e.target.value)}
           rows={4}
           style={inputStyle}
@@ -720,14 +750,11 @@ function QuestionField({ q, value, onChange }) {
 
   if (q.type === 'NUMBER') {
     return (
-      <div
-        className="rounded-xl border p-4"
-        style={{ borderColor: 'rgba(255,255,255,0.14)', background: 'rgba(0,0,0,0.12)' }}
-      >
+      <div className="rounded-xl border p-4" style={cardStyle}>
         {commonLabel}
         <input
           type="number"
-          value={typeof value === 'number' ? value : (value ?? '')}
+          value={typeof value === 'number' ? value : value ?? ''}
           onChange={(e) => onChange(e.target.value === '' ? null : Number(e.target.value))}
           style={inputStyle}
         />
@@ -737,14 +764,11 @@ function QuestionField({ q, value, onChange }) {
 
   if (q.type === 'DATE') {
     return (
-      <div
-        className="rounded-xl border p-4"
-        style={{ borderColor: 'rgba(255,255,255,0.14)', background: 'rgba(0,0,0,0.12)' }}
-      >
+      <div className="rounded-xl border p-4" style={cardStyle}>
         {commonLabel}
         <input
           type="date"
-          value={typeof value === 'string' ? value : (value ?? '')}
+          value={typeof value === 'string' ? value : value ?? ''}
           onChange={(e) => onChange(e.target.value)}
           style={inputStyle}
         />
@@ -755,17 +779,10 @@ function QuestionField({ q, value, onChange }) {
   if (q.type === 'BOOLEAN') {
     const boolVal = typeof value === 'boolean' ? value : false;
     return (
-      <div
-        className="rounded-xl border p-4 flex items-center justify-between gap-3"
-        style={{ borderColor: 'rgba(255,255,255,0.14)', background: 'rgba(0,0,0,0.12)' }}
-      >
+      <div className="rounded-xl border p-4 flex items-center justify-between gap-3" style={cardStyle}>
         <div>{commonLabel}</div>
-        <label className="inline-flex items-center gap-2 text-sm text-white">
-          <input
-            type="checkbox"
-            checked={!!boolVal}
-            onChange={(e) => onChange(e.target.checked)}
-          />
+        <label className="inline-flex items-center gap-2 text-sm text-slate-900">
+          <input type="checkbox" checked={!!boolVal} onChange={(e) => onChange(e.target.checked)} />
           Yes
         </label>
       </div>
@@ -773,15 +790,12 @@ function QuestionField({ q, value, onChange }) {
   }
 
   if (q.type === 'SELECT') {
-    const opts = Array.isArray(q.options) ? q.options : (q.options?.options || q.options || []);
+    const opts = Array.isArray(q.options) ? q.options : q.options?.options || q.options || [];
     return (
-      <div
-        className="rounded-xl border p-4"
-        style={{ borderColor: 'rgba(255,255,255,0.14)', background: 'rgba(0,0,0,0.12)' }}
-      >
+      <div className="rounded-xl border p-4" style={cardStyle}>
         {commonLabel}
         <select
-          value={typeof value === 'string' ? value : (value ?? '')}
+          value={typeof value === 'string' ? value : value ?? ''}
           onChange={(e) => onChange(e.target.value)}
           style={inputStyle}
         >
@@ -797,13 +811,10 @@ function QuestionField({ q, value, onChange }) {
   }
 
   if (q.type === 'MULTISELECT') {
-    const opts = Array.isArray(q.options) ? q.options : (q.options?.options || q.options || []);
+    const opts = Array.isArray(q.options) ? q.options : q.options?.options || q.options || [];
     const arr = Array.isArray(value) ? value : [];
     return (
-      <div
-        className="rounded-xl border p-4"
-        style={{ borderColor: 'rgba(255,255,255,0.14)', background: 'rgba(0,0,0,0.12)' }}
-      >
+      <div className="rounded-xl border p-4" style={cardStyle}>
         {commonLabel}
         <div className="flex flex-wrap gap-2">
           {(opts || []).map((o) => {
@@ -814,14 +825,14 @@ function QuestionField({ q, value, onChange }) {
                 key={key}
                 type="button"
                 onClick={() => {
-                  if (selected) onChange(arr.filter(x => x !== key));
+                  if (selected) onChange(arr.filter((x) => x !== key));
                   else onChange([...arr, key]);
                 }}
                 className="text-xs px-3 py-1 rounded-full border"
                 style={{
-                  borderColor: selected ? 'rgba(255,112,67,0.75)' : 'rgba(255,255,255,0.14)',
-                  background: selected ? 'rgba(255,112,67,0.12)' : 'rgba(0,0,0,0.10)',
-                  color: selected ? '#FFCCBC' : '#E2E8F0',
+                  borderColor: selected ? 'rgba(255,112,67,0.75)' : 'rgba(0,0,0,0.10)',
+                  background: selected ? 'rgba(255,112,67,0.10)' : 'rgba(255,255,255,0.70)',
+                  color: selected ? '#9A3412' : '#334155',
                 }}
               >
                 {key}
@@ -835,13 +846,10 @@ function QuestionField({ q, value, onChange }) {
 
   // fallback
   return (
-    <div
-      className="rounded-xl border p-4"
-      style={{ borderColor: 'rgba(255,255,255,0.14)', background: 'rgba(0,0,0,0.12)' }}
-    >
+    <div className="rounded-xl border p-4" style={cardStyle}>
       {commonLabel}
       <input
-        value={typeof value === 'string' ? value : (value ?? '')}
+        value={typeof value === 'string' ? value : value ?? ''}
         onChange={(e) => onChange(e.target.value)}
         style={inputStyle}
       />
@@ -852,52 +860,54 @@ function QuestionField({ q, value, onChange }) {
 function ConsentStep({ consent, setConsent }) {
   return (
     <div className="space-y-4">
-      <div className="text-white font-semibold">Consent & acknowledgement</div>
-      <div className="text-sm text-slate-200">
-        This confirms you’re submitting this application intentionally and agree to be contacted about this role.
+      <div className="text-slate-900 font-semibold">Consent & acknowledgement</div>
+      <div className="text-sm text-slate-600">
+        This confirms you're submitting this application intentionally and agree to be contacted about this role.
       </div>
 
       <div
         className="rounded-xl border p-4"
-        style={{ borderColor: 'rgba(255,255,255,0.14)', background: 'rgba(0,0,0,0.12)' }}
+        style={{ borderColor: 'rgba(0,0,0,0.10)', background: 'rgba(255,255,255,0.75)' }}
       >
-        <label className="inline-flex items-start gap-3 text-sm text-white">
+        <label className="inline-flex items-start gap-3 text-sm text-slate-900">
           <input
             type="checkbox"
             checked={!!consent.termsAccepted}
-            onChange={(e) => setConsent(prev => ({ ...prev, termsAccepted: e.target.checked }))}
+            onChange={(e) => setConsent((prev) => ({ ...prev, termsAccepted: e.target.checked }))}
             style={{ marginTop: 3 }}
           />
           <span>
-            I confirm the information I’m submitting is accurate, and I consent to being contacted about this application.
+            I confirm the information I'm submitting is accurate, and I consent to being contacted about this application.
           </span>
         </label>
 
         <div className="mt-3">
-          <label className="inline-flex items-start gap-3 text-sm text-white">
+          <label className="inline-flex items-start gap-3 text-sm text-slate-900">
             <input
               type="checkbox"
               checked={!!consent.emailUpdatesAccepted}
-              onChange={(e) => setConsent(prev => ({ ...prev, emailUpdatesAccepted: e.target.checked }))}
+              onChange={(e) =>
+                setConsent((prev) => ({ ...prev, emailUpdatesAccepted: e.target.checked }))
+              }
               style={{ marginTop: 3 }}
             />
             <span>I would like email updates about my application status. (optional)</span>
           </label>
-          <div className="text-xs text-slate-300 mt-1 ml-6">
+          <div className="text-xs text-slate-500 mt-1 ml-6">
             You can still be contacted about this role even if you opt out of status updates.
           </div>
         </div>
 
         <div className="mt-4">
-          <div className="text-sm font-semibold text-white mb-1">Signature (full name)</div>
+          <div className="text-sm font-semibold text-slate-900 mb-1">Signature (full name)</div>
           <input
             value={consent.signatureName || ''}
-            onChange={(e) => setConsent(prev => ({ ...prev, signatureName: e.target.value }))}
+            onChange={(e) => setConsent((prev) => ({ ...prev, signatureName: e.target.value }))}
             className="w-full rounded-lg px-3 py-2 text-sm"
-            style={{ background: 'rgba(255,255,255,0.90)' }}
+            style={{ background: 'rgba(255,255,255,0.95)', border: '1px solid rgba(0,0,0,0.12)' }}
             placeholder="Type your full name"
           />
-          <div className="text-xs text-slate-300 mt-2">
+          <div className="text-xs text-slate-500 mt-2">
             This acts as your electronic signature for this submission.
           </div>
         </div>
@@ -909,8 +919,8 @@ function ConsentStep({ consent, setConsent }) {
 function SelfIdStep({ selfId, setSelfId }) {
   return (
     <div className="space-y-4">
-      <div className="text-white font-semibold">Voluntary self-identification (optional)</div>
-      <div className="text-sm text-slate-200">
+      <div className="text-slate-900 font-semibold">Voluntary self-identification (optional)</div>
+      <div className="text-sm text-slate-600">
         This section is optional. You can skip it. If provided, it may help organizations meet reporting requirements.
       </div>
 
@@ -918,26 +928,26 @@ function SelfIdStep({ selfId, setSelfId }) {
         <Field
           label="Gender identity"
           value={selfId.genderIdentity}
-          onChange={(v) => setSelfId(p => ({ ...p, genderIdentity: v }))}
+          onChange={(v) => setSelfId((p) => ({ ...p, genderIdentity: v }))}
         />
         <Field
           label="Race / ethnicity"
           value={selfId.raceEthnicity}
-          onChange={(v) => setSelfId(p => ({ ...p, raceEthnicity: v }))}
+          onChange={(v) => setSelfId((p) => ({ ...p, raceEthnicity: v }))}
         />
         <Field
           label="Veteran status"
           value={selfId.veteranStatus}
-          onChange={(v) => setSelfId(p => ({ ...p, veteranStatus: v }))}
+          onChange={(v) => setSelfId((p) => ({ ...p, veteranStatus: v }))}
         />
         <Field
           label="Disability status"
           value={selfId.disabilityStatus}
-          onChange={(v) => setSelfId(p => ({ ...p, disabilityStatus: v }))}
+          onChange={(v) => setSelfId((p) => ({ ...p, disabilityStatus: v }))}
         />
       </div>
 
-      <div className="text-xs text-slate-300">
+      <div className="text-xs text-slate-500">
         Note: For MVP, this is plain text. Later we can convert to standardized options per region/org.
       </div>
     </div>
@@ -948,80 +958,80 @@ function Field({ label, value, onChange }) {
   return (
     <div
       className="rounded-xl border p-4"
-      style={{ borderColor: 'rgba(255,255,255,0.14)', background: 'rgba(0,0,0,0.12)' }}
+      style={{ borderColor: 'rgba(0,0,0,0.10)', background: 'rgba(255,255,255,0.75)' }}
     >
-      <div className="text-sm font-semibold text-white mb-1">{label}</div>
+      <div className="text-sm font-semibold text-slate-900 mb-1">{label}</div>
       <input
         value={value || ''}
         onChange={(e) => onChange(e.target.value)}
         className="w-full rounded-lg px-3 py-2 text-sm"
-        style={{ background: 'rgba(255,255,255,0.90)' }}
+        style={{ background: 'rgba(255,255,255,0.95)', border: '1px solid rgba(0,0,0,0.12)' }}
       />
     </div>
   );
 }
 
 function ReviewStep({ job, resumes, covers, selectedResumeId, selectedCoverId, consent, answers, template }) {
-  const resume = (resumes || []).find(r => r.id === selectedResumeId);
-  const cover = (covers || []).find(c => c.id === selectedCoverId);
+  const resume = (resumes || []).find((r) => r.id === selectedResumeId);
+  const cover = (covers || []).find((c) => c.id === selectedCoverId);
 
   return (
     <div className="space-y-4">
-      <div className="text-white font-semibold">Review</div>
-      <div className="text-sm text-slate-200">
+      <div className="text-slate-900 font-semibold">Review</div>
+      <div className="text-sm text-slate-600">
         Confirm everything looks right. When you submit, the recruiter receives your selected resume/cover and your responses.
       </div>
 
       <div
         className="rounded-xl border p-4"
-        style={{ borderColor: 'rgba(255,255,255,0.14)', background: 'rgba(0,0,0,0.12)' }}
+        style={{ borderColor: 'rgba(0,0,0,0.10)', background: 'rgba(255,255,255,0.75)' }}
       >
-        <div className="text-sm text-white font-semibold">Documents</div>
-        <div className="text-sm text-slate-200 mt-1">
-          Resume: <span className="text-white">{resume?.name || 'Not selected'}</span>
+        <div className="text-sm text-slate-900 font-semibold">Documents</div>
+        <div className="text-sm text-slate-700 mt-1">
+          Resume: <span className="text-slate-900">{resume?.name || 'Not selected'}</span>
         </div>
-        <div className="text-sm text-slate-200">
-          Cover: <span className="text-white">{cover?.name || 'None'}</span>
+        <div className="text-sm text-slate-700">
+          Cover: <span className="text-slate-900">{cover?.name || 'None'}</span>
         </div>
       </div>
 
       <div
         className="rounded-xl border p-4"
-        style={{ borderColor: 'rgba(255,255,255,0.14)', background: 'rgba(0,0,0,0.12)' }}
+        style={{ borderColor: 'rgba(0,0,0,0.10)', background: 'rgba(255,255,255,0.75)' }}
       >
-        <div className="text-sm text-white font-semibold">Consent</div>
-        <div className="text-sm text-slate-200 mt-1">
-          Accepted: <span className="text-white">{consent.termsAccepted ? 'Yes' : 'No'}</span>
+        <div className="text-sm text-slate-900 font-semibold">Consent</div>
+        <div className="text-sm text-slate-700 mt-1">
+          Accepted: <span className="text-slate-900">{consent.termsAccepted ? 'Yes' : 'No'}</span>
         </div>
-        <div className="text-sm text-slate-200">
-          Status updates: <span className="text-white">{consent.emailUpdatesAccepted ? 'Yes' : 'No'}</span>
+        <div className="text-sm text-slate-700">
+          Status updates: <span className="text-slate-900">{consent.emailUpdatesAccepted ? 'Yes' : 'No'}</span>
         </div>
-        <div className="text-sm text-slate-200">
-          Signature: <span className="text-white">{consent.signatureName || '—'}</span>
+        <div className="text-sm text-slate-700">
+          Signature: <span className="text-slate-900">{consent.signatureName || '-'}</span>
         </div>
       </div>
 
       <div
         className="rounded-xl border p-4"
-        style={{ borderColor: 'rgba(255,255,255,0.14)', background: 'rgba(0,0,0,0.12)' }}
+        style={{ borderColor: 'rgba(0,0,0,0.10)', background: 'rgba(255,255,255,0.75)' }}
       >
-        <div className="text-sm text-white font-semibold">Your responses</div>
+        <div className="text-sm text-slate-900 font-semibold">Your responses</div>
         <div className="mt-2 space-y-2">
           {(template?.steps || [])
-            .flatMap(s => (s.questions || []).map(q => ({ q })))
+            .flatMap((s) => (s.questions || []).map((q) => ({ q })))
             .map(({ q }) => {
               const v = answers[q.key];
-              const shown = Array.isArray(v) ? v.join(', ') : (v ?? '');
+              const shown = Array.isArray(v) ? v.join(', ') : v ?? '';
               return (
-                <div key={q.key} className="text-sm text-slate-200">
-                  <span className="text-white font-semibold">{q.label}:</span> {String(shown)}
+                <div key={q.key} className="text-sm text-slate-700">
+                  <span className="text-slate-900 font-semibold">{q.label}:</span> {String(shown)}
                 </div>
               );
             })}
         </div>
       </div>
 
-      <div className="text-xs text-slate-300">
+      <div className="text-xs text-slate-500">
         Job: {job?.title} at {job?.company}
       </div>
     </div>
