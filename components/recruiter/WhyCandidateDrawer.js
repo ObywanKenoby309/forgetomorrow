@@ -338,7 +338,7 @@ function WhyPanel({
       </div>
 
       {/* Body */}
-      <div className="p-4 overflow-y-auto grid gap-4">
+      <div className="p-4 flex-1 min-h-0 overflow-y-auto grid gap-4">
         {/* Match Summary */}
         <CollapsibleSection
           title="Match Summary"
@@ -765,7 +765,7 @@ export function WhyCandidateCompareDrawer({
         }}
       />
 
-      {/* Two panels: responsive */}
+            {/* Two panels: responsive */}
       <aside
         role="dialog"
         aria-modal="true"
@@ -778,14 +778,16 @@ export function WhyCandidateCompareDrawer({
           zIndex: 71,
           display: "grid",
           gridTemplateColumns: "repeat(2, minmax(0, 1fr))",
+          minHeight: 0, // ✅ critical: allow inner overflow scrolling in grid children
         }}
         className="max-lg:grid-cols-1"
       >
         {/* Left */}
         <div
-          className="hidden lg:flex"
+          className="hidden lg:flex min-h-0"
           style={{
             height: "100%",
+            minHeight: 0, // ✅ critical
             background: "#fff",
             borderLeft: "1px solid #e5e7eb",
             boxShadow: "-8px 0 24px rgba(0,0,0,0.12)",
@@ -804,10 +806,12 @@ export function WhyCandidateCompareDrawer({
           />
         </div>
 
-        {/* Right (always visible) */}
+                {/* Right (always visible) */}
         <div
+          className="min-h-0"
           style={{
             height: "100%",
+            minHeight: 0, // ✅ critical
             background: "#fff",
             borderLeft: "1px solid #e5e7eb",
             boxShadow: "-8px 0 24px rgba(0,0,0,0.12)",
