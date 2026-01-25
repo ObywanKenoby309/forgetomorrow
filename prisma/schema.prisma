@@ -263,6 +263,7 @@ model ApplicationConsent {
   application   Application @relation(fields: [applicationId], references: [id], onDelete: Cascade)
 
   termsAccepted      Boolean @default(false)
+  emailUpdatesAccepted Boolean @default(false)
   consentTextVersion String?
 
   signatureName String?
