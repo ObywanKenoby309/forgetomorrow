@@ -108,14 +108,20 @@ export default function PublicJobView() {
     ? `${job.title} — ${job.company || 'Job'}`
     : 'Job';
 
+  // ✅ Gate apply entry point (Closed/Draft/Reviewing = no Apply access)
   const canApply =
     !loading &&
     !!job &&
     status !== 'Draft' &&
-    status !== 'Closed';
+    status !== 'Closed' &&
+    status !== 'Reviewing';
+
+  // ✅ Only show the FT apply entry point when internal AND open
+  const showApplyCta = !!job && !loading && canApply;
 
   const handleApplyClick = () => {
     if (!job) return;
+    if (!canApply) return;
 
     if (!isInternal) {
       const finalUrl = applyLink || buildFallbackSearch(job);
@@ -264,27 +270,20 @@ export default function PublicJobView() {
                     </span>
                   )}
 
-                  {/* Apply button */}
-                  {!loading && job && (
+                  {/* Apply button (only when open/eligible) */}
+                  {showApplyCta && (
                     <button
                       type="button"
                       onClick={handleApplyClick}
-                      disabled={!canApply}
                       className="px-4 py-2 rounded-full text-sm font-semibold shadow-md"
                       style={{
-                        backgroundColor: canApply ? '#FF7043' : '#CFD8DC',
-                        color: canApply ? '#FFFFFF' : '#607D8B',
-                        cursor: canApply ? 'pointer' : 'default',
+                        backgroundColor: '#FF7043',
+                        color: '#FFFFFF',
+                        cursor: 'pointer',
                         whiteSpace: 'nowrap',
                       }}
                     >
-                      {status === 'Closed'
-                        ? 'Closed'
-                        : status === 'Reviewing'
-                        ? 'Applications paused'
-                        : isInternal
-                        ? 'Apply on ForgeTomorrow'
-                        : 'Apply on employer site'}
+                      {isInternal ? 'Apply on ForgeTomorrow' : 'Apply on employer site'}
                     </button>
                   )}
                 </div>
