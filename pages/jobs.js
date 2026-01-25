@@ -405,7 +405,7 @@ function Jobs() {
     // ✅ Internal flow: go to the real Apply page (no modal)
     // Change this route only if your apply page path is different.
     if (typeof window !== 'undefined') {
-      window.location.href = `/apply?jobId=${encodeURIComponent(job.id)}`;
+      window.location.href = `/job/${encodeURIComponent(job.id)}/apply?chrome=recruiter-ent`;
     }
   };
 

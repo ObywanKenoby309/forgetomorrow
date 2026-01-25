@@ -10,11 +10,37 @@ export default function JobActions({
   onResumeAlign,
   isPaidUser = false,
   showViewPost = false, // true on pinned page
+
+  // ✅ NEW (optional): if provided, Apply will navigate here (ex: `/job/${job.id}/apply?chrome=recruiter-ent`)
+  applyHref = '',
+
+  // ✅ NEW (optional): if applyHref not provided and no onApply, we can still route correctly
+  chrome = '',
 }) {
   if (!job) return null;
 
   const applyLink = job.url || job.externalUrl || job.link || job.applyUrl || '';
   const jobDetailUrl = `/jobs?jobId=${job.id}`; // adjust if your jobs page uses different param/query
+
+  // ✅ Default internal apply URL (only used if you don't pass applyHref and you don't pass onApply)
+  const defaultInternalApplyUrl = `/job/${job.id}/apply${chrome ? `?chrome=${encodeURIComponent(chrome)}` : ''}`;
+
+  const handleApply = () => {
+    // 1) If parent passed a handler, keep current behavior (modal/external logic lives there)
+    if (typeof onApply === 'function') {
+      onApply(job);
+      return;
+    }
+
+    // 2) If parent passed a direct href, go there
+    if (applyHref) {
+      window.location.href = applyHref;
+      return;
+    }
+
+    // 3) Fallback: internal apply page
+    window.location.href = defaultInternalApplyUrl;
+  };
 
   return (
     <div
@@ -31,7 +57,8 @@ export default function JobActions({
 
       {/* Apply */}
       <button
-        onClick={() => onApply(job)}
+        type="button"
+        onClick={handleApply}
         style={{
           background: '#FF7043',
           color: 'white',
@@ -48,6 +75,7 @@ export default function JobActions({
       {/* Resume-Role Align (Pro only) */}
       {isPaidUser && (
         <button
+          type="button"
           onClick={() => onResumeAlign(job)}
           style={{
             background: 'white',
