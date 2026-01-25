@@ -6,13 +6,7 @@ export default function JobApplyModal({ job, onClose }) {
   const [submitting, setSubmitting] = useState(false);
 
   function resolveApplyLink(job) {
-    return (
-      job?.externalUrl ||
-      job?.applyUrl ||
-      job?.url ||
-      job?.link ||
-      null
-    );
+    return job?.externalUrl || job?.applyUrl || job?.url || job?.link || null;
   }
 
   function buildFallbackSearch(job) {
@@ -52,15 +46,9 @@ export default function JobApplyModal({ job, onClose }) {
         throw new Error("Failed to submit application");
       }
 
-      if (job?.source === "External") {
-        // If we don't have a configured external link, fall back to
-        // a Google "careers" search for this job / company.
-        const finalUrl = applyLink || buildFallbackSearch(job);
-        window.open(finalUrl, "_blank", "noopener,noreferrer");
-      } else {
-        // Internal / pipeline-only jobs
-        alert(`Application submitted for: ${job?.title || "this job"}`);
-      }
+      // External jobs: open employer posting (or a careers search fallback)
+      const finalUrl = applyLink || buildFallbackSearch(job);
+      window.open(finalUrl, "_blank", "noopener,noreferrer");
 
       if (typeof onClose === "function") {
         onClose();
@@ -79,13 +67,18 @@ export default function JobApplyModal({ job, onClose }) {
     <div className="fixed inset-0 flex items-center justify-center bg-black/40 z-50">
       <div className="bg-white rounded-xl shadow-xl max-w-md w-full p-6">
         <h2 className="text-lg font-semibold mb-2">
-          Apply for {job?.title || "this job"}
+          External job posting
         </h2>
+
         <p className="text-sm text-gray-600 mb-4">
-          We will record this application in your pipeline. For external jobs,
-          you will also be redirected to the employer&apos;s site (or a careers
-          search) to complete your application.
+          ForgeTomorrow will record this in your pipeline, then we will open the employer&apos;s application page in a new tab.
+          If we don&apos;t have a direct link, we&apos;ll open a careers search for this company and role.
         </p>
+
+        <div className="text-sm text-gray-800 mb-4">
+          <div className="font-semibold">{job?.title || "Role"}</div>
+          <div className="text-gray-600">{job?.company || "Company"}</div>
+        </div>
 
         <form onSubmit={handleSubmit}>
           {/* If you want, add resume/cover selectors here later */}
@@ -104,7 +97,7 @@ export default function JobApplyModal({ job, onClose }) {
               className="px-4 py-2 text-sm rounded-md bg-orange-500 text-white font-medium disabled:opacity-60"
               disabled={submitting}
             >
-              {submitting ? "Submitting..." : "Submit application"}
+              {submitting ? "Opening..." : "Continue to employer site"}
             </button>
           </div>
         </form>

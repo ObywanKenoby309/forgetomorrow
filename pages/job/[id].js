@@ -108,29 +108,22 @@ export default function PublicJobView() {
     ? `${job.title} — ${job.company || 'Job'}`
     : 'Job';
 
-  // ✅ Gate apply entry point (Closed/Draft/Reviewing = no Apply access)
   const canApply =
     !loading &&
     !!job &&
     status !== 'Draft' &&
-    status !== 'Closed' &&
-    status !== 'Reviewing';
-
-  // ✅ Only show the FT apply entry point when internal AND open
-  const showApplyCta = !!job && !loading && canApply;
+    status !== 'Closed';
 
   const handleApplyClick = () => {
     if (!job) return;
-    if (!canApply) return;
 
-    if (!isInternal) {
-      const finalUrl = applyLink || buildFallbackSearch(job);
-      if (typeof window !== 'undefined') {
-        window.open(finalUrl, '_blank', 'noopener,noreferrer');
-      }
+    // ✅ Internal jobs: go straight to the real ForgeTomorrow apply wizard page
+    if (isInternal) {
+      router.push(`/job/${jobId}/apply`);
       return;
     }
 
+    // ✅ External jobs: show modal that explains what happens, then opens employer site
     setShowApplyModal(true);
   };
 
@@ -270,20 +263,27 @@ export default function PublicJobView() {
                     </span>
                   )}
 
-                  {/* Apply button (only when open/eligible) */}
-                  {showApplyCta && (
+                  {/* Apply button */}
+                  {!loading && job && (
                     <button
                       type="button"
                       onClick={handleApplyClick}
+                      disabled={!canApply}
                       className="px-4 py-2 rounded-full text-sm font-semibold shadow-md"
                       style={{
-                        backgroundColor: '#FF7043',
-                        color: '#FFFFFF',
-                        cursor: 'pointer',
+                        backgroundColor: canApply ? '#FF7043' : '#CFD8DC',
+                        color: canApply ? '#FFFFFF' : '#607D8B',
+                        cursor: canApply ? 'pointer' : 'default',
                         whiteSpace: 'nowrap',
                       }}
                     >
-                      {isInternal ? 'Apply on ForgeTomorrow' : 'Apply on employer site'}
+                      {status === 'Closed'
+                        ? 'Closed'
+                        : status === 'Reviewing'
+                        ? 'Applications paused'
+                        : isInternal
+                        ? 'Apply on ForgeTomorrow'
+                        : 'Apply on employer site'}
                     </button>
                   )}
                 </div>
@@ -415,8 +415,8 @@ export default function PublicJobView() {
           )}
         </div>
 
-        {/* APPLY MODAL – internal jobs only */}
-        {showApplyModal && job && isInternal && (
+        {/* APPLY MODAL – external jobs only */}
+        {showApplyModal && job && !isInternal && (
           <JobApplyModal
             job={job}
             onClose={() => setShowApplyModal(false)}
