@@ -50,12 +50,15 @@ export default function App({ Component, pageProps: { session, ...pageProps } })
 
   const isRecruiterRoute = router.pathname.startsWith('/recruiter');
 
-  // ✅ NEW: Admin routes are INTERNAL (no external header/footer)
+  // ✅ Admin routes are INTERNAL (no external header/footer)
   const isAdminRoute = router.pathname.startsWith('/admin');
 
-  // ✅ NEW: Internal / Workspace routes are INTERNAL (no external header/footer)
+  // ✅ Internal / Workspace routes are INTERNAL (no external header/footer)
   const isInternalRoute = router.pathname.startsWith('/internal');
   const isWorkspaceRoute = router.pathname.startsWith('/workspace');
+
+  // ✅ NEW: Job apply route should be treated as INTERNAL seeker-style page
+  const isJobApplyRoute = router.pathname === '/job/[id]/apply';
 
   // Treat all Hearth routes as internal seeker-style pages
   const isSeekerRoute =
@@ -65,6 +68,7 @@ export default function App({ Component, pageProps: { session, ...pageProps } })
     router.pathname.startsWith('/apply') ||
     router.pathname.startsWith('/hearth') ||
     router.pathname.startsWith('/offer-negotiation') ||
+    isJobApplyRoute ||
     [
       '/the-hearth',
       '/jobs',
