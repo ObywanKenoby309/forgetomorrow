@@ -267,12 +267,13 @@ async function findUserIdsByEducationTerms(prisma, terms) {
   if (!cleaned.length) return [];
 
   // ✅ CRITICAL: cast to jsonb so this works whether the column is JSON or JSONB
+  // ✅ ALSO: your Prisma model maps User -> "users" table (@@map("users"))
   const perTermExists = cleaned.map((term) => {
     const like = `%${term}%`;
     return Prisma.sql`
       EXISTS (
         SELECT 1
-        FROM jsonb_array_elements("User"."educationJson"::jsonb) AS e
+        FROM jsonb_array_elements("users"."educationJson"::jsonb) AS e
         WHERE
           (e->>'school') ILIKE ${like}
           OR (e->>'degree') ILIKE ${like}
@@ -286,7 +287,7 @@ async function findUserIdsByEducationTerms(prisma, terms) {
   const rows = await prisma.$queryRaw(
     Prisma.sql`
       SELECT "id"
-      FROM "User"
+      FROM "users"
       WHERE
         "deletedAt" IS NULL
         AND "educationJson" IS NOT NULL
@@ -295,9 +296,9 @@ async function findUserIdsByEducationTerms(prisma, terms) {
     `
   );
 
-  // rows is array of { id: '...' }
   return Array.isArray(rows) ? rows.map((r) => String(r.id)).filter(Boolean) : [];
 }
+
 
 export default async function handler(req, res) {
   if (req.method !== "GET") {
