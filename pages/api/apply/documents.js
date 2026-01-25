@@ -7,9 +7,6 @@ import jwt from 'jsonwebtoken';
 const JWT_SECRET =
   process.env.NEXTAUTH_SECRET || 'dev-secret-change-in-production';
 
-// ─────────────────────────────────────────────────────────────
-// ✅ Match /api/resume/list auth behavior exactly
-// ─────────────────────────────────────────────────────────────
 function getCookie(req, name) {
   try {
     const raw = req.headers?.cookie || '';
@@ -31,12 +28,10 @@ function normalizeEmail(v) {
 }
 
 async function getAuthedEmail(req, res) {
-  // 1) Prefer NextAuth session
   const session = await getServerSession(req, res, authOptions);
   const sessionEmail = normalizeEmail(session?.user?.email);
   if (sessionEmail) return sessionEmail;
 
-  // 2) Fallback: custom auth cookie set by /api/auth/verify-email
   const token = getCookie(req, 'auth');
   if (!token) return null;
 
@@ -69,22 +64,50 @@ export default async function handler(req, res) {
       return res.status(404).json({ error: 'User not found' });
     }
 
-    const [resumes, covers] = await Promise.all([
-      prisma.resume.findMany({
-        where: { userId: user.id },
-        orderBy: [{ isPrimary: 'desc' }, { updatedAt: 'desc' }],
-        select: { id: true, name: true, isPrimary: true },
-      }),
-      prisma.cover.findMany({
-        where: { userId: user.id },
-        orderBy: [{ isPrimary: 'desc' }, { updatedAt: 'desc' }],
-        select: { id: true, name: true, isPrimary: true },
-      }),
-    ]);
+    let resumes = [];
+    let covers = [];
 
-    return res.status(200).json({ resumes, covers });
+    // Isolate queries so we can see which one breaks in prod
+    try {
+      resumes = await prisma.resume.findMany({
+        where: { userId: user.id },
+        orderBy: [{ isPrimary: 'desc' }, { updatedAt: 'desc' }],
+        select: { id: true, name: true, isPrimary: true },
+      });
+    } catch (e) {
+      console.error('[apply/documents] resume query error', e);
+      return res.status(500).json({
+        error: 'Server error',
+        hint: 'resume_query_failed',
+      });
+    }
+
+    try {
+      covers = await prisma.cover.findMany({
+        where: { userId: user.id },
+        orderBy: [{ isPrimary: 'desc' }, { updatedAt: 'desc' }],
+        select: { id: true, name: true, isPrimary: true },
+      });
+    } catch (e) {
+      console.error('[apply/documents] cover query error', e);
+      return res.status(500).json({
+        error: 'Server error',
+        hint: 'cover_query_failed',
+      });
+    }
+
+    return res.status(200).json({
+      resumes,
+      covers,
+      debug: {
+        email,
+        userId: user.id,
+        resumesCount: resumes.length,
+        coversCount: covers.length,
+      },
+    });
   } catch (err) {
     console.error('[apply/documents] error', err);
-    return res.status(500).json({ error: 'Server error' });
+    return res.status(500).json({ error: 'Server error', hint: 'handler_failed' });
   }
 }
