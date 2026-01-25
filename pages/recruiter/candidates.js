@@ -1439,21 +1439,6 @@ function Body() {
                   locationFilter={locQuery}
                   booleanQuery={boolQuery}
                 />
-                <CandidateList
-                  candidates={rightCandidates}
-                  isEnterprise={isEnterprise}
-                  onView={onView}
-                  onMessage={onMessage}
-                  onWhy={onWhy}
-                  onToggleCompare={onToggleCompare}
-                  compareSelectedIds={compareSelectedIds}
-                  showFilters={false}
-                  showFilterBar={false}
-                  filtersVisible={false}
-                  query={nameQuery}
-                  locationFilter={locQuery}
-                  booleanQuery={boolQuery}
-                />
               </div>
             </div>
           )}
