@@ -13,8 +13,13 @@ const BLANK = {
   compensation: "",
   description: "",
   status: "Draft",
-  additionalQuestions: null, // ✅ supports recruiter-defined questions (Json)
+  additionalQuestions: null, // ✅ NEW — recruiter-defined application questions (max 6)
 };
+
+function makeQuestionKey() {
+  // stable-enough client key for Json array items
+  return `q_${Date.now()}_${Math.random().toString(16).slice(2)}`;
+}
 
 export default function JobFormModal({
   open,
@@ -37,6 +42,10 @@ export default function JobFormModal({
 
   // ✅ Track the currently loaded template (for Windows-like overwrite behavior)
   const [loadedTemplate, setLoadedTemplate] = useState(null); // { id, templateName }
+
+  // ✅ NEW — toggle + panel state for additional questions (mobile + desktop)
+  const [aqEnabled, setAqEnabled] = useState(false);
+  const [aqPanelOpen, setAqPanelOpen] = useState(true);
 
   const isView = mode === "view";
   const isCreate = mode === "create";
@@ -65,11 +74,18 @@ export default function JobFormModal({
       setTplError(null);
       setTplFlash("");
       setLoadedTemplate(null);
+
+      setAqEnabled(false);
+      setAqPanelOpen(true);
       return;
     }
 
     if (initialJob) {
       // NOTE: intentionally ignore isTemplate/templateName so we don't propagate it into job saves.
+      const incomingAq = Array.isArray(initialJob.additionalQuestions)
+        ? initialJob.additionalQuestions
+        : null;
+
       setData({
         company: initialJob.company || "",
         title: initialJob.title || "",
@@ -79,11 +95,11 @@ export default function JobFormModal({
         compensation: initialJob.compensation || "",
         description: initialJob.description || "",
         status: initialJob.status || "Draft",
-        additionalQuestions:
-          initialJob.additionalQuestions !== undefined
-            ? initialJob.additionalQuestions
-            : null,
+        additionalQuestions: incomingAq,
       });
+
+      // ✅ NEW — enable toggle if questions exist on the loaded job/template
+      setAqEnabled(Array.isArray(incomingAq) && incomingAq.length > 0);
 
       // ✅ If the "initial job" is actually a template passed in, remember it
       if (initialJob.isTemplate && (initialJob.templateName || "").trim()) {
@@ -97,6 +113,7 @@ export default function JobFormModal({
     } else {
       setData(BLANK);
       setLoadedTemplate(null);
+      setAqEnabled(false);
     }
 
     setTplFlash("");
@@ -114,6 +131,13 @@ export default function JobFormModal({
     mode === "edit" ? "Edit Job" : mode === "view" ? "View Job" : "Post a Job";
 
   const canUseTemplates = !isView; // allow in create + edit
+
+  const aqList = useMemo(() => {
+    return Array.isArray(data.additionalQuestions) ? data.additionalQuestions : [];
+  }, [data.additionalQuestions]);
+
+  const aqCount = aqList.length;
+  const aqLimitReached = aqCount >= 6;
 
   const loadTemplates = async () => {
     try {
@@ -161,6 +185,8 @@ export default function JobFormModal({
   const applyTemplate = (t) => {
     if (!t) return;
 
+    const incomingAq = Array.isArray(t.additionalQuestions) ? t.additionalQuestions : null;
+
     setData((p) => ({
       ...p,
       company: t.company || p.company || "",
@@ -171,9 +197,13 @@ export default function JobFormModal({
       compensation: t.compensation || p.compensation || "",
       description: t.description || p.description || "",
       status: "Draft",
-      additionalQuestions:
-        t.additionalQuestions !== undefined ? t.additionalQuestions : p.additionalQuestions,
+
+      // ✅ NEW — bring over additional questions from template (if any)
+      additionalQuestions: incomingAq,
     }));
+
+    // ✅ NEW — auto-enable toggle if questions exist
+    setAqEnabled(Array.isArray(incomingAq) && incomingAq.length > 0);
 
     // ✅ Remember which template is loaded
     setLoadedTemplate({
@@ -200,6 +230,12 @@ export default function JobFormModal({
         overwrite: Boolean(overwrite), // ✅ API uses this to replace existing template by name
         // force templates to be Draft for safety
         status: "Draft",
+
+        // ✅ NEW — persist additional questions with template
+        additionalQuestions:
+          aqEnabled && Array.isArray(data.additionalQuestions) && data.additionalQuestions.length
+            ? data.additionalQuestions
+            : null,
       }),
     });
 
@@ -267,11 +303,100 @@ export default function JobFormModal({
 
   const handleSave = () => {
     if (!valid || isView) return;
+
+    const cleanedAq =
+      aqEnabled && Array.isArray(data.additionalQuestions) && data.additionalQuestions.length
+        ? data.additionalQuestions
+            .filter((q) => (q?.label || "").trim())
+            .slice(0, 6)
+        : null;
+
     // normal job save (never a template)
     onSave?.({
       ...data,
       isTemplate: false,
       templateName: null,
+
+      // ✅ NEW — persist additional questions on the job posting (org-scoped)
+      additionalQuestions: cleanedAq,
+    });
+  };
+
+  const setQuestionAt = (idx, patch) => {
+    setData((p) => {
+      const current = Array.isArray(p.additionalQuestions) ? p.additionalQuestions : [];
+      const next = [...current];
+      const prev = next[idx] || {};
+      next[idx] = { ...prev, ...patch };
+      return { ...p, additionalQuestions: next };
+    });
+  };
+
+  const addQuestion = () => {
+    setData((p) => {
+      const current = Array.isArray(p.additionalQuestions) ? p.additionalQuestions : [];
+      if (current.length >= 6) return p;
+
+      const next = [
+        ...current,
+        {
+          key: makeQuestionKey(),
+          label: "",
+          type: "text",
+          required: false,
+          helpText: "",
+        },
+      ];
+
+      return { ...p, additionalQuestions: next };
+    });
+  };
+
+  const removeQuestion = (idx) => {
+    setData((p) => {
+      const current = Array.isArray(p.additionalQuestions) ? p.additionalQuestions : [];
+      const next = current.filter((_, i) => i !== idx);
+      return { ...p, additionalQuestions: next.length ? next : null };
+    });
+  };
+
+  const toggleAdditionalQuestions = () => {
+    if (isView) return;
+
+    if (aqEnabled) {
+      // turning OFF
+      if (aqCount > 0) {
+        const ok = window.confirm(
+          "Turn off additional questions?\n\nThis will remove the custom questions from this job/template."
+        );
+        if (!ok) return;
+      }
+      setAqEnabled(false);
+      setData((p) => ({ ...p, additionalQuestions: null }));
+      setTplFlash("Additional questions disabled.");
+      return;
+    }
+
+    // turning ON
+    setAqEnabled(true);
+    setTplFlash("");
+    setAqPanelOpen(true);
+
+    setData((p) => {
+      const current = Array.isArray(p.additionalQuestions) ? p.additionalQuestions : [];
+      if (current.length) return p;
+      return {
+        ...p,
+        additionalQuestions: [
+          {
+            key: makeQuestionKey(),
+            label: "",
+            type: "text",
+            required: false,
+            helpText: "",
+          },
+        ],
+      };
     });
   };
 
@@ -283,7 +408,7 @@ export default function JobFormModal({
       <div className="absolute inset-0 bg-black/50" onClick={onClose} />
 
       {/* Modal */}
-      <div className="relative w-full max-w-3xl max-h-[90vh] overflow-y-auto rounded-lg bg-white shadow-xl border">
+      <div className="relative w-full max-w-5xl max-h-[90vh] overflow-y-auto rounded-lg bg-white shadow-xl border">
         {/* Header */}
         <div className="p-5 border-b sticky top-0 bg-white z-10 flex items-center justify-between gap-3">
           <div className="min-w-0">
@@ -315,6 +440,19 @@ export default function JobFormModal({
                   Save as Template
                 </button>
 
+                {/* ✅ NEW — Toggle beside Save as Template */}
+                <button
+                  type="button"
+                  onClick={toggleAdditionalQuestions}
+                  disabled={tplLoading || isView}
+                  className={`px-2.5 py-1 rounded border ${
+                    aqEnabled ? "bg-slate-900 text-white border-slate-900" : "hover:bg-slate-50"
+                  }`}
+                  title="Add up to 6 custom application questions (text responses)."
+                >
+                  {aqEnabled ? "Additional Questions: ON" : "Additional Questions: OFF"}
+                </button>
+
                 {tplLoading && <span className="text-slate-500">Working…</span>}
 
                 {!!loadedTemplate?.templateName && (
@@ -323,6 +461,12 @@ export default function JobFormModal({
                     <span className="font-medium">
                       {loadedTemplate.templateName}
                     </span>
+                  </span>
+                )}
+
+                {aqEnabled && (
+                  <span className="text-slate-500">
+                    Questions: <span className="font-medium">{aqCount}/6</span>
                   </span>
                 )}
               </div>
@@ -452,135 +596,258 @@ export default function JobFormModal({
         </div>
 
         {/* Body */}
-        <div className="p-5 space-y-5 text-sm">
-          {/* ROW 1 */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <Field label="Company" required>
-              <input
-                className="border rounded px-3 py-2 w-full"
-                value={data.company}
-                onChange={(e) =>
-                  setData((p) => ({ ...p, company: e.target.value }))
-                }
-                disabled={isView}
-              />
-            </Field>
-            <Field label="Job Title" required>
-              <input
-                className="border rounded px-3 py-2 w-full"
-                value={data.title}
-                onChange={(e) =>
-                  setData((p) => ({ ...p, title: e.target.value }))
-                }
-                disabled={isView}
-              />
-            </Field>
-          </div>
-
-          {/* ROW 2 */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <Field label="Worksite" required>
-              <select
-                className="border rounded px-3 py-2 w-full"
-                value={data.worksite}
-                onChange={(e) =>
-                  setData((p) => ({ ...p, worksite: e.target.value }))
-                }
-                disabled={isView}
-              >
-                <option>Remote</option>
-                <option>Hybrid</option>
-                <option>Onsite</option>
-              </select>
-            </Field>
-            <Field label="Location" required>
-              <input
-                className="border rounded px-3 py-2 w-full"
-                value={data.location}
-                onChange={(e) =>
-                  setData((p) => ({ ...p, location: e.target.value }))
-                }
-                disabled={isView}
-              />
-            </Field>
-          </div>
-
-          {/* ROW 3 */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <Field label="Employment Type">
-              <select
-                className="border rounded px-3 py-2 w-full"
-                value={data.type}
-                onChange={(e) =>
-                  setData((p) => ({ ...p, type: e.target.value }))
-                }
-                disabled={isView}
-              >
-                <option>Full-time</option>
-                <option>Part-time</option>
-                <option>Contract</option>
-                <option>Internship</option>
-              </select>
-            </Field>
-            <Field label="Compensation">
-              <input
-                className="border rounded px-3 py-2 w-full"
-                value={data.compensation}
-                onChange={(e) =>
-                  setData((p) => ({ ...p, compensation: e.target.value }))
-                }
-                disabled={isView}
-              />
-            </Field>
-          </div>
-
-          {/* DESCRIPTION + AI */}
-          <Field label="Description" required>
-            <textarea
-              className="border rounded px-3 py-2 w-full min-h-[180px] font-mono text-sm"
-              value={data.description}
-              onChange={(e) =>
-                setData((p) => ({ ...p, description: e.target.value }))
-              }
-              disabled={isView}
-            />
-
-            {data.description.trim() && isEnterprise && !isView && (
-              <>
-                <JDOptimizer
-                  draft={data.description}
-                  title={data.title}
-                  company={data.company}
-                  onOptimize={(text) =>
-                    setData((p) => ({ ...p, description: text }))
-                  }
-                />
-                <div className="mt-4">
-                  <ATSAdvisor
-                    draft={data.description}
-                    title={data.title}
-                    company={data.company}
+        <div className="p-5 text-sm">
+          <div className="flex flex-col md:flex-row gap-5">
+            {/* LEFT: Job form */}
+            <div className="flex-1 space-y-5 min-w-0">
+              {/* ROW 1 */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <Field label="Company" required>
+                  <input
+                    className="border rounded px-3 py-2 w-full"
+                    value={data.company}
+                    onChange={(e) =>
+                      setData((p) => ({ ...p, company: e.target.value }))
+                    }
+                    disabled={isView}
                   />
-                </div>
-              </>
-            )}
-          </Field>
+                </Field>
+                <Field label="Job Title" required>
+                  <input
+                    className="border rounded px-3 py-2 w-full"
+                    value={data.title}
+                    onChange={(e) =>
+                      setData((p) => ({ ...p, title: e.target.value }))
+                    }
+                    disabled={isView}
+                  />
+                </Field>
+              </div>
 
-          <Field label="Status">
-            <select
-              className="border rounded px-3 py-2 w-full"
-              value={data.status}
-              onChange={(e) =>
-                setData((p) => ({ ...p, status: e.target.value }))
-              }
-              disabled={isView}
-            >
-              <option value="Draft">Draft</option>
-              <option value="Open">Open</option>
-              <option value="Reviewing">Reviewing applicants</option>
-              <option value="Closed">Closed</option>
-            </select>
-          </Field>
+              {/* ROW 2 */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <Field label="Worksite" required>
+                  <select
+                    className="border rounded px-3 py-2 w-full"
+                    value={data.worksite}
+                    onChange={(e) =>
+                      setData((p) => ({ ...p, worksite: e.target.value }))
+                    }
+                    disabled={isView}
+                  >
+                    <option>Remote</option>
+                    <option>Hybrid</option>
+                    <option>Onsite</option>
+                  </select>
+                </Field>
+                <Field label="Location" required>
+                  <input
+                    className="border rounded px-3 py-2 w-full"
+                    value={data.location}
+                    onChange={(e) =>
+                      setData((p) => ({ ...p, location: e.target.value }))
+                    }
+                    disabled={isView}
+                  />
+                </Field>
+              </div>
+
+              {/* ROW 3 */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <Field label="Employment Type">
+                  <select
+                    className="border rounded px-3 py-2 w-full"
+                    value={data.type}
+                    onChange={(e) =>
+                      setData((p) => ({ ...p, type: e.target.value }))
+                    }
+                    disabled={isView}
+                  >
+                    <option>Full-time</option>
+                    <option>Part-time</option>
+                    <option>Contract</option>
+                    <option>Internship</option>
+                  </select>
+                </Field>
+                <Field label="Compensation">
+                  <input
+                    className="border rounded px-3 py-2 w-full"
+                    value={data.compensation}
+                    onChange={(e) =>
+                      setData((p) => ({ ...p, compensation: e.target.value }))
+                    }
+                    disabled={isView}
+                  />
+                </Field>
+              </div>
+
+              {/* DESCRIPTION + AI */}
+              <Field label="Description" required>
+                <textarea
+                  className="border rounded px-3 py-2 w-full min-h-[180px] font-mono text-sm"
+                  value={data.description}
+                  onChange={(e) =>
+                    setData((p) => ({ ...p, description: e.target.value }))
+                  }
+                  disabled={isView}
+                />
+
+                {data.description.trim() && isEnterprise && !isView && (
+                  <>
+                    <JDOptimizer
+                      draft={data.description}
+                      title={data.title}
+                      company={data.company}
+                      onOptimize={(text) =>
+                        setData((p) => ({ ...p, description: text }))
+                      }
+                    />
+                    <div className="mt-4">
+                      <ATSAdvisor
+                        draft={data.description}
+                        title={data.title}
+                        company={data.company}
+                      />
+                    </div>
+                  </>
+                )}
+              </Field>
+
+              <Field label="Status">
+                <select
+                  className="border rounded px-3 py-2 w-full"
+                  value={data.status}
+                  onChange={(e) =>
+                    setData((p) => ({ ...p, status: e.target.value }))
+                  }
+                  disabled={isView}
+                >
+                  <option value="Draft">Draft</option>
+                  <option value="Open">Open</option>
+                  <option value="Reviewing">Reviewing applicants</option>
+                  <option value="Closed">Closed</option>
+                </select>
+              </Field>
+            </div>
+
+            {/* RIGHT: Additional Questions panel (desktop right, mobile stacks) */}
+            {canUseTemplates && aqEnabled && (
+              <div className="w-full md:w-[360px] shrink-0">
+                <div className="rounded border bg-slate-50 p-3">
+                  <div className="flex items-center justify-between gap-3">
+                    <div className="min-w-0">
+                      <div className="font-medium text-xs">
+                        Additional Application Questions
+                      </div>
+                      <div className="text-[11px] text-slate-600 mt-0.5">
+                        Candidates will answer using text fields. (Max 6)
+                      </div>
+                    </div>
+
+                    <button
+                      type="button"
+                      className="text-xs underline text-slate-600"
+                      onClick={() => setAqPanelOpen((v) => !v)}
+                    >
+                      {aqPanelOpen ? "Hide" : "Show"}
+                    </button>
+                  </div>
+
+                  {aqPanelOpen && (
+                    <>
+                      <div className="mt-3 space-y-3">
+                        {aqList.map((q, idx) => (
+                          <div key={q?.key || idx} className="rounded border bg-white p-2">
+                            <div className="flex items-center justify-between gap-2">
+                              <div className="text-[11px] font-medium text-slate-700">
+                                Question {idx + 1}
+                              </div>
+                              {!isView && (
+                                <button
+                                  type="button"
+                                  className="text-[11px] text-rose-700 underline"
+                                  onClick={() => removeQuestion(idx)}
+                                >
+                                  Remove
+                                </button>
+                              )}
+                            </div>
+
+                            <div className="mt-2">
+                              <input
+                                className="border rounded px-2 py-1 w-full text-xs"
+                                value={String(q?.label || "")}
+                                onChange={(e) =>
+                                  setQuestionAt(idx, { label: e.target.value })
+                                }
+                                placeholder="Type the question you want to ask…"
+                                disabled={isView}
+                              />
+                            </div>
+
+                            <div className="mt-2 flex items-center justify-between gap-2">
+                              <label className="flex items-center gap-2 text-xs text-slate-600">
+                                <input
+                                  type="checkbox"
+                                  checked={!!q?.required}
+                                  onChange={(e) =>
+                                    setQuestionAt(idx, { required: e.target.checked })
+                                  }
+                                  disabled={isView}
+                                />
+                                Required
+                              </label>
+
+                              <span className="text-[10px] text-slate-500">
+                                Text response
+                              </span>
+                            </div>
+
+                            <div className="mt-2">
+                              <input
+                                className="border rounded px-2 py-1 w-full text-xs"
+                                value={String(q?.helpText || "")}
+                                onChange={(e) =>
+                                  setQuestionAt(idx, { helpText: e.target.value })
+                                }
+                                placeholder="Optional help text (shown to candidate)…"
+                                disabled={isView}
+                              />
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+
+                      <div className="mt-3 flex items-center justify-between gap-2">
+                        <button
+                          type="button"
+                          onClick={addQuestion}
+                          disabled={isView || aqLimitReached}
+                          className={`px-2.5 py-1 rounded border text-xs ${
+                            !isView && !aqLimitReached
+                              ? "hover:bg-slate-100"
+                              : "bg-slate-200 text-slate-500 cursor-not-allowed"
+                          }`}
+                        >
+                          + Add Question
+                        </button>
+
+                        <div className="text-[11px] text-slate-600">
+                          {aqCount}/6
+                        </div>
+                      </div>
+
+                      {aqCount > 0 && (
+                        <div className="mt-2 text-[11px] text-slate-500">
+                          Tip: keep questions short. You can mark them required for stronger filtering.
+                        </div>
+                      )}
+                    </>
+                  )}
+                </div>
+              </div>
+            )}
+          </div>
         </div>
 
         {/* Footer */}
