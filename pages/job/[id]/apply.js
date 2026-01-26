@@ -62,6 +62,53 @@ function isInternalJob(job) {
   );
 }
 
+// ✅ NEW: normalize question type to match UI checks (TEXT, TEXTAREA, etc.)
+function normalizeQuestionType(t) {
+  const s = String(t || '').trim().toUpperCase();
+  if (!s) return 'TEXT';
+  if (s === 'TEXT') return 'TEXT';
+  if (s === 'TEXTAREA') return 'TEXTAREA';
+  if (s === 'NUMBER') return 'NUMBER';
+  if (s === 'DATE') return 'DATE';
+  if (s === 'BOOLEAN') return 'BOOLEAN';
+  if (s === 'SELECT') return 'SELECT';
+  if (s === 'MULTISELECT') return 'MULTISELECT';
+  // Back-compat: if API ever sends "text", "textarea", etc.
+  if (s === 'TEXTAREA' || s === 'TEXT_AREA') return 'TEXTAREA';
+  return 'TEXT';
+}
+
+// ✅ NEW: normalize + dedupe questions by key (preserve order)
+function mergeQuestions(jobQs, tplQs) {
+  const out = [];
+  const seen = new Set();
+
+  const push = (q) => {
+    if (!q) return;
+    const key = String(q.key || '').trim();
+    const label = String(q.label || '').trim();
+    if (!key || !label) return;
+
+    const k = key.toLowerCase();
+    if (seen.has(k)) return;
+    seen.add(k);
+
+    out.push({
+      ...q,
+      key,
+      label,
+      type: normalizeQuestionType(q.type),
+      required: Boolean(q.required),
+      helpText: String(q.helpText || ''),
+    });
+  };
+
+  (jobQs || []).forEach(push);
+  (tplQs || []).forEach(push);
+
+  return out;
+}
+
 export default function JobApplyPage() {
   const router = useRouter();
   const { id: jobId } = router.query;
@@ -184,9 +231,12 @@ export default function JobApplyPage() {
     };
   }, [jobId]);
 
+  // ✅ UPDATED: merge jobQuestions (root) + template step questions into one list
   const additionalQuestions = useMemo(() => {
+    const jobQs = Array.isArray(template?.jobQuestions) ? template.jobQuestions : [];
     const tplSteps = template?.steps || [];
-    return tplSteps.flatMap((s) => s?.questions || []);
+    const tplQs = tplSteps.flatMap((s) => s?.questions || []);
+    return mergeQuestions(jobQs, tplQs);
   }, [template]);
 
   const steps = useMemo(() => {
