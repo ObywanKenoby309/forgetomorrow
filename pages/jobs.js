@@ -643,7 +643,7 @@ function Jobs() {
   const hasAppliedToSelected = !!selectedJob && appliedJobs.some((j) => j && j.id === selectedJob.id);
 
   const isSelectedInternal = isInternalJob(selectedJob);
-  const selectedSourceLabel = isSelectedInternal ? 'Forge recruiter' : selectedJob?.source || 'External';
+  const selectedSourceLabel = isSelectedInternal ? 'Forge recruiter' : 'External';
 
   const selectedTier = getJobTier(selectedJob);
   const selectedIsFtOfficial = selectedTier === 'ft-official';
