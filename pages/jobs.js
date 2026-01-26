@@ -929,7 +929,7 @@ function Jobs() {
 
                 const status = getJobStatus(job);
                 const internal = isInternalJob(job);
-                const displaySource = internal ? 'Forge recruiter' : job.source || 'External';
+                const displaySource = internal ? 'Forge recruiter' : 'External';
 
                 let postedLabel = 'Date not provided';
                 if (job.publishedat) {
