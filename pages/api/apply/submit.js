@@ -1,11 +1,60 @@
 // pages/api/apply/submit.js
-import prisma from '@/lib/prisma';
-import { getClientSession } from '@/lib/auth-client';
+import { getServerSession } from 'next-auth/next';
+import { authOptions } from '../auth/[...nextauth]';
+import { prisma } from '@/lib/prisma';
+import jwt from 'jsonwebtoken';
+
+const JWT_SECRET = process.env.NEXTAUTH_SECRET || 'dev-secret-change-in-production';
+
+function getCookie(req, name) {
+  try {
+    const raw = req.headers?.cookie || '';
+    const parts = raw.split(';').map((p) => p.trim());
+    for (const p of parts) {
+      if (p.startsWith(name + '=')) {
+        return decodeURIComponent(p.slice(name.length + 1));
+      }
+    }
+    return null;
+  } catch {
+    return null;
+  }
+}
+
+function normalizeEmail(v) {
+  const s = String(v || '').toLowerCase().trim();
+  return s || null;
+}
+
+async function getAuthedUserId(req, res) {
+  // 1) NextAuth session (server-side)
+  const session = await getServerSession(req, res, authOptions);
+  const sid = session?.user?.id;
+  if (sid) return sid;
+
+  // 2) JWT cookie fallback (if you use an "auth" cookie)
+  const token = getCookie(req, 'auth');
+  if (!token) return null;
+
+  try {
+    const decoded = jwt.verify(token, JWT_SECRET);
+    const email = normalizeEmail(decoded?.email);
+    if (!email) return null;
+
+    const user = await prisma.user.findUnique({
+      where: { email },
+      select: { id: true },
+    });
+
+    return user?.id || null;
+  } catch {
+    return null;
+  }
+}
 
 export default async function handler(req, res) {
   try {
-    const session = await getClientSession(req);
-    const userId = session?.user?.id;
+    const userId = await getAuthedUserId(req, res);
     if (!userId) return res.status(401).json({ error: 'Unauthorized' });
     if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed' });
 
@@ -35,7 +84,9 @@ export default async function handler(req, res) {
 
     // Prevent double-submit
     if (app.submittedAt) {
-      return res.status(200).json({ ok: true, alreadySubmitted: true, submittedAt: app.submittedAt });
+      return res
+        .status(200)
+        .json({ ok: true, alreadySubmitted: true, submittedAt: app.submittedAt });
     }
 
     const now = new Date();
@@ -46,7 +97,7 @@ export default async function handler(req, res) {
         where: { id: appId },
         data: {
           submittedAt: now,
-          status: 'Applied', // keep consistent with your enum
+          status: 'Applied', // keep consistent with your enum/string
         },
       });
 
