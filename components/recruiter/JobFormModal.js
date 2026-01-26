@@ -13,6 +13,7 @@ const BLANK = {
   compensation: "",
   description: "",
   status: "Draft",
+  additionalQuestions: null, // ✅ supports recruiter-defined questions (Json)
 };
 
 export default function JobFormModal({
@@ -78,6 +79,10 @@ export default function JobFormModal({
         compensation: initialJob.compensation || "",
         description: initialJob.description || "",
         status: initialJob.status || "Draft",
+        additionalQuestions:
+          initialJob.additionalQuestions !== undefined
+            ? initialJob.additionalQuestions
+            : null,
       });
 
       // ✅ If the "initial job" is actually a template passed in, remember it
@@ -166,6 +171,8 @@ export default function JobFormModal({
       compensation: t.compensation || p.compensation || "",
       description: t.description || p.description || "",
       status: "Draft",
+      additionalQuestions:
+        t.additionalQuestions !== undefined ? t.additionalQuestions : p.additionalQuestions,
     }));
 
     // ✅ Remember which template is loaded

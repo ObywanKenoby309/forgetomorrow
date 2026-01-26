@@ -130,6 +130,9 @@ function shapeJob(job, { lite = false } = {}) {
     userId: job.userId,
     createdAt: job.createdAt,
 
+    // ✅ recruiter-defined additional questions (job-scoped JSON)
+    additionalQuestions: job.additionalQuestions ?? null,
+
     // template support
     isTemplate: Boolean(job.isTemplate),
     templateName: job.templateName || null,
@@ -155,6 +158,7 @@ function shapeJob(job, { lite = false } = {}) {
       isTemplate: base.isTemplate,
       templateName: base.templateName,
       createdAt: base.createdAt,
+      additionalQuestions: base.additionalQuestions,
     };
   }
 
@@ -227,6 +231,9 @@ export default async function handler(req, res) {
         isTemplate = false,
         templateName = null,
 
+        // ✅ recruiter-defined additional questions (job-scoped JSON)
+        additionalQuestions = null,
+
         // allow overwrite when saving template by same name
         overwrite = false,
       } = req.body || {};
@@ -282,6 +289,9 @@ export default async function handler(req, res) {
               compensation: safeText(compensation, ""),
               description: safeText(description),
 
+              // ✅ store custom questions on templates too (so "Use Template" carries them)
+              additionalQuestions: additionalQuestions ?? null,
+
               // templates are always Draft for safety
               status: "Draft",
               urgent: false,
@@ -310,6 +320,9 @@ export default async function handler(req, res) {
           type: safeText(type, ""),
           compensation: safeText(compensation, ""),
           description: safeText(description),
+
+          // ✅ recruiter-defined additional questions (job-scoped JSON)
+          additionalQuestions: additionalQuestions ?? null,
 
           // templates are always Draft for safety
           status: templateFlag ? "Draft" : status,
@@ -342,6 +355,9 @@ export default async function handler(req, res) {
         type,
         compensation,
         description,
+
+        // ✅ recruiter-defined additional questions (job-scoped JSON)
+        additionalQuestions,
 
         // template support
         templateName,
@@ -383,6 +399,12 @@ export default async function handler(req, res) {
               ? safeText(description)
               : existing.description,
 
+          // ✅ preserve unless explicitly provided
+          additionalQuestions:
+            additionalQuestions !== undefined
+              ? additionalQuestions
+              : existing.additionalQuestions,
+
           status: existing.isTemplate ? "Draft" : nextStatus,
           urgent:
             existing.isTemplate
@@ -402,7 +424,7 @@ export default async function handler(req, res) {
       return res.status(200).json({ job: shapeJob(updated) });
     }
 
-    // ✅ NEW: DELETE for templates (org-scoped; templates only)
+    // ✅ DELETE for templates (org-scoped; templates only)
     if (req.method === "DELETE") {
       const { id } = req.body || {};
 
