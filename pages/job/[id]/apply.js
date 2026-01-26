@@ -7,6 +7,15 @@ import SeekerLayout from '@/components/layouts/SeekerLayout';
 
 const ORANGE = '#FF7043';
 
+const SELF_ID_LINKS = {
+  disability503:
+    'https://www.dol.gov/sites/dolgov/files/OFCCP/regs/compliance/sec503/Self_ID_Forms/503Self-IDForm-04262023.pdf',
+  vevraa:
+    'https://www.dol.gov/agencies/ofccp/vevraa/self-id-form',
+  eeocRace:
+    'https://www.eeoc.gov/sites/default/files/migrated_files/federal/2017-approved-Applicant-Form.pdf',
+};
+
 function getChromeFromAsPath(asPath) {
   try {
     const s = String(asPath || '');
@@ -60,53 +69,6 @@ function isInternalJob(job) {
     source === 'forgetomorrow' ||
     source === 'forgetomorrow recruiter'
   );
-}
-
-// ✅ NEW: normalize question type to match UI checks (TEXT, TEXTAREA, etc.)
-function normalizeQuestionType(t) {
-  const s = String(t || '').trim().toUpperCase();
-  if (!s) return 'TEXT';
-  if (s === 'TEXT') return 'TEXT';
-  if (s === 'TEXTAREA') return 'TEXTAREA';
-  if (s === 'NUMBER') return 'NUMBER';
-  if (s === 'DATE') return 'DATE';
-  if (s === 'BOOLEAN') return 'BOOLEAN';
-  if (s === 'SELECT') return 'SELECT';
-  if (s === 'MULTISELECT') return 'MULTISELECT';
-  // Back-compat: if API ever sends "text", "textarea", etc.
-  if (s === 'TEXTAREA' || s === 'TEXT_AREA') return 'TEXTAREA';
-  return 'TEXT';
-}
-
-// ✅ NEW: normalize + dedupe questions by key (preserve order)
-function mergeQuestions(jobQs, tplQs) {
-  const out = [];
-  const seen = new Set();
-
-  const push = (q) => {
-    if (!q) return;
-    const key = String(q.key || '').trim();
-    const label = String(q.label || '').trim();
-    if (!key || !label) return;
-
-    const k = key.toLowerCase();
-    if (seen.has(k)) return;
-    seen.add(k);
-
-    out.push({
-      ...q,
-      key,
-      label,
-      type: normalizeQuestionType(q.type),
-      required: Boolean(q.required),
-      helpText: String(q.helpText || ''),
-    });
-  };
-
-  (jobQs || []).forEach(push);
-  (tplQs || []).forEach(push);
-
-  return out;
 }
 
 export default function JobApplyPage() {
@@ -231,33 +193,30 @@ export default function JobApplyPage() {
     };
   }, [jobId]);
 
-  // ✅ UPDATED: merge jobQuestions (root) + template step questions into one list
   const additionalQuestions = useMemo(() => {
-    const jobQs = Array.isArray(template?.jobQuestions) ? template.jobQuestions : [];
     const tplSteps = template?.steps || [];
-    const tplQs = tplSteps.flatMap((s) => s?.questions || []);
-    return mergeQuestions(jobQs, tplQs);
+    return tplSteps.flatMap((s) => s?.questions || []);
   }, [template]);
 
   const steps = useMemo(() => {
-  const hasAdditional = (additionalQuestions || []).length > 0;
+    const hasAdditional = (additionalQuestions || []).length > 0;
 
-  return [
-    { key: 'documents', title: 'Your documents' },
-    { key: 'selfid', title: 'Voluntary self-identification (optional)' },
-    ...(hasAdditional
-      ? [
-          {
-            key: 'additional',
-            title: 'Additional questions',
-            questions: additionalQuestions,
-          },
-        ]
-      : []),
-    { key: 'consent', title: 'Consent & acknowledgement' },
-    { key: 'review', title: 'Review & submit' },
-  ];
-}, [additionalQuestions]);
+    return [
+      { key: 'documents', title: 'Your documents' },
+      { key: 'selfid', title: 'Voluntary self-identification (optional)' },
+      { key: 'consent', title: 'Consent & acknowledgement' },
+      ...(hasAdditional
+        ? [
+            {
+              key: 'additional',
+              title: 'Additional questions',
+              questions: additionalQuestions,
+            },
+          ]
+        : []),
+      { key: 'review', title: 'Review & submit' },
+    ];
+  }, [additionalQuestions]);
 
   const currentStep = steps[stepIndex] || steps[0];
 
@@ -1032,56 +991,175 @@ function ConsentStep({ consent, setConsent }) {
 }
 
 function SelfIdStep({ selfId, setSelfId }) {
+  const genderOptions = [
+    { value: '', label: 'Decline to answer' },
+    { value: 'Female', label: 'Female' },
+    { value: 'Male', label: 'Male' },
+    { value: 'Non-binary', label: 'Non-binary' },
+    { value: 'Another identity', label: 'Another identity' },
+  ];
+
+  const raceEthnicityOptions = [
+    { value: '', label: 'Decline to answer' },
+    { value: 'Hispanic or Latino', label: 'Hispanic or Latino' },
+    { value: 'White (Not Hispanic or Latino)', label: 'White (Not Hispanic or Latino)' },
+    { value: 'Black or African American (Not Hispanic or Latino)', label: 'Black or African American (Not Hispanic or Latino)' },
+    { value: 'Asian (Not Hispanic or Latino)', label: 'Asian (Not Hispanic or Latino)' },
+    { value: 'Native Hawaiian or Other Pacific Islander (Not Hispanic or Latino)', label: 'Native Hawaiian or Other Pacific Islander (Not Hispanic or Latino)' },
+    { value: 'American Indian or Alaska Native (Not Hispanic or Latino)', label: 'American Indian or Alaska Native (Not Hispanic or Latino)' },
+    { value: 'Two or More Races (Not Hispanic or Latino)', label: 'Two or More Races (Not Hispanic or Latino)' },
+  ];
+
+  const veteranOptions = [
+    { value: '', label: 'Decline to answer' },
+    { value: 'I am not a protected veteran', label: 'I am not a protected veteran' },
+    { value: 'I am a protected veteran', label: 'I am a protected veteran' },
+  ];
+
+  const disabilityOptions = [
+    { value: '', label: 'Decline to answer' },
+    { value: 'Yes, I have a disability', label: 'Yes, I have a disability' },
+    { value: 'No, I do not have a disability', label: 'No, I do not have a disability' },
+  ];
+
   return (
     <div className="space-y-4">
       <div className="text-slate-900 font-semibold">Voluntary self-identification (optional)</div>
+
       <div className="text-sm text-slate-600">
-        This section is optional. You can skip it. If provided, it may help organizations meet reporting requirements.
+        Some employers ask these questions to meet U.S. reporting requirements. Your answers are voluntary.
+        You can decline to answer any question and still continue your application.
+      </div>
+
+      <DisclosureCard
+        title="What this is (and what it is not)"
+        items={[
+          'Optional: you may decline to answer any or all items.',
+          'Used for compliance reporting, not to determine hiring decisions.',
+          'Employers may store this information in hiring records as required.',
+        ]}
+      />
+
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <MiniLinkCard
+          title="Disability (Section 503)"
+          desc="Voluntary self-identification of disability."
+          href={SELF_ID_LINKS.disability503}
+        />
+        <MiniLinkCard
+          title="Veteran (VEVRAA)"
+          desc="Voluntary veteran status disclosure."
+          href={SELF_ID_LINKS.vevraa}
+        />
+        <MiniLinkCard
+          title="Race/Ethnicity (EEOC)"
+          desc="Applicant race and ethnicity categories."
+          href={SELF_ID_LINKS.eeocRace}
+        />
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        <Field
+        <SelectField
           label="Gender identity"
           value={selfId.genderIdentity}
           onChange={(v) => setSelfId((p) => ({ ...p, genderIdentity: v }))}
+          options={genderOptions}
+          helper="Optional. Choose “Decline to answer” to skip."
         />
-        <Field
+
+        <SelectField
           label="Race / ethnicity"
           value={selfId.raceEthnicity}
           onChange={(v) => setSelfId((p) => ({ ...p, raceEthnicity: v }))}
+          options={raceEthnicityOptions}
+          helper="Optional. Categories follow common EEOC-style reporting."
         />
-        <Field
+
+        <SelectField
           label="Veteran status"
           value={selfId.veteranStatus}
           onChange={(v) => setSelfId((p) => ({ ...p, veteranStatus: v }))}
+          options={veteranOptions}
+          helper="Optional. Some employers are required to offer this disclosure."
         />
-        <Field
+
+        <SelectField
           label="Disability status"
           value={selfId.disabilityStatus}
           onChange={(v) => setSelfId((p) => ({ ...p, disabilityStatus: v }))}
+          options={disabilityOptions}
+          helper="Optional. This is a voluntary self-identification."
         />
       </div>
 
       <div className="text-xs text-slate-500">
-        Note: For MVP, this is plain text. Later we can convert to standardized options per region/org.
+        Note: If you choose “Decline to answer,” ForgeTomorrow records that you skipped the item.
       </div>
     </div>
   );
 }
 
-function Field({ label, value, onChange }) {
+function DisclosureCard({ title, items = [] }) {
+  return (
+    <div
+      className="rounded-xl border p-4"
+      style={{
+        borderColor: 'rgba(0,0,0,0.10)',
+        background: 'rgba(255,255,255,0.75)',
+      }}
+    >
+      <div className="text-sm font-semibold text-slate-900">{title}</div>
+      <ul className="mt-2 space-y-1 text-sm text-slate-700 list-disc pl-5">
+        {(items || []).map((t, idx) => (
+          <li key={idx}>{t}</li>
+        ))}
+      </ul>
+    </div>
+  );
+}
+
+function MiniLinkCard({ title, desc, href }) {
+  return (
+    <a
+      href={href}
+      target="_blank"
+      rel="noreferrer"
+      className="rounded-xl border p-4 block hover:shadow-sm transition"
+      style={{
+        borderColor: 'rgba(0,0,0,0.10)',
+        background: 'rgba(255,255,255,0.75)',
+        textDecoration: 'none',
+      }}
+    >
+      <div className="text-sm font-semibold text-slate-900">{title}</div>
+      <div className="text-xs text-slate-600 mt-1">{desc}</div>
+      <div className="text-xs mt-3" style={{ color: ORANGE, textDecoration: 'underline' }}>
+        View official form
+      </div>
+    </a>
+  );
+}
+
+function SelectField({ label, value, onChange, options = [], helper }) {
   return (
     <div
       className="rounded-xl border p-4"
       style={{ borderColor: 'rgba(0,0,0,0.10)', background: 'rgba(255,255,255,0.75)' }}
     >
       <div className="text-sm font-semibold text-slate-900 mb-1">{label}</div>
-      <input
-        value={value || ''}
+      {helper && <div className="text-xs text-slate-500 mb-2">{helper}</div>}
+      <select
+        value={value ?? ''}
         onChange={(e) => onChange(e.target.value)}
         className="w-full rounded-lg px-3 py-2 text-sm"
         style={{ background: 'rgba(255,255,255,0.95)', border: '1px solid rgba(0,0,0,0.12)' }}
-      />
+      >
+        {(options || []).map((o) => (
+          <option key={String(o.value)} value={String(o.value)}>
+            {String(o.label)}
+          </option>
+        ))}
+      </select>
     </div>
   );
 }
