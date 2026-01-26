@@ -620,24 +620,29 @@ function Jobs() {
   });
 
   useEffect(() => {
-  // ✅ Keep selected job in sync with the jobs currently visible on the page.
-  // Prevents "internal -> external" flip caused by list changing after initial load/filter/pagination.
-  if (!selectedJob && pagedJobs.length > 0) {
-    setSelectedJob(pagedJobs[0]);
-    return;
-  }
-
-  if (selectedJob) {
-    const stillVisible = pagedJobs.some((j) => j && j.id === selectedJob.id);
-    if (!stillVisible) {
-      setSelectedJob(pagedJobs.length > 0 ? pagedJobs[0] : null);
-    }
-  }
-}, [pagedJobs, selectedJob]);
+    const totalPagesLocal = Math.max(1, Math.ceil(filteredJobs.length / pageSize));
+    if (currentPage > totalPagesLocal) setCurrentPage(1);
+  }, [filteredJobs.length, pageSize, currentPage]);
 
   const totalPages = Math.max(1, Math.ceil(filteredJobs.length / pageSize));
   const startIndex = (currentPage - 1) * pageSize;
   const pagedJobs = filteredJobs.slice(startIndex, startIndex + pageSize);
+
+  useEffect(() => {
+    // ✅ Keep selected job in sync with the jobs currently visible on the page.
+    // Prevents "internal -> external" flip caused by list changing after initial load/filter/pagination.
+    if (!selectedJob && pagedJobs.length > 0) {
+      setSelectedJob(pagedJobs[0]);
+      return;
+    }
+
+    if (selectedJob) {
+      const stillVisible = pagedJobs.some((j) => j && j.id === selectedJob.id);
+      if (!stillVisible) {
+        setSelectedJob(pagedJobs.length > 0 ? pagedJobs[0] : null);
+      }
+    }
+  }, [pagedJobs, selectedJob]);
 
   const pageNumbers = [];
   const windowSize = 3;
