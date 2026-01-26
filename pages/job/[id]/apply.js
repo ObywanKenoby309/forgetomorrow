@@ -240,24 +240,24 @@ export default function JobApplyPage() {
   }, [template]);
 
   const steps = useMemo(() => {
-    const hasAdditional = (additionalQuestions || []).length > 0;
+  const hasAdditional = (additionalQuestions || []).length > 0;
 
-    return [
-      { key: 'documents', title: 'Your documents' },
-      { key: 'selfid', title: 'Voluntary self-identification (optional)' },
-      { key: 'consent', title: 'Consent & acknowledgement' },
-      ...(hasAdditional
-        ? [
-            {
-              key: 'additional',
-              title: 'Additional questions',
-              questions: additionalQuestions,
-            },
-          ]
-        : []),
-      { key: 'review', title: 'Review & submit' },
-    ];
-  }, [additionalQuestions]);
+  return [
+    { key: 'documents', title: 'Your documents' },
+    { key: 'selfid', title: 'Voluntary self-identification (optional)' },
+    ...(hasAdditional
+      ? [
+          {
+            key: 'additional',
+            title: 'Additional questions',
+            questions: additionalQuestions,
+          },
+        ]
+      : []),
+    { key: 'consent', title: 'Consent & acknowledgement' },
+    { key: 'review', title: 'Review & submit' },
+  ];
+}, [additionalQuestions]);
 
   const currentStep = steps[stepIndex] || steps[0];
 
