@@ -1,11 +1,52 @@
 // pages/api/apply/template.js
-import prisma from '@/lib/prisma';
-import { getClientSession } from '@/lib/auth-client';
+import { getServerSession } from 'next-auth/next';
+import { authOptions } from '../auth/[...nextauth]';
+import { prisma } from '@/lib/prisma';
+import jwt from 'jsonwebtoken';
+
+const JWT_SECRET =
+  process.env.NEXTAUTH_SECRET || 'dev-secret-change-in-production';
+
+function getCookie(req, name) {
+  try {
+    const raw = req.headers?.cookie || '';
+    const parts = raw.split(';').map((p) => p.trim());
+    for (const p of parts) {
+      if (p.startsWith(name + '=')) {
+        return decodeURIComponent(p.slice(name.length + 1));
+      }
+    }
+    return null;
+  } catch {
+    return null;
+  }
+}
+
+function normalizeEmail(v) {
+  const s = String(v || '').toLowerCase().trim();
+  return s || null;
+}
+
+async function getAuthedEmail(req, res) {
+  const session = await getServerSession(req, res, authOptions);
+  const sessionEmail = normalizeEmail(session?.user?.email);
+  if (sessionEmail) return sessionEmail;
+
+  const token = getCookie(req, 'auth');
+  if (!token) return null;
+
+  try {
+    const decoded = jwt.verify(token, JWT_SECRET);
+    return normalizeEmail(decoded?.email);
+  } catch {
+    return null;
+  }
+}
 
 export default async function handler(req, res) {
   try {
-    const session = await getClientSession(req);
-    if (!session?.user?.id) return res.status(401).json({ error: 'Unauthorized' });
+    const email = await getAuthedEmail(req, res);
+    if (!email) return res.status(401).json({ error: 'Unauthorized' });
 
     const jobId = Number(req.query.jobId);
     if (!jobId) return res.status(400).json({ error: 'Missing jobId' });
@@ -29,8 +70,11 @@ export default async function handler(req, res) {
       },
     });
 
-    // If org has none yet, you can seed later – for now, fail loudly so you notice.
-    if (!tpl) return res.status(404).json({ error: 'No active application template for this organization' });
+    if (!tpl) {
+      return res
+        .status(404)
+        .json({ error: 'No active application template for this organization' });
+    }
 
     return res.status(200).json(tpl);
   } catch (e) {

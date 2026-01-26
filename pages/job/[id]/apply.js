@@ -30,7 +30,7 @@ function coerceId(val) {
   return s; // keep string ids
 }
 
-// ✅ NEW: accept multiple possible response shapes from /api/resume/list and /api/cover/list
+// ✅ NEW: accept multiple possible response shapes
 function extractList(json, keys = []) {
   if (!json) return [];
   if (Array.isArray(json)) return json;
@@ -38,7 +38,6 @@ function extractList(json, keys = []) {
     const v = json?.[k];
     if (Array.isArray(v)) return v;
   }
-  // common alternates
   if (Array.isArray(json.items)) return json.items;
   if (Array.isArray(json.data)) return json.data;
   if (Array.isArray(json.results)) return json.results;
@@ -49,8 +48,6 @@ export default function JobApplyPage() {
   const router = useRouter();
   const { id: jobId } = router.query;
 
-  // IMPORTANT: router.query can be empty on first render.
-  // Use asPath fallback so we never lose chrome context.
   const chrome =
     String(router.query.chrome || '').toLowerCase() ||
     getChromeFromAsPath(router.asPath);
@@ -58,7 +55,6 @@ export default function JobApplyPage() {
   const withChrome = (path) =>
     chrome ? `${path}${path.includes('?') ? '&' : '?'}chrome=${chrome}` : path;
 
-  // Match seeker-dashboard behavior
   const chromeKey = chrome || 'seeker';
   const activeNav = 'jobs';
 
@@ -74,11 +70,10 @@ export default function JobApplyPage() {
   const [selectedResumeId, setSelectedResumeId] = useState(null);
   const [selectedCoverId, setSelectedCoverId] = useState(null);
 
-  // answers keyed by questionKey -> value (Json)
   const [answers, setAnswers] = useState({});
   const [consent, setConsent] = useState({
     termsAccepted: false,
-    emailUpdatesAccepted: false, // optional
+    emailUpdatesAccepted: false,
     signatureName: '',
   });
   const [selfId, setSelfId] = useState({
@@ -112,7 +107,7 @@ export default function JobApplyPage() {
         const normalizedJob = jobJson?.job ? jobJson.job : jobJson;
         setJob(normalizedJob);
 
-        // Template: optional (if it 500s, we proceed with no additional questions).
+        // Template: optional
         let tplJson = { steps: [] };
         try {
           const tplRes = await fetch(
@@ -120,63 +115,42 @@ export default function JobApplyPage() {
           );
           if (tplRes.ok) tplJson = await tplRes.json();
         } catch {
-          // ignore; keep tplJson = { steps: [] }
+          // ignore
         }
         if (!active) return;
         setTemplate(tplJson);
 
-        // Documents: reuse the same sources as resume-cover page
-        // resumes: /api/resume/list, covers: /api/cover/list
-        const [resumesRes, coversRes] = await Promise.allSettled([
-          fetch('/api/resume/list'),
-          fetch('/api/cover/list'),
-        ]);
-
-        let resumesJson = null;
-        let coversJson = null;
-
-        if (resumesRes.status === 'fulfilled') {
-          try {
-            if (resumesRes.value.ok) resumesJson = await resumesRes.value.json();
-            else setError((prev) => prev || 'Failed to load resumes.');
-          } catch {
-            setError((prev) => prev || 'Failed to load resumes.');
-          }
-        } else {
+        // ✅ Documents: use the endpoint that returns BOTH resumes + covers
+        let docsJson = null;
+        try {
+          const docsRes = await fetch('/api/apply/documents');
+          if (docsRes.ok) docsJson = await docsRes.json();
+          else setError((prev) => prev || 'Failed to load resumes.');
+        } catch {
           setError((prev) => prev || 'Failed to load resumes.');
-        }
-
-        if (coversRes.status === 'fulfilled') {
-          try {
-            if (coversRes.value.ok) coversJson = await coversRes.value.json();
-            // covers are optional; no hard error needed
-          } catch {
-            // ignore
-          }
         }
 
         if (!active) return;
 
-        // ✅ Robust list extraction (supports multiple shapes)
-        const resumeList = extractList(resumesJson, ['resumes', 'resume', 'list']);
-        const coverList = extractList(coversJson, ['covers', 'cover', 'list']);
+        const resumeList = extractList(docsJson, ['resumes', 'resume', 'list']);
+        const coverList = extractList(docsJson, ['covers', 'cover', 'list']);
 
         setResumes(resumeList);
         setCovers(coverList);
 
-        // auto-pick primary if present
         const primaryResume = resumeList.find((r) => r && r.isPrimary) || resumeList[0];
         const primaryCover = coverList.find((c) => c && c.isPrimary) || null;
 
         setSelectedResumeId(primaryResume ? primaryResume.id : null);
         setSelectedCoverId(primaryCover ? primaryCover.id : null);
 
-        // Helpful debug for “why nothing is loading”
         if (typeof window !== 'undefined') {
           // eslint-disable-next-line no-console
-          console.log('[Apply] resumes loaded:', resumeList?.length || 0, resumesJson);
-          // eslint-disable-next-line no-console
-          console.log('[Apply] covers loaded:', coverList?.length || 0, coversJson);
+          console.log('[Apply] documents loaded:', {
+            resumes: resumeList?.length || 0,
+            covers: coverList?.length || 0,
+            raw: docsJson,
+          });
         }
       } catch (e) {
         if (!active) return;
@@ -192,7 +166,6 @@ export default function JobApplyPage() {
     };
   }, [jobId]);
 
-  // Flatten ALL template questions into ONE "Additional questions" step (single page).
   const additionalQuestions = useMemo(() => {
     const tplSteps = template?.steps || [];
     return tplSteps.flatMap((s) => s?.questions || []);
@@ -201,12 +174,6 @@ export default function JobApplyPage() {
   const steps = useMemo(() => {
     const hasAdditional = (additionalQuestions || []).length > 0;
 
-    // Standard flow:
-    // Your documents
-    // Voluntary self-identification (optional)
-    // Consent & acknowledgement
-    // Additional questions (conditional, single page)
-    // Review & submit
     return [
       { key: 'documents', title: 'Your documents' },
       { key: 'selfid', title: 'Voluntary self-identification (optional)' },
@@ -232,23 +199,19 @@ export default function JobApplyPage() {
 
   const isInternal = String(job?.origin || '').toLowerCase() === 'internal';
 
-  // --- Validation rules for "Continue"
   const canContinue = useMemo(() => {
     if (loading || saving) return false;
     if (!job || !isInternal) return false;
 
     if (currentStep.key === 'documents') {
-      return !!selectedResumeId; // cover optional
+      return !!selectedResumeId;
     }
 
-    if (currentStep.key === 'selfid') {
-      return true;
-    }
+    if (currentStep.key === 'selfid') return true;
 
     if (currentStep.key === 'consent') {
       if (!consent.termsAccepted) return false;
-      if (!consent.signatureName || consent.signatureName.trim().length < 2)
-        return false;
+      if (!consent.signatureName || consent.signatureName.trim().length < 2) return false;
       return true;
     }
 
@@ -270,10 +233,8 @@ export default function JobApplyPage() {
     if (currentStep.key === 'review') {
       if (!selectedResumeId) return false;
       if (!consent.termsAccepted) return false;
-      if (!consent.signatureName || consent.signatureName.trim().length < 2)
-        return false;
+      if (!consent.signatureName || consent.signatureName.trim().length < 2) return false;
 
-      // If additional questions exist, required ones must be answered before submit.
       const allQs = additionalQuestions || [];
       for (const q of allQs) {
         if (!q.required) continue;
@@ -285,7 +246,6 @@ export default function JobApplyPage() {
           !(Array.isArray(v) && v.length === 0);
         if (!ok) return false;
       }
-
       return true;
     }
 
@@ -302,7 +262,6 @@ export default function JobApplyPage() {
     additionalQuestions,
   ]);
 
-  // Create or update the Application record (draft)
   async function ensureApplicationDraft() {
     if (applicationId) return applicationId;
 
@@ -311,7 +270,6 @@ export default function JobApplyPage() {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
         jobId: Number(jobId),
-        // ✅ do NOT force Number() — resume/cover ids may be string
         resumeId: selectedResumeId != null ? coerceId(selectedResumeId) : null,
         coverId: selectedCoverId != null ? coerceId(selectedCoverId) : null,
       }),
@@ -335,13 +293,11 @@ export default function JobApplyPage() {
       const appId = await ensureApplicationDraft();
 
       if (currentStep.key === 'documents') {
-        // update resume/cover selection on Application
         const res = await fetch(`/api/apply/application`, {
           method: 'PATCH',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
             id: appId,
-            // ✅ do NOT force Number() — resume/cover ids may be string
             resumeId: selectedResumeId != null ? coerceId(selectedResumeId) : null,
             coverId: selectedCoverId != null ? coerceId(selectedCoverId) : null,
           }),
@@ -361,7 +317,7 @@ export default function JobApplyPage() {
           body: JSON.stringify({
             applicationId: appId,
             termsAccepted: !!consent.termsAccepted,
-            emailUpdatesAccepted: !!consent.emailUpdatesAccepted, // optional
+            emailUpdatesAccepted: !!consent.emailUpdatesAccepted,
             signatureName: consent.signatureName || '',
           }),
         });
@@ -448,7 +404,6 @@ export default function JobApplyPage() {
     setStepIndex((i) => Math.max(i - 1, 0));
   }
 
-  // External/scraped job guard
   if (!loading && job && !isInternal) {
     return (
       <main className="min-h-screen" style={{ padding: 24, background: '#F5F7FA' }}>
@@ -467,7 +422,6 @@ export default function JobApplyPage() {
     );
   }
 
-  // Title card (SeekerLayout header)
   const HeaderBox = (
     <section
       aria-label="Application header"
@@ -505,7 +459,6 @@ export default function JobApplyPage() {
     </section>
   );
 
-  // Right rail (SeekerLayout right)
   const RightColumn = (
     <div style={{ display: 'grid', gap: 12 }}>
       <div
@@ -576,7 +529,6 @@ export default function JobApplyPage() {
           <div className="text-slate-700 text-sm">Loading application…</div>
         ) : (
           <>
-            {/* Pills are a progress indicator (not a step navigator). */}
             <WizardStepList steps={steps} stepIndex={stepIndex} />
 
             <div className="mt-2">
@@ -939,7 +891,6 @@ function QuestionField({ q, value, onChange }) {
     );
   }
 
-  // fallback
   return (
     <div className="rounded-xl border p-4" style={cardStyle}>
       {commonLabel}
