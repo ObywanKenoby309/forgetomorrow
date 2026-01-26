@@ -56,7 +56,7 @@ function normalizeJobQuestions(list) {
       return {
         key: key || null,
         label: label || "",
-        type: "text",
+        type: "TEXT", // ✅ align with apply UI expectations
         required: Boolean(q?.required),
         helpText: helpText || "",
       };
@@ -90,6 +90,9 @@ export default async function handler(req, res) {
     if (!accountKey)
       return res.status(400).json({ error: "Job missing accountKey" });
 
+    // ✅ Always include job-level screening questions (even if no active template exists)
+    const jobQuestions = normalizeJobQuestions(job.additionalQuestions);
+
     const tpl = await prisma.applicationTemplate.findFirst({
       where: { accountKey, isActive: true },
       orderBy: { updatedAt: "desc" },
@@ -103,16 +106,18 @@ export default async function handler(req, res) {
       },
     });
 
+    // ✅ CHANGE: return 200 with empty template if none exists (so UI still has questions)
     if (!tpl) {
-      return res.status(404).json({
-        error: "No active application template for this organization",
+      return res.status(200).json({
+        id: null,
+        accountKey,
+        isActive: false,
+        steps: [],
+        jobQuestions,
       });
     }
 
-    // ✅ NEW: include job-level screening questions (if any)
     // Backward compatible: template stays at root; we only add `jobQuestions`
-    const jobQuestions = normalizeJobQuestions(job.additionalQuestions);
-
     return res.status(200).json({
       ...tpl,
       jobQuestions,
