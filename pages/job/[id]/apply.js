@@ -44,6 +44,24 @@ function extractList(json, keys = []) {
   return [];
 }
 
+// ✅ Match Jobs page logic: internal if accountKey exists (source of truth), else fallbacks
+function isInternalJob(job) {
+  if (!job) return false;
+  if (job.accountKey) return true;
+
+  const origin = String(job.origin || '').toLowerCase();
+  const source = String(job.source || '').toLowerCase();
+
+  return (
+    origin === 'internal' ||
+    source === 'internal' ||
+    source === 'forge' ||
+    source === 'forge recruiter' ||
+    source === 'forgetomorrow' ||
+    source === 'forgetomorrow recruiter'
+  );
+}
+
 export default function JobApplyPage() {
   const router = useRouter();
   const { id: jobId } = router.query;
@@ -197,7 +215,8 @@ export default function JobApplyPage() {
   const jobTitle = job?.title || 'Role';
   const pageTitle = job ? `Apply - ${jobTitle} at ${companyName}` : 'Apply';
 
-  const isInternal = String(job?.origin || '').toLowerCase() === 'internal';
+  // ✅ FIXED: internal if accountKey exists (or fallbacks)
+  const isInternal = isInternalJob(job);
 
   const canContinue = useMemo(() => {
     if (loading || saving) return false;
