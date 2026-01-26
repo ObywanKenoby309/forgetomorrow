@@ -1,5 +1,6 @@
 // pages/jobs.js — filters + list/detail + Apply + Resume-Role Align row
 import { useEffect, useState } from 'react';
+import { useRouter } from 'next/router';
 import { JobPipelineProvider, useJobPipeline } from '../context/JobPipelineContext';
 import { Card, CardHeader, CardTitle, CardContent, CardSubtle } from '../components/ui/Card';
 import Link from 'next/link';
@@ -257,6 +258,13 @@ function getJobTier(job) {
 // Main Jobs Component
 // ──────────────────────────────────────────────────────────────
 function Jobs() {
+  const router = useRouter();
+
+  // Respect chrome by inheriting it from the current URL
+  const chrome = String(router.query.chrome || '').toLowerCase();
+  const withChrome = (path) =>
+    chrome ? `${path}${path.includes('?') ? '&' : '?'}chrome=${chrome}` : path;
+
   const { viewedJobs, appliedJobs, addViewedJob, addAppliedJob } = useJobPipeline();
 
   const [jobs, setJobs] = useState([]);
@@ -313,7 +321,7 @@ function Jobs() {
         const list = (data && data.jobs) || [];
         setJobs(list);
 
-        // 🔹 Initial selection only. Do NOT mark as viewed here.
+        // Initial selection only. Do NOT mark as viewed here.
         // Recently Viewed should reflect jobs the user actually clicks.
         if (list.length > 0) {
           setSelectedJob(list[0]);
@@ -402,17 +410,16 @@ function Jobs() {
       return;
     }
 
-    // ✅ Internal flow: go to the real Apply page (no modal)
-    // Change this route only if your apply page path is different.
+    // Internal flow: go to the real Apply page (no hard-coded chrome)
     if (typeof window !== 'undefined') {
-      window.location.href = `/job/${encodeURIComponent(job.id)}/apply?chrome=recruiter-ent`;
+      window.location.href = withChrome(`/job/${encodeURIComponent(job.id)}/apply`);
     }
   };
 
-  // ✅ FIX: Resume-Role Align now writes BOTH:
+  // Resume-Role Align now writes BOTH:
   // 1) ft_last_job_text (JD)
   // 2) forge-ats-pack (job meta pack) so resume/create shows "Job Fire Loaded"
-  // Then redirects with from=match (no "ATS" in URL)
+  // Then redirects with from=match
   const handleResumeAlign = async (job) => {
     if (!job) return;
 
@@ -445,10 +452,12 @@ function Jobs() {
       await saveDraft('forge-ats-pack', pack);
     } catch (err) {
       console.error('[Jobs] Failed to store job context for Resume Alignment', err);
-      // continue anyway — user can still upload JD manually
+      // continue anyway - user can still upload JD manually
     }
 
-    window.location.href = `/resume/create?from=match&jobId=${job.id}&copyJD=true`;
+    if (typeof window !== 'undefined') {
+      window.location.href = withChrome(`/resume/create?from=match&jobId=${job.id}&copyJD=true`);
+    }
   };
 
   const handleATSAlign = async (job) => {
@@ -479,7 +488,7 @@ function Jobs() {
         summary: 'Demo result: You appear to be a strong match on core skills and background for this role.',
         recommendations: [
           'Add one or two bullets with clear metrics (%, $, time saved) for your most recent role.',
-          'Mirror 2–3 of the job’s exact keywords in your resume summary.',
+          'Mirror 2-3 of the job’s exact keywords in your resume summary.',
           'Highlight any direct experience with similar tools or platforms mentioned in the posting.',
         ],
       });
@@ -502,7 +511,7 @@ function Jobs() {
       ats: atsResult,
     };
 
-    // ✅ Store in DB drafts (no localStorage)
+    // Store in DB drafts (no localStorage)
     try {
       const res = await fetch('/api/drafts/set', {
         method: 'POST',
@@ -517,13 +526,15 @@ function Jobs() {
       console.error('[Jobs] failed to write match pack to DB drafts', err);
     }
 
-    // ✅ Go straight to the resume builder with job context (no "ATS" in URL)
-    window.location.href = `/resume/create?from=match&jobId=${atsJob.id}&copyJD=true`;
+    // Go straight to the resume builder with job context (no hard-coded chrome)
+    if (typeof window !== 'undefined') {
+      window.location.href = withChrome(`/resume/create?from=match&jobId=${atsJob.id}&copyJD=true`);
+    }
   };
 
   const handleSelectJob = (job) => {
     setSelectedJob(job);
-    addViewedJob(job); // 🔹 Only mark as viewed when user actively selects
+    addViewedJob(job); // Only mark as viewed when user actively selects
     setAtsResult(null);
     setAtsError(null);
     setAtsPanelOpen(false);
