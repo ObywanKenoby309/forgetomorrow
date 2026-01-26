@@ -43,6 +43,30 @@ async function getAuthedEmail(req, res) {
   }
 }
 
+// Keep job-level screening questions safe + consistent
+function normalizeJobQuestions(list) {
+  if (!Array.isArray(list)) return null;
+
+  const cleaned = list
+    .map((q) => {
+      const key = String(q?.key || "").trim();
+      const label = String(q?.label || "").trim();
+      const helpText = String(q?.helpText || "").trim();
+
+      return {
+        key: key || null,
+        label: label || "",
+        type: "text",
+        required: Boolean(q?.required),
+        helpText: helpText || "",
+      };
+    })
+    .filter((q) => q.label) // must have a prompt
+    .slice(0, 6);
+
+  return cleaned.length ? cleaned : null;
+}
+
 export default async function handler(req, res) {
   try {
     if (req.method !== "GET") {
@@ -58,7 +82,7 @@ export default async function handler(req, res) {
 
     const job = await prisma.job.findUnique({
       where: { id: jobId },
-      select: { id: true, accountKey: true },
+      select: { id: true, accountKey: true, additionalQuestions: true },
     });
     if (!job) return res.status(404).json({ error: "Job not found" });
 
@@ -85,7 +109,14 @@ export default async function handler(req, res) {
       });
     }
 
-    return res.status(200).json(tpl);
+    // ✅ NEW: include job-level screening questions (if any)
+    // Backward compatible: template stays at root; we only add `jobQuestions`
+    const jobQuestions = normalizeJobQuestions(job.additionalQuestions);
+
+    return res.status(200).json({
+      ...tpl,
+      jobQuestions,
+    });
   } catch (e) {
     return res.status(500).json({ error: e?.message || "Server error" });
   }
