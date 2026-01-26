@@ -228,8 +228,14 @@ function canApply(job) {
 // Internal vs external job detector (used for styling + filters)
 function isInternalJob(job) {
   if (!job) return false;
+
+  // ✅ SOURCE OF TRUTH: jobs owned by an org are internal
+  if (job.accountKey) return true;
+
+  // Legacy string fallbacks (kept for backward compatibility)
   const origin = (job.origin || '').toLowerCase();
   const source = (job.source || '').toLowerCase();
+
   return (
     origin === 'internal' ||
     source === 'internal' ||
