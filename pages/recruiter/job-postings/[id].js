@@ -17,6 +17,369 @@ function SectionCard({ title, children, right }) {
   );
 }
 
+// ──────────────────────────────────────────────────────────────
+// Resume helpers + Hybrid viewer (UI only - not PDF)
+// ──────────────────────────────────────────────────────────────
+function tryParseJson(input) {
+  if (!input) return null;
+  if (typeof input === "object") return input;
+  if (typeof input !== "string") return null;
+
+  const s = input.trim();
+  if (!s) return null;
+
+  // quick guard: if it doesn't look like JSON, skip parsing
+  const looksJson =
+    (s.startsWith("{") && s.endsWith("}")) || (s.startsWith("[") && s.endsWith("]"));
+  if (!looksJson) return null;
+
+  try {
+    return JSON.parse(s);
+  } catch {
+    return null;
+  }
+}
+
+function normalizeResumeData(raw) {
+  const data = tryParseJson(raw);
+  if (!data || typeof data !== "object") return null;
+
+  // Common shapes:
+  // 1) { personalInfo, summary, workExperiences, ... }
+  // 2) { data: { personalInfo, ... } }
+  // 3) { resume: { ... } }
+  const inner =
+    (data.data && typeof data.data === "object" && data.data) ||
+    (data.resume && typeof data.resume === "object" && data.resume) ||
+    data;
+
+  // Must have at least personalInfo-ish fields to render hybrid nicely
+  const personalInfo =
+    inner.personalInfo && typeof inner.personalInfo === "object" ? inner.personalInfo : {};
+
+  // If name is missing, still allow render but it will look weird
+  return {
+    personalInfo,
+    summary: inner.summary || "",
+    workExperiences: Array.isArray(inner.workExperiences) ? inner.workExperiences : [],
+    projects: Array.isArray(inner.projects) ? inner.projects : [],
+    educationList: Array.isArray(inner.educationList) ? inner.educationList : [],
+    skills: Array.isArray(inner.skills) ? inner.skills : [],
+    languages: Array.isArray(inner.languages) ? inner.languages : [],
+    certifications: Array.isArray(inner.certifications) ? inner.certifications : [],
+    customSections: Array.isArray(inner.customSections) ? inner.customSections : [],
+  };
+}
+
+function HybridResumeViewer({ value }) {
+  const data = useMemo(() => normalizeResumeData(value), [value]);
+
+  if (!data) return null;
+
+  const {
+    personalInfo = {},
+    summary,
+    workExperiences = [],
+    projects = [],
+    educationList = [],
+    skills = [],
+    languages = [],
+    certifications = [],
+    customSections = [],
+  } = data;
+
+  const contactLine = [
+    personalInfo.email,
+    personalInfo.phone,
+    personalInfo.location,
+  ]
+    .filter(Boolean)
+    .join(" • ");
+
+  const extraLines = [personalInfo.portfolio, personalInfo.ftProfile].filter(Boolean);
+
+  return (
+    <div className="rounded border bg-white p-4">
+      {/* Header (centered like the Hybrid PDF) */}
+      <div className="text-center">
+        <div className="text-xl font-bold text-slate-900">
+          {personalInfo.name || "Candidate"}
+        </div>
+        {contactLine ? (
+          <div className="text-xs text-slate-600 mt-1">{contactLine}</div>
+        ) : null}
+        {extraLines.length ? (
+          <div className="text-xs text-slate-600 mt-1 space-y-0.5">
+            {extraLines.map((l, idx) => (
+              <div key={idx}>{l}</div>
+            ))}
+          </div>
+        ) : null}
+        {personalInfo.targetedRole ? (
+          <div className="text-sm italic text-slate-700 mt-2">
+            {personalInfo.targetedRole}
+          </div>
+        ) : null}
+      </div>
+
+      {/* Summary */}
+      {summary ? (
+        <div className="mt-5">
+          <div className="text-xs font-bold uppercase tracking-wide border-b pb-1">
+            Professional Summary
+          </div>
+          <div className="text-sm text-slate-800 mt-2 whitespace-pre-wrap">
+            {summary}
+          </div>
+        </div>
+      ) : null}
+
+      {/* Languages */}
+      {languages.length ? (
+        <div className="mt-5">
+          <div className="text-xs font-bold uppercase tracking-wide border-b pb-1">
+            Languages
+          </div>
+          <div className="text-sm text-slate-800 mt-2">
+            {languages.join(" • ")}
+          </div>
+        </div>
+      ) : null}
+
+      {/* Two-column: Skills (left) + Experience (right) */}
+      <div className="mt-5 grid grid-cols-1 md:grid-cols-3 gap-4">
+        {/* Skills */}
+        <div className="md:col-span-1">
+          <div className="text-xs font-bold uppercase tracking-wide border-b pb-1">
+            Skills
+          </div>
+          {skills.length ? (
+            <ul className="mt-2 space-y-1">
+              {skills.map((s, i) => (
+                <li key={i} className="text-sm text-slate-800">
+                  • {s}
+                </li>
+              ))}
+            </ul>
+          ) : (
+            <div className="mt-2 text-sm text-slate-500">No skills listed.</div>
+          )}
+        </div>
+
+        {/* Experience */}
+        <div className="md:col-span-2">
+          <div className="text-xs font-bold uppercase tracking-wide border-b pb-1">
+            Experience
+          </div>
+
+          {workExperiences.length ? (
+            <div className="mt-2 space-y-4">
+              {workExperiences.map((exp, i) => {
+                const title = exp.title || exp.jobTitle || "";
+                const company = exp.company || "";
+                const dates = `${exp.startDate || ""}${exp.startDate ? " – " : ""}${exp.endDate || "Present"}`;
+
+                return (
+                  <div key={i} className="text-sm">
+                    <div className="flex items-start justify-between gap-3">
+                      <div className="min-w-0">
+                        <div className="font-semibold text-slate-900 break-words">
+                          {title || "Role"}
+                          {company ? (
+                            <span className="font-normal text-slate-700">
+                              {" "}
+                              • {company}
+                            </span>
+                          ) : null}
+                        </div>
+                      </div>
+                      <div className="text-xs text-slate-500 whitespace-nowrap">
+                        {dates.trim() || "—"}
+                      </div>
+                    </div>
+
+                    {Array.isArray(exp.bullets) && exp.bullets.length ? (
+                      <ul className="mt-2 space-y-1">
+                        {exp.bullets.map((b, bi) => (
+                          <li key={bi} className="text-sm text-slate-800">
+                            • {b}
+                          </li>
+                        ))}
+                      </ul>
+                    ) : null}
+                  </div>
+                );
+              })}
+            </div>
+          ) : (
+            <div className="mt-2 text-sm text-slate-500">No experience listed.</div>
+          )}
+        </div>
+      </div>
+
+      {/* Projects */}
+      {projects.length ? (
+        <div className="mt-5">
+          <div className="text-xs font-bold uppercase tracking-wide border-b pb-1">
+            Projects
+          </div>
+
+          <div className="mt-2 space-y-4">
+            {projects.map((proj, i) => {
+              const title = proj.title || proj.name || "Project";
+              const org = proj.company || proj.org || proj.client || "";
+              const dates =
+                proj.startDate || proj.endDate
+                  ? `${proj.startDate || ""} – ${proj.endDate || "Present"}`
+                  : "";
+
+              const bullets = Array.isArray(proj.bullets) ? proj.bullets : [];
+
+              return (
+                <div key={i} className="text-sm">
+                  <div className="flex items-start justify-between gap-3">
+                    <div className="min-w-0">
+                      <div className="font-semibold text-slate-900 break-words">
+                        {title}
+                        {org ? (
+                          <span className="font-normal text-slate-700">
+                            {" "}
+                            • {org}
+                          </span>
+                        ) : null}
+                      </div>
+                    </div>
+                    {dates ? (
+                      <div className="text-xs text-slate-500 whitespace-nowrap">
+                        {dates}
+                      </div>
+                    ) : null}
+                  </div>
+
+                  {bullets.length ? (
+                    <ul className="mt-2 space-y-1">
+                      {bullets.map((b, bi) => (
+                        <li key={bi} className="text-sm text-slate-800">
+                          • {b}
+                        </li>
+                      ))}
+                    </ul>
+                  ) : proj.description ? (
+                    <div className="mt-2 text-sm text-slate-800 whitespace-pre-wrap">
+                      {proj.description}
+                    </div>
+                  ) : null}
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      ) : null}
+
+      {/* Education */}
+      {educationList.length ? (
+        <div className="mt-5">
+          <div className="text-xs font-bold uppercase tracking-wide border-b pb-1">
+            Education
+          </div>
+
+          <div className="mt-2 space-y-3">
+            {educationList.map((edu, i) => (
+              <div key={i} className="text-sm">
+                <div className="font-semibold text-slate-900">
+                  {edu.degree || ""} {edu.field ? ` ${edu.field}` : ""}
+                </div>
+                <div className="text-sm text-slate-700">
+                  {(edu.institution || edu.school) || "—"}
+                  {edu.location ? ` • ${edu.location}` : ""}
+                </div>
+                <div className="text-xs text-slate-500">
+                  {edu.startDate || "—"} – {edu.endDate || "Present"}
+                </div>
+                {edu.description ? (
+                  <div className="mt-1 text-sm text-slate-800 whitespace-pre-wrap">
+                    {edu.description}
+                  </div>
+                ) : null}
+              </div>
+            ))}
+          </div>
+        </div>
+      ) : null}
+
+      {/* Certifications */}
+      {certifications.length ? (
+        <div className="mt-5">
+          <div className="text-xs font-bold uppercase tracking-wide border-b pb-1">
+            Certifications & Training
+          </div>
+
+          <div className="mt-2 space-y-2">
+            {certifications.map((cert, i) => {
+              const name =
+                (cert && typeof cert === "object" && (cert.name || cert.title)) ||
+                (typeof cert === "string" ? cert : "");
+              const org =
+                cert && typeof cert === "object"
+                  ? cert.organization || cert.issuer
+                  : "";
+
+              return (
+                <div key={i} className="text-sm">
+                  <div className="font-semibold text-slate-900">
+                    {name || "Certification"}
+                  </div>
+                  {org ? <div className="text-xs text-slate-600">{org}</div> : null}
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      ) : null}
+
+      {/* Custom sections */}
+      {customSections.length
+        ? customSections.map((section, i) => {
+            if (!section) return null;
+
+            const title =
+              section.title || section.heading || "Additional Information";
+            const items = Array.isArray(section.items) ? section.items : null;
+            const content = section.content || section.text || section.body;
+
+            return (
+              <div key={i} className="mt-5">
+                <div className="text-xs font-bold uppercase tracking-wide border-b pb-1">
+                  {title}
+                </div>
+                {items && items.length ? (
+                  <ul className="mt-2 space-y-1">
+                    {items.map((item, idx) => (
+                      <li key={idx} className="text-sm text-slate-800">
+                        • {item}
+                      </li>
+                    ))}
+                  </ul>
+                ) : content ? (
+                  <div className="mt-2 text-sm text-slate-800 whitespace-pre-wrap">
+                    {content}
+                  </div>
+                ) : (
+                  <div className="mt-2 text-sm text-slate-500">—</div>
+                )}
+              </div>
+            );
+          })
+        : null}
+
+      {/* Fallback note */}
+      <div className="mt-4 text-[11px] text-slate-500">
+        Recruiter view uses the Hybrid layout. Downloadable versions will be handled in the packet export pass.
+      </div>
+    </div>
+  );
+}
+
 function PacketViewer({ applicationId, onClose }) {
   const [loading, setLoading] = useState(false);
   const [packet, setPacket] = useState(null);
@@ -49,6 +412,9 @@ function PacketViewer({ applicationId, onClose }) {
       alive = false;
     };
   }, [applicationId]);
+
+  const resumeValue =
+    packet?.resume?.content !== undefined ? packet.resume.content : null;
 
   return (
     <div className="fixed inset-0 z-50 bg-black/40 flex items-center justify-center p-4">
@@ -90,12 +456,19 @@ function PacketViewer({ applicationId, onClose }) {
                 )}
               </div>
 
-              {/* Resume */}
+              {/* Resume (Hybrid formatted) */}
               <div className="rounded border p-3">
-                <div className="font-medium mb-2">Resume</div>
-                {packet.resume?.content ? (
+                <div className="font-medium mb-2">Resume (Hybrid)</div>
+
+                {/* If we can parse resume JSON, render Hybrid view */}
+                {normalizeResumeData(resumeValue) ? (
+                  <HybridResumeViewer value={resumeValue} />
+                ) : packet.resume?.content ? (
+                  // fallback to raw text if it's not JSON
                   <pre className="whitespace-pre-wrap text-sm text-slate-800">
-                    {packet.resume.content}
+                    {typeof packet.resume.content === "string"
+                      ? packet.resume.content
+                      : JSON.stringify(packet.resume.content, null, 2)}
                   </pre>
                 ) : (
                   <div className="text-sm text-slate-500">None provided.</div>
@@ -184,8 +557,7 @@ function PacketViewer({ applicationId, onClose }) {
               </div>
 
               <div className="rounded border border-slate-200 bg-slate-50 p-3 text-xs text-slate-600">
-                Self-identification answers are not included in recruiter
-                packets.
+                Self-identification answers are not included in recruiter packets.
               </div>
             </>
           )}

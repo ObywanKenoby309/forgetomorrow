@@ -1,7 +1,7 @@
 // pages/api/recruiter/applications/[id]/packet.js
 import prisma from "@/lib/prisma";
 import { getServerSession } from "next-auth/next";
-import { authOptions } from "@/pages/api/auth/[...nextauth]";
+import { authOptions } from "@/lib/auth";
 
 function toInt(val) {
   const n = Number(val);
@@ -26,6 +26,11 @@ export default async function handler(req, res) {
       return res.status(405).json({ error: "Method not allowed" });
     }
 
+    if (!prisma) {
+      return res.status(500).json({ error: "Prisma client not initialized" });
+    }
+
+    // ✅ SERVER SESSION ONLY (NO localStorage / client session)
     const session = await getServerSession(req, res, authOptions);
     const userId = session?.user?.id;
     if (!userId) return res.status(401).json({ error: "Unauthorized" });
@@ -110,6 +115,7 @@ export default async function handler(req, res) {
             updatedAt: true,
           },
         },
+
         // IMPORTANT: intentionally NOT including selfId here.
       },
     });
@@ -148,6 +154,8 @@ export default async function handler(req, res) {
         };
       });
 
+    // Packet order per your rule:
+    // Cover -> Resume -> Additional Questions -> Consent -> FT Assessment
     return res.status(200).json({
       application: {
         id: app.id,
@@ -166,14 +174,16 @@ export default async function handler(req, res) {
         : null,
       candidate: {
         id: app.user?.id || null,
-        name: app.user?.name || [app.user?.firstName, app.user?.lastName].filter(Boolean).join(" ") || null,
+        name:
+          app.user?.name || [app.user?.firstName, app.user?.lastName].filter(Boolean).join(" ") || null,
         email: app.user?.email || null,
       },
 
+      // Packet sections
       cover: app.cover ? { id: app.cover.id, name: app.cover.name, content: app.cover.content } : null,
       resume: app.resume ? { id: app.resume.id, name: app.resume.name, content: app.resume.content } : null,
 
-      additionalQuestions: additionalAnswers,
+      additionalQuestions: additionalAnswers, // [] if none
       consent: app.consent
         ? {
             termsAccepted: !!app.consent.termsAccepted,
@@ -194,6 +204,7 @@ export default async function handler(req, res) {
           }
         : null,
 
+      // Explicitly confirm self-id is not in recruiter packet payload
       selfIdentification: null,
     });
   } catch (e) {
