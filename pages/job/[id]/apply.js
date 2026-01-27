@@ -1316,7 +1316,7 @@ function ReviewStep({
           className="rounded-xl border p-4"
           style={{ borderColor: 'rgba(0,0,0,0.10)', background: 'rgba(255,255,255,0.75)' }}
         >
-          <div className="text-sm text-slate-900 font-semibold">Your responses</div>
+          <div className="text-sm text-slate-900 font-semibold">Employer additional questions</div>
           <div className="mt-2 space-y-2">
             {(additionalQuestions || []).map((q) => {
               const v = answers[q.key];
