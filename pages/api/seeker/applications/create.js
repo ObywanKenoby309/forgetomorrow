@@ -49,6 +49,8 @@ export default async function handler(req, res) {
         url: url || "",
         notes: notes || "",
         status: normalizedStatus,
+        // 🔹 NEW: explicit unscoped seeker application
+        accountKey: null,
       },
     });
 
@@ -58,7 +60,7 @@ export default async function handler(req, res) {
       company: application.company,
       location: application.location,
       url: application.url,
-      link: application.url, // alias
+      link: application.url,
       notes: application.notes,
       dateAdded: application.appliedAt.toISOString().split("T")[0],
     };

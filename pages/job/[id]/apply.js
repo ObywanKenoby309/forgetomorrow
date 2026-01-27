@@ -1090,9 +1090,11 @@ function SelfIdStep({ selfId, setSelfId }) {
       <div className="text-slate-900 font-semibold">Voluntary self-identification (optional)</div>
 
       <div className="text-sm text-slate-600">
-        Some employers ask these questions to meet U.S. reporting requirements. Your answers are voluntary.
-        You can decline to answer any question and still continue your application.
-      </div>
+  Some employers ask these questions to meet U.S. reporting requirements. Your answers are voluntary.
+  You can decline to answer any question and still continue your application.
+  Your responses are not visible to recruiters or hiring managers and are used only for aggregated compliance reporting.
+</div>
+
 
       <DisclosureCard
         title="What this is (and what it is not)"

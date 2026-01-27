@@ -21,19 +21,27 @@ export default async function handler(req, res) {
   }
 
   try {
+    // 🔹 NEW: fetch job accountKey for proper scoping
+    const job = await prisma.job.findUnique({
+      where: { id: jobId },
+      select: { accountKey: true },
+    });
+
     const application = await prisma.application.create({
       data: {
         userId: session.user.id,
         jobId,
         resumeId: resumeId || null,
         coverId: coverId || null,
+        // 🔹 NEW: ensure recruiter/org scoping
+        accountKey: job?.accountKey || null,
       },
     });
 
-    // Increment job applications count (if this field exists on your Job model)
+    // Increment job applications count
     await prisma.job.update({
       where: { id: jobId },
-      data: { applications: { increment: 1 } },
+      data: { applicationsCount: { increment: 1 } },
     });
 
     return res.status(200).json(application);
