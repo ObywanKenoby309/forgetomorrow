@@ -1,7 +1,8 @@
 // pages/api/recruiter/job-postings/[id]/applications.js
 import prisma from "@/lib/prisma";
 import { getServerSession } from "next-auth";
-import { authOptions } from "@/lib/auth";
+// ✅ use the SAME authOptions file as your working NextAuth routes
+import { authOptions } from "../../auth/[...nextauth]";
 
 function toInt(val) {
   const n = Number(val);
@@ -42,6 +43,7 @@ export default async function handler(req, res) {
       },
     });
 
+    // If session exists but user row is missing, treat as unauthorized
     if (!viewer) return res.status(401).json({ error: "Unauthorized" });
 
     const viewerRole = safeString(viewer.role).toUpperCase();
