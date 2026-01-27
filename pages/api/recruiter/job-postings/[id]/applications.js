@@ -1,8 +1,6 @@
 // pages/api/recruiter/job-postings/[id]/applications.js
-import prismaDefault, { prisma as prismaNamed } from "@/lib/prisma";
+import prisma from "@/lib/prisma";
 import { getClientSession } from "@/lib/auth-client";
-
-const prisma = prismaDefault || prismaNamed;
 
 function toInt(val) {
   const n = Number(val);
