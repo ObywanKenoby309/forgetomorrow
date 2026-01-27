@@ -10,8 +10,7 @@ const ORANGE = '#FF7043';
 const SELF_ID_LINKS = {
   disability503:
     'https://www.dol.gov/sites/dolgov/files/OFCCP/regs/compliance/sec503/Self_ID_Forms/503Self-IDForm-04262023.pdf',
-  vevraa:
-    'https://www.dol.gov/agencies/ofccp/vevraa/self-id-form',
+  vevraa: 'https://www.dol.gov/agencies/ofccp/vevraa/self-id-form',
   eeocRace:
     'https://www.eeoc.gov/sites/default/files/migrated_files/federal/2017-approved-Applicant-Form.pdf',
 };
@@ -30,7 +29,7 @@ function getChromeFromAsPath(asPath) {
   }
 }
 
-// ✅ NEW: safe ID coercion (supports both numeric IDs and string IDs like cuid/uuid)
+// ✅ safe ID coercion (supports both numeric IDs and string IDs like cuid/uuid)
 function coerceId(val) {
   if (val === undefined || val === null) return null;
   const s = String(val).trim();
@@ -39,7 +38,7 @@ function coerceId(val) {
   return s; // keep string ids
 }
 
-// ✅ NEW: accept multiple possible response shapes
+// ✅ accept multiple possible response shapes
 function extractList(json, keys = []) {
   if (!json) return [];
   if (Array.isArray(json)) return json;
@@ -69,6 +68,51 @@ function isInternalJob(job) {
     source === 'forgetomorrow' ||
     source === 'forgetomorrow recruiter'
   );
+}
+
+// ✅ normalize question type to match UI checks (TEXT, TEXTAREA, etc.)
+function normalizeQuestionType(t) {
+  const s = String(t || '').trim().toUpperCase();
+  if (!s) return 'TEXT';
+  if (s === 'TEXT') return 'TEXT';
+  if (s === 'TEXTAREA' || s === 'TEXT_AREA') return 'TEXTAREA';
+  if (s === 'NUMBER') return 'NUMBER';
+  if (s === 'DATE') return 'DATE';
+  if (s === 'BOOLEAN') return 'BOOLEAN';
+  if (s === 'SELECT') return 'SELECT';
+  if (s === 'MULTISELECT') return 'MULTISELECT';
+  return 'TEXT';
+}
+
+// ✅ normalize + dedupe questions by key (preserve order)
+function mergeQuestions(jobQs, tplQs) {
+  const out = [];
+  const seen = new Set();
+
+  const push = (q) => {
+    if (!q) return;
+    const key = String(q.key || '').trim();
+    const label = String(q.label || '').trim();
+    if (!key || !label) return;
+
+    const k = key.toLowerCase();
+    if (seen.has(k)) return;
+    seen.add(k);
+
+    out.push({
+      ...q,
+      key,
+      label,
+      type: normalizeQuestionType(q.type),
+      required: Boolean(q.required),
+      helpText: String(q.helpText || ''),
+    });
+  };
+
+  (jobQs || []).forEach(push);
+  (tplQs || []).forEach(push);
+
+  return out;
 }
 
 export default function JobApplyPage() {
@@ -165,8 +209,10 @@ export default function JobApplyPage() {
         setResumes(resumeList);
         setCovers(coverList);
 
-        const primaryResume = resumeList.find((r) => r && r.isPrimary) || resumeList[0];
-        const primaryCover = coverList.find((c) => c && c.isPrimary) || null;
+        const primaryResume =
+          resumeList.find((r) => r && r.isPrimary) || resumeList[0];
+        const primaryCover =
+          coverList.find((c) => c && c.isPrimary) || null;
 
         setSelectedResumeId(primaryResume ? primaryResume.id : null);
         setSelectedCoverId(primaryCover ? primaryCover.id : null);
@@ -193,29 +239,33 @@ export default function JobApplyPage() {
     };
   }, [jobId]);
 
+  // ✅ merge jobQuestions (root) + template step questions into one list
   const additionalQuestions = useMemo(() => {
+    const jobQs = Array.isArray(template?.jobQuestions) ? template.jobQuestions : [];
     const tplSteps = template?.steps || [];
-    return tplSteps.flatMap((s) => s?.questions || []);
+    const tplQs = tplSteps.flatMap((s) => s?.questions || []);
+    return mergeQuestions(jobQs, tplQs);
   }, [template]);
 
+  // ✅ step order REQUIRED: Documents → Self-ID → Additional Questions → Consent → Review
   const steps = useMemo(() => {
     const hasAdditional = (additionalQuestions || []).length > 0;
 
     return [
-  { key: 'documents', title: 'Your documents' },
-  { key: 'selfid', title: 'Voluntary self-identification (optional)' },
-  ...(hasAdditional
-    ? [
-        {
-          key: 'additional',
-          title: 'Additional questions',
-          questions: additionalQuestions,
-        },
-      ]
-    : []),
-  { key: 'consent', title: 'Consent & acknowledgement' },
-  { key: 'review', title: 'Review & submit' },
-];
+      { key: 'documents', title: 'Your documents' },
+      { key: 'selfid', title: 'Voluntary self-identification (optional)' },
+      ...(hasAdditional
+        ? [
+            {
+              key: 'additional',
+              title: 'Additional questions',
+              questions: additionalQuestions,
+            },
+          ]
+        : []),
+      { key: 'consent', title: 'Consent & acknowledgement' },
+      { key: 'review', title: 'Review & submit' },
+    ];
   }, [additionalQuestions]);
 
   const currentStep = steps[stepIndex] || steps[0];
@@ -224,7 +274,7 @@ export default function JobApplyPage() {
   const jobTitle = job?.title || 'Role';
   const pageTitle = job ? `Apply - ${jobTitle} at ${companyName}` : 'Apply';
 
-  // ✅ FIXED: internal if accountKey exists (or fallbacks)
+  // ✅ internal if accountKey exists (or fallbacks)
   const isInternal = isInternalJob(job);
 
   const canContinue = useMemo(() => {
@@ -575,16 +625,16 @@ export default function JobApplyPage() {
                 <SelfIdStep selfId={selfId} setSelfId={setSelfId} />
               )}
 
-              {currentStep.key === 'consent' && (
-                <ConsentStep consent={consent} setConsent={setConsent} />
-              )}
-
               {currentStep.key === 'additional' && (
                 <AdditionalQuestionsStep
                   questions={currentStep.questions || []}
                   answers={answers}
                   setAnswers={setAnswers}
                 />
+              )}
+
+              {currentStep.key === 'consent' && (
+                <ConsentStep consent={consent} setConsent={setConsent} />
               )}
 
               {currentStep.key === 'review' && (
@@ -1003,11 +1053,23 @@ function SelfIdStep({ selfId, setSelfId }) {
     { value: '', label: 'Decline to answer' },
     { value: 'Hispanic or Latino', label: 'Hispanic or Latino' },
     { value: 'White (Not Hispanic or Latino)', label: 'White (Not Hispanic or Latino)' },
-    { value: 'Black or African American (Not Hispanic or Latino)', label: 'Black or African American (Not Hispanic or Latino)' },
+    {
+      value: 'Black or African American (Not Hispanic or Latino)',
+      label: 'Black or African American (Not Hispanic or Latino)',
+    },
     { value: 'Asian (Not Hispanic or Latino)', label: 'Asian (Not Hispanic or Latino)' },
-    { value: 'Native Hawaiian or Other Pacific Islander (Not Hispanic or Latino)', label: 'Native Hawaiian or Other Pacific Islander (Not Hispanic or Latino)' },
-    { value: 'American Indian or Alaska Native (Not Hispanic or Latino)', label: 'American Indian or Alaska Native (Not Hispanic or Latino)' },
-    { value: 'Two or More Races (Not Hispanic or Latino)', label: 'Two or More Races (Not Hispanic or Latino)' },
+    {
+      value: 'Native Hawaiian or Other Pacific Islander (Not Hispanic or Latino)',
+      label: 'Native Hawaiian or Other Pacific Islander (Not Hispanic or Latino)',
+    },
+    {
+      value: 'American Indian or Alaska Native (Not Hispanic or Latino)',
+      label: 'American Indian or Alaska Native (Not Hispanic or Latino)',
+    },
+    {
+      value: 'Two or More Races (Not Hispanic or Latino)',
+      label: 'Two or More Races (Not Hispanic or Latino)',
+    },
   ];
 
   const veteranOptions = [
