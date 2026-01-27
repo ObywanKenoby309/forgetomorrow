@@ -1,6 +1,57 @@
 // pages/api/apply/answers.js
 import { prisma } from "@/lib/prisma";
-import { getClientSession } from "@/lib/auth-client";
+import { getServerSession } from "next-auth/next";
+import { authOptions } from "../auth/[...nextauth]";
+import jwt from "jsonwebtoken";
+
+const JWT_SECRET =
+  process.env.NEXTAUTH_SECRET || "dev-secret-change-in-production";
+
+function getCookie(req, name) {
+  try {
+    const raw = req.headers?.cookie || "";
+    const parts = raw.split(";").map((p) => p.trim());
+    for (const p of parts) {
+      if (p.startsWith(name + "=")) {
+        return decodeURIComponent(p.slice(name.length + 1));
+      }
+    }
+    return null;
+  } catch {
+    return null;
+  }
+}
+
+function normalizeEmail(v) {
+  const s = String(v || "").toLowerCase().trim();
+  return s || null;
+}
+
+async function getAuthedUserId(req, res) {
+  // 1) NextAuth session (server-side)
+  const session = await getServerSession(req, res, authOptions);
+  const sid = session?.user?.id;
+  if (sid) return sid;
+
+  // 2) JWT cookie fallback (if you use an "auth" cookie)
+  const token = getCookie(req, "auth");
+  if (!token) return null;
+
+  try {
+    const decoded = jwt.verify(token, JWT_SECRET);
+    const email = normalizeEmail(decoded?.email);
+    if (!email) return null;
+
+    const user = await prisma.user.findUnique({
+      where: { email },
+      select: { id: true },
+    });
+
+    return user?.id || null;
+  } catch {
+    return null;
+  }
+}
 
 export default async function handler(req, res) {
   try {
@@ -9,8 +60,7 @@ export default async function handler(req, res) {
       return res.status(405).json({ error: "Method not allowed" });
     }
 
-    const session = await getClientSession(req);
-    const userId = session?.user?.id;
+    const userId = await getAuthedUserId(req, res);
     if (!userId) return res.status(401).json({ error: "Unauthorized" });
 
     const { applicationId, answers } = req.body || {};
@@ -23,7 +73,8 @@ export default async function handler(req, res) {
     });
 
     if (!app) return res.status(404).json({ error: "Application not found" });
-    if (app.userId !== userId) return res.status(403).json({ error: "Forbidden" });
+    if (app.userId !== userId)
+      return res.status(403).json({ error: "Forbidden" });
 
     const safeAnswers = Array.isArray(answers) ? answers : [];
     if (safeAnswers.length === 0) {
@@ -51,9 +102,7 @@ export default async function handler(req, res) {
         })
       );
 
-    if (ops.length === 0) {
-      return res.status(200).json({ ok: true });
-    }
+    if (ops.length === 0) return res.status(200).json({ ok: true });
 
     await prisma.$transaction(ops);
     return res.status(200).json({ ok: true });
