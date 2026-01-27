@@ -1,6 +1,7 @@
 // pages/api/recruiter/applications/[id]/packet.js
-import prisma from '@/lib/prisma';
-import { getClientSession } from '@/lib/auth-client';
+import prisma from "@/lib/prisma";
+import { getServerSession } from "next-auth/next";
+import { authOptions } from "@/lib/auth";
 
 function toInt(val) {
   const n = Number(val);
@@ -8,7 +9,7 @@ function toInt(val) {
 }
 
 function safeString(val) {
-  if (val === undefined || val === null) return '';
+  if (val === undefined || val === null) return "";
   return String(val);
 }
 
@@ -20,17 +21,17 @@ function normalizeQuestions(qs) {
 
 export default async function handler(req, res) {
   try {
-    if (req.method !== 'GET') {
-      res.setHeader('Allow', ['GET']);
-      return res.status(405).json({ error: 'Method not allowed' });
+    if (req.method !== "GET") {
+      res.setHeader("Allow", ["GET"]);
+      return res.status(405).json({ error: "Method not allowed" });
     }
 
-    const session = await getClientSession(req);
+    const session = await getServerSession(req, res, authOptions);
     const userId = session?.user?.id;
-    if (!userId) return res.status(401).json({ error: 'Unauthorized' });
+    if (!userId) return res.status(401).json({ error: "Unauthorized" });
 
     const applicationId = toInt(req.query.id);
-    if (!applicationId) return res.status(400).json({ error: 'Invalid application id' });
+    if (!applicationId) return res.status(400).json({ error: "Invalid application id" });
 
     // Pull the caller's org access (accountKey + memberships)
     const viewer = await prisma.user.findUnique({
@@ -44,15 +45,14 @@ export default async function handler(req, res) {
       },
     });
 
-    if (!viewer) return res.status(401).json({ error: 'Unauthorized' });
+    if (!viewer) return res.status(401).json({ error: "Unauthorized" });
 
-    // Recruiter or internal staff only
     const viewerRole = safeString(viewer.role).toUpperCase();
-    const isRecruiter = viewerRole === 'RECRUITER';
+    const isRecruiter = viewerRole === "RECRUITER";
     const isStaff = !!viewer.employee;
 
     if (!isRecruiter && !isStaff) {
-      return res.status(403).json({ error: 'Forbidden' });
+      return res.status(403).json({ error: "Forbidden" });
     }
 
     const allowedAccountKeys = new Set(
@@ -97,7 +97,7 @@ export default async function handler(req, res) {
             value: true,
             updatedAt: true,
           },
-          orderBy: { updatedAt: 'asc' },
+          orderBy: { updatedAt: "asc" },
         },
         assessment: {
           select: {
@@ -109,24 +109,23 @@ export default async function handler(req, res) {
             updatedAt: true,
           },
         },
-
         // IMPORTANT: intentionally NOT including selfId here.
       },
     });
 
-    if (!app) return res.status(404).json({ error: 'Not found' });
+    if (!app) return res.status(404).json({ error: "Not found" });
 
     const appAccountKey = app.accountKey || app.job?.accountKey || null;
 
-// Recruiters must be org-scoped (staff can bypass for support)
-if (!appAccountKey && !isStaff) {
-  return res.status(403).json({ error: 'Forbidden' });
-}
+    // Recruiters must be org-scoped (staff can bypass for support)
+    if (!appAccountKey && !isStaff) {
+      return res.status(403).json({ error: "Forbidden" });
+    }
 
-// If the application is org-scoped, enforce org access
-if (appAccountKey && !allowedAccountKeys.has(appAccountKey)) {
-  return res.status(403).json({ error: 'Forbidden' });
-}
+    // If the application is org-scoped, enforce org access
+    if (appAccountKey && !allowedAccountKeys.has(appAccountKey)) {
+      return res.status(403).json({ error: "Forbidden" });
+    }
 
     // Build "Additional Questions" labels from Job.additionalQuestions (if present)
     const jobQs = normalizeQuestions(app.job?.additionalQuestions);
@@ -138,18 +137,17 @@ if (appAccountKey && !allowedAccountKeys.has(appAccountKey)) {
     }
 
     const additionalAnswers = (app.answers || [])
-  .filter((a) => labelByKey.has(safeString(a.questionKey)))
-  .map((a) => {
-    const key = safeString(a.questionKey);
-    return {
-      questionKey: key,
-      label: labelByKey.get(key) || null,
-      value: a.value,
-    };
-  });
+      .filter((a) => labelByKey.has(safeString(a.questionKey)))
+      .map((a) => {
+        const key = safeString(a.questionKey);
+        return {
+          questionKey: key,
+          label: labelByKey.get(key) || null,
+          value: a.value,
+        };
+      });
 
-    // Packet order per your rule:
-    // Cover -> Resume -> Additional Questions -> Consent -> FT Assessment
+    // Packet order: Cover -> Resume -> Additional Questions -> Consent -> FT Assessment
     return res.status(200).json({
       application: {
         id: app.id,
@@ -170,20 +168,15 @@ if (appAccountKey && !allowedAccountKeys.has(appAccountKey)) {
         id: app.user?.id || null,
         name:
           app.user?.name ||
-          [app.user?.firstName, app.user?.lastName].filter(Boolean).join(' ') ||
+          [app.user?.firstName, app.user?.lastName].filter(Boolean).join(" ") ||
           null,
         email: app.user?.email || null,
       },
 
-      // Packet sections
-      cover: app.cover
-        ? { id: app.cover.id, name: app.cover.name, content: app.cover.content }
-        : null,
-      resume: app.resume
-        ? { id: app.resume.id, name: app.resume.name, content: app.resume.content }
-        : null,
+      cover: app.cover ? { id: app.cover.id, name: app.cover.name, content: app.cover.content } : null,
+      resume: app.resume ? { id: app.resume.id, name: app.resume.name, content: app.resume.content } : null,
 
-      additionalQuestions: additionalAnswers, // [] if none
+      additionalQuestions: additionalAnswers,
       consent: app.consent
         ? {
             termsAccepted: !!app.consent.termsAccepted,
@@ -204,12 +197,10 @@ if (appAccountKey && !allowedAccountKeys.has(appAccountKey)) {
           }
         : null,
 
-      // Explicitly confirm self-id is not in recruiter packet payload
       selfIdentification: null,
     });
   } catch (e) {
-    // eslint-disable-next-line no-console
-    console.error('packet api error:', e);
-    return res.status(500).json({ error: 'Server error' });
+    console.error("packet api error:", e);
+    return res.status(500).json({ error: "Server error" });
   }
 }
