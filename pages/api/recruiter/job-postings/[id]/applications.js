@@ -1,6 +1,8 @@
 // pages/api/recruiter/job-postings/[id]/applications.js
-import prisma from "@/lib/prisma";
+import prismaDefault, { prisma as prismaNamed } from "@/lib/prisma";
 import { getClientSession } from "@/lib/auth-client";
+
+const prisma = prismaDefault || prismaNamed;
 
 function toInt(val) {
   const n = Number(val);
@@ -19,6 +21,11 @@ export default async function handler(req, res) {
       return res.status(405).json({ error: "Method not allowed" });
     }
 
+    if (!prisma) {
+      // This is the #1 “it works locally but 500 in prod” failure.
+      return res.status(500).json({ error: "Prisma client not initialized" });
+    }
+
     const session = await getClientSession(req);
     const userId = session?.user?.id;
     if (!userId) return res.status(401).json({ error: "Unauthorized" });
@@ -26,7 +33,6 @@ export default async function handler(req, res) {
     const jobId = toInt(req.query.id);
     if (!jobId) return res.status(400).json({ error: "Invalid job id" });
 
-    // viewer (recruiter or internal staff) + org access
     const viewer = await prisma.user.findUnique({
       where: { id: userId },
       select: {
@@ -52,7 +58,6 @@ export default async function handler(req, res) {
       [viewer.accountKey, ...(viewer.organizationMemberships || []).map((m) => m.accountKey)].filter(Boolean)
     );
 
-    // Load job (and enforce org access if job is org-scoped)
     const job = await prisma.job.findUnique({
       where: { id: jobId },
       select: {
@@ -69,7 +74,6 @@ export default async function handler(req, res) {
         accountKey: true,
         createdAt: true,
         updatedAt: true,
-        additionalQuestions: true,
       },
     });
 
@@ -80,7 +84,6 @@ export default async function handler(req, res) {
       return res.status(403).json({ error: "Forbidden" });
     }
 
-    // Load applications for the job
     const applications = await prisma.application.findMany({
       where: { jobId },
       select: {
@@ -102,31 +105,8 @@ export default async function handler(req, res) {
           },
         },
       },
-      orderBy: [
-        { submittedAt: "desc" },
-        { appliedAt: "desc" },
-        { updatedAt: "desc" },
-      ],
+      orderBy: [{ submittedAt: "desc" }, { appliedAt: "desc" }, { updatedAt: "desc" }],
     });
-
-    const normalized = (applications || []).map((a) => ({
-      id: a.id,
-      status: a.status,
-      submittedAt: a.submittedAt || null,
-      appliedAt: a.appliedAt || null,
-      updatedAt: a.updatedAt || null,
-      accountKey: a.accountKey || jobAccountKey || null,
-      resumeId: a.resumeId || null,
-      coverId: a.coverId || null,
-      candidate: {
-        id: a.user?.id || null,
-        name:
-          a.user?.name ||
-          [a.user?.firstName, a.user?.lastName].filter(Boolean).join(" ") ||
-          null,
-        email: a.user?.email || null,
-      },
-    }));
 
     return res.status(200).json({
       job: {
@@ -143,11 +123,25 @@ export default async function handler(req, res) {
         createdAt: job.createdAt,
         updatedAt: job.updatedAt,
       },
-      applications: normalized, // [] if none (no error)
+      applications: (applications || []).map((a) => ({
+        id: a.id,
+        status: a.status,
+        submittedAt: a.submittedAt || null,
+        appliedAt: a.appliedAt || null,
+        updatedAt: a.updatedAt || null,
+        accountKey: a.accountKey || jobAccountKey || null,
+        resumeId: a.resumeId || null,
+        coverId: a.coverId || null,
+        candidate: {
+          id: a.user?.id || null,
+          name: a.user?.name || [a.user?.firstName, a.user?.lastName].filter(Boolean).join(" ") || null,
+          email: a.user?.email || null,
+        },
+      })),
     });
   } catch (e) {
-    // eslint-disable-next-line no-console
-    console.error("[api/recruiter/job-postings/[id]/applications] error:", e);
+    // Make the error observable in prod without leaking internals
+    console.error("[job applicants api] error:", e);
     return res.status(500).json({ error: "Server error" });
   }
 }
