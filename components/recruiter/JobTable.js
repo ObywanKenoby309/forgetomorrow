@@ -26,6 +26,9 @@ export default function JobTable({
   onClose,
   onUseTemplate,
 
+  // ✅ NEW: jobs-only action to open applicants view
+  onViewApplicants,
+
   // used only for templates (delete action)
   onDelete,
 }) {
@@ -81,6 +84,10 @@ export default function JobTable({
     const status = job.status || "Unknown";
     const canClose = !isTemplates && status !== "Closed";
     const canDeleteTemplate = isTemplates;
+
+    // ✅ NEW: jobs-only (not templates), requires handler, and must be a real job (not a template row)
+    const canViewApplicants =
+      !isTemplates && typeof onViewApplicants === "function" && !job?.isTemplate;
 
     useEffect(() => setMounted(true), []);
 
@@ -188,6 +195,17 @@ export default function JobTable({
           >
             View
           </button>
+
+          {/* ✅ NEW: View Applicants (jobs-only) */}
+          {canViewApplicants && (
+            <button
+              type="button"
+              onClick={() => run(() => onViewApplicants?.(job))}
+              className="w-full text-left px-3 py-2 text-xs hover:bg-slate-50 text-[#FF7043]"
+            >
+              View applicants
+            </button>
+          )}
 
           {canClose && (
             <button

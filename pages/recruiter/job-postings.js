@@ -1,5 +1,6 @@
 // pages/recruiter/job-postings.js
 import { useEffect, useState, useCallback, useMemo } from "react";
+import { useRouter } from "next/router";
 import { PlanProvider } from "@/context/PlanContext";
 import RecruiterLayout from "@/components/layouts/RecruiterLayout";
 import JobTable from "@/components/recruiter/JobTable";
@@ -46,6 +47,7 @@ function Body({
   viewMode,
   onChangeViewMode,
   onUseTemplate,
+  onViewApplicants,
 }) {
   const tableRows = useMemo(
     () =>
@@ -117,8 +119,10 @@ function Body({
           onView={onView}
           onClose={onClose}
           onUseTemplate={onUseTemplate}
-          // ✅ NEW: templates-only delete action (button shows only in templates mode)
+          // ✅ templates-only delete action (button shows only in templates mode)
           onDelete={onDeleteTemplate}
+          // ✅ NEW: Job-scoped applicants view (JobTable must add dropdown item)
+          onViewApplicants={onViewApplicants}
         />
 
         {loading && (
@@ -143,16 +147,18 @@ function Body({
 }
 
 export default function JobPostingsPage() {
+  const router = useRouter();
+
   const [open, setOpen] = useState(false);
   const [rows, setRows] = useState([]);
   const [loading, setLoading] = useState(false);
   const [loadError, setLoadError] = useState(null);
 
-  // NEW: track whether we are creating / editing / viewing
+  // track whether we are creating / editing / viewing
   const [editingJob, setEditingJob] = useState(null);
   const [modalMode, setModalMode] = useState("create"); // "create" | "edit" | "view"
 
-  // NEW: jobs vs templates view
+  // jobs vs templates view
   const [viewMode, setViewMode] = useState("jobs"); // "jobs" | "templates"
 
   // ──────────────────────────────────────────────────────────────
@@ -279,6 +285,11 @@ export default function JobPostingsPage() {
     setOpen(true);
   };
 
+  const handleViewApplicants = (job) => {
+    if (!job?.id) return;
+    router.push(`/recruiter/job-postings/${job.id}`);
+  };
+
   const handleCloseJob = async (job) => {
     if (!job?.id) return;
 
@@ -315,7 +326,7 @@ export default function JobPostingsPage() {
     }
   };
 
-  // ✅ NEW: Delete action for templates (UI now supports it; API needs DELETE handler)
+  // Delete action for templates (UI now supports it; API needs DELETE handler)
   const handleDeleteTemplate = async (job) => {
     if (!job?.id) return;
 
@@ -324,9 +335,7 @@ export default function JobPostingsPage() {
 
     const name = job.templateName || job.title || "this template";
 
-    const ok = window.confirm(
-      `Delete "${name}"? This cannot be undone.`
-    );
+    const ok = window.confirm(`Delete "${name}"? This cannot be undone.`);
     if (!ok) return;
 
     try {
@@ -370,7 +379,7 @@ export default function JobPostingsPage() {
         title="Job Postings — ForgeTomorrow"
         header={<HeaderBar onOpenModal={openCreateModal} />}
         right={<RightToolsCard />}
-        activeNav="job-postings" // highlight "Job Posting" in recruiter sidebar
+        activeNav="job-postings"
       >
         <Body
           rows={rows}
@@ -383,6 +392,7 @@ export default function JobPostingsPage() {
           viewMode={viewMode}
           onChangeViewMode={handleChangeViewMode}
           onUseTemplate={handleUseTemplate}
+          onViewApplicants={handleViewApplicants}
         />
 
         <JobFormModal
