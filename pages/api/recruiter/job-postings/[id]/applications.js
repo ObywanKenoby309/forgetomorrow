@@ -26,7 +26,7 @@ export default async function handler(req, res) {
     const jobId = toInt(req.query.id);
     if (!jobId) return res.status(400).json({ error: "Invalid job id" });
 
-    // Viewer access
+    // viewer (recruiter or internal staff) + org access
     const viewer = await prisma.user.findUnique({
       where: { id: userId },
       select: {
@@ -52,6 +52,7 @@ export default async function handler(req, res) {
       [viewer.accountKey, ...(viewer.organizationMemberships || []).map((m) => m.accountKey)].filter(Boolean)
     );
 
+    // Load job (and enforce org access if job is org-scoped)
     const job = await prisma.job.findUnique({
       where: { id: jobId },
       select: {
@@ -60,32 +61,37 @@ export default async function handler(req, res) {
         company: true,
         worksite: true,
         location: true,
-        accountKey: true,
-        isTemplate: true,
+        type: true,
+        compensation: true,
+        description: true,
         status: true,
+        urgent: true,
+        accountKey: true,
+        createdAt: true,
+        updatedAt: true,
+        additionalQuestions: true,
       },
     });
 
-    if (!job) return res.status(404).json({ error: "Not found" });
+    if (!job) return res.status(404).json({ error: "Job not found" });
 
-    // Safety: applicants list is for real jobs, not templates
-    if (job.isTemplate) {
-      return res.status(400).json({ error: "Templates do not have applicants" });
-    }
-
-    // Enforce org access if job is org-scoped
-    if (job.accountKey && !allowedAccountKeys.has(job.accountKey)) {
+    const jobAccountKey = job.accountKey || null;
+    if (jobAccountKey && !allowedAccountKeys.has(jobAccountKey)) {
       return res.status(403).json({ error: "Forbidden" });
     }
 
+    // Load applications for the job
     const applications = await prisma.application.findMany({
-      where: { jobId: jobId },
+      where: { jobId },
       select: {
         id: true,
         status: true,
-        appliedAt: true,
         submittedAt: true,
+        appliedAt: true,
         updatedAt: true,
+        accountKey: true,
+        resumeId: true,
+        coverId: true,
         user: {
           select: {
             id: true,
@@ -95,31 +101,32 @@ export default async function handler(req, res) {
             email: true,
           },
         },
-        resumeId: true,
-        coverId: true,
       },
-      orderBy: { appliedAt: "desc" },
+      orderBy: [
+        { submittedAt: "desc" },
+        { appliedAt: "desc" },
+        { updatedAt: "desc" },
+      ],
     });
 
-    const mapped = (applications || []).map((a) => {
-      const candidateName =
-        a.user?.name ||
-        [a.user?.firstName, a.user?.lastName].filter(Boolean).join(" ") ||
-        null;
-
-      return {
-        id: a.id, // application id
-        status: a.status,
-        appliedAt: a.appliedAt,
-        submittedAt: a.submittedAt,
-        updatedAt: a.updatedAt,
-        candidateUserId: a.user?.id || null,
-        candidateName,
-        candidateEmail: a.user?.email || null,
-        hasResume: !!a.resumeId,
-        hasCover: !!a.coverId,
-      };
-    });
+    const normalized = (applications || []).map((a) => ({
+      id: a.id,
+      status: a.status,
+      submittedAt: a.submittedAt || null,
+      appliedAt: a.appliedAt || null,
+      updatedAt: a.updatedAt || null,
+      accountKey: a.accountKey || jobAccountKey || null,
+      resumeId: a.resumeId || null,
+      coverId: a.coverId || null,
+      candidate: {
+        id: a.user?.id || null,
+        name:
+          a.user?.name ||
+          [a.user?.firstName, a.user?.lastName].filter(Boolean).join(" ") ||
+          null,
+        email: a.user?.email || null,
+      },
+    }));
 
     return res.status(200).json({
       job: {
@@ -128,13 +135,19 @@ export default async function handler(req, res) {
         company: job.company,
         worksite: job.worksite,
         location: job.location,
+        type: job.type,
+        compensation: job.compensation,
         status: job.status,
+        urgent: job.urgent,
+        accountKey: jobAccountKey,
+        createdAt: job.createdAt,
+        updatedAt: job.updatedAt,
       },
-      applications: mapped,
+      applications: normalized, // [] if none (no error)
     });
   } catch (e) {
     // eslint-disable-next-line no-console
-    console.error("job applicants api error:", e);
+    console.error("[api/recruiter/job-postings/[id]/applications] error:", e);
     return res.status(500).json({ error: "Server error" });
   }
 }
