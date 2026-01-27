@@ -29,7 +29,9 @@ function PacketViewer({ applicationId, onClose }) {
       try {
         setLoading(true);
         setError(null);
-        const res = await fetch(`/api/recruiter/applications/${applicationId}/packet`);
+        const res = await fetch(
+          `/api/recruiter/applications/${applicationId}/packet`
+        );
         const json = await res.json().catch(() => ({}));
         if (!res.ok) throw new Error(json?.error || `HTTP ${res.status}`);
         if (!alive) return;
@@ -65,7 +67,9 @@ function PacketViewer({ applicationId, onClose }) {
         </div>
 
         <div className="p-4 space-y-4 max-h-[75vh] overflow-auto">
-          {loading && <div className="text-sm text-slate-500">Loading packet…</div>}
+          {loading && (
+            <div className="text-sm text-slate-500">Loading packet…</div>
+          )}
           {error && (
             <div className="rounded border border-red-200 bg-red-50 p-3 text-sm text-red-800">
               Could not load packet. {String(error?.message || "")}
@@ -109,28 +113,49 @@ function PacketViewer({ applicationId, onClose }) {
                           {a.label || a.questionKey}
                         </div>
                         <div className="text-slate-700 whitespace-pre-wrap">
-                          {typeof a.value === "string" ? a.value : JSON.stringify(a.value)}
+                          {typeof a.value === "string"
+                            ? a.value
+                            : JSON.stringify(a.value)}
                         </div>
                       </div>
                     ))}
                   </div>
                 ) : (
-                  <div className="text-sm text-slate-500">No additional questions answered.</div>
+                  <div className="text-sm text-slate-500">
+                    No additional questions answered.
+                  </div>
                 )}
               </div>
 
               {/* Consent */}
               <div className="rounded border p-3">
-                <div className="font-medium mb-2">Consent and acknowledgement</div>
+                <div className="font-medium mb-2">
+                  Consent and acknowledgement
+                </div>
                 {packet.consent ? (
                   <div className="text-sm text-slate-700 space-y-1">
-                    <div>Terms accepted: {packet.consent.termsAccepted ? "Yes" : "No"}</div>
-                    <div>Status updates: {packet.consent.emailUpdatesAccepted ? "Yes" : "No"}</div>
-                    <div>Signature: {packet.consent.signatureName || "Not provided"}</div>
-                    <div>Signed at: {packet.consent.signedAt ? String(packet.consent.signedAt) : "Not provided"}</div>
+                    <div>
+                      Terms accepted:{" "}
+                      {packet.consent.termsAccepted ? "Yes" : "No"}
+                    </div>
+                    <div>
+                      Status updates:{" "}
+                      {packet.consent.emailUpdatesAccepted ? "Yes" : "No"}
+                    </div>
+                    <div>
+                      Signature: {packet.consent.signatureName || "Not provided"}
+                    </div>
+                    <div>
+                      Signed at:{" "}
+                      {packet.consent.signedAt
+                        ? String(packet.consent.signedAt)
+                        : "Not provided"}
+                    </div>
                   </div>
                 ) : (
-                  <div className="text-sm text-slate-500">No consent record found.</div>
+                  <div className="text-sm text-slate-500">
+                    No consent record found.
+                  </div>
                 )}
               </div>
 
@@ -141,8 +166,11 @@ function PacketViewer({ applicationId, onClose }) {
                   <div className="text-sm text-slate-700 space-y-2">
                     <div className="text-slate-600">
                       Model: {packet.forgeAssessment.model || "Unknown"}{" "}
-                      {packet.forgeAssessment.modelVersion ? `(${packet.forgeAssessment.modelVersion})` : ""}
-                      {packet.forgeAssessment.score !== null && packet.forgeAssessment.score !== undefined
+                      {packet.forgeAssessment.modelVersion
+                        ? `(${packet.forgeAssessment.modelVersion})`
+                        : ""}
+                      {packet.forgeAssessment.score !== null &&
+                      packet.forgeAssessment.score !== undefined
                         ? ` • Score: ${packet.forgeAssessment.score}`
                         : ""}
                     </div>
@@ -151,14 +179,13 @@ function PacketViewer({ applicationId, onClose }) {
                     </pre>
                   </div>
                 ) : (
-                  <div className="text-sm text-slate-500">
-                    Not generated yet.
-                  </div>
+                  <div className="text-sm text-slate-500">Not generated yet.</div>
                 )}
               </div>
 
               <div className="rounded border border-slate-200 bg-slate-50 p-3 text-xs text-slate-600">
-                Self-identification answers are not included in recruiter packets.
+                Self-identification answers are not included in recruiter
+                packets.
               </div>
             </>
           )}
@@ -170,6 +197,7 @@ function PacketViewer({ applicationId, onClose }) {
 
 export default function RecruiterJobApplicantsPage() {
   const router = useRouter();
+
   const jobId = useMemo(() => {
     const n = Number(router.query?.id);
     return Number.isFinite(n) ? n : null;
@@ -180,7 +208,29 @@ export default function RecruiterJobApplicantsPage() {
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState(null);
 
+  const [viewer, setViewer] = useState(null);
+
   const [openPacketAppId, setOpenPacketAppId] = useState(null);
+
+  // Load viewer (so we can label internal test apps cleanly)
+  useEffect(() => {
+    let alive = true;
+    async function loadViewer() {
+      try {
+        const res = await fetch("/api/auth/session");
+        const json = await res.json().catch(() => null);
+        if (!alive) return;
+        setViewer(json?.user || null);
+      } catch {
+        if (!alive) return;
+        setViewer(null);
+      }
+    }
+    loadViewer();
+    return () => {
+      alive = false;
+    };
+  }, []);
 
   useEffect(() => {
     if (!router.isReady) return;
@@ -193,7 +243,9 @@ export default function RecruiterJobApplicantsPage() {
         setLoading(true);
         setLoadError(null);
 
-        const res = await fetch(`/api/recruiter/job-postings/${jobId}/applications`);
+        const res = await fetch(
+          `/api/recruiter/job-postings/${jobId}/applications`
+        );
         const json = await res.json().catch(() => ({}));
         if (!res.ok) throw new Error(json?.error || `HTTP ${res.status}`);
 
@@ -227,7 +279,9 @@ export default function RecruiterJobApplicantsPage() {
               <div className="text-xs text-slate-500">Applicants</div>
               <div className="text-lg font-semibold text-slate-900">
                 {job?.title || "Job"}{" "}
-                {job?.company ? <span className="text-slate-500">• {job.company}</span> : null}
+                {job?.company ? (
+                  <span className="text-slate-500">• {job.company}</span>
+                ) : null}
               </div>
             </div>
             <div className="flex items-center gap-2">
@@ -279,47 +333,68 @@ export default function RecruiterJobApplicantsPage() {
               <div className="text-sm text-slate-500">Loading…</div>
             ) : apps.length ? (
               <div className="space-y-3">
-                {apps.map((a) => (
-                  <div key={a.id} className="rounded border p-3">
-                    <div className="flex items-start justify-between gap-3">
-                      <div>
-                        <div className="font-medium text-slate-900">
-                          {a.candidateName || "Candidate"}
+                {apps.map((a) => {
+                  const candidateName = a?.candidate?.name || null;
+                  const candidateEmail = a?.candidate?.email || "";
+                  const candidateId = a?.candidate?.id || null;
+
+                  const isViewer =
+                    viewer?.id && candidateId && viewer.id === candidateId;
+
+                  const displayName = isViewer
+                    ? "Internal test application (You)"
+                    : candidateName || "Candidate";
+
+                  return (
+                    <div key={a.id} className="rounded border p-3">
+                      <div className="flex items-start justify-between gap-3">
+                        <div>
+                          <div className="font-medium text-slate-900">
+                            {displayName}
+                          </div>
+
+                          {candidateEmail ? (
+                            <div className="text-sm text-slate-600">
+                              {candidateEmail}
+                            </div>
+                          ) : null}
+
+                          <div className="text-xs text-slate-500 mt-1">
+                            Applied:{" "}
+                            {a.appliedAt ? String(a.appliedAt) : "Unknown"}{" "}
+                            {a.submittedAt
+                              ? `• Submitted: ${String(a.submittedAt)}`
+                              : ""}
+                          </div>
                         </div>
-                        <div className="text-sm text-slate-600">
-                          {a.candidateEmail || ""}
-                        </div>
-                        <div className="text-xs text-slate-500 mt-1">
-                          Applied: {a.appliedAt ? String(a.appliedAt) : "Unknown"}{" "}
-                          {a.submittedAt ? `• Submitted: ${String(a.submittedAt)}` : ""}
+
+                        <div className="flex items-center gap-2">
+                          <button
+                            type="button"
+                            className="text-sm px-3 py-1.5 rounded border bg-white hover:bg-slate-50"
+                            onClick={() => setOpenPacketAppId(a.id)}
+                          >
+                            View packet
+                          </button>
+
+                          <button
+                            type="button"
+                            className="text-sm px-3 py-1.5 rounded border bg-white hover:bg-slate-50 opacity-60 cursor-not-allowed"
+                            title="Download packet will be wired after exports are implemented."
+                            disabled
+                          >
+                            Download
+                          </button>
                         </div>
                       </div>
 
-                      <div className="flex items-center gap-2">
-                        <button
-                          type="button"
-                          className="text-sm px-3 py-1.5 rounded border bg-white hover:bg-slate-50"
-                          onClick={() => setOpenPacketAppId(a.id)}
-                        >
-                          View packet
-                        </button>
-
-                        <button
-                          type="button"
-                          className="text-sm px-3 py-1.5 rounded border bg-white hover:bg-slate-50 opacity-60 cursor-not-allowed"
-                          title="Download packet will be wired after exports are implemented."
-                          disabled
-                        >
-                          Download
-                        </button>
+                      <div className="mt-3 text-xs text-slate-600">
+                        Packet includes: Cover, Resume, Additional Questions,
+                        Consent, Forge Assessment. Self-ID is excluded.
                       </div>
                     </div>
-
-                    <div className="mt-3 text-xs text-slate-600">
-                      Packet includes: Cover, Resume, Additional Questions, Consent, Forge Assessment. Self-ID is excluded.
-                    </div>
-                  </div>
-                ))}
+                  );
+                })}
               </div>
             ) : (
               <div className="text-sm text-slate-500">No applicants yet.</div>
