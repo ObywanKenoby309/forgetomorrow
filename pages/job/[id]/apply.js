@@ -645,6 +645,7 @@ export default function JobApplyPage() {
                   selectedResumeId={selectedResumeId}
                   selectedCoverId={selectedCoverId}
                   consent={consent}
+                  selfId={selfId}
                   answers={answers}
                   additionalQuestions={additionalQuestions}
                 />
@@ -1233,11 +1234,19 @@ function ReviewStep({
   selectedResumeId,
   selectedCoverId,
   consent,
+  selfId,
   answers,
   additionalQuestions,
 }) {
   const resume = (resumes || []).find((r) => String(r.id) === String(selectedResumeId));
   const cover = (covers || []).find((c) => String(c.id) === String(selectedCoverId));
+
+  const hasAnySelfId = Boolean(
+    String(selfId?.genderIdentity || '').trim() ||
+      String(selfId?.raceEthnicity || '').trim() ||
+      String(selfId?.veteranStatus || '').trim() ||
+      String(selfId?.disabilityStatus || '').trim()
+  );
 
   return (
     <div className="space-y-4">
@@ -1246,6 +1255,7 @@ function ReviewStep({
         Confirm everything looks right. When you submit, the recruiter receives your selected resume/cover and your responses.
       </div>
 
+      {/* Documents */}
       <div
         className="rounded-xl border p-4"
         style={{ borderColor: 'rgba(0,0,0,0.10)', background: 'rgba(255,255,255,0.75)' }}
@@ -1259,22 +1269,48 @@ function ReviewStep({
         </div>
       </div>
 
+      {/* Voluntary self-identification (always show - if empty show "Declined to answer") */}
       <div
         className="rounded-xl border p-4"
         style={{ borderColor: 'rgba(0,0,0,0.10)', background: 'rgba(255,255,255,0.75)' }}
       >
-        <div className="text-sm text-slate-900 font-semibold">Consent</div>
-        <div className="text-sm text-slate-700 mt-1">
-          Accepted: <span className="text-slate-900">{consent.termsAccepted ? 'Yes' : 'No'}</span>
-        </div>
-        <div className="text-sm text-slate-700">
-          Status updates: <span className="text-slate-900">{consent.emailUpdatesAccepted ? 'Yes' : 'No'}</span>
-        </div>
-        <div className="text-sm text-slate-700">
-          Signature: <span className="text-slate-900">{consent.signatureName || '-'}</span>
-        </div>
+        <div className="text-sm text-slate-900 font-semibold">Voluntary self-identification</div>
+
+        {!hasAnySelfId ? (
+          <div className="text-sm text-slate-700 mt-1">
+            <span className="text-slate-900">Declined to answer</span>
+          </div>
+        ) : (
+          <>
+            {selfId?.genderIdentity && (
+              <div className="text-sm text-slate-700 mt-1">
+                Gender identity:{' '}
+                <span className="text-slate-900">{selfId.genderIdentity}</span>
+              </div>
+            )}
+            {selfId?.raceEthnicity && (
+              <div className="text-sm text-slate-700">
+                Race / ethnicity:{' '}
+                <span className="text-slate-900">{selfId.raceEthnicity}</span>
+              </div>
+            )}
+            {selfId?.veteranStatus && (
+              <div className="text-sm text-slate-700">
+                Veteran status:{' '}
+                <span className="text-slate-900">{selfId.veteranStatus}</span>
+              </div>
+            )}
+            {selfId?.disabilityStatus && (
+              <div className="text-sm text-slate-700">
+                Disability status:{' '}
+                <span className="text-slate-900">{selfId.disabilityStatus}</span>
+              </div>
+            )}
+          </>
+        )}
       </div>
 
+      {/* Additional questions (responses) */}
       {(additionalQuestions || []).length > 0 && (
         <div
           className="rounded-xl border p-4"
@@ -1294,6 +1330,24 @@ function ReviewStep({
           </div>
         </div>
       )}
+
+      {/* Consent MUST be last */}
+      <div
+        className="rounded-xl border p-4"
+        style={{ borderColor: 'rgba(0,0,0,0.10)', background: 'rgba(255,255,255,0.75)' }}
+      >
+        <div className="text-sm text-slate-900 font-semibold">Consent</div>
+        <div className="text-sm text-slate-700 mt-1">
+          Accepted: <span className="text-slate-900">{consent.termsAccepted ? 'Yes' : 'No'}</span>
+        </div>
+        <div className="text-sm text-slate-700">
+          Status updates:{' '}
+          <span className="text-slate-900">{consent.emailUpdatesAccepted ? 'Yes' : 'No'}</span>
+        </div>
+        <div className="text-sm text-slate-700">
+          Signature: <span className="text-slate-900">{consent.signatureName || '-'}</span>
+        </div>
+      </div>
 
       <div className="text-xs text-slate-500">
         Job: {job?.title} at {job?.company}
