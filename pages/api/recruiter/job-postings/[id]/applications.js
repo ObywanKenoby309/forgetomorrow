@@ -1,6 +1,7 @@
 // pages/api/recruiter/job-postings/[id]/applications.js
 import prisma from "@/lib/prisma";
-import { getClientSession } from "@/lib/auth-client";
+import { getServerSession } from "next-auth";
+import { authOptions } from "@/lib/auth";
 
 function toInt(val) {
   const n = Number(val);
@@ -20,11 +21,10 @@ export default async function handler(req, res) {
     }
 
     if (!prisma) {
-      // This is the #1 “it works locally but 500 in prod” failure.
       return res.status(500).json({ error: "Prisma client not initialized" });
     }
 
-    const session = await getClientSession(req);
+    const session = await getServerSession(req, res, authOptions);
     const userId = session?.user?.id;
     if (!userId) return res.status(401).json({ error: "Unauthorized" });
 
@@ -138,7 +138,6 @@ export default async function handler(req, res) {
       })),
     });
   } catch (e) {
-    // Make the error observable in prod without leaking internals
     console.error("[job applicants api] error:", e);
     return res.status(500).json({ error: "Server error" });
   }
