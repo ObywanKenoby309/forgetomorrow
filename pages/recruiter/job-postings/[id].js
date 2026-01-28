@@ -1,9 +1,12 @@
 // pages/recruiter/job-postings/[id].js
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/router";
 import RecruiterLayout from "@/components/layouts/RecruiterLayout";
 import { PlanProvider } from "@/context/PlanContext";
 import Link from "next/link";
+
+// ✅ WHY inline info
+import WHYScoreInfo from "@/components/ai/WHYScoreInfo";
 
 function SectionCard({ title, children, right }) {
   return (
@@ -88,11 +91,7 @@ function HybridResumeViewer({ value }) {
     customSections = [],
   } = data;
 
-  const contactLine = [
-    personalInfo.email,
-    personalInfo.phone,
-    personalInfo.location,
-  ]
+  const contactLine = [personalInfo.email, personalInfo.phone, personalInfo.location]
     .filter(Boolean)
     .join(" • ");
 
@@ -105,9 +104,7 @@ function HybridResumeViewer({ value }) {
         <div className="text-xl font-bold text-slate-900">
           {personalInfo.name || "Candidate"}
         </div>
-        {contactLine ? (
-          <div className="text-xs text-slate-600 mt-1">{contactLine}</div>
-        ) : null}
+        {contactLine ? <div className="text-xs text-slate-600 mt-1">{contactLine}</div> : null}
         {extraLines.length ? (
           <div className="text-xs text-slate-600 mt-1 space-y-0.5">
             {extraLines.map((l, idx) => (
@@ -116,9 +113,7 @@ function HybridResumeViewer({ value }) {
           </div>
         ) : null}
         {personalInfo.targetedRole ? (
-          <div className="text-sm italic text-slate-700 mt-2">
-            {personalInfo.targetedRole}
-          </div>
+          <div className="text-sm italic text-slate-700 mt-2">{personalInfo.targetedRole}</div>
         ) : null}
       </div>
 
@@ -128,21 +123,15 @@ function HybridResumeViewer({ value }) {
           <div className="text-xs font-bold uppercase tracking-wide border-b pb-1">
             Professional Summary
           </div>
-          <div className="text-sm text-slate-800 mt-2 whitespace-pre-wrap">
-            {summary}
-          </div>
+          <div className="text-sm text-slate-800 mt-2 whitespace-pre-wrap">{summary}</div>
         </div>
       ) : null}
 
       {/* Languages */}
       {languages.length ? (
         <div className="mt-5">
-          <div className="text-xs font-bold uppercase tracking-wide border-b pb-1">
-            Languages
-          </div>
-          <div className="text-sm text-slate-800 mt-2">
-            {languages.join(" • ")}
-          </div>
+          <div className="text-xs font-bold uppercase tracking-wide border-b pb-1">Languages</div>
+          <div className="text-sm text-slate-800 mt-2">{languages.join(" • ")}</div>
         </div>
       ) : null}
 
@@ -150,9 +139,7 @@ function HybridResumeViewer({ value }) {
       <div className="mt-5 grid grid-cols-1 md:grid-cols-3 gap-4">
         {/* Skills */}
         <div className="md:col-span-1">
-          <div className="text-xs font-bold uppercase tracking-wide border-b pb-1">
-            Skills
-          </div>
+          <div className="text-xs font-bold uppercase tracking-wide border-b pb-1">Skills</div>
           {skills.length ? (
             <ul className="mt-2 space-y-1">
               {skills.map((s, i) => (
@@ -168,16 +155,16 @@ function HybridResumeViewer({ value }) {
 
         {/* Experience */}
         <div className="md:col-span-2">
-          <div className="text-xs font-bold uppercase tracking-wide border-b pb-1">
-            Experience
-          </div>
+          <div className="text-xs font-bold uppercase tracking-wide border-b pb-1">Experience</div>
 
           {workExperiences.length ? (
             <div className="mt-2 space-y-4">
               {workExperiences.map((exp, i) => {
                 const title = exp.title || exp.jobTitle || "";
                 const company = exp.company || "";
-                const dates = `${exp.startDate || ""}${exp.startDate ? " – " : ""}${exp.endDate || "Present"}`;
+                const dates = `${exp.startDate || ""}${exp.startDate ? " – " : ""}${
+                  exp.endDate || "Present"
+                }`;
 
                 return (
                   <div key={i} className="text-sm">
@@ -186,10 +173,7 @@ function HybridResumeViewer({ value }) {
                         <div className="font-semibold text-slate-900 break-words">
                           {title || "Role"}
                           {company ? (
-                            <span className="font-normal text-slate-700">
-                              {" "}
-                              • {company}
-                            </span>
+                            <span className="font-normal text-slate-700"> • {company}</span>
                           ) : null}
                         </div>
                       </div>
@@ -220,9 +204,7 @@ function HybridResumeViewer({ value }) {
       {/* Projects */}
       {projects.length ? (
         <div className="mt-5">
-          <div className="text-xs font-bold uppercase tracking-wide border-b pb-1">
-            Projects
-          </div>
+          <div className="text-xs font-bold uppercase tracking-wide border-b pb-1">Projects</div>
 
           <div className="mt-2 space-y-4">
             {projects.map((proj, i) => {
@@ -241,19 +223,10 @@ function HybridResumeViewer({ value }) {
                     <div className="min-w-0">
                       <div className="font-semibold text-slate-900 break-words">
                         {title}
-                        {org ? (
-                          <span className="font-normal text-slate-700">
-                            {" "}
-                            • {org}
-                          </span>
-                        ) : null}
+                        {org ? <span className="font-normal text-slate-700"> • {org}</span> : null}
                       </div>
                     </div>
-                    {dates ? (
-                      <div className="text-xs text-slate-500 whitespace-nowrap">
-                        {dates}
-                      </div>
-                    ) : null}
+                    {dates ? <div className="text-xs text-slate-500 whitespace-nowrap">{dates}</div> : null}
                   </div>
 
                   {bullets.length ? (
@@ -265,9 +238,7 @@ function HybridResumeViewer({ value }) {
                       ))}
                     </ul>
                   ) : proj.description ? (
-                    <div className="mt-2 text-sm text-slate-800 whitespace-pre-wrap">
-                      {proj.description}
-                    </div>
+                    <div className="mt-2 text-sm text-slate-800 whitespace-pre-wrap">{proj.description}</div>
                   ) : null}
                 </div>
               );
@@ -279,9 +250,7 @@ function HybridResumeViewer({ value }) {
       {/* Education */}
       {educationList.length ? (
         <div className="mt-5">
-          <div className="text-xs font-bold uppercase tracking-wide border-b pb-1">
-            Education
-          </div>
+          <div className="text-xs font-bold uppercase tracking-wide border-b pb-1">Education</div>
 
           <div className="mt-2 space-y-3">
             {educationList.map((edu, i) => (
@@ -290,16 +259,14 @@ function HybridResumeViewer({ value }) {
                   {edu.degree || ""} {edu.field ? ` ${edu.field}` : ""}
                 </div>
                 <div className="text-sm text-slate-700">
-                  {(edu.institution || edu.school) || "—"}
+                  {edu.institution || edu.school || "—"}
                   {edu.location ? ` • ${edu.location}` : ""}
                 </div>
                 <div className="text-xs text-slate-500">
                   {edu.startDate || "—"} – {edu.endDate || "Present"}
                 </div>
                 {edu.description ? (
-                  <div className="mt-1 text-sm text-slate-800 whitespace-pre-wrap">
-                    {edu.description}
-                  </div>
+                  <div className="mt-1 text-sm text-slate-800 whitespace-pre-wrap">{edu.description}</div>
                 ) : null}
               </div>
             ))}
@@ -319,16 +286,11 @@ function HybridResumeViewer({ value }) {
               const name =
                 (cert && typeof cert === "object" && (cert.name || cert.title)) ||
                 (typeof cert === "string" ? cert : "");
-              const org =
-                cert && typeof cert === "object"
-                  ? cert.organization || cert.issuer
-                  : "";
+              const org = cert && typeof cert === "object" ? cert.organization || cert.issuer : "";
 
               return (
                 <div key={i} className="text-sm">
-                  <div className="font-semibold text-slate-900">
-                    {name || "Certification"}
-                  </div>
+                  <div className="font-semibold text-slate-900">{name || "Certification"}</div>
                   {org ? <div className="text-xs text-slate-600">{org}</div> : null}
                 </div>
               );
@@ -342,16 +304,13 @@ function HybridResumeViewer({ value }) {
         ? customSections.map((section, i) => {
             if (!section) return null;
 
-            const title =
-              section.title || section.heading || "Additional Information";
+            const title = section.title || section.heading || "Additional Information";
             const items = Array.isArray(section.items) ? section.items : null;
             const content = section.content || section.text || section.body;
 
             return (
               <div key={i} className="mt-5">
-                <div className="text-xs font-bold uppercase tracking-wide border-b pb-1">
-                  {title}
-                </div>
+                <div className="text-xs font-bold uppercase tracking-wide border-b pb-1">{title}</div>
                 {items && items.length ? (
                   <ul className="mt-2 space-y-1">
                     {items.map((item, idx) => (
@@ -361,9 +320,7 @@ function HybridResumeViewer({ value }) {
                     ))}
                   </ul>
                 ) : content ? (
-                  <div className="mt-2 text-sm text-slate-800 whitespace-pre-wrap">
-                    {content}
-                  </div>
+                  <div className="mt-2 text-sm text-slate-800 whitespace-pre-wrap">{content}</div>
                 ) : (
                   <div className="mt-2 text-sm text-slate-500">—</div>
                 )}
@@ -380,10 +337,18 @@ function HybridResumeViewer({ value }) {
   );
 }
 
-function PacketViewer({ applicationId, onClose }) {
+function PacketViewer({ applicationId, job, candidate, onClose }) {
   const [loading, setLoading] = useState(false);
   const [packet, setPacket] = useState(null);
   const [error, setError] = useState(null);
+
+  // ✅ WHY auto-run (INLINE, no drawer)
+  const [whyLoading, setWhyLoading] = useState(false);
+  const [whyError, setWhyError] = useState(null);
+  const [whyData, setWhyData] = useState(null);
+  const [whyShowDetails, setWhyShowDetails] = useState(false);
+
+  const whyHasRunRef = useRef(false);
 
   useEffect(() => {
     let alive = true;
@@ -392,9 +357,7 @@ function PacketViewer({ applicationId, onClose }) {
       try {
         setLoading(true);
         setError(null);
-        const res = await fetch(
-          `/api/recruiter/applications/${applicationId}/packet`
-        );
+        const res = await fetch(`/api/recruiter/applications/${applicationId}/packet`);
         const json = await res.json().catch(() => ({}));
         if (!res.ok) throw new Error(json?.error || `HTTP ${res.status}`);
         if (!alive) return;
@@ -413,8 +376,72 @@ function PacketViewer({ applicationId, onClose }) {
     };
   }, [applicationId]);
 
-  const resumeValue =
-    packet?.resume?.content !== undefined ? packet.resume.content : null;
+  const resumeValue = packet?.resume?.content !== undefined ? packet.resume.content : null;
+  const jobDescription = job?.description || job?.jobDescription || "";
+
+  // ✅ Run WHY automatically once we have packet + JD + resume
+  useEffect(() => {
+    let alive = true;
+
+    async function runWhy() {
+      if (!applicationId) return;
+      if (whyHasRunRef.current) return;
+
+      const resumeText =
+        typeof resumeValue === "string"
+          ? resumeValue
+          : resumeValue
+          ? JSON.stringify(resumeValue)
+          : "";
+
+      const jdText = String(jobDescription || "").trim();
+
+      if (!jdText) return; // can’t run without JD
+      if (!String(resumeText || "").trim()) return; // can’t run without resume
+
+      whyHasRunRef.current = true;
+
+      try {
+        setWhyLoading(true);
+        setWhyError(null);
+        setWhyData(null);
+
+        const res = await fetch("/api/recruiter/explain", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            resumeText,
+            jobDescription: jdText,
+            jobId: job?.id ?? null,
+            applicationId,
+            candidateUserId: candidate?.id ?? null,
+            externalName: null,
+            externalEmail: null,
+          }),
+        });
+
+        const json = await res.json().catch(() => ({}));
+        if (!res.ok) throw new Error(json?.error || `HTTP ${res.status}`);
+
+        if (!alive) return;
+        setWhyData(json);
+        setWhyShowDetails(false);
+      } catch (e) {
+        if (!alive) return;
+        setWhyError(e);
+        whyHasRunRef.current = false; // allow retry
+      } finally {
+        if (!alive) return;
+        setWhyLoading(false);
+      }
+    }
+
+    if (packet) runWhy();
+
+    return () => {
+      alive = false;
+    };
+  }, [packet, applicationId, resumeValue, jobDescription, job?.id, candidate?.id, job]);
 
   return (
     <div className="fixed inset-0 z-50 bg-black/40 flex items-center justify-center p-4">
@@ -422,6 +449,9 @@ function PacketViewer({ applicationId, onClose }) {
         <div className="px-4 py-3 border-b flex items-center justify-between">
           <div className="font-semibold">
             Application Packet {applicationId ? `#${applicationId}` : ""}
+            {candidate?.name ? (
+              <span className="text-slate-500 font-normal"> • {candidate.name}</span>
+            ) : null}
           </div>
           <button
             className="text-sm px-3 py-1.5 rounded border hover:bg-slate-50"
@@ -433,9 +463,7 @@ function PacketViewer({ applicationId, onClose }) {
         </div>
 
         <div className="p-4 space-y-4 max-h-[75vh] overflow-auto">
-          {loading && (
-            <div className="text-sm text-slate-500">Loading packet…</div>
-          )}
+          {loading && <div className="text-sm text-slate-500">Loading packet…</div>}
           {error && (
             <div className="rounded border border-red-200 bg-red-50 p-3 text-sm text-red-800">
               Could not load packet. {String(error?.message || "")}
@@ -448,9 +476,7 @@ function PacketViewer({ applicationId, onClose }) {
               <div className="rounded border p-3">
                 <div className="font-medium mb-2">Cover</div>
                 {packet.cover?.content ? (
-                  <pre className="whitespace-pre-wrap text-sm text-slate-800">
-                    {packet.cover.content}
-                  </pre>
+                  <pre className="whitespace-pre-wrap text-sm text-slate-800">{packet.cover.content}</pre>
                 ) : (
                   <div className="text-sm text-slate-500">None provided.</div>
                 )}
@@ -460,11 +486,9 @@ function PacketViewer({ applicationId, onClose }) {
               <div className="rounded border p-3">
                 <div className="font-medium mb-2">Resume (Hybrid)</div>
 
-                {/* If we can parse resume JSON, render Hybrid view */}
                 {normalizeResumeData(resumeValue) ? (
                   <HybridResumeViewer value={resumeValue} />
                 ) : packet.resume?.content ? (
-                  // fallback to raw text if it's not JSON
                   <pre className="whitespace-pre-wrap text-sm text-slate-800">
                     {typeof packet.resume.content === "string"
                       ? packet.resume.content
@@ -482,66 +506,104 @@ function PacketViewer({ applicationId, onClose }) {
                   <div className="space-y-2">
                     {packet.additionalQuestions.map((a, idx) => (
                       <div key={`${a.questionKey}-${idx}`} className="text-sm">
-                        <div className="font-medium text-slate-800">
-                          {a.label || a.questionKey}
-                        </div>
+                        <div className="font-medium text-slate-800">{a.label || a.questionKey}</div>
                         <div className="text-slate-700 whitespace-pre-wrap">
-                          {typeof a.value === "string"
-                            ? a.value
-                            : JSON.stringify(a.value)}
+                          {typeof a.value === "string" ? a.value : JSON.stringify(a.value)}
                         </div>
                       </div>
                     ))}
                   </div>
                 ) : (
-                  <div className="text-sm text-slate-500">
-                    No additional questions answered.
-                  </div>
+                  <div className="text-sm text-slate-500">No additional questions answered.</div>
                 )}
               </div>
 
               {/* Consent */}
               <div className="rounded border p-3">
-                <div className="font-medium mb-2">
-                  Consent and acknowledgement
-                </div>
+                <div className="font-medium mb-2">Consent and acknowledgement</div>
                 {packet.consent ? (
                   <div className="text-sm text-slate-700 space-y-1">
+                    <div>Terms accepted: {packet.consent.termsAccepted ? "Yes" : "No"}</div>
+                    <div>Status updates: {packet.consent.emailUpdatesAccepted ? "Yes" : "No"}</div>
+                    <div>Signature: {packet.consent.signatureName || "Not provided"}</div>
                     <div>
-                      Terms accepted:{" "}
-                      {packet.consent.termsAccepted ? "Yes" : "No"}
-                    </div>
-                    <div>
-                      Status updates:{" "}
-                      {packet.consent.emailUpdatesAccepted ? "Yes" : "No"}
-                    </div>
-                    <div>
-                      Signature: {packet.consent.signatureName || "Not provided"}
-                    </div>
-                    <div>
-                      Signed at:{" "}
-                      {packet.consent.signedAt
-                        ? String(packet.consent.signedAt)
-                        : "Not provided"}
+                      Signed at: {packet.consent.signedAt ? String(packet.consent.signedAt) : "Not provided"}
                     </div>
                   </div>
                 ) : (
-                  <div className="text-sm text-slate-500">
-                    No consent record found.
-                  </div>
+                  <div className="text-sm text-slate-500">No consent record found.</div>
                 )}
               </div>
 
-              {/* Forge Assessment */}
+              {/* Forge Assessment (includes WHY inline - no right drawer) */}
               <div className="rounded border p-3">
-                <div className="font-medium mb-2">ForgeTomorrow assessment</div>
+                <div className="font-medium mb-2 flex items-center justify-between gap-3">
+                  <div className="flex items-center gap-2">
+                    ForgeTomorrow assessment
+                    <WHYScoreInfo />
+                  </div>
+
+                  <div className="flex items-center gap-2">
+                    {whyLoading ? (
+                      <span className="text-xs text-slate-500">Analyzing…</span>
+                    ) : whyData ? (
+                      <>
+                        <span className="text-sm font-semibold text-[#FF7043]">
+                          {typeof whyData?.score === "number" ? `${whyData.score}%` : "—"}
+                        </span>
+                        <button
+                          type="button"
+                          className="text-sm px-3 py-1.5 rounded border bg-white hover:bg-slate-50"
+                          onClick={() => setWhyShowDetails((v) => !v)}
+                        >
+                          {whyShowDetails ? "Hide details" : "View details"}
+                        </button>
+                      </>
+                    ) : (
+                      <button
+                        type="button"
+                        className="text-sm px-3 py-1.5 rounded border bg-white hover:bg-slate-50"
+                        onClick={() => {
+                          whyHasRunRef.current = false;
+                          setPacket((p) => (p ? { ...p } : p)); // light re-trigger
+                        }}
+                        disabled={whyLoading}
+                        title={
+                          whyError
+                            ? `Assessment failed: ${String(whyError?.message || "")}`
+                            : "Run assessment"
+                        }
+                      >
+                        {whyError ? "Retry" : "Run"}
+                      </button>
+                    )}
+                  </div>
+                </div>
+
+                {whyError ? (
+                  <div className="mt-2 text-xs text-rose-700">
+                    Assessment could not run. {String(whyError?.message || "")}
+                  </div>
+                ) : null}
+
+                {whyData?.summary ? (
+                  <div className="mt-2 text-sm text-slate-700">{whyData.summary}</div>
+                ) : (
+                  <div className="mt-2 text-sm text-slate-500">Not generated yet.</div>
+                )}
+
+                {whyShowDetails && whyData ? (
+                  <pre className="mt-3 whitespace-pre-wrap text-sm text-slate-800">
+                    {JSON.stringify(whyData, null, 2)}
+                  </pre>
+                ) : null}
+
+                {/* Existing packet forgeAssessment (kept) */}
                 {packet.forgeAssessment ? (
-                  <div className="text-sm text-slate-700 space-y-2">
+                  <div className="mt-4 text-sm text-slate-700 space-y-2">
                     <div className="text-slate-600">
                       Model: {packet.forgeAssessment.model || "Unknown"}{" "}
-                      {packet.forgeAssessment.modelVersion
-                        ? `(${packet.forgeAssessment.modelVersion})`
-                        : ""}
+                      {packet.forgeAssessment.modelVersion ? `(${packet.forgeAssessment.modelVersion})` : ""}
                       {packet.forgeAssessment.score !== null &&
                       packet.forgeAssessment.score !== undefined
                         ? ` • Score: ${packet.forgeAssessment.score}`
@@ -551,9 +613,7 @@ function PacketViewer({ applicationId, onClose }) {
                       {JSON.stringify(packet.forgeAssessment.result, null, 2)}
                     </pre>
                   </div>
-                ) : (
-                  <div className="text-sm text-slate-500">Not generated yet.</div>
-                )}
+                ) : null}
               </div>
 
               <div className="rounded border border-slate-200 bg-slate-50 p-3 text-xs text-slate-600">
@@ -583,6 +643,7 @@ export default function RecruiterJobApplicantsPage() {
   const [viewer, setViewer] = useState(null);
 
   const [openPacketAppId, setOpenPacketAppId] = useState(null);
+  const [openPacketCandidate, setOpenPacketCandidate] = useState(null);
 
   // Load viewer (so we can label internal test apps cleanly)
   useEffect(() => {
@@ -615,9 +676,7 @@ export default function RecruiterJobApplicantsPage() {
         setLoading(true);
         setLoadError(null);
 
-        const res = await fetch(
-          `/api/recruiter/job-postings/${jobId}/applications`
-        );
+        const res = await fetch(`/api/recruiter/job-postings/${jobId}/applications`);
         const json = await res.json().catch(() => ({}));
         if (!res.ok) throw new Error(json?.error || `HTTP ${res.status}`);
 
@@ -651,9 +710,7 @@ export default function RecruiterJobApplicantsPage() {
               <div className="text-xs text-slate-500">Applicants</div>
               <div className="text-lg font-semibold text-slate-900">
                 {job?.title || "Job"}{" "}
-                {job?.company ? (
-                  <span className="text-slate-500">• {job.company}</span>
-                ) : null}
+                {job?.company ? <span className="text-slate-500">• {job.company}</span> : null}
               </div>
             </div>
             <div className="flex items-center gap-2">
@@ -676,23 +733,17 @@ export default function RecruiterJobApplicantsPage() {
 
           <SectionCard
             title="Job"
-            right={
-              job?.id ? (
-                <span className="text-xs text-slate-500">Job ID: {job.id}</span>
-              ) : null
-            }
+            right={job?.id ? <span className="text-xs text-slate-500">Job ID: {job.id}</span> : null}
           >
             {loading ? (
               <div className="text-sm text-slate-500">Loading…</div>
             ) : job ? (
               <div className="text-sm text-slate-700 space-y-1">
                 <div>
-                  <span className="font-medium">Worksite:</span>{" "}
-                  {job.worksite || "Not provided"}
+                  <span className="font-medium">Worksite:</span> {job.worksite || "Not provided"}
                 </div>
                 <div>
-                  <span className="font-medium">Location:</span>{" "}
-                  {job.location || "Not provided"}
+                  <span className="font-medium">Location:</span> {job.location || "Not provided"}
                 </div>
               </div>
             ) : (
@@ -710,8 +761,7 @@ export default function RecruiterJobApplicantsPage() {
                   const candidateEmail = a?.candidate?.email || "";
                   const candidateId = a?.candidate?.id || null;
 
-                  const isViewer =
-                    viewer?.id && candidateId && viewer.id === candidateId;
+                  const isViewer = viewer?.id && candidateId && viewer.id === candidateId;
 
                   const displayName = isViewer
                     ? "Internal test application (You)"
@@ -721,22 +771,15 @@ export default function RecruiterJobApplicantsPage() {
                     <div key={a.id} className="rounded border p-3">
                       <div className="flex items-start justify-between gap-3">
                         <div>
-                          <div className="font-medium text-slate-900">
-                            {displayName}
-                          </div>
+                          <div className="font-medium text-slate-900">{displayName}</div>
 
                           {candidateEmail ? (
-                            <div className="text-sm text-slate-600">
-                              {candidateEmail}
-                            </div>
+                            <div className="text-sm text-slate-600">{candidateEmail}</div>
                           ) : null}
 
                           <div className="text-xs text-slate-500 mt-1">
-                            Applied:{" "}
-                            {a.appliedAt ? String(a.appliedAt) : "Unknown"}{" "}
-                            {a.submittedAt
-                              ? `• Submitted: ${String(a.submittedAt)}`
-                              : ""}
+                            Applied: {a.appliedAt ? String(a.appliedAt) : "Unknown"}{" "}
+                            {a.submittedAt ? `• Submitted: ${String(a.submittedAt)}` : ""}
                           </div>
                         </div>
 
@@ -744,7 +787,10 @@ export default function RecruiterJobApplicantsPage() {
                           <button
                             type="button"
                             className="text-sm px-3 py-1.5 rounded border bg-white hover:bg-slate-50"
-                            onClick={() => setOpenPacketAppId(a.id)}
+                            onClick={() => {
+                              setOpenPacketCandidate(a?.candidate || null);
+                              setOpenPacketAppId(a.id);
+                            }}
                           >
                             View packet
                           </button>
@@ -761,8 +807,8 @@ export default function RecruiterJobApplicantsPage() {
                       </div>
 
                       <div className="mt-3 text-xs text-slate-600">
-                        Packet includes: Cover, Resume, Additional Questions,
-                        Consent, Forge Assessment. Self-ID is excluded.
+                        Packet includes: Cover, Resume, Additional Questions, Consent, Forge Assessment.
+                        Self-ID is excluded.
                       </div>
                     </div>
                   );
@@ -777,7 +823,12 @@ export default function RecruiterJobApplicantsPage() {
         {openPacketAppId ? (
           <PacketViewer
             applicationId={openPacketAppId}
-            onClose={() => setOpenPacketAppId(null)}
+            job={job}
+            candidate={openPacketCandidate}
+            onClose={() => {
+              setOpenPacketAppId(null);
+              setOpenPacketCandidate(null);
+            }}
           />
         ) : null}
       </RecruiterLayout>
