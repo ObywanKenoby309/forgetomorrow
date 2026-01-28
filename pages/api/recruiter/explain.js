@@ -1,7 +1,7 @@
 // pages/api/recruiter/explain.js
 import { getServerSession } from "next-auth/next";
 import { authOptions } from "../auth/[...nextauth]";
-import { prisma } from "@/lib/prisma";
+import prisma from "@/lib/prisma";
 
 /**
  * Deterministic (non-LLM) explainability v1.5 (capability-first, human-readable):
@@ -553,6 +553,36 @@ function requiredSignalsFromJD(jdLower) {
   return required;
 }
 
+// ✅ NEW: JD sufficiency gate (prevents scoring on placeholder / empty JDs)
+function jdSufficiency(jdText, jdLower) {
+  const jd = String(jdText || "").trim();
+  const lower = String(jdLower || "").trim();
+
+  const charCount = jd.length;
+  const wordCount = (lower.match(/\b[a-z0-9]+\b/g) || []).length;
+
+  const abMatches = findSignalMatches(lower, SPEC.signals).filter((m) => m.tier === "A" || m.tier === "B");
+  const abMatchCount = abMatches.length;
+
+  // Placeholder patterns
+  const looksPlaceholder =
+    /\b(sample job description|not a real job posting|lorem ipsum|tbd|to be determined|placeholder)\b/i.test(jd);
+
+  // Conservative: require some substance OR explicit A/B signal hits
+  const hasEnoughText = charCount >= 240 && wordCount >= 35;
+  const hasEnoughSignals = abMatchCount >= 2;
+
+  const sufficient = !looksPlaceholder && (hasEnoughText || hasEnoughSignals);
+
+  return {
+    sufficient,
+    looksPlaceholder,
+    charCount,
+    wordCount,
+    abMatchCount,
+  };
+}
+
 function computeCapabilityCoverageScore(requiredSignals, matchedSignals) {
   const weights = SPEC.scoring.tier_weights;
 
@@ -977,19 +1007,92 @@ function buildExplain(resumeText, jobDescription) {
 
   const sentenceItems = splitIntoRankableSentences(resume);
 
-  // 1) Determine what matters from JD
-  const requiredSignals = requiredSignalsFromJD(jdLower);
+  // ✅ NEW: JD sufficiency check BEFORE we create any “requirements” / “not yet demonstrated”
+  const jdGate = jdSufficiency(jd, jdLower);
 
-  // 2) Match candidate capabilities against resume only
+  // Candidate capabilities matched against resume only (always safe to compute)
   const matchedSignalsAll = findSignalMatches(resumeLower, SPEC.signals);
   const matchedSignals = matchedSignalsAll.filter((m) => m.tier === "A" || m.tier === "B");
   const matchedSignalIds = new Set(matchedSignals.map((m) => m.signal_id));
 
-  // 3) Score on required-only denominator
+  // Skills chips (supporting scan) – only meaningful when JD is sufficient, but safe to compute
+  const jdExtracted = extractJDSkills(jd);
+  const jdSkills = Array.isArray(jdExtracted?.skills) ? jdExtracted.skills : [];
+  const contextNotYet = Array.isArray(jdExtracted?.context) ? jdExtracted.context : [];
+
+  const skillsChips = computeSkillsChips(jdSkills, resumeLower, matchedSignalIds);
+
+  // Transferables (resume-only)
+  const transferable = buildTransferableStrengths(matchedSignals, matchedSignals.filter((m) => m.tier === "A").length, matchedSignals.filter((m) => m.tier === "A").length);
+
+  // ✅ If JD is insufficient, DO NOT score and DO NOT generate “not yet demonstrated”
+  if (!jdGate.sufficient) {
+    const disclaimer =
+      "WHY provides directional guidance to support recruiter judgment. This evaluation requires a sufficiently detailed job description to determine role requirements.";
+
+    const summary =
+      "Needs job description detail. Add responsibilities, required tools/processes, and outcomes to run an evidence-based comparison.";
+
+    return {
+      score: null,
+      grade: "Needs JD",
+      summary,
+      disclaimer,
+
+      // Keep these present, but neutral
+      reasons: [],
+      skills: {
+        matched: skillsChips.matched,
+        gaps: [], // do not show “gaps” when JD is not sufficient
+        transferable,
+      },
+      strengths: matchedSignals.map((m) => m.label).slice(0, 12),
+      gaps: [],
+
+      interviewQuestions: {
+        behavioral: [
+          "Tell me about a time you handled competing priorities under a tight deadline. What did you prioritize and why?",
+          "Describe a process you improved. What changed and what was the impact?",
+          "How do you communicate when expectations shift or a customer’s needs change midstream?",
+        ],
+        occupational: [
+          "Share an example of delivering outcomes in a similar role. What was your ownership and what changed as a result?",
+          "What tools or workflows do you typically use to manage customer lifecycle work?",
+        ],
+      },
+
+      _debug: {
+        jd_sufficiency: jdGate,
+        context_not_yet_demonstrated: contextNotYet,
+      },
+
+      match: { score: null, grade: "Needs JD", summary, disclaimer },
+
+      signals: {
+        required: [],
+        matched: matchedSignals.map((m) => ({
+          signal_id: m.signal_id,
+          label: m.label,
+          tier: m.tier,
+          strength: m.strength,
+          match_type: m.match_type,
+          evidence: pickEvidenceForSignal(m, sentenceItems),
+        })),
+        not_yet_demonstrated: [],
+        context_not_yet_demonstrated: contextNotYet,
+        transferable,
+      },
+    };
+  }
+
+  // 1) Determine what matters from JD (ONLY when sufficient)
+  const requiredSignals = requiredSignalsFromJD(jdLower);
+
+  // 2) Score on required-only denominator
   const cov = computeCapabilityCoverageScore(requiredSignals, matchedSignals);
   const grade = gradeFrom(cov.score, cov.tierAHit, cov.tierARequiredForStrong);
 
-  // 4) Not yet demonstrated capabilities, only for required capabilities with no evidence
+  // 3) Not yet demonstrated capabilities (ONLY required with no evidence)
   const notYetDemonstratedSignals = requiredSignals
     .filter((s) => !matchedSignalIds.has(s.id))
     .map((s) => ({
@@ -999,14 +1102,7 @@ function buildExplain(resumeText, jobDescription) {
       why_missing: "Not yet demonstrated in the provided resume text.",
     }));
 
-  // 5) Skills chips for scan, with style/context separated and suppression enabled
-  const jdExtracted = extractJDSkills(jd);
-  const jdSkills = Array.isArray(jdExtracted?.skills) ? jdExtracted.skills : [];
-  const contextNotYet = Array.isArray(jdExtracted?.context) ? jdExtracted.context : [];
-
-  const skillsChips = computeSkillsChips(jdSkills, resumeLower, matchedSignalIds);
-
-  // 6) Skill summary line uses cluster normalization and stays non-punitive
+  // 4) Skill summary line uses cluster normalization and stays non-punitive
   const skillsLine =
     (skillsChips.total >= SPEC.scoring.skills_floor_for_summary || skillsChips.clusterTotal >= SPEC.scoring.skills_floor_for_summary)
       ? `Supporting coverage: ${skillsChips.clusterMatched}/${Math.max(1, skillsChips.clusterTotal)} skill clusters present.`
@@ -1025,7 +1121,7 @@ function buildExplain(resumeText, jobDescription) {
   const disclaimer =
     "WHY provides directional guidance to support recruiter judgment. It does not make hiring decisions, and it may miss context if the resume text is incomplete.";
 
-  // 7) Reasons with best evidence
+  // 5) Reasons with best evidence
   const reasons = matchedSignals
     .slice()
     .sort((a, b) => {
@@ -1040,7 +1136,7 @@ function buildExplain(resumeText, jobDescription) {
       evidence: pickEvidenceForSignal(m, sentenceItems),
     }));
 
-  // 8) Interview questions
+  // 6) Interview questions
   const behavioral = [
     "Tell me about a time you handled competing priorities under a tight deadline. What did you prioritize and why?",
     "Describe a process you improved. What changed and what was the impact?",
@@ -1055,9 +1151,6 @@ function buildExplain(resumeText, jobDescription) {
         .map((g) => `If this role needs ${g.label}, how would you ramp quickly and demonstrate results in the first 30–60 days?`)
     )
     .slice(0, 6);
-
-  // 9) Transferable strengths
-  const transferable = buildTransferableStrengths(matchedSignals, cov.tierAHit, cov.tierATotal);
 
   // Backward-compatible fields
   const strengths = matchedSignals.map((m) => m.label).slice(0, 12);
@@ -1083,6 +1176,7 @@ function buildExplain(resumeText, jobDescription) {
 
     // Debug-friendly
     _debug: {
+      jd_sufficiency: jdGate,
       requiredSignals: requiredSignals.map((s) => ({ id: s.id, tier: s.tier, label: s.label })),
       tierARequiredForStrong: cov.tierARequiredForStrong,
       tierAHit: cov.tierAHit,
