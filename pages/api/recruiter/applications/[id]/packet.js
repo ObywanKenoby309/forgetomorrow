@@ -73,6 +73,7 @@ export default async function handler(req, res) {
             company: true,
             accountKey: true,
             additionalQuestions: true,
+			description: true,
           },
         },
         user: {

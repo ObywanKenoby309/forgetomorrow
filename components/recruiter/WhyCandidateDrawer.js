@@ -237,9 +237,9 @@ function WhyPanel({
     () => ({
       [SECTION_KEYS.summary]: true,
       [SECTION_KEYS.requirements]: true,
-      [SECTION_KEYS.skills]: true, // ✅ scan-friendly; open by default
-      [SECTION_KEYS.career]: true, // ✅ keep visible
-      [SECTION_KEYS.filters]: true, // ✅ keep visible
+      [SECTION_KEYS.skills]: true,
+      [SECTION_KEYS.career]: true,
+      [SECTION_KEYS.filters]: true,
     }),
     [SECTION_KEYS]
   );
@@ -678,6 +678,39 @@ function WhyPanel({
   );
 }
 
+/**
+ * ✅ NEW: Inline renderer (NO overlay, NO drawer)
+ * Use this inside packet modals / cards.
+ *
+ * Props:
+ * - explain, mode
+ * - onViewCandidate? optional
+ * - title? optional
+ */
+export function WhyCandidateInline({
+  explain,
+  mode = "lite",
+  onViewCandidate,
+  title = "Why this candidate",
+}) {
+  if (!explain) return null;
+
+  // Inline has no "close", so we hide close controls and omit close handler.
+  return (
+    <div className="rounded-lg border bg-white overflow-hidden">
+      <WhyPanel
+        title={title}
+        explain={explain}
+        mode={mode}
+        onClose={() => {}}
+        onViewCandidate={onViewCandidate}
+        showClose={false}
+        compactHeader
+      />
+    </div>
+  );
+}
+
 export default function WhyCandidateDrawer({
   open,
   onClose,
@@ -765,7 +798,7 @@ export function WhyCandidateCompareDrawer({
         }}
       />
 
-            {/* Two panels: responsive */}
+      {/* Two panels: responsive */}
       <aside
         role="dialog"
         aria-modal="true"
@@ -778,7 +811,7 @@ export function WhyCandidateCompareDrawer({
           zIndex: 71,
           display: "grid",
           gridTemplateColumns: "repeat(2, minmax(0, 1fr))",
-          minHeight: 0, // ✅ critical: allow inner overflow scrolling in grid children
+          minHeight: 0,
         }}
         className="max-lg:grid-cols-1"
       >
@@ -787,7 +820,7 @@ export function WhyCandidateCompareDrawer({
           className="hidden lg:flex min-h-0"
           style={{
             height: "100%",
-            minHeight: 0, // ✅ critical
+            minHeight: 0,
             background: "#fff",
             borderLeft: "1px solid #e5e7eb",
             boxShadow: "-8px 0 24px rgba(0,0,0,0.12)",
@@ -806,12 +839,12 @@ export function WhyCandidateCompareDrawer({
           />
         </div>
 
-                {/* Right (always visible) */}
+        {/* Right (always visible) */}
         <div
           className="min-h-0"
           style={{
             height: "100%",
-            minHeight: 0, // ✅ critical
+            minHeight: 0,
             background: "#fff",
             borderLeft: "1px solid #e5e7eb",
             boxShadow: "-8px 0 24px rgba(0,0,0,0.12)",

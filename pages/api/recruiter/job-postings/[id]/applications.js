@@ -115,7 +115,7 @@ export default async function handler(req, res) {
         location: job.location,
         type: job.type,
         compensation: job.compensation,
-		description: job.description
+		description: job.description,
         status: job.status,
         urgent: job.urgent,
         accountKey: jobAccountKey,
