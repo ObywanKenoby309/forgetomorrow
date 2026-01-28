@@ -1,7 +1,7 @@
 // pages/api/recruiter/applications/[id]/packet.js
 import prisma from "@/lib/prisma";
 import { getServerSession } from "next-auth/next";
-import { authOptions } from "@/lib/auth";
+import { authOptions } from "@/pages/api/auth/[...nextauth]";
 
 function toInt(val) {
   const n = Number(val);
@@ -26,17 +26,15 @@ export default async function handler(req, res) {
       return res.status(405).json({ error: "Method not allowed" });
     }
 
-    if (!prisma) {
-      return res.status(500).json({ error: "Prisma client not initialized" });
-    }
-
-    // ✅ SERVER SESSION ONLY (NO localStorage / client session)
+    // Server session only (NO localStorage / browser session)
     const session = await getServerSession(req, res, authOptions);
     const userId = session?.user?.id;
     if (!userId) return res.status(401).json({ error: "Unauthorized" });
 
     const applicationId = toInt(req.query.id);
-    if (!applicationId) return res.status(400).json({ error: "Invalid application id" });
+    if (!applicationId) {
+      return res.status(400).json({ error: "Invalid application id" });
+    }
 
     // Pull the caller's org access (accountKey + memberships)
     const viewer = await prisma.user.findUnique({
@@ -174,8 +172,7 @@ export default async function handler(req, res) {
         : null,
       candidate: {
         id: app.user?.id || null,
-        name:
-          app.user?.name || [app.user?.firstName, app.user?.lastName].filter(Boolean).join(" ") || null,
+        name: app.user?.name || [app.user?.firstName, app.user?.lastName].filter(Boolean).join(" ") || null,
         email: app.user?.email || null,
       },
 
