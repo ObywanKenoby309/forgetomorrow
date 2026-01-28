@@ -593,10 +593,57 @@ function PacketViewer({ applicationId, job, candidate, onClose }) {
                 )}
 
                 {whyShowDetails && whyData ? (
-                  <pre className="mt-3 whitespace-pre-wrap text-sm text-slate-800">
-                    {JSON.stringify(whyData, null, 2)}
-                  </pre>
-                ) : null}
+  <div className="mt-3 space-y-3">
+    {/* Matched */}
+    <div className="rounded border p-3">
+      <div className="text-xs font-semibold text-slate-700 mb-2">Matched capabilities</div>
+      <div className="space-y-2">
+        {(whyData?.signals?.matched || []).slice(0, 8).map((m, idx) => (
+          <div key={`${m.signal_id}-${idx}`} className="text-sm">
+            <div className="font-medium text-slate-900">{m.label}</div>
+            {(m.evidence || []).slice(0, 2).map((e, i) => (
+              <div key={i} className="text-slate-700 text-sm mt-1">
+                • <span className="italic">{e?.text}</span>
+              </div>
+            ))}
+          </div>
+        ))}
+        {!(whyData?.signals?.matched || []).length ? (
+          <div className="text-sm text-slate-500">No matched capability evidence found.</div>
+        ) : null}
+      </div>
+    </div>
+
+    {/* Not yet demonstrated */}
+    <div className="rounded border p-3">
+      <div className="text-xs font-semibold text-slate-700 mb-2">Not yet demonstrated</div>
+      <div className="flex flex-wrap gap-2">
+        {(whyData?.signals?.not_yet_demonstrated || []).slice(0, 10).map((g, idx) => (
+          <span
+            key={`${g.signal_id}-${idx}`}
+            className="text-xs px-2 py-1 rounded-full border bg-rose-50 border-rose-200 text-rose-800"
+          >
+            {g.label}
+          </span>
+        ))}
+        {!(whyData?.signals?.not_yet_demonstrated || []).length ? (
+          <span className="text-sm text-emerald-700">No critical gaps detected.</span>
+        ) : null}
+      </div>
+    </div>
+
+    {/* Keep raw JSON available */}
+    <details className="rounded border p-3">
+      <summary className="text-xs font-semibold text-slate-700 cursor-pointer">
+        Raw JSON (debug)
+      </summary>
+      <pre className="mt-2 whitespace-pre-wrap text-xs text-slate-800">
+        {JSON.stringify(whyData, null, 2)}
+      </pre>
+    </details>
+  </div>
+) : null}
+
 
                 {/* Existing packet forgeAssessment (kept) */}
                 {packet.forgeAssessment ? (
