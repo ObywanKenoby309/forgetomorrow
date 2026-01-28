@@ -63,7 +63,7 @@ function WhyPanel({
 }) {
   const isFull = mode === "full";
   const {
-    score = 0,
+    score = null,
     summary = "",
     reasons = [],
     skills = { matched: [], gaps: [], transferable: [] },
@@ -83,6 +83,19 @@ function WhyPanel({
     const arr = explain?.signals?.gaps || explain?.signals?.not_yet_demonstrated || [];
     return Array.isArray(arr) ? arr : [];
   }, [explain]);
+
+  // ✅ JD sufficiency / "Needs JD" gate (prevents labeling resume-only scan as JD requirements)
+  const needsJD = useMemo(() => {
+    const grade = String(explain?.grade || "").trim();
+    const debugSufficient = explain?._debug?.jd_sufficiency?.sufficient;
+    const hasDebug = typeof debugSufficient === "boolean";
+
+    if (grade.toLowerCase() === "needs jd") return true;
+    if (hasDebug && debugSufficient === false) return true;
+    if (score === null || score === undefined) return true;
+
+    return false;
+  }, [explain, score]);
 
   // Best-effort parse summary counts if present, otherwise infer hit counts
   const tierCountsFromSummary = useMemo(() => {
@@ -146,7 +159,9 @@ function WhyPanel({
     return [];
   }
 
-  // Build scan-table rows from matched + gaps (Tier A/B only)
+  // Build scan-table rows:
+  // - If JD is sufficient: show required scan (matched + gaps)
+  // - If JD is NOT sufficient: show resume-only scan (matched only) and DO NOT imply requirements
   const scanRows = useMemo(() => {
     const rows = [];
     const seen = new Set();
@@ -157,26 +172,28 @@ function WhyPanel({
         .toLowerCase()}`;
     }
 
-    // Matched first
+    // Always: matched first (Tier A/B only)
     for (const m of matchedSignals) {
       const tier = m?.tier || "B";
       if (tier !== "A" && tier !== "B") continue;
-      const label = m?.label || m?.requirement || m?.signal_id || "Requirement";
+      const label = m?.label || m?.requirement || m?.signal_id || "Capability";
       const k = keyFor(tier, label);
       if (seen.has(k)) continue;
       seen.add(k);
       rows.push({ label, tier, matched: true });
     }
 
-    // Then gaps (unchecked)
-    for (const g of gapsSignals) {
-      const tier = g?.tier || "B";
-      if (tier !== "A" && tier !== "B") continue;
-      const label = g?.label || g?.signal_id || "Requirement";
-      const k = keyFor(tier, label);
-      if (seen.has(k)) continue;
-      seen.add(k);
-      rows.push({ label, tier, matched: false });
+    // Only when JD is sufficient: include gaps (unchecked)
+    if (!needsJD) {
+      for (const g of gapsSignals) {
+        const tier = g?.tier || "B";
+        if (tier !== "A" && tier !== "B") continue;
+        const label = g?.label || g?.signal_id || "Capability";
+        const k = keyFor(tier, label);
+        if (seen.has(k)) continue;
+        seen.add(k);
+        rows.push({ label, tier, matched: false });
+      }
     }
 
     rows.sort((a, b) => {
@@ -188,13 +205,14 @@ function WhyPanel({
     });
 
     return isFull ? rows : rows.slice(0, 10);
-  }, [matchedSignals, gapsSignals, isFull]);
+  }, [matchedSignals, gapsSignals, isFull, needsJD]);
 
   // ✅ NEW: “No critical gaps detected” only when true (Tier A only)
   const noCriticalGaps = useMemo(() => {
+    if (needsJD) return false; // do not claim "no gaps" when JD is missing
     const tierAUnmatched = scanRows.filter((r) => r?.tier === "A" && !r?.matched);
     return tierAUnmatched.length === 0;
-  }, [scanRows]);
+  }, [scanRows, needsJD]);
 
   // ✅ NEW: row drill-down state (evidence opens per row)
   const [openRowKey, setOpenRowKey] = useState(null);
@@ -322,6 +340,13 @@ function WhyPanel({
   const maxEvidenceLite = 1;
   const maxEvidenceFull = 3;
 
+  // Title + empty-state messaging for the scan table
+  const scanTitle = needsJD ? "Resume capabilities (scan)" : "Required capabilities (scan)";
+
+  const scanEmptyMessage = needsJD
+    ? "Job description is too short to infer requirements. Showing resume-only capability scan."
+    : "No requirement mappings available.";
+
   return (
     <div className="h-full flex flex-col">
       {/* Header */}
@@ -354,14 +379,26 @@ function WhyPanel({
           }
         >
           {!!summary && <p className="text-sm text-slate-600 mt-1">{summary}</p>}
+
+          {needsJD ? (
+            <div className="mt-2 rounded border bg-slate-50 p-3">
+              <div className="text-sm font-semibold text-slate-800">
+                Add a job description to generate requirements and a WHY score.
+              </div>
+              <div className="text-xs text-slate-600 mt-1">
+                Right now, this view is resume-only. It will not infer or score requirements until the JD has enough detail.
+              </div>
+            </div>
+          ) : null}
+
           <p className="mt-2 text-xs text-slate-500">
             Evidence-first guidance for recruiter judgment. Recruiters review and override all decisions.
           </p>
         </CollapsibleSection>
 
-        {/* Requirements (Scan-first + click row for evidence) */}
+        {/* Requirements / Resume scan table (click row for evidence) */}
         <CollapsibleSection
-          title="Required capabilities (scan)"
+          title={scanTitle}
           isOpen={Boolean(openMap[SECTION_KEYS.requirements])}
           onToggle={() => toggle(SECTION_KEYS.requirements)}
           right={
@@ -370,7 +407,7 @@ function WhyPanel({
                 Tier A{" "}
                 <span className="font-semibold">
                   {typeof tableStats.tierAHit === "number" ? tableStats.tierAHit : 0}
-                  {typeof tableStats.tierATotal === "number" ? `/${tableStats.tierATotal}` : ""}
+                  {!needsJD && typeof tableStats.tierATotal === "number" ? `/${tableStats.tierATotal}` : ""}
                 </span>
               </span>
               <span className="text-slate-300">•</span>
@@ -378,15 +415,23 @@ function WhyPanel({
                 Tier B{" "}
                 <span className="font-semibold">
                   {typeof tableStats.tierBHit === "number" ? tableStats.tierBHit : 0}
-                  {typeof tableStats.tierBTotal === "number" ? `/${tableStats.tierBTotal}` : ""}
+                  {!needsJD && typeof tableStats.tierBTotal === "number" ? `/${tableStats.tierBTotal}` : ""}
                 </span>
               </span>
             </div>
           }
         >
+          {needsJD ? (
+            <div className="mb-3 text-xs text-slate-600">
+              JD is missing or too short - labels below reflect what is evidenced in the resume only.
+            </div>
+          ) : null}
+
           <div className="rounded border overflow-hidden bg-white">
             <div className="px-3 py-2 border-b bg-slate-50 flex items-center justify-between gap-3">
-              <div className="text-xs font-semibold text-slate-700">Requirement</div>
+              <div className="text-xs font-semibold text-slate-700">
+                {needsJD ? "Capability" : "Requirement"}
+              </div>
               <div className="flex items-center gap-6">
                 <div className="text-xs font-semibold text-slate-700 w-[78px] text-center">
                   Tier A
@@ -399,9 +444,7 @@ function WhyPanel({
 
             <div className="divide-y">
               {scanRows.length === 0 ? (
-                <div className="px-3 py-3 text-sm text-slate-500">
-                  No requirement mappings available.
-                </div>
+                <div className="px-3 py-3 text-sm text-slate-500">{scanEmptyMessage}</div>
               ) : (
                 scanRows.map((row, idx) => {
                   const isA = row.tier === "A";
@@ -554,7 +597,11 @@ function WhyPanel({
                     Not evidenced in submitted materials
                   </div>
 
-                  {noCriticalGaps ? (
+                  {needsJD ? (
+                    <div className="text-sm text-slate-600">
+                      Add a job description to show what is required vs. what is evidenced.
+                    </div>
+                  ) : noCriticalGaps ? (
                     <div className="text-sm text-emerald-700">
                       No critical gaps detected.
                     </div>
@@ -587,7 +634,11 @@ function WhyPanel({
                     Not evidenced in submitted materials (preview)
                   </div>
 
-                  {noCriticalGaps ? (
+                  {needsJD ? (
+                    <div className="text-sm text-slate-600">
+                      Add a job description to show what is required vs. what is evidenced.
+                    </div>
+                  ) : noCriticalGaps ? (
                     <div className="text-sm text-emerald-700">
                       No critical gaps detected.
                     </div>
