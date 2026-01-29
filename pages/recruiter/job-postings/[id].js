@@ -104,9 +104,7 @@ function HybridResumeViewer({ value }) {
     <div className="rounded border bg-white p-4">
       {/* Header (centered like the Hybrid PDF) */}
       <div className="text-center">
-        <div className="text-xl font-bold text-slate-900">
-          {personalInfo.name || "Candidate"}
-        </div>
+        <div className="text-xl font-bold text-slate-900">{personalInfo.name || "Candidate"}</div>
         {contactLine ? <div className="text-xs text-slate-600 mt-1">{contactLine}</div> : null}
         {extraLines.length ? (
           <div className="text-xs text-slate-600 mt-1 space-y-0.5">
@@ -229,7 +227,9 @@ function HybridResumeViewer({ value }) {
                         {org ? <span className="font-normal text-slate-700"> • {org}</span> : null}
                       </div>
                     </div>
-                    {dates ? <div className="text-xs text-slate-500 whitespace-nowrap">{dates}</div> : null}
+                    {dates ? (
+                      <div className="text-xs text-slate-500 whitespace-nowrap">{dates}</div>
+                    ) : null}
                   </div>
 
                   {bullets.length ? (
@@ -241,7 +241,9 @@ function HybridResumeViewer({ value }) {
                       ))}
                     </ul>
                   ) : proj.description ? (
-                    <div className="mt-2 text-sm text-slate-800 whitespace-pre-wrap">{proj.description}</div>
+                    <div className="mt-2 text-sm text-slate-800 whitespace-pre-wrap">
+                      {proj.description}
+                    </div>
                   ) : null}
                 </div>
               );
@@ -269,7 +271,9 @@ function HybridResumeViewer({ value }) {
                   {edu.startDate || "—"} – {edu.endDate || "Present"}
                 </div>
                 {edu.description ? (
-                  <div className="mt-1 text-sm text-slate-800 whitespace-pre-wrap">{edu.description}</div>
+                  <div className="mt-1 text-sm text-slate-800 whitespace-pre-wrap">
+                    {edu.description}
+                  </div>
                 ) : null}
               </div>
             ))}
@@ -313,7 +317,9 @@ function HybridResumeViewer({ value }) {
 
             return (
               <div key={i} className="mt-5">
-                <div className="text-xs font-bold uppercase tracking-wide border-b pb-1">{title}</div>
+                <div className="text-xs font-bold uppercase tracking-wide border-b pb-1">
+                  {title}
+                </div>
                 {items && items.length ? (
                   <ul className="mt-2 space-y-1">
                     {items.map((item, idx) => (
@@ -334,7 +340,8 @@ function HybridResumeViewer({ value }) {
 
       {/* Fallback note */}
       <div className="mt-4 text-[11px] text-slate-500">
-        Recruiter view uses the Hybrid layout. Downloadable versions will be handled in the packet export pass.
+        Recruiter view uses the Hybrid layout. Downloadable versions will be handled in the packet export
+        pass.
       </div>
     </div>
   );
@@ -391,11 +398,7 @@ function PacketViewer({ applicationId, job, candidate, onClose }) {
       if (whyHasRunRef.current) return;
 
       const resumeText =
-        typeof resumeValue === "string"
-          ? resumeValue
-          : resumeValue
-          ? JSON.stringify(resumeValue)
-          : "";
+        typeof resumeValue === "string" ? resumeValue : resumeValue ? JSON.stringify(resumeValue) : "";
 
       const jdText = String(jobDescription || "").trim();
 
@@ -479,7 +482,9 @@ function PacketViewer({ applicationId, job, candidate, onClose }) {
               <div className="rounded border p-3">
                 <div className="font-medium mb-2">Cover</div>
                 {packet.cover?.content ? (
-                  <pre className="whitespace-pre-wrap text-sm text-slate-800">{packet.cover.content}</pre>
+                  <pre className="whitespace-pre-wrap text-sm text-slate-800">
+                    {packet.cover.content}
+                  </pre>
                 ) : (
                   <div className="text-sm text-slate-500">None provided.</div>
                 )}
@@ -509,7 +514,9 @@ function PacketViewer({ applicationId, job, candidate, onClose }) {
                   <div className="space-y-2">
                     {packet.additionalQuestions.map((a, idx) => (
                       <div key={`${a.questionKey}-${idx}`} className="text-sm">
-                        <div className="font-medium text-slate-800">{a.label || a.questionKey}</div>
+                        <div className="font-medium text-slate-800">
+                          {a.label || a.questionKey}
+                        </div>
                         <div className="text-slate-700 whitespace-pre-wrap">
                           {typeof a.value === "string" ? a.value : JSON.stringify(a.value)}
                         </div>
@@ -527,10 +534,13 @@ function PacketViewer({ applicationId, job, candidate, onClose }) {
                 {packet.consent ? (
                   <div className="text-sm text-slate-700 space-y-1">
                     <div>Terms accepted: {packet.consent.termsAccepted ? "Yes" : "No"}</div>
-                    <div>Status updates: {packet.consent.emailUpdatesAccepted ? "Yes" : "No"}</div>
+                    <div>
+                      Status updates: {packet.consent.emailUpdatesAccepted ? "Yes" : "No"}
+                    </div>
                     <div>Signature: {packet.consent.signatureName || "Not provided"}</div>
                     <div>
-                      Signed at: {packet.consent.signedAt ? String(packet.consent.signedAt) : "Not provided"}
+                      Signed at:{" "}
+                      {packet.consent.signedAt ? String(packet.consent.signedAt) : "Not provided"}
                     </div>
                   </div>
                 ) : (
@@ -617,7 +627,9 @@ function PacketViewer({ applicationId, job, candidate, onClose }) {
                   <div className="mt-4 text-sm text-slate-700 space-y-2">
                     <div className="text-slate-600">
                       Model: {packet.forgeAssessment.model || "Unknown"}{" "}
-                      {packet.forgeAssessment.modelVersion ? `(${packet.forgeAssessment.modelVersion})` : ""}
+                      {packet.forgeAssessment.modelVersion
+                        ? `(${packet.forgeAssessment.modelVersion})`
+                        : ""}
                       {packet.forgeAssessment.score !== null &&
                       packet.forgeAssessment.score !== undefined
                         ? ` • Score: ${packet.forgeAssessment.score}`
@@ -809,7 +821,7 @@ export default function RecruiterJobApplicantsPage() {
                             View packet
                           </button>
 
-                          {/* ✅ ENABLED: Server-side zip download endpoint */}
+                          {/* ✅ ENABLED: server-side zip download */}
                           <a
                             className="text-sm px-3 py-1.5 rounded border bg-white hover:bg-slate-50"
                             href={`/api/recruiter/applications/${a.id}/packet.zip`}
