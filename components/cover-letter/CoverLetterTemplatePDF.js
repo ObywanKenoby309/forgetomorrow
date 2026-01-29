@@ -1,17 +1,8 @@
-// components/cover-letter/CoverLetterTemplatePDF.js
-import { Document, Page, Text, View, StyleSheet } from '@react-pdf/renderer';
+// components/cover-letter/CoverLetterTemplate.js
+// THE FORGE LETTER — FINAL, PRINT-SAFE, HR-APPROVED
+import React from 'react';
 
-const styles = StyleSheet.create({
-  page: { padding: 40, fontSize: 11, fontFamily: 'Helvetica' },
-  header: { marginBottom: 20 },
-  name: { fontSize: 18, fontWeight: 'bold', marginBottom: 4 },
-  contact: { fontSize: 10, color: '#555', marginBottom: 20 },
-  section: { marginBottom: 16 },
-  text: { marginBottom: 6, lineHeight: 1.5 },
-});
-
-export default function CoverLetterTemplatePDF({ data }) {
-  const safeData = data || {};
+export default function CoverLetterTemplate({ data }) {
   const {
     fullName = 'Your Name',
     email = '',
@@ -20,52 +11,103 @@ export default function CoverLetterTemplatePDF({ data }) {
     portfolio = '',
     recipient = 'Hiring Manager',
     company = 'the company',
-    role = '',
     greeting = 'Dear Hiring Manager,',
     opening = '',
     body = '',
     closing = '',
     signoff = 'Sincerely,',
-  } = safeData;
+  } = data;
 
-  const paragraphs = [
-    opening,
-    ...(body ? body.split('\n').filter(Boolean) : []),
-    closing,
-  ].filter(Boolean);
+  const contact = [email, phone, location]
+    .filter(Boolean)
+    .slice(0, 3)
+    .join(' · ');
+
+  const bodyLines = body
+    .split('\n')
+    .map(line => line.trim())
+    .filter(line => line.length > 0);
 
   return (
-    <Document>
-      <Page size="A4" style={styles.page}>
-        <View style={styles.header}>
-          <Text style={styles.name}>{fullName}</Text>
-          <Text style={styles.contact}>
-            {[email, phone, location, portfolio].filter(Boolean).join(' • ')}
-          </Text>
-        </View>
-        <View style={styles.section}>
-          <Text>{company}</Text>
-          {recipient !== 'Hiring Manager' && <Text>Attn: {recipient}</Text>}
-        </View>
-        <View style={styles.section}>
-          <Text>{greeting}</Text>
-        </View>
-        {paragraphs.length > 0 ? (
-          paragraphs.map((para, i) => (
-            <View key={i} style={styles.section}>
-              <Text style={styles.text}>{para}</Text>
-            </View>
-          ))
-        ) : (
-          <View style={styles.section}>
-            <Text style={styles.text}>[No content]</Text>
-          </View>
+    <div
+      style={{
+        fontFamily: 'Helvetica Neue',  // ONLY THIS — NO FALLBACKS
+        fontSize: 11,
+        lineHeight: 1.6,
+        color: '#1f2937',
+        maxWidth: 650,
+        margin: '0 auto',
+      }}
+    >
+      {/* HEADER — TOP LEFT */}
+      <div style={{ marginBottom: 40, textAlign: 'left' }}>
+        <div style={{ fontWeight: 700, fontSize: 13 }}>{fullName}</div>
+        {(contact || portfolio) && (
+          <div style={{ fontSize: 10, color: '#6b7280', marginTop: 4 }}>
+            {contact && <span>{contact}</span>}
+            {contact && portfolio && <span> · </span>}
+            {portfolio && (
+              <span style={{ color: '#1f2937', fontWeight: 500 }}>
+                {portfolio}
+              </span>
+            )}
+          </div>
         )}
-        <View style={styles.section}>
-          <Text>{signoff}</Text>
-          <Text style={{ marginTop: 30 }}>{fullName}</Text>
-        </View>
-      </Page>
-    </Document>
+      </div>
+
+      {/* RECIPIENT */}
+      <div style={{ marginBottom: 24 }}>
+        <div>{recipient}</div>
+        <div>{company}</div>
+      </div>
+
+      {/* GREETING */}
+      <div style={{ marginBottom: 20, fontWeight: 500 }}>
+        {greeting}
+      </div>
+
+      {/* OPENING */}
+      {opening && (
+        <p style={{ margin: '0 0 16px 0', textAlign: 'justify', fontSize: 11 }}>
+          {opening}
+        </p>
+      )}
+
+      {/* BODY — AUTO BULLETS */}
+      {bodyLines.length > 0 && (
+        <div style={{ margin: '16px 0' }}>
+          {bodyLines.map((line, i) => (
+            <p
+              key={i}
+              style={{
+                margin: '8px 0',
+                textAlign: 'justify',
+                fontSize: 11,
+                position: 'relative',
+                paddingLeft: 16,
+              }}
+            >
+              <span style={{ position: 'absolute', left: 0, fontWeight: 700 }}>
+                •
+              </span>
+              {line}
+            </p>
+          ))}
+        </div>
+      )}
+
+      {/* CLOSING */}
+      {closing && (
+        <p style={{ margin: '20px 0 32px 0', textAlign: 'justify', fontSize: 11 }}>
+          {closing}
+        </p>
+      )}
+
+      {/* SIGNOFF */}
+      <div style={{ marginTop: 40 }}>
+        <div style={{ fontWeight: 500 }}>{signoff}</div>
+        <div style={{ fontWeight: 700, marginTop: 8 }}>{fullName}</div>
+      </div>
+    </div>
   );
 }

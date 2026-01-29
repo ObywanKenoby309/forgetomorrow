@@ -37,15 +37,15 @@ const styles = StyleSheet.create({
 
 export default function ReverseResumeTemplatePDF({ data }) {
   const {
-    personalInfo,
-    summary,
+    personalInfo = {},
+    summary = '',
     workExperiences = [],
     educationList = [],
     skills = [],
     languages = [],
     certifications = [],
     customSections = [],
-  } = data;
+  } = data || {};
 
   return (
     <Document>
