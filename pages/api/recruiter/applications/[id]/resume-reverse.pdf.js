@@ -30,6 +30,32 @@ function safeJsonParse(maybeJson) {
   }
 }
 
+// ✅ Normalize resume content into the shape the PDF expects
+function normalizeResumeData(raw) {
+  const data = raw && typeof raw === "object" ? raw : null;
+  if (!data) return null;
+
+  const inner =
+    (data.data && typeof data.data === "object" && data.data) ||
+    (data.resume && typeof data.resume === "object" && data.resume) ||
+    data;
+
+  const personalInfo =
+    inner.personalInfo && typeof inner.personalInfo === "object" ? inner.personalInfo : {};
+
+  return {
+    personalInfo,
+    summary: safeString(inner.summary || ""),
+    workExperiences: Array.isArray(inner.workExperiences) ? inner.workExperiences : [],
+    projects: Array.isArray(inner.projects) ? inner.projects : [],
+    educationList: Array.isArray(inner.educationList) ? inner.educationList : [],
+    skills: Array.isArray(inner.skills) ? inner.skills : [],
+    languages: Array.isArray(inner.languages) ? inner.languages : [],
+    certifications: Array.isArray(inner.certifications) ? inner.certifications : [],
+    customSections: Array.isArray(inner.customSections) ? inner.customSections : [],
+  };
+}
+
 export default async function handler(req, res) {
   try {
     if (req.method !== "GET") {
@@ -103,14 +129,19 @@ export default async function handler(req, res) {
       return res.status(404).json({ error: "Resume not found" });
     }
 
-    const resumeData = safeJsonParse(app.resume.content);
-    if (!resumeData) {
+    const raw = safeJsonParse(app.resume.content);
+    if (!raw) {
       return res.status(400).json({ error: "Resume content is not valid JSON" });
     }
 
+    const resumeData = normalizeResumeData(raw);
+    if (!resumeData) {
+      return res.status(400).json({ error: "Resume content could not be normalized" });
+    }
+
     const candidateName =
-      app.user?.name ||
-      [app.user?.firstName, app.user?.lastName].filter(Boolean).join(" ") ||
+      safeString(app.user?.name).trim() ||
+      [safeString(app.user?.firstName).trim(), safeString(app.user?.lastName).trim()].filter(Boolean).join(" ") ||
       "Candidate";
 
     const fileName = `Resume-Reverse-${candidateName.replace(/[^a-z0-9]+/gi, "_")}.pdf`;
