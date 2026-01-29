@@ -2,6 +2,7 @@
 import prisma from "@/lib/prisma";
 import { getServerSession } from "next-auth/next";
 import { authOptions } from "@/pages/api/auth/[...nextauth]";
+import React from "react";
 import { pdf } from "@react-pdf/renderer";
 
 import HybridResumeTemplatePDF from "@/components/resume-form/templates/HybridResumeTemplate.pdf";
@@ -54,6 +55,14 @@ function normalizeResumeData(raw) {
     certifications: Array.isArray(inner.certifications) ? inner.certifications : [],
     customSections: Array.isArray(inner.customSections) ? inner.customSections : [],
   };
+}
+
+function filenameSafe(s) {
+  return safeString(s)
+    .replace(/[<>:"/\\|?*\x00-\x1F]/g, "")
+    .replace(/\s+/g, " ")
+    .trim()
+    .slice(0, 80);
 }
 
 export default async function handler(req, res) {
@@ -144,7 +153,7 @@ export default async function handler(req, res) {
       [safeString(app.user?.firstName).trim(), safeString(app.user?.lastName).trim()].filter(Boolean).join(" ") ||
       "Candidate";
 
-    const fileName = `Resume-Hybrid-${candidateName.replace(/[^a-z0-9]+/gi, "_")}.pdf`;
+    const fileName = `Resume-Hybrid-${filenameSafe(candidateName).replace(/[^a-z0-9]+/gi, "_")}.pdf`;
 
     const doc = <HybridResumeTemplatePDF data={resumeData} />;
     const buffer = await pdf(doc).toBuffer();
