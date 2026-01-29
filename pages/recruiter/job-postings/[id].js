@@ -809,14 +809,16 @@ export default function RecruiterJobApplicantsPage() {
                             View packet
                           </button>
 
-                          <button
-                            type="button"
-                            className="text-sm px-3 py-1.5 rounded border bg-white hover:bg-slate-50 opacity-60 cursor-not-allowed"
-                            title="Download packet will be wired after exports are implemented."
-                            disabled
+                          {/* ✅ ENABLED: Server-side zip download endpoint */}
+                          <a
+                            className="text-sm px-3 py-1.5 rounded border bg-white hover:bg-slate-50"
+                            href={`/api/recruiter/applications/${a.id}/packet.zip`}
+                            target="_blank"
+                            rel="noreferrer"
+                            title="Download recruiter packet (.zip)"
                           >
                             Download
-                          </button>
+                          </a>
                         </div>
                       </div>
 
