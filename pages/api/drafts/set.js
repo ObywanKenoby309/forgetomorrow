@@ -2,30 +2,6 @@
 import { getServerSession } from 'next-auth/next';
 import { authOptions } from '../auth/[...nextauth]';
 import { prisma } from '@/lib/prisma';
-import { verify as verifyJwt } from 'jsonwebtoken';
-
-const JWT_SECRET = process.env.NEXTAUTH_SECRET || 'dev-secret-change-in-production';
-
-function getAuthCookie(req) {
-  try {
-    return String(req?.cookies?.auth || '').trim();
-  } catch {
-    return '';
-  }
-}
-
-function getEmailFromAuthCookie(req) {
-  const token = getAuthCookie(req);
-  if (!token) return null;
-
-  try {
-    const payload = verifyJwt(token, JWT_SECRET);
-    const email = payload?.email ? String(payload.email) : '';
-    return email || null;
-  } catch {
-    return null;
-  }
-}
 
 export default async function handler(req, res) {
   if (req.method !== 'POST') {
@@ -34,14 +10,14 @@ export default async function handler(req, res) {
   }
 
   try {
-    // Accept either NextAuth session OR our `auth` JWT cookie
+    // ✅ PROD: NextAuth is the single source of truth
     const session = await getServerSession(req, res, authOptions);
-    const email = session?.user?.email || getEmailFromAuthCookie(req);
+    const email = session?.user?.email ? String(session.user.email).toLowerCase() : '';
 
     if (!email) return res.status(401).json({ error: 'Unauthorized' });
 
     const user = await prisma.user.findUnique({
-      where: { email: String(email).toLowerCase() },
+      where: { email },
       select: { id: true },
     });
 

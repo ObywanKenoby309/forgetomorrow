@@ -1,9 +1,13 @@
 // context/ResumeContext.js
 import React, { createContext, useEffect, useMemo, useRef, useState } from 'react';
+import { useSession } from 'next-auth/react';
 
 export const ResumeContext = createContext();
 
 export function ResumeProvider({ children }) {
+  const { status } = useSession();
+  const isAuthed = status === 'authenticated';
+
   // -----------------------------
   // Resume Builder State
   // -----------------------------
@@ -109,6 +113,9 @@ export function ResumeProvider({ children }) {
   const didLoadDraftRef = useRef(false);
 
   const getResumeDraft = async () => {
+    // ✅ Gate drafts behind NextAuth session
+    if (!isAuthed) return null;
+
     try {
       const res = await fetch(`/api/drafts/get?key=${encodeURIComponent(RESUME_DRAFT_KEY)}`);
       if (!res.ok) return null;
@@ -121,7 +128,10 @@ export function ResumeProvider({ children }) {
   };
 
   const setResumeDraft = async (payload, opts = { isAutosave: false }) => {
+    // ✅ Gate drafts behind NextAuth session
+    if (!isAuthed) return;
     if (opts.isAutosave && draftBusyRef.current) return;
+
     try {
       if (opts.isAutosave) draftBusyRef.current = true;
 
@@ -137,7 +147,6 @@ export function ResumeProvider({ children }) {
       setLastAutosaveAt(ts);
 
       // ✅ IMPORTANT: only fire "saveEventAt" for non-autosave actions.
-      // Right now we only call setResumeDraft via autosave + blur autosave, so this stays silent.
       if (!opts.isAutosave) {
         setSaveEventAt(ts);
       }
@@ -149,6 +158,9 @@ export function ResumeProvider({ children }) {
   };
 
   const deleteResumeDraft = async () => {
+    // ✅ Gate drafts behind NextAuth session
+    if (!isAuthed) return;
+
     try {
       await fetch('/api/drafts/delete', {
         method: 'POST',
@@ -165,6 +177,10 @@ export function ResumeProvider({ children }) {
     let mounted = true;
 
     async function loadDraftOnce() {
+      // ✅ Don’t load drafts until authenticated (prevents 401 spam on signin)
+      if (!isAuthed) return;
+
+      // If we already loaded for this authenticated session, don’t re-run
       if (didLoadDraftRef.current) return;
       didLoadDraftRef.current = true;
 
@@ -197,10 +213,13 @@ export function ResumeProvider({ children }) {
       mounted = false;
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [isAuthed]);
 
   // Autosave draft every 30s (DB). This is the core requirement.
   useEffect(() => {
+    // ✅ Don’t autosave drafts until authenticated (prevents 401 spam on signin)
+    if (!isAuthed) return;
+
     const timer = setInterval(() => {
       const payload = {
         template,
@@ -224,6 +243,7 @@ export function ResumeProvider({ children }) {
     return () => clearInterval(timer);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [
+    isAuthed,
     template,
     formData,
     summary,
@@ -241,6 +261,9 @@ export function ResumeProvider({ children }) {
   // Save draft on blur (capture) - minimal, no page edits required.
   // This triggers whenever any input/textarea/select inside the provider loses focus.
   useEffect(() => {
+    // ✅ Don’t bind blur autosave until authenticated (prevents 401 spam on signin)
+    if (!isAuthed) return;
+
     const onBlurCapture = (e) => {
       const t = e?.target;
       if (!t) return;
@@ -271,6 +294,7 @@ export function ResumeProvider({ children }) {
     return () => document.removeEventListener('blur', onBlurCapture, true);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [
+    isAuthed,
     template,
     formData,
     summary,
