@@ -7,8 +7,24 @@ import { useEffect, useState } from "react";
  * - onClose
  * - candidates: [{id, name, role, location}]
  * - onSend: (ids[], text) => void
+ *
+ * NEW (non-breaking defaults):
+ * - title?: string
+ * - recipientLabelPlural?: string
+ * - emptyRecipientsText?: string
+ * - messagePlaceholder?: string
  */
-export default function BulkMessageModal({ open, onClose, candidates = [], onSend }) {
+export default function BulkMessageModal({
+  open,
+  onClose,
+  candidates = [],
+  onSend,
+
+  title = "Bulk Message",
+  recipientLabelPlural = "candidates",
+  emptyRecipientsText = "No candidates available.",
+  messagePlaceholder = "Write your message once — it will be sent to all selected recipients.",
+}) {
   const [selected, setSelected] = useState([]);
   const [text, setText] = useState("");
 
@@ -22,7 +38,9 @@ export default function BulkMessageModal({ open, onClose, candidates = [], onSen
   if (!open) return null;
 
   const toggle = (id) =>
-    setSelected((arr) => (arr.includes(id) ? arr.filter((x) => x !== id) : [...arr, id]));
+    setSelected((arr) =>
+      arr.includes(id) ? arr.filter((x) => x !== id) : [...arr, id]
+    );
 
   const allIds = candidates.map((c) => c.id);
   const allChecked = allIds.length > 0 && selected.length === allIds.length;
@@ -32,11 +50,13 @@ export default function BulkMessageModal({ open, onClose, candidates = [], onSen
       <div className="absolute inset-0 bg-black/50" onClick={onClose} />
       <div className="relative w-full max-w-2xl rounded-lg bg-white shadow-xl border">
         <div className="p-5 border-b">
-          <h2 className="text-lg font-semibold">Bulk Message</h2>
+          <h2 className="text-lg font-semibold">{title}</h2>
         </div>
 
         <div className="p-5 space-y-4">
-          <div className="text-sm text-slate-600">Select recipients:</div>
+          <div className="text-sm text-slate-600">
+            Select {recipientLabelPlural}:
+          </div>
 
           <div className="rounded border max-h-48 overflow-auto">
             <table className="min-w-full text-sm">
@@ -47,7 +67,9 @@ export default function BulkMessageModal({ open, onClose, candidates = [], onSen
                     <input
                       type="checkbox"
                       checked={allChecked}
-                      onChange={(e) => setSelected(e.target.checked ? allIds : [])}
+                      onChange={(e) =>
+                        setSelected(e.target.checked ? allIds : [])
+                      }
                       aria-label="Select all"
                     />
                   </th>
@@ -73,10 +95,14 @@ export default function BulkMessageModal({ open, onClose, candidates = [], onSen
                     <td className="px-3 py-2">{c.location}</td>
                   </tr>
                 ))}
+
                 {candidates.length === 0 && (
                   <tr>
-                    <td className="px-3 py-4 text-slate-500 text-center" colSpan={4}>
-                      No candidates available.
+                    <td
+                      className="px-3 py-4 text-slate-500 text-center"
+                      colSpan={4}
+                    >
+                      {emptyRecipientsText}
                     </td>
                   </tr>
                 )}
@@ -88,7 +114,7 @@ export default function BulkMessageModal({ open, onClose, candidates = [], onSen
             <div className="text-sm text-slate-600 mb-1">Message</div>
             <textarea
               className="border rounded px-3 py-2 w-full min-h-[120px] text-sm"
-              placeholder="Write your message once — it will be sent to all selected recipients."
+              placeholder={messagePlaceholder}
               value={text}
               onChange={(e) => setText(e.target.value)}
             />
@@ -96,7 +122,10 @@ export default function BulkMessageModal({ open, onClose, candidates = [], onSen
         </div>
 
         <div className="p-5 border-t flex items-center justify-between">
-          <button onClick={onClose} className="px-4 py-2 rounded border text-sm hover:bg-slate-50">
+          <button
+            onClick={onClose}
+            className="px-4 py-2 rounded border text-sm hover:bg-slate-50"
+          >
             Cancel
           </button>
           <button

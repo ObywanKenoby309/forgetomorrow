@@ -525,6 +525,18 @@ model UserDraft {
   @@map("user_drafts")
 }
 
+model SavedReply {
+  id        Int      @id @default(autoincrement())
+  userId    String
+  persona   String   @default("recruiter") // recruiter | coach | seeker | etc
+  text      String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([userId, persona])
+  @@map("saved_replies")
+}
+
 // ============================================================================
 //  VERIFICATION / AUTH
 // ============================================================================

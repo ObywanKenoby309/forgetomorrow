@@ -11,14 +11,36 @@ function tsFmt(ts) {
 
 /**
  * props:
- * - threads: [{id, candidate, snippet, messages:[{id, from:'recruiter'|'candidate', text, ts, status?:'sent'|'read'}], unread?: number}]
+ * - threads: [{id, candidate, snippet, messages:[{id, from:'recruiter'|'candidate'|..., text, ts, status?:'sent'|'read'}], unread?: number}]
  * - initialThreadId?: number|string
  * - onSend?: (threadId, messageText) => void
+ *
+ * NEW (non-breaking defaults):
+ * - persona?: string (default "recruiter")  // value used in messages[].from for "self"
+ * - personaLabel?: string (default "Recruiter") // UI copy label
+ * - otherLabel?: string (default "candidate")   // UI copy label (lowercase)
+ * - inboxTitle?: string (default "Recruiter Inbox")
+ * - inboxDescription?: ReactNode|string
+ * - emptyTitle?: string
+ * - emptyBody?: ReactNode|string
+ * - emptyFootnote?: ReactNode|string
+ * - inputPlaceholderEmpty?: string
  */
 export default function MessageThread({
   threads = [],
   initialThreadId,
   onSend,
+
+  // ✅ safe defaults keep recruiter behavior exactly as-is
+  persona = "recruiter",
+  personaLabel = "Recruiter",
+  otherLabel = "candidate",
+  inboxTitle = "Recruiter Inbox",
+  inboxDescription,
+  emptyTitle,
+  emptyBody,
+  emptyFootnote,
+  inputPlaceholderEmpty,
 }) {
   const [activeId, setActiveId] = useState(
     initialThreadId ?? threads[0]?.id ?? null
@@ -74,9 +96,37 @@ export default function MessageThread({
     setDraft("");
   };
 
+  const defaultInboxDescription = (
+    <>
+      Conversations you start as a{" "}
+      <span className="font-semibold">{personaLabel}</span> will show here.
+      Personal DMs live in <span className="font-semibold">The Signal</span>.
+    </>
+  );
+
+  const defaultEmptyTitle = `No ${persona.toLowerCase()} conversations yet`;
+
+  const defaultEmptyBody = (
+    <>
+      This inbox is for conversations you start as{" "}
+      <span className="font-semibold">{personaLabel}</span>. To begin, open a{" "}
+      {otherLabel} card and choose to send a message as {personaLabel}. When{" "}
+      {otherLabel}s reply, the full thread will appear here.
+    </>
+  );
+
+  const defaultEmptyFootnote = (
+    <>
+      Personal one-to-one messages still flow through{" "}
+      <span className="font-semibold">The Signal</span>. You pick your persona;
+      the system routes each message to the right inbox.
+    </>
+  );
+
   const inputPlaceholder = hasThreads
     ? "Type a message…"
-    : "Start from a candidate card and choose ‘Send as Recruiter’ to open a conversation.";
+    : inputPlaceholderEmpty ||
+      `Start from a ${otherLabel} card and choose ‘Send as ${personaLabel}’ to open a conversation.`;
 
   return (
     <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
@@ -85,20 +135,18 @@ export default function MessageThread({
         {/* Header for clarity */}
         <div className="px-4 py-3 border-b bg-slate-50">
           <div className="text-xs font-semibold tracking-wide text-slate-600 uppercase">
-            Recruiter Inbox
+            {inboxTitle}
           </div>
           <p className="mt-1 text-[11px] text-slate-500 leading-snug">
-            Conversations you start as a{" "}
-            <span className="font-semibold">Recruiter</span> will show here.
-            Personal DMs live in{" "}
-            <span className="font-semibold">The Signal</span>.
+            {inboxDescription || defaultInboxDescription}
           </p>
         </div>
 
         {!hasThreads && (
           <div className="px-4 py-6 text-sm text-slate-500">
             No conversations yet. Messages you send as{" "}
-            <span className="font-semibold">Recruiter</span> will show up here.
+            <span className="font-semibold">{personaLabel}</span> will show up
+            here.
           </div>
         )}
 
@@ -131,18 +179,13 @@ export default function MessageThread({
           // Global empty state when there are zero conversations
           <div className="flex-1 flex flex-col items-center justify-center text-center text-sm text-slate-500 space-y-2">
             <div className="text-base font-semibold text-slate-700">
-              No recruiter conversations yet
+              {emptyTitle || defaultEmptyTitle}
             </div>
             <p className="max-w-md text-xs text-slate-500">
-              This inbox is for conversations you start as{" "}
-              <span className="font-semibold">Recruiter</span>. To begin,
-              open a candidate card and choose to send a message as Recruiter.
-              When candidates reply, the full thread will appear here.
+              {emptyBody || defaultEmptyBody}
             </p>
             <p className="max-w-md text-[11px] text-slate-400">
-              Personal one-to-one messages still flow through{" "}
-              <span className="font-semibold">The Signal</span>. You pick your
-              persona; the system routes each message to the right inbox.
+              {emptyFootnote || defaultEmptyFootnote}
             </p>
           </div>
         ) : !active ? (
@@ -152,9 +195,7 @@ export default function MessageThread({
         ) : (
           <>
             <div className="flex items-center justify-between mb-2">
-              <div className="font-medium">
-                Conversation with {active.candidate}
-              </div>
+              <div className="font-medium">Conversation with {active.candidate}</div>
               <label className="text-xs text-slate-500 cursor-pointer">
                 <input
                   type="checkbox"
@@ -172,32 +213,29 @@ export default function MessageThread({
             >
               {active.messages?.length ? (
                 <ul className="space-y-2">
-                  {active.messages.map((m) => (
-                    <li
-                      key={m.id}
-                      className={`flex ${
-                        m.from === "recruiter"
-                          ? "justify-end"
-                          : "justify-start"
-                      }`}
-                    >
-                      <div
-                        className={`px-3 py-2 rounded max-w-[80%] ${
-                          m.from === "recruiter"
-                            ? "bg-[#FF7043] text-white"
-                            : "bg-white border"
-                        }`}
-                        title={tsFmt(m.ts)}
+                  {active.messages.map((m) => {
+                    const isSelf = m.from === persona;
+                    return (
+                      <li
+                        key={m.id}
+                        className={`flex ${isSelf ? "justify-end" : "justify-start"}`}
                       >
-                        <div>{m.text}</div>
-                        {m.from === "recruiter" && (
-                          <div className="mt-1 text-[10px] opacity-80">
-                            {m.status === "read" ? "Read" : "Sent"}
-                          </div>
-                        )}
-                      </div>
-                    </li>
-                  ))}
+                        <div
+                          className={`px-3 py-2 rounded max-w-[80%] ${
+                            isSelf ? "bg-[#FF7043] text-white" : "bg-white border"
+                          }`}
+                          title={tsFmt(m.ts)}
+                        >
+                          <div>{m.text}</div>
+                          {isSelf && (
+                            <div className="mt-1 text-[10px] opacity-80">
+                              {m.status === "read" ? "Read" : "Sent"}
+                            </div>
+                          )}
+                        </div>
+                      </li>
+                    );
+                  })}
                 </ul>
               ) : (
                 <div className="text-slate-500">
@@ -239,7 +277,7 @@ export default function MessageThread({
             title={
               canCompose
                 ? "Ctrl/Cmd+Enter to send"
-                : "Open a recruiter conversation from a candidate card to send"
+                : `Open a ${personaLabel.toLowerCase()} conversation to send`
             }
           >
             Send

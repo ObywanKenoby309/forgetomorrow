@@ -44,9 +44,7 @@ function HeaderBar({ onOpenBulk }) {
         </p>
       </div>
       <div className="justify-self-center md:justify-self-end">
-        <SecondaryButton onClick={onOpenBulk}>
-          Group Message
-        </SecondaryButton>
+        <SecondaryButton onClick={onOpenBulk}>Group Message</SecondaryButton>
       </div>
     </div>
   );
@@ -138,26 +136,58 @@ function Body({
         threads={threads}
         initialThreadId={initialThreadId || threads[0]?.id}
         onSend={onSend}
+        persona="coach"
+        personaLabel="Coach"
+        otherLabel="client"
+        inboxTitle="Coach Inbox"
+        inboxDescription={
+          <>
+            Conversations you start as a{" "}
+            <span className="font-semibold">Coach</span> will show here. Personal
+            DMs live in <span className="font-semibold">The Signal</span>.
+          </>
+        }
+        emptyTitle="No coaching conversations yet"
+        emptyBody={
+          <>
+            This inbox is for conversations you start as{" "}
+            <span className="font-semibold">Coach</span>. To begin, open a client
+            profile and click Message. When clients reply, the full thread will
+            appear here.
+          </>
+        }
+        emptyFootnote={
+          <>
+            Personal one-to-one messages still flow through{" "}
+            <span className="font-semibold">The Signal</span>. You pick your
+            persona; the system routes each message to the right inbox.
+          </>
+        }
+        inputPlaceholderEmpty="Start from a client profile and click Message to open a conversation."
       />
 
       <SavedReplies
-        onInsert={(text) => {
-          const el = document.querySelector(
-            'input[placeholder="Type a message…"]'
-          );
-          if (el) {
-            el.value = el.value ? `${el.value} ${text}` : text;
-            el.dispatchEvent(new Event("input", { bubbles: true }));
-            el.focus();
-          }
-        }}
-      />
+  title="Saved Replies (Coaching)"
+  persona="coach"
+  onInsert={(text) => {
+    const el = document.querySelector('input[placeholder="Type a message…"]');
+    if (el) {
+      el.value = el.value ? `${el.value} ${text}` : text;
+      el.dispatchEvent(new Event("input", { bubbles: true }));
+      el.focus();
+    }
+  }}
+/>
 
       <BulkMessageModal
         open={bulkOpen}
         onClose={() => setBulkOpen(false)}
         candidates={candidatesFlat}
         onSend={onBulkSend}
+        title="Group Message"
+        recipientLabelPlural="clients"
+        emptyRecipientsText="No clients available."
+        messagePlaceholder="Write your message once — it will be sent to all selected clients."
       />
     </main>
   );
@@ -255,14 +285,14 @@ export default function CoachMessagingPage() {
 
               const mappedMessages = msgs.map((m) => ({
                 id: m.id,
-                from: m.senderId === currentUserId ? "coach" : "seeker",
+                // ✅ IMPORTANT: match MessageThread persona="coach"
+                from: m.senderId === currentUserId ? "coach" : "client",
                 text: m.text,
                 ts: m.timeIso || new Date().toISOString(),
                 status: "read",
               }));
 
-              const lastMsg =
-                mappedMessages[mappedMessages.length - 1] || null;
+              const lastMsg = mappedMessages[mappedMessages.length - 1] || null;
 
               return {
                 id: conv.id,
