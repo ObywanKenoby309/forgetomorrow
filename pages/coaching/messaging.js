@@ -1,5 +1,5 @@
 // pages/coaching/messaging.js
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { useRouter } from "next/router";
 import { PlanProvider } from "@/context/PlanContext";
 import CoachingLayout from "@/components/layouts/CoachingLayout";
@@ -95,17 +95,13 @@ function RightRail() {
 function Body({
   threads,
   onSend,
-  candidatesFlat,
+  recipients,
   bulkOpen,
   setBulkOpen,
   initialThreadId,
   prefillText,
+  onBulkSendDb,
 }) {
-  const onBulkSend = (ids, text) => {
-    console.log("COACH GROUP SEND", { ids, text });
-    setBulkOpen(false);
-  };
-
   useEffect(() => {
     if (!initialThreadId) return;
     if (!prefillText || !prefillText.trim()) return;
@@ -136,57 +132,51 @@ function Body({
         threads={threads}
         initialThreadId={initialThreadId || threads[0]?.id}
         onSend={onSend}
-        persona="coach"
-        personaLabel="Coach"
-        otherLabel="client"
         inboxTitle="Coach Inbox"
-        inboxDescription={
-          <>
-            Conversations you start as a{" "}
-            <span className="font-semibold">Coach</span> will show here. Personal
-            DMs live in <span className="font-semibold">The Signal</span>.
-          </>
+        inboxBlurb={
+          <p className="mt-1 text-[11px] text-slate-500 leading-snug">
+            Conversations you start as a <span className="font-semibold">Coach</span>{" "}
+            will show here. Personal DMs live in{" "}
+            <span className="font-semibold">The Signal</span>.
+          </p>
         }
-        emptyTitle="No coaching conversations yet"
+        emptyTitle="No coach conversations yet"
         emptyBody={
           <>
-            This inbox is for conversations you start as{" "}
-            <span className="font-semibold">Coach</span>. To begin, open a client
-            profile and click Message. When clients reply, the full thread will
-            appear here.
+            <p className="max-w-md text-xs text-slate-500">
+              This inbox is for conversations you start as{" "}
+              <span className="font-semibold">Coach</span>. To begin, open a client
+              profile and click Message. When they reply, the full thread will appear here.
+            </p>
+            <p className="max-w-md text-[11px] text-slate-400">
+              Personal one-to-one messages still flow through{" "}
+              <span className="font-semibold">The Signal</span>.
+            </p>
           </>
         }
-        emptyFootnote={
-          <>
-            Personal one-to-one messages still flow through{" "}
-            <span className="font-semibold">The Signal</span>. You pick your
-            persona; the system routes each message to the right inbox.
-          </>
-        }
-        inputPlaceholderEmpty="Start from a client profile and click Message to open a conversation."
       />
 
       <SavedReplies
-  title="Saved Replies (Coaching)"
-  persona="coach"
-  onInsert={(text) => {
-    const el = document.querySelector('input[placeholder="Type a message…"]');
-    if (el) {
-      el.value = el.value ? `${el.value} ${text}` : text;
-      el.dispatchEvent(new Event("input", { bubbles: true }));
-      el.focus();
-    }
-  }}
-/>
+        persona="coach"
+        title="Saved Replies (Coach)"
+        onInsert={(text) => {
+          const el = document.querySelector('input[placeholder="Type a message…"]');
+          if (el) {
+            el.value = el.value ? `${el.value} ${text}` : text;
+            el.dispatchEvent(new Event("input", { bubbles: true }));
+            el.focus();
+          }
+        }}
+      />
 
       <BulkMessageModal
         open={bulkOpen}
         onClose={() => setBulkOpen(false)}
-        candidates={candidatesFlat}
-        onSend={onBulkSend}
+        candidates={recipients}
+        onSend={onBulkSendDb}
         title="Group Message"
         recipientLabelPlural="clients"
-        emptyRecipientsText="No clients available."
+        emptyRecipientsText="No clients available yet."
         messagePlaceholder="Write your message once — it will be sent to all selected clients."
       />
     </main>
@@ -242,9 +232,8 @@ export default function CoachMessagingPage() {
   }, [router]);
 
   async function fetchJson(url, options = {}) {
-    if (!currentUserId) {
-      throw new Error("No current user id resolved yet");
-    }
+    if (!currentUserId) throw new Error("No current user id resolved yet");
+
     const res = await fetch(url, {
       ...options,
       headers: {
@@ -269,9 +258,7 @@ export default function CoachMessagingPage() {
     async function loadThreads() {
       try {
         const data = await fetchJson("/api/messages?channel=coach");
-        const conversations = Array.isArray(data.conversations)
-          ? data.conversations
-          : [];
+        const conversations = Array.isArray(data.conversations) ? data.conversations : [];
 
         const threadsWithMessages = await Promise.all(
           conversations.map(async (conv) => {
@@ -279,14 +266,13 @@ export default function CoachMessagingPage() {
               const msgData = await fetchJson(
                 `/api/messages?conversationId=${encodeURIComponent(conv.id)}`
               );
-              const msgs = Array.isArray(msgData.messages)
-                ? msgData.messages
-                : [];
+              const msgs = Array.isArray(msgData.messages) ? msgData.messages : [];
 
+              // IMPORTANT: MessageThread expects from: "recruiter" | "candidate"
+              // We keep the component unchanged by mapping coach->recruiter and client->candidate
               const mappedMessages = msgs.map((m) => ({
                 id: m.id,
-                // ✅ IMPORTANT: match MessageThread persona="coach"
-                from: m.senderId === currentUserId ? "coach" : "client",
+                from: m.senderId === currentUserId ? "recruiter" : "candidate",
                 text: m.text,
                 ts: m.timeIso || new Date().toISOString(),
                 status: "read",
@@ -300,6 +286,7 @@ export default function CoachMessagingPage() {
                 snippet: conv.lastMessage || lastMsg?.text || "",
                 unread: typeof conv.unread === "number" ? conv.unread : 0,
                 messages: mappedMessages,
+                otherUserId: conv.otherUserId || null,
               };
             } catch (err) {
               console.error("Failed to load messages for", conv.id, err);
@@ -309,6 +296,7 @@ export default function CoachMessagingPage() {
                 snippet: conv.lastMessage || "",
                 unread: typeof conv.unread === "number" ? conv.unread : 0,
                 messages: [],
+                otherUserId: conv.otherUserId || null,
               };
             }
           })
@@ -339,6 +327,18 @@ export default function CoachMessagingPage() {
     };
   }, [queryConversationId, currentUserId]);
 
+  const recipients = useMemo(() => {
+    // build list for BulkMessageModal from existing conversations for now
+    return (threads || [])
+      .filter((t) => !!t.otherUserId)
+      .map((t) => ({
+        id: t.otherUserId,
+        name: t.candidate,
+        role: "Client",
+        location: "",
+      }));
+  }, [threads]);
+
   const onSend = async (threadId, text) => {
     if (!text || !String(text).trim()) return;
     const trimmed = text.trim();
@@ -357,7 +357,7 @@ export default function CoachMessagingPage() {
 
       const newMsg = {
         id: msg?.id ?? `m-${Date.now()}`,
-        from: "coach",
+        from: "recruiter", // mapped self-key for MessageThread
         text: msg?.text ?? trimmed,
         ts: msg?.timeIso || new Date().toISOString(),
         status: "sent",
@@ -376,6 +376,32 @@ export default function CoachMessagingPage() {
       );
     } catch (err) {
       console.error("Failed to send coach message:", err);
+    }
+  };
+
+  const onBulkSendDb = async (ids, text) => {
+    const cleanText = typeof text === "string" ? text.trim() : "";
+    const cleanIds = Array.isArray(ids) ? ids.filter(Boolean) : [];
+    if (!cleanIds.length || !cleanText) return;
+
+    try {
+      await fetchJson("/api/messages/bulk", {
+        method: "POST",
+        body: JSON.stringify({
+          recipientIds: cleanIds,
+          content: cleanText,
+          channel: "coach",
+        }),
+      });
+
+      setBulkOpen(false);
+
+      // refresh threads so coach sees new snippets immediately
+      // (re-use the existing loader by forcing router refresh)
+      router.replace(router.asPath);
+    } catch (err) {
+      console.error("Failed bulk send (coach):", err);
+      setBulkOpen(false);
     }
   };
 
@@ -417,11 +443,12 @@ export default function CoachMessagingPage() {
         <Body
           threads={threads}
           onSend={onSend}
-          candidatesFlat={[]}
+          recipients={recipients}
           bulkOpen={bulkOpen}
           setBulkOpen={setBulkOpen}
           initialThreadId={initialThreadId}
           prefillText={prefillText}
+          onBulkSendDb={onBulkSendDb}
         />
       </CoachingLayout>
     </PlanProvider>
