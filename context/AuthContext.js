@@ -1,18 +1,17 @@
-import { createContext, useContext, useState, useEffect } from 'react';
+// context/AuthContext.js
+import { createContext, useContext } from 'react';
 
 export const AuthContext = createContext({});
 
 export function AuthProvider({ children }) {
-  const [user, setUser] = useState(null);
-
-  useEffect(() => {
-    const saved = localStorage.getItem('ft_user');
-    if (saved) setUser(JSON.parse(saved));
-  }, []);
-
+  // Auth state is owned by NextAuth (useSession)
   return (
-    <AuthContext.Provider value={{ user, setUser }}>
+    <AuthContext.Provider value={{}}>
       {children}
     </AuthContext.Provider>
   );
+}
+
+export function useAuth() {
+  return useContext(AuthContext);
 }

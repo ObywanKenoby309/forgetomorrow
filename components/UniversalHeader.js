@@ -4,6 +4,7 @@ import { useRouter } from "next/router";
 import { usePlan } from "@/context/PlanContext";
 import { useState, useRef, useEffect } from "react";
 import { useCurrentUserAvatar } from "@/hooks/useCurrentUserAvatar";
+import { signOut } from "next-auth/react";
 
 export default function UniversalHeader() {
   const { role } = usePlan(); // 'seeker' | 'recruiter' | 'coach' | etc.
@@ -115,9 +116,9 @@ export default function UniversalHeader() {
                   Support / The Hearth
                 </Link>
                 <button
-                  onClick={() => {
+                  onClick={async () => {
                     setMenuOpen(false);
-                    router.push("/logout"); // ← go to logout page to actually end session
+                    await signOut({ callbackUrl: "/auth/signin" });
                   }}
                   className="w-full text-left px-3 py-2 text-sm text-gray-200 hover:bg-[#FF7043] hover:text-white"
                 >

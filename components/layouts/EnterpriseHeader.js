@@ -5,7 +5,7 @@ import { useEffect, useRef, useState } from "react";
 import { usePlan } from "@/context/PlanContext";
 import Avatar from "@/components/common/Avatar";
 import { useCurrentUserAvatar } from "@/hooks/useCurrentUserAvatar";
-import { useSession } from "next-auth/react";
+import { useSession, signOut } from "next-auth/react";
 
 function readCookie(name) {
   try {
@@ -58,7 +58,7 @@ export default function EnterpriseHeader({
 
   const isPlatformAdmin = !!session?.user?.isPlatformAdmin;
 
-  // ✅ NEW: client-only flag so we can show "Stop impersonating" in the menu
+  // ✅ client-only flag so we can show "Stop impersonating" in the menu
   const [isImpersonating, setIsImpersonating] = useState(false);
 
   const [openMobile, setOpenMobile] = useState(false);
@@ -88,7 +88,7 @@ export default function EnterpriseHeader({
     return () => document.removeEventListener("keydown", handleEsc);
   }, [openMobile]);
 
-  // ✅ NEW: read impersonation UI flag cookie
+  // ✅ read impersonation UI flag cookie
   useEffect(() => {
     if (!isPlatformAdmin) return;
     setIsImpersonating(readCookie("ft_imp_active") === "1");
@@ -161,7 +161,7 @@ export default function EnterpriseHeader({
   const resolvedOptionsHref = buildUrlWithContext(optionsHref);
   const resolvedSupportHref = buildUrlWithContext(supportHref);
 
-  // ✅ NEW: impersonation page link
+  // ✅ impersonation page link
   const resolvedImpersonateHref = buildUrlWithContext("/admin/impersonate");
 
   return (
@@ -300,7 +300,7 @@ export default function EnterpriseHeader({
                           Support
                         </Link>
 
-                        {/* ✅ NEW: Impersonation links (Forge staff only) */}
+                        {/* ✅ Impersonation links (Forge staff only) */}
                         {isPlatformAdmin && (
                           <>
                             <div className="h-px bg-[#3a3a3a]" />
@@ -323,7 +323,6 @@ export default function EnterpriseHeader({
                                     await fetch("/api/admin/impersonation/stop", {
                                       method: "POST",
                                     });
-                                    // refresh state + return to current page
                                     router.replace(router.asPath);
                                   } catch {
                                     // no-throw
@@ -341,9 +340,9 @@ export default function EnterpriseHeader({
                         <button
                           className="w-full text-left px-4 py-3 text-sm hover:bg-[#333]"
                           role="menuitem"
-                          onClick={() => {
+                          onClick={async () => {
                             setOpenProfile(false);
-                            router.push("/logout");
+                            await signOut({ callbackUrl: "/auth/signin" });
                           }}
                         >
                           Log Out
@@ -456,7 +455,7 @@ export default function EnterpriseHeader({
                 </Link>
               ))}
 
-              {/* ✅ NEW: staff-only tools in mobile menu */}
+              {/* staff-only tools in mobile menu */}
               {showUserMenu && isPlatformAdmin && (
                 <div className="mt-4 space-y-3">
                   <Link
@@ -517,9 +516,9 @@ export default function EnterpriseHeader({
                     Support
                   </button>
                   <button
-                    onClick={() => {
+                    onClick={async () => {
                       setOpenMobile(false);
-                      router.push("/logout");
+                      await signOut({ callbackUrl: "/auth/signin" });
                     }}
                     className="w-full text-left text-gray-200 hover:text-[#FF7043] focus:outline-none focus:ring-4 focus:ring-orange-500 rounded-xl py-3"
                   >

@@ -56,13 +56,15 @@ export const authOptions: NextAuthOptions = {
     }),
   ],
 
+  // 🔒 HARDENED: sane SaaS session policy (reduces "zombie sessions")
   session: {
     strategy: "jwt",
-    maxAge: 30 * 24 * 60 * 60, // 30 days
+    maxAge: 24 * 60 * 60, // 24 hours absolute
+    updateAge: 60 * 60,   // refresh at most once per hour
   },
 
   jwt: {
-    maxAge: 30 * 24 * 60 * 60,
+    maxAge: 24 * 60 * 60,
   },
 
   pages: {
@@ -74,25 +76,10 @@ export const authOptions: NextAuthOptions = {
 
   callbacks: {
     async redirect({ url, baseUrl }) {
-      const clean = (value: string) => value.replace(/[\r\n]/g, "").trim();
-
-      const cleanBase = clean(baseUrl);
-      const rawUrl = url || cleanBase;
-      const cleanUrl = clean(rawUrl);
-
-      if (cleanUrl === cleanBase || cleanUrl === `${cleanBase}/`) {
-        return `${cleanBase}/auth/signin`;
-      }
-
-      if (cleanUrl.startsWith("/")) {
-        return `${cleanBase}${cleanUrl}`;
-      }
-
-      if (cleanUrl.startsWith(cleanBase)) {
-        return cleanUrl;
-      }
-
-      return `${cleanBase}/auth/signin`;
+      // 🔒 HARDENED: keep redirects safe and predictable
+      if (url.startsWith("/")) return `${baseUrl}${url}`;
+      if (url.startsWith(baseUrl)) return url;
+      return `${baseUrl}/auth/signin`;
     },
 
     async jwt({ token, user }) {
@@ -111,7 +98,7 @@ export const authOptions: NextAuthOptions = {
         session.user.id = token.sub!;
         (session.user as any).role = token.role;
         (session.user as any).plan = token.plan;
-        (session.user as any).stripeCustomerId = (token as any).stripeCustomerId;
+        (session.user as any).stripeCustomerId = (token as any).stripeCustomerId ?? null;
         (session.user as any).accountKey =
           ((token as any).accountKey as string | null) ?? null;
         (session.user as any).isPlatformAdmin = !!(token as any).isPlatformAdmin;
