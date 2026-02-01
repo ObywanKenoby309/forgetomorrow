@@ -1,11 +1,13 @@
 // hooks/useCurrentUserAvatar.js
 import { useEffect, useState } from "react";
+import { useSession } from "next-auth/react";
 
 /**
  * Minimal hook to get the current user's avatar URL.
  * For now this safely falls back to null if we can't load a user.
  */
 export function useCurrentUserAvatar() {
+  const { status } = useSession();
   const [avatarUrl, setAvatarUrl] = useState(null);
   const [loading, setLoading] = useState(true);
 
@@ -14,43 +16,45 @@ export function useCurrentUserAvatar() {
 
     async function fetchCurrentUser() {
       try {
-        // If you have a different "current user" endpoint, update this path.
-        const res = await fetch("/api/auth/me");
+        const res = await fetch("/api/auth/me", { cache: "no-store" });
         if (!res.ok) {
-          throw new Error("Failed to load current user");
+          if (!cancelled) setAvatarUrl(null);
+          return;
         }
 
         const data = await res.json();
+        const url = data?.user?.avatarUrl || data?.user?.image || null;
 
         if (!cancelled) {
-          const url =
-            data?.user?.avatarUrl ||
-            data?.user?.image ||
-            null;
-
           setAvatarUrl(url);
         }
-      } catch (err) {
-        if (!cancelled) {
-          setAvatarUrl(null);
-        }
+      } catch {
+        if (!cancelled) setAvatarUrl(null);
       } finally {
-        if (!cancelled) {
-          setLoading(false);
-        }
+        if (!cancelled) setLoading(false);
       }
     }
 
-    if (typeof window !== "undefined") {
-      fetchCurrentUser();
-    } else {
+    // ✅ Don’t call /api/auth/me while logged out (prevents extra 401/error noise)
+    if (typeof window === "undefined") {
       setLoading(false);
+      return;
     }
+
+    if (status === "loading") return;
+
+    if (status === "unauthenticated") {
+      setAvatarUrl(null);
+      setLoading(false);
+      return;
+    }
+
+    fetchCurrentUser();
 
     return () => {
       cancelled = true;
     };
-  }, []);
+  }, [status]);
 
   return { avatarUrl, loading };
 }

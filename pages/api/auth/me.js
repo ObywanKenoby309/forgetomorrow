@@ -2,22 +2,6 @@
 import { getServerSession } from "next-auth";
 import { authOptions } from "./[...nextauth]";
 import { prisma } from "@/lib/prisma";
-import jwt from "jsonwebtoken";
-
-const JWT_SECRET = process.env.NEXTAUTH_SECRET || "dev-secret-change-in-production";
-
-function getCookie(req, name) {
-  try {
-    const raw = req.headers?.cookie || "";
-    const parts = raw.split(";").map((p) => p.trim());
-    for (const p of parts) {
-      if (p.startsWith(name + "=")) return decodeURIComponent(p.slice(name.length + 1));
-    }
-    return "";
-  } catch {
-    return "";
-  }
-}
 
 export default async function handler(req, res) {
   if (req.method !== "GET") {
@@ -26,27 +10,13 @@ export default async function handler(req, res) {
   }
 
   try {
-    // 1) Prefer NextAuth session if present
+    // ✅ PROD: NextAuth is source of truth (no custom auth cookie fallback)
     const session = await getServerSession(req, res, authOptions);
-    const sessionEmail = session?.user?.email ? String(session.user.email).toLowerCase() : "";
+    const email = session?.user?.email ? String(session.user.email).toLowerCase() : "";
 
-    // 2) Fallback: custom auth cookie set by /api/auth/verify-email
-    let cookieEmail = "";
-    if (!sessionEmail) {
-      const token = getCookie(req, "auth");
-      if (token) {
-        try {
-          const decoded = jwt.verify(token, JWT_SECRET);
-          if (decoded && decoded.email) cookieEmail = String(decoded.email).toLowerCase();
-        } catch {
-          cookieEmail = "";
-        }
-      }
-    }
-
-    const email = sessionEmail || cookieEmail;
+    // Logged out is not an error; return a stable 200 shape
     if (!email) {
-      return res.status(401).json({ user: null });
+      return res.status(200).json({ user: null });
     }
 
     const user = await prisma.user.findUnique({
@@ -54,7 +24,7 @@ export default async function handler(req, res) {
     });
 
     if (!user) {
-      return res.status(404).json({ user: null });
+      return res.status(200).json({ user: null });
     }
 
     // Strip sensitive fields

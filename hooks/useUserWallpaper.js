@@ -2,6 +2,7 @@
 'use client';
 
 import { useEffect, useState, useCallback } from "react";
+import { useSession } from "next-auth/react";
 
 // Stable empty shape so destructuring is always safe
 const EMPTY_WALLPAPER = {
@@ -18,10 +19,18 @@ const EMPTY_WALLPAPER = {
  * - Listens for the "profileHeaderUpdated" event to refresh live
  */
 export function useUserWallpaper() {
+  const { status } = useSession();
   const [wallpaper, setWallpaper] = useState(EMPTY_WALLPAPER);
   const [loading, setLoading] = useState(true);
 
   const refresh = useCallback(async () => {
+    // ✅ Don’t call /api/auth/me while logged out (prevents extra 401/error noise)
+    if (status !== "authenticated") {
+      setWallpaper(EMPTY_WALLPAPER);
+      setLoading(false);
+      return;
+    }
+
     try {
       const res = await fetch("/api/auth/me", {
         method: "GET",
@@ -29,11 +38,17 @@ export function useUserWallpaper() {
       });
 
       if (!res.ok) {
-        throw new Error("Failed to load current user");
+        setWallpaper(EMPTY_WALLPAPER);
+        return;
       }
 
       const data = await res.json();
-      const user = data?.user || {};
+      const user = data?.user || null;
+
+      if (!user) {
+        setWallpaper(EMPTY_WALLPAPER);
+        return;
+      }
 
       const nextWallpaper = {
         url: user.wallpaperUrl ?? null,
@@ -43,19 +58,20 @@ export function useUserWallpaper() {
       };
 
       setWallpaper(nextWallpaper);
-    } catch (err) {
-      console.error("[useUserWallpaper] refresh error:", err);
+    } catch {
       setWallpaper(EMPTY_WALLPAPER);
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [status]);
 
   useEffect(() => {
     if (typeof window === "undefined") {
       setLoading(false);
       return;
     }
+
+    if (status === "loading") return;
 
     // Initial load
     refresh();
@@ -70,7 +86,7 @@ export function useUserWallpaper() {
     return () => {
       window.removeEventListener("profileHeaderUpdated", handler);
     };
-  }, [refresh]);
+  }, [refresh, status]);
 
   return {
     wallpaper,

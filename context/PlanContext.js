@@ -1,6 +1,7 @@
 // context/PlanContext.js
 import React, { createContext, useContext, useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/router";
+import { useSession } from "next-auth/react";
 
 /**
  * DB-first Plan Context (LIVE)
@@ -52,6 +53,7 @@ function mapUserRoleToContextRole(userRole) {
 
 export function PlanProvider({ children }) {
   const router = useRouter();
+  const { status } = useSession();
 
   // Start null to avoid “flash wrong plan” during SSR/hydration
   const [isLoaded, setIsLoaded] = useState(false);
@@ -64,11 +66,22 @@ export function PlanProvider({ children }) {
 
   // ─────────────────────────────────────────────
   // 1) Sync from server (/api/auth/me) — DB truth
+  //    ✅ Only when authenticated (prevents spam on login page)
   // ─────────────────────────────────────────────
   useEffect(() => {
     let cancelled = false;
 
     async function syncFromServer() {
+      // If session is still resolving, wait.
+      if (status === "loading") return;
+
+      // Not logged in: mark loaded (no fetch)
+      if (status === "unauthenticated") {
+        if (!cancelled) setIsLoaded(true);
+        return;
+      }
+
+      // Logged in: fetch once
       try {
         const res = await fetch("/api/auth/me", { cache: "no-store" });
         if (!res.ok) {
@@ -94,8 +107,8 @@ export function PlanProvider({ children }) {
           setRole(serverRole);
           setIsLoaded(true);
         }
-      } catch (err) {
-        console.error("[PlanContext] failed to sync from /api/auth/me", err);
+      } catch {
+        // Logged-out state is handled above; unexpected failures still just mark loaded.
         if (!cancelled) setIsLoaded(true);
       }
     }
@@ -105,7 +118,7 @@ export function PlanProvider({ children }) {
     return () => {
       cancelled = true;
     };
-  }, []);
+  }, [status]);
 
   // ─────────────────────────────────────────────
   // 2) Optional query overrides (NO persistence)
