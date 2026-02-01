@@ -176,7 +176,10 @@ function ImpersonationPolicyRightCard() {
 
 export default function AdminImpersonatePage() {
   const router = useRouter();
-  const { data: session, status } = useSession();
+
+  const sessionHook = typeof useSession === "function" ? useSession() : null;
+  const status = sessionHook?.status || "loading";
+  const session = sessionHook?.data || null;
 
   const [email, setEmail] = useState("");
   const [ticketNumber, setTicketNumber] = useState("");

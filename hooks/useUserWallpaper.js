@@ -1,5 +1,5 @@
 // hooks/useUserWallpaper.js
-'use client';
+"use client";
 
 import { useEffect, useState, useCallback } from "react";
 import { useSession } from "next-auth/react";
@@ -19,7 +19,9 @@ const EMPTY_WALLPAPER = {
  * - Listens for the "profileHeaderUpdated" event to refresh live
  */
 export function useUserWallpaper() {
-  const { status } = useSession();
+  const sessionHook = typeof useSession === "function" ? useSession() : null;
+  const status = sessionHook?.status || "loading";
+
   const [wallpaper, setWallpaper] = useState(EMPTY_WALLPAPER);
   const [loading, setLoading] = useState(true);
 

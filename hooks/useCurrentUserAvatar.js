@@ -7,7 +7,9 @@ import { useSession } from "next-auth/react";
  * For now this safely falls back to null if we can't load a user.
  */
 export function useCurrentUserAvatar() {
-  const { status } = useSession();
+  const sessionHook = typeof useSession === "function" ? useSession() : null;
+  const status = sessionHook?.status || "loading";
+
   const [avatarUrl, setAvatarUrl] = useState(null);
   const [loading, setLoading] = useState(true);
 
