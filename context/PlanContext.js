@@ -53,7 +53,10 @@ function mapUserRoleToContextRole(userRole) {
 
 export function PlanProvider({ children }) {
   const router = useRouter();
-  const { status } = useSession();
+
+  // ✅ SAFE: useSession() can be undefined during prerender if SessionProvider isn't present
+  const sessionHook = useSession();
+  const status = sessionHook?.status || "loading";
 
   // Start null to avoid “flash wrong plan” during SSR/hydration
   const [isLoaded, setIsLoaded] = useState(false);
@@ -108,7 +111,6 @@ export function PlanProvider({ children }) {
           setIsLoaded(true);
         }
       } catch {
-        // Logged-out state is handled above; unexpected failures still just mark loaded.
         if (!cancelled) setIsLoaded(true);
       }
     }
@@ -136,7 +138,6 @@ export function PlanProvider({ children }) {
     const qpRole = typeof qpRoleRaw === "string" ? qpRoleRaw.trim() : "";
     const qpRoleLower = qpRole.toLowerCase();
 
-    // Allow both “DB context roles” and “org-style roles” for testing
     const allowedRoles = new Set([
       "seeker",
       "coach",
@@ -149,8 +150,7 @@ export function PlanProvider({ children }) {
     ]);
 
     if (allowedRoles.has(qpRoleLower)) {
-      const normalized =
-        qpRoleLower === "hiringmanager" ? "hiringManager" : qpRoleLower;
+      const normalized = qpRoleLower === "hiringmanager" ? "hiringManager" : qpRoleLower;
       setRole(normalized);
     }
 
@@ -168,16 +168,11 @@ export function PlanProvider({ children }) {
   // 3) Derived helpers / capabilities
   // ─────────────────────────────────────────────
   const value = useMemo(() => {
-    // KEY CHANGE:
-    // Do NOT default to "small"/"recruiter" before isLoaded.
-    // That was causing the SMB flash.
     const effectivePlan = isLoaded ? (plan || "small") : null;
     const effectiveRole = isLoaded ? (role || "seeker") : null;
 
     const isEnterprise = effectivePlan === "enterprise";
     const isSmall = effectivePlan === "small";
-
-    // Support both context roles and org-style roles (your sidebar uses owner/admin/billing)
     const isSiteAdmin = effectiveRole === "site_admin";
 
     const isRecruiterAdmin =
@@ -223,26 +218,20 @@ export function PlanProvider({ children }) {
 
     return {
       isLoaded,
-
-      // expose raw resolved values
-      plan: effectivePlan, // null until loaded
-      role: effectiveRole, // null until loaded
+      plan: effectivePlan,
+      role: effectiveRole,
       tier,
 
-      // booleans
       isEnterprise,
       isSmall,
       isProTier: tier === "PRO",
 
-      // debug controls (ok to keep)
       setPlan,
       setRole,
 
-      // features (debug only)
       features,
       has,
 
-      // role helpers
       isRecruiterAdmin,
       isRecruiterSeat,
       isHiringManager,
