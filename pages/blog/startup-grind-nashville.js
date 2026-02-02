@@ -41,7 +41,7 @@ export default function StartupGrindNashville() {
           </h2>
 
           <p className="text-lg md:text-xl leading-relaxed">
-            ForgeTomorrow is proud to join the Startup Grind Nashville chapter — a global
+            ForgeTomorrow is proud to join the Startup Grind Nashville chapter - a global
             community with a local heartbeat. Startup Grind brings together founders,
             builders, and operators who believe that strong companies are built through
             shared knowledge, honest conversations, and long-term thinking.
