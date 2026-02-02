@@ -125,7 +125,7 @@ export default function CoachingClientsPage() {
         return;
       }
 
-      window.location.href = `/coach/messaging?conversationId=${conversationId}`;
+      window.location.href = `/coaching/messaging?conversationId=${conversationId}`;
     } catch (err) {
       console.error('Error starting coach thread:', err);
       alert('Could not start conversation.');
