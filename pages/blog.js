@@ -57,7 +57,7 @@ export default function Blog() {
               <div className="border rounded-lg shadow-lg overflow-hidden flex flex-col">
                 <div className="h-40 w-full overflow-hidden bg-black flex items-center justify-center">
                   <img
-                    src="/images/startupgrind-logo.png"
+                    src="/images/startup-grind-logo.png"
                     alt="Startup Grind Nashville"
                     className="h-24 object-contain"
                   />
@@ -70,14 +70,12 @@ export default function Blog() {
                     ForgeTomorrow is officially a member of the Startup Grind Nashville chapter, joining a global
                     community of founders, builders, and operators.
                   </p>
-                  <a
-                    href="https://www.startupgrind.com/nashville/"
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="mt-6 inline-block text-center bg-[#FF7043] hover:bg-[#F4511E] text-white font-bold py-3 px-6 rounded-lg transition"
+                  <button
+                    onClick={() => router.push("/blog/startup-grind-nashville")}
+                    className="mt-6 bg-[#FF7043] hover:bg-[#F4511E] text-white font-bold py-3 px-6 rounded-lg transition"
                   >
-                    Visit Startup Grind Nashville
-                  </a>
+                    Read More
+                  </button>
                 </div>
               </div>
 
