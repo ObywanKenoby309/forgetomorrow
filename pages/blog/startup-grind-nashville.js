@@ -56,7 +56,7 @@ export default function StartupGrindNashville() {
           {/* LOGO + LINK */}
           <div className="pt-12 flex flex-col items-center text-center space-y-6">
             <img
-              src="/images/startup-grind-logo.png"
+              src="/images/startup-grind-logo.PNG"
               alt="Startup Grind logo"
               className="h-20 object-contain"
             />

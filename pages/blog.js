@@ -57,7 +57,7 @@ export default function Blog() {
               <div className="border rounded-lg shadow-lg overflow-hidden flex flex-col">
                 <div className="h-40 w-full overflow-hidden bg-black flex items-center justify-center">
                   <img
-                    src="/images/startup-grind-logo.png"
+                    src="/images/startup-grind-logo.PNG"
                     alt="Startup Grind Nashville"
                     className="h-24 object-contain"
                   />
