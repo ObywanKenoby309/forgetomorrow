@@ -53,6 +53,34 @@ export default function Blog() {
             </div>
 
             <div className="grid md:grid-cols-3 gap-8">
+              {/* NEW: Startup Grind Nashville Membership */}
+              <div className="border rounded-lg shadow-lg overflow-hidden flex flex-col">
+                <div className="h-40 w-full overflow-hidden bg-black flex items-center justify-center">
+                  <img
+                    src="/images/startupgrind-logo.png"
+                    alt="Startup Grind Nashville"
+                    className="h-24 object-contain"
+                  />
+                </div>
+                <div className="p-6 flex-1 flex flex-col">
+                  <h3 className="text-2xl font-bold mb-4">
+                    ForgeTomorrow Joins Startup Grind Nashville
+                  </h3>
+                  <p className="flex-1 text-gray-700">
+                    ForgeTomorrow is officially a member of the Startup Grind Nashville chapter, joining a global
+                    community of founders, builders, and operators.
+                  </p>
+                  <a
+                    href="https://www.startupgrind.com/nashville/"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="mt-6 inline-block text-center bg-[#FF7043] hover:bg-[#F4511E] text-white font-bold py-3 px-6 rounded-lg transition"
+                  >
+                    Visit Startup Grind Nashville
+                  </a>
+                </div>
+              </div>
+
               {/* Post 1: Resume Builder */}
               <div className="border rounded-lg shadow-lg overflow-hidden flex flex-col">
                 <div className="h-40 w-full overflow-hidden">
@@ -130,7 +158,6 @@ export default function Blog() {
 
               {/* Post 4: Founder Welcome */}
               <div className="border rounded-lg shadow-lg overflow-hidden flex flex-col">
-                {/* Image container with true dark Steel Azure behind image */}
                 <div
                   className="h-40 w-full overflow-hidden"
                   style={{ backgroundColor: "#0F1D35" }}
@@ -146,7 +173,7 @@ export default function Blog() {
                     A Welcome from Our Founder
                   </h3>
                   <p className="flex-1 text-gray-700">
-                    On behalf of the team, I’m thrilled to welcome you to the ForgeTomorrow blog. 
+                    On behalf of the team, I’m thrilled to welcome you to the ForgeTomorrow blog.
                     Stay inspired and get insights from our community-first platform.
                   </p>
                   <button

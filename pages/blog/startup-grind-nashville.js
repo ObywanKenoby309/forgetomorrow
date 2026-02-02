@@ -1,0 +1,77 @@
+import Head from "next/head";
+
+export default function StartupGrindNashville() {
+  return (
+    <>
+      <Head>
+        <title>ForgeTomorrow Joins Startup Grind Nashville | ForgeTomorrow</title>
+        <meta
+          name="description"
+          content="ForgeTomorrow joins the Startup Grind Nashville community, connecting with local founders, builders, and operators committed to meaningful growth."
+        />
+      </Head>
+
+      {/* HERO */}
+      <section className="relative min-h-screen flex items-center justify-center px-6 text-center bg-[#112033]">
+        <div className="absolute inset-0" aria-hidden="true">
+          <img
+            src="/images/startup-grind-nashville-hero.png"
+            alt="Nashville skyline representing the local startup community"
+            className="w-full h-full object-cover"
+          />
+          <div className="absolute inset-0 bg-black/50" />
+        </div>
+
+        <div className="relative z-10 max-w-5xl mx-auto text-white">
+          <h1 className="text-5xl md:text-7xl font-black mb-8 leading-tight drop-shadow-2xl">
+            ForgeTomorrow Joins the{" "}
+            <span className="text-[#FF7043]">Startup Grind Nashville</span> Community
+          </h1>
+          <p className="text-2xl md:text-4xl max-w-4xl mx-auto drop-shadow-lg">
+            Building alongside founders, operators, and businesses shaping what comes next.
+          </p>
+        </div>
+      </section>
+
+      {/* CONTENT */}
+      <section className="py-24 bg-gray-50">
+        <div className="max-w-4xl mx-auto px-6 space-y-12 text-gray-900">
+          <h2 className="text-4xl md:text-5xl font-black text-[#FF7043] text-center">
+            A Community-First Step Forward
+          </h2>
+
+          <p className="text-lg md:text-xl leading-relaxed">
+            ForgeTomorrow is proud to join the Startup Grind Nashville chapter — a global
+            community with a local heartbeat. Startup Grind brings together founders,
+            builders, and operators who believe that strong companies are built through
+            shared knowledge, honest conversations, and long-term thinking.
+          </p>
+
+          <p className="text-lg md:text-xl leading-relaxed">
+            This step reflects our belief that progress happens in community. We’re excited
+            to learn from others, contribute where we can, and grow alongside businesses
+            committed to building responsibly and with purpose.
+          </p>
+
+          {/* LOGO + LINK */}
+          <div className="pt-12 flex flex-col items-center text-center space-y-6">
+            <img
+              src="/images/startup-grind-logo.png"
+              alt="Startup Grind logo"
+              className="h-20 object-contain"
+            />
+
+            <a
+              href="https://www.startupgrind.com/nashville/"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-block bg-[#FF7043] hover:bg-[#F4511E] text-white font-bold py-3 px-6 rounded-lg transition"
+            >
+              Visit Startup Grind Nashville
+            </a>
+          </div>
+        </div>
+      </section>
+    </>
+  );
+}
