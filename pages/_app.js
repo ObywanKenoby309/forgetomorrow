@@ -42,10 +42,10 @@ function RouteTracker() {
   return null;
 }
 
-export default function App({ Component, pageProps: { session, ...pageProps } }) {
+function AppShell({ Component, pageProps }) {
   const router = useRouter();
 
-  // Pull user wallpaper (internal pages only)
+  // Pull user wallpaper (internal pages only) — ✅ now inside SessionProvider
   const { wallpaperUrl } = useUserWallpaper();
 
   const isRecruiterRoute = router.pathname.startsWith('/recruiter');
@@ -241,29 +241,35 @@ export default function App({ Component, pageProps: { session, ...pageProps } })
             shouldUseGrayInternalBg ? 'bg-[#ECEFF1]' : ''
           }`}
         >
-          <SessionProvider session={session}>
-            <PlanProvider>
-              <ResumeProvider>
-                <AiUsageProvider>
-                  <RouteTracker />
-                  {renderLandingHeader && <LandingHeader />}
-                  {isUniversalPage && <UniversalHeader />}
-                  <Component {...pageProps} />
-                </AiUsageProvider>
-              </ResumeProvider>
-            </PlanProvider>
+          <PlanProvider>
+            <ResumeProvider>
+              <AiUsageProvider>
+                <RouteTracker />
+                {renderLandingHeader && <LandingHeader />}
+                {isUniversalPage && <UniversalHeader />}
+                <Component {...pageProps} />
+              </AiUsageProvider>
+            </ResumeProvider>
+          </PlanProvider>
 
-            {renderLandingHeader ? <LandingFooter /> : <Footer />}
+          {renderLandingHeader ? <LandingFooter /> : <Footer />}
 
-            {/* Support Floating Button - internal pages only (hidden on mobile via globals.css) */}
-            {!isPublicEffective && (
-              <div className="ft-support-fab">
-                <SupportFloatingButton />
-              </div>
-            )}
-          </SessionProvider>
+          {/* Support Floating Button - internal pages only (hidden on mobile via globals.css) */}
+          {!isPublicEffective && (
+            <div className="ft-support-fab">
+              <SupportFloatingButton />
+            </div>
+          )}
         </div>
       </div>
     </>
+  );
+}
+
+export default function App({ Component, pageProps: { session, ...pageProps } }) {
+  return (
+    <SessionProvider session={session}>
+      <AppShell Component={Component} pageProps={pageProps} />
+    </SessionProvider>
   );
 }
