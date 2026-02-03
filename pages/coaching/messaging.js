@@ -1,5 +1,4 @@
 // pages/coaching/messaging.js
-// updated to fix loading issue
 import { useState, useEffect, useMemo } from "react";
 import { useRouter } from "next/router";
 import { PlanProvider } from "@/context/PlanContext";
@@ -230,37 +229,41 @@ export default function CoachMessagingPage() {
 
   useEffect(() => {
     let cancelled = false;
-
-    // ✅ MINIMAL FIX: retry session load if hydration returns null
     let retryTimer = null;
 
     async function loadUser() {
       try {
         const session = await getClientSession();
 
-        // Hydration delay: session can be temporarily null.
-        // If we stop loading here, currentUserId never gets set and threads never load.
+        // ✅ Hydration delay: session can be null briefly. Retry quietly.
         if (!session) {
-          if (!cancelled) {
-            retryTimer = setTimeout(() => {
-              loadUser();
-            }, 250);
-          }
+          if (cancelled) return;
+          retryTimer = setTimeout(loadUser, 250);
           return;
+        }
+
+        // ✅ Session resolved: stop the spinner now.
+        if (retryTimer) {
+          clearTimeout(retryTimer);
+          retryTimer = null;
         }
 
         if (!session.user?.id) {
           if (!cancelled) await router.replace("/auth/signin");
+          if (!cancelled) setLoadingUser(false);
           return;
         }
 
-        if (!cancelled) setCurrentUserId(session.user.id);
+        if (!cancelled) {
+          setCurrentUserId(session.user.id);
+          setLoadingUser(false);
+        }
       } catch (err) {
         console.error("Failed to load session for coach messaging:", err);
-        if (!cancelled) await router.replace("/auth/signin");
-      } finally {
-        // ✅ only stop loading once we actually have a session (or redirected)
-        if (!cancelled && !retryTimer) setLoadingUser(false);
+        if (!cancelled) {
+          setLoadingUser(false);
+          await router.replace("/auth/signin");
+        }
       }
     }
 
