@@ -231,26 +231,32 @@ export default function CoachMessagingPage() {
     let cancelled = false;
     let retryTimer = null;
 
+    // ✅ hard-stop so you never sit on Loading forever
+    const hardStop = setTimeout(() => {
+      if (!cancelled) setLoadingUser(false);
+    }, 2000);
+
     async function loadUser() {
       try {
         const session = await getClientSession();
 
-        // ✅ Hydration delay: session can be null briefly. Retry quietly.
+        // session can be temporarily null during hydration - retry
         if (!session) {
           if (cancelled) return;
           retryTimer = setTimeout(loadUser, 250);
           return;
         }
 
-        // ✅ Session resolved: stop the spinner now.
         if (retryTimer) {
           clearTimeout(retryTimer);
           retryTimer = null;
         }
 
         if (!session.user?.id) {
-          if (!cancelled) await router.replace("/auth/signin");
-          if (!cancelled) setLoadingUser(false);
+          if (!cancelled) {
+            setLoadingUser(false);
+            await router.replace("/auth/signin");
+          }
           return;
         }
 
@@ -270,9 +276,11 @@ export default function CoachMessagingPage() {
     loadUser();
     return () => {
       cancelled = true;
+      clearTimeout(hardStop);
       if (retryTimer) clearTimeout(retryTimer);
     };
-  }, [router]);
+    // ✅ CRITICAL: run once. Router/query hydration was cancelling the session resolution.
+  }, []);
 
   async function fetchJson(url, options = {}) {
     if (!currentUserId) throw new Error("No current user id resolved yet");
