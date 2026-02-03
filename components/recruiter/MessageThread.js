@@ -9,22 +9,32 @@ function tsFmt(ts) {
   }
 }
 
+function initials(name) {
+  const s = String(name || "").trim();
+  if (!s) return "?";
+  const parts = s.split(/\s+/).filter(Boolean);
+  const a = parts[0]?.[0] || "?";
+  const b = parts.length > 1 ? parts[parts.length - 1]?.[0] : "";
+  return (a + b).toUpperCase();
+}
+
 /**
  * props:
- * - threads: [{id, candidate, snippet, messages:[{id, from:'recruiter'|'candidate'|..., text, ts, status?:'sent'|'read'}], unread?: number}]
+ * - threads: [{id, candidate, snippet, messages:[{id, from:'recruiter'|'candidate'|..., text, ts, status?}], unread?: number, otherUserId?, otherAvatarUrl?}]
  * - initialThreadId?: number|string
  * - onSend?: (threadId, messageText) => void
  *
- * NEW (non-breaking defaults):
- * - persona?: string (default "recruiter")  // value used in messages[].from for "self"
- * - personaLabel?: string (default "Recruiter") // UI copy label
- * - otherLabel?: string (default "candidate")   // UI copy label (lowercase)
- * - inboxTitle?: string (default "Recruiter Inbox")
- * - inboxDescription?: ReactNode|string
- * - emptyTitle?: string
- * - emptyBody?: ReactNode|string
- * - emptyFootnote?: ReactNode|string
- * - inputPlaceholderEmpty?: string
+ * Existing optional props kept intact.
+ *
+ * NEW (non-breaking):
+ * - onActiveThreadChange?: (thread) => void
+ * - otherAvatarKey?: string (default "otherAvatarUrl") // allows alt field name if ever needed
+ * - isBlocked?: boolean (default false)
+ * - onDelete?: () => void
+ * - onReport?: () => void
+ * - onBlock?: () => void
+ * - showHeaderActions?: boolean (default false)
+ * - headerActionsLabel?: { delete?: string, report?: string, block?: string, blocked?: string }
  */
 export default function MessageThread({
   threads = [],
@@ -41,6 +51,16 @@ export default function MessageThread({
   emptyBody,
   emptyFootnote,
   inputPlaceholderEmpty,
+
+  // ✅ new (safe)
+  onActiveThreadChange,
+  otherAvatarKey = "otherAvatarUrl",
+  isBlocked = false,
+  onDelete,
+  onReport,
+  onBlock,
+  showHeaderActions = false,
+  headerActionsLabel = {},
 }) {
   const [activeId, setActiveId] = useState(
     initialThreadId ?? threads[0]?.id ?? null
@@ -56,22 +76,26 @@ export default function MessageThread({
   const scrollRef = useRef(null);
 
   const hasThreads = threads.length > 0;
-  const canCompose = hasThreads && !!active;
+  const canCompose = hasThreads && !!active && !isBlocked;
 
   // 🔁 Keep activeId in sync with initialThreadId / threads when they change
   useEffect(() => {
     const next = initialThreadId ?? threads[0]?.id ?? null;
     setActiveId((prev) => {
-      // If we already have a valid activeId that still exists, keep it
       if (prev && threads.some((t) => t.id === prev)) {
-        if (initialThreadId && prev !== initialThreadId) {
-          return initialThreadId;
-        }
+        if (initialThreadId && prev !== initialThreadId) return initialThreadId;
         return prev;
       }
       return next;
     });
   }, [initialThreadId, threads]);
+
+  // ✅ notify parent when active thread changes (for polling, actions, etc.)
+  useEffect(() => {
+    if (!onActiveThreadChange) return;
+    if (!active) return;
+    onActiveThreadChange(active);
+  }, [activeId, active, onActiveThreadChange]);
 
   // Auto-scroll to bottom when switching threads or adding messages
   useEffect(() => {
@@ -83,9 +107,7 @@ export default function MessageThread({
   // Reset fake “typing” when thread changes
   useEffect(() => {
     let t;
-    if (activeId) {
-      t = setTimeout(() => setIsTyping(false), 0);
-    }
+    if (activeId) t = setTimeout(() => setIsTyping(false), 0);
     return () => clearTimeout(t);
   }, [activeId]);
 
@@ -124,9 +146,16 @@ export default function MessageThread({
   );
 
   const inputPlaceholder = hasThreads
-    ? "Type a message…"
+    ? isBlocked
+      ? "You have blocked this member."
+      : "Type a message…"
     : inputPlaceholderEmpty ||
       `Start from a ${otherLabel} card and choose ‘Send as ${personaLabel}’ to open a conversation.`;
+
+  const deleteLabel = headerActionsLabel.delete || "Delete";
+  const reportLabel = headerActionsLabel.report || "Report";
+  const blockLabel = headerActionsLabel.block || "Block";
+  const blockedLabel = headerActionsLabel.blocked || "Blocked";
 
   return (
     <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
@@ -150,27 +179,52 @@ export default function MessageThread({
           </div>
         )}
 
-        {threads.map((t) => (
-          <button
-            key={t.id}
-            onClick={() => setActiveId(t.id)}
-            className={`w-full text-left px-4 py-3 hover:bg-slate-50 focus:bg-slate-50 ${
-              t.id === activeId ? "bg-slate-50" : ""
-            }`}
-          >
-            <div className="flex items-center justify-between">
-              <div className="font-medium truncate">{t.candidate}</div>
-              {t.unread ? (
-                <span className="ml-2 text-[10px] px-1.5 py-[2px] rounded bg-emerald-100 text-emerald-700 border border-emerald-200">
-                  {t.unread}
-                </span>
-              ) : null}
-            </div>
-            <div className="text-xs text-slate-500 truncate">
-              {t.snippet || "No messages yet."}
-            </div>
-          </button>
-        ))}
+        {threads.map((t) => {
+          const avatarUrl = t?.[otherAvatarKey] || null;
+          const name = t.candidate || "Conversation";
+          const isActive = t.id === activeId;
+
+          return (
+            <button
+              key={t.id}
+              onClick={() => setActiveId(t.id)}
+              className={`w-full text-left px-4 py-3 hover:bg-slate-50 focus:bg-slate-50 ${
+                isActive ? "bg-slate-50" : ""
+              }`}
+            >
+              <div className="flex items-start gap-3">
+                {/* avatar */}
+                <div className="flex-shrink-0 mt-0.5">
+                  {avatarUrl ? (
+                    <img
+                      src={avatarUrl}
+                      alt={name}
+                      className="w-9 h-9 rounded-full object-cover border border-slate-200"
+                    />
+                  ) : (
+                    <div className="w-9 h-9 rounded-full bg-slate-200 border border-slate-200 flex items-center justify-center text-[11px] font-bold text-slate-700">
+                      {initials(name)}
+                    </div>
+                  )}
+                </div>
+
+                <div className="min-w-0 flex-1">
+                  <div className="flex items-center justify-between gap-2">
+                    <div className="font-medium truncate">{name}</div>
+                    {t.unread ? (
+                      <span className="ml-2 text-[10px] px-1.5 py-[2px] rounded bg-emerald-100 text-emerald-700 border border-emerald-200">
+                        {t.unread}
+                      </span>
+                    ) : null}
+                  </div>
+                  <div className="text-xs text-slate-500 truncate">
+                    {t.snippet || "No messages yet."}
+                  </div>
+                </div>
+              </div>
+            </button>
+          );
+        })}
       </aside>
 
       {/* Active thread + composer */}
@@ -194,17 +248,58 @@ export default function MessageThread({
           </div>
         ) : (
           <>
-            <div className="flex items-center justify-between mb-2">
-              <div className="font-medium">Conversation with {active.candidate}</div>
-              <label className="text-xs text-slate-500 cursor-pointer">
-                <input
-                  type="checkbox"
-                  className="mr-1 align-middle"
-                  onChange={(e) => setIsTyping(e.target.checked)}
-                />
-                simulate typing
-              </label>
+            <div className="flex items-center justify-between mb-2 gap-2">
+              <div className="font-medium truncate">
+                Conversation with {active.candidate}
+              </div>
+
+              <div className="flex items-center gap-2">
+                {showHeaderActions && (
+                  <>
+                    <button
+                      type="button"
+                      onClick={onDelete}
+                      className="text-[11px] px-2 py-1 border border-slate-200 rounded-md text-slate-800 hover:bg-white"
+                      disabled={!onDelete}
+                    >
+                      {deleteLabel}
+                    </button>
+                    <button
+                      type="button"
+                      onClick={onReport}
+                      className="text-[11px] px-2 py-1 border border-slate-200 rounded-md text-slate-800 hover:bg-white"
+                      disabled={!onReport}
+                    >
+                      {reportLabel}
+                    </button>
+                    <button
+                      type="button"
+                      onClick={onBlock}
+                      className="text-[11px] px-2 py-1 border border-red-200 rounded-md text-red-700 hover:bg-red-50"
+                      disabled={!onBlock || isBlocked}
+                    >
+                      {isBlocked ? blockedLabel : blockLabel}
+                    </button>
+                  </>
+                )}
+
+                <label className="text-xs text-slate-500 cursor-pointer whitespace-nowrap">
+                  <input
+                    type="checkbox"
+                    className="mr-1 align-middle"
+                    onChange={(e) => setIsTyping(e.target.checked)}
+                  />
+                  simulate typing
+                </label>
+              </div>
             </div>
+
+            {isBlocked && (
+              <div className="mb-2 text-[11px] text-red-700 bg-red-50 border border-red-200 rounded-md px-3 py-2">
+                You have blocked this member. You will not be able to send new
+                messages.
+              </div>
+            )}
 
             <div
               ref={scrollRef}
@@ -220,18 +315,37 @@ export default function MessageThread({
                         key={m.id}
                         className={`flex ${isSelf ? "justify-end" : "justify-start"}`}
                       >
-                        <div
-                          className={`px-3 py-2 rounded max-w-[80%] ${
-                            isSelf ? "bg-[#FF7043] text-white" : "bg-white border"
-                          }`}
-                          title={tsFmt(m.ts)}
-                        >
-                          <div>{m.text}</div>
-                          {isSelf && (
-                            <div className="mt-1 text-[10px] opacity-80">
-                              {m.status === "read" ? "Read" : "Sent"}
+                        <div className={`flex items-end gap-2 ${isSelf ? "flex-row-reverse" : ""}`}>
+                          {/* left-side avatar only for "other" */}
+                          {!isSelf && (
+                            <div className="flex-shrink-0">
+                              {active?.[otherAvatarKey] ? (
+                                <img
+                                  src={active[otherAvatarKey]}
+                                  alt={active.candidate}
+                                  className="w-7 h-7 rounded-full object-cover border border-slate-200"
+                                />
+                              ) : (
+                                <div className="w-7 h-7 rounded-full bg-slate-200 border border-slate-200 flex items-center justify-center text-[10px] font-bold text-slate-700">
+                                  {initials(active.candidate)}
+                                </div>
+                              )}
                             </div>
                           )}
+
+                          <div
+                            className={`px-3 py-2 rounded max-w-[80%] ${
+                              isSelf ? "bg-[#FF7043] text-white" : "bg-white border"
+                            }`}
+                            title={tsFmt(m.ts)}
+                          >
+                            <div>{m.text}</div>
+                            {isSelf && (
+                              <div className="mt-1 text-[10px] opacity-80">
+                                {m.status === "read" ? "Read" : "Sent"}
+                              </div>
+                            )}
+                          </div>
                         </div>
                       </li>
                     );
@@ -277,6 +391,8 @@ export default function MessageThread({
             title={
               canCompose
                 ? "Ctrl/Cmd+Enter to send"
+                : isBlocked
+                ? "Blocked"
                 : `Open a ${personaLabel.toLowerCase()} conversation to send`
             }
           >

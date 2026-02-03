@@ -47,6 +47,16 @@ export default async function handler(req, res) {
           senderId: true,
           content: true,
           createdAt: true,
+          sender: {
+            select: {
+              id: true,
+              email: true,
+              firstName: true,
+              lastName: true,
+              name: true,
+              avatarUrl: true,
+            },
+          },
         },
       });
 
@@ -54,6 +64,8 @@ export default async function handler(req, res) {
         messages: messages.map((m) => ({
           id: m.id,
           senderId: m.senderId,
+          senderName: m.sender ? displayName(m.sender) : null,
+          senderAvatarUrl: m.sender?.avatarUrl || null,
           text: m.content,
           timeIso: m.createdAt.toISOString(),
         })),
@@ -80,6 +92,7 @@ export default async function handler(req, res) {
                   firstName: true,
                   lastName: true,
                   name: true,
+                  avatarUrl: true,
                 },
               },
             },
@@ -103,6 +116,7 @@ export default async function handler(req, res) {
           id: c.id,
           name: other ? displayName(other) : c.title || "Conversation",
           otherUserId: other?.id || null,
+          otherAvatarUrl: other?.avatarUrl || null,
           lastMessage: c.messages?.[0]?.content || "",
           lastMessageAt: c.messages?.[0]?.createdAt?.toISOString?.() || null,
           unread: 0, // keep 0 until we implement read receipts

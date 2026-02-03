@@ -76,6 +76,11 @@ function Body({
   setBulkOpen,
   initialThreadId,
   prefillText,
+  onActiveThreadChange,
+  isBlocked,
+  onDelete,
+  onReport,
+  onBlock,
 }) {
   const { isEnterprise } = usePlan();
 
@@ -117,6 +122,21 @@ function Body({
         threads={threads}
         initialThreadId={initialThreadId || threads[0]?.id}
         onSend={onSend}
+        persona="recruiter"
+        personaLabel="Recruiter"
+        otherLabel="candidate"
+        showHeaderActions={true}
+        onDelete={onDelete}
+        onReport={onReport}
+        onBlock={onBlock}
+        isBlocked={isBlocked}
+        onActiveThreadChange={onActiveThreadChange}
+        headerActionsLabel={{
+          delete: "Delete",
+          report: "Report",
+          block: "Block",
+          blocked: "Blocked",
+        }}
       />
 
       <SavedReplies
@@ -156,6 +176,9 @@ export default function MessagingPage() {
   const [currentUserId, setCurrentUserId] = useState(null);
   const [loadingUser, setLoadingUser] = useState(true);
 
+  const [activeThread, setActiveThread] = useState(null);
+  const [isBlocked, setIsBlocked] = useState(false);
+
   const queryConversationId =
     (router.query.c && String(router.query.c)) ||
     (router.query.conversationId && String(router.query.conversationId)) ||
@@ -173,24 +196,16 @@ export default function MessagingPage() {
         if (!session) return;
 
         if (!session.user?.id) {
-          if (!cancelled) {
-            await router.replace("/auth/signin");
-          }
+          if (!cancelled) await router.replace("/auth/signin");
           return;
         }
 
-        if (!cancelled) {
-          setCurrentUserId(session.user.id);
-        }
+        if (!cancelled) setCurrentUserId(session.user.id);
       } catch (err) {
         console.error("Failed to load session for recruiter messaging:", err);
-        if (!cancelled) {
-          await router.replace("/auth/signin");
-        }
+        if (!cancelled) await router.replace("/auth/signin");
       } finally {
-        if (!cancelled) {
-          setLoadingUser(false);
-        }
+        if (!cancelled) setLoadingUser(false);
       }
     }
 
@@ -201,12 +216,14 @@ export default function MessagingPage() {
   }, [router]);
 
   async function fetchJson(url, options = {}) {
+    if (!currentUserId) throw new Error("No current user id resolved yet");
+
     const res = await fetch(url, {
       ...options,
       headers: {
         "Content-Type": "application/json",
         ...(options.headers || {}),
-        ...(currentUserId ? { "x-user-id": currentUserId } : {}),
+        "x-user-id": currentUserId,
       },
     });
 
@@ -219,7 +236,7 @@ export default function MessagingPage() {
   }
 
   useEffect(() => {
-    if (loadingUser) return; // ✅ minimal: wait for session resolution, not currentUserId
+    if (!currentUserId) return;
     let cancelled = false;
 
     async function loadThreads() {
@@ -256,6 +273,8 @@ export default function MessagingPage() {
                 snippet: conv.lastMessage || lastMsg?.text || "",
                 unread: typeof conv.unread === "number" ? conv.unread : 0,
                 messages: mappedMessages,
+                otherUserId: conv.otherUserId || null,
+                otherAvatarUrl: conv.otherAvatarUrl || null,
               };
             } catch (err) {
               console.error("Failed to load messages for", conv.id, err);
@@ -265,6 +284,8 @@ export default function MessagingPage() {
                 snippet: conv.lastMessage || "",
                 unread: typeof conv.unread === "number" ? conv.unread : 0,
                 messages: [],
+                otherUserId: conv.otherUserId || null,
+                otherAvatarUrl: conv.otherAvatarUrl || null,
               };
             }
           })
@@ -293,11 +314,60 @@ export default function MessagingPage() {
     return () => {
       cancelled = true;
     };
-  }, [queryConversationId, currentUserId, loadingUser]);
+  }, [queryConversationId, currentUserId]);
+
+  // ✅ Poll messages for the active conversation
+  useEffect(() => {
+    if (!currentUserId) return;
+    if (!activeThread?.id) return;
+
+    let cancelled = false;
+
+    const tick = async () => {
+      try {
+        const msgData = await fetchJson(
+          `/api/messages?conversationId=${encodeURIComponent(activeThread.id)}&channel=recruiter`
+        );
+        const msgs = Array.isArray(msgData.messages) ? msgData.messages : [];
+
+        const mapped = msgs.map((m) => ({
+          id: m.id,
+          from: m.senderId === currentUserId ? "recruiter" : "candidate",
+          text: m.text,
+          ts: m.timeIso || new Date().toISOString(),
+          status: "read",
+        }));
+
+        if (cancelled) return;
+
+        setThreads((prev) =>
+          prev.map((t) =>
+            t.id !== activeThread.id
+              ? t
+              : {
+                  ...t,
+                  messages: mapped,
+                  snippet: mapped[mapped.length - 1]?.text || t.snippet || "",
+                }
+          )
+        );
+      } catch {
+        // keep quiet
+      }
+    };
+
+    const initial = setTimeout(() => tick(), 800);
+    const interval = setInterval(() => tick(), 4000);
+
+    return () => {
+      cancelled = true;
+      clearTimeout(initial);
+      clearInterval(interval);
+    };
+  }, [activeThread?.id, currentUserId]);
 
   const onSend = async (threadId, text) => {
     if (!text || !String(text).trim()) return;
-
     const trimmed = text.trim();
 
     try {
@@ -336,6 +406,96 @@ export default function MessagingPage() {
     }
   };
 
+  // ✅ actions (parity with Signal)
+  const handleDelete = async () => {
+    if (!activeThread?.id) return;
+    const confirmed = window.confirm("Delete this conversation for both participants? This cannot be undone.");
+    if (!confirmed) return;
+
+    try {
+      const res = await fetch("/api/signal/delete", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ conversationId: activeThread.id }),
+      });
+      if (!res.ok) {
+        console.error("delete failed:", await res.text());
+        alert("Could not delete conversation. Please try again.");
+        return;
+      }
+
+      setThreads((prev) => prev.filter((t) => t.id !== activeThread.id));
+      setActiveThread(null);
+      setIsBlocked(false);
+    } catch (err) {
+      console.error("delete error:", err);
+      alert("Could not delete conversation. Please try again.");
+    }
+  };
+
+  const handleReport = async () => {
+    if (!activeThread?.id || !activeThread?.otherUserId) return;
+
+    const reason = window.prompt("Tell us briefly what happened. This will go to the ForgeTomorrow support team.");
+    if (reason === null) return;
+
+    try {
+      const res = await fetch("/api/signal/report", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          conversationId: activeThread.id,
+          targetUserId: activeThread.otherUserId,
+          reason: String(reason || "").trim(),
+        }),
+      });
+
+      if (!res.ok) {
+        console.error("report failed:", await res.text());
+        alert("Could not submit report. Please try again.");
+        return;
+      }
+
+      alert("Thank you. Your report has been submitted to our team.");
+    } catch (err) {
+      console.error("report error:", err);
+      alert("Could not submit report. Please try again.");
+    }
+  };
+
+  const handleBlock = async () => {
+    if (!activeThread?.otherUserId) return;
+
+    const reason = window.prompt("Optional: Why are you blocking this member? (This helps moderation)");
+    const confirmed = window.confirm(
+      "Are you sure you want to block this member? They will no longer be able to message you, and you will not see new messages from them."
+    );
+    if (!confirmed) return;
+
+    try {
+      const res = await fetch("/api/signal/block", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          targetUserId: activeThread.otherUserId,
+          reason: reason?.trim() || null,
+        }),
+      });
+
+      if (!res.ok) {
+        console.error("block failed:", await res.text());
+        alert("Could not block member. Please try again.");
+        return;
+      }
+
+      setIsBlocked(true);
+      setThreads((prev) => prev.filter((t) => t.otherUserId !== activeThread.otherUserId));
+    } catch (err) {
+      console.error("block error:", err);
+      alert("Could not block member. Please try again.");
+    }
+  };
+
   if (loadingUser) {
     return (
       <PlanProvider>
@@ -364,11 +524,19 @@ export default function MessagingPage() {
         <Body
           threads={threads}
           onSend={onSend}
-          candidatesFlat={[]}
+          candidatesFlat={[]} // unchanged
           bulkOpen={bulkOpen}
           setBulkOpen={setBulkOpen}
           initialThreadId={initialThreadId}
           prefillText={prefillText}
+          onActiveThreadChange={(t) => {
+            setActiveThread(t);
+            setIsBlocked(false);
+          }}
+          isBlocked={isBlocked}
+          onDelete={handleDelete}
+          onReport={handleReport}
+          onBlock={handleBlock}
         />
       </RecruiterLayout>
     </PlanProvider>
