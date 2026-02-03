@@ -1,4 +1,5 @@
 // pages/coaching/messaging.js
+// updated to fix loading issue
 import { useState, useEffect, useMemo } from "react";
 import { useRouter } from "next/router";
 import { PlanProvider } from "@/context/PlanContext";

@@ -1,4 +1,5 @@
 // pages/recruiter/messaging.js
+// updated to fix loading issue
 import { useState, useEffect } from "react";
 import { useRouter } from "next/router";
 import { PlanProvider, usePlan } from "@/context/PlanContext";
