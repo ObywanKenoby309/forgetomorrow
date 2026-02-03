@@ -232,14 +232,12 @@ export default function CoachMessagingPage() {
   }, [router]);
 
   async function fetchJson(url, options = {}) {
-    if (!currentUserId) throw new Error("No current user id resolved yet");
-
     const res = await fetch(url, {
       ...options,
       headers: {
         "Content-Type": "application/json",
         ...(options.headers || {}),
-        "x-user-id": currentUserId,
+        ...(currentUserId ? { "x-user-id": currentUserId } : {}),
       },
     });
 
@@ -252,7 +250,7 @@ export default function CoachMessagingPage() {
   }
 
   useEffect(() => {
-    if (!currentUserId) return;
+    if (loadingUser) return; // ✅ minimal: wait for session resolution, not currentUserId
     let cancelled = false;
 
     async function loadThreads() {
@@ -264,12 +262,10 @@ export default function CoachMessagingPage() {
           conversations.map(async (conv) => {
             try {
               const msgData = await fetchJson(
-                `/api/messages?conversationId=${encodeURIComponent(conv.id)}`
+                `/api/messages?conversationId=${encodeURIComponent(conv.id)}&channel=coach`
               );
               const msgs = Array.isArray(msgData.messages) ? msgData.messages : [];
 
-              // IMPORTANT: MessageThread expects from: "recruiter" | "candidate"
-              // We keep the component unchanged by mapping coach->recruiter and client->candidate
               const mappedMessages = msgs.map((m) => ({
                 id: m.id,
                 from: m.senderId === currentUserId ? "recruiter" : "candidate",
@@ -325,10 +321,9 @@ export default function CoachMessagingPage() {
     return () => {
       cancelled = true;
     };
-  }, [queryConversationId, currentUserId]);
+  }, [queryConversationId, currentUserId, loadingUser]);
 
   const recipients = useMemo(() => {
-    // build list for BulkMessageModal from existing conversations for now
     return (threads || [])
       .filter((t) => !!t.otherUserId)
       .map((t) => ({
@@ -357,7 +352,7 @@ export default function CoachMessagingPage() {
 
       const newMsg = {
         id: msg?.id ?? `m-${Date.now()}`,
-        from: "recruiter", // mapped self-key for MessageThread
+        from: "recruiter",
         text: msg?.text ?? trimmed,
         ts: msg?.timeIso || new Date().toISOString(),
         status: "sent",
@@ -395,9 +390,6 @@ export default function CoachMessagingPage() {
       });
 
       setBulkOpen(false);
-
-      // refresh threads so coach sees new snippets immediately
-      // (re-use the existing loader by forcing router refresh)
       router.replace(router.asPath);
     } catch (err) {
       console.error("Failed bulk send (coach):", err);

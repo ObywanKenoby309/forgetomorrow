@@ -84,7 +84,6 @@ function Body({
     setBulkOpen(false);
   };
 
-  // Prefill logic when arriving from Recruiter → Candidates → Message candidate
   useEffect(() => {
     if (!initialThreadId) return;
     if (!prefillText || !prefillText.trim()) return;
@@ -99,7 +98,6 @@ function Body({
 
   return (
     <main className="space-y-6">
-      {/* Explainer: how to start new threads */}
       <div className="mb-2 rounded-md border border-slate-200 bg-slate-50 px-4 py-3 text-xs text-slate-700">
         <p className="text-[11px] font-semibold uppercase tracking-wide text-slate-500">
           How messaging works
@@ -166,17 +164,12 @@ export default function MessagingPage() {
   const prefillText =
     typeof router.query.prefill === "string" ? router.query.prefill : "";
 
-  /* ---------------------------------------------
-     1) LOAD USER — avoid false redirects
-  ---------------------------------------------- */
   useEffect(() => {
     let cancelled = false;
 
     async function loadUser() {
       try {
         const session = await getClientSession();
-
-        // Hydration delay: don't redirect yet if session is temporarily null
         if (!session) return;
 
         if (!session.user?.id) {
@@ -207,20 +200,13 @@ export default function MessagingPage() {
     };
   }, [router]);
 
-  /* ---------------------------------------------
-     2) fetchJson helper
-  ---------------------------------------------- */
   async function fetchJson(url, options = {}) {
-    if (!currentUserId) {
-      throw new Error("No current user id resolved yet");
-    }
-
     const res = await fetch(url, {
       ...options,
       headers: {
         "Content-Type": "application/json",
         ...(options.headers || {}),
-        "x-user-id": currentUserId,
+        ...(currentUserId ? { "x-user-id": currentUserId } : {}),
       },
     });
 
@@ -232,11 +218,8 @@ export default function MessagingPage() {
     return res.json();
   }
 
-  /* ---------------------------------------------
-     3) LOAD THREADS
-  ---------------------------------------------- */
   useEffect(() => {
-    if (!currentUserId) return;
+    if (loadingUser) return; // ✅ minimal: wait for session resolution, not currentUserId
     let cancelled = false;
 
     async function loadThreads() {
@@ -250,7 +233,7 @@ export default function MessagingPage() {
           conversations.map(async (conv) => {
             try {
               const msgData = await fetchJson(
-                `/api/messages?conversationId=${encodeURIComponent(conv.id)}`
+                `/api/messages?conversationId=${encodeURIComponent(conv.id)}&channel=recruiter`
               );
               const msgs = Array.isArray(msgData.messages)
                 ? msgData.messages
@@ -310,11 +293,8 @@ export default function MessagingPage() {
     return () => {
       cancelled = true;
     };
-  }, [queryConversationId, currentUserId]);
+  }, [queryConversationId, currentUserId, loadingUser]);
 
-  /* ---------------------------------------------
-     4) SEND MESSAGES
-  ---------------------------------------------- */
   const onSend = async (threadId, text) => {
     if (!text || !String(text).trim()) return;
 
@@ -356,9 +336,6 @@ export default function MessagingPage() {
     }
   };
 
-  /* ---------------------------------------------
-     LOADING STATE (only while session resolves)
-  ---------------------------------------------- */
   if (loadingUser) {
     return (
       <PlanProvider>
@@ -376,9 +353,6 @@ export default function MessagingPage() {
     );
   }
 
-  /* ---------------------------------------------
-     RENDER PAGE (even if threads = [])
-  ---------------------------------------------- */
   return (
     <PlanProvider>
       <RecruiterLayout
@@ -390,7 +364,7 @@ export default function MessagingPage() {
         <Body
           threads={threads}
           onSend={onSend}
-          candidatesFlat={[]} // no fake placeholder candidates
+          candidatesFlat={[]}
           bulkOpen={bulkOpen}
           setBulkOpen={setBulkOpen}
           initialThreadId={initialThreadId}
