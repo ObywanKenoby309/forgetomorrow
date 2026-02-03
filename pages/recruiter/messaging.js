@@ -189,11 +189,19 @@ export default function MessagingPage() {
 
   useEffect(() => {
     let cancelled = false;
+    let retryTimer = null;
 
     async function loadUser() {
       try {
         const session = await getClientSession();
-        if (!session) return;
+
+        // ✅ IMPORTANT: session can be null briefly during hydration.
+        // Do not end loading yet. Retry quietly.
+        if (!session) {
+          if (cancelled) return;
+          retryTimer = setTimeout(loadUser, 200);
+          return;
+        }
 
         if (!session.user?.id) {
           if (!cancelled) await router.replace("/auth/signin");
@@ -205,6 +213,7 @@ export default function MessagingPage() {
         console.error("Failed to load session for recruiter messaging:", err);
         if (!cancelled) await router.replace("/auth/signin");
       } finally {
+        // ✅ Only stop loading once we have a session (or we redirected).
         if (!cancelled) setLoadingUser(false);
       }
     }
@@ -212,6 +221,7 @@ export default function MessagingPage() {
     loadUser();
     return () => {
       cancelled = true;
+      if (retryTimer) clearTimeout(retryTimer);
     };
   }, [router]);
 
@@ -250,7 +260,9 @@ export default function MessagingPage() {
           conversations.map(async (conv) => {
             try {
               const msgData = await fetchJson(
-                `/api/messages?conversationId=${encodeURIComponent(conv.id)}&channel=recruiter`
+                `/api/messages?conversationId=${encodeURIComponent(
+                  conv.id
+                )}&channel=recruiter`
               );
               const msgs = Array.isArray(msgData.messages)
                 ? msgData.messages
@@ -326,7 +338,9 @@ export default function MessagingPage() {
     const tick = async () => {
       try {
         const msgData = await fetchJson(
-          `/api/messages?conversationId=${encodeURIComponent(activeThread.id)}&channel=recruiter`
+          `/api/messages?conversationId=${encodeURIComponent(
+            activeThread.id
+          )}&channel=recruiter`
         );
         const msgs = Array.isArray(msgData.messages) ? msgData.messages : [];
 
@@ -347,7 +361,8 @@ export default function MessagingPage() {
               : {
                   ...t,
                   messages: mapped,
-                  snippet: mapped[mapped.length - 1]?.text || t.snippet || "",
+                  snippet:
+                    mapped[mapped.length - 1]?.text || t.snippet || "",
                 }
           )
         );
@@ -409,7 +424,9 @@ export default function MessagingPage() {
   // ✅ actions (parity with Signal)
   const handleDelete = async () => {
     if (!activeThread?.id) return;
-    const confirmed = window.confirm("Delete this conversation for both participants? This cannot be undone.");
+    const confirmed = window.confirm(
+      "Delete this conversation for both participants? This cannot be undone."
+    );
     if (!confirmed) return;
 
     try {
@@ -436,7 +453,9 @@ export default function MessagingPage() {
   const handleReport = async () => {
     if (!activeThread?.id || !activeThread?.otherUserId) return;
 
-    const reason = window.prompt("Tell us briefly what happened. This will go to the ForgeTomorrow support team.");
+    const reason = window.prompt(
+      "Tell us briefly what happened. This will go to the ForgeTomorrow support team."
+    );
     if (reason === null) return;
 
     try {
@@ -466,7 +485,9 @@ export default function MessagingPage() {
   const handleBlock = async () => {
     if (!activeThread?.otherUserId) return;
 
-    const reason = window.prompt("Optional: Why are you blocking this member? (This helps moderation)");
+    const reason = window.prompt(
+      "Optional: Why are you blocking this member? (This helps moderation)"
+    );
     const confirmed = window.confirm(
       "Are you sure you want to block this member? They will no longer be able to message you, and you will not see new messages from them."
     );
@@ -489,7 +510,9 @@ export default function MessagingPage() {
       }
 
       setIsBlocked(true);
-      setThreads((prev) => prev.filter((t) => t.otherUserId !== activeThread.otherUserId));
+      setThreads((prev) =>
+        prev.filter((t) => t.otherUserId !== activeThread.otherUserId)
+      );
     } catch (err) {
       console.error("block error:", err);
       alert("Could not block member. Please try again.");

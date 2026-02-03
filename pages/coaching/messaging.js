@@ -230,10 +230,23 @@ export default function CoachMessagingPage() {
   useEffect(() => {
     let cancelled = false;
 
+    // ✅ MINIMAL FIX: retry session load if hydration returns null
+    let retryTimer = null;
+
     async function loadUser() {
       try {
         const session = await getClientSession();
-        if (!session) return;
+
+        // Hydration delay: session can be temporarily null.
+        // If we stop loading here, currentUserId never gets set and threads never load.
+        if (!session) {
+          if (!cancelled) {
+            retryTimer = setTimeout(() => {
+              loadUser();
+            }, 250);
+          }
+          return;
+        }
 
         if (!session.user?.id) {
           if (!cancelled) await router.replace("/auth/signin");
@@ -245,13 +258,15 @@ export default function CoachMessagingPage() {
         console.error("Failed to load session for coach messaging:", err);
         if (!cancelled) await router.replace("/auth/signin");
       } finally {
-        if (!cancelled) setLoadingUser(false);
+        // ✅ only stop loading once we actually have a session (or redirected)
+        if (!cancelled && !retryTimer) setLoadingUser(false);
       }
     }
 
     loadUser();
     return () => {
       cancelled = true;
+      if (retryTimer) clearTimeout(retryTimer);
     };
   }, [router]);
 
