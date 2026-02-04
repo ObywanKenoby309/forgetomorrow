@@ -18,6 +18,11 @@ function initials(name) {
   return (a + b).toUpperCase();
 }
 
+function normId(v) {
+  if (v === null || v === undefined) return null;
+  return String(v);
+}
+
 /**
  * props:
  * - threads: [{id, candidate, snippet, messages:[{id, from:'recruiter'|'candidate'|..., text, ts, status?}], unread?: number, otherUserId?, otherAvatarUrl?}]
@@ -62,14 +67,17 @@ export default function MessageThread({
   showHeaderActions = false,
   headerActionsLabel = {},
 }) {
-  const [activeId, setActiveId] = useState(
-    initialThreadId ?? threads[0]?.id ?? null
-  );
+  // ✅ Normalize ids to avoid number/string mismatch bugs
+  const [activeId, setActiveId] = useState(() => {
+    const first = initialThreadId ?? threads[0]?.id ?? null;
+    return normId(first);
+  });
 
-  const active = useMemo(
-    () => threads.find((t) => t.id === activeId) || null,
-    [threads, activeId]
-  );
+  const active = useMemo(() => {
+    const a = normId(activeId);
+    if (!a) return null;
+    return threads.find((t) => normId(t.id) === a) || null;
+  }, [threads, activeId]);
 
   const [draft, setDraft] = useState("");
   const [isTyping, setIsTyping] = useState(false);
@@ -80,12 +88,19 @@ export default function MessageThread({
 
   // 🔁 Keep activeId in sync with initialThreadId / threads when they change
   useEffect(() => {
-    const next = initialThreadId ?? threads[0]?.id ?? null;
+    const next = normId(initialThreadId ?? threads[0]?.id ?? null);
+
     setActiveId((prev) => {
-      if (prev && threads.some((t) => t.id === prev)) {
-        if (initialThreadId && prev !== initialThreadId) return initialThreadId;
-        return prev;
+      const prevNorm = normId(prev);
+      const hasPrev = prevNorm && threads.some((t) => normId(t.id) === prevNorm);
+
+      // keep prev if it still exists
+      if (hasPrev) {
+        const initNorm = normId(initialThreadId);
+        if (initNorm && prevNorm !== initNorm) return initNorm;
+        return prevNorm;
       }
+
       return next;
     });
   }, [initialThreadId, threads]);
@@ -182,12 +197,12 @@ export default function MessageThread({
         {threads.map((t) => {
           const avatarUrl = t?.[otherAvatarKey] || null;
           const name = t.candidate || "Conversation";
-          const isActive = t.id === activeId;
+          const isActive = normId(t.id) === normId(activeId);
 
           return (
             <button
-              key={t.id}
-              onClick={() => setActiveId(t.id)}
+              key={normId(t.id) || t.id}
+              onClick={() => setActiveId(normId(t.id))}
               className={`w-full text-left px-4 py-3 hover:bg-slate-50 focus:bg-slate-50 ${
                 isActive ? "bg-slate-50" : ""
               }`}
