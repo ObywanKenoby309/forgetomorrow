@@ -12,7 +12,9 @@ function normalizeChannel(raw) {
   if (v === "recruiting") return "recruiter";
   if (v === "candidate") return "seeker";
 
-  return v;
+  if (v === "coach" || v === "recruiter" || v === "seeker") return v;
+
+  return null;
 }
 
 export default async function handler(req, res) {
@@ -30,6 +32,7 @@ export default async function handler(req, res) {
     const body = req.body || {};
     const ids = Array.isArray(body.recipientIds) ? body.recipientIds : [];
     const content = typeof body.content === "string" ? body.content.trim() : "";
+
     const channel = normalizeChannel(body.channel) || "coach";
 
     const recipientIds = ids
@@ -70,7 +73,7 @@ export default async function handler(req, res) {
           data: {
             isGroup: false,
             title: null,
-            channel,
+            channel, // canonical lowercase
             participants: {
               create: [
                 { userId: meId, role: "owner" },

@@ -13,12 +13,15 @@ function normalizeChannel(raw) {
   const v = raw.trim().toLowerCase();
   if (!v) return null;
 
-  // keep aliases (safe)
+  // safe aliases
   if (v === "coaching") return "coach";
   if (v === "recruiting") return "recruiter";
   if (v === "candidate") return "seeker";
 
-  return v;
+  // only allow known values
+  if (v === "coach" || v === "recruiter" || v === "seeker") return v;
+
+  return null;
 }
 
 export default async function handler(req, res) {
@@ -48,20 +51,6 @@ export default async function handler(req, res) {
         select: { id: true },
       });
       if (!member) return res.status(403).json({ error: "Forbidden" });
-
-      // ✅ If caller provides channel, enforce it to prevent cross-channel bleed
-      if (channel) {
-        const convo = await prisma.conversation.findUnique({
-          where: { id: conversationId },
-          select: { id: true, channel: true },
-        });
-        if (!convo) return res.status(404).json({ error: "Conversation not found" });
-
-        const convoChannel = normalizeChannel(convo.channel);
-        if (convoChannel !== channel) {
-          return res.status(403).json({ error: "Forbidden (channel mismatch)" });
-        }
-      }
 
       const messages = await prisma.message.findMany({
         where: { conversationId },
@@ -159,8 +148,6 @@ export default async function handler(req, res) {
       const body = req.body || {};
       const conversationId = Number(body.conversationId);
       const content = typeof body.content === "string" ? body.content.trim() : "";
-      const bodyChannel = normalizeChannel(body.channel);
-
       if (!conversationId) return res.status(400).json({ error: "Missing conversationId" });
       if (!content) return res.status(400).json({ error: "Missing content" });
 
@@ -170,20 +157,6 @@ export default async function handler(req, res) {
         select: { id: true },
       });
       if (!member) return res.status(403).json({ error: "Forbidden" });
-
-      // ✅ If caller provides channel, enforce it (prevents wrong-inbox sends)
-      if (bodyChannel) {
-        const convo = await prisma.conversation.findUnique({
-          where: { id: conversationId },
-          select: { id: true, channel: true },
-        });
-        if (!convo) return res.status(404).json({ error: "Conversation not found" });
-
-        const convoChannel = normalizeChannel(convo.channel);
-        if (convoChannel !== bodyChannel) {
-          return res.status(400).json({ error: "Channel mismatch" });
-        }
-      }
 
       const created = await prisma.message.create({
         data: {
