@@ -24,6 +24,29 @@ function normalizeChannel(raw) {
   return null;
 }
 
+// ✅ allow legacy channel variants in DB
+function channelWhere(channel) {
+  if (!channel) return {};
+
+  const legacy = [];
+  if (channel === "coach") legacy.push("coaching", "coach_inbox", "coach-inbox");
+  if (channel === "recruiter")
+    legacy.push("recruiting", "recruiter_inbox", "recruiter-inbox");
+  if (channel === "seeker") legacy.push("candidate", "signal", "dm", "personal");
+
+  // also allow common case variants
+  legacy.push(channel.toUpperCase());
+
+  return {
+    OR: [
+      { channel: { equals: channel, mode: "insensitive" } },
+      { channel: { in: legacy, mode: "insensitive" } },
+      // ✅ IMPORTANT: if older rows had null channel, still return them for that inbox
+      { channel: null },
+    ],
+  };
+}
+
 export default async function handler(req, res) {
   try {
     const session = await getServerSession(req, res, authOptions);
@@ -91,8 +114,8 @@ export default async function handler(req, res) {
     if (req.method === "GET") {
       const conversations = await prisma.conversation.findMany({
         where: {
-          ...(channel ? { channel: { equals: channel, mode: "insensitive" } } : {}),
           participants: { some: { userId: meId } },
+          ...(channel ? channelWhere(channel) : {}),
         },
         orderBy: { updatedAt: "desc" },
         include: {
@@ -132,7 +155,7 @@ export default async function handler(req, res) {
           otherAvatarUrl: other?.avatarUrl || null,
           lastMessage: c.messages?.[0]?.content || "",
           lastMessageAt: c.messages?.[0]?.createdAt?.toISOString?.() || null,
-          unread: 0, // keep 0 until we implement read receipts
+          unread: 0,
           channel: c.channel || null,
         };
       });

@@ -8,7 +8,30 @@ import MessageThread from "@/components/recruiter/MessageThread";
 import SavedReplies from "@/components/recruiter/SavedReplies";
 import BulkMessageModal from "@/components/recruiter/BulkMessageModal";
 import { SecondaryButton } from "@/components/ui/Buttons";
-import { getClientSession } from "@/lib/auth-client";
+
+/* ---------------------------------------------
+   CLIENT SESSION (DIRECT)
+---------------------------------------------- */
+async function getSessionDirect(timeoutMs = 4000) {
+  const controller = new AbortController();
+  const t = setTimeout(() => controller.abort(), timeoutMs);
+
+  try {
+    const res = await fetch("/api/auth/session", {
+      method: "GET",
+      credentials: "include",
+      headers: { "Content-Type": "application/json" },
+      signal: controller.signal,
+    });
+
+    if (!res.ok) return null;
+    return res.json();
+  } catch {
+    return null;
+  } finally {
+    clearTimeout(t);
+  }
+}
 
 /* ---------------------------------------------
    HEADER BAR
@@ -176,6 +199,7 @@ export default function MessagingPage() {
 
   const [currentUserId, setCurrentUserId] = useState(null);
   const [loadingUser, setLoadingUser] = useState(true);
+  const [sessionError, setSessionError] = useState("");
 
   const [activeThread, setActiveThread] = useState(null);
   const [isBlocked, setIsBlocked] = useState(false);
@@ -190,22 +214,13 @@ export default function MessagingPage() {
 
   useEffect(() => {
     let cancelled = false;
-    let retryTimer = null;
 
     async function loadUser() {
       try {
-        const session = await getClientSession();
+        setSessionError("");
+        const session = await getSessionDirect(4000);
 
-        // ✅ session can be null briefly during hydration.
-        // Do NOT end loading. Retry quietly.
-        if (!session) {
-          if (cancelled) return;
-          retryTimer = setTimeout(loadUser, 200);
-          return;
-        }
-
-        // ✅ session resolved but user not signed in
-        if (!session.user?.id) {
+        if (!session?.user?.id) {
           if (!cancelled) {
             setLoadingUser(false);
             await router.replace("/auth/signin");
@@ -213,16 +228,15 @@ export default function MessagingPage() {
           return;
         }
 
-        // ✅ signed in
         if (!cancelled) {
           setCurrentUserId(session.user.id);
           setLoadingUser(false);
         }
       } catch (err) {
-        console.error("Failed to load session for recruiter messaging:", err);
+        console.error("Recruiter messaging session load failed:", err);
         if (!cancelled) {
+          setSessionError("Session did not load from /api/auth/session.");
           setLoadingUser(false);
-          await router.replace("/auth/signin");
         }
       }
     }
@@ -230,11 +244,8 @@ export default function MessagingPage() {
     loadUser();
     return () => {
       cancelled = true;
-      if (retryTimer) clearTimeout(retryTimer);
     };
-
-    // ✅ CRITICAL: run once. Router/query hydration can cancel auth resolution.
-  }, []);
+  }, [router]);
 
   async function fetchJson(url, options = {}) {
     if (!currentUserId) throw new Error("No current user id resolved yet");
@@ -541,6 +552,42 @@ export default function MessagingPage() {
         >
           <div className="h-64 flex items-center justify-center text-slate-500">
             Loading…
+          </div>
+        </RecruiterLayout>
+      </PlanProvider>
+    );
+  }
+
+  if (!currentUserId) {
+    return (
+      <PlanProvider>
+        <RecruiterLayout
+          title="Messaging — ForgeTomorrow"
+          header={<HeaderBar onOpenBulk={() => {}} />}
+          right={<RightToolsCard />}
+          activeNav="messaging"
+        >
+          <div className="rounded-lg border bg-white p-4">
+            <div className="font-semibold text-slate-800">
+              Session failed to load
+            </div>
+            <p className="mt-1 text-sm text-slate-600">
+              {sessionError || "We could not resolve your session."}
+            </p>
+            <div className="mt-3 flex gap-2">
+              <button
+                className="rounded-md bg-black text-white px-3 py-2 text-sm"
+                onClick={() => window.location.reload()}
+              >
+                Retry
+              </button>
+              <button
+                className="rounded-md border px-3 py-2 text-sm"
+                onClick={() => router.push("/auth/signin")}
+              >
+                Sign in
+              </button>
+            </div>
           </div>
         </RecruiterLayout>
       </PlanProvider>

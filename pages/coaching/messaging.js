@@ -7,7 +7,30 @@ import MessageThread from "@/components/recruiter/MessageThread";
 import SavedReplies from "@/components/recruiter/SavedReplies";
 import BulkMessageModal from "@/components/recruiter/BulkMessageModal";
 import { SecondaryButton } from "@/components/ui/Buttons";
-import { getClientSession } from "@/lib/auth-client";
+
+/* ---------------------------------------------
+   CLIENT SESSION (DIRECT)
+---------------------------------------------- */
+async function getSessionDirect(timeoutMs = 4000) {
+  const controller = new AbortController();
+  const t = setTimeout(() => controller.abort(), timeoutMs);
+
+  try {
+    const res = await fetch("/api/auth/session", {
+      method: "GET",
+      credentials: "include",
+      headers: { "Content-Type": "application/json" },
+      signal: controller.signal,
+    });
+
+    if (!res.ok) return null;
+    return res.json();
+  } catch {
+    return null;
+  } finally {
+    clearTimeout(t);
+  }
+}
 
 /* ---------------------------------------------
    HEADER CARD WRAPPER
@@ -59,7 +82,7 @@ function RightToolsCard() {
       <div className="font-medium mb-2">Tips</div>
       <div className="text-sm text-slate-600 space-y-2">
         <p>Group messages work best for updates, reminders, and shared guidance.</p>
-        <p>Saved replies can help with common check-ins — personal notes still matter.</p>
+        <p>Saved replies can help with common check-ins - personal notes still matter.</p>
       </div>
     </div>
   );
@@ -197,7 +220,7 @@ function Body({
         title="Group Message"
         recipientLabelPlural="clients"
         emptyRecipientsText="No clients available yet."
-        messagePlaceholder="Write your message once — it will be sent to all selected clients."
+        messagePlaceholder="Write your message once - it will be sent to all selected clients."
       />
     </main>
   );
@@ -215,10 +238,11 @@ export default function CoachMessagingPage() {
   const [currentUserId, setCurrentUserId] = useState(null);
   const [loadingUser, setLoadingUser] = useState(true);
 
-  // ✅ NEW: slow-session hint (does NOT break loading)
+  // slow-session hint (does NOT break loading)
   const [slowSession, setSlowSession] = useState(false);
+  const [sessionError, setSessionError] = useState("");
 
-  // ✅ active thread tracking (for polling + actions)
+  // active thread tracking (for polling + actions)
   const [activeThread, setActiveThread] = useState(null);
   const [isBlocked, setIsBlocked] = useState(false);
 
@@ -232,30 +256,17 @@ export default function CoachMessagingPage() {
 
   useEffect(() => {
     let cancelled = false;
-    let retryTimer = null;
 
-    // ✅ Instead of breaking loading, just show a hint after 2s
     const slowTimer = setTimeout(() => {
       if (!cancelled) setSlowSession(true);
     }, 2000);
 
     async function loadUser() {
       try {
-        const session = await getClientSession();
+        setSessionError("");
+        const session = await getSessionDirect(4000);
 
-        // session can be temporarily null during hydration - retry
-        if (!session) {
-          if (cancelled) return;
-          retryTimer = setTimeout(loadUser, 250);
-          return;
-        }
-
-        if (retryTimer) {
-          clearTimeout(retryTimer);
-          retryTimer = null;
-        }
-
-        if (!session.user?.id) {
+        if (!session?.user?.id) {
           if (!cancelled) {
             setLoadingUser(false);
             await router.replace("/auth/signin");
@@ -270,8 +281,8 @@ export default function CoachMessagingPage() {
       } catch (err) {
         console.error("Failed to load session for coach messaging:", err);
         if (!cancelled) {
+          setSessionError("Session did not load from /api/auth/session.");
           setLoadingUser(false);
-          await router.replace("/auth/signin");
         }
       }
     }
@@ -280,17 +291,14 @@ export default function CoachMessagingPage() {
     return () => {
       cancelled = true;
       clearTimeout(slowTimer);
-      if (retryTimer) clearTimeout(retryTimer);
     };
-    // ✅ CRITICAL: run once.
-  }, []);
+  }, [router]);
 
   async function fetchJson(url, options = {}) {
     if (!currentUserId) throw new Error("No current user id resolved yet");
 
     const res = await fetch(url, {
       ...options,
-      // ✅ ensure cookies/session always flow
       credentials: "include",
       headers: {
         "Content-Type": "application/json",
@@ -383,7 +391,7 @@ export default function CoachMessagingPage() {
     };
   }, [queryConversationId, currentUserId]);
 
-  // ✅ Poll messages for the active conversation so replies appear without refresh
+  // Poll messages for the active conversation so replies appear without refresh
   useEffect(() => {
     if (!currentUserId) return;
     if (!activeThread?.id) return;
@@ -507,10 +515,12 @@ export default function CoachMessagingPage() {
     }
   };
 
-  // ✅ actions (parity with Signal)
+  // actions (parity with Signal)
   const handleDelete = async () => {
     if (!activeThread?.id) return;
-    const confirmed = window.confirm("Delete this conversation for both participants? This cannot be undone.");
+    const confirmed = window.confirm(
+      "Delete this conversation for both participants? This cannot be undone."
+    );
     if (!confirmed) return;
 
     try {
@@ -538,7 +548,9 @@ export default function CoachMessagingPage() {
   const handleReport = async () => {
     if (!activeThread?.id || !activeThread?.otherUserId) return;
 
-    const reason = window.prompt("Tell us briefly what happened. This will go to the ForgeTomorrow support team.");
+    const reason = window.prompt(
+      "Tell us briefly what happened. This will go to the ForgeTomorrow support team."
+    );
     if (reason === null) return;
 
     try {
@@ -569,7 +581,9 @@ export default function CoachMessagingPage() {
   const handleBlock = async () => {
     if (!activeThread?.otherUserId) return;
 
-    const reason = window.prompt("Optional: Why are you blocking this member? (This helps moderation)");
+    const reason = window.prompt(
+      "Optional: Why are you blocking this member? (This helps moderation)"
+    );
     const confirmed = window.confirm(
       "Are you sure you want to block this member? They will no longer be able to message you, and you will not see new messages from them."
     );
@@ -593,7 +607,9 @@ export default function CoachMessagingPage() {
       }
 
       setIsBlocked(true);
-      setThreads((prev) => prev.filter((t) => t.otherUserId !== activeThread.otherUserId));
+      setThreads((prev) =>
+        prev.filter((t) => t.otherUserId !== activeThread.otherUserId)
+      );
     } catch (err) {
       console.error("block error:", err);
       alert("Could not block member. Please try again.");
@@ -622,6 +638,47 @@ export default function CoachMessagingPage() {
                 Session is taking longer than expected. This usually resolves within a few seconds.
               </div>
             )}
+          </div>
+        </CoachingLayout>
+      </PlanProvider>
+    );
+  }
+
+  if (!currentUserId) {
+    return (
+      <PlanProvider>
+        <CoachingLayout
+          title="Messaging — ForgeTomorrow"
+          header={
+            <HeaderCard>
+              <HeaderBar onOpenBulk={() => {}} />
+            </HeaderCard>
+          }
+          right={<RightRail />}
+          activeNav="coach-messages"
+          footer={null}
+        >
+          <div className="rounded-lg border bg-white p-4">
+            <div className="font-semibold text-slate-800">
+              Session failed to load
+            </div>
+            <p className="mt-1 text-sm text-slate-600">
+              {sessionError || "We could not resolve your session."}
+            </p>
+            <div className="mt-3 flex gap-2">
+              <button
+                className="rounded-md bg-black text-white px-3 py-2 text-sm"
+                onClick={() => window.location.reload()}
+              >
+                Retry
+              </button>
+              <button
+                className="rounded-md border px-3 py-2 text-sm"
+                onClick={() => router.push("/auth/signin")}
+              >
+                Sign in
+              </button>
+            </div>
           </div>
         </CoachingLayout>
       </PlanProvider>
