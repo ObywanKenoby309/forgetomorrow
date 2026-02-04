@@ -356,6 +356,8 @@ export default function CoachMessagingPage() {
         if (cancelled) return;
 
         setThreads(threadsWithMessages);
+		
+console.log("threadsWithMessages", threadsWithMessages);
 
         const fallbackId = threadsWithMessages[0]?.id || null;
 
