@@ -24,11 +24,14 @@ export default function SavedReplies({
   const load = async () => {
     setLoading(true);
     try {
-      const res = await fetch(`/api/saved-replies?persona=${encodeURIComponent(persona)}`, {
-        method: "GET",
-        headers: { "Content-Type": "application/json" },
-        cache: "no-store",
-      });
+      const res = await fetch(
+        `/api/saved-replies?persona=${encodeURIComponent(persona)}`,
+        {
+          method: "GET",
+          headers: { "Content-Type": "application/json" },
+          cache: "no-store",
+        }
+      );
 
       if (!res.ok) {
         setItems([]);
@@ -55,11 +58,14 @@ export default function SavedReplies({
 
     setBusy(true);
     try {
-      const res = await fetch("/api/saved-replies?persona=" + encodeURIComponent(persona), {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ text: t, persona }),
-      });
+      const res = await fetch(
+        "/api/saved-replies?persona=" + encodeURIComponent(persona),
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ text: t, persona }),
+        }
+      );
 
       if (!res.ok) return;
 
@@ -125,9 +131,12 @@ export default function SavedReplies({
         )}
 
         {items.map((i) => (
-          <li key={i.id} className="py-2 flex items-center justify-between">
-            <div className="text-sm text-slate-700 pr-4 truncate">{i.text}</div>
-            <div className="flex items-center gap-2">
+          <li key={i.id} className="py-2 flex items-start justify-between gap-3">
+            {/* ✅ wrap instead of truncate */}
+            <div className="text-sm text-slate-700 whitespace-normal break-words flex-1">
+              {i.text}
+            </div>
+            <div className="flex items-center gap-2 flex-shrink-0">
               <button
                 className="text-sm underline"
                 onClick={() => onInsert?.(i.text)}

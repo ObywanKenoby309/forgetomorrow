@@ -1,5 +1,12 @@
 // components/recruiter/MessageThread.js
-import { useEffect, useMemo, useRef, useState } from "react";
+import React, {
+  forwardRef,
+  useEffect,
+  useImperativeHandle,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
 
 function tsFmt(ts) {
   try {
@@ -40,33 +47,42 @@ function normId(v) {
  * - onBlock?: () => void
  * - showHeaderActions?: boolean (default false)
  * - headerActionsLabel?: { delete?: string, report?: string, block?: string, blocked?: string }
+ *
+ * NEW (non-breaking via ref):
+ * - ref exposes:
+ *   - insertText(text, opts?: { mode?: 'append'|'replace', spacer?: string })
+ *   - setDraftText(text)
+ *   - focusComposer()
  */
-export default function MessageThread({
-  threads = [],
-  initialThreadId,
-  onSend,
+const MessageThread = forwardRef(function MessageThread(
+  {
+    threads = [],
+    initialThreadId,
+    onSend,
 
-  // ✅ safe defaults keep recruiter behavior exactly as-is
-  persona = "recruiter",
-  personaLabel = "Recruiter",
-  otherLabel = "candidate",
-  inboxTitle = "Recruiter Inbox",
-  inboxDescription,
-  emptyTitle,
-  emptyBody,
-  emptyFootnote,
-  inputPlaceholderEmpty,
+    // ✅ safe defaults keep recruiter behavior exactly as-is
+    persona = "recruiter",
+    personaLabel = "Recruiter",
+    otherLabel = "candidate",
+    inboxTitle = "Recruiter Inbox",
+    inboxDescription,
+    emptyTitle,
+    emptyBody,
+    emptyFootnote,
+    inputPlaceholderEmpty,
 
-  // ✅ new (safe)
-  onActiveThreadChange,
-  otherAvatarKey = "otherAvatarUrl",
-  isBlocked = false,
-  onDelete,
-  onReport,
-  onBlock,
-  showHeaderActions = false,
-  headerActionsLabel = {},
-}) {
+    // ✅ new (safe)
+    onActiveThreadChange,
+    otherAvatarKey = "otherAvatarUrl",
+    isBlocked = false,
+    onDelete,
+    onReport,
+    onBlock,
+    showHeaderActions = false,
+    headerActionsLabel = {},
+  },
+  ref
+) {
   // ✅ initial selection
   const [activeId, setActiveId] = useState(() => {
     const first = initialThreadId ?? threads[0]?.id ?? null;
@@ -85,9 +101,55 @@ export default function MessageThread({
   const [draft, setDraft] = useState("");
   const [isTyping, setIsTyping] = useState(false);
   const scrollRef = useRef(null);
+  const inputRef = useRef(null);
 
   const hasThreads = threads.length > 0;
   const canCompose = hasThreads && !!active && !isBlocked;
+
+  // ✅ expose safe imperative API for SavedReplies / prefill / etc.
+  useImperativeHandle(
+    ref,
+    () => ({
+      insertText: (text, opts = {}) => {
+        const t = typeof text === "string" ? text : "";
+        if (!t) return;
+
+        const mode = opts.mode || "replace"; // default to replace to match expected "Insert"
+        const spacer = typeof opts.spacer === "string" ? opts.spacer : " ";
+
+        setDraft((prev) => {
+          if (mode === "append") {
+            const base = String(prev || "");
+            if (!base.trim()) return t;
+            return `${base}${spacer}${t}`;
+          }
+          // replace
+          return t;
+        });
+
+        // focus after state update
+        setTimeout(() => {
+          try {
+            inputRef.current?.focus?.();
+          } catch {}
+        }, 0);
+      },
+      setDraftText: (text) => {
+        setDraft(typeof text === "string" ? text : "");
+        setTimeout(() => {
+          try {
+            inputRef.current?.focus?.();
+          } catch {}
+        }, 0);
+      },
+      focusComposer: () => {
+        try {
+          inputRef.current?.focus?.();
+        } catch {}
+      },
+    }),
+    []
+  );
 
   /**
    * 🔁 Sync rules (important):
@@ -403,6 +465,7 @@ export default function MessageThread({
         {/* Composer */}
         <div className="mt-3 flex items-center gap-2">
           <input
+            ref={inputRef}
             className="flex-1 border rounded px-3 py-2 text-sm disabled:bg-slate-100 disabled:text-slate-400"
             placeholder={inputPlaceholder}
             value={draft}
@@ -434,4 +497,6 @@ export default function MessageThread({
       </section>
     </div>
   );
-}
+});
+
+export default MessageThread;

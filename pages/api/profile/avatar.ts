@@ -4,6 +4,14 @@ import { getServerSession } from "next-auth";
 import authOptions from "../auth/[...nextauth]";
 import { prisma } from "@/lib/prisma";
 
+export const config = {
+  api: {
+    // ✅ Fix 413 Payload Too Large for base64/dataURL avatar uploads
+    // Adjust if needed, but keep reasonable since we're storing in DB for now.
+    bodyParser: { sizeLimit: "4mb" },
+  },
+};
+
 type AvatarResponse = {
   avatarUrl: string | null;
 };
@@ -56,11 +64,12 @@ export default async function handler(
           .json({ error: "Invalid avatar format. Must be image data URL." });
       }
 
-      // Optional size guard – ~1.5MB max
-      if (avatarDataUrl.length > 1_500_000) {
-        return res
-          .status(400)
-          .json({ error: "Avatar is too large. Please upload a smaller image." });
+      // Optional size guard – keep below our API sizeLimit headroom
+      // (data URLs expand size; 3.2M chars is a reasonable ceiling under 4mb parsing)
+      if (avatarDataUrl.length > 3_200_000) {
+        return res.status(400).json({
+          error: "Avatar is too large. Please upload a smaller image.",
+        });
       }
 
       const updated = await prisma.user.update({

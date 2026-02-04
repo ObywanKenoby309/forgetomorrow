@@ -1,5 +1,5 @@
 // pages/coaching/messaging.js
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect, useMemo, useRef } from "react";
 import { useRouter } from "next/router";
 import { PlanProvider } from "@/context/PlanContext";
 import CoachingLayout from "@/components/layouts/CoachingLayout";
@@ -117,6 +117,7 @@ function RightRail() {
 ---------------------------------------------- */
 function Body({
   threads,
+  threadRef,
   onSend,
   recipients,
   bulkOpen,
@@ -134,13 +135,20 @@ function Body({
     if (!initialThreadId) return;
     if (!prefillText || !prefillText.trim()) return;
 
+    // Use the MessageThread imperative insert if available (React-state safe)
+    if (threadRef?.current?.insertText) {
+      threadRef.current.insertText(prefillText);
+      return;
+    }
+
+    // Fallback (legacy)
     const el = document.querySelector('input[placeholder="Type a message…"]');
     if (el && !el.value) {
       el.value = prefillText;
       el.dispatchEvent(new Event("input", { bubbles: true }));
       el.focus();
     }
-  }, [initialThreadId, prefillText]);
+  }, [initialThreadId, prefillText, threadRef]);
 
   return (
     <main className="space-y-6">
@@ -157,6 +165,7 @@ function Body({
       </div>
 
       <MessageThread
+        ref={threadRef}
         threads={threads}
         initialThreadId={initialThreadId || threads[0]?.id}
         onSend={onSend}
@@ -203,6 +212,13 @@ function Body({
         persona="coach"
         title="Saved Replies (Coach)"
         onInsert={(text) => {
+          // ✅ Primary: use MessageThread insertText so it persists and Send works
+          if (threadRef?.current?.insertText) {
+            threadRef.current.insertText(text);
+            return;
+          }
+
+          // Fallback (legacy)
           const el = document.querySelector('input[placeholder="Type a message…"]');
           if (el) {
             el.value = el.value ? `${el.value} ${text}` : text;
@@ -245,6 +261,9 @@ export default function CoachMessagingPage() {
   // active thread tracking (for polling + actions)
   const [activeThread, setActiveThread] = useState(null);
   const [isBlocked, setIsBlocked] = useState(false);
+
+  // ✅ NEW: ref to MessageThread for safe insertText()
+  const threadRef = useRef(null);
 
   const queryConversationId =
     (router.query.c && String(router.query.c)) ||
@@ -700,6 +719,7 @@ export default function CoachMessagingPage() {
       >
         <Body
           threads={threads}
+          threadRef={threadRef}
           onSend={onSend}
           recipients={recipients}
           bulkOpen={bulkOpen}
