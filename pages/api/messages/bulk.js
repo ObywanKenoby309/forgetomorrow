@@ -12,7 +12,6 @@ function normalizeChannel(raw) {
   if (v === "recruiting") return "recruiter";
   if (v === "candidate") return "seeker";
 
-  if (v === "coach" || v === "recruiter" || v === "seeker") return v;
   return v;
 }
 
@@ -100,7 +99,7 @@ export default async function handler(req, res) {
 
       sentCount += 1;
       conversationIds.push(convoId);
-      void msg; // keep lint calm if needed
+      void msg;
     }
 
     return res.status(200).json({
