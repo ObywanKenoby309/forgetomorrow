@@ -33,7 +33,7 @@ function normId(v) {
  *
  * NEW (non-breaking):
  * - onActiveThreadChange?: (thread) => void
- * - otherAvatarKey?: string (default "otherAvatarUrl") // allows alt field name if ever needed
+ * - otherAvatarKey?: string (default "otherAvatarUrl")
  * - isBlocked?: boolean (default false)
  * - onDelete?: () => void
  * - onReport?: () => void
@@ -67,11 +67,14 @@ export default function MessageThread({
   showHeaderActions = false,
   headerActionsLabel = {},
 }) {
-  // ✅ Normalize ids to avoid number/string mismatch bugs
+  // ✅ initial selection
   const [activeId, setActiveId] = useState(() => {
     const first = initialThreadId ?? threads[0]?.id ?? null;
     return normId(first);
   });
+
+  // ✅ Track last initialThreadId so we only apply it when it actually changes
+  const lastInitRef = useRef(normId(initialThreadId));
 
   const active = useMemo(() => {
     const a = normId(activeId);
@@ -86,24 +89,34 @@ export default function MessageThread({
   const hasThreads = threads.length > 0;
   const canCompose = hasThreads && !!active && !isBlocked;
 
-  // 🔁 Keep activeId in sync with initialThreadId / threads when they change
+  /**
+   * 🔁 Sync rules (important):
+   * - If initialThreadId changes (new deep-link), set active to it.
+   * - Else, keep user-selected activeId as long as it still exists.
+   * - If activeId is missing (e.g., after delete or refresh), fall back to first thread.
+   */
   useEffect(() => {
-    const next = normId(initialThreadId ?? threads[0]?.id ?? null);
+    const initNorm = normId(initialThreadId);
+    const lastInit = lastInitRef.current;
 
-    setActiveId((prev) => {
-      const prevNorm = normId(prev);
-      const hasPrev = prevNorm && threads.some((t) => normId(t.id) === prevNorm);
+    const firstThreadId = normId(threads[0]?.id ?? null);
 
-      // keep prev if it still exists
-      if (hasPrev) {
-        const initNorm = normId(initialThreadId);
-        if (initNorm && prevNorm !== initNorm) return initNorm;
-        return prevNorm;
-      }
+    // If initialThreadId changed, honor it exactly once
+    if (initNorm && initNorm !== lastInit) {
+      lastInitRef.current = initNorm;
+      setActiveId(initNorm);
+      return;
+    }
 
-      return next;
-    });
-  }, [initialThreadId, threads]);
+    // If current activeId no longer exists, fall back
+    const activeNorm = normId(activeId);
+    const activeStillExists =
+      activeNorm && threads.some((t) => normId(t.id) === activeNorm);
+
+    if (!activeStillExists) {
+      setActiveId(initNorm || firstThreadId || null);
+    }
+  }, [initialThreadId, threads, activeId]);
 
   // ✅ notify parent when active thread changes (for polling, actions, etc.)
   useEffect(() => {
@@ -176,7 +189,6 @@ export default function MessageThread({
     <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
       {/* Threads list */}
       <aside className="md:col-span-1 rounded-lg border bg-white divide-y">
-        {/* Header for clarity */}
         <div className="px-4 py-3 border-b bg-slate-50">
           <div className="text-xs font-semibold tracking-wide text-slate-600 uppercase">
             {inboxTitle}
@@ -208,7 +220,6 @@ export default function MessageThread({
               }`}
             >
               <div className="flex items-start gap-3">
-                {/* avatar */}
                 <div className="flex-shrink-0 mt-0.5">
                   {avatarUrl ? (
                     <img
@@ -245,7 +256,6 @@ export default function MessageThread({
       {/* Active thread + composer */}
       <section className="md:col-span-2 rounded-lg border bg-white p-4 flex flex-col">
         {!hasThreads ? (
-          // Global empty state when there are zero conversations
           <div className="flex-1 flex flex-col items-center justify-center text-center text-sm text-slate-500 space-y-2">
             <div className="text-base font-semibold text-slate-700">
               {emptyTitle || defaultEmptyTitle}
@@ -328,10 +338,15 @@ export default function MessageThread({
                     return (
                       <li
                         key={m.id}
-                        className={`flex ${isSelf ? "justify-end" : "justify-start"}`}
+                        className={`flex ${
+                          isSelf ? "justify-end" : "justify-start"
+                        }`}
                       >
-                        <div className={`flex items-end gap-2 ${isSelf ? "flex-row-reverse" : ""}`}>
-                          {/* left-side avatar only for "other" */}
+                        <div
+                          className={`flex items-end gap-2 ${
+                            isSelf ? "flex-row-reverse" : ""
+                          }`}
+                        >
                           {!isSelf && (
                             <div className="flex-shrink-0">
                               {active?.[otherAvatarKey] ? (
@@ -350,7 +365,9 @@ export default function MessageThread({
 
                           <div
                             className={`px-3 py-2 rounded max-w-[80%] ${
-                              isSelf ? "bg-[#FF7043] text-white" : "bg-white border"
+                              isSelf
+                                ? "bg-[#FF7043] text-white"
+                                : "bg-white border"
                             }`}
                             title={tsFmt(m.ts)}
                           >
@@ -383,7 +400,7 @@ export default function MessageThread({
           </>
         )}
 
-        {/* Composer row — always visible, disabled when there is no active thread */}
+        {/* Composer */}
         <div className="mt-3 flex items-center gap-2">
           <input
             className="flex-1 border rounded px-3 py-2 text-sm disabled:bg-slate-100 disabled:text-slate-400"
