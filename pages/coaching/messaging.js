@@ -215,6 +215,9 @@ export default function CoachMessagingPage() {
   const [currentUserId, setCurrentUserId] = useState(null);
   const [loadingUser, setLoadingUser] = useState(true);
 
+  // ✅ NEW: slow-session hint (does NOT break loading)
+  const [slowSession, setSlowSession] = useState(false);
+
   // ✅ active thread tracking (for polling + actions)
   const [activeThread, setActiveThread] = useState(null);
   const [isBlocked, setIsBlocked] = useState(false);
@@ -231,9 +234,9 @@ export default function CoachMessagingPage() {
     let cancelled = false;
     let retryTimer = null;
 
-    // ✅ hard-stop so you never sit on Loading forever
-    const hardStop = setTimeout(() => {
-      if (!cancelled) setLoadingUser(false);
+    // ✅ Instead of breaking loading, just show a hint after 2s
+    const slowTimer = setTimeout(() => {
+      if (!cancelled) setSlowSession(true);
     }, 2000);
 
     async function loadUser() {
@@ -276,10 +279,10 @@ export default function CoachMessagingPage() {
     loadUser();
     return () => {
       cancelled = true;
-      clearTimeout(hardStop);
+      clearTimeout(slowTimer);
       if (retryTimer) clearTimeout(retryTimer);
     };
-    // ✅ CRITICAL: run once. Router/query hydration was cancelling the session resolution.
+    // ✅ CRITICAL: run once.
   }, []);
 
   async function fetchJson(url, options = {}) {
@@ -287,6 +290,8 @@ export default function CoachMessagingPage() {
 
     const res = await fetch(url, {
       ...options,
+      // ✅ ensure cookies/session always flow
+      credentials: "include",
       headers: {
         "Content-Type": "application/json",
         ...(options.headers || {}),
@@ -356,8 +361,6 @@ export default function CoachMessagingPage() {
         if (cancelled) return;
 
         setThreads(threadsWithMessages);
-		
-console.log("threadsWithMessages", threadsWithMessages);
 
         const fallbackId = threadsWithMessages[0]?.id || null;
 
@@ -514,6 +517,7 @@ console.log("threadsWithMessages", threadsWithMessages);
       const res = await fetch("/api/signal/delete", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
+        credentials: "include",
         body: JSON.stringify({ conversationId: activeThread.id }),
       });
       if (!res.ok) {
@@ -541,6 +545,7 @@ console.log("threadsWithMessages", threadsWithMessages);
       const res = await fetch("/api/signal/report", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
+        credentials: "include",
         body: JSON.stringify({
           conversationId: activeThread.id,
           targetUserId: activeThread.otherUserId,
@@ -574,6 +579,7 @@ console.log("threadsWithMessages", threadsWithMessages);
       const res = await fetch("/api/signal/block", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
+        credentials: "include",
         body: JSON.stringify({
           targetUserId: activeThread.otherUserId,
           reason: reason?.trim() || null,
@@ -608,8 +614,14 @@ console.log("threadsWithMessages", threadsWithMessages);
           activeNav="coach-messages"
           footer={null}
         >
-          <div className="h-64 flex items-center justify-center text-slate-500">
-            Loading…
+          <div className="h-64 flex flex-col items-center justify-center text-slate-500">
+            <div>Loading…</div>
+
+            {slowSession && (
+              <div className="mt-2 text-[11px] text-slate-400">
+                Session is taking longer than expected. This usually resolves within a few seconds.
+              </div>
+            )}
           </div>
         </CoachingLayout>
       </PlanProvider>

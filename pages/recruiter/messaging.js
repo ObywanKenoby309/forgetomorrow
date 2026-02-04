@@ -196,26 +196,34 @@ export default function MessagingPage() {
       try {
         const session = await getClientSession();
 
-        // ✅ IMPORTANT: session can be null briefly during hydration.
-        // Do not end loading yet. Retry quietly.
+        // ✅ session can be null briefly during hydration.
+        // Do NOT end loading. Retry quietly.
         if (!session) {
           if (cancelled) return;
           retryTimer = setTimeout(loadUser, 200);
           return;
         }
 
+        // ✅ session resolved but user not signed in
         if (!session.user?.id) {
-          if (!cancelled) await router.replace("/auth/signin");
+          if (!cancelled) {
+            setLoadingUser(false);
+            await router.replace("/auth/signin");
+          }
           return;
         }
 
-        if (!cancelled) setCurrentUserId(session.user.id);
+        // ✅ signed in
+        if (!cancelled) {
+          setCurrentUserId(session.user.id);
+          setLoadingUser(false);
+        }
       } catch (err) {
         console.error("Failed to load session for recruiter messaging:", err);
-        if (!cancelled) await router.replace("/auth/signin");
-      } finally {
-        // ✅ Only stop loading once we have a session (or we redirected).
-        if (!cancelled) setLoadingUser(false);
+        if (!cancelled) {
+          setLoadingUser(false);
+          await router.replace("/auth/signin");
+        }
       }
     }
 
@@ -224,7 +232,9 @@ export default function MessagingPage() {
       cancelled = true;
       if (retryTimer) clearTimeout(retryTimer);
     };
-  }, [router]);
+
+    // ✅ CRITICAL: run once. Router/query hydration can cancel auth resolution.
+  }, []);
 
   async function fetchJson(url, options = {}) {
     if (!currentUserId) throw new Error("No current user id resolved yet");
