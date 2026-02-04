@@ -3,6 +3,19 @@ import { getServerSession } from "next-auth/next";
 import { authOptions } from "../auth/[...nextauth]";
 import { prisma } from "@/lib/prisma";
 
+function normalizeChannel(raw) {
+  if (typeof raw !== "string") return null;
+  const v = raw.trim().toLowerCase();
+  if (!v) return null;
+
+  if (v === "coaching") return "coach";
+  if (v === "recruiting") return "recruiter";
+  if (v === "candidate") return "seeker";
+
+  if (v === "coach" || v === "recruiter" || v === "seeker") return v;
+  return v;
+}
+
 export default async function handler(req, res) {
   if (req.method !== "POST") {
     res.setHeader("Allow", "POST");
@@ -18,9 +31,7 @@ export default async function handler(req, res) {
     const body = req.body || {};
     const ids = Array.isArray(body.recipientIds) ? body.recipientIds : [];
     const content = typeof body.content === "string" ? body.content.trim() : "";
-    const channel = typeof body.channel === "string" && body.channel.trim()
-      ? body.channel.trim()
-      : "coach";
+    const channel = normalizeChannel(body.channel) || "coach";
 
     const recipientIds = ids
       .map((x) => (typeof x === "string" ? x.trim() : ""))
@@ -46,7 +57,7 @@ export default async function handler(req, res) {
       const existing = await prisma.conversation.findFirst({
         where: {
           isGroup: false,
-          channel,
+          channel: { equals: channel, mode: "insensitive" },
           participants: { some: { userId: meId } },
           AND: [{ participants: { some: { userId: targetId } } }],
         },

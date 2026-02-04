@@ -8,6 +8,19 @@ function displayName(u) {
   return full || u?.name || u?.email || "Conversation";
 }
 
+function normalizeChannel(raw) {
+  if (typeof raw !== "string") return null;
+  const v = raw.trim().toLowerCase();
+  if (!v) return null;
+
+  if (v === "coaching") return "coach";
+  if (v === "recruiting") return "recruiter";
+  if (v === "candidate") return "seeker";
+
+  if (v === "coach" || v === "recruiter" || v === "seeker") return v;
+  return v; // allow other future channels but keep normalized
+}
+
 export default async function handler(req, res) {
   try {
     const session = await getServerSession(req, res, authOptions);
@@ -15,10 +28,7 @@ export default async function handler(req, res) {
 
     const meId = session.user.id;
 
-    const channel =
-      typeof req.query.channel === "string" && req.query.channel.trim()
-        ? req.query.channel.trim()
-        : null;
+    const channel = normalizeChannel(req.query.channel);
 
     const conversationIdRaw =
       (typeof req.query.conversationId === "string" && req.query.conversationId.trim()) ||
@@ -38,6 +48,21 @@ export default async function handler(req, res) {
         select: { id: true },
       });
       if (!member) return res.status(403).json({ error: "Forbidden" });
+
+      // ✅ Enforce channel match (if provided)
+      if (channel) {
+        const convo = await prisma.conversation.findUnique({
+          where: { id: conversationId },
+          select: { id: true, channel: true },
+        });
+
+        if (!convo) return res.status(404).json({ error: "Conversation not found" });
+
+        const convoChannel = normalizeChannel(convo.channel);
+        if (convoChannel !== normalizeChannel(channel)) {
+          return res.status(403).json({ error: "Forbidden (channel mismatch)" });
+        }
+      }
 
       const messages = await prisma.message.findMany({
         where: { conversationId },
@@ -78,7 +103,9 @@ export default async function handler(req, res) {
     if (req.method === "GET") {
       const conversations = await prisma.conversation.findMany({
         where: {
-          ...(channel ? { channel } : {}),
+          ...(channel
+            ? { channel: { equals: channel, mode: "insensitive" } }
+            : {}),
           participants: { some: { userId: meId } },
         },
         orderBy: { updatedAt: "desc" },
@@ -135,6 +162,8 @@ export default async function handler(req, res) {
       const body = req.body || {};
       const conversationId = Number(body.conversationId);
       const content = typeof body.content === "string" ? body.content.trim() : "";
+      const bodyChannel = normalizeChannel(body.channel);
+
       if (!conversationId) return res.status(400).json({ error: "Missing conversationId" });
       if (!content) return res.status(400).json({ error: "Missing content" });
 
@@ -144,6 +173,21 @@ export default async function handler(req, res) {
         select: { id: true },
       });
       if (!member) return res.status(403).json({ error: "Forbidden" });
+
+      // ✅ Enforce channel match (if provided)
+      if (bodyChannel) {
+        const convo = await prisma.conversation.findUnique({
+          where: { id: conversationId },
+          select: { id: true, channel: true },
+        });
+
+        if (!convo) return res.status(404).json({ error: "Conversation not found" });
+
+        const convoChannel = normalizeChannel(convo.channel);
+        if (convoChannel !== bodyChannel) {
+          return res.status(400).json({ error: "Channel mismatch" });
+        }
+      }
 
       const created = await prisma.message.create({
         data: {
