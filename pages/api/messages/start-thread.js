@@ -3,6 +3,22 @@ import { getServerSession } from 'next-auth/next';
 import { authOptions } from '../auth/[...nextauth]';
 import { prisma } from '@/lib/prisma';
 
+function normalizeChannel(raw) {
+  if (typeof raw !== 'string') return null;
+  const v = raw.trim().toLowerCase();
+  if (!v) return null;
+
+  // allow safe aliases
+  if (v === 'coaching') return 'coach';
+  if (v === 'recruiting') return 'recruiter';
+  if (v === 'candidate') return 'seeker';
+
+  // allow only known channels
+  if (v === 'coach' || v === 'recruiter' || v === 'seeker') return v;
+
+  return null;
+}
+
 export default async function handler(req, res) {
   if (req.method !== 'POST') {
     res.setHeader('Allow', 'POST');
@@ -55,16 +71,14 @@ export default async function handler(req, res) {
       return res.status(404).json({ error: 'Target user not found' });
     }
 
-    // Channel: default recruiter, or explicitly "coach" etc.
-    const convChannel =
-      typeof channel === 'string' && channel.trim().length > 0
-        ? channel.trim()
-        : 'recruiter';
+    // ✅ Normalize channel (and restrict to known values)
+    const convChannel = normalizeChannel(channel) || 'recruiter';
 
     // Look for an existing 1:1 conversation in this channel between these two
     const existing = await prisma.conversation.findFirst({
       where: {
-        channel: convChannel,
+        isGroup: false,
+        channel: { equals: convChannel, mode: 'insensitive' },
         participants: {
           some: { userId: me.id },
         },
@@ -91,6 +105,7 @@ export default async function handler(req, res) {
       data: {
         isGroup: false,
         title: null,
+        // ✅ Store canonical lowercase channel
         channel: convChannel,
         participants: {
           create: [

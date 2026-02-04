@@ -211,7 +211,16 @@ export default function SignalMessages() {
       const res = await fetch('/api/signal/threads');
       if (!res.ok) throw new Error(await res.text());
       const data = await res.json();
-      setThreads(data.threads || []);
+
+      const incoming = Array.isArray(data.threads) ? data.threads : [];
+
+      // ✅ FIX: Do not show “ghost” conversations (no message has ever been sent)
+      const onlyWithMessages = incoming.filter((t) => {
+        const last = typeof t.lastMessage === 'string' ? t.lastMessage.trim() : '';
+        return !!last;
+      });
+
+      setThreads(onlyWithMessages);
     } catch (err) {
       console.error('fetchThreads error:', err);
       setThreads([]);
