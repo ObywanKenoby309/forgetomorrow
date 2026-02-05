@@ -264,18 +264,29 @@ export default function ProfileHeader() {
         }}
       >
         <div style={{ display: 'flex', gap: 12, alignItems: 'center', minWidth: 0 }}>
-          <img
-            src={avatarUrl}
-            alt="Profile avatar"
+          {/* ✅ Avatars MUST remain perfectly circular everywhere */}
+          <div
             style={{
               width: isMobile ? 76 : 96,
               height: isMobile ? 76 : 96,
-              borderRadius: '50%',
+              borderRadius: 9999,
+              overflow: 'hidden',
               border: '3px solid #FF7043',
-              objectFit: 'cover',
               flexShrink: 0,
+              background: 'rgba(255,255,255,0.75)',
             }}
-          />
+          >
+            <img
+              src={avatarUrl}
+              alt="Profile avatar"
+              style={{
+                width: '100%',
+                height: '100%',
+                objectFit: 'cover',
+                display: 'block',
+              }}
+            />
+          </div>
 
           <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: 4, minWidth: 0 }}>
             <h2
