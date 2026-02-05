@@ -5,6 +5,14 @@ import authOptions from "../auth/[...nextauth]";
 import { prisma } from "@/lib/prisma";
 import jwt from "jsonwebtoken";
 
+export const config = {
+  api: {
+    // ✅ Fix 413 / "Body exceeded 1mb limit" when saving larger profile payloads
+    // (base64 avatarUrl, rich About, JSON sections, etc.)
+    bodyParser: { sizeLimit: "4mb" },
+  },
+};
+
 const WELCOME_DRAFT_KEY = "profile_welcome_dismissed_v1";
 
 type ProfileDetails = {
