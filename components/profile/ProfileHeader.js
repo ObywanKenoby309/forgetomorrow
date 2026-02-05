@@ -274,29 +274,31 @@ export default function ProfileHeader() {
               border: '3px solid #FF7043',
               flexShrink: 0,
 
-              // ✅ MINIMAL FIX: remove white fill that shows through on transparent avatar pixels
+              // ✅ keep transparent; we’ll prevent seam via slight overscale on the image
               background: 'transparent',
 
-              // ✅ MINIMAL FIX: eliminate baseline/line-box cropping artifacts
+              // ✅ eliminate baseline/line-box artifacts
               display: 'block',
               boxSizing: 'border-box',
               lineHeight: 0,
             }}
           >
             <img
-              key={avatarUrl} // ✅ MINIMAL FIX: force remount on change to prevent transient rendering artifacts
+              key={avatarUrl}
               src={avatarUrl}
               alt="Profile avatar"
               style={{
                 width: '100%',
                 height: '100%',
                 objectFit: 'cover',
-
-                // ✅ MINIMAL FIX: hard-center the bitmap inside the crop box
                 objectPosition: 'center',
-
-                // ✅ MINIMAL FIX: remove inline-image baseline gap + rounding artifacts
                 display: 'block',
+
+                // ✅ MINIMAL FIX:
+                // Some PNGs show a 1–2px subpixel “seam” at the bottom edge when clipped by a circular overflow box
+                // on light backgrounds (looks like a white bite-out). Slight overscale prevents the seam from showing.
+                transform: 'scale(1.02)',
+                transformOrigin: 'center',
               }}
             />
           </div>
