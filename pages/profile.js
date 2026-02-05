@@ -294,8 +294,8 @@ export default function ProfilePage() {
           overflow-x: hidden;
         }
 
-        /* Keep any header images constrained to container width */
-        section[aria-label='Profile header section'] img {
+        /* Keep header images constrained (but do NOT override avatar sizing) */
+        section[aria-label='Profile header section'] img:not([data-ft-avatar='1']) {
           max-width: 100% !important;
           height: auto !important;
         }

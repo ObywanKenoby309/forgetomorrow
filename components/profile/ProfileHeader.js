@@ -273,18 +273,13 @@ export default function ProfileHeader() {
               overflow: 'hidden',
               border: '3px solid #FF7043',
               flexShrink: 0,
-
-              // ✅ keep transparent; we’ll prevent seam via slight overscale on the image
-              background: 'transparent',
-
-              // ✅ eliminate baseline/line-box artifacts
               display: 'block',
               boxSizing: 'border-box',
               lineHeight: 0,
             }}
           >
             <img
-              key={avatarUrl}
+              data-ft-avatar="1"
               src={avatarUrl}
               alt="Profile avatar"
               style={{
@@ -293,12 +288,6 @@ export default function ProfileHeader() {
                 objectFit: 'cover',
                 objectPosition: 'center',
                 display: 'block',
-
-                // ✅ MINIMAL FIX:
-                // Some PNGs show a 1–2px subpixel “seam” at the bottom edge when clipped by a circular overflow box
-                // on light backgrounds (looks like a white bite-out). Slight overscale prevents the seam from showing.
-                transform: 'scale(1.02)',
-                transformOrigin: 'center',
               }}
             />
           </div>
