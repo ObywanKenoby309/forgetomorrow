@@ -6,6 +6,14 @@ import { PrismaClient } from "@prisma/client";
 import { getCorporateBannerByKey } from "@/lib/profileCorporateBanners";
 import jwt from "jsonwebtoken";
 
+export const config = {
+  api: {
+    // ✅ Fix "Body exceeded 1mb limit" when saving base64 avatarUrl via PATCH
+    // Keep reasonable since avatar is currently stored as data URL in DB.
+    bodyParser: { sizeLimit: "4mb" },
+  },
+};
+
 const prisma = new PrismaClient();
 
 function normalizeVisibility(
