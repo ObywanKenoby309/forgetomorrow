@@ -273,7 +273,9 @@ export default function ProfileHeader() {
               overflow: 'hidden',
               border: '3px solid #FF7043',
               flexShrink: 0,
-              background: 'rgba(255,255,255,0.75)',
+
+              // ✅ MINIMAL FIX: remove white fill that shows through on transparent avatar pixels
+              background: 'transparent',
 
               // ✅ MINIMAL FIX: eliminate baseline/line-box cropping artifacts
               display: 'block',
@@ -282,6 +284,7 @@ export default function ProfileHeader() {
             }}
           >
             <img
+              key={avatarUrl} // ✅ MINIMAL FIX: force remount on change to prevent transient rendering artifacts
               src={avatarUrl}
               alt="Profile avatar"
               style={{
