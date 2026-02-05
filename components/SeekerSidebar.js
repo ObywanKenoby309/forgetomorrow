@@ -177,7 +177,6 @@ export default function SeekerSidebar({
         label="The Anvil"
         active={active === 'anvil' || active === 'roadmap'}
       />
-      <NavItem href="/resume-cover" label="Creator" active={active === 'resume-cover'} />
       <NavItem href="/jobs" label="Pipeline" active={active === 'jobs'} />
 
       {/* Resources */}

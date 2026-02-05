@@ -3,28 +3,26 @@ import { useRouter } from "next/router";
 import EnterpriseHeader from "@/components/layouts/EnterpriseHeader";
 import { usePlan } from "@/context/PlanContext";
 
-// Base nav items (seeker-space routes)
+// Seeker header should be "clean + hub-like":
+// Dashboard | The Signal | Community Feed | Calendar | Job Postings
 const BASE_NAV_ITEMS = [
-  { href: "/seeker-dashboard", label: "Seeker Dashboard" },
-  { href: "/feed", label: "Community Feed" },
+  { href: "/seeker-dashboard", label: "Dashboard" },
   { href: "/seeker/messages", label: "The Signal" },
-  { href: "/jobs", label: "The Pipeline" },
-  // 🔧 Go through /seeker/the-hearth so chrome can be preserved and redirect to shared Hearth
-  { href: "/seeker/the-hearth", label: "Your Hearth" },
+  { href: "/feed", label: "Community Feed" },
+  { href: "/seeker/calendar", label: "Calendar" },
+  { href: "/jobs", label: "Job Postings" },
 ];
 
 export default function SeekerHeader() {
   const router = useRouter();
-  const { tier, isProTier } = usePlan(); // ⬅️ use raw Tier to determine seeker label
+  const { isProTier } = usePlan();
 
-  // If we came in from recruiter/coach chrome, keep that on all links
+  // Preserve chrome when seeker pages are being viewed in coach/recruiter chrome
   const chrome = String(router.query.chrome || "").toLowerCase();
 
   const withChrome = (href) => {
     if (!chrome) return href;
-    return href.includes("?")
-      ? `${href}&chrome=${chrome}`
-      : `${href}?chrome=${chrome}`;
+    return href.includes("?") ? `${href}&chrome=${chrome}` : `${href}?chrome=${chrome}`;
   };
 
   const navItems = BASE_NAV_ITEMS.map((item) => ({
@@ -32,9 +30,6 @@ export default function SeekerHeader() {
     href: withChrome(item.href),
   }));
 
-  // 🔹 Seeker plan label is based on Tier:
-  //     - PRO      → "Seeker Pro"
-  //     - anything → "Seeker Free"
   const planLabel = isProTier ? "Seeker Pro" : "Seeker Free";
 
   return (
@@ -46,9 +41,7 @@ export default function SeekerHeader() {
       navItems={navItems}
       showUpgrade={false}
       alignWithGrid={true}
-      // ✅ Settings preserves chrome
       optionsHref={withChrome("/settings")}
-      // ✅ Support also preserves chrome; EnterpriseHeader adds returnTo
       supportHref={withChrome("/support")}
     />
   );
