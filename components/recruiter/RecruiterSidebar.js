@@ -153,7 +153,7 @@ export default function RecruiterSidebar({
         WebkitBackdropFilter: GLASS_BLUR,
       }}
     >
-      {/* Profile + Overview */}
+      {/* Profile + Dashboard */}
       <NavItem
         href={`/profile?chrome=${chromeRecruiter}`}
         label="Profile"
@@ -161,7 +161,7 @@ export default function RecruiterSidebar({
       />
       <NavItem
         href="/recruiter/dashboard"
-        label="Overview"
+        label="Dashboard"
         active={active === 'dashboard'}
       />
 

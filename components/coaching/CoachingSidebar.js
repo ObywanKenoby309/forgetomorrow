@@ -148,7 +148,7 @@ export default function CoachingSidebar({
         WebkitBackdropFilter: GLASS_BLUR,
       }}
     >
-      {/* Profile + Overview */}
+      {/* Profile + Dashboard */}
       <NavItem
         href="/profile?chrome=coach"
         label="Profile"
@@ -156,8 +156,8 @@ export default function CoachingSidebar({
       />
       <NavItem
         href="/coaching-dashboard"
-        label="Overview"
-        active={active === 'overview'}
+        label="Dashboard"
+        active={active === 'dashboard'}
       />
 
       {/* Connections */}
@@ -181,56 +181,17 @@ export default function CoachingSidebar({
         badge={counts.feed}
       />
 
-      {/* Coaching Tools */}
-      <SectionLabel>Coaching Tools</SectionLabel>
-      <NavItem
-        href="/dashboard/coaching/clients"
-        label="Clients"
-        active={active === 'clients'}
-        badge={counts.clients}
-      />
-      <NavItem
-        href="/dashboard/coaching/sessions"
-        label="Sessions"
-        active={active === 'sessions'}
-        badge={counts.sessions}
-      />
-      <NavItem
-        href="/dashboard/coaching/sessions/calendar"
-        label="Calendar"
-        active={active === 'calendar'}
-      />
-      <NavItem
-        href="/dashboard/coaching/resources"
-        label="Resources"
-        active={active === 'resources'}
-      />
-      <NavItem
-        href="/dashboard/coaching/feedback"
-        label="Feedback"
-        active={active === 'feedback'}
-        badge={counts.feedback}
-      />
-      <NavItem
-        href="/coaching/messaging"
-        label="Messaging"
-        active={active === 'coach-messages'}
-      />
-
-      {/* Jobs */}
-      <SectionLabel>Jobs</SectionLabel>
-      <NavItem
-        href="/jobs?chrome=coach"
-        label="Apply to Jobs"
-        active={active === 'jobs'}
-      />
-
       {/* Seeker Tools (coach chrome) */}
       <SectionLabel>Seeker Tools</SectionLabel>
       <NavItem
         href="/seeker-dashboard?chrome=coach"
         label="Seeker Dashboard"
         active={active === 'seeker-dashboard'}
+      />
+      <NavItem
+        href="/jobs?chrome=coach"
+        label="Apply to Jobs"
+        active={active === 'jobs'}
       />
       <NavItem
         href="/resume-cover?chrome=coach"
