@@ -274,6 +274,11 @@ export default function ProfileHeader() {
               border: '3px solid #FF7043',
               flexShrink: 0,
               background: 'rgba(255,255,255,0.75)',
+
+              // ✅ MINIMAL FIX: eliminate baseline/line-box cropping artifacts
+              display: 'block',
+              boxSizing: 'border-box',
+              lineHeight: 0,
             }}
           >
             <img
@@ -283,6 +288,11 @@ export default function ProfileHeader() {
                 width: '100%',
                 height: '100%',
                 objectFit: 'cover',
+
+                // ✅ MINIMAL FIX: hard-center the bitmap inside the crop box
+                objectPosition: 'center',
+
+                // ✅ MINIMAL FIX: remove inline-image baseline gap + rounding artifacts
                 display: 'block',
               }}
             />
