@@ -146,6 +146,7 @@ export default function SeekerSidebar({
     >
       {/* Profile */}
       <NavItem href="/profile" label="Profile" active={active === 'profile'} />
+	  <NavItem href="/seeker-dashboard" label="Dashboard" active={active === 'dashboard'} />
 
       {/* Connections */}
       <SectionLabel>Connections</SectionLabel>
@@ -155,29 +156,15 @@ export default function SeekerSidebar({
         active={active === 'contacts'}
         badge={counts.connections}
       />
-      <NavItem
-        href="/seeker/messages"
-        label="The Signal"
-        active={active === 'messages'}
-        badge={counts.signal}
-      />
-      <NavItem
-        href="/feed"
-        label="Community Feed"
-        active={active === 'feed'}
-        badge={counts.feed}
-      />
 
       {/* Tools */}
       <SectionLabel>Tools</SectionLabel>
-      <NavItem href="/seeker-dashboard" label="Dashboard" active={active === 'dashboard'} />
       <NavItem href="/seeker/calendar" label="Calendar" active={active === 'calendar'} />
       <NavItem
         href="/anvil"
         label="The Anvil"
         active={active === 'anvil' || active === 'roadmap'}
       />
-      <NavItem href="/jobs" label="Pipeline" active={active === 'jobs'} />
 
       {/* Resources */}
       <SectionLabel>Resources</SectionLabel>
