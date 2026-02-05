@@ -3,9 +3,10 @@ import EnterpriseHeader from "@/components/layouts/EnterpriseHeader";
 
 const navItems = [
   { href: "/recruiter/dashboard", label: "Dashboard" },
-  { href: "/recruiter/job-postings", label: "Job Postings" },
-  { href: "/recruiter/candidates", label: "Candidates" },
   { href: "/recruiter/messaging", label: "Messaging" },
+  { href: "/recruiter/candidate-center", label: "Candidate Center" },
+  { href: "/recruiter/calendar", label: "Calendar" },
+  { href: "/recruiter/job-postings", label: "Job Postings" },
   { href: "/recruiter/analytics", label: "Analytics" },
 ];
 

@@ -186,56 +186,6 @@ export default function RecruiterSidebar({
         badge={counts.feed}
       />
 
-      {/* Recruiter Tools */}
-      <SectionLabel>Recruiter Tools</SectionLabel>
-      <NavItem
-        href="/recruiter/candidates"
-        label="Candidates"
-        active={active === 'candidates'}
-      />
-      <NavItem
-        href="/recruiter/job-postings"
-        label="Job Posting"
-        active={active === 'job-postings'}
-      />
-      <NavItem
-        href="/recruiter/messaging"
-        label="Messaging"
-        active={active === 'messaging'}
-      />
-      <NavItem
-        href="/recruiter/calendar"
-        label="Calendar"
-        active={active === 'calendar'}
-      />
-	  <NavItem
-        href="/recruiter/explain"
-        label="Applicant Explain"
-        active={active === 'explain'}
-      />
-      {isEnterprise && (
-        <>
-          <NavItem
-            href="/recruiter/analytics"
-            label="Analytics"
-            active={active === 'analytics'}
-          />
-          <NavItem
-            href="/recruiter/pools"
-            label="Talent Pools"
-            active={active === 'pools'}
-          />
-        </>
-      )}
-
-      {canSeeSettings && (
-        <NavItem
-          href="/recruiter/settings"
-          label="Settings"
-          active={active === 'settings'}
-        />
-      )}
-
       {/* Seeker Tools (recruiter chrome) */}
       <SectionLabel>Seeker Tools</SectionLabel>
       <NavItem
@@ -266,6 +216,14 @@ export default function RecruiterSidebar({
         label="The Hearth"
         active={active === 'hearth'}
       />
+
+      {canSeeSettings && (
+        <NavItem
+          href="/recruiter/settings"
+          label="Settings"
+          active={active === 'settings'}
+        />
+      )}
 
       {/* ✅ NEW: Staff tools (DB-backed via employee + department) */}
       {staffAccess ? (
