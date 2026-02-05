@@ -159,7 +159,6 @@ export default function SeekerSidebar({
 
       {/* Tools */}
       <SectionLabel>Tools</SectionLabel>
-      <NavItem href="/seeker/calendar" label="Calendar" active={active === 'calendar'} />
       <NavItem
         href="/anvil"
         label="The Anvil"
