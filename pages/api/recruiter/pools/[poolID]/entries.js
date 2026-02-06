@@ -110,7 +110,8 @@ export default async function handler(req, res) {
   const accountKey = recruiter.accountKey;
   const recruiterUserId = recruiter.id;
 
-  const poolId = String(req.query.poolId || "").trim();
+  const poolIdRaw = req.query.poolId;
+  const poolId = (Array.isArray(poolIdRaw) ? poolIdRaw[0] : poolIdRaw || "").toString().trim();
   if (!poolId) return res.status(400).json({ error: "Missing poolId" });
 
   // Ensure pool belongs to org
