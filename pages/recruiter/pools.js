@@ -216,14 +216,15 @@ export default function RecruiterPools() {
   }
 
   async function loadEntries(poolId) {
-    if (!poolId) {
+    const pid = String(poolId || "").trim(); // ✅ ensure no whitespace/empty ids
+    if (!pid) {
       setEntries([]);
       return;
     }
     setLoadingEntries(true);
     setError("");
     try {
-      const res = await fetch(`/api/recruiter/pools/${encodeURIComponent(poolId)}/entries`, { method: "GET" });
+      const res = await fetch(`/api/recruiter/pools/${encodeURIComponent(pid)}/entries`, { method: "GET" });
       const data = await res.json().catch(() => ({}));
       if (!res.ok) throw new Error(data?.error || "Failed to load pool entries.");
       const list = Array.isArray(data?.entries) ? data.entries : [];
@@ -241,8 +242,9 @@ export default function RecruiterPools() {
   }, []);
 
   useEffect(() => {
-    if (!selectedPoolId) return;
-    loadEntries(selectedPoolId);
+    const pid = String(selectedPoolId || "").trim(); // ✅ keep consistent with loadEntries guard
+    if (!pid) return;
+    loadEntries(pid);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selectedPoolId]);
 
