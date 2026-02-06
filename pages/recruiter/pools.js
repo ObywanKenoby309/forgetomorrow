@@ -301,7 +301,7 @@ export default function RecruiterPools() {
       if (!res.ok) throw new Error(data?.error || "Failed to create pool.");
 
       // optimistic add
-      const created = data?.pool;
+      const created = data?.pool || data;
       if (created?.id) {
         setPools((prev) => [created, ...prev]);
         setSelectedPoolId(created.id);
