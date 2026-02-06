@@ -806,6 +806,9 @@ model Organization {
   // ✅ NEW: multi-org access
   members OrganizationMember[] @relation("OrganizationMembers")
 
+  // ✅ NEW: Talent Pools (org-scoped via accountKey)
+  talentPools TalentPool[] @relation("OrganizationTalentPools")
+
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
@@ -974,6 +977,10 @@ model User {
   recruiterCandidatesOwned  RecruiterCandidate[] @relation("RecruiterCandidateRecruiter")
   recruiterCandidatesAsUser RecruiterCandidate[] @relation("RecruiterCandidateCandidate")
 
+  // ✅ NEW: Talent Pools created by this user (org-scoped)
+  createdTalentPools TalentPool[] @relation("UserCreatedTalentPools")
+  talentPoolEntriesAsCandidate TalentPoolEntry[] @relation("TalentPoolEntryCandidate")
+
   messages                 Message[]                 @relation("UserMessages")
   conversationParticipants ConversationParticipant[] @relation("UserConversationParticipants")
   blocksInitiated          UserBlock[]               @relation("UserBlocksAsBlocker")
@@ -1092,6 +1099,81 @@ model RecruiterCandidate {
   @@index([candidateUserId])
   @@index([accountKey])
   @@map("recruiter_candidates")
+}
+
+// ============================================================================
+//  TALENT POOLS (DB-first, org-scoped like recruiter_candidates)
+// ============================================================================
+
+model TalentPool {
+  id String @id @default(cuid())
+
+  // Org scoping (same convention as Job / RecruiterCandidate)
+  accountKey   String
+  organization Organization? @relation("OrganizationTalentPools", fields: [accountKey], references: [accountKey], onDelete: Cascade)
+
+  name    String
+  purpose String?
+
+  // Optional light tagging for the pool itself (["silver-medalist","cs-leadership"])
+  tags Json?
+
+  // Created by recruiter user (for auditing + ownership trace)
+  createdByUserId String?
+  createdBy       User? @relation("UserCreatedTalentPools", fields: [createdByUserId], references: [id], onDelete: SetNull)
+
+  entries TalentPoolEntry[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([accountKey, name])
+  @@index([accountKey])
+  @@index([createdByUserId])
+  @@map("talent_pools")
+}
+
+model TalentPoolEntry {
+  id String @id @default(cuid())
+
+  poolId String
+  pool   TalentPool @relation(fields: [poolId], references: [id], onDelete: Cascade)
+
+  // Duplicate accountKey for fast org-scoped querying (avoid join when listing entries)
+  accountKey String
+
+  // If candidate is a Forge user (internal), link it. Otherwise store snapshot fields.
+  candidateUserId String?
+  candidate       User? @relation("TalentPoolEntryCandidate", fields: [candidateUserId], references: [id], onDelete: SetNull)
+
+  candidateName     String
+  candidateHeadline String?
+  candidateLocation String?
+
+
+  // "Internal" | "External" (string to avoid enum churn)
+  source String? @default("External")
+
+  // "Hot" | "Warm" | "Hold" (string to match your UI)
+  status String? @default("Warm")
+
+  // quick fit label like "CSM / AM", "Support Ops"
+  fit String?
+
+  lastTouchAt DateTime?
+
+  // The “why saved” snapshot: bullets + optional richer evidence blob
+  reasons  Json? // string[]
+  notes    String?
+  evidence Json? // optional: structured snapshot (scores, excerpts, etc.)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([poolId])
+  @@index([accountKey])
+  @@index([candidateUserId])
+  @@map("talent_pool_entries")
 }
 
 // ============================================================================
