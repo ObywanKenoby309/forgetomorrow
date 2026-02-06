@@ -91,6 +91,15 @@ function pickCandidateShape(e) {
   };
 }
 
+function devDetails(err) {
+  if (process.env.NODE_ENV === "production") return undefined;
+  return {
+    name: err?.name,
+    code: err?.code,
+    message: err?.message,
+  };
+}
+
 export default async function handler(req, res) {
   const prisma = getPrisma();
 
@@ -110,16 +119,22 @@ export default async function handler(req, res) {
   const accountKey = recruiter.accountKey;
   const recruiterUserId = recruiter.id;
 
-  // ✅ MIN FIX: support poolId and poolID (case mismatch / older deploys)
-  const poolIdRaw = req.query.poolId ?? req.query.poolID;
+  const poolIdRaw = req.query.poolId;
   const poolId = (Array.isArray(poolIdRaw) ? poolIdRaw[0] : poolIdRaw || "").toString().trim();
   if (!poolId) return res.status(400).json({ error: "Missing poolId" });
 
-  // Ensure pool belongs to org
-  const pool = await prisma.talentPool.findFirst({
-    where: { id: poolId, accountKey },
-    select: { id: true },
-  });
+  // Ensure pool belongs to org (wrap so Prisma errors return JSON)
+  let pool;
+  try {
+    pool = await prisma.talentPool.findFirst({
+      where: { id: poolId, accountKey },
+      select: { id: true },
+    });
+  } catch (err) {
+    console.error("[recruiter/pools/entries] pool lookup error:", err);
+    return res.status(500).json({ error: "Failed to validate pool.", details: devDetails(err) });
+  }
+
   if (!pool?.id) return res.status(404).json({ error: "Pool not found" });
 
   if (req.method === "GET") {
@@ -152,7 +167,7 @@ export default async function handler(req, res) {
       return res.status(200).json({ entries: entries.map(pickCandidateShape) });
     } catch (err) {
       console.error("[recruiter/pools/entries] GET error:", err);
-      return res.status(500).json({ error: "Failed to load pool entries." });
+      return res.status(500).json({ error: "Failed to load pool entries.", details: devDetails(err) });
     }
   }
 
@@ -172,7 +187,9 @@ export default async function handler(req, res) {
       const fit = String(body.fit || "").trim();
       const lastTouch = String(body.lastTouch || "").trim();
 
-      const reasons = Array.isArray(body.reasons) ? body.reasons.map((r) => String(r || "").trim()).filter(Boolean) : [];
+      const reasons = Array.isArray(body.reasons)
+        ? body.reasons.map((r) => String(r || "").trim()).filter(Boolean)
+        : [];
       const notes = String(body.notes || "").trim();
 
       if (!candidateName) return res.status(400).json({ error: "Missing candidate name" });
@@ -228,7 +245,7 @@ export default async function handler(req, res) {
       return res.status(201).json({ entry: pickCandidateShape(created) });
     } catch (err) {
       console.error("[recruiter/pools/entries] POST error:", err);
-      return res.status(500).json({ error: "Failed to add entry." });
+      return res.status(500).json({ error: "Failed to add entry.", details: devDetails(err) });
     }
   }
 
@@ -248,7 +265,7 @@ export default async function handler(req, res) {
       return res.status(200).json({ ok: true });
     } catch (err) {
       console.error("[recruiter/pools/entries] DELETE error:", err);
-      return res.status(500).json({ error: "Failed to remove entry." });
+      return res.status(500).json({ error: "Failed to remove entry.", details: devDetails(err) });
     }
   }
 
