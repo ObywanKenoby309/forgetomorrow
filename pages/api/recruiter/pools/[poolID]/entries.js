@@ -110,7 +110,8 @@ export default async function handler(req, res) {
   const accountKey = recruiter.accountKey;
   const recruiterUserId = recruiter.id;
 
-  const poolIdRaw = req.query.poolId;
+  // ✅ MIN FIX: support poolId and poolID (case mismatch / older deploys)
+  const poolIdRaw = req.query.poolId ?? req.query.poolID;
   const poolId = (Array.isArray(poolIdRaw) ? poolIdRaw[0] : poolIdRaw || "").toString().trim();
   if (!poolId) return res.status(400).json({ error: "Missing poolId" });
 
