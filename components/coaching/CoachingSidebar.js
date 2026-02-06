@@ -194,11 +194,6 @@ export default function CoachingSidebar({
         active={active === 'jobs'}
       />
       <NavItem
-        href="/resume-cover?chrome=coach"
-        label="Resume & Cover"
-        active={active === 'resume-cover'}
-      />
-      <NavItem
         href="/anvil?chrome=coach"
         label="The Anvil"
         active={active === 'anvil' || active === 'roadmap'}

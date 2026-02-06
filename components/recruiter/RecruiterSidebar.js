@@ -199,11 +199,6 @@ export default function RecruiterSidebar({
         active={active === 'jobs'}
       />
       <NavItem
-        href={`/resume-cover?chrome=${chromeRecruiter}`}
-        label="Resume & Cover"
-        active={active === 'resume-cover'}
-      />
-      <NavItem
         href={`/anvil?chrome=${chromeRecruiter}`}
         label="The Anvil"
         active={active === 'anvil' || active === 'roadmap'}
