@@ -37,7 +37,10 @@ async function resolveEffectiveRecruiter(prisma, req, session) {
     const imp = readCookie(req, "ft_imp");
     if (imp) {
       try {
-        const decoded = jwt.verify(imp, process.env.NEXTAUTH_SECRET || "dev-secret-change-in-production");
+        const decoded = jwt.verify(
+          imp,
+          process.env.NEXTAUTH_SECRET || "dev-secret-change-in-production"
+        );
         if (decoded && typeof decoded === "object" && decoded.targetUserId) {
           effectiveUserId = String(decoded.targetUserId);
         }
@@ -91,12 +94,17 @@ function pickCandidateShape(e) {
   };
 }
 
-function devDetails(err) {
-  if (process.env.NODE_ENV === "production") return undefined;
+// ✅ Minimum-change: allow safe debugging on prod without leaking secrets.
+// - Only returns message when ?debug=1
+// - Still does NOT expose stack or env
+function devDetails(req, err) {
+  const debug = String(req?.query?.debug || "") === "1";
+  if (!debug) return undefined;
+
   return {
-    name: err?.name,
-    code: err?.code,
-    message: err?.message,
+    name: err?.name ? String(err.name) : undefined,
+    code: err?.code ? String(err.code) : undefined,
+    message: err?.message ? String(err.message) : String(err),
   };
 }
 
@@ -132,7 +140,7 @@ export default async function handler(req, res) {
     });
   } catch (err) {
     console.error("[recruiter/pools/entries] pool lookup error:", err);
-    return res.status(500).json({ error: "Failed to validate pool.", details: devDetails(err) });
+    return res.status(500).json({ error: "Failed to validate pool.", details: devDetails(req, err) });
   }
 
   if (!pool?.id) return res.status(404).json({ error: "Pool not found" });
@@ -167,7 +175,7 @@ export default async function handler(req, res) {
       return res.status(200).json({ entries: entries.map(pickCandidateShape) });
     } catch (err) {
       console.error("[recruiter/pools/entries] GET error:", err);
-      return res.status(500).json({ error: "Failed to load pool entries.", details: devDetails(err) });
+      return res.status(500).json({ error: "Failed to load pool entries.", details: devDetails(req, err) });
     }
   }
 
@@ -196,7 +204,10 @@ export default async function handler(req, res) {
 
       // If internal user was provided, ensure it exists (defensive)
       if (candidateUserId) {
-        const u = await prisma.user.findUnique({ where: { id: candidateUserId }, select: { id: true } });
+        const u = await prisma.user.findUnique({
+          where: { id: candidateUserId },
+          select: { id: true },
+        });
         if (!u?.id) return res.status(400).json({ error: "candidateUserId not found" });
       }
 
@@ -245,7 +256,7 @@ export default async function handler(req, res) {
       return res.status(201).json({ entry: pickCandidateShape(created) });
     } catch (err) {
       console.error("[recruiter/pools/entries] POST error:", err);
-      return res.status(500).json({ error: "Failed to add entry.", details: devDetails(err) });
+      return res.status(500).json({ error: "Failed to add entry.", details: devDetails(req, err) });
     }
   }
 
@@ -265,7 +276,7 @@ export default async function handler(req, res) {
       return res.status(200).json({ ok: true });
     } catch (err) {
       console.error("[recruiter/pools/entries] DELETE error:", err);
-      return res.status(500).json({ error: "Failed to remove entry.", details: devDetails(err) });
+      return res.status(500).json({ error: "Failed to remove entry.", details: devDetails(req, err) });
     }
   }
 
