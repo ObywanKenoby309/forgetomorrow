@@ -78,6 +78,17 @@ export function SecondaryButton({ children, onClick, disabled = false }) {
   );
 }
 
+export function normalizeReasonsText(input) {
+  const raw = String(input || "").trim();
+  if (!raw) return [];
+
+  return raw
+    .split(/\n+/g)
+    .map((x) => String(x || "").trim())
+    .filter(Boolean)
+    .slice(0, 8);
+}
+
 export function TextButton({ children, onClick, disabled = false }) {
   return (
     <button
