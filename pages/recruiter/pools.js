@@ -491,27 +491,50 @@ export default function RecruiterPools() {
             onSelectEntry={(id) => setSelectedEntryId(id)}
           />
 
-          {/* Right panel stays as-is (thin inline), but View no longer navigates */}
-          <div style={{ ...panelStyle, padding: 12 }}>
-            {!selectedEntry ? (
-              <div style={{ color: "#607D8B", fontSize: 13, lineHeight: 1.45 }}>Select a candidate to view details.</div>
-            ) : (
-              <div style={{ display: "grid", gap: 10 }}>
-                <div style={{ fontWeight: 900, color: "#263238", fontSize: 16 }}>{selectedEntry.name}</div>
+          {/* Right */}
+<div style={{ ...panelStyle, padding: 12 }}>
+  {!selectedEntry ? (
+    <div style={{ color: "#607D8B", fontSize: 13, lineHeight: 1.45 }}>
+      Select a candidate to take action.
+    </div>
+  ) : (
+    <div style={{ display: "grid", gap: 10 }}>
+      <div
+        style={{
+          fontWeight: 900,
+          color: "#263238",
+          fontSize: 16,
+        }}
+      >
+        {selectedEntry.name}
+      </div>
 
-                <div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
-                  <PrimaryButton onClick={() => messageCandidate(selectedEntry)} disabled={saving}>
-                    Message
-                  </PrimaryButton>
+      <div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
+        <PrimaryButton
+          onClick={() => messageCandidate(selectedEntry)}
+          disabled={saving}
+        >
+          Message
+        </PrimaryButton>
 
-                  <SecondaryButton onClick={() => viewCandidate(selectedEntry)} disabled={saving}>
-                    View candidate
-                  </SecondaryButton>
+        <SecondaryButton
+          onClick={() => viewCandidate(selectedEntry)}
+          disabled={saving}
+        >
+          View candidate
+        </SecondaryButton>
 
-                  <TextButton onClick={() => removeFromPool(selectedEntry.id)} disabled={saving}>
-                    Remove from pool
-                  </TextButton>
-                </div>
+        <TextButton
+          onClick={() => removeFromPool(selectedEntry.id)}
+          disabled={saving}
+        >
+          Remove from pool
+        </TextButton>
+      </div>
+    </div>
+  )}
+</div>
+
 
                 <div style={{ color: "#90A4AE", fontSize: 11, lineHeight: 1.35 }}>
                   View opens a modal (no navigation). Messaging opens Recruiter Messaging and auto-opens the thread if it already exists.
