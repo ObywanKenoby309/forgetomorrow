@@ -15,7 +15,7 @@ export default function RightRail() {
       >
         <div style={{ fontWeight: 900, color: "#37474F", marginBottom: 6 }}>Placeholder</div>
         <p style={{ margin: 0, color: "#607D8B", fontSize: 13, lineHeight: 1.45 }}>
-          Right rail will become ad placements. Tonight we focus on the Talent Pools working surface.
+          Right rail will become ad placements.
         </p>
       </div>
     </div>

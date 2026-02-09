@@ -1,7 +1,6 @@
 // components/recruiter/pools/PoolEntriesList.js
 import React from "react";
 import { Pill } from "./Pills";
-import { fmtShortDate } from "./utils";
 
 export default function PoolEntriesList({
   panelStyle,
@@ -31,14 +30,16 @@ export default function PoolEntriesList({
           <div style={{ color: "#607D8B", fontSize: 12, marginTop: 2 }}>
             {loadingEntries
               ? "Loading..."
-              : `${filteredEntries.length} candidate${filteredEntries.length === 1 ? "" : "s"}`}
+              : `${filteredEntries.length} candidate${
+                  filteredEntries.length === 1 ? "" : "s"
+                } shown`}
           </div>
         </div>
 
         <input
           value={search}
           onChange={(e) => setSearch(e.target.value)}
-          placeholder="Search candidates…"
+          placeholder="Search candidates..."
           aria-label="Search candidates"
           style={{
             flex: "1 1 240px",
@@ -55,7 +56,7 @@ export default function PoolEntriesList({
       <div style={{ height: 12 }} />
 
       {loadingEntries ? (
-        <div style={{ color: "#607D8B", fontSize: 13 }}>Loading candidates…</div>
+        <div style={{ color: "#607D8B", fontSize: 13 }}>Loading candidates...</div>
       ) : filteredEntries.length === 0 ? (
         <div
           style={{
@@ -96,57 +97,33 @@ export default function PoolEntriesList({
                   border: active
                     ? "1px solid rgba(255,112,67,0.45)"
                     : "1px solid rgba(38,50,56,0.12)",
-                  background: active
-                    ? "rgba(255,112,67,0.06)"
-                    : "white",
+                  background: active ? "rgba(255,112,67,0.06)" : "white",
                   borderRadius: 12,
-                  padding: 10,
+                  padding: "10px 12px",
                   cursor: "pointer",
-                  display: "grid",
-                  gap: 4,
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "space-between",
+                  gap: 10,
                 }}
               >
                 <div
                   style={{
-                    display: "flex",
-                    alignItems: "center",
-                    justifyContent: "space-between",
-                    gap: 8,
+                    fontWeight: 900,
+                    color: "#263238",
+                    fontSize: 13,
+                    minWidth: 0,
+                    overflow: "hidden",
+                    textOverflow: "ellipsis",
+                    whiteSpace: "nowrap",
                   }}
                 >
-                  <div
-                    style={{
-                      fontWeight: 900,
-                      color: "#263238",
-                      fontSize: 14,
-                    }}
-                  >
-                    {c.name}
-                  </div>
-                  <div style={{ display: "flex", gap: 6 }}>
-                    <Pill tone={sourceTone}>{c.source || "External"}</Pill>
-                    <Pill tone={statusTone}>{c.status || "Warm"}</Pill>
-                  </div>
+                  {c.name}
                 </div>
 
-                {c.headline ? (
-                  <div style={{ color: "#607D8B", fontSize: 12 }}>
-                    {c.headline}
-                  </div>
-                ) : null}
-
-                <div
-                  style={{
-                    display: "flex",
-                    justifyContent: "space-between",
-                    gap: 10,
-                    fontSize: 11,
-                    color: "#90A4AE",
-                    fontWeight: 800,
-                  }}
-                >
-                  <span>Fit: {c.fit || "-"}</span>
-                  <span>Last touch: {fmtShortDate(c.lastTouch)}</span>
+                <div style={{ display: "flex", gap: 6, flexWrap: "wrap", justifyContent: "flex-end" }}>
+                  <Pill tone={sourceTone}>{c.source || "External"}</Pill>
+                  <Pill tone={statusTone}>{c.status || "Warm"}</Pill>
                 </div>
               </button>
             );
