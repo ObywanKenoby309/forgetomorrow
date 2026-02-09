@@ -1,5 +1,6 @@
 // pages/recruiter/pools.js
 import { useEffect, useMemo, useState } from "react";
+import { useRouter } from "next/router";
 import RecruiterLayout from "@/components/layouts/RecruiterLayout";
 
 const ORANGE = "#FF7043";
@@ -134,19 +135,21 @@ function SecondaryButton({ children, onClick, disabled = false }) {
   );
 }
 
-function TextButton({ children, onClick }) {
+function TextButton({ children, onClick, disabled = false }) {
   return (
     <button
       type="button"
       onClick={onClick}
+      disabled={disabled}
       style={{
         border: "none",
         background: "transparent",
         color: ORANGE,
         fontWeight: 900,
-        cursor: "pointer",
+        cursor: disabled ? "not-allowed" : "pointer",
         padding: 0,
         textAlign: "left",
+        opacity: disabled ? 0.6 : 1,
       }}
     >
       {children}
@@ -164,7 +167,31 @@ function fmtUpdatedAt(d) {
   }
 }
 
+function fmtShortDate(v) {
+  try {
+    if (!v) return "-";
+    const dt = new Date(v);
+    if (!Number.isFinite(dt.getTime())) return "-";
+    return dt.toLocaleDateString(undefined, { month: "short", day: "numeric" });
+  } catch {
+    return "-";
+  }
+}
+
+function normalizeReasonsText(s) {
+  const raw = String(s || "").trim();
+  if (!raw) return [];
+  // allow newline or bullet separation
+  return raw
+    .split(/\n+/g)
+    .map((x) => String(x || "").trim())
+    .filter(Boolean)
+    .slice(0, 8);
+}
+
 export default function RecruiterPools() {
+  const router = useRouter();
+
   const panelStyle = useMemo(
     () => ({
       background: "white",
@@ -193,6 +220,16 @@ export default function RecruiterPools() {
   const [newPoolName, setNewPoolName] = useState("");
   const [newPoolPurpose, setNewPoolPurpose] = useState("");
   const [newPoolTags, setNewPoolTags] = useState("");
+
+  // ✅ Add Candidates picker (DB-backed)
+  const [showPicker, setShowPicker] = useState(false);
+  const [loadingPicker, setLoadingPicker] = useState(false);
+  const [pickerQuery, setPickerQuery] = useState("");
+  const [pickerResults, setPickerResults] = useState([]);
+  const [pickerSelectedIds, setPickerSelectedIds] = useState([]);
+  const [pickerWhy, setPickerWhy] = useState("");
+  const [pickerFit, setPickerFit] = useState("");
+  const [pickerStatus, setPickerStatus] = useState("Warm");
 
   async function loadPools() {
     setLoadingPools(true);
@@ -346,6 +383,164 @@ export default function RecruiterPools() {
     }
   }
 
+  async function loadPickerCandidates(queryStr) {
+    const q = String(queryStr || "").trim();
+    setLoadingPicker(true);
+    setError("");
+    try {
+      const url = `/api/recruiter/candidates?q=${encodeURIComponent(q)}`;
+      const res = await fetch(url, { method: "GET" });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(data?.error || "Failed to load candidates.");
+      const list = Array.isArray(data?.candidates) ? data.candidates : [];
+      setPickerResults(list);
+    } catch (e) {
+      setError(String(e?.message || e || "Failed to load candidates."));
+      setPickerResults([]);
+    } finally {
+      setLoadingPicker(false);
+    }
+  }
+
+  function openPicker() {
+    if (!selectedPoolId) return;
+    setShowPicker(true);
+    setPickerQuery("");
+    setPickerResults([]);
+    setPickerSelectedIds([]);
+    setPickerWhy("");
+    setPickerFit("");
+    setPickerStatus("Warm");
+    // load initial (empty query returns latest 100)
+    loadPickerCandidates("");
+  }
+
+  function togglePickerSelect(userId) {
+    const id = String(userId || "").trim();
+    if (!id) return;
+    setPickerSelectedIds((prev) => {
+      if (prev.includes(id)) return prev.filter((x) => x !== id);
+      return [...prev, id].slice(0, 25);
+    });
+  }
+
+  async function addSelectedToPool() {
+    const poolId = String(selectedPoolId || "").trim();
+    if (!poolId) return;
+
+    const ids = Array.isArray(pickerSelectedIds) ? pickerSelectedIds : [];
+    if (!ids.length) {
+      setError("Select at least one candidate.");
+      return;
+    }
+
+    const reasons = normalizeReasonsText(pickerWhy);
+    const status = String(pickerStatus || "Warm").trim() || "Warm";
+    const fit = String(pickerFit || "").trim();
+
+    setSaving(true);
+    setError("");
+    try {
+      // Build a quick map for candidate details (for snapshot fields)
+      const byId = new Map();
+      for (const c of Array.isArray(pickerResults) ? pickerResults : []) {
+        if (c?.id) byId.set(String(c.id), c);
+      }
+
+      // Add sequentially (keeps API simple + readable logs)
+      for (const candidateUserId of ids) {
+        const c = byId.get(String(candidateUserId)) || null;
+
+        const payload = {
+          candidateUserId,
+          name: String(c?.name || "").trim() || "Unnamed",
+          headline: String(c?.title || c?.headline || "").trim(),
+          location: String(c?.location || "").trim(),
+          source: "Internal",
+          status,
+          fit: fit || String(c?.title || c?.headline || "").trim() || null,
+          lastTouch: null,
+          reasons: reasons.length ? reasons : [],
+          notes: "",
+        };
+
+        const res = await fetch(`/api/recruiter/pools/${encodeURIComponent(poolId)}/entries`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(payload),
+        });
+
+        const data = await res.json().catch(() => ({}));
+        if (!res.ok) {
+          throw new Error(data?.error || "Failed to add candidate to pool.");
+        }
+      }
+
+      setShowPicker(false);
+      setPickerSelectedIds([]);
+      setPickerResults([]);
+      setPickerQuery("");
+      setPickerWhy("");
+      setPickerFit("");
+      setPickerStatus("Warm");
+
+      await loadEntries(poolId);
+      await loadPools();
+    } catch (e) {
+      setError(String(e?.message || e || "Failed to add candidates to pool."));
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  async function messageCandidate(entry) {
+    const e = entry && typeof entry === "object" ? entry : null;
+    const candidateUserId = String(e?.candidateUserId || "").trim();
+
+    if (!candidateUserId) {
+      setError("This is an external candidate. Messaging is available for internal candidates only (for now).");
+      return;
+    }
+
+    setSaving(true);
+    setError("");
+    try {
+      // best-effort: if your conversations API exists, use it; otherwise fail gracefully
+      const res = await fetch("/api/conversations", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ participantUserIds: [candidateUserId], channel: "recruiter" }),
+      });
+
+      const data = await res.json().catch(() => ({}));
+
+      if (!res.ok) {
+        throw new Error(data?.error || "Messaging endpoint not available yet.");
+      }
+
+      const conversationId = data?.conversation?.id || data?.id || data?.conversationId || null;
+      if (!conversationId) {
+        throw new Error("Conversation created but id not returned.");
+      }
+
+      router.push(`/recruiter/messaging?c=${encodeURIComponent(conversationId)}`);
+    } catch (e2) {
+      setError(String(e2?.message || e2 || "Failed to start conversation."));
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  function viewCandidate(entry) {
+    const candidateUserId = String(entry?.candidateUserId || "").trim();
+    if (!candidateUserId) {
+      setError("This is an external candidate. View is available for internal candidates only (for now).");
+      return;
+    }
+    // conservative: go to recruiter candidate center with an id hint (won’t break if ignored)
+    router.push(`/recruiter/candidates?candidateId=${encodeURIComponent(candidateUserId)}`);
+  }
+
   return (
     <RecruiterLayout title="ForgeTomorrow — Talent Pools" header={<HeaderBox />} right={<RightRail />} activeNav="candidate-center">
       <section style={panelStyle} aria-label="Talent Pools working surface">
@@ -357,10 +552,7 @@ export default function RecruiterPools() {
               <SecondaryButton onClick={() => setShowCreate(true)} disabled={saving}>
                 New pool
               </SecondaryButton>
-              <PrimaryButton
-                onClick={() => alert("Next: Add candidates will open Candidate Center picker (DB-first)")}
-                disabled={saving || !selectedPoolId}
-              >
+              <PrimaryButton onClick={openPicker} disabled={saving || !selectedPoolId}>
                 Add candidates
               </PrimaryButton>
             </div>
@@ -447,6 +639,207 @@ export default function RecruiterPools() {
                 >
                   Cancel
                 </SecondaryButton>
+              </div>
+            </div>
+          </div>
+        ) : null}
+
+        {/* Add Candidates Picker (inline modal-ish) */}
+        {showPicker ? (
+          <div style={{ ...panelStyle, padding: 12, marginBottom: 12 }}>
+            <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: 10 }}>
+              <div style={{ minWidth: 0 }}>
+                <div style={{ fontWeight: 900, color: "#37474F" }}>
+                  Add candidates to: <span style={{ color: "#263238" }}>{selectedPool?.name || "Pool"}</span>
+                </div>
+                <div style={{ color: "#607D8B", fontSize: 12, marginTop: 2, lineHeight: 1.35 }}>
+                  This pulls LIVE candidates from <strong>User</strong> via <code>/api/recruiter/candidates</code>.
+                </div>
+              </div>
+              <SecondaryButton
+                onClick={() => {
+                  setShowPicker(false);
+                  setPickerQuery("");
+                  setPickerResults([]);
+                  setPickerSelectedIds([]);
+                  setPickerWhy("");
+                  setPickerFit("");
+                  setPickerStatus("Warm");
+                }}
+                disabled={saving}
+              >
+                Close
+              </SecondaryButton>
+            </div>
+
+            <div style={{ height: 10 }} />
+
+            <div style={{ display: "grid", gridTemplateColumns: "minmax(0, 1fr) minmax(0, 320px)", gap: 12, alignItems: "start" }}>
+              {/* Results */}
+              <div style={{ ...panelStyle, padding: 12 }}>
+                <div style={{ display: "flex", gap: 10, flexWrap: "wrap", alignItems: "center", justifyContent: "space-between" }}>
+                  <input
+                    value={pickerQuery}
+                    onChange={(e) => setPickerQuery(e.target.value)}
+                    placeholder="Search candidates (name, headline, about)..."
+                    aria-label="Search candidates"
+                    style={{
+                      flex: "1 1 260px",
+                      border: "1px solid rgba(38,50,56,0.18)",
+                      borderRadius: 10,
+                      padding: "10px 12px",
+                      fontWeight: 700,
+                      outline: "none",
+                    }}
+                  />
+                  <PrimaryButton onClick={() => loadPickerCandidates(pickerQuery)} disabled={loadingPicker || saving}>
+                    {loadingPicker ? "Searching..." : "Search"}
+                  </PrimaryButton>
+                </div>
+
+                <div style={{ height: 10 }} />
+
+                <div style={{ color: "#607D8B", fontSize: 12, fontWeight: 800 }}>
+                  {loadingPicker ? "Loading candidates..." : `${pickerResults.length} result${pickerResults.length === 1 ? "" : "s"}`}
+                  {pickerSelectedIds.length ? ` - ${pickerSelectedIds.length} selected` : ""}
+                </div>
+
+                <div style={{ height: 10 }} />
+
+                {loadingPicker ? (
+                  <div style={{ color: "#607D8B", fontSize: 13, lineHeight: 1.45 }}>Loading...</div>
+                ) : pickerResults.length === 0 ? (
+                  <div
+                    style={{
+                      border: "1px dashed rgba(38,50,56,0.22)",
+                      borderRadius: 12,
+                      padding: 14,
+                      color: "#607D8B",
+                      fontSize: 13,
+                      lineHeight: 1.45,
+                    }}
+                  >
+                    No candidates found yet. Try a broader search, or leave blank and click <strong>Search</strong> to pull newest.
+                  </div>
+                ) : (
+                  <div style={{ display: "grid", gap: 8, maxHeight: 340, overflow: "auto", paddingRight: 4 }}>
+                    {pickerResults.map((c) => {
+                      const id = String(c?.id || "").trim();
+                      const selected = pickerSelectedIds.includes(id);
+                      return (
+                        <button
+                          key={id}
+                          type="button"
+                          onClick={() => togglePickerSelect(id)}
+                          style={{
+                            textAlign: "left",
+                            border: selected ? `1px solid rgba(255,112,67,0.55)` : "1px solid rgba(38,50,56,0.12)",
+                            background: selected ? "rgba(255,112,67,0.08)" : "white",
+                            borderRadius: 12,
+                            padding: 10,
+                            cursor: "pointer",
+                            display: "grid",
+                            gap: 6,
+                          }}
+                        >
+                          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 10 }}>
+                            <div style={{ fontWeight: 900, color: "#263238", fontSize: 13 }}>{c?.name || "Unnamed"}</div>
+                            {selected ? <Pill tone="hot">Selected</Pill> : <Pill tone="neutral">Pick</Pill>}
+                          </div>
+                          <div style={{ color: "#607D8B", fontSize: 12, lineHeight: 1.35 }}>
+                            {String(c?.title || c?.headline || "").trim()}
+                          </div>
+                          <div style={{ color: "#90A4AE", fontSize: 11, fontWeight: 800 }}>
+                            {String(c?.location || "").trim()}
+                          </div>
+                        </button>
+                      );
+                    })}
+                  </div>
+                )}
+              </div>
+
+              {/* Settings */}
+              <div style={{ ...panelStyle, padding: 12 }}>
+                <div style={{ fontWeight: 900, color: "#37474F", marginBottom: 10 }}>Snapshot for this add</div>
+
+                <label style={{ display: "block", color: "#607D8B", fontSize: 12, fontWeight: 900, marginBottom: 6 }}>
+                  Status (Hot / Warm / Hold)
+                </label>
+                <select
+                  value={pickerStatus}
+                  onChange={(e) => setPickerStatus(e.target.value)}
+                  style={{
+                    width: "100%",
+                    border: "1px solid rgba(38,50,56,0.18)",
+                    borderRadius: 10,
+                    padding: "10px 12px",
+                    fontWeight: 800,
+                    outline: "none",
+                    background: "white",
+                    marginBottom: 10,
+                  }}
+                >
+                  <option value="Hot">Hot</option>
+                  <option value="Warm">Warm</option>
+                  <option value="Hold">Hold</option>
+                </select>
+
+                <label style={{ display: "block", color: "#607D8B", fontSize: 12, fontWeight: 900, marginBottom: 6 }}>
+                  Fit label (optional)
+                </label>
+                <input
+                  value={pickerFit}
+                  onChange={(e) => setPickerFit(e.target.value)}
+                  placeholder="e.g., CSM / AM, Support Ops"
+                  style={{
+                    width: "100%",
+                    border: "1px solid rgba(38,50,56,0.18)",
+                    borderRadius: 10,
+                    padding: "10px 12px",
+                    fontWeight: 700,
+                    outline: "none",
+                    marginBottom: 10,
+                  }}
+                />
+
+                <label style={{ display: "block", color: "#607D8B", fontSize: 12, fontWeight: 900, marginBottom: 6 }}>
+                  Why saved (bullets, one per line)
+                </label>
+                <textarea
+                  value={pickerWhy}
+                  onChange={(e) => setPickerWhy(e.target.value)}
+                  placeholder={"Example:\nStrong leadership signal\nRelevant domain experience\nClear operational ownership"}
+                  rows={6}
+                  style={{
+                    width: "100%",
+                    border: "1px solid rgba(38,50,56,0.18)",
+                    borderRadius: 10,
+                    padding: "10px 12px",
+                    fontWeight: 700,
+                    outline: "none",
+                    resize: "vertical",
+                    marginBottom: 12,
+                  }}
+                />
+
+                <div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
+                  <PrimaryButton onClick={addSelectedToPool} disabled={saving || !pickerSelectedIds.length}>
+                    {saving ? "Saving..." : `Add (${pickerSelectedIds.length || 0})`}
+                  </PrimaryButton>
+                  <SecondaryButton
+                    onClick={() => {
+                      setPickerSelectedIds([]);
+                    }}
+                    disabled={saving || !pickerSelectedIds.length}
+                  >
+                    Clear
+                  </SecondaryButton>
+                </div>
+
+                <div style={{ color: "#90A4AE", fontSize: 11, lineHeight: 1.35, marginTop: 10 }}>
+                  Adds are written to <strong>TalentPoolEntry</strong> (DB-first). No localStorage.
+                </div>
               </div>
             </div>
           </div>
@@ -585,7 +978,7 @@ export default function RecruiterPools() {
                   lineHeight: 1.45,
                 }}
               >
-                No candidates yet. Click <strong>Add candidates</strong> next (we’ll wire the picker).
+                No candidates yet. Click <strong>Add candidates</strong> to pull from Candidate Center and save here.
               </div>
             ) : (
               <div style={{ display: "grid", gap: 10 }}>
@@ -633,7 +1026,9 @@ export default function RecruiterPools() {
                         <div style={{ color: "#455A64", fontSize: 12, fontWeight: 800 }}>
                           Fit: <span style={{ color: "#37474F" }}>{c.fit || "-"}</span>
                         </div>
-                        <div style={{ color: "#90A4AE", fontSize: 11, fontWeight: 800 }}>Last touch: {c.lastTouch || "-"}</div>
+                        <div style={{ color: "#90A4AE", fontSize: 11, fontWeight: 800 }}>
+                          Last touch: {fmtShortDate(c.lastTouch)}
+                        </div>
                       </div>
 
                       <div style={{ display: "grid", gap: 4, marginTop: 6 }}>
@@ -694,7 +1089,7 @@ export default function RecruiterPools() {
 
                 <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
                   <Pill tone="neutral">Fit: {selectedEntry.fit || "-"}</Pill>
-                  <Pill tone="neutral">Last touch: {selectedEntry.lastTouch || "-"}</Pill>
+                  <Pill tone="neutral">Last touch: {fmtShortDate(selectedEntry.lastTouch)}</Pill>
                 </div>
 
                 <div
@@ -734,13 +1129,18 @@ export default function RecruiterPools() {
                   </div>
 
                   <div style={{ display: "flex", gap: 10, flexWrap: "wrap", marginTop: 6 }}>
-                    <PrimaryButton onClick={() => alert("Next: wire Message to The Signal (conversation create + open)")}>
+                    <PrimaryButton onClick={() => messageCandidate(selectedEntry)} disabled={saving}>
                       Message
                     </PrimaryButton>
-                    <SecondaryButton onClick={() => alert("Next: route to candidate drawer/profile")} disabled={saving}>
+                    <SecondaryButton
+                      onClick={() => viewCandidate(selectedEntry)}
+                      disabled={saving || !String(selectedEntry?.candidateUserId || "").trim()}
+                    >
                       View candidate
                     </SecondaryButton>
-                    <TextButton onClick={() => removeFromPool(selectedEntry.id)}>Remove from pool</TextButton>
+                    <TextButton onClick={() => removeFromPool(selectedEntry.id)} disabled={saving}>
+                      Remove from pool
+                    </TextButton>
                   </div>
 
                   <div style={{ color: "#90A4AE", fontSize: 11, lineHeight: 1.35, marginTop: 4 }}>
