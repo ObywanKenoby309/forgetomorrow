@@ -1,4 +1,5 @@
 // components/recruiter/pools/utils.js
+// correct script
 export function fmtUpdatedAt(d) {
   try {
     const dt = new Date(d);
