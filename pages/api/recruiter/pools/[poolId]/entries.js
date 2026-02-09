@@ -70,6 +70,28 @@ function toStringArray(v) {
   return [];
 }
 
+function safeIso(d) {
+  try {
+    if (!d) return "";
+    const dt = new Date(d);
+    if (!Number.isFinite(dt.getTime())) return "";
+    return dt.toISOString();
+  } catch {
+    return "";
+  }
+}
+
+function parseDateOrNull(v) {
+  try {
+    if (!v) return null;
+    const dt = new Date(v);
+    if (!Number.isFinite(dt.getTime())) return null;
+    return dt;
+  } catch {
+    return null;
+  }
+}
+
 function pickCandidateShape(e) {
   return {
     id: e.id,
@@ -84,7 +106,9 @@ function pickCandidateShape(e) {
     source: e.source || (e.candidateUserId ? "Internal" : "External"),
     status: e.status || "Warm",
     fit: e.fit || "",
-    lastTouch: e.lastTouch || "",
+
+    // UI expects a string; DB stores DateTime
+    lastTouch: e.lastTouchAt ? safeIso(e.lastTouchAt) : "",
 
     reasons: toStringArray(e.reasons),
     notes: e.notes || "",
@@ -94,9 +118,6 @@ function pickCandidateShape(e) {
   };
 }
 
-// ✅ Minimum-change: allow safe debugging on prod without leaking secrets.
-// - Only returns message when ?debug=1
-// - Still does NOT expose stack or env
 function devDetails(req, err) {
   const debug = String(req?.query?.debug || "") === "1";
   if (!debug) return undefined;
@@ -125,13 +146,12 @@ export default async function handler(req, res) {
   if (!recruiter.accountKey) return res.status(404).json({ error: "accountKey not found" });
 
   const accountKey = recruiter.accountKey;
-  const recruiterUserId = recruiter.id;
 
   const poolIdRaw = req.query.poolId;
   const poolId = (Array.isArray(poolIdRaw) ? poolIdRaw[0] : poolIdRaw || "").toString().trim();
   if (!poolId) return res.status(400).json({ error: "Missing poolId" });
 
-  // Ensure pool belongs to org (wrap so Prisma errors return JSON)
+  // Ensure pool belongs to org
   let pool;
   try {
     pool = await prisma.talentPool.findFirst({
@@ -153,6 +173,7 @@ export default async function handler(req, res) {
         select: {
           id: true,
           poolId: true,
+          accountKey: true,
           candidateUserId: true,
 
           candidateName: true,
@@ -162,7 +183,9 @@ export default async function handler(req, res) {
           source: true,
           status: true,
           fit: true,
-          lastTouch: true,
+
+          // ✅ schema field
+          lastTouchAt: true,
 
           reasons: true,
           notes: true,
@@ -193,7 +216,9 @@ export default async function handler(req, res) {
       const source = String(body.source || (candidateUserId ? "Internal" : "External")).trim();
       const status = String(body.status || "Warm").trim();
       const fit = String(body.fit || "").trim();
-      const lastTouch = String(body.lastTouch || "").trim();
+
+      // UI sends string; DB stores DateTime
+      const lastTouchAt = parseDateOrNull(String(body.lastTouch || "").trim());
 
       const reasons = Array.isArray(body.reasons)
         ? body.reasons.map((r) => String(r || "").trim()).filter(Boolean)
@@ -204,10 +229,7 @@ export default async function handler(req, res) {
 
       // If internal user was provided, ensure it exists (defensive)
       if (candidateUserId) {
-        const u = await prisma.user.findUnique({
-          where: { id: candidateUserId },
-          select: { id: true },
-        });
+        const u = await prisma.user.findUnique({ where: { id: candidateUserId }, select: { id: true } });
         if (!u?.id) return res.status(400).json({ error: "candidateUserId not found" });
       }
 
@@ -215,7 +237,6 @@ export default async function handler(req, res) {
         data: {
           accountKey,
           poolId,
-          addedByUserId: recruiterUserId,
 
           candidateUserId,
 
@@ -226,7 +247,9 @@ export default async function handler(req, res) {
           source: source || null,
           status: status || null,
           fit: fit || null,
-          lastTouch: lastTouch || null,
+
+          // ✅ schema field
+          lastTouchAt: lastTouchAt || null,
 
           reasons: reasons.length ? reasons : null,
           notes: notes || null,
@@ -234,6 +257,7 @@ export default async function handler(req, res) {
         select: {
           id: true,
           poolId: true,
+          accountKey: true,
           candidateUserId: true,
 
           candidateName: true,
@@ -243,7 +267,7 @@ export default async function handler(req, res) {
           source: true,
           status: true,
           fit: true,
-          lastTouch: true,
+          lastTouchAt: true,
 
           reasons: true,
           notes: true,
@@ -265,7 +289,6 @@ export default async function handler(req, res) {
       const entryId = String(req.query.entryId || "").trim();
       if (!entryId) return res.status(400).json({ error: "Missing entryId" });
 
-      // Ensure it’s in this org + pool
       const existing = await prisma.talentPoolEntry.findFirst({
         where: { id: entryId, accountKey, poolId },
         select: { id: true },
