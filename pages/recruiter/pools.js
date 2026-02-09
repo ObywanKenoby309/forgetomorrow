@@ -322,8 +322,6 @@ export default function RecruiterPools() {
       return;
     }
 
-    // We do NOT guess conversation creation.
-    // Recruiter messaging page will auto-open if thread exists by matching otherUserId.
     router.push(`/recruiter/messaging?candidateUserId=${encodeURIComponent(candidateUserId)}`);
   }
 
@@ -344,12 +342,7 @@ export default function RecruiterPools() {
   }
 
   return (
-    <RecruiterLayout
-      title="ForgeTomorrow — Talent Pools"
-      header={<HeaderBox />}
-      right={<RightRail />}
-      activeNav="candidate-center"
-    >
+    <RecruiterLayout title="ForgeTomorrow — Talent Pools" header={<HeaderBox />} right={<RightRail />} activeNav="candidate-center">
       <section style={panelStyle} aria-label="Talent Pools working surface">
         <SectionTitle
           title="Pools workspace"
@@ -438,7 +431,6 @@ export default function RecruiterPools() {
           />
         ) : null}
 
-        {/* Candidate modal for View */}
         <CandidateDetailModal
           open={showCandidateModal}
           onClose={() => {
@@ -466,7 +458,6 @@ export default function RecruiterPools() {
             alignItems: "start",
           }}
         >
-          {/* Left */}
           <PoolsList
             panelStyle={panelStyle}
             loadingPools={loadingPools}
@@ -479,7 +470,6 @@ export default function RecruiterPools() {
             }}
           />
 
-          {/* Middle */}
           <PoolEntriesList
             panelStyle={panelStyle}
             selectedPool={selectedPool}
@@ -491,53 +481,26 @@ export default function RecruiterPools() {
             onSelectEntry={(id) => setSelectedEntryId(id)}
           />
 
-          {/* Right */}
-<div style={{ ...panelStyle, padding: 12 }}>
-  {!selectedEntry ? (
-    <div style={{ color: "#607D8B", fontSize: 13, lineHeight: 1.45 }}>
-      Select a candidate to take action.
-    </div>
-  ) : (
-    <div style={{ display: "grid", gap: 10 }}>
-      <div
-        style={{
-          fontWeight: 900,
-          color: "#263238",
-          fontSize: 16,
-        }}
-      >
-        {selectedEntry.name}
-      </div>
+          {/* Right: authoritative action surface */}
+          <div style={{ ...panelStyle, padding: 12 }}>
+            {!selectedEntry ? (
+              <div style={{ color: "#607D8B", fontSize: 13, lineHeight: 1.45 }}>Select a candidate to take action.</div>
+            ) : (
+              <div style={{ display: "grid", gap: 10 }}>
+                <div style={{ fontWeight: 900, color: "#263238", fontSize: 16 }}>{selectedEntry.name}</div>
 
-      <div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
-        <PrimaryButton
-          onClick={() => messageCandidate(selectedEntry)}
-          disabled={saving}
-        >
-          Message
-        </PrimaryButton>
+                <div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
+                  <PrimaryButton onClick={() => messageCandidate(selectedEntry)} disabled={saving}>
+                    Message
+                  </PrimaryButton>
 
-        <SecondaryButton
-          onClick={() => viewCandidate(selectedEntry)}
-          disabled={saving}
-        >
-          View candidate
-        </SecondaryButton>
+                  <SecondaryButton onClick={() => viewCandidate(selectedEntry)} disabled={saving}>
+                    View candidate
+                  </SecondaryButton>
 
-        <TextButton
-          onClick={() => removeFromPool(selectedEntry.id)}
-          disabled={saving}
-        >
-          Remove from pool
-        </TextButton>
-      </div>
-    </div>
-  )}
-</div>
-
-
-                <div style={{ color: "#90A4AE", fontSize: 11, lineHeight: 1.35 }}>
-                  View opens a modal (no navigation). Messaging opens Recruiter Messaging and auto-opens the thread if it already exists.
+                  <TextButton onClick={() => removeFromPool(selectedEntry.id)} disabled={saving}>
+                    Remove from pool
+                  </TextButton>
                 </div>
               </div>
             )}
