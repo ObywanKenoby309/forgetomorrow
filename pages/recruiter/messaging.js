@@ -165,9 +165,7 @@ function Body({
 
       <SavedReplies
         onInsert={(text) => {
-          const el = document.querySelector(
-            'input[placeholder="Type a message…"]'
-          );
+          const el = document.querySelector('input[placeholder="Type a message…"]');
           if (el) {
             el.value = el.value ? `${el.value} ${text}` : text;
             el.dispatchEvent(new Event("input", { bubbles: true }));
@@ -211,6 +209,12 @@ export default function MessagingPage() {
 
   const prefillText =
     typeof router.query.prefill === "string" ? router.query.prefill : "";
+
+  // NEW: allow pools to link by candidate user id (auto-open if exists)
+  const candidateUserIdFromQuery =
+    typeof router.query.candidateUserId === "string"
+      ? router.query.candidateUserId
+      : null;
 
   useEffect(() => {
     let cancelled = false;
@@ -331,14 +335,26 @@ export default function MessagingPage() {
 
         const fallbackId = threadsWithMessages[0]?.id || null;
 
+        // 1) If explicit conversation id is present, honor it
         if (queryConversationId) {
           const match = threadsWithMessages.find(
             (t) => String(t.id) === String(queryConversationId)
           );
           setInitialThreadId(match ? match.id : fallbackId);
-        } else {
-          setInitialThreadId(fallbackId);
+          return;
         }
+
+        // 2) NEW: If candidateUserId is provided, try to auto-open existing thread by otherUserId
+        if (candidateUserIdFromQuery) {
+          const match = threadsWithMessages.find(
+            (t) => String(t.otherUserId || "") === String(candidateUserIdFromQuery)
+          );
+          setInitialThreadId(match ? match.id : fallbackId);
+          return;
+        }
+
+        // 3) Default
+        setInitialThreadId(fallbackId);
       } catch (err) {
         console.error("Failed to load recruiter threads:", err);
       }
@@ -348,7 +364,7 @@ export default function MessagingPage() {
     return () => {
       cancelled = true;
     };
-  }, [queryConversationId, currentUserId]);
+  }, [queryConversationId, candidateUserIdFromQuery, currentUserId]);
 
   // ✅ Poll messages for the active conversation
   useEffect(() => {
