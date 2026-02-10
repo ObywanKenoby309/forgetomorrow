@@ -444,22 +444,12 @@ export default function RecruiterPools() {
     );
   }
 
-  // ✅ CHANGED: two states only:
-  // - activePane="entries" => Image 1 (Col2 expanded, Col1 collapsed, Col3 full)
-  // - activePane="pools"   => Image 2 (Col1 expanded, Col2 collapsed, Col3 collapsed-from-left BUT right edge stays fixed)
   const focusedColumns =
     activePane === "entries"
       ? "minmax(120px, 200px) minmax(0, 1fr) 360px"
       : "minmax(320px, 420px) minmax(120px, 200px) 220px";
 
   const middleCompact = activePane === "pools";
-
-  // ✅ NEW: open Edit modal from Column 3
-  function openEditFromRightRail() {
-    if (!selectedEntry) return;
-    setModalEntry(selectedEntry);
-    setShowCandidateModal(true);
-  }
 
   return (
     <RecruiterLayout
@@ -641,7 +631,7 @@ export default function RecruiterPools() {
             />
           </div>
 
-          {/* Right (anchored to the right edge; when collapsed it collapses from left -> right) */}
+          {/* Right */}
           <div
             style={{
               ...panelStyle,
@@ -664,12 +654,11 @@ export default function RecruiterPools() {
               </div>
             ) : (
               <div style={{ display: "grid", gap: 10 }}>
-                <div
-                  style={{ fontWeight: 900, color: "#FF7043", fontSize: 14 }}
-                >
+                <div style={{ fontWeight: 900, color: "#FF7043", fontSize: 14 }}>
                   At a glance...
                 </div>
 
+                {/* ✅ CHANGED: restore pills on Column 3 */}
                 <div
                   style={{
                     display: "flex",
@@ -708,16 +697,14 @@ export default function RecruiterPools() {
                     ) : null}
                   </div>
 
-                  {/* ✅ CHANGED: pills are back on the At-a-glance card */}
                   <div
                     style={{
                       display: "flex",
                       gap: 8,
-                      // keep them side-by-side
                       flexWrap: "nowrap",
                       justifyContent: "flex-end",
                       alignItems: "center",
-                      minWidth: "fit-content",
+                      minWidth: 0,
                     }}
                   >
                     <Pill
@@ -775,9 +762,7 @@ export default function RecruiterPools() {
                     Last updated:{" "}
                     <span style={{ fontWeight: 800 }}>
                       {fmtShortDate(
-                        selectedEntry.updatedAt ||
-                          selectedEntry.lastTouch ||
-                          null
+                        selectedEntry.updatedAt || selectedEntry.lastTouch || null
                       )}
                     </span>
                   </div>
@@ -884,8 +869,10 @@ export default function RecruiterPools() {
                     View Full Details
                   </SecondaryButton>
 
-                  {/* ✅ CHANGED: Replace Remove with Edit; Remove moves into the modal */}
-                  <TextButton onClick={openEditFromRightRail} disabled={saving}>
+                  <TextButton
+                    onClick={() => removeFromPool(selectedEntry.id)}
+                    disabled={saving}
+                  >
                     Edit
                   </TextButton>
                 </div>
