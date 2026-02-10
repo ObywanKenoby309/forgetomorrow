@@ -11,59 +11,77 @@ export default function PoolEntriesList({
   setSearch,
   selectedEntry,
   onSelectEntry,
+  compact = false,
 }) {
   return (
-    <div style={{ ...panelStyle, padding: 12 }}>
+    <div
+      style={{
+        ...panelStyle,
+        padding: 12,
+        width: "100%",
+        maxWidth: "100%",
+        overflow: "hidden",
+      }}
+    >
       <div
         style={{
           display: "flex",
-          alignItems: "center",
+          alignItems: compact ? "flex-start" : "center",
           justifyContent: "space-between",
           gap: 12,
-          flexWrap: "wrap",
-          // ✅ NEW: ensure header row never overflows its column
+          flexWrap: "nowrap",
           width: "100%",
           maxWidth: "100%",
+          minWidth: 0,
+          overflow: "hidden",
         }}
       >
-        <div style={{ minWidth: 0 }}>
-          <div style={{ fontWeight: 900, color: "#37474F" }}>
+        <div style={{ minWidth: 0, overflow: "hidden" }}>
+          <div
+            style={{
+              fontWeight: 900,
+              color: "#37474F",
+              overflow: "hidden",
+              textOverflow: "ellipsis",
+              whiteSpace: "nowrap",
+            }}
+            title={selectedPool ? selectedPool.name : "Candidates"}
+          >
             {selectedPool ? selectedPool.name : "Candidates"}
           </div>
-          <div style={{ color: "#607D8B", fontSize: 12, marginTop: 2 }}>
-            {loadingEntries
-              ? "Loading..."
-              : `${filteredEntries.length} candidate${
-                  filteredEntries.length === 1 ? "" : "s"
-                } shown`}
-          </div>
+
+          {!compact ? (
+            <div style={{ color: "#607D8B", fontSize: 12, marginTop: 2 }}>
+              {loadingEntries
+                ? "Loading..."
+                : `${filteredEntries.length} candidate${
+                    filteredEntries.length === 1 ? "" : "s"
+                  } shown`}
+            </div>
+          ) : null}
         </div>
 
-        {/* ✅ NEW: constrain input to the middle column (prevents stretching into Col 3) */}
         <div
           style={{
-            flex: "1 1 240px",
-            minWidth: 0,
-            width: "100%",
-            maxWidth: 380,
+            flex: "1 1 auto",
+            minWidth: compact ? 90 : 240,
+            maxWidth: compact ? 120 : 380,
             overflow: "hidden",
           }}
         >
           <input
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            placeholder="Search candidates..."
+            placeholder={compact ? "Search" : "Search candidates..."}
             aria-label="Search candidates"
             style={{
-              // ✅ CHANGED: hard constrain to wrapper
               width: "100%",
               maxWidth: "100%",
               minWidth: 0,
               boxSizing: "border-box",
-
               border: "1px solid rgba(38,50,56,0.18)",
               borderRadius: 10,
-              padding: "10px 12px",
+              padding: compact ? "8px 10px" : "10px 12px",
               fontWeight: 700,
               outline: "none",
             }}
@@ -74,19 +92,28 @@ export default function PoolEntriesList({
       <div style={{ height: 12 }} />
 
       {loadingEntries ? (
-        <div style={{ color: "#607D8B", fontSize: 13 }}>Loading candidates...</div>
+        <div style={{ color: "#607D8B", fontSize: 13, overflow: "hidden" }}>
+          Loading candidates...
+        </div>
       ) : filteredEntries.length === 0 ? (
         <div
           style={{
             border: "1px dashed rgba(38,50,56,0.22)",
             borderRadius: 12,
-            padding: 14,
+            padding: compact ? 10 : 14,
             color: "#607D8B",
             fontSize: 13,
             lineHeight: 1.45,
+            overflow: "hidden",
           }}
         >
-          No candidates yet. Use <strong>Add candidates</strong> to pull from Candidate Center.
+          {compact ? (
+            <span style={{ display: "block", overflow: "hidden" }}>No candidates.</span>
+          ) : (
+            <>
+              No candidates yet. Use <strong>Add candidates</strong> to pull from Candidate Center.
+            </>
+          )}
         </div>
       ) : (
         <div style={{ display: "grid", gap: 8 }}>
@@ -117,12 +144,14 @@ export default function PoolEntriesList({
                     : "1px solid rgba(38,50,56,0.12)",
                   background: active ? "rgba(255,112,67,0.06)" : "white",
                   borderRadius: 12,
-                  padding: "10px 12px",
+                  padding: compact ? "8px 10px" : "10px 12px",
                   cursor: "pointer",
                   display: "flex",
                   alignItems: "center",
                   justifyContent: "space-between",
                   gap: 10,
+                  minWidth: 0,
+                  overflow: "hidden",
                 }}
               >
                 <div
@@ -135,6 +164,7 @@ export default function PoolEntriesList({
                     textOverflow: "ellipsis",
                     whiteSpace: "nowrap",
                   }}
+                  title={c.name}
                 >
                   {c.name}
                 </div>
@@ -143,8 +173,9 @@ export default function PoolEntriesList({
                   style={{
                     display: "flex",
                     gap: 6,
-                    flexWrap: "wrap",
+                    flexWrap: "nowrap",
                     justifyContent: "flex-end",
+                    minWidth: 0,
                   }}
                 >
                   <Pill tone={sourceTone}>{c.source || "External"}</Pill>
