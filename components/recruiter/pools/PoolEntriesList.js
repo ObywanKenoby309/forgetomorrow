@@ -21,6 +21,9 @@ export default function PoolEntriesList({
           justifyContent: "space-between",
           gap: 12,
           flexWrap: "wrap",
+          // ✅ NEW: ensure header row never overflows its column
+          width: "100%",
+          maxWidth: "100%",
         }}
       >
         <div style={{ minWidth: 0 }}>
@@ -36,21 +39,36 @@ export default function PoolEntriesList({
           </div>
         </div>
 
-        <input
-          value={search}
-          onChange={(e) => setSearch(e.target.value)}
-          placeholder="Search candidates..."
-          aria-label="Search candidates"
+        {/* ✅ NEW: constrain input to the middle column (prevents stretching into Col 3) */}
+        <div
           style={{
             flex: "1 1 240px",
+            minWidth: 0,
+            width: "100%",
             maxWidth: 380,
-            border: "1px solid rgba(38,50,56,0.18)",
-            borderRadius: 10,
-            padding: "10px 12px",
-            fontWeight: 700,
-            outline: "none",
+            overflow: "hidden",
           }}
-        />
+        >
+          <input
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            placeholder="Search candidates..."
+            aria-label="Search candidates"
+            style={{
+              // ✅ CHANGED: hard constrain to wrapper
+              width: "100%",
+              maxWidth: "100%",
+              minWidth: 0,
+              boxSizing: "border-box",
+
+              border: "1px solid rgba(38,50,56,0.18)",
+              borderRadius: 10,
+              padding: "10px 12px",
+              fontWeight: 700,
+              outline: "none",
+            }}
+          />
+        </div>
       </div>
 
       <div style={{ height: 12 }} />
@@ -121,7 +139,14 @@ export default function PoolEntriesList({
                   {c.name}
                 </div>
 
-                <div style={{ display: "flex", gap: 6, flexWrap: "wrap", justifyContent: "flex-end" }}>
+                <div
+                  style={{
+                    display: "flex",
+                    gap: 6,
+                    flexWrap: "wrap",
+                    justifyContent: "flex-end",
+                  }}
+                >
                   <Pill tone={sourceTone}>{c.source || "External"}</Pill>
                   <Pill tone={statusTone}>{c.status || "Warm"}</Pill>
                 </div>
