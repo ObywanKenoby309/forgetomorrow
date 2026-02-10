@@ -1150,7 +1150,6 @@ model TalentPoolEntry {
   candidateHeadline String?
   candidateLocation String?
 
-
   // "Internal" | "External" (string to avoid enum churn)
   source String? @default("External")
 
@@ -1159,6 +1158,9 @@ model TalentPoolEntry {
 
   // quick fit label like "CSM / AM", "Support Ops"
   fit String?
+
+  // ✅ NEW — recruiter-entered reminder of what role/req/context this candidate was considered for
+  lastRoleConsidered String?
 
   lastTouchAt DateTime?
 
@@ -1175,6 +1177,7 @@ model TalentPoolEntry {
   @@index([candidateUserId])
   @@map("talent_pool_entries")
 }
+
 
 // ============================================================================
 //  RECRUITER CANDIDATE AUTOMATION (KEEP ONLY THIS ONE)

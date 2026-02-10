@@ -18,6 +18,12 @@ export default function AddCandidatesPicker({
   pickerWhy,
   setPickerWhy,
 
+  // ✅ NEW (bulk-applied snapshot fields)
+  pickerLastRoleConsidered,
+  setPickerLastRoleConsidered,
+  pickerNotes,
+  setPickerNotes,
+
   onClose,
   onSearch,
   onToggleSelect,
@@ -170,6 +176,25 @@ export default function AddCandidatesPicker({
             }}
           />
 
+          {/* ✅ NEW */}
+          <label style={{ display: "block", color: "#607D8B", fontSize: 12, fontWeight: 900, marginBottom: 6 }}>
+            Last role considered (optional)
+          </label>
+          <input
+            value={pickerLastRoleConsidered}
+            onChange={(e) => setPickerLastRoleConsidered(e.target.value)}
+            placeholder="e.g., CSM - Enterprise, Support Lead, Req #1234"
+            style={{
+              width: "100%",
+              border: "1px solid rgba(38,50,56,0.18)",
+              borderRadius: 10,
+              padding: "10px 12px",
+              fontWeight: 700,
+              outline: "none",
+              marginBottom: 10,
+            }}
+          />
+
           <label style={{ display: "block", color: "#607D8B", fontSize: 12, fontWeight: 900, marginBottom: 6 }}>
             Why saved (bullets, one per line)
           </label>
@@ -178,6 +203,27 @@ export default function AddCandidatesPicker({
             onChange={(e) => setPickerWhy(e.target.value)}
             placeholder={"Example:\nStrong leadership signal\nRelevant domain experience\nClear operational ownership"}
             rows={6}
+            style={{
+              width: "100%",
+              border: "1px solid rgba(38,50,56,0.18)",
+              borderRadius: 10,
+              padding: "10px 12px",
+              fontWeight: 700,
+              outline: "none",
+              resize: "vertical",
+              marginBottom: 10,
+            }}
+          />
+
+          {/* ✅ NEW */}
+          <label style={{ display: "block", color: "#607D8B", fontSize: 12, fontWeight: 900, marginBottom: 6 }}>
+            Notes (optional)
+          </label>
+          <textarea
+            value={pickerNotes}
+            onChange={(e) => setPickerNotes(e.target.value)}
+            placeholder={"Add quick context to apply to all selected candidates.\nYou can refine per candidate later."}
+            rows={4}
             style={{
               width: "100%",
               border: "1px solid rgba(38,50,56,0.18)",

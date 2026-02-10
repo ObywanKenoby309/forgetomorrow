@@ -116,7 +116,7 @@ export default function CandidateDetailModal({
 
         <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
           <Pill tone="neutral">Fit: {e?.fit || "-"}</Pill>
-          <Pill tone="neutral">Last touch: {fmtShortDate(e?.lastTouch)}</Pill>
+          <Pill tone="neutral">Last updated: {fmtShortDate(e?.lastTouch)}</Pill>
         </div>
 
         <div

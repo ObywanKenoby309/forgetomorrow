@@ -12,8 +12,8 @@ import PoolEntriesList from "@/components/recruiter/pools/PoolEntriesList";
 import CreatePoolPanel from "@/components/recruiter/pools/CreatePoolPanel";
 import AddCandidatesPicker from "@/components/recruiter/pools/AddCandidatesPicker";
 import CandidateDetailModal from "@/components/recruiter/pools/CandidateDetailModal";
-import { PrimaryButton, SecondaryButton, TextButton } from "@/components/recruiter/pools/Pills";
-import { normalizeReasonsText } from "@/components/recruiter/pools/utils";
+import { PrimaryButton, SecondaryButton, TextButton, Pill } from "@/components/recruiter/pools/Pills";
+import { normalizeReasonsText, fmtShortDate } from "@/components/recruiter/pools/utils";
 
 export default function RecruiterPools() {
   const router = useRouter();
@@ -56,6 +56,10 @@ export default function RecruiterPools() {
   const [pickerWhy, setPickerWhy] = useState("");
   const [pickerFit, setPickerFit] = useState("");
   const [pickerStatus, setPickerStatus] = useState("Warm");
+
+  // ✅ NEW (bulk-applied snapshot fields)
+  const [pickerLastRoleConsidered, setPickerLastRoleConsidered] = useState("");
+  const [pickerNotes, setPickerNotes] = useState("");
 
   // Candidate modal (no navigation for View)
   const [showCandidateModal, setShowCandidateModal] = useState(false);
@@ -235,6 +239,8 @@ export default function RecruiterPools() {
     setPickerWhy("");
     setPickerFit("");
     setPickerStatus("Warm");
+    setPickerLastRoleConsidered("");
+    setPickerNotes("");
     loadPickerCandidates("");
   }
 
@@ -261,6 +267,10 @@ export default function RecruiterPools() {
     const status = String(pickerStatus || "Warm").trim() || "Warm";
     const fit = String(pickerFit || "").trim();
 
+    // ✅ NEW (bulk-applied)
+    const lastRoleConsidered = String(pickerLastRoleConsidered || "").trim();
+    const notes = String(pickerNotes || "").trim();
+
     setSaving(true);
     setError("");
     try {
@@ -280,9 +290,12 @@ export default function RecruiterPools() {
           source: "Internal",
           status,
           fit: fit || String(c?.title || c?.headline || "").trim() || null,
-          lastTouch: null,
+
+          // ✅ Do NOT send lastTouch; “Last updated” is updatedAt
+
           reasons: reasons.length ? reasons : [],
-          notes: "",
+          notes: notes || "",
+          lastRoleConsidered: lastRoleConsidered || "",
         };
 
         const res = await fetch(`/api/recruiter/pools/${encodeURIComponent(poolId)}/entries`, {
@@ -302,6 +315,8 @@ export default function RecruiterPools() {
       setPickerWhy("");
       setPickerFit("");
       setPickerStatus("Warm");
+      setPickerLastRoleConsidered("");
+      setPickerNotes("");
 
       await loadEntries(poolId);
       await loadPools();
@@ -332,7 +347,7 @@ export default function RecruiterPools() {
     setShowCandidateModal(true);
   }
 
-  // MINIMAL CHANGE: accept entry (preferred), fallback to modalEntry
+  // accept entry (preferred), fallback to modalEntry
   function openFullProfileFromModal(entryArg) {
     const e = entryArg && typeof entryArg === "object" ? entryArg : modalEntry;
     const candidateUserId = String(e?.candidateUserId || "").trim();
@@ -419,6 +434,10 @@ export default function RecruiterPools() {
             setPickerFit={setPickerFit}
             pickerWhy={pickerWhy}
             setPickerWhy={setPickerWhy}
+            pickerLastRoleConsidered={pickerLastRoleConsidered}
+            setPickerLastRoleConsidered={setPickerLastRoleConsidered}
+            pickerNotes={pickerNotes}
+            setPickerNotes={setPickerNotes}
             onClose={() => {
               setShowPicker(false);
               setPickerQuery("");
@@ -427,6 +446,8 @@ export default function RecruiterPools() {
               setPickerWhy("");
               setPickerFit("");
               setPickerStatus("Warm");
+              setPickerLastRoleConsidered("");
+              setPickerNotes("");
             }}
             onSearch={() => loadPickerCandidates(pickerQuery)}
             onToggleSelect={togglePickerSelect}
@@ -485,25 +506,98 @@ export default function RecruiterPools() {
             onSelectEntry={(id) => setSelectedEntryId(id)}
           />
 
-          {/* Right: authoritative action surface */}
+          {/* Right: At-a-glance decision surface (pool-context) */}
           <div style={{ ...panelStyle, padding: 12 }}>
             {!selectedEntry ? (
               <div style={{ color: "#607D8B", fontSize: 13, lineHeight: 1.45 }}>Select a candidate to take action.</div>
             ) : (
               <div style={{ display: "grid", gap: 10 }}>
-                <div style={{ fontWeight: 900, color: "#263238", fontSize: 16 }}>{selectedEntry.name}</div>
+                <div style={{ fontWeight: 900, color: "#FF7043", fontSize: 14 }}>At a glance...</div>
 
-                <div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
+                <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: 10 }}>
+                  <div style={{ minWidth: 0 }}>
+                    <div style={{ fontWeight: 900, color: "#263238", fontSize: 16 }}>{selectedEntry.name}</div>
+                    {selectedEntry.headline ? (
+                      <div style={{ color: "#607D8B", fontSize: 12, marginTop: 4, lineHeight: 1.35 }}>
+                        {selectedEntry.headline}
+                      </div>
+                    ) : null}
+                  </div>
+
+                  <div style={{ display: "flex", gap: 8, flexWrap: "wrap", justifyContent: "flex-end" }}>
+                    <Pill tone={String(selectedEntry.source || "").toLowerCase() === "internal" ? "internal" : "external"}>
+                      {selectedEntry.source || "External"}
+                    </Pill>
+                    <Pill
+                      tone={
+                        String(selectedEntry.status || "").toLowerCase() === "hot"
+                          ? "hot"
+                          : String(selectedEntry.status || "").toLowerCase() === "warm"
+                          ? "warm"
+                          : "hold"
+                      }
+                    >
+                      {selectedEntry.status || "Warm"}
+                    </Pill>
+                  </div>
+                </div>
+
+                <div style={{ display: "flex", justifyContent: "space-between", gap: 10, flexWrap: "wrap" }}>
+                  <div style={{ color: "#37474F", fontSize: 12, fontWeight: 900 }}>
+                    Fit: <span style={{ color: "#607D8B", fontWeight: 800 }}>{selectedEntry.fit || "-"}</span>
+                  </div>
+                  <div style={{ color: "#90A4AE", fontSize: 12, fontWeight: 900 }}>
+                    Last updated: <span style={{ fontWeight: 800 }}>{fmtShortDate(selectedEntry.lastTouch)}</span>
+                  </div>
+                </div>
+
+                {selectedEntry.lastRoleConsidered ? (
+                  <div style={{ color: "#37474F", fontSize: 12, fontWeight: 900 }}>
+                    Last role considered:{" "}
+                    <span style={{ color: "#607D8B", fontWeight: 800 }}>{selectedEntry.lastRoleConsidered}</span>
+                  </div>
+                ) : null}
+
+                <div style={{ display: "grid", gap: 6 }}>
+                  <div style={{ fontWeight: 900, color: "#37474F", fontSize: 12 }}>Why saved</div>
+                  {Array.isArray(selectedEntry.reasons) && selectedEntry.reasons.length ? (
+                    <div style={{ color: "#546E7A", fontSize: 12, lineHeight: 1.45 }}>{selectedEntry.reasons[0]}</div>
+                  ) : (
+                    <div style={{ color: "#90A4AE", fontSize: 12, lineHeight: 1.35 }}>No snapshot yet.</div>
+                  )}
+                </div>
+
+                <div style={{ display: "grid", gap: 6 }}>
+                  <div style={{ fontWeight: 900, color: "#37474F", fontSize: 12 }}>Notes</div>
+                  <div
+                    style={{
+                      border: "1px solid rgba(38,50,56,0.14)",
+                      borderRadius: 12,
+                      padding: 10,
+                      minHeight: 92,
+                      color: "#455A64",
+                      fontSize: 12,
+                      lineHeight: 1.45,
+                      background: "rgba(96,125,139,0.06)",
+                      whiteSpace: "pre-wrap",
+                    }}
+                  >
+                    {selectedEntry.notes || "No notes."}
+                  </div>
+                </div>
+
+                <div style={{ display: "flex", gap: 10, flexWrap: "wrap", marginTop: 4 }}>
                   <PrimaryButton onClick={() => messageCandidate(selectedEntry)} disabled={saving}>
                     Message
                   </PrimaryButton>
 
-                  <SecondaryButton onClick={() => viewCandidate(selectedEntry)} disabled={saving}>
-                    View candidate
+                  {/* THIS IS THE BUTTON YOU WANT TO WORK */}
+                  <SecondaryButton onClick={() => openFullProfileFromModal(selectedEntry)} disabled={saving}>
+                    View Full Details
                   </SecondaryButton>
 
                   <TextButton onClick={() => removeFromPool(selectedEntry.id)} disabled={saving}>
-                    Remove from pool
+                    Remove
                   </TextButton>
                 </div>
               </div>

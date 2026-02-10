@@ -37,10 +37,7 @@ async function resolveEffectiveRecruiter(prisma, req, session) {
     const imp = readCookie(req, "ft_imp");
     if (imp) {
       try {
-        const decoded = jwt.verify(
-          imp,
-          process.env.NEXTAUTH_SECRET || "dev-secret-change-in-production"
-        );
+        const decoded = jwt.verify(imp, process.env.NEXTAUTH_SECRET || "dev-secret-change-in-production");
         if (decoded && typeof decoded === "object" && decoded.targetUserId) {
           effectiveUserId = String(decoded.targetUserId);
         }
@@ -107,8 +104,11 @@ function pickCandidateShape(e) {
     status: e.status || "Warm",
     fit: e.fit || "",
 
-    // UI expects a string; DB stores DateTime
-    lastTouch: e.lastTouchAt ? safeIso(e.lastTouchAt) : "",
+    // ✅ “Last updated” for the working surface (any change bumps updatedAt)
+    lastTouch: e.updatedAt ? safeIso(e.updatedAt) : "",
+
+    // ✅ NEW field
+    lastRoleConsidered: e.lastRoleConsidered || "",
 
     reasons: toStringArray(e.reasons),
     notes: e.notes || "",
@@ -184,8 +184,11 @@ export default async function handler(req, res) {
           status: true,
           fit: true,
 
-          // ✅ schema field
+          // kept (unused by UI “last updated”), still safe to store if used later
           lastTouchAt: true,
+
+          // ✅ NEW
+          lastRoleConsidered: true,
 
           reasons: true,
           notes: true,
@@ -217,8 +220,11 @@ export default async function handler(req, res) {
       const status = String(body.status || "Warm").trim();
       const fit = String(body.fit || "").trim();
 
-      // UI sends string; DB stores DateTime
+      // kept for future “last contacted” concept, but not required
       const lastTouchAt = parseDateOrNull(String(body.lastTouch || "").trim());
+
+      // ✅ NEW
+      const lastRoleConsidered = String(body.lastRoleConsidered || "").trim();
 
       const reasons = Array.isArray(body.reasons)
         ? body.reasons.map((r) => String(r || "").trim()).filter(Boolean)
@@ -248,7 +254,10 @@ export default async function handler(req, res) {
           status: status || null,
           fit: fit || null,
 
-          // ✅ schema field
+          // ✅ NEW
+          lastRoleConsidered: lastRoleConsidered || null,
+
+          // kept
           lastTouchAt: lastTouchAt || null,
 
           reasons: reasons.length ? reasons : null,
@@ -268,6 +277,9 @@ export default async function handler(req, res) {
           status: true,
           fit: true,
           lastTouchAt: true,
+
+          // ✅ NEW
+          lastRoleConsidered: true,
 
           reasons: true,
           notes: true,
