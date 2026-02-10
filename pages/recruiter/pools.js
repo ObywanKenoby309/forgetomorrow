@@ -49,11 +49,11 @@ export default function RecruiterPools() {
   const [search, setSearch] = useState("");
   const [selectedEntryId, setSelectedEntryId] = useState("");
 
-  // ✅ NEW: column focus (left vs middle)
-  // CHANGED: default to "pools" so on load Col 1 is normal and Col 2 is collapsed
+  // ✅ column focus (left vs middle)
+  // default to "pools" so on load Col 1 is normal and Col 2 is collapsed
   const [activePane, setActivePane] = useState("pools"); // "pools" | "entries"
 
-  // ✅ NEW: stable scroll height for the two columns
+  // ✅ stable scroll height for the two columns
   const WORKSPACE_HEIGHT = "calc(100vh - 260px)";
 
   // Create Pool
@@ -72,7 +72,7 @@ export default function RecruiterPools() {
   const [pickerFit, setPickerFit] = useState("");
   const [pickerStatus, setPickerStatus] = useState("Warm");
 
-  // ✅ NEW (bulk-applied snapshot fields)
+  // ✅ bulk-applied snapshot fields
   const [pickerLastRoleConsidered, setPickerLastRoleConsidered] = useState("");
   const [pickerNotes, setPickerNotes] = useState("");
 
@@ -294,7 +294,6 @@ export default function RecruiterPools() {
     const status = String(pickerStatus || "Warm").trim() || "Warm";
     const fit = String(pickerFit || "").trim();
 
-    // ✅ NEW (bulk-applied)
     const lastRoleConsidered = String(pickerLastRoleConsidered || "").trim();
     const notes = String(pickerNotes || "").trim();
 
@@ -356,7 +355,6 @@ export default function RecruiterPools() {
     }
   }
 
-  // ✅ NEW: start/create conversation from pools, then open messaging on that thread
   async function startConversationFromPools(entry) {
     const e = entry && typeof entry === "object" ? entry : null;
     const candidateUserId = String(e?.candidateUserId || "").trim();
@@ -385,8 +383,7 @@ export default function RecruiterPools() {
       });
 
       const json = await res.json().catch(() => ({}));
-      if (!res.ok)
-        throw new Error(json?.error || "Failed to create conversation.");
+      if (!res.ok) throw new Error(json?.error || "Failed to create conversation.");
 
       const conv = json?.conversation || json;
       const convId = conv?.id;
@@ -405,7 +402,6 @@ export default function RecruiterPools() {
         return;
       }
 
-      // fallback if API shape isn't what we expect
       router.push(
         `/recruiter/messaging?candidateUserId=${encodeURIComponent(
           candidateUserId
@@ -413,7 +409,6 @@ export default function RecruiterPools() {
       );
     } catch (err) {
       console.error("[Pools] startConversation error:", err);
-      // fallback: old behavior (will still open messaging page)
       router.push(
         `/recruiter/messaging?candidateUserId=${encodeURIComponent(
           candidateUserId
@@ -422,19 +417,16 @@ export default function RecruiterPools() {
     }
   }
 
-  // Message: open recruiter messaging
   async function messageCandidate(entry) {
     await startConversationFromPools(entry);
   }
 
-  // View: open modal, do not navigate away
   function viewCandidate(entry) {
     const e = entry && typeof entry === "object" ? entry : null;
     setModalEntry(e);
     setShowCandidateModal(true);
   }
 
-  // accept entry (preferred), fallback to modalEntry
   function openFullProfileFromModal(entryArg) {
     const e = entryArg && typeof entryArg === "object" ? entryArg : modalEntry;
     const candidateUserId = String(e?.candidateUserId || "").trim();
@@ -446,20 +438,20 @@ export default function RecruiterPools() {
       return;
     }
 
-    // ✅ this will now auto-open the candidate modal on /recruiter/candidates (after we patch candidates.js)
     router.push(
       `/recruiter/candidates?candidateId=${encodeURIComponent(candidateUserId)}`
     );
   }
 
-  // ✅ CHANGED: Col 3 is no longer in the collapsing grid.
-  // Left region (Col1+Col2) collapses/expands; Right rail stays fixed 360px and its RIGHT EDGE never moves.
-  const leftColumns =
-    activePane === "pools"
-      ? "minmax(320px, 420px) minmax(120px, 200px)"
-      : "minmax(120px, 200px) minmax(0, 1fr)";
+  // ✅ CHANGED: two states only:
+  // - activePane="entries" => Image 1 (Col2 expanded, Col1 collapsed, Col3 full)
+  // - activePane="pools"   => Image 2 (Col1 expanded, Col2 collapsed, Col3 collapsed-from-left BUT right edge stays fixed)
+  const focusedColumns =
+    activePane === "entries"
+      ? "minmax(120px, 200px) minmax(0, 1fr) 360px"
+      : "minmax(320px, 420px) minmax(120px, 200px) 220px";
 
-  const middleIsCollapsed = activePane === "pools";
+  const middleCompact = activePane === "pools";
 
   return (
     <RecruiterLayout
@@ -594,74 +586,64 @@ export default function RecruiterPools() {
           onOpenFullProfile={(e) => openFullProfileFromModal(e)}
         />
 
-        {/* ✅ CHANGED: outer grid locks Col 3 at 360px forever (right edge never moves). */}
         <div
           style={{
             display: "grid",
-            gridTemplateColumns: "minmax(0, 1fr) 360px",
+            gridTemplateColumns: focusedColumns,
             gap: 12,
             alignItems: "start",
+            transition: "grid-template-columns 180ms ease",
+            width: "100%",
+            maxWidth: "100%",
           }}
         >
-          {/* LEFT REGION: Col1 + Col2 collapse/expand only */}
+          {/* Left */}
           <div
-            style={{
-              display: "grid",
-              gridTemplateColumns: leftColumns,
-              gap: 12,
-              alignItems: "start",
-              transition: "grid-template-columns 180ms ease",
-              minWidth: 0,
-            }}
+            style={{ minWidth: 0, height: WORKSPACE_HEIGHT, overflowY: "auto" }}
+            onMouseDown={() => setActivePane("pools")}
           >
-            {/* ✅ Left wrapper: allows shrink + scroll + click focus */}
-            <div
-              style={{
-                minWidth: 0,
-                height: WORKSPACE_HEIGHT,
-                overflowY: "auto",
+            <PoolsList
+              panelStyle={panelStyle}
+              loadingPools={loadingPools}
+              pools={pools}
+              selectedPoolId={selectedPoolId}
+              onSelectPool={(id) => {
+                setSelectedPoolId(id);
+                setSearch("");
+                setSelectedEntryId("");
               }}
-              onMouseDown={() => setActivePane("pools")}
-            >
-              <PoolsList
-                panelStyle={panelStyle}
-                loadingPools={loadingPools}
-                pools={pools}
-                selectedPoolId={selectedPoolId}
-                onSelectPool={(id) => {
-                  setSelectedPoolId(id);
-                  setSearch("");
-                  setSelectedEntryId("");
-                }}
-              />
-            </div>
-
-            {/* ✅ Middle wrapper: allows shrink + scroll + click focus */}
-            <div
-              style={{
-                minWidth: 0,
-                height: WORKSPACE_HEIGHT,
-                overflowY: "auto",
-                overflowX: "hidden",
-              }}
-              onMouseDown={() => setActivePane("entries")}
-            >
-              <PoolEntriesList
-                panelStyle={panelStyle}
-                selectedPool={selectedPool}
-                loadingEntries={loadingEntries}
-                filteredEntries={filteredEntries}
-                search={search}
-                setSearch={setSearch}
-                selectedEntry={selectedEntry}
-                onSelectEntry={(id) => setSelectedEntryId(id)}
-                collapsed={middleIsCollapsed}
-              />
-            </div>
+            />
           </div>
 
-          {/* RIGHT REGION: Col 3 is fixed 360px, never participates in collapsing */}
-          <div style={{ ...panelStyle, padding: 12, minWidth: 0 }}>
+          {/* Middle */}
+          <div
+            style={{ minWidth: 0, height: WORKSPACE_HEIGHT, overflowY: "auto" }}
+            onMouseDown={() => setActivePane("entries")}
+          >
+            <PoolEntriesList
+              panelStyle={panelStyle}
+              selectedPool={selectedPool}
+              loadingEntries={loadingEntries}
+              filteredEntries={filteredEntries}
+              search={search}
+              setSearch={setSearch}
+              selectedEntry={selectedEntry}
+              onSelectEntry={(id) => setSelectedEntryId(id)}
+              compact={middleCompact}
+            />
+          </div>
+
+          {/* Right (anchored to the right edge; when collapsed it collapses from left -> right) */}
+          <div
+            style={{
+              ...panelStyle,
+              padding: 12,
+              minWidth: 0,
+              justifySelf: "end",
+              width: "100%",
+              overflow: "hidden",
+            }}
+          >
             {!selectedEntry ? (
               <div
                 style={{
@@ -694,6 +676,9 @@ export default function RecruiterPools() {
                         fontWeight: 900,
                         color: "#263238",
                         fontSize: 16,
+                        overflow: "hidden",
+                        textOverflow: "ellipsis",
+                        whiteSpace: "nowrap",
                       }}
                     >
                       {selectedEntry.name}
@@ -705,6 +690,9 @@ export default function RecruiterPools() {
                           fontSize: 12,
                           marginTop: 4,
                           lineHeight: 1.35,
+                          overflow: "hidden",
+                          textOverflow: "ellipsis",
+                          whiteSpace: "nowrap",
                         }}
                       >
                         {selectedEntry.headline}
@@ -718,6 +706,7 @@ export default function RecruiterPools() {
                       gap: 8,
                       flexWrap: "nowrap",
                       justifyContent: "flex-end",
+                      minWidth: 0,
                     }}
                   >
                     <Pill
@@ -789,6 +778,9 @@ export default function RecruiterPools() {
                       color: "#37474F",
                       fontSize: 12,
                       fontWeight: 900,
+                      overflow: "hidden",
+                      textOverflow: "ellipsis",
+                      whiteSpace: "nowrap",
                     }}
                   >
                     Last role considered:{" "}
