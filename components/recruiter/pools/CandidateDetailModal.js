@@ -1,5 +1,5 @@
 // components/recruiter/pools/CandidateDetailModal.js
-import React, { useEffect } from "react";
+import React, { useEffect, useState } from "react";
 import { Pill, PrimaryButton, SecondaryButton } from "./Pills";
 import { fmtShortDate } from "./utils";
 
@@ -12,8 +12,11 @@ export default function CandidateDetailModal({
   onRemove,
   onOpenFullProfile,
 }) {
+  const [localError, setLocalError] = useState("");
+
   useEffect(() => {
     if (!open) return;
+    setLocalError("");
     const onKey = (e) => {
       if (e.key === "Escape") onClose();
     };
@@ -34,6 +37,32 @@ export default function CandidateDetailModal({
       : "hold";
 
   const reasons = Array.isArray(e?.reasons) ? e.reasons : [];
+  const candidateUserId = String(e?.candidateUserId || "").trim();
+  const canOpen = Boolean(candidateUserId);
+
+  function handleOpenFullProfile() {
+    setLocalError("");
+    if (!canOpen) {
+      setLocalError(
+        "This pool entry is missing an internal candidate ID, so ForgeTomorrow cannot open Candidate Center for this candidate yet."
+      );
+      return;
+    }
+    if (typeof onOpenFullProfile !== "function") {
+      setLocalError("Open profile handler is not wired. (onOpenFullProfile missing)");
+      return;
+    }
+    onOpenFullProfile(e);
+  }
+
+  function handleMessage() {
+    setLocalError("");
+    if (!canOpen) {
+      setLocalError("Messaging is available for internal candidates only (this entry has no internal candidate ID).");
+      return;
+    }
+    if (typeof onMessage === "function") onMessage();
+  }
 
   return (
     <div
@@ -76,7 +105,7 @@ export default function CandidateDetailModal({
             ) : null}
           </div>
 
-          <div style={{ display: "grid", gap: 8, justifyItems: "end" }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
             <Pill tone={sourceTone}>{e?.source || "External"}</Pill>
             <Pill tone={statusTone}>{e?.status || "Warm"}</Pill>
             <SecondaryButton onClick={onClose} disabled={saving}>
@@ -90,7 +119,15 @@ export default function CandidateDetailModal({
           <Pill tone="neutral">Last touch: {fmtShortDate(e?.lastTouch)}</Pill>
         </div>
 
-        <div style={{ borderTop: "1px solid rgba(38,50,56,0.10)", paddingTop: 10, marginTop: 4, display: "grid", gap: 8 }}>
+        <div
+          style={{
+            borderTop: "1px solid rgba(38,50,56,0.10)",
+            paddingTop: 10,
+            marginTop: 4,
+            display: "grid",
+            gap: 8,
+          }}
+        >
           <div style={{ fontWeight: 900, color: "#37474F", fontSize: 13 }}>Why saved (evidence snapshot)</div>
 
           {reasons.length ? (
@@ -118,9 +155,9 @@ export default function CandidateDetailModal({
             {e?.notes || "No notes."}
           </div>
 
-          {String(e?.candidateUserId || "").trim() ? (
+          {canOpen ? (
             <div style={{ color: "#607D8B", fontSize: 12, lineHeight: 1.35 }}>
-              Internal candidate detected. You can open full profile from Candidate Center.
+              Internal candidate detected. Use <strong>Open full profile</strong> to jump into Candidate Center.
             </div>
           ) : (
             <div style={{ color: "#607D8B", fontSize: 12, lineHeight: 1.35 }}>
@@ -128,12 +165,29 @@ export default function CandidateDetailModal({
             </div>
           )}
 
+          {localError ? (
+            <div
+              style={{
+                border: "1px solid rgba(255,112,67,0.35)",
+                background: "rgba(255,112,67,0.08)",
+                borderRadius: 12,
+                padding: 10,
+                color: "#B23C17",
+                fontWeight: 800,
+                fontSize: 12,
+                lineHeight: 1.35,
+              }}
+            >
+              {localError}
+            </div>
+          ) : null}
+
           <div style={{ display: "flex", gap: 10, flexWrap: "wrap", marginTop: 6 }}>
-            <PrimaryButton onClick={onMessage} disabled={saving || !String(e?.candidateUserId || "").trim()}>
+            <PrimaryButton onClick={handleMessage} disabled={saving}>
               Message
             </PrimaryButton>
 
-            <SecondaryButton onClick={onOpenFullProfile} disabled={saving || !String(e?.candidateUserId || "").trim()}>
+            <SecondaryButton onClick={handleOpenFullProfile} disabled={saving}>
               Open full profile
             </SecondaryButton>
 
