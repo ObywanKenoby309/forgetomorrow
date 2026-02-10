@@ -385,7 +385,8 @@ export default function RecruiterPools() {
       });
 
       const json = await res.json().catch(() => ({}));
-      if (!res.ok) throw new Error(json?.error || "Failed to create conversation.");
+      if (!res.ok)
+        throw new Error(json?.error || "Failed to create conversation.");
 
       const conv = json?.conversation || json;
       const convId = conv?.id;
@@ -446,16 +447,19 @@ export default function RecruiterPools() {
     }
 
     // ✅ this will now auto-open the candidate modal on /recruiter/candidates (after we patch candidates.js)
-    router.push(`/recruiter/candidates?candidateId=${encodeURIComponent(candidateUserId)}`);
+    router.push(
+      `/recruiter/candidates?candidateId=${encodeURIComponent(candidateUserId)}`
+    );
   }
 
-  // ✅ NEW: focused grid columns (right rail always visible)
-  // CHANGED: entries state collapses Col1 hard so Col2 can truly expand.
-  // Col3 stays locked.
-  const focusedColumns =
+  // ✅ CHANGED: Col 3 is no longer in the collapsing grid.
+  // Left region (Col1+Col2) collapses/expands; Right rail stays fixed 360px and its RIGHT EDGE never moves.
+  const leftColumns =
     activePane === "pools"
-      ? "minmax(320px, 420px) minmax(120px, 200px) 360px"
-      : "minmax(120px, 200px) minmax(0, 1fr) 360px";
+      ? "minmax(320px, 420px) minmax(120px, 200px)"
+      : "minmax(120px, 200px) minmax(0, 1fr)";
+
+  const middleIsCollapsed = activePane === "pools";
 
   return (
     <RecruiterLayout
@@ -590,77 +594,74 @@ export default function RecruiterPools() {
           onOpenFullProfile={(e) => openFullProfileFromModal(e)}
         />
 
+        {/* ✅ CHANGED: outer grid locks Col 3 at 360px forever (right edge never moves). */}
         <div
           style={{
             display: "grid",
-            gridTemplateColumns: focusedColumns,
+            gridTemplateColumns: "minmax(0, 1fr) 360px",
             gap: 12,
             alignItems: "start",
-            transition: "grid-template-columns 180ms ease",
-
-            // ✅ CHANGED (MINIMAL): allow Col 1/2 to overflow horizontally,
-            // while Col 3 stays pinned to the right and never shifts its right edge.
-            position: "relative",
-            width: "100%",
-            minWidth: 0,
-            overflowX: "auto",
-            overflowY: "visible",
-            boxSizing: "border-box",
           }}
         >
-          {/* ✅ Left wrapper: allows shrink + scroll + click focus */}
-          <div
-            style={{ minWidth: 0, height: WORKSPACE_HEIGHT, overflowY: "auto" }}
-            onMouseDown={() => setActivePane("pools")}
-          >
-            <PoolsList
-              panelStyle={panelStyle}
-              loadingPools={loadingPools}
-              pools={pools}
-              selectedPoolId={selectedPoolId}
-              onSelectPool={(id) => {
-                setSelectedPoolId(id);
-                setSearch("");
-                setSelectedEntryId("");
-              }}
-            />
-          </div>
-
-          {/* ✅ Middle wrapper: allows shrink + scroll + click focus */}
-          <div
-            style={{ minWidth: 0, height: WORKSPACE_HEIGHT, overflowY: "auto" }}
-            onMouseDown={() => setActivePane("entries")}
-          >
-            <PoolEntriesList
-              panelStyle={panelStyle}
-              selectedPool={selectedPool}
-              loadingEntries={loadingEntries}
-              filteredEntries={filteredEntries}
-              search={search}
-              setSearch={setSearch}
-              selectedEntry={selectedEntry}
-              onSelectEntry={(id) => setSelectedEntryId(id)}
-            />
-          </div>
-
-          {/* Right: At-a-glance decision surface (pool-context) */}
+          {/* LEFT REGION: Col1 + Col2 collapse/expand only */}
           <div
             style={{
-              ...panelStyle,
-              padding: 12,
+              display: "grid",
+              gridTemplateColumns: leftColumns,
+              gap: 12,
+              alignItems: "start",
+              transition: "grid-template-columns 180ms ease",
               minWidth: 0,
-
-              // ✅ CHANGED (MINIMAL): hard lock + pin to the RIGHT edge
-              width: 360,
-              minWidth: 360,
-              maxWidth: 360,
-              boxSizing: "border-box",
-              position: "sticky",
-              right: 0,
-              top: 0,
-              zIndex: 5,
             }}
           >
+            {/* ✅ Left wrapper: allows shrink + scroll + click focus */}
+            <div
+              style={{
+                minWidth: 0,
+                height: WORKSPACE_HEIGHT,
+                overflowY: "auto",
+              }}
+              onMouseDown={() => setActivePane("pools")}
+            >
+              <PoolsList
+                panelStyle={panelStyle}
+                loadingPools={loadingPools}
+                pools={pools}
+                selectedPoolId={selectedPoolId}
+                onSelectPool={(id) => {
+                  setSelectedPoolId(id);
+                  setSearch("");
+                  setSelectedEntryId("");
+                }}
+              />
+            </div>
+
+            {/* ✅ Middle wrapper: allows shrink + scroll + click focus */}
+            <div
+              style={{
+                minWidth: 0,
+                height: WORKSPACE_HEIGHT,
+                overflowY: "auto",
+                overflowX: "hidden",
+              }}
+              onMouseDown={() => setActivePane("entries")}
+            >
+              <PoolEntriesList
+                panelStyle={panelStyle}
+                selectedPool={selectedPool}
+                loadingEntries={loadingEntries}
+                filteredEntries={filteredEntries}
+                search={search}
+                setSearch={setSearch}
+                selectedEntry={selectedEntry}
+                onSelectEntry={(id) => setSelectedEntryId(id)}
+                collapsed={middleIsCollapsed}
+              />
+            </div>
+          </div>
+
+          {/* RIGHT REGION: Col 3 is fixed 360px, never participates in collapsing */}
+          <div style={{ ...panelStyle, padding: 12, minWidth: 0 }}>
             {!selectedEntry ? (
               <div
                 style={{
@@ -715,7 +716,6 @@ export default function RecruiterPools() {
                     style={{
                       display: "flex",
                       gap: 8,
-                      // CHANGED: keep Internal + Hot side-by-side
                       flexWrap: "nowrap",
                       justifyContent: "flex-end",
                     }}
@@ -745,7 +745,6 @@ export default function RecruiterPools() {
                   </div>
                 </div>
 
-                {/* ✅ Last updated: prefer updatedAt, fallback to lastTouch */}
                 <div
                   style={{
                     display: "flex",
