@@ -12,8 +12,16 @@ import PoolEntriesList from "@/components/recruiter/pools/PoolEntriesList";
 import CreatePoolPanel from "@/components/recruiter/pools/CreatePoolPanel";
 import AddCandidatesPicker from "@/components/recruiter/pools/AddCandidatesPicker";
 import CandidateDetailModal from "@/components/recruiter/pools/CandidateDetailModal";
-import { PrimaryButton, SecondaryButton, TextButton, Pill } from "@/components/recruiter/pools/Pills";
-import { normalizeReasonsText, fmtShortDate } from "@/components/recruiter/pools/utils";
+import {
+  PrimaryButton,
+  SecondaryButton,
+  TextButton,
+  Pill,
+} from "@/components/recruiter/pools/Pills";
+import {
+  normalizeReasonsText,
+  fmtShortDate,
+} from "@/components/recruiter/pools/utils";
 
 export default function RecruiterPools() {
   const router = useRouter();
@@ -42,7 +50,8 @@ export default function RecruiterPools() {
   const [selectedEntryId, setSelectedEntryId] = useState("");
 
   // ✅ NEW: column focus (left vs middle)
-  const [activePane, setActivePane] = useState("entries"); // "pools" | "entries"
+  // CHANGED: default to "pools" so on load Col 1 is normal and Col 2 is collapsed
+  const [activePane, setActivePane] = useState("pools"); // "pools" | "entries"
 
   // ✅ NEW: stable scroll height for the two columns
   const WORKSPACE_HEIGHT = "calc(100vh - 260px)";
@@ -101,9 +110,13 @@ export default function RecruiterPools() {
     setLoadingEntries(true);
     setError("");
     try {
-      const res = await fetch(`/api/recruiter/pools/${encodeURIComponent(pid)}/entries`, { method: "GET" });
+      const res = await fetch(
+        `/api/recruiter/pools/${encodeURIComponent(pid)}/entries`,
+        { method: "GET" }
+      );
       const data = await res.json().catch(() => ({}));
-      if (!res.ok) throw new Error(data?.error || "Failed to load pool entries.");
+      if (!res.ok)
+        throw new Error(data?.error || "Failed to load pool entries.");
       const list = Array.isArray(data?.entries) ? data.entries : [];
       setEntries(list);
     } catch (e) {
@@ -125,13 +138,18 @@ export default function RecruiterPools() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selectedPoolId]);
 
-  const selectedPool = useMemo(() => pools.find((p) => p.id === selectedPoolId) || null, [pools, selectedPoolId]);
+  const selectedPool = useMemo(
+    () => pools.find((p) => p.id === selectedPoolId) || null,
+    [pools, selectedPoolId]
+  );
 
   const filteredEntries = useMemo(() => {
     const q = String(search || "").toLowerCase().trim();
     if (!q) return entries;
     return entries.filter((c) => {
-      const hay = `${c.name || ""} ${c.headline || ""} ${c.fit || ""} ${c.source || ""} ${c.status || ""}`.toLowerCase();
+      const hay = `${c.name || ""} ${c.headline || ""} ${c.fit || ""} ${
+        c.source || ""
+      } ${c.status || ""}`.toLowerCase();
       return hay.includes(q);
     });
   }, [entries, search]);
@@ -147,7 +165,8 @@ export default function RecruiterPools() {
       if (selectedEntryId) setSelectedEntryId("");
       return;
     }
-    if (selectedEntryId !== selectedEntry.id) setSelectedEntryId(selectedEntry.id);
+    if (selectedEntryId !== selectedEntry.id)
+      setSelectedEntryId(selectedEntry.id);
   }, [selectedEntry, selectedEntryId]);
 
   async function createPool() {
@@ -201,7 +220,9 @@ export default function RecruiterPools() {
     setError("");
     try {
       const res = await fetch(
-        `/api/recruiter/pools/${encodeURIComponent(selectedPoolId)}/entries?entryId=${encodeURIComponent(entryId)}`,
+        `/api/recruiter/pools/${encodeURIComponent(
+          selectedPoolId
+        )}/entries?entryId=${encodeURIComponent(entryId)}`,
         { method: "DELETE" }
       );
       const data = await res.json().catch(() => ({}));
@@ -302,14 +323,18 @@ export default function RecruiterPools() {
           lastRoleConsidered: lastRoleConsidered || "",
         };
 
-        const res = await fetch(`/api/recruiter/pools/${encodeURIComponent(poolId)}/entries`, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify(payload),
-        });
+        const res = await fetch(
+          `/api/recruiter/pools/${encodeURIComponent(poolId)}/entries`,
+          {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(payload),
+          }
+        );
 
         const data = await res.json().catch(() => ({}));
-        if (!res.ok) throw new Error(data?.error || "Failed to add candidate to pool.");
+        if (!res.ok)
+          throw new Error(data?.error || "Failed to add candidate to pool.");
       }
 
       setShowPicker(false);
@@ -337,7 +362,9 @@ export default function RecruiterPools() {
     const candidateUserId = String(e?.candidateUserId || "").trim();
 
     if (!candidateUserId) {
-      setError("This is an external candidate. Messaging is available for internal candidates only (for now).");
+      setError(
+        "This is an external candidate. Messaging is available for internal candidates only (for now)."
+      );
       return;
     }
 
@@ -378,11 +405,19 @@ export default function RecruiterPools() {
       }
 
       // fallback if API shape isn't what we expect
-      router.push(`/recruiter/messaging?candidateUserId=${encodeURIComponent(candidateUserId)}&prefill=${encodeURIComponent(prefill)}`);
+      router.push(
+        `/recruiter/messaging?candidateUserId=${encodeURIComponent(
+          candidateUserId
+        )}&prefill=${encodeURIComponent(prefill)}`
+      );
     } catch (err) {
       console.error("[Pools] startConversation error:", err);
       // fallback: old behavior (will still open messaging page)
-      router.push(`/recruiter/messaging?candidateUserId=${encodeURIComponent(candidateUserId)}&prefill=${encodeURIComponent(prefill)}`);
+      router.push(
+        `/recruiter/messaging?candidateUserId=${encodeURIComponent(
+          candidateUserId
+        )}&prefill=${encodeURIComponent(prefill)}`
+      );
     }
   }
 
@@ -404,7 +439,9 @@ export default function RecruiterPools() {
     const candidateUserId = String(e?.candidateUserId || "").trim();
 
     if (!candidateUserId) {
-      setError("This pool entry is missing an internal candidate ID. Cannot open Candidate Center.");
+      setError(
+        "This pool entry is missing an internal candidate ID. Cannot open Candidate Center."
+      );
       return;
     }
 
@@ -413,23 +450,44 @@ export default function RecruiterPools() {
   }
 
   // ✅ NEW: focused grid columns (right rail always visible)
+  // CHANGED: widths corrected to match:
+  // - On load (activePane="pools"): Col1 normal, Col2 collapsed, Col3 fixed
+  // - On click Col2 (activePane="entries"): Col1 collapses, Col2 expands, Col3 fixed
   const focusedColumns =
     activePane === "pools"
-      ? "minmax(320px, 420px) minmax(260px, 420px) minmax(0, 360px)"
+      ? "minmax(320px, 420px) minmax(120px, 200px) minmax(0, 360px)"
       : "minmax(220px, 280px) minmax(0, 1fr) minmax(0, 360px)";
 
   return (
-    <RecruiterLayout title="ForgeTomorrow — Talent Pools" header={<HeaderBox />} right={<RightRail />} activeNav="candidate-center">
+    <RecruiterLayout
+      title="ForgeTomorrow — Talent Pools"
+      header={<HeaderBox />}
+      right={<RightRail />}
+      activeNav="candidate-center"
+    >
       <section style={panelStyle} aria-label="Talent Pools working surface">
         <SectionTitle
           title="Pools workspace"
           subtitle="Pick a pool, scan candidates, and take action without jumping between pages."
           right={
-            <div style={{ display: "flex", gap: 10, flexWrap: "wrap", justifyContent: "flex-end" }}>
-              <SecondaryButton onClick={() => setShowCreate(true)} disabled={saving}>
+            <div
+              style={{
+                display: "flex",
+                gap: 10,
+                flexWrap: "wrap",
+                justifyContent: "flex-end",
+              }}
+            >
+              <SecondaryButton
+                onClick={() => setShowCreate(true)}
+                disabled={saving}
+              >
                 New pool
               </SecondaryButton>
-              <PrimaryButton onClick={openPicker} disabled={saving || !selectedPoolId}>
+              <PrimaryButton
+                onClick={openPicker}
+                disabled={saving || !selectedPoolId}
+              >
                 Add candidates
               </PrimaryButton>
             </div>
@@ -580,30 +638,80 @@ export default function RecruiterPools() {
           {/* Right: At-a-glance decision surface (pool-context) */}
           <div style={{ ...panelStyle, padding: 12, minWidth: 0 }}>
             {!selectedEntry ? (
-              <div style={{ color: "#607D8B", fontSize: 13, lineHeight: 1.45 }}>Select a candidate to take action.</div>
+              <div
+                style={{
+                  color: "#607D8B",
+                  fontSize: 13,
+                  lineHeight: 1.45,
+                }}
+              >
+                Select a candidate to take action.
+              </div>
             ) : (
               <div style={{ display: "grid", gap: 10 }}>
-                <div style={{ fontWeight: 900, color: "#FF7043", fontSize: 14 }}>At a glance...</div>
+                <div
+                  style={{ fontWeight: 900, color: "#FF7043", fontSize: 14 }}
+                >
+                  At a glance...
+                </div>
 
-                <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: 10 }}>
+                <div
+                  style={{
+                    display: "flex",
+                    alignItems: "flex-start",
+                    justifyContent: "space-between",
+                    gap: 10,
+                  }}
+                >
                   <div style={{ minWidth: 0 }}>
-                    <div style={{ fontWeight: 900, color: "#263238", fontSize: 16 }}>{selectedEntry.name}</div>
+                    <div
+                      style={{
+                        fontWeight: 900,
+                        color: "#263238",
+                        fontSize: 16,
+                      }}
+                    >
+                      {selectedEntry.name}
+                    </div>
                     {selectedEntry.headline ? (
-                      <div style={{ color: "#607D8B", fontSize: 12, marginTop: 4, lineHeight: 1.35 }}>
+                      <div
+                        style={{
+                          color: "#607D8B",
+                          fontSize: 12,
+                          marginTop: 4,
+                          lineHeight: 1.35,
+                        }}
+                      >
                         {selectedEntry.headline}
                       </div>
                     ) : null}
                   </div>
 
-                  <div style={{ display: "flex", gap: 8, flexWrap: "wrap", justifyContent: "flex-end" }}>
-                    <Pill tone={String(selectedEntry.source || "").toLowerCase() === "internal" ? "internal" : "external"}>
+                  <div
+                    style={{
+                      display: "flex",
+                      gap: 8,
+                      // CHANGED: keep Internal + Hot side-by-side
+                      flexWrap: "nowrap",
+                      justifyContent: "flex-end",
+                    }}
+                  >
+                    <Pill
+                      tone={
+                        String(selectedEntry.source || "").toLowerCase() ===
+                        "internal"
+                          ? "internal"
+                          : "external"
+                      }
+                    >
                       {selectedEntry.source || "External"}
                     </Pill>
                     <Pill
                       tone={
                         String(selectedEntry.status || "").toLowerCase() === "hot"
                           ? "hot"
-                          : String(selectedEntry.status || "").toLowerCase() === "warm"
+                          : String(selectedEntry.status || "").toLowerCase() ===
+                            "warm"
                           ? "warm"
                           : "hold"
                       }
@@ -614,36 +722,103 @@ export default function RecruiterPools() {
                 </div>
 
                 {/* ✅ Last updated: prefer updatedAt, fallback to lastTouch */}
-                <div style={{ display: "flex", justifyContent: "space-between", gap: 10, flexWrap: "wrap" }}>
-                  <div style={{ color: "#37474F", fontSize: 12, fontWeight: 900 }}>
-                    Fit: <span style={{ color: "#607D8B", fontWeight: 800 }}>{selectedEntry.fit || "-"}</span>
+                <div
+                  style={{
+                    display: "flex",
+                    justifyContent: "space-between",
+                    gap: 10,
+                    flexWrap: "wrap",
+                  }}
+                >
+                  <div
+                    style={{
+                      color: "#37474F",
+                      fontSize: 12,
+                      fontWeight: 900,
+                    }}
+                  >
+                    Fit:{" "}
+                    <span style={{ color: "#607D8B", fontWeight: 800 }}>
+                      {selectedEntry.fit || "-"}
+                    </span>
                   </div>
-                  <div style={{ color: "#90A4AE", fontSize: 12, fontWeight: 900 }}>
+                  <div
+                    style={{
+                      color: "#90A4AE",
+                      fontSize: 12,
+                      fontWeight: 900,
+                    }}
+                  >
                     Last updated:{" "}
                     <span style={{ fontWeight: 800 }}>
-                      {fmtShortDate(selectedEntry.updatedAt || selectedEntry.lastTouch || null)}
+                      {fmtShortDate(
+                        selectedEntry.updatedAt ||
+                          selectedEntry.lastTouch ||
+                          null
+                      )}
                     </span>
                   </div>
                 </div>
 
                 {selectedEntry.lastRoleConsidered ? (
-                  <div style={{ color: "#37474F", fontSize: 12, fontWeight: 900 }}>
+                  <div
+                    style={{
+                      color: "#37474F",
+                      fontSize: 12,
+                      fontWeight: 900,
+                    }}
+                  >
                     Last role considered:{" "}
-                    <span style={{ color: "#607D8B", fontWeight: 800 }}>{selectedEntry.lastRoleConsidered}</span>
+                    <span style={{ color: "#607D8B", fontWeight: 800 }}>
+                      {selectedEntry.lastRoleConsidered}
+                    </span>
                   </div>
                 ) : null}
 
                 <div style={{ display: "grid", gap: 6 }}>
-                  <div style={{ fontWeight: 900, color: "#37474F", fontSize: 12 }}>Why saved</div>
-                  {Array.isArray(selectedEntry.reasons) && selectedEntry.reasons.length ? (
-                    <div style={{ color: "#546E7A", fontSize: 12, lineHeight: 1.45 }}>{selectedEntry.reasons[0]}</div>
+                  <div
+                    style={{
+                      fontWeight: 900,
+                      color: "#37474F",
+                      fontSize: 12,
+                    }}
+                  >
+                    Why saved
+                  </div>
+                  {Array.isArray(selectedEntry.reasons) &&
+                  selectedEntry.reasons.length ? (
+                    <div
+                      style={{
+                        color: "#546E7A",
+                        fontSize: 12,
+                        lineHeight: 1.45,
+                      }}
+                    >
+                      {selectedEntry.reasons[0]}
+                    </div>
                   ) : (
-                    <div style={{ color: "#90A4AE", fontSize: 12, lineHeight: 1.35 }}>No snapshot yet.</div>
+                    <div
+                      style={{
+                        color: "#90A4AE",
+                        fontSize: 12,
+                        lineHeight: 1.35,
+                      }}
+                    >
+                      No snapshot yet.
+                    </div>
                   )}
                 </div>
 
                 <div style={{ display: "grid", gap: 6 }}>
-                  <div style={{ fontWeight: 900, color: "#37474F", fontSize: 12 }}>Notes</div>
+                  <div
+                    style={{
+                      fontWeight: 900,
+                      color: "#37474F",
+                      fontSize: 12,
+                    }}
+                  >
+                    Notes
+                  </div>
                   <div
                     style={{
                       border: "1px solid rgba(38,50,56,0.14)",
@@ -661,16 +836,32 @@ export default function RecruiterPools() {
                   </div>
                 </div>
 
-                <div style={{ display: "flex", gap: 10, flexWrap: "wrap", marginTop: 4 }}>
-                  <PrimaryButton onClick={() => messageCandidate(selectedEntry)} disabled={saving}>
+                <div
+                  style={{
+                    display: "flex",
+                    gap: 10,
+                    flexWrap: "wrap",
+                    marginTop: 4,
+                  }}
+                >
+                  <PrimaryButton
+                    onClick={() => messageCandidate(selectedEntry)}
+                    disabled={saving}
+                  >
                     Message
                   </PrimaryButton>
 
-                  <SecondaryButton onClick={() => openFullProfileFromModal(selectedEntry)} disabled={saving}>
+                  <SecondaryButton
+                    onClick={() => openFullProfileFromModal(selectedEntry)}
+                    disabled={saving}
+                  >
                     View Full Details
                   </SecondaryButton>
 
-                  <TextButton onClick={() => removeFromPool(selectedEntry.id)} disabled={saving}>
+                  <TextButton
+                    onClick={() => removeFromPool(selectedEntry.id)}
+                    disabled={saving}
+                  >
                     Remove
                   </TextButton>
                 </div>
