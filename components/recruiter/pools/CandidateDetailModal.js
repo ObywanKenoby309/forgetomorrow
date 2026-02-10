@@ -40,6 +40,9 @@ export default function CandidateDetailModal({
   const candidateUserId = String(e?.candidateUserId || "").trim();
   const canOpen = Boolean(candidateUserId);
 
+  // ✅ NEW: prefer updatedAt, fallback to lastTouch (older payloads)
+  const lastUpdated = e?.updatedAt || e?.lastTouch || null;
+
   function handleOpenFullProfile() {
     setLocalError("");
     if (!canOpen) {
@@ -116,7 +119,8 @@ export default function CandidateDetailModal({
 
         <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
           <Pill tone="neutral">Fit: {e?.fit || "-"}</Pill>
-          <Pill tone="neutral">Last updated: {fmtShortDate(e?.lastTouch)}</Pill>
+          {/* ✅ CHANGED LABEL: Last updated */}
+          <Pill tone="neutral">Last updated: {fmtShortDate(lastUpdated)}</Pill>
         </div>
 
         <div

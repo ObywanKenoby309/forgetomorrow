@@ -210,7 +210,7 @@ export default function MessagingPage() {
   const prefillText =
     typeof router.query.prefill === "string" ? router.query.prefill : "";
 
-  // NEW: allow pools to link by candidate user id (auto-open if exists)
+  // NEW: allow candidates (or pools) to link by candidate user id (auto-open if exists)
   const candidateUserIdFromQuery =
     typeof router.query.candidateUserId === "string"
       ? router.query.candidateUserId
@@ -293,7 +293,11 @@ export default function MessagingPage() {
 
     if (!res.ok) {
       const payload = await res.json().catch(() => ({}));
-      console.error("[Recruiter Messaging] createConversation error:", res.status, payload);
+      console.error(
+        "[Recruiter Messaging] createConversation error:",
+        res.status,
+        payload
+      );
       return null;
     }
 
@@ -341,8 +345,10 @@ export default function MessagingPage() {
                 snippet: conv.lastMessage || lastMsg?.text || "",
                 unread: typeof conv.unread === "number" ? conv.unread : 0,
                 messages: mappedMessages,
-                otherUserId: conv.otherUserId || null,
-                otherAvatarUrl: conv.otherAvatarUrl || null,
+                // ✅ minimal: support either shape so candidateUserId matching works reliably
+                otherUserId: conv.otherUserId || conv.otherUser?.id || null,
+                otherAvatarUrl:
+                  conv.otherAvatarUrl || conv.otherUser?.avatarUrl || null,
               };
             } catch (err) {
               console.error("Failed to load messages for", conv.id, err);
@@ -352,8 +358,9 @@ export default function MessagingPage() {
                 snippet: conv.lastMessage || "",
                 unread: typeof conv.unread === "number" ? conv.unread : 0,
                 messages: [],
-                otherUserId: conv.otherUserId || null,
-                otherAvatarUrl: conv.otherAvatarUrl || null,
+                otherUserId: conv.otherUserId || conv.otherUser?.id || null,
+                otherAvatarUrl:
+                  conv.otherAvatarUrl || conv.otherUser?.avatarUrl || null,
               };
             }
           })
@@ -377,7 +384,8 @@ export default function MessagingPage() {
         // 2) If candidateUserId is provided, try to auto-open existing thread by otherUserId
         if (candidateUserIdFromQuery) {
           const match = threadsWithMessages.find(
-            (t) => String(t.otherUserId || "") === String(candidateUserIdFromQuery)
+            (t) =>
+              String(t.otherUserId || "") === String(candidateUserIdFromQuery)
           );
 
           // ✅ If thread exists, open it
@@ -390,12 +398,16 @@ export default function MessagingPage() {
           if (!didAutoCreateConversation) {
             setDidAutoCreateConversation(true);
 
-            const conv = await createConversationForCandidateUserId(candidateUserIdFromQuery);
+            const conv = await createConversationForCandidateUserId(
+              candidateUserIdFromQuery
+            );
             if (conv?.id) {
               setInitialThreadId(conv.id);
               // next run of polling/refresh will pull messages; keep UI consistent now
               setThreads((prev) => {
-                const exists = prev.some((t) => String(t.id) === String(conv.id));
+                const exists = prev.some(
+                  (t) => String(t.id) === String(conv.id)
+                );
                 if (exists) return prev;
                 return [
                   {
@@ -404,8 +416,12 @@ export default function MessagingPage() {
                     snippet: "",
                     unread: 0,
                     messages: [],
-                    otherUserId: conv.otherUserId || candidateUserIdFromQuery,
-                    otherAvatarUrl: conv.otherAvatarUrl || null,
+                    otherUserId:
+                      conv.otherUserId ||
+                      conv.otherUser?.id ||
+                      candidateUserIdFromQuery,
+                    otherAvatarUrl:
+                      conv.otherAvatarUrl || conv.otherUser?.avatarUrl || null,
                   },
                   ...prev,
                 ];
@@ -470,8 +486,7 @@ export default function MessagingPage() {
               : {
                   ...t,
                   messages: mapped,
-                  snippet:
-                    mapped[mapped.length - 1]?.text || t.snippet || "",
+                  snippet: mapped[mapped.length - 1]?.text || t.snippet || "",
                 }
           )
         );

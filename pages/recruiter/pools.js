@@ -29,21 +29,6 @@ export default function RecruiterPools() {
     []
   );
 
-  // ✅ NEW: which column is "focused" (expands)
-  const [focusCol, setFocusCol] = useState("middle"); // "left" | "middle"
-
-  // ✅ NEW: reusable scroll container height (keeps right column visible)
-  // This is intentionally simple and stable: the header + section title stack above the grid.
-  // If you ever change header height later, tweak the constant once here.
-  const scrollColStyle = useMemo(
-    () => ({
-      maxHeight: "calc(100vh - 320px)",
-      overflow: "auto",
-      WebkitOverflowScrolling: "touch",
-    }),
-    []
-  );
-
   const [loadingPools, setLoadingPools] = useState(true);
   const [loadingEntries, setLoadingEntries] = useState(false);
   const [saving, setSaving] = useState(false);
@@ -55,6 +40,12 @@ export default function RecruiterPools() {
 
   const [search, setSearch] = useState("");
   const [selectedEntryId, setSelectedEntryId] = useState("");
+
+  // ✅ NEW: column focus (left vs middle)
+  const [activePane, setActivePane] = useState("entries"); // "pools" | "entries"
+
+  // ✅ NEW: stable scroll height for the two columns
+  const WORKSPACE_HEIGHT = "calc(100vh - 260px)";
 
   // Create Pool
   const [showCreate, setShowCreate] = useState(false);
@@ -158,12 +149,6 @@ export default function RecruiterPools() {
     }
     if (selectedEntryId !== selectedEntry.id) setSelectedEntryId(selectedEntry.id);
   }, [selectedEntry, selectedEntryId]);
-
-  // ✅ NEW: "last updated" display helper (DB should provide updatedAt; fallback to lastTouch for safety)
-  const getLastUpdated = (entry) => {
-    const e = entry && typeof entry === "object" ? entry : null;
-    return e?.updatedAt || e?.lastTouch || null;
-  };
 
   async function createPool() {
     const name = String(newPoolName || "").trim();
@@ -270,7 +255,7 @@ export default function RecruiterPools() {
     if (!id) return;
     setPickerSelectedIds((prev) => {
       if (prev.includes(id)) return prev.filter((x) => x !== id);
-      return [...prev, id].slice(0, 25);
+      return [...prev].concat(id).slice(0, 25);
     });
   }
 
@@ -312,8 +297,6 @@ export default function RecruiterPools() {
           status,
           fit: fit || String(c?.title || c?.headline || "").trim() || null,
 
-          // ✅ Do NOT send lastTouch; “Last updated” is updatedAt
-
           reasons: reasons.length ? reasons : [],
           notes: notes || "",
           lastRoleConsidered: lastRoleConsidered || "",
@@ -348,8 +331,8 @@ export default function RecruiterPools() {
     }
   }
 
-  // Message: open recruiter messaging, try to auto-open existing thread by otherUserId
-  async function messageCandidate(entry) {
+  // ✅ NEW: start/create conversation from pools, then open messaging on that thread
+  async function startConversationFromPools(entry) {
     const e = entry && typeof entry === "object" ? entry : null;
     const candidateUserId = String(e?.candidateUserId || "").trim();
 
@@ -358,7 +341,54 @@ export default function RecruiterPools() {
       return;
     }
 
-    router.push(`/recruiter/messaging?candidateUserId=${encodeURIComponent(candidateUserId)}`);
+    const destName = String(e?.name || "").trim();
+    const firstName = destName.split(" ")[0] || "";
+    const prefill = firstName
+      ? `Hi ${firstName}, thanks for connecting - I’d love to chat about a role that looks like a strong match for your background.`
+      : `Hi there, thanks for connecting - I’d love to chat about a role that looks like a strong match for your background.`;
+
+    try {
+      const res = await fetch("/api/conversations", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          recipientId: candidateUserId,
+          channel: "recruiter",
+        }),
+      });
+
+      const json = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(json?.error || "Failed to create conversation.");
+
+      const conv = json?.conversation || json;
+      const convId = conv?.id;
+
+      if (convId) {
+        router.push({
+          pathname: "/recruiter/messaging",
+          query: {
+            c: convId,
+            candidateUserId,
+            name: destName,
+            role: String(e?.headline || e?.fit || "").trim(),
+            prefill,
+          },
+        });
+        return;
+      }
+
+      // fallback if API shape isn't what we expect
+      router.push(`/recruiter/messaging?candidateUserId=${encodeURIComponent(candidateUserId)}&prefill=${encodeURIComponent(prefill)}`);
+    } catch (err) {
+      console.error("[Pools] startConversation error:", err);
+      // fallback: old behavior (will still open messaging page)
+      router.push(`/recruiter/messaging?candidateUserId=${encodeURIComponent(candidateUserId)}&prefill=${encodeURIComponent(prefill)}`);
+    }
+  }
+
+  // Message: open recruiter messaging
+  async function messageCandidate(entry) {
+    await startConversationFromPools(entry);
   }
 
   // View: open modal, do not navigate away
@@ -378,17 +408,15 @@ export default function RecruiterPools() {
       return;
     }
 
-    // ✅ keep your existing param name, Candidates page will now auto-open the card
+    // ✅ this will now auto-open the candidate modal on /recruiter/candidates (after we patch candidates.js)
     router.push(`/recruiter/candidates?candidateId=${encodeURIComponent(candidateUserId)}`);
   }
 
-  // ✅ NEW: grid columns respond to focus state
-  const gridTemplateColumns = useMemo(() => {
-    if (focusCol === "left") {
-      return "minmax(320px, 420px) minmax(0, 1fr) minmax(0, 360px)";
-    }
-    return "minmax(240px, 280px) minmax(0, 1fr) minmax(0, 360px)";
-  }, [focusCol]);
+  // ✅ NEW: focused grid columns (right rail always visible)
+  const focusedColumns =
+    activePane === "pools"
+      ? "minmax(320px, 420px) minmax(260px, 420px) minmax(0, 360px)"
+      : "minmax(220px, 280px) minmax(0, 1fr) minmax(0, 360px)";
 
   return (
     <RecruiterLayout title="ForgeTomorrow — Talent Pools" header={<HeaderBox />} right={<RightRail />} activeNav="candidate-center">
@@ -508,17 +536,16 @@ export default function RecruiterPools() {
         <div
           style={{
             display: "grid",
-            gridTemplateColumns,
+            gridTemplateColumns: focusedColumns,
             gap: 12,
             alignItems: "start",
             transition: "grid-template-columns 180ms ease",
           }}
         >
-          {/* ✅ LEFT column: scroll + expand on click */}
+          {/* ✅ Left wrapper: allows shrink + scroll + click focus */}
           <div
-            style={scrollColStyle}
-            onMouseDown={() => setFocusCol("left")}
-            role="presentation"
+            style={{ minWidth: 0, height: WORKSPACE_HEIGHT, overflowY: "auto" }}
+            onMouseDown={() => setActivePane("pools")}
           >
             <PoolsList
               panelStyle={panelStyle}
@@ -529,17 +556,14 @@ export default function RecruiterPools() {
                 setSelectedPoolId(id);
                 setSearch("");
                 setSelectedEntryId("");
-                // keep the recruiter in scanning mode by default
-                setFocusCol("middle");
               }}
             />
           </div>
 
-          {/* ✅ MIDDLE column: scroll + expand on click */}
+          {/* ✅ Middle wrapper: allows shrink + scroll + click focus */}
           <div
-            style={scrollColStyle}
-            onMouseDown={() => setFocusCol("middle")}
-            role="presentation"
+            style={{ minWidth: 0, height: WORKSPACE_HEIGHT, overflowY: "auto" }}
+            onMouseDown={() => setActivePane("entries")}
           >
             <PoolEntriesList
               panelStyle={panelStyle}
@@ -554,7 +578,7 @@ export default function RecruiterPools() {
           </div>
 
           {/* Right: At-a-glance decision surface (pool-context) */}
-          <div style={{ ...panelStyle, padding: 12 }}>
+          <div style={{ ...panelStyle, padding: 12, minWidth: 0 }}>
             {!selectedEntry ? (
               <div style={{ color: "#607D8B", fontSize: 13, lineHeight: 1.45 }}>Select a candidate to take action.</div>
             ) : (
@@ -589,13 +613,16 @@ export default function RecruiterPools() {
                   </div>
                 </div>
 
+                {/* ✅ Last updated: prefer updatedAt, fallback to lastTouch */}
                 <div style={{ display: "flex", justifyContent: "space-between", gap: 10, flexWrap: "wrap" }}>
                   <div style={{ color: "#37474F", fontSize: 12, fontWeight: 900 }}>
                     Fit: <span style={{ color: "#607D8B", fontWeight: 800 }}>{selectedEntry.fit || "-"}</span>
                   </div>
                   <div style={{ color: "#90A4AE", fontSize: 12, fontWeight: 900 }}>
                     Last updated:{" "}
-                    <span style={{ fontWeight: 800 }}>{fmtShortDate(getLastUpdated(selectedEntry))}</span>
+                    <span style={{ fontWeight: 800 }}>
+                      {fmtShortDate(selectedEntry.updatedAt || selectedEntry.lastTouch || null)}
+                    </span>
                   </div>
                 </div>
 
@@ -639,7 +666,6 @@ export default function RecruiterPools() {
                     Message
                   </PrimaryButton>
 
-                  {/* THIS IS THE BUTTON YOU WANT TO WORK */}
                   <SecondaryButton onClick={() => openFullProfileFromModal(selectedEntry)} disabled={saving}>
                     View Full Details
                   </SecondaryButton>

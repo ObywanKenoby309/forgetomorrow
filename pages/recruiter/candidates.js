@@ -15,8 +15,32 @@ import WhyInfo from "../../components/recruiter/WhyInfo";
 import PersonaChoiceModal from "../../components/common/PersonaChoiceModal";
 import CandidateTargetingPanel from "../../components/recruiter/CandidateTargetingPanel";
 
-// DEV-ONLY: your recruiter user id to hit /api/conversations
+// DEV-ONLY: fallback recruiter user id (used only if session cannot be resolved)
 const RECRUITER_DEV_USER_ID = "cmic534oy0000bv2gsjrl83al";
+
+/* ---------------------------------------------
+   CLIENT SESSION (DIRECT) - minimal add
+---------------------------------------------- */
+async function getSessionDirect(timeoutMs = 4000) {
+  const controller = new AbortController();
+  const t = setTimeout(() => controller.abort(), timeoutMs);
+
+  try {
+    const res = await fetch("/api/auth/session", {
+      method: "GET",
+      credentials: "include",
+      headers: { "Content-Type": "application/json" },
+      signal: controller.signal,
+    });
+
+    if (!res.ok) return null;
+    return res.json();
+  } catch {
+    return null;
+  } finally {
+    clearTimeout(t);
+  }
+}
 
 // Shape the snapshot we log / maybe show later
 const mkWhySnapshot = (explain, mode) => ({
@@ -131,6 +155,30 @@ function RightToolsCard({ whyMode, creditsLeft = null }) {
 function Body() {
   const { isEnterprise } = usePlan();
   const router = useRouter();
+
+  // ✅ minimal add: resolve real recruiter user id (fallback to dev constant)
+  const [recruiterUserId, setRecruiterUserId] = useState(null);
+
+  useEffect(() => {
+    let cancelled = false;
+
+    async function loadUser() {
+      try {
+        const session = await getSessionDirect(4000);
+        const uid = session?.user?.id || null;
+        if (!cancelled) {
+          setRecruiterUserId(uid || null);
+        }
+      } catch {
+        if (!cancelled) setRecruiterUserId(null);
+      }
+    }
+
+    loadUser();
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   // ✅ NEW: capture candidateId from query for auto-open
   const candidateIdFromQuery =
@@ -249,21 +297,23 @@ function Body() {
 
     if (nameQuery) chips.push({ key: "q", label: `Query: ${nameQuery}` });
     if (locQuery) chips.push({ key: "loc", label: `Location: ${locQuery}` });
-    if (boolQuery) chips.push({ key: "bool", label: `Advanced query: ${boolQuery}` });
+    if (boolQuery)
+      chips.push({ key: "bool", label: `Advanced query: ${boolQuery}` });
 
     if (summaryKeywords)
       chips.push({ key: "summary", label: `Summary: ${summaryKeywords}` });
     if (jobTitle) chips.push({ key: "title", label: `Target role: ${jobTitle}` });
     if (workStatus) chips.push({ key: "status", label: `Status: ${workStatus}` });
     if (preferredWorkType)
-      chips.push({ key: "worktype", label: `Work type: ${preferredWorkType}` });
+      chips.push({
+        key: "worktype",
+        label: `Work type: ${preferredWorkType}`,
+      });
     if (willingToRelocate)
       chips.push({ key: "relocate", label: `Relocate: ${willingToRelocate}` });
     if (skills) chips.push({ key: "skills", label: `Skills: ${skills}` });
-    if (languages)
-      chips.push({ key: "langs", label: `Languages: ${languages}` });
-    if (education)
-      chips.push({ key: "edu", label: `Education: ${education}` });
+    if (languages) chips.push({ key: "langs", label: `Languages: ${languages}` });
+    if (education) chips.push({ key: "edu", label: `Education: ${education}` });
 
     return chips;
   }, [
@@ -675,22 +725,37 @@ function Body() {
   const startConversation = async (candidate, channel) => {
     if (!candidate) return;
 
+    // ✅ minimal: use real session user id when available (fallback to dev constant)
+    const resolvedRecruiterId =
+      recruiterUserId || RECRUITER_DEV_USER_ID || null;
+
+    if (!resolvedRecruiterId) {
+      alert("We couldn't load your session yet. Please refresh and try again.");
+      return;
+    }
+
     try {
+      const recipientId = candidate.userId || candidate.id;
+
       const res = await fetch("/api/conversations", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
-          "x-user-id": RECRUITER_DEV_USER_ID,
+          "x-user-id": resolvedRecruiterId,
         },
         body: JSON.stringify({
-          recipientId: candidate.userId || candidate.id,
+          recipientId,
           channel,
         }),
       });
 
       if (!res.ok) {
         const payload = await res.json().catch(() => ({}));
-        console.error("[Candidates] startConversation error:", res.status, payload);
+        console.error(
+          "[Candidates] startConversation error:",
+          res.status,
+          payload
+        );
         alert("We couldn't open a conversation yet. Please try again in a moment.");
         return;
       }
@@ -708,13 +773,23 @@ function Body() {
         ? `Hi ${firstName}, thanks for connecting - I’d love to chat about a role that looks like a strong match for your background.`
         : `Hi there, thanks for connecting - I’d love to chat about a role that looks like a strong match for your background.`;
 
+      // ✅ minimal: always pass candidateUserId so messaging can auto-open even if conv shape varies
+      const candidateUserId = String(candidate.userId || candidate.id || "");
+
+      // ✅ minimal: normalize toUserId from either shape
+      const otherUserId =
+        conv.otherUserId || conv.otherUser?.id || candidateUserId || "";
+
       if (channel === "recruiter") {
         router.push({
           pathname: "/recruiter/messaging",
           query: {
             c: conv.id,
+            // keep existing fields
             candidateId: candidate.id,
-            toUserId: conv.otherUser?.id || "",
+            // new: reliable thread lookup / create path
+            candidateUserId,
+            toUserId: otherUserId,
             name: destName,
             role: candidate.role || candidate.title || "",
             prefill,
@@ -725,7 +800,7 @@ function Body() {
           pathname: "/seeker/messages",
           query: {
             c: conv.id,
-            toUserId: conv.otherUser?.id || "",
+            toUserId: otherUserId,
             name: destName,
             role: candidate.role || candidate.title || "",
             prefill,
@@ -1202,7 +1277,8 @@ function Body() {
                   "Updating..."
                 ) : (
                   <>
-                    {candidates.length} candidate{candidates.length === 1 ? "" : "s"} in view
+                    {candidates.length} candidate
+                    {candidates.length === 1 ? "" : "s"} in view
                     {compareSelectedIds.length
                       ? ` - ${compareSelectedIds.length} selected for compare`
                       : ""}
