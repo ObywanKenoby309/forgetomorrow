@@ -385,7 +385,8 @@ export default function RecruiterPools() {
       });
 
       const json = await res.json().catch(() => ({}));
-      if (!res.ok) throw new Error(json?.error || "Failed to create conversation.");
+      if (!res.ok)
+        throw new Error(json?.error || "Failed to create conversation.");
 
       const conv = json?.conversation || json;
       const convId = conv?.id;
@@ -446,17 +447,17 @@ export default function RecruiterPools() {
     }
 
     // ✅ this will now auto-open the candidate modal on /recruiter/candidates (after we patch candidates.js)
-    router.push(`/recruiter/candidates?candidateId=${encodeURIComponent(candidateUserId)}`);
+    router.push(
+      `/recruiter/candidates?candidateId=${encodeURIComponent(candidateUserId)}`
+    );
   }
 
   // ✅ NEW: focused grid columns (right rail always visible)
-  // CHANGED: widths corrected to match:
-  // - On load (activePane="pools"): Col1 normal, Col2 collapsed, Col3 fixed
-  // - On click Col2 (activePane="entries"): Col1 collapses, Col2 expands, Col3 fixed
+  // CHANGED: lock Col3 to a fixed width so it NEVER changes
   const focusedColumns =
     activePane === "pools"
-      ? "minmax(320px, 420px) minmax(120px, 200px) minmax(0, 360px)"
-      : "minmax(220px, 280px) minmax(0, 1fr) minmax(0, 360px)";
+      ? "minmax(320px, 420px) minmax(120px, 200px) 360px"
+      : "minmax(220px, 280px) minmax(0, 1fr) 360px";
 
   return (
     <RecruiterLayout
