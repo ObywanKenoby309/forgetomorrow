@@ -132,6 +132,17 @@ function Body() {
   const { isEnterprise } = usePlan();
   const router = useRouter();
 
+  // ✅ NEW: capture candidateId from query for auto-open
+  const candidateIdFromQuery =
+    typeof router.query.candidateId === "string"
+      ? router.query.candidateId
+      : typeof router.query.id === "string"
+      ? router.query.id
+      : null;
+
+  // ✅ NEW: prevent repeat auto-open loops
+  const [didAutoOpenFromQuery, setDidAutoOpenFromQuery] = useState(false);
+
   // Filters
   const [nameQuery, setNameQuery] = useState("");
   const [locQuery, setLocQuery] = useState("");
@@ -806,6 +817,25 @@ function Body() {
     languages,
     education,
   ]);
+
+  // ✅ NEW: auto-open candidate modal when arriving from Pools with candidateId query
+  useEffect(() => {
+    if (!candidateIdFromQuery) return;
+    if (didAutoOpenFromQuery) return;
+    if (isLoading) return;
+    if (!Array.isArray(candidates) || candidates.length === 0) return;
+
+    const match =
+      candidates.find((c) => String(c?.id || "") === String(candidateIdFromQuery)) ||
+      candidates.find((c) => String(c?.userId || "") === String(candidateIdFromQuery)) ||
+      null;
+
+    if (!match) return;
+
+    setSelected(match);
+    setOpen(true);
+    setDidAutoOpenFromQuery(true);
+  }, [candidateIdFromQuery, didAutoOpenFromQuery, isLoading, candidates]);
 
   useEffect(() => {
     let isMounted = true;

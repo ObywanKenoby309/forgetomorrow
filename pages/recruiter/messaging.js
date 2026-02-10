@@ -216,6 +216,9 @@ export default function MessagingPage() {
       ? router.query.candidateUserId
       : null;
 
+  // ✅ NEW: prevent repeated "create conversation" loops
+  const [didAutoCreateConversation, setDidAutoCreateConversation] = useState(false);
+
   useEffect(() => {
     let cancelled = false;
 
@@ -269,6 +272,33 @@ export default function MessagingPage() {
     }
 
     return res.json();
+  }
+
+  // ✅ NEW: helper to create or get a conversation for recruiter channel
+  async function createConversationForCandidateUserId(recipientId) {
+    const rid = String(recipientId || "").trim();
+    if (!rid) return null;
+
+    const res = await fetch("/api/conversations", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "x-user-id": currentUserId,
+      },
+      body: JSON.stringify({
+        recipientId: rid,
+        channel: "recruiter",
+      }),
+    });
+
+    if (!res.ok) {
+      const payload = await res.json().catch(() => ({}));
+      console.error("[Recruiter Messaging] createConversation error:", res.status, payload);
+      return null;
+    }
+
+    const json = await res.json().catch(() => ({}));
+    return json?.conversation || null;
   }
 
   useEffect(() => {
@@ -344,12 +374,48 @@ export default function MessagingPage() {
           return;
         }
 
-        // 2) NEW: If candidateUserId is provided, try to auto-open existing thread by otherUserId
+        // 2) If candidateUserId is provided, try to auto-open existing thread by otherUserId
         if (candidateUserIdFromQuery) {
           const match = threadsWithMessages.find(
             (t) => String(t.otherUserId || "") === String(candidateUserIdFromQuery)
           );
-          setInitialThreadId(match ? match.id : fallbackId);
+
+          // ✅ If thread exists, open it
+          if (match) {
+            setInitialThreadId(match.id);
+            return;
+          }
+
+          // ✅ If no thread exists yet, create one once and open it
+          if (!didAutoCreateConversation) {
+            setDidAutoCreateConversation(true);
+
+            const conv = await createConversationForCandidateUserId(candidateUserIdFromQuery);
+            if (conv?.id) {
+              setInitialThreadId(conv.id);
+              // next run of polling/refresh will pull messages; keep UI consistent now
+              setThreads((prev) => {
+                const exists = prev.some((t) => String(t.id) === String(conv.id));
+                if (exists) return prev;
+                return [
+                  {
+                    id: conv.id,
+                    candidate: conv.name || "Conversation",
+                    snippet: "",
+                    unread: 0,
+                    messages: [],
+                    otherUserId: conv.otherUserId || candidateUserIdFromQuery,
+                    otherAvatarUrl: conv.otherAvatarUrl || null,
+                  },
+                  ...prev,
+                ];
+              });
+              return;
+            }
+          }
+
+          // fallback
+          setInitialThreadId(fallbackId);
           return;
         }
 
@@ -364,7 +430,12 @@ export default function MessagingPage() {
     return () => {
       cancelled = true;
     };
-  }, [queryConversationId, candidateUserIdFromQuery, currentUserId]);
+  }, [
+    queryConversationId,
+    candidateUserIdFromQuery,
+    currentUserId,
+    didAutoCreateConversation,
+  ]);
 
   // ✅ Poll messages for the active conversation
   useEffect(() => {

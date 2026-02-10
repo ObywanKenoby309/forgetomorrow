@@ -29,6 +29,21 @@ export default function RecruiterPools() {
     []
   );
 
+  // ✅ NEW: which column is "focused" (expands)
+  const [focusCol, setFocusCol] = useState("middle"); // "left" | "middle"
+
+  // ✅ NEW: reusable scroll container height (keeps right column visible)
+  // This is intentionally simple and stable: the header + section title stack above the grid.
+  // If you ever change header height later, tweak the constant once here.
+  const scrollColStyle = useMemo(
+    () => ({
+      maxHeight: "calc(100vh - 320px)",
+      overflow: "auto",
+      WebkitOverflowScrolling: "touch",
+    }),
+    []
+  );
+
   const [loadingPools, setLoadingPools] = useState(true);
   const [loadingEntries, setLoadingEntries] = useState(false);
   const [saving, setSaving] = useState(false);
@@ -143,6 +158,12 @@ export default function RecruiterPools() {
     }
     if (selectedEntryId !== selectedEntry.id) setSelectedEntryId(selectedEntry.id);
   }, [selectedEntry, selectedEntryId]);
+
+  // ✅ NEW: "last updated" display helper (DB should provide updatedAt; fallback to lastTouch for safety)
+  const getLastUpdated = (entry) => {
+    const e = entry && typeof entry === "object" ? entry : null;
+    return e?.updatedAt || e?.lastTouch || null;
+  };
 
   async function createPool() {
     const name = String(newPoolName || "").trim();
@@ -357,8 +378,17 @@ export default function RecruiterPools() {
       return;
     }
 
+    // ✅ keep your existing param name, Candidates page will now auto-open the card
     router.push(`/recruiter/candidates?candidateId=${encodeURIComponent(candidateUserId)}`);
   }
+
+  // ✅ NEW: grid columns respond to focus state
+  const gridTemplateColumns = useMemo(() => {
+    if (focusCol === "left") {
+      return "minmax(320px, 420px) minmax(0, 1fr) minmax(0, 360px)";
+    }
+    return "minmax(240px, 280px) minmax(0, 1fr) minmax(0, 360px)";
+  }, [focusCol]);
 
   return (
     <RecruiterLayout title="ForgeTomorrow — Talent Pools" header={<HeaderBox />} right={<RightRail />} activeNav="candidate-center">
@@ -478,33 +508,50 @@ export default function RecruiterPools() {
         <div
           style={{
             display: "grid",
-            gridTemplateColumns: "minmax(240px, 280px) minmax(0, 1fr) minmax(0, 360px)",
+            gridTemplateColumns,
             gap: 12,
             alignItems: "start",
+            transition: "grid-template-columns 180ms ease",
           }}
         >
-          <PoolsList
-            panelStyle={panelStyle}
-            loadingPools={loadingPools}
-            pools={pools}
-            selectedPoolId={selectedPoolId}
-            onSelectPool={(id) => {
-              setSelectedPoolId(id);
-              setSearch("");
-              setSelectedEntryId("");
-            }}
-          />
+          {/* ✅ LEFT column: scroll + expand on click */}
+          <div
+            style={scrollColStyle}
+            onMouseDown={() => setFocusCol("left")}
+            role="presentation"
+          >
+            <PoolsList
+              panelStyle={panelStyle}
+              loadingPools={loadingPools}
+              pools={pools}
+              selectedPoolId={selectedPoolId}
+              onSelectPool={(id) => {
+                setSelectedPoolId(id);
+                setSearch("");
+                setSelectedEntryId("");
+                // keep the recruiter in scanning mode by default
+                setFocusCol("middle");
+              }}
+            />
+          </div>
 
-          <PoolEntriesList
-            panelStyle={panelStyle}
-            selectedPool={selectedPool}
-            loadingEntries={loadingEntries}
-            filteredEntries={filteredEntries}
-            search={search}
-            setSearch={setSearch}
-            selectedEntry={selectedEntry}
-            onSelectEntry={(id) => setSelectedEntryId(id)}
-          />
+          {/* ✅ MIDDLE column: scroll + expand on click */}
+          <div
+            style={scrollColStyle}
+            onMouseDown={() => setFocusCol("middle")}
+            role="presentation"
+          >
+            <PoolEntriesList
+              panelStyle={panelStyle}
+              selectedPool={selectedPool}
+              loadingEntries={loadingEntries}
+              filteredEntries={filteredEntries}
+              search={search}
+              setSearch={setSearch}
+              selectedEntry={selectedEntry}
+              onSelectEntry={(id) => setSelectedEntryId(id)}
+            />
+          </div>
 
           {/* Right: At-a-glance decision surface (pool-context) */}
           <div style={{ ...panelStyle, padding: 12 }}>
@@ -547,7 +594,8 @@ export default function RecruiterPools() {
                     Fit: <span style={{ color: "#607D8B", fontWeight: 800 }}>{selectedEntry.fit || "-"}</span>
                   </div>
                   <div style={{ color: "#90A4AE", fontSize: 12, fontWeight: 900 }}>
-                    Last updated: <span style={{ fontWeight: 800 }}>{fmtShortDate(selectedEntry.lastTouch)}</span>
+                    Last updated:{" "}
+                    <span style={{ fontWeight: 800 }}>{fmtShortDate(getLastUpdated(selectedEntry))}</span>
                   </div>
                 </div>
 
