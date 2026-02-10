@@ -13,35 +13,22 @@ export default function PoolEntriesList({
   onSelectEntry,
 }) {
   return (
-    <div style={{ ...panelStyle, padding: 12, minWidth: 0, overflow: "hidden" }}>
-      {/* Header */}
+    <div style={{ ...panelStyle, padding: 12 }}>
       <div
         style={{
-          display: "grid",
-          gap: 8,
-          // ✅ identity-first: pool name always gets its own full line
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "space-between",
+          gap: 12,
+          flexWrap: "wrap",
           width: "100%",
           maxWidth: "100%",
-          minWidth: 0,
         }}
       >
         <div style={{ minWidth: 0 }}>
-          <div
-            style={{
-              fontWeight: 900,
-              color: "#37474F",
-              // ✅ do NOT let flex/grid layout ever force horizontal overflow
-              minWidth: 0,
-              maxWidth: "100%",
-              overflow: "hidden",
-              textOverflow: "ellipsis",
-              whiteSpace: "nowrap",
-            }}
-            title={selectedPool ? selectedPool.name : "Candidates"}
-          >
+          <div style={{ fontWeight: 900, color: "#37474F" }}>
             {selectedPool ? selectedPool.name : "Candidates"}
           </div>
-
           <div style={{ color: "#607D8B", fontSize: 12, marginTop: 2 }}>
             {loadingEntries
               ? "Loading..."
@@ -51,8 +38,15 @@ export default function PoolEntriesList({
           </div>
         </div>
 
-        {/* ✅ Search: subordinate + constrained, never pushes outside column */}
-        <div style={{ minWidth: 0, width: "100%" }}>
+        <div
+          style={{
+            flex: "1 1 240px",
+            minWidth: 0,
+            width: "100%",
+            maxWidth: 380,
+            overflow: "hidden",
+          }}
+        >
           <input
             value={search}
             onChange={(e) => setSearch(e.target.value)}
@@ -91,25 +85,15 @@ export default function PoolEntriesList({
             lineHeight: 1.45,
           }}
         >
-          No candidates yet. Use <strong>Add candidates</strong> to pull from
-          Candidate Center.
+          No candidates yet. Use <strong>Add candidates</strong> to pull from Candidate Center.
         </div>
       ) : (
-        <div style={{ display: "grid", gap: 8, minWidth: 0 }}>
+        <div style={{ display: "grid", gap: 8 }}>
           {filteredEntries.map((c) => {
             const active = selectedEntry && selectedEntry.id === c.id;
 
-            const statusTone =
-              String(c.status || "").toLowerCase() === "hot"
-                ? "hot"
-                : String(c.status || "").toLowerCase() === "warm"
-                ? "warm"
-                : "hold";
-
-            const sourceTone =
-              String(c.source || "").toLowerCase() === "internal"
-                ? "internal"
-                : "external";
+            // NOTE: We intentionally DO NOT render pills in Column 2.
+            // Column 2 must prioritize full candidate name visibility.
 
             return (
               <button
@@ -125,52 +109,47 @@ export default function PoolEntriesList({
                   borderRadius: 12,
                   padding: "10px 12px",
                   cursor: "pointer",
-
-                  // ✅ allow name + pills to behave inside narrow widths
-                  display: "flex",
-                  alignItems: "center",
-                  justifyContent: "space-between",
-                  gap: 10,
-                  minWidth: 0,
-                  maxWidth: "100%",
-                  overflow: "hidden",
+                  display: "block",
                 }}
               >
-                {/* Name */}
                 <div
                   style={{
                     fontWeight: 900,
                     color: "#263238",
                     fontSize: 13,
-                    minWidth: 0,
-                    overflow: "hidden",
-                    textOverflow: "ellipsis",
-                    whiteSpace: "nowrap",
-                    flex: "1 1 auto",
+
+                    // ✅ CHANGED: do NOT kill the name
+                    whiteSpace: "normal",
+                    overflow: "visible",
+                    textOverflow: "clip",
+                    wordBreak: "break-word",
+                    lineHeight: 1.25,
                   }}
-                  title={c.name}
                 >
                   {c.name}
                 </div>
 
-                {/* Pills (stack under each other when the column is narrow) */}
-                <div
-                  style={{
-                    display: "flex",
-                    gap: 6,
-                    justifyContent: "flex-end",
-                    flex: "0 0 auto",
-
-                    // ✅ when middle column collapses, pills should become a vertical stack,
-                    // instead of forcing width or wrapping weirdly across the card
-                    flexWrap: "wrap",
-                    maxWidth: 140,
-                    minWidth: 0,
-                  }}
-                >
-                  <Pill tone={sourceTone}>{c.source || "External"}</Pill>
-                  <Pill tone={statusTone}>{c.status || "Warm"}</Pill>
+                {/* ✅ OPTIONAL (kept off by default): if you ever want a tiny hint line
+                    under the name without pills, uncomment this.
+                    It will still not compete with the name. */}
+                {/*
+                <div style={{ marginTop: 6, display: "flex", gap: 6, flexWrap: "wrap" }}>
+                  <Pill tone={String(c.source || "").toLowerCase() === "internal" ? "internal" : "external"}>
+                    {c.source || "External"}
+                  </Pill>
+                  <Pill
+                    tone={
+                      String(c.status || "").toLowerCase() === "hot"
+                        ? "hot"
+                        : String(c.status || "").toLowerCase() === "warm"
+                        ? "warm"
+                        : "hold"
+                    }
+                  >
+                    {c.status || "Warm"}
+                  </Pill>
                 </div>
+                */}
               </button>
             );
           })}
