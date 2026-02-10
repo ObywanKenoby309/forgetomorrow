@@ -597,6 +597,15 @@ export default function RecruiterPools() {
             gap: 12,
             alignItems: "start",
             transition: "grid-template-columns 180ms ease",
+
+            // ✅ CHANGED (MINIMAL): allow Col 1/2 to overflow horizontally,
+            // while Col 3 stays pinned to the right and never shifts its right edge.
+            position: "relative",
+            width: "100%",
+            minWidth: 0,
+            overflowX: "auto",
+            overflowY: "visible",
+            boxSizing: "border-box",
           }}
         >
           {/* ✅ Left wrapper: allows shrink + scroll + click focus */}
@@ -635,7 +644,23 @@ export default function RecruiterPools() {
           </div>
 
           {/* Right: At-a-glance decision surface (pool-context) */}
-          <div style={{ ...panelStyle, padding: 12, minWidth: 0 }}>
+          <div
+            style={{
+              ...panelStyle,
+              padding: 12,
+              minWidth: 0,
+
+              // ✅ CHANGED (MINIMAL): hard lock + pin to the RIGHT edge
+              width: 360,
+              minWidth: 360,
+              maxWidth: 360,
+              boxSizing: "border-box",
+              position: "sticky",
+              right: 0,
+              top: 0,
+              zIndex: 5,
+            }}
+          >
             {!selectedEntry ? (
               <div
                 style={{
