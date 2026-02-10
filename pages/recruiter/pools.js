@@ -383,7 +383,8 @@ export default function RecruiterPools() {
       });
 
       const json = await res.json().catch(() => ({}));
-      if (!res.ok) throw new Error(json?.error || "Failed to create conversation.");
+      if (!res.ok)
+        throw new Error(json?.error || "Failed to create conversation.");
 
       const conv = json?.conversation || json;
       const convId = conv?.id;
@@ -452,6 +453,13 @@ export default function RecruiterPools() {
       : "minmax(320px, 420px) minmax(120px, 200px) 220px";
 
   const middleCompact = activePane === "pools";
+
+  // ✅ NEW: open Edit modal from Column 3
+  function openEditFromRightRail() {
+    if (!selectedEntry) return;
+    setModalEntry(selectedEntry);
+    setShowCandidateModal(true);
+  }
 
   return (
     <RecruiterLayout
@@ -700,13 +708,16 @@ export default function RecruiterPools() {
                     ) : null}
                   </div>
 
+                  {/* ✅ CHANGED: pills are back on the At-a-glance card */}
                   <div
                     style={{
                       display: "flex",
                       gap: 8,
+                      // keep them side-by-side
                       flexWrap: "nowrap",
                       justifyContent: "flex-end",
-                      minWidth: 0,
+                      alignItems: "center",
+                      minWidth: "fit-content",
                     }}
                   >
                     <Pill
@@ -873,11 +884,9 @@ export default function RecruiterPools() {
                     View Full Details
                   </SecondaryButton>
 
-                  <TextButton
-                    onClick={() => removeFromPool(selectedEntry.id)}
-                    disabled={saving}
-                  >
-                    Remove
+                  {/* ✅ CHANGED: Replace Remove with Edit; Remove moves into the modal */}
+                  <TextButton onClick={openEditFromRightRail} disabled={saving}>
+                    Edit
                   </TextButton>
                 </div>
               </div>

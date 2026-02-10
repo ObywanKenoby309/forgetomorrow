@@ -28,7 +28,10 @@ export default function CandidateDetailModal({
 
   const e = entry && typeof entry === "object" ? entry : null;
 
-  const sourceTone = String(e?.source || "").toLowerCase() === "internal" ? "internal" : "external";
+  const sourceTone =
+    String(e?.source || "").toLowerCase() === "internal"
+      ? "internal"
+      : "external";
   const statusTone =
     String(e?.status || "").toLowerCase() === "hot"
       ? "hot"
@@ -40,7 +43,7 @@ export default function CandidateDetailModal({
   const candidateUserId = String(e?.candidateUserId || "").trim();
   const canOpen = Boolean(candidateUserId);
 
-  // ✅ NEW: prefer updatedAt, fallback to lastTouch (older payloads)
+  // ✅ prefer updatedAt, fallback to lastTouch (older payloads)
   const lastUpdated = e?.updatedAt || e?.lastTouch || null;
 
   function handleOpenFullProfile() {
@@ -52,7 +55,9 @@ export default function CandidateDetailModal({
       return;
     }
     if (typeof onOpenFullProfile !== "function") {
-      setLocalError("Open profile handler is not wired. (onOpenFullProfile missing)");
+      setLocalError(
+        "Open profile handler is not wired. (onOpenFullProfile missing)"
+      );
       return;
     }
     onOpenFullProfile(e);
@@ -61,7 +66,9 @@ export default function CandidateDetailModal({
   function handleMessage() {
     setLocalError("");
     if (!canOpen) {
-      setLocalError("Messaging is available for internal candidates only (this entry has no internal candidate ID).");
+      setLocalError(
+        "Messaging is available for internal candidates only (this entry has no internal candidate ID)."
+      );
       return;
     }
     if (typeof onMessage === "function") onMessage();
@@ -99,12 +106,39 @@ export default function CandidateDetailModal({
           gap: 10,
         }}
       >
-        <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: 10 }}>
+        <div
+          style={{
+            display: "flex",
+            alignItems: "flex-start",
+            justifyContent: "space-between",
+            gap: 10,
+          }}
+        >
           <div style={{ minWidth: 0 }}>
-            <div style={{ fontWeight: 900, color: "#263238", fontSize: 18 }}>{e?.name || "Candidate"}</div>
-            <div style={{ color: "#607D8B", fontSize: 12, marginTop: 4, lineHeight: 1.35 }}>{e?.headline || ""}</div>
+            <div style={{ fontWeight: 900, color: "#263238", fontSize: 18 }}>
+              {e?.name || "Candidate"}
+            </div>
+            <div
+              style={{
+                color: "#607D8B",
+                fontSize: 12,
+                marginTop: 4,
+                lineHeight: 1.35,
+              }}
+            >
+              {e?.headline || ""}
+            </div>
             {e?.location ? (
-              <div style={{ color: "#90A4AE", fontSize: 12, marginTop: 6, fontWeight: 800 }}>{e.location}</div>
+              <div
+                style={{
+                  color: "#90A4AE",
+                  fontSize: 12,
+                  marginTop: 6,
+                  fontWeight: 800,
+                }}
+              >
+                {e.location}
+              </div>
             ) : null}
           </div>
 
@@ -119,7 +153,6 @@ export default function CandidateDetailModal({
 
         <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
           <Pill tone="neutral">Fit: {e?.fit || "-"}</Pill>
-          {/* ✅ CHANGED LABEL: Last updated */}
           <Pill tone="neutral">Last updated: {fmtShortDate(lastUpdated)}</Pill>
         </div>
 
@@ -132,19 +165,40 @@ export default function CandidateDetailModal({
             gap: 8,
           }}
         >
-          <div style={{ fontWeight: 900, color: "#37474F", fontSize: 13 }}>Why saved (evidence snapshot)</div>
+          <div style={{ fontWeight: 900, color: "#37474F", fontSize: 13 }}>
+            Why saved (evidence snapshot)
+          </div>
 
           {reasons.length ? (
-            <ul style={{ margin: 0, paddingLeft: 18, color: "#546E7A", fontSize: 12, lineHeight: 1.45 }}>
+            <ul
+              style={{
+                margin: 0,
+                paddingLeft: 18,
+                color: "#546E7A",
+                fontSize: 12,
+                lineHeight: 1.45,
+              }}
+            >
               {reasons.map((r, idx) => (
                 <li key={`${e?.id || "x"}-rr-${idx}`}>{r}</li>
               ))}
             </ul>
           ) : (
-            <div style={{ color: "#90A4AE", fontSize: 12, lineHeight: 1.35 }}>No snapshot yet.</div>
+            <div style={{ color: "#90A4AE", fontSize: 12, lineHeight: 1.35 }}>
+              No snapshot yet.
+            </div>
           )}
 
-          <div style={{ fontWeight: 900, color: "#37474F", fontSize: 13, marginTop: 6 }}>Notes</div>
+          <div
+            style={{
+              fontWeight: 900,
+              color: "#37474F",
+              fontSize: 13,
+              marginTop: 6,
+            }}
+          >
+            Notes
+          </div>
           <div
             style={{
               border: "1px solid rgba(38,50,56,0.14)",
@@ -161,11 +215,13 @@ export default function CandidateDetailModal({
 
           {canOpen ? (
             <div style={{ color: "#607D8B", fontSize: 12, lineHeight: 1.35 }}>
-              Internal candidate detected. Use <strong>Open full profile</strong> to jump into Candidate Center.
+              Internal candidate detected. Use <strong>Open full profile</strong>{" "}
+              to jump into Candidate Center.
             </div>
           ) : (
             <div style={{ color: "#607D8B", fontSize: 12, lineHeight: 1.35 }}>
-              External candidate entry. Full profile and messaging are limited to internal users (for now).
+              External candidate entry. Full profile and messaging are limited to
+              internal users (for now).
             </div>
           )}
 
@@ -195,6 +251,7 @@ export default function CandidateDetailModal({
               Open full profile
             </SecondaryButton>
 
+            {/* Keep destructive action inside Edit modal */}
             <SecondaryButton onClick={onRemove} disabled={saving}>
               Remove from pool
             </SecondaryButton>
