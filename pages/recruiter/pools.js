@@ -658,7 +658,6 @@ export default function RecruiterPools() {
                   At a glance...
                 </div>
 
-                {/* ✅ CHANGED: restore pills on Column 3 */}
                 <div
                   style={{
                     display: "flex",
@@ -697,6 +696,7 @@ export default function RecruiterPools() {
                     ) : null}
                   </div>
 
+                  {/* ✅ FIX: make pills block non-shrinking so it doesn't disappear */}
                   <div
                     style={{
                       display: "flex",
@@ -704,13 +704,13 @@ export default function RecruiterPools() {
                       flexWrap: "nowrap",
                       justifyContent: "flex-end",
                       alignItems: "center",
-                      minWidth: 0,
+                      flexShrink: 0,
+                      width: "max-content",
                     }}
                   >
                     <Pill
                       tone={
-                        String(selectedEntry.source || "").toLowerCase() ===
-                        "internal"
+                        String(selectedEntry.source || "").toLowerCase() === "internal"
                           ? "internal"
                           : "external"
                       }
@@ -721,8 +721,7 @@ export default function RecruiterPools() {
                       tone={
                         String(selectedEntry.status || "").toLowerCase() === "hot"
                           ? "hot"
-                          : String(selectedEntry.status || "").toLowerCase() ===
-                            "warm"
+                          : String(selectedEntry.status || "").toLowerCase() === "warm"
                           ? "warm"
                           : "hold"
                       }
@@ -869,8 +868,9 @@ export default function RecruiterPools() {
                     View Full Details
                   </SecondaryButton>
 
+                  {/* ✅ FIX: Edit opens modal (does NOT delete) */}
                   <TextButton
-                    onClick={() => removeFromPool(selectedEntry.id)}
+                    onClick={() => viewCandidate(selectedEntry)}
                     disabled={saving}
                   >
                     Edit
