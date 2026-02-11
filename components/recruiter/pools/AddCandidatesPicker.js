@@ -35,14 +35,14 @@ export default function AddCandidatesPicker({
   const [extSaving, setExtSaving] = useState(false);
   const [extError, setExtError] = useState("");
 
-  // ✅ NEW: which pane is primary (left vs right)
+  // ✅ NEW: click-to-expand behavior (like Pools workspace)
   const [activePane, setActivePane] = useState("left"); // "left" | "right"
 
   // ✅ NEW: External candidate form fields
   const [extName, setExtName] = useState("");
   const [extEmail, setExtEmail] = useState("");
   const [extPhone, setExtPhone] = useState("");
-  const [extLinkedIn, setExtLinkedIn] = useState("");
+  const [extPersonalUrl, setExtPersonalUrl] = useState(""); // ✅ renamed from LinkedIn concept
   const [extCompany, setExtCompany] = useState("");
   const [extTitle, setExtTitle] = useState("");
   const [extLocation, setExtLocation] = useState("");
@@ -58,7 +58,7 @@ export default function AddCandidatesPicker({
     setExtName("");
     setExtEmail("");
     setExtPhone("");
-    setExtLinkedIn("");
+    setExtPersonalUrl("");
     setExtCompany("");
     setExtTitle("");
     setExtLocation("");
@@ -112,7 +112,8 @@ export default function AddCandidatesPicker({
       externalCandidate: {
         email,
         phone: String(extPhone || "").trim() || null,
-        linkedinUrl: String(extLinkedIn || "").trim() || null,
+        // ✅ We store the user-entered Personal URL into the existing field to avoid schema churn.
+        linkedinUrl: String(extPersonalUrl || "").trim() || null,
         company: String(extCompany || "").trim() || null,
         title: String(extTitle || "").trim() || null,
         notes: null,
@@ -121,14 +122,11 @@ export default function AddCandidatesPicker({
 
     setExtSaving(true);
     try {
-      const res = await fetch(
-        `/api/recruiter/pools/${encodeURIComponent(selectedPool.id)}/entries`,
-        {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify(payload),
-        }
-      );
+      const res = await fetch(`/api/recruiter/pools/${encodeURIComponent(selectedPool.id)}/entries`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
+      });
 
       const data = await res.json().catch(() => ({}));
       if (!res.ok) throw new Error(data?.error || "Failed to add external candidate.");
@@ -141,13 +139,14 @@ export default function AddCandidatesPicker({
     }
   }
 
-  // ✅ Layout constants (tighter collapse)
-  const CONDENSED_W = 260; // was 340 (too wide)
-  const LEFT_CONDENSED_W = 320; // when Snapshot is primary, left should still be usable but compact
+  // ✅ FIX: Force two-column layout (so 100% looks like your 90% example)
+  // Primary pane gets 1fr, secondary pane gets fixed width.
+  const CONDENSED_W = 320; // right (snapshot) width when left is primary
+  const LEFT_CONDENSED_W = 340; // left width when snapshot is primary
 
   const gridStyle = useMemo(() => {
     if (activePane === "right") {
-      // Right primary, left condensed
+      // Snapshot is primary (expands), left condenses
       return {
         display: "grid",
         gap: 12,
@@ -155,8 +154,7 @@ export default function AddCandidatesPicker({
         gridTemplateColumns: `minmax(0, ${LEFT_CONDENSED_W}px) minmax(0, 1fr)`,
       };
     }
-
-    // Left primary, right condensed
+    // Left is primary (expands), snapshot condenses
     return {
       display: "grid",
       gap: 12,
@@ -165,7 +163,6 @@ export default function AddCandidatesPicker({
     };
   }, [activePane]);
 
-  // ✅ IMPORTANT: panelStyle likely includes maxWidth — override it to eliminate the dead gap
   const leftPanelStyle = useMemo(() => {
     const isActive = activePane === "left";
     return {
@@ -173,8 +170,8 @@ export default function AddCandidatesPicker({
       padding: 12,
       minWidth: 0,
       width: "100%",
-      maxWidth: "none", // ✅ critical
-      border: isActive ? "1px solid rgba(255,112,67,0.55)" : (panelStyle?.border || "1px solid rgba(38,50,56,0.12)"),
+      maxWidth: "none",
+      border: isActive ? "1px solid rgba(255,112,67,0.55)" : panelStyle?.border || "1px solid rgba(38,50,56,0.12)",
       boxShadow: isActive ? "0 10px 24px rgba(255,112,67,0.10)" : panelStyle?.boxShadow,
       cursor: "pointer",
     };
@@ -187,12 +184,24 @@ export default function AddCandidatesPicker({
       padding: 12,
       minWidth: 0,
       width: "100%",
-      maxWidth: "none", // ✅ critical
-      border: isActive ? "1px solid rgba(255,112,67,0.55)" : (panelStyle?.border || "1px solid rgba(38,50,56,0.12)"),
+      maxWidth: "none",
+      border: isActive ? "1px solid rgba(255,112,67,0.55)" : panelStyle?.border || "1px solid rgba(38,50,56,0.12)",
       boxShadow: isActive ? "0 10px 24px rgba(255,112,67,0.10)" : panelStyle?.boxShadow,
       cursor: "pointer",
     };
   }, [panelStyle, activePane]);
+
+  // ✅ Prevent “bleed” when left is condensed: stack the 2-col grids to 1-col
+  const leftIsCondensed = activePane === "right";
+  const twoColGrid = leftIsCondensed ? "1fr" : "1fr 1fr";
+
+  const inputBase = {
+    minWidth: 0,
+    border: "1px solid rgba(38,50,56,0.18)",
+    borderRadius: 10,
+    padding: "10px 12px",
+    outline: "none",
+  };
 
   return (
     <div style={{ ...panelStyle, padding: 12, marginBottom: 12 }}>
@@ -282,6 +291,7 @@ export default function AddCandidatesPicker({
                   aria-label="Search candidates"
                   style={{
                     flex: "1 1 260px",
+                    minWidth: 0,
                     border: "1px solid rgba(38,50,56,0.18)",
                     borderRadius: 10,
                     padding: "10px 12px",
@@ -383,144 +393,96 @@ export default function AddCandidatesPicker({
               ) : null}
 
               <div style={{ display: "grid", gap: 10 }} onClick={(e) => e.stopPropagation()}>
-                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
-                  <div style={{ display: "grid", gap: 6 }}>
+                <div style={{ display: "grid", gridTemplateColumns: twoColGrid, gap: 10 }}>
+                  <div style={{ display: "grid", gap: 6, minWidth: 0 }}>
                     <div style={{ fontWeight: 900, color: "#37474F", fontSize: 12 }}>Name *</div>
                     <input
                       value={extName}
                       onChange={(e) => setExtName(e.target.value)}
                       placeholder="Full name"
-                      style={{
-                        border: "1px solid rgba(38,50,56,0.18)",
-                        borderRadius: 10,
-                        padding: "10px 12px",
-                        fontWeight: 800,
-                        outline: "none",
-                      }}
+                      style={{ ...inputBase, fontWeight: 800 }}
                       disabled={saving || extSaving}
                     />
                   </div>
 
-                  <div style={{ display: "grid", gap: 6 }}>
+                  <div style={{ display: "grid", gap: 6, minWidth: 0 }}>
                     <div style={{ fontWeight: 900, color: "#37474F", fontSize: 12 }}>Email *</div>
                     <input
                       value={extEmail}
                       onChange={(e) => setExtEmail(e.target.value)}
                       placeholder="name@email.com"
-                      style={{
-                        border: "1px solid rgba(38,50,56,0.18)",
-                        borderRadius: 10,
-                        padding: "10px 12px",
-                        fontWeight: 800,
-                        outline: "none",
-                      }}
+                      style={{ ...inputBase, fontWeight: 800 }}
                       disabled={saving || extSaving}
                     />
                   </div>
                 </div>
 
-                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
-                  <div style={{ display: "grid", gap: 6 }}>
+                <div style={{ display: "grid", gridTemplateColumns: twoColGrid, gap: 10 }}>
+                  <div style={{ display: "grid", gap: 6, minWidth: 0 }}>
                     <div style={{ fontWeight: 900, color: "#37474F", fontSize: 12 }}>Title (optional)</div>
                     <input
                       value={extTitle}
                       onChange={(e) => setExtTitle(e.target.value)}
                       placeholder="e.g., Support Lead"
-                      style={{
-                        border: "1px solid rgba(38,50,56,0.18)",
-                        borderRadius: 10,
-                        padding: "10px 12px",
-                        fontWeight: 700,
-                        outline: "none",
-                      }}
+                      style={{ ...inputBase, fontWeight: 700 }}
                       disabled={saving || extSaving}
                     />
                   </div>
 
-                  <div style={{ display: "grid", gap: 6 }}>
+                  <div style={{ display: "grid", gap: 6, minWidth: 0 }}>
                     <div style={{ fontWeight: 900, color: "#37474F", fontSize: 12 }}>Company (optional)</div>
                     <input
                       value={extCompany}
                       onChange={(e) => setExtCompany(e.target.value)}
                       placeholder="e.g., Acme Corp"
-                      style={{
-                        border: "1px solid rgba(38,50,56,0.18)",
-                        borderRadius: 10,
-                        padding: "10px 12px",
-                        fontWeight: 700,
-                        outline: "none",
-                      }}
+                      style={{ ...inputBase, fontWeight: 700 }}
                       disabled={saving || extSaving}
                     />
                   </div>
                 </div>
 
-                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
-                  <div style={{ display: "grid", gap: 6 }}>
+                <div style={{ display: "grid", gridTemplateColumns: twoColGrid, gap: 10 }}>
+                  <div style={{ display: "grid", gap: 6, minWidth: 0 }}>
                     <div style={{ fontWeight: 900, color: "#37474F", fontSize: 12 }}>Location (optional)</div>
                     <input
                       value={extLocation}
                       onChange={(e) => setExtLocation(e.target.value)}
                       placeholder="e.g., Nashville, TN"
-                      style={{
-                        border: "1px solid rgba(38,50,56,0.18)",
-                        borderRadius: 10,
-                        padding: "10px 12px",
-                        fontWeight: 700,
-                        outline: "none",
-                      }}
+                      style={{ ...inputBase, fontWeight: 700 }}
                       disabled={saving || extSaving}
                     />
                   </div>
 
-                  <div style={{ display: "grid", gap: 6 }}>
+                  <div style={{ display: "grid", gap: 6, minWidth: 0 }}>
                     <div style={{ fontWeight: 900, color: "#37474F", fontSize: 12 }}>Phone (optional)</div>
                     <input
                       value={extPhone}
                       onChange={(e) => setExtPhone(e.target.value)}
                       placeholder="e.g., 615-555-0123"
-                      style={{
-                        border: "1px solid rgba(38,50,56,0.18)",
-                        borderRadius: 10,
-                        padding: "10px 12px",
-                        fontWeight: 700,
-                        outline: "none",
-                      }}
+                      style={{ ...inputBase, fontWeight: 700 }}
                       disabled={saving || extSaving}
                     />
                   </div>
                 </div>
 
-                <div style={{ display: "grid", gap: 6 }}>
-                  <div style={{ fontWeight: 900, color: "#37474F", fontSize: 12 }}>LinkedIn URL (optional)</div>
+                <div style={{ display: "grid", gap: 6, minWidth: 0 }}>
+                  <div style={{ fontWeight: 900, color: "#37474F", fontSize: 12 }}>Personal URL (optional)</div>
                   <input
-                    value={extLinkedIn}
-                    onChange={(e) => setExtLinkedIn(e.target.value)}
-                    placeholder="https://linkedin.com/in/..."
-                    style={{
-                      border: "1px solid rgba(38,50,56,0.18)",
-                      borderRadius: 10,
-                      padding: "10px 12px",
-                      fontWeight: 700,
-                      outline: "none",
-                    }}
+                    value={extPersonalUrl}
+                    onChange={(e) => setExtPersonalUrl(e.target.value)}
+                    placeholder="https://your-site.com/..."
+                    style={{ ...inputBase, fontWeight: 700 }}
                     disabled={saving || extSaving}
                   />
                 </div>
 
-                <div style={{ display: "grid", gap: 6 }}>
+                <div style={{ display: "grid", gap: 6, minWidth: 0 }}>
                   <div style={{ fontWeight: 900, color: "#37474F", fontSize: 12 }}>Headline (optional)</div>
                   <input
                     value={extHeadline}
                     onChange={(e) => setExtHeadline(e.target.value)}
                     placeholder="Short headline (if different from title)"
-                    style={{
-                      border: "1px solid rgba(38,50,56,0.18)",
-                      borderRadius: 10,
-                      padding: "10px 12px",
-                      fontWeight: 700,
-                      outline: "none",
-                    }}
+                    style={{ ...inputBase, fontWeight: 700 }}
                     disabled={saving || extSaving}
                   />
                 </div>
@@ -543,7 +505,7 @@ export default function AddCandidatesPicker({
           )}
         </div>
 
-        {/* Right column (Snapshot) */}
+        {/* Right column */}
         <div
           style={rightPanelStyle}
           onClick={() => setActivePane("right")}
@@ -572,7 +534,6 @@ export default function AddCandidatesPicker({
               marginBottom: 10,
             }}
             disabled={saving || extSaving}
-            onClick={(e) => e.stopPropagation()}
           >
             <option value="Hot">Hot</option>
             <option value="Warm">Warm</option>
@@ -588,6 +549,7 @@ export default function AddCandidatesPicker({
             placeholder="e.g., CSM / AM, Support Ops"
             style={{
               width: "100%",
+              minWidth: 0,
               border: "1px solid rgba(38,50,56,0.18)",
               borderRadius: 10,
               padding: "10px 12px",
@@ -596,7 +558,6 @@ export default function AddCandidatesPicker({
               marginBottom: 10,
             }}
             disabled={saving || extSaving}
-            onClick={(e) => e.stopPropagation()}
           />
 
           <label style={{ display: "block", color: "#607D8B", fontSize: 12, fontWeight: 900, marginBottom: 6 }}>
@@ -608,6 +569,7 @@ export default function AddCandidatesPicker({
             placeholder="e.g., CSM - Enterprise, Support Lead, Req #1234"
             style={{
               width: "100%",
+              minWidth: 0,
               border: "1px solid rgba(38,50,56,0.18)",
               borderRadius: 10,
               padding: "10px 12px",
@@ -616,7 +578,6 @@ export default function AddCandidatesPicker({
               marginBottom: 10,
             }}
             disabled={saving || extSaving}
-            onClick={(e) => e.stopPropagation()}
           />
 
           <label style={{ display: "block", color: "#607D8B", fontSize: 12, fontWeight: 900, marginBottom: 6 }}>
@@ -629,6 +590,7 @@ export default function AddCandidatesPicker({
             rows={6}
             style={{
               width: "100%",
+              minWidth: 0,
               border: "1px solid rgba(38,50,56,0.18)",
               borderRadius: 10,
               padding: "10px 12px",
@@ -638,7 +600,6 @@ export default function AddCandidatesPicker({
               marginBottom: 10,
             }}
             disabled={saving || extSaving}
-            onClick={(e) => e.stopPropagation()}
           />
 
           <label style={{ display: "block", color: "#607D8B", fontSize: 12, fontWeight: 900, marginBottom: 6 }}>
@@ -651,6 +612,7 @@ export default function AddCandidatesPicker({
             rows={4}
             style={{
               width: "100%",
+              minWidth: 0,
               border: "1px solid rgba(38,50,56,0.18)",
               borderRadius: 10,
               padding: "10px 12px",
@@ -660,10 +622,9 @@ export default function AddCandidatesPicker({
               marginBottom: 12,
             }}
             disabled={saving || extSaving}
-            onClick={(e) => e.stopPropagation()}
           />
 
-          <div style={{ display: "flex", gap: 10, flexWrap: "wrap" }} onClick={(e) => e.stopPropagation()}>
+          <div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
             {mode === "internal" ? (
               <>
                 <PrimaryButton onClick={onAddSelected} disabled={saving || !pickerSelectedIds.length}>
@@ -685,14 +646,6 @@ export default function AddCandidatesPicker({
           </div>
         </div>
       </div>
-
-      <style jsx>{`
-        @media (max-width: 980px) {
-          .ftPickerGrid {
-            grid-template-columns: 1fr !important;
-          }
-        }
-      `}</style>
     </div>
   );
 }
