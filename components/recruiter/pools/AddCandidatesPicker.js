@@ -30,19 +30,19 @@ export default function AddCandidatesPicker({
   onAddSelected,
   onClearSelected,
 }) {
-  // ✅ NEW: internal vs external add mode (UI-only)
+  // ✅ internal vs external add mode (UI-only)
   const [mode, setMode] = useState("internal"); // "internal" | "external"
   const [extSaving, setExtSaving] = useState(false);
   const [extError, setExtError] = useState("");
 
-  // ✅ NEW: click-to-expand behavior (like Pools workspace)
+  // ✅ click-to-expand behavior (like Pools workspace)
   const [activePane, setActivePane] = useState("left"); // "left" | "right"
 
-  // ✅ NEW: External candidate form fields
+  // ✅ External candidate form fields
   const [extName, setExtName] = useState("");
   const [extEmail, setExtEmail] = useState("");
   const [extPhone, setExtPhone] = useState("");
-  const [extPersonalUrl, setExtPersonalUrl] = useState(""); // ✅ renamed from LinkedIn concept
+  const [extPersonalUrl, setExtPersonalUrl] = useState(""); // ✅ no more LinkedIn wording
   const [extCompany, setExtCompany] = useState("");
   const [extTitle, setExtTitle] = useState("");
   const [extLocation, setExtLocation] = useState("");
@@ -112,7 +112,7 @@ export default function AddCandidatesPicker({
       externalCandidate: {
         email,
         phone: String(extPhone || "").trim() || null,
-        // ✅ We store the user-entered Personal URL into the existing field to avoid schema churn.
+        // ✅ store Personal URL into the existing field to avoid schema changes
         linkedinUrl: String(extPersonalUrl || "").trim() || null,
         company: String(extCompany || "").trim() || null,
         title: String(extTitle || "").trim() || null,
@@ -139,14 +139,12 @@ export default function AddCandidatesPicker({
     }
   }
 
-  // ✅ FIX: Force two-column layout (so 100% looks like your 90% example)
-  // Primary pane gets 1fr, secondary pane gets fixed width.
-  const CONDENSED_W = 320; // right (snapshot) width when left is primary
+  // ✅ Force 2-column layout and allow click-to-expand/condense
+  const CONDENSED_W = 320; // snapshot width when left is primary
   const LEFT_CONDENSED_W = 340; // left width when snapshot is primary
 
   const gridStyle = useMemo(() => {
     if (activePane === "right") {
-      // Snapshot is primary (expands), left condenses
       return {
         display: "grid",
         gap: 12,
@@ -154,7 +152,6 @@ export default function AddCandidatesPicker({
         gridTemplateColumns: `minmax(0, ${LEFT_CONDENSED_W}px) minmax(0, 1fr)`,
       };
     }
-    // Left is primary (expands), snapshot condenses
     return {
       display: "grid",
       gap: 12,
@@ -191,7 +188,7 @@ export default function AddCandidatesPicker({
     };
   }, [panelStyle, activePane]);
 
-  // ✅ Prevent “bleed” when left is condensed: stack the 2-col grids to 1-col
+  // ✅ When left is condensed, DO NOT render the full form/list — show a compact summary instead.
   const leftIsCondensed = activePane === "right";
   const twoColGrid = leftIsCondensed ? "1fr" : "1fr 1fr";
 
@@ -202,6 +199,61 @@ export default function AddCandidatesPicker({
     padding: "10px 12px",
     outline: "none",
   };
+
+  function renderLeftCondensedSummary() {
+    if (mode === "internal") {
+      return (
+        <div style={{ display: "grid", gap: 8 }}>
+          <div style={{ fontWeight: 900, color: "#37474F" }}>Candidates</div>
+          <div style={{ color: "#607D8B", fontSize: 12, lineHeight: 1.35 }}>
+            {pickerSelectedIds?.length ? (
+              <>
+                <strong>{pickerSelectedIds.length}</strong> selected
+              </>
+            ) : (
+              <>No selections yet</>
+            )}
+          </div>
+          <div style={{ color: "#90A4AE", fontSize: 11, lineHeight: 1.35 }}>
+            Click this panel to expand and search/select.
+          </div>
+        </div>
+      );
+    }
+
+    // external
+    const n = String(extName || "").trim();
+    const em = String(extEmail || "").trim();
+
+    return (
+      <div style={{ display: "grid", gap: 8 }}>
+        <div style={{ fontWeight: 900, color: "#37474F" }}>External candidate</div>
+        <div style={{ color: "#607D8B", fontSize: 12, lineHeight: 1.35 }}>
+          {n ? <div style={{ fontWeight: 900, color: "#263238" }}>{n}</div> : <div>Name: —</div>}
+          {em ? <div>{em}</div> : <div>Email: —</div>}
+        </div>
+        {extError ? (
+          <div
+            style={{
+              border: "1px solid rgba(255,112,67,0.35)",
+              background: "rgba(255,112,67,0.08)",
+              borderRadius: 12,
+              padding: 8,
+              color: "#B23C17",
+              fontWeight: 900,
+              fontSize: 12,
+              lineHeight: 1.35,
+            }}
+          >
+            {extError}
+          </div>
+        ) : null}
+        <div style={{ color: "#90A4AE", fontSize: 11, lineHeight: 1.35 }}>
+          Click this panel to expand and fill the full form.
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div style={{ ...panelStyle, padding: 12, marginBottom: 12 }}>
@@ -267,7 +319,7 @@ export default function AddCandidatesPicker({
       <div style={{ height: 10 }} />
 
       <div className="ftPickerGrid" style={gridStyle}>
-        {/* Left column */}
+        {/* Left pane */}
         <div
           style={leftPanelStyle}
           onClick={() => setActivePane("left")}
@@ -277,12 +329,10 @@ export default function AddCandidatesPicker({
             if (e.key === "Enter" || e.key === " ") setActivePane("left");
           }}
         >
-          {mode === "internal" ? (
+          {leftIsCondensed ? (
+            renderLeftCondensedSummary()
+          ) : mode === "internal" ? (
             <>
-              <div style={{ color: "#607D8B", fontSize: 12, marginBottom: 10, lineHeight: 1.35 }}>
-                This pulls LIVE candidates from <strong>User</strong> via <code>/api/recruiter/candidates</code>.
-              </div>
-
               <div style={{ display: "flex", gap: 10, flexWrap: "wrap", alignItems: "center", justifyContent: "space-between" }}>
                 <input
                   value={pickerQuery}
@@ -505,7 +555,7 @@ export default function AddCandidatesPicker({
           )}
         </div>
 
-        {/* Right column */}
+        {/* Right pane */}
         <div
           style={rightPanelStyle}
           onClick={() => setActivePane("right")}
@@ -639,10 +689,6 @@ export default function AddCandidatesPicker({
                 These snapshot fields will be applied to the external candidate you add.
               </div>
             )}
-          </div>
-
-          <div style={{ color: "#90A4AE", fontSize: 11, lineHeight: 1.35, marginTop: 10 }}>
-            Adds are written to <strong>TalentPoolEntry</strong> (DB-first). No localStorage.
           </div>
         </div>
       </div>
