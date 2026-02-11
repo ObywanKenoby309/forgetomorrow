@@ -45,6 +45,20 @@ export default function AddCandidatesPicker({
   const [extLocation, setExtLocation] = useState("");
   const [extHeadline, setExtHeadline] = useState("");
 
+  // ✅ IMPORTANT: do NOT reuse full panelStyle in inner columns (it may contain position/width).
+  // Only take safe “surface” styling so grid panels don’t overlap.
+  const panelSurfaceStyle = useMemo(() => {
+    const ps = panelStyle && typeof panelStyle === "object" ? panelStyle : {};
+    return {
+      background: ps.background,
+      border: ps.border,
+      borderRadius: ps.borderRadius,
+      boxShadow: ps.boxShadow,
+      backdropFilter: ps.backdropFilter,
+      WebkitBackdropFilter: ps.WebkitBackdropFilter,
+    };
+  }, [panelStyle]);
+
   const canSubmitExternal = useMemo(() => {
     const n = String(extName || "").trim();
     const em = String(extEmail || "").trim();
@@ -118,11 +132,14 @@ export default function AddCandidatesPicker({
 
     setExtSaving(true);
     try {
-      const res = await fetch(`/api/recruiter/pools/${encodeURIComponent(selectedPool.id)}/entries`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(payload),
-      });
+      const res = await fetch(
+        `/api/recruiter/pools/${encodeURIComponent(selectedPool.id)}/entries`,
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(payload),
+        }
+      );
 
       const data = await res.json().catch(() => ({}));
       if (!res.ok) throw new Error(data?.error || "Failed to add external candidate.");
@@ -198,24 +215,16 @@ export default function AddCandidatesPicker({
 
       <div style={{ height: 10 }} />
 
-      <div className="ftPickerGrid" style={{ display: "grid", gap: 12, alignItems: "start" }}>
+      <div className="ftPickerGrid" style={{ display: "grid", gap: 12, alignItems: "stretch" }}>
         {/* Left column */}
-        <div style={{ ...panelStyle, padding: 12 }}>
+        <div style={{ ...panelSurfaceStyle, padding: 12, minWidth: 0 }}>
           {mode === "internal" ? (
             <>
               <div style={{ color: "#607D8B", fontSize: 12, marginBottom: 10, lineHeight: 1.35 }}>
                 This pulls LIVE candidates from <strong>User</strong> via <code>/api/recruiter/candidates</code>.
               </div>
 
-              <div
-                style={{
-                  display: "flex",
-                  gap: 10,
-                  flexWrap: "wrap",
-                  alignItems: "center",
-                  justifyContent: "space-between",
-                }}
-              >
+              <div style={{ display: "flex", gap: 10, flexWrap: "wrap", alignItems: "center", justifyContent: "space-between" }}>
                 <input
                   value={pickerQuery}
                   onChange={(e) => setPickerQuery(e.target.value)}
@@ -238,9 +247,7 @@ export default function AddCandidatesPicker({
               <div style={{ height: 10 }} />
 
               <div style={{ color: "#607D8B", fontSize: 12, fontWeight: 800 }}>
-                {loadingPicker
-                  ? "Loading candidates..."
-                  : `${pickerResults.length} result${pickerResults.length === 1 ? "" : "s"}`}
+                {loadingPicker ? "Loading candidates..." : `${pickerResults.length} result${pickerResults.length === 1 ? "" : "s"}`}
                 {pickerSelectedIds.length ? ` - ${pickerSelectedIds.length} selected` : ""}
               </div>
 
@@ -259,8 +266,7 @@ export default function AddCandidatesPicker({
                     lineHeight: 1.45,
                   }}
                 >
-                  No candidates found yet. Try a broader search, or leave blank and click <strong>Search</strong> to pull
-                  newest.
+                  No candidates found yet. Try a broader search, or leave blank and click <strong>Search</strong> to pull newest.
                 </div>
               ) : (
                 <div style={{ display: "grid", gap: 8, maxHeight: 340, overflow: "auto", paddingRight: 4 }}>
@@ -291,9 +297,7 @@ export default function AddCandidatesPicker({
                         <div style={{ color: "#607D8B", fontSize: 12, lineHeight: 1.35 }}>
                           {String(c?.title || c?.headline || "").trim()}
                         </div>
-                        <div style={{ color: "#90A4AE", fontSize: 11, fontWeight: 800 }}>
-                          {String(c?.location || "").trim()}
-                        </div>
+                        <div style={{ color: "#90A4AE", fontSize: 11, fontWeight: 800 }}>{String(c?.location || "").trim()}</div>
                       </button>
                     );
                   })}
@@ -303,8 +307,7 @@ export default function AddCandidatesPicker({
           ) : (
             <>
               <div style={{ color: "#607D8B", fontSize: 12, marginBottom: 10, lineHeight: 1.35 }}>
-                Add an <strong>External candidate</strong> (email-based). This creates an <strong>ExternalCandidate</strong>{" "}
-                and links it to this pool.
+                Add an <strong>External candidate</strong> (email-based). This creates an <strong>ExternalCandidate</strong> and links it to this pool.
               </div>
 
               {extError ? (
@@ -487,7 +490,7 @@ export default function AddCandidatesPicker({
         </div>
 
         {/* Settings (applies to internal adds + external adds) */}
-        <div style={{ ...panelStyle, padding: 12 }}>
+        <div style={{ ...panelSurfaceStyle, padding: 12, minWidth: 0 }}>
           <div style={{ fontWeight: 900, color: "#37474F", marginBottom: 10 }}>Snapshot for this add</div>
 
           <label style={{ display: "block", color: "#607D8B", fontSize: 12, fontWeight: 900, marginBottom: 6 }}>
@@ -532,7 +535,6 @@ export default function AddCandidatesPicker({
             disabled={saving || extSaving}
           />
 
-          {/* ✅ NEW */}
           <label style={{ display: "block", color: "#607D8B", fontSize: 12, fontWeight: 900, marginBottom: 6 }}>
             Last role considered (optional)
           </label>
@@ -573,7 +575,6 @@ export default function AddCandidatesPicker({
             disabled={saving || extSaving}
           />
 
-          {/* ✅ NEW */}
           <label style={{ display: "block", color: "#607D8B", fontSize: 12, fontWeight: 900, marginBottom: 6 }}>
             Notes (optional)
           </label>
@@ -618,13 +619,14 @@ export default function AddCandidatesPicker({
         </div>
       </div>
 
-      {/* ✅ Responsive two-panel layout (expand/contract like Talent Pools) */}
+      {/* ✅ Responsive two-panel layout (no overlap) */}
       <style jsx>{`
         .ftPickerGrid {
-          grid-template-columns: minmax(0, 1fr) clamp(300px, 34vw, 480px);
+          width: 100%;
+          grid-template-columns: minmax(0, 1fr) minmax(320px, 460px);
         }
 
-        @media (max-width: 980px) {
+        @media (max-width: 1100px) {
           .ftPickerGrid {
             grid-template-columns: 1fr;
           }
