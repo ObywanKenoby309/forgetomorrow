@@ -3,7 +3,7 @@ import React, { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/router';
 import SeekerLayout from '@/components/layouts/SeekerLayout';
-import SeekerRightColumn from '@/components/seeker/SeekerRightColumn';
+import RightRailPlacementManager from '@/components/ads/RightRailPlacementManager';
 import ApplicationForm from '@/components/applications/ApplicationForm';
 import ApplicationDetailsModal from '@/components/applications/ApplicationDetailsModal';
 import ApplicationsBoard from '@/components/applications/ApplicationsBoard';
@@ -389,14 +389,37 @@ export default function SeekerApplicationsPage() {
     setDetailsOpen(true);
   };
 
+  // ✅ Profile-glass numbers (canonical, matches Contact Center)
+  const GLASS = {
+    borderRadius: 14,
+    border: '1px solid rgba(255,255,255,0.22)',
+    background: 'rgba(255,255,255,0.58)',
+    boxShadow: '0 10px 24px rgba(0,0,0,0.12)',
+    backdropFilter: 'blur(10px)',
+    WebkitBackdropFilter: 'blur(10px)',
+  };
+
+  // ✅ White readable inner card (accessibility layer on top of glass)
+  const WHITE_CARD = {
+    background: 'rgba(255,255,255,0.92)',
+    border: '1px solid rgba(0,0,0,0.08)',
+    borderRadius: 12,
+    boxShadow: '0 2px 10px rgba(0,0,0,0.08)',
+  };
+
+  // ✅ Page-level glass container (lets wallpaper breathe, keeps page cohesive)
+  const PAGE_GLASS_WRAP = {
+    ...GLASS,
+    padding: 16,
+    margin: '24px 0 0',
+    width: '100%',
+  };
+
   const HeaderBox = (
     <section
       style={{
-        background: 'white',
-        border: '1px solid #eee',
-        borderRadius: 12,
+        ...GLASS,
         padding: 16,
-        boxShadow: '0 2px 6px rgba(0,0,0,0.06)',
         textAlign: 'center',
       }}
     >
@@ -409,15 +432,9 @@ export default function SeekerApplicationsPage() {
     </section>
   );
 
-  const RightRail = (
-    <div style={{ display: 'grid', gap: 12 }}>
-      <SeekerRightColumn variant="applications" />
-    </div>
-  );
-
   if (loading) {
     return (
-      <SeekerLayout header={HeaderBox} right={RightRail}>
+      <SeekerLayout header={HeaderBox} right={<RightRailPlacementManager surfaceId="applications" />}>
         <div className="text-center py-20">Loading your applications...</div>
       </SeekerLayout>
     );
@@ -427,65 +444,61 @@ export default function SeekerApplicationsPage() {
     <SeekerLayout
       title="Applications | ForgeTomorrow"
       header={HeaderBox}
-      right={RightRail}
+      right={<RightRailPlacementManager surfaceId="applications" />}
       activeNav="jobs"
     >
-      <div style={{ display: 'grid', gap: 16 }}>
-        <section
-          style={{
-            background: 'white',
-            borderRadius: 12,
-            padding: 16,
-            border: '1px solid #eee',
-            boxShadow: '0 2px 6px rgba(0,0,0,0.06)',
-          }}
-        >
+      <div style={PAGE_GLASS_WRAP}>
+        <section style={{ ...WHITE_CARD, padding: 16 }}>
           <StageStrip tracker={tracker} />
         </section>
-        <ApplicationsBoard
-          key={JSON.stringify(tracker)}
-          stagesData={tracker}
-          compact={false}
-          columns={5}
-          title="Applications"
-          leftActions={
-            <button
-              onClick={() => {
-                setFormMode('add');
-                setShowForm(true);
-              }}
-              style={{
-                backgroundColor: '#FF7043',
-                color: 'white',
-                border: 'none',
-                padding: '8px 12px',
-                borderRadius: 8,
-                fontWeight: 700,
-                cursor: 'pointer',
-              }}
-            >
-              + Add Application
-            </button>
-          }
-          actions={
-            <span style={{ color: '#607D8B', fontSize: 13 }}>
-              or manage on the{' '}
-              <Link
-                href={withChrome('/seeker-dashboard')}
-                style={{ color: '#FF7043', fontWeight: 600 }}
+
+        <section style={{ ...WHITE_CARD, padding: 16, marginTop: 12 }}>
+          <ApplicationsBoard
+            key={JSON.stringify(tracker)}
+            stagesData={tracker}
+            compact={false}
+            columns={5}
+            title="Applications"
+            leftActions={
+              <button
+                onClick={() => {
+                  setFormMode('add');
+                  setShowForm(true);
+                }}
+                style={{
+                  backgroundColor: '#FF7043',
+                  color: 'white',
+                  border: 'none',
+                  padding: '8px 12px',
+                  borderRadius: 8,
+                  fontWeight: 700,
+                  cursor: 'pointer',
+                }}
               >
-                Dashboard
-              </Link>
-            </span>
-          }
-          onMove={(id, fromStage, toStage, pinnedId) =>
-            moveApplication(id, fromStage, toStage, pinnedId)
-          }
-          onDelete={deleteApplication}
-          onEdit={startEdit}
-          onView={onView}
-        />
+                + Add Application
+              </button>
+            }
+            actions={
+              <span style={{ color: '#607D8B', fontSize: 13 }}>
+                or manage on the{' '}
+                <Link
+                  href={withChrome('/seeker-dashboard')}
+                  style={{ color: '#FF7043', fontWeight: 600 }}
+                >
+                  Dashboard
+                </Link>
+              </span>
+            }
+            onMove={(id, fromStage, toStage, pinnedId) =>
+              moveApplication(id, fromStage, toStage, pinnedId)
+            }
+            onDelete={deleteApplication}
+            onEdit={startEdit}
+            onView={onView}
+          />
+        </section>
       </div>
+
       {showForm && (
         <ApplicationForm
           mode={formMode}
@@ -525,6 +538,7 @@ export default function SeekerApplicationsPage() {
           stages={STAGES}
         />
       )}
+
       {detailsOpen && details.job && (
         <ApplicationDetailsModal
           job={details.job}
