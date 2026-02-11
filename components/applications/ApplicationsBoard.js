@@ -125,7 +125,7 @@ export default function ApplicationsBoard({
   const gridTemplateColumns =
     columns === 'auto'
       ? 'repeat(auto-fit, minmax(220px, 1fr))'
-      : `repeat(${columns}, minmax(0, 1fr))`;
+      : `repeat(${columns}, minmax(240px, 1fr))`; // ✅ CHANGE (was minmax(0, 1fr))
 
   const activeMeta = useMemo(() => {
     if (!activeId) return { job: null, stage: null };
@@ -210,7 +210,7 @@ export default function ApplicationsBoard({
           style={{
             display: 'grid',
             gridTemplateColumns,
-            gap: compact ? 12 : 20,
+            gap: compact ? 12 : 16, // ✅ CHANGE (was 20)
             width: '100%',
           }}
         >
