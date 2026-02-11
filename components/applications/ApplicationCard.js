@@ -16,7 +16,7 @@ export default function ApplicationCard({
       style={{
         border: '1px solid #eee',
         borderRadius: '10px',
-        padding: '10px',
+        padding: '8px', // was 10px (more usable room inside columns)
         marginBottom: '10px',
         background: '#fafafa',
         display: 'flex',
@@ -37,7 +37,7 @@ export default function ApplicationCard({
           display: 'flex',
           justifyContent: 'center',
           alignItems: 'center',
-          gap: 10,
+          gap: 8, // was 10
           marginTop: 4,
         }}
       >
@@ -46,9 +46,9 @@ export default function ApplicationCard({
           {...dragListeners}
           style={{
             cursor: 'grab',
-            fontSize: 20,
+            fontSize: 18, // was 20
             color: '#FF7043',
-            padding: '0 4px',
+            padding: '0 2px', // was 0 4px
           }}
           title="Drag to move"
         >
@@ -60,8 +60,8 @@ export default function ApplicationCard({
             onClick={() => onView(job, stage)}
             title="View details"
             style={{
-              width: 32,
-              height: 32,
+              width: 30, // was 32
+              height: 30, // was 32
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
@@ -79,8 +79,8 @@ export default function ApplicationCard({
           onClick={() => onEdit(job, stage)}
           title="Edit"
           style={{
-            width: 32,
-            height: 32,
+            width: 30, // was 32
+            height: 30, // was 32
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
@@ -97,8 +97,8 @@ export default function ApplicationCard({
           onClick={() => onDelete(job, stage)}
           title="Delete"
           style={{
-            width: 32,
-            height: 32,
+            width: 30, // was 32
+            height: 30, // was 32
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',

@@ -1,3 +1,4 @@
+// components/applications/ApplicationsBoard.js
 import React, { useMemo, useState } from 'react';
 import ApplicationCard from './ApplicationCard';
 import { colorFor } from '@/components/seeker/dashboard/seekerColors';
@@ -106,7 +107,7 @@ export default function ApplicationsBoard({
     background: 'white',
     border: '1px solid #eee',
     borderRadius: 12,
-    padding: compact ? 12 : 16,
+    padding: compact ? 12 : 12, // was 16
     boxShadow: '0 2px 6px rgba(0,0,0,0.06)',
     width: '100%',
     boxSizing: 'border-box',
@@ -115,7 +116,7 @@ export default function ApplicationsBoard({
   const columnStyle = {
     background: 'white',
     borderRadius: 12,
-    padding: compact ? 8 : 16,
+    padding: compact ? 8 : 12, // was 16
     boxShadow: '0 2px 6px rgba(0,0,0,0.06)',
     minHeight: '300px',
     position: 'relative',
@@ -211,7 +212,7 @@ export default function ApplicationsBoard({
           style={{
             display: 'grid',
             gridTemplateColumns,
-            gap: compact ? 12 : 20,
+            gap: compact ? 12 : 12, // was 20 (more width per column without changing layout)
             width: '100%',
           }}
         >
@@ -224,12 +225,11 @@ export default function ApplicationsBoard({
               <div key={stage} style={columnStyle}>
                 <div
                   style={{
-                    // ✅ Changed from inline-flex + centered to flex space-between to avoid overflow
-                    display: 'flex',
+                    display: 'inline-flex',
                     alignItems: 'center',
-                    justifyContent: 'space-between',
+                    justifyContent: 'center',
                     gap: 8,
-                    padding: '6px 10px',
+                    padding: '6px 8px', // was 6px 10px
                     borderRadius: 999,
                     background: c.bg,
                     color: c.text,
@@ -237,19 +237,9 @@ export default function ApplicationsBoard({
                     marginBottom: compact ? 6 : 8,
                     fontWeight: 700,
                     width: '100%',
-                    minWidth: 0,
                   }}
                 >
-                  <span
-                    style={{
-                      whiteSpace: 'nowrap',
-                      overflow: 'hidden',
-                      textOverflow: 'ellipsis',
-                      minWidth: 0,
-                    }}
-                  >
-                    {stage}
-                  </span>
+                  <span style={{ whiteSpace: 'nowrap' }}>{stage}</span>
                   <span style={{ fontWeight: 900, whiteSpace: 'nowrap' }}>{items.length}</span>
                 </div>
 
