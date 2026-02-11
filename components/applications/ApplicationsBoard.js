@@ -122,10 +122,11 @@ export default function ApplicationsBoard({
     height: '100%',
   };
 
+  // ✅ Revert: do NOT force min widths (prevents pushing into right rail)
   const gridTemplateColumns =
     columns === 'auto'
       ? 'repeat(auto-fit, minmax(220px, 1fr))'
-      : `repeat(${columns}, minmax(240px, 1fr))`; // ✅ CHANGE (was minmax(0, 1fr))
+      : `repeat(${columns}, minmax(0, 1fr))`;
 
   const activeMeta = useMemo(() => {
     if (!activeId) return { job: null, stage: null };
@@ -210,7 +211,7 @@ export default function ApplicationsBoard({
           style={{
             display: 'grid',
             gridTemplateColumns,
-            gap: compact ? 12 : 16, // ✅ CHANGE (was 20)
+            gap: compact ? 12 : 20,
             width: '100%',
           }}
         >
@@ -223,9 +224,10 @@ export default function ApplicationsBoard({
               <div key={stage} style={columnStyle}>
                 <div
                   style={{
-                    display: 'inline-flex',
+                    // ✅ Changed from inline-flex + centered to flex space-between to avoid overflow
+                    display: 'flex',
                     alignItems: 'center',
-                    justifyContent: 'center',
+                    justifyContent: 'space-between',
                     gap: 8,
                     padding: '6px 10px',
                     borderRadius: 999,
@@ -235,10 +237,20 @@ export default function ApplicationsBoard({
                     marginBottom: compact ? 6 : 8,
                     fontWeight: 700,
                     width: '100%',
+                    minWidth: 0,
                   }}
                 >
-                  <span style={{ whiteSpace: 'nowrap' }}>{stage}</span>
-                  <span style={{ fontWeight: 900 }}>{items.length}</span>
+                  <span
+                    style={{
+                      whiteSpace: 'nowrap',
+                      overflow: 'hidden',
+                      textOverflow: 'ellipsis',
+                      minWidth: 0,
+                    }}
+                  >
+                    {stage}
+                  </span>
+                  <span style={{ fontWeight: 900, whiteSpace: 'nowrap' }}>{items.length}</span>
                 </div>
 
                 <DroppableColumn id={columnId}>
