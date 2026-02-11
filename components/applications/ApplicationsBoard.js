@@ -1,3 +1,4 @@
+// components/applications/ApplicationsBoard.js
 import React from 'react';
 import ApplicationCard from './ApplicationCard';
 import { colorFor } from '@/components/seeker/dashboard/seekerColors';
@@ -9,6 +10,7 @@ import {
   TouchSensor,
   useSensor,
   useSensors,
+  useDroppable,
 } from '@dnd-kit/core';
 import {
   SortableContext,
@@ -16,7 +18,6 @@ import {
   verticalListSortingStrategy,
   useSortable,
 } from '@dnd-kit/sortable';
-import { CSS } from '@dnd-kit/utilities';
 
 const STAGES = ['Pinned', 'Applied', 'Interviewing', 'Offers', 'Closed Out'];
 
@@ -30,16 +31,11 @@ const stageKey = (stage) =>
   }[stage] || 'info');
 
 function SortableCard({ job, stage, onView, onEdit, onDelete }) {
-  if (!job || !job.id) return null;  // Guard against undefined
+  if (!job || !job.id) return null; // Guard against undefined
 
-  const {
-    attributes,
-    listeners,
-    setNodeRef,
-    transform,
-    transition,
-    isDragging,
-  } = useSortable({ id: job.id });
+  const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
+    id: job.id,
+  });
 
   const style = {
     transform: transform ? `translate3d(${transform.x}px, ${transform.y}px, 0)` : undefined,
@@ -65,6 +61,15 @@ function SortableCard({ job, stage, onView, onEdit, onDelete }) {
   );
 }
 
+function DroppableColumn({ id, children }) {
+  const { setNodeRef } = useDroppable({ id });
+  return (
+    <div ref={setNodeRef} style={{ height: '100%' }}>
+      {children}
+    </div>
+  );
+}
+
 export default function ApplicationsBoard({
   stagesData = {
     Pinned: [],
@@ -85,15 +90,10 @@ export default function ApplicationsBoard({
 }) {
   const sensors = useSensors(
     useSensor(PointerSensor, {
-      activationConstraint: {
-        distance: 8,
-      },
+      activationConstraint: { distance: 8 },
     }),
     useSensor(TouchSensor, {
-      activationConstraint: {
-        delay: 200,
-        tolerance: 8,
-      },
+      activationConstraint: { delay: 200, tolerance: 8 },
     }),
     useSensor(KeyboardSensor, {
       coordinateGetter: sortableKeyboardCoordinates,
@@ -117,6 +117,7 @@ export default function ApplicationsBoard({
     boxShadow: '0 2px 6px rgba(0,0,0,0.06)',
     minHeight: '300px',
     position: 'relative',
+    height: '100%',
   };
 
   const gridTemplateColumns =
@@ -131,9 +132,11 @@ export default function ApplicationsBoard({
     const activeStage = STAGES.find((s) => stagesData[s]?.some((j) => j?.id === active.id));
     if (!activeStage) return;
 
+    // If dropped on a droppable column, over.id will be `${stage}-column`
     let overIdStr = String(over.id);
-    let overStage = STAGES.find((s) => overIdStr.startsWith(`${s}-column`));
+    let overStage = STAGES.find((s) => overIdStr === `${s}-column`);
 
+    // If dropped on a card, infer stage by card id
     if (!overStage) {
       overStage = STAGES.find((s) => stagesData[s]?.some((j) => j?.id === over.id));
     }
@@ -178,16 +181,10 @@ export default function ApplicationsBoard({
           </h2>
           {leftActions}
         </div>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-          {actions}
-        </div>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>{actions}</div>
       </div>
 
-      <DndContext
-        sensors={sensors}
-        collisionDetection={closestCorners}
-        onDragEnd={handleDragEnd}
-      >
+      <DndContext sensors={sensors} collisionDetection={closestCorners} onDragEnd={handleDragEnd}>
         <div
           style={{
             display: 'grid',
@@ -198,11 +195,11 @@ export default function ApplicationsBoard({
         >
           {STAGES.map((stage) => {
             const c = colorFor(stageKey(stage));
-            const items = (stagesData[stage] || []).filter(Boolean); // Remove undefined
+            const items = (stagesData[stage] || []).filter(Boolean);
             const columnId = `${stage}-column`;
 
             return (
-              <div key={stage} style={columnStyle} id={columnId}>
+              <div key={stage} style={columnStyle}>
                 <div
                   style={{
                     display: 'inline-flex',
@@ -223,34 +220,33 @@ export default function ApplicationsBoard({
                   <span style={{ fontWeight: 900 }}>{items.length}</span>
                 </div>
 
-                {items.length > 0 ? (
-                  <SortableContext
-                    items={items.map((j) => j.id)}
-                    strategy={verticalListSortingStrategy}
-                  >
-                    {items.map((job) => (
-                      <SortableCard
-                        key={job.id}
-                        job={job}
-                        stage={stage}
-                        onView={onView}
-                        onEdit={onEdit}
-                        onDelete={onDelete}
-                      />
-                    ))}
-                  </SortableContext>
-                ) : (
-                  <div
-                    style={{
-                      color: '#90A4AE',
-                      fontSize: compact ? 12 : 14,
-                      textAlign: 'center',
-                      padding: '80px 0',
-                    }}
-                  >
-                    No items. Drop here.
-                  </div>
-                )}
+                <DroppableColumn id={columnId}>
+                  {items.length > 0 ? (
+                    <SortableContext items={items.map((j) => j.id)} strategy={verticalListSortingStrategy}>
+                      {items.map((job) => (
+                        <SortableCard
+                          key={job.id}
+                          job={job}
+                          stage={stage}
+                          onView={onView}
+                          onEdit={onEdit}
+                          onDelete={onDelete}
+                        />
+                      ))}
+                    </SortableContext>
+                  ) : (
+                    <div
+                      style={{
+                        color: '#90A4AE',
+                        fontSize: compact ? 12 : 14,
+                        textAlign: 'center',
+                        padding: '80px 0',
+                      }}
+                    >
+                      No items. Drop here.
+                    </div>
+                  )}
+                </DroppableColumn>
               </div>
             );
           })}

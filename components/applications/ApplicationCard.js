@@ -30,9 +30,7 @@ export default function ApplicationCard({
         {job.company}
         {job.location ? ` • ${job.location}` : ''}
       </div>
-      <div style={{ fontSize: 12, color: '#607D8B' }}>
-        Added: {job.dateAdded}
-      </div>
+      <div style={{ fontSize: 12, color: '#607D8B' }}>Added: {job.dateAdded}</div>
 
       <div
         style={{
@@ -43,7 +41,6 @@ export default function ApplicationCard({
           marginTop: 4,
         }}
       >
-        {/* Clear drag grip */}
         <div
           {...dragAttributes}
           {...dragListeners}
@@ -97,7 +94,7 @@ export default function ApplicationCard({
         </button>
 
         <button
-          onClick={() => onDelete(job.id, stage)}   // ✅ FIX: pass id, not object
+          onClick={() => onDelete(job, stage)}
           title="Delete"
           style={{
             width: 32,
