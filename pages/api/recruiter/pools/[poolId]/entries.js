@@ -96,6 +96,12 @@ function pickCandidateShape(e) {
 
     candidateUserId: e.candidateUserId || null,
 
+    // ✅ NEW: external linkage + surfaced identity fields (read-only)
+    externalCandidateId: e.externalCandidateId || null,
+    externalEmail: e.externalCandidate?.email || "",
+    externalPhone: e.externalCandidate?.phone || "",
+    externalLinkedinUrl: e.externalCandidate?.linkedinUrl || "",
+
     name: e.candidateName || "",
     headline: e.candidateHeadline || "",
     location: e.candidateLocation || "",
@@ -176,6 +182,17 @@ export default async function handler(req, res) {
           accountKey: true,
           candidateUserId: true,
 
+          // ✅ NEW
+          externalCandidateId: true,
+          externalCandidate: {
+            select: {
+              id: true,
+              email: true,
+              phone: true,
+              linkedinUrl: true,
+            },
+          },
+
           candidateName: true,
           candidateHeadline: true,
           candidateLocation: true,
@@ -212,6 +229,10 @@ export default async function handler(req, res) {
       const candidateUserIdRaw = body.candidateUserId ? String(body.candidateUserId).trim() : "";
       const candidateUserId = candidateUserIdRaw || null;
 
+      // ✅ NEW: optional external candidate linkage or creation
+      const externalCandidateIdRaw = body.externalCandidateId ? String(body.externalCandidateId).trim() : "";
+      let externalCandidateId = externalCandidateIdRaw || null;
+
       const candidateName = String(body.name || "").trim();
       const candidateHeadline = String(body.headline || "").trim();
       const candidateLocation = String(body.location || "").trim();
@@ -239,12 +260,56 @@ export default async function handler(req, res) {
         if (!u?.id) return res.status(400).json({ error: "candidateUserId not found" });
       }
 
+      // ✅ NEW: if externalCandidateId provided, ensure it exists + belongs to org
+      if (externalCandidateId) {
+        const ex = await prisma.externalCandidate.findFirst({
+          where: { id: externalCandidateId, accountKey },
+          select: { id: true },
+        });
+        if (!ex?.id) return res.status(400).json({ error: "externalCandidateId not found for this org" });
+      }
+
+      // ✅ NEW: allow creation of external candidate if provided as object
+      // body.externalCandidate = { email?, phone?, linkedinUrl?, company?, title? ... }
+      if (!candidateUserId && !externalCandidateId && body.externalCandidate && typeof body.externalCandidate === "object") {
+        const exObj = body.externalCandidate;
+
+        const exEmail = exObj.email != null ? String(exObj.email || "").trim() : "";
+        const exPhone = exObj.phone != null ? String(exObj.phone || "").trim() : "";
+        const exLinkedinUrl = exObj.linkedinUrl != null ? String(exObj.linkedinUrl || "").trim() : "";
+        const exCompany = exObj.company != null ? String(exObj.company || "").trim() : "";
+        const exTitle = exObj.title != null ? String(exObj.title || "").trim() : "";
+        const exNotes = exObj.notes != null ? String(exObj.notes || "").trim() : "";
+
+        const createdExternal = await prisma.externalCandidate.create({
+          data: {
+            accountKey,
+            createdByUserId: recruiter.id,
+            name: candidateName,
+            email: exEmail || null,
+            phone: exPhone || null,
+            linkedinUrl: exLinkedinUrl || null,
+            company: exCompany || null,
+            title: exTitle || null,
+            location: candidateLocation || null,
+            headline: candidateHeadline || null,
+            notes: exNotes || null,
+          },
+          select: { id: true },
+        });
+
+        externalCandidateId = createdExternal?.id || null;
+      }
+
       const created = await prisma.talentPoolEntry.create({
         data: {
           accountKey,
           poolId,
 
           candidateUserId,
+
+          // ✅ NEW
+          externalCandidateId: externalCandidateId || null,
 
           candidateName,
           candidateHeadline: candidateHeadline || null,
@@ -268,6 +333,17 @@ export default async function handler(req, res) {
           poolId: true,
           accountKey: true,
           candidateUserId: true,
+
+          // ✅ NEW
+          externalCandidateId: true,
+          externalCandidate: {
+            select: {
+              id: true,
+              email: true,
+              phone: true,
+              linkedinUrl: true,
+            },
+          },
 
           candidateName: true,
           candidateHeadline: true,
@@ -326,8 +402,13 @@ export default async function handler(req, res) {
               : [])
           : null;
 
+      // ✅ IMPORTANT: candidateName is required in Prisma, so do not allow blank->null
+      if (candidateName !== null && !candidateName) {
+        return res.status(400).json({ error: "Candidate name cannot be blank." });
+      }
+
       const data = {
-        ...(candidateName !== null ? { candidateName: candidateName || null } : {}),
+        ...(candidateName !== null ? { candidateName } : {}),
         ...(candidateHeadline !== null ? { candidateHeadline: candidateHeadline || null } : {}),
         ...(candidateLocation !== null ? { candidateLocation: candidateLocation || null } : {}),
 
@@ -346,6 +427,17 @@ export default async function handler(req, res) {
           poolId: true,
           accountKey: true,
           candidateUserId: true,
+
+          // ✅ NEW
+          externalCandidateId: true,
+          externalCandidate: {
+            select: {
+              id: true,
+              email: true,
+              phone: true,
+              linkedinUrl: true,
+            },
+          },
 
           candidateName: true,
           candidateHeadline: true,

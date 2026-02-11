@@ -53,6 +53,8 @@ export default function CandidateDetailModal({
 
   const lastUpdated = e?.updatedAt || e?.lastTouch || null;
 
+  const externalEmail = String(e?.externalEmail || "").trim();
+
   // ✅ initialize drafts when modal opens / entry changes
   useEffect(() => {
     if (!open) return;
@@ -70,7 +72,7 @@ export default function CandidateDetailModal({
     setLocalError("");
     if (!canOpen) {
       setLocalError(
-        "This pool entry is missing an internal candidate ID, so ForgeTomorrow cannot open Candidate Center for this candidate yet."
+        "This is an external candidate. Full profile view is available for internal candidates only (for now)."
       );
       return;
     }
@@ -84,7 +86,7 @@ export default function CandidateDetailModal({
   function handleMessage() {
     setLocalError("");
     if (!canOpen) {
-      setLocalError("Messaging is available for internal candidates only (this entry has no internal candidate ID).");
+      setLocalError("This is an external candidate. Messaging is available for internal candidates only (for now).");
       return;
     }
     if (typeof onMessage === "function") onMessage();
@@ -161,6 +163,13 @@ export default function CandidateDetailModal({
             {e?.location ? (
               <div style={{ color: "#90A4AE", fontSize: 12, marginTop: 6, fontWeight: 800 }}>
                 {e.location}
+              </div>
+            ) : null}
+
+            {/* ✅ NEW: external email shown when present */}
+            {externalEmail ? (
+              <div style={{ color: "#607D8B", fontSize: 12, marginTop: 6, fontWeight: 900 }}>
+                Email: <span style={{ fontWeight: 800 }}>{externalEmail}</span>
               </div>
             ) : null}
           </div>
@@ -347,11 +356,11 @@ export default function CandidateDetailModal({
           ) : null}
 
           <div style={{ display: "flex", gap: 10, flexWrap: "wrap", marginTop: 6 }}>
-            <PrimaryButton onClick={handleMessage} disabled={saving}>
+            <PrimaryButton onClick={handleMessage} disabled={saving || !canOpen}>
               Message
             </PrimaryButton>
 
-            <SecondaryButton onClick={handleOpenFullProfile} disabled={saving}>
+            <SecondaryButton onClick={handleOpenFullProfile} disabled={saving || !canOpen}>
               Open full profile
             </SecondaryButton>
 

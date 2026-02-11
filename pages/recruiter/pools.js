@@ -483,6 +483,9 @@ export default function RecruiterPools() {
 
   const middleCompact = activePane === "pools";
 
+  const canMessageSelected = Boolean(String(selectedEntry?.candidateUserId || "").trim());
+  const canOpenSelected = Boolean(String(selectedEntry?.candidateUserId || "").trim());
+
   return (
     <RecruiterLayout
       title="ForgeTomorrow — Talent Pools"
@@ -751,6 +754,22 @@ export default function RecruiterPools() {
                       {selectedEntry.status || "Warm"}
                     </Pill>
                   </div>
+
+                  {/* ✅ NEW: show external email when available */}
+                  {String(selectedEntry.externalEmail || "").trim() ? (
+                    <div
+                      style={{
+                        color: "#607D8B",
+                        fontSize: 12,
+                        fontWeight: 800,
+                        overflow: "hidden",
+                        textOverflow: "ellipsis",
+                        whiteSpace: "nowrap",
+                      }}
+                    >
+                      Email: <span style={{ fontWeight: 900 }}>{selectedEntry.externalEmail}</span>
+                    </div>
+                  ) : null}
                 </div>
 
                 <div
@@ -834,14 +853,14 @@ export default function RecruiterPools() {
                 <div style={{ display: "flex", gap: 10, flexWrap: "wrap", marginTop: 4 }}>
                   <PrimaryButton
                     onClick={() => messageCandidate(selectedEntry)}
-                    disabled={saving}
+                    disabled={saving || !canMessageSelected}
                   >
                     Message
                   </PrimaryButton>
 
                   <SecondaryButton
                     onClick={() => openFullProfileFromModal(selectedEntry)}
-                    disabled={saving}
+                    disabled={saving || !canOpenSelected}
                   >
                     View Full Details
                   </SecondaryButton>

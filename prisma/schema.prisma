@@ -809,6 +809,9 @@ model Organization {
   // ✅ NEW: Talent Pools (org-scoped via accountKey)
   talentPools TalentPool[] @relation("OrganizationTalentPools")
 
+  // ✅ NEW: External candidates (org-scoped via accountKey)
+  externalCandidates ExternalCandidate[] @relation("OrganizationExternalCandidates")
+
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
@@ -941,6 +944,9 @@ model User {
 
   ownedOrganizations Organization[] @relation("OrganizationOwner")
 
+  // ✅ NEW: external candidates created by this user (audit/ownership)
+  externalCandidatesCreated ExternalCandidate[] @relation("UserExternalCandidatesCreated")
+
   profileViewsReceived ProfileView[] @relation("ProfileViewTarget")
   profileViewsMade     ProfileView[] @relation("ProfileViewViewer")
 
@@ -978,7 +984,7 @@ model User {
   recruiterCandidatesAsUser RecruiterCandidate[] @relation("RecruiterCandidateCandidate")
 
   // ✅ NEW: Talent Pools created by this user (org-scoped)
-  createdTalentPools TalentPool[] @relation("UserCreatedTalentPools")
+  createdTalentPools           TalentPool[]      @relation("UserCreatedTalentPools")
   talentPoolEntriesAsCandidate TalentPoolEntry[] @relation("TalentPoolEntryCandidate")
 
   messages                 Message[]                 @relation("UserMessages")
@@ -1102,6 +1108,46 @@ model RecruiterCandidate {
 }
 
 // ============================================================================
+//  EXTERNAL CANDIDATES (Org-scoped, recruiter-saved off-platform people)
+// ============================================================================
+
+model ExternalCandidate {
+  id String @id @default(cuid())
+
+  // Org scoping
+  accountKey   String
+  organization Organization? @relation("OrganizationExternalCandidates", fields: [accountKey], references: [accountKey], onDelete: Cascade)
+
+  // audit/ownership (optional)
+  createdByUserId String?
+  createdBy       User?   @relation("UserExternalCandidatesCreated", fields: [createdByUserId], references: [id], onDelete: SetNull)
+
+  // identity
+  name        String
+  email       String?
+  phone       String?
+  linkedinUrl String?
+
+  // optional professional context
+  company  String?
+  title    String?
+  location String?
+  headline String?
+
+  notes String?
+
+  // back-relation: used by TalentPoolEntry
+  poolEntries TalentPoolEntry[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([accountKey])
+  @@index([createdByUserId])
+  @@map("external_candidates")
+}
+
+// ============================================================================
 //  TALENT POOLS (DB-first, org-scoped like recruiter_candidates)
 // ============================================================================
 
@@ -1120,7 +1166,7 @@ model TalentPool {
 
   // Created by recruiter user (for auditing + ownership trace)
   createdByUserId String?
-  createdBy       User? @relation("UserCreatedTalentPools", fields: [createdByUserId], references: [id], onDelete: SetNull)
+  createdBy       User?   @relation("UserCreatedTalentPools", fields: [createdByUserId], references: [id], onDelete: SetNull)
 
   entries TalentPoolEntry[]
 
@@ -1144,7 +1190,11 @@ model TalentPoolEntry {
 
   // If candidate is a Forge user (internal), link it. Otherwise store snapshot fields.
   candidateUserId String?
-  candidate       User? @relation("TalentPoolEntryCandidate", fields: [candidateUserId], references: [id], onDelete: SetNull)
+  candidate       User?   @relation("TalentPoolEntryCandidate", fields: [candidateUserId], references: [id], onDelete: SetNull)
+
+  // ✅ NEW: link to an org-scoped external candidate record (off-platform)
+  externalCandidateId String?
+  externalCandidate   ExternalCandidate? @relation(fields: [externalCandidateId], references: [id], onDelete: SetNull)
 
   candidateName     String
   candidateHeadline String?
@@ -1175,9 +1225,9 @@ model TalentPoolEntry {
   @@index([poolId])
   @@index([accountKey])
   @@index([candidateUserId])
+  @@index([externalCandidateId])
   @@map("talent_pool_entries")
 }
-
 
 // ============================================================================
 //  RECRUITER CANDIDATE AUTOMATION (KEEP ONLY THIS ONE)
