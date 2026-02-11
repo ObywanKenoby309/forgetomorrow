@@ -296,6 +296,83 @@ export default async function handler(req, res) {
     }
   }
 
+  // ✅ NEW: PATCH for editing a pool entry (Edit modal -> Save)
+  if (req.method === "PATCH") {
+    try {
+      const body = req.body && typeof req.body === "object" ? req.body : {};
+      const entryId = String(body.entryId || "").trim();
+      if (!entryId) return res.status(400).json({ error: "Missing entryId" });
+
+      const existing = await prisma.talentPoolEntry.findFirst({
+        where: { id: entryId, accountKey, poolId },
+        select: { id: true },
+      });
+      if (!existing?.id) return res.status(404).json({ error: "Entry not found" });
+
+      // Minimal editable fields
+      const candidateName = body.name != null ? String(body.name || "").trim() : null;
+      const candidateHeadline = body.headline != null ? String(body.headline || "").trim() : null;
+      const candidateLocation = body.location != null ? String(body.location || "").trim() : null;
+
+      const status = body.status != null ? String(body.status || "").trim() : null;
+      const fit = body.fit != null ? String(body.fit || "").trim() : null;
+      const lastRoleConsidered = body.lastRoleConsidered != null ? String(body.lastRoleConsidered || "").trim() : null;
+      const notes = body.notes != null ? String(body.notes || "").trim() : null;
+
+      const reasons =
+        body.reasons != null
+          ? (Array.isArray(body.reasons)
+              ? body.reasons.map((r) => String(r || "").trim()).filter(Boolean)
+              : [])
+          : null;
+
+      const data = {
+        ...(candidateName !== null ? { candidateName: candidateName || null } : {}),
+        ...(candidateHeadline !== null ? { candidateHeadline: candidateHeadline || null } : {}),
+        ...(candidateLocation !== null ? { candidateLocation: candidateLocation || null } : {}),
+
+        ...(status !== null ? { status: status || null } : {}),
+        ...(fit !== null ? { fit: fit || null } : {}),
+        ...(lastRoleConsidered !== null ? { lastRoleConsidered: lastRoleConsidered || null } : {}),
+        ...(notes !== null ? { notes: notes || null } : {}),
+        ...(reasons !== null ? { reasons: reasons.length ? reasons : null } : {}),
+      };
+
+      const updated = await prisma.talentPoolEntry.update({
+        where: { id: entryId },
+        data,
+        select: {
+          id: true,
+          poolId: true,
+          accountKey: true,
+          candidateUserId: true,
+
+          candidateName: true,
+          candidateHeadline: true,
+          candidateLocation: true,
+
+          source: true,
+          status: true,
+          fit: true,
+          lastTouchAt: true,
+
+          lastRoleConsidered: true,
+
+          reasons: true,
+          notes: true,
+
+          createdAt: true,
+          updatedAt: true,
+        },
+      });
+
+      return res.status(200).json({ entry: pickCandidateShape(updated) });
+    } catch (err) {
+      console.error("[recruiter/pools/entries] PATCH error:", err);
+      return res.status(500).json({ error: "Failed to update entry.", details: devDetails(req, err) });
+    }
+  }
+
   if (req.method === "DELETE") {
     try {
       const entryId = String(req.query.entryId || "").trim();
@@ -315,6 +392,6 @@ export default async function handler(req, res) {
     }
   }
 
-  res.setHeader("Allow", ["GET", "POST", "DELETE"]);
+  res.setHeader("Allow", ["GET", "POST", "PATCH", "DELETE"]);
   return res.status(405).json({ error: "Method not allowed" });
 }

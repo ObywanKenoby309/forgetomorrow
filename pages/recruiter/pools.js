@@ -76,7 +76,7 @@ export default function RecruiterPools() {
   const [pickerLastRoleConsidered, setPickerLastRoleConsidered] = useState("");
   const [pickerNotes, setPickerNotes] = useState("");
 
-  // Candidate modal (no navigation for View)
+  // Candidate modal (Edit)
   const [showCandidateModal, setShowCandidateModal] = useState(false);
   const [modalEntry, setModalEntry] = useState(null);
 
@@ -422,7 +422,7 @@ export default function RecruiterPools() {
     await startConversationFromPools(entry);
   }
 
-  function viewCandidate(entry) {
+  function openEdit(entry) {
     const e = entry && typeof entry === "object" ? entry : null;
     setModalEntry(e);
     setShowCandidateModal(true);
@@ -442,6 +442,38 @@ export default function RecruiterPools() {
     router.push(
       `/recruiter/candidates?candidateId=${encodeURIComponent(candidateUserId)}`
     );
+  }
+
+  async function savePoolEntryEdits(payload) {
+    const poolId = String(selectedPoolId || "").trim();
+    if (!poolId) return;
+
+    setSaving(true);
+    setError("");
+    try {
+      const res = await fetch(
+        `/api/recruiter/pools/${encodeURIComponent(poolId)}/entries`,
+        {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(payload),
+        }
+      );
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(data?.error || "Failed to update entry.");
+
+      const updated = data?.entry || null;
+      if (updated?.id) {
+        setEntries((prev) => prev.map((x) => (x.id === updated.id ? updated : x)));
+      }
+
+      setShowCandidateModal(false);
+      setModalEntry(null);
+    } catch (e) {
+      setError(String(e?.message || e || "Failed to update entry."));
+    } finally {
+      setSaving(false);
+    }
   }
 
   const focusedColumns =
@@ -573,6 +605,8 @@ export default function RecruiterPools() {
           }}
           entry={modalEntry}
           saving={saving}
+          editable={true}
+          onSave={savePoolEntryEdits}
           onMessage={() => messageCandidate(modalEntry)}
           onRemove={() => {
             const id = String(modalEntry?.id || "").trim();
@@ -643,13 +677,7 @@ export default function RecruiterPools() {
             }}
           >
             {!selectedEntry ? (
-              <div
-                style={{
-                  color: "#607D8B",
-                  fontSize: 13,
-                  lineHeight: 1.45,
-                }}
-              >
+              <div style={{ color: "#607D8B", fontSize: 13, lineHeight: 1.45 }}>
                 Select a candidate to take action.
               </div>
             ) : (
@@ -658,14 +686,8 @@ export default function RecruiterPools() {
                   At a glance...
                 </div>
 
-                <div
-                  style={{
-                    display: "flex",
-                    alignItems: "flex-start",
-                    justifyContent: "space-between",
-                    gap: 10,
-                  }}
-                >
+                {/* ✅ CHANGED: pills moved UNDER name/headline so they never get clipped */}
+                <div style={{ display: "grid", gap: 8 }}>
                   <div style={{ minWidth: 0 }}>
                     <div
                       style={{
@@ -696,21 +718,19 @@ export default function RecruiterPools() {
                     ) : null}
                   </div>
 
-                  {/* ✅ FIX: make pills block non-shrinking so it doesn't disappear */}
                   <div
                     style={{
                       display: "flex",
                       gap: 8,
-                      flexWrap: "nowrap",
-                      justifyContent: "flex-end",
+                      flexWrap: "wrap",
                       alignItems: "center",
-                      flexShrink: 0,
-                      width: "max-content",
+                      maxWidth: "100%",
                     }}
                   >
                     <Pill
                       tone={
-                        String(selectedEntry.source || "").toLowerCase() === "internal"
+                        String(selectedEntry.source || "").toLowerCase() ===
+                        "internal"
                           ? "internal"
                           : "external"
                       }
@@ -719,9 +739,11 @@ export default function RecruiterPools() {
                     </Pill>
                     <Pill
                       tone={
-                        String(selectedEntry.status || "").toLowerCase() === "hot"
+                        String(selectedEntry.status || "").toLowerCase() ===
+                        "hot"
                           ? "hot"
-                          : String(selectedEntry.status || "").toLowerCase() === "warm"
+                          : String(selectedEntry.status || "").toLowerCase() ===
+                            "warm"
                           ? "warm"
                           : "hold"
                       }
@@ -739,25 +761,13 @@ export default function RecruiterPools() {
                     flexWrap: "wrap",
                   }}
                 >
-                  <div
-                    style={{
-                      color: "#37474F",
-                      fontSize: 12,
-                      fontWeight: 900,
-                    }}
-                  >
+                  <div style={{ color: "#37474F", fontSize: 12, fontWeight: 900 }}>
                     Fit:{" "}
                     <span style={{ color: "#607D8B", fontWeight: 800 }}>
                       {selectedEntry.fit || "-"}
                     </span>
                   </div>
-                  <div
-                    style={{
-                      color: "#90A4AE",
-                      fontSize: 12,
-                      fontWeight: 900,
-                    }}
-                  >
+                  <div style={{ color: "#90A4AE", fontSize: 12, fontWeight: 900 }}>
                     Last updated:{" "}
                     <span style={{ fontWeight: 800 }}>
                       {fmtShortDate(
@@ -786,47 +796,22 @@ export default function RecruiterPools() {
                 ) : null}
 
                 <div style={{ display: "grid", gap: 6 }}>
-                  <div
-                    style={{
-                      fontWeight: 900,
-                      color: "#37474F",
-                      fontSize: 12,
-                    }}
-                  >
+                  <div style={{ fontWeight: 900, color: "#37474F", fontSize: 12 }}>
                     Why saved
                   </div>
-                  {Array.isArray(selectedEntry.reasons) &&
-                  selectedEntry.reasons.length ? (
-                    <div
-                      style={{
-                        color: "#546E7A",
-                        fontSize: 12,
-                        lineHeight: 1.45,
-                      }}
-                    >
+                  {Array.isArray(selectedEntry.reasons) && selectedEntry.reasons.length ? (
+                    <div style={{ color: "#546E7A", fontSize: 12, lineHeight: 1.45 }}>
                       {selectedEntry.reasons[0]}
                     </div>
                   ) : (
-                    <div
-                      style={{
-                        color: "#90A4AE",
-                        fontSize: 12,
-                        lineHeight: 1.35,
-                      }}
-                    >
+                    <div style={{ color: "#90A4AE", fontSize: 12, lineHeight: 1.35 }}>
                       No snapshot yet.
                     </div>
                   )}
                 </div>
 
                 <div style={{ display: "grid", gap: 6 }}>
-                  <div
-                    style={{
-                      fontWeight: 900,
-                      color: "#37474F",
-                      fontSize: 12,
-                    }}
-                  >
+                  <div style={{ fontWeight: 900, color: "#37474F", fontSize: 12 }}>
                     Notes
                   </div>
                   <div
@@ -846,14 +831,7 @@ export default function RecruiterPools() {
                   </div>
                 </div>
 
-                <div
-                  style={{
-                    display: "flex",
-                    gap: 10,
-                    flexWrap: "wrap",
-                    marginTop: 4,
-                  }}
-                >
+                <div style={{ display: "flex", gap: 10, flexWrap: "wrap", marginTop: 4 }}>
                   <PrimaryButton
                     onClick={() => messageCandidate(selectedEntry)}
                     disabled={saving}
@@ -868,11 +846,8 @@ export default function RecruiterPools() {
                     View Full Details
                   </SecondaryButton>
 
-                  {/* ✅ FIX: Edit opens modal (does NOT delete) */}
-                  <TextButton
-                    onClick={() => viewCandidate(selectedEntry)}
-                    disabled={saving}
-                  >
+                  {/* ✅ CHANGED: Edit now opens edit modal (no deletion) */}
+                  <TextButton onClick={() => openEdit(selectedEntry)} disabled={saving}>
                     Edit
                   </TextButton>
                 </div>
