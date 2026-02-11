@@ -1,5 +1,4 @@
-// components/applications/ApplicationsBoard.js
-import React from 'react';
+import React, { useMemo, useState } from 'react';
 import ApplicationCard from './ApplicationCard';
 import { colorFor } from '@/components/seeker/dashboard/seekerColors';
 import {
@@ -11,6 +10,7 @@ import {
   useSensor,
   useSensors,
   useDroppable,
+  DragOverlay,
 } from '@dnd-kit/core';
 import {
   SortableContext,
@@ -40,9 +40,9 @@ function SortableCard({ job, stage, onView, onEdit, onDelete }) {
   const style = {
     transform: transform ? `translate3d(${transform.x}px, ${transform.y}px, 0)` : undefined,
     transition,
-    opacity: isDragging ? 0.8 : 1,
-    zIndex: isDragging ? 1000 : 1,
-    boxShadow: isDragging ? '0 10px 20px rgba(0,0,0,0.2)' : 'none',
+    // With DragOverlay, hide the original while dragging so it doesn't "snap back" visually.
+    opacity: isDragging ? 0 : 1,
+    zIndex: isDragging ? 1 : 1,
     position: 'relative',
   };
 
@@ -88,6 +88,8 @@ export default function ApplicationsBoard({
   actions = null,
   leftActions = null,
 }) {
+  const [activeId, setActiveId] = useState(null);
+
   const sensors = useSensors(
     useSensor(PointerSensor, {
       activationConstraint: { distance: 8 },
@@ -125,8 +127,18 @@ export default function ApplicationsBoard({
       ? 'repeat(auto-fit, minmax(220px, 1fr))'
       : `repeat(${columns}, minmax(0, 1fr))`;
 
+  const activeMeta = useMemo(() => {
+    if (!activeId) return { job: null, stage: null };
+    const stage = STAGES.find((s) => stagesData[s]?.some((j) => j?.id === activeId));
+    if (!stage) return { job: null, stage: null };
+    const job = stagesData[stage].find((j) => j?.id === activeId) || null;
+    return { job, stage };
+  }, [activeId, stagesData]);
+
   const handleDragEnd = (event) => {
     const { active, over } = event;
+
+    // If dropped outside any droppable, do nothing -> it will return to original spot
     if (!over) return;
 
     const activeStage = STAGES.find((s) => stagesData[s]?.some((j) => j?.id === active.id));
@@ -184,7 +196,16 @@ export default function ApplicationsBoard({
         <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>{actions}</div>
       </div>
 
-      <DndContext sensors={sensors} collisionDetection={closestCorners} onDragEnd={handleDragEnd}>
+      <DndContext
+        sensors={sensors}
+        collisionDetection={closestCorners}
+        onDragStart={({ active }) => setActiveId(active?.id ?? null)}
+        onDragCancel={() => setActiveId(null)}
+        onDragEnd={(event) => {
+          handleDragEnd(event);
+          setActiveId(null);
+        }}
+      >
         <div
           style={{
             display: 'grid',
@@ -222,7 +243,10 @@ export default function ApplicationsBoard({
 
                 <DroppableColumn id={columnId}>
                   {items.length > 0 ? (
-                    <SortableContext items={items.map((j) => j.id)} strategy={verticalListSortingStrategy}>
+                    <SortableContext
+                      items={items.map((j) => j.id)}
+                      strategy={verticalListSortingStrategy}
+                    >
                       {items.map((job) => (
                         <SortableCard
                           key={job.id}
@@ -251,6 +275,20 @@ export default function ApplicationsBoard({
             );
           })}
         </div>
+
+        <DragOverlay>
+          {activeMeta.job ? (
+            <div style={{ pointerEvents: 'none' }}>
+              <ApplicationCard
+                job={activeMeta.job}
+                stage={activeMeta.stage}
+                onView={onView}
+                onEdit={onEdit}
+                onDelete={onDelete}
+              />
+            </div>
+          ) : null}
+        </DragOverlay>
       </DndContext>
     </section>
   );
