@@ -35,6 +35,9 @@ export default function AddCandidatesPicker({
   const [extSaving, setExtSaving] = useState(false);
   const [extError, setExtError] = useState("");
 
+  // ✅ NEW: which pane is primary (left vs right)
+  const [activePane, setActivePane] = useState("left"); // "left" | "right"
+
   // ✅ NEW: External candidate form fields
   const [extName, setExtName] = useState("");
   const [extEmail, setExtEmail] = useState("");
@@ -44,20 +47,6 @@ export default function AddCandidatesPicker({
   const [extTitle, setExtTitle] = useState("");
   const [extLocation, setExtLocation] = useState("");
   const [extHeadline, setExtHeadline] = useState("");
-
-  // ✅ IMPORTANT: do NOT reuse full panelStyle in inner columns (it may contain position/width).
-  // Only take safe “surface” styling so grid panels don’t overlap.
-  const panelSurfaceStyle = useMemo(() => {
-    const ps = panelStyle && typeof panelStyle === "object" ? panelStyle : {};
-    return {
-      background: ps.background,
-      border: ps.border,
-      borderRadius: ps.borderRadius,
-      boxShadow: ps.boxShadow,
-      backdropFilter: ps.backdropFilter,
-      WebkitBackdropFilter: ps.WebkitBackdropFilter,
-    };
-  }, [panelStyle]);
 
   const canSubmitExternal = useMemo(() => {
     const n = String(extName || "").trim();
@@ -153,6 +142,54 @@ export default function AddCandidatesPicker({
     }
   }
 
+  // ✅ NEW: responsive + expandable layout (left primary vs right primary)
+  const gridStyle = useMemo(() => {
+    const rightCondensed = 340;
+    const rightExpanded = 520;
+
+    if (activePane === "right") {
+      return {
+        display: "grid",
+        gap: 12,
+        alignItems: "start",
+        gridTemplateColumns: `minmax(0, ${rightCondensed}px) minmax(0, 1fr)`,
+      };
+    }
+
+    return {
+      display: "grid",
+      gap: 12,
+      alignItems: "start",
+      gridTemplateColumns: `minmax(0, 1fr) minmax(0, ${rightCondensed}px)`,
+    };
+  }, [activePane]);
+
+  const leftPanelStyle = useMemo(() => {
+    const isActive = activePane === "left";
+    return {
+      ...panelStyle,
+      padding: 12,
+      minWidth: 0,
+      width: "100%",
+      border: isActive ? "1px solid rgba(255,112,67,0.55)" : (panelStyle?.border || "1px solid rgba(38,50,56,0.12)"),
+      boxShadow: isActive ? "0 10px 24px rgba(255,112,67,0.10)" : panelStyle?.boxShadow,
+      cursor: "pointer",
+    };
+  }, [panelStyle, activePane]);
+
+  const rightPanelStyle = useMemo(() => {
+    const isActive = activePane === "right";
+    return {
+      ...panelStyle,
+      padding: 12,
+      minWidth: 0,
+      width: "100%",
+      border: isActive ? "1px solid rgba(255,112,67,0.55)" : (panelStyle?.border || "1px solid rgba(38,50,56,0.12)"),
+      boxShadow: isActive ? "0 10px 24px rgba(255,112,67,0.10)" : panelStyle?.boxShadow,
+      cursor: "pointer",
+    };
+  }, [panelStyle, activePane]);
+
   return (
     <div style={{ ...panelStyle, padding: 12, marginBottom: 12 }}>
       <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: 10 }}>
@@ -174,6 +211,7 @@ export default function AddCandidatesPicker({
               onClick={() => {
                 setMode("internal");
                 setExtError("");
+                setActivePane("left"); // left should be primary by default
               }}
               style={{
                 border: mode === "internal" ? "1px solid rgba(255,112,67,0.55)" : "1px solid rgba(38,50,56,0.14)",
@@ -192,6 +230,7 @@ export default function AddCandidatesPicker({
               type="button"
               onClick={() => {
                 setMode("external");
+                setActivePane("left"); // left should be primary by default
               }}
               style={{
                 border: mode === "external" ? "1px solid rgba(255,112,67,0.55)" : "1px solid rgba(38,50,56,0.14)",
@@ -215,9 +254,21 @@ export default function AddCandidatesPicker({
 
       <div style={{ height: 10 }} />
 
-      <div className="ftPickerGrid" style={{ display: "grid", gap: 12, alignItems: "stretch" }}>
+      {/* ✅ NEW: true two-column grid that can swap primary/condensed */}
+      <div
+        className="ftPickerGrid"
+        style={gridStyle}
+      >
         {/* Left column */}
-        <div style={{ ...panelSurfaceStyle, padding: 12, minWidth: 0 }}>
+        <div
+          style={leftPanelStyle}
+          onClick={() => setActivePane("left")}
+          role="button"
+          tabIndex={0}
+          onKeyDown={(e) => {
+            if (e.key === "Enter" || e.key === " ") setActivePane("left");
+          }}
+        >
           {mode === "internal" ? (
             <>
               <div style={{ color: "#607D8B", fontSize: 12, marginBottom: 10, lineHeight: 1.35 }}>
@@ -278,7 +329,10 @@ export default function AddCandidatesPicker({
                       <button
                         key={id}
                         type="button"
-                        onClick={() => onToggleSelect(id)}
+                        onClick={(ev) => {
+                          ev.stopPropagation();
+                          onToggleSelect(id);
+                        }}
                         style={{
                           textAlign: "left",
                           border: selected ? `1px solid rgba(255,112,67,0.55)` : "1px solid rgba(38,50,56,0.12)",
@@ -323,12 +377,13 @@ export default function AddCandidatesPicker({
                     lineHeight: 1.35,
                     marginBottom: 10,
                   }}
+                  onClick={(e) => e.stopPropagation()}
                 >
                   {extError}
                 </div>
               ) : null}
 
-              <div style={{ display: "grid", gap: 10 }}>
+              <div style={{ display: "grid", gap: 10 }} onClick={(e) => e.stopPropagation()}>
                 <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
                   <div style={{ display: "grid", gap: 6 }}>
                     <div style={{ fontWeight: 900, color: "#37474F", fontSize: 12 }}>Name *</div>
@@ -489,9 +544,19 @@ export default function AddCandidatesPicker({
           )}
         </div>
 
-        {/* Settings (applies to internal adds + external adds) */}
-        <div style={{ ...panelSurfaceStyle, padding: 12, minWidth: 0 }}>
-          <div style={{ fontWeight: 900, color: "#37474F", marginBottom: 10 }}>Snapshot for this add</div>
+        {/* Right column (Snapshot) */}
+        <div
+          style={rightPanelStyle}
+          onClick={() => setActivePane("right")}
+          role="button"
+          tabIndex={0}
+          onKeyDown={(e) => {
+            if (e.key === "Enter" || e.key === " ") setActivePane("right");
+          }}
+        >
+          <div style={{ fontWeight: 900, color: "#37474F", marginBottom: 10 }}>
+            Snapshot for this add
+          </div>
 
           <label style={{ display: "block", color: "#607D8B", fontSize: 12, fontWeight: 900, marginBottom: 6 }}>
             Status (Hot / Warm / Hold)
@@ -510,6 +575,7 @@ export default function AddCandidatesPicker({
               marginBottom: 10,
             }}
             disabled={saving || extSaving}
+            onClick={(e) => e.stopPropagation()}
           >
             <option value="Hot">Hot</option>
             <option value="Warm">Warm</option>
@@ -533,6 +599,7 @@ export default function AddCandidatesPicker({
               marginBottom: 10,
             }}
             disabled={saving || extSaving}
+            onClick={(e) => e.stopPropagation()}
           />
 
           <label style={{ display: "block", color: "#607D8B", fontSize: 12, fontWeight: 900, marginBottom: 6 }}>
@@ -552,6 +619,7 @@ export default function AddCandidatesPicker({
               marginBottom: 10,
             }}
             disabled={saving || extSaving}
+            onClick={(e) => e.stopPropagation()}
           />
 
           <label style={{ display: "block", color: "#607D8B", fontSize: 12, fontWeight: 900, marginBottom: 6 }}>
@@ -573,6 +641,7 @@ export default function AddCandidatesPicker({
               marginBottom: 10,
             }}
             disabled={saving || extSaving}
+            onClick={(e) => e.stopPropagation()}
           />
 
           <label style={{ display: "block", color: "#607D8B", fontSize: 12, fontWeight: 900, marginBottom: 6 }}>
@@ -594,9 +663,10 @@ export default function AddCandidatesPicker({
               marginBottom: 12,
             }}
             disabled={saving || extSaving}
+            onClick={(e) => e.stopPropagation()}
           />
 
-          <div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
+          <div style={{ display: "flex", gap: 10, flexWrap: "wrap" }} onClick={(e) => e.stopPropagation()}>
             {mode === "internal" ? (
               <>
                 <PrimaryButton onClick={onAddSelected} disabled={saving || !pickerSelectedIds.length}>
@@ -619,16 +689,11 @@ export default function AddCandidatesPicker({
         </div>
       </div>
 
-      {/* ✅ Responsive two-panel layout (no overlap) */}
+      {/* ✅ Mobile collapse (keep minimal + local to this component) */}
       <style jsx>{`
-        .ftPickerGrid {
-          width: 100%;
-          grid-template-columns: minmax(0, 1fr) minmax(320px, 460px);
-        }
-
-        @media (max-width: 1100px) {
+        @media (max-width: 980px) {
           .ftPickerGrid {
-            grid-template-columns: 1fr;
+            grid-template-columns: 1fr !important;
           }
         }
       `}</style>
