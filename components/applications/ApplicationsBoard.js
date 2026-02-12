@@ -107,7 +107,7 @@ export default function ApplicationsBoard({
     background: 'white',
     border: '1px solid #eee',
     borderRadius: 12,
-    padding: compact ? 12 : 12, // was 16
+    padding: compact ? 10 : 8, // ✅ was 12 -> stretch usable width
     boxShadow: '0 2px 6px rgba(0,0,0,0.06)',
     width: '100%',
     boxSizing: 'border-box',
@@ -116,7 +116,7 @@ export default function ApplicationsBoard({
   const columnStyle = {
     background: 'white',
     borderRadius: 12,
-    padding: compact ? 8 : 12, // was 16
+    padding: compact ? 6 : 8, // ✅ was 12 -> stretch columns + card space
     boxShadow: '0 2px 6px rgba(0,0,0,0.06)',
     minHeight: '300px',
     position: 'relative',
@@ -212,7 +212,7 @@ export default function ApplicationsBoard({
           style={{
             display: 'grid',
             gridTemplateColumns,
-            gap: compact ? 12 : 12, // was 20 (more width per column without changing layout)
+            gap: compact ? 10 : 8, // ✅ was 12 -> more column width (no rail impact)
             width: '100%',
           }}
         >
@@ -229,7 +229,7 @@ export default function ApplicationsBoard({
                     alignItems: 'center',
                     justifyContent: 'center',
                     gap: 8,
-                    padding: '6px 8px', // was 6px 10px
+                    padding: '6px 6px', // ✅ was 6px 8px -> a touch less, gives column content room
                     borderRadius: 999,
                     background: c.bg,
                     color: c.text,
