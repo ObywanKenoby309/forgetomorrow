@@ -4,7 +4,7 @@ import ApplicationCard from './ApplicationCard';
 import { colorFor } from '@/components/seeker/dashboard/seekerColors';
 import {
   DndContext,
-  closestCorners,
+  pointerWithin, // ✅ CHANGED: was closestCorners
   KeyboardSensor,
   PointerSensor,
   TouchSensor,
@@ -19,6 +19,7 @@ import {
   verticalListSortingStrategy,
   useSortable,
 } from '@dnd-kit/sortable';
+import { snapCenterToCursor } from '@dnd-kit/modifiers'; // ✅ NEW: keeps overlay under cursor
 
 const STAGES = ['Pinned', 'Applied', 'Interviewing', 'Offers', 'Closed Out'];
 
@@ -203,11 +204,12 @@ export default function ApplicationsBoard({
 
       <DndContext
         sensors={sensors}
-        collisionDetection={closestCorners}
+        collisionDetection={pointerWithin} // ✅ CHANGED: cursor-based “over” target (prevents jumping)
+        modifiers={[snapCenterToCursor]} // ✅ NEW: keeps overlay under cursor while dragging
         onDragStart={({ active }) => {
           setActiveId(active?.id ?? null);
 
-          // ✅ NEW: lock overlay size to the grabbed card’s initial rect
+          // ✅ lock overlay size to the grabbed card’s initial rect
           const r = active?.rect?.current?.initial;
           if (r?.width && r?.height) setActiveSize({ width: r.width, height: r.height });
           else setActiveSize(null);
