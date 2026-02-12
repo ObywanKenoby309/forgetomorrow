@@ -1,4 +1,4 @@
-// pages/api/recruiter/job-postings/[jobId]/applications/[applicationId].js
+// pages/api/recruiter/job-postings/[id]/applications/[applicationId].js
 import prisma from "@/lib/prisma";
 import { getServerSession } from "next-auth";
 import { authOptions } from "../../../../auth/[...nextauth]";
@@ -30,7 +30,8 @@ export default async function handler(req, res) {
     const userId = session?.user?.id;
     if (!userId) return res.status(401).json({ error: "Unauthorized" });
 
-    const jobId = toInt(req.query.jobId);
+    // ✅ IMPORTANT: slug is [id] at the job-postings level
+    const jobId = toInt(req.query.id);
     if (!jobId) return res.status(400).json({ error: "Invalid job id" });
 
     const applicationId = toInt(req.query.applicationId);
