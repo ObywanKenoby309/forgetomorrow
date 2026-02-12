@@ -9,6 +9,11 @@ function normalizeStatus(s) {
   return s;
 }
 
+function toInt(val) {
+  const n = Number(val);
+  return Number.isFinite(n) ? n : null;
+}
+
 export default async function handler(req, res) {
   if (req.method !== "POST") {
     res.setHeader("Allow", "POST");
@@ -32,36 +37,67 @@ export default async function handler(req, res) {
   const userId = user.id;
 
   try {
-    const { title, company, location, url, notes, status = "Applied" } = req.body;
-
-    if (!title || !company) {
-      return res.status(400).json({ error: "title and company required" });
-    }
+    const { title, company, location, url, notes, status = "Applied", jobId } = req.body || {};
 
     const normalizedStatus = normalizeStatus(status);
+
+    // Optional job link (internal job applications)
+    const jobIdInt = toInt(jobId);
+
+    // If no jobId, require manual title/company
+    if (!jobIdInt && (!title || !company)) {
+      return res.status(400).json({ error: "title and company required" });
+    }
 
     const application = await prisma.application.create({
       data: {
         userId,
-        title,
-        company,
+        // If job-linked, we can omit these and still render via app.job fallback
+        title: jobIdInt ? (title ?? null) : title,
+        company: jobIdInt ? (company ?? null) : company,
         location: location || "",
         url: url || "",
         notes: notes || "",
         status: normalizedStatus,
-        // 🔹 NEW: explicit unscoped seeker application
+        jobId: jobIdInt || null,
+        // 🔹 explicit unscoped seeker application
         accountKey: null,
+      },
+      select: {
+        id: true,
+        title: true,
+        company: true,
+        location: true,
+        url: true,
+        notes: true,
+        status: true,
+        appliedAt: true,
+        job: {
+          select: {
+            id: true,
+            title: true,
+            company: true,
+            location: true,
+            worksite: true,
+            compensation: true,
+            type: true,
+          },
+        },
       },
     });
 
     const card = {
       id: application.id,
-      title: application.title,
-      company: application.company,
-      location: application.location,
-      url: application.url,
-      link: application.url,
-      notes: application.notes,
+      title: application.job?.title ?? application.title ?? "",
+      company: application.job?.company ?? application.company ?? "",
+      location: application.job?.location ?? application.location ?? "",
+      worksite: application.job?.worksite ?? null,
+      compensation: application.job?.compensation ?? null,
+      type: application.job?.type ?? null,
+      url: application.url || "",
+      link: application.url || "",
+      notes: application.notes || "",
+      status: application.status,
       dateAdded: application.appliedAt.toISOString().split("T")[0],
     };
 

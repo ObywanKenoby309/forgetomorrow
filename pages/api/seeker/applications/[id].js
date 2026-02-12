@@ -59,7 +59,7 @@ export default async function handler(req, res) {
         return res.status(400).json({ error: "No fields to update" });
       }
 
-      // ✅ ownership check (because Prisma update where can't include userId here)
+      // ✅ ownership check
       const existing = await prisma.application.findFirst({
         where: { id: appId, userId },
         select: { id: true },
@@ -81,20 +81,34 @@ export default async function handler(req, res) {
           notes: true,
           status: true,
           appliedAt: true,
+          job: {
+            select: {
+              id: true,
+              title: true,
+              company: true,
+              location: true,
+              worksite: true,
+              compensation: true,
+              type: true,
+            },
+          },
         },
       });
 
-      // Return card shape your UI expects
+      // ✅ Return card with app.job fallback (prevents blanks immediately after move/edit)
       return res.status(200).json({
         card: {
           id: updated.id,
-          title: updated.title || "",
-          company: updated.company || "",
-          location: updated.location || "",
+          title: updated.job?.title ?? updated.title ?? "",
+          company: updated.job?.company ?? updated.company ?? "",
+          location: updated.job?.location ?? updated.location ?? "",
+          worksite: updated.job?.worksite ?? null,
+          compensation: updated.job?.compensation ?? null,
+          type: updated.job?.type ?? null,
           url: updated.url || "",
           link: updated.url || "",
           notes: updated.notes || "",
-          status: updated.status, // enum string
+          status: updated.status,
           dateAdded: updated.appliedAt.toISOString().split("T")[0],
         },
       });
@@ -106,7 +120,6 @@ export default async function handler(req, res) {
 
   if (req.method === "DELETE") {
     try {
-      // ✅ ownership-safe delete
       const deleted = await prisma.application.deleteMany({
         where: { id: appId, userId },
       });
