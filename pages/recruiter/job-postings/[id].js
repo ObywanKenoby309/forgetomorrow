@@ -85,11 +85,9 @@ function normalizeResumeData(raw) {
     (data.resume && typeof data.resume === "object" && data.resume) ||
     data;
 
-  // Must have at least personalInfo-ish fields to render hybrid nicely
   const personalInfo =
     inner.personalInfo && typeof inner.personalInfo === "object" ? inner.personalInfo : {};
 
-  // If name is missing, still allow render but it will look weird
   return {
     personalInfo,
     summary: inner.summary || "",
@@ -128,7 +126,6 @@ function HybridResumeViewer({ value }) {
 
   return (
     <div className="rounded border bg-white p-4">
-      {/* Header (centered like the Hybrid PDF) */}
       <div className="text-center">
         <div className="text-xl font-bold text-slate-900">{personalInfo.name || "Candidate"}</div>
         {contactLine ? <div className="text-xs text-slate-600 mt-1">{contactLine}</div> : null}
@@ -144,7 +141,6 @@ function HybridResumeViewer({ value }) {
         ) : null}
       </div>
 
-      {/* Summary */}
       {summary ? (
         <div className="mt-5">
           <div className="text-xs font-bold uppercase tracking-wide border-b pb-1">
@@ -154,7 +150,6 @@ function HybridResumeViewer({ value }) {
         </div>
       ) : null}
 
-      {/* Languages */}
       {languages.length ? (
         <div className="mt-5">
           <div className="text-xs font-bold uppercase tracking-wide border-b pb-1">Languages</div>
@@ -162,9 +157,7 @@ function HybridResumeViewer({ value }) {
         </div>
       ) : null}
 
-      {/* Two-column: Skills (left) + Experience (right) */}
       <div className="mt-5 grid grid-cols-1 md:grid-cols-3 gap-4">
-        {/* Skills */}
         <div className="md:col-span-1">
           <div className="text-xs font-bold uppercase tracking-wide border-b pb-1">Skills</div>
           {skills.length ? (
@@ -180,7 +173,6 @@ function HybridResumeViewer({ value }) {
           )}
         </div>
 
-        {/* Experience */}
         <div className="md:col-span-2">
           <div className="text-xs font-bold uppercase tracking-wide border-b pb-1">Experience</div>
 
@@ -228,7 +220,6 @@ function HybridResumeViewer({ value }) {
         </div>
       </div>
 
-      {/* Projects */}
       {projects.length ? (
         <div className="mt-5">
           <div className="text-xs font-bold uppercase tracking-wide border-b pb-1">Projects</div>
@@ -278,7 +269,6 @@ function HybridResumeViewer({ value }) {
         </div>
       ) : null}
 
-      {/* Education */}
       {educationList.length ? (
         <div className="mt-5">
           <div className="text-xs font-bold uppercase tracking-wide border-b pb-1">Education</div>
@@ -307,7 +297,6 @@ function HybridResumeViewer({ value }) {
         </div>
       ) : null}
 
-      {/* Certifications */}
       {certifications.length ? (
         <div className="mt-5">
           <div className="text-xs font-bold uppercase tracking-wide border-b pb-1">
@@ -332,7 +321,6 @@ function HybridResumeViewer({ value }) {
         </div>
       ) : null}
 
-      {/* Custom sections */}
       {customSections.length
         ? customSections.map((section, i) => {
             if (!section) return null;
@@ -364,7 +352,6 @@ function HybridResumeViewer({ value }) {
           })
         : null}
 
-      {/* Fallback note */}
       <div className="mt-4 text-[11px] text-slate-500">
         Recruiter view uses the Hybrid layout. Downloadable versions will be handled in the packet export
         pass.
@@ -415,7 +402,6 @@ function PacketViewer({ applicationId, job, candidate, onClose }) {
   const resumeValue = packet?.resume?.content !== undefined ? packet.resume.content : null;
   const jobDescription = job?.description || job?.jobDescription || "";
 
-  // ✅ Run WHY automatically once we have packet + JD + resume
   useEffect(() => {
     let alive = true;
 
@@ -428,8 +414,8 @@ function PacketViewer({ applicationId, job, candidate, onClose }) {
 
       const jdText = String(jobDescription || "").trim();
 
-      if (!jdText) return; // can’t run without JD
-      if (!String(resumeText || "").trim()) return; // can’t run without resume
+      if (!jdText) return;
+      if (!String(resumeText || "").trim()) return;
 
       whyHasRunRef.current = true;
 
@@ -461,7 +447,7 @@ function PacketViewer({ applicationId, job, candidate, onClose }) {
       } catch (e) {
         if (!alive) return;
         setWhyError(e);
-        whyHasRunRef.current = false; // allow retry
+        whyHasRunRef.current = false;
       } finally {
         if (!alive) return;
         setWhyLoading(false);
@@ -504,7 +490,6 @@ function PacketViewer({ applicationId, job, candidate, onClose }) {
 
           {packet && (
             <>
-              {/* Cover */}
               <div className="rounded border p-3">
                 <div className="font-medium mb-2">Cover</div>
                 {packet.cover?.content ? (
@@ -516,7 +501,6 @@ function PacketViewer({ applicationId, job, candidate, onClose }) {
                 )}
               </div>
 
-              {/* Resume (Hybrid formatted) */}
               <div className="rounded border p-3">
                 <div className="font-medium mb-2">Resume (Hybrid)</div>
 
@@ -533,7 +517,6 @@ function PacketViewer({ applicationId, job, candidate, onClose }) {
                 )}
               </div>
 
-              {/* Additional Questions */}
               <div className="rounded border p-3">
                 <div className="font-medium mb-2">Additional Questions</div>
                 {(packet.additionalQuestions || []).length ? (
@@ -554,7 +537,6 @@ function PacketViewer({ applicationId, job, candidate, onClose }) {
                 )}
               </div>
 
-              {/* Consent */}
               <div className="rounded border p-3">
                 <div className="font-medium mb-2">Consent and acknowledgement</div>
                 {packet.consent ? (
@@ -574,7 +556,6 @@ function PacketViewer({ applicationId, job, candidate, onClose }) {
                 )}
               </div>
 
-              {/* Forge Assessment (includes WHY inline - no right drawer) */}
               <div className="rounded border p-3">
                 <div className="font-medium mb-2 flex items-center justify-between gap-3">
                   <div className="flex items-center gap-2">
@@ -604,7 +585,7 @@ function PacketViewer({ applicationId, job, candidate, onClose }) {
                         className="text-sm px-3 py-1.5 rounded border bg-white hover:bg-slate-50"
                         onClick={() => {
                           whyHasRunRef.current = false;
-                          setPacket((p) => (p ? { ...p } : p)); // light re-trigger
+                          setPacket((p) => (p ? { ...p } : p));
                         }}
                         disabled={whyLoading}
                         title={
@@ -631,12 +612,10 @@ function PacketViewer({ applicationId, job, candidate, onClose }) {
                   <div className="mt-2 text-sm text-slate-500">Not generated yet.</div>
                 )}
 
-                {/* ✅ CONSISTENT DETAILS VIEW (same UI as your WHY drawer; full-page feel inside packet) */}
                 {whyShowDetails && whyData ? (
                   <div className="mt-3 space-y-3">
                     <WhyCandidateInline explain={whyData} mode="full" title="Why this candidate" />
 
-                    {/* Keep raw JSON available (debug) */}
                     <details className="rounded border p-3">
                       <summary className="text-xs font-semibold text-slate-700 cursor-pointer">
                         Raw JSON (debug)
@@ -648,7 +627,6 @@ function PacketViewer({ applicationId, job, candidate, onClose }) {
                   </div>
                 ) : null}
 
-                {/* Existing packet forgeAssessment (kept) */}
                 {packet.forgeAssessment ? (
                   <div className="mt-4 text-sm text-slate-700 space-y-2">
                     <div className="text-slate-600">
@@ -702,7 +680,9 @@ function PipelineCard({
         <div className="min-w-0">
           <div className="font-medium text-slate-900 truncate">{displayName}</div>
 
-          {candidateEmail ? <div className="text-sm text-slate-600 truncate">{candidateEmail}</div> : null}
+          {candidateEmail ? (
+            <div className="text-sm text-slate-600 truncate">{candidateEmail}</div>
+          ) : null}
 
           <div className="text-xs text-slate-500 mt-1">
             Applied: {app.appliedAt ? String(app.appliedAt) : "Unknown"}{" "}
@@ -760,6 +740,99 @@ function PipelineCard({
   );
 }
 
+function ApplicationsList({
+  apps,
+  viewer,
+  movingAppIds,
+  onMoveStage,
+  onViewPacket,
+}) {
+  if (!apps.length) {
+    return <div className="text-sm text-slate-500">No applicants yet.</div>;
+  }
+
+  return (
+    <div className="overflow-auto rounded-lg border">
+      <table className="min-w-[920px] w-full text-sm">
+        <thead className="bg-slate-50">
+          <tr className="text-left">
+            <th className="p-3 font-semibold text-slate-700">Candidate</th>
+            <th className="p-3 font-semibold text-slate-700">Email</th>
+            <th className="p-3 font-semibold text-slate-700">Stage</th>
+            <th className="p-3 font-semibold text-slate-700">Applied</th>
+            <th className="p-3 font-semibold text-slate-700">Submitted</th>
+            <th className="p-3 font-semibold text-slate-700">Actions</th>
+          </tr>
+        </thead>
+        <tbody>
+          {apps.map((a) => {
+            const candidateName = a?.candidate?.name || null;
+            const candidateEmail = a?.candidate?.email || "";
+            const candidateId = a?.candidate?.id || null;
+
+            const isViewer = viewer?.id && candidateId && viewer.id === candidateId;
+
+            const displayName = isViewer
+              ? "Internal test application (You)"
+              : candidateName || "Candidate";
+
+            const currentStageKey = normalizeStatusForUi(a.status);
+            const disabled = movingAppIds.has(a.id);
+
+            return (
+              <tr key={a.id} className="border-t">
+                <td className="p-3 font-medium text-slate-900">{displayName}</td>
+                <td className="p-3 text-slate-700">{candidateEmail || "—"}</td>
+                <td className="p-3">
+                  <select
+                    className="text-xs rounded border px-2 py-1 bg-white"
+                    value={currentStageKey}
+                    onChange={(e) => onMoveStage(a.id, e.target.value)}
+                    disabled={disabled}
+                    title="Move candidate stage"
+                  >
+                    {PIPELINE_STAGES.map((s) => (
+                      <option key={s.key} value={s.key}>
+                        {s.label}
+                      </option>
+                    ))}
+                  </select>
+                </td>
+                <td className="p-3 text-slate-700">{a.appliedAt ? String(a.appliedAt) : "—"}</td>
+                <td className="p-3 text-slate-700">{a.submittedAt ? String(a.submittedAt) : "—"}</td>
+                <td className="p-3">
+                  <div className="flex items-center gap-2">
+                    <button
+                      type="button"
+                      className="text-sm px-3 py-1.5 rounded border bg-white hover:bg-slate-50"
+                      onClick={() => onViewPacket(a)}
+                      disabled={disabled}
+                    >
+                      View packet
+                    </button>
+                    <a
+                      className="text-sm px-3 py-1.5 rounded border bg-white hover:bg-slate-50"
+                      href={`/api/recruiter/applications/${a.id}/packet.zip`}
+                      target="_blank"
+                      rel="noreferrer"
+                      title="Download recruiter packet (.zip)"
+                      onClick={(e) => {
+                        if (disabled) e.preventDefault();
+                      }}
+                    >
+                      Download
+                    </a>
+                  </div>
+                </td>
+              </tr>
+            );
+          })}
+        </tbody>
+      </table>
+    </div>
+  );
+}
+
 export default function RecruiterJobApplicantsPage() {
   const router = useRouter();
 
@@ -778,12 +851,14 @@ export default function RecruiterJobApplicantsPage() {
   const [openPacketAppId, setOpenPacketAppId] = useState(null);
   const [openPacketCandidate, setOpenPacketCandidate] = useState(null);
 
+  // ✅ NEW: Kanban vs List view toggle (no localStorage persistence)
+  const [viewMode, setViewMode] = useState("kanban"); // "kanban" | "list"
+
   // drag state + move state
   const draggingRef = useRef({ appId: null, from: null });
   const [movingAppIds, setMovingAppIds] = useState(() => new Set());
   const [moveError, setMoveError] = useState(null);
 
-  // Load viewer (so we can label internal test apps cleanly)
   useEffect(() => {
     let alive = true;
     async function loadViewer() {
@@ -822,7 +897,6 @@ export default function RecruiterJobApplicantsPage() {
         setJob(json?.job || null);
 
         const list = Array.isArray(json?.applications) ? json.applications : [];
-        // normalize status consistently for UI grouping
         setApps(
           list.map((a) => ({
             ...a,
@@ -867,7 +941,6 @@ export default function RecruiterJobApplicantsPage() {
 
     const prevApps = apps;
 
-    // find current stage
     const current = prevApps.find((a) => a.id === appId);
     if (!current) return;
 
@@ -876,7 +949,6 @@ export default function RecruiterJobApplicantsPage() {
 
     setMoveError(null);
 
-    // optimistic update + mark moving
     setMovingAppIds((prev) => new Set([...Array.from(prev), appId]));
     setApps((prev) =>
       prev.map((a) =>
@@ -890,19 +962,15 @@ export default function RecruiterJobApplicantsPage() {
     );
 
     try {
-      const res = await fetch(
-        `/api/recruiter/job-postings/${jobId}/applications/${appId}`,
-        {
-          method: "PATCH",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ status: toStageKey }),
-        }
-      );
+      const res = await fetch(`/api/recruiter/job-postings/${jobId}/applications/${appId}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ status: toStageKey }),
+      });
 
       const json = await res.json().catch(() => ({}));
       if (!res.ok) throw new Error(json?.error || `HTTP ${res.status}`);
 
-      // server may return updated record; keep our list stable but align status
       const updatedStatus = normalizeStatusForUi(json?.application?.status || toStageKey);
       setApps((prev) =>
         prev.map((a) =>
@@ -916,7 +984,6 @@ export default function RecruiterJobApplicantsPage() {
         )
       );
     } catch (e) {
-      // revert
       setApps(prevApps);
       setMoveError(e);
     } finally {
@@ -944,13 +1011,52 @@ export default function RecruiterJobApplicantsPage() {
         if (!toStageKey) return;
         if (!isStageKeyValid(toStageKey)) return;
 
-        // if we already know from stage and it's same, no-op
         if (from && normalizeStatusForUi(from) === toStageKey) return;
 
         await moveCandidateStage(appId, toStageKey);
       },
     };
   }
+
+  const headerRight = (
+    <div className="flex items-center gap-2">
+      <div className="inline-flex rounded-lg border bg-white overflow-hidden">
+        <button
+          type="button"
+          className="text-sm px-3 py-1.5"
+          onClick={() => setViewMode("kanban")}
+          style={{
+            background: viewMode === "kanban" ? "rgba(255,112,67,0.12)" : "transparent",
+            color: viewMode === "kanban" ? "#9A3412" : "#334155",
+            fontWeight: viewMode === "kanban" ? 700 : 600,
+          }}
+          title="Kanban view"
+        >
+          Kanban
+        </button>
+        <button
+          type="button"
+          className="text-sm px-3 py-1.5 border-l"
+          onClick={() => setViewMode("list")}
+          style={{
+            background: viewMode === "list" ? "rgba(255,112,67,0.12)" : "transparent",
+            color: viewMode === "list" ? "#9A3412" : "#334155",
+            fontWeight: viewMode === "list" ? 700 : 600,
+          }}
+          title="List view"
+        >
+          List
+        </button>
+      </div>
+
+      <Link
+        href="/recruiter/job-postings"
+        className="text-sm px-3 py-1.5 rounded border bg-white hover:bg-slate-50"
+      >
+        Back to Job Postings
+      </Link>
+    </div>
+  );
 
   return (
     <PlanProvider>
@@ -966,14 +1072,7 @@ export default function RecruiterJobApplicantsPage() {
                 {job?.company ? <span className="text-slate-500">• {job.company}</span> : null}
               </div>
             </div>
-            <div className="flex items-center gap-2">
-              <Link
-                href="/recruiter/job-postings"
-                className="text-sm px-3 py-1.5 rounded border bg-white hover:bg-slate-50"
-              >
-                Back to Job Postings
-              </Link>
-            </div>
+            {headerRight}
           </div>
         }
       >
@@ -1014,91 +1113,98 @@ export default function RecruiterJobApplicantsPage() {
             title={`Pipeline (${apps.length})`}
             right={
               <div className="text-xs text-slate-500">
-                Drag cards between columns or use the stage selector.
+                {viewMode === "kanban"
+                  ? "Drag cards between columns or use the stage selector."
+                  : "Use the stage selector to move candidates."}
               </div>
             }
           >
             {loading ? (
               <div className="text-sm text-slate-500">Loading…</div>
             ) : apps.length ? (
-              <div className="grid grid-cols-1 md:grid-cols-4 gap-3">
-                {PIPELINE_STAGES.map((stage) => {
-                  const items = grouped[stage.key] || [];
-                  return (
-                    <div
-                      key={stage.key}
-                      className="rounded-lg border bg-slate-50 p-3"
-                      {...stageDropHandlers(stage.key)}
-                    >
-                      <div className="flex items-center justify-between mb-3">
-                        <div className="text-sm font-semibold text-slate-900">
-                          {stage.label}
+              viewMode === "kanban" ? (
+                <div className="grid grid-cols-1 md:grid-cols-4 gap-3">
+                  {PIPELINE_STAGES.map((stage) => {
+                    const items = grouped[stage.key] || [];
+                    return (
+                      <div
+                        key={stage.key}
+                        className="rounded-lg border bg-slate-50 p-3"
+                        {...stageDropHandlers(stage.key)}
+                      >
+                        <div className="flex items-center justify-between mb-3">
+                          <div className="text-sm font-semibold text-slate-900">{stage.label}</div>
+                          <div className="text-xs text-slate-500">{items.length}</div>
                         </div>
-                        <div className="text-xs text-slate-500">{items.length}</div>
+
+                        <div className="space-y-3 min-h-[40px]">
+                          {items.map((a) => {
+                            const candidateName = a?.candidate?.name || null;
+                            const candidateEmail = a?.candidate?.email || "";
+                            const candidateId = a?.candidate?.id || null;
+
+                            const isViewer = viewer?.id && candidateId && viewer.id === candidateId;
+
+                            const displayName = isViewer
+                              ? "Internal test application (You)"
+                              : candidateName || "Candidate";
+
+                            const currentStageKey = normalizeStatusForUi(a.status);
+                            const disabled = movingAppIds.has(a.id);
+
+                            const dragHandlers = {
+                              onDragStart: (e) => {
+                                try {
+                                  e.dataTransfer.setData("text/plain", `${a.id}|${currentStageKey}`);
+                                  draggingRef.current = { appId: a.id, from: currentStageKey };
+                                } catch {
+                                  // ignore
+                                }
+                              },
+                              onDragEnd: () => {
+                                draggingRef.current = { appId: null, from: null };
+                              },
+                            };
+
+                            return (
+                              <PipelineCard
+                                key={a.id}
+                                app={a}
+                                displayName={displayName}
+                                candidateEmail={candidateEmail}
+                                currentStageKey={currentStageKey}
+                                disabled={disabled}
+                                dragHandlers={dragHandlers}
+                                onViewPacket={() => {
+                                  setOpenPacketCandidate(a?.candidate || null);
+                                  setOpenPacketAppId(a.id);
+                                }}
+                                onDownload={`/api/recruiter/applications/${a.id}/packet.zip`}
+                                onChangeStage={(toKey) => moveCandidateStage(a.id, toKey)}
+                              />
+                            );
+                          })}
+                        </div>
                       </div>
-
-                      <div className="space-y-3 min-h-[40px]">
-                        {items.map((a) => {
-                          const candidateName = a?.candidate?.name || null;
-                          const candidateEmail = a?.candidate?.email || "";
-                          const candidateId = a?.candidate?.id || null;
-
-                          const isViewer = viewer?.id && candidateId && viewer.id === candidateId;
-
-                          const displayName = isViewer
-                            ? "Internal test application (You)"
-                            : candidateName || "Candidate";
-
-                          const currentStageKey = normalizeStatusForUi(a.status);
-                          const disabled = movingAppIds.has(a.id);
-
-                          const dragHandlers = {
-                            onDragStart: (e) => {
-                              try {
-                                // store "id|fromStatus"
-                                e.dataTransfer.setData(
-                                  "text/plain",
-                                  `${a.id}|${currentStageKey}`
-                                );
-                                draggingRef.current = { appId: a.id, from: currentStageKey };
-                              } catch {
-                                // ignore
-                              }
-                            },
-                            onDragEnd: () => {
-                              draggingRef.current = { appId: null, from: null };
-                            },
-                          };
-
-                          return (
-                            <PipelineCard
-                              key={a.id}
-                              app={a}
-                              displayName={displayName}
-                              candidateEmail={candidateEmail}
-                              currentStageKey={currentStageKey}
-                              disabled={disabled}
-                              dragHandlers={dragHandlers}
-                              onViewPacket={() => {
-                                setOpenPacketCandidate(a?.candidate || null);
-                                setOpenPacketAppId(a.id);
-                              }}
-                              onDownload={`/api/recruiter/applications/${a.id}/packet.zip`}
-                              onChangeStage={(toKey) => moveCandidateStage(a.id, toKey)}
-                            />
-                          );
-                        })}
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
+                    );
+                  })}
+                </div>
+              ) : (
+                <ApplicationsList
+                  apps={apps}
+                  viewer={viewer}
+                  movingAppIds={movingAppIds}
+                  onMoveStage={(appId, stageKey) => moveCandidateStage(appId, stageKey)}
+                  onViewPacket={(app) => {
+                    setOpenPacketCandidate(app?.candidate || null);
+                    setOpenPacketAppId(app.id);
+                  }}
+                />
+              )
             ) : (
               <div className="text-sm text-slate-500">No applicants yet.</div>
             )}
           </SectionCard>
-
-          {/* Keep the old list structure out of the way (removed intentionally) */}
         </div>
 
         {openPacketAppId ? (
