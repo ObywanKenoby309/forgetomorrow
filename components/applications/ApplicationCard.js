@@ -16,7 +16,7 @@ export default function ApplicationCard({
       style={{
         border: '1px solid #eee',
         borderRadius: '10px',
-        padding: '8px', // was 10px (more usable room inside columns)
+        padding: '10px',
         marginBottom: '10px',
         background: '#fafafa',
         display: 'flex',
@@ -37,7 +37,7 @@ export default function ApplicationCard({
           display: 'flex',
           justifyContent: 'center',
           alignItems: 'center',
-          gap: 8, // was 10
+          gap: 10,
           marginTop: 4,
         }}
       >
@@ -46,11 +46,15 @@ export default function ApplicationCard({
           {...dragListeners}
           style={{
             cursor: 'grab',
-            fontSize: 18, // was 20
+            fontSize: 24, // ✅ was 20 (bolder / more visible on mobile)
+            fontWeight: 900, // ✅ bolder
+            lineHeight: 1, // ✅ keeps it tight
             color: '#FF7043',
-            padding: '0 2px', // was 0 4px
+            padding: '0 6px', // ✅ slightly more touch-friendly
+            userSelect: 'none',
           }}
           title="Drag to move"
+          aria-label="Drag to move"
         >
           ↔
         </div>
@@ -60,8 +64,8 @@ export default function ApplicationCard({
             onClick={() => onView(job, stage)}
             title="View details"
             style={{
-              width: 30, // was 32
-              height: 30, // was 32
+              width: 32,
+              height: 32,
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
@@ -79,8 +83,8 @@ export default function ApplicationCard({
           onClick={() => onEdit(job, stage)}
           title="Edit"
           style={{
-            width: 30, // was 32
-            height: 30, // was 32
+            width: 32,
+            height: 32,
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
@@ -97,8 +101,8 @@ export default function ApplicationCard({
           onClick={() => onDelete(job, stage)}
           title="Delete"
           style={{
-            width: 30, // was 32
-            height: 30, // was 32
+            width: 32,
+            height: 32,
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
