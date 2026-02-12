@@ -1,30 +1,27 @@
+// pages/status.js — UPDATED (adds outage incident + marks degraded)
 import Head from "next/head";
 
 export default function Status() {
+  // ✅ During this incident, don’t claim “Operational”
   const services = [
-    { label: "API", status: "Operational" },
-    { label: "Web App", status: "Operational" },
-    { label: "Background Jobs", status: "Operational" },
+    { label: "API", status: "Degraded Performance" },
+    { label: "Web App", status: "Degraded Performance" },
+    { label: "Background Jobs", status: "Degraded Performance" },
+    { label: "Database Hosting Provider", status: "Investigating" },
   ];
 
-  const failedCount = services.filter(
-    (s) => s.status !== "Operational"
-  ).length;
+  const failedCount = services.filter((s) => s.status === "Operational").length;
+  const anyDegraded = services.some((s) => s.status !== "Operational");
 
   let forgeIntensityLabel = "Forge burning bright";
   let forgeIntensityDetail = "All core systems are operational.";
   let forgePillClass = "bg-green-500/20 text-green-300 border-green-400/40";
 
-  if (failedCount >= 1 && failedCount <= 2) {
+  if (anyDegraded) {
     forgeIntensityLabel = "Forge running low";
     forgeIntensityDetail =
-      "One or more services are degraded. Some features may be slower or unavailable.";
+      "We are experiencing an issue related to our database hosting provider that is impacting multiple areas of the site, including user login. We are monitoring the situation and will provide updates here regularly.";
     forgePillClass = "bg-amber-500/20 text-amber-200 border-amber-400/40";
-  } else if (failedCount >= 3) {
-    forgeIntensityLabel = "Forge temporarily offline";
-    forgeIntensityDetail =
-      "Multiple services are impacted. We are working to restore full service.";
-    forgePillClass = "bg-red-500/20 text-red-200 border-red-400/40";
   }
 
   return (
@@ -45,7 +42,7 @@ export default function Status() {
         </h1>
 
         <p className="text-slate-300 mb-6">
-          Operational overview and incident history.
+          Operational overview and incident updates.
         </p>
 
         {/* Forge intensity indicator */}
@@ -62,13 +59,13 @@ export default function Status() {
           <p className="mt-3 text-sm text-slate-300">{forgeIntensityDetail}</p>
         </section>
 
-        {/* Screen-reader-only label for the status grid */}
+        {/* Service grid */}
         <h2 id="service-status-heading" className="sr-only">
           Service Status Overview
         </h2>
 
         <div
-          className="grid sm:grid-cols-3 gap-4 mb-8"
+          className="grid sm:grid-cols-2 gap-4 mb-8"
           aria-labelledby="service-status-heading"
         >
           {services.map((s, i) => (
@@ -83,6 +80,8 @@ export default function Status() {
                 className={`font-semibold ${
                   s.status === "Operational"
                     ? "text-green-400"
+                    : s.status === "Investigating"
+                    ? "text-amber-200"
                     : "text-amber-300"
                 }`}
               >
@@ -92,16 +91,22 @@ export default function Status() {
           ))}
         </div>
 
-        <h2 className="font-semibold mb-3">Recent Incidents</h2>
-
-        <ul className="space-y-3">
-          <li
-            className="text-sm text-slate-300 bg-black/30 p-3 rounded-md border border-white/10"
-            aria-label="No incidents reported"
-          >
-            No incidents reported.
-          </li>
-        </ul>
+        {/* ✅ Current incident block */}
+        <h2 className="font-semibold mb-3">Current Incident</h2>
+        <div className="space-y-3">
+          <div className="text-sm text-slate-300 bg-black/30 p-4 rounded-md border border-white/10">
+            <div className="font-semibold text-slate-100">
+              Elevated 500 Errors in Some US Regions
+            </div>
+            <div className="mt-1">
+              We are investigating an issue with our database hosting provider. This is impacting
+              multiple areas of the site, including user login.
+            </div>
+            <div className="mt-2">
+              We are monitoring the situation and will provide updates on this page regularly.
+            </div>
+          </div>
+        </div>
       </main>
     </>
   );
