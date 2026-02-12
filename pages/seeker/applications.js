@@ -236,9 +236,10 @@ export default function SeekerApplicationsPage() {
 
         await fetch(`/api/seeker/applications/${id}`, { method: 'DELETE' });
 
+        // ✅ FIX: remove the optimistic "moved" item (old app id) before adding the real pinned card
         setTracker((prev) => ({
           ...prev,
-          Pinned: [newPinnedCard, ...prev.Pinned],
+          Pinned: [newPinnedCard, ...(prev.Pinned || []).filter((j) => j.id !== id)],
         }));
       } else {
         const res = await fetch(`/api/seeker/applications/${id}`, {
