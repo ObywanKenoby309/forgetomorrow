@@ -11,14 +11,50 @@ import WHYScoreInfo from "@/components/ai/WHYScoreInfo";
 // ✅ NEW: Reuse the same WHY UI (consistent with drawer experience)
 import { WhyCandidateInline } from "@/components/recruiter/WhyCandidateDrawer";
 
+function formatDateTime(v) {
+  if (!v) return "—";
+  try {
+    const d = typeof v === "string" || typeof v === "number" ? new Date(v) : v;
+    if (!d || isNaN(d.getTime())) return String(v);
+    return new Intl.DateTimeFormat(undefined, {
+      month: "short",
+      day: "2-digit",
+      year: "numeric",
+      hour: "2-digit",
+      minute: "2-digit",
+    }).format(d);
+  } catch {
+    return String(v);
+  }
+}
+
+// Canonical glass numbers (match your Seeker Applications feel)
+const GLASS = {
+  borderRadius: 14,
+  border: "1px solid rgba(255,255,255,0.22)",
+  background: "rgba(255,255,255,0.58)",
+  boxShadow: "0 10px 24px rgba(0,0,0,0.12)",
+  backdropFilter: "blur(10px)",
+  WebkitBackdropFilter: "blur(10px)",
+};
+
+const WHITE_CARD = {
+  background: "rgba(255,255,255,0.92)",
+  border: "1px solid rgba(0,0,0,0.08)",
+  borderRadius: 12,
+  boxShadow: "0 2px 10px rgba(0,0,0,0.08)",
+};
+
 function SectionCard({ title, children, right }) {
   return (
-    <div className="rounded-lg border bg-white p-4">
+    <div style={GLASS} className="p-4">
       <div className="flex items-center justify-between gap-3 mb-3">
-        <div className="font-medium">{title}</div>
+        <div className="font-semibold text-slate-900">{title}</div>
         {right ? <div>{right}</div> : null}
       </div>
-      {children}
+      <div style={WHITE_CARD} className="p-4">
+        {children}
+      </div>
     </div>
   );
 }
@@ -33,16 +69,42 @@ const PIPELINE_STAGES = [
   { key: "ClosedOut", label: "Closed Out" },
 ];
 
+const STAGE_META = {
+  Applied: {
+    ring: "ring-blue-200",
+    badgeBg: "bg-blue-50",
+    badgeText: "text-blue-700",
+    colBorder: "border-blue-200",
+    colTop: "bg-blue-50/60",
+  },
+  Interviewing: {
+    ring: "ring-green-200",
+    badgeBg: "bg-green-50",
+    badgeText: "text-green-700",
+    colBorder: "border-green-200",
+    colTop: "bg-green-50/60",
+  },
+  Offers: {
+    ring: "ring-purple-200",
+    badgeBg: "bg-purple-50",
+    badgeText: "text-purple-700",
+    colBorder: "border-purple-200",
+    colTop: "bg-purple-50/60",
+  },
+  ClosedOut: {
+    ring: "ring-slate-200",
+    badgeBg: "bg-slate-50",
+    badgeText: "text-slate-700",
+    colBorder: "border-slate-200",
+    colTop: "bg-slate-50/60",
+  },
+};
+
 function normalizeStatusForUi(s) {
   const v = String(s || "").trim();
   if (!v) return "Applied";
   if (v === "Closed Out") return "ClosedOut";
   return v;
-}
-
-function labelForStageKey(key) {
-  const found = PIPELINE_STAGES.find((s) => s.key === key);
-  return found ? found.label : key;
 }
 
 function isStageKeyValid(key) {
@@ -60,7 +122,6 @@ function tryParseJson(input) {
   const s = input.trim();
   if (!s) return null;
 
-  // quick guard: if it doesn't look like JSON, skip parsing
   const looksJson =
     (s.startsWith("{") && s.endsWith("}")) || (s.startsWith("[") && s.endsWith("]"));
   if (!looksJson) return null;
@@ -76,10 +137,6 @@ function normalizeResumeData(raw) {
   const data = tryParseJson(raw);
   if (!data || typeof data !== "object") return null;
 
-  // Common shapes:
-  // 1) { personalInfo, summary, workExperiences, ... }
-  // 2) { data: { personalInfo, ... } }
-  // 3) { resume: { ... } }
   const inner =
     (data.data && typeof data.data === "object" && data.data) ||
     (data.resume && typeof data.resume === "object" && data.resume) ||
@@ -103,7 +160,6 @@ function normalizeResumeData(raw) {
 
 function HybridResumeViewer({ value }) {
   const data = useMemo(() => normalizeResumeData(value), [value]);
-
   if (!data) return null;
 
   const {
@@ -125,7 +181,7 @@ function HybridResumeViewer({ value }) {
   const extraLines = [personalInfo.portfolio, personalInfo.ftProfile].filter(Boolean);
 
   return (
-    <div className="rounded border bg-white p-4">
+    <div className="rounded-lg border bg-white p-4">
       <div className="text-center">
         <div className="text-xl font-bold text-slate-900">{personalInfo.name || "Candidate"}</div>
         {contactLine ? <div className="text-xs text-slate-600 mt-1">{contactLine}</div> : null}
@@ -331,9 +387,7 @@ function HybridResumeViewer({ value }) {
 
             return (
               <div key={i} className="mt-5">
-                <div className="text-xs font-bold uppercase tracking-wide border-b pb-1">
-                  {title}
-                </div>
+                <div className="text-xs font-bold uppercase tracking-wide border-b pb-1">{title}</div>
                 {items && items.length ? (
                   <ul className="mt-2 space-y-1">
                     {items.map((item, idx) => (
@@ -351,11 +405,6 @@ function HybridResumeViewer({ value }) {
             );
           })
         : null}
-
-      <div className="mt-4 text-[11px] text-slate-500">
-        Recruiter view uses the Hybrid layout. Downloadable versions will be handled in the packet export
-        pass.
-      </div>
     </div>
   );
 }
@@ -365,7 +414,6 @@ function PacketViewer({ applicationId, job, candidate, onClose }) {
   const [packet, setPacket] = useState(null);
   const [error, setError] = useState(null);
 
-  // ✅ WHY auto-run (INLINE, no drawer)
   const [whyLoading, setWhyLoading] = useState(false);
   const [whyError, setWhyError] = useState(null);
   const [whyData, setWhyData] = useState(null);
@@ -410,7 +458,11 @@ function PacketViewer({ applicationId, job, candidate, onClose }) {
       if (whyHasRunRef.current) return;
 
       const resumeText =
-        typeof resumeValue === "string" ? resumeValue : resumeValue ? JSON.stringify(resumeValue) : "";
+        typeof resumeValue === "string"
+          ? resumeValue
+          : resumeValue
+          ? JSON.stringify(resumeValue)
+          : "";
 
       const jdText = String(jobDescription || "").trim();
 
@@ -523,9 +575,7 @@ function PacketViewer({ applicationId, job, candidate, onClose }) {
                   <div className="space-y-2">
                     {packet.additionalQuestions.map((a, idx) => (
                       <div key={`${a.questionKey}-${idx}`} className="text-sm">
-                        <div className="font-medium text-slate-800">
-                          {a.label || a.questionKey}
-                        </div>
+                        <div className="font-medium text-slate-800">{a.label || a.questionKey}</div>
                         <div className="text-slate-700 whitespace-pre-wrap">
                           {typeof a.value === "string" ? a.value : JSON.stringify(a.value)}
                         </div>
@@ -542,14 +592,9 @@ function PacketViewer({ applicationId, job, candidate, onClose }) {
                 {packet.consent ? (
                   <div className="text-sm text-slate-700 space-y-1">
                     <div>Terms accepted: {packet.consent.termsAccepted ? "Yes" : "No"}</div>
-                    <div>
-                      Status updates: {packet.consent.emailUpdatesAccepted ? "Yes" : "No"}
-                    </div>
+                    <div>Status updates: {packet.consent.emailUpdatesAccepted ? "Yes" : "No"}</div>
                     <div>Signature: {packet.consent.signatureName || "Not provided"}</div>
-                    <div>
-                      Signed at:{" "}
-                      {packet.consent.signedAt ? String(packet.consent.signedAt) : "Not provided"}
-                    </div>
+                    <div>Signed at: {packet.consent.signedAt ? String(packet.consent.signedAt) : "Not provided"}</div>
                   </div>
                 ) : (
                   <div className="text-sm text-slate-500">No consent record found.</div>
@@ -615,7 +660,6 @@ function PacketViewer({ applicationId, job, candidate, onClose }) {
                 {whyShowDetails && whyData ? (
                   <div className="mt-3 space-y-3">
                     <WhyCandidateInline explain={whyData} mode="full" title="Why this candidate" />
-
                     <details className="rounded border p-3">
                       <summary className="text-xs font-semibold text-slate-700 cursor-pointer">
                         Raw JSON (debug)
@@ -624,24 +668,6 @@ function PacketViewer({ applicationId, job, candidate, onClose }) {
                         {JSON.stringify(whyData, null, 2)}
                       </pre>
                     </details>
-                  </div>
-                ) : null}
-
-                {packet.forgeAssessment ? (
-                  <div className="mt-4 text-sm text-slate-700 space-y-2">
-                    <div className="text-slate-600">
-                      Model: {packet.forgeAssessment.model || "Unknown"}{" "}
-                      {packet.forgeAssessment.modelVersion
-                        ? `(${packet.forgeAssessment.modelVersion})`
-                        : ""}
-                      {packet.forgeAssessment.score !== null &&
-                      packet.forgeAssessment.score !== undefined
-                        ? ` • Score: ${packet.forgeAssessment.score}`
-                        : ""}
-                    </div>
-                    <pre className="whitespace-pre-wrap text-sm text-slate-800">
-                      {JSON.stringify(packet.forgeAssessment.result, null, 2)}
-                    </pre>
                   </div>
                 ) : null}
               </div>
@@ -668,9 +694,11 @@ function PipelineCard({
   currentStageKey,
   disabled,
 }) {
+  const meta = STAGE_META[currentStageKey] || STAGE_META.Applied;
+
   return (
     <div
-      className="rounded border bg-white p-3 shadow-sm"
+      className={`rounded-lg border bg-white p-3 shadow-sm ring-1 ${meta.ring} transition`}
       draggable={!disabled}
       onDragStart={dragHandlers?.onDragStart}
       onDragEnd={dragHandlers?.onDragEnd}
@@ -678,15 +706,12 @@ function PipelineCard({
     >
       <div className="flex items-start justify-between gap-3">
         <div className="min-w-0">
-          <div className="font-medium text-slate-900 truncate">{displayName}</div>
+          <div className="font-semibold text-slate-900 truncate">{displayName}</div>
+          {candidateEmail ? <div className="text-xs text-slate-600 truncate mt-0.5">{candidateEmail}</div> : null}
 
-          {candidateEmail ? (
-            <div className="text-sm text-slate-600 truncate">{candidateEmail}</div>
-          ) : null}
-
-          <div className="text-xs text-slate-500 mt-1">
-            Applied: {app.appliedAt ? String(app.appliedAt) : "Unknown"}{" "}
-            {app.submittedAt ? `• Submitted: ${String(app.submittedAt)}` : ""}
+          <div className="text-[11px] text-slate-500 mt-2">
+            Applied: {formatDateTime(app.appliedAt)}
+            {app.submittedAt ? ` • Submitted: ${formatDateTime(app.submittedAt)}` : ""}
           </div>
         </div>
 
@@ -694,7 +719,7 @@ function PipelineCard({
           <div className="flex items-center gap-2">
             <button
               type="button"
-              className="text-sm px-3 py-1.5 rounded border bg-white hover:bg-slate-50"
+              className="text-xs px-2.5 py-1.5 rounded border bg-white hover:bg-slate-50"
               onClick={onViewPacket}
               disabled={disabled}
             >
@@ -702,7 +727,7 @@ function PipelineCard({
             </button>
 
             <a
-              className="text-sm px-3 py-1.5 rounded border bg-white hover:bg-slate-50"
+              className="text-xs px-2.5 py-1.5 rounded border bg-white hover:bg-slate-50"
               href={onDownload}
               target="_blank"
               rel="noreferrer"
@@ -717,7 +742,7 @@ function PipelineCard({
 
           <div className="w-full">
             <select
-              className="w-full text-xs rounded border px-2 py-1 bg-white"
+              className="w-full text-xs rounded-md border px-2 py-1.5 bg-white"
               value={currentStageKey}
               onChange={(e) => onChangeStage(e.target.value)}
               disabled={disabled}
@@ -732,27 +757,17 @@ function PipelineCard({
           </div>
         </div>
       </div>
-
-      <div className="mt-3 text-xs text-slate-600">
-        Packet includes: Cover, Resume, Additional Questions, Consent, Forge Assessment. Self-ID is excluded.
-      </div>
     </div>
   );
 }
 
-function ApplicationsList({
-  apps,
-  viewer,
-  movingAppIds,
-  onMoveStage,
-  onViewPacket,
-}) {
+function ApplicationsList({ apps, viewer, movingAppIds, onMoveStage, onViewPacket }) {
   if (!apps.length) {
     return <div className="text-sm text-slate-500">No applicants yet.</div>;
   }
 
   return (
-    <div className="overflow-auto rounded-lg border">
+    <div className="overflow-auto rounded-lg border bg-white">
       <table className="min-w-[920px] w-full text-sm">
         <thead className="bg-slate-50">
           <tr className="text-left">
@@ -772,20 +787,18 @@ function ApplicationsList({
 
             const isViewer = viewer?.id && candidateId && viewer.id === candidateId;
 
-            const displayName = isViewer
-              ? "Internal test application (You)"
-              : candidateName || "Candidate";
+            const displayName = isViewer ? "Internal test application (You)" : candidateName || "Candidate";
 
             const currentStageKey = normalizeStatusForUi(a.status);
             const disabled = movingAppIds.has(a.id);
 
             return (
-              <tr key={a.id} className="border-t">
-                <td className="p-3 font-medium text-slate-900">{displayName}</td>
+              <tr key={a.id} className="border-t hover:bg-slate-50/60">
+                <td className="p-3 font-semibold text-slate-900">{displayName}</td>
                 <td className="p-3 text-slate-700">{candidateEmail || "—"}</td>
                 <td className="p-3">
                   <select
-                    className="text-xs rounded border px-2 py-1 bg-white"
+                    className="text-xs rounded-md border px-2 py-1.5 bg-white"
                     value={currentStageKey}
                     onChange={(e) => onMoveStage(a.id, e.target.value)}
                     disabled={disabled}
@@ -798,20 +811,20 @@ function ApplicationsList({
                     ))}
                   </select>
                 </td>
-                <td className="p-3 text-slate-700">{a.appliedAt ? String(a.appliedAt) : "—"}</td>
-                <td className="p-3 text-slate-700">{a.submittedAt ? String(a.submittedAt) : "—"}</td>
+                <td className="p-3 text-slate-700">{formatDateTime(a.appliedAt)}</td>
+                <td className="p-3 text-slate-700">{formatDateTime(a.submittedAt)}</td>
                 <td className="p-3">
                   <div className="flex items-center gap-2">
                     <button
                       type="button"
-                      className="text-sm px-3 py-1.5 rounded border bg-white hover:bg-slate-50"
+                      className="text-xs px-2.5 py-1.5 rounded border bg-white hover:bg-slate-50"
                       onClick={() => onViewPacket(a)}
                       disabled={disabled}
                     >
                       View packet
                     </button>
                     <a
-                      className="text-sm px-3 py-1.5 rounded border bg-white hover:bg-slate-50"
+                      className="text-xs px-2.5 py-1.5 rounded border bg-white hover:bg-slate-50"
                       href={`/api/recruiter/applications/${a.id}/packet.zip`}
                       target="_blank"
                       rel="noreferrer"
@@ -851,10 +864,9 @@ export default function RecruiterJobApplicantsPage() {
   const [openPacketAppId, setOpenPacketAppId] = useState(null);
   const [openPacketCandidate, setOpenPacketCandidate] = useState(null);
 
-  // ✅ NEW: Kanban vs List view toggle (no localStorage persistence)
+  // ✅ Kanban vs List view toggle (no localStorage persistence)
   const [viewMode, setViewMode] = useState("kanban"); // "kanban" | "list"
 
-  // drag state + move state
   const draggingRef = useRef({ appId: null, from: null });
   const [movingAppIds, setMovingAppIds] = useState(() => new Set());
   const [moveError, setMoveError] = useState(null);
@@ -1020,7 +1032,8 @@ export default function RecruiterJobApplicantsPage() {
 
   const headerRight = (
     <div className="flex items-center gap-2">
-      <div className="inline-flex rounded-lg border bg-white overflow-hidden">
+      {/* Segmented control */}
+      <div className="inline-flex rounded-xl border bg-white/90 overflow-hidden shadow-sm">
         <button
           type="button"
           className="text-sm px-3 py-1.5"
@@ -1028,7 +1041,7 @@ export default function RecruiterJobApplicantsPage() {
           style={{
             background: viewMode === "kanban" ? "rgba(255,112,67,0.12)" : "transparent",
             color: viewMode === "kanban" ? "#9A3412" : "#334155",
-            fontWeight: viewMode === "kanban" ? 700 : 600,
+            fontWeight: viewMode === "kanban" ? 800 : 600,
           }}
           title="Kanban view"
         >
@@ -1041,7 +1054,7 @@ export default function RecruiterJobApplicantsPage() {
           style={{
             background: viewMode === "list" ? "rgba(255,112,67,0.12)" : "transparent",
             color: viewMode === "list" ? "#9A3412" : "#334155",
-            fontWeight: viewMode === "list" ? 700 : 600,
+            fontWeight: viewMode === "list" ? 800 : 600,
           }}
           title="List view"
         >
@@ -1049,10 +1062,7 @@ export default function RecruiterJobApplicantsPage() {
         </button>
       </div>
 
-      <Link
-        href="/recruiter/job-postings"
-        className="text-sm px-3 py-1.5 rounded border bg-white hover:bg-slate-50"
-      >
+      <Link href="/recruiter/job-postings" className="text-sm px-3 py-1.5 rounded-lg border bg-white/90 hover:bg-white">
         Back to Job Postings
       </Link>
     </div>
@@ -1126,64 +1136,73 @@ export default function RecruiterJobApplicantsPage() {
                 <div className="grid grid-cols-1 md:grid-cols-4 gap-3">
                   {PIPELINE_STAGES.map((stage) => {
                     const items = grouped[stage.key] || [];
+                    const meta = STAGE_META[stage.key] || STAGE_META.Applied;
+
                     return (
                       <div
                         key={stage.key}
-                        className="rounded-lg border bg-slate-50 p-3"
+                        className={`rounded-xl border bg-white/80 overflow-hidden`}
                         {...stageDropHandlers(stage.key)}
+                        style={{ boxShadow: "0 2px 10px rgba(0,0,0,0.06)" }}
                       >
-                        <div className="flex items-center justify-between mb-3">
-                          <div className="text-sm font-semibold text-slate-900">{stage.label}</div>
-                          <div className="text-xs text-slate-500">{items.length}</div>
+                        <div className={`px-3 py-2 border-b ${meta.colTop}`}>
+                          <div className="flex items-center justify-between">
+                            <div className="text-sm font-semibold text-slate-900">{stage.label}</div>
+                            <span className={`text-xs px-2 py-0.5 rounded-full border ${meta.badgeBg} ${meta.badgeText}`}>
+                              {items.length}
+                            </span>
+                          </div>
                         </div>
 
-                        <div className="space-y-3 min-h-[40px]">
-                          {items.map((a) => {
-                            const candidateName = a?.candidate?.name || null;
-                            const candidateEmail = a?.candidate?.email || "";
-                            const candidateId = a?.candidate?.id || null;
+                        <div className={`p-3 border-l-4 ${meta.colBorder}`}>
+                          <div className="space-y-3 min-h-[40px] max-h-[520px] overflow-auto pr-1">
+                            {items.map((a) => {
+                              const candidateName = a?.candidate?.name || null;
+                              const candidateEmail = a?.candidate?.email || "";
+                              const candidateId = a?.candidate?.id || null;
 
-                            const isViewer = viewer?.id && candidateId && viewer.id === candidateId;
+                              const isViewer = viewer?.id && candidateId && viewer.id === candidateId;
 
-                            const displayName = isViewer
-                              ? "Internal test application (You)"
-                              : candidateName || "Candidate";
+                              const displayName = isViewer
+                                ? "Internal test application (You)"
+                                : candidateName || "Candidate";
 
-                            const currentStageKey = normalizeStatusForUi(a.status);
-                            const disabled = movingAppIds.has(a.id);
+                              const currentStageKey = normalizeStatusForUi(a.status);
+                              const disabled = movingAppIds.has(a.id);
 
-                            const dragHandlers = {
-                              onDragStart: (e) => {
-                                try {
-                                  e.dataTransfer.setData("text/plain", `${a.id}|${currentStageKey}`);
-                                  draggingRef.current = { appId: a.id, from: currentStageKey };
-                                } catch {
-                                  // ignore
-                                }
-                              },
-                              onDragEnd: () => {
-                                draggingRef.current = { appId: null, from: null };
-                              },
-                            };
+                              const dragHandlers = {
+                                onDragStart: (e) => {
+                                  try {
+                                    e.dataTransfer.setData("text/plain", `${a.id}|${currentStageKey}`);
+                                    draggingRef.current = { appId: a.id, from: currentStageKey };
+                                  } catch {
+                                    // ignore
+                                  }
+                                },
+                                onDragEnd: () => {
+                                  draggingRef.current = { appId: null, from: null };
+                                },
+                              };
 
-                            return (
-                              <PipelineCard
-                                key={a.id}
-                                app={a}
-                                displayName={displayName}
-                                candidateEmail={candidateEmail}
-                                currentStageKey={currentStageKey}
-                                disabled={disabled}
-                                dragHandlers={dragHandlers}
-                                onViewPacket={() => {
-                                  setOpenPacketCandidate(a?.candidate || null);
-                                  setOpenPacketAppId(a.id);
-                                }}
-                                onDownload={`/api/recruiter/applications/${a.id}/packet.zip`}
-                                onChangeStage={(toKey) => moveCandidateStage(a.id, toKey)}
-                              />
-                            );
-                          })}
+                              return (
+                                <PipelineCard
+                                  key={a.id}
+                                  app={a}
+                                  displayName={displayName}
+                                  candidateEmail={candidateEmail}
+                                  currentStageKey={currentStageKey}
+                                  disabled={disabled}
+                                  dragHandlers={dragHandlers}
+                                  onViewPacket={() => {
+                                    setOpenPacketCandidate(a?.candidate || null);
+                                    setOpenPacketAppId(a.id);
+                                  }}
+                                  onDownload={`/api/recruiter/applications/${a.id}/packet.zip`}
+                                  onChangeStage={(toKey) => moveCandidateStage(a.id, toKey)}
+                                />
+                              );
+                            })}
+                          </div>
                         </div>
                       </div>
                     );
