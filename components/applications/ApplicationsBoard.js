@@ -91,6 +91,9 @@ export default function ApplicationsBoard({
 }) {
   const [activeId, setActiveId] = useState(null);
 
+  // ✅ NEW: lock overlay width/height to the original card so it doesn’t “jump” away from cursor
+  const [activeSize, setActiveSize] = useState(null);
+
   const sensors = useSensors(
     useSensor(PointerSensor, {
       activationConstraint: { distance: 8 },
@@ -107,7 +110,7 @@ export default function ApplicationsBoard({
     background: 'white',
     border: '1px solid #eee',
     borderRadius: 12,
-    padding: compact ? 10 : 8, // ✅ was 12 -> stretch usable width
+    padding: compact ? 10 : 8,
     boxShadow: '0 2px 6px rgba(0,0,0,0.06)',
     width: '100%',
     boxSizing: 'border-box',
@@ -116,7 +119,7 @@ export default function ApplicationsBoard({
   const columnStyle = {
     background: 'white',
     borderRadius: 12,
-    padding: compact ? 6 : 8, // ✅ was 12 -> stretch columns + card space
+    padding: compact ? 6 : 8,
     boxShadow: '0 2px 6px rgba(0,0,0,0.06)',
     minHeight: '300px',
     position: 'relative',
@@ -201,18 +204,29 @@ export default function ApplicationsBoard({
       <DndContext
         sensors={sensors}
         collisionDetection={closestCorners}
-        onDragStart={({ active }) => setActiveId(active?.id ?? null)}
-        onDragCancel={() => setActiveId(null)}
+        onDragStart={({ active }) => {
+          setActiveId(active?.id ?? null);
+
+          // ✅ NEW: lock overlay size to the grabbed card’s initial rect
+          const r = active?.rect?.current?.initial;
+          if (r?.width && r?.height) setActiveSize({ width: r.width, height: r.height });
+          else setActiveSize(null);
+        }}
+        onDragCancel={() => {
+          setActiveId(null);
+          setActiveSize(null);
+        }}
         onDragEnd={(event) => {
           handleDragEnd(event);
           setActiveId(null);
+          setActiveSize(null);
         }}
       >
         <div
           style={{
             display: 'grid',
             gridTemplateColumns,
-            gap: compact ? 10 : 8, // ✅ was 12 -> more column width (no rail impact)
+            gap: compact ? 10 : 8,
             width: '100%',
           }}
         >
@@ -229,7 +243,7 @@ export default function ApplicationsBoard({
                     alignItems: 'center',
                     justifyContent: 'center',
                     gap: 8,
-                    padding: '6px 6px', // ✅ was 6px 8px -> a touch less, gives column content room
+                    padding: '6px 6px',
                     borderRadius: 999,
                     background: c.bg,
                     color: c.text,
@@ -278,9 +292,15 @@ export default function ApplicationsBoard({
           })}
         </div>
 
-        <DragOverlay>
+        <DragOverlay adjustScale={false}>
           {activeMeta.job ? (
-            <div style={{ pointerEvents: 'none' }}>
+            <div
+              style={{
+                pointerEvents: 'none',
+                width: activeSize?.width || 'auto',
+                height: activeSize?.height || 'auto',
+              }}
+            >
               <ApplicationCard
                 job={activeMeta.job}
                 stage={activeMeta.stage}
