@@ -409,7 +409,112 @@ function HybridResumeViewer({ value }) {
   );
 }
 
-function PacketViewer({ applicationId, job, candidate, onClose }) {
+// ──────────────────────────────────────────────────────────────
+// Alignment / WHY helpers (page-level cache + small modal)
+// ──────────────────────────────────────────────────────────────
+function AlignmentBadge({ state, onClick, title }) {
+  const loading = state?.status === "loading";
+  const score =
+    typeof state?.score === "number" && Number.isFinite(state.score) ? Math.round(state.score) : null;
+
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      disabled={loading}
+      title={title || "View alignment"}
+      aria-label={title || "View alignment"}
+      className="inline-flex items-center justify-center"
+      style={{
+        width: 30,
+        height: 30,
+        borderRadius: 8,
+        border: "2px solid rgba(255,112,67,0.95)",
+        background: "rgba(255,255,255,0.85)",
+        boxShadow: "0 1px 6px rgba(0,0,0,0.08)",
+        color: "#9A3412",
+        fontWeight: 900,
+        fontSize: 12,
+        lineHeight: "12px",
+        cursor: loading ? "default" : "pointer",
+        opacity: loading ? 0.75 : 1,
+      }}
+    >
+      {loading ? "…" : score !== null ? `${score}%` : "—"}
+    </button>
+  );
+}
+
+function AlignmentModal({ open, onClose, state, onViewFullWhy }) {
+  if (!open) return null;
+
+  const score =
+    typeof state?.score === "number" && Number.isFinite(state.score) ? Math.round(state.score) : null;
+
+  const loading = state?.status === "loading";
+  const error = state?.status === "error" ? state?.errorMessage : null;
+
+  return (
+    <div className="fixed inset-0 z-[60] bg-black/40 flex items-center justify-center p-4">
+      <div className="w-full max-w-lg rounded-xl bg-white border shadow-lg overflow-hidden">
+        <div className="px-4 py-3 border-b flex items-center justify-between">
+          <div className="font-semibold flex items-center gap-2">
+            Alignment
+            <span className="text-xs font-semibold text-[#FF7043]">{score !== null ? `${score}%` : ""}</span>
+          </div>
+          <button
+            className="text-sm px-3 py-1.5 rounded border hover:bg-slate-50"
+            onClick={onClose}
+            type="button"
+          >
+            Close
+          </button>
+        </div>
+
+        <div className="p-4 space-y-3">
+          <div className="text-sm text-slate-700">
+            Evidence-first guidance for recruiter judgment. Recruiters review and decide.
+          </div>
+
+          {loading ? (
+            <div className="text-sm text-slate-500">Analyzing…</div>
+          ) : error ? (
+            <div className="rounded border border-rose-200 bg-rose-50 p-3 text-sm text-rose-800">
+              {error}
+            </div>
+          ) : state?.summary ? (
+            <div className="rounded border bg-slate-50 p-3 text-sm text-slate-800">
+              {state.summary}
+            </div>
+          ) : (
+            <div className="rounded border bg-slate-50 p-3 text-sm text-slate-600">
+              No summary available yet.
+            </div>
+          )}
+
+          <div className="flex items-center justify-between pt-1">
+            <div className="flex items-center gap-2 text-xs text-slate-500">
+              <span className="font-semibold">ForgeTomorrow assessment</span>
+              <WHYScoreInfo />
+            </div>
+
+            <button
+              type="button"
+              className="text-sm px-3 py-1.5 rounded border bg-white hover:bg-slate-50"
+              onClick={onViewFullWhy}
+              disabled={loading}
+              title="Open full WHY details in the packet viewer"
+            >
+              View full WHY
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function PacketViewer({ applicationId, job, candidate, onClose, autoOpenWhyDetails }) {
   const [loading, setLoading] = useState(false);
   const [packet, setPacket] = useState(null);
   const [error, setError] = useState(null);
@@ -495,7 +600,13 @@ function PacketViewer({ applicationId, job, candidate, onClose }) {
 
         if (!alive) return;
         setWhyData(json);
-        setWhyShowDetails(false);
+
+        // If caller wants details open immediately, do it after data arrives.
+        if (autoOpenWhyDetails) {
+          setWhyShowDetails(true);
+        } else {
+          setWhyShowDetails(false);
+        }
       } catch (e) {
         if (!alive) return;
         setWhyError(e);
@@ -511,7 +622,7 @@ function PacketViewer({ applicationId, job, candidate, onClose }) {
     return () => {
       alive = false;
     };
-  }, [packet, applicationId, resumeValue, jobDescription, job?.id, candidate?.id, job]);
+  }, [packet, applicationId, resumeValue, jobDescription, job?.id, candidate?.id, job, autoOpenWhyDetails]);
 
   return (
     <div className="fixed inset-0 z-50 bg-black/40 flex items-center justify-center p-4">
@@ -594,7 +705,9 @@ function PacketViewer({ applicationId, job, candidate, onClose }) {
                     <div>Terms accepted: {packet.consent.termsAccepted ? "Yes" : "No"}</div>
                     <div>Status updates: {packet.consent.emailUpdatesAccepted ? "Yes" : "No"}</div>
                     <div>Signature: {packet.consent.signatureName || "Not provided"}</div>
-                    <div>Signed at: {packet.consent.signedAt ? String(packet.consent.signedAt) : "Not provided"}</div>
+                    <div>
+                      Signed at: {packet.consent.signedAt ? String(packet.consent.signedAt) : "Not provided"}
+                    </div>
                   </div>
                 ) : (
                   <div className="text-sm text-slate-500">No consent record found.</div>
@@ -693,8 +806,17 @@ function PipelineCard({
   dragHandlers,
   currentStageKey,
   disabled,
+  whyState,
+  ensureWhy,
+  onOpenAlignment,
 }) {
   const meta = STAGE_META[currentStageKey] || STAGE_META.Applied;
+
+  useEffect(() => {
+    // C) On-demand per card: run once when card mounts (light caching prevents re-run).
+    ensureWhy?.(app?.id, app?.candidate?.id);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [app?.id]);
 
   return (
     <div
@@ -706,12 +828,26 @@ function PipelineCard({
     >
       <div className="flex items-start justify-between gap-3">
         <div className="min-w-0">
-          <div className="font-semibold text-slate-900 truncate">{displayName}</div>
-          {candidateEmail ? <div className="text-xs text-slate-600 truncate mt-0.5">{candidateEmail}</div> : null}
+          <div className="flex items-start gap-2">
+            <div className="min-w-0">
+              <div className="font-semibold text-slate-900 truncate">{displayName}</div>
+              {candidateEmail ? (
+                <div className="text-xs text-slate-600 truncate mt-0.5">{candidateEmail}</div>
+              ) : null}
+            </div>
+
+            {/* Alignment badge (top surface) */}
+            <div className="shrink-0 pt-0.5">
+              <AlignmentBadge
+                state={whyState}
+                onClick={onOpenAlignment}
+                title="Alignment score (click for summary)"
+              />
+            </div>
+          </div>
 
           <div className="text-[11px] text-slate-500 mt-2">
             Applied: {formatDateTime(app.appliedAt)}
-            {app.submittedAt ? ` • Submitted: ${formatDateTime(app.submittedAt)}` : ""}
           </div>
         </div>
 
@@ -761,7 +897,16 @@ function PipelineCard({
   );
 }
 
-function ApplicationsList({ apps, viewer, movingAppIds, onMoveStage, onViewPacket }) {
+function ApplicationsList({
+  apps,
+  viewer,
+  movingAppIds,
+  onMoveStage,
+  onViewPacket,
+  whyByAppId,
+  ensureWhy,
+  onOpenAlignmentForApp,
+}) {
   if (!apps.length) {
     return <div className="text-sm text-slate-500">No applicants yet.</div>;
   }
@@ -775,7 +920,6 @@ function ApplicationsList({ apps, viewer, movingAppIds, onMoveStage, onViewPacke
             <th className="p-3 font-semibold text-slate-700">Email</th>
             <th className="p-3 font-semibold text-slate-700">Stage</th>
             <th className="p-3 font-semibold text-slate-700">Applied</th>
-            <th className="p-3 font-semibold text-slate-700">Submitted</th>
             <th className="p-3 font-semibold text-slate-700">Actions</th>
           </tr>
         </thead>
@@ -786,15 +930,34 @@ function ApplicationsList({ apps, viewer, movingAppIds, onMoveStage, onViewPacke
             const candidateId = a?.candidate?.id || null;
 
             const isViewer = viewer?.id && candidateId && viewer.id === candidateId;
-
             const displayName = isViewer ? "Internal test application (You)" : candidateName || "Candidate";
 
             const currentStageKey = normalizeStatusForUi(a.status);
             const disabled = movingAppIds.has(a.id);
 
+            const whyState = whyByAppId?.[a.id];
+
+            // C) On-demand per row
+            // Run once when row mounts (cache prevents re-run).
+            // Keep this super light: it will no-op if already loaded/attempted.
+            // eslint-disable-next-line react-hooks/rules-of-hooks
+            useEffect(() => {
+              ensureWhy?.(a?.id, a?.candidate?.id);
+              // eslint-disable-next-line react-hooks/exhaustive-deps
+            }, [a?.id]);
+
             return (
               <tr key={a.id} className="border-t hover:bg-slate-50/60">
-                <td className="p-3 font-semibold text-slate-900">{displayName}</td>
+                <td className="p-3 font-semibold text-slate-900">
+                  <div className="flex items-center gap-2">
+                    <span className="truncate">{displayName}</span>
+                    <AlignmentBadge
+                      state={whyState}
+                      onClick={() => onOpenAlignmentForApp?.(a)}
+                      title="Alignment score (click for summary)"
+                    />
+                  </div>
+                </td>
                 <td className="p-3 text-slate-700">{candidateEmail || "—"}</td>
                 <td className="p-3">
                   <select
@@ -812,7 +975,6 @@ function ApplicationsList({ apps, viewer, movingAppIds, onMoveStage, onViewPacke
                   </select>
                 </td>
                 <td className="p-3 text-slate-700">{formatDateTime(a.appliedAt)}</td>
-                <td className="p-3 text-slate-700">{formatDateTime(a.submittedAt)}</td>
                 <td className="p-3">
                   <div className="flex items-center gap-2">
                     <button
@@ -863,6 +1025,7 @@ export default function RecruiterJobApplicantsPage() {
 
   const [openPacketAppId, setOpenPacketAppId] = useState(null);
   const [openPacketCandidate, setOpenPacketCandidate] = useState(null);
+  const [openPacketAutoWhy, setOpenPacketAutoWhy] = useState(false);
 
   // ✅ Kanban vs List view toggle (no localStorage persistence)
   const [viewMode, setViewMode] = useState("kanban"); // "kanban" | "list"
@@ -870,6 +1033,15 @@ export default function RecruiterJobApplicantsPage() {
   const draggingRef = useRef({ appId: null, from: null });
   const [movingAppIds, setMovingAppIds] = useState(() => new Set());
   const [moveError, setMoveError] = useState(null);
+
+  // WHY per app cache
+  const [whyByAppId, setWhyByAppId] = useState({});
+  const resumeTextCacheRef = useRef(new Map()); // appId -> string
+  const whyInFlightRef = useRef(new Set()); // appId
+
+  // Small alignment modal state
+  const [openAlignAppId, setOpenAlignAppId] = useState(null);
+  const [openAlignCandidate, setOpenAlignCandidate] = useState(null);
 
   useEffect(() => {
     let alive = true;
@@ -945,6 +1117,105 @@ export default function RecruiterJobApplicantsPage() {
 
     return g;
   }, [apps]);
+
+  async function fetchResumeTextForApplication(appId) {
+    if (!appId) return "";
+    if (resumeTextCacheRef.current.has(appId)) {
+      return resumeTextCacheRef.current.get(appId) || "";
+    }
+
+    const res = await fetch(`/api/recruiter/applications/${appId}/packet`);
+    const json = await res.json().catch(() => ({}));
+    if (!res.ok) throw new Error(json?.error || `HTTP ${res.status}`);
+
+    const resumeValue = json?.resume?.content !== undefined ? json.resume.content : null;
+
+    const resumeText =
+      typeof resumeValue === "string"
+        ? resumeValue
+        : resumeValue
+        ? JSON.stringify(resumeValue)
+        : "";
+
+    resumeTextCacheRef.current.set(appId, resumeText || "");
+    return resumeText || "";
+  }
+
+  function setWhyState(appId, next) {
+    setWhyByAppId((prev) => ({
+      ...prev,
+      [appId]: {
+        ...(prev?.[appId] || {}),
+        ...(next || {}),
+      },
+    }));
+  }
+
+  async function ensureWhy(appId, candidateUserId) {
+    if (!appId) return;
+
+    const existing = whyByAppId?.[appId];
+    if (existing?.status === "ready") return;
+    if (existing?.status === "loading") return;
+    if (whyInFlightRef.current.has(appId)) return;
+
+    const jdText = String(job?.description || job?.jobDescription || "").trim();
+    if (!jdText) {
+      // No JD at all: show "—" and an explanatory note in modal/tooltip (not blocking the page).
+      setWhyState(appId, {
+        status: "error",
+        errorMessage:
+          "Needs job description detail. Add responsibilities, required tools/processes, and outcomes to run an evidence-based comparison.",
+      });
+      return;
+    }
+
+    try {
+      whyInFlightRef.current.add(appId);
+      setWhyState(appId, { status: "loading", errorMessage: null });
+
+      const resumeText = await fetchResumeTextForApplication(appId);
+      if (!String(resumeText || "").trim()) {
+        setWhyState(appId, {
+          status: "error",
+          errorMessage: "Resume content is missing for this application.",
+        });
+        return;
+      }
+
+      const res = await fetch("/api/recruiter/explain", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          resumeText,
+          jobDescription: jdText,
+          jobId: job?.id ?? null,
+          applicationId: appId,
+          candidateUserId: candidateUserId ?? null,
+          externalName: null,
+          externalEmail: null,
+        }),
+      });
+
+      const json = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(json?.error || `HTTP ${res.status}`);
+
+      setWhyState(appId, {
+        status: "ready",
+        score: typeof json?.score === "number" ? json.score : null,
+        summary: json?.summary || "",
+        explain: json || null,
+        errorMessage: null,
+      });
+    } catch (e) {
+      setWhyState(appId, {
+        status: "error",
+        errorMessage: `Assessment could not run. ${String(e?.message || "")}`,
+      });
+    } finally {
+      whyInFlightRef.current.delete(appId);
+    }
+  }
 
   async function moveCandidateStage(appId, toStageKey) {
     if (!jobId) return;
@@ -1030,6 +1301,26 @@ export default function RecruiterJobApplicantsPage() {
     };
   }
 
+  function openPacket(app) {
+    setOpenPacketCandidate(app?.candidate || null);
+    setOpenPacketAppId(app?.id || null);
+    setOpenPacketAutoWhy(false);
+  }
+
+  function openPacketWithWhy(app) {
+    setOpenPacketCandidate(app?.candidate || null);
+    setOpenPacketAppId(app?.id || null);
+    setOpenPacketAutoWhy(true);
+  }
+
+  function openAlignment(app) {
+    if (!app?.id) return;
+    setOpenAlignAppId(app.id);
+    setOpenAlignCandidate(app?.candidate || null);
+    // Ensure we have data (if already loaded, this is a no-op)
+    ensureWhy(app.id, app?.candidate?.id);
+  }
+
   const headerRight = (
     <div className="flex items-center gap-2">
       {/* Segmented control */}
@@ -1067,6 +1358,8 @@ export default function RecruiterJobApplicantsPage() {
       </Link>
     </div>
   );
+
+  const alignState = openAlignAppId ? whyByAppId?.[openAlignAppId] : null;
 
   return (
     <PlanProvider>
@@ -1193,10 +1486,10 @@ export default function RecruiterJobApplicantsPage() {
                                   currentStageKey={currentStageKey}
                                   disabled={disabled}
                                   dragHandlers={dragHandlers}
-                                  onViewPacket={() => {
-                                    setOpenPacketCandidate(a?.candidate || null);
-                                    setOpenPacketAppId(a.id);
-                                  }}
+                                  whyState={whyByAppId?.[a.id]}
+                                  ensureWhy={ensureWhy}
+                                  onOpenAlignment={() => openAlignment(a)}
+                                  onViewPacket={() => openPacket(a)}
                                   onDownload={`/api/recruiter/applications/${a.id}/packet.zip`}
                                   onChangeStage={(toKey) => moveCandidateStage(a.id, toKey)}
                                 />
@@ -1213,11 +1506,11 @@ export default function RecruiterJobApplicantsPage() {
                   apps={apps}
                   viewer={viewer}
                   movingAppIds={movingAppIds}
+                  whyByAppId={whyByAppId}
+                  ensureWhy={ensureWhy}
+                  onOpenAlignmentForApp={(app) => openAlignment(app)}
                   onMoveStage={(appId, stageKey) => moveCandidateStage(appId, stageKey)}
-                  onViewPacket={(app) => {
-                    setOpenPacketCandidate(app?.candidate || null);
-                    setOpenPacketAppId(app.id);
-                  }}
+                  onViewPacket={(app) => openPacket(app)}
                 />
               )
             ) : (
@@ -1226,14 +1519,32 @@ export default function RecruiterJobApplicantsPage() {
           </SectionCard>
         </div>
 
+        {/* Small "taste" modal */}
+        <AlignmentModal
+          open={!!openAlignAppId}
+          state={alignState}
+          onClose={() => {
+            setOpenAlignAppId(null);
+            setOpenAlignCandidate(null);
+          }}
+          onViewFullWhy={() => {
+            const app = apps.find((x) => x.id === openAlignAppId);
+            if (app) openPacketWithWhy(app);
+            setOpenAlignAppId(null);
+            setOpenAlignCandidate(null);
+          }}
+        />
+
         {openPacketAppId ? (
           <PacketViewer
             applicationId={openPacketAppId}
             job={job}
             candidate={openPacketCandidate}
+            autoOpenWhyDetails={openPacketAutoWhy}
             onClose={() => {
               setOpenPacketAppId(null);
               setOpenPacketCandidate(null);
+              setOpenPacketAutoWhy(false);
             }}
           />
         ) : null}
