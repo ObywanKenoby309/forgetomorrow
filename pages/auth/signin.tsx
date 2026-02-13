@@ -1,4 +1,4 @@
-// pages/auth/signin.tsx — UPDATED (adds outage notice banner)
+// pages/auth/signin.tsx — FINAL FIXED VERSION (NO MORE LOOP)
 import Link from 'next/link';
 import { getSession, getCsrfToken } from 'next-auth/react';
 
@@ -45,45 +45,13 @@ export default function SignIn({ csrfToken, error }: SignInProps) {
         style={{
           textAlign: 'center',
           color: '#FF7043',
-          marginBottom: 18,
+          marginBottom: 30,
           fontSize: 24,
           fontWeight: 800,
         }}
       >
         Welcome Back
       </h1>
-
-      {/* ✅ OUTAGE NOTICE (non-blocking, always visible) */}
-      <div
-        role="status"
-        aria-live="polite"
-        style={{
-          marginBottom: 16,
-          padding: '12px 14px',
-          borderRadius: 10,
-          background: 'rgba(255,112,67,0.10)',
-          border: '1px solid rgba(255,112,67,0.30)',
-          color: '#7C2D12',
-          fontSize: 13,
-          lineHeight: 1.35,
-        }}
-      >
-        <div style={{ fontWeight: 800, marginBottom: 4 }}>
-          Service Notice
-        </div>
-        <div>
-          We are experiencing an issue related to our database hosting provider that is impacting
-          multiple areas of the site, including user login. We are monitoring the situation and will
-          provide updates on the{' '}
-          <Link
-            href="/status"
-            style={{ color: '#FF7043', fontWeight: 800 }}
-          >
-            status page
-          </Link>{' '}
-          regularly.
-        </div>
-      </div>
 
       {friendlyError && (
         <div
@@ -156,7 +124,7 @@ export default function SignIn({ csrfToken, error }: SignInProps) {
           />
         </div>
 
-        {/* ✅ Forgot Password link (kept) */}
+        {/* ✅ NEW: Forgot Password link (minimal UI addition) */}
         <div style={{ textAlign: 'right', marginBottom: 18 }}>
           <Link
             href="/forgot-password"
@@ -211,6 +179,8 @@ export async function getServerSideProps(context: any) {
 
     // 1) Recruiter (SMALL_BIZ / ENTERPRISE)
     if (role === "RECRUITER") {
+      // If you ever want a different page for SMB vs ENT, you can branch on `plan` here.
+      // For now, they both land on the same recruiter dashboard.
       return {
         redirect: {
           destination: "/recruiter/dashboard",
@@ -223,7 +193,7 @@ export async function getServerSideProps(context: any) {
     if (role === "COACH") {
       return {
         redirect: {
-          destination: "/coaching-dashboard",
+          destination: "/coaching-dashboard", // or /coach/clients if that’s your real hub
           permanent: false,
         },
       };
