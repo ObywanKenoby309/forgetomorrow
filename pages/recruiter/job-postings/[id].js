@@ -1426,7 +1426,7 @@ export default function RecruiterJobApplicantsPage() {
               <div className="text-sm text-slate-500">Loading…</div>
             ) : apps.length ? (
               viewMode === "kanban" ? (
-                <div className="grid grid-cols-1 md:grid-cols-4 gap-3">
+                <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-3">
                   {PIPELINE_STAGES.map((stage) => {
                     const items = grouped[stage.key] || [];
                     const meta = STAGE_META[stage.key] || STAGE_META.Applied;
