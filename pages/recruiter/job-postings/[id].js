@@ -460,7 +460,9 @@ function AlignmentModal({ open, onClose, state, onViewFullWhy }) {
         <div className="px-4 py-3 border-b flex items-center justify-between">
           <div className="font-semibold flex items-center gap-2">
             Alignment
-            <span className="text-xs font-semibold text-[#FF7043]">{score !== null ? `${score}%` : ""}</span>
+            <span className="text-xs font-semibold text-[#FF7043]">
+              {score !== null ? `${score}%` : ""}
+            </span>
           </div>
           <button
             className="text-sm px-3 py-1.5 rounded border hover:bg-slate-50"
@@ -601,7 +603,6 @@ function PacketViewer({ applicationId, job, candidate, onClose, autoOpenWhyDetai
         if (!alive) return;
         setWhyData(json);
 
-        // If caller wants details open immediately, do it after data arrives.
         if (autoOpenWhyDetails) {
           setWhyShowDetails(true);
         } else {
@@ -813,7 +814,6 @@ function PipelineCard({
   const meta = STAGE_META[currentStageKey] || STAGE_META.Applied;
 
   useEffect(() => {
-    // C) On-demand per card: run once when card mounts (light caching prevents re-run).
     ensureWhy?.(app?.id, app?.candidate?.id);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [app?.id]);
@@ -836,7 +836,6 @@ function PipelineCard({
               ) : null}
             </div>
 
-            {/* Alignment badge (top surface) */}
             <div className="shrink-0 pt-0.5">
               <AlignmentBadge
                 state={whyState}
@@ -897,6 +896,69 @@ function PipelineCard({
   );
 }
 
+function SponsoredCard() {
+  return (
+    <div style={GLASS} className="p-4">
+      <div style={WHITE_CARD} className="p-4">
+        <div className="text-sm font-semibold text-slate-900">Sponsored</div>
+        <div className="mt-2 text-xs text-slate-600 leading-relaxed">
+          This space is reserved for contextual placements. Once campaigns are enabled, ads can appear here
+          without changing page code.
+        </div>
+        <div className="mt-3 text-[11px] text-slate-500">
+          Surface: applications · Slot: right_rail_1
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function CompanyHeaderTile({ companyName, headerRight }) {
+  return (
+    <div style={GLASS} className="p-4">
+      <div style={WHITE_CARD} className="p-4">
+        <div className="text-center">
+          <div className="text-2xl font-extrabold text-[#FF7043] leading-tight">
+            {companyName || "Company"}
+          </div>
+          <div className="mt-3 flex items-center justify-center">{headerRight}</div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function JobMetaTile({ jobTitle, worksite, jobId, location }) {
+  const pillBase =
+    "px-3 py-1.5 rounded-full border bg-white text-xs font-semibold text-slate-700 shadow-sm";
+  return (
+    <div style={GLASS} className="p-4">
+      <div style={WHITE_CARD} className="p-4">
+        <div className="text-center">
+          <div className="text-lg font-extrabold text-[#FF7043] leading-tight">
+            {jobTitle || "Job Title"}
+          </div>
+
+          <div className="mt-4 flex flex-wrap items-center justify-center gap-3">
+            <div className={pillBase}>
+              <span className="text-slate-500 font-bold">Worksite:</span>{" "}
+              <span className="text-slate-800">{worksite || "Not provided"}</span>
+            </div>
+            <div className={pillBase}>
+              <span className="text-slate-500 font-bold">Job ID:</span>{" "}
+              <span className="text-slate-800">{jobId ?? "—"}</span>
+            </div>
+            <div className={pillBase}>
+              <span className="text-slate-500 font-bold">Location:</span>{" "}
+              <span className="text-slate-800">{location || "Not provided"}</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 function ApplicationsList({
   apps,
   viewer,
@@ -936,15 +998,6 @@ function ApplicationsList({
             const disabled = movingAppIds.has(a.id);
 
             const whyState = whyByAppId?.[a.id];
-
-            // C) On-demand per row
-            // Run once when row mounts (cache prevents re-run).
-            // Keep this super light: it will no-op if already loaded/attempted.
-            // eslint-disable-next-line react-hooks/rules-of-hooks
-            useEffect(() => {
-              ensureWhy?.(a?.id, a?.candidate?.id);
-              // eslint-disable-next-line react-hooks/exhaustive-deps
-            }, [a?.id]);
 
             return (
               <tr key={a.id} className="border-t hover:bg-slate-50/60">
@@ -1161,7 +1214,6 @@ export default function RecruiterJobApplicantsPage() {
 
     const jdText = String(job?.description || job?.jobDescription || "").trim();
     if (!jdText) {
-      // No JD at all: show "—" and an explanatory note in modal/tooltip (not blocking the page).
       setWhyState(appId, {
         status: "error",
         errorMessage:
@@ -1317,13 +1369,11 @@ export default function RecruiterJobApplicantsPage() {
     if (!app?.id) return;
     setOpenAlignAppId(app.id);
     setOpenAlignCandidate(app?.candidate || null);
-    // Ensure we have data (if already loaded, this is a no-op)
     ensureWhy(app.id, app?.candidate?.id);
   }
 
   const headerRight = (
     <div className="flex items-center gap-2">
-      {/* Segmented control */}
       <div className="inline-flex rounded-xl border bg-white/90 overflow-hidden shadow-sm">
         <button
           type="button"
@@ -1353,7 +1403,10 @@ export default function RecruiterJobApplicantsPage() {
         </button>
       </div>
 
-      <Link href="/recruiter/job-postings" className="text-sm px-3 py-1.5 rounded-lg border bg-white/90 hover:bg-white">
+      <Link
+        href="/recruiter/job-postings"
+        className="text-sm px-3 py-1.5 rounded-lg border bg-white/90 hover:bg-white"
+      >
         Back to Job Postings
       </Link>
     </div>
@@ -1361,24 +1414,12 @@ export default function RecruiterJobApplicantsPage() {
 
   const alignState = openAlignAppId ? whyByAppId?.[openAlignAppId] : null;
 
+  const companyName = job?.company || "Company";
+  const jobTitle = job?.title || "Job Title";
+
   return (
     <PlanProvider>
-      <RecruiterLayout
-        title="Applicants — ForgeTomorrow"
-        activeNav="job-postings"
-        header={
-          <div className="flex items-center justify-between gap-3">
-            <div>
-              <div className="text-xs text-slate-500">Applicants</div>
-              <div className="text-lg font-semibold text-slate-900">
-                {job?.title || "Job"}{" "}
-                {job?.company ? <span className="text-slate-500">• {job.company}</span> : null}
-              </div>
-            </div>
-            {headerRight}
-          </div>
-        }
-      >
+      <RecruiterLayout title="Applicants — ForgeTomorrow" activeNav="job-postings">
         <div className="space-y-6">
           {loadError && (
             <div className="rounded-lg border border-red-200 bg-red-50 p-4 text-sm text-red-800">
@@ -1392,26 +1433,32 @@ export default function RecruiterJobApplicantsPage() {
             </div>
           )}
 
-          <SectionCard
-            title="Job"
-            right={job?.id ? <span className="text-xs text-slate-500">Job ID: {job.id}</span> : null}
-          >
-            {loading ? (
-              <div className="text-sm text-slate-500">Loading…</div>
-            ) : job ? (
-              <div className="text-sm text-slate-700 space-y-1">
-                <div>
-                  <span className="font-medium">Worksite:</span> {job.worksite || "Not provided"}
-                </div>
-                <div>
-                  <span className="font-medium">Location:</span> {job.location || "Not provided"}
-                </div>
-              </div>
-            ) : (
-              <div className="text-sm text-slate-500">Job not found.</div>
-            )}
-          </SectionCard>
+          {/* ────────────────────────────────────────────── */}
+          {/* TOP LAYOUT (matches your screenshot)            */}
+          {/* Left stack: Company tile + Job tile             */}
+          {/* Right: Sponsored tile                           */}
+          {/* ────────────────────────────────────────────── */}
+          <div className="grid grid-cols-1 xl:grid-cols-[1fr_340px] gap-6 items-start">
+            <div className="space-y-6">
+              <CompanyHeaderTile
+                companyName={loading ? "Loading…" : companyName}
+                headerRight={headerRight}
+              />
 
+              <JobMetaTile
+                jobTitle={loading ? "Loading…" : jobTitle}
+                worksite={job?.worksite}
+                jobId={job?.id}
+                location={job?.location}
+              />
+            </div>
+
+            <div>
+              <SponsoredCard />
+            </div>
+          </div>
+
+          {/* PIPELINE spans full width and runs UNDER ads */}
           <SectionCard
             title={`Pipeline (${apps.length})`}
             right={
@@ -1441,14 +1488,16 @@ export default function RecruiterJobApplicantsPage() {
                         <div className={`px-3 py-2 border-b ${meta.colTop}`}>
                           <div className="flex items-center justify-between">
                             <div className="text-sm font-semibold text-slate-900">{stage.label}</div>
-                            <span className={`text-xs px-2 py-0.5 rounded-full border ${meta.badgeBg} ${meta.badgeText}`}>
+                            <span
+                              className={`text-xs px-2 py-0.5 rounded-full border ${meta.badgeBg} ${meta.badgeText}`}
+                            >
                               {items.length}
                             </span>
                           </div>
                         </div>
 
                         <div className={`p-3 border-l-4 ${meta.colBorder}`}>
-                          <div className="space-y-3 min-h-[40px] max-h-[520px] overflow-auto pr-1">
+                          <div className="space-y-3 min-h-[40px] max-h-[420px] overflow-auto pr-1">
                             {items.map((a) => {
                               const candidateName = a?.candidate?.name || null;
                               const candidateEmail = a?.candidate?.email || "";
