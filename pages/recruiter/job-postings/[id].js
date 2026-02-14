@@ -87,9 +87,7 @@ function SponsoredAdTile() {
           without changing page code.
         </div>
 
-        <div className="mt-4 text-xs text-slate-500">
-          Surface: applications · Slot: right_rail_1
-        </div>
+        <div className="mt-4 text-xs text-slate-500">Surface: applications · Slot: right_rail_1</div>
       </div>
     </div>
   );
@@ -288,9 +286,7 @@ function HybridResumeViewer({ value }) {
                           ) : null}
                         </div>
                       </div>
-                      <div className="text-xs text-slate-500 whitespace-nowrap">
-                        {dates.trim() || "—"}
-                      </div>
+                      <div className="text-xs text-slate-500 whitespace-nowrap">{dates.trim() || "—"}</div>
                     </div>
 
                     {Array.isArray(exp.bullets) && exp.bullets.length ? (
@@ -336,9 +332,7 @@ function HybridResumeViewer({ value }) {
                         {org ? <span className="font-normal text-slate-700"> • {org}</span> : null}
                       </div>
                     </div>
-                    {dates ? (
-                      <div className="text-xs text-slate-500 whitespace-nowrap">{dates}</div>
-                    ) : null}
+                    {dates ? <div className="text-xs text-slate-500 whitespace-nowrap">{dates}</div> : null}
                   </div>
 
                   {bullets.length ? (
@@ -350,9 +344,7 @@ function HybridResumeViewer({ value }) {
                       ))}
                     </ul>
                   ) : proj.description ? (
-                    <div className="mt-2 text-sm text-slate-800 whitespace-pre-wrap">
-                      {proj.description}
-                    </div>
+                    <div className="mt-2 text-sm text-slate-800 whitespace-pre-wrap">{proj.description}</div>
                   ) : null}
                 </div>
               );
@@ -379,9 +371,7 @@ function HybridResumeViewer({ value }) {
                   {edu.startDate || "—"} – {edu.endDate || "Present"}
                 </div>
                 {edu.description ? (
-                  <div className="mt-1 text-sm text-slate-800 whitespace-pre-wrap">
-                    {edu.description}
-                  </div>
+                  <div className="mt-1 text-sm text-slate-800 whitespace-pre-wrap">{edu.description}</div>
                 ) : null}
               </div>
             ))}
@@ -496,9 +486,7 @@ function AlignmentModal({ open, onClose, state, onViewFullWhy }) {
         <div className="px-4 py-3 border-b flex items-center justify-between">
           <div className="font-semibold flex items-center gap-2">
             Alignment
-            <span className="text-xs font-semibold text-[#FF7043]">
-              {score !== null ? `${score}%` : ""}
-            </span>
+            <span className="text-xs font-semibold text-[#FF7043]">{score !== null ? `${score}%` : ""}</span>
           </div>
           <button
             className="text-sm px-3 py-1.5 rounded border hover:bg-slate-50"
@@ -521,13 +509,9 @@ function AlignmentModal({ open, onClose, state, onViewFullWhy }) {
               {error}
             </div>
           ) : state?.summary ? (
-            <div className="rounded border bg-slate-50 p-3 text-sm text-slate-800">
-              {state.summary}
-            </div>
+            <div className="rounded border bg-slate-50 p-3 text-sm text-slate-800">{state.summary}</div>
           ) : (
-            <div className="rounded border bg-slate-50 p-3 text-sm text-slate-600">
-              No summary available yet.
-            </div>
+            <div className="rounded border bg-slate-50 p-3 text-sm text-slate-600">No summary available yet.</div>
           )}
 
           <div className="flex items-center justify-between pt-1">
@@ -639,12 +623,8 @@ function PacketViewer({ applicationId, job, candidate, onClose, autoOpenWhyDetai
         if (!alive) return;
         setWhyData(json);
 
-        // If caller wants details open immediately, do it after data arrives.
-        if (autoOpenWhyDetails) {
-          setWhyShowDetails(true);
-        } else {
-          setWhyShowDetails(false);
-        }
+        if (autoOpenWhyDetails) setWhyShowDetails(true);
+        else setWhyShowDetails(false);
       } catch (e) {
         if (!alive) return;
         setWhyError(e);
@@ -668,15 +648,9 @@ function PacketViewer({ applicationId, job, candidate, onClose, autoOpenWhyDetai
         <div className="px-4 py-3 border-b flex items-center justify-between">
           <div className="font-semibold">
             Application Packet {applicationId ? `#${applicationId}` : ""}
-            {candidate?.name ? (
-              <span className="text-slate-500 font-normal"> • {candidate.name}</span>
-            ) : null}
+            {candidate?.name ? <span className="text-slate-500 font-normal"> • {candidate.name}</span> : null}
           </div>
-          <button
-            className="text-sm px-3 py-1.5 rounded border hover:bg-slate-50"
-            onClick={onClose}
-            type="button"
-          >
+          <button className="text-sm px-3 py-1.5 rounded border hover:bg-slate-50" onClick={onClose} type="button">
             Close
           </button>
         </div>
@@ -694,9 +668,7 @@ function PacketViewer({ applicationId, job, candidate, onClose, autoOpenWhyDetai
               <div className="rounded border p-3">
                 <div className="font-medium mb-2">Cover</div>
                 {packet.cover?.content ? (
-                  <pre className="whitespace-pre-wrap text-sm text-slate-800">
-                    {packet.cover.content}
-                  </pre>
+                  <pre className="whitespace-pre-wrap text-sm text-slate-800">{packet.cover.content}</pre>
                 ) : (
                   <div className="text-sm text-slate-500">None provided.</div>
                 )}
@@ -743,10 +715,7 @@ function PacketViewer({ applicationId, job, candidate, onClose, autoOpenWhyDetai
                     <div>Terms accepted: {packet.consent.termsAccepted ? "Yes" : "No"}</div>
                     <div>Status updates: {packet.consent.emailUpdatesAccepted ? "Yes" : "No"}</div>
                     <div>Signature: {packet.consent.signatureName || "Not provided"}</div>
-                    <div>
-                      Signed at:{" "}
-                      {packet.consent.signedAt ? String(packet.consent.signedAt) : "Not provided"}
-                    </div>
+                    <div>Signed at: {packet.consent.signedAt ? String(packet.consent.signedAt) : "Not provided"}</div>
                   </div>
                 ) : (
                   <div className="text-sm text-slate-500">No consent record found.</div>
@@ -785,11 +754,7 @@ function PacketViewer({ applicationId, job, candidate, onClose, autoOpenWhyDetai
                           setPacket((p) => (p ? { ...p } : p));
                         }}
                         disabled={whyLoading}
-                        title={
-                          whyError
-                            ? `Assessment failed: ${String(whyError?.message || "")}`
-                            : "Run assessment"
-                        }
+                        title={whyError ? `Assessment failed: ${String(whyError?.message || "")}` : "Run assessment"}
                       >
                         {whyError ? "Retry" : "Run"}
                       </button>
@@ -798,9 +763,7 @@ function PacketViewer({ applicationId, job, candidate, onClose, autoOpenWhyDetai
                 </div>
 
                 {whyError ? (
-                  <div className="mt-2 text-xs text-rose-700">
-                    Assessment could not run. {String(whyError?.message || "")}
-                  </div>
+                  <div className="mt-2 text-xs text-rose-700">Assessment could not run. {String(whyError?.message || "")}</div>
                 ) : null}
 
                 {whyData?.summary ? (
@@ -813,12 +776,8 @@ function PacketViewer({ applicationId, job, candidate, onClose, autoOpenWhyDetai
                   <div className="mt-3 space-y-3">
                     <WhyCandidateInline explain={whyData} mode="full" title="Why this candidate" />
                     <details className="rounded border p-3">
-                      <summary className="text-xs font-semibold text-slate-700 cursor-pointer">
-                        Raw JSON (debug)
-                      </summary>
-                      <pre className="mt-2 whitespace-pre-wrap text-xs text-slate-800">
-                        {JSON.stringify(whyData, null, 2)}
-                      </pre>
+                      <summary className="text-xs font-semibold text-slate-700 cursor-pointer">Raw JSON (debug)</summary>
+                      <pre className="mt-2 whitespace-pre-wrap text-xs text-slate-800">{JSON.stringify(whyData, null, 2)}</pre>
                     </details>
                   </div>
                 ) : null}
@@ -852,11 +811,11 @@ function PipelineCard({
   const meta = STAGE_META[currentStageKey] || STAGE_META.Applied;
 
   useEffect(() => {
-    // C) On-demand per card: run once when card mounts (light caching prevents re-run).
     ensureWhy?.(app?.id, app?.candidate?.id);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [app?.id]);
 
+  // ✅ Layout-only change: stacked content so it matches your mock and stops squishing.
   return (
     <div
       className={`rounded-lg border bg-white p-3 shadow-sm ring-1 ${meta.ring} transition`}
@@ -864,73 +823,63 @@ function PipelineCard({
       onDragStart={dragHandlers?.onDragStart}
       onDragEnd={dragHandlers?.onDragEnd}
       title="Drag to move stage"
+      style={{ minWidth: 0 }}
     >
+      {/* Row 1: Name + alignment */}
       <div className="flex items-start justify-between gap-3">
         <div className="min-w-0">
-          <div className="flex items-start gap-2">
-            <div className="min-w-0">
-              <div className="font-semibold text-slate-900 truncate">{displayName}</div>
-              {candidateEmail ? (
-                <div className="text-xs text-slate-600 truncate mt-0.5">{candidateEmail}</div>
-              ) : null}
-            </div>
-
-            {/* Alignment badge (top surface) */}
-            <div className="shrink-0 pt-0.5">
-              <AlignmentBadge
-                state={whyState}
-                onClick={onOpenAlignment}
-                title="Alignment score (click for summary)"
-              />
-            </div>
-          </div>
-
-          <div className="text-[11px] text-slate-500 mt-2">
-            Applied: {formatDateTime(app.appliedAt)}
-          </div>
+          <div className="font-semibold text-slate-900 truncate">{displayName}</div>
+          {candidateEmail ? <div className="text-xs text-slate-600 truncate mt-0.5">{candidateEmail}</div> : null}
         </div>
 
-        <div className="flex flex-col items-end gap-2">
-          <div className="flex items-center gap-2">
-            <button
-              type="button"
-              className="text-xs px-2.5 py-1.5 rounded border bg-white hover:bg-slate-50"
-              onClick={onViewPacket}
-              disabled={disabled}
-            >
-              View packet
-            </button>
-
-            <a
-              className="text-xs px-2.5 py-1.5 rounded border bg-white hover:bg-slate-50"
-              href={onDownload}
-              target="_blank"
-              rel="noreferrer"
-              title="Download recruiter packet (.zip)"
-              onClick={(e) => {
-                if (disabled) e.preventDefault();
-              }}
-            >
-              Download
-            </a>
-          </div>
-
-          <div className="w-full">
-            <select
-              className="w-full text-xs rounded-md border px-2 py-1.5 bg-white"
-              value={currentStageKey}
-              onChange={(e) => onChangeStage(e.target.value)}
-              disabled={disabled}
-              title="Move candidate stage"
-            >
-              {PIPELINE_STAGES.map((s) => (
-                <option key={s.key} value={s.key}>
-                  {s.label}
-                </option>
-              ))}
-            </select>
-          </div>
+        <div className="shrink-0">
+          <AlignmentBadge state={whyState} onClick={onOpenAlignment} title="Alignment score (click for summary)" />
         </div>
+      </div>
+
+      {/* Row 2: Applied date */}
+      <div className="text-[11px] text-slate-500 mt-2">Applied: {formatDateTime(app.appliedAt)}</div>
+
+      {/* Row 3: Actions */}
+      <div className="mt-3 flex items-center justify-center gap-2">
+        <button
+          type="button"
+          className="text-xs px-2.5 py-1.5 rounded border bg-white hover:bg-slate-50"
+          onClick={onViewPacket}
+          disabled={disabled}
+        >
+          View packet
+        </button>
+
+        <a
+          className="text-xs px-2.5 py-1.5 rounded border bg-white hover:bg-slate-50"
+          href={onDownload}
+          target="_blank"
+          rel="noreferrer"
+          title="Download recruiter packet (.zip)"
+          onClick={(e) => {
+            if (disabled) e.preventDefault();
+          }}
+        >
+          Download
+        </a>
+      </div>
+
+      {/* Row 4: Stage selector */}
+      <div className="mt-2">
+        <select
+          className="w-full text-xs rounded-md border px-2 py-1.5 bg-white"
+          value={currentStageKey}
+          onChange={(e) => onChangeStage(e.target.value)}
+          disabled={disabled}
+          title="Move candidate stage"
+        >
+          {PIPELINE_STAGES.map((s) => (
+            <option key={s.key} value={s.key}>
+              {s.label}
+            </option>
+          ))}
+        </select>
       </div>
     </div>
   );
@@ -946,9 +895,7 @@ function ApplicationsList({
   ensureWhy,
   onOpenAlignmentForApp,
 }) {
-  if (!apps.length) {
-    return <div className="text-sm text-slate-500">No applicants yet.</div>;
-  }
+  if (!apps.length) return <div className="text-sm text-slate-500">No applicants yet.</div>;
 
   return (
     <div className="overflow-auto rounded-lg border bg-white">
@@ -969,18 +916,13 @@ function ApplicationsList({
             const candidateId = a?.candidate?.id || null;
 
             const isViewer = viewer?.id && candidateId && viewer.id === candidateId;
-            const displayName = isViewer
-              ? "Internal test application (You)"
-              : candidateName || "Candidate";
+            const displayName = isViewer ? "Internal test application (You)" : candidateName || "Candidate";
 
             const currentStageKey = normalizeStatusForUi(a.status);
             const disabled = movingAppIds.has(a.id);
 
             const whyState = whyByAppId?.[a.id];
 
-            // C) On-demand per row
-            // Run once when row mounts (cache prevents re-run).
-            // Keep this super light: it will no-op if already loaded/attempted.
             // eslint-disable-next-line react-hooks/rules-of-hooks
             useEffect(() => {
               ensureWhy?.(a?.id, a?.candidate?.id);
@@ -1161,9 +1103,7 @@ export default function RecruiterJobApplicantsPage() {
 
   async function fetchResumeTextForApplication(appId) {
     if (!appId) return "";
-    if (resumeTextCacheRef.current.has(appId)) {
-      return resumeTextCacheRef.current.get(appId) || "";
-    }
+    if (resumeTextCacheRef.current.has(appId)) return resumeTextCacheRef.current.get(appId) || "";
 
     const res = await fetch(`/api/recruiter/applications/${appId}/packet`);
     const json = await res.json().catch(() => ({}));
@@ -1172,11 +1112,7 @@ export default function RecruiterJobApplicantsPage() {
     const resumeValue = json?.resume?.content !== undefined ? json.resume.content : null;
 
     const resumeText =
-      typeof resumeValue === "string"
-        ? resumeValue
-        : resumeValue
-        ? JSON.stringify(resumeValue)
-        : "";
+      typeof resumeValue === "string" ? resumeValue : resumeValue ? JSON.stringify(resumeValue) : "";
 
     resumeTextCacheRef.current.set(appId, resumeText || "");
     return resumeText || "";
@@ -1216,10 +1152,7 @@ export default function RecruiterJobApplicantsPage() {
 
       const resumeText = await fetchResumeTextForApplication(appId);
       if (!String(resumeText || "").trim()) {
-        setWhyState(appId, {
-          status: "error",
-          errorMessage: "Resume content is missing for this application.",
-        });
+        setWhyState(appId, { status: "error", errorMessage: "Resume content is missing for this application." });
         return;
       }
 
@@ -1263,7 +1196,6 @@ export default function RecruiterJobApplicantsPage() {
     if (!isStageKeyValid(toStageKey)) return;
 
     const prevApps = apps;
-
     const current = prevApps.find((a) => a.id === appId);
     if (!current) return;
 
@@ -1273,16 +1205,7 @@ export default function RecruiterJobApplicantsPage() {
     setMoveError(null);
 
     setMovingAppIds((prev) => new Set([...Array.from(prev), appId]));
-    setApps((prev) =>
-      prev.map((a) =>
-        a.id === appId
-          ? {
-              ...a,
-              status: toStageKey,
-            }
-          : a
-      )
-    );
+    setApps((prev) => prev.map((a) => (a.id === appId ? { ...a, status: toStageKey } : a)));
 
     try {
       const res = await fetch(`/api/recruiter/job-postings/${jobId}/applications/${appId}`, {
@@ -1297,13 +1220,7 @@ export default function RecruiterJobApplicantsPage() {
       const updatedStatus = normalizeStatusForUi(json?.application?.status || toStageKey);
       setApps((prev) =>
         prev.map((a) =>
-          a.id === appId
-            ? {
-                ...a,
-                status: updatedStatus,
-                updatedAt: json?.application?.updatedAt || a.updatedAt,
-              }
-            : a
+          a.id === appId ? { ...a, status: updatedStatus, updatedAt: json?.application?.updatedAt || a.updatedAt } : a
         )
       );
     } catch (e) {
@@ -1320,9 +1237,7 @@ export default function RecruiterJobApplicantsPage() {
 
   function stageDropHandlers(toStageKey) {
     return {
-      onDragOver: (e) => {
-        e.preventDefault();
-      },
+      onDragOver: (e) => e.preventDefault(),
       onDrop: async (e) => {
         e.preventDefault();
         const raw = e.dataTransfer.getData("text/plain") || "";
@@ -1333,7 +1248,6 @@ export default function RecruiterJobApplicantsPage() {
         if (!Number.isFinite(appId)) return;
         if (!toStageKey) return;
         if (!isStageKeyValid(toStageKey)) return;
-
         if (from && normalizeStatusForUi(from) === toStageKey) return;
 
         await moveCandidateStage(appId, toStageKey);
@@ -1391,10 +1305,7 @@ export default function RecruiterJobApplicantsPage() {
         </button>
       </div>
 
-      <Link
-        href="/recruiter/job-postings"
-        className="text-sm px-3 py-1.5 rounded-lg border bg-white/90 hover:bg-white"
-      >
+      <Link href="/recruiter/job-postings" className="text-sm px-3 py-1.5 rounded-lg border bg-white/90 hover:bg-white">
         Back to Job Postings
       </Link>
     </div>
@@ -1404,7 +1315,13 @@ export default function RecruiterJobApplicantsPage() {
 
   return (
     <PlanProvider>
-      <RecruiterLayout title="Applicants — ForgeTomorrow" activeNav="job-postings" header={null}>
+      {/* ✅ Kills the empty header bar from RecruiterLayout */}
+      <RecruiterLayout
+        title="Applicants — ForgeTomorrow"
+        activeNav="job-postings"
+        header={null}
+        headerCard={false}
+      >
         <div className="space-y-4">
           {loadError && (
             <div className="rounded-lg border border-red-200 bg-red-50 p-4 text-sm text-red-800">
@@ -1425,9 +1342,7 @@ export default function RecruiterJobApplicantsPage() {
               {/* Company tile */}
               <TopTile>
                 <div className="text-center">
-                  <div className="text-3xl font-extrabold tracking-tight text-[#FF7043]">
-                    ForgeTomorrow
-                  </div>
+                  <div className="text-3xl font-extrabold tracking-tight text-[#FF7043]">ForgeTomorrow</div>
                   <div className="mt-3">{headerRight}</div>
                 </div>
               </TopTile>
@@ -1435,9 +1350,7 @@ export default function RecruiterJobApplicantsPage() {
               {/* Job tile */}
               <TopTile>
                 <div className="text-center">
-                  <div className="text-xl font-extrabold text-[#FF7043]">
-                    {loading ? "Loading…" : job?.title || "Job"}
-                  </div>
+                  <div className="text-xl font-extrabold text-[#FF7043]">{loading ? "Loading…" : job?.title || "Job"}</div>
 
                   <div className="mt-4 flex items-center justify-center gap-3 flex-wrap">
                     <Pill>Worksite: {job?.worksite || "Not provided"}</Pill>
@@ -1459,9 +1372,7 @@ export default function RecruiterJobApplicantsPage() {
                 title={`Pipeline (${apps.length})`}
                 right={
                   <div className="text-xs text-slate-500">
-                    {viewMode === "kanban"
-                      ? "Drag cards between columns or use the stage selector."
-                      : "Use the stage selector to move candidates."}
+                    {viewMode === "kanban" ? "Drag cards between columns or use the stage selector." : "Use the stage selector to move candidates."}
                   </div>
                 }
               >
@@ -1483,30 +1394,22 @@ export default function RecruiterJobApplicantsPage() {
                           >
                             <div className={`px-3 py-2 border-b ${meta.colTop}`}>
                               <div className="flex items-center justify-between">
-                                <div className="text-sm font-semibold text-slate-900">
-                                  {stage.label}
-                                </div>
-                                <span
-                                  className={`text-xs px-2 py-0.5 rounded-full border ${meta.badgeBg} ${meta.badgeText}`}
-                                >
+                                <div className="text-sm font-semibold text-slate-900">{stage.label}</div>
+                                <span className={`text-xs px-2 py-0.5 rounded-full border ${meta.badgeBg} ${meta.badgeText}`}>
                                   {items.length}
                                 </span>
                               </div>
                             </div>
 
                             <div className={`p-3 border-l-4 ${meta.colBorder}`}>
-                              <div className="space-y-3 min-h-[40px] max-h-[420px] overflow-auto pr-1">
+                              <div className="space-y-3 min-h-[40px] max-h-[520px] overflow-auto pr-1">
                                 {items.map((a) => {
                                   const candidateName = a?.candidate?.name || null;
                                   const candidateEmail = a?.candidate?.email || "";
                                   const candidateId = a?.candidate?.id || null;
 
-                                  const isViewer =
-                                    viewer?.id && candidateId && viewer.id === candidateId;
-
-                                  const displayName = isViewer
-                                    ? "Internal test application (You)"
-                                    : candidateName || "Candidate";
+                                  const isViewer = viewer?.id && candidateId && viewer.id === candidateId;
+                                  const displayName = isViewer ? "Internal test application (You)" : candidateName || "Candidate";
 
                                   const currentStageKey = normalizeStatusForUi(a.status);
                                   const disabled = movingAppIds.has(a.id);
@@ -1514,10 +1417,7 @@ export default function RecruiterJobApplicantsPage() {
                                   const dragHandlers = {
                                     onDragStart: (e) => {
                                       try {
-                                        e.dataTransfer.setData(
-                                          "text/plain",
-                                          `${a.id}|${currentStageKey}`
-                                        );
+                                        e.dataTransfer.setData("text/plain", `${a.id}|${currentStageKey}`);
                                         draggingRef.current = { appId: a.id, from: currentStageKey };
                                       } catch {
                                         // ignore
@@ -1572,7 +1472,6 @@ export default function RecruiterJobApplicantsPage() {
           </div>
         </div>
 
-        {/* Small "taste" modal */}
         <AlignmentModal
           open={!!openAlignAppId}
           state={alignState}
