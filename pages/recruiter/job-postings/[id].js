@@ -854,11 +854,18 @@ function PipelineCard({
       onDragStart={dragHandlers?.onDragStart}
       onDragEnd={dragHandlers?.onDragEnd}
       title="Drag to move stage"
+      style={{ minWidth: 0 }}
     >
-      {/* Row 1: name + alignment badge */}
-      <div className="flex items-start justify-between gap-2">
+      {/* Top row: candidate left, alignment badge right */}
+      <div className="flex items-start justify-between gap-3" style={{ minWidth: 0 }}>
         <div className="min-w-0">
           <div className="font-semibold text-slate-900 truncate">{displayName}</div>
+          {candidateEmail ? (
+            <div className="text-xs text-slate-600 truncate mt-0.5">{candidateEmail}</div>
+          ) : null}
+          <div className="text-[11px] text-slate-500 mt-2 whitespace-nowrap">
+            Applied: {formatDateTime(app.appliedAt)}
+          </div>
         </div>
 
         <div className="shrink-0 pt-0.5">
@@ -870,22 +877,12 @@ function PipelineCard({
         </div>
       </div>
 
-      {/* Row 2: email */}
-      {candidateEmail ? (
-        <div className="text-xs text-slate-600 truncate mt-0.5">{candidateEmail}</div>
-      ) : null}
-
-      {/* Row 3: applied date (full width, not cramped) */}
-      <div className="text-[11px] text-slate-500 mt-2">
-        Applied: {formatDateTime(app.appliedAt)}
-      </div>
-
-      {/* Row 4: actions + stage */}
-      <div className="mt-3 flex items-start justify-between gap-2">
-        <div className="flex items-center gap-2 flex-wrap">
+      {/* Actions area: 2-up buttons, then full-width dropdown */}
+      <div className="mt-3" style={{ minWidth: 0 }}>
+        <div className="grid grid-cols-2 gap-2">
           <button
             type="button"
-            className="text-xs px-2.5 py-1.5 rounded border bg-white hover:bg-slate-50"
+            className="text-xs px-2.5 py-1.5 rounded border bg-white hover:bg-slate-50 w-full"
             onClick={onViewPacket}
             disabled={disabled}
           >
@@ -893,7 +890,7 @@ function PipelineCard({
           </button>
 
           <a
-            className="text-xs px-2.5 py-1.5 rounded border bg-white hover:bg-slate-50"
+            className="text-xs px-2.5 py-1.5 rounded border bg-white hover:bg-slate-50 w-full text-center"
             href={onDownload}
             target="_blank"
             rel="noreferrer"
@@ -906,9 +903,9 @@ function PipelineCard({
           </a>
         </div>
 
-        <div className="min-w-[140px]">
+        <div className="mt-2">
           <select
-            className="w-full text-xs rounded-md border px-2 py-1.5 bg-white"
+            className="w-full text-xs rounded-md border px-2 py-2 bg-white"
             value={currentStageKey}
             onChange={(e) => onChangeStage(e.target.value)}
             disabled={disabled}
@@ -925,6 +922,7 @@ function PipelineCard({
     </div>
   );
 }
+
 
 function ApplicationsList({
   apps,
