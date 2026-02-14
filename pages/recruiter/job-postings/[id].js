@@ -47,13 +47,49 @@ const WHITE_CARD = {
 
 function SectionCard({ title, children, right }) {
   return (
-    <div style={GLASS} className="p-4">
-      <div className="flex items-center justify-between gap-3 mb-3">
+    <div style={GLASS} className="p-3">
+      <div className="flex items-center justify-between gap-3 mb-2">
         <div className="font-semibold text-slate-900">{title}</div>
         {right ? <div>{right}</div> : null}
       </div>
-      <div style={WHITE_CARD} className="p-4">
+      <div style={WHITE_CARD} className="p-3">
         {children}
+      </div>
+    </div>
+  );
+}
+
+function TopTile({ children }) {
+  return (
+    <div style={GLASS} className="p-4">
+      <div style={WHITE_CARD} className="p-5">
+        {children}
+      </div>
+    </div>
+  );
+}
+
+function Pill({ children }) {
+  return (
+    <div className="inline-flex items-center rounded-full border bg-white px-4 py-2 text-sm font-semibold text-slate-700 shadow-sm">
+      {children}
+    </div>
+  );
+}
+
+function SponsoredAdTile() {
+  return (
+    <div style={GLASS} className="p-4 h-full">
+      <div style={WHITE_CARD} className="p-5 h-full">
+        <div className="font-semibold text-slate-900">Sponsored</div>
+        <div className="mt-2 text-sm text-slate-600 leading-relaxed">
+          This space is reserved for contextual placements. Once campaigns are enabled, ads can appear here
+          without changing page code.
+        </div>
+
+        <div className="mt-4 text-xs text-slate-500">
+          Surface: applications · Slot: right_rail_1
+        </div>
       </div>
     </div>
   );
@@ -603,6 +639,7 @@ function PacketViewer({ applicationId, job, candidate, onClose, autoOpenWhyDetai
         if (!alive) return;
         setWhyData(json);
 
+        // If caller wants details open immediately, do it after data arrives.
         if (autoOpenWhyDetails) {
           setWhyShowDetails(true);
         } else {
@@ -707,7 +744,8 @@ function PacketViewer({ applicationId, job, candidate, onClose, autoOpenWhyDetai
                     <div>Status updates: {packet.consent.emailUpdatesAccepted ? "Yes" : "No"}</div>
                     <div>Signature: {packet.consent.signatureName || "Not provided"}</div>
                     <div>
-                      Signed at: {packet.consent.signedAt ? String(packet.consent.signedAt) : "Not provided"}
+                      Signed at:{" "}
+                      {packet.consent.signedAt ? String(packet.consent.signedAt) : "Not provided"}
                     </div>
                   </div>
                 ) : (
@@ -814,6 +852,7 @@ function PipelineCard({
   const meta = STAGE_META[currentStageKey] || STAGE_META.Applied;
 
   useEffect(() => {
+    // C) On-demand per card: run once when card mounts (light caching prevents re-run).
     ensureWhy?.(app?.id, app?.candidate?.id);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [app?.id]);
@@ -836,6 +875,7 @@ function PipelineCard({
               ) : null}
             </div>
 
+            {/* Alignment badge (top surface) */}
             <div className="shrink-0 pt-0.5">
               <AlignmentBadge
                 state={whyState}
@@ -896,69 +936,6 @@ function PipelineCard({
   );
 }
 
-function SponsoredCard() {
-  return (
-    <div style={GLASS} className="p-4">
-      <div style={WHITE_CARD} className="p-4">
-        <div className="text-sm font-semibold text-slate-900">Sponsored</div>
-        <div className="mt-2 text-xs text-slate-600 leading-relaxed">
-          This space is reserved for contextual placements. Once campaigns are enabled, ads can appear here
-          without changing page code.
-        </div>
-        <div className="mt-3 text-[11px] text-slate-500">
-          Surface: applications · Slot: right_rail_1
-        </div>
-      </div>
-    </div>
-  );
-}
-
-function CompanyHeaderTile({ companyName, headerRight }) {
-  return (
-    <div style={GLASS} className="p-4">
-      <div style={WHITE_CARD} className="p-4">
-        <div className="text-center">
-          <div className="text-2xl font-extrabold text-[#FF7043] leading-tight">
-            {companyName || "Company"}
-          </div>
-          <div className="mt-3 flex items-center justify-center">{headerRight}</div>
-        </div>
-      </div>
-    </div>
-  );
-}
-
-function JobMetaTile({ jobTitle, worksite, jobId, location }) {
-  const pillBase =
-    "px-3 py-1.5 rounded-full border bg-white text-xs font-semibold text-slate-700 shadow-sm";
-  return (
-    <div style={GLASS} className="p-4">
-      <div style={WHITE_CARD} className="p-4">
-        <div className="text-center">
-          <div className="text-lg font-extrabold text-[#FF7043] leading-tight">
-            {jobTitle || "Job Title"}
-          </div>
-
-          <div className="mt-4 flex flex-wrap items-center justify-center gap-3">
-            <div className={pillBase}>
-              <span className="text-slate-500 font-bold">Worksite:</span>{" "}
-              <span className="text-slate-800">{worksite || "Not provided"}</span>
-            </div>
-            <div className={pillBase}>
-              <span className="text-slate-500 font-bold">Job ID:</span>{" "}
-              <span className="text-slate-800">{jobId ?? "—"}</span>
-            </div>
-            <div className={pillBase}>
-              <span className="text-slate-500 font-bold">Location:</span>{" "}
-              <span className="text-slate-800">{location || "Not provided"}</span>
-            </div>
-          </div>
-        </div>
-      </div>
-    </div>
-  );
-}
-
 function ApplicationsList({
   apps,
   viewer,
@@ -992,12 +969,23 @@ function ApplicationsList({
             const candidateId = a?.candidate?.id || null;
 
             const isViewer = viewer?.id && candidateId && viewer.id === candidateId;
-            const displayName = isViewer ? "Internal test application (You)" : candidateName || "Candidate";
+            const displayName = isViewer
+              ? "Internal test application (You)"
+              : candidateName || "Candidate";
 
             const currentStageKey = normalizeStatusForUi(a.status);
             const disabled = movingAppIds.has(a.id);
 
             const whyState = whyByAppId?.[a.id];
+
+            // C) On-demand per row
+            // Run once when row mounts (cache prevents re-run).
+            // Keep this super light: it will no-op if already loaded/attempted.
+            // eslint-disable-next-line react-hooks/rules-of-hooks
+            useEffect(() => {
+              ensureWhy?.(a?.id, a?.candidate?.id);
+              // eslint-disable-next-line react-hooks/exhaustive-deps
+            }, [a?.id]);
 
             return (
               <tr key={a.id} className="border-t hover:bg-slate-50/60">
@@ -1373,7 +1361,7 @@ export default function RecruiterJobApplicantsPage() {
   }
 
   const headerRight = (
-    <div className="flex items-center gap-2">
+    <div className="flex items-center justify-center gap-2 flex-wrap">
       <div className="inline-flex rounded-xl border bg-white/90 overflow-hidden shadow-sm">
         <button
           type="button"
@@ -1414,13 +1402,10 @@ export default function RecruiterJobApplicantsPage() {
 
   const alignState = openAlignAppId ? whyByAppId?.[openAlignAppId] : null;
 
-  const companyName = job?.company || "Company";
-  const jobTitle = job?.title || "Job Title";
-
   return (
     <PlanProvider>
-      <RecruiterLayout title="Applicants — ForgeTomorrow" activeNav="job-postings">
-        <div className="space-y-6">
+      <RecruiterLayout title="Applicants — ForgeTomorrow" activeNav="job-postings" header={null}>
+        <div className="space-y-4">
           {loadError && (
             <div className="rounded-lg border border-red-200 bg-red-50 p-4 text-sm text-red-800">
               Could not load applicants. {String(loadError?.message || "")}
@@ -1433,139 +1418,158 @@ export default function RecruiterJobApplicantsPage() {
             </div>
           )}
 
-          {/* ────────────────────────────────────────────── */}
-          {/* TOP LAYOUT (matches your screenshot)            */}
-          {/* Left stack: Company tile + Job tile             */}
-          {/* Right: Sponsored tile                           */}
-          {/* ────────────────────────────────────────────── */}
-          <div className="grid grid-cols-1 xl:grid-cols-[1fr_340px] gap-6 items-start">
+          {/* ===== Image-1 Layout Grid ===== */}
+          <div className="grid grid-cols-1 xl:grid-cols-[1fr_360px] gap-6">
+            {/* Left column: Company tile + Job tile */}
             <div className="space-y-6">
-              <CompanyHeaderTile
-                companyName={loading ? "Loading…" : companyName}
-                headerRight={headerRight}
-              />
+              {/* Company tile */}
+              <TopTile>
+                <div className="text-center">
+                  <div className="text-3xl font-extrabold tracking-tight text-[#FF7043]">
+                    ForgeTomorrow
+                  </div>
+                  <div className="mt-3">{headerRight}</div>
+                </div>
+              </TopTile>
 
-              <JobMetaTile
-                jobTitle={loading ? "Loading…" : jobTitle}
-                worksite={job?.worksite}
-                jobId={job?.id}
-                location={job?.location}
-              />
+              {/* Job tile */}
+              <TopTile>
+                <div className="text-center">
+                  <div className="text-xl font-extrabold text-[#FF7043]">
+                    {loading ? "Loading…" : job?.title || "Job"}
+                  </div>
+
+                  <div className="mt-4 flex items-center justify-center gap-3 flex-wrap">
+                    <Pill>Worksite: {job?.worksite || "Not provided"}</Pill>
+                    <Pill>Job ID: {job?.id ? String(job.id) : "—"}</Pill>
+                    <Pill>Location: {job?.location || "Not provided"}</Pill>
+                  </div>
+                </div>
+              </TopTile>
             </div>
 
-            <div>
-              <SponsoredCard />
+            {/* Right column: Ads tile (spans the height of both top tiles at xl) */}
+            <div className="xl:row-span-2 self-start">
+              <SponsoredAdTile />
+            </div>
+
+            {/* Full-width pipeline under BOTH columns */}
+            <div className="xl:col-span-2">
+              <SectionCard
+                title={`Pipeline (${apps.length})`}
+                right={
+                  <div className="text-xs text-slate-500">
+                    {viewMode === "kanban"
+                      ? "Drag cards between columns or use the stage selector."
+                      : "Use the stage selector to move candidates."}
+                  </div>
+                }
+              >
+                {loading ? (
+                  <div className="text-sm text-slate-500">Loading…</div>
+                ) : apps.length ? (
+                  viewMode === "kanban" ? (
+                    <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-3">
+                      {PIPELINE_STAGES.map((stage) => {
+                        const items = grouped[stage.key] || [];
+                        const meta = STAGE_META[stage.key] || STAGE_META.Applied;
+
+                        return (
+                          <div
+                            key={stage.key}
+                            className="rounded-xl border bg-white/80 overflow-hidden"
+                            {...stageDropHandlers(stage.key)}
+                            style={{ boxShadow: "0 2px 10px rgba(0,0,0,0.06)" }}
+                          >
+                            <div className={`px-3 py-2 border-b ${meta.colTop}`}>
+                              <div className="flex items-center justify-between">
+                                <div className="text-sm font-semibold text-slate-900">
+                                  {stage.label}
+                                </div>
+                                <span
+                                  className={`text-xs px-2 py-0.5 rounded-full border ${meta.badgeBg} ${meta.badgeText}`}
+                                >
+                                  {items.length}
+                                </span>
+                              </div>
+                            </div>
+
+                            <div className={`p-3 border-l-4 ${meta.colBorder}`}>
+                              <div className="space-y-3 min-h-[40px] max-h-[420px] overflow-auto pr-1">
+                                {items.map((a) => {
+                                  const candidateName = a?.candidate?.name || null;
+                                  const candidateEmail = a?.candidate?.email || "";
+                                  const candidateId = a?.candidate?.id || null;
+
+                                  const isViewer =
+                                    viewer?.id && candidateId && viewer.id === candidateId;
+
+                                  const displayName = isViewer
+                                    ? "Internal test application (You)"
+                                    : candidateName || "Candidate";
+
+                                  const currentStageKey = normalizeStatusForUi(a.status);
+                                  const disabled = movingAppIds.has(a.id);
+
+                                  const dragHandlers = {
+                                    onDragStart: (e) => {
+                                      try {
+                                        e.dataTransfer.setData(
+                                          "text/plain",
+                                          `${a.id}|${currentStageKey}`
+                                        );
+                                        draggingRef.current = { appId: a.id, from: currentStageKey };
+                                      } catch {
+                                        // ignore
+                                      }
+                                    },
+                                    onDragEnd: () => {
+                                      draggingRef.current = { appId: null, from: null };
+                                    },
+                                  };
+
+                                  return (
+                                    <PipelineCard
+                                      key={a.id}
+                                      app={a}
+                                      displayName={displayName}
+                                      candidateEmail={candidateEmail}
+                                      currentStageKey={currentStageKey}
+                                      disabled={disabled}
+                                      dragHandlers={dragHandlers}
+                                      whyState={whyByAppId?.[a.id]}
+                                      ensureWhy={ensureWhy}
+                                      onOpenAlignment={() => openAlignment(a)}
+                                      onViewPacket={() => openPacket(a)}
+                                      onDownload={`/api/recruiter/applications/${a.id}/packet.zip`}
+                                      onChangeStage={(toKey) => moveCandidateStage(a.id, toKey)}
+                                    />
+                                  );
+                                })}
+                              </div>
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  ) : (
+                    <ApplicationsList
+                      apps={apps}
+                      viewer={viewer}
+                      movingAppIds={movingAppIds}
+                      whyByAppId={whyByAppId}
+                      ensureWhy={ensureWhy}
+                      onOpenAlignmentForApp={(app) => openAlignment(app)}
+                      onMoveStage={(appId, stageKey) => moveCandidateStage(appId, stageKey)}
+                      onViewPacket={(app) => openPacket(app)}
+                    />
+                  )
+                ) : (
+                  <div className="text-sm text-slate-500">No applicants yet.</div>
+                )}
+              </SectionCard>
             </div>
           </div>
-
-          {/* PIPELINE spans full width and runs UNDER ads */}
-          <SectionCard
-            title={`Pipeline (${apps.length})`}
-            right={
-              <div className="text-xs text-slate-500">
-                {viewMode === "kanban"
-                  ? "Drag cards between columns or use the stage selector."
-                  : "Use the stage selector to move candidates."}
-              </div>
-            }
-          >
-            {loading ? (
-              <div className="text-sm text-slate-500">Loading…</div>
-            ) : apps.length ? (
-              viewMode === "kanban" ? (
-                <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-3">
-                  {PIPELINE_STAGES.map((stage) => {
-                    const items = grouped[stage.key] || [];
-                    const meta = STAGE_META[stage.key] || STAGE_META.Applied;
-
-                    return (
-                      <div
-                        key={stage.key}
-                        className={`rounded-xl border bg-white/80 overflow-hidden`}
-                        {...stageDropHandlers(stage.key)}
-                        style={{ boxShadow: "0 2px 10px rgba(0,0,0,0.06)" }}
-                      >
-                        <div className={`px-3 py-2 border-b ${meta.colTop}`}>
-                          <div className="flex items-center justify-between">
-                            <div className="text-sm font-semibold text-slate-900">{stage.label}</div>
-                            <span
-                              className={`text-xs px-2 py-0.5 rounded-full border ${meta.badgeBg} ${meta.badgeText}`}
-                            >
-                              {items.length}
-                            </span>
-                          </div>
-                        </div>
-
-                        <div className={`p-3 border-l-4 ${meta.colBorder}`}>
-                          <div className="space-y-3 min-h-[40px] max-h-[420px] overflow-auto pr-1">
-                            {items.map((a) => {
-                              const candidateName = a?.candidate?.name || null;
-                              const candidateEmail = a?.candidate?.email || "";
-                              const candidateId = a?.candidate?.id || null;
-
-                              const isViewer = viewer?.id && candidateId && viewer.id === candidateId;
-
-                              const displayName = isViewer
-                                ? "Internal test application (You)"
-                                : candidateName || "Candidate";
-
-                              const currentStageKey = normalizeStatusForUi(a.status);
-                              const disabled = movingAppIds.has(a.id);
-
-                              const dragHandlers = {
-                                onDragStart: (e) => {
-                                  try {
-                                    e.dataTransfer.setData("text/plain", `${a.id}|${currentStageKey}`);
-                                    draggingRef.current = { appId: a.id, from: currentStageKey };
-                                  } catch {
-                                    // ignore
-                                  }
-                                },
-                                onDragEnd: () => {
-                                  draggingRef.current = { appId: null, from: null };
-                                },
-                              };
-
-                              return (
-                                <PipelineCard
-                                  key={a.id}
-                                  app={a}
-                                  displayName={displayName}
-                                  candidateEmail={candidateEmail}
-                                  currentStageKey={currentStageKey}
-                                  disabled={disabled}
-                                  dragHandlers={dragHandlers}
-                                  whyState={whyByAppId?.[a.id]}
-                                  ensureWhy={ensureWhy}
-                                  onOpenAlignment={() => openAlignment(a)}
-                                  onViewPacket={() => openPacket(a)}
-                                  onDownload={`/api/recruiter/applications/${a.id}/packet.zip`}
-                                  onChangeStage={(toKey) => moveCandidateStage(a.id, toKey)}
-                                />
-                              );
-                            })}
-                          </div>
-                        </div>
-                      </div>
-                    );
-                  })}
-                </div>
-              ) : (
-                <ApplicationsList
-                  apps={apps}
-                  viewer={viewer}
-                  movingAppIds={movingAppIds}
-                  whyByAppId={whyByAppId}
-                  ensureWhy={ensureWhy}
-                  onOpenAlignmentForApp={(app) => openAlignment(app)}
-                  onMoveStage={(appId, stageKey) => moveCandidateStage(appId, stageKey)}
-                  onViewPacket={(app) => openPacket(app)}
-                />
-              )
-            ) : (
-              <div className="text-sm text-slate-500">No applicants yet.</div>
-            )}
-          </SectionCard>
         </div>
 
         {/* Small "taste" modal */}
