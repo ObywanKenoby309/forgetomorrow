@@ -855,70 +855,71 @@ function PipelineCard({
       onDragEnd={dragHandlers?.onDragEnd}
       title="Drag to move stage"
     >
-      <div className="flex items-start justify-between gap-3">
+      {/* Row 1: name + alignment badge */}
+      <div className="flex items-start justify-between gap-2">
         <div className="min-w-0">
-          <div className="flex items-start gap-2">
-            <div className="min-w-0">
-              <div className="font-semibold text-slate-900 truncate">{displayName}</div>
-              {candidateEmail ? (
-                <div className="text-xs text-slate-600 truncate mt-0.5">{candidateEmail}</div>
-              ) : null}
-            </div>
-
-            <div className="shrink-0 pt-0.5">
-              <AlignmentBadge
-                state={whyState}
-                onClick={onOpenAlignment}
-                title="Alignment score (click for summary)"
-              />
-            </div>
-          </div>
-
-          <div className="text-[11px] text-slate-500 mt-2">
-            Applied: {formatDateTime(app.appliedAt)}
-          </div>
+          <div className="font-semibold text-slate-900 truncate">{displayName}</div>
         </div>
 
-        <div className="flex flex-col items-end gap-2">
-          <div className="flex items-center gap-2">
-            <button
-              type="button"
-              className="text-xs px-2.5 py-1.5 rounded border bg-white hover:bg-slate-50"
-              onClick={onViewPacket}
-              disabled={disabled}
-            >
-              View packet
-            </button>
+        <div className="shrink-0 pt-0.5">
+          <AlignmentBadge
+            state={whyState}
+            onClick={onOpenAlignment}
+            title="Alignment score (click for summary)"
+          />
+        </div>
+      </div>
 
-            <a
-              className="text-xs px-2.5 py-1.5 rounded border bg-white hover:bg-slate-50"
-              href={onDownload}
-              target="_blank"
-              rel="noreferrer"
-              title="Download recruiter packet (.zip)"
-              onClick={(e) => {
-                if (disabled) e.preventDefault();
-              }}
-            >
-              Download
-            </a>
-          </div>
+      {/* Row 2: email */}
+      {candidateEmail ? (
+        <div className="text-xs text-slate-600 truncate mt-0.5">{candidateEmail}</div>
+      ) : null}
 
-          <div className="w-full">
-            <select
-              className="w-full text-xs rounded-md border px-2 py-1.5 bg-white"
-              value={currentStageKey}
-              onChange={(e) => onChangeStage(e.target.value)}
-              disabled={disabled}
-              title="Move candidate stage"
-            >
-              {PIPELINE_STAGES.map((s) => (
-                <option key={s.key} value={s.key}>
-                  {s.label}
-                </option>
-              ))}
-            </select>
-          </div>
+      {/* Row 3: applied date (full width, not cramped) */}
+      <div className="text-[11px] text-slate-500 mt-2">
+        Applied: {formatDateTime(app.appliedAt)}
+      </div>
+
+      {/* Row 4: actions + stage */}
+      <div className="mt-3 flex items-start justify-between gap-2">
+        <div className="flex items-center gap-2 flex-wrap">
+          <button
+            type="button"
+            className="text-xs px-2.5 py-1.5 rounded border bg-white hover:bg-slate-50"
+            onClick={onViewPacket}
+            disabled={disabled}
+          >
+            View packet
+          </button>
+
+          <a
+            className="text-xs px-2.5 py-1.5 rounded border bg-white hover:bg-slate-50"
+            href={onDownload}
+            target="_blank"
+            rel="noreferrer"
+            title="Download recruiter packet (.zip)"
+            onClick={(e) => {
+              if (disabled) e.preventDefault();
+            }}
+          >
+            Download
+          </a>
+        </div>
+
+        <div className="min-w-[140px]">
+          <select
+            className="w-full text-xs rounded-md border px-2 py-1.5 bg-white"
+            value={currentStageKey}
+            onChange={(e) => onChangeStage(e.target.value)}
+            disabled={disabled}
+            title="Move candidate stage"
+          >
+            {PIPELINE_STAGES.map((s) => (
+              <option key={s.key} value={s.key}>
+                {s.label}
+              </option>
+            ))}
+          </select>
         </div>
       </div>
     </div>
