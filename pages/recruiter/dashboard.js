@@ -6,7 +6,6 @@ import RecruiterLayout from "@/components/layouts/RecruiterLayout";
 import { PrimaryButton, SecondaryButton } from "@/components/ui/Buttons";
 
 function HeaderBar() {
-  // Center title/subtitle while keeping actions aligned right
   return (
     <div className="grid grid-cols-1 md:grid-cols-3 items-center gap-3 min-w-0">
       <div className="hidden md:block" />
@@ -26,33 +25,114 @@ function HeaderBar() {
   );
 }
 
-function RightToolsCard() {
+function ActionCenterLiteCard() {
+  const [loading, setLoading] = useState(true);
+  const [items, setItems] = useState([]);
+
+  useEffect(() => {
+    let alive = true;
+
+    const load = async () => {
+      setLoading(true);
+      try {
+        const res = await fetch("/api/notifications/list?scope=RECRUITER&limit=3&includeRead=0", {
+          method: "GET",
+          headers: { "Content-Type": "application/json" },
+          credentials: "include",
+        });
+
+        if (!res.ok) {
+          if (alive) setItems([]);
+          return;
+        }
+
+        const data = await res.json();
+        if (!alive) return;
+
+        setItems(Array.isArray(data?.items) ? data.items : []);
+      } catch {
+        if (alive) setItems([]);
+      } finally {
+        if (alive) setLoading(false);
+      }
+    };
+
+    load();
+    const t = setInterval(load, 25000);
+
+    return () => {
+      alive = false;
+      clearInterval(t);
+    };
+  }, []);
+
   return (
     <div className="rounded-lg border bg-white p-4">
-      <div className="font-medium mb-2">Quick Tools</div>
-      <div className="space-y-2 text-sm">
-        <div className="text-slate-600">Jump back into common tasks:</div>
-        <div className="flex flex-wrap gap-2">
-          <SecondaryButton href="/recruiter/candidates" size="sm">
-            Browse Candidates
-          </SecondaryButton>
-          <SecondaryButton href="/recruiter/messaging" size="sm">
-            Messaging
-          </SecondaryButton>
-          <SecondaryButton href="/recruiter/job-postings" size="sm">
-            Manage Jobs
-          </SecondaryButton>
-          {/* NEW: link to the Job Tracker MVP */}
-          <SecondaryButton href="/recruiter/job-tracker" size="sm">
-            Job Tracker
-          </SecondaryButton>
+      <div className="flex items-center justify-between mb-2">
+        <div className="font-medium">Action Center</div>
+        <SecondaryButton href="/action-center?scope=RECRUITER" size="sm">
+          View all
+        </SecondaryButton>
+      </div>
+
+      {loading ? (
+        <div className="text-xs text-slate-500">Loading updates…</div>
+      ) : items.length === 0 ? (
+        <div className="text-xs text-slate-500">No unread items.</div>
+      ) : (
+        <div className="grid gap-2">
+          {items.map((n) => (
+            <a
+              key={n.id}
+              href="/action-center?scope=RECRUITER"
+              className="block rounded-md border px-3 py-2 hover:bg-orange-50"
+            >
+              <div className="text-xs font-semibold text-slate-900 truncate">
+                {n.title || "Update"}
+              </div>
+              {n.body ? (
+                <div className="text-[11px] text-slate-600 mt-0.5 line-clamp-2">
+                  {n.body}
+                </div>
+              ) : null}
+            </a>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
+function RightToolsCard() {
+  return (
+    <div className="space-y-4">
+      {/* ✅ NEW: Action Center lite preview */}
+      <ActionCenterLiteCard />
+
+      <div className="rounded-lg border bg-white p-4">
+        <div className="font-medium mb-2">Quick Tools</div>
+        <div className="space-y-2 text-sm">
+          <div className="text-slate-600">Jump back into common tasks:</div>
+          <div className="flex flex-wrap gap-2">
+            <SecondaryButton href="/recruiter/candidates" size="sm">
+              Browse Candidates
+            </SecondaryButton>
+            <SecondaryButton href="/recruiter/messaging" size="sm">
+              Messaging
+            </SecondaryButton>
+            <SecondaryButton href="/recruiter/job-postings" size="sm">
+              Manage Jobs
+            </SecondaryButton>
+            <SecondaryButton href="/recruiter/job-tracker" size="sm">
+              Job Tracker
+            </SecondaryButton>
+          </div>
         </div>
       </div>
     </div>
   );
 }
 
-// Panel auto-equal heights via h-full + flex layout; children fill space
 function Panel({ title, children }) {
   return (
     <section
@@ -60,7 +140,6 @@ function Panel({ title, children }) {
       aria-label={title}
     >
       <div className="font-medium mb-2">{title}</div>
-      {/* Ensure uniform internal spacing in all panels */}
       <div className="flex-1 grid content-start gap-2 min-w-0">{children}</div>
     </section>
   );
@@ -73,14 +152,12 @@ function DashboardBody() {
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState(null);
 
-  // Fetch aggregated recruiter analytics data (same engine as /recruiter/analytics)
   useEffect(() => {
     let isMounted = true;
 
     async function fetchDashboard() {
       try {
         setIsLoading(true);
-        // Default view: 30 days, all jobs, all recruiters
         const res = await fetch(
           "/api/analytics/recruiter?range=30d&jobId=all&recruiterId=all"
         );
@@ -95,7 +172,6 @@ function DashboardBody() {
       } catch (err) {
         console.error("[RecruiterDashboard] Error loading analytics:", err);
         if (isMounted) {
-          // Soft message, but no fake fallback numbers
           setError(
             "We had trouble loading live analytics. This dashboard will update automatically when data is available."
           );
@@ -113,9 +189,6 @@ function DashboardBody() {
     };
   }, []);
 
-  // ──────────────────────────────────────────────────────────────
-  // Derive stats + snapshot from analyticsData (no fake fallbacks)
-  // ──────────────────────────────────────────────────────────────
   const kpis = analyticsData?.kpis || null;
   const sourcesArray = Array.isArray(analyticsData?.sources)
     ? analyticsData.sources
@@ -142,7 +215,6 @@ function DashboardBody() {
         },
       ]
     : [
-        // Neutral placeholders when analytics API is unavailable
         { label: "Total Views", value: "—" },
         { label: "Total Applies", value: "—" },
         { label: "Avg Time-to-Fill", value: "—" },
@@ -163,25 +235,21 @@ function DashboardBody() {
       }
     : null;
 
-  // Top candidates: no fake names, just wait for real data later
   const topCandidates = Array.isArray(analyticsData?.topCandidates)
     ? analyticsData.topCandidates
     : [];
 
   return (
     <div className="space-y-6 min-w-0">
-      {/* Error banner (soft, non-blocking) */}
       {error && (
         <div className="rounded-md border border-red-200 bg-red-50 px-3 py-2 text-xs text-red-700">
           {error}
         </div>
       )}
 
-      {/* Quick Stats (available to all plans) */}
       <section className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         {isLoading && !analyticsData
-          ? // Loading skeletons
-            Array.from({ length: 4 }).map((_, idx) => (
+          ? Array.from({ length: 4 }).map((_, idx) => (
               <div
                 key={idx}
                 className="rounded-lg border bg-white p-4 animate-pulse space-y-2"
@@ -190,8 +258,7 @@ function DashboardBody() {
                 <div className="h-7 w-10 bg-slate-200 rounded" />
               </div>
             ))
-          : // Live or neutral stats
-            stats.map((t) => (
+          : stats.map((t) => (
               <div key={t.label} className="rounded-lg border bg-white p-4">
                 <div className="text-sm font-medium text-[#FF7043] truncate">
                   {t.label}
@@ -201,9 +268,7 @@ function DashboardBody() {
             ))}
       </section>
 
-      {/* Panels — equal heights & consistent spacing */}
       <section className="grid grid-cols-1 lg:grid-cols-2 gap-4 items-stretch">
-        {/* Top Candidate Recommendations */}
         <Panel title="Top Candidate Recommendations">
           {isLoading && !analyticsData ? (
             <ul className="text-sm grid gap-2 animate-pulse">
@@ -236,7 +301,6 @@ function DashboardBody() {
           )}
         </Panel>
 
-        {/* Quick Analytics Snapshot */}
         <Panel title="Quick Analytics Snapshot">
           {isLoading && !analyticsData ? (
             <div className="text-sm grid gap-2 animate-pulse">
@@ -272,7 +336,6 @@ function DashboardBody() {
               </div>
             )
           ) : (
-            // Locked mode wrapped for identical padding/margins
             <FeatureLock label="Analytics Snapshot">
               <div className="text-sm text-slate-500">
                 Upgrade to Enterprise to see detailed analytics for your roles.

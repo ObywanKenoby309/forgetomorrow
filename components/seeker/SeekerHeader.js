@@ -3,6 +3,9 @@ import { useRouter } from "next/router";
 import EnterpriseHeader from "@/components/layouts/EnterpriseHeader";
 import { usePlan } from "@/context/PlanContext";
 
+// ✅ NEW
+import { useEffect, useState } from "react";
+
 // Seeker header should be "clean + hub-like":
 // Dashboard | The Signal | Community Feed | Calendar | Job Postings
 const BASE_NAV_ITEMS = [
@@ -25,10 +28,50 @@ export default function SeekerHeader() {
     return href.includes("?") ? `${href}&chrome=${chrome}` : `${href}?chrome=${chrome}`;
   };
 
-  const navItems = BASE_NAV_ITEMS.map((item) => ({
-    ...item,
-    href: withChrome(item.href),
-  }));
+  // ✅ NEW: unread dot for Action Center (shown on Dashboard in header)
+  const [hasActionUnread, setHasActionUnread] = useState(false);
+
+  useEffect(() => {
+    let alive = true;
+
+    const load = async () => {
+      try {
+        const res = await fetch("/api/notifications/unread-count?scope=SEEKER", {
+          method: "GET",
+          headers: { "Content-Type": "application/json" },
+          credentials: "include",
+        });
+
+        if (!res.ok) return;
+        const data = await res.json();
+        if (!alive) return;
+
+        setHasActionUnread(!!data?.hasUnread);
+      } catch {
+        // swallow - no dot if API fails
+      }
+    };
+
+    load();
+    const t = setInterval(load, 25000);
+
+    return () => {
+      alive = false;
+      clearInterval(t);
+    };
+  }, []);
+
+  const navItems = BASE_NAV_ITEMS.map((item) => {
+    // ✅ NEW: show dot beside Dashboard if Action Center has unread items
+    const isDashboard = item.href === "/seeker-dashboard";
+    const label = isDashboard && hasActionUnread ? `${item.label} ●` : item.label;
+
+    return {
+      ...item,
+      label,
+      href: withChrome(item.href),
+    };
+  });
 
   const planLabel = isProTier ? "Seeker Pro" : "Seeker Free";
 

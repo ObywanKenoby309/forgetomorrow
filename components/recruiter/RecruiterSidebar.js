@@ -3,6 +3,9 @@ import React from 'react';
 import Link from 'next/link';
 import { usePlan } from '@/context/PlanContext';
 
+// ✅ NEW
+import { useEffect, useState } from 'react';
+
 const ORANGE = '#FF7043';
 const TEXT_MAIN = '#263238';
 
@@ -42,7 +45,28 @@ function Badge({ value }) {
   );
 }
 
-function NavItem({ href, label, active, badge }) {
+// ✅ NEW: subtle dot (used for Action Center unread indicator)
+function Dot({ show }) {
+  if (!show) return null;
+  return (
+    <span
+      aria-label="Unread updates"
+      title="Unread updates"
+      style={{
+        display: 'inline-block',
+        width: 8,
+        height: 8,
+        borderRadius: 999,
+        background: ORANGE,
+        boxShadow: '0 6px 12px rgba(0,0,0,0.12)',
+        marginLeft: 8,
+        flex: '0 0 auto',
+      }}
+    />
+  );
+}
+
+function NavItem({ href, label, active, badge, dot }) {
   const base = {
     position: 'relative',
     display: 'flex',
@@ -88,6 +112,10 @@ function NavItem({ href, label, active, badge }) {
         />
       )}
       <span style={{ marginLeft: active ? 6 : 0 }}>{label}</span>
+
+      {/* ✅ NEW: dot indicator (Action Center unread) */}
+      <Dot show={dot} />
+
       <Badge value={badge} />
     </Link>
   );
@@ -132,6 +160,39 @@ export default function RecruiterSidebar({
   const dept = String(department || '').trim().toLowerCase();
   const staffAccess = employee === true && dept.length > 0;
 
+  // ✅ NEW: unread dot for Action Center (shown on Dashboard in sidebar)
+  const [hasActionUnread, setHasActionUnread] = useState(false);
+
+  useEffect(() => {
+    let alive = true;
+
+    const load = async () => {
+      try {
+        const res = await fetch('/api/notifications/unread-count?scope=RECRUITER', {
+          method: 'GET',
+          headers: { 'Content-Type': 'application/json' },
+          credentials: 'include',
+        });
+
+        if (!res.ok) return;
+        const data = await res.json();
+        if (!alive) return;
+
+        setHasActionUnread(!!data?.hasUnread);
+      } catch {
+        // swallow - no dot if API fails
+      }
+    };
+
+    load();
+    const t = setInterval(load, 25000);
+
+    return () => {
+      alive = false;
+      clearInterval(t);
+    };
+  }, []);
+
   return (
     <nav
       aria-label="Recruiter navigation"
@@ -163,6 +224,7 @@ export default function RecruiterSidebar({
         href="/recruiter/dashboard"
         label="Dashboard"
         active={active === 'dashboard'}
+        dot={hasActionUnread}
       />
 
       {/* Connections */}

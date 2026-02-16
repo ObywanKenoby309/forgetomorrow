@@ -53,6 +53,8 @@ const PUBLIC_PATHS = new Set([
 
 // ✅ Internal / Workspace routes (staff-only by login)
 const INTERNAL_PREFIXES = ["/internal", "/workspace"];
+// ✅ App routes that must require login (but are NOT staff-only)
+const AUTH_PREFIXES = ["/action-center"];
 
 function isPublicPath(pathname) {
   // Direct matches
@@ -83,6 +85,10 @@ function isPublicPath(pathname) {
 
 function isInternalPath(pathname) {
   return INTERNAL_PREFIXES.some((p) => pathname === p || pathname.startsWith(p + "/"));
+}
+
+function isAuthPath(pathname) {
+  return AUTH_PREFIXES.some((p) => pathname === p || pathname.startsWith(p + "/"));
 }
 
 function hasNextAuthSession(req) {
@@ -130,6 +136,20 @@ export async function middleware(req) {
 
   // 3. Other public routes
   if (isPublicPath(pathname)) {
+    return NextResponse.next();
+  }
+  
+    // ✅ 3a. App routes that always require login (not staff-only)
+  if (isAuthPath(pathname)) {
+    const hasSession = hasNextAuthSession(req);
+
+    if (!hasSession) {
+      const url = req.nextUrl.clone();
+      url.pathname = "/auth/signin";
+      url.searchParams.set("from", pathname);
+      return NextResponse.redirect(url, 302);
+    }
+
     return NextResponse.next();
   }
 

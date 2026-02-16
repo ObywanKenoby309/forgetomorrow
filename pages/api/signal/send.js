@@ -47,6 +47,7 @@ export default async function handler(req, res) {
     const convo = await prisma.conversation.findUnique({
       where: { id: convoId },
       select: {
+        channel: true,
         participants: {
           select: { userId: true },
         },
@@ -99,6 +100,81 @@ export default async function handler(req, res) {
       where: { id: convoId },
       data: { updatedAt: new Date() },
     });
+
+    // ✅ NEW: Upsert Notification rows for receivers (required for dots + preview cards)
+    // Determine scope based on Conversation.channel (string)
+    const channel = String(convo.channel || '').trim().toLowerCase();
+
+    const scope =
+      channel === 'coach'
+        ? 'COACH'
+        : channel === 'recruiter' || channel.startsWith('recruiter')
+        ? 'RECRUITER'
+        : 'SEEKER';
+
+    // Recipients: everyone in convo except sender
+    const recipientIds = (convo.participants || [])
+      .map((p) => p.userId)
+      .filter((id) => id && id !== userId);
+
+    const senderName =
+      (session?.user?.name && String(session.user.name).trim()) ||
+      (session?.user?.email && String(session.user.email).trim()) ||
+      'Someone';
+
+    const snippet = String(content || '').trim().slice(0, 160);
+
+    const entityId = String(convoId);
+    const dedupeKey = `${scope}:conversation:${entityId}`;
+
+    if (recipientIds.length > 0) {
+      await prisma.$transaction(
+        recipientIds.map((rid) =>
+          prisma.notification.upsert({
+            where: {
+              userId_dedupeKey: {
+                userId: rid,
+                dedupeKey,
+              },
+            },
+            create: {
+              userId: rid,
+              actorUserId: userId,
+              scope,
+              category: 'MESSAGING',
+              entityType: 'CONVERSATION',
+              entityId,
+              dedupeKey,
+              title: `New message from ${senderName}`,
+              body: snippet || null,
+              requiresAction: true,
+              readAt: null,
+              metadata: {
+                conversationId: entityId,
+                messageId: String(message.id),
+                channel: channel || null,
+              },
+            },
+            update: {
+              actorUserId: userId,
+              scope,
+              category: 'MESSAGING',
+              entityType: 'CONVERSATION',
+              entityId,
+              title: `New message from ${senderName}`,
+              body: snippet || null,
+              requiresAction: true,
+              readAt: null,
+              metadata: {
+                conversationId: entityId,
+                messageId: String(message.id),
+                channel: channel || null,
+              },
+            },
+          })
+        )
+      );
+    }
 
     return res.status(200).json({ ok: true, message });
   } catch (err) {

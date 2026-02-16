@@ -34,6 +34,10 @@ function getStatusStyles(status) {
 export default function CoachingDashboardPage() {
   const router = useRouter();
 
+  // ✅ NEW: Action Center lite preview (coach scope)
+  const [actionLoading, setActionLoading] = useState(true);
+  const [actionItems, setActionItems] = useState([]);
+
   // ---- Sessions (DB source of truth) ----
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
@@ -77,9 +81,45 @@ export default function CoachingDashboardPage() {
     loadSessions();
   }, [loadSessions]);
 
+  // ✅ NEW: load Action Center preview (unread only)
+  useEffect(() => {
+    let cancelled = false;
+
+    async function loadActionPreview() {
+      setActionLoading(true);
+      try {
+        const res = await fetch('/api/notifications/list?scope=COACH&limit=3&includeRead=0', {
+          method: 'GET',
+          headers: { 'Content-Type': 'application/json' },
+          credentials: 'include',
+        });
+
+        if (!res.ok) {
+          if (!cancelled) setActionItems([]);
+          return;
+        }
+
+        const data = await res.json();
+        if (cancelled) return;
+        setActionItems(Array.isArray(data?.items) ? data.items : []);
+      } catch (e) {
+        console.error('Coach action preview error:', e);
+        if (!cancelled) setActionItems([]);
+      } finally {
+        if (!cancelled) setActionLoading(false);
+      }
+    }
+
+    loadActionPreview();
+    const t = setInterval(loadActionPreview, 25000);
+
+    return () => {
+      cancelled = true;
+      clearInterval(t);
+    };
+  }, []);
+
   // ---- CSAT (DB source of truth) ----
-  // NOTE: This expects an API route (ex: /api/coaching/csat) and returns an array.
-  // We intentionally do NOT use localStorage here (production rule).
   const [csat, setCsat] = useState([]);
   const [refreshing, setRefreshing] = useState(false);
   const [csatError, setCsatError] = useState('');
@@ -92,9 +132,8 @@ export default function CoachingDashboardPage() {
         headers: { 'Content-Type': 'application/json' },
       });
 
-      if (res.status === 401) return; // dashboard already handles login redirect on sessions
+      if (res.status === 401) return;
       if (!res.ok) {
-        // If endpoint isn't wired yet, fail gracefully (no local fallback).
         throw new Error('Failed to load CSAT');
       }
 
@@ -148,7 +187,7 @@ export default function CoachingDashboardPage() {
     return set.size;
   }, [sessions]);
 
-  const followUpsDue = 0; // Keep as 0 until follow-ups are DB-modeled + returned by API
+  const followUpsDue = 0;
 
   const kpis = [
     { label: 'Sessions Today', value: sessionsToday.length },
@@ -158,7 +197,6 @@ export default function CoachingDashboardPage() {
 
   // ---- Clients table derived from sessions (minimal, no new endpoints) ----
   const clients = useMemo(() => {
-    // group by client display name, keep next upcoming session per client
     const byClient = new Map();
 
     for (const s of sessions) {
@@ -178,10 +216,8 @@ export default function CoachingDashboardPage() {
         continue;
       }
 
-      // keep latest status we saw (simple)
       existing.status = s?.status || existing.status;
 
-      // keep earliest upcoming as "next"
       if (dt && dt >= now) {
         if (!existing.nextSession || dt < existing.nextSession) {
           existing.nextSession = dt;
@@ -192,7 +228,6 @@ export default function CoachingDashboardPage() {
     }
 
     return Array.from(byClient.values()).sort((a, b) => {
-      // upcoming first
       const aTime = a.nextSession ? a.nextSession.getTime() : Number.MAX_SAFE_INTEGER;
       const bTime = b.nextSession ? b.nextSession.getTime() : Number.MAX_SAFE_INTEGER;
       return aTime - bTime;
@@ -325,7 +360,46 @@ export default function CoachingDashboardPage() {
               </div>
             </Card>
 
-            <Card title="New Client Intakes" />
+            {/* ✅ NEW: Action Center lite preview */}
+            <Card title="Action Center">
+              {actionLoading ? (
+                <div style={{ color: '#90A4AE' }}>Loading updates…</div>
+              ) : actionItems.length === 0 ? (
+                <div style={{ color: '#90A4AE' }}>No unread items.</div>
+              ) : (
+                <div style={{ display: 'grid', gap: 8 }}>
+                  {actionItems.map((n) => (
+                    <Link
+                      key={n.id}
+                      href="/action-center?scope=COACH"
+                      style={{
+                        display: 'block',
+                        border: '1px solid #eee',
+                        borderRadius: 8,
+                        padding: '8px 10px',
+                        background: 'white',
+                        textDecoration: 'none',
+                      }}
+                    >
+                      <div style={{ fontWeight: 700, color: '#263238', fontSize: 13 }}>
+                        {n.title || 'Update'}
+                      </div>
+                      {n.body ? (
+                        <div style={{ color: '#607D8B', fontSize: 12, marginTop: 2 }}>
+                          {n.body}
+                        </div>
+                      ) : null}
+                    </Link>
+                  ))}
+                </div>
+              )}
+
+              <div style={{ textAlign: 'right', marginTop: 10 }}>
+                <Link href="/action-center?scope=COACH" style={{ color: '#FF7043', fontWeight: 600 }}>
+                  View all
+                </Link>
+              </div>
+            </Card>
 
             <Card title="Follow-ups Due" />
           </div>

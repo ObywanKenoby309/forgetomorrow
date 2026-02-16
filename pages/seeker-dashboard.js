@@ -24,22 +24,35 @@ const weekDiff = (a, b) => {
   return Math.floor((a.getTime() - b.getTime()) / MSWEEK);
 };
 
+function resolveScopeFromChrome(chrome) {
+  const c = String(chrome || '').toLowerCase();
+  if (c === 'coach') return 'COACH';
+  if (c.startsWith('recruiter')) return 'RECRUITER';
+  return 'SEEKER';
+}
+
 export default function SeekerDashboard() {
   const router = useRouter();
   const chrome = String(router.query.chrome || '').toLowerCase();
   const withChrome = (path) =>
     chrome ? `${path}${path.includes('?') ? '&' : '?'}chrome=${chrome}` : path;
 
+  const scope = resolveScopeFromChrome(chrome);
+
   // Decide which sidebar item should be highlighted
   const chromeKey = chrome || 'seeker';
   const seekerActiveNav =
     chromeKey === 'coach' || chromeKey.startsWith('recruiter')
-      ? 'seeker-dashboard' // Coach / Recruiter sidebars → Seeker Tools → Seeker Dashboard
-      : 'dashboard'; // Native seeker sidebar
+      ? 'seeker-dashboard'
+      : 'dashboard';
 
   const [kpi, setKpi] = useState(null);
   const [weeks, setWeeks] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
+
+  // ✅ NEW: Action Center preview (lite)
+  const [actionLoading, setActionLoading] = useState(true);
+  const [actionItems, setActionItems] = useState([]);
 
   useEffect(() => {
     let cancelled = false;
@@ -52,7 +65,6 @@ export default function SeekerDashboard() {
         const data = await res.json();
         if (cancelled) return;
 
-        // ✅ Map the DB-backed KPI shape (no "rejected" field)
         const newKpi = {
           pinned: data.pinned || 0,
           applied: data.applied ?? data.applications ?? 0,
@@ -112,6 +124,42 @@ export default function SeekerDashboard() {
     };
   }, []);
 
+  // ✅ NEW: Load Action Center preview items (unread only, top 3)
+  useEffect(() => {
+    let cancelled = false;
+
+    async function loadActionPreview() {
+      setActionLoading(true);
+      try {
+        const res = await fetch(
+          `/api/notifications/list?scope=${encodeURIComponent(scope)}&limit=3&includeRead=0`,
+          { method: 'GET', headers: { 'Content-Type': 'application/json' }, credentials: 'include' }
+        );
+        if (!res.ok) {
+          setActionItems([]);
+          return;
+        }
+        const data = await res.json();
+        if (cancelled) return;
+
+        setActionItems(Array.isArray(data?.items) ? data.items : []);
+      } catch (e) {
+        console.error('Action preview load error:', e);
+        if (!cancelled) setActionItems([]);
+      } finally {
+        if (!cancelled) setActionLoading(false);
+      }
+    }
+
+    loadActionPreview();
+    const t = setInterval(loadActionPreview, 25000);
+
+    return () => {
+      cancelled = true;
+      clearInterval(t);
+    };
+  }, [scope]);
+
   const HeaderBox = (
     <section
       aria-label="Job seeker dashboard overview"
@@ -128,6 +176,44 @@ export default function SeekerDashboard() {
 
   const RightRail = (
     <div className="grid gap-4">
+      {/* ✅ NEW: Action Center lite preview */}
+      <section className="bg-white border border-gray-200 rounded-xl p-4 shadow-sm">
+        <div className="flex items-center justify-between mb-2">
+          <h2 className="text-sm font-semibold text-gray-900">Action Center</h2>
+          <Link
+            href={withChrome(`/action-center?scope=${scope}`)}
+            className="text-orange-600 font-semibold text-xs hover:underline"
+          >
+            View all
+          </Link>
+        </div>
+
+        {actionLoading ? (
+          <div className="text-xs text-gray-500">Loading updates…</div>
+        ) : actionItems.length === 0 ? (
+          <div className="text-xs text-gray-500">No unread items.</div>
+        ) : (
+          <div className="grid gap-2">
+            {actionItems.map((n) => (
+              <Link
+                key={n.id}
+                href={withChrome(`/action-center?scope=${scope}`)}
+                className="block rounded-lg border border-gray-200 px-3 py-2 hover:bg-orange-50"
+              >
+                <div className="text-xs font-semibold text-gray-900 truncate">
+                  {n.title || 'Update'}
+                </div>
+                {n.body ? (
+                  <div className="text-[11px] text-gray-600 mt-0.5 line-clamp-2">
+                    {n.body}
+                  </div>
+                ) : null}
+              </Link>
+            ))}
+          </div>
+        )}
+      </section>
+
       {/* 1) Resume + Cover builder quick access */}
       <section className="bg-white border border-gray-200 rounded-xl p-4 shadow-sm">
         <h2 className="text-sm font-semibold text-gray-900 mb-1">
