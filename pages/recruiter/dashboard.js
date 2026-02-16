@@ -1,5 +1,5 @@
 // pages/recruiter/dashboard.js
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { PlanProvider, usePlan } from "@/context/PlanContext";
 import FeatureLock from "@/components/recruiter/FeatureLock";
 import RecruiterLayout from "@/components/layouts/RecruiterLayout";
@@ -25,80 +25,86 @@ function HeaderBar() {
   );
 }
 
-function ActionCenterLiteCard() {
-  const [loading, setLoading] = useState(true);
-  const [items, setItems] = useState([]);
+function safeText(v) {
+  return typeof v === "string" ? v : v == null ? "" : String(v);
+}
 
-  useEffect(() => {
-    let alive = true;
+function pickRecruiterActionBucket(n) {
+  const title = safeText(n?.title).toLowerCase();
+  const body = safeText(n?.body).toLowerCase();
+  const meta = n?.metadata || {};
+  const metaStr = safeText(meta?.type || meta?.event || meta?.kind || meta?.entityType || "").toLowerCase();
+  const haystack = `${title} ${body} ${metaStr}`;
 
-    const load = async () => {
-      setLoading(true);
-      try {
-        const res = await fetch("/api/notifications/list?scope=RECRUITER&limit=3&includeRead=0", {
-          method: "GET",
-          headers: { "Content-Type": "application/json" },
-          credentials: "include",
-        });
+  // Heuristics only - no schema assumptions
+  if (haystack.includes("message") || haystack.includes("inbox") || haystack.includes("dm") || haystack.includes("signal")) {
+    return "messages";
+  }
+  if (
+    haystack.includes("apply") ||
+    haystack.includes("application") ||
+    haystack.includes("candidate") ||
+    haystack.includes("interview") ||
+    haystack.includes("offer") ||
+    haystack.includes("hire")
+  ) {
+    return "candidates";
+  }
+  if (
+    haystack.includes("job") ||
+    haystack.includes("posting") ||
+    haystack.includes("role") ||
+    haystack.includes("requisition") ||
+    haystack.includes("listing")
+  ) {
+    return "jobs";
+  }
 
-        if (!res.ok) {
-          if (alive) setItems([]);
-          return;
-        }
+  // Default so nothing disappears
+  return "messages";
+}
 
-        const data = await res.json();
-        if (!alive) return;
-
-        setItems(Array.isArray(data?.items) ? data.items : []);
-      } catch {
-        if (alive) setItems([]);
-      } finally {
-        if (alive) setLoading(false);
-      }
-    };
-
-    load();
-    const t = setInterval(load, 25000);
-
-    return () => {
-      alive = false;
-      clearInterval(t);
-    };
-  }, []);
+function ActionLiteCard({ title, items, emptyText, href, updating = false }) {
+  const list = Array.isArray(items) ? items : [];
 
   return (
-    <div className="rounded-lg border bg-white p-4">
-      <div className="flex items-center justify-between mb-2">
-        <div className="font-medium">Action Center</div>
-        <SecondaryButton href="/action-center?scope=RECRUITER&chrome=recruiter-smb" size="sm">
-          View all
-        </SecondaryButton>
+    <div className="rounded-lg border bg-white p-4 min-h-[160px] flex flex-col">
+      <div className="flex items-center justify-between gap-3 mb-2">
+        <div className="font-medium min-w-0 truncate">{title}</div>
+        <div className="flex items-center gap-2">
+          {updating ? (
+            <span className="text-[11px] text-slate-500">Updating…</span>
+          ) : null}
+          <SecondaryButton href={href} size="sm">
+            View all
+          </SecondaryButton>
+        </div>
       </div>
 
-      {loading ? (
-        <div className="text-xs text-slate-500">Loading updates…</div>
-      ) : items.length === 0 ? (
-        <div className="text-xs text-slate-500">No unread items.</div>
-      ) : (
-        <div className="grid gap-2">
-          {items.map((n) => (
-            <a
-              key={n.id}
-              href="/action-center?scope=RECRUITER&chrome=recruiter-smb"
-              className="block rounded-md border px-3 py-2 hover:bg-orange-50"
-            >
-              <div className="text-xs font-semibold text-slate-900 truncate">
-                {n.title || "Update"}
-              </div>
-              {n.body ? (
-                <div className="text-[11px] text-slate-600 mt-0.5 line-clamp-2">
-                  {n.body}
+      <div className="flex-1">
+        {list.length === 0 ? (
+          <div className="text-xs text-slate-500">{emptyText}</div>
+        ) : (
+          <div className="grid gap-2">
+            {list.map((n) => (
+              <a
+                key={n.id}
+                href={href}
+                className="block rounded-md border px-3 py-2 hover:bg-orange-50"
+              >
+                <div className="text-xs font-semibold text-slate-900 truncate">
+                  {n.title || "Update"}
                 </div>
-              ) : null}
-            </a>
-          ))}
-        </div>
-      )}
+                {n.body ? (
+                  <div className="text-[11px] text-slate-600 mt-0.5 line-clamp-2">
+                    {n.body}
+                  </div>
+                ) : null}
+              </a>
+            ))}
+          </div>
+        )}
+      </div>
     </div>
   );
 }
@@ -106,28 +112,10 @@ function ActionCenterLiteCard() {
 function RightToolsCard() {
   return (
     <div className="space-y-4">
-      {/* ✅ NEW: Action Center lite preview */}
-      <ActionCenterLiteCard />
-
+      {/* Ads live here now (no quick links/tools) */}
       <div className="rounded-lg border bg-white p-4">
-        <div className="font-medium mb-2">Quick Tools</div>
-        <div className="space-y-2 text-sm">
-          <div className="text-slate-600">Jump back into common tasks:</div>
-          <div className="flex flex-wrap gap-2">
-            <SecondaryButton href="/recruiter/candidates" size="sm">
-              Browse Candidates
-            </SecondaryButton>
-            <SecondaryButton href="/recruiter/messaging" size="sm">
-              Messaging
-            </SecondaryButton>
-            <SecondaryButton href="/recruiter/job-postings" size="sm">
-              Manage Jobs
-            </SecondaryButton>
-            <SecondaryButton href="/recruiter/job-tracker" size="sm">
-              Job Tracker
-            </SecondaryButton>
-          </div>
-        </div>
+        <div className="font-medium mb-2">Sponsored</div>
+        <div className="text-xs text-slate-500">Ad space</div>
       </div>
     </div>
   );
@@ -151,6 +139,11 @@ function DashboardBody() {
   const [analyticsData, setAnalyticsData] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState(null);
+
+  // ✅ Action Center (smooth refresh, no layout jump)
+  const [actionFirstLoad, setActionFirstLoad] = useState(true);
+  const [actionUpdating, setActionUpdating] = useState(false);
+  const [actionItems, setActionItems] = useState([]);
 
   useEffect(() => {
     let isMounted = true;
@@ -188,6 +181,77 @@ function DashboardBody() {
       isMounted = false;
     };
   }, []);
+
+  // ✅ Action Center loader (initial load shows Loading; after that we keep content + show Updating…)
+  useEffect(() => {
+    let alive = true;
+    let first = true;
+
+    const load = async () => {
+      if (first) {
+        setActionFirstLoad(true);
+      } else {
+        setActionUpdating(true);
+      }
+
+      try {
+        const res = await fetch(
+          "/api/notifications/list?scope=RECRUITER&limit=12&includeRead=0",
+          {
+            method: "GET",
+            headers: { "Content-Type": "application/json" },
+            credentials: "include",
+          }
+        );
+
+        if (!res.ok) {
+          // no wipe - keep previous items
+          return;
+        }
+
+        const data = await res.json();
+        if (!alive) return;
+
+        const next = Array.isArray(data?.items) ? data.items : [];
+        setActionItems(next);
+      } catch (e) {
+        // no wipe - keep previous items
+        console.error("[RecruiterDashboard] Action Center refresh error:", e);
+      } finally {
+        if (!alive) return;
+        if (first) {
+          setActionFirstLoad(false);
+          first = false;
+        } else {
+          setActionUpdating(false);
+        }
+      }
+    };
+
+    load();
+    const t = setInterval(load, 25000);
+
+    return () => {
+      alive = false;
+      clearInterval(t);
+    };
+  }, []);
+
+  const actionBuckets = useMemo(() => {
+    const buckets = { messages: [], candidates: [], jobs: [] };
+
+    for (const n of Array.isArray(actionItems) ? actionItems : []) {
+      const bucket = pickRecruiterActionBucket(n);
+      if (!buckets[bucket]) buckets[bucket] = [];
+      buckets[bucket].push(n);
+    }
+
+    return {
+      messages: buckets.messages.slice(0, 3),
+      candidates: buckets.candidates.slice(0, 3),
+      jobs: buckets.jobs.slice(0, 3),
+    };
+  }, [actionItems]);
 
   const kpis = analyticsData?.kpis || null;
   const sourcesArray = Array.isArray(analyticsData?.sources)
@@ -266,6 +330,44 @@ function DashboardBody() {
                 <div className="text-2xl font-semibold mt-1">{t.value}</div>
               </div>
             ))}
+      </section>
+
+      {/* ✅ ACTION CENTER (center section, no right-rail box) */}
+      <section className="rounded-lg border bg-white p-4">
+        <div className="flex items-center justify-between gap-3 mb-3">
+          <div className="font-medium">Action Center</div>
+          <SecondaryButton href="/action-center?scope=RECRUITER&chrome=recruiter-smb" size="sm">
+            View all
+          </SecondaryButton>
+        </div>
+
+        {actionFirstLoad ? (
+          <div className="text-xs text-slate-500">Loading updates…</div>
+        ) : (
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+            <ActionLiteCard
+              title="New Messages"
+              items={actionBuckets.messages}
+              emptyText="No unread recruiter inbox items."
+              href="/action-center?scope=RECRUITER&chrome=recruiter-smb"
+              updating={actionUpdating}
+            />
+            <ActionLiteCard
+              title="Candidate Activity"
+              items={actionBuckets.candidates}
+              emptyText="No new candidate activity."
+              href="/action-center?scope=RECRUITER&chrome=recruiter-smb"
+              updating={actionUpdating}
+            />
+            <ActionLiteCard
+              title="Job Updates"
+              items={actionBuckets.jobs}
+              emptyText="No job updates."
+              href="/action-center?scope=RECRUITER&chrome=recruiter-smb"
+              updating={actionUpdating}
+            />
+          </div>
+        )}
       </section>
 
       <section className="grid grid-cols-1 lg:grid-cols-2 gap-4 items-stretch">
