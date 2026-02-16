@@ -31,10 +31,36 @@ function getStatusStyles(status) {
   return { background: '#E8F5E9', color: '#2E7D32' };
 }
 
+function safeText(v) {
+  return typeof v === 'string' ? v : v == null ? '' : String(v);
+}
+
+function pickActionBucket(n) {
+  const title = safeText(n?.title).toLowerCase();
+  const body = safeText(n?.body).toLowerCase();
+  const meta = n?.metadata || {};
+  const metaStr = safeText(meta?.type || meta?.event || meta?.kind || '').toLowerCase();
+  const haystack = `${title} ${body} ${metaStr}`;
+
+  // Heuristics (no new schema assumptions)
+  if (haystack.includes('feedback') || haystack.includes('csat') || haystack.includes('rating') || haystack.includes('survey')) {
+    return 'feedback';
+  }
+  if (haystack.includes('calendar') || haystack.includes('invite') || haystack.includes('session') || haystack.includes('resched') || haystack.includes('schedule')) {
+    return 'calendar';
+  }
+  if (haystack.includes('message') || haystack.includes('inbox') || haystack.includes('dm') || haystack.includes('signal')) {
+    return 'messages';
+  }
+
+  // Default bucket so nothing disappears
+  return 'messages';
+}
+
 export default function CoachingDashboardPage() {
   const router = useRouter();
 
-  // ✅ NEW: Action Center lite preview (coach scope)
+  // ✅ Action Center lite preview (coach scope)
   const [actionLoading, setActionLoading] = useState(true);
   const [actionItems, setActionItems] = useState([]);
 
@@ -81,14 +107,14 @@ export default function CoachingDashboardPage() {
     loadSessions();
   }, [loadSessions]);
 
-  // ✅ NEW: load Action Center preview (unread only)
+  // ✅ load Action Center preview (unread only)
   useEffect(() => {
     let cancelled = false;
 
     async function loadActionPreview() {
       setActionLoading(true);
       try {
-        const res = await fetch('/api/notifications/list?scope=COACH&limit=3&includeRead=0', {
+        const res = await fetch('/api/notifications/list?scope=COACH&limit=12&includeRead=0', {
           method: 'GET',
           headers: { 'Content-Type': 'application/json' },
           credentials: 'include',
@@ -234,6 +260,8 @@ export default function CoachingDashboardPage() {
     });
   }, [sessions, now]);
 
+  const clientsPreview = useMemo(() => clients.slice(0, 5), [clients]);
+
   // ---- CSAT stats ----
   const avgScore =
     csat.length > 0
@@ -251,7 +279,22 @@ export default function CoachingDashboardPage() {
       : '—';
 
   const totalResponses = csat.length;
-  const recent = csat.slice(0, 3);
+
+  // ---- Action Center buckets (lite) ----
+  const actionBuckets = useMemo(() => {
+    const buckets = { messages: [], feedback: [], calendar: [] };
+
+    for (const n of Array.isArray(actionItems) ? actionItems : []) {
+      const bucket = pickActionBucket(n);
+      buckets[bucket].push(n);
+    }
+
+    return {
+      messages: buckets.messages.slice(0, 3),
+      feedback: buckets.feedback.slice(0, 3),
+      calendar: buckets.calendar.slice(0, 3),
+    };
+  }, [actionItems]);
 
   return (
     <CoachingLayout
@@ -293,6 +336,7 @@ export default function CoachingDashboardPage() {
             ))}
           </div>
 
+          {/* Keep the 3-card row, but Action Center is no longer here */}
           <div style={grid3}>
             <Card title="Upcoming Sessions">
               {loading ? (
@@ -360,285 +404,234 @@ export default function CoachingDashboardPage() {
               </div>
             </Card>
 
-            {/* ✅ NEW: Action Center lite preview */}
-            <Card title="Action Center">
-              {actionLoading ? (
-                <div style={{ color: '#90A4AE' }}>Loading updates…</div>
-              ) : actionItems.length === 0 ? (
-                <div style={{ color: '#90A4AE' }}>No unread items.</div>
-              ) : (
-                <div style={{ display: 'grid', gap: 8 }}>
-                  {actionItems.map((n) => (
-                    <Link
-                      key={n.id}
-                      href="/action-center?scope=COACH&chrome=coach"
-                      style={{
-                        display: 'block',
-                        border: '1px solid #eee',
-                        borderRadius: 8,
-                        padding: '8px 10px',
-                        background: 'white',
-                        textDecoration: 'none',
-                      }}
-                    >
-                      <div style={{ fontWeight: 700, color: '#263238', fontSize: 13 }}>
-                        {n.title || 'Update'}
-                      </div>
-                      {n.body ? (
-                        <div style={{ color: '#607D8B', fontSize: 12, marginTop: 2 }}>
-                          {n.body}
-                        </div>
-                      ) : null}
-                    </Link>
-                  ))}
-                </div>
-              )}
-
-              <div style={{ textAlign: 'right', marginTop: 10 }}>
-                <Link
-                  href="/action-center?scope=COACH&chrome=coach"
-                  style={{ color: '#FF7043', fontWeight: 600 }}
-                >
-                  View all
-                </Link>
-              </div>
+            <Card title="Follow-ups Due">
+              <div style={{ color: '#90A4AE' }}>Coming soon…</div>
             </Card>
 
-            <Card title="Follow-ups Due" />
+            <Card title="Sponsored">
+			  <div style={{ color: '#90A4AE', fontSize: 13 }}>
+				Ad space
+			  </div>
+			</Card>
+
           </div>
         </Section>
 
-        {/* Clients */}
-        <Section title="Clients">
-          {loading ? (
-            <div
-              style={{
-                padding: 16,
-                background: 'white',
-                borderRadius: 10,
-                border: '1px solid #eee',
-                color: '#90A4AE',
-                fontSize: 14,
-              }}
+        {/* ACTION CENTER (Center, full section) */}
+        <Section
+          title="Action Center"
+          action={
+            <Link
+              href="/action-center?scope=COACH&chrome=coach"
+              style={{ color: '#FF7043', fontWeight: 700 }}
             >
-              Loading clients…
-            </div>
-          ) : clients.length === 0 ? (
-            <div
-              style={{
-                padding: 16,
-                background: 'white',
-                borderRadius: 10,
-                border: '1px solid #eee',
-                color: '#90A4AE',
-                fontSize: 14,
-              }}
-            >
-              No clients yet. Once you start working with clients, a quick snapshot of their status will appear here.
-            </div>
+              View all
+            </Link>
+          }
+        >
+          {actionLoading ? (
+            <div style={{ color: '#90A4AE' }}>Loading updates…</div>
           ) : (
-            <>
-              <div style={{ overflowX: 'auto' }}>
-                <table
-                  style={{
-                    width: '100%',
-                    borderCollapse: 'separate',
-                    borderSpacing: 0,
-                    background: 'white',
-                    border: '1px solid #eee',
-                    borderRadius: 10,
-                    overflow: 'hidden',
-                  }}
-                >
-                  <thead>
-                    <tr style={{ background: '#FAFAFA' }}>
-                      <Th>Name</Th>
-                      <Th>Status</Th>
-                      <Th>Next Session</Th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {clients.map((c) => {
-                      const { background, color } = getStatusStyles(c.status);
-                      return (
-                        <tr key={c.id} style={{ borderTop: '1px solid #eee' }}>
-                          <Td strong>{c.name}</Td>
-                          <Td>
-                            <span
-                              style={{
-                                fontSize: 12,
-                                background,
-                                color,
-                                padding: '4px 8px',
-                                borderRadius: 999,
-                              }}
-                            >
-                              {c.status}
-                            </span>
-                          </Td>
-                          <Td>
-                            {c.nextSession
-                              ? c.nextSession.toLocaleString(undefined, {
-                                  month: 'short',
-                                  day: 'numeric',
-                                  hour: 'numeric',
-                                  minute: '2-digit',
-                                })
-                              : '—'}
-                          </Td>
-                        </tr>
-                      );
-                    })}
-                  </tbody>
-                </table>
-              </div>
-              <div style={{ textAlign: 'right', marginTop: 10 }}>
-                <Link
-                  href="/dashboard/coaching/clients"
-                  style={{ color: '#FF7043', fontWeight: 600 }}
-                >
-                  View all clients
-                </Link>
-              </div>
-            </>
+            <div style={grid3}>
+              <ActionLiteCard
+                title="New Messages"
+                items={actionBuckets.messages}
+                emptyText="No unread coach inbox items."
+                href="/action-center?scope=COACH&chrome=coach"
+              />
+              <ActionLiteCard
+                title="New Feedback"
+                items={actionBuckets.feedback}
+                emptyText="No new feedback yet."
+                href="/dashboard/coaching/feedback"
+              />
+              <ActionLiteCard
+                title="Calendar Updates"
+                items={actionBuckets.calendar}
+                emptyText="No calendar updates."
+                href="/dashboard/coaching/sessions"
+              />
+            </div>
           )}
         </Section>
 
-        {/* CSAT */}
-        <Section
-          title="CSAT Overview"
-          action={
-            <button
-              type="button"
-              onClick={refreshCsat}
-              aria-label="Refresh CSAT"
-              title="Refresh CSAT"
-              style={{
-                background: 'white',
-                color: '#FF7043',
-                border: '1px solid #FF7043',
-                borderRadius: 10,
-                padding: '8px 10px',
-                fontWeight: 700,
-                cursor: 'pointer',
-              }}
-              disabled={refreshing}
-            >
-              {refreshing ? 'Refreshing…' : 'Refresh'}
-            </button>
-          }
+        {/* CLIENTS + CSAT OVERVIEW ON SAME LINE */}
+        <div
+          style={{
+            display: 'grid',
+            gridTemplateColumns: 'minmax(0, 2fr) minmax(0, 1fr)',
+            gap: 12,
+            width: '100%',
+          }}
         >
-          {csatError ? (
+          <Section title="Clients">
+            {loading ? (
+              <div
+                style={{
+                  padding: 16,
+                  background: 'white',
+                  borderRadius: 10,
+                  border: '1px solid #eee',
+                  color: '#90A4AE',
+                  fontSize: 14,
+                }}
+              >
+                Loading clients…
+              </div>
+            ) : clientsPreview.length === 0 ? (
+              <div
+                style={{
+                  padding: 16,
+                  background: 'white',
+                  borderRadius: 10,
+                  border: '1px solid #eee',
+                  color: '#90A4AE',
+                  fontSize: 14,
+                }}
+              >
+                No clients yet. Once you start working with clients, a quick snapshot of their status will appear here.
+              </div>
+            ) : (
+              <>
+                <div style={{ overflowX: 'auto' }}>
+                  <table
+                    style={{
+                      width: '100%',
+                      borderCollapse: 'separate',
+                      borderSpacing: 0,
+                      background: 'white',
+                      border: '1px solid #eee',
+                      borderRadius: 10,
+                      overflow: 'hidden',
+                    }}
+                  >
+                    <thead>
+                      <tr style={{ background: '#FAFAFA' }}>
+                        <Th>Name</Th>
+                        <Th>Status</Th>
+                        <Th>Next Session</Th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {clientsPreview.map((c) => {
+                        const { background, color } = getStatusStyles(c.status);
+                        return (
+                          <tr key={c.id} style={{ borderTop: '1px solid #eee' }}>
+                            <Td strong>{c.name}</Td>
+                            <Td>
+                              <span
+                                style={{
+                                  fontSize: 12,
+                                  background,
+                                  color,
+                                  padding: '4px 8px',
+                                  borderRadius: 999,
+                                }}
+                              >
+                                {c.status}
+                              </span>
+                            </Td>
+                            <Td>
+                              {c.nextSession
+                                ? c.nextSession.toLocaleString(undefined, {
+                                    month: 'short',
+                                    day: 'numeric',
+                                    hour: 'numeric',
+                                    minute: '2-digit',
+                                  })
+                                : '—'}
+                            </Td>
+                          </tr>
+                        );
+                      })}
+                    </tbody>
+                  </table>
+                </div>
+
+                <div style={{ textAlign: 'right', marginTop: 10 }}>
+                  <Link
+                    href="/dashboard/coaching/clients"
+                    style={{ color: '#FF7043', fontWeight: 600 }}
+                  >
+                    View all clients
+                  </Link>
+                </div>
+              </>
+            )}
+          </Section>
+
+          <Section
+            title="CSAT Overview"
+            action={
+              <button
+                type="button"
+                onClick={refreshCsat}
+                aria-label="Refresh CSAT"
+                title="Refresh CSAT"
+                style={{
+                  background: 'white',
+                  color: '#FF7043',
+                  border: '1px solid #FF7043',
+                  borderRadius: 10,
+                  padding: '8px 10px',
+                  fontWeight: 700,
+                  cursor: 'pointer',
+                }}
+                disabled={refreshing}
+              >
+                {refreshing ? 'Refreshing…' : 'Refresh'}
+              </button>
+            }
+          >
+            {csatError ? (
+              <div
+                style={{
+                  background: '#FFF3E0',
+                  border: '1px solid #FFCC80',
+                  borderRadius: 10,
+                  padding: 10,
+                  color: '#6D4C41',
+                  fontSize: 13,
+                  marginBottom: 12,
+                }}
+              >
+                {csatError}
+              </div>
+            ) : null}
+
             <div
               style={{
-                background: '#FFF3E0',
-                border: '1px solid #FFCC80',
+                background: '#FAFAFA',
+                border: '1px solid #eee',
                 borderRadius: 10,
-                padding: 10,
-                color: '#6D4C41',
-                fontSize: 13,
-                marginBottom: 12,
+                padding: 16,
+                minHeight: 120,
               }}
             >
-              {csatError}
-            </div>
-          ) : null}
+              <div style={{ fontWeight: 600, marginBottom: 8 }}>Average Score</div>
 
-          <div style={grid3}>
-            <Card title="Average Score">
               <div style={{ display: 'flex', alignItems: 'baseline', gap: 8 }}>
                 <div style={{ fontSize: 28, fontWeight: 800, color: '#263238' }}>
                   {avgScore}
                 </div>
                 <div style={{ color: '#90A4AE', fontSize: 12 }}>/ 5</div>
               </div>
+
               <div style={{ color: '#607D8B', fontSize: 13, marginTop: 4 }}>
                 Based on {totalResponses} {totalResponses === 1 ? 'response' : 'responses'}
               </div>
+
               <div style={{ marginTop: 10 }}>
                 <Link
                   href="/dashboard/coaching/feedback"
-                  style={{ color: '#FF7043', fontWeight: 600 }}
+                  style={{ color: '#FF7043', fontWeight: 700 }}
                 >
                   Open feedback
                 </Link>
               </div>
-            </Card>
-
-            <Card title="Recent Feedback">
-              {recent.length === 0 ? (
-                <div style={{ color: '#90A4AE' }}>No responses yet.</div>
-              ) : (
-                <ul
-                  style={{
-                    margin: 0,
-                    padding: 0,
-                    listStyle: 'none',
-                    display: 'grid',
-                    gap: 8,
-                  }}
-                >
-                  {recent.map((r) => {
-                    const avg = (
-                      (Number(r.satisfaction) +
-                        Number(r.timeliness) +
-                        Number(r.quality)) /
-                      3
-                    ).toFixed(1);
-                    const comment = (r.comment || '').trim();
-                    const createdAt = r.createdAt ? new Date(r.createdAt) : null;
-
-                    return (
-                      <li
-                        key={r.id || `${avg}-${comment}-${String(r.createdAt || '')}`}
-                        style={{
-                          border: '1px solid #eee',
-                          borderRadius: 8,
-                          padding: '8px 10px',
-                          background: 'white',
-                        }}
-                      >
-                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline' }}>
-                          <div style={{ fontWeight: 700, color: '#263238' }}>{avg}/5</div>
-                          <div style={{ color: '#90A4AE', fontSize: 12 }}>
-                            {createdAt
-                              ? createdAt.toLocaleString(undefined, {
-                                  month: 'short',
-                                  day: 'numeric',
-                                  hour: 'numeric',
-                                  minute: '2-digit',
-                                })
-                              : ''}
-                          </div>
-                        </div>
-                        <div style={{ color: '#455A64', marginTop: 4 }}>
-                          {comment ? comment : <span style={{ color: '#90A4AE' }}>(No comment)</span>}
-                        </div>
-                        {r.anonymous ? (
-                          <div style={{ color: '#90A4AE', fontSize: 12, marginTop: 4 }}>
-                            Anonymous
-                          </div>
-                        ) : null}
-                      </li>
-                    );
-                  })}
-                </ul>
-              )}
-            </Card>
-
-            <Card title="Breakdown (latest)">
-              {csat.length === 0 ? (
-                <div style={{ color: '#90A4AE' }}>No data yet.</div>
-              ) : (
-                <div style={{ display: 'grid', gap: 6 }}>
-                  <Row label="Satisfaction" value={csat[0].satisfaction} />
-                  <Row label="Timeliness" value={csat[0].timeliness} />
-                  <Row label="Quality" value={csat[0].quality} />
-                </div>
-              )}
-            </Card>
-          </div>
-        </Section>
+            </div>
+          </Section>
+        </div>
 
         {/* Docs & Tools */}
         <Section title="Docs & Tools">
@@ -744,6 +737,61 @@ function KPI({ label, value }) {
   );
 }
 
+function ActionLiteCard({ title, items, emptyText, href }) {
+  const list = Array.isArray(items) ? items : [];
+
+  return (
+    <div
+      style={{
+        background: '#FAFAFA',
+        border: '1px solid #eee',
+        borderRadius: 10,
+        padding: 16,
+        minHeight: 140,
+        display: 'grid',
+        gap: 10,
+      }}
+    >
+      <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', gap: 10 }}>
+        <div style={{ fontWeight: 600 }}>{title}</div>
+        <Link href={href} style={{ color: '#FF7043', fontWeight: 700, fontSize: 12 }}>
+          View all
+        </Link>
+      </div>
+
+      {list.length === 0 ? (
+        <div style={{ color: '#90A4AE', fontSize: 13 }}>{emptyText}</div>
+      ) : (
+        <div style={{ display: 'grid', gap: 8 }}>
+          {list.map((n) => (
+            <Link
+              key={n.id}
+              href={href}
+              style={{
+                display: 'block',
+                border: '1px solid #eee',
+                borderRadius: 8,
+                padding: '8px 10px',
+                background: 'white',
+                textDecoration: 'none',
+              }}
+            >
+              <div style={{ fontWeight: 700, color: '#263238', fontSize: 13 }}>
+                {n.title || 'Update'}
+              </div>
+              {n.body ? (
+                <div style={{ color: '#607D8B', fontSize: 12, marginTop: 2 }}>
+                  {n.body}
+                </div>
+              ) : null}
+            </Link>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
 function Th({ children }) {
   return (
     <th
@@ -773,21 +821,6 @@ function Td({ children, strong = false }) {
     >
       {children}
     </td>
-  );
-}
-
-function Row({ label, value }) {
-  return (
-    <div
-      style={{
-        display: 'flex',
-        justifyContent: 'space-between',
-        color: '#455A64',
-      }}
-    >
-      <span>{label}</span>
-      <span style={{ fontWeight: 700 }}>{value}/5</span>
-    </div>
   );
 }
 
