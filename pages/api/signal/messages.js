@@ -20,7 +20,9 @@ export default async function handler(req, res) {
 
     const convoId = Number(conversationId);
     if (!convoId || Number.isNaN(convoId)) {
-      return res.status(400).json({ error: 'Missing or invalid conversationId' });
+      return res
+        .status(400)
+        .json({ error: 'Missing or invalid conversationId' });
     }
 
     const participant = await prisma.conversationParticipant.findFirst({
@@ -28,8 +30,16 @@ export default async function handler(req, res) {
     });
 
     if (!participant) {
-      return res.status(403).json({ error: 'Not allowed to view this conversation' });
+      return res
+        .status(403)
+        .json({ error: 'Not allowed to view this conversation' });
     }
+
+    // ✅ mark as read (per-user, per-conversation)
+    await prisma.conversationParticipant.update({
+      where: { id: participant.id },
+      data: { lastReadAt: new Date() },
+    });
 
     const messages = await prisma.message.findMany({
       where: { conversationId: convoId },

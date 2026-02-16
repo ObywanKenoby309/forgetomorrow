@@ -63,6 +63,12 @@ export default async function handler(req, res) {
       orderBy: { createdAt: 'desc' },
     });
 
+    // ✅ map my participant row (for lastReadAt)
+    const myParticipantByConversationId = {};
+    for (const p of participants) {
+      myParticipantByConversationId[p.conversationId] = p;
+    }
+
     const lastMessageByConversation = {};
     for (const m of lastMessages) {
       if (!lastMessageByConversation[m.conversationId]) {
@@ -70,38 +76,54 @@ export default async function handler(req, res) {
       }
     }
 
-    const threads = conversations.map((c) => {
-      const participantsForConversation = allParticipants.filter(
-        (p) => p.conversationId === c.id
-      );
-      const otherParticipant = participantsForConversation.find(
-        (p) => p.userId !== userId
-      );
+    // ✅ async build so we can compute unreadCount per conversation
+    const threads = await Promise.all(
+      conversations.map(async (c) => {
+        const participantsForConversation = allParticipants.filter(
+          (p) => p.conversationId === c.id
+        );
+        const otherParticipant = participantsForConversation.find(
+          (p) => p.userId !== userId
+        );
 
-      const otherUser = otherParticipant
-        ? users.find((u) => u.id === otherParticipant.userId)
-        : null;
+        const otherUser = otherParticipant
+          ? users.find((u) => u.id === otherParticipant.userId)
+          : null;
 
-      const otherName =
-        otherUser?.name ||
-        [otherUser?.firstName, otherUser?.lastName]
-          .filter(Boolean)
-          .join(' ') ||
-        (c.isGroup ? c.title || 'Group' : 'Member');
+        const otherName =
+          otherUser?.name ||
+          [otherUser?.firstName, otherUser?.lastName]
+            .filter(Boolean)
+            .join(' ') ||
+          (c.isGroup ? c.title || 'Group' : 'Member');
 
-      const last = lastMessageByConversation[c.id];
+        const last = lastMessageByConversation[c.id];
 
-      return {
-        id: c.id,
-        isGroup: c.isGroup,
-        title: c.isGroup ? c.title || otherName : otherName,
-        otherUserId: otherUser?.id || null,
-        otherAvatarUrl: otherUser?.avatarUrl || null,
-        otherHeadline: otherUser?.headline || '',
-        lastMessage: last ? last.content : '',
-        lastMessageAt: last ? last.createdAt : c.createdAt,
-      };
-    });
+        const myPart = myParticipantByConversationId[c.id] || null;
+        const lastReadAt = myPart?.lastReadAt || null;
+
+        // ✅ unread = messages from other user since lastReadAt
+        const unreadCount = await prisma.message.count({
+          where: {
+            conversationId: c.id,
+            senderId: { not: userId },
+            ...(lastReadAt ? { createdAt: { gt: lastReadAt } } : {}),
+          },
+        });
+
+        return {
+          id: c.id,
+          isGroup: c.isGroup,
+          title: c.isGroup ? c.title || otherName : otherName,
+          otherUserId: otherUser?.id || null,
+          otherAvatarUrl: otherUser?.avatarUrl || null,
+          otherHeadline: otherUser?.headline || '',
+          lastMessage: last ? last.content : '',
+          lastMessageAt: last ? last.createdAt : c.createdAt,
+          unreadCount,
+        };
+      })
+    );
 
     return res.status(200).json({ ok: true, threads });
   } catch (err) {

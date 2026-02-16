@@ -15,6 +15,26 @@ function getCurrentUserId(req) {
   return raw;
 }
 
+/**
+ * Notification scope mapper (Option A source of truth)
+ * channel values you already use:
+ * - "recruiter"
+ * - "coach" (expected)
+ * - everything else defaults to SEEKER
+ */
+function channelToScope(channel) {
+  const c = String(channel || '').trim().toLowerCase();
+  if (c === 'recruiter') return 'RECRUITER';
+  if (c === 'coach' || c === 'coaching') return 'COACH';
+  return 'SEEKER';
+}
+
+function safeSnippet(text, max = 140) {
+  const s = String(text || '').replace(/\s+/g, ' ').trim();
+  if (s.length <= max) return s;
+  return s.slice(0, max - 1) + '…';
+}
+
 export default async function handler(req, res) {
   const userId = getCurrentUserId(req);
 
@@ -234,6 +254,99 @@ async function handlePost(req, res, userId) {
       content: messageText,
     },
   });
+
+  // ============================================================================
+  //  ✅ OPTION A NOTIFICATION UPSERT (ONE PER CONVERSATION UNTIL CLEARED)
+  //  Source of truth: Notification table
+  // ============================================================================
+  try {
+    const convChannel =
+      (typeof participant.conversation?.channel === 'string' &&
+        participant.conversation.channel.trim()) ||
+      (typeof channel === 'string' && channel.trim()) ||
+      '';
+
+    const scope = channelToScope(convChannel);
+    const dedupeKey = `msg:${scope}:convo:${String(convId)}`;
+
+    // Identify recipients (all other participants)
+    const recipients = await prisma.conversationParticipant.findMany({
+      where: {
+        conversationId: convId,
+        userId: { not: userId },
+      },
+      select: { userId: true },
+    });
+
+    if (recipients && recipients.length > 0) {
+      // Best-effort sender label
+      const sender = await prisma.user.findUnique({
+        where: { id: userId },
+        select: { name: true, firstName: true, lastName: true, email: true },
+      });
+
+      const senderName =
+        sender?.name ||
+        (sender?.firstName || sender?.lastName
+          ? `${sender?.firstName || ''} ${sender?.lastName || ''}`.trim()
+          : sender?.email || 'Someone');
+
+      const bodyPreview = safeSnippet(`${senderName}: ${messageText}`, 180);
+
+      // Upsert one notification per conversation per scope (Option A)
+      await Promise.all(
+        recipients.map((r) =>
+          prisma.notification.upsert({
+            where: {
+              userId_dedupeKey: {
+                userId: r.userId,
+                dedupeKey,
+              },
+            },
+            create: {
+              userId: r.userId,
+              actorUserId: userId,
+              category: 'MESSAGING',
+              scope,
+              entityType: 'CONVERSATION',
+              entityId: String(convId),
+              dedupeKey,
+              requiresAction: true,
+              title: 'New message',
+              body: bodyPreview,
+              metadata: {
+                conversationId: convId,
+                channel: convChannel || null,
+                senderId: userId,
+                senderName,
+              },
+              readAt: null,
+            },
+            update: {
+              actorUserId: userId,
+              category: 'MESSAGING',
+              scope,
+              entityType: 'CONVERSATION',
+              entityId: String(convId),
+              requiresAction: true,
+              title: 'New message',
+              body: bodyPreview,
+              metadata: {
+                conversationId: convId,
+                channel: convChannel || null,
+                senderId: userId,
+                senderName,
+              },
+              readAt: null, // re-open if previously cleared
+            },
+          })
+        )
+      );
+    }
+  } catch (notifyErr) {
+    // Do not block message sending on notification failure
+    console.error('[messages POST] notification upsert failed:', notifyErr);
+  }
 
   return res.status(200).json({
     message: {
