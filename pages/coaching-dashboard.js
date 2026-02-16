@@ -371,7 +371,7 @@ export default function CoachingDashboardPage() {
                   {actionItems.map((n) => (
                     <Link
                       key={n.id}
-                      href="/action-center?scope=COACH"
+                      href="/action-center?scope=COACH&chrome=coach"
                       style={{
                         display: 'block',
                         border: '1px solid #eee',
@@ -395,7 +395,10 @@ export default function CoachingDashboardPage() {
               )}
 
               <div style={{ textAlign: 'right', marginTop: 10 }}>
-                <Link href="/action-center?scope=COACH" style={{ color: '#FF7043', fontWeight: 600 }}>
+                <Link
+                  href="/action-center?scope=COACH&chrome=coach"
+                  style={{ color: '#FF7043', fontWeight: 600 }}
+                >
                   View all
                 </Link>
               </div>
