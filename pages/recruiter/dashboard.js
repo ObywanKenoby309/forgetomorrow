@@ -37,9 +37,21 @@ function pickRecruiterActionBucket(n) {
   const haystack = `${title} ${body} ${metaStr}`;
 
   // Heuristics only - no schema assumptions
+  if (
+    haystack.includes("calendar") ||
+    haystack.includes("invite") ||
+    haystack.includes("interview") ||
+    haystack.includes("schedule") ||
+    haystack.includes("resched") ||
+    haystack.includes("meeting")
+  ) {
+    return "calendar";
+  }
+
   if (haystack.includes("message") || haystack.includes("inbox") || haystack.includes("dm") || haystack.includes("signal")) {
     return "messages";
   }
+
   if (
     haystack.includes("apply") ||
     haystack.includes("application") ||
@@ -50,6 +62,7 @@ function pickRecruiterActionBucket(n) {
   ) {
     return "candidates";
   }
+
   if (
     haystack.includes("job") ||
     haystack.includes("posting") ||
@@ -238,7 +251,7 @@ function DashboardBody() {
   }, []);
 
   const actionBuckets = useMemo(() => {
-    const buckets = { messages: [], candidates: [], jobs: [] };
+    const buckets = { messages: [], candidates: [], jobs: [], calendar: [] };
 
     for (const n of Array.isArray(actionItems) ? actionItems : []) {
       const bucket = pickRecruiterActionBucket(n);
@@ -250,6 +263,7 @@ function DashboardBody() {
       messages: buckets.messages.slice(0, 3),
       candidates: buckets.candidates.slice(0, 3),
       jobs: buckets.jobs.slice(0, 3),
+      calendar: buckets.calendar.slice(0, 3),
     };
   }, [actionItems]);
 
@@ -332,7 +346,7 @@ function DashboardBody() {
             ))}
       </section>
 
-      {/* ✅ ACTION CENTER (center section, no right-rail box) */}
+      {/* ✅ ACTION CENTER (center section, now 4 tiles) */}
       <section className="rounded-lg border bg-white p-4">
         <div className="flex items-center justify-between gap-3 mb-3">
           <div className="font-medium">Action Center</div>
@@ -344,7 +358,7 @@ function DashboardBody() {
         {actionFirstLoad ? (
           <div className="text-xs text-slate-500">Loading updates…</div>
         ) : (
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-3">
             <ActionLiteCard
               title="New Messages"
               items={actionBuckets.messages}
@@ -363,6 +377,13 @@ function DashboardBody() {
               title="Job Updates"
               items={actionBuckets.jobs}
               emptyText="No job updates."
+              href="/action-center?scope=RECRUITER&chrome=recruiter-smb"
+              updating={actionUpdating}
+            />
+            <ActionLiteCard
+              title="Calendar Updates"
+              items={actionBuckets.calendar}
+              emptyText="No calendar updates."
               href="/action-center?scope=RECRUITER&chrome=recruiter-smb"
               updating={actionUpdating}
             />
