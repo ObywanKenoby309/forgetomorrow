@@ -43,13 +43,29 @@ function pickActionBucket(n) {
   const haystack = `${title} ${body} ${metaStr}`;
 
   // Heuristics (no new schema assumptions)
-  if (haystack.includes('feedback') || haystack.includes('csat') || haystack.includes('rating') || haystack.includes('survey')) {
+  if (
+    haystack.includes('feedback') ||
+    haystack.includes('csat') ||
+    haystack.includes('rating') ||
+    haystack.includes('survey')
+  ) {
     return 'feedback';
   }
-  if (haystack.includes('calendar') || haystack.includes('invite') || haystack.includes('session') || haystack.includes('resched') || haystack.includes('schedule')) {
+  if (
+    haystack.includes('calendar') ||
+    haystack.includes('invite') ||
+    haystack.includes('session') ||
+    haystack.includes('resched') ||
+    haystack.includes('schedule')
+  ) {
     return 'calendar';
   }
-  if (haystack.includes('message') || haystack.includes('inbox') || haystack.includes('dm') || haystack.includes('signal')) {
+  if (
+    haystack.includes('message') ||
+    haystack.includes('inbox') ||
+    haystack.includes('dm') ||
+    haystack.includes('signal')
+  ) {
     return 'messages';
   }
 
@@ -61,7 +77,10 @@ export default function CoachingDashboardPage() {
   const router = useRouter();
 
   // ✅ Action Center lite preview (coach scope)
-  const [actionLoading, setActionLoading] = useState(true);
+  // IMPORTANT: keep UI stable during refresh (no hard "Loading..." swaps)
+  const [actionLoading, setActionLoading] = useState(true); // only for first paint
+  const [actionRefreshing, setActionRefreshing] = useState(false); // subtle refresh state
+  const [actionBootstrapped, setActionBootstrapped] = useState(false); // first load complete
   const [actionItems, setActionItems] = useState([]);
 
   // ---- Sessions (DB source of truth) ----
@@ -112,7 +131,13 @@ export default function CoachingDashboardPage() {
     let cancelled = false;
 
     async function loadActionPreview() {
-      setActionLoading(true);
+      // Only show full loading on very first load; afterwards use subtle refreshing flag
+      if (!actionBootstrapped) {
+        setActionLoading(true);
+      } else {
+        setActionRefreshing(true);
+      }
+
       try {
         const res = await fetch('/api/notifications/list?scope=COACH&limit=12&includeRead=0', {
           method: 'GET',
@@ -121,18 +146,30 @@ export default function CoachingDashboardPage() {
         });
 
         if (!res.ok) {
-          if (!cancelled) setActionItems([]);
+          // Do NOT wipe items during refresh; keep last good state for a smooth SaaS feel.
+          if (!cancelled && !actionBootstrapped) {
+            setActionItems([]);
+          }
           return;
         }
 
         const data = await res.json();
         if (cancelled) return;
-        setActionItems(Array.isArray(data?.items) ? data.items : []);
+
+        const nextItems = Array.isArray(data?.items) ? data.items : [];
+        setActionItems(nextItems);
+        setActionBootstrapped(true);
       } catch (e) {
         console.error('Coach action preview error:', e);
-        if (!cancelled) setActionItems([]);
+        // Do NOT wipe items during refresh; keep last good state.
+        if (!cancelled && !actionBootstrapped) {
+          setActionItems([]);
+        }
       } finally {
-        if (!cancelled) setActionLoading(false);
+        if (!cancelled) {
+          setActionLoading(false);
+          setActionRefreshing(false);
+        }
       }
     }
 
@@ -143,7 +180,8 @@ export default function CoachingDashboardPage() {
       cancelled = true;
       clearInterval(t);
     };
-  }, []);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [actionBootstrapped]);
 
   // ---- CSAT (DB source of truth) ----
   const [csat, setCsat] = useState([]);
@@ -269,10 +307,7 @@ export default function CoachingDashboardPage() {
           csat.reduce(
             (sum, r) =>
               sum +
-              (Number(r.satisfaction) +
-                Number(r.timeliness) +
-                Number(r.quality)) /
-                3,
+              (Number(r.satisfaction) + Number(r.timeliness) + Number(r.quality)) / 3,
             0
           ) / csat.length
         ).toFixed(1)
@@ -340,9 +375,7 @@ export default function CoachingDashboardPage() {
           <div style={grid3}>
             <Card title="Upcoming Sessions">
               {loading ? (
-                <div style={{ color: '#90A4AE', fontSize: 14 }}>
-                  Loading upcoming sessions…
-                </div>
+                <div style={{ color: '#90A4AE', fontSize: 14 }}>Loading upcoming sessions…</div>
               ) : upcomingNext3.length === 0 ? (
                 <div style={{ color: '#90A4AE' }}>
                   No upcoming sessions yet. Once you add sessions in the calendar, they will appear here.
@@ -365,16 +398,10 @@ export default function CoachingDashboardPage() {
                           gap: 10,
                         }}
                       >
-                        <span style={{ fontWeight: 600, minWidth: 72 }}>
-                          {s.time || '—'}
-                        </span>
+                        <span style={{ fontWeight: 600, minWidth: 72 }}>{s.time || '—'}</span>
                         <div style={{ display: 'grid', gap: 2, flex: 1 }}>
-                          <span style={{ color: '#455A64' }}>
-                            {s.client || 'Client'}
-                          </span>
-                          <span style={{ color: '#90A4AE', fontSize: 12 }}>
-                            {s.type || 'Session'}
-                          </span>
+                          <span style={{ color: '#455A64' }}>{s.client || 'Client'}</span>
+                          <span style={{ color: '#90A4AE', fontSize: 12 }}>{s.type || 'Session'}</span>
                         </div>
                         <span
                           style={{
@@ -395,10 +422,7 @@ export default function CoachingDashboardPage() {
               )}
 
               <div style={{ textAlign: 'right', marginTop: 10 }}>
-                <Link
-                  href="/dashboard/coaching/sessions"
-                  style={{ color: '#FF7043', fontWeight: 600 }}
-                >
+                <Link href="/dashboard/coaching/sessions" style={{ color: '#FF7043', fontWeight: 600 }}>
                   View schedule
                 </Link>
               </div>
@@ -409,11 +433,8 @@ export default function CoachingDashboardPage() {
             </Card>
 
             <Card title="Sponsored">
-			  <div style={{ color: '#90A4AE', fontSize: 13 }}>
-				Ad space
-			  </div>
-			</Card>
-
+              <div style={{ color: '#90A4AE', fontSize: 13 }}>Ad space</div>
+            </Card>
           </div>
         </Section>
 
@@ -421,38 +442,57 @@ export default function CoachingDashboardPage() {
         <Section
           title="Action Center"
           action={
-            <Link
-              href="/action-center?scope=COACH&chrome=coach"
-              style={{ color: '#FF7043', fontWeight: 700 }}
-            >
-              View all
-            </Link>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+              {/* subtle indicator that does NOT change layout */}
+              {actionRefreshing ? (
+                <span
+                  style={{
+                    fontSize: 12,
+                    color: '#90A4AE',
+                    fontWeight: 600,
+                    whiteSpace: 'nowrap',
+                  }}
+                >
+                  Updating…
+                </span>
+              ) : null}
+
+              <Link
+                href="/action-center?scope=COACH&chrome=coach"
+                style={{ color: '#FF7043', fontWeight: 700 }}
+              >
+                View all
+              </Link>
+            </div>
           }
         >
-          {actionLoading ? (
-            <div style={{ color: '#90A4AE' }}>Loading updates…</div>
-          ) : (
-            <div style={grid3}>
-              <ActionLiteCard
-                title="New Messages"
-                items={actionBuckets.messages}
-                emptyText="No unread coach inbox items."
-                href="/action-center?scope=COACH&chrome=coach"
-              />
-              <ActionLiteCard
-                title="New Feedback"
-                items={actionBuckets.feedback}
-                emptyText="No new feedback yet."
-                href="/dashboard/coaching/feedback"
-              />
-              <ActionLiteCard
-                title="Calendar Updates"
-                items={actionBuckets.calendar}
-                emptyText="No calendar updates."
-                href="/dashboard/coaching/sessions"
-              />
-            </div>
-          )}
+          {/* Keep a stable height so refresh never causes "jump" */}
+          <div style={{ minHeight: 190 }}>
+            {actionLoading && !actionBootstrapped ? (
+              <div style={{ color: '#90A4AE' }}>Loading updates…</div>
+            ) : (
+              <div style={grid3}>
+                <ActionLiteCard
+                  title="New Messages"
+                  items={actionBuckets.messages}
+                  emptyText="No unread coach inbox items."
+                  href="/action-center?scope=COACH&chrome=coach"
+                />
+                <ActionLiteCard
+                  title="New Feedback"
+                  items={actionBuckets.feedback}
+                  emptyText="No new feedback yet."
+                  href="/dashboard/coaching/feedback"
+                />
+                <ActionLiteCard
+                  title="Calendar Updates"
+                  items={actionBuckets.calendar}
+                  emptyText="No calendar updates."
+                  href="/dashboard/coaching/sessions"
+                />
+              </div>
+            )}
+          </div>
         </Section>
 
         {/* CLIENTS + CSAT OVERVIEW ON SAME LINE */}
@@ -549,10 +589,7 @@ export default function CoachingDashboardPage() {
                 </div>
 
                 <div style={{ textAlign: 'right', marginTop: 10 }}>
-                  <Link
-                    href="/dashboard/coaching/clients"
-                    style={{ color: '#FF7043', fontWeight: 600 }}
-                  >
+                  <Link href="/dashboard/coaching/clients" style={{ color: '#FF7043', fontWeight: 600 }}>
                     View all clients
                   </Link>
                 </div>
@@ -611,9 +648,7 @@ export default function CoachingDashboardPage() {
               <div style={{ fontWeight: 600, marginBottom: 8 }}>Average Score</div>
 
               <div style={{ display: 'flex', alignItems: 'baseline', gap: 8 }}>
-                <div style={{ fontSize: 28, fontWeight: 800, color: '#263238' }}>
-                  {avgScore}
-                </div>
+                <div style={{ fontSize: 28, fontWeight: 800, color: '#263238' }}>{avgScore}</div>
                 <div style={{ color: '#90A4AE', fontSize: 12 }}>/ 5</div>
               </div>
 
@@ -622,10 +657,7 @@ export default function CoachingDashboardPage() {
               </div>
 
               <div style={{ marginTop: 10 }}>
-                <Link
-                  href="/dashboard/coaching/feedback"
-                  style={{ color: '#FF7043', fontWeight: 700 }}
-                >
+                <Link href="/dashboard/coaching/feedback" style={{ color: '#FF7043', fontWeight: 700 }}>
                   Open feedback
                 </Link>
               </div>
