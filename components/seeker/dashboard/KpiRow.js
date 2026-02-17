@@ -1,5 +1,5 @@
 // components/seeker/dashboard/KpiRow.js
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { colorFor } from '@/components/seeker/dashboard/seekerColors';
 import { useRouter } from 'next/router';
 
@@ -21,15 +21,28 @@ export default function KpiRow({
 }) {
   const router = useRouter();
 
-  // === ANIMATED COUNTER ===
-  const AnimatedNumber = ({ end, duration = 1500 }) => {
+  // Preserve chrome (matches behavior used elsewhere)
+  const chrome = useMemo(() => String(router.query?.chrome || '').toLowerCase(), [router.query?.chrome]);
+  const withChrome = useMemo(
+    () => (path) => (chrome ? `${path}${path.includes('?') ? '&' : '?'}chrome=${chrome}` : path),
+    [chrome]
+  );
+
+  // === ANIMATED COUNTER (keep behavior, but visuals match Applications) ===
+  const AnimatedNumber = ({ end, duration = 900 }) => {
     const [count, setCount] = useState(0);
+
     useEffect(() => {
-      if (end === 0) return;
+      // Reset for fresh animation
+      setCount(0);
+
+      // If end is 0, just show 0 (no interval)
+      if (!end) return;
+
       let start = 0;
-      const increment = end / (duration / 16);
+      const step = end / Math.max(1, Math.floor(duration / 16));
       const timer = setInterval(() => {
-        start += increment;
+        start += step;
         if (start >= end) {
           setCount(end);
           clearInterval(timer);
@@ -37,16 +50,25 @@ export default function KpiRow({
           setCount(Math.floor(start));
         }
       }, 16);
+
       return () => clearInterval(timer);
     }, [end, duration]);
+
     return <>{count}</>;
   };
 
-  // === KPI TILE ===
+  // === KPI TILE (STYLE MATCHES Applications StageStrip) ===
   const Tile = ({ title, value, stage }) => {
     const c = colorFor(stageKey(stage));
     return (
-      <div className="kpiTile" style={{ background: c.bg, color: c.text, border: `1px solid ${c.solid}` }}>
+      <div
+        className="kpiTile"
+        style={{
+          background: c.bg,
+          color: c.text,
+          border: `1px solid ${c.solid}`,
+        }}
+      >
         <div className="kpiTitle">{title}</div>
         <div className="kpiValue">
           <AnimatedNumber end={value} />
@@ -55,10 +77,10 @@ export default function KpiRow({
     );
   };
 
-  // === MAIN RETURN — clickable row
   return (
     <>
       <style jsx>{`
+        /* Match Applications StageStrip grid */
         .kpiRow {
           display: grid;
           gap: 12px;
@@ -66,34 +88,34 @@ export default function KpiRow({
           cursor: pointer;
         }
 
+        /* Match Applications StageStrip tiles */
         .kpiTile {
-          border-radius: 12px;
-          padding: 12px 16px;
+          border-radius: 10px;
+          padding: 10px 12px;
           display: grid;
-          gap: 6px;
+          gap: 4px;
+          text-align: center;
           min-width: 0;
-          box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
-          transition: all 0.3s ease;
+          box-shadow: none; /* Applications has no tile shadow */
+          transition: none;
         }
 
         .kpiTitle {
-          font-size: 13px;
+          font-size: 12px;
           opacity: 0.9;
-          font-weight: 600;
+          white-space: nowrap; /* Applications uses nowrap */
+          overflow: hidden;
+          text-overflow: ellipsis;
           line-height: 1.15;
-          text-align: center;
-          white-space: normal;
-          overflow-wrap: anywhere;
         }
 
         .kpiValue {
-          font-size: 24px;
+          font-size: 20px; /* Applications uses 20 */
           font-weight: 800;
           line-height: 1;
-          text-align: center;
         }
 
-        /* Mobile tightening so labels never collide */
+        /* Tighten on small screens */
         @media (max-width: 520px) {
           .kpiRow {
             gap: 8px;
@@ -102,35 +124,21 @@ export default function KpiRow({
             padding: 10px 10px;
           }
           .kpiTitle {
-            font-size: 12px;
-          }
-          .kpiValue {
-            font-size: 22px;
-          }
-        }
-
-        @media (max-width: 420px) {
-          .kpiTile {
-            padding: 10px 8px;
-          }
-          .kpiTitle {
             font-size: 11px;
           }
           .kpiValue {
-            font-size: 20px;
+            font-size: 18px;
           }
         }
       `}</style>
 
       <div
         className="kpiRow"
-        onClick={() => router.push('/seeker/applications')}
-        onMouseEnter={(e) => (e.currentTarget.style.boxShadow = '0 4px 12px rgba(0,0,0,0.15)')}
-        onMouseLeave={(e) => (e.currentTarget.style.boxShadow = 'none')}
+        onClick={() => router.push(withChrome('/seeker/applications'))}
         role="button"
         tabIndex={0}
         onKeyDown={(e) => {
-          if (e.key === 'Enter' || e.key === ' ') router.push('/seeker/applications');
+          if (e.key === 'Enter' || e.key === ' ') router.push(withChrome('/seeker/applications'));
         }}
         aria-label="Open applications"
       >
