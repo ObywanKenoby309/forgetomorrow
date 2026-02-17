@@ -317,3 +317,8 @@ function List({ items }) {
     </ul>
   );
 }
+
+// ✅ FORCE SSR: prevents Vercel/Next from trying to pre-render this page at build time.
+export async function getServerSideProps() {
+  return { props: {} };
+}

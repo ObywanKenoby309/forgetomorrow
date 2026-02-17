@@ -4,10 +4,6 @@ import { useEffect, useMemo, useState } from 'react';
 import { useRouter } from 'next/router';
 import SeekerLayout from '@/components/layouts/SeekerLayout';
 
-export async function getServerSideProps() {
-  return { props: {} };
-}
-
 function getChromeFromAsPath(asPath) {
   try {
     const s = String(asPath || '');
@@ -220,4 +216,9 @@ export default function OnboardingGrowthStartPage() {
       </SeekerLayout>
     </>
   );
+}
+
+// ✅ FORCE SSR: prevents Vercel/Next from trying to pre-render this page at build time.
+export async function getServerSideProps() {
+  return { props: {} };
 }
