@@ -1,5 +1,6 @@
 // pages/seeker-dashboard.js
-// updated layout (FIXED: top glass is center-column only; bottom glass spans full width)
+// updated layout (page-only): top glass is center-column only; bottom glass spans full width
+// tweaks: pull center stack up; drop profile performance lower than ad zone
 import React, { useEffect, useMemo, useState } from 'react';
 import Head from 'next/head';
 import Link from 'next/link';
@@ -291,23 +292,27 @@ export default function SeekerDashboard() {
     boxShadow: '0 2px 10px rgba(0,0,0,0.08)',
   };
 
-  // ✅ PAGE-ONLY: these must match SeekerLayout defaults so the “center column” width lines up.
+  // ✅ PAGE-ONLY: match SeekerLayout defaults so the center-column width is exact
   const RIGHT_RAIL_WIDTH = 260;
   const LAYOUT_GAP = 12;
   const RESERVED_RIGHT = RIGHT_RAIL_WIDTH + LAYOUT_GAP;
 
-  // ✅ TOP GLASS: center-column only (does NOT extend under the right rail space)
+  // ✅ TUNABLE (page-only)
+  const TOP_PULL_UP = 6; // was effectively ~24px via margin - pull it closer to header
+  const PROFILE_DROP_DOWN = 140; // drop profile teaser lower (out of the ad zone)
+
+  // ✅ TOP STACK (KPI + Action Center): center-column only
   const TOP_GLASS_WRAP = {
     ...GLASS,
     padding: 16,
-    margin: '24px 0 0',
+    margin: `${TOP_PULL_UP}px 0 0`,
     width: `calc(100% - ${RESERVED_RIGHT}px)`,
     maxWidth: `calc(100% - ${RESERVED_RIGHT}px)`,
     boxSizing: 'border-box',
     minWidth: 0,
   };
 
-  // ✅ BOTTOM GLASS: full width (extends into the right area like your image)
+  // ✅ BOTTOM ROW: full width (extends into the right space like your image)
   const BOTTOM_GLASS_WRAP = {
     ...GLASS,
     padding: 16,
@@ -404,12 +409,15 @@ export default function SeekerDashboard() {
     </section>
   );
 
-  // ✅ Right rail: Ads slot + profile performance teaser underneath (strategic)
+  // ✅ Right rail: keep ad at top, then drop profile teaser down (page-only)
   const RightRail = (
-    <div className="grid gap-4">
+    <div className="grid" style={{ gap: 16 }}>
       <RightRailPlacementManager slot="right_rail_1" />
-      <div style={{ ...WHITE_CARD, padding: 16 }}>
-        <ProfilePerformanceTeaser />
+
+      <div style={{ marginTop: PROFILE_DROP_DOWN }}>
+        <div style={{ ...WHITE_CARD, padding: 16 }}>
+          <ProfilePerformanceTeaser />
+        </div>
       </div>
     </div>
   );
@@ -448,7 +456,7 @@ export default function SeekerDashboard() {
         rightTopOnly
         activeNav={seekerActiveNav}
       >
-        {/* ✅ TOP STACK (KPI + Action Center): CENTER COLUMN ONLY */}
+        {/* ✅ TOP STACK: CENTER COLUMN ONLY */}
         <div style={TOP_GLASS_WRAP}>
           <section style={{ ...WHITE_CARD, padding: 16 }}>
             {kpi && (
@@ -467,7 +475,7 @@ export default function SeekerDashboard() {
           </section>
         </div>
 
-        {/* ✅ BOTTOM ROW: FULL WIDTH (spans into right area like your image) */}
+        {/* ✅ BOTTOM ROW: FULL WIDTH */}
         <div style={BOTTOM_GLASS_WRAP}>
           <div className="grid md:grid-cols-3 gap-6">
             <section style={{ ...WHITE_CARD, padding: 16 }}>
