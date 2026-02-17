@@ -1,504 +1,483 @@
-// pages/seeker-dashboard.js
-// updated layout (redeploying to test hanging deployments)
+// components/layouts/SeekerLayout.js
 import React, { useEffect, useMemo, useState } from 'react';
 import Head from 'next/head';
-import Link from 'next/link';
 import { useRouter } from 'next/router';
-import SeekerLayout from '@/components/layouts/SeekerLayout';
-import PinnedJobsPreview from '@/components/PinnedJobsPreview';
-import RecommendedJobsPreview from '@/components/seeker/dashboard/RecommendedJobsPreview';
-import ProfilePerformanceTeaser from '@/components/seeker/dashboard/ProfilePerformanceTeaser';
-import KpiRow from '@/components/seeker/dashboard/KpiRow';
-import ApplicationsOverTime from '@/components/seeker/dashboard/ApplicationsOverTime';
+import { useUserWallpaper } from '@/hooks/useUserWallpaper';
+import { usePlan } from '@/context/PlanContext';
 
-// ✅ Ads (DB-backed placements)
-import RightRailPlacementManager from '@/components/ads/RightRailPlacementManager';
+// Seeker / Coach chrome
+import SeekerSidebar from '@/components/SeekerSidebar';
+import CoachingSidebar from '@/components/coaching/CoachingSidebar';
+import SeekerHeader from '@/components/seeker/SeekerHeader';
+import CoachingHeader from '@/components/coaching/CoachingHeader';
+import useSidebarCounts from '@/components/hooks/useSidebarCounts';
 
-// ISO WEEK HELPERS
-const startOfISOWeek = (d) => {
-  const date = new Date(Date.UTC(d.getFullYear(), d.getMonth(), d.getDate()));
-  const day = date.getUTCDay() || 7;
-  if (day !== 1) date.setUTCDate(date.getUTCDate() - (day - 1));
-  date.setUTCHours(0, 0, 0, 0);
-  return date;
-};
+// Recruiter chrome
+import RecruiterHeader from '@/components/recruiter/RecruiterHeader';
+import RecruiterSidebar from '@/components/recruiter/RecruiterSidebar';
 
-const weekDiff = (a, b) => {
-  const MSWEEK = 7 * 24 * 3600 * 1000;
-  return Math.floor((a.getTime() - b.getTime()) / MSWEEK);
-};
+// ✅ Mobile bottom bar (Tools opens sidebar sheet on mobile)
+import MobileBottomBar from '@/components/mobile/MobileBottomBar';
 
-function resolveScopeFromChrome(chrome) {
-  const c = String(chrome || '').toLowerCase();
-  if (c === 'coach') return 'COACH';
-  if (c.startsWith('recruiter')) return 'RECRUITER';
-  return 'SEEKER';
-}
+const ALLOWED_MODES = new Set(['seeker', 'coach', 'recruiter-smb', 'recruiter-ent']);
 
-function safeText(v) {
-  return typeof v === 'string' ? v : v == null ? '' : String(v);
-}
+function normalizeChrome(input) {
+  const raw = String(input || '').toLowerCase().trim();
+  if (!raw) return '';
 
-function pickSeekerBucket(n) {
-  const title = safeText(n?.title).toLowerCase();
-  const body = safeText(n?.body).toLowerCase();
-  const meta = n?.metadata || {};
-  const metaStr = safeText(meta?.type || meta?.event || meta?.kind || '').toLowerCase();
-  const haystack = `${title} ${body} ${metaStr}`;
+  if (ALLOWED_MODES.has(raw)) return raw;
+
+  // aliases
+  if (raw === 'recruiter') return 'recruiter-smb';
+  if (raw === 'recruiter_smb' || raw === 'smb') return 'recruiter-smb';
 
   if (
-    haystack.includes('calendar') ||
-    haystack.includes('invite') ||
-    haystack.includes('schedule') ||
-    haystack.includes('resched') ||
-    haystack.includes('interview')
+    raw === 'recruiter-ent' ||
+    raw === 'recruiter_enterprise' ||
+    raw === 'recruiter-enterprise' ||
+    raw === 'enterprise' ||
+    raw === 'ent'
   ) {
-    return 'calendar';
+    return 'recruiter-ent';
   }
 
-  if (
-    haystack.includes('apply') ||
-    haystack.includes('application') ||
-    haystack.includes('submitted') ||
-    haystack.includes('status') ||
-    haystack.includes('pipeline') ||
-    haystack.includes('stage')
-  ) {
-    return 'applications';
+  if (raw.startsWith('recruiter')) {
+    if (raw.includes('ent') || raw.includes('enterprise')) return 'recruiter-ent';
+    return 'recruiter-smb';
   }
 
-  if (
-    haystack.includes('job') ||
-    haystack.includes('posting') ||
-    haystack.includes('role') ||
-    haystack.includes('match') ||
-    haystack.includes('recommend')
-  ) {
-    return 'jobs';
-  }
+  if (raw === 'coach') return 'coach';
+  if (raw === 'seeker') return 'seeker';
 
-  if (
-    haystack.includes('message') ||
-    haystack.includes('inbox') ||
-    haystack.includes('dm') ||
-    haystack.includes('signal') ||
-    haystack.includes('chat')
-  ) {
-    return 'messages';
-  }
-
-  return 'messages';
+  return '';
 }
 
-function ActionTile({ title, emptyText, items, href, withChrome }) {
-  const list = Array.isArray(items) ? items : [];
+function setQueryChrome(router, chrome) {
+  try {
+    if (!router?.isReady) return;
+    const nextChrome = normalizeChrome(chrome);
+    if (!nextChrome) return;
 
-  return (
-    <div className="rounded-lg border bg-white p-4 flex flex-col min-h-[170px]">
-      <div className="flex items-start justify-between gap-3">
-        <div className="font-semibold text-slate-900 text-sm leading-5 whitespace-normal break-words">
-          {title}
-        </div>
-        <div className="shrink-0" />
-      </div>
+    const current = normalizeChrome(router.query?.chrome);
+    if (current === nextChrome) return;
 
-      <div className="mt-3 flex-1">
-        {list.length === 0 ? (
-          <div className="text-sm text-slate-500">{emptyText}</div>
-        ) : (
-          <div className="space-y-2">
-            {list.slice(0, 1).map((n) => (
-              <div key={n.id} className="text-sm text-slate-700">
-                {n.title || 'Update'}
-              </div>
-            ))}
-          </div>
-        )}
-      </div>
-
-      <div className="mt-4 flex justify-end">
-        <Link
-          href={withChrome(href)}
-          className="rounded-md border px-3 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50"
-        >
-          View More
-        </Link>
-      </div>
-    </div>
-  );
+    const nextQuery = { ...router.query, chrome: nextChrome };
+    router.replace({ pathname: router.pathname, query: nextQuery }, undefined, {
+      shallow: true,
+      scroll: false,
+    });
+  } catch {
+    // no-throw
+  }
 }
 
-function SeekerActionCenterSection({ scope, withChrome }) {
-  const [items, setItems] = useState([]);
-  const [initialLoading, setInitialLoading] = useState(true);
-  const [refreshing, setRefreshing] = useState(false);
+export default function SeekerLayout({
+  title = 'ForgeTomorrow - Seeker',
+  left,
+  header,
+  right,
+  children,
+  activeNav,
+  forceChrome, // 'seeker' | 'coach' | 'recruiter-smb' | 'recruiter-ent'
+  rightVariant = 'dark', // 'dark' | 'light'
+  rightWidth = 260,
+  leftWidth = 240,
+  gap = 12,
+  pad = 16,
+
+  // ✅ allow right rail to appear only on top row, while content spans full width below.
+  // Default false keeps existing layout behavior everywhere.
+  rightTopOnly = false,
+
+  // ✅ PAGE-ONLY OPT-IN:
+  // When true (desktop only), main content can span UNDER the left rail too.
+  // Default false keeps existing layout behavior everywhere.
+  contentFullBleed = false,
+
+  // ✅ NEW (optional): DB-backed staff fields to pass through to sidebars
+  // If not provided yet, safe defaults keep Staff Tools hidden.
+  employee = false,
+  department = '',
+}) {
+  const router = useRouter();
+  const { isLoaded: planLoaded, plan, role } = usePlan();
+
+  // ✅ Normalize legacy nav key: roadmap -> anvil
+  const normalizedActiveNav = activeNav === 'roadmap' ? 'anvil' : activeNav;
+
+  // ---- CHROME MODE (DB-first; URL may request chrome but DB can canonicalize recruiter ent/smb) ----
+  const [chromeMode, setChromeMode] = useState(() => {
+    // IMPORTANT: deterministic initial value avoids hydration mismatch.
+    // We’ll resolve properly in effects once router + plan are ready.
+    return normalizeChrome(forceChrome) || 'seeker';
+  });
 
   useEffect(() => {
-    let alive = true;
+    if (!router?.isReady) return;
 
-    const load = async (isInitial = false) => {
-      if (isInitial) setInitialLoading(true);
-      else setRefreshing(true);
-
-      try {
-        const res = await fetch(
-          `/api/notifications/list?scope=${encodeURIComponent(scope)}&limit=25&includeRead=0`,
-          {
-            method: 'GET',
-            headers: { 'Content-Type': 'application/json' },
-            credentials: 'include',
-          }
-        );
-
-        if (!res.ok) return;
-
-        const data = await res.json();
-        if (!alive) return;
-
-        const next = Array.isArray(data?.items) ? data.items : [];
-        setItems(next);
-      } catch (e) {
-        console.error('Seeker Action Center load error:', e);
-      } finally {
-        if (!alive) return;
-        if (isInitial) setInitialLoading(false);
-        setRefreshing(false);
-      }
-    };
-
-    load(true);
-    const t = setInterval(() => load(false), 25000);
-
-    return () => {
-      alive = false;
-      clearInterval(t);
-    };
-  }, [scope]);
-
-  const buckets = useMemo(() => {
-    const b = { messages: [], jobs: [], applications: [], calendar: [] };
-
-    for (const n of Array.isArray(items) ? items : []) {
-      const k = pickSeekerBucket(n);
-      if (!b[k]) continue;
-      b[k].push(n);
+    const forced = normalizeChrome(forceChrome);
+    if (forced) {
+      setChromeMode(forced);
+      return;
     }
 
-    return {
-      messages: b.messages.slice(0, 3),
-      jobs: b.jobs.slice(0, 3),
-      applications: b.applications.slice(0, 3),
-      calendar: b.calendar.slice(0, 3),
-    };
-  }, [items]);
+    // URL request (what user is “trying” to view)
+    const urlChrome = normalizeChrome(router.query?.chrome);
 
-  return (
-    <section className="bg-white border border-gray-200 rounded-xl p-5 shadow-sm">
-      <div className="flex items-center justify-between gap-3 mb-4">
-        <h2 className="text-lg font-semibold text-orange-600">Action Center</h2>
+    // DB truth (what the account *is*)
+    const dbRole = String(role || '').toLowerCase(); // seeker|coach|recruiter|site_admin|...
+    const dbPlan = String(plan || '').toLowerCase(); // small|enterprise|null
+    const isRecruiterAccount =
+      dbRole === 'recruiter' ||
+      dbRole === 'site_admin' ||
+      dbRole === 'owner' ||
+      dbRole === 'admin' ||
+      dbRole === 'billing';
+    const isCoachAccount = dbRole === 'coach';
+    const isEnterpriseAccount = dbPlan === 'enterprise';
 
-        <div className="flex items-center gap-3">
-          {refreshing ? <div className="text-xs text-gray-500">Updating…</div> : null}
+    // Determine DB-preferred chrome when loaded
+    const dbPreferred =
+      planLoaded && isRecruiterAccount
+        ? isEnterpriseAccount
+          ? 'recruiter-ent'
+          : 'recruiter-smb'
+        : planLoaded && isCoachAccount
+        ? 'coach'
+        : 'seeker';
 
-          <Link
-            href={withChrome(`/action-center?scope=${scope}`)}
-            className="rounded-md border px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50"
-          >
-            View More
-          </Link>
-        </div>
-      </div>
+    // If URL specifies recruiter chrome, canonicalize based on DB when loaded.
+    if (urlChrome === 'recruiter-smb' || urlChrome === 'recruiter-ent') {
+      if (planLoaded && isRecruiterAccount) {
+        const canonical = isEnterpriseAccount ? 'recruiter-ent' : 'recruiter-smb';
+        setChromeMode(canonical);
+        setQueryChrome(router, canonical);
+        return;
+      }
+      // If not loaded yet, honor URL for now (prevents flicker loops)
+      setChromeMode(urlChrome);
+      return;
+    }
 
-      {initialLoading ? (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-          {Array.from({ length: 4 }).map((_, idx) => (
-            <div key={idx} className="rounded-lg border bg-white p-4 min-h-[170px] animate-pulse">
-              <div className="h-4 w-40 bg-slate-200 rounded" />
-              <div className="h-3 w-56 bg-slate-200 rounded mt-4" />
-              <div className="h-3 w-44 bg-slate-200 rounded mt-2" />
-              <div className="h-10 w-28 bg-slate-200 rounded mt-6 ml-auto" />
-            </div>
-          ))}
-        </div>
-      ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-          <ActionTile
-            title="New Messages"
-            emptyText="No unread items."
-            items={buckets.messages}
-            href={`/action-center?scope=${scope}`}
-            withChrome={withChrome}
-          />
-          <ActionTile
-            title="Job Updates"
-            emptyText="No new job updates."
-            items={buckets.jobs}
-            href={`/action-center?scope=${scope}`}
-            withChrome={withChrome}
-          />
-          <ActionTile
-            title="Application Updates"
-            emptyText="No application updates."
-            items={buckets.applications}
-            href={`/action-center?scope=${scope}`}
-            withChrome={withChrome}
-          />
-          <ActionTile
-            title="Calendar Updates"
-            emptyText="No calendar updates."
-            items={buckets.calendar}
-            href={`/action-center?scope=${scope}`}
-            withChrome={withChrome}
-          />
-        </div>
-      )}
-    </section>
-  );
-}
+    // If URL specifies coach/seeker explicitly, honor it.
+    if (urlChrome === 'coach' || urlChrome === 'seeker') {
+      setChromeMode(urlChrome);
+      return;
+    }
 
-export default function SeekerDashboard() {
-  const router = useRouter();
-  const chrome = String(router.query.chrome || '').toLowerCase();
-  const withChrome = (path) =>
-    chrome ? `${path}${path.includes('?') ? '&' : '?'}chrome=${chrome}` : path;
+    // No chrome requested: use DB preference once loaded, else keep current.
+    if (planLoaded) {
+      setChromeMode(dbPreferred);
+      if (dbPreferred === 'recruiter-ent' || dbPreferred === 'recruiter-smb') {
+        // Optional: stamp chrome into URL for consistency on shared pages
+        setQueryChrome(router, dbPreferred);
+      }
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [router?.isReady, router?.query?.chrome, forceChrome, planLoaded, plan, role]);
 
-  const scope = resolveScopeFromChrome(chrome);
+  // Always call hook; only Seeker uses the counts
+  const seekerCounts = useSidebarCounts();
 
-  const chromeKey = chrome || 'seeker';
-  const seekerActiveNav =
-    chromeKey === 'coach' || chromeKey.startsWith('recruiter')
-      ? 'seeker-dashboard'
-      : 'dashboard';
-
-  const [kpi, setKpi] = useState(null);
-  const [weeks, setWeeks] = useState([]);
-  const [isLoading, setIsLoading] = useState(true);
-
-  // ✅ Glass + cards (same approach as Applications page)
-  const GLASS = {
-    borderRadius: 14,
-    border: '1px solid rgba(255,255,255,0.22)',
-    background: 'rgba(255,255,255,0.58)',
-    boxShadow: '0 10px 24px rgba(0,0,0,0.12)',
-    backdropFilter: 'blur(10px)',
-    WebkitBackdropFilter: 'blur(10px)',
-  };
-
-  const WHITE_CARD = {
-    background: 'rgba(255,255,255,0.92)',
-    border: '1px solid rgba(0,0,0,0.08)',
-    borderRadius: 12,
-    boxShadow: '0 2px 10px rgba(0,0,0,0.08)',
-  };
-
-  // ✅ Pull the middle UP (this was the big gap)
-  const PAGE_GLASS_WRAP = {
-    ...GLASS,
-    padding: 16,
-    margin: '12px 0 0', // was 24px
-    width: '100%',
-  };
-
-  // ✅ Match SeekerLayout defaults (used for page-only spacing math)
-  const LEFT_RAIL_WIDTH = 240;
-  const RIGHT_RAIL_WIDTH = 260;
-  const LAYOUT_GAP = 12;
-
-  // ✅ KPI + Action Center stay center-column width (reserve BOTH sides in full-bleed main)
-  const PAGE_ONLY_CENTER_STACK_STYLE = {
-    width: '100%',
-    minWidth: 0,
-    paddingLeft: LEFT_RAIL_WIDTH + LAYOUT_GAP,
-    paddingRight: RIGHT_RAIL_WIDTH + LAYOUT_GAP,
-    boxSizing: 'border-box',
-  };
-
-  useEffect(() => {
-    let cancelled = false;
-
-    async function loadData() {
-      try {
-        const res = await fetch('/api/seeker/dashboard-data');
-        if (!res.ok) throw new Error(`Failed to load data: ${res.status}`);
-
-        const data = await res.json();
-        if (cancelled) return;
-
-        const newKpi = {
-          pinned: data.pinned || 0,
-          applied: data.applied ?? data.applications ?? 0,
-          viewed: data.views || 0,
-          interviewing: data.interviewing ?? 0,
-          offers: data.offers || 0,
-          closedOut: data.closedOut || 0,
-          lastSent: data.lastApplication ? new Date(data.lastApplication).toLocaleDateString() : '—',
+  // ---- HEADER + SIDEBAR SELECTION ----
+  const { HeaderComp, SidebarComp, sidebarProps } = useMemo(() => {
+    switch (chromeMode) {
+      case 'coach':
+        return {
+          HeaderComp: CoachingHeader,
+          SidebarComp: CoachingSidebar,
+          sidebarProps: {
+            active: normalizedActiveNav,
+            employee,
+            department,
+          },
         };
 
-        setKpi(newKpi);
+      case 'recruiter-smb':
+        return {
+          HeaderComp: RecruiterHeader,
+          SidebarComp: RecruiterSidebar,
+          sidebarProps: {
+            variant: 'smb',
+            active: normalizedActiveNav,
+            counts: {},
+            employee,
+            department,
+          },
+        };
 
-        const today = new Date();
-        const thisWeek = startOfISOWeek(today);
-        const labels = Array.from({ length: 5 }, (_, i) => `W${5 - i}`);
-        const buckets = labels.map(() => ({ applied: 0, interviews: 0 }));
+      case 'recruiter-ent':
+        return {
+          HeaderComp: RecruiterHeader,
+          SidebarComp: RecruiterSidebar,
+          sidebarProps: {
+            variant: 'enterprise',
+            active: normalizedActiveNav,
+            counts: {},
+            employee,
+            department,
+          },
+        };
 
-        (data.allApplications || []).forEach((app) => {
-          const d = new Date(app.appliedAt);
-          const wStart = startOfISOWeek(d);
-          const diff = weekDiff(thisWeek, wStart);
-          if (diff >= 0 && diff < 5) {
-            const idx = 5 - diff - 1;
-            buckets[idx].applied += 1;
-          }
-        });
-
-        setWeeks(
-          labels.map((label, i) => ({
-            label,
-            applied: buckets[i].applied,
-            interviews: 0,
-          }))
-        );
-      } catch (err) {
-        console.error('Dashboard load error:', err);
-        if (!cancelled) {
-          setKpi({
-            pinned: 0,
-            applied: 0,
-            viewed: 0,
-            interviewing: 0,
-            offers: 0,
-            closedOut: 0,
-            lastSent: '—',
-          });
-        }
-      } finally {
-        if (!cancelled) setIsLoading(false);
-      }
+      case 'seeker':
+      default:
+        return {
+          HeaderComp: SeekerHeader,
+          SidebarComp: SeekerSidebar,
+          sidebarProps: {
+            active: normalizedActiveNav,
+            counts: seekerCounts,
+            employee,
+            department,
+          },
+        };
     }
+  }, [chromeMode, normalizedActiveNav, seekerCounts, employee, department]);
 
-    loadData();
-    return () => {
-      cancelled = true;
+  // ---- WALLPAPER / BACKGROUND ----
+  const { wallpaperUrl } = useUserWallpaper();
+
+  const backgroundStyle = wallpaperUrl
+    ? {
+        minHeight: '100vh',
+        backgroundImage: `url(${wallpaperUrl})`,
+        backgroundSize: 'cover',
+        backgroundPosition: 'center top',
+        backgroundRepeat: 'no-repeat',
+        backgroundAttachment: 'fixed',
+      }
+    : {
+        minHeight: '100vh',
+        backgroundColor: '#ECEFF1',
+      };
+
+  // ---- MOBILE DETECTION + TOOLS SHEET ----
+  const hasRight = Boolean(right);
+  const [isMobile, setIsMobile] = useState(true);
+  const [mobileToolsOpen, setMobileToolsOpen] = useState(false);
+
+  useEffect(() => {
+    const handleResize = () => {
+      if (typeof window !== 'undefined') {
+        const width = window.innerWidth;
+        setIsMobile(width < 1024);
+      }
     };
+
+    handleResize();
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
   }, []);
 
-  const HeaderBox = (
-    <section
-      style={{
-        ...GLASS,
-        padding: 16,
-        textAlign: 'center',
-      }}
-      aria-label="Job seeker dashboard overview"
-    >
-      <h1 style={{ margin: 0, color: '#FF7043', fontSize: 24, fontWeight: 800 }}>
-        Your Job Seeker Dashboard
-      </h1>
-      <p style={{ margin: '6px auto 0', color: '#607D8B', maxWidth: 720 }}>
-        You're not alone. Track your momentum, see your wins, and keep moving forward.
-      </p>
-    </section>
-  );
+  // ---- RIGHT RAIL STYLES ----
+  const rightBase = {
+    gridArea: 'right',
+    alignSelf: 'start',
+    borderRadius: 12,
+    boxSizing: 'border-box',
+    width: hasRight && !isMobile ? rightWidth : '100%',
+    minWidth: hasRight && !isMobile ? rightWidth : 0,
+    maxWidth: hasRight && !isMobile ? rightWidth : '100%',
+    minInlineSize: 0,
+  };
 
-  // ✅ Right rail TOP: ADS ONLY (profile performance drops down into lower row like Image 2)
-  const RightRail = (
-    <div className="grid gap-4">
-      <RightRailPlacementManager slot="right_rail_1" />
-    </div>
-  );
+  const rightDark = {
+    background: '#2a2a2a',
+    border: '1px solid #3a3a3a',
+    padding: 16,
+    boxShadow: '0 2px 6px rgba(0,0,0,0.06)',
+  };
 
-  if (isLoading) {
-    return (
-      <>
-        <Head>
-          <title>Loading… | ForgeTomorrow</title>
-        </Head>
-        <SeekerLayout
-          title="Loading..."
-          header={HeaderBox}
-          right={RightRail}
-          rightTopOnly
-          contentFullBleed
-          activeNav={seekerActiveNav}
-        >
-          <div className="flex items-center justify-center h-64 text-gray-500">
-            Loading your progress...
-          </div>
-        </SeekerLayout>
-      </>
-    );
-  }
+  const rightLight = {
+    background: 'transparent',
+    border: 'none',
+    padding: 0,
+    boxShadow: 'none',
+  };
+
+  const containerPadding = {
+    paddingTop: pad,
+    paddingBottom: isMobile ? pad + 84 : pad,
+    paddingLeft: pad,
+    paddingRight: hasRight ? Math.max(8, pad - 4) : pad,
+  };
+
+  // ---- DESKTOP VS MOBILE GRID ----
+  const desktopGrid = {
+    display: 'grid',
+    gridTemplateColumns: `${leftWidth}px minmax(0, 1fr) ${hasRight ? `${rightWidth}px` : '0px'}`,
+    gridTemplateRows: 'auto 1fr',
+    gridTemplateAreas: hasRight
+      ? rightTopOnly
+        ? `"left header right"
+           "left content content"`
+        : `"left header right"
+           "left content right"`
+      : `"left header header"
+         "left content content"`,
+  };
+
+  const mobileGrid = {
+    display: 'grid',
+    gridTemplateColumns: '1fr',
+    gridTemplateRows: hasRight ? 'auto auto auto' : 'auto auto',
+    gridTemplateAreas: hasRight
+      ? `"header"
+         "content"
+         "right"`
+      : `"header"
+         "content"`,
+  };
+
+  const gridStyles = isMobile ? mobileGrid : desktopGrid;
+
+  // ✅ PAGE-ONLY: allow content to span under left rail (desktop only)
+  const mainOverrides =
+    !isMobile && contentFullBleed
+      ? {
+          gridColumn: '1 / -1',
+          position: 'relative',
+          zIndex: 1,
+        }
+      : {
+          position: 'relative',
+          zIndex: 1,
+        };
+
+  // ✅ Ensure side rails stay above full-bleed content
+  const leftRailLayer = { position: 'relative', zIndex: 10 };
+  const headerLayer = { position: 'relative', zIndex: 9 };
+  const rightRailLayer = { position: 'relative', zIndex: 10 };
 
   return (
     <>
       <Head>
-        <title>Seeker Dashboard | ForgeTomorrow</title>
+        <title>{title}</title>
       </Head>
 
-      <SeekerLayout
-        title="Seeker Dashboard | ForgeTomorrow"
-        header={HeaderBox}
-        right={RightRail}
-        rightTopOnly
-        contentFullBleed
-        activeNav={seekerActiveNav}
-      >
-        <div style={PAGE_GLASS_WRAP}>
-          {/* ✅ KPI + Action Center: CENTER COLUMN WIDTH (reserved space for left + right rails) */}
-          <div style={PAGE_ONLY_CENTER_STACK_STYLE}>
-            <section style={{ ...WHITE_CARD, padding: 16 }}>
-              {kpi && (
-                <KpiRow
-                  pinned={kpi.pinned || 0}
-                  applied={kpi.applied || 0}
-                  interviewing={kpi.interviewing || 0}
-                  offers={kpi.offers || 0}
-                  closedOut={kpi.closedOut || 0}
-                />
-              )}
-            </section>
+      <div style={backgroundStyle}>
+        <HeaderComp />
 
-            <section style={{ ...WHITE_CARD, padding: 16, marginTop: 12 }}>
-              <SeekerActionCenterSection scope={scope} withChrome={withChrome} />
-            </section>
-          </div>
-
-          {/* ✅ Bottom row: FULL WIDTH, and includes Profile Performance dropped DOWN in its own right column */}
-          <div
-            className="grid gap-6 grid-cols-1 md:grid-cols-2 lg:grid-cols-[minmax(0,1fr)_minmax(0,1fr)_minmax(0,1fr)_260px]"
-            style={{ marginTop: 12 }}
+        <div style={{ ...gridStyles, gap, ...containerPadding, alignItems: 'start' }}>
+          <aside
+            style={{
+              ...leftRailLayer,
+              gridArea: 'left',
+              alignSelf: 'start',
+              minWidth: 0,
+              display: isMobile ? 'none' : 'block',
+            }}
           >
-            <section style={{ ...WHITE_CARD, padding: 16 }}>
-              <RecommendedJobsPreview />
-            </section>
+            {left ? left : <SidebarComp {...sidebarProps} />}
+          </aside>
 
-            <section style={{ ...WHITE_CARD, padding: 16 }}>
-              <div className="flex items-center justify-between mb-4">
-                <h2 className="text-lg font-semibold text-orange-600">Your Next Yes</h2>
-                <Link
-                  href={withChrome('/seeker/pinned-jobs')}
-                  className="text-orange-600 font-medium hover:underline"
-                >
-                  View all
-                </Link>
-              </div>
-              <PinnedJobsPreview />
-            </section>
+          <header
+            style={{
+              ...headerLayer,
+              gridArea: 'header',
+              alignSelf: 'start',
+              minWidth: 0,
+            }}
+          >
+            {header}
+          </header>
 
-            <section style={{ ...WHITE_CARD, padding: 16 }}>
-              <h3 className="text-base font-semibold text-gray-800 mb-3">
-                Applications Over Time
-              </h3>
-              <ApplicationsOverTime weeks={weeks} withChrome={withChrome} />
-            </section>
+          {hasRight ? (
+            <aside
+              style={{
+                ...rightRailLayer,
+                ...rightBase,
+                ...(rightVariant === 'light' ? rightLight : rightDark),
+              }}
+            >
+              {right}
+            </aside>
+          ) : null}
 
-            {/* ✅ DROPPED DOWN (not inside ad rail) */}
-            <section style={{ ...WHITE_CARD, padding: 16, width: RIGHT_RAIL_WIDTH }}>
-              <ProfilePerformanceTeaser />
-            </section>
+          <main style={{ gridArea: 'content', minWidth: 0, ...mainOverrides }}>
+            <div style={{ display: 'grid', gap, width: '100%', minWidth: 0 }}>{children}</div>
+          </main>
+        </div>
+      </div>
+
+      <MobileBottomBar
+        isMobile={isMobile}
+        chromeMode={chromeMode}
+        onOpenTools={() => setMobileToolsOpen(true)}
+      />
+
+      {isMobile && mobileToolsOpen && (
+        <div
+          style={{
+            position: 'fixed',
+            inset: 0,
+            zIndex: 99999,
+            display: 'flex',
+            justifyContent: 'center',
+            alignItems: 'flex-end',
+          }}
+        >
+          <button
+            type="button"
+            onClick={() => setMobileToolsOpen(false)}
+            aria-label="Dismiss Tools"
+            style={{
+              position: 'absolute',
+              inset: 0,
+              border: 'none',
+              background: 'rgba(0,0,0,0.55)',
+              cursor: 'pointer',
+            }}
+          />
+
+          <div
+            style={{
+              position: 'relative',
+              zIndex: 1,
+              width: 'min(760px, 100%)',
+              maxHeight: '82vh',
+              borderTopLeftRadius: 18,
+              borderTopRightRadius: 18,
+              border: '1px solid rgba(255,255,255,0.22)',
+              background: 'rgba(255,255,255,0.92)',
+              backdropFilter: 'blur(12px)',
+              WebkitBackdropFilter: 'blur(12px)',
+              padding: 16,
+              boxSizing: 'border-box',
+              overflowY: 'auto',
+              boxShadow: '0 -10px 26px rgba(0,0,0,0.22)',
+            }}
+          >
+            <div
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+                marginBottom: 12,
+              }}
+            >
+              <div style={{ fontSize: 14, fontWeight: 800, color: '#112033' }}>Tools</div>
+              <button
+                type="button"
+                onClick={() => setMobileToolsOpen(false)}
+                aria-label="Close Tools"
+                style={{
+                  border: 'none',
+                  background: 'transparent',
+                  cursor: 'pointer',
+                  fontSize: 22,
+                  lineHeight: 1,
+                  color: '#546E7A',
+                }}
+              >
+                ×
+              </button>
+            </div>
+
+            {left ? left : <SidebarComp {...sidebarProps} />}
           </div>
         </div>
-      </SeekerLayout>
+      )}
     </>
   );
 }
