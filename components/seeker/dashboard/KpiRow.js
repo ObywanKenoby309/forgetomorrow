@@ -22,25 +22,28 @@ export default function KpiRow({
   const router = useRouter();
 
   // Preserve chrome (matches behavior used elsewhere)
-  const chrome = useMemo(() => String(router.query?.chrome || '').toLowerCase(), [router.query?.chrome]);
+  const chrome = useMemo(
+    () => String(router.query?.chrome || '').toLowerCase(),
+    [router.query?.chrome]
+  );
+
   const withChrome = useMemo(
     () => (path) => (chrome ? `${path}${path.includes('?') ? '&' : '?'}chrome=${chrome}` : path),
     [chrome]
   );
 
-  // === ANIMATED COUNTER (keep behavior, but visuals match Applications) ===
+  // === ANIMATED COUNTER (behavior stays the same) ===
   const AnimatedNumber = ({ end, duration = 900 }) => {
     const [count, setCount] = useState(0);
 
     useEffect(() => {
-      // Reset for fresh animation
       setCount(0);
-
-      // If end is 0, just show 0 (no interval)
       if (!end) return;
 
       let start = 0;
-      const step = end / Math.max(1, Math.floor(duration / 16));
+      const steps = Math.max(1, Math.floor(duration / 16));
+      const step = end / steps;
+
       const timer = setInterval(() => {
         start += step;
         if (start >= end) {
@@ -57,20 +60,20 @@ export default function KpiRow({
     return <>{count}</>;
   };
 
-  // === KPI TILE (STYLE MATCHES Applications StageStrip) ===
+  // === TILE (visuals match Applications StageStrip) ===
   const Tile = ({ title, value, stage }) => {
     const c = colorFor(stageKey(stage));
     return (
       <div
-        className="kpiTile"
+        className="ftKpiTile"
         style={{
           background: c.bg,
           color: c.text,
           border: `1px solid ${c.solid}`,
         }}
       >
-        <div className="kpiTitle">{title}</div>
-        <div className="kpiValue">
+        <div className="ftKpiTitle">{title}</div>
+        <div className="ftKpiValue">
           <AnimatedNumber end={value} />
         </div>
       </div>
@@ -80,60 +83,59 @@ export default function KpiRow({
   return (
     <>
       <style jsx>{`
-        /* Match Applications StageStrip grid */
-        .kpiRow {
+        .ftKpiRow {
           display: grid;
           gap: 12px;
           grid-template-columns: repeat(5, minmax(0, 1fr));
           cursor: pointer;
         }
 
-        /* Match Applications StageStrip tiles */
-        .kpiTile {
+        /* Match Applications StageStrip tile shape + spacing */
+        .ftKpiTile {
           border-radius: 10px;
           padding: 10px 12px;
           display: grid;
           gap: 4px;
           text-align: center;
           min-width: 0;
-          box-shadow: none; /* Applications has no tile shadow */
-          transition: none;
+          box-shadow: none;
         }
 
-        .kpiTitle {
+        /* Match Applications label */
+        .ftKpiTitle {
           font-size: 12px;
           opacity: 0.9;
-          white-space: nowrap; /* Applications uses nowrap */
+          white-space: nowrap;
           overflow: hidden;
           text-overflow: ellipsis;
           line-height: 1.15;
         }
 
-        .kpiValue {
-          font-size: 20px; /* Applications uses 20 */
+        /* Match Applications number */
+        .ftKpiValue {
+          font-size: 20px;
           font-weight: 800;
           line-height: 1;
         }
 
-        /* Tighten on small screens */
         @media (max-width: 520px) {
-          .kpiRow {
+          .ftKpiRow {
             gap: 8px;
           }
-          .kpiTile {
+          .ftKpiTile {
             padding: 10px 10px;
           }
-          .kpiTitle {
+          .ftKpiTitle {
             font-size: 11px;
           }
-          .kpiValue {
+          .ftKpiValue {
             font-size: 18px;
           }
         }
       `}</style>
 
       <div
-        className="kpiRow"
+        className="ftKpiRow"
         onClick={() => router.push(withChrome('/seeker/applications'))}
         role="button"
         tabIndex={0}
