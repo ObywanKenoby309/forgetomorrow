@@ -10,6 +10,9 @@ import ProfilePerformanceTeaser from '@/components/seeker/dashboard/ProfilePerfo
 import KpiRow from '@/components/seeker/dashboard/KpiRow';
 import ApplicationsOverTime from '@/components/seeker/dashboard/ApplicationsOverTime';
 
+// ✅ Ads (DB-backed placements)
+import RightRailPlacementManager from '@/components/ads/RightRailPlacementManager';
+
 // ISO WEEK HELPERS
 const startOfISOWeek = (d) => {
   const date = new Date(Date.UTC(d.getFullYear(), d.getMonth(), d.getDate()));
@@ -42,7 +45,6 @@ function pickSeekerBucket(n) {
   const metaStr = safeText(meta?.type || meta?.event || meta?.kind || '').toLowerCase();
   const haystack = `${title} ${body} ${metaStr}`;
 
-  // Calendar updates
   if (
     haystack.includes('calendar') ||
     haystack.includes('invite') ||
@@ -53,32 +55,27 @@ function pickSeekerBucket(n) {
     return 'calendar';
   }
 
-  // Job updates (matches, recommendations, pinned, saved, new jobs)
   if (
-    haystack.includes('job') ||
-    haystack.includes('match') ||
-    haystack.includes('recommended') ||
-    haystack.includes('recommendation') ||
-    haystack.includes('pinned') ||
-    haystack.includes('saved')
-  ) {
-    return 'jobs';
-  }
-
-  // Application updates (applied, stage moved, rejected, offer)
-  if (
-    haystack.includes('applied') ||
+    haystack.includes('apply') ||
     haystack.includes('application') ||
+    haystack.includes('submitted') ||
+    haystack.includes('status') ||
     haystack.includes('pipeline') ||
-    haystack.includes('stage') ||
-    haystack.includes('interviewing') ||
-    haystack.includes('offer') ||
-    haystack.includes('rejected')
+    haystack.includes('stage')
   ) {
     return 'applications';
   }
 
-  // Messages
+  if (
+    haystack.includes('job') ||
+    haystack.includes('posting') ||
+    haystack.includes('role') ||
+    haystack.includes('match') ||
+    haystack.includes('recommend')
+  ) {
+    return 'jobs';
+  }
+
   if (
     haystack.includes('message') ||
     haystack.includes('inbox') ||
@@ -92,21 +89,19 @@ function pickSeekerBucket(n) {
   return 'messages';
 }
 
-function ActionTile({ title, emptyText, items, href }) {
+function ActionTile({ title, emptyText, items, href, withChrome }) {
   const list = Array.isArray(items) ? items : [];
 
   return (
-    <div className="rounded-lg border bg-white p-4 flex flex-col min-h-[150px]">
+    <div className="rounded-lg border bg-white p-4 flex flex-col min-h-[170px]">
       <div className="flex items-start justify-between gap-3">
+        {/* Title wraps fully (no truncation) */}
         <div className="font-semibold text-slate-900 text-sm leading-5 whitespace-normal break-words">
           {title}
         </div>
-        <Link
-          href={href}
-          className="shrink-0 rounded-md border px-3 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50"
-        >
-          View More
-        </Link>
+
+        {/* Keeping top-right optional space clean (no button up top per your mock) */}
+        <div className="shrink-0" />
       </div>
 
       <div className="mt-3 flex-1">
@@ -114,6 +109,7 @@ function ActionTile({ title, emptyText, items, href }) {
           <div className="text-sm text-slate-500">{emptyText}</div>
         ) : (
           <div className="space-y-2">
+            {/* show only the most recent item for the tile */}
             {list.slice(0, 1).map((n) => (
               <div key={n.id} className="text-sm text-slate-700">
                 {n.title || 'Update'}
@@ -122,11 +118,21 @@ function ActionTile({ title, emptyText, items, href }) {
           </div>
         )}
       </div>
+
+      {/* View More bottom-right like your Image 2 */}
+      <div className="mt-4 flex justify-end">
+        <Link
+          href={withChrome(href)}
+          className="rounded-md border px-3 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50"
+        >
+          View More
+        </Link>
+      </div>
     </div>
   );
 }
 
-function SeekerActionCenterSection({ scope, actionCenterHref }) {
+function SeekerActionCenterSection({ scope, withChrome }) {
   const [items, setItems] = useState([]);
   const [initialLoading, setInitialLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
@@ -160,6 +166,7 @@ function SeekerActionCenterSection({ scope, actionCenterHref }) {
         setItems(next);
       } catch (e) {
         // keep previous items to avoid UI jump
+        console.error('Seeker Action Center load error:', e);
       } finally {
         if (!alive) return;
         if (isInitial) setInitialLoading(false);
@@ -199,12 +206,10 @@ function SeekerActionCenterSection({ scope, actionCenterHref }) {
         <h2 className="text-lg font-semibold text-orange-600">Action Center</h2>
 
         <div className="flex items-center gap-3">
-          {refreshing ? (
-            <div className="text-xs text-slate-500">Updating…</div>
-          ) : null}
+          {refreshing ? <div className="text-xs text-gray-500">Updating…</div> : null}
 
           <Link
-            href={actionCenterHref}
+            href={withChrome(`/action-center?scope=${scope}`)}
             className="rounded-md border px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50"
           >
             View More
@@ -215,13 +220,11 @@ function SeekerActionCenterSection({ scope, actionCenterHref }) {
       {initialLoading ? (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
           {Array.from({ length: 4 }).map((_, idx) => (
-            <div
-              key={idx}
-              className="rounded-lg border bg-white p-4 min-h-[150px] animate-pulse"
-            >
+            <div key={idx} className="rounded-lg border bg-white p-4 min-h-[170px] animate-pulse">
               <div className="h-4 w-40 bg-slate-200 rounded" />
               <div className="h-3 w-56 bg-slate-200 rounded mt-4" />
               <div className="h-3 w-44 bg-slate-200 rounded mt-2" />
+              <div className="h-10 w-28 bg-slate-200 rounded mt-6 ml-auto" />
             </div>
           ))}
         </div>
@@ -229,27 +232,31 @@ function SeekerActionCenterSection({ scope, actionCenterHref }) {
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
           <ActionTile
             title="New Messages"
-            emptyText="No unread messages."
+            emptyText="No unread items."
             items={buckets.messages}
-            href={actionCenterHref}
+            href={`/action-center?scope=${scope}`}
+            withChrome={withChrome}
           />
           <ActionTile
             title="Job Updates"
             emptyText="No new job updates."
             items={buckets.jobs}
-            href={actionCenterHref}
+            href={`/action-center?scope=${scope}`}
+            withChrome={withChrome}
           />
           <ActionTile
             title="Application Updates"
             emptyText="No application updates."
             items={buckets.applications}
-            href={actionCenterHref}
+            href={`/action-center?scope=${scope}`}
+            withChrome={withChrome}
           />
           <ActionTile
             title="Calendar Updates"
             emptyText="No calendar updates."
             items={buckets.calendar}
-            href={actionCenterHref}
+            href={`/action-center?scope=${scope}`}
+            withChrome={withChrome}
           />
         </div>
       )}
@@ -360,19 +367,12 @@ export default function SeekerDashboard() {
     </section>
   );
 
-  // ✅ Right rail: ONLY a single Ad card (no shortcuts/no Action Center lite)
+  // ✅ Right rail: ONLY ads (placement manager)
   const RightRail = (
     <div className="grid gap-4">
-      <section className="bg-white border border-gray-200 rounded-xl p-4 shadow-sm">
-        <h2 className="text-sm font-semibold text-gray-900 mb-1">Sponsored</h2>
-        <p className="text-xs text-gray-600">
-          Ad space
-        </p>
-      </section>
+      <RightRailPlacementManager slot="right_rail_1" />
     </div>
   );
-
-  const actionCenterHref = withChrome(`/action-center?scope=${scope}`);
 
   if (isLoading) {
     return (
@@ -407,10 +407,7 @@ export default function SeekerDashboard() {
         activeNav={seekerActiveNav}
       >
         <div className="grid gap-6">
-          {/* ✅ CENTER: Action Center (your layout) */}
-          <SeekerActionCenterSection scope={scope} actionCenterHref={actionCenterHref} />
-
-          {/* KPI Row */}
+          {/* ✅ KPI Row FIRST (focus on progress/wins) */}
           <section className="bg-white border border-gray-200 rounded-xl p-4 shadow-sm">
             <h2 className="text-lg font-semibold text-orange-600 mb-3">
               Job Search Snapshot
@@ -426,6 +423,9 @@ export default function SeekerDashboard() {
               />
             )}
           </section>
+
+          {/* ✅ Action Center SECOND (still present, not the “hero”) */}
+          <SeekerActionCenterSection scope={scope} withChrome={withChrome} />
 
           {/* New Matches + Your Next Yes - side by side */}
           <div className="grid md:grid-cols-2 gap-6">
