@@ -1,3 +1,4 @@
+// pages/seeker-dashboard.js
 import React, { useEffect, useMemo, useState } from 'react';
 import Head from 'next/head';
 import Link from 'next/link';
@@ -200,7 +201,7 @@ function SeekerActionCenterSection({ scope, withChrome }) {
   }, [items]);
 
   return (
-    <section className="bg-white border border-gray-200 rounded-xl p-5 shadow-sm">
+    <div>
       <div className="flex items-center justify-between gap-3 mb-4">
         <h2 className="text-lg font-semibold text-orange-600">Action Center</h2>
 
@@ -259,7 +260,7 @@ function SeekerActionCenterSection({ scope, withChrome }) {
           />
         </div>
       )}
-    </section>
+    </div>
   );
 }
 
@@ -281,6 +282,30 @@ export default function SeekerDashboard() {
   const [kpi, setKpi] = useState(null);
   const [weeks, setWeeks] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
+
+  // ✅ Glass + cards (same as Applications page approach)
+  const GLASS = {
+    borderRadius: 14,
+    border: '1px solid rgba(255,255,255,0.22)',
+    background: 'rgba(255,255,255,0.58)',
+    boxShadow: '0 10px 24px rgba(0,0,0,0.12)',
+    backdropFilter: 'blur(10px)',
+    WebkitBackdropFilter: 'blur(10px)',
+  };
+
+  const WHITE_CARD = {
+    background: 'rgba(255,255,255,0.92)',
+    border: '1px solid rgba(0,0,0,0.08)',
+    borderRadius: 12,
+    boxShadow: '0 2px 10px rgba(0,0,0,0.08)',
+  };
+
+  const PAGE_GLASS_WRAP = {
+    ...GLASS,
+    padding: 16,
+    margin: '24px 0 0',
+    width: '100%',
+  };
 
   useEffect(() => {
     let cancelled = false;
@@ -354,13 +379,17 @@ export default function SeekerDashboard() {
 
   const HeaderBox = (
     <section
+      style={{
+        ...GLASS,
+        padding: 16,
+        textAlign: 'center',
+      }}
       aria-label="Job seeker dashboard overview"
-      className="bg-white border border-gray-200 rounded-xl p-6 text-center shadow-sm"
     >
-      <h1 className="text-2xl md:text-3xl font-bold text-orange-600">
+      <h1 style={{ margin: 0, color: '#FF7043', fontSize: 24, fontWeight: 800 }}>
         Your Job Seeker Dashboard
       </h1>
-      <p className="text-sm md:text-base text-gray-600 mt-2 max-w-3xl mx-auto">
+      <p style={{ margin: '6px auto 0', color: '#607D8B', maxWidth: 720 }}>
         You're not alone. Track your momentum, see your wins, and keep moving forward.
       </p>
     </section>
@@ -372,29 +401,6 @@ export default function SeekerDashboard() {
       <RightRailPlacementManager slot="right_rail_1" />
     </div>
   );
-
-  // ✅ Match Applications page container look for KPI row
-  const GLASS = {
-    borderRadius: 14,
-    border: '1px solid rgba(255,255,255,0.22)',
-    background: 'rgba(255,255,255,0.58)',
-    boxShadow: '0 10px 24px rgba(0,0,0,0.12)',
-    backdropFilter: 'blur(10px)',
-    WebkitBackdropFilter: 'blur(10px)',
-  };
-
-  const WHITE_CARD = {
-    background: 'rgba(255,255,255,0.92)',
-    border: '1px solid rgba(0,0,0,0.08)',
-    borderRadius: 12,
-    boxShadow: '0 2px 10px rgba(0,0,0,0.08)',
-  };
-
-  const KPI_GLASS_WRAP = {
-    ...GLASS,
-    padding: 16,
-    width: '100%',
-  };
 
   if (isLoading) {
     return (
@@ -428,29 +434,33 @@ export default function SeekerDashboard() {
         right={RightRail}
         activeNav={seekerActiveNav}
       >
-        <div className="grid gap-6">
-          {/* ✅ KPI Row FIRST - styled IDENTICAL to Applications StageStrip block */}
-          <div style={KPI_GLASS_WRAP}>
+        {/* ✅ One page-level glass wrap, white cards inside (same approach as Applications) */}
+        <div style={PAGE_GLASS_WRAP}>
+          {/* KPI Row */}
+          <section style={{ ...WHITE_CARD, padding: 16 }}>
+            {kpi && (
+              <KpiRow
+                pinned={kpi.pinned || 0}
+                applied={kpi.applied || 0}
+                interviewing={kpi.interviewing || 0}
+                offers={kpi.offers || 0}
+                closedOut={kpi.closedOut || 0}
+              />
+            )}
+          </section>
+
+          {/* Action Center */}
+          <section style={{ ...WHITE_CARD, padding: 16, marginTop: 12 }}>
+            <SeekerActionCenterSection scope={scope} withChrome={withChrome} />
+          </section>
+
+          {/* New Matches + Your Next Yes */}
+          <div className="grid md:grid-cols-2 gap-6" style={{ marginTop: 12 }}>
             <section style={{ ...WHITE_CARD, padding: 16 }}>
-              {kpi && (
-                <KpiRow
-                  pinned={kpi.pinned || 0}
-                  applied={kpi.applied || 0}
-                  interviewing={kpi.interviewing || 0}
-                  offers={kpi.offers || 0}
-                  closedOut={kpi.closedOut || 0}
-                />
-              )}
+              <RecommendedJobsPreview />
             </section>
-          </div>
 
-          {/* ✅ Action Center SECOND (still present, not the “hero”) */}
-          <SeekerActionCenterSection scope={scope} withChrome={withChrome} />
-
-          {/* New Matches + Your Next Yes - side by side */}
-          <div className="grid md:grid-cols-2 gap-6">
-            <RecommendedJobsPreview />
-            <section className="bg-white border border-gray-200 rounded-xl p-5 shadow-sm">
+            <section style={{ ...WHITE_CARD, padding: 16 }}>
               <div className="flex items-center justify-between mb-4">
                 <h2 className="text-lg font-semibold text-orange-600">
                   Your Next Yes
@@ -466,15 +476,18 @@ export default function SeekerDashboard() {
             </section>
           </div>
 
-          {/* Applications Over Time + Profile Performance Teaser - side by side */}
-          <div className="grid md:grid-cols-2 gap-6">
-            <section className="bg-white border border-gray-200 rounded-xl p-5 shadow-sm">
+          {/* Applications Over Time + Profile Performance */}
+          <div className="grid md:grid-cols-2 gap-6" style={{ marginTop: 12 }}>
+            <section style={{ ...WHITE_CARD, padding: 16 }}>
               <h3 className="text-base font-semibold text-gray-800 mb-3">
                 Applications Over Time
               </h3>
               <ApplicationsOverTime weeks={weeks} withChrome={withChrome} />
             </section>
-            <ProfilePerformanceTeaser />
+
+            <section style={{ ...WHITE_CARD, padding: 16 }}>
+              <ProfilePerformanceTeaser />
+            </section>
           </div>
         </div>
       </SeekerLayout>
