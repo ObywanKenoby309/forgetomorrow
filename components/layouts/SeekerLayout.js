@@ -1,5 +1,5 @@
 // pages/seeker-dashboard.js
-// updated layout
+// updated layout (redeploying to test hanging deployments)
 import React, { useEffect, useMemo, useState } from 'react';
 import Head from 'next/head';
 import Link from 'next/link';
