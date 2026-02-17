@@ -15,12 +15,7 @@ function HeaderBar() {
           Monitor open roles, candidate recommendations, and quick analytics at a glance.
         </p>
       </div>
-      <div className="justify-self-center md:justify-self-end">
-        <div className="flex flex-wrap items-center gap-2">
-          <PrimaryButton href="/recruiter/job-postings">Post a Job</PrimaryButton>
-          <SecondaryButton href="/recruiter/analytics">View Analytics</SecondaryButton>
-        </div>
-      </div>
+      <div />
     </div>
   );
 }

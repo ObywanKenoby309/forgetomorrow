@@ -1,5 +1,5 @@
 // pages/seeker-dashboard.js
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import Head from 'next/head';
 import Link from 'next/link';
 import { useRouter } from 'next/router';
@@ -31,6 +31,232 @@ function resolveScopeFromChrome(chrome) {
   return 'SEEKER';
 }
 
+function safeText(v) {
+  return typeof v === 'string' ? v : v == null ? '' : String(v);
+}
+
+function pickSeekerBucket(n) {
+  const title = safeText(n?.title).toLowerCase();
+  const body = safeText(n?.body).toLowerCase();
+  const meta = n?.metadata || {};
+  const metaStr = safeText(meta?.type || meta?.event || meta?.kind || '').toLowerCase();
+  const haystack = `${title} ${body} ${metaStr}`;
+
+  // Calendar updates
+  if (
+    haystack.includes('calendar') ||
+    haystack.includes('invite') ||
+    haystack.includes('schedule') ||
+    haystack.includes('resched') ||
+    haystack.includes('interview')
+  ) {
+    return 'calendar';
+  }
+
+  // Job updates (matches, recommendations, pinned, saved, new jobs)
+  if (
+    haystack.includes('job') ||
+    haystack.includes('match') ||
+    haystack.includes('recommended') ||
+    haystack.includes('recommendation') ||
+    haystack.includes('pinned') ||
+    haystack.includes('saved')
+  ) {
+    return 'jobs';
+  }
+
+  // Application updates (applied, stage moved, rejected, offer)
+  if (
+    haystack.includes('applied') ||
+    haystack.includes('application') ||
+    haystack.includes('pipeline') ||
+    haystack.includes('stage') ||
+    haystack.includes('interviewing') ||
+    haystack.includes('offer') ||
+    haystack.includes('rejected')
+  ) {
+    return 'applications';
+  }
+
+  // Messages
+  if (
+    haystack.includes('message') ||
+    haystack.includes('inbox') ||
+    haystack.includes('dm') ||
+    haystack.includes('signal') ||
+    haystack.includes('chat')
+  ) {
+    return 'messages';
+  }
+
+  return 'messages';
+}
+
+function ActionTile({ title, emptyText, items, href }) {
+  const list = Array.isArray(items) ? items : [];
+
+  return (
+    <div className="rounded-lg border bg-white p-4 flex flex-col min-h-[150px]">
+      <div className="flex items-start justify-between gap-3">
+        <div className="font-semibold text-slate-900 text-sm leading-5 whitespace-normal break-words">
+          {title}
+        </div>
+        <Link
+          href={href}
+          className="shrink-0 rounded-md border px-3 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50"
+        >
+          View More
+        </Link>
+      </div>
+
+      <div className="mt-3 flex-1">
+        {list.length === 0 ? (
+          <div className="text-sm text-slate-500">{emptyText}</div>
+        ) : (
+          <div className="space-y-2">
+            {list.slice(0, 1).map((n) => (
+              <div key={n.id} className="text-sm text-slate-700">
+                {n.title || 'Update'}
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
+function SeekerActionCenterSection({ scope, actionCenterHref }) {
+  const [items, setItems] = useState([]);
+  const [initialLoading, setInitialLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
+
+  useEffect(() => {
+    let alive = true;
+
+    const load = async (isInitial = false) => {
+      if (isInitial) setInitialLoading(true);
+      else setRefreshing(true);
+
+      try {
+        const res = await fetch(
+          `/api/notifications/list?scope=${encodeURIComponent(scope)}&limit=25&includeRead=0`,
+          {
+            method: 'GET',
+            headers: { 'Content-Type': 'application/json' },
+            credentials: 'include',
+          }
+        );
+
+        if (!res.ok) {
+          // keep previous items to avoid UI jump
+          return;
+        }
+
+        const data = await res.json();
+        if (!alive) return;
+
+        const next = Array.isArray(data?.items) ? data.items : [];
+        setItems(next);
+      } catch (e) {
+        // keep previous items to avoid UI jump
+      } finally {
+        if (!alive) return;
+        if (isInitial) setInitialLoading(false);
+        setRefreshing(false);
+      }
+    };
+
+    load(true);
+    const t = setInterval(() => load(false), 25000);
+
+    return () => {
+      alive = false;
+      clearInterval(t);
+    };
+  }, [scope]);
+
+  const buckets = useMemo(() => {
+    const b = { messages: [], jobs: [], applications: [], calendar: [] };
+
+    for (const n of Array.isArray(items) ? items : []) {
+      const k = pickSeekerBucket(n);
+      if (!b[k]) continue;
+      b[k].push(n);
+    }
+
+    return {
+      messages: b.messages.slice(0, 3),
+      jobs: b.jobs.slice(0, 3),
+      applications: b.applications.slice(0, 3),
+      calendar: b.calendar.slice(0, 3),
+    };
+  }, [items]);
+
+  return (
+    <section className="bg-white border border-gray-200 rounded-xl p-5 shadow-sm">
+      <div className="flex items-center justify-between gap-3 mb-4">
+        <h2 className="text-lg font-semibold text-orange-600">Action Center</h2>
+
+        <div className="flex items-center gap-3">
+          {refreshing ? (
+            <div className="text-xs text-slate-500">Updating…</div>
+          ) : null}
+
+          <Link
+            href={actionCenterHref}
+            className="rounded-md border px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50"
+          >
+            View More
+          </Link>
+        </div>
+      </div>
+
+      {initialLoading ? (
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+          {Array.from({ length: 4 }).map((_, idx) => (
+            <div
+              key={idx}
+              className="rounded-lg border bg-white p-4 min-h-[150px] animate-pulse"
+            >
+              <div className="h-4 w-40 bg-slate-200 rounded" />
+              <div className="h-3 w-56 bg-slate-200 rounded mt-4" />
+              <div className="h-3 w-44 bg-slate-200 rounded mt-2" />
+            </div>
+          ))}
+        </div>
+      ) : (
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+          <ActionTile
+            title="New Messages"
+            emptyText="No unread messages."
+            items={buckets.messages}
+            href={actionCenterHref}
+          />
+          <ActionTile
+            title="Job Updates"
+            emptyText="No new job updates."
+            items={buckets.jobs}
+            href={actionCenterHref}
+          />
+          <ActionTile
+            title="Application Updates"
+            emptyText="No application updates."
+            items={buckets.applications}
+            href={actionCenterHref}
+          />
+          <ActionTile
+            title="Calendar Updates"
+            emptyText="No calendar updates."
+            items={buckets.calendar}
+            href={actionCenterHref}
+          />
+        </div>
+      )}
+    </section>
+  );
+}
+
 export default function SeekerDashboard() {
   const router = useRouter();
   const chrome = String(router.query.chrome || '').toLowerCase();
@@ -49,10 +275,6 @@ export default function SeekerDashboard() {
   const [kpi, setKpi] = useState(null);
   const [weeks, setWeeks] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
-
-  // ✅ NEW: Action Center preview (lite)
-  const [actionLoading, setActionLoading] = useState(true);
-  const [actionItems, setActionItems] = useState([]);
 
   useEffect(() => {
     let cancelled = false;
@@ -124,42 +346,6 @@ export default function SeekerDashboard() {
     };
   }, []);
 
-  // ✅ NEW: Load Action Center preview items (unread only, top 3)
-  useEffect(() => {
-    let cancelled = false;
-
-    async function loadActionPreview() {
-      setActionLoading(true);
-      try {
-        const res = await fetch(
-          `/api/notifications/list?scope=${encodeURIComponent(scope)}&limit=3&includeRead=0`,
-          { method: 'GET', headers: { 'Content-Type': 'application/json' }, credentials: 'include' }
-        );
-        if (!res.ok) {
-          setActionItems([]);
-          return;
-        }
-        const data = await res.json();
-        if (cancelled) return;
-
-        setActionItems(Array.isArray(data?.items) ? data.items : []);
-      } catch (e) {
-        console.error('Action preview load error:', e);
-        if (!cancelled) setActionItems([]);
-      } finally {
-        if (!cancelled) setActionLoading(false);
-      }
-    }
-
-    loadActionPreview();
-    const t = setInterval(loadActionPreview, 25000);
-
-    return () => {
-      cancelled = true;
-      clearInterval(t);
-    };
-  }, [scope]);
-
   const HeaderBox = (
     <section
       aria-label="Job seeker dashboard overview"
@@ -174,99 +360,19 @@ export default function SeekerDashboard() {
     </section>
   );
 
+  // ✅ Right rail: ONLY a single Ad card (no shortcuts/no Action Center lite)
   const RightRail = (
     <div className="grid gap-4">
-      {/* ✅ NEW: Action Center lite preview */}
       <section className="bg-white border border-gray-200 rounded-xl p-4 shadow-sm">
-        <div className="flex items-center justify-between mb-2">
-          <h2 className="text-sm font-semibold text-gray-900">Action Center</h2>
-          <Link
-            href={withChrome(`/action-center?scope=${scope}`)}
-            className="text-orange-600 font-semibold text-xs hover:underline"
-          >
-            View all
-          </Link>
-        </div>
-
-        {actionLoading ? (
-          <div className="text-xs text-gray-500">Loading updates…</div>
-        ) : actionItems.length === 0 ? (
-          <div className="text-xs text-gray-500">No unread items.</div>
-        ) : (
-          <div className="grid gap-2">
-            {actionItems.map((n) => (
-              <Link
-                key={n.id}
-                href={withChrome(`/action-center?scope=${scope}`)}
-                className="block rounded-lg border border-gray-200 px-3 py-2 hover:bg-orange-50"
-              >
-                <div className="text-xs font-semibold text-gray-900 truncate">
-                  {n.title || 'Update'}
-                </div>
-                {n.body ? (
-                  <div className="text-[11px] text-gray-600 mt-0.5 line-clamp-2">
-                    {n.body}
-                  </div>
-                ) : null}
-              </Link>
-            ))}
-          </div>
-        )}
-      </section>
-
-      {/* 1) Resume + Cover builder quick access */}
-      <section className="bg-white border border-gray-200 rounded-xl p-4 shadow-sm">
-        <h2 className="text-sm font-semibold text-gray-900 mb-1">
-          Resume &amp; Cover
-        </h2>
-        <p className="text-xs text-gray-600 mb-3">
-          Keep your resume and cover letter updated in one place.
-        </p>
-        <div className="flex flex-wrap gap-2">
-          <Link
-            href={withChrome('/resume/create')}
-            className="inline-flex items-center justify-center px-3 py-1.5 rounded-full text-xs font-semibold bg-orange-50 text-orange-700 hover:bg-orange-100"
-          >
-            Open resume builder
-          </Link>
-          <Link
-            href={withChrome('/cover/create')}
-            className="inline-flex items-center justify-center px-3 py-1.5 rounded-full text-xs font-semibold bg-slate-50 text-slate-800 hover:bg-slate-100"
-          >
-            Open cover letter
-          </Link>
-        </div>
-      </section>
-
-      {/* 2) Career roadmap teaser */}
-      <section className="bg-white border border-gray-200 rounded-xl p-4 shadow-sm">
-        <h2 className="text-sm font-semibold text-gray-900 mb-1">
-          Career Roadmap
-        </h2>
+        <h2 className="text-sm font-semibold text-gray-900 mb-1">Sponsored</h2>
         <p className="text-xs text-gray-600">
-          Soon you&apos;ll be able to map your next 2–3 roles, skills, and milestones
-          here. For now, use your dashboard and The Hearth to plan your next move.
-        </p>
-      </section>
-
-      {/* 3) Advertisement / Partner Spotlight */}
-      <section className="bg-white border border-gray-200 rounded-xl p-4 shadow-sm">
-        <h2 className="text-sm font-semibold text-gray-900 mb-1">
-          Partner Spotlight
-        </h2>
-        <p className="text-xs text-gray-600">
-          Your advertisement could be here. Contact{' '}
-          <a
-            href="mailto:sales@forgetomorrow.com"
-            className="text-orange-600 font-semibold"
-          >
-            sales@forgetomorrow.com
-          </a>
-          .
+          Ad space
         </p>
       </section>
     </div>
   );
+
+  const actionCenterHref = withChrome(`/action-center?scope=${scope}`);
 
   if (isLoading) {
     return (
@@ -301,6 +407,9 @@ export default function SeekerDashboard() {
         activeNav={seekerActiveNav}
       >
         <div className="grid gap-6">
+          {/* ✅ CENTER: Action Center (your layout) */}
+          <SeekerActionCenterSection scope={scope} actionCenterHref={actionCenterHref} />
+
           {/* KPI Row */}
           <section className="bg-white border border-gray-200 rounded-xl p-4 shadow-sm">
             <h2 className="text-lg font-semibold text-orange-600 mb-3">
