@@ -1,6 +1,5 @@
 // pages/seeker-dashboard.js
-// updated layout (page-only): top glass is center-column only; bottom glass spans full width
-// tweaks: pull center stack up; drop profile performance lower than ad zone
+// updated layout (page-only)
 import React, { useEffect, useMemo, useState } from 'react';
 import Head from 'next/head';
 import Link from 'next/link';
@@ -292,35 +291,16 @@ export default function SeekerDashboard() {
     boxShadow: '0 2px 10px rgba(0,0,0,0.08)',
   };
 
-  // ✅ PAGE-ONLY: match SeekerLayout defaults so the center-column width is exact
-  const RIGHT_RAIL_WIDTH = 260;
-  const LAYOUT_GAP = 12;
-  const RESERVED_RIGHT = RIGHT_RAIL_WIDTH + LAYOUT_GAP;
-
-  // ✅ TUNABLE (page-only)
-  const TOP_PULL_UP = 6; // was effectively ~24px via margin - pull it closer to header
-  const PROFILE_DROP_DOWN = 140; // drop profile teaser lower (out of the ad zone)
-
-  // ✅ TOP STACK (KPI + Action Center): center-column only
-  const TOP_GLASS_WRAP = {
+  const PAGE_GLASS_WRAP = {
     ...GLASS,
     padding: 16,
-    margin: `${TOP_PULL_UP}px 0 0`,
-    width: `calc(100% - ${RESERVED_RIGHT}px)`,
-    maxWidth: `calc(100% - ${RESERVED_RIGHT}px)`,
-    boxSizing: 'border-box',
-    minWidth: 0,
-  };
-
-  // ✅ BOTTOM ROW: full width (extends into the right space like your image)
-  const BOTTOM_GLASS_WRAP = {
-    ...GLASS,
-    padding: 16,
-    marginTop: 12,
+    // ✅ pull the whole middle UP (this was creating the “too much gap”)
+    margin: '12px 0 0',
     width: '100%',
-    boxSizing: 'border-box',
-    minWidth: 0,
   };
+
+  // ✅ page-only constants (match SeekerLayout defaults)
+  const RIGHT_COL_WIDTH = 260;
 
   useEffect(() => {
     let cancelled = false;
@@ -409,16 +389,11 @@ export default function SeekerDashboard() {
     </section>
   );
 
-  // ✅ Right rail: keep ad at top, then drop profile teaser down (page-only)
+  // ✅ Right rail (TOP ROW) = ADS ONLY
+  // Profile Performance is moved OUT of the ad container and rendered beside KPI/Action in the content row.
   const RightRail = (
-    <div className="grid" style={{ gap: 16 }}>
+    <div className="grid gap-4">
       <RightRailPlacementManager slot="right_rail_1" />
-
-      <div style={{ marginTop: PROFILE_DROP_DOWN }}>
-        <div style={{ ...WHITE_CARD, padding: 16 }}>
-          <ProfilePerformanceTeaser />
-        </div>
-      </div>
     </div>
   );
 
@@ -456,51 +431,82 @@ export default function SeekerDashboard() {
         rightTopOnly
         activeNav={seekerActiveNav}
       >
-        {/* ✅ TOP STACK: CENTER COLUMN ONLY */}
-        <div style={TOP_GLASS_WRAP}>
-          <section style={{ ...WHITE_CARD, padding: 16 }}>
-            {kpi && (
-              <KpiRow
-                pinned={kpi.pinned || 0}
-                applied={kpi.applied || 0}
-                interviewing={kpi.interviewing || 0}
-                offers={kpi.offers || 0}
-                closedOut={kpi.closedOut || 0}
-              />
-            )}
-          </section>
+        <div style={PAGE_GLASS_WRAP}>
+          {/* ✅ CONTENT ROW LAYOUT (page-only):
+              Row A:
+                - Left: KPI + Action Center (center column)
+                - Right: Profile Performance (dropped DOWN out of the ad box)
+              Row B:
+                - Bottom 3 cards span full width under both columns
+          */}
+          <div
+            className="grid grid-cols-1 gap-3 lg:gap-3"
+            style={{
+              width: '100%',
+              minWidth: 0,
+            }}
+          >
+            {/* Row A: two columns on desktop */}
+            <div
+              className="grid grid-cols-1 lg:grid-cols-[minmax(0,1fr)_260px] gap-3"
+              style={{ alignItems: 'start', minWidth: 0 }}
+            >
+              {/* LEFT: KPI + Action Center */}
+              <div style={{ minWidth: 0 }}>
+                <section style={{ ...WHITE_CARD, padding: 16 }}>
+                  {kpi && (
+                    <KpiRow
+                      pinned={kpi.pinned || 0}
+                      applied={kpi.applied || 0}
+                      interviewing={kpi.interviewing || 0}
+                      offers={kpi.offers || 0}
+                      closedOut={kpi.closedOut || 0}
+                    />
+                  )}
+                </section>
 
-          <section style={{ ...WHITE_CARD, padding: 16, marginTop: 12 }}>
-            <SeekerActionCenterSection scope={scope} withChrome={withChrome} />
-          </section>
-        </div>
-
-        {/* ✅ BOTTOM ROW: FULL WIDTH */}
-        <div style={BOTTOM_GLASS_WRAP}>
-          <div className="grid md:grid-cols-3 gap-6">
-            <section style={{ ...WHITE_CARD, padding: 16 }}>
-              <RecommendedJobsPreview />
-            </section>
-
-            <section style={{ ...WHITE_CARD, padding: 16 }}>
-              <div className="flex items-center justify-between mb-4">
-                <h2 className="text-lg font-semibold text-orange-600">Your Next Yes</h2>
-                <Link
-                  href={withChrome('/seeker/pinned-jobs')}
-                  className="text-orange-600 font-medium hover:underline"
-                >
-                  View all
-                </Link>
+                <section style={{ ...WHITE_CARD, padding: 16, marginTop: 12 }}>
+                  <SeekerActionCenterSection scope={scope} withChrome={withChrome} />
+                </section>
               </div>
-              <PinnedJobsPreview />
-            </section>
 
-            <section style={{ ...WHITE_CARD, padding: 16 }}>
-              <h3 className="text-base font-semibold text-gray-800 mb-3">
-                Applications Over Time
-              </h3>
-              <ApplicationsOverTime weeks={weeks} withChrome={withChrome} />
-            </section>
+              {/* RIGHT: Profile Performance (now in content row, not in the ad rail) */}
+              <div style={{ width: '100%', minWidth: 0 }}>
+                <div style={{ ...WHITE_CARD, padding: 16, width: '100%' }}>
+                  <ProfilePerformanceTeaser />
+                </div>
+
+                {/* keep exact right-column width alignment with layout */}
+                <div aria-hidden style={{ width: RIGHT_COL_WIDTH, height: 0, overflow: 'hidden' }} />
+              </div>
+            </div>
+
+            {/* Row B: FULL WIDTH */}
+            <div className="grid md:grid-cols-3 gap-6" style={{ marginTop: 12 }}>
+              <section style={{ ...WHITE_CARD, padding: 16 }}>
+                <RecommendedJobsPreview />
+              </section>
+
+              <section style={{ ...WHITE_CARD, padding: 16 }}>
+                <div className="flex items-center justify-between mb-4">
+                  <h2 className="text-lg font-semibold text-orange-600">Your Next Yes</h2>
+                  <Link
+                    href={withChrome('/seeker/pinned-jobs')}
+                    className="text-orange-600 font-medium hover:underline"
+                  >
+                    View all
+                  </Link>
+                </div>
+                <PinnedJobsPreview />
+              </section>
+
+              <section style={{ ...WHITE_CARD, padding: 16 }}>
+                <h3 className="text-base font-semibold text-gray-800 mb-3">
+                  Applications Over Time
+                </h3>
+                <ApplicationsOverTime weeks={weeks} withChrome={withChrome} />
+              </section>
+            </div>
           </div>
         </div>
       </SeekerLayout>
