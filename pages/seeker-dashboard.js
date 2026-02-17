@@ -1,5 +1,5 @@
 // pages/seeker-dashboard.js
-// updated layout
+// updated layout (FIXED: top glass is center-column only; bottom glass spans full width)
 import React, { useEffect, useMemo, useState } from 'react';
 import Head from 'next/head';
 import Link from 'next/link';
@@ -291,17 +291,31 @@ export default function SeekerDashboard() {
     boxShadow: '0 2px 10px rgba(0,0,0,0.08)',
   };
 
-  const PAGE_GLASS_WRAP = {
+  // ✅ PAGE-ONLY: these must match SeekerLayout defaults so the “center column” width lines up.
+  const RIGHT_RAIL_WIDTH = 260;
+  const LAYOUT_GAP = 12;
+  const RESERVED_RIGHT = RIGHT_RAIL_WIDTH + LAYOUT_GAP;
+
+  // ✅ TOP GLASS: center-column only (does NOT extend under the right rail space)
+  const TOP_GLASS_WRAP = {
     ...GLASS,
     padding: 16,
     margin: '24px 0 0',
-    width: '100%',
+    width: `calc(100% - ${RESERVED_RIGHT}px)`,
+    maxWidth: `calc(100% - ${RESERVED_RIGHT}px)`,
+    boxSizing: 'border-box',
+    minWidth: 0,
   };
 
-  // ✅ NEW (page-only): use the same right rail width + gap as SeekerLayout defaults
-  // This lets KPI + Action Center stay "center-column width", while the bottom row spans full content width.
-  const RIGHT_RAIL_WIDTH = 260;
-  const LAYOUT_GAP = 12;
+  // ✅ BOTTOM GLASS: full width (extends into the right area like your image)
+  const BOTTOM_GLASS_WRAP = {
+    ...GLASS,
+    padding: 16,
+    marginTop: 12,
+    width: '100%',
+    boxSizing: 'border-box',
+    minWidth: 0,
+  };
 
   useEffect(() => {
     let cancelled = false;
@@ -434,78 +448,51 @@ export default function SeekerDashboard() {
         rightTopOnly
         activeNav={seekerActiveNav}
       >
-        <div style={PAGE_GLASS_WRAP}>
-          {/* ✅ PAGE-ONLY STRUCTURE:
-              - Top stack uses a 2-col grid (center + right spacer) to keep KPI/Action the same width as the center column.
-              - Bottom row spans full width (center + right) and can stretch exactly like your image.
-          */}
-          <div
-            style={{
-              display: 'grid',
-              gridTemplateColumns: `minmax(0, 1fr) ${RIGHT_RAIL_WIDTH}px`,
-              gap: LAYOUT_GAP,
-              alignItems: 'start',
-              width: '100%',
-              minWidth: 0,
-            }}
-          >
-            {/* LEFT (CENTER COLUMN CONTENT) */}
-            <div style={{ minWidth: 0 }}>
-              {/* KPI Row */}
-              <section style={{ ...WHITE_CARD, padding: 16 }}>
-                {kpi && (
-                  <KpiRow
-                    pinned={kpi.pinned || 0}
-                    applied={kpi.applied || 0}
-                    interviewing={kpi.interviewing || 0}
-                    offers={kpi.offers || 0}
-                    closedOut={kpi.closedOut || 0}
-                  />
-                )}
-              </section>
+        {/* ✅ TOP STACK (KPI + Action Center): CENTER COLUMN ONLY */}
+        <div style={TOP_GLASS_WRAP}>
+          <section style={{ ...WHITE_CARD, padding: 16 }}>
+            {kpi && (
+              <KpiRow
+                pinned={kpi.pinned || 0}
+                applied={kpi.applied || 0}
+                interviewing={kpi.interviewing || 0}
+                offers={kpi.offers || 0}
+                closedOut={kpi.closedOut || 0}
+              />
+            )}
+          </section>
 
-              {/* Action Center */}
-              <section style={{ ...WHITE_CARD, padding: 16, marginTop: 12 }}>
-                <SeekerActionCenterSection scope={scope} withChrome={withChrome} />
-              </section>
-            </div>
+          <section style={{ ...WHITE_CARD, padding: 16, marginTop: 12 }}>
+            <SeekerActionCenterSection scope={scope} withChrome={withChrome} />
+          </section>
+        </div>
 
-            {/* RIGHT SPACER (keeps KPI/Action from stretching into the right area) */}
-            <div aria-hidden style={{ width: RIGHT_RAIL_WIDTH }} />
+        {/* ✅ BOTTOM ROW: FULL WIDTH (spans into right area like your image) */}
+        <div style={BOTTOM_GLASS_WRAP}>
+          <div className="grid md:grid-cols-3 gap-6">
+            <section style={{ ...WHITE_CARD, padding: 16 }}>
+              <RecommendedJobsPreview />
+            </section>
 
-            {/* ✅ Bottom row - FULL WIDTH (center + right) */}
-            <div style={{ gridColumn: '1 / -1', minWidth: 0 }}>
-              <div className="grid md:grid-cols-3 gap-6" style={{ marginTop: 12 }}>
-                {/* New Matches */}
-                <section style={{ ...WHITE_CARD, padding: 16 }}>
-                  <RecommendedJobsPreview />
-                </section>
-
-                {/* Your Next Yes */}
-                <section style={{ ...WHITE_CARD, padding: 16 }}>
-                  <div className="flex items-center justify-between mb-4">
-                    <h2 className="text-lg font-semibold text-orange-600">
-                      Your Next Yes
-                    </h2>
-                    <Link
-                      href={withChrome('/seeker/pinned-jobs')}
-                      className="text-orange-600 font-medium hover:underline"
-                    >
-                      View all
-                    </Link>
-                  </div>
-                  <PinnedJobsPreview />
-                </section>
-
-                {/* Applications Over Time */}
-                <section style={{ ...WHITE_CARD, padding: 16 }}>
-                  <h3 className="text-base font-semibold text-gray-800 mb-3">
-                    Applications Over Time
-                  </h3>
-                  <ApplicationsOverTime weeks={weeks} withChrome={withChrome} />
-                </section>
+            <section style={{ ...WHITE_CARD, padding: 16 }}>
+              <div className="flex items-center justify-between mb-4">
+                <h2 className="text-lg font-semibold text-orange-600">Your Next Yes</h2>
+                <Link
+                  href={withChrome('/seeker/pinned-jobs')}
+                  className="text-orange-600 font-medium hover:underline"
+                >
+                  View all
+                </Link>
               </div>
-            </div>
+              <PinnedJobsPreview />
+            </section>
+
+            <section style={{ ...WHITE_CARD, padding: 16 }}>
+              <h3 className="text-base font-semibold text-gray-800 mb-3">
+                Applications Over Time
+              </h3>
+              <ApplicationsOverTime weeks={weeks} withChrome={withChrome} />
+            </section>
           </div>
         </div>
       </SeekerLayout>
