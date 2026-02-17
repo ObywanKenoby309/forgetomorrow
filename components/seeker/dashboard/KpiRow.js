@@ -1,4 +1,3 @@
-// components/seeker/dashboard/KpiRow.js
 import React, { useState, useEffect, useMemo } from 'react';
 import { colorFor } from '@/components/seeker/dashboard/seekerColors';
 import { useRouter } from 'next/router';
@@ -60,20 +59,33 @@ export default function KpiRow({
     return <>{count}</>;
   };
 
-  // === TILE (visuals match Applications StageStrip) ===
+  // ✅ Inline styles to guarantee identical rendering to Applications StageStrip
+  const rowStyle = {
+    display: 'grid',
+    gap: 12,
+    gridTemplateColumns: 'repeat(5, minmax(0,1fr))',
+    cursor: 'pointer',
+  };
+
   const Tile = ({ title, value, stage }) => {
     const c = colorFor(stageKey(stage));
     return (
       <div
-        className="ftKpiTile"
         style={{
           background: c.bg,
           color: c.text,
           border: `1px solid ${c.solid}`,
+          borderRadius: 10,
+          padding: '10px 12px',
+          display: 'grid',
+          gap: 4,
+          textAlign: 'center',
+          minWidth: 0,
+          boxShadow: 'none',
         }}
       >
-        <div className="ftKpiTitle">{title}</div>
-        <div className="ftKpiValue">
+        <div style={{ fontSize: 12, opacity: 0.9, whiteSpace: 'nowrap' }}>{title}</div>
+        <div style={{ fontSize: 20, fontWeight: 800, lineHeight: 1 }}>
           <AnimatedNumber end={value} />
         </div>
       </div>
@@ -81,75 +93,21 @@ export default function KpiRow({
   };
 
   return (
-    <>
-      <style jsx>{`
-        .ftKpiRow {
-          display: grid;
-          gap: 12px;
-          grid-template-columns: repeat(5, minmax(0, 1fr));
-          cursor: pointer;
-        }
-
-        /* Match Applications StageStrip tile shape + spacing */
-        .ftKpiTile {
-          border-radius: 10px;
-          padding: 10px 12px;
-          display: grid;
-          gap: 4px;
-          text-align: center;
-          min-width: 0;
-          box-shadow: none;
-        }
-
-        /* Match Applications label */
-        .ftKpiTitle {
-          font-size: 12px;
-          opacity: 0.9;
-          white-space: nowrap;
-          overflow: hidden;
-          text-overflow: ellipsis;
-          line-height: 1.15;
-        }
-
-        /* Match Applications number */
-        .ftKpiValue {
-          font-size: 20px;
-          font-weight: 800;
-          line-height: 1;
-        }
-
-        @media (max-width: 520px) {
-          .ftKpiRow {
-            gap: 8px;
-          }
-          .ftKpiTile {
-            padding: 10px 10px;
-          }
-          .ftKpiTitle {
-            font-size: 11px;
-          }
-          .ftKpiValue {
-            font-size: 18px;
-          }
-        }
-      `}</style>
-
-      <div
-        className="ftKpiRow"
-        onClick={() => router.push(withChrome('/seeker/applications'))}
-        role="button"
-        tabIndex={0}
-        onKeyDown={(e) => {
-          if (e.key === 'Enter' || e.key === ' ') router.push(withChrome('/seeker/applications'));
-        }}
-        aria-label="Open applications"
-      >
-        <Tile title="Pinned" value={pinned} stage="Pinned" />
-        <Tile title="Applied" value={applied} stage="Applied" />
-        <Tile title="Interviewing" value={interviewing} stage="Interviewing" />
-        <Tile title="Offers" value={offers} stage="Offers" />
-        <Tile title="Closed Out" value={closedOut} stage="Closed Out" />
-      </div>
-    </>
+    <div
+      style={rowStyle}
+      onClick={() => router.push(withChrome('/seeker/applications'))}
+      role="button"
+      tabIndex={0}
+      onKeyDown={(e) => {
+        if (e.key === 'Enter' || e.key === ' ') router.push(withChrome('/seeker/applications'));
+      }}
+      aria-label="Open applications"
+    >
+      <Tile title="Pinned" value={pinned} stage="Pinned" />
+      <Tile title="Applied" value={applied} stage="Applied" />
+      <Tile title="Interviewing" value={interviewing} stage="Interviewing" />
+      <Tile title="Offers" value={offers} stage="Offers" />
+      <Tile title="Closed Out" value={closedOut} stage="Closed Out" />
+    </div>
   );
 }

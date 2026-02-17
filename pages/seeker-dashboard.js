@@ -1,4 +1,3 @@
-// pages/seeker-dashboard.js
 import React, { useEffect, useMemo, useState } from 'react';
 import Head from 'next/head';
 import Link from 'next/link';
@@ -374,6 +373,29 @@ export default function SeekerDashboard() {
     </div>
   );
 
+  // ✅ Match Applications page container look for KPI row
+  const GLASS = {
+    borderRadius: 14,
+    border: '1px solid rgba(255,255,255,0.22)',
+    background: 'rgba(255,255,255,0.58)',
+    boxShadow: '0 10px 24px rgba(0,0,0,0.12)',
+    backdropFilter: 'blur(10px)',
+    WebkitBackdropFilter: 'blur(10px)',
+  };
+
+  const WHITE_CARD = {
+    background: 'rgba(255,255,255,0.92)',
+    border: '1px solid rgba(0,0,0,0.08)',
+    borderRadius: 12,
+    boxShadow: '0 2px 10px rgba(0,0,0,0.08)',
+  };
+
+  const KPI_GLASS_WRAP = {
+    ...GLASS,
+    padding: 16,
+    width: '100%',
+  };
+
   if (isLoading) {
     return (
       <>
@@ -407,22 +429,20 @@ export default function SeekerDashboard() {
         activeNav={seekerActiveNav}
       >
         <div className="grid gap-6">
-          {/* ✅ KPI Row FIRST (focus on progress/wins) */}
-          <section className="bg-white border border-gray-200 rounded-xl p-4 shadow-sm">
-            <h2 className="text-lg font-semibold text-orange-600 mb-3">
-              Job Search Snapshot
-            </h2>
-
-            {kpi && (
-              <KpiRow
-                pinned={kpi.pinned || 0}
-                applied={kpi.applied || 0}
-                interviewing={kpi.interviewing || 0}
-                offers={kpi.offers || 0}
-                closedOut={kpi.closedOut || 0}
-              />
-            )}
-          </section>
+          {/* ✅ KPI Row FIRST - styled IDENTICAL to Applications StageStrip block */}
+          <div style={KPI_GLASS_WRAP}>
+            <section style={{ ...WHITE_CARD, padding: 16 }}>
+              {kpi && (
+                <KpiRow
+                  pinned={kpi.pinned || 0}
+                  applied={kpi.applied || 0}
+                  interviewing={kpi.interviewing || 0}
+                  offers={kpi.offers || 0}
+                  closedOut={kpi.closedOut || 0}
+                />
+              )}
+            </section>
+          </div>
 
           {/* ✅ Action Center SECOND (still present, not the “hero”) */}
           <SeekerActionCenterSection scope={scope} withChrome={withChrome} />
