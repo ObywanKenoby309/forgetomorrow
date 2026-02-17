@@ -95,12 +95,9 @@ function ActionTile({ title, emptyText, items, href, withChrome }) {
   return (
     <div className="rounded-lg border bg-white p-4 flex flex-col min-h-[170px]">
       <div className="flex items-start justify-between gap-3">
-        {/* Title wraps fully (no truncation) */}
         <div className="font-semibold text-slate-900 text-sm leading-5 whitespace-normal break-words">
           {title}
         </div>
-
-        {/* Keeping top-right optional space clean (no button up top per your mock) */}
         <div className="shrink-0" />
       </div>
 
@@ -109,7 +106,6 @@ function ActionTile({ title, emptyText, items, href, withChrome }) {
           <div className="text-sm text-slate-500">{emptyText}</div>
         ) : (
           <div className="space-y-2">
-            {/* show only the most recent item for the tile */}
             {list.slice(0, 1).map((n) => (
               <div key={n.id} className="text-sm text-slate-700">
                 {n.title || 'Update'}
@@ -119,7 +115,6 @@ function ActionTile({ title, emptyText, items, href, withChrome }) {
         )}
       </div>
 
-      {/* View More bottom-right like your Image 2 */}
       <div className="mt-4 flex justify-end">
         <Link
           href={withChrome(href)}
@@ -154,10 +149,7 @@ function SeekerActionCenterSection({ scope, withChrome }) {
           }
         );
 
-        if (!res.ok) {
-          // keep previous items to avoid UI jump
-          return;
-        }
+        if (!res.ok) return;
 
         const data = await res.json();
         if (!alive) return;
@@ -165,7 +157,6 @@ function SeekerActionCenterSection({ scope, withChrome }) {
         const next = Array.isArray(data?.items) ? data.items : [];
         setItems(next);
       } catch (e) {
-        // keep previous items to avoid UI jump
         console.error('Seeker Action Center load error:', e);
       } finally {
         if (!alive) return;
@@ -272,7 +263,6 @@ export default function SeekerDashboard() {
 
   const scope = resolveScopeFromChrome(chrome);
 
-  // Decide which sidebar item should be highlighted
   const chromeKey = chrome || 'seeker';
   const seekerActiveNav =
     chromeKey === 'coach' || chromeKey.startsWith('recruiter')
@@ -283,7 +273,7 @@ export default function SeekerDashboard() {
   const [weeks, setWeeks] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
 
-  // ✅ Glass + cards (same as Applications page approach)
+  // ✅ Glass + cards (same approach as Applications page)
   const GLASS = {
     borderRadius: 14,
     border: '1px solid rgba(255,255,255,0.22)',
@@ -330,7 +320,6 @@ export default function SeekerDashboard() {
 
         setKpi(newKpi);
 
-        // Applications over time - 5 weeks
         const today = new Date();
         const thisWeek = startOfISOWeek(today);
         const labels = Array.from({ length: 5 }, (_, i) => `W${5 - i}`);
@@ -395,10 +384,13 @@ export default function SeekerDashboard() {
     </section>
   );
 
-  // ✅ Right rail: ONLY ads (placement manager)
+  // ✅ Right rail: Ads slot + profile performance teaser underneath (strategic)
   const RightRail = (
     <div className="grid gap-4">
       <RightRailPlacementManager slot="right_rail_1" />
+      <div style={{ ...WHITE_CARD, padding: 16 }}>
+        <ProfilePerformanceTeaser />
+      </div>
     </div>
   );
 
@@ -434,7 +426,6 @@ export default function SeekerDashboard() {
         right={RightRail}
         activeNav={seekerActiveNav}
       >
-        {/* ✅ One page-level glass wrap, white cards inside (same approach as Applications) */}
         <div style={PAGE_GLASS_WRAP}>
           {/* KPI Row */}
           <section style={{ ...WHITE_CARD, padding: 16 }}>
@@ -454,12 +445,14 @@ export default function SeekerDashboard() {
             <SeekerActionCenterSection scope={scope} withChrome={withChrome} />
           </section>
 
-          {/* New Matches + Your Next Yes */}
-          <div className="grid md:grid-cols-2 gap-6" style={{ marginTop: 12 }}>
+          {/* Bottom row - stretched modules (dashboard teaser layout) */}
+          <div className="grid md:grid-cols-3 gap-6" style={{ marginTop: 12 }}>
+            {/* New Matches */}
             <section style={{ ...WHITE_CARD, padding: 16 }}>
               <RecommendedJobsPreview />
             </section>
 
+            {/* Your Next Yes */}
             <section style={{ ...WHITE_CARD, padding: 16 }}>
               <div className="flex items-center justify-between mb-4">
                 <h2 className="text-lg font-semibold text-orange-600">
@@ -474,19 +467,13 @@ export default function SeekerDashboard() {
               </div>
               <PinnedJobsPreview />
             </section>
-          </div>
 
-          {/* Applications Over Time + Profile Performance */}
-          <div className="grid md:grid-cols-2 gap-6" style={{ marginTop: 12 }}>
+            {/* Applications Over Time */}
             <section style={{ ...WHITE_CARD, padding: 16 }}>
               <h3 className="text-base font-semibold text-gray-800 mb-3">
                 Applications Over Time
               </h3>
               <ApplicationsOverTime weeks={weeks} withChrome={withChrome} />
-            </section>
-
-            <section style={{ ...WHITE_CARD, padding: 16 }}>
-              <ProfilePerformanceTeaser />
             </section>
           </div>
         </div>
