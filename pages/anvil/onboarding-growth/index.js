@@ -4,6 +4,10 @@ import { useEffect, useMemo, useState } from 'react';
 import { useRouter } from 'next/router';
 import SeekerLayout from '@/components/layouts/SeekerLayout';
 
+export async function getServerSideProps() {
+  return { props: {} };
+}
+
 function getChromeFromAsPath(asPath) {
   try {
     const s = String(asPath || '');
