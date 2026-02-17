@@ -4,6 +4,8 @@ import { useRouter } from 'next/router';
 import { useEffect, useState } from 'react';
 import Head from 'next/head';
 import Script from 'next/script';
+import NextApp from 'next/app'; // ✅ ADDED: disables automatic static optimization when getInitialProps is defined
+
 import LandingHeader from '@/components/LandingHeader';
 import LandingFooter from '@/components/LandingFooter';
 import Footer from '@/components/Footer';
@@ -83,6 +85,7 @@ function AppShell({ Component, pageProps }) {
       '/post-view', // ✅ NEW: Post full view is INTERNAL (prevents public header/footer)
       '/member-profile',
       '/messages',
+      '/action-center',
     ].includes(router.pathname);
 
   const isCoachingRoute =
@@ -266,10 +269,19 @@ function AppShell({ Component, pageProps }) {
   );
 }
 
-export default function App({ Component, pageProps: { session, ...pageProps } }) {
+function MyApp({ Component, pageProps: { session, ...pageProps } }) {
   return (
     <SessionProvider session={session}>
       <AppShell Component={Component} pageProps={pageProps} />
     </SessionProvider>
   );
 }
+
+// ✅ ADDED: This disables Next's Automatic Static Optimization (pre-rendering tons of pages at build)
+// and prevents the "Generating static pages ... took more than 60 seconds" deployment hang pattern.
+MyApp.getInitialProps = async (appContext) => {
+  const appProps = await NextApp.getInitialProps(appContext);
+  return { ...appProps };
+};
+
+export default MyApp;
