@@ -251,6 +251,114 @@ function RecruiterActionCenterSection() {
   );
 }
 
+function ActionCenterLiteCard() {
+  const [loading, setLoading] = useState(true);
+  const [items, setItems] = useState([]);
+
+  useEffect(() => {
+    let alive = true;
+
+    const load = async () => {
+      setLoading(true);
+      try {
+        const res = await fetch("/api/notifications/list?scope=RECRUITER&limit=3&includeRead=0", {
+          method: "GET",
+          headers: { "Content-Type": "application/json" },
+          credentials: "include",
+        });
+
+        if (!res.ok) {
+          if (alive) setItems([]);
+          return;
+        }
+
+        const data = await res.json();
+        if (!alive) return;
+
+        setItems(Array.isArray(data?.items) ? data.items : []);
+      } catch {
+        if (alive) setItems([]);
+      } finally {
+        if (alive) setLoading(false);
+      }
+    };
+
+    load();
+    const t = setInterval(load, 25000);
+
+    return () => {
+      alive = false;
+      clearInterval(t);
+    };
+  }, []);
+
+  return (
+    <div className="rounded-lg border bg-white p-4">
+      <div className="flex items-center justify-between mb-2">
+        <div className="font-medium">Action Center</div>
+        <SecondaryButton href="/action-center?scope=RECRUITER&chrome=recruiter-smb" size="sm">
+          View all
+        </SecondaryButton>
+      </div>
+
+      {loading ? (
+        <div className="text-xs text-slate-500">Loading updates…</div>
+      ) : items.length === 0 ? (
+        <div className="text-xs text-slate-500">No unread items.</div>
+      ) : (
+        <div className="grid gap-2">
+          {items.map((n) => (
+            <a
+              key={n.id}
+              href="/action-center?scope=RECRUITER&chrome=recruiter-smb"
+              className="block rounded-md border px-3 py-2 hover:bg-orange-50"
+            >
+              <div className="text-xs font-semibold text-slate-900 truncate">
+                {n.title || "Update"}
+              </div>
+              {n.body ? (
+                <div className="text-[11px] text-slate-600 mt-0.5 line-clamp-2">
+                  {n.body}
+                </div>
+              ) : null}
+            </a>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
+function RightToolsCard() {
+  return (
+    <div className="space-y-4">
+      {/* Keeping this for now (we can swap it for Ads later exactly like Coaching) */}
+      <ActionCenterLiteCard />
+
+      <div className="rounded-lg border bg-white p-4">
+        <div className="font-medium mb-2">Quick Tools</div>
+        <div className="space-y-2 text-sm">
+          <div className="text-slate-600">Jump back into common tasks:</div>
+          <div className="flex flex-wrap gap-2">
+            <SecondaryButton href="/recruiter/candidates" size="sm">
+              Browse Candidates
+            </SecondaryButton>
+            <SecondaryButton href="/recruiter/messaging" size="sm">
+              Messaging
+            </SecondaryButton>
+            <SecondaryButton href="/recruiter/job-postings" size="sm">
+              Manage Jobs
+            </SecondaryButton>
+            <SecondaryButton href="/recruiter/job-tracker" size="sm">
+              Job Tracker
+            </SecondaryButton>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 function Panel({ title, children }) {
   return (
     <section
@@ -475,6 +583,7 @@ export default function RecruiterDashboardPage() {
       <RecruiterLayout
         title="ForgeTomorrow — Recruiter"
         header={<HeaderBar />}
+        right={<RightToolsCard />}
       >
         <DashboardBody />
       </RecruiterLayout>
