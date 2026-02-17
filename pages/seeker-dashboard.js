@@ -192,7 +192,7 @@ function SeekerActionCenterSection({ scope, withChrome }) {
   }, [items]);
 
   return (
-    <div>
+    <section className="bg-white border border-gray-200 rounded-xl p-5 shadow-sm">
       <div className="flex items-center justify-between gap-3 mb-4">
         <h2 className="text-lg font-semibold text-orange-600">Action Center</h2>
 
@@ -251,7 +251,7 @@ function SeekerActionCenterSection({ scope, withChrome }) {
           />
         </div>
       )}
-    </div>
+    </section>
   );
 }
 
@@ -272,30 +272,6 @@ export default function SeekerDashboard() {
   const [kpi, setKpi] = useState(null);
   const [weeks, setWeeks] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
-
-  // ✅ Glass + cards (same approach as Applications page)
-  const GLASS = {
-    borderRadius: 14,
-    border: '1px solid rgba(255,255,255,0.22)',
-    background: 'rgba(255,255,255,0.58)',
-    boxShadow: '0 10px 24px rgba(0,0,0,0.12)',
-    backdropFilter: 'blur(10px)',
-    WebkitBackdropFilter: 'blur(10px)',
-  };
-
-  const WHITE_CARD = {
-    background: 'rgba(255,255,255,0.92)',
-    border: '1px solid rgba(0,0,0,0.08)',
-    borderRadius: 12,
-    boxShadow: '0 2px 10px rgba(0,0,0,0.08)',
-  };
-
-  const PAGE_GLASS_WRAP = {
-    ...GLASS,
-    padding: 16,
-    margin: '24px 0 0',
-    width: '100%',
-  };
 
   useEffect(() => {
     let cancelled = false;
@@ -366,6 +342,22 @@ export default function SeekerDashboard() {
     };
   }, []);
 
+  const GLASS = {
+    borderRadius: 14,
+    border: '1px solid rgba(255,255,255,0.22)',
+    background: 'rgba(255,255,255,0.58)',
+    boxShadow: '0 10px 24px rgba(0,0,0,0.12)',
+    backdropFilter: 'blur(10px)',
+    WebkitBackdropFilter: 'blur(10px)',
+  };
+
+  const WHITE_CARD = {
+    background: 'rgba(255,255,255,0.92)',
+    border: '1px solid rgba(0,0,0,0.08)',
+    borderRadius: 12,
+    boxShadow: '0 2px 10px rgba(0,0,0,0.08)',
+  };
+
   const HeaderBox = (
     <section
       style={{
@@ -384,7 +376,7 @@ export default function SeekerDashboard() {
     </section>
   );
 
-  // ✅ Right rail: Ads slot + profile performance teaser underneath (strategic)
+  // Right rail stays top-only; content below will span into that space.
   const RightRail = (
     <div className="grid gap-4">
       <RightRailPlacementManager slot="right_rail_1" />
@@ -404,6 +396,7 @@ export default function SeekerDashboard() {
           title="Loading..."
           header={HeaderBox}
           right={RightRail}
+          rightTopOnly
           activeNav={seekerActiveNav}
         >
           <div className="flex items-center justify-center h-64 text-gray-500">
@@ -424,10 +417,10 @@ export default function SeekerDashboard() {
         title="Seeker Dashboard | ForgeTomorrow"
         header={HeaderBox}
         right={RightRail}
+        rightTopOnly
         activeNav={seekerActiveNav}
       >
-        <div style={PAGE_GLASS_WRAP}>
-          {/* KPI Row */}
+        <div style={{ ...GLASS, padding: 16, margin: '24px 0 0', width: '100%' }}>
           <section style={{ ...WHITE_CARD, padding: 16 }}>
             {kpi && (
               <KpiRow
@@ -440,24 +433,18 @@ export default function SeekerDashboard() {
             )}
           </section>
 
-          {/* Action Center */}
           <section style={{ ...WHITE_CARD, padding: 16, marginTop: 12 }}>
             <SeekerActionCenterSection scope={scope} withChrome={withChrome} />
           </section>
 
-          {/* Bottom row - stretched modules (dashboard teaser layout) */}
           <div className="grid md:grid-cols-3 gap-6" style={{ marginTop: 12 }}>
-            {/* New Matches */}
             <section style={{ ...WHITE_CARD, padding: 16 }}>
               <RecommendedJobsPreview />
             </section>
 
-            {/* Your Next Yes */}
             <section style={{ ...WHITE_CARD, padding: 16 }}>
               <div className="flex items-center justify-between mb-4">
-                <h2 className="text-lg font-semibold text-orange-600">
-                  Your Next Yes
-                </h2>
+                <h2 className="text-lg font-semibold text-orange-600">Your Next Yes</h2>
                 <Link
                   href={withChrome('/seeker/pinned-jobs')}
                   className="text-orange-600 font-medium hover:underline"
@@ -468,7 +455,6 @@ export default function SeekerDashboard() {
               <PinnedJobsPreview />
             </section>
 
-            {/* Applications Over Time */}
             <section style={{ ...WHITE_CARD, padding: 16 }}>
               <h3 className="text-base font-semibold text-gray-800 mb-3">
                 Applications Over Time

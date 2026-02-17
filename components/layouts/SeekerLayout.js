@@ -85,6 +85,10 @@ export default function SeekerLayout({
   gap = 12,
   pad = 16,
 
+  // ✅ allow right rail to appear only on top row, while content spans full width below.
+  // Default false keeps existing layout behavior everywhere.
+  rightTopOnly = false,
+
   // ✅ NEW (optional): DB-backed staff fields to pass through to sidebars
   // If not provided yet, safe defaults keep Staff Tools hidden.
   employee = false,
@@ -299,8 +303,11 @@ export default function SeekerLayout({
     gridTemplateColumns: `${leftWidth}px minmax(0, 1fr) ${hasRight ? `${rightWidth}px` : '0px'}`,
     gridTemplateRows: 'auto 1fr',
     gridTemplateAreas: hasRight
-      ? `"left header right"
-         "left content right"`
+      ? rightTopOnly
+        ? `"left header right"
+           "left content content"`
+        : `"left header right"
+           "left content right"`
       : `"left header header"
          "left content content"`,
   };
