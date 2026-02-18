@@ -299,20 +299,6 @@ export default function SeekerDashboard() {
     width: '100%',
   };
 
-  // ✅ Match SeekerLayout defaults (used for page-only spacing math)
-  const LEFT_RAIL_WIDTH = 240;
-  const RIGHT_RAIL_WIDTH = 260;
-  const LAYOUT_GAP = 12;
-
-  // ✅ KPI + Action Center stay center-column width (reserve BOTH sides in full-bleed main)
-  const PAGE_ONLY_CENTER_STACK_STYLE = {
-    width: '100%',
-    minWidth: 0,
-    paddingLeft: LEFT_RAIL_WIDTH + LAYOUT_GAP,
-    paddingRight: RIGHT_RAIL_WIDTH + LAYOUT_GAP,
-    boxSizing: 'border-box',
-  };
-
   useEffect(() => {
     let cancelled = false;
 
@@ -400,16 +386,11 @@ export default function SeekerDashboard() {
     </section>
   );
 
-  // ✅ Right rail: ADS (top) + Profile Performance (below) — matches Image 2
+  // ✅ Right rail matches screenshot: Ad box on top + Profile Performance below
   const RightRail = (
     <div className="grid gap-4">
-      <section style={{ ...WHITE_CARD, padding: 16 }}>
-        <RightRailPlacementManager slot="right_rail_1" />
-      </section>
-
-      <section style={{ ...WHITE_CARD, padding: 16 }}>
-        <ProfilePerformanceTeaser />
-      </section>
+      <RightRailPlacementManager slot="right_rail_1" />
+      <ProfilePerformanceTeaser />
     </div>
   );
 
@@ -423,9 +404,6 @@ export default function SeekerDashboard() {
           title="Loading..."
           header={HeaderBox}
           right={RightRail}
-          rightTopOnly
-          rightVariant="light"
-          contentFullBleed
           activeNav={seekerActiveNav}
         >
           <div className="flex items-center justify-center h-64 text-gray-500">
@@ -446,36 +424,27 @@ export default function SeekerDashboard() {
         title="Seeker Dashboard | ForgeTomorrow"
         header={HeaderBox}
         right={RightRail}
-        rightTopOnly
-        rightVariant="light"
-        contentFullBleed
         activeNav={seekerActiveNav}
       >
         <div style={PAGE_GLASS_WRAP}>
-          {/* ✅ KPI + Action Center: CENTER COLUMN WIDTH (reserved space for left + right rails) */}
-          <div style={PAGE_ONLY_CENTER_STACK_STYLE}>
-            <section style={{ ...WHITE_CARD, padding: 16 }}>
-              {kpi && (
-                <KpiRow
-                  pinned={kpi.pinned || 0}
-                  applied={kpi.applied || 0}
-                  interviewing={kpi.interviewing || 0}
-                  offers={kpi.offers || 0}
-                  closedOut={kpi.closedOut || 0}
-                />
-              )}
-            </section>
+          <section style={{ ...WHITE_CARD, padding: 16 }}>
+            {kpi && (
+              <KpiRow
+                pinned={kpi.pinned || 0}
+                applied={kpi.applied || 0}
+                interviewing={kpi.interviewing || 0}
+                offers={kpi.offers || 0}
+                closedOut={kpi.closedOut || 0}
+              />
+            )}
+          </section>
 
-            <section style={{ ...WHITE_CARD, padding: 16, marginTop: 12 }}>
-              <SeekerActionCenterSection scope={scope} withChrome={withChrome} />
-            </section>
-          </div>
+          <section style={{ ...WHITE_CARD, padding: 16, marginTop: 12 }}>
+            <SeekerActionCenterSection scope={scope} withChrome={withChrome} />
+          </section>
 
-          {/* ✅ Bottom row: FULL WIDTH (3 columns) — right rail content moved to RightRail stack */}
-          <div
-            className="grid gap-6 grid-cols-1 md:grid-cols-2 lg:grid-cols-3"
-            style={{ marginTop: 12 }}
-          >
+          {/* ✅ Bottom row stays in main content (3 columns). Right rail is separate (matches screenshot). */}
+          <div className="grid gap-6 grid-cols-1 md:grid-cols-2 lg:grid-cols-3" style={{ marginTop: 12 }}>
             <section style={{ ...WHITE_CARD, padding: 16 }}>
               <RecommendedJobsPreview />
             </section>
