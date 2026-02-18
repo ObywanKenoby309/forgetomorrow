@@ -341,7 +341,7 @@ export default async function handler(req, res) {
                                 text-transform:uppercase;
                                 color:#e5e7eb;
                               ">
-                                EARLY ACCESS • SEEKER
+                                FORGETOMORROW ACCOUNT
                               </span>
                             </td>
                             <td align="right">
