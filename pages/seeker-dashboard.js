@@ -1,5 +1,5 @@
 // pages/seeker-dashboard.js
-// updated layout
+// updated layout (matches: Left | Center | Right with rightTopOnly header rail)
 import React, { useEffect, useMemo, useState } from 'react';
 import Head from 'next/head';
 import Link from 'next/link';
@@ -291,13 +291,14 @@ export default function SeekerDashboard() {
     boxShadow: '0 2px 10px rgba(0,0,0,0.08)',
   };
 
-  // ✅ Pull the middle UP (this was the big gap)
   const PAGE_GLASS_WRAP = {
     ...GLASS,
     padding: 16,
-    margin: '12px 0 0', // was 24px
+    margin: '12px 0 0',
     width: '100%',
   };
+
+  const RIGHT_COL_WIDTH = 260;
 
   useEffect(() => {
     let cancelled = false;
@@ -386,11 +387,10 @@ export default function SeekerDashboard() {
     </section>
   );
 
-  // ✅ Right rail matches screenshot: Ad box on top + Profile Performance below
-  const RightRail = (
+  // ✅ Header-row Right rail: ADS ONLY (matches your screenshot)
+  const RightRailTop = (
     <div className="grid gap-4">
       <RightRailPlacementManager slot="right_rail_1" />
-      <ProfilePerformanceTeaser />
     </div>
   );
 
@@ -403,7 +403,9 @@ export default function SeekerDashboard() {
         <SeekerLayout
           title="Loading..."
           header={HeaderBox}
-          right={RightRail}
+          right={RightRailTop}
+          rightTopOnly
+          contentFullBleed
           activeNav={seekerActiveNav}
         >
           <div className="flex items-center justify-center h-64 text-gray-500">
@@ -423,51 +425,72 @@ export default function SeekerDashboard() {
       <SeekerLayout
         title="Seeker Dashboard | ForgeTomorrow"
         header={HeaderBox}
-        right={RightRail}
+        right={RightRailTop}
+        rightTopOnly
+        contentFullBleed
         activeNav={seekerActiveNav}
       >
         <div style={PAGE_GLASS_WRAP}>
-          <section style={{ ...WHITE_CARD, padding: 16 }}>
-            {kpi && (
-              <KpiRow
-                pinned={kpi.pinned || 0}
-                applied={kpi.applied || 0}
-                interviewing={kpi.interviewing || 0}
-                offers={kpi.offers || 0}
-                closedOut={kpi.closedOut || 0}
-              />
-            )}
-          </section>
+          {/* CONTENT ROW is now: Center + Right (260px) */}
+          <div
+            className="grid gap-6"
+            style={{
+              gridTemplateColumns: `minmax(0, 1fr) ${RIGHT_COL_WIDTH}px`,
+              alignItems: 'start',
+            }}
+          >
+            {/* CENTER COLUMN */}
+            <div className="grid gap-6">
+              <section style={{ ...WHITE_CARD, padding: 16 }}>
+                {kpi && (
+                  <KpiRow
+                    pinned={kpi.pinned || 0}
+                    applied={kpi.applied || 0}
+                    interviewing={kpi.interviewing || 0}
+                    offers={kpi.offers || 0}
+                    closedOut={kpi.closedOut || 0}
+                  />
+                )}
+              </section>
 
-          <section style={{ ...WHITE_CARD, padding: 16, marginTop: 12 }}>
-            <SeekerActionCenterSection scope={scope} withChrome={withChrome} />
-          </section>
+              <section style={{ ...WHITE_CARD, padding: 16 }}>
+                <SeekerActionCenterSection scope={scope} withChrome={withChrome} />
+              </section>
 
-          {/* ✅ Bottom row stays in main content (3 columns). Right rail is separate (matches screenshot). */}
-          <div className="grid gap-6 grid-cols-1 md:grid-cols-2 lg:grid-cols-3" style={{ marginTop: 12 }}>
-            <section style={{ ...WHITE_CARD, padding: 16 }}>
-              <RecommendedJobsPreview />
-            </section>
+              {/* Bottom center row: New Matches | Your Next Yes */}
+              <div className="grid gap-6 grid-cols-1 lg:grid-cols-2">
+                <section style={{ ...WHITE_CARD, padding: 16 }}>
+                  <RecommendedJobsPreview />
+                </section>
 
-            <section style={{ ...WHITE_CARD, padding: 16 }}>
-              <div className="flex items-center justify-between mb-4">
-                <h2 className="text-lg font-semibold text-orange-600">Your Next Yes</h2>
-                <Link
-                  href={withChrome('/seeker/pinned-jobs')}
-                  className="text-orange-600 font-medium hover:underline"
-                >
-                  View all
-                </Link>
+                <section style={{ ...WHITE_CARD, padding: 16 }}>
+                  <div className="flex items-center justify-between mb-4">
+                    <h2 className="text-lg font-semibold text-orange-600">Your Next Yes</h2>
+                    <Link
+                      href={withChrome('/seeker/pinned-jobs')}
+                      className="text-orange-600 font-medium hover:underline"
+                    >
+                      View all
+                    </Link>
+                  </div>
+                  <PinnedJobsPreview />
+                </section>
               </div>
-              <PinnedJobsPreview />
-            </section>
+            </div>
 
-            <section style={{ ...WHITE_CARD, padding: 16 }}>
-              <h3 className="text-base font-semibold text-gray-800 mb-3">
-                Applications Over Time
-              </h3>
-              <ApplicationsOverTime weeks={weeks} withChrome={withChrome} />
-            </section>
+            {/* RIGHT COLUMN (content row): Profile Analytics Lite then Applications Over Time */}
+            <div className="grid gap-6" style={{ width: RIGHT_COL_WIDTH }}>
+              <section style={{ ...WHITE_CARD, padding: 16 }}>
+                <ProfilePerformanceTeaser />
+              </section>
+
+              <section style={{ ...WHITE_CARD, padding: 16 }}>
+                <h3 className="text-base font-semibold text-gray-800 mb-3">
+                  Applications Over Time
+                </h3>
+                <ApplicationsOverTime weeks={weeks} withChrome={withChrome} />
+              </section>
+            </div>
           </div>
         </div>
       </SeekerLayout>
