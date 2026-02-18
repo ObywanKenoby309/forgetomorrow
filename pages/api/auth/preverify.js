@@ -12,7 +12,9 @@ const REGISTRATION_LOCK = process.env.REGISTRATION_LOCK === '1';
 
 // Optional reCAPTCHA bypass (0 = enforce, 1 = skip)
 // Use this ONLY for controlled internal testing.
-const RECAPTCHA_DISABLED = process.env.RECAPTCHA_DISABLED === '1';
+//
+// ✅ SECURITY: Never allow reCAPTCHA bypass in production even if env is set.
+const RECAPTCHA_DISABLED = !isProd && process.env.RECAPTCHA_DISABLED === '1';
 
 // ─────────────────────────────────────────────────────────────
 // CORS (minimal) — fixes OPTIONS preflight "Method Not Allowed"
@@ -53,6 +55,9 @@ function setCors(req, res) {
 }
 
 // BREVO NEWSLETTER AUTO-ADD
+// ✅ NOTE: We no longer call Brevo here (pre-verification).
+// Newsletter opt-in is now applied after the user verifies and the account is created
+// inside /api/auth/verify-email.
 async function addToBrevo(email, firstName, lastName) {
   if (!process.env.BREVO_API_KEY || !process.env.BREVO_LIST_ID) {
     console.log('[preverify] Brevo not configured — skipping');
@@ -184,7 +189,7 @@ export default async function handler(req, res) {
       return res.status(400).json({ error: 'reCAPTCHA failed' });
     }
   } else {
-    console.warn('[preverify] RECAPTCHA_DISABLED=1 — skipping reCAPTCHA verification');
+    console.warn('[preverify] RECAPTCHA_DISABLED=1 — skipping reCAPTCHA verification (NON-PROD ONLY)');
   }
 
   const normalizedEmail = String(email).toLowerCase().trim();
@@ -243,10 +248,12 @@ export default async function handler(req, res) {
   }
 
   // Newsletter → Brevo
+  // ✅ SECURITY: Brevo contact add is intentionally moved to /api/auth/verify-email
+  // after successful verification + user creation.
   const wantsNewsletter = newsletter === 'on' || newsletter === true || newsletter === 'true';
   if (wantsNewsletter) {
-    console.log('[preverify] User opted into newsletter; sending to Brevo');
-    await addToBrevo(normalizedEmail, firstName, lastName);
+    console.log('[preverify] User opted into newsletter; deferring Brevo add until verified user creation');
+    // await addToBrevo(normalizedEmail, firstName, lastName);
   }
 
   // Build verification URL

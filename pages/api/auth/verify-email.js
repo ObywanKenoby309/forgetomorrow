@@ -68,6 +68,37 @@ function buildAuthCookie(jwt) {
   return parts.join('; ');
 }
 
+// ✅ BREVO NEWSLETTER AUTO-ADD (post-verification only)
+async function addToBrevo(email, firstName, lastName) {
+  if (!process.env.BREVO_API_KEY || !process.env.BREVO_LIST_ID) {
+    console.log('[verify-email] Brevo not configured — skipping');
+    return;
+  }
+  try {
+    const res = await fetch('https://api.brevo.com/v3/contacts', {
+      method: 'POST',
+      headers: {
+        'api-key': process.env.BREVO_API_KEY,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        email,
+        attributes: { FIRSTNAME: firstName, LASTNAME: lastName },
+        listIds: [Number(process.env.BREVO_LIST_ID)],
+      }),
+    });
+
+    if (!res.ok) {
+      const txt = await res.text();
+      console.error('[verify-email] Brevo error:', txt);
+    } else {
+      console.log('[verify-email] Brevo → added:', email);
+    }
+  } catch (err) {
+    console.error('[verify-email] Brevo exception:', err.message);
+  }
+}
+
 export default async function handler(req, res) {
   if (req.method !== 'POST') return res.status(405).end();
 
@@ -144,6 +175,12 @@ export default async function handler(req, res) {
         slug,
       },
     });
+
+    // ✅ Newsletter → Brevo (verified users only)
+    if (user.newsletter) {
+      console.log('[verify-email] Verified user opted into newsletter; sending to Brevo');
+      await addToBrevo(user.email, user.firstName, user.lastName);
+    }
 
     // Clean up token
     await prisma.verificationToken.delete({ where: { token } }).catch(() => {});
