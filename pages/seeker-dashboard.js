@@ -400,10 +400,16 @@ export default function SeekerDashboard() {
     </section>
   );
 
-  // ✅ Right rail TOP: ADS ONLY (profile performance drops down into lower row like Image 2)
+  // ✅ Right rail: ADS (top) + Profile Performance (below) — matches Image 2
   const RightRail = (
     <div className="grid gap-4">
-      <RightRailPlacementManager slot="right_rail_1" />
+      <section style={{ ...WHITE_CARD, padding: 16 }}>
+        <RightRailPlacementManager slot="right_rail_1" />
+      </section>
+
+      <section style={{ ...WHITE_CARD, padding: 16 }}>
+        <ProfilePerformanceTeaser />
+      </section>
     </div>
   );
 
@@ -418,6 +424,7 @@ export default function SeekerDashboard() {
           header={HeaderBox}
           right={RightRail}
           rightTopOnly
+          rightVariant="light"
           contentFullBleed
           activeNav={seekerActiveNav}
         >
@@ -440,6 +447,7 @@ export default function SeekerDashboard() {
         header={HeaderBox}
         right={RightRail}
         rightTopOnly
+        rightVariant="light"
         contentFullBleed
         activeNav={seekerActiveNav}
       >
@@ -463,9 +471,9 @@ export default function SeekerDashboard() {
             </section>
           </div>
 
-          {/* ✅ Bottom row: FULL WIDTH, and includes Profile Performance dropped DOWN in its own right column */}
+          {/* ✅ Bottom row: FULL WIDTH (3 columns) — right rail content moved to RightRail stack */}
           <div
-            className="grid gap-6 grid-cols-1 md:grid-cols-2 lg:grid-cols-[minmax(0,1fr)_minmax(0,1fr)_minmax(0,1fr)_260px]"
+            className="grid gap-6 grid-cols-1 md:grid-cols-2 lg:grid-cols-3"
             style={{ marginTop: 12 }}
           >
             <section style={{ ...WHITE_CARD, padding: 16 }}>
@@ -490,11 +498,6 @@ export default function SeekerDashboard() {
                 Applications Over Time
               </h3>
               <ApplicationsOverTime weeks={weeks} withChrome={withChrome} />
-            </section>
-
-            {/* ✅ DROPPED DOWN (not inside ad rail) */}
-            <section style={{ ...WHITE_CARD, padding: 16, width: RIGHT_RAIL_WIDTH }}>
-              <ProfilePerformanceTeaser />
             </section>
           </div>
         </div>
