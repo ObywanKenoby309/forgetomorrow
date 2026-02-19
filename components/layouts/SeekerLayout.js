@@ -107,8 +107,6 @@ export default function SeekerLayout({
 
   // ---- CHROME MODE (DB-first; URL may request chrome but DB can canonicalize recruiter ent/smb) ----
   const [chromeMode, setChromeMode] = useState(() => {
-    // IMPORTANT: deterministic initial value avoids hydration mismatch.
-    // We’ll resolve properly in effects once router + plan are ready.
     return normalizeChrome(forceChrome) || 'seeker';
   });
 
@@ -121,12 +119,10 @@ export default function SeekerLayout({
       return;
     }
 
-    // URL request (what user is “trying” to view)
     const urlChrome = normalizeChrome(router.query?.chrome);
 
-    // DB truth (what the account *is*)
-    const dbRole = String(role || '').toLowerCase(); // seeker|coach|recruiter|site_admin|...
-    const dbPlan = String(plan || '').toLowerCase(); // small|enterprise|null
+    const dbRole = String(role || '').toLowerCase();
+    const dbPlan = String(plan || '').toLowerCase();
     const isRecruiterAccount =
       dbRole === 'recruiter' ||
       dbRole === 'site_admin' ||
@@ -136,7 +132,6 @@ export default function SeekerLayout({
     const isCoachAccount = dbRole === 'coach';
     const isEnterpriseAccount = dbPlan === 'enterprise';
 
-    // Determine DB-preferred chrome when loaded
     const dbPreferred =
       planLoaded && isRecruiterAccount
         ? isEnterpriseAccount
@@ -146,7 +141,6 @@ export default function SeekerLayout({
         ? 'coach'
         : 'seeker';
 
-    // If URL specifies recruiter chrome, canonicalize based on DB when loaded.
     if (urlChrome === 'recruiter-smb' || urlChrome === 'recruiter-ent') {
       if (planLoaded && isRecruiterAccount) {
         const canonical = isEnterpriseAccount ? 'recruiter-ent' : 'recruiter-smb';
@@ -154,29 +148,24 @@ export default function SeekerLayout({
         setQueryChrome(router, canonical);
         return;
       }
-      // If not loaded yet, honor URL for now (prevents flicker loops)
       setChromeMode(urlChrome);
       return;
     }
 
-    // If URL specifies coach/seeker explicitly, honor it.
     if (urlChrome === 'coach' || urlChrome === 'seeker') {
       setChromeMode(urlChrome);
       return;
     }
 
-    // No chrome requested: use DB preference once loaded, else keep current.
     if (planLoaded) {
       setChromeMode(dbPreferred);
       if (dbPreferred === 'recruiter-ent' || dbPreferred === 'recruiter-smb') {
-        // Optional: stamp chrome into URL for consistency on shared pages
         setQueryChrome(router, dbPreferred);
       }
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [router?.isReady, router?.query?.chrome, forceChrome, planLoaded, plan, role]);
 
-  // Always call hook; only Seeker uses the counts
   const seekerCounts = useSidebarCounts();
 
   // ---- HEADER + SIDEBAR SELECTION ----
@@ -303,16 +292,17 @@ export default function SeekerLayout({
   };
 
   // ---- DESKTOP VS MOBILE GRID ----
+  // ✅ KEY CHANGE: right rail always spans full height (both rows) so pages
+  // can stack content inside it (e.g. ads on top, Profile Performance below).
+  // rightTopOnly prop is preserved for API compatibility but the right column
+  // itself always exists — pages control what they render inside it.
   const desktopGrid = {
     display: 'grid',
     gridTemplateColumns: `${leftWidth}px minmax(0, 1fr) ${hasRight ? `${rightWidth}px` : '0px'}`,
     gridTemplateRows: 'auto 1fr',
     gridTemplateAreas: hasRight
-      ? rightTopOnly
-        ? `"left header right"
-           "left content content"`
-        : `"left header right"
-           "left content right"`
+      ? `"left header right"
+         "left content right"`
       : `"left header header"
          "left content content"`,
   };
@@ -388,6 +378,9 @@ export default function SeekerLayout({
                 ...rightRailLayer,
                 ...rightBase,
                 ...(rightVariant === 'light' ? rightLight : rightDark),
+                // ✅ Right rail spans both rows so stacked content works cleanly
+                gridRow: '1 / -1',
+                alignSelf: 'start',
               }}
             >
               {right}

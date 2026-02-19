@@ -1,5 +1,6 @@
 // pages/seeker-dashboard.js
-// updated layout (matches: Left | Center | Right exactly like reference)
+// Layout: Left Sidebar | Center (full height) | Right Rail (Ads + Profile Performance stacked)
+// Bottom row: New Matches | Your Next Yes | Applications Over Time — 3 equal cols, full center width
 import React, { useEffect, useMemo, useState } from 'react';
 import Head from 'next/head';
 import Link from 'next/link';
@@ -274,10 +275,9 @@ export default function SeekerDashboard() {
   const [weeks, setWeeks] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
 
-  // ✅ Slightly wider right col so Apps Over Time reaches left a bit more
+  // ✅ Right rail width — holds Ads + Profile Performance
   const RIGHT_COL_WIDTH = 280;
 
-  // ✅ Glass + cards (same approach as Applications page)
   const GLASS = {
     borderRadius: 14,
     border: '1px solid rgba(255,255,255,0.22)',
@@ -370,6 +370,7 @@ export default function SeekerDashboard() {
     };
   }, []);
 
+  // ✅ Header: title card spans center column only (right rail handles itself)
   const HeaderBox = (
     <section
       style={{
@@ -388,10 +389,24 @@ export default function SeekerDashboard() {
     </section>
   );
 
-  // ✅ Header-row Right rail: ADS ONLY (matches reference)
-  const RightRailTop = (
-    <div className="grid gap-4">
-      <RightRailPlacementManager slot="right_rail_1" />
+  // ✅ RIGHT RAIL: Ads on top, Profile Performance directly below — same column, full height
+  // Both sit inside the dark right rail panel provided by SeekerLayout
+  const RightRail = (
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+      {/* Ad slot — sits at the top, breathes cleanly */}
+      <div>
+        <RightRailPlacementManager slot="right_rail_1" />
+      </div>
+
+      {/* Profile Performance — directly below ads, matches Action Center row height visually */}
+      <div
+        style={{
+          ...WHITE_CARD,
+          padding: 16,
+        }}
+      >
+        <ProfilePerformanceTeaser />
+      </div>
     </div>
   );
 
@@ -404,8 +419,7 @@ export default function SeekerDashboard() {
         <SeekerLayout
           title="Loading..."
           header={HeaderBox}
-          right={RightRailTop}
-          rightTopOnly
+          right={RightRail}
           rightWidth={RIGHT_COL_WIDTH}
           activeNav={seekerActiveNav}
         >
@@ -426,71 +440,68 @@ export default function SeekerDashboard() {
       <SeekerLayout
         title="Seeker Dashboard | ForgeTomorrow"
         header={HeaderBox}
-        right={RightRailTop}
-        rightTopOnly
+        right={RightRail}
         rightWidth={RIGHT_COL_WIDTH}
         activeNav={seekerActiveNav}
       >
+        {/* ✅ Glass wrapper — children fill the center column cleanly */}
         <div style={PAGE_GLASS_WRAP}>
-          {/* Grid: Center + Right (right starts on row 2 so it sits beside Action Center, not KPI) */}
+
+          {/* ROW 1: KPI strip — full center width */}
+          <section style={{ ...WHITE_CARD, padding: 16, marginBottom: 16 }}>
+            {kpi && (
+              <KpiRow
+                pinned={kpi.pinned || 0}
+                applied={kpi.applied || 0}
+                interviewing={kpi.interviewing || 0}
+                offers={kpi.offers || 0}
+                closedOut={kpi.closedOut || 0}
+              />
+            )}
+          </section>
+
+          {/* ROW 2: Action Center — full center width */}
+          {/* Profile Performance is in the right rail beside this row naturally */}
+          <section style={{ ...WHITE_CARD, padding: 16, marginBottom: 16 }}>
+            <SeekerActionCenterSection scope={scope} withChrome={withChrome} />
+          </section>
+
+          {/* ROW 3: Bottom cards — 3 equal columns, full center width, breathable */}
           <div
-            className="grid gap-6"
             style={{
-              gridTemplateColumns: `minmax(0, 1fr) ${RIGHT_COL_WIDTH}px`,
-              alignItems: 'start',
+              display: 'grid',
+              gridTemplateColumns: 'repeat(3, minmax(0, 1fr))',
+              gap: 16,
             }}
           >
-            {/* ROW 1 (Center only): KPI aligns with Title card left edge because we are NOT full-bleed */}
-            <section style={{ ...WHITE_CARD, padding: 16, gridColumn: '1 / 2' }}>
-              {kpi && (
-                <KpiRow
-                  pinned={kpi.pinned || 0}
-                  applied={kpi.applied || 0}
-                  interviewing={kpi.interviewing || 0}
-                  offers={kpi.offers || 0}
-                  closedOut={kpi.closedOut || 0}
-                />
-              )}
+            {/* Card 1: New Matches for You */}
+            <section style={{ ...WHITE_CARD, padding: 16 }}>
+              <RecommendedJobsPreview />
             </section>
 
-            {/* ROW 2 (Center): Action Center */}
-            <section style={{ ...WHITE_CARD, padding: 16, gridColumn: '1 / 2' }}>
-              <SeekerActionCenterSection scope={scope} withChrome={withChrome} />
+            {/* Card 2: Your Next Yes */}
+            <section style={{ ...WHITE_CARD, padding: 16 }}>
+              <div className="flex items-center justify-between mb-4">
+                <h2 className="text-lg font-semibold text-orange-600">Your Next Yes</h2>
+                <Link
+                  href={withChrome('/seeker/pinned-jobs')}
+                  className="text-orange-600 font-medium hover:underline"
+                >
+                  View all
+                </Link>
+              </div>
+              <PinnedJobsPreview />
             </section>
 
-            {/* ROW 2 (Right): Profile Performance (pulled DOWN by starting after KPI row) */}
-            <section style={{ ...WHITE_CARD, padding: 16, gridColumn: '2 / 3', gridRow: '2' }}>
-              <ProfilePerformanceTeaser />
-            </section>
-
-            {/* ROW 3 (Center): New Matches + Your Next Yes */}
-            <div className="grid gap-6 grid-cols-1 lg:grid-cols-2" style={{ gridColumn: '1 / 2' }}>
-              <section style={{ ...WHITE_CARD, padding: 16 }}>
-                <RecommendedJobsPreview />
-              </section>
-
-              <section style={{ ...WHITE_CARD, padding: 16 }}>
-                <div className="flex items-center justify-between mb-4">
-                  <h2 className="text-lg font-semibold text-orange-600">Your Next Yes</h2>
-                  <Link
-                    href={withChrome('/seeker/pinned-jobs')}
-                    className="text-orange-600 font-medium hover:underline"
-                  >
-                    View all
-                  </Link>
-                </div>
-                <PinnedJobsPreview />
-              </section>
-            </div>
-
-            {/* ROW 3 (Right): Applications Over Time (wider, extends left slightly) */}
-            <section style={{ ...WHITE_CARD, padding: 16, gridColumn: '2 / 3' }}>
+            {/* Card 3: Applications Over Time */}
+            <section style={{ ...WHITE_CARD, padding: 16 }}>
               <h3 className="text-base font-semibold text-gray-800 mb-3">
                 Applications Over Time
               </h3>
               <ApplicationsOverTime weeks={weeks} withChrome={withChrome} />
             </section>
           </div>
+
         </div>
       </SeekerLayout>
     </>
