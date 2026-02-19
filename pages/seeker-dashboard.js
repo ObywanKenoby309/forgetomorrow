@@ -381,24 +381,6 @@ export default function SeekerDashboard() {
     };
   }, []);
 
-  const HeaderBox = (
-    <section
-      style={{
-        ...GLASS,
-        padding: 16,
-        textAlign: 'center',
-      }}
-      aria-label="Job seeker dashboard overview"
-    >
-      <h1 style={{ margin: 0, color: '#FF7043', fontSize: 24, fontWeight: 800 }}>
-        Your Job Seeker Dashboard
-      </h1>
-      <p style={{ margin: '6px auto 0', color: '#607D8B', maxWidth: 720 }}>
-        You're not alone. Track your momentum, see your wins, and keep moving forward.
-      </p>
-    </section>
-  );
-
   if (isLoading) {
     return (
       <>
@@ -407,7 +389,6 @@ export default function SeekerDashboard() {
         </Head>
         <SeekerLayout
           title="Loading..."
-          header={HeaderBox}
           activeNav={seekerActiveNav}
         >
           <div className="flex items-center justify-center h-64 text-gray-500">
@@ -425,37 +406,57 @@ export default function SeekerDashboard() {
       </Head>
 
       {/*
-        ✅ No `right` prop passed to SeekerLayout — page owns its internal layout entirely.
+        ✅ No `right` prop, no `header` prop passed to SeekerLayout.
         Content area spans full width from sidebar edge to page edge.
-        We build our own [center | right-rail] grid inside.
+        Everything — including the title card — lives inside our internal grid.
 
         Visual structure:
         ┌─────────────────────────────┬──────────────┐
-        │ KPI Row          (row 1)    │  Ad Slot     │
-        ├─────────────────────────────│  (rows 1+2)  │
-        │ Action Center    (row 2)    │  Profile     │
-        │                             │  Performance │
+        │ Title Card       (row 1)    │  Ad Slot     │
+        ├─────────────────────────────│  (rows 2+3)  │
+        │ KPI Row          (row 2)    │              │
+        ├─────────────────────────────│  Profile     │
+        │ Action Center    (row 3)    │  Performance │
         ├─────────────────────────────┴──────────────┤
-        │ New Matches │ Your Next Yes │ Apps Over Time│  ← full width
+        │ New Matches │ Your Next Yes │ Apps Over Time│  ← full width incl. under sidebar
         └──────────────────────────────────────────────┘
       */}
       <SeekerLayout
         title="Seeker Dashboard | ForgeTomorrow"
-        header={HeaderBox}
         activeNav={seekerActiveNav}
+        contentFullBleed
       >
         <div style={PAGE_GLASS_WRAP}>
           <div
             style={{
               display: 'grid',
               gridTemplateColumns: `minmax(0, 1fr) ${RIGHT_COL_WIDTH}px`,
-              gridTemplateRows: 'auto auto auto',
+              gridTemplateRows: 'auto auto auto auto',
               gap: GAP,
               width: '100%',
             }}
           >
-            {/* ROW 1, COL 1: KPI strip */}
-            <section style={{ ...WHITE_CARD, padding: 16, gridColumn: '1 / 2', gridRow: '1' }}>
+            {/* ROW 1, COL 1: Title card — stops at center column right edge, ad space stays tall */}
+            <section
+              style={{
+                ...GLASS,
+                padding: 16,
+                textAlign: 'center',
+                gridColumn: '1 / 2',
+                gridRow: '1',
+              }}
+              aria-label="Job seeker dashboard overview"
+            >
+              <h1 style={{ margin: 0, color: '#FF7043', fontSize: 24, fontWeight: 800 }}>
+                Your Job Seeker Dashboard
+              </h1>
+              <p style={{ margin: '6px auto 0', color: '#607D8B', maxWidth: 720 }}>
+                You're not alone. Track your momentum, see your wins, and keep moving forward.
+              </p>
+            </section>
+
+            {/* ROW 2, COL 1: KPI strip */}
+            <section style={{ ...WHITE_CARD, padding: 16, gridColumn: '1 / 2', gridRow: '2' }}>
               {kpi && (
                 <KpiRow
                   pinned={kpi.pinned || 0}
@@ -467,47 +468,47 @@ export default function SeekerDashboard() {
               )}
             </section>
 
-            {/* ROW 2, COL 1: Action Center */}
-            <div style={{ gridColumn: '1 / 2', gridRow: '2' }}>
+            {/* ROW 3, COL 1: Action Center */}
+            <div style={{ gridColumn: '1 / 2', gridRow: '3' }}>
               <SeekerActionCenterSection scope={scope} withChrome={withChrome} />
             </div>
 
             {/*
-              COL 2, ROWS 1–2: Right Rail dark panel
-              Ad slot on top, Profile Performance below.
-              Spans beside both KPI and Action Center rows.
+              COL 2, ROWS 1–3: Right Rail dark panel
+              Spans all three center rows — title, KPI, Action Center.
+              Ad slot on top (tall, breathing), Profile Performance below.
             */}
             <aside
               style={{
                 ...DARK_RAIL,
                 gridColumn: '2 / 3',
-                gridRow: '1 / 3',
+                gridRow: '1 / 4',
                 display: 'flex',
                 flexDirection: 'column',
                 gap: GAP,
                 alignSelf: 'stretch',
               }}
             >
-              {/* Ad slot — top of rail */}
-              <div style={{ minHeight: 120 }}>
+              {/* Ad slot — top of rail, tall and breathing */}
+              <div style={{ flex: 2, minHeight: 160 }}>
                 <RightRailPlacementManager slot="right_rail_1" />
               </div>
 
-              {/* Profile Performance — below ad, fills remaining rail height */}
+              {/* Profile Performance — below ad */}
               <div style={{ ...WHITE_CARD, padding: 16, flex: 1 }}>
                 <ProfilePerformanceTeaser />
               </div>
             </aside>
 
             {/*
-              ROW 3: Bottom 3 cards — span FULL WIDTH (col 1 + col 2).
+              ROW 4: Bottom 3 cards — span FULL WIDTH (col 1 + col 2).
+              contentFullBleed on SeekerLayout means this also extends under the sidebar.
               New Matches | Your Next Yes | Applications Over Time
-              All three breathe across the entire page width.
             */}
             <div
               style={{
                 gridColumn: '1 / -1',
-                gridRow: '3',
+                gridRow: '4',
                 display: 'grid',
                 gridTemplateColumns: 'repeat(3, minmax(0, 1fr))',
                 gap: GAP,
