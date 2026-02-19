@@ -58,20 +58,20 @@ function isAbsoluteUrl(href) {
 export default function MobileBottomBar({ chromeMode = 'seeker', onOpenTools, isMobile = false }) {
   const router = useRouter();
 
-  // ✅ Prevent broken-image UI: if SVG fails, fall back to emoji
+  // ✅ Prevent broken-image UI: if icon fails, fall back to emoji
   const [toolsIconOk, setToolsIconOk] = useState(true);
   const [dashIconOk, setDashIconOk] = useState(true);
   const [feedIconOk, setFeedIconOk] = useState(true);
-  const [jobsIconOk, setJobsIconOk] = useState(true);
-  const [calIconOk, setCalIconOk] = useState(true);
+  const [msgsIconOk, setMsgsIconOk] = useState(true);
+  const [supportIconOk, setSupportIconOk] = useState(true);
 
-  // ✅ Final icon paths (public/icons/*.svg)
+  // ✅ Final icon paths (public/icons/*.png)
   const ICONS = {
-    tools: '/icons/Tools.svg',
-    dashboard: '/icons/Dashboard.svg',
-    feed: '/icons/Feed.svg',
-    jobs: '/icons/Jobs.svg',
-    calendar: '/icons/Calendar.svg',
+    tools: '/icons/tools.png',
+    dashboard: '/icons/dashboard.png',
+    feed: '/icons/feed.png',
+    messages: '/icons/messages.png',
+    support: '/icons/support.png',
   };
 
   const routes = useMemo(() => {
@@ -79,20 +79,17 @@ export default function MobileBottomBar({ chromeMode = 'seeker', onOpenTools, is
       seeker: {
         dashboard: 'https://www.forgetomorrow.com/seeker-dashboard',
         feed: 'https://www.forgetomorrow.com/feed',
-        jobs: 'https://www.forgetomorrow.com/jobs',
-        calendar: 'https://www.forgetomorrow.com/seeker/calendar',
+        messages: 'https://www.forgetomorrow.com/messages',
       },
       coach: {
         dashboard: 'https://www.forgetomorrow.com/coaching-dashboard',
         feed: 'https://www.forgetomorrow.com/feed',
-        jobs: 'https://www.forgetomorrow.com/jobs',
-        calendar: 'https://www.forgetomorrow.com/dashboard/coaching/sessions/calendar',
+        messages: 'https://www.forgetomorrow.com/messages',
       },
       recruiter: {
         dashboard: 'https://www.forgetomorrow.com/recruiter/dashboard',
         feed: 'https://www.forgetomorrow.com/feed',
-        jobs: 'https://www.forgetomorrow.com/jobs',
-        calendar: 'https://www.forgetomorrow.com/recruiter/calendar',
+        messages: 'https://www.forgetomorrow.com/messages',
       },
     };
 
@@ -107,8 +104,7 @@ export default function MobileBottomBar({ chromeMode = 'seeker', onOpenTools, is
     return {
       dashboard: buildHref(r.dashboard, chromeMode),
       feed: buildHref(r.feed, chromeMode),
-      jobs: buildHref(r.jobs, chromeMode),
-      calendar: buildHref(r.calendar, chromeMode),
+      messages: buildHref(r.messages, chromeMode),
       support: buildSupportHref(chromeMode, router),
     };
   }, [chromeMode, router]);
@@ -151,7 +147,7 @@ export default function MobileBottomBar({ chromeMode = 'seeker', onOpenTools, is
     paddingRight: 10,
     paddingBottom: 'calc(10px + env(safe-area-inset-bottom))',
     display: 'grid',
-    gridTemplateColumns: 'repeat(6, 1fr)',
+    gridTemplateColumns: 'repeat(5, 1fr)',
     gap: 6,
     boxSizing: 'border-box',
   };
@@ -231,7 +227,7 @@ export default function MobileBottomBar({ chromeMode = 'seeker', onOpenTools, is
           />
         ) : (
           <span style={iconStyle} aria-hidden="true">
-            🧰
+            🔧
           </span>
         )}
         <span style={labelStyle}>Tools</span>
@@ -271,44 +267,37 @@ export default function MobileBottomBar({ chromeMode = 'seeker', onOpenTools, is
         <span style={labelStyle}>Feed</span>
       </NavLink>
 
-      <NavLink href={routes.jobs} active={isActive(routes.jobs)} ariaLabel="Go to Jobs">
-        {jobsIconOk ? (
+      <NavLink href={routes.messages} active={isActive(routes.messages)} ariaLabel="Go to Messages">
+        {msgsIconOk ? (
           <img
-            src={ICONS.jobs}
+            src={ICONS.messages}
             alt=""
             aria-hidden="true"
             style={imgIconStyle}
-            onError={() => setJobsIconOk(false)}
+            onError={() => setMsgsIconOk(false)}
           />
         ) : (
           <span style={iconStyle} aria-hidden="true">
-            💼
+            ✉️
           </span>
         )}
-        <span style={labelStyle}>Jobs</span>
-      </NavLink>
-
-      <NavLink href={routes.calendar} active={isActive(routes.calendar)} ariaLabel="Go to Calendar">
-        {calIconOk ? (
-          <img
-            src={ICONS.calendar}
-            alt=""
-            aria-hidden="true"
-            style={imgIconStyle}
-            onError={() => setCalIconOk(false)}
-          />
-        ) : (
-          <span style={iconStyle} aria-hidden="true">
-            📅
-          </span>
-        )}
-        <span style={labelStyle}>Cal</span>
+        <span style={labelStyle}>Msgs</span>
       </NavLink>
 
       <NavLink href={routes.support} active={isActive(routes.support)} ariaLabel="Open Support Center">
-        <span style={iconStyle} aria-hidden="true">
-          💬
-        </span>
+        {supportIconOk ? (
+          <img
+            src={ICONS.support}
+            alt=""
+            aria-hidden="true"
+            style={imgIconStyle}
+            onError={() => setSupportIconOk(false)}
+          />
+        ) : (
+          <span style={iconStyle} aria-hidden="true">
+            🛟
+          </span>
+        )}
         <span style={labelStyle}>Support</span>
       </NavLink>
     </nav>
