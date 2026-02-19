@@ -306,11 +306,10 @@ export default function SeekerDashboard() {
   };
 
   const PAGE_GLASS_WRAP = {
-    ...GLASS,
-    padding: 16,
-    margin: '-16px 0 0',
-    width: '100%',
-  };
+  padding: 0,
+  margin: 0,
+  width: '100%',
+};
 
   useEffect(() => {
     let cancelled = false;
@@ -390,7 +389,6 @@ export default function SeekerDashboard() {
         <SeekerLayout
           title="Loading..."
           activeNav={seekerActiveNav}
-          pad={0}
         >
           <div className="flex items-center justify-center h-64 text-gray-500">
             Loading your progress...
@@ -425,7 +423,6 @@ export default function SeekerDashboard() {
       <SeekerLayout
         title="Seeker Dashboard | ForgeTomorrow"
         activeNav={seekerActiveNav}
-        pad={0}
       >
         <div style={PAGE_GLASS_WRAP}>
           <div
