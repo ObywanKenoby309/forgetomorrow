@@ -508,7 +508,7 @@ export default function SeekerDashboard() {
                 gridColumn: '1 / -1',
                 gridRow: '4',
                 display: 'grid',
-                gridTemplateColumns: 'repeat(3, minmax(0, 1fr))',
+                gridTemplateColumns: '5fr 5fr 4fr))',
                 gap: GAP,
                 marginLeft: -252,
               }}
@@ -531,7 +531,7 @@ export default function SeekerDashboard() {
               </section>
 
               <section style={{ ...WHITE_CARD, padding: 16 }}>
-                <h3 className="text-base font-semibold text-gray-800 mb-3">
+                <h3 className="text-base font-semibold text-orange-600 mb-3">
                   Applications Over Time
                 </h3>
                 <ApplicationsOverTime weeks={weeks} withChrome={withChrome} />
