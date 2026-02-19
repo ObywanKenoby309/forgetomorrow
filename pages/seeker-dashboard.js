@@ -508,7 +508,7 @@ export default function SeekerDashboard() {
                 gridColumn: '1 / -1',
                 gridRow: '4',
                 display: 'grid',
-                gridTemplateColumns: '5fr 5fr 4fr))',
+                gridTemplateColumns: 'minmax(0, 5fr) minmax(0, 5fr) minmax(0, 3fr)',
                 gap: GAP,
                 marginLeft: -252,
               }}
