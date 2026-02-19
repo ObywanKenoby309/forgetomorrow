@@ -424,7 +424,6 @@ export default function SeekerDashboard() {
       <SeekerLayout
         title="Seeker Dashboard | ForgeTomorrow"
         activeNav={seekerActiveNav}
-        contentFullBleed
       >
         <div style={PAGE_GLASS_WRAP}>
           <div
@@ -501,8 +500,8 @@ export default function SeekerDashboard() {
             </aside>
 
             {/*
-              ROW 4: Bottom 3 cards — span FULL WIDTH (col 1 + col 2).
-              contentFullBleed on SeekerLayout means this also extends under the sidebar.
+              ROW 4: Bottom 3 cards — extend left under the sidebar using negative margin,
+              while still spanning right to the page edge.
               New Matches | Your Next Yes | Applications Over Time
             */}
             <div
@@ -512,6 +511,7 @@ export default function SeekerDashboard() {
                 display: 'grid',
                 gridTemplateColumns: 'repeat(3, minmax(0, 1fr))',
                 gap: GAP,
+                marginLeft: -252,
               }}
             >
               <section style={{ ...WHITE_CARD, padding: 16 }}>
