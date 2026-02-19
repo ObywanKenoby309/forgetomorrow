@@ -306,10 +306,10 @@ export default function SeekerDashboard() {
   };
 
   const PAGE_GLASS_WRAP = {
-  padding: 0,
-  margin: 0,
-  width: '100%',
-};
+    padding: 0,
+    margin: 0,
+    width: '100%',
+  };
 
   useEffect(() => {
     let cancelled = false;
@@ -386,10 +386,7 @@ export default function SeekerDashboard() {
         <Head>
           <title>Loading… | ForgeTomorrow</title>
         </Head>
-        <SeekerLayout
-          title="Loading..."
-          activeNav={seekerActiveNav}
-        >
+        <SeekerLayout title="Loading..." activeNav={seekerActiveNav}>
           <div className="flex items-center justify-center h-64 text-gray-500">
             Loading your progress...
           </div>
@@ -397,6 +394,8 @@ export default function SeekerDashboard() {
       </>
     );
   }
+
+  const pinnedCount = Number(kpi?.pinned || 0);
 
   return (
     <>
@@ -420,10 +419,7 @@ export default function SeekerDashboard() {
         │ New Matches │ Your Next Yes │ Apps Over Time│  ← full width incl. under sidebar
         └──────────────────────────────────────────────┘
       */}
-      <SeekerLayout
-        title="Seeker Dashboard | ForgeTomorrow"
-        activeNav={seekerActiveNav}
-      >
+      <SeekerLayout title="Seeker Dashboard | ForgeTomorrow" activeNav={seekerActiveNav}>
         <div style={PAGE_GLASS_WRAP}>
           <div
             style={{
@@ -527,6 +523,25 @@ export default function SeekerDashboard() {
                     View all
                   </Link>
                 </div>
+
+                {pinnedCount <= 0 ? (
+                  <div style={{ padding: 12, borderRadius: 10, background: '#FFF7ED', border: '1px solid #FED7AA' }}>
+                    <div style={{ fontWeight: 800, color: '#9A3412', marginBottom: 6 }}>
+                      Your Next Yes is out there.
+                    </div>
+                    <div style={{ color: '#7C2D12', fontSize: 13, lineHeight: 1.5 }}>
+                      Pin a role that excites you — not one you&apos;ll settle for. This space is reserved for the
+                      opportunity you actually want to wake up for.
+                      <br />
+                      When you find it, pin it. We&apos;ll help you chase it.
+                    </div>
+                  </div>
+                ) : (
+                  <div style={{ color: '#607D8B', fontSize: 13, lineHeight: 1.45, marginBottom: 10 }}>
+                    These are your pinned roles — keep them warm. Revisit them, follow up, and move the best ones forward.
+                  </div>
+                )}
+
                 <PinnedJobsPreview />
               </section>
 
@@ -537,7 +552,6 @@ export default function SeekerDashboard() {
                 <ApplicationsOverTime weeks={weeks} withChrome={withChrome} />
               </section>
             </div>
-
           </div>
         </div>
       </SeekerLayout>
