@@ -58,39 +58,49 @@ export default function PinnedJobsPreview() {
   }
 
   if (!jobs.length) {
-    return (
-      <div style={{ color: '#607D8B', fontSize: 14 }}>
-        No pinned jobs yet. When you pin roles from the job board, the latest ones will appear here as your “Next Yes.”
-      </div>
-    );
-  }
-
   return (
-    <div style={{ display: 'grid', gap: 12 }}>
-      {jobs.map((job) => (
-        <div
-          key={job.id}
-          style={{
-            border: '1px solid #eee',
-            borderRadius: '10px',
-            padding: '14px',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'space-between',
-          }}
-        >
-          <div>
-            <div style={{ fontWeight: 600 }}>{job.title}</div>
-            <div style={{ color: '#546E7A' }}>
-              {job.company}
-              {job.location ? ` • ${job.location}` : ''}
-            </div>
-          </div>
-          <div style={{ color: '#455A64', fontSize: 13 }}>
-            Pinned: {formatDate(job.pinnedAt)}
-          </div>
-        </div>
-      ))}
+    <div style={{ padding: 12, borderRadius: 10, background: '#FFF7ED', border: '1px solid #FED7AA' }}>
+      <div style={{ fontWeight: 800, color: '#9A3412', marginBottom: 6 }}>
+        Your Next Yes is out there.
+      </div>
+      <div style={{ color: '#7C2D12', fontSize: 13, lineHeight: 1.5 }}>
+        Pin a role that excites you — not one you'll settle for. This space is reserved for the
+        opportunity you actually want to wake up for.<br />
+        When you find it, pin it. We'll help you chase it.
+      </div>
     </div>
   );
+}
+
+return (
+  <div style={{ display: 'grid', gap: 12 }}>
+    <div style={{ color: '#7C2D12', fontSize: 13, lineHeight: 1.45, padding: '8px 12px', background: '#FFF7ED', borderRadius: 8 }}>
+      Keep these warm. Revisit, follow up, and move the best ones forward.
+    </div>
+    {jobs.map((job) => (
+      <div
+        key={job.id}
+        style={{
+          border: '1px solid #eee',
+          borderRadius: '10px',
+          padding: '14px',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+        }}
+      >
+        <div>
+          <div style={{ fontWeight: 600 }}>{job.title}</div>
+          <div style={{ color: '#546E7A' }}>
+            {job.company}
+            {job.location ? ` • ${job.location}` : ''}
+          </div>
+        </div>
+        <div style={{ color: '#455A64', fontSize: 13 }}>
+          Pinned: {formatDate(job.pinnedAt)}
+        </div>
+      </div>
+    ))}
+  </div>
+);
 }

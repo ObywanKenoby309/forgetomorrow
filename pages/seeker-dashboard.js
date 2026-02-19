@@ -395,8 +395,6 @@ export default function SeekerDashboard() {
     );
   }
 
-  const pinnedCount = Number(kpi?.pinned || 0);
-
   return (
     <>
       <Head>
@@ -411,7 +409,7 @@ export default function SeekerDashboard() {
         Visual structure:
         ┌─────────────────────────────┬──────────────┐
         │ Title Card       (row 1)    │  Ad Slot     │
-        ├─────────────────────────────│  (rows 2+3)  │
+        ├─────────────────────────────│  (rows 1-3)  │
         │ KPI Row          (row 2)    │              │
         ├─────────────────────────────│  Profile     │
         │ Action Center    (row 3)    │  Performance │
@@ -498,6 +496,7 @@ export default function SeekerDashboard() {
               ROW 4: Bottom 3 cards — extend left under the sidebar using negative margin,
               while still spanning right to the page edge.
               New Matches | Your Next Yes | Applications Over Time
+              ✅ PinnedJobsPreview owns its own empty + populated messaging — no logic needed here
             */}
             <div
               style={{
@@ -523,25 +522,7 @@ export default function SeekerDashboard() {
                     View all
                   </Link>
                 </div>
-
-                {pinnedCount <= 0 ? (
-                  <div style={{ padding: 12, borderRadius: 10, background: '#FFF7ED', border: '1px solid #FED7AA' }}>
-                    <div style={{ fontWeight: 800, color: '#9A3412', marginBottom: 6 }}>
-                      Your Next Yes is out there.
-                    </div>
-                    <div style={{ color: '#7C2D12', fontSize: 13, lineHeight: 1.5 }}>
-                      Pin a role that excites you — not one you&apos;ll settle for. This space is reserved for the
-                      opportunity you actually want to wake up for.
-                      <br />
-                      When you find it, pin it. We&apos;ll help you chase it.
-                    </div>
-                  </div>
-                ) : (
-                  <div style={{ color: '#607D8B', fontSize: 13, lineHeight: 1.45, marginBottom: 10 }}>
-                    These are your pinned roles — keep them warm. Revisit them, follow up, and move the best ones forward.
-                  </div>
-                )}
-
+                {/* ✅ Component handles both empty state and populated messaging internally */}
                 <PinnedJobsPreview />
               </section>
 
@@ -552,6 +533,7 @@ export default function SeekerDashboard() {
                 <ApplicationsOverTime weeks={weeks} withChrome={withChrome} />
               </section>
             </div>
+
           </div>
         </div>
       </SeekerLayout>
