@@ -1,5 +1,5 @@
 // components/mobile/MobileBottomBar.js
-import React, { useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/router';
 
@@ -55,7 +55,7 @@ function isAbsoluteUrl(href) {
   return /^https?:\/\//i.test(String(href || ''));
 }
 
-function MobileBottomBar({ chromeMode = 'seeker', onOpenTools, isMobile = false }) {
+export default function MobileBottomBar({ chromeMode = 'seeker', onOpenTools, isMobile = false }) {
   const router = useRouter();
 
   // ✅ Prevent broken-image UI: if icon fails, fall back to emoji
@@ -64,6 +64,9 @@ function MobileBottomBar({ chromeMode = 'seeker', onOpenTools, isMobile = false 
   const [feedIconOk, setFeedIconOk] = useState(true);
   const [msgsIconOk, setMsgsIconOk] = useState(true);
   const [supportIconOk, setSupportIconOk] = useState(true);
+
+  // ✅ NEW: unread dot for dashboard (Action Center attention)
+  const [hasDashUnread, setHasDashUnread] = useState(false);
 
   // ✅ Final icon paths (public/icons/*.png)
   const ICONS = {
@@ -74,22 +77,83 @@ function MobileBottomBar({ chromeMode = 'seeker', onOpenTools, isMobile = false 
     support: '/icons/support.png',
   };
 
+  // ✅ Scope mapping mirrors the RecruiterHeader approach (safe fallback)
+  const notifScope = useMemo(() => {
+    if (chromeMode === 'recruiter-smb' || chromeMode === 'recruiter-ent') return 'RECRUITER';
+    if (chromeMode === 'coach') return 'COACH';
+    return 'SEEKER';
+  }, [chromeMode]);
+
+  // ✅ Quiet polling: only update state if it actually changes; pause when tab hidden
+  useEffect(() => {
+    if (!isMobile) return;
+
+    let alive = true;
+
+    const load = async () => {
+      try {
+        // If tab is hidden, skip (reduces flicker + wasted calls)
+        if (typeof document !== 'undefined' && document.hidden) return;
+
+        const res = await fetch(`/api/notifications/unread-count?scope=${encodeURIComponent(notifScope)}`, {
+          method: 'GET',
+          headers: { 'Content-Type': 'application/json' },
+          credentials: 'include',
+        });
+
+        if (!res.ok) return;
+
+        const data = await res.json();
+        if (!alive) return;
+
+        const next = !!data?.hasUnread;
+
+        // ✅ Only setState if changed (prevents pointless renders)
+        setHasDashUnread((prev) => (prev === next ? prev : next));
+      } catch {
+        // swallow - no dot if API fails
+      }
+    };
+
+    load();
+    const t = setInterval(load, 25000);
+
+    const onVis = () => {
+      // refresh immediately when user returns
+      if (!document.hidden) load();
+    };
+
+    if (typeof document !== 'undefined') {
+      document.addEventListener('visibilitychange', onVis);
+    }
+
+    return () => {
+      alive = false;
+      clearInterval(t);
+      if (typeof document !== 'undefined') {
+        document.removeEventListener('visibilitychange', onVis);
+      }
+    };
+  }, [isMobile, notifScope]);
+
   const routes = useMemo(() => {
-    // ✅ IMPORTANT: Mobile Messages is personal messages for ALL roles
     const map = {
       seeker: {
         dashboard: 'https://www.forgetomorrow.com/seeker-dashboard',
         feed: 'https://www.forgetomorrow.com/feed',
+        // ✅ ALL users go to Seeker personal messages
         messages: 'https://www.forgetomorrow.com/seeker/messages',
       },
       coach: {
         dashboard: 'https://www.forgetomorrow.com/coaching-dashboard',
         feed: 'https://www.forgetomorrow.com/feed',
+        // ✅ ALL users go to Seeker personal messages
         messages: 'https://www.forgetomorrow.com/seeker/messages',
       },
       recruiter: {
         dashboard: 'https://www.forgetomorrow.com/recruiter/dashboard',
         feed: 'https://www.forgetomorrow.com/feed',
+        // ✅ ALL users go to Seeker personal messages
         messages: 'https://www.forgetomorrow.com/seeker/messages',
       },
     };
@@ -183,11 +247,24 @@ function MobileBottomBar({ chromeMode = 'seeker', onOpenTools, isMobile = false 
     lineHeight: 1,
   };
 
+  // ✅ Bigger icons
   const imgIconStyle = {
     width: 30,
     height: 30,
     display: 'block',
     objectFit: 'contain',
+  };
+
+  // ✅ Dot badge (Forge orange)
+  const dotStyle = {
+    position: 'absolute',
+    top: -1,
+    right: -1,
+    width: 9,
+    height: 9,
+    borderRadius: 999,
+    background: '#FF7043',
+    boxShadow: '0 0 0 2px rgba(255,255,255,0.85), 0 6px 14px rgba(0,0,0,0.18)',
   };
 
   // ✅ Link wrapper that avoids nested <a> and handles absolute URLs safely
@@ -235,19 +312,25 @@ function MobileBottomBar({ chromeMode = 'seeker', onOpenTools, isMobile = false 
       </button>
 
       <NavLink href={routes.dashboard} active={isActive(routes.dashboard)} ariaLabel="Go to Dashboard">
-        {dashIconOk ? (
-          <img
-            src={ICONS.dashboard}
-            alt=""
-            aria-hidden="true"
-            style={imgIconStyle}
-            onError={() => setDashIconOk(false)}
-          />
-        ) : (
-          <span style={iconStyle} aria-hidden="true">
-            🏠
-          </span>
-        )}
+        <span style={{ position: 'relative', display: 'inline-block' }}>
+          {dashIconOk ? (
+            <img
+              src={ICONS.dashboard}
+              alt=""
+              aria-hidden="true"
+              style={imgIconStyle}
+              onError={() => setDashIconOk(false)}
+            />
+          ) : (
+            <span style={iconStyle} aria-hidden="true">
+              🏠
+            </span>
+          )}
+
+          {/* ✅ Action Center attention dot */}
+          {hasDashUnread ? <span aria-hidden="true" style={dotStyle} /> : null}
+        </span>
+
         <span style={labelStyle}>Dash</span>
       </NavLink>
 
@@ -304,6 +387,3 @@ function MobileBottomBar({ chromeMode = 'seeker', onOpenTools, isMobile = false 
     </nav>
   );
 }
-
-// ✅ Critical: prevents “blink” when parent re-renders for polling/count updates
-export default React.memo(MobileBottomBar);

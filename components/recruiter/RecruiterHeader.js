@@ -41,12 +41,26 @@ export default function RecruiterHeader() {
       }
     };
 
+    const onRefresh = () => load();
+
     load();
     const t = setInterval(load, 25000);
+
+    if (typeof window !== "undefined") {
+      window.addEventListener("ft-notifications-updated", onRefresh);
+      window.addEventListener("focus", onRefresh);
+      document.addEventListener("visibilitychange", onRefresh);
+    }
 
     return () => {
       alive = false;
       clearInterval(t);
+
+      if (typeof window !== "undefined") {
+        window.removeEventListener("ft-notifications-updated", onRefresh);
+        window.removeEventListener("focus", onRefresh);
+        document.removeEventListener("visibilitychange", onRefresh);
+      }
     };
   }, []);
 

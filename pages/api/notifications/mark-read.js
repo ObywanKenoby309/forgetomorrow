@@ -27,7 +27,7 @@ export default async function handler(req, res) {
 
     const updated = await prisma.notification.update({
       where: { id: String(id) },
-      data: { readAt: new Date(), requiresAction: false },
+      data: { readAt: new Date() }, // ✅ standard: read/seen only
       select: { id: true, readAt: true },
     });
 

@@ -165,6 +165,36 @@ export default function ActionCenterPage() {
     }
   };
 
+  // ✅ NEW: Viewing the Action Center clears the unread dot (mark all as seen/read)
+  useEffect(() => {
+    const markAllReadOnOpen = async () => {
+      try {
+        const res = await fetch("/api/notifications/mark-all-read", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          credentials: "include",
+          body: JSON.stringify({ scope }),
+        });
+
+        if (!res.ok) return;
+
+        if (typeof window !== "undefined") {
+  // fire now
+  window.dispatchEvent(new Event("ft-notifications-updated"));
+
+  // fire again next tick to beat listener-attach races on fresh mounts
+  setTimeout(() => {
+    window.dispatchEvent(new Event("ft-notifications-updated"));
+  }, 50);
+}
+      } catch {
+        // swallow
+      }
+    };
+
+    if (scope) markAllReadOnOpen();
+  }, [scope]);
+
   useEffect(() => {
     load({ includeRead });
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -188,6 +218,10 @@ export default function ActionCenterPage() {
       setItems((prev) =>
         prev.map((n) => (n.id === id ? { ...n, readAt: nowIso } : n))
       );
+
+      if (typeof window !== "undefined") {
+        window.dispatchEvent(new Event("ft-notifications-updated"));
+      }
     } catch {
       // no-op
     }
