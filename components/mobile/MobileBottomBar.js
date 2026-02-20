@@ -158,8 +158,8 @@ export default function MobileBottomBar({ chromeMode = 'seeker', onOpenTools, is
     flexDirection: 'column',
     alignItems: 'center',
     justifyContent: 'center',
-    gap: 4,
-    padding: '8px 4px',
+    gap: 6, // was 4
+    padding: '10px 4px', // was 8px
     borderRadius: 14,
     border: active ? '1px solid rgba(17,32,51,0.18)' : '1px solid transparent',
     background: active ? 'rgba(255,255,255,0.65)' : 'transparent',
@@ -182,9 +182,10 @@ export default function MobileBottomBar({ chromeMode = 'seeker', onOpenTools, is
     lineHeight: 1,
   };
 
+  // ✅ Bigger icons (was 22x22)
   const imgIconStyle = {
-    width: 22,
-    height: 22,
+    width: 30,
+    height: 30,
     display: 'block',
     objectFit: 'contain',
   };
