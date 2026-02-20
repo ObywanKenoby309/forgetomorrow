@@ -272,12 +272,9 @@ export default function RecruiterLayout({
 
   // ✅ Seeker-style: page-only opt-in for full-bleed content (desktop only)
   const mainOverrides = {
-  position: 'relative',
-  zIndex: 1,
-		{
-          position: 'relative',
-          zIndex: 1,
-        };
+    position: 'relative',
+    zIndex: 1,
+  };
 
   // ✅ Ensure side rail stays above full-bleed content (same layering strategy as SeekerLayout)
   const leftRailLayer = { position: 'relative', zIndex: 10 };
@@ -357,19 +354,19 @@ export default function RecruiterLayout({
 
           {/* Main content */}
           <main
-  style={{
-    gridArea: 'content',
-    minWidth: 0,
-    width: '100%',
-    maxWidth: '100%',
+            style={{
+              gridArea: 'content',
+              minWidth: 0,
+              width: '100%',
+              maxWidth: '100%',
 
-    // ✅ Only remove overflow clipping on dashboard (contentFullBleed).
-    // All other recruiter pages keep overflowX: 'hidden' for mobile safety.
-    ...(!contentFullBleed ? { overflowX: 'hidden' } : {}),
+              // ✅ Only remove overflow clipping on dashboard (contentFullBleed).
+              // All other recruiter pages keep overflowX: 'hidden' for mobile safety.
+              ...(!contentFullBleed ? { overflowX: 'hidden' } : {}),
 
-    ...mainOverrides,
-  }}
->
+              ...mainOverrides,
+            }}
+          >
             <div style={{ display: 'grid', gap: GAP, width: '100%', minWidth: 0, maxWidth: '100%' }}>
               {children}
             </div>
