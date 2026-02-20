@@ -1,5 +1,5 @@
 // components/layouts/SeekerLayout.js
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useState, useCallback } from 'react';
 import Head from 'next/head';
 import { useRouter } from 'next/router';
 import { useUserWallpaper } from '@/hooks/useUserWallpaper';
@@ -256,6 +256,9 @@ export default function SeekerLayout({
   const [isMobile, setIsMobile] = useState(true);
   const [mobileToolsOpen, setMobileToolsOpen] = useState(false);
 
+  // ✅ Stable handler so MobileBottomBar doesn't re-render/blink
+  const handleOpenTools = useCallback(() => setMobileToolsOpen(true), []);
+
   useEffect(() => {
     const handleResize = () => {
       if (typeof window !== 'undefined') {
@@ -400,11 +403,7 @@ export default function SeekerLayout({
         </div>
       </div>
 
-      <MobileBottomBar
-        isMobile={isMobile}
-        chromeMode={chromeMode}
-        onOpenTools={() => setMobileToolsOpen(true)}
-      />
+      <MobileBottomBar isMobile={isMobile} chromeMode={chromeMode} onOpenTools={handleOpenTools} />
 
       {isMobile && mobileToolsOpen && (
         <div

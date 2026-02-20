@@ -1,5 +1,5 @@
 // components/layouts/InternalLayout.js
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useState, useCallback } from 'react';
 import Head from 'next/head';
 import { useRouter } from 'next/router';
 import useSidebarCounts from '@/components/hooks/useSidebarCounts';
@@ -139,11 +139,21 @@ export default function InternalLayout({
     if (planLoaded) {
       const dbRole = String(role || '').toLowerCase();
       const isRecruiterAccount =
-        dbRole === 'recruiter' || dbRole === 'site_admin' || dbRole === 'owner' || dbRole === 'admin' || dbRole === 'billing';
+        dbRole === 'recruiter' ||
+        dbRole === 'site_admin' ||
+        dbRole === 'owner' ||
+        dbRole === 'admin' ||
+        dbRole === 'billing';
       const isCoachAccount = dbRole === 'coach';
       const isEnterprise = String(plan || '').toLowerCase() === 'enterprise';
 
-      const dbPreferred = isRecruiterAccount ? (isEnterprise ? 'recruiter-ent' : 'recruiter-smb') : isCoachAccount ? 'coach' : 'seeker';
+      const dbPreferred = isRecruiterAccount
+        ? isEnterprise
+          ? 'recruiter-ent'
+          : 'recruiter-smb'
+        : isCoachAccount
+        ? 'coach'
+        : 'seeker';
       setChromeMode(dbPreferred);
 
       if (dbPreferred === 'recruiter-ent' || dbPreferred === 'recruiter-smb') {
@@ -205,6 +215,9 @@ export default function InternalLayout({
   const hasRight = Boolean(right);
   const [isMobile, setIsMobile] = useState(true);
   const [mobileToolsOpen, setMobileToolsOpen] = useState(false);
+
+  // ✅ Stable handler so MobileBottomBar doesn't re-render/blink
+  const handleOpenTools = useCallback(() => setMobileToolsOpen(true), []);
 
   useEffect(() => {
     const handleResize = () => {
@@ -312,11 +325,7 @@ export default function InternalLayout({
 
         <SupportFloatingButton />
 
-        <MobileBottomBar
-          isMobile={isMobile}
-          chromeMode={chromeMode}
-          onOpenTools={() => setMobileToolsOpen(true)}
-        />
+        <MobileBottomBar isMobile={isMobile} chromeMode={chromeMode} onOpenTools={handleOpenTools} />
       </div>
 
       {isMobile && mobileToolsOpen && (

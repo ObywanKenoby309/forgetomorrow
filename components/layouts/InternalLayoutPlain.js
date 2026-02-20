@@ -1,5 +1,5 @@
 // components/layouts/InternalLayoutPlain.js
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useCallback } from 'react';
 import Head from 'next/head';
 import InternalSidebar from '@/components/internal/InternalSidebar';
 import EmployeeHeader from '@/components/employee/EmployeeHeader';
@@ -34,6 +34,9 @@ export default function InternalLayoutPlain({
   const [isMobile, setIsMobile] = useState(true);
   const [mobileToolsOpen, setMobileToolsOpen] = useState(false);
   const [hat, setHat] = useState(() => normalizeHat(initialHat));
+
+  // ✅ Stable handler so EmployeeHeader doesn't re-render/blink
+  const handleOpenTools = useCallback(() => setMobileToolsOpen(true), []);
 
   useEffect(() => {
     const handleResize = () => {
@@ -81,7 +84,7 @@ export default function InternalLayoutPlain({
           hat={hat}
           onHatChange={setHat}
           isMobile={isMobile}
-          onOpenTools={() => setMobileToolsOpen(true)}
+          onOpenTools={handleOpenTools}
           active={activeNav}
         />
 
@@ -152,7 +155,14 @@ export default function InternalLayoutPlain({
                 boxShadow: '0 -10px 26px rgba(0,0,0,0.22)',
               }}
             >
-              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>
+              <div
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'space-between',
+                  marginBottom: 12,
+                }}
+              >
                 <div style={{ fontSize: 14, fontWeight: 900, color: '#111827' }}>Employee Tools</div>
                 <button
                   type="button"

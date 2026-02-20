@@ -55,7 +55,7 @@ function isAbsoluteUrl(href) {
   return /^https?:\/\//i.test(String(href || ''));
 }
 
-export default function MobileBottomBar({ chromeMode = 'seeker', onOpenTools, isMobile = false }) {
+function MobileBottomBar({ chromeMode = 'seeker', onOpenTools, isMobile = false }) {
   const router = useRouter();
 
   // ✅ Prevent broken-image UI: if icon fails, fall back to emoji
@@ -75,6 +75,7 @@ export default function MobileBottomBar({ chromeMode = 'seeker', onOpenTools, is
   };
 
   const routes = useMemo(() => {
+    // ✅ IMPORTANT: Mobile Messages is personal messages for ALL roles
     const map = {
       seeker: {
         dashboard: 'https://www.forgetomorrow.com/seeker-dashboard',
@@ -84,12 +85,12 @@ export default function MobileBottomBar({ chromeMode = 'seeker', onOpenTools, is
       coach: {
         dashboard: 'https://www.forgetomorrow.com/coaching-dashboard',
         feed: 'https://www.forgetomorrow.com/feed',
-        messages: 'https://www.forgetomorrow.com/coaching/messaging',
+        messages: 'https://www.forgetomorrow.com/seeker/messages',
       },
       recruiter: {
         dashboard: 'https://www.forgetomorrow.com/recruiter/dashboard',
         feed: 'https://www.forgetomorrow.com/feed',
-        messages: 'https://www.forgetomorrow.com/recruiter/messaging',
+        messages: 'https://www.forgetomorrow.com/seeker/messages',
       },
     };
 
@@ -158,8 +159,8 @@ export default function MobileBottomBar({ chromeMode = 'seeker', onOpenTools, is
     flexDirection: 'column',
     alignItems: 'center',
     justifyContent: 'center',
-    gap: 6, // was 4
-    padding: '10px 4px', // was 8px
+    gap: 6,
+    padding: '10px 4px',
     borderRadius: 14,
     border: active ? '1px solid rgba(17,32,51,0.18)' : '1px solid transparent',
     background: active ? 'rgba(255,255,255,0.65)' : 'transparent',
@@ -182,7 +183,6 @@ export default function MobileBottomBar({ chromeMode = 'seeker', onOpenTools, is
     lineHeight: 1,
   };
 
-  // ✅ Bigger icons (was 22x22)
   const imgIconStyle = {
     width: 30,
     height: 30,
@@ -304,3 +304,6 @@ export default function MobileBottomBar({ chromeMode = 'seeker', onOpenTools, is
     </nav>
   );
 }
+
+// ✅ Critical: prevents “blink” when parent re-renders for polling/count updates
+export default React.memo(MobileBottomBar);

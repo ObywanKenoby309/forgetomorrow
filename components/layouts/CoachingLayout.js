@@ -1,5 +1,5 @@
 // components/layouts/CoachingLayout.js
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useCallback } from 'react';
 import Head from 'next/head';
 import CoachingHeader from '@/components/coaching/CoachingHeader';
 import CoachingSidebar from '@/components/coaching/CoachingSidebar';
@@ -57,6 +57,9 @@ export default function CoachingLayout({
   // --- Mobile detection (match Seeker/Recruiter behavior) ---
   const [isMobile, setIsMobile] = useState(true);
   const [mobileToolsOpen, setMobileToolsOpen] = useState(false);
+
+  // ✅ Stable handler so MobileBottomBar doesn't re-render/blink
+  const handleOpenTools = useCallback(() => setMobileToolsOpen(true), []);
 
   useEffect(() => {
     const handleResize = () => {
@@ -215,11 +218,7 @@ export default function CoachingLayout({
       <SupportFloatingButton />
 
       {/* ✅ Mobile bottom bar */}
-      <MobileBottomBar
-        isMobile={isMobile}
-        chromeMode={chromeMode}
-        onOpenTools={() => setMobileToolsOpen(true)}
-      />
+      <MobileBottomBar isMobile={isMobile} chromeMode={chromeMode} onOpenTools={handleOpenTools} />
 
       {/* ✅ MOBILE TOOLS BOTTOM SHEET */}
       {isMobile && mobileToolsOpen && (

@@ -1,5 +1,5 @@
 // components/layouts/RecruiterLayout.js
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import Head from 'next/head';
 import { useRouter } from 'next/router';
 import { usePlan } from '@/context/PlanContext';
@@ -191,6 +191,9 @@ export default function RecruiterLayout({
     color: 'white',
   };
 
+  // ✅ Stable callback so MobileBottomBar memo does NOT re-render on every parent refresh
+  const handleOpenTools = useCallback(() => setMobileToolsOpen(true), []);
+
   return (
     <>
       <Head>
@@ -276,11 +279,7 @@ export default function RecruiterLayout({
 
       <SupportFloatingButton />
 
-      <MobileBottomBar
-        isMobile={isMobile}
-        chromeMode={chromeMode}
-        onOpenTools={() => setMobileToolsOpen(true)}
-      />
+      <MobileBottomBar isMobile={isMobile} chromeMode={chromeMode} onOpenTools={handleOpenTools} />
 
       {isMobile && mobileToolsOpen && (
         <div
