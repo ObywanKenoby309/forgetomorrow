@@ -258,18 +258,6 @@ function RecruiterActionCenterSection({ chromeQuery }) {
   );
 }
 
-function Panel({ title, children }) {
-  return (
-    <section
-      className="rounded-lg border bg-white p-4 relative h-full min-h-[220px] flex flex-col"
-      aria-label={title}
-    >
-      <div className="font-medium mb-2">{title}</div>
-      <div className="flex-1 grid content-start gap-2 min-w-0">{children}</div>
-    </section>
-  );
-}
-
 /* -----------------------------
    Dashboard Body (Seeker-style internal grid)
 ------------------------------ */
@@ -289,7 +277,7 @@ function DashboardBody() {
   const RIGHT_COL_WIDTH = 280;
   const GAP = 16;
 
-  // ✅ Glass + cards (matches your Seeker dashboard approach)
+  // ✅ Glass + cards (matches Seeker dashboard approach)
   const GLASS = {
     borderRadius: 14,
     border: "1px solid rgba(255,255,255,0.22)",
@@ -304,6 +292,7 @@ function DashboardBody() {
     border: "1px solid rgba(0,0,0,0.08)",
     borderRadius: 12,
     boxShadow: "0 2px 10px rgba(0,0,0,0.08)",
+    boxSizing: "border-box",
   };
 
   // ✅ Dark rail to match SeekerLayout rightDark feel
@@ -313,6 +302,13 @@ function DashboardBody() {
     borderRadius: 12,
     padding: 16,
     boxShadow: "0 2px 6px rgba(0,0,0,0.06)",
+    boxSizing: "border-box",
+  };
+
+  // ✅ Dashboard-only: breathing room from right scrollbar (no global layout changes)
+  const PAGE_WRAP = {
+    width: "100%",
+    paddingRight: 10,
     boxSizing: "border-box",
   };
 
@@ -392,7 +388,7 @@ function DashboardBody() {
     : null;
 
   return (
-    <div style={{ width: "100%", minWidth: 0 }}>
+    <div style={PAGE_WRAP}>
       {error && (
         <div className="rounded-md border border-red-200 bg-red-50 px-3 py-2 text-xs text-red-700 mb-4">
           {error}
@@ -408,6 +404,7 @@ function DashboardBody() {
           gap: GAP,
           width: "100%",
           minWidth: 0,
+          boxSizing: "border-box",
         }}
       >
         {/* ROW 1, COL 1: Title card */}
@@ -418,6 +415,7 @@ function DashboardBody() {
             textAlign: "center",
             gridColumn: "1 / 2",
             gridRow: "1",
+            boxSizing: "border-box",
           }}
           aria-label="Recruiter dashboard overview"
         >
@@ -470,18 +468,17 @@ function DashboardBody() {
             flexDirection: "column",
             gap: GAP,
             alignSelf: "stretch",
+            boxSizing: "border-box",
           }}
         >
-          {/* Sponsored */}
-          <div style={{ flex: 2, minHeight: 160 }}>
-            <div style={{ ...WHITE_CARD, padding: 16, height: "100%" }}>
-              <div className="font-medium mb-2 text-slate-900">Sponsored</div>
-              <div className="text-sm text-slate-500">Ad space</div>
-            </div>
+          {/* Sponsored (taller so Health Snapshot sits lower) */}
+          <div style={{ ...WHITE_CARD, padding: 16, flex: 2, minHeight: 180 }}>
+            <div className="font-medium mb-2 text-slate-900">Sponsored</div>
+            <div className="text-sm text-slate-500">Ad space</div>
           </div>
 
-          {/* Quick snapshot (compact, click-through) */}
-          <div style={{ ...WHITE_CARD, padding: 16 }}>
+          {/* Health Snapshot (lower) */}
+          <div style={{ ...WHITE_CARD, padding: 16, flex: 1 }}>
             <div className="font-medium mb-2 text-slate-900">Health Snapshot</div>
 
             {isEnterprise ? (
@@ -489,8 +486,8 @@ function DashboardBody() {
                 <div className="text-sm grid gap-2 text-slate-700">
                   <div>Time-to-Hire: {analyticsSnapshot.timeToHireDays} days</div>
                   <div>
-                    Top Apply Source: {analyticsSnapshot.topApplySourceLabel} ({analyticsSnapshot.topApplySourcePercent}
-                    %)
+                    Top Apply Source: {analyticsSnapshot.topApplySourceLabel} (
+                    {analyticsSnapshot.topApplySourcePercent}%)
                   </div>
                   <div>Conversion (View→Apply): {analyticsSnapshot.conversionViewToApply}%</div>
                   <div className="pt-1 text-[11px] text-slate-500">
@@ -525,12 +522,18 @@ function DashboardBody() {
             display: "grid",
             gridTemplateColumns: "minmax(0, 5fr) minmax(0, 5fr) minmax(0, 3fr)",
             gap: GAP,
-            marginLeft: 0, // ✅ FIX: recruiter layout cannot safely extend under sidebar like Seeker
-            paddingRight: 6, // ✅ FIX: keep content off the scrollbar
+
+            // ✅ EXACT Seeker blueprint behavior: pull left under the sidebar on desktop.
+            // We do it here (dashboard-only), not globally.
+            marginLeft: -252,
+
+            // ✅ Keep right breathing room consistent with PAGE_WRAP
+            paddingRight: 10,
+            boxSizing: "border-box",
             minWidth: 0,
           }}
         >
-          {/* Top Candidate Recommendations */}
+          {/* Top Candidate Recommendations (LEFT card, stays LEFT) */}
           <section style={{ ...WHITE_CARD, padding: 16 }}>
             <div className="flex items-center justify-between mb-3">
               <h2 className="text-lg font-semibold text-[#FF7043]">Top Candidate Recommendations</h2>
@@ -571,7 +574,7 @@ function DashboardBody() {
             )}
           </section>
 
-          {/* Pipeline Health Snapshot (click-through concept surface) */}
+          {/* Pipeline Health (MIDDLE card, stays MIDDLE) */}
           <section style={{ ...WHITE_CARD, padding: 16 }}>
             <div className="flex items-center justify-between mb-3">
               <h2 className="text-lg font-semibold text-[#FF7043]">Pipeline Health</h2>
@@ -595,7 +598,7 @@ function DashboardBody() {
             </div>
           </section>
 
-          {/* Trends / Momentum (placeholder for chart) */}
+          {/* Trends (RIGHT card, stays RIGHT) */}
           <section style={{ ...WHITE_CARD, padding: 16 }}>
             <div className="flex items-center justify-between mb-3">
               <h3 className="text-base font-semibold text-[#FF7043]">Trends</h3>
@@ -621,11 +624,10 @@ function DashboardBody() {
 }
 
 export default function RecruiterDashboardPage() {
-  // ✅ We keep RecruiterLayout, but we build the “real dashboard” inside DashboardBody,
-  // so we can place components + wire without fighting layout constraints.
   return (
     <PlanProvider>
-      <RecruiterLayout title="ForgeTomorrow — Recruiter">
+      {/* ✅ DASHBOARD ONLY: enable full-bleed span under sidebar (Seeker blueprint) */}
+      <RecruiterLayout title="ForgeTomorrow — Recruiter" contentFullBleed>
         <DashboardBody />
       </RecruiterLayout>
     </PlanProvider>

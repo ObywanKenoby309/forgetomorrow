@@ -84,6 +84,10 @@ export default function RecruiterLayout({
   // ✅ NEW (optional): DB-backed staff fields to pass through to sidebar
   employee = false,
   department = '',
+
+  // ✅ NEW: Seeker-style page-only opt-in to allow content to span under the left rail (desktop only)
+  // Default false so no other recruiter pages change.
+  contentFullBleed = false,
 }) {
   const router = useRouter();
   const hasHeader = Boolean(header);
@@ -266,6 +270,22 @@ export default function RecruiterLayout({
   // ✅ Stable callback so MobileBottomBar memo does NOT re-render on every parent refresh
   const handleOpenTools = useCallback(() => setMobileToolsOpen(true), []);
 
+  // ✅ Seeker-style: page-only opt-in for full-bleed content (desktop only)
+  const mainOverrides =
+    !isMobile && contentFullBleed
+      ? {
+          gridColumn: '1 / -1',
+          position: 'relative',
+          zIndex: 1,
+        }
+      : {
+          position: 'relative',
+          zIndex: 1,
+        };
+
+  // ✅ Ensure side rail stays above full-bleed content (same layering strategy as SeekerLayout)
+  const leftRailLayer = { position: 'relative', zIndex: 10 };
+
   return (
     <>
       <Head>
@@ -296,6 +316,7 @@ export default function RecruiterLayout({
           {/* Left rail */}
           <aside
             style={{
+              ...leftRailLayer,
               gridArea: 'left',
               alignSelf: 'start',
               minWidth: 0,
@@ -348,6 +369,8 @@ export default function RecruiterLayout({
               width: '100%',
               maxWidth: '100%',
               overflowX: 'hidden',
+
+              ...mainOverrides,
             }}
           >
             <div style={{ display: 'grid', gap: GAP, width: '100%', minWidth: 0, maxWidth: '100%' }}>
