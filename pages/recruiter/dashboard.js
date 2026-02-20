@@ -392,7 +392,7 @@ function DashboardBody() {
     : null;
 
   return (
-    <div style={{ width: "100%" }}>
+    <div style={{ width: "100%", minWidth: 0 }}>
       {error && (
         <div className="rounded-md border border-red-200 bg-red-50 px-3 py-2 text-xs text-red-700 mb-4">
           {error}
@@ -407,6 +407,7 @@ function DashboardBody() {
           gridTemplateRows: "auto auto auto auto",
           gap: GAP,
           width: "100%",
+          minWidth: 0,
         }}
       >
         {/* ROW 1, COL 1: Title card */}
@@ -472,9 +473,11 @@ function DashboardBody() {
           }}
         >
           {/* Sponsored */}
-          <div style={{ ...WHITE_CARD, padding: 16 }}>
-            <div className="font-medium mb-2 text-slate-900">Sponsored</div>
-            <div className="text-sm text-slate-500">Ad space</div>
+          <div style={{ flex: 2, minHeight: 160 }}>
+            <div style={{ ...WHITE_CARD, padding: 16, height: "100%" }}>
+              <div className="font-medium mb-2 text-slate-900">Sponsored</div>
+              <div className="text-sm text-slate-500">Ad space</div>
+            </div>
           </div>
 
           {/* Quick snapshot (compact, click-through) */}
@@ -522,7 +525,9 @@ function DashboardBody() {
             display: "grid",
             gridTemplateColumns: "minmax(0, 5fr) minmax(0, 5fr) minmax(0, 3fr)",
             gap: GAP,
-            marginLeft: -252, // ✅ mirrors Seeker’s “extend under sidebar” move
+            marginLeft: 0, // ✅ FIX: recruiter layout cannot safely extend under sidebar like Seeker
+            paddingRight: 6, // ✅ FIX: keep content off the scrollbar
+            minWidth: 0,
           }}
         >
           {/* Top Candidate Recommendations */}
