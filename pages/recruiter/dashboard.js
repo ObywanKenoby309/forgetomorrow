@@ -1,4 +1,21 @@
 // pages/recruiter/dashboard.js
+// Layout strategy — mirrors Seeker dashboard blueprint exactly:
+//   - RecruiterLayout receives NO header prop, NO right prop
+//   - DashboardBody owns the full internal grid
+//   - Right rail (Sponsored + Health Snapshot) lives INSIDE the internal grid
+//   - Bottom 3 cards span full width using marginLeft: -252 (LEFT_W 240 + GAP 12)
+//
+// Visual structure:
+// ┌─────────────────────────────┬──────────────┐
+// │ Title Card       (row 1)    │  Sponsored   │
+// ├─────────────────────────────│  (rows 1-3)  │
+// │ KPI Row          (row 2)    │              │
+// ├─────────────────────────────│  Health      │
+// │ Action Center    (row 3)    │  Snapshot    │
+// ├─────────────────────────────┴──────────────┤
+// │ Top Candidates │ Pipeline Health │ Trends  │  ← full width incl. under sidebar
+// └──────────────────────────────────────────────┘
+
 import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/router";
@@ -77,13 +94,6 @@ function pickRecruiterBucket(n) {
   return "messages";
 }
 
-/**
- * ✅ Action tile (kept from your current recruiter version)
- * - Wrap title
- * - Body text
- * - "View More" bottom-right
- * - Same height
- */
 function ActionTile({ title, emptyText, items, href, chromeQuery }) {
   const list = Array.isArray(items) ? items : [];
   const link = `${href}${chromeQuery ? `&chrome=${chromeQuery}` : ""}`;
@@ -120,9 +130,6 @@ function ActionTile({ title, emptyText, items, href, chromeQuery }) {
   );
 }
 
-/**
- * ✅ Action Center section (kept wired)
- */
 function RecruiterActionCenterSection({ chromeQuery }) {
   const [items, setItems] = useState([]);
   const [initialLoading, setInitialLoading] = useState(true);
@@ -145,9 +152,7 @@ function RecruiterActionCenterSection({ chromeQuery }) {
           }
         );
 
-        if (!res.ok) {
-          return; // keep previous items to avoid UI jump
-        }
+        if (!res.ok) return;
 
         const data = await res.json();
         if (!alive) return;
@@ -192,7 +197,7 @@ function RecruiterActionCenterSection({ chromeQuery }) {
   return (
     <section className="rounded-xl border bg-white p-4">
       <div className="flex items-center justify-between gap-3 mb-4">
-        <div className="text-lg font-semibold text-slate-900">Action Center</div>
+        <div className="text-lg font-semibold text-[#FF7043]">Action Center</div>
 
         <div className="flex items-center gap-3">
           {refreshing ? <div className="text-xs text-slate-500">Updating…</div> : null}
@@ -259,25 +264,21 @@ function RecruiterActionCenterSection({ chromeQuery }) {
 }
 
 /* -----------------------------
-   Dashboard Body (Seeker-style internal grid)
+   Dashboard Body
 ------------------------------ */
 function DashboardBody() {
   const router = useRouter();
-
-  // ✅ Use URL chrome if present; default to smb so links are stable
   const chromeQuery = normalizeRecruiterChrome(router?.query?.chrome) || "recruiter-smb";
-
   const { isEnterprise } = usePlan();
 
   const [analyticsData, setAnalyticsData] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState(null);
 
-  // ✅ Right rail width + spacing (matches Seeker)
+  // ✅ Matches Seeker blueprint exactly
   const RIGHT_COL_WIDTH = 280;
   const GAP = 16;
 
-  // ✅ Glass + cards (matches Seeker dashboard approach)
   const GLASS = {
     borderRadius: 14,
     border: "1px solid rgba(255,255,255,0.22)",
@@ -295,20 +296,13 @@ function DashboardBody() {
     boxSizing: "border-box",
   };
 
-  // ✅ Dark rail to match SeekerLayout rightDark feel
+  // ✅ Matches SeekerLayout rightDark style exactly
   const DARK_RAIL = {
     background: "#2a2a2a",
     border: "1px solid #3a3a3a",
     borderRadius: 12,
     padding: 16,
     boxShadow: "0 2px 6px rgba(0,0,0,0.06)",
-    boxSizing: "border-box",
-  };
-
-  // ✅ Dashboard-only: breathing room from right scrollbar (no global layout changes)
-  const PAGE_WRAP = {
-    width: "100%",
-    paddingRight: 10,
     boxSizing: "border-box",
   };
 
@@ -371,7 +365,6 @@ function DashboardBody() {
 
   const topCandidates = Array.isArray(analyticsData?.topCandidates) ? analyticsData.topCandidates : [];
 
-  // ✅ Clarified “source” label: source = apply channel (Forge, referrals, external, etc.)
   const topApplySourceLabel = primarySource?.name || "Forge";
   const topApplySourcePercent =
     primarySource && kpis?.totalApplies
@@ -388,14 +381,18 @@ function DashboardBody() {
     : null;
 
   return (
-    <div style={PAGE_WRAP}>
+    <div style={{ width: "100%", padding: 0, margin: 0 }}>
       {error && (
         <div className="rounded-md border border-red-200 bg-red-50 px-3 py-2 text-xs text-red-700 mb-4">
           {error}
         </div>
       )}
 
-      {/* ✅ Seeker-style internal grid: left stack + right rail spanning rows 1–3 */}
+      {/*
+        ✅ INTERNAL PAGE GRID — 2 columns: [center | right-rail]
+        No header prop, no right prop passed to RecruiterLayout.
+        This grid owns everything — identical strategy to Seeker dashboard.
+      */}
       <div
         style={{
           display: "grid",
@@ -407,7 +404,7 @@ function DashboardBody() {
           boxSizing: "border-box",
         }}
       >
-        {/* ROW 1, COL 1: Title card */}
+        {/* ROW 1, COL 1: Title card — stops at center column right edge */}
         <section
           style={{
             ...GLASS,
@@ -427,7 +424,7 @@ function DashboardBody() {
           </p>
         </section>
 
-        {/* ROW 2, COL 1: KPI strip (click-through) */}
+        {/* ROW 2, COL 1: KPI strip — all 4 stats visible */}
         <section style={{ ...WHITE_CARD, padding: 16, gridColumn: "1 / 2", gridRow: "2" }}>
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
             {isLoading && !analyticsData
@@ -458,7 +455,11 @@ function DashboardBody() {
           <RecruiterActionCenterSection chromeQuery={chromeQuery} />
         </div>
 
-        {/* COL 2, ROWS 1–3: Right rail (dark) */}
+        {/*
+          COL 2, ROWS 1–3: Right Rail dark panel
+          Spans all three center rows — title, KPI, Action Center.
+          Sponsored (tall, breathing) on top, Health Snapshot below.
+        */}
         <aside
           style={{
             ...DARK_RAIL,
@@ -468,16 +469,15 @@ function DashboardBody() {
             flexDirection: "column",
             gap: GAP,
             alignSelf: "stretch",
-            boxSizing: "border-box",
           }}
         >
-          {/* Sponsored (taller so Health Snapshot sits lower) */}
+          {/* Sponsored — top of rail, tall and breathing */}
           <div style={{ ...WHITE_CARD, padding: 16, flex: 2, minHeight: 180 }}>
             <div className="font-medium mb-2 text-slate-900">Sponsored</div>
             <div className="text-sm text-slate-500">Ad space</div>
           </div>
 
-          {/* Health Snapshot (lower) */}
+          {/* Health Snapshot — below sponsored */}
           <div style={{ ...WHITE_CARD, padding: 16, flex: 1 }}>
             <div className="font-medium mb-2 text-slate-900">Health Snapshot</div>
 
@@ -514,7 +514,12 @@ function DashboardBody() {
           </div>
         </aside>
 
-        {/* ROW 4: Bottom “real dashboard” row (full width like Seeker) */}
+        {/*
+          ROW 4: Bottom 3 cards — extend left under the sidebar using negative margin,
+          while still spanning right to the page edge.
+          ✅ Exact Seeker blueprint: marginLeft -252 (LEFT_W 240 + GAP 12)
+          Top Candidates | Pipeline Health | Trends
+        */}
         <div
           style={{
             gridColumn: "1 / -1",
@@ -522,18 +527,12 @@ function DashboardBody() {
             display: "grid",
             gridTemplateColumns: "minmax(0, 5fr) minmax(0, 5fr) minmax(0, 3fr)",
             gap: GAP,
-
-            // ✅ EXACT Seeker blueprint behavior: pull left under the sidebar on desktop.
-            // We do it here (dashboard-only), not globally.
             marginLeft: -252,
-
-            // ✅ Keep right breathing room consistent with PAGE_WRAP
-            paddingRight: 10,
             boxSizing: "border-box",
             minWidth: 0,
           }}
         >
-          {/* Top Candidate Recommendations (LEFT card, stays LEFT) */}
+          {/* Card 1: Top Candidate Recommendations */}
           <section style={{ ...WHITE_CARD, padding: 16 }}>
             <div className="flex items-center justify-between mb-3">
               <h2 className="text-lg font-semibold text-[#FF7043]">Top Candidate Recommendations</h2>
@@ -574,7 +573,7 @@ function DashboardBody() {
             )}
           </section>
 
-          {/* Pipeline Health (MIDDLE card, stays MIDDLE) */}
+          {/* Card 2: Pipeline Health */}
           <section style={{ ...WHITE_CARD, padding: 16 }}>
             <div className="flex items-center justify-between mb-3">
               <h2 className="text-lg font-semibold text-[#FF7043]">Pipeline Health</h2>
@@ -587,18 +586,18 @@ function DashboardBody() {
             </div>
 
             <div className="text-sm text-slate-700 grid gap-2">
-              <div className="text-slate-500">This panel becomes your “where do I act today?” view.</div>
+              <div className="text-slate-500">This panel becomes your "where do I act today?" view.</div>
               <div>• New applicants needing review</div>
               <div>• Candidates stuck in stage (SLA watch)</div>
               <div>• Interviews scheduled this week</div>
               <div>• Offers pending response</div>
               <div className="pt-2 text-[11px] text-slate-500">
-                Next wiring step: feed counts by stage + “stale” thresholds (e.g., 7/14/30 days).
+                Next wiring step: feed counts by stage + "stale" thresholds (e.g., 7/14/30 days).
               </div>
             </div>
           </section>
 
-          {/* Trends (RIGHT card, stays RIGHT) */}
+          {/* Card 3: Trends */}
           <section style={{ ...WHITE_CARD, padding: 16 }}>
             <div className="flex items-center justify-between mb-3">
               <h3 className="text-base font-semibold text-[#FF7043]">Trends</h3>
@@ -613,7 +612,7 @@ function DashboardBody() {
               <div>• Time-to-fill trend</div>
               <div>• Funnel drop-off alerts</div>
               <div className="pt-2 text-[11px] text-slate-500">
-                Next wiring step: add a small sparkline + “change vs last period”.
+                Next wiring step: add a small sparkline + "change vs last period".
               </div>
             </div>
           </section>
@@ -626,8 +625,11 @@ function DashboardBody() {
 export default function RecruiterDashboardPage() {
   return (
     <PlanProvider>
-      {/* ✅ DASHBOARD ONLY: enable full-bleed span under sidebar (Seeker blueprint) */}
-      <RecruiterLayout title="ForgeTomorrow — Recruiter" contentFullBleed>
+      {/*
+        ✅ No header prop, no right prop — DashboardBody owns the full internal grid.
+        contentFullBleed not needed since we use internal grid + negative margin strategy.
+      */}
+      <RecruiterLayout title="ForgeTomorrow — Recruiter Dashboard" activeNav="dashboard">
         <DashboardBody />
       </RecruiterLayout>
     </PlanProvider>
