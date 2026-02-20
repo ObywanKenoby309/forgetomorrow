@@ -522,15 +522,17 @@ function DashboardBody() {
         */}
         <div
           style={{
-            gridColumn: "1 / -1",
-            gridRow: "4",
-            display: "grid",
-            gridTemplateColumns: "minmax(0, 5fr) minmax(0, 5fr) minmax(0, 3fr)",
-            gap: GAP,
-            marginLeft: -240,
-            boxSizing: "border-box",
-            minWidth: 0,
-          }}
+			gridColumn: "1 / -1",
+			gridRow: "4",
+			display: "grid",
+			gridTemplateColumns: "minmax(0, 5fr) minmax(0, 5fr) minmax(0, 3fr)",
+			gap: GAP,
+			marginLeft: -224,
+			boxSizing: "border-box",
+			minWidth: 0,
+			position: "relative",
+			zIndex: 11,
+		  }}
         >
           {/* Card 1: Top Candidate Recommendations */}
           <section style={{ ...WHITE_CARD, padding: 16 }}>
