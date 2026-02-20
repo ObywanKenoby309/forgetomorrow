@@ -361,18 +361,19 @@ export default function RecruiterLayout({
 
           {/* Main content */}
           <main
-            style={{
-              gridArea: 'content',
-              minWidth: 0,
+  style={{
+    gridArea: 'content',
+    minWidth: 0,
+    width: '100%',
+    maxWidth: '100%',
 
-              // ✅ Safety net: prevent child rows from forcing horizontal scroll
-              width: '100%',
-              maxWidth: '100%',
-              overflowX: 'hidden',
+    // ✅ Only remove overflow clipping on dashboard (contentFullBleed).
+    // All other recruiter pages keep overflowX: 'hidden' for mobile safety.
+    ...(!contentFullBleed ? { overflowX: 'hidden' } : {}),
 
-              ...mainOverrides,
-            }}
-          >
+    ...mainOverrides,
+  }}
+>
             <div style={{ display: 'grid', gap: GAP, width: '100%', minWidth: 0, maxWidth: '100%' }}>
               {children}
             </div>

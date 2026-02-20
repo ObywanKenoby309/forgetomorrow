@@ -1,10 +1,11 @@
 // pages/recruiter/dashboard.js
 // Layout strategy — mirrors Seeker dashboard blueprint exactly:
 //   - RecruiterLayout receives NO header prop, NO right prop
-//   - contentFullBleed passed to RecruiterLayout so content spans under sidebar naturally
+//   - contentFullBleed passed to RecruiterLayout so main content overflowX clipping
+//     is removed for this page only (other recruiter pages unaffected)
 //   - DashboardBody owns the full internal grid
 //   - Right rail (Sponsored + Health Snapshot) lives INSIDE the internal grid
-//   - Bottom 3 cards use gridColumn: '1 / -1' — no negative margin needed
+//   - Bottom 3 cards use marginLeft: -252 to extend under sidebar
 //
 // Visual structure:
 // ┌─────────────────────────────┬──────────────┐
@@ -277,6 +278,8 @@ function DashboardBody() {
   const [error, setError] = useState(null);
 
   // ✅ Matches Seeker blueprint exactly
+  // RecruiterLayout LEFT_W=240, GAP=12, PAD=16
+  // marginLeft = -(LEFT_W + GAP) = -252
   const RIGHT_COL_WIDTH = 280;
   const GAP = 16;
 
@@ -297,7 +300,6 @@ function DashboardBody() {
     boxSizing: "border-box",
   };
 
-  // ✅ Matches SeekerLayout rightDark style exactly
   const DARK_RAIL = {
     background: "#2a2a2a",
     border: "1px solid #3a3a3a",
@@ -364,7 +366,9 @@ function DashboardBody() {
         { label: "Conversion (View→Apply)", value: "—", href: "/recruiter/analytics" },
       ];
 
-  const topCandidates = Array.isArray(analyticsData?.topCandidates) ? analyticsData.topCandidates : [];
+  const topCandidates = Array.isArray(analyticsData?.topCandidates)
+    ? analyticsData.topCandidates
+    : [];
 
   const topApplySourceLabel = primarySource?.name || "Forge";
   const topApplySourcePercent =
@@ -389,11 +393,6 @@ function DashboardBody() {
         </div>
       )}
 
-      {/*
-        ✅ INTERNAL PAGE GRID — 2 columns: [center | right-rail]
-        contentFullBleed on RecruiterLayout means gridColumn 1/-1 on row 4
-        naturally spans under the sidebar — no negative margin, no z-index fighting.
-      */}
       <div
         style={{
           display: "grid",
@@ -516,9 +515,10 @@ function DashboardBody() {
         </aside>
 
         {/*
-          ROW 4: Bottom 3 cards — gridColumn 1/-1 spans full width.
-          contentFullBleed on RecruiterLayout makes the content area span
-          under the sidebar naturally — clean, no negative margin needed.
+          ROW 4: Bottom 3 cards — extend left under the sidebar using negative margin.
+          contentFullBleed on RecruiterLayout removes overflowX clipping from <main>
+          for this page only, allowing the negative margin to work correctly.
+          ✅ marginLeft: -252 = LEFT_W (240) + GAP (12)
           Top Candidates | Pipeline Health | Trends
         */}
         <div
@@ -528,6 +528,7 @@ function DashboardBody() {
             display: "grid",
             gridTemplateColumns: "minmax(0, 5fr) minmax(0, 5fr) minmax(0, 3fr)",
             gap: GAP,
+            marginLeft: -252,
             boxSizing: "border-box",
             minWidth: 0,
           }}
@@ -626,10 +627,10 @@ export default function RecruiterDashboardPage() {
   return (
     <PlanProvider>
       {/*
-        ✅ contentFullBleed — makes the content area span under the sidebar on desktop.
+        ✅ contentFullBleed — removes overflowX: hidden from <main> for this page only.
+        This allows the bottom cards' marginLeft: -252 to escape under the sidebar.
         No header prop, no right prop — DashboardBody owns the full internal grid.
-        No negative margins, no z-index fighting, no overflow clipping issues.
-        Other recruiter pages are unaffected (contentFullBleed defaults to false).
+        All other recruiter pages are completely unaffected.
       */}
       <RecruiterLayout
         title="ForgeTomorrow — Recruiter Dashboard"
