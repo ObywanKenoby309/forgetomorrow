@@ -381,7 +381,7 @@ function DashboardBody() {
     : null;
 
   return (
-    <div style={{ width: "100%", padding: 0, margin: 0 }}>
+    <div style={{ width: "100%", padding: 0, margin: 0, paddingRight: 16, boxSizing: "border-box" }}
       {error && (
         <div className="rounded-md border border-red-200 bg-red-50 px-3 py-2 text-xs text-red-700 mb-4">
           {error}
@@ -527,7 +527,7 @@ function DashboardBody() {
             display: "grid",
             gridTemplateColumns: "minmax(0, 5fr) minmax(0, 5fr) minmax(0, 3fr)",
             gap: GAP,
-            marginLeft: -252,
+            marginLeft: -240,
             boxSizing: "border-box",
             minWidth: 0,
           }}
