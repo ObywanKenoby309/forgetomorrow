@@ -271,14 +271,10 @@ export default function RecruiterLayout({
   const handleOpenTools = useCallback(() => setMobileToolsOpen(true), []);
 
   // ✅ Seeker-style: page-only opt-in for full-bleed content (desktop only)
-  const mainOverrides =
-    !isMobile && contentFullBleed
-      ? {
-          gridColumn: '1 / -1',
-          position: 'relative',
-          zIndex: 1,
-        }
-      : {
+  const mainOverrides = {
+  position: 'relative',
+  zIndex: 1,
+		{
           position: 'relative',
           zIndex: 1,
         };
