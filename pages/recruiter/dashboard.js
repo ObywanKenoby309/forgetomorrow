@@ -1,6 +1,7 @@
 // pages/recruiter/dashboard.js
 import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
+import { useRouter } from "next/router";
 import { PlanProvider, usePlan } from "@/context/PlanContext";
 import FeatureLock from "@/components/recruiter/FeatureLock";
 import RecruiterLayout from "@/components/layouts/RecruiterLayout";
@@ -10,6 +11,18 @@ import RecruiterLayout from "@/components/layouts/RecruiterLayout";
 ------------------------------ */
 function safeText(v) {
   return typeof v === "string" ? v : v == null ? "" : String(v);
+}
+
+function normalizeRecruiterChrome(input) {
+  const raw = String(input || "").toLowerCase().trim();
+  if (!raw) return "";
+  if (raw === "recruiter-ent" || raw === "ent" || raw === "enterprise") return "recruiter-ent";
+  if (raw === "recruiter-smb" || raw === "smb" || raw === "recruiter") return "recruiter-smb";
+  if (raw.startsWith("recruiter")) {
+    if (raw.includes("ent") || raw.includes("enterprise")) return "recruiter-ent";
+    return "recruiter-smb";
+  }
+  return "";
 }
 
 function pickRecruiterBucket(n) {
@@ -110,7 +123,7 @@ function ActionTile({ title, emptyText, items, href, chromeQuery }) {
 /**
  * ✅ Action Center section (kept wired)
  */
-function RecruiterActionCenterSection() {
+function RecruiterActionCenterSection({ chromeQuery }) {
   const [items, setItems] = useState([]);
   const [initialLoading, setInitialLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
@@ -176,8 +189,6 @@ function RecruiterActionCenterSection() {
     };
   }, [items]);
 
-  const chromeQuery = "recruiter-smb";
-
   return (
     <section className="rounded-xl border bg-white p-4">
       <div className="flex items-center justify-between gap-3 mb-4">
@@ -187,7 +198,7 @@ function RecruiterActionCenterSection() {
           {refreshing ? <div className="text-xs text-slate-500">Updating…</div> : null}
 
           <a
-            href={`/action-center?scope=RECRUITER&chrome=${chromeQuery}`}
+            href={`/action-center?scope=RECRUITER${chromeQuery ? `&chrome=${chromeQuery}` : ""}`}
             className="rounded-md border px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50"
           >
             View all
@@ -263,6 +274,11 @@ function Panel({ title, children }) {
    Dashboard Body (Seeker-style internal grid)
 ------------------------------ */
 function DashboardBody() {
+  const router = useRouter();
+
+  // ✅ Use URL chrome if present; default to smb so links are stable
+  const chromeQuery = normalizeRecruiterChrome(router?.query?.chrome) || "recruiter-smb";
+
   const { isEnterprise } = usePlan();
 
   const [analyticsData, setAnalyticsData] = useState(null);
@@ -341,8 +357,7 @@ function DashboardBody() {
         { label: "Total Applies", value: kpis.totalApplies ?? 0, href: "/recruiter/analytics" },
         {
           label: "Avg Time-to-Fill",
-          value:
-            typeof kpis.avgTimeToFillDays === "number" ? `${kpis.avgTimeToFillDays} days` : "—",
+          value: typeof kpis.avgTimeToFillDays === "number" ? `${kpis.avgTimeToFillDays} days` : "—",
           href: "/recruiter/analytics",
         },
         {
@@ -441,7 +456,7 @@ function DashboardBody() {
 
         {/* ROW 3, COL 1: Action Center */}
         <div style={{ gridColumn: "1 / 2", gridRow: "3" }}>
-          <RecruiterActionCenterSection />
+          <RecruiterActionCenterSection chromeQuery={chromeQuery} />
         </div>
 
         {/* COL 2, ROWS 1–3: Right rail (dark) */}
@@ -514,7 +529,10 @@ function DashboardBody() {
           <section style={{ ...WHITE_CARD, padding: 16 }}>
             <div className="flex items-center justify-between mb-3">
               <h2 className="text-lg font-semibold text-[#FF7043]">Top Candidate Recommendations</h2>
-              <Link href="/recruiter/candidate-center" className="text-[#FF7043] font-medium hover:underline">
+              <Link
+                href="/recruiter/candidate-center"
+                className="text-[#FF7043] font-medium hover:underline"
+              >
                 View all
               </Link>
             </div>
@@ -552,15 +570,16 @@ function DashboardBody() {
           <section style={{ ...WHITE_CARD, padding: 16 }}>
             <div className="flex items-center justify-between mb-3">
               <h2 className="text-lg font-semibold text-[#FF7043]">Pipeline Health</h2>
-              <Link href="/recruiter/candidate-center" className="text-[#FF7043] font-medium hover:underline">
+              <Link
+                href="/recruiter/candidate-center"
+                className="text-[#FF7043] font-medium hover:underline"
+              >
                 Open pipeline
               </Link>
             </div>
 
             <div className="text-sm text-slate-700 grid gap-2">
-              <div className="text-slate-500">
-                This panel becomes your “where do I act today?” view.
-              </div>
+              <div className="text-slate-500">This panel becomes your “where do I act today?” view.</div>
               <div>• New applicants needing review</div>
               <div>• Candidates stuck in stage (SLA watch)</div>
               <div>• Interviews scheduled this week</div>

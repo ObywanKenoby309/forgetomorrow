@@ -3,6 +3,7 @@ import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import Head from 'next/head';
 import { useRouter } from 'next/router';
 import { usePlan } from '@/context/PlanContext';
+import { useUserWallpaper } from '@/hooks/useUserWallpaper';
 
 import RecruiterHeader from '@/components/recruiter/RecruiterHeader';
 import RecruiterSidebar from '@/components/recruiter/RecruiterSidebar';
@@ -23,7 +24,12 @@ const GLASS = {
 function normalizeChrome(input) {
   const raw = String(input || '').toLowerCase().trim();
   if (!raw) return '';
-  if (raw === 'recruiter-ent' || raw === 'recruiter_enterprise' || raw === 'enterprise' || raw === 'ent')
+  if (
+    raw === 'recruiter-ent' ||
+    raw === 'recruiter_enterprise' ||
+    raw === 'enterprise' ||
+    raw === 'ent'
+  )
     return 'recruiter-ent';
   if (raw === 'recruiter-smb' || raw === 'recruiter_smb' || raw === 'smb' || raw === 'recruiter')
     return 'recruiter-smb';
@@ -65,7 +71,10 @@ export default function RecruiterLayout({
   header,
   right,
   children,
+
+  // ✅ Default true, but ONLY renders if header is actually provided.
   headerCard = true,
+
   role: roleProp = 'recruiter',
   variant: variantProp = 'smb',
   counts,
@@ -77,9 +86,27 @@ export default function RecruiterLayout({
   department = '',
 }) {
   const router = useRouter();
+  const hasHeader = Boolean(header);
   const hasRight = Boolean(right);
 
   const { isLoaded: planLoaded, plan, role: planRole } = usePlan();
+
+  // ---- WALLPAPER / BACKGROUND (matches SeekerLayout behavior) ----
+  const { wallpaperUrl } = useUserWallpaper();
+
+  const backgroundStyle = wallpaperUrl
+    ? {
+        minHeight: '100vh',
+        backgroundImage: `url(${wallpaperUrl})`,
+        backgroundSize: 'cover',
+        backgroundPosition: 'center top',
+        backgroundRepeat: 'no-repeat',
+        backgroundAttachment: 'fixed',
+      }
+    : {
+        minHeight: '100vh',
+        backgroundColor: '#ECEFF1',
+      };
 
   // --- Mobile detection ---
   const [isMobile, setIsMobile] = useState(true);
@@ -149,28 +176,73 @@ export default function RecruiterLayout({
   const LEFT_W = 240;
   const RIGHT_W = 240;
 
-  const desktopGrid = {
-    display: 'grid',
-    gridTemplateColumns: `${LEFT_W}px minmax(0, 1fr) ${hasRight ? `${RIGHT_W}px` : '0px'}`,
-    gridTemplateRows: 'auto 1fr',
-    gridTemplateAreas: hasRight
-      ? `"left header right"
-         "left content right"`
-      : `"left header header"
-         "left content content"`,
-  };
+  // ✅ KEY: if no header + no right, we run headerless + rightless grid (Seeker-style page-owned layout)
+  const desktopGrid = useMemo(() => {
+    if (!hasHeader && !hasRight) {
+      return {
+        display: 'grid',
+        gridTemplateColumns: `${LEFT_W}px minmax(0, 1fr)`,
+        gridTemplateRows: '1fr',
+        gridTemplateAreas: `"left content"`,
+      };
+    }
 
-  const mobileGrid = {
-    display: 'grid',
-    gridTemplateColumns: '1fr',
-    gridTemplateRows: hasRight ? 'auto auto auto' : 'auto auto',
-    gridTemplateAreas: hasRight
-      ? `"header"
-         "content"
-         "right"`
-      : `"header"
-         "content"`,
-  };
+    // If header is absent but right exists, keep a 2-row grid but don’t render header row
+    // (This is rare, but safe.)
+    if (!hasHeader && hasRight) {
+      return {
+        display: 'grid',
+        gridTemplateColumns: `${LEFT_W}px minmax(0, 1fr) ${RIGHT_W}px`,
+        gridTemplateRows: '1fr',
+        gridTemplateAreas: `"left content right"`,
+      };
+    }
+
+    // Standard behavior (existing)
+    return {
+      display: 'grid',
+      gridTemplateColumns: `${LEFT_W}px minmax(0, 1fr) ${hasRight ? `${RIGHT_W}px` : '0px'}`,
+      gridTemplateRows: 'auto 1fr',
+      gridTemplateAreas: hasRight
+        ? `"left header right"
+           "left content right"`
+        : `"left header header"
+           "left content content"`,
+    };
+  }, [hasHeader, hasRight]);
+
+  const mobileGrid = useMemo(() => {
+    // On mobile, even headerless pages still stack cleanly
+    if (!hasHeader && !hasRight) {
+      return {
+        display: 'grid',
+        gridTemplateColumns: '1fr',
+        gridTemplateRows: 'auto',
+        gridTemplateAreas: `"content"`,
+      };
+    }
+
+    if (!hasHeader && hasRight) {
+      return {
+        display: 'grid',
+        gridTemplateColumns: '1fr',
+        gridTemplateRows: 'auto auto',
+        gridTemplateAreas: `"content" "right"`,
+      };
+    }
+
+    return {
+      display: 'grid',
+      gridTemplateColumns: '1fr',
+      gridTemplateRows: hasRight ? 'auto auto auto' : 'auto auto',
+      gridTemplateAreas: hasRight
+        ? `"header"
+           "content"
+           "right"`
+        : `"header"
+           "content"`,
+    };
+  }, [hasHeader, hasRight]);
 
   const gridStyles = isMobile ? mobileGrid : desktopGrid;
 
@@ -200,81 +272,89 @@ export default function RecruiterLayout({
         <title>{title}</title>
       </Head>
 
-      <RecruiterHeader />
+      <div style={backgroundStyle}>
+        <RecruiterHeader />
 
-      <div
-        style={{
-          ...gridStyles,
-          gap: GAP,
-          paddingTop: PAD,
-          paddingBottom: isMobile ? PAD + 84 : PAD,
-          paddingLeft: PAD,
-          paddingRight: hasRight ? Math.max(8, PAD - 4) : PAD,
-          alignItems: 'start',
-          boxSizing: 'border-box',
-
-          // ✅ FIX (mobile overflow): hard clamp layout to viewport
-          width: '100%',
-          maxWidth: '100vw',
-          overflowX: 'hidden',
-          minWidth: 0,
-        }}
-      >
-        <aside
+        <div
           style={{
-            gridArea: 'left',
-            alignSelf: 'start',
+            ...gridStyles,
+            gap: GAP,
+            paddingTop: PAD,
+            paddingBottom: isMobile ? PAD + 84 : PAD,
+            paddingLeft: PAD,
+            paddingRight: hasRight ? Math.max(8, PAD - 4) : PAD,
+            alignItems: 'start',
+            boxSizing: 'border-box',
+
+            // ✅ FIX (mobile overflow): hard clamp layout to viewport
+            width: '100%',
+            maxWidth: '100vw',
+            overflowX: 'hidden',
             minWidth: 0,
-            display: isMobile ? 'none' : 'block',
           }}
         >
-          <RecruiterSidebar
-            active={activeNav}
-            role={resolvedRole}
-            variant={resolvedVariant}
-            counts={counts}
-            initialOpen={initialOpen}
-            employee={employee}
-            department={department}
-          />
-        </aside>
-
-        {headerCard ? (
-          <section
+          {/* Left rail */}
+          <aside
             style={{
-              gridArea: 'header',
-              borderRadius: 14,
-              padding: '8px 12px',
+              gridArea: 'left',
+              alignSelf: 'start',
               minWidth: 0,
-              boxSizing: 'border-box',
-              ...GLASS,
+              display: isMobile ? 'none' : 'block',
             }}
           >
-            {header}
-          </section>
-        ) : (
-          <header style={{ gridArea: 'header', alignSelf: 'start', minWidth: 0 }}>
-            {header}
-          </header>
-        )}
+            <RecruiterSidebar
+              active={activeNav}
+              role={resolvedRole}
+              variant={resolvedVariant}
+              counts={counts}
+              initialOpen={initialOpen}
+              employee={employee}
+              department={department}
+            />
+          </aside>
 
-        {hasRight && <aside style={rightRailStyle}>{right}</aside>}
+          {/* Header (ONLY if provided) */}
+          {hasHeader ? (
+            headerCard ? (
+              <section
+                style={{
+                  gridArea: 'header',
+                  borderRadius: 14,
+                  padding: '8px 12px',
+                  minWidth: 0,
+                  boxSizing: 'border-box',
+                  ...GLASS,
+                }}
+              >
+                {header}
+              </section>
+            ) : (
+              <header style={{ gridArea: 'header', alignSelf: 'start', minWidth: 0 }}>
+                {header}
+              </header>
+            )
+          ) : null}
 
-        <main
-          style={{
-            gridArea: 'content',
-            minWidth: 0,
+          {/* Right rail (ONLY if provided) */}
+          {hasRight ? <aside style={rightRailStyle}>{right}</aside> : null}
 
-            // ✅ Safety net: prevent child rows from forcing horizontal scroll
-            width: '100%',
-            maxWidth: '100%',
-            overflowX: 'hidden',
-          }}
-        >
-          <div style={{ display: 'grid', gap: GAP, width: '100%', minWidth: 0, maxWidth: '100%' }}>
-            {children}
-          </div>
-        </main>
+          {/* Main content */}
+          <main
+            style={{
+              gridArea: 'content',
+              minWidth: 0,
+
+              // ✅ Safety net: prevent child rows from forcing horizontal scroll
+              width: '100%',
+              maxWidth: '100%',
+              overflowX: 'hidden',
+            }}
+          >
+            <div style={{ display: 'grid', gap: GAP, width: '100%', minWidth: 0, maxWidth: '100%' }}>
+              {children}
+            </div>
+          </main>
+        </div>
       </div>
 
       <SupportFloatingButton />
