@@ -1,9 +1,10 @@
 // pages/recruiter/dashboard.js
 // Layout strategy — mirrors Seeker dashboard blueprint exactly:
 //   - RecruiterLayout receives NO header prop, NO right prop
+//   - contentFullBleed passed to RecruiterLayout so content spans under sidebar naturally
 //   - DashboardBody owns the full internal grid
 //   - Right rail (Sponsored + Health Snapshot) lives INSIDE the internal grid
-//   - Bottom 3 cards span full width using marginLeft: -252 (LEFT_W 240 + GAP 12)
+//   - Bottom 3 cards use gridColumn: '1 / -1' — no negative margin needed
 //
 // Visual structure:
 // ┌─────────────────────────────┬──────────────┐
@@ -390,8 +391,8 @@ function DashboardBody() {
 
       {/*
         ✅ INTERNAL PAGE GRID — 2 columns: [center | right-rail]
-        No header prop, no right prop passed to RecruiterLayout.
-        This grid owns everything — identical strategy to Seeker dashboard.
+        contentFullBleed on RecruiterLayout means gridColumn 1/-1 on row 4
+        naturally spans under the sidebar — no negative margin, no z-index fighting.
       */}
       <div
         style={{
@@ -515,24 +516,21 @@ function DashboardBody() {
         </aside>
 
         {/*
-          ROW 4: Bottom 3 cards — extend left under the sidebar using negative margin,
-          while still spanning right to the page edge.
-          ✅ Exact Seeker blueprint: marginLeft -252 (LEFT_W 240 + GAP 12)
+          ROW 4: Bottom 3 cards — gridColumn 1/-1 spans full width.
+          contentFullBleed on RecruiterLayout makes the content area span
+          under the sidebar naturally — clean, no negative margin needed.
           Top Candidates | Pipeline Health | Trends
         */}
         <div
           style={{
-			gridColumn: "1 / -1",
-			gridRow: "4",
-			display: "grid",
-			gridTemplateColumns: "minmax(0, 5fr) minmax(0, 5fr) minmax(0, 3fr)",
-			gap: GAP,
-			marginLeft: -224,
-			boxSizing: "border-box",
-			minWidth: 0,
-			position: "relative",
-			zIndex: 11,
-		  }}
+            gridColumn: "1 / -1",
+            gridRow: "4",
+            display: "grid",
+            gridTemplateColumns: "minmax(0, 5fr) minmax(0, 5fr) minmax(0, 3fr)",
+            gap: GAP,
+            boxSizing: "border-box",
+            minWidth: 0,
+          }}
         >
           {/* Card 1: Top Candidate Recommendations */}
           <section style={{ ...WHITE_CARD, padding: 16 }}>
@@ -628,10 +626,16 @@ export default function RecruiterDashboardPage() {
   return (
     <PlanProvider>
       {/*
-        ✅ No header prop, no right prop — DashboardBody owns the full internal grid.
-        contentFullBleed not needed since we use internal grid + negative margin strategy.
+        ✅ contentFullBleed — makes the content area span under the sidebar on desktop.
+        No header prop, no right prop — DashboardBody owns the full internal grid.
+        No negative margins, no z-index fighting, no overflow clipping issues.
+        Other recruiter pages are unaffected (contentFullBleed defaults to false).
       */}
-      <RecruiterLayout title="ForgeTomorrow — Recruiter Dashboard" activeNav="dashboard">
+      <RecruiterLayout
+        title="ForgeTomorrow — Recruiter Dashboard"
+        activeNav="dashboard"
+        contentFullBleed
+      >
         <DashboardBody />
       </RecruiterLayout>
     </PlanProvider>
