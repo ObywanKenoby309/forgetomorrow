@@ -79,17 +79,17 @@ export default function MobileBottomBar({ chromeMode = 'seeker', onOpenTools, is
       seeker: {
         dashboard: 'https://www.forgetomorrow.com/seeker-dashboard',
         feed: 'https://www.forgetomorrow.com/feed',
-        messages: 'https://www.forgetomorrow.com/messages',
+        messages: 'https://www.forgetomorrow.com/seeker/messages',
       },
       coach: {
         dashboard: 'https://www.forgetomorrow.com/coaching-dashboard',
         feed: 'https://www.forgetomorrow.com/feed',
-        messages: 'https://www.forgetomorrow.com/messages',
+        messages: 'https://www.forgetomorrow.com/coaching/messaging',
       },
       recruiter: {
         dashboard: 'https://www.forgetomorrow.com/recruiter/dashboard',
         feed: 'https://www.forgetomorrow.com/feed',
-        messages: 'https://www.forgetomorrow.com/messages',
+        messages: 'https://www.forgetomorrow.com/recruiter/messaging',
       },
     };
 
