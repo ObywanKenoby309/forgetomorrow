@@ -1,5 +1,5 @@
 // pages/seeker/applications.js
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useMemo } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/router';
 import SeekerLayout from '@/components/layouts/SeekerLayout';
@@ -287,81 +287,152 @@ export default function SeekerApplicationsPage() {
     setShowForm(true);
   };
 
- const saveEdits = async (updatedApp) => {
-  const { id, title, company, location, url, notes, status, originalStage } = updatedApp;
+  // ✅ FIXED: internal Forge apps = ONLY notes are editable + NO stage move + NO reinsert/duplicate
+  const saveEdits = async (updatedApp) => {
+    const { id, title, company, location, url, notes, status, originalStage } = updatedApp;
 
-  const originalItem = tracker[originalStage].find((j) => j.id === id);
-  if (!originalItem) return;
+    const originalItem = tracker[originalStage].find((j) => j.id === id);
+    if (!originalItem) return;
 
-  const isInternal = !!originalItem.jobId;
+    const isInternalForgeApp = !!originalItem.jobId && originalStage !== 'Pinned';
 
-  try {
-    // 🔒 INTERNAL FORGE APPLICATIONS
-    if (isInternal) {
-      const res = await fetch(`/api/seeker/applications/${id}`, {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          seekerNotes: notes,
-        }),
-      });
-
-      if (!res.ok) throw new Error('Update notes failed');
-
-      // ✅ Update IN PLACE (no remove/reinsert)
+    // ──────────────────────────────────────────────────────────────
+    // INTERNAL Forge application card
+    // ──────────────────────────────────────────────────────────────
+    if (isInternalForgeApp) {
+      // Update ONLY notes in-place (no remove/add, no stage change)
       setTracker((prev) => ({
         ...prev,
-        [originalStage]: prev[originalStage].map((j) =>
+        [originalStage]: (prev[originalStage] || []).map((j) =>
           j.id === id ? { ...j, notes } : j
         ),
       }));
 
-      setShowForm(false);
-      setJobToEdit(null);
+      try {
+        const res = await fetch(`/api/seeker/applications/${id}`, {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            // keep compatibility if API still expects "notes"
+            notes,
+            // and support new separation if your API uses it
+            seekerNotes: notes,
+          }),
+        });
+        if (!res.ok) throw new Error('Update internal notes failed');
+      } catch (err) {
+        console.error('Save internal notes error:', err);
+
+        // revert
+        setTracker((prev) => ({
+          ...prev,
+          [originalStage]: (prev[originalStage] || []).map((j) =>
+            j.id === id ? { ...j, notes: originalItem.notes || '' } : j
+          ),
+        }));
+      } finally {
+        setShowForm(false);
+        setJobToEdit(null);
+      }
+
       return;
     }
 
-    // 🟢 EXTERNAL APPLICATIONS (existing behavior)
+    // ──────────────────────────────────────────────────────────────
+    // EXTERNAL (seeker-owned) cards: old behavior
+    // ──────────────────────────────────────────────────────────────
 
     // Optimistic update
     setTracker((prev) => ({
       ...prev,
       [originalStage]: prev[originalStage].filter((j) => j.id !== id),
-      [status]: [
-        { ...originalItem, title, company, location, url, notes },
-        ...prev[status],
-      ],
+      [status]: [{ ...originalItem, title, company, location, url, notes }, ...prev[status]],
     }));
 
-    const res = await fetch(`/api/seeker/applications/${id}`, {
-      method: 'PATCH',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        title,
-        company,
-        location,
-        url,
-        notes,
-        status,
-      }),
-    });
+    try {
+      if (originalStage === 'Pinned') {
+        const res = await fetch('/api/seeker/pinned-jobs', {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            pinnedId: originalItem.pinnedId || id,
+            title,
+            company,
+            location,
+            url,
+          }),
+        });
+        if (!res.ok) throw new Error('Update pinned failed');
+        const { pinned } = await res.json();
 
-    if (!res.ok) throw new Error('Update application failed');
+        setTracker((prev) => ({
+          ...prev,
+          [status]: prev[status].map((j) => (j.id === id ? { ...j, ...pinned, notes } : j)),
+        }));
+      } else if (status === 'Pinned') {
+        const pinRes = await fetch('/api/seeker/pinned-jobs', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            title,
+            company,
+            location,
+            url,
+          }),
+        });
+        if (!pinRes.ok) throw new Error('Pin failed');
+        const { pinned } = await pinRes.json();
 
-  } catch (err) {
-    console.error('Save edits error:', err);
+        const newPinnedCard = {
+          pinnedId: pinned.id,
+          id: pinned.id,
+          title: pinned.title || title,
+          company: pinned.company || company,
+          location: pinned.location || location,
+          url: pinned.url || url,
+          notes,
+          dateAdded: new Date(pinned.pinnedAt).toISOString().split('T')[0],
+        };
 
-    // Rollback
-    setTracker((prev) => ({
-      ...prev,
-      [status]: prev[status].filter((j) => j.id !== id),
-      [originalStage]: [originalItem, ...prev[originalStage]],
-    }));
-  } finally {
-    setShowForm(false);
-    setJobToEdit(null);
-  }
-};
+        await fetch(`/api/seeker/applications/${id}`, { method: 'DELETE' });
+
+        setTracker((prev) => ({
+          ...prev,
+          Pinned: [newPinnedCard, ...prev.Pinned],
+        }));
+      } else {
+        const res = await fetch(`/api/seeker/applications/${id}`, {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            title,
+            company,
+            location,
+            url,
+            notes,
+            status,
+          }),
+        });
+        if (!res.ok) throw new Error('Update application failed');
+        const { card } = await res.json();
+
+        setTracker((prev) => ({
+          ...prev,
+          [status]: prev[status].map((j) => (j.id === id ? { ...j, ...card } : j)),
+        }));
+      }
+    } catch (err) {
+      console.error('Save edits error:', err);
+      setTracker((prev) => ({
+        ...prev,
+        [status]: prev[status].filter((j) => j.id !== id),
+        [originalStage]: [originalItem, ...prev[originalStage]],
+      }));
+    } finally {
+      setShowForm(false);
+      setJobToEdit(null);
+    }
+  };
 
   const onView = (job, stage) => {
     setDetails({ job, stage });
@@ -410,6 +481,39 @@ export default function SeekerApplicationsPage() {
       </p>
     </section>
   );
+
+  // ✅ Stable initial object to prevent modal remount/focus jumping
+  const formInitial = useMemo(() => {
+    if (formMode === 'edit' && jobToEdit) {
+      return {
+        id: jobToEdit.job.id,
+        title: jobToEdit.job.title,
+        company: jobToEdit.job.company,
+        location: jobToEdit.job.location || '',
+        url: jobToEdit.job.url || '',
+        notes: jobToEdit.job.notes || '',
+        dateAdded: jobToEdit.job.dateAdded || '',
+        status: jobToEdit.stage,
+        originalStage: jobToEdit.stage,
+        jobId: jobToEdit.job.jobId || null,
+      };
+    }
+
+    return {
+      title: '',
+      company: '',
+      location: '',
+      url: '',
+      notes: '',
+      dateAdded: new Date().toISOString().split('T')[0],
+      status: 'Applied',
+    };
+  }, [formMode, jobToEdit]);
+
+  const lockFields =
+    formMode === 'edit' &&
+    !!formInitial?.jobId &&
+    formInitial?.originalStage !== 'Pinned';
 
   if (loading) {
     return (
@@ -480,6 +584,8 @@ export default function SeekerApplicationsPage() {
 
       {showForm && (
         <ApplicationForm
+          // ✅ Stable key prevents remount loops that cause focus jumps
+          key={formMode === 'edit' ? `edit-${formInitial?.id}` : 'add'}
           mode={formMode}
           onClose={() => {
             setShowForm(false);
@@ -491,30 +597,10 @@ export default function SeekerApplicationsPage() {
               ? () => deleteApplication(jobToEdit.job, jobToEdit.stage)
               : undefined
           }
-          initial={
-            formMode === 'edit' && jobToEdit
-              ? {
-                  id: jobToEdit.job.id,
-                  title: jobToEdit.job.title,
-                  company: jobToEdit.job.company,
-                  location: jobToEdit.job.location || '',
-                  url: jobToEdit.job.url || '',
-                  notes: jobToEdit.job.notes || '',
-                  dateAdded: jobToEdit.job.dateAdded || '',
-                  status: jobToEdit.stage,
-                  originalStage: jobToEdit.stage,
-                }
-              : {
-                  title: '',
-                  company: '',
-                  location: '',
-                  url: '',
-                  notes: '',
-                  dateAdded: new Date().toISOString().split('T')[0],
-                  status: 'Applied',
-                }
-          }
+          initial={formInitial}
           stages={STAGES}
+          // ✅ Safe prop: even if ApplicationForm ignores it, our saveEdits still enforces rules
+          lockFields={lockFields}
         />
       )}
 
