@@ -1,7 +1,5 @@
 // pages/seeker/applications.js
 import React, { useEffect, useState, useMemo } from 'react';
-import Link from 'next/link';
-import { useRouter } from 'next/router';
 import SeekerLayout from '@/components/layouts/SeekerLayout';
 import RightRailPlacementManager from '@/components/ads/RightRailPlacementManager';
 import ApplicationForm from '@/components/applications/ApplicationForm';
@@ -50,10 +48,6 @@ function StageStrip({ tracker }) {
 }
 
 export default function SeekerApplicationsPage() {
-  const router = useRouter();
-  const chrome = String(router.query.chrome || '').toLowerCase();
-  const withChrome = (path) =>
-    chrome ? `${path}${path.includes('?') ? '&' : '?'}chrome=${chrome}` : path;
 
   const [tracker, setTracker] = useState({
     Pinned: [],
@@ -505,7 +499,11 @@ export default function SeekerApplicationsPage() {
 
   if (loading) {
     return (
-      <SeekerLayout header={HeaderBox} right={<RightRailPlacementManager surfaceId="applications" />}>
+      <SeekerLayout
+        header={HeaderBox}
+        right={<RightRailPlacementManager surfaceId="applications" />}
+        rightTopOnly
+      >
         <div className="text-center py-20">Loading your applications...</div>
       </SeekerLayout>
     );
@@ -516,6 +514,7 @@ export default function SeekerApplicationsPage() {
       title="Applications | ForgeTomorrow"
       header={HeaderBox}
       right={<RightRailPlacementManager surfaceId="applications" />}
+      rightTopOnly  // ✅ KPI strip (header area) stays contained; kanban board spans full content+right width
       activeNav="jobs"
     >
       <div style={PAGE_GLASS_WRAP}>
@@ -548,17 +547,6 @@ export default function SeekerApplicationsPage() {
               >
                 + Add Application
               </button>
-            }
-            actions={
-              <span style={{ color: '#607D8B', fontSize: 13 }}>
-                or manage on the{' '}
-                <Link
-                  href={withChrome('/seeker-dashboard')}
-                  style={{ color: '#FF7043', fontWeight: 600 }}
-                >
-                  Dashboard
-                </Link>
-              </span>
             }
             onMove={(id, fromStage, toStage, pinnedId) =>
               moveApplication(id, fromStage, toStage, pinnedId)
