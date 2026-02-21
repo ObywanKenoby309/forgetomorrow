@@ -13,9 +13,41 @@ function clamp(n, min, max) {
   return Math.max(min, Math.min(max, n));
 }
 
-export default function AiWindow({ mode, title, zIndex = 30, x, y, onFocus, onClose, onMinimize, onSetPosition }) {
-  const size = useMemo(() => ({ w: 360, h: 420 }), []);
-  const [pos, setPos] = useState(() => ({ x: typeof x === 'number' ? x : null, y: typeof y === 'number' ? y : null }));
+function normalizeMode(mode) {
+  const m = String(mode || '').toLowerCase().trim();
+  if (m === 'seeker') return 'seeker';
+  if (m === 'coach') return 'coach';
+  if (m === 'recruiter') return 'recruiter';
+  return 'seeker';
+}
+
+export default function AiWindow({
+  mode,
+  title,
+  zIndex = 30,
+  x,
+  y,
+  onFocus,
+  onClose,
+  onMinimize,
+  onSetPosition,
+}) {
+  const resolvedMode = normalizeMode(mode);
+
+  const size = useMemo(() => ({ w: 360, h: 460 }), []);
+  const [pos, setPos] = useState(() => ({
+    x: typeof x === 'number' ? x : null,
+    y: typeof y === 'number' ? y : null,
+  }));
+
+  const [threadId, setThreadId] = useState('');
+  const [loading, setLoading] = useState(true);
+  const [sending, setSending] = useState(false);
+  const [error, setError] = useState('');
+  const [messages, setMessages] = useState([]);
+  const [text, setText] = useState('');
+
+  const scrollRef = useRef(null);
 
   // initial placement (once)
   useEffect(() => {
@@ -25,6 +57,7 @@ export default function AiWindow({ mode, title, zIndex = 30, x, y, onFocus, onCl
     const pad = 18;
     const startX = window.innerWidth - size.w - pad;
     const startY = window.innerHeight - size.h - 140;
+
     const next = {
       x: clamp(startX, pad, window.innerWidth - size.w - pad),
       y: clamp(startY, pad, window.innerHeight - size.h - pad),
@@ -37,6 +70,84 @@ export default function AiWindow({ mode, title, zIndex = 30, x, y, onFocus, onCl
   useEffect(() => {
     if (typeof x === 'number' && typeof y === 'number') setPos({ x, y });
   }, [x, y]);
+
+  // Load thread + messages (DB-first)
+  useEffect(() => {
+    let alive = true;
+
+    async function run() {
+      setLoading(true);
+      setError('');
+      try {
+        const tRes = await fetch(`/api/ai/thread?mode=${encodeURIComponent(resolvedMode)}`);
+        const tJson = await tRes.json();
+        if (!tRes.ok) throw new Error(tJson?.error || 'Failed to load thread');
+
+        const tid = String(tJson?.thread?.id || '');
+        if (!tid) throw new Error('Thread id missing');
+
+        if (!alive) return;
+        setThreadId(tid);
+
+        const mRes = await fetch(`/api/ai/messages?threadId=${encodeURIComponent(tid)}`);
+        const mJson = await mRes.json();
+        if (!mRes.ok) throw new Error(mJson?.error || 'Failed to load messages');
+
+        if (!alive) return;
+        setMessages(Array.isArray(mJson?.messages) ? mJson.messages : []);
+      } catch (e) {
+        if (!alive) return;
+        setError(String(e?.message || 'Failed to load.'));
+      } finally {
+        if (!alive) return;
+        setLoading(false);
+      }
+    }
+
+    run();
+    return () => {
+      alive = false;
+    };
+  }, [resolvedMode]);
+
+  // Auto-scroll to bottom when messages change
+  useEffect(() => {
+    const el = scrollRef.current;
+    if (!el) return;
+    try {
+      el.scrollTop = el.scrollHeight;
+    } catch {
+      // no-op
+    }
+  }, [messages?.length]);
+
+  async function handleSend() {
+    if (sending) return;
+    const content = String(text || '').trim();
+    if (!content) return;
+    if (!threadId) return;
+
+    setSending(true);
+    setError('');
+
+    try {
+      const res = await fetch('/api/ai/send', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ threadId, content }),
+      });
+
+      const json = await res.json();
+      if (!res.ok) throw new Error(json?.error || 'Failed to send');
+
+      setMessages(Array.isArray(json?.messages) ? json.messages : []);
+      setText('');
+    } catch (e) {
+      setError(String(e?.message || 'Failed to send.'));
+    } finally {
+      setSending(false);
+    }
+  }
 
   const dragging = useRef(false);
   const start = useRef({ px: 0, py: 0, ox: 0, oy: 0 });
@@ -106,7 +217,9 @@ export default function AiWindow({ mode, title, zIndex = 30, x, y, onFocus, onCl
       >
         <div style={{ display: 'grid' }}>
           <div style={{ fontSize: 13, fontWeight: 900, color: '#112033', lineHeight: 1.1 }}>{title}</div>
-          <div style={{ fontSize: 11, fontWeight: 800, color: '#607D8B' }}>{String(mode || '').toUpperCase()} MODE</div>
+          <div style={{ fontSize: 11, fontWeight: 800, color: '#607D8B' }}>
+            {resolvedMode.toUpperCase()} MODE
+          </div>
         </div>
 
         <div style={{ display: 'flex', gap: 6 }}>
@@ -144,30 +257,66 @@ export default function AiWindow({ mode, title, zIndex = 30, x, y, onFocus, onCl
       </div>
 
       <div style={{ height: 'calc(100% - 54px)', display: 'flex', flexDirection: 'column' }}>
-        <div style={{ padding: 12, overflowY: 'auto', flex: 1 }}>
-          <div
-            style={{
-              fontSize: 13,
-              color: '#223040',
-              lineHeight: 1.4,
-              background: 'rgba(255,255,255,0.72)',
-              border: '1px solid rgba(0,0,0,0.06)',
-              borderRadius: 12,
-              padding: 12,
-            }}
-          >
-            This is the UI shell for <b>{title}</b>.
-            <br />
-            <br />
-            Next wiring step: DB threads/messages + scoped prompts + “stay on Forge” redirect behavior.
-          </div>
+        <div ref={scrollRef} style={{ padding: 12, overflowY: 'auto', flex: 1 }}>
+          {loading ? (
+            <div style={{ fontSize: 13, fontWeight: 700, color: '#546E7A' }}>Loading…</div>
+          ) : error ? (
+            <div
+              style={{
+                fontSize: 13,
+                color: '#B71C1C',
+                background: 'rgba(183, 28, 28, 0.08)',
+                border: '1px solid rgba(183, 28, 28, 0.18)',
+                borderRadius: 12,
+                padding: 10,
+                fontWeight: 800,
+              }}
+            >
+              {error}
+            </div>
+          ) : messages.length === 0 ? (
+            <div style={{ fontSize: 13, fontWeight: 700, color: '#546E7A' }}>
+              Start the conversation.
+            </div>
+          ) : (
+            <div style={{ display: 'grid', gap: 10 }}>
+              {messages.map((m) => {
+                const isUser = String(m.role) === 'user';
+                return (
+                  <div
+                    key={m.id}
+                    style={{
+                      justifySelf: isUser ? 'end' : 'start',
+                      maxWidth: '88%',
+                      borderRadius: 14,
+                      padding: '10px 12px',
+                      border: '1px solid rgba(0,0,0,0.08)',
+                      background: isUser ? 'rgba(17, 32, 51, 0.10)' : 'rgba(255,255,255,0.78)',
+                      color: '#112033',
+                      fontSize: 13,
+                      fontWeight: 700,
+                      lineHeight: 1.35,
+                      whiteSpace: 'pre-wrap',
+                    }}
+                  >
+                    {m.content}
+                  </div>
+                );
+              })}
+            </div>
+          )}
         </div>
 
         <div style={{ padding: 12, borderTop: '1px solid rgba(0,0,0,0.08)', display: 'flex', gap: 8 }}>
           <input
             type="text"
-            placeholder="Type here (wiring next)..."
-            disabled
+            value={text}
+            onChange={(e) => setText(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter') handleSend();
+            }}
+            placeholder={sending ? 'Sending…' : 'Type a message…'}
+            disabled={loading || sending || !!error}
             style={{
               flex: 1,
               borderRadius: 12,
@@ -180,7 +329,8 @@ export default function AiWindow({ mode, title, zIndex = 30, x, y, onFocus, onCl
           />
           <button
             type="button"
-            disabled
+            onClick={handleSend}
+            disabled={loading || sending || !!error || !String(text || '').trim()}
             style={{
               borderRadius: 12,
               border: '1px solid rgba(0,0,0,0.10)',
@@ -188,7 +338,7 @@ export default function AiWindow({ mode, title, zIndex = 30, x, y, onFocus, onCl
               fontSize: 13,
               fontWeight: 900,
               background: 'rgba(17, 32, 51, 0.10)',
-              cursor: 'not-allowed',
+              cursor: loading || sending || !!error ? 'not-allowed' : 'pointer',
             }}
           >
             Send

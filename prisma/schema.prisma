@@ -101,6 +101,13 @@ enum NotificationEntityType {
   CONVERSATION
 }
 
+// ✅ NEW: AI Buddies (mode-scoped threads)
+enum AiBuddyMode {
+  SEEKER
+  COACH
+  RECRUITER
+}
+
 // ============================================================================
 //  JOBS, APPLICATIONS, INTERVIEWS & OFFERS
 // ============================================================================
@@ -560,6 +567,48 @@ model SavedReply {
 }
 
 // ============================================================================
+//  AI BUDDIES — THREADS + MESSAGES (DB-first; no localStorage)
+// ============================================================================
+
+model AiThread {
+  id     String      @id @default(cuid())
+  userId String
+  user   User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  mode  AiBuddyMode
+  title String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  messages AiMessage[]
+
+  @@unique([userId, mode], name: "userId_mode_unique")
+  @@index([userId])
+  @@index([mode])
+  @@map("ai_threads")
+}
+
+model AiMessage {
+  id       String   @id @default(cuid())
+  threadId String
+  thread   AiThread @relation(fields: [threadId], references: [id], onDelete: Cascade)
+
+  // "user" | "assistant" | "system"
+  role    String
+  content String
+
+  // optional future-proofing (safe to keep null for now)
+  metadata Json?
+
+  createdAt DateTime @default(now())
+
+  @@index([threadId, createdAt])
+  @@index([role])
+  @@map("ai_messages")
+}
+
+// ============================================================================
 //  VERIFICATION / AUTH
 // ============================================================================
 
@@ -989,6 +1038,9 @@ model User {
   scanLogs   ScanLog[]
 
   drafts UserDraft[]
+
+// ✅ AI Buddies
+  aiThreads AiThread[]
 
   careerRoadmaps   CareerRoadmap[]   @relation("UserCareerRoadmaps")
   negotiations     Negotiation[]     @relation("UserNegotiations")
