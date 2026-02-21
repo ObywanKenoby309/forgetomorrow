@@ -7,7 +7,7 @@ const LABELS = {
   recruiter: 'Recruiter Buddy',
 };
 
-export default function AiLauncher({ allowedModes = [], onOpenMode, openCount = 0 }) {
+export default function AiLauncher({ allowedModes = [], onOpenMode, badgeCount = 0 }) {
   const [open, setOpen] = useState(false);
 
   const modes = useMemo(() => {
@@ -16,6 +16,9 @@ export default function AiLauncher({ allowedModes = [], onOpenMode, openCount = 
   }, [allowedModes]);
 
   if (!modes.length) return null;
+
+  const showBadge = Number(badgeCount || 0) > 0;
+  const badgeText = Math.min(Number(badgeCount || 0), 99);
 
   return (
     <div style={{ position: 'fixed', right: 18, bottom: 92, zIndex: 99998 }}>
@@ -47,7 +50,7 @@ export default function AiLauncher({ allowedModes = [], onOpenMode, openCount = 
                 type="button"
                 onClick={() => {
                   onOpenMode?.(mode);
-                  setOpen(false);
+                  setOpen(false); // ✅ closes menu after selection
                 }}
                 style={{
                   width: '100%',
@@ -90,14 +93,15 @@ export default function AiLauncher({ allowedModes = [], onOpenMode, openCount = 
         }}
       >
         AI
-        {openCount > 0 ? (
+        {showBadge ? (
           <span
             style={{
               position: 'absolute',
               top: -4,
               right: -4,
-              width: 18,
+              minWidth: 18,
               height: 18,
+              padding: '0 5px',
               borderRadius: 999,
               background: '#FF7043',
               color: '#fff',
@@ -108,9 +112,10 @@ export default function AiLauncher({ allowedModes = [], onOpenMode, openCount = 
               justifyContent: 'center',
               border: '2px solid rgba(17, 32, 51, 0.86)',
               boxSizing: 'border-box',
+              lineHeight: 1,
             }}
           >
-            {Math.min(openCount, 9)}
+            {badgeText}
           </span>
         ) : null}
       </button>
