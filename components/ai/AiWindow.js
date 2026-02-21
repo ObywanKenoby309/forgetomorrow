@@ -153,6 +153,15 @@ export default function AiWindow({
   const start = useRef({ px: 0, py: 0, ox: 0, oy: 0 });
 
   function onPointerDown(e) {
+    // ✅ If user clicked a button in the header, do NOT start dragging.
+    // This prevents pointer-capture from swallowing minimize/close.
+    try {
+      const target = e?.target;
+      if (target && typeof target.closest === 'function' && target.closest('button')) return;
+    } catch {
+      // no-op
+    }
+
     if (e.button !== undefined && e.button !== 0) return;
     dragging.current = true;
     start.current = { px: e.clientX, py: e.clientY, ox: pos.x ?? 0, oy: pos.y ?? 0 };
@@ -225,6 +234,7 @@ export default function AiWindow({
         <div style={{ display: 'flex', gap: 6 }}>
           <button
             type="button"
+            onPointerDown={(e) => e.stopPropagation()} // ✅ prevent drag capture
             onClick={onMinimize}
             aria-label="Minimize"
             style={{
@@ -240,6 +250,7 @@ export default function AiWindow({
           </button>
           <button
             type="button"
+            onPointerDown={(e) => e.stopPropagation()} // ✅ prevent drag capture
             onClick={onClose}
             aria-label="Close"
             style={{
