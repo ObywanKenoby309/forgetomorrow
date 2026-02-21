@@ -529,7 +529,7 @@ export default function CoachingDashboardPage() {
               gridColumn: '1 / -1',
               gridRow: '4',
               display: 'grid',
-              gridTemplateColumns: 'minmax(0, 5fr) minmax(0, 4fr) minmax(0, 3fr)',
+              gridTemplateColumns: 'minmax(0, 6fr) minmax(0, 4fr) minmax(0, 2fr)',
               gap: GAP,
               marginLeft: -252,
               boxSizing: 'border-box',
