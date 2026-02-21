@@ -1,11 +1,17 @@
 // components/layouts/CoachingLayout.js
-import React, { useEffect, useState, useCallback } from 'react';
+import React, { useEffect, useState, useCallback, useMemo } from 'react';
 import Head from 'next/head';
 import CoachingHeader from '@/components/coaching/CoachingHeader';
 import CoachingSidebar from '@/components/coaching/CoachingSidebar';
 
 import MobileBottomBar from '@/components/mobile/MobileBottomBar';
 import SupportFloatingButton from '@/components/SupportFloatingButton';
+
+// ✅ NEW: Plan gating for AI Partner
+import { usePlan } from '@/context/PlanContext';
+
+// ✅ NEW: Desktop AI Partner (floating orb + 1 window per mode)
+import AiWindowsHost from '@/components/ai/AiWindowsHost';
 
 const UI = {
   GAP: 12,
@@ -22,6 +28,21 @@ const GLASS = {
   backdropFilter: 'blur(10px)',
   WebkitBackdropFilter: 'blur(10px)',
 };
+
+// ✅ NEW: AI Partner entitlement for coaching layout (Prisma enums)
+// Only COACH with plan COACH gets the AI Partner orb/windows here.
+// Allowed modes: seeker + coach
+function getCoachAiPartnerAccess(planLoaded, role, plan) {
+  if (!planLoaded) return { enabled: false, modes: [] };
+
+  const r = String(role || '').toUpperCase().trim(); // COACH | ...
+  const p = String(plan || '').toUpperCase().trim(); // COACH | ...
+
+  const enabled = r === 'COACH' && p === 'COACH';
+  if (!enabled) return { enabled: false, modes: [] };
+
+  return { enabled: true, modes: ['seeker', 'coach'] };
+}
 
 export default function CoachingLayout({
   title = 'ForgeTomorrow — Coaching',
@@ -53,6 +74,9 @@ export default function CoachingLayout({
   const pageTitle = headerTitle || defaultFromNav;
   const hasRight = Boolean(right);
   const hasHeader = Boolean(header);
+
+  // ✅ PlanContext (DB-first)
+  const { isLoaded: planLoaded, plan, role } = usePlan();
 
   const [isMobile, setIsMobile] = useState(true);
   const [mobileToolsOpen, setMobileToolsOpen] = useState(false);
@@ -101,6 +125,9 @@ export default function CoachingLayout({
   // ✅ Same stacking strategy as RecruiterLayout
   const leftRailLayer = { position: 'relative', zIndex: 10 };
   const mainOverrides = { position: 'relative', zIndex: 1 };
+
+  // ✅ NEW: AI Partner access (desktop-only render for now)
+  const aiAccess = useMemo(() => getCoachAiPartnerAccess(planLoaded, role, plan), [planLoaded, role, plan]);
 
   return (
     <>
@@ -151,7 +178,14 @@ export default function CoachingLayout({
           <header style={{ gridArea: 'header', alignSelf: 'start', marginTop: 0, paddingTop: 0, minWidth: 0 }}>
             {header ?? (
               <section
-                style={{ borderRadius: 14, padding: UI.CARD_PAD, textAlign: 'center', minWidth: 0, boxSizing: 'border-box', ...GLASS }}
+                style={{
+                  borderRadius: 14,
+                  padding: UI.CARD_PAD,
+                  textAlign: 'center',
+                  minWidth: 0,
+                  boxSizing: 'border-box',
+                  ...GLASS,
+                }}
                 aria-label="Coaching overview"
               >
                 <h1 style={{ margin: 0, color: '#FF7043', fontSize: 22, fontWeight: 900 }}>{pageTitle}</h1>
@@ -210,6 +244,9 @@ export default function CoachingLayout({
 
       <SupportFloatingButton />
       <MobileBottomBar isMobile={isMobile} chromeMode={chromeMode} onOpenTools={handleOpenTools} />
+
+      {/* ✅ NEW: Desktop AI Partner (Coach only; allows Seeker + Coach modes) */}
+      {!isMobile && aiAccess.enabled ? <AiWindowsHost allowedModes={aiAccess.modes} /> : null}
 
       {isMobile && mobileToolsOpen && (
         <div style={{ position: 'fixed', inset: 0, zIndex: 99999, display: 'flex', justifyContent: 'center', alignItems: 'flex-end' }}>

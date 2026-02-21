@@ -19,6 +19,9 @@ import RecruiterSidebar from '@/components/recruiter/RecruiterSidebar';
 // ✅ Mobile bottom bar (Tools opens sidebar sheet on mobile)
 import MobileBottomBar from '@/components/mobile/MobileBottomBar';
 
+// ✅ NEW: Desktop AI Partner (floating orb + 1 window per mode)
+import AiWindowsHost from '@/components/ai/AiWindowsHost';
+
 const ALLOWED_MODES = new Set(['seeker', 'coach', 'recruiter-smb', 'recruiter-ent']);
 
 function normalizeChrome(input) {
@@ -69,6 +72,33 @@ function setQueryChrome(router, chrome) {
   } catch {
     // no-throw
   }
+}
+
+// ✅ NEW: AI Partner entitlement + allowed modes (based on your Prisma enums)
+// - Seeker Free (SEEKER+FREE): NO AI Partner at all
+// - Seeker Pro (SEEKER+PRO): Seeker Buddy
+// - Coach (COACH+COACH): Seeker Buddy + Coach Buddy
+// - Recruiter (RECRUITER + SMALL_BIZ/ENTERPRISE): Seeker Buddy + Recruiter Buddy
+function getAiPartnerAccess(planLoaded, role, plan) {
+  if (!planLoaded) return { enabled: false, modes: [] };
+
+  const r = String(role || '').toUpperCase().trim(); // SEEKER | COACH | RECRUITER | ...
+  const p = String(plan || '').toUpperCase().trim(); // FREE | PRO | COACH | SMALL_BIZ | ENTERPRISE | ...
+
+  const isSeekerFree = r === 'SEEKER' && p === 'FREE';
+  if (isSeekerFree) return { enabled: false, modes: [] };
+
+  // ✅ Everyone paid gets Seeker Buddy
+  const modes = ['seeker'];
+
+  // ✅ Coach accounts get Coach Buddy
+  if (r === 'COACH') modes.push('coach');
+
+  // ✅ Recruiter accounts get Recruiter Buddy
+  if (r === 'RECRUITER') modes.push('recruiter');
+
+  // ✅ (Optional hardening): if some admin role should see more later, we can add it explicitly.
+  return { enabled: true, modes };
 }
 
 export default function SeekerLayout({
@@ -352,6 +382,9 @@ export default function SeekerLayout({
   const headerLayer = { position: 'relative', zIndex: 9 };
   const rightRailLayer = { position: 'relative', zIndex: 10 };
 
+  // ✅ NEW: AI Partner access (desktop-only render for now)
+  const aiAccess = useMemo(() => getAiPartnerAccess(planLoaded, role, plan), [planLoaded, role, plan]);
+
   return (
     <>
       <Head>
@@ -404,6 +437,9 @@ export default function SeekerLayout({
       </div>
 
       <MobileBottomBar isMobile={isMobile} chromeMode={chromeMode} onOpenTools={handleOpenTools} />
+
+      {/* ✅ NEW: Desktop AI Partner (Seeker FREE does not get this at all) */}
+      {!isMobile && aiAccess.enabled ? <AiWindowsHost allowedModes={aiAccess.modes} /> : null}
 
       {isMobile && mobileToolsOpen && (
         <div

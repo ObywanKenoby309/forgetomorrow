@@ -12,6 +12,9 @@ import RecruiterSidebar from '@/components/recruiter/RecruiterSidebar';
 import MobileBottomBar from '@/components/mobile/MobileBottomBar';
 import SupportFloatingButton from '@/components/SupportFloatingButton';
 
+// ✅ NEW: Desktop AI Partner (floating orb + 1 window per mode)
+import AiWindowsHost from '@/components/ai/AiWindowsHost';
+
 // Profile-standard glass
 const GLASS = {
   border: '1px solid rgba(255,255,255,0.22)',
@@ -64,6 +67,21 @@ function chromeToVariant(chromeMode) {
   if (c === 'recruiter-ent') return 'enterprise';
   if (c === 'recruiter-smb') return 'smb';
   return null;
+}
+
+// ✅ NEW: AI Partner entitlement for recruiter layout (Prisma enums)
+// Only RECRUITER with SMALL_BIZ or ENTERPRISE gets the AI Partner orb/windows here.
+// Allowed modes: seeker + recruiter
+function getRecruiterAiPartnerAccess(planLoaded, role, plan) {
+  if (!planLoaded) return { enabled: false, modes: [] };
+
+  const r = String(role || '').toUpperCase().trim(); // RECRUITER | ...
+  const p = String(plan || '').toUpperCase().trim(); // SMALL_BIZ | ENTERPRISE | ...
+
+  const enabled = r === 'RECRUITER' && (p === 'SMALL_BIZ' || p === 'ENTERPRISE');
+  if (!enabled) return { enabled: false, modes: [] };
+
+  return { enabled: true, modes: ['seeker', 'recruiter'] };
 }
 
 export default function RecruiterLayout({
@@ -279,6 +297,12 @@ export default function RecruiterLayout({
   // ✅ Ensure side rail stays above full-bleed content (same layering strategy as SeekerLayout)
   const leftRailLayer = { position: 'relative', zIndex: 10 };
 
+  // ✅ NEW: AI Partner access (desktop-only render for now)
+  const aiAccess = useMemo(
+    () => getRecruiterAiPartnerAccess(planLoaded, planRole, plan),
+    [planLoaded, planRole, plan]
+  );
+
   return (
     <>
       <Head>
@@ -377,6 +401,9 @@ export default function RecruiterLayout({
       <SupportFloatingButton />
 
       <MobileBottomBar isMobile={isMobile} chromeMode={chromeMode} onOpenTools={handleOpenTools} />
+
+      {/* ✅ NEW: Desktop AI Partner (Recruiter only; allows Seeker + Recruiter modes) */}
+      {!isMobile && aiAccess.enabled ? <AiWindowsHost allowedModes={aiAccess.modes} /> : null}
 
       {isMobile && mobileToolsOpen && (
         <div
