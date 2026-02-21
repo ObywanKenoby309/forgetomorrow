@@ -451,7 +451,7 @@ export default function SeekerApplicationsPage() {
   const PAGE_GLASS_WRAP = {
     ...GLASS,
     padding: 16,
-    margin: '24px 0 0',
+    margin: '12px 0 0', // ✅ matches HeaderBox gap so spacing is even: title→KPI = KPI→kanban
     width: '100%',
   };
 
@@ -466,7 +466,7 @@ export default function SeekerApplicationsPage() {
         </p>
       </section>
       {/* ✅ KPI strip lives in header slot — constrained to center column, never spans right rail */}
-      <section style={{ ...WHITE_CARD, padding: 16 }}>
+      <section style={{ ...WHITE_CARD, padding: '28px 16px' }}>
         <StageStrip tracker={tracker} />
       </section>
     </div>
