@@ -1,17 +1,17 @@
 // components/applications/ApplicationForm.js
 import React, { useEffect, useMemo, useRef, useState } from 'react';
+import { createPortal } from 'react-dom'; // ✅ FIX #1: portal to escape dnd-kit stacking context
 
 export default function ApplicationForm({
   mode = 'add',
   initial,
   onClose,
   onSave,
-  onDelete, // optional delete handler (edit mode)
+  onDelete,
   stages = [],
 }) {
   const [form, setForm] = useState({
     id: initial?.id || null,
-    // keep these in state even if locked so we can display them
     title: initial?.title || '',
     company: initial?.company || '',
     location: initial?.location || '',
@@ -21,7 +21,6 @@ export default function ApplicationForm({
     status: initial?.status || 'Applied',
     originalStage: initial?.originalStage || initial?.status || 'Applied',
 
-    // meta passthrough (safe)
     jobId: initial?.jobId ?? null,
     locked: initial?.locked ?? false,
     isRecruiterControlled: initial?.isRecruiterControlled ?? false,
@@ -32,31 +31,23 @@ export default function ApplicationForm({
   const titleRef = useRef(null);
   const notesRef = useRef(null);
 
-  // ──────────────────────────────────────────────────────────────
-  // READ ONLY rules:
-  // Recruiter-controlled internal applications: lock everything except notes.
-  // Pinned cards stay editable.
-  // ──────────────────────────────────────────────────────────────
+  // ✅ FIX #2: isReadOnlyInternal now correctly reads from initial (which includes locked + isRecruiterControlled)
   const isReadOnlyInternal = useMemo(() => {
     const explicit =
-      initial?.locked === true || initial?.isRecruiterControlled === true || form.locked === true || form.isRecruiterControlled === true;
+      initial?.locked === true ||
+      initial?.isRecruiterControlled === true ||
+      form.locked === true ||
+      form.isRecruiterControlled === true;
 
     const hasJobId = !!(initial?.jobId ?? form.jobId);
     const originalStage = String(initial?.originalStage || form.originalStage || '').trim();
-
-    // If it's pinned, it's seeker-owned (editable)
     const isPinned = originalStage === 'Pinned';
-
-    // If it has a jobId and it is NOT pinned, treat it as recruiter-controlled internal
     const inferredInternal = hasJobId && !isPinned;
 
     return explicit || inferredInternal;
   }, [initial, form.jobId, form.locked, form.isRecruiterControlled, form.originalStage]);
 
   useEffect(() => {
-    // Focus behavior:
-    // - If editable: focus title.
-    // - If read-only internal: focus notes (so typing goes where allowed).
     if (isReadOnlyInternal) {
       if (notesRef.current) notesRef.current.focus();
     } else {
@@ -81,9 +72,7 @@ export default function ApplicationForm({
   }, [dirty, onClose, isReadOnlyInternal]);
 
   const handleChange = (e) => {
-    // If read-only internal, block any field changes except notes
     if (isReadOnlyInternal && e.target.name !== 'notes') return;
-
     setDirty(true);
     setForm((f) => ({ ...f, [e.target.name]: e.target.value }));
   };
@@ -91,11 +80,9 @@ export default function ApplicationForm({
   const handleSubmit = (e) => {
     e.preventDefault();
 
-    // For read-only internal: allow saving notes without title/company validation
     if (isReadOnlyInternal) {
       onSave({
         ...form,
-        // defensively preserve non-notes fields exactly as they were
         title: initial?.title ?? form.title,
         company: initial?.company ?? form.company,
         location: initial?.location ?? form.location,
@@ -106,13 +93,12 @@ export default function ApplicationForm({
       return;
     }
 
-    // Normal validation for editable items
     if (!form.title.trim() || !form.company.trim()) {
       alert('Job Title and Company are required.');
       return;
     }
 
-    onSave(form); // Pass full form object including status + originalStage
+    onSave(form);
   };
 
   const handleDeleteClick = () => {
@@ -137,14 +123,11 @@ export default function ApplicationForm({
   };
 
   const readOnlyStyle = isReadOnlyInternal
-    ? {
-        background: '#F8FAFC',
-        color: '#475569',
-        cursor: 'not-allowed',
-      }
+    ? { background: '#F8FAFC', color: '#475569', cursor: 'not-allowed' }
     : {};
 
-  return (
+  // ✅ FIX #1: modal JSX extracted so we can wrap in createPortal
+  const modal = (
     <div
       onClick={onClose}
       style={{
@@ -155,7 +138,7 @@ export default function ApplicationForm({
         alignItems: 'flex-start',
         justifyContent: 'center',
         paddingTop: '80px',
-        zIndex: 1000,
+        zIndex: 9999, // ✅ bumped from 1000 — portal ensures this wins
         overflowY: 'auto',
       }}
     >
@@ -218,12 +201,7 @@ export default function ApplicationForm({
 
         <form
           onSubmit={handleSubmit}
-          style={{
-            display: 'grid',
-            gap: 8,
-            padding: '16px',
-            overflowY: 'auto',
-          }}
+          style={{ display: 'grid', gap: 8, padding: '16px', overflowY: 'auto' }}
         >
           <div>
             <label style={labelStyle}>Job Title {isReadOnlyInternal ? '' : '*'}</label>
@@ -288,13 +266,7 @@ export default function ApplicationForm({
             />
           </div>
 
-          <div
-            style={{
-              display: 'grid',
-              gridTemplateColumns: '1fr 1fr',
-              gap: 8,
-            }}
-          >
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
             <div>
               <label style={labelStyle}>Date Added</label>
               <input
@@ -327,14 +299,7 @@ export default function ApplicationForm({
             </div>
           </div>
 
-          <div
-            style={{
-              display: 'flex',
-              justifyContent: 'flex-end',
-              gap: 8,
-              marginTop: 6,
-            }}
-          >
+          <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8, marginTop: 6 }}>
             {mode === 'edit' && onDelete && !isReadOnlyInternal && (
               <button
                 type="button"
@@ -386,4 +351,7 @@ export default function ApplicationForm({
       </div>
     </div>
   );
+
+  // ✅ FIX #1: render into document.body so dnd-kit stacking context can't trap the modal
+  return typeof document !== 'undefined' ? createPortal(modal, document.body) : null;
 }

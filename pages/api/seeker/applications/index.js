@@ -1,4 +1,4 @@
-// pages/api/seeker/applications/index.js
+// pages/api/seeker/applications/index.js — CORRECTED (jobId only, no locked/isRecruiterControlled)
 import { getServerSession } from "next-auth/next";
 import { authOptions } from "../../auth/[...nextauth]";
 import { prisma } from "@/lib/prisma";
@@ -61,7 +61,9 @@ export default async function handler(req, res) {
     applications.forEach((app) => {
       const status = normalizeStatus(app.status) || "Applied";
 
-      // ✅ Critical fix: app.job can be null for manually created applications
+      const isInternal = !!app.jobId;
+
+      // ✅ Job fields: prefer linked job record, fall back to manual entry
       const title = app.job?.title ?? app.title ?? "";
       const company = app.job?.company ?? app.company ?? "";
       const location = app.job?.location ?? app.location ?? "";
@@ -69,12 +71,10 @@ export default async function handler(req, res) {
       const compensation = app.job?.compensation ?? null;
       const type = app.job?.type ?? null;
 
-      const isInternal = !!app.jobId;
-
-      // ✅ notes for seeker:
-      // - internal apps: seekerNotes only
-      // - external apps: legacy notes
-      const safeNotes = isInternal ? (app.seekerNotes || "") : (app.notes || "");
+      // ✅ Notes: internal apps show seekerNotes, external show legacy notes
+      const safeNotes = isInternal
+        ? (app.seekerNotes || "")
+        : (app.notes || "");
 
       if (grouped[status]) {
         grouped[status].push({
@@ -88,7 +88,12 @@ export default async function handler(req, res) {
           dateAdded: app.appliedAt.toISOString().split("T")[0],
           notes: safeNotes,
           url: app.url || "",
-          link: app.url || "", // keep alias for any older UI usage
+          link: app.url || "",
+          // ✅ ADDED: these three fields are required by the frontend to determine
+          // whether a card is recruiter-controlled (read-only for seeker)
+          jobId: app.jobId ?? null,
+          locked: app.locked ?? false,
+          isRecruiterControlled: app.isRecruiterControlled ?? false,
         });
       }
     });

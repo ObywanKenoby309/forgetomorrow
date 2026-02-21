@@ -175,7 +175,7 @@ export default function SeekerApplicationsPage() {
     const item = tracker[fromStage].find((j) => j.id === id);
     if (!item) return;
 
-    // Optimistic move first
+    // Optimistic move
     setTracker((prev) => ({
       ...prev,
       [fromStage]: prev[fromStage].filter((j) => j.id !== id),
@@ -236,7 +236,6 @@ export default function SeekerApplicationsPage() {
 
         await fetch(`/api/seeker/applications/${id}`, { method: 'DELETE' });
 
-        // ✅ FIX: remove the optimistic "moved" item (old app id) before adding the real pinned card
         setTracker((prev) => ({
           ...prev,
           Pinned: [newPinnedCard, ...(prev.Pinned || []).filter((j) => j.id !== id)],
@@ -287,20 +286,16 @@ export default function SeekerApplicationsPage() {
     setShowForm(true);
   };
 
-  // ✅ FIXED: internal Forge apps = ONLY notes are editable + NO stage move + NO reinsert/duplicate
   const saveEdits = async (updatedApp) => {
     const { id, title, company, location, url, notes, status, originalStage } = updatedApp;
 
-    const originalItem = tracker[originalStage].find((j) => j.id === id);
+    const originalItem = tracker[originalStage]?.find((j) => j.id === id);
     if (!originalItem) return;
 
     const isInternalForgeApp = !!originalItem.jobId && originalStage !== 'Pinned';
 
-    // ──────────────────────────────────────────────────────────────
-    // INTERNAL Forge application card
-    // ──────────────────────────────────────────────────────────────
+    // ── INTERNAL Forge application: notes only, in-place ──────────────────────
     if (isInternalForgeApp) {
-      // Update ONLY notes in-place (no remove/add, no stage change)
       setTracker((prev) => ({
         ...prev,
         [originalStage]: (prev[originalStage] || []).map((j) =>
@@ -312,18 +307,11 @@ export default function SeekerApplicationsPage() {
         const res = await fetch(`/api/seeker/applications/${id}`, {
           method: 'PATCH',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            // keep compatibility if API still expects "notes"
-            notes,
-            // and support new separation if your API uses it
-            seekerNotes: notes,
-          }),
+          body: JSON.stringify({ notes, seekerNotes: notes }),
         });
         if (!res.ok) throw new Error('Update internal notes failed');
       } catch (err) {
         console.error('Save internal notes error:', err);
-
-        // revert
         setTracker((prev) => ({
           ...prev,
           [originalStage]: (prev[originalStage] || []).map((j) =>
@@ -338,16 +326,24 @@ export default function SeekerApplicationsPage() {
       return;
     }
 
-    // ──────────────────────────────────────────────────────────────
-    // EXTERNAL (seeker-owned) cards: old behavior
-    // ──────────────────────────────────────────────────────────────
+    // ── EXTERNAL (seeker-owned) cards ─────────────────────────────────────────
+    const stageChanged = status !== originalStage;
 
-    // Optimistic update
-    setTracker((prev) => ({
-      ...prev,
-      [originalStage]: prev[originalStage].filter((j) => j.id !== id),
-      [status]: [{ ...originalItem, title, company, location, url, notes }, ...prev[status]],
-    }));
+    // ✅ FIX #3: in-place update when stage hasn't changed — prevents ghost card
+    setTracker((prev) => {
+      const updatedItem = { ...originalItem, title, company, location, url, notes };
+      if (!stageChanged) {
+        return {
+          ...prev,
+          [originalStage]: prev[originalStage].map((j) => (j.id === id ? updatedItem : j)),
+        };
+      }
+      return {
+        ...prev,
+        [originalStage]: prev[originalStage].filter((j) => j.id !== id),
+        [status]: [updatedItem, ...(prev[status] || [])],
+      };
+    });
 
     try {
       if (originalStage === 'Pinned') {
@@ -367,18 +363,15 @@ export default function SeekerApplicationsPage() {
 
         setTracker((prev) => ({
           ...prev,
-          [status]: prev[status].map((j) => (j.id === id ? { ...j, ...pinned, notes } : j)),
+          [status]: prev[status].map((j) =>
+            j.id === id ? { ...j, ...pinned, notes } : j
+          ),
         }));
       } else if (status === 'Pinned') {
         const pinRes = await fetch('/api/seeker/pinned-jobs', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            title,
-            company,
-            location,
-            url,
-          }),
+          body: JSON.stringify({ title, company, location, url }),
         });
         if (!pinRes.ok) throw new Error('Pin failed');
         const { pinned } = await pinRes.json();
@@ -396,26 +389,23 @@ export default function SeekerApplicationsPage() {
 
         await fetch(`/api/seeker/applications/${id}`, { method: 'DELETE' });
 
+        // ✅ Remove the optimistic card (old id) and replace with real pinned card
         setTracker((prev) => ({
           ...prev,
-          Pinned: [newPinnedCard, ...prev.Pinned],
+          Pinned: [newPinnedCard, ...(prev.Pinned || []).filter((j) => j.id !== id)],
+          [originalStage]: (prev[originalStage] || []).filter((j) => j.id !== id),
         }));
       } else {
+        // Standard stage-to-stage or same-stage update
         const res = await fetch(`/api/seeker/applications/${id}`, {
           method: 'PATCH',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            title,
-            company,
-            location,
-            url,
-            notes,
-            status,
-          }),
+          body: JSON.stringify({ title, company, location, url, notes, status }),
         });
         if (!res.ok) throw new Error('Update application failed');
         const { card } = await res.json();
 
+        // ✅ Reconcile with server response in the correct column
         setTracker((prev) => ({
           ...prev,
           [status]: prev[status].map((j) => (j.id === id ? { ...j, ...card } : j)),
@@ -423,11 +413,20 @@ export default function SeekerApplicationsPage() {
       }
     } catch (err) {
       console.error('Save edits error:', err);
-      setTracker((prev) => ({
-        ...prev,
-        [status]: prev[status].filter((j) => j.id !== id),
-        [originalStage]: [originalItem, ...prev[originalStage]],
-      }));
+      // Revert to original state
+      setTracker((prev) => {
+        if (!stageChanged) {
+          return {
+            ...prev,
+            [originalStage]: prev[originalStage].map((j) => (j.id === id ? originalItem : j)),
+          };
+        }
+        return {
+          ...prev,
+          [status]: (prev[status] || []).filter((j) => j.id !== id),
+          [originalStage]: [originalItem, ...(prev[originalStage] || [])],
+        };
+      });
     } finally {
       setShowForm(false);
       setJobToEdit(null);
@@ -439,7 +438,6 @@ export default function SeekerApplicationsPage() {
     setDetailsOpen(true);
   };
 
-  // ✅ Profile-glass numbers (canonical, matches Contact Center)
   const GLASS = {
     borderRadius: 14,
     border: '1px solid rgba(255,255,255,0.22)',
@@ -449,7 +447,6 @@ export default function SeekerApplicationsPage() {
     WebkitBackdropFilter: 'blur(10px)',
   };
 
-  // ✅ White readable inner card (accessibility layer on top of glass)
   const WHITE_CARD = {
     background: 'rgba(255,255,255,0.92)',
     border: '1px solid rgba(0,0,0,0.08)',
@@ -457,7 +454,6 @@ export default function SeekerApplicationsPage() {
     boxShadow: '0 2px 10px rgba(0,0,0,0.08)',
   };
 
-  // ✅ Page-level glass container (lets wallpaper breathe, keeps page cohesive)
   const PAGE_GLASS_WRAP = {
     ...GLASS,
     padding: 16,
@@ -466,13 +462,7 @@ export default function SeekerApplicationsPage() {
   };
 
   const HeaderBox = (
-    <section
-      style={{
-        ...GLASS,
-        padding: 16,
-        textAlign: 'center',
-      }}
-    >
+    <section style={{ ...GLASS, padding: 16, textAlign: 'center' }}>
       <h1 style={{ margin: 0, color: '#FF7043', fontSize: 24, fontWeight: 800 }}>
         Applications
       </h1>
@@ -482,7 +472,8 @@ export default function SeekerApplicationsPage() {
     </section>
   );
 
-  // ✅ Stable initial object to prevent modal remount/focus jumping
+  // ✅ FIX #2: formInitial now includes locked + isRecruiterControlled
+  // so ApplicationForm's isReadOnlyInternal fires correctly for internal cards
   const formInitial = useMemo(() => {
     if (formMode === 'edit' && jobToEdit) {
       return {
@@ -496,6 +487,8 @@ export default function SeekerApplicationsPage() {
         status: jobToEdit.stage,
         originalStage: jobToEdit.stage,
         jobId: jobToEdit.job.jobId || null,
+        locked: jobToEdit.job.locked ?? false,                            // ✅ ADDED
+        isRecruiterControlled: jobToEdit.job.isRecruiterControlled ?? false, // ✅ ADDED
       };
     }
 
@@ -509,11 +502,6 @@ export default function SeekerApplicationsPage() {
       status: 'Applied',
     };
   }, [formMode, jobToEdit]);
-
-  const lockFields =
-    formMode === 'edit' &&
-    !!formInitial?.jobId &&
-    formInitial?.originalStage !== 'Pinned';
 
   if (loading) {
     return (
@@ -584,7 +572,6 @@ export default function SeekerApplicationsPage() {
 
       {showForm && (
         <ApplicationForm
-          // ✅ Stable key prevents remount loops that cause focus jumps
           key={formMode === 'edit' ? `edit-${formInitial?.id}` : 'add'}
           mode={formMode}
           onClose={() => {
@@ -599,8 +586,6 @@ export default function SeekerApplicationsPage() {
           }
           initial={formInitial}
           stages={STAGES}
-          // ✅ Safe prop: even if ApplicationForm ignores it, our saveEdits still enforces rules
-          lockFields={lockFields}
         />
       )}
 
