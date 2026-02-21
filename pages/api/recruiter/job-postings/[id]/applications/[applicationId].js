@@ -15,6 +15,9 @@ function safeString(val) {
 
 const ALLOWED_STATUSES = new Set(["Applied", "Interviewing", "Offers", "ClosedOut"]);
 
+// Light guardrail to avoid accidental mega-pastes
+const MAX_NOTES_LEN = 8000;
+
 export default async function handler(req, res) {
   try {
     if (req.method !== "PATCH") {
@@ -78,15 +81,41 @@ export default async function handler(req, res) {
     }
 
     const body = req.body || {};
-    let nextStatus = safeString(body.status).trim();
 
-    // allow UI to send "Closed Out" label, normalize to enum
-    if (nextStatus === "Closed Out") nextStatus = "ClosedOut";
+    // Allow PATCH for status and/or recruiterNotes
+    const hasStatus = Object.prototype.hasOwnProperty.call(body, "status");
+    const hasRecruiterNotes = Object.prototype.hasOwnProperty.call(body, "recruiterNotes");
 
-    if (!ALLOWED_STATUSES.has(nextStatus)) {
-      return res.status(400).json({
-        error: `Invalid status. Allowed: ${Array.from(ALLOWED_STATUSES).join(", ")}`,
-      });
+    if (!hasStatus && !hasRecruiterNotes) {
+      return res.status(400).json({ error: "Nothing to update" });
+    }
+
+    let nextStatus = null;
+    if (hasStatus) {
+      nextStatus = safeString(body.status).trim();
+
+      // allow UI to send "Closed Out" label, normalize to enum
+      if (nextStatus === "Closed Out") nextStatus = "ClosedOut";
+
+      if (!ALLOWED_STATUSES.has(nextStatus)) {
+        return res.status(400).json({
+          error: `Invalid status. Allowed: ${Array.from(ALLOWED_STATUSES).join(", ")}`,
+        });
+      }
+    }
+
+    let nextRecruiterNotes = null;
+    if (hasRecruiterNotes) {
+      // recruiterNotes can be null to clear, or string
+      if (body.recruiterNotes === null) {
+        nextRecruiterNotes = null;
+      } else {
+        const s = safeString(body.recruiterNotes);
+        if (s.length > MAX_NOTES_LEN) {
+          return res.status(400).json({ error: `recruiterNotes too long (max ${MAX_NOTES_LEN})` });
+        }
+        nextRecruiterNotes = s;
+      }
     }
 
     const app = await prisma.application.findUnique({
@@ -111,14 +140,17 @@ export default async function handler(req, res) {
       return res.status(403).json({ error: "Forbidden" });
     }
 
+    const data = {};
+    if (hasStatus) data.status = nextStatus;
+    if (hasRecruiterNotes) data.recruiterNotes = nextRecruiterNotes;
+
     const updated = await prisma.application.update({
       where: { id: applicationId },
-      data: {
-        status: nextStatus,
-      },
+      data,
       select: {
         id: true,
         status: true,
+        recruiterNotes: true,
         updatedAt: true,
       },
     });

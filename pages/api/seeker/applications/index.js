@@ -69,6 +69,13 @@ export default async function handler(req, res) {
       const compensation = app.job?.compensation ?? null;
       const type = app.job?.type ?? null;
 
+      const isInternal = !!app.jobId;
+
+      // ✅ notes for seeker:
+      // - internal apps: seekerNotes only
+      // - external apps: legacy notes
+      const safeNotes = isInternal ? (app.seekerNotes || "") : (app.notes || "");
+
       if (grouped[status]) {
         grouped[status].push({
           id: app.id,
@@ -79,7 +86,7 @@ export default async function handler(req, res) {
           compensation,
           type,
           dateAdded: app.appliedAt.toISOString().split("T")[0],
-          notes: app.notes || "",
+          notes: safeNotes,
           url: app.url || "",
           link: app.url || "", // keep alias for any older UI usage
         });

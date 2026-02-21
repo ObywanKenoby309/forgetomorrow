@@ -47,26 +47,42 @@ export default async function handler(req, res) {
       const { title, company, location, url, notes, status } = req.body || {};
       const normalizedStatus = normalizeStatus(status);
 
-      const data = {};
-      if (title !== undefined) data.title = title;
-      if (company !== undefined) data.company = company;
-      if (location !== undefined) data.location = location;
-      if (url !== undefined) data.url = url;
-      if (notes !== undefined) data.notes = notes;
-      if (normalizedStatus) data.status = normalizedStatus;
-
-      if (Object.keys(data).length === 0) {
-        return res.status(400).json({ error: "No fields to update" });
-      }
-
-      // ✅ ownership check
+      // ✅ ownership check + detect internal vs external
       const existing = await prisma.application.findFirst({
         where: { id: appId, userId },
-        select: { id: true },
+        select: { id: true, jobId: true },
       });
 
       if (!existing) {
         return res.status(404).json({ error: "Application not found" });
+      }
+
+      const isInternal = !!existing.jobId;
+
+      const data = {};
+
+      // ✅ notes separation rule:
+      // - internal apps: seeker can ONLY write seekerNotes (mapped from "notes" input)
+      // - external apps: keep using legacy notes field
+      if (notes !== undefined) {
+        if (isInternal) data.seekerNotes = notes;
+        else data.notes = notes;
+      }
+
+      // ✅ external/manual apps: seeker can edit card fields as before
+      if (!isInternal) {
+        if (title !== undefined) data.title = title;
+        if (company !== undefined) data.company = company;
+        if (location !== undefined) data.location = location;
+        if (url !== undefined) data.url = url;
+        if (normalizedStatus) data.status = normalizedStatus;
+      }
+
+      // ✅ internal apps: no seeker edits to card meta (defense-in-depth)
+      // (Recruiter owns stage + job fields; seeker only has seekerNotes)
+
+      if (Object.keys(data).length === 0) {
+        return res.status(400).json({ error: "No fields to update" });
       }
 
       const updated = await prisma.application.update({
@@ -79,8 +95,11 @@ export default async function handler(req, res) {
           location: true,
           url: true,
           notes: true,
+          seekerNotes: true,
+          recruiterNotes: true, // selected but NEVER returned to seeker
           status: true,
           appliedAt: true,
+          jobId: true,
           job: {
             select: {
               id: true,
@@ -95,7 +114,16 @@ export default async function handler(req, res) {
         },
       });
 
+      const internal = !!updated.jobId;
+
       // ✅ Return card with app.job fallback (prevents blanks immediately after move/edit)
+      // ✅ notes returned:
+      // - internal apps: seekerNotes only
+      // - external apps: legacy notes
+      const safeNotes = internal
+        ? (updated.seekerNotes || "")
+        : (updated.notes || "");
+
       return res.status(200).json({
         card: {
           id: updated.id,
@@ -107,7 +135,7 @@ export default async function handler(req, res) {
           type: updated.job?.type ?? null,
           url: updated.url || "",
           link: updated.url || "",
-          notes: updated.notes || "",
+          notes: safeNotes,
           status: updated.status,
           dateAdded: updated.appliedAt.toISOString().split("T")[0],
         },

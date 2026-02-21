@@ -93,6 +93,10 @@ export default async function handler(req, res) {
         accountKey: true,
         resumeId: true,
         coverId: true,
+
+        // ✅ NEW: recruiter-only notes (requires prisma field Application.recruiterNotes)
+        recruiterNotes: true,
+
         user: {
           select: {
             id: true,
@@ -115,7 +119,7 @@ export default async function handler(req, res) {
         location: job.location,
         type: job.type,
         compensation: job.compensation,
-		description: job.description,
+        description: job.description,
         status: job.status,
         urgent: job.urgent,
         accountKey: jobAccountKey,
@@ -131,6 +135,10 @@ export default async function handler(req, res) {
         accountKey: a.accountKey || jobAccountKey || null,
         resumeId: a.resumeId || null,
         coverId: a.coverId || null,
+
+        // ✅ recruiter-only notes (never return seeker notes here)
+        recruiterNotes: a.recruiterNotes ?? null,
+
         candidate: {
           id: a.user?.id || null,
           name: a.user?.name || [a.user?.firstName, a.user?.lastName].filter(Boolean).join(" ") || null,

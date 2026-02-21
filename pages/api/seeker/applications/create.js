@@ -37,12 +37,21 @@ export default async function handler(req, res) {
   const userId = user.id;
 
   try {
-    const { title, company, location, url, notes, status = "Applied", jobId } = req.body || {};
+    const {
+      title,
+      company,
+      location,
+      url,
+      notes,
+      status = "Applied",
+      jobId,
+    } = req.body || {};
 
     const normalizedStatus = normalizeStatus(status);
 
     // Optional job link (internal job applications)
     const jobIdInt = toInt(jobId);
+    const isInternal = !!jobIdInt;
 
     // If no jobId, require manual title/company
     if (!jobIdInt && (!title || !company)) {
@@ -52,14 +61,20 @@ export default async function handler(req, res) {
     const application = await prisma.application.create({
       data: {
         userId,
+
         // If job-linked, we can omit these and still render via app.job fallback
         title: jobIdInt ? (title ?? null) : title,
         company: jobIdInt ? (company ?? null) : company,
         location: location || "",
         url: url || "",
-        notes: notes || "",
+
+        // ✅ notes routing
+        notes: isInternal ? null : (notes || ""),
+        seekerNotes: isInternal ? (notes || "") : null,
+
         status: normalizedStatus,
         jobId: jobIdInt || null,
+
         // 🔹 explicit unscoped seeker application
         accountKey: null,
       },
@@ -70,8 +85,11 @@ export default async function handler(req, res) {
         location: true,
         url: true,
         notes: true,
+        seekerNotes: true,
+        recruiterNotes: true, // selected but NEVER returned to seeker
         status: true,
         appliedAt: true,
+        jobId: true,
         job: {
           select: {
             id: true,
@@ -86,6 +104,8 @@ export default async function handler(req, res) {
       },
     });
 
+    const internal = !!application.jobId;
+
     const card = {
       id: application.id,
       title: application.job?.title ?? application.title ?? "",
@@ -96,7 +116,7 @@ export default async function handler(req, res) {
       type: application.job?.type ?? null,
       url: application.url || "",
       link: application.url || "",
-      notes: application.notes || "",
+      notes: internal ? (application.seekerNotes || "") : (application.notes || ""),
       status: application.status,
       dateAdded: application.appliedAt.toISOString().split("T")[0],
     };

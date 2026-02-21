@@ -176,7 +176,14 @@ model Application {
   company   String?
   location  String?
   url       String?
+  
+  // ✅ legacy / external-only notes (keep for now)
   notes     String?
+  
+  // ✅ NEW: notes separation for internal Forge apps (jobId != null)
+  seekerNotes    String?
+  recruiterNotes String?
+  
   status    ApplicationStatus @default(Applied)
   appliedAt DateTime          @default(now())
   updatedAt DateTime          @updatedAt
