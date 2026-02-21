@@ -4,7 +4,6 @@ import Head from 'next/head';
 import CoachingHeader from '@/components/coaching/CoachingHeader';
 import CoachingSidebar from '@/components/coaching/CoachingSidebar';
 
-// ✅ NEW: mobile bottom bar + support floating button
 import MobileBottomBar from '@/components/mobile/MobileBottomBar';
 import SupportFloatingButton from '@/components/SupportFloatingButton';
 
@@ -16,7 +15,6 @@ const UI = {
   CARD_PAD: 14,
 };
 
-// Profile-standard glass (definitive)
 const GLASS = {
   border: '1px solid rgba(255,255,255,0.22)',
   background: 'rgba(255,255,255,0.58)',
@@ -33,12 +31,13 @@ export default function CoachingLayout({
   left,
   right,
   children,
-  activeNav = 'overview', // ← keep receiving this
-  sidebarInitialOpen, // ← and this
-
-  // ✅ NEW (optional): DB-backed staff fields to pass through to sidebar
+  activeNav = 'overview',
+  sidebarInitialOpen,
   employee = false,
   department = '',
+
+  // ✅ Same pattern as RecruiterLayout — dashboard opts in, all other pages unaffected
+  contentFullBleed = false,
 }) {
   const defaultFromNav =
     {
@@ -53,64 +52,55 @@ export default function CoachingLayout({
 
   const pageTitle = headerTitle || defaultFromNav;
   const hasRight = Boolean(right);
+  const hasHeader = Boolean(header);
 
-  // --- Mobile detection (match Seeker/Recruiter behavior) ---
   const [isMobile, setIsMobile] = useState(true);
   const [mobileToolsOpen, setMobileToolsOpen] = useState(false);
-
-  // ✅ Stable handler so MobileBottomBar doesn't re-render/blink
   const handleOpenTools = useCallback(() => setMobileToolsOpen(true), []);
 
   useEffect(() => {
     const handleResize = () => {
-      if (typeof window !== 'undefined') {
-        const width = window.innerWidth;
-        setIsMobile(width < 1024);
-      }
+      if (typeof window !== 'undefined') setIsMobile(window.innerWidth < 1024);
     };
-
     handleResize();
     window.addEventListener('resize', handleResize);
     return () => window.removeEventListener('resize', handleResize);
   }, []);
 
-  // --- Desktop vs mobile grid configs (match SeekerLayout structure) ---
-  const desktopGrid = {
-    display: 'grid',
-    gridTemplateColumns: `${UI.LEFT_W}px minmax(0, 1fr) ${hasRight ? `${UI.RIGHT_W}px` : '0px'}`,
-    gridTemplateRows: 'auto 1fr',
-    gridTemplateAreas: hasRight
-      ? `"left header right"
-         "left content right"`
-      : `"left header header"
-         "left content content"`,
-  };
+  // ✅ Matches RecruiterLayout: no header + no right = Seeker-style page-owned layout
+  const desktopGrid = (!hasHeader && !hasRight)
+    ? {
+        display: 'grid',
+        gridTemplateColumns: `${UI.LEFT_W}px minmax(0, 1fr)`,
+        gridTemplateRows: '1fr',
+        gridTemplateAreas: `"left content"`,
+      }
+    : {
+        display: 'grid',
+        gridTemplateColumns: `${UI.LEFT_W}px minmax(0, 1fr) ${hasRight ? `${UI.RIGHT_W}px` : '0px'}`,
+        gridTemplateRows: 'auto 1fr',
+        gridTemplateAreas: hasRight
+          ? `"left header right"
+             "left content right"`
+          : `"left header header"
+             "left content content"`,
+      };
 
   const mobileGrid = {
     display: 'grid',
     gridTemplateColumns: '1fr',
     gridTemplateRows: hasRight ? 'auto auto auto' : 'auto auto',
     gridTemplateAreas: hasRight
-      ? `"header"
-         "content"
-         "right"`
-      : `"header"
-         "content"`,
+      ? `"header" "content" "right"`
+      : `"header" "content"`,
   };
 
   const gridStyles = isMobile ? mobileGrid : desktopGrid;
-
-  // Asymmetric padding (match SeekerLayout: keep right edge tighter when rail exists)
-  // ✅ Add extra bottom padding on mobile to prevent bottom bar overlap
-  const containerPadding = {
-    paddingTop: UI.PAD,
-    paddingBottom: isMobile ? UI.PAD + 84 : UI.PAD,
-    paddingLeft: UI.PAD,
-    paddingRight: hasRight ? Math.max(8, UI.PAD - 4) : UI.PAD,
-  };
-
-  // Coach chrome is deterministic
   const chromeMode = 'coach';
+
+  // ✅ Same stacking strategy as RecruiterLayout
+  const leftRailLayer = { position: 'relative', zIndex: 10 };
+  const mainOverrides = { position: 'relative', zIndex: 1 };
 
   return (
     <>
@@ -124,14 +114,22 @@ export default function CoachingLayout({
         style={{
           ...gridStyles,
           gap: UI.GAP,
-          ...containerPadding,
+          paddingTop: UI.PAD,
+          paddingBottom: isMobile ? UI.PAD + 84 : UI.PAD,
+          paddingLeft: UI.PAD,
+          paddingRight: hasRight ? Math.max(8, UI.PAD - 4) : UI.PAD,
           alignItems: 'start',
           boxSizing: 'border-box',
+          width: '100%',
+          maxWidth: '100vw',
+          overflowX: 'hidden',
+          minWidth: 0,
         }}
       >
-        {/* LEFT — Sidebar (hidden on mobile, moved into Tools sheet) */}
+        {/* Left rail */}
         <aside
           style={{
+            ...leftRailLayer,
             gridArea: 'left',
             alignSelf: 'start',
             display: isMobile ? 'none' : 'block',
@@ -148,41 +146,26 @@ export default function CoachingLayout({
           )}
         </aside>
 
-        {/* HEADER */}
-        <header
-          style={{
-            gridArea: 'header',
-            alignSelf: 'start',
-            marginTop: 0,
-            paddingTop: 0,
-            minWidth: 0,
-          }}
-        >
-          {header ?? (
-            <section
-              style={{
-                borderRadius: 14,
-                padding: UI.CARD_PAD,
-                textAlign: 'center',
-                minWidth: 0,
-                boxSizing: 'border-box',
-                ...GLASS,
-              }}
-              aria-label="Coaching overview"
-            >
-              <h1 style={{ margin: 0, color: '#FF7043', fontSize: 22, fontWeight: 900 }}>
-                {pageTitle}
-              </h1>
-              {headerDescription && (
-                <p style={{ margin: '6px auto 0', color: '#455A64', maxWidth: 760, fontWeight: 600 }}>
-                  {headerDescription}
-                </p>
-              )}
-            </section>
-          )}
-        </header>
+        {/* Header (ONLY if provided — dashboard does NOT pass this) */}
+        {hasHeader ? (
+          <header style={{ gridArea: 'header', alignSelf: 'start', marginTop: 0, paddingTop: 0, minWidth: 0 }}>
+            {header ?? (
+              <section
+                style={{ borderRadius: 14, padding: UI.CARD_PAD, textAlign: 'center', minWidth: 0, boxSizing: 'border-box', ...GLASS }}
+                aria-label="Coaching overview"
+              >
+                <h1 style={{ margin: 0, color: '#FF7043', fontSize: 22, fontWeight: 900 }}>{pageTitle}</h1>
+                {headerDescription && (
+                  <p style={{ margin: '6px auto 0', color: '#455A64', maxWidth: 760, fontWeight: 600 }}>
+                    {headerDescription}
+                  </p>
+                )}
+              </section>
+            )}
+          </header>
+        ) : null}
 
-        {/* RIGHT — dark rail (unchanged styling, just kept uniform sizing) */}
+        {/* Right rail (ONLY if provided) */}
         {hasRight && (
           <aside
             style={{
@@ -206,92 +189,55 @@ export default function CoachingLayout({
           </aside>
         )}
 
-        {/* CONTENT */}
-        <main style={{ gridArea: 'content', minWidth: 0 }}>
-          <div style={{ display: 'grid', gap: UI.GAP, width: '100%', minWidth: 0 }}>
+        {/* Main content */}
+        <main
+          style={{
+            gridArea: 'content',
+            minWidth: 0,
+            width: '100%',
+            maxWidth: '100%',
+            // ✅ Only remove overflow clipping for dashboard (contentFullBleed).
+            // All other coaching pages keep overflowX: 'hidden' for mobile safety.
+            ...(!contentFullBleed ? { overflowX: 'hidden' } : {}),
+            ...mainOverrides,
+          }}
+        >
+          <div style={{ display: 'grid', gap: UI.GAP, width: '100%', minWidth: 0, maxWidth: '100%' }}>
             {children}
           </div>
         </main>
       </div>
 
-      {/* ✅ Support stays as the existing floating button */}
       <SupportFloatingButton />
-
-      {/* ✅ Mobile bottom bar */}
       <MobileBottomBar isMobile={isMobile} chromeMode={chromeMode} onOpenTools={handleOpenTools} />
 
-      {/* ✅ MOBILE TOOLS BOTTOM SHEET */}
       {isMobile && mobileToolsOpen && (
-        <div
-          style={{
-            position: 'fixed',
-            inset: 0,
-            zIndex: 99999,
-            display: 'flex',
-            justifyContent: 'center',
-            alignItems: 'flex-end',
-          }}
-        >
-          {/* Backdrop (click to dismiss) */}
+        <div style={{ position: 'fixed', inset: 0, zIndex: 99999, display: 'flex', justifyContent: 'center', alignItems: 'flex-end' }}>
           <button
             type="button"
             onClick={() => setMobileToolsOpen(false)}
             aria-label="Dismiss Tools"
-            style={{
-              position: 'absolute',
-              inset: 0,
-              border: 'none',
-              background: 'rgba(0,0,0,0.55)',
-              cursor: 'pointer',
-            }}
+            style={{ position: 'absolute', inset: 0, border: 'none', background: 'rgba(0,0,0,0.55)', cursor: 'pointer' }}
           />
-
-          {/* Sheet */}
           <div
             style={{
-              position: 'relative',
-              zIndex: 1,
-              width: 'min(760px, 100%)',
-              maxHeight: '82vh',
-              borderTopLeftRadius: 18,
-              borderTopRightRadius: 18,
-              border: '1px solid rgba(255,255,255,0.22)',
-              background: 'rgba(255,255,255,0.92)',
-              backdropFilter: 'blur(12px)',
-              WebkitBackdropFilter: 'blur(12px)',
-              padding: 16,
-              boxSizing: 'border-box',
-              overflowY: 'auto',
+              position: 'relative', zIndex: 1, width: 'min(760px, 100%)', maxHeight: '82vh',
+              borderTopLeftRadius: 18, borderTopRightRadius: 18,
+              border: '1px solid rgba(255,255,255,0.22)', background: 'rgba(255,255,255,0.92)',
+              backdropFilter: 'blur(12px)', WebkitBackdropFilter: 'blur(12px)',
+              padding: 16, boxSizing: 'border-box', overflowY: 'auto',
               boxShadow: '0 -10px 26px rgba(0,0,0,0.22)',
             }}
           >
-            {/* Header row inside Tools sheet */}
-            <div
-              style={{
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'space-between',
-                marginBottom: 12,
-              }}
-            >
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>
               <div style={{ fontSize: 14, fontWeight: 800, color: '#112033' }}>Tools</div>
               <button
                 type="button"
                 onClick={() => setMobileToolsOpen(false)}
                 aria-label="Close Tools"
-                style={{
-                  border: 'none',
-                  background: 'transparent',
-                  cursor: 'pointer',
-                  fontSize: 22,
-                  lineHeight: 1,
-                  color: '#546E7A',
-                }}
-              >
-                ×
-              </button>
+                style={{ border: 'none', background: 'transparent', cursor: 'pointer', fontSize: 22, lineHeight: 1, color: '#546E7A' }}
+              >×</button>
             </div>
-
             {left || (
               <CoachingSidebar
                 initialOpen={sidebarInitialOpen}
