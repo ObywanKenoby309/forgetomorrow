@@ -456,14 +456,20 @@ export default function SeekerApplicationsPage() {
   };
 
   const HeaderBox = (
-    <section style={{ ...GLASS, padding: 16, textAlign: 'center' }}>
-      <h1 style={{ margin: 0, color: '#FF7043', fontSize: 24, fontWeight: 800 }}>
-        Applications
-      </h1>
-      <p style={{ margin: '6px auto 0', color: '#607D8B', maxWidth: 720 }}>
-        Track your job search across stages, keep notes, and move roles forward.
-      </p>
-    </section>
+    <div style={{ display: 'grid', gap: 12 }}>
+      <section style={{ ...GLASS, padding: 16, textAlign: 'center' }}>
+        <h1 style={{ margin: 0, color: '#FF7043', fontSize: 24, fontWeight: 800 }}>
+          Applications
+        </h1>
+        <p style={{ margin: '6px auto 0', color: '#607D8B', maxWidth: 720 }}>
+          Track your job search across stages, keep notes, and move roles forward.
+        </p>
+      </section>
+      {/* ✅ KPI strip lives in header slot — constrained to center column, never spans right rail */}
+      <section style={{ ...WHITE_CARD, padding: 16 }}>
+        <StageStrip tracker={tracker} />
+      </section>
+    </div>
   );
 
   // ✅ FIX #2: formInitial now includes locked + isRecruiterControlled
@@ -518,11 +524,7 @@ export default function SeekerApplicationsPage() {
       activeNav="jobs"
     >
       <div style={PAGE_GLASS_WRAP}>
-        <section style={{ ...WHITE_CARD, padding: 16 }}>
-          <StageStrip tracker={tracker} />
-        </section>
-
-        <section style={{ ...WHITE_CARD, padding: 16, marginTop: 12 }}>
+        <section style={{ ...WHITE_CARD, padding: 16, marginTop: 0 }}>
           <ApplicationsBoard
             key={JSON.stringify(tracker)}
             stagesData={tracker}
