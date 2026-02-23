@@ -167,7 +167,7 @@ export default function AiWindowsHost({ allowedModes = [] }) {
     let timer = null;
 
     async function ensureThreadId(mode) {
-      // ✅ FIX #2: read from ref so we always have the latest threadIds
+      // read from ref so we always have the latest threadIds
       const existing = threadIdsRef.current?.[mode];
       if (existing) return existing;
 
@@ -182,6 +182,14 @@ export default function AiWindowsHost({ allowedModes = [] }) {
       // Update both ref and state
       threadIdsRef.current = { ...threadIdsRef.current, [mode]: tid };
       setThreadIds((prev) => ({ ...(prev || {}), [mode]: tid }));
+
+      // ✅ Seed lastSeenAt to NOW on first thread load — this means all existing
+      // messages are treated as already read. Badge only fires for NEW messages
+      // that arrive after this session started, while the window was closed.
+      const now = Date.now();
+      lastSeenAtRef.current = { ...lastSeenAtRef.current, [mode]: now };
+      setLastSeenAt((prev) => ({ ...(prev || {}), [mode]: now }));
+
       return tid;
     }
 

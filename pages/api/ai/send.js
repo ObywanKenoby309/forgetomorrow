@@ -112,6 +112,9 @@ export default async function handler(req, res) {
   const threadId = String(body.threadId || "").trim();
   const content = String(body.content || "").trim();
 
+  // ✅ NEW: optional client context (page awareness, chrome, etc.)
+  const context = body.context && typeof body.context === "object" ? body.context : null;
+
   if (!threadId) return res.status(400).json({ error: "Missing threadId" });
   if (!content) return res.status(400).json({ error: "Missing content" });
   if (content.length > 4000) return res.status(400).json({ error: "Message too long (max 4000)." });
@@ -132,6 +135,8 @@ export default async function handler(req, res) {
           threadId,
           role: "user",
           content,
+          // ✅ NEW: store context on the user message
+          metadata: context || undefined,
         },
       }),
       prisma.aiMessage.create({
@@ -150,7 +155,7 @@ export default async function handler(req, res) {
     const messages = await prisma.aiMessage.findMany({
       where: { threadId },
       orderBy: { createdAt: "asc" },
-      select: { id: true, role: true, content: true, createdAt: true },
+      select: { id: true, role: true, content: true, createdAt: true, metadata: true },
       take: 200,
     });
 
