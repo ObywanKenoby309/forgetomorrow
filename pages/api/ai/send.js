@@ -144,6 +144,7 @@ export default async function handler(req, res) {
           threadId,
           role: "assistant",
           content: reply,
+		  metadata: context || undefined,
         },
       }),
       prisma.aiThread.update({
