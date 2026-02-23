@@ -105,6 +105,126 @@ function coerceStr(v, max = 400) {
   return s.slice(0, max) + "…";
 }
 
+// ✅ NEW: Strict mode guardrails (no site paths needed)
+function buildModeGuardrails(mode) {
+  if (mode === "SEEKER") {
+    return [
+      "Hard rules:",
+      "- You are helping a job seeker execute job search tasks.",
+      "- You MAY give resume improvement guidance, JD alignment steps, application strategy, interview prep, and profile improvement.",
+      "- You MUST NOT act as a hiring decision-maker or give recruiter-side pipeline instructions as if the user is the recruiter.",
+      "- If the user is asking to evaluate a candidate for hiring, tell them to switch to Recruiter Buddy.",
+    ].join("\n");
+  }
+
+  if (mode === "COACH") {
+    return [
+      "Hard rules:",
+      "- You are helping a coach support a client with structured outputs (plans, feedback, session structure).",
+      "- You MAY translate tool outputs into coaching actions and homework.",
+      "- You MUST NOT make recruiter-side hiring decisions.",
+      "- If the user is asking how to apply personally, suggest switching to Seeker Buddy unless they are explicitly coaching a client.",
+    ].join("\n");
+  }
+
+  if (mode === "RECRUITER") {
+    return [
+      "Hard rules:",
+      "- You are helping a recruiter make hiring decisions and run recruiter workflows.",
+      "- You MAY discuss resumes only as evaluation artifacts (evidence, gaps, interview probes).",
+      "- You MUST NOT coach the user on how to write or optimize THEIR OWN resume, how to apply for jobs, or job-seeker outreach strategy.",
+      "- If the user is asking for job-seeker resume/application coaching, tell them to switch to Seeker Buddy.",
+    ].join("\n");
+  }
+
+  return [
+    "Hard rules:",
+    "- Stay in the current mode and do not cross into another persona’s responsibilities.",
+  ].join("\n");
+}
+
+// ✅ NEW: Simple handoff detection (no mapping; keyword-based)
+function detectHandoff({ threadMode, content }) {
+  const text = String(content || "").toLowerCase();
+
+  // seeker-ish asks (resume writing / applying)
+  const seekerSignals = [
+    "my resume",
+    "update my resume",
+    "rewrite my resume",
+    "tailor my resume",
+    "cover letter",
+    "how do i apply",
+    "apply for",
+    "job search",
+    "ats",
+    "interview prep",
+    "what should i say",
+    "follow up",
+    "recruiter message",
+  ];
+
+  // recruiter-ish asks (evaluate candidate / move to interview)
+  const recruiterSignals = [
+    "this candidate",
+    "move to interview",
+    "should we interview",
+    "should we hire",
+    "reject",
+    "advance",
+    "pipeline stage",
+    "talent pool",
+    "shortlist",
+    "compare candidates",
+    "job req",
+    "job requirements",
+    "screening",
+  ];
+
+  const seekerHit = seekerSignals.some((s) => text.includes(s));
+  const recruiterHit = recruiterSignals.some((s) => text.includes(s));
+
+  if (threadMode === "RECRUITER" && seekerHit && !recruiterHit) {
+    return {
+      handoffTo: "SEEKER",
+      reply:
+        "This question is job-seeker coaching (resume/application execution). " +
+        "Please switch to **Seeker Buddy** so I can help you improve your resume and apply strategically.",
+    };
+  }
+
+  if (threadMode === "SEEKER" && recruiterHit && !seekerHit) {
+    return {
+      handoffTo: "RECRUITER",
+      reply:
+        "This question is recruiter decision support (candidate evaluation/pipeline). " +
+        "Please switch to **Recruiter Buddy** so I can help you assess evidence, gaps, and next steps.",
+    };
+  }
+
+  // Coach stays flexible; we only handoff if it’s very obvious
+  if (threadMode === "COACH" && recruiterHit && !seekerHit) {
+    return {
+      handoffTo: "RECRUITER",
+      reply:
+        "This looks like recruiter-side candidate decisioning. " +
+        "Please switch to **Recruiter Buddy** for evaluation/pipeline guidance.",
+    };
+  }
+
+  if (threadMode === "COACH" && seekerHit && !recruiterHit) {
+    // Coach can still support a client, but if it reads like personal seeker execution, handoff
+    return {
+      handoffTo: "SEEKER",
+      reply:
+        "If this is your personal job search (resume/applications), switch to **Seeker Buddy**. " +
+        "If you’re coaching a client, tell me: 'Coaching a client' and the goal, and I’ll stay in Coach mode.",
+    };
+  }
+
+  return null;
+}
+
 function buildSystemPrompt(mode, context) {
   const base =
     "You are ForgeTomorrow's in-platform AI Buddy. " +
@@ -130,7 +250,10 @@ function buildSystemPrompt(mode, context) {
 
   const pageLine = pageBits.length ? `Client context: ${pageBits.join(" | ")}` : "Client context: (none)";
 
-  return [base, modeLine, pageLine].join("\n");
+  // ✅ NEW: append guardrails (no path mapping needed)
+  const guardrails = buildModeGuardrails(mode);
+
+  return [base, modeLine, pageLine, guardrails].join("\n");
 }
 
 function toOpenAiMessages(mode, systemPrompt, history) {
@@ -189,7 +312,11 @@ async function tryGenerateWithOpenAI({ mode, context, history }) {
   }
 }
 
-async function generateAssistantReply({ threadMode, context, threadId, prisma }) {
+async function generateAssistantReply({ threadMode, context, threadId, prisma, lastUserContent }) {
+  // ✅ NEW: handoff guardrail BEFORE any generation
+  const handoff = detectHandoff({ threadMode, content: lastUserContent });
+  if (handoff?.reply) return handoff.reply;
+
   // Pull recent history from DB (includes the latest user message already inserted)
   const recent = await prisma.aiMessage.findMany({
     where: { threadId },
@@ -272,6 +399,8 @@ export default async function handler(req, res) {
       context,
       threadId,
       prisma,
+      // ✅ NEW: pass the last user content for router checks
+      lastUserContent: content,
     });
 
     // 3) Persist assistant message + bump thread
