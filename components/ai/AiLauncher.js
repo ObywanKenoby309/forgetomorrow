@@ -20,10 +20,9 @@ const ICONS = {
   recruiter: '/icons/recruiter-ai.png',
 };
 
-// Per-brain accent colors — ties into ForgeTomorrow brand
 const ACCENTS = {
-  seeker: { bg: 'rgba(255,112,67,0.10)', border: 'rgba(255,112,67,0.30)', icon: '#FF7043' },
-  coach: { bg: 'rgba(66,165,245,0.10)', border: 'rgba(66,165,245,0.30)', icon: '#42A5F5' },
+  seeker:    { bg: 'rgba(255,112,67,0.10)',  border: 'rgba(255,112,67,0.30)',  icon: '#FF7043' },
+  coach:     { bg: 'rgba(66,165,245,0.10)',  border: 'rgba(66,165,245,0.30)',  icon: '#42A5F5' },
   recruiter: { bg: 'rgba(102,187,106,0.10)', border: 'rgba(102,187,106,0.30)', icon: '#66BB6A' },
 };
 
@@ -42,20 +41,18 @@ export default function AiLauncher({ allowedModes = [], onOpenMode, badgeCount =
   const showBadge = Number(badgeCount || 0) > 0;
   const badgeText = Math.min(Number(badgeCount || 0), 99);
 
-  // Position left of the support floating button
-  const SUPPORT_RIGHT = 16;
+  const SUPPORT_RIGHT  = 16;
   const SUPPORT_BOTTOM = 16;
-  const SUPPORT_SIZE = 42;
-  const GAP = 10;
-  const LAUNCHER_SIZE = 48;
+  const SUPPORT_SIZE   = 42;
+  const GAP            = 10;
+  const LAUNCHER_SIZE  = 48;
 
-  const launcherRight = SUPPORT_RIGHT + SUPPORT_SIZE + GAP;
+  const launcherRight  = SUPPORT_RIGHT + SUPPORT_SIZE + GAP;
   const launcherBottom = SUPPORT_BOTTOM;
 
   return (
     <div style={{ position: 'fixed', right: launcherRight, bottom: launcherBottom, zIndex: 99998 }}>
 
-      {/* ── Striker card menu ── */}
       {open && (
         <div
           style={{
@@ -73,7 +70,6 @@ export default function AiLauncher({ allowedModes = [], onOpenMode, badgeCount =
             boxSizing: 'border-box',
           }}
         >
-          {/* Header label */}
           <div
             style={{
               fontSize: 10,
@@ -89,29 +85,25 @@ export default function AiLauncher({ allowedModes = [], onOpenMode, badgeCount =
             Strikers
           </div>
 
-          {/* Brain cards */}
           <div style={{ display: 'grid', gap: 6 }}>
             {modes.map((mode) => {
               const iconSrc = ICONS[mode] || ICONS.launcher;
-              const accent = ACCENTS[mode] || ACCENTS.seeker;
-              const isHovered = hovered === mode;
+              const accent  = ACCENTS[mode] || ACCENTS.seeker;
+              const isHov   = hovered === mode;
 
               return (
                 <button
                   key={mode}
                   type="button"
-                  onClick={() => {
-                    onOpenMode?.(mode);
-                    setOpen(false);
-                  }}
+                  onClick={() => { onOpenMode?.(mode); setOpen(false); }}
                   onMouseEnter={() => setHovered(mode)}
                   onMouseLeave={() => setHovered(null)}
                   style={{
                     width: '100%',
                     textAlign: 'left',
                     borderRadius: 12,
-                    border: `1px solid ${isHovered ? accent.border : 'rgba(0,0,0,0.07)'}`,
-                    background: isHovered ? accent.bg : 'rgba(248,250,252,0.80)',
+                    border: `1px solid ${isHov ? accent.border : 'rgba(0,0,0,0.07)'}`,
+                    background: isHov ? accent.bg : 'rgba(248,250,252,0.80)',
                     color: '#112033',
                     padding: '10px 10px',
                     cursor: 'pointer',
@@ -119,17 +111,16 @@ export default function AiLauncher({ allowedModes = [], onOpenMode, badgeCount =
                     alignItems: 'center',
                     gap: 10,
                     transition: 'all 0.15s ease',
-                    boxShadow: isHovered ? '0 2px 10px rgba(0,0,0,0.08)' : 'none',
+                    boxShadow: isHov ? '0 2px 10px rgba(0,0,0,0.08)' : 'none',
                   }}
                 >
-                  {/* Icon bubble */}
                   <div
                     style={{
                       width: 38,
                       height: 38,
                       borderRadius: 10,
-                      background: isHovered ? accent.bg : 'rgba(255,255,255,0.9)',
-                      border: `1.5px solid ${isHovered ? accent.border : 'rgba(0,0,0,0.08)'}`,
+                      background: isHov ? accent.bg : 'rgba(255,255,255,0.9)',
+                      border: `1.5px solid ${isHov ? accent.border : 'rgba(0,0,0,0.08)'}`,
                       boxShadow: '0 2px 8px rgba(0,0,0,0.10)',
                       display: 'flex',
                       alignItems: 'center',
@@ -142,22 +133,17 @@ export default function AiLauncher({ allowedModes = [], onOpenMode, badgeCount =
                       src={iconSrc}
                       alt=""
                       aria-hidden="true"
-                      style={{
-                        width: 24,
-                        height: 24,
-                        objectFit: 'contain',
-                        borderRadius: 6,
-                      }}
+                      style={{ width: 24, height: 24, objectFit: 'contain', borderRadius: 6 }}
                     />
                   </div>
 
-                  {/* Label + subtitle */}
-                  <div style={{ display: 'grid', gap: 1, minWidth: 0 }}>
+                  {/* ✅ FIX 1: subtitle now wraps — removed whiteSpace:nowrap and overflow:hidden */}
+                  <div style={{ display: 'grid', gap: 2, minWidth: 0, flex: 1 }}>
                     <span
                       style={{
                         fontSize: 13,
                         fontWeight: 900,
-                        color: isHovered ? '#112033' : '#263238',
+                        color: isHov ? '#112033' : '#263238',
                         lineHeight: 1.1,
                         whiteSpace: 'nowrap',
                       }}
@@ -168,12 +154,10 @@ export default function AiLauncher({ allowedModes = [], onOpenMode, badgeCount =
                       style={{
                         fontSize: 10,
                         fontWeight: 600,
-                        color: isHovered ? accent.icon : '#90A4AE',
-                        lineHeight: 1.2,
-                        whiteSpace: 'nowrap',
-                        overflow: 'hidden',
-                        textOverflow: 'ellipsis',
+                        color: isHov ? accent.icon : '#90A4AE',
+                        lineHeight: 1.3,
                         transition: 'color 0.15s ease',
+                        // ✅ no whiteSpace:nowrap, no overflow:hidden — wraps naturally
                       }}
                     >
                       {SUBTITLES[mode] || ''}
@@ -186,7 +170,6 @@ export default function AiLauncher({ allowedModes = [], onOpenMode, badgeCount =
         </div>
       )}
 
-      {/* ── Launcher button ── */}
       <button
         type="button"
         aria-label={open ? 'Close Strikers' : 'Open Strikers'}
@@ -195,17 +178,11 @@ export default function AiLauncher({ allowedModes = [], onOpenMode, badgeCount =
           width: LAUNCHER_SIZE,
           height: LAUNCHER_SIZE,
           borderRadius: 999,
-          border: open
-            ? '1.5px solid rgba(255,112,67,0.50)'
-            : '1px solid rgba(255,255,255,0.24)',
-          background: open
-            ? 'rgba(255,255,255,0.96)'
-            : 'rgba(17, 32, 51, 0.86)',
+          border: open ? '1.5px solid rgba(255,112,67,0.50)' : '1px solid rgba(255,255,255,0.24)',
+          background: open ? 'rgba(255,255,255,0.96)' : 'rgba(17, 32, 51, 0.86)',
           cursor: 'pointer',
           position: 'relative',
-          boxShadow: open
-            ? '0 4px 18px rgba(255,112,67,0.22)'
-            : '0 12px 26px rgba(0,0,0,0.28)',
+          boxShadow: open ? '0 4px 18px rgba(255,112,67,0.22)' : '0 12px 26px rgba(0,0,0,0.28)',
           backdropFilter: 'blur(12px)',
           WebkitBackdropFilter: 'blur(12px)',
           display: 'flex',
@@ -215,21 +192,8 @@ export default function AiLauncher({ allowedModes = [], onOpenMode, badgeCount =
           transition: 'all 0.18s ease',
         }}
       >
-        <img
-          src={ICONS.launcher}
-          alt=""
-          aria-hidden="true"
-          style={{
-            width: 34,
-            height: 34,
-            objectFit: 'contain',
-            borderRadius: 999,
-            // ✅ subtle invert when open so icon stays visible on light bg
-            filter: open ? 'none' : 'none',
-          }}
-        />
+        <img src={ICONS.launcher} alt="" aria-hidden="true" style={{ width: 34, height: 34, objectFit: 'contain', borderRadius: 999 }} />
 
-        {/* Unread badge */}
         {showBadge && (
           <span
             style={{
