@@ -84,6 +84,134 @@ function buildPlaceholderReply(mode) {
   return "Got it. DB wiring is live; AI generation is next.";
 }
 
+// ----------------------------------------------------------------------------
+// ✅ "Brain" wiring (safe + additive)
+// - Uses DB history + client context when present
+// - If OPENAI_API_KEY exists and the `openai` package is installed, it will generate
+// - Otherwise it falls back to your placeholder reply (no breakage)
+// ----------------------------------------------------------------------------
+
+function safeJson(obj) {
+  try {
+    return obj && typeof obj === "object" ? obj : null;
+  } catch {
+    return null;
+  }
+}
+
+function coerceStr(v, max = 400) {
+  const s = String(v || "");
+  if (s.length <= max) return s;
+  return s.slice(0, max) + "…";
+}
+
+function buildSystemPrompt(mode, context) {
+  const base =
+    "You are ForgeTomorrow's in-platform AI Buddy. " +
+    "Be concise, practical, and action-oriented. " +
+    "Do not mention internal implementation details. " +
+    "When page context is provided, tailor guidance to that surface.";
+
+  const modeLine =
+    mode === "SEEKER"
+      ? "Mode: SEEKER. Help the user execute job search tasks inside ForgeTomorrow: resumes, applications, profile, 30/60/90."
+      : mode === "COACH"
+        ? "Mode: COACH. Help the coach support a client with structured outputs: plans, feedback, session structure."
+        : mode === "RECRUITER"
+          ? "Mode: RECRUITER. Help recruiter workflows: job templates, candidate review, pipeline steps, explainability."
+          : `Mode: ${String(mode || "UNKNOWN")}.`;
+
+  const ctx = safeJson(context) || {};
+  const pageBits = [
+    ctx?.pathname ? `pathname=${coerceStr(ctx.pathname, 200)}` : "",
+    ctx?.asPath ? `asPath=${coerceStr(ctx.asPath, 200)}` : "",
+    ctx?.mode ? `clientMode=${coerceStr(ctx.mode, 40)}` : "",
+  ].filter(Boolean);
+
+  const pageLine = pageBits.length ? `Client context: ${pageBits.join(" | ")}` : "Client context: (none)";
+
+  return [base, modeLine, pageLine].join("\n");
+}
+
+function toOpenAiMessages(mode, systemPrompt, history) {
+  // history: [{ role, content }]
+  // Normalize into chat format
+  const msgs = [{ role: "system", content: systemPrompt }];
+
+  for (const m of history || []) {
+    const r = String(m?.role || "");
+    const c = String(m?.content || "");
+    if (!c) continue;
+
+    if (r === "assistant") msgs.push({ role: "assistant", content: c });
+    else if (r === "user") msgs.push({ role: "user", content: c });
+    // ignore "system" rows from DB for now (none expected)
+  }
+
+  return msgs;
+}
+
+async function tryGenerateWithOpenAI({ mode, context, history }) {
+  const apiKey = String(process.env.OPENAI_API_KEY || "").trim();
+  if (!apiKey) return null;
+
+  // Dynamic import so builds don't explode if `openai` isn't installed yet.
+  let OpenAI;
+  try {
+    const mod = await import("openai");
+    OpenAI = mod?.default || mod?.OpenAI || null;
+  } catch {
+    return null;
+  }
+  if (!OpenAI) return null;
+
+  const client = new OpenAI({ apiKey });
+
+  const systemPrompt = buildSystemPrompt(mode, context);
+  const messages = toOpenAiMessages(mode, systemPrompt, history);
+
+  const model = String(process.env.OPENAI_MODEL || "gpt-4o-mini").trim();
+
+  try {
+    const resp = await client.chat.completions.create({
+      model,
+      messages,
+      temperature: 0.3,
+      max_tokens: 350,
+    });
+
+    const text = resp?.choices?.[0]?.message?.content;
+    const out = String(text || "").trim();
+    return out || null;
+  } catch (e) {
+    console.error("[ai/send] OpenAI generation error:", e?.message || e);
+    return null;
+  }
+}
+
+async function generateAssistantReply({ threadMode, context, threadId, prisma }) {
+  // Pull recent history from DB (includes the latest user message already inserted)
+  const recent = await prisma.aiMessage.findMany({
+    where: { threadId },
+    orderBy: { createdAt: "asc" },
+    select: { role: true, content: true, createdAt: true },
+    take: 40,
+  });
+
+  const history = Array.isArray(recent) ? recent.map((m) => ({ role: m.role, content: m.content })) : [];
+
+  const generated = await tryGenerateWithOpenAI({
+    mode: threadMode,
+    context,
+    history,
+  });
+
+  if (generated) return generated;
+
+  // Fallback (always works)
+  return buildPlaceholderReply(threadMode);
+}
+
 export default async function handler(req, res) {
   const prisma = getPrisma();
 
@@ -112,7 +240,7 @@ export default async function handler(req, res) {
   const threadId = String(body.threadId || "").trim();
   const content = String(body.content || "").trim();
 
-  // ✅ NEW: optional client context (page awareness, chrome, etc.)
+  // ✅ optional client context (page awareness, chrome, etc.)
   const context = body.context && typeof body.context === "object" ? body.context : null;
 
   if (!threadId) return res.status(400).json({ error: "Missing threadId" });
@@ -120,31 +248,41 @@ export default async function handler(req, res) {
   if (content.length > 4000) return res.status(400).json({ error: "Message too long (max 4000)." });
 
   try {
-    // ensure thread belongs to effective user; read mode for placeholder reply
+    // ensure thread belongs to effective user; read mode for reply
     const thread = await prisma.aiThread.findFirst({
       where: { id: threadId, userId: user.id },
       select: { id: true, mode: true },
     });
     if (!thread?.id) return res.status(404).json({ error: "Thread not found" });
 
-    const reply = buildPlaceholderReply(thread.mode);
+    // 1) Persist the user message immediately (DB-first)
+    await prisma.aiMessage.create({
+      data: {
+        threadId,
+        role: "user",
+        content,
+        // store context on the user message
+        metadata: context || undefined,
+      },
+    });
 
+    // 2) Generate assistant reply using DB history + context (brain)
+    const reply = await generateAssistantReply({
+      threadMode: thread.mode,
+      context,
+      threadId,
+      prisma,
+    });
+
+    // 3) Persist assistant message + bump thread
     await prisma.$transaction([
-      prisma.aiMessage.create({
-        data: {
-          threadId,
-          role: "user",
-          content,
-          // ✅ NEW: store context on the user message
-          metadata: context || undefined,
-        },
-      }),
       prisma.aiMessage.create({
         data: {
           threadId,
           role: "assistant",
           content: reply,
-		  metadata: context || undefined,
+          // If you want the same context echoed on assistant rows for debugging/analytics
+          metadata: context || undefined,
         },
       }),
       prisma.aiThread.update({
