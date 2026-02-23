@@ -1,5 +1,6 @@
 // components/ai/AiWindow.js
 import React, { useEffect, useCallback, useRef, useState } from 'react';
+import { useRouter } from 'next/router';
 
 const GLASS = {
   border: '1px solid rgba(255,255,255,0.22)',
@@ -42,6 +43,7 @@ export default function AiWindow({
   onSetPosition,
   onMarkSeen, // ✅ FIX #2: called on mount so badge clears immediately
 }) {
+  const router = useRouter();
   const resolvedMode = normalizeMode(mode);
 
   // ✅ FIX #4: height is now state so user can drag-resize
@@ -60,6 +62,21 @@ export default function AiWindow({
   const [text, setText] = useState('');
 
   const scrollRef = useRef(null);
+
+  // ✅ NEW: capture page context (client-side only)
+  const buildClientContext = useCallback(() => {
+    try {
+      return {
+        mode: resolvedMode,
+        pathname: String(router?.pathname || ''),
+        asPath: String(router?.asPath || ''),
+        query: router?.query || {},
+        ts: new Date().toISOString(),
+      };
+    } catch {
+      return { mode: resolvedMode };
+    }
+  }, [resolvedMode, router?.asPath, router?.pathname, router?.query]);
 
   // ✅ FIX #3: Initial placement — never opens under the site header
   useEffect(() => {
@@ -81,7 +98,7 @@ export default function AiWindow({
     const next = { x: startX, y: startY };
     setPos(next);
     onSetPosition?.(next);
-  // eslint-disable-next-line react-hooks/exhaustive-deps
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   // Sync position if parent changes it
@@ -92,7 +109,7 @@ export default function AiWindow({
   // ✅ FIX #2: Mark as seen the moment the window mounts (becomes visible)
   useEffect(() => {
     onMarkSeen?.();
-  // eslint-disable-next-line react-hooks/exhaustive-deps
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   // Load thread + messages (DB-first)
@@ -152,10 +169,12 @@ export default function AiWindow({
     setError('');
 
     try {
+      const context = buildClientContext();
+
       const res = await fetch('/api/ai/send', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ threadId, content }),
+        body: JSON.stringify({ threadId, content, context }),
       });
 
       const json = await res.json();
