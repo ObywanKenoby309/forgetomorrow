@@ -43,8 +43,7 @@ export default function SupportFloatingButton() {
             flex items-center justify-center
             w-[42px] h-[42px]
             rounded-full
-            bg-[#FF7043]
-            text-white
+            bg-transparent
             shadow-lg
             hover:brightness-110
             focus:outline-none
@@ -53,20 +52,15 @@ export default function SupportFloatingButton() {
             focus:ring-[#FF7043]
           "
         >
-          {/* Chat bubble icon */}
-          <svg
-            xmlns="http://www.w3.org/2000/svg"
-            width="22"
-            height="22"
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="currentColor"
-            strokeWidth="2"
-            strokeLinecap="round"
-            strokeLinejoin="round"
-          >
-            <path d="M21 15a4 4 0 0 1-4 4H7l-4 4V7a4 4 0 0 1 4-4h10a4 4 0 0 1 4 4z" />
-          </svg>
+          {/* Support icon image (medallion) */}
+          <img
+            src="/icons/support-medallion.png"
+            alt=""
+            width={42}
+            height={42}
+            draggable={false}
+            style={{ display: 'block' }}
+          />
 
           {/* Online indicator */}
           <span className="absolute top-1 right-1 w-2.5 h-2.5 rounded-full bg-lime-300 border border-white" />
