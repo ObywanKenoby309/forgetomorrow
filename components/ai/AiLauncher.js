@@ -199,7 +199,7 @@ export default function AiLauncher({ allowedModes = [], onOpenMode, badgeCount =
           transition: 'all 0.18s ease',
         }}
       >
-        <img src={ICONS.launcher} alt="" aria-hidden="true" style={{ width: 28, height: 28, objectFit: 'contain', borderRadius: 999 }} />
+        <img src={ICONS.launcher} alt="" aria-hidden="true" style={{ width: 40, height: 40, objectFit: 'contain', borderRadius: 999 }} />
 
         {showBadge && (
           <span
