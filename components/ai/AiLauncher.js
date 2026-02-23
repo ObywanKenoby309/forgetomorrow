@@ -175,14 +175,21 @@ export default function AiLauncher({ allowedModes = [], onOpenMode, badgeCount =
         aria-label={open ? 'Close Strikers' : 'Open Strikers'}
         onClick={() => setOpen((v) => !v)}
         style={{
-          width: LAUNCHER_SIZE,
-          height: LAUNCHER_SIZE,
+          // ✅ Sized to match support button; always white so it doesn't compete
+          width: SUPPORT_SIZE,
+          height: SUPPORT_SIZE,
           borderRadius: 999,
-          border: open ? '1.5px solid rgba(255,112,67,0.50)' : '1px solid rgba(255,255,255,0.24)',
-          background: open ? 'rgba(255,255,255,0.96)' : 'rgba(17, 32, 51, 0.86)',
+          // ✅ Closed: clean white with subtle shadow
+          // Open: faint orange ring + soft orange glow — signals active state
+          border: open
+            ? '1.5px solid rgba(255,112,67,0.45)'
+            : '1px solid rgba(0,0,0,0.10)',
+          background: 'rgba(255,255,255,0.96)',
           cursor: 'pointer',
           position: 'relative',
-          boxShadow: open ? '0 4px 18px rgba(255,112,67,0.22)' : '0 12px 26px rgba(0,0,0,0.28)',
+          boxShadow: open
+            ? '0 0 0 3px rgba(255,112,67,0.15), 0 4px 14px rgba(0,0,0,0.14)'
+            : '0 2px 8px rgba(0,0,0,0.14)',
           backdropFilter: 'blur(12px)',
           WebkitBackdropFilter: 'blur(12px)',
           display: 'flex',
@@ -192,7 +199,7 @@ export default function AiLauncher({ allowedModes = [], onOpenMode, badgeCount =
           transition: 'all 0.18s ease',
         }}
       >
-        <img src={ICONS.launcher} alt="" aria-hidden="true" style={{ width: 34, height: 34, objectFit: 'contain', borderRadius: 999 }} />
+        <img src={ICONS.launcher} alt="" aria-hidden="true" style={{ width: 28, height: 28, objectFit: 'contain', borderRadius: 999 }} />
 
         {showBadge && (
           <span
@@ -211,7 +218,7 @@ export default function AiLauncher({ allowedModes = [], onOpenMode, badgeCount =
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
-              border: '2px solid rgba(17, 32, 51, 0.86)',
+              border: '2px solid rgba(255,255,255,0.96)',
               boxSizing: 'border-box',
               lineHeight: 1,
             }}
