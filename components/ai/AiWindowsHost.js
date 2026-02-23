@@ -4,9 +4,9 @@ import AiLauncher from '@/components/ai/AiLauncher';
 import AiWindow from '@/components/ai/AiWindow';
 
 const LABELS = {
-  seeker: 'Seeker Buddy',
-  coach: 'Coach Buddy',
-  recruiter: 'Recruiter Buddy',
+  seeker: 'Seeker Striker',
+  coach: 'Coaching Striker',
+  recruiter: 'Recruiting Striker',
 };
 
 function safeMode(m) {
@@ -140,16 +140,13 @@ export default function AiWindowsHost({ allowedModes = [] }) {
     [allowed, bringToFront, markSeenNow]
   );
 
-  const closeMode = useCallback(
-    (mode) => {
-      setWindows((w) => ({
-        ...w,
-        [mode]: { ...(w?.[mode] || {}), open: false, minimized: false },
-      }));
-      // If they had it open, we treat it as seen already (no extra work).
-    },
-    []
-  );
+  const closeMode = useCallback((mode) => {
+    setWindows((w) => ({
+      ...w,
+      [mode]: { ...(w?.[mode] || {}), open: false, minimized: false },
+    }));
+    // If they had it open, we treat it as seen already (no extra work).
+  }, []);
 
   const minimizeMode = useCallback((mode) => {
     setWindows((w) => ({
@@ -268,7 +265,7 @@ export default function AiWindowsHost({ allowedModes = [] }) {
           <AiWindow
             key={mode}
             mode={mode}
-            title={LABELS[mode] || 'AI Buddy'}
+            title={LABELS[mode] || 'AI Striker'}
             zIndex={st.z || 20}
             x={st.x}
             y={st.y}
