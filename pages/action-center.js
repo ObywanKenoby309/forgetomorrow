@@ -106,7 +106,7 @@ function actionHrefForNotification(n, scope, chrome) {
 }
 
 /* -----------------------------
-   Recruiter Tabs
+   Recruiter Tabs (moved OUT of header)
 ------------------------------ */
 const RECRUITER_TABS = [
   { key: "ALL", label: "All" },
@@ -132,9 +132,11 @@ function recruiterTabMatches(n, tabKey) {
   const entityType = safeText(n.entityType).toUpperCase();
 
   const meta = n?.metadata || {};
-  const metaBucket = safeText(meta.bucket || meta.tab || meta.queue || meta.type || meta.kind || meta.event).toUpperCase();
+  const metaBucket = safeText(
+    meta.bucket || meta.tab || meta.queue || meta.type || meta.kind || meta.event
+  ).toUpperCase();
 
-  // ✅ DB-first matching (preferred): allow your writer to set category/meta for perfect routing
+  // ✅ DB-first matching (preferred)
   if (tabKey === "STALLED") {
     if (metaBucket.includes("STALLED")) return true;
     if (category.includes("STALLED")) return true;
@@ -162,7 +164,7 @@ function recruiterTabMatches(n, tabKey) {
     if (category.includes("CALENDAR")) return true;
   }
 
-  // ✅ Fallback keyword matching (works even if only title/body exist)
+  // ✅ Fallback keyword matching
   const text = `${norm(n.title)} ${norm(n.body)} ${norm(metaBucket)}`;
 
   if (tabKey === "STALLED") {
@@ -207,6 +209,12 @@ function recruiterTabMatches(n, tabKey) {
   return false;
 }
 
+function byCreatedDesc(a, b) {
+  const ta = a?.createdAt ? new Date(a.createdAt).getTime() : 0;
+  const tb = b?.createdAt ? new Date(b.createdAt).getTime() : 0;
+  return tb - ta;
+}
+
 /* -----------------------------
    Page
 ------------------------------ */
@@ -229,10 +237,10 @@ export default function ActionCenterPage() {
 
   const [loading, setLoading] = useState(true);
   const [items, setItems] = useState([]);
-  const [includeRead, setIncludeRead] = useState(false);
+  const [includeRead, setIncludeRead] = useState(true); // ✅ history default
   const [error, setError] = useState("");
 
-  // ✅ NEW: recruiter active tab (supports deep linking)
+  // ✅ recruiter active tab (supports deep linking)
   const [activeRecruiterTab, setActiveRecruiterTab] = useState("ALL");
 
   // ✅ Sync tab from URL when recruiter scope
@@ -352,174 +360,253 @@ export default function ActionCenterPage() {
     return counts;
   }, [scope, items]);
 
-  const visibleItems = useMemo(() => {
+  const filteredByTab = useMemo(() => {
     if (scope !== "RECRUITER") return items;
     const tab = String(activeRecruiterTab || "ALL").toUpperCase();
     return (Array.isArray(items) ? items : []).filter((n) => recruiterTabMatches(n, tab));
   }, [scope, items, activeRecruiterTab]);
 
+  // ✅ Needs Attention = unread only + chronological
+  const needsAttention = useMemo(() => {
+    const base = Array.isArray(filteredByTab) ? filteredByTab : [];
+    return base.filter((n) => !n.readAt).sort(byCreatedDesc);
+  }, [filteredByTab]);
+
+  // ✅ History = whatever we loaded (usually includeRead true) + chronological
+  const historyItems = useMemo(() => {
+    const base = Array.isArray(filteredByTab) ? filteredByTab : [];
+    return base.slice().sort(byCreatedDesc);
+  }, [filteredByTab]);
+
+  /* -----------------------------
+     Header: clean, no tabs
+  ------------------------------ */
   const Header = (
-    <FrostPanel className="p-6 text-center">
+    <FrostPanel className="p-6 text-left">
       <h1 className="text-2xl md:text-3xl font-bold text-orange-600">
         {scopeLabel(scope)}
       </h1>
-      <p className="text-sm md:text-base text-slate-700 mt-2 max-w-3xl mx-auto">
-        Updates that need your attention. Click an item to go straight to where
-        you take action.
+      <p className="text-sm md:text-base text-slate-700 mt-2 max-w-3xl">
+        This is your review surface. Items that need attention live at the top. History is always available below.
       </p>
-
-      {/* ✅ Recruiter tabs */}
-      {scope === "RECRUITER" ? (
-        <div className="mt-4 flex flex-wrap gap-2 justify-center">
-          {RECRUITER_TABS.map((t) => {
-            const isActive = activeRecruiterTab === t.key;
-            const count = Number(recruiterTabCounts?.[t.key] || 0);
-
-            return (
-              <button
-                key={t.key}
-                type="button"
-                onClick={() => {
-                  setActiveRecruiterTab(t.key);
-                  const nextHref = `/action-center?scope=RECRUITER&tab=${encodeURIComponent(
-                    t.key
-                  )}${chrome ? `&chrome=${encodeURIComponent(chrome)}` : ""}`;
-                  router.replace(nextHref, undefined, { shallow: true });
-                }}
-                className={[
-                  "px-3 py-1.5 rounded-full text-xs font-semibold border transition flex items-center gap-2",
-                  isActive
-                    ? "bg-orange-50 text-orange-700 border-orange-200"
-                    : "bg-white/60 hover:bg-white/80 text-slate-700 border-white/40",
-                ].join(" ")}
-                aria-pressed={isActive}
-              >
-                <span>{t.label}</span>
-                <span
-                  className={[
-                    "min-w-[22px] px-2 py-0.5 rounded-full text-[11px] border",
-                    isActive
-                      ? "bg-white/70 border-orange-200 text-orange-700"
-                      : "bg-white/70 border-white/40 text-slate-700",
-                  ].join(" ")}
-                  title={`${count} item(s)`}
-                >
-                  {count}
-                </span>
-              </button>
-            );
-          })}
-        </div>
-      ) : null}
-
-      <div className="mt-4 flex flex-wrap gap-2 justify-center">
-        <button
-          type="button"
-          onClick={() => setIncludeRead(false)}
-          className={[
-            "px-3 py-1.5 rounded-full text-xs font-semibold border transition",
-            !includeRead
-              ? "bg-orange-50 text-orange-700 border-orange-200"
-              : "bg-white/60 hover:bg-white/80 text-slate-700 border-white/40",
-          ].join(" ")}
-        >
-          Unread only
-        </button>
-
-        <button
-          type="button"
-          onClick={() => setIncludeRead(true)}
-          className={[
-            "px-3 py-1.5 rounded-full text-xs font-semibold border transition",
-            includeRead
-              ? "bg-orange-50 text-orange-700 border-orange-200"
-              : "bg-white/60 hover:bg-white/80 text-slate-700 border-white/40",
-          ].join(" ")}
-        >
-          Include read
-        </button>
-
-        <button
-          type="button"
-          onClick={() => load({ includeRead })}
-          className="px-3 py-1.5 rounded-full text-xs font-semibold bg-white/60 hover:bg-white/80 text-slate-800 border border-white/40 transition"
-        >
-          Refresh
-        </button>
-      </div>
     </FrostPanel>
   );
 
-  const Content = (
-    <div className="grid gap-4">
-      {error ? (
-        <div className="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
-          {error}
-        </div>
-      ) : null}
+  /* -----------------------------
+     Reusable list row
+  ------------------------------ */
+  function NotificationRow({ n }) {
+    const isUnread = !n.readAt;
+    const href = actionHrefForNotification(n, scope, chrome);
 
-      <FrostPanel className="p-4">
-        {loading ? (
-          <div className="text-slate-600">Loading Action Center…</div>
-        ) : visibleItems.length === 0 ? (
-          <div className="text-slate-600">No items right now.</div>
-        ) : (
-          <div className="grid gap-2">
-            {visibleItems.map((n) => {
-              const isUnread = !n.readAt;
-              const href = actionHrefForNotification(n, scope, chrome);
-
-              return (
-                <div
-                  key={n.id}
-                  className="border border-white/30 bg-white/60 hover:bg-white/75 transition rounded-2xl p-3 flex items-start justify-between gap-3"
-                >
-                  <div className="min-w-0">
-                    <div className="flex items-center gap-2">
-                      <div className="font-semibold text-slate-900 truncate">
-                        {n.title || "Notification"}
-                      </div>
-                      <Dot show={isUnread} />
-                    </div>
-
-                    {n.body ? (
-                      <div className="text-sm text-slate-700 mt-1 break-words">
-                        {n.body}
-                      </div>
-                    ) : null}
-
-                    <div className="text-[11px] text-slate-500 mt-1">
-                      {n.createdAt ? new Date(n.createdAt).toLocaleString() : ""}
-                    </div>
-                  </div>
-
-                  <div className="flex flex-col gap-2 items-end shrink-0">
-                    <Link
-                      href={href}
-                      onClick={() => {
-                        markRead(n.id);
-                      }}
-                      className="text-xs font-semibold px-3 py-1.5 rounded-full bg-orange-50 text-orange-700 hover:bg-orange-100 border border-orange-100"
-                    >
-                      Open
-                    </Link>
-
-                    {isUnread ? (
-                      <button
-                        type="button"
-                        onClick={() => markRead(n.id)}
-                        className="text-[11px] text-slate-700 hover:underline"
-                      >
-                        Mark read
-                      </button>
-                    ) : null}
-                  </div>
-                </div>
-              );
-            })}
+    return (
+      <div
+        className="border border-white/30 bg-white/60 hover:bg-white/75 transition rounded-2xl p-3 flex items-start justify-between gap-3"
+      >
+        <div className="min-w-0">
+          <div className="flex items-center gap-2">
+            <div className="font-semibold text-slate-900 truncate">
+              {n.title || "Notification"}
+            </div>
+            <Dot show={isUnread} />
           </div>
-        )}
-      </FrostPanel>
+
+          {n.body ? (
+            <div className="text-sm text-slate-700 mt-1 break-words">
+              {n.body}
+            </div>
+          ) : null}
+
+          <div className="text-[11px] text-slate-500 mt-1">
+            {n.createdAt ? new Date(n.createdAt).toLocaleString() : ""}
+          </div>
+        </div>
+
+        <div className="flex flex-col gap-2 items-end shrink-0">
+          <Link
+            href={href}
+            onClick={() => {
+              markRead(n.id);
+            }}
+            className="text-xs font-semibold px-3 py-1.5 rounded-full bg-orange-50 text-orange-700 hover:bg-orange-100 border border-orange-100"
+          >
+            Open
+          </Link>
+
+          {isUnread ? (
+            <button
+              type="button"
+              onClick={() => markRead(n.id)}
+              className="text-[11px] text-slate-700 hover:underline"
+            >
+              Mark read
+            </button>
+          ) : null}
+        </div>
+      </div>
+    );
+  }
+
+  /* -----------------------------
+     Content: center-first layout
+  ------------------------------ */
+  const Content = (
+    <div className="w-full flex justify-center">
+      <div className="w-full max-w-[1100px] px-0">
+        <div className="grid gap-4">
+          {/* Recruiter Tabs (moved below header) */}
+          {scope === "RECRUITER" ? (
+            <FrostPanel className="p-3">
+              <div className="flex flex-wrap gap-2 justify-start">
+                {RECRUITER_TABS.map((t) => {
+                  const isActive = activeRecruiterTab === t.key;
+                  const count = Number(recruiterTabCounts?.[t.key] || 0);
+
+                  return (
+                    <button
+                      key={t.key}
+                      type="button"
+                      onClick={() => {
+                        setActiveRecruiterTab(t.key);
+                        const nextHref = `/action-center?scope=RECRUITER&tab=${encodeURIComponent(
+                          t.key
+                        )}${chrome ? `&chrome=${encodeURIComponent(chrome)}` : ""}`;
+                        router.replace(nextHref, undefined, { shallow: true });
+                      }}
+                      className={[
+                        "px-3 py-1.5 rounded-full text-xs font-semibold border transition flex items-center gap-2",
+                        isActive
+                          ? "bg-orange-50 text-orange-700 border-orange-200"
+                          : "bg-white/60 hover:bg-white/80 text-slate-700 border-white/40",
+                      ].join(" ")}
+                      aria-pressed={isActive}
+                    >
+                      <span>{t.label}</span>
+                      <span
+                        className={[
+                          "min-w-[22px] px-2 py-0.5 rounded-full text-[11px] border",
+                          isActive
+                            ? "bg-white/70 border-orange-200 text-orange-700"
+                            : "bg-white/70 border-white/40 text-slate-700",
+                        ].join(" ")}
+                        title={`${count} item(s)`}
+                      >
+                        {count}
+                      </span>
+                    </button>
+                  );
+                })}
+              </div>
+            </FrostPanel>
+          ) : null}
+
+          {error ? (
+            <div className="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
+              {error}
+            </div>
+          ) : null}
+
+          {/* Needs Attention (Unread-only, chronological) */}
+          <FrostPanel className="p-4">
+            <div className="flex items-start justify-between gap-3">
+              <div>
+                <div className="text-sm font-semibold text-slate-900">
+                  Needs Attention
+                </div>
+                <div className="text-[12px] text-slate-600 mt-0.5">
+                  Unread items, newest first. Click to go take action.
+                </div>
+              </div>
+
+              <button
+                type="button"
+                onClick={() => load({ includeRead })}
+                className="px-3 py-1.5 rounded-full text-xs font-semibold bg-white/60 hover:bg-white/80 text-slate-800 border border-white/40 transition"
+              >
+                Refresh
+              </button>
+            </div>
+
+            <div className="mt-3">
+              {loading ? (
+                <div className="text-slate-600">Loading…</div>
+              ) : needsAttention.length === 0 ? (
+                <div className="text-slate-600">
+                  No items needing action right now.
+                </div>
+              ) : (
+                <div className="grid gap-2">
+                  {needsAttention.map((n) => (
+                    <NotificationRow key={n.id} n={n} />
+                  ))}
+                </div>
+              )}
+            </div>
+          </FrostPanel>
+
+          {/* History (always available) */}
+          <FrostPanel className="p-4">
+            <div className="flex flex-wrap items-start justify-between gap-3">
+              <div>
+                <div className="text-sm font-semibold text-slate-900">History</div>
+                <div className="text-[12px] text-slate-600 mt-0.5">
+                  A chronological log of what changed. You take action from the linked destination.
+                </div>
+              </div>
+
+              <div className="flex flex-wrap gap-2">
+                <button
+                  type="button"
+                  onClick={() => setIncludeRead(true)}
+                  className={[
+                    "px-3 py-1.5 rounded-full text-xs font-semibold border transition",
+                    includeRead
+                      ? "bg-orange-50 text-orange-700 border-orange-200"
+                      : "bg-white/60 hover:bg-white/80 text-slate-700 border-white/40",
+                  ].join(" ")}
+                >
+                  Include read
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => setIncludeRead(false)}
+                  className={[
+                    "px-3 py-1.5 rounded-full text-xs font-semibold border transition",
+                    !includeRead
+                      ? "bg-orange-50 text-orange-700 border-orange-200"
+                      : "bg-white/60 hover:bg-white/80 text-slate-700 border-white/40",
+                  ].join(" ")}
+                >
+                  Unread only
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => load({ includeRead })}
+                  className="px-3 py-1.5 rounded-full text-xs font-semibold bg-white/60 hover:bg-white/80 text-slate-800 border border-white/40 transition"
+                >
+                  Refresh
+                </button>
+              </div>
+            </div>
+
+            <div className="mt-3">
+              {loading ? (
+                <div className="text-slate-600">Loading…</div>
+              ) : historyItems.length === 0 ? (
+                <div className="text-slate-600">No history items right now.</div>
+              ) : (
+                <div className="grid gap-2">
+                  {historyItems.map((n) => (
+                    <NotificationRow key={n.id} n={n} />
+                  ))}
+                </div>
+              )}
+            </div>
+          </FrostPanel>
+        </div>
+      </div>
     </div>
   );
 
