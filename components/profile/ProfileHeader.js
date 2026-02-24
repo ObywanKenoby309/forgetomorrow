@@ -21,7 +21,7 @@ export default function ProfileHeader() {
   const [coverUrl, setCoverUrl] = useState('');
   const [wallpaperUrl, setWallpaperUrl] = useState('');
 
-  const [bannerH, setBannerH] = useState(120);
+  const [bannerH, setBannerH] = useState(220); // ✅ FIX: was 120 — increased default to show full banner
   const [bannerMode, setBannerMode] = useState('cover'); // "cover" | "fit"
   const [focalY, setFocalY] = useState(50);
 
@@ -32,7 +32,7 @@ export default function ProfileHeader() {
   const [saving, setSaving] = useState(false);
   const [saveError, setSaveError] = useState(null);
 
-  // expand/collapse controls for “More options…”
+  // expand/collapse controls for "More options…"
   const [bannerMoreOpen, setBannerMoreOpen] = useState(false);
   const [wallpaperMoreOpen, setWallpaperMoreOpen] = useState(false);
 
@@ -104,8 +104,8 @@ export default function ProfileHeader() {
 
         setWallpaperUrl(user.wallpaperUrl || '');
 
-        const h = user.bannerHeight != null ? user.bannerHeight : 120;
-        setBannerH(clamp(h, 80, 220));
+        const h = user.bannerHeight != null ? user.bannerHeight : 220; // ✅ FIX: default 220 not 120
+        setBannerH(clamp(h, 80, 400)); // ✅ FIX: max raised to 400 to allow full banner display
 
         const mode = user.bannerMode === 'fit' ? 'fit' : 'cover';
         setBannerMode(mode);
@@ -705,7 +705,7 @@ export default function ProfileHeader() {
               <input
                 type="range"
                 min={80}
-                max={220}
+                max={400} // ✅ FIX: was 220 — raised to allow full banner display
                 value={bannerH}
                 onChange={(e) => setBannerH(Number(e.target.value))}
               />
@@ -797,20 +797,32 @@ export default function ProfileHeader() {
 
 /* ===== Banner, Toggle, Dialog ===== */
 
+// ✅ FIX: BannerCover now uses a real <img> so the full image height is respected.
+// The height prop acts as a maxHeight cap rather than a hard crop.
 function BannerCover({ url, height, focalY }) {
   return (
     <div
       style={{
-        height,
+        position: 'relative',
         width: '100%',
-        backgroundImage: `url(${url})`,
-        backgroundSize: 'cover',
-        backgroundPosition: `center ${focalY}%`,
-        backgroundRepeat: 'no-repeat',
+        overflow: 'hidden',
         borderTopLeftRadius: 12,
         borderTopRightRadius: 12,
       }}
-    />
+    >
+      <img
+        src={url}
+        alt=""
+        style={{
+          display: 'block',
+          width: '100%',
+          height: 'auto',
+          maxHeight: Math.max(height, 220),
+          objectFit: 'cover',
+          objectPosition: `center ${focalY}%`,
+        }}
+      />
+    </div>
   );
 }
 

@@ -350,7 +350,7 @@ export default function ProfilePage() {
               boxShadow: '0 10px 24px rgba(0,0,0,0.12)',
               backdropFilter: 'blur(10px)',
               WebkitBackdropFilter: 'blur(10px)',
-              padding: 10,
+              padding: 0, // ✅ FIX: was 10 — caused red side gaps on banner
               maxWidth: '100%',
             }}
           >

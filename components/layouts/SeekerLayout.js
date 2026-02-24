@@ -138,7 +138,7 @@ export default function SeekerLayout({
   // ---- CHROME MODE (DB-first; URL may request chrome but DB can canonicalize recruiter ent/smb) ----
   const [chromeMode, setChromeMode] = useState(() => {
     // IMPORTANT: deterministic initial value avoids hydration mismatch.
-    // We’ll resolve properly in effects once router + plan are ready.
+    // We'll resolve properly in effects once router + plan are ready.
     return normalizeChrome(forceChrome) || 'seeker';
   });
 
@@ -151,7 +151,7 @@ export default function SeekerLayout({
       return;
     }
 
-    // URL request (what user is “trying” to view)
+    // URL request (what user is "trying" to view)
     const urlChrome = normalizeChrome(router.query?.chrome);
 
     // DB truth (what the account *is*)
@@ -312,6 +312,7 @@ export default function SeekerLayout({
     minWidth: hasRight && !isMobile ? rightWidth : 0,
     maxWidth: hasRight && !isMobile ? rightWidth : '100%',
     minInlineSize: 0,
+    overflow: 'hidden', // ✅ FIX: prevent right rail content from bleeding past its column
   };
 
   const rightDark = {
@@ -394,7 +395,8 @@ export default function SeekerLayout({
       <div style={backgroundStyle}>
         <HeaderComp />
 
-        <div style={{ ...gridStyles, gap, ...containerPadding, alignItems: 'start' }}>
+        {/* ✅ FIX: overflowX hidden prevents right rail content from causing page-wide horizontal scroll */}
+        <div style={{ ...gridStyles, gap, ...containerPadding, alignItems: 'start', overflowX: 'hidden' }}>
           <aside
             style={{
               ...leftRailLayer,
