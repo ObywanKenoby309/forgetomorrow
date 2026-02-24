@@ -215,6 +215,52 @@ function byCreatedDesc(a, b) {
 }
 
 /* -----------------------------
+   Recruiter Right Rail (Ad + helper)
+------------------------------ */
+function RecruiterRightRail() {
+  return (
+    <div className="grid gap-3">
+      <div
+        style={{
+          background: "white",
+          borderRadius: 12,
+          padding: 14,
+          boxShadow: "0 2px 6px rgba(0,0,0,0.06)",
+          border: "1px solid #eee",
+          minHeight: 110,
+          display: "grid",
+          placeItems: "center",
+          textAlign: "center",
+        }}
+      >
+        <div style={{ fontWeight: 900, color: "#37474F" }}>AD SLOT</div>
+        <div style={{ marginTop: 6, fontSize: 12, color: "#607D8B" }}>
+          Top-right placement
+        </div>
+      </div>
+
+      <div
+        style={{
+          background: "white",
+          borderRadius: 12,
+          padding: 14,
+          boxShadow: "0 2px 6px rgba(0,0,0,0.06)",
+          border: "1px solid #eee",
+        }}
+      >
+        <div style={{ fontWeight: 900, color: "#37474F", marginBottom: 6 }}>
+          Need help?
+        </div>
+        <p style={{ margin: 0, color: "#607D8B", fontSize: 13, lineHeight: 1.45 }}>
+          Use the orange “Need help? Chat with Support” button at the bottom-right of
+          the screen.
+        </p>
+      </div>
+    </div>
+  );
+}
+
+/* -----------------------------
    Page
 ------------------------------ */
 export default function ActionCenterPage() {
@@ -224,11 +270,7 @@ export default function ActionCenterPage() {
   const tabFromQueryRaw = String(router.query.tab || "").toUpperCase();
 
   const scope = useMemo(() => {
-    if (
-      scopeFromQuery === "SEEKER" ||
-      scopeFromQuery === "COACH" ||
-      scopeFromQuery === "RECRUITER"
-    ) {
+    if (scopeFromQuery === "SEEKER" || scopeFromQuery === "COACH" || scopeFromQuery === "RECRUITER") {
       return scopeFromQuery;
     }
     return resolveScope({ pathname: router.pathname, chrome });
@@ -334,9 +376,7 @@ export default function ActionCenterPage() {
 
       // Optimistic update
       const nowIso = new Date().toISOString();
-      setItems((prev) =>
-        prev.map((n) => (n.id === id ? { ...n, readAt: nowIso } : n))
-      );
+      setItems((prev) => prev.map((n) => (n.id === id ? { ...n, readAt: nowIso } : n)));
 
       if (typeof window !== "undefined") {
         window.dispatchEvent(new Event("ft-notifications-updated"));
@@ -353,8 +393,7 @@ export default function ActionCenterPage() {
 
     for (const n of Array.isArray(items) ? items : []) {
       for (const t of RECRUITER_TABS) {
-        if (recruiterTabMatches(n, t.key))
-          counts[t.key] = (counts[t.key] || 0) + 1;
+        if (recruiterTabMatches(n, t.key)) counts[t.key] = (counts[t.key] || 0) + 1;
       }
     }
     return counts;
@@ -363,9 +402,7 @@ export default function ActionCenterPage() {
   const filteredByTab = useMemo(() => {
     if (scope !== "RECRUITER") return items;
     const tab = String(activeRecruiterTab || "ALL").toUpperCase();
-    return (Array.isArray(items) ? items : []).filter((n) =>
-      recruiterTabMatches(n, tab)
-    );
+    return (Array.isArray(items) ? items : []).filter((n) => recruiterTabMatches(n, tab));
   }, [scope, items, activeRecruiterTab]);
 
   // ✅ Needs Attention = unread only + chronological
@@ -380,39 +417,19 @@ export default function ActionCenterPage() {
     return base.slice().sort(byCreatedDesc);
   }, [filteredByTab]);
 
-  const MAX_LIST_ITEMS = 10;
-
   /* -----------------------------
-     Header: respects right rail + ad top-right
+     Header: clean, no tabs
   ------------------------------ */
   const Header = (
-    <div className="w-full flex justify-center">
-      <div className="w-full max-w-[1100px]">
-        <div className="grid grid-cols-1 lg:grid-cols-[1fr_320px] gap-4">
-          <FrostPanel className="p-6 text-left">
-            <h1 className="text-2xl md:text-3xl font-bold text-orange-600">
-              {scopeLabel(scope)}
-            </h1>
-            <p className="text-sm md:text-base text-slate-700 mt-2 max-w-3xl">
-              This is your review surface. Items that need attention live on the
-              left. History for this category is on the right.
-            </p>
-          </FrostPanel>
-
-          {/* ✅ Ad / right-rail slot */}
-          <FrostPanel className="p-4 h-[120px] flex items-center justify-center text-slate-600">
-            <div className="text-center">
-              <div className="text-xs font-semibold tracking-wide text-slate-700">
-                AD SLOT
-              </div>
-              <div className="text-[11px] text-slate-600 mt-1">
-                Top-right placement
-              </div>
-            </div>
-          </FrostPanel>
-        </div>
-      </div>
-    </div>
+    <FrostPanel className="p-6 text-left">
+      <h1 className="text-2xl md:text-3xl font-bold text-orange-600">
+        {scopeLabel(scope)}
+      </h1>
+      <p className="text-sm md:text-base text-slate-700 mt-2 max-w-3xl">
+        This is your review surface. Items that need attention are on the left. History for
+        this category is on the right.
+      </p>
+    </FrostPanel>
   );
 
   /* -----------------------------
@@ -433,9 +450,7 @@ export default function ActionCenterPage() {
           </div>
 
           {n.body ? (
-            <div className="text-sm text-slate-700 mt-1 break-words">
-              {n.body}
-            </div>
+            <div className="text-sm text-slate-700 mt-1 break-words">{n.body}</div>
           ) : null}
 
           <div className="text-[11px] text-slate-500 mt-1">
@@ -469,77 +484,137 @@ export default function ActionCenterPage() {
   }
 
   /* -----------------------------
-     Content: tabs + two-column (needs vs history)
+     Content
+     - Recruiter: 2-column needs vs history (respects right rail)
+     - Others: keep stacked
   ------------------------------ */
   const Content = (
-    <div className="w-full flex justify-center">
-      <div className="w-full max-w-[1100px]">
-        <div className="grid gap-4">
-          {/* Recruiter Tabs (below header) */}
-          {scope === "RECRUITER" ? (
-            <FrostPanel className="p-3">
-              <div className="flex flex-wrap gap-2 justify-start">
-                {RECRUITER_TABS.map((t) => {
-                  const isActive = activeRecruiterTab === t.key;
-                  const count = Number(recruiterTabCounts?.[t.key] || 0);
+    <div className="grid gap-4">
+      {/* Recruiter Tabs (below header) */}
+      {scope === "RECRUITER" ? (
+        <FrostPanel className="p-3">
+          <div className="flex flex-wrap gap-2 justify-start">
+            {RECRUITER_TABS.map((t) => {
+              const isActive = activeRecruiterTab === t.key;
+              const count = Number(recruiterTabCounts?.[t.key] || 0);
 
-                  return (
-                    <button
-                      key={t.key}
-                      type="button"
-                      onClick={() => {
-                        setActiveRecruiterTab(t.key);
-                        const nextHref = `/action-center?scope=RECRUITER&tab=${encodeURIComponent(
-                          t.key
-                        )}${chrome ? `&chrome=${encodeURIComponent(chrome)}` : ""}`;
-                        router.replace(nextHref, undefined, { shallow: true });
-                      }}
-                      className={[
-                        "px-3 py-1.5 rounded-full text-xs font-semibold border transition flex items-center gap-2",
-                        isActive
-                          ? "bg-orange-50 text-orange-700 border-orange-200"
-                          : "bg-white/60 hover:bg-white/80 text-slate-700 border-white/40",
-                      ].join(" ")}
-                      aria-pressed={isActive}
-                    >
-                      <span>{t.label}</span>
-                      <span
-                        className={[
-                          "min-w-[22px] px-2 py-0.5 rounded-full text-[11px] border",
-                          isActive
-                            ? "bg-white/70 border-orange-200 text-orange-700"
-                            : "bg-white/70 border-white/40 text-slate-700",
-                        ].join(" ")}
-                        title={`${count} item(s)`}
-                      >
-                        {count}
-                      </span>
-                    </button>
-                  );
-                })}
-              </div>
-            </FrostPanel>
-          ) : null}
+              return (
+                <button
+                  key={t.key}
+                  type="button"
+                  onClick={() => {
+                    setActiveRecruiterTab(t.key);
+                    const nextHref = `/action-center?scope=RECRUITER&tab=${encodeURIComponent(
+                      t.key
+                    )}${chrome ? `&chrome=${encodeURIComponent(chrome)}` : ""}`;
+                    router.replace(nextHref, undefined, { shallow: true });
+                  }}
+                  className={[
+                    "px-3 py-1.5 rounded-full text-xs font-semibold border transition flex items-center gap-2",
+                    isActive
+                      ? "bg-orange-50 text-orange-700 border-orange-200"
+                      : "bg-white/60 hover:bg-white/80 text-slate-700 border-white/40",
+                  ].join(" ")}
+                  aria-pressed={isActive}
+                >
+                  <span>{t.label}</span>
+                  <span
+                    className={[
+                      "min-w-[22px] px-2 py-0.5 rounded-full text-[11px] border",
+                      isActive
+                        ? "bg-white/70 border-orange-200 text-orange-700"
+                        : "bg-white/70 border-white/40 text-slate-700",
+                    ].join(" ")}
+                    title={`${count} item(s)`}
+                  >
+                    {count}
+                  </span>
+                </button>
+              );
+            })}
+          </div>
+        </FrostPanel>
+      ) : null}
 
-          {error ? (
-            <div className="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
-              {error}
-            </div>
-          ) : null}
+      {error ? (
+        <div className="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
+          {error}
+        </div>
+      ) : null}
 
-          {/* ✅ Two column layout */}
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-            {/* Needs Attention */}
-            <FrostPanel className="p-4">
-              <div className="flex items-start justify-between gap-3">
-                <div>
-                  <div className="text-sm font-semibold text-slate-900">
-                    Needs Attention
-                  </div>
-                  <div className="text-[12px] text-slate-600 mt-0.5">
-                    Unread items, newest first. Click to go take action.
-                  </div>
+      {/* Recruiter: true two-column */}
+      {scope === "RECRUITER" ? (
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+          {/* Needs Attention */}
+          <FrostPanel className="p-4 bg-white/80">
+            <div className="flex items-start justify-between gap-3">
+              <div>
+                <div className="text-sm font-semibold text-slate-900">Needs Attention</div>
+                <div className="text-[12px] text-slate-600 mt-0.5">
+                  Unread items, newest first. Click to go take action.
                 </div>
+              </div>
+
+              <button
+                type="button"
+                onClick={() => load({ includeRead })}
+                className="px-3 py-1.5 rounded-full text-xs font-semibold bg-white/60 hover:bg-white/80 text-slate-800 border border-white/40 transition"
+              >
+                Refresh
+              </button>
+            </div>
+
+            <div className="mt-3">
+              {loading ? (
+                <div className="text-slate-600">Loading…</div>
+              ) : needsAttention.length === 0 ? (
+                <div className="text-slate-600">No items needing action right now.</div>
+              ) : (
+                <div className="grid gap-2 max-h-[520px] overflow-auto pr-1">
+                  {needsAttention.map((n) => (
+                    <NotificationRow key={n.id} n={n} />
+                  ))}
+                </div>
+              )}
+            </div>
+          </FrostPanel>
+
+          {/* History */}
+          <FrostPanel className="p-4">
+            <div className="flex flex-wrap items-start justify-between gap-3">
+              <div>
+                <div className="text-sm font-semibold text-slate-900">History</div>
+                <div className="text-[12px] text-slate-600 mt-0.5">
+                  A chronological log for this category. Take action from the linked destination.
+                </div>
+              </div>
+
+              <div className="flex flex-wrap gap-2">
+                <button
+                  type="button"
+                  onClick={() => setIncludeRead(true)}
+                  className={[
+                    "px-3 py-1.5 rounded-full text-xs font-semibold border transition",
+                    includeRead
+                      ? "bg-orange-50 text-orange-700 border-orange-200"
+                      : "bg-white/60 hover:bg-white/80 text-slate-700 border-white/40",
+                  ].join(" ")}
+                >
+                  Include read
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => setIncludeRead(false)}
+                  className={[
+                    "px-3 py-1.5 rounded-full text-xs font-semibold border transition",
+                    !includeRead
+                      ? "bg-orange-50 text-orange-700 border-orange-200"
+                      : "bg-white/60 hover:bg-white/80 text-slate-700 border-white/40",
+                  ].join(" ")}
+                >
+                  Unread only
+                </button>
 
                 <button
                   type="button"
@@ -549,106 +624,121 @@ export default function ActionCenterPage() {
                   Refresh
                 </button>
               </div>
+            </div>
 
-              <div className="mt-3">
-                {loading ? (
-                  <div className="text-slate-600">Loading…</div>
-                ) : needsAttention.length === 0 ? (
-                  <div className="text-slate-600">No items needing action right now.</div>
-                ) : (
-                  <>
-                    <div className="max-h-[420px] overflow-y-auto pr-1">
-                      <div className="grid gap-2">
-                        {needsAttention.slice(0, MAX_LIST_ITEMS).map((n) => (
-                          <NotificationRow key={n.id} n={n} />
-                        ))}
-                      </div>
-                    </div>
-
-                    {needsAttention.length > MAX_LIST_ITEMS ? (
-                      <div className="text-[11px] text-slate-600 mt-2">
-                        Showing {MAX_LIST_ITEMS} of {needsAttention.length}. Scroll to review.
-                      </div>
-                    ) : null}
-                  </>
-                )}
-              </div>
-            </FrostPanel>
-
-            {/* History */}
-            <FrostPanel className="p-4">
-              <div className="flex flex-wrap items-start justify-between gap-3">
-                <div>
-                  <div className="text-sm font-semibold text-slate-900">History</div>
-                  <div className="text-[12px] text-slate-600 mt-0.5">
-                    A chronological log for this category. Take action from the linked destination.
-                  </div>
+            <div className="mt-3">
+              {loading ? (
+                <div className="text-slate-600">Loading…</div>
+              ) : historyItems.length === 0 ? (
+                <div className="text-slate-600">No history items right now.</div>
+              ) : (
+                <div className="grid gap-2 max-h-[520px] overflow-auto pr-1">
+                  {historyItems.map((n) => (
+                    <NotificationRow key={n.id} n={n} />
+                  ))}
                 </div>
-
-                <div className="flex flex-wrap gap-2">
-                  <button
-                    type="button"
-                    onClick={() => setIncludeRead(true)}
-                    className={[
-                      "px-3 py-1.5 rounded-full text-xs font-semibold border transition",
-                      includeRead
-                        ? "bg-orange-50 text-orange-700 border-orange-200"
-                        : "bg-white/60 hover:bg-white/80 text-slate-700 border-white/40",
-                    ].join(" ")}
-                  >
-                    Include read
-                  </button>
-
-                  <button
-                    type="button"
-                    onClick={() => setIncludeRead(false)}
-                    className={[
-                      "px-3 py-1.5 rounded-full text-xs font-semibold border transition",
-                      !includeRead
-                        ? "bg-orange-50 text-orange-700 border-orange-200"
-                        : "bg-white/60 hover:bg-white/80 text-slate-700 border-white/40",
-                    ].join(" ")}
-                  >
-                    Unread only
-                  </button>
-
-                  <button
-                    type="button"
-                    onClick={() => load({ includeRead })}
-                    className="px-3 py-1.5 rounded-full text-xs font-semibold bg-white/60 hover:bg-white/80 text-slate-800 border border-white/40 transition"
-                  >
-                    Refresh
-                  </button>
-                </div>
-              </div>
-
-              <div className="mt-3">
-                {loading ? (
-                  <div className="text-slate-600">Loading…</div>
-                ) : historyItems.length === 0 ? (
-                  <div className="text-slate-600">No history items right now.</div>
-                ) : (
-                  <>
-                    <div className="max-h-[420px] overflow-y-auto pr-1">
-                      <div className="grid gap-2">
-                        {historyItems.slice(0, MAX_LIST_ITEMS).map((n) => (
-                          <NotificationRow key={n.id} n={n} />
-                        ))}
-                      </div>
-                    </div>
-
-                    {historyItems.length > MAX_LIST_ITEMS ? (
-                      <div className="text-[11px] text-slate-600 mt-2">
-                        Showing {MAX_LIST_ITEMS} of {historyItems.length}. Scroll to review.
-                      </div>
-                    ) : null}
-                  </>
-                )}
-              </div>
-            </FrostPanel>
-          </div>
+              )}
+            </div>
+          </FrostPanel>
         </div>
-      </div>
+      ) : (
+        /* Seeker/Coach: keep stacked (unchanged behavior) */
+        <div className="grid gap-4">
+          <FrostPanel className="p-4 bg-white/80">
+            <div className="flex items-start justify-between gap-3">
+              <div>
+                <div className="text-sm font-semibold text-slate-900">Needs Attention</div>
+                <div className="text-[12px] text-slate-600 mt-0.5">
+                  Unread items, newest first. Click to go take action.
+                </div>
+              </div>
+
+              <button
+                type="button"
+                onClick={() => load({ includeRead })}
+                className="px-3 py-1.5 rounded-full text-xs font-semibold bg-white/60 hover:bg-white/80 text-slate-800 border border-white/40 transition"
+              >
+                Refresh
+              </button>
+            </div>
+
+            <div className="mt-3">
+              {loading ? (
+                <div className="text-slate-600">Loading…</div>
+              ) : needsAttention.length === 0 ? (
+                <div className="text-slate-600">No items needing action right now.</div>
+              ) : (
+                <div className="grid gap-2">
+                  {needsAttention.map((n) => (
+                    <NotificationRow key={n.id} n={n} />
+                  ))}
+                </div>
+              )}
+            </div>
+          </FrostPanel>
+
+          <FrostPanel className="p-4">
+            <div className="flex flex-wrap items-start justify-between gap-3">
+              <div>
+                <div className="text-sm font-semibold text-slate-900">History</div>
+                <div className="text-[12px] text-slate-600 mt-0.5">
+                  A chronological log of what changed. You take action from the linked destination.
+                </div>
+              </div>
+
+              <div className="flex flex-wrap gap-2">
+                <button
+                  type="button"
+                  onClick={() => setIncludeRead(true)}
+                  className={[
+                    "px-3 py-1.5 rounded-full text-xs font-semibold border transition",
+                    includeRead
+                      ? "bg-orange-50 text-orange-700 border-orange-200"
+                      : "bg-white/60 hover:bg-white/80 text-slate-700 border-white/40",
+                  ].join(" ")}
+                >
+                  Include read
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => setIncludeRead(false)}
+                  className={[
+                    "px-3 py-1.5 rounded-full text-xs font-semibold border transition",
+                    !includeRead
+                      ? "bg-orange-50 text-orange-700 border-orange-200"
+                      : "bg-white/60 hover:bg-white/80 text-slate-700 border-white/40",
+                  ].join(" ")}
+                >
+                  Unread only
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => load({ includeRead })}
+                  className="px-3 py-1.5 rounded-full text-xs font-semibold bg-white/60 hover:bg-white/80 text-slate-800 border border-white/40 transition"
+                >
+                  Refresh
+                </button>
+              </div>
+            </div>
+
+            <div className="mt-3">
+              {loading ? (
+                <div className="text-slate-600">Loading…</div>
+              ) : historyItems.length === 0 ? (
+                <div className="text-slate-600">No history items right now.</div>
+              ) : (
+                <div className="grid gap-2">
+                  {historyItems.map((n) => (
+                    <NotificationRow key={n.id} n={n} />
+                  ))}
+                </div>
+              )}
+            </div>
+          </FrostPanel>
+        </div>
+      )}
     </div>
   );
 
@@ -658,7 +748,12 @@ export default function ActionCenterPage() {
         <Head>
           <title>Action Center | ForgeTomorrow</title>
         </Head>
-        <RecruiterLayout title="Action Center | ForgeTomorrow" header={Header}>
+        <RecruiterLayout
+          title="Action Center | ForgeTomorrow"
+          header={Header}
+          right={<RecruiterRightRail />}
+          activeNav="dashboard"
+        >
           {Content}
         </RecruiterLayout>
       </>
