@@ -65,19 +65,19 @@ async function resolveEffectiveUser(prisma, req, session) {
 function buildPlaceholderReply(mode) {
   if (mode === "SEEKER") {
     return (
-      "Got it. I’m your Seeker Buddy. For now, I’m in DB-wired mode (AI generation is next). " +
+      "Got it. I’m your Seeker Striker. For now, I’m in DB-wired mode (AI generation is next). " +
       "Tell me what you’re working on: resume alignment, applications pipeline, profile upgrades, incentives, or a 30/60/90 plan."
     );
   }
   if (mode === "COACH") {
     return (
-      "Got it. I’m your Coach Buddy. DB wiring is live; AI generation is next. " +
+      "Got it. I’m your Coach Striker. DB wiring is live; AI generation is next. " +
       "Tell me the client goal and what you want to produce (resume feedback, roadmap, interview prep, session plan)."
     );
   }
   if (mode === "RECRUITER") {
     return (
-      "Got it. I’m your Recruiter Buddy. DB wiring is live; AI generation is next. " +
+      "Got it. I’m your Recruiter Striker. DB wiring is live; AI generation is next. " +
       "Tell me what you’re doing: JD cleanup, candidate evaluation, pipeline steps, or explainability packet prep."
     );
   }
@@ -114,7 +114,7 @@ function buildModeGuardrails(mode) {
       "- You MAY give resume improvement guidance, JD alignment steps, application strategy, interview prep, and profile improvement.",
       "- You MUST NOT write, rewrite, standardize, or generate job descriptions for posting (JD creation is recruiter-side work).",
       "- You MUST NOT act as a hiring decision-maker or give recruiter-side pipeline instructions as if the user is the recruiter.",
-      "- If the user is asking to evaluate a candidate for hiring, tell them to switch to Recruiter Buddy.",
+      "- If the user is asking to evaluate a candidate for hiring, tell them to switch to Recruiter Striker.",
     ].join("\n");
   }
 
@@ -124,7 +124,7 @@ function buildModeGuardrails(mode) {
       "- You are helping a coach support a client with structured outputs (plans, feedback, session structure).",
       "- You MAY translate tool outputs into coaching actions and homework.",
       "- You MUST NOT make recruiter-side hiring decisions.",
-      "- If the user is asking how to apply personally, suggest switching to Seeker Buddy unless they are explicitly coaching a client.",
+      "- If the user is asking how to apply personally, suggest switching to Seeker Striker unless they are explicitly coaching a client.",
     ].join("\n");
   }
 
@@ -134,7 +134,7 @@ function buildModeGuardrails(mode) {
       "- You are helping a recruiter make hiring decisions and run recruiter workflows.",
       "- You MAY discuss resumes only as evaluation artifacts (evidence, gaps, interview probes).",
       "- You MUST NOT coach the user on how to write or optimize THEIR OWN resume, how to apply for jobs, or job-seeker outreach strategy.",
-      "- If the user is asking for job-seeker resume/application coaching, tell them to switch to Seeker Buddy.",
+      "- If the user is asking for job-seeker resume/application coaching, tell them to switch to Seeker Striker.",
     ].join("\n");
   }
 
@@ -210,7 +210,7 @@ function detectHandoff({ threadMode, content }) {
       handoffTo: "RECRUITER",
       reply:
         "Creating/cleaning a job description for posting is recruiter-side work. " +
-        "Please switch to **Recruiter Buddy** so I can help you structure the JD and requirements correctly.",
+        "Please switch to **Recruiter Striker** so I can help you structure the JD and requirements correctly.",
     };
   }
 
@@ -219,7 +219,7 @@ function detectHandoff({ threadMode, content }) {
       handoffTo: "SEEKER",
       reply:
         "This question is job-seeker coaching (resume/application execution). " +
-        "Please switch to **Seeker Buddy** so I can help you improve your resume and apply strategically.",
+        "Please switch to **Seeker Striker** so I can help you improve your resume and apply strategically.",
     };
   }
 
@@ -228,7 +228,7 @@ function detectHandoff({ threadMode, content }) {
       handoffTo: "RECRUITER",
       reply:
         "This question is recruiter decision support (candidate evaluation/pipeline). " +
-        "Please switch to **Recruiter Buddy** so I can help you assess evidence, gaps, and next steps.",
+        "Please switch to **Recruiter Striker** so I can help you assess evidence, gaps, and next steps.",
     };
   }
 
@@ -238,7 +238,7 @@ function detectHandoff({ threadMode, content }) {
       handoffTo: "RECRUITER",
       reply:
         "This looks like recruiter-side candidate decisioning. " +
-        "Please switch to **Recruiter Buddy** for evaluation/pipeline guidance.",
+        "Please switch to **Recruiter Striker** for evaluation/pipeline guidance.",
     };
   }
 
@@ -247,7 +247,7 @@ function detectHandoff({ threadMode, content }) {
     return {
       handoffTo: "SEEKER",
       reply:
-        "If this is your personal job search (resume/applications), switch to **Seeker Buddy**. " +
+        "If this is your personal job search (resume/applications), switch to **Seeker Striker**. " +
         "If you’re coaching a client, tell me: 'Coaching a client' and the goal, and I’ll stay in Coach mode.",
     };
   }
@@ -257,7 +257,7 @@ function detectHandoff({ threadMode, content }) {
 
 function buildSystemPrompt(mode, context) {
   const base =
-    "You are ForgeTomorrow's in-platform AI Buddy. " +
+    "You are ForgeTomorrow's in-platform AI Striker. " +
     "Be concise, practical, and action-oriented. " +
     "Do not mention internal implementation details. " +
     "When page context is provided, tailor guidance to that surface.";
