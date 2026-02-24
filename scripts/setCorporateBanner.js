@@ -1,20 +1,20 @@
 // scripts/setCorporateBanner.js
-import { PrismaClient } from '@prisma/client';
+import { PrismaClient } from "@prisma/client";
 
 const prisma = new PrismaClient();
 
 async function main() {
   const user = await prisma.user.update({
     where: {
-      email: 'ericwjames309@gmail.com', // your CEO account email
+      email: "ericwjames309@gmail.com",
     },
     data: {
-      corporateBannerKey: 'CEO',       // must match the mapping key
-      corporateBannerLocked: true,     // lock it so UI respects it
+      corporateBannerKey: "CEO",
+      corporateBannerLocked: true,
     },
   });
 
-  console.log('Updated user:', {
+  console.log("Updated user:", {
     id: user.id,
     email: user.email,
     corporateBannerKey: user.corporateBannerKey,
@@ -24,9 +24,13 @@ async function main() {
 
 main()
   .catch((err) => {
-    console.error('Error updating banner:', err);
-    process.exit(1);
+    console.error("Error updating banner:", err);
+    process.exitCode = 1;
   })
   .finally(async () => {
-    await prisma.$disconnect();
+    try {
+      await prisma.$disconnect();
+    } catch (e) {
+      console.error("prisma.$disconnect() failed:", e);
+    }
   });

@@ -1,7 +1,5 @@
 // pages/api/messages.js
-import { PrismaClient } from '@prisma/client';
-
-const prisma = new PrismaClient();
+import prisma from "@/lib/prisma";
 
 /**
  * DEV-ONLY AUTH STUB
@@ -10,8 +8,8 @@ const prisma = new PrismaClient();
  * In production, replace this with your real NextAuth / session logic.
  */
 function getCurrentUserId(req) {
-  const raw = req.headers['x-user-id'] || req.headers['X-User-Id'];
-  if (!raw || typeof raw !== 'string') return null;
+  const raw = req.headers["x-user-id"] || req.headers["X-User-Id"];
+  if (!raw || typeof raw !== "string") return null;
   return raw;
 }
 
@@ -23,16 +21,16 @@ function getCurrentUserId(req) {
  * - everything else defaults to SEEKER
  */
 function channelToScope(channel) {
-  const c = String(channel || '').trim().toLowerCase();
-  if (c === 'recruiter') return 'RECRUITER';
-  if (c === 'coach' || c === 'coaching') return 'COACH';
-  return 'SEEKER';
+  const c = String(channel || "").trim().toLowerCase();
+  if (c === "recruiter") return "RECRUITER";
+  if (c === "coach" || c === "coaching") return "COACH";
+  return "SEEKER";
 }
 
 function safeSnippet(text, max = 140) {
-  const s = String(text || '').replace(/\s+/g, ' ').trim();
+  const s = String(text || "").replace(/\s+/g, " ").trim();
   if (s.length <= max) return s;
-  return s.slice(0, max - 1) + '…';
+  return s.slice(0, max - 1) + "…";
 }
 
 export default async function handler(req, res) {
@@ -41,22 +39,22 @@ export default async function handler(req, res) {
   if (!userId) {
     return res
       .status(401)
-      .json({ error: 'Unauthorized: x-user-id header is required (dev stub)' });
+      .json({ error: "Unauthorized: x-user-id header is required (dev stub)" });
   }
 
   try {
-    if (req.method === 'GET') {
+    if (req.method === "GET") {
       return handleGet(req, res, userId);
     }
 
-    if (req.method === 'POST') {
+    if (req.method === "POST") {
       return handlePost(req, res, userId);
     }
 
-    return res.status(405).json({ error: 'Method not allowed' });
+    return res.status(405).json({ error: "Method not allowed" });
   } catch (err) {
-    console.error('Error in /api/messages:', err);
-    return res.status(500).json({ error: 'Internal server error' });
+    console.error("Error in /api/messages:", err);
+    return res.status(500).json({ error: "Internal server error" });
   }
 }
 
@@ -74,7 +72,7 @@ async function handleGet(req, res, userId) {
   const { channel, conversationId } = req.query || {};
 
   // Mode 1: list conversations by channel (used by recruiter messaging inbox)
-  if (typeof channel === 'string' && channel.trim().length > 0) {
+  if (typeof channel === "string" && channel.trim().length > 0) {
     const channelKey = channel.trim();
 
     // Find all conversations in this channel where the user participates
@@ -89,7 +87,7 @@ async function handleGet(req, res, userId) {
         conversation: {
           include: {
             messages: {
-              orderBy: { createdAt: 'asc' },
+              orderBy: { createdAt: "asc" },
               take: 1, // we'll fetch last message separately / keep light
             },
             participants: {
@@ -110,12 +108,10 @@ async function handleGet(req, res, userId) {
       // Get last message for snippet (separate query to allow older DBs)
       const lastMessageRecord = await prisma.message.findFirst({
         where: { conversationId: conv.id },
-        orderBy: { createdAt: 'desc' },
+        orderBy: { createdAt: "desc" },
       });
 
-      const otherParticipant = conv.participants.find(
-        (p) => p.userId !== userId
-      );
+      const otherParticipant = conv.participants.find((p) => p.userId !== userId);
       const otherUser = otherParticipant?.user || null;
 
       conversations.push({
@@ -126,11 +122,9 @@ async function handleGet(req, res, userId) {
         name:
           otherUser?.name ||
           (otherUser?.firstName || otherUser?.lastName
-            ? `${otherUser.firstName || ''} ${
-                otherUser.lastName || ''
-              }`.trim()
-            : otherUser?.email || 'Conversation'),
-        lastMessage: lastMessageRecord?.content || '',
+            ? `${otherUser.firstName || ""} ${otherUser.lastName || ""}`.trim()
+            : otherUser?.email || "Conversation"),
+        lastMessage: lastMessageRecord?.content || "",
         lastMessageAt: lastMessageRecord?.createdAt?.toISOString() || null,
         unread: 0, // TODO: add read receipts later
       });
@@ -140,12 +134,10 @@ async function handleGet(req, res, userId) {
   }
 
   // Mode 2: list messages in a specific conversation
-  if (typeof conversationId === 'string' && conversationId.trim().length > 0) {
+  if (typeof conversationId === "string" && conversationId.trim().length > 0) {
     const convId = Number(conversationId);
     if (!Number.isInteger(convId)) {
-      return res
-        .status(400)
-        .json({ error: 'conversationId must be an integer' });
+      return res.status(400).json({ error: "conversationId must be an integer" });
     }
 
     // Ensure the user is a participant
@@ -158,13 +150,13 @@ async function handleGet(req, res, userId) {
 
     if (!participant) {
       return res.status(403).json({
-        error: 'You are not a participant in this conversation',
+        error: "You are not a participant in this conversation",
       });
     }
 
     const messages = await prisma.message.findMany({
       where: { conversationId: convId },
-      orderBy: { createdAt: 'asc' },
+      orderBy: { createdAt: "asc" },
     });
 
     const shaped = messages.map((m) => ({
@@ -179,8 +171,7 @@ async function handleGet(req, res, userId) {
   }
 
   return res.status(400).json({
-    error:
-      'Missing query. Provide either ?channel=recruiter or ?conversationId=123',
+    error: "Missing query. Provide either ?channel=recruiter or ?conversationId=123",
   });
 }
 
@@ -199,21 +190,19 @@ async function handlePost(req, res, userId) {
 
   const convId = Number(conversationId);
   if (!Number.isInteger(convId)) {
-    return res
-      .status(400)
-      .json({ error: 'conversationId (integer) is required' });
+    return res.status(400).json({ error: "conversationId (integer) is required" });
   }
 
   const messageText = (
-    typeof content === 'string' && content.trim().length > 0
+    typeof content === "string" && content.trim().length > 0
       ? content
-      : typeof text === 'string'
+      : typeof text === "string"
       ? text
-      : ''
+      : ""
   ).trim();
 
   if (!messageText) {
-    return res.status(400).json({ error: 'Message content is required' });
+    return res.status(400).json({ error: "Message content is required" });
   }
 
   // Ensure the user is a participant
@@ -228,20 +217,18 @@ async function handlePost(req, res, userId) {
   });
 
   if (!participant) {
-    return res
-      .status(403)
-      .json({ error: 'You are not a participant in this conversation' });
+    return res.status(403).json({ error: "You are not a participant in this conversation" });
   }
 
   // OPTIONAL: sanity-check that channel matches conversation.channel
-  if (typeof channel === 'string' && participant.conversation.channel) {
+  if (typeof channel === "string" && participant.conversation.channel) {
     const normalizedRequested = channel.trim();
     if (normalizedRequested !== participant.conversation.channel) {
       // We don't hard-fail this yet, but we could.
       console.warn(
-        '[messages POST] Channel mismatch:',
+        "[messages POST] Channel mismatch:",
         normalizedRequested,
-        'vs',
+        "vs",
         participant.conversation.channel
       );
     }
@@ -261,10 +248,10 @@ async function handlePost(req, res, userId) {
   // ============================================================================
   try {
     const convChannel =
-      (typeof participant.conversation?.channel === 'string' &&
+      (typeof participant.conversation?.channel === "string" &&
         participant.conversation.channel.trim()) ||
-      (typeof channel === 'string' && channel.trim()) ||
-      '';
+      (typeof channel === "string" && channel.trim()) ||
+      "";
 
     const scope = channelToScope(convChannel);
     const dedupeKey = `msg:${scope}:convo:${String(convId)}`;
@@ -288,8 +275,8 @@ async function handlePost(req, res, userId) {
       const senderName =
         sender?.name ||
         (sender?.firstName || sender?.lastName
-          ? `${sender?.firstName || ''} ${sender?.lastName || ''}`.trim()
-          : sender?.email || 'Someone');
+          ? `${sender?.firstName || ""} ${sender?.lastName || ""}`.trim()
+          : sender?.email || "Someone");
 
       const bodyPreview = safeSnippet(`${senderName}: ${messageText}`, 180);
 
@@ -306,13 +293,13 @@ async function handlePost(req, res, userId) {
             create: {
               userId: r.userId,
               actorUserId: userId,
-              category: 'MESSAGING',
+              category: "MESSAGING",
               scope,
-              entityType: 'CONVERSATION',
+              entityType: "CONVERSATION",
               entityId: String(convId),
               dedupeKey,
               requiresAction: true,
-              title: 'New message',
+              title: "New message",
               body: bodyPreview,
               metadata: {
                 conversationId: convId,
@@ -324,12 +311,12 @@ async function handlePost(req, res, userId) {
             },
             update: {
               actorUserId: userId,
-              category: 'MESSAGING',
+              category: "MESSAGING",
               scope,
-              entityType: 'CONVERSATION',
+              entityType: "CONVERSATION",
               entityId: String(convId),
               requiresAction: true,
-              title: 'New message',
+              title: "New message",
               body: bodyPreview,
               metadata: {
                 conversationId: convId,
@@ -345,7 +332,7 @@ async function handlePost(req, res, userId) {
     }
   } catch (notifyErr) {
     // Do not block message sending on notification failure
-    console.error('[messages POST] notification upsert failed:', notifyErr);
+    console.error("[messages POST] notification upsert failed:", notifyErr);
   }
 
   return res.status(200).json({

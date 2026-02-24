@@ -1,47 +1,45 @@
 // pages/api/register.js
-import { PrismaClient } from '@prisma/client';
-import bcrypt from 'bcryptjs';
-
-const prisma = new PrismaClient();
+import prisma from "@/lib/prisma";
+import bcrypt from "bcryptjs";
 
 export default async function handler(req, res) {
   // Only allow POST
-  if (req.method !== 'POST') {
-    return res.status(405).json({ error: 'Method not allowed' });
+  if (req.method !== "POST") {
+    return res.status(405).json({ error: "Method not allowed" });
   }
 
   const { email, password, role: inputRole } = req.body;
 
   // Basic validation
   if (!email || !password) {
-    return res.status(400).json({ error: 'Email and password are required' });
+    return res.status(400).json({ error: "Email and password are required" });
   }
   if (!/^\S+@\S+\.\S+$/.test(email)) {
-    return res.status(400).json({ error: 'Invalid email format' });
+    return res.status(400).json({ error: "Invalid email format" });
   }
 
   try {
     // ---- Role + Tier mapping -------------------------------------------------
     const roleMap = {
-      seeker: 'SEEKER',
-      'seeker pro': 'SEEKER',
-      coach: 'COACH',
-      recruiter: 'RECRUITER',
-      'recruiter smb': 'RECRUITER',
-      'recruiter enterprise': 'RECRUITER',
-      admin: 'ADMIN',
+      seeker: "SEEKER",
+      "seeker pro": "SEEKER",
+      coach: "COACH",
+      recruiter: "RECRUITER",
+      "recruiter smb": "RECRUITER",
+      "recruiter enterprise": "RECRUITER",
+      admin: "ADMIN",
     };
 
     const tierMap = {
-      'seeker pro': 'PRO',
-      'recruiter smb': 'SMALL_BIZ',
-      'recruiter enterprise': 'ENTERPRISE',
+      "seeker pro": "PRO",
+      "recruiter smb": "SMALL_BIZ",
+      "recruiter enterprise": "ENTERPRISE",
     };
 
-    const normalized = (inputRole?.toLowerCase().trim() || 'seeker');
-    const prismaRole = roleMap[normalized] || 'SEEKER';
-    const plan = tierMap[normalized] ||
-      (prismaRole === 'SEEKER' ? 'FREE' : null);
+    const normalized = inputRole?.toLowerCase().trim() || "seeker";
+    const prismaRole = roleMap[normalized] || "SEEKER";
+    const plan =
+      tierMap[normalized] || (prismaRole === "SEEKER" ? "FREE" : null);
 
     // ---- Check existing user -------------------------------------------------
     const normalizedEmail = email.toLowerCase().trim();
@@ -51,7 +49,7 @@ export default async function handler(req, res) {
     });
 
     if (existing) {
-      return res.status(409).json({ error: 'User already exists' });
+      return res.status(409).json({ error: "User already exists" });
     }
 
     // ---- Hash password -------------------------------------------------------
@@ -75,16 +73,14 @@ export default async function handler(req, res) {
     });
 
     return res.status(201).json({
-      message: 'User registered successfully',
+      message: "User registered successfully",
       user,
     });
   } catch (err) {
-    console.error('REGISTER ERROR:', err);
+    console.error("REGISTER ERROR:", err);
     return res.status(500).json({
-      error: 'Failed to register user',
+      error: "Failed to register user",
       details: err.message,
     });
-  } finally {
-    await prisma.$disconnect();
   }
 }

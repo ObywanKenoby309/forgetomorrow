@@ -1,16 +1,10 @@
 // pages/api/recruiter/pools/index.js
 // Talent Pools — DB-backed (org scoped), impersonation-aware (Platform Admin only)
 
-import { PrismaClient } from "@prisma/client";
+import prisma from "@/lib/prisma";
 import { getServerSession } from "next-auth";
 import { authOptions } from "../../auth/[...nextauth]";
 import jwt from "jsonwebtoken";
-
-let prisma;
-function getPrisma() {
-  if (!prisma) prisma = new PrismaClient();
-  return prisma;
-}
 
 function readCookie(req, name) {
   try {
@@ -25,7 +19,7 @@ function readCookie(req, name) {
   }
 }
 
-async function resolveEffectiveRecruiter(prisma, req, session) {
+async function resolveEffectiveRecruiter(prismaClient, req, session) {
   const sessionEmail = String(session?.user?.email || "").trim().toLowerCase();
   if (!sessionEmail) return null;
 
@@ -48,14 +42,14 @@ async function resolveEffectiveRecruiter(prisma, req, session) {
   }
 
   if (effectiveUserId) {
-    const u = await prisma.user.findUnique({
+    const u = await prismaClient.user.findUnique({
       where: { id: effectiveUserId },
       select: { id: true, email: true, accountKey: true },
     });
     return u?.id ? u : null;
   }
 
-  const u = await prisma.user.findUnique({
+  const u = await prismaClient.user.findUnique({
     where: { email: sessionEmail },
     select: { id: true, email: true, accountKey: true },
   });
@@ -68,8 +62,6 @@ function toStringArray(v) {
 }
 
 export default async function handler(req, res) {
-  const prisma = getPrisma();
-
   let session;
   try {
     session = await getServerSession(req, res, authOptions);

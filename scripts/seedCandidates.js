@@ -37,13 +37,11 @@ function extractWorkPrefs(workPreferences) {
 function flattenSkills(skillsJson) {
   if (!skillsJson) return null;
   if (Array.isArray(skillsJson)) {
-    // ["Leadership", "Azure", "React"]
     return skillsJson
       .map((s) => (typeof s === "string" ? s.trim() : ""))
       .filter(Boolean)
       .join(", ");
   }
-  // If someone stored an object or weird shape, just stringify safely
   try {
     return JSON.stringify(skillsJson);
   } catch {
@@ -54,7 +52,6 @@ function flattenSkills(skillsJson) {
 function flattenLanguages(languagesJson) {
   if (!languagesJson) return null;
   if (Array.isArray(languagesJson)) {
-    // [{ name: "English", level: "Native" }]
     const names = languagesJson
       .map((l) => {
         if (!l) return "";
@@ -83,24 +80,18 @@ async function getPrimaryResumeSummary(userId) {
 
   if (!resume || !resume.content) return null;
 
-  // content is stored as "JSON/string from builder"
-  // We'll try JSON first, then fall back to plain text.
   const raw = resume.content;
 
   try {
     const parsed = JSON.parse(raw);
-    // If your builder saves a field like "summary" at the root:
     if (parsed && typeof parsed.summary === "string") {
       return parsed.summary.trim();
     }
-    // If it uses a nested shape (e.g. { basics: { summary: "..." } })
     if (parsed.basics && typeof parsed.basics.summary === "string") {
       return parsed.basics.summary.trim();
     }
   } catch {
-    // Not JSON, treat as plain text
     if (typeof raw === "string" && raw.trim().length > 0) {
-      // You could attempt to slice a portion, but for now we keep it simple.
       return raw.trim().slice(0, 1000);
     }
   }
@@ -111,7 +102,6 @@ async function getPrimaryResumeSummary(userId) {
 async function main() {
   console.log("🔍 Seeding Candidate records from User profiles...");
 
-  // Pull all SEEKER users (not deleted)
   const seekers = await prisma.user.findMany({
     where: {
       role: "SEEKER",
@@ -136,18 +126,15 @@ async function main() {
     const skills = flattenSkills(user.skillsJson);
     const languages = flattenLanguages(user.languagesJson);
 
-    // Profile-first summary, then fallback to primary resume
     let summary = (user.aboutMe || "").trim() || null;
     if (!summary) {
       summary = await getPrimaryResumeSummary(user.id);
     }
 
-    // Use headline/status as a rough role/title when we don't have more structured data yet
     const role = headline || user.status || null;
     const title = role;
     const currentTitle = role;
 
-    // Check if a Candidate already exists for this user
     const existing = await prisma.candidate.findFirst({
       where: { userId: user.id },
     });
@@ -190,7 +177,7 @@ async function main() {
           willingToRelocate,
           skills,
           languages,
-          source: "Forge", // initial source
+          source: "Forge",
           pipelineStage: "new",
           match: null,
           lastSeen: new Date(),
@@ -200,17 +187,18 @@ async function main() {
     }
   }
 
-  console.log(
-    `✅ Candidate seeding complete. Created: ${created}, Updated: ${updated}`
-  );
+  console.log(`✅ Candidate seeding complete. Created: ${created}, Updated: ${updated}`);
 }
 
-// Top-level await is allowed in ES modules
-try {
-  await main();
-} catch (err) {
-  console.error("❌ Error seeding candidates:", err);
-  process.exit(1);
-} finally {
-  await prisma.$disconnect();
-}
+main()
+  .catch((err) => {
+    console.error("❌ Error seeding candidates:", err);
+    process.exitCode = 1;
+  })
+  .finally(async () => {
+    try {
+      await prisma.$disconnect();
+    } catch (e) {
+      console.error("⚠️ prisma.$disconnect() failed:", e);
+    }
+  });

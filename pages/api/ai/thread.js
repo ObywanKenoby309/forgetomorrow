@@ -1,21 +1,16 @@
 // pages/api/ai/thread.js
-import { PrismaClient } from "@prisma/client";
+import prisma from "@/lib/prisma";
 import { getServerSession } from "next-auth";
 import { authOptions } from "../auth/[...nextauth]";
 import jwt from "jsonwebtoken";
-
-let prisma;
-function getPrisma() {
-  if (!prisma) prisma = new PrismaClient();
-  return prisma;
-}
 
 function readCookie(req, name) {
   try {
     const raw = req.headers?.cookie || "";
     const parts = raw.split(";").map((p) => p.trim());
     for (const p of parts) {
-      if (p.startsWith(name + "=")) return decodeURIComponent(p.slice(name.length + 1));
+      if (p.startsWith(name + "="))
+        return decodeURIComponent(p.slice(name.length + 1));
     }
     return "";
   } catch {
@@ -34,7 +29,9 @@ function normalizeMode(input) {
 // Policy: impersonation allowed ONLY for recruiter accounts (via SD ticket process)
 // Implementation: only Platform Admin + ft_imp cookie + target user role RECRUITER.
 async function resolveEffectiveUser(prisma, req, session) {
-  const sessionEmail = String(session?.user?.email || "").trim().toLowerCase();
+  const sessionEmail = String(session?.user?.email || "")
+    .trim()
+    .toLowerCase();
   if (!sessionEmail) return null;
 
   const isPlatformAdmin = !!session?.user?.isPlatformAdmin;
@@ -45,7 +42,10 @@ async function resolveEffectiveUser(prisma, req, session) {
     const imp = readCookie(req, "ft_imp");
     if (imp) {
       try {
-        const decoded = jwt.verify(imp, process.env.NEXTAUTH_SECRET || "dev-secret-change-in-production");
+        const decoded = jwt.verify(
+          imp,
+          process.env.NEXTAUTH_SECRET || "dev-secret-change-in-production"
+        );
         if (decoded && typeof decoded === "object" && decoded.targetUserId) {
           effectiveUserId = String(decoded.targetUserId);
         }
@@ -77,8 +77,6 @@ async function resolveEffectiveUser(prisma, req, session) {
 }
 
 export default async function handler(req, res) {
-  const prisma = getPrisma();
-
   let session;
   try {
     session = await getServerSession(req, res, authOptions);

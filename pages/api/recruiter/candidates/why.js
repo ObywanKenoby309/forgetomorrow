@@ -2,12 +2,10 @@
 // ✅ Impersonation-aware: resolves effective recruiter via ft_imp cookie (Platform Admin only)
 // NOTE: This endpoint only reads candidate/job; impersonation matters for consistent "who is asking" logging/behavior.
 
+import prisma from "@/lib/prisma";
 import { getServerSession } from "next-auth";
 import { authOptions } from "../../auth/[...nextauth]";
-import { PrismaClient } from "@prisma/client";
 import jwt from "jsonwebtoken";
-
-const prisma = new PrismaClient();
 
 function readCookie(req, name) {
   try {

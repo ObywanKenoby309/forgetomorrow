@@ -2,7 +2,7 @@
 import type { NextApiRequest, NextApiResponse } from "next";
 import { getServerSession } from "next-auth";
 import authOptions from "../auth/[...nextauth]";
-import { PrismaClient } from "@prisma/client";
+import prisma from "@/lib/prisma";
 import { getCorporateBannerByKey } from "@/lib/profileCorporateBanners";
 import jwt from "jsonwebtoken";
 
@@ -13,8 +13,6 @@ export const config = {
     bodyParser: { sizeLimit: "4mb" },
   },
 };
-
-const prisma = new PrismaClient();
 
 function normalizeVisibility(
   v: any
@@ -134,7 +132,9 @@ async function getAuthedEmail(
       | { user?: { email?: string | null } }
       | null;
 
-    const sessionEmail = session?.user?.email ? String(session.user.email) : null;
+    const sessionEmail = session?.user?.email
+      ? String(session.user.email)
+      : null;
     if (sessionEmail) return sessionEmail.toLowerCase().trim();
   } catch {
     // fall through
@@ -235,7 +235,9 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         });
       } catch (err) {
         console.error("[profile/header] GET error", err);
-        return res.status(500).json({ error: "Failed to load profile header data" });
+        return res
+          .status(500)
+          .json({ error: "Failed to load profile header data" });
       }
     }
 
@@ -269,8 +271,10 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         if (avatarUrl !== undefined) data.avatarUrl = avatarUrl;
         if (coverUrl !== undefined) data.coverUrl = coverUrl;
         if (wallpaperUrl !== undefined) data.wallpaperUrl = wallpaperUrl;
-        if (corporateBannerKey !== undefined) data.corporateBannerKey = corporateBannerKey;
-        if (corporateBannerLocked !== undefined) data.corporateBannerLocked = corporateBannerLocked;
+        if (corporateBannerKey !== undefined)
+          data.corporateBannerKey = corporateBannerKey;
+        if (corporateBannerLocked !== undefined)
+          data.corporateBannerLocked = corporateBannerLocked;
         if (pronouns !== undefined) data.pronouns = pronouns;
         if (location !== undefined) data.location = location;
 
@@ -389,6 +393,8 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     return res.status(405).json({ error: "Method not allowed" });
   } catch (outerErr) {
     console.error("[profile/header] outer error", outerErr);
-    return res.status(500).json({ error: "Unexpected error in profile header endpoint" });
+    return res
+      .status(500)
+      .json({ error: "Unexpected error in profile header endpoint" });
   }
 }

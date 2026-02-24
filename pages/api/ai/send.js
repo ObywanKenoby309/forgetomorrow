@@ -1,21 +1,16 @@
 // pages/api/ai/send.js
-import { PrismaClient } from "@prisma/client";
+import prisma from "@/lib/prisma";
 import { getServerSession } from "next-auth";
 import { authOptions } from "../auth/[...nextauth]";
 import jwt from "jsonwebtoken";
-
-let prisma;
-function getPrisma() {
-  if (!prisma) prisma = new PrismaClient();
-  return prisma;
-}
 
 function readCookie(req, name) {
   try {
     const raw = req.headers?.cookie || "";
     const parts = raw.split(";").map((p) => p.trim());
     for (const p of parts) {
-      if (p.startsWith(name + "=")) return decodeURIComponent(p.slice(name.length + 1));
+      if (p.startsWith(name + "="))
+        return decodeURIComponent(p.slice(name.length + 1));
     }
     return "";
   } catch {
@@ -24,7 +19,9 @@ function readCookie(req, name) {
 }
 
 async function resolveEffectiveUser(prisma, req, session) {
-  const sessionEmail = String(session?.user?.email || "").trim().toLowerCase();
+  const sessionEmail = String(session?.user?.email || "")
+    .trim()
+    .toLowerCase();
   if (!sessionEmail) return null;
 
   const isPlatformAdmin = !!session?.user?.isPlatformAdmin;
@@ -35,7 +32,10 @@ async function resolveEffectiveUser(prisma, req, session) {
     const imp = readCookie(req, "ft_imp");
     if (imp) {
       try {
-        const decoded = jwt.verify(imp, process.env.NEXTAUTH_SECRET || "dev-secret-change-in-production");
+        const decoded = jwt.verify(
+          imp,
+          process.env.NEXTAUTH_SECRET || "dev-secret-change-in-production"
+        );
         if (decoded && typeof decoded === "object" && decoded.targetUserId) {
           effectiveUserId = String(decoded.targetUserId);
         }
@@ -278,7 +278,9 @@ function buildSystemPrompt(mode, context) {
     ctx?.mode ? `clientMode=${coerceStr(ctx.mode, 40)}` : "",
   ].filter(Boolean);
 
-  const pageLine = pageBits.length ? `Client context: ${pageBits.join(" | ")}` : "Client context: (none)";
+  const pageLine = pageBits.length
+    ? `Client context: ${pageBits.join(" | ")}`
+    : "Client context: (none)";
 
   // ✅ NEW: append guardrails (no path mapping needed)
   const guardrails = buildModeGuardrails(mode);
@@ -342,7 +344,13 @@ async function tryGenerateWithOpenAI({ mode, context, history }) {
   }
 }
 
-async function generateAssistantReply({ threadMode, context, threadId, prisma, lastUserContent }) {
+async function generateAssistantReply({
+  threadMode,
+  context,
+  threadId,
+  prisma,
+  lastUserContent,
+}) {
   // ✅ NEW: handoff guardrail BEFORE any generation
   const handoff = detectHandoff({ threadMode, content: lastUserContent });
   if (handoff?.reply) return handoff.reply;
@@ -355,7 +363,9 @@ async function generateAssistantReply({ threadMode, context, threadId, prisma, l
     take: 40,
   });
 
-  const history = Array.isArray(recent) ? recent.map((m) => ({ role: m.role, content: m.content })) : [];
+  const history = Array.isArray(recent)
+    ? recent.map((m) => ({ role: m.role, content: m.content }))
+    : [];
 
   const generated = await tryGenerateWithOpenAI({
     mode: threadMode,
@@ -370,8 +380,6 @@ async function generateAssistantReply({ threadMode, context, threadId, prisma, l
 }
 
 export default async function handler(req, res) {
-  const prisma = getPrisma();
-
   let session;
   try {
     session = await getServerSession(req, res, authOptions);

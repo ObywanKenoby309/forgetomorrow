@@ -2,9 +2,7 @@
 import type { NextApiRequest, NextApiResponse } from "next";
 import { getServerSession } from "next-auth";
 import authOptions from "../auth/[...nextauth]";
-import { PrismaClient } from "@prisma/client";
-
-const prisma = new PrismaClient();
+import prisma from "@/lib/prisma";
 
 // /api/profile/resume
 export default async function handler(
@@ -40,8 +38,7 @@ export default async function handler(
         orderBy: [{ isPrimary: "desc" }, { updatedAt: "desc" }],
       });
 
-      const primary =
-        resumes.find((r) => r.isPrimary) || resumes[0] || null;
+      const primary = resumes.find((r) => r.isPrimary) || resumes[0] || null;
 
       return res.status(200).json({ resumes, primary });
     } catch (err) {
@@ -92,8 +89,7 @@ export default async function handler(
         where: { userId },
         orderBy: [{ isPrimary: "desc" }, { updatedAt: "desc" }],
       });
-      const primary =
-        resumes.find((r) => r.isPrimary) || resumes[0] || null;
+      const primary = resumes.find((r) => r.isPrimary) || resumes[0] || null;
 
       return res.status(201).json({ created, resumes, primary });
     } catch (err) {
@@ -146,8 +142,7 @@ export default async function handler(
         where: { userId },
         orderBy: [{ isPrimary: "desc" }, { updatedAt: "desc" }],
       });
-      const primary =
-        resumes.find((r) => r.isPrimary) || resumes[0] || null;
+      const primary = resumes.find((r) => r.isPrimary) || resumes[0] || null;
 
       return res.status(200).json({ updated, resumes, primary });
     } catch (err) {
@@ -203,8 +198,7 @@ export default async function handler(
         where: { userId },
         orderBy: [{ isPrimary: "desc" }, { updatedAt: "desc" }],
       });
-      const primary =
-        resumes.find((r) => r.isPrimary) || resumes[0] || null;
+      const primary = resumes.find((r) => r.isPrimary) || resumes[0] || null;
 
       return res.status(200).json({ success: true, resumes, primary });
     } catch (err) {

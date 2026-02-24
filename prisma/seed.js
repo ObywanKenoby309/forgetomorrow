@@ -1,5 +1,4 @@
 // prisma/seed.js
-import bcrypt from "bcrypt";
 import { PrismaClient } from "@prisma/client";
 
 const prisma = new PrismaClient();
@@ -44,8 +43,12 @@ async function main() {
 main()
   .catch((e) => {
     console.error("Seed failed:", e);
-    process.exit(1);
+    process.exitCode = 1;
   })
   .finally(async () => {
-    await prisma.$disconnect();
+    try {
+      await prisma.$disconnect();
+    } catch (e) {
+      console.error("prisma.$disconnect() failed:", e);
+    }
   });

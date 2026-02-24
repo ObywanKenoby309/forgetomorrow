@@ -1,31 +1,21 @@
 // pages/api/recruiter/candidates/automation.js
 // Save & load recruiter candidate automation (daily feed rules)
 
-import { PrismaClient } from "@prisma/client";
+import prisma from "@/lib/prisma";
 import { getServerSession } from "next-auth";
 import { authOptions } from "../../auth/[...nextauth]";
 
-let prisma;
-function getPrisma() {
-  if (!prisma) {
-    prisma = new PrismaClient();
-  }
-  return prisma;
-}
-
-async function getCurrentUser(prisma, session) {
+async function getCurrentUser(prismaClient, session) {
   const email = session?.user?.email;
   if (!email) return null;
 
-  return prisma.user.findUnique({
+  return prismaClient.user.findUnique({
     where: { email },
     select: { id: true },
   });
 }
 
 export default async function handler(req, res) {
-  const prisma = getPrisma();
-
   let session;
   try {
     session = await getServerSession(req, res, authOptions);

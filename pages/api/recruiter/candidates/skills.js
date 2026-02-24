@@ -3,16 +3,10 @@
 // Stores skills in RecruiterCandidate using (recruiterUserId, candidateUserId, accountKey)
 // ✅ Impersonation-aware: resolves effective recruiter via ft_imp cookie (Platform Admin only)
 
-import { PrismaClient } from "@prisma/client";
+import prisma from "@/lib/prisma";
 import { getServerSession } from "next-auth/next";
 import { authOptions } from "../../auth/[...nextauth]";
 import jwt from "jsonwebtoken";
-
-let prisma;
-function getPrisma() {
-  if (!prisma) prisma = new PrismaClient();
-  return prisma;
-}
 
 function asString(v) {
   const s = typeof v === "string" ? v : String(v || "");
@@ -57,7 +51,7 @@ function readCookie(req, name) {
   }
 }
 
-async function resolveEffectiveRecruiter(prisma, req, session) {
+async function resolveEffectiveRecruiter(prismaClient, req, session) {
   const sessionEmail = String(session?.user?.email || "").trim().toLowerCase();
   if (!sessionEmail) return null;
 
@@ -82,14 +76,14 @@ async function resolveEffectiveRecruiter(prisma, req, session) {
   }
 
   if (effectiveUserId) {
-    const u = await prisma.user.findUnique({
+    const u = await prismaClient.user.findUnique({
       where: { id: effectiveUserId },
       select: { id: true, email: true, accountKey: true },
     });
     return u?.id ? u : null;
   }
 
-  const u = await prisma.user.findUnique({
+  const u = await prismaClient.user.findUnique({
     where: { email: sessionEmail },
     select: { id: true, email: true, accountKey: true },
   });
@@ -101,8 +95,6 @@ export default async function handler(req, res) {
     res.setHeader("Allow", ["POST"]);
     return res.status(405).json({ error: "Method not allowed" });
   }
-
-  const prisma = getPrisma();
 
   let session;
   try {

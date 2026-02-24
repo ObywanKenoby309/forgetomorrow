@@ -3,16 +3,11 @@
 // + join recruiter-specific metadata (notes/tags/pipelineStage/skills) from RecruiterCandidate (Option A)
 // ✅ Impersonation-aware: resolves effective recruiter via ft_imp cookie (Platform Admin only)
 
-import { PrismaClient, Prisma } from "@prisma/client";
+import prisma from "@/lib/prisma";
+import { Prisma } from "@prisma/client";
 import { getServerSession } from "next-auth";
 import { authOptions } from "../../auth/[...nextauth]";
 import jwt from "jsonwebtoken";
-
-let prisma;
-function getPrisma() {
-  if (!prisma) prisma = new PrismaClient();
-  return prisma;
-}
 
 function toCsv(arr) {
   if (!Array.isArray(arr)) return "";
@@ -59,7 +54,7 @@ function dedupeCaseInsensitive(arr) {
   return out;
 }
 
-async function resolveEffectiveRecruiter(prisma, req, session) {
+async function resolveEffectiveRecruiter(prismaClient, req, session) {
   const sessionEmail = String(session?.user?.email || "").trim().toLowerCase();
   if (!sessionEmail) return null;
 
@@ -87,14 +82,14 @@ async function resolveEffectiveRecruiter(prisma, req, session) {
   }
 
   if (effectiveUserId) {
-    const u = await prisma.user.findUnique({
+    const u = await prismaClient.user.findUnique({
       where: { id: effectiveUserId },
       select: { id: true, email: true, accountKey: true },
     });
     return u?.id ? u : null;
   }
 
-  const u = await prisma.user.findUnique({
+  const u = await prismaClient.user.findUnique({
     where: { email: sessionEmail },
     select: { id: true, email: true, accountKey: true },
   });
@@ -256,9 +251,9 @@ function parseEducationTerms(input) {
   return dedupeCaseInsensitive(expanded).slice(0, 10);
 }
 
-// ✅ Education search helper (Postgres JSON/JSONB array-of-objects)
+// ✅ Education search helper (Postgres JSON/JSONB array-of-objects JSON/JSONB
 // AND across terms; within each term, OR across school/degree/field/startYear/endYear
-async function findUserIdsByEducationTerms(prisma, terms) {
+async function findUserIdsByEducationTerms(prismaClient, terms) {
   const cleaned = (terms || [])
     .map((t) => String(t || "").trim())
     .filter(Boolean)
@@ -284,7 +279,7 @@ async function findUserIdsByEducationTerms(prisma, terms) {
     `;
   });
 
-  const rows = await prisma.$queryRaw(
+  const rows = await prismaClient.$queryRaw(
     Prisma.sql`
       SELECT "id"
       FROM "users"
@@ -299,14 +294,11 @@ async function findUserIdsByEducationTerms(prisma, terms) {
   return Array.isArray(rows) ? rows.map((r) => String(r.id)).filter(Boolean) : [];
 }
 
-
 export default async function handler(req, res) {
   if (req.method !== "GET") {
     res.setHeader("Allow", ["GET"]);
     return res.status(405).json({ error: "Method not allowed" });
   }
-
-  const prisma = getPrisma();
 
   // Require authentication (recruiter, admin, etc.)
   let session;

@@ -1,10 +1,8 @@
 // pages/api/profile/cover.ts
 import { getServerSession } from "next-auth"
 import authOptions from "../auth/[...nextauth]"
-import { PrismaClient } from "@prisma/client"
+import prisma from "@/lib/prisma"
 import type { NextApiRequest, NextApiResponse } from "next"
-
-const prisma = new PrismaClient()
 
 // /api/profile/cover
 export default async function handler(
