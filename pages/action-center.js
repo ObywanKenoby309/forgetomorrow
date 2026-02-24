@@ -421,16 +421,16 @@ export default function ActionCenterPage() {
      Header: clean, no tabs
   ------------------------------ */
   const Header = (
-    <FrostPanel className="p-6 text-left">
-      <h1 className="text-2xl md:text-3xl font-bold text-orange-600">
-        {scopeLabel(scope)}
-      </h1>
-      <p className="text-sm md:text-base text-slate-700 mt-2 max-w-3xl">
-        This is your review surface. Items that need attention are on the left. History for
-        this category is on the right.
-      </p>
-    </FrostPanel>
-  );
+  <FrostPanel className="p-6 text-center">
+    <h1 className="text-2xl md:text-3xl font-bold text-orange-600">
+      {scopeLabel(scope)}
+    </h1>
+    <p className="text-sm md:text-base text-slate-700 mt-2 max-w-3xl mx-auto">
+      This is your review surface. Items that need attention are on the left. History for
+      this category is on the right.
+    </p>
+  </FrostPanel>
+);
 
   /* -----------------------------
      Reusable list row
