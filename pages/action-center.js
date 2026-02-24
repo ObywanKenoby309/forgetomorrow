@@ -106,12 +106,115 @@ function actionHrefForNotification(n, scope, chrome) {
 }
 
 /* -----------------------------
+   Recruiter Tabs
+------------------------------ */
+const RECRUITER_TABS = [
+  { key: "ALL", label: "All" },
+  { key: "STALLED", label: "Stalled" },
+  { key: "AWAITING_FEEDBACK", label: "Awaiting Feedback" },
+  { key: "UNREAD_REPLIES", label: "Unread Replies" },
+  { key: "UPCOMING", label: "Upcoming" },
+];
+
+function safeText(v) {
+  return typeof v === "string" ? v : v == null ? "" : String(v);
+}
+
+function norm(s) {
+  return safeText(s).toLowerCase();
+}
+
+function recruiterTabMatches(n, tabKey) {
+  if (!n) return false;
+  if (tabKey === "ALL") return true;
+
+  const category = safeText(n.category).toUpperCase();
+  const entityType = safeText(n.entityType).toUpperCase();
+
+  const meta = n?.metadata || {};
+  const metaBucket = safeText(meta.bucket || meta.tab || meta.queue || meta.type || meta.kind || meta.event).toUpperCase();
+
+  // ✅ DB-first matching (preferred): allow your writer to set category/meta for perfect routing
+  if (tabKey === "STALLED") {
+    if (metaBucket.includes("STALLED")) return true;
+    if (category.includes("STALLED")) return true;
+    if (category.includes("PIPELINE") && metaBucket.includes("STALE")) return true;
+  }
+
+  if (tabKey === "AWAITING_FEEDBACK") {
+    if (metaBucket.includes("AWAITING_FEEDBACK")) return true;
+    if (metaBucket.includes("HIRING_MANAGER") && metaBucket.includes("FEEDBACK")) return true;
+    if (category.includes("FEEDBACK")) return true;
+    if (category.includes("HIRING") && metaBucket.includes("FEEDBACK")) return true;
+  }
+
+  if (tabKey === "UNREAD_REPLIES") {
+    if (metaBucket.includes("UNREAD_REPLIES") || metaBucket.includes("UNREAD_REPLY")) return true;
+    if (category === "MESSAGING") return true;
+    if (entityType === "MESSAGE" || entityType === "CONVERSATION") return true;
+  }
+
+  if (tabKey === "UPCOMING") {
+    if (metaBucket.includes("UPCOMING")) return true;
+    if (metaBucket.includes("INTERVIEW")) return true;
+    if (metaBucket.includes("CONFLICT")) return true;
+    if (category.includes("INTERVIEW")) return true;
+    if (category.includes("CALENDAR")) return true;
+  }
+
+  // ✅ Fallback keyword matching (works even if only title/body exist)
+  const text = `${norm(n.title)} ${norm(n.body)} ${norm(metaBucket)}`;
+
+  if (tabKey === "STALLED") {
+    return (
+      text.includes("stalled") ||
+      text.includes("stale") ||
+      text.includes("no movement") ||
+      text.includes("stuck") ||
+      text.includes("aging")
+    );
+  }
+
+  if (tabKey === "AWAITING_FEEDBACK") {
+    return (
+      text.includes("awaiting") ||
+      text.includes("feedback") ||
+      text.includes("hiring mgr") ||
+      text.includes("hiring manager")
+    );
+  }
+
+  if (tabKey === "UNREAD_REPLIES") {
+    return (
+      text.includes("unread") ||
+      text.includes("reply") ||
+      text.includes("replies") ||
+      text.includes("message") ||
+      text.includes("inbox")
+    );
+  }
+
+  if (tabKey === "UPCOMING") {
+    return (
+      text.includes("upcoming") ||
+      text.includes("interview") ||
+      text.includes("conflict") ||
+      text.includes("schedule") ||
+      text.includes("invite")
+    );
+  }
+
+  return false;
+}
+
+/* -----------------------------
    Page
 ------------------------------ */
 export default function ActionCenterPage() {
   const router = useRouter();
   const chrome = String(router.query.chrome || "").toLowerCase();
   const scopeFromQuery = String(router.query.scope || "").toUpperCase();
+  const tabFromQueryRaw = String(router.query.tab || "").toUpperCase();
 
   const scope = useMemo(() => {
     if (
@@ -128,6 +231,18 @@ export default function ActionCenterPage() {
   const [items, setItems] = useState([]);
   const [includeRead, setIncludeRead] = useState(false);
   const [error, setError] = useState("");
+
+  // ✅ NEW: recruiter active tab (supports deep linking)
+  const [activeRecruiterTab, setActiveRecruiterTab] = useState("ALL");
+
+  // ✅ Sync tab from URL when recruiter scope
+  useEffect(() => {
+    if (scope !== "RECRUITER") return;
+    const valid = new Set(RECRUITER_TABS.map((t) => t.key));
+    const next = valid.has(tabFromQueryRaw) ? tabFromQueryRaw : "ALL";
+    if (next !== activeRecruiterTab) setActiveRecruiterTab(next);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [scope, tabFromQueryRaw]);
 
   const load = async (opts = {}) => {
     const nextIncludeRead =
@@ -165,7 +280,7 @@ export default function ActionCenterPage() {
     }
   };
 
-  // ✅ NEW: Viewing the Action Center clears the unread dot (mark all as seen/read)
+  // ✅ Viewing the Action Center clears the unread dot (mark all as seen/read)
   useEffect(() => {
     const markAllReadOnOpen = async () => {
       try {
@@ -179,14 +294,11 @@ export default function ActionCenterPage() {
         if (!res.ok) return;
 
         if (typeof window !== "undefined") {
-  // fire now
-  window.dispatchEvent(new Event("ft-notifications-updated"));
-
-  // fire again next tick to beat listener-attach races on fresh mounts
-  setTimeout(() => {
-    window.dispatchEvent(new Event("ft-notifications-updated"));
-  }, 50);
-}
+          window.dispatchEvent(new Event("ft-notifications-updated"));
+          setTimeout(() => {
+            window.dispatchEvent(new Event("ft-notifications-updated"));
+          }, 50);
+        }
       } catch {
         // swallow
       }
@@ -227,6 +339,25 @@ export default function ActionCenterPage() {
     }
   };
 
+  const recruiterTabCounts = useMemo(() => {
+    if (scope !== "RECRUITER") return {};
+    const counts = {};
+    for (const t of RECRUITER_TABS) counts[t.key] = 0;
+
+    for (const n of Array.isArray(items) ? items : []) {
+      for (const t of RECRUITER_TABS) {
+        if (recruiterTabMatches(n, t.key)) counts[t.key] = (counts[t.key] || 0) + 1;
+      }
+    }
+    return counts;
+  }, [scope, items]);
+
+  const visibleItems = useMemo(() => {
+    if (scope !== "RECRUITER") return items;
+    const tab = String(activeRecruiterTab || "ALL").toUpperCase();
+    return (Array.isArray(items) ? items : []).filter((n) => recruiterTabMatches(n, tab));
+  }, [scope, items, activeRecruiterTab]);
+
   const Header = (
     <FrostPanel className="p-6 text-center">
       <h1 className="text-2xl md:text-3xl font-bold text-orange-600">
@@ -236,6 +367,50 @@ export default function ActionCenterPage() {
         Updates that need your attention. Click an item to go straight to where
         you take action.
       </p>
+
+      {/* ✅ Recruiter tabs */}
+      {scope === "RECRUITER" ? (
+        <div className="mt-4 flex flex-wrap gap-2 justify-center">
+          {RECRUITER_TABS.map((t) => {
+            const isActive = activeRecruiterTab === t.key;
+            const count = Number(recruiterTabCounts?.[t.key] || 0);
+
+            return (
+              <button
+                key={t.key}
+                type="button"
+                onClick={() => {
+                  setActiveRecruiterTab(t.key);
+                  const nextHref = `/action-center?scope=RECRUITER&tab=${encodeURIComponent(
+                    t.key
+                  )}${chrome ? `&chrome=${encodeURIComponent(chrome)}` : ""}`;
+                  router.replace(nextHref, undefined, { shallow: true });
+                }}
+                className={[
+                  "px-3 py-1.5 rounded-full text-xs font-semibold border transition flex items-center gap-2",
+                  isActive
+                    ? "bg-orange-50 text-orange-700 border-orange-200"
+                    : "bg-white/60 hover:bg-white/80 text-slate-700 border-white/40",
+                ].join(" ")}
+                aria-pressed={isActive}
+              >
+                <span>{t.label}</span>
+                <span
+                  className={[
+                    "min-w-[22px] px-2 py-0.5 rounded-full text-[11px] border",
+                    isActive
+                      ? "bg-white/70 border-orange-200 text-orange-700"
+                      : "bg-white/70 border-white/40 text-slate-700",
+                  ].join(" ")}
+                  title={`${count} item(s)`}
+                >
+                  {count}
+                </span>
+              </button>
+            );
+          })}
+        </div>
+      ) : null}
 
       <div className="mt-4 flex flex-wrap gap-2 justify-center">
         <button
@@ -286,11 +461,11 @@ export default function ActionCenterPage() {
       <FrostPanel className="p-4">
         {loading ? (
           <div className="text-slate-600">Loading Action Center…</div>
-        ) : items.length === 0 ? (
+        ) : visibleItems.length === 0 ? (
           <div className="text-slate-600">No items right now.</div>
         ) : (
           <div className="grid gap-2">
-            {items.map((n) => {
+            {visibleItems.map((n) => {
               const isUnread = !n.readAt;
               const href = actionHrefForNotification(n, scope, chrome);
 
@@ -322,7 +497,6 @@ export default function ActionCenterPage() {
                     <Link
                       href={href}
                       onClick={() => {
-                        // mark read when you click through
                         markRead(n.id);
                       }}
                       className="text-xs font-semibold px-3 py-1.5 rounded-full bg-orange-50 text-orange-700 hover:bg-orange-100 border border-orange-100"
@@ -349,7 +523,6 @@ export default function ActionCenterPage() {
     </div>
   );
 
-  // Wrap in the correct suite chrome/layout
   if (scope === "RECRUITER") {
     return (
       <>
@@ -381,7 +554,6 @@ export default function ActionCenterPage() {
     );
   }
 
-  // Default: seeker
   return (
     <>
       <Head>

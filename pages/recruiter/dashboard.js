@@ -44,56 +44,60 @@ function normalizeRecruiterChrome(input) {
   return "";
 }
 
+// ✅ Updated to match Recruiter Action Center queues (4 tiles)
 function pickRecruiterBucket(n) {
   const title = safeText(n?.title).toLowerCase();
   const body = safeText(n?.body).toLowerCase();
   const meta = n?.metadata || {};
-  const metaStr = safeText(meta?.type || meta?.event || meta?.kind || "").toLowerCase();
-  const haystack = `${title} ${body} ${metaStr}`;
+  const metaStr = safeText(meta?.bucket || meta?.tab || meta?.queue || meta?.type || meta?.event || meta?.kind || "").toLowerCase();
+  const catStr = safeText(n?.category || "").toLowerCase();
+
+  const haystack = `${title} ${body} ${metaStr} ${catStr}`;
 
   if (
-    haystack.includes("calendar") ||
-    haystack.includes("invite") ||
-    haystack.includes("schedule") ||
-    haystack.includes("resched") ||
-    haystack.includes("interview")
+    haystack.includes("stalled") ||
+    haystack.includes("stale") ||
+    haystack.includes("no movement") ||
+    haystack.includes("stuck") ||
+    haystack.includes("aging")
   ) {
-    return "calendar";
+    return "stalled";
   }
 
   if (
-    haystack.includes("job") ||
-    haystack.includes("posting") ||
-    haystack.includes("role") ||
-    haystack.includes("approval") ||
-    haystack.includes("published") ||
-    haystack.includes("closed")
+    haystack.includes("awaiting") ||
+    haystack.includes("feedback") ||
+    haystack.includes("hiring mgr") ||
+    haystack.includes("hiring manager")
   ) {
-    return "jobs";
+    return "awaiting_feedback";
   }
 
   if (
-    haystack.includes("candidate") ||
-    haystack.includes("applied") ||
-    haystack.includes("application") ||
-    haystack.includes("pipeline") ||
-    haystack.includes("stage") ||
-    haystack.includes("shortlist")
-  ) {
-    return "candidates";
-  }
-
-  if (
+    haystack.includes("unread") ||
+    haystack.includes("reply") ||
+    haystack.includes("replies") ||
     haystack.includes("message") ||
     haystack.includes("inbox") ||
     haystack.includes("dm") ||
-    haystack.includes("signal") ||
     haystack.includes("chat")
   ) {
-    return "messages";
+    return "unread_replies";
   }
 
-  return "messages";
+  if (
+    haystack.includes("upcoming") ||
+    haystack.includes("interview") ||
+    haystack.includes("conflict") ||
+    haystack.includes("schedule") ||
+    haystack.includes("invite") ||
+    haystack.includes("resched")
+  ) {
+    return "upcoming";
+  }
+
+  // Safe default: unread replies bucket (most common recruiter action)
+  return "unread_replies";
 }
 
 function ActionTile({ title, emptyText, items, href, chromeQuery }) {
@@ -180,7 +184,12 @@ function RecruiterActionCenterSection({ chromeQuery }) {
   }, []);
 
   const buckets = useMemo(() => {
-    const b = { messages: [], candidates: [], jobs: [], calendar: [] };
+    const b = {
+      stalled: [],
+      awaiting_feedback: [],
+      unread_replies: [],
+      upcoming: [],
+    };
 
     for (const n of Array.isArray(items) ? items : []) {
       const k = pickRecruiterBucket(n);
@@ -189,10 +198,10 @@ function RecruiterActionCenterSection({ chromeQuery }) {
     }
 
     return {
-      messages: b.messages.slice(0, 3),
-      candidates: b.candidates.slice(0, 3),
-      jobs: b.jobs.slice(0, 3),
-      calendar: b.calendar.slice(0, 3),
+      stalled: b.stalled.slice(0, 3),
+      awaiting_feedback: b.awaiting_feedback.slice(0, 3),
+      unread_replies: b.unread_replies.slice(0, 3),
+      upcoming: b.upcoming.slice(0, 3),
     };
   }, [items]);
 
@@ -232,31 +241,31 @@ function RecruiterActionCenterSection({ chromeQuery }) {
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
           <ActionTile
-            title="New Messages"
-            emptyText="No unread recruiter inbox items."
-            items={buckets.messages}
-            href="/action-center?scope=RECRUITER"
+            title="Stalled Candidates"
+            emptyText="No stalled candidates right now."
+            items={buckets.stalled}
+            href="/action-center?scope=RECRUITER&tab=STALLED"
             chromeQuery={chromeQuery}
           />
           <ActionTile
-            title="Candidate Activity"
-            emptyText="No new candidate activity."
-            items={buckets.candidates}
-            href="/action-center?scope=RECRUITER"
+            title="Awaiting Hiring Mgr Feedback"
+            emptyText="No hiring manager feedback pending."
+            items={buckets.awaiting_feedback}
+            href="/action-center?scope=RECRUITER&tab=AWAITING_FEEDBACK"
             chromeQuery={chromeQuery}
           />
           <ActionTile
-            title="Job Updates"
-            emptyText="No job updates."
-            items={buckets.jobs}
-            href="/action-center?scope=RECRUITER"
+            title="Unread Candidate Replies"
+            emptyText="No unread candidate replies."
+            items={buckets.unread_replies}
+            href="/action-center?scope=RECRUITER&tab=UNREAD_REPLIES"
             chromeQuery={chromeQuery}
           />
           <ActionTile
-            title="Calendar Updates"
-            emptyText="No calendar updates."
-            items={buckets.calendar}
-            href="/action-center?scope=RECRUITER"
+            title="Upcoming Interview / Conflicts"
+            emptyText="No upcoming interviews or conflicts."
+            items={buckets.upcoming}
+            href="/action-center?scope=RECRUITER&tab=UPCOMING"
             chromeQuery={chromeQuery}
           />
         </div>
