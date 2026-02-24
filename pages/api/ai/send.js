@@ -112,6 +112,7 @@ function buildModeGuardrails(mode) {
       "Hard rules:",
       "- You are helping a job seeker execute job search tasks.",
       "- You MAY give resume improvement guidance, JD alignment steps, application strategy, interview prep, and profile improvement.",
+      "- You MUST NOT write, rewrite, standardize, or generate job descriptions for posting (JD creation is recruiter-side work).",
       "- You MUST NOT act as a hiring decision-maker or give recruiter-side pipeline instructions as if the user is the recruiter.",
       "- If the user is asking to evaluate a candidate for hiring, tell them to switch to Recruiter Buddy.",
     ].join("\n");
@@ -147,6 +148,24 @@ function buildModeGuardrails(mode) {
 function detectHandoff({ threadMode, content }) {
   const text = String(content || "").toLowerCase();
 
+  // ✅ JD-building / job-posting asks (recruiter-side)
+  const jdBuildSignals = [
+    "write a job description",
+    "create a job description",
+    "build a job description",
+    "generate a job description",
+    "rewrite this job description",
+    "clean up this job description",
+    "standardize this job description",
+    "jd template",
+    "job description template",
+    "job posting",
+    "post this job",
+    "create a posting",
+    "requirements section",
+    "responsibilities section",
+  ];
+
   // seeker-ish asks (resume writing / applying)
   const seekerSignals = [
     "my resume",
@@ -181,8 +200,19 @@ function detectHandoff({ threadMode, content }) {
     "screening",
   ];
 
+  const jdBuildHit = jdBuildSignals.some((s) => text.includes(s));
   const seekerHit = seekerSignals.some((s) => text.includes(s));
   const recruiterHit = recruiterSignals.some((s) => text.includes(s));
+
+  // ✅ If SEEKER asks to create/clean/standardize a JD or job posting → force Recruiter
+  if (threadMode === "SEEKER" && jdBuildHit) {
+    return {
+      handoffTo: "RECRUITER",
+      reply:
+        "Creating/cleaning a job description for posting is recruiter-side work. " +
+        "Please switch to **Recruiter Buddy** so I can help you structure the JD and requirements correctly.",
+    };
+  }
 
   if (threadMode === "RECRUITER" && seekerHit && !recruiterHit) {
     return {
