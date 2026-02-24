@@ -93,10 +93,7 @@ function actionHrefForNotification(n, scope, chrome) {
     }
 
     // SEEKER
-    return withChrome(
-      `/seeker/messages?c=${encodeURIComponent(convoId)}`,
-      chrome
-    );
+    return withChrome(`/seeker/messages?c=${encodeURIComponent(convoId)}`, chrome);
   }
 
   // Fallback by scope
@@ -106,7 +103,7 @@ function actionHrefForNotification(n, scope, chrome) {
 }
 
 /* -----------------------------
-   Recruiter Tabs (moved OUT of header)
+   Recruiter Tabs (below header)
 ------------------------------ */
 const RECRUITER_TABS = [
   { key: "ALL", label: "All" },
@@ -145,13 +142,15 @@ function recruiterTabMatches(n, tabKey) {
 
   if (tabKey === "AWAITING_FEEDBACK") {
     if (metaBucket.includes("AWAITING_FEEDBACK")) return true;
-    if (metaBucket.includes("HIRING_MANAGER") && metaBucket.includes("FEEDBACK")) return true;
+    if (metaBucket.includes("HIRING_MANAGER") && metaBucket.includes("FEEDBACK"))
+      return true;
     if (category.includes("FEEDBACK")) return true;
     if (category.includes("HIRING") && metaBucket.includes("FEEDBACK")) return true;
   }
 
   if (tabKey === "UNREAD_REPLIES") {
-    if (metaBucket.includes("UNREAD_REPLIES") || metaBucket.includes("UNREAD_REPLY")) return true;
+    if (metaBucket.includes("UNREAD_REPLIES") || metaBucket.includes("UNREAD_REPLY"))
+      return true;
     if (category === "MESSAGING") return true;
     if (entityType === "MESSAGE" || entityType === "CONVERSATION") return true;
   }
@@ -354,7 +353,8 @@ export default function ActionCenterPage() {
 
     for (const n of Array.isArray(items) ? items : []) {
       for (const t of RECRUITER_TABS) {
-        if (recruiterTabMatches(n, t.key)) counts[t.key] = (counts[t.key] || 0) + 1;
+        if (recruiterTabMatches(n, t.key))
+          counts[t.key] = (counts[t.key] || 0) + 1;
       }
     }
     return counts;
@@ -363,7 +363,9 @@ export default function ActionCenterPage() {
   const filteredByTab = useMemo(() => {
     if (scope !== "RECRUITER") return items;
     const tab = String(activeRecruiterTab || "ALL").toUpperCase();
-    return (Array.isArray(items) ? items : []).filter((n) => recruiterTabMatches(n, tab));
+    return (Array.isArray(items) ? items : []).filter((n) =>
+      recruiterTabMatches(n, tab)
+    );
   }, [scope, items, activeRecruiterTab]);
 
   // ✅ Needs Attention = unread only + chronological
@@ -378,18 +380,39 @@ export default function ActionCenterPage() {
     return base.slice().sort(byCreatedDesc);
   }, [filteredByTab]);
 
+  const MAX_LIST_ITEMS = 10;
+
   /* -----------------------------
-     Header: clean, no tabs
+     Header: respects right rail + ad top-right
   ------------------------------ */
   const Header = (
-    <FrostPanel className="p-6 text-left">
-      <h1 className="text-2xl md:text-3xl font-bold text-orange-600">
-        {scopeLabel(scope)}
-      </h1>
-      <p className="text-sm md:text-base text-slate-700 mt-2 max-w-3xl">
-        This is your review surface. Items that need attention live at the top. History is always available below.
-      </p>
-    </FrostPanel>
+    <div className="w-full flex justify-center">
+      <div className="w-full max-w-[1100px]">
+        <div className="grid grid-cols-1 lg:grid-cols-[1fr_320px] gap-4">
+          <FrostPanel className="p-6 text-left">
+            <h1 className="text-2xl md:text-3xl font-bold text-orange-600">
+              {scopeLabel(scope)}
+            </h1>
+            <p className="text-sm md:text-base text-slate-700 mt-2 max-w-3xl">
+              This is your review surface. Items that need attention live on the
+              left. History for this category is on the right.
+            </p>
+          </FrostPanel>
+
+          {/* ✅ Ad / right-rail slot */}
+          <FrostPanel className="p-4 h-[120px] flex items-center justify-center text-slate-600">
+            <div className="text-center">
+              <div className="text-xs font-semibold tracking-wide text-slate-700">
+                AD SLOT
+              </div>
+              <div className="text-[11px] text-slate-600 mt-1">
+                Top-right placement
+              </div>
+            </div>
+          </FrostPanel>
+        </div>
+      </div>
+    </div>
   );
 
   /* -----------------------------
@@ -400,9 +423,7 @@ export default function ActionCenterPage() {
     const href = actionHrefForNotification(n, scope, chrome);
 
     return (
-      <div
-        className="border border-white/30 bg-white/60 hover:bg-white/75 transition rounded-2xl p-3 flex items-start justify-between gap-3"
-      >
+      <div className="border border-white/30 bg-white/60 hover:bg-white/75 transition rounded-2xl p-3 flex items-start justify-between gap-3">
         <div className="min-w-0">
           <div className="flex items-center gap-2">
             <div className="font-semibold text-slate-900 truncate">
@@ -448,13 +469,13 @@ export default function ActionCenterPage() {
   }
 
   /* -----------------------------
-     Content: center-first layout
+     Content: tabs + two-column (needs vs history)
   ------------------------------ */
   const Content = (
     <div className="w-full flex justify-center">
-      <div className="w-full max-w-[1100px] px-0">
+      <div className="w-full max-w-[1100px]">
         <div className="grid gap-4">
-          {/* Recruiter Tabs (moved below header) */}
+          {/* Recruiter Tabs (below header) */}
           {scope === "RECRUITER" ? (
             <FrostPanel className="p-3">
               <div className="flex flex-wrap gap-2 justify-start">
@@ -506,80 +527,19 @@ export default function ActionCenterPage() {
             </div>
           ) : null}
 
-          {/* Needs Attention (Unread-only, chronological) */}
-          <FrostPanel className="p-4">
-            <div className="flex items-start justify-between gap-3">
-              <div>
-                <div className="text-sm font-semibold text-slate-900">
-                  Needs Attention
+          {/* ✅ Two column layout */}
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+            {/* Needs Attention */}
+            <FrostPanel className="p-4">
+              <div className="flex items-start justify-between gap-3">
+                <div>
+                  <div className="text-sm font-semibold text-slate-900">
+                    Needs Attention
+                  </div>
+                  <div className="text-[12px] text-slate-600 mt-0.5">
+                    Unread items, newest first. Click to go take action.
+                  </div>
                 </div>
-                <div className="text-[12px] text-slate-600 mt-0.5">
-                  Unread items, newest first. Click to go take action.
-                </div>
-              </div>
-
-              <button
-                type="button"
-                onClick={() => load({ includeRead })}
-                className="px-3 py-1.5 rounded-full text-xs font-semibold bg-white/60 hover:bg-white/80 text-slate-800 border border-white/40 transition"
-              >
-                Refresh
-              </button>
-            </div>
-
-            <div className="mt-3">
-              {loading ? (
-                <div className="text-slate-600">Loading…</div>
-              ) : needsAttention.length === 0 ? (
-                <div className="text-slate-600">
-                  No items needing action right now.
-                </div>
-              ) : (
-                <div className="grid gap-2">
-                  {needsAttention.map((n) => (
-                    <NotificationRow key={n.id} n={n} />
-                  ))}
-                </div>
-              )}
-            </div>
-          </FrostPanel>
-
-          {/* History (always available) */}
-          <FrostPanel className="p-4">
-            <div className="flex flex-wrap items-start justify-between gap-3">
-              <div>
-                <div className="text-sm font-semibold text-slate-900">History</div>
-                <div className="text-[12px] text-slate-600 mt-0.5">
-                  A chronological log of what changed. You take action from the linked destination.
-                </div>
-              </div>
-
-              <div className="flex flex-wrap gap-2">
-                <button
-                  type="button"
-                  onClick={() => setIncludeRead(true)}
-                  className={[
-                    "px-3 py-1.5 rounded-full text-xs font-semibold border transition",
-                    includeRead
-                      ? "bg-orange-50 text-orange-700 border-orange-200"
-                      : "bg-white/60 hover:bg-white/80 text-slate-700 border-white/40",
-                  ].join(" ")}
-                >
-                  Include read
-                </button>
-
-                <button
-                  type="button"
-                  onClick={() => setIncludeRead(false)}
-                  className={[
-                    "px-3 py-1.5 rounded-full text-xs font-semibold border transition",
-                    !includeRead
-                      ? "bg-orange-50 text-orange-700 border-orange-200"
-                      : "bg-white/60 hover:bg-white/80 text-slate-700 border-white/40",
-                  ].join(" ")}
-                >
-                  Unread only
-                </button>
 
                 <button
                   type="button"
@@ -589,22 +549,104 @@ export default function ActionCenterPage() {
                   Refresh
                 </button>
               </div>
-            </div>
 
-            <div className="mt-3">
-              {loading ? (
-                <div className="text-slate-600">Loading…</div>
-              ) : historyItems.length === 0 ? (
-                <div className="text-slate-600">No history items right now.</div>
-              ) : (
-                <div className="grid gap-2">
-                  {historyItems.map((n) => (
-                    <NotificationRow key={n.id} n={n} />
-                  ))}
+              <div className="mt-3">
+                {loading ? (
+                  <div className="text-slate-600">Loading…</div>
+                ) : needsAttention.length === 0 ? (
+                  <div className="text-slate-600">No items needing action right now.</div>
+                ) : (
+                  <>
+                    <div className="max-h-[420px] overflow-y-auto pr-1">
+                      <div className="grid gap-2">
+                        {needsAttention.slice(0, MAX_LIST_ITEMS).map((n) => (
+                          <NotificationRow key={n.id} n={n} />
+                        ))}
+                      </div>
+                    </div>
+
+                    {needsAttention.length > MAX_LIST_ITEMS ? (
+                      <div className="text-[11px] text-slate-600 mt-2">
+                        Showing {MAX_LIST_ITEMS} of {needsAttention.length}. Scroll to review.
+                      </div>
+                    ) : null}
+                  </>
+                )}
+              </div>
+            </FrostPanel>
+
+            {/* History */}
+            <FrostPanel className="p-4">
+              <div className="flex flex-wrap items-start justify-between gap-3">
+                <div>
+                  <div className="text-sm font-semibold text-slate-900">History</div>
+                  <div className="text-[12px] text-slate-600 mt-0.5">
+                    A chronological log for this category. Take action from the linked destination.
+                  </div>
                 </div>
-              )}
-            </div>
-          </FrostPanel>
+
+                <div className="flex flex-wrap gap-2">
+                  <button
+                    type="button"
+                    onClick={() => setIncludeRead(true)}
+                    className={[
+                      "px-3 py-1.5 rounded-full text-xs font-semibold border transition",
+                      includeRead
+                        ? "bg-orange-50 text-orange-700 border-orange-200"
+                        : "bg-white/60 hover:bg-white/80 text-slate-700 border-white/40",
+                    ].join(" ")}
+                  >
+                    Include read
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => setIncludeRead(false)}
+                    className={[
+                      "px-3 py-1.5 rounded-full text-xs font-semibold border transition",
+                      !includeRead
+                        ? "bg-orange-50 text-orange-700 border-orange-200"
+                        : "bg-white/60 hover:bg-white/80 text-slate-700 border-white/40",
+                    ].join(" ")}
+                  >
+                    Unread only
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => load({ includeRead })}
+                    className="px-3 py-1.5 rounded-full text-xs font-semibold bg-white/60 hover:bg-white/80 text-slate-800 border border-white/40 transition"
+                  >
+                    Refresh
+                  </button>
+                </div>
+              </div>
+
+              <div className="mt-3">
+                {loading ? (
+                  <div className="text-slate-600">Loading…</div>
+                ) : historyItems.length === 0 ? (
+                  <div className="text-slate-600">No history items right now.</div>
+                ) : (
+                  <>
+                    <div className="max-h-[420px] overflow-y-auto pr-1">
+                      <div className="grid gap-2">
+                        {historyItems.slice(0, MAX_LIST_ITEMS).map((n) => (
+                          <NotificationRow key={n.id} n={n} />
+                        ))}
+                      </div>
+                    </div>
+
+                    {historyItems.length > MAX_LIST_ITEMS ? (
+                      <div className="text-[11px] text-slate-600 mt-2">
+                        Showing {MAX_LIST_ITEMS} of {historyItems.length}. Scroll to review.
+                      </div>
+                    ) : null}
+                  </>
+                )}
+              </div>
+            </FrostPanel>
+          </div>
         </div>
       </div>
     </div>
@@ -646,11 +688,7 @@ export default function ActionCenterPage() {
       <Head>
         <title>Action Center | ForgeTomorrow</title>
       </Head>
-      <SeekerLayout
-        title="Action Center | ForgeTomorrow"
-        header={Header}
-        activeNav="dashboard"
-      >
+      <SeekerLayout title="Action Center | ForgeTomorrow" header={Header} activeNav="dashboard">
         {Content}
       </SeekerLayout>
     </>
