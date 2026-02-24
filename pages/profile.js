@@ -20,6 +20,8 @@ import ProfileEducation from '@/components/profile/ProfileEducation';
 import ProfileSectionRow from '@/components/profile/ProfileSectionRow';
 
 const UI = { CARD_PAD: 14 };
+const RIGHT_RAIL_WIDTH = 260;
+const GAP = 12;
 
 export default function ProfilePage() {
   const router = useRouter();
@@ -27,7 +29,7 @@ export default function ProfilePage() {
   const withChrome = (path) =>
     chrome ? `${path}${path.includes('?') ? '&' : '?'}chrome=${chrome}` : path;
 
-  // ✅ Mobile detection (used to prevent crushed 70/30 docs layout on phones)
+  // ✅ Mobile detection
   const [isMobile, setIsMobile] = useState(true);
   useEffect(() => {
     const handleResize = () => {
@@ -83,7 +85,6 @@ export default function ProfilePage() {
         const data = await res.json();
         if (cancelled) return;
 
-        // Backward compatible response: data.user or flattened
         const u = data.user || data.details || data || {};
 
         if (typeof u.name === 'string') setName(u.name);
@@ -125,7 +126,7 @@ export default function ProfilePage() {
     };
   }, []);
 
-  // ---------------- Welcome banner logic (cross-device via DB flag) ----------------
+  // ---------------- Welcome banner logic ----------------
   useEffect(() => {
     if (router.query.verified === '1') {
       if (!welcomeDismissed) setShowWelcomeBanner(true);
@@ -147,7 +148,7 @@ export default function ProfilePage() {
     }
   };
 
-  // ---------------- Debounced save to server (DB is source of truth) ----------------
+  // ---------------- Debounced save to server ----------------
   useEffect(() => {
     if (!serverLoaded) return;
 
@@ -156,7 +157,6 @@ export default function ProfilePage() {
     const timer = setTimeout(async () => {
       try {
         const body = {
-          // Header/identity
           name: name || '',
           pronouns: pronouns || '',
           headline: headline || '',
@@ -164,8 +164,6 @@ export default function ProfilePage() {
           status: status || '',
           avatarUrl: avatarUrl || null,
           coverUrl: coverUrl || null,
-
-          // Sections
           aboutMe: about || '',
           workPreferences: {
             workStatus: prefStatus || '',
@@ -201,68 +199,10 @@ export default function ProfilePage() {
     };
   }, [
     serverLoaded,
-    // header/identity
-    name,
-    pronouns,
-    headline,
-    location,
-    status,
-    avatarUrl,
-    coverUrl,
-    // sections
-    about,
-    prefStatus,
-    prefWorkType,
-    prefRelocate,
-    prefLocations,
-    prefStart,
-    skills,
-    languages,
-    hobbies,
-    education,
+    name, pronouns, headline, location, status, avatarUrl, coverUrl,
+    about, prefStatus, prefWorkType, prefRelocate, prefLocations, prefStart,
+    skills, languages, hobbies, education,
   ]);
-
-  // ---------------- Header text ----------------
-  const HeaderBox = (
-    <section
-      style={{
-        borderRadius: 14,
-        padding: UI.CARD_PAD,
-        textAlign: 'center',
-        border: '1px solid rgba(255,255,255,0.22)',
-        background: 'rgba(255,255,255,0.58)',
-        boxShadow: '0 10px 24px rgba(0,0,0,0.12)',
-        backdropFilter: 'blur(10px)',
-        WebkitBackdropFilter: 'blur(10px)',
-      }}
-      aria-label="Profile overview"
-    >
-      <h1 style={{ margin: 0, color: '#FF7043', fontSize: 22, fontWeight: 900 }}>
-        Your Profile
-      </h1>
-      <p style={{ margin: '6px auto 0', color: '#455A64', maxWidth: 760, fontWeight: 600 }}>
-        Clear, human overview. Your resume carries the deep detail.
-      </p>
-      <div style={{ marginTop: 10 }}>
-        <Link
-          href={withChrome('/profile-analytics')}
-          style={{
-            display: 'inline-block',
-            background: 'rgba(255,255,255,0.75)',
-            color: '#FF7043',
-            border: '1px solid rgba(255,112,67,0.55)',
-            borderRadius: 999,
-            padding: '8px 12px',
-            fontWeight: 900,
-            textDecoration: 'none',
-          }}
-          aria-label="View Profile Analytics"
-        >
-          View Profile Analytics
-        </Link>
-      </div>
-    </section>
-  );
 
   const docsHint = useMemo(
     () => ({
@@ -280,37 +220,47 @@ export default function ProfilePage() {
   const openResume = () => setDocsFocus('resume');
   const openCover = () => setDocsFocus('cover');
 
+  // ✅ Right rail styles — matches SeekerLayout's rightDark exactly
+  const DARK_RAIL = {
+    background: '#2a2a2a',
+    border: '1px solid #3a3a3a',
+    borderRadius: 12,
+    padding: 16,
+    boxShadow: '0 2px 6px rgba(0,0,0,0.06)',
+    boxSizing: 'border-box',
+    overflow: 'hidden',
+    alignSelf: 'start',
+  };
+
   return (
     <>
       <Head>
         <title>Profile | ForgeTomorrow</title>
       </Head>
 
-      {/* ✅ Guardrails for mobile overflow + banner/image scaling */}
       <style jsx global>{`
-        /* Prevent horizontal swipe caused by any oversized child elements */
-        html,
         body {
           overflow-x: hidden;
         }
-
-        /* Keep header images constrained (but do NOT override avatar sizing) */
         section[aria-label='Profile header section'] img:not([data-ft-avatar='1']) {
           max-width: 100% !important;
           height: auto !important;
         }
-
-        /* If ProfileHeader uses video */
         section[aria-label='Profile header section'] video {
           max-width: 100% !important;
           height: auto !important;
         }
       `}</style>
 
+      {/*
+        ✅ FIX: `right` prop removed from SeekerLayout entirely.
+        Right rail is now rendered inside the content area as a grid column,
+        exactly like seeker-dashboard.js — this prevents SeekerLayout's grid
+        from adding a 3rd fixed column that pushes total width past 100vw
+        and kills the vertical scrollbar.
+      */}
       <SeekerLayout
         title="Profile | ForgeTomorrow"
-        header={HeaderBox}
-        right={<RightRailPlacementManager surfaceId="profile" />}
         activeNav="profile"
       >
         {showWelcomeBanner && (
@@ -335,160 +285,224 @@ export default function ProfilePage() {
           </section>
         )}
 
-        {/* ✅ overflow-x-hidden stops the swipe-to-find-edit-button issue */}
-        <div className="w-full max-w-6xl mx-auto px-3 md:px-5 grid gap-3 md:gap-4 overflow-x-hidden">
-          <section
-            aria-label="Profile header section"
-            style={{
-              // ✅ key fix: do NOT allow children to render outside the card on mobile
-              overflow: 'hidden',
-              position: 'relative',
+        {/*
+          ✅ Two-column internal grid:
+          - Col 1: all profile sections (header card + section rows)
+          - Col 2: right rail ad slot (desktop only; hidden on mobile)
+          On mobile, single column — right rail is simply not rendered.
+        */}
+        <div
+          style={{
+            display: 'grid',
+            gridTemplateColumns: isMobile ? '1fr' : `minmax(0, 1fr) ${RIGHT_RAIL_WIDTH}px`,
+            gap: GAP,
+            width: '100%',
+            alignItems: 'start',
+          }}
+        >
+          {/* COL 1: All profile content */}
+          <div style={{ display: 'grid', gap: GAP, minWidth: 0 }}>
 
-              borderRadius: 14,
-              border: '1px solid rgba(255,255,255,0.22)',
-              background: 'rgba(255,255,255,0.58)',
-              boxShadow: '0 10px 24px rgba(0,0,0,0.12)',
-              backdropFilter: 'blur(10px)',
-              WebkitBackdropFilter: 'blur(10px)',
-              padding: 0, // ✅ FIX: was 10 — caused red side gaps on banner
-              maxWidth: '100%',
-            }}
-          >
-            <ProfileHeader />
-          </section>
-
-          <ProfileSectionRow
-            id="about"
-            title="About"
-            subtitle="Your story in 6-10 lines"
-            hintTitle="About yourself"
-            hintBullets={[
-              'Open with a concrete outcome (example: reduced churn 18% in 6 months).',
-              'Mention your domain and tools (industries, platforms, stacks).',
-              'Say what you want next so people know how to help.',
-            ]}
-          >
-            <ProfileAbout about={about || ''} setAbout={setAbout} />
-          </ProfileSectionRow>
-
-          <ProfileSectionRow
-            id="preferences"
-            title="Work preferences"
-            subtitle="Discovery settings"
-            hintTitle="Preferences help discovery"
-            hintBullets={[
-              'Select work type (remote, onsite, hybrid).',
-              'Add preferred locations to appear in local searches.',
-              'Optional: earliest start date and relocation.',
-            ]}
-          >
-            <ProfilePreferences
-              prefStatus={prefStatus}
-              setPrefStatus={setPrefStatus}
-              prefWorkType={prefWorkType}
-              setPrefWorkType={setPrefWorkType}
-              prefRelocate={prefRelocate}
-              setPrefRelocate={setPrefRelocate}
-              prefLocations={prefLocations}
-              setPrefLocations={setPrefLocations}
-              prefStart={prefStart}
-              setPrefStart={setPrefStart}
-            />
-          </ProfileSectionRow>
-
-          <ProfileSectionRow
-            id="skills"
-            title="Skills"
-            subtitle="8-12 is the sweet spot"
-            hintTitle="Strengthen your skills"
-            hintBullets={[
-              'Aim for 8-12 core skills.',
-              'Match target job descriptions.',
-              'Include tools and frameworks.',
-            ]}
-          >
-            <ProfileSkills skills={skills} setSkills={setSkills} />
-          </ProfileSectionRow>
-
-          <ProfileSectionRow
-            id="languages"
-            title="Languages"
-            subtitle="Spoken or programming"
-            hintTitle="Languages add context"
-            hintBullets={[
-              'Add spoken or programming languages.',
-              'Helps with multilingual or global roles.',
-            ]}
-          >
-            <ProfileLanguages languages={languages} setLanguages={setLanguages} />
-          </ProfileSectionRow>
-
-          <ProfileSectionRow
-            id="education"
-            title="Education"
-            subtitle="Degrees, certificates, programs"
-            hintTitle="Education"
-            hintBullets={[
-              'List your school/program and degree (or certificate).',
-              'Add a field/major if it helps recruiters understand your path.',
-              'Keep it clean and factual.',
-            ]}
-          >
-            <ProfileEducation education={education} setEducation={setEducation} />
-          </ProfileSectionRow>
-
-          <ProfileSectionRow
-            id="docs"
-            title="Resume and cover letter"
-            subtitle="Make it easy to say yes"
-            hintTitle={docsHint.title}
-            hintBullets={docsHint.bullets}
-          >
-            {/* ✅ FIX: stack on mobile so nothing is crushed; keep side-by-side on desktop */}
-            <div
+            {/* Title / header card */}
+            <section
               style={{
-                display: 'flex',
-                flexDirection: isMobile ? 'column' : 'row',
-                gap: 12,
-                alignItems: 'stretch',
-                width: '100%',
+                borderRadius: 14,
+                padding: UI.CARD_PAD,
+                textAlign: 'center',
+                border: '1px solid rgba(255,255,255,0.22)',
+                background: 'rgba(255,255,255,0.58)',
+                boxShadow: '0 10px 24px rgba(0,0,0,0.12)',
+                backdropFilter: 'blur(10px)',
+                WebkitBackdropFilter: 'blur(10px)',
+              }}
+              aria-label="Profile overview"
+            >
+              <h1 style={{ margin: 0, color: '#FF7043', fontSize: 22, fontWeight: 900 }}>
+                Your Profile
+              </h1>
+              <p style={{ margin: '6px auto 0', color: '#455A64', maxWidth: 760, fontWeight: 600 }}>
+                Clear, human overview. Your resume carries the deep detail.
+              </p>
+              <div style={{ marginTop: 10 }}>
+                <Link
+                  href={withChrome('/profile-analytics')}
+                  style={{
+                    display: 'inline-block',
+                    background: 'rgba(255,255,255,0.75)',
+                    color: '#FF7043',
+                    border: '1px solid rgba(255,112,67,0.55)',
+                    borderRadius: 999,
+                    padding: '8px 12px',
+                    fontWeight: 900,
+                    textDecoration: 'none',
+                  }}
+                  aria-label="View Profile Analytics"
+                >
+                  View Profile Analytics
+                </Link>
+              </div>
+            </section>
+
+            {/* Banner + identity */}
+            <section
+              aria-label="Profile header section"
+              style={{
+                overflow: 'hidden',
+                position: 'relative',
+                borderRadius: 14,
+                border: '1px solid rgba(255,255,255,0.22)',
+                background: 'rgba(255,255,255,0.58)',
+                boxShadow: '0 10px 24px rgba(0,0,0,0.12)',
+                backdropFilter: 'blur(10px)',
+                WebkitBackdropFilter: 'blur(10px)',
+                padding: 0,
+                maxWidth: '100%',
               }}
             >
-              <DocFocusCard
-                title="Primary Resume"
-                active={docsFocus === 'resume'}
-                onActivate={openResume}
-                activePct={70}
-                stacked={isMobile}
-              >
-                <ProfileResumeAttach withChrome={withChrome} />
-              </DocFocusCard>
+              <ProfileHeader />
+            </section>
 
-              <DocFocusCard
-                title="Primary Cover Letter"
-                active={docsFocus === 'cover'}
-                onActivate={openCover}
-                activePct={70}
-                stacked={isMobile}
-              >
-                <ProfileCoverAttach withChrome={withChrome} />
-              </DocFocusCard>
-            </div>
-          </ProfileSectionRow>
+            <ProfileSectionRow
+              id="about"
+              title="About"
+              subtitle="Your story in 6-10 lines"
+              hintTitle="About yourself"
+              hintBullets={[
+                'Open with a concrete outcome (example: reduced churn 18% in 6 months).',
+                'Mention your domain and tools (industries, platforms, stacks).',
+                'Say what you want next so people know how to help.',
+              ]}
+            >
+              <ProfileAbout about={about || ''} setAbout={setAbout} />
+            </ProfileSectionRow>
 
-          <ProfileSectionRow
-            id="hobbies"
-            title="Hobbies"
-            subtitle="Optional, but human"
-            hintTitle="Hobbies (optional)"
-            hintBullets={[
-              'Keep it professional-friendly.',
-              'One or two is enough.',
-              'Adds personality without distracting from the resume.',
-            ]}
-          >
-            <ProfileHobbies hobbies={hobbies} setHobbies={setHobbies} />
-          </ProfileSectionRow>
+            <ProfileSectionRow
+              id="preferences"
+              title="Work preferences"
+              subtitle="Discovery settings"
+              hintTitle="Preferences help discovery"
+              hintBullets={[
+                'Select work type (remote, onsite, hybrid).',
+                'Add preferred locations to appear in local searches.',
+                'Optional: earliest start date and relocation.',
+              ]}
+            >
+              <ProfilePreferences
+                prefStatus={prefStatus}
+                setPrefStatus={setPrefStatus}
+                prefWorkType={prefWorkType}
+                setPrefWorkType={setPrefWorkType}
+                prefRelocate={prefRelocate}
+                setPrefRelocate={setPrefRelocate}
+                prefLocations={prefLocations}
+                setPrefLocations={setPrefLocations}
+                prefStart={prefStart}
+                setPrefStart={setPrefStart}
+              />
+            </ProfileSectionRow>
+
+            <ProfileSectionRow
+              id="skills"
+              title="Skills"
+              subtitle="8-12 is the sweet spot"
+              hintTitle="Strengthen your skills"
+              hintBullets={[
+                'Aim for 8-12 core skills.',
+                'Match target job descriptions.',
+                'Include tools and frameworks.',
+              ]}
+            >
+              <ProfileSkills skills={skills} setSkills={setSkills} />
+            </ProfileSectionRow>
+
+            <ProfileSectionRow
+              id="languages"
+              title="Languages"
+              subtitle="Spoken or programming"
+              hintTitle="Languages add context"
+              hintBullets={[
+                'Add spoken or programming languages.',
+                'Helps with multilingual or global roles.',
+              ]}
+            >
+              <ProfileLanguages languages={languages} setLanguages={setLanguages} />
+            </ProfileSectionRow>
+
+            <ProfileSectionRow
+              id="education"
+              title="Education"
+              subtitle="Degrees, certificates, programs"
+              hintTitle="Education"
+              hintBullets={[
+                'List your school/program and degree (or certificate).',
+                'Add a field/major if it helps recruiters understand your path.',
+                'Keep it clean and factual.',
+              ]}
+            >
+              <ProfileEducation education={education} setEducation={setEducation} />
+            </ProfileSectionRow>
+
+            <ProfileSectionRow
+              id="docs"
+              title="Resume and cover letter"
+              subtitle="Make it easy to say yes"
+              hintTitle={docsHint.title}
+              hintBullets={docsHint.bullets}
+            >
+              <div
+                style={{
+                  display: 'flex',
+                  flexDirection: isMobile ? 'column' : 'row',
+                  gap: GAP,
+                  alignItems: 'stretch',
+                  width: '100%',
+                }}
+              >
+                <DocFocusCard
+                  title="Primary Resume"
+                  active={docsFocus === 'resume'}
+                  onActivate={openResume}
+                  activePct={70}
+                  stacked={isMobile}
+                >
+                  <ProfileResumeAttach withChrome={withChrome} />
+                </DocFocusCard>
+
+                <DocFocusCard
+                  title="Primary Cover Letter"
+                  active={docsFocus === 'cover'}
+                  onActivate={openCover}
+                  activePct={70}
+                  stacked={isMobile}
+                >
+                  <ProfileCoverAttach withChrome={withChrome} />
+                </DocFocusCard>
+              </div>
+            </ProfileSectionRow>
+
+            <ProfileSectionRow
+              id="hobbies"
+              title="Hobbies"
+              subtitle="Optional, but human"
+              hintTitle="Hobbies (optional)"
+              hintBullets={[
+                'Keep it professional-friendly.',
+                'One or two is enough.',
+                'Adds personality without distracting from the resume.',
+              ]}
+            >
+              <ProfileHobbies hobbies={hobbies} setHobbies={setHobbies} />
+            </ProfileSectionRow>
+
+          </div>
+
+          {/* COL 2: Right rail — inside content area, not a SeekerLayout prop */}
+          {!isMobile && (
+            <aside style={DARK_RAIL}>
+              <RightRailPlacementManager surfaceId="profile" />
+            </aside>
+          )}
+
         </div>
       </SeekerLayout>
     </>
@@ -505,11 +519,8 @@ function DocFocusCard({ title, active, onActivate, activePct = 70, stacked = fal
   const ORANGE = '#FF7043';
   const headerPad = 14;
 
-  // Width split (desktop only)
   const activeBasis = `${activePct}%`;
   const inactiveBasis = `${100 - activePct}%`;
-
-  // Height clamp stays as-is (your existing behavior)
   const maxH = active ? 1600 : 210;
 
   return (
@@ -526,13 +537,11 @@ function DocFocusCard({ title, active, onActivate, activePct = 70, stacked = fal
         }
       }}
       style={{
-        // ✅ Mobile stack: full width; Desktop: 70/30 accordion widths
         flexBasis: stacked ? '100%' : active ? activeBasis : inactiveBasis,
         flexGrow: stacked ? 1 : 0,
         flexShrink: 0,
         minWidth: 0,
         width: '100%',
-
         borderRadius: 18,
         border: active ? '1px solid rgba(255,112,67,0.55)' : '1px solid rgba(0,0,0,0.10)',
         background: active ? 'rgba(255,255,255,0.88)' : 'rgba(255,255,255,0.72)',
@@ -543,7 +552,6 @@ function DocFocusCard({ title, active, onActivate, activePct = 70, stacked = fal
         WebkitBackdropFilter: 'blur(12px)',
         overflow: 'hidden',
         cursor: active ? 'default' : 'pointer',
-
         transition:
           'flex-basis 260ms ease, box-shadow 180ms ease, border-color 180ms ease, background 180ms ease',
       }}
