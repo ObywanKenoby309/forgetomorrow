@@ -12,217 +12,80 @@ datasource db {
 }
 
 // ============================================================================
-//  ENUMS
-// ============================================================================
-
-enum UserRole {
-  SEEKER
-  COACH
-  RECRUITER
-  ADMIN
-}
-
-enum Tier {
-  FREE
-  PRO
-  COACH
-  SMALL_BIZ
-  ENTERPRISE
-}
-
-enum ContactRequestStatus {
-  PENDING
-  ACCEPTED
-  DECLINED
-  CANCELED
-}
-
-enum ProfileVisibility {
-  PRIVATE
-  PUBLIC
-  RECRUITERS_ONLY
-}
-
-// ✅ NEW: internal ForgeTomorrow staff roles (separate axis from customer UserRole)
-enum StaffRole {
-  PLATFORM_ADMIN
-  CSM
-  SALES
-  DEV
-  CS
-  UX
-}
-
-// ✅ NEW: internal ForgeTomorrow departments (for Employee/Department gate)
-enum Department {
-  EXEC
-  ENGINEERING
-  PRODUCT
-  UX
-  CX
-  CS
-  SALES
-  MARKETING
-  FINANCE
-  LEGAL
-  OPERATIONS
-  SECURITY
-}
-
-// ✅ NEW: org lifecycle (optional but useful immediately)
-enum OrganizationStatus {
-  PILOT
-  ACTIVE
-  SUSPENDED
-}
-
-enum ApplicationQuestionType {
-  TEXT
-  TEXTAREA
-  NUMBER
-  BOOLEAN
-  DATE
-  SELECT
-  MULTISELECT
-}
-
-// ✅ NEW: Notifications (long-term foundation)
-enum NotificationCategory {
-  MESSAGING
-}
-
-enum NotificationScope {
-  SEEKER
-  COACH
-  RECRUITER
-}
-
-enum NotificationEntityType {
-  CONVERSATION
-}
-
-// ✅ NEW: AI Buddies (mode-scoped threads)
-enum AiBuddyMode {
-  SEEKER
-  COACH
-  RECRUITER
-}
-
-// ============================================================================
 //  JOBS, APPLICATIONS, INTERVIEWS & OFFERS
 // ============================================================================
 
 model Job {
-  id           Int     @id @default(autoincrement())
-  company      String
-  title        String
-  worksite     String
-  location     String
-  type         String?
-  compensation String?
-  description  String
-
-  // These exist in the DB already — keep them to avoid data loss
-  salary String?
-  source String?
-  tags   String?
-  url    String?
-
-  status            String   @default("Draft")
-  urgent            Boolean  @default(false)
-  viewsCount        Int      @default(0)
-  applicationsCount Int      @default(0)
-  createdAt         DateTime @default(now())
-  updatedAt         DateTime @updatedAt
-
-  // ✅ NEW — distinguishes jobs vs templates
-  isTemplate Boolean @default(false)
-
-  // ✅ NEW — required when isTemplate = true
-  templateName String?
-
-  // Owner
-  userId String
-  user   User   @relation(fields: [userId], references: [id])
-
-  // which account / org owns this job or template
-  accountKey   String?
-  organization Organization? @relation("OrganizationJobs", fields: [accountKey], references: [accountKey])
-
-  // ✅ NEW — recruiter-defined addl questions (job-scoped, single-page, max ~6 by UI gate)
-  // Stored as Json to avoid schema churn; UI controls cap count.
-  // Each item: { key, label, type, required, helpText?, options? }
+  id                  Int           @id @default(autoincrement())
+  company             String
+  title               String
+  worksite            String?
+  location            String
+  type                String?
+  compensation        String?
+  description         String
+  status              String        @default("Draft")
+  urgent              Boolean       @default(false)
+  viewsCount          BigInt        @default(0)
+  applicationsCount   BigInt        @default(0)
+  createdAt           DateTime      @default(now())
+  updatedAt           DateTime      @updatedAt
+  userId              String
+  accountKey          String?
+  url                 String?
+  salary              String?
+  tags                String?
+  source              String?
+  isTemplate          Boolean       @default(false)
+  templateName        String?
   additionalQuestions Json?
-
-  applications Application[]
-  views        JobView[]
-  interviews   Interview[]
-  offers       Offer[]
-  pinnedBy     PinnedJob[]
-  covers       Cover[]
+  publishedAt         DateTime?     @db.Timestamptz(6)
+  publishedat         DateTime?     @db.Timestamptz(6)
+  externalId          String?
+  applications        Application[]
+  covers              Cover[]
+  interviews          Interview[]
+  views               JobView[]
+  organization        Organization? @relation("OrganizationJobs", fields: [accountKey], references: [accountKey])
+  user                User          @relation(fields: [userId], references: [id])
+  offers              Offer[]
+  pinnedBy            PinnedJob[]
 
   @@index([accountKey])
   @@index([isTemplate])
   @@map("jobs")
 }
 
-enum ApplicationStatus {
-  Applied
-  Interviewing
-  Offers
-  ClosedOut
-}
-
 model Application {
-  id        Int               @id @default(autoincrement())
-  userId    String
-  jobId     Int?
-  resumeId  Int?
-  coverId   Int?
-  title     String?
-  company   String?
-  location  String?
-  url       String?
-  
-  // ✅ legacy / external-only notes (keep for now)
-  notes     String?
-  
-  // ✅ NEW: notes separation for internal Forge apps (jobId != null)
-  seekerNotes    String?
+  id             Int                       @id @default(autoincrement())
+  userId         String
+  jobId          Int?
+  resumeId       Int?
+  coverId        Int?
+  appliedAt      DateTime                  @default(now())
+  updatedAt      DateTime                  @updatedAt
+  status         ApplicationStatus         @default(Applied)
+  company        String?
+  location       String?
+  title          String?
+  url            String?
+  notes          String?
+  accountKey     String?
+  submittedAt    DateTime?
+  templateId     String?
   recruiterNotes String?
-  
-  status    ApplicationStatus @default(Applied)
-  appliedAt DateTime          @default(now())
-  updatedAt DateTime          @updatedAt
-
-  // org routing for recruiter views
-  accountKey String?
-
-  // template + submit state
-  templateId  String?
-  submittedAt DateTime?
-
-  // ✅ NEW — baseline "Role expectations" answers (standard on every internal app)
-  // Availability, relocation, salary expectation, work authorization, sponsorship, etc.
-  expectations ApplicationExpectations?
-
-  // relations (template steps / consent / optional self-id / additional questions answers)
-  template ApplicationTemplate? @relation(fields: [templateId], references: [id], onDelete: SetNull)
-  answers  ApplicationAnswer[]
-  consent  ApplicationConsent?
-  selfId   ApplicationSelfId?
-
-  // ✅ NEW — recruiter-visible AI assessment (packet section)
-  assessment ApplicationAssessment?
-
-  // ✅ NEW — optional stored exports (PDF links + audit)
-  packetExports ApplicationPacketExport[]
-
-  user User @relation(fields: [userId], references: [id])
-  job  Job? @relation(fields: [jobId], references: [id])
-
-  resume Resume? @relation(fields: [resumeId], references: [id])
-  cover  Cover?  @relation(fields: [coverId], references: [id])
+  seekerNotes    String?
+  answers        ApplicationAnswer[]
+  assessment     ApplicationAssessment?
+  consent        ApplicationConsent?
+  expectations   ApplicationExpectations?
+  packetExports  ApplicationPacketExport[]
+  selfId         ApplicationSelfId?
+  cover          Cover?                    @relation(fields: [coverId], references: [id])
+  job            Job?                      @relation(fields: [jobId], references: [id])
+  resume         Resume?                   @relation(fields: [resumeId], references: [id])
+  template       ApplicationTemplate?      @relation(fields: [templateId], references: [id])
+  user           User                      @relation(fields: [userId], references: [id])
 
   @@unique([userId, jobId], name: "user_job_unique")
   @@index([accountKey])
@@ -230,42 +93,34 @@ model Application {
 }
 
 model ApplicationExpectations {
-  id            String      @id @default(cuid())
-  applicationId Int         @unique
-  application   Application @relation(fields: [applicationId], references: [id], onDelete: Cascade)
-
-  // Standard recruiter triage fields (baseline for all internal apps)
-  availability      String? // e.g., "Immediately", "2 weeks", "After 3/15"
+  id                String      @id @default(cuid())
+  applicationId     Int         @unique
+  availability      String?
   startDate         DateTime?
-  willingToRelocate String? // "Yes" | "No" | "Depends"
-  expectedSalary    String? // keep string for flexibility ("$85k", "$70-90k", "Open")
-  workAuthorization String? // e.g., "US Citizen", "Authorized", etc.
-  needsSponsorship  Boolean?  @default(false)
-
-  // Optional: shift/travel if you want to capture now without forcing it
-  willingToTravel String? // "0-10%", "25%", etc.
-  notes           String?
-
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  willingToRelocate String?
+  expectedSalary    String?
+  workAuthorization String?
+  needsSponsorship  Boolean?    @default(false)
+  willingToTravel   String?
+  notes             String?
+  createdAt         DateTime    @default(now())
+  updatedAt         DateTime    @updatedAt
+  application       Application @relation(fields: [applicationId], references: [id], onDelete: Cascade)
 
   @@index([applicationId])
   @@map("application_expectations")
 }
 
 model ApplicationTemplate {
-  id         String @id @default(cuid())
-  accountKey String
-
-  name     String  @default("Default Application")
-  version  Int     @default(1)
-  isActive Boolean @default(true)
-
+  id           String                    @id @default(cuid())
+  accountKey   String
+  name         String                    @default("Default Application")
+  version      Int                       @default(1)
+  isActive     Boolean                   @default(true)
+  createdAt    DateTime                  @default(now())
+  updatedAt    DateTime                  @updatedAt
   steps        ApplicationTemplateStep[]
   applications Application[]
-
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
 
   @@index([accountKey])
   @@index([isActive])
@@ -273,15 +128,13 @@ model ApplicationTemplate {
 }
 
 model ApplicationTemplateStep {
-  id         String              @id @default(cuid())
+  id         String                        @id @default(cuid())
   templateId String
-  template   ApplicationTemplate @relation(fields: [templateId], references: [id], onDelete: Cascade)
-
-  key   String
-  title String
-  order Int
-
-  questions ApplicationTemplateQuestion[]
+  key        String
+  title      String
+  order      Int
+  questions  ApplicationTemplateQuestion[]
+  template   ApplicationTemplate           @relation(fields: [templateId], references: [id], onDelete: Cascade)
 
   @@unique([templateId, key])
   @@index([templateId, order])
@@ -289,17 +142,15 @@ model ApplicationTemplateStep {
 }
 
 model ApplicationTemplateQuestion {
-  id     String                  @id @default(cuid())
-  stepId String
-  step   ApplicationTemplateStep @relation(fields: [stepId], references: [id], onDelete: Cascade)
-
+  id       String                  @id @default(cuid())
+  stepId   String
   key      String
   label    String
   helpText String?
   type     ApplicationQuestionType
   required Boolean                 @default(false)
-
-  options Json?
+  options  Json?
+  step     ApplicationTemplateStep @relation(fields: [stepId], references: [id], onDelete: Cascade)
 
   @@unique([stepId, key])
   @@index([stepId])
@@ -309,13 +160,11 @@ model ApplicationTemplateQuestion {
 model ApplicationAnswer {
   id            String      @id @default(cuid())
   applicationId Int
+  questionKey   String
+  value         Json
+  createdAt     DateTime    @default(now())
+  updatedAt     DateTime    @updatedAt
   application   Application @relation(fields: [applicationId], references: [id], onDelete: Cascade)
-
-  questionKey String
-  value       Json
-
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
 
   @@unique([applicationId, questionKey])
   @@index([applicationId])
@@ -323,36 +172,31 @@ model ApplicationAnswer {
 }
 
 model ApplicationConsent {
-  id            String      @id @default(cuid())
-  applicationId Int         @unique
-  application   Application @relation(fields: [applicationId], references: [id], onDelete: Cascade)
-
-  termsAccepted        Boolean @default(false)
-  emailUpdatesAccepted Boolean @default(false)
+  id                   String      @id @default(cuid())
+  applicationId        Int         @unique
+  termsAccepted        Boolean     @default(false)
   consentTextVersion   String?
-
-  signatureName String?
-  signedAt      DateTime?
-
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  signatureName        String?
+  signedAt             DateTime?
+  createdAt            DateTime    @default(now())
+  updatedAt            DateTime    @updatedAt
+  emailUpdatesAccepted Boolean     @default(false)
+  application          Application @relation(fields: [applicationId], references: [id], onDelete: Cascade)
 
   @@index([applicationId])
   @@map("application_consents")
 }
 
 model ApplicationSelfId {
-  id            String      @id @default(cuid())
-  applicationId Int         @unique
-  application   Application @relation(fields: [applicationId], references: [id], onDelete: Cascade)
-
+  id               String      @id @default(cuid())
+  applicationId    Int         @unique
   genderIdentity   String?
   raceEthnicity    String?
   veteranStatus    String?
   disabilityStatus String?
-
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  createdAt        DateTime    @default(now())
+  updatedAt        DateTime    @updatedAt
+  application      Application @relation(fields: [applicationId], references: [id], onDelete: Cascade)
 
   @@map("application_self_id")
 }
@@ -364,38 +208,29 @@ model ApplicationSelfId {
 model ApplicationAssessment {
   id            String      @id @default(cuid())
   applicationId Int         @unique
+  result        Json
+  score         Int?
+  model         String?
+  modelVersion  String?
+  generatedAt   DateTime?   @default(now())
+  createdAt     DateTime    @default(now())
+  updatedAt     DateTime    @updatedAt
   application   Application @relation(fields: [applicationId], references: [id], onDelete: Cascade)
-
-  // ✅ recruiter-visible AI output (store as Json to avoid churn)
-  result Json
-
-  // optional metadata
-  score        Int?
-  model        String?
-  modelVersion String?
-  generatedAt  DateTime? @default(now())
-
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
 
   @@index([applicationId])
   @@map("application_assessments")
 }
 
-// Optional: track exports (PDF) without making PDF the source of truth
 model ApplicationPacketExport {
-  id            String      @id @default(cuid())
-  applicationId Int
-  application   Application @relation(fields: [applicationId], references: [id], onDelete: Cascade)
-
-  format  String  @default("pdf") // pdf | zip later
-  url     String? // where the file lives (S3/Supabase storage/etc.)
-  version Int? // packet version if you change formatting later
-
+  id              String      @id @default(cuid())
+  applicationId   Int
+  format          String      @default("pdf")
+  url             String?
+  version         Int?
   createdByUserId String?
-  createdBy       User?   @relation("UserApplicationPacketExports", fields: [createdByUserId], references: [id], onDelete: SetNull)
-
-  createdAt DateTime @default(now())
+  createdAt       DateTime    @default(now())
+  application     Application @relation(fields: [applicationId], references: [id], onDelete: Cascade)
+  createdBy       User?       @relation("UserApplicationPacketExports", fields: [createdByUserId], references: [id])
 
   @@index([applicationId])
   @@index([createdByUserId])
@@ -408,9 +243,8 @@ model JobView {
   jobId    Int
   viewedBy String?
   viewedAt DateTime @default(now())
-
-  user User @relation(fields: [userId], references: [id])
-  job  Job  @relation(fields: [jobId], references: [id])
+  job      Job      @relation(fields: [jobId], references: [id])
+  user     User     @relation(fields: [userId], references: [id])
 
   @@map("job_views")
 }
@@ -421,9 +255,8 @@ model Interview {
   jobId       Int
   scheduledAt DateTime
   status      String   @default("Scheduled")
-
-  user User @relation(fields: [userId], references: [id])
-  job  Job  @relation(fields: [jobId], references: [id])
+  job         Job      @relation(fields: [jobId], references: [id])
+  user        User     @relation(fields: [userId], references: [id])
 
   @@map("interviews")
 }
@@ -435,9 +268,8 @@ model Offer {
   salary     String?
   accepted   Boolean?
   receivedAt DateTime @default(now())
-
-  user User @relation(fields: [userId], references: [id])
-  job  Job  @relation(fields: [jobId], references: [id])
+  job        Job      @relation(fields: [jobId], references: [id])
+  user       User     @relation(fields: [userId], references: [id])
 
   @@map("offers")
 }
@@ -446,13 +278,13 @@ model PinnedJob {
   id       Int      @id @default(autoincrement())
   userId   String
   jobId    Int?
-  title    String?
+  pinnedAt DateTime @default(now())
   company  String?
   location String?
+  title    String?
   url      String?
-  pinnedAt DateTime @default(now())
-  user     User     @relation(fields: [userId], references: [id])
   job      Job?     @relation(fields: [jobId], references: [id])
+  user     User     @relation(fields: [userId], references: [id])
 
   @@map("pinned_jobs")
 }
@@ -484,38 +316,34 @@ model ExternalJob {
 // ============================================================================
 
 model Resume {
-  id        Int      @id @default(autoincrement())
-  userId    String
-  name      String
-  content   String
-  isPublic  Boolean  @default(false)
-  isPrimary Boolean  @default(false)
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-
-  user User @relation(fields: [userId], references: [id])
-
+  id           Int           @id @default(autoincrement())
+  userId       String
+  name         String
+  content      String
+  isPublic     Boolean       @default(false)
+  isPrimary    Boolean       @default(false)
+  createdAt    DateTime      @default(now())
+  updatedAt    DateTime      @updatedAt
   applications Application[]
+  user         User          @relation(fields: [userId], references: [id])
 
   @@index([userId])
   @@map("resumes")
 }
 
 model Cover {
-  id        Int      @id @default(autoincrement())
-  userId    String
-  jobId     Int?
-  name      String
-  content   String
-  isPublic  Boolean  @default(false)
-  isPrimary Boolean  @default(false)
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-
-  user User @relation(fields: [userId], references: [id])
-  job  Job? @relation(fields: [jobId], references: [id])
-
+  id           Int           @id @default(autoincrement())
+  userId       String
+  jobId        Int?
+  name         String
+  content      String
+  isPublic     Boolean       @default(false)
+  isPrimary    Boolean       @default(false)
+  createdAt    DateTime      @default(now())
+  updatedAt    DateTime      @updatedAt
   applications Application[]
+  job          Job?          @relation(fields: [jobId], references: [id])
+  user         User          @relation(fields: [userId], references: [id])
 
   @@index([userId])
   @@index([jobId])
@@ -528,8 +356,7 @@ model ScanLog {
   date      String
   score     Int
   createdAt DateTime @default(now())
-
-  user User @relation(fields: [userId], references: [id])
+  user      User     @relation(fields: [userId], references: [id])
 
   @@index([userId, createdAt])
   @@map("scan_logs")
@@ -546,8 +373,7 @@ model UserDraft {
   content   Json
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
-
-  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@unique([userId, key], name: "userId_key")
   @@index([userId])
@@ -557,7 +383,7 @@ model UserDraft {
 model SavedReply {
   id        Int      @id @default(autoincrement())
   userId    String
-  persona   String   @default("recruiter") // recruiter | coach | seeker | etc
+  persona   String   @default("recruiter")
   text      String
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -571,17 +397,14 @@ model SavedReply {
 // ============================================================================
 
 model AiThread {
-  id     String      @id @default(cuid())
-  userId String
-  user   User        @relation(fields: [userId], references: [id], onDelete: Cascade)
-
-  mode  AiBuddyMode
-  title String?
-
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-
-  messages AiMessage[]
+  id        String      @id @default(cuid())
+  userId    String
+  mode      AiBuddyMode
+  title     String?
+  createdAt DateTime    @default(now())
+  updatedAt DateTime    @updatedAt
+  messages  AiMessage[]
+  user      User        @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@unique([userId, mode], name: "userId_mode_unique")
   @@index([userId])
@@ -590,27 +413,18 @@ model AiThread {
 }
 
 model AiMessage {
-  id       String   @id @default(cuid())
-  threadId String
-  thread   AiThread @relation(fields: [threadId], references: [id], onDelete: Cascade)
-
-  // "user" | "assistant" | "system"
-  role    String
-  content String
-
-  // optional future-proofing (safe to keep null for now)
-  metadata Json?
-
+  id        String   @id @default(cuid())
+  threadId  String
+  role      String
+  content   String
+  metadata  Json?
   createdAt DateTime @default(now())
+  thread    AiThread @relation(fields: [threadId], references: [id], onDelete: Cascade)
 
   @@index([threadId, createdAt])
   @@index([role])
   @@map("ai_messages")
 }
-
-// ============================================================================
-//  VERIFICATION / AUTH
-// ============================================================================
 
 model VerificationToken {
   id           Int      @id @default(autoincrement())
@@ -627,7 +441,6 @@ model VerificationToken {
   @@map("verification_tokens")
 }
 
-// ✅ NEW: Password Reset Tokens (DB-backed, hashed-at-rest, single-use)
 model PasswordResetToken {
   id        String    @id @default(cuid())
   userId    String
@@ -635,8 +448,7 @@ model PasswordResetToken {
   expiresAt DateTime
   usedAt    DateTime?
   createdAt DateTime  @default(now())
-
-  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([userId])
   @@index([expiresAt])
@@ -651,13 +463,13 @@ model PasswordResetToken {
 model CareerRoadmap {
   id          String   @id @default(cuid())
   userId      String
-  user        User     @relation("UserCareerRoadmaps", fields: [userId], references: [id], onDelete: Cascade)
   generatedAt DateTime @default(now())
   data        Json
   pdfUrl      String?
   isPro       Boolean  @default(false)
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
+  user        User     @relation("UserCareerRoadmaps", fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([userId])
   @@index([createdAt])
@@ -666,11 +478,11 @@ model CareerRoadmap {
 model Negotiation {
   id        String   @id @default(cuid())
   userId    String
-  user      User     @relation("UserNegotiations", fields: [userId], references: [id], onDelete: Cascade)
   input     Json
   result    Json
   pdfUrl    String?
   createdAt DateTime @default(now())
+  user      User     @relation("UserNegotiations", fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([userId])
 }
@@ -678,12 +490,12 @@ model Negotiation {
 model ProfileSnapshot {
   id        String   @id @default(cuid())
   userId    String
-  user      User     @relation("UserProfileSnapshots", fields: [userId], references: [id], onDelete: Cascade)
   headline  String?
   bio       String?
   skills    String
   resumeId  String?
   createdAt DateTime @default(now())
+  user      User     @relation("UserProfileSnapshots", fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([userId])
 }
@@ -695,11 +507,11 @@ model ProfileSnapshot {
 model UserConsent {
   id          Int      @id @default(autoincrement())
   userId      String
-  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
   consentType String
   region      String?
   given       Boolean  @default(true)
   timestamp   DateTime @default(now())
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([userId])
   @@index([userId, consentType])
@@ -721,12 +533,12 @@ model CoachingClient {
   lastContact DateTime?
   createdAt   DateTime  @default(now())
   updatedAt   DateTime  @updatedAt
-
+  notes             String?
+  coachingNotes     CoachingNote[]     @relation("ClientNotes")
+  coachingDocuments CoachingDocument[] @relation("ClientDocuments")
   coach  User  @relation("CoachClientsCoach", fields: [coachId], references: [id], onDelete: Cascade)
   client User? @relation("CoachClientsClient", fields: [clientId], references: [id], onDelete: Cascade)
-
   sessions CoachingSession[] @relation("ClientSessions")
-
   @@index([coachId])
   @@index([clientId])
   @@map("coaching_clients")
@@ -736,26 +548,19 @@ model CoachingSession {
   id       String  @id @default(cuid())
   coachId  String
   clientId String?
-
   coachingClientId String?
   coachingClient   CoachingClient? @relation("ClientSessions", fields: [coachingClientId], references: [id])
-
   startAt     DateTime
   durationMin Int      @default(60)
-
   type   String @default("Strategy")
   status String @default("Scheduled")
-
   followUpDueAt DateTime?
   followUpDone  Boolean   @default(false)
-
   notes     String?
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
-
   coach  User  @relation("CoachSessionsCoach", fields: [coachId], references: [id], onDelete: Cascade)
   client User? @relation("CoachSessionsClient", fields: [clientId], references: [id], onDelete: Cascade)
-
   @@index([coachId])
   @@index([clientId])
   @@index([startAt])
@@ -763,24 +568,50 @@ model CoachingSession {
   @@map("coaching_sessions")
 }
 
+model CoachingNote {
+  id               String         @id @default(cuid())
+  coachingClientId String
+  coachId          String
+  body             String
+  createdAt        DateTime       @default(now())
+  updatedAt        DateTime       @updatedAt
+  coachingClient CoachingClient @relation("ClientNotes", fields: [coachingClientId], references: [id], onDelete: Cascade)
+  coach          User           @relation("CoachNotes", fields: [coachId], references: [id], onDelete: Cascade)
+  @@index([coachingClientId])
+  @@index([coachId])
+  @@map("coaching_notes")
+}
+
+model CoachingDocument {
+  id               String         @id @default(cuid())
+  coachingClientId String
+  coachId          String
+  title            String
+  url              String
+  type             String         @default("Other")
+  uploadedAt       DateTime       @default(now())
+  createdAt        DateTime       @default(now())
+  coachingClient CoachingClient @relation("ClientDocuments", fields: [coachingClientId], references: [id], onDelete: Cascade)
+  coach          User           @relation("CoachDocuments", fields: [coachId], references: [id], onDelete: Cascade)
+  @@index([coachingClientId])
+  @@index([coachId])
+  @@map("coaching_documents")
+}
+
 // ============================================================================
 //  COACHING CSAT (DB-backed replacement for localStorage coachCSAT_v1)
 // ============================================================================
 
 model CoachingCsatResponse {
-  id String @id @default(cuid())
-
-  coachId String
-  coach   User   @relation("UserCoachingCsatResponses", fields: [coachId], references: [id], onDelete: Cascade)
-
+  id           String   @id @default(cuid())
+  coachId      String
   satisfaction Int
   timeliness   Int
   quality      Int
-
-  comment   String?
-  anonymous Boolean @default(true)
-
-  createdAt DateTime @default(now())
+  comment      String?
+  anonymous    Boolean  @default(true)
+  createdAt    DateTime @default(now())
+  coach        User     @relation("UserCoachingCsatResponses", fields: [coachId], references: [id], onDelete: Cascade)
 
   @@index([coachId])
   @@index([createdAt])
@@ -792,26 +623,19 @@ model CoachingCsatResponse {
 // ============================================================================
 
 model HearthSpotlight {
-  id String @id @default(cuid())
-
-  userId String
-  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
-
+  id           String   @id @default(cuid())
+  userId       String   @unique
   name         String
   headline     String
   summary      String
-  specialties  Json // string[]
-  rate         String @default("Free")
-  availability String @default("Open to discuss")
-
-  // Optional: keep for now (you said you may remove visible email later)
+  specialties  Json
+  rate         String   @default("Free")
+  availability String   @default("Open to discuss")
   contactEmail String?
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-
-  // One spotlight per coach (this is the “lock it down” rule)
-  @@unique([userId])
   @@index([createdAt])
   @@map("hearth_spotlights")
 }
@@ -826,11 +650,11 @@ model Contact {
   contactUserId String
   createdAt     DateTime @default(now())
   updatedAt     DateTime @updatedAt
-
-  user        User @relation("UserContacts", fields: [userId], references: [id], onDelete: Cascade)
-  contactUser User @relation("UserContactsAsContact", fields: [contactUserId], references: [id], onDelete: Cascade)
+  contactUser   User     @relation("UserContactsAsContact", fields: [contactUserId], references: [id], onDelete: Cascade)
+  user          User     @relation("UserContacts", fields: [userId], references: [id], onDelete: Cascade)
 
   @@unique([userId, contactUserId])
+  @@unique([userId, contactUserId], map: "contacts_userid_contactuserid_key")
   @@index([userId])
   @@index([contactUserId])
   @@map("contacts")
@@ -843,11 +667,11 @@ model ContactRequest {
   status     ContactRequestStatus @default(PENDING)
   createdAt  DateTime             @default(now())
   updatedAt  DateTime             @updatedAt
-
-  fromUser User @relation("UserContactRequestsFrom", fields: [fromUserId], references: [id], onDelete: Cascade)
-  toUser   User @relation("UserContactRequestsTo", fields: [toUserId], references: [id], onDelete: Cascade)
+  fromUser   User                 @relation("UserContactRequestsFrom", fields: [fromUserId], references: [id], onDelete: Cascade)
+  toUser     User                 @relation("UserContactRequestsTo", fields: [toUserId], references: [id], onDelete: Cascade)
 
   @@unique([fromUserId, toUserId])
+  @@unique([fromUserId, toUserId], map: "contact_requests_fromuserid_touserid_key")
   @@index([fromUserId])
   @@index([toUserId])
   @@map("contact_requests")
@@ -859,52 +683,32 @@ model ContactRequest {
 // ============================================================================
 
 model Organization {
-  id     String             @id @default(cuid())
-  name   String
-  status OrganizationStatus @default(PILOT)
-
-  // ✅ The stable "join key" already used in User.accountKey / Job.accountKey
-  accountKey String @unique
-
-  // Customer org owner/superuser (optional now, but needed soon)
-  ownerUserId String?
-  owner       User?   @relation("OrganizationOwner", fields: [ownerUserId], references: [id], onDelete: SetNull)
-
-  // ✅ Back-relations via accountKey (no extra columns required on User/Job)
-  users User[] @relation("OrganizationUsers")
-  jobs  Job[]  @relation("OrganizationJobs")
-
-  // ✅ NEW: multi-org access
-  members OrganizationMember[] @relation("OrganizationMembers")
-
-  // ✅ NEW: Talent Pools (org-scoped via accountKey)
-  talentPools TalentPool[] @relation("OrganizationTalentPools")
-
-  // ✅ NEW: External candidates (org-scoped via accountKey)
-  externalCandidates ExternalCandidate[] @relation("OrganizationExternalCandidates")
-
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  id                 String               @id @default(cuid())
+  name               String
+  status             OrganizationStatus   @default(PILOT)
+  accountKey         String               @unique
+  ownerUserId        String?
+  createdAt          DateTime             @default(now())
+  updatedAt          DateTime             @updatedAt
+  externalCandidates ExternalCandidate[]  @relation("OrganizationExternalCandidates")
+  jobs               Job[]                @relation("OrganizationJobs")
+  members            OrganizationMember[] @relation("OrganizationMembers")
+  owner              User?                @relation("OrganizationOwner", fields: [ownerUserId], references: [id])
+  talentPools        TalentPool[]         @relation("OrganizationTalentPools")
+  users              User[]               @relation("OrganizationUsers")
 
   @@index([ownerUserId])
   @@map("organizations")
 }
 
 model OrganizationMember {
-  id String @id @default(cuid())
-
-  // Org scoping via existing accountKey convention
+  id           String       @id @default(cuid())
   accountKey   String
+  userId       String
+  role         String?
+  createdAt    DateTime     @default(now())
   organization Organization @relation("OrganizationMembers", fields: [accountKey], references: [accountKey], onDelete: Cascade)
-
-  // The user who has access to the org (recruiter, admin, staff, etc.)
-  userId String
-  user   User   @relation("UserOrganizationMembers", fields: [userId], references: [id], onDelete: Cascade)
-
-  // Optional: role within THIS org (use later, doesn't break now)
-  role String?
-
-  createdAt DateTime @default(now())
+  user         User         @relation("UserOrganizationMembers", fields: [userId], references: [id], onDelete: Cascade)
 
   @@unique([accountKey, userId])
   @@index([accountKey])
@@ -921,8 +725,7 @@ model UserStaffRole {
   userId    String
   role      StaffRole
   createdAt DateTime  @default(now())
-
-  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@unique([userId, role])
   @@index([role])
@@ -935,17 +738,14 @@ model UserStaffRole {
 // ============================================================================
 
 model AuditLog {
-  id String @id @default(cuid())
-
-  actorUserId String
-  actor       User   @relation("AuditActor", fields: [actorUserId], references: [id], onDelete: Cascade)
-
+  id                 String   @id @default(cuid())
+  actorUserId        String
   impersonatedUserId String?
-  impersonatedUser   User?   @relation("AuditImpersonated", fields: [impersonatedUserId], references: [id], onDelete: SetNull)
-
-  action    String
-  metadata  Json?
-  createdAt DateTime @default(now())
+  action             String
+  metadata           Json?
+  createdAt          DateTime @default(now())
+  actor              User     @relation("AuditActor", fields: [actorUserId], references: [id], onDelete: Cascade)
+  impersonatedUser   User?    @relation("AuditImpersonated", fields: [impersonatedUserId], references: [id])
 
   @@index([actorUserId])
   @@index([impersonatedUserId])
@@ -958,152 +758,118 @@ model AuditLog {
 // ============================================================================
 
 model User {
-  id                         String    @id @default(cuid())
-  email                      String    @unique
-  emailVerified              Boolean   @default(false)
-  emailVerificationToken     String?   @unique
-  emailVerificationExpiresAt DateTime?
-  passwordHash               String?
-  firstName                  String?
-  lastName                   String?
-  name                       String?
-  image                      String?
-
-  headline          String?
-  pronouns          String?
-  location          String?
-  status            String?
-  avatarUrl         String?
-  coverUrl          String?
-  bannerMode        String?
-  bannerHeight      Int?
-  bannerFocalY      Int?
-  isProfilePublic   Boolean           @default(false)
-  profileVisibility ProfileVisibility @default(PRIVATE)
-  wallpaperUrl      String?
-
-  slug              String?   @unique
-  slugChangeCount   Int       @default(0)
-  slugLastChangedAt DateTime?
-
-  aboutMe         String?
-  workPreferences Json?
-  skillsJson      Json?
-  languagesJson   Json?
-  educationJson   Json?
-  hobbiesJson     Json?
-
-  role                 UserRole @default(SEEKER)
-  plan                 Tier     @default(FREE)
-  newsletter           Boolean  @default(false)
-  mfaEnabled           Boolean  @default(false)
-  mfaSecret            String?
-  stripeCustomerId     String?  @unique
-  stripeSubscriptionId String?  @unique
-
-  accountKey String?
-
-  employee   Boolean     @default(false)
-  department Department?
-
-  organization            Organization?        @relation("OrganizationUsers", fields: [accountKey], references: [accountKey])
-  organizationMemberships OrganizationMember[] @relation("UserOrganizationMembers")
-  staffRoles              UserStaffRole[]
-
-  auditAsActor        AuditLog[] @relation("AuditActor")
-  auditAsImpersonated AuditLog[] @relation("AuditImpersonated")
-
-  ownedOrganizations Organization[] @relation("OrganizationOwner")
-
-  // ✅ NEW: external candidates created by this user (audit/ownership)
-  externalCandidatesCreated ExternalCandidate[] @relation("UserExternalCandidatesCreated")
-
-  profileViewsReceived ProfileView[] @relation("ProfileViewTarget")
-  profileViewsMade     ProfileView[] @relation("ProfileViewViewer")
-
-  feedPostViews FeedPostView[] @relation("UserFeedPostViews")
-
-  applications Application[]
-
-  // ✅ NEW — packet exports created by this user (recruiter/admin)
-  applicationPacketExports ApplicationPacketExport[] @relation("UserApplicationPacketExports")
-
-  views      JobView[]
-  interviews Interview[]
-  offers     Offer[]
-  pinnedJobs PinnedJob[]
-  resumes    Resume[]
-  covers     Cover[]
-  jobs       Job[]
-  scanLogs   ScanLog[]
-
-  drafts UserDraft[]
-
-// ✅ AI Buddies
-  aiThreads AiThread[]
-
-  careerRoadmaps   CareerRoadmap[]   @relation("UserCareerRoadmaps")
-  negotiations     Negotiation[]     @relation("UserNegotiations")
-  profileSnapshots ProfileSnapshot[] @relation("UserProfileSnapshots")
-  consents         UserConsent[]
-
-  candidates           Candidate[]
-  candidateAutomations RecruiterCandidateAutomation[]
-
-  // ✅ NEW: inverse relations for named explain run relations
-  recruiterExplainRuns RecruiterExplainRun[] @relation("RecruiterExplainRunsAsRecruiter")
-  candidateExplainRuns RecruiterExplainRun[] @relation("RecruiterExplainRunsAsCandidate")
-
-  recruiterCandidatesOwned  RecruiterCandidate[] @relation("RecruiterCandidateRecruiter")
-  recruiterCandidatesAsUser RecruiterCandidate[] @relation("RecruiterCandidateCandidate")
-
-  // ✅ NEW: Talent Pools created by this user (org-scoped)
-  createdTalentPools           TalentPool[]      @relation("UserCreatedTalentPools")
-  talentPoolEntriesAsCandidate TalentPoolEntry[] @relation("TalentPoolEntryCandidate")
-
-  messages                 Message[]                 @relation("UserMessages")
-  conversationParticipants ConversationParticipant[] @relation("UserConversationParticipants")
-  blocksInitiated          UserBlock[]               @relation("UserBlocksAsBlocker")
-  blocksReceived           UserBlock[]               @relation("UserBlocksAsBlocked")
-  messageReactions         MessageReaction[]         @relation("UserMessageReactions")
-  reportsFiled             ConversationReport[]      @relation("UserReportsAsReporter")
-  reportsReceived          ConversationReport[]      @relation("UserReportsAsReported")
-  notifications            Notification[]
-
-  coachingClientsAsCoach   CoachingClient[]  @relation("CoachClientsCoach")
-  coachingClientsAsClient  CoachingClient[]  @relation("CoachClientsClient")
-  coachingSessionsAsCoach  CoachingSession[] @relation("CoachSessionsCoach")
-  coachingSessionsAsClient CoachingSession[] @relation("CoachSessionsClient")
-
-  coachingCsatResponses CoachingCsatResponse[] @relation("UserCoachingCsatResponses")
-  hearthSpotlights      HearthSpotlight[]
-
-  contacts                Contact[]        @relation("UserContacts")
-  contactsAsContact       Contact[]        @relation("UserContactsAsContact")
-  contactRequestsSent     ContactRequest[] @relation("UserContactRequestsFrom")
-  contactRequestsReceived ContactRequest[] @relation("UserContactRequestsTo")
-
-  groupMemberships        GroupMembership[]
-  ownedGroups             Group[]
-  ownedPages              Page[]
-  pageFollows             PageFollower[]
-  ownedNewsletters        Newsletter[]
-  newsletterSubscriptions NewsletterSubscription[]
-
-  recruiterCalendarOwnedItems  RecruiterCalendarItem[] @relation("UserRecruiterCalendarOwner")
-  recruiterCalendarAsCandidate RecruiterCalendarItem[] @relation("UserRecruiterCalendarCandidate")
-
-  seekerCalendarItems SeekerCalendarItem[] @relation("UserSeekerCalendarItems")
-
-  passwordResetTokens PasswordResetToken[]
-
-  corporateBannerKey        String?
-  corporateBannerLocked     Boolean   @default(false)
-  resumeAlignFreeUses       Int       @default(0)
-  resumeAlignLastResetMonth String?
-  deletedAt                 DateTime?
-  createdAt                 DateTime  @default(now())
-  updatedAt                 DateTime  @updatedAt
+  id                           String                         @id @default(cuid())
+  email                        String                         @unique
+  aboutMe                      String?
+  accountKey                   String?
+  avatarUrl                    String?
+  bannerFocalY                 Int?
+  bannerHeight                 Int?
+  bannerMode                   String?
+  corporateBannerKey           String?
+  corporateBannerLocked        Boolean                        @default(false)
+  coverUrl                     String?
+  createdAt                    DateTime                       @default(now())
+  deletedAt                    DateTime?
+  emailVerificationExpiresAt   DateTime?
+  emailVerificationToken       String?                        @unique
+  emailVerified                Boolean                        @default(false)
+  firstName                    String?
+  headline                     String?
+  hobbiesJson                  Json?
+  image                        String?
+  isProfilePublic              Boolean                        @default(false)
+  languagesJson                Json?
+  lastName                     String?
+  location                     String?
+  mfaEnabled                   Boolean                        @default(false)
+  mfaSecret                    String?
+  name                         String?
+  newsletter                   Boolean                        @default(false)
+  passwordHash                 String?
+  plan                         Tier                           @default(FREE)
+  pronouns                     String?
+  skillsJson                   Json?
+  slug                         String?                        @unique
+  slugChangeCount              Int                            @default(0)
+  slugLastChangedAt            DateTime?
+  status                       String?
+  stripeCustomerId             String?                        @unique
+  stripeSubscriptionId         String?                        @unique
+  updatedAt                    DateTime                       @updatedAt
+  wallpaperUrl                 String?
+  workPreferences              Json?
+  role                         UserRole                       @default(SEEKER)
+  profileVisibility            ProfileVisibility              @default(PRIVATE)
+  educationJson                Json?
+  resumeAlignFreeUses          Int                            @default(0)
+  resumeAlignLastResetMonth    String?
+  department                   Department?
+  employee                     Boolean                        @default(false)
+  careerRoadmaps               CareerRoadmap[]                @relation("UserCareerRoadmaps")
+  negotiations                 Negotiation[]                  @relation("UserNegotiations")
+  profileSnapshots             ProfileSnapshot[]              @relation("UserProfileSnapshots")
+  aiThreads                    AiThread[]
+  applicationPacketExports     ApplicationPacketExport[]      @relation("UserApplicationPacketExports")
+  applications                 Application[]
+  auditAsActor                 AuditLog[]                     @relation("AuditActor")
+  auditAsImpersonated          AuditLog[]                     @relation("AuditImpersonated")
+  candidates                   Candidate[]
+  coachingClientsAsClient      CoachingClient[]               @relation("CoachClientsClient")
+  coachingClientsAsCoach       CoachingClient[]               @relation("CoachClientsCoach")
+  coachingCsatResponses        CoachingCsatResponse[]         @relation("UserCoachingCsatResponses")
+  coachingSessionsAsClient     CoachingSession[]              @relation("CoachSessionsClient")
+  coachingSessionsAsCoach      CoachingSession[]              @relation("CoachSessionsCoach")
+  coachingNotes     CoachingNote[]     @relation("CoachNotes")
+  coachingDocuments CoachingDocument[] @relation("CoachDocuments")
+  contactRequestsSent          ContactRequest[]               @relation("UserContactRequestsFrom")
+  contactRequestsReceived      ContactRequest[]               @relation("UserContactRequestsTo")
+  contactsAsContact            Contact[]                      @relation("UserContactsAsContact")
+  contacts                     Contact[]                      @relation("UserContacts")
+  conversationParticipants     ConversationParticipant[]      @relation("UserConversationParticipants")
+  reportsReceived              ConversationReport[]           @relation("UserReportsAsReported")
+  reportsFiled                 ConversationReport[]           @relation("UserReportsAsReporter")
+  covers                       Cover[]
+  externalCandidatesCreated    ExternalCandidate[]            @relation("UserExternalCandidatesCreated")
+  feedPostViews                FeedPostView[]                 @relation("UserFeedPostViews")
+  groupMemberships             GroupMembership[]
+  ownedGroups                  Group[]
+  hearthSpotlights             HearthSpotlight?
+  interviews                   Interview[]
+  views                        JobView[]
+  jobs                         Job[]
+  messageReactions             MessageReaction[]              @relation("UserMessageReactions")
+  messages                     Message[]                      @relation("UserMessages")
+  newsletterSubscriptions      NewsletterSubscription[]
+  ownedNewsletters             Newsletter[]
+  notifications                Notification[]
+  offers                       Offer[]
+  organizationMemberships      OrganizationMember[]           @relation("UserOrganizationMembers")
+  ownedOrganizations           Organization[]                 @relation("OrganizationOwner")
+  pageFollows                  PageFollower[]
+  ownedPages                   Page[]
+  passwordResetTokens          PasswordResetToken[]
+  pinnedJobs                   PinnedJob[]
+  profileViewsReceived         ProfileView[]                  @relation("ProfileViewTarget")
+  profileViewsMade             ProfileView[]                  @relation("ProfileViewViewer")
+  recruiterCalendarAsCandidate RecruiterCalendarItem[]        @relation("UserRecruiterCalendarCandidate")
+  recruiterCalendarOwnedItems  RecruiterCalendarItem[]        @relation("UserRecruiterCalendarOwner")
+  candidateAutomations         RecruiterCandidateAutomation[]
+  recruiterCandidatesAsUser    RecruiterCandidate[]           @relation("RecruiterCandidateCandidate")
+  recruiterCandidatesOwned     RecruiterCandidate[]           @relation("RecruiterCandidateRecruiter")
+  candidateExplainRuns         RecruiterExplainRun[]          @relation("RecruiterExplainRunsAsCandidate")
+  recruiterExplainRuns         RecruiterExplainRun[]          @relation("RecruiterExplainRunsAsRecruiter")
+  resumes                      Resume[]
+  scanLogs                     ScanLog[]
+  seekerCalendarItems          SeekerCalendarItem[]           @relation("UserSeekerCalendarItems")
+  talentPoolEntriesAsCandidate TalentPoolEntry[]              @relation("TalentPoolEntryCandidate")
+  createdTalentPools           TalentPool[]                   @relation("UserCreatedTalentPools")
+  blocksReceived               UserBlock[]                    @relation("UserBlocksAsBlocked")
+  blocksInitiated              UserBlock[]                    @relation("UserBlocksAsBlocker")
+  consents                     UserConsent[]
+  drafts                       UserDraft[]
+  staffRoles                   UserStaffRole[]
+  organization                 Organization?                  @relation("OrganizationUsers", fields: [accountKey], references: [accountKey])
 
   @@map("users")
 }
@@ -1113,38 +879,31 @@ model User {
 // ============================================================================
 
 model Candidate {
-  id     Int    @id @default(autoincrement())
-  userId String
-  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
-
-  name         String
-  email        String?
-  headline     String?
-  summary      String?
-  location     String?
-  role         String?
-  title        String?
-  currentTitle String?
-
+  id                Int       @id @default(autoincrement())
+  userId            String
+  name              String
+  email             String?
+  headline          String?
+  summary           String?
+  location          String?
+  role              String?
+  title             String?
+  currentTitle      String?
   workStatus        String?
   preferredWorkType String?
   willingToRelocate String?
-
-  skills    String?
-  languages String?
-
-  tags          String?
-  notes         String?
-  source        String?
-  pipelineStage String?
-
-  match Int?
-
-  lastContacted DateTime?
-  lastSeen      DateTime?
-
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  skills            String?
+  languages         String?
+  tags              String?
+  notes             String?
+  source            String?
+  pipelineStage     String?
+  match             Int?
+  lastContacted     DateTime?
+  lastSeen          DateTime?
+  createdAt         DateTime  @default(now())
+  updatedAt         DateTime  @updatedAt
+  user              User      @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([userId])
   @@map("candidates")
@@ -1155,25 +914,20 @@ model Candidate {
 // ============================================================================
 
 model RecruiterCandidate {
-  id String @id @default(cuid())
-
+  id              String    @id @default(cuid())
   recruiterUserId String
-  recruiter       User   @relation("RecruiterCandidateRecruiter", fields: [recruiterUserId], references: [id], onDelete: Cascade)
-
   candidateUserId String
-  candidate       User   @relation("RecruiterCandidateCandidate", fields: [candidateUserId], references: [id], onDelete: Cascade)
-
-  accountKey String
-
-  tags          Json?
-  skills        Json?
-  notes         String?
-  pipelineStage String?
-  lastContacted DateTime?
-  lastSeen      DateTime?
-
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  accountKey      String
+  tags            Json?
+  notes           String?
+  pipelineStage   String?
+  lastContacted   DateTime?
+  lastSeen        DateTime?
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+  skills          Json?
+  candidate       User      @relation("RecruiterCandidateCandidate", fields: [candidateUserId], references: [id], onDelete: Cascade)
+  recruiter       User      @relation("RecruiterCandidateRecruiter", fields: [recruiterUserId], references: [id], onDelete: Cascade)
 
   @@unique([recruiterUserId, candidateUserId, accountKey])
   @@index([recruiterUserId])
@@ -1187,35 +941,23 @@ model RecruiterCandidate {
 // ============================================================================
 
 model ExternalCandidate {
-  id String @id @default(cuid())
-
-  // Org scoping
-  accountKey   String
-  organization Organization? @relation("OrganizationExternalCandidates", fields: [accountKey], references: [accountKey], onDelete: Cascade)
-
-  // audit/ownership (optional)
+  id              String            @id @default(cuid())
+  accountKey      String
   createdByUserId String?
-  createdBy       User?   @relation("UserExternalCandidatesCreated", fields: [createdByUserId], references: [id], onDelete: SetNull)
-
-  // identity
-  name        String
-  email       String?
-  phone       String?
-  linkedinUrl String?
-
-  // optional professional context
-  company  String?
-  title    String?
-  location String?
-  headline String?
-
-  notes String?
-
-  // back-relation: used by TalentPoolEntry
-  poolEntries TalentPoolEntry[]
-
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  name            String
+  email           String?
+  phone           String?
+  linkedinUrl     String?
+  company         String?
+  title           String?
+  location        String?
+  headline        String?
+  notes           String?
+  createdAt       DateTime          @default(now())
+  updatedAt       DateTime          @updatedAt
+  organization    Organization      @relation("OrganizationExternalCandidates", fields: [accountKey], references: [accountKey], onDelete: Cascade)
+  createdBy       User?             @relation("UserExternalCandidatesCreated", fields: [createdByUserId], references: [id])
+  poolEntries     TalentPoolEntry[]
 
   @@index([accountKey])
   @@index([createdByUserId])
@@ -1227,26 +969,17 @@ model ExternalCandidate {
 // ============================================================================
 
 model TalentPool {
-  id String @id @default(cuid())
-
-  // Org scoping (same convention as Job / RecruiterCandidate)
-  accountKey   String
-  organization Organization? @relation("OrganizationTalentPools", fields: [accountKey], references: [accountKey], onDelete: Cascade)
-
-  name    String
-  purpose String?
-
-  // Optional light tagging for the pool itself (["silver-medalist","cs-leadership"])
-  tags Json?
-
-  // Created by recruiter user (for auditing + ownership trace)
+  id              String            @id @default(cuid())
+  accountKey      String
+  name            String
+  purpose         String?
+  tags            Json?
   createdByUserId String?
-  createdBy       User?   @relation("UserCreatedTalentPools", fields: [createdByUserId], references: [id], onDelete: SetNull)
-
-  entries TalentPoolEntry[]
-
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  createdAt       DateTime          @default(now())
+  updatedAt       DateTime          @updatedAt
+  entries         TalentPoolEntry[]
+  organization    Organization      @relation("OrganizationTalentPools", fields: [accountKey], references: [accountKey], onDelete: Cascade)
+  createdBy       User?             @relation("UserCreatedTalentPools", fields: [createdByUserId], references: [id])
 
   @@unique([accountKey, name])
   @@index([accountKey])
@@ -1255,47 +988,27 @@ model TalentPool {
 }
 
 model TalentPoolEntry {
-  id String @id @default(cuid())
-
-  poolId String
-  pool   TalentPool @relation(fields: [poolId], references: [id], onDelete: Cascade)
-
-  // Duplicate accountKey for fast org-scoped querying (avoid join when listing entries)
-  accountKey String
-
-  // If candidate is a Forge user (internal), link it. Otherwise store snapshot fields.
-  candidateUserId String?
-  candidate       User?   @relation("TalentPoolEntryCandidate", fields: [candidateUserId], references: [id], onDelete: SetNull)
-
-  // ✅ NEW: link to an org-scoped external candidate record (off-platform)
+  id                  String             @id @default(cuid())
+  poolId              String
+  accountKey          String
+  candidateUserId     String?
+  candidateName       String
+  candidateHeadline   String?
+  candidateLocation   String?
+  source              String?            @default("External")
+  status              String?            @default("Warm")
+  fit                 String?
+  lastTouchAt         DateTime?
+  reasons             Json?
+  notes               String?
+  evidence            Json?
+  createdAt           DateTime           @default(now())
+  updatedAt           DateTime           @updatedAt
+  lastRoleConsidered  String?
   externalCandidateId String?
-  externalCandidate   ExternalCandidate? @relation(fields: [externalCandidateId], references: [id], onDelete: SetNull)
-
-  candidateName     String
-  candidateHeadline String?
-  candidateLocation String?
-
-  // "Internal" | "External" (string to avoid enum churn)
-  source String? @default("External")
-
-  // "Hot" | "Warm" | "Hold" (string to match your UI)
-  status String? @default("Warm")
-
-  // quick fit label like "CSM / AM", "Support Ops"
-  fit String?
-
-  // ✅ NEW — recruiter-entered reminder of what role/req/context this candidate was considered for
-  lastRoleConsidered String?
-
-  lastTouchAt DateTime?
-
-  // The “why saved” snapshot: bullets + optional richer evidence blob
-  reasons  Json? // string[]
-  notes    String?
-  evidence Json? // optional: structured snapshot (scores, excerpts, etc.)
-
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  candidate           User?              @relation("TalentPoolEntryCandidate", fields: [candidateUserId], references: [id])
+  externalCandidate   ExternalCandidate? @relation(fields: [externalCandidateId], references: [id])
+  pool                TalentPool         @relation(fields: [poolId], references: [id], onDelete: Cascade)
 
   @@index([poolId])
   @@index([accountKey])
@@ -1309,41 +1022,32 @@ model TalentPoolEntry {
 // ============================================================================
 
 model RecruiterCandidateAutomation {
-  id     String @id @default(cuid())
-  userId String
-  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
-
-  name    String?
-  filters Json
-
+  id        String    @id @default(cuid())
+  userId    String
+  name      String?
+  filters   Json
   enabled   Boolean   @default(true)
   lastRunAt DateTime?
-
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([userId])
   @@map("recruiter_candidate_automation")
 }
 
 model RecruiterExplainRun {
-  id String @id @default(cuid())
-
+  id              String   @id @default(cuid())
   recruiterUserId String
-  recruiter       User   @relation("RecruiterExplainRunsAsRecruiter", fields: [recruiterUserId], references: [id], onDelete: Cascade)
-
   candidateUserId String?
-  candidate       User?   @relation("RecruiterExplainRunsAsCandidate", fields: [candidateUserId], references: [id], onDelete: SetNull)
-
-  jobId Int?
-
-  resumeText     String
-  jobDescription String
-
-  result     Json
-  accountKey String?
-
-  createdAt DateTime @default(now())
+  jobId           Int?
+  resumeText      String
+  jobDescription  String
+  result          Json
+  accountKey      String?
+  createdAt       DateTime @default(now())
+  candidate       User?    @relation("RecruiterExplainRunsAsCandidate", fields: [candidateUserId], references: [id])
+  recruiter       User     @relation("RecruiterExplainRunsAsRecruiter", fields: [recruiterUserId], references: [id], onDelete: Cascade)
 
   @@index([recruiterUserId])
   @@index([candidateUserId])
@@ -1357,31 +1061,25 @@ model RecruiterExplainRun {
 // ============================================================================
 
 model RecruiterCalendarItem {
-  id String @id @default(cuid())
-
-  ownerId String
-  owner   User   @relation("UserRecruiterCalendarOwner", fields: [ownerId], references: [id], onDelete: Cascade)
-
-  scope String @default("team")
-
-  date DateTime
-  time String?
-
-  title  String
-  type   String  @default("Interview")
-  status String  @default("Scheduled")
-  notes  String?
-
-  candidateType   String  @default("external")
+  id              String   @id @default(cuid())
+  ownerId         String
+  scope           String   @default("team")
+  date            DateTime
+  time            String?
+  title           String
+  type            String   @default("Interview")
+  status          String   @default("Scheduled")
+  notes           String?
+  candidateType   String   @default("external")
   candidateUserId String?
-  candidate       User?   @relation("UserRecruiterCalendarCandidate", fields: [candidateUserId], references: [id], onDelete: SetNull)
   candidateName   String
-
-  company   String?
-  jobTitle  String?
-  req       String?
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  company         String?
+  jobTitle        String?
+  req             String?
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+  candidate       User?    @relation("UserRecruiterCalendarCandidate", fields: [candidateUserId], references: [id])
+  owner           User     @relation("UserRecruiterCalendarOwner", fields: [ownerId], references: [id], onDelete: Cascade)
 
   @@index([ownerId])
   @@index([date])
@@ -1394,24 +1092,19 @@ model RecruiterCalendarItem {
 // ============================================================================
 
 model SeekerCalendarItem {
-  id String @id @default(cuid())
-
-  userId String
-  user   User   @relation("UserSeekerCalendarItems", fields: [userId], references: [id], onDelete: Cascade)
-
-  date DateTime
-  time String?
-
-  title  String
-  type   String  @default("Interview")
-  status String  @default("Scheduled")
-  notes  String?
-
-  source       String  @default("personal")
+  id           String   @id @default(cuid())
+  userId       String
+  date         DateTime
+  time         String?
+  title        String
+  type         String   @default("Interview")
+  status       String   @default("Scheduled")
+  notes        String?
+  source       String   @default("personal")
   sourceItemId String?
-
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+  user         User     @relation("UserSeekerCalendarItems", fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([userId])
   @@index([date])
@@ -1423,32 +1116,23 @@ model SeekerCalendarItem {
 //  MESSAGING — CONVERSATIONS, MESSAGES, BLOCKS, REACTIONS, REPORTS
 // ============================================================================
 
-// ✅ NEW: Notification (Option A - one row per conversation per scope, until cleared)
 model Notification {
-  id String @id @default(cuid())
-
-  userId      String
-  actorUserId String?
-
-  category NotificationCategory
-  scope    NotificationScope
-
-  entityType NotificationEntityType
-  entityId   String
-
-  // One-notification-per-conversation (per scope) dedupe
-  dedupeKey String
-
+  id             String                 @id @default(cuid())
+  userId         String
+  actorUserId    String?
+  category       NotificationCategory
+  scope          NotificationScope
+  entityType     NotificationEntityType
+  entityId       String
+  dedupeKey      String
   title          String
   body           String?
-  requiresAction Boolean  @default(true)
+  requiresAction Boolean                @default(true)
   readAt         DateTime?
-
-  metadata  Json?
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-
-  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  metadata       Json?
+  createdAt      DateTime               @default(now())
+  updatedAt      DateTime               @updatedAt
+  user           User                   @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@unique([userId, dedupeKey], name: "userId_dedupeKey")
   @@index([userId, scope, readAt])
@@ -1459,17 +1143,15 @@ model Notification {
 }
 
 model Conversation {
-  id      Int     @id @default(autoincrement())
-  isGroup Boolean @default(false)
-  title   String?
-  channel String?
-
-  createdAt DateTime @default(now())
-  updatedAt DateTime @default(now())
-
-  messages     Message[]
+  id           Int                       @id @default(autoincrement())
+  isGroup      Boolean                   @default(false)
+  title        String?
+  channel      String?
+  createdAt    DateTime                  @default(now())
+  updatedAt    DateTime                  @default(now())
   participants ConversationParticipant[]
   reports      ConversationReport[]
+  messages     Message[]
 
   @@index([channel])
   @@index([createdAt])
@@ -1477,15 +1159,14 @@ model Conversation {
 }
 
 model ConversationParticipant {
-  id             Int      @id @default(autoincrement())
+  id             Int          @id @default(autoincrement())
   conversationId Int
   userId         String
-  joinedAt       DateTime @default(now())
+  joinedAt       DateTime     @default(now())
   role           String?
   lastReadAt     DateTime?
-  
-  conversation Conversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
-  user         User         @relation("UserConversationParticipants", fields: [userId], references: [id], onDelete: Cascade)
+  conversation   Conversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+  user           User         @relation("UserConversationParticipants", fields: [userId], references: [id], onDelete: Cascade)
 
   @@unique([conversationId, userId])
   @@index([userId])
@@ -1493,18 +1174,15 @@ model ConversationParticipant {
 }
 
 model Message {
-  id             Int      @id @default(autoincrement())
+  id             Int                  @id @default(autoincrement())
   conversationId Int
   senderId       String
   content        String
-  createdAt      DateTime @default(now())
-
-  conversation Conversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
-
-  sender User @relation("UserMessages", fields: [senderId], references: [id])
-
-  reactions MessageReaction[]
-  reports   ConversationReport[]
+  createdAt      DateTime             @default(now())
+  reports        ConversationReport[]
+  reactions      MessageReaction[]
+  conversation   Conversation         @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+  sender         User                 @relation("UserMessages", fields: [senderId], references: [id])
 
   @@index([conversationId, createdAt])
   @@index([senderId])
@@ -1516,11 +1194,9 @@ model UserBlock {
   blockerId String
   blockedId String
   createdAt DateTime @default(now())
-
-  reason String?
-
-  blocker User @relation("UserBlocksAsBlocker", fields: [blockerId], references: [id], onDelete: Cascade)
-  blocked User @relation("UserBlocksAsBlocked", fields: [blockedId], references: [id], onDelete: Cascade)
+  reason    String?
+  blocked   User     @relation("UserBlocksAsBlocked", fields: [blockedId], references: [id], onDelete: Cascade)
+  blocker   User     @relation("UserBlocksAsBlocker", fields: [blockerId], references: [id], onDelete: Cascade)
 
   @@unique([blockerId, blockedId])
   @@index([blockerId])
@@ -1534,9 +1210,8 @@ model MessageReaction {
   userId    String
   emoji     String
   createdAt DateTime @default(now())
-
-  message Message @relation(fields: [messageId], references: [id], onDelete: Cascade)
-  user    User    @relation("UserMessageReactions", fields: [userId], references: [id], onDelete: Cascade)
+  message   Message  @relation(fields: [messageId], references: [id], onDelete: Cascade)
+  user      User     @relation("UserMessageReactions", fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([messageId])
   @@index([userId])
@@ -1544,21 +1219,20 @@ model MessageReaction {
 }
 
 model ConversationReport {
-  id             Int      @id @default(autoincrement())
+  id             Int          @id @default(autoincrement())
   conversationId Int
   reporterId     String
   reportedUserId String?
   messageId      Int?
   reason         String
   details        String?
-  status         String   @default("OPEN")
-  createdAt      DateTime @default(now())
-  updatedAt      DateTime @updatedAt
-
-  conversation Conversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
-  reporter     User         @relation("UserReportsAsReporter", fields: [reporterId], references: [id], onDelete: Cascade)
-  reportedUser User?        @relation("UserReportsAsReported", fields: [reportedUserId], references: [id], onDelete: Cascade)
-  message      Message?     @relation(fields: [messageId], references: [id], onDelete: SetNull)
+  status         String       @default("OPEN")
+  createdAt      DateTime     @default(now())
+  updatedAt      DateTime     @updatedAt
+  conversation   Conversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+  message        Message?     @relation(fields: [messageId], references: [id])
+  reportedUser   User?        @relation("UserReportsAsReported", fields: [reportedUserId], references: [id], onDelete: Cascade)
+  reporter       User         @relation("UserReportsAsReporter", fields: [reporterId], references: [id], onDelete: Cascade)
 
   @@index([conversationId])
   @@index([reporterId])
@@ -1572,16 +1246,15 @@ model ConversationReport {
 // ============================================================================
 
 model Group {
-  id          String   @id @default(cuid())
+  id          String            @id @default(cuid())
   name        String
   description String?
   ownerId     String
-  isPrivate   Boolean  @default(false)
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
-
-  owner       User              @relation(fields: [ownerId], references: [id], onDelete: Cascade)
+  isPrivate   Boolean           @default(false)
+  createdAt   DateTime          @default(now())
+  updatedAt   DateTime          @updatedAt
   memberships GroupMembership[]
+  owner       User              @relation(fields: [ownerId], references: [id], onDelete: Cascade)
 
   @@index([ownerId])
   @@map("groups")
@@ -1593,9 +1266,8 @@ model GroupMembership {
   userId   String
   role     String?
   joinedAt DateTime @default(now())
-
-  group Group @relation(fields: [groupId], references: [id], onDelete: Cascade)
-  user  User  @relation(fields: [userId], references: [id], onDelete: Cascade)
+  group    Group    @relation(fields: [groupId], references: [id], onDelete: Cascade)
+  user     User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@unique([groupId, userId])
   @@index([userId])
@@ -1603,16 +1275,15 @@ model GroupMembership {
 }
 
 model Page {
-  id          String   @id @default(cuid())
+  id          String         @id @default(cuid())
   name        String
   description String?
   ownerId     String
   website     String?
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
-
-  owner     User           @relation(fields: [ownerId], references: [id], onDelete: Cascade)
-  followers PageFollower[]
+  createdAt   DateTime       @default(now())
+  updatedAt   DateTime       @updatedAt
+  followers   PageFollower[]
+  owner       User           @relation(fields: [ownerId], references: [id], onDelete: Cascade)
 
   @@index([ownerId])
   @@map("pages")
@@ -1623,9 +1294,8 @@ model PageFollower {
   pageId     String
   userId     String
   followedAt DateTime @default(now())
-
-  page Page @relation(fields: [pageId], references: [id], onDelete: Cascade)
-  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  page       Page     @relation(fields: [pageId], references: [id], onDelete: Cascade)
+  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@unique([pageId, userId])
   @@index([userId])
@@ -1633,29 +1303,27 @@ model PageFollower {
 }
 
 model Newsletter {
-  id          String   @id @default(cuid())
-  title       String
-  description String?
-  ownerId     String
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
-
-  owner         User                     @relation(fields: [ownerId], references: [id], onDelete: Cascade)
+  id            String                   @id @default(cuid())
+  title         String
+  description   String?
+  ownerId       String
+  createdAt     DateTime                 @default(now())
+  updatedAt     DateTime                 @updatedAt
   subscriptions NewsletterSubscription[]
+  owner         User                     @relation(fields: [ownerId], references: [id], onDelete: Cascade)
 
   @@index([ownerId])
   @@map("newsletters")
 }
 
 model NewsletterSubscription {
-  id             String    @id @default(cuid())
+  id             String     @id @default(cuid())
   newsletterId   String
   userId         String
-  subscribedAt   DateTime  @default(now())
+  subscribedAt   DateTime   @default(now())
   unsubscribedAt DateTime?
-
-  newsletter Newsletter @relation(fields: [newsletterId], references: [id], onDelete: Cascade)
-  user       User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  newsletter     Newsletter @relation(fields: [newsletterId], references: [id], onDelete: Cascade)
+  user           User       @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@unique([newsletterId, userId])
   @@index([userId])
@@ -1667,18 +1335,17 @@ model NewsletterSubscription {
 // ============================================================================
 
 model FeedPost {
-  id         Int      @id @default(autoincrement())
+  id         Int            @id @default(autoincrement())
   authorId   String
   authorName String
   content    String
-  type       String   @default("business")
-  likes      Int      @default(0)
-  comments   Json     @default("[]")
-  reactions  Json?    @default("[]")
-  createdAt  DateTime @default(now())
-  updatedAt  DateTime @updatedAt
-
-  views FeedPostView[]
+  type       String         @default("business")
+  likes      Int            @default(0)
+  comments   Json           @default("[]")
+  createdAt  DateTime       @default(now())
+  updatedAt  DateTime       @updatedAt
+  reactions  Json?          @default("[]")
+  views      FeedPostView[]
 
   @@index([authorId])
   @@map("feed_posts")
@@ -1690,9 +1357,8 @@ model FeedPostView {
   viewerId  String?
   source    String?  @default("feed")
   createdAt DateTime @default(now())
-
-  post   FeedPost @relation(fields: [postId], references: [id], onDelete: Cascade)
-  viewer User?    @relation("UserFeedPostViews", fields: [viewerId], references: [id], onDelete: SetNull)
+  post      FeedPost @relation(fields: [postId], references: [id], onDelete: Cascade)
+  viewer    User?    @relation("UserFeedPostViews", fields: [viewerId], references: [id])
 
   @@index([postId, createdAt])
   @@index([viewerId, createdAt])
@@ -1704,21 +1370,17 @@ model FeedPostView {
 // ============================================================================
 
 model SupportTicket {
-  id        String   @id @default(cuid())
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-
-  userId    String?
-  userEmail String?
-
+  id             String   @id @default(cuid())
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+  userId         String?
+  userEmail      String?
   subject        String
   initialMessage String
-
-  source    String
-  personaId String?
-  intent    String?
-
-  status String
+  source         String
+  personaId      String?
+  intent         String?
+  status         String
 
   @@map("support_tickets")
 }
@@ -1733,11 +1395,109 @@ model ProfileView {
   targetId  String
   source    String?
   createdAt DateTime @default(now())
-
-  viewer User? @relation("ProfileViewViewer", fields: [viewerId], references: [id], onDelete: SetNull)
-  target User  @relation("ProfileViewTarget", fields: [targetId], references: [id], onDelete: Cascade)
+  target    User     @relation("ProfileViewTarget", fields: [targetId], references: [id], onDelete: Cascade)
+  viewer    User?    @relation("ProfileViewViewer", fields: [viewerId], references: [id])
 
   @@index([targetId])
   @@index([viewerId])
   @@map("profile_views")
+}
+
+// ============================================================================
+//  ENUMS
+// ============================================================================
+
+enum UserRole {
+  SEEKER
+  COACH
+  RECRUITER
+  ADMIN
+}
+
+enum Tier {
+  FREE
+  PRO
+  COACH
+  SMALL_BIZ
+  ENTERPRISE
+}
+
+enum ContactRequestStatus {
+  PENDING
+  ACCEPTED
+  DECLINED
+  CANCELED
+}
+
+enum ProfileVisibility {
+  PRIVATE
+  PUBLIC
+  RECRUITERS_ONLY
+}
+
+enum StaffRole {
+  PLATFORM_ADMIN
+  CSM
+  SALES
+  DEV
+  CS
+  UX
+}
+
+enum Department {
+  EXEC
+  ENGINEERING
+  PRODUCT
+  UX
+  CX
+  CS
+  SALES
+  MARKETING
+  FINANCE
+  LEGAL
+  OPERATIONS
+  SECURITY
+}
+
+enum OrganizationStatus {
+  PILOT
+  ACTIVE
+  SUSPENDED
+}
+
+enum ApplicationQuestionType {
+  TEXT
+  TEXTAREA
+  NUMBER
+  BOOLEAN
+  DATE
+  SELECT
+  MULTISELECT
+}
+
+enum NotificationCategory {
+  MESSAGING
+}
+
+enum NotificationScope {
+  SEEKER
+  COACH
+  RECRUITER
+}
+
+enum NotificationEntityType {
+  CONVERSATION
+}
+
+enum AiBuddyMode {
+  SEEKER
+  COACH
+  RECRUITER
+}
+
+enum ApplicationStatus {
+  Applied
+  Interviewing
+  Offers
+  ClosedOut
 }
