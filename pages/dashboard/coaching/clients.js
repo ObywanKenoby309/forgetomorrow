@@ -272,13 +272,7 @@ export default function CoachingClientsPage() {
       <div style={{ display: 'grid', gap: 16, width: '100%' }}>
         {/* Filters */}
         <section style={sectionStyle}>
-          <div
-            style={{
-              display: 'grid',
-              gridTemplateColumns: '1fr 180px 160px',
-              gap: 12,
-            }}
-          >
+          <div className="clientsFilterGrid" style={{ display: 'grid', gridTemplateColumns: '1fr 180px 160px', gap: 12 }}>
             <input
               value={search}
               onChange={(e) => setSearch(e.target.value)}
@@ -299,6 +293,7 @@ export default function CoachingClientsPage() {
             <button
               type="button"
               onClick={openAddClientModal}
+              className="clientsAddBtn"
               style={primaryBtn}
             >
               + Add Client
@@ -327,7 +322,91 @@ export default function CoachingClientsPage() {
           {loading ? (
             <div style={{ padding: 16, color: '#90A4AE' }}>Loading clients...</div>
           ) : (
-            <div style={{ overflowX: 'auto' }}>
+            <>
+            <div className="clientsMobileList" style={{ display: 'grid', gap: 10 }}>
+              {filtered.map((c) => (
+                <article
+                  key={c.id || c.email}
+                  style={{
+                    border: '1px solid #eee',
+                    borderRadius: 12,
+                    padding: 12,
+                    display: 'grid',
+                    gap: 10,
+                    background: 'white',
+                  }}
+                >
+                  <div>
+                    <div style={{ fontSize: 16, color: '#263238', fontWeight: 700 }}>{c.name}</div>
+                    <div style={{ fontSize: 13, color: '#607D8B', wordBreak: 'break-word' }}>{c.email || 'No email added'}</div>
+                  </div>
+
+                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
+                    <span
+                      style={{
+                        fontSize: 12,
+                        background:
+                          c.status === 'At Risk' ? '#FDECEA' : c.status === 'New Intake' ? '#E3F2FD' : '#E8F5E9',
+                        color:
+                          c.status === 'At Risk' ? '#C62828' : c.status === 'New Intake' ? '#1565C0' : '#2E7D32',
+                        padding: '4px 8px',
+                        borderRadius: 999,
+                        fontWeight: 600,
+                      }}
+                    >
+                      {c.status}
+                    </span>
+                    <span style={{ fontSize: 12, color: '#546E7A' }}>Next: {c.next || '—'}</span>
+                    <span style={{ fontSize: 12, color: '#546E7A' }}>Last: {c.last || '—'}</span>
+                  </div>
+
+                  <div style={{ display: 'grid', gap: 8 }}>
+                    <Link
+                      href={`/dashboard/coaching/clients/${encodeURIComponent(c.email || '')}`}
+                      style={mobileActionLink}
+                      aria-label={`View profile for ${c.name}`}
+                    >
+                      View Profile
+                    </Link>
+                    {c.clientId && (
+                      <button
+                        type="button"
+                        onClick={() => startCoachThread(c.clientId)}
+                        style={mobilePrimaryBtn}
+                        aria-label={`Message ${c.name}`}
+                      >
+                        Message
+                      </button>
+                    )}
+                    <button
+                      type="button"
+                      onClick={() => handleDelete(c.id)}
+                      style={mobileSecondaryBtn}
+                      aria-label={`Delete ${c.name}`}
+                      title="Delete client"
+                    >
+                      Delete
+                    </button>
+                  </div>
+                </article>
+              ))}
+
+              {filtered.length === 0 && (
+                <div
+                  style={{
+                    padding: 16,
+                    color: '#90A4AE',
+                    background: 'white',
+                    border: '1px solid #eee',
+                    borderRadius: 10,
+                  }}
+                >
+                  No clients yet. Use "Add Client" to bring in someone from your contacts or add an external client.
+                </div>
+              )}
+            </div>
+
+            <div className="clientsDesktopTable" style={{ overflowX: 'auto' }}>
               <table
                 style={{
                   width: '100%',
@@ -467,6 +546,7 @@ export default function CoachingClientsPage() {
                 </tbody>
               </table>
             </div>
+            </>
           )}
         </section>
       </div>
@@ -765,6 +845,30 @@ export default function CoachingClientsPage() {
           </form>
         </div>
       )}
+
+      <style jsx>{`
+        .clientsMobileList {
+          display: none;
+        }
+
+        @media (max-width: 768px) {
+          .clientsFilterGrid {
+            grid-template-columns: 1fr !important;
+          }
+
+          .clientsAddBtn {
+            width: 100%;
+          }
+
+          .clientsMobileList {
+            display: grid;
+          }
+
+          .clientsDesktopTable {
+            display: none;
+          }
+        }
+      `}</style>
     </CoachingLayout>
   );
 }
@@ -794,6 +898,41 @@ const primaryBtn = {
   padding: '10px 12px',
   fontWeight: 700,
   cursor: 'pointer',
+};
+
+const mobileActionLink = {
+  background: 'white',
+  border: '1px solid #eee',
+  borderRadius: 8,
+  padding: '10px 12px',
+  cursor: 'pointer',
+  fontWeight: 600,
+  color: '#FF7043',
+  textDecoration: 'none',
+  display: 'block',
+  textAlign: 'center',
+};
+
+const mobilePrimaryBtn = {
+  background: '#FF7043',
+  border: 'none',
+  borderRadius: 8,
+  padding: '10px 12px',
+  cursor: 'pointer',
+  fontWeight: 600,
+  color: 'white',
+  width: '100%',
+};
+
+const mobileSecondaryBtn = {
+  background: 'white',
+  border: '1px solid #FF7043',
+  color: '#FF7043',
+  borderRadius: 8,
+  padding: '10px 12px',
+  cursor: 'pointer',
+  fontWeight: 700,
+  width: '100%',
 };
 
 function Th({ children }) {
@@ -842,8 +981,7 @@ const modalStyle = {
   background: 'white',
   borderRadius: 12,
   padding: 20,
-  width: 420,
-  maxWidth: '95vw',
+  width: 'min(420px, 95vw)',
   display: 'flex',
   flexDirection: 'column',
   gap: 10,
