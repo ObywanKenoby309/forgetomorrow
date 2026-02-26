@@ -4,6 +4,9 @@ import { useSession } from 'next-auth/react';
 import PostComposer from './PostComposer';
 import PostList from './PostList';
 
+// ✅ MIN ADD: use the same avatar resolver as the header system
+import { useCurrentUserAvatar } from '@/hooks/useCurrentUserAvatar';
+
 export default function Feed() {
   const { data: session } = useSession();
   const [filter, setFilter] = useState('both'); // both | business | personal
@@ -17,6 +20,12 @@ export default function Feed() {
     [session?.user?.firstName, session?.user?.lastName].filter(Boolean).join(' ') ||
     (session?.user?.email?.split('@')[0] ?? '');
   const currentUserAvatar = session?.user?.avatarUrl || session?.user?.image || null;
+
+  // ✅ MIN ADD: preferred avatarUrl from your “working” system (DB-backed)
+  const { avatarUrl: resolvedAvatarUrl, initials: resolvedInitials } = useCurrentUserAvatar();
+  const composerAvatarUrl = resolvedAvatarUrl || currentUserAvatar || null;
+  const composerInitial =
+    resolvedInitials || (currentUserName || 'Y')?.charAt(0)?.toUpperCase();
 
   // ✅ NEW: best-effort interaction logger (server dedupes + ignores self)
   const logPostInteraction = async (postId, source) => {
@@ -304,17 +313,17 @@ export default function Feed() {
       {/* Composer trigger (polished) */}
       <div className="bg-white/80 backdrop-blur rounded-2xl border border-gray-200 shadow-sm p-4 mb-6 w-full">
         <div className="flex items-center gap-3">
-          {/* Avatar (layout polish only; uses your existing system) */}
+          {/* ✅ MIN CHANGE: use resolved avatar (same as header); fall back to session avatar */}
           <div className="shrink-0">
-            {currentUserAvatar ? (
+            {composerAvatarUrl ? (
               <img
-                src={currentUserAvatar}
+                src={composerAvatarUrl}
                 alt={currentUserName || 'You'}
                 className="w-10 h-10 rounded-full object-cover border border-gray-200"
               />
             ) : (
               <div className="w-10 h-10 rounded-full bg-gray-200 flex items-center justify-center text-gray-600 border border-gray-200">
-                {(currentUserName || 'Y')?.charAt(0)?.toUpperCase()}
+                {composerInitial}
               </div>
             )}
           </div>
