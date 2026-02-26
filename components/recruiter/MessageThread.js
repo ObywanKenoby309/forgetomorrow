@@ -99,7 +99,7 @@ const MessageThread = forwardRef(function MessageThread(
   }, [threads, activeId]);
 
   const [draft, setDraft] = useState("");
-  const [isTyping, setIsTyping] = useState(false);
+  const [isTypingVisible, setIsTypingVisible] = useState(false);
   const scrollRef = useRef(null);
   const inputRef = useRef(null);
 
@@ -197,7 +197,7 @@ const MessageThread = forwardRef(function MessageThread(
   // Reset fake “typing” when thread changes
   useEffect(() => {
     let t;
-    if (activeId) t = setTimeout(() => setIsTyping(false), 0);
+    if (activeId) t = setTimeout(() => setIsTypingVisible(false), 0);
     return () => clearTimeout(t);
   }, [activeId]);
 
@@ -374,9 +374,10 @@ const MessageThread = forwardRef(function MessageThread(
                   <input
                     type="checkbox"
                     className="mr-1 align-middle"
-                    onChange={(e) => setIsTyping(e.target.checked)}
+                    checked={isTypingVisible}
+                    onChange={(e) => setIsTypingVisible(e.target.checked)}
                   />
-                  simulate typing
+                  Show recipient you are typing
                 </label>
               </div>
             </div>
@@ -451,10 +452,10 @@ const MessageThread = forwardRef(function MessageThread(
                 </div>
               )}
 
-              {isTyping && (
-                <div className="mt-2 flex justify-start">
-                  <div className="px-3 py-2 rounded bg-white border text-slate-500 text-[13px]">
-                    {active.candidate} is typing…
+              {isTypingVisible && (
+                <div className="mt-2 flex justify-end">
+                  <div className="px-3 py-2 rounded bg-[#FF7043] text-white text-[13px] opacity-80">
+                    You are typing…
                   </div>
                 </div>
               )}
