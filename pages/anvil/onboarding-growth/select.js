@@ -109,7 +109,6 @@ export default function OnboardingGrowthResumeSelectorPage() {
     setError('');
 
     try {
-      // ✅ CANONICAL GENERATE ENDPOINT
       const res = await fetch('/api/anvil/onboarding-growth/generate', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -117,10 +116,12 @@ export default function OnboardingGrowthResumeSelectorPage() {
       });
 
       const data = await res.json().catch(() => ({}));
+
       if (res.status === 403 && data?.error === 'free_limit_reached') {
-  throw new Error('Your free roadmap has already been used. To generate a new plan, consider upgrading to a Seeker Pro account.');
-}
-if (!res.ok) throw new Error(data?.error || 'Failed to generate plan')
+        throw new Error('Your free roadmap has already been used. To generate a new plan, consider upgrading to a Seeker Pro account.');
+      }
+
+      if (!res.ok) throw new Error(data?.error || 'Failed to generate plan');
 
       const id = String(data?.planId || data?.roadmapId || '').trim();
       if (!id) throw new Error('Plan generated, but missing planId.');
@@ -157,7 +158,20 @@ if (!res.ok) throw new Error(data?.error || 'Failed to generate plan')
             ) : (
               <>
                 {error ? (
-                  <div className="text-red-600 font-medium mb-4">{error}</div>
+                  <div
+                    style={{
+                      background: 'rgba(255, 112, 67, 0.06)',
+                      border: '1px solid rgba(255, 112, 67, 0.25)',
+                      borderRadius: 10,
+                      padding: '12px 16px',
+                      marginBottom: 16,
+                      fontSize: 14,
+                      color: '#B45309',
+                      fontWeight: 600,
+                    }}
+                  >
+                    {error}
+                  </div>
                 ) : null}
 
                 {resumes.length === 0 ? (
