@@ -429,7 +429,8 @@ export default function Feed() {
                 onPost={handleNewPost}
                 onCancel={() => setShowComposer(false)}
                 currentUserName={currentUserName}
-                currentUserAvatar={currentUserAvatar}
+                // ✅ MIN FIX: pass best-known avatar, not session-only
+                currentUserAvatar={stickyAvatarUrl || composerAvatarUrl || null}
               />
             </div>
           </div>
