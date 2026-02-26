@@ -12,8 +12,18 @@ export default function Avatar({
   initials = "FT",
   size = "md",
   className = "",
+  resolved = true, // ✅ NEW (default true = backward compatible)
 }) {
   const sizeCfg = SIZE_MAP[size] || SIZE_MAP.md;
+
+  // ✅ If not resolved yet, show neutral shimmer circle (no letters)
+  if (!resolved) {
+    return (
+      <div
+        className={`${sizeCfg.box} rounded-full bg-gray-200 border border-black/10 animate-pulse ${className}`}
+      />
+    );
+  }
 
   if (avatarUrl) {
     return (
