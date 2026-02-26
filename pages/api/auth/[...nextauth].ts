@@ -51,6 +51,10 @@ export const authOptions: NextAuthOptions = {
           stripeCustomerId: user.stripeCustomerId,
           accountKey: user.accountKey ?? null,
           isPlatformAdmin,
+
+          // ✅ MIN ADD: include avatar in the session payload (instant in UI)
+          // NOTE: assumes your Prisma User has `avatarUrl` (common in your codebase)
+          avatarUrl: (user as any).avatarUrl ?? null,
         };
       },
     }),
@@ -89,6 +93,9 @@ export const authOptions: NextAuthOptions = {
         (token as any).stripeCustomerId = (user as any).stripeCustomerId ?? null;
         (token as any).accountKey = (user as any).accountKey ?? null;
         (token as any).isPlatformAdmin = !!(user as any).isPlatformAdmin;
+
+        // ✅ MIN ADD
+        (token as any).avatarUrl = (user as any).avatarUrl ?? null;
       }
       return token;
     },
@@ -102,6 +109,12 @@ export const authOptions: NextAuthOptions = {
         (session.user as any).accountKey =
           ((token as any).accountKey as string | null) ?? null;
         (session.user as any).isPlatformAdmin = !!(token as any).isPlatformAdmin;
+
+        // ✅ MIN ADD: expose avatarUrl on session.user
+        (session.user as any).avatarUrl = (token as any).avatarUrl ?? null;
+
+        // ✅ Optional safety: also mirror into `image` so any NextAuth-native usage works
+        (session.user as any).image = (token as any).avatarUrl ?? (session.user as any).image ?? null;
       }
       return session;
     },

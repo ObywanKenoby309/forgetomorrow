@@ -8,7 +8,7 @@ import PostList from './PostList';
 import { useCurrentUserAvatar } from '@/hooks/useCurrentUserAvatar';
 
 export default function Feed() {
-  const { data: session } = useSession();
+  const { data: session, status } = useSession(); // ✅ MIN CHANGE: include status
   const [filter, setFilter] = useState('both'); // both | business | personal
   const [showComposer, setShowComposer] = useState(false);
   const [posts, setPosts] = useState([]);
@@ -22,10 +22,14 @@ export default function Feed() {
   const currentUserAvatar = session?.user?.avatarUrl || session?.user?.image || null;
 
   // ✅ MIN ADD: preferred avatarUrl from your “working” system (DB-backed)
-  const { avatarUrl: resolvedAvatarUrl, initials: resolvedInitials } = useCurrentUserAvatar();
-  const composerAvatarUrl = resolvedAvatarUrl || currentUserAvatar || null;
-  const composerInitial =
-    resolvedInitials || (currentUserName || 'Y')?.charAt(0)?.toUpperCase();
+  // IMPORTANT: only use this hook for avatarUrl, not initials (prevents Y → S flicker)
+  const { avatarUrl: resolvedAvatarUrl } = useCurrentUserAvatar();
+
+  // ✅ Prefer session avatar first (will become "immediate" after NextAuth update), then DB resolver
+  const composerAvatarUrl = currentUserAvatar || resolvedAvatarUrl || null;
+
+  // ✅ Stable initial derived from session name (never changes Y → S)
+  const composerInitial = (currentUserName || '?').trim().charAt(0).toUpperCase();
 
   // ✅ NEW: best-effort interaction logger (server dedupes + ignores self)
   const logPostInteraction = async (postId, source) => {
@@ -313,9 +317,11 @@ export default function Feed() {
       {/* Composer trigger (polished) */}
       <div className="bg-white/80 backdrop-blur rounded-2xl border border-gray-200 shadow-sm p-4 mb-6 w-full">
         <div className="flex items-center gap-3">
-          {/* ✅ MIN CHANGE: use resolved avatar (same as header); fall back to session avatar */}
+          {/* ✅ MIN CHANGE: stable avatar display (no Y → S flicker) */}
           <div className="shrink-0">
-            {composerAvatarUrl ? (
+            {status === 'loading' ? (
+              <div className="w-10 h-10 rounded-full bg-gray-200 border border-gray-200 animate-pulse" />
+            ) : composerAvatarUrl ? (
               <img
                 src={composerAvatarUrl}
                 alt={currentUserName || 'You'}
