@@ -412,6 +412,28 @@ export default function SeekerLayout({
   // ✅ AI Partner access (desktop-only render for now)
   const aiAccess = useMemo(() => getAiPartnerAccess(planLoaded, role, plan), [planLoaded, role, plan]);
 
+  // ✅ DEBUG: temporary console output to verify gating source-of-truth
+  useEffect(() => {
+    try {
+      // keep payload small but decisive
+      console.log('[Striker debug]', {
+        planLoaded: !!planLoaded,
+        role: String(role || ''),
+        plan: String(plan || ''),
+        planNorm: normalizePlan(plan),
+        freeLike: isFreeLikePlan(plan),
+        isMobile: !!isMobile,
+        aiEnabled: !!aiAccess?.enabled,
+        aiModes: aiAccess?.modes || [],
+        chromeMode,
+        path: String(router?.pathname || ''),
+        chromeQ: String(router?.query?.chrome || ''),
+      });
+    } catch {
+      // no-throw
+    }
+  }, [planLoaded, role, plan, isMobile, aiAccess, chromeMode, router?.pathname, router?.query?.chrome]);
+
   return (
     <>
       <Head>
