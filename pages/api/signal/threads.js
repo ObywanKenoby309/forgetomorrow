@@ -2,6 +2,7 @@
 import { getServerSession } from 'next-auth/next';
 import { authOptions } from '../auth/[...nextauth]';
 import { prisma } from '@/lib/prisma';
+import { Prisma } from '@prisma/client';
 
 export default async function handler(req, res) {
   if (req.method !== 'GET') {
@@ -17,8 +18,10 @@ export default async function handler(req, res) {
 
     const userId = session.user.id;
 
+    // ✅ My participant rows (includes lastReadAt)
     const participants = await prisma.conversationParticipant.findMany({
       where: { userId },
+      select: { conversationId: true, lastReadAt: true },
     });
 
     if (!participants.length) {
@@ -27,15 +30,27 @@ export default async function handler(req, res) {
 
     const conversationIds = participants.map((p) => p.conversationId);
 
+    // ✅ Conversations sorted newest first (cheap fields only)
     const conversations = await prisma.conversation.findMany({
       where: { id: { in: conversationIds } },
       orderBy: { updatedAt: 'desc' },
+      select: {
+        id: true,
+        isGroup: true,
+        title: true,
+        channel: true,
+        createdAt: true,
+        updatedAt: true,
+      },
     });
 
+    // ✅ All participants for these conversations (for "other user" lookup)
     const allParticipants = await prisma.conversationParticipant.findMany({
       where: { conversationId: { in: conversationIds } },
+      select: { conversationId: true, userId: true },
     });
 
+    // ✅ Only fetch users that are not me
     const otherUserIds = [
       ...new Set(
         allParticipants
@@ -58,72 +73,94 @@ export default async function handler(req, res) {
         })
       : [];
 
+    const userById = {};
+    for (const u of users) userById[u.id] = u;
+
+    // ✅ Latest message per conversation (NO "fetch everything")
     const lastMessages = await prisma.message.findMany({
       where: { conversationId: { in: conversationIds } },
-      orderBy: { createdAt: 'desc' },
+      orderBy: [{ conversationId: 'asc' }, { createdAt: 'desc' }],
+      distinct: ['conversationId'],
+      select: {
+        conversationId: true,
+        content: true,
+        createdAt: true,
+        senderId: true,
+      },
     });
 
-    // ✅ map my participant row (for lastReadAt)
+    const lastMessageByConversation = {};
+    for (const m of lastMessages) {
+      lastMessageByConversation[m.conversationId] = m;
+    }
+
+    // ✅ Map my participant row by conversation
     const myParticipantByConversationId = {};
     for (const p of participants) {
       myParticipantByConversationId[p.conversationId] = p;
     }
 
-    const lastMessageByConversation = {};
-    for (const m of lastMessages) {
-      if (!lastMessageByConversation[m.conversationId]) {
-        lastMessageByConversation[m.conversationId] = m;
-      }
+    // ✅ Unread counts in ONE query (per-conversation lastReadAt cutoff)
+    // unread = messages from someone else where createdAt > my lastReadAt (or all if lastReadAt null)
+    const unreadRows = await prisma.$queryRaw(
+      Prisma.sql`
+        SELECT
+          m."conversationId" as "conversationId",
+          COUNT(*)::int as "unreadCount"
+        FROM "messages" m
+        JOIN "conversation_participants" cp
+          ON cp."conversationId" = m."conversationId"
+         AND cp."userId" = ${userId}
+        WHERE m."conversationId" = ANY(${conversationIds}::int[])
+          AND m."senderId" <> ${userId}
+          AND (cp."lastReadAt" IS NULL OR m."createdAt" > cp."lastReadAt")
+        GROUP BY m."conversationId"
+      `
+    );
+
+    const unreadByConversationId = {};
+    for (const r of unreadRows || []) {
+      // conversationId comes back as number-like
+      unreadByConversationId[Number(r.conversationId)] = Number(r.unreadCount) || 0;
     }
 
-    // ✅ async build so we can compute unreadCount per conversation
-    const threads = await Promise.all(
-      conversations.map(async (c) => {
-        const participantsForConversation = allParticipants.filter(
-          (p) => p.conversationId === c.id
-        );
-        const otherParticipant = participantsForConversation.find(
-          (p) => p.userId !== userId
-        );
+    // ✅ Build threads
+    const threads = conversations.map((c) => {
+      const participantsForConversation = allParticipants.filter(
+        (p) => p.conversationId === c.id
+      );
 
-        const otherUser = otherParticipant
-          ? users.find((u) => u.id === otherParticipant.userId)
-          : null;
+      // For 1:1, pick the other participant. For group, we keep otherUserId null.
+      const otherParticipant = participantsForConversation.find(
+        (p) => p.userId !== userId
+      );
 
-        const otherName =
-          otherUser?.name ||
-          [otherUser?.firstName, otherUser?.lastName]
-            .filter(Boolean)
-            .join(' ') ||
-          (c.isGroup ? c.title || 'Group' : 'Member');
+      const otherUser = otherParticipant ? userById[otherParticipant.userId] : null;
 
-        const last = lastMessageByConversation[c.id];
+      const otherName =
+        otherUser?.name ||
+        [otherUser?.firstName, otherUser?.lastName].filter(Boolean).join(' ') ||
+        (c.isGroup ? c.title || 'Group' : 'Member');
 
-        const myPart = myParticipantByConversationId[c.id] || null;
-        const lastReadAt = myPart?.lastReadAt || null;
+      const last = lastMessageByConversation[c.id];
 
-        // ✅ unread = messages from other user since lastReadAt
-        const unreadCount = await prisma.message.count({
-          where: {
-            conversationId: c.id,
-            senderId: { not: userId },
-            ...(lastReadAt ? { createdAt: { gt: lastReadAt } } : {}),
-          },
-        });
+      // Optional: if you want to hide ghost conversations server-side too, uncomment:
+      // if (!last?.content?.trim()) return null;
 
-        return {
-          id: c.id,
-          isGroup: c.isGroup,
-          title: c.isGroup ? c.title || otherName : otherName,
-          otherUserId: otherUser?.id || null,
-          otherAvatarUrl: otherUser?.avatarUrl || null,
-          otherHeadline: otherUser?.headline || '',
-          lastMessage: last ? last.content : '',
-          lastMessageAt: last ? last.createdAt : c.createdAt,
-          unreadCount,
-        };
-      })
-    );
+      return {
+        id: c.id,
+        isGroup: c.isGroup,
+        title: c.isGroup ? c.title || otherName : otherName,
+        otherUserId: c.isGroup ? null : otherUser?.id || null,
+        otherAvatarUrl: c.isGroup ? null : otherUser?.avatarUrl || null,
+        otherHeadline: c.isGroup ? '' : otherUser?.headline || '',
+        lastMessage: last ? last.content : '',
+        lastMessageAt: last ? last.createdAt : c.createdAt,
+        unreadCount: unreadByConversationId[c.id] || 0,
+      };
+    });
+
+    // If you enabled the ghost filter above, you’d do: const clean = threads.filter(Boolean)
 
     return res.status(200).json({ ok: true, threads });
   } catch (err) {

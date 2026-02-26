@@ -20,34 +20,29 @@ export default async function handler(req, res) {
 
     const convoId = Number(conversationId);
     if (!convoId || Number.isNaN(convoId)) {
-      return res
-        .status(400)
-        .json({ error: 'Missing or invalid conversationId' });
+      return res.status(400).json({ error: 'Missing or invalid conversationId' });
     }
 
     if (!content || typeof content !== 'string' || !content.trim()) {
-      return res
-        .status(400)
-        .json({ error: 'Message content is required' });
+      return res.status(400).json({ error: 'Message content is required' });
     }
 
     // Make sure the sender is a participant in this conversation
     const participant = await prisma.conversationParticipant.findFirst({
       where: { conversationId: convoId, userId },
+      select: { id: true },
     });
 
     if (!participant) {
-      return res
-        .status(403)
-        .json({ error: 'Not allowed to send in this conversation' });
+      return res.status(403).json({ error: 'Not allowed to send in this conversation' });
     }
 
-    // 🔹 NEW: block enforcement between the two participants
-    // Find the "other" user in this 1:1 conversation (or first non-me participant)
+    // Load conversation participants + channel + group flag for block + notifications
     const convo = await prisma.conversation.findUnique({
       where: { id: convoId },
       select: {
         channel: true,
+        isGroup: true,
         participants: {
           select: { userId: true },
         },
@@ -58,25 +53,27 @@ export default async function handler(req, res) {
       return res.status(404).json({ error: 'Conversation not found' });
     }
 
-    const otherParticipant = convo.participants.find(
-      (p) => p.userId !== userId
-    );
-    const otherUserId = otherParticipant?.userId || null;
+    // 🔹 Block enforcement ONLY for 1:1 conversations
+    if (!convo.isGroup) {
+      const otherParticipant = (convo.participants || []).find((p) => p.userId !== userId);
+      const otherUserId = otherParticipant?.userId || null;
 
-    if (otherUserId) {
-      const blocked = await prisma.userBlock.findFirst({
-        where: {
-          OR: [
-            { blockerId: userId, blockedId: otherUserId },
-            { blockerId: otherUserId, blockedId: userId },
-          ],
-        },
-      });
-
-      if (blocked) {
-        return res.status(403).json({
-          error: 'Messaging is blocked between these accounts.',
+      if (otherUserId) {
+        const blocked = await prisma.userBlock.findFirst({
+          where: {
+            OR: [
+              { blockerId: userId, blockedId: otherUserId },
+              { blockerId: otherUserId, blockedId: userId },
+            ],
+          },
+          select: { id: true },
         });
+
+        if (blocked) {
+          return res.status(403).json({
+            error: 'Messaging is blocked between these accounts.',
+          });
+        }
       }
     }
 
@@ -95,14 +92,21 @@ export default async function handler(req, res) {
       },
     });
 
+    const now = new Date();
+
     // Bump conversation updatedAt
     await prisma.conversation.update({
       where: { id: convoId },
-      data: { updatedAt: new Date() },
+      data: { updatedAt: now },
     });
 
-    // ✅ NEW: Upsert Notification rows for receivers (required for dots + preview cards)
-    // Determine scope based on Conversation.channel (string)
+    // ✅ Mark sender participant as read at send time (helps unread math later)
+    await prisma.conversationParticipant.update({
+      where: { id: participant.id },
+      data: { lastReadAt: now },
+    });
+
+    // ✅ Upsert Notification rows for receivers (required for dots + preview cards)
     const channel = String(convo.channel || '').trim().toLowerCase();
 
     const scope =
