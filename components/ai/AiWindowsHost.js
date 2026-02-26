@@ -27,6 +27,10 @@ function parseDateMs(v) {
 }
 
 export default function AiWindowsHost({ allowedModes = [] }) {
+  // ✅ Only 3 brains exist: seeker, coach, recruiter
+  // - Seeker gets: ['seeker']
+  // - Coach gets: ['seeker','coach']
+  // - Recruiter gets: ['seeker','recruiter']
   const allowed = useMemo(() => {
     const set = new Set((allowedModes || []).map((m) => safeMode(m)).filter(Boolean));
     const list = [];
@@ -49,14 +53,22 @@ export default function AiWindowsHost({ allowedModes = [] }) {
   const [lastSeenAt, setLastSeenAt] = useState(() => ({}));
   const [unreadByMode, setUnreadByMode] = useState(() => ({}));
 
-  // ✅ FIX #2: refs so polling loop always reads fresh state, never stale closure values
+  // ✅ Refs so polling loop always reads fresh state (no stale closures)
   const windowsRef = useRef(windows);
   const threadIdsRef = useRef({});
   const lastSeenAtRef = useRef({});
 
-  useEffect(() => { windowsRef.current = windows; }, [windows]);
-  useEffect(() => { threadIdsRef.current = threadIds; }, [threadIds]);
-  useEffect(() => { lastSeenAtRef.current = lastSeenAt; }, [lastSeenAt]);
+  useEffect(() => {
+    windowsRef.current = windows;
+  }, [windows]);
+
+  useEffect(() => {
+    threadIdsRef.current = threadIds;
+  }, [threadIds]);
+
+  useEffect(() => {
+    lastSeenAtRef.current = lastSeenAt;
+  }, [lastSeenAt]);
 
   // Keep state aligned when allowedModes changes
   useEffect(() => {
@@ -107,7 +119,7 @@ export default function AiWindowsHost({ allowedModes = [] }) {
     });
   }, []);
 
-  // ✅ FIX #2: stamps current time AND immediately zeroes badge
+  // stamps current time AND immediately zeroes badge
   const markSeenNow = useCallback((mode) => {
     const now = Date.now();
     setLastSeenAt((s) => ({ ...(s || {}), [mode]: now }));
@@ -121,7 +133,7 @@ export default function AiWindowsHost({ allowedModes = [] }) {
       setWindows((w) => {
         const cur = w?.[mode] || { open: false, minimized: false, z: 0, x: null, y: null };
 
-        // Already open and not minimized → minimize (toggle)
+        // Already open and not minimized -> minimize (toggle)
         if (cur.open && !cur.minimized) {
           return { ...w, [mode]: { ...cur, minimized: true } };
         }
@@ -167,7 +179,6 @@ export default function AiWindowsHost({ allowedModes = [] }) {
     let timer = null;
 
     async function ensureThreadId(mode) {
-      // read from ref so we always have the latest threadIds
       const existing = threadIdsRef.current?.[mode];
       if (existing) return existing;
 
@@ -179,13 +190,10 @@ export default function AiWindowsHost({ allowedModes = [] }) {
       if (!tid) throw new Error('Thread id missing');
       if (!alive) return '';
 
-      // Update both ref and state
       threadIdsRef.current = { ...threadIdsRef.current, [mode]: tid };
       setThreadIds((prev) => ({ ...(prev || {}), [mode]: tid }));
 
-      // ✅ Seed lastSeenAt to NOW on first thread load — this means all existing
-      // messages are treated as already read. Badge only fires for NEW messages
-      // that arrive after this session started, while the window was closed.
+      // Seed lastSeenAt to NOW on first load (treat existing as read)
       const now = Date.now();
       lastSeenAtRef.current = { ...lastSeenAtRef.current, [mode]: now };
       setLastSeenAt((prev) => ({ ...(prev || {}), [mode]: now }));
@@ -201,11 +209,10 @@ export default function AiWindowsHost({ allowedModes = [] }) {
         for (const mode of allowed) {
           if (!alive) break;
 
-          // ✅ FIX #2: read windows state from ref — never stale
           const st = windowsRef.current?.[mode];
           const isVisible = !!(st?.open && !st?.minimized);
 
-          // If window is open and visible, always zero unread immediately
+          // If visible, clear unread immediately
           if (isVisible) {
             setUnreadByMode((u) => ({ ...(u || {}), [mode]: 0 }));
             continue;
@@ -215,7 +222,7 @@ export default function AiWindowsHost({ allowedModes = [] }) {
           try {
             tid = await ensureThreadId(mode);
           } catch {
-            continue; // skip this mode this poll cycle
+            continue;
           }
           if (!tid) continue;
 
@@ -224,8 +231,6 @@ export default function AiWindowsHost({ allowedModes = [] }) {
           if (!mRes.ok) continue;
 
           const msgs = Array.isArray(mJson?.messages) ? mJson.messages : [];
-
-          // ✅ FIX #2: read lastSeenAt from ref — never stale
           const seenMs = Number(lastSeenAtRef.current?.[mode] || 0);
 
           let unread = 0;
@@ -243,7 +248,6 @@ export default function AiWindowsHost({ allowedModes = [] }) {
       }
     }
 
-    // Immediate + interval
     pollOnce();
     timer = setInterval(pollOnce, 8000);
 
@@ -264,11 +268,7 @@ export default function AiWindowsHost({ allowedModes = [] }) {
 
   return (
     <>
-      <AiLauncher
-        allowedModes={allowed}
-        onOpenMode={openMode}
-        badgeCount={unreadTotal}
-      />
+      <AiLauncher allowedModes={allowed} onOpenMode={openMode} badgeCount={unreadTotal} />
 
       {allowed.map((mode) => {
         const st = windows?.[mode];
@@ -286,7 +286,6 @@ export default function AiWindowsHost({ allowedModes = [] }) {
             onClose={() => closeMode(mode)}
             onMinimize={() => minimizeMode(mode)}
             onSetPosition={(pos) => setPosition(mode, pos)}
-            // ✅ FIX #2: badge clears the moment window becomes visible
             onMarkSeen={() => markSeenNow(mode)}
           />
         );

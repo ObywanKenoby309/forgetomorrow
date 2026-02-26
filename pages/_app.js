@@ -1,7 +1,7 @@
 // pages/_app.js
 import '@/styles/globals.css';
 import { useRouter } from 'next/router';
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useMemo } from 'react';
 import Head from 'next/head';
 import Script from 'next/script';
 import LandingHeader from '@/components/LandingHeader';
@@ -9,11 +9,14 @@ import LandingFooter from '@/components/LandingFooter';
 import Footer from '@/components/Footer';
 import UniversalHeader from '@/components/UniversalHeader';
 import { ResumeProvider } from '@/context/ResumeContext';
-import { PlanProvider } from '@/context/PlanContext';
+import { PlanProvider, usePlan } from '@/context/PlanContext';
 import { AiUsageProvider } from '@/context/AiUsageContext';
 import { useUserWallpaper } from '@/hooks/useUserWallpaper';
 import SupportFloatingButton from '@/components/SupportFloatingButton';
 import { SessionProvider } from 'next-auth/react';
+
+// ✅ NEW: Global Desktop Striker host (rendered on all internal pages)
+import AiWindowsHost from '@/components/ai/AiWindowsHost';
 
 function RouteTracker() {
   const router = useRouter();
@@ -42,22 +45,83 @@ function RouteTracker() {
   return null;
 }
 
+// ✅ NEW: Decide which brains are available globally (no layout gating)
+// Rules:
+// - Free plan: no Striker
+// - Seeker paid: ['seeker']
+// - Coach: ['seeker','coach']
+// - Recruiter: ['seeker','recruiter']
+function normalizePlan(plan) {
+  const p = String(plan ?? '').toUpperCase().trim();
+  if (!p) return '';
+  if (p === 'SMB') return 'SMALL_BIZ';
+  if (p === 'SMALLBIZ' || p === 'SMALL-BIZ') return 'SMALL_BIZ';
+  return p;
+}
+
+function isFreeLikePlan(plan) {
+  const p = normalizePlan(plan);
+  if (!p) return true;
+  return p === 'FREE' || p === 'BASIC' || p.includes('FREE');
+}
+
+function GlobalStriker({ enabled }) {
+  const { isLoaded: planLoaded, plan, role } = usePlan();
+
+  const allowedModes = useMemo(() => {
+    if (!enabled) return [];
+    if (!planLoaded) return [];
+
+    if (isFreeLikePlan(plan)) return [];
+
+    const r = String(role || '').toUpperCase().trim();
+
+    // Treat admin-style roles as recruiter-capable for tooling
+    const isRecruiterLike =
+      r === 'RECRUITER' || r === 'OWNER' || r === 'ADMIN' || r === 'BILLING' || r === 'SITE_ADMIN';
+
+    if (r === 'COACH') return ['seeker', 'coach'];
+    if (isRecruiterLike) return ['seeker', 'recruiter'];
+
+    // Default: seeker paid
+    return ['seeker'];
+  }, [enabled, planLoaded, plan, role]);
+
+  // Desktop only for now (matches your current AiWindowsHost behavior expectations)
+  const [isMobile, setIsMobile] = useState(true);
+  useEffect(() => {
+    const handleResize = () => {
+      if (typeof window !== 'undefined') {
+        setIsMobile(window.innerWidth < 1024);
+      }
+    };
+    handleResize();
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
+
+  if (isMobile) return null;
+  if (!allowedModes.length) return null;
+
+  return <AiWindowsHost allowedModes={allowedModes} />;
+}
+
 function AppShell({ Component, pageProps }) {
   const router = useRouter();
 
-  // Pull user wallpaper (internal pages only) — ✅ now inside SessionProvider
+  // Pull user wallpaper (internal pages only) now inside SessionProvider
   const { wallpaperUrl } = useUserWallpaper();
 
   const isRecruiterRoute = router.pathname.startsWith('/recruiter');
 
-  // ✅ Admin routes are INTERNAL (no external header/footer)
+  // Admin routes are INTERNAL (no external header/footer)
   const isAdminRoute = router.pathname.startsWith('/admin');
 
-  // ✅ Internal / Workspace routes are INTERNAL (no external header/footer)
+  // Internal / Workspace routes are INTERNAL (no external header/footer)
   const isInternalRoute = router.pathname.startsWith('/internal');
   const isWorkspaceRoute = router.pathname.startsWith('/workspace');
 
-  // ✅ NEW: Job apply route should be treated as INTERNAL seeker-style page
+  // Job apply route should be treated as INTERNAL seeker-style page
   const isJobApplyRoute = router.pathname === '/job/[id]/apply';
 
   // Treat all Hearth routes as internal seeker-style pages
@@ -76,14 +140,14 @@ function AppShell({ Component, pageProps }) {
       '/pinned-jobs',
       '/resume-cover',
       '/roadmap', // legacy (redirects to /anvil)
-      '/anvil',   // ✅ NEW canonical
+      '/anvil', // canonical
       '/profile',
       '/profile-analytics',
       '/feed',
-      '/post-view', // ✅ NEW: Post full view is INTERNAL (prevents public header/footer)
+      '/post-view', // Post full view is INTERNAL (prevents public header/footer)
       '/member-profile',
       '/messages',
-	  '/action-center',
+      '/action-center',
     ].includes(router.pathname);
 
   const isCoachingRoute =
@@ -96,11 +160,9 @@ function AppShell({ Component, pageProps }) {
 
   // Treat Support Center as internal (shared tool for logged-in users)
   const isSupportRoute =
-    router.pathname === '/support' ||
-    router.pathname === '/support/chat' ||
-    router.pathname.startsWith('/support/');
+    router.pathname === '/support' || router.pathname === '/support/chat' || router.pathname.startsWith('/support/');
 
-  // ✅ UPDATED: admin/internal/workspace routes are NOT public
+  // admin/internal/workspace routes are NOT public
   const isPublicByPath =
     !isRecruiterRoute &&
     !isAdminRoute &&
@@ -120,7 +182,7 @@ function AppShell({ Component, pageProps }) {
     '/terms',
     '/security',
     '/accessibility',
-    '/tracking-policy', // ✅ canonical (replaces /cookies)
+    '/tracking-policy', // canonical (replaces /cookies)
   ]);
 
   const [sharedAsInternal, setSharedAsInternal] = useState(false);
@@ -143,22 +205,20 @@ function AppShell({ Component, pageProps }) {
       !!lastRoute &&
       (lastRoute.startsWith('/seeker') ||
         lastRoute.startsWith('/recruiter') ||
-        lastRoute.startsWith('/admin') || // ✅ NEW
-        lastRoute.startsWith('/internal') || // ✅ NEW
-        lastRoute.startsWith('/workspace') || // ✅ NEW
+        lastRoute.startsWith('/admin') ||
+        lastRoute.startsWith('/internal') ||
+        lastRoute.startsWith('/workspace') ||
         lastRoute.startsWith('/dashboard/coaching') ||
         lastRoute === '/coaching-dashboard' ||
         lastRoute === '/feed' ||
         lastRoute === '/settings' ||
-        lastRoute.startsWith('/anvil') ||   // ✅ NEW (handles querystring too)
-        lastRoute.startsWith('/roadmap'));  // legacy (handles querystring too)
+        lastRoute.startsWith('/anvil') ||
+        lastRoute.startsWith('/roadmap'));
 
     setSharedAsInternal(cameFromInternal);
   }, [router.pathname]);
 
-  const isPublicEffective = sharedRoutes.has(router.pathname)
-    ? isPublicByPath && !sharedAsInternal
-    : isPublicByPath;
+  const isPublicEffective = sharedRoutes.has(router.pathname) ? isPublicByPath && !sharedAsInternal : isPublicByPath;
 
   // Marketing pages (Forge hammer background)
   const useForgeBackground =
@@ -172,19 +232,19 @@ function AppShell({ Component, pageProps }) {
   // Only load cookie banner on production hostname
   const isBrowser = typeof window !== 'undefined';
   const hostname = isBrowser ? window.location.hostname : '';
-  const shouldLoadCookieScript =
-    isBrowser && (hostname === 'forgetomorrow.com' || hostname.endsWith('.forgetomorrow.com'));
+  const shouldLoadCookieScript = isBrowser && (hostname === 'forgetomorrow.com' || hostname.endsWith('.forgetomorrow.com'));
 
-  // ✅ Internal/workspace should NOT use wallpaper (presentation-safe, plain background)
+  // Internal/workspace should NOT use wallpaper (presentation-safe, plain background)
   const forcePlainInternalBg = isInternalRoute || isWorkspaceRoute;
 
   // Decide if we should show user wallpaper (internal only)
-  const shouldUseWallpaper =
-    !forcePlainInternalBg && !isUniversalPage && !isPublicEffective && !!wallpaperUrl;
+  const shouldUseWallpaper = !forcePlainInternalBg && !isUniversalPage && !isPublicEffective && !!wallpaperUrl;
 
   // Decide if internal shell should be gray (when no wallpaper OR forced plain bg)
-  const shouldUseGrayInternalBg =
-    !useForgeBackground && !isPublicEffective && (forcePlainInternalBg || !wallpaperUrl);
+  const shouldUseGrayInternalBg = !useForgeBackground && !isPublicEffective && (forcePlainInternalBg || !wallpaperUrl);
+
+  // ✅ NEW: Striker on all internal pages (everything that is not public effective)
+  const shouldShowGlobalStriker = !isPublicEffective;
 
   return (
     <>
@@ -248,6 +308,10 @@ function AppShell({ Component, pageProps }) {
                 <RouteTracker />
                 {renderLandingHeader && <LandingHeader />}
                 {isUniversalPage && <UniversalHeader />}
+
+                {/* ✅ NEW: Global Striker (desktop) for all internal pages, gated by plan/role */}
+                <GlobalStriker enabled={shouldShowGlobalStriker} />
+
                 <Component {...pageProps} />
               </AiUsageProvider>
             </ResumeProvider>

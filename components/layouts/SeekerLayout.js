@@ -19,9 +19,6 @@ import RecruiterSidebar from '@/components/recruiter/RecruiterSidebar';
 // ✅ Mobile bottom bar (Tools opens sidebar sheet on mobile)
 import MobileBottomBar from '@/components/mobile/MobileBottomBar';
 
-// ✅ NEW: Desktop AI Partner (floating orb + 1 window per mode)
-import AiWindowsHost from '@/components/ai/AiWindowsHost';
-
 const ALLOWED_MODES = new Set(['seeker', 'coach', 'recruiter-smb', 'recruiter-ent']);
 
 function normalizeChrome(input) {
@@ -74,59 +71,6 @@ function setQueryChrome(router, chrome) {
   }
 }
 
-// ✅ NEW: normalize plan values so we don't miss SMB variants or nulls
-function normalizePlan(plan) {
-  const p = String(plan ?? '').toUpperCase().trim();
-  if (!p) return ''; // treat empty/null as free-like
-  if (p === 'SMB') return 'SMALL_BIZ';
-  if (p === 'SMALLBIZ' || p === 'SMALL-BIZ') return 'SMALL_BIZ';
-  return p;
-}
-
-function isFreeLikePlan(plan) {
-  const p = normalizePlan(plan);
-  // ✅ If plan is missing, treat as FREE-like (prevents Seeker Free leaks)
-  if (!p) return true;
-  return p === 'FREE' || p === 'BASIC' || p.includes('FREE');
-}
-
-// ✅ AI Partner entitlement + allowed modes
-// Rules:
-// - Seeker Free: NO
-// - Seeker Pro: YES (seeker mode)
-// - Coach (plan COACH): YES (seeker + coach)
-// - Recruiter (SMALL_BIZ or ENTERPRISE): YES (seeker + recruiter)
-function getAiPartnerAccess(planLoaded, role, plan) {
-  if (!planLoaded) return { enabled: false, modes: [] };
-
-  const r = String(role || '').toUpperCase().trim(); // SEEKER | COACH | RECRUITER | ...
-  const p = normalizePlan(plan);
-  const freeLike = isFreeLikePlan(plan);
-
-  // ✅ Absolute: FREE-like plans never see the Striker
-  if (freeLike) return { enabled: false, modes: [] };
-
-  // ✅ SEEKER: only PRO
-  if (r === 'SEEKER') {
-    if (p !== 'PRO') return { enabled: false, modes: [] };
-    return { enabled: true, modes: ['seeker'] };
-  }
-
-  // ✅ COACH: only COACH plan
-  if (r === 'COACH') {
-    if (p !== 'COACH') return { enabled: false, modes: [] };
-    return { enabled: true, modes: ['seeker', 'coach'] };
-  }
-
-  // ✅ RECRUITER: SMALL_BIZ or ENTERPRISE
-  if (r === 'RECRUITER') {
-    if (!(p === 'SMALL_BIZ' || p === 'ENTERPRISE')) return { enabled: false, modes: [] };
-    return { enabled: true, modes: ['seeker', 'recruiter'] };
-  }
-
-  return { enabled: false, modes: [] };
-}
-
 export default function SeekerLayout({
   title = 'ForgeTomorrow - Seeker',
   left,
@@ -164,7 +108,7 @@ export default function SeekerLayout({
   // ---- CHROME MODE (DB-first; URL may request chrome but DB can canonicalize recruiter ent/smb) ----
   const [chromeMode, setChromeMode] = useState(() => {
     // IMPORTANT: deterministic initial value avoids hydration mismatch.
-    // We'll resolve properly in effects once router + plan are ready.
+    // We’ll resolve properly in effects once router + plan are ready.
     return normalizeChrome(forceChrome) || 'seeker';
   });
 
@@ -177,7 +121,7 @@ export default function SeekerLayout({
       return;
     }
 
-    // URL request (what user is "trying" to view)
+    // URL request (what user is “trying” to view)
     const urlChrome = normalizeChrome(router.query?.chrome);
 
     // DB truth (what the account *is*)
@@ -338,7 +282,6 @@ export default function SeekerLayout({
     minWidth: hasRight && !isMobile ? rightWidth : 0,
     maxWidth: hasRight && !isMobile ? rightWidth : '100%',
     minInlineSize: 0,
-    overflow: 'hidden', // ✅ FIX: prevent right rail content from bleeding past its column
   };
 
   const rightDark = {
@@ -409,31 +352,6 @@ export default function SeekerLayout({
   const headerLayer = { position: 'relative', zIndex: 9 };
   const rightRailLayer = { position: 'relative', zIndex: 10 };
 
-  // ✅ AI Partner access (desktop-only render for now)
-  const aiAccess = useMemo(() => getAiPartnerAccess(planLoaded, role, plan), [planLoaded, role, plan]);
-
-  // ✅ DEBUG: temporary console output to verify gating source-of-truth
-  useEffect(() => {
-    try {
-      // keep payload small but decisive
-      console.log('[Striker debug]', {
-        planLoaded: !!planLoaded,
-        role: String(role || ''),
-        plan: String(plan || ''),
-        planNorm: normalizePlan(plan),
-        freeLike: isFreeLikePlan(plan),
-        isMobile: !!isMobile,
-        aiEnabled: !!aiAccess?.enabled,
-        aiModes: aiAccess?.modes || [],
-        chromeMode,
-        path: String(router?.pathname || ''),
-        chromeQ: String(router?.query?.chrome || ''),
-      });
-    } catch {
-      // no-throw
-    }
-  }, [planLoaded, role, plan, isMobile, aiAccess, chromeMode, router?.pathname, router?.query?.chrome]);
-
   return (
     <>
       <Head>
@@ -443,8 +361,7 @@ export default function SeekerLayout({
       <div style={backgroundStyle}>
         <HeaderComp />
 
-        {/* ✅ FIX: overflowX hidden prevents right rail content from causing page-wide horizontal scroll */}
-        <div style={{ ...gridStyles, gap, ...containerPadding, alignItems: 'start', overflowX: 'hidden' }}>
+        <div style={{ ...gridStyles, gap, ...containerPadding, alignItems: 'start' }}>
           <aside
             style={{
               ...leftRailLayer,
@@ -487,9 +404,6 @@ export default function SeekerLayout({
       </div>
 
       <MobileBottomBar isMobile={isMobile} chromeMode={chromeMode} onOpenTools={handleOpenTools} />
-
-      {/* ✅ Desktop AI Partner (FREE-like plans do not get this at all) */}
-      {!isMobile && aiAccess.enabled ? <AiWindowsHost allowedModes={aiAccess.modes} /> : null}
 
       {isMobile && mobileToolsOpen && (
         <div
