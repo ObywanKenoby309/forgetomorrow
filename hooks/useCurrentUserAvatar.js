@@ -14,11 +14,12 @@ export function useCurrentUserAvatar() {
   // ✅ Instant source (no fetch): session already contains avatarUrl after NextAuth update
   const sessionAvatarUrl = useMemo(() => {
     const u = session?.user || null;
-    return (u && (u.avatarUrl || u.image)) ? (u.avatarUrl || u.image) : null;
+    return u && (u.avatarUrl || u.image) ? u.avatarUrl || u.image : null;
   }, [session]);
 
-  const [avatarUrl, setAvatarUrl] = useState(null);
-  const [loading, setLoading] = useState(true);
+  // ✅ Initialize from session immediately to avoid first-paint null → later avatar "pop"
+  const [avatarUrl, setAvatarUrl] = useState(sessionAvatarUrl);
+  const [loading, setLoading] = useState(status === "loading");
 
   useEffect(() => {
     let cancelled = false;
@@ -48,8 +49,11 @@ export function useCurrentUserAvatar() {
       return;
     }
 
-    // Wait for auth state
-    if (status === "loading") return;
+    // ✅ Keep loading in sync with NextAuth status
+    if (status === "loading") {
+      setLoading(true);
+      return;
+    }
 
     if (status === "unauthenticated") {
       setAvatarUrl(null);
