@@ -24,7 +24,8 @@ export default function Feed() {
 
   // ✅ MIN ADD: preferred avatarUrl from your “working” system (DB-backed)
   // IMPORTANT: only use this hook for avatarUrl, not initials (prevents Y → S flicker)
-  const { avatarUrl: resolvedAvatarUrl } = useCurrentUserAvatar();
+  // ✅ MIN CHANGE: also read loading so we don't "resolve no avatar" too early on refresh
+  const { avatarUrl: resolvedAvatarUrl, loading: resolvedAvatarLoading } = useCurrentUserAvatar();
 
   // ✅ Prefer session avatar first (will become "immediate" after NextAuth update), then DB resolver
   const composerAvatarUrl = currentUserAvatar || resolvedAvatarUrl || null;
@@ -41,15 +42,33 @@ export default function Feed() {
     if (composerAvatarUrl) setStickyAvatarUrl(composerAvatarUrl);
   }, [composerAvatarUrl]);
 
-  // ✅ NEW: Only show an initial when we are sure there is no avatar.
-  // While unknown -> show neutral skeleton (no letters).
+  // ✅ RULE: no letter until we KNOW there is no avatar
+  // - If we have sticky avatar: resolved (avatar exists)
+  // - If session not authenticated yet: unknown -> skeleton
+  // - If authenticated and either:
+  //     - session has avatar OR DB hook has avatar: resolved (avatar exists)
+  //     - DB hook still loading: unknown -> skeleton
+  //     - DB hook finished and no avatar anywhere: resolved (no avatar) -> show initial
   const avatarResolved = useMemo(() => {
-    if (stickyAvatarUrl) return true; // yes avatar
-    if (status !== 'authenticated') return false; // unknown yet, keep skeleton
-    // authenticated: if both sources are empty, we can conclude "no avatar"
-    const hasAnyAvatar = !!(currentUserAvatar || resolvedAvatarUrl);
-    return !hasAnyAvatar; // resolved "no avatar"
-  }, [stickyAvatarUrl, status, currentUserAvatar, resolvedAvatarUrl]);
+    if (stickyAvatarUrl) return true; // avatar exists
+    if (status !== 'authenticated') return false; // unknown, keep skeleton
+
+    // If session already has avatar, we are resolved immediately
+    if (currentUserAvatar) return true;
+
+    // Authenticated but session has no avatar:
+    // If resolver still loading, we are NOT resolved yet (keep skeleton)
+    if (resolvedAvatarLoading) return false;
+
+    // Resolver finished: if it found one, we resolve (avatar exists)
+    if (resolvedAvatarUrl) return true;
+
+    // Resolver finished and nothing found -> resolved "no avatar"
+    return true;
+  }, [stickyAvatarUrl, status, currentUserAvatar, resolvedAvatarLoading, resolvedAvatarUrl]);
+
+  // ✅ Derived: do we know we have an avatar image to show?
+  const hasAvatarImage = !!stickyAvatarUrl;
 
   // ✅ NEW: best-effort interaction logger (server dedupes + ignores self)
   const logPostInteraction = async (postId, source) => {
@@ -335,7 +354,7 @@ export default function Feed() {
           <div className="shrink-0">
             {!avatarResolved ? (
               <div className="w-10 h-10 rounded-full bg-gray-200 border border-gray-200 animate-pulse" />
-            ) : stickyAvatarUrl ? (
+            ) : hasAvatarImage ? (
               <img
                 src={stickyAvatarUrl}
                 alt={currentUserName || 'You'}
