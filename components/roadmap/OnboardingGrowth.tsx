@@ -377,6 +377,13 @@ export default function OnboardingGrowth() {
 
       const data = await safeReadJson(res);
 
+      // ✅ Only change: friendly message instead of "free_limit_reached"
+      if (res.status === 403 && data?.error === 'free_limit_reached') {
+        throw new Error(
+          "You've already used your free Growth plan. Upgrade to Seeker Pro to generate another one."
+        );
+      }
+
       if (!res.ok) {
         const msg = data?.error || `Failed to generate roadmap (${res.status})`;
         throw new Error(msg);
