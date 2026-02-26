@@ -16,8 +16,23 @@ export const authOptions: NextAuthOptions = {
         if (!credentials?.email || !credentials?.password) return null;
 
         const normalizedEmail = credentials.email.toLowerCase().trim();
+
+        // ✅ MIN CHANGE: select avatarUrl so it’s guaranteed present without any-casting
         const user = await prisma.user.findUnique({
           where: { email: normalizedEmail },
+          select: {
+            id: true,
+            email: true,
+            name: true,
+            firstName: true,
+            lastName: true,
+            role: true,
+            plan: true,
+            stripeCustomerId: true,
+            accountKey: true,
+            passwordHash: true,
+            avatarUrl: true, // ✅
+          },
         });
 
         if (!user || !user.passwordHash) return null;
@@ -53,8 +68,7 @@ export const authOptions: NextAuthOptions = {
           isPlatformAdmin,
 
           // ✅ MIN ADD: include avatar in the session payload (instant in UI)
-          // NOTE: assumes your Prisma User has `avatarUrl` (common in your codebase)
-          avatarUrl: (user as any).avatarUrl ?? null,
+          avatarUrl: user.avatarUrl ?? null,
         };
       },
     }),
@@ -64,7 +78,7 @@ export const authOptions: NextAuthOptions = {
   session: {
     strategy: "jwt",
     maxAge: 24 * 60 * 60, // 24 hours absolute
-    updateAge: 60 * 60,   // refresh at most once per hour
+    updateAge: 60 * 60, // refresh at most once per hour
   },
 
   jwt: {
@@ -105,7 +119,8 @@ export const authOptions: NextAuthOptions = {
         session.user.id = token.sub!;
         (session.user as any).role = token.role;
         (session.user as any).plan = token.plan;
-        (session.user as any).stripeCustomerId = (token as any).stripeCustomerId ?? null;
+        (session.user as any).stripeCustomerId =
+          (token as any).stripeCustomerId ?? null;
         (session.user as any).accountKey =
           ((token as any).accountKey as string | null) ?? null;
         (session.user as any).isPlatformAdmin = !!(token as any).isPlatformAdmin;
@@ -114,7 +129,8 @@ export const authOptions: NextAuthOptions = {
         (session.user as any).avatarUrl = (token as any).avatarUrl ?? null;
 
         // ✅ Optional safety: also mirror into `image` so any NextAuth-native usage works
-        (session.user as any).image = (token as any).avatarUrl ?? (session.user as any).image ?? null;
+        (session.user as any).image =
+          (token as any).avatarUrl ?? (session.user as any).image ?? null;
       }
       return session;
     },

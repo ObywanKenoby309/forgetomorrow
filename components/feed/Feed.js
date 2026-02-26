@@ -1,5 +1,5 @@
 // components/feed/Feed.js
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useSession } from 'next-auth/react';
 import PostComposer from './PostComposer';
 import PostList from './PostList';
@@ -19,6 +19,7 @@ export default function Feed() {
     session?.user?.name ||
     [session?.user?.firstName, session?.user?.lastName].filter(Boolean).join(' ') ||
     (session?.user?.email?.split('@')[0] ?? '');
+
   const currentUserAvatar = session?.user?.avatarUrl || session?.user?.image || null;
 
   // ✅ MIN ADD: preferred avatarUrl from your “working” system (DB-backed)
@@ -29,7 +30,26 @@ export default function Feed() {
   const composerAvatarUrl = currentUserAvatar || resolvedAvatarUrl || null;
 
   // ✅ Stable initial derived from session name (never changes Y → S)
-  const composerInitial = (currentUserName || '?').trim().charAt(0).toUpperCase();
+  const composerInitial = useMemo(() => {
+    return (currentUserName || '?').trim().charAt(0).toUpperCase();
+  }, [currentUserName]);
+
+  // ✅ Sticky avatar so once we have an image, we never regress
+  const [stickyAvatarUrl, setStickyAvatarUrl] = useState(null);
+
+  useEffect(() => {
+    if (composerAvatarUrl) setStickyAvatarUrl(composerAvatarUrl);
+  }, [composerAvatarUrl]);
+
+  // ✅ NEW: Only show an initial when we are sure there is no avatar.
+  // While unknown -> show neutral skeleton (no letters).
+  const avatarResolved = useMemo(() => {
+    if (stickyAvatarUrl) return true; // yes avatar
+    if (status !== 'authenticated') return false; // unknown yet, keep skeleton
+    // authenticated: if both sources are empty, we can conclude "no avatar"
+    const hasAnyAvatar = !!(currentUserAvatar || resolvedAvatarUrl);
+    return !hasAnyAvatar; // resolved "no avatar"
+  }, [stickyAvatarUrl, status, currentUserAvatar, resolvedAvatarUrl]);
 
   // ✅ NEW: best-effort interaction logger (server dedupes + ignores self)
   const logPostInteraction = async (postId, source) => {
@@ -155,11 +175,9 @@ export default function Feed() {
       });
 
       if (res.ok) {
-        // ✅ best-effort: log "create" against the newest post after refresh
         await reloadFeed();
         setShowComposer(false);
 
-        // Try to log interaction for the newest post authored by me (best-effort, safe if not found)
         try {
           const feedRes = await fetch('/api/feed');
           if (feedRes.ok) {
@@ -195,7 +213,6 @@ export default function Feed() {
         return;
       }
 
-      // ✅ log interaction only AFTER comment succeeds
       await logPostInteraction(postId, 'comment');
     } catch (err) {
       console.error('Comment error:', err);
@@ -258,7 +275,6 @@ export default function Feed() {
         )
       );
 
-      // ✅ log interaction only AFTER react succeeds
       await logPostInteraction(postId, 'react');
     } catch (err) {
       console.error('React error:', err);
@@ -278,7 +294,6 @@ export default function Feed() {
     }
   };
 
-  // ✅ Global block handler — optimistic add, then merge DB
   const handleBlockAuthor = (authorId) => {
     if (!authorId) return;
 
@@ -287,10 +302,9 @@ export default function Feed() {
       return [...prev, authorId];
     });
 
-    loadBlockedAuthors(); // Merge with DB
+    loadBlockedAuthors();
   };
 
-  // Filter out blocked authors
   const filteredPosts = posts.filter((p) => !blockedAuthorIds.includes(p.authorId));
 
   return (
@@ -317,13 +331,13 @@ export default function Feed() {
       {/* Composer trigger (polished) */}
       <div className="bg-white/80 backdrop-blur rounded-2xl border border-gray-200 shadow-sm p-4 mb-6 w-full">
         <div className="flex items-center gap-3">
-          {/* ✅ MIN CHANGE: stable avatar display (no Y → S flicker) */}
+          {/* ✅ RULE: no letter until we KNOW there is no avatar */}
           <div className="shrink-0">
-            {status === 'loading' ? (
+            {!avatarResolved ? (
               <div className="w-10 h-10 rounded-full bg-gray-200 border border-gray-200 animate-pulse" />
-            ) : composerAvatarUrl ? (
+            ) : stickyAvatarUrl ? (
               <img
-                src={composerAvatarUrl}
+                src={stickyAvatarUrl}
                 alt={currentUserName || 'You'}
                 className="w-10 h-10 rounded-full object-cover border border-gray-200"
               />
@@ -342,7 +356,6 @@ export default function Feed() {
           </button>
         </div>
 
-        {/* small “life” hint row (no new functionality) */}
         <div className="mt-3 flex flex-wrap gap-3 text-xs text-gray-600 pl-[52px]">
           <span className="inline-flex items-center gap-1">
             <span aria-hidden="true">📷</span> Photo
