@@ -1,14 +1,21 @@
 // hooks/useCurrentUserAvatar.js
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useSession } from "next-auth/react";
 
 /**
  * Minimal hook to get the current user's avatar URL.
- * For now this safely falls back to null if we can't load a user.
+ * Prefer session payload for instant UI; fallback to /api/auth/me only if needed.
  */
 export function useCurrentUserAvatar() {
   const sessionHook = typeof useSession === "function" ? useSession() : null;
   const status = sessionHook?.status || "loading";
+  const session = sessionHook?.data || null;
+
+  // ✅ Instant source (no fetch): session already contains avatarUrl after NextAuth update
+  const sessionAvatarUrl = useMemo(() => {
+    const u = session?.user || null;
+    return (u && (u.avatarUrl || u.image)) ? (u.avatarUrl || u.image) : null;
+  }, [session]);
 
   const [avatarUrl, setAvatarUrl] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -27,9 +34,7 @@ export function useCurrentUserAvatar() {
         const data = await res.json();
         const url = data?.user?.avatarUrl || data?.user?.image || null;
 
-        if (!cancelled) {
-          setAvatarUrl(url);
-        }
+        if (!cancelled) setAvatarUrl(url);
       } catch {
         if (!cancelled) setAvatarUrl(null);
       } finally {
@@ -37,12 +42,13 @@ export function useCurrentUserAvatar() {
       }
     }
 
-    // ✅ Don’t call /api/auth/me while logged out (prevents extra 401/error noise)
+    // ✅ SSR guard
     if (typeof window === "undefined") {
       setLoading(false);
       return;
     }
 
+    // Wait for auth state
     if (status === "loading") return;
 
     if (status === "unauthenticated") {
@@ -51,12 +57,21 @@ export function useCurrentUserAvatar() {
       return;
     }
 
+    // ✅ If session already has avatar, use it immediately and skip fetch
+    if (sessionAvatarUrl) {
+      setAvatarUrl(sessionAvatarUrl);
+      setLoading(false);
+      return;
+    }
+
+    // ✅ Authenticated but no avatar in session — fetch once as fallback
+    setLoading(true);
     fetchCurrentUser();
 
     return () => {
       cancelled = true;
     };
-  }, [status]);
+  }, [status, sessionAvatarUrl]);
 
   return { avatarUrl, loading };
 }
