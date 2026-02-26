@@ -281,18 +281,18 @@ export default function Feed() {
   const filteredPosts = posts.filter((p) => !blockedAuthorIds.includes(p.authorId));
 
   return (
-    // ✅ CHANGED: remove mx-auto so content does not “self-center” as a narrower column
     <div className="w-full max-w-none px-2 sm:px-6 pt-6 pb-10">
       {/* Filter */}
       <div className="mb-4 flex items-center justify-between w-full">
         <div className="flex items-center gap-3">
-          <span className="bg-white px-3 py-1 rounded-lg text-sm font-semibold text-gray-800 shadow-sm border border-gray-200">
+          <span className="bg-white/80 backdrop-blur px-3 py-1 rounded-lg text-sm font-semibold text-gray-800 shadow-sm border border-gray-200">
             Showing
           </span>
+
           <select
             value={filter}
             onChange={(e) => setFilter(e.target.value)}
-            className="text-sm bg-white border border-gray-300 rounded-md px-3 py-1 focus:outline-none focus:ring-2 focus:ring-orange-500"
+            className="text-sm bg-white/80 backdrop-blur border border-gray-300 rounded-md px-3 py-1 focus:outline-none focus:ring-2 focus:ring-orange-500"
           >
             <option value="both">Business & Personal</option>
             <option value="business">Business</option>
@@ -301,25 +301,58 @@ export default function Feed() {
         </div>
       </div>
 
-      {/* Composer trigger */}
-      <div className="bg-white rounded-lg shadow p-4 mb-6 w-full">
-        <button
-          onClick={() => setShowComposer(true)}
-          className="w-full text-left text-gray-600 px-3 py-2 border border-gray-300 rounded-md hover:bg-gray-50 transition"
-        >
-          Start a post…
-        </button>
+      {/* Composer trigger (polished) */}
+      <div className="bg-white/80 backdrop-blur rounded-2xl border border-gray-200 shadow-sm p-4 mb-6 w-full">
+        <div className="flex items-center gap-3">
+          {/* Avatar (layout polish only; uses your existing system) */}
+          <div className="shrink-0">
+            {currentUserAvatar ? (
+              <img
+                src={currentUserAvatar}
+                alt={currentUserName || 'You'}
+                className="w-10 h-10 rounded-full object-cover border border-gray-200"
+              />
+            ) : (
+              <div className="w-10 h-10 rounded-full bg-gray-200 flex items-center justify-center text-gray-600 border border-gray-200">
+                {(currentUserName || 'Y')?.charAt(0)?.toUpperCase()}
+              </div>
+            )}
+          </div>
+
+          <button
+            onClick={() => setShowComposer(true)}
+            className="flex-1 text-left text-gray-600 px-4 py-3 border border-gray-300 rounded-xl hover:bg-white transition shadow-inner"
+          >
+            Start a post…
+          </button>
+        </div>
+
+        {/* small “life” hint row (no new functionality) */}
+        <div className="mt-3 flex flex-wrap gap-3 text-xs text-gray-600 pl-[52px]">
+          <span className="inline-flex items-center gap-1">
+            <span aria-hidden="true">📷</span> Photo
+          </span>
+          <span className="inline-flex items-center gap-1">
+            <span aria-hidden="true">🎥</span> Video
+          </span>
+          <span className="inline-flex items-center gap-1">
+            <span aria-hidden="true">🔗</span> Link
+          </span>
+          <span className="inline-flex items-center gap-1">
+            <span aria-hidden="true">🙂</span> Emoji
+          </span>
+        </div>
       </div>
 
       <PostList
-        posts={filteredPosts} // ✅ Use filtered posts
+        posts={filteredPosts}
         filter={filter}
         onReply={handleReply}
         onDelete={handleDelete}
         onReact={handleReact}
         currentUserId={currentUserId}
         currentUserName={currentUserName}
-        onBlockAuthor={handleBlockAuthor} // ✅ Pass down
+        onBlockAuthor={handleBlockAuthor}
       />
 
       {showComposer && (
@@ -333,7 +366,6 @@ export default function Feed() {
             className="relative bg-white rounded-2xl shadow-2xl w-[92vw] max-w-2xl p-0 border border-gray-200"
             onClick={(e) => e.stopPropagation()}
           >
-            {/* Solid header so it doesn't feel like glass + explicit close */}
             <div className="flex items-center justify-between px-4 py-3 border-b border-gray-200 bg-white rounded-t-2xl">
               <div className="font-extrabold text-gray-900">Create post</div>
               <button

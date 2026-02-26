@@ -1,5 +1,5 @@
 // components/feed/PostCard.js
-import { useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { useRouter } from 'next/router';
 import QuickEmojiBar from './QuickEmojiBar';
 import { useConnect } from '@/components/actions/useConnect';
@@ -12,9 +12,8 @@ export default function PostCard({
   onReact,
   currentUserId,
   currentUserName,
-  onBlockAuthor, // ✅ NEW: callback to hide all posts from this author
+  onBlockAuthor,
 }) {
-  // ✅ CRITICAL FIX 1: Early return if post is missing/invalid (happens during static prerender)
   if (!post) return null;
 
   const router = useRouter();
@@ -25,34 +24,40 @@ export default function PostCard({
   const [hoveredEmoji, setHoveredEmoji] = useState(null);
   const [reactionUsers, setReactionUsers] = useState({});
 
-  // ✅ avatar action popover
   const [avatarMenuOpen, setAvatarMenuOpen] = useState(false);
-
-  // ✅ connect state (optimistic UI)
   const [connectStatus, setConnectStatus] = useState('idle'); // idle | requested | connected
 
-  // ✅ NEW: Desktop-only optional emoji bar
+  // ✅ NEW: actions menu (kebab) for Report/Block/Delete
+  const [actionsMenuOpen, setActionsMenuOpen] = useState(false);
+  const actionsMenuRef = useRef(null);
+
+  // ✅ Emoji bar (now “lives” with the actions row instead of floating mid-card)
   const [showEmojiBar, setShowEmojiBar] = useState(false);
 
-  // ✅ CRITICAL FIX 2: Safe isOwner check
-  const isOwner =
-    post.authorId && currentUserId ? post.authorId === currentUserId : false;
+  const isOwner = post.authorId && currentUserId ? post.authorId === currentUserId : false;
   const canTargetAuthor = Boolean(post?.authorId) && !isOwner;
 
   const chrome = String(router.query?.chrome || '').toLowerCase();
   const withChrome = (path) =>
     chrome ? `${path}${path.includes('?') ? '&' : '?'}chrome=${chrome}` : path;
 
-  // ✅ MIN CHANGE: visible comment count excludes soft-deleted comments
   const visibleCommentsCount = Array.isArray(post.comments)
     ? post.comments.filter((c) => !(c && c.deleted === true)).length
     : 0;
 
-  // ─────────────────────────────────────────────────────────────
-  // ✅ FeedPostView tracking (best-effort; never blocks UI)
-  // - "open_post" when user opens full post reader
-  // - "reply_submit" when user submits a reply/comment
-  // ─────────────────────────────────────────────────────────────
+  // Close actions menu on outside click
+  useEffect(() => {
+    const onDocDown = (e) => {
+      if (!actionsMenuOpen) return;
+      if (!actionsMenuRef.current) return;
+      if (!actionsMenuRef.current.contains(e.target)) {
+        setActionsMenuOpen(false);
+      }
+    };
+    document.addEventListener('mousedown', onDocDown);
+    return () => document.removeEventListener('mousedown', onDocDown);
+  }, [actionsMenuOpen]);
+
   const logPostView = async (source) => {
     try {
       await fetch('/api/feed/post-view', {
@@ -64,11 +69,10 @@ export default function PostCard({
         }),
       });
     } catch {
-      // ignore (best-effort)
+      // ignore
     }
   };
 
-  // ✅ Open full post reader (this is the "view")
   const handleOpenPost = async () => {
     if (!post?.id) return;
     logPostView('open_post');
@@ -78,7 +82,6 @@ export default function PostCard({
   const handleReplySubmit = async () => {
     if (!replyText.trim()) return;
 
-    // ✅ Reply submit counts as a view
     logPostView('reply_submit');
 
     onReply(post.id, replyText.trim());
@@ -86,9 +89,7 @@ export default function PostCard({
     setShowReplyInput(false);
   };
 
-  // ─────────────────────────────────────────────────────────────
-  // Avatar menu actions (View / Connect / Message) + log profile view
-  // ─────────────────────────────────────────────────────────────
+  // Profile view logger
   const logProfileView = async (source) => {
     try {
       await fetch('/api/profile/views', {
@@ -100,7 +101,7 @@ export default function PostCard({
         }),
       });
     } catch {
-      // ignore (best-effort)
+      // ignore
     }
   };
 
@@ -115,13 +116,12 @@ export default function PostCard({
     router.push(withChrome(`/member-profile?${params.toString()}`));
   };
 
-  // ✅ Connect sends request (no navigation) + UI feedback
   const handleConnect = async () => {
     if (!post?.authorId) return;
     if (connectStatus !== 'idle') return;
 
     setAvatarMenuOpen(false);
-    setConnectStatus('requested'); // optimistic
+    setConnectStatus('requested');
 
     const result = await connectWith(post.authorId);
 
@@ -134,14 +134,12 @@ export default function PostCard({
       return;
     }
 
-    // If already connected
     if (result.alreadyConnected || result.status === 'connected') {
       setConnectStatus('connected');
       alert('You are already connected.');
       return;
     }
 
-    // If already requested OR newly requested
     setConnectStatus('requested');
     alert(
       result.alreadyRequested
@@ -150,7 +148,6 @@ export default function PostCard({
     );
   };
 
-  // ✅ Message → The Signal, pre-loaded to message
   const handleMessage = () => {
     if (!post?.authorId) return;
     setAvatarMenuOpen(false);
@@ -161,9 +158,6 @@ export default function PostCard({
     router.push(withChrome(`/seeker/messages?${params.toString()}`));
   };
 
-  // ─────────────────────────────────────────────────────────────
-  // REPORT POST (non-OP only) — mirrors Signal behavior
-  // ─────────────────────────────────────────────────────────────
   const handleReportPost = async () => {
     const reason = window.prompt(
       'Tell us briefly what happened. This will be sent to the ForgeTomorrow moderation team.'
@@ -191,13 +185,12 @@ export default function PostCard({
     } catch (err) {
       console.error('report error:', err);
       alert('We could not submit your report. Please try again.');
+    } finally {
+      setActionsMenuOpen(false);
     }
   };
 
-  // ─────────────────────────────────────────────────────────────
-  // BLOCK AUTHOR (non-OP only)
-  // ─────────────────────────────────────────────────────────────
-  const handleBlockAuthor = async () => {
+  const handleBlockAuthorAction = async () => {
     if (!post?.authorId) {
       alert('We could not determine which member to block.');
       return;
@@ -232,12 +225,12 @@ export default function PostCard({
     } catch (err) {
       console.error('block error:', err);
       alert('We could not block this member. Please try again.');
+    } finally {
+      setActionsMenuOpen(false);
     }
   };
 
-  // ─────────────────────────────────────────────────────────────
-  // REACTIONS
-  // ─────────────────────────────────────────────────────────────
+  // Reactions
   const selectedEmojis =
     post.reactions
       ?.filter(
@@ -253,7 +246,6 @@ export default function PostCard({
       return acc;
     }, {}) || {};
 
-  // ✅ Dedicated Like (thumbs up)
   const likeEmoji = '👍';
   const likeCount = reactionCounts[likeEmoji] || 0;
   const likeSelected = selectedEmojis.includes(likeEmoji);
@@ -292,172 +284,184 @@ export default function PostCard({
       ? `${reactionUsers[emoji]} reacted with ${emoji}`
       : 'Loading…';
 
+  const typeLabel = post.type === 'personal' ? 'Personal' : 'Business';
+
+  const typePillClass =
+    post.type === 'personal'
+      ? 'bg-purple-50 border-purple-200 text-purple-700'
+      : 'bg-slate-50 border-slate-200 text-slate-700';
+
   return (
-    <div className="relative bg-white rounded-lg shadow p-5 space-y-4 w-full">
-      {/* TOP-RIGHT ACTIONS */}
-      <div className="absolute top-3 right-3 flex items-center gap-2">
-        {!isOwner && (
-          <>
+    <div className="relative bg-white/90 backdrop-blur rounded-2xl border border-gray-200 shadow-sm hover:shadow-md transition-shadow p-5 space-y-4 w-full">
+      {/* Header row: author + meta + kebab */}
+      <div className="flex items-start justify-between gap-3">
+        {/* AUTHOR */}
+        <div className="flex items-start gap-3 min-w-0">
+          <div className="relative">
             <button
-              onClick={handleReportPost}
-              className="text-xs px-2 py-1 border border-gray-300 rounded-md text-gray-700 hover:bg-gray-50"
+              type="button"
+              onClick={() => {
+                if (!canTargetAuthor) return;
+                setAvatarMenuOpen((v) => !v);
+              }}
+              onBlur={() => setAvatarMenuOpen(false)}
+              className="shrink-0"
+              style={{ cursor: canTargetAuthor ? 'pointer' : 'default' }}
+              aria-label={canTargetAuthor ? 'Open member actions' : 'Author avatar'}
             >
-              Report
+              {post.authorAvatar ? (
+                <img
+                  src={post.authorAvatar}
+                  alt={post.author}
+                  className="w-10 h-10 rounded-full object-cover border border-gray-200"
+                />
+              ) : (
+                <div className="w-10 h-10 rounded-full bg-gray-200 flex items-center justify-center text-gray-500 border border-gray-200">
+                  {post.author?.charAt(0)?.toUpperCase()}
+                </div>
+              )}
             </button>
-            <button
-              onClick={handleBlockAuthor}
-              className="text-xs px-2 py-1 border border-red-300 rounded-md text-red-700 hover:bg-red-50"
-            >
-              Block
-            </button>
-          </>
-        )}
 
-        {isOwner && (
-          <button
-            onClick={() => onDelete(post.id)}
-            className="text-xs px-2 py-1 border border-red-300 rounded-md text-red-700 hover:bg-red-50"
-          >
-            Delete
-          </button>
-        )}
-      </div>
+            {avatarMenuOpen && canTargetAuthor ? (
+              <div
+                className="absolute left-0 mt-2 w-44 bg-white border border-gray-200 rounded-lg shadow-lg z-30 overflow-hidden"
+                role="menu"
+              >
+                <button
+                  type="button"
+                  onMouseDown={(e) => e.preventDefault()}
+                  onClick={handleViewProfile}
+                  className="w-full text-left px-3 py-2 text-sm hover:bg-gray-50"
+                  role="menuitem"
+                >
+                  View profile
+                </button>
 
-      {/* AUTHOR */}
-      <div className="flex items-start gap-3">
-        <div className="relative">
+                <button
+                  type="button"
+                  onMouseDown={(e) => e.preventDefault()}
+                  onClick={handleConnect}
+                  disabled={connectStatus !== 'idle'}
+                  className="w-full text-left px-3 py-2 text-sm hover:bg-gray-50 disabled:text-gray-400 disabled:bg-white"
+                  role="menuitem"
+                >
+                  {connectStatus === 'connected'
+                    ? 'Connected'
+                    : connectStatus === 'requested'
+                    ? 'Connection requested'
+                    : 'Connect'}
+                </button>
+
+                <button
+                  type="button"
+                  onMouseDown={(e) => e.preventDefault()}
+                  onClick={handleMessage}
+                  className="w-full text-left px-3 py-2 text-sm hover:bg-gray-50"
+                  role="menuitem"
+                >
+                  Message
+                </button>
+              </div>
+            ) : null}
+          </div>
+
+          <div className="min-w-0">
+            <div className="flex flex-wrap items-center gap-2">
+              <div className="font-semibold text-gray-900 truncate">{post.author}</div>
+
+              <span
+                className={`inline-flex items-center px-2 py-0.5 text-[11px] font-semibold rounded-full border ${typePillClass}`}
+                title={typeLabel}
+              >
+                {typeLabel}
+              </span>
+            </div>
+
+            <div className="text-xs text-gray-500 mt-0.5">
+              {new Date(post.createdAt).toLocaleString()}
+            </div>
+          </div>
+        </div>
+
+        {/* Actions (kebab) */}
+        <div className="relative" ref={actionsMenuRef}>
           <button
             type="button"
-            onClick={() => {
-              if (!canTargetAuthor) return;
-              setAvatarMenuOpen((v) => !v);
-            }}
-            onBlur={() => setAvatarMenuOpen(false)}
-            className="shrink-0"
-            style={{ cursor: canTargetAuthor ? 'pointer' : 'default' }}
-            aria-label={canTargetAuthor ? 'Open member actions' : 'Author avatar'}
+            onClick={() => setActionsMenuOpen((v) => !v)}
+            className="inline-flex items-center justify-center w-9 h-9 rounded-full border border-gray-200 bg-white hover:bg-gray-50 text-gray-700"
+            aria-label="Post actions"
+            title="Actions"
           >
-            {post.authorAvatar ? (
-              <img
-                src={post.authorAvatar}
-                alt={post.author}
-                className="w-10 h-10 rounded-full"
-              />
-            ) : (
-              <div className="w-10 h-10 rounded-full bg-gray-200 flex items-center justify-center text-gray-500">
-                {post.author?.charAt(0)?.toUpperCase()}
-              </div>
-            )}
+            ⋯
           </button>
 
-          {avatarMenuOpen && canTargetAuthor ? (
+          {actionsMenuOpen ? (
             <div
-              className="absolute left-0 mt-2 w-44 bg-white border border-gray-200 rounded-lg shadow-lg z-30 overflow-hidden"
+              className="absolute right-0 mt-2 w-40 bg-white border border-gray-200 rounded-xl shadow-lg z-30 overflow-hidden"
               role="menu"
             >
-              <button
-                type="button"
-                onMouseDown={(e) => e.preventDefault()}
-                onClick={handleViewProfile}
-                className="w-full text-left px-3 py-2 text-sm hover:bg-gray-50"
-                role="menuitem"
-              >
-                View profile
-              </button>
+              {!isOwner ? (
+                <>
+                  <button
+                    type="button"
+                    onMouseDown={(e) => e.preventDefault()}
+                    onClick={handleReportPost}
+                    className="w-full text-left px-3 py-2 text-sm hover:bg-gray-50"
+                    role="menuitem"
+                  >
+                    Report
+                  </button>
 
-              <button
-                type="button"
-                onMouseDown={(e) => e.preventDefault()}
-                onClick={handleConnect}
-                disabled={connectStatus !== 'idle'}
-                className="w-full text-left px-3 py-2 text-sm hover:bg-gray-50 disabled:text-gray-400 disabled:bg-white"
-                role="menuitem"
-              >
-                {connectStatus === 'connected'
-                  ? 'Connected'
-                  : connectStatus === 'requested'
-                  ? 'Connection requested'
-                  : 'Connect'}
-              </button>
-
-              <button
-                type="button"
-                onMouseDown={(e) => e.preventDefault()}
-                onClick={handleMessage}
-                className="w-full text-left px-3 py-2 text-sm hover:bg-gray-50"
-                role="menuitem"
-              >
-                Message
-              </button>
+                  <button
+                    type="button"
+                    onMouseDown={(e) => e.preventDefault()}
+                    onClick={handleBlockAuthorAction}
+                    className="w-full text-left px-3 py-2 text-sm hover:bg-red-50 text-red-700"
+                    role="menuitem"
+                  >
+                    Block
+                  </button>
+                </>
+              ) : (
+                <button
+                  type="button"
+                  onMouseDown={(e) => e.preventDefault()}
+                  onClick={() => {
+                    setActionsMenuOpen(false);
+                    onDelete?.(post.id);
+                  }}
+                  className="w-full text-left px-3 py-2 text-sm hover:bg-red-50 text-red-700"
+                  role="menuitem"
+                >
+                  Delete
+                </button>
+              )}
             </div>
           ) : null}
         </div>
-
-        <div>
-          <div className="font-semibold">{post.author}</div>
-          <div className="text-xs text-gray-500">
-            {new Date(post.createdAt).toLocaleString()} • {post.type}
-          </div>
-        </div>
       </div>
 
-      {/* BODY (click to open full post = view) */}
+      {/* BODY */}
       <button
         type="button"
         onClick={handleOpenPost}
         className="w-full text-left"
         aria-label="Open post"
       >
-        <p className="whitespace-pre-wrap">{post.body}</p>
+        <p className="whitespace-pre-wrap text-[15px] leading-relaxed text-gray-800">
+          {post.body}
+        </p>
       </button>
 
-      {/* REACTIONS (Desktop only, optional via Emoji button; 👍 removed here because Like is dedicated) */}
-      <div className="relative hidden md:block">
-        <div className="flex items-center justify-between">
-          <div />
-          <button
-            type="button"
-            onClick={() => setShowEmojiBar((v) => !v)}
-            className="text-xs px-2 py-1 border border-gray-300 rounded-md text-gray-700 hover:bg-gray-50"
-            aria-label="Toggle emoji reactions"
-          >
-            Emoji
-          </button>
-        </div>
-
-        {showEmojiBar ? (
-          <div className="mt-2">
-            <QuickEmojiBar
-              emojis={['🔥', '🎉', '👏', '❤️']}
-              onPick={(emoji) => onReact(post.id, emoji)}
-              selectedEmojis={selectedEmojis}
-              reactionCounts={reactionCounts}
-              onMouseEnter={(emoji) => {
-                setHoveredEmoji(emoji);
-                if (reactionCounts[emoji] > 0) fetchUsersForEmoji(emoji);
-              }}
-              onMouseLeave={() => setHoveredEmoji(null)}
-            />
-
-            {hoveredEmoji && reactionCounts[hoveredEmoji] > 0 && (
-              <div className="absolute bottom-full left-0 mb-3 bg-gray-900 text-white text-sm rounded-lg p-3 shadow-xl z-20 whitespace-nowrap">
-                {getTooltipText(hoveredEmoji)}
-              </div>
-            )}
-          </div>
-        ) : null}
-      </div>
-
-      {/* SUMMARY */}
-      <div className="flex items-center gap-4 text-sm text-gray-600">
-        {/* ✅ Dedicated Like (all devices) */}
+      {/* Action row (life + polish) */}
+      <div className="flex flex-wrap items-center gap-3 text-sm text-gray-700">
         <button
           type="button"
           onClick={handleLike}
-          className={`flex items-center gap-2 px-2.5 py-1 rounded-full border transition ${
+          className={`flex items-center gap-2 px-3 py-1.5 rounded-full border transition ${
             likeSelected
-              ? 'bg-blue-100 border-blue-300 text-blue-800'
-              : 'bg-gray-100 border-gray-200 text-gray-700 hover:bg-gray-200'
+              ? 'bg-blue-50 border-blue-200 text-blue-800'
+              : 'bg-gray-50 border-gray-200 text-gray-700 hover:bg-gray-100'
           }`}
           aria-label={likeSelected ? 'Unlike' : 'Like'}
           title={likeSelected ? 'Unlike' : 'Like'}
@@ -467,35 +471,90 @@ export default function PostCard({
           <span className="text-xs font-semibold">Like</span>
         </button>
 
-        <button onClick={() => onOpenComments(post)} className="hover:underline">
-          {visibleCommentsCount} comments
+        <button
+          type="button"
+          onClick={() => onOpenComments?.(post)}
+          className="px-3 py-1.5 rounded-full border border-gray-200 bg-white hover:bg-gray-50 text-gray-700"
+        >
+          💬 {visibleCommentsCount} {visibleCommentsCount === 1 ? 'comment' : 'comments'}
+        </button>
+
+        <button
+          type="button"
+          onClick={() => setShowEmojiBar((v) => !v)}
+          className="px-3 py-1.5 rounded-full border border-gray-200 bg-white hover:bg-gray-50 text-gray-700"
+          aria-label="React with emoji"
+          title="React"
+        >
+          🙂 React
         </button>
       </div>
 
-      {/* REPLY */}
+      {/* Emoji bar (now attached to the action row, not floating) */}
+      {showEmojiBar ? (
+        <div className="relative">
+          <div className="mt-2">
+            <QuickEmojiBar
+              emojis={['🔥', '🎉', '👏', '❤️']}
+              onPick={(emoji) => onReact?.(post.id, emoji)}
+              selectedEmojis={selectedEmojis}
+              reactionCounts={reactionCounts}
+              onMouseEnter={(emoji) => {
+                setHoveredEmoji(emoji);
+                if (reactionCounts[emoji] > 0) fetchUsersForEmoji(emoji);
+              }}
+              onMouseLeave={() => setHoveredEmoji(null)}
+            />
+          </div>
+
+          {hoveredEmoji && reactionCounts[hoveredEmoji] > 0 && (
+            <div className="absolute bottom-full left-0 mb-3 bg-gray-900 text-white text-sm rounded-lg p-3 shadow-xl z-20 whitespace-nowrap">
+              {getTooltipText(hoveredEmoji)}
+            </div>
+          )}
+        </div>
+      ) : null}
+
+      {/* REPLY (kept at bottom, but more polished) */}
       {showReplyInput ? (
-        <div className="flex gap-2">
-          <textarea
-            value={replyText}
-            onChange={(e) => setReplyText(e.target.value)}
-            placeholder="Write a reply…"
-            className="flex-1 border rounded p-2"
-            rows={2}
-          />
-          <button
-            onClick={handleReplySubmit}
-            disabled={!replyText.trim()}
-            className="px-4 py-2 bg-orange-500 text-white rounded disabled:opacity-50"
-          >
-            Send
-          </button>
+        <div className="rounded-2xl border border-gray-200 bg-gray-50 p-3">
+          <div className="flex gap-2">
+            <textarea
+              value={replyText}
+              onChange={(e) => setReplyText(e.target.value)}
+              placeholder="Write a reply…"
+              className="flex-1 border border-gray-200 rounded-xl p-3 bg-white focus:outline-none focus:ring-2 focus:ring-orange-400"
+              rows={2}
+            />
+            <button
+              onClick={handleReplySubmit}
+              disabled={!replyText.trim()}
+              className="px-4 py-2 bg-[#ff7043] text-white rounded-xl font-semibold disabled:opacity-50"
+            >
+              Send
+            </button>
+          </div>
+
+          <div className="mt-2 flex items-center justify-between text-xs text-gray-500">
+            <span>Keep it constructive. Forge builds people.</span>
+            <button
+              type="button"
+              onClick={() => {
+                setShowReplyInput(false);
+                setReplyText('');
+              }}
+              className="font-semibold text-gray-600 hover:text-gray-900"
+            >
+              Cancel
+            </button>
+          </div>
         </div>
       ) : (
         <button
           onClick={() => setShowReplyInput(true)}
-          className="text-sm text-gray-600 hover:underline"
+          className="text-sm font-semibold text-gray-700 hover:text-gray-900 inline-flex items-center gap-2"
         >
-          Reply
+          <span aria-hidden="true">↩</span> Reply
         </button>
       )}
     </div>

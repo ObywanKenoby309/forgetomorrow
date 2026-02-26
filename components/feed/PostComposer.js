@@ -1,5 +1,5 @@
 // components/feed/PostComposer.js
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 
 export default function PostComposer({ onPost, onCancel }) {
   const [text, setText] = useState('');
@@ -9,7 +9,7 @@ export default function PostComposer({ onPost, onCancel }) {
   const [linkValue, setLinkValue] = useState('');
   const [showEmojiBar, setShowEmojiBar] = useState(false);
 
-  const EMOJIS = ['🔥', '💼', '🤝', '🚀', '🙏', '💪', '🛠️', '❤️'];
+  const EMOJIS = useMemo(() => ['🔥', '💼', '🤝', '🚀', '🙏', '💪', '🛠️', '❤️'], []);
 
   const canPost =
     text.trim().length > 0 &&
@@ -23,7 +23,6 @@ export default function PostComposer({ onPost, onCancel }) {
       reader.readAsDataURL(file);
     });
 
-  // ---- Attachments handlers ----
   const addImages = async (files) => {
     if (!files?.length) return;
     try {
@@ -64,7 +63,7 @@ export default function PostComposer({ onPost, onCancel }) {
     const url = linkValue.trim();
     if (!url) return;
     try {
-      const u = new URL(url); // basic validation
+      const u = new URL(url);
       setAttachments((prev) => [
         ...prev,
         { type: 'link', url: u.toString(), name: u.hostname },
@@ -72,7 +71,7 @@ export default function PostComposer({ onPost, onCancel }) {
       setLinkValue('');
       setShowLinkInput(false);
     } catch {
-      // invalid URL, ignore for now
+      // invalid URL, ignore
     }
   };
 
@@ -88,7 +87,6 @@ export default function PostComposer({ onPost, onCancel }) {
     setText((prev) => (prev || '') + emoji);
   };
 
-  // ---- Submit ----
   const submit = () => {
     const body = text.trim();
     if (!canPost) return;
@@ -99,7 +97,7 @@ export default function PostComposer({ onPost, onCancel }) {
         String(Date.now()),
       createdAt: Date.now(),
       body,
-      type: postType, // required
+      type: postType,
       likes: 0,
       comments: [],
       attachments: attachments.map(({ type, url, name }) => ({
@@ -118,36 +116,36 @@ export default function PostComposer({ onPost, onCancel }) {
   };
 
   return (
-    // ✅ EMBEDDED: remove standalone "card" look so it sits cleanly in the glass panel
-    <section className="w-full rounded-lg border border-gray-200 bg-white/70 backdrop-blur p-4">
+    <section className="w-full rounded-2xl border border-gray-200 bg-white/85 backdrop-blur p-4">
+      {/* textarea feels more “alive” with better padding + focus ring */}
       <textarea
         value={text}
         onChange={(e) => setText(e.target.value)}
-        placeholder="What's on your mind?"
-        className="w-full border rounded-md p-3 bg-white"
-        rows={3}
+        placeholder="Share a win, ask a question, or post an update…"
+        className="w-full border border-gray-200 rounded-2xl p-4 bg-white focus:outline-none focus:ring-2 focus:ring-orange-400"
+        rows={4}
       />
 
       {/* Attachments preview */}
       {attachments.length > 0 && (
-        <div className="mt-3 grid grid-cols-2 sm:grid-cols-3 gap-3">
+        <div className="mt-4 grid grid-cols-2 sm:grid-cols-3 gap-3">
           {attachments.map((a, idx) => (
             <div
               key={idx}
-              className="relative border rounded-md p-2 bg-gray-50 flex flex-col gap-2"
+              className="relative border border-gray-200 rounded-xl p-2 bg-gray-50 flex flex-col gap-2 overflow-hidden"
             >
               {a.type === 'image' && (
                 <img
                   src={a.url}
                   alt={a.name || 'image'}
-                  className="w-full h-28 object-cover rounded"
+                  className="w-full h-28 object-cover rounded-lg"
                 />
               )}
               {a.type === 'video' && (
                 <video
                   src={a.url}
                   controls
-                  className="w-full h-28 object-cover rounded"
+                  className="w-full h-28 object-cover rounded-lg"
                 />
               )}
               {a.type === 'link' && (
@@ -177,45 +175,49 @@ export default function PostComposer({ onPost, onCancel }) {
         </div>
       )}
 
-      {/* Link entry (togglable) */}
+      {/* Link entry */}
       {showLinkInput && (
-        <div className="mt-3 flex items-center gap-2">
+        <div className="mt-4 flex flex-col sm:flex-row sm:items-center gap-2">
           <input
             type="url"
             value={linkValue}
             onChange={(e) => setLinkValue(e.target.value)}
             placeholder="Paste a link (https://…)"
-            className="flex-1 border rounded-md px-3 py-2"
+            className="flex-1 border border-gray-200 rounded-xl px-3 py-2 focus:outline-none focus:ring-2 focus:ring-orange-400"
           />
-          <button
-            type="button"
-            onClick={addLink}
-            className="px-3 py-2 rounded-md bg-gray-800 text-white hover:bg-gray-700"
-          >
-            Attach
-          </button>
-          <button
-            type="button"
-            onClick={() => {
-              setShowLinkInput(false);
-              setLinkValue('');
-            }}
-            className="px-3 py-2 rounded-md border"
-          >
-            Cancel
-          </button>
+          <div className="flex gap-2">
+            <button
+              type="button"
+              onClick={addLink}
+              className="px-3 py-2 rounded-xl bg-gray-900 text-white hover:bg-gray-800"
+            >
+              Attach
+            </button>
+            <button
+              type="button"
+              onClick={() => {
+                setShowLinkInput(false);
+                setLinkValue('');
+              }}
+              className="px-3 py-2 rounded-xl border border-gray-200 bg-white hover:bg-gray-50"
+            >
+              Cancel
+            </button>
+          </div>
         </div>
       )}
 
       {/* Emoji bar */}
       {showEmojiBar && (
-        <div className="mt-3 flex flex-wrap gap-2 text-lg">
+        <div className="mt-4 flex flex-wrap gap-2 text-lg">
           {EMOJIS.map((emoji) => (
             <button
               key={emoji}
               type="button"
               onClick={() => addEmoji(emoji)}
-              className="px-2 py-1 border rounded-md hover:bg-gray-100"
+              className="px-2.5 py-1.5 border border-gray-200 rounded-xl hover:bg-gray-50 bg-white"
+              aria-label={`Insert ${emoji}`}
+              title={emoji}
             >
               {emoji}
             </button>
@@ -223,9 +225,9 @@ export default function PostComposer({ onPost, onCancel }) {
         </div>
       )}
 
-      {/* Bottom controls – inside the card, not stretched */}
-      <div className="mt-3 flex flex-col gap-3 sm:flex-row sm:items-center sm:gap-4">
-        {/* Left: attachment controls */}
+      {/* Bottom controls */}
+      <div className="mt-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+        {/* Left controls */}
         <div className="flex flex-wrap items-center gap-3 text-sm text-gray-700">
           <input
             id="feed-image-input"
@@ -240,7 +242,7 @@ export default function PostComposer({ onPost, onCancel }) {
           />
           <label
             htmlFor="feed-image-input"
-            className="inline-flex items-center gap-1 hover:text-gray-900 cursor-pointer"
+            className="inline-flex items-center gap-1 px-3 py-2 rounded-xl border border-gray-200 bg-white hover:bg-gray-50 cursor-pointer"
           >
             <span role="img" aria-label="photo">
               📷
@@ -261,7 +263,7 @@ export default function PostComposer({ onPost, onCancel }) {
           />
           <label
             htmlFor="feed-video-input"
-            className="inline-flex items-center gap-1 hover:text-gray-900 cursor-pointer"
+            className="inline-flex items-center gap-1 px-3 py-2 rounded-xl border border-gray-200 bg-white hover:bg-gray-50 cursor-pointer"
           >
             <span role="img" aria-label="video">
               🎥
@@ -271,7 +273,7 @@ export default function PostComposer({ onPost, onCancel }) {
 
           <button
             type="button"
-            className="inline-flex items-center gap-1 hover:text-gray-900"
+            className="inline-flex items-center gap-1 px-3 py-2 rounded-xl border border-gray-200 bg-white hover:bg-gray-50"
             onClick={() => setShowLinkInput((v) => !v)}
           >
             <span role="img" aria-label="link">
@@ -282,7 +284,7 @@ export default function PostComposer({ onPost, onCancel }) {
 
           <button
             type="button"
-            className="inline-flex items-center gap-1 hover:text-gray-900"
+            className="inline-flex items-center gap-1 px-3 py-2 rounded-xl border border-gray-200 bg-white hover:bg-gray-50"
             onClick={() => setShowEmojiBar((v) => !v)}
           >
             <span role="img" aria-label="emoji">
@@ -292,20 +294,16 @@ export default function PostComposer({ onPost, onCancel }) {
           </button>
         </div>
 
-        {/* Right: type selector + Post/Cancel */}
-        <div className="flex flex-wrap items-center justify-start gap-2 sm:gap-3">
-          <label className="text-sm text-gray-600 hidden sm:block">
-            Post as<span className="text-red-500">*</span>:
-          </label>
-
-          <div className="inline-flex rounded-md border overflow-hidden">
+        {/* Right controls */}
+        <div className="flex flex-wrap items-center gap-2 sm:gap-3">
+          <div className="inline-flex rounded-xl border border-gray-200 overflow-hidden bg-white">
             <button
               type="button"
               onClick={() => setPostType('business')}
-              className={`px-3 py-1 text-sm ${
+              className={`px-3 py-2 text-sm font-semibold ${
                 postType === 'business'
                   ? 'bg-[#ff8a65] text-white'
-                  : 'bg-white'
+                  : 'bg-white text-gray-800 hover:bg-gray-50'
               }`}
               aria-pressed={postType === 'business'}
             >
@@ -314,10 +312,10 @@ export default function PostComposer({ onPost, onCancel }) {
             <button
               type="button"
               onClick={() => setPostType('personal')}
-              className={`px-3 py-1 text-sm ${
+              className={`px-3 py-2 text-sm font-semibold ${
                 postType === 'personal'
                   ? 'bg-[#ff8a65] text-white'
-                  : 'bg-white'
+                  : 'bg-white text-gray-800 hover:bg-gray-50'
               }`}
               aria-pressed={postType === 'personal'}
             >
@@ -329,21 +327,17 @@ export default function PostComposer({ onPost, onCancel }) {
             type="button"
             onClick={submit}
             disabled={!canPost}
-            className="bg-[#ff7043] text-white font-semibold px-4 py-2 rounded-md disabled:opacity-40 disabled:cursor-not-allowed"
-            title={
-              !canPost
-                ? 'Write something and choose Business or Personal'
-                : 'Post'
-            }
+            className="bg-[#ff7043] text-white font-extrabold px-5 py-2.5 rounded-xl disabled:opacity-40 disabled:cursor-not-allowed hover:opacity-95"
+            title={!canPost ? 'Write something and choose Business or Personal' : 'Post'}
           >
             Post
           </button>
         </div>
       </div>
 
-      {/* gentle nudge when type unselected */}
+      {/* gentle nudge */}
       {!postType && text.trim() && (
-        <div className="mt-2 text-xs text-red-500">
+        <div className="mt-3 text-xs text-red-500">
           Please choose Business or Personal before posting.
         </div>
       )}
