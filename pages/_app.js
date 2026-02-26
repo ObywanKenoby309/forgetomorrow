@@ -15,7 +15,7 @@ import { useUserWallpaper } from '@/hooks/useUserWallpaper';
 import SupportFloatingButton from '@/components/SupportFloatingButton';
 import { SessionProvider } from 'next-auth/react';
 
-// ✅ NEW: Global Desktop Striker host (rendered on all internal pages)
+// ✅ Global Desktop Striker host (rendered on all internal pages)
 import AiWindowsHost from '@/components/ai/AiWindowsHost';
 
 function RouteTracker() {
@@ -45,49 +45,51 @@ function RouteTracker() {
   return null;
 }
 
-// ✅ NEW: Decide which brains are available globally (no layout gating)
+// ✅ Decide which Striker brains are available, gated by raw DB tier.
+//
+// Tier values from DB:
+//   FREE       → no Striker (free seeker)
+//   PRO        → Seeker Striker only
+//   COACH      → Seeker + Coaching Striker
+//   SMALL_BIZ  → Seeker + Recruiting Striker
+//   ENTERPRISE → Seeker + Recruiting Striker
+//
+// Role is used to disambiguate COACH vs RECRUITER vs plain SEEKER
+// for PRO/SMALL_BIZ/ENTERPRISE tier accounts.
+//
 // Rules:
-// - Free plan: no Striker
-// - Seeker paid: ['seeker']
-// - Coach: ['seeker','coach']
-// - Recruiter: ['seeker','recruiter']
-function normalizePlan(plan) {
-  const p = String(plan ?? '').toUpperCase().trim();
-  if (!p) return '';
-  if (p === 'SMB') return 'SMALL_BIZ';
-  if (p === 'SMALLBIZ' || p === 'SMALL-BIZ') return 'SMALL_BIZ';
-  return p;
-}
-
-function isFreeLikePlan(plan) {
-  const p = normalizePlan(plan);
-  if (!p) return true;
-  return p === 'FREE' || p === 'BASIC' || p.includes('FREE');
-}
+//   - Free plan (tier === 'FREE' or null): no Striker at all
+//   - COACH role: ['seeker', 'coach']
+//   - RECRUITER / OWNER / ADMIN / BILLING / SITE_ADMIN role: ['seeker', 'recruiter']
+//   - Everyone else with a paid tier: ['seeker']
 
 function GlobalStriker({ enabled }) {
-  const { isLoaded: planLoaded, plan, role } = usePlan();
+  const { isLoaded: planLoaded, tier, role } = usePlan();
 
   const allowedModes = useMemo(() => {
     if (!enabled) return [];
     if (!planLoaded) return [];
 
-    if (isFreeLikePlan(plan)) return [];
+    // Gate on raw DB tier — FREE (or null/missing) gets nothing
+    if (!tier || tier === 'FREE') return [];
 
     const r = String(role || '').toUpperCase().trim();
 
-    // Treat admin-style roles as recruiter-capable for tooling
     const isRecruiterLike =
-      r === 'RECRUITER' || r === 'OWNER' || r === 'ADMIN' || r === 'BILLING' || r === 'SITE_ADMIN';
+      r === 'RECRUITER' ||
+      r === 'OWNER' ||
+      r === 'ADMIN' ||
+      r === 'BILLING' ||
+      r === 'SITE_ADMIN';
 
     if (r === 'COACH') return ['seeker', 'coach'];
     if (isRecruiterLike) return ['seeker', 'recruiter'];
 
-    // Default: seeker paid
+    // Default paid seeker
     return ['seeker'];
-  }, [enabled, planLoaded, plan, role]);
+  }, [enabled, planLoaded, tier, role]);
 
-  // Desktop only for now (matches your current AiWindowsHost behavior expectations)
+  // Desktop only
   const [isMobile, setIsMobile] = useState(true);
   useEffect(() => {
     const handleResize = () => {
@@ -243,7 +245,7 @@ function AppShell({ Component, pageProps }) {
   // Decide if internal shell should be gray (when no wallpaper OR forced plain bg)
   const shouldUseGrayInternalBg = !useForgeBackground && !isPublicEffective && (forcePlainInternalBg || !wallpaperUrl);
 
-  // ✅ NEW: Striker on all internal pages (everything that is not public effective)
+  // Striker on all internal pages (everything that is not public effective)
   const shouldShowGlobalStriker = !isPublicEffective;
 
   return (
@@ -309,7 +311,7 @@ function AppShell({ Component, pageProps }) {
                 {renderLandingHeader && <LandingHeader />}
                 {isUniversalPage && <UniversalHeader />}
 
-                {/* ✅ NEW: Global Striker (desktop) for all internal pages, gated by plan/role */}
+                {/* ✅ Global Striker (desktop) for all internal pages, gated by tier/role */}
                 <GlobalStriker enabled={shouldShowGlobalStriker} />
 
                 <Component {...pageProps} />
