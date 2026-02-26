@@ -117,7 +117,10 @@ export default function OnboardingGrowthResumeSelectorPage() {
       });
 
       const data = await res.json().catch(() => ({}));
-      if (!res.ok) throw new Error(data?.error || 'Failed to generate plan');
+      if (res.status === 403 && data?.error === 'free_limit_reached') {
+  throw new Error('Your free roadmap has already been used. To generate a new plan, consider upgrading to a Seeker Pro account.');
+}
+if (!res.ok) throw new Error(data?.error || 'Failed to generate plan')
 
       const id = String(data?.planId || data?.roadmapId || '').trim();
       if (!id) throw new Error('Plan generated, but missing planId.');
