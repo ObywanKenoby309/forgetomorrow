@@ -804,6 +804,7 @@ model User {
   educationJson                Json?
   resumeAlignFreeUses          Int                            @default(0)
   resumeAlignLastResetMonth    String?
+  growthPivotFreeUses		   Int							  @default(0)
   department                   Department?
   employee                     Boolean                        @default(false)
   careerRoadmaps               CareerRoadmap[]                @relation("UserCareerRoadmaps")

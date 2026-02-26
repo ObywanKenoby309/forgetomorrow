@@ -62,15 +62,10 @@ function startsWithStayRequirement(s) {
   return /^Stay-the-course requirement(s)?:/i.test(s.trim());
 }
 
-/**
- * Find first match index using a case-insensitive regex.
- * Returns -1 when not found.
- */
 function indexOfRegexCI(haystack, re) {
   try {
     const m = haystack.match(re);
     if (!m || !m.index) {
-      // if match exists at index 0, m.index will be 0 (falsy)
       return m && typeof m.index === 'number' ? m.index : -1;
     }
     return m.index;
@@ -79,14 +74,10 @@ function indexOfRegexCI(haystack, re) {
   }
 }
 
-/**
- * Hard-lock pivot formatting to multi-line blocks.
- */
 function coercePivotToMultiline(pivotLine) {
   const raw = String(pivotLine || '').trim();
   if (!raw.startsWith('Possible pivot ')) return raw;
 
-  // If it's already correct, keep it.
   const alreadyMultiline =
     raw.includes('\nWhy it fits:') &&
     raw.includes('\nMissing signals:') &&
@@ -94,7 +85,6 @@ function coercePivotToMultiline(pivotLine) {
     raw.includes('\nCost/tradeoff:');
   if (alreadyMultiline) return raw;
 
-  // Normalize spacing so we can find tokens even in messy text.
   const s = normalizeSpaces(raw);
 
   const idxWhy = indexOfRegexCI(s, /\bwhy it fits\s*:/i);
@@ -215,8 +205,8 @@ function enforceComparePlacement(plan) {
 
     if (!hasSeal) {
       const seal = [
-        'If you stay: Pick one “Current alignment” role and define success as a measurable outcome + stronger tool usage + one documented end-to-end win in the next 30–60 days.',
-        'If you pivot: Do not pivot until you complete ONE “Fast proof artifact” from your chosen pivot and can show it as a deliverable (case study, report, or portfolio item).',
+        'If you stay: Pick one "Current alignment" role and define success as a measurable outcome + stronger tool usage + one documented end-to-end win in the next 30–60 days.',
+        'If you pivot: Do not pivot until you complete ONE "Fast proof artifact" from your chosen pivot and can show it as a deliverable (case study, report, or portfolio item).',
         'Next step: Take this plan to a coach or mentor to validate the best path, tighten your proof artifact, and confirm which job titles to pursue first.',
       ].join('\n\n');
 
@@ -227,6 +217,20 @@ function enforceComparePlacement(plan) {
   } catch {
     return plan;
   }
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// FREE TIER LIMITS
+// FREE users get exactly 1 lifetime use of Growth & Pivot.
+// They must have at least 1 resume on file (enforced on frontend too, but
+// double-checked here for safety).
+// Paid tiers (PRO, COACH, SMALL_BIZ, ENTERPRISE) are unrestricted.
+// ─────────────────────────────────────────────────────────────────────────────
+const FREE_LIFETIME_LIMIT = 1;
+
+function isPaidTier(tier) {
+  const t = String(tier || '').toUpperCase();
+  return t === 'PRO' || t === 'COACH' || t === 'SMALL_BIZ' || t === 'ENTERPRISE';
 }
 
 export default async function handler(req, res) {
@@ -264,6 +268,7 @@ export default async function handler(req, res) {
         .json({ error: 'Missing pivotTarget. Please specify what you want to pivot into.' });
     }
 
+    // ── Load user (include tier + usage counter) ──────────────────────────
     const user = await prisma.user.findFirst({
       where: sessionUserId ? { id: sessionUserId } : { email: sessionEmail.toLowerCase() },
       select: {
@@ -274,12 +279,27 @@ export default async function handler(req, res) {
         lastName: true,
         headline: true,
         location: true,
-        plan: true,
+        plan: true,              // raw DB Tier enum
+        growthPivotFreeUses: true, // lifetime counter for FREE tier
       },
     });
 
     if (!user) return res.status(404).json({ error: 'User not found' });
 
+    // ── FREE TIER GATE (backend enforcement) ─────────────────────────────
+    // This is the authoritative check — frontend also shows the gate but
+    // this prevents direct API abuse.
+    if (!isPaidTier(user.plan)) {
+      const usedCount = Number(user.growthPivotFreeUses || 0);
+      if (usedCount >= FREE_LIFETIME_LIMIT) {
+        return res.status(403).json({
+          error: 'free_limit_reached',
+          message: 'You have used your 1 free Growth & Pivot plan. Upgrade to PRO for unlimited access.',
+        });
+      }
+    }
+
+    // ── Resume check ─────────────────────────────────────────────────────
     const resume = await prisma.resume.findFirst({
       where: { id: resumeIdNum, userId: user.id },
       select: { id: true, name: true, content: true, createdAt: true, isPrimary: true },
@@ -487,7 +507,6 @@ ${modeRequirements}
       parsed = enforceComparePlacement(parsed);
     }
 
-    // Optional debug (set DEBUG_ANVIL=1 to verify newline behavior)
     if (process.env.DEBUG_ANVIL === '1') {
       try {
         const firstAction = String(parsed?.day30?.actions?.[0] || '');
@@ -518,14 +537,14 @@ ${modeRequirements}
       // ignore
     }
 
-    // Save to DB (CareerRoadmap)
+    // ── Save to DB ────────────────────────────────────────────────────────
     let created = null;
     try {
       created = await prisma.careerRoadmap.create({
         data: {
           userId: user.id,
           data: parsed,
-          isPro: String(user.plan || 'FREE') !== 'FREE',
+          isPro: isPaidTier(user.plan),
         },
         select: { id: true },
       });
@@ -533,7 +552,20 @@ ${modeRequirements}
       console.error('[anvil/onboarding-growth/generate] Failed to save CareerRoadmap:', e?.message || e);
     }
 
-    // Response: include planId (new), keep roadmapId for backward compatibility
+    // ── Increment FREE usage counter AFTER successful generation ─────────
+    // Only increments for FREE users, only after the plan is actually saved.
+    if (!isPaidTier(user.plan) && created?.id) {
+      try {
+        await prisma.user.update({
+          where: { id: user.id },
+          data: { growthPivotFreeUses: { increment: 1 } },
+        });
+      } catch (e) {
+        // Non-fatal — plan was generated and saved. Log and continue.
+        console.error('[anvil/onboarding-growth/generate] Failed to increment growthPivotFreeUses:', e?.message || e);
+      }
+    }
+
     const planId = created?.id || null;
 
     if (!planId) {
