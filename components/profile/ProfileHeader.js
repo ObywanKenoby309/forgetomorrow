@@ -1,14 +1,28 @@
 // components/profile/ProfileHeader.js
 'use client';
 
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { createPortal } from 'react-dom';
+import { useSession } from 'next-auth/react';
+
 import ProfileBannerSelector from './ProfileBannerSelector';
 import ProfileAvatarSelector from './ProfileAvatarSelector';
 import { profileBanners } from '@/lib/profileBanners';
 import { profileWallpapers } from '@/lib/profileWallpapers';
 
+// ✅ MIN ADD: reuse the same resolver logic used elsewhere
+import { useCurrentUserAvatar } from '@/hooks/useCurrentUserAvatar';
+
 export default function ProfileHeader() {
+  const { data: session, status: authStatus } = useSession();
+
+  const sessionAvatarUrl = useMemo(() => {
+    const u = session?.user || null;
+    return u && (u.avatarUrl || u.image) ? (u.avatarUrl || u.image) : null;
+  }, [session]);
+
+  const { avatarUrl: resolvedAvatarUrl, loading: resolvedAvatarLoading } = useCurrentUserAvatar();
+
   const [name, setName] = useState('');
   const [slug, setSlug] = useState(null);
   const [slugValue, setSlugValue] = useState('');
@@ -17,11 +31,13 @@ export default function ProfileHeader() {
   const [pronouns, setPronouns] = useState('');
   const [headline, setHeadline] = useState('');
 
-  const [avatarUrl, setAvatarUrl] = useState('/profile-avatars/demo-avatar.png');
+  // ✅ IMPORTANT: do NOT default to a demo avatar (causes generic-first pop)
+  // Seed from session immediately if present.
+  const [avatarUrl, setAvatarUrl] = useState(sessionAvatarUrl || '');
   const [coverUrl, setCoverUrl] = useState('');
   const [wallpaperUrl, setWallpaperUrl] = useState('');
 
-  const [bannerH, setBannerH] = useState(220); // ✅ FIX: was 120 — increased default to show full banner
+  const [bannerH, setBannerH] = useState(220);
   const [bannerMode, setBannerMode] = useState('cover'); // "cover" | "fit"
   const [focalY, setFocalY] = useState(50);
 
@@ -48,6 +64,16 @@ export default function ProfileHeader() {
     return () => window.removeEventListener('resize', handleResize);
   }, []);
 
+  // ✅ Sticky avatar: once we have an image URL, never regress to empty on refresh jitter
+  const [stickyAvatarUrl, setStickyAvatarUrl] = useState(sessionAvatarUrl || '');
+  useEffect(() => {
+    const best = sessionAvatarUrl || resolvedAvatarUrl || '';
+    if (best) setStickyAvatarUrl(best);
+  }, [sessionAvatarUrl, resolvedAvatarUrl]);
+
+  // Track header load so we can confidently decide "no avatar"
+  const [headerLoaded, setHeaderLoaded] = useState(false);
+
   // Load everything from the server (single source of truth)
   useEffect(() => {
     let cancel = false;
@@ -58,13 +84,12 @@ export default function ProfileHeader() {
         if (!res.ok) throw new Error('Failed to load profile');
 
         const data = await res.json();
-        const user = data.user || data; // support both {user: {...}} and flat payloads
+        const user = data.user || data;
         if (!user || cancel) return;
 
-        const fullName =
-          user.name || [user.firstName, user.lastName].filter(Boolean).join(' ');
+        const fullName = user.name || [user.firstName, user.lastName].filter(Boolean).join(' ');
 
-        // ✅ Fallback: if header endpoint doesn't include name fields, pull from /api/profile/details
+        // Fallback: if header endpoint doesn't include name fields, pull from /api/profile/details
         if (!fullName) {
           try {
             const dres = await fetch('/api/profile/details');
@@ -95,17 +120,20 @@ export default function ProfileHeader() {
         setPronouns(user.pronouns || '');
         setHeadline(user.headline || '');
 
-        setAvatarUrl(user.avatarUrl || '/profile-avatars/demo-avatar.png');
+        // ✅ Avatar: prefer session/resolver first, then server value. Never force a demo avatar.
+        const serverAvatar = typeof user.avatarUrl === 'string' ? user.avatarUrl : '';
+        const bestAvatar = sessionAvatarUrl || resolvedAvatarUrl || serverAvatar || '';
+        setAvatarUrl(bestAvatar);
+        if (bestAvatar) setStickyAvatarUrl(bestAvatar);
 
         const corporateBanner = data.corporateBanner || user.corporateBanner || null;
-        const effectiveCoverUrl =
-          (corporateBanner && corporateBanner.bannerSrc) || user.coverUrl || '';
+        const effectiveCoverUrl = (corporateBanner && corporateBanner.bannerSrc) || user.coverUrl || '';
         setCoverUrl(effectiveCoverUrl);
 
         setWallpaperUrl(user.wallpaperUrl || '');
 
-        const h = user.bannerHeight != null ? user.bannerHeight : 220; // ✅ FIX: default 220 not 120
-        setBannerH(clamp(h, 80, 400)); // ✅ FIX: max raised to 400 to allow full banner display
+        const h = user.bannerHeight != null ? user.bannerHeight : 220;
+        setBannerH(clamp(h, 80, 400));
 
         const mode = user.bannerMode === 'fit' ? 'fit' : 'cover';
         setBannerMode(mode);
@@ -123,6 +151,8 @@ export default function ProfileHeader() {
           console.error('Failed to load profile header', err);
           setName('Unnamed');
         }
+      } finally {
+        if (!cancel) setHeaderLoaded(true);
       }
     })();
 
@@ -131,6 +161,37 @@ export default function ProfileHeader() {
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  // ✅ Derive certainty: show no letters until we know there is no avatar.
+  const avatarIsKnown = useMemo(() => {
+    // If we already have an image URL, we are done.
+    if (stickyAvatarUrl) return true;
+
+    // If auth is still loading, we are not sure yet.
+    if (authStatus === 'loading') return false;
+
+    // If header is not loaded yet, we are not sure yet.
+    if (!headerLoaded) return false;
+
+    // If our resolver is still loading, we are not sure yet.
+    if (resolvedAvatarLoading) return false;
+
+    // At this point, we have checked session, header, and resolver.
+    return true;
+  }, [stickyAvatarUrl, authStatus, headerLoaded, resolvedAvatarLoading]);
+
+  const avatarFinalUrl = useMemo(() => {
+    return stickyAvatarUrl || avatarUrl || '';
+  }, [stickyAvatarUrl, avatarUrl]);
+
+  const initials = useMemo(() => {
+    const n = String(name || '').trim();
+    if (!n) return 'FT';
+    const parts = n.split(/\s+/).filter(Boolean);
+    const a = parts[0]?.[0] || 'F';
+    const b = parts.length > 1 ? parts[parts.length - 1]?.[0] : '';
+    return (a + b).toUpperCase().slice(0, 2) || 'FT';
+  }, [name]);
 
   const fullUrl = slug ? `https://forgetomorrow.com/u/${slug}` : null;
   const fullUrlFromInput = slugValue
@@ -167,7 +228,7 @@ export default function ProfileHeader() {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          avatarUrl,
+          avatarUrl: avatarUrl || null,
           coverUrl: coverUrl || null,
           wallpaperUrl: wallpaperUrl || null,
           bannerMode,
@@ -205,6 +266,12 @@ export default function ProfileHeader() {
       const effectiveWallpaper = user.wallpaperUrl ?? null;
       setWallpaperUrl(effectiveWallpaper || '');
 
+      // ✅ If we just saved an avatar, make it sticky immediately.
+      const bestAvatarAfterSave =
+        sessionAvatarUrl || resolvedAvatarUrl || (typeof user.avatarUrl === 'string' ? user.avatarUrl : '') || avatarUrl || '';
+      if (bestAvatarAfterSave) setStickyAvatarUrl(bestAvatarAfterSave);
+      setAvatarUrl(bestAvatarAfterSave);
+
       if (typeof window !== 'undefined') {
         window.dispatchEvent(
           new CustomEvent('profileHeaderUpdated', {
@@ -222,9 +289,9 @@ export default function ProfileHeader() {
     }
   };
 
-  // ✅ Mobile rule: SHOW FULL WIDTH (no side crop)
+  // Mobile rule: show full width (no side crop)
   // Height is derived from width using an aspect ratio box.
-  const MOBILE_BANNER_ASPECT = '3 / 1'; // width-driven; tweak later if you want (e.g. '16 / 9')
+  const MOBILE_BANNER_ASPECT = '3 / 1';
 
   return (
     <section
@@ -264,7 +331,7 @@ export default function ProfileHeader() {
         }}
       >
         <div style={{ display: 'flex', gap: 12, alignItems: 'center', minWidth: 0 }}>
-          {/* ✅ Avatars MUST remain perfectly circular everywhere */}
+          {/* Avatars must remain perfectly circular everywhere */}
           <div
             style={{
               width: isMobile ? 76 : 96,
@@ -276,20 +343,51 @@ export default function ProfileHeader() {
               display: 'block',
               boxSizing: 'border-box',
               lineHeight: 0,
+              background: 'rgba(0,0,0,0.06)',
             }}
           >
-            <img
-              data-ft-avatar="1"
-              src={avatarUrl}
-              alt="Profile avatar"
-              style={{
-                width: '100%',
-                height: '100%',
-                objectFit: 'cover',
-                objectPosition: 'center',
-                display: 'block',
-              }}
-            />
+            {/* ✅ RULE: no letter until we KNOW there is no avatar */}
+            {!avatarIsKnown ? (
+              <div
+                aria-hidden="true"
+                style={{
+                  width: '100%',
+                  height: '100%',
+                  background: 'rgba(0,0,0,0.08)',
+                  animation: 'ftPulse 1.2s ease-in-out infinite',
+                }}
+              />
+            ) : avatarFinalUrl ? (
+              <img
+                data-ft-avatar="1"
+                src={avatarFinalUrl}
+                alt="Profile avatar"
+                style={{
+                  width: '100%',
+                  height: '100%',
+                  objectFit: 'cover',
+                  objectPosition: 'center',
+                  display: 'block',
+                }}
+              />
+            ) : (
+              <div
+                style={{
+                  width: '100%',
+                  height: '100%',
+                  display: 'grid',
+                  placeItems: 'center',
+                  background: 'linear-gradient(135deg, #FF7043, #F4511E)',
+                  color: 'white',
+                  fontWeight: 900,
+                  fontSize: isMobile ? 22 : 26,
+                  letterSpacing: 0.5,
+                }}
+                aria-label="No avatar set"
+              >
+                {initials}
+              </div>
+            )}
           </div>
 
           <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: 4, minWidth: 0 }}>
@@ -420,7 +518,7 @@ export default function ProfileHeader() {
               </small>
             </div>
 
-            <ProfileAvatarSelector value={avatarUrl} onChange={setAvatarUrl} />
+            <ProfileAvatarSelector value={avatarUrl || ''} onChange={setAvatarUrl} />
 
             {/* BANNER SELECTION (RESTORED) */}
             <div style={{ display: 'grid', gap: 6 }}>
@@ -546,9 +644,7 @@ export default function ProfileHeader() {
                               }}
                             />
                           </div>
-                          <div style={{ fontSize: 12, fontWeight: 700, color: '#263238' }}>
-                            {b.name}
-                          </div>
+                          <div style={{ fontSize: 12, fontWeight: 700, color: '#263238' }}>{b.name}</div>
                           <div style={{ fontSize: 11, color: '#78909C' }}>{b.desc}</div>
                         </button>
                       );
@@ -682,9 +778,7 @@ export default function ProfileHeader() {
                               }}
                             />
                           </div>
-                          <div style={{ fontSize: 12, fontWeight: 700, color: '#263238' }}>
-                            {w.name}
-                          </div>
+                          <div style={{ fontSize: 12, fontWeight: 700, color: '#263238' }}>{w.name}</div>
                           <div style={{ fontSize: 11, color: '#78909C' }}>{w.desc}</div>
                         </button>
                       );
@@ -705,7 +799,7 @@ export default function ProfileHeader() {
               <input
                 type="range"
                 min={80}
-                max={400} // ✅ FIX: was 220 — raised to allow full banner display
+                max={400}
                 value={bannerH}
                 onChange={(e) => setBannerH(Number(e.target.value))}
               />
@@ -791,14 +885,27 @@ export default function ProfileHeader() {
           </div>
         </Dialog>
       )}
+
+      {/* Simple pulse keyframes scoped here */}
+      <style jsx>{`
+        @keyframes ftPulse {
+          0% {
+            opacity: 0.55;
+          }
+          50% {
+            opacity: 0.95;
+          }
+          100% {
+            opacity: 0.55;
+          }
+        }
+      `}</style>
     </section>
   );
 }
 
 /* ===== Banner, Toggle, Dialog ===== */
 
-// ✅ FIX: BannerCover now uses a real <img> so the full image height is respected.
-// The height prop acts as a maxHeight cap rather than a hard crop.
 function BannerCover({ url, height, focalY }) {
   return (
     <div
@@ -856,7 +963,6 @@ function BannerFit({ url, height }) {
   );
 }
 
-// ✅ Mobile: width-driven box (height derives from width), full banner always visible.
 function BannerFitAspect({ url, aspectRatio }) {
   return (
     <div
