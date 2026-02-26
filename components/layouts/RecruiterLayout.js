@@ -69,17 +69,34 @@ function chromeToVariant(chromeMode) {
   return null;
 }
 
-// ✅ NEW: AI Partner entitlement for recruiter layout (Prisma enums)
-// Only RECRUITER with SMALL_BIZ or ENTERPRISE gets the AI Partner orb/windows here.
-// Allowed modes: seeker + recruiter
+function isFreeLikePlan(plan) {
+  const p = String(plan || '').toUpperCase().trim();
+  if (!p) return false;
+  return p === 'FREE' || p === 'BASIC' || p.includes('FREE');
+}
+
+function normalizeRecruiterPlan(plan) {
+  const p = String(plan || '').toUpperCase().trim();
+  if (!p) return '';
+  if (p === 'SMB') return 'SMALL_BIZ';
+  if (p === 'SMALLBIZ' || p === 'SMALL-BIZ') return 'SMALL_BIZ';
+  return p;
+}
+
+// ✅ AI Partner entitlement for recruiter layout
+// Rule: RECRUITER accounts on SMB or Enterprise (and any paid recruiter plan) get it (seeker + recruiter)
 function getRecruiterAiPartnerAccess(planLoaded, role, plan) {
   if (!planLoaded) return { enabled: false, modes: [] };
 
   const r = String(role || '').toUpperCase().trim(); // RECRUITER | ...
-  const p = String(plan || '').toUpperCase().trim(); // SMALL_BIZ | ENTERPRISE | ...
+  const p = normalizeRecruiterPlan(plan);
 
-  const enabled = r === 'RECRUITER' && (p === 'SMALL_BIZ' || p === 'ENTERPRISE');
-  if (!enabled) return { enabled: false, modes: [] };
+  if (r !== 'RECRUITER') return { enabled: false, modes: [] };
+  if (isFreeLikePlan(p)) return { enabled: false, modes: [] };
+
+  // Keep explicit known plans, but allow future paid recruiter plans too.
+  const isKnownRecruiterPaid = p === 'SMALL_BIZ' || p === 'ENTERPRISE' || p === 'RECRUITER' || p === 'PRO';
+  if (!isKnownRecruiterPaid && !p) return { enabled: false, modes: [] };
 
   return { enabled: true, modes: ['seeker', 'recruiter'] };
 }
@@ -288,16 +305,14 @@ export default function RecruiterLayout({
   // ✅ Stable callback so MobileBottomBar memo does NOT re-render on every parent refresh
   const handleOpenTools = useCallback(() => setMobileToolsOpen(true), []);
 
-  // ✅ Seeker-style: page-only opt-in for full-bleed content (desktop only)
   const mainOverrides = {
     position: 'relative',
     zIndex: 1,
   };
 
-  // ✅ Ensure side rail stays above full-bleed content (same layering strategy as SeekerLayout)
   const leftRailLayer = { position: 'relative', zIndex: 10 };
 
-  // ✅ NEW: AI Partner access (desktop-only render for now)
+  // ✅ AI Partner access (desktop-only render for now)
   const aiAccess = useMemo(
     () => getRecruiterAiPartnerAccess(planLoaded, planRole, plan),
     [planLoaded, planRole, plan]
@@ -322,15 +337,12 @@ export default function RecruiterLayout({
             paddingRight: hasRight ? Math.max(8, PAD - 4) : PAD,
             alignItems: 'start',
             boxSizing: 'border-box',
-
-            // ✅ FIX (mobile overflow): hard clamp layout to viewport
             width: '100%',
             maxWidth: '100vw',
             overflowX: 'hidden',
             minWidth: 0,
           }}
         >
-          {/* Left rail */}
           <aside
             style={{
               ...leftRailLayer,
@@ -351,7 +363,6 @@ export default function RecruiterLayout({
             />
           </aside>
 
-          {/* Header (ONLY if provided) */}
           {hasHeader ? (
             headerCard ? (
               <section
@@ -373,21 +384,15 @@ export default function RecruiterLayout({
             )
           ) : null}
 
-          {/* Right rail (ONLY if provided) */}
           {hasRight ? <aside style={rightRailStyle}>{right}</aside> : null}
 
-          {/* Main content */}
           <main
             style={{
               gridArea: 'content',
               minWidth: 0,
               width: '100%',
               maxWidth: '100%',
-
-              // ✅ Only remove overflow clipping on dashboard (contentFullBleed).
-              // All other recruiter pages keep overflowX: 'hidden' for mobile safety.
               ...(!contentFullBleed ? { overflowX: 'hidden' } : {}),
-
               ...mainOverrides,
             }}
           >
@@ -402,7 +407,7 @@ export default function RecruiterLayout({
 
       <MobileBottomBar isMobile={isMobile} chromeMode={chromeMode} onOpenTools={handleOpenTools} />
 
-      {/* ✅ NEW: Desktop AI Partner (Recruiter only; allows Seeker + Recruiter modes) */}
+      {/* ✅ Desktop AI Partner (Recruiter paid; allows Seeker + Recruiter modes) */}
       {!isMobile && aiAccess.enabled ? <AiWindowsHost allowedModes={aiAccess.modes} /> : null}
 
       {isMobile && mobileToolsOpen && (

@@ -29,17 +29,22 @@ const GLASS = {
   WebkitBackdropFilter: 'blur(10px)',
 };
 
-// ✅ NEW: AI Partner entitlement for coaching layout (Prisma enums)
-// Only COACH with plan COACH gets the AI Partner orb/windows here.
-// Allowed modes: seeker + coach
+function isFreeLikePlan(plan) {
+  const p = String(plan || '').toUpperCase().trim();
+  if (!p) return false;
+  return p === 'FREE' || p === 'BASIC' || p.includes('FREE');
+}
+
+// ✅ AI Partner entitlement for coaching layout
+// Rule: COACH accounts on any paid plan get it (seeker + coach)
 function getCoachAiPartnerAccess(planLoaded, role, plan) {
   if (!planLoaded) return { enabled: false, modes: [] };
 
   const r = String(role || '').toUpperCase().trim(); // COACH | ...
-  const p = String(plan || '').toUpperCase().trim(); // COACH | ...
+  const freeLike = isFreeLikePlan(plan);
 
-  const enabled = r === 'COACH' && p === 'COACH';
-  if (!enabled) return { enabled: false, modes: [] };
+  if (r !== 'COACH') return { enabled: false, modes: [] };
+  if (freeLike) return { enabled: false, modes: [] };
 
   return { enabled: true, modes: ['seeker', 'coach'] };
 }
@@ -126,7 +131,7 @@ export default function CoachingLayout({
   const leftRailLayer = { position: 'relative', zIndex: 10 };
   const mainOverrides = { position: 'relative', zIndex: 1 };
 
-  // ✅ NEW: AI Partner access (desktop-only render for now)
+  // ✅ AI Partner access (desktop-only render for now)
   const aiAccess = useMemo(() => getCoachAiPartnerAccess(planLoaded, role, plan), [planLoaded, role, plan]);
 
   return (
@@ -230,8 +235,6 @@ export default function CoachingLayout({
             minWidth: 0,
             width: '100%',
             maxWidth: '100%',
-            // ✅ Only remove overflow clipping for dashboard (contentFullBleed).
-            // All other coaching pages keep overflowX: 'hidden' for mobile safety.
             ...(!contentFullBleed ? { overflowX: 'hidden' } : {}),
             ...mainOverrides,
           }}
@@ -245,7 +248,7 @@ export default function CoachingLayout({
       <SupportFloatingButton />
       <MobileBottomBar isMobile={isMobile} chromeMode={chromeMode} onOpenTools={handleOpenTools} />
 
-      {/* ✅ NEW: Desktop AI Partner (Coach only; allows Seeker + Coach modes) */}
+      {/* ✅ Desktop AI Partner (Coach paid; allows Seeker + Coach modes) */}
       {!isMobile && aiAccess.enabled ? <AiWindowsHost allowedModes={aiAccess.modes} /> : null}
 
       {isMobile && mobileToolsOpen && (
