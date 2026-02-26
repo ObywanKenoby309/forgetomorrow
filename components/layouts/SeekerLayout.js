@@ -74,38 +74,57 @@ function setQueryChrome(router, chrome) {
   }
 }
 
+// ✅ NEW: normalize plan values so we don't miss SMB variants or nulls
+function normalizePlan(plan) {
+  const p = String(plan ?? '').toUpperCase().trim();
+  if (!p) return ''; // treat empty/null as free-like
+  if (p === 'SMB') return 'SMALL_BIZ';
+  if (p === 'SMALLBIZ' || p === 'SMALL-BIZ') return 'SMALL_BIZ';
+  return p;
+}
+
 function isFreeLikePlan(plan) {
-  const p = String(plan || '').toUpperCase().trim();
-  if (!p) return false;
+  const p = normalizePlan(plan);
+  // ✅ If plan is missing, treat as FREE-like (prevents Seeker Free leaks)
+  if (!p) return true;
   return p === 'FREE' || p === 'BASIC' || p.includes('FREE');
 }
 
 // ✅ AI Partner entitlement + allowed modes
 // Rules:
 // - Seeker Free: NO
-// - Any paid plan: YES
-// - Seeker paid: seeker mode
-// - Coach paid: seeker + coach
-// - Recruiter paid (SMB or Enterprise): seeker + recruiter
+// - Seeker Pro: YES (seeker mode)
+// - Coach (plan COACH): YES (seeker + coach)
+// - Recruiter (SMALL_BIZ or ENTERPRISE): YES (seeker + recruiter)
 function getAiPartnerAccess(planLoaded, role, plan) {
   if (!planLoaded) return { enabled: false, modes: [] };
 
   const r = String(role || '').toUpperCase().trim(); // SEEKER | COACH | RECRUITER | ...
+  const p = normalizePlan(plan);
   const freeLike = isFreeLikePlan(plan);
 
   // ✅ Absolute: FREE-like plans never see the Striker
   if (freeLike) return { enabled: false, modes: [] };
 
-  // ✅ Everyone paid gets Seeker Striker
-  const modes = ['seeker'];
+  // ✅ SEEKER: only PRO
+  if (r === 'SEEKER') {
+    if (p !== 'PRO') return { enabled: false, modes: [] };
+    return { enabled: true, modes: ['seeker'] };
+  }
 
-  // ✅ Coach accounts get Coach Striker
-  if (r === 'COACH') modes.push('coach');
+  // ✅ COACH: only COACH plan
+  if (r === 'COACH') {
+    if (p !== 'COACH') return { enabled: false, modes: [] };
+    return { enabled: true, modes: ['seeker', 'coach'] };
+  }
 
-  // ✅ Recruiter accounts get Recruiter Striker (SMB + Enterprise)
-  if (r === 'RECRUITER') modes.push('recruiter');
+  // ✅ RECRUITER: SMALL_BIZ or ENTERPRISE
+  if (r === 'RECRUITER') {
+    if (!(p === 'SMALL_BIZ' || p === 'ENTERPRISE')) return { enabled: false, modes: [] };
+    return { enabled: true, modes: ['seeker', 'recruiter'] };
+  }
 
-  return { enabled: true, modes };
+  return { enabled: false, modes: [] };
 }
 
 export default function SeekerLayout({
