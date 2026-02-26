@@ -74,30 +74,37 @@ function setQueryChrome(router, chrome) {
   }
 }
 
-// ✅ NEW: AI Partner entitlement + allowed modes (based on your Prisma enums)
-// - Seeker Free (SEEKER+FREE): NO AI Partner at all
-// - Seeker Pro (SEEKER+PRO): Seeker Buddy
-// - Coach (COACH+COACH): Seeker Buddy + Coach Buddy
-// - Recruiter (RECRUITER + SMALL_BIZ/ENTERPRISE): Seeker Buddy + Recruiter Buddy
+function isFreeLikePlan(plan) {
+  const p = String(plan || '').toUpperCase().trim();
+  if (!p) return false;
+  return p === 'FREE' || p === 'BASIC' || p.includes('FREE');
+}
+
+// ✅ AI Partner entitlement + allowed modes
+// Rules:
+// - Seeker Free: NO
+// - Any paid plan: YES
+// - Seeker paid: seeker mode
+// - Coach paid: seeker + coach
+// - Recruiter paid (SMB or Enterprise): seeker + recruiter
 function getAiPartnerAccess(planLoaded, role, plan) {
   if (!planLoaded) return { enabled: false, modes: [] };
 
   const r = String(role || '').toUpperCase().trim(); // SEEKER | COACH | RECRUITER | ...
-  const p = String(plan || '').toUpperCase().trim(); // FREE | PRO | COACH | SMALL_BIZ | ENTERPRISE | ...
+  const freeLike = isFreeLikePlan(plan);
 
-  const isSeekerFree = r === 'SEEKER' && p === 'FREE';
-  if (isSeekerFree) return { enabled: false, modes: [] };
+  // ✅ Absolute: FREE-like plans never see the Striker
+  if (freeLike) return { enabled: false, modes: [] };
 
-  // ✅ Everyone paid gets Seeker Buddy
+  // ✅ Everyone paid gets Seeker Striker
   const modes = ['seeker'];
 
-  // ✅ Coach accounts get Coach Buddy
+  // ✅ Coach accounts get Coach Striker
   if (r === 'COACH') modes.push('coach');
 
-  // ✅ Recruiter accounts get Recruiter Buddy
+  // ✅ Recruiter accounts get Recruiter Striker (SMB + Enterprise)
   if (r === 'RECRUITER') modes.push('recruiter');
 
-  // ✅ (Optional hardening): if some admin role should see more later, we can add it explicitly.
   return { enabled: true, modes };
 }
 
@@ -383,7 +390,7 @@ export default function SeekerLayout({
   const headerLayer = { position: 'relative', zIndex: 9 };
   const rightRailLayer = { position: 'relative', zIndex: 10 };
 
-  // ✅ NEW: AI Partner access (desktop-only render for now)
+  // ✅ AI Partner access (desktop-only render for now)
   const aiAccess = useMemo(() => getAiPartnerAccess(planLoaded, role, plan), [planLoaded, role, plan]);
 
   return (
@@ -440,7 +447,7 @@ export default function SeekerLayout({
 
       <MobileBottomBar isMobile={isMobile} chromeMode={chromeMode} onOpenTools={handleOpenTools} />
 
-      {/* ✅ NEW: Desktop AI Partner (Seeker FREE does not get this at all) */}
+      {/* ✅ Desktop AI Partner (FREE-like plans do not get this at all) */}
       {!isMobile && aiAccess.enabled ? <AiWindowsHost allowedModes={aiAccess.modes} /> : null}
 
       {isMobile && mobileToolsOpen && (
