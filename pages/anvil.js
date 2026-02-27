@@ -56,6 +56,8 @@ export default function AnvilPage() {
     WebkitBackdropFilter: "blur(10px)",
   };
 
+  const GAP = 16;
+
   // -----------------------------
   // Header (hub style) - glass
   // -----------------------------
@@ -100,14 +102,24 @@ export default function AnvilPage() {
   );
 
   // -----------------------------
-  // Right rail (ONLY ad slot - everything else removed)
+  // Right rail (ONLY ad slot - uniform glass container like other pages)
   // -----------------------------
   const RightColumn = (
-    <div style={{ display: "grid", gap: 12 }}>
-      <div style={{ ...GLASS, padding: 16 }}>
+    <aside
+      style={{
+        ...GLASS,
+        padding: 16,
+        boxSizing: "border-box",
+        display: "flex",
+        flexDirection: "column",
+        gap: GAP,
+        alignSelf: "stretch",
+      }}
+    >
+      <div style={{ minHeight: 160, width: "100%" }}>
         <RightRailPlacementManager slot="right_rail_1" />
       </div>
-    </div>
+    </aside>
   );
 
   // -----------------------------
