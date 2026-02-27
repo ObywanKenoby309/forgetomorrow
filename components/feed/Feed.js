@@ -22,7 +22,7 @@ export default function Feed() {
 
   const currentUserAvatar = session?.user?.avatarUrl || session?.user?.image || null;
 
-  // ✅ MIN ADD: preferred avatarUrl from your “working” system (DB-backed)
+  // ✅ MIN ADD: preferred avatarUrl from your "working" system (DB-backed)
   // IMPORTANT: only use this hook for avatarUrl, not initials (prevents Y → S flicker)
   // ✅ MIN CHANGE: also read loading so we don't "resolve no avatar" too early on refresh
   const { avatarUrl: resolvedAvatarUrl, loading: resolvedAvatarLoading } = useCurrentUserAvatar();
@@ -100,6 +100,11 @@ export default function Feed() {
       if (Array.isArray(parsed?.attachments)) attachments = parsed.attachments;
     } catch {}
 
+    // Prefer top-level attachments array if present (new format from /api/feed/index.js)
+    if (Array.isArray(row.attachments) && row.attachments.length > 0) {
+      attachments = row.attachments;
+    }
+
     let reactions = [];
     const rawReactions = row.reactions;
 
@@ -174,45 +179,35 @@ export default function Feed() {
     return () => clearInterval(interval);
   }, [filter]);
 
-  const handleNewPost = async (postFromComposer) => {
-    const body = postFromComposer.body ?? '';
-    const payload = {
-      content: JSON.stringify({
-        body,
-        attachments: postFromComposer.attachments ?? [],
-      }),
-      text: body,
-      type: postFromComposer.type,
-      attachments: postFromComposer.attachments ?? [],
-    };
+  // ✅ UPDATED: receives { body, type, attachments } from PostComposer (no more base64).
+  // Must be async and must THROW on failure so PostComposer keeps the composer
+  // open with the user's content intact instead of silently erasing it.
+  const handleNewPost = async ({ body, type, attachments }) => {
+    const res = await fetch('/api/feed', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ body, type, attachments: attachments ?? [] }),
+    });
 
-    try {
-      const res = await fetch('/api/feed', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(payload),
-      });
+    if (!res.ok) {
+      const data = await res.json().catch(() => ({}));
+      throw new Error(data.error || `Post failed (${res.status})`);
+    }
 
-      if (res.ok) {
-        await reloadFeed();
-        setShowComposer(false);
+    const { post } = await res.json();
 
-        try {
-          const feedRes = await fetch('/api/feed');
-          if (feedRes.ok) {
-            const feedData = await feedRes.json();
-            const community = (feedData.posts || []).map(normalizeCommunityPost).filter(Boolean);
-            const mine = community.find((p) => String(p?.authorId || '') === String(currentUserId));
-            if (mine?.id) {
-              await logPostInteraction(mine.id, 'post_create');
-            }
-          }
-        } catch {}
-      } else {
-        console.error('Post failed', await res.text());
-      }
-    } catch (err) {
-      console.error('Post failed', err);
+    // Optimistically prepend the new post so the feed feels instant
+    if (post) {
+      setPosts((prev) => [normalizeCommunityPost(post), ...prev]);
+    } else {
+      await reloadFeed();
+    }
+
+    setShowComposer(false);
+
+    // Best-effort interaction log
+    if (post?.id) {
+      await logPostInteraction(post.id, 'post_create');
     }
   };
 

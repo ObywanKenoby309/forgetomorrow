@@ -3,61 +3,53 @@ import { useMemo, useState } from 'react';
 
 export default function PostComposer({ onPost, onCancel }) {
   const [text, setText] = useState('');
-  const [postType, setPostType] = useState(''); // "", "business", "personal"
-  const [attachments, setAttachments] = useState([]); // [{type, url, name}]
+  const [postType, setPostType] = useState('');
+  const [attachments, setAttachments] = useState([]);
   const [showLinkInput, setShowLinkInput] = useState(false);
   const [linkValue, setLinkValue] = useState('');
   const [showEmojiBar, setShowEmojiBar] = useState(false);
+  const [uploading, setUploading] = useState(false);
+  const [submitError, setSubmitError] = useState('');
 
   const EMOJIS = useMemo(() => ['🔥', '💼', '🤝', '🚀', '🙏', '💪', '🛠️', '❤️'], []);
 
   const canPost =
+    !uploading &&
     text.trim().length > 0 &&
     (postType === 'business' || postType === 'personal');
 
-  const fileToDataUrl = (file) =>
-    new Promise((resolve, reject) => {
-      const reader = new FileReader();
-      reader.onload = () => resolve(reader.result);
-      reader.onerror = reject;
-      reader.readAsDataURL(file);
-    });
-
-  const addImages = async (files) => {
+  // ─── Upload files to Supabase via /api/feed/upload ──────────────────────
+  const uploadFiles = async (files, type) => {
     if (!files?.length) return;
+    setUploading(true);
+    setSubmitError('');
+
     try {
-      const promises = [...files].map(async (f) => {
-        const dataUrl = await fileToDataUrl(f);
-        return {
-          type: 'image',
-          url: dataUrl,
-          name: f.name || 'image',
-        };
+      const formData = new FormData();
+      [...files].forEach((f) => formData.append('file', f));
+
+      const res = await fetch('/api/feed/upload', {
+        method: 'POST',
+        body: formData,
       });
-      const next = await Promise.all(promises);
-      setAttachments((prev) => [...prev, ...next]);
+
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}));
+        throw new Error(data.error || `Upload failed (${res.status})`);
+      }
+
+      const { attachments: uploaded } = await res.json();
+      setAttachments((prev) => [...prev, ...uploaded]);
     } catch (err) {
-      console.error('Failed to read image files', err);
+      console.error('Upload error', err);
+      setSubmitError(err.message || 'Upload failed. Please try again.');
+    } finally {
+      setUploading(false);
     }
   };
 
-  const addVideos = async (files) => {
-    if (!files?.length) return;
-    try {
-      const promises = [...files].map(async (f) => {
-        const dataUrl = await fileToDataUrl(f);
-        return {
-          type: 'video',
-          url: dataUrl,
-          name: f.name || 'video',
-        };
-      });
-      const next = await Promise.all(promises);
-      setAttachments((prev) => [...prev, ...next]);
-    } catch (err) {
-      console.error('Failed to read video files', err);
-    }
-  };
+  const addImages = (files) => uploadFiles(files, 'image');
+  const addVideos = (files) => uploadFiles(files, 'video');
 
   const addLink = () => {
     const url = linkValue.trim();
@@ -87,37 +79,34 @@ export default function PostComposer({ onPost, onCancel }) {
     setText((prev) => (prev || '') + emoji);
   };
 
-  const submit = () => {
+  // ─── Submit — only clears state if the API call succeeds ────────────────
+  const submit = async () => {
     const body = text.trim();
     if (!canPost) return;
+    setSubmitError('');
 
-    onPost?.({
-      id:
-        (typeof crypto !== 'undefined' && crypto.randomUUID?.()) ||
-        String(Date.now()),
-      createdAt: Date.now(),
-      body,
-      type: postType,
-      likes: 0,
-      comments: [],
-      attachments: attachments.map(({ type, url, name }) => ({
-        type,
-        url,
-        name,
-      })),
-    });
+    try {
+      await onPost?.({
+        body,
+        type: postType,
+        attachments: attachments.map(({ type, url, name }) => ({ type, url, name })),
+      });
 
-    setText('');
-    setPostType('');
-    setAttachments([]);
-    setShowLinkInput(false);
-    setLinkValue('');
-    setShowEmojiBar(false);
+      // Only clear if onPost resolved without throwing
+      setText('');
+      setPostType('');
+      setAttachments([]);
+      setShowLinkInput(false);
+      setLinkValue('');
+      setShowEmojiBar(false);
+    } catch (err) {
+      console.error('Post failed', err);
+      setSubmitError(err.message || 'Post failed. Your content is still here — please try again.');
+    }
   };
 
   return (
     <section className="w-full rounded-2xl border border-gray-200 bg-white/85 backdrop-blur p-4">
-      {/* textarea feels more “alive” with better padding + focus ring */}
       <textarea
         value={text}
         onChange={(e) => setText(e.target.value)}
@@ -125,6 +114,24 @@ export default function PostComposer({ onPost, onCancel }) {
         className="w-full border border-gray-200 rounded-2xl p-4 bg-white focus:outline-none focus:ring-2 focus:ring-orange-400"
         rows={4}
       />
+
+      {/* Upload progress indicator */}
+      {uploading && (
+        <div className="mt-2 flex items-center gap-2 text-sm text-orange-500">
+          <svg className="animate-spin h-4 w-4" viewBox="0 0 24 24" fill="none">
+            <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"/>
+            <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z"/>
+          </svg>
+          Uploading…
+        </div>
+      )}
+
+      {/* Error message */}
+      {submitError && (
+        <div className="mt-2 text-sm text-red-500 bg-red-50 border border-red-200 rounded-xl px-3 py-2">
+          {submitError}
+        </div>
+      )}
 
       {/* Attachments preview */}
       {attachments.length > 0 && (
@@ -195,10 +202,7 @@ export default function PostComposer({ onPost, onCancel }) {
             </button>
             <button
               type="button"
-              onClick={() => {
-                setShowLinkInput(false);
-                setLinkValue('');
-              }}
+              onClick={() => { setShowLinkInput(false); setLinkValue(''); }}
               className="px-3 py-2 rounded-xl border border-gray-200 bg-white hover:bg-gray-50"
             >
               Cancel
@@ -235,18 +239,13 @@ export default function PostComposer({ onPost, onCancel }) {
             accept="image/*"
             multiple
             className="hidden"
-            onChange={(e) => {
-              addImages(e.target.files);
-              e.target.value = '';
-            }}
+            onChange={(e) => { addImages(e.target.files); e.target.value = ''; }}
           />
           <label
             htmlFor="feed-image-input"
-            className="inline-flex items-center gap-1 px-3 py-2 rounded-xl border border-gray-200 bg-white hover:bg-gray-50 cursor-pointer"
+            className={`inline-flex items-center gap-1 px-3 py-2 rounded-xl border border-gray-200 bg-white hover:bg-gray-50 cursor-pointer ${uploading ? 'opacity-50 pointer-events-none' : ''}`}
           >
-            <span role="img" aria-label="photo">
-              📷
-            </span>
+            <span role="img" aria-label="photo">📷</span>
             Photo
           </label>
 
@@ -256,18 +255,13 @@ export default function PostComposer({ onPost, onCancel }) {
             accept="video/mp4,video/webm"
             multiple
             className="hidden"
-            onChange={(e) => {
-              addVideos(e.target.files);
-              e.target.value = '';
-            }}
+            onChange={(e) => { addVideos(e.target.files); e.target.value = ''; }}
           />
           <label
             htmlFor="feed-video-input"
-            className="inline-flex items-center gap-1 px-3 py-2 rounded-xl border border-gray-200 bg-white hover:bg-gray-50 cursor-pointer"
+            className={`inline-flex items-center gap-1 px-3 py-2 rounded-xl border border-gray-200 bg-white hover:bg-gray-50 cursor-pointer ${uploading ? 'opacity-50 pointer-events-none' : ''}`}
           >
-            <span role="img" aria-label="video">
-              🎥
-            </span>
+            <span role="img" aria-label="video">🎥</span>
             Video
           </label>
 
@@ -276,9 +270,7 @@ export default function PostComposer({ onPost, onCancel }) {
             className="inline-flex items-center gap-1 px-3 py-2 rounded-xl border border-gray-200 bg-white hover:bg-gray-50"
             onClick={() => setShowLinkInput((v) => !v)}
           >
-            <span role="img" aria-label="link">
-              🔗
-            </span>
+            <span role="img" aria-label="link">🔗</span>
             Link
           </button>
 
@@ -287,9 +279,7 @@ export default function PostComposer({ onPost, onCancel }) {
             className="inline-flex items-center gap-1 px-3 py-2 rounded-xl border border-gray-200 bg-white hover:bg-gray-50"
             onClick={() => setShowEmojiBar((v) => !v)}
           >
-            <span role="img" aria-label="emoji">
-              🙂
-            </span>
+            <span role="img" aria-label="emoji">🙂</span>
             Emoji
           </button>
         </div>
@@ -300,11 +290,7 @@ export default function PostComposer({ onPost, onCancel }) {
             <button
               type="button"
               onClick={() => setPostType('business')}
-              className={`px-3 py-2 text-sm font-semibold ${
-                postType === 'business'
-                  ? 'bg-[#ff8a65] text-white'
-                  : 'bg-white text-gray-800 hover:bg-gray-50'
-              }`}
+              className={`px-3 py-2 text-sm font-semibold ${postType === 'business' ? 'bg-[#ff8a65] text-white' : 'bg-white text-gray-800 hover:bg-gray-50'}`}
               aria-pressed={postType === 'business'}
             >
               Business
@@ -312,11 +298,7 @@ export default function PostComposer({ onPost, onCancel }) {
             <button
               type="button"
               onClick={() => setPostType('personal')}
-              className={`px-3 py-2 text-sm font-semibold ${
-                postType === 'personal'
-                  ? 'bg-[#ff8a65] text-white'
-                  : 'bg-white text-gray-800 hover:bg-gray-50'
-              }`}
+              className={`px-3 py-2 text-sm font-semibold ${postType === 'personal' ? 'bg-[#ff8a65] text-white' : 'bg-white text-gray-800 hover:bg-gray-50'}`}
               aria-pressed={postType === 'personal'}
             >
               Personal
@@ -330,12 +312,11 @@ export default function PostComposer({ onPost, onCancel }) {
             className="bg-[#ff7043] text-white font-extrabold px-5 py-2.5 rounded-xl disabled:opacity-40 disabled:cursor-not-allowed hover:opacity-95"
             title={!canPost ? 'Write something and choose Business or Personal' : 'Post'}
           >
-            Post
+            {uploading ? 'Uploading…' : 'Post'}
           </button>
         </div>
       </div>
 
-      {/* gentle nudge */}
       {!postType && text.trim() && (
         <div className="mt-3 text-xs text-red-500">
           Please choose Business or Personal before posting.
