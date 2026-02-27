@@ -74,7 +74,6 @@ export default function SignIn({ csrfToken, error }: SignInProps) {
         <input name="csrfToken" type="hidden" defaultValue={csrfToken ?? ''} />
 
         {/* 🔁 After successful login, come back here so getServerSideProps can route by plan */}
-        <input name="callbackUrl" type="hidden" value="/auth/signin" />
 
         <div style={{ marginBottom: 16 }}>
           <label

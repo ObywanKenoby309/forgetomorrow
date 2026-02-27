@@ -93,12 +93,18 @@ export const authOptions: NextAuthOptions = {
   secret: process.env.NEXTAUTH_SECRET,
 
   callbacks: {
-    async redirect({ url, baseUrl }) {
-      // 🔒 HARDENED: keep redirects safe and predictable
-      if (url.startsWith("/")) return `${baseUrl}${url}`;
-      if (url.startsWith(baseUrl)) return url;
-      return `${baseUrl}/auth/signin`;
-    },
+    async redirect({ url, baseUrl, token }) {
+  if (url === `${baseUrl}/auth/signin` || url === '/auth/signin') {
+    const role = String((token as any)?.role || '').toUpperCase();
+    if (role === 'RECRUITER') return `${baseUrl}/recruiter/dashboard`;
+    if (role === 'COACH') return `${baseUrl}/coaching-dashboard`;
+    if (role === 'ADMIN') return `${baseUrl}/admin`;
+    return `${baseUrl}/seeker-dashboard`;
+  }
+  if (url.startsWith('/')) return `${baseUrl}${url}`;
+  if (url.startsWith(baseUrl)) return url;
+  return `${baseUrl}/auth/signin`;
+},
 
     async jwt({ token, user }) {
       if (user) {

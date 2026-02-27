@@ -10,12 +10,20 @@ declare module "next-auth" {
       image?: string | null;
       role?: string | null;
       plan?: string | null;
+      stripeCustomerId?: string | null;
+      accountKey?: string | null;
+      isPlatformAdmin?: boolean;
+      avatarUrl?: string | null;
     };
   }
 
   interface User {
     role?: string | null;
     plan?: string | null;
+    stripeCustomerId?: string | null;
+    accountKey?: string | null;
+    isPlatformAdmin?: boolean;
+    avatarUrl?: string | null;
   }
 }
 
@@ -23,5 +31,9 @@ declare module "next-auth/jwt" {
   interface JWT {
     role?: string | null;
     plan?: string | null;
+    stripeCustomerId?: string | null;
+    accountKey?: string | null;
+    isPlatformAdmin?: boolean;
+    avatarUrl?: string | null;
   }
 }
