@@ -405,6 +405,77 @@ export default function PostCommentsModal({ post, onClose, onReply }) {
 
         <p className="mb-4 whitespace-pre-wrap">{post.body}</p>
 
+{/* ✅ ATTACHMENTS */}
+{Array.isArray(post?.attachments) && post.attachments.length > 0 && (
+  <div className="mb-4 space-y-3">
+    {post.attachments.map((a, idx) => {
+      const type = String(a?.type || '').toLowerCase();
+      const url = String(a?.url || '').trim();
+      if (!url) return null;
+
+      // Allow data URLs + http(s) + relative
+      const isSafe =
+        url.startsWith('data:image/') ||
+		url.startsWith('data:') && url.includes('image') ||
+        url.startsWith('data:video/') ||
+        url.startsWith('https://') ||
+        url.startsWith('http://') ||
+        url.startsWith('/');
+
+      if (!isSafe) return null;
+
+      if (type === 'image') {
+        return (
+          <div
+            key={`modal-attachment-${idx}`}
+            className="border border-gray-200 rounded-xl overflow-hidden bg-white"
+          >
+            <img
+              src={url}
+              alt={a?.name || 'Image attachment'}
+              className="w-full max-h-[420px] object-contain bg-white"
+              onError={(e) => {
+                try { e.currentTarget.style.display = 'none'; } catch {}
+              }}
+            />
+          </div>
+        );
+      }
+
+      if (type === 'video') {
+        return (
+          <div
+            key={`modal-attachment-${idx}`}
+            className="border border-gray-200 rounded-xl overflow-hidden bg-white"
+          >
+            <video
+              src={url}
+              controls
+              className="w-full max-h-[420px] object-contain bg-white"
+            />
+          </div>
+        );
+      }
+
+      if (type === 'link') {
+        return (
+          <a
+            key={`modal-attachment-${idx}`}
+            href={url}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="inline-flex items-center gap-2 px-3 py-2 rounded-lg border border-gray-200 bg-white hover:bg-gray-50 text-sm text-blue-700 break-all"
+          >
+            🔗 {a?.name || url}
+          </a>
+        );
+      }
+
+      return null;
+    })}
+  </div>
+)}
+
         <div className="border-t pt-4 space-y-3 max-h-[50vh] overflow-y-auto">
           {visibleComments.length === 0 ? (
             <div className="text-sm text-gray-500">
