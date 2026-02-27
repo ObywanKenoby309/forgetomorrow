@@ -171,18 +171,25 @@ export default function CoachingLayout({
             style={{
               gridArea: 'right',
               alignSelf: 'start',
-              background: '#2a2a2a',
-              border: '1px solid #3a3a3a',
-              borderRadius: 12,
+
+              // ✅ MIN CHANGE: match site-wide frosted glass right rail
+              border: GLASS.border,
+              background: GLASS.background,
+              boxShadow: GLASS.boxShadow,
+              backdropFilter: GLASS.backdropFilter,
+              WebkitBackdropFilter: GLASS.WebkitBackdropFilter,
+
+              borderRadius: 14, // ✅ was 12
               padding: 16,
-              boxShadow: '0 2px 6px rgba(0,0,0,0.06)',
               minHeight: 120,
               boxSizing: 'border-box',
               width: isMobile ? '100%' : UI.RIGHT_W,
               minWidth: isMobile ? 0 : UI.RIGHT_W,
               maxWidth: isMobile ? '100%' : UI.RIGHT_W,
               minInlineSize: 0,
-              color: 'white',
+
+              // ✅ was white text for dark rail; keep neutral so ad card can be solid on its own
+              color: '#112033',
             }}
           >
             {right}

@@ -276,7 +276,7 @@ export default function SeekerLayout({
   const rightBase = {
     gridArea: 'right',
     alignSelf: 'start',
-    borderRadius: 12,
+    borderRadius: 14, // ✅ MIN CHANGE: match glass standard (was 12)
     boxSizing: 'border-box',
     width: hasRight && !isMobile ? rightWidth : '100%',
     minWidth: hasRight && !isMobile ? rightWidth : 0,
@@ -284,11 +284,14 @@ export default function SeekerLayout({
     minInlineSize: 0,
   };
 
+  // ✅ MIN CHANGE: replace dark rail with frosted glass (uniform across site)
   const rightDark = {
-    background: '#2a2a2a',
-    border: '1px solid #3a3a3a',
+    border: '1px solid rgba(255,255,255,0.22)',
+    background: 'rgba(255,255,255,0.58)',
     padding: 16,
-    boxShadow: '0 2px 6px rgba(0,0,0,0.06)',
+    boxShadow: '0 10px 24px rgba(0,0,0,0.12)',
+    backdropFilter: 'blur(10px)',
+    WebkitBackdropFilter: 'blur(10px)',
   };
 
   const rightLight = {
