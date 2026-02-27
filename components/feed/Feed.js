@@ -173,11 +173,12 @@ export default function Feed() {
   };
 
   useEffect(() => {
+    if (status !== 'authenticated') return;
     reloadFeed();
     loadBlockedAuthors();
     const interval = setInterval(reloadFeed, 5 * 60 * 1000);
     return () => clearInterval(interval);
-  }, [filter]);
+  }, [filter, status]);
 
   // ✅ UPDATED: receives { body, type, attachments } from PostComposer (no more base64).
   // Must be async and must THROW on failure so PostComposer keeps the composer
