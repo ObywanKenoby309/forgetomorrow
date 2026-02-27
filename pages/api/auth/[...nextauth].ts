@@ -17,7 +17,6 @@ export const authOptions: NextAuthOptions = {
 
         const normalizedEmail = credentials.email.toLowerCase().trim();
 
-        // ✅ MIN CHANGE: select avatarUrl so it’s guaranteed present without any-casting
         const user = await prisma.user.findUnique({
           where: { email: normalizedEmail },
           select: {
@@ -31,7 +30,7 @@ export const authOptions: NextAuthOptions = {
             stripeCustomerId: true,
             accountKey: true,
             passwordHash: true,
-            avatarUrl: true, // ✅
+            avatarUrl: true,
           },
         });
 
@@ -66,8 +65,6 @@ export const authOptions: NextAuthOptions = {
           stripeCustomerId: user.stripeCustomerId,
           accountKey: user.accountKey ?? null,
           isPlatformAdmin,
-
-          // ✅ MIN ADD: include avatar in the session payload (instant in UI)
           avatarUrl: user.avatarUrl ?? null,
         };
       },
@@ -78,7 +75,7 @@ export const authOptions: NextAuthOptions = {
   session: {
     strategy: "jwt",
     maxAge: 24 * 60 * 60, // 24 hours absolute
-    updateAge: 60 * 60, // refresh at most once per hour
+    updateAge: 60 * 60,   // refresh at most once per hour
   },
 
   jwt: {
@@ -93,29 +90,22 @@ export const authOptions: NextAuthOptions = {
   secret: process.env.NEXTAUTH_SECRET,
 
   callbacks: {
-    async redirect({ url, baseUrl, token }) {
-  if (url === `${baseUrl}/auth/signin` || url === '/auth/signin') {
-    const role = String((token as any)?.role || '').toUpperCase();
-    if (role === 'RECRUITER') return `${baseUrl}/recruiter/dashboard`;
-    if (role === 'COACH') return `${baseUrl}/coaching-dashboard`;
-    if (role === 'ADMIN') return `${baseUrl}/admin`;
-    return `${baseUrl}/seeker-dashboard`;
-  }
-  if (url.startsWith('/')) return `${baseUrl}${url}`;
-  if (url.startsWith(baseUrl)) return url;
-  return `${baseUrl}/auth/signin`;
-},
+    // ✅ FIXED: token is not available in redirect callback — role routing
+    // is handled by getServerSideProps in signin.tsx instead.
+    async redirect({ url, baseUrl }) {
+      if (url.startsWith("/")) return `${baseUrl}${url}`;
+      if (url.startsWith(baseUrl)) return url;
+      return `${baseUrl}/auth/signin`;
+    },
 
     async jwt({ token, user }) {
       if (user) {
-        token.role = (user as any).role;
-        token.plan = (user as any).plan;
-        (token as any).stripeCustomerId = (user as any).stripeCustomerId ?? null;
-        (token as any).accountKey = (user as any).accountKey ?? null;
-        (token as any).isPlatformAdmin = !!(user as any).isPlatformAdmin;
-
-        // ✅ MIN ADD
-        (token as any).avatarUrl = (user as any).avatarUrl ?? null;
+        token.role = user.role;
+        token.plan = user.plan;
+        token.stripeCustomerId = user.stripeCustomerId ?? null;
+        token.accountKey = user.accountKey ?? null;
+        token.isPlatformAdmin = !!user.isPlatformAdmin;
+        token.avatarUrl = user.avatarUrl ?? null;
       }
       return token;
     },
@@ -123,20 +113,13 @@ export const authOptions: NextAuthOptions = {
     async session({ session, token }) {
       if (session.user) {
         session.user.id = token.sub!;
-        (session.user as any).role = token.role;
-        (session.user as any).plan = token.plan;
-        (session.user as any).stripeCustomerId =
-          (token as any).stripeCustomerId ?? null;
-        (session.user as any).accountKey =
-          ((token as any).accountKey as string | null) ?? null;
-        (session.user as any).isPlatformAdmin = !!(token as any).isPlatformAdmin;
-
-        // ✅ MIN ADD: expose avatarUrl on session.user
-        (session.user as any).avatarUrl = (token as any).avatarUrl ?? null;
-
-        // ✅ Optional safety: also mirror into `image` so any NextAuth-native usage works
-        (session.user as any).image =
-          (token as any).avatarUrl ?? (session.user as any).image ?? null;
+        session.user.role = token.role;
+        session.user.plan = token.plan;
+        session.user.stripeCustomerId = token.stripeCustomerId ?? null;
+        session.user.accountKey = token.accountKey ?? null;
+        session.user.isPlatformAdmin = !!token.isPlatformAdmin;
+        session.user.avatarUrl = token.avatarUrl ?? null;
+        session.user.image = token.avatarUrl ?? session.user.image ?? null;
       }
       return session;
     },
