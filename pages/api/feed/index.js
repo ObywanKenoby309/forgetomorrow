@@ -30,7 +30,25 @@ export default async function handler(req, res) {
         take: limit,
       });
 
-      return res.status(200).json({ posts });
+      // Fetch author avatars from users table so PostCard can show profile pictures
+      const authorIds = [...new Set(posts.map((p) => p.authorId).filter(Boolean))];
+      const authors = authorIds.length
+        ? await prisma.user.findMany({
+            where: { id: { in: authorIds } },
+            select: { id: true, avatarUrl: true, image: true },
+          })
+        : [];
+
+      const avatarMap = Object.fromEntries(
+        authors.map((u) => [u.id, u.avatarUrl || u.image || null])
+      );
+
+      const postsWithAvatars = posts.map((p) => ({
+        ...p,
+        authorAvatar: avatarMap[p.authorId] || null,
+      }));
+
+      return res.status(200).json({ posts: postsWithAvatars });
     } catch (err) {
       console.error('[FEED GET ERROR]', err);
       return res.status(500).json({ error: 'Failed to fetch posts' });
@@ -82,7 +100,18 @@ export default async function handler(req, res) {
         },
       });
 
-      return res.status(201).json({ post });
+      // Return the new post with the author's avatar attached
+      const author = await prisma.user.findUnique({
+        where: { id: user.id },
+        select: { avatarUrl: true, image: true },
+      });
+
+      return res.status(201).json({
+        post: {
+          ...post,
+          authorAvatar: author?.avatarUrl || author?.image || null,
+        },
+      });
     } catch (err) {
       console.error('[FEED POST ERROR]', err);
       return res.status(500).json({ error: 'Failed to create post' });
