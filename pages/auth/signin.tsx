@@ -1,13 +1,15 @@
-// pages/auth/signin.tsx — FINAL FIXED VERSION (NO MORE LOOP)
+// pages/auth/signin.tsx
 import Link from 'next/link';
+import { useState } from 'react';
 import { getSession, getCsrfToken, signIn } from 'next-auth/react';
 
 type SignInProps = {
-  csrfToken: string | null;
   error: string | null;
 };
 
-export default function SignIn({ csrfToken, error }: SignInProps) {
+export default function SignIn({ error }: SignInProps) {
+  const [isLoading, setIsLoading] = useState(false);
+
   const errorMessages: Record<string, string> = {
     Signin: 'Try signing in with a different account.',
     OAuthSignin: 'Try signing in with a different account.',
@@ -28,6 +30,27 @@ export default function SignIn({ csrfToken, error }: SignInProps) {
     ? errorMessages[error] || errorMessages.default
     : null;
 
+  async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
+    e.preventDefault();
+    setIsLoading(true);
+
+    const form = e.currentTarget;
+    const email = (form.elements.namedItem('email') as HTMLInputElement).value;
+    const password = (form.elements.namedItem('password') as HTMLInputElement).value;
+
+    // signIn() handles CSRF automatically — no hidden token needed.
+    // callbackUrl points to signin so getServerSideProps can route by role.
+    await signIn('credentials', {
+      email,
+      password,
+      callbackUrl: '/auth/signin',
+    });
+
+    // Note: setIsLoading(false) is intentionally omitted here because
+    // signIn() will navigate away on success. On failure it redirects
+    // back with ?error= and the page remounts fresh.
+  }
+
   return (
     <main
       style={{
@@ -37,6 +60,7 @@ export default function SignIn({ csrfToken, error }: SignInProps) {
         background: '#fff',
         borderRadius: 12,
         boxShadow: '0 4px 20px rgba(0,0,0,0.1)',
+        minHeight: '60vh',
       }}
       aria-labelledby="signin-heading"
     >
@@ -70,16 +94,7 @@ export default function SignIn({ csrfToken, error }: SignInProps) {
         </div>
       )}
 
-      <form onSubmit={async (e) => {
-  e.preventDefault();
-  const form = e.currentTarget;
-  const email = (form.elements.namedItem('email') as HTMLInputElement).value;
-  const password = (form.elements.namedItem('password') as HTMLInputElement).value;
-  await signIn('credentials', { email, password, callbackUrl: '/auth/signin' });
-}}>
-
-        {/* 🔁 After successful login, come back here so getServerSideProps can route by plan */}
-
+      <form onSubmit={handleSubmit}>
         <div style={{ marginBottom: 16 }}>
           <label
             htmlFor="email"
@@ -128,7 +143,6 @@ export default function SignIn({ csrfToken, error }: SignInProps) {
           />
         </div>
 
-        {/* ✅ NEW: Forgot Password link (minimal UI addition) */}
         <div style={{ textAlign: 'right', marginBottom: 18 }}>
           <Link
             href="/forgot-password"
@@ -140,6 +154,7 @@ export default function SignIn({ csrfToken, error }: SignInProps) {
 
         <button
           type="submit"
+          disabled={isLoading}
           style={{
             width: '100%',
             padding: 14,
@@ -149,10 +164,11 @@ export default function SignIn({ csrfToken, error }: SignInProps) {
             borderRadius: 8,
             fontSize: 16,
             fontWeight: 'bold',
-            cursor: 'pointer',
+            cursor: isLoading ? 'not-allowed' : 'pointer',
+            opacity: isLoading ? 0.8 : 1,
           }}
         >
-          Sign In
+          {isLoading ? 'Signing in…' : 'Sign In'}
         </button>
       </form>
 
@@ -164,7 +180,7 @@ export default function SignIn({ csrfToken, error }: SignInProps) {
           fontSize: 13,
         }}
       >
-        After signing in, you’ll land on your personal dashboard.
+        After signing in, you'll land on your personal dashboard.
       </p>
     </main>
   );
@@ -178,57 +194,27 @@ export async function getServerSideProps(context: any) {
 
   // Already logged in → send to the RIGHT dashboard
   if (session?.user) {
-    const role = String((session.user as any).role || "").toUpperCase();
-    const plan = String((session.user as any).plan || "").toUpperCase();
+    const role = String((session.user as any).role || '').toUpperCase();
 
-    // 1) Recruiter (SMALL_BIZ / ENTERPRISE)
-    if (role === "RECRUITER") {
-      // If you ever want a different page for SMB vs ENT, you can branch on `plan` here.
-      // For now, they both land on the same recruiter dashboard.
-      return {
-        redirect: {
-          destination: "/recruiter/dashboard",
-          permanent: false,
-        },
-      };
+    if (role === 'RECRUITER') {
+      return { redirect: { destination: '/recruiter/dashboard', permanent: false } };
+    }
+    if (role === 'COACH') {
+      return { redirect: { destination: '/coaching-dashboard', permanent: false } };
+    }
+    if (role === 'ADMIN') {
+      return { redirect: { destination: '/admin', permanent: false } };
     }
 
-    // 2) Coach
-    if (role === "COACH") {
-      return {
-        redirect: {
-          destination: "/coaching-dashboard", // or /coach/clients if that’s your real hub
-          permanent: false,
-        },
-      };
-    }
-
-    // 3) Admin (optional)
-    if (role === "ADMIN") {
-      return {
-        redirect: {
-          destination: "/admin",
-          permanent: false,
-        },
-      };
-    }
-
-    // 4) Default: Seeker (FREE / PRO)
-    return {
-      redirect: {
-        destination: "/seeker-dashboard",
-        permanent: false,
-      },
-    };
+    // Default: Seeker (FREE / PRO)
+    return { redirect: { destination: '/seeker-dashboard', permanent: false } };
   }
 
   // Not logged in → show sign-in form
-  const csrfToken = await getCsrfToken(context);
   const { error = null } = context.query;
 
   return {
     props: {
-      csrfToken: csrfToken ?? null,
       error: error ?? null,
     },
   };
