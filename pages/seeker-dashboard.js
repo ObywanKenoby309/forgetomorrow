@@ -90,11 +90,16 @@ function pickSeekerBucket(n) {
   return 'messages';
 }
 
-function ActionTile({ title, emptyText, items, href, withChrome }) {
+function ActionTile({ title, emptyText, items, href, withChrome, style }) {
   const list = Array.isArray(items) ? items : [];
 
   return (
-    <div className="rounded-lg border bg-white p-4 flex flex-col min-h-[170px]">
+    <div
+      className="rounded-lg p-4 flex flex-col min-h-[170px]"
+      style={{
+        ...(style || {}),
+      }}
+    >
       <div className="flex items-start justify-between gap-3">
         <div className="font-semibold text-slate-900 text-sm leading-5 whitespace-normal break-words">
           {title}
@@ -128,7 +133,7 @@ function ActionTile({ title, emptyText, items, href, withChrome }) {
   );
 }
 
-function SeekerActionCenterSection({ scope, withChrome }) {
+function SeekerActionCenterSection({ scope, withChrome, glassStyle }) {
   const [items, setItems] = useState([]);
   const [initialLoading, setInitialLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
@@ -193,7 +198,12 @@ function SeekerActionCenterSection({ scope, withChrome }) {
   }, [items]);
 
   return (
-    <section className="bg-white border border-gray-200 rounded-xl p-5 shadow-sm">
+    <section
+      className="rounded-xl p-5"
+      style={{
+        ...(glassStyle || {}),
+      }}
+    >
       <div className="flex items-center justify-between gap-3 mb-4">
         <h2 className="text-lg font-semibold text-orange-600">Action Center</h2>
 
@@ -212,7 +222,14 @@ function SeekerActionCenterSection({ scope, withChrome }) {
       {initialLoading ? (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
           {Array.from({ length: 4 }).map((_, idx) => (
-            <div key={idx} className="rounded-lg border bg-white p-4 min-h-[170px] animate-pulse">
+            <div
+              key={idx}
+              className="rounded-lg p-4 min-h-[170px] animate-pulse"
+              style={{
+                ...(glassStyle || {}),
+                borderRadius: 14,
+              }}
+            >
               <div className="h-4 w-40 bg-slate-200 rounded" />
               <div className="h-3 w-56 bg-slate-200 rounded mt-4" />
               <div className="h-3 w-44 bg-slate-200 rounded mt-2" />
@@ -228,6 +245,7 @@ function SeekerActionCenterSection({ scope, withChrome }) {
             items={buckets.messages}
             href={`/action-center?scope=${scope}`}
             withChrome={withChrome}
+            style={glassStyle}
           />
           <ActionTile
             title="Job Updates"
@@ -235,6 +253,7 @@ function SeekerActionCenterSection({ scope, withChrome }) {
             items={buckets.jobs}
             href={`/action-center?scope=${scope}`}
             withChrome={withChrome}
+            style={glassStyle}
           />
           <ActionTile
             title="Application Updates"
@@ -242,6 +261,7 @@ function SeekerActionCenterSection({ scope, withChrome }) {
             items={buckets.applications}
             href={`/action-center?scope=${scope}`}
             withChrome={withChrome}
+            style={glassStyle}
           />
           <ActionTile
             title="Calendar Updates"
@@ -249,6 +269,7 @@ function SeekerActionCenterSection({ scope, withChrome }) {
             items={buckets.calendar}
             href={`/action-center?scope=${scope}`}
             withChrome={withChrome}
+            style={glassStyle}
           />
         </div>
       )}
@@ -278,7 +299,7 @@ export default function SeekerDashboard() {
   const RIGHT_COL_WIDTH = 280;
   const GAP = 16;
 
-  // ✅ Glass + cards (same approach as Applications page)
+  // ✅ Glass baseline (matches Feed)
   const GLASS = {
     borderRadius: 14,
     border: '1px solid rgba(255,255,255,0.22)',
@@ -288,21 +309,11 @@ export default function SeekerDashboard() {
     WebkitBackdropFilter: 'blur(10px)',
   };
 
-  const WHITE_CARD = {
-    background: 'rgba(255,255,255,0.92)',
-    border: '1px solid rgba(0,0,0,0.08)',
-    borderRadius: 12,
-    boxShadow: '0 2px 10px rgba(0,0,0,0.08)',
-  };
-
-  // ✅ Matches SeekerLayout's rightDark style
-  const DARK_RAIL = {
-    background: '#2a2a2a',
-    border: '1px solid #3a3a3a',
-    borderRadius: 12,
-    padding: 16,
-    boxShadow: '0 2px 6px rgba(0,0,0,0.06)',
-    boxSizing: 'border-box',
+  // ✅ KPI should slightly stand out on dashboards
+  const KPI_GLASS = {
+    ...GLASS,
+    background: 'rgba(255,255,255,0.68)',
+    boxShadow: '0 12px 28px rgba(0,0,0,0.14)',
   };
 
   const PAGE_GLASS_WRAP = {
@@ -401,22 +412,6 @@ export default function SeekerDashboard() {
         <title>Seeker Dashboard | ForgeTomorrow</title>
       </Head>
 
-      {/*
-        ✅ No `right` prop, no `header` prop passed to SeekerLayout.
-        Content area spans full width from sidebar edge to page edge.
-        Everything — including the title card — lives inside our internal grid.
-
-        Visual structure:
-        ┌─────────────────────────────┬──────────────┐
-        │ Title Card       (row 1)    │  Ad Slot     │
-        ├─────────────────────────────│  (rows 1-3)  │
-        │ KPI Row          (row 2)    │              │
-        ├─────────────────────────────│  Profile     │
-        │ Action Center    (row 3)    │  Performance │
-        ├─────────────────────────────┴──────────────┤
-        │ New Matches │ Your Next Yes │ Apps Over Time│  ← full width incl. under sidebar
-        └──────────────────────────────────────────────┘
-      */}
       <SeekerLayout title="Seeker Dashboard | ForgeTomorrow" activeNav={seekerActiveNav}>
         <div style={PAGE_GLASS_WRAP}>
           <div
@@ -428,7 +423,7 @@ export default function SeekerDashboard() {
               width: '100%',
             }}
           >
-            {/* ROW 1, COL 1: Title card — stops at center column right edge, ad space stays tall */}
+            {/* ROW 1, COL 1: Title card */}
             <section
               style={{
                 ...GLASS,
@@ -447,8 +442,8 @@ export default function SeekerDashboard() {
               </p>
             </section>
 
-            {/* ROW 2, COL 1: KPI strip */}
-            <section style={{ ...WHITE_CARD, padding: 16, gridColumn: '1 / 2', gridRow: '2' }}>
+            {/* ROW 2, COL 1: KPI strip (slightly stronger glass) */}
+            <section style={{ ...KPI_GLASS, padding: 16, gridColumn: '1 / 2', gridRow: '2' }}>
               {kpi && (
                 <KpiRow
                   pinned={kpi.pinned || 0}
@@ -460,44 +455,37 @@ export default function SeekerDashboard() {
               )}
             </section>
 
-            {/* ROW 3, COL 1: Action Center */}
+            {/* ROW 3, COL 1: Action Center (glass behind section + behind each tile) */}
             <div style={{ gridColumn: '1 / 2', gridRow: '3' }}>
-              <SeekerActionCenterSection scope={scope} withChrome={withChrome} />
+              <SeekerActionCenterSection scope={scope} withChrome={withChrome} glassStyle={GLASS} />
             </div>
 
-            {/*
-              COL 2, ROWS 1–3: Right Rail dark panel
-              Spans all three center rows — title, KPI, Action Center.
-              Ad slot on top (tall, breathing), Profile Performance below.
-            */}
+            {/* COL 2, ROWS 1–3: Right Rail (match Feed glass feel) */}
             <aside
               style={{
-                ...DARK_RAIL,
+                ...GLASS,
                 gridColumn: '2 / 3',
                 gridRow: '1 / 4',
                 display: 'flex',
                 flexDirection: 'column',
                 gap: GAP,
                 alignSelf: 'stretch',
+                padding: 16,
+                boxSizing: 'border-box',
               }}
             >
-              {/* Ad slot — top of rail, tall and breathing */}
+              {/* Ad slot — top of rail */}
               <div style={{ flex: 2, minHeight: 160 }}>
                 <RightRailPlacementManager slot="right_rail_1" />
               </div>
 
-              {/* Profile Performance — below ad */}
-              <div style={{ ...WHITE_CARD, padding: 16, flex: 1 }}>
+              {/* Profile Performance — glass match */}
+              <div style={{ ...GLASS, padding: 16, flex: 1 }}>
                 <ProfilePerformanceTeaser />
               </div>
             </aside>
 
-            {/*
-              ROW 4: Bottom 3 cards — extend left under the sidebar using negative margin,
-              while still spanning right to the page edge.
-              New Matches | Your Next Yes | Applications Over Time
-              ✅ PinnedJobsPreview owns its own empty + populated messaging — no logic needed here
-            */}
+            {/* ROW 4: Bottom 3 cards — match Feed glass */}
             <div
               style={{
                 gridColumn: '1 / -1',
@@ -508,11 +496,11 @@ export default function SeekerDashboard() {
                 marginLeft: -252,
               }}
             >
-              <section style={{ ...WHITE_CARD, padding: 16 }}>
+              <section style={{ ...GLASS, padding: 16 }}>
                 <RecommendedJobsPreview />
               </section>
 
-              <section style={{ ...WHITE_CARD, padding: 16 }}>
+              <section style={{ ...GLASS, padding: 16 }}>
                 <div className="flex items-center justify-between mb-4">
                   <h2 className="text-lg font-semibold text-orange-600">Your Next Yes</h2>
                   <Link
@@ -522,18 +510,16 @@ export default function SeekerDashboard() {
                     View all
                   </Link>
                 </div>
-                {/* ✅ Component handles both empty state and populated messaging internally */}
                 <PinnedJobsPreview />
               </section>
 
-              <section style={{ ...WHITE_CARD, padding: 16 }}>
+              <section style={{ ...GLASS, padding: 16 }}>
                 <h3 className="text-base font-semibold text-orange-600 mb-3">
                   Applications Over Time
                 </h3>
                 <ApplicationsOverTime weeks={weeks} withChrome={withChrome} />
               </section>
             </div>
-
           </div>
         </div>
       </SeekerLayout>
