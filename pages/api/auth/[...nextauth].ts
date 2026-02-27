@@ -3,6 +3,7 @@ import NextAuth, { NextAuthOptions } from "next-auth";
 import CredentialsProvider from "next-auth/providers/credentials";
 import { prisma } from "@/lib/prisma";
 import bcrypt from "bcryptjs";
+import type { NextApiRequest, NextApiResponse } from "next";
 
 export const authOptions: NextAuthOptions = {
   providers: [
@@ -36,10 +37,7 @@ export const authOptions: NextAuthOptions = {
 
         if (!user || !user.passwordHash) return null;
 
-        const isValid = await bcrypt.compare(
-          credentials.password,
-          user.passwordHash
-        );
+        const isValid = await bcrypt.compare(credentials.password, user.passwordHash);
         if (!isValid) return null;
 
         // ✅ staff-role gate for Forge employees (impersonation, internal tools)
@@ -75,7 +73,7 @@ export const authOptions: NextAuthOptions = {
   session: {
     strategy: "jwt",
     maxAge: 24 * 60 * 60, // 24 hours absolute
-    updateAge: 60 * 60,   // refresh at most once per hour
+    updateAge: 60 * 60, // refresh at most once per hour
   },
 
   jwt: {
@@ -90,8 +88,6 @@ export const authOptions: NextAuthOptions = {
   secret: process.env.NEXTAUTH_SECRET,
 
   callbacks: {
-    // ✅ FIXED: token is not available in redirect callback — role routing
-    // is handled by getServerSideProps in signin.tsx instead.
     async redirect({ url, baseUrl }) {
       if (url.startsWith("/")) return `${baseUrl}${url}`;
       if (url.startsWith(baseUrl)) return url;
@@ -100,30 +96,39 @@ export const authOptions: NextAuthOptions = {
 
     async jwt({ token, user }) {
       if (user) {
-        token.role = user.role;
-        token.plan = user.plan;
-        token.stripeCustomerId = user.stripeCustomerId ?? null;
-        token.accountKey = user.accountKey ?? null;
-        token.isPlatformAdmin = !!user.isPlatformAdmin;
-        token.avatarUrl = user.avatarUrl ?? null;
+        token.role = (user as any).role;
+        token.plan = (user as any).plan;
+        token.stripeCustomerId = (user as any).stripeCustomerId ?? null;
+        token.accountKey = (user as any).accountKey ?? null;
+        token.isPlatformAdmin = !!(user as any).isPlatformAdmin;
+        token.avatarUrl = (user as any).avatarUrl ?? null;
       }
       return token;
     },
 
     async session({ session, token }) {
       if (session.user) {
-        session.user.id = token.sub!;
-        session.user.role = token.role;
-        session.user.plan = token.plan;
-        session.user.stripeCustomerId = token.stripeCustomerId ?? null;
-        session.user.accountKey = token.accountKey ?? null;
-        session.user.isPlatformAdmin = !!token.isPlatformAdmin;
-        session.user.avatarUrl = token.avatarUrl ?? null;
-        session.user.image = token.avatarUrl ?? session.user.image ?? null;
+        (session.user as any).id = token.sub!;
+        (session.user as any).role = (token as any).role;
+        (session.user as any).plan = (token as any).plan;
+        (session.user as any).stripeCustomerId = (token as any).stripeCustomerId ?? null;
+        (session.user as any).accountKey = (token as any).accountKey ?? null;
+        (session.user as any).isPlatformAdmin = !!(token as any).isPlatformAdmin;
+        (session.user as any).avatarUrl = (token as any).avatarUrl ?? null;
+        session.user.image = ((token as any).avatarUrl ?? session.user.image ?? null) as any;
       }
       return session;
     },
   },
 };
 
-export default NextAuth(authOptions);
+// ✅ MIN FIX: Some clients trigger an OPTIONS preflight to the credentials callback.
+// NextAuth will otherwise respond 405, and some environments abort before POST.
+// This keeps behavior identical for normal requests while preventing the 405.
+export default async function auth(req: NextApiRequest, res: NextApiResponse) {
+  if (req.method === "OPTIONS") {
+    res.status(200).end();
+    return;
+  }
+  return await (NextAuth as any)(req, res, authOptions);
+}
