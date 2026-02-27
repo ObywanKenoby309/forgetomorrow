@@ -1,5 +1,5 @@
 // components/feed/Feed.js
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { useSession } from 'next-auth/react';
 import PostComposer from './PostComposer';
 import PostList from './PostList';
@@ -13,6 +13,10 @@ export default function Feed() {
   const [showComposer, setShowComposer] = useState(false);
   const [posts, setPosts] = useState([]);
   const [blockedAuthorIds, setBlockedAuthorIds] = useState([]); // ✅ NEW: track blocked authors client-side
+
+  // ✅ NEW: "new posts available" banner state
+  const [newPostsAvailable, setNewPostsAvailable] = useState(0);
+  const newestPostIdRef = useRef(null); // tracks the newest post ID we've shown
 
   const currentUserId = session?.user?.id || 'me';
   const currentUserName =
@@ -141,17 +145,47 @@ export default function Feed() {
     };
   };
 
-  // Main loader – only community posts
+  // ✅ Full feed load (initial + on "show new posts" click)
   const reloadFeed = async () => {
+    if (document.visibilityState === 'hidden') return;
     try {
       const feedRes = await fetch('/api/feed');
       if (feedRes.ok) {
         const feedData = await feedRes.json();
         const community = (feedData.posts || []).map(normalizeCommunityPost).filter(Boolean);
         setPosts(community);
+        setNewPostsAvailable(0);
+        // Track the newest post ID we've shown
+        if (community.length > 0) {
+          newestPostIdRef.current = community[0].id;
+        }
       }
     } catch (err) {
       console.error('Feed load error:', err);
+    }
+  };
+
+  // ✅ Silent background check — only fetches page 1 and compares newest ID
+  const checkForNewPosts = async () => {
+    if (document.visibilityState === 'hidden') return;
+    if (!newestPostIdRef.current) return;
+    try {
+      const feedRes = await fetch('/api/feed?limit=5');
+      if (!feedRes.ok) return;
+      const feedData = await feedRes.json();
+      const latest = (feedData.posts || []).map(normalizeCommunityPost).filter(Boolean);
+      if (!latest.length) return;
+
+      // Count how many posts are newer than what we're currently showing
+      const newCount = latest.filter(
+        (p) => p.id > newestPostIdRef.current
+      ).length;
+
+      if (newCount > 0) {
+        setNewPostsAvailable((prev) => Math.max(prev, newCount));
+      }
+    } catch {
+      // silent — don't surface background check errors
     }
   };
 
@@ -172,13 +206,19 @@ export default function Feed() {
     }
   };
 
+  // ✅ Initial load — wait for session to be ready
   useEffect(() => {
     if (status !== 'authenticated') return;
     reloadFeed();
     loadBlockedAuthors();
-    const interval = setInterval(reloadFeed, 5 * 60 * 1000);
+  }, [status, filter]);
+
+  // ✅ Background poll every 30s — only checks, never auto-reloads
+  useEffect(() => {
+    if (status !== 'authenticated') return;
+    const interval = setInterval(checkForNewPosts, 30 * 1000);
     return () => clearInterval(interval);
-  }, [filter, status]);
+  }, [status]);
 
   // ✅ UPDATED: receives { body, type, attachments } from PostComposer (no more base64).
   // Must be async and must THROW on failure so PostComposer keeps the composer
@@ -199,7 +239,10 @@ export default function Feed() {
 
     // Optimistically prepend the new post so the feed feels instant
     if (post) {
-      setPosts((prev) => [normalizeCommunityPost(post), ...prev]);
+      const normalized = normalizeCommunityPost(post);
+      setPosts((prev) => [normalized, ...prev]);
+      // Update our "newest seen" marker so background checks stay accurate
+      if (normalized?.id) newestPostIdRef.current = normalized.id;
     } else {
       await reloadFeed();
     }
@@ -342,6 +385,20 @@ export default function Feed() {
           </select>
         </div>
       </div>
+
+      {/* ✅ NEW: "New posts available" banner */}
+      {newPostsAvailable > 0 && (
+        <button
+          type="button"
+          onClick={reloadFeed}
+          className="w-full mb-4 py-2.5 px-4 rounded-2xl bg-[#ff7043] text-white text-sm font-bold shadow-md hover:opacity-90 transition flex items-center justify-center gap-2"
+        >
+          <span>↑</span>
+          {newPostsAvailable === 1
+            ? '1 new post — tap to load'
+            : `${newPostsAvailable}+ new posts — tap to load`}
+        </button>
+      )}
 
       {/* Composer trigger (polished) */}
       <div className="bg-white/80 backdrop-blur rounded-2xl border border-gray-200 shadow-sm p-4 mb-6 w-full">
