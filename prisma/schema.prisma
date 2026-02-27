@@ -789,6 +789,7 @@ model User {
   passwordHash                 String?
   plan                         Tier                           @default(FREE)
   pronouns                     String?
+  savedPosts   				   SavedPost[]
   skillsJson                   Json?
   slug                         String?                        @unique
   slugChangeCount              Int                            @default(0)
@@ -1348,6 +1349,7 @@ model FeedPost {
   updatedAt  DateTime       @updatedAt
   reactions  Json?          @default("[]")
   views      FeedPostView[]
+  savedBy    SavedPost[]
 
   @@index([authorId])
   @@map("feed_posts")
@@ -1365,6 +1367,20 @@ model FeedPostView {
   @@index([postId, createdAt])
   @@index([viewerId, createdAt])
   @@map("feed_post_views")
+}
+
+model SavedPost {
+  id      Int      @id @default(autoincrement())
+  userId  String
+  postId  Int
+  savedAt DateTime @default(now())
+  user    User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  post    FeedPost @relation(fields: [postId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, postId])
+  @@index([userId])
+  @@index([postId])
+  @@map("saved_posts")
 }
 
 // ============================================================================

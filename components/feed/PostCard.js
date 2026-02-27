@@ -31,8 +31,13 @@ export default function PostCard({
   const [actionsMenuOpen, setActionsMenuOpen] = useState(false);
   const actionsMenuRef = useRef(null);
 
-  // ✅ Emoji bar (now “lives” with the actions row instead of floating mid-card)
+  // ✅ Emoji bar (now "lives" with the actions row instead of floating mid-card)
   const [showEmojiBar, setShowEmojiBar] = useState(false);
+
+  // ✅ NEW: Share + Save state
+  const [saved, setSaved] = useState(false);
+  const [saveLoading, setSaveLoading] = useState(false);
+  const [copyConfirm, setCopyConfirm] = useState(false);
 
   const isOwner = post.authorId && currentUserId ? post.authorId === currentUserId : false;
   const canTargetAuthor = Boolean(post?.authorId) && !isOwner;
@@ -81,9 +86,7 @@ export default function PostCard({
 
   const handleReplySubmit = async () => {
     if (!replyText.trim()) return;
-
     logPostView('reply_submit');
-
     onReply(post.id, replyText.trim());
     setReplyText('');
     setShowReplyInput(false);
@@ -108,9 +111,7 @@ export default function PostCard({
   const handleViewProfile = async () => {
     if (!post?.authorId) return;
     setAvatarMenuOpen(false);
-
     logProfileView('feed');
-
     const params = new URLSearchParams();
     params.set('userId', post.authorId);
     router.push(withChrome(`/member-profile?${params.toString()}`));
@@ -151,7 +152,6 @@ export default function PostCard({
   const handleMessage = () => {
     if (!post?.authorId) return;
     setAvatarMenuOpen(false);
-
     const params = new URLSearchParams();
     params.set('userId', post.authorId);
     params.set('action', 'message');
@@ -227,6 +227,56 @@ export default function PostCard({
       alert('We could not block this member. Please try again.');
     } finally {
       setActionsMenuOpen(false);
+    }
+  };
+
+  // ✅ NEW: Share handler — native share sheet on mobile, clipboard on desktop
+  const handleShare = async () => {
+    if (!post?.id) return;
+    const url = `${window.location.origin}/post-view?id=${post.id}`;
+    const shareData = {
+      title: `Post by ${post.author} on ForgeTomorrow`,
+      text: post.body?.slice(0, 100) || '',
+      url,
+    };
+
+    if (navigator.share && navigator.canShare?.(shareData)) {
+      try {
+        await navigator.share(shareData);
+      } catch {
+        // user cancelled — no error needed
+      }
+    } else {
+      // Fallback: copy to clipboard
+      try {
+        await navigator.clipboard.writeText(url);
+        setCopyConfirm(true);
+        setTimeout(() => setCopyConfirm(false), 2000);
+      } catch {
+        // last resort
+        window.prompt('Copy this link:', url);
+      }
+    }
+  };
+
+  // ✅ NEW: Save/unsave toggle
+  const handleSave = async () => {
+    if (!post?.id || saveLoading) return;
+    setSaveLoading(true);
+    try {
+      const res = await fetch('/api/feed/save', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ postId: post.id }),
+      });
+      if (res.ok) {
+        const data = await res.json();
+        setSaved(data.saved);
+      }
+    } catch (err) {
+      console.error('save error:', err);
+    } finally {
+      setSaveLoading(false);
     }
   };
 
@@ -306,17 +356,10 @@ export default function PostCard({
   const isSafeAttachmentUrl = (url) => {
     const u = String(url || '').trim();
     if (!u) return false;
-
-    // allow same-origin relative
     if (u.startsWith('/')) return true;
-
-    // allow https/http
     if (u.startsWith('https://') || u.startsWith('http://')) return true;
-
-    // allow data urls only for image/video
     if (u.startsWith('data:image/')) return true;
     if (u.startsWith('data:video/')) return true;
-
     return false;
   };
 
@@ -486,7 +529,7 @@ export default function PostCard({
         </p>
       </button>
 
-      {/* ✅ NEW: ATTACHMENTS (minimal, safe display) */}
+      {/* ATTACHMENTS (minimal, safe display) */}
       {safeAttachments.length > 0 ? (
         <div className="grid gap-3">
           {safeAttachments.map((a, idx) => {
@@ -503,7 +546,6 @@ export default function PostCard({
                     alt={label}
                     className="w-full max-h-[420px] object-contain bg-white"
                     onError={(e) => {
-                      // fail-safe: show something instead of silent nothing
                       try {
                         e.currentTarget.style.display = 'none';
                       } catch {}
@@ -543,13 +585,12 @@ export default function PostCard({
               );
             }
 
-            // Unknown types: do nothing (minimal, safe)
             return null;
           })}
         </div>
       ) : null}
 
-      {/* Action row (life + polish) */}
+      {/* Action row */}
       <div className="flex flex-wrap items-center gap-3 text-sm text-gray-700">
         <button
           type="button"
@@ -584,9 +625,36 @@ export default function PostCard({
         >
           🙂 React
         </button>
+
+        {/* ✅ NEW: Share button */}
+        <button
+          type="button"
+          onClick={handleShare}
+          className="px-3 py-1.5 rounded-full border border-gray-200 bg-white hover:bg-gray-50 text-gray-700 transition"
+          aria-label="Share post"
+          title="Share"
+        >
+          {copyConfirm ? '✅ Copied!' : '↗ Share'}
+        </button>
+
+        {/* ✅ NEW: Save button */}
+        <button
+          type="button"
+          onClick={handleSave}
+          disabled={saveLoading}
+          className={`px-3 py-1.5 rounded-full border transition ${
+            saved
+              ? 'bg-orange-50 border-orange-300 text-orange-700'
+              : 'border-gray-200 bg-white hover:bg-gray-50 text-gray-700'
+          }`}
+          aria-label={saved ? 'Unsave post' : 'Save post'}
+          title={saved ? 'Saved' : 'Save for later'}
+        >
+          {saved ? '🔖 Saved' : '🔖 Save'}
+        </button>
       </div>
 
-      {/* Emoji bar (now attached to the action row, not floating) */}
+      {/* Emoji bar */}
       {showEmojiBar ? (
         <div className="relative">
           <div className="mt-2">
@@ -611,7 +679,7 @@ export default function PostCard({
         </div>
       ) : null}
 
-      {/* REPLY (kept at bottom, but more polished) */}
+      {/* REPLY */}
       {showReplyInput ? (
         <div className="rounded-2xl border border-gray-200 bg-gray-50 p-3">
           <div className="flex gap-2">
