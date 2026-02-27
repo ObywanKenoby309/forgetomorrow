@@ -291,6 +291,39 @@ export default function PostCard({
       ? 'bg-purple-50 border-purple-200 text-purple-700'
       : 'bg-slate-50 border-slate-200 text-slate-700';
 
+  // ✅ NEW: attachments (minimal display support)
+  const attachments = useMemo(() => {
+    const arr = Array.isArray(post?.attachments) ? post.attachments : [];
+    return arr
+      .map((a) => ({
+        type: String(a?.type || '').toLowerCase().trim(),
+        url: String(a?.url || '').trim(),
+        name: String(a?.name || '').trim(),
+      }))
+      .filter((a) => a.type && a.url);
+  }, [post?.attachments]);
+
+  const isSafeAttachmentUrl = (url) => {
+    const u = String(url || '').trim();
+    if (!u) return false;
+
+    // allow same-origin relative
+    if (u.startsWith('/')) return true;
+
+    // allow https/http
+    if (u.startsWith('https://') || u.startsWith('http://')) return true;
+
+    // allow data urls only for image/video
+    if (u.startsWith('data:image/')) return true;
+    if (u.startsWith('data:video/')) return true;
+
+    return false;
+  };
+
+  const safeAttachments = useMemo(() => {
+    return attachments.filter((a) => isSafeAttachmentUrl(a.url));
+  }, [attachments]);
+
   return (
     <div className="relative bg-white/90 backdrop-blur rounded-2xl border border-gray-200 shadow-sm hover:shadow-md transition-shadow p-5 space-y-4 w-full">
       {/* Header row: author + meta + kebab */}
@@ -452,6 +485,69 @@ export default function PostCard({
           {post.body}
         </p>
       </button>
+
+      {/* ✅ NEW: ATTACHMENTS (minimal, safe display) */}
+      {safeAttachments.length > 0 ? (
+        <div className="grid gap-3">
+          {safeAttachments.map((a, idx) => {
+            const label = a.name || `${a.type} attachment`;
+
+            if (a.type === 'image') {
+              return (
+                <div
+                  key={`${a.type}-${idx}`}
+                  className="border border-gray-200 rounded-2xl overflow-hidden bg-white"
+                >
+                  <img
+                    src={a.url}
+                    alt={label}
+                    className="w-full max-h-[420px] object-contain bg-white"
+                    onError={(e) => {
+                      // fail-safe: show something instead of silent nothing
+                      try {
+                        e.currentTarget.style.display = 'none';
+                      } catch {}
+                    }}
+                  />
+                </div>
+              );
+            }
+
+            if (a.type === 'video') {
+              return (
+                <div
+                  key={`${a.type}-${idx}`}
+                  className="border border-gray-200 rounded-2xl overflow-hidden bg-white"
+                >
+                  <video
+                    src={a.url}
+                    controls
+                    className="w-full max-h-[420px] object-contain bg-white"
+                  />
+                </div>
+              );
+            }
+
+            if (a.type === 'link') {
+              return (
+                <a
+                  key={`${a.type}-${idx}`}
+                  href={a.url}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="inline-flex items-center gap-2 px-3 py-2 rounded-xl border border-gray-200 bg-white hover:bg-gray-50 text-sm text-blue-700 break-all"
+                  title={a.url}
+                >
+                  🔗 <span className="font-semibold">{label}</span>
+                </a>
+              );
+            }
+
+            // Unknown types: do nothing (minimal, safe)
+            return null;
+          })}
+        </div>
+      ) : null}
 
       {/* Action row (life + polish) */}
       <div className="flex flex-wrap items-center gap-3 text-sm text-gray-700">
