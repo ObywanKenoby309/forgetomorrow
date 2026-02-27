@@ -236,23 +236,20 @@ function AppShell({ Component, pageProps }) {
   const hostname = isBrowser ? window.location.hostname : '';
   const shouldLoadCookieScript = isBrowser && (hostname === 'forgetomorrow.com' || hostname.endsWith('.forgetomorrow.com'));
 
-  // ✅ MIN ADD: prevent mobile from landing at the bottom (cookie banner focus/scroll)
+  // ✅ MIN FIX: prevent mobile from landing at the bottom (cookie banner focus/scroll)
+  // ✅ CHANGE: tightened timeouts from 450ms → 150ms, added onLoad scroll reset to stop
+  //            the cookie banner from stealing focus before forceTop runs.
   useEffect(() => {
     if (typeof window === 'undefined') return;
     if (!shouldLoadCookieScript) return;
 
-    const isMobile = window.innerWidth < 1024; // match your "mobile" idea used elsewhere
+    const isMobile = window.innerWidth < 1024;
     if (!isMobile) return;
 
     const forceTop = () => {
       try {
-        // If a hash is present, allow the browser to honor anchor navigation
         if (window.location.hash) return;
-
-        // If we're already near the top, do nothing
         if (window.scrollY <= 5) return;
-
-        // Nudge back to top after DOM settles (cookie banner often injects/focuses late)
         window.scrollTo({ top: 0, left: 0, behavior: 'auto' });
         setTimeout(() => {
           try {
@@ -260,14 +257,12 @@ function AppShell({ Component, pageProps }) {
               window.scrollTo({ top: 0, left: 0, behavior: 'auto' });
             }
           } catch {}
-        }, 450);
+        }, 150); // ✅ was 450 — tightened so flash is invisible
       } catch {}
     };
 
-    // Run once on mount
     setTimeout(forceTop, 0);
 
-    // Run on route changes
     const onDone = () => setTimeout(forceTop, 0);
     router.events.on('routeChangeComplete', onDone);
     return () => router.events.off('routeChangeComplete', onDone);
@@ -296,7 +291,15 @@ function AppShell({ Component, pageProps }) {
         <Script
           src="https://cdn.cookie-script.com/s/ff274d476e18526f8fd0a8c8114bbaf3.js"
           strategy="lazyOnload"
-          onLoad={() => console.log('Cookie banner initialized once (prod)')}
+          onLoad={() => {
+            console.log('Cookie banner initialized once (prod)');
+            // ✅ MIN FIX: cookie banner steals focus on inject — scroll back to top immediately
+            setTimeout(() => {
+              if (typeof window !== 'undefined' && !window.location.hash) {
+                window.scrollTo({ top: 0, left: 0, behavior: 'auto' });
+              }
+            }, 100);
+          }}
         />
       )}
 
