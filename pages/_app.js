@@ -290,16 +290,12 @@ function AppShell({ Component, pageProps }) {
       {shouldLoadCookieScript && (
         <Script
           src="https://cdn.cookie-script.com/s/ff274d476e18526f8fd0a8c8114bbaf3.js"
-          strategy="lazyOnload"
+          strategy="afterInteractive"
           onLoad={() => {
-            console.log('Cookie banner initialized once (prod)');
-            // ✅ MIN FIX: cookie banner steals focus on inject — scroll back to top immediately
-            setTimeout(() => {
-              if (typeof window !== 'undefined' && !window.location.hash) {
-                window.scrollTo({ top: 0, left: 0, behavior: 'auto' });
-              }
-            }, 100);
-          }}
+  if (typeof window !== 'undefined' && !window.location.hash) {
+    window.scrollTo({ top: 0, left: 0, behavior: 'auto' });
+  }
+}}
         />
       )}
 
