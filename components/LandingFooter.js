@@ -59,12 +59,6 @@ export default function LandingFooter() {
   const goPrev = () => setActiveIdx((i) => (i - 1 + sections.length) % sections.length);
   const goNext = () => setActiveIdx((i) => (i + 1) % sections.length);
 
-  useEffect(() => {
-    const el = mobileRailRef.current;
-    if (!el) return;
-    el.focus();
-  }, []);
-
   const onMobileKeyDown = (e) => {
     if (e.key === 'ArrowLeft') {
       e.preventDefault();
