@@ -21,6 +21,15 @@ import SupportFloatingButton from '@/components/SupportFloatingButton';
 
 const ALLOWED_MODES = new Set(['seeker', 'coach', 'recruiter-smb', 'recruiter-ent']);
 
+// Profile-standard glass (match site-wide)
+const GLASS = {
+  border: '1px solid rgba(255,255,255,0.22)',
+  background: 'rgba(255,255,255,0.58)',
+  boxShadow: '0 10px 24px rgba(0,0,0,0.12)',
+  backdropFilter: 'blur(10px)',
+  WebkitBackdropFilter: 'blur(10px)',
+};
+
 function normalizeChrome(input) {
   const raw = String(input || '').toLowerCase().trim();
   if (!raw) return '';
@@ -232,7 +241,7 @@ export default function InternalLayout({
   const rightBase = {
     gridArea: 'right',
     alignSelf: 'start',
-    borderRadius: 12,
+    borderRadius: 14, // ✅ was 12
     boxSizing: 'border-box',
     width: hasRight && !isMobile ? rightWidth : '100%',
     minWidth: hasRight && !isMobile ? rightWidth : 0,
@@ -240,12 +249,15 @@ export default function InternalLayout({
     minInlineSize: 0,
   };
 
+  // ✅ MIN CHANGE: swap dark rail to glass (uniform with site)
   const rightDark = {
-    background: '#2a2a2a',
-    border: '1px solid #3a3a3a',
+    border: GLASS.border,
+    background: GLASS.background,
+    boxShadow: GLASS.boxShadow,
+    backdropFilter: GLASS.backdropFilter,
+    WebkitBackdropFilter: GLASS.WebkitBackdropFilter,
     padding: 16,
-    boxShadow: '0 2px 6px rgba(0,0,0,0.06)',
-    color: 'white',
+    color: '#112033',
   };
 
   const rightLight = {
