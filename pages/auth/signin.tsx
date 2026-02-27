@@ -1,6 +1,6 @@
 // pages/auth/signin.tsx — FINAL FIXED VERSION (NO MORE LOOP)
 import Link from 'next/link';
-import { getSession, getCsrfToken } from 'next-auth/react';
+import { getSession, getCsrfToken, signIn } from 'next-auth/react';
 
 type SignInProps = {
   csrfToken: string | null;
@@ -70,8 +70,13 @@ export default function SignIn({ csrfToken, error }: SignInProps) {
         </div>
       )}
 
-      <form method="post" action="/api/auth/callback/credentials">
-        <input name="csrfToken" type="hidden" defaultValue={csrfToken ?? ''} />
+      <form onSubmit={async (e) => {
+  e.preventDefault();
+  const form = e.currentTarget;
+  const email = (form.elements.namedItem('email') as HTMLInputElement).value;
+  const password = (form.elements.namedItem('password') as HTMLInputElement).value;
+  await signIn('credentials', { email, password, callbackUrl: '/auth/signin' });
+}}>
 
         {/* 🔁 After successful login, come back here so getServerSideProps can route by plan */}
 
