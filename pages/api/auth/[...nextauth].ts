@@ -3,7 +3,6 @@ import NextAuth, { NextAuthOptions } from "next-auth";
 import CredentialsProvider from "next-auth/providers/credentials";
 import { prisma } from "@/lib/prisma";
 import bcrypt from "bcryptjs";
-import type { NextApiRequest, NextApiResponse } from "next";
 
 export const authOptions: NextAuthOptions = {
   providers: [
@@ -88,7 +87,20 @@ export const authOptions: NextAuthOptions = {
   secret: process.env.NEXTAUTH_SECRET,
 
   callbacks: {
+    // ✅ HARDEN: prevent poisoned callbackUrl from redirecting into /api/auth/*
     async redirect({ url, baseUrl }) {
+      try {
+        // normalize to path if absolute
+        const target = url.startsWith("http") ? new URL(url).pathname : url;
+
+        // Never redirect users into API routes
+        if (target.startsWith("/api/auth") || target.startsWith("/api/")) {
+          return `${baseUrl}/auth/signin`;
+        }
+      } catch {
+        // if URL parsing fails, fall back below
+      }
+
       if (url.startsWith("/")) return `${baseUrl}${url}`;
       if (url.startsWith(baseUrl)) return url;
       return `${baseUrl}/auth/signin`;
@@ -115,20 +127,11 @@ export const authOptions: NextAuthOptions = {
         (session.user as any).accountKey = (token as any).accountKey ?? null;
         (session.user as any).isPlatformAdmin = !!(token as any).isPlatformAdmin;
         (session.user as any).avatarUrl = (token as any).avatarUrl ?? null;
-        session.user.image = ((token as any).avatarUrl ?? session.user.image ?? null) as any;
+        (session.user as any).image = (token as any).avatarUrl ?? (session.user as any).image ?? null;
       }
       return session;
     },
   },
 };
 
-// ✅ MIN FIX: Some clients trigger an OPTIONS preflight to the credentials callback.
-// NextAuth will otherwise respond 405, and some environments abort before POST.
-// This keeps behavior identical for normal requests while preventing the 405.
-export default async function auth(req: NextApiRequest, res: NextApiResponse) {
-  if (req.method === "OPTIONS") {
-    res.status(200).end();
-    return;
-  }
-  return await (NextAuth as any)(req, res, authOptions);
-}
+export default NextAuth(authOptions);
