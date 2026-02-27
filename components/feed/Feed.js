@@ -367,7 +367,7 @@ export default function Feed() {
 
   return (
     <div className="w-full max-w-none px-2 sm:px-6 pt-6 pb-10">
-      {/* Filter */}
+      {/* Filter row + new posts banner side by side */}
       <div className="mb-4 flex items-center justify-between w-full">
         <div className="flex items-center gap-3">
           <span className="bg-white/80 backdrop-blur px-3 py-1 rounded-lg text-sm font-semibold text-gray-800 shadow-sm border border-gray-200">
@@ -384,21 +384,21 @@ export default function Feed() {
             <option value="personal">Personal</option>
           </select>
         </div>
-      </div>
 
-      {/* ✅ NEW: "New posts available" banner */}
-      {newPostsAvailable > 0 && (
-        <button
-          type="button"
-          onClick={reloadFeed}
-          className="w-full mb-4 py-2.5 px-4 rounded-2xl bg-[#ff7043] text-white text-sm font-bold shadow-md hover:opacity-90 transition flex items-center justify-center gap-2"
-        >
-          <span>↑</span>
-          {newPostsAvailable === 1
-            ? '1 new post — tap to load'
-            : `${newPostsAvailable}+ new posts — tap to load`}
-        </button>
-      )}
+        {/* ✅ NEW: "New posts available" banner — sits in filter row, top right */}
+        {newPostsAvailable > 0 && (
+          <button
+            type="button"
+            onClick={reloadFeed}
+            className="py-2 px-4 rounded-2xl bg-[#ff7043] text-white text-sm font-bold shadow-md hover:opacity-90 transition flex items-center gap-2"
+          >
+            <span>↑</span>
+            {newPostsAvailable === 1
+              ? '1 new post — tap to load'
+              : `${newPostsAvailable}+ new posts — tap to load`}
+          </button>
+        )}
+      </div>
 
       {/* Composer trigger (polished) */}
       <div className="bg-white/80 backdrop-blur rounded-2xl border border-gray-200 shadow-sm p-4 mb-6 w-full">
