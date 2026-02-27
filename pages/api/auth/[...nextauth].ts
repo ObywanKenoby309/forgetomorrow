@@ -13,57 +13,66 @@ export const authOptions: NextAuthOptions = {
         password: { label: "Password", type: "password" },
       },
       async authorize(credentials) {
-        if (!credentials?.email || !credentials?.password) return null;
+        try {
+          if (!credentials?.email || !credentials?.password) return null;
 
-        const normalizedEmail = credentials.email.toLowerCase().trim();
+          const normalizedEmail = credentials.email.toLowerCase().trim();
 
-        const user = await prisma.user.findUnique({
-          where: { email: normalizedEmail },
-          select: {
-            id: true,
-            email: true,
-            name: true,
-            firstName: true,
-            lastName: true,
-            role: true,
-            plan: true,
-            stripeCustomerId: true,
-            accountKey: true,
-            passwordHash: true,
-            avatarUrl: true,
-          },
-        });
+          const user = await prisma.user.findUnique({
+            where: { email: normalizedEmail },
+            select: {
+              id: true,
+              email: true,
+              name: true,
+              firstName: true,
+              lastName: true,
+              role: true,
+              plan: true,
+              stripeCustomerId: true,
+              accountKey: true,
+              passwordHash: true,
+              avatarUrl: true,
+            },
+          });
 
-        if (!user || !user.passwordHash) return null;
+          if (!user || !user.passwordHash) return null;
 
-        const isValid = await bcrypt.compare(credentials.password, user.passwordHash);
-        if (!isValid) return null;
+          const isValid = await bcrypt.compare(
+            credentials.password,
+            user.passwordHash
+          );
+          if (!isValid) return null;
 
-        // ✅ staff-role gate for Forge employees (impersonation, internal tools)
-        const staff = await prisma.userStaffRole.findFirst({
-          where: {
-            userId: user.id,
-            role: "PLATFORM_ADMIN",
-          },
-          select: { id: true },
-        });
+          // ✅ staff-role gate for Forge employees (impersonation, internal tools)
+          const staff = await prisma.userStaffRole.findFirst({
+            where: {
+              userId: user.id,
+              role: "PLATFORM_ADMIN",
+            },
+            select: { id: true },
+          });
 
-        const isPlatformAdmin = !!staff;
+          const isPlatformAdmin = !!staff;
 
-        return {
-          id: user.id,
-          email: user.email,
-          name:
-            user.name ||
-            `${user.firstName || ""} ${user.lastName || ""}`.trim() ||
-            user.email,
-          role: user.role,
-          plan: user.plan,
-          stripeCustomerId: user.stripeCustomerId,
-          accountKey: user.accountKey ?? null,
-          isPlatformAdmin,
-          avatarUrl: user.avatarUrl ?? null,
-        };
+          return {
+            id: user.id,
+            email: user.email,
+            name:
+              user.name ||
+              `${user.firstName || ""} ${user.lastName || ""}`.trim() ||
+              user.email,
+            role: user.role,
+            plan: user.plan,
+            stripeCustomerId: user.stripeCustomerId,
+            accountKey: user.accountKey ?? null,
+            isPlatformAdmin,
+            avatarUrl: user.avatarUrl ?? null,
+          };
+        } catch (err) {
+          // ✅ Prevent account-specific data issues (bad hash, bad encoding, etc.) from crashing NextAuth callback
+          console.error("[nextauth][credentials][authorize] error:", err);
+          return null;
+        }
       },
     }),
   ],
@@ -87,20 +96,9 @@ export const authOptions: NextAuthOptions = {
   secret: process.env.NEXTAUTH_SECRET,
 
   callbacks: {
-    // ✅ HARDEN: prevent poisoned callbackUrl from redirecting into /api/auth/*
+    // ✅ FIXED: token is not available in redirect callback — role routing
+    // is handled by getServerSideProps in signin.tsx instead.
     async redirect({ url, baseUrl }) {
-      try {
-        // normalize to path if absolute
-        const target = url.startsWith("http") ? new URL(url).pathname : url;
-
-        // Never redirect users into API routes
-        if (target.startsWith("/api/auth") || target.startsWith("/api/")) {
-          return `${baseUrl}/auth/signin`;
-        }
-      } catch {
-        // if URL parsing fails, fall back below
-      }
-
       if (url.startsWith("/")) return `${baseUrl}${url}`;
       if (url.startsWith(baseUrl)) return url;
       return `${baseUrl}/auth/signin`;
@@ -123,11 +121,13 @@ export const authOptions: NextAuthOptions = {
         (session.user as any).id = token.sub!;
         (session.user as any).role = (token as any).role;
         (session.user as any).plan = (token as any).plan;
-        (session.user as any).stripeCustomerId = (token as any).stripeCustomerId ?? null;
+        (session.user as any).stripeCustomerId =
+          (token as any).stripeCustomerId ?? null;
         (session.user as any).accountKey = (token as any).accountKey ?? null;
         (session.user as any).isPlatformAdmin = !!(token as any).isPlatformAdmin;
         (session.user as any).avatarUrl = (token as any).avatarUrl ?? null;
-        (session.user as any).image = (token as any).avatarUrl ?? (session.user as any).image ?? null;
+        (session.user as any).image =
+          (token as any).avatarUrl ?? (session.user as any).image ?? null;
       }
       return session;
     },
