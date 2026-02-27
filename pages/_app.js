@@ -236,6 +236,43 @@ function AppShell({ Component, pageProps }) {
   const hostname = isBrowser ? window.location.hostname : '';
   const shouldLoadCookieScript = isBrowser && (hostname === 'forgetomorrow.com' || hostname.endsWith('.forgetomorrow.com'));
 
+  // ✅ MIN ADD: prevent mobile from landing at the bottom (cookie banner focus/scroll)
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    if (!shouldLoadCookieScript) return;
+
+    const isMobile = window.innerWidth < 1024; // match your "mobile" idea used elsewhere
+    if (!isMobile) return;
+
+    const forceTop = () => {
+      try {
+        // If a hash is present, allow the browser to honor anchor navigation
+        if (window.location.hash) return;
+
+        // If we're already near the top, do nothing
+        if (window.scrollY <= 5) return;
+
+        // Nudge back to top after DOM settles (cookie banner often injects/focuses late)
+        window.scrollTo({ top: 0, left: 0, behavior: 'auto' });
+        setTimeout(() => {
+          try {
+            if (!window.location.hash && window.scrollY > 5) {
+              window.scrollTo({ top: 0, left: 0, behavior: 'auto' });
+            }
+          } catch {}
+        }, 450);
+      } catch {}
+    };
+
+    // Run once on mount
+    setTimeout(forceTop, 0);
+
+    // Run on route changes
+    const onDone = () => setTimeout(forceTop, 0);
+    router.events.on('routeChangeComplete', onDone);
+    return () => router.events.off('routeChangeComplete', onDone);
+  }, [router, shouldLoadCookieScript]);
+
   // Internal/workspace should NOT use wallpaper (presentation-safe, plain background)
   const forcePlainInternalBg = isInternalRoute || isWorkspaceRoute;
 
@@ -258,15 +295,13 @@ function AppShell({ Component, pageProps }) {
       {shouldLoadCookieScript && (
         <Script
           src="https://cdn.cookie-script.com/s/ff274d476e18526f8fd0a8c8114bbaf3.js"
-          strategy="afterInteractive"
+          strategy="lazyOnload"
           onLoad={() => console.log('Cookie banner initialized once (prod)')}
         />
       )}
 
       <div className="relative min-h-screen">
-        {/* BACKGROUND LAYERS */}
-
-        {/* 1) Forge hammer background for public marketing pages */}
+        {/* BACKGROUND LAYERS */} {/* 1) Forge hammer background for public marketing pages */}
         {useForgeBackground && (
           <>
             <div
@@ -281,7 +316,6 @@ function AppShell({ Component, pageProps }) {
             <div className="fixed inset-0 bg-black opacity-80 z-0" />
           </>
         )}
-
         {/* 2) User wallpaper for internal pages (disabled for internal/workspace) */}
         {shouldUseWallpaper && (
           <>
@@ -340,3 +374,4 @@ export default function App({ Component, pageProps: { session, ...pageProps } })
     </SessionProvider>
   );
 }
+```
