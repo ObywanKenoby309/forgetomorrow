@@ -1,5 +1,5 @@
 // pages/api/auth/signup.js ← FINAL WORKING VERSION (2025)
-import bcrypt from 'bcrypt';
+import bcrypt from 'bcryptjs'
 import { prisma } from '@/lib/prisma';
 import { v4 as uuidv4 } from 'uuid';
 import { sendVerificationEmail } from '@/lib/email';

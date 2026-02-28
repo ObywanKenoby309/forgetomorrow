@@ -1,6 +1,6 @@
 // pages/api/auth/verify-email.js
 import { prisma } from '@/lib/prisma';
-import bcrypt from 'bcrypt';
+import bcrypt from 'bcryptjs'
 import Stripe from 'stripe';
 import { sign } from 'jsonwebtoken';
 
