@@ -69,7 +69,6 @@ export const authOptions: NextAuthOptions = {
             avatarUrl: user.avatarUrl ?? null,
           };
         } catch (err) {
-          // ✅ Prevent account-specific data issues (bad hash, bad encoding, etc.) from crashing NextAuth callback
           console.error("[nextauth][credentials][authorize] error:", err);
           return null;
         }
@@ -81,7 +80,7 @@ export const authOptions: NextAuthOptions = {
   session: {
     strategy: "jwt",
     maxAge: 24 * 60 * 60, // 24 hours absolute
-    updateAge: 60 * 60, // refresh at most once per hour
+    updateAge: 60 * 60,   // refresh at most once per hour
   },
 
   jwt: {
@@ -96,8 +95,6 @@ export const authOptions: NextAuthOptions = {
   secret: process.env.NEXTAUTH_SECRET,
 
   callbacks: {
-    // ✅ FIXED: token is not available in redirect callback — role routing
-    // is handled by getServerSideProps in signin.tsx instead.
     async redirect({ url, baseUrl }) {
       if (url.startsWith("/")) return `${baseUrl}${url}`;
       if (url.startsWith(baseUrl)) return url;
@@ -108,10 +105,10 @@ export const authOptions: NextAuthOptions = {
       if (user) {
         token.role = (user as any).role;
         token.plan = (user as any).plan;
-        token.stripeCustomerId = (user as any).stripeCustomerId ?? null;
-        token.accountKey = (user as any).accountKey ?? null;
-        token.isPlatformAdmin = !!(user as any).isPlatformAdmin;
-        token.avatarUrl = (user as any).avatarUrl ?? null;
+        (token as any).stripeCustomerId = (user as any).stripeCustomerId ?? null;
+        (token as any).accountKey = (user as any).accountKey ?? null;
+        (token as any).isPlatformAdmin = !!(user as any).isPlatformAdmin;
+        (token as any).avatarUrl = (user as any).avatarUrl ?? null;
       }
       return token;
     },
@@ -121,8 +118,7 @@ export const authOptions: NextAuthOptions = {
         (session.user as any).id = token.sub!;
         (session.user as any).role = (token as any).role;
         (session.user as any).plan = (token as any).plan;
-        (session.user as any).stripeCustomerId =
-          (token as any).stripeCustomerId ?? null;
+        (session.user as any).stripeCustomerId = (token as any).stripeCustomerId ?? null;
         (session.user as any).accountKey = (token as any).accountKey ?? null;
         (session.user as any).isPlatformAdmin = !!(token as any).isPlatformAdmin;
         (session.user as any).avatarUrl = (token as any).avatarUrl ?? null;
