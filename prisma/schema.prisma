@@ -523,44 +523,46 @@ model UserConsent {
 // ============================================================================
 
 model CoachingClient {
-  id          String    @id @default(cuid())
-  coachId     String
-  clientId    String?
-  name        String
-  email       String?
-  status      String    @default("Active")
-  nextSession DateTime?
-  lastContact DateTime?
-  createdAt   DateTime  @default(now())
-  updatedAt   DateTime  @updatedAt
+  id                String             @id @default(cuid())
+  coachId           String
+  clientId          String?
+  name              String
+  email             String?
+  status            String             @default("Active")
+  nextSession       DateTime?
+  lastContact       DateTime?
+  createdAt         DateTime           @default(now())
+  updatedAt         DateTime           @updatedAt
   notes             String?
   coachingNotes     CoachingNote[]     @relation("ClientNotes")
   coachingDocuments CoachingDocument[] @relation("ClientDocuments")
-  coach  User  @relation("CoachClientsCoach", fields: [coachId], references: [id], onDelete: Cascade)
-  client User? @relation("CoachClientsClient", fields: [clientId], references: [id], onDelete: Cascade)
-  sessions CoachingSession[] @relation("ClientSessions")
+  coach             User               @relation("CoachClientsCoach", fields: [coachId], references: [id], onDelete: Cascade)
+  client            User?              @relation("CoachClientsClient", fields: [clientId], references: [id], onDelete: Cascade)
+  sessions          CoachingSession[]  @relation("ClientSessions")
+
   @@index([coachId])
   @@index([clientId])
   @@map("coaching_clients")
 }
 
 model CoachingSession {
-  id       String  @id @default(cuid())
-  coachId  String
-  clientId String?
+  id               String          @id @default(cuid())
+  coachId          String
+  clientId         String?
   coachingClientId String?
   coachingClient   CoachingClient? @relation("ClientSessions", fields: [coachingClientId], references: [id])
-  startAt     DateTime
-  durationMin Int      @default(60)
-  type   String @default("Strategy")
-  status String @default("Scheduled")
-  followUpDueAt DateTime?
-  followUpDone  Boolean   @default(false)
-  notes     String?
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-  coach  User  @relation("CoachSessionsCoach", fields: [coachId], references: [id], onDelete: Cascade)
-  client User? @relation("CoachSessionsClient", fields: [clientId], references: [id], onDelete: Cascade)
+  startAt          DateTime
+  durationMin      Int             @default(60)
+  type             String          @default("Strategy")
+  status           String          @default("Scheduled")
+  followUpDueAt    DateTime?
+  followUpDone     Boolean         @default(false)
+  notes            String?
+  createdAt        DateTime        @default(now())
+  updatedAt        DateTime        @updatedAt
+  coach            User            @relation("CoachSessionsCoach", fields: [coachId], references: [id], onDelete: Cascade)
+  client           User?           @relation("CoachSessionsClient", fields: [clientId], references: [id], onDelete: Cascade)
+
   @@index([coachId])
   @@index([clientId])
   @@index([startAt])
@@ -575,8 +577,9 @@ model CoachingNote {
   body             String
   createdAt        DateTime       @default(now())
   updatedAt        DateTime       @updatedAt
-  coachingClient CoachingClient @relation("ClientNotes", fields: [coachingClientId], references: [id], onDelete: Cascade)
-  coach          User           @relation("CoachNotes", fields: [coachId], references: [id], onDelete: Cascade)
+  coachingClient   CoachingClient @relation("ClientNotes", fields: [coachingClientId], references: [id], onDelete: Cascade)
+  coach            User           @relation("CoachNotes", fields: [coachId], references: [id], onDelete: Cascade)
+
   @@index([coachingClientId])
   @@index([coachId])
   @@map("coaching_notes")
@@ -591,8 +594,9 @@ model CoachingDocument {
   type             String         @default("Other")
   uploadedAt       DateTime       @default(now())
   createdAt        DateTime       @default(now())
-  coachingClient CoachingClient @relation("ClientDocuments", fields: [coachingClientId], references: [id], onDelete: Cascade)
-  coach          User           @relation("CoachDocuments", fields: [coachId], references: [id], onDelete: Cascade)
+  coachingClient   CoachingClient @relation("ClientDocuments", fields: [coachingClientId], references: [id], onDelete: Cascade)
+  coach            User           @relation("CoachDocuments", fields: [coachId], references: [id], onDelete: Cascade)
+
   @@index([coachingClientId])
   @@index([coachId])
   @@map("coaching_documents")
@@ -680,6 +684,7 @@ model ContactRequest {
 // ============================================================================
 //  ORGANIZATIONS (Recruiter org ownership + future seats)
 //  NOTE: links via existing accountKey on User/Job to avoid breaking existing data.
+//  CRM ADDITION: tickets + slaOverrides relations added for CRM module
 // ============================================================================
 
 model Organization {
@@ -696,6 +701,9 @@ model Organization {
   owner              User?                @relation("OrganizationOwner", fields: [ownerUserId], references: [id])
   talentPools        TalentPool[]         @relation("OrganizationTalentPools")
   users              User[]               @relation("OrganizationUsers")
+  // CRM
+  tickets            Ticket[]             @relation("OrgTickets")
+  slaOverrides       SlaPolicy[]
 
   @@index([ownerUserId])
   @@map("organizations")
@@ -755,6 +763,7 @@ model AuditLog {
 
 // ============================================================================
 //  USER — FULL ACCOUNT + PROFILE
+//  CRM ADDITION: 8 new relation lines added at bottom of relations block
 // ============================================================================
 
 model User {
@@ -789,7 +798,7 @@ model User {
   passwordHash                 String?
   plan                         Tier                           @default(FREE)
   pronouns                     String?
-  savedPosts   				   SavedPost[]
+  savedPosts                   SavedPost[]
   skillsJson                   Json?
   slug                         String?                        @unique
   slugChangeCount              Int                            @default(0)
@@ -805,7 +814,7 @@ model User {
   educationJson                Json?
   resumeAlignFreeUses          Int                            @default(0)
   resumeAlignLastResetMonth    String?
-  growthPivotFreeUses		   Int							  @default(0)
+  growthPivotFreeUses          Int                            @default(0)
   department                   Department?
   employee                     Boolean                        @default(false)
   careerRoadmaps               CareerRoadmap[]                @relation("UserCareerRoadmaps")
@@ -822,8 +831,8 @@ model User {
   coachingCsatResponses        CoachingCsatResponse[]         @relation("UserCoachingCsatResponses")
   coachingSessionsAsClient     CoachingSession[]              @relation("CoachSessionsClient")
   coachingSessionsAsCoach      CoachingSession[]              @relation("CoachSessionsCoach")
-  coachingNotes     CoachingNote[]     @relation("CoachNotes")
-  coachingDocuments CoachingDocument[] @relation("CoachDocuments")
+  coachingNotes                CoachingNote[]                 @relation("CoachNotes")
+  coachingDocuments            CoachingDocument[]             @relation("CoachDocuments")
   contactRequestsSent          ContactRequest[]               @relation("UserContactRequestsFrom")
   contactRequestsReceived      ContactRequest[]               @relation("UserContactRequestsTo")
   contactsAsContact            Contact[]                      @relation("UserContactsAsContact")
@@ -872,6 +881,15 @@ model User {
   drafts                       UserDraft[]
   staffRoles                   UserStaffRole[]
   organization                 Organization?                  @relation("OrganizationUsers", fields: [accountKey], references: [accountKey])
+  // CRM
+  queueMemberships             QueueAgent[]                   @relation("UserQueueAgents")
+  ticketsAssigned              Ticket[]                       @relation("TicketAssignedTo")
+  ticketsCreated               Ticket[]                       @relation("TicketCreatedBy")
+  ticketsRequested             Ticket[]                       @relation("TicketRequester")
+  ticketComments               TicketComment[]                @relation("TicketCommentAuthor")
+  ticketHistory                TicketHistory[]                @relation("TicketHistoryActor")
+  ticketAttachments            TicketAttachment[]             @relation("TicketAttachmentUploader")
+  workflowRulesCreated         WorkflowRule[]                 @relation("WorkflowRuleCreator")
 
   @@map("users")
 }
@@ -1020,7 +1038,7 @@ model TalentPoolEntry {
 }
 
 // ============================================================================
-//  RECRUITER CANDIDATE AUTOMATION (KEEP ONLY THIS ONE)
+//  RECRUITER CANDIDATE AUTOMATION
 // ============================================================================
 
 model RecruiterCandidateAutomation {
@@ -1337,19 +1355,19 @@ model NewsletterSubscription {
 // ============================================================================
 
 model FeedPost {
-  id         Int            @id @default(autoincrement())
-  authorId   String
-  authorName String
-  content    String
-  type       String         @default("business")
-  likes      Int            @default(0)
-  comments   Json           @default("[]")
-  attachments Json          @default("[]")
-  createdAt  DateTime       @default(now())
-  updatedAt  DateTime       @updatedAt
-  reactions  Json?          @default("[]")
-  views      FeedPostView[]
-  savedBy    SavedPost[]
+  id          Int            @id @default(autoincrement())
+  authorId    String
+  authorName  String
+  content     String
+  type        String         @default("business")
+  likes       Int            @default(0)
+  comments    Json           @default("[]")
+  attachments Json           @default("[]")
+  createdAt   DateTime       @default(now())
+  updatedAt   DateTime       @updatedAt
+  reactions   Json?          @default("[]")
+  views       FeedPostView[]
+  savedBy     SavedPost[]
 
   @@index([authorId])
   @@map("feed_posts")
@@ -1384,7 +1402,7 @@ model SavedPost {
 }
 
 // ============================================================================
-//  SUPPORT TICKETS
+//  SUPPORT TICKETS (original — kept as-is alongside new CRM Ticket model)
 // ============================================================================
 
 model SupportTicket {
@@ -1419,6 +1437,261 @@ model ProfileView {
   @@index([targetId])
   @@index([viewerId])
   @@map("profile_views")
+}
+
+// ============================================================================
+//  CRM — QUEUE
+// ============================================================================
+
+model Queue {
+  id          String       @id @default(cuid())
+  name        String       @unique
+  description String?
+  isActive    Boolean      @default(true)
+  color       String?
+  icon        String?
+  createdAt   DateTime     @default(now())
+  updatedAt   DateTime     @updatedAt
+  agents      QueueAgent[]
+  slaPolicy   SlaPolicy?
+  tickets     Ticket[]
+
+  @@map("queues")
+}
+
+// ============================================================================
+//  CRM — QUEUE AGENT
+// ============================================================================
+
+model QueueAgent {
+  id        String    @id @default(cuid())
+  queueId   String
+  userId    String
+  role      QueueRole @default(AGENT)
+  isOnCall  Boolean   @default(false)
+  createdAt DateTime  @default(now())
+  queue     Queue     @relation(fields: [queueId], references: [id], onDelete: Cascade)
+  user      User      @relation("UserQueueAgents", fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([queueId, userId])
+  @@index([userId])
+  @@index([queueId])
+  @@map("queue_agents")
+}
+
+// ============================================================================
+//  CRM — SLA POLICY
+// ============================================================================
+
+model SlaPolicy {
+  id               String   @id @default(cuid())
+  name             String
+  queueId          String?  @unique
+  orgId            String?
+  p1ResponseMin    Int      @default(60)
+  p2ResponseMin    Int      @default(240)
+  p3ResponseMin    Int      @default(480)
+  p4ResponseMin    Int      @default(1440)
+  p1ResolutionMin  Int      @default(240)
+  p2ResolutionMin  Int      @default(480)
+  p3ResolutionMin  Int      @default(1440)
+  p4ResolutionMin  Int      @default(2880)
+  useBusinessHours Boolean  @default(true)
+  businessStart    Int      @default(9)
+  businessEnd      Int      @default(17)
+  businessDays     Json     @default("[1,2,3,4,5]")
+  timezone         String   @default("America/New_York")
+  warningThreshold Int      @default(75)
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+  queue            Queue?   @relation(fields: [queueId], references: [id])
+  organization     Organization? @relation(fields: [orgId], references: [id])
+  tickets          Ticket[]
+
+  @@index([orgId])
+  @@map("sla_policies")
+}
+
+// ============================================================================
+//  CRM — TICKET
+// ============================================================================
+
+model Ticket {
+  id             String         @id @default(cuid())
+  number         Int            @unique @default(autoincrement())
+  type           TicketType
+  priority       TicketPriority @default(P3)
+  status         TicketStatus   @default(OPEN)
+  title          String
+  description    String?
+  queueId        String
+  assignedToId   String?
+  createdById    String
+  requesterId    String?
+  requesterOrgId String?
+  slaPolicyId    String?
+  slaResponseDue DateTime?
+  slaResolveDue  DateTime?
+  slaResponseMet Boolean?
+  slaResolveMet  Boolean?
+  slaBreached    Boolean        @default(false)
+  firstResponseAt DateTime?
+  resolvedAt     DateTime?
+  closedAt       DateTime?
+  parentId       String?
+  tags           Json?
+  source         TicketSource   @default(AGENT)
+  externalRef    String?
+  createdAt      DateTime       @default(now())
+  updatedAt      DateTime       @updatedAt
+  queue          Queue              @relation(fields: [queueId], references: [id])
+  assignedTo     User?              @relation("TicketAssignedTo", fields: [assignedToId], references: [id])
+  createdBy      User               @relation("TicketCreatedBy", fields: [createdById], references: [id])
+  requester      User?              @relation("TicketRequester", fields: [requesterId], references: [id])
+  requesterOrg   Organization?      @relation("OrgTickets", fields: [requesterOrgId], references: [id])
+  slaPolicy      SlaPolicy?         @relation(fields: [slaPolicyId], references: [id])
+  parent         Ticket?            @relation("TicketChildren", fields: [parentId], references: [id])
+  children       Ticket[]           @relation("TicketChildren")
+  comments       TicketComment[]
+  history        TicketHistory[]
+  attachments    TicketAttachment[]
+  slaEvents      SlaEvent[]
+  workflowRuns   WorkflowRun[]
+
+  @@index([queueId])
+  @@index([assignedToId])
+  @@index([requesterId])
+  @@index([requesterOrgId])
+  @@index([status])
+  @@index([priority])
+  @@index([type])
+  @@index([slaBreached])
+  @@index([parentId])
+  @@index([createdAt])
+  @@map("tickets")
+}
+
+// ============================================================================
+//  CRM — TICKET COMMENT
+// ============================================================================
+
+model TicketComment {
+  id         String   @id @default(cuid())
+  ticketId   String
+  authorId   String
+  body       String
+  isInternal Boolean  @default(false)
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+  ticket     Ticket   @relation(fields: [ticketId], references: [id], onDelete: Cascade)
+  author     User     @relation("TicketCommentAuthor", fields: [authorId], references: [id])
+
+  @@index([ticketId])
+  @@index([authorId])
+  @@map("ticket_comments")
+}
+
+// ============================================================================
+//  CRM — TICKET HISTORY
+// ============================================================================
+
+model TicketHistory {
+  id        String   @id @default(cuid())
+  ticketId  String
+  actorId   String
+  action    String
+  fromValue String?
+  toValue   String?
+  metadata  Json?
+  createdAt DateTime @default(now())
+  ticket    Ticket   @relation(fields: [ticketId], references: [id], onDelete: Cascade)
+  actor     User     @relation("TicketHistoryActor", fields: [actorId], references: [id])
+
+  @@index([ticketId, createdAt])
+  @@index([actorId])
+  @@map("ticket_history")
+}
+
+// ============================================================================
+//  CRM — TICKET ATTACHMENT
+// ============================================================================
+
+model TicketAttachment {
+  id           String   @id @default(cuid())
+  ticketId     String
+  uploadedById String
+  filename     String
+  url          String
+  mimeType     String?
+  sizeBytes    Int?
+  createdAt    DateTime @default(now())
+  ticket       Ticket   @relation(fields: [ticketId], references: [id], onDelete: Cascade)
+  uploadedBy   User     @relation("TicketAttachmentUploader", fields: [uploadedById], references: [id])
+
+  @@index([ticketId])
+  @@map("ticket_attachments")
+}
+
+// ============================================================================
+//  CRM — SLA EVENT
+// ============================================================================
+
+model SlaEvent {
+  id       String       @id @default(cuid())
+  ticketId String
+  type     SlaEventType
+  target   String
+  firedAt  DateTime     @default(now())
+  notified Boolean      @default(false)
+  ticket   Ticket       @relation(fields: [ticketId], references: [id], onDelete: Cascade)
+
+  @@index([ticketId])
+  @@index([type])
+  @@map("sla_events")
+}
+
+// ============================================================================
+//  CRM — WORKFLOW RULE
+// ============================================================================
+
+model WorkflowRule {
+  id          String          @id @default(cuid())
+  name        String
+  description String?
+  isActive    Boolean         @default(true)
+  trigger     WorkflowTrigger
+  conditions  Json
+  actions     Json
+  runOrder    Int             @default(0)
+  createdById String
+  createdAt   DateTime        @default(now())
+  updatedAt   DateTime        @updatedAt
+  createdBy   User            @relation("WorkflowRuleCreator", fields: [createdById], references: [id])
+  runs        WorkflowRun[]
+
+  @@index([isActive, trigger])
+  @@index([createdById])
+  @@map("workflow_rules")
+}
+
+// ============================================================================
+//  CRM — WORKFLOW RUN
+// ============================================================================
+
+model WorkflowRun {
+  id        String       @id @default(cuid())
+  ruleId    String
+  ticketId  String
+  status    String       @default("success")
+  log       Json?
+  createdAt DateTime     @default(now())
+  rule      WorkflowRule @relation(fields: [ruleId], references: [id])
+  ticket    Ticket       @relation(fields: [ticketId], references: [id], onDelete: Cascade)
+
+  @@index([ruleId])
+  @@index([ticketId])
+  @@index([createdAt])
+  @@map("workflow_runs")
 }
 
 // ============================================================================
@@ -1495,16 +1768,21 @@ enum ApplicationQuestionType {
 
 enum NotificationCategory {
   MESSAGING
+  CRM
 }
 
 enum NotificationScope {
   SEEKER
   COACH
   RECRUITER
+  AGENT
+  MANAGER
 }
 
 enum NotificationEntityType {
   CONVERSATION
+  TICKET
+  SLA_EVENT
 }
 
 enum AiBuddyMode {
@@ -1518,4 +1796,65 @@ enum ApplicationStatus {
   Interviewing
   Offers
   ClosedOut
+}
+
+// ============================================================================
+//  CRM ENUMS
+// ============================================================================
+
+enum TicketType {
+  INCIDENT
+  REQUEST
+  PROBLEM
+  SCTASK
+  CHANGE_ORDER
+}
+
+enum TicketPriority {
+  P1
+  P2
+  P3
+  P4
+}
+
+enum TicketStatus {
+  OPEN
+  ASSIGNED
+  IN_PROGRESS
+  ON_HOLD
+  PENDING_CUSTOMER
+  RESOLVED
+  CLOSED
+  CANCELLED
+}
+
+enum TicketSource {
+  AGENT
+  CUSTOMER
+  EMAIL
+  SYSTEM
+}
+
+enum QueueRole {
+  AGENT
+  MANAGER
+  VIEWER
+}
+
+enum SlaEventType {
+  WARNING
+  BREACHED
+  ESCALATED
+}
+
+enum WorkflowTrigger {
+  TICKET_CREATED
+  TICKET_UPDATED
+  STATUS_CHANGED
+  PRIORITY_CHANGED
+  ASSIGNED
+  UNASSIGNED_FOR
+  SLA_WARNING
+  SLA_BREACHED
+  COMMENT_ADDED
 }
