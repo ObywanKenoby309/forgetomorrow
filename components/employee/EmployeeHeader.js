@@ -1,9 +1,9 @@
 // components/employee/EmployeeHeader.js
-import React, { useMemo } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
+import Avatar from '@/components/common/Avatar';
+import { useCurrentUserAvatar } from '@/hooks/useCurrentUserAvatar';
 
 const ORANGE = '#FF7043';
-const ORANGE_SOFT_BG = 'rgba(255,112,67,0.10)';
-const BORDER = '1px solid rgba(17, 24, 39, 0.10)';
 
 const ALLOWED_HATS = new Set(['seeker', 'coach', 'recruiter-smb', 'recruiter-ent']);
 function normalizeHat(input) {
@@ -32,6 +32,13 @@ export default function EmployeeHeader({
 }) {
   const normalizedHat = normalizeHat(hat);
 
+  // ✅ Same avatar logic as site headers (EnterpriseHeader)
+  const { avatarUrl, initials } = useCurrentUserAvatar();
+
+  // ✅ Minimal: keep the existing layout, just make it dark + real avatar
+  const DARK_BG = '#1C1F27';
+  const BORDER = '1px solid rgba(255,255,255,0.12)';
+
   const bar = useMemo(() => {
     return (
       <header
@@ -41,7 +48,7 @@ export default function EmployeeHeader({
           top: 0,
           zIndex: 50,
           width: '100%',
-          background: '#FFFFFF',
+          background: DARK_BG,
           borderBottom: BORDER,
         }}
       >
@@ -75,14 +82,14 @@ export default function EmployeeHeader({
                 }}
                 aria-label="Go to Employee Suite dashboard"
               >
-                {/* Full-color watermark icon (safe fallback if missing) */}
+                {/* FT mark */}
                 <div
                   style={{
                     width: 28,
                     height: 28,
                     borderRadius: 9,
                     border: '1px solid rgba(255,112,67,0.30)',
-                    background: 'rgba(255,112,67,0.08)',
+                    background: 'rgba(255,112,67,0.10)',
                     display: 'flex',
                     alignItems: 'center',
                     justifyContent: 'center',
@@ -96,12 +103,11 @@ export default function EmployeeHeader({
                     alt="ForgeTomorrow"
                     style={{ width: '100%', height: '100%', objectFit: 'cover' }}
                     onError={(e) => {
-                      // fallback to a simple mark without breaking layout
                       e.currentTarget.style.display = 'none';
                       const parent = e.currentTarget.parentElement;
                       if (parent && !parent.dataset.fallbackApplied) {
                         parent.dataset.fallbackApplied = '1';
-                        parent.style.background = 'rgba(255,112,67,0.12)';
+                        parent.style.background = 'rgba(255,112,67,0.14)';
                         parent.style.color = ORANGE;
                         parent.style.fontWeight = 950;
                         parent.style.fontSize = '14px';
@@ -116,7 +122,7 @@ export default function EmployeeHeader({
                     style={{
                       fontSize: 16,
                       fontWeight: 950,
-                      color: '#111827',
+                      color: '#F0F2F5',
                       whiteSpace: 'nowrap',
                     }}
                   >
@@ -130,13 +136,13 @@ export default function EmployeeHeader({
                       height: 22,
                       padding: '0 10px',
                       borderRadius: 999,
-                      border: '1px solid rgba(17,24,39,0.12)',
-                      background: 'rgba(17,24,39,0.04)',
+                      border: '1px solid rgba(255,255,255,0.14)',
+                      background: 'rgba(255,255,255,0.06)',
                       fontSize: 11,
                       fontWeight: 950,
                       letterSpacing: '0.10em',
                       textTransform: 'uppercase',
-                      color: 'rgba(17,24,39,0.70)',
+                      color: 'rgba(240,242,245,0.78)',
                       whiteSpace: 'nowrap',
                     }}
                     title="Employees only"
@@ -151,11 +157,13 @@ export default function EmployeeHeader({
                       height: 22,
                       padding: '0 10px',
                       borderRadius: 999,
-                      border: employee ? '1px solid rgba(16,185,129,0.22)' : '1px solid rgba(245,158,11,0.22)',
-                      background: employee ? 'rgba(16,185,129,0.10)' : 'rgba(245,158,11,0.10)',
+                      border: employee
+                        ? '1px solid rgba(34,197,94,0.30)'
+                        : '1px solid rgba(245,158,11,0.30)',
+                      background: employee ? 'rgba(34,197,94,0.12)' : 'rgba(245,158,11,0.12)',
                       fontSize: 11,
                       fontWeight: 950,
-                      color: employee ? 'rgba(16,185,129,0.95)' : 'rgba(245,158,11,0.95)',
+                      color: employee ? 'rgba(34,197,94,0.95)' : 'rgba(245,158,11,0.95)',
                       whiteSpace: 'nowrap',
                     }}
                     title={department ? `Dept: ${department}` : ''}
@@ -165,11 +173,9 @@ export default function EmployeeHeader({
                   </div>
                 </div>
               </a>
-
-              {/* Quiet subtitle row removed from the bar (kept available via headerSubtitle below if needed) */}
             </div>
 
-            {/* MIDDLE: intentionally empty (no redundant nav; sidebar is the nav) */}
+            {/* MIDDLE: intentionally empty (sidebar is nav) */}
             <div style={{ minWidth: 0 }} />
 
             {/* RIGHT: Hat + Open Forge Site + Tools + Avatar */}
@@ -185,19 +191,22 @@ export default function EmployeeHeader({
             >
               <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
                 {!isMobile ? (
-                  <div style={{ fontSize: 12, fontWeight: 900, color: 'rgba(17,24,39,0.65)' }}>View as</div>
+                  <div style={{ fontSize: 12, fontWeight: 900, color: 'rgba(155,163,176,0.90)' }}>
+                    View as
+                  </div>
                 ) : null}
                 <select
                   value={normalizedHat}
                   onChange={(e) => onHatChange(normalizeHat(e.target.value))}
                   aria-label="Select Forge Site view (hat)"
                   style={{
-                    border: '1px solid rgba(17,24,39,0.18)',
+                    border: '1px solid rgba(255,255,255,0.16)',
                     borderRadius: 12,
                     padding: '8px 10px',
                     fontSize: 13,
                     fontWeight: 900,
-                    background: '#fff',
+                    background: '#252932',
+                    color: '#F0F2F5',
                     cursor: 'pointer',
                     height: 40,
                   }}
@@ -223,8 +232,8 @@ export default function EmployeeHeader({
                   color: '#fff',
                   fontWeight: 950,
                   fontSize: 13,
-                  border: '1px solid rgba(0,0,0,0.08)',
-                  boxShadow: '0 10px 18px rgba(0,0,0,0.10)',
+                  border: '1px solid rgba(0,0,0,0.10)',
+                  boxShadow: '0 10px 18px rgba(0,0,0,0.18)',
                   cursor: 'pointer',
                   whiteSpace: 'nowrap',
                 }}
@@ -245,7 +254,7 @@ export default function EmployeeHeader({
                     color: '#fff',
                     fontWeight: 950,
                     fontSize: 13,
-                    border: '1px solid rgba(0,0,0,0.10)',
+                    border: '1px solid rgba(255,255,255,0.12)',
                     cursor: 'pointer',
                     whiteSpace: 'nowrap',
                   }}
@@ -255,26 +264,9 @@ export default function EmployeeHeader({
                 </button>
               ) : null}
 
-              {/* Avatar placeholder */}
-              <div
-                aria-label="Employee profile"
-                title="Profile (placeholder)"
-                style={{
-                  width: 34,
-                  height: 34,
-                  borderRadius: 999,
-                  border: '1px solid rgba(17,24,39,0.14)',
-                  background: 'rgba(17,24,39,0.06)',
-                  boxShadow: '0 8px 16px rgba(0,0,0,0.06)',
-                  display: 'inline-flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  fontWeight: 950,
-                  color: 'rgba(17,24,39,0.55)',
-                  userSelect: 'none',
-                }}
-              >
-                {/* empty on purpose */}
+              {/* ✅ Real avatar (same logic as site) */}
+              <div aria-label="Employee profile" title="Profile">
+                <Avatar avatarUrl={avatarUrl} initials={initials} size="sm" />
               </div>
             </div>
           </div>
@@ -287,21 +279,33 @@ export default function EmployeeHeader({
                 display: 'flex',
                 alignItems: 'center',
                 gap: 10,
-                color: 'rgba(17,24,39,0.60)',
+                color: 'rgba(155,163,176,0.92)',
                 fontSize: 12,
                 fontWeight: 800,
                 lineHeight: 1.25,
               }}
             >
-              <span style={{ color: 'rgba(17,24,39,0.45)' }}>{headerTitle}</span>
-              <span style={{ color: 'rgba(17,24,39,0.30)' }}>•</span>
+              <span style={{ color: 'rgba(155,163,176,0.75)' }}>{headerTitle}</span>
+              <span style={{ color: 'rgba(255,255,255,0.14)' }}>•</span>
               <span>{headerSubtitle}</span>
             </div>
           ) : null}
         </div>
       </header>
     );
-  }, [headerTitle, headerSubtitle, employee, department, active, normalizedHat, onHatChange, isMobile, onOpenTools]);
+  }, [
+    headerTitle,
+    headerSubtitle,
+    employee,
+    department,
+    active,
+    normalizedHat,
+    onHatChange,
+    isMobile,
+    onOpenTools,
+    avatarUrl,
+    initials,
+  ]);
 
   return bar;
 }
