@@ -66,7 +66,7 @@ export default function HearthCenter() {
       desc: 'Access articles, guides, and tools to support your professional growth.',
       href: '/seeker/the-hearth/resources',
       status: 'New!',
-      img: '/icons/resource-library.png',
+      img: '/icons/resource_library.png',
     },
   ];
 
