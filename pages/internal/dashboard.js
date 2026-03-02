@@ -8,6 +8,9 @@ import Link from 'next/link';
 import { getServerSession } from 'next-auth/next';
 import { authOptions } from '../api/auth/[...nextauth]';
 
+// ✅ NEW: use internal header component (no hard-wired topnav)
+import EmployeeHeader from '@/components/employee/EmployeeHeader';
+
 const PRIORITY_COLOR = { P1: '#EF4444', P2: '#F59E0B', P3: '#3B82F6', P4: '#636B78' };
 const PRIORITY_GLOW  = { P1: '0 0 6px #EF4444', P2: 'none', P3: 'none', P4: 'none' };
 
@@ -56,7 +59,7 @@ const CSS = `
     --red: #EF4444;
   }
 
-  /* TOPNAV */
+  /* TOPNAV (kept in CSS even though we now render EmployeeHeader) */
   #crm-root .topnav {
     height:52px; background:var(--dark-2); border-bottom:1px solid var(--border);
     display:flex; align-items:center; padding:0 20px; gap:16px; flex-shrink:0; z-index:100;
@@ -339,11 +342,20 @@ function TicketRow({ ticket }) {
 }
 
 // ─── Page ─────────────────────────────────────────────────────────────────────
-export default function Dashboard({ queues: initialQueues, userInitials }) {
+export default function Dashboard({ queues: initialQueues }) {
   const [queues, setQueues]     = useState(initialQueues ?? []);
   const [queueId, setQueueId]   = useState(initialQueues?.[0]?.id ?? '');
   const [data, setData]         = useState(null);
   const [loading, setLoading]   = useState(true);
+
+  // ✅ minimal: let EmployeeHeader know if we’re mobile
+  const [isMobile, setIsMobile] = useState(false);
+  useEffect(() => {
+    const onResize = () => setIsMobile(typeof window !== 'undefined' ? window.innerWidth < 768 : false);
+    onResize();
+    window.addEventListener('resize', onResize);
+    return () => window.removeEventListener('resize', onResize);
+  }, []);
 
   const fetchStats = useCallback(async (id) => {
     if (!id) return;
@@ -370,24 +382,18 @@ export default function Dashboard({ queues: initialQueues, userInitials }) {
       <style dangerouslySetInnerHTML={{ __html: CSS }} />
 
       <div id="crm-root">
-        {/* TOP NAV */}
-        <nav className="topnav">
-          <div className="logo">
-            <div className="logo-mark">F</div>
-            <span className="logo-name">ForgeTomorrow</span>
-          </div>
-          <span className="nav-badge badge-suite">Employee Suite</span>
-          <span className="nav-badge badge-limited">Limited</span>
-          <div className="nav-spacer" />
-          <div className="nav-right">
-            <div className="view-as">
-              <span>View as</span>
-              <select className="view-select"><option>Agent</option><option>Manager</option><option>Admin</option></select>
-            </div>
-            <a href="/seeker-dashboard" className="btn-site">Open Forge Site</a>
-            <div className="avatar">{userInitials}</div>
-          </div>
-        </nav>
+        {/* ✅ INTERNAL HEADER (component, not hard-wired) */}
+        <EmployeeHeader
+          headerTitle="Employee Suite"
+          headerSubtitle=""
+          employee={false}
+          department=""
+          active="dashboard"
+          hat="seeker"
+          onHatChange={() => {}}
+          isMobile={isMobile}
+          onOpenTools={() => {}}
+        />
 
         {/* BREADCRUMB */}
         <div className="breadcrumb">
@@ -583,9 +589,6 @@ export async function getServerSideProps(context) {
   const session = await getServerSession(context.req, context.res, authOptions);
   if (!session?.user) return { redirect: { destination: '/auth/signin', permanent: false } };
 
-  const userInitials = [session.user.firstName?.[0], session.user.lastName?.[0]]
-    .filter(Boolean).join('').toUpperCase() || session.user.email?.[0]?.toUpperCase() || 'U';
-
   let queues = [];
   try {
     const { prisma } = await import('@/lib/prisma');
@@ -595,5 +598,5 @@ export async function getServerSideProps(context) {
     });
   } catch (e) { console.error('[Dashboard SSR]', e.message); }
 
-  return { props: { queues, userInitials } };
+  return { props: { queues } };
 }
