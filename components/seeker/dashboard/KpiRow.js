@@ -32,6 +32,26 @@ export default function KpiRow({
     [chrome]
   );
 
+  // ✅ Mobile-only adjustments (PC unchanged)
+  const [isMobileTight, setIsMobileTight] = useState(false);
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+
+    // Galaxy S21 Ultra (and most phones) are well under this threshold.
+    const mq = window.matchMedia('(max-width: 768px)');
+    const apply = () => setIsMobileTight(!!mq.matches);
+
+    apply();
+    if (mq.addEventListener) mq.addEventListener('change', apply);
+    else mq.addListener(apply);
+
+    return () => {
+      if (mq.removeEventListener) mq.removeEventListener('change', apply);
+      else mq.removeListener(apply);
+    };
+  }, []);
+
   // === ANIMATED COUNTER (behavior stays the same) ===
   const AnimatedNumber = ({ end, duration = 900 }) => {
     const [count, setCount] = useState(0);
@@ -60,16 +80,26 @@ export default function KpiRow({
     return <>{count}</>;
   };
 
-  // ✅ Inline styles to guarantee identical rendering to Applications StageStrip
+  // ✅ Desktop stays exactly the same; mobile just tightens spacing
   const rowStyle = {
     display: 'grid',
-    gap: 12,
+    gap: isMobileTight ? 8 : 12,
     gridTemplateColumns: 'repeat(5, minmax(0,1fr))',
     cursor: 'pointer',
   };
 
-  const Tile = ({ title, value, stage }) => {
+  const Tile = ({ title, value, stage, mobileTitle }) => {
     const c = colorFor(stageKey(stage));
+
+    const showTitle = isMobileTight ? mobileTitle : title;
+
+    // ✅ Only mobile changes
+    const tilePadding = isMobileTight ? '6px 4px' : '10px 12px';
+    const titleFontSize = isMobileTight ? 10 : 12;
+    const titleSidePad = isMobileTight ? 2 : 6;
+    const numberFontSize = isMobileTight ? 18 : 20;
+    const innerGap = isMobileTight ? 2 : 4;
+
     return (
       <div
         style={{
@@ -77,36 +107,31 @@ export default function KpiRow({
           color: c.text,
           border: `1px solid ${c.solid}`,
           borderRadius: 10,
-
-          // ✅ LESS padding so labels can breathe horizontally on mobile
-          padding: '8px 8px',
-
+          padding: tilePadding,
           display: 'grid',
-          // ✅ tighter vertical rhythm so the number stays visually centered
-          gap: 3,
+          gap: innerGap,
           textAlign: 'center',
           minWidth: 0,
           boxShadow: 'none',
         }}
       >
-        {/* ✅ Short labels + horizontal breathing room */}
         <div
           style={{
-            fontSize: 12,
+            fontSize: titleFontSize,
             fontWeight: 700,
             opacity: 0.92,
             lineHeight: 1.05,
-            padding: '0 6px', // ✅ breathing space left/right for label
-            whiteSpace: 'nowrap', // ✅ keep on one line (labels are short now)
+            paddingLeft: titleSidePad,
+            paddingRight: titleSidePad,
+            whiteSpace: 'nowrap',
             overflow: 'hidden',
-            textOverflow: 'ellipsis',
+            textOverflow: 'clip', // ✅ no “Ap…” unless we truly hit a layout bug
           }}
         >
-          {title}
+          {showTitle}
         </div>
 
-        {/* ✅ Number stays centered and prominent */}
-        <div style={{ fontSize: 20, fontWeight: 800, lineHeight: 1.05 }}>
+        <div style={{ fontSize: numberFontSize, fontWeight: 800, lineHeight: 1.05 }}>
           <AnimatedNumber end={value} />
         </div>
       </div>
@@ -124,11 +149,11 @@ export default function KpiRow({
       }}
       aria-label="Open applications"
     >
-      <Tile title="Pin" value={pinned} stage="Pinned" />
-      <Tile title="Apply" value={applied} stage="Applied" />
-      <Tile title="Interview" value={interviewing} stage="Interviewing" />
-      <Tile title="Offer" value={offers} stage="Offers" />
-      <Tile title="Close" value={closedOut} stage="Closed Out" />
+      <Tile title="Pinned" mobileTitle="Pin" value={pinned} stage="Pinned" />
+      <Tile title="Applied" mobileTitle="Apply" value={applied} stage="Applied" />
+      <Tile title="Interviewing" mobileTitle="Interview" value={interviewing} stage="Interviewing" />
+      <Tile title="Offers" mobileTitle="Offer" value={offers} stage="Offers" />
+      <Tile title="Closed Out" mobileTitle="Close" value={closedOut} stage="Closed Out" />
     </div>
   );
 }
