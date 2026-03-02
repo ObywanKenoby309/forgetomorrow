@@ -7,7 +7,10 @@ import HearthCenter from '@/components/community/HearthCenter';
 import Link from 'next/link';
 import SupportFloatingButton from '@/components/SupportFloatingButton';
 
-// ✅ Match Seeker Dashboard glass styling (STYLE match, not format change)
+// ✅ DB-backed right-rail placements (no hardcoded ads)
+import RightRailPlacementManager from '@/components/ads/RightRailPlacementManager';
+
+// ✅ Match Seeker Dashboard style (glass cards)
 const GLASS = {
   borderRadius: 14,
   border: '1px solid rgba(255,255,255,0.22)',
@@ -24,15 +27,12 @@ function HeaderBox() {
         ...GLASS,
         padding: 16,
         textAlign: 'center',
-        boxSizing: 'border-box',
-        width: '100%',
-        minWidth: 0,
       }}
     >
       <h1
         style={{
           color: '#FF7043',
-          fontSize: 24,
+          fontSize: 28,
           fontWeight: 800,
           margin: 0,
         }}
@@ -41,10 +41,9 @@ function HeaderBox() {
       </h1>
       <p
         style={{
-          margin: '6px auto 0',
-          color: '#607D8B',
+          marginTop: 8,
+          color: '#546E7A',
           fontSize: 14,
-          maxWidth: 720,
         }}
       >
         Your central place to build connections, find mentors, and grow your professional
@@ -62,51 +61,37 @@ function RightRail() {
         style={{
           ...GLASS,
           borderRadius: 12,
-          padding: 14,
+          padding: 12,
           display: 'grid',
           gap: 8,
-          boxSizing: 'border-box',
           minWidth: 0,
+          boxSizing: 'border-box',
         }}
       >
         <div style={{ fontWeight: 800, color: '#37474F' }}>
           Community Guidelines &amp; Support
         </div>
-
-        <Link href="/community-guidelines" style={{ color: '#FF7043', fontWeight: 700 }}>
+        <Link
+          href="/community-guidelines"
+          style={{ color: '#FF7043', fontWeight: 600 }}
+        >
           Community Guidelines
         </Link>
-
-        <p style={{ margin: 0, color: '#607D8B', fontSize: 13, lineHeight: 1.35 }}>
+        <p
+          style={{
+            margin: 0,
+            color: '#607D8B',
+            fontSize: 13,
+          }}
+        >
           Need help? Use the orange “Need help? Chat with Support” button at the
           bottom-right of the screen to contact our team.
         </p>
       </div>
 
-      {/* Advertisement slot for The Hearth */}
-      <div
-        style={{
-          ...GLASS,
-          borderRadius: 12,
-          padding: 14,
-          boxSizing: 'border-box',
-          minWidth: 0,
-        }}
-      >
-        <div style={{ fontWeight: 800, color: '#37474F', marginBottom: 6 }}>
-          Partner Spotlight
-        </div>
-
-        <p style={{ margin: 0, color: '#607D8B', fontSize: 13, lineHeight: 1.35 }}>
-          Your advertisement could be here. Contact{' '}
-          <a
-            href="mailto:sales@forgetomorrow.com"
-            style={{ color: '#FF7043', fontWeight: 700 }}
-          >
-            sales@forgetomorrow.com
-          </a>
-          .
-        </p>
+      {/* ✅ DB-backed ad system (no hardcoded spotlight, no coaching-only callouts) */}
+      <div style={{ minWidth: 0 }}>
+        <RightRailPlacementManager slot="right_rail_1" />
       </div>
     </div>
   );
@@ -133,7 +118,8 @@ export default function TheHearth() {
       header={<HeaderBox />}
       right={<RightRail />}
       activeNav={activeNav}
-      rightVariant="light" // ✅ ensures no black right-rail container on any chrome
+      // ✅ SeekerLayout supports this; other layouts will ignore it harmlessly
+      rightVariant="light"
     >
       <>
         <HearthCenter />

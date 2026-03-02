@@ -3,15 +3,24 @@ import React, { useEffect, useMemo, useState } from 'react';
 import { useRouter } from 'next/router';
 import { resolveSurfaceId, getDefaultRailSlotsForSurface } from '@/lib/ads/surfaceMap';
 
+// ✅ Profile/Dashboard-standard glass
+const GLASS = {
+  border: '1px solid rgba(255,255,255,0.22)',
+  background: 'rgba(255,255,255,0.58)',
+  boxShadow: '0 10px 24px rgba(0,0,0,0.12)',
+  backdropFilter: 'blur(10px)',
+  WebkitBackdropFilter: 'blur(10px)',
+};
+
 function Card({ title, children }) {
   return (
     <section
       style={{
-        background: 'white',
+        ...GLASS,
         borderRadius: 12,
         padding: 12,
-        border: '1px solid #eee',
-        boxShadow: '0 2px 6px rgba(0,0,0,0.06)',
+        boxSizing: 'border-box',
+        minWidth: 0,
       }}
     >
       {title ? (
