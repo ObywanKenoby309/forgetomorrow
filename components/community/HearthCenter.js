@@ -497,11 +497,12 @@ export default function HearthCenter() {
   // Simple SSR-safe mobile detection via CSS — we render both and hide one
   return (
     <section
+      className="hearth-section"
       style={{
         ...GLASS,
         padding: 16,
         position: 'relative',
-        overflow: 'visible', // allow dropdown to escape
+        overflow: 'visible',
       }}
     >
       {/* Ambient glow */}
@@ -522,7 +523,8 @@ export default function HearthCenter() {
         .hearth-mobile  { display: none;  }
         @media (max-width: 639px) {
           .hearth-desktop { display: none; }
-          .hearth-mobile  { display: block; margin: -16px; padding: 16px 0 16px; overflow: hidden; border-radius: 14px; }
+          .hearth-mobile  { display: block; }
+          .hearth-section { padding-left: 0 !important; padding-right: 0 !important; }
         }
         /* hide scrollbar on carousel wrapper */
         .hearth-scroll-track {
