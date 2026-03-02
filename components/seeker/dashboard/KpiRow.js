@@ -1,3 +1,4 @@
+// components/seeker/dashboard/KpiRow.js
 import React, { useState, useEffect, useMemo } from 'react';
 import { colorFor } from '@/components/seeker/dashboard/seekerColors';
 import { useRouter } from 'next/router';
@@ -84,7 +85,20 @@ export default function KpiRow({
           boxShadow: 'none',
         }}
       >
-        <div style={{ fontSize: 12, opacity: 0.9, whiteSpace: 'nowrap' }}>{title}</div>
+        {/* ✅ FIX: allow wrap on narrow screens (desktop stays 1-line naturally) */}
+        <div
+          style={{
+            fontSize: 12,
+            opacity: 0.9,
+            whiteSpace: 'normal',
+            lineHeight: 1.1,
+            maxWidth: '100%',
+            wordBreak: 'break-word',
+          }}
+        >
+          {title}
+        </div>
+
         <div style={{ fontSize: 20, fontWeight: 800, lineHeight: 1 }}>
           <AnimatedNumber end={value} />
         </div>
