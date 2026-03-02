@@ -6,11 +6,8 @@ import RecruiterLayout from '@/components/layouts/RecruiterLayout';
 import HearthCenter from '@/components/community/HearthCenter';
 import Link from 'next/link';
 import SupportFloatingButton from '@/components/SupportFloatingButton';
-
-// ✅ DB-backed right-rail placements (no hardcoded ads)
 import RightRailPlacementManager from '@/components/ads/RightRailPlacementManager';
 
-// ✅ Match Seeker Dashboard style (glass cards)
 const GLASS = {
   borderRadius: 14,
   border: '1px solid rgba(255,255,255,0.22)',
@@ -56,15 +53,12 @@ function HeaderBox() {
 function RightRail() {
   return (
     <div style={{ display: 'grid', gap: 12, minWidth: 0 }}>
-      {/* Community guidelines + support */}
       <div
         style={{
           ...GLASS,
-          borderRadius: 12,
           padding: 12,
           display: 'grid',
           gap: 8,
-          minWidth: 0,
           boxSizing: 'border-box',
         }}
       >
@@ -77,19 +71,8 @@ function RightRail() {
         >
           Community Guidelines
         </Link>
-        <p
-          style={{
-            margin: 0,
-            color: '#607D8B',
-            fontSize: 13,
-          }}
-        >
-          Need help? Use the orange “Need help? Chat with Support” button at the
-          bottom-right of the screen to contact our team.
-        </p>
       </div>
 
-      {/* ✅ DB-backed ad system (no hardcoded spotlight, no coaching-only callouts) */}
       <div style={{ minWidth: 0 }}>
         <RightRailPlacementManager slot="right_rail_1" />
       </div>
@@ -118,7 +101,6 @@ export default function TheHearth() {
       header={<HeaderBox />}
       right={<RightRail />}
       activeNav={activeNav}
-      // ✅ SeekerLayout supports this; other layouts will ignore it harmlessly
       rightVariant="light"
     >
       <>

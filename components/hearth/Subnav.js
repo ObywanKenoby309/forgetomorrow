@@ -1,6 +1,15 @@
 import Link from 'next/link';
 import { useRouter } from 'next/router';
 
+const GLASS = {
+  borderRadius: 14,
+  border: '1px solid rgba(255,255,255,0.22)',
+  background: 'rgba(255,255,255,0.58)',
+  boxShadow: '0 10px 24px rgba(0,0,0,0.12)',
+  backdropFilter: 'blur(10px)',
+  WebkitBackdropFilter: 'blur(10px)',
+};
+
 export default function Subnav() {
   const { pathname } = useRouter();
   const tabs = [
@@ -15,11 +24,8 @@ export default function Subnav() {
   return (
     <div
       style={{
-        background: 'white',
-        border: '1px solid #eee',
-        borderRadius: 12,
+        ...GLASS,
         padding: 8,
-        boxShadow: '0 2px 6px rgba(0,0,0,0.06)',
         display: 'flex',
         gap: 8,
         flexWrap: 'wrap',
@@ -38,7 +44,7 @@ export default function Subnav() {
             color: isActive(t.href) ? 'white' : '#37474F',
             background: isActive(t.href)
               ? 'linear-gradient(135deg, #FF6F43, #FF8E53)'
-              : '#FAFAFA',
+              : 'white',
             boxShadow: isActive(t.href)
               ? 'inset 0 0 0 2px rgba(255,255,255,0.6)'
               : '0 2px 4px rgba(0,0,0,0.05)',
