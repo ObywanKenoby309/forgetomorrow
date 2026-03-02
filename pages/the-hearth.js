@@ -26,23 +26,10 @@ function HeaderBox() {
         textAlign: 'center',
       }}
     >
-      <h1
-        style={{
-          color: '#FF7043',
-          fontSize: 28,
-          fontWeight: 800,
-          margin: 0,
-        }}
-      >
+      <h1 style={{ color: '#FF7043', fontSize: 28, fontWeight: 800, margin: 0 }}>
         The Hearth
       </h1>
-      <p
-        style={{
-          marginTop: 8,
-          color: '#546E7A',
-          fontSize: 14,
-        }}
-      >
+      <p style={{ marginTop: 8, color: '#546E7A', fontSize: 14 }}>
         Your central place to build connections, find mentors, and grow your professional
         network with purpose and authenticity.
       </p>
@@ -63,12 +50,9 @@ function RightRail() {
         }}
       >
         <div style={{ fontWeight: 800, color: '#37474F' }}>
-          Community Guidelines &amp; Support
+          Community Guidelines
         </div>
-        <Link
-          href="/community-guidelines"
-          style={{ color: '#FF7043', fontWeight: 600 }}
-        >
+        <Link href="/community-guidelines" style={{ color: '#FF7043', fontWeight: 600 }}>
           Community Guidelines
         </Link>
       </div>
@@ -99,6 +83,7 @@ export default function TheHearth() {
     <Layout
       title="ForgeTomorrow — The Hearth"
       header={<HeaderBox />}
+      headerCard={false}
       right={<RightRail />}
       activeNav={activeNav}
       rightVariant="light"
