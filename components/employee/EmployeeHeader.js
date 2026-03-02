@@ -99,7 +99,7 @@ export default function EmployeeHeader({
                   title="ForgeTomorrow"
                 >
                   <img
-                    src="/brand/forge-watermark-fullcolor.png"
+                    src="/images/logo-color.png"
                     alt="ForgeTomorrow"
                     style={{ width: '100%', height: '100%', objectFit: 'cover' }}
                     onError={(e) => {
