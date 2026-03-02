@@ -77,29 +77,36 @@ export default function KpiRow({
           color: c.text,
           border: `1px solid ${c.solid}`,
           borderRadius: 10,
-          padding: '10px 12px',
+
+          // ✅ LESS padding so labels can breathe horizontally on mobile
+          padding: '8px 8px',
+
           display: 'grid',
-          gap: 4,
+          // ✅ tighter vertical rhythm so the number stays visually centered
+          gap: 3,
           textAlign: 'center',
           minWidth: 0,
           boxShadow: 'none',
         }}
       >
-        {/* ✅ FIX: allow wrap on narrow screens (desktop stays 1-line naturally) */}
+        {/* ✅ Short labels + horizontal breathing room */}
         <div
           style={{
             fontSize: 12,
-            opacity: 0.9,
-            whiteSpace: 'normal',
-            lineHeight: 1.1,
-            maxWidth: '100%',
-            wordBreak: 'break-word',
+            fontWeight: 700,
+            opacity: 0.92,
+            lineHeight: 1.05,
+            padding: '0 6px', // ✅ breathing space left/right for label
+            whiteSpace: 'nowrap', // ✅ keep on one line (labels are short now)
+            overflow: 'hidden',
+            textOverflow: 'ellipsis',
           }}
         >
           {title}
         </div>
 
-        <div style={{ fontSize: 20, fontWeight: 800, lineHeight: 1 }}>
+        {/* ✅ Number stays centered and prominent */}
+        <div style={{ fontSize: 20, fontWeight: 800, lineHeight: 1.05 }}>
           <AnimatedNumber end={value} />
         </div>
       </div>
@@ -117,11 +124,11 @@ export default function KpiRow({
       }}
       aria-label="Open applications"
     >
-      <Tile title="Pinned" value={pinned} stage="Pinned" />
-      <Tile title="Applied" value={applied} stage="Applied" />
-      <Tile title="Interviewing" value={interviewing} stage="Interviewing" />
-      <Tile title="Offers" value={offers} stage="Offers" />
-      <Tile title="Closed Out" value={closedOut} stage="Closed Out" />
+      <Tile title="Pin" value={pinned} stage="Pinned" />
+      <Tile title="Apply" value={applied} stage="Applied" />
+      <Tile title="Interview" value={interviewing} stage="Interviewing" />
+      <Tile title="Offer" value={offers} stage="Offers" />
+      <Tile title="Close" value={closedOut} stage="Closed Out" />
     </div>
   );
 }
