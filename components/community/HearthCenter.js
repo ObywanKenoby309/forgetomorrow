@@ -3,19 +3,19 @@ import Link from 'next/link';
 import React from 'react';
 import { useRouter } from 'next/router';
 
-function HearthIcon({ src, alt }) {
+function HearthIcon({ src, alt, size = 44 }) {
   return (
     <img
       src={src}
       alt={alt}
-      width={28}
-      height={28}
+      width={size}
+      height={size}
       style={{
         display: 'block',
-        width: 28,
-        height: 28,
+        width: size,
+        height: size,
         objectFit: 'contain',
-        filter: 'drop-shadow(0 1px 2px rgba(0,0,0,0.12))',
+        filter: 'drop-shadow(0 2px 4px rgba(0,0,0,0.16))',
       }}
       loading="lazy"
       decoding="async"
@@ -118,7 +118,6 @@ export default function HearthCenter() {
               overflow: 'hidden',
             }}
             onMouseEnter={(e) => {
-              // lift + glow (controlled)
               e.currentTarget.style.transform = 'translateY(-2px)';
               e.currentTarget.style.borderColor = 'rgba(255,112,67,0.28)';
               e.currentTarget.style.boxShadow =
@@ -149,23 +148,22 @@ export default function HearthCenter() {
               style={{
                 display: 'flex',
                 alignItems: 'center',
-                gap: 10,
+                gap: 12,
                 marginBottom: 10,
               }}
             >
+              {/* Bigger icon block: mobile-first big, desktop still clean */}
               <div
-                style={{
-                  width: 44,
-                  height: 44,
-                  borderRadius: 14,
-                  display: 'grid',
-                  placeItems: 'center',
-                  background: 'rgba(255,112,67,0.10)',
-                  border: '1px solid rgba(255,112,67,0.22)',
-                }}
-              >
-                <HearthIcon src={img} alt={title} />
-              </div>
+  style={{
+    width: 64,
+    height: 64,
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+  }}
+>
+  <HearthIcon src={img} alt={title} size={64} />
+</div>
 
               <h2
                 style={{
@@ -173,7 +171,7 @@ export default function HearthCenter() {
                   fontWeight: 800,
                   margin: 0,
                   color: '#FF7043',
-                  lineHeight: 1.1,
+                  lineHeight: 1.15,
                 }}
               >
                 {title}
@@ -185,23 +183,23 @@ export default function HearthCenter() {
             </p>
 
             <div style={{ marginTop: 12 }}>
-  <span
-    style={{
-      fontSize: 12,
-      fontWeight: 800,
-      color: '#FF7043',
-      background: 'rgba(255,112,67,0.10)',
-      border: '1px solid rgba(255,112,67,0.20)',
-      padding: '5px 10px',
-      borderRadius: 999,
-      display: 'inline-flex',
-      alignItems: 'center',
-      gap: 6,
-    }}
-  >
-    {status}
-  </span>
-</div>
+              <span
+                style={{
+                  fontSize: 12,
+                  fontWeight: 800,
+                  color: '#FF7043',
+                  background: 'rgba(255,112,67,0.10)',
+                  border: '1px solid rgba(255,112,67,0.20)',
+                  padding: '5px 10px',
+                  borderRadius: 999,
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: 6,
+                }}
+              >
+                {status}
+              </span>
+            </div>
           </Link>
         ))}
       </div>
