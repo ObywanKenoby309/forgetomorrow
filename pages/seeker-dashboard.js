@@ -295,6 +295,17 @@ export default function SeekerDashboard() {
   const [weeks, setWeeks] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
 
+  // ✅ Mobile detection (ONLY affects mobile render path)
+  const [isMobile, setIsMobile] = useState(false);
+  useEffect(() => {
+    const handleResize = () => {
+      if (typeof window !== 'undefined') setIsMobile(window.innerWidth < 1024);
+    };
+    handleResize();
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
+
   // ✅ Right rail width
   const RIGHT_COL_WIDTH = 280;
   const GAP = 16;
@@ -406,6 +417,83 @@ export default function SeekerDashboard() {
     );
   }
 
+  // ✅ MOBILE-ONLY LAYOUT (PC stays exactly the same below)
+  if (isMobile) {
+    return (
+      <>
+        <Head>
+          <title>Seeker Dashboard | ForgeTomorrow</title>
+        </Head>
+
+        <SeekerLayout title="Seeker Dashboard | ForgeTomorrow" activeNav={seekerActiveNav}>
+          <div style={{ display: 'grid', gap: GAP, width: '100%' }}>
+            {/* Title */}
+            <section style={{ ...GLASS, padding: 16, textAlign: 'center' }}>
+              <h1 style={{ margin: 0, color: '#FF7043', fontSize: 22, fontWeight: 800 }}>
+                Your Job Seeker Dashboard
+              </h1>
+              <p style={{ margin: '6px auto 0', color: '#607D8B', maxWidth: 720 }}>
+                You're not alone. Track your momentum, see your wins, and keep moving forward.
+              </p>
+            </section>
+
+            {/* KPI */}
+            <section style={{ ...KPI_GLASS, padding: 16 }}>
+              {kpi && (
+                <KpiRow
+                  pinned={kpi.pinned || 0}
+                  applied={kpi.applied || 0}
+                  interviewing={kpi.interviewing || 0}
+                  offers={kpi.offers || 0}
+                  closedOut={kpi.closedOut || 0}
+                />
+              )}
+            </section>
+
+            {/* Right rail content stacked (Ad + Profile Performance) */}
+            <section style={{ ...GLASS, padding: 16, display: 'grid', gap: GAP }}>
+              <div style={{ minHeight: 160 }}>
+                <RightRailPlacementManager slot="right_rail_1" />
+              </div>
+              <div style={{ ...GLASS, padding: 16 }}>
+                <ProfilePerformanceTeaser />
+              </div>
+            </section>
+
+            {/* Action Center */}
+            <SeekerActionCenterSection scope={scope} withChrome={withChrome} glassStyle={GLASS} />
+
+            {/* Bottom cards stacked */}
+            <section style={{ ...GLASS, padding: 16 }}>
+              <RecommendedJobsPreview />
+            </section>
+
+            <section style={{ ...GLASS, padding: 16 }}>
+              <div className="flex items-center justify-between mb-4">
+                <h2 className="text-lg font-semibold text-orange-600">Your Next Yes</h2>
+                <Link
+                  href={withChrome('/seeker/pinned-jobs')}
+                  className="text-orange-600 font-medium hover:underline"
+                >
+                  View all
+                </Link>
+              </div>
+              <PinnedJobsPreview />
+            </section>
+
+            <section style={{ ...GLASS, padding: 16 }}>
+              <h3 className="text-base font-semibold text-orange-600 mb-3">
+                Applications Over Time
+              </h3>
+              <ApplicationsOverTime weeks={weeks} withChrome={withChrome} />
+            </section>
+          </div>
+        </SeekerLayout>
+      </>
+    );
+  }
+
+  // ✅ DESKTOP LAYOUT — UNCHANGED
   return (
     <>
       <Head>
