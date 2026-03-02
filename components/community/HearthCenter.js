@@ -3,19 +3,22 @@ import Link from 'next/link';
 import React from 'react';
 import { useRouter } from 'next/router';
 
-function HearthIcon({ src, alt, size = 44 }) {
+function HearthIcon({ src, alt, size = 64 }) {
+  const sizeStyle = typeof size === 'number' ? `${size}px` : size;
+
   return (
     <img
       src={src}
       alt={alt}
-      width={size}
-      height={size}
+      width={typeof size === 'number' ? size : undefined}
+      height={typeof size === 'number' ? size : undefined}
       style={{
         display: 'block',
-        width: size,
-        height: size,
+        width: sizeStyle,
+        height: sizeStyle,
         objectFit: 'contain',
-        filter: 'drop-shadow(0 2px 4px rgba(0,0,0,0.16))',
+        // keeps the art readable on wallpaper/glass
+        filter: 'drop-shadow(0 2px 5px rgba(0,0,0,0.18))',
       }}
       loading="lazy"
       decoding="async"
@@ -38,6 +41,12 @@ export default function HearthCenter() {
     backdropFilter: 'blur(10px)',
     WebkitBackdropFilter: 'blur(10px)',
   };
+
+  // ✅ Bigger on mobile, same on PC (caps at 64)
+  // - min: 60px (so torches are visible)
+  // - fluid: 16vw
+  // - max: 64px (keeps your PC look unchanged)
+  const ICON_SIZE = 'clamp(60px, 16vw, 64px)';
 
   const tiles = [
     {
@@ -152,18 +161,10 @@ export default function HearthCenter() {
                 marginBottom: 10,
               }}
             >
-              {/* Bigger icon block: mobile-first big, desktop still clean */}
-              <div
-  style={{
-    width: 64,
-    height: 64,
-    display: 'flex',
-    alignItems: 'center',
-    justifyContent: 'center',
-  }}
->
-  <HearthIcon src={img} alt={title} size={64} />
-</div>
+              {/* ✅ No tile/background box — icon only */}
+              <div style={{ flexShrink: 0, lineHeight: 0 }}>
+                <HearthIcon src={img} alt={title} size={ICON_SIZE} />
+              </div>
 
               <h2
                 style={{
@@ -171,7 +172,7 @@ export default function HearthCenter() {
                   fontWeight: 800,
                   margin: 0,
                   color: '#FF7043',
-                  lineHeight: 1.15,
+                  lineHeight: 1.1,
                 }}
               >
                 {title}
