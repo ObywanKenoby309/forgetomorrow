@@ -670,12 +670,13 @@ function MobileLayoutInner({ tiles, withChrome }) {
         )}
       </div>
 
-      {/* Carousel track */}
-      <div ref={trackRef} className="hearth-scroll-track">
+      {/* Carousel track — negative margin breaks out of section padding,
+          card padding restores it, matching every other glass section on the page */}
+      <div ref={trackRef} className="hearth-scroll-track" style={{ margin: '0 -16px' }}>
         {tiles.map(({ title, desc, href, status, img }, i) => (
           <div
             key={title}
-            style={{ flexShrink: 0, width: '100%', scrollSnapAlign: 'start' }}
+            style={{ flexShrink: 0, width: '100%', scrollSnapAlign: 'start', padding: '0 16px', boxSizing: 'border-box' }}
           >
             <Link
               href={withChrome(href)}
