@@ -8,9 +8,6 @@ import Link from 'next/link';
 import { getServerSession } from 'next-auth/next';
 import { authOptions } from '../api/auth/[...nextauth]';
 
-// ✅ NEW: internal header component (Claude header extracted)
-import InternalHeaderDark from '@/components/employee/InternalHeaderDark';
-
 const PRIORITY_COLOR = { P1: '#EF4444', P2: '#F59E0B', P3: '#3B82F6', P4: '#636B78' };
 const PRIORITY_GLOW  = { P1: '0 0 6px #EF4444', P2: 'none', P3: 'none', P4: 'none' };
 
@@ -69,14 +66,11 @@ const CSS = `
     width:28px; height:28px; background:var(--orange); border-radius:7px;
     display:flex; align-items:center; justify-content:center;
     font-size:14px; font-weight:700; color:white; flex-shrink:0;
-    overflow:hidden;
   }
   #crm-root .logo-name { font-size:15px; font-weight:700; color:var(--text-1); letter-spacing:-0.3px; }
   #crm-root .nav-badge { font-size:10px; font-weight:600; padding:2px 8px; border-radius:4px; letter-spacing:0.5px; text-transform:uppercase; }
   #crm-root .badge-suite { background:var(--dark-4); color:var(--text-2); }
   #crm-root .badge-limited { background:#F59E0B22; color:var(--yellow); border:1px solid #F59E0B44; }
-  /* ✅ NEW: employee access badge */
-  #crm-root .badge-employee { background:#22C55E22; color:var(--green); border:1px solid #22C55E44; }
   #crm-root .nav-spacer { flex:1; }
   #crm-root .nav-right { display:flex; align-items:center; gap:12px; }
   #crm-root .view-as { display:flex; align-items:center; gap:8px; font-size:12px; color:var(--text-3); }
@@ -97,7 +91,6 @@ const CSS = `
     width:30px; height:30px; border-radius:50%; background:var(--dark-4);
     border:2px solid var(--border); display:flex; align-items:center; justify-content:center;
     font-size:12px; font-weight:600; color:var(--text-2); cursor:pointer;
-    overflow:hidden;
   }
 
   /* BREADCRUMB */
@@ -196,12 +189,12 @@ const CSS = `
   }
   #crm-root .stat-card:last-child { border-right:none; }
   #crm-root .stat-card:hover { background:var(--dark-3); }
-  #crm-root .stat-label { font-size:10px; font-weight:600; letter-spacing:0.6px; text-transform:uppercase; color:var(--text-3); margin-bottom:8px; whiteSpace:nowrap; }
+  #crm-root .stat-label { font-size:10px; font-weight:600; letter-spacing:0.6px; text-transform:uppercase; color:var(--text-3); margin-bottom:8px; white-space:nowrap; }
   #crm-root .stat-value { font-size:26px; font-weight:700; font-family:'DM Mono',monospace; color:var(--text-1); line-height:1; margin-bottom:4px; }
   #crm-root .stat-value.breach { color:var(--red); }
   #crm-root .stat-value.warn   { color:var(--yellow); }
   #crm-root .stat-value.good   { color:var(--green); }
-  #crm-root .stat-sub { font-size:11px; color:var(--text-3); whiteSpace:nowrap; }
+  #crm-root .stat-sub { font-size:11px; color:var(--text-3); white-space:nowrap; }
   #crm-root .stat-indicator { position:absolute; bottom:0; left:20px; right:20px; height:2px; border-radius:2px; background:transparent; transition:background 0.2s; }
   #crm-root .stat-card:hover .stat-indicator { background:var(--orange); }
   #crm-root .stat-card.alert .stat-indicator { background:var(--red) !important; }
@@ -346,7 +339,7 @@ function TicketRow({ ticket }) {
 }
 
 // ─── Page ─────────────────────────────────────────────────────────────────────
-export default function Dashboard({ queues: initialQueues, userInitials, avatarUrl, accessLabel }) {
+export default function Dashboard({ queues: initialQueues, userInitials }) {
   const [queues, setQueues]     = useState(initialQueues ?? []);
   const [queueId, setQueueId]   = useState(initialQueues?.[0]?.id ?? '');
   const [data, setData]         = useState(null);
@@ -377,20 +370,31 @@ export default function Dashboard({ queues: initialQueues, userInitials, avatarU
       <style dangerouslySetInnerHTML={{ __html: CSS }} />
 
       <div id="crm-root">
-        {/* ✅ INTERNAL HEADER (component) */}
-        <InternalHeaderDark
-          suiteLabel="Employee Suite"
-          accessLabel={accessLabel || 'Limited'}
-          currentPage="Dashboard"
-          brandName="ForgeTomorrow"
-          logoSrc="/brand/forge-watermark-fullcolor.png"
-          avatarUrl={avatarUrl || ''}
-          userInitials={userInitials}
-          openSiteHref="/seeker-dashboard"
-          openSiteLabel="Open Forge Site"
-          viewAsValue="Agent"
-          viewAsOptions={['Agent', 'Manager', 'Admin']}
-        />
+        {/* TOP NAV */}
+        <nav className="topnav">
+          <div className="logo">
+            <div className="logo-mark">F</div>
+            <span className="logo-name">ForgeTomorrow</span>
+          </div>
+          <span className="nav-badge badge-suite">Employee Suite</span>
+          <span className="nav-badge badge-limited">Limited</span>
+          <div className="nav-spacer" />
+          <div className="nav-right">
+            <div className="view-as">
+              <span>View as</span>
+              <select className="view-select"><option>Agent</option><option>Manager</option><option>Admin</option></select>
+            </div>
+            <a href="/seeker-dashboard" className="btn-site">Open Forge Site</a>
+            <div className="avatar">{userInitials}</div>
+          </div>
+        </nav>
+
+        {/* BREADCRUMB */}
+        <div className="breadcrumb">
+          <span className="crumb">Employee Suite</span>
+          <span className="crumb-sep">›</span>
+          <span className="crumb-current">Dashboard</span>
+        </div>
 
         {/* MAIN */}
         <div className="main-layout">
@@ -582,12 +586,6 @@ export async function getServerSideProps(context) {
   const userInitials = [session.user.firstName?.[0], session.user.lastName?.[0]]
     .filter(Boolean).join('').toUpperCase() || session.user.email?.[0]?.toUpperCase() || 'U';
 
-  // ✅ Minimal: try common session fields for avatar
-  const avatarUrl = session.user.avatarUrl || session.user.image || '';
-
-  // ✅ Minimal: if you later wire real employee access, replace this
-  const accessLabel = session.user?.isEmployee ? 'Employee' : 'Limited';
-
   let queues = [];
   try {
     const { prisma } = await import('@/lib/prisma');
@@ -597,5 +595,5 @@ export async function getServerSideProps(context) {
     });
   } catch (e) { console.error('[Dashboard SSR]', e.message); }
 
-  return { props: { queues, userInitials, avatarUrl, accessLabel } };
+  return { props: { queues, userInitials } };
 }
