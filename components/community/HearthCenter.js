@@ -522,7 +522,7 @@ export default function HearthCenter() {
         .hearth-mobile  { display: none;  }
         @media (max-width: 639px) {
           .hearth-desktop { display: none; }
-          .hearth-mobile  { display: block; }
+          .hearth-mobile  { display: block; margin: -16px; padding: 16px 0 16px; overflow: hidden; border-radius: 14px; }
         }
         /* hide scrollbar on carousel wrapper */
         .hearth-scroll-track {
@@ -585,7 +585,7 @@ function MobileLayoutInner({ tiles, withChrome }) {
   return (
     <div style={{ position: 'relative' }}>
       {/* Dropdown trigger */}
-      <div style={{ marginBottom: 14, position: 'relative', zIndex: 20 }}>
+      <div style={{ marginBottom: 14, position: 'relative', zIndex: 20, padding: '0 16px' }}>
         <button
           onClick={() => setDropdownOpen((o) => !o)}
           style={{
@@ -670,9 +670,8 @@ function MobileLayoutInner({ tiles, withChrome }) {
         )}
       </div>
 
-      {/* Carousel track — negative margin breaks out of section padding,
-          card padding restores it, matching every other glass section on the page */}
-      <div ref={trackRef} className="hearth-scroll-track" style={{ margin: '0 -16px' }}>
+      {/* Carousel track — full bleed, mobile wrapper owns the edge-to-edge */}
+      <div ref={trackRef} className="hearth-scroll-track">
         {tiles.map(({ title, desc, href, status, img }, i) => (
           <div
             key={title}
@@ -735,7 +734,7 @@ function MobileLayoutInner({ tiles, withChrome }) {
       </div>
 
       {/* Dot indicators */}
-      <div style={{ display: 'flex', justifyContent: 'center', gap: 8, marginTop: 12 }}>
+      <div style={{ display: 'flex', justifyContent: 'center', gap: 8, marginTop: 12, padding: '0 16px' }}>
         {tiles.map((_, i) => (
           <button
             key={i}
