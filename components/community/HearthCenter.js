@@ -36,21 +36,32 @@ export default function HearthCenter() {
     },
   ];
 
+  // ✅ Matches Seeker Dashboard glass baseline
+  const GLASS = {
+    borderRadius: 14,
+    border: '1px solid rgba(255,255,255,0.22)',
+    background: 'rgba(255,255,255,0.58)',
+    boxShadow: '0 10px 24px rgba(0,0,0,0.12)',
+    backdropFilter: 'blur(10px)',
+    WebkitBackdropFilter: 'blur(10px)',
+  };
+
   return (
     <section
       style={{
-        background: 'white',
-        border: '1px solid #eee',
-        borderRadius: 12,
+        ...GLASS,
         padding: 16,
-        boxShadow: '0 2px 6px rgba(0,0,0,0.06)',
+        boxSizing: 'border-box',
+        width: '100%',
+        minWidth: 0,
       }}
     >
       <div
         style={{
           display: 'grid',
-          gridTemplateColumns: 'repeat(2, minmax(0, 1fr))',
+          gridTemplateColumns: 'repeat(auto-fit, minmax(260px, 1fr))',
           gap: 16,
+          minWidth: 0,
         }}
       >
         {tiles.map(({ title, desc, href, status }) => (
@@ -58,22 +69,23 @@ export default function HearthCenter() {
             key={title}
             href={withChrome(href)}
             style={{
-              background: '#F5F5F5',
+              background: 'white',
+              border: '1px solid rgba(0,0,0,0.06)',
               borderRadius: 12,
               padding: 16,
-              boxShadow: '0 1px 4px rgba(0,0,0,0.06)',
+              boxShadow: '0 2px 6px rgba(0,0,0,0.06)',
               textDecoration: 'none',
               transition: 'box-shadow 160ms ease, transform 80ms ease',
               display: 'block',
+              minWidth: 0,
+              boxSizing: 'border-box',
             }}
             onMouseEnter={(e) => {
-              e.currentTarget.style.boxShadow =
-                '0 2px 10px rgba(0,0,0,0.10)';
+              e.currentTarget.style.boxShadow = '0 8px 18px rgba(0,0,0,0.12)';
               e.currentTarget.style.transform = 'translateY(-1px)';
             }}
             onMouseLeave={(e) => {
-              e.currentTarget.style.boxShadow =
-                '0 1px 4px rgba(0,0,0,0.06)';
+              e.currentTarget.style.boxShadow = '0 2px 6px rgba(0,0,0,0.06)';
               e.currentTarget.style.transform = 'translateY(0)';
             }}
           >

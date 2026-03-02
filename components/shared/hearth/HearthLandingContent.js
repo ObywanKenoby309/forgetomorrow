@@ -13,7 +13,6 @@ export default function HearthLandingContent() {
     { title: 'Resource Library', desc: 'Articles, guides, and tools.', href: '/hearth/resources' },
   ];
 
-  // ✅ Seeker Dashboard glass baseline
   const GLASS = {
     borderRadius: 14,
     border: '1px solid rgba(255,255,255,0.22)',
@@ -23,7 +22,6 @@ export default function HearthLandingContent() {
     WebkitBackdropFilter: 'blur(10px)',
   };
 
-  // ✅ White card tile (clean, no black)
   const TILE = {
     background: 'rgba(255,255,255,0.92)',
     border: '1px solid rgba(17,24,39,0.10)',
@@ -37,34 +35,8 @@ export default function HearthLandingContent() {
 
   return (
     <section style={{ ...GLASS, padding: 16 }}>
-      <h1
-        style={{
-          margin: 0,
-          fontSize: 28,
-          fontWeight: 900,
-          color: '#FF7043',
-          textAlign: 'center',
-        }}
-      >
-        The Hearth
-      </h1>
-
-      <p
-        style={{
-          margin: '8px auto 0',
-          fontSize: 15,
-          color: '#546E7A',
-          maxWidth: 760,
-          textAlign: 'center',
-          fontWeight: 600,
-        }}
-      >
-        Your place to build connections, find mentors, and grow your network with purpose.
-      </p>
-
       <div
         style={{
-          marginTop: 14,
           display: 'grid',
           gridTemplateColumns: '1fr',
           gap: 12,
@@ -94,7 +66,16 @@ export default function HearthLandingContent() {
               >
                 {title}
               </h2>
-              <p style={{ margin: 0, color: '#455A64', fontSize: 14, fontWeight: 600 }}>{desc}</p>
+              <p
+                style={{
+                  margin: 0,
+                  color: '#455A64',
+                  fontSize: 14,
+                  fontWeight: 600,
+                }}
+              >
+                {desc}
+              </p>
             </div>
           </Link>
         ))}
