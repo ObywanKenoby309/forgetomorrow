@@ -184,31 +184,24 @@ export default function HearthCenter() {
               {desc}
             </p>
 
-            <div
-              style={{
-                marginTop: 12,
-                display: 'inline-flex',
-                alignItems: 'center',
-                gap: 8,
-              }}
-            >
-              <span
-                style={{
-                  fontSize: 12,
-                  fontWeight: 800,
-                  color: '#FF7043',
-                  background: 'rgba(255,112,67,0.10)',
-                  border: '1px solid rgba(255,112,67,0.20)',
-                  padding: '5px 10px',
-                  borderRadius: 999,
-                }}
-              >
-                {status}
-              </span>
-              <span style={{ fontSize: 12, fontWeight: 700, color: '#546E7A' }}>
-                Open →
-              </span>
-            </div>
+            <div style={{ marginTop: 12 }}>
+  <span
+    style={{
+      fontSize: 12,
+      fontWeight: 800,
+      color: '#FF7043',
+      background: 'rgba(255,112,67,0.10)',
+      border: '1px solid rgba(255,112,67,0.20)',
+      padding: '5px 10px',
+      borderRadius: 999,
+      display: 'inline-flex',
+      alignItems: 'center',
+      gap: 6,
+    }}
+  >
+    {status}
+  </span>
+</div>
           </Link>
         ))}
       </div>
