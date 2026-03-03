@@ -286,6 +286,17 @@ function DashboardBody() {
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState(null);
 
+  // ✅ Mobile detection (ONLY affects mobile render path)
+  const [isMobile, setIsMobile] = useState(false);
+  useEffect(() => {
+    const handleResize = () => {
+      if (typeof window !== "undefined") setIsMobile(window.innerWidth < 1024);
+    };
+    handleResize();
+    window.addEventListener("resize", handleResize);
+    return () => window.removeEventListener("resize", handleResize);
+  }, []);
+
   // ✅ Matches Seeker blueprint exactly
   // RecruiterLayout LEFT_W=240, GAP=12, PAD=16
   // marginLeft = -(LEFT_W + GAP) = -252
@@ -299,6 +310,13 @@ function DashboardBody() {
     boxShadow: "0 10px 24px rgba(0,0,0,0.12)",
     backdropFilter: "blur(10px)",
     WebkitBackdropFilter: "blur(10px)",
+  };
+
+  // ✅ KPI should slightly stand out on dashboards (match seeker behavior)
+  const KPI_GLASS = {
+    ...GLASS,
+    background: "rgba(255,255,255,0.68)",
+    boxShadow: "0 12px 28px rgba(0,0,0,0.14)",
   };
 
   const WHITE_CARD = {
@@ -393,6 +411,184 @@ function DashboardBody() {
         conversionViewToApply: kpis.conversionRatePct ?? 0,
       }
     : null;
+
+  // ✅ MOBILE-ONLY LAYOUT (desktop stays exactly the same below)
+  if (isMobile) {
+    return (
+      <div style={{ width: "100%", padding: 0, margin: 0, boxSizing: "border-box" }}>
+        {error && (
+          <div className="rounded-md border border-red-200 bg-red-50 px-3 py-2 text-xs text-red-700 mb-4">
+            {error}
+          </div>
+        )}
+
+        <div style={{ display: "grid", gap: GAP, width: "100%" }}>
+          {/* Title */}
+          <section style={{ ...GLASS, padding: 16, textAlign: "center" }} aria-label="Recruiter dashboard overview">
+            <h1 style={{ margin: 0, color: "#FF7043", fontSize: 22, fontWeight: 800 }}>
+              Recruiter Dashboard
+            </h1>
+            <p style={{ margin: "6px auto 0", color: "#607D8B", maxWidth: 740 }}>
+              At-a-glance health for your roles, candidate flow, and where action is needed.
+            </p>
+          </section>
+
+          {/* KPI */}
+          <section style={{ ...KPI_GLASS, padding: 16 }}>
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+              {isLoading && !analyticsData
+                ? Array.from({ length: 4 }).map((_, idx) => (
+                    <div key={idx} className="rounded-lg border bg-white p-4 animate-pulse space-y-2">
+                      <div className="h-3 w-24 bg-slate-200 rounded" />
+                      <div className="h-7 w-10 bg-slate-200 rounded" />
+                    </div>
+                  ))
+                : stats.map((t) => (
+                    <Link
+                      key={t.label}
+                      href={t.href}
+                      className="rounded-lg border bg-white p-4 hover:bg-slate-50 transition"
+                      style={{ textDecoration: "none" }}
+                      aria-label={`Open ${t.label} analytics`}
+                    >
+                      <div className="text-sm font-medium text-[#FF7043] truncate">{t.label}</div>
+                      <div className="text-2xl font-semibold mt-1 text-slate-900">{t.value}</div>
+                      <div className="text-[11px] text-slate-500 mt-1">View details</div>
+                    </Link>
+                  ))}
+            </div>
+          </section>
+
+          {/* Right rail content stacked (Sponsored + Health Snapshot) */}
+          <section style={{ ...GLASS, padding: 16, display: "grid", gap: GAP }}>
+            <div style={{ ...WHITE_CARD, padding: 16, minHeight: 160 }}>
+              <div className="font-medium mb-2 text-slate-900">Sponsored</div>
+              <div className="text-sm text-slate-500">Ad space</div>
+            </div>
+
+            <div style={{ ...WHITE_CARD, padding: 16 }}>
+              <div className="font-medium mb-2 text-slate-900">Health Snapshot</div>
+
+              {isEnterprise ? (
+                analyticsSnapshot ? (
+                  <div className="text-sm grid gap-2 text-slate-700">
+                    <div>Time-to-Hire: {analyticsSnapshot.timeToHireDays} days</div>
+                    <div>
+                      Top Apply Source: {analyticsSnapshot.topApplySourceLabel} (
+                      {analyticsSnapshot.topApplySourcePercent}%)
+                    </div>
+                    <div>Conversion (View→Apply): {analyticsSnapshot.conversionViewToApply}%</div>
+                    <div className="pt-1 text-[11px] text-slate-500">
+                      Open Analytics for breakdowns by range, role, recruiter, and funnel stage.
+                    </div>
+                    <div className="pt-2">
+                      <Link href="/recruiter/analytics" className="text-[#FF7043] font-semibold">
+                        Open Analytics
+                      </Link>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="text-sm text-slate-500">
+                    Analytics will appear once your roles start receiving views and applications.
+                  </div>
+                )
+              ) : (
+                <FeatureLock label="Analytics Snapshot">
+                  <div className="text-sm text-slate-500">
+                    Upgrade to Enterprise to see detailed analytics for your roles.
+                  </div>
+                </FeatureLock>
+              )}
+            </div>
+          </section>
+
+          {/* Action Center */}
+          <section style={{ ...GLASS, padding: 0 }}>
+            <div style={{ padding: 16 }}>
+              <RecruiterActionCenterSection chromeQuery={chromeQuery} />
+            </div>
+          </section>
+
+          {/* Bottom cards stacked */}
+          <section style={{ ...GLASS, padding: 16 }}>
+            <div className="flex items-center justify-between mb-3">
+              <h2 className="text-lg font-semibold text-[#FF7043]">Top Candidate Recommendations</h2>
+              <Link href="/recruiter/candidate-center" className="text-[#FF7043] font-medium hover:underline">
+                View all
+              </Link>
+            </div>
+
+            {isLoading && !analyticsData ? (
+              <ul className="text-sm grid gap-2 animate-pulse">
+                <li className="h-3 bg-slate-200 rounded w-3/4" />
+                <li className="h-3 bg-slate-200 rounded w-4/5" />
+                <li className="h-3 bg-slate-200 rounded w-2/3" />
+              </ul>
+            ) : isEnterprise ? (
+              topCandidates.length === 0 ? (
+                <div className="text-sm text-slate-500">
+                  AI recommendations will appear here once candidates start interacting with your jobs.
+                </div>
+              ) : (
+                <ul className="text-sm grid gap-2 text-slate-700">
+                  {topCandidates.slice(0, 5).map((c) => (
+                    <li key={`${c.id || c.email || c.name}-${c.title}`}>
+                      • {c.name} — {c.title} ({c.matchPercent}% match)
+                    </li>
+                  ))}
+                </ul>
+              )
+            ) : (
+              <FeatureLock label="AI Candidate Recommendations">
+                <div className="text-sm text-slate-500">
+                  Upgrade to Enterprise to unlock AI-powered candidate matching in this panel.
+                </div>
+              </FeatureLock>
+            )}
+          </section>
+
+          <section style={{ ...GLASS, padding: 16 }}>
+            <div className="flex items-center justify-between mb-3">
+              <h2 className="text-lg font-semibold text-[#FF7043]">Pipeline Health</h2>
+              <Link href="/recruiter/candidate-center" className="text-[#FF7043] font-medium hover:underline">
+                Open pipeline
+              </Link>
+            </div>
+
+            <div className="text-sm text-slate-700 grid gap-2">
+              <div className="text-slate-500">This panel becomes your "where do I act today?" view.</div>
+              <div>• New applicants needing review</div>
+              <div>• Candidates stuck in stage (SLA watch)</div>
+              <div>• Interviews scheduled this week</div>
+              <div>• Offers pending response</div>
+              <div className="pt-2 text-[11px] text-slate-500">
+                Next wiring step: feed counts by stage + "stale" thresholds (e.g., 7/14/30 days).
+              </div>
+            </div>
+          </section>
+
+          <section style={{ ...GLASS, padding: 16 }}>
+            <div className="flex items-center justify-between mb-3">
+              <h3 className="text-base font-semibold text-[#FF7043]">Trends</h3>
+              <Link href="/recruiter/analytics" className="text-[#FF7043] font-medium hover:underline">
+                View charts
+              </Link>
+            </div>
+
+            <div className="text-sm text-slate-700 grid gap-2">
+              <div className="text-slate-500">Trendline / chart goes here.</div>
+              <div>• Views vs Applies (last 7 / 30 / 90)</div>
+              <div>• Time-to-fill trend</div>
+              <div>• Funnel drop-off alerts</div>
+              <div className="pt-2 text-[11px] text-slate-500">
+                Next wiring step: add a small sparkline + "change vs last period".
+              </div>
+            </div>
+          </section>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div style={{ width: "100%", padding: 0, margin: 0, paddingRight: 16, boxSizing: "border-box" }}>
