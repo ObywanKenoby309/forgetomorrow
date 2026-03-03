@@ -142,7 +142,7 @@ function MobileCard({ tile, isActive, onSelect, withChrome }) {
       )}
 
       <div style={{ display: "flex", alignItems: "center", justifyContent: "flex-end" }}>
-        <span style={{ fontSize: 13, fontWeight: 700, color: "#FF7043",
+        <span style={{ fontSize: 15, fontWeight: 900, color: "#FF7043",
           display: "flex", alignItems: "center", gap: 4 }}>
           {isLink ? "Open" : isActive ? "Selected" : "Select"}
           <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
@@ -322,7 +322,7 @@ function MobileAnvil({ tiles, activeModule, setActiveModule, withChrome }) {
             <style>{`@keyframes bounce { 0%,100%{transform:translateY(0)} 50%{transform:translateY(3px)} }`}</style>
             <path d="M8 3v10M8 13l-3-3M8 13l3-3" stroke="#FF7043" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"/>
           </svg>
-          <span style={{ fontSize: 13, fontWeight: 700, color: "#FF7043" }}>
+          <span style={{ fontSize: 15, fontWeight: 900, color: "#FF7043" }}>
             Scroll down to see your selection
           </span>
         </div>
