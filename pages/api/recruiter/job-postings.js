@@ -21,6 +21,30 @@ function readCookie(req, name) {
   }
 }
 
+// ✅ Minimal fix: make Prisma payload JSON-safe (BigInt -> string)
+function jsonSafe(value) {
+  if (value === null || value === undefined) return value;
+
+  const t = typeof value;
+
+  if (t === "bigint") return value.toString();
+  if (t === "string" || t === "number" || t === "boolean") return value;
+
+  // Preserve Date objects (JSON.stringify will handle them as ISO strings)
+  if (value instanceof Date) return value;
+
+  if (Array.isArray(value)) return value.map(jsonSafe);
+
+  if (t === "object") {
+    const out = {};
+    for (const [k, v] of Object.entries(value)) out[k] = jsonSafe(v);
+    return out;
+  }
+
+  // fallback (functions/symbols shouldn't appear in API payloads)
+  return value;
+}
+
 async function resolveEffectiveRecruiter(req, session) {
   const sessionEmail = String(session?.user?.email || "")
     .trim()
@@ -212,7 +236,7 @@ export default async function handler(req, res) {
       });
 
       const rows = jobs.map((j) => shapeJob(j, { lite }));
-      return res.status(200).json({ jobs: rows });
+      return res.status(200).json(jsonSafe({ jobs: rows }));
     }
 
     if (req.method === "POST") {
@@ -271,11 +295,13 @@ export default async function handler(req, res) {
 
         if (existingTpl?.id) {
           if (!overwriteFlag) {
-            return res.status(409).json({
-              error:
-                "A template with this name already exists. Confirm overwrite to replace it.",
-              existingTemplateId: existingTpl.id,
-            });
+            return res.status(409).json(
+              jsonSafe({
+                error:
+                  "A template with this name already exists. Confirm overwrite to replace it.",
+                existingTemplateId: existingTpl.id,
+              })
+            );
           }
 
           const updatedTpl = await prisma.job.update({
@@ -307,7 +333,7 @@ export default async function handler(req, res) {
             },
           });
 
-          return res.status(200).json({ job: shapeJob(updatedTpl) });
+          return res.status(200).json(jsonSafe({ job: shapeJob(updatedTpl) }));
         }
       }
 
@@ -340,7 +366,7 @@ export default async function handler(req, res) {
         },
       });
 
-      return res.status(201).json({ job: shapeJob(job) });
+      return res.status(201).json(jsonSafe({ job: shapeJob(job) }));
     }
 
     if (req.method === "PATCH") {
@@ -421,7 +447,7 @@ export default async function handler(req, res) {
         },
       });
 
-      return res.status(200).json({ job: shapeJob(updated) });
+      return res.status(200).json(jsonSafe({ job: shapeJob(updated) }));
     }
 
     // ✅ DELETE for templates (org-scoped; templates only)
@@ -453,10 +479,12 @@ export default async function handler(req, res) {
         where: { id: existing.id },
       });
 
-      return res.status(200).json({
-        ok: true,
-        deletedId: existing.id,
-      });
+      return res.status(200).json(
+        jsonSafe({
+          ok: true,
+          deletedId: existing.id,
+        })
+      );
     }
 
     res.setHeader("Allow", "GET,POST,PATCH,DELETE");
