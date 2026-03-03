@@ -307,7 +307,7 @@ function MobileAnvil({ tiles, activeModule, setActiveModule, withChrome }) {
       {showScrollHint && (
         <div style={{
           display: "flex", alignItems: "center", justifyContent: "center", gap: 6,
-          padding: "10px 16px", marginTop: 8,
+          padding: "10px 16px", marginTop: 4,
           animation: "fadeInOut 3s ease forwards",
         }}>
           <style>{`
