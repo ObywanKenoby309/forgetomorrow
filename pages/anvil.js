@@ -180,7 +180,14 @@ function MobileAnvil({ tiles, activeModule, setActiveModule, withChrome }) {
     programmatic.current = true;
     track.scrollTo({ left: index * track.offsetWidth, behavior: "smooth" });
     setTimeout(() => { programmatic.current = false; }, 600);
-  }, []);
+    // Fire hint for any non-resume tile (resume navigates away, no hint needed)
+    const tile = tiles[index];
+    if (tile && tile.id !== "resume") {
+      setShowScrollHint(true);
+      clearTimeout(hintTimer.current);
+      hintTimer.current = setTimeout(() => setShowScrollHint(false), 3000);
+    }
+  }, [tiles]);
 
   const handleScroll = useCallback(() => {
     if (programmatic.current) return;
@@ -305,12 +312,11 @@ function MobileAnvil({ tiles, activeModule, setActiveModule, withChrome }) {
 
       {/* ── Scroll hint — below cards, above dots ── */}
       {showScrollHint && (
-  <div style={{
-    position: "fixed", bottom: 96, left: 0, right: 0, zIndex: 50,
-    display: "flex", alignItems: "center", justifyContent: "center", gap: 6,
-    padding: "10px 16px",
-    animation: "fadeInOut 3s ease forwards",
-  }}>
+        <div style={{
+          display: "flex", alignItems: "center", justifyContent: "center", gap: 6,
+          padding: "10px 16px", marginTop: 4,
+          animation: "fadeInOut 3s ease forwards",
+        }}>
           <style>{`
             @keyframes fadeInOut {
               0%   { opacity: 0; transform: translateY(-4px); }
