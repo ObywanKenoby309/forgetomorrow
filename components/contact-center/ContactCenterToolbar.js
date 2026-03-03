@@ -336,8 +336,8 @@ export default function SeekerContactCenter() {
   const [profileViews, setProfileViews] = useState([]);
   const [pvLoading, setPvLoading] = useState(true);
 
-  // JS-driven mobile detection — same pattern as SeekerLayout + HearthCenter
-  const [isMobile, setIsMobile] = useState(true);
+  // null = not yet determined (prevents both layouts rendering during hydration)
+  const [isMobile, setIsMobile] = useState(null);
   useEffect(() => {
     const check = () => setIsMobile(window.innerWidth < 640);
     check();
@@ -495,7 +495,7 @@ export default function SeekerContactCenter() {
       right={<RightRailPlacementManager surfaceId="contact_center" />}
       activeNav="contacts"
     >
-      {isMobile ? (
+      {isMobile === null ? null : isMobile ? (
         // ── MOBILE: no wrapper — cards sit directly in SeekerLayout content area ──
         <MobileContactCenter {...sharedProps} />
       ) : (
