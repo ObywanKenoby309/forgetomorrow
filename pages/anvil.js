@@ -199,10 +199,22 @@ function MobileAnvil({ tiles, activeModule, setActiveModule, withChrome }) {
 
   const active = tiles[activeIndex];
 
+  // Scroll hint — shows when a module is activated, auto-hides after 3s
+  const [showScrollHint, setShowScrollHint] = useState(false);
+  const hintTimer = useRef(null);
+
   const handleCardSelect = (tile) => {
-    if (tile.id === "resume") return; // handled by the <a> tag
-    setActiveModule(tile.id === activeModule ? null : tile.id);
+    if (tile.id === "resume") return;
+    const next = tile.id === activeModule ? null : tile.id;
+    setActiveModule(next);
+    if (next) {
+      setShowScrollHint(true);
+      clearTimeout(hintTimer.current);
+      hintTimer.current = setTimeout(() => setShowScrollHint(false), 3000);
+    }
   };
+
+  useEffect(() => () => clearTimeout(hintTimer.current), []);
 
   return (
     <div style={{ position: "relative" }}>
@@ -305,20 +317,34 @@ function MobileAnvil({ tiles, activeModule, setActiveModule, withChrome }) {
         ))}
       </div>
 
-      {/* ── Inline module content (loads below carousel) ── */}
+      {/* ── Scroll hint — mobile only, auto-hides after 3s ── */}
+      {showScrollHint && (
+        <div style={{
+          display: "flex", alignItems: "center", justifyContent: "center", gap: 6,
+          padding: "10px 16px", marginTop: 8,
+          animation: "fadeInOut 3s ease forwards",
+        }}>
+          <style>{`
+            @keyframes fadeInOut {
+              0%   { opacity: 0; transform: translateY(-4px); }
+              15%  { opacity: 1; transform: translateY(0); }
+              70%  { opacity: 1; }
+              100% { opacity: 0; }
+            }
+          `}</style>
+          <svg width="16" height="16" viewBox="0 0 16 16" fill="none" style={{ animation: "bounce 1s ease infinite" }}>
+            <style>{`@keyframes bounce { 0%,100%{transform:translateY(0)} 50%{transform:translateY(3px)} }`}</style>
+            <path d="M8 3v10M8 13l-3-3M8 13l3-3" stroke="#FF7043" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"/>
+          </svg>
+          <span style={{ fontSize: 13, fontWeight: 700, color: "#FF7043" }}>
+            Scroll down to see your selection
+          </span>
+        </div>
+      )}
+
+      {/* ── Inline module content (loads below carousel, no back button — use carousel to switch) ── */}
       {activeModule && activeModule !== "resume" && (
         <div style={{ ...GLASS, margin: "16px 16px 0", padding: 24, display: "grid", gap: 16 }}>
-          <button
-            onClick={() => setActiveModule(null)}
-            style={{
-              fontSize: "0.875rem", color: "#FF7043", textDecoration: "underline",
-              background: "none", border: "none", cursor: "pointer",
-              textAlign: "left", width: "fit-content", fontWeight: 800,
-            }}
-          >
-            ← Back to The Anvil
-          </button>
-
           {activeModule === "profile" && (
             <ProfileDevelopment onNext={() => setActiveModule("offer")} setActiveModule={setActiveModule} />
           )}
