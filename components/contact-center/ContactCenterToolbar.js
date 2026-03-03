@@ -3,13 +3,13 @@ import React, { useEffect, useState, useMemo } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/router';
 
-export default function ContactCenterToolbar({ currentTab = 'contacts' }) {
+export default function ContactCenterToolbar({ currentTab = 'contacts', counts: propCounts }) {
   const router = useRouter();
   const chrome = String(router.query.chrome || '').toLowerCase();
   const withChrome = (path) =>
     chrome ? `${path}${path.includes('?') ? '&' : '?'}chrome=${chrome}` : path;
 
-  // Counts state
+  // Counts state (fallback if propCounts not provided)
   const [contactsCount, setContactsCount] = useState(0);
   const [invitesInCount, setInvitesInCount] = useState(0);
   const [invitesOutCount, setInvitesOutCount] = useState(0);
@@ -43,10 +43,12 @@ export default function ContactCenterToolbar({ currentTab = 'contacts' }) {
   };
 
   useEffect(() => {
+    if (propCounts) return; // parent already has counts, don't fetch again
     reloadCounts();
-  }, []);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [propCounts]);
 
-  const counts = useMemo(
+  const fallbackCounts = useMemo(
     () => ({
       contacts: contactsCount,
       invitesIn: invitesInCount,
@@ -56,6 +58,8 @@ export default function ContactCenterToolbar({ currentTab = 'contacts' }) {
     }),
     [contactsCount, invitesInCount, invitesOutCount, profileViewsCount, blockedCount]
   );
+
+  const counts = propCounts || fallbackCounts;
 
   const TabButton = ({ href, label, badge, tabKey }) => {
     const isActive = currentTab === tabKey;
