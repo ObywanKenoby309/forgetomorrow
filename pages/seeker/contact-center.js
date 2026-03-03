@@ -448,8 +448,8 @@ export default function SeekerContactCenter() {
     >
       <div style={PAGE_GLASS_WRAP}>
         <section style={{ ...WHITE_CARD, padding: 12 }}>
-          <ContactCenterToolbar currentTab="contacts" />
-        </section>
+		  <ContactCenterToolbar currentTab="contacts" counts={counts} />
+		</section>
 
         <section style={{ ...WHITE_CARD, padding: 16, marginTop: 12 }}>
           <h2 style={{ color: '#FF7043', marginTop: 0, marginBottom: 8 }}>Needs your attention</h2>
