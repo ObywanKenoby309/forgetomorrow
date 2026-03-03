@@ -1,151 +1,641 @@
-// components/contact-center/ContactCenterToolbar.js
-import React, { useEffect, useState, useMemo } from 'react';
+// pages/seeker/contact-center.js
+import React, { useMemo, useState, useEffect, useCallback } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/router';
+import SeekerLayout from '@/components/layouts/SeekerLayout';
+import RightRailPlacementManager from '@/components/ads/RightRailPlacementManager';
+import ContactsList from '@/components/ContactsList';
+import IncomingRequestsList from '@/components/IncomingRequestsList';
+import OutgoingRequestsList from '@/components/OutgoingRequestsList';
+import GroupsList from '@/components/GroupsList';
+import PagesList from '@/components/PagesList';
+import NewslettersList from '@/components/NewslettersList';
+import ContactCenterToolbar from '@/components/contact-center/ContactCenterToolbar';
 
-export default function ContactCenterToolbar({ currentTab = 'contacts' }) {
+// ─── Shared styles ────────────────────────────────────────────────────────────
+const GLASS = {
+  borderRadius: 14,
+  border: '1px solid rgba(255,255,255,0.22)',
+  background: 'rgba(255,255,255,0.58)',
+  boxShadow: '0 10px 24px rgba(0,0,0,0.12)',
+  backdropFilter: 'blur(10px)',
+  WebkitBackdropFilter: 'blur(10px)',
+};
+
+const WHITE_CARD = {
+  background: 'rgba(255,255,255,0.92)',
+  border: '1px solid rgba(0,0,0,0.08)',
+  borderRadius: 12,
+  boxShadow: '0 2px 10px rgba(0,0,0,0.08)',
+};
+
+// ─── Mobile: collapsible smart card ──────────────────────────────────────────
+function CollapsibleCard({ title, count, defaultOpen = false, children, accentColor = '#FF7043' }) {
+  const [open, setOpen] = useState(defaultOpen);
+
+  return (
+    <div style={{ ...WHITE_CARD, overflow: 'hidden' }}>
+      <button
+        onClick={() => setOpen((o) => !o)}
+        style={{
+          width: '100%', background: 'transparent', border: 'none',
+          padding: '14px 16px', display: 'flex', alignItems: 'center',
+          justifyContent: 'space-between', cursor: 'pointer', gap: 10,
+        }}
+      >
+        <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+          <span style={{ fontSize: 16, fontWeight: 800, color: '#112033' }}>{title}</span>
+          {typeof count === 'number' && (
+            <span style={{
+              fontSize: 12, fontWeight: 800, padding: '2px 8px', borderRadius: 999,
+              background: count > 0 ? 'rgba(255,112,67,0.12)' : 'rgba(0,0,0,0.04)',
+              color: count > 0 ? accentColor : '#607D8B',
+              border: `1px solid ${count > 0 ? 'rgba(255,112,67,0.25)' : 'rgba(0,0,0,0.06)'}`,
+            }}>
+              {count}
+            </span>
+          )}
+        </div>
+        <svg width="18" height="18" viewBox="0 0 18 18" fill="none"
+          style={{ flexShrink: 0, transition: 'transform 200ms ease',
+            transform: open ? 'rotate(180deg)' : 'rotate(0deg)' }}>
+          <path d="M4 6.5L9 11.5L14 6.5" stroke="#90A4AE" strokeWidth="2"
+            strokeLinecap="round" strokeLinejoin="round" />
+        </svg>
+      </button>
+      {open && (
+        <div style={{ padding: '0 16px 16px', borderTop: '1px solid rgba(0,0,0,0.06)' }}>
+          {children}
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ─── Mobile sticky tab strip ──────────────────────────────────────────────────
+function MobileTabStrip({ counts, withChrome, currentTab }) {
+  const tabs = [
+    { key: 'contacts',     label: 'Contacts',      href: '/seeker/contact-center',  badge: counts.contacts },
+    { key: 'invites',      label: 'Invites',        href: '/seeker/contact-incoming', badge: counts.invitesIn },
+    { key: 'requests',     label: 'Requests',       href: '/seeker/contact-outgoing', badge: counts.invitesOut },
+    { key: 'profileViews', label: 'Profile Views',  href: '/seeker/profile-views',   badge: counts.profileViews },
+    { key: 'blocked',      label: 'Blocked',        href: '/seeker/blocked',         badge: counts.blocked },
+  ];
+
+  return (
+    <div style={{
+      position: 'sticky', top: 0, zIndex: 30,
+      background: 'rgba(255,255,255,0.95)',
+      backdropFilter: 'blur(10px)', WebkitBackdropFilter: 'blur(10px)',
+      borderBottom: '1px solid rgba(0,0,0,0.07)',
+      padding: '10px 0',
+      marginLeft: -16, marginRight: -16, // bleed to section edges
+      paddingLeft: 16,
+    }}>
+      <div style={{
+        display: 'flex', gap: 8, overflowX: 'auto',
+        scrollbarWidth: 'none', msOverflowStyle: 'none',
+        paddingRight: 16,
+      }}>
+        <style>{`.mobile-tab-strip::-webkit-scrollbar { display: none; }`}</style>
+        {tabs.map((tab) => {
+          const isActive = currentTab === tab.key;
+          const hasAlert = tab.badge > 0 && tab.key !== 'contacts';
+          return (
+            <Link
+              key={tab.key}
+              href={withChrome(tab.href)}
+              style={{
+                flexShrink: 0,
+                display: 'inline-flex', alignItems: 'center', gap: 6,
+                padding: '7px 12px', borderRadius: 999,
+                fontWeight: 800, fontSize: 13, textDecoration: 'none',
+                whiteSpace: 'nowrap',
+                background: isActive ? '#FF7043' : hasAlert ? 'rgba(255,112,67,0.10)' : 'rgba(0,0,0,0.04)',
+                color: isActive ? 'white' : hasAlert ? '#FF7043' : '#607D8B',
+                border: isActive ? 'none' : `1px solid ${hasAlert ? 'rgba(255,112,67,0.25)' : 'transparent'}`,
+                boxShadow: isActive ? '0 4px 12px rgba(255,112,67,0.30)' : 'none',
+                transition: 'all 150ms ease',
+              }}
+            >
+              {tab.label}
+              {typeof tab.badge === 'number' && (
+                <span style={{
+                  fontSize: 11, fontWeight: 900,
+                  background: isActive ? 'rgba(255,255,255,0.30)' : hasAlert ? 'rgba(255,112,67,0.20)' : 'rgba(0,0,0,0.08)',
+                  color: isActive ? 'white' : '#374151',
+                  borderRadius: 999, padding: '1px 6px',
+                }}>
+                  {tab.badge}
+                </span>
+              )}
+            </Link>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
+// ─── Mobile layout ────────────────────────────────────────────────────────────
+function MobileContactCenter({
+  counts, withChrome,
+  contacts, topContacts, loading,
+  incomingRequests, incomingPreview,
+  outgoingRequests, outgoingPreview,
+  profileViews, pvLoading,
+  groups, pages, newsletters,
+  handleAccept, handleDecline, handleCancel,
+  handleViewProfile, handleDisconnect,
+  openGroup, openPage, openNewsletter,
+  formatDateTime,
+  nothingNeedingAttention,
+  showContacts, setShowContacts,
+}) {
+  const [networkOpen, setNetworkOpen] = useState(false);
+
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+
+      {/* ── 1. Sticky tab strip ── */}
+      <MobileTabStrip counts={counts} withChrome={withChrome} currentTab="contacts" />
+
+      {/* ── 2. Needs Your Attention — always visible, action-first ── */}
+      <div style={{ ...WHITE_CARD, padding: 16 }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 12 }}>
+          <h2 style={{ color: '#FF7043', margin: 0, fontSize: 16, fontWeight: 800 }}>
+            Needs Your Attention
+          </h2>
+          {!nothingNeedingAttention && (
+            <span style={{
+              fontSize: 12, fontWeight: 800, padding: '2px 8px', borderRadius: 999,
+              background: 'rgba(255,112,67,0.12)', color: '#FF7043',
+              border: '1px solid rgba(255,112,67,0.25)',
+            }}>
+              {incomingRequests.length + outgoingRequests.length}
+            </span>
+          )}
+        </div>
+
+        {nothingNeedingAttention ? (
+          <p style={{ color: '#607D8B', fontSize: 14, margin: 0 }}>
+            You're all caught up. New invites or requests will appear here first.
+          </p>
+        ) : (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+            {incomingRequests.length > 0 && (
+              <div>
+                <h3 style={{ margin: '0 0 8px', fontSize: 13, color: '#374151', fontWeight: 700 }}>
+                  Invites waiting on you
+                </h3>
+                <IncomingRequestsList
+                  items={incomingPreview}
+                  onAccept={handleAccept}
+                  onDecline={handleDecline}
+                  onViewProfile={handleViewProfile}
+                />
+                <Link href={withChrome('/seeker/contact-incoming')}
+                  style={{ color: '#FF7043', fontWeight: 700, fontSize: 13, marginTop: 6, display: 'block' }}>
+                  Review all invites →
+                </Link>
+              </div>
+            )}
+            {outgoingRequests.length > 0 && (
+              <div>
+                <h3 style={{ margin: '0 0 8px', fontSize: 13, color: '#374151', fontWeight: 700 }}>
+                  Requests you've sent
+                </h3>
+                <OutgoingRequestsList
+                  items={outgoingPreview}
+                  onCancel={handleCancel}
+                  onViewProfile={handleViewProfile}
+                />
+                <Link href={withChrome('/seeker/contact-outgoing')}
+                  style={{ color: '#FF7043', fontWeight: 700, fontSize: 13, marginTop: 6, display: 'block' }}>
+                  Review all requests →
+                </Link>
+              </div>
+            )}
+          </div>
+        )}
+      </div>
+
+      {/* ── 3. Contacts — collapsible smart card ── */}
+      <CollapsibleCard title="Contacts" count={contacts.length} defaultOpen={true}>
+        <div style={{ paddingTop: 12 }}>
+          <ContactsList
+            contacts={topContacts}
+            onViewProfile={handleViewProfile}
+            onDisconnect={handleDisconnect}
+            loading={loading}
+          />
+          <Link href={withChrome('/seeker/contacts')}
+            style={{ color: '#FF7043', fontWeight: 700, fontSize: 13, marginTop: 8, display: 'block' }}>
+            View all contacts →
+          </Link>
+        </div>
+      </CollapsibleCard>
+
+      {/* ── 4. Recent Profile Views — collapsible smart card ── */}
+      <CollapsibleCard title="Recent Profile Views" count={profileViews.length} defaultOpen={false}>
+        <div style={{ paddingTop: 12 }}>
+          {pvLoading ? (
+            <p style={{ color: '#607D8B', fontSize: 14, margin: 0 }}>Loading views…</p>
+          ) : profileViews.length === 0 ? (
+            <p style={{ color: '#607D8B', fontSize: 14, margin: 0 }}>
+              No profile views yet. Recruiters, coaches, and peers who visit will show up here.
+            </p>
+          ) : (
+            <ul style={{ listStyle: 'none', margin: 0, padding: 0, display: 'grid', gap: 8 }}>
+              {profileViews.map((v) => (
+                <li key={v.id} style={{
+                  display: 'flex', flexDirection: 'column', padding: '8px 10px',
+                  borderRadius: 10, background: 'rgba(0,0,0,0.03)',
+                  border: '1px solid rgba(0,0,0,0.06)',
+                }}>
+                  <span style={{ fontWeight: 700, color: v.viewer?.name ? '#111827' : '#6B7280', fontSize: 14 }}>
+                    {v.viewer?.name || 'Anonymous ForgeTomorrow member'}
+                  </span>
+                  <span style={{ fontSize: 12, color: '#6B7280' }}>
+                    Viewed your profile • {formatDateTime(v.createdAt)}
+                  </span>
+                </li>
+              ))}
+            </ul>
+          )}
+          <Link href={withChrome('/seeker/profile-views')}
+            style={{ color: '#FF7043', fontWeight: 700, fontSize: 13, marginTop: 8, display: 'block' }}>
+            View all profile views →
+          </Link>
+        </div>
+      </CollapsibleCard>
+
+      {/* ── 5. Your Network — Groups / Pages / Newsletters folded into one ── */}
+      <div style={{ ...WHITE_CARD, overflow: 'hidden' }}>
+        <button
+          onClick={() => setNetworkOpen((o) => !o)}
+          style={{
+            width: '100%', background: 'transparent', border: 'none',
+            padding: '14px 16px', display: 'flex', alignItems: 'center',
+            justifyContent: 'space-between', cursor: 'pointer',
+          }}
+        >
+          <span style={{ fontSize: 16, fontWeight: 800, color: '#112033' }}>Your Network</span>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+            <span style={{ fontSize: 12, color: '#90A4AE', fontWeight: 600 }}>
+              Groups · Pages · Newsletters
+            </span>
+            <svg width="18" height="18" viewBox="0 0 18 18" fill="none"
+              style={{ flexShrink: 0, transition: 'transform 200ms ease',
+                transform: networkOpen ? 'rotate(180deg)' : 'rotate(0deg)' }}>
+              <path d="M4 6.5L9 11.5L14 6.5" stroke="#90A4AE" strokeWidth="2"
+                strokeLinecap="round" strokeLinejoin="round" />
+            </svg>
+          </div>
+        </button>
+
+        {networkOpen && (
+          <div style={{ borderTop: '1px solid rgba(0,0,0,0.06)' }}>
+            {/* Groups */}
+            <div style={{ padding: '14px 16px', borderBottom: '1px solid rgba(0,0,0,0.05)' }}>
+              <h3 style={{ color: '#FF7043', margin: '0 0 8px', fontSize: 14, fontWeight: 800 }}>Groups</h3>
+              <GroupsList groups={groups} onOpen={openGroup} />
+            </div>
+            {/* Pages */}
+            <div style={{ padding: '14px 16px', borderBottom: '1px solid rgba(0,0,0,0.05)' }}>
+              <h3 style={{ color: '#FF7043', margin: '0 0 8px', fontSize: 14, fontWeight: 800 }}>Pages</h3>
+              <PagesList pages={pages} onOpen={openPage} />
+            </div>
+            {/* Newsletters */}
+            <div style={{ padding: '14px 16px' }}>
+              <h3 style={{ color: '#FF7043', margin: '0 0 8px', fontSize: 14, fontWeight: 800 }}>Newsletters</h3>
+              <NewslettersList items={newsletters} onOpen={openNewsletter} />
+            </div>
+          </div>
+        )}
+      </div>
+
+    </div>
+  );
+}
+
+// ─── Main page ────────────────────────────────────────────────────────────────
+export default function SeekerContactCenter() {
   const router = useRouter();
   const chrome = String(router.query.chrome || '').toLowerCase();
   const withChrome = (path) =>
     chrome ? `${path}${path.includes('?') ? '&' : '?'}chrome=${chrome}` : path;
 
-  // Counts state
-  const [contactsCount, setContactsCount] = useState(0);
-  const [invitesInCount, setInvitesInCount] = useState(0);
-  const [invitesOutCount, setInvitesOutCount] = useState(0);
-  const [profileViewsCount, setProfileViewsCount] = useState(0);
-  const [blockedCount, setBlockedCount] = useState(0);
+  const [contacts, setContacts] = useState([]);
+  const [incomingRequests, setIncomingRequests] = useState([]);
+  const [outgoingRequests, setOutgoingRequests] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [groups] = useState([]);
+  const [pages] = useState([]);
+  const [newsletters] = useState([]);
+  const [profileViews, setProfileViews] = useState([]);
+  const [pvLoading, setPvLoading] = useState(true);
 
-  const reloadCounts = async () => {
-    try {
-      const summaryRes = await fetch('/api/contacts/summary');
-      if (summaryRes.ok) {
-        const data = await summaryRes.json();
-        setContactsCount(data.contacts?.length || 0);
-        setInvitesInCount(data.incoming?.length || 0);
-        setInvitesOutCount(data.outgoing?.length || 0);
-      }
-
-      const pvRes = await fetch('/api/profile/views?limit=5');
-      if (pvRes.ok) {
-        const data = await pvRes.json();
-        setProfileViewsCount(data.views?.length || 0);
-      }
-
-      const blockedRes = await fetch('/api/signal/blocked?countOnly=true');
-      if (blockedRes.ok) {
-        const data = await blockedRes.json();
-        setBlockedCount(data.count || 0);
-      }
-    } catch (err) {
-      console.error('ContactCenterToolbar counts error', err);
-    }
-  };
-
+  // JS-driven mobile detection — same pattern as SeekerLayout + HearthCenter
+  const [isMobile, setIsMobile] = useState(true);
   useEffect(() => {
-    reloadCounts();
+    const check = () => setIsMobile(window.innerWidth < 640);
+    check();
+    window.addEventListener('resize', check);
+    return () => window.removeEventListener('resize', check);
   }, []);
 
-  const counts = useMemo(
-    () => ({
-      contacts: contactsCount,
-      invitesIn: invitesInCount,
-      invitesOut: invitesOutCount,
-      profileViews: profileViewsCount,
-      blocked: blockedCount,
-    }),
-    [contactsCount, invitesInCount, invitesOutCount, profileViewsCount, blockedCount]
+  const reloadSummary = async () => {
+    try {
+      setLoading(true);
+      const res = await fetch('/api/contacts/summary');
+      if (!res.ok) { setContacts([]); setIncomingRequests([]); setOutgoingRequests([]); return; }
+      const data = await res.json();
+      setContacts(data.contacts || []);
+      setIncomingRequests(data.incoming || []);
+      setOutgoingRequests(data.outgoing || []);
+    } catch { setContacts([]); setIncomingRequests([]); setOutgoingRequests([]); }
+    finally { setLoading(false); }
+  };
+
+  const reloadProfileViews = async () => {
+    try {
+      setPvLoading(true);
+      const res = await fetch('/api/profile/views?limit=5');
+      if (!res.ok) { setProfileViews([]); return; }
+      const data = await res.json();
+      setProfileViews(data.views || []);
+    } catch { setProfileViews([]); }
+    finally { setPvLoading(false); }
+  };
+
+  useEffect(() => { reloadSummary(); reloadProfileViews(); }, []);
+
+  const counts = useMemo(() => ({
+    contacts: contacts.length,
+    invitesIn: incomingRequests.length,
+    invitesOut: outgoingRequests.length,
+    profileViews: profileViews.length,
+    blocked: 0,
+  }), [contacts, incomingRequests, outgoingRequests, profileViews]);
+
+  const getPersonFromItem = (item) => {
+    if (!item) return null;
+    if (item.from) return item.from;
+    if (item.to) return item.to;
+    return item;
+  };
+
+  const handleViewProfile = (item) => {
+    const person = getPersonFromItem(item);
+    if (!person?.id) return;
+    router.push(withChrome(`/member-profile?userId=${person.id}`));
+  };
+
+  const handleAccept = async (item) => {
+    const requestId = item.requestId || item.id;
+    if (!requestId) return;
+    try {
+      const res = await fetch('/api/contacts/respond', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ requestId, action: 'accept' }),
+      });
+      if (!res.ok) { alert('Could not accept. Please try again.'); return; }
+      await reloadSummary();
+    } catch { alert('Could not accept. Please try again.'); }
+  };
+
+  const handleDecline = async (item) => {
+    const requestId = item.requestId || item.id;
+    if (!requestId) return;
+    try {
+      const res = await fetch('/api/contacts/respond', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ requestId, action: 'decline' }),
+      });
+      if (!res.ok) { alert('Could not decline. Please try again.'); return; }
+      await reloadSummary();
+    } catch { alert('Could not decline. Please try again.'); }
+  };
+
+  const handleCancel = async (item) => {
+    const requestId = item.requestId || item.id;
+    if (!requestId) return;
+    try {
+      const res = await fetch('/api/contacts/respond', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ requestId, action: 'cancel' }),
+      });
+      if (!res.ok) { alert('Could not cancel. Please try again.'); return; }
+      await reloadSummary();
+    } catch { alert('Could not cancel. Please try again.'); }
+  };
+
+  const handleDisconnect = async (item) => {
+    const person = getPersonFromItem(item);
+    if (!person?.id) return;
+    if (!window.confirm(`Disconnect from ${person.name || 'this member'}?`)) return;
+    try {
+      const res = await fetch('/api/contacts/remove', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ contactUserId: person.id }),
+      });
+      if (!res.ok) { alert('Could not disconnect. Please try again.'); return; }
+      await reloadSummary();
+    } catch { alert('Could not disconnect. Please try again.'); }
+  };
+
+  const openGroup = (g) => console.log('Open group (future)', g);
+  const openPage = (p) => console.log('Open page (future)', p);
+  const openNewsletter = (n) => console.log('Open newsletter (future)', n);
+
+  const formatDateTime = (iso) => {
+    try { return new Date(iso).toLocaleString(); } catch { return ''; }
+  };
+
+  const [showContacts, setShowContacts] = useState(true);
+  const topContacts = useMemo(() => contacts.slice(0, 5), [contacts]);
+  const incomingPreview = useMemo(() => incomingRequests.slice(0, 3), [incomingRequests]);
+  const outgoingPreview = useMemo(() => outgoingRequests.slice(0, 3), [outgoingRequests]);
+  const nothingNeedingAttention = incomingRequests.length === 0 && outgoingRequests.length === 0;
+
+  const HeaderBox = (
+    <section style={{ ...GLASS, padding: 16, textAlign: 'center' }}>
+      <h1 style={{ margin: 0, color: '#FF7043', fontSize: 24, fontWeight: 800 }}>
+        Contact Center
+      </h1>
+      <p style={{ margin: '6px auto 0', color: '#607D8B', maxWidth: 720 }}>
+        See who you're connected with, who's trying to reach you, and who's been looking at your
+        profile. When you're ready to talk, jump into{' '}
+        <Link href={withChrome('/seeker/messages')} style={{ color: '#FF7043', fontWeight: 700 }}>
+          The Signal
+        </Link>.
+      </p>
+    </section>
   );
 
-  const TabButton = ({ href, label, badge, tabKey }) => {
-    const isActive = currentTab === tabKey;
-    const hasBadge = typeof badge === 'number' && badge > 0;
-    const bg = isActive || (hasBadge && tabKey !== 'contacts') ? '#FFF3E9' : 'white';
-    const border = isActive || (hasBadge && tabKey !== 'contacts') ? '#FFCCBC' : '#eee';
-    const color = isActive || (hasBadge && tabKey !== 'contacts') ? '#D84315' : '#374151';
-
-    return (
-      <Link
-        href={withChrome(href)}
-        style={{
-          display: 'inline-flex',
-          alignItems: 'center',
-          gap: 8,
-          padding: '8px 12px',
-          borderRadius: 10,
-          border: `1px solid ${border}`,
-          background: bg,
-          color,
-          fontWeight: 700,
-          textDecoration: 'none',
-        }}
-      >
-        <span>{label}</span>
-        {typeof badge === 'number' && (
-          <span
-            style={{
-              background: hasBadge ? '#FFE0B2' : '#ECEFF1',
-              color: '#374151',
-              borderRadius: 999,
-              padding: '2px 8px',
-              fontSize: 12,
-              fontWeight: 800,
-            }}
-          >
-            {badge}
-          </span>
-        )}
-      </Link>
-    );
+  const sharedProps = {
+    counts, withChrome,
+    contacts, topContacts, loading,
+    incomingRequests, incomingPreview,
+    outgoingRequests, outgoingPreview,
+    profileViews, pvLoading,
+    groups, pages, newsletters,
+    handleAccept, handleDecline, handleCancel,
+    handleViewProfile, handleDisconnect,
+    openGroup, openPage, openNewsletter,
+    formatDateTime, nothingNeedingAttention,
+    showContacts, setShowContacts,
   };
 
   return (
-    <section
-      style={{
-        background: 'white',
-        borderRadius: 12,
-        padding: 12,
-        border: '1px solid #eee',
-        boxShadow: '0 2px 6px rgba(0,0,0,0.06)',
-        marginBottom: 16,
-      }}
+    <SeekerLayout
+      title="Contact Center | ForgeTomorrow"
+      header={HeaderBox}
+      right={<RightRailPlacementManager surfaceId="contact_center" />}
+      activeNav="contacts"
     >
-      <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
-        <TabButton
-          href="/seeker/contact-center"
-          label="Contacts"
-          badge={counts.contacts}
-          tabKey="contacts"
-        />
-        <TabButton
-          href="/seeker/contact-incoming"
-          label="Invites"
-          badge={counts.invitesIn}
-          tabKey="invites"
-          highlight={counts.invitesIn > 0}
-        />
-        <TabButton
-          href="/seeker/contact-outgoing"
-          label="Requests"
-          badge={counts.invitesOut}
-          tabKey="requests"
-          highlight={counts.invitesOut > 0}
-        />
-        <TabButton
-          href="/seeker/profile-views"
-          label="Profile Views"
-          badge={counts.profileViews}
-          tabKey="profileViews"
-          highlight={counts.profileViews > 0}
-        />
-        <TabButton
-          href="/seeker/blocked"
-          label="Blocked Users"
-          badge={counts.blocked}
-          tabKey="blocked"
-          highlight={counts.blocked > 0}
-        />
-      </div>
-    </section>
+      {isMobile ? (
+        // ── MOBILE: priority-first single column ──
+        <div style={{
+          ...GLASS,
+          paddingTop: 16, paddingBottom: 16,
+          paddingLeft: 16, paddingRight: 16,
+          overflow: 'visible',
+        }}>
+          <MobileContactCenter {...sharedProps} />
+        </div>
+      ) : (
+        // ── DESKTOP: original layout, completely untouched ──
+        <div style={{ ...GLASS, padding: 16, margin: '24px 0 0', width: '100%' }}>
+          <div style={{ display: 'grid', gap: 12, width: '100%' }}>
+
+            <section style={{ ...WHITE_CARD, padding: 12 }}>
+              <ContactCenterToolbar currentTab="contacts" />
+            </section>
+
+            <section style={{ ...WHITE_CARD, padding: 16 }}>
+              <h2 style={{ color: '#FF7043', marginTop: 0, marginBottom: 8 }}>
+                Needs your attention
+              </h2>
+              {nothingNeedingAttention ? (
+                <p style={{ color: '#607D8B', fontSize: 14, marginBottom: 0 }}>
+                  You're all caught up. When new invites or requests come in, they'll appear here first.
+                </p>
+              ) : (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+                  {incomingRequests.length > 0 && (
+                    <div>
+                      <h3 style={{ margin: 0, fontSize: 14, color: '#374151', fontWeight: 700 }}>
+                        Invites waiting on you
+                      </h3>
+                      <IncomingRequestsList items={incomingPreview}
+                        onAccept={handleAccept} onDecline={handleDecline} onViewProfile={handleViewProfile} />
+                      <Link href={withChrome('/seeker/contact-incoming')}
+                        style={{ color: '#FF7043', fontWeight: 700, fontSize: 13, marginTop: 6, display: 'block' }}>
+                        Review all invites →
+                      </Link>
+                    </div>
+                  )}
+                  {outgoingRequests.length > 0 && (
+                    <div>
+                      <h3 style={{ margin: 0, fontSize: 14, color: '#374151', fontWeight: 700 }}>
+                        Requests you've sent
+                      </h3>
+                      <OutgoingRequestsList items={outgoingPreview}
+                        onCancel={handleCancel} onViewProfile={handleViewProfile} />
+                      <Link href={withChrome('/seeker/contact-outgoing')}
+                        style={{ color: '#FF7043', fontWeight: 700, fontSize: 13, marginTop: 6, display: 'block' }}>
+                        Review all requests →
+                      </Link>
+                    </div>
+                  )}
+                </div>
+              )}
+            </section>
+
+            <section style={{ display: 'grid', gap: 12,
+              gridTemplateColumns: 'minmax(0, 1.4fr) minmax(0, 1fr)', marginTop: 0 }}>
+              <section style={{ ...WHITE_CARD, padding: 16 }}>
+                <div style={{ display: 'flex', alignItems: 'center',
+                  justifyContent: 'space-between', marginBottom: 8 }}>
+                  <h2 style={{ color: '#FF7043', margin: 0 }}>Contacts</h2>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                    <span style={{ fontSize: 12, fontWeight: 800, padding: '2px 8px',
+                      borderRadius: 999, background: 'rgba(0,0,0,0.04)', color: '#334155',
+                      border: '1px solid rgba(0,0,0,0.06)' }}>
+                      {contacts.length}
+                    </span>
+                    <button type="button" onClick={() => setShowContacts((v) => !v)}
+                      style={{ fontSize: 13, padding: '6px 10px', border: '1px solid rgba(0,0,0,0.12)',
+                        borderRadius: 8, background: 'rgba(255,255,255,0.92)', cursor: 'pointer' }}
+                      aria-expanded={showContacts}>
+                      {showContacts ? 'Hide' : 'Show'}
+                    </button>
+                  </div>
+                </div>
+                {showContacts && (
+                  <div>
+                    <ContactsList contacts={topContacts} onViewProfile={handleViewProfile}
+                      onDisconnect={handleDisconnect} loading={loading} />
+                    <Link href={withChrome('/seeker/contacts')}
+                      style={{ color: '#FF7043', fontWeight: 700, marginTop: 8, display: 'block' }}>
+                      View all contacts →
+                    </Link>
+                  </div>
+                )}
+              </section>
+
+              <section style={{ ...WHITE_CARD, padding: 16 }}>
+                <h2 style={{ color: '#FF7043', marginTop: 0 }}>Recent Profile Views</h2>
+                {pvLoading ? (
+                  <p style={{ color: '#607D8B', fontSize: 14 }}>Loading views…</p>
+                ) : profileViews.length === 0 ? (
+                  <p style={{ color: '#607D8B', fontSize: 14 }}>
+                    No one has viewed your profile yet.
+                  </p>
+                ) : (
+                  <ul style={{ listStyle: 'none', margin: 0, padding: 0, display: 'grid', gap: 8 }}>
+                    {profileViews.map((v) => (
+                      <li key={v.id} style={{ display: 'flex', flexDirection: 'column',
+                        padding: '8px 10px', borderRadius: 10, background: 'rgba(0,0,0,0.03)',
+                        border: '1px solid rgba(0,0,0,0.06)' }}>
+                        <span style={{ fontWeight: 700, color: v.viewer?.name ? '#111827' : '#6B7280', fontSize: 14 }}>
+                          {v.viewer?.name || 'Anonymous ForgeTomorrow member'}
+                        </span>
+                        <span style={{ fontSize: 12, color: '#6B7280' }}>
+                          Viewed your profile • {formatDateTime(v.createdAt)}
+                        </span>
+                      </li>
+                    ))}
+                  </ul>
+                )}
+                <Link href={withChrome('/seeker/profile-views')}
+                  style={{ color: '#FF7043', fontWeight: 700, marginTop: 8, display: 'block' }}>
+                  View all profile views →
+                </Link>
+              </section>
+            </section>
+
+            <section style={{ display: 'grid', gap: 12,
+              gridTemplateColumns: 'repeat(3, minmax(0, 1fr))' }}>
+              <section style={{ ...WHITE_CARD, padding: 16 }}>
+                <h2 style={{ color: '#FF7043', marginTop: 0 }}>Groups</h2>
+                <GroupsList groups={groups} onOpen={openGroup} />
+              </section>
+              <section style={{ ...WHITE_CARD, padding: 16 }}>
+                <h2 style={{ color: '#FF7043', marginTop: 0 }}>Pages</h2>
+                <PagesList pages={pages} onOpen={openPage} />
+              </section>
+              <section style={{ ...WHITE_CARD, padding: 16 }}>
+                <h2 style={{ color: '#FF7043', marginTop: 0 }}>Newsletters</h2>
+                <NewslettersList items={newsletters} onOpen={openNewsletter} />
+              </section>
+            </section>
+
+          </div>
+        </div>
+      )}
+    </SeekerLayout>
   );
 }
