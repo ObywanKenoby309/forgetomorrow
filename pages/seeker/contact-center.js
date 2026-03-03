@@ -144,7 +144,7 @@ function CollapsibleCard({ title, count, defaultOpen = false, children }) {
   );
 }
 
-// ─── Mobile: sticky scrollable tab strip ─────────────────────────────────────
+// ─── Mobile: sticky WRAPPING tab strip (no horizontal scroll) ─────────────────
 function MobileTabStrip({ counts, withChrome }) {
   const tabs = [
     { key: 'contacts', label: 'Contacts', href: '/seeker/contact-center', badge: counts.contacts },
@@ -166,39 +166,37 @@ function MobileTabStrip({ counts, withChrome }) {
         WebkitBackdropFilter: 'blur(10px)',
         borderBottom: '1px solid rgba(0,0,0,0.07)',
         marginBottom: 12,
-        overflowX: 'hidden', // ✅ prevents the strip container itself from pushing the page
+        overflowX: 'hidden',
       }}
     >
       <div
         style={{
           display: 'flex',
+          flexWrap: 'wrap',          // ✅ wrap instead of scroll
           gap: 8,
-          overflowX: 'auto',
           padding: '10px 16px',
-          scrollbarWidth: 'none',
-          msOverflowStyle: 'none',
-          WebkitOverflowScrolling: 'touch',
+          minWidth: 0,
         }}
       >
-        <style>{`div::-webkit-scrollbar{display:none}`}</style>
         {tabs.map((tab) => {
           const isActive = tab.key === 'contacts'; // current page
           const hasAlert = tab.badge > 0 && tab.key !== 'contacts';
+
           return (
             <Link
               key={tab.key}
               href={withChrome(tab.href)}
               style={{
-                flexShrink: 0,
                 display: 'inline-flex',
                 alignItems: 'center',
                 gap: 6,
-                padding: '7px 12px',
+                padding: '7px 10px',     // ✅ slightly tighter
                 borderRadius: 999,
                 fontWeight: 800,
                 fontSize: 13,
                 textDecoration: 'none',
-                whiteSpace: 'nowrap',
+                whiteSpace: 'normal',     // ✅ allow wrap
+                lineHeight: 1.1,          // ✅ keeps wrapped chips tidy
                 background: isActive
                   ? '#FF7043'
                   : hasAlert
@@ -207,6 +205,8 @@ function MobileTabStrip({ counts, withChrome }) {
                 color: isActive ? 'white' : hasAlert ? '#FF7043' : '#607D8B',
                 border: isActive ? 'none' : `1px solid ${hasAlert ? 'rgba(255,112,67,0.25)' : 'transparent'}`,
                 boxShadow: isActive ? '0 4px 12px rgba(255,112,67,0.30)' : 'none',
+                maxWidth: '100%',
+                boxSizing: 'border-box',
               }}
             >
               {tab.label}
@@ -219,6 +219,7 @@ function MobileTabStrip({ counts, withChrome }) {
                     padding: '1px 6px',
                     background: isActive ? 'rgba(255,255,255,0.30)' : 'rgba(255,112,67,0.20)',
                     color: isActive ? 'white' : '#374151',
+                    flexShrink: 0,
                   }}
                 >
                   {tab.badge}
@@ -450,7 +451,16 @@ export default function SeekerContactCenter() {
           <MobileTabStrip counts={counts} withChrome={withChrome} />
 
           {/* 1. Needs Your Attention — always open */}
-          <div style={{ ...WHITE_CARD, ...MOBILE_FULL_WIDTH, padding: 16 }}>
+          <div
+            style={{
+              ...WHITE_CARD,
+              ...MOBILE_FULL_WIDTH,
+              padding: 16,
+              minWidth: 0,
+              overflowWrap: 'anywhere',
+              wordBreak: 'break-word',
+            }}
+          >
             <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 12, minWidth: 0 }}>
               <h2 style={{ color: '#FF7043', margin: 0, fontSize: 16, fontWeight: 800 }}>
                 Needs Your Attention
@@ -477,9 +487,9 @@ export default function SeekerContactCenter() {
                 You&apos;re all caught up. New invites or requests will appear here first.
               </p>
             ) : (
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 16, minWidth: 0 }}>
                 {incomingRequests.length > 0 && (
-                  <div>
+                  <div style={{ minWidth: 0 }}>
                     <h3 style={{ margin: '0 0 8px', fontSize: 13, color: '#374151', fontWeight: 700 }}>
                       Invites waiting on you
                     </h3>
@@ -498,15 +508,11 @@ export default function SeekerContactCenter() {
                   </div>
                 )}
                 {outgoingRequests.length > 0 && (
-                  <div>
+                  <div style={{ minWidth: 0 }}>
                     <h3 style={{ margin: '0 0 8px', fontSize: 13, color: '#374151', fontWeight: 700 }}>
                       Requests you&apos;ve sent
                     </h3>
-                    <OutgoingRequestsList
-                      items={outgoingPreview}
-                      onCancel={handleCancel}
-                      onViewProfile={handleViewProfile}
-                    />
+                    <OutgoingRequestsList items={outgoingPreview} onCancel={handleCancel} onViewProfile={handleViewProfile} />
                     <Link
                       href={withChrome('/seeker/contact-outgoing')}
                       style={{ color: '#FF7043', fontWeight: 700, fontSize: 13, marginTop: 6, display: 'block' }}
