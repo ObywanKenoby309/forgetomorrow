@@ -303,21 +303,7 @@ function MobileAnvil({ tiles, activeModule, setActiveModule, withChrome }) {
         ))}
       </div>
 
-      {/* ── Dot indicators ── */}
-      <div style={{ display: "flex", justifyContent: "center", gap: 8, marginTop: 12 }}>
-        {tiles.map((_, i) => (
-          <button key={i} onClick={() => goTo(i)} aria-label={`Go to ${tiles[i].title}`}
-            style={{
-              width: i === activeIndex ? 24 : 8, height: 8, borderRadius: 999,
-              background: i === activeIndex ? "#FF7043" : "rgba(255,112,67,0.25)",
-              border: "none", padding: 0, cursor: "pointer",
-              transition: "width 220ms ease, background 220ms ease",
-            }}
-          />
-        ))}
-      </div>
-
-      {/* ── Scroll hint — mobile only, auto-hides after 3s ── */}
+      {/* ── Scroll hint — below cards, above dots ── */}
       {showScrollHint && (
         <div style={{
           display: "flex", alignItems: "center", justifyContent: "center", gap: 6,
@@ -341,6 +327,20 @@ function MobileAnvil({ tiles, activeModule, setActiveModule, withChrome }) {
           </span>
         </div>
       )}
+
+      {/* ── Dot indicators ── */}
+      <div style={{ display: "flex", justifyContent: "center", gap: 8, marginTop: 8 }}>
+        {tiles.map((_, i) => (
+          <button key={i} onClick={() => goTo(i)} aria-label={`Go to ${tiles[i].title}`}
+            style={{
+              width: i === activeIndex ? 24 : 8, height: 8, borderRadius: 999,
+              background: i === activeIndex ? "#FF7043" : "rgba(255,112,67,0.25)",
+              border: "none", padding: 0, cursor: "pointer",
+              transition: "width 220ms ease, background 220ms ease",
+            }}
+          />
+        ))}
+      </div>
 
       {/* ── Inline module content (loads below carousel, no back button — use carousel to switch) ── */}
       {activeModule && activeModule !== "resume" && (
