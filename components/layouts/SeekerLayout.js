@@ -364,7 +364,7 @@ export default function SeekerLayout({
       <div style={backgroundStyle}>
         <HeaderComp />
 
-        <div style={{ ...gridStyles, gap, ...containerPadding, alignItems: 'start' }}>
+        <div style={{ ...gridStyles, gap, ...containerPadding, alignItems: 'start', overflowX: 'hidden', boxSizing: 'border-box' }}>
           <aside
             style={{
               ...leftRailLayer,
