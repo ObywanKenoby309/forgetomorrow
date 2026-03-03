@@ -15,10 +15,8 @@ export default function OutgoingRequestsList({
       {items.map((p) => {
         const person = p.to || p; // API shape: { to: {...} }
         const displayName = person.name || 'Member';
-        const avatar =
-          person.avatarUrl || person.photo || '/demo-profile.jpg';
-        const note =
-          p.note || person.headline || person.status || '';
+        const avatar = person.avatarUrl || person.photo || '/demo-profile.jpg';
+        const note = p.note || person.headline || person.status || '';
 
         return (
           <div
@@ -30,6 +28,9 @@ export default function OutgoingRequestsList({
               border: '1px solid #eee',
               borderRadius: 10,
               padding: 10,
+
+              // ✅ allow wrap on narrow screens
+              flexWrap: 'wrap',
             }}
           >
             <img
@@ -37,25 +38,51 @@ export default function OutgoingRequestsList({
               alt={displayName}
               width={40}
               height={40}
-              style={{ borderRadius: 999, objectFit: 'cover' }}
+              style={{ borderRadius: 999, objectFit: 'cover', flexShrink: 0 }}
             />
-            <div style={{ flex: 1, minWidth: 0 }}>
+
+            <div style={{ flex: '1 1 200px', minWidth: 0 }}>
               <div
                 style={{
                   fontWeight: 700,
                   color: '#263238',
-                  whiteSpace: 'nowrap',
-                  overflow: 'hidden',
-                  textOverflow: 'ellipsis',
+
+                  // ✅ allow wrapping instead of forcing nowrap
+                  overflowWrap: 'anywhere',
+                  wordBreak: 'break-word',
                 }}
               >
                 {displayName}
               </div>
               {note ? (
-                <div style={{ fontSize: 12, color: '#607D8B' }}>{note}</div>
+                <div
+                  style={{
+                    fontSize: 12,
+                    color: '#607D8B',
+                    marginTop: 2,
+                    overflowWrap: 'anywhere',
+                    wordBreak: 'break-word',
+                  }}
+                >
+                  {note}
+                </div>
               ) : null}
             </div>
-            <div style={{ display: 'flex', gap: 8 }}>
+
+            <div
+              style={{
+                display: 'flex',
+                gap: 8,
+
+                // ✅ wrap actions when needed
+                flexWrap: 'wrap',
+                justifyContent: 'flex-end',
+
+                // ✅ allow this block to drop below the text on narrow screens
+                flex: '1 1 180px',
+                minWidth: 0,
+              }}
+            >
               <button
                 onClick={() => onCancel?.(p)}
                 style={{
@@ -66,6 +93,7 @@ export default function OutgoingRequestsList({
                   padding: '6px 10px',
                   fontWeight: 700,
                   cursor: 'pointer',
+                  flexShrink: 0,
                 }}
               >
                 Cancel
@@ -80,6 +108,7 @@ export default function OutgoingRequestsList({
                   padding: '6px 10px',
                   fontWeight: 700,
                   cursor: 'pointer',
+                  flexShrink: 0,
                 }}
               >
                 View

@@ -21,8 +21,7 @@ export default function IncomingRequestsList({
         // }
         const person = p.from || p;
         const displayName = person.name || 'Member';
-        const avatar =
-          person.avatarUrl || person.photo || '/demo-profile.jpg';
+        const avatar = person.avatarUrl || person.photo || '/demo-profile.jpg';
 
         const headline = person.headline || '';
         const location = person.location || '';
@@ -45,6 +44,9 @@ export default function IncomingRequestsList({
               border: '1px solid #eee',
               borderRadius: 10,
               padding: 10,
+
+              // ✅ allow wrap on narrow screens so buttons don't force overflow
+              flexWrap: 'wrap',
             }}
           >
             <img
@@ -52,9 +54,14 @@ export default function IncomingRequestsList({
               alt={displayName}
               width={40}
               height={40}
-              style={{ borderRadius: 999, objectFit: 'cover' }}
+              style={{
+                borderRadius: 999,
+                objectFit: 'cover',
+                flexShrink: 0,
+              }}
             />
-            <div style={{ flex: 1, minWidth: 0 }}>
+
+            <div style={{ flex: '1 1 200px', minWidth: 0 }}>
               {/* Name */}
               <div
                 style={{
@@ -62,6 +69,7 @@ export default function IncomingRequestsList({
                   color: '#263238',
                   fontSize: 14,
                   overflowWrap: 'anywhere',
+                  wordBreak: 'break-word',
                 }}
               >
                 {displayName}
@@ -75,6 +83,7 @@ export default function IncomingRequestsList({
                     fontSize: 12,
                     color: '#546E7A',
                     overflowWrap: 'anywhere',
+                    wordBreak: 'break-word',
                   }}
                 >
                   {headline}
@@ -89,6 +98,7 @@ export default function IncomingRequestsList({
                     fontSize: 12,
                     color: '#90A4AE',
                     overflowWrap: 'anywhere',
+                    wordBreak: 'break-word',
                   }}
                 >
                   {meta}
@@ -96,7 +106,20 @@ export default function IncomingRequestsList({
               ) : null}
             </div>
 
-            <div style={{ display: 'flex', gap: 8 }}>
+            <div
+              style={{
+                display: 'flex',
+                gap: 8,
+
+                // ✅ wrap actions when needed (prevents overflow)
+                flexWrap: 'wrap',
+                justifyContent: 'flex-end',
+
+                // ✅ ensures this block can drop to next line
+                flex: '1 1 220px',
+                minWidth: 0,
+              }}
+            >
               <button
                 type="button"
                 onClick={() => onAccept?.(p)}
@@ -110,6 +133,7 @@ export default function IncomingRequestsList({
                   fontSize: 14,
                   cursor: 'pointer',
                   minWidth: 70,
+                  flexShrink: 0,
                 }}
               >
                 Accept
@@ -127,6 +151,7 @@ export default function IncomingRequestsList({
                   fontSize: 14,
                   cursor: 'pointer',
                   minWidth: 70,
+                  flexShrink: 0,
                 }}
               >
                 Decline
@@ -144,6 +169,7 @@ export default function IncomingRequestsList({
                   fontSize: 14,
                   cursor: 'pointer',
                   minWidth: 70,
+                  flexShrink: 0,
                 }}
               >
                 View
