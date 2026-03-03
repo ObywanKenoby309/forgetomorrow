@@ -496,15 +496,8 @@ export default function SeekerContactCenter() {
       activeNav="contacts"
     >
       {isMobile ? (
-        // ── MOBILE: priority-first single column ──
-        <div style={{
-          ...GLASS,
-          paddingTop: 16, paddingBottom: 16,
-          paddingLeft: 16, paddingRight: 16,
-          overflow: 'visible',
-        }}>
-          <MobileContactCenter {...sharedProps} />
-        </div>
+        // ── MOBILE: no wrapper — cards sit directly in SeekerLayout content area ──
+        <MobileContactCenter {...sharedProps} />
       ) : (
         // ── DESKTOP: original layout, completely untouched ──
         <div style={{ ...GLASS, padding: 16, margin: '24px 0 0', width: '100%' }}>
