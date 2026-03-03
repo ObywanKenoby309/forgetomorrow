@@ -284,6 +284,7 @@ export default function SeekerContactCenter() {
     width: '100%',
   };
 
+    console.log('isMobile:', isMobile);
   return (
     <SeekerLayout
       title="Contact Center | ForgeTomorrow"
