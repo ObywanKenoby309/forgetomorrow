@@ -282,8 +282,11 @@ function AgendaView({ scopedEvents, selectedDate, onEdit, onAdd }) {
               </div>
             </div>
             {evs.length === 0 ? (
-              <div style={{ padding:'10px 14px', background:'rgba(255,255,255,0.6)',
-                borderRadius:10, fontSize:13, color:'#90A4AE', fontStyle:'italic' }}>
+              <div style={{ padding:'10px 14px', background:'rgba(255,255,255,0.88)',
+                backdropFilter:'blur(8px)', WebkitBackdropFilter:'blur(8px)',
+                borderRadius:10, fontSize:13, color:'#546E7A', fontStyle:'italic',
+                fontWeight:600, border:'1px solid rgba(255,255,255,0.50)',
+                boxShadow:'0 2px 8px rgba(0,0,0,0.06)' }}>
                 No events — tap + to add one
               </div>
             ) : (
@@ -356,8 +359,11 @@ function WeekView({ scopedEvents, selectedDate, onSelectDate, onEdit }) {
       <div style={{ display:'flex', flexDirection:'column', gap:8 }}>
         {(eventsByDate[selectedDate] || []).length === 0 ? (
           <div style={{ textAlign:'center', padding:'24px 20px',
-            background:'rgba(255,255,255,0.6)', borderRadius:14,
-            color:'#90A4AE', fontSize:14 }}>
+            background:'rgba(255,255,255,0.88)',
+            backdropFilter:'blur(8px)', WebkitBackdropFilter:'blur(8px)',
+            borderRadius:14, border:'1px solid rgba(255,255,255,0.50)',
+            boxShadow:'0 2px 8px rgba(0,0,0,0.06)',
+            color:'#546E7A', fontSize:14, fontWeight:600 }}>
             No events on this day
           </div>
         ) : (
@@ -451,8 +457,12 @@ function MobileCalendar({ scopedEvents, viewScope, setViewScope, cursor, setCurs
           </div>
           <div style={{ display:'flex', flexDirection:'column', gap:8 }}>
             {(eventsByDate[selectedDate] || []).length === 0 ? (
-              <div style={{ textAlign:'center', padding:'20px', background:'rgba(255,255,255,0.6)',
-                borderRadius:12, color:'#90A4AE', fontSize:14 }}>
+              <div style={{ textAlign:'center', padding:'20px',
+                background:'rgba(255,255,255,0.88)',
+                backdropFilter:'blur(8px)', WebkitBackdropFilter:'blur(8px)',
+                borderRadius:12, border:'1px solid rgba(255,255,255,0.50)',
+                boxShadow:'0 2px 8px rgba(0,0,0,0.06)',
+                color:'#546E7A', fontSize:14, fontWeight:600 }}>
                 No events on this day
               </div>
             ) : (
@@ -629,9 +639,18 @@ export default function RecruiterCalendar({ title = 'Recruiter Calendar', seed =
     return (
       <>
         <div style={{ width:'100%', padding:'0 4px', boxSizing:'border-box' }}>
-          <div style={{ marginBottom:16 }}>
+          <div style={{
+            marginBottom:16,
+            background:'rgba(255,255,255,0.82)',
+            backdropFilter:'blur(10px)',
+            WebkitBackdropFilter:'blur(10px)',
+            borderRadius:14,
+            border:'1px solid rgba(255,255,255,0.40)',
+            boxShadow:'0 4px 16px rgba(0,0,0,0.10)',
+            padding:'14px 16px',
+          }}>
             <div style={{ fontWeight:800, fontSize:18, color:'#112033' }}>{title}</div>
-            <div style={{ fontSize:12, color:'#607D8B', marginTop:2 }}>
+            <div style={{ fontSize:12, color:'#546E7A', marginTop:3, fontWeight:600 }}>
               Tap a date · swipe to browse
             </div>
           </div>

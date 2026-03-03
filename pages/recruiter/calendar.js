@@ -4,41 +4,25 @@ import { PlanProvider } from '@/context/PlanContext';
 import RecruiterLayout from '@/components/layouts/RecruiterLayout';
 import RecruiterCalendar from '@/components/calendar/RecruiterCalendar';
 
-// Note: keeping STORAGE_KEY here for future use if needed,
-// but RecruiterCalendar now manages its own persistence (API-first).
 const STORAGE_KEY = 'recruiterCalendar_live_v1';
+
+const GLASS = {
+  borderRadius: 14,
+  border: '1px solid rgba(255,255,255,0.22)',
+  background: 'rgba(255,255,255,0.58)',
+  boxShadow: '0 10px 24px rgba(0,0,0,0.12)',
+  backdropFilter: 'blur(10px)',
+  WebkitBackdropFilter: 'blur(10px)',
+};
 
 export default function RecruiterCalendarPage() {
   const HeaderBox = (
-    <section
-      style={{
-        background: 'white',
-        borderRadius: 12,
-        padding: 16,
-        boxShadow: '0 2px 6px rgba(0,0,0,0.06)',
-        border: '1px solid #eee',
-        textAlign: 'center',
-      }}
-    >
-      <h1
-        style={{
-          margin: 0,
-          color: '#FF7043',
-          fontSize: 24,
-          fontWeight: 800,
-        }}
-      >
+    <section style={{ ...GLASS, padding: 16, textAlign: 'center' }}>
+      <h1 style={{ margin: 0, color: '#FF7043', fontSize: 24, fontWeight: 800 }}>
         Recruiter Calendar
       </h1>
-      <p
-        style={{
-          margin: '6px auto 0',
-          color: '#607D8B',
-          maxWidth: 720,
-        }}
-      >
-        Block interviews, intakes, outreach blocks, and offer milestones—all in
-        one place.
+      <p style={{ margin: '6px auto 0', color: '#546E7A', maxWidth: 720, fontWeight: 600 }}>
+        Block interviews, intakes, outreach blocks, and offer milestones — all in one place.
       </p>
     </section>
   );
