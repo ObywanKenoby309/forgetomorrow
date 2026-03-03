@@ -1,3 +1,4 @@
+// components/CalendarInterface.js
 export default function CalendarInterface() {
   return (
     <section className="bg-white rounded-lg shadow p-6">

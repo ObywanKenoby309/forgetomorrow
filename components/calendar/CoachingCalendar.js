@@ -1,3 +1,4 @@
+// components/calendar/CoachingCalendar.js
 import React from 'react';
 import CalendarInterface from './CalendarInterface';
 
