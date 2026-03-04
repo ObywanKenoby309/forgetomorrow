@@ -35,7 +35,7 @@ export default function CheckMyFit({ job, onImproveResume }) {
         summary: 'You appear to be a strong match on core skills and background for this role.',
         recommendations: [
           'Add one or two bullets with clear metrics (%, $, time saved) for your most recent role.',
-          'Mirror 2–3 of the job's exact keywords in your resume summary.',
+          "Mirror 2–3 of the job's exact keywords in your resume summary.",
           'Highlight any direct experience with similar tools mentioned in the posting.',
         ],
       });
