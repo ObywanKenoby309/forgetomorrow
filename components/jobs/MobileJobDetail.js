@@ -187,7 +187,7 @@ export default function MobileJobDetail({
             </p>
             <p style={{ margin: '4px 0 0', lineHeight: 1.5 }}>
               {hasApplied
-                ? 'This employer is reviewing applicants. You'll hear directly if selected.'
+                ? "This employer is reviewing applicants. You'll hear directly if selected."
                 : 'New applications are paused.'}
             </p>
           </div>

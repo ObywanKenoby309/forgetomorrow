@@ -190,7 +190,7 @@ export default function JobDetailPanel({
             </p>
             <p style={{ margin: '4px 0 0' }}>
               {hasApplied
-                ? 'This employer is reviewing applicants. You'll hear directly if selected.'
+                ? "This employer is reviewing applicants. You'll hear directly if selected."
                 : 'New applications are paused. Thank you to everyone who applied.'}
             </p>
           </div>
