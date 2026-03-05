@@ -1,5 +1,5 @@
 // components/layouts/RecruiterLayout.js
-import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useState, useLayoutEffect } from 'react';
 import Head from 'next/head';
 import { useRouter } from 'next/router';
 import { usePlan } from '@/context/PlanContext';
@@ -95,28 +95,18 @@ export default function RecruiterLayout({
 
   const { isLoaded: planLoaded, plan, role: planRole } = usePlan();
 
-  // ---- WALLPAPER / BACKGROUND (matches SeekerLayout behavior) ----
-  const { wallpaperUrl } = useUserWallpaper();
-
-  const backgroundStyle = wallpaperUrl
-    ? {
-        minHeight: '100vh',
-        backgroundImage: `url(${wallpaperUrl})`,
-        backgroundSize: 'cover',
-        backgroundPosition: 'center top',
-        backgroundRepeat: 'no-repeat',
-        backgroundAttachment: 'fixed',
-      }
-    : {
-        minHeight: '100vh',
-        backgroundColor: '#ECEFF1',
-      };
-
   // --- Mobile detection ---
-  const [isMobile, setIsMobile] = useState(true);
+  // ✅ FIX: never start as true. Initialize from window width when possible.
+  const [isMobile, setIsMobile] = useState(() => {
+    if (typeof window === 'undefined') return false; // server: assume desktop to prevent mobile-first flash
+    return window.innerWidth < 1024;
+  });
   const [mobileToolsOpen, setMobileToolsOpen] = useState(false);
 
-  useEffect(() => {
+  // ✅ Use layout effect on client so the correct layout is chosen before paint.
+  const useIsomorphicLayoutEffect = typeof window !== 'undefined' ? useLayoutEffect : useEffect;
+
+  useIsomorphicLayoutEffect(() => {
     const handleResize = () => {
       if (typeof window !== 'undefined') setIsMobile(window.innerWidth < 1024);
     };
@@ -124,6 +114,24 @@ export default function RecruiterLayout({
     window.addEventListener('resize', handleResize);
     return () => window.removeEventListener('resize', handleResize);
   }, []);
+
+  // ---- WALLPAPER / BACKGROUND (matches SeekerLayout behavior) ----
+  const { wallpaperUrl } = useUserWallpaper();
+
+  // ✅ FIX: avoid background-attachment: fixed on mobile (can cause “seam/restart” artifacts)
+  const backgroundStyle = wallpaperUrl
+    ? {
+        minHeight: '100vh',
+        backgroundImage: `url(${wallpaperUrl})`,
+        backgroundSize: 'cover',
+        backgroundPosition: 'center top',
+        backgroundRepeat: 'no-repeat',
+        backgroundAttachment: isMobile ? 'scroll' : 'fixed',
+      }
+    : {
+        minHeight: '100vh',
+        backgroundColor: '#ECEFF1',
+      };
 
   // --- DB-first recruiter chrome: enterprise users must be recruiter-ent ---
   const chromeMode = useMemo(() => {
