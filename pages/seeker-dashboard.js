@@ -10,6 +10,7 @@ import ProfilePerformanceTeaser from '@/components/seeker/dashboard/ProfilePerfo
 import KpiRow from '@/components/seeker/dashboard/KpiRow';
 import ApplicationsOverTime from '@/components/seeker/dashboard/ApplicationsOverTime';
 import RightRailPlacementManager from '@/components/ads/RightRailPlacementManager';
+import { colorFor } from '@/components/seeker/dashboard/seekerColors';
 
 // ✅ Shared greeting helper — same lib used by Recruiter + Coaching dashboards
 import { getTimeGreeting } from '@/lib/dashboardGreeting';
@@ -207,7 +208,6 @@ function SeekerActionCenterSection({ scope, withChrome, glassStyle, isMobile }) 
     { key: 'jobs',         title: 'Job Matches',         emptyText: 'No new job updates.',        href: withChrome(`/action-center?scope=${scope}`), icon: '🎯', items: buckets.jobs         },
   ];
 
-  // Non-zero items float to top
   const sortedTiles = [...tiles].sort((a, b) => (b.items.length > 0 ? 1 : 0) - (a.items.length > 0 ? 1 : 0));
   const totalActions = tiles.reduce((sum, t) => sum + t.items.length, 0);
 
@@ -374,7 +374,7 @@ export default function SeekerDashboard() {
         <SeekerLayout title="Seeker Dashboard | ForgeTomorrow" activeNav={seekerActiveNav}>
           <div style={{ display: 'grid', gap: GAP, width: '100%' }}>
 
-            {/* 1. Greeting — sets the tone */}
+            {/* 1. Greeting */}
             <section style={{ ...GLASS, padding: '18px 20px' }}>
               <div style={{ fontSize: 13, fontWeight: 600, color: '#90A4AE', marginBottom: 4 }}>
                 {greeting}
@@ -389,18 +389,18 @@ export default function SeekerDashboard() {
               </p>
             </section>
 
-            {/* 2. Action Center — first, most urgent */}
+            {/* 2. Action Center */}
             <section style={{ ...GLASS, padding: 16 }}>
               <SeekerActionCenterSection scope={scope} withChrome={withChrome}
                 glassStyle={GLASS} isMobile={true} />
             </section>
 
-            {/* 3. KPI strip — horizontal scroll chips, not KpiRow */}
+            {/* 3. KPI strip — seekerColors applied, numbers centered */}
             <section style={{ ...GLASS, padding: '12px 0 12px 12px', overflow: 'hidden' }}>
               <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between',
                 paddingRight: 12, marginBottom: 10 }}>
                 <span style={{ fontSize: 13, fontWeight: 800, color: '#112033' }}>Your Progress</span>
-                <Link href={withChrome('/applications')}
+                <Link href={withChrome('/seeker/applications')}
                   style={{ fontSize: 12, fontWeight: 700, color: '#FF7043', textDecoration: 'none' }}>
                   Full history →
                 </Link>
@@ -408,27 +408,42 @@ export default function SeekerDashboard() {
               <div style={{ display: 'flex', gap: 8, overflowX: 'auto', paddingRight: 12,
                 paddingBottom: 4, scrollbarWidth: 'none', msOverflowStyle: 'none' }}>
                 {kpi && [
-                  { label: 'Pinned',       value: kpi.pinned,       href: withChrome('/pinned-jobs') },
-                  { label: 'Applied',      value: kpi.applied,      href: withChrome('/applications') },
-                  { label: 'Interviewing', value: kpi.interviewing, href: withChrome('/applications') },
-                  { label: 'Offers',       value: kpi.offers,       href: withChrome('/applications') },
-                  { label: 'Closed Out',   value: kpi.closedOut,    href: withChrome('/applications') },
-                ].map(stat => (
-                  <Link key={stat.label} href={stat.href} style={{
-                    flexShrink: 0, width: 100, ...WHITE_CARD,
-                    padding: '10px 12px', textDecoration: 'none', display: 'block',
-                  }}>
-                    <div style={{ fontSize: 10, fontWeight: 700, color: '#FF7043',
-                      textTransform: 'uppercase', letterSpacing: '0.04em',
-                      overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                      {stat.label}
-                    </div>
-                    <div style={{ fontSize: 24, fontWeight: 900, color: '#112033',
-                      lineHeight: 1.1, marginTop: 4 }}>
-                      {stat.value}
-                    </div>
-                  </Link>
-                ))}
+                  { label: 'Pinned',       value: kpi.pinned,       href: withChrome('/seeker/applications'), colorKey: 'pinned'      },
+                  { label: 'Applied',      value: kpi.applied,      href: withChrome('/seeker/applications'), colorKey: 'applied'      },
+                  { label: 'Interviewing', value: kpi.interviewing, href: withChrome('/seeker/applications'), colorKey: 'interviewing' },
+                  { label: 'Offers',       value: kpi.offers,       href: withChrome('/seeker/applications'), colorKey: 'offers'       },
+                  { label: 'Closed Out',   value: kpi.closedOut,    href: withChrome('/seeker/applications'), colorKey: 'info'         },
+                ].map(stat => {
+                  const c = colorFor(stat.colorKey);
+                  return (
+                    <Link key={stat.label} href={stat.href} style={{
+                      flexShrink: 0, width: 100,
+                      background: c.bg,
+                      border: `1px solid ${c.solid}`,
+                      borderRadius: 10,
+                      padding: '10px 12px',
+                      textDecoration: 'none',
+                      display: 'block',
+                      textAlign: 'center',
+                    }}>
+                      <div style={{
+                        fontSize: 10, fontWeight: 700, color: c.text,
+                        textTransform: 'uppercase', letterSpacing: '0.04em',
+                        overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
+                        textAlign: 'center',
+                      }}>
+                        {stat.label}
+                      </div>
+                      <div style={{
+                        fontSize: 24, fontWeight: 900, color: c.text,
+                        lineHeight: 1.1, marginTop: 4,
+                        textAlign: 'center', width: '100%',
+                      }}>
+                        {stat.value}
+                      </div>
+                    </Link>
+                  );
+                })}
               </div>
             </section>
 
