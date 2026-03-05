@@ -21,6 +21,7 @@
 import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/router";
+import { getTimeGreeting } from "@/lib/dashboardGreeting";
 import { PlanProvider, usePlan } from "@/context/PlanContext";
 import FeatureLock from "@/components/recruiter/FeatureLock";
 import RecruiterLayout from "@/components/layouts/RecruiterLayout";
@@ -360,11 +361,11 @@ function DashboardBody() {
   } : null;
 
   if (isMobile === null) return <div style={{ minHeight: 200 }} />;
+  const greeting = getTimeGreeting();
 
   // ── MOBILE ────────────────────────────────────────────────────────────────
   if (isMobile) {
-    const hour = new Date().getHours();
-    const greeting = hour < 12 ? "Good morning" : hour < 17 ? "Good afternoon" : "Good evening";
+    const greeting = getTimeGreeting();
 
     return (
       <div style={{ width: "100%", boxSizing: "border-box" }}>
@@ -382,10 +383,10 @@ function DashboardBody() {
             <div style={{ fontSize: 13, fontWeight: 600, color: "#90A4AE", marginBottom: 4 }}>
               {greeting}
             </div>
-            <h1 style={{ margin: 0, fontSize: 22, fontWeight: 900, color: "#FF7043", lineHeight: 1.1 }}>
+            <h1 style={{ margin: "0 auto", textAlign: "center", fontSize: 22, fontWeight: 900, color: "#FF7043", lineHeight: 1.1 }}>
               Recruiter Dashboard
             </h1>
-            <p style={{ margin: "8px 0 0", fontSize: 13, color: "#546E7A", fontWeight: 600, lineHeight: 1.5 }}>
+            <p style={{ margin: "8px auto 0", textAlign: "center", fontSize: 13, color: "#546E7A", fontWeight: 600, lineHeight: 1.5 }}>
               Your hiring pipeline at a glance. Act on what matters most today.
             </p>
           </section>
@@ -594,13 +595,28 @@ function DashboardBody() {
       <div style={{ display: "grid", gridTemplateColumns: `minmax(0, 1fr) ${RIGHT_COL_WIDTH}px`,
         gridTemplateRows: "auto auto auto auto", gap: GAP, width: "100%", minWidth: 0, boxSizing: "border-box" }}>
 
-        <section style={{ ...GLASS, padding: 16, textAlign: "center",
-          gridColumn: "1 / 2", gridRow: "1", boxSizing: "border-box" }}>
-          <h1 style={{ margin: 0, color: "#FF7043", fontSize: 24, fontWeight: 800 }}>Recruiter Dashboard</h1>
-          <p style={{ margin: "6px auto 0", color: "#607D8B", maxWidth: 740 }}>
-            At-a-glance health for your roles, candidate flow, and where action is needed.
-          </p>
-        </section>
+        <section
+  style={{
+    ...GLASS,
+    padding: 16,
+    textAlign: "center",
+    gridColumn: "1 / 2",
+    gridRow: "1",
+    boxSizing: "border-box",
+  }}
+>
+  <div style={{ fontSize: 13, fontWeight: 600, color: "#90A4AE", marginBottom: 4 }}>
+    {greeting}
+  </div>
+
+  <h1 style={{ margin: 0, color: "#FF7043", fontSize: 24, fontWeight: 800 }}>
+    Recruiter Dashboard
+  </h1>
+
+  <p style={{ margin: "6px auto 0", color: "#607D8B", maxWidth: 740 }}>
+    At-a-glance health for your roles, candidate flow, and where action is needed.
+  </p>
+</section>
 
         <section style={{ ...WHITE_CARD, padding: 16, gridColumn: "1 / 2", gridRow: "2" }}>
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">

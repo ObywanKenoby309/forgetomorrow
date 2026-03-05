@@ -11,6 +11,9 @@ import ProfilePerformanceTeaser from '@/components/seeker/dashboard/ProfilePerfo
 import KpiRow from '@/components/seeker/dashboard/KpiRow';
 import ApplicationsOverTime from '@/components/seeker/dashboard/ApplicationsOverTime';
 
+// ✅ Shared greeting helper (same system as Recruiter + Coaching)
+import { getTimeGreeting } from '@/lib/dashboardGreeting';
+
 // ✅ Ads (DB-backed placements)
 import RightRailPlacementManager from '@/components/ads/RightRailPlacementManager';
 
@@ -133,7 +136,106 @@ function ActionTile({ title, emptyText, items, href, withChrome, style }) {
   );
 }
 
-function SeekerActionCenterSection({ scope, withChrome, glassStyle }) {
+// ✅ Mobile Action tile (matches Recruiter/Coaching mobile feel)
+function MobileActionTile({ title, items, emptyText, href, icon, style }) {
+  const hasItems = items.length > 0;
+
+  return (
+    <Link
+      href={href}
+      style={{
+        display: 'flex',
+        alignItems: 'center',
+        gap: 12,
+        padding: '12px 14px',
+        borderRadius: 12,
+        textDecoration: 'none',
+        background: hasItems ? 'rgba(255,255,255,0.95)' : 'rgba(255,255,255,0.55)',
+        border: hasItems ? '1px solid rgba(255,112,67,0.22)' : '1px solid rgba(0,0,0,0.06)',
+        boxShadow: hasItems ? '0 4px 12px rgba(0,0,0,0.08)' : 'none',
+        transition: 'all 150ms ease',
+        ...(style || {}),
+      }}
+    >
+      {/* Icon */}
+      <div
+        style={{
+          width: 40,
+          height: 40,
+          borderRadius: 10,
+          flexShrink: 0,
+          background: hasItems ? 'rgba(255,112,67,0.10)' : 'rgba(0,0,0,0.04)',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          fontSize: 18,
+        }}
+      >
+        {icon}
+      </div>
+
+      {/* Text */}
+      <div style={{ flex: 1, minWidth: 0 }}>
+        <div style={{ fontSize: 13, fontWeight: 800, color: hasItems ? '#112033' : '#90A4AE' }}>
+          {title}
+        </div>
+        <div
+          style={{
+            fontSize: 12,
+            marginTop: 2,
+            color: hasItems ? '#546E7A' : '#B0BEC5',
+            overflow: 'hidden',
+            textOverflow: 'ellipsis',
+            whiteSpace: 'nowrap',
+          }}
+        >
+          {hasItems ? items[0].title || 'View item' : emptyText}
+        </div>
+      </div>
+
+      {/* Badge or check */}
+      {hasItems ? (
+        <div
+          style={{
+            minWidth: 28,
+            height: 28,
+            borderRadius: 999,
+            flexShrink: 0,
+            background: '#FF7043',
+            color: 'white',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            fontSize: 13,
+            fontWeight: 900,
+            boxShadow: '0 4px 10px rgba(255,112,67,0.40)',
+          }}
+        >
+          {items.length}
+        </div>
+      ) : (
+        <div
+          style={{
+            width: 24,
+            height: 24,
+            borderRadius: 999,
+            flexShrink: 0,
+            background: 'rgba(0,0,0,0.04)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            fontSize: 14,
+            color: '#B0BEC5',
+          }}
+        >
+          ✓
+        </div>
+      )}
+    </Link>
+  );
+}
+
+function SeekerActionCenterSection({ scope, withChrome, glassStyle, isMobile }) {
   const [items, setItems] = useState([]);
   const [initialLoading, setInitialLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
@@ -197,6 +299,128 @@ function SeekerActionCenterSection({ scope, withChrome, glassStyle }) {
     };
   }, [items]);
 
+  // ✅ MOBILE RENDER (aligned with Recruiter/Coaching pattern)
+  if (isMobile) {
+    const tiles = [
+      {
+        key: 'messages',
+        title: 'New Messages',
+        emptyText: 'No unread items.',
+        href: withChrome(`/action-center?scope=${scope}`),
+        icon: '💬',
+        items: buckets.messages,
+      },
+      {
+        key: 'jobs',
+        title: 'Job Updates',
+        emptyText: 'No new job updates.',
+        href: withChrome(`/action-center?scope=${scope}`),
+        icon: '🧭',
+        items: buckets.jobs,
+      },
+      {
+        key: 'applications',
+        title: 'Application Updates',
+        emptyText: 'No application updates.',
+        href: withChrome(`/action-center?scope=${scope}`),
+        icon: '📄',
+        items: buckets.applications,
+      },
+      {
+        key: 'calendar',
+        title: 'Calendar Updates',
+        emptyText: 'No calendar updates.',
+        href: withChrome(`/action-center?scope=${scope}`),
+        icon: '📅',
+        items: buckets.calendar,
+      },
+    ];
+
+    const sortedTiles = [...tiles].sort((a, b) => (b.items.length > 0 ? 1 : 0) - (a.items.length > 0 ? 1 : 0));
+    const totalActions = tiles.reduce((sum, t) => sum + t.items.length, 0);
+
+    if (initialLoading) {
+      return (
+        <section style={{ ...(glassStyle || {}), padding: 16 }}>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>
+            <div>
+              <div style={{ fontSize: 16, fontWeight: 800, color: '#FF7043' }}>Action Center</div>
+              <div
+                style={{
+                  fontSize: 12,
+                  color: '#90A4AE',
+                  fontWeight: 500,
+                  marginTop: 2,
+                }}
+              >
+                Loading your updates…
+              </div>
+            </div>
+          </div>
+
+          <div style={{ display: 'grid', gap: 8 }}>
+            {[1, 2, 3, 4].map((i) => (
+              <div
+                key={i}
+                style={{
+                  height: 64,
+                  borderRadius: 12,
+                  background: 'rgba(255,255,255,0.70)',
+                  border: '1px solid rgba(0,0,0,0.06)',
+                }}
+              />
+            ))}
+          </div>
+        </section>
+      );
+    }
+
+    return (
+      <section style={{ ...(glassStyle || {}), padding: 16 }}>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>
+          <div>
+            <div style={{ fontSize: 16, fontWeight: 800, color: '#FF7043' }}>Action Center</div>
+            <div
+              style={{
+                fontSize: 12,
+                color: totalActions > 0 ? '#FF7043' : '#90A4AE',
+                fontWeight: totalActions > 0 ? 700 : 500,
+                marginTop: 2,
+              }}
+            >
+              {totalActions > 0
+                ? `${totalActions} item${totalActions !== 1 ? 's' : ''} need your attention`
+                : "You're all caught up"}
+            </div>
+          </div>
+
+          <Link
+            href={withChrome(`/action-center?scope=${scope}`)}
+            style={{
+              fontSize: 12,
+              fontWeight: 700,
+              color: '#FF7043',
+              textDecoration: 'none',
+              padding: '6px 12px',
+              borderRadius: 999,
+              border: '1px solid rgba(255,112,67,0.30)',
+              background: 'rgba(255,112,67,0.08)',
+            }}
+          >
+            View all
+          </Link>
+        </div>
+
+        <div style={{ display: 'grid', gap: 8 }}>
+          {sortedTiles.map((t) => (
+            <MobileActionTile key={t.key} {...t} style={{}} />
+          ))}
+        </div>
+      </section>
+    );
+  }
+
+  // ✅ DESKTOP RENDER (unchanged)
   return (
     <section
       className="rounded-xl p-5"
@@ -419,6 +643,8 @@ export default function SeekerDashboard() {
 
   // ✅ MOBILE-ONLY LAYOUT (PC stays exactly the same below)
   if (isMobile) {
+    const greeting = getTimeGreeting();
+
     return (
       <>
         <Head>
@@ -427,17 +653,47 @@ export default function SeekerDashboard() {
 
         <SeekerLayout title="Seeker Dashboard | ForgeTomorrow" activeNav={seekerActiveNav}>
           <div style={{ display: 'grid', gap: GAP, width: '100%' }}>
-            {/* Title */}
-            <section style={{ ...GLASS, padding: 16, textAlign: 'center' }}>
-              <h1 style={{ margin: 0, color: '#FF7043', fontSize: 22, fontWeight: 800 }}>
+            {/* 1) Greeting + Title (aligned with Recruiter/Coaching) */}
+            <section style={{ ...GLASS, padding: '18px 20px' }}>
+              <div style={{ fontSize: 13, fontWeight: 600, color: '#90A4AE', marginBottom: 4 }}>
+                {greeting}
+              </div>
+              <h1
+                style={{
+                  margin: '0 auto',
+                  textAlign: 'center',
+                  fontSize: 22,
+                  fontWeight: 900,
+                  color: '#FF7043',
+                  lineHeight: 1.1,
+                }}
+              >
                 Your Job Seeker Dashboard
               </h1>
-              <p style={{ margin: '6px auto 0', color: '#607D8B', maxWidth: 720 }}>
+              <p
+                style={{
+                  margin: '8px auto 0',
+                  textAlign: 'center',
+                  fontSize: 13,
+                  color: '#546E7A',
+                  fontWeight: 600,
+                  lineHeight: 1.5,
+                  maxWidth: 720,
+                }}
+              >
                 You're not alone. Track your momentum, see your wins, and keep moving forward.
               </p>
             </section>
 
-            {/* KPI */}
+            {/* 2) Action Center — first, most urgent */}
+            <SeekerActionCenterSection
+              scope={scope}
+              withChrome={withChrome}
+              glassStyle={GLASS}
+              isMobile={true}
+            />
+
+            {/* 3) KPI strip (keep your existing KPI row inside glass) */}
             <section style={{ ...KPI_GLASS, padding: 16 }}>
               {kpi && (
                 <KpiRow
@@ -450,7 +706,7 @@ export default function SeekerDashboard() {
               )}
             </section>
 
-            {/* Right rail content stacked (Ad + Profile Performance) */}
+            {/* 4) Right rail content stacked (Ad + Profile Performance) */}
             <section style={{ ...GLASS, padding: 16, display: 'grid', gap: GAP }}>
               <div style={{ minHeight: 160 }}>
                 <RightRailPlacementManager slot="right_rail_1" />
@@ -460,10 +716,7 @@ export default function SeekerDashboard() {
               </div>
             </section>
 
-            {/* Action Center */}
-            <SeekerActionCenterSection scope={scope} withChrome={withChrome} glassStyle={GLASS} />
-
-            {/* Bottom cards stacked */}
+            {/* 5) Bottom cards stacked */}
             <section style={{ ...GLASS, padding: 16 }}>
               <RecommendedJobsPreview />
             </section>
@@ -545,7 +798,12 @@ export default function SeekerDashboard() {
 
             {/* ROW 3, COL 1: Action Center (glass behind section + behind each tile) */}
             <div style={{ gridColumn: '1 / 2', gridRow: '3' }}>
-              <SeekerActionCenterSection scope={scope} withChrome={withChrome} glassStyle={GLASS} />
+              <SeekerActionCenterSection
+                scope={scope}
+                withChrome={withChrome}
+                glassStyle={GLASS}
+                isMobile={false}
+              />
             </div>
 
             {/* COL 2, ROWS 1–3: Right Rail (match Feed glass feel) */}

@@ -19,6 +19,7 @@
 
 import React, { useEffect, useMemo, useState, useCallback } from 'react';
 import Link from 'next/link';
+import { getTimeGreeting } from "@/lib/dashboardGreeting";
 import { useRouter } from 'next/router';
 import CoachingLayout from '@/components/layouts/CoachingLayout';
 
@@ -467,6 +468,7 @@ export default function CoachingDashboardPage() {
   }
 
   // ── DESKTOP (original, untouched) ─────────────────────────────────────────
+  const greeting = getTimeGreeting();
   return (
     <CoachingLayout title="Coaching Dashboard | ForgeTomorrow" activeNav="overview" contentFullBleed sidebarInitialOpen={{coaching:true,seeker:false}}>
       <div style={{ width:'100%', padding:0, margin:0, paddingRight:16, boxSizing:'border-box' }}>
@@ -476,10 +478,28 @@ export default function CoachingDashboardPage() {
         <div style={{ display:'grid', gridTemplateColumns:`minmax(0,1fr) ${RIGHT_COL_WIDTH}px`,
           gridTemplateRows:'auto auto auto auto', gap:GAP, width:'100%', minWidth:0, boxSizing:'border-box' }}>
 
-          <section style={{ ...GLASS, padding:16, textAlign:'center', gridColumn:'1/2', gridRow:'1', boxSizing:'border-box' }}>
-            <h1 style={{ margin:0, color:'#FF7043', fontSize:24, fontWeight:800 }}>Your Coaching Dashboard</h1>
-            <p style={{ margin:'6px auto 0', color:'#607D8B', maxWidth:740 }}>Track client progress, manage sessions, and review feedback — all in one place.</p>
-          </section>
+          <section
+  style={{
+    ...GLASS,
+    padding: 16,
+    textAlign: "center",
+    gridColumn: "1/2",
+    gridRow: "1",
+    boxSizing: "border-box",
+  }}
+>
+  <div style={{ fontSize: 13, fontWeight: 600, color: "#90A4AE", marginBottom: 4 }}>
+    {greeting}
+  </div>
+
+  <h1 style={{ margin: 0, color: "#FF7043", fontSize: 24, fontWeight: 800 }}>
+    Your Coaching Dashboard
+  </h1>
+
+  <p style={{ margin: "6px auto 0", color: "#607D8B", maxWidth: 740 }}>
+    Track client progress, manage sessions, and review feedback — all in one place.
+  </p>
+</section>
 
           <section style={{ ...WHITE_CARD, padding:16, gridColumn:'1/2', gridRow:'2' }}>
             <div style={{ display:'grid', gridTemplateColumns:'repeat(4,minmax(0,1fr))', gap:12 }}>
