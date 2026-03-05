@@ -54,7 +54,9 @@ export default function CoachingLayout({
   const hasRight = Boolean(right);
   const hasHeader = Boolean(header);
 
-  const [isMobile, setIsMobile] = useState(true);
+  // ✅ FIX: null until client decides (prevents “mobile first” paint)
+  const [isMobile, setIsMobile] = useState(null);
+
   const [mobileToolsOpen, setMobileToolsOpen] = useState(false);
   const handleOpenTools = useCallback(() => setMobileToolsOpen(true), []);
 
@@ -66,6 +68,9 @@ export default function CoachingLayout({
     window.addEventListener('resize', handleResize);
     return () => window.removeEventListener('resize', handleResize);
   }, []);
+
+  const isMobileReady = isMobile !== null;
+  const isMobileBool = isMobile === true;
 
   // ✅ Matches RecruiterLayout: no header + no right = Seeker-style page-owned layout
   const desktopGrid = (!hasHeader && !hasRight)
@@ -95,7 +100,7 @@ export default function CoachingLayout({
       : `"header" "content"`,
   };
 
-  const gridStyles = isMobile ? mobileGrid : desktopGrid;
+  const gridStyles = isMobileBool ? mobileGrid : desktopGrid;
   const chromeMode = 'coach';
 
   // ✅ Same stacking strategy as RecruiterLayout
@@ -110,115 +115,122 @@ export default function CoachingLayout({
 
       <CoachingHeader />
 
-      <div
-        style={{
-          ...gridStyles,
-          gap: UI.GAP,
-          paddingTop: UI.PAD,
-          paddingBottom: isMobile ? UI.PAD + 84 : UI.PAD,
-          paddingLeft: UI.PAD,
-          paddingRight: hasRight ? Math.max(8, UI.PAD - 4) : UI.PAD,
-          alignItems: 'start',
-          boxSizing: 'border-box',
-          width: '100%',
-          maxWidth: '100vw',
-          overflowX: 'hidden',
-          minWidth: 0,
-        }}
-      >
-        {/* Left rail */}
-        <aside
+      {/* ✅ FIX: don’t render grid until isMobile is known (prevents “mobile first → desktop” blink) */}
+      {isMobileReady ? (
+        <div
           style={{
-            ...leftRailLayer,
-            gridArea: 'left',
-            alignSelf: 'start',
-            display: isMobile ? 'none' : 'block',
+            ...gridStyles,
+            gap: UI.GAP,
+            paddingTop: UI.PAD,
+            paddingBottom: isMobileBool ? UI.PAD + 84 : UI.PAD,
+            paddingLeft: UI.PAD,
+            paddingRight: hasRight ? Math.max(8, UI.PAD - 4) : UI.PAD,
+            alignItems: 'start',
+            boxSizing: 'border-box',
+            width: '100%',
+            maxWidth: '100vw',
+            overflowX: 'hidden',
             minWidth: 0,
           }}
         >
-          {left || (
-            <CoachingSidebar
-              initialOpen={sidebarInitialOpen}
-              active={activeNav}
-              employee={employee}
-              department={department}
-            />
-          )}
-        </aside>
-
-        {/* Header (ONLY if provided — dashboard does NOT pass this) */}
-        {hasHeader ? (
-          <header style={{ gridArea: 'header', alignSelf: 'start', marginTop: 0, paddingTop: 0, minWidth: 0 }}>
-            {header ?? (
-              <section
-                style={{ borderRadius: 14, padding: UI.CARD_PAD, textAlign: 'center', minWidth: 0, boxSizing: 'border-box', ...GLASS }}
-                aria-label="Coaching overview"
-              >
-                <h1 style={{ margin: 0, color: '#FF7043', fontSize: 22, fontWeight: 900 }}>{pageTitle}</h1>
-                {headerDescription && (
-                  <p style={{ margin: '6px auto 0', color: '#455A64', maxWidth: 760, fontWeight: 600 }}>
-                    {headerDescription}
-                  </p>
-                )}
-              </section>
-            )}
-          </header>
-        ) : null}
-
-        {/* Right rail (ONLY if provided) */}
-        {hasRight && (
+          {/* Left rail */}
           <aside
             style={{
-              gridArea: 'right',
+              ...leftRailLayer,
+              gridArea: 'left',
               alignSelf: 'start',
-
-              // ✅ MIN CHANGE: match site-wide frosted glass right rail
-              border: GLASS.border,
-              background: GLASS.background,
-              boxShadow: GLASS.boxShadow,
-              backdropFilter: GLASS.backdropFilter,
-              WebkitBackdropFilter: GLASS.WebkitBackdropFilter,
-
-              borderRadius: 14, // ✅ was 12
-              padding: 16,
-              minHeight: 120,
-              boxSizing: 'border-box',
-              width: isMobile ? '100%' : UI.RIGHT_W,
-              minWidth: isMobile ? 0 : UI.RIGHT_W,
-              maxWidth: isMobile ? '100%' : UI.RIGHT_W,
-              minInlineSize: 0,
-
-              // ✅ was white text for dark rail; keep neutral so ad card can be solid on its own
-              color: '#112033',
+              display: isMobileBool ? 'none' : 'block',
+              minWidth: 0,
             }}
           >
-            {right}
+            {left || (
+              <CoachingSidebar
+                initialOpen={sidebarInitialOpen}
+                active={activeNav}
+                employee={employee}
+                department={department}
+              />
+            )}
           </aside>
-        )}
 
-        {/* Main content */}
-        <main
-          style={{
-            gridArea: 'content',
-            minWidth: 0,
-            width: '100%',
-            maxWidth: '100%',
-            // ✅ Only remove overflow clipping for dashboard (contentFullBleed).
-            // All other coaching pages keep overflowX: 'hidden' for mobile safety.
-            ...(!contentFullBleed ? { overflowX: 'hidden' } : {}),
-            ...mainOverrides,
-          }}
-        >
-          <div style={{ display: 'grid', gap: UI.GAP, width: '100%', minWidth: 0, maxWidth: '100%' }}>
-            {children}
-          </div>
-        </main>
-      </div>
+          {/* Header (ONLY if provided — dashboard does NOT pass this) */}
+          {hasHeader ? (
+            <header style={{ gridArea: 'header', alignSelf: 'start', marginTop: 0, paddingTop: 0, minWidth: 0 }}>
+              {header ?? (
+                <section
+                  style={{ borderRadius: 14, padding: UI.CARD_PAD, textAlign: 'center', minWidth: 0, boxSizing: 'border-box', ...GLASS }}
+                  aria-label="Coaching overview"
+                >
+                  <h1 style={{ margin: 0, color: '#FF7043', fontSize: 22, fontWeight: 900 }}>{pageTitle}</h1>
+                  {headerDescription && (
+                    <p style={{ margin: '6px auto 0', color: '#455A64', maxWidth: 760, fontWeight: 600 }}>
+                      {headerDescription}
+                    </p>
+                  )}
+                </section>
+              )}
+            </header>
+          ) : null}
+
+          {/* Right rail (ONLY if provided) */}
+          {hasRight && (
+            <aside
+              style={{
+                gridArea: 'right',
+                alignSelf: 'start',
+
+                // ✅ MIN CHANGE: match site-wide frosted glass right rail
+                border: GLASS.border,
+                background: GLASS.background,
+                boxShadow: GLASS.boxShadow,
+                backdropFilter: GLASS.backdropFilter,
+                WebkitBackdropFilter: GLASS.WebkitBackdropFilter,
+
+                borderRadius: 14, // ✅ was 12
+                padding: 16,
+                minHeight: 120,
+                boxSizing: 'border-box',
+                width: isMobileBool ? '100%' : UI.RIGHT_W,
+                minWidth: isMobileBool ? 0 : UI.RIGHT_W,
+                maxWidth: isMobileBool ? '100%' : UI.RIGHT_W,
+                minInlineSize: 0,
+
+                // ✅ was white text for dark rail; keep neutral so ad card can be solid on its own
+                color: '#112033',
+              }}
+            >
+              {right}
+            </aside>
+          )}
+
+          {/* Main content */}
+          <main
+            style={{
+              gridArea: 'content',
+              minWidth: 0,
+              width: '100%',
+              maxWidth: '100%',
+              // ✅ Only remove overflow clipping for dashboard (contentFullBleed).
+              // All other coaching pages keep overflowX: 'hidden' for mobile safety.
+              ...(!contentFullBleed ? { overflowX: 'hidden' } : {}),
+              ...mainOverrides,
+            }}
+          >
+            <div style={{ display: 'grid', gap: UI.GAP, width: '100%', minWidth: 0, maxWidth: '100%' }}>
+              {children}
+            </div>
+          </main>
+        </div>
+      ) : (
+        <div style={{ paddingTop: UI.PAD, paddingLeft: UI.PAD, paddingRight: UI.PAD, paddingBottom: UI.PAD }}>
+          <div style={{ height: 180 }} />
+        </div>
+      )}
 
       <SupportFloatingButton />
-      <MobileBottomBar isMobile={isMobile} chromeMode={chromeMode} onOpenTools={handleOpenTools} />
+      <MobileBottomBar isMobile={isMobileBool} chromeMode={chromeMode} onOpenTools={handleOpenTools} />
 
-      {isMobile && mobileToolsOpen && (
+      {isMobileBool && mobileToolsOpen && (
         <div style={{ position: 'fixed', inset: 0, zIndex: 99999, display: 'flex', justifyContent: 'center', alignItems: 'flex-end' }}>
           <button
             type="button"

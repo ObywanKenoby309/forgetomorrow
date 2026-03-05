@@ -234,26 +234,12 @@ export default function SeekerLayout({
     }
   }, [chromeMode, normalizedActiveNav, seekerCounts, employee, department]);
 
-  // ---- WALLPAPER / BACKGROUND ----
-  const { wallpaperUrl } = useUserWallpaper();
-
-  const backgroundStyle = wallpaperUrl
-    ? {
-        minHeight: '100vh',
-        backgroundImage: `url(${wallpaperUrl})`,
-        backgroundSize: 'cover',
-        backgroundPosition: 'center top',
-        backgroundRepeat: 'no-repeat',
-        backgroundAttachment: 'fixed',
-      }
-    : {
-        minHeight: '100vh',
-        backgroundColor: '#ECEFF1',
-      };
-
   // ---- MOBILE DETECTION + TOOLS SHEET ----
   const hasRight = Boolean(right);
-  const [isMobile, setIsMobile] = useState(true);
+
+  // ✅ FIX: null until client decides (prevents “mobile first” paint)
+  const [isMobile, setIsMobile] = useState(null);
+
   const [mobileToolsOpen, setMobileToolsOpen] = useState(false);
 
   // ✅ Stable handler so MobileBottomBar doesn't re-render/blink
@@ -272,15 +258,36 @@ export default function SeekerLayout({
     return () => window.removeEventListener('resize', handleResize);
   }, []);
 
+  const isMobileReady = isMobile !== null;
+  const isMobileBool = isMobile === true;
+
+  // ---- WALLPAPER / BACKGROUND ----
+  const { wallpaperUrl } = useUserWallpaper();
+
+  // ✅ FIX: on mobile, use 'scroll' to prevent wallpaper seam / repaint banding
+  const backgroundStyle = wallpaperUrl
+    ? {
+        minHeight: '100vh',
+        backgroundImage: `url(${wallpaperUrl})`,
+        backgroundSize: 'cover',
+        backgroundPosition: 'center top',
+        backgroundRepeat: 'no-repeat',
+        backgroundAttachment: isMobileBool ? 'scroll' : 'fixed',
+      }
+    : {
+        minHeight: '100vh',
+        backgroundColor: '#ECEFF1',
+      };
+
   // ---- RIGHT RAIL STYLES ----
   const rightBase = {
     gridArea: 'right',
     alignSelf: 'start',
     borderRadius: 14, // ✅ MIN CHANGE: match glass standard (was 12)
     boxSizing: 'border-box',
-    width: hasRight && !isMobile ? rightWidth : '100%',
-    minWidth: hasRight && !isMobile ? rightWidth : 0,
-    maxWidth: hasRight && !isMobile ? rightWidth : '100%',
+    width: hasRight && !isMobileBool ? rightWidth : '100%',
+    minWidth: hasRight && !isMobileBool ? rightWidth : 0,
+    maxWidth: hasRight && !isMobileBool ? rightWidth : '100%',
     minInlineSize: 0,
   };
 
@@ -303,7 +310,7 @@ export default function SeekerLayout({
 
   const containerPadding = {
     paddingTop: pad,
-    paddingBottom: isMobile ? pad + 84 : pad,
+    paddingBottom: isMobileBool ? pad + 84 : pad,
     paddingLeft: pad,
     paddingRight: hasRight ? Math.max(8, pad - 4) : pad,
   };
@@ -335,11 +342,11 @@ export default function SeekerLayout({
          "content"`,
   };
 
-  const gridStyles = isMobile ? mobileGrid : desktopGrid;
+  const gridStyles = isMobileBool ? mobileGrid : desktopGrid;
 
   // ✅ PAGE-ONLY: allow content to span under left rail (desktop only)
   const mainOverrides =
-    !isMobile && contentFullBleed
+    !isMobileBool && contentFullBleed
       ? {
           gridColumn: '1 / -1',
           position: 'relative',
@@ -364,51 +371,72 @@ export default function SeekerLayout({
       <div style={backgroundStyle}>
         <HeaderComp />
 
-        <div style={{ ...gridStyles, gap, ...containerPadding, alignItems: 'start', overflowX: 'hidden', boxSizing: 'border-box' }}>
-          <aside
+        {/* ✅ FIX: don’t render grid until isMobile is known (prevents “mobile first → desktop” blink) */}
+        {isMobileReady ? (
+          <div
             style={{
-              ...leftRailLayer,
-              gridArea: 'left',
-              alignSelf: 'start',
-              minWidth: 0,
-              display: isMobile ? 'none' : 'block',
-            }}
-          >
-            {left ? left : <SidebarComp {...sidebarProps} />}
-          </aside>
-
-          <header
-            style={{
-              ...headerLayer,
-              gridArea: 'header',
-              alignSelf: 'start',
+              ...gridStyles,
+              gap,
+              ...containerPadding,
+              alignItems: 'start',
+              overflowX: 'hidden',
+              boxSizing: 'border-box',
+              width: '100%',
+              maxWidth: '100vw',
               minWidth: 0,
             }}
           >
-            {header}
-          </header>
-
-          {hasRight ? (
             <aside
               style={{
-                ...rightRailLayer,
-                ...rightBase,
-                ...(rightVariant === 'light' ? rightLight : rightDark),
+                ...leftRailLayer,
+                gridArea: 'left',
+                alignSelf: 'start',
+                minWidth: 0,
+                display: isMobileBool ? 'none' : 'block',
               }}
             >
-              {right}
+              {left ? left : <SidebarComp {...sidebarProps} />}
             </aside>
-          ) : null}
 
-          <main style={{ gridArea: 'content', minWidth: 0, ...mainOverrides }}>
-            <div style={{ display: 'grid', gap, width: '100%', minWidth: 0 }}>{children}</div>
-          </main>
-        </div>
+            <header
+              style={{
+                ...headerLayer,
+                gridArea: 'header',
+                alignSelf: 'start',
+                minWidth: 0,
+              }}
+            >
+              {header}
+            </header>
+
+            {hasRight ? (
+              <aside
+                style={{
+                  ...rightRailLayer,
+                  ...rightBase,
+                  ...(rightVariant === 'light' ? rightLight : rightDark),
+                }}
+              >
+                {right}
+              </aside>
+            ) : null}
+
+            <main style={{ gridArea: 'content', minWidth: 0, ...mainOverrides }}>
+              <div style={{ display: 'grid', gap, width: '100%', minWidth: 0 }}>{children}</div>
+            </main>
+          </div>
+        ) : (
+          // Minimal stable shell (no blink / no layout jump)
+          <div style={{ paddingTop: pad, paddingLeft: pad, paddingRight: pad, paddingBottom: pad }}>
+            <div style={{ height: 180 }} />
+          </div>
+        )}
       </div>
 
-      <MobileBottomBar isMobile={isMobile} chromeMode={chromeMode} onOpenTools={handleOpenTools} />
+      {/* ✅ Only render bottom bar on actual mobile */}
+      <MobileBottomBar isMobile={isMobileBool} chromeMode={chromeMode} onOpenTools={handleOpenTools} />
 
-      {isMobile && mobileToolsOpen && (
+      {isMobileBool && mobileToolsOpen && (
         <div
           style={{
             position: 'fixed',
