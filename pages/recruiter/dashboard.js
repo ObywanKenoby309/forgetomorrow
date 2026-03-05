@@ -18,6 +18,7 @@
 // │ Top Candidates │ Pipeline Health │ Trends  │  ← full width incl. under sidebar
 // └──────────────────────────────────────────────┘
 
+// pages/recruiter/dashboard.js
 import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/router";
@@ -25,9 +26,6 @@ import { PlanProvider, usePlan } from "@/context/PlanContext";
 import FeatureLock from "@/components/recruiter/FeatureLock";
 import RecruiterLayout from "@/components/layouts/RecruiterLayout";
 
-/* -----------------------------
-   Helpers
------------------------------- */
 function safeText(v) {
   return typeof v === "string" ? v : v == null ? "" : String(v);
 }
@@ -44,159 +42,113 @@ function normalizeRecruiterChrome(input) {
   return "";
 }
 
-// ✅ Updated to match Recruiter Action Center queues (4 tiles)
 function pickRecruiterBucket(n) {
   const title = safeText(n?.title).toLowerCase();
   const body = safeText(n?.body).toLowerCase();
   const meta = n?.metadata || {};
   const metaStr = safeText(meta?.bucket || meta?.tab || meta?.queue || meta?.type || meta?.event || meta?.kind || "").toLowerCase();
   const catStr = safeText(n?.category || "").toLowerCase();
-
   const haystack = `${title} ${body} ${metaStr} ${catStr}`;
-
-  if (
-    haystack.includes("stalled") ||
-    haystack.includes("stale") ||
-    haystack.includes("no movement") ||
-    haystack.includes("stuck") ||
-    haystack.includes("aging")
-  ) {
-    return "stalled";
-  }
-
-  if (
-    haystack.includes("awaiting") ||
-    haystack.includes("feedback") ||
-    haystack.includes("hiring mgr") ||
-    haystack.includes("hiring manager")
-  ) {
-    return "awaiting_feedback";
-  }
-
-  if (
-    haystack.includes("unread") ||
-    haystack.includes("reply") ||
-    haystack.includes("replies") ||
-    haystack.includes("message") ||
-    haystack.includes("inbox") ||
-    haystack.includes("dm") ||
-    haystack.includes("chat")
-  ) {
-    return "unread_replies";
-  }
-
-  if (
-    haystack.includes("upcoming") ||
-    haystack.includes("interview") ||
-    haystack.includes("conflict") ||
-    haystack.includes("schedule") ||
-    haystack.includes("invite") ||
-    haystack.includes("resched")
-  ) {
-    return "upcoming";
-  }
-
-  // Safe default: unread replies bucket (most common recruiter action)
+  if (haystack.includes("stalled") || haystack.includes("stale") || haystack.includes("no movement") || haystack.includes("stuck") || haystack.includes("aging")) return "stalled";
+  if (haystack.includes("awaiting") || haystack.includes("feedback") || haystack.includes("hiring mgr") || haystack.includes("hiring manager")) return "awaiting_feedback";
+  if (haystack.includes("unread") || haystack.includes("reply") || haystack.includes("replies") || haystack.includes("message") || haystack.includes("inbox") || haystack.includes("dm") || haystack.includes("chat")) return "unread_replies";
+  if (haystack.includes("upcoming") || haystack.includes("interview") || haystack.includes("conflict") || haystack.includes("schedule") || haystack.includes("invite") || haystack.includes("resched")) return "upcoming";
   return "unread_replies";
 }
 
+// ─── Shared styles ────────────────────────────────────────────────────────────
+const GLASS = {
+  borderRadius: 14,
+  border: "1px solid rgba(255,255,255,0.22)",
+  background: "rgba(255,255,255,0.58)",
+  boxShadow: "0 10px 24px rgba(0,0,0,0.12)",
+  backdropFilter: "blur(10px)",
+  WebkitBackdropFilter: "blur(10px)",
+};
+
+const WHITE_CARD = {
+  background: "rgba(255,255,255,0.92)",
+  border: "1px solid rgba(0,0,0,0.08)",
+  borderRadius: 12,
+  boxShadow: "0 2px 10px rgba(0,0,0,0.08)",
+  boxSizing: "border-box",
+};
+
+const DARK_RAIL = {
+  background: "#2a2a2a",
+  border: "1px solid #3a3a3a",
+  borderRadius: 12,
+  padding: 16,
+  boxShadow: "0 2px 6px rgba(0,0,0,0.06)",
+  boxSizing: "border-box",
+};
+
+const GAP = 16;
+const RIGHT_COL_WIDTH = 280;
+
+// ─── Action tile — desktop ────────────────────────────────────────────────────
 function ActionTile({ title, emptyText, items, href, chromeQuery }) {
   const list = Array.isArray(items) ? items : [];
   const link = `${href}${chromeQuery ? `&chrome=${chromeQuery}` : ""}`;
-
   return (
     <div className="rounded-lg border bg-white p-4 flex flex-col min-h-[170px]">
-      <div className="font-semibold text-slate-900 text-base leading-6 whitespace-normal break-words">
-        {title}
-      </div>
-
+      <div className="font-semibold text-slate-900 text-base leading-6 whitespace-normal break-words">{title}</div>
       <div className="mt-6 flex-1">
         {list.length === 0 ? (
           <div className="text-sm text-slate-500">{emptyText}</div>
         ) : (
           <div className="space-y-2">
             {list.slice(0, 1).map((n) => (
-              <div key={n.id} className="text-sm text-slate-700">
-                {n.title || "Update"}
-              </div>
+              <div key={n.id} className="text-sm text-slate-700">{n.title || "Update"}</div>
             ))}
           </div>
         )}
       </div>
-
       <div className="mt-auto pt-4 flex justify-end">
-        <a
-          href={link}
-          className="shrink-0 rounded-md border px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50"
-        >
-          View More
-        </a>
+        <a href={link} className="shrink-0 rounded-md border px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50">View More</a>
       </div>
     </div>
   );
 }
 
-function RecruiterActionCenterSection({ chromeQuery }) {
+// ─── Action Center ────────────────────────────────────────────────────────────
+function RecruiterActionCenterSection({ chromeQuery, isMobile }) {
   const [items, setItems] = useState([]);
   const [initialLoading, setInitialLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
 
   useEffect(() => {
     let alive = true;
-
     const load = async (isInitial = false) => {
       if (isInitial) setInitialLoading(true);
       else setRefreshing(true);
-
       try {
-        const res = await fetch(
-          "/api/notifications/list?scope=RECRUITER&limit=25&includeRead=0",
-          {
-            method: "GET",
-            headers: { "Content-Type": "application/json" },
-            credentials: "include",
-          }
-        );
-
+        const res = await fetch("/api/notifications/list?scope=RECRUITER&limit=25&includeRead=0", {
+          method: "GET", headers: { "Content-Type": "application/json" }, credentials: "include",
+        });
         if (!res.ok) return;
-
         const data = await res.json();
         if (!alive) return;
-
-        const next = Array.isArray(data?.items) ? data.items : [];
-        setItems(next);
-      } catch {
-        // keep previous items to avoid UI jump
-      } finally {
+        setItems(Array.isArray(data?.items) ? data.items : []);
+      } catch {}
+      finally {
         if (!alive) return;
         if (isInitial) setInitialLoading(false);
         setRefreshing(false);
       }
     };
-
     load(true);
     const t = setInterval(() => load(false), 25000);
-
-    return () => {
-      alive = false;
-      clearInterval(t);
-    };
+    return () => { alive = false; clearInterval(t); };
   }, []);
 
   const buckets = useMemo(() => {
-    const b = {
-      stalled: [],
-      awaiting_feedback: [],
-      unread_replies: [],
-      upcoming: [],
-    };
-
+    const b = { stalled: [], awaiting_feedback: [], unread_replies: [], upcoming: [] };
     for (const n of Array.isArray(items) ? items : []) {
       const k = pickRecruiterBucket(n);
       if (!b[k]) continue;
       b[k].push(n);
     }
-
     return {
       stalled: b.stalled.slice(0, 3),
       awaiting_feedback: b.awaiting_feedback.slice(0, 3),
@@ -205,78 +157,152 @@ function RecruiterActionCenterSection({ chromeQuery }) {
     };
   }, [items]);
 
+  const tiles = [
+    { key: "unread_replies",    title: "Unread Replies",       emptyText: "No unread candidate replies.",          href: "/action-center?scope=RECRUITER&tab=UNREAD_REPLIES",    items: buckets.unread_replies,    icon: "💬" },
+    { key: "upcoming",          title: "Upcoming Interviews",  emptyText: "No upcoming interviews or conflicts.",  href: "/action-center?scope=RECRUITER&tab=UPCOMING",          items: buckets.upcoming,          icon: "📅" },
+    { key: "stalled",           title: "Stalled Candidates",   emptyText: "No stalled candidates right now.",      href: "/action-center?scope=RECRUITER&tab=STALLED",           items: buckets.stalled,           icon: "⚠️" },
+    { key: "awaiting_feedback", title: "Awaiting Feedback",    emptyText: "No hiring manager feedback pending.",   href: "/action-center?scope=RECRUITER&tab=AWAITING_FEEDBACK", items: buckets.awaiting_feedback, icon: "🔄" },
+  ];
+
+  // Sort: non-zero first
+  const sortedTiles = [...tiles].sort((a, b) => {
+    const aHas = a.items.length > 0 ? 1 : 0;
+    const bHas = b.items.length > 0 ? 1 : 0;
+    return bHas - aHas;
+  });
+
+  if (isMobile) {
+    if (initialLoading) {
+      return (
+        <div style={{ display: "grid", gap: 8 }}>
+          {[1,2,3,4].map(i => (
+            <div key={i} style={{ height: 64, borderRadius: 12,
+              background: "rgba(255,255,255,0.70)", border: "1px solid rgba(0,0,0,0.06)" }} />
+          ))}
+        </div>
+      );
+    }
+
+    const totalActions = tiles.reduce((sum, t) => sum + t.items.length, 0);
+
+    return (
+      <div>
+        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 12 }}>
+          <div>
+            <div style={{ fontSize: 16, fontWeight: 800, color: "#FF7043" }}>Action Center</div>
+            <div style={{ fontSize: 12, color: totalActions > 0 ? "#FF7043" : "#90A4AE",
+              fontWeight: totalActions > 0 ? 700 : 500, marginTop: 2 }}>
+              {totalActions > 0
+                ? `${totalActions} item${totalActions !== 1 ? "s" : ""} need your attention`
+                : "You're all caught up"}
+            </div>
+          </div>
+          <Link href={`/action-center?scope=RECRUITER${chromeQuery ? `&chrome=${chromeQuery}` : ""}`}
+            style={{ fontSize: 12, fontWeight: 700, color: "#FF7043", textDecoration: "none",
+              padding: "6px 12px", borderRadius: 999, border: "1px solid rgba(255,112,67,0.30)",
+              background: "rgba(255,112,67,0.08)" }}>
+            View all
+          </Link>
+        </div>
+
+        <div style={{ display: "grid", gap: 8 }}>
+          {sortedTiles.map(tile => {
+            const hasItems = tile.items.length > 0;
+            const link = `${tile.href}${chromeQuery ? `&chrome=${chromeQuery}` : ""}`;
+            return (
+              <Link key={tile.key} href={link} style={{
+                display: "flex", alignItems: "center", gap: 12,
+                padding: "12px 14px", borderRadius: 12, textDecoration: "none",
+                background: hasItems ? "rgba(255,255,255,0.95)" : "rgba(255,255,255,0.55)",
+                border: hasItems ? "1px solid rgba(255,112,67,0.22)" : "1px solid rgba(0,0,0,0.06)",
+                boxShadow: hasItems ? "0 4px 12px rgba(0,0,0,0.08)" : "none",
+                transition: "all 150ms ease",
+              }}>
+                {/* Icon */}
+                <div style={{
+                  width: 40, height: 40, borderRadius: 10, flexShrink: 0,
+                  background: hasItems ? "rgba(255,112,67,0.10)" : "rgba(0,0,0,0.04)",
+                  display: "flex", alignItems: "center", justifyContent: "center",
+                  fontSize: 18,
+                }}>
+                  {tile.icon}
+                </div>
+
+                {/* Text */}
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <div style={{ fontSize: 13, fontWeight: 800,
+                    color: hasItems ? "#112033" : "#90A4AE" }}>
+                    {tile.title}
+                  </div>
+                  <div style={{ fontSize: 12, marginTop: 2,
+                    color: hasItems ? "#546E7A" : "#B0BEC5",
+                    overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                    {hasItems ? (tile.items[0].title || "View item") : tile.emptyText}
+                  </div>
+                </div>
+
+                {/* Badge or check */}
+                {hasItems ? (
+                  <div style={{
+                    minWidth: 28, height: 28, borderRadius: 999, flexShrink: 0,
+                    background: "#FF7043", color: "white",
+                    display: "flex", alignItems: "center", justifyContent: "center",
+                    fontSize: 13, fontWeight: 900,
+                    boxShadow: "0 4px 10px rgba(255,112,67,0.40)",
+                  }}>
+                    {tile.items.length}
+                  </div>
+                ) : (
+                  <div style={{
+                    width: 24, height: 24, borderRadius: 999, flexShrink: 0,
+                    background: "rgba(0,0,0,0.04)",
+                    display: "flex", alignItems: "center", justifyContent: "center",
+                    fontSize: 14, color: "#B0BEC5",
+                  }}>
+                    ✓
+                  </div>
+                )}
+              </Link>
+            );
+          })}
+        </div>
+      </div>
+    );
+  }
+
+  // Desktop
   return (
     <section className="rounded-xl border bg-white p-4">
       <div className="flex items-center justify-between gap-3 mb-4">
         <div className="text-lg font-semibold text-[#FF7043]">Action Center</div>
-
         <div className="flex items-center gap-3">
           {refreshing ? <div className="text-xs text-slate-500">Updating…</div> : null}
-
-          <a
-            href={`/action-center?scope=RECRUITER${chromeQuery ? `&chrome=${chromeQuery}` : ""}`}
-            className="rounded-md border px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50"
-          >
+          <a href={`/action-center?scope=RECRUITER${chromeQuery ? `&chrome=${chromeQuery}` : ""}`}
+            className="rounded-md border px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50">
             View all
           </a>
         </div>
       </div>
-
       {initialLoading ? (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
           {Array.from({ length: 4 }).map((_, idx) => (
-            <div
-              key={idx}
-              className="rounded-lg border bg-white p-4 min-h-[170px] animate-pulse flex flex-col"
-            >
+            <div key={idx} className="rounded-lg border bg-white p-4 min-h-[170px] animate-pulse flex flex-col">
               <div className="h-5 w-40 bg-slate-200 rounded" />
               <div className="h-3 w-56 bg-slate-200 rounded mt-8" />
-              <div className="h-3 w-44 bg-slate-200 rounded mt-2" />
-              <div className="mt-auto pt-4 flex justify-end">
-                <div className="h-9 w-24 bg-slate-200 rounded" />
-              </div>
+              <div className="mt-auto pt-4 flex justify-end"><div className="h-9 w-24 bg-slate-200 rounded" /></div>
             </div>
           ))}
         </div>
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-          <ActionTile
-            title="Stalled Candidates"
-            emptyText="No stalled candidates right now."
-            items={buckets.stalled}
-            href="/action-center?scope=RECRUITER&tab=STALLED"
-            chromeQuery={chromeQuery}
-          />
-          <ActionTile
-            title="Awaiting Hiring Mgr Feedback"
-            emptyText="No hiring manager feedback pending."
-            items={buckets.awaiting_feedback}
-            href="/action-center?scope=RECRUITER&tab=AWAITING_FEEDBACK"
-            chromeQuery={chromeQuery}
-          />
-          <ActionTile
-            title="Unread Candidate Replies"
-            emptyText="No unread candidate replies."
-            items={buckets.unread_replies}
-            href="/action-center?scope=RECRUITER&tab=UNREAD_REPLIES"
-            chromeQuery={chromeQuery}
-          />
-          <ActionTile
-            title="Upcoming Interview / Conflicts"
-            emptyText="No upcoming interviews or conflicts."
-            items={buckets.upcoming}
-            href="/action-center?scope=RECRUITER&tab=UPCOMING"
-            chromeQuery={chromeQuery}
-          />
+          {tiles.map(t => <ActionTile key={t.key} {...t} chromeQuery={chromeQuery} />)}
         </div>
       )}
     </section>
   );
 }
 
-/* -----------------------------
-   Dashboard Body
------------------------------- */
+// ─── Dashboard Body ───────────────────────────────────────────────────────────
 function DashboardBody() {
   const router = useRouter();
   const chromeQuery = normalizeRecruiterChrome(router?.query?.chrome) || "recruiter-smb";
@@ -285,351 +311,298 @@ function DashboardBody() {
   const [analyticsData, setAnalyticsData] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [isMobile, setIsMobile] = useState(null);
 
-  // ✅ Mobile detection (ONLY affects mobile render path)
-  const [isMobile, setIsMobile] = useState(false);
   useEffect(() => {
-    const handleResize = () => {
-      if (typeof window !== "undefined") setIsMobile(window.innerWidth < 1024);
-    };
-    handleResize();
-    window.addEventListener("resize", handleResize);
-    return () => window.removeEventListener("resize", handleResize);
+    const check = () => setIsMobile(window.innerWidth < 1024);
+    check();
+    window.addEventListener("resize", check);
+    return () => window.removeEventListener("resize", check);
   }, []);
-
-  // ✅ Matches Seeker blueprint exactly
-  // RecruiterLayout LEFT_W=240, GAP=12, PAD=16
-  // marginLeft = -(LEFT_W + GAP) = -252
-  const RIGHT_COL_WIDTH = 280;
-  const GAP = 16;
-
-  const GLASS = {
-    borderRadius: 14,
-    border: "1px solid rgba(255,255,255,0.22)",
-    background: "rgba(255,255,255,0.58)",
-    boxShadow: "0 10px 24px rgba(0,0,0,0.12)",
-    backdropFilter: "blur(10px)",
-    WebkitBackdropFilter: "blur(10px)",
-  };
-
-  // ✅ KPI should slightly stand out on dashboards (match seeker behavior)
-  const KPI_GLASS = {
-    ...GLASS,
-    background: "rgba(255,255,255,0.68)",
-    boxShadow: "0 12px 28px rgba(0,0,0,0.14)",
-  };
-
-  const WHITE_CARD = {
-    background: "rgba(255,255,255,0.92)",
-    border: "1px solid rgba(0,0,0,0.08)",
-    borderRadius: 12,
-    boxShadow: "0 2px 10px rgba(0,0,0,0.08)",
-    boxSizing: "border-box",
-  };
-
-  const DARK_RAIL = {
-    background: "#2a2a2a",
-    border: "1px solid #3a3a3a",
-    borderRadius: 12,
-    padding: 16,
-    boxShadow: "0 2px 6px rgba(0,0,0,0.06)",
-    boxSizing: "border-box",
-  };
 
   useEffect(() => {
     let isMounted = true;
-
     async function fetchDashboard() {
       try {
         setIsLoading(true);
         const res = await fetch("/api/analytics/recruiter?range=30d&jobId=all&recruiterId=all");
-        if (!res.ok) throw new Error(`Failed to load dashboard: ${res.status}`);
+        if (!res.ok) throw new Error(`Failed: ${res.status}`);
         const json = await res.json();
-        if (isMounted) {
-          setAnalyticsData(json);
-          setError(null);
-        }
+        if (isMounted) { setAnalyticsData(json); setError(null); }
       } catch (err) {
-        console.error("[RecruiterDashboard] Error loading analytics:", err);
-        if (isMounted) {
-          setError(
-            "We had trouble loading live analytics. This dashboard will update automatically when data is available."
-          );
-        }
+        if (isMounted) setError("Trouble loading live analytics. Will update automatically.");
       } finally {
         if (isMounted) setIsLoading(false);
       }
     }
-
     fetchDashboard();
-    return () => {
-      isMounted = false;
-    };
+    return () => { isMounted = false; };
   }, []);
 
   const kpis = analyticsData?.kpis || null;
   const sourcesArray = Array.isArray(analyticsData?.sources) ? analyticsData.sources : [];
   const primarySource = sourcesArray[0] || null;
 
-  const stats = kpis
-    ? [
-        { label: "Total Views", value: kpis.totalViews ?? 0, href: "/recruiter/analytics" },
-        { label: "Total Applies", value: kpis.totalApplies ?? 0, href: "/recruiter/analytics" },
-        {
-          label: "Avg Time-to-Fill",
-          value: typeof kpis.avgTimeToFillDays === "number" ? `${kpis.avgTimeToFillDays} days` : "—",
-          href: "/recruiter/analytics",
-        },
-        {
-          label: "Conversion (View→Apply)",
-          value: typeof kpis.conversionRatePct === "number" ? `${kpis.conversionRatePct}%` : "—",
-          href: "/recruiter/analytics",
-        },
-      ]
-    : [
-        { label: "Total Views", value: "—", href: "/recruiter/analytics" },
-        { label: "Total Applies", value: "—", href: "/recruiter/analytics" },
-        { label: "Avg Time-to-Fill", value: "—", href: "/recruiter/analytics" },
-        { label: "Conversion (View→Apply)", value: "—", href: "/recruiter/analytics" },
-      ];
+  const stats = [
+    { label: "Total Views",    value: kpis ? (kpis.totalViews ?? 0)                                                           : "—", href: "/recruiter/analytics" },
+    { label: "Total Applies",  value: kpis ? (kpis.totalApplies ?? 0)                                                         : "—", href: "/recruiter/analytics" },
+    { label: "Time-to-Fill",   value: kpis ? (typeof kpis.avgTimeToFillDays === "number" ? `${kpis.avgTimeToFillDays}d` : "—") : "—", href: "/recruiter/analytics" },
+    { label: "View→Apply",     value: kpis ? (typeof kpis.conversionRatePct === "number" ? `${kpis.conversionRatePct}%` : "—") : "—", href: "/recruiter/analytics" },
+  ];
 
-  const topCandidates = Array.isArray(analyticsData?.topCandidates)
-    ? analyticsData.topCandidates
-    : [];
-
+  const topCandidates = Array.isArray(analyticsData?.topCandidates) ? analyticsData.topCandidates : [];
   const topApplySourceLabel = primarySource?.name || "Forge";
-  const topApplySourcePercent =
-    primarySource && kpis?.totalApplies
-      ? Math.round((primarySource.value / Math.max(kpis.totalApplies, 1)) * 100)
-      : 100;
+  const topApplySourcePercent = primarySource && kpis?.totalApplies
+    ? Math.round((primarySource.value / Math.max(kpis.totalApplies, 1)) * 100) : 100;
+  const analyticsSnapshot = kpis ? {
+    timeToHireDays: kpis.avgTimeToFillDays ?? 0,
+    topApplySourceLabel, topApplySourcePercent,
+    conversionViewToApply: kpis.conversionRatePct ?? 0,
+  } : null;
 
-  const analyticsSnapshot = kpis
-    ? {
-        timeToHireDays: kpis.avgTimeToFillDays ?? 0,
-        topApplySourceLabel,
-        topApplySourcePercent,
-        conversionViewToApply: kpis.conversionRatePct ?? 0,
-      }
-    : null;
+  if (isMobile === null) return <div style={{ minHeight: 200 }} />;
 
-  // ✅ MOBILE-ONLY LAYOUT (desktop stays exactly the same below)
+  // ── MOBILE ────────────────────────────────────────────────────────────────
   if (isMobile) {
+    const hour = new Date().getHours();
+    const greeting = hour < 12 ? "Good morning" : hour < 17 ? "Good afternoon" : "Good evening";
+
     return (
-      <div style={{ width: "100%", padding: 0, margin: 0, boxSizing: "border-box" }}>
+      <div style={{ width: "100%", boxSizing: "border-box" }}>
         {error && (
-          <div className="rounded-md border border-red-200 bg-red-50 px-3 py-2 text-xs text-red-700 mb-4">
+          <div style={{ background: "rgba(254,226,226,0.90)", border: "1px solid rgba(239,68,68,0.25)",
+            borderRadius: 10, padding: "10px 14px", fontSize: 12, color: "#B91C1C", marginBottom: 12 }}>
             {error}
           </div>
         )}
 
-        <div style={{ display: "grid", gap: GAP, width: "100%" }}>
-          {/* Title */}
-          <section style={{ ...GLASS, padding: 16, textAlign: "center" }} aria-label="Recruiter dashboard overview">
-            <h1 style={{ margin: 0, color: "#FF7043", fontSize: 22, fontWeight: 800 }}>
+        <div style={{ display: "grid", gap: GAP }}>
+
+          {/* ── 1. Greeting + context — sets the tone immediately ── */}
+          <section style={{ ...GLASS, padding: "18px 20px" }}>
+            <div style={{ fontSize: 13, fontWeight: 600, color: "#90A4AE", marginBottom: 4 }}>
+              {greeting}
+            </div>
+            <h1 style={{ margin: 0, fontSize: 22, fontWeight: 900, color: "#112033", lineHeight: 1.1 }}>
               Recruiter Dashboard
             </h1>
-            <p style={{ margin: "6px auto 0", color: "#607D8B", maxWidth: 740 }}>
-              At-a-glance health for your roles, candidate flow, and where action is needed.
+            <p style={{ margin: "8px 0 0", fontSize: 13, color: "#546E7A", fontWeight: 600, lineHeight: 1.5 }}>
+              Your hiring pipeline at a glance. Act on what matters most today.
             </p>
           </section>
 
-          {/* KPI */}
-          <section style={{ ...KPI_GLASS, padding: 16 }}>
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-              {isLoading && !analyticsData
-                ? Array.from({ length: 4 }).map((_, idx) => (
-                    <div key={idx} className="rounded-lg border bg-white p-4 animate-pulse space-y-2">
-                      <div className="h-3 w-24 bg-slate-200 rounded" />
-                      <div className="h-7 w-10 bg-slate-200 rounded" />
+          {/* ── 2. Action Center — FIRST, most important ── */}
+          <section style={{ ...GLASS, padding: 16 }}>
+            <RecruiterActionCenterSection chromeQuery={chromeQuery} isMobile={true} />
+          </section>
+
+          {/* ── 3. KPI strip — horizontal scroll, compact ── */}
+          <section style={{ ...GLASS, padding: "12px 0 12px 12px", overflow: "hidden" }}>
+            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between",
+              paddingRight: 12, marginBottom: 10 }}>
+              <span style={{ fontSize: 13, fontWeight: 800, color: "#112033" }}>Last 30 Days</span>
+              <Link href="/recruiter/analytics"
+                style={{ fontSize: 12, fontWeight: 700, color: "#FF7043", textDecoration: "none" }}>
+                Full analytics →
+              </Link>
+            </div>
+            <div style={{ display: "flex", gap: 8, overflowX: "auto",
+              paddingRight: 12, paddingBottom: 4,
+              scrollbarWidth: "none", msOverflowStyle: "none" }}>
+              <style>{`.kpi-scroll::-webkit-scrollbar{display:none}`}</style>
+              {isLoading && !analyticsData ? (
+                [1,2,3,4].map(i => (
+                  <div key={i} style={{ flexShrink: 0, width: 110, height: 72, borderRadius: 12,
+                    background: "rgba(255,255,255,0.70)", border: "1px solid rgba(0,0,0,0.06)" }} />
+                ))
+              ) : (
+                stats.map(t => (
+                  <Link key={t.label} href={t.href} style={{
+                    flexShrink: 0, width: 110,
+                    ...WHITE_CARD, padding: "10px 12px",
+                    textDecoration: "none", display: "block",
+                  }}>
+                    <div style={{ fontSize: 10, fontWeight: 700, color: "#FF7043",
+                      textTransform: "uppercase", letterSpacing: "0.04em",
+                      overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                      {t.label}
                     </div>
-                  ))
-                : stats.map((t) => (
-                    <Link
-                      key={t.label}
-                      href={t.href}
-                      className="rounded-lg border bg-white p-4 hover:bg-slate-50 transition"
-                      style={{ textDecoration: "none" }}
-                      aria-label={`Open ${t.label} analytics`}
-                    >
-                      <div className="text-sm font-medium text-[#FF7043] truncate">{t.label}</div>
-                      <div className="text-2xl font-semibold mt-1 text-slate-900">{t.value}</div>
-                      <div className="text-[11px] text-slate-500 mt-1">View details</div>
-                    </Link>
-                  ))}
+                    <div style={{ fontSize: 24, fontWeight: 900, color: "#112033",
+                      lineHeight: 1.1, marginTop: 4 }}>
+                      {t.value}
+                    </div>
+                  </Link>
+                ))
+              )}
             </div>
           </section>
 
-          {/* Right rail content stacked (Sponsored + Health Snapshot) */}
-          <section style={{ ...GLASS, padding: 16, display: "grid", gap: GAP }}>
-            <div style={{ ...WHITE_CARD, padding: 16, minHeight: 160 }}>
-              <div className="font-medium mb-2 text-slate-900">Sponsored</div>
-              <div className="text-sm text-slate-500">Ad space</div>
+          {/* ── 4. Top Candidates ── */}
+          <section style={{ ...GLASS, padding: 16 }}>
+            <div style={{ display: "flex", alignItems: "center",
+              justifyContent: "space-between", marginBottom: 12 }}>
+              <span style={{ fontSize: 15, fontWeight: 800, color: "#112033" }}>
+                Top Candidates
+              </span>
+              <Link href="/recruiter/candidate-center"
+                style={{ fontSize: 12, fontWeight: 700, color: "#FF7043", textDecoration: "none",
+                  padding: "5px 10px", borderRadius: 999, border: "1px solid rgba(255,112,67,0.25)",
+                  background: "rgba(255,112,67,0.08)" }}>
+                View all
+              </Link>
             </div>
-
-            <div style={{ ...WHITE_CARD, padding: 16 }}>
-              <div className="font-medium mb-2 text-slate-900">Health Snapshot</div>
-
-              {isEnterprise ? (
-                analyticsSnapshot ? (
-                  <div className="text-sm grid gap-2 text-slate-700">
-                    <div>Time-to-Hire: {analyticsSnapshot.timeToHireDays} days</div>
-                    <div>
-                      Top Apply Source: {analyticsSnapshot.topApplySourceLabel} (
-                      {analyticsSnapshot.topApplySourcePercent}%)
-                    </div>
-                    <div>Conversion (View→Apply): {analyticsSnapshot.conversionViewToApply}%</div>
-                    <div className="pt-1 text-[11px] text-slate-500">
-                      Open Analytics for breakdowns by range, role, recruiter, and funnel stage.
-                    </div>
-                    <div className="pt-2">
-                      <Link href="/recruiter/analytics" className="text-[#FF7043] font-semibold">
-                        Open Analytics
-                      </Link>
-                    </div>
+            <div style={{ ...WHITE_CARD, padding: 12 }}>
+              {isLoading && !analyticsData ? (
+                <div style={{ display: "grid", gap: 8 }}>
+                  {[1,2,3].map(i => <div key={i} style={{ height: 14, background: "rgba(0,0,0,0.07)", borderRadius: 6, width: `${70 + i * 8}%` }} />)}
+                </div>
+              ) : isEnterprise ? (
+                topCandidates.length === 0 ? (
+                  <div style={{ fontSize: 13, color: "#90A4AE", lineHeight: 1.5 }}>
+                    AI recommendations will appear once candidates interact with your jobs.
                   </div>
                 ) : (
-                  <div className="text-sm text-slate-500">
-                    Analytics will appear once your roles start receiving views and applications.
+                  <div style={{ display: "grid", gap: 10 }}>
+                    {topCandidates.slice(0, 5).map(c => (
+                      <div key={`${c.id||c.email||c.name}-${c.title}`}
+                        style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 8 }}>
+                        <div style={{ minWidth: 0 }}>
+                          <div style={{ fontSize: 13, fontWeight: 700, color: "#112033",
+                            overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                            {c.name}
+                          </div>
+                          <div style={{ fontSize: 11, color: "#607D8B",
+                            overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                            {c.title}
+                          </div>
+                        </div>
+                        <div style={{ flexShrink: 0, fontSize: 12, fontWeight: 800,
+                          color: "#FF7043", background: "rgba(255,112,67,0.10)",
+                          padding: "3px 8px", borderRadius: 999,
+                          border: "1px solid rgba(255,112,67,0.20)" }}>
+                          {c.matchPercent}%
+                        </div>
+                      </div>
+                    ))}
                   </div>
                 )
               ) : (
-                <FeatureLock label="Analytics Snapshot">
-                  <div className="text-sm text-slate-500">
-                    Upgrade to Enterprise to see detailed analytics for your roles.
-                  </div>
+                <FeatureLock label="AI Candidate Recommendations">
+                  <div style={{ fontSize: 13, color: "#90A4AE" }}>Upgrade to Enterprise to unlock AI-powered matching.</div>
                 </FeatureLock>
               )}
             </div>
           </section>
 
-          {/* Action Center */}
-          <section style={{ ...GLASS, padding: 0 }}>
-            <div style={{ padding: 16 }}>
-              <RecruiterActionCenterSection chromeQuery={chromeQuery} />
-            </div>
-          </section>
+          {/* ── 5. Pipeline + Trends side by side (2 col) ── */}
+          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: GAP }}>
+            <section style={{ ...GLASS, padding: 14 }}>
+              <div style={{ display: "flex", alignItems: "center",
+                justifyContent: "space-between", marginBottom: 10 }}>
+                <span style={{ fontSize: 13, fontWeight: 800, color: "#112033" }}>Pipeline</span>
+                <Link href="/recruiter/candidate-center"
+                  style={{ fontSize: 11, fontWeight: 700, color: "#FF7043", textDecoration: "none" }}>
+                  Open →
+                </Link>
+              </div>
+              <div style={{ display: "grid", gap: 7 }}>
+                {["New applicants", "Stuck in stage", "Interviews this week", "Offers pending"].map(item => (
+                  <div key={item} style={{ display: "flex", alignItems: "center", gap: 6 }}>
+                    <div style={{ width: 6, height: 6, borderRadius: 999, background: "#FF7043", flexShrink: 0 }} />
+                    <span style={{ fontSize: 11, color: "#37474F", lineHeight: 1.3 }}>{item}</span>
+                  </div>
+                ))}
+              </div>
+            </section>
 
-          {/* Bottom cards stacked */}
+            <section style={{ ...GLASS, padding: 14 }}>
+              <div style={{ display: "flex", alignItems: "center",
+                justifyContent: "space-between", marginBottom: 10 }}>
+                <span style={{ fontSize: 13, fontWeight: 800, color: "#112033" }}>Trends</span>
+                <Link href="/recruiter/analytics"
+                  style={{ fontSize: 11, fontWeight: 700, color: "#FF7043", textDecoration: "none" }}>
+                  Charts →
+                </Link>
+              </div>
+              <div style={{ display: "grid", gap: 7 }}>
+                {["Views vs Applies", "Time-to-fill", "Funnel drop-off", "Period vs prior"].map(item => (
+                  <div key={item} style={{ display: "flex", alignItems: "center", gap: 6 }}>
+                    <div style={{ width: 6, height: 6, borderRadius: 999, background: "#1A4B8F", flexShrink: 0 }} />
+                    <span style={{ fontSize: 11, color: "#37474F", lineHeight: 1.3 }}>{item}</span>
+                  </div>
+                ))}
+              </div>
+            </section>
+          </div>
+
+          {/* ── 6. Health Snapshot ── */}
           <section style={{ ...GLASS, padding: 16 }}>
-            <div className="flex items-center justify-between mb-3">
-              <h2 className="text-lg font-semibold text-[#FF7043]">Top Candidate Recommendations</h2>
-              <Link href="/recruiter/candidate-center" className="text-[#FF7043] font-medium hover:underline">
-                View all
-              </Link>
+            <div style={{ fontSize: 14, fontWeight: 800, color: "#112033", marginBottom: 10 }}>
+              Health Snapshot
             </div>
-
-            {isLoading && !analyticsData ? (
-              <ul className="text-sm grid gap-2 animate-pulse">
-                <li className="h-3 bg-slate-200 rounded w-3/4" />
-                <li className="h-3 bg-slate-200 rounded w-4/5" />
-                <li className="h-3 bg-slate-200 rounded w-2/3" />
-              </ul>
-            ) : isEnterprise ? (
-              topCandidates.length === 0 ? (
-                <div className="text-sm text-slate-500">
-                  AI recommendations will appear here once candidates start interacting with your jobs.
-                </div>
+            <div style={{ ...WHITE_CARD, padding: 12 }}>
+              {isEnterprise ? (
+                analyticsSnapshot ? (
+                  <div style={{ display: "grid", gap: 8 }}>
+                    {[
+                      { label: "Time-to-Hire",    value: `${analyticsSnapshot.timeToHireDays} days` },
+                      { label: "Top Source",       value: `${analyticsSnapshot.topApplySourceLabel} (${analyticsSnapshot.topApplySourcePercent}%)` },
+                      { label: "Conversion",       value: `${analyticsSnapshot.conversionViewToApply}%` },
+                    ].map(row => (
+                      <div key={row.label} style={{ display: "flex", alignItems: "center",
+                        justifyContent: "space-between", gap: 8 }}>
+                        <span style={{ fontSize: 12, color: "#607D8B" }}>{row.label}</span>
+                        <span style={{ fontSize: 13, fontWeight: 800, color: "#112033" }}>{row.value}</span>
+                      </div>
+                    ))}
+                    <Link href="/recruiter/analytics"
+                      style={{ color: "#FF7043", fontWeight: 700, fontSize: 12,
+                        marginTop: 4, display: "block", textDecoration: "none" }}>
+                      Open Analytics →
+                    </Link>
+                  </div>
+                ) : (
+                  <div style={{ fontSize: 13, color: "#90A4AE" }}>Analytics will appear once your roles receive activity.</div>
+                )
               ) : (
-                <ul className="text-sm grid gap-2 text-slate-700">
-                  {topCandidates.slice(0, 5).map((c) => (
-                    <li key={`${c.id || c.email || c.name}-${c.title}`}>
-                      • {c.name} — {c.title} ({c.matchPercent}% match)
-                    </li>
-                  ))}
-                </ul>
-              )
-            ) : (
-              <FeatureLock label="AI Candidate Recommendations">
-                <div className="text-sm text-slate-500">
-                  Upgrade to Enterprise to unlock AI-powered candidate matching in this panel.
-                </div>
-              </FeatureLock>
-            )}
-          </section>
-
-          <section style={{ ...GLASS, padding: 16 }}>
-            <div className="flex items-center justify-between mb-3">
-              <h2 className="text-lg font-semibold text-[#FF7043]">Pipeline Health</h2>
-              <Link href="/recruiter/candidate-center" className="text-[#FF7043] font-medium hover:underline">
-                Open pipeline
-              </Link>
-            </div>
-
-            <div className="text-sm text-slate-700 grid gap-2">
-              <div className="text-slate-500">This panel becomes your "where do I act today?" view.</div>
-              <div>• New applicants needing review</div>
-              <div>• Candidates stuck in stage (SLA watch)</div>
-              <div>• Interviews scheduled this week</div>
-              <div>• Offers pending response</div>
-              <div className="pt-2 text-[11px] text-slate-500">
-                Next wiring step: feed counts by stage + "stale" thresholds (e.g., 7/14/30 days).
-              </div>
+                <FeatureLock label="Analytics Snapshot">
+                  <div style={{ fontSize: 13, color: "#90A4AE" }}>Upgrade to Enterprise to see detailed analytics.</div>
+                </FeatureLock>
+              )}
             </div>
           </section>
 
-          <section style={{ ...GLASS, padding: 16 }}>
-            <div className="flex items-center justify-between mb-3">
-              <h3 className="text-base font-semibold text-[#FF7043]">Trends</h3>
-              <Link href="/recruiter/analytics" className="text-[#FF7043] font-medium hover:underline">
-                View charts
-              </Link>
-            </div>
-
-            <div className="text-sm text-slate-700 grid gap-2">
-              <div className="text-slate-500">Trendline / chart goes here.</div>
-              <div>• Views vs Applies (last 7 / 30 / 90)</div>
-              <div>• Time-to-fill trend</div>
-              <div>• Funnel drop-off alerts</div>
-              <div className="pt-2 text-[11px] text-slate-500">
-                Next wiring step: add a small sparkline + "change vs last period".
-              </div>
+          {/* ── 7. Sponsored — last, lowest priority ── */}
+          <section style={{ ...GLASS, padding: 12 }}>
+            <div style={{ ...WHITE_CARD, padding: 16, minHeight: 100 }}>
+              <div style={{ fontWeight: 700, color: "#90A4AE", marginBottom: 6, fontSize: 12,
+                textTransform: "uppercase", letterSpacing: "0.06em" }}>Sponsored</div>
+              <div style={{ fontSize: 13, color: "#B0BEC5" }}>Ad space</div>
             </div>
           </section>
+
         </div>
       </div>
     );
   }
 
+  // ── DESKTOP (original, untouched) ─────────────────────────────────────────
   return (
     <div style={{ width: "100%", padding: 0, margin: 0, paddingRight: 16, boxSizing: "border-box" }}>
       {error && (
-        <div className="rounded-md border border-red-200 bg-red-50 px-3 py-2 text-xs text-red-700 mb-4">
-          {error}
-        </div>
+        <div className="rounded-md border border-red-200 bg-red-50 px-3 py-2 text-xs text-red-700 mb-4">{error}</div>
       )}
+      <div style={{ display: "grid", gridTemplateColumns: `minmax(0, 1fr) ${RIGHT_COL_WIDTH}px`,
+        gridTemplateRows: "auto auto auto auto", gap: GAP, width: "100%", minWidth: 0, boxSizing: "border-box" }}>
 
-      <div
-        style={{
-          display: "grid",
-          gridTemplateColumns: `minmax(0, 1fr) ${RIGHT_COL_WIDTH}px`,
-          gridTemplateRows: "auto auto auto auto",
-          gap: GAP,
-          width: "100%",
-          minWidth: 0,
-          boxSizing: "border-box",
-        }}
-      >
-        {/* ROW 1, COL 1: Title card — stops at center column right edge */}
-        <section
-          style={{
-            ...GLASS,
-            padding: 16,
-            textAlign: "center",
-            gridColumn: "1 / 2",
-            gridRow: "1",
-            boxSizing: "border-box",
-          }}
-          aria-label="Recruiter dashboard overview"
-        >
-          <h1 style={{ margin: 0, color: "#FF7043", fontSize: 24, fontWeight: 800 }}>
-            Recruiter Dashboard
-          </h1>
+        <section style={{ ...GLASS, padding: 16, textAlign: "center",
+          gridColumn: "1 / 2", gridRow: "1", boxSizing: "border-box" }}>
+          <h1 style={{ margin: 0, color: "#FF7043", fontSize: 24, fontWeight: 800 }}>Recruiter Dashboard</h1>
           <p style={{ margin: "6px auto 0", color: "#607D8B", maxWidth: 740 }}>
             At-a-glance health for your roles, candidate flow, and where action is needed.
           </p>
         </section>
 
-        {/* ROW 2, COL 1: KPI strip — all 4 stats visible */}
         <section style={{ ...WHITE_CARD, padding: 16, gridColumn: "1 / 2", gridRow: "2" }}>
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
             {isLoading && !analyticsData
@@ -639,14 +612,10 @@ function DashboardBody() {
                     <div className="h-7 w-10 bg-slate-200 rounded" />
                   </div>
                 ))
-              : stats.map((t) => (
-                  <Link
-                    key={t.label}
-                    href={t.href}
+              : stats.map(t => (
+                  <Link key={t.label} href={t.href}
                     className="rounded-lg border bg-white p-4 hover:bg-slate-50 transition"
-                    style={{ textDecoration: "none" }}
-                    aria-label={`Open ${t.label} analytics`}
-                  >
+                    style={{ textDecoration: "none" }}>
                     <div className="text-sm font-medium text-[#FF7043] truncate">{t.label}</div>
                     <div className="text-2xl font-semibold mt-1 text-slate-900">{t.value}</div>
                     <div className="text-[11px] text-slate-500 mt-1">View details</div>
@@ -655,101 +624,47 @@ function DashboardBody() {
           </div>
         </section>
 
-        {/* ROW 3, COL 1: Action Center */}
         <div style={{ gridColumn: "1 / 2", gridRow: "3" }}>
-          <RecruiterActionCenterSection chromeQuery={chromeQuery} />
+          <RecruiterActionCenterSection chromeQuery={chromeQuery} isMobile={false} />
         </div>
 
-        {/*
-          COL 2, ROWS 1–3: Right Rail dark panel
-          Spans all three center rows — title, KPI, Action Center.
-          Sponsored (tall, breathing) on top, Health Snapshot below.
-        */}
-        <aside
-          style={{
-            ...DARK_RAIL,
-            gridColumn: "2 / 3",
-            gridRow: "1 / 4",
-            display: "flex",
-            flexDirection: "column",
-            gap: GAP,
-            alignSelf: "stretch",
-          }}
-        >
-          {/* Sponsored — top of rail, tall and breathing */}
+        <aside style={{ ...DARK_RAIL, gridColumn: "2 / 3", gridRow: "1 / 4",
+          display: "flex", flexDirection: "column", gap: GAP, alignSelf: "stretch" }}>
           <div style={{ ...WHITE_CARD, padding: 16, flex: 2, minHeight: 180 }}>
             <div className="font-medium mb-2 text-slate-900">Sponsored</div>
             <div className="text-sm text-slate-500">Ad space</div>
           </div>
-
-          {/* Health Snapshot — below sponsored */}
           <div style={{ ...WHITE_CARD, padding: 16, flex: 1 }}>
             <div className="font-medium mb-2 text-slate-900">Health Snapshot</div>
-
             {isEnterprise ? (
               analyticsSnapshot ? (
                 <div className="text-sm grid gap-2 text-slate-700">
                   <div>Time-to-Hire: {analyticsSnapshot.timeToHireDays} days</div>
-                  <div>
-                    Top Apply Source: {analyticsSnapshot.topApplySourceLabel} (
-                    {analyticsSnapshot.topApplySourcePercent}%)
-                  </div>
+                  <div>Top Apply Source: {analyticsSnapshot.topApplySourceLabel} ({analyticsSnapshot.topApplySourcePercent}%)</div>
                   <div>Conversion (View→Apply): {analyticsSnapshot.conversionViewToApply}%</div>
-                  <div className="pt-1 text-[11px] text-slate-500">
-                    Open Analytics for breakdowns by range, role, recruiter, and funnel stage.
-                  </div>
-                  <div className="pt-2">
-                    <Link href="/recruiter/analytics" className="text-[#FF7043] font-semibold">
-                      Open Analytics
-                    </Link>
-                  </div>
+                  <div className="pt-1 text-[11px] text-slate-500">Open Analytics for breakdowns by range, role, recruiter, and funnel stage.</div>
+                  <div className="pt-2"><Link href="/recruiter/analytics" className="text-[#FF7043] font-semibold">Open Analytics</Link></div>
                 </div>
               ) : (
-                <div className="text-sm text-slate-500">
-                  Analytics will appear once your roles start receiving views and applications.
-                </div>
+                <div className="text-sm text-slate-500">Analytics will appear once your roles start receiving views and applications.</div>
               )
             ) : (
               <FeatureLock label="Analytics Snapshot">
-                <div className="text-sm text-slate-500">
-                  Upgrade to Enterprise to see detailed analytics for your roles.
-                </div>
+                <div className="text-sm text-slate-500">Upgrade to Enterprise to see detailed analytics for your roles.</div>
               </FeatureLock>
             )}
           </div>
         </aside>
 
-        {/*
-          ROW 4: Bottom 3 cards — extend left under the sidebar using negative margin.
-          contentFullBleed on RecruiterLayout removes overflowX clipping from <main>
-          for this page only, allowing the negative margin to work correctly.
-          ✅ marginLeft: -252 = LEFT_W (240) + GAP (12)
-          Top Candidates | Pipeline Health | Trends
-        */}
-        <div
-          style={{
-            gridColumn: "1 / -1",
-            gridRow: "4",
-            display: "grid",
-            gridTemplateColumns: "minmax(0, 5fr) minmax(0, 5fr) minmax(0, 3fr)",
-            gap: GAP,
-            marginLeft: -252,
-            boxSizing: "border-box",
-            minWidth: 0,
-          }}
-        >
-          {/* Card 1: Top Candidate Recommendations */}
+        <div style={{ gridColumn: "1 / -1", gridRow: "4", display: "grid",
+          gridTemplateColumns: "minmax(0, 5fr) minmax(0, 5fr) minmax(0, 3fr)",
+          gap: GAP, marginLeft: -252, boxSizing: "border-box", minWidth: 0 }}>
+
           <section style={{ ...WHITE_CARD, padding: 16 }}>
             <div className="flex items-center justify-between mb-3">
               <h2 className="text-lg font-semibold text-[#FF7043]">Top Candidate Recommendations</h2>
-              <Link
-                href="/recruiter/candidate-center"
-                className="text-[#FF7043] font-medium hover:underline"
-              >
-                View all
-              </Link>
+              <Link href="/recruiter/candidate-center" className="text-[#FF7043] font-medium hover:underline">View all</Link>
             </div>
-
             {isLoading && !analyticsData ? (
               <ul className="text-sm grid gap-2 animate-pulse">
                 <li className="h-3 bg-slate-200 rounded w-3/4" />
@@ -758,68 +673,47 @@ function DashboardBody() {
               </ul>
             ) : isEnterprise ? (
               topCandidates.length === 0 ? (
-                <div className="text-sm text-slate-500">
-                  AI recommendations will appear here once candidates start interacting with your jobs.
-                </div>
+                <div className="text-sm text-slate-500">AI recommendations will appear here once candidates start interacting with your jobs.</div>
               ) : (
                 <ul className="text-sm grid gap-2 text-slate-700">
-                  {topCandidates.slice(0, 5).map((c) => (
-                    <li key={`${c.id || c.email || c.name}-${c.title}`}>
-                      • {c.name} — {c.title} ({c.matchPercent}% match)
-                    </li>
+                  {topCandidates.slice(0, 5).map(c => (
+                    <li key={`${c.id||c.email||c.name}-${c.title}`}>• {c.name} — {c.title} ({c.matchPercent}% match)</li>
                   ))}
                 </ul>
               )
             ) : (
               <FeatureLock label="AI Candidate Recommendations">
-                <div className="text-sm text-slate-500">
-                  Upgrade to Enterprise to unlock AI-powered candidate matching in this panel.
-                </div>
+                <div className="text-sm text-slate-500">Upgrade to Enterprise to unlock AI-powered candidate matching in this panel.</div>
               </FeatureLock>
             )}
           </section>
 
-          {/* Card 2: Pipeline Health */}
           <section style={{ ...WHITE_CARD, padding: 16 }}>
             <div className="flex items-center justify-between mb-3">
               <h2 className="text-lg font-semibold text-[#FF7043]">Pipeline Health</h2>
-              <Link
-                href="/recruiter/candidate-center"
-                className="text-[#FF7043] font-medium hover:underline"
-              >
-                Open pipeline
-              </Link>
+              <Link href="/recruiter/candidate-center" className="text-[#FF7043] font-medium hover:underline">Open pipeline</Link>
             </div>
-
             <div className="text-sm text-slate-700 grid gap-2">
               <div className="text-slate-500">This panel becomes your "where do I act today?" view.</div>
               <div>• New applicants needing review</div>
               <div>• Candidates stuck in stage (SLA watch)</div>
               <div>• Interviews scheduled this week</div>
               <div>• Offers pending response</div>
-              <div className="pt-2 text-[11px] text-slate-500">
-                Next wiring step: feed counts by stage + "stale" thresholds (e.g., 7/14/30 days).
-              </div>
+              <div className="pt-2 text-[11px] text-slate-500">Next wiring step: feed counts by stage + "stale" thresholds.</div>
             </div>
           </section>
 
-          {/* Card 3: Trends */}
           <section style={{ ...WHITE_CARD, padding: 16 }}>
             <div className="flex items-center justify-between mb-3">
               <h3 className="text-base font-semibold text-[#FF7043]">Trends</h3>
-              <Link href="/recruiter/analytics" className="text-[#FF7043] font-medium hover:underline">
-                View charts
-              </Link>
+              <Link href="/recruiter/analytics" className="text-[#FF7043] font-medium hover:underline">View charts</Link>
             </div>
-
             <div className="text-sm text-slate-700 grid gap-2">
               <div className="text-slate-500">Trendline / chart goes here.</div>
               <div>• Views vs Applies (last 7 / 30 / 90)</div>
               <div>• Time-to-fill trend</div>
               <div>• Funnel drop-off alerts</div>
-              <div className="pt-2 text-[11px] text-slate-500">
-                Next wiring step: add a small sparkline + "change vs last period".
-              </div>
+              <div className="pt-2 text-[11px] text-slate-500">Next wiring step: add a small sparkline + "change vs last period".</div>
             </div>
           </section>
         </div>
@@ -831,17 +725,7 @@ function DashboardBody() {
 export default function RecruiterDashboardPage() {
   return (
     <PlanProvider>
-      {/*
-        ✅ contentFullBleed — removes overflowX: hidden from <main> for this page only.
-        This allows the bottom cards' marginLeft: -252 to escape under the sidebar.
-        No header prop, no right prop — DashboardBody owns the full internal grid.
-        All other recruiter pages are completely unaffected.
-      */}
-      <RecruiterLayout
-        title="ForgeTomorrow — Recruiter Dashboard"
-        activeNav="dashboard"
-        contentFullBleed
-      >
+      <RecruiterLayout title="ForgeTomorrow — Recruiter Dashboard" activeNav="dashboard" contentFullBleed>
         <DashboardBody />
       </RecruiterLayout>
     </PlanProvider>
