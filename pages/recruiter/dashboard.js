@@ -16,9 +16,8 @@
 // │ Action Center    (row 3)    │  Snapshot    │
 // ├─────────────────────────────┴──────────────┤
 // │ Top Candidates │ Pipeline Health │ Trends  │  ← full width incl. under sidebar
-// └──────────────────────────────────────────────┘
+// └────────────────────────────────────────────┘
 
-// pages/recruiter/dashboard.js
 import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/router";
@@ -383,7 +382,7 @@ function DashboardBody() {
             <div style={{ fontSize: 13, fontWeight: 600, color: "#90A4AE", marginBottom: 4 }}>
               {greeting}
             </div>
-            <h1 style={{ margin: 0, fontSize: 22, fontWeight: 900, color: "#112033", lineHeight: 1.1 }}>
+            <h1 style={{ margin: 0, fontSize: 22, fontWeight: 900, color: "#FF7043", lineHeight: 1.1 }}>
               Recruiter Dashboard
             </h1>
             <p style={{ margin: "8px 0 0", fontSize: 13, color: "#546E7A", fontWeight: 600, lineHeight: 1.5 }}>
