@@ -32,7 +32,7 @@ const stageKey = (stage) =>
     'Closed Out': 'info',
   }[stage] || 'info');
 
-function SortableCard({ job, stage, onView, onEdit, onDelete }) {
+function SortableCard({ job, stage, onView, onEdit, onDelete, onMove }) {
   if (!job || !job.id) return null;
 
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
@@ -55,6 +55,7 @@ function SortableCard({ job, stage, onView, onEdit, onDelete }) {
         onView={onView}
         onEdit={onEdit}
         onDelete={onDelete}
+        onMove={onMove}
         dragListeners={listeners}
         dragAttributes={attributes}
       />
@@ -133,6 +134,8 @@ export default function ApplicationsBoard({
     minHeight: isMobile ? '220px' : '300px',
     position: 'relative',
     height: '100%',
+    minWidth: 0,
+    boxSizing: 'border-box',
   };
 
   const gridTemplateColumns = isMobile
@@ -343,6 +346,7 @@ export default function ApplicationsBoard({
                     marginBottom: compact ? 6 : 8,
                     fontWeight: 700,
                     width: '100%',
+                    boxSizing: 'border-box',
                   }}
                 >
                   <span style={{ whiteSpace: 'nowrap' }}>{stage}</span>
@@ -363,6 +367,7 @@ export default function ApplicationsBoard({
                           onView={onView}
                           onEdit={onEdit}
                           onDelete={onDelete}
+                          onMove={onMove}
                         />
                       ))}
                     </SortableContext>
@@ -399,6 +404,7 @@ export default function ApplicationsBoard({
                 onView={onView}
                 onEdit={onEdit}
                 onDelete={onDelete}
+                onMove={onMove}
               />
             </div>
           ) : null}

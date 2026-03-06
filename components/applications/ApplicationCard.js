@@ -1,6 +1,8 @@
 // components/applications/ApplicationCard.js
-import React from 'react';
-import { FaEye, FaEdit, FaTrash } from 'react-icons/fa';
+import React, { useEffect, useState } from 'react';
+import { FaEye, FaEdit, FaTrash, FaExchangeAlt } from 'react-icons/fa';
+
+const STAGES = ['Pinned', 'Applied', 'Interviewing', 'Offers', 'Closed Out'];
 
 export default function ApplicationCard({
   job,
@@ -8,9 +10,36 @@ export default function ApplicationCard({
   onView,
   onEdit,
   onDelete,
+  onMove,
   dragListeners,
   dragAttributes,
 }) {
+  const [isMobile, setIsMobile] = useState(false);
+
+  useEffect(() => {
+    const updateIsMobile = () => setIsMobile(window.innerWidth <= 768);
+    updateIsMobile();
+    window.addEventListener('resize', updateIsMobile);
+    return () => window.removeEventListener('resize', updateIsMobile);
+  }, []);
+
+  const handleMove = () => {
+    if (!onMove) return;
+
+    const options = STAGES.filter((s) => s !== stage);
+    const choice = window.prompt(
+      `Move "${job.title}" to:\n\n${options.map((s, i) => `${i + 1}. ${s}`).join('\n')}\n\nType the stage name exactly:`,
+      options[0] || ''
+    );
+
+    if (!choice) return;
+
+    const normalized = options.find((s) => s.toLowerCase() === String(choice).trim().toLowerCase());
+    if (!normalized) return;
+
+    onMove(job.id, stage, normalized, job.pinnedId || null);
+  };
+
   return (
     <div
       style={{
@@ -23,13 +52,17 @@ export default function ApplicationCard({
         flexDirection: 'column',
         gap: '8px',
         position: 'relative',
+        minWidth: 0,
+        boxSizing: 'border-box',
       }}
     >
-      <div style={{ fontWeight: 600 }}>{job.title}</div>
-      <div style={{ color: '#546E7A', fontSize: 13 }}>
+      <div style={{ fontWeight: 600, minWidth: 0, overflowWrap: 'anywhere' }}>{job.title}</div>
+
+      <div style={{ color: '#546E7A', fontSize: 13, minWidth: 0, overflowWrap: 'anywhere' }}>
         {job.company}
         {job.location ? ` • ${job.location}` : ''}
       </div>
+
       <div style={{ fontSize: 12, color: '#607D8B' }}>Added: {job.dateAdded}</div>
 
       <div
@@ -39,25 +72,46 @@ export default function ApplicationCard({
           alignItems: 'center',
           gap: 10,
           marginTop: 4,
+          flexWrap: 'wrap',
         }}
       >
-        <div
-          {...dragAttributes}
-          {...dragListeners}
-          style={{
-            cursor: 'grab',
-            fontSize: 24, // ✅ was 20 (bolder / more visible on mobile)
-            fontWeight: 900, // ✅ bolder
-            lineHeight: 1, // ✅ keeps it tight
-            color: '#FF7043',
-            padding: '0 6px', // ✅ slightly more touch-friendly
-            userSelect: 'none',
-          }}
-          title="Drag to move"
-          aria-label="Drag to move"
-        >
-          ↔
-        </div>
+        {isMobile ? (
+          <button
+            onClick={handleMove}
+            title="Move"
+            style={{
+              width: 32,
+              height: 32,
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              border: '1px solid #eee',
+              borderRadius: 6,
+              background: 'white',
+              cursor: 'pointer',
+            }}
+          >
+            <FaExchangeAlt color="#FF7043" />
+          </button>
+        ) : (
+          <div
+            {...dragAttributes}
+            {...dragListeners}
+            style={{
+              cursor: 'grab',
+              fontSize: 24,
+              fontWeight: 900,
+              lineHeight: 1,
+              color: '#FF7043',
+              padding: '0 6px',
+              userSelect: 'none',
+            }}
+            title="Drag to move"
+            aria-label="Drag to move"
+          >
+            ↔
+          </div>
+        )}
 
         {onView && (
           <button
