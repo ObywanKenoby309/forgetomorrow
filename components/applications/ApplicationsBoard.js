@@ -96,6 +96,8 @@ export default function ApplicationsBoard({
   const [isMobile, setIsMobile] = useState(false);
   const [mobileStage, setMobileStage] = useState('Pinned');
 
+  const [touchStart, setTouchStart] = useState(null);
+
   useEffect(() => {
     const updateIsMobile = () => setIsMobile(window.innerWidth <= 768);
     updateIsMobile();
@@ -174,6 +176,40 @@ export default function ApplicationsBoard({
     const job = stagesData[activeStage].find((j) => j?.id === active.id);
     if (job && onMove) {
       onMove(job.id, activeStage, overStage, job.pinnedId || null);
+    }
+  };
+
+  const handleMobileSwipeStart = (e) => {
+    if (!isMobile) return;
+    const touch = e.touches?.[0];
+    if (!touch) return;
+    setTouchStart({ x: touch.clientX, y: touch.clientY });
+  };
+
+  const handleMobileSwipeEnd = (e) => {
+    if (!isMobile || !touchStart) return;
+
+    const touch = e.changedTouches?.[0];
+    if (!touch) {
+      setTouchStart(null);
+      return;
+    }
+
+    const dx = touch.clientX - touchStart.x;
+    const dy = touch.clientY - touchStart.y;
+
+    setTouchStart(null);
+
+    if (Math.abs(dx) < 50) return;
+    if (Math.abs(dx) <= Math.abs(dy)) return;
+
+    const currentIndex = STAGES.indexOf(mobileStage);
+    if (currentIndex === -1) return;
+
+    if (dx < 0 && currentIndex < STAGES.length - 1) {
+      setMobileStage(STAGES[currentIndex + 1]);
+    } else if (dx > 0 && currentIndex > 0) {
+      setMobileStage(STAGES[currentIndex - 1]);
     }
   };
 
@@ -318,11 +354,14 @@ export default function ApplicationsBoard({
         }}
       >
         <div
+          onTouchStart={handleMobileSwipeStart}
+          onTouchEnd={handleMobileSwipeEnd}
           style={{
             display: 'grid',
             gridTemplateColumns,
             gap: compact ? 10 : 8,
             width: '100%',
+            touchAction: isMobile ? 'pan-y' : 'auto',
           }}
         >
           {visibleStages.map((stage) => {

@@ -1,5 +1,5 @@
 // components/applications/ApplicationCard.js
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { FaEye, FaEdit, FaTrash, FaExchangeAlt } from 'react-icons/fa';
 
 const STAGES = ['Pinned', 'Applied', 'Interviewing', 'Offers', 'Closed Out'];
@@ -15,6 +15,7 @@ export default function ApplicationCard({
   dragAttributes,
 }) {
   const [isMobile, setIsMobile] = useState(false);
+  const [showMoveSelect, setShowMoveSelect] = useState(false);
 
   useEffect(() => {
     const updateIsMobile = () => setIsMobile(window.innerWidth <= 768);
@@ -23,21 +24,20 @@ export default function ApplicationCard({
     return () => window.removeEventListener('resize', updateIsMobile);
   }, []);
 
-  const handleMove = () => {
-    if (!onMove) return;
+  const moveOptions = useMemo(() => STAGES.filter((s) => s !== stage), [stage]);
 
-    const options = STAGES.filter((s) => s !== stage);
-    const choice = window.prompt(
-      `Move "${job.title}" to:\n\n${options.map((s, i) => `${i + 1}. ${s}`).join('\n')}\n\nType the stage name exactly:`,
-      options[0] || ''
-    );
+  const handleMoveChange = (e) => {
+    const nextStage = e.target.value;
+    if (!nextStage) {
+      setShowMoveSelect(false);
+      return;
+    }
 
-    if (!choice) return;
+    if (onMove) {
+      onMove(job.id, stage, nextStage, job.pinnedId || null);
+    }
 
-    const normalized = options.find((s) => s.toLowerCase() === String(choice).trim().toLowerCase());
-    if (!normalized) return;
-
-    onMove(job.id, stage, normalized, job.pinnedId || null);
+    setShowMoveSelect(false);
   };
 
   return (
@@ -76,23 +76,53 @@ export default function ApplicationCard({
         }}
       >
         {isMobile ? (
-          <button
-            onClick={handleMove}
-            title="Move"
-            style={{
-              width: 32,
-              height: 32,
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              border: '1px solid #eee',
-              borderRadius: 6,
-              background: 'white',
-              cursor: 'pointer',
-            }}
-          >
-            <FaExchangeAlt color="#FF7043" />
-          </button>
+          <>
+            <button
+              onClick={() => setShowMoveSelect((prev) => !prev)}
+              title="Move"
+              style={{
+                width: 32,
+                height: 32,
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                border: '1px solid #eee',
+                borderRadius: 6,
+                background: 'white',
+                cursor: 'pointer',
+              }}
+            >
+              <FaExchangeAlt color="#FF7043" />
+            </button>
+
+            {showMoveSelect && (
+              <select
+                defaultValue=""
+                onChange={handleMoveChange}
+                onBlur={() => setShowMoveSelect(false)}
+                autoFocus
+                style={{
+                  height: 32,
+                  border: '1px solid #eee',
+                  borderRadius: 6,
+                  background: 'white',
+                  color: '#546E7A',
+                  fontSize: 13,
+                  padding: '0 8px',
+                  maxWidth: '100%',
+                }}
+              >
+                <option value="" disabled>
+                  Move to...
+                </option>
+                {moveOptions.map((option) => (
+                  <option key={option} value={option}>
+                    {option}
+                  </option>
+                ))}
+              </select>
+            )}
+          </>
         ) : (
           <div
             {...dragAttributes}
