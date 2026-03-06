@@ -1,4 +1,5 @@
 // pages/seeker-dashboard.js
+// updated for mobile
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import Head from 'next/head';
 import Link from 'next/link';
