@@ -81,9 +81,15 @@ function getJobStatus(job) {
 
 function isInternalJob(job) {
   if (!job) return false;
+
+  // cron-imported jobs are always external
+  if (job.userId === 'cmiwa2op6000cbvz0f2s8eafb') return false;
+
   if (job.accountKey) return true;
+
   const origin = (job.origin || '').toLowerCase();
   const source = (job.source || '').toLowerCase();
+
   return (
     origin === 'internal' ||
     source === 'internal' ||
