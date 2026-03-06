@@ -20,7 +20,16 @@ const stageKey = (stage) =>
 
 function StageStrip({ tracker }) {
   return (
-    <div style={{ display: 'grid', gap: 12, gridTemplateColumns: 'repeat(5, minmax(0,1fr))' }}>
+    <div
+      style={{
+        display: 'grid',
+        gap: 12,
+        gridTemplateColumns: 'repeat(5, minmax(0,1fr))',
+        width: '100%',
+        minWidth: 0,
+        boxSizing: 'border-box',
+      }}
+    >
       {STAGES.map((stage) => {
         const count = tracker?.[stage]?.length || 0;
         const c = colorFor(stageKey(stage));
@@ -36,6 +45,8 @@ function StageStrip({ tracker }) {
               display: 'grid',
               gap: 4,
               textAlign: 'center',
+              minWidth: 0,
+              boxSizing: 'border-box',
             }}
           >
             <div style={{ fontSize: 12, opacity: 0.9, whiteSpace: 'nowrap' }}>{stage}</div>
@@ -48,7 +59,6 @@ function StageStrip({ tracker }) {
 }
 
 export default function SeekerApplicationsPage() {
-
   const [tracker, setTracker] = useState({
     Pinned: [],
     Applied: [],
@@ -169,7 +179,6 @@ export default function SeekerApplicationsPage() {
     const item = tracker[fromStage].find((j) => j.id === id);
     if (!item) return;
 
-    // Optimistic move
     setTracker((prev) => ({
       ...prev,
       [fromStage]: prev[fromStage].filter((j) => j.id !== id),
@@ -288,7 +297,6 @@ export default function SeekerApplicationsPage() {
 
     const isInternalForgeApp = !!originalItem.jobId && originalStage !== 'Pinned';
 
-    // ── INTERNAL Forge application: notes only, in-place ──────────────────────
     if (isInternalForgeApp) {
       setTracker((prev) => ({
         ...prev,
@@ -320,10 +328,8 @@ export default function SeekerApplicationsPage() {
       return;
     }
 
-    // ── EXTERNAL (seeker-owned) cards ─────────────────────────────────────────
     const stageChanged = status !== originalStage;
 
-    // ✅ FIX #3: in-place update when stage hasn't changed — prevents ghost card
     setTracker((prev) => {
       const updatedItem = { ...originalItem, title, company, location, url, notes };
       if (!stageChanged) {
@@ -383,14 +389,12 @@ export default function SeekerApplicationsPage() {
 
         await fetch(`/api/seeker/applications/${id}`, { method: 'DELETE' });
 
-        // ✅ Remove the optimistic card (old id) and replace with real pinned card
         setTracker((prev) => ({
           ...prev,
           Pinned: [newPinnedCard, ...(prev.Pinned || []).filter((j) => j.id !== id)],
           [originalStage]: (prev[originalStage] || []).filter((j) => j.id !== id),
         }));
       } else {
-        // Standard stage-to-stage or same-stage update
         const res = await fetch(`/api/seeker/applications/${id}`, {
           method: 'PATCH',
           headers: { 'Content-Type': 'application/json' },
@@ -399,7 +403,6 @@ export default function SeekerApplicationsPage() {
         if (!res.ok) throw new Error('Update application failed');
         const { card } = await res.json();
 
-        // ✅ Reconcile with server response in the correct column
         setTracker((prev) => ({
           ...prev,
           [status]: prev[status].map((j) => (j.id === id ? { ...j, ...card } : j)),
@@ -407,7 +410,6 @@ export default function SeekerApplicationsPage() {
       }
     } catch (err) {
       console.error('Save edits error:', err);
-      // Revert to original state
       setTracker((prev) => {
         if (!stageChanged) {
           return {
@@ -439,6 +441,9 @@ export default function SeekerApplicationsPage() {
     boxShadow: '0 10px 24px rgba(0,0,0,0.12)',
     backdropFilter: 'blur(10px)',
     WebkitBackdropFilter: 'blur(10px)',
+    boxSizing: 'border-box',
+    width: '100%',
+    minWidth: 0,
   };
 
   const WHITE_CARD = {
@@ -446,17 +451,24 @@ export default function SeekerApplicationsPage() {
     border: '1px solid rgba(0,0,0,0.08)',
     borderRadius: 12,
     boxShadow: '0 2px 10px rgba(0,0,0,0.08)',
+    boxSizing: 'border-box',
+    width: '100%',
+    minWidth: 0,
   };
 
   const PAGE_GLASS_WRAP = {
     ...GLASS,
     padding: 16,
-    margin: '12px 0 0', // ✅ matches HeaderBox gap so spacing is even: title→KPI = KPI→kanban
+    margin: '12px 0 0',
     width: '100%',
+    minWidth: 0,
+    maxWidth: '100%',
+    boxSizing: 'border-box',
+    overflowX: 'hidden',
   };
 
   const HeaderBox = (
-    <div style={{ display: 'grid', gap: 12 }}>
+    <div style={{ display: 'grid', gap: 12, width: '100%', minWidth: 0 }}>
       <section style={{ ...GLASS, padding: 16, textAlign: 'center' }}>
         <h1 style={{ margin: 0, color: '#FF7043', fontSize: 24, fontWeight: 800 }}>
           Applications
@@ -465,15 +477,13 @@ export default function SeekerApplicationsPage() {
           Track your job search across stages, keep notes, and move roles forward.
         </p>
       </section>
-      {/* ✅ KPI strip lives in header slot — constrained to center column, never spans right rail */}
+
       <section style={{ ...WHITE_CARD, padding: '28px 16px' }}>
         <StageStrip tracker={tracker} />
       </section>
     </div>
   );
 
-  // ✅ FIX #2: formInitial now includes locked + isRecruiterControlled
-  // so ApplicationForm's isReadOnlyInternal fires correctly for internal cards
   const formInitial = useMemo(() => {
     if (formMode === 'edit' && jobToEdit) {
       return {
@@ -487,8 +497,8 @@ export default function SeekerApplicationsPage() {
         status: jobToEdit.stage,
         originalStage: jobToEdit.stage,
         jobId: jobToEdit.job.jobId || null,
-        locked: jobToEdit.job.locked ?? false,                            // ✅ ADDED
-        isRecruiterControlled: jobToEdit.job.isRecruiterControlled ?? false, // ✅ ADDED
+        locked: jobToEdit.job.locked ?? false,
+        isRecruiterControlled: jobToEdit.job.isRecruiterControlled ?? false,
       };
     }
 
@@ -520,7 +530,7 @@ export default function SeekerApplicationsPage() {
       title="Applications | ForgeTomorrow"
       header={HeaderBox}
       right={<RightRailPlacementManager surfaceId="applications" />}
-      rightTopOnly  // ✅ KPI strip (header area) stays contained; kanban board spans full content+right width
+      rightTopOnly
       activeNav="jobs"
     >
       <div style={PAGE_GLASS_WRAP}>
@@ -541,10 +551,13 @@ export default function SeekerApplicationsPage() {
                   backgroundColor: '#FF7043',
                   color: 'white',
                   border: 'none',
-                  padding: '8px 12px',
+                  padding: '10px 14px',
                   borderRadius: 8,
                   fontWeight: 700,
                   cursor: 'pointer',
+                  width: 'auto',
+                  maxWidth: '100%',
+                  alignSelf: 'flex-start',
                 }}
               >
                 + Add Application
