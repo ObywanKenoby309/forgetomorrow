@@ -4,7 +4,7 @@ import ApplicationCard from './ApplicationCard';
 import { colorFor } from '@/components/seeker/dashboard/seekerColors';
 import {
   DndContext,
-  pointerWithin, // ✅ CHANGED: was closestCorners
+  pointerWithin,
   KeyboardSensor,
   PointerSensor,
   TouchSensor,
@@ -19,7 +19,7 @@ import {
   verticalListSortingStrategy,
   useSortable,
 } from '@dnd-kit/sortable';
-import { snapCenterToCursor } from '@dnd-kit/modifiers'; // ✅ NEW: keeps overlay under cursor
+import { snapCenterToCursor } from '@dnd-kit/modifiers';
 
 const STAGES = ['Pinned', 'Applied', 'Interviewing', 'Offers', 'Closed Out'];
 
@@ -92,7 +92,6 @@ export default function ApplicationsBoard({
   const [activeId, setActiveId] = useState(null);
   const [activeSize, setActiveSize] = useState(null);
 
-  // ✅ NEW: mobile-only active stage
   const [isMobile, setIsMobile] = useState(false);
   const [mobileStage, setMobileStage] = useState('Pinned');
 
@@ -123,6 +122,7 @@ export default function ApplicationsBoard({
     boxShadow: '0 2px 6px rgba(0,0,0,0.06)',
     width: '100%',
     boxSizing: 'border-box',
+    overflow: 'hidden',
   };
 
   const columnStyle = {
@@ -130,7 +130,7 @@ export default function ApplicationsBoard({
     borderRadius: 12,
     padding: compact ? 6 : 8,
     boxShadow: '0 2px 6px rgba(0,0,0,0.06)',
-    minHeight: '300px',
+    minHeight: isMobile ? '220px' : '300px',
     position: 'relative',
     height: '100%',
   };
@@ -181,7 +181,7 @@ export default function ApplicationsBoard({
           display: 'flex',
           alignItems: isMobile ? 'stretch' : 'center',
           justifyContent: 'space-between',
-          gap: 12,
+          gap: isMobile ? 10 : 12,
           marginBottom: compact ? 8 : 12,
           flexWrap: 'wrap',
           flexDirection: isMobile ? 'column' : 'row',
@@ -191,7 +191,7 @@ export default function ApplicationsBoard({
           style={{
             display: 'flex',
             alignItems: isMobile ? 'stretch' : 'center',
-            gap: 12,
+            gap: isMobile ? 10 : 12,
             flex: '1 1 auto',
             minWidth: isMobile ? 0 : 240,
             flexDirection: isMobile ? 'column' : 'row',
@@ -211,45 +211,57 @@ export default function ApplicationsBoard({
         <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>{actions}</div>
       </div>
 
-      {/* ✅ NEW: mobile stage tabs */}
       {isMobile && (
         <div
           style={{
-            display: 'flex',
-            gap: 8,
             overflowX: 'auto',
-            paddingBottom: 8,
-            marginBottom: compact ? 8 : 12,
+            overflowY: 'hidden',
             WebkitOverflowScrolling: 'touch',
+            paddingBottom: 6,
+            marginBottom: compact ? 8 : 10,
+            marginRight: -8,
+            paddingRight: 24,
+            scrollbarWidth: 'none',
+            msOverflowStyle: 'none',
           }}
         >
-          {STAGES.map((stage) => {
-            const c = colorFor(stageKey(stage));
-            const isActive = mobileStage === stage;
-            const count = (stagesData[stage] || []).filter(Boolean).length;
+          <div
+            style={{
+              display: 'inline-flex',
+              gap: 8,
+              minWidth: 'max-content',
+              paddingRight: 24,
+            }}
+          >
+            {STAGES.map((stage) => {
+              const c = colorFor(stageKey(stage));
+              const isActive = mobileStage === stage;
+              const count = (stagesData[stage] || []).filter(Boolean).length;
 
-            return (
-              <button
-                key={stage}
-                type="button"
-                onClick={() => setMobileStage(stage)}
-                style={{
-                  borderRadius: 999,
-                  border: `1px solid ${c.solid}`,
-                  background: isActive ? c.bg : '#fff',
-                  color: c.text,
-                  padding: '8px 12px',
-                  fontWeight: 700,
-                  whiteSpace: 'nowrap',
-                  cursor: 'pointer',
-                  boxShadow: isActive ? '0 2px 8px rgba(0,0,0,0.08)' : 'none',
-                  flex: '0 0 auto',
-                }}
-              >
-                {stage} {count}
-              </button>
-            );
-          })}
+              return (
+                <button
+                  key={stage}
+                  type="button"
+                  onClick={() => setMobileStage(stage)}
+                  style={{
+                    borderRadius: 999,
+                    border: `1px solid ${c.solid}`,
+                    background: isActive ? c.bg : '#fff',
+                    color: c.text,
+                    padding: '10px 16px',
+                    fontWeight: 800,
+                    fontSize: 14,
+                    whiteSpace: 'nowrap',
+                    cursor: 'pointer',
+                    boxShadow: isActive ? '0 2px 8px rgba(0,0,0,0.08)' : 'none',
+                    flex: '0 0 auto',
+                  }}
+                >
+                  {stage} {count}
+                </button>
+              );
+            })}
+          </div>
         </div>
       )}
 
@@ -295,7 +307,7 @@ export default function ApplicationsBoard({
                     alignItems: 'center',
                     justifyContent: 'center',
                     gap: 8,
-                    padding: '6px 6px',
+                    padding: isMobile ? '8px 10px' : '6px 6px',
                     borderRadius: 999,
                     background: c.bg,
                     color: c.text,
@@ -332,7 +344,7 @@ export default function ApplicationsBoard({
                         color: '#90A4AE',
                         fontSize: compact ? 12 : 14,
                         textAlign: 'center',
-                        padding: '80px 0',
+                        padding: isMobile ? '56px 0' : '80px 0',
                       }}
                     >
                       No items. Drop here.
