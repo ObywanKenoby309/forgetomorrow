@@ -236,24 +236,31 @@ export default function ApplicationsBoard({
       {isMobile && (
         <div
           style={{
+            width: '100%',
+            maxWidth: '100%',
             overflowX: 'auto',
             overflowY: 'hidden',
             WebkitOverflowScrolling: 'touch',
             paddingBottom: 6,
             marginBottom: compact ? 8 : 10,
-            paddingRight: 12,
+            boxSizing: 'border-box',
             scrollbarWidth: 'none',
             msOverflowStyle: 'none',
+            scrollSnapType: 'x proximity',
           }}
         >
           <div
-  style={{
-    display: 'flex',
-    gap: 8,
-    width: '100%',
-    overflowX: 'auto'
-  }}
->
+            style={{
+              display: 'inline-grid',
+              gridAutoFlow: 'column',
+              gridAutoColumns: 'max-content',
+              gap: 8,
+              width: 'max-content',
+              minWidth: '100%',
+              boxSizing: 'border-box',
+              paddingRight: 8,
+            }}
+          >
             {STAGES.map((stage) => {
               const c = colorFor(stageKey(stage));
               const isActive = mobileStage === stage;
@@ -275,7 +282,7 @@ export default function ApplicationsBoard({
                     whiteSpace: 'nowrap',
                     cursor: 'pointer',
                     boxShadow: isActive ? '0 2px 8px rgba(0,0,0,0.08)' : 'none',
-                    flex: '0 0 auto',
+                    scrollSnapAlign: 'start',
                   }}
                 >
                   {stage} {count}
