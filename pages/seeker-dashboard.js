@@ -1,5 +1,5 @@
 // pages/seeker-dashboard.js
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import Head from 'next/head';
 import Link from 'next/link';
 import { useRouter } from 'next/router';
@@ -11,8 +11,6 @@ import KpiRow from '@/components/seeker/dashboard/KpiRow';
 import ApplicationsOverTime from '@/components/seeker/dashboard/ApplicationsOverTime';
 import RightRailPlacementManager from '@/components/ads/RightRailPlacementManager';
 import { colorFor } from '@/components/seeker/dashboard/seekerColors';
-
-// ✅ Shared greeting helper — same lib used by Recruiter + Coaching dashboards
 import { getTimeGreeting } from '@/lib/dashboardGreeting';
 
 // ─── ISO week helpers ─────────────────────────────────────────────────────────
@@ -73,6 +71,80 @@ const WHITE_CARD = {
 const GAP = 16;
 const RIGHT_COL_WIDTH = 280;
 
+// ─── Job Carousel (Recommended + Pinned) ─────────────────────────────────────
+function JobCarousel({ withChrome }) {
+  const SLIDES = ['recommended', 'pinned'];
+  const LABELS = { recommended: 'New Matches', pinned: 'Your Next Yes' };
+  const LINKS  = { recommended: withChrome('/seeker/jobs'), pinned: withChrome('/seeker/pinned-jobs') };
+
+  const [index, setIndex] = useState(0);
+  const [paused, setPaused] = useState(false);
+  const timerRef = useRef(null);
+
+  const startTimer = () => {
+    clearInterval(timerRef.current);
+    timerRef.current = setInterval(() => {
+      setIndex(i => (i + 1) % SLIDES.length);
+    }, 5000);
+  };
+
+  useEffect(() => {
+    if (!paused) startTimer();
+    else clearInterval(timerRef.current);
+    return () => clearInterval(timerRef.current);
+  }, [paused]);
+
+  // Touch swipe
+  const touchStart = useRef(null);
+  const handleTouchStart = (e) => { touchStart.current = e.touches[0].clientX; setPaused(true); };
+  const handleTouchEnd = (e) => {
+    if (touchStart.current === null) return;
+    const diff = touchStart.current - e.changedTouches[0].clientX;
+    if (Math.abs(diff) > 40) setIndex(i => diff > 0 ? (i + 1) % SLIDES.length : (i - 1 + SLIDES.length) % SLIDES.length);
+    touchStart.current = null;
+  };
+
+  const active = SLIDES[index];
+
+  return (
+    <section style={{ ...GLASS, padding: 14 }}>
+      {/* Header row */}
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 10 }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+          <span style={{ fontSize: 14, fontWeight: 800, color: '#FF7043' }}>{LABELS[active]}</span>
+          {/* Dot indicators */}
+          <div style={{ display: 'flex', gap: 4 }}>
+            {SLIDES.map((s, i) => (
+              <button key={s} onClick={() => { setIndex(i); setPaused(true); }}
+                style={{ width: i === index ? 16 : 6, height: 6, borderRadius: 999, border: 'none', cursor: 'pointer', padding: 0,
+                  background: i === index ? '#FF7043' : 'rgba(255,112,67,0.25)',
+                  transition: 'all 200ms ease' }} />
+            ))}
+          </div>
+        </div>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+          <button onClick={() => setPaused(p => !p)}
+            style={{ fontSize: 11, fontWeight: 700, color: '#90A4AE', background: 'none',
+              border: '1px solid rgba(0,0,0,0.10)', borderRadius: 999, padding: '3px 8px', cursor: 'pointer' }}>
+            {paused ? '▶ Play' : '⏸ Pause'}
+          </button>
+          <Link href={LINKS[active]}
+            style={{ fontSize: 11, fontWeight: 700, color: '#FF7043', textDecoration: 'none' }}>
+            All →
+          </Link>
+        </div>
+      </div>
+
+      {/* Slide content */}
+      <div style={{ ...WHITE_CARD, padding: 12, minHeight: 120 }}
+        onTouchStart={handleTouchStart}
+        onTouchEnd={handleTouchEnd}>
+        {active === 'recommended' ? <RecommendedJobsPreview /> : <PinnedJobsPreview />}
+      </div>
+    </section>
+  );
+}
+
 // ─── Desktop Action Tile ──────────────────────────────────────────────────────
 function ActionTile({ title, emptyText, items, href, withChrome, style }) {
   const list = Array.isArray(items) ? items : [];
@@ -122,31 +194,23 @@ function MobileActionTile({ title, items, emptyText, href, icon }) {
         {icon}
       </div>
       <div style={{ flex: 1, minWidth: 0 }}>
-        <div style={{ fontSize: 13, fontWeight: 800, color: hasItems ? '#112033' : '#90A4AE' }}>
-          {title}
-        </div>
+        <div style={{ fontSize: 13, fontWeight: 800, color: hasItems ? '#112033' : '#90A4AE' }}>{title}</div>
         <div style={{ fontSize: 12, marginTop: 2, color: hasItems ? '#546E7A' : '#B0BEC5',
           overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
           {hasItems ? (items[0].title || 'View item') : emptyText}
         </div>
       </div>
       {hasItems ? (
-        <div style={{
-          minWidth: 28, height: 28, borderRadius: 999, flexShrink: 0,
-          background: '#FF7043', color: 'white',
-          display: 'flex', alignItems: 'center', justifyContent: 'center',
-          fontSize: 13, fontWeight: 900,
-          boxShadow: '0 4px 10px rgba(255,112,67,0.40)',
-        }}>
+        <div style={{ minWidth: 28, height: 28, borderRadius: 999, flexShrink: 0,
+          background: '#FF7043', color: 'white', display: 'flex', alignItems: 'center',
+          justifyContent: 'center', fontSize: 13, fontWeight: 900,
+          boxShadow: '0 4px 10px rgba(255,112,67,0.40)' }}>
           {items.length}
         </div>
       ) : (
-        <div style={{
-          width: 24, height: 24, borderRadius: 999, flexShrink: 0,
-          background: 'rgba(0,0,0,0.04)',
-          display: 'flex', alignItems: 'center', justifyContent: 'center',
-          fontSize: 14, color: '#B0BEC5',
-        }}>
+        <div style={{ width: 24, height: 24, borderRadius: 999, flexShrink: 0,
+          background: 'rgba(0,0,0,0.04)', display: 'flex', alignItems: 'center',
+          justifyContent: 'center', fontSize: 14, color: '#B0BEC5' }}>
           ✓
         </div>
       )}
@@ -202,16 +266,15 @@ function SeekerActionCenterSection({ scope, withChrome, glassStyle, isMobile }) 
   }, [items]);
 
   const tiles = [
-    { key: 'messages',     title: 'New Messages',        emptyText: 'No unread items.',           href: withChrome(`/action-center?scope=${scope}`), icon: '💬', items: buckets.messages     },
-    { key: 'applications', title: 'Application Updates', emptyText: 'No application updates.',    href: withChrome(`/action-center?scope=${scope}`), icon: '📋', items: buckets.applications },
-    { key: 'calendar',     title: 'Interview Invites',   emptyText: 'No calendar updates.',       href: withChrome(`/action-center?scope=${scope}`), icon: '📅', items: buckets.calendar     },
-    { key: 'jobs',         title: 'Job Matches',         emptyText: 'No new job updates.',        href: withChrome(`/action-center?scope=${scope}`), icon: '🎯', items: buckets.jobs         },
+    { key: 'messages',     title: 'New Messages',        emptyText: 'No unread items.',        href: withChrome(`/action-center?scope=${scope}`), icon: '💬', items: buckets.messages     },
+    { key: 'applications', title: 'Application Updates', emptyText: 'No application updates.', href: withChrome(`/action-center?scope=${scope}`), icon: '📋', items: buckets.applications },
+    { key: 'calendar',     title: 'Interview Invites',   emptyText: 'No calendar updates.',    href: withChrome(`/action-center?scope=${scope}`), icon: '📅', items: buckets.calendar     },
+    { key: 'jobs',         title: 'Job Matches',         emptyText: 'No new job updates.',     href: withChrome(`/action-center?scope=${scope}`), icon: '🎯', items: buckets.jobs         },
   ];
 
   const sortedTiles = [...tiles].sort((a, b) => (b.items.length > 0 ? 1 : 0) - (a.items.length > 0 ? 1 : 0));
   const totalActions = tiles.reduce((sum, t) => sum + t.items.length, 0);
 
-  // ── Mobile ──
   if (isMobile) {
     if (initialLoading) {
       return (
@@ -252,7 +315,7 @@ function SeekerActionCenterSection({ scope, withChrome, glassStyle, isMobile }) 
     );
   }
 
-  // ── Desktop ──
+  // Desktop
   return (
     <section className="rounded-xl p-5" style={glassStyle || {}}>
       <div className="flex items-center justify-between gap-3 mb-4">
@@ -302,7 +365,6 @@ export default function SeekerDashboard() {
   const [weeks, setWeeks] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
 
-  // SSR-safe mobile detection — null until client confirms
   const [isMobile, setIsMobile] = useState(null);
   useEffect(() => {
     const check = () => setIsMobile(window.innerWidth < 1024);
@@ -350,7 +412,6 @@ export default function SeekerDashboard() {
     return () => { cancelled = true; };
   }, []);
 
-  // Hold render until both data and mobile detection are ready
   if (isLoading || isMobile === null) {
     return (
       <>
@@ -395,7 +456,7 @@ export default function SeekerDashboard() {
                 glassStyle={GLASS} isMobile={true} />
             </section>
 
-            {/* 3. KPI strip — seekerColors applied, numbers centered */}
+            {/* 3. KPI strip — seekerColors, centered */}
             <section style={{ ...GLASS, padding: '12px 0 12px 12px', overflow: 'hidden' }}>
               <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between',
                 paddingRight: 12, marginBottom: 10 }}>
@@ -408,37 +469,28 @@ export default function SeekerDashboard() {
               <div style={{ display: 'flex', gap: 8, overflowX: 'auto', paddingRight: 12,
                 paddingBottom: 4, scrollbarWidth: 'none', msOverflowStyle: 'none' }}>
                 {kpi && [
-                  { label: 'Pinned',       value: kpi.pinned,       href: withChrome('/seeker/applications'), colorKey: 'pinned'      },
-                  { label: 'Applied',      value: kpi.applied,      href: withChrome('/seeker/applications'), colorKey: 'applied'      },
-                  { label: 'Interviewing', value: kpi.interviewing, href: withChrome('/seeker/applications'), colorKey: 'interviewing' },
-                  { label: 'Offers',       value: kpi.offers,       href: withChrome('/seeker/applications'), colorKey: 'offers'       },
-                  { label: 'Closed Out',   value: kpi.closedOut,    href: withChrome('/seeker/applications'), colorKey: 'info'         },
+                  { label: 'Pinned',       value: kpi.pinned,       href: withChrome('/seeker/pinned-jobs'),    colorKey: 'neutral'      },
+                  { label: 'Applied',      value: kpi.applied,      href: withChrome('/seeker/applications'),   colorKey: 'applied'      },
+                  { label: 'Interviewing', value: kpi.interviewing, href: withChrome('/seeker/applications'),   colorKey: 'interviewing' },
+                  { label: 'Offers',       value: kpi.offers,       href: withChrome('/seeker/applications'),   colorKey: 'offers'       },
+                  { label: 'Closed Out',   value: kpi.closedOut,    href: withChrome('/seeker/applications'),   colorKey: 'info'         },
                 ].map(stat => {
                   const c = colorFor(stat.colorKey);
                   return (
                     <Link key={stat.label} href={stat.href} style={{
                       flexShrink: 0, width: 100,
-                      background: c.bg,
-                      border: `1px solid ${c.solid}`,
-                      borderRadius: 10,
-                      padding: '10px 12px',
-                      textDecoration: 'none',
-                      display: 'block',
-                      textAlign: 'center',
+                      background: c.bg, border: `1px solid ${c.solid}`,
+                      borderRadius: 10, padding: '10px 12px',
+                      textDecoration: 'none', display: 'block', textAlign: 'center',
                     }}>
-                      <div style={{
-                        fontSize: 10, fontWeight: 700, color: c.text,
+                      <div style={{ fontSize: 10, fontWeight: 700, color: c.text,
                         textTransform: 'uppercase', letterSpacing: '0.04em',
                         overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
-                        textAlign: 'center',
-                      }}>
+                        textAlign: 'center' }}>
                         {stat.label}
                       </div>
-                      <div style={{
-                        fontSize: 24, fontWeight: 900, color: c.text,
-                        lineHeight: 1.1, marginTop: 4,
-                        textAlign: 'center', width: '100%',
-                      }}>
+                      <div style={{ fontSize: 24, fontWeight: 900, color: c.text,
+                        lineHeight: 1.1, marginTop: 4, textAlign: 'center', width: '100%' }}>
                         {stat.value}
                       </div>
                     </Link>
@@ -447,51 +499,106 @@ export default function SeekerDashboard() {
               </div>
             </section>
 
-            {/* 4. Recommended Jobs */}
-            <section style={{ ...GLASS, padding: 16 }}>
-              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>
-                <span style={{ fontSize: 15, fontWeight: 800, color: '#FF7043' }}>Recommended Jobs</span>
+            {/* 4. Activity — right after KPIs, motivational */}
+            <section style={{ ...GLASS, padding: 14 }}>
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 10 }}>
+                <span style={{ fontSize: 13, fontWeight: 800, color: '#112033' }}>Activity</span>
+                <Link href={withChrome('/seeker/applications')}
+                  style={{ fontSize: 11, fontWeight: 700, color: '#FF7043', textDecoration: 'none' }}>
+                  History →
+                </Link>
               </div>
-              <div style={{ ...WHITE_CARD, padding: 12 }}>
-                <RecommendedJobsPreview />
+              <div style={{ ...WHITE_CARD, padding: 10 }}>
+                <ApplicationsOverTime weeks={weeks} withChrome={withChrome} />
               </div>
             </section>
 
-            {/* 5. Pinned Jobs + Activity — side by side */}
+            {/* 5. Carousel — Recommended Jobs ↔ Pinned Jobs */}
+            <JobCarousel withChrome={withChrome} />
+
+            {/* 6. Pipeline + Next Steps — recruiter-style small side-by-side cards */}
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: GAP }}>
+
+              {/* Pipeline snapshot */}
               <section style={{ ...GLASS, padding: 14 }}>
-                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 10 }}>
-                  <span style={{ fontSize: 13, fontWeight: 800, color: '#FF7043' }}>Your Next Yes</span>
-                  <Link href={withChrome('/seeker/pinned-jobs')}
+                <div style={{ display: 'flex', alignItems: 'center',
+                  justifyContent: 'space-between', marginBottom: 10 }}>
+                  <span style={{ fontSize: 13, fontWeight: 800, color: '#112033' }}>Pipeline</span>
+                  <Link href={withChrome('/seeker/applications')}
                     style={{ fontSize: 11, fontWeight: 700, color: '#FF7043', textDecoration: 'none' }}>
-                    All →
+                    Open →
                   </Link>
                 </div>
-                <div style={{ ...WHITE_CARD, padding: 10 }}>
-                  <PinnedJobsPreview />
+                <div style={{ display: 'grid', gap: 7 }}>
+                  {[
+                    { label: 'Applied',      value: kpi?.applied      ?? 0, colorKey: 'applied'      },
+                    { label: 'Interviewing', value: kpi?.interviewing ?? 0, colorKey: 'interviewing' },
+                    { label: 'Offers',       value: kpi?.offers       ?? 0, colorKey: 'offers'       },
+                    { label: 'Closed Out',   value: kpi?.closedOut    ?? 0, colorKey: 'info'         },
+                  ].map(row => {
+                    const c = colorFor(row.colorKey);
+                    return (
+                      <div key={row.label} style={{ display: 'flex', alignItems: 'center',
+                        justifyContent: 'space-between', gap: 6 }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
+                          <div style={{ width: 6, height: 6, borderRadius: 999,
+                            background: c.solid, flexShrink: 0 }} />
+                          <span style={{ fontSize: 11, color: '#37474F', lineHeight: 1.3 }}>{row.label}</span>
+                        </div>
+                        <span style={{ fontSize: 12, fontWeight: 800, color: c.text,
+                          background: c.bg, border: `1px solid ${c.solid}`,
+                          borderRadius: 999, padding: '1px 7px', flexShrink: 0 }}>
+                          {row.value}
+                        </span>
+                      </div>
+                    );
+                  })}
                 </div>
               </section>
+
+              {/* Next Steps */}
               <section style={{ ...GLASS, padding: 14 }}>
-                <div style={{ marginBottom: 10 }}>
-                  <span style={{ fontSize: 13, fontWeight: 800, color: '#FF7043' }}>Activity</span>
+                <div style={{ display: 'flex', alignItems: 'center',
+                  justifyContent: 'space-between', marginBottom: 10 }}>
+                  <span style={{ fontSize: 13, fontWeight: 800, color: '#112033' }}>Next Steps</span>
+                  <Link href={withChrome('/seeker/jobs')}
+                    style={{ fontSize: 11, fontWeight: 700, color: '#FF7043', textDecoration: 'none' }}>
+                    Jobs →
+                  </Link>
                 </div>
-                <div style={{ ...WHITE_CARD, padding: 10 }}>
-                  <ApplicationsOverTime weeks={weeks} withChrome={withChrome} />
+                <div style={{ display: 'grid', gap: 7 }}>
+                  {[
+                    'Follow up on apps',
+                    'Check new matches',
+                    'Update your profile',
+                    'Review interviews',
+                  ].map(item => (
+                    <div key={item} style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                      <div style={{ width: 6, height: 6, borderRadius: 999,
+                        background: '#FF7043', flexShrink: 0 }} />
+                      <span style={{ fontSize: 11, color: '#37474F', lineHeight: 1.3 }}>{item}</span>
+                    </div>
+                  ))}
                 </div>
               </section>
             </div>
 
-            {/* 6. Profile Performance */}
+            {/* 7. Profile Performance — health snapshot style */}
             <section style={{ ...GLASS, padding: 16 }}>
-              <div style={{ fontSize: 14, fontWeight: 800, color: '#FF7043', marginBottom: 10 }}>
-                Profile Performance
+              <div style={{ display: 'flex', alignItems: 'center',
+                justifyContent: 'space-between', marginBottom: 10 }}>
+                <span style={{ fontSize: 14, fontWeight: 800, color: '#112033' }}>Profile Health</span>
+                <Link href={withChrome('/seeker/profile')}
+                  style={{ fontSize: 11, fontWeight: 700, color: '#FF7043', textDecoration: 'none' }}>
+                  Full analytics →
+                </Link>
               </div>
               <div style={{ ...WHITE_CARD, padding: 12 }}>
                 <ProfilePerformanceTeaser />
               </div>
             </section>
 
-            {/* 7. Ad — lowest priority */}
+            {/* 8. Ad — lowest priority */}
             <section style={{ ...GLASS, padding: 12 }}>
               <div style={{ ...WHITE_CARD, padding: 16, minHeight: 100 }}>
                 <RightRailPlacementManager slot="right_rail_1" />
