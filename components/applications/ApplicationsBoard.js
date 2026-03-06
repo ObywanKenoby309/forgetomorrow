@@ -1,5 +1,5 @@
 // components/applications/ApplicationsBoard.js
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import ApplicationCard from './ApplicationCard';
 import { colorFor } from '@/components/seeker/dashboard/seekerColors';
 import {
@@ -92,11 +92,12 @@ export default function ApplicationsBoard({
 }) {
   const [activeId, setActiveId] = useState(null);
   const [activeSize, setActiveSize] = useState(null);
-
   const [isMobile, setIsMobile] = useState(false);
   const [mobileStage, setMobileStage] = useState('Pinned');
-
   const [touchStart, setTouchStart] = useState(null);
+
+  const chipRailRef = useRef(null);
+  const chipRefs = useRef({});
 
   useEffect(() => {
     const updateIsMobile = () => setIsMobile(window.innerWidth <= 768);
@@ -104,6 +105,25 @@ export default function ApplicationsBoard({
     window.addEventListener('resize', updateIsMobile);
     return () => window.removeEventListener('resize', updateIsMobile);
   }, []);
+
+  useEffect(() => {
+    if (!isMobile) return;
+
+    const rail = chipRailRef.current;
+    const chip = chipRefs.current[mobileStage];
+    if (!rail || !chip) return;
+
+    const railRect = rail.getBoundingClientRect();
+    const chipRect = chip.getBoundingClientRect();
+
+    const chipCenter = chip.offsetLeft + chipRect.width / 2;
+    const targetScrollLeft = chipCenter - railRect.width / 2;
+
+    rail.scrollTo({
+      left: Math.max(0, targetScrollLeft),
+      behavior: 'smooth',
+    });
+  }, [mobileStage, isMobile]);
 
   const sensors = useSensors(
     useSensor(PointerSensor, {
@@ -274,6 +294,9 @@ export default function ApplicationsBoard({
 
       {isMobile && (
         <div
+          ref={chipRailRef}
+          onTouchStart={handleMobileSwipeStart}
+          onTouchEnd={handleMobileSwipeEnd}
           style={{
             width: '100%',
             maxWidth: '100%',
@@ -286,6 +309,7 @@ export default function ApplicationsBoard({
             scrollbarWidth: 'none',
             msOverflowStyle: 'none',
             scrollSnapType: 'x proximity',
+            touchAction: 'pan-x',
           }}
         >
           <div
@@ -308,6 +332,9 @@ export default function ApplicationsBoard({
               return (
                 <button
                   key={stage}
+                  ref={(el) => {
+                    chipRefs.current[stage] = el;
+                  }}
                   type="button"
                   onClick={() => setMobileStage(stage)}
                   style={{
