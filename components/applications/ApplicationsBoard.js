@@ -1,5 +1,5 @@
 // components/applications/ApplicationsBoard.js
-import React, { useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import ApplicationCard from './ApplicationCard';
 import { colorFor } from '@/components/seeker/dashboard/seekerColors';
 import {
@@ -33,7 +33,7 @@ const stageKey = (stage) =>
   }[stage] || 'info');
 
 function SortableCard({ job, stage, onView, onEdit, onDelete }) {
-  if (!job || !job.id) return null; // Guard against undefined
+  if (!job || !job.id) return null;
 
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
     id: job.id,
@@ -42,7 +42,6 @@ function SortableCard({ job, stage, onView, onEdit, onDelete }) {
   const style = {
     transform: transform ? `translate3d(${transform.x}px, ${transform.y}px, 0)` : undefined,
     transition,
-    // With DragOverlay, hide the original while dragging so it doesn't "snap back" visually.
     opacity: isDragging ? 0 : 1,
     zIndex: isDragging ? 1 : 1,
     position: 'relative',
@@ -91,9 +90,18 @@ export default function ApplicationsBoard({
   leftActions = null,
 }) {
   const [activeId, setActiveId] = useState(null);
-
-  // ✅ NEW: lock overlay width/height to the original card so it doesn’t “jump” away from cursor
   const [activeSize, setActiveSize] = useState(null);
+
+  // ✅ NEW: mobile-only active stage
+  const [isMobile, setIsMobile] = useState(false);
+  const [mobileStage, setMobileStage] = useState('Pinned');
+
+  useEffect(() => {
+    const updateIsMobile = () => setIsMobile(window.innerWidth <= 768);
+    updateIsMobile();
+    window.addEventListener('resize', updateIsMobile);
+    return () => window.removeEventListener('resize', updateIsMobile);
+  }, []);
 
   const sensors = useSensors(
     useSensor(PointerSensor, {
@@ -127,11 +135,13 @@ export default function ApplicationsBoard({
     height: '100%',
   };
 
-  // ✅ Revert: do NOT force min widths (prevents pushing into right rail)
-  const gridTemplateColumns =
-    columns === 'auto'
+  const gridTemplateColumns = isMobile
+    ? '1fr'
+    : columns === 'auto'
       ? 'repeat(auto-fit, minmax(220px, 1fr))'
       : `repeat(${columns}, minmax(0, 1fr))`;
+
+  const visibleStages = isMobile ? [mobileStage] : STAGES;
 
   const activeMeta = useMemo(() => {
     if (!activeId) return { job: null, stage: null };
@@ -144,17 +154,14 @@ export default function ApplicationsBoard({
   const handleDragEnd = (event) => {
     const { active, over } = event;
 
-    // If dropped outside any droppable, do nothing -> it will return to original spot
     if (!over) return;
 
     const activeStage = STAGES.find((s) => stagesData[s]?.some((j) => j?.id === active.id));
     if (!activeStage) return;
 
-    // If dropped on a droppable column, over.id will be `${stage}-column`
     let overIdStr = String(over.id);
     let overStage = STAGES.find((s) => overIdStr === `${s}-column`);
 
-    // If dropped on a card, infer stage by card id
     if (!overStage) {
       overStage = STAGES.find((s) => stagesData[s]?.some((j) => j?.id === over.id));
     }
@@ -172,20 +179,22 @@ export default function ApplicationsBoard({
       <div
         style={{
           display: 'flex',
-          alignItems: 'center',
+          alignItems: isMobile ? 'stretch' : 'center',
           justifyContent: 'space-between',
           gap: 12,
           marginBottom: compact ? 8 : 12,
           flexWrap: 'wrap',
+          flexDirection: isMobile ? 'column' : 'row',
         }}
       >
         <div
           style={{
             display: 'flex',
-            alignItems: 'center',
+            alignItems: isMobile ? 'stretch' : 'center',
             gap: 12,
             flex: '1 1 auto',
-            minWidth: 240,
+            minWidth: isMobile ? 0 : 240,
+            flexDirection: isMobile ? 'column' : 'row',
           }}
         >
           <h2
@@ -202,14 +211,55 @@ export default function ApplicationsBoard({
         <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>{actions}</div>
       </div>
 
+      {/* ✅ NEW: mobile stage tabs */}
+      {isMobile && (
+        <div
+          style={{
+            display: 'flex',
+            gap: 8,
+            overflowX: 'auto',
+            paddingBottom: 8,
+            marginBottom: compact ? 8 : 12,
+            WebkitOverflowScrolling: 'touch',
+          }}
+        >
+          {STAGES.map((stage) => {
+            const c = colorFor(stageKey(stage));
+            const isActive = mobileStage === stage;
+            const count = (stagesData[stage] || []).filter(Boolean).length;
+
+            return (
+              <button
+                key={stage}
+                type="button"
+                onClick={() => setMobileStage(stage)}
+                style={{
+                  borderRadius: 999,
+                  border: `1px solid ${c.solid}`,
+                  background: isActive ? c.bg : '#fff',
+                  color: c.text,
+                  padding: '8px 12px',
+                  fontWeight: 700,
+                  whiteSpace: 'nowrap',
+                  cursor: 'pointer',
+                  boxShadow: isActive ? '0 2px 8px rgba(0,0,0,0.08)' : 'none',
+                  flex: '0 0 auto',
+                }}
+              >
+                {stage} {count}
+              </button>
+            );
+          })}
+        </div>
+      )}
+
       <DndContext
         sensors={sensors}
-        collisionDetection={pointerWithin} // ✅ CHANGED: cursor-based “over” target (prevents jumping)
-        modifiers={[snapCenterToCursor]} // ✅ NEW: keeps overlay under cursor while dragging
+        collisionDetection={pointerWithin}
+        modifiers={[snapCenterToCursor]}
         onDragStart={({ active }) => {
           setActiveId(active?.id ?? null);
 
-          // ✅ lock overlay size to the grabbed card’s initial rect
           const r = active?.rect?.current?.initial;
           if (r?.width && r?.height) setActiveSize({ width: r.width, height: r.height });
           else setActiveSize(null);
@@ -232,7 +282,7 @@ export default function ApplicationsBoard({
             width: '100%',
           }}
         >
-          {STAGES.map((stage) => {
+          {visibleStages.map((stage) => {
             const c = colorFor(stageKey(stage));
             const items = (stagesData[stage] || []).filter(Boolean);
             const columnId = `${stage}-column`;
