@@ -1,3 +1,4 @@
+// components/seeker/dashboard/seekerColors.js
 // Stage -> color mapping (KPI tiles, funnels, headers)
 export const seekerStageColors = {
   // Positive/neutral progression
