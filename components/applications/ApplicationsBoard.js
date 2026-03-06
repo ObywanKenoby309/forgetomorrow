@@ -206,9 +206,31 @@ export default function ApplicationsBoard({
           >
             {title}
           </h2>
-          {leftActions}
+
+          <div
+            style={{
+              display: 'flex',
+              width: isMobile ? '100%' : 'auto',
+              maxWidth: '100%',
+              minWidth: 0,
+            }}
+          >
+            {leftActions}
+          </div>
         </div>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>{actions}</div>
+
+        <div
+          style={{
+            display: 'flex',
+            alignItems: 'center',
+            gap: 12,
+            width: isMobile ? '100%' : 'auto',
+            maxWidth: '100%',
+            minWidth: 0,
+          }}
+        >
+          {actions}
+        </div>
       </div>
 
       {isMobile && (
@@ -219,8 +241,7 @@ export default function ApplicationsBoard({
             WebkitOverflowScrolling: 'touch',
             paddingBottom: 6,
             marginBottom: compact ? 8 : 10,
-            marginRight: -8,
-            paddingRight: 24,
+            paddingRight: 12,
             scrollbarWidth: 'none',
             msOverflowStyle: 'none',
           }}
@@ -230,7 +251,7 @@ export default function ApplicationsBoard({
               display: 'inline-flex',
               gap: 8,
               minWidth: 'max-content',
-              paddingRight: 24,
+              paddingRight: 12,
             }}
           >
             {STAGES.map((stage) => {
