@@ -247,13 +247,13 @@ export default function ApplicationsBoard({
           }}
         >
           <div
-            style={{
-              display: 'inline-flex',
-              gap: 8,
-              minWidth: 'max-content',
-              paddingRight: 12,
-            }}
-          >
+  style={{
+    display: 'flex',
+    gap: 8,
+    width: '100%',
+    overflowX: 'auto'
+  }}
+>
             {STAGES.map((stage) => {
               const c = colorFor(stageKey(stage));
               const isActive = mobileStage === stage;
