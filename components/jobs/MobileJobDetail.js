@@ -210,7 +210,7 @@ export default function MobileJobDetail({
     paddingTop: 20,
     paddingLeft: 16,
     paddingRight: 16,
-    paddingBottom: 110,
+    paddingBottom: 220,
     boxSizing: 'border-box',
     display: 'flex',
     flexDirection: 'column',
