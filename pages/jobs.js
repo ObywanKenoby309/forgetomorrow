@@ -73,11 +73,22 @@ function getJobStatus(job) {
   const raw = (job?.status || '').toString().trim();
   if (!raw) return 'Open';
   const upper = raw.toUpperCase();
-  if (upper === 'DRAFT')     return 'Draft';
-  if (upper === 'OPEN')      return 'Open';
+  if (upper === 'DRAFT')                                         return 'Draft';
+  if (upper === 'OPEN' || upper === 'PUBLISHED')                 return 'Open';
   if (upper === 'REVIEWING' || upper === 'REVIEWING APPLICANTS') return 'Reviewing';
-  if (upper === 'CLOSED')    return 'Closed';
-  return raw;
+  if (upper === 'CLOSED' || upper === 'EXPIRED')                 return 'Closed';
+  return 'Open';
+}
+
+function stripMarkdown(text) {
+  if (!text) return '';
+  return text
+    .replace(/#{1,6}\s*/g, '')
+    .replace(/\*\*(.*?)\*\*/g, '$1')
+    .replace(/\*(.*?)\*/g, '$1')
+    .replace(/\[(.*?)\]\(.*?\)/g, '$1')
+    .replace(/`{1,3}(.*?)`{1,3}/g, '$1')
+    .trim();
 }
 
 // ──────────────────────────────────────────────────────────────
@@ -381,7 +392,7 @@ function OldJobsUI() {
   // ── MOBILE LAYOUT ──────────────────────────────────────────
   if (isMobile) {
     return (
-      <div style={{ display: 'flex', flexDirection: 'column', gap: 12, padding: '0 4px' }}>
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 12, padding: '0 4px 100px' }}>
         <header style={{ ...GLASS, padding: '16px 18px', textAlign: 'center' }}>
           <h1 style={{ color: '#FF7043', fontSize: 22, fontWeight: 800, margin: 0 }}>Job Listings</h1>
           <p style={{ margin: '6px 0 0', color: '#546E7A', fontSize: 13 }}>{filteredJobs.length} open roles</p>
@@ -550,7 +561,7 @@ function OldJobsUI() {
                 <div style={{ flex: 1, overflowY: 'auto', paddingRight: 4, display: 'flex', flexDirection: 'column', gap: 12 }}>
                   {pagedJobs.map(job => {
                     const rawDesc      = job.description || '';
-                    const cleanDesc    = rawDesc.replace(/<[^>]*>/g, '');
+                    const cleanDesc    = stripMarkdown(rawDesc.replace(/<[^>]*>/g, ''));
                     const snippet      = cleanDesc.length > 160 ? `${cleanDesc.slice(0, 160)}…` : cleanDesc;
                     const location     = job.location || '';
                     const locationType = inferLocationType(location);
@@ -604,8 +615,8 @@ function OldJobsUI() {
                           <div style={{ marginTop: 4, display: 'flex', flexWrap: 'wrap', gap: 8, fontSize: 13, color: subtleColor }}>
                             <span>{location || 'Location not provided'}</span>
                             {locationType && <span style={{ padding: '2px 8px', borderRadius: 999, border: '1px solid rgba(207,216,220,0.7)', fontSize: 12, backgroundColor: isDarkCard ? 'rgba(38,50,56,0.8)' : 'transparent' }}>{locationType}</span>}
-                            {displaySource && <span style={{ padding: '2px 8px', borderRadius: 999, border: '1px solid rgba(207,216,220,0.7)', fontSize: 12, backgroundColor: isDarkCard ? 'rgba(38,50,56,0.8)' : 'transparent' }}>Source: {displaySource}</span>}
-                            {status && status !== 'Open' && <span style={{ padding: '2px 8px', borderRadius: 999, border: '1px solid #FFCC80', fontSize: 12, backgroundColor: status === 'Reviewing' ? '#FFF3E0' : '#ECEFF1', color: status === 'Reviewing' ? '#E65100' : '#455A64' }}>{status === 'Reviewing' ? 'Reviewing applicants' : status}</span>}
+                            {internal && displaySource && <span style={{ padding: '2px 8px', borderRadius: 999, border: '1px solid rgba(207,216,220,0.7)', fontSize: 12, backgroundColor: isDarkCard ? 'rgba(38,50,56,0.8)' : 'transparent' }}>Source: {displaySource}</span>}
+                            {(status === 'Reviewing' || status === 'Closed') && <span style={{ padding: '2px 8px', borderRadius: 999, border: '1px solid #FFCC80', fontSize: 12, backgroundColor: status === 'Reviewing' ? '#FFF3E0' : '#ECEFF1', color: status === 'Reviewing' ? '#E65100' : '#455A64' }}>{status === 'Reviewing' ? 'Reviewing applicants' : 'Closed'}</span>}
                           </div>
                         </CardHeader>
                         <CardContent>
@@ -650,7 +661,7 @@ function OldJobsUI() {
                       <CardContent style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
                         <div style={{ flex: 1, overflowY: 'auto', paddingRight: 4, maxHeight: '58vh' }}>
                           {(() => {
-                            const raw = (selectedJob.description || '').replace(/<[^>]*>/g, '');
+                            const raw = stripMarkdown((selectedJob.description || '').replace(/<[^>]*>/g, ''));
                             const paragraphs = raw.split(/\n\s*\n/).map(p => p.trim()).filter(p => p.length > 0);
                             if (paragraphs.length === 0) return <p style={{ margin: 0, color: detailBodyColor, fontSize: 14, lineHeight: 1.6 }}>No description provided.</p>;
                             return paragraphs.map((para, idx) => <p key={idx} style={{ margin: idx === 0 ? '0 0 10px' : '10px 0 0', color: detailBodyColor, fontSize: 14, lineHeight: 1.6 }}>{para}</p>);
@@ -913,7 +924,7 @@ function NewJobsUI() {
 
   if (isMobile) {
     return (
-      <div style={{ display: 'flex', flexDirection: 'column', gap: 12, padding: '0 4px' }}>
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 12, padding: '0 4px 100px' }}>
         <JobsPageHeader totalCount={filteredJobs.length} />
         <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
           <input type="text" value={keyword} onChange={e => setKeyword(e.target.value)} placeholder="Search jobs…"

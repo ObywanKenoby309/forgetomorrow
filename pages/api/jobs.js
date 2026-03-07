@@ -196,13 +196,13 @@ export default async function handler(req, res) {
     }
   }
 
-  // 2) Internal recruiter jobs from Prisma
+  // 2) Internal recruiter jobs from Prisma (exclude cron user — those are scraped jobs handled above)
+  const CRON_USER_ID = 'cmiwa2op6000cbvz0f2s8eafb';
   try {
     const prismaJobs = await prisma.job.findMany({
       where: {
-        status: {
-          not: 'Draft',
-        },
+        status: { not: 'Draft' },
+        userId: { not: CRON_USER_ID },
       },
       orderBy: {
         createdAt: 'desc',
