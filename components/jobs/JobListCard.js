@@ -73,17 +73,19 @@ export default function JobListCard({ job, isSelected, onClick, getJobStatus, is
       aria-label={`${job.title} at ${job.company || 'Unknown company'}`}
       onClick={onClick}
       style={{
-        cursor: 'pointer',
-        border: cardBorder,
-        background: cardBackground,
-        boxShadow: cardShadow,
-        borderRadius: 14,
-        padding: '14px 16px',
-        position: 'relative',
-        overflow: 'hidden',
-        transition: 'box-shadow 150ms ease, border-color 150ms ease',
-        minHeight: 100,
-      }}
+  cursor: 'pointer',
+  border: cardBorder,
+  background: cardBackground,
+  boxShadow: cardShadow,
+  borderRadius: 14,
+  padding: '14px 16px',
+  position: 'relative',
+  overflow: 'hidden',
+  transition: 'box-shadow 150ms ease, border-color 150ms ease',
+  minHeight: 100,
+  maxWidth: '100%',
+  boxSizing: 'border-box',
+}}
     >
       {/* Selected indicator bar */}
       {isSelected && !isDarkCard && (

@@ -392,7 +392,7 @@ function OldJobsUI() {
   // ── MOBILE LAYOUT ──────────────────────────────────────────
   if (isMobile) {
     return (
-      <div style={{ display: 'flex', flexDirection: 'column', gap: 12, padding: '0 4px 100px' }}>
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 12, padding: '0 4px 100px', width: '100%', boxSizing: 'border-box', overflowX: 'hidden' }}>
         <header style={{ ...GLASS, padding: '16px 18px', textAlign: 'center' }}>
           <h1 style={{ color: '#FF7043', fontSize: 22, fontWeight: 800, margin: 0 }}>Job Listings</h1>
           <p style={{ margin: '6px 0 0', color: '#546E7A', fontSize: 13 }}>{filteredJobs.length} open roles</p>
