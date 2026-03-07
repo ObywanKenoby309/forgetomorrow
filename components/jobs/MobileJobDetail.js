@@ -318,11 +318,12 @@ export default function MobileJobDetail({
     <div
   style={{
     display: 'grid',
-    gridTemplateColumns: isPaidUser ? '1fr 1fr 1fr' : '1fr 1fr',
-    gap: 8,
-    width: 'min(480px, 100%)',
-    margin: '0 auto',
-    alignItems: 'center',
+    gridTemplateColumns: isPaidUser ? 'auto auto auto' : 'auto auto',
+gap: 8,
+width: 'fit-content',
+margin: '0 auto',
+justifyContent: 'center',
+alignItems: 'center',
   }}
 >
             <button
