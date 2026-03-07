@@ -300,31 +300,31 @@ export default function MobileJobDetail({
       {/* ── Fixed 3-button action row above mobile toolbar ── */}
 {status === 'Open' && (
   <div
-    style={{
-      position: 'fixed',
-      left: 0,
-      right: 0,
-      bottom: 68, // raised 6px
-      background: 'rgba(244,246,248,0.96)',
-      backdropFilter: 'blur(12px)',
-      WebkitBackdropFilter: 'blur(12px)',
-      borderTop: '1px solid rgba(0,0,0,0.08)',
-      padding: '10px 12px',
-      zIndex: 61,
-    }}
-  >
+  style={{
+    position: 'fixed',
+    left: 0,
+    right: 0,
+    bottom: 68,
+    background: 'rgba(244,246,248,0.96)',
+    backdropFilter: 'blur(12px)',
+    WebkitBackdropFilter: 'blur(12px)',
+    borderTop: '1px solid rgba(0,0,0,0.08)',
+    padding: '10px 12px',
+    zIndex: 61,
+    display: 'flex',
+    justifyContent: 'center',
+  }}
+>
     <div
-      style={{
-        display: 'grid',
-        gridTemplateColumns: isPaidUser ? '1fr 1fr 1fr' : '1fr 1fr',
-        gap: 8,
-        width: '100%',
-        maxWidth: 480,
-        margin: '0 auto',
-        alignItems: 'center',
-        justifyContent: 'center',
-      }}
-    >
+  style={{
+    display: 'grid',
+    gridTemplateColumns: isPaidUser ? '1fr 1fr 1fr' : '1fr 1fr',
+    gap: 8,
+    width: 'min(480px, 100%)',
+    margin: '0 auto',
+    alignItems: 'center',
+  }}
+>
             <button
               type="button"
               onClick={() => onApply(job)}

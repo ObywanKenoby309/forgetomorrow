@@ -407,11 +407,52 @@ function OldJobsUI() {
             placeholder="Search jobs…"
             style={{ flex: 1, padding: '10px 14px', borderRadius: 12, border: '1px solid rgba(255,255,255,0.30)', background: 'rgba(255,255,255,0.80)', backdropFilter: 'blur(8px)', WebkitBackdropFilter: 'blur(8px)', fontSize: 14, color: '#263238', outline: 'none', boxShadow: '0 2px 8px rgba(0,0,0,0.08)' }}
           />
-          <button type="button" onClick={() => setFilterDrawerOpen(true)}
-            style={{ position: 'relative', padding: '10px 14px', borderRadius: 12, background: activeFilterCount > 0 ? '#FF7043' : 'rgba(255,255,255,0.80)', border: '1px solid rgba(255,255,255,0.30)', color: activeFilterCount > 0 ? 'white' : '#546E7A', fontWeight: 700, fontSize: 13, cursor: 'pointer', boxShadow: '0 2px 8px rgba(0,0,0,0.08)', backdropFilter: 'blur(8px)', WebkitBackdropFilter: 'blur(8px)', whiteSpace: 'nowrap' }}>
-            Filters
-            {activeFilterCount > 0 && <span style={{ position: 'absolute', top: -6, right: -6, background: 'white', color: '#FF7043', borderRadius: 999, fontSize: 10, fontWeight: 900, padding: '1px 5px', border: '1.5px solid #FF7043', lineHeight: 1.4 }}>{activeFilterCount}</span>}
-          </button>
+          <button
+  type="button"
+  onClick={() => setFilterDrawerOpen(true)}
+  aria-label="Filter jobs"
+  style={{
+    position: 'relative',
+    width: 42,
+    height: 42,
+    borderRadius: 12,
+    background: activeFilterCount > 0 ? '#FF7043' : 'rgba(255,255,255,0.80)',
+    border: '1px solid rgba(255,255,255,0.30)',
+    color: activeFilterCount > 0 ? 'white' : '#546E7A',
+    fontWeight: 700,
+    fontSize: 16,
+    cursor: 'pointer',
+    boxShadow: '0 2px 8px rgba(0,0,0,0.08)',
+    backdropFilter: 'blur(8px)',
+    WebkitBackdropFilter: 'blur(8px)',
+    flexShrink: 0,
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    padding: 0,
+  }}
+>
+  ⚲
+  {activeFilterCount > 0 && (
+    <span
+      style={{
+        position: 'absolute',
+        top: -6,
+        right: -6,
+        background: 'white',
+        color: '#FF7043',
+        borderRadius: 999,
+        fontSize: 10,
+        fontWeight: 900,
+        padding: '1px 5px',
+        border: '1.5px solid #FF7043',
+        lineHeight: 1.4,
+      }}
+    >
+      {activeFilterCount}
+    </span>
+  )}
+</button>
           <button type="button" onClick={applyFilters}
             style={{ padding: '10px 16px', borderRadius: 12, background: '#FF7043', color: 'white', border: 'none', fontWeight: 700, fontSize: 13, cursor: 'pointer', whiteSpace: 'nowrap', boxShadow: '0 2px 8px rgba(255,112,67,0.35)' }}>
             Search
