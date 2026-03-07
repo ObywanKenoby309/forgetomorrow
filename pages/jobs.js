@@ -13,6 +13,7 @@ import ATSResultPanel from '../components/seeker/ATSResultPanel';
 import JobActions from '../components/jobs/JobActions';
 import { normalizeJobText } from '../lib/jd/ingest';
 import RightRailPlacementManager from '@/components/ads/RightRailPlacementManager';
+import { isInternalJob, getJobTier, getDisplaySource } from '../lib/jobs/jobSource';
 
 // ── New UI components ─────────────────────────────────────────
 import JobsPageHeader     from '../components/jobs/JobsPageHeader';
@@ -77,38 +78,6 @@ function getJobStatus(job) {
   if (upper === 'REVIEWING' || upper === 'REVIEWING APPLICANTS') return 'Reviewing';
   if (upper === 'CLOSED')    return 'Closed';
   return raw;
-}
-
-function isInternalJob(job) {
-  if (!job) return false;
-
-  // cron-imported jobs are always external
-  if (job.userId === 'cmiwa2op6000cbvz0f2s8eafb') return false;
-
-  if (job.accountKey) return true;
-
-  const origin = (job.origin || '').toLowerCase();
-  const source = (job.source || '').toLowerCase();
-
-  return (
-    origin === 'internal' ||
-    source === 'internal' ||
-    source === 'forge' ||
-    source === 'forge recruiter' ||
-    source === 'forgetomorrow' ||
-    source === 'forgetomorrow recruiter'
-  );
-}
-
-function getJobTier(job) {
-  if (!job) return 'external';
-  const rawTier = job.tier;
-  if (rawTier === 'ft-official' || rawTier === 'partner' || rawTier === 'external') return rawTier;
-  const internal = isInternalJob(job);
-  if (!internal) return 'external';
-  const company = (job.company || '').trim().toLowerCase();
-  if (company === 'forgetomorrow') return 'ft-official';
-  return 'partner';
 }
 
 // ──────────────────────────────────────────────────────────────
@@ -355,7 +324,7 @@ function OldJobsUI() {
   const selectedStatus           = selectedJob ? getJobStatus(selectedJob) : null;
   const hasAppliedToSelected     = !!selectedJob && appliedJobs.some(j => j && j.id === selectedJob.id);
   const isSelectedInternal       = isInternalJob(selectedJob);
-  const selectedSourceLabel      = isSelectedInternal ? 'Forge recruiter' : 'External';
+  const selectedSourceLabel      = getDisplaySource(selectedJob);
   const selectedTier             = getJobTier(selectedJob);
   const selectedIsFtOfficial     = selectedTier === 'ft-official';
   const selectedIsPartner        = selectedTier === 'partner';
@@ -443,7 +412,7 @@ function OldJobsUI() {
                     const locationType = inferLocationType(location);
                     const status       = getJobStatus(job);
                     const internal     = isInternalJob(job);
-                    const displaySource = internal ? 'Forge recruiter' : 'External';
+                    const displaySource = getDisplaySource(job);
                     let postedLabel = 'Date not provided';
                     if (job.publishedat) { const d = new Date(job.publishedat); if (!Number.isNaN(d.getTime())) postedLabel = d.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }); }
                     const isSelected   = selectedJob && selectedJob.id === job.id;
