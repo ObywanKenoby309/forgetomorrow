@@ -24,7 +24,6 @@ export default function MobileJobDetail({
   onApply,
   onResumeAlign,
 }) {
-  // Lock body scroll while detail is open
   useEffect(() => {
     document.body.style.overflow = 'hidden';
     return () => { document.body.style.overflow = ''; };
@@ -79,7 +78,6 @@ export default function MobileJobDetail({
           padding: '12px 16px 14px',
         }}
       >
-        {/* Back button */}
         <button
           type="button"
           onClick={onBack}
@@ -102,7 +100,6 @@ export default function MobileJobDetail({
           Back to jobs
         </button>
 
-        {/* Tier chip */}
         {chipLabel && (
           <div
             style={{
@@ -156,7 +153,6 @@ export default function MobileJobDetail({
           {job.company}{job.location ? ` — ${job.location}` : ''}
         </div>
 
-        {/* Tag pills */}
         <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
           {inferLocationType(job.location || '') && (
             <span
@@ -217,7 +213,6 @@ export default function MobileJobDetail({
           gap: 16,
         }}
       >
-        {/* Description */}
         <div>
           {paragraphs.length === 0 ? (
             <p
@@ -248,7 +243,6 @@ export default function MobileJobDetail({
           )}
         </div>
 
-        {/* Status banners */}
         {status === 'Reviewing' && (
           <div
             style={{
@@ -293,51 +287,51 @@ export default function MobileJobDetail({
           </div>
         )}
 
-        {/* Bottom padding so action row doesn't overlap content */}
         <div style={{ height: 140 }} />
       </div>
 
       {/* ── Fixed 3-button action row above mobile toolbar ── */}
-{status === 'Open' && (
-  <div
-  style={{
-    position: 'fixed',
-    left: 0,
-    right: 0,
-    bottom: 68,
-    background: 'rgba(244,246,248,0.96)',
-    backdropFilter: 'blur(12px)',
-    WebkitBackdropFilter: 'blur(12px)',
-    borderTop: '1px solid rgba(0,0,0,0.08)',
-    padding: '10px 12px',
-    zIndex: 61,
-    display: 'flex',
-    justifyContent: 'center',
-  }}
->
-    <div
-  style={{
-    display: 'grid',
-    gridTemplateColumns: isPaidUser ? 'auto auto auto' : 'auto auto',
-gap: 8,
-width: 'fit-content',
-margin: '0 auto',
-justifyContent: 'center',
-alignItems: 'center',
-  }}
->
+      {status === 'Open' && (
+        <div
+          style={{
+            position: 'fixed',
+            left: 0,
+            right: 0,
+            bottom: 68,
+            background: 'rgba(244,246,248,0.96)',
+            backdropFilter: 'blur(12px)',
+            WebkitBackdropFilter: 'blur(12px)',
+            borderTop: '1px solid rgba(0,0,0,0.08)',
+            padding: '10px 12px',
+            zIndex: 61,
+            display: 'flex',
+            justifyContent: 'center',
+          }}
+        >
+          <div
+            style={{
+              display: 'grid',
+              gridTemplateColumns: isPaidUser ? '1fr 1.35fr 72px' : '1fr 72px',
+              gap: 10,
+              width: '100%',
+              maxWidth: 560,
+              margin: '0 auto',
+              alignItems: 'center',
+            }}
+          >
             <button
               type="button"
               onClick={() => onApply(job)}
               style={{
+                width: '100%',
                 minWidth: 0,
-                padding: '12px 10px',
+                padding: '14px 12px',
                 background: '#FF7043',
                 color: 'white',
                 border: 'none',
-                borderRadius: 12,
+                borderRadius: 14,
                 fontWeight: 800,
-                fontSize: 13,
+                fontSize: 14,
                 cursor: 'pointer',
                 boxShadow: '0 4px 14px rgba(255,112,67,0.32)',
                 letterSpacing: '-0.1px',
@@ -352,14 +346,15 @@ alignItems: 'center',
                 type="button"
                 onClick={() => onResumeAlign(job)}
                 style={{
+                  width: '100%',
                   minWidth: 0,
-                  padding: '12px 10px',
+                  padding: '14px 12px',
                   background: 'white',
                   color: '#FF7043',
                   border: '1.5px solid #FF7043',
-                  borderRadius: 12,
+                  borderRadius: 14,
                   fontWeight: 700,
-                  fontSize: 13,
+                  fontSize: 14,
                   cursor: 'pointer',
                   whiteSpace: 'nowrap',
                 }}
@@ -370,16 +365,20 @@ alignItems: 'center',
 
             <div
               style={{
-                minWidth: 0,
+                width: 72,
+                height: 56,
                 display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
               }}
             >
               <div
                 style={{
-                  width: '100%',
+                  transform: 'scale(1.45)',
+                  transformOrigin: 'center',
                   display: 'flex',
-                  alignItems: 'stretch',
-                  justifyContent: 'stretch',
+                  alignItems: 'center',
+                  justifyContent: 'center',
                 }}
               >
                 <PinnedJobToggleButton
