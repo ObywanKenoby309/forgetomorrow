@@ -287,7 +287,7 @@ export default function MobileJobDetail({
           </div>
         )}
 
-        <div style={{ height: 140 }} />
+        <div style={{ height: 240 }} />
       </div>
 
       {/* ── Fixed 3-button action row above mobile toolbar ── */}
