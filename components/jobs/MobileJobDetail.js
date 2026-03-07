@@ -210,7 +210,7 @@ export default function MobileJobDetail({
     paddingTop: 20,
     paddingLeft: 16,
     paddingRight: 16,
-    paddingBottom: 420,
+    paddingBottom: 110,
     boxSizing: 'border-box',
     display: 'flex',
     flexDirection: 'column',
@@ -291,7 +291,6 @@ export default function MobileJobDetail({
           </div>
         )}
 
-        <div style={{ height: 300 }} />
       </div>
 
       {/* ── Fixed 3-button action row above mobile toolbar ── */}
