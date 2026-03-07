@@ -204,15 +204,19 @@ export default function MobileJobDetail({
 
       {/* ── Scrollable body ── */}
       <div
-        style={{
-          flex: 1,
-          overflowY: 'auto',
-          padding: '20px 16px',
-          display: 'flex',
-          flexDirection: 'column',
-          gap: 16,
-        }}
-      >
+  style={{
+    flex: 1,
+    overflowY: 'auto',
+    paddingTop: 20,
+    paddingLeft: 16,
+    paddingRight: 16,
+    paddingBottom: 420,
+    boxSizing: 'border-box',
+    display: 'flex',
+    flexDirection: 'column',
+    gap: 16,
+  }}
+>
         <div>
           {paragraphs.length === 0 ? (
             <p
@@ -287,7 +291,7 @@ export default function MobileJobDetail({
           </div>
         )}
 
-        <div style={{ height: 240 }} />
+        <div style={{ height: 300 }} />
       </div>
 
       {/* ── Fixed 3-button action row above mobile toolbar ── */}
