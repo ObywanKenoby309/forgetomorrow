@@ -18,7 +18,6 @@ function getPool() {
     pool = new Pool({
       connectionString,
       ssl: {
-        // Use SSL but ignore self-signed cert issue
         rejectUnauthorized: false,
       },
     });
@@ -35,7 +34,7 @@ function toPublishedIso(v) {
 }
 
 function mapInternalJob(job) {
-  const published = job.publishedat || job.createdAt || null;
+  const published = job.publishedat || job.publishedAt || job.createdAt || null;
   const publishedIso = toPublishedIso(published);
 
   const companyName = (job.company || '').trim();
@@ -50,11 +49,16 @@ function mapInternalJob(job) {
     company: job.company,
     location: job.location,
     description: job.description,
-    url: null,
+    url: job.url || null,
     salary: job.compensation || null,
-    tags: null,
+    tags: job.tags || null,
 
-    source: 'Forge recruiter',
+    // Pass through the real classification fields so jobSource.js can do its job
+    source: job.source || 'internal',
+    userId: job.userId || null,
+    accountKey: job.accountKey || null,
+    externalId: job.externalId || null,
+
     origin: 'internal',
     status: job.status || 'Open',
     publishedat: publishedIso,
@@ -66,7 +70,7 @@ function mapInternalJob(job) {
 }
 
 function mapExternalRow(row) {
-  const created = row.createdAt || row.createdat || row.created_at || null;
+  const created = row.publishedat || row.publishedAt || row.createdAt || row.createdat || row.created_at || null;
   const publishedIso = toPublishedIso(created);
 
   return {
@@ -75,16 +79,21 @@ function mapExternalRow(row) {
     company: row.company,
     location: row.location,
     description: row.description,
-    url: null,
-    salary: null,
-    tags: null,
+    url: row.url || null,
+    salary: row.salary || null,
+    tags: row.tags || null,
 
-    source: 'External',
+    // Pass through the real classification fields so jobSource.js can do its job
+    source: row.source || null,
+    userId: row.userId || row.userid || null,
+    accountKey: row.accountKey || row.accountkey || null,
+    externalId: row.externalId || row.externalid || null,
+
     origin: 'external',
-    status: 'Open',
+    status: row.status || 'Open',
     publishedat: publishedIso,
 
-    tier: 'external',
+    tier: null,
     logoUrl: null,
   };
 }
@@ -97,7 +106,7 @@ export default async function handler(req, res) {
   const dbPool = getPool();
 
   // ──────────────────────────────────────────────────────────────
-  // ✅ NEW: single-job fetch for resume builder: /api/jobs?jobId=...
+  // Single-job fetch for resume builder: /api/jobs?jobId=...
   // ──────────────────────────────────────────────────────────────
   const jobIdParam = req.query?.jobId;
   const jobId = Array.isArray(jobIdParam) ? jobIdParam[0] : jobIdParam;
@@ -112,7 +121,6 @@ export default async function handler(req, res) {
         return res.status(200).json({ job: mapInternalJob(internal) });
       }
     } catch (e) {
-      // ignore and fall through to external
       console.error('[jobs] findUnique internal job error:', e);
     }
 
@@ -124,12 +132,10 @@ export default async function handler(req, res) {
           const result = await client.query(
             `
             SELECT
-              id,
-              title,
-              company,
-              location,
-              description,
-              "createdAt"
+              id, title, company, location, description,
+              url, salary, tags, source, status,
+              "userId", "accountKey", "externalId",
+              "publishedAt", "publishedat", "createdAt"
             FROM jobs
             WHERE id::text = $1
             LIMIT 1;
@@ -153,12 +159,12 @@ export default async function handler(req, res) {
   }
 
   // ──────────────────────────────────────────────────────────────
-  // Existing list behavior: GET /api/jobs (merged feed)
+  // List behavior: GET /api/jobs (merged feed)
   // ──────────────────────────────────────────────────────────────
   let externalJobs = [];
   let internalJobs = [];
 
-  // 1) External jobs from Supabase
+  // 1) External jobs from Supabase — now selecting all classification fields
   if (!dbPool) {
     console.warn('[jobs] DATABASE_URL not set; skipping external jobs');
   } else {
@@ -168,15 +174,14 @@ export default async function handler(req, res) {
         const result = await client.query(
           `
           SELECT
-            id,
-            title,
-            company,
-            location,
-            description,
-            "createdAt"
+            id, title, company, location, description,
+            url, salary, tags, source, status,
+            "userId", "accountKey", "externalId",
+            "publishedAt", "publishedat", "createdAt"
           FROM jobs
+          WHERE status != 'expired'
           ORDER BY
-            "createdAt" DESC NULLS LAST,
+            COALESCE("publishedat", "publishedAt", "createdAt") DESC NULLS LAST,
             id DESC
           LIMIT 200;
           `
@@ -194,7 +199,6 @@ export default async function handler(req, res) {
   // 2) Internal recruiter jobs from Prisma
   try {
     const prismaJobs = await prisma.job.findMany({
-      // hide Drafts from the public feed
       where: {
         status: {
           not: 'Draft',

@@ -4,7 +4,7 @@
 // Everyone else sees the original layout untouched.
 // When you're happy: delete OldJobsUI and remove the router.query check.
 // ────────────────────────────────────────────────────────────────────
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useCallback } from 'react';
 import { useRouter } from 'next/router';
 import { JobPipelineProvider, useJobPipeline } from '../context/JobPipelineContext';
 import { Card, CardHeader, CardTitle, CardContent, CardSubtle } from '../components/ui/Card';
@@ -37,7 +37,7 @@ function useIsMobile(bp = 768) {
   return val;
 }
 
-// ── Shared helpers (used by both UIs) ────────────────────────
+// ── Shared helpers ────────────────────────────────────────────
 const GLASS = {
   borderRadius: 14,
   border: '1px solid rgba(255,255,255,0.22)',
@@ -81,21 +81,23 @@ function getJobStatus(job) {
 }
 
 // ──────────────────────────────────────────────────────────────
-// OLD UI — your original, 100% untouched
+// OLD UI — with mobile support + all 3 bug fixes
 // ──────────────────────────────────────────────────────────────
 function OldJobsUI() {
-  const router = useRouter();
-  const chrome = String(router.query.chrome || '').toLowerCase();
+  const router   = useRouter();
+  const isMobile = useIsMobile(768);
+  const chrome   = String(router.query.chrome || '').toLowerCase();
   const withChrome = (path) =>
     chrome ? `${path}${path.includes('?') ? '&' : '?'}chrome=${chrome}` : path;
 
   const { viewedJobs, appliedJobs, addViewedJob, addAppliedJob } = useJobPipeline();
 
-  const [jobs, setJobs]           = useState([]);
-  const [loading, setLoading]     = useState(true);
-  const [applyOpen, setApplyOpen] = useState(false);
-  const [applyJob, setApplyJob]   = useState(null);
-  const [selectedJob, setSelectedJob] = useState(null);
+  const [jobs, setJobs]                         = useState([]);
+  const [loading, setLoading]                   = useState(true);
+  const [selectedJob, setSelectedJob]           = useState(null);
+  const [userHasSelected, setUserHasSelected]   = useState(false); // FIX #3
+  const [mobileDetailOpen, setMobileDetailOpen] = useState(false);
+  const [filterDrawerOpen, setFilterDrawerOpen] = useState(false);
 
   const [atsLoading, setAtsLoading]     = useState(false);
   const [atsError, setAtsError]         = useState(null);
@@ -103,16 +105,43 @@ function OldJobsUI() {
   const [atsPanelOpen, setAtsPanelOpen] = useState(false);
   const [atsJob, setAtsJob]             = useState(null);
 
+  // FIX #1: draft state (what user types) vs applied state (what filters jobs)
+  const [draftKeyword, setDraftKeyword]           = useState('');
+  const [draftCompany, setDraftCompany]           = useState('');
+  const [draftLocation, setDraftLocation]         = useState('');
+  const [draftLocationType, setDraftLocationType] = useState('');
+  const [draftDays, setDraftDays]                 = useState('');
+  const [draftSource, setDraftSource]             = useState('');
+
   const [keyword, setKeyword]                       = useState('');
   const [companyFilter, setCompanyFilter]           = useState('');
   const [locationFilter, setLocationFilter]         = useState('');
   const [locationTypeFilter, setLocationTypeFilter] = useState('');
   const [daysFilter, setDaysFilter]                 = useState('');
   const [sourceFilter, setSourceFilter]             = useState('');
-  const [pageSize, setPageSize]                     = useState(20);
-  const [currentPage, setCurrentPage]               = useState(1);
-  const [pinnedIds, setPinnedIds]                   = useState(new Set());
+
+  const [pageSize, setPageSize]       = useState(20);
+  const [currentPage, setCurrentPage] = useState(1);
+  const [pinnedIds, setPinnedIds]     = useState(new Set());
   const isPaidUser = true;
+
+  const applyFilters = useCallback(() => {
+    setKeyword(draftKeyword);
+    setCompanyFilter(draftCompany);
+    setLocationFilter(draftLocation);
+    setLocationTypeFilter(draftLocationType);
+    setDaysFilter(draftDays);
+    setSourceFilter(draftSource);
+    setCurrentPage(1);
+  }, [draftKeyword, draftCompany, draftLocation, draftLocationType, draftDays, draftSource]);
+
+  const clearFilters = useCallback(() => {
+    setDraftKeyword(''); setDraftCompany(''); setDraftLocation('');
+    setDraftLocationType(''); setDraftDays(''); setDraftSource('');
+    setKeyword(''); setCompanyFilter(''); setLocationFilter('');
+    setLocationTypeFilter(''); setDaysFilter(''); setSourceFilter('');
+    setCurrentPage(1);
+  }, []);
 
   const saveDraft = async (key, content) => {
     try {
@@ -129,14 +158,12 @@ function OldJobsUI() {
       try {
         const res  = await fetch('/api/jobs');
         const data = await res.json();
-        const list = (data && data.jobs) || [];
-        setJobs(list);
-        if (list.length > 0) setSelectedJob(null);
+        setJobs((data && data.jobs) || []);
       } catch (err) { console.error(err); }
       finally { setLoading(false); }
     }
     fetchJobs();
-  }, [addViewedJob]);
+  }, []);
 
   useEffect(() => {
     let cancelled = false;
@@ -175,7 +202,7 @@ function OldJobsUI() {
       });
     } catch (err) {
       console.error('[Jobs] togglePin error', err);
-      alert(err.message || (currentlyPinned ? 'Could not unpin this job. Please try again.' : 'Could not pin this job. Please try again.'));
+      alert(err.message || (currentlyPinned ? 'Could not unpin this job.' : 'Could not pin this job.'));
     }
   };
 
@@ -202,7 +229,7 @@ function OldJobsUI() {
         job: { id: job.id, title: job.title, company: job.company, location: job.location, description: raw },
         ats: { score: null, summary: '', recommendations: [] },
       });
-    } catch (err) { console.error('[Jobs] Failed to store job context for Resume Alignment', err); }
+    } catch (err) { console.error('[Jobs] Failed to store job context', err); }
     if (typeof window !== 'undefined')
       window.location.href = withChrome(`/resume/create?from=match&jobId=${job.id}&copyJD=true`);
   };
@@ -247,16 +274,19 @@ function OldJobsUI() {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ key: 'forge-ats-pack', content: pack }),
       });
-      if (!res.ok) console.warn('[Jobs] failed to write match pack to DB drafts', res.status);
-    } catch (err) { console.error('[Jobs] failed to write match pack to DB drafts', err); }
+      if (!res.ok) console.warn('[Jobs] failed to write match pack', res.status);
+    } catch (err) { console.error('[Jobs] failed to write match pack', err); }
     if (typeof window !== 'undefined')
       window.location.href = withChrome(`/resume/create?from=match&jobId=${atsJob.id}&copyJD=true`);
   };
 
+  // FIX #3: set userHasSelected on explicit click
   const handleSelectJob = (job) => {
+    setUserHasSelected(true);
     setSelectedJob(job);
     addViewedJob(job);
     setAtsResult(null); setAtsError(null); setAtsPanelOpen(false);
+    if (isMobile) setMobileDetailOpen(true);
   };
 
   const normalizedKeyword  = keyword.trim().toLowerCase();
@@ -306,13 +336,15 @@ function OldJobsUI() {
   const startIndex = (currentPage - 1) * pageSize;
   const pagedJobs  = filteredJobs.slice(startIndex, startIndex + pageSize);
 
+  // FIX #3: only auto-select first job if user hasn't manually chosen one
   useEffect(() => {
+    if (userHasSelected) return;
     if (!selectedJob && pagedJobs.length > 0) { setSelectedJob(pagedJobs[0]); return; }
     if (selectedJob) {
       const stillVisible = pagedJobs.some(j => j && j.id === selectedJob.id);
       if (!stillVisible) setSelectedJob(pagedJobs.length > 0 ? pagedJobs[0] : null);
     }
-  }, [pagedJobs, selectedJob]);
+  }, [pagedJobs]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const pageNumbers = [];
   const windowSize  = 3;
@@ -320,15 +352,15 @@ function OldJobsUI() {
   const endPage     = Math.min(totalPages, currentPage + windowSize);
   for (let p = startPage; p <= endPage; p++) pageNumbers.push(p);
 
-  const recentViewed             = viewedJobs.slice(-6).reverse();
-  const selectedStatus           = selectedJob ? getJobStatus(selectedJob) : null;
-  const hasAppliedToSelected     = !!selectedJob && appliedJobs.some(j => j && j.id === selectedJob.id);
-  const isSelectedInternal       = isInternalJob(selectedJob);
-  const selectedSourceLabel      = getDisplaySource(selectedJob);
-  const selectedTier             = getJobTier(selectedJob);
-  const selectedIsFtOfficial     = selectedTier === 'ft-official';
-  const selectedIsPartner        = selectedTier === 'partner';
-  const selectedIsDark           = selectedIsFtOfficial || selectedIsPartner;
+  const recentViewed         = viewedJobs.slice(-6).reverse();
+  const selectedStatus       = selectedJob ? getJobStatus(selectedJob) : null;
+  const hasAppliedToSelected = !!selectedJob && appliedJobs.some(j => j && j.id === selectedJob.id);
+  const isSelectedInternal   = isInternalJob(selectedJob);
+  const selectedSourceLabel  = getDisplaySource(selectedJob);
+  const selectedTier         = getJobTier(selectedJob);
+  const selectedIsFtOfficial = selectedTier === 'ft-official';
+  const selectedIsPartner    = selectedTier === 'partner';
+  const selectedIsDark       = selectedIsFtOfficial || selectedIsPartner;
   const selectedDetailBorder     = selectedIsFtOfficial ? '2px solid #FF7043' : selectedIsPartner ? '1px solid rgba(17,32,51,0.35)' : '1px solid #E0E0E0';
   const selectedDetailBackground = selectedIsFtOfficial ? 'linear-gradient(135deg, #FF7043, #FF8A65)' : selectedIsPartner ? 'linear-gradient(135deg, #0B1724, #112033)' : '#FFFFFF';
   const detailTitleColor         = selectedIsDark ? '#FFFFFF' : '#263238';
@@ -336,7 +368,9 @@ function OldJobsUI() {
   const detailBodyColor          = selectedIsDark ? '#ECEFF1' : '#37474F';
   const selectedChipLabel        = selectedIsFtOfficial ? 'ForgeTomorrow official posting' : isSelectedInternal ? 'ForgeTomorrow recruiter posting' : null;
 
-  if (loading) {
+  const activeFilterCount = [draftKeyword, draftCompany, draftLocation, draftLocationType, draftDays, draftSource].filter(Boolean).length;
+
+  if (loading || isMobile === null) {
     return (
       <div className="px-4 md:px-8 pb-10">
         <p style={{ padding: 40, textAlign: 'center' }} aria-busy="true">Loading jobs...</p>
@@ -344,6 +378,104 @@ function OldJobsUI() {
     );
   }
 
+  // ── MOBILE LAYOUT ──────────────────────────────────────────
+  if (isMobile) {
+    return (
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 12, padding: '0 4px' }}>
+        <header style={{ ...GLASS, padding: '16px 18px', textAlign: 'center' }}>
+          <h1 style={{ color: '#FF7043', fontSize: 22, fontWeight: 800, margin: 0 }}>Job Listings</h1>
+          <p style={{ margin: '6px 0 0', color: '#546E7A', fontSize: 13 }}>{filteredJobs.length} open roles</p>
+        </header>
+
+        {/* Search + Filter + Search button */}
+        <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+          <input
+            type="text" value={draftKeyword}
+            onChange={e => setDraftKeyword(e.target.value)}
+            onKeyDown={e => e.key === 'Enter' && applyFilters()}
+            placeholder="Search jobs…"
+            style={{ flex: 1, padding: '10px 14px', borderRadius: 12, border: '1px solid rgba(255,255,255,0.30)', background: 'rgba(255,255,255,0.80)', backdropFilter: 'blur(8px)', WebkitBackdropFilter: 'blur(8px)', fontSize: 14, color: '#263238', outline: 'none', boxShadow: '0 2px 8px rgba(0,0,0,0.08)' }}
+          />
+          <button type="button" onClick={() => setFilterDrawerOpen(true)}
+            style={{ position: 'relative', padding: '10px 14px', borderRadius: 12, background: activeFilterCount > 0 ? '#FF7043' : 'rgba(255,255,255,0.80)', border: '1px solid rgba(255,255,255,0.30)', color: activeFilterCount > 0 ? 'white' : '#546E7A', fontWeight: 700, fontSize: 13, cursor: 'pointer', boxShadow: '0 2px 8px rgba(0,0,0,0.08)', backdropFilter: 'blur(8px)', WebkitBackdropFilter: 'blur(8px)', whiteSpace: 'nowrap' }}>
+            Filters
+            {activeFilterCount > 0 && <span style={{ position: 'absolute', top: -6, right: -6, background: 'white', color: '#FF7043', borderRadius: 999, fontSize: 10, fontWeight: 900, padding: '1px 5px', border: '1.5px solid #FF7043', lineHeight: 1.4 }}>{activeFilterCount}</span>}
+          </button>
+          <button type="button" onClick={applyFilters}
+            style={{ padding: '10px 16px', borderRadius: 12, background: '#FF7043', color: 'white', border: 'none', fontWeight: 700, fontSize: 13, cursor: 'pointer', whiteSpace: 'nowrap', boxShadow: '0 2px 8px rgba(255,112,67,0.35)' }}>
+            Search
+          </button>
+        </div>
+
+        <div style={{ fontSize: 12, color: '#78909C', fontWeight: 600, paddingLeft: 2 }}>
+          Showing {filteredJobs.length === 0 ? 0 : startIndex + 1}–{Math.min(startIndex + pageSize, filteredJobs.length)} of {filteredJobs.length} jobs
+        </div>
+
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+          {pagedJobs.map(job => (
+            <JobListCard key={job.id} job={job} isSelected={selectedJob?.id === job.id} onClick={() => handleSelectJob(job)} getJobStatus={getJobStatus} isInternalJob={isInternalJob} getJobTier={getJobTier} />
+          ))}
+          {pagedJobs.length === 0 && (
+            <div style={{ textAlign: 'center', padding: '40px 20px', background: 'rgba(255,255,255,0.70)', borderRadius: 14, color: '#78909C', fontSize: 14 }}>No jobs match your filters.</div>
+          )}
+        </div>
+
+        {filteredJobs.length > pageSize && (
+          <nav style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', gap: 6, fontSize: 12, flexWrap: 'wrap', paddingTop: 4 }}>
+            <button type="button" disabled={currentPage === 1} onClick={() => setCurrentPage(1)} style={{ padding: '4px 8px', borderRadius: 6, border: '1px solid #CFD8DC', background: currentPage === 1 ? '#ECEFF1' : 'white', cursor: currentPage === 1 ? 'default' : 'pointer', fontWeight: 500 }}>First</button>
+            {pageNumbers.map(p => <button key={p} type="button" onClick={() => setCurrentPage(p)} style={{ padding: '4px 8px', borderRadius: 6, border: '1px solid #CFD8DC', background: p === currentPage ? '#FF7043' : 'white', color: p === currentPage ? 'white' : '#263238', cursor: p === currentPage ? 'default' : 'pointer', fontWeight: p === currentPage ? 700 : 500 }}>{p}</button>)}
+            <button type="button" disabled={currentPage === totalPages} onClick={() => setCurrentPage(totalPages)} style={{ padding: '4px 8px', borderRadius: 6, border: '1px solid #CFD8DC', background: currentPage === totalPages ? '#ECEFF1' : 'white', cursor: currentPage === totalPages ? 'default' : 'pointer', fontWeight: 500 }}>Last</button>
+          </nav>
+        )}
+
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, marginTop: 4 }}>
+          <Card as="section">
+            <CardHeader><CardTitle style={{ color: '#FF7043', fontSize: 16 }}>Recently Viewed</CardTitle></CardHeader>
+            <CardContent>{recentViewed.length === 0 ? <p style={{ color: '#999', fontStyle: 'italic', margin: 0, fontSize: 13 }}>None yet.</p> : <ul style={{ margin: 0, paddingLeft: 16, fontSize: 13 }}>{recentViewed.map(job => <li key={`${job.id}-${job.title}`}>{job.title}</li>)}</ul>}</CardContent>
+          </Card>
+          <Card as="section">
+            <CardHeader><CardTitle style={{ color: '#FF7043', fontSize: 16 }}>Applied</CardTitle></CardHeader>
+            <CardContent>{appliedJobs.length === 0 ? <p style={{ color: '#999', fontStyle: 'italic', margin: 0, fontSize: 13 }}>None yet.</p> : <ul style={{ margin: 0, paddingLeft: 16, fontSize: 13 }}>{appliedJobs.map(job => <li key={`${job.id}-${job.title}`}>{job.title}</li>)}</ul>}</CardContent>
+          </Card>
+        </div>
+
+        <MobileFilterDrawer
+          open={filterDrawerOpen}
+          onClose={() => { applyFilters(); setFilterDrawerOpen(false); }}
+          filterProps={{
+            keyword: draftKeyword, setKeyword: setDraftKeyword,
+            companyFilter: draftCompany, setCompanyFilter: setDraftCompany,
+            locationFilter: draftLocation, setLocationFilter: setDraftLocation,
+            locationTypeFilter: draftLocationType, setLocationTypeFilter: setDraftLocationType,
+            sourceFilter: draftSource, setSourceFilter: setDraftSource,
+            daysFilter: draftDays, setDaysFilter: setDraftDays,
+            filteredCount: filteredJobs.length, totalCount: jobs.length,
+            pageSize, setPageSize, currentPage, startIndex,
+          }}
+        />
+
+        {mobileDetailOpen && selectedJob && (
+          <MobileJobDetail
+            job={selectedJob}
+            onBack={() => setMobileDetailOpen(false)}
+            getJobStatus={getJobStatus}
+            isInternalJob={isInternalJob}
+            getJobTier={getJobTier}
+            isJobPinned={isJobPinned}
+            hasApplied={hasAppliedToSelected}
+            isPaidUser={isPaidUser}
+            onApply={handleApplyClick}
+            onResumeAlign={handleResumeAlign}
+            onImproveResume={handleSendToResumeBuilder}
+          />
+        )}
+
+        <ATSResultPanel open={atsPanelOpen} onClose={() => setAtsPanelOpen(false)} loading={atsLoading} error={atsError} result={atsResult} onImproveResume={handleSendToResumeBuilder} />
+      </div>
+    );
+  }
+
+  // ── DESKTOP LAYOUT ────────────────────────────────────────
   return (
     <div className="px-4 md:px-8 pb-10">
       <div className="max-w-7xl mx-auto grid grid-cols-1 lg:grid-cols-[minmax(0,1.8fr)_minmax(260px,0.7fr)] gap-6">
@@ -354,48 +486,60 @@ function OldJobsUI() {
           </header>
 
           <div style={{ display: 'flex', flexDirection: 'column', gap: 20, maxWidth: 1200 }}>
+            {/* FIX #1: Filter panel with draft state + Apply Filters button */}
             <Card as="section" aria-labelledby="jobs-filter-heading">
               <CardHeader>
                 <h2 id="jobs-filter-heading" style={{ margin: 0, fontSize: 16, fontWeight: 600, color: '#263238' }}>Filter jobs</h2>
               </CardHeader>
               <CardContent>
-                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: 12, alignItems: 'center', marginBottom: 8 }}>
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: 12, alignItems: 'center', marginBottom: 12 }}>
                   <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
                     <label htmlFor="jobs-filter-keywords" style={{ fontSize: 12, color: '#78909C' }}>Keywords</label>
-                    <input id="jobs-filter-keywords" type="text" value={keyword} onChange={e => setKeyword(e.target.value)} placeholder="Title, skills, tags..." style={{ padding: '8px 10px', borderRadius: 8, border: '1px solid #CFD8DC', fontSize: 14 }} />
+                    <input id="jobs-filter-keywords" type="text" value={draftKeyword} onChange={e => setDraftKeyword(e.target.value)} onKeyDown={e => e.key === 'Enter' && applyFilters()} placeholder="Title, skills, tags..." style={{ padding: '8px 10px', borderRadius: 8, border: '1px solid #CFD8DC', fontSize: 14 }} />
                   </div>
                   <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
                     <label htmlFor="jobs-filter-company" style={{ fontSize: 12, color: '#78909C' }}>Company Name</label>
-                    <input id="jobs-filter-company" type="text" value={companyFilter} onChange={e => setCompanyFilter(e.target.value)} placeholder="Company..." style={{ padding: '8px 10px', borderRadius: 8, border: '1px solid #CFD8DC', fontSize: 14 }} />
+                    <input id="jobs-filter-company" type="text" value={draftCompany} onChange={e => setDraftCompany(e.target.value)} onKeyDown={e => e.key === 'Enter' && applyFilters()} placeholder="Company..." style={{ padding: '8px 10px', borderRadius: 8, border: '1px solid #CFD8DC', fontSize: 14 }} />
                   </div>
                   <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
                     <label htmlFor="jobs-filter-location" style={{ fontSize: 12, color: '#78909C' }}>Location</label>
-                    <input id="jobs-filter-location" type="text" value={locationFilter} onChange={e => setLocationFilter(e.target.value)} placeholder="City, region, country..." style={{ padding: '8px 10px', borderRadius: 8, border: '1px solid #CFD8DC', fontSize: 14 }} />
+                    <input id="jobs-filter-location" type="text" value={draftLocation} onChange={e => setDraftLocation(e.target.value)} onKeyDown={e => e.key === 'Enter' && applyFilters()} placeholder="City, region, country..." style={{ padding: '8px 10px', borderRadius: 8, border: '1px solid #CFD8DC', fontSize: 14 }} />
                   </div>
                   <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
                     <label htmlFor="jobs-filter-location-type" style={{ fontSize: 12, color: '#78909C' }}>Location Type</label>
-                    <select id="jobs-filter-location-type" value={locationTypeFilter} onChange={e => setLocationTypeFilter(e.target.value)} style={{ padding: '8px 10px', borderRadius: 8, border: '1px solid #CFD8DC', fontSize: 14, backgroundColor: 'white' }}>
+                    <select id="jobs-filter-location-type" value={draftLocationType} onChange={e => setDraftLocationType(e.target.value)} style={{ padding: '8px 10px', borderRadius: 8, border: '1px solid #CFD8DC', fontSize: 14, backgroundColor: 'white' }}>
                       <option value="">All</option><option value="Remote">Remote</option><option value="Hybrid">Hybrid</option><option value="On-site">On-site</option>
                     </select>
                   </div>
                   <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
                     <label htmlFor="jobs-filter-source" style={{ fontSize: 12, color: '#78909C' }}>Source</label>
-                    <select id="jobs-filter-source" value={sourceFilter} onChange={e => setSourceFilter(e.target.value)} style={{ padding: '8px 10px', borderRadius: 8, border: '1px solid #CFD8DC', fontSize: 14, backgroundColor: 'white' }}>
+                    <select id="jobs-filter-source" value={draftSource} onChange={e => setDraftSource(e.target.value)} style={{ padding: '8px 10px', borderRadius: 8, border: '1px solid #CFD8DC', fontSize: 14, backgroundColor: 'white' }}>
                       <option value="">All sources</option><option value="external">External only</option><option value="internal">Forge recruiters only</option>
                     </select>
                   </div>
                   <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
                     <label htmlFor="jobs-filter-days" style={{ fontSize: 12, color: '#78909C' }}>Posted in last (days)</label>
-                    <input id="jobs-filter-days" type="number" min="1" value={daysFilter} onChange={e => setDaysFilter(e.target.value)} placeholder="e.g. 7" style={{ padding: '8px 10px', borderRadius: 8, border: '1px solid #CFD8DC', fontSize: 14 }} />
+                    <input id="jobs-filter-days" type="number" min="1" value={draftDays} onChange={e => setDraftDays(e.target.value)} onKeyDown={e => e.key === 'Enter' && applyFilters()} placeholder="e.g. 7" style={{ padding: '8px 10px', borderRadius: 8, border: '1px solid #CFD8DC', fontSize: 14 }} />
                   </div>
                 </div>
-                <div style={{ marginTop: 6, display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: 12, color: '#78909C', gap: 12, flexWrap: 'wrap' }}>
-                  <span>Showing {filteredJobs.length === 0 ? 0 : startIndex + 1}–{Math.min(startIndex + pageSize, filteredJobs.length)} of {filteredJobs.length} jobs</span>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                    <span>Jobs per page:</span>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 10 }}>
+                  <span style={{ fontSize: 12, color: '#78909C' }}>
+                    Showing {filteredJobs.length === 0 ? 0 : startIndex + 1}–{Math.min(startIndex + pageSize, filteredJobs.length)} of {filteredJobs.length} jobs
+                  </span>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
+                    <span style={{ fontSize: 12, color: '#78909C' }}>Jobs per page:</span>
                     <select aria-label="Jobs per page" value={pageSize} onChange={e => { setPageSize(Number(e.target.value)); setCurrentPage(1); }} style={{ padding: '4px 8px', borderRadius: 6, border: '1px solid #CFD8DC', fontSize: 12, backgroundColor: 'white' }}>
                       <option value={10}>10</option><option value={20}>20</option><option value={50}>50</option>
                     </select>
+                    {activeFilterCount > 0 && (
+                      <button type="button" onClick={clearFilters} style={{ padding: '6px 14px', borderRadius: 8, border: '1px solid #CFD8DC', background: 'white', color: '#78909C', fontSize: 13, cursor: 'pointer', fontWeight: 500 }}>
+                        Clear
+                      </button>
+                    )}
+                    <button type="button" onClick={applyFilters}
+                      style={{ padding: '7px 20px', borderRadius: 8, background: '#FF7043', color: 'white', border: 'none', fontSize: 13, fontWeight: 700, cursor: 'pointer', boxShadow: '0 2px 8px rgba(255,112,67,0.30)' }}>
+                      Apply Filters
+                    </button>
                   </div>
                 </div>
               </CardContent>
@@ -452,7 +596,7 @@ function OldJobsUI() {
                                 )}
                               </div>
                             </div>
-                            <div style={{ textAlign: 'right', minWidth: 120, flexShrink: 0 }} aria-label={`Posted ${postedLabel}`}>
+                            <div style={{ textAlign: 'right', minWidth: 120, flexShrink: 0 }}>
                               <div style={{ fontSize: 12, color: subtleColor }}>Posted</div>
                               <div style={{ fontSize: 13, color: isDarkCard ? '#FFFFFF' : '#455A64', fontWeight: 500 }}>{postedLabel}</div>
                             </div>
@@ -473,11 +617,11 @@ function OldJobsUI() {
                 </div>
                 {filteredJobs.length > pageSize && (
                   <nav aria-label="Job results pagination" style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', gap: 6, fontSize: 12, color: '#78909C', paddingTop: 4, flexWrap: 'wrap' }}>
-                    <button type="button" disabled={currentPage === 1} onClick={() => setCurrentPage(1)} style={{ padding: '4px 8px', borderRadius: 6, border: '1px solid #CFD8DC', background: currentPage === 1 ? '#ECEFF1' : 'white', cursor: currentPage === 1 ? 'default' : 'pointer', fontWeight: 500 }} aria-label="Go to first page">First</button>
-                    {startPage > 1 && <span aria-hidden="true">…</span>}
-                    {pageNumbers.map(p => <button key={p} type="button" onClick={() => setCurrentPage(p)} style={{ padding: '4px 8px', borderRadius: 6, border: '1px solid #CFD8DC', background: p === currentPage ? '#FF7043' : 'white', color: p === currentPage ? 'white' : '#263238', cursor: p === currentPage ? 'default' : 'pointer', fontWeight: p === currentPage ? 700 : 500 }} aria-current={p === currentPage ? 'page' : undefined} aria-label={`Go to page ${p}`}>{p}</button>)}
-                    {endPage < totalPages && <span aria-hidden="true">…</span>}
-                    <button type="button" disabled={currentPage === totalPages} onClick={() => setCurrentPage(totalPages)} style={{ padding: '4px 8px', borderRadius: 6, border: '1px solid #CFD8DC', background: currentPage === totalPages ? '#ECEFF1' : 'white', cursor: currentPage === totalPages ? 'default' : 'pointer', fontWeight: 500 }} aria-label="Go to last page">Last</button>
+                    <button type="button" disabled={currentPage === 1} onClick={() => setCurrentPage(1)} style={{ padding: '4px 8px', borderRadius: 6, border: '1px solid #CFD8DC', background: currentPage === 1 ? '#ECEFF1' : 'white', cursor: currentPage === 1 ? 'default' : 'pointer', fontWeight: 500 }}>First</button>
+                    {startPage > 1 && <span>…</span>}
+                    {pageNumbers.map(p => <button key={p} type="button" onClick={() => setCurrentPage(p)} style={{ padding: '4px 8px', borderRadius: 6, border: '1px solid #CFD8DC', background: p === currentPage ? '#FF7043' : 'white', color: p === currentPage ? 'white' : '#263238', cursor: p === currentPage ? 'default' : 'pointer', fontWeight: p === currentPage ? 700 : 500 }}>{p}</button>)}
+                    {endPage < totalPages && <span>…</span>}
+                    <button type="button" disabled={currentPage === totalPages} onClick={() => setCurrentPage(totalPages)} style={{ padding: '4px 8px', borderRadius: 6, border: '1px solid #CFD8DC', background: currentPage === totalPages ? '#ECEFF1' : 'white', cursor: currentPage === totalPages ? 'default' : 'pointer', fontWeight: 500 }}>Last</button>
                   </nav>
                 )}
               </section>
@@ -516,13 +660,13 @@ function OldJobsUI() {
                         {selectedStatus === 'Reviewing' && (
                           <div style={{ marginTop: 8, padding: '8px 10px', borderRadius: 8, border: '1px solid #FFCC80', backgroundColor: '#FFF3E0', fontSize: 12, color: '#E65100' }}>
                             <p style={{ margin: 0, fontWeight: 600 }}>{hasAppliedToSelected ? 'Thank you for applying.' : 'This employer is now reviewing applicants.'}</p>
-                            <p style={{ margin: '4px 0 0' }}>{hasAppliedToSelected ? "This employer is now reviewing applicants for this role. You'll see updates here as they take action." : 'New applications are paused. Thank you to everyone who applied.'}</p>
+                            <p style={{ margin: '4px 0 0' }}>{hasAppliedToSelected ? "This employer is reviewing applicants for this role." : 'New applications are paused.'}</p>
                           </div>
                         )}
                         {selectedStatus === 'Closed' && (
                           <div style={{ marginTop: 8, padding: '8px 10px', borderRadius: 8, border: '1px solid #CFD8DC', backgroundColor: '#ECEFF1', fontSize: 12, color: '#455A64' }}>
                             <p style={{ margin: 0, fontWeight: 600 }}>{hasAppliedToSelected ? 'Thank you for applying.' : 'This posting is now closed.'}</p>
-                            <p style={{ margin: '4px 0 0' }}>{hasAppliedToSelected ? 'If you are selected for next steps, the employer will reach out directly.' : 'Stay tuned for future opportunities from this employer.'}</p>
+                            <p style={{ margin: '4px 0 0' }}>{hasAppliedToSelected ? 'If selected, the employer will reach out directly.' : 'Stay tuned for future opportunities.'}</p>
                           </div>
                         )}
                       </CardContent>
@@ -573,7 +717,7 @@ function OldJobsUI() {
 }
 
 // ──────────────────────────────────────────────────────────────
-// NEW UI — your saved clean version, verbatim
+// NEW UI — unchanged, with FIX #3 applied
 // ──────────────────────────────────────────────────────────────
 function NewJobsUI() {
   const router   = useRouter();
@@ -589,6 +733,7 @@ function NewJobsUI() {
   const [loading, setLoading]     = useState(true);
   const [pinnedIds, setPinnedIds] = useState(new Set());
   const [selectedJob, setSelectedJob]           = useState(null);
+  const [userHasSelected, setUserHasSelected]   = useState(false); // FIX #3
   const [mobileDetailOpen, setMobileDetailOpen] = useState(false);
   const [filterDrawerOpen, setFilterDrawerOpen] = useState(false);
 
@@ -665,7 +810,7 @@ function NewJobsUI() {
         job: { id: job.id, title: job.title, company: job.company, location: job.location, description: raw },
         ats: { score: null, summary: '', recommendations: [] },
       });
-    } catch (err) { console.error('[Jobs] Failed to store job context for Resume Alignment', err); }
+    } catch (err) { console.error('[Jobs] Failed to store job context', err); }
     if (typeof window !== 'undefined')
       window.location.href = withChrome(`/resume/create?from=match&jobId=${job.id}&copyJD=true`);
   };
@@ -688,6 +833,7 @@ function NewJobsUI() {
   };
 
   const handleSelectJob = (job) => {
+    setUserHasSelected(true);
     setSelectedJob(job);
     addViewedJob(job);
     if (isMobile) setMobileDetailOpen(true);
@@ -740,13 +886,15 @@ function NewJobsUI() {
   const startIndex = (currentPage - 1) * pageSize;
   const pagedJobs  = filteredJobs.slice(startIndex, startIndex + pageSize);
 
+  // FIX #3
   useEffect(() => {
+    if (userHasSelected) return;
     if (!selectedJob && pagedJobs.length > 0) { setSelectedJob(pagedJobs[0]); return; }
     if (selectedJob) {
       const stillVisible = pagedJobs.some(j => j && j.id === selectedJob.id);
       if (!stillVisible) setSelectedJob(pagedJobs.length > 0 ? pagedJobs[0] : null);
     }
-  }, [pagedJobs, selectedJob]);
+  }, [pagedJobs]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const hasAppliedToSelected = !!selectedJob && appliedJobs.some(j => j && j.id === selectedJob.id);
   const activeFilterCount    = [keyword, companyFilter, locationFilter, locationTypeFilter, sourceFilter, daysFilter].filter(Boolean).length;
@@ -828,7 +976,7 @@ function NewJobsUI() {
 }
 
 // ──────────────────────────────────────────────────────────────
-// ROUTER — ?newui=1 → NewJobsUI, everyone else → OldJobsUI
+// ROUTER
 // ──────────────────────────────────────────────────────────────
 function Jobs() {
   const router = useRouter();
@@ -836,7 +984,6 @@ function Jobs() {
   return <OldJobsUI />;
 }
 
-// ── Page wrapper ──────────────────────────────────────────────
 export default function JobsPage() {
   return (
     <InternalLayout activeNav="jobs">
