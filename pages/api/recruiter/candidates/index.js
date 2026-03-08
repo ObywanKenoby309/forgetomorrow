@@ -227,6 +227,17 @@ function parseEducationTerms(input) {
   return dedupeCaseInsensitive(expanded).slice(0, 10);
 }
 
+function parseLocationTerms(input) {
+  return dedupeCaseInsensitive(
+    String(input || "")
+      .trim()
+      .replace(/,/g, " ")
+      .split(/\s+/)
+      .map((s) => s.trim())
+      .filter(Boolean)
+  ).slice(0, 8);
+}
+
 async function findUserIdsByEducationTerms(prismaClient, terms) {
   const cleaned = (terms || [])
     .map((t) => String(t || "").trim())
@@ -437,9 +448,19 @@ export default async function handler(req, res) {
     }
 
     if (locationQuery) {
-      andClauses.push({
-        location: { contains: locationQuery, mode: "insensitive" },
-      });
+      const locationTerms = parseLocationTerms(locationQuery);
+
+      if (locationTerms.length) {
+        andClauses.push({
+          AND: locationTerms.map((term) => ({
+            OR: [
+              { location: { contains: term, mode: "insensitive" } },
+              { headline: { contains: term, mode: "insensitive" } },
+              { aboutMe: { contains: term, mode: "insensitive" } },
+            ],
+          })),
+        });
+      }
     }
 
     if (summaryKeywordsQuery) {
