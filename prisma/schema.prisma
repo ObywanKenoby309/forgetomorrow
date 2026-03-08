@@ -1,7 +1,3 @@
-// ============================================================================
-//  PRISMA CONFIGURATION
-// ============================================================================
-
 generator client {
   provider = "prisma-client-js"
 }
@@ -11,12 +7,8 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
-// ============================================================================
-//  JOBS, APPLICATIONS, INTERVIEWS & OFFERS
-// ============================================================================
-
 model Job {
-  id                  Int           @id @default(autoincrement())
+  id                  Int                      @id @default(autoincrement())
   company             String
   title               String
   worksite            String?
@@ -24,35 +16,40 @@ model Job {
   type                String?
   compensation        String?
   description         String
-  status              String        @default("Draft")
-  urgent              Boolean       @default(false)
-  viewsCount          BigInt        @default(0)
-  applicationsCount   BigInt        @default(0)
-  createdAt           DateTime      @default(now())
-  updatedAt           DateTime      @updatedAt
+  status              String                   @default("Draft")
+  urgent              Boolean                  @default(false)
+  viewsCount          BigInt                   @default(0)
+  applicationsCount   BigInt                   @default(0)
+  createdAt           DateTime                 @default(now())
+  updatedAt           DateTime                 @updatedAt
   userId              String
   accountKey          String?
   url                 String?
   salary              String?
   tags                String?
   source              String?
-  isTemplate          Boolean       @default(false)
+  isTemplate          Boolean                  @default(false)
   templateName        String?
   additionalQuestions Json?
-  publishedAt         DateTime?     @db.Timestamptz(6)
-  publishedat         DateTime?     @db.Timestamptz(6)
-  externalId          String?
+  publishedAt         DateTime?                @db.Timestamptz(6)
+  publishedat         DateTime?                @db.Timestamptz(6)
+  externalId          String?                  @unique(map: "jobs_external_id_unique")
+  search_vector       Unsupported("tsvector")?
   applications        Application[]
   covers              Cover[]
   interviews          Interview[]
   views               JobView[]
-  organization        Organization? @relation("OrganizationJobs", fields: [accountKey], references: [accountKey])
-  user                User          @relation(fields: [userId], references: [id])
+  organization        Organization?            @relation("OrganizationJobs", fields: [accountKey], references: [accountKey])
+  user                User                     @relation(fields: [userId], references: [id])
   offers              Offer[]
   pinnedBy            PinnedJob[]
 
   @@index([accountKey])
   @@index([isTemplate])
+  @@index([company(ops: raw("gin_trgm_ops"))], map: "jobs_company_trgm_idx", type: Gin)
+  @@index([search_vector], type: Gin)
+  @@index([tags(ops: raw("gin_trgm_ops"))], map: "jobs_tags_trgm_idx", type: Gin)
+  @@index([title(ops: raw("gin_trgm_ops"))], map: "jobs_title_trgm_idx", type: Gin)
   @@map("jobs")
 }
 
@@ -201,10 +198,6 @@ model ApplicationSelfId {
   @@map("application_self_id")
 }
 
-// ============================================================================
-//  APPLICATION PACKET (Recruiter-visible assessment + optional export tracking)
-// ============================================================================
-
 model ApplicationAssessment {
   id            String      @id @default(cuid())
   applicationId Int         @unique
@@ -289,10 +282,6 @@ model PinnedJob {
   @@map("pinned_jobs")
 }
 
-// ============================================================================
-//  EXTERNAL / INGESTED JOB FEED (for cron imports)
-// ============================================================================
-
 model ExternalJob {
   id          String    @id @default(cuid())
   title       String?
@@ -310,10 +299,6 @@ model ExternalJob {
   @@index([source])
   @@map("external_jobs")
 }
-
-// ============================================================================
-//  RESUMES, COVERS, AND SCAN LOGS
-// ============================================================================
 
 model Resume {
   id           Int           @id @default(autoincrement())
@@ -362,10 +347,6 @@ model ScanLog {
   @@map("scan_logs")
 }
 
-// ============================================================================
-//  USER DRAFT CACHE (DB-backed replacement for localStorage)
-// ============================================================================
-
 model UserDraft {
   id        String   @id @default(cuid())
   userId    String
@@ -391,10 +372,6 @@ model SavedReply {
   @@index([userId, persona])
   @@map("saved_replies")
 }
-
-// ============================================================================
-//  AI BUDDIES — THREADS + MESSAGES (DB-first; no localStorage)
-// ============================================================================
 
 model AiThread {
   id        String      @id @default(cuid())
@@ -456,10 +433,6 @@ model PasswordResetToken {
   @@map("password_reset_tokens")
 }
 
-// ============================================================================
-//  CAREER TOOLS & HISTORY
-// ============================================================================
-
 model CareerRoadmap {
   id          String   @id @default(cuid())
   userId      String
@@ -500,10 +473,6 @@ model ProfileSnapshot {
   @@index([userId])
 }
 
-// ============================================================================
-//  CONSENT LOGGING
-// ============================================================================
-
 model UserConsent {
   id          Int      @id @default(autoincrement())
   userId      String
@@ -518,26 +487,22 @@ model UserConsent {
   @@map("user_consents")
 }
 
-// ============================================================================
-//  COACHING RELATIONSHIPS
-// ============================================================================
-
 model CoachingClient {
   id                String             @id @default(cuid())
   coachId           String
   clientId          String?
-  name              String
-  email             String?
   status            String             @default("Active")
   nextSession       DateTime?
   lastContact       DateTime?
   createdAt         DateTime           @default(now())
   updatedAt         DateTime           @updatedAt
+  email             String?
+  name              String
   notes             String?
-  coachingNotes     CoachingNote[]     @relation("ClientNotes")
-  coachingDocuments CoachingDocument[] @relation("ClientDocuments")
-  coach             User               @relation("CoachClientsCoach", fields: [coachId], references: [id], onDelete: Cascade)
   client            User?              @relation("CoachClientsClient", fields: [clientId], references: [id], onDelete: Cascade)
+  coach             User               @relation("CoachClientsCoach", fields: [coachId], references: [id], onDelete: Cascade)
+  coachingDocuments CoachingDocument[] @relation("ClientDocuments")
+  coachingNotes     CoachingNote[]     @relation("ClientNotes")
   sessions          CoachingSession[]  @relation("ClientSessions")
 
   @@index([coachId])
@@ -550,7 +515,6 @@ model CoachingSession {
   coachId          String
   clientId         String?
   coachingClientId String?
-  coachingClient   CoachingClient? @relation("ClientSessions", fields: [coachingClientId], references: [id])
   startAt          DateTime
   durationMin      Int             @default(60)
   type             String          @default("Strategy")
@@ -560,8 +524,9 @@ model CoachingSession {
   notes            String?
   createdAt        DateTime        @default(now())
   updatedAt        DateTime        @updatedAt
-  coach            User            @relation("CoachSessionsCoach", fields: [coachId], references: [id], onDelete: Cascade)
   client           User?           @relation("CoachSessionsClient", fields: [clientId], references: [id], onDelete: Cascade)
+  coach            User            @relation("CoachSessionsCoach", fields: [coachId], references: [id], onDelete: Cascade)
+  coachingClient   CoachingClient? @relation("ClientSessions", fields: [coachingClientId], references: [id])
 
   @@index([coachId])
   @@index([clientId])
@@ -577,8 +542,8 @@ model CoachingNote {
   body             String
   createdAt        DateTime       @default(now())
   updatedAt        DateTime       @updatedAt
-  coachingClient   CoachingClient @relation("ClientNotes", fields: [coachingClientId], references: [id], onDelete: Cascade)
   coach            User           @relation("CoachNotes", fields: [coachId], references: [id], onDelete: Cascade)
+  coachingClient   CoachingClient @relation("ClientNotes", fields: [coachingClientId], references: [id], onDelete: Cascade)
 
   @@index([coachingClientId])
   @@index([coachId])
@@ -594,17 +559,13 @@ model CoachingDocument {
   type             String         @default("Other")
   uploadedAt       DateTime       @default(now())
   createdAt        DateTime       @default(now())
-  coachingClient   CoachingClient @relation("ClientDocuments", fields: [coachingClientId], references: [id], onDelete: Cascade)
   coach            User           @relation("CoachDocuments", fields: [coachId], references: [id], onDelete: Cascade)
+  coachingClient   CoachingClient @relation("ClientDocuments", fields: [coachingClientId], references: [id], onDelete: Cascade)
 
   @@index([coachingClientId])
   @@index([coachId])
   @@map("coaching_documents")
 }
-
-// ============================================================================
-//  COACHING CSAT (DB-backed replacement for localStorage coachCSAT_v1)
-// ============================================================================
 
 model CoachingCsatResponse {
   id           String   @id @default(cuid())
@@ -621,10 +582,6 @@ model CoachingCsatResponse {
   @@index([createdAt])
   @@map("coaching_csat_responses")
 }
-
-// ============================================================================
-//  HEARTH SPOTLIGHTS — COACH-MANAGED PUBLIC MENTOR CARD (DB-backed)
-// ============================================================================
 
 model HearthSpotlight {
   id           String   @id @default(cuid())
@@ -643,10 +600,6 @@ model HearthSpotlight {
   @@index([createdAt])
   @@map("hearth_spotlights")
 }
-
-// ============================================================================
-//  CONTACTS / NETWORK
-// ============================================================================
 
 model Contact {
   id            String   @id @default(cuid())
@@ -681,12 +634,6 @@ model ContactRequest {
   @@map("contact_requests")
 }
 
-// ============================================================================
-//  ORGANIZATIONS (Recruiter org ownership + future seats)
-//  NOTE: links via existing accountKey on User/Job to avoid breaking existing data.
-//  CRM ADDITION: tickets + slaOverrides relations added for CRM module
-// ============================================================================
-
 model Organization {
   id                 String               @id @default(cuid())
   name               String
@@ -699,11 +646,10 @@ model Organization {
   jobs               Job[]                @relation("OrganizationJobs")
   members            OrganizationMember[] @relation("OrganizationMembers")
   owner              User?                @relation("OrganizationOwner", fields: [ownerUserId], references: [id])
-  talentPools        TalentPool[]         @relation("OrganizationTalentPools")
-  users              User[]               @relation("OrganizationUsers")
-  // CRM
-  tickets            Ticket[]             @relation("OrgTickets")
   slaOverrides       SlaPolicy[]
+  talentPools        TalentPool[]         @relation("OrganizationTalentPools")
+  tickets            Ticket[]             @relation("OrgTickets")
+  users              User[]               @relation("OrganizationUsers")
 
   @@index([ownerUserId])
   @@map("organizations")
@@ -724,10 +670,6 @@ model OrganizationMember {
   @@map("organization_members")
 }
 
-// ============================================================================
-//  INTERNAL STAFF ROLES (Option B) — many-to-many User ↔ StaffRole
-// ============================================================================
-
 model UserStaffRole {
   id        String    @id @default(cuid())
   userId    String
@@ -740,10 +682,6 @@ model UserStaffRole {
   @@index([userId])
   @@map("user_staff_roles")
 }
-
-// ============================================================================
-//  AUDIT LOG (supports impersonation + admin actions)
-// ============================================================================
 
 model AuditLog {
   id                 String   @id @default(cuid())
@@ -760,11 +698,6 @@ model AuditLog {
   @@index([createdAt])
   @@map("audit_logs")
 }
-
-// ============================================================================
-//  USER — FULL ACCOUNT + PROFILE
-//  CRM ADDITION: 8 new relation lines added at bottom of relations block
-// ============================================================================
 
 model User {
   id                           String                         @id @default(cuid())
@@ -798,7 +731,6 @@ model User {
   passwordHash                 String?
   plan                         Tier                           @default(FREE)
   pronouns                     String?
-  savedPosts                   SavedPost[]
   skillsJson                   Json?
   slug                         String?                        @unique
   slugChangeCount              Int                            @default(0)
@@ -814,9 +746,9 @@ model User {
   educationJson                Json?
   resumeAlignFreeUses          Int                            @default(0)
   resumeAlignLastResetMonth    String?
-  growthPivotFreeUses          Int                            @default(0)
   department                   Department?
   employee                     Boolean                        @default(false)
+  growthPivotFreeUses          Int                            @default(0)
   careerRoadmaps               CareerRoadmap[]                @relation("UserCareerRoadmaps")
   negotiations                 Negotiation[]                  @relation("UserNegotiations")
   profileSnapshots             ProfileSnapshot[]              @relation("UserProfileSnapshots")
@@ -829,10 +761,10 @@ model User {
   coachingClientsAsClient      CoachingClient[]               @relation("CoachClientsClient")
   coachingClientsAsCoach       CoachingClient[]               @relation("CoachClientsCoach")
   coachingCsatResponses        CoachingCsatResponse[]         @relation("UserCoachingCsatResponses")
+  coachingDocuments            CoachingDocument[]             @relation("CoachDocuments")
+  coachingNotes                CoachingNote[]                 @relation("CoachNotes")
   coachingSessionsAsClient     CoachingSession[]              @relation("CoachSessionsClient")
   coachingSessionsAsCoach      CoachingSession[]              @relation("CoachSessionsCoach")
-  coachingNotes                CoachingNote[]                 @relation("CoachNotes")
-  coachingDocuments            CoachingDocument[]             @relation("CoachDocuments")
   contactRequestsSent          ContactRequest[]               @relation("UserContactRequestsFrom")
   contactRequestsReceived      ContactRequest[]               @relation("UserContactRequestsTo")
   contactsAsContact            Contact[]                      @relation("UserContactsAsContact")
@@ -863,6 +795,7 @@ model User {
   pinnedJobs                   PinnedJob[]
   profileViewsReceived         ProfileView[]                  @relation("ProfileViewTarget")
   profileViewsMade             ProfileView[]                  @relation("ProfileViewViewer")
+  queueMemberships             QueueAgent[]                   @relation("UserQueueAgents")
   recruiterCalendarAsCandidate RecruiterCalendarItem[]        @relation("UserRecruiterCalendarCandidate")
   recruiterCalendarOwnedItems  RecruiterCalendarItem[]        @relation("UserRecruiterCalendarOwner")
   candidateAutomations         RecruiterCandidateAutomation[]
@@ -871,35 +804,30 @@ model User {
   candidateExplainRuns         RecruiterExplainRun[]          @relation("RecruiterExplainRunsAsCandidate")
   recruiterExplainRuns         RecruiterExplainRun[]          @relation("RecruiterExplainRunsAsRecruiter")
   resumes                      Resume[]
+  savedPosts                   SavedPost[]
   scanLogs                     ScanLog[]
   seekerCalendarItems          SeekerCalendarItem[]           @relation("UserSeekerCalendarItems")
   talentPoolEntriesAsCandidate TalentPoolEntry[]              @relation("TalentPoolEntryCandidate")
   createdTalentPools           TalentPool[]                   @relation("UserCreatedTalentPools")
+  ticketAttachments            TicketAttachment[]             @relation("TicketAttachmentUploader")
+  ticketComments               TicketComment[]                @relation("TicketCommentAuthor")
+  ticketHistory                TicketHistory[]                @relation("TicketHistoryActor")
+  ticketsAssigned              Ticket[]                       @relation("TicketAssignedTo")
+  ticketsCreated               Ticket[]                       @relation("TicketCreatedBy")
+  ticketsRequested             Ticket[]                       @relation("TicketRequester")
   blocksReceived               UserBlock[]                    @relation("UserBlocksAsBlocked")
   blocksInitiated              UserBlock[]                    @relation("UserBlocksAsBlocker")
   consents                     UserConsent[]
   drafts                       UserDraft[]
   staffRoles                   UserStaffRole[]
   organization                 Organization?                  @relation("OrganizationUsers", fields: [accountKey], references: [accountKey])
-  // CRM
-  queueMemberships             QueueAgent[]                   @relation("UserQueueAgents")
-  ticketsAssigned              Ticket[]                       @relation("TicketAssignedTo")
-  ticketsCreated               Ticket[]                       @relation("TicketCreatedBy")
-  ticketsRequested             Ticket[]                       @relation("TicketRequester")
-  ticketComments               TicketComment[]                @relation("TicketCommentAuthor")
-  ticketHistory                TicketHistory[]                @relation("TicketHistoryActor")
-  ticketAttachments            TicketAttachment[]             @relation("TicketAttachmentUploader")
   workflowRulesCreated         WorkflowRule[]                 @relation("WorkflowRuleCreator")
 
   @@map("users")
 }
 
-// ============================================================================
-//  CANDIDATES — RECRUITER-FACING SNAPSHOT
-// ============================================================================
-
 model Candidate {
-  id                Int       @id @default(autoincrement())
+  id                Int                      @id @default(autoincrement())
   userId            String
   name              String
   email             String?
@@ -921,17 +849,18 @@ model Candidate {
   match             Int?
   lastContacted     DateTime?
   lastSeen          DateTime?
-  createdAt         DateTime  @default(now())
-  updatedAt         DateTime  @updatedAt
-  user              User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  createdAt         DateTime                 @default(now())
+  updatedAt         DateTime                 @updatedAt
+  search_vector     Unsupported("tsvector")?
+  user              User                     @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([userId])
+  @@index([name(ops: raw("gin_trgm_ops"))], map: "candidates_name_trgm_idx", type: Gin)
+  @@index([search_vector], type: Gin)
+  @@index([skills(ops: raw("gin_trgm_ops"))], map: "candidates_skills_trgm_idx", type: Gin)
+  @@index([title(ops: raw("gin_trgm_ops"))], map: "candidates_title_trgm_idx", type: Gin)
   @@map("candidates")
 }
-
-// ============================================================================
-//  RECRUITER CANDIDATE (Option A) — recruiter-specific metadata for a User
-// ============================================================================
 
 model RecruiterCandidate {
   id              String    @id @default(cuid())
@@ -956,10 +885,6 @@ model RecruiterCandidate {
   @@map("recruiter_candidates")
 }
 
-// ============================================================================
-//  EXTERNAL CANDIDATES (Org-scoped, recruiter-saved off-platform people)
-// ============================================================================
-
 model ExternalCandidate {
   id              String            @id @default(cuid())
   accountKey      String
@@ -983,10 +908,6 @@ model ExternalCandidate {
   @@index([createdByUserId])
   @@map("external_candidates")
 }
-
-// ============================================================================
-//  TALENT POOLS (DB-first, org-scoped like recruiter_candidates)
-// ============================================================================
 
 model TalentPool {
   id              String            @id @default(cuid())
@@ -1037,10 +958,6 @@ model TalentPoolEntry {
   @@map("talent_pool_entries")
 }
 
-// ============================================================================
-//  RECRUITER CANDIDATE AUTOMATION
-// ============================================================================
-
 model RecruiterCandidateAutomation {
   id        String    @id @default(cuid())
   userId    String
@@ -1076,10 +993,6 @@ model RecruiterExplainRun {
   @@map("recruiter_explain_runs")
 }
 
-// ============================================================================
-//  RECRUITER CALENDAR ITEMS
-// ============================================================================
-
 model RecruiterCalendarItem {
   id              String   @id @default(cuid())
   ownerId         String
@@ -1107,10 +1020,6 @@ model RecruiterCalendarItem {
   @@map("recruiter_calendar_items")
 }
 
-// ============================================================================
-//  SEEKER CALENDAR ITEMS
-// ============================================================================
-
 model SeekerCalendarItem {
   id           String   @id @default(cuid())
   userId       String
@@ -1131,10 +1040,6 @@ model SeekerCalendarItem {
   @@index([source])
   @@map("seeker_calendar_items")
 }
-
-// ============================================================================
-//  MESSAGING — CONVERSATIONS, MESSAGES, BLOCKS, REACTIONS, REPORTS
-// ============================================================================
 
 model Notification {
   id             String                 @id @default(cuid())
@@ -1261,10 +1166,6 @@ model ConversationReport {
   @@map("conversation_reports")
 }
 
-// ============================================================================
-//  SOCIAL OBJECTS — GROUPS, PAGES, NEWSLETTERS
-// ============================================================================
-
 model Group {
   id          String            @id @default(cuid())
   name        String
@@ -1350,10 +1251,6 @@ model NewsletterSubscription {
   @@map("newsletter_subscriptions")
 }
 
-// ============================================================================
-//  COMMUNITY FEED
-// ============================================================================
-
 model FeedPost {
   id          Int            @id @default(autoincrement())
   authorId    String
@@ -1362,10 +1259,10 @@ model FeedPost {
   type        String         @default("business")
   likes       Int            @default(0)
   comments    Json           @default("[]")
-  attachments Json           @default("[]")
   createdAt   DateTime       @default(now())
   updatedAt   DateTime       @updatedAt
   reactions   Json?          @default("[]")
+  attachments Json           @default("[]")
   views       FeedPostView[]
   savedBy     SavedPost[]
 
@@ -1392,18 +1289,14 @@ model SavedPost {
   userId  String
   postId  Int
   savedAt DateTime @default(now())
-  user    User     @relation(fields: [userId], references: [id], onDelete: Cascade)
   post    FeedPost @relation(fields: [postId], references: [id], onDelete: Cascade)
+  user    User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@unique([userId, postId])
   @@index([userId])
   @@index([postId])
   @@map("saved_posts")
 }
-
-// ============================================================================
-//  SUPPORT TICKETS (original — kept as-is alongside new CRM Ticket model)
-// ============================================================================
 
 model SupportTicket {
   id             String   @id @default(cuid())
@@ -1421,10 +1314,6 @@ model SupportTicket {
   @@map("support_tickets")
 }
 
-// ============================================================================
-//  PROFILE VIEWS — WHO'S LOOKING AT YOU
-// ============================================================================
-
 model ProfileView {
   id        String   @id @default(cuid())
   viewerId  String?
@@ -1438,10 +1327,6 @@ model ProfileView {
   @@index([viewerId])
   @@map("profile_views")
 }
-
-// ============================================================================
-//  CRM — QUEUE
-// ============================================================================
 
 model Queue {
   id          String       @id @default(cuid())
@@ -1459,10 +1344,6 @@ model Queue {
   @@map("queues")
 }
 
-// ============================================================================
-//  CRM — QUEUE AGENT
-// ============================================================================
-
 model QueueAgent {
   id        String    @id @default(cuid())
   queueId   String
@@ -1479,84 +1360,76 @@ model QueueAgent {
   @@map("queue_agents")
 }
 
-// ============================================================================
-//  CRM — SLA POLICY
-// ============================================================================
-
 model SlaPolicy {
-  id               String   @id @default(cuid())
+  id               String        @id @default(cuid())
   name             String
-  queueId          String?  @unique
+  queueId          String?       @unique
   orgId            String?
-  p1ResponseMin    Int      @default(60)
-  p2ResponseMin    Int      @default(240)
-  p3ResponseMin    Int      @default(480)
-  p4ResponseMin    Int      @default(1440)
-  p1ResolutionMin  Int      @default(240)
-  p2ResolutionMin  Int      @default(480)
-  p3ResolutionMin  Int      @default(1440)
-  p4ResolutionMin  Int      @default(2880)
-  useBusinessHours Boolean  @default(true)
-  businessStart    Int      @default(9)
-  businessEnd      Int      @default(17)
-  businessDays     Json     @default("[1,2,3,4,5]")
-  timezone         String   @default("America/New_York")
-  warningThreshold Int      @default(75)
-  createdAt        DateTime @default(now())
-  updatedAt        DateTime @updatedAt
-  queue            Queue?   @relation(fields: [queueId], references: [id])
+  p1ResponseMin    Int           @default(60)
+  p2ResponseMin    Int           @default(240)
+  p3ResponseMin    Int           @default(480)
+  p4ResponseMin    Int           @default(1440)
+  p1ResolutionMin  Int           @default(240)
+  p2ResolutionMin  Int           @default(480)
+  p3ResolutionMin  Int           @default(1440)
+  p4ResolutionMin  Int           @default(2880)
+  useBusinessHours Boolean       @default(true)
+  businessStart    Int           @default(9)
+  businessEnd      Int           @default(17)
+  businessDays     Json          @default("[1, 2, 3, 4, 5]")
+  timezone         String        @default("America/New_York")
+  warningThreshold Int           @default(75)
+  createdAt        DateTime      @default(now())
+  updatedAt        DateTime      @updatedAt
   organization     Organization? @relation(fields: [orgId], references: [id])
+  queue            Queue?        @relation(fields: [queueId], references: [id])
   tickets          Ticket[]
 
   @@index([orgId])
   @@map("sla_policies")
 }
 
-// ============================================================================
-//  CRM — TICKET
-// ============================================================================
-
 model Ticket {
-  id             String         @id @default(cuid())
-  number         Int            @unique @default(autoincrement())
-  type           TicketType
-  priority       TicketPriority @default(P3)
-  status         TicketStatus   @default(OPEN)
-  title          String
-  description    String?
-  queueId        String
-  assignedToId   String?
-  createdById    String
-  requesterId    String?
-  requesterOrgId String?
-  slaPolicyId    String?
-  slaResponseDue DateTime?
-  slaResolveDue  DateTime?
-  slaResponseMet Boolean?
-  slaResolveMet  Boolean?
-  slaBreached    Boolean        @default(false)
+  id              String             @id @default(cuid())
+  number          Int                @unique @default(autoincrement())
+  type            TicketType
+  priority        TicketPriority     @default(P3)
+  status          TicketStatus       @default(OPEN)
+  title           String
+  description     String?
+  queueId         String
+  assignedToId    String?
+  createdById     String
+  requesterId     String?
+  requesterOrgId  String?
+  slaPolicyId     String?
+  slaResponseDue  DateTime?
+  slaResolveDue   DateTime?
+  slaResponseMet  Boolean?
+  slaResolveMet   Boolean?
+  slaBreached     Boolean            @default(false)
   firstResponseAt DateTime?
-  resolvedAt     DateTime?
-  closedAt       DateTime?
-  parentId       String?
-  tags           Json?
-  source         TicketSource   @default(AGENT)
-  externalRef    String?
-  createdAt      DateTime       @default(now())
-  updatedAt      DateTime       @updatedAt
-  queue          Queue              @relation(fields: [queueId], references: [id])
-  assignedTo     User?              @relation("TicketAssignedTo", fields: [assignedToId], references: [id])
-  createdBy      User               @relation("TicketCreatedBy", fields: [createdById], references: [id])
-  requester      User?              @relation("TicketRequester", fields: [requesterId], references: [id])
-  requesterOrg   Organization?      @relation("OrgTickets", fields: [requesterOrgId], references: [id])
-  slaPolicy      SlaPolicy?         @relation(fields: [slaPolicyId], references: [id])
-  parent         Ticket?            @relation("TicketChildren", fields: [parentId], references: [id])
-  children       Ticket[]           @relation("TicketChildren")
-  comments       TicketComment[]
-  history        TicketHistory[]
-  attachments    TicketAttachment[]
-  slaEvents      SlaEvent[]
-  workflowRuns   WorkflowRun[]
+  resolvedAt      DateTime?
+  closedAt        DateTime?
+  parentId        String?
+  tags            Json?
+  source          TicketSource       @default(AGENT)
+  externalRef     String?
+  createdAt       DateTime           @default(now())
+  updatedAt       DateTime           @updatedAt
+  slaEvents       SlaEvent[]
+  attachments     TicketAttachment[]
+  comments        TicketComment[]
+  history         TicketHistory[]
+  assignedTo      User?              @relation("TicketAssignedTo", fields: [assignedToId], references: [id])
+  createdBy       User               @relation("TicketCreatedBy", fields: [createdById], references: [id])
+  parent          Ticket?            @relation("TicketChildren", fields: [parentId], references: [id])
+  children        Ticket[]           @relation("TicketChildren")
+  queue           Queue              @relation(fields: [queueId], references: [id])
+  requester       User?              @relation("TicketRequester", fields: [requesterId], references: [id])
+  requesterOrg    Organization?      @relation("OrgTickets", fields: [requesterOrgId], references: [id])
+  slaPolicy       SlaPolicy?         @relation(fields: [slaPolicyId], references: [id])
+  workflowRuns    WorkflowRun[]
 
   @@index([queueId])
   @@index([assignedToId])
@@ -1571,10 +1444,6 @@ model Ticket {
   @@map("tickets")
 }
 
-// ============================================================================
-//  CRM — TICKET COMMENT
-// ============================================================================
-
 model TicketComment {
   id         String   @id @default(cuid())
   ticketId   String
@@ -1583,17 +1452,13 @@ model TicketComment {
   isInternal Boolean  @default(false)
   createdAt  DateTime @default(now())
   updatedAt  DateTime @updatedAt
-  ticket     Ticket   @relation(fields: [ticketId], references: [id], onDelete: Cascade)
   author     User     @relation("TicketCommentAuthor", fields: [authorId], references: [id])
+  ticket     Ticket   @relation(fields: [ticketId], references: [id], onDelete: Cascade)
 
   @@index([ticketId])
   @@index([authorId])
   @@map("ticket_comments")
 }
-
-// ============================================================================
-//  CRM — TICKET HISTORY
-// ============================================================================
 
 model TicketHistory {
   id        String   @id @default(cuid())
@@ -1604,17 +1469,13 @@ model TicketHistory {
   toValue   String?
   metadata  Json?
   createdAt DateTime @default(now())
-  ticket    Ticket   @relation(fields: [ticketId], references: [id], onDelete: Cascade)
   actor     User     @relation("TicketHistoryActor", fields: [actorId], references: [id])
+  ticket    Ticket   @relation(fields: [ticketId], references: [id], onDelete: Cascade)
 
   @@index([ticketId, createdAt])
   @@index([actorId])
   @@map("ticket_history")
 }
-
-// ============================================================================
-//  CRM — TICKET ATTACHMENT
-// ============================================================================
 
 model TicketAttachment {
   id           String   @id @default(cuid())
@@ -1632,10 +1493,6 @@ model TicketAttachment {
   @@map("ticket_attachments")
 }
 
-// ============================================================================
-//  CRM — SLA EVENT
-// ============================================================================
-
 model SlaEvent {
   id       String       @id @default(cuid())
   ticketId String
@@ -1649,10 +1506,6 @@ model SlaEvent {
   @@index([type])
   @@map("sla_events")
 }
-
-// ============================================================================
-//  CRM — WORKFLOW RULE
-// ============================================================================
 
 model WorkflowRule {
   id          String          @id @default(cuid())
@@ -1674,10 +1527,6 @@ model WorkflowRule {
   @@map("workflow_rules")
 }
 
-// ============================================================================
-//  CRM — WORKFLOW RUN
-// ============================================================================
-
 model WorkflowRun {
   id        String       @id @default(cuid())
   ruleId    String
@@ -1693,10 +1542,6 @@ model WorkflowRun {
   @@index([createdAt])
   @@map("workflow_runs")
 }
-
-// ============================================================================
-//  ENUMS
-// ============================================================================
 
 enum UserRole {
   SEEKER
@@ -1797,10 +1642,6 @@ enum ApplicationStatus {
   Offers
   ClosedOut
 }
-
-// ============================================================================
-//  CRM ENUMS
-// ============================================================================
 
 enum TicketType {
   INCIDENT
