@@ -105,6 +105,8 @@ function OldJobsUI() {
 
   const [jobs, setJobs]                         = useState([]);
   const [loading, setLoading]                   = useState(true);
+  const [searchKeywordJobs, setSearchKeywordJobs] = useState(null);
+  const [searchLoading, setSearchLoading]         = useState(false);
   const [selectedJob, setSelectedJob]           = useState(null);
   const [userHasSelected, setUserHasSelected]   = useState(false); // FIX #3
   const [mobileDetailOpen, setMobileDetailOpen] = useState(false);
@@ -175,6 +177,50 @@ function OldJobsUI() {
     }
     fetchJobs();
   }, []);
+  
+    useEffect(() => {
+    let cancelled = false;
+
+    async function runKeywordSearch() {
+      const q = keyword.trim();
+
+      if (!q) {
+        setSearchKeywordJobs(null);
+        return;
+      }
+
+      setSearchLoading(true);
+
+      try {
+        const res = await fetch('/api/search/jobs', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            query: q,
+            pageSize: 200,
+            currentPage: 1,
+          }),
+        });
+
+        const data = await res.json();
+
+        if (!cancelled) {
+          setSearchKeywordJobs(Array.isArray(data.jobs) ? data.jobs : []);
+        }
+      } catch (err) {
+        console.error('[Jobs] keyword search failed', err);
+        if (!cancelled) setSearchKeywordJobs([]);
+      } finally {
+        if (!cancelled) setSearchLoading(false);
+      }
+    }
+
+    runKeywordSearch();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [keyword]);
 
   useEffect(() => {
     let cancelled = false;
@@ -308,7 +354,9 @@ function OldJobsUI() {
   const now                = new Date();
   const cutoffTime         = hasDaysFilter ? now.getTime() - parsedDays * 24 * 60 * 60 * 1000 : null;
 
-  const filteredJobs = jobs.filter(job => {
+  const baseJobs = keyword.trim() ? (searchKeywordJobs ?? []) : jobs;
+
+  const filteredJobs = baseJobs.filter(job => {
     const status = getJobStatus(job);
     if (status === 'Draft') return false;
     if (status === 'Closed') {
@@ -321,7 +369,7 @@ function OldJobsUI() {
     const location    = (job.location || '').toLowerCase();
     const description = (job.description || '').toLowerCase();
     const tags        = (job.tags || '').toString().toLowerCase();
-    if (normalizedKeyword && !`${title} ${company} ${location} ${description} ${tags}`.includes(normalizedKeyword)) return false;
+    if (!keyword.trim() && normalizedKeyword && !`${title} ${company} ${location} ${description} ${tags}`.includes(normalizedKeyword)) return false;
     if (normalizedCompany  && !company.includes(normalizedCompany))   return false;
     if (normalizedLocation && !location.includes(normalizedLocation)) return false;
     if (locationTypeFilter && inferLocationType(job.location || '') !== locationTypeFilter) return false;
@@ -381,7 +429,7 @@ function OldJobsUI() {
 
   const activeFilterCount = [draftKeyword, draftCompany, draftLocation, draftLocationType, draftDays, draftSource].filter(Boolean).length;
 
-  if (loading || isMobile === null) {
+  if (loading || isMobile === null || (keyword.trim() && searchLoading && searchKeywordJobs === null)) {
     return (
       <div className="px-4 md:px-8 pb-10">
         <p style={{ padding: 40, textAlign: 'center' }} aria-busy="true">Loading jobs...</p>
