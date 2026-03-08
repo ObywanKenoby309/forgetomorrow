@@ -292,7 +292,7 @@ export default function RecruiterLayout({
   };
 
   // ✅ Ensure side rail stays above full-bleed content (same layering strategy as SeekerLayout)
-  const leftRailLayer = { position: 'relative', zIndex: 10 };
+  const leftRailLayer = { position: 'relative', zIndex: 1 };
 
   return (
     <>

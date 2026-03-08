@@ -8,6 +8,7 @@ import prisma from "@/lib/prisma";
 import { Prisma } from "@prisma/client";
 import { getServerSession } from "next-auth";
 import { authOptions } from "../../auth/[...nextauth]";
+import { expandStateQuery } from "@/lib/stateNormalize";
 import jwt from "jsonwebtoken";
 
 function toCsv(arr) {
@@ -452,13 +453,20 @@ function candidateMatchesPostFilters(candidate, filters) {
     relocateQuery = "",
   } = filters || {};
 
-  if (locationQuery) {
+    if (locationQuery) {
+    // Expand state names so "Tennessee" matches "Nashville, TN" etc.
+    // expandStateQuery("Tennessee") → ["Tennessee", "TN"]
+    // expandStateQuery("Nashville") → ["Nashville"]  (passthrough)
+    const locationVariants = expandStateQuery(locationQuery);
+
     const locationsToCheck = [
       candidate?.location || "",
       ...(Array.isArray(candidate?.preferredLocations) ? candidate.preferredLocations : []),
     ].filter(Boolean);
 
-    const hasLocationMatch = locationsToCheck.some((loc) => includesCI(loc, locationQuery));
+    const hasLocationMatch = locationsToCheck.some((loc) =>
+      locationVariants.some((variant) => includesCI(loc, variant))
+    );
     if (!hasLocationMatch) return false;
   }
 
