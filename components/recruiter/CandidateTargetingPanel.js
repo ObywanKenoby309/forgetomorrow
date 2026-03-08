@@ -114,16 +114,16 @@ export default function CandidateTargetingPanel({
                     Current work status
                   </label>
                   <select
-                    value={workStatus || ""}
-                    onChange={(e) => setWorkStatus?.(e.target.value)}
-                    className="w-full rounded-xl border border-white/40 bg-white/70 px-3 py-2 text-xs sm:text-sm shadow-sm focus:outline-none focus:ring-2 focus:ring-[#FF7043]"
-                  >
-                    <option value="">Any status</option>
-                    <option value="employed">Employed</option>
-                    <option value="unemployed">Actively looking</option>
-                    <option value="student">Student</option>
-                    <option value="contractor">Contractor / Freelance</option>
-                  </select>
+					value={workStatus || ""}
+					onChange={(e) => setWorkStatus?.(e.target.value)}
+				  >
+					<option value="">Any status</option>
+					<option value="actively-seeking">Actively Seeking</option>
+					<option value="open">Open to Opportunities</option>
+					<option value="not-seeking">Not Seeking</option>
+					<option value="student">Student</option>
+					<option value="contract">Freelance / Contract</option>
+				 </select>
                 </div>
 
                 <div>
@@ -131,18 +131,15 @@ export default function CandidateTargetingPanel({
                     Preferred work type
                   </label>
                   <select
-                    value={preferredWorkType || ""}
-                    onChange={(e) => setPreferredWorkType?.(e.target.value)}
-                    className="w-full rounded-xl border border-white/40 bg-white/70 px-3 py-2 text-xs sm:text-sm shadow-sm focus:outline-none focus:ring-2 focus:ring-[#FF7043]"
-                  >
-                    <option value="">Any type</option>
-                    <option value="full-time">Full-time</option>
-                    <option value="part-time">Part-time</option>
-                    <option value="contract">Contract</option>
-                    <option value="internship">Internship</option>
-                    <option value="temporary">Temporary</option>
-                    <option value="remote-only">Remote only</option>
-                  </select>
+					value={preferredWorkType || ""}
+					onChange={(e) => setPreferredWorkType?.(e.target.value)}
+				  >
+					<option value="">Any</option>
+					<option value="remote">Remote</option>
+					<option value="hybrid">Hybrid</option>
+					<option value="onsite">On-site</option>
+					<option value="flexible">Flexible</option>
+				  </select>
                 </div>
 
                 <div>
@@ -160,6 +157,19 @@ export default function CandidateTargetingPanel({
                     <option value="maybe">Maybe</option>
                   </select>
                 </div>
+
+				<div>
+				  <label className="block text-xs font-medium text-slate-600 mb-1">
+					Preferred location
+				  </label>
+				  <input
+					type="text"
+					value={locationFilter || ""}
+					onChange={(e) => setLocationFilter?.(e.target.value)}
+					placeholder="e.g., Nashville, TN"
+					className="w-full rounded-xl border border-white/40 bg-white/70 px-3 py-2 text-xs sm:text-sm shadow-sm focus:outline-none focus:ring-2 focus:ring-[#FF7043]"
+				  />
+				</div>
 
                 <div>
                   <label className="block text-xs font-medium text-slate-600 mb-1">
