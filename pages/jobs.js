@@ -434,7 +434,7 @@ function OldJobsUI() {
 
   const activeFilterCount = [draftKeyword, draftCompany, draftLocation, draftLocationType, draftDays, draftSource].filter(Boolean).length;
 
-  if (loading || isMobile === null || (keyword.trim() && searchLoading && searchKeywordJobs === null)) {
+  if (loading || isMobile === null) {
     return (
       <div className="px-4 md:px-8 pb-10">
         <p style={{ padding: 40, textAlign: 'center' }} aria-busy="true">Loading jobs...</p>
