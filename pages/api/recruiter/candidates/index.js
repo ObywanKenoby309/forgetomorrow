@@ -55,6 +55,114 @@ function dedupeCaseInsensitive(arr) {
   return out;
 }
 
+function normalizeText(value) {
+  return String(value || "").trim();
+}
+
+function normalizeLower(value) {
+  return normalizeText(value).toLowerCase();
+}
+
+function includesCI(haystack, needle) {
+  const h = normalizeLower(haystack);
+  const n = normalizeLower(needle);
+  if (!h || !n) return false;
+  return h.includes(n);
+}
+
+function normalizeYesNoMaybe(value) {
+  if (typeof value === "boolean") return value ? "yes" : "no";
+
+  const v = normalizeLower(value);
+  if (!v) return "";
+  if (["yes", "true", "y"].includes(v)) return "yes";
+  if (["no", "false", "n"].includes(v)) return "no";
+  if (["maybe", "open", "possible"].includes(v)) return "maybe";
+  return v;
+}
+
+function normalizeWorkType(value) {
+  const v = normalizeLower(value);
+  if (!v) return "";
+
+  if (v === "remote-only") return "remote";
+  if (v === "remote only") return "remote";
+  if (v === "full time") return "full-time";
+  if (v === "part time") return "part-time";
+
+  return v;
+}
+
+function getWorkPreferencesObject(v) {
+  if (v && typeof v === "object" && !Array.isArray(v)) return v;
+  return {};
+}
+
+function getPreferredLocationsFromWorkPreferences(workPreferences) {
+  const prefs = getWorkPreferencesObject(workPreferences);
+
+  const raw =
+    prefs.preferredLocations ??
+    prefs.locations ??
+    prefs.locationPreferences ??
+    prefs.preferredLocation ??
+    prefs.location ??
+    [];
+
+  if (Array.isArray(raw)) {
+    return dedupeCaseInsensitive(
+      raw.map((x) => {
+        if (typeof x === "string") return x;
+        if (x && typeof x === "object") {
+          return x.label || x.name || x.value || x.location || "";
+        }
+        return "";
+      })
+    );
+  }
+
+  if (typeof raw === "string") {
+    return dedupeCaseInsensitive(
+      raw
+        .split(",")
+        .map((s) => s.trim())
+        .filter(Boolean)
+    );
+  }
+
+  return [];
+}
+
+function getWorkStatusFromWorkPreferences(workPreferences) {
+  const prefs = getWorkPreferencesObject(workPreferences);
+  return (
+    prefs.workStatus ||
+    prefs.currentWorkStatus ||
+    prefs.status ||
+    ""
+  );
+}
+
+function getPreferredWorkTypeFromWorkPreferences(workPreferences) {
+  const prefs = getWorkPreferencesObject(workPreferences);
+  return (
+    prefs.preferredWorkType ||
+    prefs.workType ||
+    prefs.employmentType ||
+    ""
+  );
+}
+
+function getRelocateFromWorkPreferences(workPreferences) {
+  const prefs = getWorkPreferencesObject(workPreferences);
+  return (
+    prefs.willingToRelocate ??
+    prefs.relocate ??
+    prefs.relocation ??
+    ""
+  );
+}
+
 async function resolveEffectiveRecruiter(prismaClient, req, session) {
   const sessionEmail = String(session?.user?.email || "").trim().toLowerCase();
   if (!sessionEmail) return null;
@@ -227,17 +335,6 @@ function parseEducationTerms(input) {
   return dedupeCaseInsensitive(expanded).slice(0, 10);
 }
 
-function parseLocationTerms(input) {
-  return dedupeCaseInsensitive(
-    String(input || "")
-      .trim()
-      .replace(/,/g, " ")
-      .split(/\s+/)
-      .map((s) => s.trim())
-      .filter(Boolean)
-  ).slice(0, 8);
-}
-
 async function findUserIdsByEducationTerms(prismaClient, terms) {
   const cleaned = (terms || [])
     .map((t) => String(t || "").trim())
@@ -347,6 +444,45 @@ async function fetchRenderMatches(payload) {
   return res.json();
 }
 
+function candidateMatchesPostFilters(candidate, filters) {
+  const {
+    locationQuery = "",
+    workStatusQuery = "",
+    preferredWorkTypeQuery = "",
+    relocateQuery = "",
+  } = filters || {};
+
+  if (locationQuery) {
+    const locationsToCheck = [
+      candidate?.location || "",
+      ...(Array.isArray(candidate?.preferredLocations) ? candidate.preferredLocations : []),
+    ].filter(Boolean);
+
+    const hasLocationMatch = locationsToCheck.some((loc) => includesCI(loc, locationQuery));
+    if (!hasLocationMatch) return false;
+  }
+
+  if (workStatusQuery) {
+    const candidateStatus = normalizeLower(candidate?.workStatus);
+    const targetStatus = normalizeLower(workStatusQuery);
+    if (candidateStatus !== targetStatus) return false;
+  }
+
+  if (preferredWorkTypeQuery) {
+    const candidateType = normalizeWorkType(candidate?.preferredWorkType);
+    const targetType = normalizeWorkType(preferredWorkTypeQuery);
+    if (candidateType !== targetType) return false;
+  }
+
+  if (relocateQuery) {
+    const candidateRelocate = normalizeYesNoMaybe(candidate?.willingToRelocate);
+    const targetRelocate = normalizeYesNoMaybe(relocateQuery);
+    if (candidateRelocate !== targetRelocate) return false;
+  }
+
+  return true;
+}
+
 export default async function handler(req, res) {
   if (req.method !== "GET") {
     res.setHeader("Allow", ["GET"]);
@@ -447,22 +583,6 @@ export default async function handler(req, res) {
       });
     }
 
-    if (locationQuery) {
-      const locationTerms = parseLocationTerms(locationQuery);
-
-      if (locationTerms.length) {
-        andClauses.push({
-          AND: locationTerms.map((term) => ({
-            OR: [
-              { location: { contains: term, mode: "insensitive" } },
-              { headline: { contains: term, mode: "insensitive" } },
-              { aboutMe: { contains: term, mode: "insensitive" } },
-            ],
-          })),
-        });
-      }
-    }
-
     if (summaryKeywordsQuery) {
       andClauses.push({
         aboutMe: { contains: summaryKeywordsQuery, mode: "insensitive" },
@@ -473,37 +593,6 @@ export default async function handler(req, res) {
       andClauses.push({
         headline: { contains: jobTitleQuery, mode: "insensitive" },
       });
-    }
-
-    if (workStatusQuery) {
-      andClauses.push({
-        workPreferences: {
-          path: ["workStatus"],
-          equals: workStatusQuery,
-        },
-      });
-    }
-
-    if (preferredWorkTypeQuery) {
-      andClauses.push({
-        workPreferences: {
-          path: ["workType"],
-          equals: preferredWorkTypeQuery,
-        },
-      });
-    }
-
-    if (relocateQuery) {
-      const v = relocateQuery.toLowerCase();
-      if (v === "yes") {
-        andClauses.push({
-          workPreferences: { path: ["willingToRelocate"], equals: true },
-        });
-      } else if (v === "no") {
-        andClauses.push({
-          workPreferences: { path: ["willingToRelocate"], equals: false },
-        });
-      }
     }
 
     if (skillsQuery) {
@@ -551,6 +640,7 @@ export default async function handler(req, res) {
         headline: true,
         aboutMe: true,
         location: true,
+        workPreferences: true,
         skillsJson: true,
         languagesJson: true,
         educationJson: true,
@@ -630,7 +720,7 @@ export default async function handler(req, res) {
     );
     const renderIdOrder = renderCandidates.map((c) => String(c.id));
 
-    const candidates = users.map((u) => {
+    let candidates = users.map((u) => {
       const meta = metaByCandidateId.get(u.id) || null;
       const renderCandidate = renderById.get(String(u.id)) || null;
 
@@ -655,6 +745,12 @@ export default async function handler(req, res) {
       const effectiveSkillsArr =
         recruiterSkillsArr.length > 0 ? recruiterSkillsArr : baselineSkillsArr;
 
+      const workPreferencesObj = getWorkPreferencesObject(u.workPreferences);
+      const preferredLocations = getPreferredLocationsFromWorkPreferences(workPreferencesObj);
+      const resolvedWorkStatus = getWorkStatusFromWorkPreferences(workPreferencesObj);
+      const resolvedPreferredWorkType = getPreferredWorkTypeFromWorkPreferences(workPreferencesObj);
+      const resolvedRelocate = getRelocateFromWorkPreferences(workPreferencesObj);
+
       return {
         id: u.id,
         userId: u.id,
@@ -665,6 +761,12 @@ export default async function handler(req, res) {
         role: u.headline || renderCandidate?.role || "",
         summary: u.aboutMe || renderCandidate?.summary || "",
         location: u.location || renderCandidate?.location || "",
+
+        workPreferences: workPreferencesObj,
+        preferredLocations,
+        workStatus: resolvedWorkStatus || renderCandidate?.workStatus || "",
+        preferredWorkType: resolvedPreferredWorkType || renderCandidate?.preferredWorkType || "",
+        willingToRelocate: resolvedRelocate,
 
         skills: effectiveSkillsArr,
         education: toEducationObjects(u.educationJson),
@@ -698,6 +800,18 @@ export default async function handler(req, res) {
             : null,
       };
     });
+
+    // ✅ IMPORTANT:
+    // Apply location/work-preference filters against the final candidate object,
+    // so recruiter search respects profile work preferences like preferredLocations.
+    candidates = candidates.filter((candidate) =>
+      candidateMatchesPostFilters(candidate, {
+        locationQuery,
+        workStatusQuery,
+        preferredWorkTypeQuery,
+        relocateQuery,
+      })
+    );
 
     // Preserve Render ranking when possible, otherwise keep local order
     candidates.sort((a, b) => {
