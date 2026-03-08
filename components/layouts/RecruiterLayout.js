@@ -1,5 +1,5 @@
 // components/layouts/RecruiterLayout.js
-import React, { useCallback, useEffect, useMemo, useState, useLayoutEffect } from 'react';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import Head from 'next/head';
 import { useRouter } from 'next/router';
 import { usePlan } from '@/context/PlanContext';
@@ -95,21 +95,22 @@ export default function RecruiterLayout({
 
   const { isLoaded: planLoaded, plan, role: planRole } = usePlan();
 
-  // --- Mobile detection ---
-  // ✅ FIX: never start as true. Initialize from window width when possible.
-  const [isMobile, setIsMobile] = useState(() => {
-    if (typeof window === 'undefined') return false; // server: assume desktop to prevent mobile-first flash
-    return window.innerWidth < 1024;
-  });
+  // ✅ HYDRATION FIX:
+  // Always render desktop-safe markup on the server and first client paint.
+  // Then switch to mobile after mount if needed.
+  const [hasMounted, setHasMounted] = useState(false);
+  const [isMobile, setIsMobile] = useState(false);
   const [mobileToolsOpen, setMobileToolsOpen] = useState(false);
 
-  // ✅ Use layout effect on client so the correct layout is chosen before paint.
-  const useIsomorphicLayoutEffect = typeof window !== 'undefined' ? useLayoutEffect : useEffect;
+  useEffect(() => {
+    setHasMounted(true);
 
-  useIsomorphicLayoutEffect(() => {
     const handleResize = () => {
-      if (typeof window !== 'undefined') setIsMobile(window.innerWidth < 1024);
+      if (typeof window !== 'undefined') {
+        setIsMobile(window.innerWidth < 1024);
+      }
     };
+
     handleResize();
     window.addEventListener('resize', handleResize);
     return () => window.removeEventListener('resize', handleResize);
@@ -126,7 +127,7 @@ export default function RecruiterLayout({
         backgroundSize: 'cover',
         backgroundPosition: 'center top',
         backgroundRepeat: 'no-repeat',
-        backgroundAttachment: isMobile ? 'scroll' : 'fixed',
+        backgroundAttachment: hasMounted && isMobile ? 'scroll' : 'fixed',
       }
     : {
         minHeight: '100vh',
@@ -256,7 +257,7 @@ export default function RecruiterLayout({
     };
   }, [hasHeader, hasRight]);
 
-  const gridStyles = isMobile ? mobileGrid : desktopGrid;
+  const gridStyles = hasMounted && isMobile ? mobileGrid : desktopGrid;
 
   const rightRailStyle = {
     gridArea: 'right',
@@ -269,16 +270,15 @@ export default function RecruiterLayout({
     backdropFilter: GLASS.backdropFilter,
     WebkitBackdropFilter: GLASS.WebkitBackdropFilter,
 
-    borderRadius: 14, // ✅ was 12
+    borderRadius: 14,
     padding: 16,
     minHeight: 120,
     boxSizing: 'border-box',
-    width: isMobile ? '100%' : RIGHT_W,
-    minWidth: isMobile ? 0 : RIGHT_W,
-    maxWidth: isMobile ? '100%' : RIGHT_W,
+    width: hasMounted && isMobile ? '100%' : RIGHT_W,
+    minWidth: hasMounted && isMobile ? 0 : RIGHT_W,
+    maxWidth: hasMounted && isMobile ? '100%' : RIGHT_W,
     minInlineSize: 0,
 
-    // ✅ was white text for dark rail; keep neutral so ad card can be solid on its own
     color: '#112033',
   };
 
@@ -308,13 +308,12 @@ export default function RecruiterLayout({
             ...gridStyles,
             gap: GAP,
             paddingTop: PAD,
-            paddingBottom: isMobile ? PAD + 84 : PAD,
+            paddingBottom: hasMounted && isMobile ? PAD + 84 : PAD,
             paddingLeft: PAD,
             paddingRight: hasRight ? Math.max(8, PAD - 4) : PAD,
             alignItems: 'start',
             boxSizing: 'border-box',
 
-            // ✅ FIX (mobile overflow): hard clamp layout to viewport
             width: '100%',
             maxWidth: '100vw',
             overflowX: 'hidden',
@@ -328,7 +327,7 @@ export default function RecruiterLayout({
               gridArea: 'left',
               alignSelf: 'start',
               minWidth: 0,
-              display: isMobile ? 'none' : 'block',
+              display: hasMounted && isMobile ? 'none' : 'block',
             }}
           >
             <RecruiterSidebar
@@ -374,11 +373,7 @@ export default function RecruiterLayout({
               minWidth: 0,
               width: '100%',
               maxWidth: '100%',
-
-              // ✅ Only remove overflow clipping on dashboard (contentFullBleed).
-              // All other recruiter pages keep overflowX: 'hidden' for mobile safety.
               ...(!contentFullBleed ? { overflowX: 'hidden' } : {}),
-
               ...mainOverrides,
             }}
           >
@@ -391,9 +386,13 @@ export default function RecruiterLayout({
 
       <SupportFloatingButton />
 
-      <MobileBottomBar isMobile={isMobile} chromeMode={chromeMode} onOpenTools={handleOpenTools} />
+      <MobileBottomBar
+        isMobile={hasMounted ? isMobile : false}
+        chromeMode={chromeMode}
+        onOpenTools={handleOpenTools}
+      />
 
-      {isMobile && mobileToolsOpen && (
+      {hasMounted && isMobile && mobileToolsOpen && (
         <div
           style={{
             position: 'fixed',
