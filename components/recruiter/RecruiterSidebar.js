@@ -2,21 +2,17 @@
 import React from 'react';
 import Link from 'next/link';
 import { usePlan } from '@/context/PlanContext';
-
-// ✅ NEW
 import { useEffect, useState } from 'react';
 
 const ORANGE = '#FF7043';
 const TEXT_MAIN = '#263238';
 
-// ✅ Glass standard (align with Profile page canonical frosted glass)
 const GLASS_BG = 'rgba(255,255,255,0.68)';
 const GLASS_BORDER = 'rgba(255,255,255,0.22)';
 const GLASS_SHADOW = '0 10px 26px rgba(0,0,0,0.12)';
 const GLASS_BLUR = 'blur(12px)';
 
-// Hover / subtle fills on glass
-const HOVER_BG = 'rgba(255,112,67,0.10)'; // orange tint but still “breathes”
+const HOVER_BG = 'rgba(255,112,67,0.10)';
 const ACTIVE_SHADOW = '0 12px 24px rgba(0,0,0,0.12)';
 
 function Badge({ value }) {
@@ -45,7 +41,6 @@ function Badge({ value }) {
   );
 }
 
-// ✅ NEW: subtle dot (used for Action Center unread indicator)
 function Dot({ show }) {
   if (!show) return null;
   return (
@@ -112,10 +107,7 @@ function NavItem({ href, label, active, badge, dot }) {
         />
       )}
       <span style={{ marginLeft: active ? 6 : 0 }}>{label}</span>
-
-      {/* ✅ NEW: dot indicator (Action Center unread) */}
       <Dot show={dot} />
-
       <Badge value={badge} />
     </Link>
   );
@@ -143,8 +135,6 @@ export default function RecruiterSidebar({
   role: roleProp,
   variant,
   counts = { connections: 0, signal: 0, feed: 0 },
-
-  // ✅ NEW: DB-backed staff fields (from session/user)
   employee = false,
   department = '',
 }) {
@@ -160,7 +150,6 @@ export default function RecruiterSidebar({
   const dept = String(department || '').trim().toLowerCase();
   const staffAccess = employee === true && dept.length > 0;
 
-  // ✅ NEW: unread dot for Action Center (shown on Dashboard in sidebar)
   const [hasActionUnread, setHasActionUnread] = useState(false);
 
   useEffect(() => {
@@ -180,7 +169,7 @@ export default function RecruiterSidebar({
 
         setHasActionUnread(!!data?.hasUnread);
       } catch {
-        // swallow - no dot if API fails
+        // swallow — no dot if API fails
       }
     };
 
@@ -218,7 +207,11 @@ export default function RecruiterSidebar({
         alignSelf: 'start',
         height: 'fit-content',
 
-        // ✅ Glass container
+        // ✅ FIX: explicit low z-index so the candidate profile modal (z-[100])
+        // always renders on top. Without this, position:sticky creates a stacking
+        // context that competes with the modal overlay.
+        zIndex: 10,
+
         background: GLASS_BG,
         borderRadius: 18,
         border: `1px solid ${GLASS_BORDER}`,
@@ -296,7 +289,6 @@ export default function RecruiterSidebar({
         />
       )}
 
-      {/* ✅ NEW: Staff tools (DB-backed via employee + department) */}
       {staffAccess ? (
         <>
           <SectionLabel>Staff Tools</SectionLabel>
