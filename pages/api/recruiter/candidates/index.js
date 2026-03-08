@@ -1,7 +1,7 @@
 // pages/api/recruiter/candidates/index.js
 // List recruiter candidates from Prisma (main DB) — LIVE from User table
 // + join recruiter-specific metadata (notes/tags/pipelineStage/skills) from RecruiterCandidate
-// + REAL match ranking from Render recruiter candidate engine
+// + OPTIONAL Render match enrichment (never blocks local candidate search)
 // ✅ Impersonation-aware: resolves effective recruiter via ft_imp cookie (Platform Admin only)
 
 import prisma from "@/lib/prisma";
@@ -393,26 +393,7 @@ export default async function handler(req, res) {
 
   try {
     // ─────────────────────────────────────────────────────────────
-    // 1) Get ranked candidate ids + match scores from Render
-    // ─────────────────────────────────────────────────────────────
-    const renderPayload = buildRenderPayload(req.query);
-    const renderResponse = await fetchRenderMatches(renderPayload);
-
-    const renderCandidates = Array.isArray(renderResponse?.candidates)
-      ? renderResponse.candidates
-      : [];
-
-    if (!renderCandidates.length) {
-      return res.status(200).json({ candidates: [] });
-    }
-
-    const renderIdOrder = renderCandidates.map((c) => String(c.id));
-    const renderById = new Map(
-      renderCandidates.map((c) => [String(c.id), c])
-    );
-
-    // ─────────────────────────────────────────────────────────────
-    // 2) Privacy / visibility filters still enforced locally
+    // 1) Always load local candidates first
     // ─────────────────────────────────────────────────────────────
     const andClauses = [
       { deletedAt: null },
@@ -426,9 +407,6 @@ export default async function handler(req, res) {
             ],
           },
         ],
-      },
-      {
-        id: { in: renderIdOrder },
       },
     ];
 
@@ -448,7 +426,6 @@ export default async function handler(req, res) {
       }
     }
 
-    // Optional local guards remain for fields that exist locally.
     if (nameRoleQuery) {
       andClauses.push({
         OR: [
@@ -542,11 +519,10 @@ export default async function handler(req, res) {
 
     const where = { AND: andClauses };
 
-    // ─────────────────────────────────────────────────────────────
-    // 3) Load local candidate records
-    // ─────────────────────────────────────────────────────────────
     const users = await prisma.user.findMany({
       where,
+      orderBy: { createdAt: "desc" },
+      take: 100,
       select: {
         id: true,
         name: true,
@@ -614,14 +590,26 @@ export default async function handler(req, res) {
       if (b > a) bestResumeByUserId.set(r.userId, r);
     }
 
-    const userById = new Map(users.map((u) => [String(u.id), u]));
+    // ─────────────────────────────────────────────────────────────
+    // 2) Try Render enrichment, but never let it block local results
+    // ─────────────────────────────────────────────────────────────
+    let renderCandidates = [];
+    try {
+      const renderPayload = buildRenderPayload(req.query);
+      const renderResponse = await fetchRenderMatches(renderPayload);
+      renderCandidates = Array.isArray(renderResponse?.candidates)
+        ? renderResponse.candidates
+        : [];
+    } catch (renderErr) {
+      console.error("[recruiter/candidates] render enrichment error:", renderErr);
+    }
 
-    // Preserve Render ranking order
-    const orderedUsers = renderIdOrder
-      .map((id) => userById.get(String(id)))
-      .filter(Boolean);
+    const renderById = new Map(
+      renderCandidates.map((c) => [String(c.id), c])
+    );
+    const renderIdOrder = renderCandidates.map((c) => String(c.id));
 
-    const candidates = orderedUsers.map((u) => {
+    const candidates = users.map((u) => {
       const meta = metaByCandidateId.get(u.id) || null;
       const renderCandidate = renderById.get(String(u.id)) || null;
 
@@ -688,6 +676,23 @@ export default async function handler(req, res) {
             ? renderCandidate.match
             : null,
       };
+    });
+
+    // Preserve Render ranking when possible, otherwise keep local order
+    candidates.sort((a, b) => {
+      const aIdx = renderIdOrder.indexOf(String(a.id));
+      const bIdx = renderIdOrder.indexOf(String(b.id));
+
+      const aHasRender = aIdx !== -1;
+      const bHasRender = bIdx !== -1;
+
+      if (aHasRender && bHasRender) return aIdx - bIdx;
+      if (aHasRender && !bHasRender) return -1;
+      if (!aHasRender && bHasRender) return 1;
+
+      const aDate = a?.lastSeen ? new Date(a.lastSeen).getTime() : 0;
+      const bDate = b?.lastSeen ? new Date(b.lastSeen).getTime() : 0;
+      return bDate - aDate;
     });
 
     return res.status(200).json({ candidates });
