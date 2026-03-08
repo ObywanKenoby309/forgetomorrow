@@ -1,6 +1,7 @@
 // pages/api/recruiter/candidates/index.js
 // List recruiter candidates from Prisma (main DB) — LIVE from User table
-// + join recruiter-specific metadata (notes/tags/pipelineStage/skills) from RecruiterCandidate (Option A)
+// + join recruiter-specific metadata (notes/tags/pipelineStage/skills) from RecruiterCandidate
+// + REAL match ranking from Render recruiter candidate engine
 // ✅ Impersonation-aware: resolves effective recruiter via ft_imp cookie (Platform Admin only)
 
 import prisma from "@/lib/prisma";
@@ -59,11 +60,8 @@ async function resolveEffectiveRecruiter(prismaClient, req, session) {
   if (!sessionEmail) return null;
 
   const isPlatformAdmin = !!session?.user?.isPlatformAdmin;
-
-  // Default: real logged-in user
   let effectiveUserId = null;
 
-  // If platform admin + impersonation cookie exists, use targetUserId
   if (isPlatformAdmin) {
     const imp = readCookie(req, "ft_imp");
     if (imp) {
@@ -104,15 +102,12 @@ function safeJsonParse(str) {
   }
 }
 
-// Attempts to map your Resume.content payload into modal-friendly experience items.
 function extractExperienceFromResumeContent(contentStr) {
   const parsed = typeof contentStr === "string" ? safeJsonParse(contentStr) : null;
   if (!parsed || typeof parsed !== "object") return [];
 
-  // ✅ Your resume content is saved as: { template: "...", data: { ... } }
   const root = parsed?.data && typeof parsed.data === "object" ? parsed.data : parsed;
 
-  // ✅ Support your builder shapes:
   const list =
     (Array.isArray(root.workExperiences) && root.workExperiences) ||
     (Array.isArray(root.experiences) && root.experiences) ||
@@ -156,22 +151,16 @@ function extractExperienceFromResumeContent(contentStr) {
     .filter((e) => e.title || e.company || e.range || (e.highlights && e.highlights.length));
 }
 
-// ✅ Extract skills from resume content (profile first; resume fallback only when profile is empty)
 function extractSkillsFromResumeContent(contentStr) {
   const parsed = typeof contentStr === "string" ? safeJsonParse(contentStr) : null;
   if (!parsed || typeof parsed !== "object") return [];
 
   const root = parsed?.data && typeof parsed.data === "object" ? parsed.data : parsed;
-
-  // Your builder saves skills at data.skills (array of strings)
   const skills = Array.isArray(root.skills) ? root.skills : [];
   return dedupeCaseInsensitive(skills.map((s) => String(s || "").trim()).filter(Boolean));
 }
 
-// ✅ Education normalization: we store educationJson as array of objects.
-// This returns sanitized objects (never "[object Object]" strings).
 function toEducationObjects(v) {
-  // already an array of objects
   if (Array.isArray(v)) {
     return v
       .map((x) => {
@@ -188,7 +177,6 @@ function toEducationObjects(v) {
       .filter(Boolean);
   }
 
-  // JSON string support (defensive)
   if (typeof v === "string") {
     const parsed = safeJsonParse(v);
     if (Array.isArray(parsed)) return toEducationObjects(parsed);
@@ -197,20 +185,12 @@ function toEducationObjects(v) {
   return [];
 }
 
-// ✅ Education query parsing
-// - UI sometimes sends "AS in Microsoft Engineering" as ONE string
-// - We normalize that into multiple terms so education search only matches inside educationJson.
-// - We also normalize degree shorthand: "AS" should match "Associate" and "Associate's".
 function parseEducationTerms(input) {
   const raw = String(input || "").trim();
   if (!raw) return [];
 
-  // Normalize common "X in Y" single-string pattern into multi-term search
-  // Example: "AS in Microsoft Support Engineering" -> ["AS", "Microsoft Support Engineering"]
   let normalized = raw;
 
-  // If no commas were used, but " in " exists, split on " in "
-  // Keep it conservative: only split on the first occurrence.
   if (!normalized.includes(",") && /\s+in\s+/i.test(normalized)) {
     const parts = normalized.split(/\s+in\s+/i).map((s) => s.trim()).filter(Boolean);
     if (parts.length >= 2) {
@@ -218,18 +198,15 @@ function parseEducationTerms(input) {
     }
   }
 
-  // Primary split remains comma-based
   const terms = normalized
     .split(",")
     .map((s) => s.trim())
     .filter(Boolean);
 
-  // Expand shorthand degree synonyms (kept tight and specific to avoid over-broad matches)
   const expanded = [];
   for (const t of terms) {
     const tl = t.toLowerCase();
 
-    // AS / A.S. -> Associate / Associate's
     if (tl === "as" || tl === "a.s." || tl === "a.s" || tl === "assoc" || tl === "associates") {
       expanded.push(t);
       expanded.push("Associate");
@@ -237,7 +214,6 @@ function parseEducationTerms(input) {
       continue;
     }
 
-    // AA / A.A. -> Associate / Associate's
     if (tl === "aa" || tl === "a.a." || tl === "a.a") {
       expanded.push(t);
       expanded.push("Associate");
@@ -251,8 +227,6 @@ function parseEducationTerms(input) {
   return dedupeCaseInsensitive(expanded).slice(0, 10);
 }
 
-// ✅ Education search helper (Postgres JSON/JSONB array-of-objects JSON/JSONB
-// AND across terms; within each term, OR across school/degree/field/startYear/endYear
 async function findUserIdsByEducationTerms(prismaClient, terms) {
   const cleaned = (terms || [])
     .map((t) => String(t || "").trim())
@@ -261,8 +235,6 @@ async function findUserIdsByEducationTerms(prismaClient, terms) {
 
   if (!cleaned.length) return [];
 
-  // ✅ CRITICAL: cast to jsonb so this works whether the column is JSON or JSONB
-  // ✅ ALSO: your Prisma model maps User -> "users" table (@@map("users"))
   const perTermExists = cleaned.map((term) => {
     const like = `%${term}%`;
     return Prisma.sql`
@@ -294,13 +266,82 @@ async function findUserIdsByEducationTerms(prismaClient, terms) {
   return Array.isArray(rows) ? rows.map((r) => String(r.id)).filter(Boolean) : [];
 }
 
+function buildRenderPayload(query) {
+  const {
+    q = "",
+    location = "",
+    bool = "",
+    summaryKeywords = "",
+    jobTitle = "",
+    workStatus = "",
+    preferredWorkType = "",
+    willingToRelocate = "",
+    skills = "",
+    languages = "",
+    education = "",
+  } = query || {};
+
+  return {
+    q: String(q || "").trim(),
+    location: String(location || "").trim(),
+    bool: String(bool || "").trim(),
+    summaryKeywords: String(summaryKeywords || "").trim(),
+    jobTitle: String(jobTitle || "").trim(),
+    workStatus: String(workStatus || "").trim(),
+    preferredWorkType: String(preferredWorkType || "").trim(),
+    relocate: String(willingToRelocate || "").trim(),
+    skills: String(skills || "")
+      .split(",")
+      .map((s) => s.trim())
+      .filter(Boolean),
+    languages: String(languages || "")
+      .split(",")
+      .map((s) => s.trim())
+      .filter(Boolean),
+    education: String(education || "")
+      .split(",")
+      .map((s) => s.trim())
+      .filter(Boolean),
+    limit: 100,
+    offset: 0,
+  };
+}
+
+async function fetchRenderMatches(payload) {
+  const baseUrl = process.env.SEARCH_SERVICE_URL;
+  if (!baseUrl) {
+    throw new Error("Missing SEARCH_SERVICE_URL");
+  }
+
+  const headers = {
+    "Content-Type": "application/json",
+  };
+
+  if (process.env.SEARCH_SERVICE_API_KEY) {
+    headers["x-api-key"] = process.env.SEARCH_SERVICE_API_KEY;
+  }
+
+  const res = await fetch(`${baseUrl}/recruiter/candidates/match`, {
+    method: "POST",
+    headers,
+    body: JSON.stringify(payload),
+    cache: "no-store",
+  });
+
+  if (!res.ok) {
+    const text = await res.text().catch(() => "");
+    throw new Error(`Render recruiter match failed (${res.status}): ${text || "Unknown error"}`);
+  }
+
+  return res.json();
+}
+
 export default async function handler(req, res) {
   if (req.method !== "GET") {
     res.setHeader("Allow", ["GET"]);
     return res.status(405).json({ error: "Method not allowed" });
   }
 
-  // Require authentication (recruiter, admin, etc.)
   let session;
   try {
     session = await getServerSession(req, res, authOptions);
@@ -312,7 +353,6 @@ export default async function handler(req, res) {
     return res.status(401).json({ error: "Not authenticated" });
   }
 
-  // ✅ Impersonation-aware recruiter identity
   const recruiter = await resolveEffectiveRecruiter(prisma, req, session);
 
   if (!recruiter?.id) {
@@ -339,162 +379,174 @@ export default async function handler(req, res) {
     education = "",
   } = req.query || {};
 
-  const nameRoleQuery = (q || "").toString().trim();
-  const locationQuery = (location || "").toString().trim();
-  const booleanQuery = (bool || "").toString().trim();
-  const summaryKeywordsQuery = (summaryKeywords || "").toString().trim();
-  const jobTitleQuery = (jobTitle || "").toString().trim();
-  const workStatusQuery = (workStatus || "").toString().trim();
-  const preferredWorkTypeQuery = (preferredWorkType || "").toString().trim();
-  const relocateQuery = (willingToRelocate || "").toString().trim();
-  const skillsQuery = (skills || "").toString().trim();
-  const languagesQuery = (languages || "").toString().trim();
-  const educationQuery = (education || "").toString().trim();
-
-  // Recruiter discovery is LIVE and only includes:
-  // - PUBLIC profiles
-  // - RECRUITERS_ONLY profiles
-  // Private profiles are excluded instantly.
-  //
-  // ✅ IMPORTANT FIX:
-  // Legacy `isProfilePublic` must never override explicit `profileVisibility: PRIVATE`.
-  // We only honor `isProfilePublic` when `profileVisibility` is NULL (legacy accounts).
-  const andClauses = [
-    { deletedAt: null },
-    {
-      OR: [
-        { profileVisibility: { in: ["PUBLIC", "RECRUITERS_ONLY"] } },
-        {
-          AND: [
-            { isProfilePublic: true },
-            { profileVisibility: { not: "PRIVATE" } },
-          ],
-        },
-      ],
-    },
-  ];
-
-  if (nameRoleQuery) {
-    andClauses.push({
-      OR: [
-        { name: { contains: nameRoleQuery, mode: "insensitive" } },
-        { headline: { contains: nameRoleQuery, mode: "insensitive" } },
-        { aboutMe: { contains: nameRoleQuery, mode: "insensitive" } },
-      ],
-    });
-  }
-
-  if (locationQuery) {
-    andClauses.push({
-      location: { contains: locationQuery, mode: "insensitive" },
-    });
-  }
-
-  if (summaryKeywordsQuery) {
-    andClauses.push({
-      aboutMe: { contains: summaryKeywordsQuery, mode: "insensitive" },
-    });
-  }
-
-  if (jobTitleQuery) {
-    andClauses.push({
-      headline: { contains: jobTitleQuery, mode: "insensitive" },
-    });
-  }
-
-  if (workStatusQuery) {
-    andClauses.push({
-      workPreferences: {
-        path: ["workStatus"],
-        equals: workStatusQuery,
-      },
-    });
-  }
-
-  if (preferredWorkTypeQuery) {
-    andClauses.push({
-      workPreferences: {
-        path: ["workType"],
-        equals: preferredWorkTypeQuery,
-      },
-    });
-  }
-
-  if (relocateQuery) {
-    const v = relocateQuery.toLowerCase();
-    if (v === "yes") {
-      andClauses.push({
-        workPreferences: { path: ["willingToRelocate"], equals: true },
-      });
-    } else if (v === "no") {
-      andClauses.push({
-        workPreferences: { path: ["willingToRelocate"], equals: false },
-      });
-    }
-  }
-
-  if (skillsQuery) {
-    const terms = skillsQuery
-      .split(",")
-      .map((s) => s.trim())
-      .filter(Boolean);
-
-    for (const term of terms) {
-      andClauses.push({
-        skillsJson: { array_contains: [term] },
-      });
-    }
-  }
-
-  if (languagesQuery) {
-    const terms = languagesQuery
-      .split(",")
-      .map((s) => s.trim())
-      .filter(Boolean);
-
-    for (const term of terms) {
-      andClauses.push({
-        languagesJson: { array_contains: [term] },
-      });
-    }
-  }
-
-  // ✅ FIXED: education keyword filter for array-of-objects JSON/JSONB
-  // AND across parsed terms (comma-separated; also supports "X in Y" -> ["X","Y"])
-  if (educationQuery) {
-    const terms = parseEducationTerms(educationQuery);
-
-    try {
-      const matchedUserIds = await findUserIdsByEducationTerms(prisma, terms);
-
-      // No matches -> return empty quickly (avoids full scan + useless joins)
-      if (!matchedUserIds.length) {
-        return res.status(200).json({ candidates: [] });
-      }
-
-      andClauses.push({
-        id: { in: matchedUserIds },
-      });
-    } catch (e) {
-      console.error("[recruiter/candidates] education search error:", e);
-      // If education search fails, do not silently return wrong data
-      return res.status(500).json({ error: "Failed to search candidates by education." });
-    }
-  }
-
-  if (booleanQuery) {
-    andClauses.push({
-      aboutMe: { contains: booleanQuery, mode: "insensitive" },
-    });
-  }
-
-  const where = { AND: andClauses };
+  const nameRoleQuery = String(q || "").trim();
+  const locationQuery = String(location || "").trim();
+  const booleanQuery = String(bool || "").trim();
+  const summaryKeywordsQuery = String(summaryKeywords || "").trim();
+  const jobTitleQuery = String(jobTitle || "").trim();
+  const workStatusQuery = String(workStatus || "").trim();
+  const preferredWorkTypeQuery = String(preferredWorkType || "").trim();
+  const relocateQuery = String(willingToRelocate || "").trim();
+  const skillsQuery = String(skills || "").trim();
+  const languagesQuery = String(languages || "").trim();
+  const educationQuery = String(education || "").trim();
 
   try {
+    // ─────────────────────────────────────────────────────────────
+    // 1) Get ranked candidate ids + match scores from Render
+    // ─────────────────────────────────────────────────────────────
+    const renderPayload = buildRenderPayload(req.query);
+    const renderResponse = await fetchRenderMatches(renderPayload);
+
+    const renderCandidates = Array.isArray(renderResponse?.candidates)
+      ? renderResponse.candidates
+      : [];
+
+    if (!renderCandidates.length) {
+      return res.status(200).json({ candidates: [] });
+    }
+
+    const renderIdOrder = renderCandidates.map((c) => String(c.id));
+    const renderById = new Map(
+      renderCandidates.map((c) => [String(c.id), c])
+    );
+
+    // ─────────────────────────────────────────────────────────────
+    // 2) Privacy / visibility filters still enforced locally
+    // ─────────────────────────────────────────────────────────────
+    const andClauses = [
+      { deletedAt: null },
+      {
+        OR: [
+          { profileVisibility: { in: ["PUBLIC", "RECRUITERS_ONLY"] } },
+          {
+            AND: [
+              { isProfilePublic: true },
+              { profileVisibility: { not: "PRIVATE" } },
+            ],
+          },
+        ],
+      },
+      {
+        id: { in: renderIdOrder },
+      },
+    ];
+
+    if (educationQuery) {
+      const terms = parseEducationTerms(educationQuery);
+      try {
+        const matchedUserIds = await findUserIdsByEducationTerms(prisma, terms);
+        if (!matchedUserIds.length) {
+          return res.status(200).json({ candidates: [] });
+        }
+        andClauses.push({
+          id: { in: matchedUserIds },
+        });
+      } catch (e) {
+        console.error("[recruiter/candidates] education search error:", e);
+        return res.status(500).json({ error: "Failed to search candidates by education." });
+      }
+    }
+
+    // Optional local guards remain for fields that exist locally.
+    if (nameRoleQuery) {
+      andClauses.push({
+        OR: [
+          { name: { contains: nameRoleQuery, mode: "insensitive" } },
+          { headline: { contains: nameRoleQuery, mode: "insensitive" } },
+          { aboutMe: { contains: nameRoleQuery, mode: "insensitive" } },
+        ],
+      });
+    }
+
+    if (locationQuery) {
+      andClauses.push({
+        location: { contains: locationQuery, mode: "insensitive" },
+      });
+    }
+
+    if (summaryKeywordsQuery) {
+      andClauses.push({
+        aboutMe: { contains: summaryKeywordsQuery, mode: "insensitive" },
+      });
+    }
+
+    if (jobTitleQuery) {
+      andClauses.push({
+        headline: { contains: jobTitleQuery, mode: "insensitive" },
+      });
+    }
+
+    if (workStatusQuery) {
+      andClauses.push({
+        workPreferences: {
+          path: ["workStatus"],
+          equals: workStatusQuery,
+        },
+      });
+    }
+
+    if (preferredWorkTypeQuery) {
+      andClauses.push({
+        workPreferences: {
+          path: ["workType"],
+          equals: preferredWorkTypeQuery,
+        },
+      });
+    }
+
+    if (relocateQuery) {
+      const v = relocateQuery.toLowerCase();
+      if (v === "yes") {
+        andClauses.push({
+          workPreferences: { path: ["willingToRelocate"], equals: true },
+        });
+      } else if (v === "no") {
+        andClauses.push({
+          workPreferences: { path: ["willingToRelocate"], equals: false },
+        });
+      }
+    }
+
+    if (skillsQuery) {
+      const terms = skillsQuery
+        .split(",")
+        .map((s) => s.trim())
+        .filter(Boolean);
+
+      for (const term of terms) {
+        andClauses.push({
+          skillsJson: { array_contains: [term] },
+        });
+      }
+    }
+
+    if (languagesQuery) {
+      const terms = languagesQuery
+        .split(",")
+        .map((s) => s.trim())
+        .filter(Boolean);
+
+      for (const term of terms) {
+        andClauses.push({
+          languagesJson: { array_contains: [term] },
+        });
+      }
+    }
+
+    if (booleanQuery) {
+      andClauses.push({
+        aboutMe: { contains: booleanQuery, mode: "insensitive" },
+      });
+    }
+
+    const where = { AND: andClauses };
+
+    // ─────────────────────────────────────────────────────────────
+    // 3) Load local candidate records
+    // ─────────────────────────────────────────────────────────────
     const users = await prisma.user.findMany({
       where,
-      orderBy: { createdAt: "desc" },
-      take: 100,
       select: {
         id: true,
         name: true,
@@ -511,7 +563,6 @@ export default async function handler(req, res) {
 
     const candidateUserIds = users.map((u) => u.id);
 
-    // ✅ Join recruiter-specific metadata scoped to recruiterUserId + accountKey
     const metas = candidateUserIds.length
       ? await prisma.recruiterCandidate.findMany({
           where: {
@@ -536,12 +587,10 @@ export default async function handler(req, res) {
       metaByCandidateId.set(m.candidateUserId, m);
     }
 
-    // ✅ Pull resumes for these users:
-    // Prefer isPrimary, but if none exists, use the most recently updated resume.
     const resumes = candidateUserIds.length
       ? await prisma.resume.findMany({
           where: { userId: { in: candidateUserIds } },
-          select: { userId: true, content: true, updatedAt: true, isPrimary: true },
+          select: { id: true, userId: true, content: true, updatedAt: true, isPrimary: true },
           orderBy: { updatedAt: "desc" },
         })
       : [];
@@ -565,22 +614,26 @@ export default async function handler(req, res) {
       if (b > a) bestResumeByUserId.set(r.userId, r);
     }
 
-    const candidates = users.map((u) => {
+    const userById = new Map(users.map((u) => [String(u.id), u]));
+
+    // Preserve Render ranking order
+    const orderedUsers = renderIdOrder
+      .map((id) => userById.get(String(id)))
+      .filter(Boolean);
+
+    const candidates = orderedUsers.map((u) => {
       const meta = metaByCandidateId.get(u.id) || null;
+      const renderCandidate = renderById.get(String(u.id)) || null;
 
       const tagsArr = meta?.tags ? toStringArray(meta.tags) : [];
       const notesText = typeof meta?.notes === "string" ? meta.notes : "";
 
       const bestResume = bestResumeByUserId.get(u.id) || null;
 
-      // ✅ Experience (leave as-is — already working)
       const experience = bestResume?.content
         ? extractExperienceFromResumeContent(bestResume.content)
         : [];
 
-      // ✅ Skills baseline:
-      // 1) profile skills first
-      // 2) if profile empty, fallback to resume skills (primary else latest)
       const profileSkillsArr = dedupeCaseInsensitive(toArrayJson(u.skillsJson));
       const resumeSkillsArr = bestResume?.content
         ? extractSkillsFromResumeContent(bestResume.content)
@@ -589,8 +642,6 @@ export default async function handler(req, res) {
       const baselineSkillsArr =
         profileSkillsArr.length > 0 ? profileSkillsArr : resumeSkillsArr;
 
-      // ✅ Recruiter curated skills for team view (add/remove via interview)
-      // If recruiter has saved skills, that becomes the effective list.
       const recruiterSkillsArr = meta?.skills ? toStringArray(meta.skills) : [];
       const effectiveSkillsArr =
         recruiterSkillsArr.length > 0 ? recruiterSkillsArr : baselineSkillsArr;
@@ -598,21 +649,17 @@ export default async function handler(req, res) {
       return {
         id: u.id,
         userId: u.id,
-        name: u.name || "Unnamed",
-        email: u.email || null,
-        title: u.headline || "",
-        currentTitle: u.headline || "",
-        role: u.headline || "",
-        summary: u.aboutMe || "",
-        location: u.location || "",
+        name: u.name || renderCandidate?.name || "Unnamed",
+        email: u.email || renderCandidate?.email || null,
+        title: u.headline || renderCandidate?.headline || "",
+        currentTitle: u.headline || renderCandidate?.currentTitle || "",
+        role: u.headline || renderCandidate?.role || "",
+        summary: u.aboutMe || renderCandidate?.summary || "",
+        location: u.location || renderCandidate?.location || "",
 
-        // ✅ what the modal should display/edit
         skills: effectiveSkillsArr,
-
-        // ✅ education returns objects (consistent with profile storage)
         education: toEducationObjects(u.educationJson),
 
-        // optional: transparency/debug
         skillsBaseline: baselineSkillsArr,
         skillsProfile: profileSkillsArr,
         skillsResume: resumeSkillsArr,
@@ -625,20 +672,21 @@ export default async function handler(req, res) {
             ? "resume"
             : "none",
 
-        // keep languages as array for the modal
         languages: toArrayJson(u.languagesJson),
-
-        // ✅ Experience from resume (primary if set, otherwise latest)
         experience,
 
-        // recruiter-only metadata
         tags: tagsArr,
         notes: notesText,
-        pipelineStage: meta?.pipelineStage || null,
+        pipelineStage: meta?.pipelineStage || renderCandidate?.pipelineStage || null,
         lastContacted: meta?.lastContacted || null,
         lastSeen: meta?.lastSeen || null,
 
-        match: null,
+        resumeId: bestResume?.id || null,
+
+        match:
+          typeof renderCandidate?.match === "number"
+            ? renderCandidate.match
+            : null,
       };
     });
 
