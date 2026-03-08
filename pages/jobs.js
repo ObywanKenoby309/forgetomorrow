@@ -354,7 +354,12 @@ function OldJobsUI() {
   const now                = new Date();
   const cutoffTime         = hasDaysFilter ? now.getTime() - parsedDays * 24 * 60 * 60 * 1000 : null;
 
-  const baseJobs = keyword.trim() ? (searchKeywordJobs ?? []) : jobs;
+  const baseJobs = keyword.trim()
+  ? (searchKeywordJobs ?? []).map((hit) => {
+      const fullJob = jobs.find((j) => String(j.id) === String(hit.id));
+      return fullJob ? { ...fullJob, ...hit } : hit;
+    })
+  : jobs;
 
   const filteredJobs = baseJobs.filter(job => {
     const status = getJobStatus(job);
