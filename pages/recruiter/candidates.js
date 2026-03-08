@@ -118,7 +118,6 @@ function RightToolsCard({ whyMode, creditsLeft = null }) {
             {isFull ? "WHY: Full" : "WHY: Lite"}
           </span>
 
-          {/* Single POR for explainability */}
           <WhyInfo />
         </div>
       </div>
@@ -155,6 +154,13 @@ function RightToolsCard({ whyMode, creditsLeft = null }) {
 function Body() {
   const { isEnterprise } = usePlan();
   const router = useRouter();
+
+  // ✅ hydration safety guard
+  const [mounted, setMounted] = useState(false);
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
 
   // ✅ minimal add: resolve real recruiter user id (fallback to dev constant)
   const [recruiterUserId, setRecruiterUserId] = useState(null);
@@ -267,7 +273,6 @@ function Body() {
     if (locQuery) params.set("location", locQuery);
     if (boolQuery) params.set("bool", boolQuery);
 
-    // Safe profile filters
     if (summaryKeywords) params.set("summaryKeywords", summaryKeywords);
     if (jobTitle) params.set("jobTitle", jobTitle);
     if (workStatus) params.set("workStatus", workStatus);
@@ -275,8 +280,6 @@ function Body() {
     if (willingToRelocate) params.set("willingToRelocate", willingToRelocate);
     if (skills) params.set("skills", skills);
     if (languages) params.set("languages", languages);
-
-    // Education
     if (education) params.set("education", education);
 
     return params;
@@ -297,20 +300,13 @@ function Body() {
 
     if (nameQuery) chips.push({ key: "q", label: `Query: ${nameQuery}` });
     if (locQuery) chips.push({ key: "loc", label: `Location: ${locQuery}` });
-    if (boolQuery)
-      chips.push({ key: "bool", label: `Advanced query: ${boolQuery}` });
+    if (boolQuery) chips.push({ key: "bool", label: `Advanced query: ${boolQuery}` });
 
-    if (summaryKeywords)
-      chips.push({ key: "summary", label: `Summary: ${summaryKeywords}` });
+    if (summaryKeywords) chips.push({ key: "summary", label: `Summary: ${summaryKeywords}` });
     if (jobTitle) chips.push({ key: "title", label: `Target role: ${jobTitle}` });
     if (workStatus) chips.push({ key: "status", label: `Status: ${workStatus}` });
-    if (preferredWorkType)
-      chips.push({
-        key: "worktype",
-        label: `Work type: ${preferredWorkType}`,
-      });
-    if (willingToRelocate)
-      chips.push({ key: "relocate", label: `Relocate: ${willingToRelocate}` });
+    if (preferredWorkType) chips.push({ key: "worktype", label: `Work type: ${preferredWorkType}` });
+    if (willingToRelocate) chips.push({ key: "relocate", label: `Relocate: ${willingToRelocate}` });
     if (skills) chips.push({ key: "skills", label: `Skills: ${skills}` });
     if (languages) chips.push({ key: "langs", label: `Languages: ${languages}` });
     if (education) chips.push({ key: "edu", label: `Education: ${education}` });
@@ -347,7 +343,6 @@ function Body() {
     setEducation("");
   };
 
-  // ---------- WHY PERSONALIZATION (client-side, deterministic) ----------
   const normalizeList = (val) => {
     if (!val) return [];
     if (Array.isArray(val)) return val.filter(Boolean).map(String);
@@ -517,8 +512,7 @@ function Body() {
       const parts = [];
       if (candidateTitle) parts.push(`title alignment (${candidateTitle})`);
       if (candidateLocation) parts.push(`location fit (${candidateLocation})`);
-      if (matched?.length)
-        parts.push(`skills overlap (${matched.slice(0, 4).join(", ")})`);
+      if (matched?.length) parts.push(`skills overlap (${matched.slice(0, 4).join(", ")})`);
       if (jobTitle) parts.push(`target role signal (${jobTitle})`);
 
       const join = parts.length ? parts.join(", ") : "available profile signals";
@@ -669,7 +663,6 @@ function Body() {
 
     return ex;
   };
-  // ---------- END WHY PERSONALIZATION ----------
 
   const runManualCandidateSearch = async () => {
     setActionError(null);
@@ -725,9 +718,7 @@ function Body() {
   const startConversation = async (candidate, channel) => {
     if (!candidate) return;
 
-    // ✅ minimal: use real session user id when available (fallback to dev constant)
-    const resolvedRecruiterId =
-      recruiterUserId || RECRUITER_DEV_USER_ID || null;
+    const resolvedRecruiterId = recruiterUserId || RECRUITER_DEV_USER_ID || null;
 
     if (!resolvedRecruiterId) {
       alert("We couldn't load your session yet. Please refresh and try again.");
@@ -751,11 +742,7 @@ function Body() {
 
       if (!res.ok) {
         const payload = await res.json().catch(() => ({}));
-        console.error(
-          "[Candidates] startConversation error:",
-          res.status,
-          payload
-        );
+        console.error("[Candidates] startConversation error:", res.status, payload);
         alert("We couldn't open a conversation yet. Please try again in a moment.");
         return;
       }
@@ -773,21 +760,15 @@ function Body() {
         ? `Hi ${firstName}, thanks for connecting - I’d love to chat about a role that looks like a strong match for your background.`
         : `Hi there, thanks for connecting - I’d love to chat about a role that looks like a strong match for your background.`;
 
-      // ✅ minimal: always pass candidateUserId so messaging can auto-open even if conv shape varies
       const candidateUserId = String(candidate.userId || candidate.id || "");
-
-      // ✅ minimal: normalize toUserId from either shape
-      const otherUserId =
-        conv.otherUserId || conv.otherUser?.id || candidateUserId || "";
+      const otherUserId = conv.otherUserId || conv.otherUser?.id || candidateUserId || "";
 
       if (channel === "recruiter") {
         router.push({
           pathname: "/recruiter/messaging",
           query: {
             c: conv.id,
-            // keep existing fields
             candidateId: candidate.id,
-            // new: reliable thread lookup / create path
             candidateUserId,
             toUserId: otherUserId,
             name: destName,
@@ -893,7 +874,6 @@ function Body() {
     education,
   ]);
 
-  // ✅ NEW: auto-open candidate modal when arriving from Pools with candidateId query
   useEffect(() => {
     if (!candidateIdFromQuery) return;
     if (didAutoOpenFromQuery) return;
@@ -980,9 +960,7 @@ function Body() {
 
       if (!res.ok) {
         const payload = await res.json().catch(() => ({}));
-        const msg =
-          payload?.error ||
-          `Failed to save candidate notes (status ${res.status}).`;
+        const msg = payload?.error || `Failed to save candidate notes (status ${res.status}).`;
         throw new Error(msg);
       }
     } catch (err) {
@@ -1020,9 +998,7 @@ function Body() {
 
       if (!res.ok) {
         const payload = await res.json().catch(() => ({}));
-        const msg =
-          payload?.error ||
-          `Failed to update candidate tags (status ${res.status}).`;
+        const msg = payload?.error || `Failed to update candidate tags (status ${res.status}).`;
         throw new Error(msg);
       }
     } catch (err) {
@@ -1203,7 +1179,6 @@ function Body() {
     });
   };
 
-  // Search tools panel now includes Results (count, chips, clear actions)
   const FiltersRow = (
     <GlassPanel className="mb-3 px-5 py-4 sm:px-6">
       <div className="flex flex-col gap-3">
@@ -1265,7 +1240,6 @@ function Body() {
           )}
         </div>
 
-        {/* Results live inside Search tools */}
         <div className="pt-1">
           <div className="flex items-start justify-between gap-3">
             <div>
@@ -1399,6 +1373,19 @@ function Body() {
 
   const { left: leftCandidates, right: rightCandidates } =
     splitForColumns(candidates);
+
+  if (!mounted) {
+    return (
+      <GlassPanel className="px-5 py-8 sm:px-6">
+        <div className="text-sm text-slate-700 font-medium">
+          Loading candidates...
+        </div>
+        <div className="mt-2 text-xs text-slate-600">
+          Pulling your latest pipeline and signals.
+        </div>
+      </GlassPanel>
+    );
+  }
 
   return (
     <>
