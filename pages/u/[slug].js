@@ -1430,12 +1430,16 @@ export default function PublicProfile({ user, primaryResume, effectiveVisibility
                       />
                     </div>
                     <div className="ft-mobile-identity-text">
-                      {pronouns && <div className="ft-mobile-pronoun">{pronouns}</div>}
-                      <div className="ft-mobile-name">{fullName}</div>
-                      <div className="ft-mobile-sub">
-                        {headline || location || 'ForgeTomorrow Member'}
-                      </div>
-                    </div>
+  <div className="ft-mobile-name">{fullName}</div>
+
+  {pronouns && (
+    <div className="ft-mobile-pronoun">{pronouns}</div>
+  )}
+
+  <div className="ft-mobile-sub">
+    {headline || location || 'ForgeTomorrow Member'}
+  </div>
+</div>
                   </div>
 
                   <div className="ft-mobile-tab-bar">
