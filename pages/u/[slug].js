@@ -801,7 +801,7 @@ export default function PublicProfile({ user, primaryResume, effectiveVisibility
           align-items: flex-end;
           gap: 14px;
           padding: 0 16px;
-          margin-top: -44px;
+          margin-top: -38px;
           position: relative;
           z-index: 2;
           flex-shrink: 0;
