@@ -54,7 +54,7 @@ const PUBLIC_PATHS = new Set([
 // ✅ Internal / Workspace routes (staff-only by login)
 const INTERNAL_PREFIXES = ["/internal", "/workspace"];
 // ✅ App routes that must require login (but are NOT staff-only)
-const AUTH_PREFIXES = ["/action-center"];
+const AUTH_PREFIXES = ["/action-center", "/profile"];
 
 function isPublicPath(pathname) {
   // Direct matches
@@ -138,8 +138,8 @@ export async function middleware(req) {
   if (isPublicPath(pathname)) {
     return NextResponse.next();
   }
-  
-    // ✅ 3a. App routes that always require login (not staff-only)
+
+  // ✅ 3a. App routes that always require login (not staff-only)
   if (isAuthPath(pathname)) {
     const hasSession = hasNextAuthSession(req);
 

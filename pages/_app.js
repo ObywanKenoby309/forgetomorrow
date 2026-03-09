@@ -144,6 +144,8 @@ function AppShell({ Component, pageProps }) {
       '/roadmap', // legacy (redirects to /anvil)
       '/anvil', // canonical
       '/profile',
+      '/profile/edit',
+      '/profile/[slug]',
       '/profile-analytics',
       '/feed',
       '/post-view', // Post full view is INTERNAL (prevents public header/footer)
@@ -210,7 +212,7 @@ function AppShell({ Component, pageProps }) {
         lastRoute.startsWith('/admin') ||
         lastRoute.startsWith('/internal') ||
         lastRoute.startsWith('/workspace') ||
-        lastRoute.startsWith('/dashboard/coaching') ||
+        lastRoute.startsWith('/profile') ||
         lastRoute === '/coaching-dashboard' ||
         lastRoute === '/feed' ||
         lastRoute === '/settings' ||
@@ -292,10 +294,10 @@ function AppShell({ Component, pageProps }) {
           src="https://cdn.cookie-script.com/s/ff274d476e18526f8fd0a8c8114bbaf3.js"
           strategy="afterInteractive"
           onLoad={() => {
-  if (typeof window !== 'undefined' && !window.location.hash) {
-    window.scrollTo({ top: 0, left: 0, behavior: 'auto' });
-  }
-}}
+            if (typeof window !== 'undefined' && !window.location.hash) {
+              window.scrollTo({ top: 0, left: 0, behavior: 'auto' });
+            }
+          }}
         />
       )}
 
