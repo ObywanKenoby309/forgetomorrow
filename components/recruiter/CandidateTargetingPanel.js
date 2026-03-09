@@ -24,26 +24,28 @@ export default function CandidateTargetingPanel({
   isLoading,
 }) {
   const {
-    summaryKeywords,
-    jobTitle,
-    workStatus,
-    preferredWorkType,
-    willingToRelocate,
-    skills,
-    languages,
-    education,
-  } = filters || {};
+  summaryKeywords,
+  jobTitle,
+  workStatus,
+  preferredWorkType,
+  willingToRelocate,
+  locationFilter,
+  skills,
+  languages,
+  education,
+} = filters || {};
 
-  const {
-    setSummaryKeywords,
-    setJobTitle,
-    setWorkStatus,
-    setPreferredWorkType,
-    setWillingToRelocate,
-    setSkills,
-    setLanguages,
-    setEducation,
-  } = setFilters || {};
+const {
+  setSummaryKeywords,
+  setJobTitle,
+  setWorkStatus,
+  setPreferredWorkType,
+  setWillingToRelocate,
+  setLocationFilter,
+  setSkills,
+  setLanguages,
+  setEducation,
+} = setFilters || {};
 
   const {
     enabled: automationEnabled,
@@ -114,9 +116,10 @@ export default function CandidateTargetingPanel({
                     Current work status
                   </label>
                   <select
-					value={workStatus || ""}
-					onChange={(e) => setWorkStatus?.(e.target.value)}
-				  >
+  value={workStatus || ""}
+  onChange={(e) => setWorkStatus?.(e.target.value)}
+  className="w-full rounded-xl border border-white/40 bg-white/70 px-3 py-2 text-xs sm:text-sm shadow-sm focus:outline-none focus:ring-2 focus:ring-[#FF7043]"
+>
 					<option value="">Any status</option>
 					<option value="actively-seeking">Actively Seeking</option>
 					<option value="open">Open to Opportunities</option>
@@ -131,9 +134,10 @@ export default function CandidateTargetingPanel({
                     Preferred work type
                   </label>
                   <select
-					value={preferredWorkType || ""}
-					onChange={(e) => setPreferredWorkType?.(e.target.value)}
-				  >
+  value={preferredWorkType || ""}
+  onChange={(e) => setPreferredWorkType?.(e.target.value)}
+  className="w-full rounded-xl border border-white/40 bg-white/70 px-3 py-2 text-xs sm:text-sm shadow-sm focus:outline-none focus:ring-2 focus:ring-[#FF7043]"
+>
 					<option value="">Any</option>
 					<option value="remote">Remote</option>
 					<option value="hybrid">Hybrid</option>
