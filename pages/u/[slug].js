@@ -754,19 +754,22 @@ export default function PublicProfile({ user, primaryResume, effectiveVisibility
           background-color: #180800;
         }
         .ft-mobile-banner-bg,
-        .ft-mobile-banner-blur {
-          position: absolute;
-          inset: 0;
-          background-image: ${bannerImage};
-          background-size: cover;
-          background-position: ${bannerPos};
-          background-repeat: no-repeat;
-        }
-        .ft-mobile-banner-blur {
-          filter: blur(22px);
-          transform: scale(1.08);
-          opacity: 0.8;
-        }
+.ft-mobile-banner-blur {
+  position: absolute;
+  inset: 0;
+  background-image: ${bannerImage};
+  background-position: ${bannerPos};
+  background-repeat: no-repeat;
+}
+.ft-mobile-banner-blur {
+  background-size: cover;
+  filter: blur(22px);
+  transform: scale(1.08);
+  opacity: 0.8;
+}
+.ft-mobile-banner-bg {
+  background-size: contain;
+}
         .ft-mobile-banner-overlay {
           position: absolute;
           inset: 0;
@@ -839,14 +842,15 @@ export default function PublicProfile({ user, primaryResume, effectiveVisibility
           line-height: 1.1;
         }
         .ft-mobile-sub {
-          font-size: 12px;
-          color: var(--forge-muted);
-          margin-top: 2px;
-          white-space: nowrap;
-          overflow: hidden;
-          text-overflow: ellipsis;
-        }
-
+  font-size: 12px;
+  color: var(--forge-muted);
+  margin-top: 2px;
+  line-height: 1.35;
+  white-space: normal;
+  overflow: visible;
+  text-overflow: unset;
+  word-break: break-word;
+}
         .ft-mobile-tab-bar {
           display: flex;
           gap: 0;
@@ -1041,17 +1045,27 @@ export default function PublicProfile({ user, primaryResume, effectiveVisibility
         }
 
         .ft-mobile-contact-row {
-          display: flex;
-          align-items: center;
-          gap: 12px;
-          padding: 13px;
-          background: var(--forge-card);
-          border: 1px solid var(--forge-border);
-          border-radius: 14px;
-          margin-bottom: 8px;
-          text-decoration: none;
-          transition: all 0.14s;
-        }
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+  padding: 13px;
+  background: var(--forge-card);
+  border: 1px solid var(--forge-border);
+  border-radius: 14px;
+  margin-bottom: 8px;
+  text-decoration: none;
+  text-align: left;
+  transition: all 0.14s;
+}
+.ft-mobile-contact-row[type="button"] {
+  appearance: none;
+  -webkit-appearance: none;
+  border: 1px solid var(--forge-border);
+  background: var(--forge-card);
+  font: inherit;
+  color: inherit;
+}
         .ft-mobile-contact-row:active {
           transform: scale(0.98);
           background: var(--forge-surface);
@@ -1652,25 +1666,6 @@ export default function PublicProfile({ user, primaryResume, effectiveVisibility
                           <div className="ft-mobile-contact-arrow">›</div>
                         </a>
                       )}
-
-                      <a
-                        className="ft-mobile-contact-row"
-                        href="https://forgetomorrow.com"
-                        target="_blank"
-                        rel="noopener noreferrer"
-                      >
-                        <div
-                          className="ft-mobile-contact-icon"
-                          style={{ background: 'rgba(245,158,11,0.14)', color: '#f59e0b' }}
-                        >
-                          ⚒
-                        </div>
-                        <div style={{ minWidth: 0 }}>
-                          <div className="ft-mobile-contact-label">Powered By</div>
-                          <div className="ft-mobile-contact-value">ForgeTomorrow</div>
-                        </div>
-                        <div className="ft-mobile-contact-arrow">›</div>
-                      </a>
                     </div>
 
                     <div className="ft-mobile-footer">
