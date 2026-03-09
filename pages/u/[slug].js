@@ -1,10 +1,10 @@
-// pages/u/[slug].js  —  ForgeTomorrow Public Profile v2
+// pages/u/[slug].js  —  ForgeTomorrow Public Profile v3
 import Head from 'next/head';
 import { prisma } from '@/lib/prisma';
 import { getServerSession } from 'next-auth/next';
 import authOptions from '../api/auth/[...nextauth]';
 
-// ─── Safe parsers (unchanged logic) ─────────────────────────────────────────
+// ─── Safe parsers ─────────────────────────────────────────────────────────────
 
 function parseArrayField(raw, fallback = []) {
   if (!raw) return fallback;
@@ -55,7 +55,7 @@ function parseEducationField(raw, fallback = []) {
   }
 }
 
-// ─── Data fetching (unchanged logic) ────────────────────────────────────────
+// ─── Data fetching ────────────────────────────────────────────────────────────
 
 export async function getServerSideProps(context) {
   const { slug } = context.params;
@@ -123,7 +123,7 @@ export async function getServerSideProps(context) {
   };
 }
 
-// ─── Component ───────────────────────────────────────────────────────────────
+// ─── Component ────────────────────────────────────────────────────────────────
 
 export default function PublicProfile({ user, primaryResume, effectiveVisibility }) {
   const {
@@ -171,8 +171,9 @@ export default function PublicProfile({ user, primaryResume, effectiveVisibility
         {avatarUrl && <meta property="og:image" content={avatarUrl} />}
         <link rel="preconnect" href="https://fonts.googleapis.com" />
         <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
+        {/* ✅ CHANGE 1: Playfair Display + Inter */}
         <link
-          href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=Outfit:wght@300;400;500;600;700&display=swap"
+          href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@600;700;800;900&family=Inter:wght@300;400;500;600;700&display=swap"
           rel="stylesheet"
         />
       </Head>
@@ -199,8 +200,9 @@ export default function PublicProfile({ user, primaryResume, effectiveVisibility
           --shadow-lg:   0 24px 64px rgba(0,0,0,0.42);
           --shadow-md:   0 12px 32px rgba(0,0,0,0.28);
           --shadow-sm:   0 4px 16px rgba(0,0,0,0.20);
-          --font-display:'Syne', sans-serif;
-          --font-body:   'Outfit', sans-serif;
+          /* ✅ CHANGE 2: Professional font stack */
+          --font-display: 'Playfair Display', Georgia, serif;
+          --font-body:    'Inter', system-ui, sans-serif;
         }
 
         body {
@@ -287,11 +289,12 @@ export default function PublicProfile({ user, primaryResume, effectiveVisibility
           transform: scale(1.10);
           opacity: 0.85;
         }
+        /* ✅ CHANGE 3: cover fills the full card edge-to-edge */
         .ft-banner-fg {
           position: absolute;
           inset: 0;
-          background-size: contain;
-          background-position: center;
+          background-size: cover;
+          background-position: ${bannerPos};
           background-repeat: no-repeat;
         }
         .ft-banner-vignette {
@@ -345,31 +348,33 @@ export default function PublicProfile({ user, primaryResume, effectiveVisibility
         .ft-name {
           font-family: var(--font-display);
           font-size: clamp(28px, 4vw, 40px);
-          font-weight: 800;
+          font-weight: 700;
           color: var(--white);
-          letter-spacing: -0.5px;
+          letter-spacing: -0.3px;
           line-height: 1.05;
           text-shadow: 0 2px 12px rgba(0,0,0,0.35);
         }
         .ft-pronouns {
-          font-size: 12px;
-          font-weight: 700;
+          font-family: var(--font-body);
+          font-size: 11px;
+          font-weight: 600;
           color: var(--orange);
-          letter-spacing: 0.08em;
+          letter-spacing: 0.10em;
           text-transform: uppercase;
           margin-top: 6px;
         }
         .ft-headline {
-          font-size: 16px;
-          font-weight: 600;
+          font-family: var(--font-body);
+          font-size: 15px;
+          font-weight: 500;
           color: rgba(248,244,239,0.92);
           margin-top: 10px;
-          line-height: 1.42;
-          max-width: 900px;
+          line-height: 1.5;
+          max-width: 860px;
         }
         .ft-meta-row {
           display: flex;
-          gap: 12px;
+          gap: 10px;
           flex-wrap: wrap;
           margin-top: 12px;
           align-items: center;
@@ -378,8 +383,9 @@ export default function PublicProfile({ user, primaryResume, effectiveVisibility
           display: inline-flex;
           align-items: center;
           gap: 5px;
+          font-family: var(--font-body);
           font-size: 12px;
-          font-weight: 700;
+          font-weight: 500;
           color: rgba(248,244,239,0.86);
           background: rgba(255,255,255,0.08);
           border: 1px solid rgba(255,255,255,0.14);
@@ -397,9 +403,10 @@ export default function PublicProfile({ user, primaryResume, effectiveVisibility
           margin-top: 14px;
         }
         .ft-url-pill {
+          font-family: var(--font-body);
           font-size: 12px;
-          font-weight: 700;
-          color: rgba(248,244,239,0.78);
+          font-weight: 500;
+          color: rgba(248,244,239,0.70);
           background: rgba(255,255,255,0.06);
           border: 1px solid rgba(255,255,255,0.14);
           border-radius: var(--radius-sm);
@@ -417,20 +424,20 @@ export default function PublicProfile({ user, primaryResume, effectiveVisibility
           gap: 7px;
           border-radius: var(--radius-sm);
           cursor: pointer;
-          font-family: var(--font-display);
-          font-size: 12px;
-          font-weight: 700;
-          letter-spacing: 0.04em;
+          font-family: var(--font-body);
+          font-size: 13px;
+          font-weight: 600;
+          letter-spacing: 0.02em;
           transition: transform 0.15s, box-shadow 0.15s, background 0.15s, border-color 0.15s;
           text-decoration: none;
           min-height: 38px;
           white-space: nowrap;
+          padding: 8px 16px;
         }
         .ft-copy-btn {
           background: var(--orange);
           color: #fff;
           border: none;
-          padding: 8px 16px;
           box-shadow: 0 6px 18px rgba(255,112,67,0.38);
         }
         .ft-copy-btn:hover {
@@ -442,7 +449,6 @@ export default function PublicProfile({ user, primaryResume, effectiveVisibility
           background: rgba(255,112,67,0.14);
           color: var(--orange);
           border: 1px solid rgba(255,112,67,0.38);
-          padding: 8px 16px;
           box-shadow: 0 6px 18px rgba(0,0,0,0.14);
         }
         .ft-resume-top-btn:hover {
@@ -466,9 +472,7 @@ export default function PublicProfile({ user, primaryResume, effectiveVisibility
           top: 24px;
           align-self: start;
         }
-        .ft-main-col {
-          min-width: 0;
-        }
+        .ft-main-col { min-width: 0; }
 
         /* ── Cards ── */
         .ft-card {
@@ -486,17 +490,17 @@ export default function PublicProfile({ user, primaryResume, effectiveVisibility
           border-color: rgba(255,255,255,0.18);
           transform: translateY(-1px);
         }
-        .ft-card-inner { padding: 22px; }
         .ft-card + .ft-card { margin-top: 18px; }
+        .ft-card-inner { padding: 22px; }
 
         .ft-section-label {
           display: flex;
           align-items: center;
           gap: 10px;
-          font-family: var(--font-display);
-          font-size: 11px;
+          font-family: var(--font-body);
+          font-size: 10px;
           font-weight: 700;
-          letter-spacing: 0.14em;
+          letter-spacing: 0.16em;
           text-transform: uppercase;
           color: var(--orange);
           margin-bottom: 16px;
@@ -511,6 +515,7 @@ export default function PublicProfile({ user, primaryResume, effectiveVisibility
 
         /* ── Summary ── */
         .ft-summary-text {
+          font-family: var(--font-body);
           font-size: 15px;
           line-height: 1.9;
           color: rgba(248,244,239,0.88);
@@ -525,8 +530,9 @@ export default function PublicProfile({ user, primaryResume, effectiveVisibility
           gap: 8px;
         }
         .ft-chip {
+          font-family: var(--font-body);
           font-size: 12px;
-          font-weight: 700;
+          font-weight: 500;
           padding: 7px 13px;
           border-radius: 999px;
           background: rgba(255,255,255,0.08);
@@ -553,8 +559,9 @@ export default function PublicProfile({ user, primaryResume, effectiveVisibility
           display: flex;
           align-items: center;
           gap: 8px;
+          font-family: var(--font-body);
           font-size: 13px;
-          font-weight: 600;
+          font-weight: 500;
           color: rgba(248,244,239,0.84);
           padding: 7px 0;
           border-bottom: 1px solid rgba(255,255,255,0.08);
@@ -591,12 +598,14 @@ export default function PublicProfile({ user, primaryResume, effectiveVisibility
           color: var(--white);
         }
         .ft-edu-sub {
+          font-family: var(--font-body);
           font-size: 13px;
           color: var(--muted);
           margin-top: 5px;
-          font-weight: 600;
+          font-weight: 500;
         }
         .ft-edu-notes {
+          font-family: var(--font-body);
           font-size: 13px;
           color: rgba(248,244,239,0.76);
           margin-top: 9px;
@@ -624,6 +633,11 @@ export default function PublicProfile({ user, primaryResume, effectiveVisibility
           padding: 14px 16px;
           text-decoration: none;
           box-shadow: var(--shadow-sm);
+          transition: border-color 0.2s, background 0.2s;
+        }
+        .ft-member-badge:hover {
+          border-color: rgba(255,112,67,0.45);
+          background: rgba(255,112,67,0.20);
         }
         .ft-member-badge-icon {
           width: 36px;
@@ -639,14 +653,14 @@ export default function PublicProfile({ user, primaryResume, effectiveVisibility
         .ft-member-badge-title {
           font-family: var(--font-display);
           font-size: 13px;
-          font-weight: 800;
+          font-weight: 700;
           color: var(--orange);
-          letter-spacing: 0.02em;
         }
         .ft-member-badge-sub {
+          font-family: var(--font-body);
           font-size: 11px;
           color: var(--muted);
-          font-weight: 600;
+          font-weight: 500;
           margin-top: 2px;
         }
 
@@ -655,9 +669,10 @@ export default function PublicProfile({ user, primaryResume, effectiveVisibility
           display: inline-flex;
           align-items: center;
           gap: 5px;
+          font-family: var(--font-body);
           font-size: 11px;
-          font-weight: 700;
-          color: rgba(248,244,239,0.78);
+          font-weight: 500;
+          color: rgba(248,244,239,0.65);
           background: rgba(255,255,255,0.06);
           border: 1px solid rgba(255,255,255,0.12);
           border-radius: 999px;
@@ -669,9 +684,10 @@ export default function PublicProfile({ user, primaryResume, effectiveVisibility
         .ft-footer {
           margin-top: 40px;
           text-align: center;
+          font-family: var(--font-body);
           font-size: 12px;
-          color: rgba(248,244,239,0.56);
-          font-weight: 500;
+          color: rgba(248,244,239,0.45);
+          font-weight: 400;
           padding-bottom: 12px;
         }
         .ft-footer a {
@@ -684,18 +700,10 @@ export default function PublicProfile({ user, primaryResume, effectiveVisibility
 
         /* ── Mobile ── */
         @media (max-width: 900px) {
-          .ft-body {
-            grid-template-columns: 1fr;
-          }
-          .ft-sidebar {
-            position: static;
-            order: 2;
-          }
-          .ft-main-col {
-            order: 1;
-          }
+          .ft-body { grid-template-columns: 1fr; }
+          .ft-sidebar { position: static; order: 2; }
+          .ft-main-col { order: 1; }
         }
-
         @media (max-width: 760px) {
           .ft-container { padding: 0 16px 36px; }
           .ft-banner-wrap { height: auto !important; aspect-ratio: 16 / 9; }
@@ -708,15 +716,9 @@ export default function PublicProfile({ user, primaryResume, effectiveVisibility
           }
           .ft-avatar-ring { width: 104px; height: 104px; }
           .ft-name { font-size: 28px; }
-          .ft-headline { font-size: 15px; }
-          .ft-meta-row,
-          .ft-actions-row {
-            justify-content: center;
-          }
-          .ft-url-pill {
-            min-width: 0;
-            width: 100%;
-          }
+          .ft-headline { font-size: 14px; }
+          .ft-meta-row, .ft-actions-row { justify-content: center; }
+          .ft-url-pill { min-width: 0; width: 100%; }
         }
 
         /* ── Scrollbar ── */
@@ -728,9 +730,9 @@ export default function PublicProfile({ user, primaryResume, effectiveVisibility
 
       <div className="ft-page">
         <div className="ft-page-overlay">
-
-          {/* ── Banner ── */}
           <div className="ft-container">
+
+            {/* ── Banner ── */}
             <div
               className="ft-banner-wrap animate-scale-in"
               style={{ height: resolvedBannerHeight }}
@@ -750,7 +752,7 @@ export default function PublicProfile({ user, primaryResume, effectiveVisibility
 
             {/* ── Identity ── */}
             <div className="ft-identity animate-fade-up delay-1">
-              <div className="ft-avatar-ring" aria-hidden="true">
+              <div className="ft-avatar-ring">
                 <img
                   className="ft-avatar"
                   src={avatarUrl || '/demo-profile.jpg'}
@@ -783,16 +785,10 @@ export default function PublicProfile({ user, primaryResume, effectiveVisibility
                       className="ft-meta-chip"
                       style={{ color: 'rgba(255,112,67,0.95)', borderColor: 'rgba(255,112,67,0.24)' }}
                     >
-                      <span
-                        style={{
-                          width: 6,
-                          height: 6,
-                          borderRadius: '50%',
-                          background: 'var(--orange)',
-                          flexShrink: 0,
-                          display: 'inline-block',
-                        }}
-                      />
+                      <span style={{
+                        width: 6, height: 6, borderRadius: '50%',
+                        background: 'var(--orange)', flexShrink: 0, display: 'inline-block',
+                      }} />
                       {status}
                     </span>
                   )}
@@ -850,7 +846,7 @@ export default function PublicProfile({ user, primaryResume, effectiveVisibility
               <aside className="ft-sidebar animate-fade-up delay-2">
 
                 <a href="https://forgetomorrow.com" className="ft-member-badge" target="_blank" rel="noopener noreferrer">
-                  <div className="ft-member-badge-icon" aria-hidden="true">
+                  <div className="ft-member-badge-icon">
                     <svg width="20" height="20" fill="none" viewBox="0 0 20 20">
                       <path d="M10 2C8 5 6 6 7 9c.5 1.5 0 2.5-1.5 3C7 14 8 16 10 17c2-1 3-3 4.5-5-.5 0-1-.5-1.5-1.5C14 8.5 13 6 10 2z" fill="white" />
                       <path d="M10 17c0 0 2-2 2-4s-2-2-2-2-2 0-2 2 2 4 2 4z" fill="rgba(255,255,255,0.5)" />
@@ -868,10 +864,7 @@ export default function PublicProfile({ user, primaryResume, effectiveVisibility
                       <p className="ft-section-label">Skills</p>
                       <div className="ft-chips">
                         {skills.map((skill, i) => (
-                          <span
-                            key={skill}
-                            className={`ft-chip${i < 3 ? ' ft-chip-accent' : ''}`}
-                          >
+                          <span key={skill} className={`ft-chip${i < 3 ? ' ft-chip-accent' : ''}`}>
                             {skill}
                           </span>
                         ))}
@@ -970,6 +963,7 @@ export default function PublicProfile({ user, primaryResume, effectiveVisibility
                 {' '}— The future of careers and networking.
               </p>
             </footer>
+
           </div>
         </div>
       </div>
