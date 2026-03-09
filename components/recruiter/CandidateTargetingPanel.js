@@ -124,8 +124,6 @@ const {
 					<option value="actively-seeking">Actively Seeking</option>
 					<option value="open">Open to Opportunities</option>
 					<option value="not-seeking">Not Seeking</option>
-					<option value="student">Student</option>
-					<option value="contract">Freelance / Contract</option>
 				 </select>
                 </div>
 
