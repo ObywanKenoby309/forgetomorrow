@@ -1,50 +1,40 @@
-// pages/u/[slug].js
+// pages/u/[slug].js  —  ForgeTomorrow Public Profile v2
 import Head from 'next/head';
 import { prisma } from '@/lib/prisma';
-
-// ✅ session gating for PUBLIC vs RECRUITERS_ONLY vs PRIVATE
 import { getServerSession } from 'next-auth/next';
 import authOptions from '../api/auth/[...nextauth]';
 
-// Safe helpers for parsing skills / languages / hobbies from JSON
+// ─── Safe parsers (unchanged logic) ─────────────────────────────────────────
+
 function parseArrayField(raw, fallback = []) {
   if (!raw) return fallback;
-
   try {
     const parsed = typeof raw === 'string' ? JSON.parse(raw) : raw;
-
     if (Array.isArray(parsed)) {
       return parsed
         .map((item) => (typeof item === 'string' ? item : item?.name || item?.label || ''))
         .filter(Boolean);
     }
-
     if (parsed && typeof parsed === 'object' && Array.isArray(parsed.items)) {
       return parsed.items
         .map((item) => (typeof item === 'string' ? item : item?.name || item?.label || ''))
         .filter(Boolean);
     }
-
     return fallback;
   } catch {
     return fallback;
   }
 }
 
-// Education-safe parsing (keeps objects so we can render school/degree/etc.)
 function parseEducationField(raw, fallback = []) {
   if (!raw) return fallback;
-
   try {
     const parsed = typeof raw === 'string' ? JSON.parse(raw) : raw;
-
     if (Array.isArray(parsed)) {
       return parsed
         .map((item) => {
           if (!item) return null;
-
           if (typeof item === 'string') return { school: item };
-
           if (typeof item === 'object') {
             return {
               school: item.school || item.institution || item.name || '',
@@ -55,61 +45,33 @@ function parseEducationField(raw, fallback = []) {
               notes: item.notes || item.details || '',
             };
           }
-
           return null;
         })
         .filter((x) => x && (x.school || x.degree || x.field || x.notes));
     }
-
     return fallback;
   } catch {
     return fallback;
   }
 }
 
+// ─── Data fetching (unchanged logic) ────────────────────────────────────────
+
 export async function getServerSideProps(context) {
   const { slug } = context.params;
-
   const session = await getServerSession(context.req, context.res, authOptions);
   const viewerEmail = session?.user?.email ? String(session.user.email) : null;
 
   const user = await prisma.user.findUnique({
     where: { slug },
     select: {
-      id: true,
-      slug: true,
-      name: true,
-      firstName: true,
-      lastName: true,
-
-      headline: true,
-      pronouns: true,
-      location: true,
-      status: true,
-      avatarUrl: true,
-      coverUrl: true,
-      aboutMe: true,
-      skillsJson: true,
-      languagesJson: true,
-      educationJson: true,
-
-      // ✅ NEW: hobbies for public portfolio view
-      hobbiesJson: true,
-
-      bannerMode: true,
-      bannerHeight: true,
-      bannerFocalY: true,
-      wallpaperUrl: true,
-      corporateBannerKey: true,
-      corporateBannerLocked: true,
-
-      // visibility gating fields
-      isProfilePublic: true,
-      profileVisibility: true, // PRIVATE | PUBLIC | RECRUITERS_ONLY
-      role: true,
-      email: true,
-
-      // Primary resume
+      id: true, slug: true, name: true, firstName: true, lastName: true,
+      headline: true, pronouns: true, location: true, status: true,
+      avatarUrl: true, coverUrl: true, aboutMe: true,
+      skillsJson: true, languagesJson: true, educationJson: true, hobbiesJson: true,
+      bannerMode: true, bannerHeight: true, bannerFocalY: true,
+      wallpaperUrl: true, corporateBannerKey: true, corporateBannerLocked: true,
+      isProfilePublic: true, profileVisibility: true, role: true, email: true,
       resumes: {
         where: { isPrimary: true },
         orderBy: { updatedAt: 'desc' },
@@ -121,11 +83,9 @@ export async function getServerSideProps(context) {
 
   if (!user) return { notFound: true };
 
-  // normalize legacy boolean into enum behavior (back-compat)
   const effectiveVisibility =
     user.profileVisibility || (user.isProfilePublic ? 'PUBLIC' : 'PRIVATE');
 
-  // viewer role lookup (only if logged in)
   let viewerRole = null;
   let viewerId = null;
   if (viewerEmail) {
@@ -138,24 +98,20 @@ export async function getServerSideProps(context) {
   }
 
   const isOwner =
-    Boolean(viewerEmail) &&
-    Boolean(user.email) &&
+    Boolean(viewerEmail) && Boolean(user.email) &&
     String(user.email).toLowerCase() === String(viewerEmail).toLowerCase();
-
   const isAdmin = viewerRole === 'ADMIN';
   const isRecruiter = viewerRole === 'RECRUITER';
 
   const allowed =
-    effectiveVisibility === 'PUBLIC'
-      ? true
-      : effectiveVisibility === 'RECRUITERS_ONLY'
-      ? isOwner || isAdmin || isRecruiter
-      : isOwner || isAdmin;
+    effectiveVisibility === 'PUBLIC' ? true
+    : effectiveVisibility === 'RECRUITERS_ONLY' ? isOwner || isAdmin || isRecruiter
+    : isOwner || isAdmin;
 
   if (!allowed) return { notFound: true };
 
   const { resumes, ...userSafe } = user;
-  const primaryResume = resumes && resumes.length > 0 ? resumes[0] : null;
+  const primaryResume = resumes?.length > 0 ? resumes[0] : null;
 
   return {
     props: {
@@ -167,35 +123,17 @@ export async function getServerSideProps(context) {
   };
 }
 
+// ─── Component ───────────────────────────────────────────────────────────────
+
 export default function PublicProfile({ user, primaryResume, effectiveVisibility }) {
   const {
-    name,
-    firstName,
-    lastName,
-    headline,
-    pronouns,
-    location,
-    status,
-    avatarUrl,
-    coverUrl,
-    slug,
-    aboutMe,
-    skillsJson,
-    languagesJson,
-    educationJson,
-
-    // ✅ NEW: hobbies
-    hobbiesJson,
-
-    bannerMode,
-    bannerHeight,
-    bannerFocalY,
-    wallpaperUrl,
-    corporateBannerKey,
-    corporateBannerLocked,
+    name, firstName, lastName, headline, pronouns, location, status,
+    avatarUrl, coverUrl, slug, aboutMe,
+    skillsJson, languagesJson, educationJson, hobbiesJson,
+    bannerMode, bannerHeight, bannerFocalY,
+    wallpaperUrl, corporateBannerKey, corporateBannerLocked,
   } = user;
 
-  // ✅ Never show "Unknown User" on a portfolio-style public page
   const computedName = String(name || '').trim();
   const computedFirst = String(firstName || '').trim();
   const computedLast = String(lastName || '').trim();
@@ -211,518 +149,863 @@ export default function PublicProfile({ user, primaryResume, effectiveVisibility
   const hobbies = parseArrayField(hobbiesJson, []);
   const education = parseEducationField(educationJson, []);
 
-  const resolvedBannerHeight = typeof bannerHeight === 'number' ? bannerHeight : 260;
-
   let bannerImage;
   if (corporateBannerLocked && corporateBannerKey) {
     bannerImage = `url(/corporate-banners/${corporateBannerKey}.png)`;
   } else if (coverUrl) {
     bannerImage = `url(${coverUrl})`;
   } else {
-    // ✅ IMPORTANT: banner should NOT fall back to wallpaper
-    bannerImage = 'linear-gradient(135deg, #112033, #455A64)';
+    bannerImage = 'linear-gradient(135deg, #0D1B2A 0%, #1a3048 50%, #0D1B2A 100%)';
   }
 
-  const bannerPos = typeof bannerFocalY === 'number' ? `center ${bannerFocalY}%` : 'center';
-
-  // IMPORTANT: must show full image (contain) because banners have text
-  const bannerFgSize = 'contain';
-
-  // ─────────────────────────────────────────────────────────────
-  // ✅ Glass standard (match internal Profile canonical style)
-  // ─────────────────────────────────────────────────────────────
-  const GLASS_BG = 'rgba(255,255,255,0.72)';
-  const GLASS_BORDER = 'rgba(255,255,255,0.26)';
-  const GLASS_SHADOW = '0 14px 34px rgba(0,0,0,0.14)';
-  const GLASS_BLUR = 'blur(12px)';
-
-  const TEXT_DARK = '#1F2937';
-  const TEXT_MID = '#455A64';
-  const ORANGE = '#FF7043';
-
-  const cardBase = {
-    border: `1px solid ${GLASS_BORDER}`,
-    borderRadius: 14,
-    padding: 16,
-    background: GLASS_BG,
-    backdropFilter: GLASS_BLUR,
-    WebkitBackdropFilter: GLASS_BLUR,
-    boxShadow: GLASS_SHADOW,
-    width: '100%',
-  };
-
-  const bannerFrame = {
-    borderRadius: 16,
-    overflow: 'hidden',
-    border: `1px solid ${GLASS_BORDER}`,
-    boxShadow: '0 18px 38px rgba(0,0,0,0.18)',
-    background: 'rgba(255,255,255,0.18)',
-    backdropFilter: 'blur(12px)',
-    WebkitBackdropFilter: 'blur(12px)',
-    width: '100%',
-    position: 'relative',
-  };
+  const bannerPos = typeof bannerFocalY === 'number' ? `center ${bannerFocalY}%` : 'center 30%';
+  const resolvedBannerHeight = typeof bannerHeight === 'number' ? bannerHeight : 300;
 
   return (
     <>
       <Head>
-        <title>{fullName} – ForgeTomorrow Profile</title>
-        <meta
-          name="description"
-          content={`View the professional profile of ${fullName} on ForgeTomorrow.`}
+        <title>{fullName} — ForgeTomorrow</title>
+        <meta name="description" content={`Professional portfolio of ${fullName} on ForgeTomorrow.`} />
+        <meta property="og:title" content={`${fullName} — ForgeTomorrow`} />
+        <meta property="og:description" content={headline || `View the professional profile of ${fullName}.`} />
+        {avatarUrl && <meta property="og:image" content={avatarUrl} />}
+        <link rel="preconnect" href="https://fonts.googleapis.com" />
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
+        <link
+          href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=Outfit:wght@300;400;500;600;700&display=swap"
+          rel="stylesheet"
         />
       </Head>
 
       <style>{`
-        /* Mobile + polish */
-        @media (max-width: 640px) {
-          .public-main {
-            padding: 0 16px 32px !important;
-          }
+        *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
-          .public-banner-frame {
-            height: auto !important;
-            aspect-ratio: 16 / 9;
-          }
-
-          .public-header {
-            flex-direction: column !important;
-            text-align: center !important;
-            align-items: center !important;
-          }
-
-          .public-urlrow {
-            justify-content: center !important;
-          }
-
-          .public-avatar {
-            width: 104px !important;
-            height: 104px !important;
-          }
+        :root {
+          --navy:       #0D1B2A;
+          --navy-mid:   #162336;
+          --navy-light: #1E3250;
+          --orange:     #FF7043;
+          --orange-dim: rgba(255,112,67,0.18);
+          --orange-glow:rgba(255,112,67,0.35);
+          --white:      #F8F4EF;
+          --muted:      #8DA0B3;
+          --border:     rgba(255,255,255,0.10);
+          --card-bg:    rgba(255,255,255,0.055);
+          --card-bg-hi: rgba(255,255,255,0.085);
+          --blur:       blur(18px);
+          --radius-lg:  20px;
+          --radius-md:  14px;
+          --radius-sm:  10px;
+          --shadow-lg:  0 24px 64px rgba(0,0,0,0.55);
+          --shadow-md:  0 12px 32px rgba(0,0,0,0.35);
+          --shadow-sm:  0 4px 16px rgba(0,0,0,0.25);
+          --font-display: 'Syne', sans-serif;
+          --font-body:    'Outfit', sans-serif;
         }
+
+        body {
+          font-family: var(--font-body);
+          background: var(--navy);
+          color: var(--white);
+          -webkit-font-smoothing: antialiased;
+        }
+
+        /* ── Animations ── */
+        @keyframes fadeUp {
+          from { opacity: 0; transform: translateY(20px); }
+          to   { opacity: 1; transform: translateY(0); }
+        }
+        @keyframes scaleIn {
+          from { opacity: 0; transform: scale(0.94); }
+          to   { opacity: 1; transform: scale(1); }
+        }
+        @keyframes shimmer {
+          0%   { background-position: -400px 0; }
+          100% { background-position: 400px 0; }
+        }
+        @keyframes pulseRing {
+          0%   { box-shadow: 0 0 0 0   var(--orange-glow); }
+          70%  { box-shadow: 0 0 0 12px rgba(255,112,67,0); }
+          100% { box-shadow: 0 0 0 0   rgba(255,112,67,0); }
+        }
+        @keyframes float {
+          0%, 100% { transform: translateY(0px); }
+          50%       { transform: translateY(-4px); }
+        }
+
+        .animate-fade-up    { animation: fadeUp 0.6s ease both; }
+        .animate-scale-in   { animation: scaleIn 0.5s ease both; }
+        .delay-1 { animation-delay: 0.08s; }
+        .delay-2 { animation-delay: 0.16s; }
+        .delay-3 { animation-delay: 0.24s; }
+        .delay-4 { animation-delay: 0.32s; }
+        .delay-5 { animation-delay: 0.40s; }
+        .delay-6 { animation-delay: 0.48s; }
+
+        /* ── Layout ── */
+        .ft-page {
+          min-height: 100vh;
+          width: 100%;
+          background-image: ${wallpaperUrl ? `url(${wallpaperUrl})` : 'none'};
+          background-size: cover;
+          background-position: center;
+          background-attachment: fixed;
+          position: relative;
+        }
+        .ft-page-overlay {
+          min-height: 100vh;
+          background: linear-gradient(
+            160deg,
+            rgba(13,27,42,0.96) 0%,
+            rgba(13,27,42,0.88) 40%,
+            rgba(13,27,42,0.94) 100%
+          );
+        }
+        .ft-container {
+          max-width: 1100px;
+          margin: 0 auto;
+          padding: 0 24px 64px;
+        }
+
+        /* ── Banner ── */
+        .ft-banner-wrap {
+          position: relative;
+          width: 100%;
+          overflow: hidden;
+          border-radius: 0 0 var(--radius-lg) var(--radius-lg);
+          box-shadow: var(--shadow-lg);
+        }
+        .ft-banner-blur {
+          position: absolute;
+          inset: 0;
+          background-size: cover;
+          background-position: ${bannerPos};
+          filter: blur(24px);
+          transform: scale(1.12);
+          opacity: 0.7;
+        }
+        .ft-banner-fg {
+          position: absolute;
+          inset: 0;
+          background-size: contain;
+          background-position: center;
+          background-repeat: no-repeat;
+        }
+        .ft-banner-vignette {
+          position: absolute;
+          inset: 0;
+          background: linear-gradient(
+            180deg,
+            rgba(13,27,42,0.25) 0%,
+            rgba(13,27,42,0.08) 40%,
+            rgba(13,27,42,0.70) 100%
+          );
+        }
+        .ft-banner-badge {
+          position: absolute;
+          top: 18px;
+          right: 18px;
+          background: rgba(13,27,42,0.75);
+          border: 1px solid var(--border);
+          backdrop-filter: var(--blur);
+          -webkit-backdrop-filter: var(--blur);
+          border-radius: 999px;
+          padding: 7px 14px;
+          font-family: var(--font-display);
+          font-size: 12px;
+          font-weight: 700;
+          color: var(--orange);
+          letter-spacing: 0.03em;
+          display: flex;
+          align-items: center;
+          gap: 6px;
+        }
+        .ft-banner-badge-dot {
+          width: 7px;
+          height: 7px;
+          border-radius: 50%;
+          background: var(--orange);
+          animation: pulseRing 2.5s ease-in-out infinite;
+        }
+
+        /* ── Identity card ── */
+        .ft-identity {
+          display: flex;
+          gap: 28px;
+          align-items: flex-end;
+          margin-top: -52px;
+          position: relative;
+          z-index: 10;
+          padding: 0 4px;
+        }
+        .ft-avatar-ring {
+          flex-shrink: 0;
+          position: relative;
+          width: 126px;
+          height: 126px;
+          border-radius: 50%;
+          padding: 3px;
+          background: linear-gradient(135deg, var(--orange), #FF8A65, #FF5722);
+          box-shadow: 0 0 0 4px var(--navy), var(--shadow-lg);
+          animation: float 6s ease-in-out infinite;
+        }
+        .ft-avatar {
+          width: 100%;
+          height: 100%;
+          border-radius: 50%;
+          object-fit: cover;
+          background: var(--navy-mid);
+        }
+        .ft-identity-info {
+          flex: 1;
+          min-width: 0;
+          padding-bottom: 6px;
+        }
+        .ft-name {
+          font-family: var(--font-display);
+          font-size: clamp(24px, 4vw, 38px);
+          font-weight: 800;
+          color: var(--white);
+          letter-spacing: -0.5px;
+          line-height: 1.1;
+          text-shadow: 0 2px 12px rgba(0,0,0,0.5);
+        }
+        .ft-pronouns {
+          font-size: 12px;
+          font-weight: 600;
+          color: var(--orange);
+          letter-spacing: 0.08em;
+          text-transform: uppercase;
+          margin-top: 5px;
+        }
+        .ft-headline {
+          font-size: 15px;
+          font-weight: 500;
+          color: rgba(248,244,239,0.82);
+          margin-top: 8px;
+          line-height: 1.4;
+        }
+        .ft-meta-row {
+          display: flex;
+          gap: 14px;
+          flex-wrap: wrap;
+          margin-top: 10px;
+          align-items: center;
+        }
+        .ft-meta-chip {
+          display: flex;
+          align-items: center;
+          gap: 5px;
+          font-size: 12px;
+          font-weight: 600;
+          color: var(--muted);
+          background: rgba(255,255,255,0.07);
+          border: 1px solid var(--border);
+          border-radius: 999px;
+          padding: 4px 11px;
+        }
+        .ft-meta-chip svg { flex-shrink: 0; }
+
+        /* ── URL share row ── */
+        .ft-share-row {
+          display: flex;
+          align-items: center;
+          gap: 10px;
+          flex-wrap: wrap;
+          margin-top: 14px;
+        }
+        .ft-url-pill {
+          font-size: 12px;
+          font-weight: 600;
+          color: var(--muted);
+          background: rgba(255,255,255,0.06);
+          border: 1px solid var(--border);
+          border-radius: var(--radius-sm);
+          padding: 6px 12px;
+          word-break: break-all;
+          flex: 1;
+          min-width: 0;
+        }
+        .ft-copy-btn {
+          flex-shrink: 0;
+          display: flex;
+          align-items: center;
+          gap: 6px;
+          background: var(--orange);
+          color: #fff;
+          border: none;
+          padding: 8px 16px;
+          border-radius: var(--radius-sm);
+          cursor: pointer;
+          font-family: var(--font-display);
+          font-size: 12px;
+          font-weight: 700;
+          letter-spacing: 0.04em;
+          transition: transform 0.15s, box-shadow 0.15s, background 0.15s;
+          box-shadow: 0 6px 18px rgba(255,112,67,0.38);
+        }
+        .ft-copy-btn:hover {
+          transform: translateY(-1px);
+          box-shadow: 0 10px 24px rgba(255,112,67,0.5);
+          background: #FF8A65;
+        }
+        .ft-copy-btn:active { transform: scale(0.97); }
+
+        /* ── Body layout ── */
+        .ft-body {
+          display: grid;
+          grid-template-columns: 280px 1fr;
+          gap: 24px;
+          margin-top: 28px;
+          align-items: start;
+        }
+        .ft-sidebar { position: sticky; top: 24px; }
+        .ft-main-col { min-width: 0; }
+
+        /* ── Cards ── */
+        .ft-card {
+          background: var(--card-bg);
+          border: 1px solid var(--border);
+          border-radius: var(--radius-lg);
+          backdrop-filter: var(--blur);
+          -webkit-backdrop-filter: var(--blur);
+          box-shadow: var(--shadow-md);
+          overflow: hidden;
+          transition: box-shadow 0.2s, border-color 0.2s;
+        }
+        .ft-card:hover {
+          box-shadow: var(--shadow-lg);
+          border-color: rgba(255,255,255,0.15);
+        }
+        .ft-card-inner { padding: 22px; }
+        .ft-card + .ft-card { margin-top: 18px; }
+        .ft-main-col .ft-card + .ft-card { margin-top: 18px; }
+
+        .ft-section-label {
+          display: flex;
+          align-items: center;
+          gap: 10px;
+          font-family: var(--font-display);
+          font-size: 11px;
+          font-weight: 700;
+          letter-spacing: 0.14em;
+          text-transform: uppercase;
+          color: var(--orange);
+          margin-bottom: 16px;
+        }
+        .ft-section-label::after {
+          content: '';
+          flex: 1;
+          height: 1px;
+          background: linear-gradient(to right, var(--orange-dim), transparent);
+          border-radius: 1px;
+        }
+        .ft-section-title {
+          font-family: var(--font-display);
+          font-size: 18px;
+          font-weight: 700;
+          color: var(--white);
+          margin-bottom: 14px;
+          letter-spacing: -0.2px;
+        }
+
+        /* ── Summary ── */
+        .ft-summary-text {
+          font-size: 14px;
+          line-height: 1.85;
+          color: rgba(248,244,239,0.78);
+          font-weight: 400;
+          white-space: pre-line;
+        }
+
+        /* ── Resume CTA ── */
+        .ft-resume-name {
+          font-size: 14px;
+          font-weight: 600;
+          color: var(--white);
+          margin-bottom: 4px;
+        }
+        .ft-resume-date {
+          font-size: 12px;
+          color: var(--muted);
+          margin-bottom: 16px;
+        }
+        .ft-resume-btn {
+          display: inline-flex;
+          align-items: center;
+          gap: 8px;
+          background: var(--orange-dim);
+          border: 1px solid var(--orange);
+          color: var(--orange);
+          border-radius: var(--radius-sm);
+          padding: 10px 18px;
+          font-family: var(--font-display);
+          font-size: 13px;
+          font-weight: 700;
+          letter-spacing: 0.03em;
+          text-decoration: none;
+          transition: background 0.15s, transform 0.15s, box-shadow 0.15s;
+          cursor: pointer;
+        }
+        .ft-resume-btn:hover {
+          background: rgba(255,112,67,0.28);
+          transform: translateY(-1px);
+          box-shadow: 0 8px 24px rgba(255,112,67,0.3);
+        }
+
+        /* ── Skills ── */
+        .ft-chips {
+          display: flex;
+          flex-wrap: wrap;
+          gap: 8px;
+        }
+        .ft-chip {
+          font-size: 12px;
+          font-weight: 600;
+          padding: 6px 13px;
+          border-radius: 999px;
+          background: rgba(255,255,255,0.08);
+          border: 1px solid var(--border);
+          color: rgba(248,244,239,0.85);
+          transition: background 0.15s, border-color 0.15s, color 0.15s, transform 0.15s;
+          cursor: default;
+        }
+        .ft-chip:hover {
+          background: var(--orange-dim);
+          border-color: var(--orange);
+          color: var(--orange);
+          transform: translateY(-1px);
+        }
+        .ft-chip-accent {
+          background: var(--orange-dim);
+          border-color: rgba(255,112,67,0.35);
+          color: var(--orange);
+        }
+
+        /* ── Languages (sidebar) ── */
+        .ft-lang-list { list-style: none; }
+        .ft-lang-list li {
+          display: flex;
+          align-items: center;
+          gap: 8px;
+          font-size: 13px;
+          font-weight: 500;
+          color: rgba(248,244,239,0.8);
+          padding: 7px 0;
+          border-bottom: 1px solid var(--border);
+        }
+        .ft-lang-list li:last-child { border-bottom: none; }
+        .ft-lang-list li::before {
+          content: '';
+          display: inline-block;
+          width: 5px;
+          height: 5px;
+          border-radius: 50%;
+          background: var(--orange);
+          flex-shrink: 0;
+        }
+
+        /* ── Education ── */
+        .ft-edu-item {
+          position: relative;
+          padding: 16px;
+          border-radius: var(--radius-md);
+          background: var(--card-bg-hi);
+          border: 1px solid var(--border);
+          transition: border-color 0.2s;
+        }
+        .ft-edu-item:hover { border-color: rgba(255,112,67,0.3); }
+        .ft-edu-item + .ft-edu-item { margin-top: 10px; }
+        .ft-edu-school {
+          font-family: var(--font-display);
+          font-size: 15px;
+          font-weight: 700;
+          color: var(--white);
+        }
+        .ft-edu-sub {
+          font-size: 13px;
+          color: var(--muted);
+          margin-top: 4px;
+          font-weight: 500;
+        }
+        .ft-edu-notes {
+          font-size: 13px;
+          color: rgba(248,244,239,0.65);
+          margin-top: 8px;
+          line-height: 1.65;
+          white-space: pre-line;
+        }
+        .ft-edu-accent-bar {
+          position: absolute;
+          left: 0;
+          top: 16px;
+          bottom: 16px;
+          width: 3px;
+          background: linear-gradient(to bottom, var(--orange), #FF5722);
+          border-radius: 0 2px 2px 0;
+        }
+        .ft-edu-item { padding-left: 20px; }
+
+        /* ── FT Member badge (sidebar) ── */
+        .ft-member-badge {
+          display: flex;
+          align-items: center;
+          gap: 12px;
+          background: linear-gradient(135deg, rgba(255,112,67,0.15), rgba(255,112,67,0.07));
+          border: 1px solid rgba(255,112,67,0.3);
+          border-radius: var(--radius-md);
+          padding: 14px 16px;
+          text-decoration: none;
+        }
+        .ft-member-badge-icon {
+          width: 36px;
+          height: 36px;
+          border-radius: 10px;
+          background: var(--orange);
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          flex-shrink: 0;
+          box-shadow: 0 4px 14px rgba(255,112,67,0.4);
+        }
+        .ft-member-badge-text {}
+        .ft-member-badge-title {
+          font-family: var(--font-display);
+          font-size: 13px;
+          font-weight: 800;
+          color: var(--orange);
+          letter-spacing: 0.02em;
+        }
+        .ft-member-badge-sub {
+          font-size: 11px;
+          color: var(--muted);
+          font-weight: 500;
+          margin-top: 2px;
+        }
+
+        /* ── Visibility pill ── */
+        .ft-visibility-pill {
+          display: inline-flex;
+          align-items: center;
+          gap: 5px;
+          font-size: 11px;
+          font-weight: 600;
+          color: var(--muted);
+          background: rgba(255,255,255,0.05);
+          border: 1px solid var(--border);
+          border-radius: 999px;
+          padding: 4px 10px;
+          margin-top: 10px;
+        }
+
+        /* ── Divider ── */
+        .ft-divider {
+          height: 1px;
+          background: var(--border);
+          margin: 18px 0;
+        }
+
+        /* ── Footer ── */
+        .ft-footer {
+          margin-top: 48px;
+          text-align: center;
+          font-size: 12px;
+          color: rgba(141,160,179,0.5);
+          font-weight: 500;
+          padding-bottom: 32px;
+        }
+        .ft-footer a {
+          color: var(--orange);
+          opacity: 0.7;
+          text-decoration: none;
+          transition: opacity 0.15s;
+        }
+        .ft-footer a:hover { opacity: 1; }
+
+        /* ── Mobile ── */
+        @media (max-width: 760px) {
+          .ft-container { padding: 0 16px 48px; }
+          .ft-identity { flex-direction: column; align-items: center; text-align: center; margin-top: -44px; }
+          .ft-avatar-ring { width: 100px; height: 100px; }
+          .ft-meta-row { justify-content: center; }
+          .ft-share-row { justify-content: center; }
+          .ft-body { grid-template-columns: 1fr; }
+          .ft-sidebar { position: static; }
+          .ft-name { font-size: 28px; }
+        }
+
+        /* ── Scrollbar ── */
+        ::-webkit-scrollbar { width: 6px; }
+        ::-webkit-scrollbar-track { background: var(--navy); }
+        ::-webkit-scrollbar-thumb { background: rgba(255,112,67,0.3); border-radius: 3px; }
+        ::-webkit-scrollbar-thumb:hover { background: rgba(255,112,67,0.5); }
       `}</style>
 
-      <div
-        style={{
-          minHeight: '100vh',
-          width: '100%',
-          backgroundImage: wallpaperUrl
-            ? `url(${wallpaperUrl})`
-            : 'linear-gradient(135deg, #112033, #1c2a3c)',
-          backgroundSize: 'cover',
-          backgroundPosition: 'center',
-          backgroundRepeat: 'no-repeat',
-        }}
-      >
-        {/* subtle cinematic overlay so everything feels intentional */}
-        <div
-          style={{
-            minHeight: '100vh',
-            width: '100%',
-            background:
-              'linear-gradient(180deg, rgba(17,32,51,0.62) 0%, rgba(17,32,51,0.18) 55%, rgba(17,32,51,0.30) 100%)',
-            padding: '18px 0',
-          }}
-        >
-          <main
-            className="public-main"
-            style={{
-              maxWidth: 980,
-              margin: '0 auto',
-              padding: '0px 28px 28px',
-              minHeight: '80vh',
-            }}
+      <div className="ft-page">
+        <div className="ft-page-overlay">
+
+          {/* ── Banner ── */}
+          <div
+            className="ft-banner-wrap animate-scale-in"
+            style={{ height: resolvedBannerHeight }}
+            aria-label="Profile banner"
           >
-            {/* Banner */}
             <div
-              className="public-banner-frame"
-              style={{
-                ...bannerFrame,
-                height: resolvedBannerHeight,
-              }}
-              aria-label="Profile banner"
-            >
-              {/* Blurred background fill */}
-              <div
-                aria-hidden="true"
-                style={{
-                  position: 'absolute',
-                  inset: 0,
-                  backgroundImage: bannerImage,
-                  backgroundSize: 'cover',
-                  backgroundPosition: bannerPos,
-                  backgroundRepeat: 'no-repeat',
-                  filter: 'blur(18px)',
-                  transform: 'scale(1.10)',
-                  opacity: 0.85,
-                }}
-              />
+              className="ft-banner-blur"
+              style={{ backgroundImage: bannerImage }}
+              aria-hidden="true"
+            />
+            <div className="ft-banner-vignette" aria-hidden="true" />
+            <div
+              className="ft-banner-fg"
+              style={{ backgroundImage: bannerImage }}
+            />
 
-              {/* Darken overlay for contrast */}
-              <div
-                aria-hidden="true"
-                style={{
-                  position: 'absolute',
-                  inset: 0,
-                  background:
-                    'linear-gradient(180deg, rgba(17,32,51,0.55), rgba(17,32,51,0.22))',
-                }}
-              />
-
-              {/* Foreground banner (full image) */}
-              <div
-                style={{
-                  position: 'absolute',
-                  inset: 0,
-                  backgroundImage: bannerImage,
-                  backgroundSize: bannerFgSize,
-                  backgroundPosition: 'center',
-                  backgroundRepeat: 'no-repeat',
-                }}
-              />
+            {/* ForgeTomorrow badge overlay */}
+            <div className="ft-banner-badge" aria-hidden="true">
+              <div className="ft-banner-badge-dot" />
+              ForgeTomorrow
             </div>
+          </div>
 
-            {/* Header card */}
-            <section
-              className="public-header"
-              style={{
-                ...cardBase,
-                display: 'flex',
-                gap: 18,
-                alignItems: 'center',
-                marginTop: -28,
-                position: 'relative',
-                zIndex: 2,
-              }}
-              aria-label="Profile header"
-            >
-              <img
-                className="public-avatar"
-                src={avatarUrl || '/demo-profile.jpg'}
-                alt="Profile photo"
-                style={{
-                  width: 112,
-                  height: 112,
-                  borderRadius: '50%',
-                  objectFit: 'cover',
-                  border: `4px solid ${ORANGE}`,
-                  boxShadow: '0 12px 24px rgba(0,0,0,0.18)',
-                  flexShrink: 0,
-                }}
-              />
+          {/* ── Main container ── */}
+          <div className="ft-container">
 
-              <div style={{ flex: 1, minWidth: 0 }}>
-                <h1
-                  style={{
-                    margin: 0,
-                    fontSize: 26,
-                    fontWeight: 900,
-                    color: TEXT_DARK,
-                    letterSpacing: '-0.2px',
-                  }}
-                >
-                  {fullName}
-                </h1>
+            {/* ── Identity ── */}
+            <div className="ft-identity animate-fade-up delay-1">
+              <div className="ft-avatar-ring" aria-hidden="true">
+                <img
+                  className="ft-avatar"
+                  src={avatarUrl || '/demo-profile.jpg'}
+                  alt={`${fullName} profile photo`}
+                />
+              </div>
+
+              <div className="ft-identity-info">
+                <h1 className="ft-name">{fullName}</h1>
 
                 {pronouns && (
-                  <p style={{ margin: '6px 0 0', color: TEXT_MID, fontSize: 13, fontWeight: 700 }}>
-                    {pronouns}
-                  </p>
+                  <p className="ft-pronouns">{pronouns}</p>
                 )}
 
                 {headline && (
-                  <p
-                    style={{
-                      margin: '10px 0 0',
-                      fontSize: 15,
-                      color: TEXT_DARK,
-                      fontWeight: 800,
-                      lineHeight: 1.35,
-                    }}
-                  >
-                    {headline}
-                  </p>
+                  <p className="ft-headline">{headline}</p>
                 )}
 
-                {(location || status) && (
-                  <p style={{ margin: '10px 0 0', fontSize: 13, color: TEXT_MID, fontWeight: 700 }}>
-                    {location && `Location: ${location}`}{' '}
-                    {status && `• ${status}`}
-                  </p>
-                )}
+                <div className="ft-meta-row">
+                  {location && (
+                    <span className="ft-meta-chip">
+                      {/* Pin icon */}
+                      <svg width="11" height="13" fill="none" viewBox="0 0 11 13" style={{opacity:0.7}}>
+                        <path d="M5.5 0A4.5 4.5 0 001 4.5C1 8.25 5.5 13 5.5 13S10 8.25 10 4.5A4.5 4.5 0 005.5 0zm0 6.25A1.75 1.75 0 113.75 4.5 1.752 1.752 0 015.5 6.25z" fill="currentColor"/>
+                      </svg>
+                      {location}
+                    </span>
+                  )}
+                  {status && (
+                    <span className="ft-meta-chip" style={{color:'rgba(255,112,67,0.9)',borderColor:'rgba(255,112,67,0.25)'}}>
+                      {/* Status dot */}
+                      <span style={{width:6,height:6,borderRadius:'50%',background:'var(--orange)',flexShrink:0,display:'inline-block'}} />
+                      {status}
+                    </span>
+                  )}
+                </div>
 
-                <div
-                  className="public-urlrow"
-                  style={{
-                    marginTop: 12,
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: 10,
-                    flexWrap: 'wrap',
-                  }}
-                >
-                  <span
-                    style={{
-                      fontSize: 13,
-                      color: TEXT_MID,
-                      background: 'rgba(255,255,255,0.72)',
-                      padding: '6px 10px',
-                      borderRadius: 10,
-                      wordBreak: 'break-all',
-                      border: '1px solid rgba(0,0,0,0.06)',
-                      fontWeight: 700,
-                    }}
-                  >
-                    {profileUrl}
-                  </span>
-
+                <div className="ft-share-row">
+                  <span className="ft-url-pill">{profileUrl}</span>
                   <button
+                    className="ft-copy-btn"
+                    type="button"
                     onClick={() =>
                       typeof navigator !== 'undefined' && navigator.clipboard?.writeText(profileUrl)
                     }
-                    style={{
-                      background: ORANGE,
-                      color: 'white',
-                      border: 'none',
-                      padding: '8px 12px',
-                      borderRadius: 10,
-                      cursor: 'pointer',
-                      fontSize: 13,
-                      fontWeight: 900,
-                      boxShadow: '0 12px 22px rgba(0,0,0,0.12)',
-                    }}
-                    type="button"
+                    aria-label="Copy profile URL"
                   >
-                    Copy
+                    {/* Copy icon */}
+                    <svg width="13" height="13" fill="none" viewBox="0 0 13 13">
+                      <rect x="4" y="4" width="8" height="8" rx="1.5" stroke="white" strokeWidth="1.4"/>
+                      <path d="M3 9H2a1 1 0 01-1-1V2a1 1 0 011-1h6a1 1 0 011 1v1" stroke="white" strokeWidth="1.4"/>
+                    </svg>
+                    Copy Link
                   </button>
                 </div>
 
                 {effectiveVisibility === 'PUBLIC' && (
-                  <div
-                    style={{
-                      marginTop: 10,
-                      fontSize: 12,
-                      color: TEXT_MID,
-                      fontStyle: 'italic',
-                      fontWeight: 700,
-                    }}
-                  >
-                    This is a public{' '}
-                    <span style={{ color: ORANGE, fontWeight: 900 }}>ForgeTomorrow</span>{' '}
-                    profile.
-                  </div>
+                  <span className="ft-visibility-pill">
+                    <svg width="10" height="10" fill="none" viewBox="0 0 10 10">
+                      <circle cx="5" cy="5" r="4" stroke="currentColor" strokeWidth="1.2"/>
+                      <path d="M1 5h8M5 1c-1.5 1.2-2 2.5-2 4s.5 2.8 2 4M5 1c1.5 1.2 2 2.5 2 4s-.5 2.8-2 4" stroke="currentColor" strokeWidth="1.2"/>
+                    </svg>
+                    Public profile
+                  </span>
                 )}
               </div>
-            </section>
+            </div>
 
-            {/* Professional Summary */}
-            {aboutMe && (
-              <section style={{ ...cardBase, marginTop: 16 }} aria-label="Professional Summary">
-                <h2 style={{ margin: '0 0 10px', fontSize: 18, fontWeight: 900, color: TEXT_DARK }}>
-                  Professional Summary
-                </h2>
-                <p
-                  style={{
-                    margin: 0,
-                    fontSize: 14,
-                    lineHeight: 1.75,
-                    color: TEXT_DARK,
-                    whiteSpace: 'pre-line',
-                    fontWeight: 600,
-                  }}
-                >
-                  {aboutMe}
-                </p>
-              </section>
-            )}
+            {/* ── Body ── */}
+            <div className="ft-body">
 
-            {/* Primary Resume */}
-            {primaryResume && (
-              <section style={{ ...cardBase, marginTop: 16 }} aria-label="Primary Resume">
-                <h2 style={{ margin: '0 0 10px', fontSize: 18, fontWeight: 900, color: TEXT_DARK }}>
-                  Primary Resume
-                </h2>
+              {/* ── Sidebar ── */}
+              <aside className="ft-sidebar animate-fade-up delay-2">
 
-                <p style={{ margin: '0 0 6px', fontSize: 14, color: TEXT_DARK, fontWeight: 700 }}>
-                  {primaryResume.name || 'Primary resume'} · Last updated{' '}
-                  {new Date(primaryResume.updatedAt).toLocaleDateString()}
-                </p>
-
-                <a
-                  href={`/api/resume/public-download?resumeId=${encodeURIComponent(
-                    primaryResume.id
-                  )}&slug=${encodeURIComponent(slug)}`}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  style={{
-                    display: 'inline-block',
-                    marginTop: 10,
-                    fontSize: 14,
-                    color: ORANGE,
-                    textDecoration: 'underline',
-                    fontWeight: 900,
-                  }}
-                >
-                  Download Resume (PDF)
+                {/* FT Member badge */}
+                <a href="https://forgetomorrow.com" className="ft-member-badge" target="_blank" rel="noopener noreferrer">
+                  <div className="ft-member-badge-icon" aria-hidden="true">
+                    {/* Flame/forge icon */}
+                    <svg width="20" height="20" fill="none" viewBox="0 0 20 20">
+                      <path d="M10 2C8 5 6 6 7 9c.5 1.5 0 2.5-1.5 3C7 14 8 16 10 17c2-1 3-3 4.5-5-.5 0-1-.5-1.5-1.5C14 8.5 13 6 10 2z" fill="white"/>
+                      <path d="M10 17c0 0 2-2 2-4s-2-2-2-2-2 0-2 2 2 4 2 4z" fill="rgba(255,255,255,0.5)"/>
+                    </svg>
+                  </div>
+                  <div className="ft-member-badge-text">
+                    <div className="ft-member-badge-title">ForgeTomorrow</div>
+                    <div className="ft-member-badge-sub">Verified Member</div>
+                  </div>
                 </a>
-              </section>
-            )}
 
-            {/* Skills / Languages */}
-            {(skills.length > 0 || languages.length > 0) && (
-              <section
-                style={{
-                  marginTop: 16,
-                  display: 'grid',
-                  gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))',
-                  gap: 16,
-                }}
-                aria-label="Skills and Languages"
-              >
-                {skills.length > 0 && (
-                  <div style={cardBase}>
-                    <h2 style={{ margin: '0 0 10px', fontSize: 16, fontWeight: 900, color: TEXT_DARK }}>
-                      Skills
-                    </h2>
-                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, marginTop: 6 }}>
-                      {skills.map((skill) => (
-                        <span
-                          key={skill}
-                          style={{
-                            fontSize: 12,
-                            padding: '6px 10px',
-                            borderRadius: 999,
-                            background: 'rgba(255,255,255,0.72)',
-                            color: TEXT_DARK,
-                            border: '1px solid rgba(0,0,0,0.06)',
-                            fontWeight: 800,
-                          }}
-                        >
-                          {skill}
-                        </span>
-                      ))}
+                {/* Languages */}
+                {languages.length > 0 && (
+                  <div className="ft-card" style={{marginTop: 18}}>
+                    <div className="ft-card-inner">
+                      <p className="ft-section-label">Languages</p>
+                      <ul className="ft-lang-list">
+                        {languages.map((lang) => (
+                          <li key={lang}>{lang}</li>
+                        ))}
+                      </ul>
                     </div>
                   </div>
                 )}
 
-                {languages.length > 0 && (
-                  <div style={cardBase}>
-                    <h2 style={{ margin: '0 0 10px', fontSize: 16, fontWeight: 900, color: TEXT_DARK }}>
-                      Languages
-                    </h2>
-                    <ul
-                      style={{
-                        listStyle: 'none',
-                        padding: 0,
-                        margin: 0,
-                        fontSize: 13,
-                        color: TEXT_DARK,
-                        fontWeight: 700,
-                      }}
-                    >
-                      {languages.map((lang) => (
-                        <li key={lang} style={{ marginBottom: 6 }}>
-                          {lang}
-                        </li>
-                      ))}
-                    </ul>
+                {/* Hobbies */}
+                {hobbies.length > 0 && (
+                  <div className="ft-card" style={{marginTop: 18}}>
+                    <div className="ft-card-inner">
+                      <p className="ft-section-label">Interests</p>
+                      <div className="ft-chips">
+                        {hobbies.map((h) => (
+                          <span key={h} className="ft-chip">{h}</span>
+                        ))}
+                      </div>
+                    </div>
                   </div>
                 )}
-              </section>
-            )}
 
-            {/* Education */}
-            {education.length > 0 && (
-              <section style={{ ...cardBase, marginTop: 16 }} aria-label="Education">
-                <h2 style={{ margin: '0 0 10px', fontSize: 18, fontWeight: 900, color: TEXT_DARK }}>
-                  Education
-                </h2>
+              </aside>
 
-                <div style={{ display: 'grid', gap: 10 }}>
-                  {education.map((edu, idx) => {
-                    const school = edu?.school || '';
-                    const degree = edu?.degree || '';
-                    const field = edu?.field || '';
-                    const startYear = edu?.startYear || '';
-                    const endYear = edu?.endYear || '';
-                    const notes = edu?.notes || '';
+              {/* ── Main column ── */}
+              <div className="ft-main-col">
 
-                    const line1 = [degree, field].filter(Boolean).join(' — ');
-                    const years = [startYear, endYear].filter(Boolean).join(' – ');
+                {/* Professional Summary */}
+                {aboutMe && (
+                  <div className="ft-card animate-fade-up delay-3">
+                    <div className="ft-card-inner">
+                      <p className="ft-section-label">Professional Summary</p>
+                      <p className="ft-summary-text">{aboutMe}</p>
+                    </div>
+                  </div>
+                )}
 
-                    return (
-                      <div
-                        key={`${school || line1 || 'edu'}-${idx}`}
-                        style={{
-                          padding: '12px 12px',
-                          borderRadius: 14,
-                          background: 'rgba(255,255,255,0.62)',
-                          border: '1px solid rgba(0,0,0,0.06)',
-                        }}
+                {/* Primary Resume */}
+                {primaryResume && (
+                  <div className="ft-card animate-fade-up delay-3">
+                    <div className="ft-card-inner">
+                      <p className="ft-section-label">Resume</p>
+                      <p className="ft-resume-name">{primaryResume.name || 'Primary Resume'}</p>
+                      <p className="ft-resume-date">
+                        Last updated {new Date(primaryResume.updatedAt).toLocaleDateString('en-US', {year:'numeric',month:'long',day:'numeric'})}
+                      </p>
+                      <a
+                        className="ft-resume-btn"
+                        href={`/api/resume/public-download?resumeId=${encodeURIComponent(primaryResume.id)}&slug=${encodeURIComponent(slug)}`}
+                        target="_blank"
+                        rel="noopener noreferrer"
                       >
-                        <div style={{ fontSize: 14, fontWeight: 900, color: TEXT_DARK }}>
-                          {school || 'Education'}
-                        </div>
+                        {/* Download icon */}
+                        <svg width="14" height="14" fill="none" viewBox="0 0 14 14">
+                          <path d="M7 1v8M4 7l3 3 3-3M2 11h10" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round"/>
+                        </svg>
+                        Download PDF
+                      </a>
+                    </div>
+                  </div>
+                )}
 
-                        {(line1 || years) && (
-                          <div style={{ marginTop: 6, fontSize: 13, color: TEXT_MID, fontWeight: 800 }}>
-                            {line1}
-                            {line1 && years ? ' • ' : ''}
-                            {years}
-                          </div>
-                        )}
-
-                        {notes && (
-                          <div
-                            style={{
-                              marginTop: 8,
-                              fontSize: 13,
-                              color: TEXT_DARK,
-                              lineHeight: 1.65,
-                              whiteSpace: 'pre-line',
-                              fontWeight: 600,
-                            }}
+                {/* Skills */}
+                {skills.length > 0 && (
+                  <div className="ft-card animate-fade-up delay-4">
+                    <div className="ft-card-inner">
+                      <p className="ft-section-label">Skills</p>
+                      <div className="ft-chips">
+                        {skills.map((skill, i) => (
+                          <span
+                            key={skill}
+                            className={`ft-chip${i < 3 ? ' ft-chip-accent' : ''}`}
                           >
-                            {notes}
-                          </div>
-                        )}
+                            {skill}
+                          </span>
+                        ))}
                       </div>
-                    );
-                  })}
-                </div>
-              </section>
-            )}
+                    </div>
+                  </div>
+                )}
 
-            {/* ✅ Hobbies (optional, human, portfolio-style) */}
-            {hobbies.length > 0 && (
-              <section style={{ ...cardBase, marginTop: 16 }} aria-label="Hobbies">
-                <h2 style={{ margin: '0 0 10px', fontSize: 16, fontWeight: 900, color: TEXT_DARK }}>
-                  Hobbies
-                </h2>
+                {/* Education */}
+                {education.length > 0 && (
+                  <div className="ft-card animate-fade-up delay-5">
+                    <div className="ft-card-inner">
+                      <p className="ft-section-label">Education</p>
+                      <div>
+                        {education.map((edu, idx) => {
+                          const school = edu?.school || '';
+                          const degree = edu?.degree || '';
+                          const field = edu?.field || '';
+                          const startYear = edu?.startYear || '';
+                          const endYear = edu?.endYear || '';
+                          const notes = edu?.notes || '';
+                          const line1 = [degree, field].filter(Boolean).join(' — ');
+                          const years = [startYear, endYear].filter(Boolean).join(' – ');
 
-                <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
-                  {hobbies.map((hobby) => (
-                    <span
-                      key={hobby}
-                      style={{
-                        fontSize: 12,
-                        padding: '6px 10px',
-                        borderRadius: 999,
-                        background: 'rgba(255,255,255,0.62)',
-                        color: TEXT_DARK,
-                        border: '1px solid rgba(0,0,0,0.06)',
-                        fontWeight: 800,
-                      }}
-                    >
-                      {hobby}
-                    </span>
-                  ))}
-                </div>
-              </section>
-            )}
-          </main>
-        </div>
-      </div>
+                          return (
+                            <div
+                              key={`${school || line1 || 'edu'}-${idx}`}
+                              className="ft-edu-item"
+                            >
+                              <div className="ft-edu-accent-bar" />
+                              <div className="ft-edu-school">{school || 'Education'}</div>
+                              {(line1 || years) && (
+                                <div className="ft-edu-sub">
+                                  {line1}{line1 && years ? ' · ' : ''}{years}
+                                </div>
+                              )}
+                              {notes && (
+                                <div className="ft-edu-notes">{notes}</div>
+                              )}
+                            </div>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+              </div>{/* /ft-main-col */}
+            </div>{/* /ft-body */}
+
+            {/* ── Footer ── */}
+            <footer className="ft-footer animate-fade-up delay-6">
+              <p>
+                This profile is powered by{' '}
+                <a href="https://forgetomorrow.com" target="_blank" rel="noopener noreferrer">
+                  ForgeTomorrow
+                </a>
+                {' '}— Building the careers of tomorrow, today.
+              </p>
+            </footer>
+
+          </div>{/* /ft-container */}
+        </div>{/* /ft-page-overlay */}
+      </div>{/* /ft-page */}
     </>
   );
 }
