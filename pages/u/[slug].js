@@ -172,9 +172,9 @@ export default function PublicProfile({ user, primaryResume, effectiveVisibility
         <link rel="preconnect" href="https://fonts.googleapis.com" />
         <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
         <link
-          href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=Outfit:wght@300;400;500;600;700&display=swap"
-          rel="stylesheet"
-        />
+href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@500;600;700;800&family=Outfit:wght@300;400;500;600;700&display=swap"
+rel="stylesheet"
+/>
       </Head>
 
       <style>{`
@@ -309,7 +309,7 @@ export default function PublicProfile({ user, primaryResume, effectiveVisibility
           display: flex;
           gap: 22px;
           align-items: center;
-          margin-top: -34px;
+          margin-top: 18px;
           position: relative;
           z-index: 10;
           padding: 18px 20px;
