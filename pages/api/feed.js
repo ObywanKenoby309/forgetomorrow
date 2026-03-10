@@ -95,10 +95,12 @@ function mapFeedPostRow(row, userMap, viewerId) {
 
   // 🔹 Lookup author avatar from userMap (if provided)
   let authorAvatar = null;
+  let authorSlug = null;
   if (userMap && row.authorId) {
-    const u = userMap.get(row.authorId);
-    if (u) {
-      authorAvatar = u.avatarUrl || u.image || null;
+	  const u = userMap.get(row.authorId);
+	  if (u) {
+		authorAvatar = u.avatarUrl || u.image || null;
+		authorSlug = u.slug || null;
     }
   }
 
@@ -107,6 +109,7 @@ function mapFeedPostRow(row, userMap, viewerId) {
     authorId: row.authorId,
     author: row.authorName,
     authorAvatar, // ✅ used by PostCard header
+	authorSlug,
     body,
     type: row.type || 'business',
     createdAt: row.createdAt,
@@ -165,7 +168,7 @@ export default async function handler(req, res) {
       if (allUserIds.length > 0) {
         const users = await prisma.user.findMany({
           where: { id: { in: allUserIds } },
-          select: { id: true, avatarUrl: true, image: true },
+          select: { id: true, avatarUrl: true, image: true, slug: true },
         });
         userMap = new Map(users.map((u) => [String(u.id), u]));
       }

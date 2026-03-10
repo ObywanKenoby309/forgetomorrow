@@ -134,6 +134,7 @@ export default function Feed() {
       authorId: row.authorId ?? null,
       author: row.authorName || row.author || 'Member',
       authorAvatar: row.authorAvatar || null,
+	  authorSlug: row.authorSlug || null,
       body,
       type: row.type ?? 'business',
       createdAt: new Date(row.createdAt).toISOString(),

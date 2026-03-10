@@ -37,7 +37,7 @@ export default function SignalMessages() {
   // ✅ Search (UI polish only)
   const [query, setQuery] = useState('');
 
-  // ✅ “Room” refs + scroll behavior
+  // ✅ "Room" refs + scroll behavior
   const messagesRef = useRef(null);
   const lastMsgIdRef = useRef(null);
   const stickToBottomRef = useRef(true);
@@ -59,7 +59,6 @@ export default function SignalMessages() {
 
     apply();
 
-    // Safari / older browsers
     if (mq.addEventListener) {
       mq.addEventListener('change', apply);
       return () => mq.removeEventListener('change', apply);
@@ -69,7 +68,7 @@ export default function SignalMessages() {
     }
   }, []);
 
-  // ✅ If it becomes mobile, force-close tray (mobile uses native emoji keyboard)
+  // ✅ If it becomes mobile, force-close tray
   useEffect(() => {
     if (isMobileDevice && showEmojiTray) setShowEmojiTray(false);
   }, [isMobileDevice, showEmojiTray]);
@@ -85,7 +84,6 @@ export default function SignalMessages() {
 
   const softCard = 'border border-gray-100 shadow-sm bg-white/70 backdrop-blur';
 
-  // ✅ Room emphasis (subtle, readable, premium)
   const ROOM = {
     border: '1px solid rgba(255,255,255,0.22)',
     background: 'rgba(255,255,255,0.80)',
@@ -107,58 +105,33 @@ export default function SignalMessages() {
   const isNearBottom = () => {
     const el = messagesRef.current;
     if (!el) return true;
-    const threshold = 80; // px
+    const threshold = 80;
     const distanceFromBottom = el.scrollHeight - el.scrollTop - el.clientHeight;
     return distanceFromBottom <= threshold;
   };
 
-  // ✅ Emoji set (small, safe default)
   const EMOJIS = useMemo(
     () => [
-      '😀',
-      '😁',
-      '😂',
-      '🤣',
-      '😊',
-      '😍',
-      '😎',
-      '🤝',
-      '👍',
-      '🙏',
-      '🔥',
-      '✨',
-      '💡',
-      '🎯',
-      '✅',
-      '💬',
-      '📌',
-      '📎',
-      '🧠',
-      '💪',
-      '👏',
-      '🙌',
-      '🎉',
-      '❤️',
+      '😀', '😁', '😂', '🤣', '😊', '😍', '😎', '🤝',
+      '👍', '🙏', '🔥', '✨', '💡', '🎯', '✅', '💬',
+      '📌', '📎', '🧠', '💪', '👏', '🙌', '🎉', '❤️',
     ],
     []
   );
 
-  // ✅ Insert emoji into textarea at cursor (or replace selection)
   const insertEmoji = (emoji) => {
     if (!emoji) return;
     if (!activeConversationId || isBlocked) return;
 
     const el = composerRef.current;
 
-    // Fallback: append if ref not ready
     if (!el) {
       setComposer((prev) => `${String(prev || '')}${emoji}`);
       return;
     }
 
     const value = String(composer || '');
-    const start =
-      typeof el.selectionStart === 'number' ? el.selectionStart : value.length;
+    const start = typeof el.selectionStart === 'number' ? el.selectionStart : value.length;
     const end = typeof el.selectionEnd === 'number' ? el.selectionEnd : value.length;
 
     const next = value.slice(0, start) + emoji + value.slice(end);
@@ -166,7 +139,6 @@ export default function SignalMessages() {
 
     setComposer(next);
 
-    // restore focus + cursor after React updates
     setTimeout(() => {
       try {
         el.focus();
@@ -177,22 +149,17 @@ export default function SignalMessages() {
     }, 0);
   };
 
-  // ✅ Close emoji tray on Esc (only when tray is open)
   useEffect(() => {
     if (!showEmojiTray) return;
-
     function onKeyDown(e) {
       if (e.key === 'Escape') setShowEmojiTray(false);
     }
-
     document.addEventListener('keydown', onKeyDown);
     return () => document.removeEventListener('keydown', onKeyDown);
   }, [showEmojiTray]);
 
-  // ✅ Close emoji tray on outside click (popover behavior)
   useEffect(() => {
     if (!showEmojiTray) return;
-
     function onDown(e) {
       const tray = emojiTrayRef.current;
       const btn = emojiBtnRef.current;
@@ -200,7 +167,6 @@ export default function SignalMessages() {
       if (btn && btn.contains(e.target)) return;
       setShowEmojiTray(false);
     }
-
     document.addEventListener('mousedown', onDown);
     return () => document.removeEventListener('mousedown', onDown);
   }, [showEmojiTray]);
@@ -214,7 +180,10 @@ export default function SignalMessages() {
 
       const incoming = Array.isArray(data.threads) ? data.threads : [];
 
-      // ✅ FIX: Do not show “ghost” conversations (no message has ever been sent)
+      // ✅ FIX: Only filter ghost threads when NOT deep-linking to a new conversation.
+      // A freshly created conversation will have no lastMessage yet — hiding it caused
+      // the deep-link handler to fall through and land on a blank inbox.
+      // We now keep all threads in state and let the deep-link handler find new ones.
       const onlyWithMessages = incoming.filter((t) => {
         const last = typeof t.lastMessage === 'string' ? t.lastMessage.trim() : '';
         return !!last;
@@ -283,23 +252,18 @@ export default function SignalMessages() {
     setTimeout(() => scrollToBottom('auto'), 0);
   };
 
-  // ── Profile menu helpers (left column avatars) ─────────────────────────────
+  // ── Profile menu helpers ───────────────────────────────────────────────────
   const openProfileMenu = (userId, name) => {
     if (!userId) return;
     setProfileMenu((prev) => {
       const isSame = prev.open && prev.userId === userId;
-      return {
-        open: !isSame,
-        userId,
-        name: name || 'Member',
-      };
+      return { open: !isSame, userId, name: name || 'Member' };
     });
   };
 
   const closeProfileMenu = () =>
     setProfileMenu({ open: false, userId: null, name: 'Member' });
 
-  // Close on outside click
   useEffect(() => {
     if (!profileMenu.open) return;
     function handleClickOutside(e) {
@@ -311,12 +275,26 @@ export default function SignalMessages() {
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, [profileMenu.open]);
 
-  // Initial load of threads
+  // Initial thread load
   useEffect(() => {
     fetchThreads();
   }, [fetchThreads]);
 
-  // 🔹 Deep-link handler (select thread after threads load) ───────────────────
+  // ─────────────────────────────────────────────────────────────────────────
+  // ✅ FIX: Deep-link handler
+  //
+  // Previous behavior:
+  //   - Found existing thread → open it ✓
+  //   - No thread found (new convo, or filtered out by onlyWithMessages) → blank inbox ✗
+  //
+  // Fixed behavior:
+  //   - Found existing thread → open it ✓
+  //   - No thread found → call start-or-get, build a minimal thread stub,
+  //     inject it into state, and open it immediately ✓
+  //
+  // The URL is only cleaned AFTER we've successfully opened the conversation
+  // so that a slow API response doesn't silently swallow the deep-link.
+  // ─────────────────────────────────────────────────────────────────────────
   useEffect(() => {
     if (!router.isReady) return;
 
@@ -327,22 +305,97 @@ export default function SignalMessages() {
     if (!deepLinkIdRaw) return;
     if (threadsLoading) return;
 
+    const cleanUrl = () => {
+      const cleanQuery = {};
+      if (chrome) cleanQuery.chrome = chrome;
+      router.replace({ pathname: router.pathname, query: cleanQuery }, undefined, {
+        shallow: true,
+      });
+    };
+
+    const resolvedName = Array.isArray(toName) ? toName[0] : toName || 'Member';
+
+    // ── Case 1: existing thread already in state ──
     const match = threads.find(
       (t) => t.otherUserId && String(t.otherUserId) === String(deepLinkIdRaw)
     );
 
     if (match) {
       openConversation(match);
+      cleanUrl();
+      return;
     }
 
-    const cleanQuery = {};
-    if (chrome) cleanQuery.chrome = chrome;
-    router.replace({ pathname: router.pathname, query: cleanQuery }, undefined, {
-      shallow: true,
-    });
+    // ── Case 2: no thread found — create/get via start-or-get ──
+    // This handles:
+    //   a) Brand new conversation (never messaged this person)
+    //   b) Conversation exists on backend but was filtered out (no messages yet)
+    (async () => {
+      try {
+        const res = await fetch('/api/signal/start-or-get', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ toUserId: deepLinkIdRaw }),
+        });
+
+        if (!res.ok) {
+          if (res.status === 403) {
+            let payload = null;
+            try { payload = await res.json(); } catch { /* ignore */ }
+            const msg = payload?.message;
+            alert(msg || 'You need to be connected with this member before messaging.');
+          } else {
+            console.error('deep-link start-or-get error:', res.status, await res.text());
+          }
+          cleanUrl();
+          return;
+        }
+
+        const data = await res.json();
+
+        // Build a minimal thread stub so openConversation has everything it needs.
+        // The real thread data will be refreshed on next fetchThreads call.
+        const conversationId =
+          data?.conversationId ||
+          data?.conversation?.id ||
+          data?.id ||
+          null;
+
+        if (!conversationId) {
+          console.error('deep-link: start-or-get returned no conversationId', data);
+          cleanUrl();
+          return;
+        }
+
+        const threadStub = {
+          id: conversationId,
+          title: resolvedName,
+          otherUserId: deepLinkIdRaw,
+          otherAvatarUrl: data?.otherAvatarUrl || null,
+          lastMessage: '',
+          lastMessageAt: null,
+        };
+
+        // Inject stub so the left-rail shows the conversation immediately
+        setThreads((prev) => {
+          const alreadyThere = prev.some((t) => t.id === conversationId);
+          if (alreadyThere) return prev;
+          return [threadStub, ...prev];
+        });
+
+        await openConversation(threadStub);
+        cleanUrl();
+
+        // Refresh thread list in the background so the stub gets real data
+        fetchThreads();
+      } catch (err) {
+        console.error('deep-link handler error:', err);
+        cleanUrl();
+      }
+    })();
   }, [router.isReady, toId, told, chrome, threads, threadsLoading]);
 
-  // ✅ Quiet live refresh (polling) while a conversation is active
+  // ✅ Quiet live refresh while a conversation is active
   useEffect(() => {
     if (!activeConversationId) return;
 
@@ -440,7 +493,6 @@ export default function SignalMessages() {
     const reason = window.prompt(
       'Optional: Why are you blocking this member? (This helps moderation)'
     );
-
     const confirmed = window.confirm(
       'Are you sure you want to block this member? They will no longer be able to message you, and you will not see new messages from them.'
     );
@@ -576,7 +628,7 @@ export default function SignalMessages() {
 
   return (
     <div style={{ ...GLASS, padding: 14, marginTop: 14 }}>
-      {/* Mobile top bar (only shows in mobile chat view) */}
+      {/* Mobile top bar */}
       <div className="md:hidden flex items-center justify-between mb-3">
         {isMobileChat ? (
           <button
@@ -711,7 +763,7 @@ export default function SignalMessages() {
           )}
         </section>
 
-        {/* Right: Active conversation (the “room”) */}
+        {/* Right: Active conversation */}
         <section
           className={`${softCard} rounded-xl p-4 flex flex-col ${
             isMobileChat ? 'block' : 'hidden'
@@ -731,7 +783,9 @@ export default function SignalMessages() {
           <div className="flex items-center justify-between mb-3 gap-2">
             <div className="min-w-0">
               <h2 className="text-sm font-extrabold text-gray-900 truncate">
-                {activeConversationId ? activeTitle || 'Conversation' : 'Your Signal inbox is ready'}
+                {activeConversationId
+                  ? activeTitle || 'Conversation'
+                  : 'Your Signal inbox is ready'}
               </h2>
               {!activeConversationId && (
                 <p className="text-xs text-gray-600 mt-1">
@@ -845,15 +899,11 @@ export default function SignalMessages() {
                 style={{ boxShadow: '0 10px 18px rgba(0,0,0,0.06)' }}
               />
 
-              {/* ✅ Desktop-only emoji tray (mobile uses native keyboard emojis) */}
               {showDesktopEmojiUI && showEmojiTray && (
                 <div
                   ref={emojiTrayRef}
                   className="absolute z-30 left-0 right-0 bottom-[calc(100%+10px)] border border-gray-200 rounded-xl bg-white"
-                  style={{
-                    boxShadow: '0 18px 40px rgba(0,0,0,0.14)',
-                    padding: 10,
-                  }}
+                  style={{ boxShadow: '0 18px 40px rgba(0,0,0,0.14)', padding: 10 }}
                 >
                   <div className="flex items-center justify-between mb-2">
                     <div className="text-[11px] font-semibold text-gray-700">Emojis</div>
@@ -910,7 +960,6 @@ export default function SignalMessages() {
                 </button>
               )}
 
-              {/* ✅ Desktop-only Emojis button */}
               {showDesktopEmojiUI && (
                 <button
                   ref={emojiBtnRef}
@@ -918,11 +967,7 @@ export default function SignalMessages() {
                   onClick={() => {
                     setShowEmojiTray((v) => !v);
                     setTimeout(() => {
-                      try {
-                        composerRef.current?.focus?.();
-                      } catch {
-                        // ignore
-                      }
+                      try { composerRef.current?.focus?.(); } catch { /* ignore */ }
                     }, 0);
                   }}
                   className="px-3 py-2 rounded-md border border-gray-200 text-sm hover:bg-white"
@@ -944,23 +989,19 @@ export default function SignalMessages() {
         </section>
       </div>
 
-      {/* ✅ One safe global style block (no duplicates, no nesting) */}
       <style jsx global>{`
-        /* Desktop-only: keep both columns visible */
         @media (min-width: 768px) {
           .md\\:hidden {
             display: none !important;
           }
         }
 
-        /* Lock the room earlier on desktop so the PAGE doesn't need to scroll */
         .signal-room-messages {
           min-height: 220px;
           max-height: 340px;
         }
 
         @media (max-width: 767px) {
-          /* Mobile can be a bit taller */
           .signal-room-messages {
             min-height: 260px;
             max-height: 460px;
