@@ -262,7 +262,7 @@ export default function CandidateTargetingPanel({
           <p className="mt-2 text-[11px] text-slate-600">{automationMessage}</p>
         )}
 
-        <p className="mt-3 text-[11px] text-slate-500">
+        <p className="mt-3 mb-6 text-[11px] text-slate-500">
           ForgeTomorrow never filters candidates by name, hobbies or interests,
           previous employers, birthdays or age, or pronouns. Those details may
           appear in a profile but are not used for search or automation.
@@ -273,7 +273,7 @@ export default function CandidateTargetingPanel({
 
   // ── When defaultExpanded: render form directly, no toggle wrapper ──────────
   if (defaultExpanded) {
-    return <div className="p-4">{formContent}</div>;
+    return <div className="pt-6 px-4 pb-4">{formContent}</div>;
   }
 
   // ── Normal inline mode: collapsible panel (legacy pages) ──────────────────
