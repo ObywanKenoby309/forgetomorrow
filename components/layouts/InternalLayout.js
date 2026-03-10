@@ -90,6 +90,7 @@ export default function InternalLayout({
 
   forceChrome,
   chrome,
+  disableViewerWallpaper = false,
 
   rightVariant = 'dark',
   rightWidth = 260,
@@ -207,19 +208,24 @@ export default function InternalLayout({
 
   const { wallpaperUrl } = useUserWallpaper();
 
-  const backgroundStyle = wallpaperUrl
-    ? {
-        minHeight: '100vh',
-        backgroundImage: `url(${wallpaperUrl})`,
-        backgroundSize: 'cover',
-        backgroundPosition: 'center top',
-        backgroundRepeat: 'no-repeat',
-        backgroundAttachment: 'fixed',
-      }
-    : {
-        minHeight: '100vh',
-        backgroundColor: '#ECEFF1',
-      };
+  const backgroundStyle = disableViewerWallpaper
+  ? {
+      minHeight: '100vh',
+      backgroundColor: 'transparent',
+    }
+  : wallpaperUrl
+  ? {
+      minHeight: '100vh',
+      backgroundImage: `url(${wallpaperUrl})`,
+      backgroundSize: 'cover',
+      backgroundPosition: 'center top',
+      backgroundRepeat: 'no-repeat',
+      backgroundAttachment: 'fixed',
+    }
+  : {
+      minHeight: '100vh',
+      backgroundColor: '#ECEFF1',
+    };
 
   const hasRight = Boolean(right);
   const [isMobile, setIsMobile] = useState(true);

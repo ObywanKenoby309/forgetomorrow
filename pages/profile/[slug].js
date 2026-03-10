@@ -212,12 +212,13 @@ export default function PublicProfile({ user, primaryResume, effectiveVisibility
 
   return (
     <InternalLayout
-      title={`${fullName} — ForgeTomorrow`}
-      activeNav="profile"
-      header={null}
-      right={<RightRailPlacementManager />}
-      rightVariant="dark"
-    >
+  title={`${fullName} — ForgeTomorrow`}
+  activeNav="profile"
+  header={null}
+  right={<RightRailPlacementManager />}
+  rightVariant="dark"
+  disableViewerWallpaper
+>
       <>
         <Head>
           <meta name="description" content={`Professional portfolio of ${fullName} on ForgeTomorrow.`} />
