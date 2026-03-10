@@ -1,4 +1,3 @@
-// components/recruiter/RecruiterSidebar.js
 import React from 'react';
 import Link from 'next/link';
 import { usePlan } from '@/context/PlanContext';
@@ -137,6 +136,7 @@ export default function RecruiterSidebar({
   counts = { connections: 0, signal: 0, feed: 0 },
   employee = false,
   department = '',
+  profileSlug = '',
 }) {
   const { isEnterprise: planIsEnterprise, can, role: ctxRole } = usePlan();
 
@@ -146,6 +146,9 @@ export default function RecruiterSidebar({
 
   const chromeRecruiter = isEnterprise ? 'recruiter-ent' : 'recruiter-smb';
   const canSeeSettings = can('recruiter.settings.view');
+  const resolvedProfileHref = profileSlug
+    ? `/profile/${profileSlug}?chrome=${chromeRecruiter}`
+    : `/profile?chrome=${chromeRecruiter}`;
 
   const dept = String(department || '').trim().toLowerCase();
   const staffAccess = employee === true && dept.length > 0;
@@ -223,7 +226,7 @@ export default function RecruiterSidebar({
     >
       {/* Profile + Dashboard */}
       <NavItem
-        href={`/profile?chrome=${chromeRecruiter}`}
+        href={resolvedProfileHref}
         label="Profile"
         active={active === 'profile'}
       />

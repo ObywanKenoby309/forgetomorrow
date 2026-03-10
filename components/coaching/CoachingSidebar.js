@@ -1,4 +1,3 @@
-// components/coaching/CoachingSidebar.js
 import React from 'react';
 import Link from 'next/link';
 
@@ -151,9 +150,14 @@ export default function CoachingSidebar({
   // ✅ NEW: DB-backed staff fields (from session/user)
   employee = false,
   department = '',
+  profileSlug = '',
 }) {
   const dept = String(department || '').trim().toLowerCase();
   const staffAccess = employee === true && dept.length > 0;
+
+  const resolvedProfileHref = profileSlug
+    ? `/profile/${profileSlug}?chrome=coach`
+    : '/profile?chrome=coach';
 
   // ✅ NEW: unread dot for Action Center (shown on Dashboard in sidebar)
   const [hasActionUnread, setHasActionUnread] = useState(false);
@@ -211,7 +215,7 @@ export default function CoachingSidebar({
     >
       {/* Profile + Dashboard */}
       <NavItem
-        href="/profile?chrome=coach"
+        href={resolvedProfileHref}
         label="Profile"
         active={active === 'profile'}
       />

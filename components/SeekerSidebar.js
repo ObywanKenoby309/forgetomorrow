@@ -112,9 +112,7 @@ function NavItem({ href, label, active, badge, dot }) {
       )}
       <span style={{ marginLeft: active ? 6 : 0 }}>{label}</span>
 
-      {/* ✅ NEW: dot indicator (Action Center unread) */}
       <Dot show={dot} />
-
       <Badge value={badge} />
     </Link>
   );
@@ -140,18 +138,15 @@ function SectionLabel({ children }) {
 export default function SeekerSidebar({
   active = '',
   counts = { connections: 0, signal: 0, feed: 0 },
-
-  // ✅ NEW: DB-backed staff fields (from session/user)
   employee = false,
   department = '',
+  profileSlug = '',
 }) {
   const dept = String(department || '').trim().toLowerCase();
 
-  // ✅ v1 rule: must be an employee AND have a department value
-  // (You can tighten to an allowlist later; keeping it minimal + safe.)
   const staffAccess = employee === true && dept.length > 0;
+  const resolvedProfileHref = profileSlug ? `/profile/${profileSlug}` : '/profile/edit';
 
-  // ✅ NEW: unread dot for Action Center (shown on Dashboard in sidebar)
   const [hasActionUnread, setHasActionUnread] = useState(false);
 
   useEffect(() => {
@@ -170,9 +165,7 @@ export default function SeekerSidebar({
         if (!alive) return;
 
         setHasActionUnread(!!data?.hasUnread);
-      } catch {
-        // swallow - no dot if API fails
-      }
+      } catch {}
     };
 
     load();
@@ -194,8 +187,6 @@ export default function SeekerSidebar({
         top: 24,
         alignSelf: 'start',
         height: 'fit-content',
-
-        // ✅ Glass container (match Recruiter)
         background: GLASS_BG,
         borderRadius: 18,
         border: `1px solid ${GLASS_BORDER}`,
@@ -206,9 +197,9 @@ export default function SeekerSidebar({
       }}
     >
       {/* Profile */}
-      <NavItem href="/profile" label="Profile" active={active === 'profile'} />
+      <NavItem href={resolvedProfileHref} label="Profile" active={active === 'profile'} />
 
-      {/* ✅ Dashboard (dot indicates Action Center has unread items) */}
+      {/* Dashboard */}
       <NavItem
         href="/seeker-dashboard"
         label="Dashboard"
@@ -237,7 +228,6 @@ export default function SeekerSidebar({
       <SectionLabel>Resources</SectionLabel>
       <NavItem href="/the-hearth" label="The Hearth" active={active === 'the-hearth'} />
 
-      {/* ✅ NEW: Staff tools (DB-backed via employee + department) */}
       {staffAccess ? (
         <>
           <SectionLabel>Staff Tools</SectionLabel>

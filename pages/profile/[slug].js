@@ -1,5 +1,6 @@
 // pages/profile/[slug].js  —  ForgeTomorrow Internal Profile
 import Head from 'next/head';
+import Link from 'next/link';
 import { useEffect, useState } from 'react';
 import { prisma } from '@/lib/prisma';
 import { getServerSession } from 'next-auth/next';
@@ -201,7 +202,7 @@ export default function PublicProfile({ user, primaryResume, effectiveVisibility
     return (
       <MemberAvatarActions
         targetUserId={profileUserId}
-		targetUserSlug={slug}
+        targetUserSlug={slug}
         targetName={fullName}
         showMessage
       >
@@ -212,15 +213,15 @@ export default function PublicProfile({ user, primaryResume, effectiveVisibility
 
   return (
     <InternalLayout
-  title={`${fullName} — ForgeTomorrow`}
-  activeNav="profile"
-  header={null}
-  right={<RightRailPlacementManager />}
-  rightVariant="dark"
-  backgroundOverrideUrl={effectiveWallpaper}
-  collapseSiderails={siderailsCollapsed}
-  onToggleSiderails={() => setSiderailsCollapsed(s => !s)}
->
+      title={`${fullName} — ForgeTomorrow`}
+      activeNav="profile"
+      header={null}
+      right={<RightRailPlacementManager />}
+      rightVariant="dark"
+      backgroundOverrideUrl={effectiveWallpaper}
+      collapseSiderails={siderailsCollapsed}
+      onToggleSiderails={() => setSiderailsCollapsed(s => !s)}
+    >
       <>
         <Head>
           <meta name="description" content={`Professional portfolio of ${fullName} on ForgeTomorrow.`} />
@@ -315,12 +316,12 @@ export default function PublicProfile({ user, primaryResume, effectiveVisibility
           .delay-6 { animation-delay: 0.48s; }
 
           .ft-page {
-  min-height: 100vh;
-  width: 100%;
-  position: relative;
-  border-radius: 18px;
-  overflow: hidden;
-}
+            min-height: 100vh;
+            width: 100%;
+            position: relative;
+            border-radius: 18px;
+            overflow: hidden;
+          }
           .ft-page-overlay {
             min-height: 100vh;
             background: linear-gradient(
@@ -484,7 +485,8 @@ export default function PublicProfile({ user, primaryResume, effectiveVisibility
             min-width: 220px;
           }
           .ft-copy-btn,
-          .ft-resume-top-btn {
+          .ft-resume-top-btn,
+          .ft-edit-profile-btn {
             flex-shrink: 0;
             display: inline-flex;
             align-items: center;
@@ -513,19 +515,22 @@ export default function PublicProfile({ user, primaryResume, effectiveVisibility
             box-shadow: 0 10px 24px rgba(255,112,67,0.5);
             background: #FF8A65;
           }
-          .ft-resume-top-btn {
+          .ft-resume-top-btn,
+          .ft-edit-profile-btn {
             background: rgba(255,112,67,0.14);
             color: var(--orange);
             border: 1px solid rgba(255,112,67,0.38);
             box-shadow: 0 6px 18px rgba(0,0,0,0.14);
           }
-          .ft-resume-top-btn:hover {
+          .ft-resume-top-btn:hover,
+          .ft-edit-profile-btn:hover {
             background: rgba(255,112,67,0.24);
             transform: translateY(-1px);
             box-shadow: 0 10px 24px rgba(255,112,67,0.22);
           }
           .ft-copy-btn:active,
-          .ft-resume-top-btn:active { transform: scale(0.98); }
+          .ft-resume-top-btn:active,
+          .ft-edit-profile-btn:active { transform: scale(0.98); }
 
           .ft-body {
             display: grid;
@@ -1304,6 +1309,20 @@ export default function PublicProfile({ user, primaryResume, effectiveVisibility
                         {copied ? 'Copied' : 'Copy Link'}
                       </button>
 
+                      {isOwnProfile && (
+                        <Link
+                          href="/profile/edit"
+                          className="ft-edit-profile-btn"
+                          aria-label="Edit your profile"
+                        >
+                          <svg width="14" height="14" fill="none" viewBox="0 0 14 14">
+                            <path d="M9.916 1.75a1.237 1.237 0 011.75 1.75l-6.5 6.5-2.333.583.583-2.333 6.5-6.5z" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round" />
+                            <path d="M8.75 2.917l2.333 2.333" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round" />
+                          </svg>
+                          Edit Profile
+                        </Link>
+                      )}
+
                       {primaryResume && (
                         <a
                           className="ft-resume-top-btn"
@@ -1675,6 +1694,25 @@ export default function PublicProfile({ user, primaryResume, effectiveVisibility
                           <div className="ft-mobile-contact-arrow">{copied ? '✓' : '›'}</div>
                         </button>
 
+                        {isOwnProfile && (
+                          <Link
+                            href="/profile/edit"
+                            className="ft-mobile-contact-row"
+                          >
+                            <div
+                              className="ft-mobile-contact-icon"
+                              style={{ background: 'rgba(255,112,67,0.14)', color: '#FF7043' }}
+                            >
+                              ✎
+                            </div>
+                            <div style={{ minWidth: 0 }}>
+                              <div className="ft-mobile-contact-label">Profile</div>
+                              <div className="ft-mobile-contact-value">Edit your profile</div>
+                            </div>
+                            <div className="ft-mobile-contact-arrow">›</div>
+                          </Link>
+                        )}
+
                         {location && (
                           <div className="ft-mobile-contact-row">
                             <div
@@ -1722,7 +1760,14 @@ export default function PublicProfile({ user, primaryResume, effectiveVisibility
                           ⎘ {copied ? 'Copied' : 'Copy Link'}
                         </button>
 
-                        {primaryResume && (
+                        {isOwnProfile ? (
+                          <Link
+                            href="/profile/edit"
+                            className="ft-mobile-footer-btn primary"
+                          >
+                            ✎ Edit Profile
+                          </Link>
+                        ) : primaryResume ? (
                           <a
                             className="ft-mobile-footer-btn primary"
                             href={`/api/resume/public-download?resumeId=${encodeURIComponent(primaryResume.id)}&slug=${encodeURIComponent(slug)}`}
@@ -1731,7 +1776,7 @@ export default function PublicProfile({ user, primaryResume, effectiveVisibility
                           >
                             ↓ Download Resume
                           </a>
-                        )}
+                        ) : null}
                       </div>
                     </div>
                   </div>

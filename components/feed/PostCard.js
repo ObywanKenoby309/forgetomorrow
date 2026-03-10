@@ -109,10 +109,16 @@ export default function PostCard({
   };
 
   const handleViewProfile = async () => {
-    if (!post?.authorId || !post?.authorSlug) return;
+    if (!post?.authorId) return;
     setAvatarMenuOpen(false);
-    logProfileView('feed');
-    router.push(withChrome(`/profile/${post.authorSlug}`));
+    await logProfileView('feed');
+
+    if (post?.authorSlug) {
+      router.push(withChrome(`/profile/${post.authorSlug}`));
+      return;
+    }
+
+    router.push(withChrome(`/member-profile?userId=${post.authorId}`));
   };
 
   const handleConnect = async () => {
@@ -147,13 +153,64 @@ export default function PostCard({
     );
   };
 
-  const handleMessage = () => {
+  const handleMessage = async () => {
     if (!post?.authorId) return;
     setAvatarMenuOpen(false);
-    const params = new URLSearchParams();
-    params.set('userId', post.authorId);
-    params.set('action', 'message');
-    router.push(withChrome(`/seeker/messages?${params.toString()}`));
+
+    try {
+      const res = await fetch('/api/signal/start-or-get', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ toUserId: post.authorId }),
+      });
+
+      if (!res.ok) {
+        if (res.status === 403) {
+          let payload = null;
+          try {
+            payload = await res.json();
+          } catch {
+            // ignore parse error, fall back to generic text
+          }
+
+          const role = payload?.role;
+          const msg = payload?.message;
+
+          if (role === 'COACH') {
+            alert(
+              msg ||
+                'To respect the privacy of coaches, please send a connection request or explore their mentorship offerings before messaging.'
+            );
+          } else if (role === 'RECRUITER') {
+            alert(
+              msg ||
+                'To keep DMs respectful, please send a connection request first. Once you are connected, you can open a private conversation from The Signal.'
+            );
+          } else {
+            alert(
+              msg ||
+                'You need to be connected with this member before opening a private conversation.'
+            );
+          }
+
+          return;
+        }
+
+        const text = await res.text();
+        console.error('signal/start-or-get error (PostCard):', text);
+        alert('We could not open this conversation. Please try again.');
+        return;
+      }
+
+      const params = new URLSearchParams();
+      params.set('toId', post.authorId);
+      if (post.author) params.set('toName', post.author);
+
+      router.push(withChrome(`/seeker/messages?${params.toString()}`));
+    } catch (err) {
+      console.error('messageUser error (PostCard):', err);
+      alert('We could not open this conversation. Please try again.');
+    }
   };
 
   const handleReportPost = async () => {
@@ -407,7 +464,6 @@ export default function PostCard({
                   onClick={handleViewProfile}
                   className="w-full text-left px-3 py-2 text-sm hover:bg-gray-50"
                   role="menuitem"
-                  disabled={!post?.authorSlug}
                 >
                   View profile
                 </button>
