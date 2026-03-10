@@ -144,8 +144,6 @@ export default function PublicProfile({ user, primaryResume, effectiveVisibility
   } = user;
   // Default profile wallpaper (system fallback)
   const DEFAULT_PROFILE_WALLPAPER = '/images/profile-fallbacks/profile-default-wallpaper.png';
-
-  // Use member wallpaper or fallback
   const effectiveWallpaper = wallpaperUrl || DEFAULT_PROFILE_WALLPAPER;
 
   const isOwnProfile = Boolean(viewer?.id) && Boolean(profileUserId) && String(viewer.id) === String(profileUserId);
@@ -217,7 +215,7 @@ export default function PublicProfile({ user, primaryResume, effectiveVisibility
   header={null}
   right={<RightRailPlacementManager />}
   rightVariant="dark"
-  disableViewerWallpaper
+  backgroundOverrideUrl={effectiveWallpaper}
 >
       <>
         <Head>
@@ -313,17 +311,12 @@ export default function PublicProfile({ user, primaryResume, effectiveVisibility
           .delay-6 { animation-delay: 0.48s; }
 
           .ft-page {
-			min-height: 100vh;
-			width: 100%;
-			background-image: url(${effectiveWallpaper});
-			background-size: cover;
-			background-position: center;
-			background-repeat: no-repeat;
-			background-attachment: fixed;
-			position: relative;
-			border-radius: 18px;
-			overflow: hidden;
-		  }
+  min-height: 100vh;
+  width: 100%;
+  position: relative;
+  border-radius: 18px;
+  overflow: hidden;
+}
           .ft-page-overlay {
             min-height: 100vh;
             background: linear-gradient(

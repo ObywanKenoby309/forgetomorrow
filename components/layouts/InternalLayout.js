@@ -90,7 +90,7 @@ export default function InternalLayout({
 
   forceChrome,
   chrome,
-  disableViewerWallpaper = false,
+  backgroundOverrideUrl = '',
 
   rightVariant = 'dark',
   rightWidth = 260,
@@ -208,15 +208,12 @@ export default function InternalLayout({
 
   const { wallpaperUrl } = useUserWallpaper();
 
-  const backgroundStyle = disableViewerWallpaper
+  const effectiveLayoutWallpaper = backgroundOverrideUrl || wallpaperUrl;
+
+const backgroundStyle = effectiveLayoutWallpaper
   ? {
       minHeight: '100vh',
-      backgroundColor: 'transparent',
-    }
-  : wallpaperUrl
-  ? {
-      minHeight: '100vh',
-      backgroundImage: `url(${wallpaperUrl})`,
+      backgroundImage: `url(${effectiveLayoutWallpaper})`,
       backgroundSize: 'cover',
       backgroundPosition: 'center top',
       backgroundRepeat: 'no-repeat',
