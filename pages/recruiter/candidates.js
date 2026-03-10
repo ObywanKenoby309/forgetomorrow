@@ -281,18 +281,19 @@ function MobileCompareSheet({ open, onClose, left, right, onViewLeft, onViewRigh
           borderTopLeftRadius: 20, borderTopRightRadius: 20,
           border: "1px solid rgba(255,255,255,0.40)",
           boxShadow: "0 -16px 60px rgba(0,0,0,0.22)",
-          maxHeight: "88vh",
+          maxHeight: "94vh",
+          minHeight: "72vh",
           display: "flex", flexDirection: "column",
           overflowX: "hidden",
         }}
       >
         {/* Drag handle */}
-        <div style={{ display: "flex", justifyContent: "center", padding: "10px 0 4px" }}>
+        <div style={{ display: "flex", justifyContent: "center", padding: "10px 0 6px" }}>
           <div style={{ width: 36, height: 4, borderRadius: 2, background: "rgba(0,0,0,0.14)" }} />
         </div>
 
         {/* Header */}
-        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "0 16px 10px", minWidth: 0 }}>
+        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "0 16px 12px", minWidth: 0 }}>
           <span style={{ fontSize: 13, fontWeight: 700, color: "#0f172a" }}>Compare Candidates</span>
           <button
             onClick={onClose}
@@ -311,7 +312,7 @@ function MobileCompareSheet({ open, onClose, left, right, onViewLeft, onViewRigh
               key={key}
               onClick={() => setTab(key)}
               style={{
-                flex: 1, minWidth: 0, padding: "10px 8px", fontSize: 13,
+                flex: 1, minWidth: 0, padding: "12px 8px", fontSize: 13,
                 fontWeight: tab === key ? 700 : 500,
                 color: tab === key ? "#FF7043" : "#64748b",
                 background: "transparent", border: "none",
@@ -326,22 +327,22 @@ function MobileCompareSheet({ open, onClose, left, right, onViewLeft, onViewRigh
         </div>
 
         {/* Scrollable content */}
-        <div style={{ flex: 1, overflowY: "auto", overflowX: "hidden", WebkitOverflowScrolling: "touch", padding: "16px", minWidth: 0 }}>
+        <div style={{ flex: 1, overflowY: "auto", overflowX: "hidden", WebkitOverflowScrolling: "touch", padding: "18px 16px 20px", minWidth: 0 }}>
           {/* Candidate header row */}
           {activeCandidate && (
-            <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 16, minWidth: 0 }}>
-              <div style={{ width: 44, height: 44, borderRadius: "50%", flexShrink: 0, background: "linear-gradient(135deg,#FF7043,#FF8A65)", display: "flex", alignItems: "center", justifyContent: "center", color: "white", fontWeight: 700, fontSize: 16 }}>
+            <div style={{ display: "flex", alignItems: "center", gap: 14, marginBottom: 18, minWidth: 0 }}>
+              <div style={{ width: 52, height: 52, borderRadius: "50%", flexShrink: 0, background: "linear-gradient(135deg,#FF7043,#FF8A65)", display: "flex", alignItems: "center", justifyContent: "center", color: "white", fontWeight: 700, fontSize: 18 }}>
                 {(activeCandidate.name || "?")[0].toUpperCase()}
               </div>
               <div style={{ flex: 1, minWidth: 0 }}>
-                <div style={{ fontWeight: 700, fontSize: 15, color: "#0f172a", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{activeCandidate.name}</div>
-                <div style={{ fontSize: 12, color: "#64748b", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{activeCandidate.title || activeCandidate.currentTitle || ""}</div>
-                {activeCandidate.location && <div style={{ fontSize: 11, color: "#94a3b8", marginTop: 1 }}>📍 {activeCandidate.location}</div>}
+                <div style={{ fontWeight: 700, fontSize: 16, color: "#0f172a", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{activeCandidate.name}</div>
+                <div style={{ fontSize: 13, color: "#64748b", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", marginTop: 2 }}>{activeCandidate.title || activeCandidate.currentTitle || ""}</div>
+                {activeCandidate.location && <div style={{ fontSize: 12, color: "#94a3b8", marginTop: 3 }}>📍 {activeCandidate.location}</div>}
               </div>
               {score !== null && (
                 <div style={{ textAlign: "center", flexShrink: 0 }}>
-                  <div style={{ fontSize: 22, fontWeight: 800, color: scoreColor, lineHeight: 1 }}>{score}</div>
-                  <div style={{ fontSize: 10, color: "#94a3b8", marginTop: 2 }}>match</div>
+                  <div style={{ fontSize: 24, fontWeight: 800, color: scoreColor, lineHeight: 1 }}>{score}</div>
+                  <div style={{ fontSize: 10, color: "#94a3b8", marginTop: 3 }}>match</div>
                 </div>
               )}
             </div>
@@ -349,12 +350,12 @@ function MobileCompareSheet({ open, onClose, left, right, onViewLeft, onViewRigh
 
           {/* WHY reasons */}
           {reasons.length > 0 ? (
-            <div style={{ display: "flex", flexDirection: "column", gap: 10, minWidth: 0 }}>
+            <div style={{ display: "flex", flexDirection: "column", gap: 12, minWidth: 0 }}>
               {reasons.slice(0, mode === "full" ? 8 : 3).map((r, i) => (
-                <div key={i} style={{ background: "rgba(255,255,255,0.80)", border: "1px solid rgba(0,0,0,0.06)", borderRadius: 12, padding: "12px 14px", minWidth: 0, overflowX: "hidden" }}>
-                  <div style={{ fontSize: 12, fontWeight: 600, color: "#0f172a", marginBottom: 6, overflowWrap: "anywhere", wordBreak: "break-word" }}>{r.requirement}</div>
+                <div key={i} style={{ background: "rgba(255,255,255,0.80)", border: "1px solid rgba(0,0,0,0.06)", borderRadius: 12, padding: "14px 16px", minWidth: 0, overflowX: "hidden" }}>
+                  <div style={{ fontSize: 12, fontWeight: 600, color: "#0f172a", marginBottom: 8, overflowWrap: "anywhere", wordBreak: "break-word" }}>{r.requirement}</div>
                   {Array.isArray(r.evidence) && r.evidence.slice(0, 3).map((ev, j) => (
-                    <div key={j} style={{ fontSize: 11, color: "#475569", paddingLeft: 8, borderLeft: "2px solid rgba(255,112,67,0.25)", marginTop: 4, overflowWrap: "anywhere", wordBreak: "break-word" }}>
+                    <div key={j} style={{ fontSize: 11, color: "#475569", paddingLeft: 8, borderLeft: "2px solid rgba(255,112,67,0.25)", marginTop: 6, overflowWrap: "anywhere", wordBreak: "break-word", lineHeight: 1.5 }}>
                       {ev.text}{ev.source && <span style={{ color: "#94a3b8", marginLeft: 4 }}>· {ev.source}</span>}
                     </div>
                   ))}
@@ -369,7 +370,7 @@ function MobileCompareSheet({ open, onClose, left, right, onViewLeft, onViewRigh
           {activeCandidate && (
             <button
               onClick={() => { onViewActive?.(); onClose(); }}
-              style={{ marginTop: 20, width: "100%", maxWidth: "100%", padding: "12px", borderRadius: 12, border: "none", background: "linear-gradient(135deg,#FF7043,#FF8A65)", color: "white", fontSize: 13, fontWeight: 700, cursor: "pointer", boxSizing: "border-box" }}
+              style={{ marginTop: 22, width: "100%", maxWidth: "100%", padding: "14px", borderRadius: 12, border: "none", background: "linear-gradient(135deg,#FF7043,#FF8A65)", color: "white", fontSize: 13, fontWeight: 700, cursor: "pointer", boxSizing: "border-box" }}
             >
               View {activeCandidate.name?.split(" ")[0] || "Profile"}'s Full Profile
             </button>
