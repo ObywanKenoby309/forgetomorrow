@@ -147,7 +147,8 @@ export default function PublicProfile({ user, primaryResume, effectiveVisibility
   const effectiveWallpaper = wallpaperUrl || DEFAULT_PROFILE_WALLPAPER;
 
   const isOwnProfile = Boolean(viewer?.id) && Boolean(profileUserId) && String(viewer.id) === String(profileUserId);
-
+  const [siderailsCollapsed, setSiderailsCollapsed] = useState(false);
+  
   const computedName = String(name || '').trim();
   const computedFirst = String(firstName || '').trim();
   const computedLast = String(lastName || '').trim();
@@ -216,6 +217,8 @@ export default function PublicProfile({ user, primaryResume, effectiveVisibility
   right={<RightRailPlacementManager />}
   rightVariant="dark"
   backgroundOverrideUrl={effectiveWallpaper}
+  collapseSiderails={siderailsCollapsed}
+  onToggleSiderails={() => setSiderailsCollapsed(s => !s)}
 >
       <>
         <Head>

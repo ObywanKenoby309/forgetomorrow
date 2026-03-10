@@ -80,6 +80,91 @@ function setQueryChrome(router, chrome) {
   }
 }
 
+// ── Siderail Toggle Button ─────────────────────────────────────────────────────
+function SiderailToggle({ collapsed, onToggle, leftWidth, gap }) {
+  const [hovered, setHovered] = useState(false);
+
+  // Position: at the left seam when expanded, near viewport edge when collapsed
+  const leftPos = collapsed ? 6 : leftWidth + gap - 14;
+
+  return (
+    <button
+      onClick={onToggle}
+      onMouseEnter={() => setHovered(true)}
+      onMouseLeave={() => setHovered(false)}
+      aria-label={collapsed ? 'Expand Siderails' : 'Collapse Siderails'}
+      style={{
+        position: 'fixed',
+        left: leftPos,
+        top: '44%',
+        transform: 'translateY(-50%)',
+        zIndex: 300,
+        background: hovered
+          ? 'rgba(255,112,67,0.18)'
+          : 'rgba(13,27,42,0.88)',
+        border: `1px solid ${hovered ? 'rgba(255,112,67,0.6)' : 'rgba(255,112,67,0.28)'}`,
+        borderRadius: collapsed ? '0 10px 10px 0' : '10px 0 0 10px',
+        color: '#FF7043',
+        cursor: 'pointer',
+        padding: '12px 5px',
+        display: 'flex',
+        flexDirection: 'column',
+        alignItems: 'center',
+        justifyContent: 'center',
+        gap: 3,
+        backdropFilter: 'blur(10px)',
+        WebkitBackdropFilter: 'blur(10px)',
+        boxShadow: hovered
+          ? '0 4px 20px rgba(255,112,67,0.25)'
+          : '0 2px 12px rgba(0,0,0,0.35)',
+        transition: 'left 0.35s ease, background 0.18s, border-color 0.18s, box-shadow 0.18s, border-radius 0.35s',
+        outline: 'none',
+        minWidth: 22,
+      }}
+    >
+      {/* Double chevron SVG */}
+      {collapsed ? (
+        // >> expand
+        <svg width="11" height="18" viewBox="0 0 11 18" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <path d="M1 2l4.5 7L1 16" stroke="#FF7043" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" opacity="0.5"/>
+          <path d="M5.5 2L10 9l-4.5 7" stroke="#FF7043" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+        </svg>
+      ) : (
+        // << collapse
+        <svg width="11" height="18" viewBox="0 0 11 18" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <path d="M10 2L5.5 9 10 16" stroke="#FF7043" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+          <path d="M5.5 2L1 9l4.5 7" stroke="#FF7043" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" opacity="0.5"/>
+        </svg>
+      )}
+
+      {/* Tooltip */}
+      {hovered && (
+        <span style={{
+          position: 'absolute',
+          left: collapsed ? 'calc(100% + 10px)' : 'auto',
+          right: collapsed ? 'auto' : 'calc(100% + 10px)',
+          top: '50%',
+          transform: 'translateY(-50%)',
+          background: 'rgba(13,27,42,0.96)',
+          border: '1px solid rgba(255,112,67,0.3)',
+          borderRadius: 8,
+          padding: '5px 10px',
+          fontSize: 11,
+          fontWeight: 600,
+          color: '#F8F4EF',
+          whiteSpace: 'nowrap',
+          pointerEvents: 'none',
+          fontFamily: 'Inter, system-ui, sans-serif',
+          letterSpacing: '0.02em',
+          boxShadow: '0 4px 14px rgba(0,0,0,0.3)',
+        }}>
+          {collapsed ? 'Expand Siderails' : 'Collapse Siderails'}
+        </span>
+      )}
+    </button>
+  );
+}
+
 export default function InternalLayout({
   title = 'ForgeTomorrow',
   left,
@@ -97,6 +182,13 @@ export default function InternalLayout({
   leftWidth = 240,
   gap = 12,
   pad = 16,
+
+  // ── Siderail collapse props ────────────────────────────────────────────────
+  // Pass collapseSiderails + onToggleSiderails from the page to enable
+  // the portfolio-view toggle. Only renders on desktop, only affects this
+  // page's session — no persistence.
+  collapseSiderails = false,
+  onToggleSiderails = null,
 }) {
   const router = useRouter();
   const counts = useSidebarCounts();
@@ -117,7 +209,6 @@ export default function InternalLayout({
     // 2) URL query
     const q = normalizeChrome(router?.query?.chrome);
     if (q && ALLOWED_MODES.has(q)) {
-      // If recruiter chrome requested, canonicalize once DB is loaded
       if ((q === 'recruiter-smb' || q === 'recruiter-ent') && planLoaded) {
         const isEnterprise = String(plan || '').toLowerCase() === 'enterprise';
         const canonical = isEnterprise ? 'recruiter-ent' : 'recruiter-smb';
@@ -125,7 +216,6 @@ export default function InternalLayout({
         setQueryChrome(router, canonical);
         return;
       }
-
       setChromeMode(q);
       return;
     }
@@ -140,12 +230,11 @@ export default function InternalLayout({
         setQueryChrome(router, canonical);
         return;
       }
-
       setChromeMode(fromPath);
       return;
     }
 
-    // 4) DB default when loaded (prevents “random SMB”)
+    // 4) DB default when loaded
     if (planLoaded) {
       const dbRole = String(role || '').toLowerCase();
       const isRecruiterAccount =
@@ -158,12 +247,8 @@ export default function InternalLayout({
       const isEnterprise = String(plan || '').toLowerCase() === 'enterprise';
 
       const dbPreferred = isRecruiterAccount
-        ? isEnterprise
-          ? 'recruiter-ent'
-          : 'recruiter-smb'
-        : isCoachAccount
-        ? 'coach'
-        : 'seeker';
+        ? isEnterprise ? 'recruiter-ent' : 'recruiter-smb'
+        : isCoachAccount ? 'coach' : 'seeker';
       setChromeMode(dbPreferred);
 
       if (dbPreferred === 'recruiter-ent' || dbPreferred === 'recruiter-smb') {
@@ -183,7 +268,6 @@ export default function InternalLayout({
           SidebarComp: CoachingSidebar,
           sidebarProps: { active: activeNav, counts },
         };
-
       case 'recruiter-smb':
       case 'recruiter-ent':
         return {
@@ -195,7 +279,6 @@ export default function InternalLayout({
             counts,
           },
         };
-
       case 'seeker':
       default:
         return {
@@ -207,44 +290,45 @@ export default function InternalLayout({
   }, [chromeMode, activeNav, counts]);
 
   const { wallpaperUrl } = useUserWallpaper();
-
   const effectiveLayoutWallpaper = backgroundOverrideUrl || wallpaperUrl;
 
-const backgroundStyle = effectiveLayoutWallpaper
-  ? {
-      minHeight: '100vh',
-      backgroundImage: `url(${effectiveLayoutWallpaper})`,
-      backgroundSize: 'cover',
-      backgroundPosition: 'center top',
-      backgroundRepeat: 'no-repeat',
-      backgroundAttachment: 'fixed',
-    }
-  : {
-      minHeight: '100vh',
-      backgroundColor: '#ECEFF1',
-    };
+  const backgroundStyle = effectiveLayoutWallpaper
+    ? {
+        minHeight: '100vh',
+        backgroundImage: `url(${effectiveLayoutWallpaper})`,
+        backgroundSize: 'cover',
+        backgroundPosition: 'center top',
+        backgroundRepeat: 'no-repeat',
+        backgroundAttachment: 'fixed',
+      }
+    : {
+        minHeight: '100vh',
+        backgroundColor: '#ECEFF1',
+      };
 
   const hasRight = Boolean(right);
   const [isMobile, setIsMobile] = useState(true);
   const [mobileToolsOpen, setMobileToolsOpen] = useState(false);
 
-  // ✅ Stable handler so MobileBottomBar doesn't re-render/blink
   const handleOpenTools = useCallback(() => setMobileToolsOpen(true), []);
 
   useEffect(() => {
     const handleResize = () => {
       if (typeof window !== 'undefined') setIsMobile(window.innerWidth < 1024);
     };
-
     handleResize();
     window.addEventListener('resize', handleResize);
     return () => window.removeEventListener('resize', handleResize);
   }, []);
 
+  // ── Grid column widths — animate when siderails collapse ──────────────────
+  const effectiveLeftWidth  = !isMobile && collapseSiderails ? 0 : leftWidth;
+  const effectiveRightWidth = !isMobile && collapseSiderails ? 0 : (hasRight ? rightWidth : 0);
+
   const rightBase = {
     gridArea: 'right',
     alignSelf: 'start',
-    borderRadius: 14, // ✅ was 12
+    borderRadius: 14,
     boxSizing: 'border-box',
     width: hasRight && !isMobile ? rightWidth : '100%',
     minWidth: hasRight && !isMobile ? rightWidth : 0,
@@ -252,7 +336,6 @@ const backgroundStyle = effectiveLayoutWallpaper
     minInlineSize: 0,
   };
 
-  // ✅ MIN CHANGE: swap dark rail to glass (uniform with site)
   const rightDark = {
     border: GLASS.border,
     background: GLASS.background,
@@ -279,13 +362,15 @@ const backgroundStyle = effectiveLayoutWallpaper
 
   const desktopGrid = {
     display: 'grid',
-    gridTemplateColumns: `${leftWidth}px minmax(0, 1fr) ${hasRight ? `${rightWidth}px` : '0px'}`,
+    // ✅ Animate column widths when collapsing/expanding siderails
+    gridTemplateColumns: `${effectiveLeftWidth}px minmax(0, 1fr) ${effectiveRightWidth}px`,
     gridTemplateRows: 'auto 1fr',
     gridTemplateAreas: hasRight
       ? `"left header right"
          "left content right"`
       : `"left header header"
          "left content content"`,
+    transition: 'grid-template-columns 0.35s ease',
   };
 
   const mobileGrid = {
@@ -312,12 +397,19 @@ const backgroundStyle = effectiveLayoutWallpaper
         <HeaderComp />
 
         <div style={{ ...gridStyles, gap, ...containerPadding, alignItems: 'start' }}>
+
+          {/* ── Left sidebar ── */}
           <aside
             style={{
               gridArea: 'left',
               alignSelf: 'start',
               minWidth: 0,
               display: isMobile ? 'none' : 'block',
+              // ✅ Fade out and clip when collapsed
+              overflow: 'hidden',
+              opacity: collapseSiderails ? 0 : 1,
+              pointerEvents: collapseSiderails ? 'none' : 'auto',
+              transition: 'opacity 0.25s ease',
             }}
           >
             {left ?? <SidebarComp {...sidebarProps} />}
@@ -327,8 +419,20 @@ const backgroundStyle = effectiveLayoutWallpaper
             {header}
           </header>
 
+          {/* ── Right rail ── */}
           {hasRight ? (
-            <aside style={{ ...rightBase, ...(rightVariant === 'light' ? rightLight : rightDark) }}>
+            <aside
+              style={{
+                ...rightBase,
+                ...(rightVariant === 'light' ? rightLight : rightDark),
+                // ✅ Fade out and clip when collapsed
+                overflow: 'hidden',
+                opacity: collapseSiderails ? 0 : 1,
+                pointerEvents: collapseSiderails ? 'none' : 'auto',
+                padding: collapseSiderails ? 0 : (rightVariant === 'light' ? 0 : 16),
+                transition: 'opacity 0.25s ease, padding 0.35s ease',
+              }}
+            >
               {right}
             </aside>
           ) : null}
@@ -341,6 +445,16 @@ const backgroundStyle = effectiveLayoutWallpaper
         <SupportFloatingButton />
 
         <MobileBottomBar isMobile={isMobile} chromeMode={chromeMode} onOpenTools={handleOpenTools} />
+
+        {/* ── Siderail toggle button — only renders when the page opts in ── */}
+        {onToggleSiderails && !isMobile && (
+          <SiderailToggle
+            collapsed={collapseSiderails}
+            onToggle={onToggleSiderails}
+            leftWidth={leftWidth}
+            gap={gap + pad}
+          />
+        )}
       </div>
 
       {isMobile && mobileToolsOpen && (
@@ -366,7 +480,6 @@ const backgroundStyle = effectiveLayoutWallpaper
               cursor: 'pointer',
             }}
           />
-
           <div
             style={{
               position: 'relative',
@@ -410,7 +523,6 @@ const backgroundStyle = effectiveLayoutWallpaper
                 ×
               </button>
             </div>
-
             {left ?? <SidebarComp {...sidebarProps} />}
           </div>
         </div>
