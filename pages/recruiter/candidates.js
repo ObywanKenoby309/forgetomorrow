@@ -693,6 +693,7 @@ function Body() {
   const [workStatus, setWorkStatus] = useState("");
   const [preferredWorkType, setPreferredWorkType] = useState("");
   const [willingToRelocate, setWillingToRelocate] = useState("");
+  const [locationFilter, setLocationFilter] = useState("");
   const [skills, setSkills] = useState("");
   const [languages, setLanguages] = useState("");
   const [education, setEducation] = useState("");
@@ -739,14 +740,14 @@ function Body() {
     },
   ];
 
-  const buildCandidateParams = useCallback(() => {
+    const buildCandidateParams = useCallback(() => {
     const params = new URLSearchParams();
-	
+
     if (nameQuery) params.set("q", nameQuery);
-	
+
     const effectiveLocation = locQuery || locationFilter;
-	if (effectiveLocation) params.set("location", effectiveLocation);
-	
+    if (effectiveLocation) params.set("location", effectiveLocation);
+
     if (boolQuery) params.set("bool", boolQuery);
     if (summaryKeywords) params.set("summaryKeywords", summaryKeywords);
     if (jobTitle) params.set("jobTitle", jobTitle);
@@ -756,13 +757,46 @@ function Body() {
     if (skills) params.set("skills", skills);
     if (languages) params.set("languages", languages);
     if (education) params.set("education", education);
-    return params;
-  }, [nameQuery, locQuery, boolQuery, summaryKeywords, jobTitle, workStatus, preferredWorkType, willingToRelocate, skills, languages, education]);
 
-  const activeFilterCount = useMemo(() => {
-    return [summaryKeywords, jobTitle, workStatus, preferredWorkType, willingToRelocate, skills, languages, education]
-      .filter(Boolean).length;
-  }, [summaryKeywords, jobTitle, workStatus, preferredWorkType, willingToRelocate, skills, languages, education]);
+    return params;
+  }, [
+    nameQuery,
+    locQuery,
+    locationFilter,
+    boolQuery,
+    summaryKeywords,
+    jobTitle,
+    workStatus,
+    preferredWorkType,
+    willingToRelocate,
+    skills,
+    languages,
+    education,
+  ]);
+
+    const activeFilterCount = useMemo(() => {
+    return [
+      summaryKeywords,
+      jobTitle,
+      workStatus,
+      preferredWorkType,
+      willingToRelocate,
+      locationFilter,
+      skills,
+      languages,
+      education,
+    ].filter(Boolean).length;
+  }, [
+    summaryKeywords,
+    jobTitle,
+    workStatus,
+    preferredWorkType,
+    willingToRelocate,
+    locationFilter,
+    skills,
+    languages,
+    education,
+  ]);
 
   const hasAnyTargeting = activeFilterCount > 0;
 
@@ -776,16 +810,24 @@ function Body() {
     if (workStatus) chips.push({ key: "status", label: `Status: ${workStatus}` });
     if (preferredWorkType) chips.push({ key: "worktype", label: `Work type: ${preferredWorkType}` });
     if (willingToRelocate) chips.push({ key: "relocate", label: `Relocate: ${willingToRelocate}` });
+    if (locationFilter) chips.push({ key: "prefLoc", label: `Preferred location: ${locationFilter}` });
     if (skills) chips.push({ key: "skills", label: `Skills: ${skills}` });
     if (languages) chips.push({ key: "langs", label: `Languages: ${languages}` });
     if (education) chips.push({ key: "edu", label: `Education: ${education}` });
     return chips;
-  }, [nameQuery, locQuery, boolQuery, summaryKeywords, jobTitle, workStatus, preferredWorkType, willingToRelocate, skills, languages, education]);
+    }, [nameQuery, locQuery, boolQuery, summaryKeywords, jobTitle, workStatus, preferredWorkType, willingToRelocate, locationFilter, skills, languages, education]);
 
   const clearSearchFilters = () => { setNameQuery(""); setLocQuery(""); setBoolQuery(""); };
   const clearTargeting = () => {
-    setSummaryKeywords(""); setJobTitle(""); setWorkStatus(""); setPreferredWorkType("");
-    setWillingToRelocate(""); setSkills(""); setLanguages(""); setEducation("");
+    setSummaryKeywords("");
+    setJobTitle("");
+    setWorkStatus("");
+    setPreferredWorkType("");
+    setWillingToRelocate("");
+    setLocationFilter("");
+    setSkills("");
+    setLanguages("");
+    setEducation("");
   };
   const clearAll = () => { clearSearchFilters(); clearTargeting(); };
 
@@ -799,6 +841,7 @@ function Body() {
       status: () => setWorkStatus(""),
       worktype: () => setPreferredWorkType(""),
       relocate: () => setWillingToRelocate(""),
+	  prefLoc: () => setLocationFilter(""),
       skills: () => setSkills(""),
       langs: () => setLanguages(""),
       edu: () => setEducation(""),
@@ -833,7 +876,9 @@ function Body() {
   const buildFiltersTriggered = () => {
     const filters = [];
     if (nameQuery) filters.push(`Name/role: ${nameQuery}`);
-    if (locQuery) filters.push(`Location: ${locQuery}`);
+    if (locQuery || locationFilter) {
+  filters.push(`Location: ${locQuery || locationFilter}`);
+}
     if (boolQuery) filters.push(`Advanced query: ${boolQuery}`);
     if (summaryKeywords) filters.push(`Summary keywords: ${summaryKeywords}`);
     if (jobTitle) filters.push(`Job title: ${jobTitle}`);
@@ -1052,6 +1097,7 @@ function Body() {
         if (typeof f.workStatus === "string") setWorkStatus(f.workStatus);
         if (typeof f.preferredWorkType === "string") setPreferredWorkType(f.preferredWorkType);
         if (typeof f.relocate === "string") setWillingToRelocate(f.relocate);
+		if (typeof f.location === "string") setLocationFilter(f.location);
         if (typeof f.skills === "string") setSkills(f.skills);
         if (typeof f.languages === "string") setLanguages(f.languages);
         if (typeof f.education === "string") setEducation(f.education);
@@ -1099,7 +1145,7 @@ function Body() {
       const res = await fetch("/api/recruiter/candidates/why", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ candidateId: c.id, jobId: null, filters: { q: nameQuery || null, location: locQuery || null, bool: boolQuery || null, summaryKeywords: summaryKeywords || null, jobTitle: jobTitle || null, workStatus: workStatus || null, preferredWorkType: preferredWorkType || null, relocate: willingToRelocate || null, skills: skills || null, languages: languages || null, education: education || null } }),
+        body: JSON.stringify({ candidateId: c.id, jobId: null, filters: { q: nameQuery || null, location: (locQuery || locationFilter) || null, bool: boolQuery || null, summaryKeywords: summaryKeywords || null, jobTitle: jobTitle || null, workStatus: workStatus || null, preferredWorkType: preferredWorkType || null, relocate: willingToRelocate || null, skills: skills || null, languages: languages || null, education: education || null } }),
       });
       if (!res.ok) throw new Error(`WHY API failed (status ${res.status})`);
       ex = await res.json();
@@ -1153,7 +1199,7 @@ function Body() {
     setAutomationMessage(null); setActionError(null);
     try {
       setAutomationSaving(true);
-      const payload = { name: automationName || null, enabled: automationEnabled, filters: { q: nameQuery || null, location: locQuery || null, bool: boolQuery || null, summaryKeywords: summaryKeywords || null, jobTitle: jobTitle || null, workStatus: workStatus || null, preferredWorkType: preferredWorkType || null, relocate: willingToRelocate || null, skills: skills || null, languages: languages || null, education: education || null } };
+      const payload = { name: automationName || null, enabled: automationEnabled, filters: { q: nameQuery || null, location: (locQuery || locationFilter) || null, bool: boolQuery || null, summaryKeywords: summaryKeywords || null, jobTitle: jobTitle || null, workStatus: workStatus || null, preferredWorkType: preferredWorkType || null, relocate: willingToRelocate || null, skills: skills || null, languages: languages || null, education: education || null } };
       const res = await fetch("/api/recruiter/candidates/automation", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(payload) });
       if (!res.ok) throw new Error(`Automation API failed (status ${res.status})`);
       setAutomationMessage("Automation settings saved for your daily candidate feed.");
@@ -1215,8 +1261,8 @@ function Body() {
       <TargetingDrawer
         open={targetingOpen}
         onClose={() => setTargetingOpen(false)}
-        filters={{ summaryKeywords, jobTitle, workStatus, preferredWorkType, willingToRelocate, skills, languages, education }}
-        setFilters={{ setSummaryKeywords, setJobTitle, setWorkStatus, setPreferredWorkType, setWillingToRelocate, setSkills, setLanguages, setEducation }}
+        filters={{ summaryKeywords, jobTitle, workStatus, preferredWorkType, willingToRelocate, locationFilter, skills, languages, education }}
+        setFilters={{ setSummaryKeywords, setJobTitle, setWorkStatus, setPreferredWorkType, setWillingToRelocate, setLocationFilter, setSkills, setLanguages, setEducation }}
         automation={{ enabled: automationEnabled, setEnabled: setAutomationEnabled, name: automationName, setName: setAutomationName, saving: automationSaving, message: automationMessage, onSave: saveAutomationConfig }}
         onFindCandidates={runManualCandidateSearch}
         onClearTargeting={clearTargeting}
