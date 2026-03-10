@@ -161,6 +161,53 @@ export default function SeekerLayout({
   // Always call hook; only Seeker uses the counts
   const seekerCounts = useSidebarCounts();
 
+  // ✅ NEW: resolve the logged-in user's profile slug for sidebar Profile routing
+  const [profileSlug, setProfileSlug] = useState(() => {
+    return typeof router.query?.slug === 'string' ? router.query.slug : '';
+  });
+
+  useEffect(() => {
+    if (typeof router.query?.slug === 'string' && router.query.slug) {
+      setProfileSlug(router.query.slug);
+      return;
+    }
+
+    let alive = true;
+
+    const loadProfileSlug = async () => {
+      try {
+        const res = await fetch('/api/profile/details', {
+          method: 'GET',
+          headers: { 'Content-Type': 'application/json' },
+          credentials: 'include',
+        });
+
+        if (!res.ok) return;
+
+        const data = await res.json();
+        if (!alive) return;
+
+        const nextSlug =
+          data?.user?.slug ||
+          data?.details?.slug ||
+          data?.slug ||
+          '';
+
+        if (nextSlug) {
+          setProfileSlug(String(nextSlug));
+        }
+      } catch {
+        // no-op
+      }
+    };
+
+    loadProfileSlug();
+
+    return () => {
+      alive = false;
+    };
+  }, [router.query?.slug]);
+
   // ---- HEADER + SIDEBAR SELECTION ----
   const { HeaderComp, SidebarComp, sidebarProps } = useMemo(() => {
     switch (chromeMode) {
@@ -168,29 +215,49 @@ export default function SeekerLayout({
         return {
           HeaderComp: CoachingHeader,
           SidebarComp: CoachingSidebar,
-          sidebarProps: { active: normalizedActiveNav, employee, department },
+          sidebarProps: { active: normalizedActiveNav, employee, department, profileSlug },
         };
       case 'recruiter-smb':
         return {
           HeaderComp: RecruiterHeader,
           SidebarComp: RecruiterSidebar,
-          sidebarProps: { variant: 'smb', active: normalizedActiveNav, counts: {}, employee, department },
+          sidebarProps: {
+            variant: 'smb',
+            active: normalizedActiveNav,
+            counts: {},
+            employee,
+            department,
+            profileSlug,
+          },
         };
       case 'recruiter-ent':
         return {
           HeaderComp: RecruiterHeader,
           SidebarComp: RecruiterSidebar,
-          sidebarProps: { variant: 'enterprise', active: normalizedActiveNav, counts: {}, employee, department },
+          sidebarProps: {
+            variant: 'enterprise',
+            active: normalizedActiveNav,
+            counts: {},
+            employee,
+            department,
+            profileSlug,
+          },
         };
       case 'seeker':
       default:
         return {
           HeaderComp: SeekerHeader,
           SidebarComp: SeekerSidebar,
-          sidebarProps: { active: normalizedActiveNav, counts: seekerCounts, employee, department },
+          sidebarProps: {
+            active: normalizedActiveNav,
+            counts: seekerCounts,
+            employee,
+            department,
+            profileSlug,
+          },
         };
     }
-  }, [chromeMode, normalizedActiveNav, seekerCounts, employee, department]);
+  }, [chromeMode, normalizedActiveNav, seekerCounts, employee, department, profileSlug]);
 
   // ---- MOBILE DETECTION ----
   // ✅ Match RecruiterLayout exactly: sync init from window so correct grid is used on first paint.

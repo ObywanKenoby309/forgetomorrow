@@ -147,8 +147,8 @@ export default function RecruiterSidebar({
   const chromeRecruiter = isEnterprise ? 'recruiter-ent' : 'recruiter-smb';
   const canSeeSettings = can('recruiter.settings.view');
   const resolvedProfileHref = profileSlug
-    ? `/profile/${profileSlug}?chrome=${chromeRecruiter}`
-    : `/profile?chrome=${chromeRecruiter}`;
+  ? `/profile/${profileSlug}?chrome=${chromeRecruiter}`
+  : `/profile`;
 
   const dept = String(department || '').trim().toLowerCase();
   const staffAccess = employee === true && dept.length > 0;

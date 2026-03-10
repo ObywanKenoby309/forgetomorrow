@@ -95,6 +95,9 @@ export default function RecruiterLayout({
 
   const { isLoaded: planLoaded, plan, role: planRole } = usePlan();
 
+  // ✅ NEW: resolve logged-in user's profile slug for sidebar Profile routing
+  const [profileSlug, setProfileSlug] = useState('');
+
   // ✅ HYDRATION FIX:
   // Always render desktop-safe markup on the server and first client paint.
   // Then switch to mobile after mount if needed.
@@ -114,6 +117,43 @@ export default function RecruiterLayout({
     handleResize();
     window.addEventListener('resize', handleResize);
     return () => window.removeEventListener('resize', handleResize);
+  }, []);
+
+  useEffect(() => {
+    let alive = true;
+
+    const loadProfileSlug = async () => {
+      try {
+        const res = await fetch('/api/profile/details', {
+          method: 'GET',
+          headers: { 'Content-Type': 'application/json' },
+          credentials: 'include',
+        });
+
+        if (!res.ok) return;
+
+        const data = await res.json();
+        if (!alive) return;
+
+        const nextSlug =
+          data?.user?.slug ||
+          data?.details?.slug ||
+          data?.slug ||
+          '';
+
+        if (nextSlug) {
+          setProfileSlug(String(nextSlug));
+        }
+      } catch {
+        // no-op
+      }
+    };
+
+    loadProfileSlug();
+
+    return () => {
+      alive = false;
+    };
   }, []);
 
   // ---- WALLPAPER / BACKGROUND (matches SeekerLayout behavior) ----
@@ -338,6 +378,7 @@ export default function RecruiterLayout({
               initialOpen={initialOpen}
               employee={employee}
               department={department}
+              profileSlug={profileSlug}
             />
           </aside>
 
@@ -468,6 +509,7 @@ export default function RecruiterLayout({
               initialOpen={initialOpen}
               employee={employee}
               department={department}
+              profileSlug={profileSlug}
             />
           </div>
         </div>

@@ -145,7 +145,7 @@ export default function SeekerSidebar({
   const dept = String(department || '').trim().toLowerCase();
 
   const staffAccess = employee === true && dept.length > 0;
-  const resolvedProfileHref = profileSlug ? `/profile/${profileSlug}` : '/profile/edit';
+  const resolvedProfileHref = profileSlug ? `/profile/${profileSlug}` : '/profile';
 
   const [hasActionUnread, setHasActionUnread] = useState(false);
 
