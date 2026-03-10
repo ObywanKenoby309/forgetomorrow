@@ -90,7 +90,7 @@ export default function CandidateList({
 
   if (!hasCandidates) {
     return (
-      <div className="mt-4 rounded-xl border border-slate-200 bg-white/80 px-5 py-8 text-sm text-slate-600 shadow-sm">
+      <div className="mt-4 w-full max-w-full min-w-0 overflow-x-hidden rounded-xl border border-slate-200 bg-white/80 px-5 py-8 text-sm text-slate-600 shadow-sm">
         <p className="mb-1 font-semibold text-slate-800">No candidates found yet</p>
         <p className="text-xs text-slate-500">
           Adjust your filters above, or widen your criteria. New candidates matching
@@ -101,7 +101,7 @@ export default function CandidateList({
   }
 
   return (
-    <div className="mt-4 w-full max-w-full space-y-3">
+    <div className="mt-4 w-full max-w-full min-w-0 overflow-x-hidden space-y-3">
       {candidates.map((c) => (
         <CandidateCard
           key={c.id}
@@ -173,19 +173,19 @@ function CandidateCard({
     : "text-slate-500";
 
   return (
-    <div className="group relative w-full min-w-0 rounded-xl border border-slate-200/80 bg-white shadow-sm hover:shadow-md transition-shadow duration-150 overflow-hidden">
+    <div className="group relative w-full max-w-full min-w-0 overflow-hidden rounded-xl border border-slate-200/80 bg-white shadow-sm transition-shadow duration-150 hover:shadow-md">
       {/* Left accent bar */}
       <div
         className="absolute left-0 top-0 bottom-0 w-[3px]"
         style={{ background: `linear-gradient(180deg, ${avatarFrom}, ${avatarTo})` }}
       />
 
-      <div className="pl-4 pr-4 py-3">
+      <div className="min-w-0 max-w-full overflow-hidden pl-4 pr-4 py-3">
         {/* Top row: avatar + name/title + match score */}
-        <div className="flex items-start gap-3 min-w-0">
+        <div className="flex min-w-0 max-w-full items-start gap-3 overflow-hidden">
           {/* Avatar */}
           <div
-            className="flex-shrink-0 w-9 h-9 rounded-full flex items-center justify-center text-white text-xs font-bold shadow-sm"
+            className="flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-full text-xs font-bold text-white shadow-sm"
             style={{ background: `linear-gradient(135deg, ${avatarFrom}, ${avatarTo})` }}
             aria-hidden="true"
           >
@@ -193,9 +193,9 @@ function CandidateCard({
           </div>
 
           {/* Name + title */}
-          <div className="flex-1 min-w-0">
-            <div className="flex items-start justify-between gap-2 min-w-0">
-              <h2 className="text-sm font-bold text-slate-900 truncate leading-tight">
+          <div className="min-w-0 flex-1 overflow-hidden">
+            <div className="flex min-w-0 max-w-full items-start justify-between gap-2 overflow-hidden">
+              <h2 className="min-w-0 flex-1 truncate text-sm font-bold leading-tight text-slate-900">
                 {name || "Unnamed candidate"}
               </h2>
 
@@ -207,7 +207,7 @@ function CandidateCard({
             </div>
 
             {displayTitle && (
-              <p className="text-xs text-slate-500 truncate mt-0.5 leading-tight">
+              <p className="mt-0.5 truncate text-xs leading-tight text-slate-500">
                 {displayTitle}
               </p>
             )}
@@ -216,32 +216,34 @@ function CandidateCard({
 
         {/* Meta chips row */}
         {(displayLocation || workTypeLabel || statusObj || relocateLabel) && (
-          <div className="mt-2.5 flex flex-wrap items-center gap-1.5">
+          <div className="mt-2.5 flex min-w-0 max-w-full flex-wrap items-center gap-1.5 overflow-hidden">
             {displayLocation && (
-              <span className="inline-flex items-center gap-1 text-[11px] text-slate-600 bg-slate-50 border border-slate-200 rounded-full px-2.5 py-1 leading-none">
-                <svg className="w-3 h-3 text-slate-400 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+              <span className="inline-flex max-w-full min-w-0 items-center gap-1 rounded-full border border-slate-200 bg-slate-50 px-2.5 py-1 text-[11px] leading-none text-slate-600">
+                <svg className="h-3 w-3 flex-shrink-0 text-slate-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
                   <path strokeLinecap="round" strokeLinejoin="round" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
                   <path strokeLinecap="round" strokeLinejoin="round" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
                 </svg>
-                <span className="truncate max-w-[180px]">{displayLocation}</span>
+                <span className="block min-w-0 max-w-[180px] truncate sm:max-w-[220px]">
+                  {displayLocation}
+                </span>
               </span>
             )}
 
             {workTypeLabel && (
-              <span className="inline-flex items-center text-[11px] text-slate-600 bg-slate-50 border border-slate-200 rounded-full px-2.5 py-1 leading-none">
-                {workTypeLabel}
+              <span className="inline-flex max-w-full min-w-0 items-center rounded-full border border-slate-200 bg-slate-50 px-2.5 py-1 text-[11px] leading-none text-slate-600">
+                <span className="truncate">{workTypeLabel}</span>
               </span>
             )}
 
             {statusObj && (
-              <span className={`inline-flex items-center text-[11px] rounded-full px-2.5 py-1 border leading-none ${STATUS_STYLES[statusObj.color] || STATUS_STYLES.slate}`}>
-                {statusObj.label}
+              <span className={`inline-flex max-w-full min-w-0 items-center rounded-full border px-2.5 py-1 text-[11px] leading-none ${STATUS_STYLES[statusObj.color] || STATUS_STYLES.slate}`}>
+                <span className="truncate">{statusObj.label}</span>
               </span>
             )}
 
             {relocateLabel && (
-              <span className="inline-flex items-center text-[11px] text-blue-600 bg-blue-50 border border-blue-200 rounded-full px-2.5 py-1 leading-none">
-                {relocateLabel}
+              <span className="inline-flex max-w-full min-w-0 items-center rounded-full border border-blue-200 bg-blue-50 px-2.5 py-1 text-[11px] leading-none text-blue-600">
+                <span className="truncate">{relocateLabel}</span>
               </span>
             )}
           </div>
@@ -249,17 +251,17 @@ function CandidateCard({
 
         {/* Skills preview */}
         {skillsList.length > 0 && (
-          <div className="mt-2 flex flex-wrap gap-1.5">
+          <div className="mt-2 flex min-w-0 max-w-full flex-wrap gap-1.5 overflow-hidden">
             {skillsList.map((skill, i) => (
               <span
                 key={`${skill}-${i}`}
-                className="inline-flex items-center text-[10px] font-medium text-slate-600 bg-slate-100 rounded px-2 py-0.5 leading-none border border-slate-200/70"
+                className="inline-flex max-w-full min-w-0 items-center rounded border border-slate-200/70 bg-slate-100 px-2 py-0.5 text-[10px] font-medium leading-none text-slate-600"
               >
-                {skill}
+                <span className="truncate">{skill}</span>
               </span>
             ))}
             {toSafeArray(skills).length > 4 && (
-              <span className="inline-flex items-center text-[10px] text-slate-400 px-1 py-0.5 leading-none">
+              <span className="inline-flex max-w-full items-center px-1 py-0.5 text-[10px] leading-none text-slate-400">
                 +{toSafeArray(skills).length - 4} more
               </span>
             )}
@@ -270,12 +272,12 @@ function CandidateCard({
         <div className="mt-3 border-t border-slate-100" />
 
         {/* Action buttons */}
-        <div className="mt-2.5 flex flex-wrap items-center gap-1.5">
+        <div className="mt-2.5 flex min-w-0 max-w-full flex-wrap items-center gap-1.5 overflow-hidden">
           {typeof onMessage === "function" && (
             <button
               type="button"
               onClick={() => onMessage(candidate)}
-              className="inline-flex items-center justify-center rounded-full bg-[#FF7043] px-3 py-1.5 text-[11px] font-semibold text-white shadow-sm hover:bg-[#F4511E] transition-colors"
+              className="inline-flex max-w-full items-center justify-center rounded-full bg-[#FF7043] px-3 py-1.5 text-[11px] font-semibold text-white shadow-sm transition-colors hover:bg-[#F4511E]"
             >
               Message
             </button>
@@ -285,7 +287,7 @@ function CandidateCard({
             <button
               type="button"
               onClick={() => onView(candidate)}
-              className="inline-flex items-center justify-center rounded-full border border-slate-200 bg-white px-3 py-1.5 text-[11px] font-semibold text-slate-700 hover:bg-slate-50 transition-colors"
+              className="inline-flex max-w-full items-center justify-center rounded-full border border-slate-200 bg-white px-3 py-1.5 text-[11px] font-semibold text-slate-700 transition-colors hover:bg-slate-50"
             >
               View profile
             </button>
@@ -296,10 +298,10 @@ function CandidateCard({
               type="button"
               onClick={() => onViewResume(candidate)}
               disabled={!hasResume}
-              className={`inline-flex items-center justify-center rounded-full border border-slate-200 bg-white px-3 py-1.5 text-[11px] font-semibold transition-colors ${
+              className={`inline-flex max-w-full items-center justify-center rounded-full border border-slate-200 bg-white px-3 py-1.5 text-[11px] font-semibold transition-colors ${
                 hasResume
                   ? "text-slate-700 hover:bg-slate-50"
-                  : "text-slate-300 cursor-not-allowed"
+                  : "cursor-not-allowed text-slate-300"
               }`}
               title={hasResume ? "View resume" : "No resume on file"}
             >
@@ -311,7 +313,7 @@ function CandidateCard({
             <button
               type="button"
               onClick={() => onWhy(candidate)}
-              className="inline-flex items-center gap-1 justify-center rounded-full border border-[#FF7043]/30 bg-[#FFF3EF] px-3 py-1.5 text-[11px] font-semibold text-[#FF7043] hover:bg-[#FFE8E0] transition-colors"
+              className="inline-flex max-w-full items-center justify-center gap-1 rounded-full border border-[#FF7043]/30 bg-[#FFF3EF] px-3 py-1.5 text-[11px] font-semibold text-[#FF7043] transition-colors hover:bg-[#FFE8E0]"
             >
               <span className="text-[10px]">✦</span>
               WHY
@@ -319,13 +321,13 @@ function CandidateCard({
           )}
 
           {typeof onToggleCompare === "function" && (
-            <label className="ml-auto inline-flex items-center gap-1.5 rounded-full border border-slate-200 bg-white px-3 py-1.5 text-[11px] font-semibold text-slate-600 hover:bg-slate-50 cursor-pointer select-none transition-colors">
-              <span>Compare</span>
+            <label className="inline-flex max-w-full cursor-pointer select-none items-center gap-1.5 rounded-full border border-slate-200 bg-white px-3 py-1.5 text-[11px] font-semibold text-slate-600 transition-colors hover:bg-slate-50 sm:ml-auto">
+              <span className="truncate">Compare</span>
               <input
                 type="checkbox"
                 checked={Boolean(compareSelected)}
                 onChange={() => onToggleCompare(candidate)}
-                className="h-3 w-3 accent-[#FF7043]"
+                className="h-3 w-3 flex-shrink-0 accent-[#FF7043]"
               />
             </label>
           )}
