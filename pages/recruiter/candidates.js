@@ -115,6 +115,7 @@ function TargetingDrawer({
           bottom: 0,
           zIndex: 50,
           width: "min(580px, 100vw)",
+          maxWidth: "100vw",
           display: "flex",
           flexDirection: "column",
           background: "rgba(252,252,253,0.97)",
@@ -137,7 +138,7 @@ function TargetingDrawer({
             flexShrink: 0,
           }}
         >
-          <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 10, minWidth: 0 }}>
             {/* Target icon */}
             <div
               style={{
@@ -161,8 +162,8 @@ function TargetingDrawer({
                 <line x1="12.5" y1="8" x2="15" y2="8" stroke="white" strokeWidth="1.5" strokeLinecap="round"/>
               </svg>
             </div>
-            <div>
-              <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+            <div style={{ minWidth: 0 }}>
+              <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
                 <span style={{ fontWeight: 700, fontSize: 15, color: "#0f172a" }}>
                   Targeting & Automation
                 </span>
@@ -214,7 +215,7 @@ function TargetingDrawer({
         </div>
 
         {/* Scrollable body */}
-        <div style={{ flex: 1, overflowY: "auto", WebkitOverflowScrolling: "touch" }}>
+        <div style={{ flex: 1, overflowY: "auto", overflowX: "hidden", WebkitOverflowScrolling: "touch", minWidth: 0 }}>
           <CandidateTargetingPanel
             filters={filters}
             setFilters={setFilters}
@@ -273,6 +274,8 @@ function MobileCompareSheet({ open, onClose, left, right, onViewLeft, onViewRigh
       <div
         style={{
           position: "fixed", left: 0, right: 0, bottom: 0, zIndex: 99,
+          width: "100%",
+          maxWidth: "100vw",
           background: "rgba(252,252,253,0.98)",
           backdropFilter: "blur(24px)",
           borderTopLeftRadius: 20, borderTopRightRadius: 20,
@@ -280,6 +283,7 @@ function MobileCompareSheet({ open, onClose, left, right, onViewLeft, onViewRigh
           boxShadow: "0 -16px 60px rgba(0,0,0,0.22)",
           maxHeight: "88vh",
           display: "flex", flexDirection: "column",
+          overflowX: "hidden",
         }}
       >
         {/* Drag handle */}
@@ -288,11 +292,11 @@ function MobileCompareSheet({ open, onClose, left, right, onViewLeft, onViewRigh
         </div>
 
         {/* Header */}
-        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "0 16px 10px" }}>
+        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "0 16px 10px", minWidth: 0 }}>
           <span style={{ fontSize: 13, fontWeight: 700, color: "#0f172a" }}>Compare Candidates</span>
           <button
             onClick={onClose}
-            style={{ width: 28, height: 28, borderRadius: 8, border: "1px solid rgba(0,0,0,0.08)", background: "transparent", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", color: "#64748b" }}
+            style={{ width: 28, height: 28, borderRadius: 8, border: "1px solid rgba(0,0,0,0.08)", background: "transparent", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", color: "#64748b", flexShrink: 0 }}
           >
             <svg width="12" height="12" viewBox="0 0 14 14" fill="none">
               <path d="M11 3L3 11M3 3l8 8" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round"/>
@@ -301,13 +305,13 @@ function MobileCompareSheet({ open, onClose, left, right, onViewLeft, onViewRigh
         </div>
 
         {/* Candidate tabs */}
-        <div style={{ display: "flex", borderBottom: "1px solid rgba(0,0,0,0.07)", paddingLeft: 16, paddingRight: 16, gap: 4 }}>
+        <div style={{ display: "flex", borderBottom: "1px solid rgba(0,0,0,0.07)", paddingLeft: 16, paddingRight: 16, gap: 4, minWidth: 0 }}>
           {[{ key: "a", candidate: left?.candidate }, { key: "b", candidate: right?.candidate }].map(({ key, candidate }) => (
             <button
               key={key}
               onClick={() => setTab(key)}
               style={{
-                flex: 1, padding: "10px 8px", fontSize: 13,
+                flex: 1, minWidth: 0, padding: "10px 8px", fontSize: 13,
                 fontWeight: tab === key ? 700 : 500,
                 color: tab === key ? "#FF7043" : "#64748b",
                 background: "transparent", border: "none",
@@ -322,10 +326,10 @@ function MobileCompareSheet({ open, onClose, left, right, onViewLeft, onViewRigh
         </div>
 
         {/* Scrollable content */}
-        <div style={{ flex: 1, overflowY: "auto", WebkitOverflowScrolling: "touch", padding: "16px" }}>
+        <div style={{ flex: 1, overflowY: "auto", overflowX: "hidden", WebkitOverflowScrolling: "touch", padding: "16px", minWidth: 0 }}>
           {/* Candidate header row */}
           {activeCandidate && (
-            <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 16 }}>
+            <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 16, minWidth: 0 }}>
               <div style={{ width: 44, height: 44, borderRadius: "50%", flexShrink: 0, background: "linear-gradient(135deg,#FF7043,#FF8A65)", display: "flex", alignItems: "center", justifyContent: "center", color: "white", fontWeight: 700, fontSize: 16 }}>
                 {(activeCandidate.name || "?")[0].toUpperCase()}
               </div>
@@ -345,12 +349,12 @@ function MobileCompareSheet({ open, onClose, left, right, onViewLeft, onViewRigh
 
           {/* WHY reasons */}
           {reasons.length > 0 ? (
-            <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+            <div style={{ display: "flex", flexDirection: "column", gap: 10, minWidth: 0 }}>
               {reasons.slice(0, mode === "full" ? 8 : 3).map((r, i) => (
-                <div key={i} style={{ background: "rgba(255,255,255,0.80)", border: "1px solid rgba(0,0,0,0.06)", borderRadius: 12, padding: "12px 14px" }}>
-                  <div style={{ fontSize: 12, fontWeight: 600, color: "#0f172a", marginBottom: 6 }}>{r.requirement}</div>
+                <div key={i} style={{ background: "rgba(255,255,255,0.80)", border: "1px solid rgba(0,0,0,0.06)", borderRadius: 12, padding: "12px 14px", minWidth: 0, overflowX: "hidden" }}>
+                  <div style={{ fontSize: 12, fontWeight: 600, color: "#0f172a", marginBottom: 6, overflowWrap: "anywhere", wordBreak: "break-word" }}>{r.requirement}</div>
                   {Array.isArray(r.evidence) && r.evidence.slice(0, 3).map((ev, j) => (
-                    <div key={j} style={{ fontSize: 11, color: "#475569", paddingLeft: 8, borderLeft: "2px solid rgba(255,112,67,0.25)", marginTop: 4 }}>
+                    <div key={j} style={{ fontSize: 11, color: "#475569", paddingLeft: 8, borderLeft: "2px solid rgba(255,112,67,0.25)", marginTop: 4, overflowWrap: "anywhere", wordBreak: "break-word" }}>
                       {ev.text}{ev.source && <span style={{ color: "#94a3b8", marginLeft: 4 }}>· {ev.source}</span>}
                     </div>
                   ))}
@@ -365,7 +369,7 @@ function MobileCompareSheet({ open, onClose, left, right, onViewLeft, onViewRigh
           {activeCandidate && (
             <button
               onClick={() => { onViewActive?.(); onClose(); }}
-              style={{ marginTop: 20, width: "100%", padding: "12px", borderRadius: 12, border: "none", background: "linear-gradient(135deg,#FF7043,#FF8A65)", color: "white", fontSize: 13, fontWeight: 700, cursor: "pointer" }}
+              style={{ marginTop: 20, width: "100%", maxWidth: "100%", padding: "12px", borderRadius: 12, border: "none", background: "linear-gradient(135deg,#FF7043,#FF8A65)", color: "white", fontSize: 13, fontWeight: 700, cursor: "pointer", boxSizing: "border-box" }}
             >
               View {activeCandidate.name?.split(" ")[0] || "Profile"}'s Full Profile
             </button>
@@ -392,9 +396,10 @@ function FilterChip({ label, onRemove }) {
         color: "#c2410c",
         border: "1px solid rgba(255,112,67,0.20)",
         whiteSpace: "nowrap",
+        maxWidth: "100%",
       }}
     >
-      {label}
+      <span style={{ overflow: "hidden", textOverflow: "ellipsis" }}>{label}</span>
       {onRemove && (
         <button
           onClick={onRemove}
@@ -442,7 +447,7 @@ function CommandBar({
   onClearTargeting,
   onClearAll,
   onRemoveChip,
-  isMobile, // [FIX 1]
+  isMobile,
 }) {
   const hasSearch = nameQuery || locQuery || boolQuery;
 
@@ -469,6 +474,8 @@ function CommandBar({
         whiteSpace: "nowrap",
         transition: "all 0.15s",
         flexShrink: 0,
+        maxWidth: "100%",
+        boxSizing: "border-box",
       }}
       onMouseEnter={(e) => { e.currentTarget.style.background = "rgba(255,112,67,0.08)"; e.currentTarget.style.borderColor = "rgba(255,112,67,0.30)"; e.currentTarget.style.color = "#FF7043"; }}
       onMouseLeave={(e) => {
@@ -515,10 +522,15 @@ function CommandBar({
   const onBlur  = (e) => { e.target.style.borderColor = "rgba(0,0,0,0.08)"; e.target.style.boxShadow = "none"; };
 
   return (
-    <div style={{ marginBottom: 16 }}>
+    <div style={{ marginBottom: 16, width: "100%", maxWidth: "100%", minWidth: 0, overflowX: "hidden" }}>
       {/* Main bar */}
       <div
         style={{
+          width: "100%",
+          maxWidth: "100%",
+          minWidth: 0,
+          overflowX: "hidden",
+          boxSizing: "border-box",
           background: "rgba(255,255,255,0.80)",
           backdropFilter: "blur(16px)",
           border: "1px solid rgba(255,255,255,0.50)",
@@ -529,9 +541,9 @@ function CommandBar({
       >
         {isMobile ? (
           /* ── MOBILE: two-row layout ── */
-          <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+          <div style={{ display: "flex", flexDirection: "column", gap: 8, width: "100%", maxWidth: "100%", minWidth: 0 }}>
             {/* Row 1: name/role + Filters button */}
-            <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+            <div style={{ display: "flex", alignItems: "center", gap: 8, width: "100%", maxWidth: "100%", minWidth: 0 }}>
               <div style={{ flex: 1, minWidth: 0, position: "relative" }}>
                 <div style={{ position: "absolute", left: 10, top: "50%", transform: "translateY(-50%)", color: "#94a3b8", pointerEvents: "none" }}>
                   <svg width="14" height="14" viewBox="0 0 16 16" fill="none">
@@ -544,7 +556,7 @@ function CommandBar({
                   placeholder="Name or role..."
                   value={nameQuery}
                   onChange={(e) => setNameQuery(e.target.value)}
-                  style={{ width: "100%", paddingLeft: 32, paddingRight: 10, paddingTop: 9, paddingBottom: 9, border: "1px solid rgba(0,0,0,0.08)", borderRadius: 10, fontSize: 14, background: "rgba(255,255,255,0.70)", color: "#0f172a", outline: "none", boxSizing: "border-box" }}
+                  style={{ width: "100%", maxWidth: "100%", paddingLeft: 32, paddingRight: 10, paddingTop: 9, paddingBottom: 9, border: "1px solid rgba(0,0,0,0.08)", borderRadius: 10, fontSize: 14, background: "rgba(255,255,255,0.70)", color: "#0f172a", outline: "none", boxSizing: "border-box", minWidth: 0 }}
                   onFocus={onFocus}
                   onBlur={onBlur}
                 />
@@ -552,7 +564,7 @@ function CommandBar({
               <TargetingBtn />
             </div>
             {/* Row 2: location */}
-            <div style={{ position: "relative" }}>
+            <div style={{ position: "relative", width: "100%", maxWidth: "100%", minWidth: 0 }}>
               <div style={{ position: "absolute", left: 10, top: "50%", transform: "translateY(-50%)", color: "#94a3b8", pointerEvents: "none" }}>
                 <svg width="13" height="13" viewBox="0 0 16 16" fill="none">
                   <path d="M8 1.5C5.51 1.5 3.5 3.51 3.5 6c0 3.5 4.5 8.5 4.5 8.5s4.5-5 4.5-8.5c0-2.49-2.01-4.5-4.5-4.5z" stroke="currentColor" strokeWidth="1.5"/>
@@ -564,7 +576,7 @@ function CommandBar({
                 placeholder="Location..."
                 value={locQuery}
                 onChange={(e) => setLocQuery(e.target.value)}
-                style={{ width: "100%", paddingLeft: 30, paddingRight: 10, paddingTop: 9, paddingBottom: 9, border: "1px solid rgba(0,0,0,0.08)", borderRadius: 10, fontSize: 14, background: "rgba(255,255,255,0.70)", color: "#0f172a", outline: "none", boxSizing: "border-box" }}
+                style={{ width: "100%", maxWidth: "100%", paddingLeft: 30, paddingRight: 10, paddingTop: 9, paddingBottom: 9, border: "1px solid rgba(0,0,0,0.08)", borderRadius: 10, fontSize: 14, background: "rgba(255,255,255,0.70)", color: "#0f172a", outline: "none", boxSizing: "border-box", minWidth: 0 }}
                 onFocus={onFocus}
                 onBlur={onBlur}
               />
@@ -572,7 +584,7 @@ function CommandBar({
           </div>
         ) : (
           /* ── DESKTOP: original single-row layout ── */
-          <div style={{ display: "flex", alignItems: "stretch", gap: 8, flexWrap: "wrap" }}>
+          <div style={{ display: "flex", alignItems: "stretch", gap: 8, flexWrap: "wrap", width: "100%", maxWidth: "100%", minWidth: 0 }}>
             {/* Search by name/role */}
             <div style={{ flex: "2 1 160px", minWidth: 0, position: "relative" }}>
               <div style={{ position: "absolute", left: 10, top: "50%", transform: "translateY(-50%)", color: "#94a3b8", pointerEvents: "none" }}>
@@ -586,7 +598,7 @@ function CommandBar({
                 placeholder="Name or role..."
                 value={nameQuery}
                 onChange={(e) => setNameQuery(e.target.value)}
-                style={{ width: "100%", paddingLeft: 32, paddingRight: 10, paddingTop: 8, paddingBottom: 8, border: "1px solid rgba(0,0,0,0.08)", borderRadius: 10, fontSize: 13, background: "rgba(255,255,255,0.70)", color: "#0f172a", outline: "none", transition: "border-color 0.15s, box-shadow 0.15s" }}
+                style={{ width: "100%", paddingLeft: 32, paddingRight: 10, paddingTop: 8, paddingBottom: 8, border: "1px solid rgba(0,0,0,0.08)", borderRadius: 10, fontSize: 13, background: "rgba(255,255,255,0.70)", color: "#0f172a", outline: "none", transition: "border-color 0.15s, box-shadow 0.15s", boxSizing: "border-box" }}
                 onFocus={onFocus}
                 onBlur={onBlur}
               />
@@ -605,7 +617,7 @@ function CommandBar({
                 placeholder="Location..."
                 value={locQuery}
                 onChange={(e) => setLocQuery(e.target.value)}
-                style={{ width: "100%", paddingLeft: 30, paddingRight: 10, paddingTop: 8, paddingBottom: 8, border: "1px solid rgba(0,0,0,0.08)", borderRadius: 10, fontSize: 13, background: "rgba(255,255,255,0.70)", color: "#0f172a", outline: "none", transition: "border-color 0.15s, box-shadow 0.15s" }}
+                style={{ width: "100%", paddingLeft: 30, paddingRight: 10, paddingTop: 8, paddingBottom: 8, border: "1px solid rgba(0,0,0,0.08)", borderRadius: 10, fontSize: 13, background: "rgba(255,255,255,0.70)", color: "#0f172a", outline: "none", transition: "border-color 0.15s, box-shadow 0.15s", boxSizing: "border-box" }}
                 onFocus={onFocus}
                 onBlur={onBlur}
               />
@@ -619,14 +631,14 @@ function CommandBar({
                   placeholder='Advanced: ("CSM" OR "CS Manager") AND SaaS'
                   value={boolQuery}
                   onChange={(e) => setBoolQuery(e.target.value)}
-                  style={{ width: "100%", paddingLeft: 12, paddingRight: 10, paddingTop: 8, paddingBottom: 8, border: "1px solid rgba(0,0,0,0.08)", borderRadius: 10, fontSize: 12, background: "rgba(255,255,255,0.70)", color: "#0f172a", outline: "none", transition: "border-color 0.15s, box-shadow 0.15s" }}
+                  style={{ width: "100%", paddingLeft: 12, paddingRight: 10, paddingTop: 8, paddingBottom: 8, border: "1px solid rgba(0,0,0,0.08)", borderRadius: 10, fontSize: 12, background: "rgba(255,255,255,0.70)", color: "#0f172a", outline: "none", transition: "border-color 0.15s, box-shadow 0.15s", boxSizing: "border-box" }}
                   onFocus={onFocus}
                   onBlur={onBlur}
                 />
               ) : (
                 <FeatureLock label="Advanced query">
                   <div
-                    style={{ width: "100%", paddingLeft: 12, paddingRight: 10, paddingTop: 8, paddingBottom: 8, border: "1px dashed rgba(0,0,0,0.12)", borderRadius: 10, fontSize: 12, background: "rgba(0,0,0,0.03)", color: "#94a3b8", cursor: "not-allowed" }}
+                    style={{ width: "100%", paddingLeft: 12, paddingRight: 10, paddingTop: 8, paddingBottom: 8, border: "1px dashed rgba(0,0,0,0.12)", borderRadius: 10, fontSize: 12, background: "rgba(0,0,0,0.03)", color: "#94a3b8", cursor: "not-allowed", boxSizing: "border-box" }}
                   >
                     Advanced query — Enterprise only
                   </div>
@@ -651,6 +663,11 @@ function CommandBar({
           gap: 8,
           marginTop: 8,
           paddingLeft: 4,
+          width: "100%",
+          maxWidth: "100%",
+          minWidth: 0,
+          overflowX: "hidden",
+          boxSizing: "border-box",
         }}
       >
         {/* Result count */}
@@ -660,6 +677,8 @@ function CommandBar({
             color: isLoading || manualSearching ? "#94a3b8" : "#475569",
             fontWeight: 500,
             flexShrink: 0,
+            minWidth: 0,
+            maxWidth: "100%",
           }}
         >
           {isLoading || manualSearching ? (
@@ -686,7 +705,7 @@ function CommandBar({
         {activeChips.length > 0 && (
           <>
             <div style={{ width: 1, height: 14, background: "rgba(0,0,0,0.10)", flexShrink: 0 }} />
-            <div style={{ display: "flex", flexWrap: "wrap", gap: 5, alignItems: "center" }}>
+            <div style={{ display: "flex", flexWrap: "wrap", gap: 5, alignItems: "center", minWidth: 0, maxWidth: "100%", overflow: "hidden" }}>
               {activeChips.slice(0, 8).map((chip) => (
                 <FilterChip
                   key={chip.key}
@@ -717,6 +736,8 @@ function CommandBar({
               padding: "2px 6px",
               borderRadius: 6,
               transition: "color 0.15s",
+              flexShrink: 0,
+              maxWidth: "100%",
             }}
             onMouseEnter={(e) => { e.currentTarget.style.color = "#FF7043"; }}
             onMouseLeave={(e) => { e.currentTarget.style.color = "#94a3b8"; }}
@@ -725,7 +746,23 @@ function CommandBar({
           </button>
         )}
       </div>
-      <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
+      <style>{`
+        @keyframes spin { to { transform: rotate(360deg); } }
+
+        @media (max-width: 1023px) {
+          .candidates-mobile-clamp,
+          .candidates-mobile-clamp * {
+            box-sizing: border-box;
+          }
+
+          .candidates-mobile-clamp {
+            width: 100%;
+            max-width: 100%;
+            min-width: 0;
+            overflow-x: hidden;
+          }
+        }
+      `}</style>
     </div>
   );
 }
@@ -895,7 +932,7 @@ function Body() {
     },
   ];
 
-    const buildCandidateParams = useCallback(() => {
+  const buildCandidateParams = useCallback(() => {
     const params = new URLSearchParams();
 
     if (nameQuery) params.set("q", nameQuery);
@@ -929,7 +966,7 @@ function Body() {
     education,
   ]);
 
-    const activeFilterCount = useMemo(() => {
+  const activeFilterCount = useMemo(() => {
     return [
       summaryKeywords,
       jobTitle,
@@ -970,7 +1007,7 @@ function Body() {
     if (languages) chips.push({ key: "langs", label: `Languages: ${languages}` });
     if (education) chips.push({ key: "edu", label: `Education: ${education}` });
     return chips;
-    }, [nameQuery, locQuery, boolQuery, summaryKeywords, jobTitle, workStatus, preferredWorkType, willingToRelocate, locationFilter, skills, languages, education]);
+  }, [nameQuery, locQuery, boolQuery, summaryKeywords, jobTitle, workStatus, preferredWorkType, willingToRelocate, locationFilter, skills, languages, education]);
 
   const clearSearchFilters = () => { setNameQuery(""); setLocQuery(""); setBoolQuery(""); };
   const clearTargeting = () => {
@@ -996,7 +1033,7 @@ function Body() {
       status: () => setWorkStatus(""),
       worktype: () => setPreferredWorkType(""),
       relocate: () => setWillingToRelocate(""),
-	  prefLoc: () => setLocationFilter(""),
+      prefLoc: () => setLocationFilter(""),
       skills: () => setSkills(""),
       langs: () => setLanguages(""),
       edu: () => setEducation(""),
@@ -1032,8 +1069,8 @@ function Body() {
     const filters = [];
     if (nameQuery) filters.push(`Name/role: ${nameQuery}`);
     if (locQuery || locationFilter) {
-  filters.push(`Location: ${locQuery || locationFilter}`);
-}
+      filters.push(`Location: ${locQuery || locationFilter}`);
+    }
     if (boolQuery) filters.push(`Advanced query: ${boolQuery}`);
     if (summaryKeywords) filters.push(`Summary keywords: ${summaryKeywords}`);
     if (jobTitle) filters.push(`Job title: ${jobTitle}`);
@@ -1252,7 +1289,7 @@ function Body() {
         if (typeof f.workStatus === "string") setWorkStatus(f.workStatus);
         if (typeof f.preferredWorkType === "string") setPreferredWorkType(f.preferredWorkType);
         if (typeof f.relocate === "string") setWillingToRelocate(f.relocate);
-		if (typeof f.location === "string") setLocationFilter(f.location);
+        if (typeof f.location === "string") setLocationFilter(f.location);
         if (typeof f.skills === "string") setSkills(f.skills);
         if (typeof f.languages === "string") setLanguages(f.languages);
         if (typeof f.education === "string") setEducation(f.education);
@@ -1380,7 +1417,16 @@ function Body() {
   }
 
   return (
-    <>
+    <div
+      className="candidates-mobile-clamp"
+      style={{
+        width: "100%",
+        maxWidth: "100%",
+        minWidth: 0,
+        overflowX: "hidden",
+        boxSizing: "border-box",
+      }}
+    >
       {/* ── ERROR BANNERS ─────────────────────────────────────────── */}
       {loadError && (
         <GlassPanel className="mb-3 px-5 py-3 sm:px-6 border-red-200/50 bg-red-50/60">
@@ -1461,9 +1507,8 @@ function Body() {
           </div>
         </GlassPanel>
       ) : (
-        <div className="pt-0">
-          {/* [FIX 2] overflow:hidden prevents cards bleeding off right edge on mobile */}
-          <div className="block lg:hidden" style={{ width: "100%", overflowX: "hidden" }}>
+        <div className="pt-0" style={{ width: "100%", maxWidth: "100%", minWidth: 0, overflowX: "hidden" }}>
+          <div className="block lg:hidden" style={{ width: "100%", maxWidth: "100%", minWidth: 0, overflowX: "hidden" }}>
             <CandidateList
               candidates={candidates}
               isEnterprise={isEnterprise}
@@ -1564,7 +1609,7 @@ function Body() {
         onPrimary={async () => { const c = personaCandidate; setPersonaOpen(false); setPersonaCandidate(null); if (c) await startConversation(c, "recruiter"); }}
         onSecondary={async () => { const c = personaCandidate; setPersonaOpen(false); setPersonaCandidate(null); if (c) await startConversation(c, "personal"); }}
       />
-    </>
+    </div>
   );
 }
 
