@@ -122,6 +122,7 @@ function AppShell({ Component, pageProps }) {
   // Internal / Workspace routes are INTERNAL (no external header/footer)
   const isInternalRoute = router.pathname.startsWith('/internal');
   const isWorkspaceRoute = router.pathname.startsWith('/workspace');
+  const isInternalProfileViewRoute = router.pathname === '/profile/[slug]';
 
   // Job apply route should be treated as INTERNAL seeker-style page
   const isJobApplyRoute = router.pathname === '/job/[id]/apply';
