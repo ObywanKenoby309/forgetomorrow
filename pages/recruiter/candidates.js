@@ -273,17 +273,23 @@ function MobileCompareSheet({ open, onClose, left, right, onViewLeft, onViewRigh
       {/* Sheet */}
       <div
         style={{
-          position: "fixed", left: 0, right: 0, bottom: 0, zIndex: 99,
+          position: "fixed",
+          left: 0,
+          right: 0,
+          bottom: 74,
+          zIndex: 99,
           width: "100%",
           maxWidth: "100vw",
           background: "rgba(252,252,253,0.98)",
           backdropFilter: "blur(24px)",
-          borderTopLeftRadius: 20, borderTopRightRadius: 20,
+          borderTopLeftRadius: 20,
+          borderTopRightRadius: 20,
           border: "1px solid rgba(255,255,255,0.40)",
           boxShadow: "0 -16px 60px rgba(0,0,0,0.22)",
-          maxHeight: "94vh",
-          minHeight: "72vh",
-          display: "flex", flexDirection: "column",
+          maxHeight: "calc(96vh - 74px)",
+          minHeight: "calc(76vh - 74px)",
+          display: "flex",
+          flexDirection: "column",
           overflowX: "hidden",
         }}
       >
@@ -327,7 +333,16 @@ function MobileCompareSheet({ open, onClose, left, right, onViewLeft, onViewRigh
         </div>
 
         {/* Scrollable content */}
-        <div style={{ flex: 1, overflowY: "auto", overflowX: "hidden", WebkitOverflowScrolling: "touch", padding: "18px 16px 20px", minWidth: 0 }}>
+        <div
+          style={{
+            flex: 1,
+            overflowY: "auto",
+            overflowX: "hidden",
+            WebkitOverflowScrolling: "touch",
+            padding: "18px 16px 30px",
+            minWidth: 0,
+          }}
+        >
           {/* Candidate header row */}
           {activeCandidate && (
             <div style={{ display: "flex", alignItems: "center", gap: 14, marginBottom: 18, minWidth: 0 }}>
@@ -370,7 +385,21 @@ function MobileCompareSheet({ open, onClose, left, right, onViewLeft, onViewRigh
           {activeCandidate && (
             <button
               onClick={() => { onViewActive?.(); onClose(); }}
-              style={{ marginTop: 22, width: "100%", maxWidth: "100%", padding: "14px", borderRadius: 12, border: "none", background: "linear-gradient(135deg,#FF7043,#FF8A65)", color: "white", fontSize: 13, fontWeight: 700, cursor: "pointer", boxSizing: "border-box" }}
+              style={{
+                marginTop: 22,
+                width: "100%",
+                maxWidth: "100%",
+                padding: "14px",
+                borderRadius: 12,
+                border: "none",
+                background: "linear-gradient(135deg,#FF7043,#FF8A65)",
+                color: "white",
+                fontSize: 13,
+                fontWeight: 700,
+                cursor: "pointer",
+                boxSizing: "border-box",
+                marginBottom: 6,
+              }}
             >
               View {activeCandidate.name?.split(" ")[0] || "Profile"}'s Full Profile
             </button>
