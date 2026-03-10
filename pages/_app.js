@@ -126,6 +126,8 @@ function AppShell({ Component, pageProps }) {
   // Job apply route should be treated as INTERNAL seeker-style page
   const isJobApplyRoute = router.pathname === '/job/[id]/apply';
 
+  const isInternalProfileViewRoute = router.pathname === '/profile/[slug]';
+
   // Treat all Hearth routes as internal seeker-style pages
   const isSeekerRoute =
     router.pathname.startsWith('/seeker') ||
@@ -271,7 +273,7 @@ function AppShell({ Component, pageProps }) {
   }, [router, shouldLoadCookieScript]);
 
   // Internal/workspace should NOT use wallpaper (presentation-safe, plain background)
-  const forcePlainInternalBg = isInternalRoute || isWorkspaceRoute;
+  const forcePlainInternalBg = isInternalRoute || isWorkspaceRoute || isInternalProfileViewRoute;
 
   // Decide if we should show user wallpaper (internal only)
   const shouldUseWallpaper = !forcePlainInternalBg && !isUniversalPage && !isPublicEffective && !!wallpaperUrl;
