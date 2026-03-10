@@ -69,6 +69,7 @@ export default async function handler(req, res) {
             lastName: true,
             avatarUrl: true,
             headline: true,
+			slug: true,
           },
         })
       : [];
@@ -153,6 +154,7 @@ export default async function handler(req, res) {
         title: c.isGroup ? c.title || otherName : otherName,
         otherUserId: c.isGroup ? null : otherUser?.id || null,
         otherAvatarUrl: c.isGroup ? null : otherUser?.avatarUrl || null,
+		otherUserSlug: c.isGroup ? null : otherUser?.slug || null,
         otherHeadline: c.isGroup ? '' : otherUser?.headline || '',
         lastMessage: last ? last.content : '',
         lastMessageAt: last ? last.createdAt : c.createdAt,

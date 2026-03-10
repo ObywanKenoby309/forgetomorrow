@@ -1,6 +1,24 @@
 // pages/api/register.js
 import prisma from "@/lib/prisma";
 import bcrypt from "bcryptjs";
+import { normalizeSlug, randomSuffix, hasBannedTerm } from '@/lib/slug';
+
+// ---- Slug generator -------------------------------------------------------
+async function generateUniqueSlug(email) {
+  const base = normalizeSlug(email.split('@')[0]) || 'user';
+  let attempt = 0;
+  while (attempt < 10) {
+    const candidate = `${base}-${randomSuffix(5)}`;
+    if (hasBannedTerm(candidate)) { attempt++; continue; }
+    const exists = await prisma.user.findUnique({
+      where: { slug: candidate },
+      select: { id: true },
+    });
+    if (!exists) return candidate;
+    attempt++;
+  }
+  return `user-${randomSuffix(8)}`;
+}
 
 export default async function handler(req, res) {
   // Only allow POST
@@ -29,7 +47,6 @@ export default async function handler(req, res) {
       "recruiter enterprise": "RECRUITER",
       admin: "ADMIN",
     };
-
     const tierMap = {
       "seeker pro": "PRO",
       "recruiter smb": "SMALL_BIZ",
@@ -38,22 +55,22 @@ export default async function handler(req, res) {
 
     const normalized = inputRole?.toLowerCase().trim() || "seeker";
     const prismaRole = roleMap[normalized] || "SEEKER";
-    const plan =
-      tierMap[normalized] || (prismaRole === "SEEKER" ? "FREE" : null);
+    const plan = tierMap[normalized] || (prismaRole === "SEEKER" ? "FREE" : null);
 
     // ---- Check existing user -------------------------------------------------
     const normalizedEmail = email.toLowerCase().trim();
-
     const existing = await prisma.user.findUnique({
       where: { email: normalizedEmail },
     });
-
     if (existing) {
       return res.status(409).json({ error: "User already exists" });
     }
 
     // ---- Hash password -------------------------------------------------------
     const passwordHash = await bcrypt.hash(password, 12);
+
+    // ---- Generate slug -------------------------------------------------------
+    const slug = await generateUniqueSlug(normalizedEmail);
 
     // ---- Create user ---------------------------------------------------------
     const user = await prisma.user.create({
@@ -62,6 +79,7 @@ export default async function handler(req, res) {
         passwordHash,
         role: prismaRole,
         plan,
+        slug,
       },
       select: {
         id: true,

@@ -42,6 +42,7 @@ export default function ConversationList({
                   {otherUserId ? (
                     <MemberAvatarActions
                       targetUserId={otherUserId}
+					  targetUserSlug={t.otherUserSlug}
                       targetName={otherName}
                       showMessage={false} // Only "View profile" + "Connect" here
                     >
