@@ -110,7 +110,7 @@ function TargetingDrawer({
       <div
         style={{
           position: "fixed",
-          top: 0,
+          top: 56,
           right: 0,
           bottom: 0,
           zIndex: 50,
