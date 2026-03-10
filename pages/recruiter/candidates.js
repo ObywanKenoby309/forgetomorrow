@@ -741,8 +741,12 @@ function Body() {
 
   const buildCandidateParams = useCallback(() => {
     const params = new URLSearchParams();
+	
     if (nameQuery) params.set("q", nameQuery);
-    if (locQuery) params.set("location", locQuery);
+	
+    const effectiveLocation = locQuery || locationFilter;
+	if (effectiveLocation) params.set("location", effectiveLocation);
+	
     if (boolQuery) params.set("bool", boolQuery);
     if (summaryKeywords) params.set("summaryKeywords", summaryKeywords);
     if (jobTitle) params.set("jobTitle", jobTitle);
