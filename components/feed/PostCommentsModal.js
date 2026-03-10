@@ -103,7 +103,7 @@ export default function PostCommentsModal({ post, onClose, onReply }) {
 
     const params = new URLSearchParams();
     params.set('userId', targetUserId);
-    router.push(withChrome(`/member-profile?${params.toString()}`));
+    router.push(withChrome(`/profile/${user.slug}`));
   };
 
   const handleConnect = async (targetUserId, key) => {

@@ -30,22 +30,29 @@ export default async function handler(req, res) {
         take: limit,
       });
 
-      // Fetch author avatars from users table so PostCard can show profile pictures
+      // Fetch author avatars + slug from users table
       const authorIds = [...new Set(posts.map((p) => p.authorId).filter(Boolean))];
       const authors = authorIds.length
         ? await prisma.user.findMany({
             where: { id: { in: authorIds } },
-            select: { id: true, avatarUrl: true, image: true },
+            select: { id: true, slug: true, avatarUrl: true, image: true },
           })
         : [];
 
-      const avatarMap = Object.fromEntries(
-        authors.map((u) => [u.id, u.avatarUrl || u.image || null])
+      const authorMap = Object.fromEntries(
+        authors.map((u) => [
+          u.id,
+          {
+            authorSlug: u.slug || null,
+            authorAvatar: u.avatarUrl || u.image || null,
+          },
+        ])
       );
 
       const postsWithAvatars = posts.map((p) => ({
         ...p,
-        authorAvatar: avatarMap[p.authorId] || null,
+        authorSlug: authorMap[p.authorId]?.authorSlug || null,
+        authorAvatar: authorMap[p.authorId]?.authorAvatar || null,
       }));
 
       return res.status(200).json({ posts: postsWithAvatars });
@@ -100,15 +107,16 @@ export default async function handler(req, res) {
         },
       });
 
-      // Return the new post with the author's avatar attached
+      // Return the new post with the author's avatar + slug attached
       const author = await prisma.user.findUnique({
         where: { id: user.id },
-        select: { avatarUrl: true, image: true },
+        select: { slug: true, avatarUrl: true, image: true },
       });
 
       return res.status(201).json({
         post: {
           ...post,
+          authorSlug: author?.slug || null,
           authorAvatar: author?.avatarUrl || author?.image || null,
         },
       });

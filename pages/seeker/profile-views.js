@@ -82,7 +82,7 @@ export default function ProfileViewsPage() {
     if (!view.viewer?.id) return;
     const params = new URLSearchParams();
     params.set('userId', view.viewer.id);
-    router.push(withChrome(`/member-profile?${params.toString()}`));
+    router.push(withChrome(`/profile/${viewer.slug}`));
   };
   return (
     <SeekerLayout

@@ -62,7 +62,7 @@ export default function SeekerIncomingInvitesPage() {
     if (!person?.id) return;
     const params = new URLSearchParams();
     params.set('userId', person.id);
-    router.push(withChrome(`/member-profile?${params.toString()}`));
+    router.push(withChrome(`/profile/${person.slug}`));
   };
   const handleAccept = async (item) => {
     const requestId = item.requestId || item.id;

@@ -46,12 +46,13 @@ export default async function handler(req, res) {
           'Member';
 
         contactsMap.set(otherId, {
-          id: otherId, // keep using the other user's id as before
-          name,
-          headline: other.headline || '',
-          location: other.location || '',
-          status: other.status || '',
-          avatarUrl: other.avatarUrl || other.image || null,
+  id: otherId, // keep using the other user's id as before
+  slug: other.slug || null,
+  name,
+  headline: other.headline || '',
+  location: other.location || '',
+  status: other.status || '',
+  avatarUrl: other.avatarUrl || other.image || null,
         });
       }
     }
@@ -73,6 +74,7 @@ export default async function handler(req, res) {
             where: { id: { in: incomingFromIds } },
             select: {
               id: true,
+			  slug: true,
               name: true,
               firstName: true,
               lastName: true,
@@ -95,21 +97,23 @@ export default async function handler(req, res) {
         requestId: r.id,
         createdAt: r.createdAt,
         from: u
-          ? {
-              id: u.id,
-              name,
-              headline: u.headline || '',
-              location: u.location || '',
-              status: u.status || '',
-              avatarUrl: u.avatarUrl || null,
+		  ? {
+			  id: u.id,
+			  slug: u.slug || null,
+			  name,
+			  headline: u.headline || '',
+			  location: u.location || '',
+			  status: u.status || '',
+			  avatarUrl: u.avatarUrl || null,
             }
           : {
               id: r.fromUserId,
-              name: 'Member',
-              headline: '',
-              location: '',
-              status: '',
-              avatarUrl: null,
+			  slug: null,
+			  name: 'Member',
+			  headline: '',
+			  location: '',
+			  status: '',
+			  avatarUrl: null,
             },
       };
     });
@@ -129,6 +133,7 @@ export default async function handler(req, res) {
             where: { id: { in: outgoingToIds } },
             select: {
               id: true,
+			  slug: true,
               name: true,
               firstName: true,
               lastName: true,
@@ -151,16 +156,18 @@ export default async function handler(req, res) {
         requestId: r.id,
         createdAt: r.createdAt,
         to: u
-          ? {
-              id: u.id,
-              name,
-              headline: u.headline || '',
-              location: u.location || '',
-              status: u.status || '',
-              avatarUrl: u.avatarUrl || null,
+		  ? {
+			  id: u.id,
+			  slug: u.slug || null,
+			  name,
+			  headline: u.headline || '',
+			  location: u.location || '',
+			  status: u.status || '',
+			  avatarUrl: u.avatarUrl || null,
             }
           : {
               id: r.toUserId,
+			  slug: null,
               name: 'Member',
               headline: '',
               location: '',

@@ -5,6 +5,7 @@ import { useProfileViewLogger } from '../actions/useProfileViewLogger';
 
 export default function MemberActions({
   targetUserId,
+  targetUserSlug,
   targetName = 'Member',
   layout = 'menu', // menu | inline (future)
   onClose,
@@ -25,6 +26,7 @@ export default function MemberActions({
   // We intentionally do not try to infer "self" here.
   // Backend already blocks self-connect and self-message.
   const isSelf = false;
+  const isAlreadyOnProfilePage = router.pathname === '/profile/[slug]';
 
   // ── Load relationship status ────────────────────────────
   useEffect(() => {
@@ -51,7 +53,7 @@ export default function MemberActions({
   // ── Actions ──────────────────────────────────────────────
 
   const viewProfile = async () => {
-    if (!targetUserId) return;
+    if (!targetUserId || !targetUserSlug) return;
 
     // log profile view for analytics
     try {
@@ -61,7 +63,7 @@ export default function MemberActions({
     }
 
     onClose?.();
-    router.push(withChrome(`/member-profile?userId=${targetUserId}`));
+    router.push(withChrome(`/profile/${targetUserSlug}`));
   };
 
   const messageUser = async () => {
@@ -273,7 +275,9 @@ export default function MemberActions({
 
   return (
     <>
-      <Button onClick={viewProfile}>View profile</Button>
+      {!isAlreadyOnProfilePage && (
+        <Button onClick={viewProfile}>View profile</Button>
+      )}
 
       {/* Message is always visible, but front-end gated by status */}
       {!isSelf && <Button onClick={messageUser}>Message</Button>}

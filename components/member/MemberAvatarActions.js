@@ -5,8 +5,9 @@ import MemberActions from './MemberActions';
 export default function MemberAvatarActions({
   children,
   targetUserId,
+  targetUserSlug,
   targetName = 'Member',
-  showMessage = true, // 👈 NEW
+  showMessage = true,
 }) {
   const [open, setOpen] = useState(false);
   const containerRef = useRef(null);
@@ -54,10 +55,11 @@ export default function MemberAvatarActions({
           </div>
           <MemberActions
             targetUserId={targetUserId}
+            targetUserSlug={targetUserSlug}
             targetName={targetName}
             layout="menu"
             onClose={close}
-            showMessage={showMessage} // 👈 pass through
+            showMessage={showMessage}
           />
         </div>
       )}

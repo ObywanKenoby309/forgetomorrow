@@ -201,6 +201,7 @@ export default function PublicProfile({ user, primaryResume, effectiveVisibility
     return (
       <MemberAvatarActions
         targetUserId={profileUserId}
+		targetUserSlug={slug}
         targetName={fullName}
         showMessage
       >

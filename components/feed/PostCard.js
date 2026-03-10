@@ -109,12 +109,10 @@ export default function PostCard({
   };
 
   const handleViewProfile = async () => {
-    if (!post?.authorId) return;
+    if (!post?.authorId || !post?.authorSlug) return;
     setAvatarMenuOpen(false);
     logProfileView('feed');
-    const params = new URLSearchParams();
-    params.set('userId', post.authorId);
-    router.push(withChrome(`/member-profile?${params.toString()}`));
+    router.push(withChrome(`/profile/${post.authorSlug}`));
   };
 
   const handleConnect = async () => {
@@ -409,6 +407,7 @@ export default function PostCard({
                   onClick={handleViewProfile}
                   className="w-full text-left px-3 py-2 text-sm hover:bg-gray-50"
                   role="menuitem"
+                  disabled={!post?.authorSlug}
                 >
                   View profile
                 </button>

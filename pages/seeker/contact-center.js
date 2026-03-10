@@ -332,7 +332,7 @@ export default function SeekerContactCenter() {
   const handleViewProfile = (item) => {
     const person = getPersonFromItem(item);
     if (!person?.id) return;
-    router.push(withChrome(`/member-profile?userId=${person.id}`));
+    router.push(withChrome(`/profile/${person.slug}`));
   };
 
   const handleAccept = async (item) => {

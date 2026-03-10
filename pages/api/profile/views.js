@@ -63,10 +63,14 @@ export default async function handler(req, res) {
           where: { id: { in: viewerIds } },
           select: {
             id: true,
+            slug: true,
             name: true,
+            headline: true,
+            avatarUrl: true,
             image: true,
           },
         });
+
         viewersById = users.reduce((acc, u) => {
           acc[u.id] = u;
           return acc;
@@ -78,8 +82,13 @@ export default async function handler(req, res) {
           v.viewerId && viewersById[v.viewerId]
             ? {
                 id: viewersById[v.viewerId].id,
+                slug: viewersById[v.viewerId].slug || null,
                 name: viewersById[v.viewerId].name,
-                avatarUrl: viewersById[v.viewerId].image || null,
+                headline: viewersById[v.viewerId].headline || null,
+                avatarUrl:
+                  viewersById[v.viewerId].avatarUrl ||
+                  viewersById[v.viewerId].image ||
+                  null,
               }
             : null;
 

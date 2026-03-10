@@ -464,7 +464,7 @@ export default function PostViewPage({ initialPost, notFound }) {
 
     const params = new URLSearchParams();
     params.set('userId', targetUserId);
-    router.push(withChrome(`/member-profile?${params.toString()}`));
+    router.push(withChrome(`/profile/${post.authorSlug}`));
   };
 
   const handleConnect = async (targetUserId, key) => {
