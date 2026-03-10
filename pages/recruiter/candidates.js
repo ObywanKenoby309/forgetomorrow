@@ -234,6 +234,148 @@ function TargetingDrawer({
   );
 }
 
+// ─── MOBILE COMPARE SHEET ─────────────────────────────────────────────────
+// [FIX 3] Replaces the side-by-side WHY compare drawer on narrow screens.
+// Shows A and B as switchable tabs inside a bottom sheet.
+function MobileCompareSheet({ open, onClose, left, right, onViewLeft, onViewRight, mode }) {
+  const [tab, setTab] = useState("a");
+
+  useEffect(() => {
+    if (!open) return;
+    const handler = (e) => { if (e.key === "Escape") onClose(); };
+    document.addEventListener("keydown", handler);
+    return () => document.removeEventListener("keydown", handler);
+  }, [open, onClose]);
+
+  useEffect(() => {
+    document.body.style.overflow = open ? "hidden" : "";
+    return () => { document.body.style.overflow = ""; };
+  }, [open]);
+
+  if (!open) return null;
+
+  const activeCandidate = tab === "a" ? left?.candidate : right?.candidate;
+  const activeExplain   = tab === "a" ? left?.explain   : right?.explain;
+  const onViewActive    = tab === "a" ? onViewLeft       : onViewRight;
+
+  const score = typeof activeExplain?.score === "number" ? activeExplain.score : null;
+  const reasons = Array.isArray(activeExplain?.reasons) ? activeExplain.reasons : [];
+  const scoreColor = score === null ? "#94a3b8" : score >= 80 ? "#16a34a" : score >= 60 ? "#d97706" : "#dc2626";
+
+  return (
+    <>
+      {/* Backdrop */}
+      <div
+        onClick={onClose}
+        style={{ position: "fixed", inset: 0, zIndex: 98, background: "rgba(10,12,18,0.55)", backdropFilter: "blur(4px)" }}
+      />
+      {/* Sheet */}
+      <div
+        style={{
+          position: "fixed", left: 0, right: 0, bottom: 0, zIndex: 99,
+          background: "rgba(252,252,253,0.98)",
+          backdropFilter: "blur(24px)",
+          borderTopLeftRadius: 20, borderTopRightRadius: 20,
+          border: "1px solid rgba(255,255,255,0.40)",
+          boxShadow: "0 -16px 60px rgba(0,0,0,0.22)",
+          maxHeight: "88vh",
+          display: "flex", flexDirection: "column",
+        }}
+      >
+        {/* Drag handle */}
+        <div style={{ display: "flex", justifyContent: "center", padding: "10px 0 4px" }}>
+          <div style={{ width: 36, height: 4, borderRadius: 2, background: "rgba(0,0,0,0.14)" }} />
+        </div>
+
+        {/* Header */}
+        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "0 16px 10px" }}>
+          <span style={{ fontSize: 13, fontWeight: 700, color: "#0f172a" }}>Compare Candidates</span>
+          <button
+            onClick={onClose}
+            style={{ width: 28, height: 28, borderRadius: 8, border: "1px solid rgba(0,0,0,0.08)", background: "transparent", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", color: "#64748b" }}
+          >
+            <svg width="12" height="12" viewBox="0 0 14 14" fill="none">
+              <path d="M11 3L3 11M3 3l8 8" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round"/>
+            </svg>
+          </button>
+        </div>
+
+        {/* Candidate tabs */}
+        <div style={{ display: "flex", borderBottom: "1px solid rgba(0,0,0,0.07)", paddingLeft: 16, paddingRight: 16, gap: 4 }}>
+          {[{ key: "a", candidate: left?.candidate }, { key: "b", candidate: right?.candidate }].map(({ key, candidate }) => (
+            <button
+              key={key}
+              onClick={() => setTab(key)}
+              style={{
+                flex: 1, padding: "10px 8px", fontSize: 13,
+                fontWeight: tab === key ? 700 : 500,
+                color: tab === key ? "#FF7043" : "#64748b",
+                background: "transparent", border: "none",
+                borderBottom: tab === key ? "2px solid #FF7043" : "2px solid transparent",
+                cursor: "pointer", transition: "all 0.15s",
+                whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis", textAlign: "left",
+              }}
+            >
+              {candidate?.name || `Candidate ${key.toUpperCase()}`}
+            </button>
+          ))}
+        </div>
+
+        {/* Scrollable content */}
+        <div style={{ flex: 1, overflowY: "auto", WebkitOverflowScrolling: "touch", padding: "16px" }}>
+          {/* Candidate header row */}
+          {activeCandidate && (
+            <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 16 }}>
+              <div style={{ width: 44, height: 44, borderRadius: "50%", flexShrink: 0, background: "linear-gradient(135deg,#FF7043,#FF8A65)", display: "flex", alignItems: "center", justifyContent: "center", color: "white", fontWeight: 700, fontSize: 16 }}>
+                {(activeCandidate.name || "?")[0].toUpperCase()}
+              </div>
+              <div style={{ flex: 1, minWidth: 0 }}>
+                <div style={{ fontWeight: 700, fontSize: 15, color: "#0f172a", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{activeCandidate.name}</div>
+                <div style={{ fontSize: 12, color: "#64748b", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{activeCandidate.title || activeCandidate.currentTitle || ""}</div>
+                {activeCandidate.location && <div style={{ fontSize: 11, color: "#94a3b8", marginTop: 1 }}>📍 {activeCandidate.location}</div>}
+              </div>
+              {score !== null && (
+                <div style={{ textAlign: "center", flexShrink: 0 }}>
+                  <div style={{ fontSize: 22, fontWeight: 800, color: scoreColor, lineHeight: 1 }}>{score}</div>
+                  <div style={{ fontSize: 10, color: "#94a3b8", marginTop: 2 }}>match</div>
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* WHY reasons */}
+          {reasons.length > 0 ? (
+            <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+              {reasons.slice(0, mode === "full" ? 8 : 3).map((r, i) => (
+                <div key={i} style={{ background: "rgba(255,255,255,0.80)", border: "1px solid rgba(0,0,0,0.06)", borderRadius: 12, padding: "12px 14px" }}>
+                  <div style={{ fontSize: 12, fontWeight: 600, color: "#0f172a", marginBottom: 6 }}>{r.requirement}</div>
+                  {Array.isArray(r.evidence) && r.evidence.slice(0, 3).map((ev, j) => (
+                    <div key={j} style={{ fontSize: 11, color: "#475569", paddingLeft: 8, borderLeft: "2px solid rgba(255,112,67,0.25)", marginTop: 4 }}>
+                      {ev.text}{ev.source && <span style={{ color: "#94a3b8", marginLeft: 4 }}>· {ev.source}</span>}
+                    </div>
+                  ))}
+                </div>
+              ))}
+            </div>
+          ) : (
+            <div style={{ fontSize: 13, color: "#94a3b8", textAlign: "center", paddingTop: 24 }}>No explainability data available.</div>
+          )}
+
+          {/* View full profile CTA */}
+          {activeCandidate && (
+            <button
+              onClick={() => { onViewActive?.(); onClose(); }}
+              style={{ marginTop: 20, width: "100%", padding: "12px", borderRadius: 12, border: "none", background: "linear-gradient(135deg,#FF7043,#FF8A65)", color: "white", fontSize: 13, fontWeight: 700, cursor: "pointer" }}
+            >
+              View {activeCandidate.name?.split(" ")[0] || "Profile"}'s Full Profile
+            </button>
+          )}
+        </div>
+      </div>
+    </>
+  );
+}
+
 // ─── ACTIVE FILTER CHIPS ───────────────────────────────────────────────────
 function FilterChip({ label, onRemove }) {
   return (
@@ -281,7 +423,9 @@ function FilterChip({ label, onRemove }) {
 }
 
 // ─── COMMAND BAR ──────────────────────────────────────────────────────────
-// The heartbeat of the page. Three search inputs + targeting trigger + status.
+// [FIX 1] Mobile layout: row 1 = [name | Filters btn], row 2 = [location].
+//         Advanced query hidden on mobile (Enterprise-only, not critical on narrow screens).
+//         Desktop: original three-input + Targeting button inline.
 function CommandBar({
   nameQuery, setNameQuery,
   locQuery, setLocQuery,
@@ -298,202 +442,204 @@ function CommandBar({
   onClearTargeting,
   onClearAll,
   onRemoveChip,
+  isMobile, // [FIX 1]
 }) {
   const hasSearch = nameQuery || locQuery || boolQuery;
+
+  // Shared targeting button — used in both mobile row-1 and desktop single-row
+  const TargetingBtn = () => (
+    <button
+      onClick={onOpenTargeting}
+      style={{
+        display: "flex",
+        alignItems: "center",
+        gap: 7,
+        padding: isMobile ? "9px 14px" : "8px 14px",
+        borderRadius: 10,
+        border: activeFilterCount > 0
+          ? "1px solid rgba(255,112,67,0.35)"
+          : "1px solid rgba(0,0,0,0.10)",
+        background: activeFilterCount > 0
+          ? "linear-gradient(135deg,rgba(255,112,67,0.10),rgba(255,138,101,0.06))"
+          : "rgba(255,255,255,0.60)",
+        cursor: "pointer",
+        fontSize: 13,
+        fontWeight: 600,
+        color: activeFilterCount > 0 ? "#FF7043" : "#475569",
+        whiteSpace: "nowrap",
+        transition: "all 0.15s",
+        flexShrink: 0,
+      }}
+      onMouseEnter={(e) => { e.currentTarget.style.background = "rgba(255,112,67,0.08)"; e.currentTarget.style.borderColor = "rgba(255,112,67,0.30)"; e.currentTarget.style.color = "#FF7043"; }}
+      onMouseLeave={(e) => {
+        if (activeFilterCount > 0) {
+          e.currentTarget.style.background = "linear-gradient(135deg,rgba(255,112,67,0.10),rgba(255,138,101,0.06))";
+          e.currentTarget.style.borderColor = "rgba(255,112,67,0.35)";
+          e.currentTarget.style.color = "#FF7043";
+        } else {
+          e.currentTarget.style.background = "rgba(255,255,255,0.60)";
+          e.currentTarget.style.borderColor = "rgba(0,0,0,0.10)";
+          e.currentTarget.style.color = "#475569";
+        }
+      }}
+    >
+      <svg width="14" height="14" viewBox="0 0 16 16" fill="none">
+        <circle cx="8" cy="8" r="6.5" stroke="currentColor" strokeWidth="1.5"/>
+        <circle cx="8" cy="8" r="3.5" stroke="currentColor" strokeWidth="1.5"/>
+        <circle cx="8" cy="8" r="1" fill="currentColor"/>
+      </svg>
+      {isMobile ? "Filters" : "Targeting"}
+      {activeFilterCount > 0 && (
+        <span
+          style={{
+            display: "inline-flex",
+            alignItems: "center",
+            justifyContent: "center",
+            width: 18,
+            height: 18,
+            borderRadius: "50%",
+            background: "#FF7043",
+            color: "white",
+            fontSize: 10,
+            fontWeight: 700,
+          }}
+        >
+          {activeFilterCount}
+        </span>
+      )}
+    </button>
+  );
+
+  // Shared input focus/blur handlers
+  const onFocus = (e) => { e.target.style.borderColor = "#FF7043"; e.target.style.boxShadow = "0 0 0 3px rgba(255,112,67,0.12)"; };
+  const onBlur  = (e) => { e.target.style.borderColor = "rgba(0,0,0,0.08)"; e.target.style.boxShadow = "none"; };
 
   return (
     <div style={{ marginBottom: 16 }}>
       {/* Main bar */}
       <div
         style={{
-          display: "flex",
-          alignItems: "stretch",
-          gap: 8,
           background: "rgba(255,255,255,0.80)",
           backdropFilter: "blur(16px)",
           border: "1px solid rgba(255,255,255,0.50)",
           borderRadius: 16,
           padding: "10px 12px",
           boxShadow: "0 4px 24px rgba(0,0,0,0.08), 0 1px 3px rgba(0,0,0,0.05)",
-          flexWrap: "wrap",
         }}
       >
-        {/* Search by name/role */}
-        <div style={{ flex: "2 1 160px", minWidth: 0, position: "relative" }}>
-          <div style={{ position: "absolute", left: 10, top: "50%", transform: "translateY(-50%)", color: "#94a3b8", pointerEvents: "none" }}>
-            <svg width="14" height="14" viewBox="0 0 16 16" fill="none">
-              <circle cx="7" cy="7" r="5.5" stroke="currentColor" strokeWidth="1.6"/>
-              <path d="M11 11l3 3" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round"/>
-            </svg>
-          </div>
-          <input
-            type="text"
-            placeholder="Name or role..."
-            value={nameQuery}
-            onChange={(e) => setNameQuery(e.target.value)}
-            style={{
-              width: "100%",
-              paddingLeft: 32,
-              paddingRight: 10,
-              paddingTop: 8,
-              paddingBottom: 8,
-              border: "1px solid rgba(0,0,0,0.08)",
-              borderRadius: 10,
-              fontSize: 13,
-              background: "rgba(255,255,255,0.70)",
-              color: "#0f172a",
-              outline: "none",
-              transition: "border-color 0.15s, box-shadow 0.15s",
-            }}
-            onFocus={(e) => { e.target.style.borderColor = "#FF7043"; e.target.style.boxShadow = "0 0 0 3px rgba(255,112,67,0.12)"; }}
-            onBlur={(e) => { e.target.style.borderColor = "rgba(0,0,0,0.08)"; e.target.style.boxShadow = "none"; }}
-          />
-        </div>
-
-        {/* Location */}
-        <div style={{ flex: "1.5 1 120px", minWidth: 0, position: "relative" }}>
-          <div style={{ position: "absolute", left: 10, top: "50%", transform: "translateY(-50%)", color: "#94a3b8", pointerEvents: "none" }}>
-            <svg width="13" height="13" viewBox="0 0 16 16" fill="none">
-              <path d="M8 1.5C5.51 1.5 3.5 3.51 3.5 6c0 3.5 4.5 8.5 4.5 8.5s4.5-5 4.5-8.5c0-2.49-2.01-4.5-4.5-4.5z" stroke="currentColor" strokeWidth="1.5"/>
-              <circle cx="8" cy="6" r="1.5" stroke="currentColor" strokeWidth="1.3"/>
-            </svg>
-          </div>
-          <input
-            type="text"
-            placeholder="Location..."
-            value={locQuery}
-            onChange={(e) => setLocQuery(e.target.value)}
-            style={{
-              width: "100%",
-              paddingLeft: 30,
-              paddingRight: 10,
-              paddingTop: 8,
-              paddingBottom: 8,
-              border: "1px solid rgba(0,0,0,0.08)",
-              borderRadius: 10,
-              fontSize: 13,
-              background: "rgba(255,255,255,0.70)",
-              color: "#0f172a",
-              outline: "none",
-              transition: "border-color 0.15s, box-shadow 0.15s",
-            }}
-            onFocus={(e) => { e.target.style.borderColor = "#FF7043"; e.target.style.boxShadow = "0 0 0 3px rgba(255,112,67,0.12)"; }}
-            onBlur={(e) => { e.target.style.borderColor = "rgba(0,0,0,0.08)"; e.target.style.boxShadow = "none"; }}
-          />
-        </div>
-
-        {/* Advanced / Enterprise query */}
-        <div style={{ flex: "2 1 160px", minWidth: 0 }}>
-          {isEnterprise ? (
-            <input
-              type="text"
-              placeholder='Advanced: ("CSM" OR "CS Manager") AND SaaS'
-              value={boolQuery}
-              onChange={(e) => setBoolQuery(e.target.value)}
-              style={{
-                width: "100%",
-                paddingLeft: 12,
-                paddingRight: 10,
-                paddingTop: 8,
-                paddingBottom: 8,
-                border: "1px solid rgba(0,0,0,0.08)",
-                borderRadius: 10,
-                fontSize: 12,
-                background: "rgba(255,255,255,0.70)",
-                color: "#0f172a",
-                outline: "none",
-                transition: "border-color 0.15s, box-shadow 0.15s",
-              }}
-              onFocus={(e) => { e.target.style.borderColor = "#FF7043"; e.target.style.boxShadow = "0 0 0 3px rgba(255,112,67,0.12)"; }}
-              onBlur={(e) => { e.target.style.borderColor = "rgba(0,0,0,0.08)"; e.target.style.boxShadow = "none"; }}
-            />
-          ) : (
-            <FeatureLock label="Advanced query">
-              <div
-                style={{
-                  width: "100%",
-                  paddingLeft: 12,
-                  paddingRight: 10,
-                  paddingTop: 8,
-                  paddingBottom: 8,
-                  border: "1px dashed rgba(0,0,0,0.12)",
-                  borderRadius: 10,
-                  fontSize: 12,
-                  background: "rgba(0,0,0,0.03)",
-                  color: "#94a3b8",
-                  cursor: "not-allowed",
-                }}
-              >
-                Advanced query — Enterprise only
+        {isMobile ? (
+          /* ── MOBILE: two-row layout ── */
+          <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+            {/* Row 1: name/role + Filters button */}
+            <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+              <div style={{ flex: 1, minWidth: 0, position: "relative" }}>
+                <div style={{ position: "absolute", left: 10, top: "50%", transform: "translateY(-50%)", color: "#94a3b8", pointerEvents: "none" }}>
+                  <svg width="14" height="14" viewBox="0 0 16 16" fill="none">
+                    <circle cx="7" cy="7" r="5.5" stroke="currentColor" strokeWidth="1.6"/>
+                    <path d="M11 11l3 3" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round"/>
+                  </svg>
+                </div>
+                <input
+                  type="text"
+                  placeholder="Name or role..."
+                  value={nameQuery}
+                  onChange={(e) => setNameQuery(e.target.value)}
+                  style={{ width: "100%", paddingLeft: 32, paddingRight: 10, paddingTop: 9, paddingBottom: 9, border: "1px solid rgba(0,0,0,0.08)", borderRadius: 10, fontSize: 14, background: "rgba(255,255,255,0.70)", color: "#0f172a", outline: "none", boxSizing: "border-box" }}
+                  onFocus={onFocus}
+                  onBlur={onBlur}
+                />
               </div>
-            </FeatureLock>
-          )}
-        </div>
+              <TargetingBtn />
+            </div>
+            {/* Row 2: location */}
+            <div style={{ position: "relative" }}>
+              <div style={{ position: "absolute", left: 10, top: "50%", transform: "translateY(-50%)", color: "#94a3b8", pointerEvents: "none" }}>
+                <svg width="13" height="13" viewBox="0 0 16 16" fill="none">
+                  <path d="M8 1.5C5.51 1.5 3.5 3.51 3.5 6c0 3.5 4.5 8.5 4.5 8.5s4.5-5 4.5-8.5c0-2.49-2.01-4.5-4.5-4.5z" stroke="currentColor" strokeWidth="1.5"/>
+                  <circle cx="8" cy="6" r="1.5" stroke="currentColor" strokeWidth="1.3"/>
+                </svg>
+              </div>
+              <input
+                type="text"
+                placeholder="Location..."
+                value={locQuery}
+                onChange={(e) => setLocQuery(e.target.value)}
+                style={{ width: "100%", paddingLeft: 30, paddingRight: 10, paddingTop: 9, paddingBottom: 9, border: "1px solid rgba(0,0,0,0.08)", borderRadius: 10, fontSize: 14, background: "rgba(255,255,255,0.70)", color: "#0f172a", outline: "none", boxSizing: "border-box" }}
+                onFocus={onFocus}
+                onBlur={onBlur}
+              />
+            </div>
+          </div>
+        ) : (
+          /* ── DESKTOP: original single-row layout ── */
+          <div style={{ display: "flex", alignItems: "stretch", gap: 8, flexWrap: "wrap" }}>
+            {/* Search by name/role */}
+            <div style={{ flex: "2 1 160px", minWidth: 0, position: "relative" }}>
+              <div style={{ position: "absolute", left: 10, top: "50%", transform: "translateY(-50%)", color: "#94a3b8", pointerEvents: "none" }}>
+                <svg width="14" height="14" viewBox="0 0 16 16" fill="none">
+                  <circle cx="7" cy="7" r="5.5" stroke="currentColor" strokeWidth="1.6"/>
+                  <path d="M11 11l3 3" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round"/>
+                </svg>
+              </div>
+              <input
+                type="text"
+                placeholder="Name or role..."
+                value={nameQuery}
+                onChange={(e) => setNameQuery(e.target.value)}
+                style={{ width: "100%", paddingLeft: 32, paddingRight: 10, paddingTop: 8, paddingBottom: 8, border: "1px solid rgba(0,0,0,0.08)", borderRadius: 10, fontSize: 13, background: "rgba(255,255,255,0.70)", color: "#0f172a", outline: "none", transition: "border-color 0.15s, box-shadow 0.15s" }}
+                onFocus={onFocus}
+                onBlur={onBlur}
+              />
+            </div>
 
-        {/* Divider */}
-        <div style={{ width: 1, background: "rgba(0,0,0,0.08)", margin: "2px 2px", flexShrink: 0 }} />
+            {/* Location */}
+            <div style={{ flex: "1.5 1 120px", minWidth: 0, position: "relative" }}>
+              <div style={{ position: "absolute", left: 10, top: "50%", transform: "translateY(-50%)", color: "#94a3b8", pointerEvents: "none" }}>
+                <svg width="13" height="13" viewBox="0 0 16 16" fill="none">
+                  <path d="M8 1.5C5.51 1.5 3.5 3.51 3.5 6c0 3.5 4.5 8.5 4.5 8.5s4.5-5 4.5-8.5c0-2.49-2.01-4.5-4.5-4.5z" stroke="currentColor" strokeWidth="1.5"/>
+                  <circle cx="8" cy="6" r="1.5" stroke="currentColor" strokeWidth="1.3"/>
+                </svg>
+              </div>
+              <input
+                type="text"
+                placeholder="Location..."
+                value={locQuery}
+                onChange={(e) => setLocQuery(e.target.value)}
+                style={{ width: "100%", paddingLeft: 30, paddingRight: 10, paddingTop: 8, paddingBottom: 8, border: "1px solid rgba(0,0,0,0.08)", borderRadius: 10, fontSize: 13, background: "rgba(255,255,255,0.70)", color: "#0f172a", outline: "none", transition: "border-color 0.15s, box-shadow 0.15s" }}
+                onFocus={onFocus}
+                onBlur={onBlur}
+              />
+            </div>
 
-        {/* Targeting trigger button */}
-        <button
-          onClick={onOpenTargeting}
-          style={{
-            display: "flex",
-            alignItems: "center",
-            gap: 7,
-            padding: "8px 14px",
-            borderRadius: 10,
-            border: activeFilterCount > 0
-              ? "1px solid rgba(255,112,67,0.35)"
-              : "1px solid rgba(0,0,0,0.10)",
-            background: activeFilterCount > 0
-              ? "linear-gradient(135deg,rgba(255,112,67,0.10),rgba(255,138,101,0.06))"
-              : "rgba(255,255,255,0.60)",
-            cursor: "pointer",
-            fontSize: 13,
-            fontWeight: 600,
-            color: activeFilterCount > 0 ? "#FF7043" : "#475569",
-            whiteSpace: "nowrap",
-            transition: "all 0.15s",
-            flexShrink: 0,
-          }}
-          onMouseEnter={(e) => { e.currentTarget.style.background = "rgba(255,112,67,0.08)"; e.currentTarget.style.borderColor = "rgba(255,112,67,0.30)"; e.currentTarget.style.color = "#FF7043"; }}
-          onMouseLeave={(e) => {
-            if (activeFilterCount > 0) {
-              e.currentTarget.style.background = "linear-gradient(135deg,rgba(255,112,67,0.10),rgba(255,138,101,0.06))";
-              e.currentTarget.style.borderColor = "rgba(255,112,67,0.35)";
-              e.currentTarget.style.color = "#FF7043";
-            } else {
-              e.currentTarget.style.background = "rgba(255,255,255,0.60)";
-              e.currentTarget.style.borderColor = "rgba(0,0,0,0.10)";
-              e.currentTarget.style.color = "#475569";
-            }
-          }}
-        >
-          <svg width="14" height="14" viewBox="0 0 16 16" fill="none">
-            <circle cx="8" cy="8" r="6.5" stroke="currentColor" strokeWidth="1.5"/>
-            <circle cx="8" cy="8" r="3.5" stroke="currentColor" strokeWidth="1.5"/>
-            <circle cx="8" cy="8" r="1" fill="currentColor"/>
-          </svg>
-          Targeting
-          {activeFilterCount > 0 && (
-            <span
-              style={{
-                display: "inline-flex",
-                alignItems: "center",
-                justifyContent: "center",
-                width: 18,
-                height: 18,
-                borderRadius: "50%",
-                background: "#FF7043",
-                color: "white",
-                fontSize: 10,
-                fontWeight: 700,
-              }}
-            >
-              {activeFilterCount}
-            </span>
-          )}
-        </button>
+            {/* Advanced / Enterprise query */}
+            <div style={{ flex: "2 1 160px", minWidth: 0 }}>
+              {isEnterprise ? (
+                <input
+                  type="text"
+                  placeholder='Advanced: ("CSM" OR "CS Manager") AND SaaS'
+                  value={boolQuery}
+                  onChange={(e) => setBoolQuery(e.target.value)}
+                  style={{ width: "100%", paddingLeft: 12, paddingRight: 10, paddingTop: 8, paddingBottom: 8, border: "1px solid rgba(0,0,0,0.08)", borderRadius: 10, fontSize: 12, background: "rgba(255,255,255,0.70)", color: "#0f172a", outline: "none", transition: "border-color 0.15s, box-shadow 0.15s" }}
+                  onFocus={onFocus}
+                  onBlur={onBlur}
+                />
+              ) : (
+                <FeatureLock label="Advanced query">
+                  <div
+                    style={{ width: "100%", paddingLeft: 12, paddingRight: 10, paddingTop: 8, paddingBottom: 8, border: "1px dashed rgba(0,0,0,0.12)", borderRadius: 10, fontSize: 12, background: "rgba(0,0,0,0.03)", color: "#94a3b8", cursor: "not-allowed" }}
+                  >
+                    Advanced query — Enterprise only
+                  </div>
+                </FeatureLock>
+              )}
+            </div>
+
+            {/* Divider */}
+            <div style={{ width: 1, background: "rgba(0,0,0,0.08)", margin: "2px 2px", flexShrink: 0 }} />
+
+            <TargetingBtn />
+          </div>
+        )}
       </div>
 
       {/* Status bar + active chips */}
@@ -656,6 +802,15 @@ function Body() {
 
   const [mounted, setMounted] = useState(false);
   useEffect(() => { setMounted(true); }, []);
+
+  // [FIX 1 + FIX 3] Drives two-row command bar and mobile compare sheet
+  const [isMobile, setIsMobile] = useState(false);
+  useEffect(() => {
+    const check = () => setIsMobile(window.innerWidth < 1024);
+    check();
+    window.addEventListener("resize", check);
+    return () => window.removeEventListener("resize", check);
+  }, []);
 
   const [recruiterUserId, setRecruiterUserId] = useState(null);
   useEffect(() => {
@@ -1255,6 +1410,7 @@ function Body() {
         onClearTargeting={clearTargeting}
         onClearAll={clearAll}
         onRemoveChip={removeChipByKey}
+        isMobile={isMobile}
       />
 
       {/* ── TARGETING DRAWER ──────────────────────────────────────── */}
@@ -1306,7 +1462,8 @@ function Body() {
         </GlassPanel>
       ) : (
         <div className="pt-0">
-          <div className="block lg:hidden">
+          {/* [FIX 2] overflow:hidden prevents cards bleeding off right edge on mobile */}
+          <div className="block lg:hidden" style={{ width: "100%", overflowX: "hidden" }}>
             <CandidateList
               candidates={candidates}
               isEnterprise={isEnterprise}
@@ -1373,15 +1530,30 @@ function Body() {
         mode={whyMode}
         onViewCandidate={() => { if (whyCandidate) { setSelected(whyCandidate); setOpen(true); } setWhyOpen(false); }}
       />
-      <WhyCandidateCompareDrawer
-        open={compareOpen}
-        onClose={resetCompare}
-        mode={whyMode}
-        left={{ candidate: compareCandidates?.a, explain: compareExplains?.a }}
-        right={{ candidate: compareCandidates?.b, explain: compareExplains?.b }}
-        onViewLeft={() => { if (compareCandidates?.a) { setSelected(compareCandidates.a); setOpen(true); } }}
-        onViewRight={() => { if (compareCandidates?.b) { setSelected(compareCandidates.b); setOpen(true); } }}
-      />
+
+      {/* [FIX 3] Tabbed bottom sheet on mobile; side-by-side drawer on desktop */}
+      {isMobile ? (
+        <MobileCompareSheet
+          open={compareOpen}
+          onClose={resetCompare}
+          mode={whyMode}
+          left={{ candidate: compareCandidates?.a, explain: compareExplains?.a }}
+          right={{ candidate: compareCandidates?.b, explain: compareExplains?.b }}
+          onViewLeft={() => { if (compareCandidates?.a) { setSelected(compareCandidates.a); setOpen(true); } }}
+          onViewRight={() => { if (compareCandidates?.b) { setSelected(compareCandidates.b); setOpen(true); } }}
+        />
+      ) : (
+        <WhyCandidateCompareDrawer
+          open={compareOpen}
+          onClose={resetCompare}
+          mode={whyMode}
+          left={{ candidate: compareCandidates?.a, explain: compareExplains?.a }}
+          right={{ candidate: compareCandidates?.b, explain: compareExplains?.b }}
+          onViewLeft={() => { if (compareCandidates?.a) { setSelected(compareCandidates.a); setOpen(true); } }}
+          onViewRight={() => { if (compareCandidates?.b) { setSelected(compareCandidates.b); setOpen(true); } }}
+        />
+      )}
+
       <PersonaChoiceModal
         open={personaOpen}
         targetName={personaCandidate?.name}
