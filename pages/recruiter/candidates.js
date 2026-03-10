@@ -226,6 +226,7 @@ function TargetingDrawer({
             onClearTargeting={onClearTargeting}
             manualSearching={manualSearching}
             isLoading={isLoading}
+            defaultExpanded={true}
           />
         </div>
       </div>
