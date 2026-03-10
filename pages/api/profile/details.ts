@@ -16,6 +16,9 @@ export const config = {
 const WELCOME_DRAFT_KEY = "profile_welcome_dismissed_v1";
 
 type ProfileDetails = {
+  // ✅ FIX: slug added so sidebar Profile link resolves to /profile/[slug]
+  slug: string | null;
+
   // Header / identity
   name: string | null;
   headline: string | null;
@@ -103,6 +106,9 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         prisma.user.findUnique({
           where: { id: userId },
           select: {
+            // ✅ FIX: slug now selected so sidebar Profile link resolves correctly
+            slug: true,
+
             name: true,
             headline: true,
             location: true,
@@ -134,6 +140,9 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
       const details: ProfileDetails | null = record
         ? {
+            // ✅ FIX: slug included in response
+            slug: record.slug ?? null,
+
             name: record.name,
             headline: record.headline,
             location: record.location,
@@ -187,6 +196,10 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       if (body.hobbiesJson !== undefined) data.hobbiesJson = body.hobbiesJson;
       if (body.educationJson !== undefined) data.educationJson = body.educationJson;
 
+      // Note: slug is intentionally NOT patchable here.
+      // Slug changes (if ever allowed) should go through a dedicated endpoint
+      // with uniqueness checks and redirect handling.
+
       // Persist user fields first (only if something actually changed)
       const updatedUser =
         Object.keys(data).length > 0
@@ -194,6 +207,8 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
               where: { id: userId },
               data,
               select: {
+                slug: true,
+
                 name: true,
                 headline: true,
                 location: true,
@@ -213,6 +228,8 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
           : await prisma.user.findUnique({
               where: { id: userId },
               select: {
+                slug: true,
+
                 name: true,
                 headline: true,
                 location: true,
@@ -264,6 +281,8 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       });
 
       const details: ProfileDetails = {
+        slug: (updatedUser as any).slug ?? null,
+
         name: updatedUser.name ?? null,
         headline: updatedUser.headline ?? null,
         location: updatedUser.location ?? null,
