@@ -149,8 +149,8 @@ export default function CandidateTargetingPanel({
             </label>
             <input
               type="text"
-              value={filters?.location || ""}
-              onChange={(e) => setFilters?.setLocation?.(e.target.value)}
+              value={locationFilter || ""}
+			  onChange={(e) => setLocationFilter?.(e.target.value)}
               placeholder="e.g., Nashville, TN"
               className="w-full rounded-xl border border-white/40 bg-white/70 px-3 py-2 text-xs sm:text-sm shadow-sm focus:outline-none focus:ring-2 focus:ring-[#FF7043]"
             />
