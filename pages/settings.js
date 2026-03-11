@@ -330,20 +330,29 @@ const CARDS = [
 ];
 
 function Carousel({ plan, onManageBilling }) {
-  const [active, setActive]     = useState(0);
-  const [sliding, setSliding]   = useState(false);
+  const [active, setActive] = useState(0);
+  const [sliding, setSliding] = useState(false);
   const [direction, setDirection] = useState(null); // 'left' | 'right'
   const [displayed, setDisplayed] = useState(0);
   const touchStartX = useRef(null);
 
-  function goTo(next) {
-    if (sliding || next === active) return;
-    const dir = next > active ? 'left' : 'right';
+  function wrapIndex(idx) {
+    return (idx + CARDS.length) % CARDS.length;
+  }
+
+  function goTo(next, dirOverride = null) {
+    const wrappedNext = wrapIndex(next);
+    if (sliding || wrappedNext === active) return;
+
+    let dir = dirOverride;
+    if (!dir) dir = wrappedNext > active ? 'left' : 'right';
+
     setDirection(dir);
     setSliding(true);
+
     setTimeout(() => {
-      setDisplayed(next);
-      setActive(next);
+      setDisplayed(wrappedNext);
+      setActive(wrappedNext);
       setDirection(dir === 'left' ? 'from-right' : 'from-left');
       setTimeout(() => {
         setSliding(false);
@@ -352,22 +361,55 @@ function Carousel({ plan, onManageBilling }) {
     }, 280);
   }
 
-  function onTouchStart(e) { touchStartX.current = e.touches[0].clientX; }
+  function onTouchStart(e) {
+    touchStartX.current = e.touches[0].clientX;
+  }
+
   function onTouchEnd(e) {
     if (touchStartX.current === null) return;
     const dx = touchStartX.current - e.changedTouches[0].clientX;
     touchStartX.current = null;
     if (Math.abs(dx) < 44) return;
-    if (dx > 0 && active < CARDS.length - 1) goTo(active + 1);
-    if (dx < 0 && active > 0) goTo(active - 1);
+    if (dx > 0) goTo(active + 1, 'left');
+    if (dx < 0) goTo(active - 1, 'right');
   }
 
   const getSlideStyle = () => {
-    if (!sliding && !direction) return { transform: 'translateX(0)', opacity: 1, transition: 'transform 0.28s cubic-bezier(0.4,0,0.2,1), opacity 0.28s ease' };
-    if (direction === 'left')       return { transform: 'translateX(-48px)', opacity: 0, transition: 'transform 0.28s cubic-bezier(0.4,0,0.2,1), opacity 0.28s ease' };
-    if (direction === 'right')      return { transform: 'translateX(48px)',  opacity: 0, transition: 'transform 0.28s cubic-bezier(0.4,0,0.2,1), opacity 0.28s ease' };
-    if (direction === 'from-right') return { transform: 'translateX(0)',     opacity: 1, transition: 'transform 0.28s cubic-bezier(0.4,0,0.2,1), opacity 0.28s ease' };
-    if (direction === 'from-left')  return { transform: 'translateX(0)',     opacity: 1, transition: 'transform 0.28s cubic-bezier(0.4,0,0.2,1), opacity 0.28s ease' };
+    if (!sliding && !direction) {
+      return {
+        transform: 'translateX(0)',
+        opacity: 1,
+        transition: 'transform 0.28s cubic-bezier(0.4,0,0.2,1), opacity 0.28s ease',
+      };
+    }
+    if (direction === 'left') {
+      return {
+        transform: 'translateX(-48px)',
+        opacity: 0,
+        transition: 'transform 0.28s cubic-bezier(0.4,0,0.2,1), opacity 0.28s ease',
+      };
+    }
+    if (direction === 'right') {
+      return {
+        transform: 'translateX(48px)',
+        opacity: 0,
+        transition: 'transform 0.28s cubic-bezier(0.4,0,0.2,1), opacity 0.28s ease',
+      };
+    }
+    if (direction === 'from-right') {
+      return {
+        transform: 'translateX(0)',
+        opacity: 1,
+        transition: 'transform 0.28s cubic-bezier(0.4,0,0.2,1), opacity 0.28s ease',
+      };
+    }
+    if (direction === 'from-left') {
+      return {
+        transform: 'translateX(0)',
+        opacity: 1,
+        transition: 'transform 0.28s cubic-bezier(0.4,0,0.2,1), opacity 0.28s ease',
+      };
+    }
     return {};
   };
 
@@ -387,14 +429,14 @@ function Carousel({ plan, onManageBilling }) {
         <button
           type="button"
           aria-label="Previous"
-          onClick={() => active > 0 && goTo(active - 1)}
+          onClick={() => goTo(active - 1, 'right')}
           style={{
             flexShrink: 0,
             width: 36, height: 36, borderRadius: '50%',
-            background: active === 0 ? 'rgba(0,0,0,0.04)' : 'rgba(255,255,255,0.58)',
+            background: 'rgba(255,255,255,0.58)',
             border: '1px solid rgba(255,255,255,0.16)',
-            color: active === 0 ? '#7E8FA1' : '#1C2A38',
-            cursor: active === 0 ? 'default' : 'pointer',
+            color: '#1C2A38',
+            cursor: 'pointer',
             fontSize: 18, display: 'flex', alignItems: 'center', justifyContent: 'center',
             transition: 'all 0.18s', backdropFilter: 'blur(8px)',
             WebkitBackdropFilter: 'blur(8px)',
@@ -406,7 +448,7 @@ function Carousel({ plan, onManageBilling }) {
           onTouchStart={onTouchStart}
           onTouchEnd={onTouchEnd}
         >
-          <div style={{ ...getSlideStyle(), paddingRight: 32 }}>
+          <div style={{ ...getSlideStyle(), paddingLeft: 32, paddingRight: 32 }}>
             <div style={{
               ...GLASS,
               padding: '22px 24px',
@@ -430,34 +472,46 @@ function Carousel({ plan, onManageBilling }) {
             </div>
           </div>
 
-          {active < CARDS.length - 1 && (
-            <div
-              aria-hidden="true"
-              style={{
-                position: 'absolute', top: 0, right: 0, bottom: 0, width: 28,
-                background: 'rgba(255,255,255,0.30)',
-                backdropFilter: 'blur(6px)',
-                WebkitBackdropFilter: 'blur(6px)',
-                borderRadius: '0 16px 16px 0',
-                border: '1px solid rgba(255,255,255,0.10)',
-                borderLeft: 'none',
-                pointerEvents: 'none',
-              }}
-            />
-          )}
+          <div
+            aria-hidden="true"
+            style={{
+              position: 'absolute', top: 0, left: 0, bottom: 0, width: 28,
+              background: 'rgba(255,255,255,0.30)',
+              backdropFilter: 'blur(6px)',
+              WebkitBackdropFilter: 'blur(6px)',
+              borderRadius: '16px 0 0 16px',
+              border: '1px solid rgba(255,255,255,0.10)',
+              borderRight: 'none',
+              pointerEvents: 'none',
+            }}
+          />
+
+          <div
+            aria-hidden="true"
+            style={{
+              position: 'absolute', top: 0, right: 0, bottom: 0, width: 28,
+              background: 'rgba(255,255,255,0.30)',
+              backdropFilter: 'blur(6px)',
+              WebkitBackdropFilter: 'blur(6px)',
+              borderRadius: '0 16px 16px 0',
+              border: '1px solid rgba(255,255,255,0.10)',
+              borderLeft: 'none',
+              pointerEvents: 'none',
+            }}
+          />
         </div>
 
         <button
           type="button"
           aria-label="Next"
-          onClick={() => active < CARDS.length - 1 && goTo(active + 1)}
+          onClick={() => goTo(active + 1, 'left')}
           style={{
             flexShrink: 0,
             width: 36, height: 36, borderRadius: '50%',
-            background: active === CARDS.length - 1 ? 'rgba(0,0,0,0.04)' : 'rgba(255,255,255,0.58)',
+            background: 'rgba(255,255,255,0.58)',
             border: '1px solid rgba(255,255,255,0.16)',
-            color: active === CARDS.length - 1 ? '#7E8FA1' : '#1C2A38',
-            cursor: active === CARDS.length - 1 ? 'default' : 'pointer',
+            color: '#1C2A38',
+            cursor: 'pointer',
             fontSize: 18, display: 'flex', alignItems: 'center', justifyContent: 'center',
             transition: 'all 0.18s', backdropFilter: 'blur(8px)',
             WebkitBackdropFilter: 'blur(8px)',
@@ -471,7 +525,7 @@ function Carousel({ plan, onManageBilling }) {
             key={c.id}
             type="button"
             aria-label={`Go to ${c.label}`}
-            onClick={() => goTo(i)}
+            onClick={() => goTo(i, i > active ? 'left' : 'right')}
             style={{
               width: i === active ? 24 : 8,
               height: 8, borderRadius: 999, border: 'none', padding: 0,
@@ -487,39 +541,59 @@ function Carousel({ plan, onManageBilling }) {
 }
 
 function SettingsContent() {
-  const router   = useRouter();
-  const chrome   = String(router.query.chrome || '').toLowerCase();
+  const router = useRouter();
+  const chrome = String(router.query.chrome || '').toLowerCase();
   const isMobile = useIsMobile(768);
 
   const [meLoading, setMeLoading] = useState(true);
-  const [me, setMe]               = useState(null);
+  const [me, setMe] = useState(null);
 
   useEffect(() => {
     let cancelled = false;
     async function loadMe() {
       try {
-        const res  = await fetch('/api/auth/me', { method: 'GET' });
-        if (!res.ok) { if (!cancelled) { setMe(null); setMeLoading(false); } return; }
+        const res = await fetch('/api/auth/me', { method: 'GET' });
+        if (!res.ok) {
+          if (!cancelled) {
+            setMe(null);
+            setMeLoading(false);
+          }
+          return;
+        }
         const json = await res.json();
-        if (!cancelled) { setMe(json?.user || null); setMeLoading(false); }
-      } catch { if (!cancelled) { setMe(null); setMeLoading(false); } }
+        if (!cancelled) {
+          setMe(json?.user || null);
+          setMeLoading(false);
+        }
+      } catch {
+        if (!cancelled) {
+          setMe(null);
+          setMeLoading(false);
+        }
+      }
     }
     loadMe();
     return () => { cancelled = true; };
   }, []);
 
   const email = useMemo(() => meLoading ? 'Loading…' : (me?.email || 'Unknown'), [meLoading, me]);
-  const name  = useMemo(() => meLoading ? 'Loading…' : (me?.name || me?.fullName || me?.displayName || 'Unnamed'), [meLoading, me]);
-  const plan  = useMemo(() => meLoading ? 'Loading…' : (me?.plan || 'Unknown'), [meLoading, me]);
+  const name = useMemo(() => meLoading ? 'Loading…' : (me?.name || me?.fullName || me?.displayName || 'Unnamed'), [meLoading, me]);
+  const plan = useMemo(() => meLoading ? 'Loading…' : (me?.plan || 'Unknown'), [meLoading, me]);
 
   async function handleManageBilling() {
     try {
-      const res  = await fetch('/api/billing/portal', { method: 'POST' });
-      if (!res.ok) { const d = await res.json().catch(() => ({})); alert(d?.error || 'Could not open billing portal.'); return; }
+      const res = await fetch('/api/billing/portal', { method: 'POST' });
+      if (!res.ok) {
+        const d = await res.json().catch(() => ({}));
+        alert(d?.error || 'Could not open billing portal.');
+        return;
+      }
       const data = await res.json();
       if (data?.url) window.location.href = data.url;
       else { window.location.href = getSupportUrl(); }
-    } catch { window.location.href = getSupportUrl(); }
+    } catch {
+      window.location.href = getSupportUrl();
+    }
   }
 
   function handleLogout() {
@@ -561,10 +635,11 @@ function SettingsContent() {
 
         <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : 'repeat(2,1fr)', gap: isMobile ? 10 : 14 }}>
           <LockedField label="Email" value={email} />
-          <LockedField label="Name"  value={name} />
+          <LockedField label="Name" value={name} />
         </div>
 
-		<p style={{ margin: 0, fontSize: 12, color: '#223043', lineHeight: 1.6, background: 'rgba(255,255,255,0.16)', borderRadius: 8, padding: '10px 14px', border: '1px solid rgba(255,255,255,0.10)' }}>          🔒 To help prevent fraud, your name and email are set during account creation and cannot be changed here. To update either, please{' '}
+        <p style={{ margin: 0, fontSize: 12, color: '#223043', lineHeight: 1.6, background: 'rgba(255,255,255,0.16)', borderRadius: 8, padding: '10px 14px', border: '1px solid rgba(255,255,255,0.10)' }}>
+          🔒 To help prevent fraud, your name and email are set during account creation and cannot be changed here. To update either, please{' '}
           <a href={getSupportUrl()} style={{ color: '#C86A43', textDecoration: 'none', fontWeight: 600 }}>submit a ticket through the Support Center</a>.
         </p>
 
