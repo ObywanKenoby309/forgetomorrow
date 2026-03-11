@@ -1,3 +1,4 @@
+// components/recruiter/RecruiterSidebar.js
 import React from 'react';
 import Link from 'next/link';
 import { usePlan } from '@/context/PlanContext';
@@ -147,8 +148,8 @@ export default function RecruiterSidebar({
   const chromeRecruiter = isEnterprise ? 'recruiter-ent' : 'recruiter-smb';
   const canSeeSettings = can('recruiter.settings.view');
   const resolvedProfileHref = profileSlug
-  ? `/profile/${profileSlug}?chrome=${chromeRecruiter}`
-  : `/profile`;
+    ? `/profile/${profileSlug}?chrome=${chromeRecruiter}`
+    : `/profile/edit?chrome=${chromeRecruiter}`;
 
   const dept = String(department || '').trim().toLowerCase();
   const staffAccess = employee === true && dept.length > 0;
@@ -210,9 +211,6 @@ export default function RecruiterSidebar({
         alignSelf: 'start',
         height: 'fit-content',
 
-        // ✅ FIX: explicit low z-index so the candidate profile modal (z-[100])
-        // always renders on top. Without this, position:sticky creates a stacking
-        // context that competes with the modal overlay.
         zIndex: 10,
 
         background: GLASS_BG,
@@ -224,7 +222,6 @@ export default function RecruiterSidebar({
         WebkitBackdropFilter: GLASS_BLUR,
       }}
     >
-      {/* Profile + Dashboard */}
       <NavItem
         href={resolvedProfileHref}
         label="Profile"
@@ -237,7 +234,6 @@ export default function RecruiterSidebar({
         dot={hasActionUnread}
       />
 
-      {/* Connections */}
       <SectionLabel>Connections</SectionLabel>
       <NavItem
         href={`/seeker/contact-center?chrome=${chromeRecruiter}`}
@@ -258,7 +254,6 @@ export default function RecruiterSidebar({
         badge={counts.feed}
       />
 
-      {/* Seeker Tools (recruiter chrome) */}
       <SectionLabel>Seeker Tools</SectionLabel>
       <NavItem
         href={`/seeker-dashboard?chrome=${chromeRecruiter}`}
@@ -276,7 +271,6 @@ export default function RecruiterSidebar({
         active={active === 'anvil' || active === 'roadmap'}
       />
 
-      {/* Resources */}
       <SectionLabel>Resources</SectionLabel>
       <NavItem
         href={`/the-hearth?chrome=${chromeRecruiter}`}
