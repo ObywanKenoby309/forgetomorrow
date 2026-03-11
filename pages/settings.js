@@ -6,25 +6,26 @@ import SeekerLayout from '@/components/layouts/SeekerLayout';
 
 // ── Style tokens ─────────────────────────────────────────────
 const GLASS = {
-  borderRadius: 16,
-  border: '1px solid rgba(255,255,255,0.14)',
-  background: 'rgba(13,27,42,0.62)',
-  boxShadow: '0 10px 32px rgba(0,0,0,0.38)',
-  backdropFilter: 'blur(14px)',
-  WebkitBackdropFilter: 'blur(14px)',
-};
-
-const GLASS_LIGHT = {
-  borderRadius: 12,
-  border: '1px solid rgba(255,255,255,0.10)',
-  background: 'rgba(255,255,255,0.07)',
+  borderRadius: 14,
+  border: '1px solid rgba(255,255,255,0.22)',
+  background: 'rgba(255,255,255,0.58)',
+  boxShadow: '0 10px 24px rgba(0,0,0,0.12)',
   backdropFilter: 'blur(10px)',
   WebkitBackdropFilter: 'blur(10px)',
 };
 
+const GLASS_LIGHT = {
+  borderRadius: 12,
+  border: '1px solid rgba(255,255,255,0.22)',
+  background: 'rgba(255,255,255,0.40)',
+  boxShadow: '0 4px 16px rgba(0,0,0,0.08)',
+  backdropFilter: 'blur(8px)',
+  WebkitBackdropFilter: 'blur(8px)',
+};
+
 const DIVIDER = {
   border: 'none',
-  borderTop: '1px solid rgba(255,255,255,0.08)',
+  borderTop: '1px solid rgba(0,0,0,0.08)',
   margin: '4px 0',
 };
 
@@ -36,12 +37,20 @@ const DANGER_DIVIDER = {
 
 const LABEL = {
   fontSize: 11, fontWeight: 700, letterSpacing: '0.08em',
-  textTransform: 'uppercase', color: '#90A4AE',
+  textTransform: 'uppercase', color: '#607D8B',
   marginBottom: 6, display: 'block',
 };
 
 // Fixed height for ALL carousel cards — no jumping arrows
 const CARD_HEIGHT = 360;
+
+// ── Support URL — respects chrome param ─────────────────────
+function getSupportUrl() {
+  if (typeof window === 'undefined') return '/support';
+  const params = new URLSearchParams(window.location.search);
+  const chrome = params.get('chrome');
+  return chrome ? `/support?chrome=${chrome}` : '/support';
+}
 
 // ── SSR-safe mobile hook ─────────────────────────────────────
 function useIsMobile(bp = 768) {
@@ -92,7 +101,7 @@ function PillBtn({ children, onClick, variant = 'ghost', type = 'button', disabl
   };
   const variants = {
     primary: { background: 'linear-gradient(135deg,#FF7043,#F4511E)', color: '#fff', boxShadow: '0 4px 16px rgba(255,112,67,0.45)' },
-    ghost:   { background: 'rgba(255,255,255,0.08)', color: '#CFD8DC', border: '1px solid rgba(255,255,255,0.16)' },
+    ghost:   { background: 'rgba(0,0,0,0.06)', color: '#263238', border: '1px solid rgba(0,0,0,0.15)' },
     danger:  { background: 'rgba(183,28,28,0.25)', color: '#EF9A9A', border: '1px solid rgba(239,154,154,0.35)' },
   };
   return (
@@ -111,7 +120,7 @@ function Toggle({ value, onChange }) {
       onClick={() => onChange(!value)}
       style={{
         flexShrink: 0, width: 44, height: 24, borderRadius: 999,
-        background: value ? 'linear-gradient(135deg,#FF7043,#F4511E)' : 'rgba(255,255,255,0.12)',
+        background: value ? 'linear-gradient(135deg,#FF7043,#F4511E)' : 'rgba(0,0,0,0.12)',
         border: 'none', cursor: 'pointer', position: 'relative',
         transition: 'background 0.2s ease',
         boxShadow: value ? '0 2px 8px rgba(255,112,67,0.4)' : 'none',
@@ -136,7 +145,7 @@ function SectionLabel({ children }) {
       textTransform: 'uppercase', color: '#FF7043', marginBottom: 12,
     }}>
       {children}
-      <div style={{ flex: 1, height: 1, background: 'linear-gradient(to right,rgba(255,112,67,0.3),transparent)', borderRadius: 1 }} />
+      <div style={{ flex: 1, height: 1, background: 'linear-gradient(to right,rgba(255,112,67,0.5),transparent)', borderRadius: 1 }} />
     </div>
   );
 }
@@ -146,10 +155,10 @@ function ComingSoonRow({ title, description }) {
   return (
     <div style={{ ...GLASS_LIGHT, padding: '14px 16px', borderRadius: 12, display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, flexWrap: 'wrap' }}>
       <div style={{ flex: 1, minWidth: 0 }}>
-        <p style={{ margin: 0, fontSize: 14, fontWeight: 600, color: '#ECEFF1' }}>{title}</p>
+        <p style={{ margin: 0, fontSize: 14, fontWeight: 600, color: '#112033' }}>{title}</p>
         {description && <p style={{ margin: '3px 0 0', fontSize: 12, color: '#78909C', lineHeight: 1.5 }}>{description}</p>}
       </div>
-      <span style={{ fontSize: 11, fontWeight: 700, letterSpacing: '0.08em', textTransform: 'uppercase', padding: '3px 10px', borderRadius: 999, border: '1px solid rgba(255,255,255,0.12)', color: '#78909C', background: 'rgba(255,255,255,0.05)', whiteSpace: 'nowrap' }}>
+      <span style={{ fontSize: 11, fontWeight: 700, letterSpacing: '0.08em', textTransform: 'uppercase', padding: '3px 10px', borderRadius: 999, border: '1px solid rgba(0,0,0,0.12)', color: '#78909C', background: 'rgba(0,0,0,0.05)', whiteSpace: 'nowrap' }}>
         Coming soon
       </span>
     </div>
@@ -182,7 +191,8 @@ function PasswordChangeRow({ email }) {
       )}
       {status === 'error' && (
         <p style={{ margin: 0, fontSize: 12, color: '#EF9A9A', background: 'rgba(183,28,28,0.12)', border: '1px solid rgba(239,154,154,0.25)', borderRadius: 8, padding: '8px 12px', lineHeight: 1.55 }}>
-          Something went wrong. Contact support@forgetomorrow.com.
+          Something went wrong.{' '}
+          <a href={getSupportUrl()} style={{ color: '#EF9A9A', fontWeight: 600 }}>Submit a ticket</a> and we'll help you out.
         </p>
       )}
     </div>
@@ -199,7 +209,7 @@ function DeleteAccountRow() {
           ⚠️ This cannot be undone. Your profile, resume, and all data will be permanently deleted.
         </p>
         <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
-          <PillBtn variant="danger" onClick={() => { alert('Please contact support@forgetomorrow.com to delete your account.'); setStep('idle'); }}>
+          <PillBtn variant="danger" onClick={() => { window.location.href = getSupportUrl(); setStep('idle'); }}>
             ✕ Yes, delete my account
           </PillBtn>
           <PillBtn variant="ghost" onClick={() => setStep('idle')}>Cancel</PillBtn>
@@ -236,13 +246,13 @@ function BillingCard({ plan, onManageBilling }) {
       </div>
       <hr style={DIVIDER} />
       <div>
-        <p style={{ margin: '0 0 4px', fontSize: 13, fontWeight: 600, color: '#ECEFF1' }}>Invoices &amp; receipts</p>
+        <p style={{ margin: '0 0 4px', fontSize: 13, fontWeight: 600, color: '#112033' }}>Invoices &amp; receipts</p>
         <p style={{ margin: 0, fontSize: 12, color: '#78909C', lineHeight: 1.6 }}>
-          Billing history will appear here once fully connected. Contact{' '}
-          <a href="mailto:support@forgetomorrow.com" style={{ color: '#FF7043', textDecoration: 'none', fontWeight: 600 }}>
-            support@forgetomorrow.com
+          Billing history will appear here once fully connected.{' '}
+          <a href={getSupportUrl()} style={{ color: '#FF7043', textDecoration: 'none', fontWeight: 600 }}>
+            Submit a ticket
           </a>{' '}
-          for payment help.
+          if you need help with a payment.
         </p>
       </div>
     </div>
@@ -255,7 +265,7 @@ function PrivacyCard() {
       <SectionLabel>Your data</SectionLabel>
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 16, flexWrap: 'wrap', padding: '4px 0' }}>
         <div style={{ flex: 1, minWidth: 0 }}>
-          <p style={{ margin: 0, fontSize: 14, fontWeight: 600, color: '#ECEFF1' }}>Download my data</p>
+          <p style={{ margin: 0, fontSize: 14, fontWeight: 600, color: '#112033' }}>Download my data</p>
           <p style={{ margin: '3px 0 0', fontSize: 12, color: '#78909C', lineHeight: 1.55 }}>
             Request a copy of the personal data associated with your ForgeTomorrow account.
           </p>
@@ -294,7 +304,7 @@ function NotificationsCard() {
       <SectionLabel>Notifications</SectionLabel>
       <div style={{ ...GLASS_LIGHT, padding: '14px 16px', borderRadius: 12, display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12 }}>
         <div style={{ flex: 1, minWidth: 0 }}>
-          <p style={{ margin: 0, fontSize: 14, fontWeight: 600, color: '#ECEFF1' }}>Email updates &amp; product news</p>
+          <p style={{ margin: 0, fontSize: 14, fontWeight: 600, color: '#112033' }}>Email updates &amp; product news</p>
           <p style={{ margin: '3px 0 0', fontSize: 12, color: '#78909C', lineHeight: 1.5 }}>
             New features, product changes, and important account notices.
           </p>
@@ -385,9 +395,9 @@ function Carousel({ plan, onManageBilling }) {
           style={{
             flexShrink: 0,
             width: 36, height: 36, borderRadius: '50%',
-            background: active === 0 ? 'rgba(255,255,255,0.04)' : 'rgba(255,255,255,0.10)',
+            background: active === 0 ? 'rgba(0,0,0,0.04)' : 'rgba(255,255,255,0.70)',
             border: '1px solid rgba(255,255,255,0.14)',
-            color: active === 0 ? '#37474F' : '#ECEFF1',
+            color: active === 0 ? '#B0BEC5' : '#263238',
             cursor: active === 0 ? 'default' : 'pointer',
             fontSize: 18, display: 'flex', alignItems: 'center', justifyContent: 'center',
             transition: 'all 0.18s', backdropFilter: 'blur(8px)',
@@ -414,10 +424,10 @@ function Carousel({ plan, onManageBilling }) {
             }}>
               {/* Card header */}
               <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 18, flexShrink: 0 }}>
-                <h2 style={{ margin: 0, fontSize: 17, fontWeight: 800, color: '#ECEFF1', letterSpacing: '-0.01em' }}>
+                <h2 style={{ margin: 0, fontSize: 17, fontWeight: 800, color: '#112033', letterSpacing: '-0.01em' }}>
                   {CARDS[displayed].label}
                 </h2>
-                <span style={{ fontSize: 12, color: '#546E7A', fontWeight: 500 }}>
+                <span style={{ fontSize: 12, color: '#78909C', fontWeight: 500 }}>
                   {active + 1} / {CARDS.length}
                 </span>
               </div>
@@ -434,7 +444,7 @@ function Carousel({ plan, onManageBilling }) {
               aria-hidden="true"
               style={{
                 position: 'absolute', top: 0, right: 0, bottom: 0, width: 28,
-                background: 'rgba(13,27,42,0.55)',
+                background: 'rgba(255,255,255,0.45)',
                 backdropFilter: 'blur(6px)',
                 WebkitBackdropFilter: 'blur(6px)',
                 borderRadius: '0 16px 16px 0',
@@ -454,9 +464,9 @@ function Carousel({ plan, onManageBilling }) {
           style={{
             flexShrink: 0,
             width: 36, height: 36, borderRadius: '50%',
-            background: active === CARDS.length - 1 ? 'rgba(255,255,255,0.04)' : 'rgba(255,255,255,0.10)',
+            background: active === CARDS.length - 1 ? 'rgba(0,0,0,0.04)' : 'rgba(255,255,255,0.70)',
             border: '1px solid rgba(255,255,255,0.14)',
-            color: active === CARDS.length - 1 ? '#37474F' : '#ECEFF1',
+            color: active === CARDS.length - 1 ? '#B0BEC5' : '#263238',
             cursor: active === CARDS.length - 1 ? 'default' : 'pointer',
             fontSize: 18, display: 'flex', alignItems: 'center', justifyContent: 'center',
             transition: 'all 0.18s', backdropFilter: 'blur(8px)',
@@ -476,7 +486,7 @@ function Carousel({ plan, onManageBilling }) {
             style={{
               width: i === active ? 24 : 8,
               height: 8, borderRadius: 999, border: 'none', padding: 0,
-              background: i === active ? '#FF7043' : 'rgba(255,255,255,0.20)',
+              background: i === active ? '#FF7043' : 'rgba(0,0,0,0.18)',
               cursor: i === active ? 'default' : 'pointer',
               transition: 'all 0.25s ease',
             }}
@@ -523,8 +533,8 @@ function SettingsContent() {
       if (!res.ok) { const d = await res.json().catch(() => ({})); alert(d?.error || 'Could not open billing portal.'); return; }
       const data = await res.json();
       if (data?.url) window.location.href = data.url;
-      else alert('Could not open billing portal. Contact support@forgetomorrow.com.');
-    } catch { alert('Something went wrong. Contact support@forgetomorrow.com.'); }
+      else { window.location.href = getSupportUrl(); }
+    } catch { window.location.href = getSupportUrl(); }
   }
 
   function handleLogout() {
@@ -547,7 +557,7 @@ function SettingsContent() {
         <div aria-hidden="true" style={{
           position: 'absolute', top: -50, left: '50%', transform: 'translateX(-50%)',
           width: 300, height: 150, borderRadius: '50%', pointerEvents: 'none',
-          background: 'radial-gradient(ellipse, rgba(255,112,67,0.15) 0%, transparent 70%)',
+          background: 'radial-gradient(ellipse, rgba(255,112,67,0.12) 0%, transparent 70%)',
         }} />
         <h1 style={{
           margin: 0, fontWeight: 900, letterSpacing: '-0.02em', lineHeight: 1.1,
@@ -555,7 +565,7 @@ function SettingsContent() {
         }}>
           Settings
         </h1>
-        <p style={{ margin: '6px 0 0', color: '#78909C', fontSize: isMobile ? 12 : 14 }}>
+        <p style={{ margin: '6px 0 0', color: '#546E7A', fontSize: isMobile ? 12 : 14 }}>
           Manage your account, privacy, and billing in one place.
         </p>
       </header>
@@ -563,7 +573,7 @@ function SettingsContent() {
       {/* ── Account card ─────────────────────────────────────── */}
       <section style={{ ...GLASS, padding: isMobile ? '20px 18px' : '22px 24px', display: 'flex', flexDirection: 'column', gap: 16 }}>
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-          <h2 style={{ margin: 0, fontSize: isMobile ? 15 : 17, fontWeight: 800, color: '#ECEFF1', letterSpacing: '-0.01em' }}>Account</h2>
+          <h2 style={{ margin: 0, fontSize: isMobile ? 15 : 17, fontWeight: 800, color: '#112033', letterSpacing: '-0.01em' }}>Account</h2>
           <span style={{ fontSize: 10, fontWeight: 800, letterSpacing: '0.12em', textTransform: 'uppercase', padding: '3px 10px', borderRadius: 999, border: '1px solid rgba(255,112,67,0.40)', color: '#FF7043', background: 'rgba(255,112,67,0.12)' }}>Core</span>
         </div>
 
@@ -572,9 +582,9 @@ function SettingsContent() {
           <LockedField label="Name"  value={name} />
         </div>
 
-        <p style={{ margin: 0, fontSize: 12, color: '#546E7A', lineHeight: 1.6, background: 'rgba(255,255,255,0.04)', borderRadius: 8, padding: '10px 14px', border: '1px solid rgba(255,255,255,0.07)' }}>
-          🔒 To help prevent fraud, your name and email are set during account creation and cannot be changed here. To update either, please submit a ticket to{' '}
-          <a href="mailto:support@forgetomorrow.com" style={{ color: '#FF7043', textDecoration: 'none', fontWeight: 600 }}>support@forgetomorrow.com</a>
+        <p style={{ margin: 0, fontSize: 12, color: '#546E7A', lineHeight: 1.6, background: 'rgba(0,0,0,0.04)', borderRadius: 8, padding: '10px 14px', border: '1px solid rgba(255,255,255,0.07)' }}>
+          🔒 To help prevent fraud, your name and email are set during account creation and cannot be changed here. To update either, please{' '}
+          <a href={getSupportUrl()} style={{ color: '#FF7043', textDecoration: 'none', fontWeight: 600 }}>submit a ticket through the Support Center</a>.
         </p>
 
         <hr style={DIVIDER} />
@@ -588,7 +598,7 @@ function SettingsContent() {
       {/* ── Carousel ─────────────────────────────────────────── */}
       <Carousel plan={plan} onManageBilling={handleManageBilling} />
 
-      <p style={{ textAlign: 'center', fontSize: 12, color: '#546E7A', marginTop: 4 }}>
+      <p style={{ textAlign: 'center', fontSize: 12, color: '#78909C', marginTop: 4 }}>
         ForgeTomorrow · Building Human-First Career Infrastructure
       </p>
     </div>
