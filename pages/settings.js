@@ -564,7 +564,7 @@ function SettingsContent() {
           <LockedField label="Name"  value={name} />
         </div>
 
-        <p style={{ margin: 0, fontSize: 12, color: '#47596A', lineHeight: 1.6, background: 'rgba(255,255,255,0.16)', borderRadius: 8, padding: '10px 14px', border: '1px solid rgba(255,255,255,0.10)' }}>
+        <p style={{ margin: 0, fontSize: 12, color: '#<p style={{ margin: 0, fontSize: 12, color: '#223043', lineHeight: 1.6, background: 'rgba(255,255,255,0.16)', borderRadius: 8, padding: '10px 14px', border: '1px solid rgba(255,255,255,0.10)' }}>', lineHeight: 1.6, background: 'rgba(255,255,255,0.16)', borderRadius: 8, padding: '10px 14px', border: '1px solid rgba(255,255,255,0.10)' }}>
           🔒 To help prevent fraud, your name and email are set during account creation and cannot be changed here. To update either, please{' '}
           <a href={getSupportUrl()} style={{ color: '#C86A43', textDecoration: 'none', fontWeight: 600 }}>submit a ticket through the Support Center</a>.
         </p>
