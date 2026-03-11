@@ -1,3 +1,4 @@
+// components/coaching/CoachingSidebar.js
 import React from 'react';
 import Link from 'next/link';
 
@@ -157,7 +158,7 @@ export default function CoachingSidebar({
 
   const resolvedProfileHref = profileSlug
     ? `/profile/${profileSlug}?chrome=coach`
-    : '/profile?chrome=coach';
+    : '/profile/edit?chrome=coach';
 
   // ✅ NEW: unread dot for Action Center (shown on Dashboard in sidebar)
   const [hasActionUnread, setHasActionUnread] = useState(false);
