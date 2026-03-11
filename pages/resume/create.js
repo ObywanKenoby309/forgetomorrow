@@ -267,6 +267,7 @@ export default function CreateResumePage() {
   const fileInputRef = useRef(null);
   const dropRef = useRef(null);
   const hasAppliedUploadRef = useRef(false); // ensure we only parse once per uploaded flow
+  const hasAppliedResumeLoadRef = useRef(false); // ensure resumeId hydration runs once per id
 
   const {
     formData,
@@ -394,6 +395,110 @@ export default function CreateResumePage() {
     }
   };
 
+  // ✅ hydration helpers
+  const coerceUploadedDraftText = (raw) => {
+    if (typeof raw === 'string') return raw;
+    if (raw && typeof raw === 'object' && typeof raw.text === 'string') return raw.text;
+    return '';
+  };
+
+  const applyResumePayloadToState = (payload) => {
+    if (!payload || typeof payload !== 'object') return false;
+
+    const source =
+      payload.resume ||
+      payload.data ||
+      payload.item ||
+      payload.document ||
+      payload;
+
+    const sourceForm =
+      source.formData ||
+      source.personalInfo ||
+      source.contact ||
+      {};
+
+    setFormData((prev) => ({
+      ...prev,
+      ...(sourceForm || {}),
+      fullName:
+        sourceForm.fullName ||
+        sourceForm.name ||
+        source.fullName ||
+        source.name ||
+        prev.fullName ||
+        prev.name ||
+        '',
+    }));
+
+    if (typeof source.summary === 'string') setSummary(source.summary);
+    if (Array.isArray(source.experiences || source.workExperiences)) {
+      setExperiences(source.experiences || source.workExperiences);
+    }
+    if (Array.isArray(source.educationList || source.education)) {
+      setEducationList(source.educationList || source.education);
+    }
+    if (Array.isArray(source.skills)) setSkills(source.skills);
+    if (Array.isArray(source.projects)) setProjects(source.projects);
+    if (Array.isArray(source.certifications)) setCertifications(source.certifications);
+    if (Array.isArray(source.customSections)) setCustomSections(source.customSections);
+    if (Array.isArray(source.languages)) setLanguages(source.languages);
+
+    return true;
+  };
+
+  const fetchResumeById = async (resumeId) => {
+    const id = String(resumeId || '').trim();
+    if (!id) return null;
+
+    const tryEndpoints = [
+      `/api/resume/get?id=${encodeURIComponent(id)}`,
+      `/api/resume?id=${encodeURIComponent(id)}`,
+      `/api/resume/list`,
+    ];
+
+    for (const url of tryEndpoints) {
+      try {
+        const res = await fetch(url);
+        if (!res.ok) continue;
+        const json = await res.json();
+
+        if (url.includes('/api/resume/list')) {
+          const list = Array.isArray(json?.resumes) ? json.resumes : [];
+          const found = list.find((item) => String(item?.id) === id);
+          if (found) return found;
+          continue;
+        }
+
+        return json;
+      } catch (err) {
+        console.error('[resume/create] Failed fetching resume source', url, err);
+      }
+    }
+
+    return null;
+  };
+
+  const buildResumeCreateHref = (template) => {
+    const params = new URLSearchParams();
+
+    Object.entries(router.query || {}).forEach(([key, value]) => {
+      if (value === undefined || value === null || value === '') return;
+      if (Array.isArray(value)) {
+        value.forEach((v) => {
+          if (v !== undefined && v !== null && v !== '') params.append(key, String(v));
+        });
+      } else {
+        params.set(key, String(value));
+      }
+    });
+
+    params.set('template', template);
+
+    const qs = params.toString();
+    return withChrome(`/resume/create${qs ? `?${qs}` : ''}`);
+  };
+
   // Helper: detect if atsPack is a real result vs demo
   const hasRealAts =
     !!(atsPack && atsPack.ats && typeof atsPack.ats.score === 'number' && !/demo|sample/i.test(atsPack.ats.summary || ''));
@@ -516,6 +621,42 @@ export default function CreateResumePage() {
     };
   }, [router.isReady, router.query.jobId]);
 
+  // ✅ NEW: hydrate exact saved resume when resumeId is present
+  useEffect(() => {
+    if (!router.isReady) return;
+
+    const resumeId = String(router.query.resumeId || '').trim();
+    if (!resumeId) {
+      hasAppliedResumeLoadRef.current = false;
+      return;
+    }
+
+    if (hasAppliedResumeLoadRef.current === resumeId) return;
+
+    let cancelled = false;
+
+    async function loadResumeFromRoute() {
+      try {
+        const payload = await fetchResumeById(resumeId);
+        if (cancelled || !payload) return;
+
+        const applied = applyResumePayloadToState(payload);
+        if (applied) {
+          hasAppliedResumeLoadRef.current = resumeId;
+          hasAppliedUploadRef.current = true;
+        }
+      } catch (err) {
+        console.error('[resume/create] Failed to hydrate resume from resumeId', err);
+      }
+    }
+
+    loadResumeFromRoute();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [router.isReady, router.query.resumeId]);
+
   // Handle manual JD file upload / drop
   const handleFile = async (file) => {
     if (!file) return;
@@ -561,6 +702,7 @@ export default function CreateResumePage() {
       alert(`Failed to process job description. ${msg}`);
     } finally {
       if (fileInputRef.current) fileInputRef.current.value = '';
+      setJdLoading(false);
     }
   };
 
@@ -595,14 +737,16 @@ export default function CreateResumePage() {
     if (!router.isReady) return;
     if (hasAppliedUploadRef.current) return;
 
-    const { uploaded } = router.query || {};
+    const { uploaded, resumeId } = router.query || {};
+    if (resumeId) return;
+
     const uploadedFlag = String(uploaded || '').toLowerCase();
     if (uploadedFlag !== '1' && uploadedFlag !== 'true') return;
 
     async function applyUploadedResume() {
       try {
         const raw = await getDraft(DRAFT_KEYS.LAST_UPLOADED_RESUME_TEXT);
-        const text = typeof raw === 'string' ? raw : '';
+        const text = coerceUploadedDraftText(raw);
         if (!text) return;
 
         const lines = text
@@ -793,7 +937,7 @@ export default function CreateResumePage() {
                 Template: <strong>{templateName}</strong> • Live preview updates instantly on the right {' • '}
                 <span style={{ display: 'inline-flex', alignItems: 'center', gap: 8 }}>
                   <button
-                    onClick={() => router.push(withChrome('/resume/create?template=reverse'))}
+                    onClick={() => router.push(buildResumeCreateHref('reverse'))}
                     style={{
                       fontWeight: router.query.template !== 'hybrid' ? 900 : 700,
                       color: router.query.template !== 'hybrid' ? ORANGE : '#64748B',
@@ -807,7 +951,7 @@ export default function CreateResumePage() {
                   </button>
                   <span style={{ color: '#94A3B8' }}>|</span>
                   <button
-                    onClick={() => router.push(withChrome('/resume/create?template=hybrid'))}
+                    onClick={() => router.push(buildResumeCreateHref('hybrid'))}
                     style={{
                       fontWeight: router.query.template === 'hybrid' ? 900 : 700,
                       color: router.query.template === 'hybrid' ? ORANGE : '#64748B',
