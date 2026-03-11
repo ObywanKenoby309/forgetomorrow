@@ -37,7 +37,7 @@ const DANGER_DIVIDER = {
 
 const LABEL = {
   fontSize: 11, fontWeight: 700, letterSpacing: '0.08em',
-  textTransform: 'uppercase', color: '#516273',
+  textTransform: 'uppercase', color: '#425466',
   marginBottom: 6, display: 'block',
 };
 
@@ -77,7 +77,7 @@ function LockedField({ label, value }) {
           borderRadius: 10,
           border: '1px solid rgba(255,255,255,0.18)',
           background: 'rgba(255,255,255,0.14)',
-          fontSize: 14, color: '#607386',
+          fontSize: 14, color: '#485B6D',
           cursor: 'not-allowed', userSelect: 'none',
         }}>
           {value}
@@ -103,7 +103,7 @@ function PillBtn({ children, onClick, variant = 'ghost', type = 'button', disabl
   };
   const variants = {
     primary: { background: 'linear-gradient(135deg,#FF7043,#F4511E)', color: '#fff', boxShadow: '0 4px 16px rgba(255,112,67,0.45)' },
-    ghost:   { background: 'rgba(255,255,255,0.22)', color: '#223043', border: '1px solid rgba(15,23,42,0.12)' },
+    ghost:   { background: 'rgba(255,255,255,0.22)', color: '#1C2A38', border: '1px solid rgba(15,23,42,0.12)' },
     danger:  { background: 'rgba(183,28,28,0.25)', color: '#EF9A9A', border: '1px solid rgba(239,154,154,0.35)' },
   };
   return (
@@ -144,7 +144,7 @@ function SectionLabel({ children }) {
     <div style={{
       display: 'flex', alignItems: 'center', gap: 10,
       fontSize: 10, fontWeight: 700, letterSpacing: '0.16em',
-      textTransform: 'uppercase', color: '#A65A3A', marginBottom: 12,
+      textTransform: 'uppercase', color: '#8F4D32', marginBottom: 12,
     }}>
       {children}
       <div style={{ flex: 1, height: 1, background: 'linear-gradient(to right,rgba(166,90,58,0.45),transparent)', borderRadius: 1 }} />
@@ -157,10 +157,10 @@ function ComingSoonRow({ title, description }) {
   return (
     <div style={{ ...GLASS_LIGHT, padding: '14px 16px', borderRadius: 12, display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, flexWrap: 'wrap' }}>
       <div style={{ flex: 1, minWidth: 0 }}>
-        <p style={{ margin: 0, fontSize: 14, fontWeight: 600, color: '#1F2E3D' }}>{title}</p>
-        {description && <p style={{ margin: '3px 0 0', fontSize: 12, color: '#5F7384', lineHeight: 1.5 }}>{description}</p>}
+        <p style={{ margin: 0, fontSize: 14, fontWeight: 600, color: '#162433' }}>{title}</p>
+        {description && <p style={{ margin: '3px 0 0', fontSize: 12, color: '#485B6D', lineHeight: 1.5 }}>{description}</p>}
       </div>
-      <span style={{ fontSize: 11, fontWeight: 700, letterSpacing: '0.08em', textTransform: 'uppercase', padding: '3px 10px', borderRadius: 999, border: '1px solid rgba(15,23,42,0.10)', color: '#6B7E8E', background: 'rgba(255,255,255,0.18)', whiteSpace: 'nowrap' }}>
+      <span style={{ fontSize: 11, fontWeight: 700, letterSpacing: '0.08em', textTransform: 'uppercase', padding: '3px 10px', borderRadius: 999, border: '1px solid rgba(15,23,42,0.10)', color: '#55687A', background: 'rgba(255,255,255,0.18)', whiteSpace: 'nowrap' }}>
         Coming soon
       </span>
     </div>
@@ -239,8 +239,8 @@ function BillingCard({ plan, onManageBilling }) {
     <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
       <SectionLabel>Current plan</SectionLabel>
       <div style={{ ...GLASS_LIGHT, padding: '14px 18px', borderLeft: '3px solid #C86A43' }}>
-        <p style={{ margin: 0, fontSize: 11, color: '#5F7384', fontWeight: 700, letterSpacing: '0.08em', textTransform: 'uppercase' }}>Plan</p>
-        <p style={{ margin: '4px 0 0', fontSize: 24, fontWeight: 900, color: '#223043', letterSpacing: '-0.01em' }}>{plan}</p>
+        <p style={{ margin: 0, fontSize: 11, color: '#485B6D', fontWeight: 700, letterSpacing: '0.08em', textTransform: 'uppercase' }}>Plan</p>
+        <p style={{ margin: '4px 0 0', fontSize: 24, fontWeight: 900, color: '#1B2937', letterSpacing: '-0.01em' }}>{plan}</p>
       </div>
       <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
         <PillBtn variant="primary" onClick={onManageBilling}>💳 Manage billing</PillBtn>
@@ -248,8 +248,8 @@ function BillingCard({ plan, onManageBilling }) {
       </div>
       <hr style={DIVIDER} />
       <div>
-        <p style={{ margin: '0 0 4px', fontSize: 13, fontWeight: 600, color: '#1F2E3D' }}>Invoices &amp; receipts</p>
-        <p style={{ margin: 0, fontSize: 12, color: '#5F7384', lineHeight: 1.6 }}>
+        <p style={{ margin: '0 0 4px', fontSize: 13, fontWeight: 600, color: '#162433' }}>Invoices &amp; receipts</p>
+        <p style={{ margin: 0, fontSize: 12, color: '#485B6D', lineHeight: 1.6 }}>
           Billing history will appear here once fully connected.{' '}
           <a href={getSupportUrl()} style={{ color: '#C86A43', textDecoration: 'none', fontWeight: 600 }}>
             Submit a ticket
@@ -267,8 +267,8 @@ function PrivacyCard() {
       <SectionLabel>Your data</SectionLabel>
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 16, flexWrap: 'wrap', padding: '4px 0' }}>
         <div style={{ flex: 1, minWidth: 0 }}>
-          <p style={{ margin: 0, fontSize: 14, fontWeight: 600, color: '#1F2E3D' }}>Download my data</p>
-          <p style={{ margin: '3px 0 0', fontSize: 12, color: '#5F7384', lineHeight: 1.55 }}>
+          <p style={{ margin: 0, fontSize: 14, fontWeight: 600, color: '#162433' }}>Download my data</p>
+          <p style={{ margin: '3px 0 0', fontSize: 12, color: '#485B6D', lineHeight: 1.55 }}>
             Request a copy of the personal data associated with your ForgeTomorrow account.
           </p>
         </div>
@@ -306,8 +306,8 @@ function NotificationsCard() {
       <SectionLabel>Notifications</SectionLabel>
       <div style={{ ...GLASS_LIGHT, padding: '14px 16px', borderRadius: 12, display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12 }}>
         <div style={{ flex: 1, minWidth: 0 }}>
-          <p style={{ margin: 0, fontSize: 14, fontWeight: 600, color: '#1F2E3D' }}>Email updates &amp; product news</p>
-          <p style={{ margin: '3px 0 0', fontSize: 12, color: '#5F7384', lineHeight: 1.5 }}>
+          <p style={{ margin: 0, fontSize: 14, fontWeight: 600, color: '#162433' }}>Email updates &amp; product news</p>
+          <p style={{ margin: '3px 0 0', fontSize: 12, color: '#485B6D', lineHeight: 1.5 }}>
             New features, product changes, and important account notices.
           </p>
         </div>
@@ -393,7 +393,7 @@ function Carousel({ plan, onManageBilling }) {
             width: 36, height: 36, borderRadius: '50%',
             background: active === 0 ? 'rgba(0,0,0,0.04)' : 'rgba(255,255,255,0.58)',
             border: '1px solid rgba(255,255,255,0.16)',
-            color: active === 0 ? '#94A3B8' : '#223043',
+            color: active === 0 ? '#7E8FA1' : '#1C2A38',
             cursor: active === 0 ? 'default' : 'pointer',
             fontSize: 18, display: 'flex', alignItems: 'center', justifyContent: 'center',
             transition: 'all 0.18s', backdropFilter: 'blur(8px)',
@@ -417,10 +417,10 @@ function Carousel({ plan, onManageBilling }) {
               flexDirection: 'column',
             }}>
               <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 18, flexShrink: 0 }}>
-                <h2 style={{ margin: 0, fontSize: 17, fontWeight: 800, color: '#1F2E3D', letterSpacing: '-0.01em' }}>
+                <h2 style={{ margin: 0, fontSize: 17, fontWeight: 800, color: '#162433', letterSpacing: '-0.01em' }}>
                   {CARDS[displayed].label}
                 </h2>
-                <span style={{ fontSize: 12, color: '#5F7384', fontWeight: 500 }}>
+                <span style={{ fontSize: 12, color: '#485B6D', fontWeight: 500 }}>
                   {active + 1} / {CARDS.length}
                 </span>
               </div>
@@ -456,7 +456,7 @@ function Carousel({ plan, onManageBilling }) {
             width: 36, height: 36, borderRadius: '50%',
             background: active === CARDS.length - 1 ? 'rgba(0,0,0,0.04)' : 'rgba(255,255,255,0.58)',
             border: '1px solid rgba(255,255,255,0.16)',
-            color: active === CARDS.length - 1 ? '#94A3B8' : '#223043',
+            color: active === CARDS.length - 1 ? '#7E8FA1' : '#1C2A38',
             cursor: active === CARDS.length - 1 ? 'default' : 'pointer',
             fontSize: 18, display: 'flex', alignItems: 'center', justifyContent: 'center',
             transition: 'all 0.18s', backdropFilter: 'blur(8px)',
@@ -544,19 +544,19 @@ function SettingsContent() {
         }} />
         <h1 style={{
           margin: 0, fontWeight: 900, letterSpacing: '-0.02em', lineHeight: 1.1,
-          fontSize: isMobile ? 24 : 30, color: '#223043',
+          fontSize: isMobile ? 24 : 30, color: '#1B2937',
         }}>
           Settings
         </h1>
-        <p style={{ margin: '6px 0 0', color: '#5F7384', fontSize: isMobile ? 12 : 14 }}>
+        <p style={{ margin: '6px 0 0', color: '#485B6D', fontSize: isMobile ? 12 : 14 }}>
           Manage your account, privacy, and billing in one place.
         </p>
       </header>
 
       <section style={{ ...GLASS, padding: isMobile ? '20px 18px' : '22px 24px', display: 'flex', flexDirection: 'column', gap: 16 }}>
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-          <h2 style={{ margin: 0, fontSize: isMobile ? 15 : 17, fontWeight: 800, color: '#1F2E3D', letterSpacing: '-0.01em' }}>Account</h2>
-          <span style={{ fontSize: 10, fontWeight: 800, letterSpacing: '0.12em', textTransform: 'uppercase', padding: '3px 10px', borderRadius: 999, border: '1px solid rgba(200,106,67,0.34)', color: '#A65A3A', background: 'rgba(200,106,67,0.10)' }}>Core</span>
+          <h2 style={{ margin: 0, fontSize: isMobile ? 15 : 17, fontWeight: 800, color: '#162433', letterSpacing: '-0.01em' }}>Account</h2>
+          <span style={{ fontSize: 10, fontWeight: 800, letterSpacing: '0.12em', textTransform: 'uppercase', padding: '3px 10px', borderRadius: 999, border: '1px solid rgba(200,106,67,0.34)', color: '#8F4D32', background: 'rgba(200,106,67,0.10)' }}>Core</span>
         </div>
 
         <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : 'repeat(2,1fr)', gap: isMobile ? 10 : 14 }}>
@@ -564,7 +564,7 @@ function SettingsContent() {
           <LockedField label="Name"  value={name} />
         </div>
 
-        <p style={{ margin: 0, fontSize: 12, color: '#536779', lineHeight: 1.6, background: 'rgba(255,255,255,0.16)', borderRadius: 8, padding: '10px 14px', border: '1px solid rgba(255,255,255,0.10)' }}>
+        <p style={{ margin: 0, fontSize: 12, color: '#47596A', lineHeight: 1.6, background: 'rgba(255,255,255,0.16)', borderRadius: 8, padding: '10px 14px', border: '1px solid rgba(255,255,255,0.10)' }}>
           🔒 To help prevent fraud, your name and email are set during account creation and cannot be changed here. To update either, please{' '}
           <a href={getSupportUrl()} style={{ color: '#C86A43', textDecoration: 'none', fontWeight: 600 }}>submit a ticket through the Support Center</a>.
         </p>
@@ -579,7 +579,7 @@ function SettingsContent() {
 
       <Carousel plan={plan} onManageBilling={handleManageBilling} />
 
-      <p style={{ textAlign: 'center', fontSize: 12, color: '#6B7E8E', marginTop: 4 }}>
+      <p style={{ textAlign: 'center', fontSize: 12, color: '#55687A', marginTop: 4 }}>
         ForgeTomorrow · The future of careers and networking.
       </p>
     </div>
