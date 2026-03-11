@@ -91,6 +91,8 @@ export default function SeekerLayout({
   contentFullBleed = false,
   employee = false,
   department = '',
+  disableUserWallpaper = false,
+  backgroundImageOverride = '',
 }) {
   const router = useRouter();
   const { isLoaded: planLoaded, plan, role } = usePlan();
@@ -260,19 +262,16 @@ export default function SeekerLayout({
   }, [chromeMode, normalizedActiveNav, seekerCounts, employee, department, profileSlug]);
 
   // ---- MOBILE DETECTION ----
-  // ✅ Match RecruiterLayout exactly: sync init from window so correct grid is used on first paint.
-  // No null guard needed — no more "240px column ghost" pushing content off screen on mobile.
   const hasRight = Boolean(right);
 
   const [isMobile, setIsMobile] = useState(() => {
-    if (typeof window === 'undefined') return false; // SSR: assume desktop
+    if (typeof window === 'undefined') return false;
     return window.innerWidth < 1024;
   });
 
   const [mobileToolsOpen, setMobileToolsOpen] = useState(false);
   const handleOpenTools = useCallback(() => setMobileToolsOpen(true), []);
 
-  // ✅ useLayoutEffect fires before paint — grid is always correct from frame 1
   useIsomorphicLayoutEffect(() => {
     const handleResize = () => {
       if (typeof window !== 'undefined') setIsMobile(window.innerWidth < 1024);
@@ -285,10 +284,17 @@ export default function SeekerLayout({
   // ---- WALLPAPER / BACKGROUND ----
   const { wallpaperUrl } = useUserWallpaper();
 
-  const backgroundStyle = wallpaperUrl
+  const resolvedBackgroundImage =
+    backgroundImageOverride && String(backgroundImageOverride).trim()
+      ? String(backgroundImageOverride).trim()
+      : !disableUserWallpaper && wallpaperUrl
+      ? wallpaperUrl
+      : '';
+
+  const backgroundStyle = resolvedBackgroundImage
     ? {
         minHeight: '100vh',
-        backgroundImage: `url(${wallpaperUrl})`,
+        backgroundImage: `url(${resolvedBackgroundImage})`,
         backgroundSize: 'cover',
         backgroundPosition: 'center top',
         backgroundRepeat: 'no-repeat',
