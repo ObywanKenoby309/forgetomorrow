@@ -295,10 +295,11 @@ export default function SeekerLayout({
     ? {
         minHeight: '100vh',
         backgroundImage: `url(${resolvedBackgroundImage})`,
-        backgroundSize: 'cover',
+        backgroundSize: disableUserWallpaper ? (isMobile ? 'cover' : '100% auto') : 'cover',
         backgroundPosition: 'center top',
         backgroundRepeat: 'no-repeat',
-        backgroundAttachment: isMobile ? 'scroll' : 'fixed',
+        backgroundAttachment: disableUserWallpaper ? 'scroll' : isMobile ? 'scroll' : 'fixed',
+        backgroundColor: disableUserWallpaper ? '#0B1624' : undefined,
       }
     : {
         minHeight: '100vh',
