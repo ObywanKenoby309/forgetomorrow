@@ -1,20 +1,36 @@
 // pages/support.js (or pages/support/index.js)
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useRef, useCallback } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/router';
 import SeekerLayout from '@/components/layouts/SeekerLayout';
 import SeekerRightColumn from '@/components/seeker/SeekerRightColumn';
 
+function getChromeFromAsPath(asPath) {
+  try {
+    const s = String(asPath || '');
+    if (!s.includes('chrome=')) return '';
+    const qIndex = s.indexOf('?');
+    if (qIndex === -1) return '';
+    const query = s.slice(qIndex + 1);
+    const params = new URLSearchParams(query);
+    return String(params.get('chrome') || '').toLowerCase();
+  } catch {
+    return '';
+  }
+}
+
 const UI = { CARD_PAD: 14 };
 
-// ✅ Profile-standard glass (canonical)
 const GLASS = {
+  borderRadius: 14,
   border: '1px solid rgba(255,255,255,0.22)',
   background: 'rgba(255,255,255,0.58)',
   boxShadow: '0 10px 24px rgba(0,0,0,0.12)',
   backdropFilter: 'blur(10px)',
   WebkitBackdropFilter: 'blur(10px)',
 };
+
+const STATUS_OPTIONS = ['OPEN', 'IN_PROGRESS', 'AWAITING_USER', 'RESOLVED', 'CLOSED'];
 
 function SupportHeaderBox({ chrome }) {
   const mode = String(chrome || '').toLowerCase();
@@ -36,42 +52,485 @@ function SupportHeaderBox({ chrome }) {
       'Whether you’re supporting clients, building programs, or using coaching tools, this is your home base for questions, feedback, and help staying focused on your clients.';
   }
 
-  // ✅ Same glass treatment as Profile header card
   return (
-    <section className="px-4 pt-1 md:pt-2">
-      <div
+    <section
+      style={{
+        ...GLASS,
+        padding: '24px 16px',
+        textAlign: 'center',
+        margin: '0 auto',
+        maxWidth: 1320,
+      }}
+      aria-label="Support Center overview"
+    >
+      <h1 style={{ color: '#FF7043', fontSize: 28, fontWeight: 900, margin: 0 }}>
+        {title}
+      </h1>
+      <p
         style={{
-          borderRadius: 14,
-          padding: UI.CARD_PAD,
-          textAlign: 'center',
-          ...GLASS,
-          maxWidth: 896, // ~ max-w-4xl
-          margin: '0 auto',
+          marginTop: 8,
+          color: '#546E7A',
+          fontSize: 14,
+          fontWeight: 600,
+          maxWidth: 860,
+          marginLeft: 'auto',
+          marginRight: 'auto',
         }}
       >
-        <h1 style={{ margin: 0, color: '#FF7043', fontSize: 22, fontWeight: 900 }}>
-          {title}
-        </h1>
-        <p
-          style={{
-            margin: '6px auto 0',
-            color: '#455A64',
-            maxWidth: 760,
-            fontWeight: 600,
-          }}
-        >
-          {subtitle}
-        </p>
-      </div>
+        {subtitle}
+      </p>
     </section>
   );
 }
 
-const STATUS_OPTIONS = ['OPEN', 'IN_PROGRESS', 'AWAITING_USER', 'RESOLVED', 'CLOSED'];
+function SupportIcon({ size = 64 }) {
+  return (
+    <div
+      style={{
+        width: size,
+        height: size,
+        borderRadius: 12,
+        background: 'rgba(255,112,67,0.10)',
+        border: '1px solid rgba(255,112,67,0.20)',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        flexShrink: 0,
+      }}
+    >
+      <svg width={size * 0.45} height={size * 0.45} viewBox="0 0 24 24" fill="none">
+        <path
+          d="M4 6.5C4 5.67 4.67 5 5.5 5h13c.83 0 1.5.67 1.5 1.5v8c0 .83-.67 1.5-1.5 1.5H10l-4 3v-3H5.5C4.67 16 4 15.33 4 14.5v-8Z"
+          stroke="#FF7043"
+          strokeWidth="2"
+          strokeLinecap="round"
+          strokeLinejoin="round"
+        />
+      </svg>
+    </div>
+  );
+}
+
+const SUPPORT_TILES = [
+  {
+    id: 'chat',
+    title: 'Chat with Support',
+    desc: 'Start a live conversation with our support personas about your job search, billing, or technical issues.',
+    href: '/support/chat',
+  },
+  {
+    id: 'faq',
+    title: 'FAQs',
+    desc: 'Find answers to common questions about using ForgeTomorrow.',
+    alertMsg: 'FAQs coming soon!',
+  },
+  {
+    id: 'contact',
+    title: 'Contact Us',
+    desc: (
+      <>
+        Need personalized support? Email us anytime at{' '}
+        <a href="mailto:support@forgetomorrow.com" className="text-[#FF7043] underline">
+          support@forgetomorrow.com
+        </a>
+        .
+      </>
+    ),
+    alertMsg: 'Contact Us feature coming soon!',
+  },
+  {
+    id: 'guides',
+    title: 'Tutorials & Guides',
+    desc: 'Step-by-step instructions and video tutorials to get the most from ForgeTomorrow.',
+    alertMsg: 'Tutorials & Guides coming soon!',
+  },
+  {
+    id: 'community',
+    title: 'Community Forum',
+    desc: 'Connect with other users to share tips, ideas, and best practices.',
+    alertMsg: 'Community Forum coming soon!',
+  },
+];
+
+function MobileSupportCard({ tile, withChrome }) {
+  const isLink = !!tile.href;
+
+  const cardStyle = {
+    display: 'block',
+    background: 'rgba(255,255,255,0.95)',
+    borderRadius: 16,
+    padding: '22px 20px 20px',
+    border: '1.5px solid rgba(255,112,67,0.15)',
+    boxShadow: '0 12px 28px rgba(0,0,0,0.10)',
+    textDecoration: 'none',
+    position: 'relative',
+    overflow: 'hidden',
+    minHeight: 210,
+    cursor: 'pointer',
+    width: '100%',
+    textAlign: 'left',
+    transition: 'border-color 200ms ease, box-shadow 200ms ease',
+  };
+
+  const inner = (
+    <>
+      <div
+        aria-hidden="true"
+        style={{
+          position: 'absolute',
+          right: -70,
+          top: -70,
+          width: 200,
+          height: 200,
+          background:
+            'radial-gradient(circle, rgba(255,112,67,0.18), rgba(255,112,67,0.00) 70%)',
+          pointerEvents: 'none',
+        }}
+      />
+
+      <div style={{ display: 'flex', alignItems: 'center', gap: 14, marginBottom: 14 }}>
+        <SupportIcon size={64} />
+        <h2
+          style={{
+            fontSize: 20,
+            fontWeight: 900,
+            margin: 0,
+            color: '#FF7043',
+            lineHeight: 1.1,
+          }}
+        >
+          {tile.title}
+        </h2>
+      </div>
+
+      <div style={{ color: '#37474F', margin: '0 0 14px', lineHeight: 1.55, fontSize: 15 }}>
+        {tile.desc}
+      </div>
+
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end' }}>
+        <span
+          style={{
+            fontSize: 15,
+            fontWeight: 900,
+            color: '#FF7043',
+            display: 'flex',
+            alignItems: 'center',
+            gap: 4,
+          }}
+        >
+          {isLink ? 'Open' : 'View'}
+          <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+            <path
+              d="M3 8H13M13 8L9 4M13 8L9 12"
+              stroke="#FF7043"
+              strokeWidth="1.8"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+            />
+          </svg>
+        </span>
+      </div>
+    </>
+  );
+
+  if (isLink) {
+    return (
+      <a href={withChrome(tile.href)} style={cardStyle}>
+        {inner}
+      </a>
+    );
+  }
+
+  return (
+    <div
+      role="button"
+      tabIndex={0}
+      onClick={() => alert(tile.alertMsg)}
+      onKeyDown={(e) => {
+        if (e.key === 'Enter' || e.key === ' ') {
+          e.preventDefault();
+          alert(tile.alertMsg);
+        }
+      }}
+      style={cardStyle}
+      aria-label={tile.title}
+    >
+      {inner}
+    </div>
+  );
+}
+
+function MobileSupport({ tiles, withChrome }) {
+  const [activeIndex, setActiveIndex] = useState(0);
+  const [dropdownOpen, setDropdownOpen] = useState(false);
+  const trackRef = useRef(null);
+  const programmatic = useRef(false);
+
+  const goTo = useCallback(
+    (index) => {
+      setActiveIndex(index);
+      setDropdownOpen(false);
+      const track = trackRef.current;
+      if (!track) return;
+      programmatic.current = true;
+      track.scrollTo({ left: index * track.offsetWidth, behavior: 'smooth' });
+      setTimeout(() => {
+        programmatic.current = false;
+      }, 600);
+    },
+    []
+  );
+
+  const handleScroll = useCallback(() => {
+    if (programmatic.current) return;
+    const track = trackRef.current;
+    if (!track) return;
+    const index = Math.round(track.scrollLeft / track.offsetWidth);
+    if (index >= 0 && index < tiles.length) setActiveIndex(index);
+  }, [tiles.length]);
+
+  useEffect(() => {
+    const track = trackRef.current;
+    if (!track) return;
+    track.addEventListener('scroll', handleScroll, { passive: true });
+    return () => track.removeEventListener('scroll', handleScroll);
+  }, [handleScroll]);
+
+  const active = tiles[activeIndex];
+
+  return (
+    <div style={{ position: 'relative' }}>
+      <div style={{ padding: '0 16px 14px', position: 'relative', zIndex: 20 }}>
+        <button
+          onClick={() => setDropdownOpen((o) => !o)}
+          style={{
+            width: '100%',
+            background: 'rgba(255,255,255,0.95)',
+            border: '1.5px solid rgba(255,112,67,0.35)',
+            borderRadius: 12,
+            padding: '13px 16px',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            cursor: 'pointer',
+            boxShadow: '0 4px 14px rgba(0,0,0,0.08)',
+            gap: 10,
+            boxSizing: 'border-box',
+          }}
+        >
+          <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+            <SupportIcon size={28} />
+            <span style={{ fontSize: 16, fontWeight: 800, color: '#FF7043' }}>
+              {active.title}
+            </span>
+          </div>
+          <svg
+            width="20"
+            height="20"
+            viewBox="0 0 20 20"
+            fill="none"
+            style={{
+              flexShrink: 0,
+              transition: 'transform 200ms ease',
+              transform: dropdownOpen ? 'rotate(180deg)' : 'rotate(0deg)',
+            }}
+          >
+            <path
+              d="M5 7.5L10 12.5L15 7.5"
+              stroke="#FF7043"
+              strokeWidth="2"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+            />
+          </svg>
+        </button>
+
+        {dropdownOpen && (
+          <div
+            style={{
+              position: 'absolute',
+              top: 'calc(100% - 14px + 6px)',
+              left: 16,
+              right: 16,
+              background: 'rgba(255,255,255,0.98)',
+              border: '1.5px solid rgba(255,112,67,0.20)',
+              borderRadius: 12,
+              overflow: 'hidden',
+              boxShadow: '0 20px 48px rgba(0,0,0,0.16)',
+              backdropFilter: 'blur(14px)',
+              WebkitBackdropFilter: 'blur(14px)',
+            }}
+          >
+            {tiles.map((tile, i) => (
+              <button
+                key={tile.id}
+                onClick={() => goTo(i)}
+                style={{
+                  width: '100%',
+                  background: i === activeIndex ? 'rgba(255,112,67,0.08)' : 'transparent',
+                  border: 'none',
+                  borderBottom: i < tiles.length - 1 ? '1px solid rgba(0,0,0,0.06)' : 'none',
+                  padding: '13px 16px',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: 12,
+                  cursor: 'pointer',
+                  textAlign: 'left',
+                }}
+              >
+                <SupportIcon size={34} />
+                <div style={{ flex: 1 }}>
+                  <div
+                    style={{
+                      fontSize: 15,
+                      fontWeight: 800,
+                      lineHeight: 1.2,
+                      color: i === activeIndex ? '#FF7043' : '#37474F',
+                    }}
+                  >
+                    {tile.title}
+                  </div>
+                  <div style={{ fontSize: 12, color: '#78909C', marginTop: 2 }}>
+                    {tile.href ? 'Open option' : 'Preview option'}
+                  </div>
+                </div>
+                {i === activeIndex && (
+                  <svg width="18" height="18" viewBox="0 0 18 18" fill="none" style={{ flexShrink: 0 }}>
+                    <path
+                      d="M4 9L7.5 12.5L14 6"
+                      stroke="#FF7043"
+                      strokeWidth="2"
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                    />
+                  </svg>
+                )}
+              </button>
+            ))}
+          </div>
+        )}
+      </div>
+
+      <div
+        ref={trackRef}
+        style={{
+          display: 'flex',
+          overflowX: 'auto',
+          scrollSnapType: 'x mandatory',
+          msOverflowStyle: 'none',
+          scrollbarWidth: 'none',
+          WebkitOverflowScrolling: 'touch',
+        }}
+      >
+        {tiles.map((tile) => (
+          <div
+            key={tile.id}
+            style={{
+              flexShrink: 0,
+              width: '100%',
+              scrollSnapAlign: 'start',
+              padding: '0 16px',
+              boxSizing: 'border-box',
+            }}
+          >
+            <MobileSupportCard tile={tile} withChrome={withChrome} />
+          </div>
+        ))}
+      </div>
+
+      <div style={{ display: 'flex', justifyContent: 'center', gap: 8, marginTop: 8 }}>
+        {tiles.map((tile, i) => (
+          <button
+            key={tile.id}
+            onClick={() => goTo(i)}
+            aria-label={`Go to ${tile.title}`}
+            style={{
+              width: i === activeIndex ? 24 : 8,
+              height: 8,
+              borderRadius: 999,
+              background: i === activeIndex ? '#FF7043' : 'rgba(255,112,67,0.25)',
+              border: 'none',
+              padding: 0,
+              cursor: 'pointer',
+              transition: 'width 220ms ease, background 220ms ease',
+            }}
+          />
+        ))}
+      </div>
+    </div>
+  );
+}
+
+function DesktopSupportTile({ tile, withChrome }) {
+  const tileStyle = {
+    ...GLASS,
+    padding: 16,
+    display: 'grid',
+    gap: 8,
+    minHeight: 106,
+  };
+
+  const titleStyle = {
+    margin: 0,
+    color: '#37474F',
+    fontSize: 16,
+    fontWeight: 900,
+  };
+
+  const descStyle = {
+    margin: 0,
+    color: '#607D8B',
+    fontSize: 13,
+    lineHeight: 1.4,
+  };
+
+  const linkStyle = {
+    color: '#FF7043',
+    fontWeight: 800,
+    textDecoration: 'none',
+    display: 'inline-flex',
+    alignItems: 'center',
+    gap: 6,
+    width: 'fit-content',
+    background: 'none',
+    border: 'none',
+    padding: 0,
+    cursor: 'pointer',
+  };
+
+  if (tile.href) {
+    return (
+      <div style={tileStyle}>
+        <h2 style={titleStyle}>{tile.title}</h2>
+        <div style={descStyle}>{tile.desc}</div>
+        <a href={withChrome(tile.href)} style={linkStyle}>
+          Open →
+        </a>
+      </div>
+    );
+  }
+
+  return (
+    <div style={tileStyle}>
+      <h2 style={titleStyle}>{tile.title}</h2>
+      <div style={descStyle}>{tile.desc}</div>
+      <button
+        onClick={() => alert(tile.alertMsg)}
+        style={linkStyle}
+      >
+        Open →
+      </button>
+    </div>
+  );
+}
 
 export default function Support() {
   const router = useRouter();
-  const chrome = String(router.query.chrome || '').toLowerCase();
+
+  const chrome =
+    String(router.query.chrome || '').toLowerCase() ||
+    getChromeFromAsPath(router.asPath);
+
   const withChrome = (path) =>
     chrome ? `${path}${path.includes('?') ? '&' : '?'}chrome=${chrome}` : path;
 
@@ -79,6 +538,15 @@ export default function Support() {
   const [loadingTickets, setLoadingTickets] = useState(true);
   const [ticketError, setTicketError] = useState(null);
   const [updatingTicketId, setUpdatingTicketId] = useState(null);
+
+  const [isMobile, setIsMobile] = useState(true);
+
+  useEffect(() => {
+    const check = () => setIsMobile(window.innerWidth < 640);
+    check();
+    window.addEventListener('resize', check);
+    return () => window.removeEventListener('resize', check);
+  }, []);
 
   useEffect(() => {
     let isCancelled = false;
@@ -215,114 +683,58 @@ export default function Support() {
     }
   };
 
+  const HeaderBox = <SupportHeaderBox chrome={chrome} />;
+
   return (
     <SeekerLayout
       title="ForgeTomorrow – Support"
-      header={<SupportHeaderBox chrome={chrome} />}
+      header={HeaderBox}
       right={<SeekerRightColumn variant="support" />}
       activeNav="support"
     >
-      <div className="max-w-4xl mx-auto p-6 space-y-10">
-        {/* MAIN CONTENT CARD (glass) */}
-        <section
-          style={{
-            borderRadius: 14,
-            padding: 18,
-            ...GLASS,
-          }}
-          className="space-y-6"
-        >
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
-            {[
-              {
-                title: 'Chat with Support',
-                desc: 'Start a live conversation with our support personas about your job search, billing, or technical issues.',
-                href: '/support/chat',
-              },
-              {
-                title: 'FAQs',
-                desc: 'Find answers to common questions about using ForgeTomorrow.',
-                alertMsg: 'FAQs coming soon!',
-              },
-              {
-                title: 'Contact Us',
-                desc: (
-                  <>
-                    Need personalized support? Email us anytime at{' '}
-                    <a href="mailto:support@forgetomorrow.com" className="text-[#FF7043] underline">
-                      support@forgetomorrow.com
-                    </a>
-                    .
-                  </>
-                ),
-                alertMsg: 'Contact Us feature coming soon!',
-              },
-              {
-                title: 'Tutorials & Guides',
-                desc: 'Step-by-step instructions and video tutorials to get the most from ForgeTomorrow.',
-                alertMsg: 'Tutorials & Guides coming soon!',
-              },
-              {
-                title: 'Community Forum',
-                desc: 'Connect with other users to share tips, ideas, and best practices.',
-                alertMsg: 'Community Forum coming soon!',
-              },
-            ].map(({ title, desc, alertMsg, href }) => {
-              // ✅ Tile glass (slightly stronger than base so text pops, but still wallpaper-breathing)
-              const tileStyle = {
-                borderRadius: 14,
-                padding: 16,
-                border: '1px solid rgba(255,255,255,0.22)',
-                background: 'rgba(255,255,255,0.72)',
-                boxShadow: '0 10px 22px rgba(0,0,0,0.10)',
-                backdropFilter: 'blur(10px)',
-                WebkitBackdropFilter: 'blur(10px)',
-                transition: 'box-shadow 150ms ease, transform 150ms ease',
-              };
+      <div
+        style={{
+          ...GLASS,
+          paddingTop: 24,
+          paddingBottom: 24,
+          paddingLeft: isMobile ? 0 : 16,
+          paddingRight: isMobile ? 0 : 16,
+          width: '100%',
+          overflow: isMobile ? 'hidden' : 'visible',
+        }}
+      >
+        {isMobile && (
+          <MobileSupport
+            tiles={SUPPORT_TILES}
+            withChrome={withChrome}
+          />
+        )}
 
-              const tileClass =
-                'hover:shadow-lg hover:-translate-y-[1px] cursor-pointer focus:outline-none focus:ring-2 focus:ring-[#FF7043] focus:ring-offset-2 focus:ring-offset-white';
-
-              if (href) {
-                return (
-                  <Link
-                    key={title}
-                    href={withChrome(href)}
-                    className={tileClass}
-                    style={tileStyle}
-                    aria-label={title}
-                  >
-                    <h2 className="text-2xl font-semibold text-[#FF7043] mb-3">{title}</h2>
-                    <p className="text-slate-700">{desc}</p>
-                  </Link>
-                );
-              }
-
-              return (
-                <div
-                  key={title}
-                  style={tileStyle}
-                  className={tileClass}
-                  role="button"
-                  tabIndex={0}
-                  onClick={() => alert(alertMsg)}
-                  onKeyPress={(e) => e.key === 'Enter' && alert(alertMsg)}
-                  aria-label={title}
-                >
-                  <h2 className="text-2xl font-semibold text-[#FF7043] mb-3">{title}</h2>
-                  <p className="text-slate-700">{desc}</p>
-                </div>
-              );
-            })}
+        {!isMobile && (
+          <div style={{ display: 'grid', gap: 12, width: '100%' }}>
+            <div
+              style={{
+                display: 'grid',
+                gridTemplateColumns: 'repeat(2, minmax(0, 1fr))',
+                gap: 12,
+              }}
+            >
+              {SUPPORT_TILES.map((tile) => (
+                <DesktopSupportTile
+                  key={tile.id}
+                  tile={tile}
+                  withChrome={withChrome}
+                />
+              ))}
+            </div>
           </div>
-        </section>
+        )}
 
-        {/* RECENT TICKETS (glass) */}
         <section
           style={{
-            borderRadius: 14,
-            padding: 14,
             ...GLASS,
+            margin: isMobile ? '16px 16px 0' : '16px 0 0',
+            padding: UI.CARD_PAD,
           }}
           className="space-y-4"
         >
@@ -397,9 +809,15 @@ export default function Support() {
                           </select>
                         </div>
                       </td>
-                      <td className="py-2 px-3 text-xs text-slate-700 align-top">{intentLabel(t.intent)}</td>
-                      <td className="py-2 px-3 text-xs text-slate-700 align-top">{t.personaId || '—'}</td>
-                      <td className="py-2 px-3 text-xs text-slate-700 align-top">{t.source || 'support-chat'}</td>
+                      <td className="py-2 px-3 text-xs text-slate-700 align-top">
+                        {intentLabel(t.intent)}
+                      </td>
+                      <td className="py-2 px-3 text-xs text-slate-700 align-top">
+                        {t.personaId || '—'}
+                      </td>
+                      <td className="py-2 px-3 text-xs text-slate-700 align-top">
+                        {t.source || 'support-chat'}
+                      </td>
                       <td className="py-2 px-3 text-xs text-slate-600 whitespace-nowrap align-top">
                         {formatDate(t.createdAt)}
                       </td>
