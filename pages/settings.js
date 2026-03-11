@@ -41,6 +41,8 @@ const LABEL = {
   marginBottom: 6, display: 'block',
 };
 
+const SETTINGS_BACKGROUND_IMAGE = '/images/profile-fallbacks/profile-default-wallpaper.png';
+
 // Fixed height for ALL carousel cards — no jumping arrows
 const CARD_HEIGHT = 360;
 
@@ -339,7 +341,6 @@ function Carousel({ plan, onManageBilling }) {
     const dir = next > active ? 'left' : 'right';
     setDirection(dir);
     setSliding(true);
-    // After exit animation, swap card and run enter
     setTimeout(() => {
       setDisplayed(next);
       setActive(next);
@@ -361,7 +362,6 @@ function Carousel({ plan, onManageBilling }) {
     if (dx < 0 && active > 0) goTo(active - 1);
   }
 
-  // Slide animation styles
   const getSlideStyle = () => {
     if (!sliding && !direction) return { transform: 'translateX(0)', opacity: 1, transition: 'transform 0.28s cubic-bezier(0.4,0,0.2,1), opacity 0.28s ease' };
     if (direction === 'left')       return { transform: 'translateX(-48px)', opacity: 0, transition: 'transform 0.28s cubic-bezier(0.4,0,0.2,1), opacity 0.28s ease' };
@@ -383,11 +383,7 @@ function Carousel({ plan, onManageBilling }) {
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
-
-      {/* Arrow + viewport row */}
       <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-
-        {/* LEFT ARROW — fixed position in the row, never moves */}
         <button
           type="button"
           aria-label="Previous"
@@ -405,24 +401,21 @@ function Carousel({ plan, onManageBilling }) {
           }}
         >‹</button>
 
-        {/* VIEWPORT — overflow hidden + peek */}
         <div
           style={{ flex: 1, overflow: 'hidden', position: 'relative' }}
           onTouchStart={onTouchStart}
           onTouchEnd={onTouchEnd}
         >
-          {/* The animated card */}
           <div style={{ ...getSlideStyle(), paddingRight: 32 }}>
             <div style={{
               ...GLASS,
               padding: '22px 24px',
-              height: CARD_HEIGHT,        // ← FIXED height — arrows never move
+              height: CARD_HEIGHT,
               boxSizing: 'border-box',
               overflow: 'hidden',
               display: 'flex',
               flexDirection: 'column',
             }}>
-              {/* Card header */}
               <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 18, flexShrink: 0 }}>
                 <h2 style={{ margin: 0, fontSize: 17, fontWeight: 800, color: '#112033', letterSpacing: '-0.01em' }}>
                   {CARDS[displayed].label}
@@ -431,14 +424,12 @@ function Carousel({ plan, onManageBilling }) {
                   {active + 1} / {CARDS.length}
                 </span>
               </div>
-              {/* Card body — scrollable if content overflows */}
               <div style={{ flex: 1, overflowY: 'auto', paddingRight: 2 }}>
                 {cardContent(displayed)}
               </div>
             </div>
           </div>
 
-          {/* Peek sliver — ghost of next card */}
           {active < CARDS.length - 1 && (
             <div
               aria-hidden="true"
@@ -456,7 +447,6 @@ function Carousel({ plan, onManageBilling }) {
           )}
         </div>
 
-        {/* RIGHT ARROW — fixed position in the row, never moves */}
         <button
           type="button"
           aria-label="Next"
@@ -475,7 +465,6 @@ function Carousel({ plan, onManageBilling }) {
         >›</button>
       </div>
 
-      {/* Dot indicators — click any dot to jump directly */}
       <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', gap: 8 }}>
         {CARDS.map((c, i) => (
           <button
@@ -493,14 +482,10 @@ function Carousel({ plan, onManageBilling }) {
           />
         ))}
       </div>
-
     </div>
   );
 }
 
-// ────────────────────────────────────────────────────────────────
-// PAGE CONTENT
-// ────────────────────────────────────────────────────────────────
 function SettingsContent() {
   const router   = useRouter();
   const chrome   = String(router.query.chrome || '').toLowerCase();
@@ -545,8 +530,6 @@ function SettingsContent() {
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 14, paddingBottom: isMobile ? 100 : 40 }}>
-
-      {/* ── Title card — centered, orange, no icon ─────────── */}
       <header style={{
         ...GLASS,
         padding: isMobile ? '20px 18px' : '22px 32px',
@@ -570,7 +553,6 @@ function SettingsContent() {
         </p>
       </header>
 
-      {/* ── Account card ─────────────────────────────────────── */}
       <section style={{ ...GLASS, padding: isMobile ? '20px 18px' : '22px 24px', display: 'flex', flexDirection: 'column', gap: 16 }}>
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
           <h2 style={{ margin: 0, fontSize: isMobile ? 15 : 17, fontWeight: 800, color: '#112033', letterSpacing: '-0.01em' }}>Account</h2>
@@ -595,20 +577,15 @@ function SettingsContent() {
         </div>
       </section>
 
-      {/* ── Carousel ─────────────────────────────────────────── */}
       <Carousel plan={plan} onManageBilling={handleManageBilling} />
 
       <p style={{ textAlign: 'center', fontSize: 12, color: '#78909C', marginTop: 4 }}>
-        ForgeTomorrow · Building Human-First Career Infrastructure
+        ForgeTomorrow · The future of careers and networking.
       </p>
     </div>
   );
 }
 
-// ────────────────────────────────────────────────────────────────
-// EXPORT — SeekerLayout handles wallpaper, sidebar, header, mobile
-// right prop is empty but reserves the rail space for future use
-// ────────────────────────────────────────────────────────────────
 export default function SettingsPage() {
   return (
     <SeekerLayout
@@ -616,6 +593,8 @@ export default function SettingsPage() {
       activeNav=""
       right={<div />}
       rightVariant="light"
+      disableUserWallpaper
+      backgroundImageOverride={SETTINGS_BACKGROUND_IMAGE}
     >
       <SettingsContent />
     </SeekerLayout>
