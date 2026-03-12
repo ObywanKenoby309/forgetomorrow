@@ -242,12 +242,17 @@ function Body() {
             }}
           >
             <div>
-              <div style={{ fontSize: 18, fontWeight: 900, color: SLATE }}>Application Funnel</div>
+              <div style={{ fontSize: 18, fontWeight: 900, color: SLATE }}>
+                Application Funnel
+              </div>
               <div style={{ fontSize: 13, color: MUTED, marginTop: 4 }}>
                 Track movement from interest to hire and spot where candidates drop.
               </div>
             </div>
-            <Link href="/recruiter/analytics/funnel" style={{ color: ORANGE, fontWeight: 800, fontSize: 12 }}>
+            <Link
+              href="/recruiter/analytics/funnel"
+              style={{ color: ORANGE, fontWeight: 800, fontSize: 12 }}
+            >
               Full report →
             </Link>
           </div>
@@ -265,12 +270,17 @@ function Body() {
             }}
           >
             <div>
-              <div style={{ fontSize: 18, fontWeight: 900, color: SLATE }}>Source Performance</div>
+              <div style={{ fontSize: 18, fontWeight: 900, color: SLATE }}>
+                Source Performance
+              </div>
               <div style={{ fontSize: 13, color: MUTED, marginTop: 4 }}>
                 See which channels produce the strongest recruiting outcomes.
               </div>
             </div>
-            <Link href="/recruiter/analytics/sources" style={{ color: ORANGE, fontWeight: 800, fontSize: 12 }}>
+            <Link
+              href="/recruiter/analytics/sources"
+              style={{ color: ORANGE, fontWeight: 800, fontSize: 12 }}
+            >
               Full report →
             </Link>
           </div>
@@ -290,12 +300,17 @@ function Body() {
             }}
           >
             <div>
-              <div style={{ fontSize: 18, fontWeight: 900, color: SLATE }}>Recruiter Activity</div>
+              <div style={{ fontSize: 18, fontWeight: 900, color: SLATE }}>
+                Recruiter Activity
+              </div>
               <div style={{ fontSize: 13, color: MUTED, marginTop: 4 }}>
                 Outreach, screens, and hires across your current window.
               </div>
             </div>
-            <Link href="/recruiter/analytics/recruiters" style={{ color: ORANGE, fontWeight: 800, fontSize: 12 }}>
+            <Link
+              href="/recruiter/analytics/recruiters"
+              style={{ color: ORANGE, fontWeight: 800, fontSize: 12 }}
+            >
               Full report →
             </Link>
           </div>
@@ -303,7 +318,9 @@ function Body() {
         </div>
 
         <div style={{ ...GLASS, borderRadius: 18, padding: 16 }}>
-          <div style={{ fontSize: 18, fontWeight: 900, color: SLATE }}>Report Gateways</div>
+          <div style={{ fontSize: 18, fontWeight: 900, color: SLATE }}>
+            Report Gateways
+          </div>
           <div style={{ fontSize: 13, color: MUTED, marginTop: 4, marginBottom: 12 }}>
             Snapshot here, drill into dedicated reports for the why.
           </div>
@@ -383,7 +400,9 @@ function Body() {
             }}
           >
             <div>
-              <div style={{ fontSize: 18, fontWeight: 900, color: SLATE }}>Executive Overview</div>
+              <div style={{ fontSize: 18, fontWeight: 900, color: SLATE }}>
+                Executive Overview
+              </div>
               <div style={{ fontSize: 13, color: MUTED, marginTop: 4 }}>
                 Quick reads for source quality, interview flow, and close efficiency.
               </div>
@@ -447,7 +466,9 @@ function Body() {
         </div>
 
         <div style={{ ...GLASS, borderRadius: 18, padding: 16 }}>
-          <div style={{ fontSize: 18, fontWeight: 900, color: SLATE }}>Intelligence Panel</div>
+          <div style={{ fontSize: 18, fontWeight: 900, color: SLATE }}>
+            Intelligence Panel
+          </div>
           <div style={{ fontSize: 13, color: MUTED, marginTop: 4, marginBottom: 12 }}>
             What matters most right now.
           </div>
@@ -456,12 +477,12 @@ function Body() {
             <InsightTile
               title="Quality of Hire"
               value="Building"
-              detail="Keep QOH on analytics first. Promote it once enough post-hire data exists to make it trustworthy."
+              detail="Quality of Hire activates once sufficient post-hire performance data exists."
             />
             <InsightTile
-              title="Top recruiter"
-              value="A. Johnson"
-              detail="Strong current placeholder callout until recruiter leaderboard data is wired."
+              title="Recruiter leaderboard"
+              value="Building"
+              detail="Leaderboard rankings will appear once recruiter performance data is available for the selected period."
               color="#0F766E"
             />
             <InsightTile
@@ -488,8 +509,7 @@ function Body() {
 
       {data?.meta?.refreshedAt ? (
         <div style={{ fontSize: 12, color: "#94A3B8", textAlign: "right" }}>
-          Last updated: {new Date(data.meta.refreshedAt).toLocaleString()} · Source:{" "}
-          {data.meta.source?.toUpperCase?.() || "SQL"}
+          Last updated: {new Date(data.meta.refreshedAt).toLocaleString()}
         </div>
       ) : null}
     </RecruiterAnalyticsLayout>

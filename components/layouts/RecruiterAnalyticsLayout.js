@@ -83,18 +83,46 @@ function FilterPill({ active, onClick, children }) {
   );
 }
 
-function AnalyticsHeader({ title, subtitle }) {
+function AnalyticsHeader({ title, subtitle, activeTab }) {
+  const activeLabel =
+    activeTab === "command"
+      ? "Command Center"
+      : activeTab === "reports"
+      ? "Report Details"
+      : "Presentation Visuals";
+
   return (
     <div style={{ textAlign: "center" }}>
-      <h1 style={{ fontSize: 28, fontWeight: 900, color: ORANGE, lineHeight: 1.1 }}>
+      <h1
+        style={{
+          fontSize: 28,
+          fontWeight: 900,
+          color: ORANGE,
+          lineHeight: 1.05,
+          margin: 0,
+        }}
+      >
         {title}
       </h1>
+
+      <div
+        style={{
+          fontSize: 22,
+          fontWeight: 900,
+          color: SLATE,
+          lineHeight: 1.1,
+          marginTop: 2,
+        }}
+      >
+        {activeLabel}
+      </div>
+
       <p
         style={{
           fontSize: 14,
           color: "#475569",
-          marginTop: 6,
-          maxWidth: 720,
+          marginTop: 8,
+          maxWidth: 760,
           marginLeft: "auto",
           marginRight: "auto",
           lineHeight: 1.6,
@@ -167,6 +195,57 @@ function DefaultRightRail() {
   );
 }
 
+function LabelCell({ children }) {
+  return (
+    <div
+      style={{
+        fontSize: 11,
+        fontWeight: 700,
+        color: MUTED,
+        minWidth: 44,
+        paddingTop: 2,
+        whiteSpace: "nowrap",
+      }}
+    >
+      {children}
+    </div>
+  );
+}
+
+const SELECT_STYLE = {
+  borderRadius: 999,
+  border: "1px solid rgba(51,65,85,0.14)",
+  background: "rgba(255,255,255,0.84)",
+  color: SLATE,
+  fontSize: 12,
+  fontWeight: 700,
+  padding: "7px 12px",
+  outline: "none",
+};
+
+const EXPORT_STYLE = {
+  borderRadius: 999,
+  border: "1px solid rgba(51,65,85,0.14)",
+  background: "rgba(255,255,255,0.92)",
+  color: SLATE,
+  fontSize: 12,
+  fontWeight: 800,
+  padding: "7px 14px",
+  cursor: "pointer",
+  whiteSpace: "nowrap",
+};
+
+const DATE_INPUT_STYLE = {
+  borderRadius: 999,
+  border: "1px solid rgba(51,65,85,0.14)",
+  background: "rgba(255,255,255,0.84)",
+  color: SLATE,
+  fontSize: 12,
+  fontWeight: 700,
+  padding: "7px 12px",
+  outline: "none",
+};
+
 export default function RecruiterAnalyticsLayout({
   title = "Recruiter Analytics — ForgeTomorrow",
   pageTitle = "Recruiter Analytics",
@@ -180,7 +259,6 @@ export default function RecruiterAnalyticsLayout({
   const router = useRouter();
 
   const period = filters?.range || "30d";
-
   const activePath = useMemo(() => router.pathname || "", [router.pathname]);
 
   const pushWithFilters = (href) => {
@@ -197,7 +275,11 @@ export default function RecruiterAnalyticsLayout({
   };
 
   const header = (
-    <AnalyticsHeader title={pageTitle} subtitle={pageSubtitle} />
+    <AnalyticsHeader
+      title={pageTitle}
+      subtitle={pageSubtitle}
+      activeTab={activeTab}
+    />
   );
 
   const rightRail = right || <DefaultRightRail />;
@@ -214,216 +296,212 @@ export default function RecruiterAnalyticsLayout({
         style={{
           ...GLASS,
           borderRadius: 18,
-          padding: 16,
+          padding: 14,
         }}
       >
         <div
           style={{
-            display: "flex",
-            alignItems: "flex-start",
-            justifyContent: "space-between",
-            gap: 12,
-            flexWrap: "wrap",
+            display: "grid",
+            gap: 10,
           }}
         >
-          <div>
+          {/* Row 1: View + Refresh */}
+          <div
+            style={{
+              display: "flex",
+              alignItems: "flex-start",
+              justifyContent: "space-between",
+              gap: 14,
+              flexWrap: "wrap",
+            }}
+          >
             <div
               style={{
-                fontSize: 11,
-                fontWeight: 800,
-                letterSpacing: "0.08em",
-                textTransform: "uppercase",
-                color: ORANGE,
-                marginBottom: 6,
+                display: "flex",
+                alignItems: "center",
+                gap: 10,
+                flexWrap: "wrap",
+                minWidth: 0,
+                flex: 1,
               }}
             >
-              Recruiter Analytics
+              <LabelCell>View:</LabelCell>
+
+              {MODE_TABS.map((tab) => (
+                <TabButton
+                  key={tab.key}
+                  active={activeTab === tab.key}
+                  onClick={() => pushWithFilters(tab.href)}
+                >
+                  {tab.label}
+                </TabButton>
+              ))}
             </div>
-            <div style={{ fontSize: 24, fontWeight: 900, color: SLATE, lineHeight: 1.1 }}>
-              {activeTab === "command"
-                ? "Command Center"
-                : activeTab === "reports"
-                ? "Report Details"
-                : "Presentation Visuals"}
-            </div>
-            <div style={{ fontSize: 13, color: MUTED, marginTop: 6, lineHeight: 1.6 }}>
-              One surface for monitoring, understanding, and presenting recruiting performance.
+
+            <div
+              style={{
+                display: "flex",
+                alignItems: "flex-start",
+                justifyContent: "flex-end",
+                minWidth: 86,
+              }}
+            >
+              <div style={{ textAlign: "left" }}>
+                <div style={{ fontSize: 11, color: "#94A3B8" }}>Refresh</div>
+                <div style={{ fontSize: 14, fontWeight: 800, color: SLATE }}>30s live</div>
+              </div>
             </div>
           </div>
 
-          <div style={{ display: "flex", gap: 18, flexWrap: "wrap" }}>
-            <div>
-              <div style={{ fontSize: 11, color: "#94A3B8" }}>Refresh</div>
-              <div style={{ fontSize: 14, fontWeight: 800, color: SLATE }}>30s live</div>
-            </div>
-            <div>
-              <div style={{ fontSize: 11, color: "#94A3B8" }}>Data source</div>
-              <div style={{ fontSize: 14, fontWeight: 800, color: SLATE }}>SQL</div>
-            </div>
-          </div>
-        </div>
-
-        <div
-          style={{
-            display: "flex",
-            gap: 8,
-            overflowX: "auto",
-            paddingTop: 14,
-            paddingBottom: 2,
-            scrollbarWidth: "none",
-          }}
-        >
-          {MODE_TABS.map((tab) => (
-            <TabButton
-              key={tab.key}
-              active={activeTab === tab.key}
-              onClick={() => pushWithFilters(tab.href)}
-            >
-              {tab.label}
-            </TabButton>
-          ))}
-        </div>
-
-        <div
-          style={{
-            display: "flex",
-            gap: 8,
-            overflowX: "auto",
-            paddingTop: 10,
-            paddingBottom: 2,
-            scrollbarWidth: "none",
-          }}
-        >
-          {REPORT_LINKS.map((tab) => (
-            <TabButton
-              key={tab.href}
-              active={activePath === tab.href}
-              onClick={() => pushWithFilters(tab.href)}
-            >
-              {tab.label}
-            </TabButton>
-          ))}
-        </div>
-
-        <div
-          style={{
-            ...SOFT_GLASS,
-            borderRadius: 16,
-            padding: 14,
-            marginTop: 14,
-          }}
-        >
+          {/* Row 2: Report */}
           <div
             style={{
               display: "flex",
               alignItems: "center",
               gap: 10,
               flexWrap: "wrap",
+              minWidth: 0,
             }}
           >
-            <div style={{ fontSize: 11, fontWeight: 700, color: MUTED }}>Period:</div>
+            <LabelCell>Report:</LabelCell>
 
-            {["7d", "30d", "90d", "ytd", "custom"].map((value) => (
-              <FilterPill
-                key={value}
-                active={period === value}
-                onClick={() => onFilterChange?.({ range: value })}
+            {REPORT_LINKS.map((tab) => (
+              <TabButton
+                key={tab.href}
+                active={activePath === tab.href}
+                onClick={() => pushWithFilters(tab.href)}
               >
-                {value.toUpperCase()}
-              </FilterPill>
+                {tab.label}
+              </TabButton>
             ))}
+          </div>
 
-            <select
-              value={filters?.jobId || "all"}
-              onChange={(e) => onFilterChange?.({ jobId: e.target.value })}
+          {/* Row 3: Filters */}
+          <div
+            style={{
+              ...SOFT_GLASS,
+              borderRadius: 16,
+              padding: 14,
+              marginTop: 2,
+            }}
+          >
+            <div
               style={{
-                borderRadius: 999,
-                border: "1px solid rgba(51,65,85,0.14)",
-                background: "rgba(255,255,255,0.84)",
-                color: SLATE,
-                fontSize: 12,
-                fontWeight: 700,
-                padding: "7px 12px",
-                outline: "none",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "space-between",
+                gap: 12,
+                flexWrap: "wrap",
               }}
             >
-              <option value="all">All Jobs</option>
-              <option value="engineering">Engineering</option>
-              <option value="sales">Sales</option>
-              <option value="operations">Operations</option>
-            </select>
+              <div
+                style={{
+                  display: "flex",
+                  alignItems: "center",
+                  gap: 10,
+                  flexWrap: "wrap",
+                  minWidth: 0,
+                  flex: 1,
+                }}
+              >
+                <LabelCell>Period:</LabelCell>
 
-            <select
-              value={filters?.recruiterId || "all"}
-              onChange={(e) => onFilterChange?.({ recruiterId: e.target.value })}
-              style={{
-                borderRadius: 999,
-                border: "1px solid rgba(51,65,85,0.14)",
-                background: "rgba(255,255,255,0.84)",
-                color: SLATE,
-                fontSize: 12,
-                fontWeight: 700,
-                padding: "7px 12px",
-                outline: "none",
-              }}
-            >
-              <option value="all">All Recruiters</option>
-              <option value="ajohnson">A. Johnson</option>
-              <option value="mchen">M. Chen</option>
-              <option value="slee">S. Lee</option>
-            </select>
+                {["7d", "30d", "90d", "ytd", "custom"].map((value) => (
+                  <FilterPill
+                    key={value}
+                    active={period === value}
+                    onClick={() => onFilterChange?.({ range: value })}
+                  >
+                    {value.toUpperCase()}
+                  </FilterPill>
+                ))}
+              </div>
+
+              <div
+                style={{
+                  display: "flex",
+                  alignItems: "center",
+                  gap: 10,
+                  flexWrap: "wrap",
+                  justifyContent: "flex-end",
+                }}
+              >
+                <select
+                  value={filters?.jobId || "all"}
+                  onChange={(e) => onFilterChange?.({ jobId: e.target.value })}
+                  style={SELECT_STYLE}
+                >
+                  <option value="all">All Jobs</option>
+                  <option value="engineering">Engineering</option>
+                  <option value="sales">Sales</option>
+                  <option value="operations">Operations</option>
+                </select>
+
+                <select
+                  value={filters?.recruiterId || "all"}
+                  onChange={(e) => onFilterChange?.({ recruiterId: e.target.value })}
+                  style={SELECT_STYLE}
+                >
+                  <option value="all">All Recruiters</option>
+                  <option value="ajohnson">A. Johnson</option>
+                  <option value="mchen">M. Chen</option>
+                  <option value="slee">S. Lee</option>
+                </select>
+
+                <button type="button" style={EXPORT_STYLE}>
+                  Export CSV
+                </button>
+              </div>
+            </div>
 
             {period === "custom" ? (
-              <>
+              <div
+                style={{
+                  display: "flex",
+                  alignItems: "center",
+                  gap: 12,
+                  flexWrap: "wrap",
+                  marginTop: 12,
+                  paddingLeft: 54,
+                }}
+              >
+                <div
+                  style={{
+                    fontSize: 12,
+                    fontWeight: 700,
+                    color: SLATE,
+                    whiteSpace: "nowrap",
+                  }}
+                >
+                  From
+                </div>
+
                 <input
                   type="date"
                   value={filters?.from || ""}
                   onChange={(e) => onFilterChange?.({ from: e.target.value })}
+                  style={DATE_INPUT_STYLE}
+                />
+
+                <div
                   style={{
-                    borderRadius: 999,
-                    border: "1px solid rgba(51,65,85,0.14)",
-                    background: "rgba(255,255,255,0.84)",
-                    color: SLATE,
                     fontSize: 12,
                     fontWeight: 700,
-                    padding: "7px 12px",
-                    outline: "none",
+                    color: SLATE,
+                    whiteSpace: "nowrap",
                   }}
-                />
+                >
+                  To
+                </div>
+
                 <input
                   type="date"
                   value={filters?.to || ""}
                   onChange={(e) => onFilterChange?.({ to: e.target.value })}
-                  style={{
-                    borderRadius: 999,
-                    border: "1px solid rgba(51,65,85,0.14)",
-                    background: "rgba(255,255,255,0.84)",
-                    color: SLATE,
-                    fontSize: 12,
-                    fontWeight: 700,
-                    padding: "7px 12px",
-                    outline: "none",
-                  }}
+                  style={DATE_INPUT_STYLE}
                 />
-              </>
+              </div>
             ) : null}
-
-            <button
-              type="button"
-              style={{
-                marginLeft: "auto",
-                borderRadius: 999,
-                border: "1px solid rgba(51,65,85,0.14)",
-                background: "rgba(255,255,255,0.92)",
-                color: SLATE,
-                fontSize: 12,
-                fontWeight: 800,
-                padding: "7px 14px",
-                cursor: "pointer",
-              }}
-            >
-              Export CSV
-            </button>
           </div>
         </div>
       </section>
