@@ -671,7 +671,7 @@ export default function SeekerDashboard() {
               display: 'grid',
               gridTemplateColumns: 'minmax(0, 5fr) minmax(0, 5fr) minmax(0, 3fr)',
               gap: GAP,
-              marginLeft: -252,
+              marginLeft: -0,
               position: 'relative',  // ← raises stacking context
               zIndex: 11,            // ← beats sidebar's zIndex: 10 so cards render on top
             }}>
