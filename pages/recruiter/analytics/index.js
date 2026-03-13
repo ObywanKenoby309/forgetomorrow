@@ -196,7 +196,7 @@ function Body() {
     <>
       {/* Row A: Executive Snapshot | Recruiter Activity | Intelligence Panel
           marginTop pushes this row below both right rail cards so it bleeds full width */}
-      <div style={{ ...bleedRowStyle, marginTop: 48 }}>
+      <div style={{ ...bleedRowStyle, marginTop: 64 }}>
         <div style={{ ...GLASS, borderRadius: 18, padding: 16 }}>
           <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: 12, flexWrap: "wrap" }}>
             <div>
