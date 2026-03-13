@@ -94,15 +94,7 @@ function StatTile({ label, value, hint }) {
   return (
     <div style={{ ...SOFT_GLASS, borderRadius: 14, padding: 14 }}>
       <div style={{ fontSize: 11, color: MUTED }}>{label}</div>
-      <div
-        style={{
-          fontSize: 18,
-          fontWeight: 900,
-          color: SLATE,
-          marginTop: 5,
-          lineHeight: 1.2,
-        }}
-      >
+      <div style={{ fontSize: 18, fontWeight: 900, color: SLATE, marginTop: 5, lineHeight: 1.2 }}>
         {value}
       </div>
       <div style={{ fontSize: 11, color: "#94A3B8", marginTop: 4 }}>{hint}</div>
@@ -114,20 +106,10 @@ function InsightTile({ title, value, detail, color = ORANGE }) {
   return (
     <div style={{ ...SOFT_GLASS, borderRadius: 14, padding: 14 }}>
       <div style={{ fontSize: 12, fontWeight: 800, color: SLATE }}>{title}</div>
-      <div
-        style={{
-          fontSize: 24,
-          fontWeight: 900,
-          color,
-          marginTop: 8,
-          lineHeight: 1,
-        }}
-      >
+      <div style={{ fontSize: 24, fontWeight: 900, color, marginTop: 8, lineHeight: 1 }}>
         {value}
       </div>
-      <div style={{ fontSize: 12, color: MUTED, lineHeight: 1.6, marginTop: 8 }}>
-        {detail}
-      </div>
+      <div style={{ fontSize: 12, color: MUTED, lineHeight: 1.6, marginTop: 8 }}>{detail}</div>
     </div>
   );
 }
@@ -160,11 +142,8 @@ function ReportCard({ title, description, href, value }) {
             Full report
           </div>
           <div style={{ fontSize: 15, fontWeight: 900, color: SLATE }}>{title}</div>
-          <div style={{ fontSize: 12, color: MUTED, lineHeight: 1.55, marginTop: 6 }}>
-            {description}
-          </div>
+          <div style={{ fontSize: 12, color: MUTED, lineHeight: 1.55, marginTop: 6 }}>{description}</div>
         </div>
-
         <div
           style={{
             display: "flex",
@@ -196,7 +175,6 @@ function Body() {
   const onFilterChange = (patch) => {
     const next = { ...filters, ...patch };
     setFilters(next);
-
     router.replace(
       {
         pathname: router.pathname,
@@ -227,9 +205,14 @@ function Body() {
 
   const ChartsBlock = (
     <div style={{ display: "grid", gap: 16 }}>
+      {/* ✅ Funnel + Source: inline 2-col — fires on container width, not viewport */}
       <section
-        className="grid grid-cols-1 xl:grid-cols-2 gap-4"
-        style={{ alignItems: "start" }}
+        style={{
+          display: "grid",
+          gridTemplateColumns: "repeat(auto-fit, minmax(min(100%, 440px), 1fr))",
+          gap: 16,
+          alignItems: "start",
+        }}
       >
         <div style={{ ...GLASS, borderRadius: 18, padding: 16 }}>
           <div
@@ -242,17 +225,12 @@ function Body() {
             }}
           >
             <div>
-              <div style={{ fontSize: 18, fontWeight: 900, color: SLATE }}>
-                Application Funnel
-              </div>
+              <div style={{ fontSize: 18, fontWeight: 900, color: SLATE }}>Application Funnel</div>
               <div style={{ fontSize: 13, color: MUTED, marginTop: 4 }}>
                 Track movement from interest to hire and spot where candidates drop.
               </div>
             </div>
-            <Link
-              href="/recruiter/analytics/funnel"
-              style={{ color: ORANGE, fontWeight: 800, fontSize: 12 }}
-            >
+            <Link href="/recruiter/analytics/funnel" style={{ color: ORANGE, fontWeight: 800, fontSize: 12 }}>
               Full report →
             </Link>
           </div>
@@ -270,17 +248,12 @@ function Body() {
             }}
           >
             <div>
-              <div style={{ fontSize: 18, fontWeight: 900, color: SLATE }}>
-                Source Performance
-              </div>
+              <div style={{ fontSize: 18, fontWeight: 900, color: SLATE }}>Source Performance</div>
               <div style={{ fontSize: 13, color: MUTED, marginTop: 4 }}>
                 See which channels produce the strongest recruiting outcomes.
               </div>
             </div>
-            <Link
-              href="/recruiter/analytics/sources"
-              style={{ color: ORANGE, fontWeight: 800, fontSize: 12 }}
-            >
+            <Link href="/recruiter/analytics/sources" style={{ color: ORANGE, fontWeight: 800, fontSize: 12 }}>
               Full report →
             </Link>
           </div>
@@ -288,7 +261,14 @@ function Body() {
         </div>
       </section>
 
-      <section className="grid grid-cols-1 2xl:grid-cols-[1.4fr_1fr] gap-4">
+      {/* ✅ Activity + Report Gateways: inline 1.4fr/1fr */}
+      <section
+        style={{
+          display: "grid",
+          gridTemplateColumns: "minmax(0, 1.4fr) minmax(0, 1fr)",
+          gap: 16,
+        }}
+      >
         <div style={{ ...GLASS, borderRadius: 18, padding: 16 }}>
           <div
             style={{
@@ -300,17 +280,12 @@ function Body() {
             }}
           >
             <div>
-              <div style={{ fontSize: 18, fontWeight: 900, color: SLATE }}>
-                Recruiter Activity
-              </div>
+              <div style={{ fontSize: 18, fontWeight: 900, color: SLATE }}>Recruiter Activity</div>
               <div style={{ fontSize: 13, color: MUTED, marginTop: 4 }}>
                 Outreach, screens, and hires across your current window.
               </div>
             </div>
-            <Link
-              href="/recruiter/analytics/recruiters"
-              style={{ color: ORANGE, fontWeight: 800, fontSize: 12 }}
-            >
+            <Link href="/recruiter/analytics/recruiters" style={{ color: ORANGE, fontWeight: 800, fontSize: 12 }}>
               Full report →
             </Link>
           </div>
@@ -318,13 +293,10 @@ function Body() {
         </div>
 
         <div style={{ ...GLASS, borderRadius: 18, padding: 16 }}>
-          <div style={{ fontSize: 18, fontWeight: 900, color: SLATE }}>
-            Report Gateways
-          </div>
+          <div style={{ fontSize: 18, fontWeight: 900, color: SLATE }}>Report Gateways</div>
           <div style={{ fontSize: 13, color: MUTED, marginTop: 4, marginBottom: 12 }}>
             Snapshot here, drill into dedicated reports for the why.
           </div>
-
           <div style={{ display: "grid", gap: 10 }}>
             <ReportCard
               title="Time-to-Fill"
@@ -373,7 +345,14 @@ function Body() {
         </div>
       ) : null}
 
-      <section className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-6 gap-4">
+      {/* ✅ KPI row: 6 equal columns via auto-fit — fills available width */}
+      <section
+        style={{
+          display: "grid",
+          gridTemplateColumns: "repeat(auto-fit, minmax(min(100%, 130px), 1fr))",
+          gap: 16,
+        }}
+      >
         <KPICard label="Total job views" value={data?.kpis?.totalViews ?? (loading ? "…" : 0)} />
         <KPICard label="Total applies" value={data?.kpis?.totalApplies ?? (loading ? "…" : 0)} />
         <KPICard
@@ -388,7 +367,14 @@ function Body() {
         <KPICard label="Hires" value={loading ? "…" : totalHires} />
       </section>
 
-      <section className="grid grid-cols-1 xl:grid-cols-[1.5fr_1fr] gap-4">
+      {/* ✅ Executive Overview + Intelligence Panel: 1.5fr / 1fr */}
+      <section
+        style={{
+          display: "grid",
+          gridTemplateColumns: "minmax(0, 1.5fr) minmax(0, 1fr)",
+          gap: 16,
+        }}
+      >
         <div style={{ ...GLASS, borderRadius: 18, padding: 16 }}>
           <div
             style={{
@@ -400,14 +386,11 @@ function Body() {
             }}
           >
             <div>
-              <div style={{ fontSize: 18, fontWeight: 900, color: SLATE }}>
-                Executive Overview
-              </div>
+              <div style={{ fontSize: 18, fontWeight: 900, color: SLATE }}>Executive Overview</div>
               <div style={{ fontSize: 13, color: MUTED, marginTop: 4 }}>
                 Quick reads for source quality, interview flow, and close efficiency.
               </div>
             </div>
-
             <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
               <Link
                 href="/recruiter/analytics/reports"
@@ -440,7 +423,15 @@ function Body() {
             </div>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mt-4">
+          {/* ✅ StatTiles: 3-col inline */}
+          <div
+            style={{
+              display: "grid",
+              gridTemplateColumns: "repeat(3, minmax(0, 1fr))",
+              gap: 16,
+              marginTop: 16,
+            }}
+          >
             <StatTile
               label="Top source"
               value={loading ? "…" : topSource?.name || "N/A"}
@@ -466,13 +457,10 @@ function Body() {
         </div>
 
         <div style={{ ...GLASS, borderRadius: 18, padding: 16 }}>
-          <div style={{ fontSize: 18, fontWeight: 900, color: SLATE }}>
-            Intelligence Panel
-          </div>
+          <div style={{ fontSize: 18, fontWeight: 900, color: SLATE }}>Intelligence Panel</div>
           <div style={{ fontSize: 13, color: MUTED, marginTop: 4, marginBottom: 12 }}>
             What matters most right now.
           </div>
-
           <div style={{ display: "grid", gap: 10 }}>
             <InsightTile
               title="Quality of Hire"

@@ -13,7 +13,7 @@ import { PlanProvider, usePlan } from '@/context/PlanContext';
 import { AiUsageProvider } from '@/context/AiUsageContext';
 import { useUserWallpaper } from '@/hooks/useUserWallpaper';
 import SupportFloatingButton from '@/components/SupportFloatingButton';
-import { SessionProvider } from 'next-auth/react';
+import { SessionProvider, useSession } from 'next-auth/react';
 
 // ✅ Global Desktop Striker host (rendered on all internal pages)
 import AiWindowsHost from '@/components/ai/AiWindowsHost';
@@ -106,6 +106,29 @@ function GlobalStriker({ enabled }) {
   if (!allowedModes.length) return null;
 
   return <AiWindowsHost allowedModes={allowedModes} />;
+}
+
+function SessionExpiryGuard({ enabled }) {
+  const router = useRouter();
+  const { status } = useSession();
+
+  useEffect(() => {
+    if (!enabled) return;
+    if (status === 'loading') return;
+    if (status !== 'unauthenticated') return;
+
+    const from = router.asPath || router.pathname || '/';
+    const signinPath = '/auth/signin';
+
+    if (router.pathname === signinPath || router.pathname === '/login') return;
+
+    router.replace({
+      pathname: signinPath,
+      query: { from },
+    });
+  }, [enabled, status, router]);
+
+  return null;
 }
 
 function AppShell({ Component, pageProps }) {
@@ -284,6 +307,9 @@ function AppShell({ Component, pageProps }) {
   // Striker on all internal pages (everything that is not public effective)
   const shouldShowGlobalStriker = !isPublicEffective;
 
+  // Client-side auth expiry redirect on protected routes only
+  const shouldGuardSession = !isPublicEffective;
+
   return (
     <>
       <Head>
@@ -345,6 +371,7 @@ function AppShell({ Component, pageProps }) {
             <ResumeProvider>
               <AiUsageProvider>
                 <RouteTracker />
+                <SessionExpiryGuard enabled={shouldGuardSession} />
                 {renderLandingHeader && <LandingHeader />}
                 {isUniversalPage && <UniversalHeader />}
 

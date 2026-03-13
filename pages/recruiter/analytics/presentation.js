@@ -98,7 +98,6 @@ function PresentationCard({ title, period, children }) {
           <div style={{ fontSize: 17, fontWeight: 900, color: "#334155" }}>{title}</div>
           <div style={{ fontSize: 11, color: "#94A3B8", marginTop: 4 }}>{period}</div>
         </div>
-
         <button
           type="button"
           style={{
@@ -116,7 +115,6 @@ function PresentationCard({ title, period, children }) {
           PNG next
         </button>
       </div>
-
       {children}
     </div>
   );
@@ -135,7 +133,6 @@ function Body() {
   const onFilterChange = (patch) => {
     const next = { ...filters, ...patch };
     setFilters(next);
-
     router.replace(
       {
         pathname: router.pathname,
@@ -199,7 +196,6 @@ function Body() {
               White-background cards for clean screenshots and slide-ready visuals.
             </div>
           </div>
-
           <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
             <select
               style={{
@@ -217,7 +213,6 @@ function Body() {
               <option value="png">PNG</option>
               <option value="svg">SVG</option>
             </select>
-
             <select
               style={{
                 borderRadius: 999,
@@ -234,7 +229,6 @@ function Body() {
               <option value="standard">Standard</option>
               <option value="high">High-res</option>
             </select>
-
             <button
               type="button"
               style={{
@@ -256,7 +250,14 @@ function Body() {
         </div>
       </section>
 
-      <section className="grid grid-cols-1 xl:grid-cols-2 gap-5">
+      {/* ✅ 2-col presentation grid — inline, container-relative */}
+      <section
+        style={{
+          display: "grid",
+          gridTemplateColumns: "minmax(0, 1fr) minmax(0, 1fr)",
+          gap: 20,
+        }}
+      >
         <PresentationCard title="Application Funnel" period={periodLabel}>
           <ApplicationFunnel data={data?.funnel || []} />
         </PresentationCard>
@@ -266,7 +267,14 @@ function Body() {
         </PresentationCard>
 
         <PresentationCard title="KPI Summary" period={periodLabel}>
-          <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-4">
+          {/* ✅ 3-col KPI grid inside card — inline */}
+          <div
+            style={{
+              display: "grid",
+              gridTemplateColumns: "repeat(3, minmax(0, 1fr))",
+              gap: 16,
+            }}
+          >
             <KPICard label="Job views" value={data?.kpis?.totalViews ?? (loading ? "…" : 0)} />
             <KPICard label="Applications" value={data?.kpis?.totalApplies ?? (loading ? "…" : 0)} />
             <KPICard

@@ -98,9 +98,7 @@ function NarrativeCard({ eyebrow, title, body, accent = "#FF7043" }) {
       >
         {eyebrow}
       </div>
-      <div style={{ fontSize: 14, fontWeight: 900, color: "#334155", marginBottom: 6 }}>
-        {title}
-      </div>
+      <div style={{ fontSize: 14, fontWeight: 900, color: "#334155", marginBottom: 6 }}>{title}</div>
       <div style={{ fontSize: 13, color: "#475569", lineHeight: 1.7 }}>{body}</div>
     </div>
   );
@@ -119,7 +117,6 @@ function Body() {
   const onFilterChange = (patch) => {
     const next = { ...filters, ...patch };
     setFilters(next);
-
     router.replace(
       {
         pathname: router.pathname,
@@ -167,21 +164,26 @@ function Body() {
       ) : null}
 
       <section style={{ ...GLASS, borderRadius: 18, padding: 18 }}>
-        <div style={{ fontSize: 22, fontWeight: 900, color: "#334155" }}>
-          Funnel narrative
-        </div>
+        <div style={{ fontSize: 22, fontWeight: 900, color: "#334155" }}>Funnel narrative</div>
         <div style={{ fontSize: 14, color: "#64748B", lineHeight: 1.7, marginTop: 6 }}>
           This period your funnel processed {totalApplies} applications and converted{" "}
-          {totalInterviews} into interviews and {totalHires} into hires. Interview
-          rate is currently {interviewRate}% and apply-to-hire is {hireRate}%.
+          {totalInterviews} into interviews and {totalHires} into hires. Interview rate is
+          currently {interviewRate}% and apply-to-hire is {hireRate}%.
         </div>
 
-        <div className="grid grid-cols-1 xl:grid-cols-2 gap-4 mt-4">
+        {/* ✅ inline 2-col — container-relative, not viewport */}
+        <div
+          style={{
+            display: "grid",
+            gridTemplateColumns: "minmax(0, 1fr) minmax(0, 1fr)",
+            gap: 16,
+            marginTop: 16,
+          }}
+        >
           <div style={{ ...GLASS, borderRadius: 16, padding: 16 }}>
             <ApplicationFunnel data={data?.funnel || []} />
           </div>
-
-          <div style={{ display: "grid", gap: 12 }}>
+          <div style={{ display: "grid", gap: 12, alignContent: "start" }}>
             <NarrativeCard
               eyebrow="Key finding"
               title="Your screening-to-interview transition is the main leverage point"
@@ -198,20 +200,25 @@ function Body() {
       </section>
 
       <section style={{ ...GLASS, borderRadius: 18, padding: 18 }}>
-        <div style={{ fontSize: 22, fontWeight: 900, color: "#334155" }}>
-          Source narrative
-        </div>
+        <div style={{ fontSize: 22, fontWeight: 900, color: "#334155" }}>Source narrative</div>
         <div style={{ fontSize: 14, color: "#64748B", lineHeight: 1.7, marginTop: 6 }}>
-          Source reporting should not stop at volume. The strongest recruiting teams
-          compare which channels create interviews, hires, and strong downstream outcomes.
+          Source reporting should not stop at volume. The strongest recruiting teams compare which
+          channels create interviews, hires, and strong downstream outcomes.
         </div>
 
-        <div className="grid grid-cols-1 xl:grid-cols-2 gap-4 mt-4">
+        {/* ✅ inline 2-col */}
+        <div
+          style={{
+            display: "grid",
+            gridTemplateColumns: "minmax(0, 1fr) minmax(0, 1fr)",
+            gap: 16,
+            marginTop: 16,
+          }}
+        >
           <div style={{ ...GLASS, borderRadius: 16, padding: 16 }}>
             <SourceBreakdown data={data?.sources || []} />
           </div>
-
-          <div style={{ display: "grid", gap: 12 }}>
+          <div style={{ display: "grid", gap: 12, alignContent: "start" }}>
             <NarrativeCard
               eyebrow="Source quality"
               title="High-volume sources are not always high-value sources"
@@ -233,11 +240,19 @@ function Body() {
           Quality of Hire methodology
         </div>
         <div style={{ fontSize: 14, color: "#64748B", lineHeight: 1.7, marginTop: 6 }}>
-          Quality of Hire belongs here first, not on the recruiter dashboard. It becomes
-          meaningful once enough post-hire data exists to make the signal trustworthy.
+          Quality of Hire belongs here first, not on the recruiter dashboard. It becomes meaningful
+          once enough post-hire data exists to make the signal trustworthy.
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mt-4">
+        {/* ✅ inline 3-col */}
+        <div
+          style={{
+            display: "grid",
+            gridTemplateColumns: "repeat(3, minmax(0, 1fr))",
+            gap: 16,
+            marginTop: 16,
+          }}
+        >
           <div
             style={{
               borderRadius: 16,
