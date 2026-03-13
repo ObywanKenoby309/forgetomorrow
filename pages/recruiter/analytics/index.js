@@ -31,7 +31,13 @@ const ORANGE = "#FF7043";
 const SLATE = "#334155";
 const MUTED = "#64748B";
 
-// RIGHT_W(240) + GAP(12) from RecruiterLayout — bleed rows span into right rail column
+// RIGHT_W(240) + GAP(12) from RecruiterLayout
+const BLEED_RIGHT = -(240 + 12); // -252
+
+// Right rail approximate height: Intel card (~160) + gap(12) + Sponsored card (~220) + padding = ~420px
+// KPI row height: ~80px
+// So Row A needs marginTop of ~340px to sit cleanly below both rails
+const RAIL_CLEARANCE = 340;
 
 function useAnalytics(state) {
   const [data, setData] = useState(null);
@@ -139,6 +145,7 @@ function Body() {
   const router = useRouter();
   const [filters, setFilters] = useState(getFiltersFromQuery(router.query));
   const { data, loading, error } = useAnalytics(filters);
+  const { isEnterprise } = usePlan();
 
   useEffect(() => {
     if (!router.isReady) return;
@@ -176,50 +183,18 @@ function Body() {
         )
       : null;
 
-  // Row style — full width 3-col grid within the content column.
-  // No bleed needed: right rail is sticky and floats alongside, content stacks naturally below it.
-  const threeColRow = {
+  const bleedRowStyle = {
+    marginRight: BLEED_RIGHT,
     display: "grid",
     gridTemplateColumns: "minmax(0, 1fr) minmax(0, 1.4fr) minmax(0, 1fr)",
     gap: 12,
   };
 
-  return (
-    <RecruiterAnalyticsLayout
-      title="Analytics — ForgeTomorrow"
-      pageTitle="Recruiter Analytics"
-      pageSubtitle="A recruiter command center for funnel health, source performance, recruiter output, and hiring intelligence."
-      activeTab="command"
-      filters={filters}
-      onFilterChange={onFilterChange}
-    >
-      {error ? (
-        <div style={{ borderRadius: 16, border: "1px solid rgba(239,68,68,0.20)", background: "rgba(254,242,242,0.86)", color: "#B91C1C", padding: 16 }}>
-          {String(error)}
-        </div>
-      ) : null}
-
-      {/* ── KPI ROW — SMB + Enterprise ─────────────────────────────────────── */}
-      <section
-        style={{
-          display: "grid",
-          gridTemplateColumns: "repeat(auto-fit, minmax(min(100%, 120px), 1fr))",
-          gap: 12,
-        }}
-      >
-        <KPICard label="Total job views" value={data?.kpis?.totalViews ?? (loading ? "…" : 0)} />
-        <KPICard label="Total applies" value={data?.kpis?.totalApplies ?? (loading ? "…" : 0)} />
-        <KPICard label="Conversion rate" value={data ? `${data.kpis.conversionRatePct}%` : loading ? "…" : "0%"} />
-        <KPICard label="Avg. time-to-fill" value={data ? `${data.kpis.avgTimeToFillDays} days` : loading ? "…" : "0 days"} />
-        <KPICard label="Interviews" value={loading ? "…" : totalInterviews} />
-        <KPICard label="Hires" value={loading ? "…" : totalHires} />
-      </section>
-
-      {/* ── ROW A — SMB + Enterprise ────────────────────────────────────────── 
-          Executive Snapshot | Source Performance | Application Funnel          */}
-      <div style={threeColRow}>
-
-        {/* Executive Snapshot — always visible */}
+  const ChartsBlock = (
+    <>
+      {/* Row A: Executive Snapshot | Recruiter Activity | Intelligence Panel
+          marginTop pushes this row below both right rail cards so it bleeds full width */}
+      <div style={{ ...bleedRowStyle, marginTop: RAIL_CLEARANCE }}>
         <div style={{ ...GLASS, borderRadius: 18, padding: 16 }}>
           <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: 12, flexWrap: "wrap" }}>
             <div>
@@ -262,7 +237,48 @@ function Body() {
           </div>
         </div>
 
-        {/* Source Performance — always visible */}
+        <div style={{ ...GLASS, borderRadius: 18, padding: 16 }}>
+          <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: 12, marginBottom: 12 }}>
+            <div>
+              <div style={{ fontSize: 18, fontWeight: 900, color: SLATE }}>Recruiter Activity</div>
+              <div style={{ fontSize: 13, color: MUTED, marginTop: 4 }}>
+                Outreach, screens, and hires across your current window.
+              </div>
+            </div>
+            <Link href="/recruiter/analytics/recruiters" style={{ color: ORANGE, fontWeight: 800, fontSize: 12 }}>
+              Full report →
+            </Link>
+          </div>
+          <RecruiterActivity data={data?.recruiterActivity || []} />
+        </div>
+
+        <div style={{ ...GLASS, borderRadius: 18, padding: 16 }}>
+          <div style={{ fontSize: 18, fontWeight: 900, color: SLATE }}>Intelligence Panel</div>
+          <div style={{ fontSize: 13, color: MUTED, marginTop: 4, marginBottom: 12 }}>What matters most right now.</div>
+          <div style={{ display: "grid", gap: 10 }}>
+            <InsightTile
+              title="Quality of Hire"
+              value="Building"
+              detail="Quality of Hire activates once sufficient post-hire performance data exists."
+            />
+            <InsightTile
+              title="Recruiter leaderboard"
+              value="Building"
+              detail="Leaderboard rankings will appear once recruiter performance data is available for the selected period."
+              color="#0F766E"
+            />
+            <InsightTile
+              title="Apply-to-hire"
+              value={loading ? "…" : data?.kpis?.totalApplies ? `${((totalHires / data.kpis.totalApplies) * 100).toFixed(1)}%` : "0%"}
+              detail="An executive signal for how efficiently your current hiring motion is converting."
+              color="#7C3AED"
+            />
+          </div>
+        </div>
+      </div>
+
+      {/* Row B: Source Performance | Application Funnel | Report Gateways */}
+      <div style={{ ...bleedRowStyle, marginTop: 12 }}>
         <div style={{ ...GLASS, borderRadius: 18, padding: 16 }}>
           <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: 12, marginBottom: 12 }}>
             <div>
@@ -278,7 +294,6 @@ function Body() {
           <SourceBreakdown data={data?.sources || []} />
         </div>
 
-        {/* Application Funnel — always visible */}
         <div style={{ ...GLASS, borderRadius: 18, padding: 16 }}>
           <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: 12, marginBottom: 12 }}>
             <div>
@@ -294,95 +309,75 @@ function Body() {
           <ApplicationFunnel data={data?.funnel || []} />
         </div>
 
+        <div style={{ ...GLASS, borderRadius: 18, padding: 16 }}>
+          <div style={{ fontSize: 18, fontWeight: 900, color: SLATE }}>Report Gateways</div>
+          <div style={{ fontSize: 13, color: MUTED, marginTop: 4, marginBottom: 12 }}>
+            Snapshot here, drill into dedicated reports for the why.
+          </div>
+          <div style={{ display: "grid", gap: 10 }}>
+            <ReportCard
+              title="Time-to-Fill"
+              description="See which roles close fastest and where delays are building."
+              href="/recruiter/analytics/time-to-fill"
+              value={loading ? "…" : `${data?.kpis?.avgTimeToFillDays ?? 0} days`}
+            />
+            <ReportCard
+              title="Quality of Hire"
+              description="Track post-hire quality signals once enough historical data exists."
+              href="/recruiter/analytics/quality-of-hire"
+              value="Building"
+            />
+            <ReportCard
+              title="Talent Intelligence"
+              description="Compare source quality, match reasons, and role-specific signals."
+              href="/recruiter/analytics/talent-intelligence"
+              value={loading ? "…" : topSource?.name || "N/A"}
+            />
+          </div>
+        </div>
       </div>
+    </>
+  );
 
-      {/* ── ROW B — Enterprise only ─────────────────────────────────────────── 
-          Recruiter Activity | Intelligence Panel | Report Gateways             */}
-      <div style={threeColRow}>
-
-        {/* Recruiter Activity — Enterprise only */}
-        <FeatureLock label="Recruiter Activity" minHeight={320}>
-          <div style={{ ...GLASS, borderRadius: 18, padding: 16, height: "100%" }}>
-            <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: 12, marginBottom: 12 }}>
-              <div>
-                <div style={{ fontSize: 18, fontWeight: 900, color: SLATE }}>Recruiter Activity</div>
-                <div style={{ fontSize: 13, color: MUTED, marginTop: 4 }}>
-                  Outreach, screens, and hires across your current window.
-                </div>
-              </div>
-              <Link href="/recruiter/analytics/recruiters" style={{ color: ORANGE, fontWeight: 800, fontSize: 12 }}>
-                Full report →
-              </Link>
-            </div>
-            <RecruiterActivity data={data?.recruiterActivity || []} />
-          </div>
-        </FeatureLock>
-
-        {/* Intelligence Panel — Enterprise only */}
-        <FeatureLock label="Intelligence Panel" minHeight={320}>
-          <div style={{ ...GLASS, borderRadius: 18, padding: 16, height: "100%" }}>
-            <div style={{ fontSize: 18, fontWeight: 900, color: SLATE }}>Intelligence Panel</div>
-            <div style={{ fontSize: 13, color: MUTED, marginTop: 4, marginBottom: 12 }}>What matters most right now.</div>
-            <div style={{ display: "grid", gap: 10 }}>
-              <InsightTile
-                title="Quality of Hire"
-                value="Building"
-                detail="Quality of Hire activates once sufficient post-hire performance data exists."
-              />
-              <InsightTile
-                title="Recruiter leaderboard"
-                value="Building"
-                detail="Leaderboard rankings will appear once recruiter performance data is available for the selected period."
-                color="#0F766E"
-              />
-              <InsightTile
-                title="Apply-to-hire"
-                value={loading ? "…" : data?.kpis?.totalApplies ? `${((totalHires / data.kpis.totalApplies) * 100).toFixed(1)}%` : "0%"}
-                detail="An executive signal for how efficiently your current hiring motion is converting."
-                color="#7C3AED"
-              />
-            </div>
-          </div>
-        </FeatureLock>
-
-        {/* Report Gateways — Enterprise only */}
-        <FeatureLock label="Report Gateways" minHeight={320}>
-          <div style={{ ...GLASS, borderRadius: 18, padding: 16, height: "100%" }}>
-            <div style={{ fontSize: 18, fontWeight: 900, color: SLATE }}>Report Gateways</div>
-            <div style={{ fontSize: 13, color: MUTED, marginTop: 4, marginBottom: 12 }}>
-              Snapshot here, drill into dedicated reports for the why.
-            </div>
-            <div style={{ display: "grid", gap: 10 }}>
-              <ReportCard
-                title="Time-to-Fill"
-                description="See which roles close fastest and where delays are building."
-                href="/recruiter/analytics/time-to-fill"
-                value={loading ? "…" : `${data?.kpis?.avgTimeToFillDays ?? 0} days`}
-              />
-              <ReportCard
-                title="Quality of Hire"
-                description="Track post-hire quality signals once enough historical data exists."
-                href="/recruiter/analytics/quality-of-hire"
-                value="Building"
-              />
-              <ReportCard
-                title="Talent Intelligence"
-                description="Compare source quality, match reasons, and role-specific signals."
-                href="/recruiter/analytics/talent-intelligence"
-                value={loading ? "…" : topSource?.name || "N/A"}
-              />
-            </div>
-          </div>
-        </FeatureLock>
-
-      </div>
-
-      {data?.meta?.refreshedAt ? (
-        <div style={{ fontSize: 12, color: "#94A3B8", textAlign: "right" }}>
-          Last updated: {new Date(data.meta.refreshedAt).toLocaleString()}
+  return (
+    <RecruiterAnalyticsLayout
+      title="Analytics — ForgeTomorrow"
+      pageTitle="Recruiter Analytics"
+      pageSubtitle="A recruiter command center for funnel health, source performance, recruiter output, and hiring intelligence."
+      activeTab="command"
+      filters={filters}
+      onFilterChange={onFilterChange}
+    >
+      {error ? (
+        <div style={{ borderRadius: 16, border: "1px solid rgba(239,68,68,0.20)", background: "rgba(254,242,242,0.86)", color: "#B91C1C", padding: 16 }}>
+          {String(error)}
         </div>
       ) : null}
 
+      {/* KPI row — sits alongside right rail */}
+      <section
+        style={{
+          display: "grid",
+          gridTemplateColumns: "repeat(auto-fit, minmax(min(100%, 120px), 1fr))",
+          gap: 12,
+        }}
+      >
+        <KPICard label="Total job views" value={data?.kpis?.totalViews ?? (loading ? "…" : 0)} />
+        <KPICard label="Total applies" value={data?.kpis?.totalApplies ?? (loading ? "…" : 0)} />
+        <KPICard label="Conversion rate" value={data ? `${data.kpis.conversionRatePct}%` : loading ? "…" : "0%"} />
+        <KPICard label="Avg. time-to-fill" value={data ? `${data.kpis.avgTimeToFillDays} days` : loading ? "…" : "0 days"} />
+        <KPICard label="Interviews" value={loading ? "…" : totalInterviews} />
+        <KPICard label="Hires" value={loading ? "…" : totalHires} />
+      </section>
+
+      {/* Bleed rows — drop below rails, span full width */}
+      {isEnterprise ? ChartsBlock : <FeatureLock label="Full Analytics">{ChartsBlock}</FeatureLock>}
+
+      {data?.meta?.refreshedAt ? (
+        <div style={{ fontSize: 12, color: "#94A3B8", textAlign: "right", marginRight: BLEED_RIGHT }}>
+          Last updated: {new Date(data.meta.refreshedAt).toLocaleString()}
+        </div>
+      ) : null}
     </RecruiterAnalyticsLayout>
   );
 }
