@@ -32,12 +32,13 @@ const SLATE = "#334155";
 const MUTED = "#64748B";
 
 // RIGHT_W(240) + GAP(12) from RecruiterLayout
+const BLEED_LEFT  = -(240 + 12); // -252
 const BLEED_RIGHT = -(240 + 12); // -252
 
 // Right rail approximate height: Intel card (~160) + gap(12) + Sponsored card (~220) + padding = ~420px
 // KPI row height: ~80px
 // So Row A needs marginTop of ~340px to sit cleanly below both rails
-const RAIL_CLEARANCE = 340;
+
 
 function useAnalytics(state) {
   const [data, setData] = useState(null);
@@ -184,9 +185,10 @@ function Body() {
       : null;
 
   const bleedRowStyle = {
+    marginLeft: BLEED_LEFT,
     marginRight: BLEED_RIGHT,
     display: "grid",
-    gridTemplateColumns: "minmax(0, 1fr) minmax(0, 1.4fr) minmax(0, 1fr)",
+    gridTemplateColumns: "minmax(0, 1fr) minmax(0, 2fr) minmax(0, 1fr)",
     gap: 12,
   };
 
@@ -194,7 +196,7 @@ function Body() {
     <>
       {/* Row A: Executive Snapshot | Recruiter Activity | Intelligence Panel
           marginTop pushes this row below both right rail cards so it bleeds full width */}
-      <div style={{ ...bleedRowStyle, marginTop: RAIL_CLEARANCE }}>
+      <div style={{ ...bleedRowStyle, marginTop: 48 }}>
         <div style={{ ...GLASS, borderRadius: 18, padding: 16 }}>
           <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: 12, flexWrap: "wrap" }}>
             <div>
