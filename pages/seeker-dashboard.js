@@ -665,12 +665,15 @@ export default function SeekerDashboard() {
               </div>
             </aside>
 
-            {/* ROW 4: Bottom 3 cards */}
+            {/* ROW 4: Bottom 3 cards — bleed left under sidebar via marginLeft + zIndex */}
             <div style={{
               gridColumn: '1 / -1', gridRow: '4',
               display: 'grid',
               gridTemplateColumns: 'minmax(0, 5fr) minmax(0, 5fr) minmax(0, 3fr)',
-              gap: GAP, marginLeft: -252,
+              gap: GAP,
+              marginLeft: -252,
+              position: 'relative',  // ← raises stacking context
+              zIndex: 11,            // ← beats sidebar's zIndex: 10 so cards render on top
             }}>
               <section style={{ ...GLASS, padding: 16 }}>
                 <RecommendedJobsPreview />
