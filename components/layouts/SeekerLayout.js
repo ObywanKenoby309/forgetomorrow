@@ -370,10 +370,13 @@ export default function SeekerLayout({
 
   const gridStyles = isMobile ? mobileGrid : desktopGrid;
 
-  const mainOverrides =
-    !isMobile && contentFullBleed
-      ? { gridColumn: '1 / -1', position: 'relative', zIndex: 1 }
-      : { position: 'relative', zIndex: 1 };
+  // ✅ FIX: removed gridColumn: '1 / -1' — that was pulling <main> behind the sidebar.
+  // contentFullBleed's job is done by the conditional overflowX below.
+  // Matches RecruiterLayout and CoachingLayout exactly.
+  const mainOverrides = {
+    position: 'relative',
+    zIndex: 1,
+  };
 
   const leftRailLayer = { position: 'relative', zIndex: 10 };
   const headerLayer = { position: 'relative', zIndex: 9 };
@@ -437,15 +440,17 @@ export default function SeekerLayout({
           ) : null}
 
           <main
-  style={{
-    gridArea: 'content',
-    minWidth: 0,
-    width: '100%',
-    maxWidth: '100%',
-    ...(!contentFullBleed ? { overflowX: 'hidden' } : {}),
-    ...mainOverrides,
-  }}
->
+            style={{
+              gridArea: 'content',
+              minWidth: 0,
+              width: '100%',
+              maxWidth: '100%',
+              // ✅ Only remove overflow clipping for dashboard (contentFullBleed).
+              // All other seeker pages keep overflowX: 'hidden' for mobile safety.
+              ...(!contentFullBleed ? { overflowX: 'hidden' } : {}),
+              ...mainOverrides,
+            }}
+          >
             <div style={{ display: 'grid', gap, width: '100%', minWidth: 0 }}>{children}</div>
           </main>
         </div>
