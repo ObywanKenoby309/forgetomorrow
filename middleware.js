@@ -1,5 +1,6 @@
 // middleware.js — Updated PUBLIC PAGES version with profile + asset + billing/stripe bypass
 import { NextResponse } from "next/server";
+import { getToken } from "next-auth/jwt";
 import { Ratelimit } from "@upstash/ratelimit";
 import { Redis } from "@upstash/redis";
 
@@ -91,11 +92,13 @@ function isAuthPath(pathname) {
   return AUTH_PREFIXES.some((p) => pathname === p || pathname.startsWith(p + "/"));
 }
 
-function hasNextAuthSession(req) {
-  // Covers both next-auth.session-token and __Secure-next-auth.session-token
-  return req.cookies
-    .getAll()
-    .some((cookie) => cookie.name.includes("next-auth.session-token"));
+async function hasValidNextAuthSession(req) {
+  const token = await getToken({
+    req,
+    secret: process.env.NEXTAUTH_SECRET,
+  });
+
+  return !!token;
 }
 
 export async function middleware(req) {
@@ -141,7 +144,7 @@ export async function middleware(req) {
 
   // ✅ 3a. App routes that always require login (not staff-only)
   if (isAuthPath(pathname)) {
-    const hasSession = hasNextAuthSession(req);
+    const hasSession = await hasValidNextAuthSession(req);
 
     if (!hasSession) {
       const url = req.nextUrl.clone();
@@ -155,7 +158,7 @@ export async function middleware(req) {
 
   // ✅ 3b. Internal/workspace routes are always protected (independent of SITE_LOCK)
   if (isInternalPath(pathname)) {
-    const hasSession = hasNextAuthSession(req);
+    const hasSession = await hasValidNextAuthSession(req);
 
     if (!hasSession) {
       const url = req.nextUrl.clone();
@@ -171,7 +174,7 @@ export async function middleware(req) {
 
   // 4. SITE_LOCK protected mode
   if (SITE_LOCK) {
-    const hasSession = hasNextAuthSession(req);
+    const hasSession = await hasValidNextAuthSession(req);
 
     if (!hasSession) {
       const url = req.nextUrl.clone();
