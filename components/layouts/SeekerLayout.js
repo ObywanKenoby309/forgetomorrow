@@ -375,7 +375,7 @@ export default function SeekerLayout({
       ? { gridColumn: '1 / -1', position: 'relative', zIndex: 1 }
       : { position: 'relative', zIndex: 1 };
 
-  const leftRailLayer = { position: 'relative', zIndex: 10 };
+  const leftRailLayer = { position: 'relative', zIndex: 1 };
   const headerLayer = { position: 'relative', zIndex: 9 };
   const rightRailLayer = { position: 'relative', zIndex: 10 };
 
