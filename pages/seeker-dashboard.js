@@ -1,5 +1,4 @@
 // pages/seeker-dashboard.js
-// updated for mobile
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import Head from 'next/head';
 import Link from 'next/link';
@@ -616,7 +615,7 @@ export default function SeekerDashboard() {
   return (
     <>
       <Head><title>Seeker Dashboard | ForgeTomorrow</title></Head>
-      <SeekerLayout title="Seeker Dashboard | ForgeTomorrow" activeNav={seekerActiveNav}>
+      <SeekerLayout title="Seeker Dashboard | ForgeTomorrow" activeNav={seekerActiveNav} contentFullBleed>
         <div style={{ padding: 0, margin: 0, width: '100%' }}>
           <div style={{
             display: 'grid',
@@ -671,9 +670,9 @@ export default function SeekerDashboard() {
               display: 'grid',
               gridTemplateColumns: 'minmax(0, 5fr) minmax(0, 5fr) minmax(0, 3fr)',
               gap: GAP,
-              marginLeft: -0,
-              position: 'relative',  // ← raises stacking context
-              zIndex: 11,            // ← beats sidebar's zIndex: 10 so cards render on top
+              marginLeft: -252,
+              position: 'relative',
+              zIndex: 11,
             }}>
               <section style={{ ...GLASS, padding: 16 }}>
                 <RecommendedJobsPreview />

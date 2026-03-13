@@ -442,7 +442,7 @@ export default function SeekerLayout({
               minWidth: 0,
               width: '100%',
               maxWidth: '100%',
-              overflowX: 'hidden',
+              ...(!contentFullBleed ? { overflowX: 'hidden' } : {}),
               ...mainOverrides,
             }}
           >
