@@ -437,15 +437,15 @@ export default function SeekerLayout({
           ) : null}
 
           <main
-            style={{
-              gridArea: 'content',
-              minWidth: 0,
-              width: '100%',
-              maxWidth: '100%',
-              overflowX: 'hidden',
-              ...mainOverrides,
-            }}
-          >
+  style={{
+    gridArea: 'content',
+    minWidth: 0,
+    width: '100%',
+    maxWidth: '100%',
+    ...(!contentFullBleed ? { overflowX: 'hidden' } : {}),
+    ...mainOverrides,
+  }}
+>
             <div style={{ display: 'grid', gap, width: '100%', minWidth: 0 }}>{children}</div>
           </main>
         </div>
