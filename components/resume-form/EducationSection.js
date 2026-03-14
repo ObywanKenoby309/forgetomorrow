@@ -1,6 +1,12 @@
 // components/resume-form/EducationSection.js
-import { useMemo, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { FaChevronDown, FaChevronRight, FaTrash, FaPlus } from 'react-icons/fa';
+
+function makeId() {
+  return (typeof crypto !== 'undefined' && crypto.randomUUID)
+    ? crypto.randomUUID()
+    : Math.random().toString(36).slice(2);
+}
 
 export default function EducationSection({
   educationList = [],
@@ -10,39 +16,43 @@ export default function EducationSection({
 }) {
   const [isOpen, setIsOpen] = useState(defaultOpen);
 
-  // Ensure stable ids (once) so rows don't remount
-  const rows = useMemo(() => {
-    return (educationList || []).map((e) => {
-      if (e?.id) return e;
-      return {
-        id:
-          (typeof crypto !== 'undefined' && crypto.randomUUID)
-            ? crypto.randomUUID()
-            : Math.random().toString(36).slice(2),
+  // Backfill stable ids once so rows do not remount unexpectedly
+  useEffect(() => {
+    if (!Array.isArray(educationList) || educationList.length === 0) return;
+
+    const needsIds = educationList.some((e) => !e?.id);
+    if (!needsIds) return;
+
+    setEducationList(
+      educationList.map((e) => ({
+        id: e?.id || makeId(),
         degree: e?.degree ?? '',
         institution: e?.institution ?? '',
         location: e?.location ?? '',
         startDate: e?.startDate ?? '',
         endDate: e?.endDate ?? '',
         description: e?.description ?? '',
-      };
-    });
-  }, [educationList]);
+      }))
+    );
+  }, [educationList, setEducationList]);
 
-  const commit = (next) => setEducationList(next);
+  const rows = Array.isArray(educationList) ? educationList : [];
 
-  const updateFieldOnBlur = (id, field, value) => {
-    commit(rows.map((r) => (r.id === id ? { ...r, [field]: value } : r)));
+  const updateField = (id, field, value) => {
+    setEducationList(
+      rows.map((r) =>
+        r.id === id
+          ? { ...r, [field]: value }
+          : r
+      )
+    );
   };
 
   const addEducation = () => {
-    commit([
+    setEducationList([
       ...rows,
       {
-        id:
-          (typeof crypto !== 'undefined' && crypto.randomUUID)
-            ? crypto.randomUUID()
-            : Math.random().toString(36).slice(2),
+        id: makeId(),
         degree: '',
         institution: '',
         location: '',
@@ -54,7 +64,7 @@ export default function EducationSection({
   };
 
   const removeEducation = (id) => {
-    commit(rows.filter((r) => r.id !== id));
+    setEducationList(rows.filter((r) => r.id !== id));
   };
 
   const Body = () => (
@@ -71,8 +81,8 @@ export default function EducationSection({
               </label>
               <input
                 type="text"
-                defaultValue={edu.degree}
-                onBlur={(e) => updateFieldOnBlur(edu.id, 'degree', e.target.value)}
+                value={edu.degree || ''}
+                onChange={(e) => updateField(edu.id, 'degree', e.target.value)}
                 placeholder="e.g. B.S. in Computer Science"
                 className="mt-1 w-full rounded-lg border border-slate-200 p-2.5 text-sm outline-none focus:border-[#FF7043] focus:ring-2 focus:ring-[#FF7043]/30"
               />
@@ -84,8 +94,8 @@ export default function EducationSection({
               </label>
               <input
                 type="text"
-                defaultValue={edu.institution}
-                onBlur={(e) => updateFieldOnBlur(edu.id, 'institution', e.target.value)}
+                value={edu.institution || ''}
+                onChange={(e) => updateField(edu.id, 'institution', e.target.value)}
                 placeholder="e.g. University of Example"
                 className="mt-1 w-full rounded-lg border border-slate-200 p-2.5 text-sm outline-none focus:border-[#FF7043] focus:ring-2 focus:ring-[#FF7043]/30"
               />
@@ -97,8 +107,8 @@ export default function EducationSection({
               </label>
               <input
                 type="text"
-                defaultValue={edu.location}
-                onBlur={(e) => updateFieldOnBlur(edu.id, 'location', e.target.value)}
+                value={edu.location || ''}
+                onChange={(e) => updateField(edu.id, 'location', e.target.value)}
                 placeholder="City, State"
                 className="mt-1 w-full rounded-lg border border-slate-200 p-2.5 text-sm outline-none focus:border-[#FF7043] focus:ring-2 focus:ring-[#FF7043]/30"
               />
@@ -111,8 +121,8 @@ export default function EducationSection({
                 </label>
                 <input
                   type="month"
-                  defaultValue={edu.startDate}
-                  onBlur={(e) => updateFieldOnBlur(edu.id, 'startDate', e.target.value)}
+                  value={edu.startDate || ''}
+                  onChange={(e) => updateField(edu.id, 'startDate', e.target.value)}
                   className="mt-1 w-full rounded-lg border border-slate-200 p-2.5 text-sm outline-none focus:border-[#FF7043] focus:ring-2 focus:ring-[#FF7043]/30"
                 />
               </div>
@@ -122,8 +132,8 @@ export default function EducationSection({
                 </label>
                 <input
                   type="month"
-                  defaultValue={edu.endDate}
-                  onBlur={(e) => updateFieldOnBlur(edu.id, 'endDate', e.target.value)}
+                  value={edu.endDate || ''}
+                  onChange={(e) => updateField(edu.id, 'endDate', e.target.value)}
                   className="mt-1 w-full rounded-lg border border-slate-200 p-2.5 text-sm outline-none focus:border-[#FF7043] focus:ring-2 focus:ring-[#FF7043]/30"
                 />
               </div>
@@ -135,8 +145,8 @@ export default function EducationSection({
               Description / Notes
             </label>
             <textarea
-              defaultValue={edu.description}
-              onBlur={(e) => updateFieldOnBlur(edu.id, 'description', e.target.value)}
+              value={edu.description || ''}
+              onChange={(e) => updateField(edu.id, 'description', e.target.value)}
               placeholder="Honors, relevant coursework, thesis, societies…"
               className="mt-1 w-full rounded-lg border border-slate-200 p-2.5 text-sm outline-none resize-y focus:border-[#FF7043] focus:ring-2 focus:ring-[#FF7043]/30"
               rows={3}
