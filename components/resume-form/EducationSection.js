@@ -1,12 +1,6 @@
 // components/resume-form/EducationSection.js
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 import { FaChevronDown, FaChevronRight, FaTrash, FaPlus } from 'react-icons/fa';
-
-function makeId() {
-  return (typeof crypto !== 'undefined' && crypto.randomUUID)
-    ? crypto.randomUUID()
-    : Math.random().toString(36).slice(2);
-}
 
 export default function EducationSection({
   educationList = [],
@@ -16,62 +10,50 @@ export default function EducationSection({
 }) {
   const [isOpen, setIsOpen] = useState(defaultOpen);
 
-  // Backfill stable ids once so rows do not remount unexpectedly
-  useEffect(() => {
-    if (!Array.isArray(educationList) || educationList.length === 0) return;
-
-    const needsIds = educationList.some((e) => !e?.id);
-    if (!needsIds) return;
-
-    setEducationList(
-      educationList.map((e) => ({
-        id: e?.id || makeId(),
-        degree: e?.degree ?? '',
-        institution: e?.institution ?? '',
-        location: e?.location ?? '',
-        startDate: e?.startDate ?? '',
-        endDate: e?.endDate ?? '',
-        description: e?.description ?? '',
-      }))
-    );
-  }, [educationList, setEducationList]);
-
   const rows = Array.isArray(educationList) ? educationList : [];
 
-  const updateField = (id, field, value) => {
-    setEducationList(
-      rows.map((r) =>
-        r.id === id
-          ? { ...r, [field]: value }
-          : r
-      )
-    );
+  const updateField = (index, field, value) => {
+    setEducationList((prev) => {
+      const next = Array.isArray(prev) ? [...prev] : [];
+      const current = next[index] || {};
+
+      next[index] = {
+        ...current,
+        [field]: value,
+      };
+
+      return next;
+    });
   };
 
   const addEducation = () => {
-    setEducationList([
-      ...rows,
-      {
-        id: makeId(),
+    setEducationList((prev) => {
+      const next = Array.isArray(prev) ? [...prev] : [];
+      next.push({
         degree: '',
         institution: '',
         location: '',
         startDate: '',
         endDate: '',
         description: '',
-      },
-    ]);
+      });
+      return next;
+    });
   };
 
-  const removeEducation = (id) => {
-    setEducationList(rows.filter((r) => r.id !== id));
+  const removeEducation = (index) => {
+    setEducationList((prev) => {
+      const next = Array.isArray(prev) ? [...prev] : [];
+      next.splice(index, 1);
+      return next;
+    });
   };
 
   const Body = () => (
     <div className="space-y-4">
-      {rows.map((edu) => (
+      {rows.map((edu, index) => (
         <div
-          key={edu.id}
+          key={edu?.id || `education-${index}`}
           className="rounded-xl border border-slate-200 p-3 md:p-4 bg-white"
         >
           <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
@@ -81,8 +63,8 @@ export default function EducationSection({
               </label>
               <input
                 type="text"
-                value={edu.degree || ''}
-                onChange={(e) => updateField(edu.id, 'degree', e.target.value)}
+                value={edu?.degree || ''}
+                onChange={(e) => updateField(index, 'degree', e.target.value)}
                 placeholder="e.g. B.S. in Computer Science"
                 className="mt-1 w-full rounded-lg border border-slate-200 p-2.5 text-sm outline-none focus:border-[#FF7043] focus:ring-2 focus:ring-[#FF7043]/30"
               />
@@ -94,8 +76,8 @@ export default function EducationSection({
               </label>
               <input
                 type="text"
-                value={edu.institution || ''}
-                onChange={(e) => updateField(edu.id, 'institution', e.target.value)}
+                value={edu?.institution || edu?.school || ''}
+                onChange={(e) => updateField(index, 'institution', e.target.value)}
                 placeholder="e.g. University of Example"
                 className="mt-1 w-full rounded-lg border border-slate-200 p-2.5 text-sm outline-none focus:border-[#FF7043] focus:ring-2 focus:ring-[#FF7043]/30"
               />
@@ -107,8 +89,8 @@ export default function EducationSection({
               </label>
               <input
                 type="text"
-                value={edu.location || ''}
-                onChange={(e) => updateField(edu.id, 'location', e.target.value)}
+                value={edu?.location || ''}
+                onChange={(e) => updateField(index, 'location', e.target.value)}
                 placeholder="City, State"
                 className="mt-1 w-full rounded-lg border border-slate-200 p-2.5 text-sm outline-none focus:border-[#FF7043] focus:ring-2 focus:ring-[#FF7043]/30"
               />
@@ -121,8 +103,8 @@ export default function EducationSection({
                 </label>
                 <input
                   type="month"
-                  value={edu.startDate || ''}
-                  onChange={(e) => updateField(edu.id, 'startDate', e.target.value)}
+                  value={edu?.startDate || ''}
+                  onChange={(e) => updateField(index, 'startDate', e.target.value)}
                   className="mt-1 w-full rounded-lg border border-slate-200 p-2.5 text-sm outline-none focus:border-[#FF7043] focus:ring-2 focus:ring-[#FF7043]/30"
                 />
               </div>
@@ -132,8 +114,8 @@ export default function EducationSection({
                 </label>
                 <input
                   type="month"
-                  value={edu.endDate || ''}
-                  onChange={(e) => updateField(edu.id, 'endDate', e.target.value)}
+                  value={edu?.endDate || ''}
+                  onChange={(e) => updateField(index, 'endDate', e.target.value)}
                   className="mt-1 w-full rounded-lg border border-slate-200 p-2.5 text-sm outline-none focus:border-[#FF7043] focus:ring-2 focus:ring-[#FF7043]/30"
                 />
               </div>
@@ -145,8 +127,8 @@ export default function EducationSection({
               Description / Notes
             </label>
             <textarea
-              value={edu.description || ''}
-              onChange={(e) => updateField(edu.id, 'description', e.target.value)}
+              value={edu?.description || edu?.details || ''}
+              onChange={(e) => updateField(index, 'description', e.target.value)}
               placeholder="Honors, relevant coursework, thesis, societies…"
               className="mt-1 w-full rounded-lg border border-slate-200 p-2.5 text-sm outline-none resize-y focus:border-[#FF7043] focus:ring-2 focus:ring-[#FF7043]/30"
               rows={3}
@@ -156,7 +138,7 @@ export default function EducationSection({
           <div className="mt-3">
             <button
               type="button"
-              onClick={() => removeEducation(edu.id)}
+              onClick={() => removeEducation(index)}
               className="inline-flex items-center gap-1 text-xs text-red-600 hover:underline"
             >
               <FaTrash /> Remove Education
