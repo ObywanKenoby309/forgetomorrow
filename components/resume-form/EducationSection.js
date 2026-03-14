@@ -49,7 +49,7 @@ export default function EducationSection({
     });
   };
 
-  const Body = () => (
+  const educationContent = (
     <div className="space-y-4">
       {rows.map((edu, index) => (
         <div
@@ -157,7 +157,7 @@ export default function EducationSection({
     </div>
   );
 
-  if (embedded) return <Body />;
+  if (embedded) return educationContent;
 
   return (
     <section className="bg-white rounded-xl border border-slate-200 shadow-sm p-4 md:p-5 space-y-4">
@@ -173,7 +173,7 @@ export default function EducationSection({
           <FaChevronRight className="text-[#FF7043]" />
         )}
       </button>
-      {isOpen && <Body />}
+      {isOpen && educationContent}
     </section>
   );
 }
