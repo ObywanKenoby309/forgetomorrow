@@ -1,90 +1,103 @@
-// pages/profile/edit.js
+// pages/profile/edit.js  —  ForgeTomorrow Profile Editor (v3)
 // ─────────────────────────────────────────────────────────────────────────────
-//  ForgeTomorrow — Profile Editor (upgraded)
-//
-//  What's new vs the old edit.js:
-//  1. Dark navy aesthetic matches the portfolio page ([slug].js) exactly.
-//  2. Tab nav: Who I Am / What I Bring / Where I've Been / Your Documents
-//     • Desktop: tabs across top, selected section renders full-width below
-//     • Mobile:  carousel-style swipeable tab bar (matches other FT pages)
-//  3. Live preview panel (right rail, desktop only) — full portfolio identity
-//     card with real wallpaper bg, banner, avatar, name, headline updating
-//     in real time as the user edits. No save required to see changes.
-//  4. Avatar instant preview — blob URL shown immediately on file select,
-//     replaced with CDN URL when the upload resolves. (Handled by lifting
-//     avatarUrl state to this page and passing handleAvatarChange down.)
-//  5. Wallpaper + banner real-time — state lifted to this page and fed into
-//     both the editor and the preview panel simultaneously.
+// Layout: SeekerLayout (left nav) | main content col | right rail
+// Tabs:   What's my style / Who Am I / What I Bring / Where I've Been
+// Theme:  Glass/light matching recruiter dashboard + seeker dashboard
 // ─────────────────────────────────────────────────────────────────────────────
 
-import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import Head from 'next/head';
-import { useRouter } from 'next/router';
 import Link from 'next/link';
+import { useRouter } from 'next/router';
+import { useSession } from 'next-auth/react';
 import SeekerLayout from '@/components/layouts/SeekerLayout';
+import RightRailPlacementManager from '@/components/ads/RightRailPlacementManager';
 
-// ── Profile section components (unchanged internals) ─────────────────────────
-import ProfileAbout        from '@/components/profile/ProfileAbout';
-import ProfileLanguages    from '@/components/profile/ProfileLanguages';
-import ProfilePreferences  from '@/components/profile/ProfilePreferences';
+// ── Existing section components ───────────────────────────────────────────────
+import ProfileAbout       from '@/components/profile/ProfileAbout';
+import ProfileSkills      from '@/components/profile/ProfileSkills';
+import ProfileLanguages   from '@/components/profile/ProfileLanguages';
+import ProfilePreferences from '@/components/profile/ProfilePreferences';
+import ProfileEducation   from '@/components/profile/ProfileEducation';
+import ProfileHobbies     from '@/components/profile/ProfileHobbies';
 import ProfileResumeAttach from '@/components/profile/ProfileResumeAttach';
-import ProfileSkills       from '@/components/profile/ProfileSkills';
-import ProfileHobbies      from '@/components/profile/ProfileHobbies';
-import ProfileCoverAttach  from '@/components/profile/ProfileCoverAttach';
-import ProfileEducation    from '@/components/profile/ProfileEducation';
-import ProfileSectionRow   from '@/components/profile/ProfileSectionRow';
 
-// ── Avatar selector ───────────────────────────────────────────────────────────
-import ProfileAvatarSelector from '@/components/profile/ProfileAvatarSelector';
-
-// ── Banner / wallpaper data ───────────────────────────────────────────────────
+// ── Asset libraries ───────────────────────────────────────────────────────────
 import { profileBanners    } from '@/lib/profileBanners';
 import { profileWallpapers } from '@/lib/profileWallpapers';
 
-// ─────────────────────────────────────────────────────────────────────────────
-//  Design tokens — matches [slug].js exactly
-// ─────────────────────────────────────────────────────────────────────────────
-const ORANGE        = '#FF7043';
-const ORANGE_DIM    = 'rgba(255,112,67,0.18)';
-const ORANGE_BORDER = 'rgba(255,112,67,0.38)';
-const NAVY          = '#0D1B2A';
-const WHITE         = '#F8F4EF';
-const MUTED         = '#A8B7C7';
-const BORDER        = 'rgba(255,255,255,0.14)';
-const CARD_BG       = 'rgba(13,27,42,0.72)';
-const BLUR          = 'blur(14px)';
-const GAP           = 14;
-const PREVIEW_W     = 310;
+// ── Hooks ─────────────────────────────────────────────────────────────────────
+import { useCurrentUserAvatar } from '@/hooks/useCurrentUserAvatar';
 
-const TABS = [
-  { id: 'who',       label: 'Who I Am',        icon: '◈' },
-  { id: 'bring',     label: 'What I Bring',    icon: '◇' },
-  { id: 'been',      label: "Where I've Been", icon: '◉' },
-  { id: 'documents', label: 'Your Documents',  icon: '◫' },
+// ─── Constants ────────────────────────────────────────────────────────────────
+const ORANGE          = '#FF7043';
+const GAP             = 14;
+const RIGHT_COL_WIDTH = 280;
+const SAVE_DELAY      = 900;
+
+const GLASS = {
+  borderRadius: 14,
+  border: '1px solid rgba(255,255,255,0.22)',
+  background: 'rgba(255,255,255,0.58)',
+  boxShadow: '0 10px 24px rgba(0,0,0,0.12)',
+  backdropFilter: 'blur(10px)',
+  WebkitBackdropFilter: 'blur(10px)',
+};
+
+const DARK_RAIL = {
+  background: '#2a2a2a',
+  border: '1px solid #3a3a3a',
+  borderRadius: 12,
+  padding: 16,
+  boxShadow: '0 2px 6px rgba(0,0,0,0.06)',
+  boxSizing: 'border-box',
+  overflow: 'hidden',
+  alignSelf: 'start',
+};
+
+const WHITE_CARD = {
+  background: 'rgba(255,255,255,0.92)',
+  border: '1px solid rgba(0,0,0,0.08)',
+  borderRadius: 12,
+  boxShadow: '0 2px 10px rgba(0,0,0,0.08)',
+  boxSizing: 'border-box',
+};
+
+const PRESET_AVATARS = [
+  { label: 'Default',      url: '/profile-avatars/avatar-default-forge.png'      },
+  { label: 'Professional', url: '/profile-avatars/avatar-professional-path.png'  },
+  { label: 'Creator',      url: '/profile-avatars/avatar-creator-spectrum.png'   },
+  { label: 'Tech',         url: '/profile-avatars/avatar-tech-nexus.png'         },
+  { label: 'Coach',        url: '/profile-avatars/avatar-coach-beacon.png'       },
 ];
 
-const DOCS_HINT = {
-  title: 'Make it easy to say yes',
-  bullets: [
-    'Keep one primary resume linked to your profile.',
-    'Save alternates for different roles.',
-    'Do the same with cover letters so recruiters instantly see fit.',
-    'Manage everything in the builder — change primaries anytime.',
-  ],
-};
+const SOCIAL_FIELDS = [
+  { key: 'github',    label: 'GitHub',    placeholder: 'github.com/username',      icon: '⌥' },
+  { key: 'x',         label: 'X',         placeholder: 'x.com/username',           icon: '✕' },
+  { key: 'youtube',   label: 'YouTube',   placeholder: 'youtube.com/@channel',     icon: '▶' },
+  { key: 'instagram', label: 'Instagram', placeholder: 'instagram.com/username',   icon: '◉' },
+];
+
+const TABS = [
+  { id: 'style',  label: "What's my style", icon: '◎' },
+  { id: 'who',    label: 'Who Am I',         icon: '◈' },
+  { id: 'bring',  label: 'What I Bring',     icon: '◇' },
+  { id: 'been',   label: "Where I've Been",  icon: '◻' },
+];
 
 function clamp(n, min, max) { return Math.max(min, Math.min(max, n)); }
 
 // ─────────────────────────────────────────────────────────────────────────────
-//  Page component
+// Page
 // ─────────────────────────────────────────────────────────────────────────────
 export default function ProfileEditPage() {
   const router = useRouter();
-  const chrome = String(router.query.chrome || '').toLowerCase();
+  const { data: session } = useSession();
+
+  const chrome     = String(router.query.chrome || '').toLowerCase();
   const withChrome = (path) =>
     chrome ? `${path}${path.includes('?') ? '&' : '?'}chrome=${chrome}` : path;
 
-  // ── Responsive ──────────────────────────────────────────────────────────────
   const [isMobile, setIsMobile] = useState(true);
   useEffect(() => {
     const fn = () => setIsMobile(window.innerWidth < 900);
@@ -93,55 +106,62 @@ export default function ProfileEditPage() {
     return () => window.removeEventListener('resize', fn);
   }, []);
 
-  // ── Active tab ──────────────────────────────────────────────────────────────
-  const [activeTab, setActiveTab] = useState('who');
-
-  // ── Server load gate ────────────────────────────────────────────────────────
+  const [activeTab,    setActiveTab]    = useState('style');
   const [serverLoaded, setServerLoaded] = useState(false);
 
-  // ── Identity ────────────────────────────────────────────────────────────────
-  const [name,      setName]      = useState('');
-  const [pronouns,  setPronouns]  = useState('');
-  const [headline,  setHeadline]  = useState('');
-  const [location,  setLocation]  = useState('');
-  const [status,    setStatus]    = useState('');
-  const [slug,      setSlug]      = useState('');
-  const [slugValue, setSlugValue] = useState('');
+  // ── Avatar ────────────────────────────────────────────────────────────────
+  const { avatarUrl: resolvedAvatarUrl } = useCurrentUserAvatar();
+  const sessionAvatarUrl = useMemo(() => {
+    const u = session?.user || null;
+    return u ? (u.avatarUrl || u.image || '') : '';
+  }, [session]);
 
-  // ── Visual (lifted from ProfileHeader — drives both editor + live preview) ──
-  const [avatarUrl,    setAvatarUrl]    = useState('');
+  const [avatarUrl,       setAvatarUrl]       = useState(sessionAvatarUrl || '');
+  const [avatarUploading, setAvatarUploading] = useState(false);
+  const fileInputRef = useRef(null);
+
+  // ── Identity / appearance ─────────────────────────────────────────────────
+  const [name,         setName]         = useState('');  // READ-ONLY
+  const [pronouns,     setPronouns]     = useState('');
+  const [headline,     setHeadline]     = useState('');
+  const [location,     setLocation]     = useState('');
+  const [status,       setStatus]       = useState('');
+  const [slug,         setSlug]         = useState('');
+  const [visibility,   setVisibility]   = useState('private');
   const [coverUrl,     setCoverUrl]     = useState('');
   const [wallpaperUrl, setWallpaperUrl] = useState('');
   const [bannerH,      setBannerH]      = useState(220);
   const [bannerMode,   setBannerMode]   = useState('cover');
   const [focalY,       setFocalY]       = useState(50);
-  const [visibility,   setVisibility]   = useState('private');
 
-  // ── Content sections ────────────────────────────────────────────────────────
+  // ── Social links ──────────────────────────────────────────────────────────
+  const [socialLinks, setSocialLinks] = useState({ github: '', x: '', youtube: '', instagram: '' });
+  const updateSocial = (key, val) => setSocialLinks(prev => ({ ...prev, [key]: val }));
+
+  // ── Content ───────────────────────────────────────────────────────────────
   const [about,         setAbout]         = useState('');
   const [skills,        setSkills]        = useState([]);
   const [languages,     setLanguages]     = useState([]);
   const [hobbies,       setHobbies]       = useState([]);
   const [education,     setEducation]     = useState([]);
+  const [certifications,setCertifications]= useState([]);  // [{name,issuer,year}]
+  const [projects,      setProjects]      = useState([]);  // [{title,description,url}]
   const [prefStatus,    setPrefStatus]    = useState('');
   const [prefWorkType,  setPrefWorkType]  = useState('');
-  const [prefRelocate,  setPrefRelocate]  = useState('');
   const [prefLocations, setPrefLocations] = useState([]);
   const [prefStart,     setPrefStart]     = useState('');
+  const [prefRelocate,  setPrefRelocate]  = useState('');
 
-  // ── Docs UX ─────────────────────────────────────────────────────────────────
-  const [docsFocus, setDocsFocus] = useState('resume');
-
-  // ── Picker expand state ──────────────────────────────────────────────────────
+  // ── Banner expand ─────────────────────────────────────────────────────────
   const [bannerMoreOpen,    setBannerMoreOpen]    = useState(false);
   const [wallpaperMoreOpen, setWallpaperMoreOpen] = useState(false);
 
-  // ── Header save state ────────────────────────────────────────────────────────
-  const [headerSaving,  setHeaderSaving]  = useState(false);
-  const [headerSaveMsg, setHeaderSaveMsg] = useState('');
+  // ── Save indicator ────────────────────────────────────────────────────────
+  const [saveState, setSaveState] = useState('idle');
+  const saveTimerRef = useRef(null);
 
   // ─────────────────────────────────────────────────────────────────────────
-  //  Load from server
+  // Load from server
   // ─────────────────────────────────────────────────────────────────────────
   useEffect(() => {
     let cancelled = false;
@@ -151,51 +171,55 @@ export default function ProfileEditPage() {
           fetch('/api/profile/header'),
           fetch('/api/profile/details'),
         ]);
-
-        if (!cancelled && hRes.ok) {
+        if (hRes.ok) {
           const hData = await hRes.json();
-          const u = hData.user || hData;
-
-          const fullName = u.name || [u.firstName, u.lastName].filter(Boolean).join(' ');
-          if (fullName)    setName(fullName);
-          if (u.pronouns)  setPronouns(u.pronouns);
-          if (u.headline)  setHeadline(u.headline);
-          if (u.location)  setLocation(u.location);
-          if (u.status)    setStatus(u.status);
-          if (u.slug)      { setSlug(u.slug); setSlugValue(u.slug); }
-          if (u.avatarUrl) setAvatarUrl(u.avatarUrl);
-
-          const cb = hData.corporateBanner || u.corporateBanner;
-          setCoverUrl((cb && cb.bannerSrc) || u.coverUrl || '');
-          setWallpaperUrl(u.wallpaperUrl || '');
-          setBannerH(clamp(u.bannerHeight ?? 220, 80, 400));
-          setBannerMode(u.bannerMode === 'fit' ? 'fit' : 'cover');
-          setFocalY(clamp(u.bannerFocalY ?? 50, 0, 100));
-
-          const pv = String(u.profileVisibility || '').toUpperCase();
-          if      (pv === 'PUBLIC')           setVisibility('public');
-          else if (pv === 'RECRUITERS_ONLY')  setVisibility('recruiters');
-          else if (u.isProfilePublic)         setVisibility('public');
-          else                                setVisibility('private');
+          const hUser = hData.user || hData;
+          if (!cancelled) {
+            const fullName = hUser.name || [hUser.firstName, hUser.lastName].filter(Boolean).join(' ');
+            setName(fullName || '');
+            setPronouns(hUser.pronouns || '');
+            setHeadline(hUser.headline || '');
+            setSlug(hUser.slug         || '');
+            const serverAvatar = typeof hUser.avatarUrl === 'string' ? hUser.avatarUrl : '';
+            setAvatarUrl(sessionAvatarUrl || resolvedAvatarUrl || serverAvatar || '');
+            const corp = hData.corporateBanner || hUser.corporateBanner || null;
+            setCoverUrl((corp?.bannerSrc) || hUser.coverUrl     || '');
+            setWallpaperUrl(hUser.wallpaperUrl  || '');
+            setBannerH(clamp(hUser.bannerHeight ?? 220, 80, 400));
+            setBannerMode(hUser.bannerMode === 'fit' ? 'fit' : 'cover');
+            setFocalY(clamp(hUser.bannerFocalY  ?? 50, 0, 100));
+            const pv = String(hUser.profileVisibility || '').toUpperCase();
+            setVisibility(
+              pv === 'PUBLIC'          ? 'public'     :
+              pv === 'RECRUITERS_ONLY' ? 'recruiters' :
+              hUser.isProfilePublic    ? 'public'     : 'private'
+            );
+            if (hUser.socialLinks && typeof hUser.socialLinks === 'object') {
+              setSocialLinks(prev => ({ ...prev, ...hUser.socialLinks }));
+            }
+          }
         }
-
-        if (!cancelled && dRes.ok) {
+        if (dRes.ok) {
           const dData = await dRes.json();
           const u = dData.user || dData.details || dData || {};
-
-          if (typeof u.aboutMe === 'string')  setAbout(u.aboutMe);
-          if (Array.isArray(u.skillsJson))    setSkills(u.skillsJson);
-          if (Array.isArray(u.languagesJson)) setLanguages(u.languagesJson);
-          if (Array.isArray(u.hobbiesJson))   setHobbies(u.hobbiesJson);
-          if (Array.isArray(u.educationJson)) setEducation(u.educationJson);
-
-          const wp = u.workPreferences || {};
-          if (wp.workStatus)   setPrefStatus(wp.workStatus);
-          if (wp.workType)     setPrefWorkType(wp.workType);
-          if (wp.startDate)    setPrefStart(wp.startDate);
-          if (Array.isArray(wp.locations)) setPrefLocations(wp.locations);
-          if (typeof wp.willingToRelocate === 'boolean')
-            setPrefRelocate(wp.willingToRelocate ? 'Yes' : 'No');
+          if (!cancelled) {
+            if (typeof u.location === 'string') setLocation(u.location);
+            if (typeof u.status   === 'string') setStatus(u.status);
+            if (typeof u.aboutMe  === 'string') setAbout(u.aboutMe);
+            const wp = u.workPreferences || {};
+            if (wp.workStatus)   setPrefStatus(wp.workStatus);
+            if (wp.workType)     setPrefWorkType(wp.workType);
+            if (Array.isArray(wp.locations)) setPrefLocations(wp.locations);
+            if (wp.startDate)    setPrefStart(wp.startDate);
+            if (typeof wp.willingToRelocate === 'boolean')
+              setPrefRelocate(wp.willingToRelocate ? 'Yes' : 'No');
+            if (Array.isArray(u.skillsJson))         setSkills(u.skillsJson);
+            if (Array.isArray(u.languagesJson))      setLanguages(u.languagesJson);
+            if (Array.isArray(u.hobbiesJson))        setHobbies(u.hobbiesJson);
+            if (Array.isArray(u.educationJson))      setEducation(u.educationJson);
+            if (Array.isArray(u.certificationsJson)) setCertifications(u.certificationsJson);
+            if (Array.isArray(u.projectsJson))       setProjects(u.projectsJson);
+          }
         }
       } catch (err) {
         console.error('Failed to load profile:', err);
@@ -204,118 +228,138 @@ export default function ProfileEditPage() {
       }
     })();
     return () => { cancelled = true; };
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   // ─────────────────────────────────────────────────────────────────────────
-  //  Debounced auto-save for content fields
+  // Debounced save
   // ─────────────────────────────────────────────────────────────────────────
   useEffect(() => {
     if (!serverLoaded) return;
+    if (avatarUrl.startsWith('data:')) return;
+
     const controller = new AbortController();
-    const timer = setTimeout(async () => {
+    setSaveState('saving');
+    if (saveTimerRef.current) clearTimeout(saveTimerRef.current);
+
+    saveTimerRef.current = setTimeout(async () => {
       try {
-        await fetch('/api/profile/details', {
-          method: 'PATCH',
-          headers: { 'Content-Type': 'application/json' },
-          signal: controller.signal,
-          body: JSON.stringify({
-            name, pronouns, headline, location, status,
-            aboutMe: about,
-            workPreferences: {
-              workStatus: prefStatus,
-              workType: prefWorkType,
-              locations: prefLocations,
-              startDate: prefStart,
-              willingToRelocate:
-                prefRelocate === 'Yes' ? true
-                : prefRelocate === 'No' ? false
-                : null,
-            },
-            skillsJson:   skills,
-            languagesJson: languages,
-            hobbiesJson:  hobbies,
-            educationJson: education,
+        const cleanSlug = slug.trim().toLowerCase().replace(/\s+/g, '-');
+        const profileVisibility =
+          visibility === 'public'     ? 'PUBLIC'          :
+          visibility === 'recruiters' ? 'RECRUITERS_ONLY' : 'PRIVATE';
+
+        const [hRes, dRes] = await Promise.all([
+          fetch('/api/profile/header', {
+            method: 'PATCH',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              avatarUrl: avatarUrl || null, coverUrl: coverUrl || null,
+              wallpaperUrl: wallpaperUrl || null, bannerMode,
+              bannerHeight: bannerH, bannerFocalY: focalY,
+              slug: cleanSlug, profileVisibility,
+              isProfilePublic: profileVisibility === 'PUBLIC',
+              socialLinks,
+            }),
+            signal: controller.signal,
           }),
-        });
+          fetch('/api/profile/details', {
+            method: 'PATCH',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              pronouns, headline, location, status,
+              avatarUrl: avatarUrl || null,
+              coverUrl:  coverUrl  || null,
+              aboutMe:   about     || '',
+              workPreferences: {
+                workStatus: prefStatus || '', workType: prefWorkType || '',
+                locations:  prefLocations || [], startDate: prefStart || '',
+                willingToRelocate:
+                  prefRelocate === 'Yes' ? true :
+                  prefRelocate === 'No'  ? false : null,
+              },
+              skillsJson:         skills         || [],
+              languagesJson:      languages      || [],
+              hobbiesJson:        hobbies        || [],
+              educationJson:      education      || [],
+              certificationsJson: certifications || [],
+              projectsJson:       projects       || [],
+            }),
+            signal: controller.signal,
+          }),
+        ]);
+
+        if (hRes.ok && dRes.ok) {
+          setSaveState('saved');
+          setTimeout(() => setSaveState('idle'), 2500);
+          if (typeof window !== 'undefined') {
+            window.dispatchEvent(new CustomEvent('profileHeaderUpdated', {
+              detail: { wallpaperUrl: wallpaperUrl || null },
+            }));
+          }
+        } else {
+          setSaveState('error');
+        }
       } catch (err) {
-        if (err?.name !== 'AbortError') console.error('Auto-save failed:', err);
+        if (err?.name === 'AbortError') return;
+        setSaveState('error');
       }
-    }, 900);
-    return () => { controller.abort(); clearTimeout(timer); };
+    }, SAVE_DELAY);
+
+    return () => {
+      controller.abort();
+      if (saveTimerRef.current) clearTimeout(saveTimerRef.current);
+    };
   }, [
-    serverLoaded,
-    name, pronouns, headline, location, status, about,
-    prefStatus, prefWorkType, prefRelocate, prefLocations, prefStart,
-    skills, languages, hobbies, education,
+    serverLoaded, pronouns, headline, location, status, slug, visibility,
+    avatarUrl, coverUrl, wallpaperUrl, bannerMode, bannerH, focalY, socialLinks,
+    about, prefStatus, prefWorkType, prefRelocate, prefLocations, prefStart,
+    skills, languages, hobbies, education, certifications, projects,
   ]);
 
   // ─────────────────────────────────────────────────────────────────────────
-  //  Header save — avatar, banner, wallpaper, slug, visibility
-  //  This is explicit (user hits "Save appearance") so visual changes are
-  //  committed to DB. The live preview updates instantly without this.
+  // Avatar upload — optimistic blob preview
   // ─────────────────────────────────────────────────────────────────────────
-  const handleHeaderSave = useCallback(async () => {
-    setHeaderSaving(true);
-    setHeaderSaveMsg('');
-    const cleanSlug = slugValue.trim().toLowerCase().replace(/\s+/g, '-');
-    const profileVisibility =
-      visibility === 'public'      ? 'PUBLIC'
-      : visibility === 'recruiters' ? 'RECRUITERS_ONLY'
-      : 'PRIVATE';
-    try {
-      const res = await fetch('/api/profile/header', {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          avatarUrl:    avatarUrl || null,
-          coverUrl:     coverUrl || null,
-          wallpaperUrl: wallpaperUrl || null,
-          bannerMode,
-          bannerHeight: bannerH,
-          bannerFocalY: focalY,
-          slug:         cleanSlug,
-          profileVisibility,
-          isProfilePublic: profileVisibility === 'PUBLIC',
-        }),
-      });
-      if (!res.ok) throw new Error('Save failed');
-      const data = await res.json();
-      const u = data.user || data;
-      if (u.slug) { setSlug(u.slug); setSlugValue(u.slug); }
-      setHeaderSaveMsg('Appearance saved ✓');
-      // Notify layout (wallpaper background update)
-      window.dispatchEvent(new CustomEvent('profileHeaderUpdated', {
-        detail: { wallpaperUrl: u.wallpaperUrl ?? wallpaperUrl },
-      }));
-    } catch (err) {
-      console.error(err);
-      setHeaderSaveMsg('Save failed — try again');
-    } finally {
-      setHeaderSaving(false);
-      setTimeout(() => setHeaderSaveMsg(''), 3000);
-    }
-  }, [avatarUrl, coverUrl, wallpaperUrl, bannerMode, bannerH, focalY, slugValue, visibility]);
+  const handleAvatarFileChange = useCallback(async (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    if (!file.type.startsWith('image/')) { alert('Please choose an image file.'); e.target.value = ''; return; }
+    setAvatarUploading(true);
+    const reader = new FileReader();
+    reader.onloadend = async () => {
+      try {
+        const dataUrl = reader.result;
+        if (typeof dataUrl !== 'string') throw new Error('Failed to read image.');
+        setAvatarUrl(dataUrl); // ✅ Optimistic — show immediately
+        const res  = await fetch('/api/profile/avatar', {
+          method: 'POST', headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ avatarDataUrl: dataUrl }),
+        });
+        const json = await res.json();
+        if (!res.ok) {
+          alert(json.error || 'Failed to upload avatar.');
+          setAvatarUrl(sessionAvatarUrl || resolvedAvatarUrl || '');
+          return;
+        }
+        setAvatarUrl(json.avatarUrl || ''); // ✅ Replace blob with CDN URL
+      } catch (err) {
+        alert('Something went wrong uploading your avatar.');
+        setAvatarUrl(sessionAvatarUrl || resolvedAvatarUrl || '');
+      } finally {
+        setAvatarUploading(false);
+        if (fileInputRef.current) fileInputRef.current.value = '';
+      }
+    };
+    reader.readAsDataURL(file);
+  }, [sessionAvatarUrl, resolvedAvatarUrl]);
 
-  // ─────────────────────────────────────────────────────────────────────────
-  //  Avatar change handler — instant blob preview + CDN swap
-  //
-  //  ProfileAvatarSelector calls onChange with either:
-  //    (a) a preset URL string  → show immediately
-  //    (b) a data: URL          → show immediately as blob preview
-  //    (c) a CDN URL            → show after upload resolves (replaces (b))
-  //    (d) null                 → removed, fall back to initials
-  //
-  //  Because avatarUrl is now lifted to this page, both the avatar preview
-  //  strip and the live preview panel update the moment onChange fires —
-  //  even before the upload completes.
-  // ─────────────────────────────────────────────────────────────────────────
-  const handleAvatarChange = useCallback((url) => {
-    setAvatarUrl(url || '');
+  const handleAvatarRemove = useCallback(async () => {
+    const res = await fetch('/api/profile/avatar', { method: 'DELETE' });
+    if (!res.ok) { alert('Failed to remove avatar.'); return; }
+    setAvatarUrl('');
   }, []);
 
-  // ─────────────────────────────────────────────────────────────────────────
-  //  Derived values
-  // ─────────────────────────────────────────────────────────────────────────
+  // ── Derived ───────────────────────────────────────────────────────────────
   const initials = useMemo(() => {
     const n = String(name || '').trim();
     if (!n) return 'FT';
@@ -323,258 +367,525 @@ export default function ProfileEditPage() {
     return ((parts[0]?.[0] || '') + (parts[1]?.[0] || '')).toUpperCase() || 'FT';
   }, [name]);
 
-  const profileHref = slug ? `/u/${slug}` : '/profile';
-
-  const DEFAULT_WALLPAPER = '/images/profile-fallbacks/profile-default-wallpaper.png';
-  const effectiveWallpaper = wallpaperUrl || DEFAULT_WALLPAPER;
-  const bannerImage = coverUrl
-    ? `url(${coverUrl})`
-    : 'linear-gradient(135deg, #0D1B2A 0%, #1a3048 50%, #0D1B2A 100%)';
-  const bannerPos = `center ${focalY}%`;
+  const profileUrl  = slug ? `https://forgetomorrow.com/u/${slug}` : null;
+  const bannerImage = coverUrl ? `url(${coverUrl})` : null;
+  const bannerPos   = `center ${focalY}%`;
 
   // ─────────────────────────────────────────────────────────────────────────
-  //  Render
+  // Render
   // ─────────────────────────────────────────────────────────────────────────
   return (
     <>
       <Head>
         <title>Edit Profile | ForgeTomorrow</title>
-        <link
-          href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@600;700;800;900&family=Inter:wght@300;400;500;600;700&family=DM+Sans:wght@300;400;500;600&display=swap"
-          rel="stylesheet"
-        />
       </Head>
 
-      <GlobalStyles />
+      <style jsx global>{`
+        /* ── Shared input theming for child components ── */
+        .pe-section input[type="text"],
+        .pe-section input[type="url"],
+        .pe-section input[type="email"],
+        .pe-section input[type="number"],
+        .pe-section textarea,
+        .pe-section select {
+          background: rgba(255,255,255,0.85) !important;
+          border: 1px solid rgba(0,0,0,0.12) !important;
+          color: #263238 !important;
+          border-radius: 8px !important;
+        }
+        .pe-section input:focus,
+        .pe-section textarea:focus,
+        .pe-section select:focus {
+          border-color: rgba(255,112,67,0.55) !important;
+          box-shadow: 0 0 0 3px rgba(255,112,67,0.12) !important;
+          outline: none !important;
+        }
+        .pe-tab-rail {
+          display: flex; gap: 4px;
+          overflow-x: auto; scrollbar-width: none;
+          -webkit-overflow-scrolling: touch;
+          padding-bottom: 2px;
+        }
+        .pe-tab-rail::-webkit-scrollbar { display: none; }
+        .pe-tab-btn {
+          flex-shrink: 0; display: flex; align-items: center; gap: 6px;
+          padding: 9px 18px; border-radius: 999px;
+          border: 1px solid rgba(0,0,0,0.12);
+          background: rgba(255,255,255,0.70);
+          color: #546E7A; font-size: 13px; font-weight: 600;
+          cursor: pointer; transition: all 0.15s; white-space: nowrap;
+          font-family: inherit;
+        }
+        .pe-tab-btn:hover { background: rgba(255,255,255,0.90); color: #263238; }
+        .pe-tab-btn.active {
+          background: ${ORANGE}; border-color: ${ORANGE};
+          color: #fff; box-shadow: 0 4px 14px rgba(255,112,67,0.35);
+        }
+        .pe-field { display: flex; flex-direction: column; gap: 6px; }
+        .pe-label {
+          font-size: 11px; font-weight: 700; letter-spacing: 0.07em;
+          text-transform: uppercase; color: #78909C;
+        }
+        .pe-input, .pe-textarea, .pe-select {
+          padding: 9px 12px;
+          background: rgba(255,255,255,0.85);
+          border: 1px solid rgba(0,0,0,0.12);
+          border-radius: 8px; color: #263238;
+          font-size: 14px; font-family: inherit;
+          outline: none; transition: border-color 0.15s, box-shadow 0.15s;
+          width: 100%; box-sizing: border-box;
+        }
+        .pe-input:focus, .pe-textarea:focus, .pe-select:focus {
+          border-color: rgba(255,112,67,0.55);
+          box-shadow: 0 0 0 3px rgba(255,112,67,0.12);
+        }
+        .pe-input.locked {
+          background: rgba(0,0,0,0.04); color: #90A4AE; cursor: not-allowed;
+        }
+        .pe-textarea { min-height: 90px; resize: vertical; line-height: 1.6; }
+        .pe-grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+        .pe-grid-2 .full { grid-column: 1 / -1; }
+        @media (max-width: 540px) {
+          .pe-grid-2 { grid-template-columns: 1fr; }
+          .pe-grid-2 .full { grid-column: 1; }
+        }
+        .pe-section-label {
+          font-size: 10px; font-weight: 800; letter-spacing: 0.14em;
+          text-transform: uppercase; color: ${ORANGE};
+          margin-bottom: 16px; display: flex; align-items: center; gap: 8px;
+        }
+        .pe-section-label::after {
+          content: ''; flex: 1; height: 1px;
+          background: linear-gradient(to right, rgba(255,112,67,0.25), transparent);
+        }
+        .pe-asset-rail { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
+        .pe-asset-chip {
+          border-radius: 999px; padding: 2px;
+          border: 2px solid transparent; background: white;
+          cursor: pointer; transition: border-color 0.15s; flex-shrink: 0;
+          box-shadow: 0 1px 4px rgba(0,0,0,0.10);
+        }
+        .pe-asset-chip.selected { border-color: ${ORANGE}; }
+        .pe-asset-chip img { width: 64px; height: 32px; border-radius: 999px; object-fit: cover; display: block; }
+        .pe-asset-btn {
+          padding: 6px 14px; border-radius: 999px;
+          border: 1px solid rgba(0,0,0,0.14); background: rgba(255,255,255,0.80);
+          color: #546E7A; font-size: 12px; font-weight: 600;
+          cursor: pointer; transition: all 0.15s; white-space: nowrap;
+          font-family: inherit;
+        }
+        .pe-asset-btn.selected { border-color: ${ORANGE}; color: ${ORANGE}; background: rgba(255,112,67,0.06); }
+        .pe-asset-btn:hover:not(.selected) { background: rgba(255,255,255,0.95); }
+        .pe-asset-grid {
+          display: grid; grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
+          gap: 10px; margin-top: 10px; padding: 12px;
+          background: rgba(255,255,255,0.50); border: 1px solid rgba(0,0,0,0.08);
+          border-radius: 10px;
+        }
+        .pe-asset-grid-item {
+          border-radius: 10px; padding: 6px;
+          border: 1px solid rgba(0,0,0,0.10); background: white;
+          cursor: pointer; text-align: left; display: grid; gap: 5px;
+          transition: border-color 0.15s; font-family: inherit;
+        }
+        .pe-asset-grid-item.selected { border-color: ${ORANGE}; background: rgba(255,112,67,0.04); }
+        .pe-asset-grid-item img { width: 100%; height: 52px; object-fit: cover; border-radius: 6px; display: block; }
+        .pe-asset-grid-item-name { font-size: 11px; font-weight: 700; color: #263238; }
+        .pe-asset-grid-item-desc { font-size: 10px; color: #78909C; line-height: 1.35; }
+        .pe-vis-group { display: flex; gap: 8px; flex-wrap: wrap; }
+        .pe-vis-pill {
+          padding: 7px 16px; border-radius: 999px;
+          border: 1px solid rgba(0,0,0,0.14); background: rgba(255,255,255,0.80);
+          color: #546E7A; font-size: 12px; font-weight: 700;
+          cursor: pointer; transition: all 0.15s; font-family: inherit;
+        }
+        .pe-vis-pill.active { background: ${ORANGE}; border-color: ${ORANGE}; color: #fff; }
+        .pe-vis-pill:hover:not(.active) { background: rgba(255,255,255,0.95); color: #263238; }
+        .pe-avatar-option {
+          border-radius: 50%; padding: 2px; border: 2px solid transparent;
+          background: transparent; cursor: pointer; transition: border-color 0.15s;
+          flex-shrink: 0;
+        }
+        .pe-avatar-option.selected { border-color: ${ORANGE}; }
+        .pe-avatar-option img { width: 46px; height: 46px; border-radius: 50%; object-fit: cover; display: block; }
+        .pe-avatar-upload-btn {
+          width: 46px; height: 46px; border-radius: 50%;
+          border: 2px dashed rgba(255,112,67,0.55);
+          background: rgba(255,112,67,0.06); color: ${ORANGE};
+          font-size: 10px; font-weight: 700;
+          display: flex; align-items: center; justify-content: center;
+          cursor: pointer; transition: background 0.15s; flex-shrink: 0;
+          font-family: inherit;
+        }
+        .pe-avatar-upload-btn:hover { background: rgba(255,112,67,0.14); }
+        .pe-slider { width: 100%; accent-color: ${ORANGE}; }
+        @keyframes pe-fade-in {
+          from { opacity: 0; transform: translateY(6px); }
+          to   { opacity: 1; transform: translateY(0); }
+        }
+        .pe-fade-in { animation: pe-fade-in 0.22s ease both; }
+        @keyframes pe-spin { to { transform: rotate(360deg); } }
+        .pe-spin { animation: pe-spin 0.8s linear infinite; display: inline-block; }
+
+        /* Preview panel */
+        .pe-preview-name {
+          font-size: 15px; font-weight: 800; color: #F8F4EF; line-height: 1.2;
+        }
+        .pe-preview-chip {
+          font-size: 9px; font-weight: 500; padding: 2px 8px; border-radius: 999px;
+          background: rgba(255,255,255,0.10); border: 1px solid rgba(255,255,255,0.16);
+          color: rgba(248,244,239,0.82);
+        }
+        .pe-preview-chip.orange {
+          background: rgba(255,112,67,0.20); border-color: rgba(255,112,67,0.38); color: #FF7043;
+        }
+        .pe-preview-skill {
+          font-size: 9px; font-weight: 500; padding: 2px 8px; border-radius: 999px;
+          background: rgba(255,255,255,0.08); border: 1px solid rgba(255,255,255,0.12);
+          color: rgba(248,244,239,0.80);
+        }
+      `}</style>
 
       <SeekerLayout title="Edit Profile | ForgeTomorrow" activeNav="profile">
-        <div className="ep-page">
+        <div style={{ width: '100%' }}>
 
-          {/* ── Top bar ── */}
-          <div className="ep-topbar">
-            <div className="ep-topbar-left">
-              <span className="ep-topbar-title">Editing your profile</span>
-              {slug && (
-                <Link href={profileHref} className="ep-view-link">
-                  View live profile →
-                </Link>
-              )}
-            </div>
-            <div className="ep-topbar-right">
-              {headerSaveMsg && (
-                <span className={`ep-save-msg ${headerSaveMsg.includes('✓') ? 'ok' : 'err'}`}>
-                  {headerSaveMsg}
-                </span>
-              )}
-              <button
-                className="ep-btn-primary"
-                onClick={handleHeaderSave}
-                disabled={headerSaving}
-              >
-                {headerSaving ? 'Saving…' : 'Save appearance'}
-              </button>
-            </div>
-          </div>
+          {/* ── Internal grid: content col + right rail ── */}
+          <div style={{
+            display: 'grid',
+            gridTemplateColumns: isMobile ? '1fr' : `minmax(0,1fr) ${RIGHT_COL_WIDTH}px`,
+            gap: GAP, width: '100%', alignItems: 'start',
+          }}>
 
-          {/* ── Tab nav ── */}
-          <nav className="ep-tabs" aria-label="Profile sections">
-            {TABS.map((t) => (
-              <button
-                key={t.id}
-                type="button"
-                className={`ep-tab ${activeTab === t.id ? 'active' : ''}`}
-                onClick={() => setActiveTab(t.id)}
-              >
-                <span className="ep-tab-icon" aria-hidden="true">{t.icon}</span>
-                <span>{t.label}</span>
-              </button>
-            ))}
-          </nav>
+            {/* ══════════════════════════════════════════════════════════════
+                COL 1 — Edit forms
+            ══════════════════════════════════════════════════════════════ */}
+            <div style={{ display: 'grid', gap: GAP, minWidth: 0 }}>
 
-          {/* ── Body: editor col + preview rail ── */}
-          <div className="ep-body">
+              {/* Title card */}
+              <section style={{ ...GLASS, padding: '18px 20px', textAlign: 'center' }}>
+                {/* Mobile: show mini preview centered here */}
+                {isMobile && (
+                  <MobilePreviewStrip
+                    avatarUrl={avatarUrl} name={name} headline={headline}
+                    location={location} status={status} initials={initials}
+                    coverUrl={coverUrl} bannerPos={bannerPos}
+                    wallpaperUrl={wallpaperUrl} profileUrl={profileUrl}
+                    slug={slug}
+                  />
+                )}
+                <div style={{ fontSize: 13, fontWeight: 600, color: '#90A4AE', marginBottom: 4 }}>
+                  Your public profile
+                </div>
+                <h1 style={{ margin: 0, color: ORANGE, fontSize: 22, fontWeight: 900 }}>
+                  Profile Editor
+                </h1>
+                <p style={{ margin: '6px auto 0', color: '#546E7A', fontSize: 13, fontWeight: 600, maxWidth: 500 }}>
+                  Avatar, banner, wallpaper — all update in the preview instantly
+                </p>
+                <div style={{ marginTop: 12, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 10, flexWrap: 'wrap' }}>
+                  <SaveIndicator state={saveState} />
+                  {slug && (
+                    <Link href={`/u/${slug}`} style={{
+                      display: 'inline-flex', alignItems: 'center', gap: 5,
+                      padding: '7px 16px', borderRadius: 999,
+                      border: `1px solid rgba(255,112,67,0.40)`,
+                      background: 'rgba(255,112,67,0.08)', color: ORANGE,
+                      fontSize: 12, fontWeight: 700, textDecoration: 'none',
+                    }}>
+                      View live profile →
+                    </Link>
+                  )}
+                </div>
+              </section>
 
-            {/* ────────── EDITOR COL ────────── */}
-            <div className="ep-editor-col">
+              {/* Tab rail */}
+              <div className="pe-tab-rail">
+                {TABS.map(tab => (
+                  <button key={tab.id}
+                    className={`pe-tab-btn${activeTab === tab.id ? ' active' : ''}`}
+                    onClick={() => setActiveTab(tab.id)} type="button">
+                    <span style={{ fontSize: 11, opacity: 0.8 }}>{tab.icon}</span>
+                    {tab.label}
+                  </button>
+                ))}
+              </div>
 
-              {/* ══ WHO I AM ══ */}
-              {activeTab === 'who' && (
-                <div className="ep-section-stack">
+              {/* ── Tab: What's my style ── */}
+              {activeTab === 'style' && (
+                <div className="pe-fade-in" style={{ display: 'grid', gap: GAP }}>
 
-                  {/* Appearance card */}
-                  <EditorCard
-                    title="Appearance"
-                    subtitle="Avatar, banner, wallpaper — all update in the preview instantly"
-                    accent
-                  >
-                    {/* Avatar with instant preview */}
-                    <Field label="Profile photo">
-                      <div className="ep-avatar-row">
-                        <div className="ep-avatar-now-ring">
-                          {avatarUrl ? (
-                            <img src={avatarUrl} alt="Your current avatar" className="ep-avatar-now-img" />
-                          ) : (
-                            <div className="ep-avatar-now-initials">{initials}</div>
-                          )}
-                        </div>
-                        <div>
-                          <div className="ep-avatar-now-title">Current photo</div>
-                          <div className="ep-avatar-now-sub">Updates instantly when you pick a new one</div>
+                  {/* Avatar */}
+                  <section className="pe-section" style={{ ...GLASS, padding: 20 }}>
+                    <div className="pe-section-label">Profile photo</div>
+                    <div style={{ display: 'flex', gap: 14, alignItems: 'center', flexWrap: 'wrap', marginBottom: 16 }}>
+                      <div style={{
+                        width: 68, height: 68, borderRadius: '50%',
+                        border: `3px solid ${ORANGE}`, overflow: 'hidden',
+                        flexShrink: 0, background: 'rgba(0,0,0,0.06)', position: 'relative',
+                      }}>
+                        {avatarUploading && (
+                          <div style={{ position: 'absolute', inset: 0, background: 'rgba(255,255,255,0.7)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1 }}>
+                            <span className="pe-spin" style={{ fontSize: 18, color: ORANGE }}>◌</span>
+                          </div>
+                        )}
+                        {avatarUrl ? (
+                          <img src={avatarUrl} alt="Current avatar"
+                            style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }} />
+                        ) : (
+                          <div style={{ width: '100%', height: '100%', display: 'grid', placeItems: 'center', background: `linear-gradient(135deg, ${ORANGE}, #F4511E)`, color: '#fff', fontWeight: 900, fontSize: 20 }}>
+                            {initials}
+                          </div>
+                        )}
+                      </div>
+                      <div>
+                        <div style={{ fontSize: 13, fontWeight: 700, color: '#263238', marginBottom: 3 }}>Current photo</div>
+                        <div style={{ fontSize: 12, color: '#78909C', lineHeight: 1.5 }}>
+                          Updates instantly when you pick a new one
                         </div>
                       </div>
-                      <ProfileAvatarSelector value={avatarUrl} onChange={handleAvatarChange} />
-                    </Field>
-
-                    <HRule />
-
-                    {/* Banner */}
-                    <Field label="Profile banner">
-                      <BannerPicker
-                        coverUrl={coverUrl}
-                        setCoverUrl={setCoverUrl}
-                        bannerMoreOpen={bannerMoreOpen}
-                        setBannerMoreOpen={setBannerMoreOpen}
-                      />
-                      <div className="ep-sub-controls">
-                        <ModeToggle value={bannerMode} onChange={setBannerMode} />
-                        <span className="ep-hint">{bannerH}px</span>
-                        <input
-                          type="range" min={80} max={400} step={4} value={bannerH}
-                          onChange={(e) => setBannerH(Number(e.target.value))}
-                          className="ep-range"
-                        />
-                      </div>
-                      {bannerMode === 'cover' && (
-                        <div className="ep-sub-controls" style={{ marginTop: 6 }}>
-                          <span className="ep-hint">Vertical focus</span>
-                          <input
-                            type="range" min={0} max={100} value={focalY}
-                            onChange={(e) => setFocalY(Number(e.target.value))}
-                            className="ep-range"
-                          />
-                          <span className="ep-hint">{focalY}%</span>
-                        </div>
+                    </div>
+                    <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', alignItems: 'center' }}>
+                      {PRESET_AVATARS.map(opt => (
+                        <button key={opt.url} type="button"
+                          className={`pe-avatar-option${avatarUrl === opt.url ? ' selected' : ''}`}
+                          onClick={() => setAvatarUrl(opt.url)} title={opt.label}>
+                          <img src={opt.url} alt={opt.label} />
+                        </button>
+                      ))}
+                      <button type="button" className="pe-avatar-upload-btn"
+                        onClick={() => fileInputRef.current?.click()} disabled={avatarUploading}>
+                        {avatarUploading ? '…' : 'Custom'}
+                      </button>
+                      {avatarUrl && (
+                        <button type="button" className="pe-avatar-upload-btn"
+                          onClick={handleAvatarRemove}
+                          style={{ borderColor: 'rgba(211,47,47,0.4)', background: 'rgba(211,47,47,0.06)', color: '#D32F2F' }}>
+                          Remove
+                        </button>
                       )}
-                    </Field>
+                      <input ref={fileInputRef} type="file" accept="image/*"
+                        style={{ display: 'none' }} onChange={handleAvatarFileChange} />
+                    </div>
+                    <div style={{ fontSize: 11, color: '#90A4AE', marginTop: 8 }}>
+                      Pick a preset, upload your own photo, or remove it to use your initials.
+                    </div>
+                  </section>
 
-                    <HRule />
-
-                    {/* Wallpaper */}
-                    <Field label="Page wallpaper">
-                      <WallpaperPicker
-                        wallpaperUrl={wallpaperUrl}
-                        setWallpaperUrl={setWallpaperUrl}
-                        wallpaperMoreOpen={wallpaperMoreOpen}
-                        setWallpaperMoreOpen={setWallpaperMoreOpen}
-                      />
-                    </Field>
-
-                    <HRule />
-
-                    {/* Slug */}
-                    <Field label="Your profile URL">
-                      <div className="ep-slug-row">
-                        <span className="ep-slug-prefix">forgetomorrow.com/u/</span>
-                        <input
-                          className="ep-input ep-slug-input"
-                          value={slugValue}
-                          onChange={(e) => setSlugValue(e.target.value)}
-                          placeholder="your-name"
-                        />
-                      </div>
-                    </Field>
-
-                    {/* Visibility */}
-                    <Field label="Visibility">
-                      <div className="ep-pill-row">
-                        {[
-                          { v: 'private',    l: 'Private'         },
-                          { v: 'public',     l: 'Public'          },
-                          { v: 'recruiters', l: 'Recruiters only' },
-                        ].map(({ v, l }) => (
-                          <button
-                            key={v}
-                            type="button"
-                            className={`ep-pill ${visibility === v ? 'active' : ''}`}
-                            onClick={() => setVisibility(v)}
-                          >
-                            {l}
+                  {/* Banner */}
+                  <section className="pe-section" style={{ ...GLASS, padding: 20 }}>
+                    <div className="pe-section-label">Profile banner</div>
+                    <div className="pe-asset-rail" style={{ marginBottom: 10 }}>
+                      <button type="button" className={`pe-asset-btn${!coverUrl ? ' selected' : ''}`}
+                        onClick={() => setCoverUrl('')}>None</button>
+                      {profileBanners.slice(0, 4).map(b => (
+                        <button key={b.key} type="button"
+                          className={`pe-asset-chip${coverUrl === b.src ? ' selected' : ''}`}
+                          onClick={() => setCoverUrl(b.src)}>
+                          <img src={b.src} alt={b.name} />
+                        </button>
+                      ))}
+                      <button type="button" className="pe-asset-btn"
+                        onClick={() => setBannerMoreOpen(v => !v)}>
+                        {bannerMoreOpen ? 'Less ↑' : 'More...'}
+                      </button>
+                    </div>
+                    {bannerMoreOpen && (
+                      <div className="pe-asset-grid">
+                        {profileBanners.map(b => (
+                          <button key={b.key} type="button"
+                            className={`pe-asset-grid-item${coverUrl === b.src ? ' selected' : ''}`}
+                            onClick={() => setCoverUrl(b.src)}>
+                            <img src={b.src} alt={b.name} />
+                            <div className="pe-asset-grid-item-name">{b.name}</div>
+                            <div className="pe-asset-grid-item-desc">{b.desc}</div>
                           </button>
                         ))}
                       </div>
-                    </Field>
+                    )}
+                    {coverUrl && (
+                      <div style={{ display: 'grid', gap: 12, marginTop: 14, padding: '14px 0 0', borderTop: '1px solid rgba(0,0,0,0.08)' }}>
+                        <div style={{ display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap' }}>
+                          <span style={{ fontSize: 12, fontWeight: 600, color: '#546E7A' }}>Display mode</span>
+                          {['cover', 'fit'].map(m => (
+                            <button key={m} type="button" onClick={() => setBannerMode(m)}
+                              style={{ padding: '5px 14px', borderRadius: 999, fontFamily: 'inherit',
+                                border: `1px solid ${bannerMode === m ? ORANGE : 'rgba(0,0,0,0.14)'}`,
+                                background: bannerMode === m ? 'rgba(255,112,67,0.08)' : 'rgba(255,255,255,0.80)',
+                                color: bannerMode === m ? ORANGE : '#546E7A',
+                                fontSize: 12, fontWeight: 600, cursor: 'pointer', textTransform: 'capitalize' }}>
+                              {m}
+                            </button>
+                          ))}
+                        </div>
+                        <div className="pe-field">
+                          <label className="pe-label">Banner height — {bannerH}px</label>
+                          <input type="range" min={80} max={400} value={bannerH}
+                            className="pe-slider" onChange={e => setBannerH(Number(e.target.value))} />
+                        </div>
+                        {bannerMode === 'cover' && (
+                          <div className="pe-field">
+                            <label className="pe-label">Vertical focus — {focalY}%</label>
+                            <input type="range" min={0} max={100} value={focalY}
+                              className="pe-slider" onChange={e => setFocalY(Number(e.target.value))} />
+                          </div>
+                        )}
+                      </div>
+                    )}
+                  </section>
 
-                    <div className="ep-card-save-row">
-                      {headerSaveMsg && (
-                        <span className={`ep-save-msg ${headerSaveMsg.includes('✓') ? 'ok' : 'err'}`}>
-                          {headerSaveMsg}
-                        </span>
-                      )}
-                      <button
-                        className="ep-btn-primary"
-                        onClick={handleHeaderSave}
-                        disabled={headerSaving}
-                      >
-                        {headerSaving ? 'Saving…' : 'Save appearance'}
+                  {/* Wallpaper */}
+                  <section className="pe-section" style={{ ...GLASS, padding: 20 }}>
+                    <div className="pe-section-label">Page wallpaper</div>
+                    <div className="pe-asset-rail" style={{ marginBottom: 10 }}>
+                      <button type="button" className={`pe-asset-btn${!wallpaperUrl ? ' selected' : ''}`}
+                        onClick={() => setWallpaperUrl('')}>Default</button>
+                      {profileWallpapers.slice(0, 4).map(w => (
+                        <button key={w.key} type="button"
+                          className={`pe-asset-chip${wallpaperUrl === w.src ? ' selected' : ''}`}
+                          onClick={() => setWallpaperUrl(w.src)}>
+                          <img src={w.src} alt={w.name} />
+                        </button>
+                      ))}
+                      <button type="button" className="pe-asset-btn"
+                        onClick={() => setWallpaperMoreOpen(v => !v)}>
+                        {wallpaperMoreOpen ? 'Less ↑' : 'More...'}
                       </button>
                     </div>
-                  </EditorCard>
+                    {wallpaperMoreOpen && (
+                      <div className="pe-asset-grid">
+                        {profileWallpapers.map(w => (
+                          <button key={w.key} type="button"
+                            className={`pe-asset-grid-item${wallpaperUrl === w.src ? ' selected' : ''}`}
+                            onClick={() => setWallpaperUrl(w.src)}>
+                            <img src={w.src} alt={w.name} />
+                            <div className="pe-asset-grid-item-name">{w.name}</div>
+                            <div className="pe-asset-grid-item-desc">{w.desc}</div>
+                          </button>
+                        ))}
+                      </div>
+                    )}
+                  </section>
 
-                  {/* Identity text fields */}
-                  <EditorCard title="Identity" subtitle="Name, headline, location">
-                    <div className="ep-two-col">
-                      <Field label="Display name">
-                        <input className="ep-input" value={name}
-                          onChange={(e) => setName(e.target.value)} placeholder="Your full name" />
-                      </Field>
-                      <Field label="Pronouns">
-                        <input className="ep-input" value={pronouns}
-                          onChange={(e) => setPronouns(e.target.value)} placeholder="e.g. they/them" />
-                      </Field>
-                      <Field label="Headline" full>
-                        <input className="ep-input" value={headline}
-                          onChange={(e) => setHeadline(e.target.value)}
-                          placeholder="e.g. Senior Product Designer at Acme" maxLength={120} />
-                      </Field>
-                      <Field label="Location">
-                        <input className="ep-input" value={location}
-                          onChange={(e) => setLocation(e.target.value)} placeholder="City, State or Remote" />
-                      </Field>
-                      <Field label="Status">
-                        <input className="ep-input" value={status}
-                          onChange={(e) => setStatus(e.target.value)} placeholder="e.g. Open to work" />
-                      </Field>
+                  {/* Profile URL + Visibility */}
+                  <section className="pe-section" style={{ ...GLASS, padding: 20 }}>
+                    <div className="pe-section-label">Your profile URL</div>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 0,
+                      background: 'rgba(255,255,255,0.85)', border: '1px solid rgba(0,0,0,0.12)',
+                      borderRadius: 8, overflow: 'hidden', marginBottom: 6 }}>
+                      <span style={{ padding: '9px 12px', fontSize: 13, color: '#90A4AE',
+                        background: 'rgba(0,0,0,0.04)', borderRight: '1px solid rgba(0,0,0,0.10)',
+                        whiteSpace: 'nowrap', flexShrink: 0 }}>
+                        forgetomorrow.com/u/
+                      </span>
+                      <input value={slug} onChange={e => setSlug(e.target.value)}
+                        placeholder="your-name"
+                        style={{ flex: 1, padding: '9px 12px', border: 'none', background: 'none',
+                          outline: 'none', fontSize: 14, fontWeight: 600, color: ORANGE,
+                          fontFamily: 'inherit', minWidth: 0 }} />
                     </div>
-                    <p className="ep-autosave-note">✦ Changes save automatically</p>
-                  </EditorCard>
+                    <div style={{ fontSize: 11, color: '#90A4AE', marginBottom: 18 }}>
+                      Letters, numbers, and hyphens only
+                    </div>
+                    <div className="pe-section-label">Visibility</div>
+                    <div className="pe-vis-group" style={{ marginBottom: 8 }}>
+                      {[
+                        { id: 'private',    label: 'Private'          },
+                        { id: 'public',     label: 'Public'           },
+                        { id: 'recruiters', label: 'Recruiters only'  },
+                      ].map(v => (
+                        <button key={v.id} type="button"
+                          className={`pe-vis-pill${visibility === v.id ? ' active' : ''}`}
+                          onClick={() => setVisibility(v.id)}>
+                          {v.label}
+                        </button>
+                      ))}
+                    </div>
+                    <div style={{ fontSize: 11, color: '#90A4AE' }}>
+                      {visibility === 'public'
+                        ? 'Anyone with your link can view your profile.'
+                        : visibility === 'recruiters'
+                        ? 'Only approved recruiters can find you.'
+                        : 'Only you can see your profile.'}
+                    </div>
+                  </section>
+
+                  {/* Social links */}
+                  <section className="pe-section" style={{ ...GLASS, padding: 20 }}>
+                    <div className="pe-section-label">Social links</div>
+                    <div style={{ display: 'grid', gap: 12 }}>
+                      {SOCIAL_FIELDS.map(f => (
+                        <div key={f.key} className="pe-field">
+                          <label className="pe-label" style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                            <span style={{ fontSize: 13, opacity: 0.7 }}>{f.icon}</span>
+                            {f.label}
+                          </label>
+                          <input className="pe-input" type="url"
+                            value={socialLinks[f.key] || ''}
+                            onChange={e => updateSocial(f.key, e.target.value)}
+                            placeholder={f.placeholder} />
+                        </div>
+                      ))}
+                    </div>
+                  </section>
 
                 </div>
               )}
 
-              {/* ══ WHAT I BRING ══ */}
-              {activeTab === 'bring' && (
-                <div className="ep-section-stack">
-                  <ProfileSectionRow
-                    id="about" title="About" subtitle="Your story in 6–10 lines"
-                    hintTitle="About yourself"
-                    hintBullets={[
-                      'Open with a concrete outcome (e.g. reduced churn 18%).',
-                      'Mention your domain and tools.',
-                      'Say what you want next so people know how to help.',
-                    ]}
-                  >
-                    <ProfileAbout about={about} setAbout={setAbout} />
-                  </ProfileSectionRow>
+              {/* ── Tab: Who Am I ── */}
+              {activeTab === 'who' && (
+                <div className="pe-fade-in" style={{ display: 'grid', gap: GAP }}>
 
-                  <ProfileSectionRow
-                    id="preferences" title="Work preferences" subtitle="Discovery settings"
-                    hintTitle="Preferences help discovery"
-                    hintBullets={[
-                      'Select work type (remote, onsite, hybrid).',
-                      'Add preferred locations to appear in local searches.',
-                      'Optional: earliest start date and relocation.',
-                    ]}
-                  >
+                  {/* Identity — name locked */}
+                  <section className="pe-section" style={{ ...GLASS, padding: 20 }}>
+                    <div className="pe-section-label">Identity</div>
+                    <div className="pe-grid-2">
+                      <div className="pe-field">
+                        <label className="pe-label">Display name</label>
+                        <input className="pe-input locked" value={name} readOnly
+                          title="To update your name, contact support" />
+                        <span style={{ fontSize: 11, color: '#90A4AE' }}>
+                          Name changes go through{' '}
+                          <Link href="/support" style={{ color: ORANGE, textDecoration: 'none', fontWeight: 600 }}>
+                            Support Center
+                          </Link>
+                        </span>
+                      </div>
+                      <div className="pe-field">
+                        <label className="pe-label">Pronouns</label>
+                        <input className="pe-input" value={pronouns}
+                          onChange={e => setPronouns(e.target.value)} placeholder="e.g. they/them" />
+                      </div>
+                      <div className="pe-field full">
+                        <label className="pe-label">Headline</label>
+                        <input className="pe-input" value={headline}
+                          onChange={e => setHeadline(e.target.value)}
+                          placeholder="Founder & CEO of ForgeTomorrow | Building Human-First Careers"
+                          maxLength={160} />
+                      </div>
+                      <div className="pe-field">
+                        <label className="pe-label">Location</label>
+                        <input className="pe-input" value={location}
+                          onChange={e => setLocation(e.target.value)}
+                          placeholder="City, State or Remote" />
+                      </div>
+                      <div className="pe-field">
+                        <label className="pe-label">Status</label>
+                        <input className="pe-input" value={status}
+                          onChange={e => setStatus(e.target.value)}
+                          placeholder="e.g. Open to work" />
+                      </div>
+                    </div>
+                  </section>
+
+                  {/* About */}
+                  <section className="pe-section" style={{ ...GLASS, padding: 20 }}>
+                    <div className="pe-section-label">About / Summary</div>
+                    <ProfileAbout about={about || ''} setAbout={setAbout} />
+                  </section>
+
+                  {/* Work preferences */}
+                  <section className="pe-section" style={{ ...GLASS, padding: 20 }}>
+                    <div className="pe-section-label">Work preferences</div>
                     <ProfilePreferences
                       prefStatus={prefStatus}       setPrefStatus={setPrefStatus}
                       prefWorkType={prefWorkType}   setPrefWorkType={setPrefWorkType}
@@ -582,246 +893,276 @@ export default function ProfileEditPage() {
                       prefLocations={prefLocations} setPrefLocations={setPrefLocations}
                       prefStart={prefStart}         setPrefStart={setPrefStart}
                     />
-                  </ProfileSectionRow>
+                  </section>
 
-                  <ProfileSectionRow
-                    id="skills" title="Skills" subtitle="8–12 is the sweet spot"
-                    hintTitle="Strengthen your skills"
-                    hintBullets={[
-                      'Aim for 8–12 core skills.',
-                      'Match target job descriptions.',
-                      'Include tools and frameworks.',
-                    ]}
-                  >
-                    <ProfileSkills skills={skills} setSkills={setSkills} />
-                  </ProfileSectionRow>
-
-                  <ProfileSectionRow
-                    id="languages" title="Languages" subtitle="Spoken or programming"
-                    hintTitle="Languages add context"
-                    hintBullets={[
-                      'Add spoken or programming languages.',
-                      'Helps with multilingual or global roles.',
-                    ]}
-                  >
-                    <ProfileLanguages languages={languages} setLanguages={setLanguages} />
-                  </ProfileSectionRow>
-                </div>
-              )}
-
-              {/* ══ WHERE I'VE BEEN ══ */}
-              {activeTab === 'been' && (
-                <div className="ep-section-stack">
-                  <ProfileSectionRow
-                    id="education" title="Education" subtitle="Degrees, certificates, programs"
-                    hintTitle="Education"
-                    hintBullets={[
-                      'List your school/program and degree.',
-                      "Add a field/major if it helps recruiters understand your path.",
-                      'Keep it clean and factual.',
-                    ]}
-                  >
-                    <ProfileEducation education={education} setEducation={setEducation} />
-                  </ProfileSectionRow>
-
-                  <ProfileSectionRow
-                    id="hobbies" title="Hobbies" subtitle="Optional, but human"
-                    hintTitle="Hobbies (optional)"
-                    hintBullets={[
-                      'Keep it professional-friendly.',
-                      'One or two is enough.',
-                      'Adds personality without distracting from the resume.',
-                    ]}
-                  >
+                  {/* Hobbies */}
+                  <section className="pe-section" style={{ ...GLASS, padding: 20 }}>
+                    <div className="pe-section-label">Hobbies & interests</div>
                     <ProfileHobbies hobbies={hobbies} setHobbies={setHobbies} />
-                  </ProfileSectionRow>
+                  </section>
+
                 </div>
               )}
 
-              {/* ══ YOUR DOCUMENTS ══ */}
-              {activeTab === 'documents' && (
-                <div className="ep-section-stack">
-                  <ProfileSectionRow
-                    id="docs"
-                    title="Resume and cover letter"
-                    subtitle="Make it easy to say yes"
-                    hintTitle={DOCS_HINT.title}
-                    hintBullets={DOCS_HINT.bullets}
-                  >
-                    <div className={`ep-docs-wrap ${isMobile ? 'stacked' : ''}`}>
-                      <DocFocusCard
-                        title="Primary Resume"
-                        active={docsFocus === 'resume'}
-                        onActivate={() => setDocsFocus('resume')}
-                        stacked={isMobile}
-                      >
-                        <ProfileResumeAttach withChrome={withChrome} />
-                      </DocFocusCard>
+              {/* ── Tab: What I Bring ── */}
+              {activeTab === 'bring' && (
+                <div className="pe-fade-in" style={{ display: 'grid', gap: GAP }}>
 
-                      <DocFocusCard
-                        title="Primary Cover Letter"
-                        active={docsFocus === 'cover'}
-                        onActivate={() => setDocsFocus('cover')}
-                        stacked={isMobile}
-                      >
-                        <ProfileCoverAttach withChrome={withChrome} />
-                      </DocFocusCard>
-                    </div>
-                  </ProfileSectionRow>
+                  <section className="pe-section" style={{ ...GLASS, padding: 20 }}>
+                    <div className="pe-section-label">Skills</div>
+                    <ProfileSkills skills={skills} setSkills={setSkills} />
+                  </section>
+
+                  <section className="pe-section" style={{ ...GLASS, padding: 20 }}>
+                    <div className="pe-section-label">Languages</div>
+                    <ProfileLanguages languages={languages} setLanguages={setLanguages} />
+                  </section>
+
+                  <section className="pe-section" style={{ ...GLASS, padding: 20 }}>
+                    <div className="pe-section-label">Certifications</div>
+                    <ProfileCertifications
+                      certifications={certifications}
+                      setCertifications={setCertifications}
+                    />
+                  </section>
+
+                  <section className="pe-section" style={{ ...GLASS, padding: 20 }}>
+                    <div className="pe-section-label">Education</div>
+                    <ProfileEducation education={education} setEducation={setEducation} />
+                  </section>
+
                 </div>
               )}
 
-            </div>{/* /ep-editor-col */}
+              {/* ── Tab: Where I've Been ── */}
+              {activeTab === 'been' && (
+                <div className="pe-fade-in" style={{ display: 'grid', gap: GAP }}>
 
-            {/* ────────── LIVE PREVIEW RAIL (desktop only) ────────── */}
+                  <section className="pe-section" style={{ ...GLASS, padding: 20 }}>
+                    <div className="pe-section-label">Resume</div>
+                    <p style={{ fontSize: 13, color: '#546E7A', marginBottom: 16, lineHeight: 1.6 }}>
+                      Your primary resume is the cornerstone of your ForgeTomorrow portfolio.
+                      Recruiters can download it directly from your public profile.
+                    </p>
+                    <ProfileResumeAttach withChrome={withChrome} />
+                  </section>
+
+                  <section className="pe-section" style={{ ...GLASS, padding: 20 }}>
+                    <div className="pe-section-label">Projects</div>
+                    <ProfileProjects projects={projects} setProjects={setProjects} />
+                  </section>
+
+                </div>
+              )}
+
+            </div>
+
+            {/* ══════════════════════════════════════════════════════════════
+                COL 2 — Right rail (desktop only)
+            ══════════════════════════════════════════════════════════════ */}
             {!isMobile && (
-              <aside className="ep-preview-rail" aria-label="Live profile preview">
-                <div className="ep-preview-header">
-                  <span className="ep-preview-live-dot" />
-                  <span className="ep-preview-live-label">Live preview</span>
-                </div>
+              <div style={{ display: 'grid', gap: GAP, alignSelf: 'start', position: 'sticky', top: 20 }}>
 
-                <LivePreviewCard
-                  wallpaperUrl={effectiveWallpaper}
-                  bannerImage={bannerImage}
-                  bannerPos={bannerPos}
-                  bannerH={bannerH}
-                  bannerMode={bannerMode}
-                  avatarUrl={avatarUrl}
-                  initials={initials}
-                  name={name}
-                  pronouns={pronouns}
-                  headline={headline}
-                  location={location}
-                  status={status}
-                  skills={skills}
-                  languages={languages}
-                  hobbies={hobbies}
-                  slug={slug}
-                />
+                {/* Ad slot */}
+                <aside style={DARK_RAIL}>
+                  <RightRailPlacementManager surfaceId="profile" />
+                </aside>
 
-                {slug && (
-                  <Link href={profileHref} className="ep-preview-open-btn">
-                    Open full profile →
-                  </Link>
-                )}
-              </aside>
+                {/* Live preview */}
+                <aside style={DARK_RAIL}>
+                  <div style={{ fontSize: 9, fontWeight: 800, letterSpacing: '0.14em',
+                    textTransform: 'uppercase', color: '#888', marginBottom: 10 }}>
+                    Live preview
+                  </div>
+                  <LivePreviewCard
+                    avatarUrl={avatarUrl} name={name} pronouns={pronouns}
+                    headline={headline} location={location} status={status}
+                    initials={initials} coverUrl={coverUrl} bannerPos={bannerPos}
+                    wallpaperUrl={wallpaperUrl} profileUrl={profileUrl}
+                    skills={skills} languages={languages} hobbies={hobbies}
+                    visibility={visibility} slug={slug}
+                  />
+                  {slug && (
+                    <Link href={`/u/${slug}`} style={{
+                      display: 'block', marginTop: 10, textAlign: 'center',
+                      fontSize: 11, fontWeight: 700, color: ORANGE, textDecoration: 'none',
+                    }}>
+                      See full profile →
+                    </Link>
+                  )}
+                </aside>
+
+              </div>
             )}
 
-          </div>{/* /ep-body */}
-        </div>{/* /ep-page */}
+          </div>
+        </div>
       </SeekerLayout>
     </>
   );
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
-//  LivePreviewCard
-//  Mirrors [slug].js identity block at preview scale.
-//  Updates in real time as the user edits — no save needed.
+// Live Preview Card
 // ─────────────────────────────────────────────────────────────────────────────
 function LivePreviewCard({
-  wallpaperUrl, bannerImage, bannerPos, bannerH, bannerMode,
-  avatarUrl, initials, name, pronouns, headline, location, status,
-  skills, languages, hobbies, slug,
+  avatarUrl, name, pronouns, headline, location, status,
+  initials, coverUrl, bannerPos, wallpaperUrl, profileUrl,
+  skills, languages, hobbies, visibility, slug,
 }) {
-  const previewBannerH = Math.round(bannerH * 0.265);
-  const safeStr = (v) => (typeof v === 'string' ? v : v?.name || v?.label || '');
+  const NAVY = '#0D1B2A';
+  const bannerImage = coverUrl ? `url(${coverUrl})` : null;
+
+  const skillLabels = (skills || [])
+    .map(s => typeof s === 'string' ? s : s?.name || s?.label || '')
+    .filter(Boolean).slice(0, 5);
+
+  const langLabels = (languages || [])
+    .map(l => typeof l === 'string' ? l : l?.name || l?.label || '')
+    .filter(Boolean).slice(0, 3);
+
+  const hobbyLabels = (hobbies || [])
+    .map(h => typeof h === 'string' ? h : h?.name || h?.label || '')
+    .filter(Boolean).slice(0, 3);
 
   return (
-    <div className="lp-card">
-      {/* Wallpaper */}
-      <div className="lp-wallpaper" style={{ backgroundImage: `url(${wallpaperUrl})` }} />
-      <div className="lp-overlay" />
+    <div style={{
+      borderRadius: 14, overflow: 'hidden',
+      border: '1px solid rgba(255,255,255,0.10)',
+      boxShadow: '0 12px 32px rgba(0,0,0,0.40)',
+      background: wallpaperUrl
+        ? `url(${wallpaperUrl}) center/cover no-repeat`
+        : `linear-gradient(135deg, ${NAVY} 0%, #1a3048 60%, ${NAVY} 100%)`,
+    }}>
+      {/* Overlay */}
+      <div style={{
+        background: 'linear-gradient(180deg, rgba(13,27,42,0.55) 0%, rgba(13,27,42,0.22) 50%, rgba(13,27,42,0.65) 100%)',
+      }}>
+        <div style={{ padding: 10 }}>
 
-      <div className="lp-inner">
-        {/* Banner */}
-        <div
-          className="lp-banner"
-          style={{
-            backgroundImage: bannerImage,
-            backgroundPosition: bannerPos,
-            backgroundSize: bannerMode === 'fit' ? 'contain' : 'cover',
-            height: previewBannerH,
-          }}
-        />
-
-        {/* Identity */}
-        <div className="lp-identity">
-          <div className="lp-avatar-ring">
-            {avatarUrl ? (
-              <img src={avatarUrl} alt="" className="lp-avatar-img" />
+          {/* Banner */}
+          <div style={{
+            height: 60, borderRadius: 10, overflow: 'hidden', marginBottom: 8,
+            border: '1px solid rgba(255,255,255,0.12)',
+            background: NAVY, position: 'relative',
+          }}>
+            {bannerImage ? (
+              <>
+                <div style={{ position: 'absolute', inset: 0, backgroundImage: bannerImage,
+                  backgroundSize: 'cover', backgroundPosition: bannerPos,
+                  filter: 'blur(6px)', transform: 'scale(1.06)', opacity: 0.85 }} />
+                <div style={{ position: 'absolute', inset: 0, backgroundImage: bannerImage,
+                  backgroundSize: 'cover', backgroundPosition: bannerPos }} />
+                <div style={{ position: 'absolute', inset: 0,
+                  background: 'linear-gradient(180deg,rgba(13,27,42,0.4),rgba(13,27,42,0.1))' }} />
+              </>
             ) : (
-              <div className="lp-avatar-initials">{initials}</div>
+              <div style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center',
+                justifyContent: 'center' }}>
+                <span style={{ fontSize: 9, color: 'rgba(255,255,255,0.25)', fontWeight: 600 }}>
+                  No banner
+                </span>
+              </div>
             )}
           </div>
-          <div className="lp-id-text">
-            <div className="lp-name">{name || 'Your Name'}</div>
-            {pronouns && <div className="lp-pronouns">{pronouns}</div>}
-            {headline  && <div className="lp-headline">{headline}</div>}
-            <div className="lp-chips-row">
-              {location && (
-                <span className="lp-chip">
-                  <svg width="6" height="8" viewBox="0 0 11 13" fill="currentColor" style={{flexShrink:0}}>
-                    <path d="M5.5 0A4.5 4.5 0 001 4.5C1 8.25 5.5 13 5.5 13S10 8.25 10 4.5A4.5 4.5 0 005.5 0zm0 6.25A1.75 1.75 0 113.75 4.5 1.752 1.752 0 015.5 6.25z"/>
-                  </svg>
-                  {location}
-                </span>
-              )}
-              {status && (
-                <span className="lp-chip lp-chip-orange">
-                  <span className="lp-status-dot" />{status}
-                </span>
-              )}
+
+          {/* Identity block */}
+          <div style={{
+            background: 'rgba(13,27,42,0.72)', backdropFilter: 'blur(10px)',
+            border: '1px solid rgba(255,255,255,0.10)', borderRadius: 10, padding: 10,
+            marginBottom: 8,
+          }}>
+            <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+              {/* Avatar */}
+              <div style={{
+                width: 42, height: 42, borderRadius: '50%', flexShrink: 0,
+                border: '2px solid #FF7043', overflow: 'hidden',
+                background: '#162336', boxShadow: '0 0 0 2px rgba(13,27,42,0.85)',
+              }}>
+                {avatarUrl ? (
+                  <img src={avatarUrl} alt="preview"
+                    style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }} />
+                ) : (
+                  <div style={{ width: '100%', height: '100%', display: 'grid', placeItems: 'center',
+                    background: 'linear-gradient(135deg,#FF7043,#F4511E)', color: '#fff', fontWeight: 900, fontSize: 12 }}>
+                    {initials}
+                  </div>
+                )}
+              </div>
+              <div style={{ flex: 1, minWidth: 0 }}>
+                <div className="pe-preview-name">{name || 'Your Name'}</div>
+                {pronouns && (
+                  <div style={{ fontSize: 8, fontWeight: 700, letterSpacing: '0.10em',
+                    textTransform: 'uppercase', color: '#FF7043', marginTop: 1 }}>
+                    {pronouns}
+                  </div>
+                )}
+                {headline && (
+                  <div style={{ fontSize: 9, color: 'rgba(248,244,239,0.72)', marginTop: 2,
+                    lineHeight: 1.4, overflow: 'hidden', display: '-webkit-box',
+                    WebkitLineClamp: 2, WebkitBoxOrient: 'vertical' }}>
+                    {headline}
+                  </div>
+                )}
+              </div>
+            </div>
+            <div style={{ display: 'flex', gap: 4, flexWrap: 'wrap', marginTop: 7 }}>
+              {location && <span className="pe-preview-chip">📍 {location}</span>}
+              {status   && <span className="pe-preview-chip orange">● {status}</span>}
+              {visibility === 'public' && <span className="pe-preview-chip">🌐 Public</span>}
             </div>
           </div>
-        </div>
 
-        {/* Skills */}
-        {skills.length > 0 && (
-          <div className="lp-section">
-            <div className="lp-section-label">Skills</div>
-            <div className="lp-tags">
-              {skills.slice(0, 8).map((s, i) => {
-                const label = safeStr(s);
-                return label ? (
-                  <span key={i} className={`lp-tag ${i < 3 ? 'accent' : ''}`}>{label}</span>
-                ) : null;
-              })}
+          {/* Skills */}
+          {skillLabels.length > 0 && (
+            <div style={{ marginBottom: 6 }}>
+              <div style={{ fontSize: 8, fontWeight: 800, letterSpacing: '0.12em',
+                textTransform: 'uppercase', color: 'rgba(255,112,67,0.80)', marginBottom: 5 }}>
+                Skills
+              </div>
+              <div style={{ display: 'flex', gap: 3, flexWrap: 'wrap' }}>
+                {skillLabels.map(s => <span key={s} className="pe-preview-skill">{s}</span>)}
+                {(skills || []).length > 5 && (
+                  <span className="pe-preview-skill" style={{ color: 'rgba(255,255,255,0.4)' }}>
+                    +{(skills || []).length - 5}
+                  </span>
+                )}
+              </div>
             </div>
-          </div>
-        )}
+          )}
 
-        {/* Languages */}
-        {languages.length > 0 && (
-          <div className="lp-section">
-            <div className="lp-section-label">Languages</div>
-            <div className="lp-tags">
-              {languages.slice(0, 4).map((l, i) => {
-                const label = safeStr(l);
-                return label ? <span key={i} className="lp-tag">{label}</span> : null;
-              })}
+          {/* Languages */}
+          {langLabels.length > 0 && (
+            <div style={{ marginBottom: 6 }}>
+              <div style={{ fontSize: 8, fontWeight: 800, letterSpacing: '0.12em',
+                textTransform: 'uppercase', color: 'rgba(255,112,67,0.80)', marginBottom: 5 }}>
+                Languages
+              </div>
+              <div style={{ display: 'flex', gap: 3, flexWrap: 'wrap' }}>
+                {langLabels.map(l => <span key={l} className="pe-preview-skill">{l}</span>)}
+              </div>
             </div>
-          </div>
-        )}
+          )}
 
-        {/* Hobbies */}
-        {hobbies.length > 0 && (
-          <div className="lp-section">
-            <div className="lp-section-label">Interests</div>
-            <div className="lp-tags">
-              {hobbies.slice(0, 4).map((h, i) => {
-                const label = safeStr(h);
-                return label ? <span key={i} className="lp-tag">{label}</span> : null;
-              })}
+          {/* Interests */}
+          {hobbyLabels.length > 0 && (
+            <div>
+              <div style={{ fontSize: 8, fontWeight: 800, letterSpacing: '0.12em',
+                textTransform: 'uppercase', color: 'rgba(255,112,67,0.80)', marginBottom: 5 }}>
+                Interests
+              </div>
+              <div style={{ display: 'flex', gap: 3, flexWrap: 'wrap' }}>
+                {hobbyLabels.map(h => <span key={h} className="pe-preview-skill">{h}</span>)}
+              </div>
             </div>
-          </div>
-        )}
+          )}
 
-        {/* Footer */}
-        <div className="lp-footer">
-          <span className="lp-ft-mark">ForgeTomorrow</span>
-          {slug && <span className="lp-slug">forgetomorrow.com/u/{slug}</span>}
+          {profileUrl && (
+            <div style={{ marginTop: 8, fontSize: 8, color: 'rgba(255,255,255,0.30)',
+              fontWeight: 500, wordBreak: 'break-all', borderTop: '1px solid rgba(255,255,255,0.08)', paddingTop: 7 }}>
+              {profileUrl}
+            </div>
+          )}
         </div>
       </div>
     </div>
@@ -829,656 +1170,235 @@ function LivePreviewCard({
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
-//  BannerPicker
+// Mobile Preview Strip — sits inside the title card on mobile
 // ─────────────────────────────────────────────────────────────────────────────
-function BannerPicker({ coverUrl, setCoverUrl, bannerMoreOpen, setBannerMoreOpen }) {
+function MobilePreviewStrip({ avatarUrl, name, headline, location, status, initials, coverUrl, bannerPos, wallpaperUrl, profileUrl, slug }) {
+  const NAVY = '#0D1B2A';
+  const bannerImage = coverUrl ? `url(${coverUrl})` : null;
   return (
-    <div className="picker-wrap">
-      <div className="picker-row">
-        <button type="button"
-          className={`picker-none ${!coverUrl ? 'active' : ''}`}
-          onClick={() => setCoverUrl('')}
-        >None</button>
-
-        {profileBanners.slice(0, 4).map((b) => (
-          <button key={b.key} type="button"
-            className={`picker-thumb ${coverUrl === b.src ? 'active' : ''}`}
-            onClick={() => setCoverUrl(b.src)} title={b.name}
-          >
-            <img src={b.src} alt={b.name} />
-          </button>
-        ))}
-
-        <button type="button" className="picker-more"
-          onClick={() => setBannerMoreOpen(v => !v)}
-        >{bannerMoreOpen ? 'Less' : 'More…'}</button>
+    <div style={{ marginBottom: 14 }}>
+      <div style={{ fontSize: 9, fontWeight: 800, letterSpacing: '0.14em',
+        textTransform: 'uppercase', color: '#90A4AE', marginBottom: 8 }}>
+        Live preview
       </div>
+      <div style={{
+        borderRadius: 12, overflow: 'hidden', maxWidth: 320, margin: '0 auto',
+        border: '1px solid rgba(255,255,255,0.16)',
+        background: wallpaperUrl
+          ? `url(${wallpaperUrl}) center/cover no-repeat`
+          : `linear-gradient(135deg, ${NAVY} 0%, #1a3048 100%)`,
+      }}>
+        <div style={{ background: 'linear-gradient(180deg,rgba(13,27,42,0.5) 0%,rgba(13,27,42,0.65) 100%)', padding: 10 }}>
+          {/* Banner strip */}
+          {bannerImage && (
+            <div style={{ height: 40, borderRadius: 7, overflow: 'hidden', marginBottom: 8, position: 'relative', background: NAVY }}>
+              <div style={{ position: 'absolute', inset: 0, backgroundImage: bannerImage, backgroundSize: 'cover', backgroundPosition: bannerPos }} />
+            </div>
+          )}
+          {/* Identity row */}
+          <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+            <div style={{ width: 36, height: 36, borderRadius: '50%', flexShrink: 0, border: '2px solid #FF7043', overflow: 'hidden', background: '#162336' }}>
+              {avatarUrl ? (
+                <img src={avatarUrl} alt="preview" style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }} />
+              ) : (
+                <div style={{ width: '100%', height: '100%', display: 'grid', placeItems: 'center', background: 'linear-gradient(135deg,#FF7043,#F4511E)', color: '#fff', fontWeight: 900, fontSize: 11 }}>{initials}</div>
+              )}
+            </div>
+            <div style={{ flex: 1, minWidth: 0 }}>
+              <div style={{ fontSize: 12, fontWeight: 800, color: '#F8F4EF' }}>{name || 'Your Name'}</div>
+              {headline && <div style={{ fontSize: 9, color: 'rgba(248,244,239,0.65)', marginTop: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{headline}</div>}
+              <div style={{ display: 'flex', gap: 3, flexWrap: 'wrap', marginTop: 3 }}>
+                {location && <span style={{ fontSize: 8, padding: '1px 6px', borderRadius: 999, background: 'rgba(255,255,255,0.10)', color: 'rgba(248,244,239,0.75)', border: '1px solid rgba(255,255,255,0.12)' }}>{location}</span>}
+                {status   && <span style={{ fontSize: 8, padding: '1px 6px', borderRadius: 999, background: 'rgba(255,112,67,0.18)', color: '#FF7043', border: '1px solid rgba(255,112,67,0.30)' }}>{status}</span>}
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
 
-      {bannerMoreOpen && (
-        <div className="picker-grid">
-          {profileBanners.map((b) => (
-            <button key={b.key} type="button"
-              className={`picker-grid-item ${coverUrl === b.src ? 'active' : ''}`}
-              onClick={() => setCoverUrl(b.src)}
-            >
-              <img src={b.src} alt={b.name} />
-              <span>{b.name}</span>
-            </button>
+// ─────────────────────────────────────────────────────────────────────────────
+// ProfileCertifications — inline component
+// ─────────────────────────────────────────────────────────────────────────────
+function ProfileCertifications({ certifications, setCertifications }) {
+  const empty = { name: '', issuer: '', year: '' };
+  const [draft, setDraft] = useState(empty);
+
+  const add = () => {
+    if (!draft.name.trim()) return;
+    setCertifications(prev => [...prev, { ...draft }]);
+    setDraft(empty);
+  };
+
+  const remove = (idx) => setCertifications(prev => prev.filter((_, i) => i !== idx));
+
+  return (
+    <div style={{ display: 'grid', gap: 12 }}>
+      {/* Existing */}
+      {certifications.length > 0 && (
+        <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
+          {certifications.map((c, i) => (
+            <div key={i} style={{
+              display: 'flex', alignItems: 'center', gap: 6,
+              padding: '6px 12px', borderRadius: 999,
+              background: 'rgba(255,112,67,0.08)', border: '1px solid rgba(255,112,67,0.25)',
+            }}>
+              <span style={{ fontSize: 13, fontWeight: 600, color: '#263238' }}>{c.name}</span>
+              {c.issuer && <span style={{ fontSize: 11, color: '#78909C' }}>· {c.issuer}</span>}
+              {c.year   && <span style={{ fontSize: 11, color: '#78909C' }}>· {c.year}</span>}
+              <button type="button" onClick={() => remove(i)}
+                style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#D32F2F', fontSize: 14, lineHeight: 1, padding: '0 2px' }}>
+                ×
+              </button>
+            </div>
           ))}
         </div>
       )}
-    </div>
-  );
-}
-
-// ─────────────────────────────────────────────────────────────────────────────
-//  WallpaperPicker
-// ─────────────────────────────────────────────────────────────────────────────
-function WallpaperPicker({ wallpaperUrl, setWallpaperUrl, wallpaperMoreOpen, setWallpaperMoreOpen }) {
-  return (
-    <div className="picker-wrap">
-      <div className="picker-row">
-        <button type="button"
-          className={`picker-none ${!wallpaperUrl ? 'active' : ''}`}
-          onClick={() => setWallpaperUrl('')}
-        >Default</button>
-
-        {profileWallpapers.slice(0, 4).map((w) => (
-          <button key={w.key} type="button"
-            className={`picker-thumb ${wallpaperUrl === w.src ? 'active' : ''}`}
-            onClick={() => setWallpaperUrl(w.src)} title={w.name}
-          >
-            <img src={w.src} alt={w.name} />
-          </button>
-        ))}
-
-        <button type="button" className="picker-more"
-          onClick={() => setWallpaperMoreOpen(v => !v)}
-        >{wallpaperMoreOpen ? 'Less' : 'More…'}</button>
-      </div>
-
-      {wallpaperMoreOpen && (
-        <div className="picker-grid">
-          {profileWallpapers.map((w) => (
-            <button key={w.key} type="button"
-              className={`picker-grid-item ${wallpaperUrl === w.src ? 'active' : ''}`}
-              onClick={() => setWallpaperUrl(w.src)}
-            >
-              <img src={w.src} alt={w.name} />
-              <span>{w.name}</span>
-            </button>
-          ))}
+      {/* Add new */}
+      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 80px auto', gap: 8, alignItems: 'end' }}>
+        <div className="pe-field">
+          <label className="pe-label">Certification name</label>
+          <input className="pe-input" value={draft.name}
+            onChange={e => setDraft(p => ({ ...p, name: e.target.value }))}
+            placeholder="AWS Solutions Architect"
+            onKeyDown={e => e.key === 'Enter' && add()} />
         </div>
-      )}
-    </div>
-  );
-}
-
-// ─────────────────────────────────────────────────────────────────────────────
-//  DocFocusCard — reskinned for dark theme
-// ─────────────────────────────────────────────────────────────────────────────
-function DocFocusCard({ title, active, onActivate, stacked = false, children }) {
-  return (
-    <div
-      className={`ep-doc-card ${active ? 'active' : ''} ${stacked ? 'stacked' : ''}`}
-      onClick={() => !active && onActivate()}
-      role={!active ? 'button' : undefined}
-      tabIndex={!active ? 0 : undefined}
-      onKeyDown={(e) => {
-        if (!active && (e.key === 'Enter' || e.key === ' ')) {
-          e.preventDefault();
-          onActivate();
-        }
-      }}
-      aria-label={active ? `${title} expanded` : `${title} — click to expand`}
-    >
-      <div className="ep-doc-header">
-        <div className={`ep-doc-dot ${active ? 'active' : ''}`} />
-        <div style={{ flex: 1, minWidth: 0 }}>
-          <div className="ep-doc-title">{title}</div>
-          <div className="ep-doc-sub">{active ? 'Expanded' : 'Click to expand'}</div>
+        <div className="pe-field">
+          <label className="pe-label">Issuer</label>
+          <input className="pe-input" value={draft.issuer}
+            onChange={e => setDraft(p => ({ ...p, issuer: e.target.value }))}
+            placeholder="Amazon" onKeyDown={e => e.key === 'Enter' && add()} />
         </div>
-        {!active && (
-          <button
-            type="button"
-            className="ep-doc-expand-btn"
-            onClick={(e) => { e.stopPropagation(); onActivate(); }}
-          >Expand →</button>
-        )}
-      </div>
-
-      <div className="ep-doc-body" style={{ maxHeight: active ? 1600 : 200 }}>
-        {children}
-        {!active && <div className="ep-doc-fade" />}
-      </div>
-
-      {!active && (
-        <div className="ep-doc-footer">
-          <span>Click to expand and manage.</span>
-          <button
-            type="button"
-            className="ep-btn-primary small"
-            onClick={(e) => { e.stopPropagation(); onActivate(); }}
-          >Expand</button>
+        <div className="pe-field">
+          <label className="pe-label">Year</label>
+          <input className="pe-input" value={draft.year}
+            onChange={e => setDraft(p => ({ ...p, year: e.target.value }))}
+            placeholder="2024" onKeyDown={e => e.key === 'Enter' && add()} />
         </div>
-      )}
-    </div>
-  );
-}
-
-// ─────────────────────────────────────────────────────────────────────────────
-//  Tiny layout helpers
-// ─────────────────────────────────────────────────────────────────────────────
-function EditorCard({ title, subtitle, accent = false, children }) {
-  return (
-    <div className={`ep-card ${accent ? 'accent' : ''}`}>
-      <div className="ep-card-head">
-        <div className="ep-card-title">{title}</div>
-        {subtitle && <div className="ep-card-sub">{subtitle}</div>}
-      </div>
-      <div className="ep-card-body">{children}</div>
-    </div>
-  );
-}
-
-function Field({ label, full = false, children }) {
-  return (
-    <div className={`ep-field ${full ? 'full' : ''}`}>
-      <label className="ep-field-label">{label}</label>
-      {children}
-    </div>
-  );
-}
-
-function HRule() {
-  return <div className="ep-hrule" />;
-}
-
-function ModeToggle({ value, onChange }) {
-  return (
-    <div className="ep-mode-toggle">
-      {['cover', 'fit'].map((v) => (
-        <button
-          key={v}
-          type="button"
-          className={`ep-mode-btn ${value === v ? 'active' : ''}`}
-          onClick={() => onChange(v)}
-        >
-          {v === 'cover' ? 'Cover' : 'Fit'}
+        <button type="button" onClick={add}
+          style={{ padding: '9px 16px', borderRadius: 8, background: ORANGE, color: '#fff',
+            border: 'none', fontWeight: 700, fontSize: 13, cursor: 'pointer',
+            fontFamily: 'inherit', whiteSpace: 'nowrap' }}>
+          + Add
         </button>
-      ))}
+      </div>
+      <div style={{ fontSize: 11, color: '#90A4AE' }}>
+        Press Enter or click Add. Name, issuer, and year all optional except the name.
+      </div>
     </div>
   );
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
-//  Global styles — dark navy matching [slug].js exactly
+// ProfileProjects — inline component
 // ─────────────────────────────────────────────────────────────────────────────
-function GlobalStyles() {
+function ProfileProjects({ projects, setProjects }) {
+  const empty = { title: '', description: '', url: '' };
+  const [draft, setDraft] = useState(empty);
+  const [adding, setAdding] = useState(false);
+
+  const add = () => {
+    if (!draft.title.trim()) return;
+    setProjects(prev => [...prev, { ...draft }]);
+    setDraft(empty);
+    setAdding(false);
+  };
+
+  const remove = (idx) => setProjects(prev => prev.filter((_, i) => i !== idx));
+
   return (
-    <style jsx global>{`
-      body { font-family: 'DM Sans', 'Inter', system-ui, sans-serif; }
+    <div style={{ display: 'grid', gap: 12 }}>
+      {projects.map((p, i) => (
+        <div key={i} style={{
+          padding: '14px 16px', borderRadius: 10,
+          background: 'rgba(255,255,255,0.75)', border: '1px solid rgba(0,0,0,0.09)',
+          position: 'relative',
+        }}>
+          <button type="button" onClick={() => remove(i)}
+            style={{ position: 'absolute', top: 10, right: 10, background: 'none', border: 'none',
+              cursor: 'pointer', color: '#D32F2F', fontSize: 16, lineHeight: 1 }}>
+            ×
+          </button>
+          <div style={{ fontSize: 14, fontWeight: 700, color: '#263238', marginBottom: 4 }}>{p.title}</div>
+          {p.description && <div style={{ fontSize: 13, color: '#546E7A', lineHeight: 1.5, marginBottom: 4 }}>{p.description}</div>}
+          {p.url && (
+            <a href={p.url} target="_blank" rel="noopener noreferrer"
+              style={{ fontSize: 12, color: ORANGE, fontWeight: 600, textDecoration: 'none' }}>
+              {p.url}
+            </a>
+          )}
+        </div>
+      ))}
 
-      /* ── Page shell ── */
-      .ep-page {
-        display: flex; flex-direction: column;
-        gap: ${GAP}px; min-height: 100vh;
-      }
+      {adding ? (
+        <div style={{ padding: '14px 16px', borderRadius: 10, background: 'rgba(255,255,255,0.75)', border: `1px solid rgba(255,112,67,0.30)`, display: 'grid', gap: 10 }}>
+          <div className="pe-field">
+            <label className="pe-label">Project title</label>
+            <input className="pe-input" value={draft.title}
+              onChange={e => setDraft(p => ({ ...p, title: e.target.value }))}
+              placeholder="My awesome project" autoFocus />
+          </div>
+          <div className="pe-field">
+            <label className="pe-label">Description</label>
+            <textarea className="pe-textarea" value={draft.description}
+              onChange={e => setDraft(p => ({ ...p, description: e.target.value }))}
+              placeholder="What did you build? What was the impact?"
+              style={{ minHeight: 70 }} />
+          </div>
+          <div className="pe-field">
+            <label className="pe-label">URL (optional)</label>
+            <input className="pe-input" type="url" value={draft.url}
+              onChange={e => setDraft(p => ({ ...p, url: e.target.value }))}
+              placeholder="https://..." />
+          </div>
+          <div style={{ display: 'flex', gap: 8 }}>
+            <button type="button" onClick={add}
+              style={{ padding: '8px 20px', borderRadius: 8, background: ORANGE, color: '#fff', border: 'none', fontWeight: 700, fontSize: 13, cursor: 'pointer', fontFamily: 'inherit' }}>
+              Save project
+            </button>
+            <button type="button" onClick={() => { setAdding(false); setDraft(empty); }}
+              style={{ padding: '8px 14px', borderRadius: 8, background: 'transparent', color: '#78909C', border: '1px solid rgba(0,0,0,0.12)', fontWeight: 600, fontSize: 13, cursor: 'pointer', fontFamily: 'inherit' }}>
+              Cancel
+            </button>
+          </div>
+        </div>
+      ) : (
+        <button type="button" onClick={() => setAdding(true)}
+          style={{ padding: '10px', borderRadius: 10, background: 'rgba(255,255,255,0.60)',
+            border: '2px dashed rgba(255,112,67,0.30)', color: ORANGE, fontWeight: 700,
+            fontSize: 13, cursor: 'pointer', fontFamily: 'inherit', textAlign: 'center',
+            transition: 'all 0.15s' }}>
+          + Add project
+        </button>
+      )}
+      {projects.length === 0 && !adding && (
+        <div style={{ fontSize: 12, color: '#90A4AE', lineHeight: 1.6 }}>
+          Projects show recruiters what you've shipped. Add anything you're proud of —
+          side projects, open source contributions, work samples.
+        </div>
+      )}
+    </div>
+  );
+}
 
-      /* ── Top bar ── */
-      .ep-topbar {
-        display: flex; align-items: center; justify-content: space-between;
-        gap: 12px; flex-wrap: wrap;
-        padding: 14px 20px;
-        background: ${CARD_BG};
-        border: 1px solid ${BORDER};
-        border-radius: 16px;
-        backdrop-filter: ${BLUR};
-        -webkit-backdrop-filter: ${BLUR};
-        box-shadow: 0 8px 24px rgba(0,0,0,0.22);
-      }
-      .ep-topbar-left  { display: flex; align-items: center; gap: 16px; flex-wrap: wrap; }
-      .ep-topbar-right { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
-      .ep-topbar-title {
-        font-family: 'Playfair Display', Georgia, serif;
-        font-size: 19px; font-weight: 700;
-        color: ${WHITE}; letter-spacing: -0.2px;
-      }
-      .ep-view-link {
-        font-size: 13px; font-weight: 500;
-        color: ${ORANGE}; text-decoration: none;
-        border: 1px solid ${ORANGE_BORDER};
-        border-radius: 999px; padding: 5px 13px;
-        transition: background 0.15s;
-      }
-      .ep-view-link:hover { background: ${ORANGE_DIM}; }
-
-      /* ── Buttons ── */
-      .ep-btn-primary {
-        background: ${ORANGE}; color: white;
-        border: none; border-radius: 10px;
-        padding: 9px 18px;
-        font-size: 13px; font-weight: 600;
-        font-family: 'DM Sans', sans-serif;
-        cursor: pointer; white-space: nowrap;
-        transition: background 0.15s, transform 0.1s, opacity 0.15s;
-      }
-      .ep-btn-primary:hover:not(:disabled) { background: #FF8A65; }
-      .ep-btn-primary:active:not(:disabled) { transform: scale(0.97); }
-      .ep-btn-primary:disabled { opacity: 0.6; cursor: default; }
-      .ep-btn-primary.small { padding: 6px 12px; font-size: 12px; }
-
-      /* ── Save message ── */
-      .ep-save-msg {
-        font-size: 12px; font-weight: 500;
-        padding: 4px 10px; border-radius: 999px;
-      }
-      .ep-save-msg.ok  { background: rgba(34,197,94,0.14); color: #4ade80; }
-      .ep-save-msg.err { background: rgba(239,68,68,0.14);  color: #f87171; }
-
-      /* ── Tab nav ── */
-      .ep-tabs {
-        display: flex; gap: 4px;
-        overflow-x: auto; scrollbar-width: none;
-        padding: 4px;
-        background: ${CARD_BG};
-        border: 1px solid ${BORDER};
-        border-radius: 16px;
-        backdrop-filter: ${BLUR};
-        -webkit-backdrop-filter: ${BLUR};
-      }
-      .ep-tabs::-webkit-scrollbar { display: none; }
-      .ep-tab {
-        flex: 1; min-width: 90px;
-        display: flex; align-items: center; justify-content: center; gap: 7px;
-        padding: 10px 12px;
-        border: 1px solid transparent;
-        background: transparent;
-        border-radius: 11px;
-        font-family: 'DM Sans', sans-serif;
-        font-size: 13px; font-weight: 500;
-        color: ${MUTED}; cursor: pointer;
-        transition: background 0.18s, color 0.18s, border-color 0.18s;
-        white-space: nowrap;
-      }
-      .ep-tab:hover { background: rgba(255,255,255,0.06); color: ${WHITE}; }
-      .ep-tab.active {
-        background: ${ORANGE_DIM};
-        color: ${ORANGE};
-        border-color: ${ORANGE_BORDER};
-      }
-      .ep-tab-icon { font-size: 13px; }
-
-      /* ── Body grid ── */
-      .ep-body {
-        display: grid;
-        grid-template-columns: minmax(0, 1fr) ${PREVIEW_W}px;
-        gap: ${GAP}px;
-        align-items: start;
-      }
-      @media (max-width: 899px) {
-        .ep-body { grid-template-columns: 1fr; }
-      }
-
-      .ep-editor-col { display: flex; flex-direction: column; gap: ${GAP}px; min-width: 0; }
-      .ep-section-stack { display: flex; flex-direction: column; gap: ${GAP}px; }
-
-      /* ── Editor card ── */
-      .ep-card {
-        background: ${CARD_BG};
-        border: 1px solid ${BORDER};
-        border-radius: 18px;
-        backdrop-filter: ${BLUR};
-        -webkit-backdrop-filter: ${BLUR};
-        overflow: hidden;
-        box-shadow: 0 8px 24px rgba(0,0,0,0.20);
-      }
-      .ep-card.accent { border-color: ${ORANGE_BORDER}; }
-      .ep-card-head {
-        padding: 18px 22px 14px;
-        border-bottom: 1px solid ${BORDER};
-      }
-      .ep-card-title {
-        font-family: 'Playfair Display', Georgia, serif;
-        font-size: 16px; font-weight: 700; color: ${WHITE};
-      }
-      .ep-card-sub { font-size: 12px; color: ${MUTED}; margin-top: 3px; }
-      .ep-card-body { padding: 20px 22px; display: flex; flex-direction: column; gap: 20px; }
-      .ep-card-save-row {
-        display: flex; align-items: center; justify-content: flex-end;
-        gap: 10px; padding-top: 4px;
-      }
-
-      /* ── Fields ── */
-      .ep-two-col {
-        display: grid;
-        grid-template-columns: 1fr 1fr;
-        gap: 14px;
-      }
-      @media (max-width: 560px) { .ep-two-col { grid-template-columns: 1fr; } }
-
-      .ep-field { display: flex; flex-direction: column; gap: 6px; }
-      .ep-field.full { grid-column: 1 / -1; }
-      .ep-field-label {
-        font-size: 11px; font-weight: 600;
-        letter-spacing: 0.08em; text-transform: uppercase; color: ${MUTED};
-      }
-      .ep-input {
-        background: rgba(255,255,255,0.06);
-        border: 1px solid ${BORDER};
-        border-radius: 10px;
-        padding: 9px 13px;
-        font-size: 14px; font-family: 'DM Sans', sans-serif; color: ${WHITE};
-        outline: none; width: 100%;
-        transition: border-color 0.15s, background 0.15s;
-      }
-      .ep-input:focus {
-        border-color: ${ORANGE_BORDER};
-        background: rgba(255,255,255,0.09);
-      }
-      .ep-input::placeholder { color: ${MUTED}; opacity: 0.55; }
-      .ep-hint { font-size: 11px; color: ${MUTED}; white-space: nowrap; }
-      .ep-hrule { height: 1px; background: ${BORDER}; }
-      .ep-autosave-note { font-size: 11px; color: ${MUTED}; opacity: 0.65; margin-top: -4px; }
-
-      /* ── Avatar row ── */
-      .ep-avatar-row {
-        display: flex; align-items: center; gap: 14px;
-        padding: 12px 14px;
-        background: rgba(255,255,255,0.04);
-        border: 1px solid ${BORDER};
-        border-radius: 12px;
-        margin-bottom: 10px;
-      }
-      .ep-avatar-now-ring {
-        width: 58px; height: 58px; border-radius: 50%;
-        border: 2px solid ${ORANGE}; overflow: hidden; flex-shrink: 0;
-        box-shadow: 0 0 0 3px ${ORANGE_DIM};
-      }
-      .ep-avatar-now-img  { width:100%; height:100%; object-fit:cover; display:block; }
-      .ep-avatar-now-initials {
-        width:100%; height:100%; display:grid; place-items:center;
-        background: linear-gradient(135deg, ${ORANGE}, #FF5722);
-        color: white; font-weight: 700; font-size: 18px;
-      }
-      .ep-avatar-now-title { font-size: 13px; font-weight: 500; color: ${WHITE}; }
-      .ep-avatar-now-sub   { font-size: 11px; color: ${MUTED}; margin-top: 2px; }
-
-      /* ── Sub-controls row ── */
-      .ep-sub-controls {
-        display: flex; align-items: center; gap: 10px; flex-wrap: wrap;
-        margin-top: 10px;
-      }
-      .ep-range { flex: 1; min-width: 80px; accent-color: ${ORANGE}; }
-      .ep-mode-toggle { display: flex; gap: 6px; }
-      .ep-mode-btn {
-        padding: 5px 12px; border-radius: 8px;
-        border: 1px solid ${BORDER}; background: transparent;
-        color: ${MUTED}; font-size: 12px; font-weight: 600;
-        font-family: 'DM Sans', sans-serif; cursor: pointer;
-        transition: all 0.15s;
-      }
-      .ep-mode-btn.active { border-color: ${ORANGE_BORDER}; color: ${ORANGE}; background: ${ORANGE_DIM}; }
-
-      /* ── Slug row ── */
-      .ep-slug-row { display: flex; align-items: center; }
-      .ep-slug-prefix {
-        font-size: 12px; color: ${MUTED}; white-space: nowrap;
-        padding: 9px 10px;
-        background: rgba(255,255,255,0.04); border: 1px solid ${BORDER};
-        border-right: none; border-radius: 10px 0 0 10px;
-      }
-      .ep-slug-input { border-radius: 0 10px 10px 0 !important; }
-
-      /* ── Pill rows (visibility) ── */
-      .ep-pill-row { display: flex; gap: 8px; flex-wrap: wrap; }
-      .ep-pill {
-        padding: 6px 14px; border-radius: 999px;
-        border: 1px solid ${BORDER}; background: transparent;
-        color: ${MUTED}; font-size: 12px; font-weight: 600;
-        font-family: 'DM Sans', sans-serif; cursor: pointer;
-        transition: all 0.15s;
-      }
-      .ep-pill.active { background: ${ORANGE}; border-color: ${ORANGE}; color: white; }
-
-      /* ── Pickers ── */
-      .picker-wrap { display: flex; flex-direction: column; gap: 10px; }
-      .picker-row  { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
-      .picker-none, .picker-more {
-        padding: 5px 12px; border-radius: 999px;
-        border: 1px solid ${BORDER}; background: transparent;
-        color: ${MUTED}; font-size: 12px; font-weight: 600;
-        font-family: 'DM Sans', sans-serif; cursor: pointer; white-space: nowrap;
-        transition: all 0.15s;
-      }
-      .picker-none:hover, .picker-more:hover { color: ${WHITE}; border-color: rgba(255,255,255,0.28); }
-      .picker-none.active { border-color: ${ORANGE_BORDER}; color: ${ORANGE}; background: ${ORANGE_DIM}; }
-      .picker-thumb {
-        padding: 2px; border-radius: 999px;
-        border: 2px solid transparent; background: transparent;
-        cursor: pointer; line-height: 0; transition: border-color 0.15s;
-      }
-      .picker-thumb img {
-        width: 60px; height: 30px; border-radius: 999px;
-        object-fit: cover; display: block;
-      }
-      .picker-thumb.active { border-color: ${ORANGE}; }
-      .picker-grid {
-        display: grid; grid-template-columns: repeat(auto-fill, minmax(100px, 1fr));
-        gap: 8px; padding: 12px;
-        background: rgba(255,255,255,0.03);
-        border: 1px solid ${BORDER}; border-radius: 12px;
-      }
-      .picker-grid-item {
-        display: flex; flex-direction: column; gap: 5px;
-        padding: 6px; border-radius: 10px;
-        border: 1px solid transparent; background: transparent;
-        cursor: pointer; text-align: left; transition: all 0.15s;
-      }
-      .picker-grid-item img {
-        width: 100%; height: 48px; object-fit: cover;
-        border-radius: 7px; display: block;
-      }
-      .picker-grid-item span { font-size: 10px; color: ${MUTED}; font-weight: 500; }
-      .picker-grid-item:hover { border-color: ${BORDER}; background: rgba(255,255,255,0.04); }
-      .picker-grid-item.active { border-color: ${ORANGE_BORDER}; background: ${ORANGE_DIM}; }
-      .picker-grid-item.active span { color: ${ORANGE}; }
-
-      /* ── Docs layout ── */
-      .ep-docs-wrap { display: flex; gap: ${GAP}px; align-items: stretch; width: 100%; }
-      .ep-docs-wrap.stacked { flex-direction: column; }
-
-      /* ── Doc card ── */
-      .ep-doc-card {
-        flex: 1; border-radius: 18px;
-        border: 1px solid rgba(255,255,255,0.10);
-        background: rgba(255,255,255,0.04);
-        backdrop-filter: ${BLUR}; -webkit-backdrop-filter: ${BLUR};
-        overflow: hidden; cursor: pointer;
-        transition: border-color 0.2s, box-shadow 0.2s;
-      }
-      .ep-doc-card.active {
-        border-color: ${ORANGE_BORDER}; cursor: default;
-        box-shadow: 0 8px 28px rgba(255,112,67,0.12);
-      }
-      .ep-doc-header {
-        display: flex; align-items: center; gap: 10px;
-        padding: 14px 16px;
-        border-bottom: 1px solid rgba(255,255,255,0.07);
-      }
-      .ep-doc-dot {
-        width: 8px; height: 8px; border-radius: 50%;
-        background: ${MUTED}; flex-shrink: 0;
-        transition: background 0.2s, box-shadow 0.2s;
-      }
-      .ep-doc-dot.active { background: ${ORANGE}; box-shadow: 0 0 0 3px ${ORANGE_DIM}; }
-      .ep-doc-title { font-size: 14px; font-weight: 600; color: ${WHITE}; }
-      .ep-doc-sub   { font-size: 11px; color: ${MUTED}; margin-top: 2px; }
-      .ep-doc-expand-btn {
-        margin-left: auto; border-radius: 999px;
-        padding: 5px 12px;
-        background: rgba(255,255,255,0.08);
-        border: 1px solid ${ORANGE_BORDER};
-        color: ${ORANGE}; font-weight: 700; font-size: 12px;
-        font-family: 'DM Sans', sans-serif; cursor: pointer; flex-shrink: 0;
-      }
-      .ep-doc-body {
-        overflow: hidden; transition: max-height 280ms ease; position: relative;
-      }
-      .ep-doc-fade {
-        height: 60px; margin-top: -60px;
-        background: linear-gradient(to bottom, rgba(13,27,42,0), rgba(13,27,42,0.88));
-        pointer-events: none;
-      }
-      .ep-doc-footer {
-        display: flex; align-items: center; justify-content: space-between;
-        gap: 10px; padding: 10px 16px;
-        border-top: 1px solid rgba(255,255,255,0.07);
-        font-size: 12px; color: ${MUTED};
-      }
-
-      /* ── Preview rail ── */
-      .ep-preview-rail {
-        position: sticky; top: 24px; align-self: start;
-        display: flex; flex-direction: column; gap: 10px;
-        width: ${PREVIEW_W}px;
-      }
-      .ep-preview-header { display: flex; align-items: center; gap: 7px; }
-      .ep-preview-live-dot {
-        width: 7px; height: 7px; border-radius: 50%;
-        background: #4ade80; flex-shrink: 0;
-        animation: epLivePulse 2s ease-in-out infinite;
-      }
-      @keyframes epLivePulse {
-        0%,100% { opacity: 1; box-shadow: 0 0 0 0 rgba(74,222,128,0.5); }
-        50%      { opacity: 0.45; box-shadow: 0 0 0 5px rgba(74,222,128,0); }
-      }
-      .ep-preview-live-label {
-        font-size: 11px; font-weight: 600;
-        letter-spacing: 0.08em; text-transform: uppercase; color: ${MUTED};
-      }
-      .ep-preview-open-btn {
-        display: block; text-align: center;
-        font-size: 12px; font-weight: 600; color: ${ORANGE};
-        text-decoration: none; padding: 8px;
-        border: 1px solid ${ORANGE_BORDER}; border-radius: 10px;
-        transition: background 0.15s;
-      }
-      .ep-preview-open-btn:hover { background: ${ORANGE_DIM}; }
-
-      /* ── Live preview card ── */
-      .lp-card {
-        position: relative; border-radius: 14px; overflow: hidden;
-        border: 1px solid ${BORDER}; background: ${NAVY}; min-height: 180px;
-      }
-      .lp-wallpaper {
-        position: absolute; inset: 0;
-        background-size: cover; background-position: center;
-        opacity: 0.5; transition: background-image 0.3s;
-      }
-      .lp-overlay {
-        position: absolute; inset: 0;
-        background: linear-gradient(
-          180deg,
-          rgba(13,27,42,0.55) 0%,
-          rgba(13,27,42,0.20) 55%,
-          rgba(13,27,42,0.42) 100%
-        );
-      }
-      .lp-inner { position: relative; z-index: 2; display: flex; flex-direction: column; }
-      .lp-banner {
-        width: 100%; flex-shrink: 0; background-repeat: no-repeat;
-        border-radius: 14px 14px 0 0;
-        transition: height 0.2s, background-position 0.2s;
-        min-height: 4px;
-      }
-      .lp-identity {
-        display: flex; gap: 9px; align-items: center;
-        padding: 10px 11px 8px;
-        background: rgba(13,27,42,0.60);
-        backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px);
-        border-bottom: 1px solid ${BORDER};
-      }
-      .lp-avatar-ring {
-        width: 38px; height: 38px; border-radius: 50%;
-        border: 2px solid ${ORANGE}; overflow: hidden; flex-shrink: 0;
-        box-shadow: 0 0 0 2px rgba(255,112,67,0.22);
-      }
-      .lp-avatar-img { width:100%; height:100%; object-fit:cover; display:block; }
-      .lp-avatar-initials {
-        width:100%; height:100%; display:grid; place-items:center;
-        background: linear-gradient(135deg, ${ORANGE}, #FF5722);
-        color: white; font-size: 12px; font-weight: 700;
-      }
-      .lp-id-text { flex: 1; min-width: 0; }
-      .lp-name {
-        font-family: 'Playfair Display', Georgia, serif;
-        font-size: 12px; font-weight: 700; color: ${WHITE};
-        white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
-      }
-      .lp-pronouns {
-        font-size: 9px; font-weight: 600; color: ${ORANGE};
-        letter-spacing: 0.08em; text-transform: uppercase; margin-top: 1px;
-      }
-      .lp-headline {
-        font-size: 10px; color: rgba(248,244,239,0.78); margin-top: 2px;
-        white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
-      }
-      .lp-chips-row { display: flex; gap: 4px; flex-wrap: wrap; margin-top: 4px; }
-      .lp-chip {
-        display: inline-flex; align-items: center; gap: 3px;
-        font-size: 9px; font-weight: 500;
-        color: rgba(248,244,239,0.72);
-        background: rgba(255,255,255,0.08);
-        border: 1px solid rgba(255,255,255,0.10);
-        border-radius: 999px; padding: 2px 7px;
-      }
-      .lp-chip-orange { color: ${ORANGE}; border-color: rgba(255,112,67,0.22); }
-      .lp-status-dot {
-        width: 4px; height: 4px; border-radius: 50%;
-        background: ${ORANGE}; display: inline-block;
-      }
-      .lp-section {
-        padding: 7px 11px 4px;
-        border-bottom: 1px solid rgba(255,255,255,0.05);
-      }
-      .lp-section-label {
-        font-size: 8px; font-weight: 700;
-        letter-spacing: 0.12em; text-transform: uppercase;
-        color: ${ORANGE}; margin-bottom: 5px;
-      }
-      .lp-tags { display: flex; flex-wrap: wrap; gap: 4px; }
-      .lp-tag {
-        font-size: 9px; font-weight: 500; padding: 2px 7px;
-        border-radius: 999px;
-        background: rgba(255,255,255,0.07);
-        border: 1px solid rgba(255,255,255,0.10);
-        color: rgba(248,244,239,0.78);
-      }
-      .lp-tag.accent {
-        background: rgba(255,112,67,0.14);
-        border-color: rgba(255,112,67,0.28);
-        color: ${ORANGE};
-      }
-      .lp-footer {
-        display: flex; align-items: center; justify-content: space-between;
-        padding: 7px 11px; gap: 6px;
-      }
-      .lp-ft-mark { font-size: 9px; font-weight: 700; color: ${ORANGE}; letter-spacing: 0.04em; }
-      .lp-slug {
-        font-size: 9px; color: ${MUTED};
-        white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 170px;
-      }
-
-      /* ── Mobile ── */
-      @media (max-width: 767px) {
-        .ep-topbar { padding: 11px 14px; }
-        .ep-topbar-title { font-size: 16px; }
-        .ep-tab { min-width: 76px; padding: 8px 9px; font-size: 12px; }
-        .ep-tab-icon { display: none; }
-        .ep-card-body { padding: 15px 16px; gap: 16px; }
-        .ep-card-head { padding: 14px 16px 10px; }
-      }
-    `}</style>
+// ─────────────────────────────────────────────────────────────────────────────
+// SaveIndicator
+// ─────────────────────────────────────────────────────────────────────────────
+function SaveIndicator({ state }) {
+  const map = {
+    idle:   { dot: 'transparent', text: '',                    color: 'transparent' },
+    saving: { dot: '#FFB74D',     text: 'Saving…',             color: '#78909C'     },
+    saved:  { dot: '#66BB6A',     text: 'All changes saved',   color: '#78909C'     },
+    error:  { dot: '#EF5350',     text: 'Save failed',         color: '#D32F2F'     },
+  };
+  const c = map[state] || map.idle;
+  if (state === 'idle') return null;
+  return (
+    <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+      <div style={{ width: 7, height: 7, borderRadius: '50%', background: c.dot, flexShrink: 0 }} />
+      <span style={{ fontSize: 12, fontWeight: 500, color: c.color }}>{c.text}</span>
+    </div>
   );
 }
