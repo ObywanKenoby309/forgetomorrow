@@ -42,6 +42,25 @@ body {
   min-height: 100vh;
 }
 
+/* ✅ Smooth ForgeTomorrow form-field transitions */
+input,
+textarea,
+select {
+  transition:
+    border-color 120ms ease,
+    box-shadow 120ms ease,
+    background-color 120ms ease;
+}
+
+/* ✅ Global ForgeTomorrow input focus */
+input:focus,
+textarea:focus,
+select:focus {
+  outline: none !important;
+  border-color: #FF7043 !important;
+  box-shadow: 0 0 0 2px rgba(255, 112, 67, 0.3) !important;
+}
+
 /* ------------------------------------------------------------
    Mobile bottom bar + Cookie-Script badge positioning
    ------------------------------------------------------------ */
