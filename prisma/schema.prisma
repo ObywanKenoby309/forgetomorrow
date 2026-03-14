@@ -732,6 +732,8 @@ model User {
   plan                         Tier                           @default(FREE)
   pronouns                     String?
   skillsJson                   Json?
+  certificationsJson           Json?  
+  projectsJson                 Json?
   slug                         String?                        @unique
   slugChangeCount              Int                            @default(0)
   slugLastChangedAt            DateTime?

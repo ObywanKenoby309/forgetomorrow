@@ -7,8 +7,6 @@ import jwt from "jsonwebtoken";
 
 export const config = {
   api: {
-    // ✅ Fix 413 / "Body exceeded 1mb limit" when saving larger profile payloads
-    // (base64 avatarUrl, rich About, JSON sections, etc.)
     bodyParser: { sizeLimit: "4mb" },
   },
 };
@@ -16,7 +14,6 @@ export const config = {
 const WELCOME_DRAFT_KEY = "profile_welcome_dismissed_v1";
 
 type ProfileDetails = {
-  // ✅ FIX: slug added so sidebar Profile link resolves to /profile/[slug]
   slug: string | null;
 
   // Header / identity
@@ -35,14 +32,13 @@ type ProfileDetails = {
   languagesJson: any | null;
   hobbiesJson: any | null;
   educationJson: any | null;
+  certificationsJson: any | null;
+  projectsJson: any | null;
 
   // UI flags (DB-backed via UserDraft)
   welcomeDismissed: boolean;
 };
 
-// ─────────────────────────────────────────────────────────────
-// ✅ MIN CHANGE: allow auth via NextAuth session OR HttpOnly `auth` cookie
-// ─────────────────────────────────────────────────────────────
 function getCookie(req: NextApiRequest, name: string) {
   const raw = req.headers.cookie || "";
   const parts = raw.split(";").map((p) => p.trim());
@@ -53,7 +49,6 @@ function getCookie(req: NextApiRequest, name: string) {
 }
 
 function getJwtSecret() {
-  // Must match what /api/auth/verify-email uses
   return process.env.NEXTAUTH_SECRET || "dev-secret-change-in-production";
 }
 
@@ -87,7 +82,6 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     return res.status(401).json({ error: "Not authenticated" });
   }
 
-  // Resolve user once
   const user = await prisma.user.findUnique({
     where: { email },
     select: { id: true },
@@ -99,14 +93,12 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
   const userId = user.id;
 
-  // ──────────────── GET: load profile details ────────────────
   if (req.method === "GET") {
     try {
       const [record, welcomeDraft] = await Promise.all([
         prisma.user.findUnique({
           where: { id: userId },
           select: {
-            // ✅ FIX: slug now selected so sidebar Profile link resolves correctly
             slug: true,
 
             name: true,
@@ -123,6 +115,8 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
             languagesJson: true,
             hobbiesJson: true,
             educationJson: true,
+            certificationsJson: true,
+            projectsJson: true,
           },
         }),
         prisma.userDraft.findUnique({
@@ -140,7 +134,6 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
       const details: ProfileDetails | null = record
         ? {
-            // ✅ FIX: slug included in response
             slug: record.slug ?? null,
 
             name: record.name,
@@ -156,7 +149,9 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
             skillsJson: record.skillsJson,
             languagesJson: record.languagesJson,
             hobbiesJson: record.hobbiesJson,
-            educationJson: (record as any).educationJson ?? null,
+            educationJson: record.educationJson ?? null,
+            certificationsJson: (record as any).certificationsJson ?? null,
+            projectsJson: (record as any).projectsJson ?? null,
 
             welcomeDismissed: dismissed,
           }
@@ -172,14 +167,11 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     }
   }
 
-  // ──────────────── PATCH: update profile details ────────────────
   if (req.method === "PATCH") {
     try {
       const body = (req.body || {}) as Partial<ProfileDetails>;
-
       const data: any = {};
 
-      // Header / identity
       if (body.name !== undefined) data.name = body.name;
       if (body.headline !== undefined) data.headline = body.headline;
       if (body.location !== undefined) data.location = body.location;
@@ -188,19 +180,16 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       if (body.avatarUrl !== undefined) data.avatarUrl = body.avatarUrl;
       if (body.coverUrl !== undefined) data.coverUrl = body.coverUrl;
 
-      // Sections
       if (body.aboutMe !== undefined) data.aboutMe = body.aboutMe;
       if (body.workPreferences !== undefined) data.workPreferences = body.workPreferences;
       if (body.skillsJson !== undefined) data.skillsJson = body.skillsJson;
       if (body.languagesJson !== undefined) data.languagesJson = body.languagesJson;
       if (body.hobbiesJson !== undefined) data.hobbiesJson = body.hobbiesJson;
       if (body.educationJson !== undefined) data.educationJson = body.educationJson;
+      if (body.certificationsJson !== undefined)
+        data.certificationsJson = body.certificationsJson;
+      if (body.projectsJson !== undefined) data.projectsJson = body.projectsJson;
 
-      // Note: slug is intentionally NOT patchable here.
-      // Slug changes (if ever allowed) should go through a dedicated endpoint
-      // with uniqueness checks and redirect handling.
-
-      // Persist user fields first (only if something actually changed)
       const updatedUser =
         Object.keys(data).length > 0
           ? await prisma.user.update({
@@ -223,6 +212,8 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
                 languagesJson: true,
                 hobbiesJson: true,
                 educationJson: true,
+                certificationsJson: true,
+                projectsJson: true,
               },
             })
           : await prisma.user.findUnique({
@@ -244,6 +235,8 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
                 languagesJson: true,
                 hobbiesJson: true,
                 educationJson: true,
+                certificationsJson: true,
+                projectsJson: true,
               },
             });
 
@@ -251,7 +244,6 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         return res.status(404).json({ error: "User not found" });
       }
 
-      // DB-backed welcome dismiss flag via UserDraft
       if (body.welcomeDismissed !== undefined) {
         if (body.welcomeDismissed) {
           await prisma.userDraft.upsert({
@@ -268,7 +260,6 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
             },
           });
         } else {
-          // if you ever want to re-show it cross-device
           await prisma.userDraft.deleteMany({
             where: { userId, key: WELCOME_DRAFT_KEY },
           });
@@ -297,6 +288,8 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         languagesJson: updatedUser.languagesJson ?? null,
         hobbiesJson: updatedUser.hobbiesJson ?? null,
         educationJson: (updatedUser as any).educationJson ?? null,
+        certificationsJson: (updatedUser as any).certificationsJson ?? null,
+        projectsJson: (updatedUser as any).projectsJson ?? null,
 
         welcomeDismissed: Boolean((draft?.content as any)?.dismissed) === true,
       };
