@@ -149,7 +149,8 @@ function AppShell({ Component, pageProps }) {
   // Job apply route should be treated as INTERNAL seeker-style page
   const isJobApplyRoute = router.pathname === '/job/[id]/apply';
 
-  const isInternalProfileViewRoute = router.pathname === '/profile/[slug]';
+  const isInternalProfileViewRoute = router.pathname === '/profile/[slug]' ||
+									 router.pathname === '/profile/view/[slug]';
 
   // Treat all Hearth routes as internal seeker-style pages
   const isSeekerRoute =
@@ -171,6 +172,7 @@ function AppShell({ Component, pageProps }) {
       '/profile',
       '/profile/edit',
       '/profile/[slug]',
+	  '/profile/view/[slug]',
       '/profile-analytics',
       '/feed',
       '/post-view', // Post full view is INTERNAL (prevents public header/footer)
