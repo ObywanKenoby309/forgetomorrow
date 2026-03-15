@@ -16,7 +16,7 @@ import Link from 'next/link';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { prisma } from '@/lib/prisma';
 import { getServerSession } from 'next-auth/next';
-import authOptions from '../../api/auth/[...nextauth]';
+import { authOptions } from '../../api/auth/[...nextauth]';
 import InternalLayout from '@/components/layouts/InternalLayout';
 import RightRailPlacementManager from '@/components/ads/RightRailPlacementManager';
 import MemberAvatarActions from '@/components/member/MemberAvatarActions';
