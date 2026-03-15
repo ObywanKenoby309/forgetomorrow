@@ -732,6 +732,7 @@ model User {
   plan                         Tier                           @default(FREE)
   pronouns                     String?
   skillsJson                   Json?
+  socialLinks				   Json?
   certificationsJson           Json?  
   projectsJson                 Json?
   slug                         String?                        @unique
