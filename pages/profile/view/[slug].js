@@ -976,19 +976,19 @@ export default function PortfolioViewPage({ user, primaryResume, effectiveVisibi
                     ) : null}
                   </div>
 
-                  {/* RIGHT — Education, Resume, Certifications, Projects, Custom */}
+                  {/* RIGHT — Education + Resume only (balanced with left col) */}
                   <div className="ft-col-right animate-fade-up delay-5">
 
-                    {/* Education */}
+                    {/* Education — always show card in view mode */}
                     {editMode ? (
                       <EducationEditCard
                         education={education} setEducation={setEducation}
                         eduDraft={eduDraft} setEduDraft={setEduDraft} blankEdu={blankEdu} />
-                    ) : education.length > 0 ? (
+                    ) : (
                       <div className="ft-card">
                         <div className="ft-card-inner">
                           <p className="ft-section-label">Education</p>
-                          {education.map((edu, idx) => {
+                          {education.length > 0 ? education.map((edu, idx) => {
                             const line1 = [edu?.degree, edu?.field].filter(Boolean).join(' — ');
                             const years = [edu?.startYear, edu?.endYear].filter(Boolean).join(' – ');
                             return (
@@ -999,60 +999,80 @@ export default function PortfolioViewPage({ user, primaryResume, effectiveVisibi
                                 {edu?.notes && <div style={{ fontSize: 12, color: 'rgba(248,244,239,0.65)', marginTop: 6, lineHeight: 1.6 }}>{edu.notes}</div>}
                               </div>
                             );
-                          })}
+                          }) : (
+                            <div style={{ fontSize: 13, color: 'rgba(248,244,239,0.35)', fontStyle: 'italic' }}>No education added yet.</div>
+                          )}
                         </div>
                       </div>
-                    ) : null}
+                    )}
 
-                    {/* Resume */}
-                    <div className={editMode ? 'ft-dark-card' : 'ft-card'} style={{ marginTop: education.length > 0 || editMode ? 18 : 0 }}>
-                      <div className={editMode ? 'ft-dark-card-inner' : 'ft-card-inner'}>
-                        {editMode
-                          ? <div className="ft-dark-section-label">Resume</div>
-                          : <p className="ft-section-label">Resume</p>
-                        }
-                        <ProfileResumeAttach withChrome={p => p} />
-                      </div>
-                    </div>
-
-                    {/* Certifications */}
-                    <div className={editMode ? 'ft-dark-card' : 'ft-card'} style={{ marginTop: 18 }}>
-                      <div className={editMode ? 'ft-dark-card-inner' : 'ft-card-inner'}>
-                        {editMode
-                          ? <div className="ft-dark-section-label">Certifications</div>
-                          : <p className="ft-section-label">Certifications</p>
-                        }
-                        <ProfileCertifications
-                          certifications={certifications}
-                          setCertifications={setCertifications} />
-                      </div>
-                    </div>
-
-                    {/* Projects */}
-                    <div className={editMode ? 'ft-dark-card' : 'ft-card'} style={{ marginTop: 18 }}>
-                      <div className={editMode ? 'ft-dark-card-inner' : 'ft-card-inner'}>
-                        {editMode
-                          ? <div className="ft-dark-section-label">Projects</div>
-                          : <p className="ft-section-label">Projects</p>
-                        }
-                        <ProfileProjects
-                          projects={projects}
-                          setProjects={setProjects} />
-                      </div>
-                    </div>
-
-                    {/* Custom card stub — placeholder until custom card builder is wired */}
-                    {editMode && (
-                      <div className="ft-dark-card" style={{ marginTop: 18 }}>
-                        <div className="ft-dark-card-inner">
-                          <div className="ft-dark-section-label">Custom Section</div>
-                          <div style={{ fontSize: 13, color: 'rgba(255,255,255,0.35)', fontStyle: 'italic', lineHeight: 1.6 }}>
-                            Custom cards coming soon — add a portfolio spotlight, featured work, press mentions, or anything else that tells your story.
-                          </div>
+                    {/* Resume — view shows primary resume card; edit mode uses "Select Resume" in header */}
+                    {!editMode && (
+                      <div className="ft-card" style={{ marginTop: 18 }}>
+                        <div className="ft-card-inner">
+                          <p className="ft-section-label">Resume</p>
+                          {primaryResume ? (
+                            <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', gap:12 }}>
+                              <div style={{ minWidth:0 }}>
+                                <div style={{ fontSize:14, fontWeight:700, color:'var(--white)', overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>
+                                  {primaryResume.name || 'Primary Resume'}
+                                </div>
+                                <div style={{ fontSize:11, color:'var(--muted)', marginTop:3 }}>
+                                  Primary · Updated {new Date(primaryResume.updatedAt).toLocaleDateString()}
+                                </div>
+                              </div>
+                              <a href={`/api/resume/public-download?resumeId=${encodeURIComponent(primaryResume.id)}&slug=${encodeURIComponent(slug)}`}
+                                target="_blank" rel="noopener noreferrer"
+                                style={{ display:'inline-flex', alignItems:'center', gap:6, padding:'7px 14px', borderRadius:999, background:'rgba(255,112,67,0.14)', border:'1px solid rgba(255,112,67,0.35)', color:ORANGE, fontSize:12, fontWeight:700, textDecoration:'none', flexShrink:0 }}>
+                                <svg width="13" height="13" fill="none" viewBox="0 0 14 14"><path d="M7 1v8M4 7l3 3 3-3M2 11h10" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round"/></svg>
+                                Download
+                              </a>
+                            </div>
+                          ) : (
+                            <div style={{ fontSize:13, color:'rgba(248,244,239,0.35)', fontStyle:'italic' }}>No resume attached yet.</div>
+                          )}
                         </div>
                       </div>
                     )}
                   </div>
+                </div>
+
+                {/* ══ BELOW-GRID FULL-WIDTH ROW — Certifications, Projects, Custom ══
+                    These span full width so neither column gets disproportionately long */}
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 18, marginTop: 18 }}>
+
+                  {/* Certifications */}
+                  <div className={editMode ? 'ft-dark-card' : 'ft-card'}>
+                    <div className={editMode ? 'ft-dark-card-inner' : 'ft-card-inner'}>
+                      {editMode
+                        ? <div className="ft-dark-section-label">Certifications</div>
+                        : <p className="ft-section-label">Certifications</p>}
+                      <ProfileCertifications certifications={certifications} setCertifications={setCertifications} />
+                    </div>
+                  </div>
+
+                  {/* Projects */}
+                  <div className={editMode ? 'ft-dark-card' : 'ft-card'}>
+                    <div className={editMode ? 'ft-dark-card-inner' : 'ft-card-inner'}>
+                      {editMode
+                        ? <div className="ft-dark-section-label">Projects</div>
+                        : <p className="ft-section-label">Projects</p>}
+                      <ProfileProjects projects={projects} setProjects={setProjects} />
+                    </div>
+                  </div>
+
+                  {/* Custom card stub */}
+                  <div className={editMode ? 'ft-dark-card' : 'ft-card'}>
+                    <div className={editMode ? 'ft-dark-card-inner' : 'ft-card-inner'}>
+                      {editMode
+                        ? <div className="ft-dark-section-label">Custom Section</div>
+                        : <p className="ft-section-label">Custom Section</p>}
+                      <div style={{ fontSize: 13, color: 'rgba(248,244,239,0.30)', fontStyle: 'italic', lineHeight: 1.6 }}>
+                        Coming soon — add a portfolio spotlight, featured work, press mentions, or anything else that tells your story.
+                      </div>
+                    </div>
+                  </div>
+
                 </div>
 
               </div>
@@ -1611,19 +1631,34 @@ function IdentitySection({ editMode, avatarUrl, avatarUploading, initials, fullN
           </div>
         )}
         <div className="ft-actions-row">
-          <span className="ft-url-pill">{profileUrl}</span>
-          <button className="ft-copy-btn" type="button" onClick={handleCopyProfileUrl}>
+          {/* URL pill — shrinks to fit, doesn't flex-grow */}
+          <span className="ft-url-pill" style={{ flex: '0 1 auto', minWidth: 0, maxWidth: 280 }}>{profileUrl}</span>
+
+          {/* Copy Link — compact, fixed width */}
+          <button className="ft-copy-btn" type="button" onClick={handleCopyProfileUrl} style={{ flexShrink: 0 }}>
             <svg width="13" height="13" fill="none" viewBox="0 0 13 13"><rect x="4" y="4" width="8" height="8" rx="1.5" stroke="white" strokeWidth="1.4" /><path d="M3 9H2a1 1 0 01-1-1V2a1 1 0 011-1h6a1 1 0 011 1v1" stroke="white" strokeWidth="1.4" /></svg>
             {copied ? 'Copied' : 'Copy Link'}
           </button>
+
+          {/* Edit mode: Select Resume CTA */}
+          {editMode && (
+            <a href="/profile/edit#resume" className="ft-resume-top-btn" style={{ flexShrink: 0 }}>
+              <svg width="14" height="14" fill="none" viewBox="0 0 14 14"><path d="M2 4h10M2 7h7M2 10h5" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round"/></svg>
+              Select Resume
+            </a>
+          )}
+
+          {/* View mode owner: Edit Portfolio */}
           {isOwner && !editMode && (
-            <button type="button" className="ft-edit-portfolio-btn" onClick={onEditClick}>
+            <button type="button" className="ft-edit-portfolio-btn" onClick={onEditClick} style={{ flexShrink: 0 }}>
               <svg width="14" height="14" fill="none" viewBox="0 0 14 14"><path d="M9.916 1.75a1.237 1.237 0 011.75 1.75l-6.5 6.5-2.333.583.583-2.333 6.5-6.5z" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round" /><path d="M8.75 2.917l2.333 2.333" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round" /></svg>
               Edit Portfolio
             </button>
           )}
+
+          {/* View mode: Download primary resume */}
           {primaryResume && !editMode && (
-            <a className="ft-resume-top-btn" href={`/api/resume/public-download?resumeId=${encodeURIComponent(primaryResume.id)}&slug=${encodeURIComponent(slug)}`} target="_blank" rel="noopener noreferrer">
+            <a className="ft-resume-top-btn" href={`/api/resume/public-download?resumeId=${encodeURIComponent(primaryResume.id)}&slug=${encodeURIComponent(slug)}`} target="_blank" rel="noopener noreferrer" style={{ flexShrink: 0 }}>
               <svg width="14" height="14" fill="none" viewBox="0 0 14 14"><path d="M7 1v8M4 7l3 3 3-3M2 11h10" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" /></svg>
               Download Resume
             </a>
