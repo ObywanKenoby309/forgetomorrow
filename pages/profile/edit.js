@@ -1,8 +1,10 @@
-// pages/profile/edit.js  —  ForgeTomorrow Profile Editor (v3)
+// pages/profile/edit.js  —  ForgeTomorrow Portfolio Editor (v3 + surgical fixes)
 // ─────────────────────────────────────────────────────────────────────────────
-// Layout: SeekerLayout (left nav) | main content col | right rail
-// Tabs:   What's my style / Who Am I / What I Bring / Where I've Been
-// Theme:  Glass/light matching recruiter dashboard + seeker dashboard
+// Surgical changes from v3:
+//   FIX 1: Grid alignment — removed marginTop:-18, right rail top:0 (was top:2)
+//   FIX 2: Avatar order — Upload first, presets middle, Remove last
+//   FIX 3: Mobile — larger touch targets, horizontal avatar scroll, mobile padding
+//   FIX 4: "Profile" → "Portfolio" in all user-facing text (no path changes)
 // ─────────────────────────────────────────────────────────────────────────────
 
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
@@ -237,7 +239,7 @@ export default function ProfileEditPage() {
           }
         }
       } catch (err) {
-        console.error('Failed to load profile:', err);
+        console.error('Failed to load portfolio:', err);
       } finally {
         if (!cancelled) setServerLoaded(true);
       }
@@ -391,7 +393,7 @@ export default function ProfileEditPage() {
           const dataUrl = reader.result;
           if (typeof dataUrl !== 'string') throw new Error('Failed to read image.');
 
-          setAvatarUrl(dataUrl);
+          setAvatarUrl(dataUrl); // ✅ Optimistic — show immediately
 
           const res = await fetch('/api/profile/avatar', {
             method: 'POST',
@@ -401,14 +403,14 @@ export default function ProfileEditPage() {
 
           const json = await res.json();
           if (!res.ok) {
-            alert(json.error || 'Failed to upload avatar.');
+            alert(json.error || 'Failed to upload photo.');
             setAvatarUrl(sessionAvatarUrl || resolvedAvatarUrl || '');
             return;
           }
 
-          setAvatarUrl(json.avatarUrl || '');
+          setAvatarUrl(json.avatarUrl || ''); // ✅ Replace blob with CDN URL
         } catch (err) {
-          alert('Something went wrong uploading your avatar.');
+          alert('Something went wrong uploading your photo.');
           setAvatarUrl(sessionAvatarUrl || resolvedAvatarUrl || '');
         } finally {
           setAvatarUploading(false);
@@ -424,7 +426,7 @@ export default function ProfileEditPage() {
   const handleAvatarRemove = useCallback(async () => {
     const res = await fetch('/api/profile/avatar', { method: 'DELETE' });
     if (!res.ok) {
-      alert('Failed to remove avatar.');
+      alert('Failed to remove photo.');
       return;
     }
     setAvatarUrl('');
@@ -447,7 +449,8 @@ export default function ProfileEditPage() {
   return (
     <>
       <Head>
-        <title>Edit Profile | ForgeTomorrow</title>
+        {/* FIX 4 — "Profile" → "Portfolio" in page title */}
+        <title>Portfolio Editor | ForgeTomorrow</title>
       </Head>
 
       <style jsx global>{`
@@ -508,6 +511,16 @@ export default function ProfileEditPage() {
           color: #fff;
           box-shadow: 0 4px 14px rgba(255, 112, 67, 0.35);
         }
+
+        /* FIX 3 — Mobile: larger touch targets on tabs */
+        @media (max-width: 899px) {
+          .pe-tab-btn {
+            padding: 11px 20px;
+            font-size: 14px;
+            min-height: 44px;
+          }
+        }
+
         .pe-field {
           display: flex;
           flex-direction: column;
@@ -523,7 +536,7 @@ export default function ProfileEditPage() {
         .pe-input,
         .pe-textarea,
         .pe-select {
-          padding: 9px 12px;
+          padding: 10px 12px;
           background: rgba(255, 255, 255, 0.88);
           border: 1px solid rgba(0, 0, 0, 0.12);
           border-radius: 8px;
@@ -700,6 +713,8 @@ export default function ProfileEditPage() {
           background: rgba(255, 255, 255, 0.96);
           color: #1f2a33;
         }
+
+        /* FIX 2 — Avatar option base styles */
         .pe-avatar-option {
           border-radius: 50%;
           padding: 2px;
@@ -719,26 +734,67 @@ export default function ProfileEditPage() {
           object-fit: cover;
           display: block;
         }
-        .pe-avatar-upload-btn {
+
+        /* FIX 2 — Upload / Remove action buttons */
+        .pe-avatar-action-btn {
           width: 46px;
           height: 46px;
           border-radius: 50%;
-          border: 2px dashed rgba(255, 112, 67, 0.55);
-          background: rgba(255, 112, 67, 0.06);
-          color: ${ORANGE};
-          font-size: 10px;
-          font-weight: 700;
           display: flex;
+          flex-direction: column;
           align-items: center;
           justify-content: center;
+          gap: 1px;
           cursor: pointer;
-          transition: background 0.15s;
-          flex-shrink: 0;
+          transition: all 0.15s;
           font-family: inherit;
+          flex-shrink: 0;
         }
-        .pe-avatar-upload-btn:hover {
-          background: rgba(255, 112, 67, 0.14);
+        .pe-avatar-action-btn .btn-icon {
+          font-size: 15px;
+          line-height: 1;
         }
+        .pe-avatar-action-btn .btn-label {
+          font-size: 8px;
+          font-weight: 800;
+          letter-spacing: 0.03em;
+          line-height: 1;
+        }
+
+        /* FIX 3 — Avatar row: horizontal scroll on mobile */
+        .pe-avatar-row {
+          display: flex;
+          gap: 10px;
+          align-items: center;
+          flex-wrap: wrap;
+        }
+        @media (max-width: 899px) {
+          .pe-avatar-row {
+            flex-wrap: nowrap;
+            overflow-x: auto;
+            scrollbar-width: none;
+            -webkit-overflow-scrolling: touch;
+            padding-bottom: 6px;
+          }
+          .pe-avatar-row::-webkit-scrollbar {
+            display: none;
+          }
+          .pe-avatar-option img {
+            width: 52px;
+            height: 52px;
+          }
+          .pe-avatar-action-btn {
+            width: 52px;
+            height: 52px;
+          }
+          .pe-avatar-action-btn .btn-icon {
+            font-size: 17px;
+          }
+          .pe-avatar-action-btn .btn-label {
+            font-size: 9px;
+          }
+        }
+
         .pe-slider {
           width: 100%;
           accent-color: ${ORANGE};
@@ -798,13 +854,56 @@ export default function ProfileEditPage() {
         }
       `}</style>
 
-      <SeekerLayout title="Edit Profile | ForgeTomorrow" activeNav="profile">
-        <div
-          style={{
-            width: '100%',
-            marginTop: isMobile ? 0 : -18,
-          }}
-        >
+      <SeekerLayout title="Portfolio Editor | ForgeTomorrow" activeNav="profile">
+
+        {/* ══════════════════════════════════════════════════════════════════════
+            MOBILE RENDER — completely separate from desktop, native-app feel
+            Glass/light aesthetic matching the app shell (not the dark portfolio)
+            Bottom tab bar always visible, panels scroll independently
+        ══════════════════════════════════════════════════════════════════════ */}
+        {isMobile && (
+          <MobileEditor
+            // appearance
+            avatarUrl={avatarUrl} avatarUploading={avatarUploading}
+            initials={initials} coverUrl={coverUrl} wallpaperUrl={wallpaperUrl}
+            bannerH={bannerH} bannerMode={bannerMode} focalY={focalY}
+            bannerMoreOpen={bannerMoreOpen} wallpaperMoreOpen={wallpaperMoreOpen}
+            setBannerMoreOpen={setBannerMoreOpen} setWallpaperMoreOpen={setWallpaperMoreOpen}
+            setCoverUrl={setCoverUrl} setWallpaperUrl={setWallpaperUrl}
+            setBannerH={setBannerH} setBannerMode={setBannerMode} setFocalY={setFocalY}
+            fileInputRef={fileInputRef} handleAvatarFileChange={handleAvatarFileChange}
+            handleAvatarRemove={handleAvatarRemove} setAvatarUrl={setAvatarUrl}
+            // identity
+            name={name} pronouns={pronouns} headline={headline}
+            location={location} status={status} slug={slug} visibility={visibility}
+            setPronouns={setPronouns} setHeadline={setHeadline}
+            setLocation={setLocation} setStatus={setStatus}
+            setSlug={setSlug} setVisibility={setVisibility}
+            socialLinks={socialLinks} updateSocial={updateSocial}
+            // content
+            about={about} setAbout={setAbout}
+            skills={skills} setSkills={setSkills}
+            languages={languages} setLanguages={setLanguages}
+            hobbies={hobbies} setHobbies={setHobbies}
+            education={education} setEducation={setEducation}
+            certifications={certifications} setCertifications={setCertifications}
+            projects={projects} setProjects={setProjects}
+            prefStatus={prefStatus} setPrefStatus={setPrefStatus}
+            prefWorkType={prefWorkType} setPrefWorkType={setPrefWorkType}
+            prefLocations={prefLocations} setPrefLocations={setPrefLocations}
+            prefStart={prefStart} setPrefStart={setPrefStart}
+            prefRelocate={prefRelocate} setPrefRelocate={setPrefRelocate}
+            // meta
+            saveState={saveState} profileUrl={profileUrl}
+            bannerPos={bannerPos} withChrome={withChrome}
+          />
+        )}
+
+        {/* ══════════════════════════════════════════════════════════════════════
+            DESKTOP RENDER — unchanged from v3+fixes
+        ══════════════════════════════════════════════════════════════════════ */}
+        {!isMobile && (
+        <div style={{ width: '100%' }}>
           {/* ── Internal grid: content col + right rail ── */}
           <div
             style={{
@@ -819,26 +918,11 @@ export default function ProfileEditPage() {
                 COL 1 — Edit forms
             ══════════════════════════════════════════════════════════════ */}
             <div style={{ display: 'grid', gap: GAP, minWidth: 0 }}>
-              {/* Title card */}
+              {/* Title card — desktop only */}
               <section style={{ ...GLASS, padding: '18px 20px', textAlign: 'center' }}>
-                {isMobile && (
-                  <MobilePreviewStrip
-                    avatarUrl={avatarUrl}
-                    name={name}
-                    headline={headline}
-                    location={location}
-                    status={status}
-                    initials={initials}
-                    coverUrl={coverUrl}
-                    bannerPos={bannerPos}
-                    wallpaperUrl={wallpaperUrl}
-                    profileUrl={profileUrl}
-                    slug={slug}
-                  />
-                )}
-
+                {/* FIX 4 — "Profile Editor" → "Portfolio Editor" */}
                 <h1 style={{ margin: 0, color: ORANGE, fontSize: 22, fontWeight: 900 }}>
-                  Profile Editor
+                  Portfolio Editor
                 </h1>
 
                 <p
@@ -879,9 +963,11 @@ export default function ProfileEditPage() {
                         fontSize: 12,
                         fontWeight: 700,
                         textDecoration: 'none',
+                        minHeight: 40,
                       }}
                     >
-                      View live profile →
+                      {/* FIX 4 — "View live profile" → "View live portfolio" */}
+                      View live portfolio →
                     </Link>
                   )}
                 </div>
@@ -907,7 +993,8 @@ export default function ProfileEditPage() {
                 <div className="pe-fade-in" style={{ display: 'grid', gap: GAP }}>
                   {/* Avatar */}
                   <section className="pe-section" style={{ ...GLASS, padding: 20 }}>
-                    <div className="pe-section-label">Profile photo</div>
+                    {/* FIX 4 — "Profile photo" → "Portfolio photo" */}
+                    <div className="pe-section-label">Portfolio photo</div>
                     <div
                       style={{
                         display: 'flex',
@@ -950,7 +1037,7 @@ export default function ProfileEditPage() {
                         {avatarUrl ? (
                           <img
                             src={avatarUrl}
-                            alt="Current avatar"
+                            alt="Current photo"
                             style={{
                               width: '100%',
                               height: '100%',
@@ -978,12 +1065,7 @@ export default function ProfileEditPage() {
 
                       <div>
                         <div
-                          style={{
-                            fontSize: 13,
-                            fontWeight: 700,
-                            color: '#1F2A33',
-                            marginBottom: 3,
-                          }}
+                          style={{ fontSize: 13, fontWeight: 700, color: '#1F2A33', marginBottom: 3 }}
                         >
                           Current photo
                         </div>
@@ -993,7 +1075,30 @@ export default function ProfileEditPage() {
                       </div>
                     </div>
 
-                    <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', alignItems: 'center' }}>
+                    {/*
+                      FIX 2 — Order: Upload → Presets → Remove
+                      FIX 3 — pe-avatar-row scrolls horizontally on mobile
+                    */}
+                    <div className="pe-avatar-row">
+
+                      {/* 1. Upload — FIRST */}
+                      <button
+                        type="button"
+                        className="pe-avatar-action-btn"
+                        onClick={() => fileInputRef.current?.click()}
+                        disabled={avatarUploading}
+                        title="Upload your own photo"
+                        style={{
+                          background: 'rgba(255,112,67,0.08)',
+                          border: '2px dashed rgba(255,112,67,0.55)',
+                          color: ORANGE,
+                        }}
+                      >
+                        <span className="btn-icon">{avatarUploading ? '…' : '↑'}</span>
+                        <span className="btn-label">{avatarUploading ? 'Wait' : 'Upload'}</span>
+                      </button>
+
+                      {/* 2. Presets — MIDDLE */}
                       {PRESET_AVATARS.map((opt) => (
                         <button
                           key={opt.url}
@@ -1006,27 +1111,21 @@ export default function ProfileEditPage() {
                         </button>
                       ))}
 
-                      <button
-                        type="button"
-                        className="pe-avatar-upload-btn"
-                        onClick={() => fileInputRef.current?.click()}
-                        disabled={avatarUploading}
-                      >
-                        {avatarUploading ? '…' : 'Custom'}
-                      </button>
-
+                      {/* 3. Remove — LAST */}
                       {avatarUrl && (
                         <button
                           type="button"
-                          className="pe-avatar-upload-btn"
+                          className="pe-avatar-action-btn"
                           onClick={handleAvatarRemove}
+                          title="Remove photo — use initials instead"
                           style={{
-                            borderColor: 'rgba(211,47,47,0.4)',
-                            background: 'rgba(211,47,47,0.06)',
-                            color: '#D32F2F',
+                            background: 'rgba(211,47,47,0.07)',
+                            border: '2px solid rgba(211,47,47,0.28)',
+                            color: '#C62828',
                           }}
                         >
-                          Remove
+                          <span className="btn-icon">✕</span>
+                          <span className="btn-label">Remove</span>
                         </button>
                       )}
 
@@ -1040,13 +1139,14 @@ export default function ProfileEditPage() {
                     </div>
 
                     <div style={{ fontSize: 11, color: '#546E7A', marginTop: 8 }}>
-                      Pick a preset, upload your own photo, or remove it to use your initials.
+                      Upload your own photo, pick a preset, or remove it to use your initials.
                     </div>
                   </section>
 
                   {/* Banner */}
                   <section className="pe-section" style={{ ...GLASS, padding: 20 }}>
-                    <div className="pe-section-label">Profile banner</div>
+                    {/* FIX 4 — "Profile banner" → "Portfolio banner" */}
+                    <div className="pe-section-label">Portfolio banner</div>
                     <div className="pe-asset-rail" style={{ marginBottom: 10 }}>
                       <button
                         type="button"
@@ -1116,9 +1216,7 @@ export default function ProfileEditPage() {
                                 padding: '5px 14px',
                                 borderRadius: 999,
                                 fontFamily: 'inherit',
-                                border: `1px solid ${
-                                  bannerMode === m ? ORANGE : 'rgba(0,0,0,0.14)'
-                                }`,
+                                border: `1px solid ${bannerMode === m ? ORANGE : 'rgba(0,0,0,0.14)'}`,
                                 background:
                                   bannerMode === m
                                     ? 'rgba(255,112,67,0.08)'
@@ -1218,7 +1316,8 @@ export default function ProfileEditPage() {
 
                   {/* Profile URL + Visibility */}
                   <section className="pe-section" style={{ ...GLASS, padding: 20 }}>
-                    <div className="pe-section-label">Your profile URL</div>
+                    {/* FIX 4 — "Your profile URL" → "Your portfolio URL" */}
+                    <div className="pe-section-label">Your portfolio URL</div>
 
                     <div
                       style={{
@@ -1288,12 +1387,13 @@ export default function ProfileEditPage() {
                       ))}
                     </div>
 
+                    {/* FIX 4 — "profile" → "portfolio" in visibility descriptions */}
                     <div style={{ fontSize: 11, color: '#455A64', fontWeight: 600 }}>
                       {visibility === 'public'
-                        ? 'Anyone with your link can view your profile.'
+                        ? 'Anyone with your link can view your portfolio.'
                         : visibility === 'recruiters'
                         ? 'Only approved recruiters can find you.'
-                        : 'Only you can see your profile.'}
+                        : 'Only you can see your portfolio.'}
                     </div>
                   </section>
 
@@ -1466,8 +1566,9 @@ export default function ProfileEditPage() {
                         lineHeight: 1.6,
                       }}
                     >
+                      {/* FIX 4 — "profile" → "portfolio" in resume description */}
                       Your primary resume is the cornerstone of your ForgeTomorrow portfolio.
-                      Recruiters can download it directly from your public profile.
+                      Recruiters can download it directly from your public portfolio page.
                     </p>
                     <ProfileResumeAttach withChrome={withChrome} />
                   </section>
@@ -1482,6 +1583,7 @@ export default function ProfileEditPage() {
 
             {/* ══════════════════════════════════════════════════════════════
                 COL 2 — Right rail (desktop only)
+                FIX 1 — top: 0 (was top: 2), starts flush with sidebar
             ══════════════════════════════════════════════════════════════ */}
             {!isMobile && (
               <div
@@ -1490,7 +1592,7 @@ export default function ProfileEditPage() {
                   gap: GAP,
                   alignSelf: 'start',
                   position: 'sticky',
-                  top: 2,
+                  top: 0,
                 }}
               >
                 {/* Ad slot */}
@@ -1545,7 +1647,8 @@ export default function ProfileEditPage() {
                         textDecoration: 'none',
                       }}
                     >
-                      See full profile →
+                      {/* FIX 4 — "See full profile" → "See full portfolio" */}
+                      See full portfolio →
                     </Link>
                   )}
                 </aside>
@@ -1553,8 +1656,777 @@ export default function ProfileEditPage() {
             )}
           </div>
         </div>
+        )} {/* end desktop */}
+
       </SeekerLayout>
     </>
+  );
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// MobileEditor — full native-app mobile layout
+// Glass/light aesthetic, sticky bottom tab bar, independent scrolling panels
+// ─────────────────────────────────────────────────────────────────────────────
+function MobileEditor(props) {
+  const {
+    avatarUrl, avatarUploading, initials, coverUrl, wallpaperUrl,
+    bannerH, bannerMode, focalY, bannerMoreOpen, wallpaperMoreOpen,
+    setBannerMoreOpen, setWallpaperMoreOpen,
+    setCoverUrl, setWallpaperUrl, setBannerH, setBannerMode, setFocalY,
+    fileInputRef, handleAvatarFileChange, handleAvatarRemove, setAvatarUrl,
+    name, pronouns, headline, location, status, slug, visibility,
+    setPronouns, setHeadline, setLocation, setStatus, setSlug, setVisibility,
+    socialLinks, updateSocial,
+    about, setAbout, skills, setSkills, languages, setLanguages,
+    hobbies, setHobbies, education, setEducation,
+    certifications, setCertifications, projects, setProjects,
+    prefStatus, setPrefStatus, prefWorkType, setPrefWorkType,
+    prefLocations, setPrefLocations, prefStart, setPrefStart,
+    prefRelocate, setPrefRelocate,
+    saveState, profileUrl, bannerPos, withChrome,
+  } = props;
+
+  const [activeTab, setActiveTab] = useState('style');
+  // Track which accordion sections are open within each tab
+  const [openSections, setOpenSections] = useState({
+    photo: true, banner: false, wallpaper: false, url: false, social: false,
+    identity: true, about: false, prefs: false, hobbies: false,
+    skills: true, languages: false, certs: false, education: false,
+    resume: true, projects: false,
+  });
+
+  const toggleSection = (key) =>
+    setOpenSections(prev => ({ ...prev, [key]: !prev[key] }));
+
+  const MOBILE_TABS = [
+    { id: 'style', label: 'Style',   icon: '◎' },
+    { id: 'who',   label: 'Who',     icon: '◈' },
+    { id: 'bring', label: 'Bring',   icon: '◇' },
+    { id: 'been',  label: "Been",    icon: '◻' },
+  ];
+
+  // Save toast slide-up
+  const [toastVisible, setToastVisible] = useState(false);
+  const toastRef = useRef(null);
+  useEffect(() => {
+    if (saveState === 'saved') {
+      setToastVisible(true);
+      if (toastRef.current) clearTimeout(toastRef.current);
+      toastRef.current = setTimeout(() => setToastVisible(false), 2200);
+    }
+    if (saveState === 'error') setToastVisible(true);
+    return () => { if (toastRef.current) clearTimeout(toastRef.current); };
+  }, [saveState]);
+
+  const bannerImage = coverUrl ? `url(${coverUrl})` : null;
+
+  return (
+    <>
+      <style jsx global>{`
+        /* ── Mobile Editor Shell ── */
+        .me-shell {
+          display: flex;
+          flex-direction: column;
+          width: 100%;
+          /* bottom tab bar is 64px — panels get padding-bottom to clear it */
+        }
+
+        /* ── Live preview strip at top ── */
+        .me-preview-strip {
+          border-radius: 14px;
+          overflow: hidden;
+          margin-bottom: 12px;
+          border: 1px solid rgba(255,255,255,0.22);
+          box-shadow: 0 10px 24px rgba(0,0,0,0.12);
+          position: relative;
+        }
+
+        /* ── Tab panels ── */
+        .me-panels { position: relative; width: 100%; }
+        .me-panel {
+          display: none;
+          padding-bottom: 88px; /* clear bottom tab bar */
+        }
+        .me-panel.active { display: block; }
+
+        /* ── Accordion section ── */
+        .me-accordion {
+          border-radius: 14px;
+          border: 1px solid rgba(255,255,255,0.22);
+          background: rgba(255,255,255,0.58);
+          box-shadow: 0 4px 14px rgba(0,0,0,0.08);
+          backdropFilter: blur(10px);
+          -webkit-backdrop-filter: blur(10px);
+          overflow: hidden;
+          margin-bottom: 10px;
+        }
+        .me-accordion-header {
+          display: flex;
+          align-items: center;
+          justify-content: space-between;
+          padding: 14px 16px;
+          cursor: pointer;
+          user-select: none;
+          -webkit-user-select: none;
+          gap: 10px;
+          min-height: 52px;
+        }
+        .me-accordion-header:active { background: rgba(255,255,255,0.30); }
+        .me-accordion-title {
+          font-size: 13px;
+          font-weight: 800;
+          color: #1F2A33;
+          display: flex;
+          align-items: center;
+          gap: 8px;
+        }
+        .me-accordion-dot {
+          width: 7px; height: 7px; border-radius: 50%;
+          background: ${ORANGE}; flex-shrink: 0;
+          box-shadow: 0 0 0 3px rgba(255,112,67,0.18);
+        }
+        .me-accordion-chevron {
+          font-size: 12px; color: #90A4AE;
+          transition: transform 0.2s; flex-shrink: 0;
+        }
+        .me-accordion-chevron.open { transform: rotate(180deg); }
+        .me-accordion-body {
+          padding: 0 16px 16px;
+          border-top: 1px solid rgba(0,0,0,0.07);
+        }
+        .me-accordion-body-pad { padding-top: 14px; }
+
+        /* ── Bottom tab bar ── */
+        .me-tab-bar {
+          position: fixed;
+          bottom: 0; left: 0; right: 0;
+          height: 64px;
+          background: rgba(255,255,255,0.88);
+          backdrop-filter: blur(16px);
+          -webkit-backdrop-filter: blur(16px);
+          border-top: 1px solid rgba(0,0,0,0.10);
+          display: flex;
+          align-items: stretch;
+          z-index: 100;
+          box-shadow: 0 -4px 20px rgba(0,0,0,0.10);
+        }
+        .me-tab-btn {
+          flex: 1;
+          display: flex;
+          flex-direction: column;
+          align-items: center;
+          justify-content: center;
+          gap: 3px;
+          border: none;
+          background: transparent;
+          cursor: pointer;
+          font-family: inherit;
+          transition: background 0.15s;
+          -webkit-tap-highlight-color: transparent;
+          padding: 0;
+        }
+        .me-tab-btn:active { background: rgba(255,112,67,0.06); }
+        .me-tab-icon {
+          font-size: 18px;
+          line-height: 1;
+          color: #90A4AE;
+          transition: color 0.15s, transform 0.15s;
+        }
+        .me-tab-label {
+          font-size: 10px;
+          font-weight: 700;
+          letter-spacing: 0.03em;
+          color: #90A4AE;
+          transition: color 0.15s;
+        }
+        .me-tab-btn.active .me-tab-icon { color: ${ORANGE}; transform: scale(1.15); }
+        .me-tab-btn.active .me-tab-label { color: ${ORANGE}; }
+        .me-tab-pip {
+          width: 4px; height: 4px; border-radius: 50%;
+          background: transparent; margin-top: 1px;
+          transition: background 0.15s;
+        }
+        .me-tab-btn.active .me-tab-pip { background: ${ORANGE}; }
+
+        /* ── Avatar carousel row ── */
+        .me-avatar-carousel {
+          display: flex; gap: 12px; align-items: center;
+          overflow-x: auto; scrollbar-width: none;
+          -webkit-overflow-scrolling: touch;
+          padding: 4px 2px 8px;
+        }
+        .me-avatar-carousel::-webkit-scrollbar { display: none; }
+
+        /* ── Asset carousel ── */
+        .me-asset-carousel {
+          display: flex; gap: 8px; align-items: center;
+          overflow-x: auto; scrollbar-width: none;
+          -webkit-overflow-scrolling: touch;
+          padding: 4px 2px 8px;
+        }
+        .me-asset-carousel::-webkit-scrollbar { display: none; }
+
+        /* ── Save toast ── */
+        .me-toast {
+          position: fixed;
+          bottom: 76px;
+          left: 50%;
+          transform: translateX(-50%) translateY(20px);
+          background: rgba(30,30,30,0.92);
+          color: white;
+          font-size: 13px;
+          font-weight: 700;
+          padding: 10px 22px;
+          border-radius: 999px;
+          backdrop-filter: blur(12px);
+          -webkit-backdrop-filter: blur(12px);
+          opacity: 0;
+          transition: opacity 0.25s, transform 0.25s;
+          pointer-events: none;
+          white-space: nowrap;
+          z-index: 200;
+          display: flex;
+          align-items: center;
+          gap: 8px;
+        }
+        .me-toast.visible {
+          opacity: 1;
+          transform: translateX(-50%) translateY(0);
+        }
+        .me-toast-dot {
+          width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0;
+        }
+
+        /* ── View portfolio pill at top ── */
+        .me-view-pill {
+          display: flex;
+          align-items: center;
+          justify-content: space-between;
+          padding: 10px 14px;
+          background: rgba(255,255,255,0.58);
+          border: 1px solid rgba(255,255,255,0.22);
+          border-radius: 14px;
+          box-shadow: 0 4px 14px rgba(0,0,0,0.08);
+          backdrop-filter: blur(10px);
+          -webkit-backdrop-filter: blur(10px);
+          margin-bottom: 12px;
+          text-decoration: none;
+        }
+        .me-section-hint {
+          font-size: 12px;
+          color: #546E7A;
+          line-height: 1.55;
+          padding: 8px 12px;
+          background: rgba(255,112,67,0.06);
+          border-radius: 8px;
+          border-left: 3px solid rgba(255,112,67,0.35);
+          margin-bottom: 12px;
+        }
+      `}</style>
+
+      <div className="me-shell">
+
+        {/* ── Top: mini live preview ── */}
+        <div className="me-preview-strip" style={{
+          background: wallpaperUrl
+            ? `url(${wallpaperUrl}) center/cover no-repeat`
+            : 'linear-gradient(135deg, #f5f0eb 0%, #ede8e2 100%)',
+        }}>
+          <div style={{
+            background: 'linear-gradient(180deg, rgba(255,255,255,0.15) 0%, rgba(255,255,255,0.55) 100%)',
+            backdropFilter: 'blur(4px)',
+            WebkitBackdropFilter: 'blur(4px)',
+            padding: '12px 14px',
+          }}>
+            {/* Banner strip */}
+            {coverUrl && (
+              <div style={{
+                height: 48, borderRadius: 10, overflow: 'hidden',
+                marginBottom: 10, position: 'relative',
+                border: '1px solid rgba(255,255,255,0.30)',
+              }}>
+                <div style={{
+                  position: 'absolute', inset: 0,
+                  backgroundImage: bannerImage,
+                  backgroundSize: 'cover',
+                  backgroundPosition: bannerPos,
+                }} />
+                <div style={{
+                  position: 'absolute', inset: 0,
+                  background: 'linear-gradient(180deg,rgba(0,0,0,0.25),rgba(0,0,0,0.05))',
+                }} />
+              </div>
+            )}
+
+            {/* Identity row */}
+            <div style={{ display: 'flex', gap: 10, alignItems: 'center' }}>
+              <div style={{
+                width: 44, height: 44, borderRadius: '50%', flexShrink: 0,
+                border: `2.5px solid ${ORANGE}`,
+                overflow: 'hidden', background: 'rgba(0,0,0,0.08)',
+                boxShadow: '0 2px 8px rgba(255,112,67,0.30)',
+              }}>
+                {avatarUrl ? (
+                  <img src={avatarUrl} alt="preview"
+                    style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }} />
+                ) : (
+                  <div style={{
+                    width: '100%', height: '100%', display: 'grid', placeItems: 'center',
+                    background: `linear-gradient(135deg, ${ORANGE}, #F4511E)`,
+                    color: '#fff', fontWeight: 900, fontSize: 14,
+                  }}>{initials}</div>
+                )}
+              </div>
+              <div style={{ flex: 1, minWidth: 0 }}>
+                <div style={{ fontSize: 14, fontWeight: 900, color: '#1F2A33',
+                  overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                  {name || 'Your Name'}
+                </div>
+                {headline && (
+                  <div style={{ fontSize: 11, color: '#546E7A', marginTop: 1,
+                    overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                    {headline}
+                  </div>
+                )}
+                <div style={{ display: 'flex', gap: 4, marginTop: 3, flexWrap: 'wrap' }}>
+                  {location && (
+                    <span style={{ fontSize: 9, fontWeight: 600, padding: '2px 7px',
+                      borderRadius: 999, background: 'rgba(0,0,0,0.07)', color: '#455A64' }}>
+                      {location}
+                    </span>
+                  )}
+                  {status && (
+                    <span style={{ fontSize: 9, fontWeight: 700, padding: '2px 7px',
+                      borderRadius: 999, background: 'rgba(255,112,67,0.12)',
+                      color: ORANGE, border: '1px solid rgba(255,112,67,0.25)' }}>
+                      ● {status}
+                    </span>
+                  )}
+                </div>
+              </div>
+              {/* Portfolio Editor label */}
+              <div style={{ flexShrink: 0, textAlign: 'right' }}>
+                <div style={{ fontSize: 10, fontWeight: 900, color: ORANGE, lineHeight: 1 }}>
+                  Portfolio
+                </div>
+                <div style={{ fontSize: 10, fontWeight: 900, color: ORANGE }}>
+                  Editor
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* ── View live portfolio link ── */}
+        {slug && (
+          <Link href={`/u/${slug}`} className="me-view-pill">
+            <span style={{ fontSize: 13, fontWeight: 700, color: '#1F2A33' }}>
+              View live portfolio
+            </span>
+            <span style={{ fontSize: 13, fontWeight: 900, color: ORANGE }}>→</span>
+          </Link>
+        )}
+
+        {/* ════════════════════════════════════════════════════════
+            PANELS — one per tab, stack in DOM, show/hide via CSS
+        ════════════════════════════════════════════════════════ */}
+        <div className="me-panels">
+
+          {/* ── Style panel ── */}
+          <div className={`me-panel${activeTab === 'style' ? ' active' : ''}`}>
+
+            {/* Photo */}
+            <MeAccordion
+              label="Portfolio photo" open={openSections.photo}
+              onToggle={() => toggleSection('photo')}>
+              <div style={{ display: 'flex', gap: 12, alignItems: 'center', marginBottom: 14 }}>
+                <div style={{
+                  width: 64, height: 64, borderRadius: '50%',
+                  border: `3px solid ${ORANGE}`, overflow: 'hidden',
+                  flexShrink: 0, background: 'rgba(0,0,0,0.06)', position: 'relative',
+                }}>
+                  {avatarUploading && (
+                    <div style={{ position: 'absolute', inset: 0, background: 'rgba(255,255,255,0.8)',
+                      display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                      <span style={{ fontSize: 20, color: ORANGE }}>◌</span>
+                    </div>
+                  )}
+                  {avatarUrl ? (
+                    <img src={avatarUrl} alt="avatar"
+                      style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }} />
+                  ) : (
+                    <div style={{ width: '100%', height: '100%', display: 'grid', placeItems: 'center',
+                      background: `linear-gradient(135deg, ${ORANGE}, #F4511E)`,
+                      color: '#fff', fontWeight: 900, fontSize: 22 }}>
+                      {initials}
+                    </div>
+                  )}
+                </div>
+                <div>
+                  <div style={{ fontSize: 13, fontWeight: 700, color: '#1F2A33', marginBottom: 2 }}>
+                    Current photo
+                  </div>
+                  <div style={{ fontSize: 12, color: '#455A64' }}>Updates instantly</div>
+                </div>
+              </div>
+
+              {/* Upload first, presets, remove last */}
+              <div className="me-avatar-carousel">
+                <button type="button"
+                  onClick={() => fileInputRef.current?.click()}
+                  disabled={avatarUploading}
+                  style={{
+                    width: 56, height: 56, borderRadius: '50%', flexShrink: 0,
+                    border: `2px dashed rgba(255,112,67,0.60)`,
+                    background: 'rgba(255,112,67,0.07)', color: ORANGE,
+                    display: 'flex', flexDirection: 'column', alignItems: 'center',
+                    justifyContent: 'center', gap: 1, cursor: 'pointer', fontFamily: 'inherit',
+                  }}>
+                  <span style={{ fontSize: 18, lineHeight: 1 }}>↑</span>
+                  <span style={{ fontSize: 8, fontWeight: 800 }}>Upload</span>
+                </button>
+
+                {PRESET_AVATARS.map(opt => (
+                  <button key={opt.url} type="button"
+                    onClick={() => setAvatarUrl(opt.url)}
+                    style={{
+                      width: 56, height: 56, borderRadius: '50%', flexShrink: 0,
+                      padding: 2, border: `2px solid ${avatarUrl === opt.url ? ORANGE : 'transparent'}`,
+                      background: 'transparent', cursor: 'pointer',
+                    }}>
+                    <img src={opt.url} alt={opt.label}
+                      style={{ width: '100%', height: '100%', borderRadius: '50%', objectFit: 'cover', display: 'block' }} />
+                  </button>
+                ))}
+
+                {avatarUrl && (
+                  <button type="button" onClick={handleAvatarRemove}
+                    style={{
+                      width: 56, height: 56, borderRadius: '50%', flexShrink: 0,
+                      border: '2px solid rgba(211,47,47,0.30)',
+                      background: 'rgba(211,47,47,0.07)', color: '#C62828',
+                      display: 'flex', flexDirection: 'column', alignItems: 'center',
+                      justifyContent: 'center', gap: 1, cursor: 'pointer', fontFamily: 'inherit',
+                    }}>
+                    <span style={{ fontSize: 16, lineHeight: 1 }}>✕</span>
+                    <span style={{ fontSize: 8, fontWeight: 800 }}>Remove</span>
+                  </button>
+                )}
+
+                <input ref={fileInputRef} type="file" accept="image/*"
+                  style={{ display: 'none' }} onChange={handleAvatarFileChange} />
+              </div>
+            </MeAccordion>
+
+            {/* Portfolio banner */}
+            <MeAccordion
+              label="Portfolio banner" open={openSections.banner}
+              onToggle={() => toggleSection('banner')}>
+              <div className="me-asset-carousel" style={{ marginBottom: 6 }}>
+                <button type="button"
+                  className={`pe-asset-btn${!coverUrl ? ' selected' : ''}`}
+                  onClick={() => setCoverUrl('')} style={{ flexShrink: 0 }}>
+                  None
+                </button>
+                {profileBanners.map(b => (
+                  <button key={b.key} type="button"
+                    className={`pe-asset-chip${coverUrl === b.src ? ' selected' : ''}`}
+                    onClick={() => setCoverUrl(b.src)} style={{ flexShrink: 0 }}>
+                    <img src={b.src} alt={b.name} />
+                  </button>
+                ))}
+              </div>
+              {coverUrl && (
+                <div style={{ display: 'grid', gap: 12, paddingTop: 10,
+                  borderTop: '1px solid rgba(0,0,0,0.07)' }}>
+                  <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+                    <span style={{ fontSize: 12, fontWeight: 700, color: '#37474F' }}>Mode</span>
+                    {['cover', 'fit'].map(m => (
+                      <button key={m} type="button" onClick={() => setBannerMode(m)}
+                        style={{
+                          padding: '5px 14px', borderRadius: 999, fontFamily: 'inherit',
+                          border: `1px solid ${bannerMode === m ? ORANGE : 'rgba(0,0,0,0.14)'}`,
+                          background: bannerMode === m ? 'rgba(255,112,67,0.08)' : 'rgba(255,255,255,0.80)',
+                          color: bannerMode === m ? ORANGE : '#37474F',
+                          fontSize: 12, fontWeight: 700, cursor: 'pointer', textTransform: 'capitalize',
+                          minHeight: 36,
+                        }}>{m}</button>
+                    ))}
+                  </div>
+                  <div className="pe-field">
+                    <label className="pe-label">Height — {bannerH}px</label>
+                    <input type="range" min={80} max={400} value={bannerH}
+                      className="pe-slider" onChange={e => setBannerH(Number(e.target.value))} />
+                  </div>
+                  {bannerMode === 'cover' && (
+                    <div className="pe-field">
+                      <label className="pe-label">Vertical focus — {focalY}%</label>
+                      <input type="range" min={0} max={100} value={focalY}
+                        className="pe-slider" onChange={e => setFocalY(Number(e.target.value))} />
+                    </div>
+                  )}
+                </div>
+              )}
+            </MeAccordion>
+
+            {/* Wallpaper */}
+            <MeAccordion
+              label="Page wallpaper" open={openSections.wallpaper}
+              onToggle={() => toggleSection('wallpaper')}>
+              <div className="me-section-hint">
+                Your wallpaper is the background of your public portfolio page.
+              </div>
+              <div className="me-asset-carousel">
+                <button type="button"
+                  className={`pe-asset-btn${!wallpaperUrl ? ' selected' : ''}`}
+                  onClick={() => setWallpaperUrl('')} style={{ flexShrink: 0 }}>
+                  Default
+                </button>
+                {profileWallpapers.map(w => (
+                  <button key={w.key} type="button"
+                    className={`pe-asset-chip${wallpaperUrl === w.src ? ' selected' : ''}`}
+                    onClick={() => setWallpaperUrl(w.src)} style={{ flexShrink: 0 }}>
+                    <img src={w.src} alt={w.name} />
+                  </button>
+                ))}
+              </div>
+            </MeAccordion>
+
+            {/* URL + visibility */}
+            <MeAccordion
+              label="Portfolio URL & visibility" open={openSections.url}
+              onToggle={() => toggleSection('url')}>
+              <div style={{ display: 'flex', alignItems: 'center',
+                background: 'rgba(255,255,255,0.88)', border: '1px solid rgba(0,0,0,0.12)',
+                borderRadius: 8, overflow: 'hidden', marginBottom: 6 }}>
+                <span style={{ padding: '9px 10px', fontSize: 11, color: '#546E7A',
+                  background: 'rgba(0,0,0,0.04)', borderRight: '1px solid rgba(0,0,0,0.10)',
+                  whiteSpace: 'nowrap', flexShrink: 0, fontWeight: 700 }}>
+                  forgetomorrow.com/u/
+                </span>
+                <input value={slug} onChange={e => setSlug(e.target.value)}
+                  placeholder="your-name"
+                  style={{ flex: 1, padding: '9px 10px', border: 'none', background: 'none',
+                    outline: 'none', fontSize: 14, fontWeight: 700, color: ORANGE,
+                    fontFamily: 'inherit', minWidth: 0 }} />
+              </div>
+              <div style={{ fontSize: 11, color: '#546E7A', marginBottom: 14 }}>
+                Letters, numbers, and hyphens only
+              </div>
+              <div style={{ fontSize: 11, fontWeight: 800, textTransform: 'uppercase',
+                letterSpacing: '0.07em', color: '#455A64', marginBottom: 8 }}>
+                Visibility
+              </div>
+              <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+                {[
+                  { id: 'private',    label: 'Private'         },
+                  { id: 'public',     label: 'Public'          },
+                  { id: 'recruiters', label: 'Recruiters only' },
+                ].map(v => (
+                  <button key={v.id} type="button"
+                    className={`pe-vis-pill${visibility === v.id ? ' active' : ''}`}
+                    onClick={() => setVisibility(v.id)} style={{ minHeight: 40 }}>
+                    {v.label}
+                  </button>
+                ))}
+              </div>
+            </MeAccordion>
+
+            {/* Social */}
+            <MeAccordion
+              label="Social links" open={openSections.social}
+              onToggle={() => toggleSection('social')}>
+              <div style={{ display: 'grid', gap: 10 }}>
+                {SOCIAL_FIELDS.map(f => (
+                  <div key={f.key} className="pe-field">
+                    <label className="pe-label" style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
+                      <span style={{ fontSize: 12, opacity: 0.7 }}>{f.icon}</span>
+                      {f.label}
+                    </label>
+                    <input className="pe-input" type="url"
+                      value={socialLinks[f.key] || ''}
+                      onChange={e => updateSocial(f.key, e.target.value)}
+                      placeholder={f.placeholder} />
+                  </div>
+                ))}
+              </div>
+            </MeAccordion>
+          </div>
+
+          {/* ── Who Am I panel ── */}
+          <div className={`me-panel${activeTab === 'who' ? ' active' : ''}`}>
+
+            <MeAccordion label="Identity" open={openSections.identity}
+              onToggle={() => toggleSection('identity')}>
+              <div style={{ display: 'grid', gap: 12 }}>
+                <div className="pe-field">
+                  <label className="pe-label">Display name</label>
+                  <input className="pe-input locked" value={name} readOnly
+                    title="To update your name, contact support" />
+                  <span style={{ fontSize: 11, color: '#546E7A', fontWeight: 600 }}>
+                    Name changes go through{' '}
+                    <Link href="/support" style={{ color: ORANGE, textDecoration: 'none', fontWeight: 700 }}>
+                      Support Center
+                    </Link>
+                  </span>
+                </div>
+                <div className="pe-field">
+                  <label className="pe-label">Pronouns</label>
+                  <input className="pe-input" value={pronouns}
+                    onChange={e => setPronouns(e.target.value)} placeholder="e.g. they/them" />
+                </div>
+                <div className="pe-field">
+                  <label className="pe-label">Headline</label>
+                  <input className="pe-input" value={headline}
+                    onChange={e => setHeadline(e.target.value)}
+                    placeholder="Your headline" maxLength={160} />
+                </div>
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
+                  <div className="pe-field">
+                    <label className="pe-label">Location</label>
+                    <input className="pe-input" value={location}
+                      onChange={e => setLocation(e.target.value)} placeholder="City or Remote" />
+                  </div>
+                  <div className="pe-field">
+                    <label className="pe-label">Status</label>
+                    <input className="pe-input" value={status}
+                      onChange={e => setStatus(e.target.value)} placeholder="Open to work" />
+                  </div>
+                </div>
+              </div>
+            </MeAccordion>
+
+            <MeAccordion label="About / Summary" open={openSections.about}
+              onToggle={() => toggleSection('about')}>
+              <div className="pe-section">
+                <ProfileAbout about={about || ''} setAbout={setAbout} />
+              </div>
+            </MeAccordion>
+
+            <MeAccordion label="Work preferences" open={openSections.prefs}
+              onToggle={() => toggleSection('prefs')}>
+              <div className="pe-section">
+                <ProfilePreferences
+                  prefStatus={prefStatus}       setPrefStatus={setPrefStatus}
+                  prefWorkType={prefWorkType}   setPrefWorkType={setPrefWorkType}
+                  prefRelocate={prefRelocate}   setPrefRelocate={setPrefRelocate}
+                  prefLocations={prefLocations} setPrefLocations={setPrefLocations}
+                  prefStart={prefStart}         setPrefStart={setPrefStart}
+                />
+              </div>
+            </MeAccordion>
+
+            <MeAccordion label="Hobbies & interests" open={openSections.hobbies}
+              onToggle={() => toggleSection('hobbies')}>
+              <div className="pe-section">
+                <ProfileHobbies hobbies={hobbies} setHobbies={setHobbies} />
+              </div>
+            </MeAccordion>
+          </div>
+
+          {/* ── What I Bring panel ── */}
+          <div className={`me-panel${activeTab === 'bring' ? ' active' : ''}`}>
+
+            <MeAccordion label="Skills" open={openSections.skills}
+              onToggle={() => toggleSection('skills')}>
+              <div className="pe-section">
+                <ProfileSkills skills={skills} setSkills={setSkills} />
+              </div>
+            </MeAccordion>
+
+            <MeAccordion label="Languages" open={openSections.languages}
+              onToggle={() => toggleSection('languages')}>
+              <div className="pe-section">
+                <ProfileLanguages languages={languages} setLanguages={setLanguages} />
+              </div>
+            </MeAccordion>
+
+            <MeAccordion label="Certifications" open={openSections.certs}
+              onToggle={() => toggleSection('certs')}>
+              <div className="pe-section">
+                <ProfileCertifications certifications={certifications} setCertifications={setCertifications} />
+              </div>
+            </MeAccordion>
+
+            <MeAccordion label="Education" open={openSections.education}
+              onToggle={() => toggleSection('education')}>
+              <div className="pe-section">
+                <ProfileEducation education={education} setEducation={setEducation} />
+              </div>
+            </MeAccordion>
+          </div>
+
+          {/* ── Where I've Been panel ── */}
+          <div className={`me-panel${activeTab === 'been' ? ' active' : ''}`}>
+
+            <MeAccordion label="Resume" open={openSections.resume}
+              onToggle={() => toggleSection('resume')}>
+              <p style={{ fontSize: 13, color: '#37474F', fontWeight: 600, marginBottom: 14, lineHeight: 1.6 }}>
+                Your primary resume is the cornerstone of your ForgeTomorrow portfolio.
+                Recruiters download it directly from your public portfolio page.
+              </p>
+              <div className="pe-section">
+                <ProfileResumeAttach withChrome={withChrome} />
+              </div>
+            </MeAccordion>
+
+            <MeAccordion label="Projects" open={openSections.projects}
+              onToggle={() => toggleSection('projects')}>
+              <div className="pe-section">
+                <ProfileProjects projects={projects} setProjects={setProjects} />
+              </div>
+            </MeAccordion>
+          </div>
+
+        </div>{/* end panels */}
+
+      </div>{/* end me-shell */}
+
+      {/* ── Sticky bottom tab bar ── */}
+      <nav className="me-tab-bar" role="tablist" aria-label="Portfolio editor sections">
+        {MOBILE_TABS.map(tab => (
+          <button key={tab.id} type="button"
+            className={`me-tab-btn${activeTab === tab.id ? ' active' : ''}`}
+            onClick={() => setActiveTab(tab.id)}
+            role="tab" aria-selected={activeTab === tab.id}>
+            <span className="me-tab-icon">{tab.icon}</span>
+            <span className="me-tab-label">{tab.label}</span>
+            <span className="me-tab-pip" />
+          </button>
+        ))}
+      </nav>
+
+      {/* ── Save toast ── */}
+      <div className={`me-toast${toastVisible ? ' visible' : ''}`}>
+        <div className="me-toast-dot" style={{
+          background: saveState === 'error' ? '#EF5350' : '#66BB6A',
+        }} />
+        {saveState === 'error' ? 'Save failed' : 'All changes saved'}
+      </div>
+    </>
+  );
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// MeAccordion — mobile accordion section
+// ─────────────────────────────────────────────────────────────────────────────
+function MeAccordion({ label, open, onToggle, children }) {
+  return (
+    <div className="me-accordion">
+      <div className="me-accordion-header" onClick={onToggle} role="button"
+        aria-expanded={open}>
+        <div className="me-accordion-title">
+          {open && <span className="me-accordion-dot" />}
+          {label}
+        </div>
+        <span className={`me-accordion-chevron${open ? ' open' : ''}`}>▼</span>
+      </div>
+      {open && (
+        <div className="me-accordion-body">
+          <div className="me-accordion-body-pad">{children}</div>
+        </div>
+      )}
+    </div>
   );
 }
 
