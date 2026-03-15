@@ -18,7 +18,9 @@ import { authOptions } from '../../api/auth/[...nextauth]';
 import InternalLayout from '@/components/layouts/InternalLayout';
 import RightRailPlacementManager from '@/components/ads/RightRailPlacementManager';
 import MemberAvatarActions from '@/components/member/MemberAvatarActions';
-import ProfileResumeAttach from '@/components/profile/ProfileResumeAttach';
+import ProfileResumeAttach    from '@/components/profile/ProfileResumeAttach';
+import ProfileCertifications  from '@/components/profile/ProfileCertifications';
+import ProfileProjects        from '@/components/profile/ProfileProjects';
 
 import { profileBanners    } from '@/lib/profileBanners';
 import { profileWallpapers } from '@/lib/profileWallpapers';
@@ -125,6 +127,7 @@ export async function getServerSideProps(context) {
       headline: true, pronouns: true, location: true, status: true,
       avatarUrl: true, coverUrl: true, aboutMe: true,
       skillsJson: true, languagesJson: true, educationJson: true, hobbiesJson: true,
+      certificationsJson: true, projectsJson: true,
       bannerMode: true, bannerHeight: true, bannerFocalY: true,
       wallpaperUrl: true, corporateBannerKey: true, corporateBannerLocked: true,
       isProfilePublic: true, profileVisibility: true, role: true, email: true,
@@ -210,11 +213,13 @@ export default function PortfolioViewPage({ user, primaryResume, effectiveVisibi
   const [bannerMode,   setBannerMode]   = useState(serverBannerMode === 'fit' ? 'fit' : 'cover');
   const [bannerH,      setBannerH]      = useState(clamp(serverBannerH ?? 300, 80, 400));
   const [focalY,       setFocalY]       = useState(clamp(serverFocalY  ?? 30,  0, 100));
-  const [skills,       setSkills]       = useState(parseArrayField(skillsJson,    []));
-  const [languages,    setLanguages]    = useState(parseArrayField(languagesJson, []));
-  const [hobbies,      setHobbies]      = useState(parseArrayField(hobbiesJson,   []));
-  const [education,    setEducation]    = useState(parseEducationField(educationJson, []));
-  const [socialLinks,  setSocialLinks]  = useState({ github: '', x: '', youtube: '', instagram: '' });
+  const [skills,          setSkills]          = useState(parseArrayField(skillsJson,    []));
+  const [languages,       setLanguages]       = useState(parseArrayField(languagesJson, []));
+  const [hobbies,         setHobbies]         = useState(parseArrayField(hobbiesJson,   []));
+  const [education,       setEducation]       = useState(parseEducationField(educationJson, []));
+  const [certifications,  setCertifications]  = useState(parseArrayField(user.certificationsJson, []));
+  const [projects,        setProjects]        = useState(parseArrayField(user.projectsJson,        []));
+  const [socialLinks,     setSocialLinks]     = useState({ github: '', x: '', youtube: '', instagram: '' });
   const updateSocial = (key, val) => setSocialLinks(p => ({ ...p, [key]: val }));
 
   // Work preferences — expanded schema from Sora's card
@@ -330,6 +335,7 @@ export default function PortfolioViewPage({ user, primaryResume, effectiveVisibi
               },
               skillsJson: skills || [], languagesJson: languages || [],
               hobbiesJson: hobbies || [], educationJson: education || [],
+              certificationsJson: certifications || [], projectsJson: projects || [],
             }),
             signal: controller.signal,
           }),
@@ -346,7 +352,7 @@ export default function PortfolioViewPage({ user, primaryResume, effectiveVisibi
     socialLinks, pronouns, headline, location, status, aboutMe,
     prefWorkStatus, prefWorkType, prefSchedule, prefWillingToRelocate,
     prefStartDate, prefScheduleAvailability, prefLocations,
-    skills, languages, hobbies, education,
+    skills, languages, hobbies, education, certifications, projects,
   ]);
 
   const AvatarWrap = ({ children }) => {
@@ -945,22 +951,10 @@ export default function PortfolioViewPage({ user, primaryResume, effectiveVisibi
                       </div>
                     ) : null}
 
-                    {/* Member badge */}
-                    <a href="https://forgetomorrow.com" className="ft-member-badge" target="_blank" rel="noopener noreferrer">
-                      <div className="ft-member-badge-icon">
-                        <svg width="20" height="20" fill="none" viewBox="0 0 20 20">
-                          <path d="M10 2C8 5 6 6 7 9c.5 1.5 0 2.5-1.5 3C7 14 8 16 10 17c2-1 3-3 4.5-5-.5 0-1-.5-1.5-1.5C14 8.5 13 6 10 2z" fill="white" />
-                          <path d="M10 17c0 0 2-2 2-4s-2-2-2-2-2 0-2 2 2 4 2 4z" fill="rgba(255,255,255,0.5)" />
-                        </svg>
-                      </div>
-                      <div>
-                        <div className="ft-member-badge-title">ForgeTomorrow</div>
-                        <div className="ft-member-badge-sub">Verified Member</div>
-                      </div>
-                    </a>
                   </div>
+                  {/* end left col */}
 
-                  {/* CENTER — Summary */}
+                  {/* CENTER — Summary (the user's story, owns this column) */}
                   <div className="ft-col-center animate-fade-up delay-4">
                     {editMode ? (
                       <div className="ft-dark-card">
@@ -968,7 +962,8 @@ export default function PortfolioViewPage({ user, primaryResume, effectiveVisibi
                           <div className="ft-dark-section-label">Professional Summary</div>
                           <textarea className="ft-dark-textarea" value={aboutMe}
                             onChange={e => setAboutMe(e.target.value)}
-                            placeholder="Tell your professional story…" rows={8} />
+                            placeholder="Tell your professional story…"
+                            style={{ minHeight: 260, resize: 'vertical' }} />
                         </div>
                       </div>
                     ) : aboutMe ? (
@@ -979,20 +974,12 @@ export default function PortfolioViewPage({ user, primaryResume, effectiveVisibi
                         </div>
                       </div>
                     ) : null}
-
-                    {/* Resume in center col — edit only */}
-                    {editMode && (
-                      <div className="ft-dark-card" style={{ marginTop: 18 }}>
-                        <div className="ft-dark-card-inner">
-                          <div className="ft-dark-section-label">Resume</div>
-                          <ProfileResumeAttach withChrome={p => p} />
-                        </div>
-                      </div>
-                    )}
                   </div>
 
-                  {/* RIGHT — Education */}
+                  {/* RIGHT — Education, Resume, Certifications, Projects, Custom */}
                   <div className="ft-col-right animate-fade-up delay-5">
+
+                    {/* Education */}
                     {editMode ? (
                       <EducationEditCard
                         education={education} setEducation={setEducation}
@@ -1016,6 +1003,55 @@ export default function PortfolioViewPage({ user, primaryResume, effectiveVisibi
                         </div>
                       </div>
                     ) : null}
+
+                    {/* Resume */}
+                    <div className={editMode ? 'ft-dark-card' : 'ft-card'} style={{ marginTop: education.length > 0 || editMode ? 18 : 0 }}>
+                      <div className={editMode ? 'ft-dark-card-inner' : 'ft-card-inner'}>
+                        {editMode
+                          ? <div className="ft-dark-section-label">Resume</div>
+                          : <p className="ft-section-label">Resume</p>
+                        }
+                        <ProfileResumeAttach withChrome={p => p} />
+                      </div>
+                    </div>
+
+                    {/* Certifications */}
+                    <div className={editMode ? 'ft-dark-card' : 'ft-card'} style={{ marginTop: 18 }}>
+                      <div className={editMode ? 'ft-dark-card-inner' : 'ft-card-inner'}>
+                        {editMode
+                          ? <div className="ft-dark-section-label">Certifications</div>
+                          : <p className="ft-section-label">Certifications</p>
+                        }
+                        <ProfileCertifications
+                          certifications={certifications}
+                          setCertifications={setCertifications} />
+                      </div>
+                    </div>
+
+                    {/* Projects */}
+                    <div className={editMode ? 'ft-dark-card' : 'ft-card'} style={{ marginTop: 18 }}>
+                      <div className={editMode ? 'ft-dark-card-inner' : 'ft-card-inner'}>
+                        {editMode
+                          ? <div className="ft-dark-section-label">Projects</div>
+                          : <p className="ft-section-label">Projects</p>
+                        }
+                        <ProfileProjects
+                          projects={projects}
+                          setProjects={setProjects} />
+                      </div>
+                    </div>
+
+                    {/* Custom card stub — placeholder until custom card builder is wired */}
+                    {editMode && (
+                      <div className="ft-dark-card" style={{ marginTop: 18 }}>
+                        <div className="ft-dark-card-inner">
+                          <div className="ft-dark-section-label">Custom Section</div>
+                          <div style={{ fontSize: 13, color: 'rgba(255,255,255,0.35)', fontStyle: 'italic', lineHeight: 1.6 }}>
+                            Custom cards coming soon — add a portfolio spotlight, featured work, press mentions, or anything else that tells your story.
+                          </div>
+                        </div>
+                      </div>
+                    )}
                   </div>
                 </div>
 
@@ -1317,25 +1353,21 @@ export default function PortfolioViewPage({ user, primaryResume, effectiveVisibi
 // ─── Sub-components ───────────────────────────────────────────────────────────
 
 function SkillsViewCard({ skills }) {
-  const [showAll, setShowAll] = useState(false);
-  const TOP = 8;
-  const visible = showAll ? skills : skills.slice(0, TOP);
   return (
     <div className="ft-card">
       <div className="ft-card-inner">
         <p className="ft-section-label">Skills</p>
-        <div className="ft-skill-grid">
-          {visible.map((s, i) => (
-            <div key={s} className={`ft-skill-item${i < 3 ? ' accent' : ''}`}>{s}</div>
-          ))}
+        <div style={{ maxHeight: 180, overflowY: 'auto', scrollbarWidth: 'thin', scrollbarColor: 'rgba(255,112,67,0.3) transparent' }}>
+          <div className="ft-skill-grid">
+            {skills.map((s, i) => (
+              <div key={s} className={`ft-skill-item${i < 3 ? ' accent' : ''}`}>{s}</div>
+            ))}
+          </div>
         </div>
-        {skills.length > TOP && !showAll && (
-          <button type="button" className="ft-show-more" onClick={() => setShowAll(true)}>
-            +{skills.length - TOP} more skills
-          </button>
-        )}
-        {showAll && skills.length > TOP && (
-          <button type="button" className="ft-show-more" onClick={() => setShowAll(false)}>Show less</button>
+        {skills.length > 6 && (
+          <div style={{ fontSize: 11, color: 'rgba(255,255,255,0.30)', marginTop: 8, fontWeight: 600 }}>
+            Scroll to see all {skills.length} skills
+          </div>
         )}
       </div>
     </div>
@@ -1548,6 +1580,11 @@ function IdentitySection({ editMode, avatarUrl, avatarUploading, initials, fullN
             </div>
           </div>
         )}
+        {/* FT member micro-tag — swap for ID.me verified badge when identity verification is wired */}
+        <div style={{ textAlign:'center', marginTop:8, fontSize:10, fontWeight:700,
+          letterSpacing:'0.08em', color:'rgba(255,255,255,0.28)', textTransform:'uppercase' }}>
+          ForgeTomorrow
+        </div>
       </div>
 
       <div className="ft-identity-info">
@@ -1557,12 +1594,10 @@ function IdentitySection({ editMode, avatarUrl, avatarUploading, initials, fullN
         {editMode ? (
           <div style={{ display:'flex', gap:8, marginTop:12, flexWrap:'wrap' }}>
             <input className="ft-inline-input" value={location} onChange={e => setLocation(e.target.value)} placeholder="Location" style={{ flex:1, minWidth:140, fontSize:12 }} />
-            <input className="ft-inline-input" value={status}   onChange={e => setStatus(e.target.value)}   placeholder="Status (e.g. Open to work)" style={{ flex:1, minWidth:140, fontSize:12 }} />
           </div>
         ) : (
           <div className="ft-meta-row">
             {location && <span className="ft-meta-chip"><svg width="11" height="13" fill="none" viewBox="0 0 11 13" style={{ opacity:0.75 }}><path d="M5.5 0A4.5 4.5 0 001 4.5C1 8.25 5.5 13 5.5 13S10 8.25 10 4.5A4.5 4.5 0 005.5 0zm0 6.25A1.75 1.75 0 113.75 4.5 1.752 1.752 0 015.5 6.25z" fill="currentColor" /></svg>{location}</span>}
-            {status && <span className="ft-meta-chip" style={{ color:'rgba(255,112,67,0.95)', borderColor:'rgba(255,112,67,0.24)' }}><span style={{ width:6, height:6, borderRadius:'50%', background:'var(--orange)', flexShrink:0, display:'inline-block' }} />{status}</span>}
           </div>
         )}
         {editMode && (
